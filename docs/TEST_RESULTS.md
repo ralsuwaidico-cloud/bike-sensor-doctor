@@ -2,14 +2,20 @@
 
 You asked me not to claim a feature works until it has been tested. Here is exactly where things stand.
 
+## Build status (updated after CI run #2, 2026-10-11 13:44 Dubai)
+
+- **Compiled successfully** on GitHub Actions: `./gradlew testDebugUnitTest assembleDebug` — green on the first
+  attempt after the SDK-setup step was fixed. All 8 parser unit tests passed.
+- **APK produced and published**: https://github.com/ralsuwaidico-cloud/bike-sensor-doctor/releases/tag/build-2
+  (`BikeSensorDoctor-build2.apk`, 16.5 MB, debug-signed, APK Signature Scheme v2 block verified).
+- **Still untested on hardware**: nothing has run on the Nokia 5.3 or against the sensor yet. Every "No" in the
+  table below stays "No" until the first real session.
+
 ## What was NOT possible in my build environment
 
 - The environment that wrote this project has **no Android SDK and no access to Google's/Maven Central package
   servers** (network policy). Therefore:
-  - **The project has not been compiled.** There may be compile errors (typos, API signature mismatches) that a first
-    Gradle build will surface. They are usually one-line fixes; send me the error text and I will fix them.
-  - **No APK was produced here.** The GitHub Actions workflow (`.github/workflows/build-apk.yml`) or Android Studio
-    will produce it (see `docs/INSTALL_NOKIA_5_3.md`).
+  - The project could not be compiled *here*; it was compiled on GitHub Actions instead (see above).
   - **Nothing has run against your sensor.** All behaviour descriptions below are design intent, not observed results.
 - The Gradle wrapper (`gradlew`, `gradle/wrapper/*`) **was** generated with Gradle 8.9 and is valid.
 
