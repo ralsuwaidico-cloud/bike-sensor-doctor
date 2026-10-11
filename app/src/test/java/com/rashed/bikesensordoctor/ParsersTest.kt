@@ -54,6 +54,17 @@ class ParsersTest {
         val b = byteArrayOf(0xC8.toByte(), 0x00, 0x64, 0x00, 0x64, 0x00, 0x5A, 0x00, 0x2D, 0x01, 0x00)
         val c = Parsers.parseXdsCandidate(b)!!
         assertEquals(200, c.totalPowerW); assertEquals(100, c.leftPowerW); assertEquals(90, c.cadenceRpm); assertEquals(301, c.crankAngleDeg)
+        assertEquals(false, c.backwards)
+    }
+
+    @Test
+    fun xdsCandidate_realPacketsFromNokiaLog() {
+        // Idle packet captured 2026-10-11 14:00:08: all zero, angle 0x015A = 346°
+        val idle = Parsers.parseXdsCandidate(byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0x5A, 0x01, 0))!!
+        assertEquals(0, idle.totalPowerW); assertEquals(0, idle.cadenceRpm); assertEquals(346, idle.crankAngleDeg); assertEquals(false, idle.rotating)
+        // Rotating packet 14:00:46: cadence 0xFFA8 = -88 (reverse pedaling), angle 0x00F1 = 241°, power 0 (no load)
+        val spin = Parsers.parseXdsCandidate(byteArrayOf(0, 0, 0, 0, 0, 0, 0xA8.toByte(), 0xFF.toByte(), 0xF1.toByte(), 0, 0))!!
+        assertEquals(-88, spin.cadenceSignedRpm); assertEquals(88, spin.cadenceRpm); assertEquals(true, spin.backwards); assertEquals(241, spin.crankAngleDeg); assertEquals(0, spin.totalPowerW)
     }
 
     @Test

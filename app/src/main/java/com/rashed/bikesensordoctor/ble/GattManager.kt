@@ -292,13 +292,12 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
             main.post {
                 if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
                     reconnectDelayMs = 1000L
-                    log.add(EventType.CONNECTION, device = g.device.address, note = "Connected; requesting MTU 247 and discovering services")
+                    log.add(EventType.CONNECTION, device = g.device.address, note = "Connected; requesting MTU 247, then discovering services")
                     _snapshot.update { it.copy(state = ConnectionState.CONNECTED, lastError = null) }
-                    g.requestMtu(247)
-                    main.postDelayed({
-                        _snapshot.update { it.copy(state = ConnectionState.DISCOVERING) }
-                        if (!g.discoverServices()) log.add(EventType.ERROR, device = addr(), note = "discoverServices() returned false")
-                    }, 600)
+                    discoveryStarted = false
+                    if (!g.requestMtu(247)) startDiscovery(g)
+                    // Fallback: if the MTU callback never arrives, discover anyway after 2 s.
+                    main.postDelayed({ startDiscovery(g) }, 2000)
                 } else {
                     log.add(EventType.CONNECTION, device = g.device.address, note = "Disconnected: ${statusText(status)}")
                     queue.clear(); inFlight = null; main.removeCallbacks(opTimeout)
@@ -313,6 +312,9 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
             main.post {
                 log.add(EventType.CONNECTION, device = addr(), note = "MTU=$mtu ${statusText(status)}")
                 _snapshot.update { it.copy(mtu = mtu) }
+                // Session log 2026-10-11 showed discovery hanging when started while the MTU exchange was in flight;
+                // starting it from here (after the exchange) avoids that.
+                startDiscovery(g)
             }
         }
 
@@ -401,6 +403,16 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
         }
     }
 
+    private var discoveryStarted = false
+
+    @SuppressLint("MissingPermission")
+    private fun startDiscovery(g: BluetoothGatt) {
+        if (discoveryStarted || gatt !== g) return
+        discoveryStarted = true
+        _snapshot.update { it.copy(state = ConnectionState.DISCOVERING) }
+        if (!g.discoverServices()) log.add(EventType.ERROR, device = addr(), note = "discoverServices() returned false")
+    }
+
     private fun updateChar(uuid: UUID, f: (CharInfo) -> CharInfo) {
         _snapshot.update { s ->
             s.copy(services = s.services.map { svc ->
@@ -443,7 +455,7 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
                 // Not a SIG-compliant placement; try the community-documented XDS layout, labelled as candidate.
                 Parsers.parseXdsCandidate(value)?.let { c ->
                     _snapshot.update { it.copy(candidate = c) }
-                    note += " CANDIDATE power=${c.totalPowerW}W cad=${c.cadenceRpm} (unverified layout)"
+                    note += " XDS power=${c.totalPowerW}W cadence=${c.cadenceSignedRpm} angle=${c.crankAngleDeg}"
                 }
             }
             uuid == Uuids.BATTERY_LEVEL -> _snapshot.update { it.copy(batteryPct = Parsers.parseBattery(value)) }

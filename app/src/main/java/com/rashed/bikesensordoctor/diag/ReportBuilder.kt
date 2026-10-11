@@ -93,8 +93,8 @@ object ReportBuilder {
             confirmed += "Standard cycling measurements WERE decoded from a SIG service."
         }
         snapshot.candidate?.let { c ->
-            sb.appendLine("CANDIDATE (unverified community layout): power=${c.totalPowerW} W L/R=${c.leftPowerW}/${c.rightPowerW} cadence=${c.cadenceRpm} angle=${c.crankAngleDeg} err=${c.errorCode}")
-            likely += "Data on 0x2A63 under 0x1828 decoded with the community layout; verify by pedaling at a known cadence and comparing."
+            sb.appendLine("XDS decode (last packet): power=${c.totalPowerW} W L/R=${c.leftPowerW}/${c.rightPowerW} cadence=${c.cadenceSignedRpm} rpm (negative = reverse) angle=${c.crankAngleDeg} err=${c.errorCode}")
+            
         }
         if (snapshot.services.isNotEmpty() && notifyTotal == 0) {
             confirmed += "Subscribing to every notify/indicate characteristic produced ZERO notifications."

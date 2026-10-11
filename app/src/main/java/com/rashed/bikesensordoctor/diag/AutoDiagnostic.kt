@@ -1,6 +1,8 @@
 package com.rashed.bikesensordoctor.diag
 
 import com.rashed.bikesensordoctor.ble.BleScanner
+import com.rashed.bikesensordoctor.ble.CandidateMetrics
+import com.rashed.bikesensordoctor.ble.Parsers
 import com.rashed.bikesensordoctor.ble.ConnectionState
 import com.rashed.bikesensordoctor.ble.GattManager
 import com.rashed.bikesensordoctor.ble.ScannedDevice
@@ -26,6 +28,8 @@ data class ApprovalRequest(
     val explanation: String,
     val risks: String,
     val response: CompletableDeferred<Boolean>,
+    val yesLabel: String = "YES",
+    val noLabel: String = "NO",
 )
 
 data class AutoState(
@@ -36,6 +40,9 @@ data class AutoState(
     val countdown: Int = 0,
     val steps: List<StepStatus> = emptyList(),
     val approval: ApprovalRequest? = null,
+    val liveCadence: Int? = null,
+    val livePower: Int? = null,
+    val liveBackwards: Boolean = false,
     val outcome: Outcome? = null,
     val summary: String = "",               // plain-language: what was tested / fixed / next
     val technicalReport: String = "",
@@ -60,6 +67,7 @@ class AutoDiagnostic(
         const val STILL_SECONDS = 15
         const val PEDAL_SECONDS = 30
         const val RETEST_SECONDS = 25
+        const val RIDE_SECONDS = 60
     }
 
     private val _state = MutableStateFlow(AutoState())
@@ -68,7 +76,7 @@ class AutoDiagnostic(
 
     private val stepTitles = listOf(
         "Bluetooth ready", "Find the power meter", "Connect and identify", "Battery and firmware",
-        "Bluetooth services", "Listen while still", "Listen while pedaling", "Try safe fixes", "Final verdict",
+        "Bluetooth services", "Listen while still", "Cadence check (pedaling)", "Safe fixes if needed", "Power check (ride)", "Final verdict",
     )
 
     fun start(bluetoothOn: Boolean) {
@@ -99,9 +107,9 @@ class AutoDiagnostic(
         _state.update { it.copy(countdown = 0, instruction = "") }
     }
 
-    private suspend fun requestApproval(title: String, explanation: String, risks: String): Boolean {
+    private suspend fun requestApproval(title: String, explanation: String, risks: String, yes: String = "YES", no: String = "NO"): Boolean {
         val d = CompletableDeferred<Boolean>()
-        _state.update { it.copy(approval = ApprovalRequest(title, explanation, risks, d)) }
+        _state.update { it.copy(approval = ApprovalRequest(title, explanation, risks, d, yes, no)) }
         val answer = d.await()
         _state.update { it.copy(approval = null) }
         log.add(EventType.TEST, note = "User approval for '$title': ${if (answer) "YES" else "NO"}")
@@ -235,43 +243,50 @@ class AutoDiagnostic(
         val subscribed = snap1.services.flatMap { it.characteristics }.count { it.notifying }
         tested += "Subscribed to $subscribed data channels (all that the sensor offers)"
 
-        // 5. Still
+        // 5. Still — the sensor should report zero rotation and a fixed crank angle
         step(5, "running"); headline("Listening while the bike is still", "KEEP THE BIKE COMPLETELY STILL")
         var seq = lastSeq()
         countdown(STILL_SECONDS, "KEEP THE BIKE COMPLETELY STILL")
         val stillResult = collect(seq, STILL_SECONDS)
-        step(5, "ok", "${stillResult.total} messages while still")
+        val stillSamples = xdsSamples(seq)
+        val stillRotating = stillSamples.count { it.rotating }
+        step(5, if (stillRotating == 0) "ok" else "warn", "${stillResult.total} messages; ${stillSamples.size} sensor readings, ${stillRotating} showed rotation")
+        tested += "15 s still: ${stillSamples.size} readings, cadence ${if (stillRotating == 0) "correctly 0" else "NOT zero in $stillRotating readings"}"
 
-        // 6. Pedal
-        step(6, "running"); headline("Listening while pedaling", "PEDAL NOW — steady, about 80 rpm")
+        // 6. Pedal — verify cadence live, and detect pedaling direction
+        step(6, "running"); headline("Checking cadence", "PEDAL FORWARDS — steady, about 80 rpm")
         seq = lastSeq()
-        countdown(PEDAL_SECONDS, "PEDAL NOW — steady, about 80 rpm")
+        var pedal = pedalPhase(seq, PEDAL_SECONDS, "PEDAL FORWARDS — steady, about 80 rpm")
         var pedalResult = collect(seq, PEDAL_SECONDS)
-        var snapP = gatt.snapshot.value
-        var responsive = respondsToPedaling(stillResult, pedalResult)
-        step(6, if (pedalResult.total > 0) "ok" else "fail", "${pedalResult.total} messages while pedaling" + (if (snapP.state != ConnectionState.READY) " (connection dropped!)" else ""))
-        tested += "Listened ${STILL_SECONDS} s still (${stillResult.total} messages) and ${PEDAL_SECONDS} s pedaling (${pedalResult.total} messages)"
+        var cadenceOk = pedal.cadenceSamples >= 5
+        var responsive = cadenceOk || respondsToPedaling(stillResult, pedalResult)
+        step(6, if (cadenceOk) "ok" else if (pedalResult.total > 0) "warn" else "fail",
+            if (cadenceOk) "Cadence verified: ${pedal.cadenceSamples} readings, typical ${pedal.typicalCadence} rpm${if (pedal.backwardsSamples > pedal.cadenceSamples / 2) " (pedaled backwards)" else ""}"
+            else "${pedalResult.total} messages, no cadence detected")
+        tested += if (cadenceOk) "30 s pedaling: cadence measured by the sensor in ${pedal.cadenceSamples} readings, typical ${pedal.typicalCadence} rpm" +
+                (if (pedal.backwardsSamples > 0) " (${pedal.backwardsSamples} readings were backwards pedaling)" else "")
+            else "30 s pedaling: ${pedalResult.total} messages but no cadence reading"
 
-        // 7. Safe fixes, only if nothing useful arrived
+        // 7. Safe fixes, only if the sensor is not reporting rotation at all
         step(7, "running")
-        if (!responsive) {
-            // Fix A: documented, reversible — full disconnect/reconnect cycle, then retest while pedaling.
+        if (!cadenceOk && !responsive) {
             headline("Trying fix 1 of 2: reconnecting from scratch…")
             gatt.disconnect(silent = true); delay(2500)
             gatt.connect(meter.address, meter.name, reconnect = false)
             if (waitForState(ConnectionState.READY, 30_000)) {
                 delay(5000)
                 seq = lastSeq()
-                countdown(RETEST_SECONDS, "PEDAL NOW — retest after reconnect")
+                val p2 = pedalPhase(seq, RETEST_SECONDS, "PEDAL FORWARDS — retest after reconnect")
                 val r = collect(seq, RETEST_SECONDS)
-                log.add(EventType.TEST, note = "Retest after reconnect: ${r.total} notifications")
-                if (respondsToPedaling(stillResult, r)) { responsive = true; pedalResult = r; fixed += "A full disconnect/reconnect cycle made the sensor start sending data (verified by a live pedaling retest)." }
-                else tested += "Fix 1 (reconnect from scratch): no change"
+                log.add(EventType.TEST, note = "Retest after reconnect: ${r.total} notifications, cadence samples ${p2.cadenceSamples}")
+                if (p2.cadenceSamples >= 5 || respondsToPedaling(stillResult, r)) {
+                    responsive = true; cadenceOk = p2.cadenceSamples >= 5; pedal = p2; pedalResult = r
+                    fixed += "A full disconnect/reconnect cycle made the sensor start reporting (verified by a live pedaling retest)."
+                } else tested += "Fix 1 (reconnect from scratch): no change"
             } else tested += "Fix 1 (reconnect from scratch): the sensor did not accept the new connection"
-            snapP = gatt.snapshot.value
         }
-        if (!responsive && snapP.state == ConnectionState.READY && snapP.hasMeshProxy && snapP.meshProxyHas2A55) {
-            // Fix B: community-documented 'start' write. Requires explicit approval; harmlessly rejected on at least one unit.
+        val snapP = gatt.snapshot.value
+        if (!cadenceOk && !responsive && snapP.state == ConnectionState.READY && snapP.hasMeshProxy && snapP.meshProxyHas2A55) {
             headline("A possible fix needs your approval")
             val ok = requestApproval(
                 "Send the 'start sending data' request?",
@@ -279,60 +294,125 @@ class AutoDiagnostic(
                 "This exact request is used by an open-source Garmin bridge built for XDS meters. It is not from the manufacturer.",
                 "Risk: low. On one other XDS unit the sensor simply rejected it (error 0x81) with no side effects. It does not touch calibration, settings or firmware. " +
                 "But because it is not manufacturer-documented, its full meaning is unknown. You can decline and nothing is sent.",
+                "YES, TRY IT", "NO, SKIP",
             )
             if (ok) {
                 seq = lastSeq()
                 gatt.experimentalWrite(Uuids.SC_CONTROL_POINT, byteArrayOf(0x02, 0x16, 0xAA.toByte(), 0x10), "github.com/DuoDuoJuZi/xds_forwarding (community)")
                 delay(2500)
-                countdown(RETEST_SECONDS, "PEDAL NOW — retest after start request")
+                val p2 = pedalPhase(seq, RETEST_SECONDS, "PEDAL FORWARDS — retest after start request")
                 val r = collect(seq, RETEST_SECONDS)
                 val rejected = log.entries.value.any { it.seq > seq && it.type == EventType.ERROR && it.note.contains("Write") }
-                log.add(EventType.TEST, note = "Retest after start request: ${r.total} notifications, rejected=$rejected")
-                if (respondsToPedaling(stillResult, r)) { responsive = true; pedalResult = r; fixed += "Sending the 'start' request made the sensor stream data (verified by a live pedaling retest)." }
-                else tested += "Fix 2 (community 'start' request): " + (if (rejected) "the sensor rejected it (harmless)" else "accepted but no data followed")
+                log.add(EventType.TEST, note = "Retest after start request: ${r.total} notifications, cadence samples ${p2.cadenceSamples}, rejected=$rejected")
+                if (p2.cadenceSamples >= 5 || respondsToPedaling(stillResult, r)) {
+                    responsive = true; cadenceOk = p2.cadenceSamples >= 5; pedal = p2; pedalResult = r
+                    fixed += "Sending the 'start' request made the sensor stream data (verified by a live pedaling retest)."
+                } else tested += "Fix 2 (community 'start' request): " + (if (rejected) "the sensor rejected it (harmless)" else "accepted but no data followed")
             } else tested += "Fix 2 (community 'start' request): skipped at your request"
         }
-        step(7, if (fixed.isNotEmpty()) "ok" else "warn", if (fixed.isNotEmpty()) fixed.joinToString() else "No safe fix changed the result")
+        step(7, if (fixed.isNotEmpty()) "ok" else if (cadenceOk) "ok" else "warn", if (fixed.isNotEmpty()) fixed.joinToString() else if (cadenceOk) "Not needed" else "No safe fix changed the result")
 
-        // 8. Verdict
-        step(8, "running"); headline("Working out the verdict…")
+        // 8. Power — needs real load (riding or a trainer); spinning unloaded cranks reads 0 W on any power meter
+        step(8, "running")
+        var ride: PedalStats? = null
+        if (cadenceOk && gatt.snapshot.value.state == ConnectionState.READY) {
+            headline("Power can only be checked under load")
+            val go = requestApproval(
+                "Ready for the ride test?",
+                "Cadence is confirmed. Power can only be measured while the pedals are under real load, so the next test is a 60-second ride. " +
+                "Put the phone in a pocket and ride normally (or pedal on a trainer against resistance). Pedal forwards the whole time. The screen stays on.",
+                "Nothing is written to the sensor during this test. You can skip it and run it later.",
+                "START RIDE (60 s)", "SKIP FOR NOW",
+            )
+            if (go) {
+                seq = lastSeq()
+                ride = pedalPhase(seq, RIDE_SECONDS, "RIDE NOW — pedal forwards under load")
+                val pOk = ride.powerSamples >= 5
+                step(8, if (pOk) "ok" else "fail", if (pOk) "Power verified: average ${ride.avgPower} W, peak ${ride.maxPower} W, cadence ${ride.typicalCadence} rpm" else "No power above 20 W in ${ride.cadenceSamples} pedaling readings")
+                tested += if (pOk) "60 s ride: power measured by the sensor in ${ride.powerSamples} readings — average ${ride.avgPower} W, peak ${ride.maxPower} W, cadence ${ride.typicalCadence} rpm"
+                          else "60 s ride: cranks turned (${ride.cadenceSamples} cadence readings) but the sensor reported 0 W throughout"
+            } else { step(8, "warn", "Skipped"); tested += "Ride test for power: skipped (power not yet verified)" }
+        } else step(8, if (cadenceOk) "warn" else "fail", if (cadenceOk) "Connection lost before the ride test" else "Not possible without cadence")
+
+        // 9. Verdict
+        step(9, "running"); headline("Working out the verdict…")
         val snapF = gatt.snapshot.value
-        val verified = snapF.metrics != null       // decoded from a standard SIG service
-        val candidate = snapF.candidate != null    // decoded with the community layout
+        val powerOk = ride != null && ride.powerSamples >= 5
+        val rideDone = ride != null
         val summary: String
+        val garminWhy = "A Garmin Edge 820 pairs power meters over ANT+ only (its Bluetooth is used just for the phone link). This sensor has no ANT+ and speaks XDS's private Bluetooth format, so the Edge 820 can never see it directly — no phone app can change that."
         when {
-            responsive && verified && std -> {
+            snapF.hasCyclingPower && snapF.metrics != null && cadenceOk -> {
                 outcome = if (fixed.isNotEmpty()) Outcome.FIXED else Outcome.WORKING
-                summary = "Live power/cadence was decoded from the standard Bluetooth cycling service while you pedaled. The sensor works and speaks the standard language a Garmin understands."
-                next += "Pair the sensor again on the Edge 820 (Sensors → Add sensor). If it still fails, the Garmin side needs attention, not the sensor."
+                summary = "The sensor reports standard Bluetooth cycling power and the readings responded to pedaling."
+                next += "Pair it again on the Edge 820 under Sensors → Add sensor."
             }
-            responsive -> {
+            cadenceOk && powerOk -> {
                 outcome = if (fixed.isNotEmpty()) Outcome.FIXED else Outcome.COMPATIBILITY_ISSUE
-                summary = "The sensor is alive and sends data that changes when you pedal" + (if (candidate) " (power ≈ ${snapF.candidate!!.totalPowerW} W, cadence ≈ ${snapF.candidate!!.cadenceRpm} rpm using the community decoding)" else "") +
-                    ". But it uses XDS's private Bluetooth format, not the standard cycling-power service, and it has no ANT+. " +
-                    "A Garmin Edge 820 can only pair with standard Bluetooth power meters or ANT+ ones, so it will never see this sensor no matter what any phone app does."
-                next += "Use the official 'X-LAB Bikes' app to see your power, or add a small bridge device (an nRF52840 dongle running an open-source XDS→ANT+ bridge) if you want the Garmin to show it. No Android app can add ANT+ to the Garmin or the sensor."
+                summary = "The sensor works. Live measurements were verified: cadence ${ride!!.typicalCadence} rpm and power averaging ${ride.avgPower} W (peak ${ride.maxPower} W) during your ride. " + garminWhy
+                next += "To see power on the Garmin you need a small ANT+ bridge device — see the explanation in the chat."
+                next += "The official 'X-LAB Bikes' app shows power on the phone meanwhile."
+            }
+            cadenceOk && rideDone -> {
+                outcome = Outcome.NEEDS_ATTENTION
+                summary = "The sensor measures rotation correctly (cadence ${pedal.typicalCadence} rpm) but reported 0 W for the whole ride, even under load. That points to the strain-gauge/power side of the sensor, not to Bluetooth. " + garminWhy
+                next += "Open the official 'X-LAB Bikes' app: if it also shows 0 W while riding, the meter needs a zero-offset calibration from that app or a warranty check with XDS/Branta."
+                next += "If X-LAB Bikes shows real watts, run this test again — the difference would mean the sensor needs that app's activation first."
+            }
+            cadenceOk -> {
+                outcome = Outcome.INCONCLUSIVE
+                summary = "Cadence is confirmed: the sensor measured your pedaling (${pedal.typicalCadence} rpm" + (if (pedal.backwardsSamples > pedal.cadenceSamples / 2) ", pedaled backwards" else "") + "). " +
+                    "Power reads 0 W when the cranks turn without load, which is normal for every power meter, so power is not yet verified. " + garminWhy
+                next += "Run again and accept the 60-second ride test (pedal FORWARDS, under real load) to verify power."
             }
             pedalResult.total > 0 -> {
                 outcome = Outcome.INCONCLUSIVE
-                summary = "The sensor sent ${pedalResult.total} messages, but they looked the same whether you pedaled or not, so they may be status messages rather than measurements."
-                next += "Run the test again and pedal harder and faster (90+ rpm) during the pedaling phase."
-                next += "Check whether the official 'X-LAB Bikes' app shows live power."
+                summary = "The sensor sent ${pedalResult.total} messages, but none contained a cadence reading while you pedaled."
+                next += "Run the test again and pedal forwards, faster (90+ rpm), for the whole pedaling phase."
             }
             else -> {
                 outcome = Outcome.NEEDS_ATTENTION
-                summary = "The phone connected, read the battery" + (battery?.let { " ($it %)" } ?: "") + " and subscribed to every channel the sensor offers, but the sensor sent nothing while you pedaled — even after the safe fixes. " +
-                    "Its radio works; its measuring side is silent. Either it needs the manufacturer's own app to activate it, or the sensor electronics are faulty."
-                next += "Install the official 'X-LAB Bikes' app (Google Play) and check for live power or an activation/firmware prompt. If that app shows power, the sensor is fine and only the private protocol is the obstacle."
-                next += "If the official app also shows nothing, contact XDS/Branta support — this is a hardware or firmware fault that no phone app can repair."
+                summary = "The phone connected, read the battery" + (battery?.let { " ($it %)" } ?: "") + " and subscribed to every channel, but the sensor sent nothing while you pedaled — even after the safe fixes. Its radio works; its measuring side is silent."
+                next += "Install the official 'X-LAB Bikes' app and check for live power or an activation prompt."
+                next += "If that app also shows nothing, contact XDS/Branta support — this is a hardware or firmware fault no phone app can repair."
             }
         }
-        if (outcome != Outcome.WORKING && outcome != Outcome.FIXED && !snapF.hasCyclingPower) {
-            tested += "Why the Garmin cannot connect: the sensor does not offer the standard Bluetooth cycling-power service and has no ANT+ transmitter"
-        }
-        step(8, "ok", outcome.name)
-        val report = ReportBuilder.build(snapF, scanner.devices.value.values, GuidedTestState(TestPhase.DONE, 0, stillResult, pedalResult, "auto: $outcome"), log)
+        step(9, "ok", outcome.name)
+        val report = ReportBuilder.build(snapF, scanner.devices.value.values, GuidedTestState(TestPhase.DONE, 0, stillResult, pedalResult, "auto: $outcome; cadence=${pedal.typicalCadence} backwards=${pedal.backwardsSamples}/${pedal.cadenceSamples}; ride=${ride?.let { "avg ${it.avgPower} W max ${it.maxPower} W n=${it.powerSamples}" } ?: "not run"}"), log)
         finish(outcome, summary, tested, fixed, next, report)
+    }
+
+    /** Decoded XDS readings (0x2A63 under 0x1828) logged after [sinceSeq]. */
+    private fun xdsSamples(sinceSeq: Long): List<CandidateMetrics> =
+        log.entries.value.filter { it.seq > sinceSeq && it.type == EventType.NOTIFY && it.uuid == Uuids.CP_MEASUREMENT.toString() }
+            .mapNotNull { e -> Parsers.parseXdsCandidate(e.hex.split(" ").filter { it.isNotEmpty() }.map { it.toInt(16).toByte() }.toByteArray()) }
+
+    data class PedalStats(val cadenceSamples: Int, val backwardsSamples: Int, val typicalCadence: Int, val powerSamples: Int, val avgPower: Int, val maxPower: Int)
+
+    /** Counts down while showing live cadence/power and correcting the pedaling direction on screen. */
+    private suspend fun pedalPhase(sinceSeq: Long, seconds: Int, instruction: String): PedalStats {
+        var backwardsStreak = 0
+        for (s in seconds downTo 1) {
+            val latest = gatt.snapshot.value.candidate
+            val live = latest?.takeIf { it.rotating }
+            backwardsStreak = if (live?.backwards == true) backwardsStreak + 1 else 0
+            val text = if (backwardsStreak >= 2) "YOU ARE PEDALING BACKWARDS — PEDAL FORWARDS" else instruction
+            _state.update { it.copy(countdown = s, instruction = text, liveCadence = live?.cadenceRpm, livePower = live?.totalPowerW, liveBackwards = live?.backwards == true) }
+            delay(1000)
+        }
+        _state.update { it.copy(countdown = 0, instruction = "", liveCadence = null, livePower = null, liveBackwards = false) }
+        val samples = xdsSamples(sinceSeq)
+        val rot = samples.filter { it.cadenceRpm in 15..250 }
+        val pw = samples.filter { it.rotating && !it.backwards && it.totalPowerW >= 20 }
+        val typical = if (rot.isEmpty()) 0 else rot.map { it.cadenceRpm }.sorted()[rot.size / 2]
+        return PedalStats(
+            cadenceSamples = rot.size,
+            backwardsSamples = rot.count { it.backwards },
+            typicalCadence = typical,
+            powerSamples = pw.size,
+            avgPower = if (pw.isEmpty()) 0 else pw.map { it.totalPowerW }.average().toInt(),
+            maxPower = pw.maxOfOrNull { it.totalPowerW } ?: 0,
+        )
     }
 
     private fun finish(outcome: Outcome, summary: String, tested: List<String>, fixed: List<String>, next: List<String>, report: String?) {

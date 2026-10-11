@@ -63,8 +63,8 @@ fun HomeScreen(vm: DoctorViewModel) {
                 Spacer(Modifier.height(12.dp))
                 Text(req.risks, fontSize = 15.sp, color = Amber)
             } },
-            confirmButton = { Button(onClick = { vm.auto.answerApproval(true) }) { Text("YES, TRY IT", fontSize = 16.sp) } },
-            dismissButton = { TextButton(onClick = { vm.auto.answerApproval(false) }) { Text("NO, SKIP", fontSize = 16.sp) } },
+            confirmButton = { Button(onClick = { vm.auto.answerApproval(true) }) { Text(req.yesLabel, fontSize = 16.sp) } },
+            dismissButton = { TextButton(onClick = { vm.auto.answerApproval(false) }) { Text(req.noLabel, fontSize = 16.sp) } },
         )
     }
 
@@ -86,7 +86,7 @@ fun HomeScreen(vm: DoctorViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = Blue, contentColor = Color(0xFF042026)),
                 ) { Text("DIAGNOSE & FIX\nMY POWER METER", fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 30.sp) }
                 Spacer(Modifier.height(16.dp))
-                Text("Takes about 3 minutes. Have the bike next to you with the pedals free to turn. The app will tell you when to pedal.", fontSize = 16.sp)
+                Text("About 3 minutes, plus an optional 60-second ride to verify power. Have the bike next to you with the pedals free to turn. The app tells you exactly when to keep still, pedal and ride.", fontSize = 16.sp)
                 Spacer(Modifier.height(24.dp))
                 OutlinedButton(onClick = { showLive = true }, Modifier.fillMaxWidth().height(56.dp)) { Text("Show live watts & cadence on this phone", fontSize = 16.sp) }
                 Spacer(Modifier.height(12.dp))
@@ -101,10 +101,14 @@ private fun RunningPanel(a: AutoState, onCancel: () -> Unit) {
     LinearProgressIndicator(progress = { a.progress }, modifier = Modifier.fillMaxWidth().height(10.dp))
     Spacer(Modifier.height(16.dp))
     if (a.instruction.isNotEmpty()) {
-        Box(Modifier.fillMaxWidth().background(if (a.instruction.startsWith("PEDAL")) Green else Amber, RoundedCornerShape(16.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().background(if (a.instruction.startsWith("YOU ARE")) Red else if (a.instruction.startsWith("PEDAL") || a.instruction.startsWith("RIDE")) Green else Amber, RoundedCornerShape(16.dp)).padding(20.dp), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(a.instruction, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF042026), textAlign = TextAlign.Center)
                 if (a.countdown > 0) Text("${a.countdown}", fontSize = 56.sp, fontWeight = FontWeight.Bold, color = Color(0xFF042026))
+                if (a.liveCadence != null || a.livePower != null) {
+                    Text("${a.liveCadence ?: 0} rpm${if (a.liveBackwards) " (backwards)" else ""}   ·   ${a.livePower ?: 0} W", fontSize = 22.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF042026))
+                    Text("live from the sensor", fontSize = 12.sp, color = Color(0xFF042026))
+                }
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -195,9 +199,9 @@ private fun LiveScreen(vm: DoctorViewModel, onBack: () -> Unit) {
                 Big(m.derivedCadenceRpm?.let { "%.0f".format(it) } ?: "—", "RPM (verified)")
             }
             c != null -> {
-                Big("${c.totalPowerW}", "WATTS (estimated — XDS private format)")
-                Big("${c.cadenceRpm}", "RPM (estimated)")
-                Text("These numbers use a decoding found by other XDS owners, not the manufacturer. Treat them as an indication, not a measurement.", fontSize = 13.sp, color = Amber)
+                Big("${c.totalPowerW}", "WATTS (XDS format — reads 0 unless the pedals are under load)")
+                Big("${c.cadenceRpm}", if (c.backwards) "RPM — PEDALING BACKWARDS" else "RPM")
+                Text("Decoded from the sensor's own data format, checked against two open-source XDS decoders and this phone's recorded packets.", fontSize = 13.sp, color = Color(0xFF9FB8C2))
             }
             s.state == ConnectionState.READY -> {
                 Big("—", "WATTS"); Big("—", "RPM")

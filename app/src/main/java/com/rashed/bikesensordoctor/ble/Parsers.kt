@@ -23,11 +23,16 @@ data class CandidateMetrics(
     val totalPowerW: Int,
     val leftPowerW: Int,
     val rightPowerW: Int,
-    val cadenceRpm: Int,
+    val cadenceSignedRpm: Int,   // raw signed value; negative = reverse pedaling per 66ccff231 README ("负值（反踩）")
     val crankAngleDeg: Int,
     val errorCode: Int,
     val source: String,
-)
+) {
+    /** Cadence magnitude. Both open-source decoders clamp negatives to 0; we keep the magnitude and the direction separately. */
+    val cadenceRpm: Int get() = kotlin.math.abs(cadenceSignedRpm)
+    val backwards: Boolean get() = cadenceSignedRpm < 0
+    val rotating: Boolean get() = cadenceSignedRpm != 0
+}
 
 object Parsers {
     fun hex(bytes: ByteArray?): String =
@@ -111,8 +116,11 @@ object Parsers {
     }
 
     /**
-     * Community-documented XDS payload (11 bytes, little-endian) seen on characteristic 0x2A63 under
-     * service 0x1828. Source: github.com/DuoDuoJuZi/xds_forwarding (xds_protocol.c). Unverified by manufacturer.
+     * XDS payload (11 bytes, little-endian) on characteristic 0x2A63 under service 0x1828.
+     * Layout confirmed identical in two independent open-source decoders
+     * (github.com/DuoDuoJuZi/xds_forwarding xds_protocol.c; github.com/66ccff231/ad350-nrf52840-bridge README,
+     * whose sample packets show total = left + right) and matched against Rashed's own log on 2026-10-11:
+     * idle = all zeros with a fixed angle; rotation = cadence ±rpm with the angle advancing every packet (1 Hz).
      */
     fun parseXdsCandidate(b: ByteArray): CandidateMetrics? {
         if (b.size < 11) return null
@@ -120,10 +128,10 @@ object Parsers {
             totalPowerW = u16(b, 0),
             leftPowerW = s16(b, 2),
             rightPowerW = s16(b, 4),
-            cadenceRpm = s16(b, 6).coerceAtLeast(0),
+            cadenceSignedRpm = s16(b, 6),
             crankAngleDeg = u16(b, 8),
             errorCode = u8(b, 10),
-            source = "Community layout (xds_forwarding) — UNVERIFIED",
+            source = "XDS 0x1828/0x2A63 layout (two open-source decoders + this phone's log)",
         )
     }
 
