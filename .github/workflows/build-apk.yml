@@ -1,0 +1,36 @@
+# Builds the debug APK on GitHub's servers and publishes it as a Release, so the APK can be downloaded
+# straight onto the phone from the repository's Releases page. No Android Studio needed.
+name: Build APK
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Unit tests (parsers)
+        run: ./gradlew --no-daemon testDebugUnitTest
+      - name: Build debug APK
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk BikeSensorDoctor-build${{ github.run_number }}.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BikeSensorDoctor-apk
+          path: BikeSensorDoctor-build*.apk
+      - name: Publish release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Bike Sensor Doctor build ${{ github.run_number }}
+          body: "Debug APK for Nokia 5.3 / Android 12. Open this page on the phone, tap the .apk file below, then Install."
+          files: BikeSensorDoctor-build*.apk
