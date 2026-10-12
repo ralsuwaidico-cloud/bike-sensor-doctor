@@ -26,15 +26,15 @@ jobs:
       - name: Build debug APK
         run: ./gradlew --no-daemon assembleDebug
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk BikeSensorDoctor-build${{ github.run_number }}.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk BikeComputer-build${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: BikeSensorDoctor-apk
-          path: BikeSensorDoctor-build*.apk
+          name: BikeComputer-apk
+          path: BikeComputer-build*.apk
       - name: Publish release with APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Bike Sensor Doctor build ${{ github.run_number }}
+          name: Bike Computer build ${{ github.run_number }}
           body: "Debug APK for Nokia 5.3 / Android 12. Open this page on the phone, tap the .apk file below, then Install."
-          files: BikeSensorDoctor-build*.apk
+          files: BikeComputer-build*.apk

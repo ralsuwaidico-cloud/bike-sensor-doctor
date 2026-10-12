@@ -51,6 +51,8 @@ data class DeviceSnapshot(
     val mtu: Int = 23,
     val metrics: CyclingMetrics? = null,
     val candidate: CandidateMetrics? = null,
+    val lastPacketMs: Long? = null,
+    val rejectedPackets: Int = 0,
     val lastError: String? = null,
     val connectAttempts: Int = 0,
     val disconnects: Int = 0,
@@ -71,6 +73,11 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
 
     private val _snapshot = MutableStateFlow(DeviceSnapshot())
     val snapshot: StateFlow<DeviceSnapshot> = _snapshot
+
+    /** Every decoded XDS sample (portable core type), with wall-clock ms. Set by the ride layer. */
+    var onXdsSample: ((com.rashed.bikesensordoctor.core.XdsSample, Long) -> Unit)? = null
+
+    val isAutoReconnecting: Boolean get() = autoReconnect && !userInitiatedDisconnect && _snapshot.value.address.isNotEmpty()
 
     private val main = Handler(Looper.getMainLooper())
     private var gatt: BluetoothGatt? = null
@@ -453,6 +460,10 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
             }
             uuid == Uuids.CP_MEASUREMENT && serviceUuid == Uuids.MESH_PROXY -> {
                 // Not a SIG-compliant placement; try the community-documented XDS layout, labelled as candidate.
+                val now = System.currentTimeMillis()
+                val core = com.rashed.bikesensordoctor.core.XdsDecoder.decode(value)
+                if (core == null || !core.plausible) _snapshot.update { it.copy(rejectedPackets = it.rejectedPackets + 1, lastPacketMs = now) }
+                else { _snapshot.update { it.copy(lastPacketMs = now) }; onXdsSample?.invoke(core, now) }
                 Parsers.parseXdsCandidate(value)?.let { c ->
                     _snapshot.update { it.copy(candidate = c) }
                     note += " XDS power=${c.totalPowerW}W cadence=${c.cadenceSignedRpm} angle=${c.crankAngleDeg}"

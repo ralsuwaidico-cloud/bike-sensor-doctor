@@ -49,9 +49,8 @@ private val Red = Color(0xFFEF5350)
 private val Blue = Color(0xFF4DD0E1)
 
 @Composable
-fun HomeScreen(vm: DoctorViewModel) {
+fun DiagnoseScreen(vm: DoctorViewModel, onBack: () -> Unit) {
     val a by vm.auto.state.collectAsStateWithLifecycle()
-    var showLive by remember { mutableStateOf(false) }
     var showTech by remember { mutableStateOf(false) }
 
     a.approval?.let { req ->
@@ -68,27 +67,25 @@ fun HomeScreen(vm: DoctorViewModel) {
         )
     }
 
-    if (showLive) { LiveScreen(vm) { showLive = false }; return }
-
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
-        Text("Bike Sensor Doctor", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Diagnose & Repair", fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text("For the XDS / Branta power meter", fontSize = 15.sp, color = Color(0xFF9FB8C2))
         Spacer(Modifier.height(20.dp))
 
         when {
-            a.running -> RunningPanel(a) { vm.auto.cancel() }
-            a.outcome != null -> ResultPanel(a, onAgain = { vm.startAuto() }, onLive = { showLive = true }, onTech = { showTech = !showTech }, showTech = showTech, vm = vm)
+            a.running -> RunningPanel(a) { vm.endAuto() }
+            a.outcome != null -> ResultPanel(a, onAgain = { vm.startAuto() }, onLive = { vm.endAuto(); onBack() }, onTech = { showTech = !showTech }, showTech = showTech, vm = vm)
             else -> {
                 Button(
                     onClick = { vm.startAuto() },
                     modifier = Modifier.fillMaxWidth().height(120.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Blue, contentColor = Color(0xFF042026)),
-                ) { Text("DIAGNOSE & FIX\nMY POWER METER", fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 30.sp) }
+                ) { Text("DIAGNOSE & REPAIR\nMY POWER METER", fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 30.sp) }
                 Spacer(Modifier.height(16.dp))
-                Text("About 3 minutes, plus an optional 60-second ride to verify power. Have the bike next to you with the pedals free to turn. The app tells you exactly when to keep still, pedal and ride.", fontSize = 16.sp)
+                Text("About 3 minutes, plus an optional 60-second ride to verify power. The dashboard's sensor link is paused while this runs. The app tells you exactly when to keep still, pedal and ride.", fontSize = 16.sp)
                 Spacer(Modifier.height(24.dp))
-                OutlinedButton(onClick = { showLive = true }, Modifier.fillMaxWidth().height(56.dp)) { Text("Show live watts & cadence on this phone", fontSize = 16.sp) }
+                OutlinedButton(onClick = { vm.endAuto(); onBack() }, Modifier.fillMaxWidth().height(52.dp)) { Text("Back to dashboard", fontSize = 16.sp) }
                 Spacer(Modifier.height(12.dp))
                 Text("What this app will never do: change calibration, reset the sensor, update firmware, or send unknown commands. Anything that changes a setting asks you first.", fontSize = 13.sp, color = Color(0xFF9FB8C2))
             }
@@ -150,7 +147,7 @@ private fun ResultPanel(a: AutoState, onAgain: () -> Unit, onLive: () -> Unit, o
     Spacer(Modifier.height(20.dp))
     Button(onClick = onAgain, Modifier.fillMaxWidth().height(64.dp), shape = RoundedCornerShape(16.dp)) { Text("RUN AGAIN", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
     Spacer(Modifier.height(10.dp))
-    OutlinedButton(onClick = onLive, Modifier.fillMaxWidth().height(52.dp)) { Text("Show live watts & cadence", fontSize = 16.sp) }
+    OutlinedButton(onClick = onLive, Modifier.fillMaxWidth().height(52.dp)) { Text("Back to dashboard", fontSize = 16.sp) }
     Spacer(Modifier.height(10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         TextButton(onClick = onTech) { Text(if (showTech) "Hide technical details" else "Technical details") }
@@ -160,64 +157,4 @@ private fun ResultPanel(a: AutoState, onAgain: () -> Unit, onLive: () -> Unit, o
     if (showTech) Card(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(a.technicalReport, Modifier.padding(10.dp), fontFamily = FontFamily.Monospace, fontSize = 10.sp)
     }
-}
-
-/** Shows whatever live numbers the phone can decode. Standard-service values are labelled verified; XDS private-format values are labelled estimated. */
-@Composable
-private fun LiveScreen(vm: DoctorViewModel, onBack: () -> Unit) {
-    val s by vm.gatt.snapshot.collectAsStateWithLifecycle()
-    val counts by vm.log.notifyCounts.collectAsStateWithLifecycle()
-    val scanning by vm.scanner.scanning.collectAsStateWithLifecycle()
-    val devices by vm.scanner.devices.collectAsStateWithLifecycle()
-    Column(Modifier.fillMaxSize().padding(20.dp)) {
-        Text("Live watts & cadence", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(12.dp))
-        val stateText = when (s.state) {
-            ConnectionState.READY -> "Connected to ${s.name.ifEmpty { s.address }}"
-            ConnectionState.DISCONNECTED -> if (scanning) "Searching for the power meter…" else "Not connected"
-            else -> "Connecting…"
-        }
-        Text(stateText, fontSize = 16.sp, color = Color(0xFF9FB8C2))
-        if (s.state == ConnectionState.DISCONNECTED && !scanning) {
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = {
-                vm.scanner.clear(); vm.scanner.start()
-            }, Modifier.fillMaxWidth().height(56.dp)) { Text("CONNECT", fontSize = 18.sp) }
-        }
-        // auto-connect once the known meter (or any XDS-like device) appears during a scan
-        LaunchedEffect(devices, scanning, s.state) {
-            if (scanning && s.state == ConnectionState.DISCONNECTED) {
-                val target = devices[com.rashed.bikesensordoctor.diag.AutoDiagnostic.TARGET_MAC] ?: devices.values.firstOrNull { it.looksLikeXds }
-                if (target != null) { vm.scanner.stop(); vm.gatt.connect(target.address, target.name, reconnect = true) }
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-        val m = s.metrics; val c = s.candidate
-        when {
-            m != null -> {
-                Big("${m.instantaneousPowerW ?: "—"}", "WATTS (verified, standard Bluetooth)")
-                Big(m.derivedCadenceRpm?.let { "%.0f".format(it) } ?: "—", "RPM (verified)")
-            }
-            c != null -> {
-                Big("${c.totalPowerW}", "WATTS (XDS format — reads 0 unless the pedals are under load)")
-                Big("${c.cadenceRpm}", if (c.backwards) "RPM — PEDALING BACKWARDS" else "RPM")
-                Text("Decoded from the sensor's own data format, checked against two open-source XDS decoders and this phone's recorded packets.", fontSize = 13.sp, color = Color(0xFF9FB8C2))
-            }
-            s.state == ConnectionState.READY -> {
-                Big("—", "WATTS"); Big("—", "RPM")
-                Text(if (counts.isEmpty()) "Connected, but the sensor has sent no data yet. Pedal for 10 seconds." else "The sensor is sending ${counts.values.sum()} messages that this app cannot decode into watts.", fontSize = 15.sp, color = Amber)
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-        Text("Battery: ${s.batteryPct?.let { "$it %" } ?: "—"}   Signal: ${s.rssi?.let { "$it dBm" } ?: "—"}   Messages: ${counts.values.sum()}", fontSize = 14.sp, color = Color(0xFF9FB8C2))
-        Spacer(Modifier.height(24.dp))
-        OutlinedButton(onClick = { vm.scanner.stop(); vm.gatt.disconnect(); onBack() }, Modifier.fillMaxWidth().height(52.dp)) { Text("Back", fontSize = 16.sp) }
-    }
-}
-
-@Composable
-private fun Big(value: String, label: String) {
-    Text(value, fontSize = 64.sp, fontWeight = FontWeight.Bold)
-    Text(label, fontSize = 14.sp, color = Color(0xFF9FB8C2))
-    Spacer(Modifier.height(12.dp))
 }

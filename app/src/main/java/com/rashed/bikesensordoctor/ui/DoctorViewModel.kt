@@ -1,58 +1,52 @@
 package com.rashed.bikesensordoctor.ui
 
 import android.app.Application
-import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.rashed.bikesensordoctor.ble.BleScanner
-import com.rashed.bikesensordoctor.ble.GattManager
+import com.rashed.bikesensordoctor.BikeApp
 import com.rashed.bikesensordoctor.diag.AutoDiagnostic
-import com.rashed.bikesensordoctor.log.EventLog
-import com.rashed.bikesensordoctor.log.EventType
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import com.rashed.bikesensordoctor.ride.RideEngine
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Thin ViewModel over the app-wide RideEngine. The Diagnose & Repair flow (AutoDiagnostic) reuses the engine's
+ * scanner/gatt/log, so the sensor supervisor is paused while it runs and restarted afterwards.
+ */
 class DoctorViewModel(app: Application) : AndroidViewModel(app) {
-    private val adapter = (app.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+    val engine: RideEngine = BikeApp.engine(app)
+    val log get() = engine.log
+    val scanner get() = engine.scanner
+    val gatt get() = engine.gatt
 
-    val log = EventLog()
-    val scanner = BleScanner(adapter, log)
-    val gatt = GattManager(app, adapter, log)
-    val auto = AutoDiagnostic(scanner, gatt, log, viewModelScope, ::saveReport)
+    val auto = AutoDiagnostic(engine.scanner, engine.gatt, engine.log, viewModelScope, ::saveReport)
 
-    private var rssiJob: Job? = null
+    fun bluetoothOn(): Boolean = engine.bluetoothOn()
 
-    init {
-        log.add(EventType.INFO, note = "Bike Sensor Doctor started")
-        rssiJob = viewModelScope.launch { while (isActive) { delay(3000); gatt.readRssi() } }
+    fun startAuto() {
+        engine.sensor.stop()
+        auto.start(bluetoothOn())
     }
 
-    fun bluetoothOn(): Boolean = adapter?.isEnabled == true
+    fun endAuto() {
+        auto.cancel()
+        engine.connect()
+    }
 
-    fun startAuto() = auto.start(bluetoothOn())
-
-    /** Saves the technical report silently into the app's private files; returns the path. */
     private fun saveReport(text: String): String {
         val dir = File(getApplication<Application>().filesDir, "reports").apply { mkdirs() }
         val f = File(dir, "report-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".txt")
         f.writeText(text)
-        // also save the raw JSON log next to it
         File(dir, f.nameWithoutExtension + "-log.json").writeText(log.toJson())
-        // keep only the last 20 reports
         dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(40)?.forEach { it.delete() }
         return f.absolutePath
     }
 
-    /** Opens the share sheet with the latest report and its JSON log (only used for troubleshooting). */
     fun shareLatestReport(context: Context) {
         val dir = File(getApplication<Application>().filesDir, "reports")
         val files = dir.listFiles()?.sortedByDescending { it.lastModified() }?.take(2) ?: emptyList()
@@ -61,15 +55,17 @@ class DoctorViewModel(app: Application) : AndroidViewModel(app) {
         val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
             type = "text/*"
             putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
-            putExtra(Intent.EXTRA_SUBJECT, "Bike Sensor Doctor report")
+            putExtra(Intent.EXTRA_SUBJECT, "Bike Computer diagnostic report")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(intent, "Send report").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    override fun onCleared() {
-        rssiJob?.cancel()
-        scanner.stop()
-        gatt.disconnect(silent = true)
+    fun shareRideCsv(context: Context, startedAtMs: Long) {
+        val f = engine.history.csvFile(startedAtMs)
+        if (!f.exists()) return
+        val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", f)
+        val i = Intent(Intent.ACTION_SEND).apply { type = "text/csv"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        context.startActivity(Intent.createChooser(i, "Share ride").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

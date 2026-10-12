@@ -51,3 +51,17 @@ solely from a button that opens a confirmation dialog.
 ## To fill in after the first run on the Nokia 5.3
 
 Copy `docs/DIAGNOSTIC_REPORT_TEMPLATE.md`, paste the app-generated report, and attach the JSON export.
+
+## v0.3.0 — Bike Computer (2026-10-12)
+
+Verified on hardware (2026-10-11 session, 48 real 0x2A63 packets): connection, service table, battery read, 1 Hz
+streaming without any start command, cadence magnitude (~80–88 rpm), crank angle advancing, power 0 under no load.
+**Power under load: NOT yet verified** — first ride with v0.3 will show it.
+
+Automated tests (JUnit, pure JVM — run in CI and also executed locally by the review agent, 17/17 passing):
+- Decoder: idle packets, negative cadence (real fixture), forward cadence (community samples), malformed/implausible.
+- RideStats: real-session replay, 3-s window + staleness, pause/resume/finish timing, implausible rejection, coasting.
+- HealthClassifier: permission, Bluetooth off, searching, reconnecting, silent link (BT), decode error (software), sensor fault.
+
+Not yet tested on hardware (new in v0.3): dashboard rendering, auto-reconnect supervisor, foreground service with screen
+off, ride history save/share, settings. First things to check on the Nokia are listed in the chat delivery notes.
