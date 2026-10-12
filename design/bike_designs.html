@@ -369,6 +369,86 @@ function apex(st){
   </svg>`;
 }
 
+/* ============ DESIGN 7 — AI SCIENTIFIC COACH (combination of 4 + 5) ============ */
+function aiSci(st){
+  const W=300,H=720;const pz=powZone(st.power),hz=hrZone(st.hr);
+  // --- status of a value vs its target: below / inside / above ---
+  function tstat(kind){
+    let s;
+    if(kind==="pow") s = pz<2?"below":pz>2?"above":"inside";
+    else if(kind==="hr") s = hz<2?"below":hz>2?"above":"inside";
+    else s = st.cad<85?"below":st.cad>95?"above":"inside";
+    if(s==="below") return {t:kind==="cad"?"BELOW RANGE":"BELOW TARGET",c:C.cyan,ar:"▲"};
+    if(s==="above") return {t:kind==="cad"?"ABOVE RANGE":"ABOVE TARGET",c:C.amber,ar:"▼"};
+    return {t:"ON TARGET",c:C.green,ar:"●"};
+  }
+  // --- Design-4-style circular gauge: track + zone-coloured progress + target line + big number + status ---
+  function gauge(cx,cy,r,sw,val,maxv,col,targetFrac,zoneBounds,sub,unit,big,stat){
+    const f=Math.min(1,val/maxv),s=135,sweep=270;
+    let g=`<path d="${arcPath(cx,cy,r,s,s+sweep)}" fill="none" stroke="${C.track}" stroke-width="${sw}"/>`;
+    g+=`<path d="${arcPath(cx,cy,r,s,s+sweep*f)}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"/>`;
+    // zone boundary ticks on the ring (power/HR: show progression through zones)
+    (zoneBounds||[]).forEach(zf=>{if(zf<=0||zf>=1)return;const a=s+sweep*zf;const[x1,y1]=pol(cx,cy,r-sw/2,a),[x2,y2]=pol(cx,cy,r+sw/2,a);g+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#05080b" stroke-width="2"/>`;});
+    // target line (same style as AI Coach First: white radial tick + TGT label)
+    const ta=s+sweep*targetFrac,[tx1,ty1]=pol(cx,cy,r-sw/2-4,ta),[tx2,ty2]=pol(cx,cy,r+sw/2+4,ta);
+    g+=`<line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="${C.fg}" stroke-width="2.5"/>`;
+    const[lx,ly]=pol(cx,cy,r+sw/2+11,ta);g+=`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="${C.mut}" font-size="8" text-anchor="middle" font-family="IBM Plex Mono">TGT</text>`;
+    g+=`<text x="${cx}" y="${cy+(big?10:6)}" text-anchor="middle" fill="${C.fg}" font-size="${big?44:26}" font-weight="500" font-family="Rajdhani">${val}</text>`;
+    g+=`<text x="${cx}" y="${cy+(big?30:24)}" text-anchor="middle" fill="${C.mut}" font-size="${big?11:9}" letter-spacing="1" font-family="IBM Plex Mono">${unit}</text>`;
+    if(sub) g+=`<text x="${cx}" y="${cy-(big?26:18)}" text-anchor="middle" fill="${col}" font-size="${big?11:9}" font-family="IBM Plex Mono">${sub}</text>`;
+    // below/inside/above chip under gauge
+    g+=`<text x="${cx}" y="${cy+r+16}" text-anchor="middle" fill="${stat.c}" font-size="${big?11:9}" font-weight="700" font-family="IBM Plex Mono">${stat.ar} ${stat.t}</text>`;
+    return g;
+  }
+  // within-zone percent for the sub-label
+  const pLo=pz===1?0:PB[pz-2],pPct=Math.round(Math.max(0,Math.min(1,((st.power/FTP)-pLo)/((PB[pz-1]-pLo)||1)))*100);
+  const hLo=HRB[hz-1],hPct=Math.round(Math.max(0,Math.min(1,((st.hr/MAXHR)-hLo)/((HRB[hz]-hLo)||1)))*100);
+  const powBounds=PB.map(b=>b*FTP/(FTP*1.5));
+  const hrBounds=HRB.slice(1,5);
+  // Design-5 horizontal zone band (reused verbatim for the preserved lower section)
+  function band(x,y,w,segs,curFrac,colors,tgt){
+    let g=`<rect x="${x}" y="${y}" width="${w}" height="18" rx="3" fill="#0a1015"/>`;const sw=w/segs.length;
+    segs.forEach((lab,i)=>{g+=`<rect x="${x+i*sw}" y="${y}" width="${sw-2}" height="18" fill="${colors[i]}" opacity="${0.25+0.1*i}"/>`;
+      [0,.5,1].forEach(t=>g+=`<line x1="${x+i*sw+sw*t}" y1="${y+18}" x2="${x+i*sw+sw*t}" y2="${y+22}" stroke="${C.faint}" stroke-width="1"/>`);
+      g+=`<text x="${x+i*sw+sw/2}" y="${y+13}" text-anchor="middle" font-size="9" fill="${C.fg}" font-family="IBM Plex Mono">${lab}</text>`;});
+    if(tgt!=null)g+=`<rect x="${x+tgt*w-1}" y="${y-3}" width="2" height="24" fill="${C.cyan}"/>`;
+    const mx=x+Math.min(1,curFrac)*w;g+=`<path d="M${mx-5} ${y-5} L${mx+5} ${y-5} L${mx} ${y+1} Z" fill="${C.fg}"/>`;return g;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="IBM Plex Mono, monospace">
+  <rect width="${W}" height="${H}" fill="#060a0d"/>
+  ${Array.from({length:11},(_,i)=>`<line x1="0" y1="${60+i*60}" x2="${W}" y2="${60+i*60}" stroke="#0e161b" stroke-width="1"/>`).join("")}
+  ${btPill(14,18)}<text x="${W-14}" y="22" text-anchor="end" fill="${C.mut}" font-size="11">T ${RIDE.time}</text>
+  <text x="14" y="48" fill="${C.cyan}" font-size="11" letter-spacing="2">AI SCIENTIFIC COACH · LIVE</text>
+  <!-- (from Design 4) three circular gauges with zone progression + target line + status -->
+  ${gauge(150,118,56,13,st.power,FTP*1.5,powZoneColor(pz),0.45,powBounds,"Z"+pz+" · "+pPct+"%","WATTS",true,tstat("pow"))}
+  ${gauge(60,210,38,9,st.cad,130,C.violet,85/130,null,"tgt 85–95","RPM",false,tstat("cad"))}
+  ${gauge(240,210,38,9,st.hr,MAXHR,zoneColor(hz),0.65,hrBounds,"Z"+hz+" · "+hPct+"%","BPM",false,tstat("hr"))}
+  <!-- cadence target range band on its own gauge track -->
+  <path d="${arcPath(60,210,38,135+270*(85/130),135+270*(95/130))}" fill="none" stroke="${C.green}" stroke-width="3" opacity=".9"/>
+  <!-- (from Design 4) enlarged, dominant, colour-coded coaching box -->
+  <rect x="14" y="262" width="272" height="78" rx="14" fill="${st.col}"/>
+  ${st.dir!==0?`<text x="34" y="312" fill="#05121a" font-size="40" font-weight="800" font-family="Archivo">${st.dir>0?"▲":"▼"}</text>`:`<circle cx="34" cy="300" r="11" fill="#05121a"/>`}
+  <text x="155" y="302" text-anchor="middle" fill="#05121a" font-size="26" font-weight="800" font-family="Archivo">${st.cue}</text>
+  <text x="155" y="324" text-anchor="middle" fill="#05121a" font-size="12" opacity=".82" font-family="Inter">${st.sub} · auto from sensors + target</text>
+  <!-- ============ FROM HERE DOWN: preserved exactly as Design 5 ============ -->
+  <line x1="14" y1="360" x2="${W-14}" y2="360" stroke="${C.line}"/>
+  <text x="14" y="382" fill="${C.mut}" font-size="10">POWER ZONES (target ▲ = Z2)</text>
+  ${band(14,390,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],st.power/(FTP*1.5),[C.grey,C.cyan,C.green,C.lime,C.amber,C.orange,C.red],0.65*0.66)}
+  <text x="14" y="440" fill="${C.mut}" font-size="10">HEART-RATE ZONES (begin · mid · end ticks)</text>
+  ${band(14,448,272,["Z1","Z2","Z3","Z4","Z5"],st.hr/MAXHR,[C.faint,C.cyan,C.green,C.amber,C.red],0.66)}
+  <text x="14" y="500" fill="${C.mut}" font-size="10">POWER TREND · last 5 min</text>
+  <rect x="14" y="508" width="272" height="150" fill="#080e12" stroke="${C.line}"/>
+  <line x1="14" y1="568" x2="286" y2="568" stroke="#13202a" stroke-dasharray="3 3"/><text x="288" y="571" fill="${C.faint}" font-size="8">FTP</text>
+  ${sparkline(22,520,256,130,C.cyan,true)}
+  <g font-family="Rajdhani">
+    <text x="14" y="696" fill="${C.fg}" font-size="24">${RIDE.dist}</text><text x="14" y="712" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">DISTANCE</text>
+    <text x="150" y="696" fill="${C.fg}" font-size="24">${st.power+6} W</text><text x="150" y="712" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG</text>
+    <text x="230" y="696" fill="${C.fg}" font-size="24">0.9</text><text x="230" y="712" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
+  </g>
+  ${demoTag(210,22)}
+  </svg>`;
+}
+
 const DESIGNS=[
   {id:"garmin",no:"01",name:"Garmin Pro",fn:garmin,tag:"Clean, professional, data-first",
    pros:["Instantly familiar to anyone from a Garmin/Wahoo head unit","Segmented 7-zone power ring reads at a glance in sunlight","Big primary number, calm hierarchy — low distraction while riding"],
@@ -388,6 +468,9 @@ const DESIGNS=[
   {id:"apex",no:"06",name:"Apex",fn:apex,tag:"My synthesis of the strongest ideas",
    pros:["Garmin's segmented zone ring + a target tick (Scientific) + a bold coach ribbon (Coach First)","Zone-coloured hero number with direction arrow — effort and guidance in one view","HR 5-zone arc with begin/mid/end ticks; clean 60s power graph; balanced density"],
    cons:["More to render/animate — slightly heavier on an old phone","Combines several ideas, so it's the least 'pure' single concept"]},
+  {id:"aiSci",no:"07",name:"AI Scientific Coach",fn:aiSci,tag:"Your combination: Design 5 base + Design 4 gauges & coach box",
+   pros:["Scientific Performance kept intact from Power Zones down — bands, FTP-referenced trend, distance/3s/variability","Three AI-Coach-First circular gauges on top: big number, zone-coloured progress, white target line, below/on/above-target chip, and position within the current zone","Enlarged, colour-coded coaching box (green keep · blue faster · orange ease · purple recover) you can read at a glance"],
+   cons:["Tallest layout — a little scrolling on a short phone screen","Most elements on one screen, so spacing has to stay disciplined"]},
 ];
 
 // build gallery
