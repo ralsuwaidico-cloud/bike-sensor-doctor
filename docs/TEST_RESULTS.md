@@ -65,3 +65,28 @@ Automated tests (JUnit, pure JVM — run in CI and also executed locally by the 
 
 Not yet tested on hardware (new in v0.3): dashboard rendering, auto-reconnect supervisor, foreground service with screen
 off, ride history save/share, settings. First things to check on the Nokia are listed in the chat delivery notes.
+
+## v0.7.0 (build 21) — 2026-10-12 — P0 reliability + P1 coach v2
+
+### Simulated (JUnit, run locally and in CI on every build) — ALL PASS (66 tests)
+| ID | Test | Result |
+|---|---|---|
+| P0-3 | RideStats snapshot/restore lossless, resumes counting after restore | PASS |
+| P0-5 | SignalState FRESH / COASTING / STALE / NONE; stale never held as a value | PASS |
+| P0-6 | LinkMonitor quality %, 3 gaps with duration/reason/activity-before, open gap closed at finish | PASS |
+| P0-8 | LoadVerifier passes only on ≥10 packets ≥40 W with cadence >30; never on 0 W spinning or still cranks; ignores implausible/late packets | PASS |
+| P1-1…P1-12 | 17 shared vectors in testvectors/coach, ~1,500 asserted ticks incl. the 60-min Zone 2 session | PASS |
+| legacy | decoder, ride stats, zones, targets, BLE parsers, connection policy, health classifier | PASS |
+
+Engine defects found and fixed by the vectors before release: (1) coasting 0 W samples polluted the power rolling
+mean so the first loaded seconds read "below target" → PUSH; (2) "keep it up" fired while power passed *through*
+the target band on its way down (now needs 5 s on target).
+
+### Real-device — NOT YET PERFORMED (needs Rashed on the bike)
+| ID | What to do | Status |
+|---|---|---|
+| P0-1 | Ride ≥ 10 min with a pedaling pause; open the ride in History → Report → "Sensor link": each gap shows reason and "before it: pedaling/cranks still, under load/0 W". Send logs. | pending |
+| P0-2 | After the pause, resume pedaling: watts/cadence back within ≤ 10 s, no 20 s stalls. | pending |
+| P0-4 | Mid-ride, swipe the app away; reopen: dashboard shows "Ride restored after restart", time/avg intact, RESUME continues. | pending |
+| P0-9 | Settings → VERIFY POWER UNDER LOAD, on road/trainer: PASS with credible max watts; POWER UNVERIFIED tag disappears. | pending |
+| P1-13 | Zone 2 mode ride with strap: cues match the gauges; no contradictory cue within 10 s; warm-up gives no "push". | pending |
