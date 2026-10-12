@@ -1,5 +1,7 @@
 package com.rashed.bikesensordoctor.core
 
+import kotlin.math.pow
+
 /**
  * PORTABLE CORE — no Android imports. Ride statistics from a stream of XdsSample at ~1 Hz.
  *
@@ -16,6 +18,7 @@ class RideStats {
     companion object {
         const val WINDOW_3S_MS = 3000L
         const val WINDOW_10S_MS = 10000L
+        const val WINDOW_30S_MS = 30000L
         const val STALE_MS = 4000L
     }
 
@@ -42,6 +45,12 @@ class RideStats {
     var maxCadenceRpm = 0; private set
     var backwardsSamples = 0; private set
 
+    // Normalized Power (Coggan): 30 s rolling mean of power, raised to the 4th power, averaged, 4th root.
+    // Accumulated once per RUNNING sample after the first 30 s of data exist. VI = NP / average power.
+    private val np30 = ArrayDeque<Pair<Long, Int>>()
+    private var npSum4 = 0.0
+    private var npCount = 0L
+
     fun start(nowMs: Long) {
         if (state == State.IDLE || state == State.FINISHED) {
             reset(); startedAtMs = nowMs
@@ -63,6 +72,7 @@ class RideStats {
         state = State.IDLE; runningSinceMs = null; accumulatedMs = 0; startedAtMs = null
         window.clear(); lastSampleMs = null; last = null
         sampleCount = 0; rejectedCount = 0; powerSum = 0; maxPowerW = 0; cadenceSum = 0; cadenceCount = 0; maxCadenceRpm = 0; backwardsSamples = 0
+        np30.clear(); npSum4 = 0.0; npCount = 0
     }
 
     fun elapsedMs(nowMs: Long): Long = accumulatedMs + (runningSinceMs?.let { nowMs - it } ?: 0L)
@@ -77,6 +87,13 @@ class RideStats {
         sampleCount++
         powerSum += s.powerW
         if (s.powerW > maxPowerW) maxPowerW = s.powerW
+        // normalized-power accumulator: 30 s rolling mean^4, once the window is full
+        np30.addLast(nowMs to s.powerW)
+        while (np30.isNotEmpty() && nowMs - np30.first().first > WINDOW_30S_MS) np30.removeFirst()
+        if (nowMs - np30.first().first >= WINDOW_30S_MS - 1500) {   // window spans ~30 s (allows 1 Hz jitter)
+            val mean = np30.sumOf { it.second }.toDouble() / np30.size
+            npSum4 += mean * mean * mean * mean; npCount++
+        }
         if (s.rotating) {
             cadenceSum += s.cadenceRpm; cadenceCount++
             if (s.cadenceRpm > maxCadenceRpm) maxCadenceRpm = s.cadenceRpm
@@ -103,6 +120,15 @@ class RideStats {
 
     val avgPowerW: Int get() = if (sampleCount == 0) 0 else (powerSum.toDouble() / sampleCount + 0.5).toInt()
     val avgCadenceRpm: Int get() = if (cadenceCount == 0) 0 else (cadenceSum.toDouble() / cadenceCount + 0.5).toInt()
+
+    /** Normalized Power in W, or null until 30 s of running data exist. */
+    val normalizedPowerW: Int? get() = if (npCount == 0L) null else ((npSum4 / npCount).pow(0.25) + 0.5).toInt()
+
+    /** Variability Index = NP / average power (1.00 = perfectly steady). null until NP exists or avg is 0. */
+    val variabilityIndex: Double? get() {
+        val np = normalizedPowerW ?: return null
+        return if (avgPowerW <= 0) null else np.toDouble() / avgPowerW
+    }
 
     /** Energy in kJ = Σ(power × Δt). With ~1 Hz samples we use sample count × average as the estimate. */
     fun energyKj(nowMs: Long): Double = avgPowerW * (elapsedMs(nowMs) / 1000.0) / 1000.0

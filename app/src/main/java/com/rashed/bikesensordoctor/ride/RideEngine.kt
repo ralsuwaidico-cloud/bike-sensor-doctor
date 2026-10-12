@@ -56,8 +56,11 @@ data class Dashboard(
     val hrConnected: Boolean = false,
     val hrBatteryPct: Int? = null,
     val linkUptimeSec: Long = 0,
-    val recentPower: List<Int> = emptyList(),   // last ~60 s of 1 Hz power for the sparkline
+    val recentPower: List<Int> = emptyList(),   // last 5 min of 1 Hz power for the trend chart
     val lastSavedRide: String? = null,
+    val normalizedPowerW: Int? = null,          // Coggan NP, null until 30 s of riding
+    val variabilityIndex: Double? = null,       // NP / avg power, null until NP exists
+    val coachMode: String = "FREE",
 )
 
 /**
@@ -212,7 +215,7 @@ class RideEngine(private val app: Application) {
 
         // sparkline + zone-time while running
         if (stats.state == RideStats.State.RUNNING) {
-            recentPower.addLast(stats.livePowerW(now) ?: 0); while (recentPower.size > 60) recentPower.removeFirst()
+            recentPower.addLast(stats.livePowerW(now) ?: 0); while (recentPower.size > 300) recentPower.removeFirst()
             if (hrZ in 1..5) hrZoneSec[hrZ]++
             if (bpm != null && bpm > 0) { hrSum += bpm; hrCount++; if (bpm > hrMax) hrMax = bpm }
             val pz = com.rashed.bikesensordoctor.core.PowerZones.zone(stats.livePowerW(now), prefs.ftpW)
@@ -233,6 +236,8 @@ class RideEngine(private val app: Application) {
             speedKmh = g.speedKmh, distanceKm = g.distanceKm, gpsFix = g.hasFix,
             hrBpm = bpm, hrZone = hrZ, hrConnected = hrState.connected, hrBatteryPct = hrState.batteryPct,
             linkUptimeSec = uptimeSec, recentPower = recentPower.toList(),
+            normalizedPowerW = stats.normalizedPowerW, variabilityIndex = stats.variabilityIndex,
+            coachMode = prefs.coachMode,
         )
     }
 

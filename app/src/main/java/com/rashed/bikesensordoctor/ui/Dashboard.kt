@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,10 +50,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rashed.bikesensordoctor.core.CoachMode
 import com.rashed.bikesensordoctor.core.CueType
+import com.rashed.bikesensordoctor.core.TargetStatus
+import com.rashed.bikesensordoctor.core.Targets
 import com.rashed.bikesensordoctor.core.Health
 import com.rashed.bikesensordoctor.core.PowerZones
 import com.rashed.bikesensordoctor.core.RideStats
@@ -98,214 +103,219 @@ fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBa
     }
 }
 
-// ------------------------------------------------------------------ Dashboard
+// ------------------------------------------------------------------ Dashboard (Design 7 — AI Scientific Coach)
+
+/** Everything the screen needs to indicate, derived once per frame from the engine snapshot via core/Targets. */
+private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachCue, prefs: Prefs) {
+    val mode = runCatching { CoachMode.valueOf(d.coachMode) }.getOrDefault(CoachMode.FREE)
+    val targetZone = Targets.targetZone(mode)
+    val ftp = prefs.ftpW; val maxHr = prefs.maxHr
+    val powerMax = Targets.powerGaugeMaxW(ftp)
+    val powerStatus = Targets.power(d.powerW, ftp, targetZone)
+    val cadStatus = Targets.cadence(d.cadenceRpm, prefs.cadenceLow, prefs.cadenceHigh)
+    val hrStatus = if (d.hrConnected) Targets.hr(d.hrBpm, maxHr, targetZone) else TargetStatus.UNKNOWN
+    val powerPct = Targets.powerZonePercent(d.powerW, ftp)
+    val hrPct = Targets.hrZonePercent(d.hrBpm, maxHr)
+    val cadLow = prefs.cadenceLow; val cadHigh = prefs.cadenceHigh
+
+    // coaching presentation
+    val coachActive = mode != CoachMode.FREE && cue.type != CueType.NONE && cue.type != CueType.NO_HR && cue.type != CueType.NO_POWER && cue.type != CueType.WARMUP
+    val coachColor: Color = when (cue.type) {
+        CueType.KEEP_IT_UP -> D7.Green
+        CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK -> D7.Cyan
+        CueType.EASE_OFF, CueType.PEDAL_SLOWER -> D7.Amber
+        CueType.RECOVER -> D7.Violet
+        else -> D7.Faint
+    }
+    val shape = Targets.coachShape(cue.type)
+    val direction: Int? = if (coachActive) Targets.coachDirection(cue.type) else null
+    val headline = when {
+        mode == CoachMode.FREE -> "COACH OFF"
+        cue.type == CueType.NONE -> "COACH READY"
+        else -> cue.headline
+    }
+    val detail = when {
+        mode == CoachMode.FREE -> "Tap to pick a mode: Zone 2, cadence, endurance or intervals"
+        cue.type == CueType.NONE -> "Start pedalling — watching your ${if (mode == CoachMode.CADENCE) "cadence" else "effort"} against the target"
+        else -> cue.detail
+    }
+}
+
+private fun statusText(s: TargetStatus, kind: String) = when (s) {
+    TargetStatus.BELOW -> if (kind == "cad") "BELOW RANGE" else "BELOW TGT"
+    TargetStatus.ABOVE -> if (kind == "cad") "ABOVE RANGE" else "ABOVE TGT"
+    TargetStatus.ON -> "ON TARGET"
+    TargetStatus.UNKNOWN -> when (kind) { "hr" -> "NO STRAP"; "cad" -> "NOT TURNING"; else -> "COASTING" }
+}
 
 @Composable
 fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit) {
     val d by vm.engine.dash.collectAsStateWithLifecycle()
     val cue by vm.engine.cue.collectAsStateWithLifecycle()
     val prefs = vm.engine.prefs
+    val st = D7State(d, cue, prefs)
     var confirmFinish by remember { mutableStateOf(false) }
-    var editField by remember { mutableStateOf<Int?>(null) }
-    var fields by remember { mutableStateOf(prefs.fields) }
 
-    Column(Modifier.fillMaxSize().background(Ink).padding(horizontal = 12.dp, vertical = 8.dp)) {
-        StatusStrip(d) { vm.engine.sensor.recoverNow() }
-        Spacer(Modifier.height(6.dp))
-
-        // live coach banner (only while a mode is active and a cue exists)
-        if (cue.type != CueType.NONE && d.rideState == RideStats.State.RUNNING) {
-            val bg = when (cue.type) {
-                CueType.EASE_OFF, CueType.RECOVER -> Amber
-                CueType.PUSH_HARDER, CueType.WORK -> Green
-                CueType.PEDAL_FASTER, CueType.PEDAL_SLOWER -> Cyan
-                CueType.KEEP_IT_UP -> Green
-                else -> Panel
+    BoxWithConstraints(Modifier.fillMaxSize().background(D7.Bg)) {
+        val landscape = maxWidth > maxHeight
+        if (!landscape) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                Header(d, st) { vm.engine.sensor.recoverNow() }
+                Spacer(Modifier.height(6.dp))
+                Gauges(d, st)
+                Spacer(Modifier.height(14.dp))
+                CoachBox(st.headline, st.detail, st.coachColor, st.shape, st.direction, st.coachActive, onCoach)
+                Spacer(Modifier.height(12.dp))
+                LowerSection(d, st, prefs)
+                Spacer(Modifier.height(14.dp))
+                Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true })
             }
-            Box(Modifier.fillMaxWidth().background(bg, RoundedCornerShape(14.dp)).clickable(onClick = onCoach).padding(12.dp)) {
-                Column { Text(cue.headline, fontSize = 22.sp, fontWeight = FontWeight.Black, color = Ink)
-                    if (cue.detail.isNotEmpty()) Text(cue.detail, fontSize = 13.sp, color = Ink.copy(alpha = 0.8f)) }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-
-        // Power gauge (hero) + cadence/HR arcs
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ArcGauge(Modifier.weight(1.5f), value = d.powerW, max = (prefs.ftpW * 1.6f).coerceAtLeast(300f),
-                label = "WATTS", color = zoneColor(d.powerZone).takeIf { d.powerZone > 0 } ?: Cyan, big = true,
-                sub = if (d.powerZone in 1..7) PowerZones.name(d.powerZone) else d.power3sW?.let { "3s $it" })
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ArcGauge(Modifier.fillMaxWidth(), value = d.cadenceRpm, max = 130f,
-                    label = if (d.backwards) "RPM ◄" else "RPM", color = if (d.backwards) Red else Violet, big = false, sub = null)
-                ArcGauge(Modifier.fillMaxWidth(), value = d.hrBpm, max = prefs.maxHr.toFloat().coerceAtLeast(120f),
-                    label = "BPM", color = if (d.hrConnected) zoneColor(d.hrZone).takeIf { d.hrZone > 0 } ?: Red else Dim,
-                    big = false, sub = if (d.hrConnected) (if (d.hrZone in 1..5) "HR Z${d.hrZone}" else null) else "no strap")
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Sparkline(d.recentPower, prefs.ftpW)
-        Spacer(Modifier.height(8.dp))
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (i in 0 until 2) Field(Modifier.weight(1f), fields.getOrElse(i) { "time" }, d, prefs) { editField = i }
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (i in 2 until 4) Field(Modifier.weight(1f), fields.getOrElse(i) { "time" }, d, prefs) { editField = i }
-        }
-
-        Spacer(Modifier.weight(1f))
-        d.lastSavedRide?.takeIf { d.rideState == RideStats.State.IDLE }?.let {
-            Text(it, fontSize = 13.sp, color = Green, modifier = Modifier.padding(bottom = 6.dp))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.weight(1f)) {
-                when (d.rideState) {
-                    RideStats.State.IDLE, RideStats.State.FINISHED -> BigButton("START", Green) { vm.engine.startRide() }
-                    RideStats.State.RUNNING -> BigButton("PAUSE", Amber) { vm.engine.pauseRide() }
-                    RideStats.State.PAUSED -> BigButton("RESUME", Green) { vm.engine.startRide() }
+        } else {
+            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                    Header(d, st) { vm.engine.sensor.recoverNow() }
+                    Spacer(Modifier.height(6.dp))
+                    Gauges(d, st)
+                }
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                    CoachBox(st.headline, st.detail, st.coachColor, st.shape, st.direction, st.coachActive, onCoach)
+                    Spacer(Modifier.height(12.dp))
+                    LowerSection(d, st, prefs)
+                    Spacer(Modifier.height(14.dp))
+                    Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true })
                 }
             }
-            if (d.rideState == RideStats.State.RUNNING || d.rideState == RideStats.State.PAUSED)
-                Box(Modifier.weight(1f)) { BigButton("FINISH", Red) { confirmFinish = true } }
-            Box(Modifier.width(96.dp)) { BigButton("COACH", Violet, onCoach) }
-        }
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onHistory) { Text("History", color = Cyan) }
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onSettings) { Text("⚙ Settings", color = Cyan) }
         }
     }
 
     if (confirmFinish) AlertDialog(
         onDismissRequest = { confirmFinish = false },
-        containerColor = Panel,
+        containerColor = D7.Panel2,
         title = { Text("Finish ride?") },
         text = { Text("${RideEngine.fmtDuration(d.elapsedMs)} · avg ${d.avgPowerW} W · max ${d.maxPowerW} W — saved to History.") },
         confirmButton = { Button(onClick = { confirmFinish = false; vm.engine.finishRide() }) { Text("FINISH & SAVE") } },
         dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text("Keep riding") } },
     )
-    editField?.let { idx ->
-        AlertDialog(onDismissRequest = { editField = null }, containerColor = Panel, title = { Text("Show in this field") },
-            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
-                Prefs.FIELD_OPTIONS.forEach { (key, label) ->
-                    Text(label, fontSize = 18.sp, modifier = Modifier.fillMaxWidth().clickable {
-                        val f = fields.toMutableList(); while (f.size < 4) f.add("time"); f[idx] = key; fields = f; prefs.fields = f; editField = null
-                    }.padding(vertical = 12.dp), color = if (fields.getOrNull(idx) == key) Cyan else Color.White)
-                } } },
-            confirmButton = { TextButton(onClick = { editField = null }) { Text("Cancel") } })
-    }
 }
 
+/** 1 · Header: LIVE dot + link state (tap to reconnect), ride time, title, divider, coach-colour bar. */
 @Composable
-private fun StatusStrip(d: Dashboard, onReconnect: () -> Unit) {
+private fun Header(d: Dashboard, st: D7State, onReconnect: () -> Unit) {
+    val live = d.health == Health.CONNECTED_LIVE || d.health == Health.CONNECTED_IDLE
     val (dot, text) = when (d.health) {
-        Health.CONNECTED_LIVE -> Green to "LIVE"
-        Health.CONNECTED_IDLE -> Cyan to "READY"
-        Health.RECONNECTING, Health.SEARCHING, Health.LINK_SILENT -> Amber to "CONNECTING"
-        else -> Red to "OFFLINE"
+        Health.CONNECTED_LIVE -> D7.Green to "LIVE"
+        Health.CONNECTED_IDLE -> D7.Cyan to "READY"
+        Health.RECONNECTING, Health.SEARCHING, Health.LINK_SILENT -> D7.Amber to "CONNECTING"
+        else -> D7.Red to "OFFLINE"
     }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(9.dp).background(dot, CircleShape))
-        Spacer(Modifier.width(6.dp))
-        Column(Modifier.weight(1f).clickable { if (d.health !in listOf(Health.CONNECTED_LIVE, Health.CONNECTED_IDLE)) onReconnect() }) {
-            Text(if (d.health in listOf(Health.CONNECTED_LIVE, Health.CONNECTED_IDLE)) "$text · ${RideEngine.fmtDuration(d.linkUptimeSec * 1000)}" else d.healthText,
-                fontSize = 12.sp, color = Color(0xFFBFD2DA), maxLines = 1)
+    Column {
+        Row(Modifier.fillMaxWidth().clickable { if (!live) onReconnect() }, verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).background(dot, CircleShape))
+            Spacer(Modifier.width(6.dp))
+            Text(buildString {
+                append(text)
+                d.batteryPct?.let { append(" · BAT $it%") }
+                if (!live && d.healthText.isNotEmpty()) append(" · tap to retry")
+            }, fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text("T ${RideEngine.fmtDuration(d.elapsedMs)}", fontFamily = PlexMono, fontSize = 12.sp, color = if (d.rideState == RideStats.State.RUNNING) D7.Fg else D7.Mut)
         }
-        Chip("PWR", d.batteryPct?.let { "$it%" } ?: "—", if ((d.batteryPct ?: 100) < 15) Red else Dim)
-        Spacer(Modifier.width(6.dp))
-        Chip("HR", if (d.hrConnected) (d.hrBpm?.toString() ?: "…") else "off", if (d.hrConnected) Red else Dim)
-        Spacer(Modifier.width(6.dp))
-        Chip("GPS", if (d.gpsFix) "fix" else "—", if (d.gpsFix) Green else Dim)
+        Spacer(Modifier.height(6.dp))
+        Text("AI SCIENTIFIC COACH", fontFamily = PlexMono, fontSize = 13.sp, color = D7.Cyan, letterSpacing = 2.sp)
+        Spacer(Modifier.height(6.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(D7.Line))
+        Spacer(Modifier.height(2.dp))
+        val bar by animateColorAsState(if (st.coachActive) st.coachColor else D7.Line, tween(400), label = "bar")
+        Box(Modifier.fillMaxWidth().height(3.dp).background(bar, RoundedCornerShape(2.dp)))
+    }
+}
+
+/** 2 + 3 · Large central power gauge, then RPM and HR side by side. */
+@Composable
+private fun Gauges(d: Dashboard, st: D7State) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        TargetGauge(
+            Modifier.fillMaxWidth(0.62f), value = d.powerW, max = st.powerMax,
+            color = if (d.powerZone in 1..7) D7.powerZone(d.powerZone) else D7.Grey,
+            targetFraction = Targets.powerTargetFraction(st.targetZone, st.ftp), zoneTicks = Targets.powerZoneTicks(st.ftp),
+            sub = if (d.powerZone in 1..7) "Z${d.powerZone} · ${st.powerPct ?: 0}%" else null,
+            unit = "WATTS", big = true, status = st.powerStatus, statusText = statusText(st.powerStatus, "pow"), showTgtLabel = true,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            TargetGauge(
+                Modifier.weight(1f), value = d.cadenceRpm, max = Targets.CADENCE_GAUGE_MAX,
+                color = if (d.backwards) D7.Red else D7.Violet,
+                targetFraction = st.cadLow.toFloat() / Targets.CADENCE_GAUGE_MAX, zoneTicks = FloatArray(0),
+                rangeArc = st.cadLow.toFloat() / Targets.CADENCE_GAUGE_MAX to st.cadHigh.toFloat() / Targets.CADENCE_GAUGE_MAX,
+                sub = if (d.backwards) "BACKWARDS" else "${st.cadLow}–${st.cadHigh}", unit = "RPM", big = false,
+                status = st.cadStatus, statusText = statusText(st.cadStatus, "cad"), showTgtLabel = false,
+            )
+            TargetGauge(
+                Modifier.weight(1f), value = if (d.hrConnected) d.hrBpm else null, max = st.maxHr.coerceAtLeast(120),
+                color = if (d.hrConnected && d.hrZone in 1..5) D7.hrZone(d.hrZone) else D7.Faint,
+                targetFraction = Targets.hrTargetFraction(st.targetZone), zoneTicks = Targets.hrZoneTicks,
+                sub = if (d.hrConnected && d.hrZone in 1..5) "Z${d.hrZone} · ${st.hrPct ?: 0}%" else null, unit = "BPM", big = false,
+                status = st.hrStatus, statusText = statusText(st.hrStatus, "hr"), showTgtLabel = false,
+            )
+        }
+    }
+}
+
+/** 5–8 · Power zones, HR zones, power trend, ride statistics (Design 5, preserved). */
+@Composable
+private fun LowerSection(d: Dashboard, st: D7State, prefs: Prefs) {
+    Column(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(D7.Line))
+        Spacer(Modifier.height(10.dp))
+        SectionLabel("POWER ZONES (target ▲ = Z${st.targetZone})")
+        ZoneBand(listOf("Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"), D7.powerZoneColors,
+            currentFraction = d.powerW?.let { Targets.gaugeFraction(it, st.powerMax) }, targetFraction = Targets.powerTargetFraction(st.targetZone, st.ftp))
+        Spacer(Modifier.height(10.dp))
+        SectionLabel("HEART-RATE ZONES (begin · mid · end ticks)")
+        ZoneBand(listOf("Z1", "Z2", "Z3", "Z4", "Z5"), D7.hrZoneColors,
+            currentFraction = if (d.hrConnected) d.hrBpm?.let { Targets.gaugeFraction(it, st.maxHr) } else null, targetFraction = Targets.hrTargetFraction(st.targetZone))
+        Spacer(Modifier.height(10.dp))
+        SectionLabel("POWER TREND · last 5 min")
+        Spacer(Modifier.height(4.dp))
+        TrendChart(d.recentPower, st.ftp)
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth()) {
+            Stat(fmtKm(d.distanceKm, d.gpsFix), "DISTANCE", Modifier.weight(1.2f))
+            Stat(d.power3sW?.let { "$it W" } ?: "—", "3S AVG", Modifier.weight(1f))
+            Stat(fmtVi(d.variabilityIndex), "VARIABILITY", Modifier.weight(1f))
+        }
+        d.lastSavedRide?.takeIf { d.rideState == RideStats.State.IDLE }?.let {
+            Text(it, fontFamily = PlexMono, fontSize = 11.sp, color = D7.Green, modifier = Modifier.padding(top = 8.dp))
+        }
     }
 }
 
 @Composable
-private fun Chip(label: String, value: String, color: Color) {
-    Row(Modifier.background(Panel, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, fontSize = 10.sp, color = Dim); Spacer(Modifier.width(4.dp)); Text(value, fontSize = 12.sp, color = color, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun ArcGauge(modifier: Modifier, value: Int?, max: Float, label: String, color: Color, big: Boolean, sub: String?) {
-    val target = ((value ?: 0).toFloat() / max).coerceIn(0f, 1f)
-    val anim by animateFloatAsState(targetValue = target, animationSpec = tween(400), label = "gauge")
-    val animColor by animateColorAsState(color, tween(400), label = "col")
-    Box(modifier.aspectRatio(if (big) 1f else 1.7f), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val stroke = size.minDimension * (if (big) 0.085f else 0.11f)
-            val inset = stroke / 2 + 2.dp.toPx()
-            val d = min(size.width, size.height) - 2 * inset
-            val topLeft = Offset((size.width - d) / 2, (size.height - d) / 2 + if (big) 0f else size.height * 0.08f)
-            val arc = Size(d, d)
-            val start = 135f; val sweep = 270f
-            drawArc(Color(0xFF16242B), start, sweep, false, topLeft, arc, style = Stroke(stroke, cap = StrokeCap.Round))
-            if (anim > 0f) drawArc(Brush.sweepGradient(listOf(animColor.copy(alpha = 0.5f), animColor)), start, sweep * anim, false, topLeft, arc, style = Stroke(stroke, cap = StrokeCap.Round))
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value?.toString() ?: "—", fontSize = if (big) 68.sp else 34.sp, fontWeight = FontWeight.Black,
-                color = if (value == null) Dim else Color.White, lineHeight = if (big) 70.sp else 36.sp)
-            Text(label, fontSize = if (big) 14.sp else 11.sp, color = if (label.contains("◄")) Red else Dim, fontWeight = FontWeight.Bold)
-            sub?.let { Text(it, fontSize = if (big) 13.sp else 10.sp, color = animColor) }
-        }
-    }
-}
-
-@Composable
-private fun Sparkline(data: List<Int>, ftp: Int) {
-    Box(Modifier.fillMaxWidth().height(54.dp).background(Panel, RoundedCornerShape(12.dp)).padding(8.dp)) {
-        if (data.size < 2) { Text("power — last 60 s", fontSize = 11.sp, color = Dim); return@Box }
-        val maxV = (data.max().coerceAtLeast(ftp)).toFloat()
-        Canvas(Modifier.fillMaxSize()) {
-            val n = data.size; val dx = size.width / (n - 1).coerceAtLeast(1)
-            // FTP reference line
-            val ftpY = size.height * (1f - (ftp / maxV).coerceIn(0f, 1f))
-            drawLine(Color(0xFF2A3A42), Offset(0f, ftpY), Offset(size.width, ftpY), strokeWidth = 1.5f)
-            var prev: Offset? = null
-            data.forEachIndexed { i, v ->
-                val p = Offset(i * dx, size.height * (1f - (v / maxV).coerceIn(0f, 1f)))
-                prev?.let { drawLine(Cyan, it, p, strokeWidth = 3f, cap = StrokeCap.Round) }
-                prev = p
+private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onStart: () -> Unit, onPause: () -> Unit, onFinish: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(Modifier.weight(1f)) {
+            when (d.rideState) {
+                RideStats.State.IDLE, RideStats.State.FINISHED -> BigButton("START", D7.Green, onStart)
+                RideStats.State.RUNNING -> BigButton("PAUSE", D7.Amber, onPause)
+                RideStats.State.PAUSED -> BigButton("RESUME", D7.Green, onStart)
             }
         }
+        if (d.rideState == RideStats.State.RUNNING || d.rideState == RideStats.State.PAUSED)
+            Box(Modifier.weight(1f)) { BigButton("FINISH", D7.Red, onFinish) }
+        Box(Modifier.width(96.dp)) { BigButton("COACH", D7.Violet, onCoach) }
     }
-}
-
-private fun powerColorUnused() {}
-
-@Composable
-private fun Field(modifier: Modifier, key: String, d: Dashboard, prefs: Prefs, onClick: () -> Unit) {
-    val (label, value) = fieldValue(key, d, prefs)
-    Column(modifier.background(Panel, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp)) {
-        Text(label.uppercase(), fontSize = 11.sp, color = Dim, fontWeight = FontWeight.SemiBold)
-        Text(value, fontSize = 30.sp, fontWeight = FontWeight.Black, color = if (value == "—") Dim else Color.White)
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onClick = onHistory) { Text("History", color = D7.Cyan) }
+        Spacer(Modifier.weight(1f))
+        TextButton(onClick = onSettings) { Text("⚙ Settings", color = D7.Cyan) }
     }
-}
-
-private fun fieldValue(key: String, d: Dashboard, prefs: Prefs): Pair<String, String> = when (key) {
-    "power3s" -> "3 s power" to (d.power3sW?.let { "$it W" } ?: "—")
-    "power10s" -> "10 s power" to (d.power10sW?.let { "$it W" } ?: "—")
-    "avgPower" -> "Avg power" to "${d.avgPowerW} W"
-    "maxPower" -> "Max power" to "${d.maxPowerW} W"
-    "powerZone" -> "Power zone" to (if (d.powerZone in 1..7) "Z${d.powerZone}" else "—")
-    "speed" -> "Speed" to (d.speedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: if (d.gpsFix) "0.0" else "—")
-    "distance" -> "Distance" to (if (d.gpsFix || d.distanceKm > 0) String.format(Locale.US, "%.2f km", d.distanceKm) else "—")
-    "time" -> "Ride time" to RideEngine.fmtDuration(d.elapsedMs)
-    "avgCadence" -> "Avg cadence" to "${d.avgCadenceRpm}"
-    "maxCadence" -> "Max cadence" to "${d.maxCadenceRpm}"
-    "energy" -> "Energy" to String.format(Locale.US, "%.0f kJ", d.energyKj)
-    "battery" -> "Sensor battery" to (d.batteryPct?.let { "$it %" } ?: "—")
-    "balance" -> "L / R" to (if (d.leftW != null && d.rightW != null && d.leftW + d.rightW > 0) "${d.leftW * 100 / (d.leftW + d.rightW)}/${d.rightW * 100 / (d.leftW + d.rightW)}" else "—")
-    "clock" -> "Clock" to SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-    else -> key to "—"
 }
 
 @Composable
 private fun BigButton(text: String, color: Color, onClick: () -> Unit) {
-    Button(onClick = onClick, Modifier.fillMaxWidth().height(64.dp), shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = Ink)) {
-        Text(text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+    Button(onClick = onClick, Modifier.fillMaxWidth().height(60.dp), shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = D7.Ink)) {
+        Text(text, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp)
     }
 }
 
