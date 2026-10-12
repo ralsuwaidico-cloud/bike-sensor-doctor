@@ -12,8 +12,8 @@ android {
         applicationId = "com.rashed.bikesensordoctor"
         minSdk = 26          // Nokia 5.3 runs Android 12 (API 31); 26 keeps Android 8+ phones usable too
         targetSdk = 34
-        versionCode = 8
-        versionName = "0.7.0"
+        versionCode = 9
+        versionName = "0.7.1"
     }
 
     buildTypes {

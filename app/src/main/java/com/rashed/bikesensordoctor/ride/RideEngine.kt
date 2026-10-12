@@ -187,8 +187,13 @@ class RideEngine(private val app: Application) {
             restoredRide = true
             log.add(EventType.TEST, note = "Ride restored from checkpoint (paused): ${fmtDuration(stats.elapsedMs(System.currentTimeMillis()))}, ${stats.sampleCount} samples")
             _dash.value = _dash.value.copy(lastSavedRide = "Ride restored after restart — press RESUME to continue or FINISH to save", restoredRide = true)
-            RideService.start(app)
+            // the foreground service is started by onForeground() once a screen is visible (Android 12 rule)
         } catch (_: Exception) { clearCheckpoint() }
+    }
+
+    /** Called by MainActivity.onResume: a restored/active ride needs its foreground service, which Android only lets us start now. */
+    fun onForeground() {
+        if (stats.state == RideStats.State.RUNNING || stats.state == RideStats.State.PAUSED) RideService.start(app)
     }
 
     fun connectHr(address: String, name: String?) { prefs.hrAddress = address; prefs.hrName = name; hr.connect(address, name) }

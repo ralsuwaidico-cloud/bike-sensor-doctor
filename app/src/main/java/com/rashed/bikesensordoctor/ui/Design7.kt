@@ -39,6 +39,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontLoadingStrategy
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -75,10 +76,12 @@ object D7 {
 }
 
 // ---- fonts bundled in res/font (SIL OFL; licences in assets/licenses) ----
-val Rajdhani = FontFamily(Font(R.font.rajdhani_medium, FontWeight.Medium), Font(R.font.rajdhani_semibold, FontWeight.SemiBold))
-val PlexMono = FontFamily(Font(R.font.plexmono_regular, FontWeight.Normal), Font(R.font.plexmono_bold, FontWeight.Bold))
+// Async loading: if a font file cannot be loaded on a device, Compose falls back to the system font instead of
+// throwing during layout (a blocking load failure would crash the dashboard).
+val Rajdhani = FontFamily(Font(R.font.rajdhani_medium, FontWeight.Medium, loadingStrategy = FontLoadingStrategy.Async), Font(R.font.rajdhani_semibold, FontWeight.SemiBold, loadingStrategy = FontLoadingStrategy.Async))
+val PlexMono = FontFamily(Font(R.font.plexmono_regular, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async), Font(R.font.plexmono_bold, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async))
 @OptIn(ExperimentalTextApi::class)
-val Archivo = FontFamily(Font(R.font.archivo_variable, FontWeight.ExtraBold, variationSettings = FontVariation.Settings(FontVariation.weight(800))))
+val Archivo = FontFamily(Font(R.font.archivo_variable, FontWeight.ExtraBold, loadingStrategy = FontLoadingStrategy.Async, variationSettings = FontVariation.Settings(FontVariation.weight(800))))
 
 private const val START = 135f
 private const val SWEEP = 270f

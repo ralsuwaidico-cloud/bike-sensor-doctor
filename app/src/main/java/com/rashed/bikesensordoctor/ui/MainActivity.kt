@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
     private val vm: DoctorViewModel by viewModels()
     private val permissionGranted = mutableStateOf(false)
     private val bluetoothOn = mutableStateOf(false)
+    private val crashText = mutableStateOf<String?>(null)
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         permissionGranted.value = Permissions.allGranted(this)
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        crashText.value = runCatching { com.rashed.bikesensordoctor.BikeApp.crashFile(this).takeIf { it.exists() }?.readText() }.getOrNull()
         applyKeepScreenOn()
         // Spoken coaching: route the engine's cues through Android TTS.
         tts = android.speech.tts.TextToSpeech(this) { status ->
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when {
+                        crashText.value != null -> CrashGate(crashText.value!!, onSend = { shareCrash(crashText.value!!) }, onContinue = { com.rashed.bikesensordoctor.BikeApp.crashFile(this).delete(); crashText.value = null })
                         !permissionGranted.value -> PermissionGate { permissionLauncher.launch(Permissions.required() + extraPermissions()) }
                         !bluetoothOn.value -> BluetoothGate { enableBtLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
                         else -> BikeComputerApp(vm, onKeepScreenOnChanged = { applyKeepScreenOn() }, onBatteryOptimization = { requestIgnoreBatteryOptimizations() })
@@ -105,12 +108,28 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         permissionGranted.value = Permissions.allGranted(this)
         bluetoothOn.value = vm.bluetoothOn()
-        if (permissionGranted.value && bluetoothOn.value) vm.engine.connect()
+        if (permissionGranted.value && bluetoothOn.value) { vm.engine.connect(); vm.engine.onForeground() }
+    }
+
+    private fun shareCrash(text: String) {
+        val i = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_SUBJECT, "Bike Computer crash report"); putExtra(Intent.EXTRA_TEXT, text) }
+        startActivity(Intent.createChooser(i, "Send crash report"))
     }
 
     override fun onDestroy() {
         runCatching { tts?.shutdown() }
         super.onDestroy()
+    }
+}
+
+@Composable
+private fun CrashGate(text: String, onSend: () -> Unit, onContinue: () -> Unit) {
+    Column(Modifier.fillMaxSize().padding(24.dp)) {
+        Text("The app crashed last time", fontSize = 24.sp, style = MaterialTheme.typography.headlineSmall)
+        Text("The error was saved. Please send it to Claude so it can be fixed, then continue.", Modifier.padding(vertical = 12.dp), fontSize = 16.sp)
+        Button(onClick = onSend, Modifier.fillMaxWidth().height(56.dp)) { Text("SEND CRASH REPORT", fontSize = 18.sp) }
+        Button(onClick = onContinue, Modifier.fillMaxWidth().height(56.dp).padding(top = 8.dp)) { Text("CONTINUE", fontSize = 18.sp) }
+        Text(text.lines().take(12).joinToString("\n"), Modifier.padding(top = 16.dp), fontSize = 11.sp, color = Color(0xFF8396A0))
     }
 }
 

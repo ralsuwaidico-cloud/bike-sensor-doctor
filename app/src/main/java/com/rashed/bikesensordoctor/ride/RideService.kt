@@ -43,8 +43,15 @@ class RideService : Service() {
             }
         }
         val n = buildNotification()
-        if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-        else startForeground(ID, n)
+        try {
+            if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            else startForeground(ID, n)
+        } catch (e: Exception) {
+            // Android 12+: a foreground start from the background is refused. Never crash the app for it — the
+            // activity will start us again when it comes to the foreground (RideEngine.onForeground()).
+            try { BikeApp.engine(this).log.add(com.rashed.bikesensordoctor.log.EventType.ERROR, note = "Foreground service refused: ${e.javaClass.simpleName}") } catch (_: Exception) {}
+            stopSelf(); return START_NOT_STICKY
+        }
         if (ticker == null) ticker = scope.launch {
             while (isActive) {
                 delay(5000)
@@ -89,8 +96,8 @@ class RideService : Service() {
     companion object {
         const val CHANNEL = "ride"
         const val ID = 1001
-        fun start(ctx: Context) { ctx.startForegroundService(Intent(ctx, RideService::class.java)) }
+        fun start(ctx: Context) { runCatching { ctx.startForegroundService(Intent(ctx, RideService::class.java)) } }
         fun update(ctx: Context) { runCatching { ctx.startForegroundService(Intent(ctx, RideService::class.java)) } }
-        fun stop(ctx: Context) { ctx.stopService(Intent(ctx, RideService::class.java)) }
+        fun stop(ctx: Context) { runCatching { ctx.stopService(Intent(ctx, RideService::class.java)) } }
     }
 }
