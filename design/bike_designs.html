@@ -371,7 +371,7 @@ function apex(st){
 
 /* ============ DESIGN 7 — AI SCIENTIFIC COACH (combination of 4 + 5) ============ */
 function aiSci(st){
-  const W=300,H=940;const pz=powZone(st.power),hz=hrZone(st.hr);
+  const W=300,H=958;const pz=powZone(st.power),hz=hrZone(st.hr);
   // --- status of a value vs its target: below / inside / above ---
   function tstat(kind){
     let s;
@@ -401,8 +401,27 @@ function aiSci(st){
     if(sub) g+=`<text x="${cx}" y="${cy-(big?30:18)}" text-anchor="middle" fill="${col}" font-size="${big?12:9}" font-family="IBM Plex Mono">${sub}</text>`;
     g+=`<text x="${cx}" y="${cy+(big?12:7)}" text-anchor="middle" fill="${C.fg}" font-size="${big?54:26}" font-weight="500" font-family="Rajdhani">${val}</text>`;
     g+=`<text x="${cx}" y="${cy+(big?34:25)}" text-anchor="middle" fill="${C.mut}" font-size="${big?12:9}" letter-spacing="1" font-family="IBM Plex Mono">${unit}</text>`;
-    // below/on/above chip under the ring
-    g+=`<text x="${cx}" y="${cy+r+(big?24:17)}" text-anchor="middle" fill="${stat.c}" font-size="${big?12:9}" font-weight="700" font-family="IBM Plex Mono">${stat.ar} ${stat.t}</text>`;
+    // below/on/above indicator under the ring: colour-tinted pill + shape glyph + text (shape and colour both carry the state)
+    const ct=`${stat.ar} ${stat.t}`,cf=big?12:9,cw=ct.length*cf*0.64+16,cyy=cy+r+(big?24:17),ch=cf+9;
+    g+=`<rect x="${(cx-cw/2).toFixed(1)}" y="${cyy-cf-1}" width="${cw.toFixed(1)}" height="${ch}" rx="${ch/2}" fill="${stat.c}" fill-opacity=".16" stroke="${stat.c}" stroke-width="1"/>`;
+    g+=`<text x="${cx}" y="${cyy+2}" text-anchor="middle" fill="${stat.c}" font-size="${cf}" font-weight="700" font-family="IBM Plex Mono">${ct}</text>`;
+    return g;
+  }
+  // coaching shape badge: a distinct SHAPE per state so the instruction reads without words or colour
+  //   dir>0  ▲ up-triangle  = go faster / push      dir=0  ✓ check in circle = on target      dir<0  ▼ down-triangle = ease off
+  function coachShape(cx,cy,dir,col){
+    let g=`<circle cx="${cx}" cy="${cy}" r="18" fill="#05121a"/>`;
+    if(dir>0) g+=`<polygon points="${cx},${cy-10} ${cx+10},${cy+7} ${cx-10},${cy+7}" fill="${col}"/>`;
+    else if(dir<0) g+=`<polygon points="${cx},${cy+10} ${cx+10},${cy-7} ${cx-10},${cy-7}" fill="${col}"/>`;
+    else g+=`<path d="M${cx-9} ${cy+1} l6 6 l12 -13" fill="none" stroke="${col}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    return g;
+  }
+  // three-step state scale (EASE · ON TARGET · FASTER) with the active step lit — shows WHERE you are relative to target
+  function coachScale(x,y,w,dir){
+    const steps=[{l:"▼ EASE",d:-1},{l:"✓ ON TARGET",d:0},{l:"▲ FASTER",d:1}],gap=4,pw=(w-gap*2)/3;let g="";
+    steps.forEach((s,i)=>{const px=x+i*(pw+gap),on=s.d===dir;
+      g+=`<rect x="${px.toFixed(1)}" y="${y}" width="${pw.toFixed(1)}" height="15" rx="7.5" fill="#05121a" fill-opacity="${on?1:.12}" stroke="#05121a" stroke-opacity="${on?1:.35}" stroke-width="1"/>`;
+      g+=`<text x="${(px+pw/2).toFixed(1)}" y="${y+10.5}" text-anchor="middle" fill="${on?st.col:"#05121a"}" fill-opacity="${on?1:.75}" font-size="7.5" font-weight="700" font-family="IBM Plex Mono">${s.l}</text>`;});
     return g;
   }
   // within-zone percent for the sub-label
@@ -427,6 +446,8 @@ function aiSci(st){
   ${btPill(14,20)}<text x="${W-14}" y="24" text-anchor="end" fill="${C.mut}" font-size="11">T ${RIDE.time}</text>
   <text x="14" y="46" fill="${C.cyan}" font-size="12" letter-spacing="1.5">AI SCIENTIFIC COACH</text>
   <line x1="14" y1="56" x2="${W-14}" y2="56" stroke="${C.line}"/>
+  <!-- coach-state colour bar: the whole screen's accent follows the coaching state -->
+  <rect x="14" y="58" width="272" height="3" rx="1.5" fill="${st.col}"/>
   <!-- 2 · LARGE CENTRAL POWER GAUGE -->
   ${gauge(150,150,72,15,st.power,FTP*1.5,powZoneColor(pz),0.45,powBounds,"Z"+pz+" · "+pPct+"%","WATTS",true,tstat("pow"),true)}
   <!-- 3 · TWO SMALLER GAUGES SIDE BY SIDE: RPM + HR -->
@@ -435,31 +456,32 @@ function aiSci(st){
   <path d="${arcPath(78,340,52,135+270*(85/130),135+270*(95/130))}" fill="none" stroke="${C.green}" stroke-width="3" opacity=".9"/>
   ${gauge(222,340,52,11,st.hr,MAXHR,zoneColor(hz),0.65,hrBounds,"Z"+hz+" · "+hPct+"%","BPM",false,tstat("hr"),false)}
   <!-- 4 · LARGE COACHING BOX -->
-  <rect x="14" y="440" width="272" height="100" rx="16" fill="${st.col}"/>
-  <!-- icon column x14–58; cue + secondary centred in the remaining x58–286 (centre 172); cue font scales with length -->
-  ${st.dir!==0?`<text x="36" y="498" text-anchor="middle" fill="#05121a" font-size="30" font-weight="800" font-family="Archivo">${st.dir>0?"▲":"▼"}</text>`:`<circle cx="36" cy="487" r="10" fill="#05121a"/>`}
-  <text x="172" y="487" text-anchor="middle" fill="#05121a" font-size="${st.cue.length>=12?21:st.cue.length>=10?24:26}" font-weight="800" font-family="Archivo">${st.cue}</text>
-  ${sec2.slice(0,2).map((ln,i)=>`<text x="172" y="${511+i*17}" text-anchor="middle" fill="#05121a" font-size="12" opacity=".82" font-family="Inter">${ln}</text>`).join("")}
+  <rect x="14" y="440" width="272" height="118" rx="16" fill="${st.col}"/>
+  <!-- icon column x14–58 holds the SHAPE badge; cue + secondary centred in x58–286 (centre 172); cue font scales with length -->
+  ${coachShape(36,489,st.dir,st.col)}
+  <text x="172" y="484" text-anchor="middle" fill="#05121a" font-size="${st.cue.length>=12?21:st.cue.length>=10?24:26}" font-weight="800" font-family="Archivo">${st.cue}</text>
+  ${sec2.slice(0,2).map((ln,i)=>`<text x="172" y="${506+i*16}" text-anchor="middle" fill="#05121a" font-size="12" opacity=".82" font-family="Inter">${ln}</text>`).join("")}
+  ${coachScale(26,534,248,st.dir)}
   <!-- ============ FROM HERE DOWN: preserved from Design 5 (spacing only) ============ -->
   <!-- 5 · POWER ZONES -->
-  <line x1="14" y1="556" x2="${W-14}" y2="556" stroke="${C.line}"/>
-  <text x="14" y="576" fill="${C.mut}" font-size="10">POWER ZONES (target ▲ = Z2)</text>
-  ${band(14,584,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],st.power/(FTP*1.5),[C.grey,C.cyan,C.green,C.lime,C.amber,C.orange,C.red],0.65*0.66)}
+  <line x1="14" y1="574" x2="${W-14}" y2="574" stroke="${C.line}"/>
+  <text x="14" y="594" fill="${C.mut}" font-size="10">POWER ZONES (target ▲ = Z2)</text>
+  ${band(14,602,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],st.power/(FTP*1.5),[C.grey,C.cyan,C.green,C.lime,C.amber,C.orange,C.red],0.65*0.66)}
   <!-- 6 · HEART-RATE ZONES -->
-  <text x="14" y="632" fill="${C.mut}" font-size="10">HEART-RATE ZONES (begin · mid · end ticks)</text>
-  ${band(14,640,272,["Z1","Z2","Z3","Z4","Z5"],st.hr/MAXHR,[C.faint,C.cyan,C.green,C.amber,C.red],0.66)}
+  <text x="14" y="650" fill="${C.mut}" font-size="10">HEART-RATE ZONES (begin · mid · end ticks)</text>
+  ${band(14,658,272,["Z1","Z2","Z3","Z4","Z5"],st.hr/MAXHR,[C.faint,C.cyan,C.green,C.amber,C.red],0.66)}
   <!-- 7 · POWER TREND -->
-  <text x="14" y="690" fill="${C.mut}" font-size="10">POWER TREND · last 5 min</text>
-  <rect x="14" y="698" width="272" height="130" fill="#080e12" stroke="${C.line}"/>
-  <line x1="14" y1="758" x2="286" y2="758" stroke="#13202a" stroke-dasharray="3 3"/><text x="20" y="755" fill="${C.faint}" font-size="8">FTP</text>
-  ${sparkline(22,710,256,110,C.cyan,true)}
+  <text x="14" y="708" fill="${C.mut}" font-size="10">POWER TREND · last 5 min</text>
+  <rect x="14" y="716" width="272" height="130" fill="#080e12" stroke="${C.line}"/>
+  <line x1="14" y1="776" x2="286" y2="776" stroke="#13202a" stroke-dasharray="3 3"/><text x="20" y="773" fill="${C.faint}" font-size="8">FTP</text>
+  ${sparkline(22,728,256,110,C.cyan,true)}
   <!-- 8 · RIDE STATISTICS -->
   <g font-family="Rajdhani">
-    <text x="14" y="866" fill="${C.fg}" font-size="24">${RIDE.dist}</text><text x="14" y="882" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">DISTANCE</text>
-    <text x="140" y="866" fill="${C.fg}" font-size="24">${st.power+6} W</text><text x="140" y="882" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG</text>
-    <text x="226" y="866" fill="${C.fg}" font-size="24">0.9</text><text x="226" y="882" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
+    <text x="14" y="884" fill="${C.fg}" font-size="24">${RIDE.dist}</text><text x="14" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">DISTANCE</text>
+    <text x="140" y="884" fill="${C.fg}" font-size="24">${st.power+6} W</text><text x="140" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG</text>
+    <text x="226" y="884" fill="${C.fg}" font-size="24">0.9</text><text x="226" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
   </g>
-  ${demoTag(14,918)}
+  ${demoTag(14,936)}
   </svg>`;
 }
 
@@ -483,7 +505,7 @@ const DESIGNS=[
    pros:["Garmin's segmented zone ring + a target tick (Scientific) + a bold coach ribbon (Coach First)","Zone-coloured hero number with direction arrow — effort and guidance in one view","HR 5-zone arc with begin/mid/end ticks; clean 60s power graph; balanced density"],
    cons:["More to render/animate — slightly heavier on an old phone","Combines several ideas, so it's the least 'pure' single concept"]},
   {id:"aiSci",no:"07",name:"AI Scientific Coach",fn:aiSci,tag:"Your combination: Design 5 base + Design 4 gauges & coach box",
-   pros:["Scientific Performance kept intact from Power Zones down — bands, FTP-referenced trend, distance/3s/variability","Three AI-Coach-First circular gauges on top: big number, zone-coloured progress, white target line, below/on/above-target chip, and position within the current zone","Enlarged, colour-coded coaching box (green keep · blue faster · orange ease · purple recover) you can read at a glance"],
+   pros:["Scientific Performance kept intact from Power Zones down — bands, FTP-referenced trend, distance/3s/variability","Three AI-Coach-First circular gauges on top: big number, zone-coloured progress, white target line, below/on/above-target chip, and position within the current zone","Coaching is triple-coded — colour (green keep · blue faster · orange ease), shape (▲ ✓ ▼ badge + pill chips under every gauge) and a lit EASE · ON TARGET · FASTER scale — so it reads at a glance, even colour-blind"],
    cons:["Tallest layout — a little scrolling on a short phone screen","Most elements on one screen, so spacing has to stay disciplined"]},
 ];
 
