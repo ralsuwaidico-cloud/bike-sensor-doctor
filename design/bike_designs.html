@@ -1,0 +1,427 @@
+<title>Bike Computer Design Concepts</title>
+<meta name="description" content="Six cycling-computer interface concepts to compare">
+<style>
+/* Layout: a dark design gallery — comparison grid up top, then a full section per concept.
+   Single committed dark look (an outdoor cycling screen); all colors explicit. */
+:root{
+  --bg:#05080b; --bg2:#0b1116; --panel:#101a21; --line:#1d2a33;
+  --fg:#eef4f7; --mut:#8396a0; --faint:#5a6b74;
+  --cyan:#34e7e4; --green:#56e08c; --lime:#a6e22e; --amber:#ffb64d; --orange:#ff8a3d; --red:#ff5a5a; --violet:#9b8cff;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,sans-serif;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px;padding-left:16px;padding-right:16px}
+h1{font-family:Rajdhani,sans-serif;font-weight:700;font-size:clamp(28px,5vw,44px);letter-spacing:.01em;margin:0;text-wrap:balance}
+h2{font-family:Rajdhani,sans-serif;font-weight:700;font-size:clamp(22px,3.5vw,30px);margin:.2em 0 .1em}
+.sub{color:var(--mut);max-width:70ch}
+.ey{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan)}
+.demo{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin-top:6px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:20px}
+.gcard{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;text-decoration:none;color:inherit;transition:border-color .2s,transform .2s}
+.gcard:hover{border-color:var(--cyan);transform:translateY(-2px)}
+.gcard .nm{font-family:Rajdhani,sans-serif;font-weight:700;font-size:17px;margin-top:8px}
+.gcard .no{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--faint)}
+section.design{margin-top:48px;border-top:1px solid var(--line);padding-top:28px;scroll-margin-top:12px}
+.row{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+.block{min-width:0}
+.cap{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:0 0 8px}
+.states{display:flex;gap:14px;flex-wrap:wrap}
+.zoneprog{display:flex;gap:10px;flex-wrap:wrap}
+.phone{background:#000;border:2px solid #1b2a31;border-radius:26px;padding:7px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.phone svg{display:block;border-radius:19px;width:100%;height:auto}
+.prose{flex:1 1 300px;min-width:260px}
+.prose ul{margin:.3em 0;padding-left:0;list-style:none}
+.prose li{padding:3px 0 3px 20px;position:relative;color:var(--fg)}
+.prose li.pro::before{content:"+";position:absolute;left:2px;color:var(--green);font-weight:700}
+.prose li.con::before{content:"−";position:absolute;left:2px;color:var(--amber);font-weight:700}
+.note{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:10px;padding:12px 14px;margin-top:16px;color:var(--mut);font-size:14px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+a.top{color:var(--cyan);text-decoration:none;font-size:13px}
+@media (max-width:520px){ .phone{padding:5px} }
+</style>
+
+<div class="wrap">
+  <p class="ey">Bike Computer · interface exploration</p>
+  <h1>Six ways to ride the same data</h1>
+  <p class="sub">Six distinct cycling-computer concepts for the Nokia 5.3 (and, later, the round Waveshare display). Every concept shows live power, cadence and heart rate, five progressive HR zones, a circular coaching indicator with a target marker, plain-language coaching, ride time, distance, a performance graph and Bluetooth status. Numbers are demonstration data, not a live ride. Tap a card to jump to its full preview; each concept also shows the Z1→Z5 gauge progression and the three coaching states.</p>
+  <div class="legend" aria-hidden="true">
+    <span><i class="dot" style="background:var(--faint)"></i>Z1</span>
+    <span><i class="dot" style="background:var(--cyan)"></i>Z2</span>
+    <span><i class="dot" style="background:var(--green)"></i>Z3</span>
+    <span><i class="dot" style="background:var(--amber)"></i>Z4</span>
+    <span><i class="dot" style="background:var(--red)"></i>Z5</span>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+  <div id="sections"></div>
+
+  <p class="note">These are visual mockups only — the app has not been changed. Pick the concept (or the parts of several) you like best and we'll refine that one, then build it into the APK.</p>
+</div>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Oswald:wght@400;500;600;700&family=Orbitron:wght@600;800&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@700;800&family=Inter:wght@400;500;600&display=swap">
+<script>
+const NS="http://www.w3.org/2000/svg";
+const C={grey:"#7e8c93",faint:"#5a6b74",line:"#1d2a33",cyan:"#34e7e4",green:"#56e08c",lime:"#a6e22e",amber:"#ffb64d",orange:"#ff8a3d",red:"#ff5a5a",violet:"#9b8cff",fg:"#eef4f7",mut:"#8396a0",track:"#16242b"};
+const MAXHR=185, FTP=210;
+// HR zone model (5 zones as % of max): Z1<60,Z2 60-70,Z3 70-80,Z4 80-90,Z5>90
+const HRB=[0,.60,.70,.80,.90,1.0];
+function hrZone(hr){const f=hr/MAXHR;for(let i=1;i<=5;i++)if(f<=HRB[i])return i;return 5;}
+function zoneColor(z){return [C.faint,C.cyan,C.green,C.amber,C.red][z-1]||C.faint;}
+// power zones (Coggan) as %FTP upper bounds
+const PB=[.55,.75,.90,1.05,1.20,1.50];
+function powZone(w){const f=w/FTP;for(let i=0;i<PB.length;i++)if(f<=PB[i])return i+1;return 7;}
+function powZoneColor(z){return [C.grey,C.cyan,C.green,C.lime,C.amber,C.orange,C.red][z-1]||C.grey;}
+
+function pol(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
+function arcPath(cx,cy,r,a0,a1){ // clockwise from a0 to a1 (deg)
+  const [x0,y0]=pol(cx,cy,r,a0),[x1,y1]=pol(cx,cy,r,a1);
+  const large=((a1-a0)%360+360)%360>180?1:0;
+  return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+}
+function el(s){const d=document.createElement("div");d.innerHTML=s.trim();return d.firstChild;}
+
+// coaching states
+const STATES={
+  keep:{cue:"KEEP IT UP",sub:"On target — Zone 2",power:168,cad:90,hr:139,col:C.green,dir:0},
+  faster:{cue:"PEDAL FASTER",sub:"Lift cadence to 85–95",power:150,cad:72,hr:134,col:C.cyan,dir:1},
+  ease:{cue:"EASE OFF",sub:"Above target — Zone 4",power:262,cad:96,hr:168,col:C.amber,dir:-1},
+};
+const RIDE={time:"27:14",dist:"13.4 km"};
+
+// ---- shared bits ----
+function sparkline(x,y,w,h,col,hot){
+  const pts=[6,7,8,7,9,11,10,12,11,13,12,11,13,15,14,13,12,14,16,15];
+  const mx=Math.max(...pts),step=w/(pts.length-1);
+  let d="";pts.forEach((p,i)=>{const px=x+i*step,py=y+h-(p/mx)*h;d+=(i?"L":"M")+px.toFixed(1)+" "+py.toFixed(1);});
+  const last=[x+w,y+h-(pts[pts.length-1]/mx)*h];
+  return `<path d="${d}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${hot?`<circle cx="${last[0]}" cy="${last[1]}" r="3" fill="${col}"/>`:""}`;
+}
+function btPill(x,y){return `<g font-family="IBM Plex Mono" font-size="9"><circle cx="${x}" cy="${y}" r="3.2" fill="${C.green}"/><text x="${x+8}" y="${y+3}" fill="${C.mut}">LIVE</text></g>`;}
+function demoTag(x,y){return `<text x="${x}" y="${y}" font-family="IBM Plex Mono" font-size="8" fill="${C.faint}" letter-spacing="1">DEMO DATA</text>`;}
+// 5-zone HR arc segments with begin/mid/end ticks, highlight current zone, marker at current hr
+function hrZoneRing(cx,cy,r,sw,hr,startDeg,sweep){
+  const z=hrZone(hr);let g="";const seg=sweep/5;
+  for(let i=0;i<5;i++){
+    const a0=startDeg+i*seg+1.5,a1=startDeg+(i+1)*seg-1.5;
+    const active=(i+1)===z;
+    g+=`<path d="${arcPath(cx,cy,r,a0,a1)}" fill="none" stroke="${zoneColor(i+1)}" stroke-width="${active?sw+3:sw}" stroke-linecap="round" opacity="${active?1:.4}"/>`;
+    // begin/middle/end ticks within each zone
+    [0,.5,1].forEach(t=>{const a=startDeg+(i+t)*seg;const[xa,ya]=pol(cx,cy,r+sw/2+2,a);const[xb,yb]=pol(cx,cy,r+sw/2+ (t===.5?7:4),a);g+=`<line x1="${xa.toFixed(1)}" y1="${ya.toFixed(1)}" x2="${xb.toFixed(1)}" y2="${yb.toFixed(1)}" stroke="${C.faint}" stroke-width="1"/>`;});
+  }
+  // current marker
+  const f=Math.min(1,Math.max(0,hr/MAXHR)),a=startDeg+f*sweep;const[mx,my]=pol(cx,cy,r,a);
+  g+=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${sw/2+2}" fill="#000" stroke="${C.fg}" stroke-width="2"/>`;
+  return g;
+}
+
+/* ============ DESIGN 1 — GARMIN PRO ============ */
+function garmin(st,W=300,H=600){
+  const z=powZone(st.power),col=powZoneColor(z);
+  const s=135,sweep=270,f=Math.min(1,st.power/(FTP*1.5));
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="Oswald, sans-serif">
+  <rect width="${W}" height="${H}" fill="#070b0e"/>
+  <!-- top bar -->
+  <rect x="0" y="0" width="${W}" height="30" fill="#0c1319"/>
+  ${btPill(14,15)} <text x="${W-14}" y="19" text-anchor="end" fill="${C.mut}" font-size="12">${RIDE.time}</text>
+  <!-- coaching strip -->
+  <rect x="0" y="30" width="${W}" height="26" fill="${st.col}"/>
+  <text x="${W/2}" y="48" text-anchor="middle" fill="#05080b" font-size="16" font-weight="700" letter-spacing="1">${st.cue}</text>
+  <!-- segmented zone ring -->
+  <g>
+    ${[1,2,3,4,5,6,7].map(i=>{const a0=s+sweep*(i-1)/7+2,a1=s+sweep*i/7-2;return `<path d="${arcPath(150,185,92,a0,a1)}" fill="none" stroke="${powZoneColor(i)}" stroke-width="10" opacity="${i===z?1:.35}"/>`;}).join("")}
+    <path d="${arcPath(150,185,92,s,s+sweep*f)}" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round"/>
+    <text x="150" y="196" text-anchor="middle" fill="${C.fg}" font-size="74" font-weight="700">${st.power}</text>
+    <text x="150" y="222" text-anchor="middle" fill="${C.mut}" font-size="14" letter-spacing="3">WATTS · Z${z}</text>
+  </g>
+  <!-- metric grid -->
+  <line x1="20" y1="300" x2="${W-20}" y2="300" stroke="${C.line}"/>
+  <g text-anchor="middle">
+    <text x="80" y="345" fill="${C.violet}" font-size="46" font-weight="700">${st.cad}</text><text x="80" y="366" fill="${C.mut}" font-size="12" letter-spacing="2">RPM</text>
+    <text x="220" y="345" fill="${zoneColor(hrZone(st.hr))}" font-size="46" font-weight="700">${st.hr}</text><text x="220" y="366" fill="${C.mut}" font-size="12" letter-spacing="2">BPM · Z${hrZone(st.hr)}</text>
+  </g>
+  <line x1="150" y1="310" x2="150" y2="378" stroke="${C.line}"/>
+  <line x1="20" y1="392" x2="${W-20}" y2="392" stroke="${C.line}"/>
+  <!-- HR zone bar Z1-5 -->
+  <text x="20" y="420" fill="${C.mut}" font-size="11" letter-spacing="2">HEART-RATE ZONES</text>
+  ${hrZoneRing(150,470,70,9,st.hr,180,180)}
+  <g font-size="10" fill="${C.faint}" text-anchor="middle" font-family="IBM Plex Mono">
+    <text x="80" y="486">Z1</text><text x="115" y="470">Z2</text><text x="150" y="464">Z3</text><text x="185" y="470">Z4</text><text x="220" y="486">Z5</text>
+  </g>
+  <!-- distance + graph -->
+  <text x="20" y="548" fill="${C.fg}" font-size="26" font-weight="700">${RIDE.dist}</text>
+  <text x="20" y="566" fill="${C.mut}" font-size="11" letter-spacing="2">DISTANCE</text>
+  ${sparkline(150,520,130,46,C.cyan,true)}
+  ${demoTag(20,588)}
+  </svg>`;
+}
+
+/* ============ DESIGN 2 — APPLE FITNESS ============ */
+function apple(st){
+  const W=300,H=600;const hz=hrZone(st.hr),pz=powZone(st.power);
+  const ring=(r,frac,col)=>`<path d="${arcPath(150,170,r,0,359.9)}" fill="none" stroke="${C.track}" stroke-width="16"/><path d="${arcPath(150,170,r,0,359.9*Math.min(1,frac))}" fill="none" stroke="url(#g${r})" stroke-width="16" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="g96" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${C.red}"/><stop offset="1" stop-color="${C.amber}"/></linearGradient>
+    <linearGradient id="g74" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${C.cyan}"/><stop offset="1" stop-color="${C.green}"/></linearGradient>
+    <linearGradient id="g52" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${C.violet}"/><stop offset="1" stop-color="${C.cyan}"/></linearGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="#060a0e"/>
+  ${btPill(16,20)}<text x="${W-16}" y="24" text-anchor="end" fill="${C.mut}" font-size="12">${RIDE.time} · ${RIDE.dist}</text>
+  <!-- concentric rings -->
+  ${ring(96,st.hr/MAXHR,C.red)}
+  ${ring(74,st.power/(FTP*1.4),C.cyan)}
+  ${ring(52,st.cad/120,C.violet)}
+  <text x="150" y="162" text-anchor="middle" fill="${C.fg}" font-size="40" font-weight="800">${st.power}</text>
+  <text x="150" y="182" text-anchor="middle" fill="${C.mut}" font-size="12">watts</text>
+  <!-- ring legend -->
+  <g font-size="13" font-weight="600">
+    <circle cx="40" cy="300" r="5" fill="${C.red}"/><text x="52" y="305" fill="${C.fg}">${st.hr} bpm · HR Z${hz}</text>
+    <circle cx="40" cy="326" r="5" fill="${C.cyan}"/><text x="52" y="331" fill="${C.fg}">${st.power} W · Z${pz}</text>
+    <circle cx="40" cy="352" r="5" fill="${C.violet}"/><text x="52" y="357" fill="${C.fg}">${st.cad} rpm</text>
+  </g>
+  <!-- coaching pill -->
+  <rect x="24" y="378" width="252" height="54" rx="27" fill="${st.col}"/>
+  <text x="150" y="404" text-anchor="middle" fill="#06202a" font-size="20" font-weight="800">${st.cue}</text>
+  <text x="150" y="422" text-anchor="middle" fill="#06202a" font-size="11" opacity=".8">${st.sub}</text>
+  <!-- HR zones -->
+  <text x="24" y="460" fill="${C.mut}" font-size="11" letter-spacing="1">HR ZONES  ·  5 progressive bands</text>
+  ${hrZoneRing(150,500,58,10,st.hr,210,300)}
+  <g font-size="10" fill="${C.faint}" text-anchor="middle" font-family="Inter">
+    <text x="104" y="520">Z1</text><text x="120" y="470">Z2</text><text x="150" y="452">Z3</text><text x="180" y="470">Z4</text><text x="196" y="520">Z5</text>
+  </g>
+  ${sparkline(214,560,70,28,C.cyan,true)}
+  ${demoTag(24,588)}
+  </svg>`;
+}
+
+/* ============ DESIGN 3 — RACING DASHBOARD ============ */
+function racing(st){
+  const W=300,H=600;const pz=powZone(st.power),hz=hrZone(st.hr);
+  // needle gauge semicircle 180deg from 180..360
+  const needle=(cx,cy,r,frac,col)=>{const a=180+180*Math.min(1,frac);const[x,y]=pol(cx,cy,r-6,a);return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${col}" stroke-width="4" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="6" fill="${col}"/>`;};
+  const ticks=(cx,cy,r)=>{let g="";for(let i=0;i<=10;i++){const a=180+18*i;const[x1,y1]=pol(cx,cy,r,a),[x2,y2]=pol(cx,cy,r-(i%5?6:10),a);g+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${i>8?C.red:C.faint}" stroke-width="${i%5?1:2}"/>`;}return g;};
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="Orbitron, sans-serif">
+  <defs><linearGradient id="carbon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#11181d"/><stop offset="1" stop-color="#05080b"/></linearGradient></defs>
+  <rect width="${W}" height="${H}" fill="url(#carbon)"/>
+  <rect x="0" y="0" width="${W}" height="4" fill="${C.red}"/>
+  ${btPill(14,20)}<text x="${W-14}" y="24" text-anchor="end" fill="${C.mut}" font-size="11" font-family="IBM Plex Mono">${RIDE.time}</text>
+  <!-- big power tach -->
+  <path d="${arcPath(150,150,110,180,360)}" fill="none" stroke="#0c1217" stroke-width="16"/>
+  <path d="${arcPath(150,150,110,180,180+180*Math.min(1,st.power/(FTP*1.6)))}" fill="none" stroke="${powZoneColor(pz)}" stroke-width="16"/>
+  ${ticks(150,150,110)}
+  ${needle(150,150,110,st.power/(FTP*1.6),C.red)}
+  <text x="150" y="130" text-anchor="middle" fill="${C.fg}" font-size="56" font-weight="800">${st.power}</text>
+  <text x="150" y="150" text-anchor="middle" fill="${powZoneColor(pz)}" font-size="13" letter-spacing="2">WATTS Z${pz}</text>
+  <!-- warning alert -->
+  <rect x="18" y="186" width="264" height="40" rx="6" fill="${st.col}" stroke="#000" stroke-width="1"/>
+  <text x="150" y="212" text-anchor="middle" fill="#120700" font-size="18" font-weight="800" letter-spacing="1">⚑ ${st.cue}</text>
+  <!-- two mini needle gauges -->
+  <g>
+    <path d="${arcPath(78,300,56,180,360)}" fill="none" stroke="#0c1217" stroke-width="9"/>
+    <path d="${arcPath(78,300,56,180,180+180*Math.min(1,st.cad/120))}" fill="none" stroke="${C.violet}" stroke-width="9"/>
+    ${needle(78,300,56,st.cad/120,C.violet)}
+    <text x="78" y="286" text-anchor="middle" fill="${C.fg}" font-size="30" font-weight="800">${st.cad}</text>
+    <text x="78" y="330" text-anchor="middle" fill="${C.mut}" font-size="10" letter-spacing="1">RPM</text>
+  </g>
+  <g>
+    <path d="${arcPath(222,300,56,180,360)}" fill="none" stroke="#0c1217" stroke-width="9"/>
+    <path d="${arcPath(222,300,56,180,180+180*Math.min(1,st.hr/MAXHR))}" fill="none" stroke="${zoneColor(hz)}" stroke-width="9"/>
+    ${needle(222,300,56,st.hr/MAXHR,C.red)}
+    <text x="222" y="286" text-anchor="middle" fill="${C.fg}" font-size="30" font-weight="800">${st.hr}</text>
+    <text x="222" y="330" text-anchor="middle" fill="${C.mut}" font-size="10" letter-spacing="1">BPM Z${hz}</text>
+  </g>
+  <!-- HR zone strip rectangles -->
+  <text x="18" y="372" fill="${C.mut}" font-size="10" letter-spacing="2" font-family="IBM Plex Mono">HR ZONES</text>
+  ${[1,2,3,4,5].map(i=>{const x=18+(i-1)*53;const on=i===hz;return `<rect x="${x}" y="380" width="48" height="22" rx="3" fill="${zoneColor(i)}" opacity="${on?1:.3}"/><text x="${x+24}" y="395" text-anchor="middle" font-size="11" fill="#05080b" font-weight="700" font-family="IBM Plex Mono">Z${i}</text>${[0,.5,1].map(t=>`<line x1="${x+48*t}" y1="402" x2="${x+48*t}" y2="406" stroke="${C.faint}" stroke-width="1"/>`).join("")}`;}).join("")}
+  <!-- data strip + graph -->
+  <rect x="18" y="430" width="264" height="150" rx="8" fill="#0a1015" stroke="${C.line}"/>
+  <text x="34" y="462" fill="${C.fg}" font-size="26" font-weight="800">${RIDE.dist}</text><text x="34" y="480" fill="${C.mut}" font-size="10" letter-spacing="1" font-family="IBM Plex Mono">DISTANCE</text>
+  <text x="34" y="516" fill="${C.cyan}" font-size="20" font-weight="700">3s ${st.power+6}W</text>
+  ${sparkline(34,536,232,34,C.red,true)}
+  ${demoTag(200,462)}
+  </svg>`;
+}
+
+/* ============ DESIGN 4 — AI COACH FIRST ============ */
+function coachFirst(st){
+  const W=300,H=600;const hz=hrZone(st.hr),pz=powZone(st.power);
+  // orbiting mini rings
+  const mini=(cx,cy,frac,col,val,lab)=>`<path d="${arcPath(cx,cy,26,135,405)}" fill="none" stroke="${C.track}" stroke-width="6"/><path d="${arcPath(cx,cy,26,135,135+270*Math.min(1,frac))}" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round"/><text x="${cx}" y="${cy+4}" text-anchor="middle" fill="${C.fg}" font-size="22" font-weight="800" font-family="Archivo">${val}</text><text x="${cx}" y="${cy+40}" text-anchor="middle" fill="${C.mut}" font-size="10" letter-spacing="1">${lab}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="Archivo, sans-serif">
+  <rect width="${W}" height="${H}" fill="#05080b"/>
+  ${btPill(16,22)}<text x="${W-16}" y="26" text-anchor="end" fill="${C.mut}" font-size="12" font-family="Inter">${RIDE.time} · ${RIDE.dist}</text>
+  <!-- central coaching indicator: circular current vs target -->
+  <circle cx="150" cy="190" r="118" fill="none" stroke="#0b1217" stroke-width="3"/>
+  <path d="${arcPath(150,190,100,135,405)}" fill="none" stroke="${C.track}" stroke-width="12"/>
+  <path d="${arcPath(150,190,100,135,135+270*Math.min(1,st.power/(FTP*1.5)))}" fill="none" stroke="${st.col}" stroke-width="12" stroke-linecap="round"/>
+  <!-- target tick -->
+  ${(()=>{const a=135+270*(FTP*0.7/(FTP*1.5));const[x1,y1]=pol(150,190,88,a),[x2,y2]=pol(150,190,112,a);return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${C.fg}" stroke-width="3"/><text x="${pol(150,190,124,a)[0].toFixed(1)}" y="${pol(150,190,124,a)[1].toFixed(1)}" fill="${C.mut}" font-size="9" text-anchor="middle" font-family="Inter">TARGET</text>`;})()}
+  <text x="150" y="176" text-anchor="middle" fill="${st.col}" font-size="34" font-weight="800">${st.cue.split(" ")[0]}</text>
+  <text x="150" y="212" text-anchor="middle" fill="${st.col}" font-size="34" font-weight="800">${st.cue.split(" ").slice(1).join(" ")}</text>
+  <text x="150" y="238" text-anchor="middle" fill="${C.mut}" font-size="12" font-family="Inter">${st.sub}</text>
+  <!-- three orbiting mini metrics -->
+  ${mini(70,370,st.power/(FTP*1.5),C.cyan,st.power,"WATTS Z"+pz)}
+  ${mini(150,400,st.cad/120,C.violet,st.cad,"RPM")}
+  ${mini(230,370,st.hr/MAXHR,zoneColor(hz),st.hr,"BPM Z"+hz)}
+  <!-- HR zone progression ring across bottom -->
+  <text x="150" y="470" text-anchor="middle" fill="${C.mut}" font-size="10" letter-spacing="2" font-family="Inter">HEART-RATE ZONES</text>
+  ${hrZoneRing(150,500,56,9,st.hr,200,320)}
+  ${sparkline(90,536,120,30,st.col,true)}
+  ${demoTag(120,590)}
+  </svg>`;
+}
+
+/* ============ DESIGN 5 — SCIENTIFIC PERFORMANCE ============ */
+function scientific(st){
+  const W=300,H=600;const pz=powZone(st.power),hz=hrZone(st.hr);
+  // horizontal zone band with current marker + target band
+  function band(x,y,w,segs,curFrac,colors,tgt){
+    let g=`<rect x="${x}" y="${y}" width="${w}" height="18" rx="3" fill="#0a1015"/>`;
+    const sw=w/segs.length;
+    segs.forEach((lab,i)=>{g+=`<rect x="${x+i*sw}" y="${y}" width="${sw-2}" height="18" fill="${colors[i]}" opacity="${0.25+0.1*i}"/>`;
+      [0,.5,1].forEach(t=>g+=`<line x1="${x+i*sw+sw*t}" y1="${y+18}" x2="${x+i*sw+sw*t}" y2="${y+22}" stroke="${C.faint}" stroke-width="1"/>`);
+      g+=`<text x="${x+i*sw+sw/2}" y="${y+13}" text-anchor="middle" font-size="9" fill="${C.fg}" font-family="IBM Plex Mono">${lab}</text>`;});
+    if(tgt!=null){g+=`<rect x="${x+tgt*w-1}" y="${y-3}" width="2" height="24" fill="${C.cyan}"/>`;}
+    const mx=x+Math.min(1,curFrac)*w;
+    g+=`<path d="M${mx-5} ${y-5} L${mx+5} ${y-5} L${mx} ${y+1} Z" fill="${C.fg}"/>`;
+    return g;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="IBM Plex Mono, monospace">
+  <rect width="${W}" height="${H}" fill="#060a0d"/>
+  <!-- faint grid -->
+  ${Array.from({length:9},(_,i)=>`<line x1="0" y1="${60+i*60}" x2="${W}" y2="${60+i*60}" stroke="#0e161b" stroke-width="1"/>`).join("")}
+  ${btPill(14,18)}<text x="${W-14}" y="22" text-anchor="end" fill="${C.mut}" font-size="11">T ${RIDE.time}</text>
+  <text x="14" y="52" fill="${C.cyan}" font-size="11" letter-spacing="2">LIVE TRAINING FEEDBACK</text>
+  <!-- primary numbers as a precise grid -->
+  <g>
+    <text x="14" y="104" fill="${C.fg}" font-size="52" font-weight="500" font-family="Rajdhani">${st.power}</text><text x="14" y="122" fill="${C.mut}" font-size="10">POWER W · Z${pz} · ${(st.power/FTP*100).toFixed(0)}% FTP</text>
+    <text x="165" y="92" fill="${C.violet}" font-size="30" font-family="Rajdhani">${st.cad}</text><text x="165" y="106" fill="${C.mut}" font-size="9">CADENCE</text>
+    <text x="165" y="128" fill="${zoneColor(hz)}" font-size="30" font-family="Rajdhani">${st.hr}</text><text x="165" y="142" fill="${C.mut}" font-size="9">HR · Z${hz} · ${(st.hr/MAXHR*100).toFixed(0)}% MAX</text>
+  </g>
+  <line x1="14" y1="156" x2="${W-14}" y2="156" stroke="${C.line}"/>
+  <!-- power zone band -->
+  <text x="14" y="178" fill="${C.mut}" font-size="10">POWER ZONES (target ▲ = Z2)</text>
+  ${band(14,186,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],st.power/(FTP*1.5),[C.grey,C.cyan,C.green,C.lime,C.amber,C.orange,C.red],0.65*0.66)}
+  <!-- HR zone band -->
+  <text x="14" y="236" fill="${C.mut}" font-size="10">HEART-RATE ZONES (begin · mid · end ticks)</text>
+  ${band(14,244,272,["Z1","Z2","Z3","Z4","Z5"],st.hr/MAXHR,[C.faint,C.cyan,C.green,C.amber,C.red],0.66)}
+  <!-- coaching readout -->
+  <rect x="14" y="286" width="272" height="40" rx="4" fill="#0a1217" stroke="${st.col}"/>
+  <rect x="14" y="286" width="5" height="40" fill="${st.col}"/>
+  <text x="28" y="304" fill="${st.col}" font-size="15" font-weight="500" font-family="Rajdhani" letter-spacing="1">${st.cue}</text>
+  <text x="28" y="320" fill="${C.mut}" font-size="10">${st.sub}</text>
+  <!-- trend chart with axes -->
+  <text x="14" y="352" fill="${C.mut}" font-size="10">POWER TREND · last 5 min</text>
+  <rect x="14" y="360" width="272" height="150" fill="#080e12" stroke="${C.line}"/>
+  <line x1="14" y1="420" x2="286" y2="420" stroke="#13202a" stroke-dasharray="3 3"/><text x="288" y="423" fill="${C.faint}" font-size="8">FTP</text>
+  ${sparkline(22,372,256,130,C.cyan,true)}
+  <!-- bottom readout -->
+  <g font-family="Rajdhani">
+    <text x="14" y="548" fill="${C.fg}" font-size="24">${RIDE.dist}</text><text x="14" y="564" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">DISTANCE</text>
+    <text x="150" y="548" fill="${C.fg}" font-size="24">${st.power+6} W</text><text x="150" y="564" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG</text>
+    <text x="230" y="548" fill="${C.fg}" font-size="24">0.9</text><text x="230" y="564" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
+  </g>
+  ${demoTag(220,22)}
+  </svg>`;
+}
+
+/* ============ DESIGN 6 — APEX (ORIGINAL) ============ */
+function apex(st){
+  const W=300,H=600;const pz=powZone(st.power),hz=hrZone(st.hr);
+  const s=135,sweep=270,f=Math.min(1,st.power/(FTP*1.5));
+  const tgtA=s+sweep*(FTP*0.7/(FTP*1.5));
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="Rajdhani, sans-serif">
+  <defs><radialGradient id="glow" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#0c1821"/><stop offset="1" stop-color="#05080b"/></radialGradient></defs>
+  <rect width="${W}" height="${H}" fill="url(#glow)"/>
+  <!-- status -->
+  ${btPill(16,22)}<text x="${W/2}" y="26" text-anchor="middle" fill="${C.mut}" font-size="11" font-family="IBM Plex Mono">${RIDE.time}</text><text x="${W-16}" y="26" text-anchor="end" fill="${C.mut}" font-size="11" font-family="IBM Plex Mono">${RIDE.dist}</text>
+  <!-- hero power arc, zone-segmented underlay + value arc + target tick -->
+  ${[1,2,3,4,5,6,7].map(i=>{const a0=s+sweep*(i-1)/7+1.5,a1=s+sweep*i/7-1.5;return `<path d="${arcPath(150,180,96,a0,a1)}" fill="none" stroke="${powZoneColor(i)}" stroke-width="7" opacity="${i===pz?.9:.22}"/>`;}).join("")}
+  <path d="${arcPath(150,180,96,s,s+sweep*f)}" fill="none" stroke="${powZoneColor(pz)}" stroke-width="13" stroke-linecap="round"/>
+  ${(()=>{const[x1,y1]=pol(150,180,82,tgtA),[x2,y2]=pol(150,180,108,tgtA);return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${C.fg}" stroke-width="2.5"/><text x="${pol(150,180,118,tgtA)[0].toFixed(1)}" y="${pol(150,180,118,tgtA)[1].toFixed(1)}" fill="${C.mut}" font-size="8" text-anchor="middle" font-family="IBM Plex Mono">TGT</text>`;})()}
+  <text x="150" y="188" text-anchor="middle" fill="${C.fg}" font-size="76" font-weight="700">${st.power}</text>
+  <text x="150" y="212" text-anchor="middle" fill="${powZoneColor(pz)}" font-size="13" letter-spacing="3">WATTS · ZONE ${pz}</text>
+  <!-- coach ribbon -->
+  <rect x="26" y="262" width="248" height="44" rx="12" fill="${st.col}"/>
+  ${st.dir!==0?`<text x="48" y="290" fill="#05121a" font-size="22" font-weight="700">${st.dir>0?"▲":"▼"}</text>`:`<circle cx="46" cy="284" r="7" fill="#05121a"/>`}
+  <text x="150" y="282" text-anchor="middle" fill="#05121a" font-size="19" font-weight="700">${st.cue}</text>
+  <text x="150" y="298" text-anchor="middle" fill="#05121a" font-size="10" opacity=".85">${st.sub}</text>
+  <!-- twin small readouts -->
+  <g text-anchor="middle">
+    <text x="78" y="352" fill="${C.violet}" font-size="40" font-weight="700">${st.cad}</text><text x="78" y="370" fill="${C.mut}" font-size="11" letter-spacing="2">RPM</text>
+    <text x="222" y="352" fill="${zoneColor(hz)}" font-size="40" font-weight="700">${st.hr}</text><text x="222" y="370" fill="${C.mut}" font-size="11" letter-spacing="2">BPM · Z${hz}</text>
+  </g>
+  <!-- HR 5-zone arc with begin/mid/end ticks -->
+  ${hrZoneRing(150,452,60,10,st.hr,205,310)}
+  <text x="150" y="458" text-anchor="middle" fill="${C.mut}" font-size="10" letter-spacing="2" font-family="IBM Plex Mono">HR ZONES</text>
+  <g font-size="10" fill="${C.faint}" text-anchor="middle" font-family="IBM Plex Mono">
+   <text x="104" y="474">Z1</text><text x="120" y="420">Z2</text><text x="150" y="404">Z3</text><text x="180" y="420">Z4</text><text x="196" y="474">Z5</text>
+  </g>
+  <!-- performance graph -->
+  <text x="20" y="516" fill="${C.mut}" font-size="10" letter-spacing="2" font-family="IBM Plex Mono">POWER · LAST 60s</text>
+  <rect x="20" y="522" width="260" height="52" rx="8" fill="#0a1218" stroke="${C.line}"/>
+  ${sparkline(28,528,244,40,powZoneColor(pz),true)}
+  ${demoTag(20,590)}
+  </svg>`;
+}
+
+const DESIGNS=[
+  {id:"garmin",no:"01",name:"Garmin Pro",fn:garmin,tag:"Clean, professional, data-first",
+   pros:["Instantly familiar to anyone from a Garmin/Wahoo head unit","Segmented 7-zone power ring reads at a glance in sunlight","Big primary number, calm hierarchy — low distraction while riding"],
+   cons:["Conservative — not visually exciting","Two-column metric block can feel sparse on a tall phone"]},
+  {id:"apple",no:"02",name:"Apple Fitness",fn:apple,tag:"Elegant concentric rings + gradients",
+   pros:["Three nested rings show power, HR and cadence effort in one shape","Gradients and the rounded pill feel premium and modern","Coaching pill is soft and unobtrusive"],
+   cons:["Rings encode effort, not exact zone edges — less precise for training","Thin ring text is harder to read at a glance on a bumpy road"]},
+  {id:"racing",no:"03",name:"Racing Dashboard",fn:racing,tag:"Motorsport gauges + needles + alerts",
+   pros:["Needle tach is dramatic and fun; redline implies 'push' intuitively","High-visibility alert bar for coaching — impossible to miss","Distinct personality, feels like a performance instrument"],
+   cons:["Needles are slower to read an exact number than plain digits","Busiest layout — most visual noise of the six"]},
+  {id:"coachFirst",no:"04",name:"AI Coach First",fn:coachFirst,tag:"Guidance front and centre",
+   pros:["Coaching instruction dominates — best for 'just tell me what to do'","Central ring shows current-vs-target directly around the words","Calmest for new riders who ignore raw numbers"],
+   cons:["Raw metrics are small — data-hungry riders may want more","Less useful if you ride without a coaching mode active"]},
+  {id:"scientific",no:"05",name:"Scientific Performance",fn:scientific,tag:"Lab-grade bands + trends",
+   pros:["Zone bands show exact position with begin/mid/end ticks and a target marker","%FTP, %max HR, 3s avg and variability — richest training detail","Trend chart with FTP reference line for pacing"],
+   cons:["Most text-dense — needs a glance, not a flick","Monospace lab look is less 'premium consumer', more tool"]},
+  {id:"apex",no:"06",name:"Apex",fn:apex,tag:"My synthesis of the strongest ideas",
+   pros:["Garmin's segmented zone ring + a target tick (Scientific) + a bold coach ribbon (Coach First)","Zone-coloured hero number with direction arrow — effort and guidance in one view","HR 5-zone arc with begin/mid/end ticks; clean 60s power graph; balanced density"],
+   cons:["More to render/animate — slightly heavier on an old phone","Combines several ideas, so it's the least 'pure' single concept"]},
+];
+
+// build gallery
+const gal=document.getElementById("gallery");
+DESIGNS.forEach(d=>{
+  const a=el(`<a class="gcard" href="#${d.id}"><div class="phone">${d.fn(STATES.keep)}</div><div class="nm">${d.name}</div><div class="no">DESIGN ${d.no} · ${d.tag}</div></a>`);
+  gal.appendChild(a);
+});
+
+// build sections
+const sec=document.getElementById("sections");
+DESIGNS.forEach(d=>{
+  const s=el(`<section class="design" id="${d.id}">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <div><p class="ey">Design ${d.no}</p><h2>${d.name}</h2><p class="sub">${d.tag}. Demonstration data.</p></div>
+      <a class="top" href="#gallery">↑ all designs</a>
+    </div>
+    <div class="row">
+      <div class="block"><p class="cap">Full preview · "Keep it up"</p><div class="phone" style="width:270px">${d.fn(STATES.keep)}</div></div>
+      <div class="block" style="flex:1 1 320px">
+        <p class="cap">Coaching states</p>
+        <div class="states">
+          <div><div class="phone" style="width:150px">${d.fn(STATES.faster)}</div></div>
+          <div><div class="phone" style="width:150px">${d.fn(STATES.keep)}</div></div>
+          <div><div class="phone" style="width:150px">${d.fn(STATES.ease)}</div></div>
+        </div>
+        <div class="prose" style="margin-top:14px">
+          <ul>${d.pros.map(p=>`<li class="pro">${p}</li>`).join("")}${d.cons.map(c=>`<li class="con">${c}</li>`).join("")}</ul>
+        </div>
+      </div>
+    </div>
+    <p class="cap" style="margin-top:18px">Gauge progression · Zone 1 → Zone 5 (heart rate rising)</p>
+    <div class="zoneprog">${[105,122,139,158,176].map((hrv,i)=>`<div style="text-align:center"><div class="phone" style="width:118px">${d.fn(Object.assign({},STATES.keep,{hr:hrv,cue:["EASE","KEEP IT UP","KEEP IT UP","PUSH","EASE OFF"][i]}))}</div><div class="no" style="margin-top:4px;color:${zoneColor(i+1)}">Z${i+1} · ${hrv} bpm</div></div>`).join("")}</div>
+  </section>`);
+  sec.appendChild(s);
+});
+</script>
