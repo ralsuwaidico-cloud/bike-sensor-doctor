@@ -85,26 +85,39 @@ def decode_2a63(b):
             "angle_deg": u16(b, 8), "error": b[10]}
 
 # --------------------------------------------------------------------------- scan
-async def scan(timeout=20):
-    ev("scan_start", msg=f"scanning {timeout}s for {TARGET_NAME} … spin the pedals a few times to wake the sensor")
+async def scan(timeout=30):
+    print("\n" + "!"*64)
+    print("! BEFORE THIS SCAN:")
+    print("!  1) Turn OFF Bluetooth on your phone (the meter talks to ONE device")
+    print("!     at a time; the phone's app holds it and hides it from the PC).")
+    print("!  2) Keep the pedals turning slowly NOW — the meter only broadcasts")
+    print("!     while the cranks move.")
+    print("!"*64 + "\n")
+    ev("scan_start", msg=f"scanning {timeout}s for {TARGET_NAME} … keep pedaling")
     found = {}
     def cb(d, adv):
         found[d.address] = (d, adv)
     scanner = BleakScanner(detection_callback=cb)
-    await scanner.start(); await asyncio.sleep(timeout); await scanner.stop()
+    await scanner.start()
     target = None
+    for _ in range(timeout):          # check each second so we can stop early
+        await asyncio.sleep(1)
+        for addr, (d, adv) in list(found.items()):
+            name = adv.local_name or d.name
+            if (name == TARGET_NAME) or (addr.upper() == TARGET_ADDR_HINT) or \
+               (S_1828 in [s.lower() for s in (adv.service_uuids or [])]):
+                target = d; break
+        if target: break
+    await scanner.stop()
     for addr, (d, adv) in found.items():
-        name = adv.local_name or d.name
-        entry = {"address": addr, "name": name, "rssi": adv.rssi,
-                 "services": list(adv.service_uuids or [])}
-        log["scan"].append(entry)
-        hit = (name == TARGET_NAME) or (addr.upper() == TARGET_ADDR_HINT) or \
-              (S_1828 in [s.lower() for s in (adv.service_uuids or [])])
-        if hit and target is None:
-            target = d
-            ev("scan_hit", msg=f"found {name or addr} @ {adv.rssi} dBm, services={entry['services']}")
-    if target is None:
-        ev("scan_miss", msg=f"{TARGET_NAME} not seen ({len(found)} other devices). Is it awake / in range?")
+        log["scan"].append({"address": addr, "name": adv.local_name or d.name,
+                            "rssi": adv.rssi, "services": list(adv.service_uuids or [])})
+    if target:
+        ev("scan_hit", msg=f"found {target.address} @ "
+           f"{found[target.address][1].rssi} dBm")
+    else:
+        ev("scan_miss", msg=f"{TARGET_NAME} not seen ({len(found)} other devices). "
+           "Trying a direct connect by address as a fallback…")
     return target
 
 # ------------------------------------------------------------------- one attempt
@@ -288,10 +301,20 @@ def save():
 
 async def main():
     ev("boot", msg=f"xds_probe on {log['platform']}")
-    dev = await scan(20)
+    dev = await scan(30)
     if not dev:
-        ev("abort", msg="sensor not found — cannot continue")
-        save(); return
+        # Fallback: on Windows, a device the system already knows can sometimes be
+        # connected by address without appearing in the live scan.
+        ev("direct_try", msg=f"attempting direct connect to {TARGET_ADDR_HINT}")
+        client, info = await attempt_connect(TARGET_ADDR_HINT, "direct-by-address", 25, 0.0)
+        if client:
+            await client.disconnect()
+            dev = TARGET_ADDR_HINT   # BleakClient accepts the address string downstream
+        else:
+            ev("abort", msg="sensor not found by scan or direct connect. "
+               "Most likely the phone still holds it (turn phone Bluetooth OFF) "
+               "or it is asleep (pedal during the scan).")
+            save(); return
     await investigate(dev)
     await asyncio.sleep(2)
     try:
