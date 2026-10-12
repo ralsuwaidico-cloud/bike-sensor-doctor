@@ -419,7 +419,7 @@ function aiSci(st){
     if(tgt!=null)g+=`<rect x="${x+tgt*w-1}" y="${y-3}" width="2" height="24" fill="${C.cyan}"/>`;
     const mx=x+Math.min(1,curFrac)*w;g+=`<path d="M${mx-5} ${y-5} L${mx+5} ${y-5} L${mx} ${y+1} Z" fill="${C.fg}"/>`;return g;
   }
-  const sec2=wrap(st.sub+" · auto from sensors + target",34);
+  const sec2=wrap(st.sub+" · auto from sensors + target",31);
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="IBM Plex Mono, monospace">
   <rect width="${W}" height="${H}" fill="#060a0d"/>
   ${Array.from({length:15},(_,i)=>`<line x1="0" y1="${64+i*60}" x2="${W}" y2="${64+i*60}" stroke="#0e161b" stroke-width="1"/>`).join("")}
@@ -436,9 +436,10 @@ function aiSci(st){
   ${gauge(222,340,52,11,st.hr,MAXHR,zoneColor(hz),0.65,hrBounds,"Z"+hz+" · "+hPct+"%","BPM",false,tstat("hr"),false)}
   <!-- 4 · LARGE COACHING BOX -->
   <rect x="14" y="440" width="272" height="100" rx="16" fill="${st.col}"/>
-  ${st.dir!==0?`<text x="30" y="500" fill="#05121a" font-size="40" font-weight="800" font-family="Archivo">${st.dir>0?"▲":"▼"}</text>`:`<circle cx="36" cy="487" r="11" fill="#05121a"/>`}
-  <text x="155" y="487" text-anchor="middle" fill="#05121a" font-size="26" font-weight="800" font-family="Archivo">${st.cue}</text>
-  ${sec2.slice(0,2).map((ln,i)=>`<text x="155" y="${511+i*17}" text-anchor="middle" fill="#05121a" font-size="12" opacity=".82" font-family="Inter">${ln}</text>`).join("")}
+  <!-- icon column x14–58; cue + secondary centred in the remaining x58–286 (centre 172); cue font scales with length -->
+  ${st.dir!==0?`<text x="36" y="498" text-anchor="middle" fill="#05121a" font-size="30" font-weight="800" font-family="Archivo">${st.dir>0?"▲":"▼"}</text>`:`<circle cx="36" cy="487" r="10" fill="#05121a"/>`}
+  <text x="172" y="487" text-anchor="middle" fill="#05121a" font-size="${st.cue.length>=12?21:st.cue.length>=10?24:26}" font-weight="800" font-family="Archivo">${st.cue}</text>
+  ${sec2.slice(0,2).map((ln,i)=>`<text x="172" y="${511+i*17}" text-anchor="middle" fill="#05121a" font-size="12" opacity=".82" font-family="Inter">${ln}</text>`).join("")}
   <!-- ============ FROM HERE DOWN: preserved from Design 5 (spacing only) ============ -->
   <!-- 5 · POWER ZONES -->
   <line x1="14" y1="556" x2="${W-14}" y2="556" stroke="${C.line}"/>
