@@ -108,6 +108,27 @@ Recovery actions, all reversible: reconnect with exponential back-off 1 → 2 �
 disconnect/reconnect, at most 3 cycles then fall back to scanning. Never write to any characteristic other than
 CCCDs.
 
+## 5a. Screen indicator logic (Targets.kt) and Normalized Power (RideStats.kt)
+
+The Design-7 "AI Scientific Coach" screen draws nothing it decides itself; every indicator comes from `core/Targets.kt`:
+
+| Need | Call | Notes |
+|---|---|---|
+| Below / on / above target pill | `Targets.power(w, ftp, targetZone)`, `Targets.hr(bpm, maxHr, targetZone)`, `Targets.cadence(rpm, lo, hi)` | 0 W / 0 rpm / no strap = `UNKNOWN`, never "below" |
+| Needle position on the ring | `Targets.gaugeFraction(value, max)` | power full-scale `powerGaugeMaxW(ftp)` = max(300, 1.5×FTP) |
+| White target line | `powerTargetFraction(zone, ftp)`, `hrTargetFraction(zone)` | mid-point of the target zone |
+| Zone boundary ticks | `powerZoneTicks(ftp)`, `hrZoneTicks` | 0..1 of the gauge |
+| "Z2 · 82 %" sub-label | `powerZonePercent`, `hrZonePercent` | zone bounds are inclusive at the top |
+| Coaching shape / lit scale step | `coachShape(cueType)` (UP/CHECK/DOWN/NONE), `coachDirection(cueType)` (+1/0/−1) | informational cues have no shape |
+| Target zone of a mode | `targetZone(mode)` | ENDURANCE → Z3, otherwise Z2 |
+
+Normalized Power (Coggan): `RideStats` keeps a 30 s rolling mean of RUNNING samples, accumulates mean⁴ once per sample
+after the first 30 s, and `normalizedPowerW = (Σ mean⁴ / n)^¼`. `variabilityIndex = NP / avgPower` (1.00 = perfectly
+steady). Both are `null` until 30 s of riding exist — the screen shows "—", never a guess. Paused samples are excluded.
+
+Fonts used by the screen (bundle the same on the ESP32 if the display library supports TTF): Rajdhani (numbers),
+IBM Plex Mono (labels), Archivo 800 (coaching cue). All SIL OFL; licences in `app/src/main/assets/licenses`.
+
 ## 6. Hardware notes for the ESP32-S3 build
 
 - NimBLE central, one connection, MTU ≥ 23 is enough for 0x2A63 (11 bytes) — MTU 247 only matters for a6ed0202.
