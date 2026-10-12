@@ -8,6 +8,12 @@ import android.os.Build
 import com.rashed.bikesensordoctor.ble.BleScanner
 import com.rashed.bikesensordoctor.ble.GattManager
 import com.rashed.bikesensordoctor.core.Health
+import com.rashed.bikesensordoctor.core.Phase
+import com.rashed.bikesensordoctor.core.Session
+import com.rashed.bikesensordoctor.core.SessionPlan
+import com.rashed.bikesensordoctor.core.LinkMonitor
+import com.rashed.bikesensordoctor.core.CoachInput
+import com.rashed.bikesensordoctor.core.Signal
 import com.rashed.bikesensordoctor.core.RideStats
 import com.rashed.bikesensordoctor.core.XdsSample
 import com.rashed.bikesensordoctor.log.EventLog
@@ -61,6 +67,16 @@ data class Dashboard(
     val normalizedPowerW: Int? = null,          // Coggan NP, null until 30 s of riding
     val variabilityIndex: Double? = null,       // NP / avg power, null until NP exists
     val coachMode: String = "FREE",
+    // ---- P0/P1 additions ----
+    val signal: RideStats.SignalState = RideStats.SignalState.NONE,   // FRESH / COASTING / STALE / NONE
+    val phase: Phase = Phase.MAIN,
+    val warmupRemainingSec: Int = 0,
+    val linkQualityPct: Int? = null,
+    val linkGaps: Int = 0,
+    val linkLostSec: Long = 0,
+    val powerVerified: Boolean = false,
+    val coachReason: String = "",
+    val restoredRide: Boolean = false,                                // true after a ride was recovered from a checkpoint
 )
 
 /**
@@ -101,11 +117,27 @@ class RideEngine(private val app: Application) {
     private val powerZoneSec = IntArray(8)
     private var hrSum = 0L; private var hrCount = 0; private var hrMax = 0
 
+    // ---- P0: link quality + gaps, ride checkpoint ----
+    val link = LinkMonitor()
+    private var lastDisconnects = 0
+    private var lastCheckpointMs = 0L
+    private val checkpointFile get() = File(app.filesDir, "ride-checkpoint.txt")
+    private val checkpointCsv get() = File(app.filesDir, "ride-checkpoint.csv")
+    private val checkpointLink get() = File(app.filesDir, "ride-checkpoint-link.txt")
+    private var csvFlushed = 0            // chars of csv already appended to checkpointCsv
+    private var restoredRide = false
+
+    // ---- P1: session phases ----
+    private var cooldownRequestedAtMs: Long? = null   // riding-time at which COOL DOWN was pressed
+    private val plan get() = SessionPlan(warmupSec = prefs.warmupSec)
+
     fun bluetoothOn() = adapter?.isEnabled == true
 
     init {
+        restoreCheckpoint()
         sensor.addSampleListener { s, t ->
             stats.onSample(s, t)
+            if (s.plausible && stats.state != RideStats.State.IDLE) link.onPacket(t, s.cadenceRpm, s.powerW)
             if (stats.state == RideStats.State.RUNNING) {
                 csv.append(t).append(',').append(s.powerW).append(',').append(s.leftW).append(',').append(s.rightW).append(',').append(s.cadenceSignedRpm).append(',').append(s.crankAngleDeg).append('\n')
                 if (s.plausible) { sampleByMs[t] = s.powerW to s.cadenceRpm; if (sampleByMs.size > 20000) sampleByMs.remove(sampleByMs.keys.first()) }
@@ -128,9 +160,35 @@ class RideEngine(private val app: Application) {
     fun applyCoachConfig() {
         coach.config = com.rashed.bikesensordoctor.core.CoachConfig(
             mode = runCatching { com.rashed.bikesensordoctor.core.CoachMode.valueOf(prefs.coachMode) }.getOrDefault(com.rashed.bikesensordoctor.core.CoachMode.FREE),
-            cadenceLow = prefs.cadenceLow, cadenceHigh = prefs.cadenceHigh,
+            cadenceEnabled = prefs.cadenceCoaching, cadenceLow = prefs.cadenceLow, cadenceHigh = prefs.cadenceHigh,
             ftpW = prefs.ftpW, maxHr = prefs.maxHr,
         )
+    }
+
+    /** P1: the rider asks for the cool-down phase (effort cues stop asking for more). */
+    fun requestCooldown() { cooldownRequestedAtMs = stats.elapsedMs(System.currentTimeMillis()); log.add(EventType.TEST, note = "Cool-down requested") }
+
+    // ---------------------------------------------------------------- P0 checkpoint (ride survives app restart)
+    private fun writeCheckpoint(now: Long) {
+        try {
+            checkpointFile.writeText(stats.snapshot(now))
+            if (csv.length > csvFlushed) { checkpointCsv.appendText(csv.substring(csvFlushed)); csvFlushed = csv.length }
+            checkpointLink.writeText(link.gaps.joinToString("\n") { "${it.startMs},${it.endMs},${it.reason},${it.rotatingBefore},${it.poweredBefore}" })
+        } catch (_: Exception) {}
+    }
+    private fun clearCheckpoint() { checkpointFile.delete(); checkpointCsv.delete(); checkpointLink.delete(); csvFlushed = 0 }
+    private fun restoreCheckpoint() {
+        try {
+            if (!checkpointFile.exists()) return
+            val age = System.currentTimeMillis() - checkpointFile.lastModified()
+            if (age > 6 * 3600_000L) { clearCheckpoint(); return }           // older than 6 h: not the same ride
+            if (!stats.restore(checkpointFile.readText())) { clearCheckpoint(); return }
+            if (checkpointCsv.exists()) { csv.setLength(0); csv.append(checkpointCsv.readText()); csvFlushed = csv.length }
+            restoredRide = true
+            log.add(EventType.TEST, note = "Ride restored from checkpoint (paused): ${fmtDuration(stats.elapsedMs(System.currentTimeMillis()))}, ${stats.sampleCount} samples")
+            _dash.value = _dash.value.copy(lastSavedRide = "Ride restored after restart — press RESUME to continue or FINISH to save", restoredRide = true)
+            RideService.start(app)
+        } catch (_: Exception) { clearCheckpoint() }
     }
 
     fun connectHr(address: String, name: String?) { prefs.hrAddress = address; prefs.hrName = name; hr.connect(address, name) }
@@ -142,6 +200,7 @@ class RideEngine(private val app: Application) {
             csv.setLength(0); csv.append("timestamp_ms,power_w,left_w,right_w,cadence_signed_rpm,crank_angle_deg\n")
             sampleByMs.clear(); recentPower.clear(); hrZoneSec.fill(0); powerZoneSec.fill(0); coach.reset()
             hrSum = 0; hrCount = 0; hrMax = 0
+            link.reset(); cooldownRequestedAtMs = null; clearCheckpoint(); restoredRide = false
         }
         stats.start(now)
         applyCoachConfig()
@@ -157,12 +216,13 @@ class RideEngine(private val app: Application) {
         if (stats.state == RideStats.State.IDLE) return null
         val startedAt = stats.startedAtMs ?: now
         stats.finish(now)
+        link.finish(now)
         gps.setRecording(false)
         val summary = stats.summary(now)
         val saved = if (summary.samples > 0 || summary.durationMs > 10_000) {
             history.save(summary, csv.toString())
             history.saveReport(if (summary.startedAtMs > 0) summary.startedAtMs else startedAt,
-                powerZoneSec, hrZoneSec, if (hrCount > 0) (hrSum / hrCount).toInt() else 0, hrMax)
+                powerZoneSec, hrZoneSec, if (hrCount > 0) (hrSum / hrCount).toInt() else 0, hrMax, link.report(now))
             // GPX if we recorded any track; annotate each point with the nearest power/cadence sample.
             val track = gps.snapshotTrack()
             val rideId = if (summary.startedAtMs > 0) summary.startedAtMs else startedAt
@@ -176,8 +236,9 @@ class RideEngine(private val app: Application) {
         log.add(EventType.TEST, note = "Ride finished: $saved")
         saveLogSnapshot("ride-end")
         stats.reset()
+        clearCheckpoint(); restoredRide = false
         RideService.stop(app)
-        _dash.value = _dash.value.copy(lastSavedRide = saved)
+        _dash.value = _dash.value.copy(lastSavedRide = saved, restoredRide = false)
         return saved
     }
 
@@ -199,6 +260,9 @@ class RideEngine(private val app: Application) {
         // keepalive: a light battery read every 20 s keeps the GATT link active against idle timeouts
         if (live && now - lastKeepaliveMs > 20_000) { lastKeepaliveMs = now; gatt.readRssi() }
 
+        // P0: tag the next gap with the GATT reason of a disconnect we just observed
+        if (snap.disconnects != lastDisconnects) { lastDisconnects = snap.disconnects; link.onDisconnect(now, snap.lastDisconnectReason ?: "disconnect") }
+
         val last = sensor.lastSample.value?.first
         val fresh = stats.livePowerW(now) != null
         val g = gps.state.value
@@ -206,11 +270,27 @@ class RideEngine(private val app: Application) {
         val hrState = hr.state.value
         val hrZ = com.rashed.bikesensordoctor.core.HrZones.zone(bpm, prefs.maxHr)
 
-        // coaching (≈1 Hz): run the engine and surface/speak any new cue
-        val c = coach.update(now, stats.liveCadenceRpm(now), bpm, stats.livePowerW(now))
-        if (c.type != com.rashed.bikesensordoctor.core.CueType.NONE) {
-            _cue.value = c
-            if (prefs.coachVoice && c.spoken.isNotEmpty()) onSpeak?.invoke(c.spoken)
+        // P1 coaching (≈1 Hz): phase-aware, freshness-aware multi-signal engine. Only while the ride is RUNNING.
+        val elapsed = stats.elapsedMs(now)
+        val phase = Session.phaseAt(plan, elapsed, cooldownRequestedAtMs)
+        if (stats.state == RideStats.State.RUNNING) {
+            val sig = stats.signalState(now)
+            val xdsFresh = sig == RideStats.SignalState.FRESH || sig == RideStats.SignalState.COASTING
+            val c = coach.update(CoachInput(
+                nowMs = now, phase = phase,
+                cadence = Signal(stats.liveCadenceRpm(now), xdsFresh),
+                hr = Signal(bpm, bpm != null),
+                power = Signal(stats.livePowerW(now), xdsFresh),
+            ))
+            if (c.type != com.rashed.bikesensordoctor.core.CueType.NONE) {
+                _cue.value = c
+                log.add(EventType.TEST, note = "Coach: ${c.type} (${c.reason})")
+                if (prefs.coachVoice && c.spoken.isNotEmpty()) onSpeak?.invoke(c.spoken)
+            }
+        }
+        // P0: checkpoint every 10 s while a ride exists
+        if (stats.state == RideStats.State.RUNNING || stats.state == RideStats.State.PAUSED) {
+            if (now - lastCheckpointMs >= 10_000) { lastCheckpointMs = now; writeCheckpoint(now) }
         }
 
         // sparkline + zone-time while running
@@ -238,6 +318,9 @@ class RideEngine(private val app: Application) {
             linkUptimeSec = uptimeSec, recentPower = recentPower.toList(),
             normalizedPowerW = stats.normalizedPowerW, variabilityIndex = stats.variabilityIndex,
             coachMode = prefs.coachMode,
+            signal = stats.signalState(now), phase = phase, warmupRemainingSec = Session.warmupRemainingSec(plan, elapsed),
+            linkQualityPct = link.qualityPct(now), linkGaps = link.gaps.size, linkLostSec = link.lostMs() / 1000,
+            powerVerified = prefs.powerVerified, coachReason = _cue.value.reason, restoredRide = restoredRide,
         )
     }
 

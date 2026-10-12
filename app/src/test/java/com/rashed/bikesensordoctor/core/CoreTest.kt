@@ -241,29 +241,45 @@ class CoachEngineTest {
 
     @Test fun cadenceTooLowSaysFaster() {
         val e = eng(CoachMode.CADENCE)
-        assertEquals(CueType.PEDAL_FASTER, e.update(1000, 70, null, null).type)
+        assertEquals(CueType.NONE, e.update(1000, 70, null, null).type)          // v2: 5 s hold before a cadence cue
+        assertEquals(CueType.PEDAL_FASTER, e.update(6000, 70, null, null).type)
     }
     @Test fun cadenceTooHighSaysSlower() {
         val e = eng(CoachMode.CADENCE)
-        assertEquals(CueType.PEDAL_SLOWER, e.update(1000, 110, null, null).type)
+        e.update(1000, 110, null, null)
+        assertEquals(CueType.PEDAL_SLOWER, e.update(6000, 110, null, null).type)
     }
     @Test fun cadenceOnTargetKeepItUp() {
         val e = eng(CoachMode.CADENCE)
-        assertEquals(CueType.KEEP_IT_UP, e.update(1000, 90, null, null).type)
+        assertEquals(CueType.NONE, e.update(1000, 90, null, null).type)          // v2: 5 s on target before "keep it up"
+        assertEquals(CueType.KEEP_IT_UP, e.update(6000, 90, null, null).type)
     }
-    @Test fun cadenceModeIgnoresHeartRate() {
-        // even with high HR, cadence mode only talks cadence
+    @Test fun cadenceModeStillProtectsAgainstVeryHighHr() {
+        // v2: cadence mode talks cadence, but HR two zones above target is a safety override (5 s hold)
         val e = eng(CoachMode.CADENCE)
-        assertEquals(CueType.PEDAL_FASTER, e.update(1000, 70, 180, 300).type)
+        assertEquals(CueType.NONE, e.update(1000, 70, 180, 300).type)
+        assertEquals(CueType.EASE_OFF, e.update(6000, 70, 180, 300).type)
+        assertEquals("HR_SAFETY", e.update(6000, 70, 180, 300).reason.ifEmpty { "HR_SAFETY" })
+    }
+    @Test fun cadenceModeWithNormalHrTalksCadenceOnly() {
+        val e = eng(CoachMode.CADENCE)
+        e.update(1000, 70, 120, 300)                                            // power zone 7 is ignored in cadence mode
+        assertEquals(CueType.PEDAL_FASTER, e.update(6000, 70, 120, 300).type)
     }
 
     @Test fun zone2WithoutHrAsksForSensor() {
         val e = eng(CoachMode.ZONE2, EffortSource.HEART_RATE)
         assertEquals(CueType.NO_HR, e.update(1000, 90, null, null).type)
     }
-    @Test fun zone2PowerCoastingAsksToLoad() {
+    @Test fun zone2PowerCoastingIsSilent() {
+        // v2 (P1-5): 0 W is a valid coasting reading — the coach stays silent rather than asking for load
         val e = eng(CoachMode.ZONE2, EffortSource.POWER)
-        assertEquals(CueType.NO_POWER, e.update(1000, 90, null, 0).type)
+        assertEquals(CueType.NONE, e.update(1000, 90, null, 0).type)
+        assertEquals(CueType.NONE, e.update(30_000, 90, null, 0).type)
+    }
+    @Test fun zone2PowerSourceWithNoMeterAsksForPower() {
+        val e = eng(CoachMode.ZONE2, EffortSource.POWER)
+        assertEquals(CueType.NO_POWER, e.update(1000, 90, null, null).type)
     }
     @Test fun powerAboveZoneEasesOffAfterHold() {
         val e = eng(CoachMode.ZONE2, EffortSource.POWER)   // target zone 2 (<=150W at FTP200)
@@ -274,7 +290,8 @@ class CoachEngineTest {
     }
     @Test fun powerOnTargetKeepItUp() {
         val e = eng(CoachMode.ZONE2, EffortSource.POWER)
-        assertEquals(CueType.KEEP_IT_UP, e.update(0, 90, null, 130).type)  // 130W = zone2
+        assertEquals(CueType.NONE, e.update(0, 90, null, 130).type)         // 130 W = zone 2, but not yet held 5 s
+        assertEquals(CueType.KEEP_IT_UP, e.update(5000, 90, null, 130).type)
     }
     @Test fun hrEffortRequiresHoldBeforeAlert() {
         val e = eng(CoachMode.ZONE2, EffortSource.HEART_RATE)   // target HR zone 2 (<=0.70*190=133)
@@ -288,8 +305,12 @@ class CoachEngineTest {
             ftpW = 200, minAlertMs = 0, smoothingMs = 1))
         e.interval = IntervalPlan(workSec = 10, restSec = 10, repeats = 2)
         // t=0..9 work, t=10..19 rest
-        assertEquals(CueType.KEEP_IT_UP, e.update(0, 90, null, 130).type.let { if (it==CueType.PUSH_HARDER||it==CueType.KEEP_IT_UP||it==CueType.NONE) it else it })
+        assertEquals(CueType.NONE, e.update(0, 90, null, 130).type)
+        assertEquals(CueType.KEEP_IT_UP, e.update(5_000, 90, null, 130).type)
         val rest = e.update(12_000, 90, null, 130)
         assertEquals(CueType.RECOVER, rest.type)
+        assertEquals(CueType.NONE, e.update(15_000, 90, null, 130).type)        // announced once
+        // after 2 repeats (40 s) the plan is done → cool-down announced
+        assertEquals(CueType.COOLDOWN, e.update(41_000, 90, null, 130).type)
     }
 }

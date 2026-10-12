@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rashed.bikesensordoctor.core.CoachMode
 import com.rashed.bikesensordoctor.core.CueType
+import com.rashed.bikesensordoctor.core.Phase
 import com.rashed.bikesensordoctor.core.TargetStatus
 import com.rashed.bikesensordoctor.core.Targets
 import com.rashed.bikesensordoctor.core.Health
@@ -86,7 +87,7 @@ private val Dim = Color(0xFF6B828C)
 private val zoneColors = listOf(Color(0xFF7E8C93), Cyan, Green, Color(0xFF9CDB3C), Amber, Color(0xFFFF8A3D), Red)
 private fun zoneColor(z: Int) = if (z in 1..7) zoneColors[z - 1] else Dim
 
-enum class Screen { DASHBOARD, COACH, HISTORY, REPORT, SETTINGS, ADD_HR, DIAGNOSE }
+enum class Screen { DASHBOARD, COACH, HISTORY, REPORT, SETTINGS, ADD_HR, DIAGNOSE, VERIFY_POWER }
 
 @Composable
 fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBatteryOptimization: () -> Unit) {
@@ -97,7 +98,8 @@ fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBa
         Screen.COACH -> CoachScreen(vm) { screen = Screen.DASHBOARD }
         Screen.HISTORY -> HistoryScreen(vm, onBack = { screen = Screen.DASHBOARD }, onOpen = { reportRide = it; screen = Screen.REPORT })
         Screen.REPORT -> ReportScreen(vm, reportRide) { screen = Screen.HISTORY }
-        Screen.SETTINGS -> SettingsScreen(vm, onBack = { screen = Screen.DASHBOARD }, onDiagnose = { screen = Screen.DIAGNOSE }, onAddHr = { screen = Screen.ADD_HR }, onKeepScreenOnChanged, onBatteryOptimization)
+        Screen.SETTINGS -> SettingsScreen(vm, onBack = { screen = Screen.DASHBOARD }, onDiagnose = { screen = Screen.DIAGNOSE }, onAddHr = { screen = Screen.ADD_HR }, onVerifyPower = { screen = Screen.VERIFY_POWER }, onKeepScreenOnChanged, onBatteryOptimization)
+        Screen.VERIFY_POWER -> VerifyPowerScreen(vm) { screen = Screen.SETTINGS }
         Screen.ADD_HR -> AddHrScreen(vm) { screen = Screen.SETTINGS }
         Screen.DIAGNOSE -> DiagnoseScreen(vm) { screen = Screen.SETTINGS }
     }
@@ -119,12 +121,13 @@ private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachC
     val cadLow = prefs.cadenceLow; val cadHigh = prefs.cadenceHigh
 
     // coaching presentation
-    val coachActive = mode != CoachMode.FREE && cue.type != CueType.NONE && cue.type != CueType.NO_HR && cue.type != CueType.NO_POWER && cue.type != CueType.WARMUP
+    val signal = d.signal
+    val coachActive = mode != CoachMode.FREE && cue.type != CueType.NONE && cue.type != CueType.NO_HR && cue.type != CueType.NO_POWER
     val coachColor: Color = when (cue.type) {
         CueType.KEEP_IT_UP -> D7.Green
         CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK -> D7.Cyan
         CueType.EASE_OFF, CueType.PEDAL_SLOWER -> D7.Amber
-        CueType.RECOVER -> D7.Violet
+        CueType.RECOVER, CueType.WARMUP, CueType.COOLDOWN -> D7.Violet
         else -> D7.Faint
     }
     val shape = Targets.coachShape(cue.type)
@@ -136,16 +139,26 @@ private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachC
     }
     val detail = when {
         mode == CoachMode.FREE -> "Tap to pick a mode: Zone 2, cadence, endurance or intervals"
-        cue.type == CueType.NONE -> "Start pedalling — watching your ${if (mode == CoachMode.CADENCE) "cadence" else "effort"} against the target"
+        cue.type == CueType.NONE -> if (d.rideState == RideStats.State.RUNNING) "Watching your ${if (mode == CoachMode.CADENCE) "cadence" else "effort"} against the target" else "Press START — coaching runs during the ride"
         else -> cue.detail
+    }
+    val phaseLabel = when (d.phase) {
+        Phase.WARMUP -> "WARM-UP ${RideEngine.fmtDuration(d.warmupRemainingSec * 1000L)}"
+        Phase.MAIN -> "MAIN"
+        Phase.RECOVERY -> "RECOVERY"
+        Phase.COOLDOWN -> "COOL-DOWN"
     }
 }
 
-private fun statusText(s: TargetStatus, kind: String) = when (s) {
+private fun statusText(s: TargetStatus, kind: String, signal: RideStats.SignalState = RideStats.SignalState.FRESH) = when (s) {
     TargetStatus.BELOW -> if (kind == "cad") "BELOW RANGE" else "BELOW TGT"
     TargetStatus.ABOVE -> if (kind == "cad") "ABOVE RANGE" else "ABOVE TGT"
     TargetStatus.ON -> "ON TARGET"
-    TargetStatus.UNKNOWN -> when (kind) { "hr" -> "NO STRAP"; "cad" -> "NOT TURNING"; else -> "COASTING" }
+    TargetStatus.UNKNOWN -> when (kind) {
+        "hr" -> "NO STRAP"
+        // P0-5: a valid zero is named as such; missing data is never dressed up as a value
+        else -> when (signal) { RideStats.SignalState.STALE -> "NO SIGNAL"; RideStats.SignalState.NONE -> "NO SENSOR"; else -> if (kind == "cad") "NOT TURNING" else "COASTING" }
+    }
 }
 
 @Composable
@@ -168,7 +181,7 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
                 Spacer(Modifier.height(12.dp))
                 LowerSection(d, st, prefs)
                 Spacer(Modifier.height(14.dp))
-                Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true })
+                Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true }, onCooldown = { vm.engine.requestCooldown() })
             }
         } else {
             Row(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -182,7 +195,7 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
                     Spacer(Modifier.height(12.dp))
                     LowerSection(d, st, prefs)
                     Spacer(Modifier.height(14.dp))
-                    Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true })
+                    Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true }, onCooldown = { vm.engine.requestCooldown() })
                 }
             }
         }
@@ -220,7 +233,14 @@ private fun Header(d: Dashboard, st: D7State, onReconnect: () -> Unit) {
             Text("T ${RideEngine.fmtDuration(d.elapsedMs)}", fontFamily = PlexMono, fontSize = 12.sp, color = if (d.rideState == RideStats.State.RUNNING) D7.Fg else D7.Mut)
         }
         Spacer(Modifier.height(6.dp))
-        Text("AI SCIENTIFIC COACH", fontFamily = PlexMono, fontSize = 13.sp, color = D7.Cyan, letterSpacing = 2.sp)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("SCIENTIFIC COACH", fontFamily = PlexMono, fontSize = 13.sp, color = D7.Cyan, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+            if (d.rideState != RideStats.State.IDLE) Text(st.phaseLabel, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 10.sp,
+                color = if (d.phase == Phase.MAIN) D7.Green else D7.Violet, modifier = Modifier.padding(end = 8.dp))
+            if (!d.powerVerified) Box(Modifier.background(D7.Amber.copy(alpha = 0.18f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+                Text("POWER UNVERIFIED", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Amber, fontWeight = FontWeight.Bold)
+            }
+        }
         Spacer(Modifier.height(6.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(D7.Line))
         Spacer(Modifier.height(2.dp))
@@ -238,7 +258,7 @@ private fun Gauges(d: Dashboard, st: D7State) {
             color = if (d.powerZone in 1..7) D7.powerZone(d.powerZone) else D7.Grey,
             targetFraction = Targets.powerTargetFraction(st.targetZone, st.ftp), zoneTicks = Targets.powerZoneTicks(st.ftp),
             sub = if (d.powerZone in 1..7) "Z${d.powerZone} · ${st.powerPct ?: 0}%" else null,
-            unit = "WATTS", big = true, status = st.powerStatus, statusText = statusText(st.powerStatus, "pow"), showTgtLabel = true,
+            unit = "WATTS", big = true, status = st.powerStatus, statusText = statusText(st.powerStatus, "pow", st.signal), showTgtLabel = true,
         )
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -248,7 +268,7 @@ private fun Gauges(d: Dashboard, st: D7State) {
                 targetFraction = st.cadLow.toFloat() / Targets.CADENCE_GAUGE_MAX, zoneTicks = FloatArray(0),
                 rangeArc = st.cadLow.toFloat() / Targets.CADENCE_GAUGE_MAX to st.cadHigh.toFloat() / Targets.CADENCE_GAUGE_MAX,
                 sub = if (d.backwards) "BACKWARDS" else "${st.cadLow}–${st.cadHigh}", unit = "RPM", big = false,
-                status = st.cadStatus, statusText = statusText(st.cadStatus, "cad"), showTgtLabel = false,
+                status = st.cadStatus, statusText = statusText(st.cadStatus, "cad", st.signal), showTgtLabel = false,
             )
             TargetGauge(
                 Modifier.weight(1f), value = if (d.hrConnected) d.hrBpm else null, max = st.maxHr.coerceAtLeast(120),
@@ -284,14 +304,21 @@ private fun LowerSection(d: Dashboard, st: D7State, prefs: Prefs) {
             Stat(d.power3sW?.let { "$it W" } ?: "—", "3S AVG", Modifier.weight(1f))
             Stat(fmtVi(d.variabilityIndex), "VARIABILITY", Modifier.weight(1f))
         }
-        d.lastSavedRide?.takeIf { d.rideState == RideStats.State.IDLE }?.let {
-            Text(it, fontFamily = PlexMono, fontSize = 11.sp, color = D7.Green, modifier = Modifier.padding(top = 8.dp))
+        d.lastSavedRide?.takeIf { d.rideState == RideStats.State.IDLE || d.restoredRide }?.let {
+            Text(it, fontFamily = PlexMono, fontSize = 11.sp, color = if (d.restoredRide) D7.Amber else D7.Green, modifier = Modifier.padding(top = 8.dp))
+        }
+        if (d.rideState != RideStats.State.IDLE) d.linkQualityPct?.let { q ->
+            Text("LINK ${q}%" + (if (d.linkGaps > 0) " · ${d.linkGaps} gap(s), ${d.linkLostSec} s lost" else " · no gaps"), fontFamily = PlexMono, fontSize = 10.sp,
+                color = if (q >= 95 && d.linkGaps == 0) D7.Faint else D7.Amber, modifier = Modifier.padding(top = 6.dp))
         }
     }
 }
 
 @Composable
-private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onStart: () -> Unit, onPause: () -> Unit, onFinish: () -> Unit) {
+private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onStart: () -> Unit, onPause: () -> Unit, onFinish: () -> Unit, onCooldown: () -> Unit = {}) {
+    if (d.rideState == RideStats.State.RUNNING && d.phase != Phase.COOLDOWN && d.coachMode != "FREE") {
+        TextButton(onClick = onCooldown, Modifier.fillMaxWidth()) { Text("Start cool-down (no more 'push' cues)", color = D7.Violet, fontFamily = PlexMono, fontSize = 12.sp) }
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.weight(1f)) {
             when (d.rideState) {
@@ -496,6 +523,13 @@ fun ReportScreen(vm: DoctorViewModel, startedAtMs: Long?, onBack: () -> Unit) {
                 ZoneBars(rep.hrZoneSec.drop(1), (1..5).map { "Z$it" }, (1..5).map { zoneColor(it) })
             }
         }
+        report?.linkVerdict?.let { v ->
+            Spacer(Modifier.height(16.dp)); Text("Sensor link", color = Color.White, fontWeight = FontWeight.Bold)
+            Text(v, color = if ((report.linkQualityPct ?: 0) >= 95 && report.linkGapCount == 0) Green else Amber, fontSize = 13.sp, lineHeight = 18.sp)
+            report.gaps.take(8).forEachIndexed { i, g ->
+                Text("Gap ${i + 1}: at ${RideEngine.fmtDuration(g.startMs - ride.startedAtMs)} for ${(g.endMs - g.startMs) / 1000} s — ${g.reason}; before it: ${if (g.rotatingBefore) "pedaling" else "cranks still"}, ${if (g.poweredBefore) "under load" else "0 W"}", color = Dim, fontSize = 12.sp, lineHeight = 16.sp)
+            }
+        }
         Spacer(Modifier.height(16.dp))
         Text(summaryText(ride, report), color = Color(0xFFBFD2DA), fontSize = 14.sp, lineHeight = 20.sp)
     }
@@ -542,13 +576,20 @@ private fun St(v: String, l: String) {
 // ------------------------------------------------------------------ Settings
 
 @Composable
-fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Unit, onAddHr: () -> Unit, onKeepScreenOnChanged: () -> Unit, onBatteryOptimization: () -> Unit) {
+fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Unit, onAddHr: () -> Unit, onVerifyPower: () -> Unit, onKeepScreenOnChanged: () -> Unit, onBatteryOptimization: () -> Unit) {
     val prefs = vm.engine.prefs
     val ctx = LocalContext.current
     val d by vm.engine.dash.collectAsStateWithLifecycle()
     var keepOn by remember { mutableStateOf(prefs.keepScreenOn) }
     var ftp by remember { mutableStateOf(prefs.ftpW) }
     var maxHr by remember { mutableStateOf(prefs.maxHr) }
+    var ftpSet by remember { mutableStateOf(prefs.ftpSetByUser) }
+    var maxHrSet by remember { mutableStateOf(prefs.maxHrSetByUser) }
+    var cadOn by remember { mutableStateOf(prefs.cadenceCoaching) }
+    var cadLow by remember { mutableStateOf(prefs.cadenceLow) }
+    var cadHigh by remember { mutableStateOf(prefs.cadenceHigh) }
+    var warmup by remember { mutableStateOf(prefs.warmupSec / 60) }
+    val powerVerified = prefs.powerVerified
     Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("‹ Ride", color = Cyan, fontSize = 18.sp) }
@@ -563,18 +604,57 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
             Switch(checked = keepOn, onCheckedChange = { keepOn = it; prefs.keepScreenOn = it; onKeepScreenOnChanged() })
         }
         Spacer(Modifier.height(14.dp))
-        Text("FTP (functional threshold power): $ftp W", fontSize = 16.sp, color = Color.White)
-        Text("Sets your power zones.", fontSize = 13.sp, color = Dim)
+        // ---- P0: power verification status ----
+        Text("Power meter", fontSize = 18.sp, color = Color.White)
+        if (powerVerified) Text("✓ Verified under load: max ${prefs.powerVerifiedMaxW} W on ${SimpleDateFormat("d MMM HH:mm", Locale.getDefault()).format(Date(prefs.powerVerifiedAtMs))}", fontSize = 13.sp, color = Green)
+        else Text("POWER UNVERIFIED — the sensor has only ever reported 0 W. Watts, zones and power coaching cannot be trusted until this passes.", fontSize = 13.sp, color = Amber)
+        OutlinedButton(onClick = onVerifyPower, Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(if (powerVerified) "Re-verify power under load" else "VERIFY POWER UNDER LOAD") }
+        Spacer(Modifier.height(16.dp))
+
+        // ---- P2 (partial): rider numbers, flagged until set ----
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("FTP: $ftp W", fontSize = 16.sp, color = Color.White)
+            if (!ftpSet) UnverifiedTag()
+        }
+        Text(if (ftpSet) "Sets your power zones." else "This is a generic default, not your measured FTP. Power zones and power coaching are calibrated to a fictional rider until you set it.", fontSize = 13.sp, color = if (ftpSet) Dim else Amber)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-            OutlinedButton(onClick = { ftp = (ftp - 5).coerceAtLeast(50); prefs.ftpW = ftp }) { Text("−5") }
-            OutlinedButton(onClick = { ftp += 5; prefs.ftpW = ftp }) { Text("+5") }
+            OutlinedButton(onClick = { ftp = (ftp - 5).coerceAtLeast(50); prefs.ftpW = ftp; prefs.ftpSetByUser = true; ftpSet = true; vm.engine.applyCoachConfig() }) { Text("−5") }
+            OutlinedButton(onClick = { ftp += 5; prefs.ftpW = ftp; prefs.ftpSetByUser = true; ftpSet = true; vm.engine.applyCoachConfig() }) { Text("+5") }
+            if (!ftpSet) OutlinedButton(onClick = { prefs.ftpSetByUser = true; ftpSet = true }) { Text("Keep $ftp") }
         }
         Spacer(Modifier.height(14.dp))
-        Text("Max heart rate: $maxHr bpm", fontSize = 16.sp, color = Color.White)
-        Text("Sets your heart-rate zones.", fontSize = 13.sp, color = Dim)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Max heart rate: $maxHr bpm", fontSize = 16.sp, color = Color.White)
+            if (!maxHrSet) UnverifiedTag()
+        }
+        Text(if (maxHrSet) "Sets your heart-rate zones (Z2 = 60–70 % of this)." else "Generic default — not measured. Heart-rate zones and Zone 2 coaching are wrong until you set your real maximum.", fontSize = 13.sp, color = if (maxHrSet) Dim else Amber)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-            OutlinedButton(onClick = { maxHr = (maxHr - 1).coerceAtLeast(120); prefs.maxHr = maxHr }) { Text("−1") }
-            OutlinedButton(onClick = { maxHr += 1; prefs.maxHr = maxHr }) { Text("+1") }
+            OutlinedButton(onClick = { maxHr = (maxHr - 1).coerceAtLeast(120); prefs.maxHr = maxHr; prefs.maxHrSetByUser = true; maxHrSet = true; vm.engine.applyCoachConfig() }) { Text("−1") }
+            OutlinedButton(onClick = { maxHr += 1; prefs.maxHr = maxHr; prefs.maxHrSetByUser = true; maxHrSet = true; vm.engine.applyCoachConfig() }) { Text("+1") }
+            if (!maxHrSet) OutlinedButton(onClick = { prefs.maxHrSetByUser = true; maxHrSet = true }) { Text("Keep $maxHr") }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        // ---- P1: coaching controls ----
+        Text("Coaching", fontSize = 18.sp, color = Color.White)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) { Text("Cadence hints", fontSize = 16.sp, color = Color.White); Text("Only when effort is already on target", fontSize = 13.sp, color = Dim) }
+            Switch(checked = cadOn, onCheckedChange = { cadOn = it; prefs.cadenceCoaching = it; vm.engine.applyCoachConfig() })
+        }
+        if (cadOn) {
+            Text("Cadence range: $cadLow–$cadHigh rpm", fontSize = 15.sp, color = Color.White, modifier = Modifier.padding(top = 4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                OutlinedButton(onClick = { cadLow = (cadLow - 5).coerceAtLeast(50); prefs.cadenceLow = cadLow; vm.engine.applyCoachConfig() }) { Text("low −5") }
+                OutlinedButton(onClick = { cadLow = (cadLow + 5).coerceAtMost(cadHigh - 5); prefs.cadenceLow = cadLow; vm.engine.applyCoachConfig() }) { Text("low +5") }
+                OutlinedButton(onClick = { cadHigh = (cadHigh - 5).coerceAtLeast(cadLow + 5); prefs.cadenceHigh = cadHigh; vm.engine.applyCoachConfig() }) { Text("high −5") }
+                OutlinedButton(onClick = { cadHigh = (cadHigh + 5).coerceAtMost(130); prefs.cadenceHigh = cadHigh; vm.engine.applyCoachConfig() }) { Text("high +5") }
+            }
+        }
+        Text("Warm-up: ${if (warmup == 0) "off" else "$warmup min"}", fontSize = 15.sp, color = Color.White, modifier = Modifier.padding(top = 10.dp))
+        Text("No 'push harder' during the warm-up; only a safety 'ease off' if heart rate is far too high.", fontSize = 13.sp, color = Dim)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+            OutlinedButton(onClick = { warmup = (warmup - 1).coerceAtLeast(0); prefs.warmupSec = warmup * 60 }) { Text("−1 min") }
+            OutlinedButton(onClick = { warmup = (warmup + 1).coerceAtMost(20); prefs.warmupSec = warmup * 60 }) { Text("+1 min") }
         }
         Spacer(Modifier.height(16.dp))
         Text("Connection test", fontSize = 18.sp, color = Color.White)
@@ -590,6 +670,68 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
         Spacer(Modifier.height(10.dp))
         TextButton(onClick = onDiagnose) { Text("Advanced: Diagnose & Repair sensor", color = Dim) }
         Spacer(Modifier.height(10.dp))
-        Text("Bike Computer v0.5 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
+        Text("Bike Computer v0.7 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
+    }
+}
+
+@Composable
+private fun UnverifiedTag() {
+    Box(Modifier.padding(start = 8.dp).background(Amber.copy(alpha = 0.18f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
+        Text("UNVERIFIED DEFAULT", fontSize = 10.sp, color = Amber, fontWeight = FontWeight.Bold)
+    }
+}
+
+// ------------------------------------------------------------------ Verify power under load (P0)
+
+@Composable
+fun VerifyPowerScreen(vm: DoctorViewModel, onBack: () -> Unit) {
+    val d by vm.engine.dash.collectAsStateWithLifecycle()
+    var verifier by remember { mutableStateOf<com.rashed.bikesensordoctor.core.LoadVerifier?>(null) }
+    var result by remember { mutableStateOf<com.rashed.bikesensordoctor.core.LoadVerifier.Result?>(null) }
+    // feed live samples into the verifier while it runs
+    androidx.compose.runtime.DisposableEffect(verifier) {
+        val v = verifier
+        val listener: (com.rashed.bikesensordoctor.core.XdsSample, Long) -> Unit = { s, t -> v?.onSample(s, t) }
+        if (v != null) vm.engine.sensor.addSampleListener(listener)
+        onDispose { if (v != null) vm.engine.sensor.removeSampleListener(listener) }
+    }
+    androidx.compose.runtime.LaunchedEffect(verifier) {
+        val v = verifier ?: return@LaunchedEffect
+        while (true) {
+            val r = v.result(System.currentTimeMillis()); result = r
+            if (r.passed) { vm.engine.prefs.powerVerifiedAtMs = System.currentTimeMillis(); vm.engine.prefs.powerVerifiedMaxW = r.maxPowerW; vm.engine.log.add(com.rashed.bikesensordoctor.log.EventType.TEST, note = "Power verified under load: " + r.message()); verifier = null; break }
+            if (r.status == com.rashed.bikesensordoctor.core.LoadVerifier.Status.TIMEOUT) { vm.engine.log.add(com.rashed.bikesensordoctor.log.EventType.TEST, note = "Power verification failed: " + r.message()); verifier = null; break }
+            kotlinx.coroutines.delay(500)
+        }
+    }
+    Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack) { Text("‹ Settings", color = Cyan, fontSize = 18.sp) }
+            Text("Verify power", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White)
+        }
+        Text("Why: so far the XDS has only ever reported 0 W (free-spinning). This 60-second check proves it measures real watts. It passes only if at least 10 packets show ≥ 40 W while the cranks turn above 30 rpm.", fontSize = 14.sp, color = Color(0xFFBFD2DA), lineHeight = 20.sp)
+        Spacer(Modifier.height(12.dp))
+        Text("How: be on the road or on a trainer with resistance. Press START, then pedal normally for up to a minute.", fontSize = 14.sp, color = Color(0xFFBFD2DA), lineHeight = 20.sp)
+        Spacer(Modifier.height(16.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            St("${d.powerW ?: "—"}", "W now"); St("${d.cadenceRpm ?: "—"}", "rpm now"); St(when (d.signal) { RideStats.SignalState.FRESH -> "live"; RideStats.SignalState.COASTING -> "0 W"; RideStats.SignalState.STALE -> "stale"; RideStats.SignalState.NONE -> "none" }, "signal")
+        }
+        Spacer(Modifier.height(16.dp))
+        val r = result
+        val running = verifier != null
+        if (running || r != null) {
+            val col = when (r?.status) { com.rashed.bikesensordoctor.core.LoadVerifier.Status.PASS -> Green; com.rashed.bikesensordoctor.core.LoadVerifier.Status.TIMEOUT -> Red; com.rashed.bikesensordoctor.core.LoadVerifier.Status.SPINNING_NO_LOAD -> Amber; else -> Cyan }
+            Box(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(14.dp)).padding(14.dp)) {
+                Column {
+                    Text(r?.message() ?: "Starting…", color = col, fontSize = 16.sp, fontWeight = FontWeight.Bold, lineHeight = 22.sp)
+                    r?.let { Text("${it.loadedPackets} loaded / ${it.totalPackets} packets · ${(it.elapsedMs / 1000).coerceAtMost(60)} s of 60", color = Dim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)) }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+        Button(onClick = { result = null; verifier = com.rashed.bikesensordoctor.core.LoadVerifier(System.currentTimeMillis()) }, Modifier.fillMaxWidth().height(60.dp), enabled = !running,
+            colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (running) "CHECKING… PEDAL UNDER LOAD" else "START 60-SECOND CHECK", fontWeight = FontWeight.Black) }
+        Spacer(Modifier.height(12.dp))
+        Text("Nothing is written to the sensor. A PASS only records the date and the max watts seen; it does not change calibration.", fontSize = 12.sp, color = Dim)
     }
 }

@@ -43,21 +43,42 @@ class RideHistory(context: Context) {
     fun reportFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs-report.json")
 
     /** Extra analysis stored alongside the ride: seconds in each power/HR zone, HR avg/max. */
-    fun saveReport(startedAtMs: Long, powerZoneSec: IntArray, hrZoneSec: IntArray, avgHr: Int, maxHr: Int) {
+    fun saveReport(startedAtMs: Long, powerZoneSec: IntArray, hrZoneSec: IntArray, avgHr: Int, maxHr: Int,
+                   link: com.rashed.bikesensordoctor.core.LinkReport? = null) {
         val o = JSONObject()
         o.put("powerZoneSec", JSONArray(powerZoneSec.toList()))
         o.put("hrZoneSec", JSONArray(hrZoneSec.toList()))
         o.put("avgHr", avgHr); o.put("maxHr", maxHr)
+        if (link != null) {
+            // P0: sensor-quality and connection-gap record
+            o.put("linkPackets", link.packets); o.put("linkQualityPct", link.qualityPct)
+            o.put("linkGapCount", link.gapCount); o.put("linkLostMs", link.lostMs)
+            o.put("linkVerdict", link.verdict())
+            o.put("linkGaps", JSONArray(link.gaps.map { g ->
+                JSONObject().put("startMs", g.startMs).put("endMs", g.endMs).put("reason", g.reason)
+                    .put("rotatingBefore", g.rotatingBefore).put("poweredBefore", g.poweredBefore)
+                    .put("lastCadenceRpm", g.lastCadenceRpm).put("lastPowerW", g.lastPowerW)
+            }))
+        }
         reportFile(startedAtMs).writeText(o.toString())
     }
 
-    data class Report(val powerZoneSec: List<Int>, val hrZoneSec: List<Int>, val avgHr: Int, val maxHr: Int)
+    data class GapInfo(val startMs: Long, val endMs: Long, val reason: String, val rotatingBefore: Boolean, val poweredBefore: Boolean)
+    data class Report(
+        val powerZoneSec: List<Int>, val hrZoneSec: List<Int>, val avgHr: Int, val maxHr: Int,
+        val linkQualityPct: Int? = null, val linkGapCount: Int = 0, val linkLostMs: Long = 0, val linkVerdict: String? = null,
+        val gaps: List<GapInfo> = emptyList(),
+    )
     fun readReport(startedAtMs: Long): Report? {
         val f = reportFile(startedAtMs); if (!f.exists()) return null
         return runCatching {
             val o = JSONObject(f.readText())
             fun arr(k: String) = o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getInt(it) } }
-            Report(arr("powerZoneSec"), arr("hrZoneSec"), o.optInt("avgHr"), o.optInt("maxHr"))
+            val gaps = o.optJSONArray("linkGaps")?.let { a -> (0 until a.length()).map { i -> val g = a.getJSONObject(i)
+                GapInfo(g.getLong("startMs"), g.getLong("endMs"), g.optString("reason"), g.optBoolean("rotatingBefore"), g.optBoolean("poweredBefore")) } } ?: emptyList()
+            Report(arr("powerZoneSec"), arr("hrZoneSec"), o.optInt("avgHr"), o.optInt("maxHr"),
+                if (o.has("linkQualityPct")) o.getInt("linkQualityPct") else null, o.optInt("linkGapCount"), o.optLong("linkLostMs"),
+                if (o.has("linkVerdict")) o.getString("linkVerdict") else null, gaps)
         }.getOrNull()
     }
     fun gpxFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.gpx")

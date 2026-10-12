@@ -44,6 +44,29 @@ class Prefs(context: Context) {
     var coachVoice: Boolean
         get() = sp.getBoolean("coach_voice", true)
         set(v) = sp.edit().putBoolean("coach_voice", v).apply()
+    // ---- P1/P2 coaching settings ----
+    var cadenceCoaching: Boolean
+        get() = sp.getBoolean("cad_coach", true)
+        set(v) = sp.edit().putBoolean("cad_coach", v).apply()
+    var warmupSec: Int
+        get() = sp.getInt("warmup_sec", 300)
+        set(v) = sp.edit().putInt("warmup_sec", v).apply()
+    /** True once the rider has set the value; until then the UI flags the number as an UNVERIFIED DEFAULT. */
+    var ftpSetByUser: Boolean
+        get() = sp.getBoolean("ftp_set", false)
+        set(v) = sp.edit().putBoolean("ftp_set", v).apply()
+    var maxHrSetByUser: Boolean
+        get() = sp.getBoolean("maxhr_set", false)
+        set(v) = sp.edit().putBoolean("maxhr_set", v).apply()
+    // ---- P0: power verified under real load (LoadVerifier PASS) ----
+    var powerVerifiedAtMs: Long
+        get() = sp.getLong("pw_verified_at", 0L)
+        set(v) = sp.edit().putLong("pw_verified_at", v).apply()
+    var powerVerifiedMaxW: Int
+        get() = sp.getInt("pw_verified_max", 0)
+        set(v) = sp.edit().putInt("pw_verified_max", v).apply()
+    val powerVerified: Boolean get() = powerVerifiedAtMs > 0
+
     var cadenceLow: Int
         get() = sp.getInt("cad_low", 85)
         set(v) = sp.edit().putInt("cad_low", v).apply()

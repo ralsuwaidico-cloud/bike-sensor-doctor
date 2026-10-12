@@ -56,6 +56,7 @@ data class DeviceSnapshot(
     val lastError: String? = null,
     val connectAttempts: Int = 0,
     val disconnects: Int = 0,
+    val lastDisconnectReason: String? = null,   // P0: GATT status text of the most recent disconnect, for the gap log
     val hasCyclingPower: Boolean = false,
     val hasCsc: Boolean = false,
     val hasMeshProxy: Boolean = false,
@@ -368,7 +369,7 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
                 } else {
                     log.add(EventType.CONNECTION, device = g.device.address, note = "Disconnected: ${statusText(status)}")
                     queue.clear(); inFlight = null; main.removeCallbacks(opTimeout)
-                    _snapshot.update { it.copy(disconnects = it.disconnects + 1, lastError = if (status != 0) statusText(status) else it.lastError) }
+                    _snapshot.update { it.copy(disconnects = it.disconnects + 1, lastDisconnectReason = statusText(status), lastError = if (status != 0) statusText(status) else it.lastError) }
                     closeGatt()
                     when {
                         userInitiatedDisconnect -> _snapshot.update { it.copy(state = ConnectionState.DISCONNECTED) }

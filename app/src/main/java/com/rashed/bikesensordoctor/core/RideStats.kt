@@ -24,6 +24,15 @@ class RideStats {
 
     enum class State { IDLE, RUNNING, PAUSED, FINISHED }
 
+    /**
+     * P0: distinguishes a VALID zero from missing data.
+     *  FRESH    packet ≤ STALE_MS old and the rider is producing power or turning the cranks
+     *  COASTING packet ≤ STALE_MS old, 0 W and cranks still — a real, trustworthy zero
+     *  STALE    last packet older than STALE_MS — values must be shown as "—", never held
+     *  NONE     no packet ever received in this session
+     */
+    enum class SignalState { FRESH, COASTING, STALE, NONE }
+
     var state: State = State.IDLE
         private set
 
@@ -103,6 +112,15 @@ class RideStats {
 
     private fun fresh(nowMs: Long) = lastSampleMs?.let { nowMs - it <= STALE_MS } == true
 
+    fun signalState(nowMs: Long): SignalState {
+        val l = last ?: return SignalState.NONE
+        if (!fresh(nowMs)) return SignalState.STALE
+        return if (l.powerW > 0 || l.rotating) SignalState.FRESH else SignalState.COASTING
+    }
+
+    /** Milliseconds since the last accepted packet, or null if none yet. */
+    fun sinceLastSampleMs(nowMs: Long): Long? = lastSampleMs?.let { nowMs - it }
+
     /** Live instantaneous power, or null when no fresh sample. */
     fun livePowerW(nowMs: Long): Int? = if (fresh(nowMs)) last?.powerW else null
     fun liveCadenceRpm(nowMs: Long): Int? = if (fresh(nowMs)) last?.cadenceRpm else null
@@ -132,6 +150,40 @@ class RideStats {
 
     /** Energy in kJ = Σ(power × Δt). With ~1 Hz samples we use sample count × average as the estimate. */
     fun energyKj(nowMs: Long): Double = avgPowerW * (elapsedMs(nowMs) / 1000.0) / 1000.0
+
+    /**
+     * P0: serialise everything needed to continue this ride after an app restart. Plain key=value lines so the
+     * ESP32 port can use the same format in flash. Rolling windows (3 s/10 s/30 s) are intentionally not saved —
+     * they rebuild within 30 s and must not be reconstructed from stale data.
+     */
+    fun snapshot(nowMs: Long): String {
+        val running = state == State.RUNNING
+        return listOf(
+            "v=1", "state=${if (running) State.PAUSED else state}",   // always restore PAUSED: the rider confirms resume
+            "accumulatedMs=${elapsedMs(nowMs)}", "startedAtMs=${startedAtMs ?: -1}",
+            "sampleCount=$sampleCount", "rejectedCount=$rejectedCount", "powerSum=$powerSum", "maxPowerW=$maxPowerW",
+            "cadenceSum=$cadenceSum", "cadenceCount=$cadenceCount", "maxCadenceRpm=$maxCadenceRpm", "backwardsSamples=$backwardsSamples",
+            "npSum4=$npSum4", "npCount=$npCount",
+        ).joinToString("\n")
+    }
+
+    /** Restores a [snapshot]. Returns false (and leaves this object untouched) if the text is not a valid snapshot. */
+    fun restore(text: String): Boolean {
+        val m = text.lines().mapNotNull { l -> l.indexOf('=').takeIf { it > 0 }?.let { l.substring(0, it) to l.substring(it + 1) } }.toMap()
+        if (m["v"] != "1") return false
+        val st = runCatching { State.valueOf(m["state"] ?: "") }.getOrNull() ?: return false
+        if (st == State.IDLE) return false
+        reset()
+        state = st; runningSinceMs = null
+        accumulatedMs = m["accumulatedMs"]?.toLongOrNull() ?: 0
+        startedAtMs = m["startedAtMs"]?.toLongOrNull()?.takeIf { it >= 0 }
+        sampleCount = m["sampleCount"]?.toIntOrNull() ?: 0; rejectedCount = m["rejectedCount"]?.toIntOrNull() ?: 0
+        powerSum = m["powerSum"]?.toLongOrNull() ?: 0; maxPowerW = m["maxPowerW"]?.toIntOrNull() ?: 0
+        cadenceSum = m["cadenceSum"]?.toLongOrNull() ?: 0; cadenceCount = m["cadenceCount"]?.toIntOrNull() ?: 0
+        maxCadenceRpm = m["maxCadenceRpm"]?.toIntOrNull() ?: 0; backwardsSamples = m["backwardsSamples"]?.toIntOrNull() ?: 0
+        npSum4 = m["npSum4"]?.toDoubleOrNull() ?: 0.0; npCount = m["npCount"]?.toLongOrNull() ?: 0
+        return true
+    }
 
     fun summary(nowMs: Long) = RideSummary(
         startedAtMs = startedAtMs ?: 0L,
