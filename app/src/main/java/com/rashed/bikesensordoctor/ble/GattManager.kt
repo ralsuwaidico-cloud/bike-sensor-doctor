@@ -86,6 +86,15 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
     private var reconnectDelayMs = 1000L
     private var lastCrank: Pair<Int, Int>? = null
 
+    // Connection lifecycle state (hardened 2026-10-12 after the PC probe proved the sensor itself
+    // connects 8/8 and survives rapid reconnects — so every failure was Android-side teardown/timing).
+    private var generation = 0                 // bumped per connectGatt; callbacks from an old client are dropped
+    private var connAddress = ""
+    private var connName: String? = null
+    private var connAutoConnect = false
+    private var triedAutoConnect = false       // per attempt-cycle: direct first, autoConnect=true as fallback
+    private var everReady = false              // reached READY at least once this connect() session
+
     // ---- serialized operation queue ----
     private class Op(val name: String, val run: () -> Boolean)
     private val queue = ArrayDeque<Op>()
@@ -129,35 +138,70 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
     fun connect(address: String, name: String?, reconnect: Boolean) {
         val a = adapter ?: return fail("No Bluetooth adapter")
         if (!a.isEnabled) return fail("Bluetooth is off")
-        disconnect(silent = true)
+        // Cancel anything in flight and tear the old client down completely before we touch the radio again.
+        main.removeCallbacks(reconnectRunnable); main.removeCallbacks(connectTimeout); main.removeCallbacks(connectRunnable)
+        queue.clear(); inFlight = null; main.removeCallbacks(opTimeout)
         autoReconnect = reconnect
         userInitiatedDisconnect = false
         reconnectDelayMs = 1000L
+        triedAutoConnect = false
+        everReady = false
+        connAddress = address; connName = name
         _snapshot.value = DeviceSnapshot(address = address, name = name ?: "", state = ConnectionState.CONNECTING, connectAttempts = 1)
-        val device = try { a.getRemoteDevice(address) } catch (e: IllegalArgumentException) { return fail("Bad address $address") }
-        log.add(EventType.CONNECTION, device = address, note = "connectGatt (autoConnect=false, TRANSPORT_LE)")
-        gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
-        main.postDelayed(connectTimeout, 20_000)
+        val hadGatt = gatt != null
+        closeGatt()
+        // Settle delay after a close is the single most important fix for Android's error-133 on reconnect:
+        // connectGatt too soon after close() reuses a half-released client and the sensor still thinks it is taken.
+        launchConnect(useAutoConnect = false, settleMs = if (hadGatt) 700 else 0)
+    }
+
+    private fun launchConnect(useAutoConnect: Boolean, settleMs: Long) {
+        connAutoConnect = useAutoConnect
+        main.removeCallbacks(connectRunnable)
+        main.postDelayed(connectRunnable, settleMs)
+    }
+
+    @SuppressLint("MissingPermission")
+    private val connectRunnable = Runnable {
+        val a = adapter
+        if (a == null || userInitiatedDisconnect || connAddress.isEmpty()) return@Runnable
+        val device = try { a.getRemoteDevice(connAddress) } catch (e: Exception) { fail("Bad address $connAddress"); return@Runnable }
+        generation++
+        log.add(EventType.CONNECTION, device = connAddress, note = "connectGatt (autoConnect=$connAutoConnect, gen=$generation)")
+        gatt = device.connectGatt(context, connAutoConnect, callback, BluetoothDevice.TRANSPORT_LE)
+        // Direct attempts need a timeout; autoConnect=true has no deadline (the stack keeps trying in the background).
+        if (!connAutoConnect) main.postDelayed(connectTimeout, 20_000)
     }
 
     private val connectTimeout = Runnable {
         if (_snapshot.value.state == ConnectionState.CONNECTING) {
-            log.add(EventType.ERROR, device = addr(), note = "Connection timeout (20 s)")
-            _snapshot.update { it.copy(lastError = "Connection timeout (20 s)") }
+            log.add(EventType.ERROR, device = addr(), note = "Connect attempt timed out (20 s, autoConnect=$connAutoConnect)")
             closeGatt()
-            scheduleReconnect()
+            onConnectAttemptFailed("timeout")
+        }
+    }
+
+    /** A connection attempt that never reached READY: try autoConnect once, then fall back to scheduled retry. */
+    private fun onConnectAttemptFailed(reason: String) {
+        when (com.rashed.bikesensordoctor.core.ConnectionPolicy.decide(userInitiatedDisconnect, everReady, triedAutoConnect)) {
+            com.rashed.bikesensordoctor.core.RecoveryAction.STOP ->
+                _snapshot.update { it.copy(state = ConnectionState.DISCONNECTED) }
+            com.rashed.bikesensordoctor.core.RecoveryAction.TRY_AUTOCONNECT -> {
+                triedAutoConnect = true
+                log.add(EventType.CONNECTION, device = connAddress, note = "Retrying with autoConnect=true after $reason")
+                _snapshot.update { it.copy(state = ConnectionState.CONNECTING) }
+                launchConnect(useAutoConnect = true, settleMs = 700)
+            }
+            com.rashed.bikesensordoctor.core.RecoveryAction.SCHEDULE_RETRY -> scheduleReconnect()
         }
     }
 
     @SuppressLint("MissingPermission")
     fun disconnect(silent: Boolean = false) {
         userInitiatedDisconnect = true
-        main.removeCallbacks(reconnectRunnable); main.removeCallbacks(connectTimeout)
+        main.removeCallbacks(reconnectRunnable); main.removeCallbacks(connectTimeout); main.removeCallbacks(connectRunnable)
         queue.clear(); inFlight = null; main.removeCallbacks(opTimeout)
-        gatt?.let {
-            if (!silent) log.add(EventType.CONNECTION, device = addr(), note = "User disconnect")
-            try { it.disconnect() } catch (_: Exception) {}
-        }
+        if (!silent && gatt != null) log.add(EventType.CONNECTION, device = addr(), note = "User disconnect")
         closeGatt()
         if (!silent) _snapshot.update { it.copy(state = ConnectionState.DISCONNECTED) }
     }
@@ -246,19 +290,28 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
 
     @SuppressLint("MissingPermission")
     private fun closeGatt() {
-        try { gatt?.close() } catch (_: Exception) {}
+        gatt?.let { g ->
+            // Clear Android's cached service handles so a reconnect reads them fresh (reversible, local-only).
+            refreshDeviceCache(g)
+            try { g.disconnect() } catch (_: Exception) {}
+            try { g.close() } catch (_: Exception) {}
+        }
         gatt = null
     }
 
+    /** BluetoothGatt.refresh() is hidden API; calling it clears the local GATT cache. Best-effort, no-op on failure. */
     @SuppressLint("MissingPermission")
+    private fun refreshDeviceCache(g: BluetoothGatt) {
+        try { g.javaClass.getMethod("refresh").invoke(g) } catch (_: Exception) {}
+    }
+
     private val reconnectRunnable = Runnable {
-        val s = _snapshot.value
-        if (s.address.isEmpty() || userInitiatedDisconnect) return@Runnable
-        log.add(EventType.CONNECTION, device = s.address, note = "Auto-reconnect attempt ${s.connectAttempts + 1}")
+        if (connAddress.isEmpty() || userInitiatedDisconnect) return@Runnable
+        triedAutoConnect = false
         _snapshot.update { it.copy(state = ConnectionState.CONNECTING, connectAttempts = it.connectAttempts + 1) }
-        val device = adapter?.getRemoteDevice(s.address) ?: return@Runnable
-        gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
-        main.postDelayed(connectTimeout, 20_000)
+        log.add(EventType.CONNECTION, device = connAddress, note = "Auto-reconnect attempt ${_snapshot.value.connectAttempts}")
+        closeGatt()
+        launchConnect(useAutoConnect = false, settleMs = 400)
     }
 
     private fun scheduleReconnect() {
@@ -295,10 +348,13 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
 
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+            if (g !== gatt) { try { g.close() } catch (_: Exception) {}; return }   // stale client from a previous attempt
             main.removeCallbacks(connectTimeout)
             main.post {
+                if (g !== gatt) return@post
                 if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
                     reconnectDelayMs = 1000L
+                    triedAutoConnect = false
                     log.add(EventType.CONNECTION, device = g.device.address, note = "Connected; requesting MTU 247, then discovering services")
                     _snapshot.update { it.copy(state = ConnectionState.CONNECTED, lastError = null) }
                     discoveryStarted = false
@@ -310,13 +366,21 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
                     queue.clear(); inFlight = null; main.removeCallbacks(opTimeout)
                     _snapshot.update { it.copy(disconnects = it.disconnects + 1, lastError = if (status != 0) statusText(status) else it.lastError) }
                     closeGatt()
-                    scheduleReconnect()
+                    when {
+                        userInitiatedDisconnect -> _snapshot.update { it.copy(state = ConnectionState.DISCONNECTED) }
+                        // Dropped before ever reaching READY → a failed attempt: try autoConnect, then scheduled retry.
+                        !everReady -> onConnectAttemptFailed("status $status")
+                        // Dropped mid-session after a good connection → normal reconnect with backoff.
+                        else -> scheduleReconnect()
+                    }
                 }
             }
         }
 
         override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
+            if (g !== gatt) return
             main.post {
+                if (g !== gatt) return@post
                 log.add(EventType.CONNECTION, device = addr(), note = "MTU=$mtu ${statusText(status)}")
                 _snapshot.update { it.copy(mtu = mtu) }
                 // Session log 2026-10-11 showed discovery hanging when started while the MTU exchange was in flight;
@@ -326,12 +390,17 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
+            if (g !== gatt) return
             main.post {
+                if (g !== gatt) return@post
                 if (status != BluetoothGatt.GATT_SUCCESS) {
                     log.add(EventType.ERROR, device = addr(), note = "Service discovery failed: ${statusText(status)}")
                     _snapshot.update { it.copy(lastError = "Service discovery failed: ${statusText(status)}") }
+                    // treat as a failed attempt so the retry path runs instead of a dead connection
+                    closeGatt(); if (!everReady) onConnectAttemptFailed("discovery $status") else scheduleReconnect()
                     return@post
                 }
+                everReady = true
                 val services = g.services.map { s ->
                     ServiceInfo(s.uuid, s.characteristics.map { c -> CharInfo(c.uuid, c.properties) })
                 }
@@ -360,27 +429,30 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
 
         // API 33+ signatures
         override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray, status: Int) {
-            main.post { handleRead(c.uuid, value, status) }
+            if (g !== gatt) return
+            main.post { if (g === gatt) handleRead(c.uuid, value, status) }
         }
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray) {
-            main.post { handleNotify(c.service.uuid, c.uuid, value) }
+            if (g !== gatt) return
+            main.post { if (g === gatt) handleNotify(c.service.uuid, c.uuid, value) }
         }
 
         // Pre-33 signatures (Android 12 on the Nokia 5.3 uses these)
         @Deprecated("Deprecated in Java")
         override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
-            if (Build.VERSION.SDK_INT >= 33) return
+            if (Build.VERSION.SDK_INT >= 33 || g !== gatt) return
             @Suppress("DEPRECATION") val v = c.value ?: ByteArray(0)
-            main.post { handleRead(c.uuid, v, status) }
+            main.post { if (g === gatt) handleRead(c.uuid, v, status) }
         }
         @Deprecated("Deprecated in Java")
         override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
-            if (Build.VERSION.SDK_INT >= 33) return
+            if (Build.VERSION.SDK_INT >= 33 || g !== gatt) return
             @Suppress("DEPRECATION") val v = c.value ?: ByteArray(0)
-            main.post { handleNotify(c.service.uuid, c.uuid, v) }
+            main.post { if (g === gatt) handleNotify(c.service.uuid, c.uuid, v) }
         }
 
         override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
+            if (g !== gatt) return
             main.post {
                 log.add(if (status == 0) EventType.WRITE else EventType.ERROR, device = addr(), uuid = c.uuid.toString(),
                     note = "Write result: ${statusText(status)}")
@@ -390,6 +462,7 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
         }
 
         override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
+            if (g !== gatt) return
             main.post {
                 val cu = d.characteristic.uuid
                 if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -403,6 +476,7 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
         }
 
         override fun onReadRemoteRssi(g: BluetoothGatt, rssi: Int, status: Int) {
+            if (g !== gatt) return
             main.post {
                 if (status == 0) _snapshot.update { it.copy(rssi = rssi) }
                 completed()

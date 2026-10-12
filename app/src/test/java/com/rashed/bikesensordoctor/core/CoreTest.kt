@@ -143,3 +143,23 @@ class HealthClassifierTest {
         assertEquals(Health.CONNECTED_IDLE, HealthClassifier.classify(true, true, true, false, 500, live.copy(cadenceSignedRpm = 0), 0))
     }
 }
+
+class ConnectionPolicyTest {
+    @Test fun userDisconnectStops() =
+        assertEquals(RecoveryAction.STOP, ConnectionPolicy.decide(userDisconnect = true, everReady = false, triedAutoConnect = false))
+
+    @Test fun firstFailureTriesAutoConnect() =
+        assertEquals(RecoveryAction.TRY_AUTOCONNECT, ConnectionPolicy.decide(false, everReady = false, triedAutoConnect = false))
+
+    @Test fun secondFailureSchedulesRetry() =
+        assertEquals(RecoveryAction.SCHEDULE_RETRY, ConnectionPolicy.decide(false, everReady = false, triedAutoConnect = true))
+
+    @Test fun dropAfterReadyReconnects() =
+        assertEquals(RecoveryAction.SCHEDULE_RETRY, ConnectionPolicy.decide(false, everReady = true, triedAutoConnect = false))
+
+    @Test fun backoffDoublesAndCaps() {
+        assertEquals(2000L, ConnectionPolicy.nextBackoffMs(1000L))
+        assertEquals(16000L, ConnectionPolicy.nextBackoffMs(10000L))
+        assertEquals(16000L, ConnectionPolicy.nextBackoffMs(16000L))
+    }
+}
