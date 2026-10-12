@@ -66,8 +66,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun extraPermissions(): Array<String> =
-        if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.POST_NOTIFICATIONS) else emptyArray()
+    // Location is optional (for GPS speed/distance); denying it must not block the app, so it is requested
+    // alongside but never gates entry — Permissions.allGranted() only checks the required Bluetooth permissions.
+    private fun extraPermissions(): Array<String> = buildList {
+        add(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+    }.toTypedArray()
 
     private fun afterPermissions() { vm.engine.connect() }
 

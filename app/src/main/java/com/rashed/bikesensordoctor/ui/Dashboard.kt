@@ -99,7 +99,7 @@ fun DashboardScreen(vm: DoctorViewModel, onHistory: () -> Unit, onSettings: () -
                 modifier = Modifier.weight(1.35f),
                 value = d.powerW, max = (prefs.ftpW * 1.5f).coerceAtLeast(300f), label = "WATTS",
                 color = powerColor(d.powerW, prefs.ftpW), big = true,
-                sub = d.power3sW?.let { "3 s  $it" },
+                sub = if (d.powerZone in 1..7) com.rashed.bikesensordoctor.core.PowerZones.name(d.powerZone) else d.power3sW?.let { "3 s  $it W" },
             )
             Gauge(
                 modifier = Modifier.weight(1f),
@@ -241,8 +241,12 @@ private fun Field(modifier: Modifier, key: String, d: Dashboard, prefs: Prefs, o
 
 private fun fieldValue(key: String, d: Dashboard, prefs: Prefs): Pair<String, String> = when (key) {
     "power3s" -> "3 s power" to (d.power3sW?.let { "$it W" } ?: "—")
+    "power10s" -> "10 s power" to (d.power10sW?.let { "$it W" } ?: "—")
     "avgPower" -> "Avg power" to "${d.avgPowerW} W"
     "maxPower" -> "Max power" to "${d.maxPowerW} W"
+    "powerZone" -> "Power zone" to (if (d.powerZone in 1..7) "Z${d.powerZone}" else "—")
+    "speed" -> "Speed" to (d.speedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: if (d.gpsFix) "0.0" else "—")
+    "distance" -> "Distance" to (if (d.gpsFix || d.distanceKm > 0) String.format(Locale.US, "%.2f km", d.distanceKm) else "—")
     "time" -> "Ride time" to RideEngine.fmtDuration(d.elapsedMs)
     "avgCadence" -> "Avg cadence" to "${d.avgCadenceRpm}"
     "maxCadence" -> "Max cadence" to "${d.maxCadenceRpm}"
@@ -284,7 +288,8 @@ fun HistoryScreen(vm: DoctorViewModel, onBack: () -> Unit) {
                         }
                         if (r.backwardsSamples > r.samples / 2 && r.samples > 0) Text("Cadence was reported as backwards for most of this ride", fontSize = 12.sp, color = Amber)
                         Row {
-                            TextButton(onClick = { vm.shareRideCsv(ctx, r.startedAtMs) }) { Text("Share CSV") }
+                            TextButton(onClick = { vm.shareRideCsv(ctx, r.startedAtMs) }) { Text("CSV") }
+                            if (vm.engine.history.hasGpx(r.startedAtMs)) TextButton(onClick = { vm.shareRideGpx(ctx, r.startedAtMs) }) { Text("GPX") }
                             TextButton(onClick = { toDelete = r }) { Text("Delete", color = Red) }
                         }
                     }

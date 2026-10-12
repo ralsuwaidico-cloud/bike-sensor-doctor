@@ -5,6 +5,7 @@ import com.rashed.bikesensordoctor.core.RideSummary
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.Locale
 
 /** Local ride history: one JSON file per ride in app-private storage, plus a 1 Hz CSV of samples. */
 class RideHistory(context: Context) {
@@ -39,6 +40,41 @@ class RideHistory(context: Context) {
     }
 
     fun csvFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.csv")
+    fun gpxFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.gpx")
+    fun hasGpx(startedAtMs: Long): Boolean = gpxFile(startedAtMs).exists()
+
+    /** Writes a standard GPX 1.1 track with Garmin power/cadence/hr extensions. Returns null if no points. */
+    fun saveGpx(startedAtMs: Long, points: List<TrackPoint>, samplesAt: (Long) -> Triple<Int?, Int?, Int?>): File? {
+        if (points.isEmpty()) return null
+        val iso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        val sb = StringBuilder()
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        sb.append("<gpx version=\"1.1\" creator=\"Bike Computer\" xmlns=\"http://www.topografix.com/GPX/1/1\" ")
+        sb.append("xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\">\n")
+        sb.append("<trk><name>Ride ").append(iso.format(java.util.Date(startedAtMs))).append("</name><trkseg>\n")
+        for (p in points) {
+            sb.append("<trkpt lat=\"").append(p.lat).append("\" lon=\"").append(p.lon).append("\">")
+            p.altM?.let { sb.append("<ele>").append(it).append("</ele>") }
+            sb.append("<time>").append(iso.format(java.util.Date(p.timeMs))).append("</time>")
+            val (pw, cad, hr) = samplesAt(p.timeMs)
+            if (pw != null) sb.append("<extensions><power>").append(pw).append("</power>")
+            if (cad != null || hr != null) {
+                if (pw == null) sb.append("<extensions>")
+                sb.append("<gpxtpx:TrackPointExtension>")
+                cad?.let { sb.append("<gpxtpx:cad>").append(it).append("</gpxtpx:cad>") }
+                hr?.let { sb.append("<gpxtpx:hr>").append(it).append("</gpxtpx:hr>") }
+                sb.append("</gpxtpx:TrackPointExtension>")
+                sb.append("</extensions>")
+            } else if (pw != null) sb.append("</extensions>")
+            sb.append("</trkpt>\n")
+        }
+        sb.append("</trkseg></trk></gpx>\n")
+        val f = gpxFile(startedAtMs)
+        f.writeText(sb.toString())
+        return f
+    }
 
     fun exportAllJson(): String {
         val arr = JSONArray(); list().forEach { s ->

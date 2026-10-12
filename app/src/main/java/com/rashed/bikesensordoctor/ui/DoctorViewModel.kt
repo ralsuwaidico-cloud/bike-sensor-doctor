@@ -61,11 +61,13 @@ class DoctorViewModel(app: Application) : AndroidViewModel(app) {
         context.startActivity(Intent.createChooser(intent, "Send report").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
-    fun shareRideCsv(context: Context, startedAtMs: Long) {
-        val f = engine.history.csvFile(startedAtMs)
+    fun shareRideCsv(context: Context, startedAtMs: Long) = shareRideFile(context, engine.history.csvFile(startedAtMs), "text/csv")
+    fun shareRideGpx(context: Context, startedAtMs: Long) = shareRideFile(context, engine.history.gpxFile(startedAtMs), "application/gpx+xml")
+
+    private fun shareRideFile(context: Context, f: File, mime: String) {
         if (!f.exists()) return
         val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", f)
-        val i = Intent(Intent.ACTION_SEND).apply { type = "text/csv"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        val i = Intent(Intent.ACTION_SEND).apply { type = mime; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         context.startActivity(Intent.createChooser(i, "Share ride").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 }

@@ -163,3 +163,69 @@ class ConnectionPolicyTest {
         assertEquals(16000L, ConnectionPolicy.nextBackoffMs(16000L))
     }
 }
+
+class ZonesTest {
+    @Test fun powerZonesAtFtp200() {
+        val ftp = 200
+        assertEquals(0, PowerZones.zone(0, ftp))       // coasting → neutral
+        assertEquals(1, PowerZones.zone(100, ftp))     // 50% → Z1
+        assertEquals(2, PowerZones.zone(130, ftp))     // 65% → Z2 endurance
+        assertEquals(3, PowerZones.zone(170, ftp))     // 85% → Z3
+        assertEquals(4, PowerZones.zone(200, ftp))     // 100% → Z4
+        assertEquals(5, PowerZones.zone(230, ftp))     // 115% → Z5
+        assertEquals(7, PowerZones.zone(400, ftp))     // 200% → Z7
+    }
+    @Test fun zone2Detection() {
+        assertTrue(PowerZones.isZone2(130, 200))
+        assertFalse(PowerZones.isZone2(190, 200))
+    }
+    @Test fun zone2Range() {
+        val (lo, hi) = PowerZones.range(2, 200)
+        assertEquals(110, lo); assertEquals(150, hi)
+    }
+    @Test fun hrZonesAtMax190() {
+        assertEquals(1, HrZones.zone(100, 190))   // 53%
+        assertEquals(2, HrZones.zone(125, 190))   // 66%
+        assertEquals(5, HrZones.zone(185, 190))   // 97%
+        assertTrue(HrZones.isZone2(125, 190))
+    }
+}
+
+class BleStandardTest {
+    @Test fun heartRate8and16bit() {
+        assertEquals(72, BleStandard.heartRate(byteArrayOf(0x00, 72)))               // flags=0 → 8-bit
+        assertEquals(300, BleStandard.heartRate(byteArrayOf(0x01, 0x2C, 0x01)))      // flags bit0 → 16-bit 0x012C
+        assertNull(BleStandard.heartRate(byteArrayOf()))
+    }
+    @Test fun standardPowerInstantWatts() {
+        // flags 0x0000, power 250 (0x00FA)
+        assertEquals(250, BleStandard.cyclingPowerWatts(byteArrayOf(0x00, 0x00, 0xFA.toByte(), 0x00)))
+        assertNull(BleStandard.cyclingPowerWatts(byteArrayOf(0x00)))
+    }
+    @Test fun cscCrankAndCadence() {
+        val a = BleStandard.cscCrank(byteArrayOf(0x02, 10, 0, 0x00, 0x04))!!   // crank only, revs=10, t=0x0400
+        val b = BleStandard.cscCrank(byteArrayOf(0x02, 14, 0, 0x00, 0x08))!!   // revs=14, t=0x0800 (+1024 ticks=1s), +4 revs
+        assertEquals(10, a.cumulativeRevs)
+        assertEquals(240.0, BleStandard.cadenceRpm(a, b)!!, 0.01)              // 4 rev/s = 240 rpm
+    }
+    @Test fun cscSkipsWheelBlock() {
+        // flags 0x03 (wheel+crank): 1 flag +6 wheel, then crank revs=5 t=0x0100
+        val s = BleStandard.cscCrank(byteArrayOf(0x03, 0,0,0,0, 0,0, 5,0, 0x00,0x01))!!
+        assertEquals(5, s.cumulativeRevs)
+    }
+}
+
+class RideStatsWindowTest {
+    @Test fun tenSecondAverageSpansLongerThanThree() {
+        val st = RideStats(); st.start(0)
+        fun p(w: Int) = XdsSample(w, w/2, w/2, 85, 10, 0)
+        // 0..9s at 100,110,...; recent 3s should average the last ~3 samples, 10s the last ~10
+        var w = 100
+        for (t in 0..9) { st.onSample(p(w), t * 1000L); w += 20 }  // 100,120,...,280 at t=0..9s
+        val now = 9000L
+        val p3 = st.power3sW(now)!!    // t within 3s of 9s → 6,7,8,9s → 220,240,260,280 → 250
+        val p10 = st.power10sW(now)!!  // all 10 → mean(100..280 step 20) = 190
+        assertEquals(250, p3)
+        assertEquals(190, p10)
+    }
+}

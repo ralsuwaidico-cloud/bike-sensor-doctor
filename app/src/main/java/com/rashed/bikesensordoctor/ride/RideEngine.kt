@@ -32,6 +32,7 @@ data class Dashboard(
     val rideState: RideStats.State = RideStats.State.IDLE,
     val powerW: Int? = null,
     val power3sW: Int? = null,
+    val power10sW: Int? = null,
     val cadenceRpm: Int? = null,
     val backwards: Boolean = false,
     val crankAngle: Int? = null,
@@ -46,6 +47,10 @@ data class Dashboard(
     val sensorName: String = "",
     val leftW: Int? = null,
     val rightW: Int? = null,
+    val powerZone: Int = 0,
+    val speedKmh: Double? = null,
+    val distanceKm: Double = 0.0,
+    val gpsFix: Boolean = false,
     val lastSavedRide: String? = null,
 )
 
@@ -63,11 +68,14 @@ class RideEngine(private val app: Application) {
     val sensor = SensorManager(app, adapter, log, scanner, gatt, prefs, scope)
     val history = RideHistory(app)
     val stats = RideStats()
+    val gps = GpsTracker(app)
 
     private val _dash = MutableStateFlow(Dashboard())
     val dash: StateFlow<Dashboard> = _dash
 
     private val csv = StringBuilder()
+    // Per-second power/cadence keyed by timestamp, so GPX trackpoints can be annotated at finish.
+    private val sampleByMs = LinkedHashMap<Long, Pair<Int, Int>>()  // t -> (power, cadenceMagnitude)
     private var lastHealth: Health? = null
     private var lastSampleLogged: XdsSample? = null
 
@@ -76,7 +84,10 @@ class RideEngine(private val app: Application) {
     init {
         sensor.addSampleListener { s, t ->
             stats.onSample(s, t)
-            if (stats.state == RideStats.State.RUNNING) csv.append(t).append(',').append(s.powerW).append(',').append(s.leftW).append(',').append(s.rightW).append(',').append(s.cadenceSignedRpm).append(',').append(s.crankAngleDeg).append('\n')
+            if (stats.state == RideStats.State.RUNNING) {
+                csv.append(t).append(',').append(s.powerW).append(',').append(s.leftW).append(',').append(s.rightW).append(',').append(s.cadenceSignedRpm).append(',').append(s.crankAngleDeg).append('\n')
+                if (s.plausible) { sampleByMs[t] = s.powerW to s.cadenceRpm; if (sampleByMs.size > 20000) sampleByMs.remove(sampleByMs.keys.first()) }
+            }
             lastSampleLogged = s
         }
         scope.launch {
@@ -84,28 +95,41 @@ class RideEngine(private val app: Application) {
         }
     }
 
-    /** Begin keeping the sensor connected (dashboard open). */
-    fun connect() = sensor.start()
+    /** Begin keeping the sensor connected (dashboard open) and listening for GPS. */
+    fun connect() { sensor.start(); gps.start() }
 
     fun startRide() {
         val now = System.currentTimeMillis()
         if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) {
             csv.setLength(0); csv.append("timestamp_ms,power_w,left_w,right_w,cadence_signed_rpm,crank_angle_deg\n")
+            sampleByMs.clear()
         }
         stats.start(now)
+        gps.start(); gps.setRecording(true)
         log.add(EventType.TEST, note = "Ride started/resumed")
         RideService.start(app)
     }
 
-    fun pauseRide() { stats.pause(System.currentTimeMillis()); log.add(EventType.TEST, note = "Ride paused"); RideService.update(app) }
+    fun pauseRide() { stats.pause(System.currentTimeMillis()); gps.setRecording(false); log.add(EventType.TEST, note = "Ride paused"); RideService.update(app) }
 
     fun finishRide(): String? {
         val now = System.currentTimeMillis()
         if (stats.state == RideStats.State.IDLE) return null
+        val startedAt = stats.startedAtMs ?: now
         stats.finish(now)
+        gps.setRecording(false)
         val summary = stats.summary(now)
         val saved = if (summary.samples > 0 || summary.durationMs > 10_000) {
-            history.save(summary, csv.toString()); "Ride saved: ${fmtDuration(summary.durationMs)}, avg ${summary.avgPowerW} W"
+            history.save(summary, csv.toString())
+            // GPX if we recorded any track; annotate each point with the nearest power/cadence sample.
+            val track = gps.snapshotTrack()
+            val rideId = if (summary.startedAtMs > 0) summary.startedAtMs else startedAt
+            val gpx = history.saveGpx(rideId, track) { tMs ->
+                val near = sampleByMs.entries.minByOrNull { kotlin.math.abs(it.key - tMs) }
+                val within = near?.takeIf { kotlin.math.abs(it.key - tMs) <= 3000 }?.value
+                Triple(within?.first, within?.second, null)
+            }
+            "Ride saved: ${fmtDuration(summary.durationMs)}, avg ${summary.avgPowerW} W" + (if (gpx != null) " + GPX" else "")
         } else "Ride discarded (too short)"
         log.add(EventType.TEST, note = "Ride finished: $saved")
         saveLogSnapshot("ride-end")
@@ -126,15 +150,19 @@ class RideEngine(private val app: Application) {
         }
         val last = sensor.lastSample.value?.first
         val fresh = stats.livePowerW(now) != null
+        val g = gps.state.value
         _dash.value = _dash.value.copy(
             health = h, healthText = com.rashed.bikesensordoctor.core.HealthClassifier.message(h),
             rideState = stats.state,
-            powerW = stats.livePowerW(now), power3sW = stats.power3sW(now), cadenceRpm = stats.liveCadenceRpm(now),
+            powerW = stats.livePowerW(now), power3sW = stats.power3sW(now), power10sW = stats.power10sW(now),
+            cadenceRpm = stats.liveCadenceRpm(now),
             backwards = stats.liveBackwards(now), crankAngle = stats.liveCrankAngle(now),
             avgPowerW = stats.avgPowerW, maxPowerW = stats.maxPowerW, avgCadenceRpm = stats.avgCadenceRpm, maxCadenceRpm = stats.maxCadenceRpm,
             energyKj = stats.energyKj(now), elapsedMs = stats.elapsedMs(now),
             batteryPct = snap.batteryPct, rssi = snap.rssi, sensorName = snap.name.ifEmpty { prefs.lastSensorName ?: "" },
             leftW = if (fresh) last?.leftW else null, rightW = if (fresh) last?.rightW else null,
+            powerZone = com.rashed.bikesensordoctor.core.PowerZones.zone(stats.livePowerW(now), prefs.ftpW),
+            speedKmh = g.speedKmh, distanceKm = g.distanceKm, gpsFix = g.hasFix,
         )
     }
 

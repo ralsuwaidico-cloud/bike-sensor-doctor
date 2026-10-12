@@ -15,6 +15,7 @@ package com.rashed.bikesensordoctor.core
 class RideStats {
     companion object {
         const val WINDOW_3S_MS = 3000L
+        const val WINDOW_10S_MS = 10000L
         const val STALE_MS = 4000L
     }
 
@@ -71,7 +72,7 @@ class RideStats {
         if (!s.plausible) { rejectedCount++; return }
         last = s; lastSampleMs = nowMs
         window.addLast(nowMs to s.powerW)
-        while (window.isNotEmpty() && nowMs - window.first().first > WINDOW_3S_MS) window.removeFirst()
+        while (window.isNotEmpty() && nowMs - window.first().first > WINDOW_10S_MS) window.removeFirst()
         if (state != State.RUNNING) return
         sampleCount++
         powerSum += s.powerW
@@ -91,9 +92,12 @@ class RideStats {
     fun liveBackwards(nowMs: Long): Boolean = fresh(nowMs) && last?.backwards == true
     fun liveCrankAngle(nowMs: Long): Int? = if (fresh(nowMs)) last?.crankAngleDeg else null
 
-    fun power3sW(nowMs: Long): Int? {
+    fun power3sW(nowMs: Long): Int? = rollingPower(nowMs, WINDOW_3S_MS)
+    fun power10sW(nowMs: Long): Int? = rollingPower(nowMs, WINDOW_10S_MS)
+
+    private fun rollingPower(nowMs: Long, windowMs: Long): Int? {
         if (!fresh(nowMs)) return null
-        val recent = window.filter { nowMs - it.first <= WINDOW_3S_MS }
+        val recent = window.filter { nowMs - it.first <= windowMs }
         return if (recent.isEmpty()) null else (recent.sumOf { it.second }.toDouble() / recent.size + 0.5).toInt()
     }
 

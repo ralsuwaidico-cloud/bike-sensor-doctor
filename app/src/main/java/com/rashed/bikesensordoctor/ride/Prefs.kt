@@ -33,8 +33,12 @@ class Prefs(context: Context) {
         val DEFAULT_FIELDS = listOf("power3s", "avgPower", "maxPower", "time")
         val FIELD_OPTIONS = linkedMapOf(
             "power3s" to "3 s power",
+            "power10s" to "10 s power",
             "avgPower" to "Average power",
             "maxPower" to "Max power",
+            "powerZone" to "Power zone",
+            "speed" to "Speed (GPS)",
+            "distance" to "Distance (GPS)",
             "time" to "Ride time",
             "avgCadence" to "Average cadence",
             "maxCadence" to "Max cadence",
