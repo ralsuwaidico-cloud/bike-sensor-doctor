@@ -51,14 +51,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         crashText.value = runCatching { com.rashed.bikesensordoctor.BikeApp.crashFile(this).takeIf { it.exists() }?.readText() }.getOrNull()
-        applyKeepScreenOn()
-        // Spoken coaching: route the engine's cues through Android TTS.
-        tts = android.speech.tts.TextToSpeech(this) { status ->
-            if (status == android.speech.tts.TextToSpeech.SUCCESS) tts?.language = java.util.Locale.ENGLISH
-        }
-        vm.engine.onSpeak = { text ->
-            runCatching { tts?.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "coach") }
-        }
+        // The screen is set up FIRST. The engine (Bluetooth, stats, coach) is created lazily inside the composition
+        // and any failure is shown on screen with a Send button instead of killing the app before it can draw.
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
@@ -67,15 +61,41 @@ class MainActivity : ComponentActivity() {
                 ),
             ) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    when {
-                        crashText.value != null -> CrashGate(crashText.value!!, onSend = { shareCrash(crashText.value!!) }, onContinue = { com.rashed.bikesensordoctor.BikeApp.crashFile(this).delete(); crashText.value = null })
-                        !permissionGranted.value -> PermissionGate { permissionLauncher.launch(Permissions.required() + extraPermissions()) }
-                        !bluetoothOn.value -> BluetoothGate { enableBtLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
-                        else -> BikeComputerApp(vm, onKeepScreenOnChanged = { applyKeepScreenOn() }, onBatteryOptimization = { requestIgnoreBatteryOptimizations() })
+                    val crash = crashText.value
+                    if (crash != null) {
+                        CrashGate(crash, onSend = { shareCrash(crash) }, onContinue = { com.rashed.bikesensordoctor.BikeApp.crashFile(this).delete(); crashText.value = null })
+                    } else {
+                        val startup = androidx.compose.runtime.remember { runCatching { vm.also { wireEngine(it) } } }
+                        startup.fold(
+                            onSuccess = { viewModel ->
+                                when {
+                                    !permissionGranted.value -> PermissionGate { permissionLauncher.launch(Permissions.required() + extraPermissions()) }
+                                    !bluetoothOn.value -> BluetoothGate { enableBtLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
+                                    else -> BikeComputerApp(viewModel, onKeepScreenOnChanged = { applyKeepScreenOn() }, onBatteryOptimization = { requestIgnoreBatteryOptimizations() })
+                                }
+                            },
+                            onFailure = { e ->
+                                val text = "Startup failed: ${e.javaClass.name}: ${e.message}\n" + e.stackTraceToString()
+                                CrashGate(text, onSend = { shareCrash(text) }, onContinue = { finish() })
+                            },
+                        )
                     }
                 }
             }
         }
+    }
+
+    /** Everything that needs the engine, done once it exists. */
+    private fun wireEngine(viewModel: DoctorViewModel) {
+        applyKeepScreenOn()
+        tts = android.speech.tts.TextToSpeech(this) { status ->
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) tts?.language = java.util.Locale.ENGLISH
+        }
+        viewModel.engine.onSpeak = { text ->
+            runCatching { tts?.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "coach") }
+        }
+        permissionGranted.value = Permissions.allGranted(this)
+        bluetoothOn.value = viewModel.bluetoothOn()
     }
 
     // Location is optional (for GPS speed/distance); denying it must not block the app, so it is requested
@@ -85,10 +105,11 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
     }.toTypedArray()
 
-    private fun afterPermissions() { vm.engine.connect() }
+    private fun afterPermissions() { runCatching { vm.engine.connect() } }
 
     fun applyKeepScreenOn() {
-        if (vm.engine.prefs.keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        val keep = runCatching { vm.engine.prefs.keepScreenOn }.getOrDefault(true)
+        if (keep) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
@@ -107,8 +128,10 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         permissionGranted.value = Permissions.allGranted(this)
-        bluetoothOn.value = vm.bluetoothOn()
-        if (permissionGranted.value && bluetoothOn.value) { vm.engine.connect(); vm.engine.onForeground() }
+        runCatching {
+            bluetoothOn.value = vm.bluetoothOn()
+            if (permissionGranted.value && bluetoothOn.value) { vm.engine.connect(); vm.engine.onForeground() }
+        }
     }
 
     private fun shareCrash(text: String) {

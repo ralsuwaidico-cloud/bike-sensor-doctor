@@ -77,6 +77,7 @@ data class Dashboard(
     val powerVerified: Boolean = false,
     val coachReason: String = "",
     val restoredRide: Boolean = false,                                // true after a ride was recovered from a checkpoint
+    val engineError: String? = null,                                  // last refresh() exception, shown on the dashboard instead of crashing
 )
 
 /**
@@ -131,6 +132,9 @@ class RideEngine(private val app: Application) {
     private var cooldownRequestedAtMs: Long? = null   // riding-time at which COOL DOWN was pressed
     private val plan get() = SessionPlan(warmupSec = prefs.warmupSec)
 
+    private val recentPower = ArrayDeque<Int>()
+    @Volatile var lastEngineError: String? = null; private set
+
     fun bluetoothOn() = adapter?.isEnabled == true
 
     init {
@@ -145,7 +149,16 @@ class RideEngine(private val app: Application) {
             lastSampleLogged = s
         }
         scope.launch {
-            while (isActive) { refresh(); delay(500) }
+            delay(300)   // never run the first refresh synchronously inside the constructor
+            while (isActive) {
+                try { refresh() } catch (e: Throwable) {
+                    // A bug in one refresh must never kill the app: record it, show it, keep going.
+                    val msg = "${e.javaClass.simpleName}: ${e.message}\n" + e.stackTrace.take(6).joinToString("\n") { "  at $it" }
+                    if (lastEngineError == null) { log.add(EventType.ERROR, note = "refresh() failed: $msg"); lastEngineError = msg }
+                    runCatching { _dash.value = _dash.value.copy(engineError = msg) }
+                }
+                delay(500)
+            }
         }
     }
 
@@ -246,8 +259,6 @@ class RideEngine(private val app: Application) {
         _dash.value = _dash.value.copy(lastSavedRide = saved, restoredRide = false)
         return saved
     }
-
-    private val recentPower = ArrayDeque<Int>()
 
     private fun refresh() {
         val now = System.currentTimeMillis()

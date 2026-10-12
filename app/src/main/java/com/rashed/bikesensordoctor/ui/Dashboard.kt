@@ -307,6 +307,9 @@ private fun LowerSection(d: Dashboard, st: D7State, prefs: Prefs) {
         d.lastSavedRide?.takeIf { d.rideState == RideStats.State.IDLE || d.restoredRide }?.let {
             Text(it, fontFamily = PlexMono, fontSize = 11.sp, color = if (d.restoredRide) D7.Amber else D7.Green, modifier = Modifier.padding(top = 8.dp))
         }
+        d.engineError?.let { err ->
+            Text("Internal error (app kept running) — please send logs from Settings:\n$err", fontFamily = PlexMono, fontSize = 10.sp, color = D7.Red, modifier = Modifier.padding(top = 8.dp))
+        }
         if (d.rideState != RideStats.State.IDLE) d.linkQualityPct?.let { q ->
             Text("LINK ${q}%" + (if (d.linkGaps > 0) " · ${d.linkGaps} gap(s), ${d.linkLostSec} s lost" else " · no gaps"), fontFamily = PlexMono, fontSize = 10.sp,
                 color = if (q >= 95 && d.linkGaps == 0) D7.Faint else D7.Amber, modifier = Modifier.padding(top = 6.dp))
