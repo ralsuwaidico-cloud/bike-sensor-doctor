@@ -29,11 +29,19 @@ import kotlinx.coroutines.launch
 class RideService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var ticker: Job? = null
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         ensureChannel()
+        // Keep the CPU awake during a ride so the Bluetooth link and recording survive the screen turning off.
+        if (wakeLock == null) {
+            val pm = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "BikeComputer::ride").apply {
+                setReferenceCounted(false); acquire(6 * 60 * 60 * 1000L)  // safety cap 6 h
+            }
+        }
         val n = buildNotification()
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         else startForeground(ID, n)
@@ -47,7 +55,12 @@ class RideService : Service() {
         return START_STICKY
     }
 
-    override fun onDestroy() { ticker?.cancel(); super.onDestroy() }
+    override fun onDestroy() {
+        ticker?.cancel()
+        try { wakeLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) {}
+        wakeLock = null
+        super.onDestroy()
+    }
 
     private fun buildNotification(): Notification {
         val d = BikeApp.engine(this).dash.value

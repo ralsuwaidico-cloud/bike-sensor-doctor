@@ -40,6 +40,26 @@ class RideHistory(context: Context) {
     }
 
     fun csvFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.csv")
+    fun reportFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs-report.json")
+
+    /** Extra analysis stored alongside the ride: seconds in each power/HR zone, HR avg/max. */
+    fun saveReport(startedAtMs: Long, powerZoneSec: IntArray, hrZoneSec: IntArray, avgHr: Int, maxHr: Int) {
+        val o = JSONObject()
+        o.put("powerZoneSec", JSONArray(powerZoneSec.toList()))
+        o.put("hrZoneSec", JSONArray(hrZoneSec.toList()))
+        o.put("avgHr", avgHr); o.put("maxHr", maxHr)
+        reportFile(startedAtMs).writeText(o.toString())
+    }
+
+    data class Report(val powerZoneSec: List<Int>, val hrZoneSec: List<Int>, val avgHr: Int, val maxHr: Int)
+    fun readReport(startedAtMs: Long): Report? {
+        val f = reportFile(startedAtMs); if (!f.exists()) return null
+        return runCatching {
+            val o = JSONObject(f.readText())
+            fun arr(k: String) = o.getJSONArray(k).let { a -> (0 until a.length()).map { a.getInt(it) } }
+            Report(arr("powerZoneSec"), arr("hrZoneSec"), o.optInt("avgHr"), o.optInt("maxHr"))
+        }.getOrNull()
+    }
     fun gpxFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.gpx")
     fun hasGpx(startedAtMs: Long): Boolean = gpxFile(startedAtMs).exists()
 

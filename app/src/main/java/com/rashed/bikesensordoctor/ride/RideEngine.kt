@@ -51,6 +51,12 @@ data class Dashboard(
     val speedKmh: Double? = null,
     val distanceKm: Double = 0.0,
     val gpsFix: Boolean = false,
+    val hrBpm: Int? = null,
+    val hrZone: Int = 0,
+    val hrConnected: Boolean = false,
+    val hrBatteryPct: Int? = null,
+    val linkUptimeSec: Long = 0,
+    val recentPower: List<Int> = emptyList(),   // last ~60 s of 1 Hz power for the sparkline
     val lastSavedRide: String? = null,
 )
 
@@ -69,15 +75,28 @@ class RideEngine(private val app: Application) {
     val history = RideHistory(app)
     val stats = RideStats()
     val gps = GpsTracker(app)
+    val hr = com.rashed.bikesensordoctor.ble.HrSensor(app, adapter, log)
+    val coach = com.rashed.bikesensordoctor.core.CoachEngine()
 
     private val _dash = MutableStateFlow(Dashboard())
     val dash: StateFlow<Dashboard> = _dash
+    private val _cue = MutableStateFlow(com.rashed.bikesensordoctor.core.CoachCue.NONE)
+    val cue: StateFlow<com.rashed.bikesensordoctor.core.CoachCue> = _cue
+    /** Called on each NEW spoken cue so the UI can speak it via TTS. */
+    var onSpeak: ((String) -> Unit)? = null
 
     private val csv = StringBuilder()
     // Per-second power/cadence keyed by timestamp, so GPX trackpoints can be annotated at finish.
     private val sampleByMs = LinkedHashMap<Long, Pair<Int, Int>>()  // t -> (power, cadenceMagnitude)
     private var lastHealth: Health? = null
     private var lastSampleLogged: XdsSample? = null
+    private var linkUpSinceMs: Long? = null   // for the connection-uptime / 30-min test
+    private var lastKeepaliveMs = 0L
+
+    // HR zone-time accumulators (seconds in each zone) for the post-ride report
+    private val hrZoneSec = IntArray(6)
+    private val powerZoneSec = IntArray(8)
+    private var hrSum = 0L; private var hrCount = 0; private var hrMax = 0
 
     fun bluetoothOn() = adapter?.isEnabled == true
 
@@ -95,16 +114,34 @@ class RideEngine(private val app: Application) {
         }
     }
 
-    /** Begin keeping the sensor connected (dashboard open) and listening for GPS. */
-    fun connect() { sensor.start(); gps.start() }
+    /** Begin keeping the sensor connected (dashboard open) and listening for GPS. Reconnect a remembered HR strap. */
+    fun connect() {
+        sensor.start(); gps.start()
+        val hrAddr = prefs.hrAddress
+        if (hrAddr != null && !hr.state.value.connected && !hr.state.value.connecting) hr.connect(hrAddr, prefs.hrName)
+        applyCoachConfig()
+    }
+
+    fun applyCoachConfig() {
+        coach.config = com.rashed.bikesensordoctor.core.CoachConfig(
+            mode = runCatching { com.rashed.bikesensordoctor.core.CoachMode.valueOf(prefs.coachMode) }.getOrDefault(com.rashed.bikesensordoctor.core.CoachMode.FREE),
+            cadenceLow = prefs.cadenceLow, cadenceHigh = prefs.cadenceHigh,
+            ftpW = prefs.ftpW, maxHr = prefs.maxHr,
+        )
+    }
+
+    fun connectHr(address: String, name: String?) { prefs.hrAddress = address; prefs.hrName = name; hr.connect(address, name) }
+    fun forgetHr() { prefs.hrAddress = null; prefs.hrName = null; hr.disconnect() }
 
     fun startRide() {
         val now = System.currentTimeMillis()
         if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) {
             csv.setLength(0); csv.append("timestamp_ms,power_w,left_w,right_w,cadence_signed_rpm,crank_angle_deg\n")
-            sampleByMs.clear()
+            sampleByMs.clear(); recentPower.clear(); hrZoneSec.fill(0); powerZoneSec.fill(0); coach.reset()
+            hrSum = 0; hrCount = 0; hrMax = 0
         }
         stats.start(now)
+        applyCoachConfig()
         gps.start(); gps.setRecording(true)
         log.add(EventType.TEST, note = "Ride started/resumed")
         RideService.start(app)
@@ -121,6 +158,8 @@ class RideEngine(private val app: Application) {
         val summary = stats.summary(now)
         val saved = if (summary.samples > 0 || summary.durationMs > 10_000) {
             history.save(summary, csv.toString())
+            history.saveReport(if (summary.startedAtMs > 0) summary.startedAtMs else startedAt,
+                powerZoneSec, hrZoneSec, if (hrCount > 0) (hrSum / hrCount).toInt() else 0, hrMax)
             // GPX if we recorded any track; annotate each point with the nearest power/cadence sample.
             val track = gps.snapshotTrack()
             val rideId = if (summary.startedAtMs > 0) summary.startedAtMs else startedAt
@@ -139,18 +178,47 @@ class RideEngine(private val app: Application) {
         return saved
     }
 
+    private val recentPower = ArrayDeque<Int>()
+
     private fun refresh() {
         val now = System.currentTimeMillis()
         val snap = gatt.snapshot.value
         val h = sensor.health.value
         if (h != lastHealth) {
             lastHealth = h
-            // Save a technical log automatically whenever a problem state appears
             if (h == Health.LINK_SILENT || h == Health.DECODE_ERROR || h == Health.SENSOR_FAULT || h == Health.RECONNECTING) saveLogSnapshot(h.name.lowercase())
         }
+        // connection uptime for the 30-min test: reset whenever we're not live
+        val live = h == Health.CONNECTED_LIVE || h == Health.CONNECTED_IDLE
+        if (live) { if (linkUpSinceMs == null) linkUpSinceMs = now } else linkUpSinceMs = null
+        val uptimeSec = linkUpSinceMs?.let { (now - it) / 1000 } ?: 0L
+
+        // keepalive: a light battery read every 20 s keeps the GATT link active against idle timeouts
+        if (live && now - lastKeepaliveMs > 20_000) { lastKeepaliveMs = now; gatt.readRssi() }
+
         val last = sensor.lastSample.value?.first
         val fresh = stats.livePowerW(now) != null
         val g = gps.state.value
+        val bpm = hr.liveBpm(now)
+        val hrState = hr.state.value
+        val hrZ = com.rashed.bikesensordoctor.core.HrZones.zone(bpm, prefs.maxHr)
+
+        // coaching (≈1 Hz): run the engine and surface/speak any new cue
+        val c = coach.update(now, stats.liveCadenceRpm(now), bpm, stats.livePowerW(now))
+        if (c.type != com.rashed.bikesensordoctor.core.CueType.NONE) {
+            _cue.value = c
+            if (prefs.coachVoice && c.spoken.isNotEmpty()) onSpeak?.invoke(c.spoken)
+        }
+
+        // sparkline + zone-time while running
+        if (stats.state == RideStats.State.RUNNING) {
+            recentPower.addLast(stats.livePowerW(now) ?: 0); while (recentPower.size > 60) recentPower.removeFirst()
+            if (hrZ in 1..5) hrZoneSec[hrZ]++
+            if (bpm != null && bpm > 0) { hrSum += bpm; hrCount++; if (bpm > hrMax) hrMax = bpm }
+            val pz = com.rashed.bikesensordoctor.core.PowerZones.zone(stats.livePowerW(now), prefs.ftpW)
+            if (pz in 1..7) powerZoneSec[pz]++
+        }
+
         _dash.value = _dash.value.copy(
             health = h, healthText = com.rashed.bikesensordoctor.core.HealthClassifier.message(h),
             rideState = stats.state,
@@ -163,6 +231,8 @@ class RideEngine(private val app: Application) {
             leftW = if (fresh) last?.leftW else null, rightW = if (fresh) last?.rightW else null,
             powerZone = com.rashed.bikesensordoctor.core.PowerZones.zone(stats.livePowerW(now), prefs.ftpW),
             speedKmh = g.speedKmh, distanceKm = g.distanceKm, gpsFix = g.hasFix,
+            hrBpm = bpm, hrZone = hrZ, hrConnected = hrState.connected, hrBatteryPct = hrState.batteryPct,
+            linkUptimeSec = uptimeSec, recentPower = recentPower.toList(),
         )
     }
 

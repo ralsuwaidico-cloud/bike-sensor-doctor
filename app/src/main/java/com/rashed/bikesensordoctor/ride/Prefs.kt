@@ -27,6 +27,30 @@ class Prefs(context: Context) {
         get() = sp.getInt("ftp", 200)
         set(v) = sp.edit().putInt("ftp", v).apply()
 
+    var maxHr: Int
+        get() = sp.getInt("maxhr", 185)
+        set(v) = sp.edit().putInt("maxhr", v).apply()
+
+    var hrAddress: String?
+        get() = sp.getString("hr_addr", null)
+        set(v) = sp.edit().putString("hr_addr", v).apply()
+    var hrName: String?
+        get() = sp.getString("hr_name", null)
+        set(v) = sp.edit().putString("hr_name", v).apply()
+
+    var coachMode: String
+        get() = sp.getString("coach_mode", "FREE") ?: "FREE"
+        set(v) = sp.edit().putString("coach_mode", v).apply()
+    var coachVoice: Boolean
+        get() = sp.getBoolean("coach_voice", true)
+        set(v) = sp.edit().putBoolean("coach_voice", v).apply()
+    var cadenceLow: Int
+        get() = sp.getInt("cad_low", 85)
+        set(v) = sp.edit().putInt("cad_low", v).apply()
+    var cadenceHigh: Int
+        get() = sp.getInt("cad_high", 95)
+        set(v) = sp.edit().putInt("cad_high", v).apply()
+
     companion object {
         const val DEFAULT_ADDRESS = "C0:A1:25:07:97:69"
         const val DEFAULT_NAME = "XDS-A001-9769"

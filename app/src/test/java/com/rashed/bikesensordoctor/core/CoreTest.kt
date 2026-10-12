@@ -229,3 +229,67 @@ class RideStatsWindowTest {
         assertEquals(190, p10)
     }
 }
+
+class CoachEngineTest {
+    private fun eng(mode: CoachMode, src: EffortSource = EffortSource.AUTO) =
+        CoachEngine(CoachConfig(mode = mode, effortSource = src, ftpW = 200, maxHr = 190,
+            cadenceLow = 85, cadenceHigh = 95, minAlertMs = 0, effortHoldMs = 8000, smoothingMs = 1))
+
+    @Test fun freeModeSaysNothing() {
+        assertEquals(CueType.NONE, eng(CoachMode.FREE).update(0, 90, 150, 200).type)
+    }
+
+    @Test fun cadenceTooLowSaysFaster() {
+        val e = eng(CoachMode.CADENCE)
+        assertEquals(CueType.PEDAL_FASTER, e.update(1000, 70, null, null).type)
+    }
+    @Test fun cadenceTooHighSaysSlower() {
+        val e = eng(CoachMode.CADENCE)
+        assertEquals(CueType.PEDAL_SLOWER, e.update(1000, 110, null, null).type)
+    }
+    @Test fun cadenceOnTargetKeepItUp() {
+        val e = eng(CoachMode.CADENCE)
+        assertEquals(CueType.KEEP_IT_UP, e.update(1000, 90, null, null).type)
+    }
+    @Test fun cadenceModeIgnoresHeartRate() {
+        // even with high HR, cadence mode only talks cadence
+        val e = eng(CoachMode.CADENCE)
+        assertEquals(CueType.PEDAL_FASTER, e.update(1000, 70, 180, 300).type)
+    }
+
+    @Test fun zone2WithoutHrAsksForSensor() {
+        val e = eng(CoachMode.ZONE2, EffortSource.HEART_RATE)
+        assertEquals(CueType.NO_HR, e.update(1000, 90, null, null).type)
+    }
+    @Test fun zone2PowerCoastingAsksToLoad() {
+        val e = eng(CoachMode.ZONE2, EffortSource.POWER)
+        assertEquals(CueType.NO_POWER, e.update(1000, 90, null, 0).type)
+    }
+    @Test fun powerAboveZoneEasesOffAfterHold() {
+        val e = eng(CoachMode.ZONE2, EffortSource.POWER)   // target zone 2 (<=150W at FTP200)
+        // 260 W = zone 4; power hold is 2s
+        assertEquals(CueType.NONE, e.update(0, 90, null, 260).type)        // first sample, not held yet
+        val c = e.update(3000, 90, null, 260)
+        assertEquals(CueType.EASE_OFF, c.type)
+    }
+    @Test fun powerOnTargetKeepItUp() {
+        val e = eng(CoachMode.ZONE2, EffortSource.POWER)
+        assertEquals(CueType.KEEP_IT_UP, e.update(0, 90, null, 130).type)  // 130W = zone2
+    }
+    @Test fun hrEffortRequiresHoldBeforeAlert() {
+        val e = eng(CoachMode.ZONE2, EffortSource.HEART_RATE)   // target HR zone 2 (<=0.70*190=133)
+        // 170 bpm = zone4; must hold 8s before EASE_OFF
+        assertEquals(CueType.NONE, e.update(0, 80, 170, null).type)
+        assertEquals(CueType.NONE, e.update(5000, 80, 170, null).type)     // only 5s held
+        assertEquals(CueType.EASE_OFF, e.update(9000, 80, 170, null).type) // 9s held
+    }
+    @Test fun intervalRestSaysRecover() {
+        val e = CoachEngine(CoachConfig(mode = CoachMode.INTERVAL, effortSource = EffortSource.POWER,
+            ftpW = 200, minAlertMs = 0, smoothingMs = 1))
+        e.interval = IntervalPlan(workSec = 10, restSec = 10, repeats = 2)
+        // t=0..9 work, t=10..19 rest
+        assertEquals(CueType.KEEP_IT_UP, e.update(0, 90, null, 130).type.let { if (it==CueType.PUSH_HARDER||it==CueType.KEEP_IT_UP||it==CueType.NONE) it else it })
+        val rest = e.update(12_000, 90, null, 130)
+        assertEquals(CueType.RECOVER, rest.type)
+    }
+}

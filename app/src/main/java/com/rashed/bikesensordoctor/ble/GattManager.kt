@@ -307,11 +307,15 @@ class GattManager(private val context: Context, private val adapter: BluetoothAd
 
     private val reconnectRunnable = Runnable {
         if (connAddress.isEmpty() || userInitiatedDisconnect) return@Runnable
-        triedAutoConnect = false
+        triedAutoConnect = true   // reconnects go straight to the persistent mode below
         _snapshot.update { it.copy(state = ConnectionState.CONNECTING, connectAttempts = it.connectAttempts + 1) }
-        log.add(EventType.CONNECTION, device = connAddress, note = "Auto-reconnect attempt ${_snapshot.value.connectAttempts}")
+        log.add(EventType.CONNECTION, device = connAddress, note = "Auto-reconnect (persistent autoConnect) attempt ${_snapshot.value.connectAttempts}")
         closeGatt()
-        launchConnect(useAutoConnect = false, settleMs = 400)
+        // KEY FIX (2026-10-12 ride log): the XDS meter sleeps when pedaling pauses and closes the link cleanly
+        // (status GATT_SUCCESS). A direct connectGatt(autoConnect=false) can never catch a non-advertising sleeping
+        // sensor and times out forever. autoConnect=true waits in the background and latches the moment the sensor
+        // re-advertises (i.e. when the rider pedals again) — exactly the right tool for mid-ride sleep/wake.
+        launchConnect(useAutoConnect = true, settleMs = 400)
     }
 
     private fun scheduleReconnect() {

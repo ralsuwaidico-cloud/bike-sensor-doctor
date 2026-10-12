@@ -45,9 +45,18 @@ class MainActivity : ComponentActivity() {
         bluetoothOn.value = vm.bluetoothOn()
     }
 
+    private var tts: android.speech.tts.TextToSpeech? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyKeepScreenOn()
+        // Spoken coaching: route the engine's cues through Android TTS.
+        tts = android.speech.tts.TextToSpeech(this) { status ->
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) tts?.language = java.util.Locale.ENGLISH
+        }
+        vm.engine.onSpeak = { text ->
+            runCatching { tts?.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "coach") }
+        }
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
@@ -97,6 +106,11 @@ class MainActivity : ComponentActivity() {
         permissionGranted.value = Permissions.allGranted(this)
         bluetoothOn.value = vm.bluetoothOn()
         if (permissionGranted.value && bluetoothOn.value) vm.engine.connect()
+    }
+
+    override fun onDestroy() {
+        runCatching { tts?.shutdown() }
+        super.onDestroy()
     }
 }
 
