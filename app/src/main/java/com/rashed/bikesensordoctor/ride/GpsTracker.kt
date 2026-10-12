@@ -29,7 +29,7 @@ class GpsTracker(private val context: Context) {
     val state: StateFlow<GpsState> = _state
 
     private val points = ArrayList<TrackPoint>()
-    @Volatile var recording = false
+    @Volatile private var recordingActive = false
     private var last: Location? = null
     private var distanceM = 0.0
     private var listening = false
@@ -65,14 +65,14 @@ class GpsTracker(private val context: Context) {
 
     /** Begin/stop accumulating distance and recording the track for the current ride. */
     fun setRecording(on: Boolean) {
-        recording = on
+        recordingActive = on
         if (on) { points.clear(); distanceM = 0.0; last = null; _state.value = _state.value.copy(distanceKm = 0.0) }
     }
 
     private fun onFix(loc: Location) {
         val speedKmh = if (loc.hasSpeed()) loc.speed * 3.6 else 0.0
         _state.value = _state.value.copy(available = true, hasFix = true, speedKmh = speedKmh)
-        if (!recording) { last = loc; return }
+        if (!recordingActive) { last = loc; return }
         val prev = last
         if (prev != null && loc.hasAccuracy() && loc.accuracy <= 25f) {
             val d = prev.distanceTo(loc)
