@@ -39,6 +39,8 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
         }
     }
     fun stop() { job?.cancel(); job = null; engine.simulatedHr = null }
+    /** Ride started: the script restarts from minute 0 so the planned hour lines up with the ride clock. */
+    fun restart() { tSec = 0; startVirtualMs = engine.now() }
 
     /** Deterministic curves; values depend only on the second so tests are repeatable. */
     private fun step(t: Int, now: Long) {

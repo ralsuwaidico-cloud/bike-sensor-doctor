@@ -163,7 +163,7 @@ class AppFlowTest {
         shot("27_dashboard_cooldown")
         // background + foreground must not lose the ride
         device.pressHome(); Thread.sleep(2000); launch(); find(tag("btn_pause"), 10_000)
-        tap(tag("btn_finish")); tap(tag("confirm_finish"))
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE"))   // the dialog is its own window: find it by its text
         find(tag("save_post"), 15_000); shot("28_post_ride")
         tap(text("Legs")); tap(text("Yes")); tap(tag("save_post"))
         find(tag("post_home")); shot("29_next_workout"); tap(tag("post_home"))
@@ -175,7 +175,7 @@ class AppFlowTest {
     @Test fun t05_restart_keeps_data_and_settings_screens() {
         launch()
         // if an earlier test left a ride running, finish it first (a running ride re-opens on the dashboard by design)
-        if (!has(tag("start_ride"), 4000) && visible(tag("btn_finish"), 4000)) { tap(tag("btn_finish")); tap(tag("confirm_finish")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
+        if (!has(tag("start_ride"), 4000) && visible(tag("btn_finish"), 4000)) { tap(tag("btn_finish")); tap(text("FINISH & SAVE")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
         find(tag("start_ride"), 15_000)
         assertTrue(has(text("Rashed"), 3000))
         tap(text("⚙")); shot("31_settings"); scrollTo(text("Advanced: Diagnose & Repair sensor"))

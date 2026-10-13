@@ -202,11 +202,12 @@ private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachC
         cue.type == CueType.NONE -> if (d.rideState == RideStats.State.RUNNING) "Watching your ${if (mode == CoachMode.CADENCE) "cadence" else "effort"} against the target" else "Press START — coaching runs during the ride"
         else -> cue.detail
     }
-    val phaseLabel = when (d.phase) {
-        Phase.WARMUP -> "WARM-UP ${RideEngine.fmtDuration(d.warmupRemainingSec * 1000L)}"
-        Phase.MAIN -> if (d.plannedSec != null) "MAIN · ${RideEngine.fmtDuration(((d.plannedSec * 1000L) - d.elapsedMs).coerceAtLeast(0))} left" else "MAIN"
-        Phase.RECOVERY -> "RECOVERY"
-        Phase.COOLDOWN -> "COOL-DOWN"
+    val phaseLabel = when {
+        d.plannedSec != null && d.elapsedMs >= d.plannedSec * 1000L -> "DONE · PRESS FINISH"
+        d.phase == Phase.WARMUP -> "WARM-UP ${RideEngine.fmtDuration(d.warmupRemainingSec * 1000L)}"
+        d.phase == Phase.MAIN -> if (d.plannedSec != null) "MAIN · ${RideEngine.fmtDuration(((d.plannedSec * 1000L) - d.elapsedMs).coerceAtLeast(0))} left" else "MAIN"
+        d.phase == Phase.RECOVERY -> "RECOVERY"
+        else -> if (d.plannedSec != null) "COOL-DOWN · ${RideEngine.fmtDuration(((d.plannedSec * 1000L) - d.elapsedMs).coerceAtLeast(0))}" else "COOL-DOWN"
     }
 }
 

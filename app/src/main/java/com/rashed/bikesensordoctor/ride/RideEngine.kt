@@ -364,6 +364,7 @@ class RideEngine(private val app: Application) {
             } else { workoutPlan = null; plan = SessionPlan(warmupSec = prefs.warmupSec) }
             _dash.value = _dash.value.copy(lastResult = null, plannedSec = plan.plannedSec, workoutName = w?.name ?: "")
         }
+        if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) simulator?.restart()
         stats.start(now)
         applyCoachConfig()
         gps.start(); gps.setRecording(true)
