@@ -41,11 +41,18 @@ class AppFlowTest {
     private fun shot(name: String) { device.waitForIdle(1500); device.takeScreenshot(File(shots(), "$name.png")) }
     private fun tag(t: String): BySelector = By.res(t)
     private fun text(t: String): BySelector = By.text(t)
-    /** Finds a node, scrolling the page down and then up if it is off-screen (the dashboard and long pages scroll). */
+    /** Finds a node, scrolling the page (accessibility scroll actions, then swipes) if it is off-screen. */
     private fun find(sel: BySelector, timeout: Long = T): UiObject2 {
         var o = device.wait(Until.findObject(sel), minOf(timeout, 3000L))
-        if (o == null) { repeat(5) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
-        if (o == null) { repeat(6) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
+        if (o == null) {
+            val sc = device.findObject(By.scrollable(true))
+            if (sc != null) {
+                o = runCatching { sc.scrollUntil(androidx.test.uiautomator.Direction.DOWN, Until.findObject(sel)) }.getOrNull()
+                if (o == null) o = runCatching { device.findObject(By.scrollable(true))?.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(sel)) }.getOrNull()
+            }
+        }
+        if (o == null) { repeat(4) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
+        if (o == null) { repeat(5) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null && timeout > 3000) o = device.wait(Until.findObject(sel), timeout - 3000)
         assertNotNull("not found: $sel", o); return o!!
     }
@@ -57,7 +64,7 @@ class AppFlowTest {
         if (bottom > device.displayHeight * 0.80) { val w = device.displayWidth / 2; device.swipe(w, (device.displayHeight * 0.6).toInt(), w, (device.displayHeight * 0.35).toInt(), 25); device.waitForIdle(800); Thread.sleep(300) }
         retry { find(sel, 2000).click() }; device.waitForIdle(1000)
     }
-    private fun top() { repeat(4) { swipe(up = false) } }
+    private fun top() { val sc = device.findObject(By.scrollable(true)); if (sc != null) runCatching { sc.fling(androidx.test.uiautomator.Direction.UP) }; repeat(2) { swipe(up = false) } }
     private fun visible(sel: BySelector, timeout: Long = 3000L) = runCatching { find(sel, timeout) }.isSuccess
     private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
@@ -77,6 +84,8 @@ class AppFlowTest {
 
     @Before fun setUp() {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        // the live dashboard never goes "idle" (it refreshes continuously): don't let every lookup wait 10 s for that
+        androidx.test.uiautomator.Configurator.getInstance().waitForIdleTimeout = 800
         ctx = ApplicationProvider.getApplicationContext()
         device.pressHome()
     }
