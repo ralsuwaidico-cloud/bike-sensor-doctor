@@ -152,3 +152,13 @@ Every cue carries a `reason` code (e.g. `HR_ABOVE`, `HR_LAG_HOLD`) so a log or a
 - All [SIM] tests run in CI on every build (JUnit) and locally before each release.
 - [DEVICE] tests are performed by Rashed; results are written to `docs/TEST_RESULTS.md` with the log file name.
 - A feature's status in release notes is one of: **simulated-only**, **device-verified**, **not implemented**.
+
+## 5. Findings from the ride-replay demonstration (2026-10-13, design/coach_demo.html)
+Three real Apple Fitness rides (30 Sep, 5 Oct, 12 Oct) were replayed through the v0.7 engine with simulated power/cadence.
+- **Repeat policy is too aggressive.** With HR above target for 45 min, the engine repeats EASE OFF every 45 s (~60 cues).
+  P1 follow-up for v0.8: after 3 unheeded repeats of the same cue, go quiet (gauges keep showing the state) and speak again
+  only on a state change or every 5 min. Add a vector for it.
+- **Default zones would make every real ride "above target".** Max-HR-185 zones give Z2 = 111–129 bpm; Rashed's rides
+  average 150–156 bpm. P2 calibration (editable zones, LTHR-based option) is required before HR coaching is useful.
+- **Power cannot be inferred from speed/HR.** The physics model gave ~80 W average at 19.7 km/h; a coherent demo needed a
+  140 W "demo FTP". Only the XDS verified under load (P0-9) resolves this.
