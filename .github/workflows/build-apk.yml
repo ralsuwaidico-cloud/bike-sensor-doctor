@@ -109,20 +109,26 @@ jobs:
             if [ -s crashes.txt ]; then echo "CRASH IN LOGCAT"; cat crashes.txt; RC=1; fi
             if [ -s last-crash-after-monkey.txt ]; then echo "APP CRASH RECORDED"; RC=1; fi
             exit $RC
+      - name: Pack device test evidence
+        if: always()
+        run: |
+          mkdir -p evidence && cp -r screens logcat.txt instrument.txt install.txt monkey.txt meminfo.txt crashes.txt last-crash*.txt evidence/ 2>/dev/null || true
+          cd evidence && zip -qr ../device-evidence-${{ github.run_number }}.zip . && cd .. && ls -la device-evidence-*.zip
       - name: Upload device test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: device-test-evidence
-          path: |
-            screens/
-            logcat.txt
-            instrument.txt
-            install.txt
-            monkey.txt
-            meminfo.txt
-            crashes.txt
-            last-crash*.txt
+          path: evidence/
+      - name: Publish evidence as a release asset (readable from the session)
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: evidence-${{ github.run_number }}
+          name: Device test evidence ${{ github.run_number }}
+          prerelease: true
+          body: "Emulator screenshots, logcat and instrumentation output for run ${{ github.run_number }}."
+          files: device-evidence-${{ github.run_number }}.zip
 
   release:
     needs: [build, device]
