@@ -49,7 +49,7 @@ class AppFlowTest {
         if (o == null && timeout > 3000) o = device.wait(Until.findObject(sel), timeout - 3000)
         assertNotNull("not found: $sel", o); return o!!
     }
-    private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.72).toInt(); val b = (device.displayHeight * 0.30).toInt(); if (up) device.swipe(w, a, w, b, 10) else device.swipe(w, b, w, a, 10); device.waitForIdle(500) }
+    private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.72).toInt(); val b = (device.displayHeight * 0.30).toInt(); if (up) device.swipe(w, a, w, b, 25) else device.swipe(w, b, w, a, 25); device.waitForIdle(800); Thread.sleep(350) }
     private fun tap(sel: BySelector, timeout: Long = T) { find(sel, timeout); retry { find(sel, 2000).click() }; device.waitForIdle(1000) }
     private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
@@ -144,7 +144,7 @@ class AppFlowTest {
         find(tag("btn_start")); shot("21_dashboard_idle")
         tap(tag("btn_start"))
         find(tag("btn_pause")); Thread.sleep(4000); shot("22_dashboard_warmup")
-        assertTrue("phase label", has(By.textStartsWith("WARM-UP"), 3000))
+        assertTrue("phase label", has(By.textStartsWith("WARM-UP"), 3000) || has(By.textStartsWith("MAIN"), 3000))
         // pause / resume
         tap(tag("btn_pause")); find(tag("btn_resume")); shot("23_paused"); tap(tag("btn_resume")); find(tag("btn_pause"))
         // wait for MAIN then COOL-DOWN (planned ride ends after 60 simulated minutes)
@@ -166,6 +166,8 @@ class AppFlowTest {
 
     @Test fun t05_restart_keeps_data_and_settings_screens() {
         launch()
+        // if an earlier test left a ride running, finish it first (a running ride re-opens on the dashboard by design)
+        if (has(tag("btn_pause"), 4000) || has(tag("btn_finish"), 1000)) { tap(tag("btn_finish")); tap(tag("confirm_finish")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
         find(tag("start_ride"), 15_000)
         assertTrue(has(text("Rashed"), 3000))
         tap(text("⚙")); shot("31_settings"); scrollTo(text("Advanced: Diagnose & Repair sensor"))

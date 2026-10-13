@@ -299,12 +299,15 @@ private fun Header(d: Dashboard, st: D7State, onReconnect: () -> Unit) {
         }
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("SCIENTIFIC COACH", fontFamily = PlexMono, fontSize = 13.sp, color = D7.Cyan, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
-            if (d.rideState != RideStats.State.IDLE) Text(st.phaseLabel, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 10.sp,
-                color = if (d.phase == Phase.MAIN) D7.Green else D7.Violet, modifier = Modifier.padding(end = 8.dp))
-            if (!d.powerVerified) Box(Modifier.background(D7.Amber.copy(alpha = 0.18f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
-                Text("POWER UNVERIFIED", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Amber, fontWeight = FontWeight.Bold)
-            }
+            Text("SCIENTIFIC COACH", fontFamily = PlexMono, fontSize = 13.sp, color = D7.Cyan, letterSpacing = 2.sp, maxLines = 1, softWrap = false, modifier = Modifier.weight(1f))
+            if (d.rideState != RideStats.State.IDLE) Text(st.phaseLabel, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1,
+                color = if (d.phase == Phase.MAIN) D7.Green else D7.Violet)
+        }
+        Spacer(Modifier.height(4.dp))
+        // trust tags on their own line so they never squeeze the title: power verification · zone confidence
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (d.workoutName.isNotEmpty() && d.rideState != RideStats.State.IDLE) d.workoutName.uppercase() else "", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Mut, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (!d.powerVerified) Tag("POWER UNVERIFIED", D7.Amber)
             Spacer(Modifier.width(4.dp))
             ConfidenceTag(st.zoneTag)
         }
@@ -324,7 +327,7 @@ private fun Gauges(d: Dashboard, st: D7State) {
             Modifier.fillMaxWidth(0.62f), value = d.powerW, max = st.powerMax,
             color = if (d.powerZone in 1..7) D7.powerZone(d.powerZone) else D7.Grey,
             targetFraction = Targets.powerTargetFraction(st.targetZone, st.ftp), zoneTicks = Targets.powerZoneTicks(st.ftp),
-            sub = if (!st.powerCoached) "SHOWN · NOT COACHED" else if (d.powerZone in 1..7) "Z${d.powerZone} · ${st.powerPct ?: 0}%" else null,
+            sub = if (!st.powerCoached) "NOT COACHED" else if (d.powerZone in 1..7) "Z${d.powerZone} · ${st.powerPct ?: 0}%" else null,
             unit = "WATTS", big = true, status = if (st.powerCoached) st.powerStatus else TargetStatus.UNKNOWN,
             statusText = if (st.powerCoached) statusText(st.powerStatus, "pow", st.signal) else (if (d.powerVerified) "FTP UNKNOWN" else "UNVERIFIED"), showTgtLabel = true, band = st.powerBand,
         )
@@ -400,7 +403,7 @@ private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, o
         }
         if (d.rideState == RideStats.State.RUNNING || d.rideState == RideStats.State.PAUSED)
             Box(Modifier.weight(1f)) { BigButton("FINISH", D7.Red, onFinish, "btn_finish") }
-        Box(Modifier.width(96.dp)) { BigButton("COACH", D7.Violet, onCoach, "btn_coach") }
+        Box(Modifier.width(104.dp)) { BigButton("COACH", D7.Violet, onCoach, "btn_coach", 16) }
     }
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         TextButton(onClick = onHome, modifier = Modifier.testTag("dash_home")) { Text("‹ Home", color = D7.Cyan) }
@@ -411,10 +414,10 @@ private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, o
 }
 
 @Composable
-private fun BigButton(text: String, color: Color, onClick: () -> Unit, tag: String = "") {
-    Button(onClick = onClick, Modifier.fillMaxWidth().height(60.dp).testTag(tag), shape = RoundedCornerShape(16.dp),
+private fun BigButton(text: String, color: Color, onClick: () -> Unit, tag: String = "", size: Int = 19) {
+    Button(onClick = onClick, Modifier.fillMaxWidth().height(60.dp).testTag(tag), shape = RoundedCornerShape(16.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = D7.Ink)) {
-        Text(text, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp)
+        Text(text, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = size.sp, maxLines = 1, softWrap = false)
     }
 }
 

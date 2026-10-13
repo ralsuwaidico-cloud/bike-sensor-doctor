@@ -24,20 +24,24 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
 
     private var job: Job? = null
     @Volatile private var tSec = 0
+    private var startVirtualMs = 0L
 
+    /** Emits exactly one sample per second of ENGINE time, catching up after scheduler jitter, so the link monitor never sees false gaps at high speed. */
     fun start() {
+        startVirtualMs = engine.now()
         job = engine.scope.launch {
             while (isActive) {
-                step(tSec); tSec++
-                delay((1000 / engine.clockSpeed).toLong().coerceAtLeast(16))
+                val target = ((engine.now() - startVirtualMs) / 1000).toInt()
+                var n = 0
+                while (tSec <= target && n < 120) { step(tSec, startVirtualMs + tSec * 1000L); tSec++; n++ }
+                delay(if (engine.clockSpeed > 1) 40 else 250)
             }
         }
     }
     fun stop() { job?.cancel(); job = null; engine.simulatedHr = null }
 
     /** Deterministic curves; values depend only on the second so tests are repeatable. */
-    private fun step(t: Int) {
-        val now = engine.now()
+    private fun step(t: Int, now: Long) {
         val m = t / 60.0
         val p = engine.setup
         val hrLo = p?.hrTargetLo ?: 111; val hrHi = p?.hrCap ?: 129
