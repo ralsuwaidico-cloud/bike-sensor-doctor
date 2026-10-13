@@ -37,7 +37,7 @@ class AppFlowTest {
     private val pkg = "com.rashed.bikesensordoctor.debug"
     private val T = 8_000L
 
-    private fun shots(): File = File(ctx.getExternalFilesDir(null), "screens").apply { mkdirs() }
+    private fun shots(): File = File(ctx.filesDir, "screens").apply { mkdirs() }   // pulled by CI with run-as
     private fun shot(name: String) { device.waitForIdle(1500); device.takeScreenshot(File(shots(), "$name.png")) }
     private fun tag(t: String): BySelector = By.res(t)
     private fun text(t: String): BySelector = By.text(t)
@@ -78,9 +78,8 @@ class AppFlowTest {
         find(text("3")); device.findObjects(text("3")).first().click(); device.findObjects(text("4")).last().click(); device.waitForIdle(); shot("05_page3"); tap(tag("next_page"))
         // page 4: zones (I know my numbers)
         tap(text("I know my numbers"))
-        find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"
-        device.pressBack()  // close keyboard
-        scrollTo(text("Tested")); device.findObjects(text("Tested")).let { it.first().click(); it.last().click() }; device.waitForIdle()
+        find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"; device.waitForIdle()
+        scrollTo(text("Tested")); device.findObjects(text("Tested")).let { it.first().click(); device.waitForIdle(); device.findObjects(text("Tested")).last().click() }; device.waitForIdle()
         tap(text("Don't know yet")); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
         // page 5: prefs
         tap(text("On")); tap(text("Corrections")); shot("07_page5"); tap(tag("next_page"))
@@ -94,7 +93,7 @@ class AppFlowTest {
         launch()
         find(tag("start_ride"), 15_000)
         tap(text("CLUB")); find(tag("invite_code")); shot("10_club_not_member")
-        find(tag("invite_code")).text = "DAWN-7Q2K"; device.pressBack(); tap(tag("join_btn"))
+        find(tag("invite_code")).text = "DAWN-7Q2K"; device.waitForIdle(); tap(tag("join_btn"))
         find(text("Leave club"), 5000); shot("11_club_joined")
         tap(text("BOARD")); find(text("Weekly distance")); shot("12_board_week")
         tap(text("Climb")); find(text("Elevation this month")); shot("13_board_climb")

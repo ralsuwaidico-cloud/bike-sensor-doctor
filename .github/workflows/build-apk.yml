@@ -97,7 +97,7 @@ jobs:
             adb shell dumpsys package com.rashed.bikesensordoctor.debug | grep -E "versionName|versionCode" | tee -a install.txt
             adb shell am instrument -w -r -e class com.rashed.bikesensordoctor.AppFlowTest com.rashed.bikesensordoctor.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee instrument.txt
             RC=${PIPESTATUS[0]}
-            mkdir -p screens && adb pull /sdcard/Android/data/com.rashed.bikesensordoctor.debug/files/screens screens || true
+            mkdir -p screens && adb exec-out run-as com.rashed.bikesensordoctor.debug tar -C files -c screens > screens.tar && tar -xf screens.tar && ls screens | head -50 || true
             adb shell "run-as com.rashed.bikesensordoctor.debug cat files/last-crash.txt" > last-crash.txt 2>/dev/null || true
             adb shell dumpsys meminfo com.rashed.bikesensordoctor.debug > meminfo.txt 2>&1 || true
             # Stress: 1500 random events must not crash the app
