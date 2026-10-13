@@ -42,7 +42,7 @@ class AppFlowTest {
     private fun tag(t: String): BySelector = By.res(t)
     private fun text(t: String): BySelector = By.text(t)
     private fun find(sel: BySelector, timeout: Long = T): UiObject2 { val o = device.wait(Until.findObject(sel), timeout); assertNotNull("not found: $sel", o); return o!! }
-    private fun tap(sel: BySelector, timeout: Long = T) { find(sel, timeout).click(); device.waitForIdle(1000) }
+    private fun tap(sel: BySelector, timeout: Long = T) { find(sel, timeout); retry { find(sel, 2000).click() }; device.waitForIdle(1000) }
     private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
     private fun scrollTo(sel: BySelector): UiObject2 {
         repeat(6) { if (has(sel, 600)) return find(sel, 1000); device.swipe(device.displayWidth / 2, (device.displayHeight * 0.75).toInt(), device.displayWidth / 2, (device.displayHeight * 0.3).toInt(), 12) }
@@ -82,7 +82,7 @@ class AppFlowTest {
         // page 2: goals
         tap(text("Endurance (Zone 2)")); shot("04_page2"); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
         // page 3: routine
-        find(text("3")); device.findObjects(text("3")).first().click(); device.findObjects(text("4")).last().click(); device.waitForIdle(); shot("05_page3"); tap(tag("next_page"))
+        find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); shot("05_page3"); tap(tag("next_page"))
         // page 4: zones (I know my numbers)
         tap(text("I know my numbers"))
         find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"; device.waitForIdle()
