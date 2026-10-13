@@ -86,7 +86,7 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 .appbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px 10px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
 .appbar .mono{color:var(--faint);letter-spacing:.06em}
 .linkbtn{background:none;border:0;color:var(--faint);font-family:var(--mono);font-size:10px;cursor:pointer;text-decoration:underline;padding:0}
-.scr{background:var(--bg);border-radius:18px;min-height:420px;padding:16px 14px;color:var(--fg)}
+.scr{background:var(--bg);border-radius:18px;min-height:420px;padding:12px 12px;color:var(--fg)}
 .scr .phone{max-width:none;padding:0;border:0;box-shadow:none;background:transparent;margin-top:8px}
 .scr .bar{margin:0 0 8px;padding:8px}
 .scr .bar .seg button{padding:6px 8px;font-size:11px}
@@ -97,9 +97,9 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 .btn.wide{width:100%;padding:14px}
 .btn.finish{background:var(--red);width:100%;margin-top:6px}
 .btn:disabled{opacity:.35;cursor:default}
-.qwrap{display:flex;flex-direction:column;gap:12px}
+.qwrap{display:flex;flex-direction:column;gap:10px}
 .prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden}.prog i{display:block;height:100%;background:var(--cyan)}
-.q{font-family:var(--display);font-weight:700;font-size:24px;line-height:1.15;margin:4px 0 0;text-wrap:balance}
+.q{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.1;margin:2px 0 0;text-wrap:balance}
 .q.small{font-size:17px;margin-top:6px}
 .why{color:var(--mut);font-size:12.5px;margin:-4px 0 0}
 .opts{display:flex;flex-direction:column;gap:8px}
@@ -127,6 +127,28 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 .tag.prov{color:var(--amber);background:rgba(255,182,77,.14);border:1px solid rgba(255,182,77,.5)}
 .main{grid-template-columns:minmax(300px,400px) minmax(0,1fr)}
 @media (max-width:800px){.main{grid-template-columns:1fr}.appframe{max-width:100%}}
+
+/* ---- compact onboarding controls ---- */
+.dots{display:flex;gap:6px}.dots i{flex:1;height:4px;border-radius:2px;background:var(--line)}.dots i.done{background:var(--cyan);opacity:.55}.dots i.cur{background:var(--cyan)}
+.pbody{display:flex;flex-direction:column;gap:6px}
+.fl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-top:4px}
+.opt-tag{color:var(--faint);text-transform:none;letter-spacing:0;font-size:10px}
+.segc{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.2;cursor:pointer;font-family:var(--body);min-height:40px;flex:1 1 auto;text-align:center}
+.segc.grid2{display:grid;grid-template-columns:1fr 1fr}.segc.grid3{display:grid;grid-template-columns:1fr 1fr 1fr}.segc.days{display:grid;grid-template-columns:repeat(7,1fr)}.segc.days .chip{padding:7px 2px;font-size:11.5px;min-height:34px}.segc.tiny .chip{padding:6px 6px;font-size:11.5px;min-height:32px}
+.chip.on{border-color:var(--cyan);background:rgba(52,231,228,.14);color:var(--cyan);font-weight:600}
+.chip:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nin{display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);min-width:0}
+.nin input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:10px;padding:11px 10px;font-size:18px;font-family:var(--mono);min-width:0}
+.sl{display:flex;align-items:center;gap:10px}.sl output{font-family:var(--display);font-size:24px;font-weight:700;min-width:84px}.sl input{flex:1;accent-color:var(--cyan);min-width:0}
+.adv{border:1px solid var(--line);border-radius:10px;padding:6px 10px}.adv summary{cursor:pointer;color:var(--cyan);font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:4px 0}.adv[open] summary{margin-bottom:4px}
+.mbox{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+.mrow{display:grid;grid-template-columns:96px 1fr;gap:4px 8px;align-items:center}.mrow .ml{font-size:13px;color:var(--fg)}.mrow .nin{flex-direction:row;align-items:center;gap:6px}.mrow .nin span{display:none}.mrow .nin input{padding:8px;font-size:15px;width:84px}.mrow .segc{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}.mrow .segc .chip{padding:5px 6px;min-height:28px;font-size:11px;border-radius:7px}.mrow .nin input{width:100%}
+.editrow{display:flex;flex-wrap:wrap;gap:4px 12px}.editrow .linkbtn{color:var(--cyan);font-size:11px}
+.box.fu{border-color:var(--violet)}
+@media (max-width:400px){.row3{grid-template-columns:1fr 1fr 1fr}.two-col{grid-template-columns:1fr}}
 </style>
 
 <div class="wrap">
@@ -695,7 +717,7 @@ function renderFeat(){ const rows=[
 
 /* ============================================================ RIDER PROFILE & ONBOARDING (prototype of the app flow) */
 const STORE_KEY="bc_rider_profile_v1";
-let P={answers:{},completed:false,feedback:[],stepIndex:0};
+let P={answers:{},completed:false,feedback:[],page:0,asked:{}};
 function loadP(){ try{ const s=localStorage.getItem(STORE_KEY); if(s){ const o=JSON.parse(s); if(o&&o.answers) P=Object.assign(P,o); } }catch(_){} }
 function saveP(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(P)); }catch(_){} }
 const A=()=>P.answers;
@@ -703,56 +725,83 @@ const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const GOALS=[["endurance","Improve aerobic endurance and Zone 2 fitness"],["fasterHr","Ride faster at the same heart rate"],["ftp","Increase FTP and sustained power"],["climb","Improve climbing"],["longer","Ride longer without getting exhausted"],["event","Prepare for a race or event"],["fitness","Improve general fitness"],["weight","Lose weight or improve body composition"],["other","Another personal goal"]];
 const goalName=k=>(GOALS.find(g=>g[0]===k)||[k,k])[1];
 
-/* Each step: id, question, type, options, why (shown small), when(answers) → relevant?, skip label.
-   type: choice | multi | number | two | metric | summary. Metric = value + how it was obtained. */
-const STEPS=[
- {id:"age",q:"How old are you?",why:"Age sets a provisional max-HR formula when nothing is measured, and lengthens the warm-up over 50.",type:"number",min:14,max:90,unit:"years",skip:"Skip"},
- {id:"body",q:"Height and weight",why:"Optional. Weight matters for power-to-weight and climbing; nothing else uses it.",type:"two",fields:[["heightCm","Height (cm)",120,220],["weightKg","Weight (kg)",35,160]],skip:"Skip"},
- {id:"experience",q:"How much cycling experience do you have?",why:"New or returning riders get longer warm-ups and slower progression.",type:"choice",options:[["new","New — under a year of regular riding"],["recreational","Recreational — 1 to 3 years"],["experienced","Experienced — 3+ years, some structured training"],["returning","Returning after a long break"]]},
- {id:"env",q:"Where do you usually ride?",why:"Hills and indoor riding change how cadence and power targets are used.",type:"multi",options:[["flat","Flat road"],["hills","Hilly road"],["indoor","Indoor trainer"],["mixed","Mixed / varies"]]},
- {id:"limits",q:"Any exercise limitation the coach should respect?",why:"Only used to keep intensity moderate. You can say no.",type:"choice",options:[["none","No limitations"],["moderate","Yes — keep intensity moderate"],["medical","Yes — I have medical guidance on heart rate"],["private","Prefer not to say"]]},
- {id:"goals",q:"What do you want to achieve? Choose all that apply.",type:"multi",options:GOALS},
- {id:"primary",q:"Which one is your main priority?",why:"The main goal decides the type of session the coach recommends.",type:"choice",options:a=>(a.goals||[]).map(k=>[k,goalName(k)]),when:a=>(a.goals||[]).length>1},
- {id:"success",q:"What would success look like in 3 months?",why:"A measurable target the coach can check against your rides.",type:"choice",options:a=>successOptions(a)},
- {id:"ridesNow",q:"How many times do you cycle per week right now?",type:"choice",options:[["0","0–1"],["2","2"],["3","3"],["4","4"],["5","5 or more"]]},
- {id:"daysAvail",q:"How many days could you realistically train?",why:"The plan never schedules more than this, and adds at most one ride a week over what you do now.",type:"choice",options:[["2","2"],["3","3"],["4","4"],["5","5 or more"]]},
- {id:"typicalMin",q:"Typical ride duration",type:"number",min:20,max:240,step:5,unit:"min",slider:true},
- {id:"longestMin",q:"Longest ride you are comfortable with",type:"number",min:30,max:360,step:10,unit:"min",slider:true},
- {id:"other",q:"Other regular exercise?",why:"The coach plans around it rather than treating cycling as your only training.",type:"multi",options:[["weights","Weight training"],["running","Running"],["swim","Swimming"],["sport","Team or racket sport"],["none","None"]]},
- {id:"otherDays",q:"Which days is that exercise usually on?",why:"Hard rides are not scheduled the day after leg-heavy sessions.",type:"multi",options:DAYS.map(d=>[d,d]),when:a=>(a.other||[]).some(x=>x!=="none"),skip:"Varies"},
- {id:"rest",q:"Preferred rest days?",type:"multi",options:DAYS.map(d=>[d,d]),skip:"No preference"},
- {id:"varies",q:"Does your schedule change from week to week?",type:"choice",options:[["no","Mostly the same"],["yes","Changes often"]]},
- {id:"maxHr",q:"Do you know your maximum heart rate?",why:"Used only if there is no threshold heart rate. A formula is used if unknown, and labelled provisional.",type:"metric",unit:"bpm",min:120,max:220},
- {id:"restHr",q:"Do you know your resting heart rate?",why:"With max HR it gives heart-rate-reserve zones, which fit individuals better than % of max.",type:"metric",unit:"bpm",min:30,max:100},
- {id:"lthr",q:"Do you know your lactate-threshold heart rate?",why:"The best anchor for Zone 2 if it was measured in a test.",type:"metric",unit:"bpm",min:110,max:210},
- {id:"ftp",q:"Do you know your FTP (functional threshold power)?",why:"Without it the coach guides by heart rate only and offers an FTP test later.",type:"metric",unit:"W",min:60,max:450},
- {id:"apple",q:"Import your Apple Fitness heart-rate zones as a provisional reference?",why:"Apple's bands (Z2 = 151–160 bpm) are app-calculated, not your physiology. They are kept only as a labelled reference.",type:"choice",options:[["yes","Yes, keep them as app-calculated reference"],["no","No"]],when:a=>!(a.lthr&&a.lthr.how==="measured")},
- {id:"limiter",q:"What usually limits your rides?",why:"Breathing-limited riders get stricter heart-rate ceilings; leg-limited riders get cadence and strength work.",type:"choice",options:[["breathing","Breathing / heart rate"],["legs","Leg fatigue"],["tired","General tiredness"],["time","Time"],["other","Something else"]]},
- {id:"style",q:"Steady riding or intervals?",type:"choice",options:[["steady","Steady"],["intervals","Intervals"],["mix","A mix"]]},
- {id:"cadence",q:"Do you know your natural cadence?",why:"If known, the cadence range is built around it instead of a generic 80–95.",type:"metric",unit:"rpm",min:50,max:120,hows:[["measured","Measured on a sensor"],["estimated","Rough idea"],["unknown","I don't know"]]},
- {id:"struggleZ2",q:"Do you find it hard to stay in Zone 2 (easy) on rides?",why:"If yes, the ceiling is set a few beats lower and the coach speaks sooner.",type:"choice",options:[["yes","Yes, I drift harder"],["no","No"],["unsure","Not sure"]],when:a=>["endurance","fasterHr","longer","weight","fitness"].includes(primaryGoal(a))},
- {id:"guidance",q:"Prefer heart-rate or power guidance?",type:"choice",options:a=>[["hr","Heart rate"],...((a.ftp&&a.ftp.how!=="unknown")?[["power","Power"],["both","Both"]]:[]),["unsure","Not sure — coach decides"]]},
- {id:"heat",q:"Do you often ride in hot conditions?",why:"Heat raises heart rate for the same effort: longer warm-up, extra drift tolerance, earlier-start advice.",type:"choice",options:[["yes","Yes (Abu Dhabi afternoons)"],["no","No"]]},
- {id:"voice",q:"Spoken coaching or screen only?",type:"choice",options:[["voice","Voice + screen"],["screen","Screen only"]]},
- {id:"freq",q:"How often should the coach speak?",type:"choice",options:[["important","Only important corrections"],["frequent","Frequent guidance"]]},
- {id:"tone",q:"Coaching tone?",type:"choice",options:[["encouraging","Encouraging"],["neutral","Neutral"],["technical","Technical"]]},
- {id:"detail",q:"Simple guidance or detailed explanations?",type:"choice",options:[["simple","Simple"],["detailed","Detailed"]]},
- {id:"cadAdvice",q:"Cadence advice during endurance rides?",type:"choice",options:[["yes","Yes"],["no","No"]]},
- {id:"summary",type:"summary"},
+/* ---------------- six-page onboarding ---------------- */
+const PAGES=[
+ {id:"you",title:"About you",sub:"Four quick facts. Everything else is optional."},
+ {id:"goals",title:"Your goals",sub:"One main goal; add a second if you like."},
+ {id:"routine",title:"Your training routine",sub:"So the plan fits your week, not an ideal one."},
+ {id:"zones",title:"Fitness & zones",sub:"Skip anything you don't know — the coach will say what is provisional."},
+ {id:"prefs",title:"Coaching preferences",sub:"Change these any time in Rider Profile."},
+ {id:"coach",title:"Your personal coach",sub:""},
 ];
+const GOAL_SHORT={endurance:"Endurance (Zone 2)",fasterHr:"Faster at same HR",ftp:"Higher FTP",climb:"Climbing",longer:"Ride longer",event:"Race / event",fitness:"General fitness",weight:"Body composition",other:"Other"};
 function primaryGoal(a){ return a.primary || (a.goals||[])[0] || "endurance"; }
-function successOptions(a){ const g=primaryGoal(a); const typ=a.typicalMin||60;
-  const m={endurance:[["z2_75","Hold Zone 2 for 75 minutes without drifting up"],["z2_90pct","90% of a ride inside Zone 2"],["drift5","Heart-rate drift under 5% on a steady hour"]],
-    fasterHr:[["speed1","+1 km/h at the same average heart rate on my route"],["eff5","5% better speed-per-heartbeat"]],
-    ftp:[["ftp5","+5% FTP in a test"],["ftp10","+10% FTP in a test"]],
-    climb:[["climb","Same climb at a lower heart rate"],["climb_w","More watts per kilo on climbs"]],
-    longer:[["long20",`A ${Math.round((a.longestMin||90)*1.2)}-minute ride feeling fresh at the end`],["long_hr","Finish long rides without the final heart-rate surge"]],
+function successOptions(a){ const g=primaryGoal(a);
+  const m={endurance:[["z2_75","Hold Zone 2 for 75 min"],["z2_90pct","90% of a ride in Zone 2"],["drift5","HR drift under 5%"]],
+    fasterHr:[["speed1","+1 km/h at the same HR"],["eff5","5% better speed per heartbeat"]],
+    ftp:[["ftp5","+5% FTP"],["ftp10","+10% FTP"]],
+    climb:[["climb","Same climb, lower HR"],["climb_w","More W/kg on climbs"]],
+    longer:[["long20",`${Math.round((a.longestMin||90)*1.2)}-min ride, fresh at the end`],["long_hr","No final HR surge on long rides"]],
     event:[["event_done","Complete the event comfortably"],["event_time","Beat a target time"]],
-    fitness:[["fit3","Three rides a week, every week"],["fit_rest","Lower resting heart rate"]],
-    weight:[["w_consist","Consistent weekly riding time"],["w_long","Longer easy rides each week"]],
-    other:[["own","I'll describe it later in the profile"]]};
-  return (m[g]||m.other).concat([["unsure","Not sure yet — the coach proposes one"]]); }
-function visibleSteps(){ return STEPS.filter(s=>!s.when||s.when(A())); }
+    fitness:[["fit3","3 rides a week, every week"],["fit_rest","Lower resting HR"]],
+    weight:[["w_consist","Consistent weekly riding"],["w_long","Longer easy rides"]],
+    other:[["own","My own target"]]};
+  return (m[g]||m.other).concat([["unsure","Coach proposes one"]]); }
+
+function seg(key,opts,cur,multi,cls){ return `<div class="segc ${cls||""}" data-key="${key}" data-multi="${multi?1:0}">${opts.map(([k,l])=>`<button type="button" class="chip${(multi?(cur||[]).includes(k):cur===k)?" on":""}" data-v="${k}">${l}</button>`).join("")}</div>`; }
+function numIn(key,val,unit,min,max,ph){ return `<label class="nin"><span>${unit}</span><input type="number" data-num="${key}" min="${min}" max="${max}" value="${val??""}" placeholder="${ph||"—"}" inputmode="numeric"></label>`; }
+function slider(key,val,min,max,step,unit){ return `<div class="sl"><output data-out="${key}">${val} ${unit}</output><input type="range" data-sl="${key}" data-unit="${unit}" min="${min}" max="${max}" step="${step}" value="${val}"></div>`; }
+function metricRow(key,label,unit,min,max,a){ const m=a[key]||{}; return `<div class="mrow"><div class="ml">${label}</div>${numIn(key+".value",m.value,unit,min,max)}${seg(key+".how",[["measured","Tested"],["estimated","Estimated"],["app","From app"]],m.how||"",false,"tiny")}</div>`; }
+
+function pageBody(i,a){
+  if(i===0) return `<div class="row3">${numIn("age",a.age,"Age",14,90,"years")}${numIn("heightCm",a.heightCm,"Height",120,220,"cm")}${numIn("weightKg",a.weightKg,"Weight",35,160,"kg")}</div>
+    <div class="fl">Experience</div>${seg("experience",[["new","New"],["recreational","1–3 yrs"],["experienced","3+ yrs"],["returning","Returning"]],a.experience)}`;
+  if(i===1){ const sec=(a.goals||[]).filter(k=>k!==a.primary); return `<div class="fl">Main goal?</div>${seg("primary",GOALS.map(([k])=>[k,GOAL_SHORT[k]]),a.primary,false,"grid2")}
+    <div class="fl">Secondary <span class="opt-tag">optional</span></div>${seg("goals",GOALS.filter(g=>g[0]!==a.primary&&g[0]!=="other").map(([k])=>[k,GOAL_SHORT[k]]),sec,true,"grid3 tiny")}
+    ${a.primary?`<div class="fl">In 3 months?</div>${seg("success",successOptions(a),a.success,false,"grid2")}`:""}`; }
+  if(i===2) return `<div class="two-col"><div><div class="fl">Rides per week now</div>${seg("ridesNow",[["0","0–1"],["2","2"],["3","3"],["4","4"],["5","5+"]],a.ridesNow)}</div><div><div class="fl">Days you could ride</div>${seg("daysAvail",[["2","2"],["3","3"],["4","4"],["5","5+"]],a.daysAvail)}</div></div>
+    <div class="fl">Typical ride</div>${slider("typicalMin",a.typicalMin??60,20,240,5,"min")}
+    <div class="fl">Other exercise</div>${seg("other",[["weights","Weights"],["running","Running"],["swim","Swimming"],["sport","Sport"],["none","None"]],a.other||[],true,"grid3")}
+    <details class="adv"${(a.rest||[]).length||(a.otherDays||[]).length?" open":""}><summary>More options</summary><div class="fl">Longest comfortable ride</div>${slider("longestMin",a.longestMin??90,30,360,10,"min")}
+    ${(a.other||[]).some(x=>x!=="none"&&x)?`<div class="fl">Days for that exercise</div>${seg("otherDays",DAYS.map(d=>[d,d]),a.otherDays||[],true,"days")}`:""}<div class="fl">Rest days</div>${seg("rest",DAYS.map(d=>[d,d]),a.rest||[],true,"days")}</details>`;
+  if(i===3) return `<div class="fl">Heart rate</div>${seg("hrMode",[["know","I know my numbers"],["estimate","Estimate for now"],["later","Set up later"]],a.hrMode)}
+    ${a.hrMode==="know"?`<div class="mbox">${metricRow("maxHr","Max HR","bpm",120,220,a)}${metricRow("restHr","Resting HR","bpm",30,100,a)}${metricRow("lthr","Threshold HR","bpm",110,210,a)}<p class="why">Fill any you know. "Tested" values become confirmed zones; the rest stay provisional.</p></div>`:a.hrMode==="estimate"?`<p class="why">Zone 2 will be estimated from ${a.age?"your age":"a default max HR"} and marked GENERIC until a calibration ride.</p>`:a.hrMode==="later"?`<p class="why">Heart-rate guidance stays generic until you add numbers in Rider Profile.</p>`:""}
+    <div class="fl">Power</div>${seg("pwMode",[["know","I know my FTP"],["unknown","Don't know yet"]],a.pwMode)}
+    ${a.pwMode==="know"?`<div class="mbox">${metricRow("ftp","FTP","W",60,450,a)}</div>`:a.pwMode==="unknown"?`<p class="why">Power is shown, not coached. An FTP test is offered after three rides — once the meter is verified under load.</p>`:""}
+    <details class="adv"${a.apple?" open":""}><summary>More options</summary><div class="fl">Keep Apple Fitness zones as a labelled reference?</div>${seg("apple",[["yes","Yes"],["no","No"]],a.apple)}<p class="why">Apple's bands (Z2 = 151–160 bpm) are app-calculated, not your physiology.</p></details>`;
+  if(i===4) return `<div class="two-col"><div><div class="fl">Voice coaching</div>${seg("voice",[["voice","On"],["screen","Screen only"]],a.voice)}</div><div><div class="fl">Coach speaks</div>${seg("freq",[["important","Corrections only"],["frequent","Often"]],a.freq)}</div></div>
+    <div class="fl">Where you ride</div>${seg("env",[["flat","Flat road"],["hills","Hills"],["indoor","Indoor"],["mixed","Mixed"]],a.env||[],true,"grid2")}
+    <div class="two-col"><div><div class="fl">Cadence guidance</div>${seg("cadAdvice",[["yes","On"],["no","Off"]],a.cadAdvice)}</div><div><div class="fl">Hot conditions?</div>${seg("heat",[["yes","Yes"],["no","No"]],a.heat)}</div></div>
+    <details class="adv"${a.tone||a.detail||(a.cadence&&a.cadence.how)?" open":""}><summary>More options</summary><div class="fl">Tone</div>${seg("tone",[["encouraging","Encouraging"],["neutral","Neutral"],["technical","Technical"]],a.tone)}<div class="fl">Explanations</div>${seg("detail",[["simple","Simple"],["detailed","Detailed"]],a.detail)}<div class="fl">Natural cadence, if known</div>${metricRow("cadence","Cadence","rpm",50,120,a)}</details>`;
+  return "";
+}
+function pageValid(i,a){ if(i===0) return !!a.experience; if(i===1) return !!a.primary; if(i===2) return !!a.ridesNow&&!!a.daysAvail; if(i===3) return !!a.hrMode&&!!a.pwMode; if(i===4) return !!a.voice&&!!a.freq; return true; }
+
+function renderPage(i){ P.page=i; saveP(); const a=A(); const pg=PAGES[i]; if(i===5) return renderSummary();
+  el("appStep").textContent=`${i+1} / 6`;
+  el("scrQ").innerHTML=`<div class="qwrap"><div class="dots">${PAGES.map((p,k)=>`<i class="${k<i?"done":k===i?"cur":""}"></i>`).join("")}</div><h2 class="q">${pg.title}</h2>${pg.sub?`<p class="why">${pg.sub}</p>`:""}<div class="pbody">${pageBody(i,a)}</div>
+    <div class="nav"><button class="btn reset" id="back" ${i===0?"disabled":""}>‹ BACK</button><button class="btn reset" id="skip">SKIP</button><button class="btn play" id="next" ${pageValid(i,a)?"":"disabled"}>CONTINUE ›</button></div></div>`;
+  show("scrQ","Set up");
+  bindPage(i);
+}
+function setDeep(a,key,val){ const [k,sub]=key.split("."); if(sub){ a[k]=Object.assign({},a[k]||{}); if(val===""||val==null) delete a[k][sub]; else a[k][sub]=val; if(a[k].value==null&&!a[k].how) delete a[k]; } else { if(val===""||val==null) delete a[k]; else a[k]=val; } }
+function bindPage(i){ const Q=el("scrQ"), a=A();
+  Q.querySelectorAll(".segc").forEach(g=>{ const key=g.dataset.key, multi=g.dataset.multi==="1"; g.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ const v=b.dataset.v;
+    if(multi){ let cur=(key.includes(".")?[]:(a[key]||[])).slice(); if(v==="none") cur=cur.includes("none")?[]:["none"]; else { cur=cur.filter(x=>x!=="none"); cur=cur.includes(v)?cur.filter(x=>x!==v):cur.concat([v]); } a[key]=cur; if(key==="goals"&&a.primary&&!cur.includes(a.primary)) a.goals=[a.primary].concat(cur); }
+    else { setDeep(a,key,v); if(key==="primary"){ a.goals=[v].concat((a.goals||[]).filter(x=>x!==v)); delete a.success; } }
+    saveP(); renderPage(i); }); });
+  Q.querySelectorAll("[data-num]").forEach(inp=>inp.onchange=()=>{ const v=+inp.value; const lo=+inp.min, hi=+inp.max; setDeep(a,inp.dataset.num,(v>=lo&&v<=hi)?v:null); saveP(); el("next").disabled=!pageValid(i,a); });
+  Q.querySelectorAll("[data-sl]").forEach(inp=>{ inp.oninput=()=>{ Q.querySelector(`[data-out="${inp.dataset.sl}"]`).textContent=inp.value+" "+inp.dataset.unit; }; inp.onchange=()=>{ a[inp.dataset.sl]=+inp.value; saveP(); }; if(a[inp.dataset.sl]==null&&inp.dataset.sl==='typicalMin'){ a[inp.dataset.sl]=+inp.value; saveP(); } });
+  el("back").onclick=()=>renderPage(i-1);
+  el("skip").onclick=()=>{ if(i===3){ a.hrMode=a.hrMode||"later"; a.pwMode=a.pwMode||"unknown"; } if(i===4){ a.voice=a.voice||"voice"; a.freq=a.freq||"important"; } if(i===0&&!a.experience) a.experience="recreational"; if(i===1&&!a.primary){ a.primary="fitness"; a.goals=["fitness"]; } if(i===2){ a.ridesNow=a.ridesNow||"2"; a.daysAvail=a.daysAvail||"3"; } saveP(); renderPage(i+1); };
+  el("next").onclick=()=>{ if(!pageValid(i,a)) return; renderPage(i+1); };
+}
+/* follow-up questions the coach may ask after rides (one at a time, never repeated) */
+function followUp(a){ const n=rideLog().length; const asked=P.asked||{};
+  if(n>=2&&!(a.restHr&&a.restHr.how)&&!asked.restHr) return {key:"restHr",q:"Do you know your resting heart rate?",why:"It upgrades your zones from % of max to heart-rate reserve.",kind:"metric",unit:"bpm",min:30,max:100};
+  if(n>=3&&!(a.ftp&&a.ftp.how)&&!asked.ftpTest) return {key:"ftpTest",q:"Calibrate your FTP with a 20-minute test on your next ride?",kind:"choice",opts:[["yes","Yes, schedule it"],["later","Not yet"]]};
+  if(n>=2&&!a.struggleZ2&&!asked.struggleZ2){ const last=rideLog().slice(-2); if(last.every(f=>f.inZonePct<60)) return {key:"struggleZ2",q:"Your last two rides were mostly above Zone 2. Do you find it hard to stay easy?",kind:"choice",opts:[["yes","Yes, I drift harder"],["no","No, it was deliberate"]]}; }
+  return null; }
 
 /* ---------------- derive the coaching configuration from the profile (transparent rules) ---------------- */
 function deriveConfig(a){
@@ -823,55 +872,31 @@ function recommend(a,c){
   return {name,kind,minutes,hrT,pwT,why,how,measure,alts,success:a.success};
 }
 
+
 /* ---------------- screens ---------------- */
 const SCR=["scrWelcome","scrQ","scrProfile","scrHome","scrLive","scrPost"];
 function show(id,title){ SCR.forEach(s=>el(s).hidden=(s!==id)); el("appTitle").textContent=title||"Bike Computer"; const live=id==="scrLive"; ["cueCard","logCard","memoCard","kvCard"].forEach(c=>el(c).hidden=!live); el("cmpCard").hidden=!(P.completed); window.scrollTo({top:0,behavior:"smooth"}); }
 function tag(cls,txt){ return `<i class="tag ${cls}">${txt}</i>`; }
 function confTag(c){ return c.startsWith("CONFIRMED")?tag("conf","CONFIRMED"):c.startsWith("PROVISIONAL")?tag("prov","PROVISIONAL"):tag("sim","GENERIC"); }
-
-function renderWelcome(){ el("appStep").textContent=""; el("scrWelcome").innerHTML=`<div class="hero"><p class="ey">First launch</p><h2 class="big">Let's build your personal cycling coach.</h2><p class="muted">About 30 quick questions, one at a time. Tap Skip or I don't know whenever you like — the coach will say what it still needs to learn. Nothing leaves this phone.</p><button class="btn play wide" id="startOb">START</button>${P.answers&&Object.keys(P.answers).length?`<button class="btn reset wide" id="resumeOb">RESUME WHERE I STOPPED</button>`:""}</div>`;
-  el("startOb").onclick=()=>{ P.stepIndex=0; saveP(); renderStep(); }; const r=el("resumeOb"); if(r) r.onclick=()=>renderStep(); show("scrWelcome","Welcome"); }
-
-function renderStep(){ const steps=visibleSteps(); if(P.stepIndex>=steps.length) P.stepIndex=steps.length-1; const s=steps[P.stepIndex]; const n=P.stepIndex+1, N=steps.length;
-  el("appStep").textContent=`${n} / ${N}`; const a=A(); const cur=a[s.id];
-  if(s.type==="summary"){ return renderSummary(); }
-  let body="";
-  const opts=typeof s.options==="function"?s.options(a):s.options;
-  if(s.type==="choice") body=`<div class="opts">${opts.map(([k,l])=>`<button class="opt${cur===k?" on":""}" data-v="${k}">${l}</button>`).join("")}</div>`;
-  if(s.type==="multi") body=`<div class="opts">${opts.map(([k,l])=>`<button class="opt${(cur||[]).includes(k)?" on":""}" data-m="${k}">${l}</button>`).join("")}</div>`;
-  if(s.type==="number") body= s.slider? `<div class="num"><output id="numOut">${cur??Math.round((s.min+s.max)/3/5)*5} ${s.unit}</output><input type="range" id="numIn" min="${s.min}" max="${s.max}" step="${s.step||1}" value="${cur??Math.round((s.min+s.max)/3/5)*5}"></div>` : `<div class="num"><input type="number" id="numIn" min="${s.min}" max="${s.max}" value="${cur??""}" placeholder="${s.unit}" inputmode="numeric"> <span class="muted">${s.unit}</span></div>`;
-  if(s.type==="two") body=`<div class="num two">${s.fields.map(([k,l,lo,hi])=>`<label>${l}<input type="number" data-k="${k}" min="${lo}" max="${hi}" value="${a[k]??""}" inputmode="numeric"></label>`).join("")}</div>`;
-  if(s.type==="metric"){ const hows=s.hows||[["measured","Measured in a test"],["estimated","Estimated from workouts"],["app","Another app calculated it"],["unknown","I don't know"]]; const how=(cur&&cur.how)||""; body=`<div class="opts">${hows.map(([k,l])=>`<button class="opt${how===k?" on":""}" data-how="${k}">${l}</button>`).join("")}</div><div class="num" id="metricVal" ${how&&how!=="unknown"?"":"hidden"}><input type="number" id="numIn" min="${s.min}" max="${s.max}" value="${(cur&&cur.value)||""}" placeholder="${s.unit}" inputmode="numeric"> <span class="muted">${s.unit}</span></div>`; }
-  el("scrQ").innerHTML=`<div class="qwrap"><div class="prog"><i style="width:${Math.round(n/N*100)}%"></i></div><h2 class="q">${s.q}</h2>${s.why?`<p class="why">${s.why}</p>`:""}${body}<div class="nav"><button class="btn reset" id="back" ${n===1?"disabled":""}>‹ BACK</button>${(s.skip||s.type==="metric"||s.type==="number"||s.type==="two"||s.type==="multi")?`<button class="btn reset" id="skip">${s.skip||(s.type==="metric"?"I don't know":"Skip")}</button>`:""}<button class="btn play" id="next">NEXT ›</button></div></div>`;
-  show("scrQ","Your profile");
-  const Q=el("scrQ");
-  Q.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{ a[s.id]=b.dataset.v; saveP(); advance(); });
-  Q.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{ let v=a[s.id]||[]; const k=b.dataset.m; if(k==="none"){ v=["none"]; } else { v=v.filter(x=>x!=="none"); v=v.includes(k)?v.filter(x=>x!==k):v.concat([k]); } a[s.id]=v; saveP(); renderStep(); });
-  Q.querySelectorAll("[data-how]").forEach(b=>b.onclick=()=>{ const how=b.dataset.how; a[s.id]=Object.assign({},a[s.id]||{},{how}); if(how==="unknown"){ a[s.id]={how:"unknown",value:null}; saveP(); advance(); } else { saveP(); renderStep(); setTimeout(()=>{ const i=el("numIn"); if(i) i.focus(); },50); } });
-  const ni=el("numIn"); if(ni&&s.slider) ni.oninput=()=>{ el("numOut").textContent=ni.value+" "+s.unit; };
-  el("back").onclick=()=>{ P.stepIndex=Math.max(0,P.stepIndex-1); saveP(); renderStep(); };
-  const sk=el("skip"); if(sk) sk.onclick=()=>{ if(s.type==="metric") a[s.id]={how:"unknown",value:null}; else if(s.type==="multi") a[s.id]=a[s.id]||[]; else delete a[s.id]; saveP(); advance(); };
-  el("next").onclick=()=>{ if(s.type==="number"){ const v=+el("numIn").value; if(v>=s.min&&v<=s.max) a[s.id]=v; else if(!s.slider){ el("numIn").focus(); return; } }
-    if(s.type==="two"){ Q.querySelectorAll("[data-k]").forEach(i=>{ const v=+i.value; if(v) a[i.dataset.k]=v; }); }
-    if(s.type==="metric"){ const how=(a[s.id]||{}).how; if(!how){ return; } if(how!=="unknown"){ const v=+el("numIn").value; if(!(v>=s.min&&v<=s.max)){ el("numIn").focus(); return; } a[s.id]={how,value:v}; } }
-    if(s.type==="choice"&&!a[s.id]) return;
-    saveP(); advance(); };
-}
-function advance(){ P.stepIndex=Math.min(P.stepIndex+1,visibleSteps().length-1); saveP(); renderStep(); }
+function renderWelcome(){ el("appStep").textContent=""; el("scrWelcome").innerHTML=`<div class="hero"><p class="ey">First launch</p><h2 class="big">Let's build your personal cycling coach.</h2><p class="muted">Six short pages, about two minutes. Skip anything you don't know — the coach will say what it still needs to learn. Nothing leaves this phone.</p><button class="btn play wide" id="startOb">START</button>${P.answers&&Object.keys(P.answers).length?`<button class="btn reset wide" id="resumeOb">RESUME WHERE I STOPPED</button>`:""}</div>`;
+  el("startOb").onclick=()=>{ renderPage(0); }; const r=el("resumeOb"); if(r) r.onclick=()=>renderPage(P.page||0); show("scrWelcome","Welcome"); }
 
 function profileRows(a,c){ const v=(x,alt="—")=>x==null||x===""?alt:x; const m=k=>{ const x=a[k]; if(!x||x.how==="unknown") return `<span class="muted">unknown</span>`; return `${x.value} ${tag(x.how==="measured"?"conf":"prov",x.how==="measured"?"MEASURED":x.how==="app"?"APP":x.how)}`; };
-  return [["Main goal",goalName(primaryGoal(a))+((a.goals||[]).length>1?` <span class="muted">(+${(a.goals||[]).length-1} more)</span>`:"")],["3-month success",a.success?(successOptions(a).find(o=>o[0]===a.success)||[a.success,a.success])[1]:"—"],["Experience",v(a.experience)],["Age · height · weight",`${v(a.age)} · ${v(a.heightCm)} cm · ${v(a.weightKg)} kg`],["Rides now / days available",`${v(a.ridesNow)} / ${v(a.daysAvail)} per week`],["Typical · longest ride",`${v(a.typicalMin)} · ${v(a.longestMin)} min`],["Other exercise",(a.other||[]).join(", ")||"—"],["Rest days",(a.rest||[]).join(", ")||"no preference"],["Max HR",m("maxHr")],["Resting HR",m("restHr")],["Threshold HR",m("lthr")],["FTP",m("ftp")],["Natural cadence",m("cadence")],["Limiter · style",`${v(a.limiter)} · ${v(a.style)}`],["Heat",v(a.heat)],["Coaching",`${v(a.voice)} · ${v(a.freq)} · ${v(a.tone)} · ${v(a.detail)} · cadence ${v(a.cadAdvice)}`]]; }
+  return [["Goal",GOAL_SHORT[primaryGoal(a)]+((a.goals||[]).length>1?` <span class="muted">+${(a.goals||[]).length-1}</span>`:"")+(a.success?` · ${(successOptions(a).find(o=>o[0]===a.success)||["",""])[1]}`:"")],["You",`${v(a.age)} y · ${v(a.heightCm)} cm · ${v(a.weightKg)} kg · ${v(a.experience)}`],["Routine",`${v(a.ridesNow)} rides/wk now · ${v(a.daysAvail)} days possible · ${v(a.typicalMin)} min typical${(a.other||[]).filter(x=>x!=="none").length?" · "+(a.other||[]).filter(x=>x!=="none").join(", "):""}`],["Heart rate",`max ${m("maxHr")} · rest ${m("restHr")} · threshold ${m("lthr")}`],["Power",`FTP ${m("ftp")}`],["Coaching",`${v(a.voice)} · ${v(a.freq)} · cadence ${v(a.cadAdvice)}${a.heat==="yes"?" · hot conditions":""}`]]; }
 
-function renderSummary(){ const a=A(); const c=deriveConfig(a); const r=recommend(a,c);
-  el("appStep").textContent="summary";
-  el("scrProfile").innerHTML=`<div class="qwrap"><p class="ey">Your rider profile</p><h2 class="q">Here is what the coach understood</h2>
+function renderSummary(){ const a=A(); const c=deriveConfig(a); const r=recommend(a,c); P.page=5; saveP();
+  el("appStep").textContent="6 / 6";
+  const edit=(i,l)=>`<button class="linkbtn" data-edit="${i}">edit ${l}</button>`;
+  el("scrProfile").innerHTML=`<div class="qwrap"><div class="dots">${PAGES.map((p,k)=>`<i class="${k<5?"done":"cur"}"></i>`).join("")}</div><h2 class="q">Your personal coach</h2>
   <div class="kv prof">${profileRows(a,c).map(([k,v])=>`<span>${k}</span><span>${v}</span>`).join("")}</div>
-  <div class="box"><h3>Zone confidence</h3><p>${confTag(c.zoneConfidence)} ${c.zoneConfidence}. Zone 2 = <b>${c.hrTarget[0]}–${c.hrTarget[1]} bpm</b>${c.hrCap<c.hrTarget[1]?` (ceiling ${c.hrCap})`:""}${c.powerCoaching?` · ${Math.round(c.ftp*0.55)}–${Math.round(c.ftp*0.75)} W`:" · power targets off (FTP unknown)"}.</p></div>
-  <div class="box"><h3>Recommended structure</h3><p><b>${r.name}</b>, ${r.minutes} min, ${c.warmupSec/60}-min warm-up, ${c.cooldownSec/60}-min cool-down, ${Math.min(+(a.daysAvail||3),(+(a.ridesNow||2))+1)} rides a week to start.</p></div>
-  <div class="box"><h3>What the coach still needs to learn</h3><ul>${needs(a,c).map(x=>`<li>${x}</li>`).join("")}</ul></div>
-  <div class="nav"><button class="btn reset" id="editProf">EDIT ANSWERS</button><button class="btn play" id="confirmProf">CONFIRM</button></div></div>`;
-  el("editProf").onclick=()=>{ P.stepIndex=0; saveP(); renderStep(); };
-  el("confirmProf").onclick=()=>{ P.completed=true; saveP(); applyProfile(); renderHome(); };
+  <div class="editrow">${edit(0,"about you")}${edit(1,"goals")}${edit(2,"routine")}${edit(3,"zones")}${edit(4,"preferences")}</div>
+  <div class="box"><h3>Training targets</h3><p>${confTag(c.zoneConfidence)} ${c.zoneConfidence}.<br>Zone 2 = <b>${c.hrTarget[0]}–${c.hrTarget[1]} bpm</b>${c.hrCap<c.hrTarget[1]?` (ceiling ${c.hrCap})`:""}${c.powerCoaching?` · <b>${Math.round(c.ftp*0.55)}–${Math.round(c.ftp*0.75)} W</b> ${a.ftp&&a.ftp.how==="measured"?tag("conf","CONFIRMED"):tag("prov","PROVISIONAL")}`:" · power targets off (FTP unknown)"}<br>Warm-up ${c.warmupSec/60} min · cool-down ${c.cooldownSec/60} min · cadence ${c.cadenceEnabled?c.cadRange[0]+"–"+c.cadRange[1]+" rpm":"off"}</p></div>
+  <div class="box rec"><h3>Recommended first workout</h3><div class="recname">${r.name}</div><div class="recline"><span>${r.minutes} min</span><span>${r.hrT[0]}–${r.hrT[1]} bpm</span><span>${r.pwT?r.pwT[0]+"–"+r.pwT[1]+" W":"power off"}</span></div><p style="margin-top:6px">${r.why[0]}</p></div>
+  <div class="box"><h3>Still to learn</h3><ul>${needs(a,c).slice(0,3).map(x=>`<li>${x}</li>`).join("")}</ul></div>
+  <div class="nav"><button class="btn reset" id="backProf">‹ BACK</button><button class="btn play" id="confirmProf">${P.completed?"SAVE":"START RIDING"}</button></div></div>`;
+  el("scrProfile").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>renderPage(+b.dataset.edit));
+  el("backProf").onclick=()=>renderPage(4);
+  el("confirmProf").onclick=()=>{ const first=!P.completed; P.completed=true; saveP(); applyProfile(); if(first){ renderHome(); } else renderHome(); };
   show("scrProfile","Rider profile"); renderRules(c); }
 function needs(a,c){ const n=[]; if(!c.zoneConfidence.startsWith("CONFIRMED")) n.push("Your real threshold heart rate — a 20-minute steady test, offered after 3 rides."); if(!c.ftpKnown) n.push("Your FTP — power meter verified under load first, then a 20-minute test."); else if(a.ftp.how!=="measured") n.push("Confirm FTP with a test (current value is "+a.ftp.how+")."); n.push("Whether you can hold the Zone 2 band on your route (first ride answers this)."); if(a.heat==="yes") n.push("How much heat lifts your heart rate (drift between halves)."); if(!(a.cadence&&a.cadence.how!=="unknown")) n.push("Your natural cadence (XDS sensor, first ride)."); return n; }
 
@@ -916,10 +941,11 @@ function renderPost(){ const a=A(), c=deriveConfig(a); const res=rideResult(); c
   <p class="q small">How hard did that feel, 1 (easy) to 10 (maximal)?</p><div class="num"><output id="rpeOut">6</output><input type="range" id="rpe" min="1" max="10" value="6"></div>
   <p class="q small">What limited you?</p><div class="opts row"><button class="opt" data-l="legs">Legs</button><button class="opt" data-l="breathing">Breathing</button><button class="opt" data-l="tired">Tiredness</button><button class="opt" data-l="none">Nothing</button></div>
   <p class="q small">Do you feel recovered enough to ride again tomorrow?</p><div class="opts row"><button class="opt" data-r="yes">Yes</button><button class="opt" data-r="no">No</button><button class="opt" data-r="unsure">Not sure</button></div>
+  ${(()=>{ const f=followUp(a); if(!f) return ""; return `<div class="box fu"><h3>One more, because it would improve your plan ${tag("proto","FOLLOW-UP")}</h3><p class="q small">${f.q}</p>${f.why?`<p class="why">${f.why}</p>`:""}${f.kind==="metric"?`<div class="num"><input type="number" id="fuVal" min="${f.min}" max="${f.max}" placeholder="${f.unit}" inputmode="numeric"> <span class="muted">${f.unit}</span></div>`:`<div class="opts row">${f.opts.map(([k,l])=>`<button class="opt" data-fu="${k}">${l}</button>`).join("")}</div>`}</div>`; })()}
   <div class="nav"><button class="btn reset" id="skipPost">SKIP</button><button class="btn play" id="savePost">SAVE</button></div></div>`;
-  let lim=null, rec=null; const S=el("scrPost"); S.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{ lim=b.dataset.l; S.querySelectorAll("[data-l]").forEach(x=>x.classList.toggle("on",x===b)); }); S.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{ rec=b.dataset.r; S.querySelectorAll("[data-r]").forEach(x=>x.classList.toggle("on",x===b)); });
+  let lim=null, rec=null, fuAns=null; const S=el("scrPost"); const fu=followUp(a); S.querySelectorAll("[data-fu]").forEach(b=>b.onclick=()=>{ fuAns=b.dataset.fu; S.querySelectorAll("[data-fu]").forEach(x=>x.classList.toggle("on",x===b)); }); S.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{ lim=b.dataset.l; S.querySelectorAll("[data-l]").forEach(x=>x.classList.toggle("on",x===b)); }); S.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{ rec=b.dataset.r; S.querySelectorAll("[data-r]").forEach(x=>x.classList.toggle("on",x===b)); });
   el("rpe").oninput=()=>{ el("rpeOut").textContent=el("rpe").value; };
-  const finish=(withAnswers)=>{ const fb={date:new Date().toISOString().slice(0,10),ride,inZonePct:res.inZonePct,drift:+res.drift,avgHr:res.avgHr,sec:res.sec}; if(withAnswers){ fb.rpe=+el("rpe").value; fb.limiter=lim; fb.recovered=rec; } P.feedback.push(fb); P.override=null; saveP(); const after=recommend(a,c); renderNext(before,after,fb); };
+  const finish=(withAnswers)=>{ const fb={date:new Date().toISOString().slice(0,10),ride,inZonePct:res.inZonePct,drift:+res.drift,avgHr:res.avgHr,sec:res.sec}; if(withAnswers){ fb.rpe=+el("rpe").value; fb.limiter=lim; fb.recovered=rec; if(fu){ P.asked=P.asked||{}; P.asked[fu.key]=true; if(fu.kind==="metric"){ const v=+(el("fuVal")||{}).value; if(v>=fu.min&&v<=fu.max) a[fu.key]={how:"estimated",value:v}; } else if(fuAns){ if(fu.key==="struggleZ2") a.struggleZ2=fuAns; else a[fu.key]=fuAns; } } } P.feedback.push(fb); P.override=null; saveP(); const after=recommend(a,c); renderNext(before,after,fb); };
   el("savePost").onclick=()=>finish(true); el("skipPost").onclick=()=>finish(false); show("scrPost","Post-ride"); }
 function renderNext(before,after,fb){ const changed=before.name!==after.name||before.minutes!==after.minutes;
   el("scrPost").innerHTML=`<div class="qwrap"><p class="ey">Next workout</p><h2 class="q">${changed?"The recommendation changed":"The recommendation stands"}</h2>
@@ -932,8 +958,8 @@ function renderNext(before,after,fb){ const changed=before.name!==after.name||be
 loadP();
 // a reset link for testing the first-launch flow again
 document.querySelector(".appbar").insertAdjacentHTML("beforeend",`<button class="linkbtn" id="resetAll" title="Clear saved answers and start over">reset</button>`);
-el("resetAll").onclick=()=>{ P={answers:{},completed:false,feedback:[],stepIndex:0}; try{ localStorage.removeItem(STORE_KEY);}catch(_){ } CFG=Object.assign({},GENERIC); P.override=null; renderWelcome(); el("rules").textContent="Answer the onboarding questions in the phone and this panel fills with the exact rules your answers trigger."; };
+el("resetAll").onclick=()=>{ P={answers:{},completed:false,feedback:[],page:0,asked:{}}; try{ localStorage.removeItem(STORE_KEY);}catch(_){ } CFG=Object.assign({},GENERIC); P.override=null; renderWelcome(); el("rules").textContent="Answer the onboarding questions in the phone and this panel fills with the exact rules your answers trigger."; };
 renderCmp(); renderMemoAll(); renderQa(); renderFeat(); resetRide();
-if(P.completed){ applyProfile(); renderHome(); } else if(Object.keys(P.answers).length){ renderStep(); } else renderWelcome();
+if(P.completed){ applyProfile(); renderHome(); } else if(Object.keys(P.answers).length){ renderPage(P.page||0); } else renderWelcome();
 
 </script>
