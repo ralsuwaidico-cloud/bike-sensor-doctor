@@ -50,7 +50,14 @@ class AppFlowTest {
         assertNotNull("not found: $sel", o); return o!!
     }
     private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.72).toInt(); val b = (device.displayHeight * 0.30).toInt(); if (up) device.swipe(w, a, w, b, 25) else device.swipe(w, b, w, a, 25); device.waitForIdle(800); Thread.sleep(350) }
-    private fun tap(sel: BySelector, timeout: Long = T) { find(sel, timeout); retry { find(sel, 2000).click() }; device.waitForIdle(1000) }
+    private fun tap(sel: BySelector, timeout: Long = T) {
+        val o = find(sel, timeout)
+        // a node clipped at the bottom edge (behind the tab bar) must be scrolled fully into view before tapping
+        if (o.visibleBounds.bottom > device.displayHeight * 0.80) { val w = device.displayWidth / 2; device.swipe(w, (device.displayHeight * 0.6).toInt(), w, (device.displayHeight * 0.35).toInt(), 25); device.waitForIdle(800); Thread.sleep(300) }
+        retry { find(sel, 2000).click() }; device.waitForIdle(1000)
+    }
+    private fun top() { repeat(4) { swipe(up = false) } }
+    private fun visible(sel: BySelector, timeout: Long = 3000L) = runCatching { find(sel, timeout) }.isSuccess
     private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
     private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
@@ -144,14 +151,14 @@ class AppFlowTest {
         find(tag("btn_start")); shot("21_dashboard_idle")
         tap(tag("btn_start"))
         find(tag("btn_pause")); Thread.sleep(4000); shot("22_dashboard_warmup")
-        assertTrue("phase label", has(By.textStartsWith("WARM-UP"), 3000) || has(By.textStartsWith("MAIN"), 3000))
+        assertTrue("phase label", visible(By.textStartsWith("WARM-UP")) || visible(By.textStartsWith("MAIN")))
         // pause / resume
         tap(tag("btn_pause")); find(tag("btn_resume")); shot("23_paused"); tap(tag("btn_resume")); find(tag("btn_pause"))
         // wait for MAIN then COOL-DOWN (planned ride ends after 60 simulated minutes)
-        assertTrue("MAIN phase reached", device.wait(Until.hasObject(By.textStartsWith("MAIN")), 60_000))
+        top(); assertTrue("MAIN phase reached", device.wait(Until.hasObject(By.textStartsWith("MAIN")), 60_000))
         shot("25_dashboard_main")
         tap(tag("btn_coach")); shot("26_coach"); device.pressBack(); find(tag("btn_pause"))
-        assertTrue("COOL-DOWN reached", device.wait(Until.hasObject(By.textStartsWith("COOL-DOWN")), 150_000))
+        top(); assertTrue("COOL-DOWN reached", device.wait(Until.hasObject(By.textStartsWith("COOL-DOWN")), 150_000))
         shot("27_dashboard_cooldown")
         // background + foreground must not lose the ride
         device.pressHome(); Thread.sleep(2000); launch(); find(tag("btn_pause"), 10_000)
@@ -167,7 +174,7 @@ class AppFlowTest {
     @Test fun t05_restart_keeps_data_and_settings_screens() {
         launch()
         // if an earlier test left a ride running, finish it first (a running ride re-opens on the dashboard by design)
-        if (has(tag("btn_pause"), 4000) || has(tag("btn_finish"), 1000)) { tap(tag("btn_finish")); tap(tag("confirm_finish")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
+        if (!has(tag("start_ride"), 4000) && visible(tag("btn_finish"), 4000)) { tap(tag("btn_finish")); tap(tag("confirm_finish")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
         find(tag("start_ride"), 15_000)
         assertTrue(has(text("Rashed"), 3000))
         tap(text("⚙")); shot("31_settings"); scrollTo(text("Advanced: Diagnose & Repair sensor"))
