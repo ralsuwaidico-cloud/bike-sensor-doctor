@@ -206,9 +206,10 @@ function genRide(r){
   const hr=smooth(hrRaw,5).map(v=>Math.round(v));
   // --- speed: synthetic profile constrained by your real average, range and stop points (SIMULATED) ---
   let sp=[]; for(let t=0;t<N;t++){ const m=t/60; let v=25+5*Math.sin(m/2.3)+3*Math.sin(m/0.7+1)+ (rnd()-0.5)*3;
-    if(Math.sin(m/1.9+0.4)>0.93) v+=7;                                  // short surges (your real max was ~34 km/h)
+    if(Math.sin(m/1.9+0.4)>0.975) v+=6;                                  // short surges (your real max was ~34 km/h)
     if(r.steady && m>=r.steady[0] && m<=r.steady[1]) v=26+(rnd()-0.5)*1.2;   // a deliberately steady stretch
     if(m<1.5) v=Math.min(v, 6+m*12);                                   // rolling out
+    v*= m<5?0.78 : m<6?0.78+0.22*(m-5) : 1;                           // gentler first 5 min (your real HR was 100–135 there), then a 1-min ramp
     r.stops.forEach(s=>{ const d=Math.abs(m-s); if(d<0.35) v=0; else if(d<1.1) v=Math.min(v, (d-0.35)/0.75*26); });
     if(m>N/60-1) v=Math.min(v, Math.max(0,(N/60-m)*18));
     sp.push(Math.max(0,v)); }
@@ -253,19 +254,19 @@ class Coach{
     const c=this.cfg; if(c.mode==="FREE") return null;
     const cad=this.feed("cad",now,cadIn); const hr=this.feed("hr",now,hrIn);
     const coasting = pwIn!=null && pwIn===0; const pwRaw=this.feed("pw",now,coasting?null:pwIn); const pw=(pwRaw!=null&&pwRaw>0)?pwRaw:null;
-    const [hLo,hHi]=DEMO.hrTarget; const pLo=PB[0]*DEMO.ftp, pHi=PB[1]*DEMO.ftp;
+    const TG=targetsFor(phase,true); const [hLo,hHi]=TG.hr; const [pLo,pHi]=TG.pw;
     const hb=this.bandOf("hr",now,hr,hLo,hHi,c.hysHr); const pb=this.bandOf("pw",now,pw,pLo,pHi,c.hysPw*DEMO.ftp);
     const hz=hr?hrZone(hr):null, pz=pw?powZone(pw):null;
-    const safety=()=> (hb==="ABOVE" && hz!=null && hz>=4 && this.held("hr",now,5000)) ? this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm is zone ${hz} — two zones above the Zone 2 target (138–149). Safety rule: back off whatever power or cadence say.`,"HR_SAFETY") : null;
-    if(phase==="WARMUP"){ const s=safety(); if(s) return s; return this.announce(now,phase,"WARMUP","WARM UP","Easy spinning for 5 minutes. No 'push harder' during the warm-up; only an 'ease off' if heart rate runs far too high.","PHASE_WARMUP"); }
-    if(phase==="COOLDOWN"){ if(hb==="ABOVE"&&this.held("hr",now,c.hrHold)) return this.emit(now,"EASE_OFF","EASE OFF",`Cool-down: let the heart rate come down (${hr} bpm, still above 149).`,"COOLDOWN_HR_ABOVE"); return this.announce(now,phase,"COOLDOWN","COOL DOWN","Last 5 minutes: easy spinning to finish. The coach will not ask for more effort from here.","PHASE_COOLDOWN"); }
+    const safety=()=> (hb==="ABOVE" && hz!=null && hz>=4 && this.held("hr",now,5000)) ? this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm is zone ${hz} — two or more zones above the target. Safety rule: back off whatever power or cadence say.`,"HR_SAFETY") : null;
+    if(phase==="WARMUP"){ const s=safety(); if(s) return s; return this.announce(now,phase,"WARMUP","WARM UP",`Easy spinning for 5 minutes: target Zone 1 (${hLo}–${hHi} bpm). No 'push harder' during the warm-up; only an 'ease off' if heart rate runs far too high.`,"PHASE_WARMUP"); }
+    if(phase==="COOLDOWN"){ if(hb==="ABOVE"&&this.held("hr",now,c.hrHold)) return this.emit(now,"EASE_OFF","EASE OFF",`Cool-down target is Zone 1 (${hLo}–${hHi} bpm); heart rate ${hr} is still above it.`,"COOLDOWN_HR_ABOVE"); return this.announce(now,phase,"COOLDOWN","COOL DOWN",`Last 5 minutes: target drops to Zone 1 (${hLo}–${hHi} bpm). The coach will not ask for more effort from here.`,"PHASE_COOLDOWN"); }
     if(this.announced!=="MAIN"){ this.announced="MAIN"; this.keepArmed=true; }
     let effort=null, hold=false;
     if(hr!=null){
-      if(hb==="ABOVE"){ if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm (zone ${hz}) has stayed above the Zone 2 target 138–149 for 8 s. HR is the authority on effort; power is ignored here.`,"HR_ABOVE"); else hold=true; }
+      if(hb==="ABOVE"){ if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm (zone ${hz}) has stayed above the target ${hLo}–${hHi} bpm for 8 s. HR is the authority on effort; power is ignored here.`,"HR_ABOVE"); else hold=true; }
       else if(hb==="ON"){ const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging){ if(this.surgeSince==null) this.surgeSince=now; if(now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; }
       else { this.surgeSince=null; if(pb==="ON"||pb==="ABOVE") hold=true;  /* HR lag: never push */
-             else if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"PUSH_HARDER","PUSH A LITTLE HARDER",`Heart rate ${hr} bpm is below the Zone 2 target (138–149) and power is not already on target, for 8 s.`,"HR_BELOW"); else hold=true; }
+             else if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"PUSH_HARDER","PUSH A LITTLE HARDER",`Heart rate ${hr} bpm is below the target ${hLo}–${hHi} bpm and power is not already on target, for 8 s.`,"HR_BELOW"); else hold=true; }
     } else if(pw!=null){
       if(pb==="ABOVE"){ if(this.held("pw",now,c.pwHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`No heart rate: simulated power ${pw} W is above the Zone 2 band for 2 s.`,"PW_ABOVE"); else hold=true; }
       else if(pb==="BELOW"){ if(this.held("pw",now,c.pwHold)) effort=this.emit(now,"PUSH_HARDER","PUSH A LITTLE HARDER",`No heart rate: simulated power ${pw} W is below the Zone 2 band for 2 s.`,"PW_BELOW"); else hold=true; }
@@ -278,7 +279,7 @@ class Coach{
     if(this.allGood==null){ this.allGood=now; this.keepArmed=true; }
     if(now-this.allGood<c.keepHold) return null;
     if(!(this.keepArmed || now-this.lastEmit>=c.keepRepeat)) return null;
-    const k=this.emit(now,"KEEP_IT_UP","KEEP IT UP",`Heart rate ${hr} bpm inside 138–149 and cadence in range for at least 5 s. Repeated at most every 90 s.`,"ALL_GOOD"); if(k) this.keepArmed=false; return k;
+    const k=this.emit(now,"KEEP_IT_UP","KEEP IT UP",`Heart rate ${hr} bpm inside the target ${hLo}–${hHi} and cadence in range for at least 5 s. Repeated at most every 90 s.`,"ALL_GOOD"); if(k) this.keepArmed=false; return k;
   }
   cadence(now,cad,phase){ const c=this.cfg; if(!c.cadenceEnabled||cad==null||cad<=0||phase==="COOLDOWN"){ this.cadState=null; return undefined; }
     const st=this.cadState; let n;
@@ -310,6 +311,12 @@ class Prototypes{
 }
 function zoneTimes(hrArr){ const z=[0,0,0,0,0]; hrArr.forEach(h=>{ const k=hrZone(h); if(k>0) z[k-1]++; }); return z; }
 function avgNonZero(a){ const f=a.filter(v=>v>0); return f.length?Math.round(f.reduce((x,y)=>x+y,0)/f.length):0; }
+/* Active workout target per phase. Warm-up and cool-down aim at Zone 1; the main block aims at Zone 2. Cadence range is constant. */
+function targetsFor(phase,coached){
+  if(!coached) return {hr:[DEMO.hrTarget[0],DEMO.hrTarget[1]],pw:[PB[0]*DEMO.ftp,PB[1]*DEMO.ftp],cad:DEMO.cadRange,label:"Z2 reference (uncoached)",zone:2};
+  if(phase==="WARMUP"||phase==="COOLDOWN") return {hr:[105,DEMO.hrZoneEdges[0]-1],pw:[0.35*DEMO.ftp,PB[0]*DEMO.ftp],cad:DEMO.cadRange,label:(phase==="WARMUP"?"WARM-UP":"COOL-DOWN")+" · Zone 1",zone:1};
+  return {hr:[DEMO.hrTarget[0],DEMO.hrTarget[1]],pw:[PB[0]*DEMO.ftp,PB[1]*DEMO.ftp],cad:DEMO.cadRange,label:"MAIN · Zone 2",zone:2};
+}
 function phaseAt(t,N,coached){ if(!coached) return "MAIN"; if(t<DEMO.warmupSec) return "WARMUP"; if(t>=N-DEMO.cooldownSec) return "COOLDOWN"; return "MAIN"; }
 
 /* ============================================================ Design 7 dashboard (SVG) */
@@ -321,15 +328,26 @@ function arcPath(cx,cy,r,a0,a1){ if(a1-a0<0.01) return ""; const [x0,y0]=pol(cx,
 const W=300,H=958, S0=135, SW=270;
 const PMAX=Math.max(300,DEMO.ftp*1.5), HMAX=190, CMAX=130;
 
-function gaugeStatic(cx,cy,r,sw,ticks,targetFrac,showTgt,rangeArc){
+function gaugeStatic(cx,cy,r,sw,ticks,showTgt,rangeArc){
   let g=`<path d="${arcPath(cx,cy,r,S0,S0+SW)}" fill="none" stroke="${C.track}" stroke-width="${sw}"/>`;
-  g+=`<path id="" class="prog" fill="none" stroke-width="${sw}" stroke-linecap="round"/>`;
+  g+=`<path class="prog" fill="none" stroke-width="${sw}" stroke-linecap="round"/>`;
   if(rangeArc) g+=`<path d="${arcPath(cx,cy,r,S0+SW*rangeArc[0],S0+SW*rangeArc[1])}" fill="none" stroke="${C.green}" stroke-width="3" opacity=".9"/>`;
   ticks.forEach(zf=>{ if(zf<=0||zf>=1)return; const a=S0+SW*zf; const[x1,y1]=pol(cx,cy,r-sw/2,a),[x2,y2]=pol(cx,cy,r+sw/2,a); g+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#05080b" stroke-width="2"/>`; });
-  if(targetFrac!=null){ const ta=S0+SW*targetFrac,[tx1,ty1]=pol(cx,cy,r-sw/2-4,ta),[tx2,ty2]=pol(cx,cy,r+sw/2+4,ta); g+=`<line x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}" stroke="${C.fg}" stroke-width="2.5"/>`;
-    if(showTgt){ const[lx,ly]=pol(cx,cy,r+sw/2+12,ta); g+=`<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" fill="${C.mut}" font-size="8" text-anchor="middle" font-family="IBM Plex Mono">TGT</text>`; } }
+  // TARGET band: a bright arc just outside the ring spanning the active target range (lo..hi), with end ticks.
+  g+=`<path class="tgtBand" fill="none" stroke="${C.fg}" stroke-width="3.5" stroke-linecap="butt"/>`;
+  g+=`<line class="tgtLo" stroke="${C.fg}" stroke-width="2"/><line class="tgtHi" stroke="${C.fg}" stroke-width="2"/>`;
+  if(showTgt) g+=`<text class="tgtLbl" fill="${C.fg}" font-size="8" font-weight="700" text-anchor="middle" font-family="IBM Plex Mono">TGT</text>`;
+  // LIVE marker: a dark disc with a white rim riding on the ring at the current value.
+  g+=`<circle class="live" r="${(sw/2+2.5).toFixed(1)}" fill="#05080b" stroke="${C.fg}" stroke-width="2.5"/>`;
   return g;
 }
+// same value→angle mapping for live marker, progress arc and target band
+function angleOf(frac){ return S0+SW*Math.max(0,Math.min(1,frac)); }
+function setLive(g,cx,cy,r,frac){ const [x,y]=pol(cx,cy,r,angleOf(frac)); const c=g.querySelector(".live"); c.setAttribute("cx",x.toFixed(1)); c.setAttribute("cy",y.toFixed(1)); }
+function setTarget(g,cx,cy,r,sw,lo,hi,col){ const ro=r+sw/2+5; const a0=angleOf(lo),a1=angleOf(hi); const band=g.querySelector(".tgtBand"); band.setAttribute("d",arcPath(cx,cy,ro,a0,a1)); band.setAttribute("stroke",col);
+  [["tgtLo",a0],["tgtHi",a1]].forEach(([cls,a])=>{ const l=g.querySelector("."+cls); const [x1,y1]=pol(cx,cy,r-sw/2-2,a),[x2,y2]=pol(cx,cy,ro+3,a); l.setAttribute("x1",x1.toFixed(1));l.setAttribute("y1",y1.toFixed(1));l.setAttribute("x2",x2.toFixed(1));l.setAttribute("y2",y2.toFixed(1)); l.setAttribute("stroke",col); });
+  const lbl=g.querySelector(".tgtLbl"); if(lbl){ const am=(a0+a1)/2; const bottom=((am%360)+360)%360; const inside=bottom>150&&bottom<210;   // band at the bottom of the dial → label inside the ring, clear of the status pill
+    const [lx,ly]=pol(cx,cy,inside?(r-sw/2-11):(ro+11),am); lbl.setAttribute("x",lx.toFixed(1)); lbl.setAttribute("y",(ly+3).toFixed(1)); lbl.setAttribute("fill",col); } }
 function band(x,y,w,segs,colors){ let g=`<rect x="${x}" y="${y}" width="${w}" height="18" rx="3" fill="#0a1015"/>`;const sw=w/segs.length;
   segs.forEach((lab,i)=>{g+=`<rect x="${x+i*sw}" y="${y}" width="${sw-2}" height="18" fill="${colors[i]}" opacity="${0.25+0.1*i}"/>`;[0,.5,1].forEach(t=>g+=`<line x1="${x+i*sw+sw*t}" y1="${y+18}" x2="${x+i*sw+sw*t}" y2="${y+22}" stroke="${C.faint}" stroke-width="1"/>`);g+=`<text x="${x+i*sw+sw/2}" y="${y+13}" text-anchor="middle" font-size="9" fill="${C.fg}" font-family="IBM Plex Mono">${lab}</text>`;}); return g; }
 
@@ -346,19 +364,20 @@ function buildPhone(){
   <line x1="14" y1="56" x2="${W-14}" y2="56" stroke="${C.line}"/>
   <rect id="coachBar" x="14" y="58" width="272" height="3" rx="1.5" fill="${C.line}"/>
   <!-- power gauge (SIMULATED) -->
-  <g id="gP">${gaugeStatic(150,150,72,15,pTicks,pwT,true,null)}</g>
+  <text id="tgtLine" x="14" y="72" fill="${C.cyan}" font-size="8.5" letter-spacing="1">TARGET · —</text>
+  <g id="gP">${gaugeStatic(150,150,72,15,pTicks,true,null)}</g>
   <text id="pSub" x="150" y="120" text-anchor="middle" fill="${C.mut}" font-size="12"> </text>
   <text id="pVal" x="150" y="162" text-anchor="middle" fill="${C.fg}" font-size="54" font-weight="500" font-family="Rajdhani">—</text>
   <text x="150" y="184" text-anchor="middle" fill="${C.mut}" font-size="12" letter-spacing="1">WATTS · SIM</text>
   <g id="pPill"><rect x="96" y="233" width="108" height="21" rx="10.5" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="150" y="248" text-anchor="middle" fill="${C.faint}" font-size="12" font-weight="700">○ WAITING</text></g>
   <!-- cadence (SIMULATED) -->
-  <g id="gC">${gaugeStatic(78,340,52,11,[],DEMO.cadRange[0]/CMAX,false,[DEMO.cadRange[0]/CMAX,DEMO.cadRange[1]/CMAX])}</g>
+  <g id="gC">${gaugeStatic(78,340,52,11,[],false,null)}</g>
   <text x="78" y="322" text-anchor="middle" fill="${C.violet}" font-size="9">${DEMO.cadRange[0]}–${DEMO.cadRange[1]}</text>
   <text id="cVal" x="78" y="347" text-anchor="middle" fill="${C.fg}" font-size="26" font-weight="500" font-family="Rajdhani">—</text>
   <text x="78" y="365" text-anchor="middle" fill="${C.mut}" font-size="9" letter-spacing="1">RPM · SIM</text>
   <g id="cPill"><rect x="38" y="400" width="80" height="18" rx="9" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="78" y="413" text-anchor="middle" fill="${C.faint}" font-size="9" font-weight="700">○ WAITING</text></g>
   <!-- heart rate (REAL) -->
-  <g id="gH">${gaugeStatic(222,340,52,11,hTicks,hrT,false,null)}</g>
+  <g id="gH">${gaugeStatic(222,340,52,11,hTicks,false,null)}</g>
   <text id="hSub" x="222" y="322" text-anchor="middle" fill="${C.mut}" font-size="9"> </text>
   <text id="hVal" x="222" y="347" text-anchor="middle" fill="${C.fg}" font-size="26" font-weight="500" font-family="Rajdhani">—</text>
   <text x="222" y="365" text-anchor="middle" fill="${C.mut}" font-size="9" letter-spacing="1">BPM · REAL</text>
@@ -374,10 +393,10 @@ function buildPhone(){
   <line x1="14" y1="574" x2="${W-14}" y2="574" stroke="${C.line}"/>
   <text x="14" y="594" fill="${C.mut}" font-size="10">POWER ZONES · SIM (target ▲ = Z2, demo FTP ${DEMO.ftp} W)</text>
   ${band(14,602,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],PZC)}
-  <rect x="${14+pwT*272-1}" y="599" width="2" height="24" fill="${C.cyan}"/><path id="pMark" d="" fill="${C.fg}"/>
+  <rect id="pTgtBar" x="${14+pwT*272-1}" y="599" width="2" height="24" fill="${C.cyan}"/><path id="pMark" d="" fill="${C.fg}"/>
   <text x="14" y="650" fill="${C.mut}" font-size="10">HEART-RATE ZONES · REAL (Zone 2 = 138–149 bpm, est.)</text>
   ${band(14,658,272,["Z1","Z2","Z3","Z4","Z5"],HZC)}
-  <rect x="${14+hrT*272-1}" y="655" width="2" height="24" fill="${C.cyan}"/><path id="hMark" d="" fill="${C.fg}"/>
+  <rect id="hTgtBar" x="${14+hrT*272-1}" y="655" width="2" height="24" fill="${C.cyan}"/><path id="hMark" d="" fill="${C.fg}"/>
   <text x="14" y="708" fill="${C.mut}" font-size="10">POWER TREND · SIM · last 5 min   ·   HR · REAL</text>
   <rect x="14" y="716" width="272" height="130" fill="#080e12" stroke="${C.line}"/>
   <line x1="14" y1="776" x2="286" y2="776" stroke="#13202a" stroke-dasharray="3 3"/><text x="20" y="773" fill="${C.faint}" font-size="8">FTP</text>
@@ -388,7 +407,7 @@ function buildPhone(){
     <text id="s3s" x="130" y="884" fill="${C.fg}" font-size="24">— W</text><text x="130" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG · SIM</text>
     <text id="sVi" x="218" y="884" fill="${C.fg}" font-size="24">—</text><text x="218" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
   </g>
-  <text x="14" y="936" font-size="8" fill="${C.faint}" letter-spacing="1">REPLAY OF REAL HR · WATTS AND RPM ARE SIMULATED</text>
+  <text x="14" y="936" font-size="8" fill="${C.faint}" letter-spacing="1">LIVE = white-rimmed dot on the ring · TGT = bright band outside the ring · watts and rpm are simulated</text>
   </svg>`;
 }
 
@@ -444,20 +463,28 @@ function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,M
   q("#hdrTime").textContent="T "+fmt(i); el("clock").textContent=fmt(i); el("scrub").value=i;
   q("#phaseTxt").textContent= !coached?"FREE RIDE · OBSERVING": phase==="WARMUP"?`WARM-UP ${fmt(DEMO.warmupSec-i)}`: phase==="COOLDOWN"?"COOL-DOWN":"MAIN · ZONE 2 MODE";
   q("#phaseTxt").setAttribute("fill", phase==="MAIN"&&coached?C.green:C.violet);
-  // power gauge
-  const pz=powZone(pw), pcol=pz?PZC[pz-1]:C.grey; q("#progP").setAttribute("d",arcPath(150,150,72,S0,S0+SW*Math.min(1,pw/PMAX))); q("#progP").setAttribute("stroke",pcol);
+  const TG=targetsFor(phase,coached);
+  q("#tgtLine").textContent=`TGT ${TG.label.replace("MAIN · Zone 2","MAIN Z2").replace("WARM-UP · Zone 1","WARM-UP Z1").replace("COOL-DOWN · Zone 1","COOL-DOWN Z1").replace("Z2 reference (uncoached)","Z2 REF")} · ${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} BPM · ${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W · ${TG.cad[0]}–${TG.cad[1]} RPM`;
+  const gP=q("#gP"), gC=q("#gC"), gH=q("#gH");
+  // power gauge — LIVE: progress arc + marker at the current watts; TGT: band over the active power target
+  const pz=powZone(pw), pcol=pz?PZC[pz-1]:C.grey; const pf=Math.min(1,pw/PMAX);
+  q("#progP").setAttribute("d",arcPath(150,150,72,S0,angleOf(pf))); q("#progP").setAttribute("stroke",pcol); setLive(gP,150,150,72,pf);
+  setTarget(gP,150,150,72,15,TG.pw[0]/PMAX,TG.pw[1]/PMAX,C.cyan);
   q("#pVal").textContent=pw>0?pw:"0"; q("#pSub").textContent=pz?`Z${pz} · ${pz===7?"":Math.round(((pw/DEMO.ftp)-(pz===1?0:PB[pz-2]))/((PB[pz-1]-(pz===1?0:PB[pz-2]))||1)*100)+"%"}`:"coasting"; q("#pSub").setAttribute("fill",pz?pcol:C.mut);
-  const ps= pw<=0?"UNKNOWN":tstat(pz,2,2); pillSet("pPill",ps,ps==="UNKNOWN"?"COASTING":ps==="ON"?"ON TARGET":ps==="BELOW"?"BELOW TGT":"ABOVE TGT",true);
-  // cadence
-  q("#progC").setAttribute("d",arcPath(78,340,52,S0,S0+SW*Math.min(1,cad/CMAX))); q("#progC").setAttribute("stroke",C.violet); q("#cVal").textContent=cad>0?cad:"0";
-  const cs=tstat(cad,DEMO.cadRange[0],DEMO.cadRange[1]); pillSet("cPill",cs,cs==="UNKNOWN"?"NOT TURNING":cs==="ON"?"ON TARGET":cs==="BELOW"?"BELOW RANGE":"ABOVE RANGE",false);
-  // HR
-  const hz=hrZone(hr), hcol=hz?HZC[hz-1]:C.faint; q("#progH").setAttribute("d",arcPath(222,340,52,S0,S0+SW*Math.min(1,hr/HMAX))); q("#progH").setAttribute("stroke",hcol); q("#hVal").textContent=hr;
+  const ps= pw<=0?"UNKNOWN":tstat(pw,TG.pw[0],TG.pw[1]); pillSet("pPill",ps,ps==="UNKNOWN"?"COASTING":ps==="ON"?"ON TARGET":ps==="BELOW"?"BELOW TGT":"ABOVE TGT",true);
+  // cadence — LIVE marker + constant target range band
+  const cf=Math.min(1,cad/CMAX); q("#progC").setAttribute("d",arcPath(78,340,52,S0,angleOf(cf))); q("#progC").setAttribute("stroke",C.violet); setLive(gC,78,340,52,cf); q("#cVal").textContent=cad>0?cad:"0";
+  setTarget(gC,78,340,52,11,TG.cad[0]/CMAX,TG.cad[1]/CMAX,C.green);
+  const cs=tstat(cad,TG.cad[0],TG.cad[1]); pillSet("cPill",cs,cs==="UNKNOWN"?"NOT TURNING":cs==="ON"?"ON TARGET":cs==="BELOW"?"BELOW RANGE":"ABOVE RANGE",false);
+  // heart rate — LIVE marker + target band that moves with the phase
+  const hz=hrZone(hr), hcol=hz?HZC[hz-1]:C.faint; const hf=Math.min(1,hr/HMAX); q("#progH").setAttribute("d",arcPath(222,340,52,S0,angleOf(hf))); q("#progH").setAttribute("stroke",hcol); setLive(gH,222,340,52,hf); q("#hVal").textContent=hr;
+  setTarget(gH,222,340,52,11,TG.hr[0]/HMAX,TG.hr[1]/HMAX,C.cyan);
   const e=DEMO.hrZoneEdges, lo=hz<=1?100:e[hz-2], hi=hz>=5?185:e[hz-1]; q("#hSub").textContent=`Z${hz} · ${Math.round(Math.max(0,Math.min(1,(hr-lo)/((hi-lo)||1)))*100)}%`; q("#hSub").setAttribute("fill",hcol);
-  const hs=tstat(hz,2,2); pillSet("hPill",hs,hs==="ON"?"ON TARGET":hs==="BELOW"?"BELOW TGT":"ABOVE TGT",false);
+  const hs=tstat(hr,TG.hr[0],TG.hr[1]); pillSet("hPill",hs,hs==="ON"?"ON TARGET":hs==="BELOW"?"BELOW TGT":"ABOVE TGT",false);
   // band markers
   const mx=14+Math.min(1,pw/PMAX)*272; q("#pMark").setAttribute("d",`M${mx-5} 597 L${mx+5} 597 L${mx} 603 Z`);
   const hx=14+Math.min(1,hr/HMAX)*272; q("#hMark").setAttribute("d",`M${hx-5} 653 L${hx+5} 653 L${hx} 659 Z`);
+  q("#pTgtBar").setAttribute("x",(14+((TG.pw[0]+TG.pw[1])/2)/PMAX*272-1).toFixed(1)); q("#hTgtBar").setAttribute("x",(14+((TG.hr[0]+TG.hr[1])/2)/HMAX*272-1).toFixed(1));
   // trend (last 5 min)
   const a=Math.max(0,i-299), n=i-a+1; const maxV=Math.max(DEMO.ftp, ...S.power.slice(a,i+1))*1.05;
   const ptsP=[],ptsH=[]; for(let k=a;k<=i;k++){ const x=22+(k-a)/299*256; ptsP.push(x.toFixed(1)+","+(838-S.power[k]/maxV*110).toFixed(1)); ptsH.push(x.toFixed(1)+","+(838-(S.hr[k]-90)/100*110).toFixed(1)); }
