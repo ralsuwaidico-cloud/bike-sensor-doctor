@@ -209,8 +209,8 @@ private fun Keyed(k: Int, content: @Composable () -> Unit) { androidx.compose.ru
 private fun MetricRow(a: RiderAnswers, key: String, label: String, unit: String, min: Int, max: Int, onChange: () -> Unit, onTick: () -> Unit) {
     val m = a.metric(key)
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, fontSize = 12.sp, color = D7.Fg, modifier = Modifier.width(78.dp))
-        NumberField(a.int("$key.value"), unit, min, max, Modifier.width(88.dp).testTag("num_$key")) { v -> a.setMetric(key, v, a["$key.how"] ?: if (v != null) "estimated" else null); onChange() }
+        Text(label, fontSize = 12.sp, lineHeight = 14.sp, color = D7.Fg, modifier = Modifier.width(64.dp))
+        NumberField(a.int("$key.value"), unit, min, max, Modifier.width(80.dp).testTag("num_$key")) { v -> a.setMetric(key, v, a["$key.how"] ?: if (v != null) "estimated" else null); onChange() }
         Spacer(Modifier.width(6.dp))
         Box(Modifier.weight(1f)) {
             Chips(listOf("measured" to "Tested", "estimated" to "Est.", "app" to "App"), setOfNotNull(a["$key.how"]), small = true) { how -> a["$key.how"] = how; onTick() }

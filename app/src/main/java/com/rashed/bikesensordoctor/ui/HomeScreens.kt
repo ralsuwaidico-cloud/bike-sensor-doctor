@@ -98,15 +98,19 @@ fun HomeScreen(vm: DoctorViewModel, onStartRide: () -> Unit, onSwitch: () -> Uni
                 if (!vm.engine.prefs.powerVerified && c.powerCoaching) Text("Power targets stay off until the meter is verified under load (Settings).", fontSize = 11.sp, color = D7.Amber, modifier = Modifier.padding(top = 4.dp))
                 Spacer(Modifier.height(10.dp))
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SecondaryButton("HISTORY", Modifier.weight(1f), onClick = onHistory)
-                PrimaryButton(if (d.rideState == com.rashed.bikesensordoctor.core.RideStats.State.IDLE) "START RIDE" else "BACK TO RIDE", Modifier.weight(1.6f).testTag("start_ride"), onClick = onStartRide)
-            }
             if (d.simulated) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) { SimTag(); Spacer(Modifier.width(6.dp)); Text("Simulated sensors are running (Settings → Simulation).", fontSize = 11.sp, color = D7.Amber) }
             d.lastSavedRide?.let { Text(it, fontFamily = PlexMono, fontSize = 11.sp, color = D7.Green, modifier = Modifier.padding(top = 6.dp)) }
             Spacer(Modifier.height(12.dp))
         }
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) { TabBar("HOME", onTab) }
+        // START RIDE is always visible, whatever the scroll position
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SecondaryButton("HISTORY", Modifier.weight(1f), onClick = onHistory)
+                PrimaryButton(if (d.rideState == com.rashed.bikesensordoctor.core.RideStats.State.IDLE) "START RIDE" else "BACK TO RIDE", Modifier.weight(1.6f).testTag("start_ride"), onClick = onStartRide)
+            }
+            Spacer(Modifier.height(6.dp))
+            TabBar("HOME", onTab)
+        }
     }
 }
 

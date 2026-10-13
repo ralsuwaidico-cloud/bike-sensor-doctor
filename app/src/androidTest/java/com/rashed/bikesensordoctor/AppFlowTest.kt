@@ -126,7 +126,7 @@ class AppFlowTest {
         tap(tag("switch_rider")); tap(tag("rider_layla")); find(text("Layla")); shot("19_home_layla")
         assertTrue("Layla's FTP goal gives sweet-spot work", has(text("Sweet-spot intervals (3 × 10 min at 88–93% FTP)"), 3000) || has(text("Zone 2 endurance (easy day after weights)"), 500))
         // back to the created rider
-        tap(tag("switch_rider")); val mine = device.findObjects(By.res(java.util.regex.Pattern.compile("rider_r.*"))).firstOrNull(); assertNotNull(mine); mine!!.click()
+        tap(tag("switch_rider")); find(tag("rider_omar")); val mine = device.findObjects(By.res(java.util.regex.Pattern.compile("rider_r.*"))).firstOrNull(); assertNotNull(mine); mine!!.click()
         find(text("Rashed"), 5000)
     }
 

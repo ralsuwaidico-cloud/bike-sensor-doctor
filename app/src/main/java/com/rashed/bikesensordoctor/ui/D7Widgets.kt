@@ -114,7 +114,7 @@ fun Chips(options: List<Pair<String, String>>, selected: Set<String>, columns: I
                     val on = k in selected
                     Box(Modifier.weight(1f).background(if (on) D7.Cyan.copy(alpha = 0.14f) else D7.Panel2, RoundedCornerShape(9.dp))
                         .border(1.dp, if (on) D7.Cyan else D7.Line, RoundedCornerShape(9.dp)).clickable { onClick(k) }
-                        .padding(horizontal = 6.dp, vertical = if (small) 7.dp else 10.dp), contentAlignment = Alignment.Center) {
+                        .padding(horizontal = if (small) 3.dp else 6.dp, vertical = if (small) 7.dp else 10.dp), contentAlignment = Alignment.Center) {
                         Text(label, fontSize = if (small) 11.sp else 12.5.sp, lineHeight = 14.sp, color = if (on) D7.Cyan else D7.Fg, fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
                             maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
