@@ -85,40 +85,11 @@ jobs:
           profile: pixel_4a
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            set +e
-            exec 19> trace.txt; BASH_XTRACEFD=19; set -x
-            adb logcat -c
-            adb logcat -v time > logcat.txt 2>&1 &
-            adb shell wm size 720x1520; adb shell wm density 320
-            adb install -r BikeComputer-build*.apk && echo INSTALL_OK | tee install.txt
-            adb install -r BikeComputer-test.apk
-            for perm in BLUETOOTH_SCAN BLUETOOTH_CONNECT ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION; do adb shell pm grant com.rashed.bikesensordoctor.debug android.permission.$perm || true; done
-            adb shell settings put secure immersive_mode_confirmations confirmed; adb shell settings put global window_animation_scale 0
-            adb shell dumpsys package com.rashed.bikesensordoctor.debug | grep -E "versionName|versionCode" | tee -a install.txt
-            adb shell am instrument -w -r -e class com.rashed.bikesensordoctor.AppFlowTest com.rashed.bikesensordoctor.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee instrument.txt
-            RC=${PIPESTATUS[0]}
-            mkdir -p screens
-            adb shell run-as com.rashed.bikesensordoctor.debug ls files/screens > screenlist.txt 2>&1; cat screenlist.txt
-            for f in $(tr -d '\r' < screenlist.txt); do adb exec-out run-as com.rashed.bikesensordoctor.debug cat "files/screens/$f" > "screens/$f" || true; done
-            ls -la screens | head -60
-            adb shell "run-as com.rashed.bikesensordoctor.debug cat files/last-crash.txt" > last-crash.txt 2>/dev/null || true
-            adb shell dumpsys meminfo com.rashed.bikesensordoctor.debug > meminfo.txt 2>&1 || true
-            # Stress: 1500 random events must not crash the app
-            adb shell monkey -p com.rashed.bikesensordoctor.debug --pct-syskeys 0 --throttle 60 -s 42 1500 2>&1 | tee monkey.txt
-            MRC=${PIPESTATUS[0]}
-            adb shell "run-as com.rashed.bikesensordoctor.debug cat files/last-crash.txt" > last-crash-after-monkey.txt 2>/dev/null || true
-            sleep 2; pkill -f "adb logcat" || true
-            grep -E "FATAL EXCEPTION|AndroidRuntime: .*Exception" logcat.txt | head -50 > crashes.txt || true
-            echo "instrument rc=$RC monkey rc=$MRC" | tee -a install.txt
-            if grep -q "INSTRUMENTATION_STATUS_CODE: -1\|FAILURES!!!\|INSTRUMENTATION_RESULT: shortMsg=Process crashed" instrument.txt; then echo "UI TEST FAILED"; RC=1; fi
-            if [ -s crashes.txt ]; then echo "CRASH IN LOGCAT"; cat crashes.txt; RC=1; fi
-            if [ -s last-crash-after-monkey.txt ]; then echo "APP CRASH RECORDED"; RC=1; fi
-            exit $RC
+          script: bash ci/device-test.sh
       - name: Pack device test evidence
         if: always()
         run: |
-          mkdir -p evidence; for f in screens logcat.txt instrument.txt install.txt monkey.txt meminfo.txt crashes.txt trace.txt screenlist.txt last-crash.txt last-crash-after-monkey.txt; do [ -e "$f" ] && cp -r "$f" evidence/; done; ls -R evidence | head -80
+          mkdir -p evidence; for f in screens logcat.txt instrument.txt install.txt monkey.txt meminfo.txt crashes.txt progress.txt screenlist.txt last-crash.txt last-crash-after-monkey.txt; do [ -e "$f" ] && cp -r "$f" evidence/; done; ls -R evidence | head -80
           cd evidence && zip -qr ../device-evidence-${{ github.run_number }}.zip . && cd .. && ls -la device-evidence-*.zip
       - name: Upload device test evidence
         if: always()
