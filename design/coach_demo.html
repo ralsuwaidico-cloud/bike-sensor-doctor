@@ -716,7 +716,7 @@ function renderFeat(){ const rows=[
 
 
 /* ============================================================ RIDER PROFILE & ONBOARDING (prototype of the app flow) */
-const STORE_KEY="bc_rider_profile_v1";
+const STORE_KEY="bc_rider_profile_v2";
 let P={answers:{},completed:false,feedback:[],page:0,asked:{}};
 function loadP(){ try{ const s=localStorage.getItem(STORE_KEY); if(s){ const o=JSON.parse(s); if(o&&o.answers) P=Object.assign(P,o); } }catch(_){} }
 function saveP(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(P)); }catch(_){} }
@@ -907,7 +907,9 @@ function renderHome(){ const a=A(); const c=deriveConfig(a); const r=recommend(a
    <h3 style="margin-top:8px">Why</h3><ul>${R.why.map(x=>`<li>${x}</li>`).join("")}</ul><h3>How the coach will guide it</h3><ul>${R.how.map(x=>`<li>${x}</li>`).join("")}</ul><h3>What it will measure</h3><ul>${R.measure.map(x=>`<li>${x}</li>`).join("")}</ul></div>
   <div class="alts"><span class="muted">Change workout:</span>${r.alts.map(x=>`<button class="opt small" data-alt="${x.k}">${x.n}</button>`).join("")}${ov?`<button class="opt small" data-alt="reset">Back to recommended</button>`:""}</div>
   <div class="nav"><button class="btn reset" id="profBtn">RIDER PROFILE</button><button class="btn play" id="startRide">START RIDE</button></div>
-  <p class="muted small">Zones: ${confTag(c.zoneConfidence)} ${c.zoneConfidence}</p></div>`;
+  <p class="muted small">Zones: ${confTag(c.zoneConfidence)} ${c.zoneConfidence}</p>
+  <p class="muted small"><button class="linkbtn" id="startOver">Start over (clear all answers)</button></p></div>`;
+  el("startOver").onclick=()=>el("resetAll").click();
   el("profBtn").onclick=()=>renderSummary();
   el("startRide").onclick=()=>{ applyProfile(); show("scrLive","Live ride"); resetRide(); renderRules(c); renderCmpBox(); };
   el("scrHome").querySelectorAll("[data-alt]").forEach(b=>b.onclick=()=>{ const k=b.dataset.alt; if(k==="reset") P.override=null; else if(k==="shorter") P.override={minutes:Math.max(30,r.minutes-15),name:r.name+" (shorter)"}; else if(k==="longer") P.override={minutes:Math.min(a.longestMin||90,r.minutes+15),name:r.name+" (longer)"}; else if(k==="rec") P.override={minutes:30,name:"Recovery spin (Zone 1)",hrT:[c.hrTarget[0]-15,c.hrTarget[0]-1],pwT:null}; else if(k==="int") P.override={minutes:Math.max(45,r.minutes),name:"Intervals: 4 × 4 min Zone 3",hrT:[c.hrZoneEdges[1],c.hrZoneEdges[2]-1]}; saveP(); renderHome(); });
