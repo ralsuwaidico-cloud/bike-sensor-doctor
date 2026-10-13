@@ -177,7 +177,7 @@ class RideEngine(private val app: Application) {
     private var clockAnchorVirtual = clockAnchorReal
     /** Engine time: real time, or accelerated virtual time while a simulation runs. */
     fun now(): Long = if (clockSpeed == 1) System.currentTimeMillis() + clockOffsetMs else clockAnchorVirtual + (System.currentTimeMillis() - clockAnchorReal) * clockSpeed
-    fun setClockSpeed(speed: Int) { val v = now(); clockAnchorReal = System.currentTimeMillis(); clockAnchorVirtual = v; clockSpeed = speed.coerceIn(1, 60); clockOffsetMs = if (clockSpeed == 1) v - clockAnchorReal else 0 }
+    fun accelerateClock(speed: Int) { val v = now(); clockAnchorReal = System.currentTimeMillis(); clockAnchorVirtual = v; clockSpeed = speed.coerceIn(1, 60); clockOffsetMs = if (clockSpeed == 1) v - clockAnchorReal else 0 }
     var simulator: RideSimulator? = null; private set
 
     fun bluetoothOn() = adapter?.isEnabled == true
@@ -240,7 +240,7 @@ class RideEngine(private val app: Application) {
     fun startSimulation(speed: Int, profile: RideSimulator.Profile) {
         if (stats.state != RideStats.State.IDLE && stats.state != RideStats.State.FINISHED) return
         simulator?.stop()
-        setClockSpeed(speed)
+        accelerateClock(speed)
         simulator = RideSimulator(this, profile).also { it.start() }
         rideSource = RideSource.SIMULATED
         log.add(EventType.TEST, note = "SIMULATION started at ${speed}× (${profile.name})")
@@ -249,7 +249,7 @@ class RideEngine(private val app: Application) {
     fun stopSimulation() {
         simulator?.stop(); simulator = null
         if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) rideSource = RideSource.DEVICE
-        setClockSpeed(1); clockOffsetMs = 0
+        accelerateClock(1); clockOffsetMs = 0
         _dash.value = _dash.value.copy(simulated = false)
     }
     /** The simulator feeds samples through the same path as the real sensor. */
