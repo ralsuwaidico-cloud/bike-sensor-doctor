@@ -30,6 +30,10 @@ import java.io.File
 class AppFlowTest {
     private lateinit var device: UiDevice
     private lateinit var ctx: Context
+    /** On any failure, keep a screenshot of what the screen looked like. */
+    @get:org.junit.Rule val watcher: org.junit.rules.TestWatcher = object : org.junit.rules.TestWatcher() {
+        override fun failed(e: Throwable?, description: org.junit.runner.Description?) { runCatching { device.takeScreenshot(File(shots(), "FAIL_${description?.methodName}.png")); File(shots(), "FAIL_${description?.methodName}.txt").writeText(e?.stackTraceToString() ?: "") } }
+    }
     private val pkg = "com.rashed.bikesensordoctor.debug"
     private val T = 8_000L
 
@@ -47,8 +51,8 @@ class AppFlowTest {
     private fun launch() {
         val i = ctx.packageManager.getLaunchIntentForPackage(pkg)!!.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
         ctx.startActivity(i); device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
-        // any system permission dialog: allow (there is no Bluetooth on the emulator, so usually none)
-        repeat(3) { device.findObject(By.textContains("llow"))?.let { if (it.isClickable) { it.click(); device.waitForIdle() } } }
+        // a system permission dialog (Nearby devices / location) would cover the app: allow it
+        repeat(4) { Thread.sleep(700); device.findObject(By.clickable(true).textContains("llow"))?.let { it.click(); device.waitForIdle() } }
     }
 
     @Before fun setUp() {
