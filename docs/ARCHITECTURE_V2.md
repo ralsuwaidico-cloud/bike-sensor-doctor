@@ -162,3 +162,49 @@ Three real Apple Fitness rides (30 Sep, 5 Oct, 12 Oct) were replayed through the
   average 150–156 bpm. P2 calibration (editable zones, LTHR-based option) is required before HR coaching is useful.
 - **Power cannot be inferred from speed/HR.** The physics model gave ~80 W average at 19.7 km/h; a coherent demo needed a
   140 W "demo FTP". Only the XDS verified under load (P0-9) resolves this.
+
+## 6. Multi-rider accounts, clubs and leaderboards — production proposal (2026-10-13)
+
+Prototyped in `design/coach_demo.html` (sign-in / create account with optional PIN, switch rider, four SAMPLE riders,
+club with invite code and challenges, leaderboard with six metrics, per-rider coaching from the same replay). The APK is
+unchanged.
+
+### 6.1 Principles
+- **One rider, one record.** Profile, answers, zones, FTP, coach config, sensor pairing, rides and feedback live under a
+  rider id. The active rider id is stamped on a ride at start and never changes. No code path reads another rider's
+  private data.
+- **Fair boards only.** Ranked: weekly/monthly distance, riding time, elevation, ride count, optional Zone 2 discipline
+  (each rider judged against their own band). Never ranked: power, speed, heart rate. Simulated or replayed values are
+  flagged (`source != "device"`, `verified=false`) and excluded from any real board.
+- **Private by default.** HR, zones, FTP, weight are not shared; a per-field share flag opens them to a club.
+- **Offline first.** The Nokia records and coaches with no network; sync is a background job that can fail silently.
+
+### 6.2 Simplest practical architecture
+| Layer | Choice | Notes |
+|---|---|---|
+| Device store | Room/SQLite on Android; LittleFS records on ESP32 | Tables: riders, profiles, rides (immutable, UUID), samples (optional), feedback, sync_queue |
+| Auth | Managed provider (Supabase Auth or Firebase Auth): e-mail/password + Google | Tokens cached; app works signed-in-offline indefinitely |
+| Backend | Supabase (Postgres + row-level security + edge functions) — or Firebase equivalent | RLS: a rider reads own rows plus club members' *shared* columns via a view |
+| Tables | riders, profiles, rides, clubs, memberships, invites, challenges, board_snapshots | `rides.source ∈ {device, import}`, `verified` set by server from sensor provenance |
+| Leaderboards | Server-computed per club/period from verified rides only; scheduled job rolls week (Mon) and month | Device caches the last snapshot |
+| ESP32-S3 | BLE relay through the phone app: rides up, profile/zones/config down; optional Wi-Fi later | Same ride-record format as Android (portable core) |
+
+### 6.3 Conflict-free sync
+- Rides: append-only, idempotent upload keyed by UUID. Re-sending is harmless; nothing edits a ride after upload.
+- Profile fields: last-writer-wins per field with timestamps; fields flagged `verified` (tested LTHR, verified FTP) are
+  never overwritten by estimates (existing rule "never overwrite verified values with simulated estimates").
+- Feedback/answers: append-only log folded into the profile on the device.
+- Club membership, invites, challenges: server-authoritative; device keeps a read-only cache.
+
+### 6.4 Development stages and acceptance
+1. **Local accounts in the APK** — rider list, switch before ride, per-rider prefs/ride files. *Accept:* two riders ride
+   back-to-back; each ride file, prefs and zones belong to the right rider; switching mid-ride is blocked.
+2. **Onboarding + personal coach** — port the six-page onboarding and `deriveConfig` rules; profile drives `CoachEngine`
+   config. *Accept:* test vectors per rider config; same replay → different cue counts as in the prototype.
+3. **Cloud sign-in + sync** — profiles and rides; offline queue; conflict rules above. *Accept:* airplane-mode ride syncs
+   later exactly once; verified fields survive a stale-estimate upload.
+4. **Clubs + leaderboard** — invites, membership, server boards, verified-only rule. *Accept:* a replay/simulated ride
+   never appears on a board; week/month rollover tested with a fixed clock.
+5. **ESP32 relay** — BLE sync via phone. *Accept:* ride recorded on ESP32 appears under the correct rider on the phone
+   and in the cloud.
+6. **Verified challenges** — only after the power meter is verified under load and an FTP-test protocol is fixed.

@@ -1,7 +1,7 @@
 <div class="wrap">
-  <p class="ey">Bike Computer · Scientific Coach · personalised experience</p>
-  <h1>A coach that asks before it prescribes</h1>
-  <p class="sub">This is the Bike Computer app flow as it would run on your Nokia: first launch → onboarding → your rider profile → today's recommended workout → live coaching → post-ride questions → an updated recommendation. Answer inside the phone frame. Your answers are saved in this browser and survive reloads. Heart rate in the ride replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
+  <p class="ey">Bike Computer · Scientific Coach · riders, club and leaderboard</p>
+  <h1>One device, every rider their own coach</h1>
+  <p class="sub">The Bike Computer app flow as it would run on your Nokia: sign in or create an account → onboarding → personal home → live coaching → post-ride questions → your updated plan and club position. Switch rider before a ride and the zones, coach, sensors and history switch with you. Four fictional riders (Omar, Layla, Sami, Noor) and their SAMPLE rides are seeded so you can compare profiles, recommendations and rankings. Everything is stored in this browser only. Heart rate in the replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
   <div class="legend">
     <span><i class="tag real">REAL</i> measured</span>
     <span><i class="tag sim">SIMULATED</i> generated, assumptions stated</span>
@@ -13,8 +13,9 @@
 
   <div class="main" style="margin-top:22px">
     <div class="appframe" id="app">
-      <div class="appbar"><span id="appTitle">Bike Computer</span><span id="appStep" class="mono"></span></div>
+      <div class="appbar"><span id="appTitle">Bike Computer</span><span id="riderChip" class="chipname"></span><span id="appStep" class="mono"></span></div>
       <div id="scrWelcome" class="scr"></div>
+      <div id="scrAuth" class="scr" hidden></div>
       <div id="scrQ" class="scr" hidden></div>
       <div id="scrProfile" class="scr" hidden></div>
       <div id="scrHome" class="scr" hidden></div>
@@ -40,6 +41,10 @@
         <div class="phone" id="phone"></div>
       </div>
       <div id="scrPost" class="scr" hidden></div>
+      <div id="scrClub" class="scr" hidden></div>
+      <div id="scrBoard" class="scr" hidden></div>
+      <div id="scrMember" class="scr" hidden></div>
+      <nav class="tabs" id="tabs" hidden><button type="button" data-tab="scrHome">Home</button><button type="button" data-tab="scrClub">Club</button><button type="button" data-tab="scrBoard">Board</button><button type="button" data-tab="scrProfile">Me</button></nav>
     </div>
     <div class="col">
       <div class="card cue" id="rulesCard">
@@ -49,6 +54,10 @@
       <div class="card" id="cmpCard" hidden>
         <h3>Generic coach vs your coach — same ride, same heart rate</h3>
         <div id="cmpBox"></div>
+      </div>
+      <div class="card" id="ridersCard" hidden>
+        <h3>Same ride, four coaches <i class="tag proto">PROTOTYPE</i></h3>
+        <div id="ridersBox"></div>
       </div>
       <div class="card cue" id="cueCard" hidden>
         <h3>Latest instruction and why</h3>
@@ -93,9 +102,33 @@
   </section>
 
   <section class="block">
+    <p class="ey">Fair competition</p>
+    <h2>What the leaderboard will and will not rank</h2>
+    <div class="tbl"><table class="feat"><thead><tr><th>Ranked</th><th>Why it is fair</th><th>Never ranked</th><th>Why not</th></tr></thead><tbody>
+      <tr><td>Weekly / monthly distance</td><td>Every km counts the same regardless of bike or terrain</td><td>Average or peak power</td><td>Depends on weight, bike, meter calibration; unverifiable across riders</td></tr>
+      <tr><td>Riding time</td><td>Rewards consistency, not fitness</td><td>Average speed</td><td>Wind, terrain, traffic lights, tyres</td></tr>
+      <tr><td>Elevation gained</td><td>Barometric or map elevation, same source for all</td><td>Heart rate or zones</td><td>Private health data; max HR differs per person</td></tr>
+      <tr><td>Number of rides</td><td>Habit building</td><td>Simulated or replayed values</td><td>Replays (this page) and simulated watts/cadence/distance are flagged and excluded from any real board</td></tr>
+      <tr><td>Zone 2 discipline (optional)</td><td>Each rider is judged against their <em>own</em> band, so the score compares discipline, not fitness</td><td>Later: verified FTP-test challenges</td><td>Only after the power meter is verified under load and the test protocol is fixed</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="block">
+    <p class="ey">Production proposal</p>
+    <h2>Simplest practical architecture</h2>
+    <p class="sub">Offline-first on the Nokia, one small cloud service, and the ESP32 syncing through the phone. Nothing on this page changes the Android app yet.</p>
+    <div class="arch" id="arch">
+      <div class="box"><h3>1 · Device (Nokia app, later ESP32)</h3><ul><li>Local database (Room/SQLite) is the source of truth while riding. Rides are written as immutable records with a UUID, rider id and device id.</li><li>Rider switch loads profile, zones, coach config and sensor pairing from the local store; the active rider id is stamped on every ride record at start.</li><li>Works with no internet forever; sync is a background job.</li><li>ESP32-S3: records to flash, pairs with the phone over BLE; the phone app relays rides and receives profile/zone updates. Optional Wi-Fi sync later.</li></ul></div>
+      <div class="box"><h3>2 · Cloud (one managed backend, e.g. Supabase or Firebase)</h3><ul><li>Auth: e-mail/password and Google sign-in, tokens cached for offline use.</li><li>Tables: riders, profiles, rides, ride_samples (optional), clubs, memberships, invites, challenges. Row-level security: a rider reads only their own rows plus club members' <em>shared</em> fields.</li><li>Leaderboards computed server-side from verified rides only (device-recorded, sensor-sourced, not edited), per club, per period; a small scheduled job rolls weekly/monthly periods.</li><li>Health fields (HR, zones, FTP, body weight) are private by default; a per-field share flag exposes them to a club.</li></ul></div>
+      <div class="box"><h3>3 · Sync without conflicts</h3><ul><li>Rides: append-only, idempotent upload keyed by UUID — re-sending is harmless, two devices never edit the same ride.</li><li>Profile fields: last-writer-wins per field with a timestamp; verified values (tested LTHR, verified FTP) carry a "verified" flag and are never overwritten by estimates.</li><li>Feedback/answers: append-only log, folded into the profile on the device.</li><li>Club membership and invites: server-authoritative; the device caches a copy.</li></ul></div>
+      <div class="box"><h3>4 · Development stages</h3><ol><li><b>Local accounts</b> in the APK: rider list, switch before ride, per-rider prefs and ride files (no cloud). Acceptance: two riders, two rides, nothing mixed.</li><li><b>Onboarding + personal coach</b> ported from this prototype into the app; profile drives CoachEngine config.</li><li><b>Cloud sign-in + sync</b> of profiles and rides; offline queue; conflict rules above with tests.</li><li><b>Clubs and leaderboard</b>: invites, membership, server-computed boards, verified-rides-only rule.</li><li><b>ESP32 relay</b>: phone↔device BLE sync of rides and profiles.</li><li><b>Verified challenges</b> only after power verification and a fixed FTP-test protocol.</li></ol></div>
+    </div>
+  </section>
+
+  <section class="block">
     <p class="ey">Honesty table</p>
     <h2>What exists today versus what this demo prototypes</h2>
     <div class="tbl"><table class="feat" id="feat"></table></div>
-    <p class="note">This page is a demonstration. The production app has not been changed. Simulated watts and cadence illustrate how the coach reacts; they are not measurements of your performance. Onboarding answers are stored only in this browser.</p>
+    <p class="note">This page is a demonstration. The production app has not been changed. Simulated watts and cadence illustrate how the coach reacts; they are not measurements of your performance. Rider accounts, onboarding answers, sample riders and replay results are stored only in this browser; there is no cloud account yet.</p>
   </section>
 </div>

@@ -149,12 +149,45 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 .editrow{display:flex;flex-wrap:wrap;gap:4px 12px}.editrow .linkbtn{color:var(--cyan);font-size:11px}
 .box.fu{border-color:var(--violet)}
 @media (max-width:400px){.row3{grid-template-columns:1fr 1fr 1fr}.two-col{grid-template-columns:1fr}}
+
+/* accounts · club · leaderboard */
+.chipname{font-family:var(--display);font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:none;color:var(--fg);margin-left:auto}
+.riders{display:flex;flex-direction:column;gap:6px}
+.rider{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);color:var(--fg);border-radius:12px;padding:8px 10px;text-align:left;cursor:pointer;font-family:var(--body);width:100%}
+.rider.on{border-color:var(--cyan);background:rgba(52,231,228,.08)}
+.rider .rt{display:flex;flex-direction:column;min-width:0;flex:1}
+.rider .rn,.board .rn{font-weight:700;font-size:14px}
+.rider .rg{color:var(--mut);font-size:12px;line-height:1.3}
+.av{flex:0 0 32px;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1c3b45,#0f2a33);border:1px solid var(--cyan);color:var(--cyan);display:inline-flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:13px}
+.ridingas{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:13px}
+.ridingas>span:nth-child(2){flex:1;min-width:0}
+.btn.small{padding:7px 10px;font-size:11px}
+.tabs[hidden]{display:none}
+.tabs{display:flex;gap:4px;margin-top:8px;background:var(--panel);border-radius:14px;padding:4px}
+.tabs button{flex:1;background:none;border:0;color:var(--mut);font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;padding:9px 4px;border-radius:10px;cursor:pointer}
+.tabs button[aria-pressed=true]{background:rgba(52,231,228,.14);color:var(--cyan)}
+.chal .chrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px}
+.prog{height:6px;background:#0d1a20;border-radius:3px;margin:6px 0 4px;overflow:hidden}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:3px}
+.board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.board li{display:flex;align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.board li.me{border-color:var(--cyan);background:rgba(52,231,228,.1)}
+.board li.first .rk{color:var(--amber)}
+.board .rk{font-family:var(--display);font-weight:800;font-size:20px;width:26px;text-align:center;color:var(--mut)}
+.board .rn{flex:1;min-width:0}
+.board .sc{font-family:var(--display);font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.board .sc small{font-family:var(--mono);font-size:10px;color:var(--mut);margin-left:4px;font-weight:400}
+.demoflag{font-size:12px;color:var(--mut);margin:0}
+.tog{display:flex;gap:8px;align-items:flex-start;font-size:13px}.tog input{accent-color:var(--cyan);margin-top:2px}
+.arch{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}
+.arch ol{margin:4px 0 0;padding-left:18px;font-size:13px}.arch li{margin:3px 0}
+.tbl tr.me td{color:var(--cyan)}
 </style>
 
 <div class="wrap">
-  <p class="ey">Bike Computer · Scientific Coach · personalised experience</p>
-  <h1>A coach that asks before it prescribes</h1>
-  <p class="sub">This is the Bike Computer app flow as it would run on your Nokia: first launch → onboarding → your rider profile → today's recommended workout → live coaching → post-ride questions → an updated recommendation. Answer inside the phone frame. Your answers are saved in this browser and survive reloads. Heart rate in the ride replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
+  <p class="ey">Bike Computer · Scientific Coach · riders, club and leaderboard</p>
+  <h1>One device, every rider their own coach</h1>
+  <p class="sub">The Bike Computer app flow as it would run on your Nokia: sign in or create an account → onboarding → personal home → live coaching → post-ride questions → your updated plan and club position. Switch rider before a ride and the zones, coach, sensors and history switch with you. Four fictional riders (Omar, Layla, Sami, Noor) and their SAMPLE rides are seeded so you can compare profiles, recommendations and rankings. Everything is stored in this browser only. Heart rate in the replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
   <div class="legend">
     <span><i class="tag real">REAL</i> measured</span>
     <span><i class="tag sim">SIMULATED</i> generated, assumptions stated</span>
@@ -166,8 +199,9 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 
   <div class="main" style="margin-top:22px">
     <div class="appframe" id="app">
-      <div class="appbar"><span id="appTitle">Bike Computer</span><span id="appStep" class="mono"></span></div>
+      <div class="appbar"><span id="appTitle">Bike Computer</span><span id="riderChip" class="chipname"></span><span id="appStep" class="mono"></span></div>
       <div id="scrWelcome" class="scr"></div>
+      <div id="scrAuth" class="scr" hidden></div>
       <div id="scrQ" class="scr" hidden></div>
       <div id="scrProfile" class="scr" hidden></div>
       <div id="scrHome" class="scr" hidden></div>
@@ -193,6 +227,10 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
         <div class="phone" id="phone"></div>
       </div>
       <div id="scrPost" class="scr" hidden></div>
+      <div id="scrClub" class="scr" hidden></div>
+      <div id="scrBoard" class="scr" hidden></div>
+      <div id="scrMember" class="scr" hidden></div>
+      <nav class="tabs" id="tabs" hidden><button type="button" data-tab="scrHome">Home</button><button type="button" data-tab="scrClub">Club</button><button type="button" data-tab="scrBoard">Board</button><button type="button" data-tab="scrProfile">Me</button></nav>
     </div>
     <div class="col">
       <div class="card cue" id="rulesCard">
@@ -202,6 +240,10 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
       <div class="card" id="cmpCard" hidden>
         <h3>Generic coach vs your coach — same ride, same heart rate</h3>
         <div id="cmpBox"></div>
+      </div>
+      <div class="card" id="ridersCard" hidden>
+        <h3>Same ride, four coaches <i class="tag proto">PROTOTYPE</i></h3>
+        <div id="ridersBox"></div>
       </div>
       <div class="card cue" id="cueCard" hidden>
         <h3>Latest instruction and why</h3>
@@ -246,10 +288,34 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
   </section>
 
   <section class="block">
+    <p class="ey">Fair competition</p>
+    <h2>What the leaderboard will and will not rank</h2>
+    <div class="tbl"><table class="feat"><thead><tr><th>Ranked</th><th>Why it is fair</th><th>Never ranked</th><th>Why not</th></tr></thead><tbody>
+      <tr><td>Weekly / monthly distance</td><td>Every km counts the same regardless of bike or terrain</td><td>Average or peak power</td><td>Depends on weight, bike, meter calibration; unverifiable across riders</td></tr>
+      <tr><td>Riding time</td><td>Rewards consistency, not fitness</td><td>Average speed</td><td>Wind, terrain, traffic lights, tyres</td></tr>
+      <tr><td>Elevation gained</td><td>Barometric or map elevation, same source for all</td><td>Heart rate or zones</td><td>Private health data; max HR differs per person</td></tr>
+      <tr><td>Number of rides</td><td>Habit building</td><td>Simulated or replayed values</td><td>Replays (this page) and simulated watts/cadence/distance are flagged and excluded from any real board</td></tr>
+      <tr><td>Zone 2 discipline (optional)</td><td>Each rider is judged against their <em>own</em> band, so the score compares discipline, not fitness</td><td>Later: verified FTP-test challenges</td><td>Only after the power meter is verified under load and the test protocol is fixed</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="block">
+    <p class="ey">Production proposal</p>
+    <h2>Simplest practical architecture</h2>
+    <p class="sub">Offline-first on the Nokia, one small cloud service, and the ESP32 syncing through the phone. Nothing on this page changes the Android app yet.</p>
+    <div class="arch" id="arch">
+      <div class="box"><h3>1 · Device (Nokia app, later ESP32)</h3><ul><li>Local database (Room/SQLite) is the source of truth while riding. Rides are written as immutable records with a UUID, rider id and device id.</li><li>Rider switch loads profile, zones, coach config and sensor pairing from the local store; the active rider id is stamped on every ride record at start.</li><li>Works with no internet forever; sync is a background job.</li><li>ESP32-S3: records to flash, pairs with the phone over BLE; the phone app relays rides and receives profile/zone updates. Optional Wi-Fi sync later.</li></ul></div>
+      <div class="box"><h3>2 · Cloud (one managed backend, e.g. Supabase or Firebase)</h3><ul><li>Auth: e-mail/password and Google sign-in, tokens cached for offline use.</li><li>Tables: riders, profiles, rides, ride_samples (optional), clubs, memberships, invites, challenges. Row-level security: a rider reads only their own rows plus club members' <em>shared</em> fields.</li><li>Leaderboards computed server-side from verified rides only (device-recorded, sensor-sourced, not edited), per club, per period; a small scheduled job rolls weekly/monthly periods.</li><li>Health fields (HR, zones, FTP, body weight) are private by default; a per-field share flag exposes them to a club.</li></ul></div>
+      <div class="box"><h3>3 · Sync without conflicts</h3><ul><li>Rides: append-only, idempotent upload keyed by UUID — re-sending is harmless, two devices never edit the same ride.</li><li>Profile fields: last-writer-wins per field with a timestamp; verified values (tested LTHR, verified FTP) carry a "verified" flag and are never overwritten by estimates.</li><li>Feedback/answers: append-only log, folded into the profile on the device.</li><li>Club membership and invites: server-authoritative; the device caches a copy.</li></ul></div>
+      <div class="box"><h3>4 · Development stages</h3><ol><li><b>Local accounts</b> in the APK: rider list, switch before ride, per-rider prefs and ride files (no cloud). Acceptance: two riders, two rides, nothing mixed.</li><li><b>Onboarding + personal coach</b> ported from this prototype into the app; profile drives CoachEngine config.</li><li><b>Cloud sign-in + sync</b> of profiles and rides; offline queue; conflict rules above with tests.</li><li><b>Clubs and leaderboard</b>: invites, membership, server-computed boards, verified-rides-only rule.</li><li><b>ESP32 relay</b>: phone↔device BLE sync of rides and profiles.</li><li><b>Verified challenges</b> only after power verification and a fixed FTP-test protocol.</li></ol></div>
+    </div>
+  </section>
+
+  <section class="block">
     <p class="ey">Honesty table</p>
     <h2>What exists today versus what this demo prototypes</h2>
     <div class="tbl"><table class="feat" id="feat"></table></div>
-    <p class="note">This page is a demonstration. The production app has not been changed. Simulated watts and cadence illustrate how the coach reacts; they are not measurements of your performance. Onboarding answers are stored only in this browser.</p>
+    <p class="note">This page is a demonstration. The production app has not been changed. Simulated watts and cadence illustrate how the coach reacts; they are not measurements of your performance. Rider accounts, onboarding answers, sample riders and replay results are stored only in this browser; there is no cloud account yet.</p>
   </section>
 </div>
 
@@ -716,11 +782,64 @@ function renderFeat(){ const rows=[
 
 
 /* ============================================================ RIDER PROFILE & ONBOARDING (prototype of the app flow) */
-const STORE_KEY="bc_rider_profile_v2";
-let P={answers:{},completed:false,feedback:[],page:0,asked:{}};
-function loadP(){ try{ const s=localStorage.getItem(STORE_KEY); if(s){ const o=JSON.parse(s); if(o&&o.answers) P=Object.assign(P,o); } }catch(_){} }
-function saveP(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(P)); }catch(_){} }
+/* ============================================================ RIDER ACCOUNTS (prototype) ============================================================
+   Every rider has an isolated record: display name, optional PIN, onboarding answers, feedback, rides, sensor pairing and sharing
+   preferences. DB.activeId selects whose record P points at, so all the onboarding / coaching / post-ride code below works
+   unchanged on the active rider. Nothing is read across riders except what a rider SHARES to the club: name, distance, time,
+   elevation, ride count and achievements. Heart rate, zones, FTP and coaching stay private. */
+const STORE_KEY="bc_accounts_v1";
+const newRider=(id,name)=>({id,name,pin:null,answers:{},completed:false,feedback:[],rides:[],page:0,asked:{},override:null,
+  sensors:{power:"XDS-A001-9769",hr:null},shares:{distance:true,time:true,elevation:true,achievements:true,zones:false},created:Date.now()});
+let DB={riders:{},activeId:null,club:null,version:1};
+let P=newRider("tmp","");
+const uid=()=>"r"+Math.random().toString(36).slice(2,8);
+function loadP(){ try{ const s=localStorage.getItem(STORE_KEY); if(s){ const o=JSON.parse(s); if(o&&o.riders) DB=o; } }catch(_){} seedDemo(); if(DB.activeId&&DB.riders[DB.activeId]) P=DB.riders[DB.activeId]; }
+function saveP(){ if(P.id&&P.id!=="tmp") DB.riders[P.id]=P; try{ localStorage.setItem(STORE_KEY,JSON.stringify(DB)); }catch(_){} }
+function setActive(id){ if(!DB.riders[id]) return; DB.activeId=id; P=DB.riders[id]; saveP(); CFG=P.completed?deriveConfig(P.answers):Object.assign({},GENERIC); }
 const A=()=>P.answers;
+
+/* ---------------- fictional club riders · SAMPLE DATA (never real rides) ---------------- */
+function daysAgo(n,h){ const d=new Date(); d.setDate(d.getDate()-n); d.setHours(h||7,0,0,0); return d.toISOString(); }
+function sampleRide(dAgo,km,min,elevFt,inZone){ return {id:uid(),date:daysAgo(dAgo),km:km,sec:min*60,elevFt:elevFt,inZonePct:inZone,source:"sample",verified:false}; }
+const DEMO_RIDERS=[
+ {id:"omar",name:"Omar",sensors:{power:"XDS-B204-1182",hr:"HRM-Pro 4431"},answers:{age:38,heightCm:178,weightKg:76,experience:"experienced",primary:"endurance",goals:["endurance"],success:"z2_90pct",ridesNow:"4",daysAvail:"5",typicalMin:90,longestMin:150,other:["none"],hrMode:"know",maxHr:{how:"measured",value:186},restHr:{how:"measured",value:52},lthr:{how:"measured",value:168},pwMode:"know",ftp:{how:"measured",value:245},cadence:{how:"measured",value:88},voice:"voice",freq:"important",env:["flat","hills"],cadAdvice:"yes",heat:"yes",tone:"technical",detail:"detailed"},
+  rides:[sampleRide(1,42.3,95,310,84),sampleRide(3,31.0,70,180,88),sampleRide(5,55.2,125,520,81),sampleRide(9,38.4,85,260,79),sampleRide(12,61.0,140,640,86),sampleRide(16,29.9,65,150,90),sampleRide(20,44.1,98,330,83),sampleRide(24,36.0,80,240,85)]},
+ {id:"layla",name:"Layla",sensors:{power:"Assioma 77019",hr:"Polar H10"},answers:{age:31,heightCm:165,weightKg:58,experience:"experienced",primary:"ftp",goals:["ftp","climb"],success:"ftp5",ridesNow:"3",daysAvail:"4",typicalMin:75,longestMin:120,other:["weights"],otherDays:["Tue","Fri"],hrMode:"know",maxHr:{how:"estimated",value:190},lthr:{how:"app",value:172},pwMode:"know",ftp:{how:"measured",value:210},voice:"voice",freq:"frequent",env:["hills","indoor"],cadAdvice:"yes",heat:"no",tone:"encouraging",detail:"simple"},
+  rides:[sampleRide(0,28.6,65,710,55),sampleRide(4,24.0,55,520,48),sampleRide(7,36.5,80,980,52),sampleRide(11,22.8,50,430,60),sampleRide(14,40.2,90,1120,50),sampleRide(18,26.1,60,600,58),sampleRide(23,33.0,72,860,54)]},
+ {id:"sami",name:"Sami",sensors:{power:null,hr:"Wahoo TICKR"},answers:{age:47,heightCm:182,weightKg:88,experience:"recreational",primary:"longer",goals:["longer","event"],success:"long20",ridesNow:"2",daysAvail:"3",typicalMin:120,longestMin:180,other:["swim"],hrMode:"estimate",pwMode:"unknown",voice:"screen",freq:"important",env:["flat"],cadAdvice:"no",heat:"yes"},
+  rides:[sampleRide(0,68.0,165,420,66),sampleRide(6,52.4,130,300,70),sampleRide(13,74.5,185,480,62),sampleRide(19,47.0,115,260,71),sampleRide(26,58.3,145,350,68)]},
+ {id:"noor",name:"Noor",sensors:{power:null,hr:null},answers:{age:27,experience:"new",primary:"fitness",goals:["fitness","weight"],success:"fit3",ridesNow:"2",daysAvail:"3",typicalMin:45,longestMin:60,other:["running"],otherDays:["Wed"],hrMode:"later",pwMode:"unknown",voice:"voice",freq:"frequent",env:["flat"],cadAdvice:"yes",heat:"yes",tone:"encouraging",detail:"simple"},
+  rides:[sampleRide(1,18.2,45,90,58),sampleRide(2,15.6,40,70,63),sampleRide(4,20.1,50,110,61),sampleRide(8,16.9,42,80,66),sampleRide(10,19.4,48,95,72),sampleRide(15,14.8,38,60,69),sampleRide(17,21.0,52,120,70),sampleRide(22,17.5,44,85,74)]},
+];
+function seedDemo(){ let changed=false;
+  DEMO_RIDERS.forEach(d=>{ if(!DB.riders[d.id]){ const r=newRider(d.id,d.name); r.answers=d.answers; r.completed=true; r.rides=d.rides; r.demo=true; if(d.sensors) r.sensors=d.sensors; DB.riders[d.id]=r; changed=true; } });
+  if(!DB.club){ DB.club={name:"Dawn Riders",code:"DAWN-7Q2K",members:["omar","layla","sami","noor"],created:daysAgo(30),
+    challenges:[{id:"wkm",title:"Ride 120 km this week",target:120},{id:"time",title:"20 hours in the saddle this month",target:20},{id:"z2",title:"Three Zone 2 rides (≥80% in your band) this month",target:3}]}; changed=true; }
+  if(changed) try{ localStorage.setItem(STORE_KEY,JSON.stringify(DB)); }catch(_){} }
+
+/* ---------------- scoring · fair by design: distance, time, elevation, ride count. Never watts, never speed. ---------------- */
+function periodStart(period){ const d=new Date(); d.setHours(0,0,0,0); if(period==="week"){ d.setDate(d.getDate()-((d.getDay()+6)%7)); } else if(period==="month"){ d.setDate(1); } else return 0; return d.getTime(); }
+function periodEnd(period){ const d=new Date(); d.setHours(0,0,0,0); if(period==="week"){ d.setDate(d.getDate()+(7-(d.getDay()+6)%7)); } else { d.setMonth(d.getMonth()+1,1); } return d; }
+function ridesIn(r,period){ const t0=periodStart(period); return (r.rides||[]).filter(x=>new Date(x.date).getTime()>=t0); }
+const METRICS=[
+ {id:"wkm",label:"Weekly distance",short:"Wk km",period:"week",unit:"km",f:rs=>rs.reduce((a,x)=>a+x.km,0)},
+ {id:"mkm",label:"Monthly distance",short:"Mo km",period:"month",unit:"km",f:rs=>rs.reduce((a,x)=>a+x.km,0)},
+ {id:"time",label:"Riding time this month",short:"Time",period:"month",unit:"h",f:rs=>rs.reduce((a,x)=>a+x.sec,0)/3600},
+ {id:"elev",label:"Elevation this month",short:"Climb",period:"month",unit:"ft",f:rs=>rs.reduce((a,x)=>a+(x.elevFt||0),0)},
+ {id:"rides",label:"Rides this month",short:"Rides",period:"month",unit:"rides",f:rs=>rs.length},
+ {id:"z2",label:"Zone 2 discipline this month",short:"Z2 ★",period:"month",unit:"rides ≥80% in band",f:rs=>rs.filter(x=>x.inZonePct>=80).length},
+];
+const metricById=id=>METRICS.find(x=>x.id===id);
+function score(r,m){ return m.f(ridesIn(r,m.period)); }
+function fmtScore(v,m){ return m.unit==="h"||m.unit==="km"?v.toFixed(1):String(Math.round(v)); }
+function achievements(r){ const out=[]; const wk=ridesIn(r,"week"), mo=ridesIn(r,"month"), all=r.rides||[];
+  if(wk.length>=3) out.push({k:"consistent",t:"3 rides in a week"});
+  if(mo.filter(x=>x.inZonePct>=80).length>=3) out.push({k:"z2",t:"Zone 2 discipline ×3"});
+  if(Math.max(0,...all.map(x=>x.sec))>=2*3600) out.push({k:"long",t:"2-hour ride"});
+  if(all.reduce((a,x)=>a+x.km,0)>=200) out.push({k:"200",t:"200 km club"});
+  if(mo.reduce((a,x)=>a+(x.elevFt||0),0)>=3000) out.push({k:"climb",t:"3,000 ft this month"});
+  return out; }
+
 const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const GOALS=[["endurance","Improve aerobic endurance and Zone 2 fitness"],["fasterHr","Ride faster at the same heart rate"],["ftp","Increase FTP and sustained power"],["climb","Improve climbing"],["longer","Ride longer without getting exhausted"],["event","Prepare for a race or event"],["fitness","Improve general fitness"],["weight","Lose weight or improve body composition"],["other","Another personal goal"]];
 const goalName=k=>(GOALS.find(g=>g[0]===k)||[k,k])[1];
@@ -874,11 +993,83 @@ function recommend(a,c){
 
 
 /* ---------------- screens ---------------- */
-const SCR=["scrWelcome","scrQ","scrProfile","scrHome","scrLive","scrPost"];
-function show(id,title){ SCR.forEach(s=>el(s).hidden=(s!==id)); el("appTitle").textContent=title||"Bike Computer"; const live=id==="scrLive"; ["cueCard","logCard","memoCard","kvCard"].forEach(c=>el(c).hidden=!live); el("cmpCard").hidden=!(P.completed); window.scrollTo({top:0,behavior:"smooth"}); }
+const SCR=["scrWelcome","scrAuth","scrQ","scrProfile","scrHome","scrLive","scrPost","scrClub","scrBoard","scrMember"];
+const TABSCR=["scrHome","scrClub","scrBoard","scrMember","scrProfile"];
+function show(id,title){ SCR.forEach(s=>el(s).hidden=(s!==id)); el("appTitle").textContent=title||"Bike Computer"; const live=id==="scrLive"; ["cueCard","logCard","memoCard","kvCard"].forEach(c=>el(c).hidden=!live); el("cmpCard").hidden=!(P.completed); el("ridersCard").hidden=!(P.completed);
+  const tabs=el("tabs"); tabs.hidden=!(P.completed&&TABSCR.includes(id)); tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===id||(b.dataset.tab==="scrClub"&&id==="scrMember")||(b.dataset.tab==="scrHome"&&id==="scrProfile"))));
+  el("riderChip").textContent=P.id!=="tmp"&&P.name?P.name:""; window.scrollTo({top:0,behavior:"smooth"}); }
 function tag(cls,txt){ return `<i class="tag ${cls}">${txt}</i>`; }
 function confTag(c){ return c.startsWith("CONFIRMED")?tag("conf","CONFIRMED"):c.startsWith("PROVISIONAL")?tag("prov","PROVISIONAL"):tag("sim","GENERIC"); }
-function renderWelcome(){ el("appStep").textContent=""; el("scrWelcome").innerHTML=`<div class="hero"><p class="ey">First launch</p><h2 class="big">Let's build your personal cycling coach.</h2><p class="muted">Six short pages, about two minutes. Skip anything you don't know — the coach will say what it still needs to learn. Nothing leaves this phone.</p><button class="btn play wide" id="startOb">START</button>${P.answers&&Object.keys(P.answers).length?`<button class="btn reset wide" id="resumeOb">RESUME WHERE I STOPPED</button>`:""}</div>`;
+/* ---------------- accounts, club, leaderboard screens ---------------- */
+function initials(n){ return (n||"?").trim().split(/\s+/).map(x=>x[0]).join("").toUpperCase().slice(0,2); }
+function riderCard(r,opts){ opts=opts||{}; const ach=achievements(r); const sub=opts.sub!=null?opts.sub:(r.completed?(GOAL_SHORT[primaryGoal(r.answers)]||""):"setup not finished")+(r.pin?" · PIN":"");
+  return `<button type="button" class="rider${r.id===P.id?" on":""}" data-rid="${r.id}"><span class="av">${initials(r.name)}</span><span class="rt"><span class="rn">${r.name}${r.id===P.id&&opts.you?" (you)":""}${r.demo?` <i class="tag sim">SAMPLE</i>`:""}</span><span class="rg">${sub}${opts.ach&&ach.length?"<br>"+ach.map(a=>"★ "+a.t).join(" · "):""}</span></span></button>`; }
+
+function renderAuth(mode){ const riders=Object.values(DB.riders).filter(r=>r.id!=="tmp"); el("appStep").textContent="";
+  el("scrAuth").innerHTML=`<div class="qwrap"><p class="ey">${mode==="switch"?"Switch rider":"Sign in"}</p><h2 class="q">${mode==="switch"?"Who is riding?":"Choose your account"}</h2>
+   <p class="why">${mode==="switch"?"The next ride is saved under the rider you pick. Their zones, coach, sensor pairing and workout load with them.":"Each rider's zones, coaching and rides are kept apart. In production this is a cloud account (e-mail or Google sign-in) that also works offline; here it is a name and an optional PIN, stored in this browser."}</p>
+   <div class="riders">${riders.map(r=>riderCard(r)).join("")}</div>
+   <div id="pinRow"></div>
+   <div class="box"><h3>Create account</h3><div class="num"><input type="text" id="newName" placeholder="Display name" maxlength="18" style="flex:1 1 120px;min-width:0"><input type="number" id="newPin" placeholder="PIN (optional)" inputmode="numeric" style="width:130px"></div><button type="button" class="btn play" id="createBtn" style="margin-top:8px">CREATE &amp; SET UP</button></div>
+   ${mode==="switch"?`<div class="nav"><button type="button" class="btn reset" id="cancelSwitch">CANCEL</button></div>`:""}
+   <p class="muted small">Sample riders exist so you can see different profiles, coaching and leaderboard positions. Their rides are marked SAMPLE everywhere.</p></div>`;
+  el("scrAuth").querySelectorAll("[data-rid]").forEach(b=>b.onclick=()=>{ const r=DB.riders[b.dataset.rid]; if(!r.pin){ signIn(r.id); return; }
+    el("pinRow").innerHTML=`<div class="box"><h3>PIN for ${r.name}</h3><div class="num"><input type="number" id="pinBox" inputmode="numeric" placeholder="••••" style="width:120px"><button type="button" class="btn play" id="pinOk">UNLOCK</button></div><p id="pinErr" class="why"></p></div>`;
+    el("pinOk").onclick=()=>{ if(el("pinBox").value===String(r.pin)) signIn(r.id); else { el("pinErr").textContent="Wrong PIN."; el("pinBox").value=""; } }; el("pinBox").focus(); });
+  el("createBtn").onclick=()=>{ const n=(el("newName").value||"").trim(); if(!n){ el("newName").focus(); return; } const id=uid(); const r=newRider(id,n); const pin=(el("newPin").value||"").trim(); r.pin=pin||null; DB.riders[id]=r; setActive(id); renderWelcome(); };
+  const c=el("cancelSwitch"); if(c) c.onclick=()=>renderHome(); show("scrAuth",mode==="switch"?"Switch rider":"Sign in"); }
+function signIn(id){ setActive(id); el("rules").textContent="Answer the onboarding questions in the phone and this panel fills with the exact rules your answers trigger.";
+  if(P.id==="tmp") renderAuth("signin"); else if(P.completed){ applyProfile(); renderHome(); } else if(Object.keys(P.answers).length){ renderPage(P.page||0); } else renderWelcome(); }
+function signOut(){ DB.activeId=null; saveP(); P=newRider("tmp",""); CFG=Object.assign({},GENERIC); renderAuth("signin"); }
+
+function renderClub(){ const c=DB.club; const members=c.members.map(id=>DB.riders[id]).filter(Boolean); const inClub=c.members.includes(P.id);
+  el("scrClub").innerHTML=`<div class="qwrap"><p class="ey">Club</p><h2 class="q">${c.name}</h2><p class="why">Private group · invite code <b class="mono">${c.code}</b> · ${members.length} riders</p>
+   ${inClub?"":`<div class="box rec"><h3>You are not in this club yet</h3><p>Enter the invite code to join and compare rides.</p><div class="num" style="margin-top:6px"><input type="text" id="joinCode" placeholder="INVITE CODE" style="width:150px;text-transform:uppercase"><button type="button" class="btn play" id="joinBtn">JOIN</button></div></div>`}
+   <h3>Challenges</h3>${c.challenges.map(ch=>{ const m=metricById(ch.id); const mine=inClub?score(P,m):0; const pct=Math.min(100,Math.round(mine/ch.target*100)); const done=members.filter(r=>score(r,m)>=ch.target).length;
+     return `<div class="box chal"><div class="chrow"><b>${ch.title}</b><span class="mono">${fmtScore(mine,m)} / ${ch.target}</span></div><div class="prog"><i style="width:${pct}%"></i></div><p class="muted small">${m.period==="week"?"Resets Monday":"Resets on the 1st"} · ${done} of ${members.length} done${pct>=100?" · ★ you completed it":""}</p></div>`; }).join("")}
+   <h3>Members</h3><div class="riders">${members.map(r=>riderCard(r,{you:true,ach:true,sub:(GOAL_SHORT[primaryGoal(r.answers)]||"—")+" · "+ridesIn(r,"week").length+(ridesIn(r,"week").length===1?" ride":" rides")+" this week"})).join("")}</div>
+   <div class="box"><h3>Friends &amp; groups</h3><div class="num"><input type="text" id="friendCode" placeholder="Friend's code or link" style="flex:1 1 120px;min-width:0"><button type="button" class="btn reset" id="addFriend">ADD</button></div><div class="num" style="margin-top:6px"><button type="button" class="btn reset" id="newGroup">CREATE PRIVATE GROUP</button>${inClub&&!P.demo?`<button type="button" class="btn reset" id="leaveGroup">LEAVE</button>`:""}</div><p class="why">Your code: <b class="mono">${P.id.toUpperCase().slice(0,6)}-${(P.name||"").slice(0,3).toUpperCase()}</b>. In production the server issues codes and links that expire.</p></div>
+   <p class="muted small">Privacy: members see your name, distance, time, elevation, ride count and achievements. Heart rate, zones, FTP, power and coaching stay private unless you turn sharing on in your profile.</p></div>`;
+  el("scrClub").querySelectorAll("[data-rid]").forEach(b=>b.onclick=()=>renderMember(b.dataset.rid));
+  const j=el("joinBtn"); if(j) j.onclick=()=>{ if((el("joinCode").value||"").trim().toUpperCase()===c.code){ c.members.push(P.id); saveP(); renderClub(); } else { el("joinCode").value=""; el("joinCode").placeholder="NOT FOUND"; } };
+  el("addFriend").onclick=()=>{ const v=(el("friendCode").value||"").trim(); if(v){ el("friendCode").value=""; el("friendCode").placeholder="Request sent (demo)"; } };
+  el("newGroup").onclick=()=>{ DB.club={name:P.name+"'s group",code:"NEW-"+Math.random().toString(36).slice(2,6).toUpperCase(),members:[P.id],created:new Date().toISOString(),challenges:c.challenges}; saveP(); renderClub(); };
+  const lv=el("leaveGroup"); if(lv) lv.onclick=()=>{ c.members=c.members.filter(x=>x!==P.id); saveP(); renderClub(); };
+  show("scrClub","Club"); }
+
+let boardMetric="wkm";
+function renderBoard(){ const c=DB.club; const members=c.members.map(id=>DB.riders[id]).filter(Boolean); const m=metricById(boardMetric);
+  const rows=members.map(r=>({r,v:score(r,m)})).sort((a,b)=>b.v-a.v); const myIdx=rows.findIndex(x=>x.r.id===P.id); const unit=m.unit.startsWith("rides")?"rides":m.unit;
+  const reset=periodEnd(m.period).toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+  const hasReplay=(P.rides||[]).some(x=>x.source==="replay"); const anySample=rows.some(x=>x.r.demo);
+  el("scrBoard").innerHTML=`<div class="qwrap"><p class="ey">Leaderboard · ${c.name}</p><h2 class="q">${m.label}</h2>
+   <div class="segc tiny" id="metricSeg">${METRICS.map(x=>`<button type="button" class="chip${x.id===m.id?" on":""}" data-metric="${x.id}">${x.short}</button>`).join("")}</div>
+   <p class="why">Resets ${reset} · ranked by ${m.id==="z2"?"rides with ≥80% of time inside each rider's own Zone 2 band":unit}. Never by watts or speed: terrain, bike, weight and wind make those unfair.</p>
+   ${anySample||hasReplay?`<p class="demoflag"><i class="tag sim">DEMO BOARD</i> contains sample rides${hasReplay?" and your replays (real heart rate; distance from Apple Fitness)":""}. A production board counts only device-recorded, verified rides.</p>`:""}
+   <ol class="board">${rows.map((x,i)=>`<li class="${x.r.id===P.id?"me":""}${i===0?" first":""}"><span class="rk">${i+1}</span><span class="av">${initials(x.r.name)}</span><span class="rn">${x.r.name}${x.r.id===P.id?" (you)":""}${x.r.demo?` <i class="tag sim">SAMPLE</i>`:(x.r.rides||[]).some(q=>q.source==="replay")?` <i class="tag sim">REPLAY</i>`:""}</span><span class="sc">${fmtScore(x.v,m)}<small>${unit}</small></span></li>`).join("")}</ol>
+   <div class="box"><h3>Your position</h3><p>${myIdx<0?"You are not in this club yet — join it from the Club tab.":`<b>#${myIdx+1} of ${rows.length}</b> with ${fmtScore(rows[myIdx].v,m)} ${unit}${myIdx>0?` · ${fmtScore(rows[myIdx-1].v-rows[myIdx].v,m)} ${unit} behind ${rows[myIdx-1].r.name}`:" · leading"}. Rides counted this period: ${ridesIn(P,m.period).length}.`}</p></div>
+   ${myIdx>=0&&achievements(P).length?`<div class="box"><h3>Your achievements</h3><p>${achievements(P).map(a=>"★ "+a.t).join(" · ")}</p></div>`:""}</div>`;
+  el("metricSeg").querySelectorAll("[data-metric]").forEach(b=>b.onclick=()=>{ boardMetric=b.dataset.metric; renderBoard(); }); show("scrBoard","Leaderboard"); }
+
+function renderMember(id){ const r=DB.riders[id]; if(!r||!r.completed) return renderClub(); const a=r.answers, c=deriveConfig(a), rec=recommend.call(null,a,c); const me=r.id===P.id; const ach=achievements(r); const mo=ridesIn(r,"month");
+  const d=dryRun(c,ride);
+  el("scrMember").innerHTML=`<div class="qwrap"><p class="ey">Rider profile ${r.demo?tag("sim","SAMPLE"):""}</p><h2 class="q">${r.name}${me?" (you)":""}</h2>
+   <div class="kv prof"><span>Goal</span><span>${GOAL_SHORT[primaryGoal(a)]||"—"}</span><span>Experience</span><span>${a.experience||"—"}</span><span>This month</span><span>${mo.reduce((x,y)=>x+y.km,0).toFixed(0)} km · ${(mo.reduce((x,y)=>x+y.sec,0)/3600).toFixed(1)} h · ${mo.reduce((x,y)=>x+(y.elevFt||0),0)} ft · ${mo.length} rides</span><span>Achievements</span><span>${ach.length?ach.map(x=>"★ "+x.t).join(" · "):"none yet"}</span></div>
+   ${me||r.shares.zones?`<div class="box"><h3>${me?"Private to you":"Shared by "+r.name}</h3><p>Zone 2 ${c.hrTarget[0]}–${c.hrTarget[1]} bpm ${confTag(c.zoneConfidence)} · ${c.powerCoaching?"FTP "+c.ftp+" W":"power targets off"} · next: <b>${rec.name}</b>, ${rec.minutes} min</p></div>`
+     :`<div class="box"><h3>Coaching is personal</h3><p>${r.name}'s heart-rate zones, FTP and power are private. Their coach currently recommends <b>${rec.name}</b>, ${rec.minutes} min — on the same ${REAL[ride].date} replay their coach would speak ${d.total} times (yours: ${dryRun(deriveConfig(A()),ride).total}), because goal, calibration and preferences differ.</p></div>`}
+   ${me?`<div class="box"><h3>Sharing</h3><label class="tog"><input type="checkbox" id="shareZones" ${r.shares.zones?"checked":""}> Share my zones and next workout with club members</label></div>`:""}
+   <div class="nav"><button type="button" class="btn reset" id="backClub">‹ CLUB</button>${me?`<button type="button" class="btn play" id="editMe">EDIT PROFILE</button>`:""}</div></div>`;
+  el("backClub").onclick=()=>renderClub(); const e=el("editMe"); if(e) e.onclick=()=>renderSummary(); const sz=el("shareZones"); if(sz) sz.onchange=()=>{ r.shares.zones=sz.checked; saveP(); };
+  show("scrMember","Rider"); }
+
+/* right-hand card: the same replay run through every rider's coaching configuration */
+function renderRidersCard(){ if(!P.completed) return; const ids=[P.id].concat(Object.keys(DB.riders).filter(x=>x!==P.id&&DB.riders[x].completed)).slice(0,5);
+  el("ridersBox").innerHTML=`<p class="muted" style="font-size:12px;margin:0 0 8px">One replay (${REAL[ride].date}, your real heart rate) run through each rider's own coaching configuration. Same data, different bands, cues and next workout — because goals, calibration and preferences differ.</p><div class="tbl"><table style="min-width:0"><thead><tr><th style="text-align:left">Rider</th><th>HR band</th><th>Power band</th><th>In band</th><th>Cues</th><th style="text-align:left">Next workout</th></tr></thead><tbody>${ids.map(id=>{ const r=DB.riders[id]; const c=deriveConfig(r.answers); const d=dryRun(c,ride); const rc=recommend(r.answers,c); return `<tr${id===P.id?' class="me"':""}><td style="text-align:left">${r.name}${id===P.id?" (you)":""}</td><td>${c.hrTarget[0]}–${c.hrCap}</td><td>${c.powerCoaching?Math.round(c.ftp*0.55)+"–"+Math.round(c.ftp*0.75)+" W":"off"}</td><td>${d.inZonePct}%</td><td>${d.total}</td><td style="text-align:left">${rc.name} · ${rc.minutes} min</td></tr>`; }).join("")}</tbody></table></div>`; }
+
+/* save a finished replay under the ACTIVE rider only · source "replay" so it is never confused with a device-recorded ride */
+function recordRide(res){ P.rides=P.rides||[]; P.rides.push({id:uid(),date:new Date().toISOString(),km:res.km,sec:res.sec,elevFt:REAL[ride].elevFt||0,inZonePct:res.inZonePct,source:"replay",verified:false,hrSource:"real",rideRef:ride}); }
+
+function renderWelcome(){ if(P.id==="tmp") return renderAuth("signin"); el("appStep").textContent=""; el("scrWelcome").innerHTML=`<div class="hero"><p class="ey">New rider · ${P.name}</p><h2 class="big">Let's build your personal cycling coach, ${P.name}.</h2><p class="muted">Six short pages, about two minutes. Skip anything you don't know — the coach will say what it still needs to learn. Nothing leaves this phone.</p><button class="btn play wide" id="startOb">START</button>${P.answers&&Object.keys(P.answers).length?`<button class="btn reset wide" id="resumeOb">RESUME WHERE I STOPPED</button>`:""}</div>`;
   el("startOb").onclick=()=>{ renderPage(0); }; const r=el("resumeOb"); if(r) r.onclick=()=>renderPage(P.page||0); show("scrWelcome","Welcome"); }
 
 function profileRows(a,c){ const v=(x,alt="—")=>x==null||x===""?alt:x; const m=k=>{ const x=a[k]; if(!x||x.how==="unknown") return `<span class="muted">unknown</span>`; return `${x.value} ${tag(x.how==="measured"?"conf":"prov",x.how==="measured"?"MEASURED":x.how==="app"?"APP":x.how)}`; };
@@ -902,18 +1093,19 @@ function needs(a,c){ const n=[]; if(!c.zoneConfidence.startsWith("CONFIRMED")) n
 
 function renderHome(){ const a=A(); const c=deriveConfig(a); const r=recommend(a,c); const ov=P.override;
   const R=ov?Object.assign({},r,ov):r; el("appStep").textContent="";
-  el("scrHome").innerHTML=`<div class="qwrap home"><p class="ey">Main goal</p><h2 class="q">${goalName(primaryGoal(a))}</h2>${a.success?`<p class="muted">Success in 3 months: ${(successOptions(a).find(o=>o[0]===a.success)||["",""])[1]}</p>`:""}
+  el("scrHome").innerHTML=`<div class="qwrap home"><div class="ridingas"><span class="av">${initials(P.name)}</span><span>Riding as <b>${P.name}</b>${P.demo?" "+tag("sim","SAMPLE"):""}<br><span class="muted small">Sensors: ${P.sensors.power||"no power meter"} · ${P.sensors.hr||"no HR strap"}</span></span><button type="button" class="btn reset small" id="switchBtn">SWITCH</button></div><p class="ey">Main goal</p><h2 class="q">${goalName(primaryGoal(a))}</h2>${a.success?`<p class="muted">Success in 3 months: ${(successOptions(a).find(o=>o[0]===a.success)||["",""])[1]}</p>`:""}
   <div class="box rec"><h3>Today's recommended workout ${ov?tag("prov","YOUR CHOICE"):""}</h3><div class="recname">${R.name}</div><div class="recline"><span>${R.minutes} min</span><span>${R.hrT[0]}–${R.hrT[1]} bpm</span><span>${R.pwT?R.pwT[0]+"–"+R.pwT[1]+" W":"power off"}</span></div>
    <h3 style="margin-top:8px">Why</h3><ul>${R.why.map(x=>`<li>${x}</li>`).join("")}</ul><h3>How the coach will guide it</h3><ul>${R.how.map(x=>`<li>${x}</li>`).join("")}</ul><h3>What it will measure</h3><ul>${R.measure.map(x=>`<li>${x}</li>`).join("")}</ul></div>
   <div class="alts"><span class="muted">Change workout:</span>${r.alts.map(x=>`<button class="opt small" data-alt="${x.k}">${x.n}</button>`).join("")}${ov?`<button class="opt small" data-alt="reset">Back to recommended</button>`:""}</div>
   <div class="nav"><button class="btn reset" id="profBtn">RIDER PROFILE</button><button class="btn play" id="startRide">START RIDE</button></div>
   <p class="muted small">Zones: ${confTag(c.zoneConfidence)} ${c.zoneConfidence}</p>
-  <p class="muted small"><button class="linkbtn" id="startOver">Start over (clear all answers)</button></p></div>`;
-  el("startOver").onclick=()=>el("resetAll").click();
+  <p class="muted small"><button class="linkbtn" id="startOver">Redo my onboarding</button> · <button class="linkbtn" id="signOutBtn">Sign out</button></p></div>`;
+  el("startOver").onclick=()=>{ P.answers={}; P.completed=false; P.page=0; P.asked={}; P.override=null; saveP(); CFG=Object.assign({},GENERIC); renderWelcome(); };
+  el("signOutBtn").onclick=signOut; el("switchBtn").onclick=()=>renderAuth("switch");
   el("profBtn").onclick=()=>renderSummary();
-  el("startRide").onclick=()=>{ applyProfile(); show("scrLive","Live ride"); resetRide(); renderRules(c); renderCmpBox(); };
+  el("startRide").onclick=()=>{ applyProfile(); show("scrLive","Live ride"); resetRide(); renderRules(c); renderCmpBox(); renderRidersCard(); };
   el("scrHome").querySelectorAll("[data-alt]").forEach(b=>b.onclick=()=>{ const k=b.dataset.alt; if(k==="reset") P.override=null; else if(k==="shorter") P.override={minutes:Math.max(30,r.minutes-15),name:r.name+" (shorter)"}; else if(k==="longer") P.override={minutes:Math.min(a.longestMin||90,r.minutes+15),name:r.name+" (longer)"}; else if(k==="rec") P.override={minutes:30,name:"Recovery spin (Zone 1)",hrT:[c.hrTarget[0]-15,c.hrTarget[0]-1],pwT:null}; else if(k==="int") P.override={minutes:Math.max(45,r.minutes),name:"Intervals: 4 × 4 min Zone 3",hrT:[c.hrZoneEdges[1],c.hrZoneEdges[2]-1]}; saveP(); renderHome(); });
-  show("scrHome","Home"); renderRules(c); renderCmpBox(); }
+  show("scrHome","Home"); renderRules(c); renderCmpBox(); renderRidersCard(); }
 
 function applyProfile(){ const c=deriveConfig(A()); const keep=CFG; CFG=c; if(ST&&Object.keys(ST).length){ ORDER.forEach(id=>ST[id]=fullStats(id)); renderCmp(); renderMemoAll(); } }
 function renderRules(c){ el("rules").innerHTML=`<div class="kv" style="margin-bottom:8px"><span>Zone 2</span><span>${c.hrTarget[0]}–${c.hrTarget[1]} bpm · cap ${c.hrCap}</span><span>Power</span><span>${c.powerCoaching?Math.round(c.ftp*0.55)+"–"+Math.round(c.ftp*0.75)+" W":"off"}</span><span>Warm-up / cool-down</span><span>${c.warmupSec/60} / ${c.cooldownSec/60} min</span><span>Cadence</span><span>${c.cadenceEnabled?c.cadRange[0]+"–"+c.cadRange[1]+" rpm":"off"}</span><span>Repeat spacing</span><span>${c.sameRepeat/1000} s · keep ${c.keepRepeat?c.keepRepeat/1000+" s":"once"}</span></div><ul class="rules">${c.rules.map(r=>`<li><b>${r.what}</b><br><span class="muted">${r.because}</span></li>`).join("")}</ul>`; }
@@ -947,20 +1139,22 @@ function renderPost(){ const a=A(), c=deriveConfig(a); const res=rideResult(); c
   <div class="nav"><button class="btn reset" id="skipPost">SKIP</button><button class="btn play" id="savePost">SAVE</button></div></div>`;
   let lim=null, rec=null, fuAns=null; const S=el("scrPost"); const fu=followUp(a); S.querySelectorAll("[data-fu]").forEach(b=>b.onclick=()=>{ fuAns=b.dataset.fu; S.querySelectorAll("[data-fu]").forEach(x=>x.classList.toggle("on",x===b)); }); S.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{ lim=b.dataset.l; S.querySelectorAll("[data-l]").forEach(x=>x.classList.toggle("on",x===b)); }); S.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{ rec=b.dataset.r; S.querySelectorAll("[data-r]").forEach(x=>x.classList.toggle("on",x===b)); });
   el("rpe").oninput=()=>{ el("rpeOut").textContent=el("rpe").value; };
-  const finish=(withAnswers)=>{ const fb={date:new Date().toISOString().slice(0,10),ride,inZonePct:res.inZonePct,drift:+res.drift,avgHr:res.avgHr,sec:res.sec}; if(withAnswers){ fb.rpe=+el("rpe").value; fb.limiter=lim; fb.recovered=rec; if(fu){ P.asked=P.asked||{}; P.asked[fu.key]=true; if(fu.kind==="metric"){ const v=+(el("fuVal")||{}).value; if(v>=fu.min&&v<=fu.max) a[fu.key]={how:"estimated",value:v}; } else if(fuAns){ if(fu.key==="struggleZ2") a.struggleZ2=fuAns; else a[fu.key]=fuAns; } } } P.feedback.push(fb); P.override=null; saveP(); const after=recommend(a,c); renderNext(before,after,fb); };
+  const finish=(withAnswers)=>{ const fb={date:new Date().toISOString().slice(0,10),ride,inZonePct:res.inZonePct,drift:+res.drift,avgHr:res.avgHr,sec:res.sec}; if(withAnswers){ fb.rpe=+el("rpe").value; fb.limiter=lim; fb.recovered=rec; if(fu){ P.asked=P.asked||{}; P.asked[fu.key]=true; if(fu.kind==="metric"){ const v=+(el("fuVal")||{}).value; if(v>=fu.min&&v<=fu.max) a[fu.key]={how:"estimated",value:v}; } else if(fuAns){ if(fu.key==="struggleZ2") a.struggleZ2=fuAns; else a[fu.key]=fuAns; } } } P.feedback.push(fb); recordRide(res); P.override=null; saveP(); const after=recommend(a,c); renderNext(before,after,fb); };
   el("savePost").onclick=()=>finish(true); el("skipPost").onclick=()=>finish(false); show("scrPost","Post-ride"); }
 function renderNext(before,after,fb){ const changed=before.name!==after.name||before.minutes!==after.minutes;
   el("scrPost").innerHTML=`<div class="qwrap"><p class="ey">Next workout</p><h2 class="q">${changed?"The recommendation changed":"The recommendation stands"}</h2>
   <div class="box"><h3>Before this ride</h3><p>${before.name} · ${before.minutes} min</p></div><div class="box rec"><h3>After this ride</h3><p><b>${after.name} · ${after.minutes} min</b></p><ul>${after.why.map(x=>`<li>${x}</li>`).join("")}</ul></div>
   <p class="muted small">Used: ${fb.rpe?`your effort ${fb.rpe}/10, limiter ${fb.limiter||"—"}, recovered ${fb.recovered||"—"}, `:""}time in band ${fb.inZonePct}% (real HR), drift +${fb.drift}% (estimated). Rides on record: ${P.feedback.length}.</p>
+  ${(()=>{ if(!DB.club.members.includes(P.id)) return ""; const m=metricById("wkm"); const rows=DB.club.members.map(id=>DB.riders[id]).filter(Boolean).map(r=>({r,v:score(r,m)})).sort((x,y)=>y.v-x.v); const i=rows.findIndex(x=>x.r.id===P.id); return `<div class="box"><h3>Scoreboard ${tag("sim","DEMO BOARD")}</h3><p>This replay was saved under <b>${P.name}</b> (${fb.inZonePct}% in band, real HR). Weekly distance: now <b>#${i+1} of ${rows.length}</b> with ${fmtScore(rows[i].v,m)} km${i>0?`, ${fmtScore(rows[i-1].v-rows[i].v,m)} km behind ${rows[i-1].r.name}`:" — leading"}. <button type="button" class="linkbtn" id="toBoard">open leaderboard</button></p></div>`; })()}
   <div class="nav"><button class="btn reset" id="againBtn">RIDE AGAIN</button><button class="btn play" id="homeBtn">HOME</button></div></div>`;
-  el("homeBtn").onclick=()=>renderHome(); el("againBtn").onclick=()=>{ show("scrLive","Live ride"); resetRide(); }; show("scrPost","Next workout"); }
+  el("homeBtn").onclick=()=>renderHome(); const tb=el("toBoard"); if(tb) tb.onclick=()=>{ boardMetric="wkm"; renderBoard(); }; el("againBtn").onclick=()=>{ show("scrLive","Live ride"); resetRide(); }; show("scrPost","Next workout"); }
 
 /* ---------------- boot ---------------- */
 loadP();
 // a reset link for testing the first-launch flow again
 document.querySelector(".appbar").insertAdjacentHTML("beforeend",`<button class="linkbtn" id="resetAll" title="Clear saved answers and start over">reset</button>`);
-el("resetAll").onclick=()=>{ P={answers:{},completed:false,feedback:[],page:0,asked:{}}; try{ localStorage.removeItem(STORE_KEY);}catch(_){ } CFG=Object.assign({},GENERIC); P.override=null; renderWelcome(); el("rules").textContent="Answer the onboarding questions in the phone and this panel fills with the exact rules your answers trigger."; };
+el("resetAll").onclick=()=>{ DB={riders:{},activeId:null,club:null,version:1}; try{ localStorage.removeItem(STORE_KEY);}catch(_){ } seedDemo(); P=newRider("tmp",""); CFG=Object.assign({},GENERIC); renderAuth("signin"); el("rules").textContent="Answer the onboarding questions in the phone and this panel fills with the exact rules your answers trigger."; };
+el("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{ const t=b.dataset.tab; if(t==="scrHome") renderHome(); else if(t==="scrClub") renderClub(); else if(t==="scrBoard") renderBoard(); else if(t==="scrProfile") renderMember(P.id); });
 renderCmp(); renderMemoAll(); renderQa(); renderFeat(); resetRide();
 if(P.completed){ applyProfile(); renderHome(); } else if(Object.keys(P.answers).length){ renderPage(P.page||0); } else renderWelcome();
 
