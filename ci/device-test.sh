@@ -31,7 +31,7 @@ MRC=$?
 tail -3 monkey.txt
 adb shell run-as $PKG cat files/last-crash.txt > last-crash-after-monkey.txt 2>/dev/null
 sleep 2; kill $LOGPID 2>/dev/null
-grep -E "FATAL EXCEPTION|AndroidRuntime: .*Exception" logcat.txt | grep -v systemui | head -50 > crashes.txt
+grep -B2 -A12 "AndroidRuntime.*Process: com.rashed.bikesensordoctor" logcat.txt | head -80 > crashes.txt
 echo "instrument rc=$RC monkey rc=$MRC" | tee -a install.txt
 if grep -q "FAILURES!!!\|INSTRUMENTATION_RESULT: shortMsg=Process crashed\|INSTRUMENTATION_FAILED" instrument.txt; then echo "UI TEST FAILED"; RC=1; fi
 if [ -s crashes.txt ]; then echo "CRASH IN LOGCAT"; cat crashes.txt; RC=1; fi

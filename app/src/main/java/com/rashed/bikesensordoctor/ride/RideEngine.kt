@@ -190,7 +190,12 @@ class RideEngine(private val app: Application) {
         history = RideHistory(riders.ridesDir(r?.id ?: RiderStore.LEGACY_ID))
         setup = r?.takeIf { it.completed }?.let { RiderProfile.deriveSetup(it.answers) }
         workout = setup?.let { s -> recommendFor(r!!, s) }
-        if (setup != null) { prefs.ftpW = setup!!.ftp; prefs.maxHr = setup!!.maxHrEstimate; prefs.cadenceLow = setup!!.cadLow; prefs.cadenceHigh = setup!!.cadHigh; prefs.warmupSec = setup!!.warmupSec; prefs.cadenceCoaching = setup!!.cadenceEnabled; prefs.coachVoice = setup!!.voice }
+        setup?.let { s ->
+            prefs.ftpW = s.ftp; prefs.maxHr = s.maxHrEstimate; prefs.cadenceLow = s.cadLow; prefs.cadenceHigh = s.cadHigh; prefs.warmupSec = s.warmupSec
+            prefs.cadenceCoaching = s.cadenceEnabled; prefs.coachVoice = s.voice
+            prefs.ftpSetByUser = s.ftpKnown; prefs.maxHrSetByUser = s.zoneConfidence != ZoneConfidence.GENERIC
+            if (prefs.coachMode == "FREE") prefs.coachMode = "ZONE2"     // a rider with a profile is coached by default; Free ride can still be picked per ride
+        }
         applyCoachConfig()
         _dash.value = _dash.value.copy(riderName = r?.name ?: "", riderId = r?.id ?: "", profileCompleted = r?.completed == true, zoneConfidence = setup?.zoneConfidence?.name ?: "GENERIC",
             hrGaugeMax = setup?.maxHrEstimate ?: prefs.maxHr, workoutName = workout?.name ?: "")

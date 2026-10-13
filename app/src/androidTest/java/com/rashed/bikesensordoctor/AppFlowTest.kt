@@ -41,13 +41,18 @@ class AppFlowTest {
     private fun shot(name: String) { device.waitForIdle(1500); device.takeScreenshot(File(shots(), "$name.png")) }
     private fun tag(t: String): BySelector = By.res(t)
     private fun text(t: String): BySelector = By.text(t)
-    private fun find(sel: BySelector, timeout: Long = T): UiObject2 { val o = device.wait(Until.findObject(sel), timeout); assertNotNull("not found: $sel", o); return o!! }
+    /** Finds a node, scrolling the page down and then up if it is off-screen (the dashboard and long pages scroll). */
+    private fun find(sel: BySelector, timeout: Long = T): UiObject2 {
+        var o = device.wait(Until.findObject(sel), minOf(timeout, 3000L))
+        if (o == null) { repeat(5) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
+        if (o == null) { repeat(6) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
+        if (o == null && timeout > 3000) o = device.wait(Until.findObject(sel), timeout - 3000)
+        assertNotNull("not found: $sel", o); return o!!
+    }
+    private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.72).toInt(); val b = (device.displayHeight * 0.30).toInt(); if (up) device.swipe(w, a, w, b, 10) else device.swipe(w, b, w, a, 10); device.waitForIdle(500) }
     private fun tap(sel: BySelector, timeout: Long = T) { find(sel, timeout); retry { find(sel, 2000).click() }; device.waitForIdle(1000) }
     private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
-    private fun scrollTo(sel: BySelector): UiObject2 {
-        repeat(6) { if (has(sel, 600)) return find(sel, 1000); device.swipe(device.displayWidth / 2, (device.displayHeight * 0.75).toInt(), device.displayWidth / 2, (device.displayHeight * 0.3).toInt(), 12) }
-        return find(sel, 1000)
-    }
+    private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
     private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
     private fun launch() {
         val i = ctx.packageManager.getLaunchIntentForPackage(pkg)!!.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
