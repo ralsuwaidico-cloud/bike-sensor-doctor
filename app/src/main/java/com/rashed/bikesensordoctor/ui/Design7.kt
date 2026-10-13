@@ -102,6 +102,8 @@ fun TargetGauge(
     targetFraction: Float?, zoneTicks: FloatArray, rangeArc: Pair<Float, Float>? = null,
     sub: String?, unit: String, big: Boolean,
     status: TargetStatus, statusText: String, showTgtLabel: Boolean,
+    /** v0.8: the active TGT band (0..1 of the gauge) drawn just outside the ring; it moves with the workout phase. */
+    band: Pair<Float, Float>? = null,
 ) {
     val frac = if (value == null || max <= 0) 0f else (value.toFloat() / max).coerceIn(0f, 1f)
     val anim by animateFloatAsState(frac, tween(400), label = "g")
@@ -112,7 +114,7 @@ fun TargetGauge(
         Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
                 val sw = size.minDimension * (if (big) 0.10f else 0.105f)
-                val over = sw / 2 + (if (showTgtLabel) 20.dp.toPx() else 6.dp.toPx())
+                val over = sw / 2 + (if (showTgtLabel) 24.dp.toPx() else 10.dp.toPx())
                 val r = size.minDimension / 2 - over
                 val c = Offset(size.width / 2, size.height / 2)
                 val tl = Offset(c.x - r, c.y - r); val sz = Size(2 * r, 2 * r)
@@ -126,8 +128,27 @@ fun TargetGauge(
                     val a = START + SWEEP * zf
                     drawLine(D7.Bg, polar(c, r - sw / 2, a), polar(c, r + sw / 2, a), strokeWidth = 2.dp.toPx())
                 }
-                // white target line
-                targetFraction?.let { tf ->
+                // v0.8 TGT band: a thin arc outside the ring with end ticks, coloured by the live status; the LIVE value is the
+                // white-rimmed dot at the end of the progress arc, so "where am I vs the band" is visible at a glance.
+                band?.let { (a, b) ->
+                    val lo = a.coerceIn(0f, 1f); val hi = b.coerceIn(lo, 1f)
+                    val rb = r + sw / 2 + 5.dp.toPx(); val bw = 3.dp.toPx()
+                    val bc = D7.status(status).let { if (status == TargetStatus.UNKNOWN) D7.Fg.copy(alpha = 0.7f) else it }
+                    drawArc(bc, START + SWEEP * lo, SWEEP * (hi - lo), false, Offset(c.x - rb, c.y - rb), Size(2 * rb, 2 * rb), style = Stroke(bw, cap = StrokeCap.Butt))
+                    listOf(lo, hi).forEach { f -> val ang = START + SWEEP * f; drawLine(bc, polar(c, rb - 4.dp.toPx(), ang), polar(c, rb + 4.dp.toPx(), ang), strokeWidth = 2.dp.toPx()) }
+                    if (showTgtLabel) {
+                        val mid = START + SWEEP * (lo + hi) / 2
+                        val p = polar(c, rb + 11.dp.toPx(), mid)
+                        val m = measurer.measure("TGT", tgtStyle)
+                        drawText(m, topLeft = Offset(p.x - m.size.width / 2f, p.y - m.size.height / 2f))
+                    }
+                }
+                if (value != null && anim > 0f) {
+                    val p = polar(c, r, START + SWEEP * anim)
+                    drawCircle(D7.Fg, sw * 0.42f, p); drawCircle(col, sw * 0.28f, p)
+                }
+                // white target line (zone-based targets, when no band is active)
+                if (band == null) targetFraction?.let { tf ->
                     val a = START + SWEEP * tf
                     drawLine(D7.Fg, polar(c, r - sw / 2 - 4.dp.toPx(), a), polar(c, r + sw / 2 + 4.dp.toPx(), a), strokeWidth = 2.5.dp.toPx())
                     if (showTgtLabel) {

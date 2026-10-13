@@ -50,11 +50,16 @@ class SensorManager(
     fun removeSampleListener(l: (XdsSample, Long) -> Unit) { listeners -= l }
 
     init {
-        gatt.onXdsSample = { s, t ->
-            _lastSample.value = s to t
-            listeners.forEach { it(s, t) }
-        }
+        gatt.onXdsSample = { s, t -> dispatch(s, t) }
     }
+
+    private fun dispatch(s: XdsSample, t: Long) {
+        _lastSample.value = s to t
+        listeners.forEach { it(s, t) }
+    }
+
+    /** SIMULATED source (RideSimulator): feeds a sample through exactly the same path as a real XDS packet. */
+    fun inject(s: XdsSample, t: Long) = dispatch(s, t)
 
     /** Keep the sensor connected until [stop]. Safe to call repeatedly. */
     fun start() {

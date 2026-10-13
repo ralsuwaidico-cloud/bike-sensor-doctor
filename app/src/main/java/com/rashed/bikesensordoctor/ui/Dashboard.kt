@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -87,21 +88,71 @@ private val Dim = Color(0xFF6B828C)
 private val zoneColors = listOf(Color(0xFF7E8C93), Cyan, Green, Color(0xFF9CDB3C), Amber, Color(0xFFFF8A3D), Red)
 private fun zoneColor(z: Int) = if (z in 1..7) zoneColors[z - 1] else Dim
 
-enum class Screen { DASHBOARD, COACH, HISTORY, REPORT, SETTINGS, ADD_HR, DIAGNOSE, VERIFY_POWER }
+enum class Screen { SIGN_IN, SWITCH, WELCOME, ONBOARD, PROFILE, HOME, CLUB, BOARD, MEMBER, POST_RIDE, DASHBOARD, COACH, HISTORY, REPORT, SETTINGS, ADD_HR, DIAGNOSE, VERIFY_POWER, SIMULATION }
+
+/** Where the app opens: sign-in without a rider, onboarding until the profile is done (or skipped), else Home. A live ride goes straight to the dashboard. */
+private fun startScreen(vm: DoctorViewModel): Screen {
+    val r = vm.engine.rider ?: return Screen.SIGN_IN
+    if (vm.engine.dash.value.rideState != RideStats.State.IDLE) return Screen.DASHBOARD
+    if (r.completed) return Screen.HOME
+    return if (r.answers.isEmpty) Screen.WELCOME else Screen.ONBOARD
+}
 
 @Composable
-fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBatteryOptimization: () -> Unit) {
-    var screen by remember { mutableStateOf(Screen.DASHBOARD) }
+fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBatteryOptimization: () -> Unit, notice: String? = null, onNotice: () -> Unit = {}) {
+    var screen by remember { mutableStateOf(startScreen(vm)) }
     var reportRide by remember { mutableStateOf<Long?>(null) }
+    var page by remember { mutableStateOf(vm.engine.rider?.page?.coerceIn(0, 4) ?: 0) }
+    var member by remember { mutableStateOf("") }
+    var profileFirstTime by remember { mutableStateOf(true) }
+    val d by vm.engine.dash.collectAsStateWithLifecycle()
+    val root = if (vm.engine.rider == null) Screen.SIGN_IN else if (vm.engine.rider?.completed == true) Screen.HOME else Screen.WELCOME
+    // a finished ride with a profile → post-ride questions (once)
+    val result = d.lastResult
+    androidx.compose.runtime.LaunchedEffect(result) { if (result != null && screen != Screen.POST_RIDE) screen = Screen.POST_RIDE }
+    // Back goes to the parent screen; on the root it leaves the app as usual
+    val parent: Screen? = when (screen) {
+        Screen.SIGN_IN, Screen.HOME, Screen.WELCOME -> null
+        Screen.SWITCH -> root
+        Screen.ONBOARD -> if (page > 0) Screen.ONBOARD else Screen.WELCOME
+        Screen.PROFILE -> if (profileFirstTime) Screen.ONBOARD else Screen.HOME
+        Screen.CLUB, Screen.BOARD, Screen.POST_RIDE, Screen.DASHBOARD -> root
+        Screen.MEMBER -> Screen.CLUB
+        Screen.COACH, Screen.HISTORY -> if (d.rideState != RideStats.State.IDLE) Screen.DASHBOARD else root
+        Screen.REPORT -> Screen.HISTORY
+        Screen.SETTINGS -> if (d.rideState != RideStats.State.IDLE) Screen.DASHBOARD else root
+        Screen.ADD_HR, Screen.DIAGNOSE, Screen.VERIFY_POWER, Screen.SIMULATION -> Screen.SETTINGS
+    }
+    androidx.activity.compose.BackHandler(enabled = parent != null) {
+        if (screen == Screen.ONBOARD && page > 0) page-- else if (screen == Screen.POST_RIDE) { vm.engine.clearResult(); screen = root } else parent?.let { screen = it }
+    }
+    val goTab: (String) -> Unit = { t -> screen = when (t) { "CLUB" -> Screen.CLUB; "BOARD" -> Screen.BOARD; "ME" -> { profileFirstTime = false; Screen.PROFILE }; else -> Screen.HOME } }
+    val toRoot = { screen = startScreen(vm) }
     when (screen) {
-        Screen.DASHBOARD -> DashboardScreen(vm, onCoach = { screen = Screen.COACH }, onHistory = { screen = Screen.HISTORY }, onSettings = { screen = Screen.SETTINGS })
+        Screen.SIGN_IN -> SignInScreen(vm, switching = false, onDone = { page = vm.engine.rider?.page?.coerceIn(0, 4) ?: 0; toRoot() }, onCancel = null)
+        Screen.SWITCH -> SignInScreen(vm, switching = true, onDone = { page = vm.engine.rider?.page?.coerceIn(0, 4) ?: 0; toRoot() }, onCancel = { screen = root })
+        Screen.WELCOME -> WelcomeScreen(vm, onStart = { page = vm.engine.rider?.page?.coerceIn(0, 4) ?: 0; screen = Screen.ONBOARD },
+            onSkip = { vm.engine.rider?.let { r -> com.rashed.bikesensordoctor.core.RiderProfile.skipAll(r.answers); r.completed = true; vm.engine.saveRider() }; screen = Screen.HOME }, onSwitch = { screen = Screen.SWITCH })
+        Screen.ONBOARD -> OnboardingScreen(vm, page, onPage = { page = it }, onFinished = { profileFirstTime = vm.engine.rider?.completed != true; screen = Screen.PROFILE })
+        Screen.PROFILE -> ProfileSummaryScreen(vm, firstTime = profileFirstTime, onEdit = { page = it; screen = Screen.ONBOARD },
+            onConfirm = { vm.engine.rider?.let { r -> r.completed = true; r.page = 5; vm.engine.saveRider() }; screen = Screen.HOME },
+            onBack = { if (profileFirstTime) { page = 4; screen = Screen.ONBOARD } else screen = Screen.HOME },
+            onSignOut = { if (vm.engine.signOut()) screen = Screen.SIGN_IN })
+        Screen.HOME -> HomeScreen(vm, onStartRide = { screen = Screen.DASHBOARD }, onSwitch = { screen = Screen.SWITCH }, onProfile = { profileFirstTime = true; page = 0; screen = Screen.ONBOARD },
+            onTab = goTab, onHistory = { screen = Screen.HISTORY }, onSettings = { screen = Screen.SETTINGS })
+        Screen.CLUB -> ClubScreen(vm, onTab = goTab, onMember = { member = it; screen = Screen.MEMBER })
+        Screen.BOARD -> BoardScreen(vm, onTab = goTab)
+        Screen.MEMBER -> MemberScreen(vm, member) { screen = Screen.CLUB }
+        Screen.POST_RIDE -> { val res = result; if (res != null) PostRideScreen(vm, res, onDone = { vm.engine.clearResult(); screen = Screen.HOME }) else screen = root }
+        Screen.DASHBOARD -> DashboardScreen(vm, onCoach = { screen = Screen.COACH }, onHistory = { screen = Screen.HISTORY }, onSettings = { screen = Screen.SETTINGS }, onHome = { screen = root }, notice = notice, onNotice = onNotice)
         Screen.COACH -> CoachScreen(vm) { screen = Screen.DASHBOARD }
-        Screen.HISTORY -> HistoryScreen(vm, onBack = { screen = Screen.DASHBOARD }, onOpen = { reportRide = it; screen = Screen.REPORT })
+        Screen.HISTORY -> HistoryScreen(vm, onBack = { screen = parent ?: root }, onOpen = { reportRide = it; screen = Screen.REPORT })
         Screen.REPORT -> ReportScreen(vm, reportRide) { screen = Screen.HISTORY }
-        Screen.SETTINGS -> SettingsScreen(vm, onBack = { screen = Screen.DASHBOARD }, onDiagnose = { screen = Screen.DIAGNOSE }, onAddHr = { screen = Screen.ADD_HR }, onVerifyPower = { screen = Screen.VERIFY_POWER }, onKeepScreenOnChanged, onBatteryOptimization)
+        Screen.SETTINGS -> SettingsScreen(vm, onBack = { screen = parent ?: root }, onDiagnose = { screen = Screen.DIAGNOSE }, onAddHr = { screen = Screen.ADD_HR }, onVerifyPower = { screen = Screen.VERIFY_POWER }, onKeepScreenOnChanged, onBatteryOptimization, onSimulation = { screen = Screen.SIMULATION })
         Screen.VERIFY_POWER -> VerifyPowerScreen(vm) { screen = Screen.SETTINGS }
         Screen.ADD_HR -> AddHrScreen(vm) { screen = Screen.SETTINGS }
         Screen.DIAGNOSE -> DiagnoseScreen(vm) { screen = Screen.SETTINGS }
+        Screen.SIMULATION -> SimulationScreen(vm, onBack = { screen = Screen.SETTINGS }, onRide = { screen = Screen.DASHBOARD })
     }
 }
 
@@ -113,17 +164,26 @@ private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachC
     val targetZone = Targets.targetZone(mode)
     val ftp = prefs.ftpW; val maxHr = prefs.maxHr
     val powerMax = Targets.powerGaugeMaxW(ftp)
-    val powerStatus = Targets.power(d.powerW, ftp, targetZone)
-    val cadStatus = Targets.cadence(d.cadenceRpm, prefs.cadenceLow, prefs.cadenceHigh)
-    val hrStatus = if (d.hrConnected) Targets.hr(d.hrBpm, maxHr, targetZone) else TargetStatus.UNKNOWN
+    val tg = d.targets
+    val hrMaxGauge = maxOf(d.hrGaugeMax, 120)
+    val powerStatus = if (tg != null && tg.pwLo != null && tg.pwHi != null) bandStatus(d.powerW?.takeIf { it > 0 }, tg.pwLo, tg.pwHi) else Targets.power(d.powerW, ftp, targetZone)
+    val cadLow = tg?.cadLo ?: prefs.cadenceLow; val cadHigh = tg?.cadHi ?: prefs.cadenceHigh
+    val cadStatus = Targets.cadence(d.cadenceRpm, cadLow, cadHigh)
+    val hrLive = if (d.hrConnected || d.simulated) d.hrBpm else null
+    val hrStatus = if (tg != null) bandStatus(hrLive, tg.hrLo, tg.hrHi) else if (d.hrConnected || d.simulated) Targets.hr(d.hrBpm, maxHr, targetZone) else TargetStatus.UNKNOWN
     val powerPct = Targets.powerZonePercent(d.powerW, ftp)
-    val hrPct = Targets.hrZonePercent(d.hrBpm, maxHr)
-    val cadLow = prefs.cadenceLow; val cadHigh = prefs.cadenceHigh
+    val hrPct = Targets.hrZonePercent(d.hrBpm, hrMaxGauge)
+    // v0.8 TGT bands as gauge fractions (move with the phase ramps); null when no workout is active
+    val powerBand: Pair<Float, Float>? = tg?.let { t -> if (t.pwLo != null && t.pwHi != null) (t.pwLo.toFloat() / powerMax) to (t.pwHi.toFloat() / powerMax) else null }
+    val hrBand: Pair<Float, Float>? = tg?.let { t -> (t.hrLo.toFloat() / hrMaxGauge) to (t.hrHi.toFloat() / hrMaxGauge) }
+    val powerCoached = tg == null || (tg.pwLo != null)
+    val zoneTag = runCatching { com.rashed.bikesensordoctor.core.ZoneConfidence.valueOf(d.zoneConfidence) }.getOrDefault(com.rashed.bikesensordoctor.core.ZoneConfidence.GENERIC)
 
     // coaching presentation
     val signal = d.signal
     val coachActive = mode != CoachMode.FREE && cue.type != CueType.NONE && cue.type != CueType.NO_HR && cue.type != CueType.NO_POWER
     val coachColor: Color = when (cue.type) {
+        CueType.QUIET -> D7.Faint
         CueType.KEEP_IT_UP -> D7.Green
         CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK -> D7.Cyan
         CueType.EASE_OFF, CueType.PEDAL_SLOWER -> D7.Amber
@@ -144,11 +204,13 @@ private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachC
     }
     val phaseLabel = when (d.phase) {
         Phase.WARMUP -> "WARM-UP ${RideEngine.fmtDuration(d.warmupRemainingSec * 1000L)}"
-        Phase.MAIN -> "MAIN"
+        Phase.MAIN -> if (d.plannedSec != null) "MAIN · ${RideEngine.fmtDuration(((d.plannedSec * 1000L) - d.elapsedMs).coerceAtLeast(0))} left" else "MAIN"
         Phase.RECOVERY -> "RECOVERY"
         Phase.COOLDOWN -> "COOL-DOWN"
     }
 }
+
+private fun bandStatus(v: Int?, lo: Int, hi: Int): TargetStatus = when { v == null -> TargetStatus.UNKNOWN; v < lo -> TargetStatus.BELOW; v > hi -> TargetStatus.ABOVE; else -> TargetStatus.ON }
 
 private fun statusText(s: TargetStatus, kind: String, signal: RideStats.SignalState = RideStats.SignalState.FRESH) = when (s) {
     TargetStatus.BELOW -> if (kind == "cad") "BELOW RANGE" else "BELOW TGT"
@@ -162,7 +224,7 @@ private fun statusText(s: TargetStatus, kind: String, signal: RideStats.SignalSt
 }
 
 @Composable
-fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit) {
+fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onHome: () -> Unit = {}, notice: String? = null, onNotice: () -> Unit = {}) {
     val d by vm.engine.dash.collectAsStateWithLifecycle()
     val cue by vm.engine.cue.collectAsStateWithLifecycle()
     val prefs = vm.engine.prefs
@@ -173,6 +235,7 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
         val landscape = maxWidth > maxHeight
         if (!landscape) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp)) {
+                if (notice != null && !d.simulated) Text(notice, fontFamily = PlexMono, fontSize = 11.sp, color = D7.Amber, modifier = Modifier.fillMaxWidth().background(D7.Amber.copy(alpha = 0.12f), RoundedCornerShape(8.dp)).clickable { onNotice() }.padding(8.dp).testTag("bt_notice"))
                 Header(d, st) { vm.engine.sensor.recoverNow() }
                 Spacer(Modifier.height(6.dp))
                 Gauges(d, st)
@@ -181,7 +244,7 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
                 Spacer(Modifier.height(12.dp))
                 LowerSection(d, st, prefs)
                 Spacer(Modifier.height(14.dp))
-                Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true }, onCooldown = { vm.engine.requestCooldown() })
+                Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true }, onCooldown = { vm.engine.requestCooldown() }, onHome = onHome)
             }
         } else {
             Row(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -195,7 +258,7 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
                     Spacer(Modifier.height(12.dp))
                     LowerSection(d, st, prefs)
                     Spacer(Modifier.height(14.dp))
-                    Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true }, onCooldown = { vm.engine.requestCooldown() })
+                    Controls(d, onCoach, onHistory, onSettings, onStart = { vm.engine.startRide() }, onPause = { vm.engine.pauseRide() }, onFinish = { confirmFinish = true }, onCooldown = { vm.engine.requestCooldown() }, onHome = onHome)
                 }
             }
         }
@@ -206,7 +269,7 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
         containerColor = D7.Panel2,
         title = { Text("Finish ride?") },
         text = { Text("${RideEngine.fmtDuration(d.elapsedMs)} · avg ${d.avgPowerW} W · max ${d.maxPowerW} W — saved to History.") },
-        confirmButton = { Button(onClick = { confirmFinish = false; vm.engine.finishRide() }) { Text("FINISH & SAVE") } },
+        confirmButton = { Button(onClick = { confirmFinish = false; vm.engine.finishRide() }, modifier = Modifier.testTag("confirm_finish")) { Text("FINISH & SAVE") } },
         dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text("Keep riding") } },
     )
 }
@@ -214,11 +277,12 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
 /** 1 · Header: LIVE dot + link state (tap to reconnect), ride time, title, divider, coach-colour bar. */
 @Composable
 private fun Header(d: Dashboard, st: D7State, onReconnect: () -> Unit) {
-    val live = d.health == Health.CONNECTED_LIVE || d.health == Health.CONNECTED_IDLE
-    val (dot, text) = when (d.health) {
-        Health.CONNECTED_LIVE -> D7.Green to "LIVE"
-        Health.CONNECTED_IDLE -> D7.Cyan to "READY"
-        Health.RECONNECTING, Health.SEARCHING, Health.LINK_SILENT -> D7.Amber to "CONNECTING"
+    val live = d.health == Health.CONNECTED_LIVE || d.health == Health.CONNECTED_IDLE || d.simulated
+    val (dot, text) = when {
+        d.simulated -> D7.Amber to "SIMULATED"
+        d.health == Health.CONNECTED_LIVE -> D7.Green to "LIVE"
+        d.health == Health.CONNECTED_IDLE -> D7.Cyan to "READY"
+        d.health == Health.RECONNECTING || d.health == Health.SEARCHING || d.health == Health.LINK_SILENT -> D7.Amber to "CONNECTING"
         else -> D7.Red to "OFFLINE"
     }
     Column {
@@ -227,6 +291,7 @@ private fun Header(d: Dashboard, st: D7State, onReconnect: () -> Unit) {
             Spacer(Modifier.width(6.dp))
             Text(buildString {
                 append(text)
+                if (d.riderName.isNotEmpty()) append(" · ${d.riderName.uppercase()}")
                 d.batteryPct?.let { append(" · BAT $it%") }
                 if (!live && d.healthText.isNotEmpty()) append(" · tap to retry")
             }, fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -240,6 +305,8 @@ private fun Header(d: Dashboard, st: D7State, onReconnect: () -> Unit) {
             if (!d.powerVerified) Box(Modifier.background(D7.Amber.copy(alpha = 0.18f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp)) {
                 Text("POWER UNVERIFIED", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Amber, fontWeight = FontWeight.Bold)
             }
+            Spacer(Modifier.width(4.dp))
+            ConfidenceTag(st.zoneTag)
         }
         Spacer(Modifier.height(6.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(D7.Line))
@@ -257,25 +324,26 @@ private fun Gauges(d: Dashboard, st: D7State) {
             Modifier.fillMaxWidth(0.62f), value = d.powerW, max = st.powerMax,
             color = if (d.powerZone in 1..7) D7.powerZone(d.powerZone) else D7.Grey,
             targetFraction = Targets.powerTargetFraction(st.targetZone, st.ftp), zoneTicks = Targets.powerZoneTicks(st.ftp),
-            sub = if (d.powerZone in 1..7) "Z${d.powerZone} · ${st.powerPct ?: 0}%" else null,
-            unit = "WATTS", big = true, status = st.powerStatus, statusText = statusText(st.powerStatus, "pow", st.signal), showTgtLabel = true,
+            sub = if (!st.powerCoached) "SHOWN · NOT COACHED" else if (d.powerZone in 1..7) "Z${d.powerZone} · ${st.powerPct ?: 0}%" else null,
+            unit = "WATTS", big = true, status = if (st.powerCoached) st.powerStatus else TargetStatus.UNKNOWN,
+            statusText = if (st.powerCoached) statusText(st.powerStatus, "pow", st.signal) else (if (d.powerVerified) "FTP UNKNOWN" else "UNVERIFIED"), showTgtLabel = true, band = st.powerBand,
         )
         Spacer(Modifier.height(16.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             TargetGauge(
                 Modifier.weight(1f), value = d.cadenceRpm, max = Targets.CADENCE_GAUGE_MAX,
                 color = if (d.backwards) D7.Red else D7.Violet,
-                targetFraction = st.cadLow.toFloat() / Targets.CADENCE_GAUGE_MAX, zoneTicks = FloatArray(0),
-                rangeArc = st.cadLow.toFloat() / Targets.CADENCE_GAUGE_MAX to st.cadHigh.toFloat() / Targets.CADENCE_GAUGE_MAX,
+                targetFraction = null, zoneTicks = FloatArray(0),
+                band = st.cadLow.toFloat() / Targets.CADENCE_GAUGE_MAX to st.cadHigh.toFloat() / Targets.CADENCE_GAUGE_MAX,
                 sub = if (d.backwards) "BACKWARDS" else "${st.cadLow}–${st.cadHigh}", unit = "RPM", big = false,
                 status = st.cadStatus, statusText = statusText(st.cadStatus, "cad", st.signal), showTgtLabel = false,
             )
             TargetGauge(
-                Modifier.weight(1f), value = if (d.hrConnected) d.hrBpm else null, max = st.maxHr.coerceAtLeast(120),
-                color = if (d.hrConnected && d.hrZone in 1..5) D7.hrZone(d.hrZone) else D7.Faint,
+                Modifier.weight(1f), value = st.hrLive, max = st.hrMaxGauge,
+                color = if (st.hrLive != null && d.hrZone in 1..5) D7.hrZone(d.hrZone) else D7.Faint,
                 targetFraction = Targets.hrTargetFraction(st.targetZone), zoneTicks = Targets.hrZoneTicks,
-                sub = if (d.hrConnected && d.hrZone in 1..5) "Z${d.hrZone} · ${st.hrPct ?: 0}%" else null, unit = "BPM", big = false,
-                status = st.hrStatus, statusText = statusText(st.hrStatus, "hr"), showTgtLabel = false,
+                sub = if (st.tg != null) "${st.tg.hrLo}–${st.tg.hrHi}" else if (st.hrLive != null && d.hrZone in 1..5) "Z${d.hrZone} · ${st.hrPct ?: 0}%" else null, unit = "BPM", big = false,
+                status = st.hrStatus, statusText = statusText(st.hrStatus, "hr"), showTgtLabel = false, band = st.hrBand,
             )
         }
     }
@@ -291,7 +359,7 @@ private fun LowerSection(d: Dashboard, st: D7State, prefs: Prefs) {
         ZoneBand(listOf("Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"), D7.powerZoneColors,
             currentFraction = d.powerW?.let { Targets.gaugeFraction(it, st.powerMax) }, targetFraction = Targets.powerTargetFraction(st.targetZone, st.ftp))
         Spacer(Modifier.height(10.dp))
-        SectionLabel("HEART-RATE ZONES (begin · mid · end ticks)")
+        SectionLabel("HEART-RATE ZONES · ${st.zoneTag.name}" + (d.inZonePct?.let { " · IN BAND $it%" } ?: ""))
         ZoneBand(listOf("Z1", "Z2", "Z3", "Z4", "Z5"), D7.hrZoneColors,
             currentFraction = if (d.hrConnected) d.hrBpm?.let { Targets.gaugeFraction(it, st.maxHr) } else null, targetFraction = Targets.hrTargetFraction(st.targetZone))
         Spacer(Modifier.height(10.dp))
@@ -318,23 +386,24 @@ private fun LowerSection(d: Dashboard, st: D7State, prefs: Prefs) {
 }
 
 @Composable
-private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onStart: () -> Unit, onPause: () -> Unit, onFinish: () -> Unit, onCooldown: () -> Unit = {}) {
+private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, onSettings: () -> Unit, onStart: () -> Unit, onPause: () -> Unit, onFinish: () -> Unit, onCooldown: () -> Unit = {}, onHome: () -> Unit = {}) {
     if (d.rideState == RideStats.State.RUNNING && d.phase != Phase.COOLDOWN && d.coachMode != "FREE") {
         TextButton(onClick = onCooldown, Modifier.fillMaxWidth()) { Text("Start cool-down (no more 'push' cues)", color = D7.Violet, fontFamily = PlexMono, fontSize = 12.sp) }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.weight(1f)) {
             when (d.rideState) {
-                RideStats.State.IDLE, RideStats.State.FINISHED -> BigButton("START", D7.Green, onStart)
-                RideStats.State.RUNNING -> BigButton("PAUSE", D7.Amber, onPause)
-                RideStats.State.PAUSED -> BigButton("RESUME", D7.Green, onStart)
+                RideStats.State.IDLE, RideStats.State.FINISHED -> BigButton("START", D7.Green, onStart, "btn_start")
+                RideStats.State.RUNNING -> BigButton("PAUSE", D7.Amber, onPause, "btn_pause")
+                RideStats.State.PAUSED -> BigButton("RESUME", D7.Green, onStart, "btn_resume")
             }
         }
         if (d.rideState == RideStats.State.RUNNING || d.rideState == RideStats.State.PAUSED)
-            Box(Modifier.weight(1f)) { BigButton("FINISH", D7.Red, onFinish) }
-        Box(Modifier.width(96.dp)) { BigButton("COACH", D7.Violet, onCoach) }
+            Box(Modifier.weight(1f)) { BigButton("FINISH", D7.Red, onFinish, "btn_finish") }
+        Box(Modifier.width(96.dp)) { BigButton("COACH", D7.Violet, onCoach, "btn_coach") }
     }
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onClick = onHome, modifier = Modifier.testTag("dash_home")) { Text("‹ Home", color = D7.Cyan) }
         TextButton(onClick = onHistory) { Text("History", color = D7.Cyan) }
         Spacer(Modifier.weight(1f))
         TextButton(onClick = onSettings) { Text("⚙ Settings", color = D7.Cyan) }
@@ -342,8 +411,8 @@ private fun Controls(d: Dashboard, onCoach: () -> Unit, onHistory: () -> Unit, o
 }
 
 @Composable
-private fun BigButton(text: String, color: Color, onClick: () -> Unit) {
-    Button(onClick = onClick, Modifier.fillMaxWidth().height(60.dp), shape = RoundedCornerShape(16.dp),
+private fun BigButton(text: String, color: Color, onClick: () -> Unit, tag: String = "") {
+    Button(onClick = onClick, Modifier.fillMaxWidth().height(60.dp).testTag(tag), shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color, contentColor = D7.Ink)) {
         Text(text, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp)
     }
@@ -469,15 +538,20 @@ fun HistoryScreen(vm: DoctorViewModel, onBack: () -> Unit, onOpen: (Long) -> Uni
     var toDelete by remember { mutableStateOf<RideSummary?>(null) }
     Column(Modifier.fillMaxSize().background(Ink).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ Ride", color = Cyan, fontSize = 18.sp) }
+            TextButton(onClick = onBack) { Text("‹ Back", color = Cyan, fontSize = 18.sp) }
             Text("History", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White)
+            vm.engine.rider?.let { Text("  · ${it.name}", fontSize = 14.sp, color = Dim) }
         }
         if (rides.isEmpty()) Text("No rides yet. Press START on the dashboard.", color = Dim, modifier = Modifier.padding(top = 24.dp))
         LazyColumn {
             items(rides, key = { it.startedAtMs }) { r ->
                 Card(Modifier.fillMaxWidth().padding(vertical = 5.dp).clickable { onOpen(r.startedAtMs) }) {
                     Column(Modifier.padding(12.dp)) {
-                        Text(SimpleDateFormat("EEE d MMM · HH:mm", Locale.getDefault()).format(Date(r.startedAtMs)), fontSize = 14.sp, color = Color(0xFFBFD2DA))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(SimpleDateFormat("EEE d MMM · HH:mm", Locale.getDefault()).format(Date(r.startedAtMs)), fontSize = 14.sp, color = Color(0xFFBFD2DA), modifier = Modifier.weight(1f))
+                            if (r.source == com.rashed.bikesensordoctor.core.RideSource.SIMULATED) SimTag() else if (r.distanceKm > 0) Text(String.format(Locale.US, "%.1f km", r.distanceKm), fontSize = 12.sp, color = Dim)
+                            if (r.inZonePct >= 0) Text("  ${r.inZonePct}% in band", fontSize = 12.sp, color = Dim)
+                        }
                         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                             St(RideEngine.fmtDuration(r.durationMs), "time"); St("${r.avgPowerW}", "avg W"); St("${r.maxPowerW}", "max W"); St("${r.avgCadenceRpm}", "rpm"); St(String.format(Locale.US, "%.0f", r.energyKj), "kJ")
                         }
@@ -579,7 +653,7 @@ private fun St(v: String, l: String) {
 // ------------------------------------------------------------------ Settings
 
 @Composable
-fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Unit, onAddHr: () -> Unit, onVerifyPower: () -> Unit, onKeepScreenOnChanged: () -> Unit, onBatteryOptimization: () -> Unit) {
+fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Unit, onAddHr: () -> Unit, onVerifyPower: () -> Unit, onKeepScreenOnChanged: () -> Unit, onBatteryOptimization: () -> Unit, onSimulation: () -> Unit = {}) {
     val prefs = vm.engine.prefs
     val ctx = LocalContext.current
     val d by vm.engine.dash.collectAsStateWithLifecycle()
@@ -595,9 +669,10 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
     val powerVerified = prefs.powerVerified
     Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("‹ Ride", color = Cyan, fontSize = 18.sp) }
+            TextButton(onClick = onBack) { Text("‹ Back", color = Cyan, fontSize = 18.sp) }
             Text("Settings", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Color.White)
         }
+        vm.engine.rider?.let { r -> Text("Rider: ${r.name}" + (if (vm.engine.setup != null) " · zones and coaching come from the rider profile (ME tab)" else " · no profile yet, generic settings below apply"), fontSize = 13.sp, color = Dim) }
         Spacer(Modifier.height(10.dp))
         Button(onClick = onAddHr, Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Ink)) { Text("ADD HEART-RATE SENSOR (WHOOP / watch)", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
         Spacer(Modifier.height(14.dp))
@@ -672,8 +747,9 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
         }
         Spacer(Modifier.height(10.dp))
         TextButton(onClick = onDiagnose) { Text("Advanced: Diagnose & Repair sensor", color = Dim) }
+        TextButton(onClick = onSimulation, modifier = Modifier.testTag("open_simulation")) { Text("Test tool: simulated sensors (SIMULATED rides)", color = Dim) }
         Spacer(Modifier.height(10.dp))
-        Text("Bike Computer v0.7 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
+        Text("Bike Computer v0.8 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
     }
 }
 

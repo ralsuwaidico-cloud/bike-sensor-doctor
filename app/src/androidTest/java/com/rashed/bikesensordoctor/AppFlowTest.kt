@@ -1,0 +1,161 @@
+package com.rashed.bikesensordoctor
+
+import android.content.Context
+import android.content.Intent
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.BySelector
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.UiObject2
+import androidx.test.uiautomator.Until
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.FixMethodOrder
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
+import java.io.File
+
+/**
+ * End-to-end walk through the real app on an emulator (API 31, 720×1520 like the Nokia 5.3), driven through the
+ * accessibility tree with UiAutomator — the same way a person taps. Screenshots of every screen are saved to the
+ * app's external files dir and collected by CI. Rides use the SIMULATED sensor source; nothing here proves the
+ * XDS meter or an HR strap.
+ */
+@RunWith(AndroidJUnit4::class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+class AppFlowTest {
+    private lateinit var device: UiDevice
+    private lateinit var ctx: Context
+    private val pkg = "com.rashed.bikesensordoctor.debug"
+    private val T = 8_000L
+
+    private fun shots(): File = File(ctx.getExternalFilesDir(null), "screens").apply { mkdirs() }
+    private fun shot(name: String) { device.waitForIdle(1500); device.takeScreenshot(File(shots(), "$name.png")) }
+    private fun tag(t: String): BySelector = By.res(t)
+    private fun text(t: String): BySelector = By.text(t)
+    private fun find(sel: BySelector, timeout: Long = T): UiObject2 { val o = device.wait(Until.findObject(sel), timeout); assertNotNull("not found: $sel", o); return o!! }
+    private fun tap(sel: BySelector, timeout: Long = T) { find(sel, timeout).click(); device.waitForIdle(1000) }
+    private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
+    private fun scrollTo(sel: BySelector): UiObject2 {
+        repeat(6) { if (has(sel, 600)) return find(sel, 1000); device.swipe(device.displayWidth / 2, (device.displayHeight * 0.75).toInt(), device.displayWidth / 2, (device.displayHeight * 0.3).toInt(), 12) }
+        return find(sel, 1000)
+    }
+    private fun launch() {
+        val i = ctx.packageManager.getLaunchIntentForPackage(pkg)!!.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
+        ctx.startActivity(i); device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
+        // any system permission dialog: allow (there is no Bluetooth on the emulator, so usually none)
+        repeat(3) { device.findObject(By.textContains("llow"))?.let { if (it.isClickable) { it.click(); device.waitForIdle() } } }
+    }
+
+    @Before fun setUp() {
+        device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+        ctx = ApplicationProvider.getApplicationContext()
+        device.pressHome()
+    }
+
+    @Test fun t01_firstLaunch_signIn_create_onboard_home() {
+        launch()
+        find(tag("rider_omar"), 15_000)         // sample riders are seeded on first launch
+        shot("01_sign_in")
+        find(tag("new_name")).text = "Rashed"
+        tap(tag("create_btn"))
+        find(tag("start_onboarding")); shot("02_welcome")
+        tap(tag("start_onboarding"))
+        // page 1: about you
+        find(text("3+ yrs")); shot("03_page1")
+        tap(text("3+ yrs")); tap(tag("next_page"))
+        // page 2: goals
+        tap(text("Endurance (Zone 2)")); shot("04_page2"); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
+        // page 3: routine
+        find(text("3")); device.findObjects(text("3")).first().click(); device.findObjects(text("4")).last().click(); device.waitForIdle(); shot("05_page3"); tap(tag("next_page"))
+        // page 4: zones (I know my numbers)
+        tap(text("I know my numbers"))
+        find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"
+        device.pressBack()  // close keyboard
+        scrollTo(text("Tested")); device.findObjects(text("Tested")).let { it.first().click(); it.last().click() }; device.waitForIdle()
+        tap(text("Don't know yet")); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
+        // page 5: prefs
+        tap(text("On")); tap(text("Corrections")); shot("07_page5"); tap(tag("next_page"))
+        // page 6: summary
+        find(text("CONFIRMED"), 10_000); shot("08_profile"); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
+        find(tag("start_ride")); shot("09_home")
+        assertTrue(has(text("Riding as "), 3000))
+    }
+
+    @Test fun t02_club_board_profile_tabs_and_back() {
+        launch()
+        find(tag("start_ride"), 15_000)
+        tap(text("CLUB")); find(tag("invite_code")); shot("10_club_not_member")
+        find(tag("invite_code")).text = "DAWN-7Q2K"; device.pressBack(); tap(tag("join_btn"))
+        find(text("Leave club"), 5000); shot("11_club_joined")
+        tap(text("BOARD")); find(text("Weekly distance")); shot("12_board_week")
+        tap(text("Climb")); find(text("Elevation this month")); shot("13_board_climb")
+        tap(text("Z2 ★")); shot("14_board_z2")
+        tap(text("CLUB")); tap(tag("member_layla")); find(text("COACHING IS PERSONAL")); shot("15_member_layla")
+        device.pressBack(); find(text("Leave club"), 5000)   // back → club
+        tap(text("ME")); find(tag("confirm_profile")); shot("16_me")
+        device.pressBack(); find(tag("start_ride"))   // back from ME → Home
+        tap(text("BOARD")); device.pressBack(); find(tag("start_ride"))   // back from board → Home
+        device.pressBack()   // back on Home leaves the app
+        assertTrue(device.wait(Until.gone(By.pkg(pkg).depth(0)), 5000))
+    }
+
+    @Test fun t03_switch_rider_isolates_profiles() {
+        launch()
+        find(tag("switch_rider"), 15_000); tap(tag("switch_rider"))
+        find(tag("rider_omar")); shot("17_switch")
+        tap(tag("rider_omar"))
+        find(text("Omar"), 5000); shot("18_home_omar")
+        assertTrue(has(text("Sweet-spot intervals (3 × 10 min at 88–93% FTP)"), 500) || has(text("Zone 2 endurance"), 2000))
+        tap(tag("switch_rider")); tap(tag("rider_layla")); find(text("Layla")); shot("19_home_layla")
+        assertTrue("Layla's FTP goal gives sweet-spot work", has(text("Sweet-spot intervals (3 × 10 min at 88–93% FTP)"), 3000) || has(text("Zone 2 endurance (easy day after weights)"), 500))
+        // back to the created rider
+        tap(tag("switch_rider")); val mine = device.findObjects(By.res(java.util.regex.Pattern.compile("rider_r.*"))).firstOrNull(); assertNotNull(mine); mine!!.click()
+        find(text("Rashed"), 5000)
+    }
+
+    @Test fun t04_simulated_ride_full_session() {
+        launch()
+        find(tag("start_ride"), 15_000)
+        // Settings → simulation at 30× (a 60-min planned ride plays in ~2 min)
+        tap(text("⚙")); scrollTo(tag("open_simulation")); tap(tag("open_simulation"))
+        tap(text("30×")); shot("20_simulation"); tap(tag("sim_start"))
+        find(tag("btn_start")); shot("21_dashboard_idle")
+        tap(tag("btn_start"))
+        find(tag("btn_pause")); Thread.sleep(4000); shot("22_dashboard_warmup")
+        assertTrue("phase label", has(By.textStartsWith("WARM-UP"), 3000))
+        // pause / resume
+        tap(tag("btn_pause")); find(tag("btn_resume")); shot("23_paused"); tap(tag("btn_resume")); find(tag("btn_pause"))
+        // wait for MAIN then COOL-DOWN (planned ride ends after 60 simulated minutes)
+        assertTrue("MAIN phase reached", device.wait(Until.hasObject(By.textStartsWith("MAIN")), 60_000))
+        shot("25_dashboard_main")
+        tap(tag("btn_coach")); shot("26_coach"); device.pressBack(); find(tag("btn_pause"))
+        assertTrue("COOL-DOWN reached", device.wait(Until.hasObject(By.textStartsWith("COOL-DOWN")), 150_000))
+        shot("27_dashboard_cooldown")
+        // background + foreground must not lose the ride
+        device.pressHome(); Thread.sleep(2000); launch(); find(tag("btn_pause"), 10_000)
+        tap(tag("btn_finish")); tap(tag("confirm_finish"))
+        find(tag("save_post"), 15_000); shot("28_post_ride")
+        tap(text("Legs")); tap(text("Yes")); tap(tag("save_post"))
+        find(tag("post_home")); shot("29_next_workout"); tap(tag("post_home"))
+        find(tag("start_ride"))
+        tap(text("HISTORY")); find(text("SIMULATED"), 5000); shot("30_history")
+        device.pressBack(); find(tag("start_ride"))
+    }
+
+    @Test fun t05_restart_keeps_data_and_settings_screens() {
+        launch()
+        find(tag("start_ride"), 15_000)
+        assertTrue(has(text("Rashed"), 3000))
+        tap(text("⚙")); shot("31_settings"); scrollTo(text("Advanced: Diagnose & Repair sensor"))
+        device.pressBack(); find(tag("start_ride"))
+        // dashboard without simulation: no Bluetooth on the emulator → notice shown, app alive
+        tap(tag("start_ride")); find(tag("btn_start")); shot("32_dashboard_no_bluetooth")
+        assertTrue(has(tag("bt_notice"), 3000))
+        tap(tag("dash_home")); find(tag("start_ride"))
+    }
+}

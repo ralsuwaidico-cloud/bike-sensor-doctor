@@ -8,8 +8,9 @@ import java.io.File
 import java.util.Locale
 
 /** Local ride history: one JSON file per ride in app-private storage, plus a 1 Hz CSV of samples. */
-class RideHistory(context: Context) {
-    private val dir = File(context.filesDir, "rides").apply { mkdirs() }
+class RideHistory(val dir: File) {
+    constructor(context: Context) : this(File(context.filesDir, "rides"))
+    init { dir.mkdirs() }
 
     fun save(summary: RideSummary, samplesCsv: String): File {
         val id = "ride-${summary.startedAtMs}"
@@ -21,6 +22,8 @@ class RideHistory(context: Context) {
             put("avgCadenceRpm", summary.avgCadenceRpm); put("maxCadenceRpm", summary.maxCadenceRpm)
             put("energyKj", summary.energyKj); put("samples", summary.samples); put("rejected", summary.rejected)
             put("backwardsSamples", summary.backwardsSamples)
+            put("distanceKm", summary.distanceKm); put("elevationGainM", summary.elevationGainM); put("avgHr", summary.avgHr)
+            put("inZonePct", summary.inZonePct); put("source", summary.source.name); put("riderId", summary.riderId)
         }.toString())
         return f
     }
@@ -31,12 +34,16 @@ class RideHistory(context: Context) {
                 val o = JSONObject(f.readText())
                 RideSummary(o.getLong("startedAtMs"), o.getLong("durationMs"), o.getInt("avgPowerW"), o.getInt("maxPowerW"),
                     o.getInt("avgCadenceRpm"), o.getInt("maxCadenceRpm"), o.getDouble("energyKj"), o.getInt("samples"),
-                    o.optInt("rejected"), o.optInt("backwardsSamples"))
+                    o.optInt("rejected"), o.optInt("backwardsSamples"),
+                    o.optDouble("distanceKm", 0.0), o.optDouble("elevationGainM", 0.0), o.optInt("avgHr", 0), o.optInt("inZonePct", -1),
+                    runCatching { com.rashed.bikesensordoctor.core.RideSource.valueOf(o.optString("source", "DEVICE")) }.getOrDefault(com.rashed.bikesensordoctor.core.RideSource.DEVICE),
+                    o.optString("riderId", ""))
             }.getOrNull()
         }?.sortedByDescending { it.startedAtMs } ?: emptyList()
 
     fun delete(startedAtMs: Long) {
         File(dir, "ride-$startedAtMs.json").delete(); File(dir, "ride-$startedAtMs.csv").delete()
+        File(dir, "ride-$startedAtMs-report.json").delete(); File(dir, "ride-$startedAtMs.gpx").delete()
     }
 
     fun csvFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.csv")

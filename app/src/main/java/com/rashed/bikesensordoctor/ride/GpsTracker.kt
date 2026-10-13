@@ -16,6 +16,7 @@ data class GpsState(
     val hasFix: Boolean = false,
     val speedKmh: Double? = null,
     val distanceKm: Double = 0.0,
+    val elevationGainM: Double = 0.0,
 )
 
 /**
@@ -32,6 +33,8 @@ class GpsTracker(private val context: Context) {
     @Volatile private var recordingActive = false
     private var last: Location? = null
     private var distanceM = 0.0
+    private var gainM = 0.0
+    private var lastAlt: Double? = null
     private var listening = false
 
     private val listener = object : LocationListener {
@@ -66,7 +69,7 @@ class GpsTracker(private val context: Context) {
     /** Begin/stop accumulating distance and recording the track for the current ride. */
     fun setRecording(on: Boolean) {
         recordingActive = on
-        if (on) { points.clear(); distanceM = 0.0; last = null; _state.value = _state.value.copy(distanceKm = 0.0) }
+        if (on) { points.clear(); distanceM = 0.0; gainM = 0.0; lastAlt = null; last = null; _state.value = _state.value.copy(distanceKm = 0.0, elevationGainM = 0.0) }
     }
 
     private fun onFix(loc: Location) {
@@ -80,9 +83,16 @@ class GpsTracker(private val context: Context) {
             if (d in 0.5f..80f) distanceM += d
         }
         last = loc
+        // elevation gain: only climbs of 3 m or more between accepted fixes count, so GPS altitude noise doesn't add up
+        if (loc.hasAltitude() && (!loc.hasVerticalAccuracy() || loc.verticalAccuracyMeters <= 15f)) {
+            val a = loc.altitude; val prevAlt = lastAlt
+            if (prevAlt == null) lastAlt = a
+            else if (a - prevAlt >= 3.0) { gainM += a - prevAlt; lastAlt = a }
+            else if (a < prevAlt) lastAlt = a
+        }
         points.add(TrackPoint(System.currentTimeMillis(), loc.latitude, loc.longitude,
             if (loc.hasAltitude()) loc.altitude else null, speedKmh))
-        _state.value = _state.value.copy(distanceKm = distanceM / 1000.0)
+        _state.value = _state.value.copy(distanceKm = distanceM / 1000.0, elevationGainM = gainM)
     }
 
     fun snapshotTrack(): List<TrackPoint> = ArrayList(points)

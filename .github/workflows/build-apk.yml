@@ -1,5 +1,9 @@
-# Builds the debug APK on GitHub's servers and publishes it as a Release, so the APK can be downloaded
-# straight onto the phone from the repository's Releases page. No Android Studio needed.
+# Builds, unit-tests, emulator-tests and publishes the debug APK on GitHub's servers. No Android Studio needed.
+#  job build  : unit tests (coach vectors, profile rules, reliability) + assembleDebug → APK artifact
+#  job device : Android 12 (API 31) emulator at 720×1520 (Nokia 5.3) → installs the APK, runs AppFlowTest
+#               (sign-in, onboarding, home, club, leaderboard, rider switch, simulated 60-min ride, post-ride,
+#               history, restart), collects screenshots + logcat, fails on any crash
+#  job release: publishes the SAME tested APK as Release build-NN (only when both jobs passed)
 name: Build APK
 on:
   push:
@@ -16,21 +20,32 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Prepare Android SDK (preinstalled on the runner)
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Prepare Android SDK
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME" && ls "$ANDROID_HOME/platforms" "$ANDROID_HOME/build-tools" || true
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null
-      - name: Unit tests (parsers)
+      - name: Unit tests
         shell: bash
         run: |
           set -o pipefail
           ./gradlew --no-daemon testDebugUnitTest 2>&1 | tee ci-test-output.txt
-      - name: Build debug APK
+      - name: Build debug APK + test APK
         shell: bash
         run: |
           set -o pipefail
-          ./gradlew --no-daemon assembleDebug 2>&1 | tee -a ci-test-output.txt
+          ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest 2>&1 | tee -a ci-test-output.txt
+          cp app/build/outputs/apk/debug/app-debug.apk BikeComputer-build${{ github.run_number }}.apk
+          cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk BikeComputer-test.apk
+          sha256sum BikeComputer-build${{ github.run_number }}.apk | tee apk.sha256
+      - name: Unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            app/build/test-results/testDebugUnitTest/*.xml
+            ci-test-output.txt
       - name: Publish error log on failure
         if: failure()
         uses: softprops/action-gh-release@v2
@@ -39,16 +54,89 @@ jobs:
           name: CI error ${{ github.run_number }}
           body: "Compiler/test output for a failed run."
           files: ci-test-output.txt
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk BikeComputer-build${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: BikeComputer-apk
-          path: BikeComputer-build*.apk
-      - name: Publish release with APK
+          name: apks
+          path: |
+            BikeComputer-build*.apk
+            BikeComputer-test.apk
+            apk.sha256
+
+  device:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: apks
+      - name: Enable KVM (hardware-accelerated emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run app flow test on Android 12 emulator (720×1520, 320 dpi — Nokia 5.3 geometry)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: x86_64
+          profile: pixel_4a
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            set +e
+            adb logcat -c
+            adb logcat -v time > logcat.txt 2>&1 &
+            adb shell wm size 720x1520; adb shell wm density 320
+            adb install -r BikeComputer-build*.apk && echo INSTALL_OK | tee install.txt
+            adb install -r BikeComputer-test.apk
+            adb shell dumpsys package com.rashed.bikesensordoctor.debug | grep -E "versionName|versionCode" | tee -a install.txt
+            adb shell am instrument -w -r -e class com.rashed.bikesensordoctor.AppFlowTest com.rashed.bikesensordoctor.debug.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee instrument.txt
+            RC=${PIPESTATUS[0]}
+            mkdir -p screens && adb pull /sdcard/Android/data/com.rashed.bikesensordoctor.debug/files/screens screens || true
+            adb shell "run-as com.rashed.bikesensordoctor.debug cat files/last-crash.txt" > last-crash.txt 2>/dev/null || true
+            adb shell dumpsys meminfo com.rashed.bikesensordoctor.debug > meminfo.txt 2>&1 || true
+            # Stress: 1500 random events must not crash the app
+            adb shell monkey -p com.rashed.bikesensordoctor.debug --pct-syskeys 0 --throttle 60 -s 42 1500 2>&1 | tee monkey.txt
+            MRC=${PIPESTATUS[0]}
+            adb shell "run-as com.rashed.bikesensordoctor.debug cat files/last-crash.txt" > last-crash-after-monkey.txt 2>/dev/null || true
+            sleep 2; pkill -f "adb logcat" || true
+            grep -E "FATAL EXCEPTION|AndroidRuntime: .*Exception" logcat.txt | head -50 > crashes.txt || true
+            echo "instrument rc=$RC monkey rc=$MRC" | tee -a install.txt
+            if grep -q "INSTRUMENTATION_STATUS_CODE: -1\|FAILURES!!!\|INSTRUMENTATION_RESULT: shortMsg=Process crashed" instrument.txt; then echo "UI TEST FAILED"; RC=1; fi
+            if [ -s crashes.txt ]; then echo "CRASH IN LOGCAT"; cat crashes.txt; RC=1; fi
+            if [ -s last-crash-after-monkey.txt ]; then echo "APP CRASH RECORDED"; RC=1; fi
+            exit $RC
+      - name: Upload device test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: device-test-evidence
+          path: |
+            screens/
+            logcat.txt
+            instrument.txt
+            install.txt
+            monkey.txt
+            meminfo.txt
+            crashes.txt
+            last-crash*.txt
+
+  release:
+    needs: [build, device]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: apks
+      - name: Publish release with the tested APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: Bike Computer build ${{ github.run_number }}
-          body: "Debug APK for Nokia 5.3 / Android 12. Open this page on the phone, tap the .apk file below, then Install."
-          files: BikeComputer-build*.apk
+          body: "Debug APK for Nokia 5.3 / Android 12 — this exact file passed the unit tests and the emulator UI test of this run. Open this page on the phone, tap the .apk file below, then Install."
+          files: |
+            BikeComputer-build*.apk
+            apk.sha256

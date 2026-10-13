@@ -205,4 +205,11 @@ data class RideSummary(
     val samples: Int,
     val rejected: Int,
     val backwardsSamples: Int,
+    // ---- v0.8: what the leaderboard and post-ride analysis need (defaults keep old files readable) ----
+    val distanceKm: Double = 0.0,
+    val elevationGainM: Double = 0.0,
+    val avgHr: Int = 0,
+    val inZonePct: Int = -1,              // -1 = no target band was active
+    val source: RideSource = RideSource.DEVICE,
+    val riderId: String = "",
 )

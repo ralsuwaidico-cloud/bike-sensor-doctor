@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 
 class MainActivity : ComponentActivity() {
     private val vm: DoctorViewModel by viewModels()
@@ -47,7 +50,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private var tts: android.speech.tts.TextToSpeech? = null
+    private var askedOnce = false
 
+    @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         crashText.value = runCatching { com.rashed.bikesensordoctor.BikeApp.crashFile(this).takeIf { it.exists() }?.readText() }.getOrNull()
@@ -60,7 +65,8 @@ class MainActivity : ComponentActivity() {
                     background = Color(0xFF000000), surface = Color(0xFF0E1A1F), onBackground = Color(0xFFF2F7F9), onSurface = Color(0xFFF2F7F9),
                 ),
             ) {
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                // testTagsAsResourceId: lets UI automation (and the release checks) find controls by their test tags
+                Surface(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }, color = MaterialTheme.colorScheme.background) {
                     val crash = crashText.value
                     if (crash != null) {
                         CrashGate(crash, onSend = { shareCrash(crash) }, onContinue = { com.rashed.bikesensordoctor.BikeApp.crashFile(this).delete(); crashText.value = null })
@@ -68,11 +74,21 @@ class MainActivity : ComponentActivity() {
                         val startup = androidx.compose.runtime.remember { runCatching { vm.also { wireEngine(it) } } }
                         startup.fold(
                             onSuccess = { viewModel ->
-                                when {
-                                    !permissionGranted.value -> PermissionGate { permissionLauncher.launch(Permissions.required() + extraPermissions()) }
-                                    !bluetoothOn.value -> BluetoothGate { enableBtLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
-                                    else -> BikeComputerApp(viewModel, onKeepScreenOnChanged = { applyKeepScreenOn() }, onBatteryOptimization = { requestIgnoreBatteryOptimizations() })
+                                // v0.8: Bluetooth problems no longer block the whole app (profile, club, history and the simulated
+                                // test ride work without it). The dashboard shows a tappable notice instead.
+                                val hasBt = viewModel.engine.hasBluetooth()
+                                val notice = when {
+                                    !hasBt -> "No Bluetooth on this device — sensors unavailable (simulated sensors still work)"
+                                    !permissionGranted.value -> "Bluetooth permission needed for the sensors — tap to allow"
+                                    !bluetoothOn.value -> "Bluetooth is off — tap to turn it on"
+                                    else -> null
                                 }
+                                BikeComputerApp(viewModel, onKeepScreenOnChanged = { applyKeepScreenOn() }, onBatteryOptimization = { requestIgnoreBatteryOptimizations() },
+                                    notice = notice, onNotice = {
+                                        if (!permissionGranted.value) permissionLauncher.launch(Permissions.required() + extraPermissions())
+                                        else if (!bluetoothOn.value) runCatching { enableBtLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }
+                                    })
+                                androidx.compose.runtime.LaunchedEffect(Unit) { if (hasBt && !permissionGranted.value && !askedOnce) { askedOnce = true; permissionLauncher.launch(Permissions.required() + extraPermissions()) } }
                             },
                             onFailure = { e ->
                                 val text = "Startup failed: ${e.javaClass.name}: ${e.message}\n" + e.stackTraceToString()

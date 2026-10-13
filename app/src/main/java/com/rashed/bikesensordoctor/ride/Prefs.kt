@@ -2,17 +2,22 @@ package com.rashed.bikesensordoctor.ride
 
 import android.content.Context
 
-/** Small settings store (SharedPreferences). */
-class Prefs(context: Context) {
-    private val sp = context.getSharedPreferences("bike_computer", Context.MODE_PRIVATE)
+/**
+ * Small settings store (SharedPreferences), one per rider account. The original single-rider store ("bike_computer")
+ * belongs to the first/migrated rider ([RiderStore.LEGACY_ID]) so an update never loses existing settings.
+ * The XDS power meter is on the bike, not the rider, so its pairing lives in the shared store for every rider.
+ */
+class Prefs(context: Context, val riderId: String = RiderStore.LEGACY_ID) {
+    private val sp = context.getSharedPreferences(if (riderId == RiderStore.LEGACY_ID) "bike_computer" else "bike_computer_$riderId", Context.MODE_PRIVATE)
+    private val shared = context.getSharedPreferences("bike_computer", Context.MODE_PRIVATE)
 
     var lastSensorAddress: String?
-        get() = sp.getString("sensor_addr", DEFAULT_ADDRESS)
-        set(v) = sp.edit().putString("sensor_addr", v).apply()
+        get() = shared.getString("sensor_addr", DEFAULT_ADDRESS)
+        set(v) = shared.edit().putString("sensor_addr", v).apply()
 
     var lastSensorName: String?
-        get() = sp.getString("sensor_name", DEFAULT_NAME)
-        set(v) = sp.edit().putString("sensor_name", v).apply()
+        get() = shared.getString("sensor_name", DEFAULT_NAME)
+        set(v) = shared.edit().putString("sensor_name", v).apply()
 
     var keepScreenOn: Boolean
         get() = sp.getBoolean("keep_screen_on", true)

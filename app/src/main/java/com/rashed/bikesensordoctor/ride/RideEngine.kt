@@ -16,6 +16,15 @@ import com.rashed.bikesensordoctor.core.CoachInput
 import com.rashed.bikesensordoctor.core.Signal
 import com.rashed.bikesensordoctor.core.RideStats
 import com.rashed.bikesensordoctor.core.XdsSample
+import com.rashed.bikesensordoctor.core.ActiveTargets
+import com.rashed.bikesensordoctor.core.CoachSetup
+import com.rashed.bikesensordoctor.core.RideFeedback
+import com.rashed.bikesensordoctor.core.RideSource
+import com.rashed.bikesensordoctor.core.RiderProfile
+import com.rashed.bikesensordoctor.core.Workout
+import com.rashed.bikesensordoctor.core.WorkoutPlan
+import com.rashed.bikesensordoctor.core.WorkoutTargets
+import com.rashed.bikesensordoctor.core.ZoneConfidence
 import com.rashed.bikesensordoctor.log.EventLog
 import com.rashed.bikesensordoctor.log.EventType
 import kotlinx.coroutines.CoroutineScope
@@ -78,7 +87,22 @@ data class Dashboard(
     val coachReason: String = "",
     val restoredRide: Boolean = false,                                // true after a ride was recovered from a checkpoint
     val engineError: String? = null,                                  // last refresh() exception, shown on the dashboard instead of crashing
+    // ---- v0.8: rider accounts + workout targets ----
+    val riderName: String = "",
+    val riderId: String = "",
+    val profileCompleted: Boolean = false,
+    val workoutName: String = "",
+    val plannedSec: Int? = null,
+    val targets: ActiveTargets? = null,                               // active bands this second (phase ramps applied); null = zone-based
+    val hrGaugeMax: Int = 185,
+    val zoneConfidence: String = "GENERIC",
+    val inZonePct: Int? = null,                                       // % of MAIN-phase seconds inside the HR (or power) band
+    val simulated: Boolean = false,                                   // SIMULATED sensor source active (never a real ride)
+    val lastResult: RideResult? = null,                               // set when a ride finishes; the post-ride screen consumes it
 )
+
+/** What a finished ride measured, for the post-ride questions and the next recommendation. */
+data class RideResult(val startedAtMs: Long, val durationSec: Int, val km: Double, val avgHr: Int, val inZonePct: Int, val driftPct: Int, val cues: Int, val source: RideSource, val saved: String)
 
 /**
  * App-wide singleton (via BikeApp) that owns the Bluetooth link, the portable RideStats, and persistence.
@@ -88,11 +112,13 @@ class RideEngine(private val app: Application) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val adapter = (app.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
     val log = EventLog()
-    val prefs = Prefs(app)
+    val riders = RiderStore(app).also { it.migrateIfNeeded() }
+    var rider: Rider? = riders.activeId?.let { riders.load(it) }; private set
+    var prefs = Prefs(app, rider?.id ?: RiderStore.LEGACY_ID); private set
     val scanner = BleScanner(adapter, log)
     val gatt = GattManager(app, adapter, log)
     val sensor = SensorManager(app, adapter, log, scanner, gatt, prefs, scope)
-    val history = RideHistory(app)
+    var history = RideHistory(riders.ridesDir(rider?.id ?: RiderStore.LEGACY_ID)); private set
     val stats = RideStats()
     val gps = GpsTracker(app)
     val hr = com.rashed.bikesensordoctor.ble.HrSensor(app, adapter, log)
@@ -130,14 +156,109 @@ class RideEngine(private val app: Application) {
 
     // ---- P1: session phases ----
     private var cooldownRequestedAtMs: Long? = null   // riding-time at which COOL DOWN was pressed
-    private val plan get() = SessionPlan(warmupSec = prefs.warmupSec)
 
     private val recentPower = ArrayDeque<Int>()
     @Volatile var lastEngineError: String? = null; private set
 
+    // ---- v0.8: profile-driven workout ----
+    var setup: CoachSetup? = null; private set
+    var workout: Workout? = null; private set
+    private var plan = SessionPlan()
+    private var workoutPlan: WorkoutPlan? = null
+    private var inZoneSec = 0; private var mainSec = 0
+    private val hrFirstHalf = ArrayList<Int>(); private val hrSecondHalf = ArrayList<Int>()
+    private var cueCount = 0
+    private var rideSource = RideSource.DEVICE
+
+    // ---- clock (the simulator can run it faster than real time) ----
+    @Volatile var clockOffsetMs = 0L
+    @Volatile var clockSpeed = 1
+    private var clockAnchorReal = System.currentTimeMillis()
+    private var clockAnchorVirtual = clockAnchorReal
+    /** Engine time: real time, or accelerated virtual time while a simulation runs. */
+    fun now(): Long = if (clockSpeed == 1) System.currentTimeMillis() + clockOffsetMs else clockAnchorVirtual + (System.currentTimeMillis() - clockAnchorReal) * clockSpeed
+    fun setClockSpeed(speed: Int) { val v = now(); clockAnchorReal = System.currentTimeMillis(); clockAnchorVirtual = v; clockSpeed = speed.coerceIn(1, 60); clockOffsetMs = if (clockSpeed == 1) v - clockAnchorReal else 0 }
+    var simulator: RideSimulator? = null; private set
+
     fun bluetoothOn() = adapter?.isEnabled == true
+    fun hasBluetooth() = adapter != null
+
+    // ---------------------------------------------------------------- v0.8 rider accounts
+    private fun loadRiderState() {
+        val r = rider
+        prefs = Prefs(app, r?.id ?: RiderStore.LEGACY_ID)
+        history = RideHistory(riders.ridesDir(r?.id ?: RiderStore.LEGACY_ID))
+        setup = r?.takeIf { it.completed }?.let { RiderProfile.deriveSetup(it.answers) }
+        workout = setup?.let { s -> recommendFor(r!!, s) }
+        if (setup != null) { prefs.ftpW = setup!!.ftp; prefs.maxHr = setup!!.maxHrEstimate; prefs.cadenceLow = setup!!.cadLow; prefs.cadenceHigh = setup!!.cadHigh; prefs.warmupSec = setup!!.warmupSec; prefs.cadenceCoaching = setup!!.cadenceEnabled; prefs.coachVoice = setup!!.voice }
+        applyCoachConfig()
+        _dash.value = _dash.value.copy(riderName = r?.name ?: "", riderId = r?.id ?: "", profileCompleted = r?.completed == true, zoneConfidence = setup?.zoneConfidence?.name ?: "GENERIC",
+            hrGaugeMax = setup?.maxHrEstimate ?: prefs.maxHr, workoutName = workout?.name ?: "")
+        val hrAddr = prefs.hrAddress
+        if (hrAddr != null && hrAddr != hr.state.value.address) { hr.disconnect(); hr.connect(hrAddr, prefs.hrName) }
+        else if (hrAddr == null && hr.state.value.connected) hr.disconnect()
+    }
+
+    private fun recommendFor(r: Rider, s: CoachSetup): Workout {
+        val cal = java.util.Calendar.getInstance(); val today = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
+        return RiderProfile.recommend(r.answers, s, r.feedback, today)
+    }
+
+    /** Switch the active rider. Refused while a ride is running or paused, so a ride can never change owner. */
+    fun switchRider(id: String): Boolean {
+        if (stats.state == RideStats.State.RUNNING || stats.state == RideStats.State.PAUSED) return false
+        val r = riders.load(id) ?: return false
+        riders.activeId = id; rider = r
+        log.add(EventType.INFO, note = "Rider switched to ${r.name} (${r.id})")
+        loadRiderState()
+        return true
+    }
+    fun signOut(): Boolean { if (stats.state == RideStats.State.RUNNING || stats.state == RideStats.State.PAUSED) return false; riders.activeId = null; rider = null; loadRiderState(); return true }
+    fun createRider(name: String, pin: String?): Rider { val r = riders.create(name, pin); switchRider(r.id); return r }
+    /** Persist edits to the active rider's profile and re-derive the coach. */
+    fun saveRider() { rider?.let { riders.save(it) }; loadRiderState() }
+    fun chooseWorkout(w: Workout?) { workout = w ?: setup?.let { s -> rider?.let { recommendFor(it, s) } }; _dash.value = _dash.value.copy(workoutName = workout?.name ?: "") }
+    fun refreshRecommendation() { workout = setup?.let { s -> rider?.let { recommendFor(it, s) } }; _dash.value = _dash.value.copy(workoutName = workout?.name ?: "") }
+
+    /** Record the rider's post-ride answers under the active account. */
+    fun recordFeedback(fb: RideFeedback, followUpKey: String?, followUpValue: String?) {
+        val r = rider ?: return
+        r.feedback += fb
+        if (followUpKey != null) {
+            r.asked += followUpKey
+            if (followUpValue != null) when (followUpKey) {
+                "restHr" -> followUpValue.toIntOrNull()?.let { r.answers.setMetric("restHr", it, "estimated") }
+                else -> r.answers[followUpKey] = followUpValue
+            }
+        }
+        riders.save(r); loadRiderState()
+        _dash.value = _dash.value.copy(lastResult = null)
+    }
+    fun clearResult() { _dash.value = _dash.value.copy(lastResult = null) }
+
+    // ---------------------------------------------------------------- v0.8 simulation (SIMULATED sensor source; never a real ride)
+    fun startSimulation(speed: Int, profile: RideSimulator.Profile) {
+        if (stats.state != RideStats.State.IDLE && stats.state != RideStats.State.FINISHED) return
+        simulator?.stop()
+        setClockSpeed(speed)
+        simulator = RideSimulator(this, profile).also { it.start() }
+        rideSource = RideSource.SIMULATED
+        log.add(EventType.TEST, note = "SIMULATION started at ${speed}× (${profile.name})")
+        _dash.value = _dash.value.copy(simulated = true)
+    }
+    fun stopSimulation() {
+        simulator?.stop(); simulator = null
+        if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) rideSource = RideSource.DEVICE
+        setClockSpeed(1); clockOffsetMs = 0
+        _dash.value = _dash.value.copy(simulated = false)
+    }
+    /** The simulator feeds samples through the same path as the real sensor. */
+    internal fun injectSample(s: XdsSample, t: Long) = sensor.inject(s, t)
+    internal var simulatedHr: Int? = null
 
     init {
+        plan = SessionPlan(warmupSec = prefs.warmupSec)
+        loadRiderState()
         restoreCheckpoint()
         sensor.addSampleListener { s, t ->
             stats.onSample(s, t)
@@ -157,7 +278,7 @@ class RideEngine(private val app: Application) {
                     if (lastEngineError == null) { log.add(EventType.ERROR, note = "refresh() failed: $msg"); lastEngineError = msg }
                     runCatching { _dash.value = _dash.value.copy(engineError = msg) }
                 }
-                delay(500)
+                delay((500 / clockSpeed).toLong().coerceAtLeast(50))
             }
         }
     }
@@ -171,15 +292,23 @@ class RideEngine(private val app: Application) {
     }
 
     fun applyCoachConfig() {
-        coach.config = com.rashed.bikesensordoctor.core.CoachConfig(
-            mode = runCatching { com.rashed.bikesensordoctor.core.CoachMode.valueOf(prefs.coachMode) }.getOrDefault(com.rashed.bikesensordoctor.core.CoachMode.FREE),
+        val s = setup
+        val prefMode = runCatching { com.rashed.bikesensordoctor.core.CoachMode.valueOf(prefs.coachMode) }.getOrDefault(com.rashed.bikesensordoctor.core.CoachMode.FREE)
+        coach.config = if (s != null && workoutPlan != null) com.rashed.bikesensordoctor.core.CoachConfig(
+            // profile-driven workout: absolute bands come per tick via CoachInput.targets
+            mode = if (prefMode == com.rashed.bikesensordoctor.core.CoachMode.FREE) com.rashed.bikesensordoctor.core.CoachMode.FREE else com.rashed.bikesensordoctor.core.CoachMode.ZONE2,
+            cadenceEnabled = s.cadenceEnabled, cadenceLow = s.cadLow, cadenceHigh = s.cadHigh,
+            ftpW = s.ftp, maxHr = s.maxHrEstimate, powerCoaching = s.powerCoaching && prefs.powerVerified,
+            sameRepeatMs = s.sameRepeatMs, keepRepeatMs = s.keepRepeatMs, graceMs = 90_000, backoff = true,
+        ) else com.rashed.bikesensordoctor.core.CoachConfig(
+            mode = prefMode,
             cadenceEnabled = prefs.cadenceCoaching, cadenceLow = prefs.cadenceLow, cadenceHigh = prefs.cadenceHigh,
             ftpW = prefs.ftpW, maxHr = prefs.maxHr,
         )
     }
 
     /** P1: the rider asks for the cool-down phase (effort cues stop asking for more). */
-    fun requestCooldown() { cooldownRequestedAtMs = stats.elapsedMs(System.currentTimeMillis()); log.add(EventType.TEST, note = "Cool-down requested") }
+    fun requestCooldown() { cooldownRequestedAtMs = stats.elapsedMs(now()); log.add(EventType.TEST, note = "Cool-down requested") }
 
     // ---------------------------------------------------------------- P0 checkpoint (ride survives app restart)
     private fun writeCheckpoint(now: Long) {
@@ -213,12 +342,22 @@ class RideEngine(private val app: Application) {
     fun forgetHr() { prefs.hrAddress = null; prefs.hrName = null; hr.disconnect() }
 
     fun startRide() {
-        val now = System.currentTimeMillis()
+        val now = now()
         if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) {
             csv.setLength(0); csv.append("timestamp_ms,power_w,left_w,right_w,cadence_signed_rpm,crank_angle_deg\n")
             sampleByMs.clear(); recentPower.clear(); hrZoneSec.fill(0); powerZoneSec.fill(0); coach.reset()
-            hrSum = 0; hrCount = 0; hrMax = 0
+            hrSum = 0; hrCount = 0; hrMax = 0; inZoneSec = 0; mainSec = 0; hrFirstHalf.clear(); hrSecondHalf.clear(); cueCount = 0
             link.reset(); cooldownRequestedAtMs = null; clearCheckpoint(); restoredRide = false
+            if (simulator == null) rideSource = RideSource.DEVICE
+            // v0.8: the recommended workout sets the session plan and the target bands; without a profile the old settings apply
+            val s = setup; val w = workout
+            if (s != null && w != null) {
+                workoutPlan = WorkoutPlan(w.hrLo, w.hrHi, if (s.powerCoaching && prefs.powerVerified) w.pwLo else null, if (s.powerCoaching && prefs.powerVerified) w.pwHi else null,
+                    s.cadLow, s.cadHigh, s.ftp, s.warmupSec, s.cooldownSec, plannedSec = w.minutes * 60)
+                plan = SessionPlan(warmupSec = s.warmupSec, cooldownSec = s.cooldownSec, plannedSec = w.minutes * 60)
+                if (prefs.coachMode == "FREE") prefs.coachMode = "ZONE2"
+            } else { workoutPlan = null; plan = SessionPlan(warmupSec = prefs.warmupSec) }
+            _dash.value = _dash.value.copy(lastResult = null, plannedSec = plan.plannedSec, workoutName = w?.name ?: "")
         }
         stats.start(now)
         applyCoachConfig()
@@ -227,16 +366,19 @@ class RideEngine(private val app: Application) {
         RideService.start(app)
     }
 
-    fun pauseRide() { stats.pause(System.currentTimeMillis()); gps.setRecording(false); log.add(EventType.TEST, note = "Ride paused"); RideService.update(app) }
+    fun pauseRide() { stats.pause(now()); gps.setRecording(false); log.add(EventType.TEST, note = "Ride paused"); RideService.update(app) }
 
     fun finishRide(): String? {
-        val now = System.currentTimeMillis()
+        val now = now()
         if (stats.state == RideStats.State.IDLE) return null
         val startedAt = stats.startedAtMs ?: now
         stats.finish(now)
         link.finish(now)
         gps.setRecording(false)
-        val summary = stats.summary(now)
+        val g = gps.state.value
+        val avgHrAll = if (hrCount > 0) (hrSum / hrCount).toInt() else 0
+        val inZone = if (workoutPlan != null && mainSec > 0) (inZoneSec * 100 / mainSec) else -1
+        val summary = stats.summary(now).copy(distanceKm = g.distanceKm, elevationGainM = g.elevationGainM, avgHr = avgHrAll, inZonePct = inZone, source = rideSource, riderId = rider?.id ?: "")
         val saved = if (summary.samples > 0 || summary.durationMs > 10_000) {
             history.save(summary, csv.toString())
             history.saveReport(if (summary.startedAtMs > 0) summary.startedAtMs else startedAt,
@@ -253,15 +395,20 @@ class RideEngine(private val app: Application) {
         } else "Ride discarded (too short)"
         log.add(EventType.TEST, note = "Ride finished: $saved")
         saveLogSnapshot("ride-end")
+        val drift = if (hrFirstHalf.size > 60 && hrSecondHalf.size > 60) Math.round((hrSecondHalf.average() / hrFirstHalf.average() - 1) * 100).toInt() else 0
+        val result = RideResult(if (summary.startedAtMs > 0) summary.startedAtMs else startedAt, (summary.durationMs / 1000).toInt(), g.distanceKm, avgHrAll,
+            if (inZone < 0) 0 else inZone, drift, cueCount, rideSource, saved)
         stats.reset()
         clearCheckpoint(); restoredRide = false
+        workoutPlan = null
         RideService.stop(app)
-        _dash.value = _dash.value.copy(lastSavedRide = saved, restoredRide = false)
+        if (simulator != null) stopSimulation()
+        _dash.value = _dash.value.copy(lastSavedRide = saved, restoredRide = false, lastResult = if (rider?.completed == true && summary.durationMs > 10_000) result else null, targets = null, inZonePct = null, plannedSec = null)
         return saved
     }
 
     private fun refresh() {
-        val now = System.currentTimeMillis()
+        val now = now()
         val snap = gatt.snapshot.value
         val h = sensor.health.value
         if (h != lastHealth) {
@@ -282,13 +429,15 @@ class RideEngine(private val app: Application) {
         val last = sensor.lastSample.value?.first
         val fresh = stats.livePowerW(now) != null
         val g = gps.state.value
-        val bpm = hr.liveBpm(now)
+        val bpm = simulatedHr ?: hr.liveBpm(System.currentTimeMillis())
         val hrState = hr.state.value
         val hrZ = com.rashed.bikesensordoctor.core.HrZones.zone(bpm, prefs.maxHr)
 
         // P1 coaching (≈1 Hz): phase-aware, freshness-aware multi-signal engine. Only while the ride is RUNNING.
         val elapsed = stats.elapsedMs(now)
         val phase = Session.phaseAt(plan, elapsed, cooldownRequestedAtMs)
+        val wp = workoutPlan
+        val targets = wp?.let { WorkoutTargets.forPhase(it, phase, (elapsed / 1000).toInt(), Session.cooldownStartMs(plan, cooldownRequestedAtMs)?.let { ms -> (ms / 1000).toInt() }) }
         if (stats.state == RideStats.State.RUNNING) {
             val sig = stats.signalState(now)
             val xdsFresh = sig == RideStats.SignalState.FRESH || sig == RideStats.SignalState.COASTING
@@ -297,11 +446,26 @@ class RideEngine(private val app: Application) {
                 cadence = Signal(stats.liveCadenceRpm(now), xdsFresh),
                 hr = Signal(bpm, bpm != null),
                 power = Signal(stats.livePowerW(now), xdsFresh),
+                targets = targets,
             ))
             if (c.type != com.rashed.bikesensordoctor.core.CueType.NONE) {
                 _cue.value = c
+                cueCount++
                 log.add(EventType.TEST, note = "Coach: ${c.type} (${c.reason})")
                 if (prefs.coachVoice && c.spoken.isNotEmpty()) onSpeak?.invoke(c.spoken)
+            }
+            // v0.8: time inside the band (MAIN phase only) and HR drift halves, once per second of riding time
+            if (targets != null && phase == Phase.MAIN && elapsed / 1000 != lastZoneSec) {
+                lastZoneSec = elapsed / 1000
+                mainSec++
+                val pw = stats.livePowerW(now)
+                val inBand = when {
+                    bpm != null -> bpm in targets.hrLo..targets.hrHi
+                    pw != null && pw > 0 && targets.pwLo != null && targets.pwHi != null -> pw in targets.pwLo..targets.pwHi
+                    else -> false
+                }
+                if (inBand) inZoneSec++
+                if (bpm != null) { val half = ((plan.plannedSec ?: 3600) - plan.warmupSec - plan.cooldownSec) / 2; if (mainSec <= half) hrFirstHalf += bpm else hrSecondHalf += bpm }
             }
         }
         // P0: checkpoint every 10 s while a ride exists
@@ -337,8 +501,11 @@ class RideEngine(private val app: Application) {
             signal = stats.signalState(now), phase = phase, warmupRemainingSec = Session.warmupRemainingSec(plan, elapsed),
             linkQualityPct = link.qualityPct(now), linkGaps = link.gaps.size, linkLostSec = link.lostMs() / 1000,
             powerVerified = prefs.powerVerified, coachReason = _cue.value.reason, restoredRide = restoredRide,
+            targets = if (stats.state == RideStats.State.IDLE) null else targets, inZonePct = if (mainSec > 0) inZoneSec * 100 / mainSec else null,
+            plannedSec = if (stats.state == RideStats.State.IDLE) null else plan.plannedSec,
         )
     }
+    private var lastZoneSec = -1L
 
     /** Writes the event log to app storage; the user can share it from Settings. Keeps the last 30 files. */
     fun saveLogSnapshot(reason: String): File? = try {
