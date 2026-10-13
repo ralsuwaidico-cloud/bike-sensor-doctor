@@ -51,9 +51,10 @@ class AppFlowTest {
     }
     private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.72).toInt(); val b = (device.displayHeight * 0.30).toInt(); if (up) device.swipe(w, a, w, b, 25) else device.swipe(w, b, w, a, 25); device.waitForIdle(800); Thread.sleep(350) }
     private fun tap(sel: BySelector, timeout: Long = T) {
-        val o = find(sel, timeout)
+        find(sel, timeout)
         // a node clipped at the bottom edge (behind the tab bar) must be scrolled fully into view before tapping
-        if (o.visibleBounds.bottom > device.displayHeight * 0.80) { val w = device.displayWidth / 2; device.swipe(w, (device.displayHeight * 0.6).toInt(), w, (device.displayHeight * 0.35).toInt(), 25); device.waitForIdle(800); Thread.sleep(300) }
+        val bottom = (0 until 3).firstNotNullOfOrNull { runCatching { find(sel, 2000).visibleBounds.bottom }.getOrNull() } ?: 0
+        if (bottom > device.displayHeight * 0.80) { val w = device.displayWidth / 2; device.swipe(w, (device.displayHeight * 0.6).toInt(), w, (device.displayHeight * 0.35).toInt(), 25); device.waitForIdle(800); Thread.sleep(300) }
         retry { find(sel, 2000).click() }; device.waitForIdle(1000)
     }
     private fun top() { repeat(4) { swipe(up = false) } }
