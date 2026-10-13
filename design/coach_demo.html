@@ -91,6 +91,7 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
     <span><i class="tag sim">SIMULATED</i> generated from speed and heart rate, assumptions stated</span>
     <span><i class="tag now">v0.7 RULE</i> coaching logic that exists in the app today</span>
     <span><i class="tag proto">PROTOTYPE</i> future behaviour, demonstrated here only</span>
+    <span><i class="tag proto">v0.8 PROPOSAL</i> transition and back-off rules proposed for the next app version</span>
   </div>
 
   <div class="bar" role="group" aria-label="Playback">
@@ -173,7 +174,7 @@ const REAL = {
    stops:[20.5,29.5,57.5], cadBase:76, grind:true},
  r2:{id:"r2",name:"Ride 2 · guided",date:"Mon 5 Oct",time:"4:48–5:50 PM",sec:3702,km:21.33,activeCal:489,totalCal:594,elevFt:79,elevRange:"19–51 ft",avgKmh:20.7,speedRange:"1.7–34.5 km/h",avgHr:156,hrMin:114,hrMax:174,apple:[1034,400,1966,305,0],post:[156,157,143],effort:"7 · Hard",
    hrKeys:[[0,114],[2,128],[4,138],[6,135],[8,142],[10,138],[12,130],[13,125],[14,135],[16,150],[18,160],[22,165],[26,163],[30,166],[34,164],[38,166],[42,167],[44,152],[46,150],[48,162],[52,168],[56,170],[59,172],[60.5,174],[61.7,160]],
-   stops:[12.5,44.5], cadBase:82, grind:false, uneven:[40,46]},
+   stops:[12.5,44.5], cadBase:82, grind:false, uneven:[7,11]},
  r3:{id:"r3",name:"Ride 3 · progress",date:"Mon 12 Oct",time:"4:34–5:39 PM",sec:3905,km:21.46,activeCal:509,totalCal:617,elevFt:91,elevRange:"8–38 ft",avgKmh:19.7,speedRange:"0.3–33.6 km/h",avgHr:150,hrMin:100,hrMax:173,apple:[1606,1262,956,80,0],post:[158,151,147],effort:"6 · Moderate",
    hrKeys:[[0,100],[2,118],[4,132],[6,140],[9,143],[12,138],[14,120],[15,128],[18,150],[22,155],[26,158],[30,160],[32,135],[33,140],[36,158],[40,160],[43,162],[46,150],[50,140],[52,145],[55,158],[58,165],[61,170],[63,173],[64,168],[65,165]],
    stops:[14,32,53], cadBase:85, grind:false, steady:[45,52]},
@@ -229,7 +230,7 @@ function genRide(r){
   const cad=[]; let drift=0; for(let t=0;t<N;t++){ drift=drift*0.97+(rnd()-0.5)*2; let c=r.cadBase+drift+(rnd()-0.5)*4;
     if(r.grind && power[t]>140) c-=12;                                   // Ride 1 habit: grinding a big gear on efforts
     if(r.id==="r2" && t>1500 && t<2100) c-=9;                            // Ride 2: a low-cadence stretch for the coach to catch
-    if(r.uneven && t>r.uneven[0]*60 && t<r.uneven[1]*60) c+=(rnd()-0.5)*45;  // Ride 2: an uneven-cadence stretch (prototype PEDAL SMOOTHER)
+    if(r.uneven && t>r.uneven[0]*60 && t<r.uneven[1]*60) c+=6+(rnd()-0.5)*36;  // Ride 2: an uneven-cadence stretch (average fine, rhythm ragged) (prototype PEDAL SMOOTHER)
     if(sp[t]<3) c=0; cad.push(Math.max(0,Math.round(c))); }
   return {hr,speed:sp,elev,power,cad};
 }
@@ -238,7 +239,7 @@ const SERIES={}; ORDER.forEach(id=>SERIES[id]=genRide(REAL[id]));
 /* ============================================================ coach engine — port of core/Coach.kt v2 (v0.7) */
 class Coach{
   constructor(cfg){ this.cfg=Object.assign({mode:"ZONE2",cadenceEnabled:true,cadLow:80,cadHigh:95,hrHold:8000,pwHold:2000,surgeHold:6000,cadHold:5000,minAlert:10000,sameRepeat:45000,keepRepeat:90000,keepHold:5000,infoRepeat:30000,smooth:5000,hysHr:3,hysPw:0.02,cadHys:3},cfg); this.reset(); }
-  reset(){ this.win={cad:[],hr:[],pw:[]}; this.band={hr:null,pw:null}; this.since={hr:0,pw:0}; this.cadState=null; this.cadSince=0; this.lastType="NONE"; this.lastEmit=-1e12; this.allGood=null; this.keepArmed=true; this.announced=null; this.surgeSince=null; }
+  reset(){ this.phaseSeen=null; this.phaseSince=0; this.repeat=0; this.quietSince=0; this.win={cad:[],hr:[],pw:[]}; this.band={hr:null,pw:null}; this.since={hr:0,pw:0}; this.cadState=null; this.cadSince=0; this.lastType="NONE"; this.lastEmit=-1e12; this.allGood=null; this.keepArmed=true; this.announced=null; this.surgeSince=null; }
   feed(k,now,v){ const w=this.win[k]; if(v==null){ w.length=0; return null;} w.push([now,v]); while(w.length&&now-w[0][0]>this.cfg.smooth) w.shift(); return Math.round(w.reduce((a,b)=>a+b[1],0)/w.length); }
   bandOf(k,now,val,lo,hi,h){ if(val==null){ this.band[k]=null; return null; } const b=this.band[k]; let n;
     if(b==null) n= val<lo?"BELOW": val>hi?"ABOVE":"ON";
@@ -247,25 +248,32 @@ class Coach{
     else n= val<lo-h?"BELOW": val>hi+h?"ABOVE":"ON";
     if(n!==b){ this.band[k]=n; this.since[k]=now; } return n; }
   held(k,now,ms){ return this.band[k]!=null && now-this.since[k]>=ms; }
-  emit(now,type,head,detail,reason){ const s=now-this.lastEmit; if(type===this.lastType && s<(type==="KEEP_IT_UP"?this.cfg.keepRepeat:this.cfg.sameRepeat)) return null; if(type!==this.lastType && s<this.cfg.minAlert) return null; this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:"v0.7 rule"}; }
+  emit(now,type,head,detail,reason,src){ const s=now-this.lastEmit; if(type===this.lastType && s<(type==="KEEP_IT_UP"?this.cfg.keepRepeat:this.cfg.sameRepeat)) return null; if(type!==this.lastType && s<this.cfg.minAlert) return null;
+    // v0.8 proposal: after 3 unheeded repeats of the same cue, go quiet (gauges keep showing the state) until the cue changes or 5 min pass
+    if(type===this.lastType && type!=="KEEP_IT_UP"){ this.repeat=(this.repeat||0)+1; if(this.repeat>=3){ if(this.repeat===3){ this.lastEmit=now; this.quietSince=now; return {type:"QUIET",head:"COACH QUIET",detail:`${head} has been said 3 times without a change. Going quiet; the gauges keep showing the state. I will speak again when something changes or after 5 minutes.`,reason:"BACKOFF",src:"v0.8 proposal"}; } if(now-this.quietSince<300000) return null; this.repeat=0; } }
+    else this.repeat=0;
+    this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:src||"v0.7 rule"}; }
   announce(now,phase,type,head,detail,reason){ if(this.announced===phase) return null; this.announced=phase; this.allGood=null; this.keepArmed=true; this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:"v0.7 rule"}; }
   info(now,type,head,detail,reason){ if(type===this.lastType && now-this.lastEmit<this.cfg.infoRepeat) return null; this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:"v0.7 rule"}; }
-  update(now,phase,cadIn,hrIn,pwIn){
+  update(now,phase,cadIn,hrIn,pwIn,t,N){
     const c=this.cfg; if(c.mode==="FREE") return null;
+    if(phase!==this.phaseSeen){ this.phaseSeen=phase; this.phaseSince=now; this.repeat=0; }
     const cad=this.feed("cad",now,cadIn); const hr=this.feed("hr",now,hrIn);
     const coasting = pwIn!=null && pwIn===0; const pwRaw=this.feed("pw",now,coasting?null:pwIn); const pw=(pwRaw!=null&&pwRaw>0)?pwRaw:null;
-    const TG=targetsFor(phase,true); const [hLo,hHi]=TG.hr; const [pLo,pHi]=TG.pw;
+    const TG=targetsFor(phase,true,t,N); const [hLo,hHi]=TG.hr; const [pLo,pHi]=TG.pw;
+    const grace = phase==="MAIN" && now-this.phaseSince<90000;   // v0.8 proposal: 90 s after entering the main block, no 'push' — heart rate is still responding
     const hb=this.bandOf("hr",now,hr,hLo,hHi,c.hysHr); const pb=this.bandOf("pw",now,pw,pLo,pHi,c.hysPw*DEMO.ftp);
     const hz=hr?hrZone(hr):null, pz=pw?powZone(pw):null;
     const safety=()=> (hb==="ABOVE" && hz!=null && hz>=4 && this.held("hr",now,5000)) ? this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm is zone ${hz} — two or more zones above the target. Safety rule: back off whatever power or cadence say.`,"HR_SAFETY") : null;
     if(phase==="WARMUP"){ const s=safety(); if(s) return s; return this.announce(now,phase,"WARMUP","WARM UP",`Easy spinning for 5 minutes: target Zone 1 (${hLo}–${hHi} bpm). No 'push harder' during the warm-up; only an 'ease off' if heart rate runs far too high.`,"PHASE_WARMUP"); }
-    if(phase==="COOLDOWN"){ if(hb==="ABOVE"&&this.held("hr",now,c.hrHold)) return this.emit(now,"EASE_OFF","EASE OFF",`Cool-down target is Zone 1 (${hLo}–${hHi} bpm); heart rate ${hr} is still above it.`,"COOLDOWN_HR_ABOVE"); return this.announce(now,phase,"COOLDOWN","COOL DOWN",`Last 5 minutes: target drops to Zone 1 (${hLo}–${hHi} bpm). The coach will not ask for more effort from here.`,"PHASE_COOLDOWN"); }
+    if(phase==="COOLDOWN"){ if(hb==="ABOVE"&&this.held("hr",now,c.hrHold)) return this.emit(now,"EASE_OFF","WIND DOWN",`Cool-down ceiling is now ${hHi} bpm and comes down gradually to 125; heart rate ${hr} is above it. Ease the effort a little, not a stop.`,"COOLDOWN_RAMP","v0.8 proposal"); return this.announce(now,phase,"COOLDOWN","COOL DOWN",`Last 5 minutes: the ceiling drops gradually from 149 to 125 bpm. No more 'push' from here.`,"PHASE_COOLDOWN"); }
     if(this.announced!=="MAIN"){ this.announced="MAIN"; this.keepArmed=true; }
     let effort=null, hold=false;
     if(hr!=null){
       if(hb==="ABOVE"){ if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm (zone ${hz}) has stayed above the target ${hLo}–${hHi} bpm for 8 s. HR is the authority on effort; power is ignored here.`,"HR_ABOVE"); else hold=true; }
       else if(hb==="ON"){ const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging){ if(this.surgeSince==null) this.surgeSince=now; if(now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; }
       else { this.surgeSince=null; if(pb==="ON"||pb==="ABOVE") hold=true;  /* HR lag: never push */
+             else if(grace) hold=true;                                        /* v0.8 proposal: transition grace after warm-up */
              else if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"PUSH_HARDER","PUSH A LITTLE HARDER",`Heart rate ${hr} bpm is below the target ${hLo}–${hHi} bpm and power is not already on target, for 8 s.`,"HR_BELOW"); else hold=true; }
     } else if(pw!=null){
       if(pb==="ABOVE"){ if(this.held("pw",now,c.pwHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`No heart rate: simulated power ${pw} W is above the Zone 2 band for 2 s.`,"PW_ABOVE"); else hold=true; }
@@ -273,7 +281,8 @@ class Coach{
     } else { if(coasting) hold=true; else effort=this.info(now,"NO_HR","NO EFFORT SIGNAL","Neither heart rate nor loaded power is available.","NO_SIGNAL"); }
     if(effort){ this.allGood=null; return effort; }
     if(hold) return null;
-    if(hb!=="ABOVE"){ const cc=this.cadence(now,cad,phase); if(cc!==undefined){ if(cc) this.allGood=null; return cc; } }
+    // cadence hints only when effort is in order: band not ABOVE and the smoothed HR itself not over the ceiling (no hysteresis slack here)
+    if(hb!=="ABOVE" && !(hr!=null && hr>hHi)){ const cc=this.cadence(now,cad,phase); if(cc!==undefined){ if(cc) this.allGood=null; return cc; } }
     const good = hb==="ON" || (hr==null && pb==="ON");
     if(!good){ this.allGood=null; return null; }
     if(this.allGood==null){ this.allGood=now; this.keepArmed=true; }
@@ -301,7 +310,8 @@ class Prototypes{
     this.pwWin.push(pw); if(this.pwWin.length>300) this.pwWin.shift();
     const cv=a=>{ if(a.length<30) return null; const m=a.reduce((x,y)=>x+y,0)/a.length; if(m<=0) return null; return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length)/m; };
     const ccv=cv(this.cadWin), pcv=cv(this.pwWin.filter(v=>v>0));
-    if(mode!=="FREE" && phase==="MAIN" && ccv!=null && ccv>0.12 && now-this.lastSmooth>120000){ this.lastSmooth=now; out.push({type:"PEDAL_SMOOTHER",head:"PEDAL SMOOTHER",detail:`Simulated cadence varied ±${Math.round(ccv*100)}% over the last minute (unusually uneven). Prototype rule: cadence coefficient of variation > 12% for 60 s.`,reason:"CAD_UNEVEN",src:"prototype"}); }
+    const TGn=targetsFor(phase,mode!=="FREE",t,ride.sec); const hrOk = hr<=TGn.hr[1];   // never a cadence hint while heart rate is over the ceiling
+    if(mode!=="FREE" && phase==="MAIN" && hrOk && ccv!=null && ccv>0.11 && now-this.lastSmooth>120000){ this.lastSmooth=now; out.push({type:"PEDAL_SMOOTHER",head:"PEDAL SMOOTHER",detail:`Simulated cadence varied ±${Math.round(ccv*100)}% over the last minute (unusually uneven). Prototype rule: cadence coefficient of variation > 11% for 60 s.`,reason:"CAD_UNEVEN",src:"prototype"}); }
     if(mode!=="FREE" && phase==="MAIN" && pcv!=null && pcv<0.20 && t>900 && now-this.lastPacing>600000 && hrZone(hr)===2){ this.lastPacing=now; out.push({type:"GREAT_PACING",head:"GREAT PACING",detail:`Simulated power varied only ±${Math.round(pcv*100)}% over the last 5 minutes while heart rate stayed in Zone 2. Prototype rule: 1 Hz power CV < 20% over 5 min inside the target zone (real power is noisy; 20% is steady riding).`,reason:"PACING_STEADY",src:"prototype"}); }
     if(mode==="FREE" && t>0 && t%600===0){ // baseline observations every 10 min
       const z=zoneTimes(S.hr.slice(0,t)); const z3=(z[2]+z[3]+z[4])/t*100; const cadAvg=avgNonZero(S.cad.slice(0,t));
@@ -312,10 +322,14 @@ class Prototypes{
 function zoneTimes(hrArr){ const z=[0,0,0,0,0]; hrArr.forEach(h=>{ const k=hrZone(h); if(k>0) z[k-1]++; }); return z; }
 function avgNonZero(a){ const f=a.filter(v=>v>0); return f.length?Math.round(f.reduce((x,y)=>x+y,0)/f.length):0; }
 /* Active workout target per phase. Warm-up and cool-down aim at Zone 1; the main block aims at Zone 2. Cadence range is constant. */
-function targetsFor(phase,coached){
-  if(!coached) return {hr:[DEMO.hrTarget[0],DEMO.hrTarget[1]],pw:[PB[0]*DEMO.ftp,PB[1]*DEMO.ftp],cad:DEMO.cadRange,label:"Z2 reference (uncoached)",zone:2};
-  if(phase==="WARMUP"||phase==="COOLDOWN") return {hr:[105,DEMO.hrZoneEdges[0]-1],pw:[0.35*DEMO.ftp,PB[0]*DEMO.ftp],cad:DEMO.cadRange,label:(phase==="WARMUP"?"WARM-UP":"COOL-DOWN")+" · Zone 1",zone:1};
-  return {hr:[DEMO.hrTarget[0],DEMO.hrTarget[1]],pw:[PB[0]*DEMO.ftp,PB[1]*DEMO.ftp],cad:DEMO.cadRange,label:"MAIN · Zone 2",zone:2};
+function targetsFor(phase,coached,t,N){
+  const Z2=[DEMO.hrTarget[0],DEMO.hrTarget[1]], P2=[PB[0]*DEMO.ftp,PB[1]*DEMO.ftp];
+  if(!coached) return {hr:Z2,pw:P2,cad:DEMO.cadRange,label:"Z2 REF",zone:2};
+  if(phase==="WARMUP"){ const u=Math.max(0,Math.min(1,(t||0)/DEMO.warmupSec));                       // v0.8 proposal: the ceiling rises gradually so heart rate may climb through the warm-up
+    return {hr:[105, Math.round(125+(Z2[1]-125)*u)], pw:[0.35*DEMO.ftp, Math.round(70+(P2[1]-70)*u)], cad:DEMO.cadRange, label:"WARM-UP RAMP", zone:1}; }
+  if(phase==="COOLDOWN"){ const u=Math.max(0,Math.min(1,((t||0)-((N||0)-DEMO.cooldownSec))/DEMO.cooldownSec));   // v0.8 proposal: the ceiling comes down gradually
+    return {hr:[105, Math.round(Z2[1]-(Z2[1]-125)*u)], pw:[0.35*DEMO.ftp, Math.round(P2[1]-(P2[1]-70)*u)], cad:DEMO.cadRange, label:"COOL-DOWN RAMP", zone:1}; }
+  return {hr:Z2,pw:P2,cad:DEMO.cadRange,label:"MAIN Z2",zone:2};
 }
 function phaseAt(t,N,coached){ if(!coached) return "MAIN"; if(t<DEMO.warmupSec) return "WARMUP"; if(t>=N-DEMO.cooldownSec) return "COOLDOWN"; return "MAIN"; }
 
@@ -364,8 +378,8 @@ function buildPhone(){
   <line x1="14" y1="56" x2="${W-14}" y2="56" stroke="${C.line}"/>
   <rect id="coachBar" x="14" y="58" width="272" height="3" rx="1.5" fill="${C.line}"/>
   <!-- power gauge (SIMULATED) -->
-  <text id="tgtLine" x="14" y="72" fill="${C.cyan}" font-size="8.5" letter-spacing="1">TARGET · —</text>
-  <g id="gP">${gaugeStatic(150,150,72,15,pTicks,true,null)}</g>
+  <text id="tgtLine" x="14" y="70" fill="${C.cyan}" font-size="8">TARGET · —</text>
+  <g id="gP">${gaugeStatic(150,150,68,15,pTicks,true,null)}</g>
   <text id="pSub" x="150" y="120" text-anchor="middle" fill="${C.mut}" font-size="12"> </text>
   <text id="pVal" x="150" y="162" text-anchor="middle" fill="${C.fg}" font-size="54" font-weight="500" font-family="Rajdhani">—</text>
   <text x="150" y="184" text-anchor="middle" fill="${C.mut}" font-size="12" letter-spacing="1">WATTS · SIM</text>
@@ -391,10 +405,10 @@ function buildPhone(){
   <g id="cbScale"></g>
   <!-- power zones -->
   <line x1="14" y1="574" x2="${W-14}" y2="574" stroke="${C.line}"/>
-  <text x="14" y="594" fill="${C.mut}" font-size="10">POWER ZONES · SIM (target ▲ = Z2, demo FTP ${DEMO.ftp} W)</text>
+  <text x="14" y="594" fill="${C.mut}" font-size="10">POWER ZONES · SIM · demo FTP ${DEMO.ftp} W</text>
   ${band(14,602,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],PZC)}
   <rect id="pTgtBar" x="${14+pwT*272-1}" y="599" width="2" height="24" fill="${C.cyan}"/><path id="pMark" d="" fill="${C.fg}"/>
-  <text x="14" y="650" fill="${C.mut}" font-size="10">HEART-RATE ZONES · REAL (Zone 2 = 138–149 bpm, est.)</text>
+  <text x="14" y="650" fill="${C.mut}" font-size="10">HR ZONES · REAL · Z2 = 138–149 bpm (est.)</text>
   ${band(14,658,272,["Z1","Z2","Z3","Z4","Z5"],HZC)}
   <rect id="hTgtBar" x="${14+hrT*272-1}" y="655" width="2" height="24" fill="${C.cyan}"/><path id="hMark" d="" fill="${C.fg}"/>
   <text x="14" y="708" fill="${C.mut}" font-size="10">POWER TREND · SIM · last 5 min   ·   HR · REAL</text>
@@ -407,7 +421,7 @@ function buildPhone(){
     <text id="s3s" x="130" y="884" fill="${C.fg}" font-size="24">— W</text><text x="130" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG · SIM</text>
     <text id="sVi" x="218" y="884" fill="${C.fg}" font-size="24">—</text><text x="218" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
   </g>
-  <text x="14" y="936" font-size="8" fill="${C.faint}" letter-spacing="1">LIVE = white-rimmed dot on the ring · TGT = bright band outside the ring · watts and rpm are simulated</text>
+  <text x="14" y="936" font-size="8" fill="${C.faint}">LIVE = dot · TGT = band · watts &amp; rpm simulated</text>
   </svg>`;
 }
 
@@ -428,7 +442,7 @@ function scaleSvg(dir,active,col){ const steps=[["▼ EASE",-1],["✓ ON TARGET"
   steps.forEach((s,i)=>{ const px=x+i*(pw+gap), on=active&&dir===s[1]; g+=`<rect x="${px.toFixed(1)}" y="${y}" width="${pw.toFixed(1)}" height="15" rx="7.5" fill="${active?C.ink:C.line}" fill-opacity="${on?1:.25}" stroke="${active?C.ink:C.line}" stroke-opacity="${on?1:.6}"/>`; g+=`<text x="${(px+pw/2).toFixed(1)}" y="${y+10.5}" text-anchor="middle" fill="${on?col:(active?C.ink:C.mut)}" fill-opacity="${on?1:.8}" font-size="7.5" font-weight="700" font-family="IBM Plex Mono">${s[0]}</text>`; }); return g; }
 function wrap2(s,max){ const w=s.split(" "),l=[]; let c=""; w.forEach(x=>{ if((c+" "+x).trim().length>max){ if(c)l.push(c); c=x; } else c=(c+" "+x).trim(); }); if(c)l.push(c); if(l.length>2){ l[1]=l.slice(1).join(" "); l.length=2; if(l[1].length>max) l[1]=l[1].slice(0,max-1)+"…"; } return l; }
 
-const CUE_STYLE={KEEP_IT_UP:[C.green,0],PEDAL_FASTER:[C.cyan,1],PUSH_HARDER:[C.cyan,1],EASE_OFF:[C.amber,-1],PEDAL_SLOWER:[C.amber,-1],WARMUP:[C.violet,null],COOLDOWN:[C.violet,null],RECOVER:[C.violet,null],PEDAL_SMOOTHER:[C.violet,null],GREAT_PACING:[C.green,0],NOTE:[C.violet,null],NO_HR:[C.faint,null]};
+const CUE_STYLE={QUIET:[C.faint,null],KEEP_IT_UP:[C.green,0],PEDAL_FASTER:[C.cyan,1],PUSH_HARDER:[C.cyan,1],EASE_OFF:[C.amber,-1],PEDAL_SLOWER:[C.amber,-1],WARMUP:[C.violet,null],COOLDOWN:[C.violet,null],RECOVER:[C.violet,null],PEDAL_SMOOTHER:[C.violet,null],GREAT_PACING:[C.green,0],NOTE:[C.violet,null],NO_HR:[C.faint,null]};
 function setCoachBox(e){
   const coached=ride!=="r1";
   if(!e){ q("#cbBox").setAttribute("fill","#0a1015"); q("#cbBox").setAttribute("stroke",C.line); q("#cbCue").textContent=coached?"COACH READY":"COACH OFF"; q("#cbCue").setAttribute("fill",C.fg);
@@ -437,7 +451,7 @@ function setCoachBox(e){
   const [col,dir]=CUE_STYLE[e.type]||[C.faint,null]; const active=e.type!=="NOTE"&&e.type!=="NO_HR";
   q("#cbBox").setAttribute("fill",active?col:"#0a1015"); q("#cbBox").setAttribute("stroke",active?col:C.line);
   const ink=active?C.ink:C.fg; q("#cbCue").textContent=e.head; q("#cbCue").setAttribute("fill",ink); q("#cbCue").setAttribute("font-size",e.head.length>=14?19:e.head.length>=12?21:e.head.length>=10?24:26);
-  const l=wrap2(e.detail.split(".")[0],34); q("#cbL1").textContent=l[0]||""; q("#cbL2").textContent=l[1]||""; q("#cbL1").setAttribute("fill",active?C.ink:C.mut); q("#cbL2").setAttribute("fill",active?C.ink:C.mut);
+  const l=wrap2(e.detail.split(".")[0],30); q("#cbL1").textContent=l[0]||""; q("#cbL2").textContent=l[1]||""; q("#cbL1").setAttribute("fill",active?C.ink:C.mut); q("#cbL2").setAttribute("fill",active?C.ink:C.mut);
   q("#cbShape").innerHTML=`<g style="color:${active?col:C.faint}">${shapeSvg(dir)}</g>`; q("#cbScale").innerHTML=scaleSvg(dir,active,col); q("#coachBar").setAttribute("fill",active?col:C.line);
 }
 
@@ -453,8 +467,10 @@ function step(){ const R=REAL[ride], S=SERIES[ride]; if(t>=R.sec) return false;
   distKm+=S.speed[t]/3600;
   // NP accumulator (30 s rolling mean^4) — SIMULATED
   if(t>=30){ const w=S.power.slice(t-29,t+1); const m=w.reduce((a,b)=>a+b,0)/30; npAcc+=Math.pow(m,4); npN++; }
-  const cue=coach.update(now,phase,cad,hr,pw);
-  const extra=protos.update(now,R,t,S,phase,coach.cfg.mode);
+  const cue=coach.update(now,phase,cad,hr,pw,t,R.sec);
+  // prototype observers share the engine's spacing rule: nothing within 10 s of the last cue, and they count as the last cue
+  const extra=(now-coach.lastEmit>=10000)?protos.update(now,R,t,S,phase,coach.cfg.mode):[];
+  if(extra.length){ coach.lastEmit=now; coach.lastType=extra[0].type; coach.repeat=0; }
   [cue,...extra].forEach(e=>{ if(!e) return; e.t=t; logEntries.push(e); latest=e; cueCounts[e.type]=(cueCounts[e.type]||0)+1; });
   t++; return true; }
 
@@ -463,13 +479,13 @@ function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,M
   q("#hdrTime").textContent="T "+fmt(i); el("clock").textContent=fmt(i); el("scrub").value=i;
   q("#phaseTxt").textContent= !coached?"FREE RIDE · OBSERVING": phase==="WARMUP"?`WARM-UP ${fmt(DEMO.warmupSec-i)}`: phase==="COOLDOWN"?"COOL-DOWN":"MAIN · ZONE 2 MODE";
   q("#phaseTxt").setAttribute("fill", phase==="MAIN"&&coached?C.green:C.violet);
-  const TG=targetsFor(phase,coached);
-  q("#tgtLine").textContent=`TGT ${TG.label.replace("MAIN · Zone 2","MAIN Z2").replace("WARM-UP · Zone 1","WARM-UP Z1").replace("COOL-DOWN · Zone 1","COOL-DOWN Z1").replace("Z2 reference (uncoached)","Z2 REF")} · ${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} BPM · ${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W · ${TG.cad[0]}–${TG.cad[1]} RPM`;
+  const TG=targetsFor(phase,coached,i,R.sec);
+  q("#tgtLine").textContent=`TGT ${TG.label.replace("MAIN Z2","Z2").replace(" RAMP","")} · ${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} BPM · ${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W · ${TG.cad[0]}–${TG.cad[1]} RPM`;
   const gP=q("#gP"), gC=q("#gC"), gH=q("#gH");
   // power gauge — LIVE: progress arc + marker at the current watts; TGT: band over the active power target
   const pz=powZone(pw), pcol=pz?PZC[pz-1]:C.grey; const pf=Math.min(1,pw/PMAX);
-  q("#progP").setAttribute("d",arcPath(150,150,72,S0,angleOf(pf))); q("#progP").setAttribute("stroke",pcol); setLive(gP,150,150,72,pf);
-  setTarget(gP,150,150,72,15,TG.pw[0]/PMAX,TG.pw[1]/PMAX,C.cyan);
+  q("#progP").setAttribute("d",arcPath(150,150,68,S0,angleOf(pf))); q("#progP").setAttribute("stroke",pcol); setLive(gP,150,150,68,pf);
+  setTarget(gP,150,150,68,15,TG.pw[0]/PMAX,TG.pw[1]/PMAX,C.cyan);
   q("#pVal").textContent=pw>0?pw:"0"; q("#pSub").textContent=pz?`Z${pz} · ${pz===7?"":Math.round(((pw/DEMO.ftp)-(pz===1?0:PB[pz-2]))/((PB[pz-1]-(pz===1?0:PB[pz-2]))||1)*100)+"%"}`:"coasting"; q("#pSub").setAttribute("fill",pz?pcol:C.mut);
   const ps= pw<=0?"UNKNOWN":tstat(pw,TG.pw[0],TG.pw[1]); pillSet("pPill",ps,ps==="UNKNOWN"?"COASTING":ps==="ON"?"ON TARGET":ps==="BELOW"?"BELOW TGT":"ABOVE TGT",true);
   // cadence — LIVE marker + constant target range band
@@ -493,10 +509,10 @@ function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,M
   q("#sDist").textContent=distKm.toFixed(1)+" km"; const s3=i>=2?Math.round((S.power[i]+S.power[i-1]+S.power[i-2])/3):pw; q("#s3s").textContent=s3+" W";
   const np=npN?Math.pow(npAcc/npN,0.25):null; const avgP=S.power.slice(0,i+1).reduce((x,y)=>x+y,0)/(i+1); q("#sVi").textContent=(np&&avgP>0)?(np/avgP).toFixed(2):"—";
   setCoachBox(latest);
-  if(latest){ el("cueBig").textContent=latest.head; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="prototype"?"proto":"now"}">${latest.src==="prototype"?"PROTOTYPE":"v0.7 RULE"}</i> at ${fmt(latest.t)} — ${latest.detail}`; }
+  if(latest){ el("cueBig").textContent=latest.head; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="v0.7 rule"?"now":"proto"}">${latest.src.toUpperCase()}</i> at ${fmt(latest.t)} — ${latest.detail}`; }
 }
 function renderLog(){ const L=el("log"); el("logCount").textContent=logEntries.length?`· ${logEntries.length} entries`:""; if(!logEntries.length){ L.innerHTML=`<div class="ent"><div class="t">—</div><div><div class="h" style="color:var(--mut)">No instructions yet</div><div class="w">Press play. Ride 1 produces observations; Rides 2 and 3 produce instructions.</div></div></div>`; return; }
-  const last=logEntries.slice(-40).reverse(); L.innerHTML=last.map((e,i)=>`<div class="ent${i===0?" latest":""}"><div class="t">${fmt(e.t)}</div><div><div class="h" style="color:${(CUE_STYLE[e.type]||[C.fg])[0]}">${e.head} <i class="tag ${e.src==="prototype"?"proto":"now"}">${e.src==="prototype"?"PROTOTYPE":"v0.7"}</i></div><div class="w">${e.detail}</div></div></div>`).join(""); }
+  const last=logEntries.slice(-40).reverse(); L.innerHTML=last.map((e,i)=>`<div class="ent${i===0?" latest":""}"><div class="t">${fmt(e.t)}</div><div><div class="h" style="color:${(CUE_STYLE[e.type]||[C.fg])[0]}">${e.head} <i class="tag ${e.src==="v0.7 rule"?"now":"proto"}">${e.src==="v0.7 rule"?"v0.7":e.src.toUpperCase()}</i></div><div class="w">${e.detail}</div></div></div>`).join(""); }
 
 function loop(ts){ if(!playing) return; if(!lastTs) lastTs=ts; const dt=(ts-lastTs)/1000; lastTs=ts; acc+=dt*speedX; let n=0; while(acc>=1 && n<60){ if(!step()){ playing=false; el("playBtn").textContent="▶ PLAY"; el("playBtn").className="btn play"; finishRide(); break; } acc-=1; n++; }
   renderFrame(); if(n) { renderLog(); renderMemo(); } if(playing) raf=requestAnimationFrame(loop); }
@@ -571,7 +587,12 @@ function renderCmp(){ const rows=[
    + mk("Efficiency marker",ORDER.map(id=>+ST[id].eff),"",C.green,"real","km/h per 100 bpm. Flat across three rides: no measurable change in how much speed each heartbeat buys you — expected over 12 days.")
    + mk("HR-per-speed drift",ORDER.map(id=>+ST[id].drift)," %",C.amber,"est","Positive = heart rate rose relative to speed in the second half. Rides 2 and 3 drifted upward; Ride 1 ran the other way because its second half had the long dips. In heat, upward drift is normal; on a cool day it points at pacing. Measured power would separate the two.");
 }
-function renderMemoAll(){ el("memoAll").innerHTML=ORDER.map(id=>`<div class="card"><h3>${REAL[id].name} · ${REAL[id].date}</h3>${memoBlocks(memoFor(id,REAL[id].sec))}${id==="r3"?`<h3 style="margin-top:10px;color:var(--cyan)">Next workout the coach would recommend <i class="tag proto">PROTOTYPE</i></h3><p style="font-size:13px;margin:0">Rule: three rides in 12 days, all ending with a 10-minute surge above threshold, and Zone 2 time never above 55% → <b>75 minutes on the same route, cap 149 bpm, cool-down from minute 65, no sprint at the end.</b> Start 30 minutes later or before 8 am to cut the heat drift. Ride it with the XDS verified under load so the next comparison uses measured watts.</p>`:""}</div>`).join(""); }
+const RECO={
+ r1:"After Ride 1 the coach has one baseline and no calibration. Recommendation: ride the same route again in Zone 2 mode with a 149 bpm ceiling, keep cadence hints on (simulated habit was 74 rpm), and verify the power meter under load before trusting any watts.",
+ r2:"After Ride 2 the coach has seen a hard day: 45 min above the ceiling and about 60 EASE OFF cues. Recommendation changes: next ride easier, not harder — same route, hold under 149 bpm, and the coach should back off after three unheeded cues (now proposed for v0.8). Still no FTP or threshold test, so zones remain estimates.",
+ r3:"After Ride 3 the coach sees the same speed as Ride 1 at 3 bpm less and twice Ride 2's Zone 2 time, but a hard final 10 minutes every time. Recommendation: extend to 75 min under the cap, cool-down from minute 65, no final surge, earlier start, with verified power so the next comparison is measured.",
+};
+function renderMemoAll(){ el("memoAll").innerHTML=ORDER.map(id=>`<div class="card"><h3>${REAL[id].name} · ${REAL[id].date}</h3>${memoBlocks(memoFor(id,REAL[id].sec))}<h3 style="margin-top:10px;color:var(--cyan)">Recommendation after this ride <i class="tag proto">PROTOTYPE</i></h3><p style="font-size:13px;margin:0">${RECO[id]}</p>${id==="r3"?`<h3 style="margin-top:10px;color:var(--cyan)">Next workout the coach would recommend <i class="tag proto">PROTOTYPE</i></h3><p style="font-size:13px;margin:0">Rule: three rides in 12 days, all ending with a 10-minute surge above threshold, and Zone 2 time never above 55% → <b>75 minutes on the same route, cap 149 bpm, cool-down from minute 65, no sprint at the end.</b> Start 30 minutes later or before 8 am to cut the heat drift. Ride it with the XDS verified under load so the next comparison uses measured watts.</p>`:""}</div>`).join(""); }
 function renderQa(){ const q=[
  ["1. What did the coach notice about your cycling?","Your 'easy' rides are not easy. Across three rides your heart rate averaged 150–156 bpm, and 40–65% of each ride was above the Zone 2 band (138–149 bpm, estimated). Every ride ends with a hard surge in the last 10 minutes. Recovery after efforts is quick (20–30 bpm in 2 minutes), which is a good sign for aerobic fitness. All of this comes from your real Apple Watch data."],
  ["2. What instructions did it give during each ride?","Ride 1 (uncoached): observations only — time in zone every 10 minutes and a baseline summary. Ride 2: WARM UP at the start, EASE OFF each time heart rate held above 149 for 8 s (most of the ride, because 5 Oct was a hard day), PEDAL FASTER once during the simulated low-cadence stretch, KEEP IT UP whenever you were inside the band for 5 s, COOL DOWN for the last 5 minutes. Ride 3: fewer EASE OFF calls in the first 50 minutes and GREAT PACING (prototype) when simulated power stayed steady inside Zone 2, then EASE OFF again during the final surge. Press play on each ride to see the exact timestamps and reasons."],
@@ -579,6 +600,7 @@ function renderQa(){ const q=[
  ["4. What potential improvements can be demonstrated?","Real data: Ride 3 was ridden at the same speed as Ride 1 with a 3 bpm lower average and twice Ride 2's Zone 2 time. Those are consistent with improvement but inside normal variation. Simulated data: steadier cadence and steadier power in Ride 3 are assumptions that show what the coach would recognise, not evidence that it happened."],
  ["5. What additional real sensor data is needed to verify those improvements?","Measured power from the XDS (verified under load first) — it makes 'watts at the same heart rate' and aerobic decoupling real instead of unavailable. Real cadence from the same sensor. A 20-minute FTP test and a max-HR or threshold test to replace the estimated zones. Resting heart rate (and ideally sleep) to judge fatigue before the coach pushes you."],
  ["6. What should your next cycling workout be, and why?","75 minutes on your usual route with a hard cap of 149 bpm, warm-up 5 minutes, cool-down from minute 65, no sprint at the end, started earlier in the day to reduce heat drift. Why: all three rides show you can sustain ~155–165 bpm, so endurance is not what is limiting you — the discipline to stay low is. One ride held under the cap, with the XDS recording verified watts, gives the first comparison that could prove progress instead of hinting at it."],
+ ["When heart rate and power disagree, which wins and why?","Heart rate wins on effort. Heart rate is the measurement of what the ride is costing your body, which is what Zone 2 training is about; power is the measurement of what you are producing. So: HR above target → EASE OFF regardless of power. HR below target but power already on or above target → the coach stays silent, because heart rate lags power by 30–90 s and asking for more would overshoot. HR on target but power surging a full zone above for 6 s → EASE OFF before the heart rate catches up. Power alone decides only when there is no heart-rate strap, with shorter 2 s holds because power responds instantly. Cadence never overrides any of this: a cadence hint is given only when the effort ladder decided nothing and heart rate is not above target, so PEDAL FASTER can never follow EASE OFF within the same breath."],
  ["What this replay exposed about the v0.7 coach itself","On 5 Oct your heart rate stayed above the Zone 2 band for 45 minutes. The shipped engine repeats an unheeded cue every 45 seconds, so it would have said EASE OFF about 60 times. That is correct but unbearable. Recommended change for v0.8 (recorded in the roadmap): after three unheeded repeats, go quiet and show the state on the gauges only, then speak again when the state changes or every 5 minutes. The replay also confirms that with the app's current default zones (max HR 185) every one of these rides would have been 'above target' from start to finish — calibration before coaching."],
  ]; el("qa").innerHTML=q.map(([h,p])=>`<div class="card"><h3>${h}</h3><p>${p}</p></div>`).join(""); }
 function renderFeat(){ const rows=[
@@ -589,6 +611,10 @@ function renderFeat(){ const rows=[
  ["Warm-up / main / cool-down phases","v0.7 rule","Ships (5-min warm-up, cool-down button)"],
  ["Hysteresis, hold times, anti-repeat spacing","v0.7 rule","Ships (P1-10, P1-11)"],
  ["Zone 2 band 138–149 from estimated LTHR","prototype","App uses % of max HR (default 185). Editable zones are P2"],
+ ["Warm-up ceiling rising gradually (125 → 149 bpm over 5 min)","v0.8 proposal","Not in the app; v0.7 warm-up is a flat Zone-1 gate"],
+ ["90 s transition grace after warm-up (no 'push' while HR responds)","v0.8 proposal","Not in the app"],
+ ["Cool-down ceiling falling gradually (WIND DOWN instead of EASE OFF)","v0.8 proposal","Not in the app"],
+ ["Back-off: quiet after 3 unheeded repeats, speak again on change or 5 min","v0.8 proposal","Not in the app; v0.7 repeats every 45 s"],
  ["PEDAL SMOOTHER (cadence unevenness)","prototype","Not in the app"],
  ["GREAT PACING (steady power inside zone)","prototype","Not in the app"],
  ["Baseline observations every 10 min","prototype","Not in the app"],
@@ -597,7 +623,7 @@ function renderFeat(){ const rows=[
  ["Next-workout recommendation rule","prototype","P4 — not in the app"],
  ["Coach memory across rides","prototype","P3/P4 — the app stores rides but does not read them back"],
  ["Simulated power and cadence","demo only","Never in the app: it shows '—' when a sensor is absent"],
- ]; el("feat").innerHTML=`<thead><tr><th>Feature</th><th>Status</th><th>Where it stands</th></tr></thead><tbody>`+rows.map(([f,s,w])=>`<tr><td>${f}</td><td style="text-align:left"><i class="tag ${s==="v0.7 rule"?"now":s==="prototype"?"proto":"sim"}">${s.toUpperCase()}</i></td><td style="text-align:left;color:var(--mut)">${w}</td></tr>`).join("")+`</tbody>`; }
+ ]; el("feat").innerHTML=`<thead><tr><th>Feature</th><th>Status</th><th>Where it stands</th></tr></thead><tbody>`+rows.map(([f,s,w])=>`<tr><td>${f}</td><td style="text-align:left"><i class="tag ${s==="v0.7 rule"?"now":s==="demo only"?"sim":"proto"}">${s.toUpperCase()}</i></td><td style="text-align:left;color:var(--mut)">${w}</td></tr>`).join("")+`</tbody>`; }
 
 renderCmp(); renderMemoAll(); renderQa(); renderFeat(); resetRide();
 </script>
