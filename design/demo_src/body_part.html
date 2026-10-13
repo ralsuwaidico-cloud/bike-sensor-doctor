@@ -1,0 +1,101 @@
+<div class="wrap">
+  <p class="ey">Bike Computer · Scientific Coach · personalised experience</p>
+  <h1>A coach that asks before it prescribes</h1>
+  <p class="sub">This is the Bike Computer app flow as it would run on your Nokia: first launch → onboarding → your rider profile → today's recommended workout → live coaching → post-ride questions → an updated recommendation. Answer inside the phone frame. Your answers are saved in this browser and survive reloads. Heart rate in the ride replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
+  <div class="legend">
+    <span><i class="tag real">REAL</i> measured</span>
+    <span><i class="tag sim">SIMULATED</i> generated, assumptions stated</span>
+    <span><i class="tag now">v0.7 RULE</i> exists in the app today</span>
+    <span><i class="tag proto">PROTOTYPE</i> proposed, demonstrated here</span>
+    <span><i class="tag conf">CONFIRMED</i> value you measured</span>
+    <span><i class="tag prov">PROVISIONAL</i> estimated or app-calculated, needs a test</span>
+  </div>
+
+  <div class="main" style="margin-top:22px">
+    <div class="appframe" id="app">
+      <div class="appbar"><span id="appTitle">Bike Computer</span><span id="appStep" class="mono"></span></div>
+      <div id="scrWelcome" class="scr"></div>
+      <div id="scrQ" class="scr" hidden></div>
+      <div id="scrProfile" class="scr" hidden></div>
+      <div id="scrHome" class="scr" hidden></div>
+      <div id="scrLive" class="scr" hidden>
+        <div class="bar" role="group" aria-label="Playback">
+          <div class="seg" id="rideSeg">
+            <button type="button" data-ride="r3" aria-pressed="true">TODAY (12 Oct HR)</button>
+            <button type="button" data-ride="r2" aria-pressed="false">5 Oct HR</button>
+            <button type="button" data-ride="r1" aria-pressed="false">30 Sep HR</button>
+          </div>
+          <button type="button" class="btn play" id="playBtn">▶ PLAY</button>
+          <button type="button" class="btn reset" id="resetBtn">↺</button>
+          <div class="seg" id="speedSeg">
+            <button type="button" data-x="1" aria-pressed="false">1×</button>
+            <button type="button" data-x="5" aria-pressed="false">5×</button>
+            <button type="button" data-x="10" aria-pressed="true">10×</button>
+            <button type="button" data-x="30" aria-pressed="false">30×</button>
+          </div>
+          <div class="clock">ride <b id="clock">00:00</b> / <span id="total">65:05</span></div>
+          <input type="range" class="scrub" id="scrub" min="0" max="3905" value="0" step="1" aria-label="Scrub ride time">
+          <button type="button" class="btn finish" id="finishBtn">■ FINISH RIDE</button>
+        </div>
+        <div class="phone" id="phone"></div>
+      </div>
+      <div id="scrPost" class="scr" hidden></div>
+    </div>
+    <div class="col">
+      <div class="card cue" id="rulesCard">
+        <h3>What your answers change</h3>
+        <div id="rules" style="font-size:13px;color:var(--mut)">Answer the onboarding questions in the phone and this panel fills with the exact rules your answers trigger.</div>
+      </div>
+      <div class="card" id="cmpCard" hidden>
+        <h3>Generic coach vs your coach — same ride, same heart rate</h3>
+        <div id="cmpBox"></div>
+      </div>
+      <div class="card cue" id="cueCard" hidden>
+        <h3>Latest instruction and why</h3>
+        <div id="cueBig" style="font-family:var(--cue);font-weight:800;font-size:22px">PRESS PLAY</div>
+        <div id="cueWhy" style="color:var(--mut);font-size:13px;margin-top:4px">The coach speaks only when a rule fires.</div>
+      </div>
+      <div class="card" id="logCard" hidden>
+        <h3>Coach log <span id="logCount" style="color:var(--faint)"></span></h3>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="card" id="memoCard" hidden>
+        <h3>What the coach knows after this ride</h3>
+        <div class="memo" id="memo"></div>
+      </div>
+      <div class="card" id="kvCard" hidden>
+        <h3>This ride's real numbers <i class="tag real">REAL</i></h3>
+        <div class="kv" id="realKv"></div>
+        <div style="margin-top:10px"><h3>Simulation assumptions <i class="tag sim">SIMULATED</i></h3>
+        <div class="kv" id="simKv"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="block">
+    <p class="ey">Comparison</p>
+    <h2>Your three real rides side by side</h2>
+    <p class="sub">Same route each time. Real columns come straight from Apple Fitness. Estimated columns are read from the shape of your heart-rate chart. Simulated columns depend on the power model and prove nothing about fitness. Zone-based rows use the targets from your profile once you have completed onboarding.</p>
+    <div class="tbl"><table id="cmp"></table></div>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section class="block">
+    <p class="ey">The coach's memory</p>
+    <h2>How understanding builds across the three rides</h2>
+    <div class="memo" id="memoAll"></div>
+  </section>
+
+  <section class="block">
+    <p class="ey">Verdict</p>
+    <h2>What the coach is actually worth to you</h2>
+    <div class="qa" id="qa"></div>
+  </section>
+
+  <section class="block">
+    <p class="ey">Honesty table</p>
+    <h2>What exists today versus what this demo prototypes</h2>
+    <div class="tbl"><table class="feat" id="feat"></table></div>
+    <p class="note">This page is a demonstration. The production app has not been changed. Simulated watts and cadence illustrate how the coach reacts; they are not measurements of your performance. Onboarding answers are stored only in this browser.</p>
+  </section>
+</div>
