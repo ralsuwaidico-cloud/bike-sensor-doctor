@@ -48,6 +48,7 @@ class AppFlowTest {
         repeat(6) { if (has(sel, 600)) return find(sel, 1000); device.swipe(device.displayWidth / 2, (device.displayHeight * 0.75).toInt(), device.displayWidth / 2, (device.displayHeight * 0.3).toInt(), 12) }
         return find(sel, 1000)
     }
+    private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
     private fun launch() {
         val i = ctx.packageManager.getLaunchIntentForPackage(pkg)!!.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
         ctx.startActivity(i); device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
@@ -85,7 +86,9 @@ class AppFlowTest {
         // page 4: zones (I know my numbers)
         tap(text("I know my numbers"))
         find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"; device.waitForIdle()
-        scrollTo(text("Tested")); device.findObjects(text("Tested")).let { it.first().click(); device.waitForIdle(); device.findObjects(text("Tested")).last().click() }; device.waitForIdle()
+        scrollTo(text("Tested"))
+        retry { device.findObjects(text("Tested")).first().click() }; device.waitForIdle(1000)
+        retry { device.findObjects(text("Tested")).last().click() }; device.waitForIdle(1000)
         tap(text("Don't know yet")); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
         // page 5: prefs
         tap(text("On")); tap(text("Corrections")); shot("07_page5"); tap(tag("next_page"))
