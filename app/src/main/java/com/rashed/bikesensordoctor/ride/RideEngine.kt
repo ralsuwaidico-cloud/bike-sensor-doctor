@@ -236,8 +236,7 @@ class RideEngine(private val app: Application) {
                 else -> r.answers[followUpKey] = followUpValue
             }
         }
-        riders.save(r); loadRiderState()
-        _dash.value = _dash.value.copy(lastResult = null)
+        riders.save(r); loadRiderState()   // the post-ride screen clears lastResult itself when the rider leaves it
     }
     fun clearResult() { _dash.value = _dash.value.copy(lastResult = null) }
 
@@ -362,6 +361,7 @@ class RideEngine(private val app: Application) {
                 plan = SessionPlan(warmupSec = s.warmupSec, cooldownSec = s.cooldownSec, plannedSec = w.minutes * 60)
                 if (prefs.coachMode == "FREE") prefs.coachMode = "ZONE2"
             } else { workoutPlan = null; plan = SessionPlan(warmupSec = prefs.warmupSec) }
+            _cue.value = com.rashed.bikesensordoctor.core.CoachCue.NONE
             _dash.value = _dash.value.copy(lastResult = null, plannedSec = plan.plannedSec, workoutName = w?.name ?: "")
         }
         if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) simulator?.restart()
@@ -409,6 +409,7 @@ class RideEngine(private val app: Application) {
         workoutPlan = null
         RideService.stop(app)
         if (simulator != null) stopSimulation()
+        _cue.value = com.rashed.bikesensordoctor.core.CoachCue.NONE
         _dash.value = _dash.value.copy(lastSavedRide = saved, restoredRide = false, lastResult = if (rider?.completed == true && summary.durationMs > 10_000) result else null, targets = null, inZonePct = null, plannedSec = null)
         return saved
     }
