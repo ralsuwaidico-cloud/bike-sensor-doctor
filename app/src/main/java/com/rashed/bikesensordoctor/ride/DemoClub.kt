@@ -6,7 +6,6 @@ import com.rashed.bikesensordoctor.core.BoardRider
 import com.rashed.bikesensordoctor.core.RideSource
 import com.rashed.bikesensordoctor.core.RiderAnswers
 import com.rashed.bikesensordoctor.core.RiderProfile
-import java.io.File
 import java.util.Calendar
 
 /**
