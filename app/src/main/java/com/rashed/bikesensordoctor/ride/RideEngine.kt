@@ -262,6 +262,28 @@ class RideEngine(private val app: Application) {
     /** Evidence lists for FTP / threshold calibration (verified device rides only). */
     fun ftpEvidence(): List<Int> = history.list().filter { it.source == RideSource.DEVICE }.sortedBy { it.startedAtMs }.mapNotNull { history.readMeta(it.startedAtMs)["best20"] as? Int }
     fun testEvidence(): List<Int> = history.list().filter { it.source == RideSource.DEVICE }.sortedBy { it.startedAtMs }.mapNotNull { history.readMeta(it.startedAtMs)["testHr"] as? Int }
+
+    /**
+     * v0.10 performance-core: every piece of evidence this device holds for the active rider, with provenance.
+     * Simulated rides contribute nothing; unverified power contributes nothing to FTP; ordinary rides never set a threshold HR.
+     */
+    fun evidence(): List<com.rashed.bikesensordoctor.core.Evidence> {
+        val out = ArrayList<com.rashed.bikesensordoctor.core.Evidence>()
+        history.list().filter { it.source == RideSource.DEVICE }.sortedBy { it.startedAtMs }.forEach { r ->
+            val m = history.readMeta(r.startedAtMs)
+            val trusted = m["powerTrusted"] as? Boolean ?: false
+            val test = (m["workoutKind"] as? String) == "test"
+            (m["testPw"] as? Int)?.let { pw -> if (test) com.rashed.bikesensordoctor.core.Performance.ftp20(pw.toDouble(), trusted, false, 1.0, 0, r.startedAtMs, r.startedAtMs)?.let { out += it } }
+            (m["best20"] as? Int)?.let { b -> if (!test) com.rashed.bikesensordoctor.core.Performance.passiveBest20(b, trusted, false, r.startedAtMs, r.startedAtMs)?.let { out += it } }
+            (m["testHr"] as? Int)?.let { hr -> if (test) out += com.rashed.bikesensordoctor.core.Evidence("thr-${r.startedAtMs}", com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR, hr, com.rashed.bikesensordoctor.core.Method.FIELD_20MIN_HR, r.startedAtMs, sourceRideId = r.startedAtMs) }
+        }
+        rider?.answers?.let { a ->
+            a.metric("ftp")?.let { out += com.rashed.bikesensordoctor.core.Evidence("profile-ftp", com.rashed.bikesensordoctor.core.MetricKind.FTP, it.value, if (it.measured) com.rashed.bikesensordoctor.core.Method.USER_TESTED_FTP else com.rashed.bikesensordoctor.core.Method.USER_ESTIMATED_FTP, System.currentTimeMillis()) }
+            a.metric("lthr")?.let { out += com.rashed.bikesensordoctor.core.Evidence("profile-lthr", com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR, it.value, if (it.measured) com.rashed.bikesensordoctor.core.Method.USER_TESTED_HR else com.rashed.bikesensordoctor.core.Method.USER_ESTIMATED_HR, System.currentTimeMillis()) }
+        }
+        return out
+    }
+    fun estimate(kind: com.rashed.bikesensordoctor.core.MetricKind): com.rashed.bikesensordoctor.core.Estimate? = com.rashed.bikesensordoctor.core.Performance.estimate(kind, evidence(), System.currentTimeMillis())
     fun chooseWorkout(w: Workout?) { workout = w ?: setup?.let { s -> rider?.let { recommendFor(it, s) } }; _dash.value = _dash.value.copy(workoutName = workout?.name ?: "") }
     fun refreshRecommendation() { workout = setup?.let { s -> rider?.let { recommendFor(it, s) } }; _dash.value = _dash.value.copy(workoutName = workout?.name ?: "") }
 

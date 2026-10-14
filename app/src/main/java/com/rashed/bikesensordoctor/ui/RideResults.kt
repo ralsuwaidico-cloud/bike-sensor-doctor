@@ -177,38 +177,25 @@ fun RideResultsScreen(vm: DoctorViewModel, rideId: Long, fresh: Boolean, onDone:
         }
         // calibration with evidence rules (never from a single ride, never from simulated or unverified power)
         if (!simulated && rider != null) Expander("Fitness estimates & evidence", tag = "exp_calibration") {
-            val ftpE = remember(tick) { com.rashed.bikesensordoctor.core.Calibration.ftp(vm.engine.ftpEvidence()) }
-            val lthrE = remember(tick) { com.rashed.bikesensordoctor.core.Calibration.lthr(vm.engine.testEvidence()) }
-            var any = false
-            listOf("ftp" to ftpE, "lthr" to lthrE).forEach { (key, ev) ->
-                if (ev.value != null) { any = true; D7Card(Modifier.padding(top = 6.dp), accent = if (ev.ready) D7.Violet else null) {
-                    CardTitle(if (ev.ready) "${if (key == "ftp") "FTP" else "THRESHOLD HR"} — ${ev.confidence?.name ?: "EVIDENCE"}" else "${if (key == "ftp") "FTP" else "THRESHOLD HR"} — EVIDENCE BUILDING")
-                    Text("${ev.label} ${ev.value}${if (key == "ftp") " W" else " bpm"}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
-                    Expander("Why?") { Muted(ev.detail, 12) }
-                    val m = rider.answers.metric(key)
-                    if (ev.ready) Row(Modifier.padding(top = 6.dp)) {
-                        if (m?.measured == true && ev.confidence != com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) Muted("Your profile has a tested value — estimates never overwrite it.", 11)
-                        else if (m?.value == ev.value) Tag("APPLIED", D7.Green)
-                        else PrimaryButton(if (ev.confidence == com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) "USE AS CONFIRMED" else "USE AS PROVISIONAL", color = D7.Violet) { rider.answers.setMetric(key, ev.value, if (ev.confidence == com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
-                    }
-                } }
-            }
-            a.suggestions.filter { it.key != "ftp" }.forEach { sg ->
-                any = true
+            val ftpEst = remember(tick) { vm.engine.estimate(com.rashed.bikesensordoctor.core.MetricKind.FTP) }
+            val thrEst = remember(tick) { vm.engine.estimate(com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR) }
+            val pf = rider.answers.metric("ftp"); val pl = rider.answers.metric("lthr")
+            EstimateCard(com.rashed.bikesensordoctor.core.MetricKind.FTP, pf?.value, pf?.measured == true, ftpEst, Modifier.padding(top = 6.dp)) { v -> rider.answers.setMetric("ftp", v, if (ftpEst!!.status >= com.rashed.bikesensordoctor.core.EstimateStatus.HIGH) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
+            EstimateCard(com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR, pl?.value, pl?.measured == true, thrEst, Modifier.padding(top = 6.dp)) { v -> rider.answers.setMetric("lthr", v, if (thrEst!!.status >= com.rashed.bikesensordoctor.core.EstimateStatus.HIGH) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
+            a.suggestions.filter { it.key == "maxHr" }.forEach { sg ->
                 D7Card(Modifier.padding(top = 6.dp), accent = D7.Violet) {
                     CardTitle("PROVISIONAL ESTIMATE — YOUR CALL")
                     Text(sg.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg); Expander("Why?") { Muted(sg.why, 12) }
-                    val r = rider
                     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val already = r.answers.metric(sg.key)?.value == sg.value
-                        val measured = r.answers.metric(sg.key)?.measured == true
+                        val already = rider.answers.metric(sg.key)?.value == sg.value
+                        val measured = rider.answers.metric(sg.key)?.measured == true
                         if (measured) Muted("Your profile has a tested value — estimates never overwrite it.", 11)
                         else if (already) Tag("APPLIED", D7.Green)
-                        else PrimaryButton("USE AS PROVISIONAL", color = D7.Violet) { r.answers.setMetric(sg.key, sg.value, "estimated"); vm.engine.saveRider(); tick++ }
+                        else PrimaryButton("USE AS PROVISIONAL", color = D7.Violet) { rider.answers.setMetric(sg.key, sg.value, "estimated"); vm.engine.saveRider(); tick++ }
                     }
                 }
             }
-            if (!any) Muted("Nothing new from this ride. FTP needs a verified meter and two agreeing 20-minute efforts; threshold HR needs the guided test.", 12)
+            Muted("Estimates change only between rides, keep their history, and never overwrite a tested value with a weaker one.", 10)
         }
 
         // ---------------- 5 · next workout ----------------

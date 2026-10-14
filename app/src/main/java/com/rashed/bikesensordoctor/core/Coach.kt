@@ -23,7 +23,9 @@ enum class EffortSource { AUTO, HEART_RATE, POWER }
 
 enum class CueType { NONE, KEEP_IT_UP, PEDAL_FASTER, PEDAL_SLOWER, EASE_OFF, PUSH_HARDER, RECOVER, WORK, NO_HR, NO_POWER, WARMUP, COOLDOWN, QUIET,
     /** v0.10 pattern rules read from the 1 Hz history: a sudden power spike, an unsteady effort, recovery after easing off */
-    SURGE, STEADY }
+    SURGE, STEADY,
+    /** a sensor that was reporting has gone silent — said once, coaching continues from what is left */
+    SENSOR_LOST }
 
 /**
  * v3: the practical action the rider should take. One per tick, chosen by one priority ladder
@@ -34,7 +36,7 @@ enum class CoachAction(val icon: String) {
     EASIER_GEAR("⚙−"), HARDER_GEAR("⚙+"), REDUCE_PRESSURE("⇩"), INCREASE_EFFORT("⇧"), HR_RISING_EASE("♥↑"),
     PEDAL_FASTER("↻+"), PEDAL_SLOWER("↻−"), KEEP_CADENCE_STEADY("≈"), HOLD_PACE("═"), STABLE_MAINTAIN("✓"),
     RECOVER("❄"), NO_SIGNAL("?"), QUIET("…"),
-    SMOOTH_SURGES("∿"), STEADY_EFFORT("≈"), RECOVERED("✓"),
+    SMOOTH_SURGES("∿"), STEADY_EFFORT("≈"), RECOVERED("✓"), SENSOR_LOST("⚠"),
 }
 
 /**
@@ -165,10 +167,12 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
     private var announcedPhase: Phase? = null
     private var surgeSince: Long? = null
     private var spikeSince: Long? = null; private var easeAtMs: Long? = null; private var recoveredForMs: Long? = null
+    private var powerSeenMs: Long? = null; private var hrSeenMs: Long? = null; private var powerLostSaid = false; private var hrLostSaid = false
     private var lastCad: Int? = null
     private var lastHr: Int? = null; private var lastPw: Int? = null; private var lastSpeed: Double? = null
     private var lastHb: Band? = null; private var lastPb: Band? = null
     private var lastHrBand = ""; private var lastPwBand = ""
+    private var lastStopped = false; private var lastCoasting = false
 
     /** 30 s-vs-previous-30 s trend of a signal (per minute), from 1 Hz samples. */
     private class Trend {
@@ -197,6 +201,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         cadS.clear(); hrS.clear(); pwS.clear(); hrBand.clear(); pwBand.clear(); cadState = null
         lastType = CueType.NONE; lastEmitMs = Long.MIN_VALUE / 2; lastEmitByType.clear(); allGoodSince = null; keepArmed = true
         announcedPhase = null; surgeSince = null; spikeSince = null; easeAtMs = null; recoveredForMs = null; intervalStartMs = null
+        powerSeenMs = null; hrSeenMs = null; powerLostSaid = false; hrLostSaid = false
         phaseSeen = null; phaseSinceMs = 0; repeatCount = 0; quietSinceMs = 0
         hrT.clear(); pwT.clear(); cadT.clear(); spT.clear(); minuteAbove = 0; minuteBelow = 0; minuteIn = 0; minuteStartMs = Long.MIN_VALUE / 2; lastAssessment = null
         lastHr = null; lastPw = null; lastSpeed = null; lastHb = null; lastPb = null
@@ -228,6 +233,20 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         hrT.feed(now, hr?.toDouble()); pwT.feed(now, pw?.toDouble()); cadT.feed(now, cad?.takeIf { it > 0 }?.toDouble()); spT.feed(now, input.speedKmh)
         // coasting or stopped: no pedalling or gear instruction makes sense (effort rules below still see HR)
         val stopped = (input.speedKmh != null && input.speedKmh < 2.0) || (cad != null && cad == 0 && input.cadence.available)
+        lastStopped = stopped; lastCoasting = coasting
+
+        // ---- 1b. sensor loss: a signal that was reporting in the last 30 s has gone stale → say so once (not an effort cue) ----
+        if (input.power.available) { powerSeenMs = now; powerLostSaid = false }
+        if (input.hr.available) { hrSeenMs = now; hrLostSaid = false }
+        val powerLost = !input.power.available && powerSeenMs != null && now - powerSeenMs!! in 1..30_000 && !powerLostSaid
+        val hrLost = !input.hr.available && hrSeenMs != null && now - hrSeenMs!! in 1..30_000 && !hrLostSaid
+        if (powerLost && now - (powerSeenMs ?: now) >= c.staleMs) { powerLostSaid = true
+            return CoachCue(CueType.SENSOR_LOST, "POWER SENSOR DISCONNECTED", if (input.hr.available) "Coaching continues from heart rate" else "No effort signal until a sensor returns", if (input.hr.available) "Power sensor lost. Coaching from heart rate." else "Power sensor lost.", "POWER_LOST", CoachAction.SENSOR_LOST, "sensors", liveText(), "Power sensor lost", if (input.hr.available) "coaching from heart rate" else "waiting for a sensor") }
+        if (hrLost && now - (hrSeenMs ?: now) >= c.staleMs) { hrLostSaid = true
+            return CoachCue(CueType.SENSOR_LOST, "HEART-RATE SENSOR DISCONNECTED", if (input.power.available && usePw) "Coaching continues from power" else "No effort signal until the strap returns", if (input.power.available && usePw) "Heart-rate sensor lost. Coaching from power." else "Heart-rate sensor lost.", "HR_LOST", CoachAction.SENSOR_LOST, "sensors", liveText(), "HR strap lost", if (input.power.available && usePw) "coaching from power" else "waiting for the strap") }
+
+        // stopped: nothing to coach (phase bookkeeping below still runs on the next moving tick)
+        if (stopped) { allGoodSince = null; return CoachCue.NONE }
 
         // ---- 2. phase (intervals split MAIN into work / rest) ----
         var phase = input.phase
@@ -297,7 +316,9 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
                 if (pb == Band.ABOVE && pwBand.held(now, c.powerHoldMs)) return emit(now, CueType.EASE_OFF, "EASE OFF", "Recovery interval — spin easy", "Ease off, recovery", "RECOVERY_PW_ABOVE")
                 return announce(now, phase, CueType.RECOVER, "RECOVER", "Easy spin — recovery interval", "Recover", "PHASE_RECOVERY")
             }
-            Phase.MAIN -> { if (announcedPhase != Phase.MAIN) { announcedPhase = Phase.MAIN; keepArmed = true } }
+            Phase.MAIN -> { if (announcedPhase != Phase.MAIN) { announcedPhase = Phase.MAIN; keepArmed = true; allGoodSince = null
+                if (announcedPhase != null && phaseSeen == Phase.MAIN && now - phaseSinceMs < 2_000 && lastType == CueType.WARMUP) { lastType = CueType.WORK; lastEmitMs = now
+                    return CoachCue(CueType.WORK, "SETTLE INTO YOUR TARGET", "Main block: ${if (tg != null) "${tg.hrLo}–${tg.hrHi} bpm" else "zone $targetHrZone"}", "Settle into your target.", "PHASE_MAIN", CoachAction.HOLD_PACE, "phase", liveText(), "Settle into your target", if (tg != null) "${tg.hrLo}–${tg.hrHi} bpm" else "zone $targetHrZone") } } }
         }
 
         // ---- v0.10 patterns from the 1 Hz history (the same samples the live graph draws) ----
@@ -458,7 +479,8 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
      */
     private fun action(type: CueType, head: String, detail: String, spoken: String, reason: String): Worded {
         val c = config; val cad = lastCad; val pw = lastPw; val hr = lastHr
-        val cadLow = cad != null && cad > 0 && cad < c.cadenceLow; val cadHigh = cad != null && cad > c.cadenceHigh
+        val gearOk = !lastStopped && !lastCoasting   // gear direction is only meaningful while pedalling under load
+        val cadLow = gearOk && cad != null && cad > 0 && cad < c.cadenceLow; val cadHigh = gearOk && cad != null && cad > c.cadenceHigh
         val pwHigh = lastPb == Band.ABOVE || (pw != null && pw > c.ftpW * 0.75); val pwLow = lastPb == Band.BELOW || (pw != null && pw < c.ftpW * 0.55)
         val src = buildString { if (reason.startsWith("HR") || reason == "COOLDOWN_RAMP" || reason == "COOLDOWN_HR_ABOVE") append("HR"); if (reason.startsWith("PW")) append("power"); if (reason.startsWith("CAD")) append("cadence") }
         return when (type) {
@@ -514,6 +536,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
             CoachAction.STEADY_EFFORT -> "Hold a steadier effort" to "power swinging around the target"
             CoachAction.RECOVERED -> "Good — back on target" to (if (lastHr != null) "HR settled after easing off" else "power settled after easing off")
             CoachAction.NO_SIGNAL -> "No effort signal" to (if (reason == "NO_POWER") "pedal under load" else "no heart rate, no loaded power")
+            CoachAction.SENSOR_LOST -> w.head.lowercase().replaceFirstChar { it.uppercase() } to w.detail
             CoachAction.NONE -> w.head.lowercase().replaceFirstChar { it.uppercase() } to w.detail.substringBefore(" — ").take(46)
         }
     }

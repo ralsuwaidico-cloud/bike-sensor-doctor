@@ -186,5 +186,20 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 .clive{font-family:var(--mono);font-size:11px;color:var(--fg);margin-top:4px}
 .assess{font-family:var(--mono);font-size:11px;color:var(--mut);margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .assess .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--faint);margin-right:6px}.assess .dot.on{background:var(--green)}
+
+/* ---- v0.10 coach message: summary first, details on request ---- */
+.cmsg{border:1.5px solid var(--line);border-radius:14px;padding:14px;margin:10px 0 12px;background:var(--panel2)}
+.cmsg .ct{font-family:var(--mono);font-size:10px;letter-spacing:.12em}
+.cmsg .ch{font-family:var(--cue);font-weight:800;font-size:22px;line-height:1.15;margin-top:6px;color:var(--fg)}
+.cmsg .cv{font-size:15px;line-height:1.35;margin-top:8px;color:var(--fg)}
+.cmsg .cn{font-size:14px;font-weight:700;line-height:1.35;margin-top:6px}
+.cmsg .pbar{position:relative;height:8px;border-radius:4px;background:var(--track,#16242b);margin-top:8px;overflow:visible}
+.cmsg .pbar div{height:8px;border-radius:4px}
+.cmsg .pbar i{position:absolute;top:0;width:2px;height:8px;background:var(--fg)}
+.cmsg .pgoal{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:2px}
+.cmsg details{margin-top:6px}
+.cmsg summary{cursor:pointer;color:var(--cyan);font-size:13px;font-weight:700;list-style:none}
+.cmsg summary::before{content:"▸ ";} .cmsg details[open] summary::before{content:"▾ ";}
+.cmsg details p,.cmsg details ul{font-size:13px;line-height:1.45;color:var(--mut);margin:4px 0 0 16px}
 </style>
 

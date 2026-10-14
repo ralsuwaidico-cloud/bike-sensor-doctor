@@ -242,3 +242,22 @@ function showView(v){ view=v; detSel=null; if(v==="details"){ phoneEl.innerHTML=
     hit.addEventListener("pointerdown",ev=>{ hit.setPointerCapture(ev.pointerId); pick(ev); }); hit.addEventListener("pointermove",ev=>{ if(ev.buttons) pick(ev); });
     renderDetails(); }
   else { phoneEl.innerHTML=buildPhone(); phoneEl.querySelector("#btnDet").addEventListener("click",()=>showView("details")); renderFrame(); } }
+
+/* ---- v0.10 coach communication: one message first (achievement · meaning · next step), the reasoning behind expanders.
+   Port of core/CoachSummary.kt's ladder for the post-ride screen. */
+function coachMessage(res){ const inb=res.inZonePct, drift=+res.drift; const S=SERIES[ride], R=REAL[ride]; const zone=`Zone 2`;
+  const above = S.hr.filter(h=>h>CFG.hrTarget[1]).length > S.hr.filter(h=>h<CFG.hrTarget[0]).length;
+  const how=`Time in target counts every second of the main block whose heart rate was inside ${CFG.hrTarget[0]}–${CFG.hrTarget[1]} bpm. Drift compares the average heart rate of the second half with the first half at similar effort. Heart rate here is your REAL Apple Fitness data; watts and cadence are SIMULATED and were not used for any estimate.`;
+  let m;
+  if(inb<80) m={title:`${zone} performance`,head:`${inb}% of your ride in target`,verdict:above?"You rode harder than planned.":"You rode easier than planned.",next:above?`Next ride: reduce your effort to stay in ${zone} — ease off as soon as the coach says so.`:`Next ride: add a little effort to reach ${zone} and hold it.`,tone:"fix",progress:inb/100,
+    why:above?"Endurance adaptations (fat metabolism, capillaries, mitochondria) come from long time at a low, steady heart rate. Above the band the session turns into tempo work: more fatigue, less of the intended adaptation, and the next hard day suffers.":"Below the band the stimulus is too small to drive the endurance adaptations the workout is designed for. A little more pressure on the pedals — not a sprint — moves you into the zone."};
+  else if(drift>5) m={title:"Heart-rate drift",head:`Heart rate drifted up ${drift}%`,verdict:"Same effort, higher heart rate in the second half.",next:"Next ride: drink earlier, start cooler, or shorten the ride by 10 minutes.",tone:"watch",progress:inb/100,why:"Cardiac drift: as body temperature rises and plasma volume drops, the heart beats faster for the same work. Up to about 5% is normal; more points to heat, dehydration or a ride that is long for current fitness."};
+  else m={title:`${zone} performance`,head:`${inb}% of your ride in target`,verdict:"Objective achieved — a well-executed endurance ride.",next:"Next ride: repeat this — consistency is what builds endurance.",tone:"good",progress:inb/100,why:"Holding the band for most of the main block is exactly the stimulus an endurance ride is for. Repeating it, then slowly extending the duration, is how the aerobic engine grows."};
+  m.how=how; m.details=[`Average heart rate ${R.avgHr} bpm over ${fmt(R.sec)}`,`Longest continuous block in band ${Math.round(ST[ride].best)} min`,`Coach spoke ${res.cues} times`]; return m; }
+function coachCard(res){ const m=coachMessage(res); const col={good:"var(--green)",watch:"var(--amber)",fix:"var(--orange,#ff8a3d)"}[m.tone];
+  return `<div class="cmsg" style="border-color:${col}"><div class="ct" style="color:${col}">● ${m.title.toUpperCase()}</div><div class="ch">${m.head}</div>
+  ${m.progress!=null?`<div class="pbar"><div style="width:${Math.round(m.progress*100)}%;background:${col}"></div><i style="left:80%"></i></div><div class="pgoal">goal 80%</div>`:""}
+  <div class="cv">${m.verdict}</div><div class="cn" style="color:${col}">${m.next}</div>
+  <details><summary>Why?</summary><p>${m.why}</p></details>
+  <details><summary>Detailed analysis</summary><ul>${m.details.map(d=>`<li>${d}</li>`).join("")}</ul></details>
+  <details><summary>How was this calculated?</summary><p>${m.how}</p></details></div>`; }

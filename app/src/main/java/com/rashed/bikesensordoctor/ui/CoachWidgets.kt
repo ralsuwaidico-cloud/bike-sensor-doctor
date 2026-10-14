@@ -120,3 +120,36 @@ fun ProvenanceRow(items: List<Pair<String, Provenance>>, modifier: Modifier = Mo
         }
     }
 }
+
+/**
+ * A metric estimate as the rider should see it: current value, candidate, confidence word, evidence — a proposal,
+ * never "your FTP is now X". [onApply] applies the candidate to the profile (between rides only).
+ */
+@Composable
+fun EstimateCard(kind: com.rashed.bikesensordoctor.core.MetricKind, current: Int?, currentTested: Boolean, est: com.rashed.bikesensordoctor.core.Estimate?, modifier: Modifier = Modifier, onApply: ((Int) -> Unit)? = null) {
+    val name = when (kind) { com.rashed.bikesensordoctor.core.MetricKind.FTP -> "FTP"; com.rashed.bikesensordoctor.core.MetricKind.CRITICAL_POWER -> "Critical power"; com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR -> "Threshold HR"; com.rashed.bikesensordoctor.core.MetricKind.PREFERRED_CADENCE -> "Preferred cadence" }
+    val unit = kind.unit
+    Column(modifier.fillMaxWidth().background(D7.Panel2, RoundedCornerShape(12.dp)).border(1.dp, D7.Line, RoundedCornerShape(12.dp)).padding(12.dp)) {
+        if (est == null) {
+            Text("$name — no evidence yet", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
+            Text(when (kind) { com.rashed.bikesensordoctor.core.MetricKind.FTP -> "Needs a verified power meter and a 20-minute effort."; com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR -> "Needs the guided threshold test."; else -> "Needs more rides." }, fontSize = 12.sp, color = D7.Mut, modifier = Modifier.padding(top = 2.dp))
+            return@Column
+        }
+        val differs = com.rashed.bikesensordoctor.core.Performance.meaningfullyDiffers(kind, current, est.value)
+        val headline = when { current == null -> "$name estimate available"; differs && est.value > current -> "$name estimate may have increased"; differs -> "$name estimate may have decreased"; else -> "$name estimate agrees with your profile" }
+        Text(headline, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
+        KeyValue(listOfNotNull(
+            current?.let { "Current" to "$it $unit${if (currentTested) " (tested)" else ""}" },
+            "Candidate" to "${est.value} $unit",
+            "Confidence" to est.status.name.lowercase().replaceFirstChar { it.uppercase() } + " (${Math.round(est.confidence * 100)}%)",
+            "Evidence" to "${est.evidenceIds.size} × ${est.method.label}",
+        ))
+        Expander("How was this calculated?") {
+            Text("${est.label.replaceFirstChar { it.uppercase() }}: ${est.method.label}. Confidence = 0.30 data quality (${Math.round(est.components.dataQuality * 100)}%) + 0.25 repeatability (${Math.round(est.components.repeatability * 100)}%) + 0.20 effort validity (${Math.round(est.components.effortValidity * 100)}%) + 0.15 recency (${Math.round(est.components.recency * 100)}%) + 0.10 context (${Math.round(est.components.contextCoverage * 100)}%), capped at this method's ceiling of ${Math.round(est.method.ceiling * 100)}%. A method can never become 'verified' by repetition. ${est.algorithmVersion}.", fontSize = 12.sp, lineHeight = 16.sp, color = D7.Mut)
+        }
+        if (onApply != null && differs && est.status >= com.rashed.bikesensordoctor.core.EstimateStatus.PROVISIONAL) Row(Modifier.padding(top = 6.dp)) {
+            if (currentTested && est.status < com.rashed.bikesensordoctor.core.EstimateStatus.HIGH) Muted("Your profile holds a tested value — a weaker estimate never overwrites it.", 11)
+            else PrimaryButton(if (est.status >= com.rashed.bikesensordoctor.core.EstimateStatus.HIGH) "USE THIS VALUE" else "USE AS PROVISIONAL", color = D7.Violet) { onApply(est.value) }
+        }
+    }
+}

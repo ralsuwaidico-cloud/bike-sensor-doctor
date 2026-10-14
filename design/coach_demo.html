@@ -186,6 +186,21 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 .clive{font-family:var(--mono);font-size:11px;color:var(--fg);margin-top:4px}
 .assess{font-family:var(--mono);font-size:11px;color:var(--mut);margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .assess .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--faint);margin-right:6px}.assess .dot.on{background:var(--green)}
+
+/* ---- v0.10 coach message: summary first, details on request ---- */
+.cmsg{border:1.5px solid var(--line);border-radius:14px;padding:14px;margin:10px 0 12px;background:var(--panel2)}
+.cmsg .ct{font-family:var(--mono);font-size:10px;letter-spacing:.12em}
+.cmsg .ch{font-family:var(--cue);font-weight:800;font-size:22px;line-height:1.15;margin-top:6px;color:var(--fg)}
+.cmsg .cv{font-size:15px;line-height:1.35;margin-top:8px;color:var(--fg)}
+.cmsg .cn{font-size:14px;font-weight:700;line-height:1.35;margin-top:6px}
+.cmsg .pbar{position:relative;height:8px;border-radius:4px;background:var(--track,#16242b);margin-top:8px;overflow:visible}
+.cmsg .pbar div{height:8px;border-radius:4px}
+.cmsg .pbar i{position:absolute;top:0;width:2px;height:8px;background:var(--fg)}
+.cmsg .pgoal{font-family:var(--mono);font-size:9px;color:var(--faint);margin-top:2px}
+.cmsg details{margin-top:6px}
+.cmsg summary{cursor:pointer;color:var(--cyan);font-size:13px;font-weight:700;list-style:none}
+.cmsg summary::before{content:"▸ ";} .cmsg details[open] summary::before{content:"▾ ";}
+.cmsg details p,.cmsg details ul{font-size:13px;line-height:1.45;color:var(--mut);margin:4px 0 0 16px}
 </style>
 
 <div class="wrap">
@@ -945,6 +960,25 @@ function showView(v){ view=v; detSel=null; if(v==="details"){ phoneEl.innerHTML=
     renderDetails(); }
   else { phoneEl.innerHTML=buildPhone(); phoneEl.querySelector("#btnDet").addEventListener("click",()=>showView("details")); renderFrame(); } }
 
+/* ---- v0.10 coach communication: one message first (achievement · meaning · next step), the reasoning behind expanders.
+   Port of core/CoachSummary.kt's ladder for the post-ride screen. */
+function coachMessage(res){ const inb=res.inZonePct, drift=+res.drift; const S=SERIES[ride], R=REAL[ride]; const zone=`Zone 2`;
+  const above = S.hr.filter(h=>h>CFG.hrTarget[1]).length > S.hr.filter(h=>h<CFG.hrTarget[0]).length;
+  const how=`Time in target counts every second of the main block whose heart rate was inside ${CFG.hrTarget[0]}–${CFG.hrTarget[1]} bpm. Drift compares the average heart rate of the second half with the first half at similar effort. Heart rate here is your REAL Apple Fitness data; watts and cadence are SIMULATED and were not used for any estimate.`;
+  let m;
+  if(inb<80) m={title:`${zone} performance`,head:`${inb}% of your ride in target`,verdict:above?"You rode harder than planned.":"You rode easier than planned.",next:above?`Next ride: reduce your effort to stay in ${zone} — ease off as soon as the coach says so.`:`Next ride: add a little effort to reach ${zone} and hold it.`,tone:"fix",progress:inb/100,
+    why:above?"Endurance adaptations (fat metabolism, capillaries, mitochondria) come from long time at a low, steady heart rate. Above the band the session turns into tempo work: more fatigue, less of the intended adaptation, and the next hard day suffers.":"Below the band the stimulus is too small to drive the endurance adaptations the workout is designed for. A little more pressure on the pedals — not a sprint — moves you into the zone."};
+  else if(drift>5) m={title:"Heart-rate drift",head:`Heart rate drifted up ${drift}%`,verdict:"Same effort, higher heart rate in the second half.",next:"Next ride: drink earlier, start cooler, or shorten the ride by 10 minutes.",tone:"watch",progress:inb/100,why:"Cardiac drift: as body temperature rises and plasma volume drops, the heart beats faster for the same work. Up to about 5% is normal; more points to heat, dehydration or a ride that is long for current fitness."};
+  else m={title:`${zone} performance`,head:`${inb}% of your ride in target`,verdict:"Objective achieved — a well-executed endurance ride.",next:"Next ride: repeat this — consistency is what builds endurance.",tone:"good",progress:inb/100,why:"Holding the band for most of the main block is exactly the stimulus an endurance ride is for. Repeating it, then slowly extending the duration, is how the aerobic engine grows."};
+  m.how=how; m.details=[`Average heart rate ${R.avgHr} bpm over ${fmt(R.sec)}`,`Longest continuous block in band ${Math.round(ST[ride].best)} min`,`Coach spoke ${res.cues} times`]; return m; }
+function coachCard(res){ const m=coachMessage(res); const col={good:"var(--green)",watch:"var(--amber)",fix:"var(--orange,#ff8a3d)"}[m.tone];
+  return `<div class="cmsg" style="border-color:${col}"><div class="ct" style="color:${col}">● ${m.title.toUpperCase()}</div><div class="ch">${m.head}</div>
+  ${m.progress!=null?`<div class="pbar"><div style="width:${Math.round(m.progress*100)}%;background:${col}"></div><i style="left:80%"></i></div><div class="pgoal">goal 80%</div>`:""}
+  <div class="cv">${m.verdict}</div><div class="cn" style="color:${col}">${m.next}</div>
+  <details><summary>Why?</summary><p>${m.why}</p></details>
+  <details><summary>Detailed analysis</summary><ul>${m.details.map(d=>`<li>${d}</li>`).join("")}</ul></details>
+  <details><summary>How was this calculated?</summary><p>${m.how}</p></details></div>`; }
+
 /* ============================================================ RIDER PROFILE & ONBOARDING (prototype of the app flow) */
 /* ============================================================ RIDER ACCOUNTS (prototype) ============================================================
    Every rider has an isolated record: display name, optional PIN, onboarding answers, feedback, rides, sensor pairing and sharing
@@ -1294,7 +1328,7 @@ el("finishBtn").addEventListener("click",()=>{ if(!P.completed){ return; } const
   renderPost(); });
 function renderPost(){ const a=A(), c=deriveConfig(a); const res=rideResult(); const before=recommend(a,c);
   el("scrPost").innerHTML=`<div class="qwrap"><p class="ey">Ride complete</p><h2 class="q">${fmt(res.sec)} · ${res.km} km · avg ${res.avgHr} bpm ${tag("real","REAL")}</h2>
-  <div class="kv prof"><span>Time inside your band</span><span>${res.inZonePct}% ${tag("real","REAL HR")}</span><span>HR drift, 2nd half vs 1st</span><span>+${res.drift}% ${tag("sim","EST.")}</span><span>Coach cues</span><span>${res.cues}</span></div>
+  ${coachCard(res)}
   <h3 style="margin-top:12px">Two quick questions</h3>
   <p class="q small">How hard did that feel, 1 (easy) to 10 (maximal)?</p><div class="num"><output id="rpeOut">6</output><input type="range" id="rpe" min="1" max="10" value="6"></div>
   <p class="q small">What limited you?</p><div class="opts row"><button class="opt" data-l="legs">Legs</button><button class="opt" data-l="breathing">Breathing</button><button class="opt" data-l="tired">Tiredness</button><button class="opt" data-l="none">Nothing</button></div>

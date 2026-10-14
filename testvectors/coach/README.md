@@ -11,7 +11,8 @@ One file per scenario. Lines starting with `#` are metadata; the rest are ticks.
 - `phase`: WARMUP | MAIN | RECOVERY | COOLDOWN (what the Session model reports for that tick).
 - `cad`, `hr`, `pw`: integer or blank (= unavailable/stale). `pw=0` is a valid coasting reading.
 - `expect`: a CueType (`EASE_OFF`, `PUSH_HARDER`, `PEDAL_FASTER`, `PEDAL_SLOWER`, `KEEP_IT_UP`, `RECOVER`,
-  `WARMUP`, `COOLDOWN`, `NO_HR`, `NO_POWER`), `NONE` (engine must be silent on this tick), or blank (not asserted).
+  `WARMUP`, `WORK` (main block announced: "settle into your target"), `COOLDOWN`, `NO_HR`, `NO_POWER`, `SURGE`, `STEADY`,
+  `SENSOR_LOST` (a signal that was reporting went stale — said once, coaching continues from what is left)), `NONE` (engine must be silent on this tick), or blank (not asserted).
 - Ticks must be in increasing time. The engine is fed every listed tick in order; it is NOT fed intermediate
   seconds, so write a tick for every second where the smoothing window matters.
 

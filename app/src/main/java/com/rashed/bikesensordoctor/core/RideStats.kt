@@ -19,7 +19,7 @@ class RideStats {
         const val WINDOW_3S_MS = 3000L
         const val WINDOW_10S_MS = 10000L
         const val WINDOW_30S_MS = 30000L
-        const val STALE_MS = 4000L
+        const val STALE_MS = SensorPolicy.POWER_STALE_MS
     }
 
     enum class State { IDLE, RUNNING, PAUSED, FINISHED }

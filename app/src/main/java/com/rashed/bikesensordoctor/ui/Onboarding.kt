@@ -355,14 +355,15 @@ fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) 
                         l.hrAtTypicalEffort?.let { Column(Modifier.weight(1f)) { Text("$it", fontFamily = Rajdhani, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, color = D7.Fg); Text("BPM USUAL", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Mut) } }
                     }
                 }
-                val ftpE = com.rashed.bikesensordoctor.core.Calibration.ftp(vm.engine.ftpEvidence()); val lthrE = com.rashed.bikesensordoctor.core.Calibration.lthr(vm.engine.testEvidence())
                 if (com.rashed.bikesensordoctor.core.Calibration.zonesTooLow(r.feedback)) Text("Your zones may be too low — three easy rides sat above the band. Ride the guided threshold test.", fontSize = 13.sp, lineHeight = 18.sp, color = D7.Amber, modifier = Modifier.padding(top = 6.dp))
                 Expander("Details") {
                     KeyValue(listOfNotNull(
                         l.sustainablePowerW?.let { "Sustainable power" to "$it W best 20 min (verified meter)" },
                         l.recoveryBpm?.let { "Recovery" to "HR falls $it bpm in the first minute (median)" },
-                        "FTP" to ftpE.detail, "Threshold HR" to lthrE.detail,
                     ))
+                    val pf = a.metric("ftp"); val pl = a.metric("lthr")
+                    EstimateCard(com.rashed.bikesensordoctor.core.MetricKind.FTP, pf?.value, pf?.measured == true, remember { vm.engine.estimate(com.rashed.bikesensordoctor.core.MetricKind.FTP) }, Modifier.padding(top = 6.dp))
+                    EstimateCard(com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR, pl?.value, pl?.measured == true, remember { vm.engine.estimate(com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR) }, Modifier.padding(top = 6.dp))
                 }
             }
         }

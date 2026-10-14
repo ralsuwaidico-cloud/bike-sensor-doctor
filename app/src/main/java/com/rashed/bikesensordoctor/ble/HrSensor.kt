@@ -203,6 +203,6 @@ class HrSensor(private val context: Context, private val adapter: BluetoothAdapt
     /** Live HR, blanked if no beat for 8 s (strap removed / out of range). */
     fun liveBpm(nowMs: Long): Int? {
         val s = _state.value
-        return if (s.lastBeatMs != null && nowMs - s.lastBeatMs!! <= 8000) s.bpm else null
+        return if (s.lastBeatMs != null && nowMs - s.lastBeatMs!! <= com.rashed.bikesensordoctor.core.SensorPolicy.HR_STALE_MS) s.bpm else null
     }
 }

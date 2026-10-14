@@ -347,7 +347,7 @@ el("finishBtn").addEventListener("click",()=>{ if(!P.completed){ return; } const
   renderPost(); });
 function renderPost(){ const a=A(), c=deriveConfig(a); const res=rideResult(); const before=recommend(a,c);
   el("scrPost").innerHTML=`<div class="qwrap"><p class="ey">Ride complete</p><h2 class="q">${fmt(res.sec)} · ${res.km} km · avg ${res.avgHr} bpm ${tag("real","REAL")}</h2>
-  <div class="kv prof"><span>Time inside your band</span><span>${res.inZonePct}% ${tag("real","REAL HR")}</span><span>HR drift, 2nd half vs 1st</span><span>+${res.drift}% ${tag("sim","EST.")}</span><span>Coach cues</span><span>${res.cues}</span></div>
+  ${coachCard(res)}
   <h3 style="margin-top:12px">Two quick questions</h3>
   <p class="q small">How hard did that feel, 1 (easy) to 10 (maximal)?</p><div class="num"><output id="rpeOut">6</output><input type="range" id="rpe" min="1" max="10" value="6"></div>
   <p class="q small">What limited you?</p><div class="opts row"><button class="opt" data-l="legs">Legs</button><button class="opt" data-l="breathing">Breathing</button><button class="opt" data-l="tired">Tiredness</button><button class="opt" data-l="none">Nothing</button></div>
