@@ -1,8 +1,8 @@
 # Test results — Bike Computer v0.10.0, 2026-10-14
 
-Candidate: `BikeComputer-build68.apk` · versionCode 13 · versionName 0.10.0 · package `com.rashed.bikesensordoctor.debug`
-SHA-256 `7b59d4198cac6e3de86f05c99ef723ed24336f8061f1e230653372d33abe8934` — the identical file that passed every check below
-(CI run 68: build → Android 12 emulator test → release, all green). Signed with the same committed key as builds 51–61, so it
+Candidate: `BikeComputer-build69.apk` · versionCode 13 · versionName 0.10.0 · package `com.rashed.bikesensordoctor.debug`
+SHA-256 `4dd3bb38b618533d7cdc8e46cae3f05cf16f0648077908d7e56eadbb3766dd11` — the identical file that passed every check below
+(CI run 69: build → Android 12 emulator test → release, all green). Signed with the same committed key as builds 51–61, so it
 installs over them with riders, rides and settings kept. **Held for design approval — not yet delivered.**
 
 ## What is new in v0.10
@@ -54,13 +54,13 @@ Performance: the graph reads the engine's ring buffer directly (no copies), redr
 when samples outnumber pixel columns each column keeps its minimum and maximum. The recorded ride is a separate 1 Hz series that
 display downsampling never touches. Sensor acquisition and recording run in the engine, independent of drawing.
 
-## Automated checks (all pass, CI run 68)
+## Automated checks (all pass, CI run 69)
 | Layer | Count | What |
 |---|---|---|
 | Core unit tests (JVM, CI + local) | 149 | coach vectors (16 files, 1,502 assertions); coach patterns (spike, unsteady, recovery wording, short wording); **property tests** over 90,000 random ticks: HR over the ceiling never yields increase-effort / harder-gear, power above target never a harder gear, stopped or coasting never a pedalling or gear cue, power never cited alone without a loaded reading, replay deterministic; live-graph core (per-signal scaling, band mapping, status incl. zero-as-value, ring buffer, 3-s mean not bridging gaps, band-at-the-time, decimation keeping peaks and gaps, sustained breaches, fallback bands); coach summary (example wording, too easy, praise + progression by feel, detail levels, no-HR / free ride, provenance); performance engine (FTP20 protocol, inadmissible evidence, one test provisional, two tests high but capped, weak method ×100 stays provisional, strongest method wins, lab-only VERIFIED, CP recovers synthetic CP/W′ and stays separate from FTP, threshold-HR plateau rules, meaningful-change rule); ride analysis, calibration, leaderboard, profile |
 | Emulator (API 31, 720×1520, 320 dpi) — `AppFlowTest` | 7/7 | sign-in → onboarding → home → club/board/member/ME → rider switch (Omar's live screen, Layla) → simulated 60-min ride at 30× (warm-up, MAIN, cool-down, pause/resume, background/foreground) → Details graphs (1/5/10-min, tap readout) → results (coach message, Why?, heart-rate and power expanders) → questions → next workout → history → restart; **extremes** 999 W · 199 bpm · 120 rpm; **system font 1.3×**; **sensor drop-outs** (meter silent → "— NO DATA" on power and cadence, strap silent → "— NO STRAP", gaps in the graph, app alive); settings; no-Bluetooth live screen; 42 screenshots |
 | Layout assertions (every live-screen visit, 8 visits) | 11 tags + 3 geometry | no scrollable container; speed/distance/time/phase, all three cards, legend, graph, coach box and headline visible without a gesture; graph above the coach box, ≥ 1/7 of the screen high; coach box above the controls, controls inside the screen; no section overlaps the one above |
-| Memory (hour-long ride at 30×) | heap KB start 12,287 · main 14,851 · cool-down 14,934 | +83 KB over the ride after GC (limit 24 MB): the ring buffer is fixed, drawing allocates nothing per frame |
+| Memory (hour-long ride at 30×) | heap KB start 12,374 · main 15,180 · cool-down 14,888 | −292 KB over the ride after GC (limit 24 MB): the ring buffer is fixed, drawing allocates nothing per frame |
 | Stress / crash | — | 1,500 monkey events clean; no FATAL in the app process; crash recorder empty |
 | APK | — | installs on API 31; version/package confirmed; SHA-256 matches the tested artifact; signed with the committed key; new classes present in the dex |
 
