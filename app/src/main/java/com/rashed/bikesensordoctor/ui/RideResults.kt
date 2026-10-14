@@ -266,10 +266,10 @@ private fun ZoneTable(z: ZoneBreakdown, title: String, note: String) {
             val sec = z.sec[i - 1]; val pct = z.pct(i)
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Z$i", fontFamily = PlexMono, fontSize = 11.sp, color = cols[i - 1], fontWeight = FontWeight.Bold, modifier = Modifier.width(26.dp))
-                Text(z.set.label(i), fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, modifier = Modifier.width(66.dp))
+                Text(z.set.label(i), fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, maxLines = 1, modifier = Modifier.width(60.dp))
                 Box(Modifier.weight(1f).height(14.dp).background(D7.Track, RoundedCornerShape(4.dp))) { Box(Modifier.fillMaxWidth((pct / 100f).coerceIn(0f, 1f)).height(14.dp).background(cols[i - 1].copy(alpha = 0.85f), RoundedCornerShape(4.dp))) }
-                Text(RideEngine.fmtDuration(sec * 1000L), fontFamily = PlexMono, fontSize = 11.sp, color = D7.Fg, modifier = Modifier.width(52.dp).padding(start = 6.dp))
-                Text("$pct%", fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, modifier = Modifier.width(34.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                Text(RideEngine.fmtDuration(sec * 1000L), fontFamily = PlexMono, fontSize = 11.sp, color = D7.Fg, maxLines = 1, softWrap = false, modifier = Modifier.width(62.dp).padding(start = 6.dp))
+                Text("$pct%", fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, maxLines = 1, modifier = Modifier.width(34.dp), textAlign = androidx.compose.ui.text.style.TextAlign.End)
             }
         }
         Muted(note, 10)

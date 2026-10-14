@@ -236,7 +236,7 @@ class AppFlowTest {
         device.pressHome(); Thread.sleep(2000); launch(); find(tag("btn_pause"), 10_000)
         tap(tag("btn_finish")); tap(text("FINISH & SAVE"))   // the dialog is its own window: find it by its text
         find(tag("results_root"), 15_000); top(); shot("28_results_summary")
-        find(tag("coach_message")); assertTrue("one next step", has(tag("coach_next"), 2000)); tap(tag("why_expander")); shot("28b_results_why")
+        find(tag("coach_message")); assertTrue("one next step", has(tag("coach_next"), 2000)); tap(tag("why_expander")); assertTrue("the Why? expander opens the explanation", visible(By.textContains("adaptation"), 4000) || visible(By.textContains("heart rate"), 2000)); shot("28b_results_why")
         tap(tag("exp_hr")); find(text("RECOVERY 1 MIN ↓")); shot("28c_results_hr_details"); tap(tag("exp_power")); shot("28d_results_power")
         find(tag("save_post")); tap(text("Legs")); tap(text("Yes")); tap(tag("save_post"))
         find(tag("post_home")); shot("29_next_workout"); tap(tag("post_home"))

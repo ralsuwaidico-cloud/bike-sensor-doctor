@@ -1,71 +1,92 @@
-# Test results — Bike Computer v0.9.0 (build 61), 2026-10-14
+# Test results — Bike Computer v0.10.0, 2026-10-14
 
-Release APK: `BikeComputer-build61.apk` · versionCode 12 · versionName 0.9.0 · package `com.rashed.bikesensordoctor.debug`
-SHA-256 `a3f1cf4a9116c7b199ef395fa19c9ca9f4def38746368779e7f0146d75584385` — the identical file that passed every check below
-(CI run 61: build → Android 12 emulator test → release, all green). Signed with the same committed key as builds 51–60, so it
-installs over them with riders, rides and settings kept.
+Candidate: `BikeComputer-build68.apk` · versionCode 13 · versionName 0.10.0 · package `com.rashed.bikesensordoctor.debug`
+SHA-256 `7b59d4198cac6e3de86f05c99ef723ed24336f8061f1e230653372d33abe8934` — the identical file that passed every check below
+(CI run 68: build → Android 12 emulator test → release, all green). Signed with the same committed key as builds 51–61, so it
+installs over them with riders, rides and settings kept. **Held for design approval — not yet delivered.**
 
-## What is new in v0.9
-- **Live screen is one fixed Nokia screen, no scrolling**: speed · distance · time on top; power / HR / cadence gauges with LIVE
-  dot, TGT band and status pill; one line of active targets; the coach panel takes the remaining height; PAUSE / FINISH / COOL
-  (or COACH) and Home · Details · ⚙ at the bottom. Zone bands, power trend, statistics and link quality moved to **Details**.
-- **Ride Results** — one scrolling page: summary (duration, moving time, distance, avg/max speed, elevation, max HR, avg/max power,
-  cadence, calories ESTIMATE with method, effort, cues) + GPS track; heart-rate graph with zone shading and the target band, avg/max,
-  1-minute recovery, time in **your** zones with bpm bounds and %, optional **Apple Fitness reference zones** (labelled, never used
-  for coaching); power graph with FTP line, NP, time in power zones, cadence graph; speed and elevation graphs; **AI coach review**
-  (objective, in-band %, longest block, consistency, drift with validity note, what went well / could improve); calibration cards;
-  the two questions → next workout with the reason.
-- **Coach v3**: practical instructions chosen by one priority ladder (sensor validity → effort vs targets → cadence → gear →
-  encouragement): *Shift to an easier / harder gear · Reduce pressure on the pedals · Increase your effort slightly · Pedal a little
-  faster · Slow your pedalling · Keep your cadence steady · Hold this pace · Your effort is stable, maintain this rhythm · Your heart
-  rate is rising, ease off · Start your cooldown*. Gear is inferred from cadence + power (never measured). Coasting/stopped → no
-  pedalling or gear instruction. Per-instruction spacing (no ping-pong), back-off after 3 unheeded repeats, quiet/normal/often
-  presets. The panel shows the action icon, one explanation, the live numbers it used, which signals decided, and the 60-second
-  assessment with an "analysed N s ago" indicator.
-- **Calibration with evidence rules**: FTP = 95 % of best 20-min power, only from a verified meter and only when two rides agree
-  within 5 % (one ride = "1 of 2 collected"); threshold HR only from the guided 20-minute test (one test → PROVISIONAL, two within
-  3 bpm → CONFIRMED); measured values are never overwritten; "zones may be too low" flag after three easy rides mostly above band.
-- **Learning**: natural cadence (median), sustainable power, HR at usual effort, endurance, in-band trend, recovery — shown in the
-  ME tab, and the learned cadence feeds the coach after three real rides when none was entered.
+## What is new in v0.10
+- **Live dashboard redesigned** into four compact sections on one fixed Nokia 5.3 screen (no scrolling):
+  A ride info (speed · distance · time · phase chip) · B three metric cards (power / heart rate / cadence) with a target bar and a
+  status word (▲ ABOVE · ● ON TARGET · ▼ BELOW · ○ COASTING · — NO DATA — never colour alone) · C the combined graph (power cyan,
+  HR green, cadence violet; last 5 minutes) · D a compact coach line (icon · short instruction · short reason · "analysed N s ago").
+  PAUSE / FINISH / COOL stay at the bottom; Details · Home · ⚙ beneath.
+- **Combined graph with scientific scaling** (see below), a fixed 600-sample ring buffer, peak-preserving min/max decimation,
+  gaps for missing data, 0 W kept as a real zero, ≥ 20-s breaches shaded, phase changes marked, missing-signal legend.
+- **Details view**: three separate traces in real units with the target band as it was at each second, 1 / 5 / 10-minute windows,
+  tap or drag for the exact readings at that second, and the full coach reasoning (the live screen shows the short form).
+- **Coach communication**: one message first — headline (the achievement or the gap), verdict, one next step, a progress bar against
+  the 80 % goal — with "Why?", "Detailed analysis" and "How was this calculated?" folded away. One recommendation at a time, picked
+  by a ladder (no HR → free ride → time in target → drift → pacing → cadence → recovery → praise). Beginner wording by default;
+  riders who said "experienced" (or choose technical detail) get the numbers added to the details. MEASURED / ESTIMATE / SIMULATED /
+  UNVERIFIED tags once at the top of the results, not repeated. Ride details, heart rate, power & cadence, speed & elevation and
+  fitness estimates are expanders. ME tab: today's workout first, targets with one tag, progress card, profile and "still to learn"
+  behind expanders. Home: the workout with one sentence, "Why this workout?" and "How the coach will guide it" behind expanders.
+- **Coach v3.1**: sudden power spike (> 1.5× the band top for 3 s) → "Smooth out the surges"; a minute of power swinging ±20 % around an
+  on-target average → "Hold a steadier effort"; the first "all good" after an ease-off → "Good — back on target"; "Settle into your
+  target" when the main block starts; "Power sensor disconnected — coaching from heart rate" / "Heart-rate sensor disconnected —
+  coaching from power" said once; nothing at all while stopped; no gear wording while coasting. Short live-screen wording for every
+  instruction ("Ease off — HR above target" / "HR 158 vs 139–151 bpm").
+- **Performance engine (threshold-engine 2.1)**: FTP, critical power and threshold HR are separate metrics; each estimate carries its
+  method, evidence, a confidence capped by the method's ceiling (FTP20 0.80, passive best-20-min 0.65, 30-min HR field test 0.70,
+  age-based 0.20, laboratory 0.95 …) and a status (UNKNOWN / GENERIC / PROVISIONAL / HIGH / VERIFIED — only a laboratory source can be
+  VERIFIED). Simulated, unverified or poor-quality data is inadmissible. One field test is PROVISIONAL; two agreeing tests HIGH; a weak
+  method repeated 100× stays PROVISIONAL. Proposals read "FTP estimate may have increased · Current 205 W · Candidate 214 W ·
+  Confidence High · Evidence …", never "your FTP is now 214 W"; a tested profile value is never overwritten by a weaker estimate;
+  estimates change only between rides. CP is fitted from ≥ 3 maximal efforts (P = CP + W′/t) and never relabelled FTP.
+- **Sensor policy** in one place: power/cadence stale after 4 s (one missed XDS packet tolerated), HR after 6 s, GPS 10 s.
 
-## Automated checks (all pass)
+## How the combined graph is scaled
+Watts, bpm and rpm never share an axis. Each line is scaled by its **own** function against **its own target band at the time of
+the sample** (0 = lower edge, 1 = upper edge):
+- power ÷ the current power target (or, when the meter is unverified / no workout power target, a labelled *reference* band —
+  "PWR 3s ref 111–150 W" — so the trace is still shown but never called a target);
+- heart rate ÷ the current HR target (warm-up and cool-down ramps included, so old points are not bent by a later band);
+- cadence ÷ the rider's preferred range.
+The grey TARGET strip is the same height (28 % of the plot) for all three: inside it = on target. One strip height equals the
+width of that signal's band (the legend prints the numbers, e.g. 34 W · 12 bpm · 15 rpm). The scale stays linear for one more
+band height above and below, then compresses toward the edge, so 999 W still sits visibly above 300 W without flattening the
+normal range. Missing readings are gaps (never joined, never filled); a true 0 W while coasting is drawn as a value. Shaded areas
+mark ≥ 20 s outside the band for HR and power. Dashed verticals mark phase changes. Exact values are on the cards above the
+graph and in Details. Power on the live graph is the 3-second mean (gaps are not bridged); Details draws the raw 1 Hz series.
+
+Performance: the graph reads the engine's ring buffer directly (no copies), redraws once per new sample, reuses its Paths, and
+when samples outnumber pixel columns each column keeps its minimum and maximum. The recorded ride is a separate 1 Hz series that
+display downsampling never touches. Sensor acquisition and recording run in the engine, independent of drawing.
+
+## Automated checks (all pass, CI run 68)
 | Layer | Count | What |
 |---|---|---|
-| Core unit tests (JVM, CI + local) | 117 | coach vectors (16 files, 1,502 assertions); §9 scenarios: low cadence + high power, high cadence + low power, HR rising at steady power, HR above + cadence below, power below + HR above, coasting, stopped, missing HR, missing power, sensor drop-out, different profiles, phase transitions, non-contradiction, repetition limit, 60-s assessment, frequency presets; ride analysis (zones, NP, moving time, calories, drift validity, elevation, recovery, CSV round-trip); calibration evidence rules; leaderboard; profile rules |
-| Emulator (API 31, 720×1520, 320 dpi) — `AppFlowTest` | 6/6 | sign-in → onboarding → home → club/board/member/ME → rider switch (Omar, Layla) → simulated 60-min ride at 30× (warm-up, MAIN, cool-down; pause/resume; background/foreground) → results page → questions → next workout → history → restart; **extremes** 999 W · 199 bpm · 120 rpm; **system font 1.3×**; 35 screenshots |
-| Layout assertions (every live-screen visit) | 4 | no scrollable container on the live screen; speed/distance/time, all three gauges, target line, coach box and headline visible without any gesture; coach box sits above the controls, controls inside the screen |
+| Core unit tests (JVM, CI + local) | 149 | coach vectors (16 files, 1,502 assertions); coach patterns (spike, unsteady, recovery wording, short wording); **property tests** over 90,000 random ticks: HR over the ceiling never yields increase-effort / harder-gear, power above target never a harder gear, stopped or coasting never a pedalling or gear cue, power never cited alone without a loaded reading, replay deterministic; live-graph core (per-signal scaling, band mapping, status incl. zero-as-value, ring buffer, 3-s mean not bridging gaps, band-at-the-time, decimation keeping peaks and gaps, sustained breaches, fallback bands); coach summary (example wording, too easy, praise + progression by feel, detail levels, no-HR / free ride, provenance); performance engine (FTP20 protocol, inadmissible evidence, one test provisional, two tests high but capped, weak method ×100 stays provisional, strongest method wins, lab-only VERIFIED, CP recovers synthetic CP/W′ and stays separate from FTP, threshold-HR plateau rules, meaningful-change rule); ride analysis, calibration, leaderboard, profile |
+| Emulator (API 31, 720×1520, 320 dpi) — `AppFlowTest` | 7/7 | sign-in → onboarding → home → club/board/member/ME → rider switch (Omar's live screen, Layla) → simulated 60-min ride at 30× (warm-up, MAIN, cool-down, pause/resume, background/foreground) → Details graphs (1/5/10-min, tap readout) → results (coach message, Why?, heart-rate and power expanders) → questions → next workout → history → restart; **extremes** 999 W · 199 bpm · 120 rpm; **system font 1.3×**; **sensor drop-outs** (meter silent → "— NO DATA" on power and cadence, strap silent → "— NO STRAP", gaps in the graph, app alive); settings; no-Bluetooth live screen; 42 screenshots |
+| Layout assertions (every live-screen visit, 8 visits) | 11 tags + 3 geometry | no scrollable container; speed/distance/time/phase, all three cards, legend, graph, coach box and headline visible without a gesture; graph above the coach box, ≥ 1/7 of the screen high; coach box above the controls, controls inside the screen; no section overlaps the one above |
+| Memory (hour-long ride at 30×) | heap KB start 12,287 · main 14,851 · cool-down 14,934 | +83 KB over the ride after GC (limit 24 MB): the ring buffer is fixed, drawing allocates nothing per frame |
 | Stress / crash | — | 1,500 monkey events clean; no FATAL in the app process; crash recorder empty |
-| APK | — | installs on API 31; version/package confirmed; SHA-256 matches the tested artifact; signed with the committed key |
+| APK | — | installs on API 31; version/package confirmed; SHA-256 matches the tested artifact; signed with the committed key; new classes present in the dex |
 
-## Apple Fitness comparison (12 Oct ride fixture)
-Reference values you gave: 1:05:05, 21.46 km, 19.7 km/h, 150 bpm avg, 91 ft, 509/617 kcal, effort 6/10; Apple zones 26:46 / 21:02 /
-15:56 / 01:20 / 00:00 with bands <150, 151–160, 161–169, 170–178, 179+.
-- The app reproduces Apple's **zone boundaries and labelling** exactly (reference set `APPLE_12_OCT`, shown separately from your own
-  coaching zones and never used for coaching).
-- Our heart-rate trace of that ride is read from your chart (26 key points, interpolated), not from the watch's second-by-second
-  data. Zone totals from that trace: 29:47 / 23:40 / 8:37 / 3:01 / 0:00 — same ordering, same total, but Z3 is under-read by about
-  7 minutes because short excursions above 161 bpm are smoothed out by the interpolation. On the phone the app uses the strap's
-  real 1 Hz data, so this difference does not apply to real rides; it is a fixture-quality limit, documented in `RideAnalysisTest`.
-- Calories are **estimates** either way: from measured power (kJ ≈ kcal) once the meter is verified, else Keytel from heart rate
-  (needs weight and age in the profile). Apple's active/total split uses its own models; equality is not claimed.
-- Elevation: GPS altitude with a 3 m threshold vs Apple's barometer — expect differences on flat routes.
-
-## Visual review of the real build (screenshots in docs/evidence)
-Fixed before release: gauge sub-labels overflowing the small rings (now ≤ 8 characters), coach panel clipped at 1.3× font (headline
-steps down, assessment line yields), average speed above max speed in accelerated simulation (series now records every riding second).
-Remaining nit: at 1.3× system font the EASE · ON TARGET · FASTER scale row touches the bottom of the coach panel.
+## Visual review of the real build (docs/evidence/build68-*.png)
+Fixed before this candidate: the power trace was missing whenever the meter was unverified (now a labelled reference band); axis
+labels at the right edge collided with the newest points (moved left); the zone-table time column wrapped ("1:02:58"); the
+accessibility tree used by the test harness went stale on the continuously updating live screen (Compose only announces changes
+when it believes an accessibility service is enabled — the test switches that on; the app itself is unchanged for real users).
+Remaining nits: at 1.3× system font the legend truncates ("PWR 3s ref 111–1…") and the status line ellipsises "PWR UNVERI…".
 
 ## Untested — needs your phone or hardware
-- Nokia 5.3 itself (emulator matches resolution/density/Android 12, not the chip, fonts or Bluetooth stack).
+- Nokia 5.3 itself (the emulator matches resolution/density/Android 12, not the chip, fonts or Bluetooth stack).
 - XDS/Branta meter: pairing, 5-min reconnect, Verify Power under load (and therefore all power-based coaching, calories from power,
-  FTP evidence — the app keeps these off until the meter passes verification).
-- Heart-rate strap, HR recovery after FINISH (needs the strap to keep reporting for a minute), the guided threshold test.
-- Outdoor GPS: speed/distance/elevation and the route drawing (emulator GPS is a fixed point).
-- Voice: TTS on the phone.
-- Landscape: the app is locked to portrait (as before).
+  FTP evidence — the app keeps these off until the meter passes verification); a real meter drop-out and reconnect.
+- Heart-rate strap, HR recovery after FINISH, the guided threshold test (the 30-minute field assessment is implemented in the engine
+  but the guided workout in the app is still the 20-minute test, labelled FIELD_20MIN_HR with a 0.65 ceiling).
+- Outdoor GPS: speed/distance/elevation and the route drawing. Voice (TTS). Landscape (locked to portrait).
 
-## Assumptions (your earlier "adaptive coach" message arrived after this build was designed)
-- "Every 60 seconds" = a display assessment (progress, trends, in-band share) once a minute; instructions themselves still use 5-s
-  smoothing and 8-s holds so a sustained excess or a phase change is answered within seconds, as you asked.
-- Zones never change automatically; the app only *suggests* a provisional FTP / threshold with the evidence shown, and you confirm.
-- Gear instructions use cadence + power only; the app does not know the selected gear.
+## From the specification — done now / not in this release
+Done on the phone: sensor provenance and quality flags (SIMULATED / UNVERIFIED / stale limits); SIM/unverified data impossible to
+use for FTP/LTHR; FTP, CP and threshold HR as separate metric types with method, evidence, confidence ceiling and status;
+confidence/provenance visible; deterministic, replayable real-time coach with one primary instruction per tick; 60-second
+assessment; event-driven corrections within seconds; HR ceiling vetoes increase-effort (property-tested); cadence learned from
+steady on-target riding (median) with the profile range as the provisional band; gear direction only from valid power + cadence,
+never while coasting or stopped; zones never move during a ride; rider switching blocked during an active ride; rides fully
+offline; Nokia layout tests; hardware limits reported separately.
+Not in this release (server work, designed in docs/ARCHITECTURE_V2.md §6): cloud accounts and authentication, the sync outbox and
+idempotent upload, the REST API, cross-account tests, server-computed leaderboards, the AI explanation service. Also not yet: the
+guided 30-minute HR assessment as an in-app workout, maximal-effort tracking to feed the CP model, and cue-success learning.
