@@ -198,7 +198,10 @@ fun CoachPanel(modifier: Modifier, headline: String, detail: String, color: Colo
     val bg = if (active) color else D7.Panel2
     val ink = if (active) D7.Ink else D7.Fg
     val sub = if (active) D7.Ink.copy(alpha = 0.82f) else D7.Mut
-    val size = when { headline.length >= 30 -> 19.sp; headline.length >= 22 -> 21.sp; headline.length >= 18 -> 24.sp; headline.length >= 14 -> 27.sp; else -> 30.sp }
+    // large system fonts: the panel must still hold everything, so the headline steps down and the assessment line gives way
+    val bigFont = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.15f
+    val base = when { headline.length >= 30 -> 19; headline.length >= 22 -> 21; headline.length >= 18 -> 24; headline.length >= 14 -> 27; else -> 30 }
+    val size = (if (bigFont) base - 4 else base).sp
     Column(modifier.background(bg, RoundedCornerShape(16.dp)).then(if (active) Modifier else Modifier.border(1.dp, D7.Line, RoundedCornerShape(16.dp)))
         .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp).testTag("coach_box"), verticalArrangement = Arrangement.Center) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -210,13 +213,13 @@ fun CoachPanel(modifier: Modifier, headline: String, detail: String, color: Colo
             Spacer(Modifier.width(10.dp))
             Text(headline, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = size, lineHeight = (size.value + 2).sp, color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).testTag("coach_headline"))
         }
-        if (detail.isNotEmpty()) Text(detail, fontSize = 13.sp, lineHeight = 16.sp, color = sub, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        if (detail.isNotEmpty()) Text(detail, fontSize = if (bigFont) 11.sp else 13.sp, lineHeight = if (bigFont) 14.sp else 16.sp, color = sub, maxLines = if (bigFont) 1 else 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
         // relevant live numbers + which signals decided
         if (live.isNotEmpty() || sources.isNotEmpty()) Text(listOf(live, if (sources.isNotEmpty()) "from $sources" else "").filter { it.isNotEmpty() }.joinToString("  ·  "), fontFamily = PlexMono, fontSize = 10.sp, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp).testTag("coach_sources"))
         Spacer(Modifier.height(6.dp))
         CoachScalePublic(direction, lit = if (active) color else D7.Faint, ink = ink, active = active)
         // the 60-second assessment, with a subtle "analysed … ago" indicator
-        if (assessment.isNotEmpty()) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (assessment.isNotEmpty() && !bigFont) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).background(if (assessmentAgeSec in 0..65) (if (active) ink else D7.Green) else D7.Faint, CircleShape))
             Spacer(Modifier.width(5.dp))
             Text((if (assessmentAgeSec >= 0) "${assessmentAgeSec}s ago · " else "") + assessment, fontFamily = PlexMono, fontSize = 9.sp, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("coach_assessment"))

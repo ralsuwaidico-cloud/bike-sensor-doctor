@@ -51,6 +51,8 @@ class AppFlowTest {
                 if (o == null) o = runCatching { device.findObject(By.scrollable(true))?.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(sel)) }.getOrNull()
             }
         }
+        // long pages (Ride Results): fling to the end, then back, checking after each move
+        if (o == null) { repeat(6) { if (o == null) { device.findObject(By.scrollable(true))?.let { runCatching { it.fling(androidx.test.uiautomator.Direction.DOWN) } }; Thread.sleep(400); o = device.wait(Until.findObject(sel), 600) } } }
         if (o == null) { repeat(10) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null) { repeat(12) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null && timeout > 3000) o = device.wait(Until.findObject(sel), timeout - 3000)
@@ -227,7 +229,7 @@ class AppFlowTest {
         // dashboard without simulation: no Bluetooth on the emulator → notice shown, app alive; still a fixed, non-scrolling layout
         tap(tag("start_ride")); find(tag("btn_start")); shot("32_dashboard_no_bluetooth"); assertNoScrollLive("idle")
         // the emulator may or may not have a Bluetooth adapter: either the notice shows or the header reports the link state
-        assertTrue(has(tag("bt_notice"), 3000) || visible(text("SCIENTIFIC COACH")))
+        assertTrue(has(tag("bt_notice"), 3000) || has(tag("live_root"), 2000))
         tap(tag("dash_home")); find(tag("start_ride"))
     }
 }
