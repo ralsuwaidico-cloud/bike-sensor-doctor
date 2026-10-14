@@ -43,7 +43,6 @@ class AppFlowTest {
     private fun text(t: String): BySelector = By.text(t)
     /** Finds a node, scrolling the page (accessibility scroll actions, then swipes) if it is off-screen. */
     private fun find(sel: BySelector, timeout: Long = T): UiObject2 {
-        refreshTree()
         var o = device.wait(Until.findObject(sel), minOf(timeout, 3000L))
         if (o == null) {
             val sc = device.findObject(By.scrollable(true))
@@ -70,26 +69,38 @@ class AppFlowTest {
     private fun top() { val sc = device.findObject(By.scrollable(true)); if (sc != null) runCatching { sc.fling(androidx.test.uiautomator.Direction.UP) }; repeat(2) { swipe(up = false) } }
     private fun visible(sel: BySelector, timeout: Long = 3000L) = runCatching { find(sel, timeout) }.isSuccess
     /**
-     * UiAutomator reads the accessibility tree through a client-side cache that is only invalidated by accessibility
-     * events from the app. On the live screen (continuous 1 Hz updates, Canvas redraws) the cached tree was observed to
-     * go stale for minutes (run 64: the tree still said MAIN while the screen showed the cool-down). The test runs in
-     * the app's own process, so it can ask the window itself to announce a content change, which clears the cache
-     * for the whole window — every poll then sees what the screen shows.
+     * UiAutomator reads the accessibility tree through a client-side cache that is only refreshed by accessibility
+     * events from the app. Compose sends those events only when it believes an accessibility service is enabled, and
+     * UiAutomation is not an installed service — so on a screen that changes without navigation (the live screen:
+     * 1 Hz values, phases, sensor gaps) the cached tree went stale for minutes (run 64: the tree still said MAIN while
+     * the screen showed the cool-down). The test runs in the app's own process, so it switches on Compose's
+     * "accessibility enabled for testing" flag on the Compose view — the same switch Compose's own test rule uses —
+     * after which every change is announced and UiAutomator sees what the screen shows.
      */
-    private fun refreshTree() {
+    private fun enableComposeAccessibilityEvents() {
         val inst = InstrumentationRegistry.getInstrumentation()
-        runCatching { inst.uiAutomation.javaClass.getMethod("clearCache").invoke(inst.uiAutomation) }   // API 34+; harmless elsewhere
-        val act = runCatching { androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull() }.getOrNull()
-        if (act != null) runCatching { inst.runOnMainSync { act.window.decorView.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) } }
-        Thread.sleep(120)
+        val act = runCatching { androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull() }.getOrNull() ?: return
+        inst.runOnMainSync {
+            fun walk(v: android.view.View) {
+                if (v.javaClass.name == "androidx.compose.ui.platform.AndroidComposeView") {
+                    val r = runCatching {
+                        val f = v.javaClass.getDeclaredField("composeAccessibilityDelegate"); f.isAccessible = true; val d = f.get(v)!!
+                        val ff = d.javaClass.getDeclaredField("accessibilityForceEnabledForTesting"); ff.isAccessible = true; ff.setBoolean(d, true)
+                    }
+                    runCatching { File(shots(), "a11y.txt").appendText("${System.currentTimeMillis()} force-enabled=${r.isSuccess} ${r.exceptionOrNull()?.toString() ?: ""}\n") }
+                }
+                if (v is android.view.ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+            }
+            walk(act.window.decorView)
+        }
     }
-    private fun has(sel: BySelector, timeout: Long = 2000L): Boolean {
+    private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
+    /** Polls without waiting for idle (the live screen never idles) — for states that come and go, like a phase or a sensor gap. */
+    private fun appears(sel: BySelector, timeout: Long): Boolean {
         val end = System.currentTimeMillis() + timeout
-        do { refreshTree(); if (device.hasObject(sel)) return true; Thread.sleep(300) } while (System.currentTimeMillis() < end)
+        do { if (device.hasObject(sel)) return true; Thread.sleep(250) } while (System.currentTimeMillis() < end)
         return false
     }
-    /** Polls with a fresh tree each time (see [refreshTree]) — for states that come and go, like a phase or a sensor gap. */
-    private fun appears(sel: BySelector, timeout: Long): Boolean = has(sel, timeout)
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
     private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
     private fun launch() {
@@ -109,6 +120,7 @@ class AppFlowTest {
             if (device.hasObject(By.res(java.util.regex.Pattern.compile("rider_.*|start_ride|start_onboarding|btn_start|next_page|confirm_profile|results_root")))) break
             Thread.sleep(500)
         }
+        enableComposeAccessibilityEvents()
         // a results page left open by an earlier test: leave it (skip the questions) so the next test starts from Home
         if (has(tag("results_root"), 1500)) { if (visible(text("SKIP"), 2000)) tap(text("SKIP")); if (visible(tag("post_home"), 4000)) tap(tag("post_home")) }
     }
