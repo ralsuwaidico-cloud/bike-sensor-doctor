@@ -75,6 +75,7 @@ data class CoachSetup(
     val voice: Boolean, val tone: String, val detail: String,
     val sameRepeatMs: Long, val keepRepeatMs: Long,
     val rules: List<Rule>,
+    val frequency: CoachFrequency = CoachFrequency.NORMAL,
 ) {
     val powerLo get() = (ftp * 0.55 + 0.5).toInt()
     val powerHi get() = (ftp * 0.75 + 0.5).toInt()
@@ -212,11 +213,11 @@ object RiderProfile {
         }
 
         // --- cadence ---
-        val nat = a.metric("cadence")
+        val nat = a.metric("cadence") ?: a.int("learned.cadence")?.let { Metric(it, "learned") }
         val cadLo = if (nat != null) maxOf(70, nat.value - 5) else 80
         val cadHi = if (nat != null) minOf(105, nat.value + 5) else 95
         val cadOn = a["cadAdvice"] != "no"
-        if (nat != null) rule("Cadence range $cadLo–$cadHi rpm around your natural ${nat.value}", "Known cadence → targets built around you, not a generic 80–95.")
+        if (nat != null) rule("Cadence range $cadLo–$cadHi rpm around your natural ${nat.value}", if (nat.how == "learned") "Learned from your rides (median cadence) → targets built around you, not a generic 80–95." else "Known cadence → targets built around you, not a generic 80–95.")
         if (!cadOn) rule("Cadence hints off during endurance rides", "Your preference.")
         else if (a["limiter"] == "legs") rule("Cadence hints prioritised (legs limit you)", "Higher cadence shifts load from muscles to the aerobic system.")
 
@@ -229,16 +230,19 @@ object RiderProfile {
         // --- communication ---
         val voice = a["voice"] != "screen"
         val tone = a["tone"] ?: "neutral"; val detail = a["detail"] ?: "detailed"
-        val sameRepeat: Long; val keepRepeat: Long
-        if (a["freq"] == "important") { sameRepeat = 90_000; keepRepeat = 0; rule("Coach speaks only on corrections; 'keep it up' is shown, not repeated; same cue at most every 90 s", "You asked for important corrections only.") }
-        else { sameRepeat = 45_000; keepRepeat = 90_000; rule("Frequent guidance: cues up to every 45 s, 'keep it up' every 90 s", "You asked for frequent guidance.") }
+        val sameRepeat: Long; val keepRepeat: Long; val freq: CoachFrequency
+        when (a["freq"]) {
+            "quiet" -> { sameRepeat = 120_000; keepRepeat = 0; freq = CoachFrequency.QUIET; rule("Quiet coaching: corrections only, the same one at most every 2 min, no encouragement", "You asked for quiet coaching.") }
+            "frequent" -> { sameRepeat = 45_000; keepRepeat = 90_000; freq = CoachFrequency.FREQUENT; rule("Frequent guidance: cues up to every 45 s, 'hold this pace' every 90 s", "You asked for frequent guidance.") }
+            else -> { sameRepeat = 90_000; keepRepeat = 0; freq = CoachFrequency.NORMAL; rule("Normal coaching: corrections only, the same one at most every 90 s; 'hold this pace' shown once per good spell", "You asked for corrections only.") }
+        }
         rule("After 3 unheeded repeats the coach goes quiet until something changes (5 min max)", "Replay of a real ride showed ~60 repeats otherwise.")
 
         return CoachSetup(
             hrTargetLo = z2[0], hrTargetHi = z2[1], hrCap = cap, hrZoneEdges = edges, zoneConfidence = conf, zoneConfidenceText = confText, maxHrEstimate = maxEst,
             ftp = ftpW, ftpKnown = ftpKnown, ftpMeasured = ftp?.measured == true, powerCoaching = powerCoaching,
             cadLow = cadLo, cadHigh = cadHi, cadenceEnabled = cadOn, warmupSec = wu * 60, cooldownSec = cd * 60,
-            voice = voice, tone = tone, detail = detail, sameRepeatMs = sameRepeat, keepRepeatMs = keepRepeat, rules = rules,
+            voice = voice, tone = tone, detail = detail, sameRepeatMs = sameRepeat, keepRepeatMs = keepRepeat, rules = rules, frequency = freq,
         )
     }
 
@@ -290,6 +294,7 @@ object RiderProfile {
         alts += "shorter" to "Shorter: ${maxOf(30, minutes - 15)} min"
         alts += "longer" to "Longer: ${minOf(long, minutes + 15)} min"
         alts += "rec" to "Recovery spin 30 min"
+        alts += "test" to "Guided 20-min threshold test"
         if (limits == "none" && a["style"] != "steady") alts += "int" to "Intervals: 4 × 4 min Zone 3"
         return Workout(name, kind, minutes, hrLo, hrHi, pwLo, pwHi, why, how, measure, alts)
     }
@@ -300,6 +305,11 @@ object RiderProfile {
         "longer" -> base.copy(minutes = minOf(a.int("longestMin") ?: 90, base.minutes + 15), name = base.name + " (longer)")
         "rec" -> base.copy(minutes = 30, name = "Recovery spin (Zone 1)", kind = "rec", hrLo = c.hrTargetLo - 15, hrHi = c.hrTargetLo - 1, pwLo = null, pwHi = null)
         "int" -> base.copy(minutes = maxOf(45, base.minutes), name = "Intervals: 4 × 4 min Zone 3", kind = "int", hrLo = c.hrZoneEdges[1], hrHi = c.hrZoneEdges[2] - 1)
+        // guided assessment: 15 min easy, 20 min as hard as you can hold EVENLY, 10 min easy. The last 20 min of the main block give LTHR (and FTP with a verified meter).
+        "test" -> base.copy(minutes = 45, name = "Guided 20-min threshold test", kind = "test", hrLo = c.hrZoneEdges[1], hrHi = c.hrZoneEdges[3] + 20, pwLo = null, pwHi = null,
+            why = listOf("A steady 20-minute best effort is the standard way to find your threshold heart rate and FTP. Ride it evenly; a fast start spoils the result."),
+            how = listOf("15-min warm-up, then 20 minutes at the hardest pace you can hold EVENLY (the coach only warns about fading or surging), then 10-min cool-down."),
+            measure = listOf("Average heart rate of the 20 minutes → provisional threshold HR", "Average power of the 20 minutes × 0.95 → FTP (only with a verified power meter)"))
         else -> null
     }
 

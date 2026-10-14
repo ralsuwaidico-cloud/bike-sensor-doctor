@@ -129,7 +129,9 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
                 fontFamily = PlexMono, fontSize = 9.sp, color = D7.Mut, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth().padding(top = 2.dp).testTag("live_targets"))
 
             // ---- coach: always visible, takes the remaining height ----
-            CoachPanel(Modifier.weight(1f).fillMaxWidth().padding(top = if (short) 4.dp else 8.dp), st.headline, st.detail, d.minuteLine, st.coachColor, st.shape, st.direction, st.coachActive, onCoach)
+            CoachPanel(Modifier.weight(1f).fillMaxWidth().padding(top = if (short) 4.dp else 8.dp), st.headline, st.detail, st.coachColor, st.shape, st.direction, st.coachActive,
+                icon = if (st.coachActive) cue.action.icon else "", sources = if (st.coachActive) cue.sources else "", live = if (st.coachActive) cue.live else "",
+                assessment = d.assessment, assessmentAgeSec = if (d.assessmentAtMs > 0) ((vm.engine.now() - d.assessmentAtMs) / 1000).toInt() else -1, onClick = onCoach)
 
             // ---- controls ----
             Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -191,21 +193,33 @@ private fun SmallLink(text: String, tag: String, onClick: () -> Unit) {
  * Fills whatever height the fixed layout leaves; the headline shrinks by length and may wrap to two lines, never clips.
  */
 @Composable
-fun CoachPanel(modifier: Modifier, headline: String, detail: String, minuteLine: String, color: Color, shape: CoachShape, direction: Int?, active: Boolean, onClick: () -> Unit) {
+fun CoachPanel(modifier: Modifier, headline: String, detail: String, color: Color, shape: CoachShape, direction: Int?, active: Boolean,
+               icon: String = "", sources: String = "", live: String = "", assessment: String = "", assessmentAgeSec: Int = -1, onClick: () -> Unit) {
     val bg = if (active) color else D7.Panel2
     val ink = if (active) D7.Ink else D7.Fg
     val sub = if (active) D7.Ink.copy(alpha = 0.82f) else D7.Mut
-    val size = when { headline.length >= 22 -> 21.sp; headline.length >= 18 -> 24.sp; headline.length >= 14 -> 27.sp; else -> 30.sp }
+    val size = when { headline.length >= 30 -> 19.sp; headline.length >= 22 -> 21.sp; headline.length >= 18 -> 24.sp; headline.length >= 14 -> 27.sp; else -> 30.sp }
     Column(modifier.background(bg, RoundedCornerShape(16.dp)).then(if (active) Modifier else Modifier.border(1.dp, D7.Line, RoundedCornerShape(16.dp)))
         .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp).testTag("coach_box"), verticalArrangement = Arrangement.Center) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            CoachBadgePublic(shape, badge = ink, glyph = if (active) color else D7.Faint)
+            // action icon: shape badge (▲ ✓ ▼) plus the action glyph (⚙− easier gear, ⚙+ harder gear, ↻ cadence, ⇩⇧ effort, ♥↑ HR rising, ❄ cooldown)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CoachBadgePublic(shape, badge = ink, glyph = if (active) color else D7.Faint)
+                if (icon.isNotEmpty()) Text(icon, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = ink, maxLines = 1, modifier = Modifier.padding(top = 2.dp).testTag("coach_icon"))
+            }
             Spacer(Modifier.width(10.dp))
             Text(headline, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = size, lineHeight = (size.value + 2).sp, color = ink, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).testTag("coach_headline"))
         }
         if (detail.isNotEmpty()) Text(detail, fontSize = 13.sp, lineHeight = 16.sp, color = sub, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
-        if (minuteLine.isNotEmpty()) Text(minuteLine, fontFamily = PlexMono, fontSize = 10.sp, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-        Spacer(Modifier.height(8.dp))
+        // relevant live numbers + which signals decided
+        if (live.isNotEmpty() || sources.isNotEmpty()) Text(listOf(live, if (sources.isNotEmpty()) "from $sources" else "").filter { it.isNotEmpty() }.joinToString("  ·  "), fontFamily = PlexMono, fontSize = 10.sp, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp).testTag("coach_sources"))
+        Spacer(Modifier.height(6.dp))
         CoachScalePublic(direction, lit = if (active) color else D7.Faint, ink = ink, active = active)
+        // the 60-second assessment, with a subtle "analysed … ago" indicator
+        if (assessment.isNotEmpty()) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(6.dp).background(if (assessmentAgeSec in 0..65) (if (active) ink else D7.Green) else D7.Faint, CircleShape))
+            Spacer(Modifier.width(5.dp))
+            Text((if (assessmentAgeSec >= 0) "${assessmentAgeSec}s ago · " else "") + assessment, fontFamily = PlexMono, fontSize = 9.sp, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("coach_assessment"))
+        }
     }
 }

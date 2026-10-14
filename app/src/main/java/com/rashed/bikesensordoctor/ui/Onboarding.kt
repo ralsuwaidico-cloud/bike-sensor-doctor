@@ -287,7 +287,7 @@ private fun PagePrefs(a: RiderAnswers, pick: (String, String) -> Unit, toggle: (
     var more by remember { mutableStateOf(a["tone"] != null || a["detail"] != null || a.metric("cadence") != null) }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(1f)) { FieldLabel("VOICE COACHING"); Chips(listOf("voice" to "On", "screen" to "Screen only"), setOfNotNull(a["voice"]), small = true) { pick("voice", it) } }
-        Column(Modifier.weight(1f)) { FieldLabel("COACH SPEAKS"); Chips(listOf("important" to "Corrections", "frequent" to "Often"), setOfNotNull(a["freq"]), small = true) { pick("freq", it) } }
+        Column(Modifier.weight(1f)) { FieldLabel("COACH SPEAKS"); Chips(listOf("quiet" to "Quiet", "important" to "Normal", "frequent" to "Often"), setOfNotNull(a["freq"]), small = true) { pick("freq", it) } }
     }
     FieldLabel("WHERE YOU RIDE")
     Chips(listOf("flat" to "Flat road", "hills" to "Hills", "indoor" to "Indoor", "mixed" to "Mixed"), a.list("env").toSet(), columns = 2, small = true) { toggle("env", it) }
@@ -344,6 +344,21 @@ fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) 
             Text(w.name, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = D7.Fg)
             Text("${w.minutes} min · ${w.hrLo}–${w.hrHi} bpm · ${if (w.pwLo != null) "${w.pwLo}–${w.pwHi} W" else "power off"}", fontFamily = PlexMono, fontSize = 12.sp, color = D7.Cyan, modifier = Modifier.padding(vertical = 3.dp))
             Text(w.why.first(), fontSize = 12.sp, lineHeight = 16.sp, color = D7.Mut)
+        }
+        if (!firstTime) {
+            val l = remember { vm.engine.learned() }
+            D7Card(Modifier.padding(top = 8.dp), accent = D7.Violet) {
+                CardTitle("WHAT THE COACH HAS LEARNED (${l.rides} real ride${if (l.rides == 1) "" else "s"})")
+                if (l.rides == 0) Muted("Nothing yet — facts appear after real rides (simulated rides never count).", 12)
+                else KeyValue(listOfNotNull(
+                    l.naturalCadence?.let { "Natural cadence" to "$it rpm (median)" }, l.sustainablePowerW?.let { "Sustainable power" to "$it W best 20 min (verified meter)" },
+                    l.hrAtTypicalEffort?.let { "HR at usual effort" to "$it bpm (median ride average)" }, l.longestRideMin?.let { "Endurance" to "longest ride $it min" },
+                    l.inBandTrend?.let { "Zone discipline" to it }, l.recoveryBpm?.let { "Recovery" to "HR falls $it bpm in the first minute (median)" },
+                ))
+                val ftpE = com.rashed.bikesensordoctor.core.Calibration.ftp(vm.engine.ftpEvidence()); val lthrE = com.rashed.bikesensordoctor.core.Calibration.lthr(vm.engine.testEvidence())
+                Spacer(Modifier.height(4.dp)); Muted("FTP: ${ftpE.detail}", 11); Muted("Threshold HR: ${lthrE.detail}", 11)
+                if (com.rashed.bikesensordoctor.core.Calibration.zonesTooLow(r.feedback)) Text("Your last three coached rides were mostly above the band while feeling easy — the zones may be too low. Ride the guided 20-min threshold test rather than guessing.", fontSize = 12.sp, color = D7.Amber, modifier = Modifier.padding(top = 4.dp))
+            }
         }
         D7Card(Modifier.padding(top = 8.dp)) { CardTitle("STILL TO LEARN"); Bullets(RiderProfile.needs(a, c).take(3)) }
         D7Card(Modifier.padding(top = 8.dp)) {

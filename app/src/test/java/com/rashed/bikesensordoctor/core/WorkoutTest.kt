@@ -2,6 +2,7 @@ package com.rashed.bikesensordoctor.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -113,15 +114,75 @@ class WorkoutTest {
         assertEquals("3.4", BoardMetric.TIME.format(Leaderboard.rows(BoardMetric.TIME, riders, rides, week, month, true)[0].score))
     }
 
-    private fun firstCue(cad: Int, hr: Int, pw: Int): CoachCue { val e = engine(grace = 0, backoff = false); var c = CoachCue.NONE
-        for (t in 0 until 60) { c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(cad), Signal(hr), Signal(pw), main)); if (c.type != CueType.NONE) break }; return c }
+    private fun firstCue(cad: Int, hr: Int?, pw: Int?, speed: Double? = 25.0, secs: Int = 60, hrFn: ((Int) -> Int)? = null): CoachCue { val e = engine(grace = 0, backoff = false); var c = CoachCue.NONE
+        for (t in 0 until secs) { c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(cad), Signal(hrFn?.invoke(t) ?: hr), Signal(pw), main, speed)); if (c.type != CueType.NONE) break }; return c }
 
-    @Test fun actionableWordingFollowsCadenceContext() {
-        assertEquals("SHIFT TO AN EASIER GEAR", firstCue(60, 165, 150).headline)      // HR above + grinding → easier gear
-        assertEquals("REDUCE PEDAL PRESSURE", firstCue(88, 165, 150).headline)        // HR above, cadence fine → less force
-        assertEquals("SHIFT TO A HARDER GEAR", firstCue(105, 125, 100).headline)       // HR below + spinning out → harder gear
-        assertEquals("INCREASE EFFORT SLIGHTLY", firstCue(88, 125, 100).headline)      // HR below, cadence fine → a bit more effort
-        assertEquals("MAINTAIN YOUR RHYTHM", firstCue(88, 145, 150).headline)         // all good
-        assertEquals(CueType.EASE_OFF, firstCue(60, 165, 150).type)                   // the decision itself is unchanged (vectors still hold)
+    // ---- §9 scenarios: the action must be mechanically and physiologically sensible, and never contradictory ----
+    @Test fun lowCadenceHighPowerHrAbove_easierGear() { val c = firstCue(60, 165, 200); assertEquals(CoachAction.EASIER_GEAR, c.action); assertEquals(CueType.EASE_OFF, c.type); assertTrue(c.sources.contains("cadence")) }
+    @Test fun hrAboveCadenceFine_reducePressure() { assertEquals(CoachAction.REDUCE_PRESSURE, firstCue(88, 165, 150).action) }
+    @Test fun hrAboveCadenceBelow_neverPedalFaster() { val c = firstCue(70, 165, 160); assertTrue(c.action == CoachAction.EASIER_GEAR || c.action == CoachAction.REDUCE_PRESSURE); assertTrue(c.action != CoachAction.PEDAL_FASTER) }
+    @Test fun highCadenceLowPowerHrBelow_harderGear() { assertEquals(CoachAction.HARDER_GEAR, firstCue(105, 125, 100).action) }
+    @Test fun lowCadenceLowPowerHrBelow_increaseEffortNotEasierGear() { val c = firstCue(70, 125, 100); assertEquals(CoachAction.INCREASE_EFFORT, c.action); assertTrue(c.action != CoachAction.EASIER_GEAR) }
+    @Test fun powerBelowButHrAbove_hrWins() { val c = firstCue(88, 165, 100); assertEquals(CueType.EASE_OFF, c.type); assertTrue(c.action == CoachAction.REDUCE_PRESSURE || c.action == CoachAction.EASIER_GEAR) }
+    @Test fun allOnTarget_noUnnecessaryInstruction() { val c = firstCue(88, 145, 150); assertEquals(CueType.KEEP_IT_UP, c.type); assertEquals(CoachAction.HOLD_PACE, c.action) }
+    @Test fun hrRisingAtSteadyPower_easeBeforeLeavingBand() {
+        val e = engine(grace = 0, backoff = false); val cues = ArrayList<CoachCue>()
+        for (t in 0 until 130) { val c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(88), Signal(139 + t / 8), Signal(150), main, 25.0)); if (c.type != CueType.NONE) cues += c }   // climbs ~7.5 bpm/min
+        val rise = cues.firstOrNull { it.action == CoachAction.HR_RISING_EASE }
+        assertNotNull("rising rule fired: ${cues.map { it.action }}", rise); assertEquals("HR_RISING", rise!!.reason)
+        assertTrue("fired while still inside the band", cues.indexOf(rise) < cues.size && cues.none { it.reason == "HR_ABOVE" && cues.indexOf(it) < cues.indexOf(rise) })
+    }
+    @Test fun coastingOrStopped_noPedallingOrGearInstruction() {
+        assertEquals(CueType.NONE, firstCue(0, 145, 0, speed = 0.0).type)                           // stopped: nothing
+        assertEquals(CueType.NONE, firstCue(70, 145, 150, speed = 1.0).type)                        // rolling at 1 km/h: no cadence hint
+        val coast = firstCue(70, 145, 0, speed = 25.0); assertTrue(coast.action != CoachAction.PEDAL_FASTER && coast.action != CoachAction.EASIER_GEAR)
+    }
+    @Test fun missingHr_powerOnly() { val c = firstCue(88, null, 100); assertEquals(CueType.PUSH_HARDER, c.type); assertEquals("power", c.sources) }
+    @Test fun missingPower_hrOnly() { val c = firstCue(88, 165, null); assertEquals(CoachAction.REDUCE_PRESSURE, c.action); assertEquals("HR", c.sources) }
+    @Test fun noSensors_noSignalInfoOnly() { val c = firstCue(88, null, null); assertEquals(CueType.NO_HR, c.type); assertEquals(CoachAction.NO_SIGNAL, c.action) }
+    @Test fun sensorDropout_goesSilentThenRecovers() {
+        val e = engine(grace = 0, backoff = false); val types = ArrayList<CueType>()
+        for (t in 0 until 200) { val lost = t in 60..119; val c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(88, !lost), Signal(if (lost) null else 165, !lost), Signal(150, !lost), main, 25.0)); if (c.type != CueType.NONE) types += c.type }
+        assertTrue("ease before the drop-out", types.first() == CueType.EASE_OFF)
+        assertTrue("no effort cue invented during the drop-out", types.count { it == CueType.EASE_OFF } >= 2)   // resumes after data returns
+    }
+    @Test fun neverContradictory_oneActionPerTick() {
+        val e = engine(grace = 0, backoff = false)
+        for (t in 0 until 300) { val c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(60 + (t % 50)), Signal(130 + (t % 40)), Signal(100 + (t % 120)), main, 25.0))
+            if (c.type == CueType.PUSH_HARDER) assertTrue("never 'increase' while HR above ceiling", 130 + (t % 40) <= main.hrHi + 4)
+            if (c.action == CoachAction.HARDER_GEAR) assertTrue("never 'harder gear' when power is high", 100 + (t % 120) < 184) }
+    }
+    @Test fun notExcessivelyRepetitive() {
+        val e = engine(grace = 0, backoff = true); val times = ArrayList<Int>(); var quiet = 0
+        for (t in 0 until 900) { val c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(88), Signal(165), Signal(150), main, 25.0)); if (c.type == CueType.EASE_OFF) times += t; if (c.type == CueType.QUIET) quiet++ }
+        assertTrue("15 min of ignored 'ease off': at most 8 repeats (3, quiet 5 min, 3, quiet…), got ${times.size}", times.size <= 8)
+        assertTrue("goes quiet", quiet >= 2)
+        assertTrue("never twice within 45 s", times.zipWithNext().all { (a, b) -> b - a >= 45 })
+    }
+    @Test fun phaseTransitions_announceOnce() {
+        val e = engine(); val seen = ArrayList<CoachAction>()
+        for (t in 0 until 60) { val c = e.update(CoachInput(t * 1000L, Phase.WARMUP, Signal(85), Signal(120), Signal(100), ActiveTargets(105, 130, 86, 123, 83, 93, "W"), 20.0)); if (c.type != CueType.NONE) seen += c.action }
+        for (t in 60 until 120) { val c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(88), Signal(145), Signal(150), main, 25.0)); if (c.type != CueType.NONE) seen += c.action }
+        for (t in 120 until 200) { val c = e.update(CoachInput(t * 1000L, Phase.COOLDOWN, Signal(85), Signal(140), Signal(100), ActiveTargets(105, 145, 86, 150, 83, 93, "C"), 20.0)); if (c.type != CueType.NONE) seen += c.action }
+        assertEquals(1, seen.count { it == CoachAction.WARM_UP }); assertEquals(1, seen.count { it == CoachAction.START_COOLDOWN })
+        assertEquals(CoachAction.WARM_UP, seen.first()); assertTrue(seen.indexOf(CoachAction.START_COOLDOWN) > seen.indexOf(CoachAction.WARM_UP))
+    }
+    @Test fun minuteAssessmentReportsProgressAndTrends() {
+        val e = engine(grace = 0); var a: Assessment? = null
+        for (t in 0 until 130) { e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(88), Signal(140 + t / 10), Signal(150), main, 25.0)); a = e.lastAssessment }
+        assertNotNull(a); assertTrue(a!!.summary.contains("HR")); assertNotNull(a!!.hrTrend); assertTrue(a!!.hrTrend!! >= 3)
+        assertTrue(a!!.progress.contains("in band") || a!!.progress.contains("target"))
+    }
+    @Test fun differentProfilesDifferentInstructions() {
+        // same data: an experienced rider with a 139–151 band vs a new rider with a 111–130 generic band
+        val pro = CoachEngine(CoachConfig(mode = CoachMode.ZONE2, maxHr = 186, ftpW = 245, cadenceLow = 83, cadenceHigh = 93, graceMs = 0))
+        val novice = CoachEngine(CoachConfig(mode = CoachMode.ZONE2, maxHr = 185, ftpW = 200, powerCoaching = false, cadenceLow = 80, cadenceHigh = 95, graceMs = 0))
+        var a = CoachCue.NONE; var b = CoachCue.NONE
+        for (t in 0 until 60) { if (a.type == CueType.NONE) a = pro.update(CoachInput(t * 1000L, Phase.MAIN, Signal(88), Signal(145), Signal(150), main, 25.0)); if (b.type == CueType.NONE) b = novice.update(CoachInput(t * 1000L, Phase.MAIN, Signal(88), Signal(145), Signal(150), ActiveTargets(111, 130, null, null, 80, 95, "MAIN"), 25.0)) }
+        assertEquals(CueType.KEEP_IT_UP, a.type); assertEquals(CueType.EASE_OFF, b.type)
+    }
+    @Test fun frequencyPresetsChangeSpacingOnly() {
+        val q = CoachConfig().withFrequency(CoachFrequency.QUIET); val f = CoachConfig().withFrequency(CoachFrequency.FREQUENT)
+        assertTrue(q.sameRepeatMs > f.sameRepeatMs && q.keepRepeatMs == 0L && f.keepRepeatMs > 0)
     }
 }

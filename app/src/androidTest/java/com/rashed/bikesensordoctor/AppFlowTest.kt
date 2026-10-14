@@ -51,12 +51,12 @@ class AppFlowTest {
                 if (o == null) o = runCatching { device.findObject(By.scrollable(true))?.scrollUntil(androidx.test.uiautomator.Direction.UP, Until.findObject(sel)) }.getOrNull()
             }
         }
-        if (o == null) { repeat(4) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
-        if (o == null) { repeat(5) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
+        if (o == null) { repeat(10) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
+        if (o == null) { repeat(12) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null && timeout > 3000) o = device.wait(Until.findObject(sel), timeout - 3000)
         assertNotNull("not found: $sel", o); return o!!
     }
-    private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.72).toInt(); val b = (device.displayHeight * 0.30).toInt(); if (up) device.swipe(w, a, w, b, 25) else device.swipe(w, b, w, a, 25); device.waitForIdle(800); Thread.sleep(350) }
+    private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.80).toInt(); val b = (device.displayHeight * 0.25).toInt(); if (up) device.swipe(w, a, w, b, 25) else device.swipe(w, b, w, a, 25); device.waitForIdle(800); Thread.sleep(350) }
     private fun tap(sel: BySelector, timeout: Long = T) {
         find(sel, timeout)
         // a node clipped at the bottom edge (behind the tab bar) must be scrolled fully into view before tapping
@@ -83,9 +83,11 @@ class AppFlowTest {
         for (n in 0 until 40) {
             device.findObject(By.clickable(true).textContains("llow"))?.let { it.click(); device.waitForIdle() }
             device.findObject(By.clickable(true).text("While using the app"))?.let { it.click(); device.waitForIdle() }
-            if (device.hasObject(By.res(java.util.regex.Pattern.compile("rider_.*|start_ride|start_onboarding|btn_start|next_page|confirm_profile")))) break
+            if (device.hasObject(By.res(java.util.regex.Pattern.compile("rider_.*|start_ride|start_onboarding|btn_start|next_page|confirm_profile|results_root")))) break
             Thread.sleep(500)
         }
+        // a results page left open by an earlier test: leave it (skip the questions) so the next test starts from Home
+        if (has(tag("results_root"), 1500)) { if (visible(text("SKIP"), 2000)) tap(text("SKIP")); if (visible(tag("post_home"), 4000)) tap(tag("post_home")) }
     }
 
     @Before fun setUp() {
@@ -119,7 +121,7 @@ class AppFlowTest {
         retry { device.findObjects(text("Tested")).last().click() }; device.waitForIdle(1000)
         tap(text("Don't know yet")); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
         // page 5: prefs
-        tap(text("On")); tap(text("Corrections")); shot("07_page5"); tap(tag("next_page"))
+        tap(text("On")); tap(text("Normal")); shot("07_page5"); tap(tag("next_page"))
         // page 6: summary
         find(text("CONFIRMED"), 10_000); shot("08_profile"); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
         find(tag("start_ride")); shot("09_home")

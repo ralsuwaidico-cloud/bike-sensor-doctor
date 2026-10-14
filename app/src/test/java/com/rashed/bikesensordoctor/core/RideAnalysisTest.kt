@@ -77,3 +77,27 @@ class RideAnalysisTest {
         val sparse = SeriesPoint.parse(SeriesPoint(7).csv())!!; assertNull(sparse.hr); assertNull(sparse.lat)
     }
 }
+
+class CalibrationTest {
+    @Test fun ftpNeedsTwoAgreeingVerifiedRides() {
+        assertTrue(!Calibration.ftp(emptyList()).ready)
+        val one = Calibration.ftp(listOf(200)); assertTrue(!one.ready); assertEquals(190, one.value); assertTrue(one.detail.contains("1 of 2"))
+        val two = Calibration.ftp(listOf(200, 204)); assertTrue(two.ready); assertEquals(194, two.value); assertEquals(ZoneConfidence.PROVISIONAL, two.confidence)
+        assertTrue(!Calibration.ftp(listOf(200, 230)).ready)
+    }
+    @Test fun thresholdFromGuidedTests() {
+        assertEquals(ZoneConfidence.PROVISIONAL, Calibration.lthr(listOf(168)).confidence)
+        assertEquals(ZoneConfidence.CONFIRMED, Calibration.lthr(listOf(168, 170)).confidence); assertEquals(169, Calibration.lthr(listOf(168, 170)).value)
+        assertEquals(ZoneConfidence.PROVISIONAL, Calibration.lthr(listOf(160, 172)).confidence)
+    }
+    @Test fun zonesTooLowNeedsThreeEasyRidesAbove() {
+        val easyAbove = RideFeedback(0, 30, 2, 160, 3600, rpe = 3)
+        assertTrue(Calibration.zonesTooLow(listOf(easyAbove, easyAbove, easyAbove)))
+        assertTrue(!Calibration.zonesTooLow(listOf(easyAbove, easyAbove, easyAbove.copy(rpe = 7))))
+        assertTrue(!Calibration.zonesTooLow(listOf(easyAbove, easyAbove)))
+    }
+    @Test fun learnedFactsUseMediansAndTrends() {
+        val l = Calibration.learn(listOf(84, 88, 86, 90), listOf(180, 190), listOf(148, 150, 152), listOf(60, 75, 90), listOf(40, 50, 55, 70, 80, 85), listOf(25, 30))
+        assertEquals(88, l.naturalCadence); assertEquals(190, l.sustainablePowerW); assertEquals(150, l.hrAtTypicalEffort); assertEquals(90, l.longestRideMin); assertTrue(l.inBandTrend!!.startsWith("improving")); assertEquals(30, l.recoveryBpm)
+    }
+}

@@ -167,7 +167,24 @@ fun RideResultsScreen(vm: DoctorViewModel, rideId: Long, fresh: Boolean, onDone:
             if (a.improve.isNotEmpty()) { Spacer(Modifier.height(6.dp)); CardTitle("WHAT COULD IMPROVE"); Bullets(a.improve) }
             if (a.wentWell.isEmpty() && a.improve.isEmpty()) Muted("Not enough data for a review (no heart rate in the main block).", 12)
         }
-        a.suggestions.forEach { sg ->
+        // calibration with evidence rules (never from a single ride, never from simulated or unverified power)
+        if (!simulated && rider != null) {
+            val ftpE = remember(tick) { com.rashed.bikesensordoctor.core.Calibration.ftp(vm.engine.ftpEvidence()) }
+            val lthrE = remember(tick) { com.rashed.bikesensordoctor.core.Calibration.lthr(vm.engine.testEvidence()) }
+            listOf("ftp" to ftpE, "lthr" to lthrE).forEach { (key, ev) ->
+                if (ev.value != null) D7Card(Modifier.padding(top = 8.dp), accent = if (ev.ready) D7.Violet else null) {
+                    CardTitle(if (ev.ready) "CALIBRATION — ${ev.confidence?.name ?: "EVIDENCE"}" else "CALIBRATION — EVIDENCE BUILDING")
+                    Text("${ev.label} ${ev.value}${if (key == "ftp") " W" else " bpm"}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg); Muted(ev.detail, 12)
+                    val m = rider.answers.metric(key)
+                    if (ev.ready) Row(Modifier.padding(top = 6.dp)) {
+                        if (m?.measured == true && ev.confidence != com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) Muted("Your profile has a tested value — estimates never overwrite it.", 11)
+                        else if (m?.value == ev.value) Tag("APPLIED", D7.Green)
+                        else PrimaryButton(if (ev.confidence == com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) "USE AS CONFIRMED" else "USE AS PROVISIONAL", color = D7.Violet) { rider.answers.setMetric(key, ev.value, if (ev.confidence == com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
+                    }
+                }
+            }
+        }
+        a.suggestions.filter { it.key != "ftp" }.forEach { sg ->
             D7Card(Modifier.padding(top = 8.dp), accent = D7.Violet) {
                 CardTitle("PROVISIONAL ESTIMATE — YOUR CALL")
                 Text(sg.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg); Muted(sg.why, 12)

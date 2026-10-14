@@ -23,10 +23,31 @@ enum class EffortSource { AUTO, HEART_RATE, POWER }
 
 enum class CueType { NONE, KEEP_IT_UP, PEDAL_FASTER, PEDAL_SLOWER, EASE_OFF, PUSH_HARDER, RECOVER, WORK, NO_HR, NO_POWER, WARMUP, COOLDOWN, QUIET }
 
-/** @param reason machine-readable cause (e.g. HR_ABOVE, HR_LAG_HOLD) for logs and tests. */
-data class CoachCue(val type: CueType, val headline: String, val detail: String, val spoken: String, val reason: String = "") {
+/**
+ * v3: the practical action the rider should take. One per tick, chosen by one priority ladder
+ * (safety/validity → effort vs targets → cadence → gear → encouragement), so instructions never contradict.
+ */
+enum class CoachAction(val icon: String) {
+    NONE("○"), WARM_UP("☼"), START_COOLDOWN("❄"), WIND_DOWN("❄"),
+    EASIER_GEAR("⚙−"), HARDER_GEAR("⚙+"), REDUCE_PRESSURE("⇩"), INCREASE_EFFORT("⇧"), HR_RISING_EASE("♥↑"),
+    PEDAL_FASTER("↻+"), PEDAL_SLOWER("↻−"), KEEP_CADENCE_STEADY("≈"), HOLD_PACE("═"), STABLE_MAINTAIN("✓"),
+    RECOVER("❄"), NO_SIGNAL("?"), QUIET("…"),
+}
+
+/**
+ * @param reason machine-readable cause (e.g. HR_ABOVE, HR_LAG_HOLD) for logs and tests.
+ * @param action practical instruction; @param sources which signals decided ("HR + cadence"); @param live the relevant live numbers.
+ */
+data class CoachCue(val type: CueType, val headline: String, val detail: String, val spoken: String, val reason: String = "",
+                    val action: CoachAction = CoachAction.NONE, val sources: String = "", val live: String = "") {
     companion object { val NONE = CoachCue(CueType.NONE, "", "", "", "") }
 }
+
+/** How much the coach talks. Quiet: corrections only, well spaced. Frequent: also encouragement, closer together. */
+enum class CoachFrequency { QUIET, NORMAL, FREQUENT }
+
+/** The 60-second assessment: not a spoken cue — a status the display shows (and the subtle "analysed at …" indicator). */
+data class Assessment(val atMs: Long, val summary: String, val progress: String, val inBandPctMinute: Int?, val hrTrend: Int?, val powerTrend: Int?, val cadTrend: Int?)
 
 data class CoachConfig(
     val mode: CoachMode = CoachMode.FREE,
@@ -61,7 +82,14 @@ data class CoachConfig(
     /** After 3 unheeded repeats of the same cue, go QUIET until the cue changes or quietMs pass. */
     val backoff: Boolean = false,
     val quietMs: Long = 300_000,
-)
+) {
+    /** Spacing presets for quiet / normal / frequent coaching. */
+    fun withFrequency(f: CoachFrequency): CoachConfig = when (f) {
+        CoachFrequency.QUIET -> copy(minAlertMs = 15_000, sameRepeatMs = 120_000, keepRepeatMs = 0, infoRepeatMs = 60_000)
+        CoachFrequency.NORMAL -> copy(minAlertMs = 10_000, sameRepeatMs = 45_000, keepRepeatMs = 90_000, infoRepeatMs = 30_000)
+        CoachFrequency.FREQUENT -> copy(minAlertMs = 8_000, sameRepeatMs = 30_000, keepRepeatMs = 60_000, infoRepeatMs = 20_000)
+    }
+}
 
 /** Work/rest interval plan; times in seconds. targetZone applies during work. */
 data class IntervalPlan(val workSec: Int = 240, val restSec: Int = 120, val repeats: Int = 4)
@@ -80,6 +108,8 @@ data class CoachInput(
     val power: Signal = Signal.NONE,
     /** Absolute target bands for this tick (workout + phase ramps). null ⇒ zone-based targets from the config. */
     val targets: ActiveTargets? = null,
+    /** km/h, for the coasting/stopped rule and the speed trend (optional). */
+    val speedKmh: Double? = null,
 )
 
 class CoachEngine(var config: CoachConfig = CoachConfig()) {
@@ -128,6 +158,25 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
     private var announcedPhase: Phase? = null
     private var surgeSince: Long? = null
     private var lastCad: Int? = null
+    private var lastHr: Int? = null; private var lastPw: Int? = null; private var lastSpeed: Double? = null
+    private var lastHb: Band? = null; private var lastPb: Band? = null
+
+    /** 30 s-vs-previous-30 s trend of a signal (per minute), from 1 Hz samples. */
+    private class Trend {
+        private val win = ArrayDeque<Pair<Long, Double>>()
+        private var cvWin = ArrayDeque<Double>()
+        fun feed(now: Long, v: Double?) { if (v == null) { win.clear(); cvWin.clear(); return }; win.addLast(now to v); while (win.isNotEmpty() && now - win.first().first > 60_000) win.removeFirst(); cvWin.addLast(v); while (cvWin.size > 60) cvWin.removeFirst() }
+        /** change per minute: mean(last 30 s) − mean(previous 30 s), or null until 40 s of data */
+        fun perMinute(now: Long): Double? { if (win.size < 40) return null; val recent = win.filter { now - it.first <= 30_000 }.map { it.second }; val older = win.filter { now - it.first > 30_000 }.map { it.second }; if (recent.size < 10 || older.size < 10) return null; return (recent.average() - older.average()) * 2.0 }   // windows are 30 s apart → ×2 for per minute
+        fun cv(): Double? { if (cvWin.size < 45) return null; val m = cvWin.average(); if (m <= 0) return null; return Math.sqrt(cvWin.sumOf { (it - m) * (it - m) } / cvWin.size) / m }
+        /** direction reversals of ≥ 3-unit steps in the last minute: a single deliberate step change is 1, ragged pedalling is many */
+        fun reversals(): Int { if (cvWin.size < 45) return 0; var n = 0; var last = 0; val a = cvWin.toList(); for (i in 1 until a.size) { val d = a[i] - a[i - 1]; val sgn = if (d >= 3) 1 else if (d <= -3) -1 else 0; if (sgn != 0) { if (last != 0 && sgn != last) n++; last = sgn } }; return n }
+        fun clear() { win.clear(); cvWin.clear() }
+    }
+    private val hrT = Trend(); private val pwT = Trend(); private val cadT = Trend(); private val spT = Trend()
+    private var minuteAbove = 0; private var minuteBelow = 0; private var minuteIn = 0; private var minuteStartMs = Long.MIN_VALUE / 2
+    /** The most recent 60-second assessment (display only). */
+    var lastAssessment: Assessment? = null; private set
     private var phaseSeen: Phase? = null; private var phaseSinceMs = 0L
     private var repeatCount = 0; private var quietSinceMs = 0L
 
@@ -139,6 +188,8 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         lastType = CueType.NONE; lastEmitMs = Long.MIN_VALUE / 2; allGoodSince = null; keepArmed = true
         announcedPhase = null; surgeSince = null; intervalStartMs = null
         phaseSeen = null; phaseSinceMs = 0; repeatCount = 0; quietSinceMs = 0
+        hrT.clear(); pwT.clear(); cadT.clear(); spT.clear(); minuteAbove = 0; minuteBelow = 0; minuteIn = 0; minuteStartMs = Long.MIN_VALUE / 2; lastAssessment = null
+        lastHr = null; lastPw = null; lastSpeed = null; lastHb = null; lastPb = null
     }
 
     /** Compatibility entry point (MAIN phase, all signals fresh). */
@@ -163,6 +214,10 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         val usePw = c.effortSource != EffortSource.HEART_RATE && c.powerCoaching
         val hr = if (useHr) hrRaw else null
         val pw = if (usePw && pwRaw != null && pwRaw > 0) pwRaw else null
+        lastHr = hr; lastPw = pw; lastSpeed = input.speedKmh
+        hrT.feed(now, hr?.toDouble()); pwT.feed(now, pw?.toDouble()); cadT.feed(now, cad?.takeIf { it > 0 }?.toDouble()); spT.feed(now, input.speedKmh)
+        // coasting or stopped: no pedalling or gear instruction makes sense (effort rules below still see HR)
+        val stopped = (input.speedKmh != null && input.speedKmh < 2.0) || (cad != null && cad == 0 && input.cadence.available)
 
         // ---- 2. phase (intervals split MAIN into work / rest) ----
         var phase = input.phase
@@ -188,7 +243,23 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         val (pLo, pHi) = if (tg != null && tg.pwLo != null && tg.pwHi != null) (tg.pwLo.toDouble() / c.ftpW) to (tg.pwHi.toDouble() / c.ftpW) else powerBounds(targetZone)
         val hb = hrBand.update(now, hr?.let { it.toDouble() / c.maxHr }, hLo, hHi)
         val pb = pwBand.update(now, pw?.let { it.toDouble() / c.ftpW }, pLo, pHi)
+        lastHb = hb; lastPb = pb
         val bandText = if (tg != null) "${tg.hrLo}–${tg.hrHi} bpm" else "zone $targetHrZone"
+        // ---- 60-second assessment: time above/below/in band this minute, trends, progress (display only) ----
+        if (phase == Phase.MAIN) { when (hb ?: pb) { Band.ABOVE -> minuteAbove++; Band.BELOW -> minuteBelow++; Band.ON -> minuteIn++; null -> {} } }
+        if (minuteStartMs == Long.MIN_VALUE / 2) minuteStartMs = now
+        if (now - minuteStartMs >= 60_000) {
+            val tot = minuteAbove + minuteBelow + minuteIn
+            val pct = if (tot > 0) minuteIn * 100 / tot else null
+            val ht = hrT.perMinute(now)?.let { Math.round(it).toInt() }; val pt = pwT.perMinute(now)?.let { Math.round(it).toInt() }; val ct = cadT.perMinute(now)?.let { Math.round(it).toInt() }
+            val parts = ArrayList<String>()
+            hr?.let { parts += "HR $it" + (ht?.let { d -> if (d >= 3) " ↑" else if (d <= -3) " ↓" else " →" } ?: "") }
+            pw?.let { parts += "$it W" + (pt?.let { d -> if (d >= 10) " ↑" else if (d <= -10) " ↓" else " →" } ?: "") }
+            cad?.takeIf { it > 0 }?.let { parts += "$it rpm" }
+            val progress = when { phase != Phase.MAIN -> phase.name.lowercase(); pct == null -> "no effort signal this minute"; pct >= 80 -> "on track — $pct % of the last minute in band"; minuteAbove > minuteBelow -> "mostly above target ($pct % in band) — ease"; else -> "mostly below target ($pct % in band) — a little more" }
+            lastAssessment = Assessment(now, parts.joinToString(" · "), progress, pct, ht, pt, ct)
+            minuteStartMs = now; minuteAbove = 0; minuteBelow = 0; minuteIn = 0
+        }
         val hrZone = hr?.let { zoneOf(it.toDouble() / c.maxHr, c.hrZoneBounds) }
         val pwZone = pw?.let { PowerZones.zone(it, c.ftpW) }
 
@@ -223,6 +294,9 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
                 Band.ABOVE -> if (hrBand.held(now, c.effortHoldMs))
                     emit(now, CueType.EASE_OFF, "EASE OFF", "Heart rate $hr above target $bandText", "Ease off", "HR_ABOVE") else hold()
                 Band.ON -> {
+                    // heart rate climbing fast while power is steady: it will leave the band — ease before it does
+                    val rising = hrT.perMinute(now)?.let { it >= 6.0 } == true && (pwT.perMinute(now)?.let { Math.abs(it) < 15.0 } ?: true) && hr.toDouble() / c.maxHr > hHi - 0.03
+                    if (rising && hrBand.held(now, 20_000)) return emit(now, CueType.EASE_OFF, "YOUR HEART RATE IS RISING. EASE OFF", "Heart rate $hr climbing about ${Math.round(hrT.perMinute(now) ?: 0.0)} bpm/min at steady power — back off a touch before it leaves the band", "Your heart rate is rising, ease off", "HR_RISING").also { if (it.type != CueType.NONE) allGoodSince = null }
                     // power surging well above target while HR has not caught up yet → pre-empt the overshoot
                     val surging = pwZone != null && pwZone >= targetZone + 1 && pb == Band.ABOVE
                     if (surging) { if (surgeSince == null) surgeSince = now } else surgeSince = null
@@ -254,10 +328,17 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         }
         if (effort != null) { if (effort.type != CueType.NONE) allGoodSince = null; return effort }
 
-        // ---- 6. cadence hint (effort is in order and HR is not above) ----
-        if (hb != Band.ABOVE) cadenceCue(now, cad, phase)?.let { if (it.type != CueType.NONE) allGoodSince = null; return it }
+        // ---- 6. cadence hints (effort is in order and HR is not above); never while coasting or stopped ----
+        if (hb != Band.ABOVE && !stopped && !coasting) {
+            cadenceCue(now, cad, phase)?.let { if (it.type != CueType.NONE) allGoodSince = null; return it }
+            // uneven pedalling (cadence varying > 12 % over the last minute) with effort fine → keep the cadence steady
+            val cv = cadT.cv()
+            if (c.cadenceEnabled && cad != null && cad > 0 && cv != null && cv > 0.12 && cadT.reversals() >= 8 && (hb == Band.ON || (hr == null && pb == Band.ON)))
+                emit(now, CueType.PEDAL_FASTER, "KEEP YOUR CADENCE STEADY", "Cadence varied ±${Math.round(cv * 100)} % over the last minute while effort was fine — settle into one rhythm", "Keep your cadence steady", "CAD_UNEVEN").let { if (it.type != CueType.NONE) { allGoodSince = null; return it } }
+        }
 
-        // ---- 7. all good ----
+        // ---- 7. all good (not while stopped or coasting: there is no pace to hold) ----
+        if (stopped || coasting) { allGoodSince = null; return CoachCue.NONE }
         val effortKnown = hb == Band.ON || (hr == null && pb == Band.ON)
         return keepIfGood(now, phase, effortKnown)
     }
@@ -317,41 +398,66 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
     private fun hold(reason: String = ""): CoachCue = CoachCue.NONE
 
     private fun announce(now: Long, phase: Phase, type: CueType, head0: String, detail0: String, spoken0: String, reason: String): CoachCue {
-        val (head, detail, spoken) = action(type, head0, detail0, spoken0)
+        val w = action(type, head0, detail0, spoken0, reason)
         if (announcedPhase == phase) return CoachCue.NONE
         announcedPhase = phase; allGoodSince = null; keepArmed = true
         lastType = type; lastEmitMs = now
-        return CoachCue(type, head, detail, spoken, reason)
+        return CoachCue(type, w.head, w.detail, w.spoken, reason, w.action, w.sources, liveText())
     }
 
     private fun info(now: Long, type: CueType, head: String, detail: String, spoken: String, reason: String): CoachCue {
         if (type == lastType && now - lastEmitMs < config.infoRepeatMs) return CoachCue.NONE
         lastType = type; lastEmitMs = now
-        return CoachCue(type, head, detail, spoken, reason)
+        return CoachCue(type, head, detail, spoken, reason, CoachAction.NO_SIGNAL, "sensors", liveText())
     }
 
     /**
      * Actionable wording (v0.9): the SAME decision, said as what to do with the bike. Cadence decides between a gear
      * change and a pressure/effort change, so the instruction never fights the cadence hint.
      */
-    private fun action(type: CueType, head: String, detail: String, spoken: String): Triple<String, String, String> {
-        val c = config; val cad = lastCad
+    private class Worded(val action: CoachAction, val head: String, val detail: String, val spoken: String, val sources: String)
+
+    /**
+     * Gear intelligence (v3): the SAME effort decision, said as what to do with the bike. Gear is inferred from
+     * cadence and power — the app never measures the selected gear.
+     *  - HR/power above target + low cadence + high power → easier gear (less resistance, smoother spin) · else reduce pressure
+     *  - HR/power below target + high cadence + low power → harder gear · low cadence + low power → increase effort (NOT an easier gear)
+     *  - effort fine → cadence hints; all fine → hold pace / maintain rhythm
+     */
+    private fun action(type: CueType, head: String, detail: String, spoken: String, reason: String): Worded {
+        val c = config; val cad = lastCad; val pw = lastPw; val hr = lastHr
+        val cadLow = cad != null && cad > 0 && cad < c.cadenceLow; val cadHigh = cad != null && cad > c.cadenceHigh
+        val pwHigh = lastPb == Band.ABOVE || (pw != null && pw > c.ftpW * 0.75); val pwLow = lastPb == Band.BELOW || (pw != null && pw < c.ftpW * 0.55)
+        val src = buildString { if (reason.startsWith("HR") || reason == "COOLDOWN_RAMP" || reason == "COOLDOWN_HR_ABOVE") append("HR"); if (reason.startsWith("PW")) append("power"); if (reason.startsWith("CAD")) append("cadence") }
         return when (type) {
-            CueType.EASE_OFF -> if (head == "WIND DOWN") Triple("WIND DOWN", detail, spoken)
-                else if (cad != null && cad > 0 && cad < c.cadenceLow) Triple("SHIFT TO AN EASIER GEAR", "$detail · cadence $cad rpm is low, so spin lighter instead of grinding", "Shift to an easier gear")
-                else Triple("REDUCE PEDAL PRESSURE", detail, "Reduce pedal pressure")
-            CueType.PUSH_HARDER -> if (cad != null && cad > c.cadenceHigh) Triple("SHIFT TO A HARDER GEAR", "$detail · cadence $cad rpm is high, so add gear not spin", "Shift to a harder gear")
-                else Triple("INCREASE EFFORT SLIGHTLY", detail, "Increase effort slightly")
-            CueType.PEDAL_FASTER -> Triple("PEDAL FASTER", "Easier gear, quicker spin — $detail", "Pedal faster, easier gear")
-            CueType.PEDAL_SLOWER -> Triple("PEDAL SLOWER", "Harder gear, slower spin — $detail", "Pedal slower, harder gear")
-            CueType.KEEP_IT_UP -> Triple("MAINTAIN YOUR RHYTHM", detail, "Maintain your rhythm")
-            CueType.COOLDOWN -> Triple("BEGIN COOLDOWN", detail, "Begin cooldown")
-            else -> Triple(head, detail, spoken)
+            CueType.EASE_OFF -> when {
+                head == "WIND DOWN" -> Worded(CoachAction.WIND_DOWN, "WIND DOWN", detail, spoken, "HR")
+                reason == "HR_RISING" -> Worded(CoachAction.HR_RISING_EASE, head, detail, spoken, "HR trend + power")
+                cadLow && !pwLow -> Worded(CoachAction.EASIER_GEAR, "SHIFT TO AN EASIER GEAR", "$detail · cadence $cad rpm with a heavy gear: less resistance, smoother spin, and the effort comes down", "Shift to an easier gear", "$src + cadence")
+                else -> Worded(CoachAction.REDUCE_PRESSURE, "REDUCE PRESSURE ON THE PEDALS", detail, "Reduce pressure on the pedals", src.ifEmpty { "HR" })
+            }
+            CueType.PUSH_HARDER -> when {
+                cadHigh && (pwLow || pw == null) -> Worded(CoachAction.HARDER_GEAR, "SHIFT TO A HARDER GEAR", "$detail · cadence $cad rpm is high with little resistance — add gear, keep the spin", "Shift to a harder gear", "$src + cadence")
+                else -> Worded(CoachAction.INCREASE_EFFORT, "INCREASE YOUR EFFORT SLIGHTLY", if (cadLow) "$detail · cadence is low too, so press a little more rather than changing gear" else detail, "Increase your effort slightly", src.ifEmpty { "HR" })
+            }
+            CueType.PEDAL_FASTER -> if (head.startsWith("KEEP")) Worded(CoachAction.KEEP_CADENCE_STEADY, head, detail, spoken, "cadence") else Worded(CoachAction.PEDAL_FASTER, "PEDAL A LITTLE FASTER", "Easier gear, same effort — $detail", "Pedal a little faster", "cadence")
+            CueType.PEDAL_SLOWER -> Worded(CoachAction.PEDAL_SLOWER, "SLOW YOUR PEDALLING", "Harder gear, same effort — $detail", "Slow your pedalling", "cadence")
+            CueType.KEEP_IT_UP -> if (pw != null && lastPb == Band.ON) Worded(CoachAction.HOLD_PACE, "HOLD THIS PACE", "Power and heart rate on target", "Hold this pace", "HR + power")
+                else Worded(CoachAction.STABLE_MAINTAIN, "YOUR EFFORT IS STABLE. MAINTAIN THIS RHYTHM", detail, "Your effort is stable, maintain this rhythm", if (hr != null) "HR" else "power")
+            CueType.COOLDOWN -> Worded(CoachAction.START_COOLDOWN, "START YOUR COOLDOWN", detail, "Start your cooldown", "phase")
+            CueType.WARMUP -> Worded(CoachAction.WARM_UP, head, detail, spoken, "phase")
+            CueType.RECOVER -> Worded(CoachAction.RECOVER, head, detail, spoken, "phase")
+            CueType.NO_HR, CueType.NO_POWER -> Worded(CoachAction.NO_SIGNAL, head, detail, spoken, "sensors")
+            CueType.QUIET -> Worded(CoachAction.QUIET, head, detail, spoken, "")
+            else -> Worded(CoachAction.NONE, head, detail, spoken, src)
         }
     }
 
+    private fun liveText(): String = listOfNotNull(lastHr?.let { "HR $it" }, lastPw?.let { "$it W" }, lastCad?.takeIf { it > 0 }?.let { "$it rpm" }).joinToString(" · ")
+
     private fun emit(now: Long, type: CueType, head0: String, detail0: String, spoken0: String, reason: String): CoachCue {
-        val (head, detail, spoken) = action(type, head0, detail0, spoken0)
+        val w = action(type, head0, detail0, spoken0, reason)
+        val head = w.head; val detail = w.detail; val spoken = w.spoken
         val since = now - lastEmitMs
         if (type == lastType && type == CueType.KEEP_IT_UP && config.keepRepeatMs <= 0) return CoachCue.NONE   // "keep it up" once per good spell
         if (type == lastType && since < (if (type == CueType.KEEP_IT_UP) config.keepRepeatMs else config.sameRepeatMs)) return CoachCue.NONE
@@ -361,12 +467,12 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
             repeatCount++
             if (repeatCount >= 3) {
                 if (repeatCount == 3) { lastEmitMs = now; quietSinceMs = now
-                    return CoachCue(CueType.QUIET, "COACH QUIET", "$head said 3 times without a change — going quiet until something changes (5 min max)", "", "BACKOFF") }
+                    return CoachCue(CueType.QUIET, "COACH QUIET", "$head said 3 times without a change — going quiet until something changes (5 min max)", "", "BACKOFF", CoachAction.QUIET, "", liveText()) }
                 if (now - quietSinceMs < config.quietMs) return CoachCue.NONE
                 repeatCount = 0
             }
         } else repeatCount = 0
         lastType = type; lastEmitMs = now
-        return CoachCue(type, head, detail, spoken, reason)
+        return CoachCue(type, head, detail, spoken, reason, w.action, w.sources, liveText())
     }
 }

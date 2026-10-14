@@ -159,7 +159,8 @@ fun TargetGauge(
                 }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(sub ?: " ", fontFamily = PlexMono, fontSize = if (big) 13.sp else 9.sp, color = col, maxLines = 1, softWrap = false)
+                // small gauges have no room for a long label inside the ring: keep it to 8 characters (the pill below says the rest)
+                Text((sub ?: " ").let { if (!big && it.length > 8) " " else it }, fontFamily = PlexMono, fontSize = if (big) 13.sp else 9.sp, color = col, maxLines = 1, softWrap = false)
                 Text(value?.toString() ?: "—", fontFamily = Rajdhani, fontWeight = FontWeight.Medium,
                     fontSize = if (big) 64.sp else 28.sp, lineHeight = if (big) 64.sp else 29.sp,
                     color = if (value == null) D7.Faint else D7.Fg, maxLines = 1, softWrap = false)
