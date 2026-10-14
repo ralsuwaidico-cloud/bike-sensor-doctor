@@ -155,6 +155,8 @@ class AppFlowTest {
         tap(tag("rider_omar"))
         find(text("Riding as "), 8000); assertTrue("home shows Omar", has(text("Omar"), 2000)); shot("18_home_omar")
         assertTrue("Omar: Zone 2 endurance, 90 min", has(text("Zone 2 endurance"), 2000) && has(By.textStartsWith("90 min"), 2000))
+        // Omar's own live screen (different zones, same fixed layout)
+        tap(tag("start_ride")); find(tag("btn_start")); shot("18b_live_omar"); assertNoScrollLive("omar idle"); tap(tag("dash_home")); find(tag("start_ride"))
         tap(tag("switch_rider")); tap(tag("rider_layla")); find(text("Riding as "), 8000); assertTrue("home shows Layla", has(text("Layla"), 2000)); shot("19_home_layla")
         assertTrue("Layla's FTP goal gives sweet-spot work", has(text("Sweet-spot intervals (3 × 10 min at 88–93% FTP)"), 3000) || has(text("Zone 2 endurance (easy day after weights)"), 500))
         // back to the created rider
@@ -169,6 +171,7 @@ class AppFlowTest {
         tap(text("⚙")); scrollTo(tag("open_simulation")); tap(tag("open_simulation"))
         tap(text("30×")); shot("20_simulation"); tap(tag("sim_start"))
         find(tag("btn_start")); shot("21_dashboard_idle")
+        val heapStart = heapKb()
         tap(tag("btn_start"))
         find(tag("btn_pause")); Thread.sleep(4000); shot("22_dashboard_warmup")
         assertNoScrollLive("warm-up")
@@ -178,9 +181,17 @@ class AppFlowTest {
         // wait for MAIN then COOL-DOWN (planned ride ends after 60 simulated minutes)
         top(); assertTrue("MAIN phase reached", device.wait(Until.hasObject(By.textStartsWith("MAIN")), 60_000))
         shot("25_dashboard_main")
-        tap(tag("dash_details")); find(text("RIDE DETAILS")); shot("26_details"); device.pressBack(); find(tag("btn_pause"), 5000)
+        tap(tag("dash_details")); find(text("RIDE DETAILS")); find(tag("detail_graphs")); shot("26_details")
+        // graph-focused view: windows, and a tap gives the exact readings at that second
+        tap(tag("detail_win_60")); tap(tag("detail_win_600")); val g = find(tag("detail_graphs")); device.click(g.visibleBounds.centerX(), g.visibleBounds.top + g.visibleBounds.height() / 4)
+        assertTrue("tap readout shows the second", has(By.textStartsWith("at "), 3000)); shot("26b_details_readout"); tap(tag("detail_win_300"))
+        device.pressBack(); find(tag("btn_pause"), 5000)
+        val heapMain = heapKb()
         top(); assertTrue("COOL-DOWN reached", device.wait(Until.hasObject(By.textStartsWith("COOL-DOWN")), 150_000))
         shot("27_dashboard_cooldown")
+        // memory stays flat across the hour-long ride (fixed ring buffer, no per-frame garbage): < 24 MB growth after GC
+        val heapEnd = heapKb(); File(shots(), "memory.txt").writeText("heap KB: start=$heapStart main=$heapMain cooldown=$heapEnd\n")
+        assertTrue("heap growth over the ride ${(heapEnd - heapMain) / 1024} MB", heapEnd - heapMain < 24 * 1024)
         // background + foreground must not lose the ride
         device.pressHome(); Thread.sleep(2000); launch(); find(tag("btn_pause"), 10_000)
         tap(tag("btn_finish")); tap(text("FINISH & SAVE"))   // the dialog is its own window: find it by its text
@@ -197,11 +208,20 @@ class AppFlowTest {
     private fun assertNoScrollLive(label: String) {
         assertTrue("$label: live screen present", has(tag("live_root"), 3000))
         assertTrue("$label: live screen must not scroll", !device.hasObject(By.scrollable(true)))
-        for (t in listOf("live_speed", "live_dist", "live_time", "gauge_power", "gauge_hr", "gauge_cad", "live_targets", "coach_box", "coach_headline")) assertTrue("$label: $t visible without scrolling", has(tag(t), 1500))
+        for (t in listOf("live_speed", "live_dist", "live_time", "live_phase", "card_power", "card_hr", "card_cad", "live_targets", "live_graph", "coach_box", "coach_headline")) assertTrue("$label: $t visible without scrolling", has(tag(t), 1500))
         assertTrue("$label: a control visible", has(tag("btn_pause"), 500) || has(tag("btn_start"), 500) || has(tag("btn_resume"), 500))
         val box = device.findObject(tag("coach_box")); val ctl = device.findObject(By.res(java.util.regex.Pattern.compile("btn_(pause|start|resume)")))
         if (box != null && ctl != null) assertTrue("$label: coach box above the controls and inside the screen", box.visibleBounds.bottom <= ctl.visibleBounds.top && ctl.visibleBounds.bottom <= device.displayHeight)
+        val graph = device.findObject(tag("live_graph"))
+        if (graph != null && box != null) {
+            assertTrue("$label: graph above the coach box", graph.visibleBounds.bottom <= box.visibleBounds.top)
+            assertTrue("$label: graph keeps a usable height (${graph.visibleBounds.height()} px)", graph.visibleBounds.height() >= device.displayHeight / 7)
+        }
+        // nothing may overlap: every tagged element's bounds must be disjoint from the next section's
+        val order = listOf("card_power", "live_targets", "live_graph", "coach_box").mapNotNull { device.findObject(tag(it))?.visibleBounds }
+        for (i in 1 until order.size) assertTrue("$label: section $i overlaps the one above (${order[i - 1]} vs ${order[i]})", order[i].top >= order[i - 1].bottom - 1)
     }
+    private fun heapKb(): Long { Runtime.getRuntime().gc(); Thread.sleep(300); val r = Runtime.getRuntime(); return (r.totalMemory() - r.freeMemory()) / 1024 }
 
     @Test fun t04b_extremes_and_large_font_layout() {
         launch(); find(tag("start_ride"), 15_000)
@@ -215,6 +235,21 @@ class AppFlowTest {
         shot("34_live_font_1_3"); assertNoScrollLive("font 1.3")
         device.executeShellCommand("settings put system font_scale 1.0"); Thread.sleep(2500)
         launch(); find(tag("btn_finish"), 15_000); tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
+        find(tag("results_root"), 15_000); if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
+    }
+
+    /** Sensor drop-outs: the graph keeps running with gaps, the cards say NO DATA / NO STRAP, nothing is invented, the app never stalls. */
+    @Test fun t04c_sensor_dropouts_show_gaps_not_values() {
+        launch(); find(tag("start_ride"), 15_000)
+        tap(text("⚙")); tap(tag("open_simulation")); tap(text("Sensor drop-outs")); tap(text("10×")); tap(tag("sim_start"))
+        find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
+        // meter silent at 2:00 (power + cadence missing together — one device), strap silent at 3:30
+        assertTrue("power card reports NO DATA during the meter gap", device.wait(Until.hasObject(text("— NO DATA")), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
+        assertTrue("no value is shown while the meter is silent", !has(text("999"), 200))
+        assertTrue("HR card reports NO STRAP during the strap gap", device.wait(Until.hasObject(text("— NO STRAP")), 40_000)); shot("36_live_strap_gap"); assertNoScrollLive("strap gap")
+        Thread.sleep(8000); shot("37_live_after_gaps")   // ≥ 5 min of ride: both gaps now visible in the 5-minute graph
+        tap(tag("dash_details")); find(tag("detail_graphs")); shot("38_details_gaps"); device.pressBack(); find(tag("btn_finish"), 5000)
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
         find(tag("results_root"), 15_000); if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
     }
 

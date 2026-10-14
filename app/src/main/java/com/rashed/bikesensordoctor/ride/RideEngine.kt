@@ -26,6 +26,10 @@ import com.rashed.bikesensordoctor.core.WorkoutPlan
 import com.rashed.bikesensordoctor.core.WorkoutTargets
 import com.rashed.bikesensordoctor.core.ZoneConfidence
 import com.rashed.bikesensordoctor.core.SeriesPoint
+import com.rashed.bikesensordoctor.core.GraphBands
+import com.rashed.bikesensordoctor.core.LiveBuffer
+import com.rashed.bikesensordoctor.core.Targets
+import com.rashed.bikesensordoctor.core.CoachMode
 import com.rashed.bikesensordoctor.log.EventLog
 import com.rashed.bikesensordoctor.log.EventType
 import kotlinx.coroutines.CoroutineScope
@@ -105,6 +109,9 @@ data class Dashboard(
     val assessmentAtMs: Long = 0,
     val maxSpeedKmh: Double = 0.0,
     val elevationGainM: Double = 0.0,
+    // ---- v0.10: live graph ----
+    val graphVersion: Long = 0,                                       // bumps once per sample so the graph redraws exactly once per second
+    val bands: GraphBands? = null,                                    // the target bands the cards and the graph are scaled against right now
 )
 
 /** What a finished ride measured, for the post-ride questions and the next recommendation. */
@@ -177,6 +184,13 @@ class RideEngine(private val app: Application) {
     private var rideSource = RideSource.DEVICE
     // ---- v0.9: 1 Hz series for the Ride Results page; written to the checkpoint every 10 s ----
     private val series = ArrayList<SeriesPoint>()
+    /** v0.10: the last 10 minutes of 1 Hz readings + targets for the live graph (display only; the recorded ride is [series]). */
+    val liveBuffer = LiveBuffer(600)
+    private var lastBufSec = Long.MIN_VALUE
+    private fun bandsNow(targets: ActiveTargets?): GraphBands {
+        val mode = runCatching { CoachMode.valueOf(prefs.coachMode) }.getOrDefault(CoachMode.FREE)
+        return GraphBands.resolve(targets, prefs.ftpW, prefs.powerVerified, prefs.maxHr, Targets.targetZone(mode), prefs.cadenceLow, prefs.cadenceHigh)
+    }
     private var seriesFlushed = 0
     private val checkpointSeries get() = File(app.filesDir, "ride-checkpoint-series.csv")
     private var simSpeedKmh: Double? = null; private var simDistKm = 0.0; private var simAlt = 10.0; private var simGain = 0.0; private var simMaxSpeed = 0.0
@@ -534,6 +548,7 @@ class RideEngine(private val app: Application) {
                     if (bpm != null) { val half = ((plan.plannedSec ?: 3600) - plan.warmupSec - plan.cooldownSec) / 2; if (mainSec <= half) hrFirstHalf += bpm else hrSecondHalf += bpm }
                 }
                 val sim = simulator != null
+                liveBuffer.add(lastZoneSec.toInt(), pw, bpm, stats.liveCadenceRpm(now), bandsNow(targets), phase); lastBufSec = now / 1000
                 if (series.size < 8 * 3600) series += SeriesPoint(lastZoneSec.toInt(), bpm, pw, stats.liveCadenceRpm(now), if (sim) simSpeedKmh else g.speedKmh, if (sim) simAlt else g.altM,
                     if (sim) simDistKm else g.distanceKm, if (sim) null else g.lat, if (sim) null else g.lon, phase, inBand)
                 if (lastZoneSec > 0 && lastZoneSec % 60 == 0L) {
@@ -548,6 +563,11 @@ class RideEngine(private val app: Application) {
                     _dash.value = _dash.value.copy(minuteLine = if (parts.isEmpty()) "" else "Last minute: " + parts.joinToString(" · "))
                 }
             }
+        }
+        // v0.10: outside a running ride the graph still shows the live sensors, one sample per second of engine time
+        if (stats.state != RideStats.State.RUNNING) {
+            val sec = now / 1000
+            if (sec != lastBufSec) { lastBufSec = sec; liveBuffer.add(sec.toInt(), stats.livePowerW(now), bpm, stats.liveCadenceRpm(now), bandsNow(if (stats.state == RideStats.State.IDLE) null else targets), phase) }
         }
         // P0: checkpoint every 10 s while a ride exists
         if (stats.state == RideStats.State.RUNNING || stats.state == RideStats.State.PAUSED) {
@@ -586,6 +606,7 @@ class RideEngine(private val app: Application) {
             targets = if (stats.state == RideStats.State.IDLE) null else targets, inZonePct = if (mainSec > 0) inZoneSec * 100 / mainSec else null,
             assessment = coach.lastAssessment?.let { "${it.progress} · ${it.summary}" } ?: "", assessmentAtMs = coach.lastAssessment?.atMs ?: 0,
             plannedSec = if (stats.state == RideStats.State.IDLE) null else plan.plannedSec,
+            graphVersion = liveBuffer.version, bands = bandsNow(if (stats.state == RideStats.State.IDLE) null else targets),
         )
     }
     private var lastZoneSec = -1L

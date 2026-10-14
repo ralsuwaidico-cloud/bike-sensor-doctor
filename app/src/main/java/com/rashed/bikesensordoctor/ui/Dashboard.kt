@@ -285,6 +285,17 @@ fun DetailsScreen(vm: DoctorViewModel, onBack: () -> Unit, onHistory: () -> Unit
     val st = D7State(d, cue, prefs)
     Column(Modifier.fillMaxSize().background(D7.Bg).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp)) {
         D7TopBar("RIDE DETAILS", "Live", onBack, right = { TextButton(onClick = onHistory) { Text("History", color = D7.Cyan, fontSize = 12.sp) } })
+        // v0.10: the graph-focused view — separate traces in real units, 1/5/10-minute windows, tap for exact readings
+        DetailGraphs(vm.engine.liveBuffer, d.graphVersion)
+        Spacer(Modifier.height(10.dp))
+        // the full coach reasoning (the live screen shows the short form)
+        if (cue.type != CueType.NONE) D7Card(accent = st.coachColor) {
+            Text(cue.headline, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = D7.Fg)
+            Text(cue.detail, fontSize = 12.sp, color = D7.Mut, modifier = Modifier.padding(top = 2.dp))
+            if (cue.live.isNotEmpty() || cue.sources.isNotEmpty()) Text(listOf(cue.live, if (cue.sources.isNotEmpty()) "from ${cue.sources}" else "").filter { it.isNotEmpty() }.joinToString("  ·  "), fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, modifier = Modifier.padding(top = 4.dp))
+            if (d.assessment.isNotEmpty()) Text("60-s assessment: ${d.assessment}", fontFamily = PlexMono, fontSize = 10.sp, color = D7.Mut, modifier = Modifier.padding(top = 4.dp))
+        }
+        Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {
             Stat("${d.avgPowerW} W", "AVG POWER", Modifier.weight(1f)); Stat("${d.maxPowerW} W", "MAX POWER", Modifier.weight(1f)); Stat(d.normalizedPowerW?.let { "$it W" } ?: "—", "NORMALIZED", Modifier.weight(1f))
         }

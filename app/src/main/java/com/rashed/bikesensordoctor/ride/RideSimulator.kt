@@ -64,9 +64,10 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
                 cad = 90 + (3 * sin(2 * PI * t / 19.0)).toInt()
             }
             Profile.DROPOUTS -> {
-                val gap = (m in 15.0..15.5) || (m in 33.0..34.0)
-                if (gap) return   // no packets at all: the link monitor must record a gap, the app must not crash
-                hr = if (m in 20.0..23.0) null else ((hrLo + hrHi) / 2 + 2 * sin(2 * PI * m / 5)).toInt()
+                // meter silent 2:00–2:30, 15:00–15:30 and 33:00–34:00 (power AND cadence missing — one device); strap silent 3:30–4:00 and 20:00–23:00
+                val gap = (m in 2.0..2.5) || (m in 15.0..15.5) || (m in 33.0..34.0)
+                if (gap) { engine.simulatedHr = ((hrLo + hrHi) / 2 + 2 * sin(2 * PI * m / 5)).toInt(); return }   // no packets at all: the link monitor must record a gap, the app must not crash
+                hr = if (m in 3.5..4.0 || m in 20.0..23.0) null else ((hrLo + hrHi) / 2 + 2 * sin(2 * PI * m / 5)).toInt()
                 power = (0.62 * ftp + 15 * sin(2 * PI * t / 37.0)).toInt()
                 cad = if (m in 45.0..46.0) 0 else 84
             }
