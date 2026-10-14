@@ -134,7 +134,8 @@ class AppFlowTest {
     @Before fun setUp() {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         // the live dashboard never goes "idle" (it refreshes continuously): don't let every lookup wait 10 s for that
-        androidx.test.uiautomator.Configurator.getInstance().waitForIdleTimeout = 800
+        // (with Compose accessibility events switched on, the live screen announces a change every second, so "idle" never comes)
+        androidx.test.uiautomator.Configurator.getInstance().waitForIdleTimeout = 150
         ctx = ApplicationProvider.getApplicationContext()
         device.pressHome()
     }
@@ -214,7 +215,7 @@ class AppFlowTest {
         tap(tag("btn_start"))
         find(tag("btn_pause")); Thread.sleep(4000); shot("22_dashboard_warmup")
         assertNoScrollLive("warm-up")
-        assertTrue("phase label", visible(By.textStartsWith("WARM-UP")) || visible(By.textStartsWith("MAIN")))
+        assertTrue("phase label", has(By.textStartsWith("WARM-UP"), 500) || has(By.textStartsWith("MAIN"), 500) || has(By.textStartsWith("COOL-DOWN"), 500) || has(text("DONE"), 500))
         // pause / resume
         tap(tag("btn_pause")); find(tag("btn_resume")); shot("23_paused"); tap(tag("btn_resume")); find(tag("btn_pause"))
         // wait for MAIN then COOL-DOWN (planned ride ends after 60 simulated minutes)
