@@ -20,6 +20,7 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
         HARD_START("Hard start, then settles"),    // above target for the first 10 min
         DROPOUTS("Sensor drop-outs"),              // power/cadence gaps and an HR loss
         NO_HR("No heart-rate strap"),             // power-only
+        EXTREMES("Layout test: 999 W · 199 bpm · 120 rpm"),   // biggest values the gauges must still show cleanly
     }
 
     private var job: Job? = null
@@ -74,7 +75,11 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
                 power = (if (m < 5) 0.4 * ftp else if (m in 30.0..35.0) 0.85 * ftp else 0.65 * ftp).toInt() + (8 * sin(2 * PI * t / 29.0)).toInt()
                 cad = 88
             }
+            Profile.EXTREMES -> { hr = 199; power = 999; cad = 120 }
         }
+        // motion for the top strip and the results page (SIMULATED): rolling speed with the same coasts, tiny rollers
+        val speed = if (profile == Profile.EXTREMES) 59.9 else if (power == 0 || cad == 0) 0.0 else 24.0 + 4 * sin(2 * PI * m / 6.5) + 2 * sin(2 * PI * t / 41.0)
+        engine.simMotion(if (m >= 60 && profile != Profile.EXTREMES) 0.0 else speed, 0.08 * sin(2 * PI * m / 9.0))
         if (m >= 60) { power = 0; cad = 0 }   // the planned hour is over: coasting
         if (t % 300 == 299) { power = 0; cad = 0 }   // a short coast every 5 min (0 W must read as COASTING, not "below target")
         val angle = (t * 7) % 360

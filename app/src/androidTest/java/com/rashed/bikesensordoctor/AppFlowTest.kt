@@ -167,24 +167,51 @@ class AppFlowTest {
         find(tag("btn_start")); shot("21_dashboard_idle")
         tap(tag("btn_start"))
         find(tag("btn_pause")); Thread.sleep(4000); shot("22_dashboard_warmup")
+        assertNoScrollLive("warm-up")
         assertTrue("phase label", visible(By.textStartsWith("WARM-UP")) || visible(By.textStartsWith("MAIN")))
         // pause / resume
         tap(tag("btn_pause")); find(tag("btn_resume")); shot("23_paused"); tap(tag("btn_resume")); find(tag("btn_pause"))
         // wait for MAIN then COOL-DOWN (planned ride ends after 60 simulated minutes)
         top(); assertTrue("MAIN phase reached", device.wait(Until.hasObject(By.textStartsWith("MAIN")), 60_000))
         shot("25_dashboard_main")
-        tap(tag("btn_coach")); shot("26_coach"); device.pressBack(); find(tag("btn_pause"))
+        tap(tag("dash_details")); find(text("RIDE DETAILS")); shot("26_details"); device.pressBack(); find(tag("btn_pause"), 5000)
         top(); assertTrue("COOL-DOWN reached", device.wait(Until.hasObject(By.textStartsWith("COOL-DOWN")), 150_000))
         shot("27_dashboard_cooldown")
         // background + foreground must not lose the ride
         device.pressHome(); Thread.sleep(2000); launch(); find(tag("btn_pause"), 10_000)
         tap(tag("btn_finish")); tap(text("FINISH & SAVE"))   // the dialog is its own window: find it by its text
-        find(tag("save_post"), 15_000); shot("28_post_ride")
-        tap(text("Legs")); tap(text("Yes")); tap(tag("save_post"))
+        find(tag("results_root"), 15_000); top(); shot("28_results_summary")
+        find(text("HEART RATE")); shot("28b_results_hr"); find(text("AI COACH REVIEW")); shot("28c_results_coach")
+        find(tag("save_post")); tap(text("Legs")); tap(text("Yes")); tap(tag("save_post"))
         find(tag("post_home")); shot("29_next_workout"); tap(tag("post_home"))
         find(tag("start_ride"))
         tap(text("HISTORY")); find(text("SIMULATED"), 5000); shot("30_history")
         device.pressBack(); find(tag("start_ride"))
+    }
+
+    /** The live screen is a fixed layout: nothing scrollable, and the essentials are on screen without any gesture. */
+    private fun assertNoScrollLive(label: String) {
+        assertTrue("$label: live screen present", has(tag("live_root"), 3000))
+        assertTrue("$label: live screen must not scroll", !device.hasObject(By.scrollable(true)))
+        for (t in listOf("live_speed", "live_dist", "live_time", "gauge_power", "gauge_hr", "gauge_cad", "live_targets", "coach_box", "coach_headline")) assertTrue("$label: $t visible without scrolling", has(tag(t), 1500))
+        assertTrue("$label: a control visible", has(tag("btn_pause"), 500) || has(tag("btn_start"), 500) || has(tag("btn_resume"), 500))
+        val box = device.findObject(tag("coach_box")); val ctl = device.findObject(By.res(java.util.regex.Pattern.compile("btn_(pause|start|resume)")))
+        if (box != null && ctl != null) assertTrue("$label: coach box above the controls and inside the screen", box.visibleBounds.bottom <= ctl.visibleBounds.top && ctl.visibleBounds.bottom <= device.displayHeight)
+    }
+
+    @Test fun t04b_extremes_and_large_font_layout() {
+        launch(); find(tag("start_ride"), 15_000)
+        tap(text("⚙")); tap(tag("open_simulation")); tap(text("Layout test: 999 W · 199 bpm · 120 rpm")); tap(text("5×")); tap(tag("sim_start"))
+        find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause")); Thread.sleep(6000)
+        shot("33_live_extremes"); assertNoScrollLive("extremes")
+        assertTrue("999 W shown", has(text("999"), 2000)); assertTrue("199 bpm shown", has(text("199"), 2000)); assertTrue("120 rpm shown", has(text("120"), 2000))
+        // large system font: the fixed layout must still hold everything
+        device.executeShellCommand("settings put system font_scale 1.3"); Thread.sleep(2500)
+        launch(); find(tag("btn_pause"), 15_000); Thread.sleep(1500)
+        shot("34_live_font_1_3"); assertNoScrollLive("font 1.3")
+        device.executeShellCommand("settings put system font_scale 1.0"); Thread.sleep(2500)
+        launch(); find(tag("btn_finish"), 15_000); tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
+        find(tag("results_root"), 15_000); if (has(tag("save_post"), 3000)) { tap(tag("save_post")); find(tag("post_home")) } ; tap(tag("post_home")); find(tag("start_ride"))
     }
 
     @Test fun t05_restart_keeps_data_and_settings_screens() {
@@ -195,8 +222,8 @@ class AppFlowTest {
         assertTrue(has(text("Rashed"), 3000))
         tap(text("⚙")); shot("31_settings"); scrollTo(text("Advanced: Diagnose & Repair sensor"))
         device.pressBack(); find(tag("start_ride"))
-        // dashboard without simulation: no Bluetooth on the emulator → notice shown, app alive
-        tap(tag("start_ride")); find(tag("btn_start")); shot("32_dashboard_no_bluetooth")
+        // dashboard without simulation: no Bluetooth on the emulator → notice shown, app alive; still a fixed, non-scrolling layout
+        tap(tag("start_ride")); find(tag("btn_start")); shot("32_dashboard_no_bluetooth"); assertNoScrollLive("idle")
         // the emulator may or may not have a Bluetooth adapter: either the notice shows or the header reports the link state
         assertTrue(has(tag("bt_notice"), 3000) || visible(text("SCIENTIFIC COACH")))
         tap(tag("dash_home")); find(tag("start_ride"))

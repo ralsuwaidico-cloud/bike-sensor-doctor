@@ -44,6 +44,7 @@ class RideHistory(val dir: File) {
     fun delete(startedAtMs: Long) {
         File(dir, "ride-$startedAtMs.json").delete(); File(dir, "ride-$startedAtMs.csv").delete()
         File(dir, "ride-$startedAtMs-report.json").delete(); File(dir, "ride-$startedAtMs.gpx").delete()
+        File(dir, "ride-$startedAtMs-series.csv").delete(); File(dir, "ride-$startedAtMs-meta.json").delete()
     }
 
     fun csvFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.csv")
@@ -89,6 +90,27 @@ class RideHistory(val dir: File) {
         }.getOrNull()
     }
     fun gpxFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs.gpx")
+
+    // ---- v0.9: 1 Hz ride series + small meta record for the Ride Results page ----
+    fun seriesFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs-series.csv")
+    fun saveSeries(startedAtMs: Long, series: List<com.rashed.bikesensordoctor.core.SeriesPoint>) {
+        seriesFile(startedAtMs).bufferedWriter().use { w -> w.write(com.rashed.bikesensordoctor.core.SeriesPoint.HEADER); w.newLine(); series.forEach { w.write(it.csv()); w.newLine() } }
+    }
+    fun readSeries(startedAtMs: Long): List<com.rashed.bikesensordoctor.core.SeriesPoint> {
+        val f = seriesFile(startedAtMs); if (!f.exists()) return emptyList()
+        return f.useLines { lines -> lines.mapNotNull { com.rashed.bikesensordoctor.core.SeriesPoint.parse(it) }.toList() }
+    }
+    fun metaFile(startedAtMs: Long): File = File(dir, "ride-$startedAtMs-meta.json")
+    /** Merge key/values into the ride's meta record (workout, band, FTP used, rider answers after the ride, HR recovery …). */
+    fun updateMeta(startedAtMs: Long, values: Map<String, Any?>) {
+        val o = runCatching { JSONObject(metaFile(startedAtMs).readText()) }.getOrDefault(JSONObject())
+        values.forEach { (k, v) -> if (v == null) o.remove(k) else o.put(k, v) }
+        metaFile(startedAtMs).writeText(o.toString())
+    }
+    fun readMeta(startedAtMs: Long): Map<String, Any> {
+        val f = metaFile(startedAtMs); if (!f.exists()) return emptyMap()
+        return runCatching { val o = JSONObject(f.readText()); o.keys().asSequence().associateWith { o.get(it) } }.getOrDefault(emptyMap())
+    }
     fun hasGpx(startedAtMs: Long): Boolean = gpxFile(startedAtMs).exists()
 
     /** Writes a standard GPX 1.1 track with Garmin power/cadence/hr extensions. Returns null if no points. */

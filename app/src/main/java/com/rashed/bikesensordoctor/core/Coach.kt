@@ -127,6 +127,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
     private var keepArmed = true          // KEEP IT UP fires on entering "all good"
     private var announcedPhase: Phase? = null
     private var surgeSince: Long? = null
+    private var lastCad: Int? = null
     private var phaseSeen: Phase? = null; private var phaseSinceMs = 0L
     private var repeatCount = 0; private var quietSinceMs = 0L
 
@@ -152,6 +153,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
 
         // ---- 1. smoothing (stale ⇒ unavailable) ----
         val cad = cadS.feed(now, input.cadence)
+        lastCad = cad
         val hrRaw = hrS.feed(now, input.hr)
         // 0 W is a valid COASTING reading but carries no effort information: it must neither drive a cue nor
         // drag the rolling mean down (otherwise the first loaded seconds after coasting read as "below target").
@@ -314,7 +316,8 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
 
     private fun hold(reason: String = ""): CoachCue = CoachCue.NONE
 
-    private fun announce(now: Long, phase: Phase, type: CueType, head: String, detail: String, spoken: String, reason: String): CoachCue {
+    private fun announce(now: Long, phase: Phase, type: CueType, head0: String, detail0: String, spoken0: String, reason: String): CoachCue {
+        val (head, detail, spoken) = action(type, head0, detail0, spoken0)
         if (announcedPhase == phase) return CoachCue.NONE
         announcedPhase = phase; allGoodSince = null; keepArmed = true
         lastType = type; lastEmitMs = now
@@ -327,7 +330,28 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         return CoachCue(type, head, detail, spoken, reason)
     }
 
-    private fun emit(now: Long, type: CueType, head: String, detail: String, spoken: String, reason: String): CoachCue {
+    /**
+     * Actionable wording (v0.9): the SAME decision, said as what to do with the bike. Cadence decides between a gear
+     * change and a pressure/effort change, so the instruction never fights the cadence hint.
+     */
+    private fun action(type: CueType, head: String, detail: String, spoken: String): Triple<String, String, String> {
+        val c = config; val cad = lastCad
+        return when (type) {
+            CueType.EASE_OFF -> if (head == "WIND DOWN") Triple("WIND DOWN", detail, spoken)
+                else if (cad != null && cad > 0 && cad < c.cadenceLow) Triple("SHIFT TO AN EASIER GEAR", "$detail · cadence $cad rpm is low, so spin lighter instead of grinding", "Shift to an easier gear")
+                else Triple("REDUCE PEDAL PRESSURE", detail, "Reduce pedal pressure")
+            CueType.PUSH_HARDER -> if (cad != null && cad > c.cadenceHigh) Triple("SHIFT TO A HARDER GEAR", "$detail · cadence $cad rpm is high, so add gear not spin", "Shift to a harder gear")
+                else Triple("INCREASE EFFORT SLIGHTLY", detail, "Increase effort slightly")
+            CueType.PEDAL_FASTER -> Triple("PEDAL FASTER", "Easier gear, quicker spin — $detail", "Pedal faster, easier gear")
+            CueType.PEDAL_SLOWER -> Triple("PEDAL SLOWER", "Harder gear, slower spin — $detail", "Pedal slower, harder gear")
+            CueType.KEEP_IT_UP -> Triple("MAINTAIN YOUR RHYTHM", detail, "Maintain your rhythm")
+            CueType.COOLDOWN -> Triple("BEGIN COOLDOWN", detail, "Begin cooldown")
+            else -> Triple(head, detail, spoken)
+        }
+    }
+
+    private fun emit(now: Long, type: CueType, head0: String, detail0: String, spoken0: String, reason: String): CoachCue {
+        val (head, detail, spoken) = action(type, head0, detail0, spoken0)
         val since = now - lastEmitMs
         if (type == lastType && type == CueType.KEEP_IT_UP && config.keepRepeatMs <= 0) return CoachCue.NONE   // "keep it up" once per good spell
         if (type == lastType && since < (if (type == CueType.KEEP_IT_UP) config.keepRepeatMs else config.sameRepeatMs)) return CoachCue.NONE

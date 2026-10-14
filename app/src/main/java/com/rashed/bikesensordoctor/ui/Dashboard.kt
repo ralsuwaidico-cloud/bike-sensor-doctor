@@ -88,7 +88,7 @@ private val Dim = Color(0xFF6B828C)
 private val zoneColors = listOf(Color(0xFF7E8C93), Cyan, Green, Color(0xFF9CDB3C), Amber, Color(0xFFFF8A3D), Red)
 private fun zoneColor(z: Int) = if (z in 1..7) zoneColors[z - 1] else Dim
 
-enum class Screen { SIGN_IN, SWITCH, WELCOME, ONBOARD, PROFILE, HOME, CLUB, BOARD, MEMBER, POST_RIDE, DASHBOARD, COACH, HISTORY, REPORT, SETTINGS, ADD_HR, DIAGNOSE, VERIFY_POWER, SIMULATION }
+enum class Screen { SIGN_IN, SWITCH, WELCOME, ONBOARD, PROFILE, HOME, CLUB, BOARD, MEMBER, POST_RIDE, DASHBOARD, DETAILS, COACH, HISTORY, REPORT, SETTINGS, ADD_HR, DIAGNOSE, VERIFY_POWER, SIMULATION }
 
 /** Where the app opens: sign-in without a rider, onboarding until the profile is done (or skipped), else Home. A live ride goes straight to the dashboard. */
 private fun startScreen(vm: DoctorViewModel): Screen {
@@ -118,7 +118,7 @@ fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBa
         Screen.PROFILE -> if (profileFirstTime) Screen.ONBOARD else Screen.HOME
         Screen.CLUB, Screen.BOARD, Screen.POST_RIDE, Screen.DASHBOARD -> root
         Screen.MEMBER -> Screen.CLUB
-        Screen.COACH, Screen.HISTORY -> if (d.rideState != RideStats.State.IDLE) Screen.DASHBOARD else root
+        Screen.COACH, Screen.HISTORY, Screen.DETAILS -> if (d.rideState != RideStats.State.IDLE) Screen.DASHBOARD else root
         Screen.REPORT -> Screen.HISTORY
         Screen.SETTINGS -> if (d.rideState != RideStats.State.IDLE) Screen.DASHBOARD else root
         Screen.ADD_HR, Screen.DIAGNOSE, Screen.VERIFY_POWER, Screen.SIMULATION -> Screen.SETTINGS
@@ -143,11 +143,12 @@ fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBa
         Screen.CLUB -> ClubScreen(vm, onTab = goTab, onMember = { member = it; screen = Screen.MEMBER })
         Screen.BOARD -> BoardScreen(vm, onTab = goTab)
         Screen.MEMBER -> MemberScreen(vm, member) { screen = Screen.CLUB }
-        Screen.POST_RIDE -> { val res = result; if (res != null) PostRideScreen(vm, res, onDone = { vm.engine.clearResult(); screen = Screen.HOME }) else screen = root }
-        Screen.DASHBOARD -> DashboardScreen(vm, onCoach = { screen = Screen.COACH }, onHistory = { screen = Screen.HISTORY }, onSettings = { screen = Screen.SETTINGS }, onHome = { screen = root }, notice = notice, onNotice = onNotice)
+        Screen.POST_RIDE -> { val res = result; if (res != null) RideResultsScreen(vm, res.startedAtMs, fresh = true, onDone = { vm.engine.clearResult(); screen = root }, onBack = { vm.engine.clearResult(); screen = root }) else screen = root }
+        Screen.DASHBOARD -> LiveScreen(vm, onCoach = { screen = Screen.COACH }, onDetails = { screen = Screen.DETAILS }, onSettings = { screen = Screen.SETTINGS }, onHome = { screen = root }, notice = notice, onNotice = onNotice)
+        Screen.DETAILS -> DetailsScreen(vm, onBack = { screen = Screen.DASHBOARD }, onHistory = { screen = Screen.HISTORY })
         Screen.COACH -> CoachScreen(vm) { screen = Screen.DASHBOARD }
         Screen.HISTORY -> HistoryScreen(vm, onBack = { screen = parent ?: root }, onOpen = { reportRide = it; screen = Screen.REPORT })
-        Screen.REPORT -> ReportScreen(vm, reportRide) { screen = Screen.HISTORY }
+        Screen.REPORT -> RideResultsScreen(vm, reportRide ?: 0L, fresh = false, onDone = { screen = Screen.HISTORY }, onBack = { screen = Screen.HISTORY })
         Screen.SETTINGS -> SettingsScreen(vm, onBack = { screen = parent ?: root }, onDiagnose = { screen = Screen.DIAGNOSE }, onAddHr = { screen = Screen.ADD_HR }, onVerifyPower = { screen = Screen.VERIFY_POWER }, onKeepScreenOnChanged, onBatteryOptimization, onSimulation = { screen = Screen.SIMULATION })
         Screen.VERIFY_POWER -> VerifyPowerScreen(vm) { screen = Screen.SETTINGS }
         Screen.ADD_HR -> AddHrScreen(vm) { screen = Screen.SETTINGS }
@@ -159,7 +160,7 @@ fun BikeComputerApp(vm: DoctorViewModel, onKeepScreenOnChanged: () -> Unit, onBa
 // ------------------------------------------------------------------ Dashboard (Design 7 — AI Scientific Coach)
 
 /** Everything the screen needs to indicate, derived once per frame from the engine snapshot via core/Targets. */
-private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachCue, prefs: Prefs) {
+internal class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachCue, prefs: Prefs) {
     val mode = runCatching { CoachMode.valueOf(d.coachMode) }.getOrDefault(CoachMode.FREE)
     val targetZone = Targets.targetZone(mode)
     val ftp = prefs.ftpW; val maxHr = prefs.maxHr
@@ -213,7 +214,7 @@ private class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.CoachC
 
 private fun bandStatus(v: Int?, lo: Int, hi: Int): TargetStatus = when { v == null -> TargetStatus.UNKNOWN; v < lo -> TargetStatus.BELOW; v > hi -> TargetStatus.ABOVE; else -> TargetStatus.ON }
 
-private fun statusText(s: TargetStatus, kind: String, signal: RideStats.SignalState = RideStats.SignalState.FRESH) = when (s) {
+internal fun statusText(s: TargetStatus, kind: String, signal: RideStats.SignalState = RideStats.SignalState.FRESH) = when (s) {
     TargetStatus.BELOW -> if (kind == "cad") "BELOW RANGE" else "BELOW TGT"
     TargetStatus.ABOVE -> if (kind == "cad") "ABOVE RANGE" else "ABOVE TGT"
     TargetStatus.ON -> "ON TARGET"
@@ -273,6 +274,32 @@ fun DashboardScreen(vm: DoctorViewModel, onCoach: () -> Unit, onHistory: () -> U
         confirmButton = { Button(onClick = { confirmFinish = false; vm.engine.finishRide() }, modifier = Modifier.testTag("confirm_finish")) { Text("FINISH & SAVE") } },
         dismissButton = { TextButton(onClick = { confirmFinish = false }) { Text("Keep riding") } },
     )
+}
+
+/** v0.9 Details: everything that left the live screen — zone bands, power trend, ride statistics, link quality. Scrolls. */
+@Composable
+fun DetailsScreen(vm: DoctorViewModel, onBack: () -> Unit, onHistory: () -> Unit) {
+    val d by vm.engine.dash.collectAsStateWithLifecycle()
+    val cue by vm.engine.cue.collectAsStateWithLifecycle()
+    val prefs = vm.engine.prefs
+    val st = D7State(d, cue, prefs)
+    Column(Modifier.fillMaxSize().background(D7.Bg).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp)) {
+        D7TopBar("RIDE DETAILS", "Live", onBack, right = { TextButton(onClick = onHistory) { Text("History", color = D7.Cyan, fontSize = 12.sp) } })
+        Row(Modifier.fillMaxWidth()) {
+            Stat("${d.avgPowerW} W", "AVG POWER", Modifier.weight(1f)); Stat("${d.maxPowerW} W", "MAX POWER", Modifier.weight(1f)); Stat(d.normalizedPowerW?.let { "$it W" } ?: "—", "NORMALIZED", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth()) {
+            Stat("${d.avgCadenceRpm}", "AVG RPM", Modifier.weight(1f)); Stat(String.format(Locale.US, "%.0f kJ", d.energyKj), "ENERGY", Modifier.weight(1f)); Stat(d.hrBpm?.let { "$it" } ?: "—", "HR NOW", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth()) {
+            Stat(d.maxSpeedKmh.takeIf { it > 0 }?.let { String.format(Locale.US, "%.1f", it) } ?: "—", "MAX KM/H", Modifier.weight(1f)); Stat(String.format(Locale.US, "%.0f m", d.elevationGainM), "CLIMBED", Modifier.weight(1f)); Stat(d.inZonePct?.let { "$it%" } ?: "—", "IN BAND", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(12.dp))
+        LowerSection(d, st, prefs)
+        Spacer(Modifier.height(16.dp))
+    }
 }
 
 /** 1 · Header: LIVE dot + link state (tap to reconnect), ride time, title, divider, coach-colour bar. */
@@ -753,7 +780,7 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
         TextButton(onClick = onDiagnose) { Text("Advanced: Diagnose & Repair sensor", color = Dim) }
         TextButton(onClick = onSimulation, modifier = Modifier.testTag("open_simulation")) { Text("Test tool: simulated sensors (SIMULATED rides)", color = Dim) }
         Spacer(Modifier.height(10.dp))
-        Text("Bike Computer v0.8 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
+        Text("Bike Computer v0.9 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
     }
 }
 

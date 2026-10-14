@@ -112,4 +112,16 @@ class WorkoutTest {
         assertEquals(2.0, Leaderboard.rows(BoardMetric.RIDES, riders, rides, week, month, true)[0].score, 0.01)
         assertEquals("3.4", BoardMetric.TIME.format(Leaderboard.rows(BoardMetric.TIME, riders, rides, week, month, true)[0].score))
     }
+
+    private fun firstCue(cad: Int, hr: Int, pw: Int): CoachCue { val e = engine(grace = 0, backoff = false); var c = CoachCue.NONE
+        for (t in 0 until 60) { c = e.update(CoachInput(t * 1000L, Phase.MAIN, Signal(cad), Signal(hr), Signal(pw), main)); if (c.type != CueType.NONE) break }; return c }
+
+    @Test fun actionableWordingFollowsCadenceContext() {
+        assertEquals("SHIFT TO AN EASIER GEAR", firstCue(60, 165, 150).headline)      // HR above + grinding → easier gear
+        assertEquals("REDUCE PEDAL PRESSURE", firstCue(88, 165, 150).headline)        // HR above, cadence fine → less force
+        assertEquals("SHIFT TO A HARDER GEAR", firstCue(105, 125, 100).headline)       // HR below + spinning out → harder gear
+        assertEquals("INCREASE EFFORT SLIGHTLY", firstCue(88, 125, 100).headline)      // HR below, cadence fine → a bit more effort
+        assertEquals("MAINTAIN YOUR RHYTHM", firstCue(88, 145, 150).headline)         // all good
+        assertEquals(CueType.EASE_OFF, firstCue(60, 165, 150).type)                   // the decision itself is unchanged (vectors still hold)
+    }
 }

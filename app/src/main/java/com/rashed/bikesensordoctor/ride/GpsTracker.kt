@@ -17,6 +17,8 @@ data class GpsState(
     val speedKmh: Double? = null,
     val distanceKm: Double = 0.0,
     val elevationGainM: Double = 0.0,
+    val lat: Double? = null, val lon: Double? = null, val altM: Double? = null,
+    val maxSpeedKmh: Double = 0.0,
 )
 
 /**
@@ -69,12 +71,13 @@ class GpsTracker(private val context: Context) {
     /** Begin/stop accumulating distance and recording the track for the current ride. */
     fun setRecording(on: Boolean) {
         recordingActive = on
-        if (on) { points.clear(); distanceM = 0.0; gainM = 0.0; lastAlt = null; last = null; _state.value = _state.value.copy(distanceKm = 0.0, elevationGainM = 0.0) }
+        if (on) { points.clear(); distanceM = 0.0; gainM = 0.0; lastAlt = null; last = null; _state.value = _state.value.copy(distanceKm = 0.0, elevationGainM = 0.0, maxSpeedKmh = 0.0) }
     }
 
     private fun onFix(loc: Location) {
         val speedKmh = if (loc.hasSpeed()) loc.speed * 3.6 else 0.0
-        _state.value = _state.value.copy(available = true, hasFix = true, speedKmh = speedKmh)
+        _state.value = _state.value.copy(available = true, hasFix = true, speedKmh = speedKmh, lat = loc.latitude, lon = loc.longitude, altM = if (loc.hasAltitude()) loc.altitude else null,
+            maxSpeedKmh = if (recordingActive && loc.hasAccuracy() && loc.accuracy <= 25f) maxOf(_state.value.maxSpeedKmh, speedKmh) else _state.value.maxSpeedKmh)
         if (!recordingActive) { last = loc; return }
         val prev = last
         if (prev != null && loc.hasAccuracy() && loc.accuracy <= 25f) {

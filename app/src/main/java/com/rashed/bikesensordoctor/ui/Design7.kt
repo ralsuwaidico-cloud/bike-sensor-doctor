@@ -159,11 +159,11 @@ fun TargetGauge(
                 }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(sub ?: " ", fontFamily = PlexMono, fontSize = if (big) 13.sp else 10.sp, color = col, maxLines = 1)
+                Text(sub ?: " ", fontFamily = PlexMono, fontSize = if (big) 13.sp else 9.sp, color = col, maxLines = 1, softWrap = false)
                 Text(value?.toString() ?: "—", fontFamily = Rajdhani, fontWeight = FontWeight.Medium,
-                    fontSize = if (big) 64.sp else 31.sp, lineHeight = if (big) 64.sp else 32.sp,
-                    color = if (value == null) D7.Faint else D7.Fg, maxLines = 1)
-                Text(unit, fontFamily = PlexMono, fontSize = if (big) 13.sp else 10.sp, color = D7.Mut, letterSpacing = 1.sp)
+                    fontSize = if (big) 64.sp else 28.sp, lineHeight = if (big) 64.sp else 29.sp,
+                    color = if (value == null) D7.Faint else D7.Fg, maxLines = 1, softWrap = false)
+                Text(unit, fontFamily = PlexMono, fontSize = if (big) 13.sp else 9.sp, color = D7.Mut, letterSpacing = 1.sp, maxLines = 1)
             }
         }
         StatusPill(status, statusText, big)
@@ -210,6 +210,11 @@ fun CoachBox(
 }
 
 /** Distinct SHAPE per state inside a dark disc: ▲ faster/push · ✓ on target · ▼ ease · ○ nothing to say. */
+@Composable
+fun CoachBadgePublic(shape: CoachShape, badge: Color, glyph: Color) = CoachBadge(shape, badge, glyph)
+@Composable
+fun CoachScalePublic(direction: Int?, lit: Color, ink: Color, active: Boolean) = CoachScale(direction, lit, ink, active)
+
 @Composable
 private fun CoachBadge(shape: CoachShape, badge: Color, glyph: Color) {
     Canvas(Modifier.size(40.dp)) {
