@@ -44,6 +44,8 @@ import com.rashed.bikesensordoctor.core.HrZoneSet
 import com.rashed.bikesensordoctor.core.RideAnalysis
 import com.rashed.bikesensordoctor.core.RideFeedback
 import com.rashed.bikesensordoctor.core.RideSource
+import com.rashed.bikesensordoctor.core.CoachSummary
+import com.rashed.bikesensordoctor.core.DetailLevel
 import com.rashed.bikesensordoctor.core.RiderProfile
 import com.rashed.bikesensordoctor.core.SeriesPoint
 import com.rashed.bikesensordoctor.core.Workout
@@ -92,116 +94,126 @@ fun RideResultsScreen(vm: DoctorViewModel, rideId: Long, fresh: Boolean, onDone:
         D7TopBar(if (fresh) "RIDE COMPLETE" else "RIDE RESULTS", if (fresh) null else "History", if (fresh) null else onBack)
         if (summary == null) { Text("Ride not found.", color = D7.Mut); return@Column }
 
-        // ---------------- 1 · summary + route ----------------
+        // ---------------- 1 · what you did (three numbers) + where each number comes from ----------------
         Row(verticalAlignment = Alignment.CenterVertically) {
             Headline((meta["workout"] as? String)?.ifEmpty { null } ?: "Free ride", 20)
             Spacer(Modifier.width(8.dp)); if (simulated) SimTag() else Tag("REAL", D7.Green)
         }
         Muted("${fmt.format(Date(rideId))}${(meta["riderName"] as? String)?.ifEmpty { null }?.let { " · $it" } ?: ""}", 12)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {
             Big(RideEngine.fmtDuration(summary.durationMs), "DURATION", Modifier.weight(1.2f))
             Big(String.format(Locale.US, "%.2f", a.distanceKm), "KM", Modifier.weight(1f))
             Big(a.avgHr?.toString() ?: "—", "AVG BPM", Modifier.weight(1f))
         }
-        Spacer(Modifier.height(6.dp))
-        StatGrid(listOfNotNull(
-            "Moving time" to RideEngine.fmtDuration(a.movingSec * 1000L),
-            "Avg speed" to (a.avgSpeedKmh?.let { String.format(Locale.US, "%.1f km/h", it) } ?: "—"),
-            "Max speed" to (((meta["maxSpeed"] as? Double)?.takeIf { it > 0 } ?: a.maxSpeedKmh)?.let { String.format(Locale.US, "%.1f km/h", it) } ?: "—"),
-            "Elevation gain" to String.format(Locale.US, "%.0f m (%.0f ft)", a.elevationGainM, a.elevationGainM * 3.281),
-            "Max HR" to (a.maxHr?.let { "$it bpm" } ?: "—"),
-            if (a.powerSamples > 0) "Avg · max power" to "${a.avgPowerW} · ${a.maxPowerW} W${if (simulated) " SIM" else if (!powerTrusted) " (unverified)" else ""}" else "Power" to "no power data",
-            "Avg cadence" to (a.avgCadRpm?.let { "$it rpm${if (simulated) " SIM" else ""}" } ?: "—"),
-            "Calories" to (a.kcal?.let { "$it kcal ESTIMATE" } ?: "—"),
-            "Effort (you)" to (savedFb?.rpe?.let { "$it / 10" } ?: if (fresh) "below" else "not rated"),
-            "Coach cues" to "${(meta["cues"] as? Int) ?: 0}",
-        ))
-        Muted("Calories: ${a.kcalMethod}.", 10)
-        Spacer(Modifier.height(8.dp))
-        if (a.hasRoute) { CardTitle("ROUTE (GPS TRACK)"); RouteCanvas(series) } else Muted(if (simulated) "No route: simulated ride has no GPS track." else "No GPS track recorded (no fix, or location permission off).", 11)
+        ProvenanceRow(CoachSummary.provenance(simulated, powerTrusted, a.hrSamples > 0, a.hasRoute, a.powerSamples > 0), Modifier.padding(top = 8.dp))
 
-        // ---------------- 2 · heart rate ----------------
-        Section("HEART RATE")
-        if (a.hrSamples == 0) Muted("No heart-rate data for this ride (no strap connected).", 12) else {
-            LineChart(series.map { it.hr }, D7.Red, bands = personal?.let { z -> zoneBands(z) } ?: emptyList(), yMin = 60, yMax = maxOf(a.maxHr ?: 180, personal?.upper?.get(3)?.plus(10) ?: 180), unit = "bpm", refLo = band?.first, refHi = band?.last)
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp)) { Big("${a.avgHr}", "AVG", Modifier.weight(1f)); Big("${a.maxHr}", "MAX", Modifier.weight(1f)); Big(a.hrRecovery60?.let { "${(meta["hrAtFinish"] as? Int ?: a.avgHr!!) - it}" } ?: "—", "RECOVERY 1 MIN ↓", Modifier.weight(1.4f)) }
-            a.personalZones?.let { ZoneTable(it, "Time in your zones", personal!!.source) }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                TextButton(onClick = { showApple = !showApple }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) { Text(if (showApple) "▾ Hide Apple Fitness reference zones" else "▸ Show Apple Fitness reference zones", color = D7.Cyan, fontSize = 12.sp) }
-            }
-            if (showApple) a.referenceZones?.let { ZoneTable(it, "Apple Fitness reference (your watch's bands)", "Reference only: Apple's app-calculated bands from your 12 Oct workout, shown for comparison, not used for coaching.") }
-            if (a.hrRecovery60 == null) Muted("Heart-rate recovery appears when the strap keeps reporting for a minute after FINISH.", 10)
-        }
-
-        // ---------------- 3 · power & cadence ----------------
-        Section("POWER & CADENCE")
-        if (a.powerSamples == 0) Muted("No power meter data in this ride.", 12) else {
-            if (simulated) Row { SimTag(); Spacer(Modifier.width(6.dp)); Muted("Simulated watts and cadence — they test the app, they do not measure you.", 11) }
-            else if (!powerTrusted) Row { Tag("UNVERIFIED", D7.Amber); Spacer(Modifier.width(6.dp)); Muted("Meter not yet verified under load — shown, not used for calories or FTP.", 11) }
-            LineChart(series.map { it.powerW }, D7.Cyan, bands = emptyList(), yMin = 0, yMax = maxOf(a.maxPowerW ?: 300, (ftpUsed * 1.2).toInt()), unit = "W", refLo = (meta["pwLo"] as? Int), refHi = (meta["pwHi"] as? Int), ftpLine = ftpUsed)
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp)) { Big("${a.avgPowerW}", "AVG W", Modifier.weight(1f)); Big(a.normalizedPowerW?.toString() ?: "—", "NORMALIZED", Modifier.weight(1f)); Big("$ftpUsed", "FTP USED", Modifier.weight(1f)) }
-            PowerZoneBars(a.powerZoneSec, ftpUsed)
-            if (a.cadSamples > 0) { Spacer(Modifier.height(6.dp)); CardTitle("CADENCE"); LineChart(series.map { it.cadRpm }, D7.Violet, bands = emptyList(), yMin = 40, yMax = 130, unit = "rpm", refLo = setup?.cadLow, refHi = setup?.cadHigh); Muted("Average ${a.avgCadRpm} rpm", 12) }
-        }
-
-        // ---------------- 4 · speed & elevation ----------------
-        Section("SPEED & ELEVATION")
-        if (series.none { it.speedKmh != null }) Muted("No speed data (GPS off).", 12) else {
-            LineChart(series.map { it.speedKmh?.let { v -> Math.round(v).toInt() } }, D7.Green, bands = emptyList(), yMin = 0, yMax = maxOf(40, (a.maxSpeedKmh ?: 0.0).toInt() + 5), unit = "km/h")
-            Muted("Average ${a.avgSpeedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: "—"} km/h over moving time · max ${a.maxSpeedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: "—"} km/h${if (simulated) " (SIMULATED)" else ""}", 12)
-            if (series.any { it.altM != null }) { Spacer(Modifier.height(6.dp)); CardTitle("ELEVATION"); LineChart(series.map { it.altM?.let { v -> Math.round(v).toInt() } }, D7.Amber, bands = emptyList(), yMin = null, yMax = null, unit = "m"); Muted("Gain ${String.format(Locale.US, "%.0f", a.elevationGainM)} m — climbs of 3 m or more between accepted fixes; GPS altitude is coarse.", 10) }
-        }
-
-        // ---------------- 5 · coach review ----------------
-        Section("AI COACH REVIEW")
-        D7Card(accent = when (a.objectiveMet) { true -> D7.Green; false -> D7.Amber; null -> null }) {
-            Text(when (a.objectiveMet) { true -> "Objective achieved"; false -> "Objective not reached"; null -> if (band == null) "Free ride — no target band" else "No heart rate to judge the band" },
-                fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = D7.Fg)
-            if (band != null) Text("Target ${band.first}–${band.last} bpm · ${a.inBandPct ?: 0} % of the main block inside · longest block ${a.longestInBandSec / 60} min", fontSize = 12.sp, color = D7.Mut, modifier = Modifier.padding(top = 2.dp))
-            KeyValue(listOfNotNull(
-                "Consistency" to (a.hrConsistencyCv?.let { "heart rate ±${Math.round(it * 100)} %" + (a.powerConsistencyCv?.let { p -> " · power ±${Math.round(p * 100)} %" } ?: "") } ?: "needs 1 min of main-phase data"),
-                "HR drift" to (a.driftPct?.let { "${if (it >= 0) "+" else ""}$it % (${a.driftNote})" } ?: a.driftNote),
+        // ---------------- 2 · the coach's one message: achievement · meaning · next step (details behind expanders) ----------------
+        Spacer(Modifier.height(12.dp))
+        val level = DetailLevel.from(rider?.answers)
+        val zoneName = band?.let { b -> personal?.zone((b.first + b.last) / 2)?.let { "Zone $it" } } ?: "Zone 2"
+        val msg = remember(a, level) { CoachSummary.forRide(a, band, zoneName, level, simulated, powerTrusted, savedFb?.rpe) }
+        CoachMessageCard(msg) {
+            if (band != null) KeyValue(listOfNotNull(
+                "Target" to "${band.first}–${band.last} bpm",
+                "In band" to "${a.inBandPct ?: 0}% of the main block · longest ${a.longestInBandSec / 60} min",
+                "Consistency" to (a.hrConsistencyCv?.let { "heart rate ±${Math.round(it * 100)}%" + (a.powerConsistencyCv?.let { p -> " · power ±${Math.round(p * 100)}%" } ?: "") } ?: "needs 1 min of main-phase data"),
+                "HR drift" to (a.driftPct?.let { "${if (it >= 0) "+" else ""}$it% (${a.driftNote})" } ?: a.driftNote),
+                "Coach cues" to "${(meta["cues"] as? Int) ?: 0}",
             ))
-            if (a.wentWell.isNotEmpty()) { Spacer(Modifier.height(6.dp)); CardTitle("WHAT WENT WELL"); Bullets(a.wentWell) }
-            if (a.improve.isNotEmpty()) { Spacer(Modifier.height(6.dp)); CardTitle("WHAT COULD IMPROVE"); Bullets(a.improve) }
-            if (a.wentWell.isEmpty() && a.improve.isEmpty()) Muted("Not enough data for a review (no heart rate in the main block).", 12)
+        }
+
+        // ---------------- 3 · one visual: where the effort went ----------------
+        a.personalZones?.let { z ->
+            Spacer(Modifier.height(12.dp))
+            ZoneBar(z, "Time in your zones", highlight = band?.let { b -> personal?.zone((b.first + b.last) / 2) })
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                TextButton(onClick = { showApple = !showApple }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) { Text(if (showApple) "▾ Hide Apple Fitness reference zones" else "▸ Compare with Apple Fitness reference zones", color = D7.Cyan, fontSize = 12.sp) }
+            }
+            if (showApple) a.referenceZones?.let { ZoneTable(it, "Apple Fitness reference (your watch's bands)", "Reference only — Apple's app-calculated bands from your 12 Oct workout; never used for coaching.") }
+        }
+
+        // ---------------- 4 · everything else, on request ----------------
+        Spacer(Modifier.height(8.dp))
+        Expander("Ride details", tag = "exp_details") {
+            StatGrid(listOfNotNull(
+                "Moving time" to RideEngine.fmtDuration(a.movingSec * 1000L),
+                "Avg speed" to (a.avgSpeedKmh?.let { String.format(Locale.US, "%.1f km/h", it) } ?: "—"),
+                "Max speed" to (((meta["maxSpeed"] as? Double)?.takeIf { it > 0 } ?: a.maxSpeedKmh)?.let { String.format(Locale.US, "%.1f km/h", it) } ?: "—"),
+                "Elevation gain" to String.format(Locale.US, "%.0f m (%.0f ft)", a.elevationGainM, a.elevationGainM * 3.281),
+                "Max HR" to (a.maxHr?.let { "$it bpm" } ?: "—"),
+                if (a.powerSamples > 0) "Avg · max power" to "${a.avgPowerW} · ${a.maxPowerW} W" else "Power" to "no power data",
+                "Avg cadence" to (a.avgCadRpm?.let { "$it rpm" } ?: "—"),
+                "Calories" to (a.kcal?.let { "$it kcal" } ?: "—"),
+                "Effort (you)" to (savedFb?.rpe?.let { "$it / 10" } ?: if (fresh) "below" else "not rated"),
+                "HR recovery" to (a.hrRecovery60?.let { "${(meta["hrAtFinish"] as? Int ?: a.avgHr!!) - it} bpm in 1 min" } ?: "—"),
+            ))
+            Muted("Calories: ${a.kcalMethod}.", 10)
+            Spacer(Modifier.height(8.dp))
+            if (a.hasRoute) { CardTitle("ROUTE (GPS TRACK)"); RouteCanvas(series) } else Muted(if (simulated) "No route: simulated ride has no GPS track." else "No GPS track recorded (no fix, or location permission off).", 11)
+        }
+        Expander("Heart rate", tag = "exp_hr") {
+            if (a.hrSamples == 0) Muted("No heart-rate data for this ride (no strap connected).", 12) else {
+                LineChart(series.map { it.hr }, D7.Red, bands = personal?.let { z -> zoneBands(z) } ?: emptyList(), yMin = 60, yMax = maxOf(a.maxHr ?: 180, personal?.upper?.get(3)?.plus(10) ?: 180), unit = "bpm", refLo = band?.first, refHi = band?.last)
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp)) { Big("${a.avgHr}", "AVG", Modifier.weight(1f)); Big("${a.maxHr}", "MAX", Modifier.weight(1f)); Big(a.hrRecovery60?.let { "${(meta["hrAtFinish"] as? Int ?: a.avgHr!!) - it}" } ?: "—", "RECOVERY 1 MIN ↓", Modifier.weight(1.4f)) }
+                a.personalZones?.let { ZoneTable(it, "Time in your zones", personal!!.source) }
+                if (a.hrRecovery60 == null) Muted("Heart-rate recovery appears when the strap keeps reporting for a minute after FINISH.", 10)
+            }
+        }
+        Expander("Power & cadence", tag = "exp_power") {
+            if (a.powerSamples == 0) Muted("No power meter data in this ride.", 12) else {
+                LineChart(series.map { it.powerW }, D7.Cyan, bands = emptyList(), yMin = 0, yMax = maxOf(a.maxPowerW ?: 300, (ftpUsed * 1.2).toInt()), unit = "W", refLo = (meta["pwLo"] as? Int), refHi = (meta["pwHi"] as? Int), ftpLine = ftpUsed)
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp)) { Big("${a.avgPowerW}", "AVG W", Modifier.weight(1f)); Big(a.normalizedPowerW?.toString() ?: "—", "NORMALIZED", Modifier.weight(1f)); Big("$ftpUsed", "FTP USED", Modifier.weight(1f)) }
+                PowerZoneBars(a.powerZoneSec, ftpUsed)
+                if (a.cadSamples > 0) { Spacer(Modifier.height(6.dp)); CardTitle("CADENCE"); LineChart(series.map { it.cadRpm }, D7.Violet, bands = emptyList(), yMin = 40, yMax = 130, unit = "rpm", refLo = setup?.cadLow, refHi = setup?.cadHigh); Muted("Average ${a.avgCadRpm} rpm", 12) }
+            }
+        }
+        Expander("Speed & elevation", tag = "exp_speed") {
+            if (series.none { it.speedKmh != null }) Muted("No speed data (GPS off).", 12) else {
+                LineChart(series.map { it.speedKmh?.let { v -> Math.round(v).toInt() } }, D7.Green, bands = emptyList(), yMin = 0, yMax = maxOf(40, (a.maxSpeedKmh ?: 0.0).toInt() + 5), unit = "km/h")
+                Muted("Average ${a.avgSpeedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: "—"} km/h over moving time · max ${a.maxSpeedKmh?.let { String.format(Locale.US, "%.1f", it) } ?: "—"} km/h", 12)
+                if (series.any { it.altM != null }) { Spacer(Modifier.height(6.dp)); CardTitle("ELEVATION"); LineChart(series.map { it.altM?.let { v -> Math.round(v).toInt() } }, D7.Amber, bands = emptyList(), yMin = null, yMax = null, unit = "m"); Muted("Gain ${String.format(Locale.US, "%.0f", a.elevationGainM)} m — climbs of 3 m or more between accepted fixes; GPS altitude is coarse.", 10) }
+            }
         }
         // calibration with evidence rules (never from a single ride, never from simulated or unverified power)
-        if (!simulated && rider != null) {
+        if (!simulated && rider != null) Expander("Fitness estimates & evidence", tag = "exp_calibration") {
             val ftpE = remember(tick) { com.rashed.bikesensordoctor.core.Calibration.ftp(vm.engine.ftpEvidence()) }
             val lthrE = remember(tick) { com.rashed.bikesensordoctor.core.Calibration.lthr(vm.engine.testEvidence()) }
+            var any = false
             listOf("ftp" to ftpE, "lthr" to lthrE).forEach { (key, ev) ->
-                if (ev.value != null) D7Card(Modifier.padding(top = 8.dp), accent = if (ev.ready) D7.Violet else null) {
-                    CardTitle(if (ev.ready) "CALIBRATION — ${ev.confidence?.name ?: "EVIDENCE"}" else "CALIBRATION — EVIDENCE BUILDING")
-                    Text("${ev.label} ${ev.value}${if (key == "ftp") " W" else " bpm"}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg); Muted(ev.detail, 12)
+                if (ev.value != null) { any = true; D7Card(Modifier.padding(top = 6.dp), accent = if (ev.ready) D7.Violet else null) {
+                    CardTitle(if (ev.ready) "${if (key == "ftp") "FTP" else "THRESHOLD HR"} — ${ev.confidence?.name ?: "EVIDENCE"}" else "${if (key == "ftp") "FTP" else "THRESHOLD HR"} — EVIDENCE BUILDING")
+                    Text("${ev.label} ${ev.value}${if (key == "ftp") " W" else " bpm"}", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
+                    Expander("Why?") { Muted(ev.detail, 12) }
                     val m = rider.answers.metric(key)
                     if (ev.ready) Row(Modifier.padding(top = 6.dp)) {
                         if (m?.measured == true && ev.confidence != com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) Muted("Your profile has a tested value — estimates never overwrite it.", 11)
                         else if (m?.value == ev.value) Tag("APPLIED", D7.Green)
                         else PrimaryButton(if (ev.confidence == com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) "USE AS CONFIRMED" else "USE AS PROVISIONAL", color = D7.Violet) { rider.answers.setMetric(key, ev.value, if (ev.confidence == com.rashed.bikesensordoctor.core.ZoneConfidence.CONFIRMED) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
                     }
+                } }
+            }
+            a.suggestions.filter { it.key != "ftp" }.forEach { sg ->
+                any = true
+                D7Card(Modifier.padding(top = 6.dp), accent = D7.Violet) {
+                    CardTitle("PROVISIONAL ESTIMATE — YOUR CALL")
+                    Text(sg.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg); Expander("Why?") { Muted(sg.why, 12) }
+                    val r = rider
+                    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val already = r.answers.metric(sg.key)?.value == sg.value
+                        val measured = r.answers.metric(sg.key)?.measured == true
+                        if (measured) Muted("Your profile has a tested value — estimates never overwrite it.", 11)
+                        else if (already) Tag("APPLIED", D7.Green)
+                        else PrimaryButton("USE AS PROVISIONAL", color = D7.Violet) { r.answers.setMetric(sg.key, sg.value, "estimated"); vm.engine.saveRider(); tick++ }
+                    }
                 }
             }
-        }
-        a.suggestions.filter { it.key != "ftp" }.forEach { sg ->
-            D7Card(Modifier.padding(top = 8.dp), accent = D7.Violet) {
-                CardTitle("PROVISIONAL ESTIMATE — YOUR CALL")
-                Text(sg.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg); Muted(sg.why, 12)
-                val r = rider
-                if (r != null) Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val already = (sg.key == "ftp" && r.answers.metric("ftp")?.value == sg.value) || (sg.key == "maxHr" && r.answers.metric("maxHr")?.value == sg.value)
-                    val measured = (sg.key == "ftp" && r.answers.metric("ftp")?.measured == true) || (sg.key == "maxHr" && r.answers.metric("maxHr")?.measured == true)
-                    if (measured) Muted("Your profile has a tested value — estimates never overwrite it.", 11)
-                    else if (already) Tag("APPLIED", D7.Green)
-                    else PrimaryButton("USE AS PROVISIONAL", color = D7.Violet) { r.answers.setMetric(sg.key, sg.value, "estimated"); vm.engine.saveRider(); tick++ }
-                }
-            }
+            if (!any) Muted("Nothing new from this ride. FTP needs a verified meter and two agreeing 20-minute efforts; threshold HR needs the guided test.", 12)
         }
 
-        // ---------------- 6 · next workout ----------------
+        // ---------------- 5 · next workout ----------------
         Section("NEXT WORKOUT")
-        NextWorkoutSection(vm, rideId, fresh, savedFb, a, onSaved = { tick++ }, onDone = onDone)
+        NextWorkoutSection(vm, rideId, fresh, savedFb, a, onDone = onDone, onSaved = { tick++ })
         Spacer(Modifier.height(20.dp))
     }
 }
@@ -368,9 +380,12 @@ private fun NextWorkoutSection(vm: DoctorViewModel, rideId: Long, fresh: Boolean
                 CardTitle(if (fresh) "AFTER THIS RIDE" else "CURRENT RECOMMENDATION")
                 Text("${n.name} · ${n.minutes} min", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
                 Text("${n.hrLo}–${n.hrHi} bpm${if (n.pwLo != null) " · ${n.pwLo}–${n.pwHi} W" else ""}", fontFamily = PlexMono, fontSize = 12.sp, color = D7.Cyan, modifier = Modifier.padding(vertical = 3.dp))
-                Bullets(n.why)
+                n.why.firstOrNull()?.let { Text(it, fontSize = 13.sp, lineHeight = 18.sp, color = D7.Fg) }
+                if (n.why.size > 1 || savedFb != null) Expander("Why this workout?") {
+                    Bullets(n.why.drop(1))
+                    savedFb?.let { fb -> Muted("Used: ${if (fb.rpe != null) "effort ${fb.rpe}/10, limiter ${fb.limiter ?: "—"}, recovered ${fb.recovered ?: "—"}, " else ""}time in band ${fb.inZonePct}%, drift ${fb.driftPct}%. Rides on record: ${r.feedback.size}.", 11) }
+                }
             }
-            savedFb?.let { fb -> Muted("Used: ${if (fb.rpe != null) "effort ${fb.rpe}/10, limiter ${fb.limiter ?: "—"}, recovered ${fb.recovered ?: "—"}, " else ""}time in band ${fb.inZonePct}%, drift ${fb.driftPct}%. Rides on record: ${r.feedback.size}.", 11) }
         } else Muted("Finish the rider setup (ME tab) to get a personal recommendation.", 12)
         if (fresh) PrimaryButton("HOME", Modifier.fillMaxWidth().padding(top = 10.dp).testTag("post_home"), onClick = onDone)
     }

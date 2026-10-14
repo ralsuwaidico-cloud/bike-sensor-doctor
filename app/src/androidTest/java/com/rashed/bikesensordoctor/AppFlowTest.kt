@@ -79,10 +79,15 @@ class AppFlowTest {
      */
     private fun enableComposeAccessibilityEvents() {
         val inst = InstrumentationRegistry.getInstrumentation()
-        val act = runCatching { androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull() }.getOrNull() ?: return
+        var act: android.app.Activity? = null
+        for (n in 0 until 20) { act = com.rashed.bikesensordoctor.ui.MainActivity.current?.get() ?: runCatching { androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull() }.getOrNull(); if (act != null) break; Thread.sleep(250) }
+        runCatching { File(shots(), "a11y.txt").appendText("${System.currentTimeMillis()} activity=${act?.javaClass?.simpleName}\n") }
+        val activity = act ?: return
+        var found = 0
         inst.runOnMainSync {
             fun walk(v: android.view.View) {
                 if (v.javaClass.name == "androidx.compose.ui.platform.AndroidComposeView") {
+                    found++
                     val r = runCatching {
                         val f = v.javaClass.getDeclaredField("composeAccessibilityDelegate"); f.isAccessible = true; val d = f.get(v)!!
                         val ff = d.javaClass.getDeclaredField("accessibilityForceEnabledForTesting"); ff.isAccessible = true; ff.setBoolean(d, true)
@@ -91,8 +96,9 @@ class AppFlowTest {
                 }
                 if (v is android.view.ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
             }
-            walk(act.window.decorView)
+            walk(activity.window.decorView)
         }
+        runCatching { File(shots(), "a11y.txt").appendText("compose views found=$found\n") }
     }
     private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
     /** Polls without waiting for idle (the live screen never idles) — for states that come and go, like a phase or a sensor gap. */
@@ -229,7 +235,8 @@ class AppFlowTest {
         device.pressHome(); Thread.sleep(2000); launch(); find(tag("btn_pause"), 10_000)
         tap(tag("btn_finish")); tap(text("FINISH & SAVE"))   // the dialog is its own window: find it by its text
         find(tag("results_root"), 15_000); top(); shot("28_results_summary")
-        find(text("HEART RATE")); shot("28b_results_hr"); find(text("AI COACH REVIEW")); shot("28c_results_coach")
+        find(tag("coach_message")); assertTrue("one next step", has(tag("coach_next"), 2000)); tap(tag("why_expander")); shot("28b_results_why")
+        tap(tag("exp_hr")); find(text("RECOVERY 1 MIN ↓")); shot("28c_results_hr_details"); tap(tag("exp_power")); shot("28d_results_power")
         find(tag("save_post")); tap(text("Legs")); tap(text("Yes")); tap(tag("save_post"))
         find(tag("post_home")); shot("29_next_workout"); tap(tag("post_home"))
         find(tag("start_ride"))

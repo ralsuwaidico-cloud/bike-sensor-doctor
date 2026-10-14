@@ -318,53 +318,69 @@ fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) 
         D7TopBar(if (firstTime) "SET UP · 6 / 6" else "RIDER PROFILE", if (firstTime) "Back" else "Home", onBack)
         Row(verticalAlignment = Alignment.CenterVertically) { Avatar(r.initials, 40); Spacer(Modifier.width(10.dp)); Column { Headline(if (firstTime) "Your personal coach" else r.name, 22); if (r.isSample) SampleTag() } }
         Spacer(Modifier.height(10.dp))
-        KeyValue(listOf(
-            "Goal" to ((RiderAnswers.GOAL_SHORT[RiderProfile.primaryGoal(a)] ?: "—") + (a.list("goals").drop(1).takeIf { it.isNotEmpty() }?.let { " +${it.size}" } ?: "") + (RiderProfile.successText(a)?.let { " · $it" } ?: "")),
-            "You" to "${v(a["age"])} y · ${v(a["heightCm"])} cm · ${v(a["weightKg"])} kg · ${v(a["experience"])}",
-            "Routine" to "${v(a["ridesNow"])} rides/wk now · ${v(a["daysAvail"])} days possible · ${v(a["typicalMin"])} min typical" + a.list("other").filter { it != "none" }.takeIf { it.isNotEmpty() }?.let { " · " + it.joinToString(", ") }.orEmpty(),
-            "Heart rate" to "max ${m("maxHr")} · rest ${m("restHr")} · threshold ${m("lthr")}",
-            "Power" to "FTP ${m("ftp")}",
-            "Coaching" to "${v(a["voice"])} · ${v(a["freq"])} · cadence ${v(a["cadAdvice"])}${if (a["heat"] == "yes") " · hot conditions" else ""}",
-        ))
-        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            listOf(0 to "you", 1 to "goals", 2 to "routine", 3 to "zones", 4 to "prefs").forEach { (i, l) -> TextButton(onClick = { onEdit(i) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp)) { Text("edit $l", color = D7.Cyan, fontSize = 11.sp) } }
+        // 1 · the one thing to do: today's workout (why behind an expander)
+        D7Card(accent = D7.Green) {
+            CardTitle(if (firstTime) "YOUR FIRST WORKOUT" else "TODAY'S WORKOUT")
+            Text(w.name, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, lineHeight = 22.sp, color = D7.Fg)
+            Text("${w.minutes} min · ${w.hrLo}–${w.hrHi} bpm${if (w.pwLo != null) " · ${w.pwLo}–${w.pwHi} W" else ""}", fontFamily = PlexMono, fontSize = 12.sp, color = D7.Cyan, modifier = Modifier.padding(vertical = 3.dp))
+            w.why.firstOrNull()?.let { Text(it, fontSize = 13.sp, lineHeight = 18.sp, color = D7.Fg) }
+            if (w.why.size > 1) Expander("Why this workout?") { Bullets(w.why.drop(1)) }
         }
-        D7Card(Modifier.padding(top = 6.dp)) {
-            CardTitle("TRAINING TARGETS")
-            Row(verticalAlignment = Alignment.CenterVertically) { ConfidenceTag(c.zoneConfidence); Spacer(Modifier.width(6.dp)); Text(c.zoneConfidenceText.substringAfter("— "), fontSize = 12.sp, color = D7.Mut, modifier = Modifier.weight(1f)) }
-            Text("Zone 2 = ${c.hrTargetLo}–${c.hrTargetHi} bpm${if (c.hrCap < c.hrTargetHi) " (ceiling ${c.hrCap})" else ""}", fontSize = 14.sp, color = D7.Fg, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(if (c.powerCoaching) "Power ${c.powerLo}–${c.powerHi} W" else "Power targets off (FTP unknown)", fontSize = 13.sp, color = D7.Fg)
-                if (c.powerCoaching) { Spacer(Modifier.width(6.dp)); if (c.ftpMeasured) Tag("CONFIRMED", D7.Green) else Tag("PROVISIONAL", D7.Amber) }
+        // 2 · the targets the coach will hold you to — one line each, confidence as a tag
+        D7Card(Modifier.padding(top = 8.dp)) {
+            CardTitle("YOUR TARGETS")
+            Row(verticalAlignment = Alignment.CenterVertically) { Text("Zone 2 ${c.hrTargetLo}–${c.hrTargetHi} bpm", fontSize = 15.sp, color = D7.Fg, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); ConfidenceTag(c.zoneConfidence) }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
+                Text(if (c.powerCoaching) "Power ${c.powerLo}–${c.powerHi} W" else "Power targets off until FTP is known", fontSize = 13.sp, color = if (c.powerCoaching) D7.Fg else D7.Mut, modifier = Modifier.weight(1f))
+                if (c.powerCoaching) { if (c.ftpMeasured) Tag("CONFIRMED", D7.Green) else Tag("PROVISIONAL", D7.Amber) }
             }
-            Text("Warm-up ${c.warmupSec / 60} min · cool-down ${c.cooldownSec / 60} min · cadence ${if (c.cadenceEnabled) "${c.cadLow}–${c.cadHigh} rpm" else "off"}", fontSize = 12.sp, color = D7.Mut)
+            Text("Cadence ${if (c.cadenceEnabled) "${c.cadLow}–${c.cadHigh} rpm" else "not coached"} · warm-up ${c.warmupSec / 60} min · cool-down ${c.cooldownSec / 60} min", fontSize = 12.sp, color = D7.Mut, modifier = Modifier.padding(top = 3.dp))
+            Expander("Why these targets?") {
+                Text(c.zoneConfidenceText, fontSize = 12.sp, lineHeight = 16.sp, color = D7.Mut)
+                Spacer(Modifier.height(4.dp))
+                c.rules.forEach { Text(it.what, fontSize = 12.sp, color = D7.Fg, fontWeight = FontWeight.Bold); Text(it.because, fontSize = 11.sp, lineHeight = 14.sp, color = D7.Mut, modifier = Modifier.padding(bottom = 4.dp)) }
+            }
         }
-        D7Card(Modifier.padding(top = 8.dp), accent = D7.Green) {
-            CardTitle(if (firstTime) "RECOMMENDED FIRST WORKOUT" else "TODAY'S RECOMMENDATION")
-            Text(w.name, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, color = D7.Fg)
-            Text("${w.minutes} min · ${w.hrLo}–${w.hrHi} bpm · ${if (w.pwLo != null) "${w.pwLo}–${w.pwHi} W" else "power off"}", fontFamily = PlexMono, fontSize = 12.sp, color = D7.Cyan, modifier = Modifier.padding(vertical = 3.dp))
-            Text(w.why.first(), fontSize = 12.sp, lineHeight = 16.sp, color = D7.Mut)
-        }
+        // 3 · progress: what the coach has learned so far (real rides only)
         if (!firstTime) {
             val l = remember { vm.engine.learned() }
             D7Card(Modifier.padding(top = 8.dp), accent = D7.Violet) {
-                CardTitle("WHAT THE COACH HAS LEARNED (${l.rides} real ride${if (l.rides == 1) "" else "s"})")
-                if (l.rides == 0) Muted("Nothing yet — facts appear after real rides (simulated rides never count).", 12)
-                else KeyValue(listOfNotNull(
-                    l.naturalCadence?.let { "Natural cadence" to "$it rpm (median)" }, l.sustainablePowerW?.let { "Sustainable power" to "$it W best 20 min (verified meter)" },
-                    l.hrAtTypicalEffort?.let { "HR at usual effort" to "$it bpm (median ride average)" }, l.longestRideMin?.let { "Endurance" to "longest ride $it min" },
-                    l.inBandTrend?.let { "Zone discipline" to it }, l.recoveryBpm?.let { "Recovery" to "HR falls $it bpm in the first minute (median)" },
-                ))
+                CardTitle("YOUR PROGRESS · ${l.rides} REAL RIDE${if (l.rides == 1) "" else "S"}")
+                if (l.rides == 0) Text("Your first real ride starts the record. Simulated rides never count.", fontSize = 13.sp, lineHeight = 18.sp, color = D7.Fg)
+                else {
+                    l.inBandTrend?.let { Text("Zone discipline: $it", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg) }
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                        l.naturalCadence?.let { Column(Modifier.weight(1f)) { Text("$it", fontFamily = Rajdhani, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, color = D7.Fg); Text("RPM NATURAL", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Mut) } }
+                        l.longestRideMin?.let { Column(Modifier.weight(1f)) { Text("$it", fontFamily = Rajdhani, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, color = D7.Fg); Text("MIN LONGEST", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Mut) } }
+                        l.hrAtTypicalEffort?.let { Column(Modifier.weight(1f)) { Text("$it", fontFamily = Rajdhani, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, color = D7.Fg); Text("BPM USUAL", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Mut) } }
+                    }
+                }
                 val ftpE = com.rashed.bikesensordoctor.core.Calibration.ftp(vm.engine.ftpEvidence()); val lthrE = com.rashed.bikesensordoctor.core.Calibration.lthr(vm.engine.testEvidence())
-                Spacer(Modifier.height(4.dp)); Muted("FTP: ${ftpE.detail}", 11); Muted("Threshold HR: ${lthrE.detail}", 11)
-                if (com.rashed.bikesensordoctor.core.Calibration.zonesTooLow(r.feedback)) Text("Your last three coached rides were mostly above the band while feeling easy — the zones may be too low. Ride the guided 20-min threshold test rather than guessing.", fontSize = 12.sp, color = D7.Amber, modifier = Modifier.padding(top = 4.dp))
+                if (com.rashed.bikesensordoctor.core.Calibration.zonesTooLow(r.feedback)) Text("Your zones may be too low — three easy rides sat above the band. Ride the guided threshold test.", fontSize = 13.sp, lineHeight = 18.sp, color = D7.Amber, modifier = Modifier.padding(top = 6.dp))
+                Expander("Details") {
+                    KeyValue(listOfNotNull(
+                        l.sustainablePowerW?.let { "Sustainable power" to "$it W best 20 min (verified meter)" },
+                        l.recoveryBpm?.let { "Recovery" to "HR falls $it bpm in the first minute (median)" },
+                        "FTP" to ftpE.detail, "Threshold HR" to lthrE.detail,
+                    ))
+                }
             }
         }
-        D7Card(Modifier.padding(top = 8.dp)) { CardTitle("STILL TO LEARN"); Bullets(RiderProfile.needs(a, c).take(3)) }
-        D7Card(Modifier.padding(top = 8.dp)) {
-            CardTitle("WHAT YOUR ANSWERS CHANGE")
-            c.rules.forEach { Text(it.what, fontSize = 12.sp, color = D7.Fg, fontWeight = FontWeight.Bold); Text(it.because, fontSize = 11.sp, lineHeight = 14.sp, color = D7.Mut, modifier = Modifier.padding(bottom = 4.dp)) }
+        // 4 · the profile itself and what is still unknown — on request
+        Expander("Your profile", tag = "exp_profile") {
+            KeyValue(listOf(
+                "Goal" to ((RiderAnswers.GOAL_SHORT[RiderProfile.primaryGoal(a)] ?: "—") + (a.list("goals").drop(1).takeIf { it.isNotEmpty() }?.let { " +${it.size}" } ?: "") + (RiderProfile.successText(a)?.let { " · $it" } ?: "")),
+                "You" to "${v(a["age"])} y · ${v(a["heightCm"])} cm · ${v(a["weightKg"])} kg · ${v(a["experience"])}",
+                "Routine" to "${v(a["ridesNow"])} rides/wk now · ${v(a["daysAvail"])} days possible · ${v(a["typicalMin"])} min typical" + a.list("other").filter { it != "none" }.takeIf { it.isNotEmpty() }?.let { " · " + it.joinToString(", ") }.orEmpty(),
+                "Heart rate" to "max ${m("maxHr")} · rest ${m("restHr")} · threshold ${m("lthr")}",
+                "Power" to "FTP ${m("ftp")}",
+                "Coaching" to "${v(a["voice"])} · ${v(a["freq"])} · cadence ${v(a["cadAdvice"])}${if (a["heat"] == "yes") " · hot conditions" else ""}",
+            ))
+            Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                listOf(0 to "you", 1 to "goals", 2 to "routine", 3 to "zones", 4 to "prefs").forEach { (i, l) -> TextButton(onClick = { onEdit(i) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp)) { Text("edit $l", color = D7.Cyan, fontSize = 11.sp) } }
+            }
         }
+        Expander("Still to learn") { Bullets(RiderProfile.needs(a, c).take(3)) }
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (firstTime) SecondaryButton("‹ BACK", Modifier.weight(1f), onClick = onBack)

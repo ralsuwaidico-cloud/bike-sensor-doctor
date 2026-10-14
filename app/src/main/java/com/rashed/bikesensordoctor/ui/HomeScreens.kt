@@ -83,9 +83,9 @@ fun HomeScreen(vm: DoctorViewModel, onStartRide: () -> Unit, onSwitch: () -> Uni
                     Row(verticalAlignment = Alignment.CenterVertically) { CardTitle("TODAY'S RECOMMENDED WORKOUT"); if (overridden) { Spacer(Modifier.width(6.dp)); Tag("YOUR CHOICE", D7.Amber) } }
                     Text(w.name, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, lineHeight = 22.sp, color = D7.Fg)
                     Text("${w.minutes} min · ${w.hrLo}–${w.hrHi} bpm · ${if (w.pwLo != null) "${w.pwLo}–${w.pwHi} W" else "power off"}", fontFamily = PlexMono, fontSize = 12.sp, color = D7.Cyan, modifier = Modifier.padding(vertical = 4.dp))
-                    CardTitle("WHY"); Bullets(w.why)
-                    Spacer(Modifier.height(4.dp)); CardTitle("HOW THE COACH WILL GUIDE IT"); Bullets(w.how)
-                    Spacer(Modifier.height(4.dp)); CardTitle("WHAT IT WILL MEASURE"); Bullets(w.measure)
+                    w.why.firstOrNull()?.let { Text(it, fontSize = 13.sp, lineHeight = 18.sp, color = D7.Fg) }
+                    Expander("Why this workout?", tag = "exp_why_workout") { Bullets(w.why.drop(1).ifEmpty { w.why }) }
+                    Expander("How the coach will guide it") { Bullets(w.how); Spacer(Modifier.height(4.dp)); CardTitle("WHAT IT WILL MEASURE"); Bullets(w.measure) }
                 }
                 Spacer(Modifier.height(8.dp))
                 Text("Change workout:", fontSize = 12.sp, color = D7.Mut)
@@ -94,7 +94,7 @@ fun HomeScreen(vm: DoctorViewModel, onStartRide: () -> Unit, onSwitch: () -> Uni
                     tick++
                 }
                 Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) { Text("Zones: ", fontSize = 12.sp, color = D7.Mut); ConfidenceTag(c.zoneConfidence); Spacer(Modifier.width(6.dp)); Text(c.zoneConfidenceText.substringAfter("— "), fontSize = 11.sp, color = D7.Mut, maxLines = 2, modifier = Modifier.weight(1f)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Text("Zones: ", fontSize = 12.sp, color = D7.Mut); ConfidenceTag(c.zoneConfidence); Spacer(Modifier.width(6.dp)); Text(c.zoneConfidenceText.substringAfter("— ").substringBefore(". "), fontSize = 11.sp, color = D7.Mut, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f)) }
                 if (!vm.engine.prefs.powerVerified && c.powerCoaching) Text("Power targets stay off until the meter is verified under load (Settings).", fontSize = 11.sp, color = D7.Amber, modifier = Modifier.padding(top = 4.dp))
                 Spacer(Modifier.height(10.dp))
             }

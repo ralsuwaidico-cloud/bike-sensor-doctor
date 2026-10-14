@@ -36,6 +36,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        /** The foreground activity, for the instrumentation tests (they run in this process and need the Compose view). */
+        @Volatile var current: java.lang.ref.WeakReference<MainActivity>? = null
+    }
     private val vm: DoctorViewModel by viewModels()
     private val permissionGranted = mutableStateOf(false)
     private val bluetoothOn = mutableStateOf(false)
@@ -143,6 +147,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        current = java.lang.ref.WeakReference(this)
         permissionGranted.value = Permissions.allGranted(this)
         runCatching {
             bluetoothOn.value = vm.bluetoothOn()
