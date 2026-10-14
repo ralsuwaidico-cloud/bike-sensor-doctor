@@ -516,8 +516,11 @@ class RideEngine(private val app: Application) {
                 if (prefs.coachVoice && c.spoken.isNotEmpty()) onSpeak?.invoke(c.spoken)
             }
             // v0.8/0.9: once per second of riding time — in-band accounting, HR drift halves, the 1 Hz series, the minute line
-            if (elapsed / 1000 != lastZoneSec) {
-                lastZoneSec = elapsed / 1000
+            // one record per riding second, even when a refresh tick covers several seconds (accelerated simulation)
+            val curSec = elapsed / 1000
+            if (lastZoneSec < 0 || lastZoneSec > curSec) lastZoneSec = curSec - 1
+            while (lastZoneSec < curSec) {
+                lastZoneSec++
                 val pw = stats.livePowerW(now)
                 var inBand: Boolean? = null
                 if (targets != null && phase == Phase.MAIN) {
