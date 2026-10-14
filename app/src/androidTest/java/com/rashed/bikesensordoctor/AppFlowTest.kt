@@ -215,7 +215,7 @@ class AppFlowTest {
         shot("34_live_font_1_3"); assertNoScrollLive("font 1.3")
         device.executeShellCommand("settings put system font_scale 1.0"); Thread.sleep(2500)
         launch(); find(tag("btn_finish"), 15_000); tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
-        find(tag("results_root"), 15_000); if (has(tag("save_post"), 3000)) { tap(tag("save_post")); find(tag("post_home")) } ; tap(tag("post_home")); find(tag("start_ride"))
+        find(tag("results_root"), 15_000); if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
     }
 
     @Test fun t05_restart_keeps_data_and_settings_screens() {
