@@ -153,6 +153,8 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
 
     private var lastType = CueType.NONE
     private var lastEmitMs = Long.MIN_VALUE / 2
+    /** v3: per-type spacing, so two different corrections cannot ping-pong every 10 s (each still respects its own repeat time). */
+    private val lastEmitByType = HashMap<CueType, Long>()
     private var allGoodSince: Long? = null
     private var keepArmed = true          // KEEP IT UP fires on entering "all good"
     private var announcedPhase: Phase? = null
@@ -185,7 +187,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
 
     fun reset() {
         cadS.clear(); hrS.clear(); pwS.clear(); hrBand.clear(); pwBand.clear(); cadState = null
-        lastType = CueType.NONE; lastEmitMs = Long.MIN_VALUE / 2; allGoodSince = null; keepArmed = true
+        lastType = CueType.NONE; lastEmitMs = Long.MIN_VALUE / 2; lastEmitByType.clear(); allGoodSince = null; keepArmed = true
         announcedPhase = null; surgeSince = null; intervalStartMs = null
         phaseSeen = null; phaseSinceMs = 0; repeatCount = 0; quietSinceMs = 0
         hrT.clear(); pwT.clear(); cadT.clear(); spT.clear(); minuteAbove = 0; minuteBelow = 0; minuteIn = 0; minuteStartMs = Long.MIN_VALUE / 2; lastAssessment = null
@@ -328,8 +330,9 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         }
         if (effort != null) { if (effort.type != CueType.NONE) allGoodSince = null; return effort }
 
-        // ---- 6. cadence hints (effort is in order and HR is not above); never while coasting or stopped ----
-        if (hb != Band.ABOVE && !stopped && !coasting) {
+        // ---- 6. cadence hints only when effort is in order (band ON — a pending effort correction must not be interleaved with cadence talk); never while coasting or stopped ----
+        val effortOk = hb == Band.ON || (hr == null && pb == Band.ON) || (hr == null && pw == null)
+        if (effortOk && !stopped && !coasting) {
             cadenceCue(now, cad, phase)?.let { if (it.type != CueType.NONE) allGoodSince = null; return it }
             // uneven pedalling (cadence varying > 12 % over the last minute) with effort fine → keep the cadence steady
             val cv = cadT.cv()
@@ -462,6 +465,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         if (type == lastType && type == CueType.KEEP_IT_UP && config.keepRepeatMs <= 0) return CoachCue.NONE   // "keep it up" once per good spell
         if (type == lastType && since < (if (type == CueType.KEEP_IT_UP) config.keepRepeatMs else config.sameRepeatMs)) return CoachCue.NONE
         if (type != lastType && since < config.minAlertMs) return CoachCue.NONE
+        if (type != CueType.KEEP_IT_UP) lastEmitByType[type]?.let { if (now - it < config.sameRepeatMs) return CoachCue.NONE }   // (KEEP IT UP keeps its own enter-good-spell rule)
         // v0.8 back-off: the same correction three times without effect → go quiet; the gauges keep showing the state
         if (config.backoff && type == lastType && type != CueType.KEEP_IT_UP) {
             repeatCount++
@@ -472,7 +476,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
                 repeatCount = 0
             }
         } else repeatCount = 0
-        lastType = type; lastEmitMs = now
+        lastType = type; lastEmitMs = now; lastEmitByType[type] = now
         return CoachCue(type, head, detail, spoken, reason, w.action, w.sources, liveText())
     }
 }

@@ -68,7 +68,30 @@ const SERIES={}; ORDER.forEach(id=>SERIES[id]=genRide(REAL[id]));
 /* ============================================================ coach engine — port of core/Coach.kt v2 (v0.7) */
 class Coach{
   constructor(cfg){ this.cfg=Object.assign({mode:"ZONE2",usePower:true,backoff:true,grace:true,cadenceEnabled:true,cadLow:80,cadHigh:95,hrHold:8000,pwHold:2000,surgeHold:6000,cadHold:5000,minAlert:10000,sameRepeat:45000,keepRepeat:90000,keepHold:5000,infoRepeat:30000,smooth:5000,hysHr:3,hysPw:0.02,cadHys:3},cfg); this.reset(); }
-  reset(){ this.phaseSeen=null; this.phaseSince=0; this.repeat=0; this.quietSince=0; this.win={cad:[],hr:[],pw:[]}; this.band={hr:null,pw:null}; this.since={hr:0,pw:0}; this.cadState=null; this.cadSince=0; this.lastType="NONE"; this.lastEmit=-1e12; this.allGood=null; this.keepArmed=true; this.announced=null; this.surgeSince=null; }
+  reset(){ this.phaseSeen=null; this.phaseSince=0; this.repeat=0; this.quietSince=0; this.win={cad:[],hr:[],pw:[]}; this.band={hr:null,pw:null}; this.since={hr:0,pw:0}; this.cadState=null; this.cadSince=0; this.lastType="NONE"; this.lastEmit=-1e12; this.allGood=null; this.keepArmed=true; this.announced=null; this.surgeSince=null;
+    this.tr={hr:[],pw:[],cad:[]}; this.last={cad:null,hr:null,pw:null,hb:null,pb:null}; this.minute={start:null,above:0,below:0,in:0}; this.assessment=null; }
+  /* v3 trends: mean of the last 30 s minus the previous 30 s, ×2 → change per minute; plus a 60 s coefficient of variation and direction reversals for cadence */
+  trend(k,now,v){ const a=this.tr[k]; if(v==null){ a.length=0; return; } a.push([now,v]); while(a.length&&now-a[0][0]>60000) a.shift(); }
+  perMin(k,now){ const a=this.tr[k]; if(a.length<40) return null; const r=a.filter(x=>now-x[0]<=30000).map(x=>x[1]), o=a.filter(x=>now-x[0]>30000).map(x=>x[1]); if(r.length<10||o.length<10) return null; return (r.reduce((x,y)=>x+y,0)/r.length - o.reduce((x,y)=>x+y,0)/o.length)*2; }
+  cadStats(){ const a=this.tr.cad.map(x=>x[1]); if(a.length<45) return null; const m=a.reduce((x,y)=>x+y,0)/a.length; if(m<=0) return null; const cv=Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length)/m; let rev=0,last=0; for(let i=1;i<a.length;i++){ const d=a[i]-a[i-1]; const sg=d>=3?1:d<=-3?-1:0; if(sg){ if(last&&sg!==last) rev++; last=sg; } } return {cv,rev}; }
+  /* gear intelligence: the same decision, said as what to do with the bike (gear is inferred from cadence + power, never measured) */
+  action(type,head,detail,reason){ const c=this.cfg, L=this.last, cad=L.cad, pw=L.pw;
+    const cadLow=cad!=null&&cad>0&&cad<c.cadLow, cadHigh=cad!=null&&cad>c.cadHigh, pwLow=L.pb==="BELOW"||(pw!=null&&pw<CFG.ftp*0.55);
+    const src=(reason.startsWith("HR")?"HR":"")+(reason.startsWith("PW")?"power":"")+(reason.startsWith("CAD")?"cadence":"");
+    const W=(action,icon,h,d,s)=>({action,icon,head:h,detail:d,sources:s});
+    if(type==="EASE_OFF"){ if(head==="WIND DOWN") return W("WIND_DOWN","❄",head,detail,"HR"); if(reason==="HR_RISING") return W("HR_RISING_EASE","♥↑",head,detail,"HR trend + power");
+      if(cadLow&&!pwLow) return W("EASIER_GEAR","⚙−","SHIFT TO AN EASIER GEAR",detail+` · cadence ${cad} rpm with a heavy gear: less resistance, smoother spin, and the effort comes down`,src+" + cadence");
+      return W("REDUCE_PRESSURE","⇩","REDUCE PRESSURE ON THE PEDALS",detail,src||"HR"); }
+    if(type==="PUSH_HARDER"){ if(cadHigh&&(pwLow||pw==null)) return W("HARDER_GEAR","⚙+","SHIFT TO A HARDER GEAR",detail+` · cadence ${cad} rpm is high with little resistance — add gear, keep the spin`,src+" + cadence");
+      return W("INCREASE_EFFORT","⇧","INCREASE YOUR EFFORT SLIGHTLY",cadLow?detail+" · cadence is low too, so press a little more rather than changing gear":detail,src||"HR"); }
+    if(type==="PEDAL_FASTER") return head.startsWith("KEEP")?W("KEEP_CADENCE_STEADY","≈",head,detail,"cadence"):W("PEDAL_FASTER","↻+","PEDAL A LITTLE FASTER","Easier gear, same effort — "+detail,"cadence");
+    if(type==="PEDAL_SLOWER") return W("PEDAL_SLOWER","↻−","SLOW YOUR PEDALLING","Harder gear, same effort — "+detail,"cadence");
+    if(type==="KEEP_IT_UP") return (pw!=null&&L.pb==="ON")?W("HOLD_PACE","═","HOLD THIS PACE","Power and heart rate on target","HR + power"):W("STABLE_MAINTAIN","✓","YOUR EFFORT IS STABLE. MAINTAIN THIS RHYTHM",detail,L.hr!=null?"HR":"power");
+    if(type==="COOLDOWN") return W("START_COOLDOWN","❄","START YOUR COOLDOWN",detail,"phase");
+    if(type==="WARMUP") return W("WARM_UP","☼",head,detail,"phase");
+    if(type==="QUIET") return W("QUIET","…",head,detail,"");
+    return W("NONE","○",head,detail,src); }
+  live(){ const L=this.last; return [L.hr!=null?`HR ${L.hr}`:null, L.pw!=null?`${L.pw} W`:null, L.cad>0?`${L.cad} rpm`:null].filter(Boolean).join(" · "); }
   feed(k,now,v){ const w=this.win[k]; if(v==null){ w.length=0; return null;} w.push([now,v]); while(w.length&&now-w[0][0]>this.cfg.smooth) w.shift(); return Math.round(w.reduce((a,b)=>a+b[1],0)/w.length); }
   bandOf(k,now,val,lo,hi,h){ if(val==null){ this.band[k]=null; return null; } const b=this.band[k]; let n;
     if(b==null) n= val<lo?"BELOW": val>hi?"ABOVE":"ON";
@@ -77,21 +100,30 @@ class Coach{
     else n= val<lo-h?"BELOW": val>hi+h?"ABOVE":"ON";
     if(n!==b){ this.band[k]=n; this.since[k]=now; } return n; }
   held(k,now,ms){ return this.band[k]!=null && now-this.since[k]>=ms; }
-  emit(now,type,head,detail,reason,src){ const s=now-this.lastEmit; if(type===this.lastType && s<(type==="KEEP_IT_UP"?this.cfg.keepRepeat:this.cfg.sameRepeat)) return null; if(type!==this.lastType && s<this.cfg.minAlert) return null;
+  emit(now,type,head0,detail0,reason,src){ const w=this.action(type,head0,detail0,reason); const head=w.head, detail=w.detail; const s=now-this.lastEmit; if(type===this.lastType && type==="KEEP_IT_UP" && this.cfg.keepRepeat<=0) return null; if(type===this.lastType && s<(type==="KEEP_IT_UP"?this.cfg.keepRepeat:this.cfg.sameRepeat)) return null; if(type!==this.lastType && s<this.cfg.minAlert) return null;
+    this.byType=this.byType||{}; if(type!=="KEEP_IT_UP" && this.byType[type]!=null && now-this.byType[type]<this.cfg.sameRepeat) return null;   // v3: per-type spacing, no ping-pong
     // v0.8 proposal: after 3 unheeded repeats of the same cue, go quiet (gauges keep showing the state) until the cue changes or 5 min pass
-    if(this.cfg.backoff && type===this.lastType && type!=="KEEP_IT_UP"){ this.repeat=(this.repeat||0)+1; if(this.repeat>=3){ if(this.repeat===3){ this.lastEmit=now; this.quietSince=now; return {type:"QUIET",head:"COACH QUIET",detail:`${head} has been said 3 times without a change. Going quiet; the gauges keep showing the state. I will speak again when something changes or after 5 minutes.`,reason:"BACKOFF",src:"v0.8 proposal"}; } if(now-this.quietSince<300000) return null; this.repeat=0; } }
+    if(this.cfg.backoff && type===this.lastType && type!=="KEEP_IT_UP"){ this.repeat=(this.repeat||0)+1; if(this.repeat>=3){ if(this.repeat===3){ this.lastEmit=now; this.quietSince=now; return {type:"QUIET",head:"COACH QUIET",detail:`${head} has been said 3 times without a change. Going quiet; the gauges keep showing the state. I will speak again when something changes or after 5 minutes.`,reason:"BACKOFF",src:"v0.9",action:"QUIET",icon:"…",sources:"",live:this.live()}; } if(now-this.quietSince<300000) return null; this.repeat=0; } }
     else this.repeat=0;
-    this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:src||"v0.7 rule"}; }
-  announce(now,phase,type,head,detail,reason){ if(this.announced===phase) return null; this.announced=phase; this.allGood=null; this.keepArmed=true; this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:"v0.7 rule"}; }
+    this.lastType=type; this.lastEmit=now; this.byType[type]=now; return {type,head,detail,reason,src:src||"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
+  announce(now,phase,type,head0,detail0,reason){ const w=this.action(type,head0,detail0,reason); if(this.announced===phase) return null; this.announced=phase; this.allGood=null; this.keepArmed=true; this.lastType=type; this.lastEmit=now; return {type,head:w.head,detail:w.detail,reason,src:"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
   info(now,type,head,detail,reason){ if(type===this.lastType && now-this.lastEmit<this.cfg.infoRepeat) return null; this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:"v0.7 rule"}; }
-  update(now,phase,cadIn,hrIn,pwIn,t,N){
+  update(now,phase,cadIn,hrIn,pwIn,t,N,speed){
     const c=this.cfg; if(c.mode==="FREE") return null;
     if(phase!==this.phaseSeen){ this.phaseSeen=phase; this.phaseSince=now; this.repeat=0; }
     const cad=this.feed("cad",now,cadIn); const hr=this.feed("hr",now,hrIn);
     const coasting = pwIn!=null && pwIn===0; const pwRaw=this.feed("pw",now,coasting?null:pwIn); const pw=(c.usePower && pwRaw!=null&&pwRaw>0)?pwRaw:null;   // usePower=false: FTP unknown → heart-rate guidance only
+    this.last.cad=cad; this.last.hr=hr; this.last.pw=pw; this.trend("hr",now,hr); this.trend("pw",now,pw); this.trend("cad",now,cad>0?cad:null);
+    const stopped=(speed!=null&&speed<2)||(cad===0);   // v3: coasting or stopped → no pedalling or gear instruction
     const TG=targetsFor(phase,true,t,N); const [hLo,hHi]=TG.hr; const [pLo,pHi]=TG.pw;
     const grace = c.grace && phase==="MAIN" && now-this.phaseSince<90000;   // v0.8 proposal: 90 s after entering the main block, no 'push' — heart rate is still responding
-    const hb=this.bandOf("hr",now,hr,hLo,hHi,c.hysHr); const pb=this.bandOf("pw",now,pw,pLo,pHi,c.hysPw*CFG.ftp);
+    const hb=this.bandOf("hr",now,hr,hLo,hHi,c.hysHr); const pb=this.bandOf("pw",now,pw,pLo,pHi,c.hysPw*CFG.ftp); this.last.hb=hb; this.last.pb=pb;
+    // v3: the 60-second assessment (display only)
+    const M=this.minute; if(M.start==null) M.start=now; if(phase==="MAIN"){ const b=hb||pb; if(b==="ABOVE") M.above++; else if(b==="BELOW") M.below++; else if(b==="ON") M.in++; }
+    if(now-M.start>=60000){ const tot=M.above+M.below+M.in, pct=tot?Math.round(M.in*100/tot):null; const ht=this.perMin("hr",now), pt=this.perMin("pw",now);
+      const arrow=(d,k)=>d==null?"":d>=k?" ↑":d<=-k?" ↓":" →"; const parts=[]; if(hr!=null) parts.push(`HR ${hr}${arrow(ht,3)}`); if(pw!=null) parts.push(`${pw} W${arrow(pt,10)}`); if(cad>0) parts.push(`${cad} rpm`);
+      const progress= phase!=="MAIN"?phase.toLowerCase(): pct==null?"no effort signal this minute": pct>=80?`on track — ${pct}% of the last minute in band`: M.above>M.below?`mostly above target (${pct}% in band) — ease`:`mostly below target (${pct}% in band) — a little more`;
+      this.assessment={at:now,summary:parts.join(" · "),progress,pct,hrTrend:ht,pwTrend:pt}; M.start=now; M.above=M.below=M.in=0; }
     const hz=hr?hrZone(hr):null, pz=pw?powZone(pw):null;
     const safety=()=> (hb==="ABOVE" && hz!=null && hz>=4 && this.held("hr",now,5000)) ? this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm is zone ${hz} — two or more zones above the target. Safety rule: back off whatever power or cadence say.`,"HR_SAFETY") : null;
     if(phase==="WARMUP"){ const s=safety(); if(s) return s; return this.announce(now,phase,"WARMUP","WARM UP",`Easy spinning for 5 minutes: target Zone 1 (${hLo}–${hHi} bpm). No 'push harder' during the warm-up; only an 'ease off' if heart rate runs far too high.`,"PHASE_WARMUP"); }
@@ -100,7 +132,9 @@ class Coach{
     let effort=null, hold=false;
     if(hr!=null){
       if(hb==="ABOVE"){ if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm (zone ${hz}) has stayed above the target ${hLo}–${hHi} bpm for 8 s. HR is the authority on effort; power is ignored here.`,"HR_ABOVE"); else hold=true; }
-      else if(hb==="ON"){ const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging){ if(this.surgeSince==null) this.surgeSince=now; if(now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; }
+      else if(hb==="ON"){ const ht=this.perMin("hr",now), pt=this.perMin("pw",now); const rising= ht!=null&&ht>=6&&(pt==null||Math.abs(pt)<15)&&hr>hHi-6;
+        if(rising&&this.held("hr",now,20000)){ effort=this.emit(now,"EASE_OFF","YOUR HEART RATE IS RISING. EASE OFF",`Heart rate ${hr} climbing about ${Math.round(ht)} bpm/min at steady power — back off a touch before it leaves the band.`,"HR_RISING","v0.9"); }
+        const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging){ if(this.surgeSince==null) this.surgeSince=now; if(now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; }
       else { this.surgeSince=null; if(pb==="ON"||pb==="ABOVE") hold=true;  /* HR lag: never push */
              else if(grace) hold=true;                                        /* v0.8 proposal: transition grace after warm-up */
              else if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"PUSH_HARDER","PUSH A LITTLE HARDER",`Heart rate ${hr} bpm is below the target ${hLo}–${hHi} bpm and power is not already on target, for 8 s.`,"HR_BELOW"); else hold=true; }
@@ -110,8 +144,11 @@ class Coach{
     } else { if(coasting) hold=true; else effort=this.info(now,"NO_HR","NO EFFORT SIGNAL","Neither heart rate nor loaded power is available.","NO_SIGNAL"); }
     if(effort){ this.allGood=null; return effort; }
     if(hold) return null;
-    // cadence hints only when effort is in order: band not ABOVE and the smoothed HR itself not over the ceiling (no hysteresis slack here)
-    if(hb!=="ABOVE" && !(hr!=null && hr>hHi)){ const cc=this.cadence(now,cad,phase); if(cc!==undefined){ if(cc) this.allGood=null; return cc; } }
+    // cadence hints only when effort is in order: band not ABOVE and the smoothed HR itself not over the ceiling (no hysteresis slack here); never while coasting or stopped
+    const effortOk=hb==="ON"||(hr==null&&pb==="ON")||(hr==null&&pw==null);
+    if(effortOk && !(hr!=null && hr>hHi) && !stopped && !coasting){ const cc=this.cadence(now,cad,phase); if(cc!==undefined){ if(cc) this.allGood=null; return cc; }
+      const cs=this.cadStats(); if(c.cadenceEnabled&&cad>0&&cs&&cs.cv>0.12&&cs.rev>=8&&(hb==="ON"||(hr==null&&pb==="ON"))){ const k=this.emit(now,"PEDAL_FASTER","KEEP YOUR CADENCE STEADY",`Cadence varied ±${Math.round(cs.cv*100)}% over the last minute while effort was fine — settle into one rhythm.`,"CAD_UNEVEN","v0.9"); if(k){ this.allGood=null; return k; } } }
+    if(stopped||coasting){ this.allGood=null; return null; }
     const good = hb==="ON" || (hr==null && pb==="ON");
     if(!good){ this.allGood=null; return null; }
     if(this.allGood==null){ this.allGood=now; this.keepArmed=true; }
@@ -140,7 +177,7 @@ class Prototypes{
     const cv=a=>{ if(a.length<30) return null; const m=a.reduce((x,y)=>x+y,0)/a.length; if(m<=0) return null; return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length)/m; };
     const ccv=cv(this.cadWin), pcv=cv(this.pwWin.filter(v=>v>0));
     const TGn=targetsFor(phase,mode!=="FREE",t,ride.sec); const hrOk = hr<=TGn.hr[1];   // never a cadence hint while heart rate is over the ceiling
-    if(mode!=="FREE" && phase==="MAIN" && hrOk && ccv!=null && ccv>0.11 && now-this.lastSmooth>120000){ this.lastSmooth=now; out.push({type:"PEDAL_SMOOTHER",head:"PEDAL SMOOTHER",detail:`Simulated cadence varied ±${Math.round(ccv*100)}% over the last minute (unusually uneven). Prototype rule: cadence coefficient of variation > 11% for 60 s.`,reason:"CAD_UNEVEN",src:"prototype"}); }
+    if(false && mode!=="FREE" && phase==="MAIN" && hrOk && ccv!=null && ccv>0.11 && now-this.lastSmooth>120000){ this.lastSmooth=now; out.push({type:"PEDAL_SMOOTHER",head:"PEDAL SMOOTHER",detail:`Simulated cadence varied ±${Math.round(ccv*100)}% over the last minute (unusually uneven). Prototype rule: cadence coefficient of variation > 11% for 60 s.`,reason:"CAD_UNEVEN",src:"prototype"}); }
     if(mode!=="FREE" && phase==="MAIN" && pcv!=null && pcv<0.20 && t>900 && now-this.lastPacing>600000 && hrZone(hr)===2){ this.lastPacing=now; out.push({type:"GREAT_PACING",head:"GREAT PACING",detail:`Simulated power varied only ±${Math.round(pcv*100)}% over the last 5 minutes while heart rate stayed in Zone 2. Prototype rule: 1 Hz power CV < 20% over 5 min inside the target zone (real power is noisy; 20% is steady riding).`,reason:"PACING_STEADY",src:"prototype"}); }
     if(mode==="FREE" && t>0 && t%600===0){ // baseline observations every 10 min
       const z=zoneTimes(S.hr.slice(0,t)); const z3=(z[2]+z[3]+z[4])/t*100; const cadAvg=avgNonZero(S.cad.slice(0,t));
@@ -278,7 +315,7 @@ function setCoachBox(e){
     q("#cbShape").innerHTML=`<g style="color:${C.faint}">${shapeSvg(null)}</g>`; q("#cbScale").innerHTML=scaleSvg(null,false,C.faint); q("#coachBar").setAttribute("fill",C.line); return; }
   const [col,dir]=CUE_STYLE[e.type]||[C.faint,null]; const active=e.type!=="NOTE"&&e.type!=="NO_HR";
   q("#cbBox").setAttribute("fill",active?col:"#0a1015"); q("#cbBox").setAttribute("stroke",active?col:C.line);
-  const ink=active?C.ink:C.fg; q("#cbCue").textContent=e.head; q("#cbCue").setAttribute("fill",ink); q("#cbCue").setAttribute("font-size",e.head.length>=14?19:e.head.length>=12?21:e.head.length>=10?24:26);
+  const ink=active?C.ink:C.fg; q("#cbCue").textContent=e.head; q("#cbCue").setAttribute("fill",ink); q("#cbCue").setAttribute("font-size",e.head.length>=34?11:e.head.length>=26?13:e.head.length>=20?15:e.head.length>=14?19:e.head.length>=12?21:e.head.length>=10?24:26);
   const l=wrap2(e.detail.split(".")[0],30); q("#cbL1").textContent=l[0]||""; q("#cbL2").textContent=l[1]||""; q("#cbL1").setAttribute("fill",active?C.ink:C.mut); q("#cbL2").setAttribute("fill",active?C.ink:C.mut);
   q("#cbShape").innerHTML=`<g style="color:${active?col:C.faint}">${shapeSvg(dir)}</g>`; q("#cbScale").innerHTML=scaleSvg(dir,active,col); q("#coachBar").setAttribute("fill",active?col:C.line);
 }
@@ -296,7 +333,7 @@ function step(){ const R=REAL[ride], S=SERIES[ride]; if(t>=R.sec) return false;
   distKm+=S.speed[t]/3600;
   // NP accumulator (30 s rolling mean^4) — SIMULATED
   if(t>=30){ const w=S.power.slice(t-29,t+1); const m=w.reduce((a,b)=>a+b,0)/30; npAcc+=Math.pow(m,4); npN++; }
-  const cue=coach.update(now,phase,cad,hr,pw,t,R.sec);
+  const cue=coach.update(now,phase,cad,hr,pw,t,R.sec,S.speed[t]);
   // prototype observers share the engine's spacing rule: nothing within 10 s of the last cue, and they count as the last cue
   const extra=(now-coach.lastEmit>=10000)?protos.update(now,R,t,S,phase,coach.cfg.mode):[];
   if(extra.length){ coach.lastEmit=now; coach.lastType=extra[0].type; coach.repeat=0; }
@@ -338,7 +375,8 @@ function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,M
   q("#sDist").textContent=distKm.toFixed(1)+" km"; const s3=i>=2?Math.round((S.power[i]+S.power[i-1]+S.power[i-2])/3):pw; q("#s3s").textContent=s3+" W";
   const np=npN?Math.pow(npAcc/npN,0.25):null; const avgP=S.power.slice(0,i+1).reduce((x,y)=>x+y,0)/(i+1); q("#sVi").textContent=(np&&avgP>0)?(np/avgP).toFixed(2):"—";
   setCoachBox(latest);
-  if(latest){ el("cueBig").textContent=latest.head; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="v0.7 rule"?"now":"proto"}">${latest.src.toUpperCase()}</i> at ${fmt(latest.t)} — ${wordCue(latest)}`; }
+  if(latest){ el("cueBig").innerHTML=`<span class="cicon">${latest.icon||"○"}</span>${latest.head}`; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="v0.7 rule"?"now":"proto"}">${(latest.src||"v0.9").toUpperCase()}</i> at ${fmt(latest.t)} — ${wordCue(latest)}${latest.live?`<div class="clive">${latest.live}${latest.sources?` · from <b>${latest.sources}</b>`:""}</div>`:""}`; }
+  const A=coach&&coach.assessment; const ca=el("cueAssess"); if(ca){ if(A){ ca.innerHTML=`<i class="dot ${i-Math.round(A.at/1000)<=65?"on":""}"></i>analysed ${Math.max(0,i-Math.round(A.at/1000))}s ago · ${A.progress} · ${A.summary}`; } else ca.textContent="First 60-second assessment comes after one minute of riding."; }
 }
 function wordCue(e){ const tone=CFG.tone||"neutral", det=CFG.detail||"detailed"; let d=e.detail; if(det==="simple") d=d.split(".")[0]+".";
   if(tone==="encouraging"){ const pre={EASE_OFF:"No problem — ",PUSH_HARDER:"You have more in you — ",KEEP_IT_UP:"Nice work — ",PEDAL_FASTER:"Small tweak — ",WARMUP:"Welcome back — ",COOLDOWN:"Well done — "}[e.type]||""; d=pre+d; }
