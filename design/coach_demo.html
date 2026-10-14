@@ -191,7 +191,7 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
 <div class="wrap">
   <p class="ey">Bike Computer · Scientific Coach · riders, club and leaderboard</p>
   <h1>One device, every rider their own coach</h1>
-  <p class="sub">The Bike Computer app flow as it would run on your Nokia: sign in or create an account → onboarding → personal home → live coaching → post-ride questions → your updated plan and club position. Switch rider before a ride and the zones, coach, sensors and history switch with you. Four fictional riders (Omar, Layla, Sami, Noor) and their SAMPLE rides are seeded so you can compare profiles, recommendations and rankings. Everything is stored in this browser only. Heart rate in the replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
+  <p class="sub"><b>v0.10 review build — new live dashboard.</b> Four compact sections: ride info · metric cards with target indicators · one combined power / heart-rate / cadence graph (last 5 min) · a short coach line. Press DETAILS on the phone for the larger interactive graph. The Bike Computer app flow as it would run on your Nokia: sign in or create an account → onboarding → personal home → live coaching → post-ride questions → your updated plan and club position. Switch rider before a ride and the zones, coach, sensors and history switch with you. Four fictional riders (Omar, Layla, Sami, Noor) and their SAMPLE rides are seeded so you can compare profiles, recommendations and rankings. Everything is stored in this browser only. Heart rate in the replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
   <div class="legend">
     <span><i class="tag real">REAL</i> measured</span>
     <span><i class="tag sim">SIMULATED</i> generated, assumptions stated</span>
@@ -226,6 +226,11 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
           </div>
           <div class="clock">ride <b id="clock">00:00</b> / <span id="total">65:05</span></div>
           <input type="range" class="scrub" id="scrub" min="0" max="3905" value="0" step="1" aria-label="Scrub ride time">
+          <div class="seg" id="dropSeg" title="Review aid: simulate a sensor drop-out while the replay runs">
+            <button type="button" data-drop="pw" aria-pressed="false">⚡ drop power</button>
+            <button type="button" data-drop="hr" aria-pressed="false">♥ drop HR</button>
+            <button type="button" data-drop="cad" aria-pressed="false">↻ drop cadence</button>
+          </div>
           <button type="button" class="btn finish" id="finishBtn">■ FINISH RIDE</button>
         </div>
         <div class="phone" id="phone"></div>
@@ -248,6 +253,15 @@ td.good{color:var(--green)} td.warn{color:var(--amber)} td.na{color:var(--faint)
       <div class="card" id="ridersCard" hidden>
         <h3>Same ride, four coaches <i class="tag proto">PROTOTYPE</i></h3>
         <div id="ridersBox"></div>
+      </div>
+      <div class="card" id="scaleCard" hidden>
+        <h3>How the combined graph is scaled <i class="tag proto">v0.10</i></h3>
+        <div style="font-size:13px;color:var(--mut);line-height:1.45">
+          <p style="margin:0 0 6px">Watts, bpm and rpm are never put on one shared axis. Each line is scaled by its <b>own</b> function: <span style="color:var(--cyan)">power ÷ the current power target</span>, <span style="color:var(--green)">heart rate ÷ the current HR target</span>, <span style="color:var(--violet)">cadence ÷ your preferred cadence range</span> — using the target that applied <em>at that second</em>, so a warm-up ramp does not bend old points.</p>
+          <p style="margin:0 0 6px">The grey <b>TARGET</b> strip is the same height for all three: inside it = on target. One strip height equals the width of that signal's target (the legend prints the numbers, e.g. 34 W · 12 bpm · 15 rpm). One strip height above or below is still linear; beyond that the scale compresses toward the edge, so 999 W is still visibly above 300 W without flattening the normal range.</p>
+          <p style="margin:0 0 6px">Missing readings are gaps (never joined, never filled); a true 0 W while coasting is drawn as a value. Shaded areas mark ≥ 20 s outside the band for power and heart rate. Dashed verticals mark phase changes. Exact values live on the cards above the graph and in Details.</p>
+          <p style="margin:0">Buffer: a fixed 600-sample ring (10 min at 1 Hz). The live screen draws the last 5 min; when samples outnumber pixel columns, each column keeps its min and max so peaks survive. The ride recording is a separate, untouched 1 Hz series.</p>
+        </div>
       </div>
       <div class="card cue" id="cueCard" hidden>
         <h3>Latest instruction and why <i class="tag proto">v3 COACH</i></h3>
@@ -413,8 +427,10 @@ class Coach{
       return W("INCREASE_EFFORT","⇧","INCREASE YOUR EFFORT SLIGHTLY",cadLow?detail+" · cadence is low too, so press a little more rather than changing gear":detail,src||"HR"); }
     if(type==="PEDAL_FASTER") return head.startsWith("KEEP")?W("KEEP_CADENCE_STEADY","≈",head,detail,"cadence"):W("PEDAL_FASTER","↻+","PEDAL A LITTLE FASTER","Easier gear, same effort — "+detail,"cadence");
     if(type==="PEDAL_SLOWER") return W("PEDAL_SLOWER","↻−","SLOW YOUR PEDALLING","Harder gear, same effort — "+detail,"cadence");
-    if(type==="KEEP_IT_UP") return (pw!=null&&L.pb==="ON")?W("HOLD_PACE","═","HOLD THIS PACE","Power and heart rate on target","HR + power"):W("STABLE_MAINTAIN","✓","YOUR EFFORT IS STABLE. MAINTAIN THIS RHYTHM",detail,L.hr!=null?"HR":"power");
+    if(type==="KEEP_IT_UP"){ if(this.easeAt!=null&&this.easeAt!==this.recAt) return W("RECOVERED","✓","GOOD — BACK ON TARGET",`${L.hr!=null?"Heart rate":"Power"} settled back into the band after easing off — hold this`,L.hr!=null?"HR":"power");
+      return (pw!=null&&L.pb==="ON")?W("HOLD_PACE","═","HOLD THIS PACE","Power and heart rate on target","HR + power"):W("STABLE_MAINTAIN","✓","YOUR EFFORT IS STABLE. MAINTAIN THIS RHYTHM",detail,L.hr!=null?"HR":"power"); }
     if(type==="COOLDOWN") return W("START_COOLDOWN","❄","START YOUR COOLDOWN",detail,"phase");
+    if(type==="SURGE") return W("SMOOTH_SURGES","∿",head,detail,"power"); if(type==="STEADY") return W("STEADY_EFFORT","≈",head,detail,"power + HR"); 
     if(type==="WARMUP") return W("WARM_UP","☼",head,detail,"phase");
     if(type==="QUIET") return W("QUIET","…",head,detail,"");
     return W("NONE","○",head,detail,src); }
@@ -432,7 +448,7 @@ class Coach{
     // v0.8 proposal: after 3 unheeded repeats of the same cue, go quiet (gauges keep showing the state) until the cue changes or 5 min pass
     if(this.cfg.backoff && type===this.lastType && type!=="KEEP_IT_UP"){ this.repeat=(this.repeat||0)+1; if(this.repeat>=3){ if(this.repeat===3){ this.lastEmit=now; this.quietSince=now; return {type:"QUIET",head:"COACH QUIET",detail:`${head} has been said 3 times without a change. Going quiet; the gauges keep showing the state. I will speak again when something changes or after 5 minutes.`,reason:"BACKOFF",src:"v0.9",action:"QUIET",icon:"…",sources:"",live:this.live()}; } if(now-this.quietSince<300000) return null; this.repeat=0; } }
     else this.repeat=0;
-    this.lastType=type; this.lastEmit=now; this.byType[type]=now; return {type,head,detail,reason,src:src||"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
+    this.lastType=type; this.lastEmit=now; this.byType[type]=now; if(type==="EASE_OFF"||type==="SURGE") this.easeAt=now; if(w.action==="RECOVERED") this.recAt=this.easeAt; return {type,head,detail,reason,src:src||"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
   announce(now,phase,type,head0,detail0,reason){ const w=this.action(type,head0,detail0,reason); if(this.announced===phase) return null; this.announced=phase; this.allGood=null; this.keepArmed=true; this.lastType=type; this.lastEmit=now; return {type,head:w.head,detail:w.detail,reason,src:"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
   info(now,type,head,detail,reason){ if(type===this.lastType && now-this.lastEmit<this.cfg.infoRepeat) return null; this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:"v0.7 rule"}; }
   update(now,phase,cadIn,hrIn,pwIn,t,N,speed){
@@ -461,7 +477,9 @@ class Coach{
       if(hb==="ABOVE"){ if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm (zone ${hz}) has stayed above the target ${hLo}–${hHi} bpm for 8 s. HR is the authority on effort; power is ignored here.`,"HR_ABOVE"); else hold=true; }
       else if(hb==="ON"){ const ht=this.perMin("hr",now), pt=this.perMin("pw",now); const rising= ht!=null&&ht>=6&&(pt==null||Math.abs(pt)<15)&&hr>hHi-6;
         if(rising&&this.held("hr",now,20000)){ effort=this.emit(now,"EASE_OFF","YOUR HEART RATE IS RISING. EASE OFF",`Heart rate ${hr} climbing about ${Math.round(ht)} bpm/min at steady power — back off a touch before it leaves the band.`,"HR_RISING","v0.9"); }
-        const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging){ if(this.surgeSince==null) this.surgeSince=now; if(now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; }
+        if(!effort){ const un=this.unsteady(now,pLo,pHi); if(un) effort=un; }
+        if(!effort){ const spiking=c.usePower&&pwIn!=null&&pwIn>Math.max(pHi*1.5,pHi+50);   // RAW power, not the 5-s mean
+        const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging||spiking){ if(this.surgeSince==null) this.surgeSince=now; if(spiking&&now-this.surgeSince>=3000) effort=this.emit(now,"SURGE","SMOOTH OUT THE SURGES",`Power jumped to ${pwIn} W — more than 1.5× the top of the target (${Math.round(pHi)} W) for 3 s. Surges cost more than steady watts; keep the pressure even.`,"PW_SPIKE","v0.10"); else if(surging&&now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; } }
       else { this.surgeSince=null; if(pb==="ON"||pb==="ABOVE") hold=true;  /* HR lag: never push */
              else if(grace) hold=true;                                        /* v0.8 proposal: transition grace after warm-up */
              else if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"PUSH_HARDER","PUSH A LITTLE HARDER",`Heart rate ${hr} bpm is below the target ${hLo}–${hHi} bpm and power is not already on target, for 8 s.`,"HR_BELOW"); else hold=true; }
@@ -483,6 +501,10 @@ class Coach{
     if(!(this.keepArmed || (c.keepRepeat>0 && now-this.lastEmit>=c.keepRepeat))) return null;
     const k=this.emit(now,"KEEP_IT_UP","KEEP IT UP",`Heart rate ${hr} bpm inside the target ${hLo}–${hHi} and cadence in range for at least 5 s. Repeated at most every 90 s.`,"ALL_GOOD"); if(k) this.keepArmed=false; return k;
   }
+  /* unsteady pace: a minute of 5-s power swinging ±20 % (several direction reversals — a single step change has none) around a mean inside the band */
+  unsteady(now,pLo,pHi){ if(!this.cfg.usePower) return null; const a=this.tr.pw.map(x=>x[1]); if(a.length<55) return null; const m=a.reduce((x,y)=>x+y,0)/a.length; if(m<=0||m<pLo||m>pHi) return null; const cv=Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length)/m; if(cv<=0.20) return null;
+    let rev=0,last=0; for(let i=1;i<a.length;i++){ const d=a[i]-a[i-1]; const sg=d>=3?1:d<=-3?-1:0; if(sg){ if(last&&sg!==last) rev++; last=sg; } } if(rev<4) return null;
+    return this.emit(now,"STEADY","HOLD A STEADIER EFFORT",`Average power is on target but it swung ±${Math.round(cv*100)}% over the last minute. Pick one gear and keep the pressure even.`,"PW_UNSTEADY","v0.10"); }
   cadence(now,cad,phase){ const c=this.cfg; if(!c.cadenceEnabled||cad==null||cad<=0||phase==="COOLDOWN"){ this.cadState=null; return undefined; }
     const st=this.cadState; let n;
     if(st==="BELOW") n= cad>=c.cadLow+c.cadHys?"ON":"BELOW"; else if(st==="ABOVE") n= cad<=c.cadHigh-c.cadHys?"ON":"ABOVE";
@@ -526,137 +548,29 @@ function targetsFor(phase,coached,t,N){
 }
 function phaseAt(t,N,coached){ if(!coached) return "MAIN"; if(t<CFG.warmupSec) return "WARMUP"; if(t>=N-CFG.cooldownSec) return "COOLDOWN"; return "MAIN"; }
 
-/* ============================================================ Design 7 dashboard (SVG) */
-const NS="http://www.w3.org/2000/svg";
-const C={grey:"#7e8c93",faint:"#5a6b74",line:"#1d2a33",cyan:"#34e7e4",green:"#56e08c",lime:"#a6e22e",amber:"#ffb64d",orange:"#ff8a3d",red:"#ff5a5a",violet:"#9b8cff",fg:"#eef4f7",mut:"#8396a0",track:"#16242b",ink:"#05121a"};
-const PZC=[C.grey,C.cyan,C.green,C.lime,C.amber,C.orange,C.red], HZC=[C.faint,C.cyan,C.green,C.amber,C.red];
-function pol(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
-function arcPath(cx,cy,r,a0,a1){ if(a1-a0<0.01) return ""; const [x0,y0]=pol(cx,cy,r,a0),[x1,y1]=pol(cx,cy,r,a1); const large=((a1-a0)%360+360)%360>180?1:0; return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; }
-const W=300,H=958, S0=135, SW=270;
-let PMAX=Math.max(300,CFG.ftp*1.5); const HMAX=190, CMAX=130;
-
-function gaugeStatic(cx,cy,r,sw,ticks,showTgt,rangeArc){
-  let g=`<path d="${arcPath(cx,cy,r,S0,S0+SW)}" fill="none" stroke="${C.track}" stroke-width="${sw}"/>`;
-  g+=`<path class="prog" fill="none" stroke-width="${sw}" stroke-linecap="round"/>`;
-  if(rangeArc) g+=`<path d="${arcPath(cx,cy,r,S0+SW*rangeArc[0],S0+SW*rangeArc[1])}" fill="none" stroke="${C.green}" stroke-width="3" opacity=".9"/>`;
-  ticks.forEach(zf=>{ if(zf<=0||zf>=1)return; const a=S0+SW*zf; const[x1,y1]=pol(cx,cy,r-sw/2,a),[x2,y2]=pol(cx,cy,r+sw/2,a); g+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#05080b" stroke-width="2"/>`; });
-  // TARGET band: a bright arc just outside the ring spanning the active target range (lo..hi), with end ticks.
-  g+=`<path class="tgtBand" fill="none" stroke="${C.fg}" stroke-width="3.5" stroke-linecap="butt"/>`;
-  g+=`<line class="tgtLo" stroke="${C.fg}" stroke-width="2"/><line class="tgtHi" stroke="${C.fg}" stroke-width="2"/>`;
-  if(showTgt) g+=`<text class="tgtLbl" fill="${C.fg}" font-size="8" font-weight="700" text-anchor="middle" font-family="IBM Plex Mono">TGT</text>`;
-  // LIVE marker: a dark disc with a white rim riding on the ring at the current value.
-  g+=`<circle class="live" r="${(sw/2+2.5).toFixed(1)}" fill="#05080b" stroke="${C.fg}" stroke-width="2.5"/>`;
-  return g;
-}
-// same value→angle mapping for live marker, progress arc and target band
-function angleOf(frac){ return S0+SW*Math.max(0,Math.min(1,frac)); }
-function setLive(g,cx,cy,r,frac){ const [x,y]=pol(cx,cy,r,angleOf(frac)); const c=g.querySelector(".live"); c.setAttribute("cx",x.toFixed(1)); c.setAttribute("cy",y.toFixed(1)); }
-function setTarget(g,cx,cy,r,sw,lo,hi,col){ const ro=r+sw/2+5; const a0=angleOf(lo),a1=angleOf(hi); const band=g.querySelector(".tgtBand"); band.setAttribute("d",arcPath(cx,cy,ro,a0,a1)); band.setAttribute("stroke",col);
-  [["tgtLo",a0],["tgtHi",a1]].forEach(([cls,a])=>{ const l=g.querySelector("."+cls); const [x1,y1]=pol(cx,cy,r-sw/2-2,a),[x2,y2]=pol(cx,cy,ro+3,a); l.setAttribute("x1",x1.toFixed(1));l.setAttribute("y1",y1.toFixed(1));l.setAttribute("x2",x2.toFixed(1));l.setAttribute("y2",y2.toFixed(1)); l.setAttribute("stroke",col); });
-  const lbl=g.querySelector(".tgtLbl"); if(lbl){ const am=(a0+a1)/2; const bottom=((am%360)+360)%360; const inside=bottom>150&&bottom<210;   // band at the bottom of the dial → label inside the ring, clear of the status pill
-    const [lx,ly]=pol(cx,cy,inside?(r-sw/2-11):(ro+11),am); lbl.setAttribute("x",lx.toFixed(1)); lbl.setAttribute("y",(ly+3).toFixed(1)); lbl.setAttribute("fill",col); } }
-function band(x,y,w,segs,colors){ let g=`<rect x="${x}" y="${y}" width="${w}" height="18" rx="3" fill="#0a1015"/>`;const sw=w/segs.length;
-  segs.forEach((lab,i)=>{g+=`<rect x="${x+i*sw}" y="${y}" width="${sw-2}" height="18" fill="${colors[i]}" opacity="${0.25+0.1*i}"/>`;[0,.5,1].forEach(t=>g+=`<line x1="${x+i*sw+sw*t}" y1="${y+18}" x2="${x+i*sw+sw*t}" y2="${y+22}" stroke="${C.faint}" stroke-width="1"/>`);g+=`<text x="${x+i*sw+sw/2}" y="${y+13}" text-anchor="middle" font-size="9" fill="${C.fg}" font-family="IBM Plex Mono">${lab}</text>`;}); return g; }
-
-function buildPhone(){
-  const hrT=((CFG.hrTarget[0]+CFG.hrTarget[1])/2)/HMAX, pwT=(PB[0]+PB[1])/2*CFG.ftp/PMAX;
-  const pTicks=PB.map(b=>b*CFG.ftp/PMAX), hTicks=CFG.hrZoneEdges.map(e=>e/HMAX);
-  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="IBM Plex Mono, monospace" role="img" aria-label="Design 7 dashboard replaying the ride">
-  <rect width="${W}" height="${H}" fill="#060a0d"/>
-  ${Array.from({length:15},(_,i)=>`<line x1="0" y1="${64+i*60}" x2="${W}" y2="${64+i*60}" stroke="#0e161b" stroke-width="1"/>`).join("")}
-  <g font-size="9"><circle id="liveDot" cx="14" cy="20" r="3.2" fill="${C.green}"/><text id="liveTxt" x="22" y="23" fill="${C.mut}">LIVE · REPLAY</text></g>
-  <text id="hdrTime" x="${W-14}" y="24" text-anchor="end" fill="${C.mut}" font-size="11">T 00:00</text>
-  <text x="14" y="46" fill="${C.cyan}" font-size="12" letter-spacing="1.5">SCIENTIFIC COACH</text>
-  <text id="phaseTxt" x="${W-14}" y="46" text-anchor="end" fill="${C.violet}" font-size="9" font-weight="700">FREE RIDE</text>
-  <line x1="14" y1="56" x2="${W-14}" y2="56" stroke="${C.line}"/>
-  <rect id="coachBar" x="14" y="58" width="272" height="3" rx="1.5" fill="${C.line}"/>
-  <!-- power gauge (SIMULATED) -->
-  <text id="tgtLine" x="14" y="70" fill="${C.cyan}" font-size="8">TARGET · —</text>
-  <g id="gP">${gaugeStatic(150,150,68,15,pTicks,true,null)}</g>
-  <text id="pSub" x="150" y="120" text-anchor="middle" fill="${C.mut}" font-size="12"> </text>
-  <text id="pVal" x="150" y="162" text-anchor="middle" fill="${C.fg}" font-size="54" font-weight="500" font-family="Rajdhani">—</text>
-  <text x="150" y="184" text-anchor="middle" fill="${C.mut}" font-size="12" letter-spacing="1">WATTS · SIM</text>
-  <g id="pPill"><rect x="96" y="233" width="108" height="21" rx="10.5" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="150" y="248" text-anchor="middle" fill="${C.faint}" font-size="12" font-weight="700">○ WAITING</text></g>
-  <!-- cadence (SIMULATED) -->
-  <g id="gC">${gaugeStatic(78,340,52,11,[],false,null)}</g>
-  <text x="78" y="322" text-anchor="middle" fill="${C.violet}" font-size="9">${CFG.cadRange[0]}–${CFG.cadRange[1]}</text>
-  <text id="cVal" x="78" y="347" text-anchor="middle" fill="${C.fg}" font-size="26" font-weight="500" font-family="Rajdhani">—</text>
-  <text x="78" y="365" text-anchor="middle" fill="${C.mut}" font-size="9" letter-spacing="1">RPM · SIM</text>
-  <g id="cPill"><rect x="38" y="400" width="80" height="18" rx="9" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="78" y="413" text-anchor="middle" fill="${C.faint}" font-size="9" font-weight="700">○ WAITING</text></g>
-  <!-- heart rate (REAL) -->
-  <g id="gH">${gaugeStatic(222,340,52,11,hTicks,false,null)}</g>
-  <text id="hSub" x="222" y="322" text-anchor="middle" fill="${C.mut}" font-size="9"> </text>
-  <text id="hVal" x="222" y="347" text-anchor="middle" fill="${C.fg}" font-size="26" font-weight="500" font-family="Rajdhani">—</text>
-  <text x="222" y="365" text-anchor="middle" fill="${C.mut}" font-size="9" letter-spacing="1">BPM · REAL</text>
-  <g id="hPill"><rect x="182" y="400" width="80" height="18" rx="9" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="222" y="413" text-anchor="middle" fill="${C.faint}" font-size="9" font-weight="700">○ WAITING</text></g>
-  <!-- coaching box -->
-  <rect id="cbBox" x="14" y="440" width="272" height="118" rx="16" fill="#0a1015" stroke="${C.line}"/>
-  <circle cx="36" cy="489" r="18" fill="${C.ink}"/><g id="cbShape"></g>
-  <text id="cbCue" x="172" y="484" text-anchor="middle" fill="${C.fg}" font-size="22" font-weight="800" font-family="Archivo">COACH OFF</text>
-  <text id="cbL1" x="172" y="506" text-anchor="middle" fill="${C.mut}" font-size="11" font-family="Inter">Ride 1 is the uncoached baseline</text>
-  <text id="cbL2" x="172" y="522" text-anchor="middle" fill="${C.mut}" font-size="11" font-family="Inter">the coach only observes</text>
-  <g id="cbScale"></g>
-  <!-- power zones -->
-  <line x1="14" y1="574" x2="${W-14}" y2="574" stroke="${C.line}"/>
-  <text x="14" y="594" fill="${C.mut}" font-size="10">POWER ZONES · SIM · FTP ${CFG.ftp} W${CFG.ftpKnown?"":" (not measured)"}</text>
-  ${band(14,602,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],PZC)}
-  <rect id="pTgtBar" x="${14+pwT*272-1}" y="599" width="2" height="24" fill="${C.cyan}"/><path id="pMark" d="" fill="${C.fg}"/>
-  <text x="14" y="650" fill="${C.mut}" font-size="10">HR ZONES · REAL · Z2 = ${CFG.hrTarget[0]}–${CFG.hrTarget[1]} bpm</text>
-  ${band(14,658,272,["Z1","Z2","Z3","Z4","Z5"],HZC)}
-  <rect id="hTgtBar" x="${14+hrT*272-1}" y="655" width="2" height="24" fill="${C.cyan}"/><path id="hMark" d="" fill="${C.fg}"/>
-  <text x="14" y="708" fill="${C.mut}" font-size="10">POWER TREND · SIM · last 5 min   ·   HR · REAL</text>
-  <rect x="14" y="716" width="272" height="130" fill="#080e12" stroke="${C.line}"/>
-  <line x1="14" y1="776" x2="286" y2="776" stroke="#13202a" stroke-dasharray="3 3"/><text x="20" y="773" fill="${C.faint}" font-size="8">FTP</text>
-  <polyline id="trendP" points="" fill="none" stroke="${C.cyan}" stroke-width="2" stroke-linejoin="round"/>
-  <polyline id="trendH" points="" fill="none" stroke="${C.red}" stroke-width="1.5" stroke-linejoin="round" opacity=".85"/>
-  <g font-family="Rajdhani">
-    <text id="sDist" x="14" y="884" fill="${C.fg}" font-size="24">0.0 km</text><text x="14" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">DISTANCE · REAL AVG</text>
-    <text id="s3s" x="130" y="884" fill="${C.fg}" font-size="24">— W</text><text x="130" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG · SIM</text>
-    <text id="sVi" x="218" y="884" fill="${C.fg}" font-size="24">—</text><text x="218" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
-  </g>
-  <text x="14" y="936" font-size="8" fill="${C.faint}">LIVE = dot · TGT = band · watts &amp; rpm simulated</text>
-  </svg>`;
-}
-
 /* ============================================================ player */
 const el=id=>document.getElementById(id);
-let ride="r3", speedX=10, t=0, playing=false, raf=null, lastTs=0, acc=0;
+let ride="r3", speedX=10, t=0, playing=false, raf=null, lastTs=0, acc=0; let DROP={pw:false,hr:false,cad:false};
 let coach, protos, logEntries=[], latest=null, npAcc=0, npN=0, distKm=0, zoneSec=[0,0,0,0,0], cueCounts={};
 const phoneEl=el("phone");
 const q=sel=>phoneEl.querySelector(sel);
 
 function fmt(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), r=s%60; return (m<10?"0":"")+m+":"+(r<10?"0":"")+r; }
-function pillSet(gid,status,text,big){ const g=q("#"+gid), r=g.querySelector("rect"), tx=g.querySelector("text"); const col={BELOW:C.cyan,ON:C.green,ABOVE:C.amber,UNKNOWN:C.faint}[status]; const gl={BELOW:"▲",ON:"●",ABOVE:"▼",UNKNOWN:"○"}[status];
-  const label=gl+" "+text; const fs=big?12:9; const w=label.length*fs*0.64+16; const cx=+tx.getAttribute("x"); r.setAttribute("x",(cx-w/2).toFixed(1)); r.setAttribute("width",w.toFixed(1)); r.setAttribute("fill",col); r.setAttribute("stroke",col); tx.setAttribute("fill",col); tx.textContent=label; }
-function tstat(v,lo,hi){ if(v==null||v<=0) return "UNKNOWN"; return v<lo?"BELOW":v>hi?"ABOVE":"ON"; }
-function shapeSvg(dir){ const cx=36,cy=489,u=10; if(dir>0) return `<polygon points="${cx},${cy-u} ${cx+u},${cy+u*0.7} ${cx-u},${cy+u*0.7}" fill="currentColor"/>`; if(dir<0) return `<polygon points="${cx},${cy+u} ${cx+u},${cy-u*0.7} ${cx-u},${cy-u*0.7}" fill="currentColor"/>`; if(dir===0) return `<path d="M${cx-9} ${cy+1} l6 6 l12 -13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`; return `<circle cx="${cx}" cy="${cy}" r="8" fill="none" stroke="currentColor" stroke-width="2"/>`; }
-function scaleSvg(dir,active,col){ const steps=[["▼ EASE",-1],["✓ ON TARGET",0],["▲ FASTER",1]], x=26,y=534,w=248,gap=4,pw=(w-gap*2)/3; let g="";
-  steps.forEach((s,i)=>{ const px=x+i*(pw+gap), on=active&&dir===s[1]; g+=`<rect x="${px.toFixed(1)}" y="${y}" width="${pw.toFixed(1)}" height="15" rx="7.5" fill="${active?C.ink:C.line}" fill-opacity="${on?1:.25}" stroke="${active?C.ink:C.line}" stroke-opacity="${on?1:.6}"/>`; g+=`<text x="${(px+pw/2).toFixed(1)}" y="${y+10.5}" text-anchor="middle" fill="${on?col:(active?C.ink:C.mut)}" fill-opacity="${on?1:.8}" font-size="7.5" font-weight="700" font-family="IBM Plex Mono">${s[0]}</text>`; }); return g; }
-function wrap2(s,max){ const w=s.split(" "),l=[]; let c=""; w.forEach(x=>{ if((c+" "+x).trim().length>max){ if(c)l.push(c); c=x; } else c=(c+" "+x).trim(); }); if(c)l.push(c); if(l.length>2){ l[1]=l.slice(1).join(" "); l.length=2; if(l[1].length>max) l[1]=l[1].slice(0,max-1)+"…"; } return l; }
 
-const CUE_STYLE={QUIET:[C.faint,null],KEEP_IT_UP:[C.green,0],PEDAL_FASTER:[C.cyan,1],PUSH_HARDER:[C.cyan,1],EASE_OFF:[C.amber,-1],PEDAL_SLOWER:[C.amber,-1],WARMUP:[C.violet,null],COOLDOWN:[C.violet,null],RECOVER:[C.violet,null],PEDAL_SMOOTHER:[C.violet,null],GREAT_PACING:[C.green,0],NOTE:[C.violet,null],NO_HR:[C.faint,null]};
-function setCoachBox(e){
-  const coached=ride!=="r1";
-  if(!e){ q("#cbBox").setAttribute("fill","#0a1015"); q("#cbBox").setAttribute("stroke",C.line); q("#cbCue").textContent=coached?"COACH READY":"COACH OFF"; q("#cbCue").setAttribute("fill",C.fg);
-    const l=coached?["Zone 2 mode · target 138–149 bpm","watching heart rate, power and cadence"]:["Ride 1 is the uncoached baseline","the coach only observes and takes notes"]; q("#cbL1").textContent=l[0]; q("#cbL2").textContent=l[1]; q("#cbL1").setAttribute("fill",C.mut); q("#cbL2").setAttribute("fill",C.mut);
-    q("#cbShape").innerHTML=`<g style="color:${C.faint}">${shapeSvg(null)}</g>`; q("#cbScale").innerHTML=scaleSvg(null,false,C.faint); q("#coachBar").setAttribute("fill",C.line); return; }
-  const [col,dir]=CUE_STYLE[e.type]||[C.faint,null]; const active=e.type!=="NOTE"&&e.type!=="NO_HR";
-  q("#cbBox").setAttribute("fill",active?col:"#0a1015"); q("#cbBox").setAttribute("stroke",active?col:C.line);
-  const ink=active?C.ink:C.fg; q("#cbCue").textContent=e.head; q("#cbCue").setAttribute("fill",ink); q("#cbCue").setAttribute("font-size",e.head.length>=34?11:e.head.length>=26?13:e.head.length>=20?15:e.head.length>=14?19:e.head.length>=12?21:e.head.length>=10?24:26);
-  const l=wrap2(e.detail.split(".")[0],30); q("#cbL1").textContent=l[0]||""; q("#cbL2").textContent=l[1]||""; q("#cbL1").setAttribute("fill",active?C.ink:C.mut); q("#cbL2").setAttribute("fill",active?C.ink:C.mut);
-  q("#cbShape").innerHTML=`<g style="color:${active?col:C.faint}">${shapeSvg(dir)}</g>`; q("#cbScale").innerHTML=scaleSvg(dir,active,col); q("#coachBar").setAttribute("fill",active?col:C.line);
-}
 
 function resetRide(){ cancelAnimationFrame(raf); playing=false; el("playBtn").textContent="▶ PLAY"; el("playBtn").className="btn play"; t=0; acc=0; lastTs=0;
-  const R=REAL[ride]; PMAX=Math.max(300,CFG.ftp*1.5); phoneEl.innerHTML=buildPhone(); const pr=phoneEl.querySelectorAll(".prog"); pr[0].id="progP"; pr[1].id="progC"; pr[2].id="progH";
+  const R=REAL[ride]; BUF.clear(); DROP={pw:false,hr:false,cad:false}; document.querySelectorAll("#dropSeg button").forEach(b=>b.setAttribute("aria-pressed","false"));
   coach=new Coach({mode: ride==="r1"?"FREE":"ZONE2", usePower:CFG.powerCoaching, backoff:CFG.backoff, grace:CFG.grace, cadenceEnabled:CFG.cadenceEnabled, cadLow:CFG.cadRange[0], cadHigh:CFG.cadRange[1], sameRepeat:CFG.sameRepeat, keepRepeat:CFG.keepRepeat}); protos=new Prototypes(); logEntries=[]; latest=null; npAcc=0; npN=0; distKm=0; zoneSec=[0,0,0,0,0]; cueCounts={};
   el("scrub").max=R.sec; el("scrub").value=0; el("total").textContent=fmt(R.sec); el("clock").textContent="00:00";
-  renderFrame(); renderLog(); renderMemo(); renderKv(); setCoachBox(null); el("cueBig").textContent="PRESS PLAY"; el("cueWhy").textContent="The coach speaks only when a rule fires. Each line below says which rule and what it saw."; }
+  showView("live"); renderLog(); renderMemo(); renderKv(); setCoachBox(null); el("cueBig").textContent="PRESS PLAY"; el("cueWhy").textContent="The coach speaks only when a rule fires. Each line below says which rule and what it saw."; }
 
 function step(){ const R=REAL[ride], S=SERIES[ride]; if(t>=R.sec) return false;
   const now=t*1000, coached=ride!=="r1", phase=phaseAt(t,R.sec,coached);
-  const hr=S.hr[t], pw=S.power[t], cad=S.cad[t];
+  // sensor drop-out toggles (review aid): a missing reading is null — a gap in the graph, "NO DATA" on the card, never a substitute value
+  const hr=DROP.hr?null:S.hr[t], pw=DROP.pw?null:S.power[t], cad=DROP.cad?null:S.cad[t];
   const z=hrZone(hr); if(z>0) zoneSec[z-1]++;
+  { const TG=targetsFor(phase,coached,t,R.sec); const p3=pw==null?null:(()=>{ const a=BUF.a.slice(-2).map(x=>x.pw).filter(x=>x!=null); a.push(pw); return Math.round(a.reduce((x,y)=>x+y,0)/a.length); })();
+    BUF.add({t,pw,pw3:p3,hr,cad,phase,tg:{pw:TG.pw,hr:TG.hr,cad:TG.cad},n:{pw:normOf(p3,TG.pw[0],TG.pw[1]),hr:normOf(hr,TG.hr[0],TG.hr[1]),cad:normOf(cad,TG.cad[0],TG.cad[1])}}); }
   distKm+=S.speed[t]/3600;
   // NP accumulator (30 s rolling mean^4) — SIMULATED
   if(t>=30){ const w=S.power.slice(t-29,t+1); const m=w.reduce((a,b)=>a+b,0)/30; npAcc+=Math.pow(m,4); npN++; }
@@ -667,44 +581,6 @@ function step(){ const R=REAL[ride], S=SERIES[ride]; if(t>=R.sec) return false;
   [cue,...extra].forEach(e=>{ if(!e) return; e.t=t; logEntries.push(e); latest=e; cueCounts[e.type]=(cueCounts[e.type]||0)+1; });
   t++; return true; }
 
-function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,Math.min(t,R.sec-1)); const hr=S.hr[i], pw=S.power[i], cad=S.cad[i];
-  const coached=ride!=="r1", phase=phaseAt(i,R.sec,coached);
-  q("#hdrTime").textContent="T "+fmt(i); el("clock").textContent=fmt(i); el("scrub").value=i;
-  q("#phaseTxt").textContent= !coached?"FREE RIDE · OBSERVING": phase==="WARMUP"?`WARM-UP ${fmt(CFG.warmupSec-i)}`: phase==="COOLDOWN"?"COOL-DOWN":"MAIN · ZONE 2 MODE";
-  q("#phaseTxt").setAttribute("fill", phase==="MAIN"&&coached?C.green:C.violet);
-  const TG=targetsFor(phase,coached,i,R.sec);
-  q("#tgtLine").textContent=`TGT ${TG.label.replace("MAIN Z2","Z2").replace(" RAMP","")} · ${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} BPM · ${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W · ${TG.cad[0]}–${TG.cad[1]} RPM`;
-  const gP=q("#gP"), gC=q("#gC"), gH=q("#gH");
-  // power gauge — LIVE: progress arc + marker at the current watts; TGT: band over the active power target
-  const pz=powZone(pw), pcol=pz?PZC[pz-1]:C.grey; const pf=Math.min(1,pw/PMAX);
-  q("#progP").setAttribute("d",arcPath(150,150,68,S0,angleOf(pf))); q("#progP").setAttribute("stroke",pcol); setLive(gP,150,150,68,pf);
-  setTarget(gP,150,150,68,15,TG.pw[0]/PMAX,TG.pw[1]/PMAX,C.cyan);
-  q("#pVal").textContent=pw>0?pw:"0"; q("#pSub").textContent=pz?`Z${pz} · ${pz===7?"":Math.round(((pw/CFG.ftp)-(pz===1?0:PB[pz-2]))/((PB[pz-1]-(pz===1?0:PB[pz-2]))||1)*100)+"%"}`:"coasting"; q("#pSub").setAttribute("fill",pz?pcol:C.mut);
-  const ps= pw<=0?"UNKNOWN":tstat(pw,TG.pw[0],TG.pw[1]); pillSet("pPill",ps,ps==="UNKNOWN"?"COASTING":ps==="ON"?"ON TARGET":ps==="BELOW"?"BELOW TGT":"ABOVE TGT",true);
-  // cadence — LIVE marker + constant target range band
-  const cf=Math.min(1,cad/CMAX); q("#progC").setAttribute("d",arcPath(78,340,52,S0,angleOf(cf))); q("#progC").setAttribute("stroke",C.violet); setLive(gC,78,340,52,cf); q("#cVal").textContent=cad>0?cad:"0";
-  setTarget(gC,78,340,52,11,TG.cad[0]/CMAX,TG.cad[1]/CMAX,C.green);
-  const cs=tstat(cad,TG.cad[0],TG.cad[1]); pillSet("cPill",cs,cs==="UNKNOWN"?"NOT TURNING":cs==="ON"?"ON TARGET":cs==="BELOW"?"BELOW RANGE":"ABOVE RANGE",false);
-  // heart rate — LIVE marker + target band that moves with the phase
-  const hz=hrZone(hr), hcol=hz?HZC[hz-1]:C.faint; const hf=Math.min(1,hr/HMAX); q("#progH").setAttribute("d",arcPath(222,340,52,S0,angleOf(hf))); q("#progH").setAttribute("stroke",hcol); setLive(gH,222,340,52,hf); q("#hVal").textContent=hr;
-  setTarget(gH,222,340,52,11,TG.hr[0]/HMAX,TG.hr[1]/HMAX,C.cyan);
-  const e=CFG.hrZoneEdges, lo=hz<=1?100:e[hz-2], hi=hz>=5?185:e[hz-1]; q("#hSub").textContent=`Z${hz} · ${Math.round(Math.max(0,Math.min(1,(hr-lo)/((hi-lo)||1)))*100)}%`; q("#hSub").setAttribute("fill",hcol);
-  const hs=tstat(hr,TG.hr[0],TG.hr[1]); pillSet("hPill",hs,hs==="ON"?"ON TARGET":hs==="BELOW"?"BELOW TGT":"ABOVE TGT",false);
-  // band markers
-  const mx=14+Math.min(1,pw/PMAX)*272; q("#pMark").setAttribute("d",`M${mx-5} 597 L${mx+5} 597 L${mx} 603 Z`);
-  const hx=14+Math.min(1,hr/HMAX)*272; q("#hMark").setAttribute("d",`M${hx-5} 653 L${hx+5} 653 L${hx} 659 Z`);
-  q("#pTgtBar").setAttribute("x",(14+((TG.pw[0]+TG.pw[1])/2)/PMAX*272-1).toFixed(1)); q("#hTgtBar").setAttribute("x",(14+((TG.hr[0]+TG.hr[1])/2)/HMAX*272-1).toFixed(1));
-  // trend (last 5 min)
-  const a=Math.max(0,i-299), n=i-a+1; const maxV=Math.max(CFG.ftp, ...S.power.slice(a,i+1))*1.05;
-  const ptsP=[],ptsH=[]; for(let k=a;k<=i;k++){ const x=22+(k-a)/299*256; ptsP.push(x.toFixed(1)+","+(838-S.power[k]/maxV*110).toFixed(1)); ptsH.push(x.toFixed(1)+","+(838-(S.hr[k]-90)/100*110).toFixed(1)); }
-  q("#trendP").setAttribute("points",n>1?ptsP.join(" "):""); q("#trendH").setAttribute("points",n>1?ptsH.join(" "):"");
-  // stats
-  q("#sDist").textContent=distKm.toFixed(1)+" km"; const s3=i>=2?Math.round((S.power[i]+S.power[i-1]+S.power[i-2])/3):pw; q("#s3s").textContent=s3+" W";
-  const np=npN?Math.pow(npAcc/npN,0.25):null; const avgP=S.power.slice(0,i+1).reduce((x,y)=>x+y,0)/(i+1); q("#sVi").textContent=(np&&avgP>0)?(np/avgP).toFixed(2):"—";
-  setCoachBox(latest);
-  if(latest){ el("cueBig").innerHTML=`<span class="cicon">${latest.icon||"○"}</span>${latest.head}`; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="v0.7 rule"?"now":"proto"}">${(latest.src||"v0.9").toUpperCase()}</i> at ${fmt(latest.t)} — ${wordCue(latest)}${latest.live?`<div class="clive">${latest.live}${latest.sources?` · from <b>${latest.sources}</b>`:""}</div>`:""}`; }
-  const A=coach&&coach.assessment; const ca=el("cueAssess"); if(ca){ if(A){ ca.innerHTML=`<i class="dot ${i-Math.round(A.at/1000)<=65?"on":""}"></i>analysed ${Math.max(0,i-Math.round(A.at/1000))}s ago · ${A.progress} · ${A.summary}`; } else ca.textContent="First 60-second assessment comes after one minute of riding."; }
-}
 function wordCue(e){ const tone=CFG.tone||"neutral", det=CFG.detail||"detailed"; let d=e.detail; if(det==="simple") d=d.split(".")[0]+".";
   if(tone==="encouraging"){ const pre={EASE_OFF:"No problem — ",PUSH_HARDER:"You have more in you — ",KEEP_IT_UP:"Nice work — ",PEDAL_FASTER:"Small tweak — ",WARMUP:"Welcome back — ",COOLDOWN:"Well done — "}[e.type]||""; d=pre+d; }
   if(tone==="technical") d=`[${e.reason}] `+d; return d; }
@@ -823,6 +699,251 @@ function renderFeat(){ const rows=[
  ]; el("feat").innerHTML=`<thead><tr><th>Feature</th><th>Status</th><th>Where it stands</th></tr></thead><tbody>`+rows.map(([f,s,w])=>`<tr><td>${f}</td><td style="text-align:left"><i class="tag ${s==="v0.7 rule"?"now":s==="demo only"?"sim":"proto"}">${s.toUpperCase()}</i></td><td style="text-align:left;color:var(--mut)">${w}</td></tr>`).join("")+`</tbody>`; }
 
 
+
+/* ============================================================ v0.10 live dashboard — four compact sections, one combined graph
+   Mirrors core/LiveGraph.kt in the app: the same ring buffer, the same per-signal scaling, the same gap / phase / breach rules.
+   Colours are fixed per signal everywhere on the screen: power CYAN, heart rate GREEN, cadence VIOLET. */
+const NS="http://www.w3.org/2000/svg";
+const C={grey:"#7e8c93",faint:"#5a6b74",line:"#1d2a33",cyan:"#34e7e4",green:"#56e08c",lime:"#a6e22e",amber:"#ffb64d",orange:"#ff8a3d",red:"#ff5a5a",violet:"#9b8cff",fg:"#eef4f7",mut:"#8396a0",track:"#16242b",ink:"#05121a",panel:"#0a1015",bg:"#060a0d"};
+const GC={pw:C.cyan,hr:C.green,cad:C.violet};
+const W=300,H=600;
+
+/* ---- scaling (identical to GraphScale in core/LiveGraph.kt) ----
+   Each signal is normalised against ITS OWN target band at the time of the sample: 0 = lower edge, 1 = upper edge.
+   The band is drawn once, in the middle of the plot, and is BAND_H of the plot height for every signal, so
+   "inside the band" means "on target" for watts, bpm and rpm alike. One band height = the width of that signal's target
+   (e.g. 34 W, 12 bpm, 15 rpm) — the legend states those numbers. Outside the band the scale stays linear for one more
+   band height in each direction, then compresses toward the edge so 999 W still sits above 300 W without flattening everything. */
+const SCALE={bandH:0.28, lin:1.5};
+function normOf(v,lo,hi){ if(v==null||lo==null||hi==null||hi<=lo) return null; return (v-lo)/(hi-lo); }
+function yFrac(n){ const h=SCALE.bandH, L=SCALE.lin, d=n-0.5; let y; if(Math.abs(d)<=L) y=0.5-d*h; else { const extra=Math.abs(d)-L, margin=0.5-L*h; y=0.5-Math.sign(d)*(L*h+margin*(extra/(extra+1.5))); } return Math.max(0.01,Math.min(0.99,y)); }
+const BAND_TOP=yFrac(1), BAND_BOT=yFrac(0);
+
+/* ---- fixed-size rolling buffer of 1 Hz samples with the targets that applied at that second ---- */
+class LiveBuffer{
+  constructor(cap){ this.cap=cap||600; this.a=[]; }
+  clear(){ this.a.length=0; }
+  add(s){ this.a.push(s); if(this.a.length>this.cap) this.a.shift(); }
+  window(sec){ return this.a.length>sec?this.a.slice(this.a.length-sec):this.a; }
+  last(){ return this.a[this.a.length-1]||null; }
+}
+const BUF=new LiveBuffer(600);
+/* Peak-preserving downsampling: when there are more samples than pixel columns, each bucket keeps its min and max (in time order),
+   so a one-second spike is never averaged away. Display only — the stored ride is untouched. */
+function decimate(idx,vals,buckets){ const n=vals.length; if(n<=buckets*2) return idx.map((i,k)=>[i,vals[k]]); const out=[]; const per=n/buckets;
+  for(let b=0;b<buckets;b++){ const s=Math.floor(b*per), e=Math.min(n,Math.floor((b+1)*per)); let mi=-1,ma=-1; for(let k=s;k<e;k++){ const v=vals[k]; if(v==null) continue; if(mi<0||v<vals[mi]) mi=k; if(ma<0||v>vals[ma]) ma=k; }
+    if(mi<0){ out.push([idx[s],null]); continue; } if(mi===ma) out.push([idx[mi],vals[mi]]); else if(mi<ma){ out.push([idx[mi],vals[mi]],[idx[ma],vals[ma]]); } else out.push([idx[ma],vals[ma]],[idx[mi],vals[mi]]); }
+  return out; }
+/* Runs of ≥ minSec consecutive seconds outside the band (HR and power only). */
+function breaches(samples,key,minSec){ const out=[]; let start=-1, side=0; const push=(end)=>{ if(start>=0&&end-start>=minSec) out.push([start,end,side]); start=-1; side=0; };
+  samples.forEach((s,i)=>{ const n=s.n[key]; const sd= n==null?0: n>1?1: n<0?-1:0; if(sd!==side||n==null){ push(i); if(sd){ start=i; side=sd; } } }); push(samples.length); return out; }
+
+/* ---- short, glanceable instruction for the live screen (the long reasoning stays in the log / Details) ---- */
+function shortCue(e){ if(!e) return null; const L=(coach&&coach.last)||{}; const TG=latestTG||{hr:[0,0],pw:[0,0],cad:[0,0]};
+  const hrv=L.hr!=null?`HR ${L.hr}`:"", cad=L.cad!=null?`${L.cad} rpm`:"";
+  const M={
+    EASIER_GEAR:["Shift to an easier gear",`${cad} low · power above target`],
+    HARDER_GEAR:["Shift to a harder gear",`${cad} high · power below target`],
+    REDUCE_PRESSURE:[e.reason&&e.reason.startsWith("PW")?"Ease off — power above target":"Ease off — HR above target", e.reason&&e.reason.startsWith("PW")?`${L.pw} W vs ${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W`:`${hrv} vs ${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} bpm`],
+    INCREASE_EFFORT:[e.reason&&e.reason.startsWith("PW")?"Push a little — power below target":"Push a little — HR below target",`${e.reason&&e.reason.startsWith("PW")?L.pw+" W":hrv} vs ${e.reason&&e.reason.startsWith("PW")?Math.round(TG.pw[0])+"–"+Math.round(TG.pw[1])+" W":Math.round(TG.hr[0])+"–"+Math.round(TG.hr[1])+" bpm"}`],
+    PEDAL_FASTER:["Pedal a little faster",`${cad} · below ${TG.cad[0]} rpm`],
+    PEDAL_SLOWER:["Slow your pedalling",`${cad} · above ${TG.cad[1]} rpm`],
+    KEEP_CADENCE_STEADY:["Keep your cadence steady","rhythm uneven over the last minute"],
+    HOLD_PACE:["Hold this pace","power and HR on target"],
+    STABLE_MAINTAIN:["Maintain this rhythm","effort stable · on target"],
+    HR_RISING_EASE:["HR rising — ease off","climbing at steady power"],
+    START_COOLDOWN:["Start your cooldown","ceiling comes down gradually"],
+    WIND_DOWN:["Wind down","HR above the cool-down ceiling"],
+    WARM_UP:["Warm up — easy spinning","no 'push' until the main block"],
+    QUIET:["Coach quiet","said 3× — speaks again on change"],
+    SMOOTH_SURGES:["Smooth out the surges","power spikes well above target"],
+    STEADY_EFFORT:["Hold a steadier effort","power swinging around the target"],
+    RECOVERED:["Good — back on target",`${L.hr!=null?"HR":"power"} settled after easing off`],
+  }[e.action];
+  if(M) return {head:M[0],why:M[1]};
+  if(e.type==="NO_HR") return {head:"No effort signal",why:"no heart rate, no loaded power"};
+  if(e.type==="NOTE"||e.type==="GREAT_PACING") return {head:e.head.charAt(0)+e.head.slice(1).toLowerCase(),why:(e.detail||"").split(".")[0].slice(0,46)};
+  return {head:e.head.charAt(0)+e.head.slice(1).toLowerCase(),why:(e.detail||"").split(".")[0].slice(0,46)}; }
+
+const CUE_STYLE={QUIET:[C.faint,null],KEEP_IT_UP:[C.green,0],PEDAL_FASTER:[C.cyan,1],PUSH_HARDER:[C.cyan,1],EASE_OFF:[C.amber,-1],PEDAL_SLOWER:[C.amber,-1],WARMUP:[C.violet,null],COOLDOWN:[C.violet,null],RECOVER:[C.violet,null],PEDAL_SMOOTHER:[C.violet,null],GREAT_PACING:[C.green,0],NOTE:[C.violet,null],NO_HR:[C.faint,null],SURGE:[C.amber,-1],STEADY:[C.violet,null]};
+function wrap2(s,max){ const w=s.split(" "),l=[]; let c=""; w.forEach(x=>{ if((c+" "+x).trim().length>max){ if(c)l.push(c); c=x; } else c=(c+" "+x).trim(); }); if(c)l.push(c); if(l.length>2){ l[1]=l.slice(1).join(" "); l.length=2; if(l[1].length>max) l[1]=l[1].slice(0,max-1)+"…"; } return l; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+/* ---- geometry of the one-screen layout (viewBox 300×600 ≈ the Nokia 5.3 content area between the Android bars) ---- */
+const G={ A:{y:16,h:44}, B:{y:66,h:64}, legendY:140, plot:{x:12,y:150,w:276,h:238}, axisY:400, D:{y:412,h:60}, btnY:482, linkY:548 };
+let view="live", detWin=300, detSel=null, latestTG=null;
+
+function metricCard(x,key,label,unit,tag){ const w=88,h=G.B.h,y=G.B.y; return `<g id="card_${key}">
+  <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${C.panel}" stroke="${C.line}"/>
+  <rect x="${x}" y="${y}" width="3" height="${h}" rx="1.5" fill="${GC[key]}"/>
+  <text x="${x+10}" y="${y+12}" fill="${GC[key]}" font-size="8" font-weight="700" letter-spacing="1">${label}</text>
+  <text id="${key}Tag" x="${x+w-6}" y="${y+59}" text-anchor="end" fill="${C.faint}" font-size="6.5">${tag||""}</text>
+  <text id="${key}Val" x="${x+10}" y="${y+38}" fill="${C.fg}" font-size="27" font-weight="600" font-family="Rajdhani">—</text>
+  <text x="${x+w-6}" y="${y+38}" text-anchor="end" fill="${C.mut}" font-size="8">${unit}</text>
+  <rect x="${x+10}" y="${y+45}" width="${w-20}" height="4" rx="2" fill="${C.track}"/>
+  <rect id="${key}Band" x="0" y="${y+45}" width="0" height="4" rx="2" fill="${GC[key]}" opacity=".55"/>
+  <rect id="${key}Mark" x="0" y="${y+42}" width="3" height="10" rx="1" fill="${C.fg}" visibility="hidden"/>
+  <text id="${key}Stat" x="${x+10}" y="${y+59}" fill="${C.faint}" font-size="7.5" font-weight="700">— NO DATA</text></g>`; }
+
+function buildPhone(){
+  const P=G.plot;
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="IBM Plex Mono, monospace" role="img" aria-label="Live dashboard replaying the ride">
+  <rect width="${W}" height="${H}" fill="${C.bg}"/>
+  <!-- status line -->
+  <g font-size="8"><circle id="liveDot" cx="14" cy="9" r="3" fill="${C.green}"/><text id="liveTxt" x="21" y="12" fill="${C.mut}">LIVE · REPLAY</text></g>
+  <text id="zoneTag" x="${W-12}" y="12" text-anchor="end" fill="${C.green}" font-size="7.5" font-weight="700">ZONES CONFIRMED</text>
+  <!-- A · ride information -->
+  <g id="secA">
+    <text id="aSpeed" x="12" y="${G.A.y+28}" fill="${C.fg}" font-size="32" font-weight="600" font-family="Rajdhani">0.0</text><text x="12" y="${G.A.y+40}" fill="${C.mut}" font-size="8" letter-spacing="1">KM/H</text>
+    <text id="aDist" x="92" y="${G.A.y+28}" fill="${C.fg}" font-size="24" font-weight="600" font-family="Rajdhani">0.00</text><text x="92" y="${G.A.y+40}" fill="${C.mut}" font-size="8" letter-spacing="1">KM</text>
+    <text id="aTime" x="158" y="${G.A.y+28}" fill="${C.fg}" font-size="19" font-weight="700">00:00</text><text x="158" y="${G.A.y+40}" fill="${C.mut}" font-size="8" letter-spacing="1">TIME</text>
+    <rect id="aPhaseBox" x="226" y="${G.A.y+10}" width="62" height="30" rx="8" fill="${C.violet}" fill-opacity=".14" stroke="${C.violet}"/>
+    <text id="aPhase" x="257" y="${G.A.y+22}" text-anchor="middle" fill="${C.violet}" font-size="8.5" font-weight="700">WARM-UP</text>
+    <text id="aPhaseSub" x="257" y="${G.A.y+33}" text-anchor="middle" fill="${C.violet}" font-size="7.5">04:59 left</text>
+  </g>
+  <!-- B · live sensor readings -->
+  ${metricCard(12,"pw","POWER","W","SIM")}${metricCard(106,"hr","HEART RATE","BPM","REAL")}${metricCard(200,"cad","CADENCE","RPM","SIM")}
+  <!-- C · combined performance graph -->
+  <g id="legend" font-size="7.5"></g>
+  <rect x="${P.x}" y="${P.y}" width="${P.w}" height="${P.h}" rx="6" fill="#080e12" stroke="${C.line}"/>
+  <rect x="${P.x}" y="${(P.y+P.h*BAND_TOP).toFixed(1)}" width="${P.w}" height="${(P.h*(BAND_BOT-BAND_TOP)).toFixed(1)}" fill="${C.fg}" fill-opacity=".07"/>
+  <line x1="${P.x}" y1="${(P.y+P.h*BAND_TOP).toFixed(1)}" x2="${P.x+P.w}" y2="${(P.y+P.h*BAND_TOP).toFixed(1)}" stroke="${C.fg}" stroke-opacity=".35" stroke-dasharray="2 3"/>
+  <line x1="${P.x}" y1="${(P.y+P.h*BAND_BOT).toFixed(1)}" x2="${P.x+P.w}" y2="${(P.y+P.h*BAND_BOT).toFixed(1)}" stroke="${C.fg}" stroke-opacity=".35" stroke-dasharray="2 3"/>
+  <g id="gBreach"></g><g id="gPhase"></g>
+  <g font-size="7"><rect x="${P.x+P.w-40}" y="${(P.y+P.h*BAND_TOP-11).toFixed(1)}" width="36" height="10" rx="3" fill="${C.bg}" fill-opacity=".8"/><text x="${P.x+P.w-6}" y="${(P.y+P.h*BAND_TOP-3).toFixed(1)}" text-anchor="end" fill="${C.mut}">▲ ABOVE</text>
+  <rect x="${P.x+P.w-40}" y="${(P.y+P.h*0.5-5).toFixed(1)}" width="36" height="10" rx="3" fill="${C.bg}" fill-opacity=".8"/><text x="${P.x+P.w-6}" y="${(P.y+P.h*0.5+2.5).toFixed(1)}" text-anchor="end" fill="${C.fg}" fill-opacity=".7" font-weight="700">TARGET</text>
+  <rect x="${P.x+P.w-40}" y="${(P.y+P.h*BAND_BOT+1).toFixed(1)}" width="36" height="10" rx="3" fill="${C.bg}" fill-opacity=".8"/><text x="${P.x+P.w-6}" y="${(P.y+P.h*BAND_BOT+9).toFixed(1)}" text-anchor="end" fill="${C.mut}">▼ BELOW</text></g>
+  <path id="trPw" fill="none" stroke="${GC.pw}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="trHr" fill="none" stroke="${GC.hr}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+  <path id="trCad" fill="none" stroke="${GC.cad}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" opacity=".95"/>
+  <g id="gHeads"></g>
+  <g id="axis" font-size="7" fill="${C.faint}"></g>
+  <!-- D · compact coach -->
+  <rect id="cbBox" x="12" y="${G.D.y}" width="276" height="${G.D.h}" rx="12" fill="${C.panel}" stroke="${C.line}"/>
+  <circle id="cbIcoBg" cx="34" cy="${G.D.y+G.D.h/2}" r="15" fill="${C.ink}"/><g id="cbShape"></g>
+  <text id="cbIcon" x="34" y="${G.D.y+G.D.h/2+13}" text-anchor="middle" font-size="7" font-weight="700" fill="${C.ink}"></text>
+  <text id="cbCue" x="58" y="${G.D.y+22}" fill="${C.fg}" font-size="14.5" font-weight="800" font-family="Archivo">COACH READY</text>
+  <text id="cbWhy" x="58" y="${G.D.y+36}" fill="${C.mut}" font-size="9.5" font-family="Inter">press START — coaching runs during the ride</text>
+  <g id="cbAn" font-size="7.5"><circle id="cbAnDot" cx="61" cy="${G.D.y+48}" r="2.5" fill="${C.faint}"/><text id="cbAnTxt" x="67" y="${G.D.y+51}" fill="${C.mut}">first analysis after one minute</text></g>
+  <!-- controls -->
+  <g id="btns" font-family="Archivo" font-weight="800" font-size="13" text-anchor="middle">
+    <rect x="12" y="${G.btnY}" width="88" height="44" rx="12" fill="${C.amber}"/><text x="56" y="${G.btnY+27}" fill="${C.ink}">PAUSE</text>
+    <rect x="106" y="${G.btnY}" width="88" height="44" rx="12" fill="${C.red}"/><text x="150" y="${G.btnY+27}" fill="${C.ink}">FINISH</text>
+    <rect id="btnDet" x="200" y="${G.btnY}" width="88" height="44" rx="12" fill="${C.violet}" style="cursor:pointer"/><text x="244" y="${G.btnY+27}" fill="${C.ink}" style="pointer-events:none">DETAILS</text>
+  </g>
+  <g font-size="10" fill="${C.cyan}"><text x="14" y="${G.linkY}">‹ Home</text><text id="linkQ" x="${W-14}" y="${G.linkY}" text-anchor="end" fill="${C.faint}" font-size="8">LINK 100%   ⚙</text></g>
+  </svg>`;
+}
+
+/* ---- Details view: a larger interactive graph, separate traces, 1/5/10-minute windows, tap for exact readings ---- */
+function buildDetails(){ return `<svg id="detSvg" viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="IBM Plex Mono, monospace" role="img" aria-label="Details graph">
+  <rect width="${W}" height="${H}" fill="${C.bg}"/>
+  <text x="12" y="16" fill="${C.cyan}" font-size="10" font-weight="700" style="cursor:pointer" id="detBack">‹ LIVE</text>
+  <text x="60" y="16" fill="${C.fg}" font-size="10" font-weight="700">DETAILS · HISTORY</text>
+  <g id="detSeg" font-size="8.5" font-weight="700" text-anchor="middle">${[60,300,600].map((s,i)=>`<rect data-w="${s}" x="${196+i*31}" y="5" width="29" height="16" rx="5" fill="${C.panel}" stroke="${C.line}" style="cursor:pointer"/><text x="${210.5+i*31}" y="16.5" fill="${C.mut}" style="pointer-events:none">${s/60}m</text>`).join("")}</g>
+  <g id="detPanels"></g>
+  <rect id="detHit" x="12" y="24" width="276" height="470" fill="transparent" style="cursor:crosshair"/>
+  <g id="detCursor"></g>
+  <rect x="12" y="500" width="276" height="88" rx="10" fill="${C.panel}" stroke="${C.line}"/>
+  <g id="detRead" font-size="9"><text x="22" y="518" fill="${C.mut}">Tap or drag on the graph for exact readings at that second.</text></g>
+  </svg>`; }
+
+/* ---- per-frame rendering ---- */
+function statusOf(n,v){ if(v==null) return "NONE"; if(v===0) return "ZERO"; if(n==null) return "NONE"; return n<0?"BELOW":n>1?"ABOVE":"ON"; }
+function setCard(key,v,lo,hi,unitStat){ const x={pw:12,hr:106,cad:200}[key]; const val=q("#"+key+"Val"), band=q("#"+key+"Band"), mark=q("#"+key+"Mark"), st=q("#"+key+"Stat");
+  const n=normOf(v,lo,hi); const s=statusOf(n,v);
+  val.textContent= v==null?"—":v; val.setAttribute("fill", v==null?C.faint:C.fg);
+  const bx=x+10, bw=68; // band segment = the target, using the same mapping as the graph (horizontal)
+  band.setAttribute("x",(bx+bw*(1-BAND_BOT)).toFixed(1)); band.setAttribute("width",(bw*(BAND_BOT-BAND_TOP)).toFixed(1));
+  if(n!=null){ mark.setAttribute("visibility","visible"); mark.setAttribute("x",(bx+bw*(1-yFrac(n))-1.5).toFixed(1)); } else mark.setAttribute("visibility","hidden");
+  const T={BELOW:["▼ BELOW",C.cyan],ON:["● ON TARGET",C.green],ABOVE:["▲ ABOVE",C.amber],ZERO:[key==="pw"?"○ COASTING":"○ STOPPED",C.faint],NONE:[key==="hr"?"— NO STRAP":"— NO DATA",C.faint]}[s];
+  st.textContent=T[0]+(unitStat||""); st.setAttribute("fill",T[1]); return s; }
+
+function renderGraph(samples,winSec){ const P=G.plot; const n=samples.length; const x0=P.x+4, xw=P.w-8; const xOf=k=>x0+((winSec-n+k)/Math.max(1,winSec-1))*xw;
+  // traces: one path per signal, broken at every missing second; min/max decimation when samples outnumber pixel columns
+  const cols=Math.max(40,Math.floor(xw/1.2));
+  const path=(key)=>{ const idx=[],vals=[]; samples.forEach((s,k)=>{ idx.push(k); vals.push(s.n[key]); }); const pts=decimate(idx,vals,cols); let d="",pen=false;
+    pts.forEach(([k,v])=>{ if(v==null){ pen=false; return; } const x=xOf(k).toFixed(1), y=(P.y+P.h*yFrac(v)).toFixed(1); d+=(pen?"L":"M")+x+" "+y+" "; pen=true; }); return d; };
+  q("#trPw").setAttribute("d",path("pw")); q("#trHr").setAttribute("d",path("hr")); q("#trCad").setAttribute("d",path("cad"));
+  // sustained breaches (≥ 20 s outside the band) for the effort signals — filled between the trace and the band edge
+  let br=""; ["hr","pw"].forEach(key=>{ breaches(samples,key,20).forEach(([a,b,side])=>{ const edge=P.y+P.h*(side>0?BAND_TOP:BAND_BOT); let d=`M${xOf(a).toFixed(1)} ${edge.toFixed(1)} `; for(let k=a;k<b;k++){ const v=samples[k].n[key]; if(v==null) continue; d+=`L${xOf(k).toFixed(1)} ${(P.y+P.h*yFrac(v)).toFixed(1)} `; } d+=`L${xOf(b-1).toFixed(1)} ${edge.toFixed(1)} Z`; br+=`<path d="${d}" fill="${GC[key]}" fill-opacity=".18"/>`; }); });
+  q("#gBreach").innerHTML=br;
+  // phase changes: a vertical dashed marker with a tiny label
+  let ph=""; for(let k=1;k<n;k++){ if(samples[k].phase!==samples[k-1].phase){ const x=xOf(k).toFixed(1); const lab={WARMUP:"WARM",MAIN:"MAIN",COOLDOWN:"COOL"}[samples[k].phase]||samples[k].phase; ph+=`<line x1="${x}" y1="${P.y+2}" x2="${x}" y2="${P.y+P.h-2}" stroke="${C.fg}" stroke-opacity=".3" stroke-dasharray="3 3"/><text x="${x}" y="${P.y+9}" fill="${C.mut}" font-size="6.5" text-anchor="middle">${lab}</text>`; } }
+  q("#gPhase").innerHTML=ph;
+  // a dot at the newest point of each live trace; a hollow marker at the right edge when the signal is missing
+  const L=samples[n-1]; let hd=""; ["pw","hr","cad"].forEach(key=>{ if(!L) return; const v=L.n[key]; const x=xOf(n-1).toFixed(1); if(v!=null) hd+=`<circle cx="${x}" cy="${(P.y+P.h*yFrac(v)).toFixed(1)}" r="2.6" fill="${GC[key]}" stroke="${C.bg}" stroke-width="1"/>`; else hd+=`<circle cx="${x}" cy="${(P.y+P.h*0.5).toFixed(1)}" r="2.6" fill="none" stroke="${GC[key]}" stroke-dasharray="1.5 1.5"/>`; }); q("#gHeads").innerHTML=hd;
+  // time axis
+  let ax=""; const mins=winSec/60; for(let m=0;m<=mins;m++){ const k=n-1-(mins-m)*60; const x=x0+((winSec-n+k)/Math.max(1,winSec-1))*xw; if(x<x0-1) continue; ax+=`<line x1="${x.toFixed(1)}" y1="${P.y+P.h}" x2="${x.toFixed(1)}" y2="${P.y+P.h+3}" stroke="${C.faint}"/><text x="${x.toFixed(1)}" y="${G.axisY}" text-anchor="${m===mins?"end":"middle"}">${m===mins?"now":"-"+(mins-m)+"m"}</text>`; }
+  q("#axis").innerHTML=ax;
+}
+function renderLegend(TG,have){ const items=[["pw","PWR",TG.pw?`${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W`:"no target"],["hr","HR",`${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} bpm`],["cad","CAD",`${TG.cad[0]}–${TG.cad[1]} rpm`]];
+  let g=""; items.forEach(([k,lab,band],i)=>{ const x=12+i*94, on=have[k]; g+=`<line x1="${x}" y1="${G.legendY}" x2="${x+9}" y2="${G.legendY}" stroke="${GC[k]}" stroke-width="2.5" ${on?"":'stroke-dasharray="2 2" stroke-opacity=".5"'}/><text x="${x+12}" y="${G.legendY+2.5}" fill="${on?C.fg:C.faint}" font-size="7">${lab}${k==="pw"&&on?" 3s":""} <tspan fill="${C.mut}">${on?band:"no signal"}</tspan></text>`; });
+  q("#legend").innerHTML=g; }
+
+function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,Math.min(t,R.sec-1)); const last=BUF.last(); const hr=last?last.hr:S.hr[i], pw=last?last.pw:S.power[i], cad=last?last.cad:S.cad[i];
+  const coached=ride!=="r1", phase=phaseAt(i,R.sec,coached); const TG=targetsFor(phase,coached,i,R.sec); latestTG=TG;
+  if(view==="details"){ renderDetails(); el("clock").textContent=fmt(i); el("scrub").value=i; return; }
+  el("clock").textContent=fmt(i); el("scrub").value=i;
+  // A
+  q("#aSpeed").textContent=S.speed[i].toFixed(1); q("#aDist").textContent=distKm.toFixed(2); q("#aTime").textContent=fmt(i);
+  const pl= !coached?["FREE","observing"]: phase==="WARMUP"?["WARM-UP",fmt(CFG.warmupSec-i)+" left"]: phase==="COOLDOWN"?["COOL-DOWN",fmt(R.sec-i)+" left"]:["MAIN · Z2",fmt(Math.max(0,R.sec-CFG.cooldownSec-i))+" left"];
+  const pc= phase==="MAIN"&&coached?C.green:C.violet; q("#aPhase").textContent=pl[0]; q("#aPhaseSub").textContent=pl[1]; q("#aPhase").setAttribute("fill",pc); q("#aPhaseSub").setAttribute("fill",pc); q("#aPhaseBox").setAttribute("stroke",pc); q("#aPhaseBox").setAttribute("fill",pc);
+  // B
+  setCard("pw",pw,TG.pw[0],TG.pw[1]); setCard("hr",hr,TG.hr[0],TG.hr[1]); setCard("cad",cad,TG.cad[0],TG.cad[1]);
+  // C
+  const win=BUF.window(300); renderLegend(TG,{pw:pw!=null,hr:hr!=null,cad:cad!=null}); renderGraph(win,300);
+  // D
+  setCoachBox(latest);
+  if(latest){ el("cueBig").innerHTML=`<span class="cicon">${latest.icon||"○"}</span>${latest.head}`; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="v0.7 rule"?"now":"proto"}">${(latest.src||"v0.9").toUpperCase()}</i> at ${fmt(latest.t)} — ${wordCue(latest)}${latest.live?`<div class="clive">${latest.live}${latest.sources?` · from <b>${latest.sources}</b>`:""}</div>`:""}`; }
+  const A=coach&&coach.assessment; const ca=el("cueAssess"); if(ca){ if(A){ ca.innerHTML=`<i class="dot ${i-Math.round(A.at/1000)<=65?"on":""}"></i>analysed ${Math.max(0,i-Math.round(A.at/1000))}s ago · ${A.progress} · ${A.summary}`; } else ca.textContent="First 60-second assessment comes after one minute of riding."; }
+}
+function shapeSvg(dir,cx,cy){ const u=7; if(dir>0) return `<polygon points="${cx},${cy-u} ${cx+u},${cy+u*0.7} ${cx-u},${cy+u*0.7}" fill="currentColor"/>`; if(dir<0) return `<polygon points="${cx},${cy+u} ${cx+u},${cy-u*0.7} ${cx-u},${cy-u*0.7}" fill="currentColor"/>`; if(dir===0) return `<path d="M${cx-6} ${cy+1} l4 4 l8 -9" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>`; return `<circle cx="${cx}" cy="${cy}" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/>`; }
+function setCoachBox(e){ const coached=ride!=="r1"; const cy=G.D.y+G.D.h/2-4;
+  const A=coach&&coach.assessment; const age=A?Math.max(0,t-Math.round(A.at/1000)):-1;
+  const an= A?`${age}s ago · ${A.pct!=null?A.pct+"% in band":A.progress}`:"first analysis after one minute";
+  if(!e){ q("#cbBox").setAttribute("fill",C.panel); q("#cbBox").setAttribute("stroke",C.line); q("#cbCue").textContent=coached?"Coach ready":"Coach off"; q("#cbCue").setAttribute("fill",C.fg); q("#cbCue").setAttribute("font-size","14.5");
+    q("#cbWhy").textContent=coached?`Zone 2 · ${CFG.hrTarget[0]}–${CFG.hrTarget[1]} bpm · watching HR, power, cadence`:"ride 1 is the uncoached baseline"; q("#cbWhy").setAttribute("fill",C.mut);
+    q("#cbShape").innerHTML=`<g style="color:${C.faint}">${shapeSvg(null,34,cy)}</g>`; q("#cbIcon").textContent=""; q("#cbIcoBg").setAttribute("fill",C.ink); q("#cbAnTxt").textContent=an; q("#cbAnTxt").setAttribute("fill",C.mut); q("#cbAnDot").setAttribute("fill",age>=0&&age<=65?C.green:C.faint); return; }
+  const [col,dir]=CUE_STYLE[e.type]||[C.faint,null]; const active=e.type!=="NOTE"&&e.type!=="NO_HR"; const sc=shortCue(e);
+  q("#cbBox").setAttribute("fill",active?col:C.panel); q("#cbBox").setAttribute("stroke",active?col:C.line);
+  const ink=active?C.ink:C.fg; q("#cbCue").textContent=sc.head; q("#cbCue").setAttribute("fill",ink); q("#cbCue").setAttribute("font-size",sc.head.length>30?"11.5":sc.head.length>24?"13":"14.5");
+  q("#cbWhy").textContent=sc.why; q("#cbWhy").setAttribute("fill",active?C.ink:C.mut);
+  q("#cbIcoBg").setAttribute("fill",active?C.ink:C.ink); q("#cbShape").innerHTML=`<g style="color:${active?col:C.faint}">${shapeSvg(dir,34,cy)}</g>`; q("#cbIcon").textContent=e.icon||""; q("#cbIcon").setAttribute("fill",active?col:C.faint);
+  q("#cbAnTxt").textContent=an+(e.sources?` · ${e.sources}`:""); q("#cbAnTxt").setAttribute("fill",active?C.ink:C.mut); q("#cbAnDot").setAttribute("fill",age>=0&&age<=65?(active?C.ink:C.green):(active?C.ink:C.faint)); q("#cbAnDot").setAttribute("fill-opacity",age>=0&&age<=65?"1":".4");
+}
+
+/* ---- Details rendering ---- */
+function renderDetails(){ const svg=phoneEl.querySelector("#detSvg"); if(!svg) return; const samples=BUF.window(detWin); const n=samples.length; const x0=16, xw=268; const xOf=k=>x0+((detWin-n+k)/Math.max(1,detWin-1))*xw;
+  svg.querySelectorAll("#detSeg rect").forEach(r=>{ const on=+r.dataset.w===detWin; r.setAttribute("fill",on?C.cyan:C.panel); r.setAttribute("stroke",on?C.cyan:C.line); r.nextElementSibling.setAttribute("fill",on?C.ink:C.mut); });
+  const panels=[["pw","POWER",GC.pw,"W"],["hr","HEART RATE",GC.hr,"bpm"],["cad","CADENCE",GC.cad,"rpm"]]; let g="";
+  panels.forEach(([key,lab,col,unit],pi)=>{ const y=30+pi*156, h=136; const vals=samples.map(s=>s[key]); const v=vals.filter(x=>x!=null); const lo=samples.map(s=>s.tg[key][0]), hi=samples.map(s=>s.tg[key][1]);
+    let mn=Math.min(...(v.length?v:[0]),...lo), mx=Math.max(...(v.length?v:[1]),...hi); if(mx-mn<10){ mx=mn+10; } const pad=(mx-mn)*0.08; mn=Math.max(key==="hr"?0:0, mn-pad); mx+=pad; if(key!=="hr") mn=Math.max(0,mn); const yOf=val=>y+12+(h-24)*(1-(val-mn)/(mx-mn));
+    g+=`<rect x="12" y="${y}" width="276" height="${h}" rx="6" fill="#080e12" stroke="${C.line}"/><text x="18" y="${y+10}" fill="${col}" font-size="8" font-weight="700">${lab}</text><text x="282" y="${y+10}" text-anchor="end" fill="${C.faint}" font-size="7">${Math.round(mx)} ${unit}</text><text x="282" y="${y+h-3}" text-anchor="end" fill="${C.faint}" font-size="7">${Math.round(mn)} ${unit}</text>`;
+    // target band as it was at each second (ramps show as a sloping band)
+    if(n>1){ let d=`M${xOf(0).toFixed(1)} ${yOf(hi[0]).toFixed(1)} `; for(let k=1;k<n;k++) d+=`L${xOf(k).toFixed(1)} ${yOf(hi[k]).toFixed(1)} `; for(let k=n-1;k>=0;k--) d+=`L${xOf(k).toFixed(1)} ${yOf(lo[k]).toFixed(1)} `; g+=`<path d="${d}Z" fill="${C.fg}" fill-opacity=".10" stroke="${C.fg}" stroke-opacity=".35" stroke-width=".6" stroke-dasharray="2 2"/>`; }
+    for(let k=1;k<n;k++) if(samples[k].phase!==samples[k-1].phase) g+=`<line x1="${xOf(k).toFixed(1)}" y1="${y+2}" x2="${xOf(k).toFixed(1)}" y2="${y+h-2}" stroke="${C.fg}" stroke-opacity=".3" stroke-dasharray="3 3"/>`;
+    const pts=decimate(samples.map((_,k)=>k),vals,268); let d="",pen=false; pts.forEach(([k,val])=>{ if(val==null){ pen=false; return; } d+=(pen?"L":"M")+xOf(k).toFixed(1)+" "+yOf(val).toFixed(1)+" "; pen=true; });
+    g+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    // gaps: a faint hatched strip where the signal was missing
+    let gs=-1; for(let k=0;k<=n;k++){ const miss=k<n&&vals[k]==null; if(miss&&gs<0) gs=k; if(!miss&&gs>=0){ g+=`<rect x="${xOf(gs).toFixed(1)}" y="${y+12}" width="${Math.max(1,xOf(k-1)-xOf(gs)).toFixed(1)}" height="${h-24}" fill="${col}" fill-opacity=".08"/><text x="${((xOf(gs)+xOf(k-1))/2).toFixed(1)}" y="${y+h/2}" text-anchor="middle" fill="${col}" font-size="7" opacity=".8">no ${key==="hr"?"strap":"signal"}</text>`; gs=-1; } }
+  });
+  svg.querySelector("#detPanels").innerHTML=g;
+  // cursor + readout
+  const cur=svg.querySelector("#detCursor"), rd=svg.querySelector("#detRead"); if(detSel!=null&&n){ const k=Math.max(0,Math.min(n-1,detSel)); const s=samples[k]; const x=xOf(k).toFixed(1); cur.innerHTML=`<line x1="${x}" y1="30" x2="${x}" y2="494" stroke="${C.fg}" stroke-opacity=".6"/>`;
+    const f=(v,u)=>v==null?"—":v+" "+u; rd.innerHTML=`<text x="22" y="516" fill="${C.fg}" font-weight="700">at ${fmt(s.t)} · ${s.phase.replace("WARMUP","WARM-UP").replace("COOLDOWN","COOL-DOWN")}</text>
+      <text x="22" y="534" fill="${GC.pw}">PWR ${f(s.pw,"W")}</text><text x="110" y="534" fill="${C.mut}">target ${Math.round(s.tg.pw[0])}–${Math.round(s.tg.pw[1])} W</text>
+      <text x="22" y="550" fill="${GC.hr}">HR ${f(s.hr,"bpm")}</text><text x="110" y="550" fill="${C.mut}">target ${Math.round(s.tg.hr[0])}–${Math.round(s.tg.hr[1])} bpm</text>
+      <text x="22" y="566" fill="${GC.cad}">CAD ${f(s.cad,"rpm")}</text><text x="110" y="566" fill="${C.mut}">range ${s.tg.cad[0]}–${s.tg.cad[1]} rpm</text>
+      <text x="22" y="582" fill="${C.faint}" font-size="8">${s.pw===0?"0 W = coasting (a real zero, not a gap) · ":""}missing values are drawn as gaps, never filled</text>`; }
+  else { cur.innerHTML=""; rd.innerHTML=`<text x="22" y="518" fill="${C.mut}">Tap or drag on the graph for exact readings at that second.</text><text x="22" y="536" fill="${C.faint}" font-size="8">Showing the last ${detWin/60} min of the ${BUF.a.length} s kept in memory (10-min ring buffer).</text>`; }
+}
+function showView(v){ view=v; detSel=null; if(v==="details"){ phoneEl.innerHTML=buildDetails(); const svg=phoneEl.querySelector("#detSvg"); svg.querySelector("#detBack").addEventListener("click",()=>showView("live"));
+    svg.querySelectorAll("#detSeg rect").forEach(r=>r.addEventListener("click",()=>{ detWin=+r.dataset.w; renderDetails(); }));
+    const hit=svg.querySelector("#detHit"); const pick=ev=>{ const pt=svg.createSVGPoint(); pt.x=ev.clientX; pt.y=ev.clientY; const p=pt.matrixTransform(svg.getScreenCTM().inverse()); const n=BUF.window(detWin).length; detSel=Math.round((p.x-16)/268*Math.max(1,detWin-1)-(detWin-n)); renderDetails(); };
+    hit.addEventListener("pointerdown",ev=>{ hit.setPointerCapture(ev.pointerId); pick(ev); }); hit.addEventListener("pointermove",ev=>{ if(ev.buttons) pick(ev); });
+    renderDetails(); }
+  else { phoneEl.innerHTML=buildPhone(); phoneEl.querySelector("#btnDet").addEventListener("click",()=>showView("details")); renderFrame(); } }
 
 /* ============================================================ RIDER PROFILE & ONBOARDING (prototype of the app flow) */
 /* ============================================================ RIDER ACCOUNTS (prototype) ============================================================
@@ -1038,7 +1159,7 @@ function recommend(a,c){
 /* ---------------- screens ---------------- */
 const SCR=["scrWelcome","scrAuth","scrQ","scrProfile","scrHome","scrLive","scrPost","scrClub","scrBoard","scrMember"];
 const TABSCR=["scrHome","scrClub","scrBoard","scrMember","scrProfile"];
-function show(id,title){ SCR.forEach(s=>el(s).hidden=(s!==id)); el("appTitle").textContent=title||"Bike Computer"; const live=id==="scrLive"; ["cueCard","logCard","memoCard","kvCard"].forEach(c=>el(c).hidden=!live); el("cmpCard").hidden=!(P.completed); el("ridersCard").hidden=!(P.completed);
+function show(id,title){ SCR.forEach(s=>el(s).hidden=(s!==id)); el("appTitle").textContent=title||"Bike Computer"; const live=id==="scrLive"; ["cueCard","logCard","memoCard","kvCard","scaleCard"].forEach(c=>el(c).hidden=!live); el("cmpCard").hidden=!(P.completed); el("ridersCard").hidden=!(P.completed);
   const tabs=el("tabs"); tabs.hidden=!(P.completed&&TABSCR.includes(id)); tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===id||(b.dataset.tab==="scrClub"&&id==="scrMember")||(b.dataset.tab==="scrHome"&&id==="scrProfile"))));
   el("riderChip").textContent=P.id!=="tmp"&&P.name?P.name:""; window.scrollTo({top:0,behavior:"smooth"}); }
 function tag(cls,txt){ return `<i class="tag ${cls}">${txt}</i>`; }

@@ -94,13 +94,13 @@ object Targets {
     /** -1 ease / 0 on target / +1 faster-push, from the coaching cue. Informational cues have no direction. */
     fun coachDirection(type: CueType): Int = when (type) {
         CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK -> +1
-        CueType.PEDAL_SLOWER, CueType.EASE_OFF, CueType.RECOVER -> -1
+        CueType.PEDAL_SLOWER, CueType.EASE_OFF, CueType.RECOVER, CueType.SURGE -> -1
         else -> 0
     }
 
     fun coachShape(type: CueType): CoachShape = when (type) {
         CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK -> CoachShape.UP
-        CueType.PEDAL_SLOWER, CueType.EASE_OFF, CueType.RECOVER -> CoachShape.DOWN
+        CueType.PEDAL_SLOWER, CueType.EASE_OFF, CueType.RECOVER, CueType.SURGE -> CoachShape.DOWN
         CueType.KEEP_IT_UP -> CoachShape.CHECK
         else -> CoachShape.NONE
     }

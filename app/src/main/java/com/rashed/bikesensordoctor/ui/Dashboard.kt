@@ -187,8 +187,8 @@ internal class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.Coach
         CueType.QUIET -> D7.Faint
         CueType.KEEP_IT_UP -> D7.Green
         CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK -> D7.Cyan
-        CueType.EASE_OFF, CueType.PEDAL_SLOWER -> D7.Amber
-        CueType.RECOVER, CueType.WARMUP, CueType.COOLDOWN -> D7.Violet
+        CueType.EASE_OFF, CueType.PEDAL_SLOWER, CueType.SURGE -> D7.Amber
+        CueType.RECOVER, CueType.WARMUP, CueType.COOLDOWN, CueType.STEADY -> D7.Violet
         else -> D7.Faint
     }
     val shape = Targets.coachShape(cue.type)

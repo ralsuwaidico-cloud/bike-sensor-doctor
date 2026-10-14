@@ -86,8 +86,10 @@ class Coach{
       return W("INCREASE_EFFORT","⇧","INCREASE YOUR EFFORT SLIGHTLY",cadLow?detail+" · cadence is low too, so press a little more rather than changing gear":detail,src||"HR"); }
     if(type==="PEDAL_FASTER") return head.startsWith("KEEP")?W("KEEP_CADENCE_STEADY","≈",head,detail,"cadence"):W("PEDAL_FASTER","↻+","PEDAL A LITTLE FASTER","Easier gear, same effort — "+detail,"cadence");
     if(type==="PEDAL_SLOWER") return W("PEDAL_SLOWER","↻−","SLOW YOUR PEDALLING","Harder gear, same effort — "+detail,"cadence");
-    if(type==="KEEP_IT_UP") return (pw!=null&&L.pb==="ON")?W("HOLD_PACE","═","HOLD THIS PACE","Power and heart rate on target","HR + power"):W("STABLE_MAINTAIN","✓","YOUR EFFORT IS STABLE. MAINTAIN THIS RHYTHM",detail,L.hr!=null?"HR":"power");
+    if(type==="KEEP_IT_UP"){ if(this.easeAt!=null&&this.easeAt!==this.recAt) return W("RECOVERED","✓","GOOD — BACK ON TARGET",`${L.hr!=null?"Heart rate":"Power"} settled back into the band after easing off — hold this`,L.hr!=null?"HR":"power");
+      return (pw!=null&&L.pb==="ON")?W("HOLD_PACE","═","HOLD THIS PACE","Power and heart rate on target","HR + power"):W("STABLE_MAINTAIN","✓","YOUR EFFORT IS STABLE. MAINTAIN THIS RHYTHM",detail,L.hr!=null?"HR":"power"); }
     if(type==="COOLDOWN") return W("START_COOLDOWN","❄","START YOUR COOLDOWN",detail,"phase");
+    if(type==="SURGE") return W("SMOOTH_SURGES","∿",head,detail,"power"); if(type==="STEADY") return W("STEADY_EFFORT","≈",head,detail,"power + HR"); 
     if(type==="WARMUP") return W("WARM_UP","☼",head,detail,"phase");
     if(type==="QUIET") return W("QUIET","…",head,detail,"");
     return W("NONE","○",head,detail,src); }
@@ -105,7 +107,7 @@ class Coach{
     // v0.8 proposal: after 3 unheeded repeats of the same cue, go quiet (gauges keep showing the state) until the cue changes or 5 min pass
     if(this.cfg.backoff && type===this.lastType && type!=="KEEP_IT_UP"){ this.repeat=(this.repeat||0)+1; if(this.repeat>=3){ if(this.repeat===3){ this.lastEmit=now; this.quietSince=now; return {type:"QUIET",head:"COACH QUIET",detail:`${head} has been said 3 times without a change. Going quiet; the gauges keep showing the state. I will speak again when something changes or after 5 minutes.`,reason:"BACKOFF",src:"v0.9",action:"QUIET",icon:"…",sources:"",live:this.live()}; } if(now-this.quietSince<300000) return null; this.repeat=0; } }
     else this.repeat=0;
-    this.lastType=type; this.lastEmit=now; this.byType[type]=now; return {type,head,detail,reason,src:src||"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
+    this.lastType=type; this.lastEmit=now; this.byType[type]=now; if(type==="EASE_OFF"||type==="SURGE") this.easeAt=now; if(w.action==="RECOVERED") this.recAt=this.easeAt; return {type,head,detail,reason,src:src||"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
   announce(now,phase,type,head0,detail0,reason){ const w=this.action(type,head0,detail0,reason); if(this.announced===phase) return null; this.announced=phase; this.allGood=null; this.keepArmed=true; this.lastType=type; this.lastEmit=now; return {type,head:w.head,detail:w.detail,reason,src:"v0.9",action:w.action,icon:w.icon,sources:w.sources,live:this.live()}; }
   info(now,type,head,detail,reason){ if(type===this.lastType && now-this.lastEmit<this.cfg.infoRepeat) return null; this.lastType=type; this.lastEmit=now; return {type,head,detail,reason,src:"v0.7 rule"}; }
   update(now,phase,cadIn,hrIn,pwIn,t,N,speed){
@@ -134,7 +136,9 @@ class Coach{
       if(hb==="ABOVE"){ if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate ${hr} bpm (zone ${hz}) has stayed above the target ${hLo}–${hHi} bpm for 8 s. HR is the authority on effort; power is ignored here.`,"HR_ABOVE"); else hold=true; }
       else if(hb==="ON"){ const ht=this.perMin("hr",now), pt=this.perMin("pw",now); const rising= ht!=null&&ht>=6&&(pt==null||Math.abs(pt)<15)&&hr>hHi-6;
         if(rising&&this.held("hr",now,20000)){ effort=this.emit(now,"EASE_OFF","YOUR HEART RATE IS RISING. EASE OFF",`Heart rate ${hr} climbing about ${Math.round(ht)} bpm/min at steady power — back off a touch before it leaves the band.`,"HR_RISING","v0.9"); }
-        const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging){ if(this.surgeSince==null) this.surgeSince=now; if(now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; }
+        if(!effort){ const un=this.unsteady(now,pLo,pHi); if(un) effort=un; }
+        if(!effort){ const spiking=c.usePower&&pwIn!=null&&pwIn>Math.max(pHi*1.5,pHi+50);   // RAW power, not the 5-s mean
+        const surging = pz!=null && pz>=3 && pb==="ABOVE"; if(surging||spiking){ if(this.surgeSince==null) this.surgeSince=now; if(spiking&&now-this.surgeSince>=3000) effort=this.emit(now,"SURGE","SMOOTH OUT THE SURGES",`Power jumped to ${pwIn} W — more than 1.5× the top of the target (${Math.round(pHi)} W) for 3 s. Surges cost more than steady watts; keep the pressure even.`,"PW_SPIKE","v0.10"); else if(surging&&now-this.surgeSince>=c.surgeHold) effort=this.emit(now,"EASE_OFF","EASE OFF",`Heart rate is on target (${hr}) but simulated power has surged to zone ${pz} (${pw} W) for 6 s — heart rate will follow, so ease before it does.`,"PW_SURGE"); else hold=true; } else this.surgeSince=null; } }
       else { this.surgeSince=null; if(pb==="ON"||pb==="ABOVE") hold=true;  /* HR lag: never push */
              else if(grace) hold=true;                                        /* v0.8 proposal: transition grace after warm-up */
              else if(this.held("hr",now,c.hrHold)) effort=this.emit(now,"PUSH_HARDER","PUSH A LITTLE HARDER",`Heart rate ${hr} bpm is below the target ${hLo}–${hHi} bpm and power is not already on target, for 8 s.`,"HR_BELOW"); else hold=true; }
@@ -156,6 +160,10 @@ class Coach{
     if(!(this.keepArmed || now-this.lastEmit>=c.keepRepeat)) return null;
     const k=this.emit(now,"KEEP_IT_UP","KEEP IT UP",`Heart rate ${hr} bpm inside the target ${hLo}–${hHi} and cadence in range for at least 5 s. Repeated at most every 90 s.`,"ALL_GOOD"); if(k) this.keepArmed=false; return k;
   }
+  /* unsteady pace: a minute of 5-s power swinging ±20 % (several direction reversals — a single step change has none) around a mean inside the band */
+  unsteady(now,pLo,pHi){ if(!this.cfg.usePower) return null; const a=this.tr.pw.map(x=>x[1]); if(a.length<55) return null; const m=a.reduce((x,y)=>x+y,0)/a.length; if(m<=0||m<pLo||m>pHi) return null; const cv=Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/a.length)/m; if(cv<=0.20) return null;
+    let rev=0,last=0; for(let i=1;i<a.length;i++){ const d=a[i]-a[i-1]; const sg=d>=3?1:d<=-3?-1:0; if(sg){ if(last&&sg!==last) rev++; last=sg; } } if(rev<4) return null;
+    return this.emit(now,"STEADY","HOLD A STEADIER EFFORT",`Average power is on target but it swung ±${Math.round(cv*100)}% over the last minute. Pick one gear and keep the pressure even.`,"PW_UNSTEADY","v0.10"); }
   cadence(now,cad,phase){ const c=this.cfg; if(!c.cadenceEnabled||cad==null||cad<=0||phase==="COOLDOWN"){ this.cadState=null; return undefined; }
     const st=this.cadState; let n;
     if(st==="BELOW") n= cad>=c.cadLow+c.cadHys?"ON":"BELOW"; else if(st==="ABOVE") n= cad<=c.cadHigh-c.cadHys?"ON":"ABOVE";
@@ -199,137 +207,29 @@ function targetsFor(phase,coached,t,N){
 }
 function phaseAt(t,N,coached){ if(!coached) return "MAIN"; if(t<CFG.warmupSec) return "WARMUP"; if(t>=N-CFG.cooldownSec) return "COOLDOWN"; return "MAIN"; }
 
-/* ============================================================ Design 7 dashboard (SVG) */
-const NS="http://www.w3.org/2000/svg";
-const C={grey:"#7e8c93",faint:"#5a6b74",line:"#1d2a33",cyan:"#34e7e4",green:"#56e08c",lime:"#a6e22e",amber:"#ffb64d",orange:"#ff8a3d",red:"#ff5a5a",violet:"#9b8cff",fg:"#eef4f7",mut:"#8396a0",track:"#16242b",ink:"#05121a"};
-const PZC=[C.grey,C.cyan,C.green,C.lime,C.amber,C.orange,C.red], HZC=[C.faint,C.cyan,C.green,C.amber,C.red];
-function pol(cx,cy,r,deg){const a=(deg-90)*Math.PI/180;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}
-function arcPath(cx,cy,r,a0,a1){ if(a1-a0<0.01) return ""; const [x0,y0]=pol(cx,cy,r,a0),[x1,y1]=pol(cx,cy,r,a1); const large=((a1-a0)%360+360)%360>180?1:0; return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; }
-const W=300,H=958, S0=135, SW=270;
-let PMAX=Math.max(300,CFG.ftp*1.5); const HMAX=190, CMAX=130;
-
-function gaugeStatic(cx,cy,r,sw,ticks,showTgt,rangeArc){
-  let g=`<path d="${arcPath(cx,cy,r,S0,S0+SW)}" fill="none" stroke="${C.track}" stroke-width="${sw}"/>`;
-  g+=`<path class="prog" fill="none" stroke-width="${sw}" stroke-linecap="round"/>`;
-  if(rangeArc) g+=`<path d="${arcPath(cx,cy,r,S0+SW*rangeArc[0],S0+SW*rangeArc[1])}" fill="none" stroke="${C.green}" stroke-width="3" opacity=".9"/>`;
-  ticks.forEach(zf=>{ if(zf<=0||zf>=1)return; const a=S0+SW*zf; const[x1,y1]=pol(cx,cy,r-sw/2,a),[x2,y2]=pol(cx,cy,r+sw/2,a); g+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#05080b" stroke-width="2"/>`; });
-  // TARGET band: a bright arc just outside the ring spanning the active target range (lo..hi), with end ticks.
-  g+=`<path class="tgtBand" fill="none" stroke="${C.fg}" stroke-width="3.5" stroke-linecap="butt"/>`;
-  g+=`<line class="tgtLo" stroke="${C.fg}" stroke-width="2"/><line class="tgtHi" stroke="${C.fg}" stroke-width="2"/>`;
-  if(showTgt) g+=`<text class="tgtLbl" fill="${C.fg}" font-size="8" font-weight="700" text-anchor="middle" font-family="IBM Plex Mono">TGT</text>`;
-  // LIVE marker: a dark disc with a white rim riding on the ring at the current value.
-  g+=`<circle class="live" r="${(sw/2+2.5).toFixed(1)}" fill="#05080b" stroke="${C.fg}" stroke-width="2.5"/>`;
-  return g;
-}
-// same value→angle mapping for live marker, progress arc and target band
-function angleOf(frac){ return S0+SW*Math.max(0,Math.min(1,frac)); }
-function setLive(g,cx,cy,r,frac){ const [x,y]=pol(cx,cy,r,angleOf(frac)); const c=g.querySelector(".live"); c.setAttribute("cx",x.toFixed(1)); c.setAttribute("cy",y.toFixed(1)); }
-function setTarget(g,cx,cy,r,sw,lo,hi,col){ const ro=r+sw/2+5; const a0=angleOf(lo),a1=angleOf(hi); const band=g.querySelector(".tgtBand"); band.setAttribute("d",arcPath(cx,cy,ro,a0,a1)); band.setAttribute("stroke",col);
-  [["tgtLo",a0],["tgtHi",a1]].forEach(([cls,a])=>{ const l=g.querySelector("."+cls); const [x1,y1]=pol(cx,cy,r-sw/2-2,a),[x2,y2]=pol(cx,cy,ro+3,a); l.setAttribute("x1",x1.toFixed(1));l.setAttribute("y1",y1.toFixed(1));l.setAttribute("x2",x2.toFixed(1));l.setAttribute("y2",y2.toFixed(1)); l.setAttribute("stroke",col); });
-  const lbl=g.querySelector(".tgtLbl"); if(lbl){ const am=(a0+a1)/2; const bottom=((am%360)+360)%360; const inside=bottom>150&&bottom<210;   // band at the bottom of the dial → label inside the ring, clear of the status pill
-    const [lx,ly]=pol(cx,cy,inside?(r-sw/2-11):(ro+11),am); lbl.setAttribute("x",lx.toFixed(1)); lbl.setAttribute("y",(ly+3).toFixed(1)); lbl.setAttribute("fill",col); } }
-function band(x,y,w,segs,colors){ let g=`<rect x="${x}" y="${y}" width="${w}" height="18" rx="3" fill="#0a1015"/>`;const sw=w/segs.length;
-  segs.forEach((lab,i)=>{g+=`<rect x="${x+i*sw}" y="${y}" width="${sw-2}" height="18" fill="${colors[i]}" opacity="${0.25+0.1*i}"/>`;[0,.5,1].forEach(t=>g+=`<line x1="${x+i*sw+sw*t}" y1="${y+18}" x2="${x+i*sw+sw*t}" y2="${y+22}" stroke="${C.faint}" stroke-width="1"/>`);g+=`<text x="${x+i*sw+sw/2}" y="${y+13}" text-anchor="middle" font-size="9" fill="${C.fg}" font-family="IBM Plex Mono">${lab}</text>`;}); return g; }
-
-function buildPhone(){
-  const hrT=((CFG.hrTarget[0]+CFG.hrTarget[1])/2)/HMAX, pwT=(PB[0]+PB[1])/2*CFG.ftp/PMAX;
-  const pTicks=PB.map(b=>b*CFG.ftp/PMAX), hTicks=CFG.hrZoneEdges.map(e=>e/HMAX);
-  return `<svg viewBox="0 0 ${W} ${H}" xmlns="${NS}" font-family="IBM Plex Mono, monospace" role="img" aria-label="Design 7 dashboard replaying the ride">
-  <rect width="${W}" height="${H}" fill="#060a0d"/>
-  ${Array.from({length:15},(_,i)=>`<line x1="0" y1="${64+i*60}" x2="${W}" y2="${64+i*60}" stroke="#0e161b" stroke-width="1"/>`).join("")}
-  <g font-size="9"><circle id="liveDot" cx="14" cy="20" r="3.2" fill="${C.green}"/><text id="liveTxt" x="22" y="23" fill="${C.mut}">LIVE · REPLAY</text></g>
-  <text id="hdrTime" x="${W-14}" y="24" text-anchor="end" fill="${C.mut}" font-size="11">T 00:00</text>
-  <text x="14" y="46" fill="${C.cyan}" font-size="12" letter-spacing="1.5">SCIENTIFIC COACH</text>
-  <text id="phaseTxt" x="${W-14}" y="46" text-anchor="end" fill="${C.violet}" font-size="9" font-weight="700">FREE RIDE</text>
-  <line x1="14" y1="56" x2="${W-14}" y2="56" stroke="${C.line}"/>
-  <rect id="coachBar" x="14" y="58" width="272" height="3" rx="1.5" fill="${C.line}"/>
-  <!-- power gauge (SIMULATED) -->
-  <text id="tgtLine" x="14" y="70" fill="${C.cyan}" font-size="8">TARGET · —</text>
-  <g id="gP">${gaugeStatic(150,150,68,15,pTicks,true,null)}</g>
-  <text id="pSub" x="150" y="120" text-anchor="middle" fill="${C.mut}" font-size="12"> </text>
-  <text id="pVal" x="150" y="162" text-anchor="middle" fill="${C.fg}" font-size="54" font-weight="500" font-family="Rajdhani">—</text>
-  <text x="150" y="184" text-anchor="middle" fill="${C.mut}" font-size="12" letter-spacing="1">WATTS · SIM</text>
-  <g id="pPill"><rect x="96" y="233" width="108" height="21" rx="10.5" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="150" y="248" text-anchor="middle" fill="${C.faint}" font-size="12" font-weight="700">○ WAITING</text></g>
-  <!-- cadence (SIMULATED) -->
-  <g id="gC">${gaugeStatic(78,340,52,11,[],false,null)}</g>
-  <text x="78" y="322" text-anchor="middle" fill="${C.violet}" font-size="9">${CFG.cadRange[0]}–${CFG.cadRange[1]}</text>
-  <text id="cVal" x="78" y="347" text-anchor="middle" fill="${C.fg}" font-size="26" font-weight="500" font-family="Rajdhani">—</text>
-  <text x="78" y="365" text-anchor="middle" fill="${C.mut}" font-size="9" letter-spacing="1">RPM · SIM</text>
-  <g id="cPill"><rect x="38" y="400" width="80" height="18" rx="9" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="78" y="413" text-anchor="middle" fill="${C.faint}" font-size="9" font-weight="700">○ WAITING</text></g>
-  <!-- heart rate (REAL) -->
-  <g id="gH">${gaugeStatic(222,340,52,11,hTicks,false,null)}</g>
-  <text id="hSub" x="222" y="322" text-anchor="middle" fill="${C.mut}" font-size="9"> </text>
-  <text id="hVal" x="222" y="347" text-anchor="middle" fill="${C.fg}" font-size="26" font-weight="500" font-family="Rajdhani">—</text>
-  <text x="222" y="365" text-anchor="middle" fill="${C.mut}" font-size="9" letter-spacing="1">BPM · REAL</text>
-  <g id="hPill"><rect x="182" y="400" width="80" height="18" rx="9" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/><text x="222" y="413" text-anchor="middle" fill="${C.faint}" font-size="9" font-weight="700">○ WAITING</text></g>
-  <!-- coaching box -->
-  <rect id="cbBox" x="14" y="440" width="272" height="118" rx="16" fill="#0a1015" stroke="${C.line}"/>
-  <circle cx="36" cy="489" r="18" fill="${C.ink}"/><g id="cbShape"></g>
-  <text id="cbCue" x="172" y="484" text-anchor="middle" fill="${C.fg}" font-size="22" font-weight="800" font-family="Archivo">COACH OFF</text>
-  <text id="cbL1" x="172" y="506" text-anchor="middle" fill="${C.mut}" font-size="11" font-family="Inter">Ride 1 is the uncoached baseline</text>
-  <text id="cbL2" x="172" y="522" text-anchor="middle" fill="${C.mut}" font-size="11" font-family="Inter">the coach only observes</text>
-  <g id="cbScale"></g>
-  <!-- power zones -->
-  <line x1="14" y1="574" x2="${W-14}" y2="574" stroke="${C.line}"/>
-  <text x="14" y="594" fill="${C.mut}" font-size="10">POWER ZONES · SIM · FTP ${CFG.ftp} W${CFG.ftpKnown?"":" (not measured)"}</text>
-  ${band(14,602,272,["Z1","Z2","Z3","Z4","Z5","Z6","Z7"],PZC)}
-  <rect id="pTgtBar" x="${14+pwT*272-1}" y="599" width="2" height="24" fill="${C.cyan}"/><path id="pMark" d="" fill="${C.fg}"/>
-  <text x="14" y="650" fill="${C.mut}" font-size="10">HR ZONES · REAL · Z2 = ${CFG.hrTarget[0]}–${CFG.hrTarget[1]} bpm</text>
-  ${band(14,658,272,["Z1","Z2","Z3","Z4","Z5"],HZC)}
-  <rect id="hTgtBar" x="${14+hrT*272-1}" y="655" width="2" height="24" fill="${C.cyan}"/><path id="hMark" d="" fill="${C.fg}"/>
-  <text x="14" y="708" fill="${C.mut}" font-size="10">POWER TREND · SIM · last 5 min   ·   HR · REAL</text>
-  <rect x="14" y="716" width="272" height="130" fill="#080e12" stroke="${C.line}"/>
-  <line x1="14" y1="776" x2="286" y2="776" stroke="#13202a" stroke-dasharray="3 3"/><text x="20" y="773" fill="${C.faint}" font-size="8">FTP</text>
-  <polyline id="trendP" points="" fill="none" stroke="${C.cyan}" stroke-width="2" stroke-linejoin="round"/>
-  <polyline id="trendH" points="" fill="none" stroke="${C.red}" stroke-width="1.5" stroke-linejoin="round" opacity=".85"/>
-  <g font-family="Rajdhani">
-    <text id="sDist" x="14" y="884" fill="${C.fg}" font-size="24">0.0 km</text><text x="14" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">DISTANCE · REAL AVG</text>
-    <text id="s3s" x="130" y="884" fill="${C.fg}" font-size="24">— W</text><text x="130" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">3S AVG · SIM</text>
-    <text id="sVi" x="218" y="884" fill="${C.fg}" font-size="24">—</text><text x="218" y="900" fill="${C.mut}" font-size="9" font-family="IBM Plex Mono">VARIABILITY</text>
-  </g>
-  <text x="14" y="936" font-size="8" fill="${C.faint}">LIVE = dot · TGT = band · watts &amp; rpm simulated</text>
-  </svg>`;
-}
-
 /* ============================================================ player */
 const el=id=>document.getElementById(id);
-let ride="r1", speedX=10, t=0, playing=false, raf=null, lastTs=0, acc=0;
+let ride="r1", speedX=10, t=0, playing=false, raf=null, lastTs=0, acc=0; let DROP={pw:false,hr:false,cad:false};
 let coach, protos, logEntries=[], latest=null, npAcc=0, npN=0, distKm=0, zoneSec=[0,0,0,0,0], cueCounts={};
 const phoneEl=el("phone");
 const q=sel=>phoneEl.querySelector(sel);
 
 function fmt(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), r=s%60; return (m<10?"0":"")+m+":"+(r<10?"0":"")+r; }
-function pillSet(gid,status,text,big){ const g=q("#"+gid), r=g.querySelector("rect"), tx=g.querySelector("text"); const col={BELOW:C.cyan,ON:C.green,ABOVE:C.amber,UNKNOWN:C.faint}[status]; const gl={BELOW:"▲",ON:"●",ABOVE:"▼",UNKNOWN:"○"}[status];
-  const label=gl+" "+text; const fs=big?12:9; const w=label.length*fs*0.64+16; const cx=+tx.getAttribute("x"); r.setAttribute("x",(cx-w/2).toFixed(1)); r.setAttribute("width",w.toFixed(1)); r.setAttribute("fill",col); r.setAttribute("stroke",col); tx.setAttribute("fill",col); tx.textContent=label; }
-function tstat(v,lo,hi){ if(v==null||v<=0) return "UNKNOWN"; return v<lo?"BELOW":v>hi?"ABOVE":"ON"; }
-function shapeSvg(dir){ const cx=36,cy=489,u=10; if(dir>0) return `<polygon points="${cx},${cy-u} ${cx+u},${cy+u*0.7} ${cx-u},${cy+u*0.7}" fill="currentColor"/>`; if(dir<0) return `<polygon points="${cx},${cy+u} ${cx+u},${cy-u*0.7} ${cx-u},${cy-u*0.7}" fill="currentColor"/>`; if(dir===0) return `<path d="M${cx-9} ${cy+1} l6 6 l12 -13" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`; return `<circle cx="${cx}" cy="${cy}" r="8" fill="none" stroke="currentColor" stroke-width="2"/>`; }
-function scaleSvg(dir,active,col){ const steps=[["▼ EASE",-1],["✓ ON TARGET",0],["▲ FASTER",1]], x=26,y=534,w=248,gap=4,pw=(w-gap*2)/3; let g="";
-  steps.forEach((s,i)=>{ const px=x+i*(pw+gap), on=active&&dir===s[1]; g+=`<rect x="${px.toFixed(1)}" y="${y}" width="${pw.toFixed(1)}" height="15" rx="7.5" fill="${active?C.ink:C.line}" fill-opacity="${on?1:.25}" stroke="${active?C.ink:C.line}" stroke-opacity="${on?1:.6}"/>`; g+=`<text x="${(px+pw/2).toFixed(1)}" y="${y+10.5}" text-anchor="middle" fill="${on?col:(active?C.ink:C.mut)}" fill-opacity="${on?1:.8}" font-size="7.5" font-weight="700" font-family="IBM Plex Mono">${s[0]}</text>`; }); return g; }
-function wrap2(s,max){ const w=s.split(" "),l=[]; let c=""; w.forEach(x=>{ if((c+" "+x).trim().length>max){ if(c)l.push(c); c=x; } else c=(c+" "+x).trim(); }); if(c)l.push(c); if(l.length>2){ l[1]=l.slice(1).join(" "); l.length=2; if(l[1].length>max) l[1]=l[1].slice(0,max-1)+"…"; } return l; }
 
-const CUE_STYLE={QUIET:[C.faint,null],KEEP_IT_UP:[C.green,0],PEDAL_FASTER:[C.cyan,1],PUSH_HARDER:[C.cyan,1],EASE_OFF:[C.amber,-1],PEDAL_SLOWER:[C.amber,-1],WARMUP:[C.violet,null],COOLDOWN:[C.violet,null],RECOVER:[C.violet,null],PEDAL_SMOOTHER:[C.violet,null],GREAT_PACING:[C.green,0],NOTE:[C.violet,null],NO_HR:[C.faint,null]};
-function setCoachBox(e){
-  const coached=ride!=="r1";
-  if(!e){ q("#cbBox").setAttribute("fill","#0a1015"); q("#cbBox").setAttribute("stroke",C.line); q("#cbCue").textContent=coached?"COACH READY":"COACH OFF"; q("#cbCue").setAttribute("fill",C.fg);
-    const l=coached?["Zone 2 mode · target 138–149 bpm","watching heart rate, power and cadence"]:["Ride 1 is the uncoached baseline","the coach only observes and takes notes"]; q("#cbL1").textContent=l[0]; q("#cbL2").textContent=l[1]; q("#cbL1").setAttribute("fill",C.mut); q("#cbL2").setAttribute("fill",C.mut);
-    q("#cbShape").innerHTML=`<g style="color:${C.faint}">${shapeSvg(null)}</g>`; q("#cbScale").innerHTML=scaleSvg(null,false,C.faint); q("#coachBar").setAttribute("fill",C.line); return; }
-  const [col,dir]=CUE_STYLE[e.type]||[C.faint,null]; const active=e.type!=="NOTE"&&e.type!=="NO_HR";
-  q("#cbBox").setAttribute("fill",active?col:"#0a1015"); q("#cbBox").setAttribute("stroke",active?col:C.line);
-  const ink=active?C.ink:C.fg; q("#cbCue").textContent=e.head; q("#cbCue").setAttribute("fill",ink); q("#cbCue").setAttribute("font-size",e.head.length>=34?11:e.head.length>=26?13:e.head.length>=20?15:e.head.length>=14?19:e.head.length>=12?21:e.head.length>=10?24:26);
-  const l=wrap2(e.detail.split(".")[0],30); q("#cbL1").textContent=l[0]||""; q("#cbL2").textContent=l[1]||""; q("#cbL1").setAttribute("fill",active?C.ink:C.mut); q("#cbL2").setAttribute("fill",active?C.ink:C.mut);
-  q("#cbShape").innerHTML=`<g style="color:${active?col:C.faint}">${shapeSvg(dir)}</g>`; q("#cbScale").innerHTML=scaleSvg(dir,active,col); q("#coachBar").setAttribute("fill",active?col:C.line);
-}
 
 function resetRide(){ cancelAnimationFrame(raf); playing=false; el("playBtn").textContent="▶ PLAY"; el("playBtn").className="btn play"; t=0; acc=0; lastTs=0;
-  const R=REAL[ride]; PMAX=Math.max(300,CFG.ftp*1.5); phoneEl.innerHTML=buildPhone(); const pr=phoneEl.querySelectorAll(".prog"); pr[0].id="progP"; pr[1].id="progC"; pr[2].id="progH";
+  const R=REAL[ride]; BUF.clear(); DROP={pw:false,hr:false,cad:false}; document.querySelectorAll("#dropSeg button").forEach(b=>b.setAttribute("aria-pressed","false"));
   coach=new Coach({mode: ride==="r1"?"FREE":"ZONE2", usePower:CFG.powerCoaching, backoff:CFG.backoff, grace:CFG.grace, cadenceEnabled:CFG.cadenceEnabled, cadLow:CFG.cadRange[0], cadHigh:CFG.cadRange[1], sameRepeat:CFG.sameRepeat, keepRepeat:CFG.keepRepeat}); protos=new Prototypes(); logEntries=[]; latest=null; npAcc=0; npN=0; distKm=0; zoneSec=[0,0,0,0,0]; cueCounts={};
   el("scrub").max=R.sec; el("scrub").value=0; el("total").textContent=fmt(R.sec); el("clock").textContent="00:00";
-  renderFrame(); renderLog(); renderMemo(); renderKv(); setCoachBox(null); el("cueBig").textContent="PRESS PLAY"; el("cueWhy").textContent="The coach speaks only when a rule fires. Each line below says which rule and what it saw."; }
+  showView("live"); renderLog(); renderMemo(); renderKv(); setCoachBox(null); el("cueBig").textContent="PRESS PLAY"; el("cueWhy").textContent="The coach speaks only when a rule fires. Each line below says which rule and what it saw."; }
 
 function step(){ const R=REAL[ride], S=SERIES[ride]; if(t>=R.sec) return false;
   const now=t*1000, coached=ride!=="r1", phase=phaseAt(t,R.sec,coached);
-  const hr=S.hr[t], pw=S.power[t], cad=S.cad[t];
+  // sensor drop-out toggles (review aid): a missing reading is null — a gap in the graph, "NO DATA" on the card, never a substitute value
+  const hr=DROP.hr?null:S.hr[t], pw=DROP.pw?null:S.power[t], cad=DROP.cad?null:S.cad[t];
   const z=hrZone(hr); if(z>0) zoneSec[z-1]++;
+  { const TG=targetsFor(phase,coached,t,R.sec); const p3=pw==null?null:(()=>{ const a=BUF.a.slice(-2).map(x=>x.pw).filter(x=>x!=null); a.push(pw); return Math.round(a.reduce((x,y)=>x+y,0)/a.length); })();
+    BUF.add({t,pw,pw3:p3,hr,cad,phase,tg:{pw:TG.pw,hr:TG.hr,cad:TG.cad},n:{pw:normOf(p3,TG.pw[0],TG.pw[1]),hr:normOf(hr,TG.hr[0],TG.hr[1]),cad:normOf(cad,TG.cad[0],TG.cad[1])}}); }
   distKm+=S.speed[t]/3600;
   // NP accumulator (30 s rolling mean^4) — SIMULATED
   if(t>=30){ const w=S.power.slice(t-29,t+1); const m=w.reduce((a,b)=>a+b,0)/30; npAcc+=Math.pow(m,4); npN++; }
@@ -340,44 +240,6 @@ function step(){ const R=REAL[ride], S=SERIES[ride]; if(t>=R.sec) return false;
   [cue,...extra].forEach(e=>{ if(!e) return; e.t=t; logEntries.push(e); latest=e; cueCounts[e.type]=(cueCounts[e.type]||0)+1; });
   t++; return true; }
 
-function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,Math.min(t,R.sec-1)); const hr=S.hr[i], pw=S.power[i], cad=S.cad[i];
-  const coached=ride!=="r1", phase=phaseAt(i,R.sec,coached);
-  q("#hdrTime").textContent="T "+fmt(i); el("clock").textContent=fmt(i); el("scrub").value=i;
-  q("#phaseTxt").textContent= !coached?"FREE RIDE · OBSERVING": phase==="WARMUP"?`WARM-UP ${fmt(CFG.warmupSec-i)}`: phase==="COOLDOWN"?"COOL-DOWN":"MAIN · ZONE 2 MODE";
-  q("#phaseTxt").setAttribute("fill", phase==="MAIN"&&coached?C.green:C.violet);
-  const TG=targetsFor(phase,coached,i,R.sec);
-  q("#tgtLine").textContent=`TGT ${TG.label.replace("MAIN Z2","Z2").replace(" RAMP","")} · ${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} BPM · ${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W · ${TG.cad[0]}–${TG.cad[1]} RPM`;
-  const gP=q("#gP"), gC=q("#gC"), gH=q("#gH");
-  // power gauge — LIVE: progress arc + marker at the current watts; TGT: band over the active power target
-  const pz=powZone(pw), pcol=pz?PZC[pz-1]:C.grey; const pf=Math.min(1,pw/PMAX);
-  q("#progP").setAttribute("d",arcPath(150,150,68,S0,angleOf(pf))); q("#progP").setAttribute("stroke",pcol); setLive(gP,150,150,68,pf);
-  setTarget(gP,150,150,68,15,TG.pw[0]/PMAX,TG.pw[1]/PMAX,C.cyan);
-  q("#pVal").textContent=pw>0?pw:"0"; q("#pSub").textContent=pz?`Z${pz} · ${pz===7?"":Math.round(((pw/CFG.ftp)-(pz===1?0:PB[pz-2]))/((PB[pz-1]-(pz===1?0:PB[pz-2]))||1)*100)+"%"}`:"coasting"; q("#pSub").setAttribute("fill",pz?pcol:C.mut);
-  const ps= pw<=0?"UNKNOWN":tstat(pw,TG.pw[0],TG.pw[1]); pillSet("pPill",ps,ps==="UNKNOWN"?"COASTING":ps==="ON"?"ON TARGET":ps==="BELOW"?"BELOW TGT":"ABOVE TGT",true);
-  // cadence — LIVE marker + constant target range band
-  const cf=Math.min(1,cad/CMAX); q("#progC").setAttribute("d",arcPath(78,340,52,S0,angleOf(cf))); q("#progC").setAttribute("stroke",C.violet); setLive(gC,78,340,52,cf); q("#cVal").textContent=cad>0?cad:"0";
-  setTarget(gC,78,340,52,11,TG.cad[0]/CMAX,TG.cad[1]/CMAX,C.green);
-  const cs=tstat(cad,TG.cad[0],TG.cad[1]); pillSet("cPill",cs,cs==="UNKNOWN"?"NOT TURNING":cs==="ON"?"ON TARGET":cs==="BELOW"?"BELOW RANGE":"ABOVE RANGE",false);
-  // heart rate — LIVE marker + target band that moves with the phase
-  const hz=hrZone(hr), hcol=hz?HZC[hz-1]:C.faint; const hf=Math.min(1,hr/HMAX); q("#progH").setAttribute("d",arcPath(222,340,52,S0,angleOf(hf))); q("#progH").setAttribute("stroke",hcol); setLive(gH,222,340,52,hf); q("#hVal").textContent=hr;
-  setTarget(gH,222,340,52,11,TG.hr[0]/HMAX,TG.hr[1]/HMAX,C.cyan);
-  const e=CFG.hrZoneEdges, lo=hz<=1?100:e[hz-2], hi=hz>=5?185:e[hz-1]; q("#hSub").textContent=`Z${hz} · ${Math.round(Math.max(0,Math.min(1,(hr-lo)/((hi-lo)||1)))*100)}%`; q("#hSub").setAttribute("fill",hcol);
-  const hs=tstat(hr,TG.hr[0],TG.hr[1]); pillSet("hPill",hs,hs==="ON"?"ON TARGET":hs==="BELOW"?"BELOW TGT":"ABOVE TGT",false);
-  // band markers
-  const mx=14+Math.min(1,pw/PMAX)*272; q("#pMark").setAttribute("d",`M${mx-5} 597 L${mx+5} 597 L${mx} 603 Z`);
-  const hx=14+Math.min(1,hr/HMAX)*272; q("#hMark").setAttribute("d",`M${hx-5} 653 L${hx+5} 653 L${hx} 659 Z`);
-  q("#pTgtBar").setAttribute("x",(14+((TG.pw[0]+TG.pw[1])/2)/PMAX*272-1).toFixed(1)); q("#hTgtBar").setAttribute("x",(14+((TG.hr[0]+TG.hr[1])/2)/HMAX*272-1).toFixed(1));
-  // trend (last 5 min)
-  const a=Math.max(0,i-299), n=i-a+1; const maxV=Math.max(CFG.ftp, ...S.power.slice(a,i+1))*1.05;
-  const ptsP=[],ptsH=[]; for(let k=a;k<=i;k++){ const x=22+(k-a)/299*256; ptsP.push(x.toFixed(1)+","+(838-S.power[k]/maxV*110).toFixed(1)); ptsH.push(x.toFixed(1)+","+(838-(S.hr[k]-90)/100*110).toFixed(1)); }
-  q("#trendP").setAttribute("points",n>1?ptsP.join(" "):""); q("#trendH").setAttribute("points",n>1?ptsH.join(" "):"");
-  // stats
-  q("#sDist").textContent=distKm.toFixed(1)+" km"; const s3=i>=2?Math.round((S.power[i]+S.power[i-1]+S.power[i-2])/3):pw; q("#s3s").textContent=s3+" W";
-  const np=npN?Math.pow(npAcc/npN,0.25):null; const avgP=S.power.slice(0,i+1).reduce((x,y)=>x+y,0)/(i+1); q("#sVi").textContent=(np&&avgP>0)?(np/avgP).toFixed(2):"—";
-  setCoachBox(latest);
-  if(latest){ el("cueBig").innerHTML=`<span class="cicon">${latest.icon||"○"}</span>${latest.head}`; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="v0.7 rule"?"now":"proto"}">${(latest.src||"v0.9").toUpperCase()}</i> at ${fmt(latest.t)} — ${wordCue(latest)}${latest.live?`<div class="clive">${latest.live}${latest.sources?` · from <b>${latest.sources}</b>`:""}</div>`:""}`; }
-  const A=coach&&coach.assessment; const ca=el("cueAssess"); if(ca){ if(A){ ca.innerHTML=`<i class="dot ${i-Math.round(A.at/1000)<=65?"on":""}"></i>analysed ${Math.max(0,i-Math.round(A.at/1000))}s ago · ${A.progress} · ${A.summary}`; } else ca.textContent="First 60-second assessment comes after one minute of riding."; }
-}
 function wordCue(e){ const tone=CFG.tone||"neutral", det=CFG.detail||"detailed"; let d=e.detail; if(det==="simple") d=d.split(".")[0]+".";
   if(tone==="encouraging"){ const pre={EASE_OFF:"No problem — ",PUSH_HARDER:"You have more in you — ",KEEP_IT_UP:"Nice work — ",PEDAL_FASTER:"Small tweak — ",WARMUP:"Welcome back — ",COOLDOWN:"Well done — "}[e.type]||""; d=pre+d; }
   if(tone==="technical") d=`[${e.reason}] `+d; return d; }

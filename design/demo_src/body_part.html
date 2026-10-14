@@ -1,7 +1,7 @@
 <div class="wrap">
   <p class="ey">Bike Computer · Scientific Coach · riders, club and leaderboard</p>
   <h1>One device, every rider their own coach</h1>
-  <p class="sub">The Bike Computer app flow as it would run on your Nokia: sign in or create an account → onboarding → personal home → live coaching → post-ride questions → your updated plan and club position. Switch rider before a ride and the zones, coach, sensors and history switch with you. Four fictional riders (Omar, Layla, Sami, Noor) and their SAMPLE rides are seeded so you can compare profiles, recommendations and rankings. Everything is stored in this browser only. Heart rate in the replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
+  <p class="sub"><b>v0.10 review build — new live dashboard.</b> Four compact sections: ride info · metric cards with target indicators · one combined power / heart-rate / cadence graph (last 5 min) · a short coach line. Press DETAILS on the phone for the larger interactive graph. The Bike Computer app flow as it would run on your Nokia: sign in or create an account → onboarding → personal home → live coaching → post-ride questions → your updated plan and club position. Switch rider before a ride and the zones, coach, sensors and history switch with you. Four fictional riders (Omar, Layla, Sami, Noor) and their SAMPLE rides are seeded so you can compare profiles, recommendations and rankings. Everything is stored in this browser only. Heart rate in the replays is your real Apple Fitness data; watts and cadence are simulated and marked.</p>
   <div class="legend">
     <span><i class="tag real">REAL</i> measured</span>
     <span><i class="tag sim">SIMULATED</i> generated, assumptions stated</span>
@@ -36,6 +36,11 @@
           </div>
           <div class="clock">ride <b id="clock">00:00</b> / <span id="total">65:05</span></div>
           <input type="range" class="scrub" id="scrub" min="0" max="3905" value="0" step="1" aria-label="Scrub ride time">
+          <div class="seg" id="dropSeg" title="Review aid: simulate a sensor drop-out while the replay runs">
+            <button type="button" data-drop="pw" aria-pressed="false">⚡ drop power</button>
+            <button type="button" data-drop="hr" aria-pressed="false">♥ drop HR</button>
+            <button type="button" data-drop="cad" aria-pressed="false">↻ drop cadence</button>
+          </div>
           <button type="button" class="btn finish" id="finishBtn">■ FINISH RIDE</button>
         </div>
         <div class="phone" id="phone"></div>
@@ -58,6 +63,15 @@
       <div class="card" id="ridersCard" hidden>
         <h3>Same ride, four coaches <i class="tag proto">PROTOTYPE</i></h3>
         <div id="ridersBox"></div>
+      </div>
+      <div class="card" id="scaleCard" hidden>
+        <h3>How the combined graph is scaled <i class="tag proto">v0.10</i></h3>
+        <div style="font-size:13px;color:var(--mut);line-height:1.45">
+          <p style="margin:0 0 6px">Watts, bpm and rpm are never put on one shared axis. Each line is scaled by its <b>own</b> function: <span style="color:var(--cyan)">power ÷ the current power target</span>, <span style="color:var(--green)">heart rate ÷ the current HR target</span>, <span style="color:var(--violet)">cadence ÷ your preferred cadence range</span> — using the target that applied <em>at that second</em>, so a warm-up ramp does not bend old points.</p>
+          <p style="margin:0 0 6px">The grey <b>TARGET</b> strip is the same height for all three: inside it = on target. One strip height equals the width of that signal's target (the legend prints the numbers, e.g. 34 W · 12 bpm · 15 rpm). One strip height above or below is still linear; beyond that the scale compresses toward the edge, so 999 W is still visibly above 300 W without flattening the normal range.</p>
+          <p style="margin:0 0 6px">Missing readings are gaps (never joined, never filled); a true 0 W while coasting is drawn as a value. Shaded areas mark ≥ 20 s outside the band for power and heart rate. Dashed verticals mark phase changes. Exact values live on the cards above the graph and in Details.</p>
+          <p style="margin:0">Buffer: a fixed 600-sample ring (10 min at 1 Hz). The live screen draws the last 5 min; when samples outnumber pixel columns, each column keeps its min and max so peaks survive. The ride recording is a separate, untouched 1 Hz series.</p>
+        </div>
       </div>
       <div class="card cue" id="cueCard" hidden>
         <h3>Latest instruction and why <i class="tag proto">v3 COACH</i></h3>

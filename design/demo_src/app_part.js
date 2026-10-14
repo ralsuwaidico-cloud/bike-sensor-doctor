@@ -212,7 +212,7 @@ function recommend(a,c){
 /* ---------------- screens ---------------- */
 const SCR=["scrWelcome","scrAuth","scrQ","scrProfile","scrHome","scrLive","scrPost","scrClub","scrBoard","scrMember"];
 const TABSCR=["scrHome","scrClub","scrBoard","scrMember","scrProfile"];
-function show(id,title){ SCR.forEach(s=>el(s).hidden=(s!==id)); el("appTitle").textContent=title||"Bike Computer"; const live=id==="scrLive"; ["cueCard","logCard","memoCard","kvCard"].forEach(c=>el(c).hidden=!live); el("cmpCard").hidden=!(P.completed); el("ridersCard").hidden=!(P.completed);
+function show(id,title){ SCR.forEach(s=>el(s).hidden=(s!==id)); el("appTitle").textContent=title||"Bike Computer"; const live=id==="scrLive"; ["cueCard","logCard","memoCard","kvCard","scaleCard"].forEach(c=>el(c).hidden=!live); el("cmpCard").hidden=!(P.completed); el("ridersCard").hidden=!(P.completed);
   const tabs=el("tabs"); tabs.hidden=!(P.completed&&TABSCR.includes(id)); tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.tab===id||(b.dataset.tab==="scrClub"&&id==="scrMember")||(b.dataset.tab==="scrHome"&&id==="scrProfile"))));
   el("riderChip").textContent=P.id!=="tmp"&&P.name?P.name:""; window.scrollTo({top:0,behavior:"smooth"}); }
 function tag(cls,txt){ return `<i class="tag ${cls}">${txt}</i>`; }
