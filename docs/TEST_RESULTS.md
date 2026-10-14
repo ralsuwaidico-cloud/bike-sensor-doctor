@@ -1,8 +1,11 @@
-# Test results — Bike Computer v0.8.0 (build 51), 2026-10-14
+# Test results — Bike Computer v0.8.0 (build 54), 2026-10-14
 
-Release APK: `BikeComputer-build51.apk` · versionCode 11 · versionName 0.8.0 · package `com.rashed.bikesensordoctor.debug`
-SHA-256 `de370e2ad51d581d2334e9b5f1cf55c446100d7ef63dfcc98f930efcc58fd180` — the identical file that passed every check below
-(CI run 51: build → emulator test → release, all green; run 50 passed the same tests one commit earlier).
+Release APK: `BikeComputer-build54.apk` · versionCode 11 · versionName 0.8.0 · package `com.rashed.bikesensordoctor.debug`
+SHA-256 `37fd737322dca11f4c1acc089fd0c243b4c25ba5ab77da7b530d92af9b989754` — the identical file that passed every check below
+(CI run 54: build → emulator test → release, all green). Same app code and same signing key as build 51; builds 50, 51, 53
+and 54 all passed the device test. Run 52 (documentation-only commit) failed because the test harness launched the app from
+the background after Android 12's 10-second grace period — a harness fault, not an app fault; the harness now launches via the
+shell (`am start`), which is never blocked.
 
 ## How it was tested
 
