@@ -1,79 +1,71 @@
-# Test results — Bike Computer v0.8.0 (build 54), 2026-10-14
+# Test results — Bike Computer v0.9.0 (build 61), 2026-10-14
 
-Release APK: `BikeComputer-build54.apk` · versionCode 11 · versionName 0.8.0 · package `com.rashed.bikesensordoctor.debug`
-SHA-256 `37fd737322dca11f4c1acc089fd0c243b4c25ba5ab77da7b530d92af9b989754` — the identical file that passed every check below
-(CI run 54: build → emulator test → release, all green). Same app code and same signing key as build 51; builds 50, 51, 53
-and 54 all passed the device test. Run 52 (documentation-only commit) failed because the test harness launched the app from
-the background after Android 12's 10-second grace period — a harness fault, not an app fault; the harness now launches via the
-shell (`am start`), which is never blocked.
+Release APK: `BikeComputer-build61.apk` · versionCode 12 · versionName 0.9.0 · package `com.rashed.bikesensordoctor.debug`
+SHA-256 `a3f1cf4a9116c7b199ef395fa19c9ca9f4def38746368779e7f0146d75584385` — the identical file that passed every check below
+(CI run 61: build → Android 12 emulator test → release, all green). Signed with the same committed key as builds 51–60, so it
+installs over them with riders, rides and settings kept.
 
-## How it was tested
+## What is new in v0.9
+- **Live screen is one fixed Nokia screen, no scrolling**: speed · distance · time on top; power / HR / cadence gauges with LIVE
+  dot, TGT band and status pill; one line of active targets; the coach panel takes the remaining height; PAUSE / FINISH / COOL
+  (or COACH) and Home · Details · ⚙ at the bottom. Zone bands, power trend, statistics and link quality moved to **Details**.
+- **Ride Results** — one scrolling page: summary (duration, moving time, distance, avg/max speed, elevation, max HR, avg/max power,
+  cadence, calories ESTIMATE with method, effort, cues) + GPS track; heart-rate graph with zone shading and the target band, avg/max,
+  1-minute recovery, time in **your** zones with bpm bounds and %, optional **Apple Fitness reference zones** (labelled, never used
+  for coaching); power graph with FTP line, NP, time in power zones, cadence graph; speed and elevation graphs; **AI coach review**
+  (objective, in-band %, longest block, consistency, drift with validity note, what went well / could improve); calibration cards;
+  the two questions → next workout with the reason.
+- **Coach v3**: practical instructions chosen by one priority ladder (sensor validity → effort vs targets → cadence → gear →
+  encouragement): *Shift to an easier / harder gear · Reduce pressure on the pedals · Increase your effort slightly · Pedal a little
+  faster · Slow your pedalling · Keep your cadence steady · Hold this pace · Your effort is stable, maintain this rhythm · Your heart
+  rate is rising, ease off · Start your cooldown*. Gear is inferred from cadence + power (never measured). Coasting/stopped → no
+  pedalling or gear instruction. Per-instruction spacing (no ping-pong), back-off after 3 unheeded repeats, quiet/normal/often
+  presets. The panel shows the action icon, one explanation, the live numbers it used, which signals decided, and the 60-second
+  assessment with an "analysed N s ago" indicator.
+- **Calibration with evidence rules**: FTP = 95 % of best 20-min power, only from a verified meter and only when two rides agree
+  within 5 % (one ride = "1 of 2 collected"); threshold HR only from the guided 20-minute test (one test → PROVISIONAL, two within
+  3 bpm → CONFIRMED); measured values are never overwritten; "zones may be too low" flag after three easy rides mostly above band.
+- **Learning**: natural cadence (median), sustainable power, HR at usual effort, endurance, in-band trend, recovery — shown in the
+  ME tab, and the learned cadence feeds the coach after three real rides when none was entered.
 
-| Layer | Where | What |
+## Automated checks (all pass)
+| Layer | Count | What |
 |---|---|---|
-| Portable core (coach, profile rules, targets, leaderboard, reliability) | GitHub Actions JVM + local JVM | 88 JUnit tests incl. 16 coach test vectors (1,502 assertions) |
-| Whole app on a device | GitHub Actions **Android 12 (API 31) emulator**, 720×1520 @ 320 dpi (Nokia 5.3 geometry) | Installed the release APK, drove it through the accessibility tree like a finger (UiAutomator), 31 screenshots, logcat crash scan, 1,500-event monkey stress |
-| Nokia 5.3 hardware, XDS meter, HR strap | **not possible from here** | see "Untested" |
+| Core unit tests (JVM, CI + local) | 117 | coach vectors (16 files, 1,502 assertions); §9 scenarios: low cadence + high power, high cadence + low power, HR rising at steady power, HR above + cadence below, power below + HR above, coasting, stopped, missing HR, missing power, sensor drop-out, different profiles, phase transitions, non-contradiction, repetition limit, 60-s assessment, frequency presets; ride analysis (zones, NP, moving time, calories, drift validity, elevation, recovery, CSV round-trip); calibration evidence rules; leaderboard; profile rules |
+| Emulator (API 31, 720×1520, 320 dpi) — `AppFlowTest` | 6/6 | sign-in → onboarding → home → club/board/member/ME → rider switch (Omar, Layla) → simulated 60-min ride at 30× (warm-up, MAIN, cool-down; pause/resume; background/foreground) → results page → questions → next workout → history → restart; **extremes** 999 W · 199 bpm · 120 rpm; **system font 1.3×**; 35 screenshots |
+| Layout assertions (every live-screen visit) | 4 | no scrollable container on the live screen; speed/distance/time, all three gauges, target line, coach box and headline visible without any gesture; coach box sits above the controls, controls inside the screen |
+| Stress / crash | — | 1,500 monkey events clean; no FATAL in the app process; crash recorder empty |
+| APK | — | installs on API 31; version/package confirmed; SHA-256 matches the tested artifact; signed with the committed key |
 
-## Passed (emulator, automated — `AppFlowTest`, 5/5 OK)
+## Apple Fitness comparison (12 Oct ride fixture)
+Reference values you gave: 1:05:05, 21.46 km, 19.7 km/h, 150 bpm avg, 91 ft, 509/617 kcal, effort 6/10; Apple zones 26:46 / 21:02 /
+15:56 / 01:20 / 00:00 with bands <150, 151–160, 161–169, 170–178, 179+.
+- The app reproduces Apple's **zone boundaries and labelling** exactly (reference set `APPLE_12_OCT`, shown separately from your own
+  coaching zones and never used for coaching).
+- Our heart-rate trace of that ride is read from your chart (26 key points, interpolated), not from the watch's second-by-second
+  data. Zone totals from that trace: 29:47 / 23:40 / 8:37 / 3:01 / 0:00 — same ordering, same total, but Z3 is under-read by about
+  7 minutes because short excursions above 161 bpm are smoothed out by the interpolation. On the phone the app uses the strap's
+  real 1 Hz data, so this difference does not apply to real rides; it is a fixture-quality limit, documented in `RideAnalysisTest`.
+- Calories are **estimates** either way: from measured power (kJ ≈ kcal) once the meter is verified, else Keytel from heart rate
+  (needs weight and age in the profile). Apple's active/total split uses its own models; equality is not claimed.
+- Elevation: GPS altitude with a 3 m threshold vs Apple's barometer — expect differences on flat routes.
 
-| # | Check | Evidence |
-|---|---|---|
-| 1 | First launch → sign-in screen with 4 SAMPLE riders, create account "Rashed" | 01_sign_in, 02_welcome |
-| 2 | All 6 onboarding pages (chips, numbers, sliders, "Tested" tags), summary with CONFIRMED zones (threshold 168 → Z2 139–151) | 03–08 |
-| 3 | Personal home: goal, today's workout, why/how/measure, START RIDE pinned | 09_home |
-| 4 | Club: not a member → join with invite code → member list, challenges, Leave | 10, 11 |
-| 5 | Leaderboard: Weekly km / Monthly km / Time / Climb / Rides / Z2★ tabs, reset date, DEMO banner, own row highlighted | 12–14 |
-| 6 | Rider profile of another member (zones hidden, their coach's recommendation shown) | 15 |
-| 7 | ME tab = editable profile summary, redo onboarding, sign out | 16 |
-| 8 | Switch rider: Omar's home (Zone 2 endurance 90 min) and Layla's home (Sweet-spot intervals) differ from Rashed's; switch back | 17–19 |
-| 9 | Back button from Club/Board/ME returns Home; Back on Home leaves the app | t02 |
-| 10 | Simulated 60-min ride at 30×: START, PAUSE, RESUME, WARM-UP ramp → MAIN → COOL-DOWN ramp, gauges update, LIVE dots and TGT bands move, cues (WARM UP, KEEP IT UP, EASE OFF, WIND DOWN, COACH QUIET after 3 repeats), link 100 % no gaps, backgrounded + reopened without losing the ride | 20–27 |
-| 11 | FINISH → post-ride results (92 % in band, drift, cues, SIMULATED label) → questions → next recommendation ("Legs limited you last time → cadence hints prioritised") → Home | 28, 29 |
-| 12 | History lists the ride tagged SIMULATED with % in band; CSV/GPX present | 30 |
-| 13 | App restart keeps rider, profile, feedback; Settings screen renders; dashboard without simulation stays alive | 31, 32 |
-| 14 | Logcat: no crash in the app process during the whole run; crash recorder file empty | crashes.txt, last-crash.txt empty |
-| 15 | Monkey 1,500 random taps/swipes: app still running, no crash file | monkey.txt |
-| 16 | APK installs on API 31; version/package confirmed by `dumpsys package` | install.txt |
+## Visual review of the real build (screenshots in docs/evidence)
+Fixed before release: gauge sub-labels overflowing the small rings (now ≤ 8 characters), coach panel clipped at 1.3× font (headline
+steps down, assessment line yields), average speed above max speed in accelerated simulation (series now records every riding second).
+Remaining nit: at 1.3× system font the EASE · ON TARGET · FASTER scale row touches the bottom of the coach panel.
 
-## Visual problems found by the screenshots and fixed before release
-- Header "SCIENTIFIC COACH" wrapped letter-by-letter when phase + tags shared the row → tags moved to their own line.
-- "COACH" button wrapped to "COA / CH" → wider button, smaller font, single line.
-- "SHOWN · NOT COACHED" overflowed the power gauge → "NOT COACHED".
-- "Tested" chips wrapped to "Teste / d" on the zones page → narrower label/number columns, tighter chip padding.
-- START RIDE on Home was below the fold → pinned above the tab bar.
-- After SAVE on the post-ride screen the app skipped the "recommendation changed" view → fixed.
-- Previous ride's last cue ("COACH QUIET") stayed on the dashboard after finishing → cue reset at start/finish.
-- Simulator script was out of step with the ride clock (coasting at minute 50) → script restarts with the ride.
+## Untested — needs your phone or hardware
+- Nokia 5.3 itself (emulator matches resolution/density/Android 12, not the chip, fonts or Bluetooth stack).
+- XDS/Branta meter: pairing, 5-min reconnect, Verify Power under load (and therefore all power-based coaching, calories from power,
+  FTP evidence — the app keeps these off until the meter passes verification).
+- Heart-rate strap, HR recovery after FINISH (needs the strap to keep reporting for a minute), the guided threshold test.
+- Outdoor GPS: speed/distance/elevation and the route drawing (emulator GPS is a fixed point).
+- Voice: TTS on the phone.
+- Landscape: the app is locked to portrait (as before).
 
-## Coaching engine (unit tests, all pass)
-HR below/inside/above band · power below/inside/above · cadence below/inside/above · HR–power conflict (HR authority, HR-lag hold,
-surge pre-empt) · stale/absent signals · warm-up → MAIN with 90 s transition grace · MAIN → cool-down with falling ceiling (WIND DOWN) ·
-back-off (3 unheeded repeats → QUIET, speaks again after 5 min; 12+ repeats without it) · power never coached when FTP unknown ·
-four rider profiles give different bands/recommendations (CONFIRMED / PROVISIONAL / GENERIC derivations) · leaderboard excludes
-SIMULATED/SAMPLE rides from a real board.
-
-## Untested — needs your phone or your hardware
-- Nokia 5.3 itself (the emulator matches its resolution/density and Android version, not its chip, fonts or Bluetooth stack).
-- XDS/Branta power meter: pairing, 5-min reconnect, power under load (Verify Power screen), battery read.
-- Heart-rate strap over Bluetooth (code unchanged from v0.7; HR address is now stored per rider).
-- Real GPS distance/elevation outdoors (emulator GPS gives a fixed point → 0.0 km).
-- Text-to-speech voice on the phone.
-- Landscape: the activity is locked to portrait (as before), so the landscape layout code is unused.
-- Bluetooth off / permission denied mid-ride: the gates no longer block the app and the dashboard shows a tappable notice, but
-  this was only exercised with the emulator's Bluetooth state, not a real adapter being switched off.
-- Battery/background behaviour over a real 60-minute ride (the foreground service and wake lock are unchanged from v0.7).
-
-## Known limitations
-- Accounts, club, invite code and leaderboard are **local to the phone** and labelled DEMO; no cloud, no real friends yet.
-- Sample riders (Omar, Layla, Sami, Noor) are fictional; their rides are tagged SAMPLE and cannot reach a real board.
-- Rides recorded with the simulation tool are tagged SIMULATED everywhere (history, board) and carry virtual timestamps.
-- Power targets switch on only after the meter passes "Verify power under load" **and** the profile has an FTP; until then power
-  is shown, not coached (by design: no invented watts).
-- Switching rider is refused while a ride is running or paused.
-
-## Installing
-- Previous builds (21–24) were signed with throw-away keys generated per build; from build 51 the key is fixed and committed,
-  so **future** updates install over this one with data kept. **This one time** Android will refuse to update over an older
-  build ("App not installed"): uninstall the old Bike Computer first, then install build 51. Old test rides are lost; the new
-  app starts with the sign-in screen.
+## Assumptions (your earlier "adaptive coach" message arrived after this build was designed)
+- "Every 60 seconds" = a display assessment (progress, trends, in-band share) once a minute; instructions themselves still use 5-s
+  smoothing and 8-s holds so a sustained excess or a phase change is answered within seconds, as you asked.
+- Zones never change automatically; the app only *suggests* a provisional FTP / threshold with the evidence shown, and you confirm.
+- Gear instructions use cadence + power only; the app does not know the selected gear.
