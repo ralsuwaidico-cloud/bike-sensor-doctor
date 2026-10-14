@@ -70,8 +70,14 @@ class AppFlowTest {
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
     private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
     private fun launch() {
-        val i = ctx.packageManager.getLaunchIntentForPackage(pkg)!!.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
-        ctx.startActivity(i); device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
+        // Launch through the shell (`am start`), not from the test process: Android 12 blocks activity starts from a
+        // background app once its 10-second grace after leaving the foreground has passed, which made this launch
+        // intermittently silent on a slow emulator (run 52). The shell is never subject to that restriction.
+        device.executeShellCommand("am start -W -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
+        if (!device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)) {
+            device.executeShellCommand("am start -W -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
+            device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
+        }
         // a system permission dialog (Nearby devices / location) would cover the app: allow it; the first cold start
         // on the emulator (font loading, class verification) can take a while, so wait for something of ours
         for (n in 0 until 40) {
