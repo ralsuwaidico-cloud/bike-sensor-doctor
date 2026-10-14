@@ -184,7 +184,7 @@ class AppFlowTest {
         tap(tag("dash_details")); find(text("RIDE DETAILS")); find(tag("detail_graphs")); shot("26_details")
         // graph-focused view: windows, and a tap gives the exact readings at that second
         tap(tag("detail_win_60")); tap(tag("detail_win_600")); val g = find(tag("detail_graphs")); device.click(g.visibleBounds.centerX(), g.visibleBounds.top + g.visibleBounds.height() / 4)
-        assertTrue("tap readout shows the second", has(By.textStartsWith("at "), 3000)); shot("26b_details_readout"); tap(tag("detail_win_300"))
+        assertTrue("tap readout shows the second", visible(By.textStartsWith("at "), 4000)); shot("26b_details_readout"); tap(tag("detail_win_300"))
         device.pressBack(); find(tag("btn_pause"), 5000)
         val heapMain = heapKb()
         top(); assertTrue("COOL-DOWN reached", device.wait(Until.hasObject(By.textStartsWith("COOL-DOWN")), 150_000))
@@ -224,7 +224,10 @@ class AppFlowTest {
     private fun heapKb(): Long { Runtime.getRuntime().gc(); Thread.sleep(300); val r = Runtime.getRuntime(); return (r.totalMemory() - r.freeMemory()) / 1024 }
 
     @Test fun t04b_extremes_and_large_font_layout() {
-        launch(); find(tag("start_ride"), 15_000)
+        launch()
+        // if an earlier test left a ride running, finish it first (a running ride re-opens on the dashboard by design)
+        if (!has(tag("start_ride"), 4000) && visible(tag("btn_finish"), 4000)) { tap(tag("btn_finish")); tap(text("FINISH & SAVE")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
+        find(tag("start_ride"), 15_000)
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Layout test: 999 W · 199 bpm · 120 rpm")); tap(text("5×")); tap(tag("sim_start"))
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause")); Thread.sleep(6000)
         shot("33_live_extremes"); assertNoScrollLive("extremes")
@@ -240,7 +243,10 @@ class AppFlowTest {
 
     /** Sensor drop-outs: the graph keeps running with gaps, the cards say NO DATA / NO STRAP, nothing is invented, the app never stalls. */
     @Test fun t04c_sensor_dropouts_show_gaps_not_values() {
-        launch(); find(tag("start_ride"), 15_000)
+        launch()
+        // if an earlier test left a ride running, finish it first (a running ride re-opens on the dashboard by design)
+        if (!has(tag("start_ride"), 4000) && visible(tag("btn_finish"), 4000)) { tap(tag("btn_finish")); tap(text("FINISH & SAVE")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
+        find(tag("start_ride"), 15_000)
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Sensor drop-outs")); tap(text("10×")); tap(tag("sim_start"))
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
         // meter silent at 2:00 (power + cadence missing together — one device), strap silent at 3:30

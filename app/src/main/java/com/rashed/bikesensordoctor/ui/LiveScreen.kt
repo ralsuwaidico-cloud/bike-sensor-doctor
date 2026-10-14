@@ -97,7 +97,7 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
             val hrLive = st.hrLive
             Row(Modifier.fillMaxWidth().padding(top = if (short) 3.dp else 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 MetricCard(Modifier.weight(1f), "POWER", d.powerW, "W", b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = if (d.simulated) "SIM" else "",
-                    statusOverride = when { d.powerW == null -> null; !d.powerVerified -> "○ UNVERIFIED"; b?.pwLo == null -> "○ NO TARGET"; else -> null }, compact = short || bigFont, testTag = "card_power")
+                    statusOverride = when { d.powerW == null -> null; !d.powerVerified -> "○ UNVERIFIED"; b?.pwReference == true -> "○ NO TARGET"; else -> null }, compact = short || bigFont, testTag = "card_power")
                 MetricCard(Modifier.weight(1f), "HEART RATE", hrLive, "BPM", b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = if (d.simulated) "SIM" else "", compact = short || bigFont, testTag = "card_hr")
                 MetricCard(Modifier.weight(1f), "CADENCE", d.cadenceRpm, "RPM", b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = if (d.simulated) "SIM" else "",
                     statusOverride = if (d.backwards) "▼ BACKWARDS" else null, compact = short || bigFont, testTag = "card_cad")

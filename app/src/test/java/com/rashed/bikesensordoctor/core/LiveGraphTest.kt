@@ -102,9 +102,14 @@ class LiveGraphTest {
         val b = GraphBands.resolve(null, ftpW = 200, powerTrusted = true, maxHr = 185, targetZone = 2, cadLo = 80, cadHi = 95)
         assertEquals(112, b.hrLo); assertEquals(129, b.hrHi)        // Z2 = 60–70 % of max HR
         assertEquals(111, b.pwLo); assertEquals(150, b.pwHi)        // Z2 = 55–75 % of FTP
+        assertFalse(b.pwReference)
         val noPower = GraphBands.resolve(null, ftpW = 200, powerTrusted = false, maxHr = 185, targetZone = 2, cadLo = 80, cadHi = 95)
-        assertNull(noPower.pwLo); assertNull(noPower.pwHi)         // unverified meter: no power band, no power status
+        assertEquals(111, noPower.pwLo); assertTrue("unverified meter: the trace is still drawn, against a labelled reference", noPower.pwReference)
+        val noFtp = GraphBands.resolve(null, ftpW = 0, powerTrusted = false, maxHr = 185, targetZone = 2, cadLo = 80, cadHi = 95)
+        assertEquals(100, noFtp.pwLo); assertEquals(200, noFtp.pwHi); assertTrue(noFtp.pwReference)
         val t = ActiveTargets(139, 151, 105, 139, 80, 95, "MAIN")
         assertEquals(GraphBands(105, 139, 139, 151, 80, 95), GraphBands.resolve(t, 200, true, 185, 2, 80, 95))
+        val tNoPw = ActiveTargets(139, 151, null, null, 80, 95, "MAIN")
+        assertTrue(GraphBands.resolve(tNoPw, 200, false, 185, 2, 80, 95).pwReference)
     }
 }

@@ -117,7 +117,7 @@ fun GraphLegend(bands: GraphBands?, havePw: Boolean, haveHr: Boolean, haveCad: B
         }
     }
     Row(modifier.fillMaxWidth()) {
-        item(GraphColors.Power, "PWR 3s", if (bands?.pwLo != null) "${bands.pwLo}–${bands.pwHi} W" else "no target", havePw, Modifier.weight(1.05f))
+        item(GraphColors.Power, "PWR 3s", if (bands?.pwLo != null) (if (bands.pwReference) "ref " else "") + "${bands.pwLo}–${bands.pwHi} W" else "no target", havePw, Modifier.weight(1.1f))
         item(GraphColors.Hr, "HR", if (bands != null) "${bands.hrLo}–${bands.hrHi} bpm" else "", haveHr, Modifier.weight(1f))
         item(GraphColors.Cad, "CAD", if (bands != null) "${bands.cadLo}–${bands.cadHi} rpm" else "", haveCad, Modifier.weight(0.95f))
     }
@@ -191,10 +191,10 @@ fun CombinedGraph(buf: LiveBuffer, version: Long, windowSec: Int, modifier: Modi
             }
         }
         // axis labels: right-hand ABOVE / TARGET / BELOW, bottom minutes
-        paint.textAlign = android.graphics.Paint.Align.RIGHT
-        paint.color = D7.Mut.toArgb(); drawContext.canvas.nativeCanvas.drawText("▲ ABOVE", padL + w - 2f * density, bt - 3f * density, paint)
-        paint.color = D7.Fg.copy(alpha = 0.7f).toArgb(); drawContext.canvas.nativeCanvas.drawText("TARGET", padL + w - 2f * density, top + h * 0.5f + labelPx / 2.6f, paint)
-        paint.color = D7.Mut.toArgb(); drawContext.canvas.nativeCanvas.drawText("▼ BELOW", padL + w - 2f * density, bb + labelPx, paint)
+        paint.textAlign = android.graphics.Paint.Align.LEFT   // left edge: the newest points live at the right edge
+        paint.color = D7.Mut.toArgb(); drawContext.canvas.nativeCanvas.drawText("▲ ABOVE", padL + 3f * density, bt - 3f * density, paint)
+        paint.color = D7.Fg.copy(alpha = 0.7f).toArgb(); drawContext.canvas.nativeCanvas.drawText("TARGET", padL + 3f * density, top + h * 0.5f + labelPx / 2.6f, paint)
+        paint.color = D7.Mut.toArgb(); drawContext.canvas.nativeCanvas.drawText("▼ BELOW", padL + 3f * density, bb + labelPx, paint)
         val mins = windowSec / 60
         paint.color = D7.Faint.toArgb()
         for (m in 0..mins) {

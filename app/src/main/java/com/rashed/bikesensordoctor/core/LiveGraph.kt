@@ -17,22 +17,27 @@ package com.rashed.bikesensordoctor.core
 enum class GraphStatus { NONE, ZERO, BELOW, ON, ABOVE }
 
 /** Target bands used for the graph and the metric cards. Power may have no band (meter unverified / FTP unknown). */
-data class GraphBands(val pwLo: Int?, val pwHi: Int?, val hrLo: Int, val hrHi: Int, val cadLo: Int, val cadHi: Int) {
+data class GraphBands(val pwLo: Int?, val pwHi: Int?, val hrLo: Int, val hrHi: Int, val cadLo: Int, val cadHi: Int,
+                      /** true when the power band is only a display REFERENCE (meter not verified / no workout power target) — never a coaching target */
+                      val pwReference: Boolean = false) {
     companion object {
         /**
          * The bands in force now: the workout's active targets when a workout runs; otherwise the coaching zone edges.
          * @param ftpW FTP (0 = unknown); power gets a band only when the meter is trusted and FTP is known.
          */
         fun resolve(targets: ActiveTargets?, ftpW: Int, powerTrusted: Boolean, maxHr: Int, targetZone: Int, cadLo: Int, cadHi: Int): GraphBands {
-            if (targets != null) return GraphBands(targets.pwLo, targets.pwHi, targets.hrLo, targets.hrHi, targets.cadLo, targets.cadHi)
             val z = targetZone.coerceIn(1, 5)
+            val pwUpper = doubleArrayOf(0.55, 0.75, 0.90, 1.05, 1.20)
+            // power is always drawn when a reading exists: against the workout target when there is one, else against the
+            // zone band from FTP as a labelled REFERENCE (FTP 0 → a generic 100–200 W reference) so an unverified meter still shows its trace
+            val refLo = if (ftpW > 0) (if (z == 1) (ftpW * 0.30).toInt() else (ftpW * pwUpper[z - 2]).toInt() + 1) else 100
+            val refHi = if (ftpW > 0) (ftpW * pwUpper[z - 1]).toInt() else 200
+            if (targets != null) return if (targets.pwLo != null && targets.pwHi != null) GraphBands(targets.pwLo, targets.pwHi, targets.hrLo, targets.hrHi, targets.cadLo, targets.cadHi)
+                else GraphBands(refLo, refHi, targets.hrLo, targets.hrHi, targets.cadLo, targets.cadHi, pwReference = true)
             val hrUpper = doubleArrayOf(0.60, 0.70, 0.80, 0.90, 1.0)
             val hrLo = if (z == 1) (maxHr * 0.50).toInt() else (maxHr * hrUpper[z - 2]).toInt() + 1
             val hrHi = (maxHr * hrUpper[z - 1]).toInt()
-            val pwUpper = doubleArrayOf(0.55, 0.75, 0.90, 1.05, 1.20)
-            val pwLo = if (powerTrusted && ftpW > 0) (if (z == 1) (ftpW * 0.30).toInt() else (ftpW * pwUpper[z - 2]).toInt() + 1) else null
-            val pwHi = if (powerTrusted && ftpW > 0) (ftpW * pwUpper[z - 1]).toInt() else null
-            return GraphBands(pwLo, pwHi, hrLo, hrHi, cadLo, cadHi)
+            return GraphBands(refLo, refHi, hrLo, hrHi, cadLo, cadHi, pwReference = !(powerTrusted && ftpW > 0))
         }
     }
 }
