@@ -43,6 +43,7 @@ class AppFlowTest {
     private fun text(t: String): BySelector = By.text(t)
     /** Finds a node, scrolling the page (accessibility scroll actions, then swipes) if it is off-screen. */
     private fun find(sel: BySelector, timeout: Long = T): UiObject2 {
+        refreshTree()
         var o = device.wait(Until.findObject(sel), minOf(timeout, 3000L))
         if (o == null) {
             val sc = device.findObject(By.scrollable(true))
@@ -68,7 +69,27 @@ class AppFlowTest {
     }
     private fun top() { val sc = device.findObject(By.scrollable(true)); if (sc != null) runCatching { sc.fling(androidx.test.uiautomator.Direction.UP) }; repeat(2) { swipe(up = false) } }
     private fun visible(sel: BySelector, timeout: Long = 3000L) = runCatching { find(sel, timeout) }.isSuccess
-    private fun has(sel: BySelector, timeout: Long = 2000L) = device.wait(Until.hasObject(sel), timeout)
+    /**
+     * UiAutomator reads the accessibility tree through a client-side cache that is only invalidated by accessibility
+     * events from the app. On the live screen (continuous 1 Hz updates, Canvas redraws) the cached tree was observed to
+     * go stale for minutes (run 64: the tree still said MAIN while the screen showed the cool-down). The test runs in
+     * the app's own process, so it can ask the window itself to announce a content change, which clears the cache
+     * for the whole window — every poll then sees what the screen shows.
+     */
+    private fun refreshTree() {
+        val inst = InstrumentationRegistry.getInstrumentation()
+        runCatching { inst.uiAutomation.javaClass.getMethod("clearCache").invoke(inst.uiAutomation) }   // API 34+; harmless elsewhere
+        val act = runCatching { androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).firstOrNull() }.getOrNull()
+        if (act != null) runCatching { inst.runOnMainSync { act.window.decorView.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) } }
+        Thread.sleep(120)
+    }
+    private fun has(sel: BySelector, timeout: Long = 2000L): Boolean {
+        val end = System.currentTimeMillis() + timeout
+        do { refreshTree(); if (device.hasObject(sel)) return true; Thread.sleep(300) } while (System.currentTimeMillis() < end)
+        return false
+    }
+    /** Polls with a fresh tree each time (see [refreshTree]) — for states that come and go, like a phase or a sensor gap. */
+    private fun appears(sel: BySelector, timeout: Long): Boolean = has(sel, timeout)
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
     private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
     private fun launch() {
@@ -179,7 +200,7 @@ class AppFlowTest {
         // pause / resume
         tap(tag("btn_pause")); find(tag("btn_resume")); shot("23_paused"); tap(tag("btn_resume")); find(tag("btn_pause"))
         // wait for MAIN then COOL-DOWN (planned ride ends after 60 simulated minutes)
-        top(); assertTrue("MAIN phase reached", device.wait(Until.hasObject(By.textStartsWith("MAIN")), 60_000))
+        top(); assertTrue("MAIN phase reached", appears(By.textStartsWith("MAIN"), 60_000))
         shot("25_dashboard_main")
         tap(tag("dash_details")); find(text("RIDE DETAILS")); find(tag("detail_graphs")); shot("26_details")
         // graph-focused view: windows, and a tap gives the exact readings at that second
@@ -187,7 +208,7 @@ class AppFlowTest {
         assertTrue("tap readout shows the second", visible(By.textStartsWith("at "), 4000)); shot("26b_details_readout"); tap(tag("detail_win_300"))
         device.pressBack(); find(tag("btn_pause"), 5000)
         val heapMain = heapKb()
-        top(); assertTrue("COOL-DOWN reached", device.wait(Until.hasObject(By.textStartsWith("COOL-DOWN")), 150_000))
+        top(); assertTrue("COOL-DOWN reached", appears(By.textStartsWith("COOL-DOWN"), 150_000))
         shot("27_dashboard_cooldown")
         // memory stays flat across the hour-long ride (fixed ring buffer, no per-frame garbage): < 24 MB growth after GC
         val heapEnd = heapKb(); File(shots(), "memory.txt").writeText("heap KB: start=$heapStart main=$heapMain cooldown=$heapEnd\n")
@@ -250,9 +271,9 @@ class AppFlowTest {
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Sensor drop-outs")); tap(text("10×")); tap(tag("sim_start"))
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
         // meter silent at 2:00 (power + cadence missing together — one device), strap silent at 3:30
-        assertTrue("power card reports NO DATA during the meter gap", device.wait(Until.hasObject(text("— NO DATA")), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
+        assertTrue("power card reports NO DATA during the meter gap", appears(text("— NO DATA"), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
         assertTrue("no value is shown while the meter is silent", !has(text("999"), 200))
-        assertTrue("HR card reports NO STRAP during the strap gap", device.wait(Until.hasObject(text("— NO STRAP")), 40_000)); shot("36_live_strap_gap"); assertNoScrollLive("strap gap")
+        assertTrue("HR card reports NO STRAP during the strap gap", appears(text("— NO STRAP"), 40_000)); shot("36_live_strap_gap"); assertNoScrollLive("strap gap")
         Thread.sleep(8000); shot("37_live_after_gaps")   // ≥ 5 min of ride: both gaps now visible in the 5-minute graph
         tap(tag("dash_details")); find(tag("detail_graphs")); shot("38_details_gaps"); device.pressBack(); find(tag("btn_finish"), 5000)
         tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
