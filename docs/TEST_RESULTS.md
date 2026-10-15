@@ -6,8 +6,8 @@ SHA-256 `4dd3bb38b618533d7cdc8e46cae3f05cf16f0648077908d7e56eadbb3766dd11` — t
 installs over them with riders, rides and settings kept. **Held for design approval — not yet delivered.**
 
 ## What is new in v0.10
-- **Live dashboard redesigned** into four compact sections on one fixed Nokia 5.3 screen (no scrolling):
-  A ride info (speed · distance · time · phase chip) · B three metric cards (power / heart rate / cadence) with a target bar and a
+- **Live dashboard redesigned** (hybrid of Design 7 and the compact layout, approved 15 Oct) into four sections on one fixed Nokia 5.3 screen (no scrolling):
+  A ride info (speed · distance · time · phase chip) · B three compact Design-7 circular gauges (power cyan / heart rate green / cadence violet) — LIVE dot and TARGET band on one numerical scale, value in the centre, unit in the dial opening — and a
   status word (▲ ABOVE · ● ON TARGET · ▼ BELOW · ○ COASTING · — NO DATA — never colour alone) · C the combined graph (power cyan,
   HR green, cadence violet; last 5 minutes) · D a compact coach line (icon · short instruction · short reason · "analysed N s ago").
   PAUSE / FINISH / COOL stay at the bottom; Details · Home · ⚙ beneath.
