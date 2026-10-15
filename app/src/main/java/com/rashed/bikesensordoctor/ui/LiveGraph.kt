@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -359,7 +361,9 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
     val valuePx = with(ld) { (if (compact) 19.sp else 22.sp).toPx() }
     val unitPx = with(ld) { 7.sp.toPx() }
     val paint = remember { android.graphics.Paint().apply { isAntiAlias = true; textAlign = android.graphics.Paint.Align.CENTER } }
-    Column(modifier.testTag(testTag), horizontalAlignment = Alignment.CenterHorizontally) {
+    // the value is drawn, not a Text node: expose it to accessibility (and the UI tests) as a description
+    val desc = "$label ${value?.toString() ?: "no data"} $unit, $statusWord"
+    Column(modifier.testTag(testTag).semantics { contentDescription = desc }, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = color, letterSpacing = 1.sp, maxLines = 1, softWrap = false)
         Canvas(Modifier.padding(top = 2.dp).size(ring)) {
             val sw = 7f * density
@@ -387,9 +391,10 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
             // centre: value + unit (+ tag)
             paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
             paint.textSize = valuePx; paint.color = (if (value == null) D7.Faint else D7.Fg).toArgb()
-            drawContext.canvas.nativeCanvas.drawText(value?.toString() ?: "—", c.x, c.y + valuePx * 0.36f, paint)
-            paint.typeface = android.graphics.Typeface.MONOSPACE; paint.textSize = unitPx; paint.color = D7.Mut.toArgb()
-            drawContext.canvas.nativeCanvas.drawText(if (tag.isNotEmpty()) "$unit · $tag" else unit, c.x, c.y + valuePx * 0.36f + unitPx * 1.4f, paint)
+            drawContext.canvas.nativeCanvas.drawText(value?.toString() ?: "—", c.x, c.y + valuePx * 0.28f, paint)
+            // the unit sits in the dial's bottom opening (the SIMULATED state is already on the status line, not repeated here)
+            paint.typeface = android.graphics.Typeface.MONOSPACE; paint.textSize = unitPx * 0.9f; paint.color = D7.Mut.toArgb()
+            drawContext.canvas.nativeCanvas.drawText(unit, c.x, c.y + r + sw / 2 - unitPx * 0.2f, paint)
         }
         Box(Modifier.padding(top = 1.dp).background(statusColor.copy(alpha = 0.16f), RoundedCornerShape(7.dp)).border(1.dp, statusColor, RoundedCornerShape(7.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
             Text(statusWord, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 7.sp, color = statusColor, maxLines = 1, softWrap = false)

@@ -272,7 +272,7 @@ class AppFlowTest {
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Layout test: 999 W · 199 bpm · 120 rpm")); tap(text("5×")); tap(tag("sim_start"))
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause")); Thread.sleep(6000)
         shot("33_live_extremes"); assertNoScrollLive("extremes")
-        assertTrue("999 W shown", has(text("999"), 2000)); assertTrue("199 bpm shown", has(text("199"), 2000)); assertTrue("120 rpm shown", has(text("120"), 2000))
+        assertTrue("999 W shown", has(By.descContains("POWER 999"), 2000)); assertTrue("199 bpm shown", has(By.descContains("HEART RATE 199"), 2000)); assertTrue("120 rpm shown", has(By.descContains("CADENCE 120"), 2000))
         // large system font: the fixed layout must still hold everything
         device.executeShellCommand("settings put system font_scale 1.3"); Thread.sleep(2500)
         launch(); find(tag("btn_pause"), 15_000); Thread.sleep(1500)
@@ -292,7 +292,7 @@ class AppFlowTest {
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
         // meter silent at 2:00 (power + cadence missing together — one device), strap silent at 3:30
         assertTrue("power card reports NO DATA during the meter gap", appears(text("— NO DATA"), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
-        assertTrue("no value is shown while the meter is silent", !has(text("999"), 200))
+        assertTrue("no value is shown while the meter is silent", has(By.descContains("POWER no data"), 2000))
         assertTrue("HR card reports NO STRAP during the strap gap", appears(text("— NO STRAP"), 40_000)); shot("36_live_strap_gap"); assertNoScrollLive("strap gap")
         Thread.sleep(8000); shot("37_live_after_gaps")   // ≥ 5 min of ride: both gaps now visible in the 5-minute graph
         tap(tag("dash_details")); find(tag("detail_graphs")); shot("38_details_gaps"); device.pressBack(); find(tag("btn_finish"), 5000)
