@@ -340,3 +340,59 @@ fun DetailGraphs(buf: LiveBuffer, version: Long) {
         }
     }
 }
+
+/**
+ * v0.10 hybrid: a compact Design-7 circular gauge for Section B. The LIVE dot (end of the progress arc) and the TARGET band
+ * (thin arc just outside the ring) share ONE scale — 0..[max] over the 270° dial — so their positions genuinely represent the
+ * reading and the range. Status is a word with a glyph under the ring; the value sits in the centre. A reference band
+ * (unverified meter) is drawn dashed and dim. Nothing animates (no per-frame cost on the Nokia).
+ */
+@Composable
+fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, max: Int, lo: Int?, hi: Int?, color: Color, kind: String,
+                 tag: String = "", reference: Boolean = false, statusOverride: String? = null, compact: Boolean = false, testTag: String) {
+    val status = GraphScale.status(value, lo, hi)
+    val (word, wc) = statusLabel(status, kind)
+    val statusWord = statusOverride ?: word
+    val statusColor = if (statusOverride != null) D7.Faint else wc
+    val ring = if (compact) 62.dp else 70.dp
+    val ld = LocalDensity.current
+    val valuePx = with(ld) { (if (compact) 19.sp else 22.sp).toPx() }
+    val unitPx = with(ld) { 7.sp.toPx() }
+    val paint = remember { android.graphics.Paint().apply { isAntiAlias = true; textAlign = android.graphics.Paint.Align.CENTER } }
+    Column(modifier.testTag(testTag), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = color, letterSpacing = 1.sp, maxLines = 1, softWrap = false)
+        Canvas(Modifier.padding(top = 2.dp).size(ring)) {
+            val sw = 7f * density
+            val over = sw / 2 + 5f * density
+            val r = size.minDimension / 2 - over
+            val c = Offset(size.width / 2, size.height / 2)
+            val tl = Offset(c.x - r, c.y - r); val sz = Size(2 * r, 2 * r)
+            val start = 135f; val sweep = 270f
+            drawArc(D7.Track, start, sweep, false, tl, sz, style = Stroke(sw))
+            val frac = if (value == null || max <= 0) null else (value.toFloat() / max).coerceIn(0f, 1f)
+            if (frac != null && frac > 0f) drawArc(color.copy(alpha = 0.55f), start, sweep * frac, false, tl, sz, style = Stroke(sw, cap = StrokeCap.Round))
+            // TARGET band on the same scale, just outside the ring, with end ticks
+            if (lo != null && hi != null && hi > lo) {
+                val rb = r + sw / 2 + 4f * density
+                val a0 = start + sweep * (lo.toFloat() / max).coerceIn(0f, 1f); val a1 = start + sweep * (hi.toFloat() / max).coerceIn(0f, 1f)
+                val bc = if (reference) D7.Faint else D7.Fg
+                drawArc(bc, a0, (a1 - a0).coerceAtLeast(1f), false, Offset(c.x - rb, c.y - rb), Size(2 * rb, 2 * rb),
+                    style = Stroke(3f * density, pathEffect = if (reference) PathEffect.dashPathEffect(floatArrayOf(3f * density, 3f * density)) else null))
+                for (a in listOf(a0, a1)) { val rad = Math.toRadians((a - 90).toDouble()); val cs = Math.cos(rad).toFloat(); val sn = Math.sin(rad).toFloat()
+                    drawLine(bc, Offset(c.x + (rb - 3f * density) * cs, c.y + (rb - 3f * density) * sn), Offset(c.x + (rb + 3f * density) * cs, c.y + (rb + 3f * density) * sn), 1.5f * density) }
+            }
+            // LIVE dot at the reading
+            if (frac != null) { val a = Math.toRadians((start + sweep * frac - 90).toDouble()); val p = Offset(c.x + r * Math.cos(a).toFloat(), c.y + r * Math.sin(a).toFloat())
+                drawCircle(D7.Bg, 5.5f * density, p); drawCircle(color, 4f * density, p); drawCircle(D7.Fg, 1.6f * density, p) }
+            // centre: value + unit (+ tag)
+            paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            paint.textSize = valuePx; paint.color = (if (value == null) D7.Faint else D7.Fg).toArgb()
+            drawContext.canvas.nativeCanvas.drawText(value?.toString() ?: "—", c.x, c.y + valuePx * 0.36f, paint)
+            paint.typeface = android.graphics.Typeface.MONOSPACE; paint.textSize = unitPx; paint.color = D7.Mut.toArgb()
+            drawContext.canvas.nativeCanvas.drawText(if (tag.isNotEmpty()) "$unit · $tag" else unit, c.x, c.y + valuePx * 0.36f + unitPx * 1.4f, paint)
+        }
+        Box(Modifier.padding(top = 1.dp).background(statusColor.copy(alpha = 0.16f), RoundedCornerShape(7.dp)).border(1.dp, statusColor, RoundedCornerShape(7.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
+            Text(statusWord, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 7.sp, color = statusColor, maxLines = 1, softWrap = false)
+        }
+    }
+}

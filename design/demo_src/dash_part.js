@@ -68,20 +68,27 @@ function wrap2(s,max){ const w=s.split(" "),l=[]; let c=""; w.forEach(x=>{ if((c
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 
 /* ---- geometry of the one-screen layout (viewBox 300×600 ≈ the Nokia 5.3 content area between the Android bars) ---- */
-const G={ A:{y:16,h:44}, B:{y:66,h:64}, legendY:140, plot:{x:12,y:150,w:276,h:238}, axisY:400, D:{y:412,h:60}, btnY:482, linkY:548 };
+const G={ A:{y:16,h:44}, B:{y:64,h:104}, legendY:176, plot:{x:12,y:186,w:276,h:202}, axisY:400, D:{y:412,h:60}, btnY:482, linkY:548 };
+/* ---- hybrid: compact Design-7 circular gauges. LIVE dot and TARGET band share one numerical scale (0..max of the dial), so their
+   positions genuinely represent the reading and the range: power 0..max(300, 1.5×FTP), HR 0..max HR, cadence 0..130. */
+const GAUGE={pw:{max:()=>Math.max(300,CFG.ftp*1.5)}, hr:{max:()=>Math.max(120,(CFG.hrZoneEdges[3]||167)/0.9)}, cad:{max:()=>130}};
+const GS0=135, GSW=270;
+function gpol(cx,cy,r,deg){ const a=(deg-90)*Math.PI/180; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; }
+function garc(cx,cy,r,a0,a1){ if(a1-a0<0.01) return ""; const [x0,y0]=gpol(cx,cy,r,a0),[x1,y1]=gpol(cx,cy,r,a1); const large=(a1-a0)>180?1:0; return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; }
+function gang(f){ return GS0+GSW*Math.max(0,Math.min(1,f)); }
 let view="live", detWin=300, detSel=null, latestTG=null;
 
-function metricCard(x,key,label,unit,tag){ const w=88,h=G.B.h,y=G.B.y; return `<g id="card_${key}">
-  <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${C.panel}" stroke="${C.line}"/>
-  <rect x="${x}" y="${y}" width="3" height="${h}" rx="1.5" fill="${GC[key]}"/>
-  <text x="${x+10}" y="${y+12}" fill="${GC[key]}" font-size="8" font-weight="700" letter-spacing="1">${label}</text>
-  <text id="${key}Tag" x="${x+w-6}" y="${y+59}" text-anchor="end" fill="${C.faint}" font-size="6.5">${tag||""}</text>
-  <text id="${key}Val" x="${x+10}" y="${y+38}" fill="${C.fg}" font-size="27" font-weight="600" font-family="Rajdhani">—</text>
-  <text x="${x+w-6}" y="${y+38}" text-anchor="end" fill="${C.mut}" font-size="8">${unit}</text>
-  <rect x="${x+10}" y="${y+45}" width="${w-20}" height="4" rx="2" fill="${C.track}"/>
-  <rect id="${key}Band" x="0" y="${y+45}" width="0" height="4" rx="2" fill="${GC[key]}" opacity=".55"/>
-  <rect id="${key}Mark" x="0" y="${y+42}" width="3" height="10" rx="1" fill="${C.fg}" visibility="hidden"/>
-  <text id="${key}Stat" x="${x+10}" y="${y+59}" fill="${C.faint}" font-size="7.5" font-weight="700">— NO DATA</text></g>`; }
+function metricCard(x,key,label,unit,tag){ const w=92,y=G.B.y, cx=x+w/2, cy=y+50, r=28, sw=7; return `<g id="card_${key}">
+  <text x="${cx}" y="${y+9}" text-anchor="middle" fill="${GC[key]}" font-size="7.5" font-weight="700" letter-spacing="1">${label}</text>
+  <path d="${garc(cx,cy,r,GS0,GS0+GSW)}" fill="none" stroke="${C.track}" stroke-width="${sw}"/>
+  <path id="${key}Prog" d="" fill="none" stroke="${GC[key]}" stroke-width="${sw}" stroke-linecap="round" opacity=".55"/>
+  <path id="${key}Band" d="" fill="none" stroke="${C.fg}" stroke-width="3"/>
+  <line id="${key}BandLo" stroke="${C.fg}" stroke-width="1.5"/><line id="${key}BandHi" stroke="${C.fg}" stroke-width="1.5"/>
+  <circle id="${key}Live" r="5" fill="${C.bg}" stroke="${GC[key]}" stroke-width="2.5" visibility="hidden"/>
+  <text id="${key}Val" x="${cx}" y="${cy+7}" text-anchor="middle" fill="${C.fg}" font-size="22" font-weight="600" font-family="Rajdhani">—</text>
+  <text x="${cx}" y="${cy+17}" text-anchor="middle" fill="${C.mut}" font-size="7">${unit}${tag?" · "+tag:""}</text>
+  <rect id="${key}Pill" x="${cx-30}" y="${y+86}" width="60" height="14" rx="7" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/>
+  <text id="${key}Stat" x="${cx}" y="${y+96}" text-anchor="middle" fill="${C.faint}" font-size="7" font-weight="700">— NO DATA</text></g>`; }
 
 function buildPhone(){
   const P=G.plot;
@@ -100,7 +107,7 @@ function buildPhone(){
     <text id="aPhaseSub" x="257" y="${G.A.y+33}" text-anchor="middle" fill="${C.violet}" font-size="7.5">04:59 left</text>
   </g>
   <!-- B · live sensor readings -->
-  ${metricCard(12,"pw","POWER","W","SIM")}${metricCard(106,"hr","HEART RATE","BPM","REAL")}${metricCard(200,"cad","CADENCE","RPM","SIM")}
+  ${metricCard(12,"pw","POWER","W","SIM")}${metricCard(104,"hr","HEART RATE","BPM","REAL")}${metricCard(196,"cad","CADENCE","RPM","SIM")}
   <!-- C · combined performance graph -->
   <g id="legend" font-size="7.5"></g>
   <rect x="${P.x}" y="${P.y}" width="${P.w}" height="${P.h}" rx="6" fill="#080e12" stroke="${C.line}"/>
@@ -148,14 +155,19 @@ function buildDetails(){ return `<svg id="detSvg" viewBox="0 0 ${W} ${H}" xmlns=
 
 /* ---- per-frame rendering ---- */
 function statusOf(n,v){ if(v==null) return "NONE"; if(v===0) return "ZERO"; if(n==null) return "NONE"; return n<0?"BELOW":n>1?"ABOVE":"ON"; }
-function setCard(key,v,lo,hi,unitStat){ const x={pw:12,hr:106,cad:200}[key]; const val=q("#"+key+"Val"), band=q("#"+key+"Band"), mark=q("#"+key+"Mark"), st=q("#"+key+"Stat");
-  const n=normOf(v,lo,hi); const s=statusOf(n,v);
-  val.textContent= v==null?"—":v; val.setAttribute("fill", v==null?C.faint:C.fg);
-  const bx=x+10, bw=68; // band segment = the target, using the same mapping as the graph (horizontal)
-  band.setAttribute("x",(bx+bw*(1-BAND_BOT)).toFixed(1)); band.setAttribute("width",(bw*(BAND_BOT-BAND_TOP)).toFixed(1));
-  if(n!=null){ mark.setAttribute("visibility","visible"); mark.setAttribute("x",(bx+bw*(1-yFrac(n))-1.5).toFixed(1)); } else mark.setAttribute("visibility","hidden");
-  const T={BELOW:["▼ BELOW",C.cyan],ON:["● ON TARGET",C.green],ABOVE:["▲ ABOVE",C.amber],ZERO:[key==="pw"?"○ COASTING":"○ STOPPED",C.faint],NONE:[key==="hr"?"— NO STRAP":"— NO DATA",C.faint]}[s];
-  st.textContent=T[0]+(unitStat||""); st.setAttribute("fill",T[1]); return s; }
+function setCard(key,v,lo,hi,unitStat){ const x={pw:12,hr:104,cad:196}[key]; const cx=x+46, cy=G.B.y+50, r=28, sw=7; const max=GAUGE[key].max();
+  const n=normOf(v,lo,hi); let st=statusOf(n,v); if(key==="pw"&&v!=null&&v>0&&!CFG.powerVerified) st="UNVERIFIED";
+  q("#"+key+"Val").textContent= v==null?"—":v; q("#"+key+"Val").setAttribute("fill", v==null?C.faint:C.fg);
+  // progress arc + LIVE dot at the reading, on the dial's scale
+  const prog=q("#"+key+"Prog"), live=q("#"+key+"Live");
+  if(v!=null){ const f=Math.min(1,v/max); prog.setAttribute("d",garc(cx,cy,r,GS0,gang(f))); const [lx,ly]=gpol(cx,cy,r,gang(f)); live.setAttribute("cx",lx.toFixed(1)); live.setAttribute("cy",ly.toFixed(1)); live.setAttribute("visibility","visible"); }
+  else { prog.setAttribute("d",""); live.setAttribute("visibility","hidden"); }
+  // TARGET band just outside the ring, same scale; dimmed (dashed) when it is only a reference
+  const band=q("#"+key+"Band"); const ref=(key==="pw"&&!CFG.powerVerified);
+  if(lo!=null&&hi!=null){ const rb=r+sw/2+4; const a0=gang(lo/max), a1=gang(hi/max); band.setAttribute("d",garc(cx,cy,rb,a0,a1)); band.setAttribute("stroke",ref?C.faint:C.fg); band.setAttribute("stroke-dasharray",ref?"2 2":"");
+    [["BandLo",a0],["BandHi",a1]].forEach(([id,a])=>{ const l=q("#"+key+id); const [x1,y1]=gpol(cx,cy,rb-3,a),[x2,y2]=gpol(cx,cy,rb+3,a); l.setAttribute("x1",x1.toFixed(1));l.setAttribute("y1",y1.toFixed(1));l.setAttribute("x2",x2.toFixed(1));l.setAttribute("y2",y2.toFixed(1)); l.setAttribute("stroke",ref?C.faint:C.fg); }); }
+  const T={BELOW:["▼ BELOW",C.cyan],ON:["● ON TARGET",C.green],ABOVE:["▲ ABOVE",C.amber],ZERO:[key==="pw"?"○ COASTING":"○ STOPPED",C.faint],NONE:[key==="hr"?"— NO STRAP":"— NO DATA",C.faint],UNVERIFIED:["○ UNVERIFIED",C.faint]}[st];
+  const pill=q("#"+key+"Pill"), txt=q("#"+key+"Stat"); txt.textContent=T[0]; txt.setAttribute("fill",T[1]); pill.setAttribute("stroke",T[1]); pill.setAttribute("fill",T[1]); return st; }
 
 function renderGraph(samples,winSec){ const P=G.plot; const n=samples.length; const x0=P.x+4, xw=P.w-8; const xOf=k=>x0+((winSec-n+k)/Math.max(1,winSec-1))*xw;
   // traces: one path per signal, broken at every missing second; min/max decimation when samples outnumber pixel columns

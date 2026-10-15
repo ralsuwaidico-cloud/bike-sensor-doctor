@@ -109,6 +109,8 @@ jobs:
 
   release:
     needs: [build, device]
+    # design-review branches are built and emulator-tested but never published as a release
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

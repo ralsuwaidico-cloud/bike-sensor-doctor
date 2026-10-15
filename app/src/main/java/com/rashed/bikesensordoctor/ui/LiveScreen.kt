@@ -95,11 +95,12 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
             // ---- B · live sensor readings ----
             val b = d.bands
             val hrLive = st.hrLive
-            Row(Modifier.fillMaxWidth().padding(top = if (short) 3.dp else 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                MetricCard(Modifier.weight(1f), "POWER", d.powerW, "W", b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = if (d.simulated) "SIM" else "",
+            Row(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                // hybrid: Design-7 circular gauges; LIVE dot and TARGET band share the dial's scale (power 0..max(300, 1.5×FTP), HR 0..max HR, cadence 0..130)
+                CompactGauge(Modifier.weight(1f), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = if (d.simulated) "SIM" else "", reference = b?.pwReference == true,
                     statusOverride = when { d.powerW == null -> null; !d.powerVerified -> "○ UNVERIFIED"; b?.pwReference == true -> "○ NO TARGET"; else -> null }, compact = short || bigFont, testTag = "card_power")
-                MetricCard(Modifier.weight(1f), "HEART RATE", hrLive, "BPM", b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = if (d.simulated) "SIM" else "", compact = short || bigFont, testTag = "card_hr")
-                MetricCard(Modifier.weight(1f), "CADENCE", d.cadenceRpm, "RPM", b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = if (d.simulated) "SIM" else "",
+                CompactGauge(Modifier.weight(1f), "HEART RATE", hrLive, "BPM", st.hrMaxGauge, b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = if (d.simulated) "SIM" else "", compact = short || bigFont, testTag = "card_hr")
+                CompactGauge(Modifier.weight(1f), "CADENCE", d.cadenceRpm, "RPM", com.rashed.bikesensordoctor.core.Targets.CADENCE_GAUGE_MAX, b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = if (d.simulated) "SIM" else "",
                     statusOverride = if (d.backwards) "▼ BACKWARDS" else null, compact = short || bigFont, testTag = "card_cad")
             }
 
