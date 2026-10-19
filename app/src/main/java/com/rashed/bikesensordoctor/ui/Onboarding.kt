@@ -148,7 +148,7 @@ private val PAGES = listOf(
     "About you" to "Four quick facts. Everything else is optional.",
     "Your goals" to "One main goal; add a second if you like.",
     "Your training routine" to "So the plan fits your week, not an ideal one.",
-    "Fitness & zones" to "Skip anything you don't know — the coach will say what is provisional.",
+    "Your starting fitness profile" to "Nothing to fill in. Your coach starts from what you told us and learns from your rides.",
     "Coaching preferences" to "Change these any time in the ME tab.",
     "Your personal coach" to "",
 )
@@ -224,10 +224,10 @@ private fun PageYou(a: RiderAnswers, pick: (String, String) -> Unit, changed: ()
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         NumberField(a.int("age"), "Age", 14, 90, Modifier.weight(1f).testTag("num_age")) { a["age"] = it?.toString(); changed() }
         NumberField(a.int("heightCm"), "Height cm", 120, 220, Modifier.weight(1f)) { a["heightCm"] = it?.toString(); changed() }
-        NumberField(a.int("weightKg"), "Weight kg", 35, 160, Modifier.weight(1f)) { a["weightKg"] = it?.toString(); changed() }
+        NumberField(a.int("weightKg"), "Weight kg", 35, 160, Modifier.weight(1f).testTag("num_weight")) { a["weightKg"] = it?.toString(); changed() }
     }
     FieldLabel("EXPERIENCE")
-    Chips(listOf("new" to "New", "recreational" to "1–3 yrs", "experienced" to "3+ yrs", "returning" to "Returning"), setOfNotNull(a["experience"])) { pick("experience", it) }
+    Chips(listOf("new" to "New", "returning" to "Returning", "recreational" to "1–3 yrs", "experienced" to "3+ yrs", "competitive" to "Racing"), setOfNotNull(a["experience"]), columns = 3) { pick("experience", it) }
 }
 
 @Composable
@@ -264,21 +264,52 @@ private fun PageRoutine(a: RiderAnswers, pick: (String, String) -> Unit, toggle:
 
 @Composable
 private fun PageZones(a: RiderAnswers, pick: (String, String) -> Unit, saved: () -> Unit, changed: () -> Unit) {
-    FieldLabel("HEART RATE")
-    Chips(listOf("know" to "I know my numbers", "estimate" to "Estimate for now", "later" to "Set up later"), setOfNotNull(a["hrMode"]), small = true) { pick("hrMode", it) }
-    when (a["hrMode"]) {
-        "know" -> D7Card(Modifier.padding(top = 6.dp)) {
-            MetricRow(a, "maxHr", "Max HR", "bpm", 120, 220, saved, changed); MetricRow(a, "restHr", "Resting HR", "bpm", 30, 100, saved, changed); MetricRow(a, "lthr", "Threshold HR", "bpm", 110, 210, saved, changed)
-            Muted("Fill any you know. \"Tested\" values become confirmed zones; the rest stay provisional.", 11)
+    // v0.11 — the page shows what the coach starts from; nothing is required. The starting FTP comes from page 1 (weight × experience).
+    com.rashed.bikesensordoctor.core.StartingFtp.applyIfMissing(a)
+    val ftp = a.metric("ftp"); val w = a.int("weightKg"); val exp = a["experience"]
+    val assumed = ftp != null && ftp.how == com.rashed.bikesensordoctor.core.StartingFtp.HOW
+    var ownFtp by remember { mutableStateOf(ftp != null && !assumed) }
+    var ownHr by remember { mutableStateOf(a.metric("maxHr") != null || a.metric("restHr") != null || a.metric("lthr") != null) }
+
+    D7Card(accent = D7.Cyan, modifier = Modifier.padding(top = 4.dp)) {
+        CardTitle("STARTING FTP")
+        when {
+            ftp != null && !assumed -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${ftp.value} W", fontFamily = Rajdhani, fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 36.sp, color = D7.Fg, modifier = Modifier.weight(1f))
+                    Tag(when (ftp.how) { "measured" -> "TESTED"; "auto" -> "LEARNED"; "app" -> "FROM APP"; else -> "YOUR ESTIMATE" }, if (ftp.how == "measured") D7.Green else D7.Cyan)
+                }
+                Muted("Your existing FTP is kept. The coach only proposes a change when your rides give strong evidence — it never overwrites a tested value on its own.", 12)
+            }
+            ftp != null -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${ftp.value} W", fontFamily = Rajdhani, fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 36.sp, color = D7.Fg, modifier = Modifier.weight(1f).testTag("starting_ftp"))
+                    Tag("ESTIMATED FROM EXPERIENCE", D7.Amber)
+                }
+                Muted("From your weight ($w kg) and experience (${com.rashed.bikesensordoctor.core.StartingFtp.LABEL[exp]}). A starting point, not a measurement — your coach replaces it automatically, up or down, once your rides show what you can hold.", 12)
+            }
+            else -> Muted(if (w == null) "Add your weight on page 1 and the coach starts from an experience-based estimate. Either way it learns your FTP from your rides." else "The coach learns your FTP from your rides.", 12)
         }
-        "estimate" -> Muted("Zone 2 will be estimated from ${if (a.int("age") != null) "your age" else "a default max HR"} and marked GENERIC until a calibration ride.", 12)
-        "later" -> Muted("Heart-rate guidance stays generic until you add numbers in the ME tab.", 12)
     }
-    FieldLabel("POWER")
-    Chips(listOf("know" to "I know my FTP", "unknown" to "Don't know yet"), setOfNotNull(a["pwMode"]), small = true) { pick("pwMode", it) }
-    when (a["pwMode"]) {
-        "know" -> D7Card(Modifier.padding(top = 6.dp)) { MetricRow(a, "ftp", "FTP", "W", 60, 450, saved, changed) }
-        "unknown" -> Muted("Power is shown, not coached. An FTP test is offered after three rides — once the meter is verified under load.", 12)
+    D7Card(Modifier.padding(top = 8.dp)) {
+        CardTitle("HEART-RATE ZONES")
+        if (ownHr && (a.metric("lthr") != null || a.metric("maxHr") != null)) Text("From the numbers you entered below.", fontSize = 14.sp, color = D7.Fg)
+        else Text("We'll learn these when you connect your HR strap.", fontSize = 14.sp, color = D7.Fg)
+        Muted("Until then the coach uses a general estimate from your age, marked GENERIC — it is not your measured threshold.", 12)
+    }
+    Text("Your coach will automatically improve these estimates as you ride.", fontSize = 13.sp, lineHeight = 17.sp, color = D7.Cyan, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+
+    // optional: a rider with a reliable existing FTP, or known heart-rate numbers
+    TextButton(onClick = { ownFtp = !ownFtp; if (!ownFtp && a.metric("ftp")?.how != com.rashed.bikesensordoctor.core.StartingFtp.HOW) { a.setMetric("ftp", null, null); com.rashed.bikesensordoctor.core.StartingFtp.applyIfMissing(a); changed() } },
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp), modifier = Modifier.testTag("own_ftp")) { Text(if (ownFtp) "▾ Enter my own FTP" else "▸ Enter my own FTP (optional)", color = D7.Cyan, fontSize = 12.sp) }
+    if (ownFtp) D7Card {
+        MetricRow(a, "ftp", "FTP", "W", 60, 450, saved, changed)
+        Muted("Only if you have a reliable value from a test or another app. Leave it empty to keep the starting estimate.", 11)
+    }
+    TextButton(onClick = { ownHr = !ownHr }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp), modifier = Modifier.testTag("own_hr")) { Text(if (ownHr) "▾ I know my heart-rate numbers" else "▸ I know my heart-rate numbers (optional)", color = D7.Cyan, fontSize = 12.sp) }
+    if (ownHr) D7Card {
+        MetricRow(a, "maxHr", "Max HR", "bpm", 120, 220, saved, changed); MetricRow(a, "restHr", "Resting HR", "bpm", 30, 100, saved, changed); MetricRow(a, "lthr", "Threshold HR", "bpm", 110, 210, saved, changed)
+        Muted("Fill any you know. \"Tested\" values become confirmed zones; the rest stay provisional.", 11)
     }
 }
 
@@ -309,6 +340,8 @@ private fun PagePrefs(a: RiderAnswers, pick: (String, String) -> Unit, toggle: (
 fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) -> Unit, onConfirm: () -> Unit, onBack: () -> Unit, onSignOut: (() -> Unit)? = null) {
     val r = vm.engine.rider ?: return
     val a = r.answers
+    // v0.11: the STARTING ASSUMPTION (weight × experience) is applied before the summary so the rider sees exactly what the coach will use
+    if (com.rashed.bikesensordoctor.core.StartingFtp.applyIfMissing(a)) runCatching { vm.engine.riders.save(r) }
     val c = RiderProfile.deriveSetup(a)
     val cal = java.util.Calendar.getInstance(); val today = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
     val w = RiderProfile.recommend(a, c, r.feedback, today)
@@ -331,8 +364,9 @@ fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) 
             CardTitle("YOUR TARGETS")
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Zone 2 ${c.hrTargetLo}–${c.hrTargetHi} bpm", fontSize = 15.sp, color = D7.Fg, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); ConfidenceTag(c.zoneConfidence) }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
-                Text(if (c.powerCoaching) "Power ${c.powerLo}–${c.powerHi} W" else "Power targets off until FTP is known", fontSize = 13.sp, color = if (c.powerCoaching) D7.Fg else D7.Mut, modifier = Modifier.weight(1f))
-                if (c.powerCoaching) { if (c.ftpMeasured) Tag("CONFIRMED", D7.Green) else Tag("PROVISIONAL", D7.Amber) }
+                Text(when { c.ftpAssumed -> "Power reference ${c.powerLo}–${c.powerHi} W from starting FTP ${c.ftp} W (starting assumption)"; c.powerCoaching -> "Power ${c.powerLo}–${c.powerHi} W"; else -> "Power targets off until FTP is known" },
+                    fontSize = 13.sp, lineHeight = 17.sp, color = if (c.powerCoaching || c.ftpAssumed) D7.Fg else D7.Mut, modifier = Modifier.weight(1f))
+                if (c.ftpAssumed) Tag("STARTING ASSUMPTION", D7.Amber) else if (c.powerCoaching) { if (c.ftpMeasured) Tag("CONFIRMED", D7.Green) else Tag("PROVISIONAL", D7.Amber) }
             }
             Text("Cadence ${if (c.cadenceEnabled) "${c.cadLow}–${c.cadHigh} rpm" else "not coached"} · warm-up ${c.warmupSec / 60} min · cool-down ${c.cooldownSec / 60} min", fontSize = 12.sp, color = D7.Mut, modifier = Modifier.padding(top = 3.dp))
             Expander("Why these targets?") {
@@ -345,7 +379,8 @@ fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) 
         if (!firstTime) {
             val l = remember { vm.engine.learned() }
             D7Card(Modifier.padding(top = 8.dp), accent = D7.Violet) {
-                CardTitle("YOUR PROGRESS · ${l.rides} REAL RIDE${if (l.rides == 1) "" else "S"}")
+                CardTitle("YOUR PROGRESS · ${com.rashed.bikesensordoctor.core.LearningStage.of(l.rides).label.uppercase()} · ${l.rides} REAL RIDE${if (l.rides == 1) "" else "S"}")
+                val fh = com.rashed.bikesensordoctor.core.FtpHistory.lines(a); if (fh.isNotEmpty()) Text(fh.last(), fontSize = 12.sp, lineHeight = 16.sp, color = D7.Fg, modifier = Modifier.padding(bottom = 4.dp))
                 if (l.rides == 0) Text("Your first real ride starts the record. Simulated rides never count.", fontSize = 13.sp, lineHeight = 18.sp, color = D7.Fg)
                 else {
                     l.inBandTrend?.let { Text("Zone discipline: $it", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg) }
@@ -374,7 +409,7 @@ fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) 
                 "You" to "${v(a["age"])} y · ${v(a["heightCm"])} cm · ${v(a["weightKg"])} kg · ${v(a["experience"])}",
                 "Routine" to "${v(a["ridesNow"])} rides/wk now · ${v(a["daysAvail"])} days possible · ${v(a["typicalMin"])} min typical" + a.list("other").filter { it != "none" }.takeIf { it.isNotEmpty() }?.let { " · " + it.joinToString(", ") }.orEmpty(),
                 "Heart rate" to "max ${m("maxHr")} · rest ${m("restHr")} · threshold ${m("lthr")}",
-                "Power" to "FTP ${m("ftp")}",
+                "Power" to "FTP ${a.metric("ftp")?.let { x -> "${x.value} W (${when (x.how) { "assumed" -> "starting assumption"; "auto" -> "learned from your efforts"; "measured" -> "tested"; else -> x.how }})" } ?: "unknown"}",
                 "Coaching" to "${v(a["voice"])} · ${v(a["freq"])} · cadence ${v(a["cadAdvice"])}${if (a["heat"] == "yes") " · hot conditions" else ""}",
             ))
             Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {

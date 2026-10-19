@@ -10,6 +10,7 @@ import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -56,6 +57,7 @@ class AppFlowTest {
         if (o == null) { repeat(10) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null) { repeat(12) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null && timeout > 3000) o = device.wait(Until.findObject(sel), timeout - 3000)
+        if (o == null) { dismissSystemAnr(); o = device.wait(Until.findObject(sel), 1500) }
         assertNotNull("not found: $sel", o); return o!!
     }
     private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.80).toInt(); val b = (device.displayHeight * 0.25).toInt(); if (up) device.swipe(w, a, w, b, 25) else device.swipe(w, b, w, a, 25); device.waitForIdle(800); Thread.sleep(350) }
@@ -109,15 +111,25 @@ class AppFlowTest {
     }
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
     private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
+    /** A slow CI emulator sometimes shows "Pixel Launcher isn't responding" over the app (run 79); the dialog is not ours — dismiss it. */
+    private fun dismissSystemAnr() {
+        repeat(3) {
+            val w = device.findObject(By.text("Wait")) ?: device.findObject(By.textContains("Close app")) ?: return
+            w.click(); device.waitForIdle(1000)
+        }
+    }
+
     private fun launch() {
         // Launch through the shell (`am start`), not from the test process: Android 12 blocks activity starts from a
         // background app once its 10-second grace after leaving the foreground has passed, which made this launch
         // intermittently silent on a slow emulator (run 52). The shell is never subject to that restriction.
-        device.executeShellCommand("am start -W -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
+        // no -W: on run 84 "am start -W" blocked for 30 min when the previous activity instance was being destroyed at the same moment; the wait below is enough
+        device.executeShellCommand("am start -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
         if (!device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)) {
-            device.executeShellCommand("am start -W -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
+            device.executeShellCommand("am start -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
             device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
         }
+        dismissSystemAnr()
         // a system permission dialog (Nearby devices / location) would cover the app: allow it; the first cold start
         // on the emulator (font loading, class verification) can take a while, so wait for something of ours
         for (n in 0 until 40) {
@@ -150,24 +162,45 @@ class AppFlowTest {
         tap(tag("start_onboarding"))
         // page 1: about you
         find(text("3+ yrs")); shot("03_page1")
+        find(tag("num_weight")).text = "75"; device.waitForIdle()
         tap(text("3+ yrs")); tap(tag("next_page"))
         // page 2: goals
         tap(text("Endurance (Zone 2)")); shot("04_page2"); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
         // page 3: routine
         find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); shot("05_page3"); tap(tag("next_page"))
-        // page 4: zones (I know my numbers)
-        tap(text("I know my numbers"))
-        find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"; device.waitForIdle()
+        // page 4 (v0.11): a summary — starting FTP from weight × experience, nothing required; HR numbers are optional
+        assertTrue("starting FTP = 75 kg × 4.0 W/kg (advanced)", visible(text("300 W"), 6000)); assertTrue(has(text("ESTIMATED FROM EXPERIENCE"), 2000))
+        assertTrue("CONTINUE is enabled without any manual value", find(tag("next_page")).isEnabled); shot("06_page4")
+        tap(tag("own_hr")); find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"; device.waitForIdle()
         scrollTo(text("Tested"))
         retry { device.findObjects(text("Tested")).first().click() }; device.waitForIdle(1000)
         retry { device.findObjects(text("Tested")).last().click() }; device.waitForIdle(1000)
-        tap(text("Don't know yet")); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
+        shot("06d_page4_own_hr"); scrollTo(tag("next_page")); tap(tag("next_page"))
         // page 5: prefs
         tap(text("On")); tap(text("Normal")); shot("07_page5"); tap(tag("next_page"))
         // page 6: summary
         find(text("CONFIRMED"), 10_000); shot("08_profile"); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
         find(tag("start_ride")); shot("09_home")
         assertTrue(has(text("Riding as "), 3000))
+    }
+
+    /** v0.11: the starting assumption follows weight × experience for every new rider, and riders never share it. */
+    @Test fun t01b_starting_ftp_for_beginner_and_intermediate_riders() {
+        launch(); find(tag("start_ride"), 15_000)
+        tap(tag("switch_rider")); find(tag("new_name")).text = "Nora"; tap(tag("create_btn")); find(tag("start_onboarding")); tap(tag("start_onboarding"))
+        find(tag("num_weight")).text = "60"; device.waitForIdle(); tap(text("New")); tap(tag("next_page"))
+        tap(text("Endurance (Zone 2)")); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
+        find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); tap(tag("next_page"))
+        assertTrue("beginner 60 kg → 105 W", visible(text("105 W"), 6000)); assertTrue(has(text("We'll learn these when you connect your HR strap."), 2000)); shot("06b_page4_beginner")
+        // change experience to intermediate on page 1 → 180 W, still an assumption
+        device.pressBack(); device.pressBack(); device.pressBack(); find(tag("num_weight"), 5000); tap(text("1–3 yrs")); tap(tag("next_page")); tap(tag("next_page")); tap(tag("next_page"))
+        assertTrue("intermediate 60 kg → 180 W", visible(text("180 W"), 6000)); shot("06c_page4_intermediate")
+        scrollTo(tag("next_page")); tap(tag("next_page")); tap(text("On")); tap(text("Normal")); tap(tag("next_page"))
+        find(tag("confirm_profile"), 10_000); assertTrue("summary shows the assumption", visible(By.textContains("starting assumption"), 4000)); shot("08b_profile_nora"); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
+        find(tag("start_ride"))
+        // back to Rashed: his own assumption (300 W) is untouched
+        tap(tag("switch_rider")); val me = find(By.res(java.util.regex.Pattern.compile("rider_r.*")).hasDescendant(text("Rashed"))); me.click()
+        find(text("Riding as "), 8000); tap(text("ME")); find(tag("confirm_profile")); tap(tag("exp_profile")); assertTrue("Rashed keeps 300 W", visible(By.textContains("300 W (starting assumption)"), 4000)); device.pressBack(); find(tag("start_ride"))
     }
 
     @Test fun t02_club_board_profile_tabs_and_back() {
@@ -249,14 +282,14 @@ class AppFlowTest {
     private fun assertNoScrollLive(label: String) {
         assertTrue("$label: live screen present", has(tag("live_root"), 3000))
         assertTrue("$label: live screen must not scroll", !device.hasObject(By.scrollable(true)))
-        for (t in listOf("live_speed", "live_dist", "live_time", "live_phase", "card_power", "card_hr", "card_cad", "live_targets", "live_graph", "coach_box", "coach_headline")) assertTrue("$label: $t visible without scrolling", has(tag(t), 1500))
+        for (t in listOf("live_speed", "live_dist", "live_time", "live_phase", "card_power", "card_hr", "card_cad", "live_targets", "live_averages", "live_graph", "coach_box", "coach_headline")) assertTrue("$label: $t visible without scrolling", has(tag(t), 1500))
         assertTrue("$label: a control visible", has(tag("btn_pause"), 500) || has(tag("btn_start"), 500) || has(tag("btn_resume"), 500))
         val box = device.findObject(tag("coach_box")); val ctl = device.findObject(By.res(java.util.regex.Pattern.compile("btn_(pause|start|resume)")))
         if (box != null && ctl != null) assertTrue("$label: coach box above the controls and inside the screen", box.visibleBounds.bottom <= ctl.visibleBounds.top && ctl.visibleBounds.bottom <= device.displayHeight)
         val graph = device.findObject(tag("live_graph"))
         if (graph != null && box != null) {
             assertTrue("$label: graph above the coach box", graph.visibleBounds.bottom <= box.visibleBounds.top)
-            assertTrue("$label: graph keeps a usable height (${graph.visibleBounds.height()} px)", graph.visibleBounds.height() >= device.displayHeight / 7)
+            assertTrue("$label: graph keeps a usable height (${graph.visibleBounds.height()} px)", graph.visibleBounds.height() >= device.displayHeight / 9)
         }
         // nothing may overlap: every tagged element's bounds must be disjoint from the next section's
         val order = listOf("card_power", "live_targets", "live_graph", "coach_box").mapNotNull { device.findObject(tag(it))?.visibleBounds }
@@ -291,13 +324,49 @@ class AppFlowTest {
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Sensor drop-outs")); tap(text("10×")); tap(tag("sim_start"))
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
         // meter silent at 2:00 (power + cadence missing together — one device), strap silent at 3:30
-        assertTrue("power card reports NO DATA during the meter gap", appears(text("— NO DATA"), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
-        assertTrue("no value is shown while the meter is silent", has(By.descContains("POWER no data"), 2000))
+        // at 10× a 30-s gap lasts 3 real seconds, so both checks happen in the same poll: the gauge shows no value AND the NO DATA status
+        assertTrue("power gauge shows no value and NO DATA during the meter gap", appears(By.descContains("POWER no data W, — NO DATA"), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
         assertTrue("HR card reports NO STRAP during the strap gap", appears(text("— NO STRAP"), 40_000)); shot("36_live_strap_gap"); assertNoScrollLive("strap gap")
         Thread.sleep(8000); shot("37_live_after_gaps")   // ≥ 5 min of ride: both gaps now visible in the 5-minute graph
         tap(tag("dash_details")); find(tag("detail_graphs")); shot("38_details_gaps"); device.pressBack(); find(tag("btn_finish"), 5000)
         tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
         find(tag("results_root"), 15_000); if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
+    }
+
+    /** v0.11: coaching from the first ride without a strap — power + cadence (relative effort, FTP only an assumption), then cadence only. */
+    @Test fun t04d_no_strap_coaching_power_only_and_cadence_only() {
+        launch()
+        if (!has(tag("start_ride"), 4000) && visible(tag("btn_finish"), 4000)) { tap(tag("btn_finish")); tap(text("FINISH & SAVE")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
+        find(tag("start_ride"), 15_000)
+        tap(text("⚙")); tap(tag("open_simulation")); tap(text("Power + cadence, no strap")); tap(text("30×")); tap(tag("sim_start"))
+        find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
+        assertTrue("HR gauge says NO STRAP", appears(text("— NO STRAP"), 15_000))
+        // relative-effort cues from the rider's own output (no zone claims): hold / drop / surge / milestone
+        assertTrue("a relative-effort instruction appears", appears(By.res("coach_headline"), 5000))
+        val seen = HashSet<String>(); val end = System.currentTimeMillis() + 100_000
+        while (System.currentTimeMillis() < end) { device.findObject(tag("coach_headline"))?.text?.let { seen += it }; if (seen.any { it.startsWith("Good pace") } && seen.any { it.startsWith("Power dropping") }) break; Thread.sleep(400) }
+        File(shots(), "coach_no_strap.txt").writeText(seen.joinToString("\n"))
+        assertTrue("steady output acknowledged: $seen", seen.any { it.startsWith("Good pace") })
+        assertTrue("the 25 % drop at minute 25 is named: $seen", seen.any { it.startsWith("Power dropping") })
+        assertTrue("no zone claims without a strap: $seen", seen.none { it.contains("zone", true) || it.contains("HR ", false) })
+        shot("39_live_no_strap"); assertNoScrollLive("no strap")
+        assertTrue("5-minute averages shown", has(tag("live_averages"), 2000))
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE")); find(tag("results_root"), 15_000)
+        // a simulated ride is labelled SIMULATED and offers no fitness estimates at all — it can never become FTP evidence
+        assertTrue("results are labelled SIMULATED", visible(text("SIMULATED"), 5000)); assertFalse("no estimates section for a simulated ride", has(tag("exp_calibration"), 1500)); shot("40_results_simulated_no_estimates")
+        if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
+        // cadence only: no power, no strap → cadence + pace + time coaching, both effort gauges say NO DATA / NO STRAP
+        tap(text("⚙")); tap(tag("open_simulation")); tap(text("Cadence only (no power, no strap)")); tap(text("30×")); tap(tag("sim_start"))
+        find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
+        assertTrue(appears(text("— NO DATA"), 15_000)); assertTrue(appears(text("— NO STRAP"), 5000))
+        val seen2 = HashSet<String>(); val end2 = System.currentTimeMillis() + 90_000
+        while (System.currentTimeMillis() < end2) { device.findObject(tag("coach_headline"))?.text?.let { seen2 += it }; if (seen2.any { it.startsWith("Pedal") } && seen2.any { it.startsWith("You have been riding") }) break; Thread.sleep(400) }
+        File(shots(), "coach_cadence_only.txt").writeText(seen2.joinToString("\n"))
+        assertTrue("cadence coached without effort sensors: $seen2", seen2.any { it.startsWith("Pedal a little faster") })
+        assertTrue("time-based check-in: $seen2", seen2.any { it.startsWith("You have been riding") })
+        shot("41_live_cadence_only"); assertNoScrollLive("cadence only")
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE")); find(tag("results_root"), 15_000)
+        if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
     }
 
     @Test fun t05_restart_keeps_data_and_settings_screens() {

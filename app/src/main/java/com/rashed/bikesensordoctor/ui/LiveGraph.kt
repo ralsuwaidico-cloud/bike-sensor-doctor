@@ -250,9 +250,10 @@ fun CompactCoach(modifier: Modifier, short: String, why: String, color: Color, a
  * and tap-or-drag for the exact readings at that second.
  */
 @Composable
-fun DetailGraphs(buf: LiveBuffer, version: Long) {
+fun DetailGraphs(buf: LiveBuffer, version: Long, windowAverages: ((Int) -> com.rashed.bikesensordoctor.core.WindowAverages)? = null, rideAverages: (() -> com.rashed.bikesensordoctor.core.WindowAverages)? = null) {
     var win by remember { mutableIntStateOf(300) }
     var sel by remember { mutableStateOf<Int?>(null) }
+    var wholeRide by remember { mutableStateOf(false) }
     val ld = LocalDensity.current
     Column(Modifier.fillMaxWidth().testTag("detail_graphs")) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -263,6 +264,13 @@ fun DetailGraphs(buf: LiveBuffer, version: Long) {
                     modifier = Modifier.padding(start = 4.dp).background(if (on) D7.Cyan else D7.Panel2, RoundedCornerShape(6.dp)).border(1.dp, if (on) D7.Cyan else D7.Line, RoundedCornerShape(6.dp))
                         .clickable { win = s; sel = null }.padding(horizontal = 8.dp, vertical = 3.dp).testTag("detail_win_$s"))
             }
+        }
+        // v0.11 averages: last 5 minutes or the whole ride (time-weighted; valid 0 W counted, missing excluded; cadence elapsed vs pedalling)
+        if (windowAverages != null && rideAverages != null) Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            val a = remember(version, wholeRide, win) { if (wholeRide) rideAverages() else windowAverages(win) }
+            AveragesRow(a, if (wholeRide) "AVG RIDE" else "AVG ${win / 60} MIN", Modifier.weight(1f))
+            Text(if (wholeRide) "ride" else "window", fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 9.sp, color = D7.Ink,
+                modifier = Modifier.padding(start = 6.dp).background(D7.Cyan, RoundedCornerShape(6.dp)).clickable { wholeRide = !wholeRide }.padding(horizontal = 6.dp, vertical = 2.dp).testTag("detail_avg_toggle"))
         }
         Spacer(Modifier.height(6.dp))
         val n = buf.size; val from = buf.windowStart(win); val cnt = n - from
@@ -356,18 +364,19 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
     val (word, wc) = statusLabel(status, kind)
     val statusWord = statusOverride ?: word
     val statusColor = if (statusOverride != null) D7.Faint else wc
-    val ring = if (compact) 62.dp else 70.dp
+    // v0.11 approved layout: 84 dp rings (1.5× — the largest three-across on a 340 dp screen); 76 dp at large system font
+    val ring = if (compact) 76.dp else 84.dp
     val ld = LocalDensity.current
-    val valuePx = with(ld) { (if (compact) 19.sp else 22.sp).toPx() }
-    val unitPx = with(ld) { 7.sp.toPx() }
+    val valuePx = with(ld) { (if (compact) 26.sp else 30.sp).toPx() }
+    val unitPx = with(ld) { 7.5.sp.toPx() }
     val paint = remember { android.graphics.Paint().apply { isAntiAlias = true; textAlign = android.graphics.Paint.Align.CENTER } }
     // the value is drawn, not a Text node: expose it to accessibility (and the UI tests) as a description
     val desc = "$label ${value?.toString() ?: "no data"} $unit, $statusWord"
     Column(modifier.testTag(testTag).semantics { contentDescription = desc }, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = color, letterSpacing = 1.sp, maxLines = 1, softWrap = false)
         Canvas(Modifier.padding(top = 2.dp).size(ring)) {
-            val sw = 7f * density
-            val over = sw / 2 + 5f * density
+            val sw = 9f * density
+            val over = sw / 2 + 1f * density
             val r = size.minDimension / 2 - over
             val c = Offset(size.width / 2, size.height / 2)
             val tl = Offset(c.x - r, c.y - r); val sz = Size(2 * r, 2 * r)
@@ -377,7 +386,7 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
             if (frac != null && frac > 0f) drawArc(color.copy(alpha = 0.55f), start, sweep * frac, false, tl, sz, style = Stroke(sw, cap = StrokeCap.Round))
             // TARGET band on the same scale, just outside the ring, with end ticks
             if (lo != null && hi != null && hi > lo) {
-                val rb = r + sw / 2 + 4f * density
+                val rb = r - sw / 2 - 4f * density   // TARGET band just INSIDE the ring (same scale as the LIVE dot) so neighbouring gauges never touch
                 val a0 = start + sweep * (lo.toFloat() / max).coerceIn(0f, 1f); val a1 = start + sweep * (hi.toFloat() / max).coerceIn(0f, 1f)
                 val bc = if (reference) D7.Faint else D7.Fg
                 drawArc(bc, a0, (a1 - a0).coerceAtLeast(1f), false, Offset(c.x - rb, c.y - rb), Size(2 * rb, 2 * rb),
@@ -387,7 +396,7 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
             }
             // LIVE dot at the reading
             if (frac != null) { val a = Math.toRadians((start + sweep * frac - 90).toDouble()); val p = Offset(c.x + r * Math.cos(a).toFloat(), c.y + r * Math.sin(a).toFloat())
-                drawCircle(D7.Bg, 5.5f * density, p); drawCircle(color, 4f * density, p); drawCircle(D7.Fg, 1.6f * density, p) }
+                drawCircle(D7.Bg, 6.5f * density, p); drawCircle(color, 5f * density, p); drawCircle(D7.Fg, 2f * density, p) }
             // centre: value + unit (+ tag)
             paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
             paint.textSize = valuePx; paint.color = (if (value == null) D7.Faint else D7.Fg).toArgb()
@@ -399,5 +408,24 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
         Box(Modifier.padding(top = 1.dp).background(statusColor.copy(alpha = 0.16f), RoundedCornerShape(7.dp)).border(1.dp, statusColor, RoundedCornerShape(7.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
             Text(statusWord, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 7.sp, color = statusColor, maxLines = 1, softWrap = false)
         }
+    }
+}
+
+
+/** v0.11: time-weighted averages over the graph window — power incl. valid 0 W (missing excluded), cadence elapsed / pedalling, HR when the strap reported. */
+@Composable
+fun AveragesRow(a: com.rashed.bikesensordoctor.core.WindowAverages, label: String, modifier: Modifier = Modifier) {
+    @Composable fun cell(col: Color, name: String, v: Int?, unit: String, sub: String, m: Modifier) {
+        Row(m, verticalAlignment = Alignment.Bottom) {
+            Text(name, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = col); Spacer(Modifier.width(3.dp))
+            Text(v?.toString() ?: "—", fontFamily = Rajdhani, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 13.sp, color = if (v == null) D7.Faint else D7.Fg); Spacer(Modifier.width(2.dp))
+            Text(if (sub.isEmpty()) unit else "$unit · $sub", fontFamily = PlexMono, fontSize = 7.sp, color = D7.Mut, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+    Row(modifier.fillMaxWidth().testTag("live_averages"), verticalAlignment = Alignment.Bottom) {
+        Text(label, fontFamily = PlexMono, fontSize = 7.sp, color = D7.Faint, modifier = Modifier.padding(end = 4.dp))
+        cell(GraphColors.Power, "PWR", a.powerW, "W", if (a.powerW != null && a.powerSec < a.windowSec) "gaps" else "", Modifier.weight(1.1f))
+        cell(GraphColors.Hr, "HR", a.hrBpm, "bpm", "", Modifier.weight(0.9f))
+        cell(GraphColors.Cad, "CAD", a.cadElapsedRpm, "rpm", if (a.cadPedallingRpm != null && a.cadPedallingRpm != a.cadElapsedRpm) "${a.cadPedallingRpm} pedal" else "", Modifier.weight(1.2f))
     }
 }

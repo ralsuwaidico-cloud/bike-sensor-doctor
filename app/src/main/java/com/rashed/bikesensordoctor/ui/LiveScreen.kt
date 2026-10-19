@@ -106,7 +106,12 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
 
             // ---- C · combined performance graph (takes whatever height is left) ----
             GraphLegend(b, havePw = d.powerW != null, haveHr = hrLive != null, haveCad = d.cadenceRpm != null, modifier = Modifier.padding(top = if (short) 3.dp else 5.dp).testTag("live_targets"))
-            CombinedGraph(vm.engine.liveBuffer, d.graphVersion, 300, Modifier.weight(1f).fillMaxWidth().padding(top = 2.dp))
+            // v0.11: averages over the same 5-minute window the graph shows (time-weighted; a disconnected sensor is never zero)
+            val avg = remember(d.graphVersion) { val buf = vm.engine.liveBuffer; val from = buf.windowStart(300); com.rashed.bikesensordoctor.core.WindowAverages.of((from until buf.size).map { buf.powerAt(it) }, (from until buf.size).map { buf.cadAt(it) }, (from until buf.size).map { buf.hrAt(it) }) }
+            AveragesRow(avg, "AVG 5 MIN", Modifier.padding(top = 2.dp))
+            // the graph at half its v0.10 height (the gauges are the main focus); whatever is left over goes below it as slack
+            CombinedGraph(vm.engine.liveBuffer, d.graphVersion, 300, Modifier.fillMaxWidth().height(if (short || bigFont) 96.dp else 118.dp).padding(top = 2.dp))
+            Spacer(Modifier.weight(1f))
 
             // ---- D · compact coach ----
             val analysisAge = if (d.assessmentAtMs > 0) ((vm.engine.now() - d.assessmentAtMs) / 1000).toInt() else -1

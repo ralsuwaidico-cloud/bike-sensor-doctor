@@ -52,7 +52,9 @@ class CoachSummaryTest {
 
     @Test fun no_heart_rate_and_free_ride_are_informational() {
         val noHr = CoachSummary.forRide(analyze(ride { null }), band, "Zone 2", DetailLevel.SIMPLE, false, false)
-        assertEquals(Tone.INFO, noHr.tone); assertNull(noHr.progress); assertTrue(noHr.next.contains("strap"))
+        // v0.11: with power but no strap the coach judges the rider against their own output — no zone claim, strap still suggested
+        assertEquals("Effort without a strap", noHr.title); assertNull(noHr.progress); assertTrue(noHr.next.contains("strap"))
+        assertTrue(noHr.verdict.contains("not a heart-rate zone")); assertTrue(noHr.headline.contains(" W average"))
         val free = CoachSummary.forRide(RideAnalysis.analyze(ride { 140 }, zones, null, 200, false, null, 85, 40), null, "Zone 2", DetailLevel.SIMPLE, false, false)
         assertEquals("Free ride", free.title); assertTrue(free.headline.contains("Zone 3"))
     }

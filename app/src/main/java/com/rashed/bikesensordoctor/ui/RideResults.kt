@@ -106,7 +106,7 @@ fun RideResultsScreen(vm: DoctorViewModel, rideId: Long, fresh: Boolean, onDone:
             Big(String.format(Locale.US, "%.2f", a.distanceKm), "KM", Modifier.weight(1f))
             Big(a.avgHr?.toString() ?: "—", "AVG BPM", Modifier.weight(1f))
         }
-        ProvenanceRow(CoachSummary.provenance(simulated, powerTrusted, a.hrSamples > 0, a.hasRoute, a.powerSamples > 0), Modifier.padding(top = 8.dp))
+        ProvenanceRow(CoachSummary.provenance(simulated, powerTrusted, a.hrSamples > 0, a.hasRoute, a.powerSamples > 0) + listOf("distance · averages · time in zones" to com.rashed.bikesensordoctor.core.Provenance.CALCULATED), Modifier.padding(top = 8.dp))
 
         // ---------------- 2 · the coach's one message: achievement · meaning · next step (details behind expanders) ----------------
         Spacer(Modifier.height(12.dp))
@@ -180,7 +180,8 @@ fun RideResultsScreen(vm: DoctorViewModel, rideId: Long, fresh: Boolean, onDone:
             val ftpEst = remember(tick) { vm.engine.estimate(com.rashed.bikesensordoctor.core.MetricKind.FTP) }
             val thrEst = remember(tick) { vm.engine.estimate(com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR) }
             val pf = rider.answers.metric("ftp"); val pl = rider.answers.metric("lthr")
-            EstimateCard(com.rashed.bikesensordoctor.core.MetricKind.FTP, pf?.value, pf?.measured == true, ftpEst, Modifier.padding(top = 6.dp)) { v -> rider.answers.setMetric("ftp", v, if (ftpEst!!.status >= com.rashed.bikesensordoctor.core.EstimateStatus.HIGH) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
+            vm.engine.ftpNotice?.let { n -> D7Card(Modifier.padding(top = 6.dp), accent = D7.Violet) { CardTitle("FTP UPDATED AUTOMATICALLY"); Text(n, fontSize = 13.sp, lineHeight = 18.sp, color = D7.Fg) } }
+            EstimateCard(com.rashed.bikesensordoctor.core.MetricKind.FTP, pf?.value, pf?.measured == true, ftpEst, Modifier.padding(top = 6.dp), currentHow = pf?.how ?: "") { v -> rider.answers.setMetric("ftp", v, if (ftpEst!!.status >= com.rashed.bikesensordoctor.core.EstimateStatus.HIGH) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
             EstimateCard(com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR, pl?.value, pl?.measured == true, thrEst, Modifier.padding(top = 6.dp)) { v -> rider.answers.setMetric("lthr", v, if (thrEst!!.status >= com.rashed.bikesensordoctor.core.EstimateStatus.HIGH) "measured" else "estimated"); vm.engine.saveRider(); tick++ }
             a.suggestions.filter { it.key == "maxHr" }.forEach { sg ->
                 D7Card(Modifier.padding(top = 6.dp), accent = D7.Violet) {

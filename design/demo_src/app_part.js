@@ -66,7 +66,7 @@ const PAGES=[
  {id:"you",title:"About you",sub:"Four quick facts. Everything else is optional."},
  {id:"goals",title:"Your goals",sub:"One main goal; add a second if you like."},
  {id:"routine",title:"Your training routine",sub:"So the plan fits your week, not an ideal one."},
- {id:"zones",title:"Fitness & zones",sub:"Skip anything you don't know — the coach will say what is provisional."},
+ {id:"zones",title:"Your starting fitness profile",sub:"Nothing to fill in. Your coach starts from what you told us and learns from your rides."},
  {id:"prefs",title:"Coaching preferences",sub:"Change these any time in Rider Profile."},
  {id:"coach",title:"Your personal coach",sub:""},
 ];
@@ -100,18 +100,24 @@ function pageBody(i,a){
     <div class="fl">Other exercise</div>${seg("other",[["weights","Weights"],["running","Running"],["swim","Swimming"],["sport","Sport"],["none","None"]],a.other||[],true,"grid3")}
     <details class="adv"${(a.rest||[]).length||(a.otherDays||[]).length?" open":""}><summary>More options</summary><div class="fl">Longest comfortable ride</div>${slider("longestMin",a.longestMin??90,30,360,10,"min")}
     ${(a.other||[]).some(x=>x!=="none"&&x)?`<div class="fl">Days for that exercise</div>${seg("otherDays",DAYS.map(d=>[d,d]),a.otherDays||[],true,"days")}`:""}<div class="fl">Rest days</div>${seg("rest",DAYS.map(d=>[d,d]),a.rest||[],true,"days")}</details>`;
-  if(i===3) return `<div class="fl">Heart rate</div>${seg("hrMode",[["know","I know my numbers"],["estimate","Estimate for now"],["later","Set up later"]],a.hrMode)}
-    ${a.hrMode==="know"?`<div class="mbox">${metricRow("maxHr","Max HR","bpm",120,220,a)}${metricRow("restHr","Resting HR","bpm",30,100,a)}${metricRow("lthr","Threshold HR","bpm",110,210,a)}<p class="why">Fill any you know. "Tested" values become confirmed zones; the rest stay provisional.</p></div>`:a.hrMode==="estimate"?`<p class="why">Zone 2 will be estimated from ${a.age?"your age":"a default max HR"} and marked GENERIC until a calibration ride.</p>`:a.hrMode==="later"?`<p class="why">Heart-rate guidance stays generic until you add numbers in Rider Profile.</p>`:""}
-    <div class="fl">Power</div>${seg("pwMode",[["know","I know my FTP"],["unknown","Don't know yet"]],a.pwMode)}
-    ${a.pwMode==="know"?`<div class="mbox">${metricRow("ftp","FTP","W",60,450,a)}</div>`:a.pwMode==="unknown"?`<p class="why">Power is shown, not coached. An FTP test is offered after three rides — once the meter is verified under load.</p>`:""}
-    <details class="adv"${a.apple?" open":""}><summary>More options</summary><div class="fl">Keep Apple Fitness zones as a labelled reference?</div>${seg("apple",[["yes","Yes"],["no","No"]],a.apple)}<p class="why">Apple's bands (Z2 = 151–160 bpm) are app-calculated, not your physiology.</p></details>`;
+  if(i===3){ const WKG={new:1.75,returning:2.25,recreational:3.0,experienced:4.0,competitive:5.0}, LBL={new:"Beginner",returning:"Novice",recreational:"Intermediate",experienced:"Advanced",competitive:"Competitive"};
+    const own=a.ftp&&a.ftp.value&&a.ftp.how&&a.ftp.how!=="assumed"; const sf=(a.weightKg&&WKG[a.experience])?Math.round(a.weightKg*WKG[a.experience]):null;
+    const hrOwn=(a.maxHr&&a.maxHr.value)||(a.lthr&&a.lthr.value);
+    return `<div class="card acc-cyan"><div class="ct">STARTING FTP</div>
+      ${own?`<div class="bigrow"><b class="bigw">${a.ftp.value} W</b><span class="tag ${a.ftp.how==="measured"?"conf":"now"}">${a.ftp.how==="measured"?"TESTED":"YOUR ESTIMATE"}</span></div><p class="why">Your existing FTP is kept. The coach only proposes a change when your rides give strong evidence — it never overwrites a tested value on its own.</p>`
+        :sf?`<div class="bigrow"><b class="bigw">${sf} W</b><span class="tag prov">ESTIMATED FROM EXPERIENCE</span></div><p class="why">From your weight (${a.weightKg} kg) and experience (${LBL[a.experience]}). A starting point, not a measurement — your coach replaces it automatically, up or down, once your rides show what you can hold.</p>`
+        :`<p class="why">Add your weight on page 1 and the coach starts from an experience-based estimate. Either way it learns your FTP from your rides.</p>`}</div>
+    <div class="card"><div class="ct">HEART-RATE ZONES</div><div class="hl">${hrOwn?"From the numbers you entered below.":"We'll learn these when you connect your HR strap."}</div><p class="why">Until then the coach uses a general estimate from your age, marked GENERIC — it is not your measured threshold.</p></div>
+    <p class="learn">Your coach will automatically improve these estimates as you ride.</p>
+    <details class="adv"${own?" open":""}><summary>Enter my own FTP (optional)</summary><div class="mbox">${metricRow("ftp","FTP","W",60,450,a)}<p class="why">Only if you have a reliable value from a test or another app. Leave it empty to keep the starting estimate.</p></div></details>
+    <details class="adv"${hrOwn?" open":""}><summary>I know my heart-rate numbers (optional)</summary><div class="mbox">${metricRow("maxHr","Max HR","bpm",120,220,a)}${metricRow("restHr","Resting HR","bpm",30,100,a)}${metricRow("lthr","Threshold HR","bpm",110,210,a)}<p class="why">Fill any you know. "Tested" values become confirmed zones; the rest stay provisional.</p></div></details>`; }
   if(i===4) return `<div class="two-col"><div><div class="fl">Voice coaching</div>${seg("voice",[["voice","On"],["screen","Screen only"]],a.voice)}</div><div><div class="fl">Coach speaks</div>${seg("freq",[["important","Corrections only"],["frequent","Often"]],a.freq)}</div></div>
     <div class="fl">Where you ride</div>${seg("env",[["flat","Flat road"],["hills","Hills"],["indoor","Indoor"],["mixed","Mixed"]],a.env||[],true,"grid2")}
     <div class="two-col"><div><div class="fl">Cadence guidance</div>${seg("cadAdvice",[["yes","On"],["no","Off"]],a.cadAdvice)}</div><div><div class="fl">Hot conditions?</div>${seg("heat",[["yes","Yes"],["no","No"]],a.heat)}</div></div>
     <details class="adv"${a.tone||a.detail||(a.cadence&&a.cadence.how)?" open":""}><summary>More options</summary><div class="fl">Tone</div>${seg("tone",[["encouraging","Encouraging"],["neutral","Neutral"],["technical","Technical"]],a.tone)}<div class="fl">Explanations</div>${seg("detail",[["simple","Simple"],["detailed","Detailed"]],a.detail)}<div class="fl">Natural cadence, if known</div>${metricRow("cadence","Cadence","rpm",50,120,a)}</details>`;
   return "";
 }
-function pageValid(i,a){ if(i===0) return !!a.experience; if(i===1) return !!a.primary; if(i===2) return !!a.ridesNow&&!!a.daysAvail; if(i===3) return !!a.hrMode&&!!a.pwMode; if(i===4) return !!a.voice&&!!a.freq; return true; }
+function pageValid(i,a){ if(i===0) return !!a.experience; if(i===1) return !!a.primary; if(i===2) return !!a.ridesNow&&!!a.daysAvail; if(i===3) return true; if(i===4) return !!a.voice&&!!a.freq; return true; }
 
 function renderPage(i){ P.page=i; saveP(); const a=A(); const pg=PAGES[i]; if(i===5) return renderSummary();
   el("appStep").textContent=`${i+1} / 6`;
@@ -129,7 +135,7 @@ function bindPage(i){ const Q=el("scrQ"), a=A();
   Q.querySelectorAll("[data-num]").forEach(inp=>inp.onchange=()=>{ const v=+inp.value; const lo=+inp.min, hi=+inp.max; setDeep(a,inp.dataset.num,(v>=lo&&v<=hi)?v:null); saveP(); el("next").disabled=!pageValid(i,a); });
   Q.querySelectorAll("[data-sl]").forEach(inp=>{ inp.oninput=()=>{ Q.querySelector(`[data-out="${inp.dataset.sl}"]`).textContent=inp.value+" "+inp.dataset.unit; }; inp.onchange=()=>{ a[inp.dataset.sl]=+inp.value; saveP(); }; if(a[inp.dataset.sl]==null&&inp.dataset.sl==='typicalMin'){ a[inp.dataset.sl]=+inp.value; saveP(); } });
   el("back").onclick=()=>renderPage(i-1);
-  el("skip").onclick=()=>{ if(i===3){ a.hrMode=a.hrMode||"later"; a.pwMode=a.pwMode||"unknown"; } if(i===4){ a.voice=a.voice||"voice"; a.freq=a.freq||"important"; } if(i===0&&!a.experience) a.experience="recreational"; if(i===1&&!a.primary){ a.primary="fitness"; a.goals=["fitness"]; } if(i===2){ a.ridesNow=a.ridesNow||"2"; a.daysAvail=a.daysAvail||"3"; } saveP(); renderPage(i+1); };
+  el("skip").onclick=()=>{  if(i===4){ a.voice=a.voice||"voice"; a.freq=a.freq||"important"; } if(i===0&&!a.experience) a.experience="recreational"; if(i===1&&!a.primary){ a.primary="fitness"; a.goals=["fitness"]; } if(i===2){ a.ridesNow=a.ridesNow||"2"; a.daysAvail=a.daysAvail||"3"; } saveP(); renderPage(i+1); };
   el("next").onclick=()=>{ if(!pageValid(i,a)) return; renderPage(i+1); };
 }
 /* follow-up questions the coach may ask after rides (one at a time, never repeated) */
