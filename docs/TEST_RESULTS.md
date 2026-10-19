@@ -73,3 +73,21 @@ ride start) · cadence-only simulation stood still so the coach stayed silent (8
 ## Not in this release (unchanged scope)
 Cloud-backed rider accounts and sync (design in ARCHITECTURE_V2.md §6) · critical-power / LTHR auto-estimation beyond the engine's
 existing methods · any layout change beyond the approved artifact version 13.
+
+## Release build — CI run 86 on main (commit fbb608f), 19 Oct 2026
+`BikeComputer-build86.apk` · 17.97 MB · SHA-256 `f80d0e979394a1a8f6e12e94020b52c85238d18f6f60e0816f2a06bb941b2262` (matches the published
+apk.sha256) · package `com.rashed.bikesensordoctor.debug` · versionCode 14 · versionName 0.11.0 · minSdk 26 / targetSdk 34.
+Pre-publish checks requested on 19 Oct:
+1. Complete suite on main: build + 161 unit tests ✓ · Android 12 emulator 9/9 flow tests ✓ · 1 500-event monkey ✓ · no app crash (the one
+   FATAL in logcat is the emulator's own System UI at boot, process com.android.systemui).
+2. Signing: APK v2 signing certificate SHA-256 `E2:51:4D:05:46:C2:55:A6:DA:1A:6F:AA:28:69:7A:01:2A:A1:F9:DD:FE:CD:80:EF:84:41:C9:74:C9:76:1E:4F`
+   = the committed `keystore/debug.keystore` (androiddebugkey) used by every build since 51, including the installed v0.10.0 build 74 → in-place update.
+3. Data preserved: same package id + same key, versionCode 13 → 14; riders, settings, FTP values and ride history live in the app's own
+   storage, which Android keeps on an in-place update; t05 (restart keeps data and settings) passes; no store migration changes in v0.11.
+4. Starting-FTP assumptions are tagged STARTING ASSUMPTION / ESTIMATED FROM EXPERIENCE everywhere they appear and are applied only when the
+   profile has no FTP or an earlier assumption (`StartingFtp.applyIfMissing`; unit-tested with tested/estimated values preserved; t01b).
+5. Simulated rides: FTP evidence, MMP, qualifying efforts, automatic FTP policy and meter verification all require `RideSource.DEVICE` /
+   a real sensor; leaderboards count DEVICE rides only; results show SIMULATED and no estimates section (t04d, unit tests).
+6. Coaching without a strap: power-only and cadence-only profiles coached on the emulator (t04d) with no zone wording; missing sensors
+   show "— NO DATA" / "— NO STRAP" with no value drawn (t04c); averages exclude missing seconds; 0 W counts only as a real coasting zero.
+APK built from commit fbb608f = the commit the emulator job tested in the same run.
