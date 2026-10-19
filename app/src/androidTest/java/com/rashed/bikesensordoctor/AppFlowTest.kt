@@ -57,6 +57,7 @@ class AppFlowTest {
         if (o == null) { repeat(10) { if (o == null) { swipe(up = true); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null) { repeat(12) { if (o == null) { swipe(up = false); o = device.wait(Until.findObject(sel), 700) } } }
         if (o == null && timeout > 3000) o = device.wait(Until.findObject(sel), timeout - 3000)
+        if (o == null) { dismissSystemAnr(); o = device.wait(Until.findObject(sel), 1500) }
         assertNotNull("not found: $sel", o); return o!!
     }
     private fun swipe(up: Boolean) { val w = device.displayWidth / 2; val a = (device.displayHeight * 0.80).toInt(); val b = (device.displayHeight * 0.25).toInt(); if (up) device.swipe(w, a, w, b, 25) else device.swipe(w, b, w, a, 25); device.waitForIdle(800); Thread.sleep(350) }
@@ -110,6 +111,14 @@ class AppFlowTest {
     }
     private fun scrollTo(sel: BySelector): UiObject2 = find(sel)
     private fun retry(times: Int = 4, block: () -> Unit) { var last: Throwable? = null; repeat(times) { try { block(); return } catch (e: Throwable) { last = e; Thread.sleep(400) } }; throw last!! }
+    /** A slow CI emulator sometimes shows "Pixel Launcher isn't responding" over the app (run 79); the dialog is not ours — dismiss it. */
+    private fun dismissSystemAnr() {
+        repeat(3) {
+            val w = device.findObject(By.text("Wait")) ?: device.findObject(By.textContains("Close app")) ?: return
+            w.click(); device.waitForIdle(1000)
+        }
+    }
+
     private fun launch() {
         // Launch through the shell (`am start`), not from the test process: Android 12 blocks activity starts from a
         // background app once its 10-second grace after leaving the foreground has passed, which made this launch
@@ -119,6 +128,7 @@ class AppFlowTest {
             device.executeShellCommand("am start -W -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
             device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
         }
+        dismissSystemAnr()
         // a system permission dialog (Nearby devices / location) would cover the app: allow it; the first cold start
         // on the emulator (font loading, class verification) can take a while, so wait for something of ours
         for (n in 0 until 40) {
