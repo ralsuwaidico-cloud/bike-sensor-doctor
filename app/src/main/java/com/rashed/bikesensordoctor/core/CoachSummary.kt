@@ -57,6 +57,21 @@ object CoachSummary {
         }
 
         // ---- the ladder: one message, the most important first ----
+        // v0.11: without a strap the coach still works — from the rider's own steady output (power), or from cadence, pace and time
+        if (a.hrSamples == 0 && a.powerSamples > 0 && a.avgPowerW != null) {
+            val cv = a.powerConsistencyCv
+            val steady = cv != null && cv <= 0.20
+            return CoachMessage("Effort without a strap", "${a.avgPowerW} W average for ${a.movingSec / 60} min",
+                if (steady) "A steady effort — judged against your own output, not a heart-rate zone." else "Your effort varied a lot — judged against your own output, not a heart-rate zone.",
+                if (steady) "Next ride: wear the strap to add zone coaching; your power record already counts." else "Next ride: hold a steadier effort — and wear the strap to add zone coaching.",
+                if (steady) Tone.GOOD else Tone.WATCH, null,
+                "No heart rate was recorded, so the coach cannot say which zone you rode in. It compared each minute with your own 10-minute output instead: a steady rhythm is the goal, surges and fades are what it points out.",
+                details, how)
+        }
+        if (a.hrSamples == 0 && a.cadSamples > 0) return CoachMessage("Ride without effort sensors", "${a.movingSec / 60} min at ${a.avgCadRpm ?: 0} rpm",
+            "No power or heart rate, so the coach guided cadence, pace and time only.",
+            "Next ride: connect the power meter or strap so the coach can judge effort.", Tone.INFO, null,
+            "Cadence tells the coach how you pedal, not how hard. Without an effort sensor it keeps the rhythm steady and checks in by time; it never guesses watts or zones.", details, how)
         if (a.hrSamples == 0) return CoachMessage("Heart rate", "No heart rate this ride", "Without a strap the coach cannot judge your effort.",
             "Next ride: wear the heart-rate strap so the coach can guide you.", Tone.INFO, null,
             "Heart rate is the coach's authority on effort; power only confirms it. With neither, the ride is recorded but not assessed.", details, how)
