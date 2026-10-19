@@ -312,6 +312,8 @@ private fun PagePrefs(a: RiderAnswers, pick: (String, String) -> Unit, toggle: (
 fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) -> Unit, onConfirm: () -> Unit, onBack: () -> Unit, onSignOut: (() -> Unit)? = null) {
     val r = vm.engine.rider ?: return
     val a = r.answers
+    // v0.11: the STARTING ASSUMPTION (weight × experience) is applied before the summary so the rider sees exactly what the coach will use
+    if (com.rashed.bikesensordoctor.core.StartingFtp.applyIfMissing(a)) runCatching { vm.engine.riders.save(r) }
     val c = RiderProfile.deriveSetup(a)
     val cal = java.util.Calendar.getInstance(); val today = (cal.get(java.util.Calendar.DAY_OF_WEEK) + 5) % 7
     val w = RiderProfile.recommend(a, c, r.feedback, today)
@@ -334,8 +336,9 @@ fun ProfileSummaryScreen(vm: DoctorViewModel, firstTime: Boolean, onEdit: (Int) 
             CardTitle("YOUR TARGETS")
             Row(verticalAlignment = Alignment.CenterVertically) { Text("Zone 2 ${c.hrTargetLo}–${c.hrTargetHi} bpm", fontSize = 15.sp, color = D7.Fg, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); ConfidenceTag(c.zoneConfidence) }
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 3.dp)) {
-                Text(if (c.powerCoaching) "Power ${c.powerLo}–${c.powerHi} W" else "Power targets off until FTP is known", fontSize = 13.sp, color = if (c.powerCoaching) D7.Fg else D7.Mut, modifier = Modifier.weight(1f))
-                if (c.powerCoaching) { if (c.ftpMeasured) Tag("CONFIRMED", D7.Green) else Tag("PROVISIONAL", D7.Amber) }
+                Text(when { c.ftpAssumed -> "Power reference ${c.powerLo}–${c.powerHi} W from starting FTP ${c.ftp} W (starting assumption)"; c.powerCoaching -> "Power ${c.powerLo}–${c.powerHi} W"; else -> "Power targets off until FTP is known" },
+                    fontSize = 13.sp, lineHeight = 17.sp, color = if (c.powerCoaching || c.ftpAssumed) D7.Fg else D7.Mut, modifier = Modifier.weight(1f))
+                if (c.ftpAssumed) Tag("STARTING ASSUMPTION", D7.Amber) else if (c.powerCoaching) { if (c.ftpMeasured) Tag("CONFIRMED", D7.Green) else Tag("PROVISIONAL", D7.Amber) }
             }
             Text("Cadence ${if (c.cadenceEnabled) "${c.cadLow}–${c.cadHigh} rpm" else "not coached"} · warm-up ${c.warmupSec / 60} min · cool-down ${c.cooldownSec / 60} min", fontSize = 12.sp, color = D7.Mut, modifier = Modifier.padding(top = 3.dp))
             Expander("Why these targets?") {
