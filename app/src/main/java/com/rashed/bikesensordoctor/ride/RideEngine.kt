@@ -589,7 +589,7 @@ class RideEngine(private val app: Application) {
                 val pw = pwLive(now)
                 // v0.11 automatic meter verification from real packets only; flips prefs.powerVerified once the data is consistent
                 if (simulator == null && !prefs.powerVerified) { meter.tick(stats.livePowerW(now), stats.liveCadenceRpm(now), link.qualityPct(now), false)
-                    if (meter.verified) { prefs.powerVerified = true; log.add(EventType.INFO, note = "Power meter VERIFIED automatically: ${meter.reason}"); applyCoachConfig(); _dash.value = _dash.value.copy(lastSavedRide = "Power meter verified — ${meter.reason}") } }
+                    if (meter.verified) { prefs.powerVerifiedAtMs = now; prefs.powerVerifiedMaxW = stats.maxPowerW; log.add(EventType.INFO, note = "Power meter VERIFIED automatically: ${meter.reason}"); applyCoachConfig(); _dash.value = _dash.value.copy(lastSavedRide = "Power meter verified — ${meter.reason}") } }
                 var inBand: Boolean? = null
                 if (targets != null && phase == Phase.MAIN) {
                     mainSec++
