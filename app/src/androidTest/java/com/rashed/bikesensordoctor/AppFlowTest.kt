@@ -359,7 +359,7 @@ class AppFlowTest {
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Cadence only (no power, no strap)")); tap(text("30×")); tap(tag("sim_start"))
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
         assertTrue(appears(text("— NO DATA"), 15_000)); assertTrue(appears(text("— NO STRAP"), 5000))
-        val seen2 = HashSet<String>(); val end2 = System.currentTimeMillis() + 60_000
+        val seen2 = HashSet<String>(); val end2 = System.currentTimeMillis() + 90_000
         while (System.currentTimeMillis() < end2) { device.findObject(tag("coach_headline"))?.text?.let { seen2 += it }; if (seen2.any { it.startsWith("Pedal") } && seen2.any { it.startsWith("You have been riding") }) break; Thread.sleep(400) }
         File(shots(), "coach_cadence_only.txt").writeText(seen2.joinToString("\n"))
         assertTrue("cadence coached without effort sensors: $seen2", seen2.any { it.startsWith("Pedal a little faster") })

@@ -467,13 +467,18 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
     private fun sensorPoor(now: Long, cad: Int?, stopped: Boolean): CoachCue? {
         if (!noSensorsSaid) { noSensorsSaid = true; lastType = CueType.NO_HR; lastEmitMs = now
             return CoachCue(CueType.NO_HR, "NO EFFORT SENSORS", "Coaching on cadence and pace until a power meter or strap reports", "", "NO_SIGNAL", CoachAction.NO_SIGNAL, "sensors", liveText(), "No effort sensors", "coaching on cadence and pace") }
-        if (stopped || speedWin.size < 90) return null
-        val v = speedWin.map { it.second }.filter { it > 3.0 }; if (v.size < 60) return null
-        val m = v.average(); val cv = Math.sqrt(v.sumOf { (it - m) * (it - m) } / v.size) / m
-        if (cv > 0.25 && (cad ?: 0) > 0) return emit(now, CueType.PACE, "TRY TO HOLD A STEADIER PACE", "Speed varied ±${Math.round(cv * 100)} % over two minutes (terrain and wind count, so this is about rhythm, not effort)", "Try to hold a steadier pace", "SPEED_UNEVEN").takeIf { it.type != CueType.NONE }
+        if (stopped) return null
         val sinceMain = mainSinceMs ?: now.also { mainSinceMs = now }
-        val min = ((now - sinceMain) / 60_000).toInt()
-        if (min >= 10 && min % 10 == 0 && min != lastMilestoneMin) {
+        if (speedWin.size >= 90) {
+            val v = speedWin.map { it.second }.filter { it > 3.0 }
+            if (v.size >= 60) {
+                val m = v.average(); val cv = Math.sqrt(v.sumOf { (it - m) * (it - m) } / v.size) / m
+                if (cv > 0.25 && (cad ?: 0) > 0) return emit(now, CueType.PACE, "TRY TO HOLD A STEADIER PACE", "Speed varied ±${Math.round(cv * 100)} % over two minutes (terrain and wind count, so this is about rhythm, not effort)", "Try to hold a steadier pace", "SPEED_UNEVEN").takeIf { it.type != CueType.NONE }
+            }
+        }
+        // time check-in every 10 minutes; a mark missed while another cue was speaking is still given once
+        val min = ((now - sinceMain) / 60_000).toInt() / 10 * 10
+        if (min >= 10 && min > lastMilestoneMin) {
             val c = emit(now, CueType.KEEP_IT_UP, "YOU HAVE BEEN RIDING FOR $min MINUTES. KEEP GOING", "Time-based check-in — no effort sensor to judge intensity", "You have been riding for $min minutes, keep going", "TIME_MILESTONE")
             if (c.type != CueType.NONE) { lastMilestoneMin = min; return c } }
         return null
