@@ -123,9 +123,10 @@ class AppFlowTest {
         // Launch through the shell (`am start`), not from the test process: Android 12 blocks activity starts from a
         // background app once its 10-second grace after leaving the foreground has passed, which made this launch
         // intermittently silent on a slow emulator (run 52). The shell is never subject to that restriction.
-        device.executeShellCommand("am start -W -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
+        // no -W: on run 84 "am start -W" blocked for 30 min when the previous activity instance was being destroyed at the same moment; the wait below is enough
+        device.executeShellCommand("am start -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
         if (!device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)) {
-            device.executeShellCommand("am start -W -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
+            device.executeShellCommand("am start -n $pkg/com.rashed.bikesensordoctor.ui.MainActivity")
             device.wait(Until.hasObject(By.pkg(pkg).depth(0)), T)
         }
         dismissSystemAnr()
