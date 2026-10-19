@@ -70,6 +70,8 @@ data class CoachSetup(
     val zoneConfidence: ZoneConfidence, val zoneConfidenceText: String,
     val maxHrEstimate: Int,
     val ftp: Int, val ftpKnown: Boolean, val ftpMeasured: Boolean, val powerCoaching: Boolean,
+    /** v0.11: the FTP is the onboarding STARTING ASSUMPTION (weight × experience) or an automatic estimate — a tentative reference, not a measurement */
+    val ftpAssumed: Boolean = false, val ftpHow: String = "unknown",
     val cadLow: Int, val cadHigh: Int, val cadenceEnabled: Boolean,
     val warmupSec: Int, val cooldownSec: Int,
     val voice: Boolean, val tone: String, val detail: String,
@@ -204,8 +206,11 @@ object RiderProfile {
         val ftpW: Int; val ftpKnown: Boolean; val powerCoaching: Boolean
         if (ftp != null) {
             ftpW = ftp.value; ftpKnown = true; powerCoaching = a["guidance"] != "hr"
-            rule("Power Zone 2 = ${r(ftpW * 0.55)}–${r(ftpW * 0.75)} W (55–75% of FTP $ftpW, ${ftp.how})",
-                if (ftp.measured) "FTP from a test → power targets are confirmed." else "FTP not from a test → power targets are provisional until a 20-minute test.")
+            rule("Power Zone 2 = ${r(ftpW * 0.55)}–${r(ftpW * 0.75)} W (55–75% of FTP $ftpW, ${if (ftp.how == StartingFtp.HOW) "STARTING ASSUMPTION" else if (ftp.how == "auto") "learned from your efforts" else ftp.how})",
+                when { ftp.measured -> "FTP from a test → power targets are confirmed."
+                       ftp.how == StartingFtp.HOW -> "Starting assumption from your weight and experience — a reference only. Without a strap the coach judges effort against your own steady output; the number is replaced automatically once your sustained efforts give better evidence."
+                       ftp.how == "auto" -> "Learned automatically from sustained efforts; it keeps adjusting as new qualifying rides arrive."
+                       else -> "FTP not from a test → power targets are provisional until a 20-minute test." })
             if (!powerCoaching) rule("Power shown but not coached", "You prefer heart-rate guidance.")
         } else {
             ftpW = 200; ftpKnown = false; powerCoaching = false
@@ -240,7 +245,7 @@ object RiderProfile {
 
         return CoachSetup(
             hrTargetLo = z2[0], hrTargetHi = z2[1], hrCap = cap, hrZoneEdges = edges, zoneConfidence = conf, zoneConfidenceText = confText, maxHrEstimate = maxEst,
-            ftp = ftpW, ftpKnown = ftpKnown, ftpMeasured = ftp?.measured == true, powerCoaching = powerCoaching,
+            ftp = ftpW, ftpKnown = ftpKnown, ftpMeasured = ftp?.measured == true, powerCoaching = powerCoaching, ftpAssumed = ftp?.how == StartingFtp.HOW, ftpHow = ftp?.how ?: "unknown",
             cadLow = cadLo, cadHigh = cadHi, cadenceEnabled = cadOn, warmupSec = wu * 60, cooldownSec = cd * 60,
             voice = voice, tone = tone, detail = detail, sameRepeatMs = sameRepeat, keepRepeatMs = keepRepeat, rules = rules, frequency = freq,
         )
@@ -258,8 +263,8 @@ object RiderProfile {
         var name = "Zone 2 endurance"; var minutes = minOf(maxOf(30, typ), long); var kind = "z2"
         val limits = a["limits"] ?: "none"
         when {
-            g == "ftp" && c.ftpKnown && limits != "moderate" && limits != "medical" -> { name = "Sweet-spot intervals (3 × 10 min at 88–93% FTP)"; kind = "ss"; minutes = maxOf(60, typ); why += "Main goal is FTP and your FTP is known, so the session targets sustained power." }
-            g == "ftp" -> why += "Main goal is FTP, but FTP is unknown: endurance base first, FTP test offered after three rides."
+            g == "ftp" && c.ftpKnown && !c.ftpAssumed && limits != "moderate" && limits != "medical" -> { name = "Sweet-spot intervals (3 × 10 min at 88–93% FTP)"; kind = "ss"; minutes = maxOf(60, typ); why += "Main goal is FTP and your FTP is known, so the session targets sustained power." }
+            g == "ftp" -> why += if (c.ftpAssumed) "Main goal is FTP, but your FTP is still a starting assumption: endurance base first while the coach learns your real sustained power — no hard intervals prescribed from an assumption." else "Main goal is FTP, but FTP is unknown: endurance base first, FTP test offered after three rides."
             g == "climb" && a["experience"] == "experienced" && limits == "none" -> { name = "Zone 2 with 4 × 5 min low-cadence (60–70 rpm) strength blocks"; kind = "strength"; why += "Climbing goal and experienced rider: low-cadence strength work inside an endurance ride." }
             g == "fasterHr" -> { name = "Zone 2 endurance with cadence focus"; why += "Riding faster at the same heart rate comes from aerobic base plus efficient cadence." }
             g == "event" && a["style"] != "steady" -> { name = "Zone 2 endurance (event build, week 1)"; why += "Event goal: base first, intensity added from week 3." }
@@ -331,7 +336,8 @@ object RiderProfile {
     fun needs(a: RiderAnswers, c: CoachSetup): List<String> {
         val n = ArrayList<String>()
         if (c.zoneConfidence != ZoneConfidence.CONFIRMED) n += "Your real threshold heart rate — a 20-minute steady test, offered after 3 rides."
-        if (!c.ftpKnown) n += "Your FTP — power meter verified under load first, then a 20-minute test."
+        if (!c.ftpKnown) n += "Your FTP — ride with the meter; sustained efforts teach the coach automatically (a guided 20-minute test is optional)."
+        else if (c.ftpAssumed) n += "Your real FTP — the current ${c.ftp} W is a starting assumption; a steady hard effort of 20 minutes in any ride replaces it automatically."
         else if (!c.ftpMeasured) n += "Confirm FTP with a test (current value is ${a["ftp.how"]})."
         n += "Whether you can hold the Zone 2 band on your route (first ride answers this)."
         if (a["heat"] == "yes") n += "How much heat lifts your heart rate (drift between halves)."

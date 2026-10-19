@@ -112,7 +112,7 @@ fun ZoneBar(z: ZoneBreakdown, title: String, modifier: Modifier = Modifier, high
 fun ProvenanceRow(items: List<Pair<String, Provenance>>, modifier: Modifier = Modifier) {
     FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         items.forEach { (what, p) ->
-            val col = when (p) { Provenance.MEASURED -> D7.Green; Provenance.ESTIMATE -> D7.Cyan; Provenance.SIMULATED -> D7.Amber; Provenance.UNVERIFIED -> D7.Orange }
+            val col = when (p) { Provenance.MEASURED -> D7.Green; Provenance.CALCULATED -> D7.Violet; Provenance.ESTIMATE -> D7.Cyan; Provenance.SIMULATED -> D7.Amber; Provenance.UNVERIFIED -> D7.Orange; Provenance.UNAVAILABLE -> D7.Faint }
             Row(Modifier.background(col.copy(alpha = 0.12f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(p.label, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = col); Spacer(Modifier.width(4.dp))
                 Text(what, fontFamily = PlexMono, fontSize = 8.sp, color = D7.Mut, maxLines = 1)
@@ -126,20 +126,21 @@ fun ProvenanceRow(items: List<Pair<String, Provenance>>, modifier: Modifier = Mo
  * never "your FTP is now X". [onApply] applies the candidate to the profile (between rides only).
  */
 @Composable
-fun EstimateCard(kind: com.rashed.bikesensordoctor.core.MetricKind, current: Int?, currentTested: Boolean, est: com.rashed.bikesensordoctor.core.Estimate?, modifier: Modifier = Modifier, onApply: ((Int) -> Unit)? = null) {
+fun EstimateCard(kind: com.rashed.bikesensordoctor.core.MetricKind, current: Int?, currentTested: Boolean, est: com.rashed.bikesensordoctor.core.Estimate?, modifier: Modifier = Modifier, currentHow: String = "", onApply: ((Int) -> Unit)? = null) {
     val name = when (kind) { com.rashed.bikesensordoctor.core.MetricKind.FTP -> "FTP"; com.rashed.bikesensordoctor.core.MetricKind.CRITICAL_POWER -> "Critical power"; com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR -> "Threshold HR"; com.rashed.bikesensordoctor.core.MetricKind.PREFERRED_CADENCE -> "Preferred cadence" }
     val unit = kind.unit
     Column(modifier.fillMaxWidth().background(D7.Panel2, RoundedCornerShape(12.dp)).border(1.dp, D7.Line, RoundedCornerShape(12.dp)).padding(12.dp)) {
         if (est == null) {
-            Text("$name — no evidence yet", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
-            Text(when (kind) { com.rashed.bikesensordoctor.core.MetricKind.FTP -> "Needs a verified power meter and a 20-minute effort."; com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR -> "Needs the guided threshold test."; else -> "Needs more rides." }, fontSize = 12.sp, color = D7.Mut, modifier = Modifier.padding(top = 2.dp))
+            Text(if (kind == com.rashed.bikesensordoctor.core.MetricKind.FTP) "FTP ESTIMATE UNAVAILABLE" else "$name — no evidence yet", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
+            Text(when (kind) { com.rashed.bikesensordoctor.core.MetricKind.FTP -> (if (current != null && currentHow == "assumed") "Riding on the starting assumption of $current W. " else "") + "A steady hard effort of about 20 minutes in any ride (with a verified meter) becomes evidence automatically; an ordinary endurance ride does not. The optional guided 20-minute test gives the best field estimate."; com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR -> "Needs the guided threshold test (or a strap plus repeated hard steady rides)."; else -> "Needs more rides." }, fontSize = 12.sp, lineHeight = 16.sp, color = D7.Mut, modifier = Modifier.padding(top = 2.dp))
             return@Column
         }
+        if (est.status < com.rashed.bikesensordoctor.core.EstimateStatus.PROVISIONAL) Text("LOW CONFIDENCE", fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 9.sp, color = D7.Amber)
         val differs = com.rashed.bikesensordoctor.core.Performance.meaningfullyDiffers(kind, current, est.value)
         val headline = when { current == null -> "$name estimate available"; differs && est.value > current -> "$name estimate may have increased"; differs -> "$name estimate may have decreased"; else -> "$name estimate agrees with your profile" }
         Text(headline, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg)
         KeyValue(listOfNotNull(
-            current?.let { "Current" to "$it $unit${if (currentTested) " (tested)" else ""}" },
+            current?.let { "Current" to "$it $unit${if (currentTested) " (tested)" else if (currentHow == "assumed") " (starting assumption)" else if (currentHow == "auto") " (learned)" else ""}" },
             "Candidate" to "${est.value} $unit",
             "Confidence" to est.status.name.lowercase().replaceFirstChar { it.uppercase() } + " (${Math.round(est.confidence * 100)}%)",
             "Evidence" to "${est.evidenceIds.size} × ${est.method.label}",

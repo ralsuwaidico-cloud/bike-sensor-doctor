@@ -21,6 +21,8 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
         DROPOUTS("Sensor drop-outs"),              // power/cadence gaps and an HR loss
         NO_HR("No heart-rate strap"),             // power-only
         EXTREMES("Layout test: 999 W · 199 bpm · 120 rpm"),   // biggest values the gauges must still show cleanly
+        CADENCE_ONLY("Cadence only (no power, no strap)"),     // v0.11: a cadence sensor without power — the coach must still work from cadence, speed and time
+        POWER_ONLY("Power + cadence, no strap"),               // v0.11: Rashed's current setup — relative-effort coaching, FTP only an assumption
     }
 
     private var job: Job? = null
@@ -30,6 +32,7 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
     /** Emits exactly one sample per second of ENGINE time, catching up after scheduler jitter, so the link monitor never sees false gaps at high speed. */
     fun start() {
         startVirtualMs = engine.now()
+        engine.simNoPower = profile == Profile.CADENCE_ONLY
         job = engine.scope.launch {
             while (isActive) {
                 val target = ((engine.now() - startVirtualMs) / 1000).toInt()
@@ -39,7 +42,7 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
             }
         }
     }
-    fun stop() { job?.cancel(); job = null; engine.simulatedHr = null }
+    fun stop() { job?.cancel(); job = null; engine.simulatedHr = null; engine.simNoPower = false }
     /** Ride started: the script restarts from minute 0 so the planned hour lines up with the ride clock. */
     fun restart() { tSec = 0; startVirtualMs = engine.now() }
 
@@ -77,6 +80,8 @@ class RideSimulator(private val engine: RideEngine, val profile: Profile) {
                 cad = 88
             }
             Profile.EXTREMES -> { hr = 199; power = 999; cad = 120 }
+            Profile.CADENCE_ONLY -> { hr = null; power = 0; cad = 84 + (3 * sin(2 * PI * t / 23.0)).toInt() + (if (m in 12.0..14.0) -20 else 0) }   // power is dropped by the engine (simNoPower)
+            Profile.POWER_ONLY -> { hr = null; power = (if (m < 6) 0.5 * ftp else if (m in 25.0..29.0) 0.52 * ftp else 0.68 * ftp).toInt() + (8 * sin(2 * PI * t / 31.0)).toInt() + (if (m in 40.0..40.2) 160 else 0); cad = 86 + (3 * sin(2 * PI * t / 19.0)).toInt() }
         }
         // motion for the top strip and the results page (SIMULATED): rolling speed with the same coasts, tiny rollers
         val speed = if (profile == Profile.EXTREMES) 59.9 else if (power == 0 || cad == 0) 0.0 else 24.0 + 4 * sin(2 * PI * m / 6.5) + 2 * sin(2 * PI * t / 41.0)

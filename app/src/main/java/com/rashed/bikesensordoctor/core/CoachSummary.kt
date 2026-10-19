@@ -17,7 +17,7 @@ enum class DetailLevel { SIMPLE, TECHNICAL;
 enum class Tone { GOOD, WATCH, FIX, INFO }
 
 /** Where a number comes from — shown once as a tag, never as a repeated disclaimer. */
-enum class Provenance(val label: String) { MEASURED("MEASURED"), ESTIMATE("ESTIMATE"), SIMULATED("SIMULATED"), UNVERIFIED("UNVERIFIED") }
+enum class Provenance(val label: String) { MEASURED("MEASURED"), CALCULATED("CALCULATED"), ESTIMATE("ESTIMATED"), SIMULATED("SIMULATED"), UNVERIFIED("UNVERIFIED"), UNAVAILABLE("UNAVAILABLE") }
 
 data class CoachMessage(
     val title: String,            // "Zone 2 performance"

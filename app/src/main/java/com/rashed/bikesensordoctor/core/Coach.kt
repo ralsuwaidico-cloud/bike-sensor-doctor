@@ -25,7 +25,9 @@ enum class CueType { NONE, KEEP_IT_UP, PEDAL_FASTER, PEDAL_SLOWER, EASE_OFF, PUS
     /** v0.10 pattern rules read from the 1 Hz history: a sudden power spike, an unsteady effort, recovery after easing off */
     SURGE, STEADY,
     /** a sensor that was reporting has gone silent — said once, coaching continues from what is left */
-    SENSOR_LOST }
+    SENSOR_LOST,
+    /** v0.11 relative-effort coaching (no strap, FTP only an assumption): the rider's own steady output is the yardstick */
+    PACE }
 
 /**
  * v3: the practical action the rider should take. One per tick, chosen by one priority ladder
@@ -37,6 +39,7 @@ enum class CoachAction(val icon: String) {
     PEDAL_FASTER("↻+"), PEDAL_SLOWER("↻−"), KEEP_CADENCE_STEADY("≈"), HOLD_PACE("═"), STABLE_MAINTAIN("✓"),
     RECOVER("❄"), NO_SIGNAL("?"), QUIET("…"),
     SMOOTH_SURGES("∿"), STEADY_EFFORT("≈"), RECOVERED("✓"), SENSOR_LOST("⚠"),
+    POWER_DROPPING("↘"), STEADY_MILESTONE("★"), STEADY_PACE("≈"),
 }
 
 /**
@@ -89,6 +92,8 @@ data class CoachConfig(
     /** After 3 unheeded repeats of the same cue, go QUIET until the cue changes or quietMs pass. */
     val backoff: Boolean = false,
     val quietMs: Long = 300_000,
+    /** v0.11: FTP is only the onboarding STARTING ASSUMPTION — without a strap the coach uses the rider's own steady output as the yardstick (relative effort), never the assumed zones as fact. */
+    val ftpAssumed: Boolean = false,
 ) {
     /** Spacing presets for quiet / normal / frequent coaching. */
     fun withFrequency(f: CoachFrequency): CoachConfig = when (f) {
@@ -173,6 +178,10 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
     private var lastHb: Band? = null; private var lastPb: Band? = null
     private var lastHrBand = ""; private var lastPwBand = ""
     private var lastStopped = false; private var lastCoasting = false
+    // v0.11 relative-effort state: a slow reference (10-min mean of loaded power), the 60-s mean, steady-minutes bookkeeping, sensor-poor notice
+    private val refWin = ArrayDeque<Pair<Long, Int>>(); private val minWin = ArrayDeque<Pair<Long, Int>>()
+    private var lowSinceMs: Long? = null; private var steadySec = 0; private var lastMilestoneMin = 0; private var mainSinceMs: Long? = null; private var noSensorsSaid = false
+    private val speedWin = ArrayDeque<Pair<Long, Double>>()
 
     /** 30 s-vs-previous-30 s trend of a signal (per minute), from 1 Hz samples. */
     private class Trend {
@@ -202,6 +211,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         lastType = CueType.NONE; lastEmitMs = Long.MIN_VALUE / 2; lastEmitByType.clear(); allGoodSince = null; keepArmed = true
         announcedPhase = null; surgeSince = null; spikeSince = null; easeAtMs = null; recoveredForMs = null; intervalStartMs = null
         powerSeenMs = null; hrSeenMs = null; powerLostSaid = false; hrLostSaid = false
+        refWin.clear(); minWin.clear(); lowSinceMs = null; steadySec = 0; lastMilestoneMin = 0; mainSinceMs = null; noSensorsSaid = false; speedWin.clear()
         phaseSeen = null; phaseSinceMs = 0; repeatCount = 0; quietSinceMs = 0
         hrT.clear(); pwT.clear(); cadT.clear(); spT.clear(); minuteAbove = 0; minuteBelow = 0; minuteIn = 0; minuteStartMs = Long.MIN_VALUE / 2; lastAssessment = null
         lastHr = null; lastPw = null; lastSpeed = null; lastHb = null; lastPb = null
@@ -234,6 +244,12 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
         // coasting or stopped: no pedalling or gear instruction makes sense (effort rules below still see HR)
         val stopped = (input.speedKmh != null && input.speedKmh < 2.0) || (cad != null && cad == 0 && input.cadence.available)
         lastStopped = stopped; lastCoasting = coasting
+        // v0.11 relative-effort windows (loaded power only): 10-min reference and 60-s mean; speed window for sensor-poor pacing
+        val loaded = input.power.value?.takeIf { input.power.available && it > 0 }
+        if (loaded != null) { refWin.addLast(now to loaded); minWin.addLast(now to loaded) }
+        while (refWin.isNotEmpty() && now - refWin.first().first > 600_000) refWin.removeFirst()
+        while (minWin.isNotEmpty() && now - minWin.first().first > 60_000) minWin.removeFirst()
+        input.speedKmh?.let { speedWin.addLast(now to it) }; while (speedWin.isNotEmpty() && now - speedWin.first().first > 120_000) speedWin.removeFirst()
 
         // ---- 1b. sensor loss: a signal that was reporting in the last 30 s has gone stale → say so once (not an effort cue) ----
         if (input.power.available) { powerSeenMs = now; powerLostSaid = false }
@@ -364,6 +380,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
                 }
                 null -> null
             }
+            pw != null && c.ftpAssumed -> relativeEffort(now, pw, rawPw, coasting, stopped)
             pw != null -> when (pb) {
                 Band.ABOVE -> if (pwBand.held(now, c.powerHoldMs)) emit(now, CueType.EASE_OFF, "EASE OFF", "Power above target — zone $pwZone, aim for $targetZone", "Ease off", "PW_ABOVE") else hold()
                 Band.BELOW -> if (grace) hold("TRANSITION_GRACE") else if (pwBand.held(now, c.powerHoldMs)) emit(now, CueType.PUSH_HARDER, "PUSH A LITTLE HARDER", "Power below target — zone $pwZone, aim for $targetZone", "Push a little harder", "PW_BELOW") else hold()
@@ -373,7 +390,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
             else -> {
                 if (coasting) hold("COASTING")
                 else if (c.effortSource == EffortSource.POWER) info(now, CueType.NO_POWER, "PEDAL UNDER LOAD", "Power reads 0 with no load — effort coaching needs pedaling resistance", "", "NO_POWER")
-                else info(now, CueType.NO_HR, "NO EFFORT SIGNAL", "Connect a heart-rate sensor, or pedal under load for power-based coaching", "", "NO_SIGNAL")
+                else sensorPoor(now, cad, stopped)
             }
         }
         if (effort != null) { if (effort.type != CueType.NONE) allGoodSince = null; return effort }
@@ -414,6 +431,51 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
     private fun safety(now: Long, hb: Band?, hrZone: Int?, targetHrZone: Int): CoachCue? {
         if (hb == Band.ABOVE && hrZone != null && hrZone >= targetHrZone + 2 && hrBand.held(now, 5_000))
             return emit(now, CueType.EASE_OFF, "EASE OFF", "Heart rate zone $hrZone — well above target, back off", "Ease off", "HR_SAFETY")
+        return null
+    }
+
+    /**
+     * v0.11 relative effort (no strap, FTP only an assumption): the rider's own loaded power over the last 10 minutes is the reference.
+     *  - 60-s mean < 85 % of the reference for 60 s, not coasting → "Your power is dropping. Try to keep a steady rhythm."
+     *  - raw power > 1.6 × reference for 3 s → "Smooth out the surges"
+     *  - within ±10 % and steady → "Good pace. Hold this effort." (keep-it-up spacing); every 10 steady minutes → "You have been riding steadily for N minutes. Keep going."
+     * Nothing here claims a zone or a physiological intensity.
+     */
+    private fun relativeEffort(now: Long, pw: Int, pwRaw: Int?, coasting: Boolean, stopped: Boolean): CoachCue? {
+        if (refWin.size < 120 || coasting || stopped) return null
+        val ref = refWin.map { it.second }.average()
+        val m60 = if (minWin.size >= 30) minWin.map { it.second }.average() else null
+        if (pwRaw != null && pwRaw > ref * 1.6) { if (spikeSince == null) spikeSince = now; if (now - (spikeSince ?: now) >= 3_000) { spikeSince = null
+            return emit(now, CueType.SURGE, "SMOOTH OUT THE SURGES", "Power jumped to $pwRaw W — well above your steady ${Math.round(ref)} W. Surges cost more than steady watts", "Smooth out the surges", "REL_SPIKE").takeIf { it.type != CueType.NONE } } } else spikeSince = null
+        if (m60 != null && m60 < ref * 0.85) { if (lowSinceMs == null) lowSinceMs = now
+            if (now - (lowSinceMs ?: now) >= 60_000) return emit(now, CueType.PACE, "YOUR POWER IS DROPPING. TRY TO KEEP A STEADY RHYTHM", "Last minute ${Math.round(m60)} W against your steady ${Math.round(ref)} W — not a zone, your own pace", "Your power is dropping, try to keep a steady rhythm", "REL_DROP").takeIf { it.type != CueType.NONE } } else lowSinceMs = null
+        if (m60 != null && Math.abs(m60 - ref) <= ref * 0.10) {
+            steadySec++
+            val min = steadySec / 60
+            if (min >= 10 && min % 10 == 0 && min != lastMilestoneMin) {
+                val c = emit(now, CueType.KEEP_IT_UP, "YOU HAVE BEEN RIDING STEADILY FOR $min MINUTES. KEEP GOING", "Steady at about ${Math.round(ref)} W", "You have been riding steadily for $min minutes, keep going", "REL_MILESTONE")
+                if (c.type != CueType.NONE) { lastMilestoneMin = min; return c } }
+            return keepIfGood(now, Phase.MAIN, true).takeIf { it.type != CueType.NONE }
+        } else { steadySec = 0; allGoodSince = null }
+        return null
+    }
+
+    /**
+     * v0.11 sensor-poor coaching (no strap, no loaded power): cadence and pace only — speed is not effort (wind, terrain, gearing),
+     * so the cues are about consistency and structure, never intensity. The missing sensors are mentioned once.
+     */
+    private fun sensorPoor(now: Long, cad: Int?, stopped: Boolean): CoachCue? {
+        if (!noSensorsSaid) { noSensorsSaid = true; lastType = CueType.NO_HR; lastEmitMs = now
+            return CoachCue(CueType.NO_HR, "NO EFFORT SENSORS", "Coaching on cadence and pace until a power meter or strap reports", "", "NO_SIGNAL", CoachAction.NO_SIGNAL, "sensors", liveText(), "No effort sensors", "coaching on cadence and pace") }
+        if (stopped || speedWin.size < 90) return null
+        val v = speedWin.map { it.second }.filter { it > 3.0 }; if (v.size < 60) return null
+        val m = v.average(); val cv = Math.sqrt(v.sumOf { (it - m) * (it - m) } / v.size) / m
+        if (cv > 0.25 && (cad ?: 0) > 0) return emit(now, CueType.PACE, "TRY TO HOLD A STEADIER PACE", "Speed varied ±${Math.round(cv * 100)} % over two minutes (terrain and wind count, so this is about rhythm, not effort)", "Try to hold a steadier pace", "SPEED_UNEVEN").takeIf { it.type != CueType.NONE }
+        val sinceMain = mainSinceMs ?: now.also { mainSinceMs = now }
+        val min = ((now - sinceMain) / 60_000).toInt()
+        if (min >= 10 && min % 10 == 0 && min != lastMilestoneMin) {
+            val c = emit(now, CueType.KEEP_IT_UP, "YOU HAVE BEEN RIDING FOR $min MINUTES. KEEP GOING", "Time-based check-in — no effort sensor to judge intensity", "You have been riding for $min minutes, keep going", "TIME_MILESTONE")
+            if (c.type != CueType.NONE) { lastMilestoneMin = min; return c } }
         return null
     }
 
@@ -496,7 +558,10 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
             }
             CueType.PEDAL_FASTER -> if (head.startsWith("KEEP")) Worded(CoachAction.KEEP_CADENCE_STEADY, head, detail, spoken, "cadence") else Worded(CoachAction.PEDAL_FASTER, "PEDAL A LITTLE FASTER", "Easier gear, same effort — $detail", "Pedal a little faster", "cadence")
             CueType.PEDAL_SLOWER -> Worded(CoachAction.PEDAL_SLOWER, "SLOW YOUR PEDALLING", "Harder gear, same effort — $detail", "Slow your pedalling", "cadence")
-            CueType.KEEP_IT_UP -> if (easeAtMs != null && easeAtMs != recoveredForMs) Worded(CoachAction.RECOVERED, "GOOD — BACK ON TARGET", "${if (hr != null) "Heart rate" else "Power"} settled back into the band after easing off — hold this", "Good, back on target", if (hr != null) "HR" else "power")
+            CueType.PACE -> if (reason == "REL_DROP") Worded(CoachAction.POWER_DROPPING, head, detail, spoken, "power") else Worded(CoachAction.STEADY_PACE, head, detail, spoken, "speed + cadence")
+            CueType.KEEP_IT_UP -> if (reason == "REL_MILESTONE" || reason == "TIME_MILESTONE") Worded(CoachAction.STEADY_MILESTONE, head, detail, spoken, if (reason == "REL_MILESTONE") "power" else "time")
+                else if (reason == "ALL_GOOD" && config.ftpAssumed && hr == null && pw != null) Worded(CoachAction.HOLD_PACE, "GOOD PACE. HOLD THIS EFFORT", "Steady against your own output — no zone claimed", "Good pace, hold this effort", "power")
+                else if (easeAtMs != null && easeAtMs != recoveredForMs) Worded(CoachAction.RECOVERED, "GOOD — BACK ON TARGET", "${if (hr != null) "Heart rate" else "Power"} settled back into the band after easing off — hold this", "Good, back on target", if (hr != null) "HR" else "power")
                 else if (pw != null && lastPb == Band.ON) Worded(CoachAction.HOLD_PACE, "HOLD THIS PACE", "Power and heart rate on target", "Hold this pace", "HR + power")
                 else Worded(CoachAction.STABLE_MAINTAIN, "YOUR EFFORT IS STABLE. MAINTAIN THIS RHYTHM", detail, "Your effort is stable, maintain this rhythm", if (hr != null) "HR" else "power")
             CueType.COOLDOWN -> Worded(CoachAction.START_COOLDOWN, "START YOUR COOLDOWN", detail, "Start your cooldown", "phase")
@@ -525,7 +590,7 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
             CoachAction.PEDAL_FASTER -> "Pedal a little faster" to "$cadv · below ${config.cadenceLow} rpm"
             CoachAction.PEDAL_SLOWER -> "Slow your pedalling" to "$cadv · above ${config.cadenceHigh} rpm"
             CoachAction.KEEP_CADENCE_STEADY -> "Keep your cadence steady" to "rhythm uneven over the last minute"
-            CoachAction.HOLD_PACE -> "Hold this pace" to "power and HR on target"
+            CoachAction.HOLD_PACE -> if (config.ftpAssumed && lastHr == null) "Good pace — hold this effort" to "steady against your own output" else "Hold this pace" to "power and HR on target"
             CoachAction.STABLE_MAINTAIN -> "Maintain this rhythm" to "effort stable · on target"
             CoachAction.START_COOLDOWN -> "Start your cooldown" to "ceiling comes down gradually"
             CoachAction.WIND_DOWN -> "Wind down" to "HR above the cool-down ceiling"
@@ -537,6 +602,9 @@ class CoachEngine(var config: CoachConfig = CoachConfig()) {
             CoachAction.RECOVERED -> "Good — back on target" to (if (lastHr != null) "HR settled after easing off" else "power settled after easing off")
             CoachAction.NO_SIGNAL -> "No effort signal" to (if (reason == "NO_POWER") "pedal under load" else "no heart rate, no loaded power")
             CoachAction.SENSOR_LOST -> w.head.lowercase().replaceFirstChar { it.uppercase() } to w.detail
+            CoachAction.POWER_DROPPING -> "Power dropping — keep a steady rhythm" to "${lastPw ?: "—"} W vs your steady pace"
+            CoachAction.STEADY_MILESTONE -> w.head.substringBefore(". ").lowercase().replaceFirstChar { it.uppercase() } to "keep going"
+            CoachAction.STEADY_PACE -> "Try to hold a steadier pace" to "speed uneven — rhythm, not effort"
             CoachAction.NONE -> w.head.lowercase().replaceFirstChar { it.uppercase() } to w.detail.substringBefore(" — ").take(46)
         }
     }

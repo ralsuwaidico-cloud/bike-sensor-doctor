@@ -186,7 +186,7 @@ internal class D7State(d: Dashboard, cue: com.rashed.bikesensordoctor.core.Coach
     val coachColor: Color = when (cue.type) {
         CueType.QUIET -> D7.Faint
         CueType.KEEP_IT_UP -> D7.Green
-        CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK -> D7.Cyan
+        CueType.PEDAL_FASTER, CueType.PUSH_HARDER, CueType.WORK, CueType.PACE -> D7.Cyan
         CueType.EASE_OFF, CueType.PEDAL_SLOWER, CueType.SURGE -> D7.Amber
         CueType.RECOVER, CueType.WARMUP, CueType.COOLDOWN, CueType.STEADY -> D7.Violet
         CueType.SENSOR_LOST -> D7.Amber
@@ -287,7 +287,7 @@ fun DetailsScreen(vm: DoctorViewModel, onBack: () -> Unit, onHistory: () -> Unit
     Column(Modifier.fillMaxSize().background(D7.Bg).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp)) {
         D7TopBar("RIDE DETAILS", "Live", onBack, right = { TextButton(onClick = onHistory) { Text("History", color = D7.Cyan, fontSize = 12.sp) } })
         // v0.10: the graph-focused view — separate traces in real units, 1/5/10-minute windows, tap for exact readings
-        DetailGraphs(vm.engine.liveBuffer, d.graphVersion)
+        DetailGraphs(vm.engine.liveBuffer, d.graphVersion, windowAverages = { vm.engine.windowAverages(it) }, rideAverages = { vm.engine.rideAverages() })
         Spacer(Modifier.height(10.dp))
         // the full coach reasoning (the live screen shows the short form)
         if (cue.type != CueType.NONE) D7Card(accent = st.coachColor) {

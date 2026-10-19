@@ -721,7 +721,7 @@ function renderFeat(){ const rows=[
 const NS="http://www.w3.org/2000/svg";
 const C={grey:"#7e8c93",faint:"#5a6b74",line:"#1d2a33",cyan:"#34e7e4",green:"#56e08c",lime:"#a6e22e",amber:"#ffb64d",orange:"#ff8a3d",red:"#ff5a5a",violet:"#9b8cff",fg:"#eef4f7",mut:"#8396a0",track:"#16242b",ink:"#05121a",panel:"#0a1015",bg:"#060a0d"};
 const GC={pw:C.cyan,hr:C.green,cad:C.violet};
-const W=300,H=600;
+const W=300,H=560;
 
 /* ---- scaling (identical to GraphScale in core/LiveGraph.kt) ----
    Each signal is normalised against ITS OWN target band at the time of the sample: 0 = lower edge, 1 = upper edge.
@@ -785,7 +785,10 @@ function wrap2(s,max){ const w=s.split(" "),l=[]; let c=""; w.forEach(x=>{ if((c
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 
 /* ---- geometry of the one-screen layout (viewBox 300×600 ≈ the Nokia 5.3 content area between the Android bars) ---- */
-const G={ A:{y:16,h:44}, B:{y:64,h:104}, legendY:176, plot:{x:12,y:186,w:276,h:202}, axisY:400, D:{y:412,h:60}, btnY:482, linkY:548 };
+/* v0.11 layout: gauges 1.5× (three at 2× would be 3 × 140 dp = 420 dp on a 340 dp-wide screen — they cannot sit in one row, and two rows
+   would push the graph and coach off a 640 dp screen without scrolling), graph at half height with an averages row beneath the legend. */
+const G={ A:{y:16,h:44}, B:{y:60,h:150}, legendY:222, avgY:236, plot:{x:12,y:244,w:276,h:98}, axisY:354, D:{y:362,h:60}, btnY:432, linkY:498 };
+const GR={r:42,sw:9,cy:78,val:32};
 /* ---- hybrid: compact Design-7 circular gauges. LIVE dot and TARGET band share one numerical scale (0..max of the dial), so their
    positions genuinely represent the reading and the range: power 0..max(300, 1.5×FTP), HR 0..max HR, cadence 0..130. */
 const GAUGE={pw:{max:()=>Math.max(300,CFG.ftp*1.5)}, hr:{max:()=>Math.max(120,(CFG.hrZoneEdges[3]||167)/0.9)}, cad:{max:()=>130}};
@@ -795,17 +798,17 @@ function garc(cx,cy,r,a0,a1){ if(a1-a0<0.01) return ""; const [x0,y0]=gpol(cx,cy
 function gang(f){ return GS0+GSW*Math.max(0,Math.min(1,f)); }
 let view="live", detWin=300, detSel=null, latestTG=null;
 
-function metricCard(x,key,label,unit,tag){ const w=92,y=G.B.y, cx=x+w/2, cy=y+50, r=28, sw=7; return `<g id="card_${key}">
+function metricCard(x,key,label,unit,tag){ const w=96,y=G.B.y, cx=x+w/2, cy=y+GR.cy, r=GR.r, sw=GR.sw; return `<g id="card_${key}">
   <text x="${cx}" y="${y+9}" text-anchor="middle" fill="${GC[key]}" font-size="7.5" font-weight="700" letter-spacing="1">${label}</text>
   <path d="${garc(cx,cy,r,GS0,GS0+GSW)}" fill="none" stroke="${C.track}" stroke-width="${sw}"/>
   <path id="${key}Prog" d="" fill="none" stroke="${GC[key]}" stroke-width="${sw}" stroke-linecap="round" opacity=".55"/>
   <path id="${key}Band" d="" fill="none" stroke="${C.fg}" stroke-width="3"/>
   <line id="${key}BandLo" stroke="${C.fg}" stroke-width="1.5"/><line id="${key}BandHi" stroke="${C.fg}" stroke-width="1.5"/>
-  <circle id="${key}Live" r="5" fill="${C.bg}" stroke="${GC[key]}" stroke-width="2.5" visibility="hidden"/>
-  <text id="${key}Val" x="${cx}" y="${cy+7}" text-anchor="middle" fill="${C.fg}" font-size="22" font-weight="600" font-family="Rajdhani">—</text>
-  <text x="${cx}" y="${cy+17}" text-anchor="middle" fill="${C.mut}" font-size="7">${unit}${tag?" · "+tag:""}</text>
-  <rect id="${key}Pill" x="${cx-30}" y="${y+86}" width="60" height="14" rx="7" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/>
-  <text id="${key}Stat" x="${cx}" y="${y+96}" text-anchor="middle" fill="${C.faint}" font-size="7" font-weight="700">— NO DATA</text></g>`; }
+  <circle id="${key}Live" r="6" fill="${C.bg}" stroke="${GC[key]}" stroke-width="3" visibility="hidden"/>
+  <text id="${key}Val" x="${cx}" y="${cy+11}" text-anchor="middle" fill="${C.fg}" font-size="${GR.val}" font-weight="600" font-family="Rajdhani">—</text>
+  <text x="${cx}" y="${cy+r+sw/2-1}" text-anchor="middle" fill="${C.mut}" font-size="7.5">${unit}</text>
+  <rect id="${key}Pill" x="${cx-32}" y="${y+132}" width="64" height="15" rx="7.5" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/>
+  <text id="${key}Stat" x="${cx}" y="${y+142.5}" text-anchor="middle" fill="${C.faint}" font-size="7.2" font-weight="700">— NO DATA</text></g>`; }
 
 function buildPhone(){
   const P=G.plot;
@@ -824,9 +827,10 @@ function buildPhone(){
     <text id="aPhaseSub" x="257" y="${G.A.y+33}" text-anchor="middle" fill="${C.violet}" font-size="7.5">04:59 left</text>
   </g>
   <!-- B · live sensor readings -->
-  ${metricCard(12,"pw","POWER","W","SIM")}${metricCard(104,"hr","HEART RATE","BPM","REAL")}${metricCard(196,"cad","CADENCE","RPM","SIM")}
+  ${metricCard(6,"pw","POWER","W","SIM")}${metricCard(102,"hr","HEART RATE","BPM","REAL")}${metricCard(198,"cad","CADENCE","RPM","SIM")}
   <!-- C · combined performance graph -->
   <g id="legend" font-size="7.5"></g>
+  <g id="avgRow" font-size="7.5"></g>
   <rect x="${P.x}" y="${P.y}" width="${P.w}" height="${P.h}" rx="6" fill="#080e12" stroke="${C.line}"/>
   <rect x="${P.x}" y="${(P.y+P.h*BAND_TOP).toFixed(1)}" width="${P.w}" height="${(P.h*(BAND_BOT-BAND_TOP)).toFixed(1)}" fill="${C.fg}" fill-opacity=".07"/>
   <line x1="${P.x}" y1="${(P.y+P.h*BAND_TOP).toFixed(1)}" x2="${P.x+P.w}" y2="${(P.y+P.h*BAND_TOP).toFixed(1)}" stroke="${C.fg}" stroke-opacity=".35" stroke-dasharray="2 3"/>
@@ -872,7 +876,7 @@ function buildDetails(){ return `<svg id="detSvg" viewBox="0 0 ${W} ${H}" xmlns=
 
 /* ---- per-frame rendering ---- */
 function statusOf(n,v){ if(v==null) return "NONE"; if(v===0) return "ZERO"; if(n==null) return "NONE"; return n<0?"BELOW":n>1?"ABOVE":"ON"; }
-function setCard(key,v,lo,hi,unitStat){ const x={pw:12,hr:104,cad:196}[key]; const cx=x+46, cy=G.B.y+50, r=28, sw=7; const max=GAUGE[key].max();
+function setCard(key,v,lo,hi,unitStat){ const x={pw:6,hr:102,cad:198}[key]; const cx=x+48, cy=G.B.y+GR.cy, r=GR.r, sw=GR.sw; const max=GAUGE[key].max();
   const n=normOf(v,lo,hi); let st=statusOf(n,v); if(key==="pw"&&v!=null&&v>0&&!CFG.powerVerified) st="UNVERIFIED";
   q("#"+key+"Val").textContent= v==null?"—":v; q("#"+key+"Val").setAttribute("fill", v==null?C.faint:C.fg);
   // progress arc + LIVE dot at the reading, on the dial's scale
@@ -881,7 +885,7 @@ function setCard(key,v,lo,hi,unitStat){ const x={pw:12,hr:104,cad:196}[key]; con
   else { prog.setAttribute("d",""); live.setAttribute("visibility","hidden"); }
   // TARGET band just outside the ring, same scale; dimmed (dashed) when it is only a reference
   const band=q("#"+key+"Band"); const ref=(key==="pw"&&!CFG.powerVerified);
-  if(lo!=null&&hi!=null){ const rb=r+sw/2+4; const a0=gang(lo/max), a1=gang(hi/max); band.setAttribute("d",garc(cx,cy,rb,a0,a1)); band.setAttribute("stroke",ref?C.faint:C.fg); band.setAttribute("stroke-dasharray",ref?"2 2":"");
+  if(lo!=null&&hi!=null){ const rb=r-sw/2-4; const a0=gang(lo/max), a1=gang(hi/max);   // TARGET band just INSIDE the ring (same scale) so neighbouring gauges never touch band.setAttribute("d",garc(cx,cy,rb,a0,a1)); band.setAttribute("stroke",ref?C.faint:C.fg); band.setAttribute("stroke-dasharray",ref?"2 2":"");
     [["BandLo",a0],["BandHi",a1]].forEach(([id,a])=>{ const l=q("#"+key+id); const [x1,y1]=gpol(cx,cy,rb-3,a),[x2,y2]=gpol(cx,cy,rb+3,a); l.setAttribute("x1",x1.toFixed(1));l.setAttribute("y1",y1.toFixed(1));l.setAttribute("x2",x2.toFixed(1));l.setAttribute("y2",y2.toFixed(1)); l.setAttribute("stroke",ref?C.faint:C.fg); }); }
   const T={BELOW:["▼ BELOW",C.cyan],ON:["● ON TARGET",C.green],ABOVE:["▲ ABOVE",C.amber],ZERO:[key==="pw"?"○ COASTING":"○ STOPPED",C.faint],NONE:[key==="hr"?"— NO STRAP":"— NO DATA",C.faint],UNVERIFIED:["○ UNVERIFIED",C.faint]}[st];
   const pill=q("#"+key+"Pill"), txt=q("#"+key+"Stat"); txt.textContent=T[0]; txt.setAttribute("fill",T[1]); pill.setAttribute("stroke",T[1]); pill.setAttribute("fill",T[1]); return st; }
@@ -904,6 +908,13 @@ function renderGraph(samples,winSec){ const P=G.plot; const n=samples.length; co
   let ax=""; const mins=winSec/60; for(let m=0;m<=mins;m++){ const k=n-1-(mins-m)*60; const x=x0+((winSec-n+k)/Math.max(1,winSec-1))*xw; if(x<x0-1) continue; ax+=`<line x1="${x.toFixed(1)}" y1="${P.y+P.h}" x2="${x.toFixed(1)}" y2="${P.y+P.h+3}" stroke="${C.faint}"/><text x="${x.toFixed(1)}" y="${G.axisY}" text-anchor="${m===mins?"end":"middle"}">${m===mins?"now":"-"+(mins-m)+"m"}</text>`; }
   q("#axis").innerHTML=ax;
 }
+/* Time-weighted averages over the displayed window (every sample is one second, so the weight is the second itself):
+   power over elapsed time INCLUDING valid 0 W while coasting, EXCLUDING missing seconds; cadence both ways (elapsed incl. 0 rpm, and
+   pedalling-only); HR over the seconds the strap reported. A disconnected sensor is never counted as zero. */
+function windowAverages(samples){ const pw=samples.map(s=>s.pw).filter(v=>v!=null), cadAll=samples.map(s=>s.cad).filter(v=>v!=null), cadPed=cadAll.filter(v=>v>0), hr=samples.map(s=>s.hr).filter(v=>v!=null&&v>0);
+  const m=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null; return {pw:m(pw),pwN:pw.length,cad:m(cadAll),cadPed:m(cadPed),cadN:cadAll.length,hr:m(hr),hrN:hr.length,n:samples.length}; }
+function renderAverages(samples){ const a=windowAverages(samples); const mins=Math.max(1,Math.round(a.n/60)); const cell=(x,col,lab,val,unit,sub)=>`<text x="${x}" y="${G.avgY}" fill="${col}" font-weight="700">${lab}</text><text x="${x+22}" y="${G.avgY}" fill="${val==null?C.faint:C.fg}" font-weight="700">${val==null?"—":val}</text><text x="${x+22+String(val==null?"—":val).length*4.6+2}" y="${G.avgY}" fill="${C.mut}" font-size="6.5">${unit}${sub?" · "+sub:""}</text>`;
+  q("#avgRow").innerHTML=`<text x="12" y="${G.avgY}" fill="${C.faint}" font-size="6.5">AVG ${mins} MIN</text>`+cell(52,GC.pw,"PWR",a.pw,"W",a.pwN<a.n?"gaps excl.":"")+cell(136,GC.hr,"HR",a.hr,"bpm",a.hrN?"":"")+cell(206,GC.cad,"CAD",a.cad,"rpm",a.cadPed!=null&&a.cadPed!==a.cad?`${a.cadPed} pedalling`:""); }
 function renderLegend(TG,have){ const items=[["pw","PWR",TG.pw?`${Math.round(TG.pw[0])}–${Math.round(TG.pw[1])} W`:"no target"],["hr","HR",`${Math.round(TG.hr[0])}–${Math.round(TG.hr[1])} bpm`],["cad","CAD",`${TG.cad[0]}–${TG.cad[1]} rpm`]];
   let g=""; items.forEach(([k,lab,band],i)=>{ const x=12+i*94, on=have[k]; g+=`<line x1="${x}" y1="${G.legendY}" x2="${x+9}" y2="${G.legendY}" stroke="${GC[k]}" stroke-width="2.5" ${on?"":'stroke-dasharray="2 2" stroke-opacity=".5"'}/><text x="${x+12}" y="${G.legendY+2.5}" fill="${on?C.fg:C.faint}" font-size="7">${lab}${k==="pw"&&on?" 3s":""} <tspan fill="${C.mut}">${on?band:"no signal"}</tspan></text>`; });
   q("#legend").innerHTML=g; }
@@ -919,7 +930,7 @@ function renderFrame(){ const R=REAL[ride], S=SERIES[ride]; const i=Math.max(0,M
   // B
   setCard("pw",pw,TG.pw[0],TG.pw[1]); setCard("hr",hr,TG.hr[0],TG.hr[1]); setCard("cad",cad,TG.cad[0],TG.cad[1]);
   // C
-  const win=BUF.window(300); renderLegend(TG,{pw:pw!=null,hr:hr!=null,cad:cad!=null}); renderGraph(win,300);
+  const win=BUF.window(300); renderLegend(TG,{pw:pw!=null,hr:hr!=null,cad:cad!=null}); renderAverages(win); renderGraph(win,300);
   // D
   setCoachBox(latest);
   if(latest){ el("cueBig").innerHTML=`<span class="cicon">${latest.icon||"○"}</span>${latest.head}`; el("cueBig").style.color=(CUE_STYLE[latest.type]||[C.fg])[0]; el("cueWhy").innerHTML=`<i class="tag ${latest.src==="v0.7 rule"?"now":"proto"}">${(latest.src||"v0.9").toUpperCase()}</i> at ${fmt(latest.t)} — ${wordCue(latest)}${latest.live?`<div class="clive">${latest.live}${latest.sources?` · from <b>${latest.sources}</b>`:""}</div>`:""}`; }

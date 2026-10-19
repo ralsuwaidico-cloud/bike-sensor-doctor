@@ -186,10 +186,16 @@ class RideEngine(private val app: Application) {
     private val series = ArrayList<SeriesPoint>()
     /** v0.10: the last 10 minutes of 1 Hz readings + targets for the live graph (display only; the recorded ride is [series]). */
     val liveBuffer = LiveBuffer(600)
+    /** v0.11: automatic power-meter verification (data consistency, independent of FTP); never fed from a simulated source. */
+    val meter = com.rashed.bikesensordoctor.core.MeterVerification()
+    /** v0.11 simulation aid: a cadence-only sensor (power unavailable) for the "no power" coaching tests. */
+    internal var simNoPower = false
+    private fun pwLive(now: Long): Int? = if (simNoPower && simulator != null) null else stats.livePowerW(now)
     private var lastBufSec = Long.MIN_VALUE
     private fun bandsNow(targets: ActiveTargets?): GraphBands {
         val mode = runCatching { CoachMode.valueOf(prefs.coachMode) }.getOrDefault(CoachMode.FREE)
-        return GraphBands.resolve(targets, prefs.ftpW, prefs.powerVerified, prefs.maxHr, Targets.targetZone(mode), prefs.cadenceLow, prefs.cadenceHigh)
+        val b = GraphBands.resolve(targets, prefs.ftpW, prefs.powerVerified, prefs.maxHr, Targets.targetZone(mode), prefs.cadenceLow, prefs.cadenceHigh)
+        return if (setup?.ftpAssumed == true) b.copy(pwReference = true) else b   // a STARTING ASSUMPTION is drawn as a dashed reference, never as a target
     }
     private var seriesFlushed = 0
     private val checkpointSeries get() = File(app.filesDir, "ride-checkpoint-series.csv")
@@ -215,6 +221,8 @@ class RideEngine(private val app: Application) {
         val r = rider
         prefs = Prefs(app, r?.id ?: RiderStore.LEGACY_ID)
         history = RideHistory(riders.ridesDir(r?.id ?: RiderStore.LEGACY_ID))
+        // v0.11: every rider with weight + experience gets a STARTING ASSUMPTION for FTP unless a credible value exists
+        if (r != null && com.rashed.bikesensordoctor.core.StartingFtp.applyIfMissing(r.answers)) runCatching { riders.save(r) }
         setup = r?.takeIf { it.completed }?.let { RiderProfile.deriveSetup(it.answers) }
         workout = setup?.let { s -> recommendFor(r!!, s) }
         setup?.let { s ->
@@ -274,15 +282,18 @@ class RideEngine(private val app: Application) {
             val trusted = m["powerTrusted"] as? Boolean ?: false
             val test = (m["workoutKind"] as? String) == "test"
             (m["testPw"] as? Int)?.let { pw -> if (test) com.rashed.bikesensordoctor.core.Performance.ftp20(pw.toDouble(), trusted, false, 1.0, 0, r.startedAtMs, r.startedAtMs)?.let { out += it } }
-            (m["best20"] as? Int)?.let { b -> if (!test) com.rashed.bikesensordoctor.core.Performance.passiveBest20(b, trusted, false, r.startedAtMs, r.startedAtMs)?.let { out += it } }
+            (m["best20"] as? Int)?.let { b -> if (!test && (m["qualifying20"] as? Boolean == true)) com.rashed.bikesensordoctor.core.Performance.passiveBest20(b, trusted, false, r.startedAtMs, r.startedAtMs, maximality = 0.8)?.let { out += it } }
             (m["testHr"] as? Int)?.let { hr -> if (test) out += com.rashed.bikesensordoctor.core.Evidence("thr-${r.startedAtMs}", com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR, hr, com.rashed.bikesensordoctor.core.Method.FIELD_20MIN_HR, r.startedAtMs, sourceRideId = r.startedAtMs) }
         }
         rider?.answers?.let { a ->
-            a.metric("ftp")?.let { out += com.rashed.bikesensordoctor.core.Evidence("profile-ftp", com.rashed.bikesensordoctor.core.MetricKind.FTP, it.value, if (it.measured) com.rashed.bikesensordoctor.core.Method.USER_TESTED_FTP else com.rashed.bikesensordoctor.core.Method.USER_ESTIMATED_FTP, System.currentTimeMillis()) }
+            a.metric("ftp")?.takeIf { it.how != com.rashed.bikesensordoctor.core.StartingFtp.HOW && it.how != "auto" }?.let { out += com.rashed.bikesensordoctor.core.Evidence("profile-ftp", com.rashed.bikesensordoctor.core.MetricKind.FTP, it.value, if (it.measured) com.rashed.bikesensordoctor.core.Method.USER_TESTED_FTP else com.rashed.bikesensordoctor.core.Method.USER_ESTIMATED_FTP, System.currentTimeMillis()) }
             a.metric("lthr")?.let { out += com.rashed.bikesensordoctor.core.Evidence("profile-lthr", com.rashed.bikesensordoctor.core.MetricKind.THRESHOLD_HR, it.value, if (it.measured) com.rashed.bikesensordoctor.core.Method.USER_TESTED_HR else com.rashed.bikesensordoctor.core.Method.USER_ESTIMATED_HR, System.currentTimeMillis()) }
         }
         return out
     }
+    /** v0.11: whole-ride averages (time-weighted over the recorded 1 Hz series). */
+    fun rideAverages(): com.rashed.bikesensordoctor.core.WindowAverages = com.rashed.bikesensordoctor.core.WindowAverages.of(series.map { it.powerW }, series.map { it.cadRpm }, series.map { it.hr })
+    fun windowAverages(sec: Int): com.rashed.bikesensordoctor.core.WindowAverages { val from = liveBuffer.windowStart(sec); val r = from until liveBuffer.size; return com.rashed.bikesensordoctor.core.WindowAverages.of(r.map { liveBuffer.powerAt(it) }, r.map { liveBuffer.cadAt(it) }, r.map { liveBuffer.hrAt(it) }) }
     fun estimate(kind: com.rashed.bikesensordoctor.core.MetricKind): com.rashed.bikesensordoctor.core.Estimate? = com.rashed.bikesensordoctor.core.Performance.estimate(kind, evidence(), System.currentTimeMillis())
     fun chooseWorkout(w: Workout?) { workout = w ?: setup?.let { s -> rider?.let { recommendFor(it, s) } }; _dash.value = _dash.value.copy(workoutName = workout?.name ?: "") }
     fun refreshRecommendation() { workout = setup?.let { s -> rider?.let { recommendFor(it, s) } }; _dash.value = _dash.value.copy(workoutName = workout?.name ?: "") }
@@ -311,6 +322,7 @@ class RideEngine(private val app: Application) {
         accelerateClock(speed)
         simulator = RideSimulator(this, profile).also { it.start() }
         rideSource = RideSource.SIMULATED
+        applyCoachConfig()   // simulated watts may drive coaching (everything is labelled SIMULATED); they never enter calibration
         log.add(EventType.TEST, note = "SIMULATION started at ${speed}× (${profile.name})")
         _dash.value = _dash.value.copy(simulated = true)
     }
@@ -319,6 +331,7 @@ class RideEngine(private val app: Application) {
         if (stats.state == RideStats.State.IDLE || stats.state == RideStats.State.FINISHED) rideSource = RideSource.DEVICE
         accelerateClock(1); clockOffsetMs = 0
         _dash.value = _dash.value.copy(simulated = false)
+        applyCoachConfig()
     }
     /** The simulator feeds samples through the same path as the real sensor. */
     internal fun injectSample(s: XdsSample, t: Long) = sensor.inject(s, t)
@@ -366,7 +379,7 @@ class RideEngine(private val app: Application) {
             // profile-driven workout: absolute bands come per tick via CoachInput.targets
             mode = if (prefMode == com.rashed.bikesensordoctor.core.CoachMode.FREE) com.rashed.bikesensordoctor.core.CoachMode.FREE else com.rashed.bikesensordoctor.core.CoachMode.ZONE2,
             cadenceEnabled = s.cadenceEnabled, cadenceLow = s.cadLow, cadenceHigh = s.cadHigh,
-            ftpW = s.ftp, maxHr = s.maxHrEstimate, powerCoaching = s.powerCoaching && prefs.powerVerified,
+            ftpW = s.ftp, maxHr = s.maxHrEstimate, powerCoaching = s.powerCoaching && (prefs.powerVerified || simulator != null), ftpAssumed = s.ftpAssumed,
             graceMs = 90_000, backoff = true,
         ).withFrequency(s.frequency).copy(sameRepeatMs = s.sameRepeatMs, keepRepeatMs = s.keepRepeatMs) else com.rashed.bikesensordoctor.core.CoachConfig(
             mode = prefMode,
@@ -470,12 +483,28 @@ class RideEngine(private val app: Application) {
             val testBlock = if (workout?.kind == "test" && mainPts.size >= 1200) mainPts.takeLast(1200) else null
             val testHr = testBlock?.mapNotNull { it.hr }?.takeIf { it.size >= 1000 }?.average()?.let { Math.round(it).toInt() }
             val testPw = if (trusted) testBlock?.mapNotNull { it.powerW }?.takeIf { it.size >= 1000 }?.average()?.let { Math.round(it).toInt() } else null
+            // v0.11: maximal mean power per duration and whether the best 20 min was a genuine sustained effort (FTP evidence) — never from simulation
+            val powerList = series.map { it.powerW }
+            val mmp = if (rideSource == RideSource.DEVICE && powerList.count { it != null } >= 600) com.rashed.bikesensordoctor.core.MmpTracker().compute(powerList) else emptyList()
+            val qualifying20 = trusted && com.rashed.bikesensordoctor.core.QualifyingEffort.ftp20(mmp.firstOrNull { it.durationSec == 1200 }, powerList)
+            if (trusted) best20 = mmp.firstOrNull { it.durationSec == 1200 }?.meanW ?: best20   // MMP never bridges missing seconds
             runCatching { history.updateMeta(rid, mapOf("best20" to best20, "testHr" to testHr, "testPw" to testPw, "workoutKind" to (workout?.kind ?: ""),
+                "mmp" to mmp.joinToString(";") { "${it.durationSec}:${it.meanW}" }, "qualifying20" to qualifying20,
                 "workout" to (workout?.name ?: ""), "bandLo" to wp?.hrLo, "bandHi" to wp?.hrHi, "pwLo" to wp?.pwLo, "pwHi" to wp?.pwHi,
                 "ftpUsed" to (s?.ftp ?: prefs.ftpW), "powerTrusted" to (prefs.powerVerified && rideSource == RideSource.DEVICE), "source" to rideSource.name,
                 "zoneConf" to (s?.zoneConfidenceText ?: "GENERIC"), "edges" to (s?.hrZoneEdges?.joinToString(",") ?: ""), "maxHrEst" to (s?.maxHrEstimate ?: prefs.maxHr),
                 "weightKg" to rider?.answers?.int("weightKg"), "age" to rider?.answers?.int("age"), "appleRef" to (rider?.answers?.get("apple") == "yes"),
                 "riderName" to (rider?.name ?: ""), "cues" to cueCount, "maxSpeed" to (if (simulator != null) simMaxSpeed else g.maxSpeedKmh))) }
+            // v0.11 automatic FTP: re-estimate from all admissible evidence; replace a STARTING ASSUMPTION automatically, propose over a calibrated value
+            rider?.let { r -> if (rideSource == RideSource.DEVICE) runCatching {
+                val est = estimate(com.rashed.bikesensordoctor.core.MetricKind.FTP)
+                when (com.rashed.bikesensordoctor.core.FtpPolicy.decide(r.answers.metric("ftp"), est)) {
+                    com.rashed.bikesensordoctor.core.FtpPolicy.Decision.AUTO_APPLY -> { val prev = r.answers.metric("ftp"); com.rashed.bikesensordoctor.core.FtpPolicy.apply(r.answers, est!!); riders.save(r)
+                        log.add(EventType.INFO, note = "FTP updated automatically: ${prev?.value} → ${est.value} W (${est.status})"); ftpNotice = com.rashed.bikesensordoctor.core.FtpHistory.lines(r.answers).last() }
+                    com.rashed.bikesensordoctor.core.FtpPolicy.Decision.PROPOSE -> ftpNotice = "FTP estimate ${est!!.value} W (${est.label}) differs from your calibrated ${r.answers.metric("ftp")?.value} W — review it in Fitness estimates."
+                    else -> {}
+                }
+            } }
             // HR recovery: if the strap keeps reporting, note the heart rate 60 s after the finish
             val lastHr = series.lastOrNull { it.hr != null }?.hr
             if (lastHr != null && simulator == null) { hrAtFinish = lastHr; scope.launch { delay(60_000); val r60 = hr.liveBpm(System.currentTimeMillis()); if (r60 != null) runCatching { history.updateMeta(rid, mapOf("hrRecovery60" to r60, "hrAtFinish" to lastHr)) } } }
@@ -521,7 +550,7 @@ class RideEngine(private val app: Application) {
         if (live && now - lastKeepaliveMs > 20_000) { lastKeepaliveMs = now; gatt.readRssi() }
 
         // P0: tag the next gap with the GATT reason of a disconnect we just observed
-        if (snap.disconnects != lastDisconnects) { lastDisconnects = snap.disconnects; link.onDisconnect(now, snap.lastDisconnectReason ?: "disconnect") }
+        if (snap.disconnects != lastDisconnects) { lastDisconnects = snap.disconnects; link.onDisconnect(now, snap.lastDisconnectReason ?: "disconnect"); meter.onDisconnect() }
 
         val last = sensor.lastSample.value?.first
         val fresh = stats.livePowerW(now) != null
@@ -542,7 +571,7 @@ class RideEngine(private val app: Application) {
                 nowMs = now, phase = phase,
                 cadence = Signal(stats.liveCadenceRpm(now), xdsFresh),
                 hr = Signal(bpm, bpm != null),
-                power = Signal(stats.livePowerW(now), xdsFresh),
+                power = Signal(pwLive(now), xdsFresh && !(simNoPower && simulator != null)),
                 targets = targets, speedKmh = if (simulator != null) simSpeedKmh else g.speedKmh,
             ))
             if (c.type != com.rashed.bikesensordoctor.core.CueType.NONE) {
@@ -557,7 +586,10 @@ class RideEngine(private val app: Application) {
             if (lastZoneSec < 0 || lastZoneSec > curSec) lastZoneSec = curSec - 1
             while (lastZoneSec < curSec) {
                 lastZoneSec++
-                val pw = stats.livePowerW(now)
+                val pw = pwLive(now)
+                // v0.11 automatic meter verification from real packets only; flips prefs.powerVerified once the data is consistent
+                if (simulator == null && !prefs.powerVerified) { meter.tick(stats.livePowerW(now), stats.liveCadenceRpm(now), link.qualityPct(now), false)
+                    if (meter.verified) { prefs.powerVerified = true; log.add(EventType.INFO, note = "Power meter VERIFIED automatically: ${meter.reason}"); applyCoachConfig(); _dash.value = _dash.value.copy(lastSavedRide = "Power meter verified — ${meter.reason}") } }
                 var inBand: Boolean? = null
                 if (targets != null && phase == Phase.MAIN) {
                     mainSec++
@@ -589,7 +621,7 @@ class RideEngine(private val app: Application) {
         // v0.10: outside a running ride the graph still shows the live sensors, one sample per second of engine time
         if (stats.state != RideStats.State.RUNNING) {
             val sec = now / 1000
-            if (sec != lastBufSec) { lastBufSec = sec; liveBuffer.add(sec.toInt(), stats.livePowerW(now), bpm, stats.liveCadenceRpm(now), bandsNow(if (stats.state == RideStats.State.IDLE) null else targets), phase) }
+            if (sec != lastBufSec) { lastBufSec = sec; liveBuffer.add(sec.toInt(), pwLive(now), bpm, stats.liveCadenceRpm(now), bandsNow(if (stats.state == RideStats.State.IDLE) null else targets), phase) }
         }
         // P0: checkpoint every 10 s while a ride exists
         if (stats.state == RideStats.State.RUNNING || stats.state == RideStats.State.PAUSED) {
@@ -608,7 +640,7 @@ class RideEngine(private val app: Application) {
         _dash.value = _dash.value.copy(
             health = h, healthText = com.rashed.bikesensordoctor.core.HealthClassifier.message(h),
             rideState = stats.state,
-            powerW = stats.livePowerW(now), power3sW = stats.power3sW(now), power10sW = stats.power10sW(now),
+            powerW = pwLive(now), power3sW = if (simNoPower && simulator != null) null else stats.power3sW(now), power10sW = if (simNoPower && simulator != null) null else stats.power10sW(now),
             cadenceRpm = stats.liveCadenceRpm(now),
             backwards = stats.liveBackwards(now), crankAngle = stats.liveCrankAngle(now),
             avgPowerW = stats.avgPowerW, maxPowerW = stats.maxPowerW, avgCadenceRpm = stats.avgCadenceRpm, maxCadenceRpm = stats.maxCadenceRpm,
@@ -632,6 +664,8 @@ class RideEngine(private val app: Application) {
         )
     }
     private var lastZoneSec = -1L
+    /** v0.11: the plain-language FTP change line produced by the last finished ride (shown on the results page), or null. */
+    var ftpNotice: String? = null; private set
 
     /** Writes the event log to app storage; the user can share it from Settings. Keeps the last 30 files. */
     fun saveLogSnapshot(reason: String): File? = try {

@@ -150,6 +150,7 @@ class AppFlowTest {
         tap(tag("start_onboarding"))
         // page 1: about you
         find(text("3+ yrs")); shot("03_page1")
+        find(tag("num_weight")).text = "75"; device.waitForIdle()
         tap(text("3+ yrs")); tap(tag("next_page"))
         // page 2: goals
         tap(text("Endurance (Zone 2)")); shot("04_page2"); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
@@ -161,13 +162,34 @@ class AppFlowTest {
         scrollTo(text("Tested"))
         retry { device.findObjects(text("Tested")).first().click() }; device.waitForIdle(1000)
         retry { device.findObjects(text("Tested")).last().click() }; device.waitForIdle(1000)
-        tap(text("Don't know yet")); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
+        tap(text("Don't know yet"))
+        assertTrue("starting FTP = 75 kg × 4.0 W/kg (advanced)", visible(text("Starting FTP 300 W"), 4000)); assertTrue(has(text("STARTING ASSUMPTION"), 2000)); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
         // page 5: prefs
         tap(text("On")); tap(text("Normal")); shot("07_page5"); tap(tag("next_page"))
         // page 6: summary
         find(text("CONFIRMED"), 10_000); shot("08_profile"); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
         find(tag("start_ride")); shot("09_home")
         assertTrue(has(text("Riding as "), 3000))
+    }
+
+    /** v0.11: the starting assumption follows weight × experience for every new rider, and riders never share it. */
+    @Test fun t01b_starting_ftp_for_beginner_and_intermediate_riders() {
+        launch(); find(tag("start_ride"), 15_000)
+        tap(tag("switch_rider")); find(tag("new_name")).text = "Nora"; tap(tag("create_btn")); find(tag("start_onboarding")); tap(tag("start_onboarding"))
+        find(tag("num_weight")).text = "60"; device.waitForIdle(); tap(text("New")); tap(tag("next_page"))
+        tap(text("Endurance (Zone 2)")); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
+        find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); tap(tag("next_page"))
+        tap(text("Estimate for now")); tap(text("Don't know yet"))
+        assertTrue("beginner 60 kg → 105 W", visible(text("Starting FTP 105 W"), 4000)); shot("06b_page4_beginner")
+        // change experience to intermediate on page 1 → 180 W, still an assumption
+        device.pressBack(); device.pressBack(); device.pressBack(); find(tag("num_weight"), 5000); tap(text("1–3 yrs")); tap(tag("next_page")); tap(tag("next_page")); tap(tag("next_page"))
+        assertTrue("intermediate 60 kg → 180 W", visible(text("Starting FTP 180 W"), 4000)); shot("06c_page4_intermediate")
+        scrollTo(tag("next_page")); tap(tag("next_page")); tap(text("On")); tap(text("Normal")); tap(tag("next_page"))
+        find(tag("confirm_profile"), 10_000); assertTrue("summary shows the assumption", visible(By.textContains("starting assumption"), 4000)); shot("08b_profile_nora"); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
+        find(tag("start_ride"))
+        // back to Rashed: his own assumption (300 W) is untouched
+        tap(tag("switch_rider")); val me = find(By.res(java.util.regex.Pattern.compile("rider_r.*")).hasDescendant(text("Rashed"))); me.click()
+        find(text("Riding as "), 8000); tap(text("ME")); find(tag("confirm_profile")); tap(tag("exp_profile")); assertTrue("Rashed keeps 300 W", visible(By.textContains("300 W (starting assumption)"), 4000)); device.pressBack(); find(tag("start_ride"))
     }
 
     @Test fun t02_club_board_profile_tabs_and_back() {
@@ -249,14 +271,14 @@ class AppFlowTest {
     private fun assertNoScrollLive(label: String) {
         assertTrue("$label: live screen present", has(tag("live_root"), 3000))
         assertTrue("$label: live screen must not scroll", !device.hasObject(By.scrollable(true)))
-        for (t in listOf("live_speed", "live_dist", "live_time", "live_phase", "card_power", "card_hr", "card_cad", "live_targets", "live_graph", "coach_box", "coach_headline")) assertTrue("$label: $t visible without scrolling", has(tag(t), 1500))
+        for (t in listOf("live_speed", "live_dist", "live_time", "live_phase", "card_power", "card_hr", "card_cad", "live_targets", "live_averages", "live_graph", "coach_box", "coach_headline")) assertTrue("$label: $t visible without scrolling", has(tag(t), 1500))
         assertTrue("$label: a control visible", has(tag("btn_pause"), 500) || has(tag("btn_start"), 500) || has(tag("btn_resume"), 500))
         val box = device.findObject(tag("coach_box")); val ctl = device.findObject(By.res(java.util.regex.Pattern.compile("btn_(pause|start|resume)")))
         if (box != null && ctl != null) assertTrue("$label: coach box above the controls and inside the screen", box.visibleBounds.bottom <= ctl.visibleBounds.top && ctl.visibleBounds.bottom <= device.displayHeight)
         val graph = device.findObject(tag("live_graph"))
         if (graph != null && box != null) {
             assertTrue("$label: graph above the coach box", graph.visibleBounds.bottom <= box.visibleBounds.top)
-            assertTrue("$label: graph keeps a usable height (${graph.visibleBounds.height()} px)", graph.visibleBounds.height() >= device.displayHeight / 7)
+            assertTrue("$label: graph keeps a usable height (${graph.visibleBounds.height()} px)", graph.visibleBounds.height() >= device.displayHeight / 9)
         }
         // nothing may overlap: every tagged element's bounds must be disjoint from the next section's
         val order = listOf("card_power", "live_targets", "live_graph", "coach_box").mapNotNull { device.findObject(tag(it))?.visibleBounds }
@@ -298,6 +320,41 @@ class AppFlowTest {
         tap(tag("dash_details")); find(tag("detail_graphs")); shot("38_details_gaps"); device.pressBack(); find(tag("btn_finish"), 5000)
         tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
         find(tag("results_root"), 15_000); if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
+    }
+
+    /** v0.11: coaching from the first ride without a strap — power + cadence (relative effort, FTP only an assumption), then cadence only. */
+    @Test fun t04d_no_strap_coaching_power_only_and_cadence_only() {
+        launch()
+        if (!has(tag("start_ride"), 4000) && visible(tag("btn_finish"), 4000)) { tap(tag("btn_finish")); tap(text("FINISH & SAVE")); if (has(tag("save_post"), 8000)) { tap(tag("save_post")); tap(tag("post_home")) } }
+        find(tag("start_ride"), 15_000)
+        tap(text("⚙")); tap(tag("open_simulation")); tap(text("Power + cadence, no strap")); tap(text("30×")); tap(tag("sim_start"))
+        find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
+        assertTrue("HR gauge says NO STRAP", appears(text("— NO STRAP"), 15_000))
+        // relative-effort cues from the rider's own output (no zone claims): hold / drop / surge / milestone
+        assertTrue("a relative-effort instruction appears", appears(By.res("coach_headline"), 5000))
+        val seen = HashSet<String>(); val end = System.currentTimeMillis() + 100_000
+        while (System.currentTimeMillis() < end) { device.findObject(tag("coach_headline"))?.text?.let { seen += it }; if (seen.any { it.startsWith("Good pace") } && seen.any { it.startsWith("Power dropping") }) break; Thread.sleep(400) }
+        File(shots(), "coach_no_strap.txt").writeText(seen.joinToString("\n"))
+        assertTrue("steady output acknowledged: $seen", seen.any { it.startsWith("Good pace") })
+        assertTrue("the 25 % drop at minute 25 is named: $seen", seen.any { it.startsWith("Power dropping") })
+        assertTrue("no zone claims without a strap: $seen", seen.none { it.contains("zone", true) || it.contains("HR ", false) })
+        shot("39_live_no_strap"); assertNoScrollLive("no strap")
+        assertTrue("5-minute averages shown", has(tag("live_averages"), 2000))
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE")); find(tag("results_root"), 15_000)
+        tap(tag("exp_calibration")); assertTrue("simulated ride never becomes FTP evidence", visible(text("FTP ESTIMATE UNAVAILABLE"), 5000)); shot("40_results_ftp_unavailable")
+        if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
+        // cadence only: no power, no strap → cadence + pace + time coaching, both effort gauges say NO DATA / NO STRAP
+        tap(text("⚙")); tap(tag("open_simulation")); tap(text("Cadence only (no power, no strap)")); tap(text("30×")); tap(tag("sim_start"))
+        find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
+        assertTrue(appears(text("— NO DATA"), 15_000)); assertTrue(appears(text("— NO STRAP"), 5000))
+        val seen2 = HashSet<String>(); val end2 = System.currentTimeMillis() + 60_000
+        while (System.currentTimeMillis() < end2) { device.findObject(tag("coach_headline"))?.text?.let { seen2 += it }; if (seen2.any { it.startsWith("Pedal") } && seen2.any { it.startsWith("You have been riding") }) break; Thread.sleep(400) }
+        File(shots(), "coach_cadence_only.txt").writeText(seen2.joinToString("\n"))
+        assertTrue("cadence coached without effort sensors: $seen2", seen2.any { it.startsWith("Pedal a little faster") })
+        assertTrue("time-based check-in: $seen2", seen2.any { it.startsWith("You have been riding") })
+        shot("41_live_cadence_only"); assertNoScrollLive("cadence only")
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE")); find(tag("results_root"), 15_000)
+        if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
     }
 
     @Test fun t05_restart_keeps_data_and_settings_screens() {
