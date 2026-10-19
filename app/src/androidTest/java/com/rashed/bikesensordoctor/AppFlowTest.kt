@@ -167,14 +167,14 @@ class AppFlowTest {
         tap(text("Endurance (Zone 2)")); shot("04_page2"); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
         // page 3: routine
         find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); shot("05_page3"); tap(tag("next_page"))
-        // page 4: zones (I know my numbers)
-        tap(text("I know my numbers"))
-        find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"; device.waitForIdle()
+        // page 4 (v0.11): a summary — starting FTP from weight × experience, nothing required; HR numbers are optional
+        assertTrue("starting FTP = 75 kg × 4.0 W/kg (advanced)", visible(text("300 W"), 6000)); assertTrue(has(text("ESTIMATED FROM EXPERIENCE"), 2000))
+        assertTrue("CONTINUE is enabled without any manual value", find(tag("next_page")).isEnabled); shot("06_page4")
+        tap(tag("own_hr")); find(tag("num_maxHr")).text = "186"; find(tag("num_lthr")).text = "168"; device.waitForIdle()
         scrollTo(text("Tested"))
         retry { device.findObjects(text("Tested")).first().click() }; device.waitForIdle(1000)
         retry { device.findObjects(text("Tested")).last().click() }; device.waitForIdle(1000)
-        tap(text("Don't know yet"))
-        assertTrue("starting FTP = 75 kg × 4.0 W/kg (advanced)", visible(text("Starting FTP 300 W"), 4000)); assertTrue(has(text("STARTING ASSUMPTION"), 2000)); shot("06_page4"); scrollTo(tag("next_page")); tap(tag("next_page"))
+        shot("06d_page4_own_hr"); scrollTo(tag("next_page")); tap(tag("next_page"))
         // page 5: prefs
         tap(text("On")); tap(text("Normal")); shot("07_page5"); tap(tag("next_page"))
         // page 6: summary
@@ -190,11 +190,10 @@ class AppFlowTest {
         find(tag("num_weight")).text = "60"; device.waitForIdle(); tap(text("New")); tap(tag("next_page"))
         tap(text("Endurance (Zone 2)")); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
         find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); tap(tag("next_page"))
-        tap(text("Estimate for now")); tap(text("Don't know yet"))
-        assertTrue("beginner 60 kg → 105 W", visible(text("Starting FTP 105 W"), 4000)); shot("06b_page4_beginner")
+        assertTrue("beginner 60 kg → 105 W", visible(text("105 W"), 6000)); assertTrue(has(text("We'll learn these when you connect your HR strap."), 2000)); shot("06b_page4_beginner")
         // change experience to intermediate on page 1 → 180 W, still an assumption
         device.pressBack(); device.pressBack(); device.pressBack(); find(tag("num_weight"), 5000); tap(text("1–3 yrs")); tap(tag("next_page")); tap(tag("next_page")); tap(tag("next_page"))
-        assertTrue("intermediate 60 kg → 180 W", visible(text("Starting FTP 180 W"), 4000)); shot("06c_page4_intermediate")
+        assertTrue("intermediate 60 kg → 180 W", visible(text("180 W"), 6000)); shot("06c_page4_intermediate")
         scrollTo(tag("next_page")); tap(tag("next_page")); tap(text("On")); tap(text("Normal")); tap(tag("next_page"))
         find(tag("confirm_profile"), 10_000); assertTrue("summary shows the assumption", visible(By.textContains("starting assumption"), 4000)); shot("08b_profile_nora"); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
         find(tag("start_ride"))

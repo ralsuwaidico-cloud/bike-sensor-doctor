@@ -137,7 +137,7 @@ object RiderProfile {
         0 -> a["experience"] != null
         1 -> a["primary"] != null
         2 -> a["ridesNow"] != null && a["daysAvail"] != null
-        3 -> a["hrMode"] != null && a["pwMode"] != null
+        3 -> true   // v0.11: the fitness page is a summary — nothing is required
         4 -> a["voice"] != null && a["freq"] != null
         else -> true
     }
@@ -148,7 +148,7 @@ object RiderProfile {
             0 -> if (a["experience"] == null) a["experience"] = "recreational"
             1 -> if (a["primary"] == null) { a["primary"] = "fitness"; a.setList("goals", listOf("fitness")) }
             2 -> { if (a["ridesNow"] == null) a["ridesNow"] = "2"; if (a["daysAvail"] == null) a["daysAvail"] = "3" }
-            3 -> { if (a["hrMode"] == null) a["hrMode"] = "later"; if (a["pwMode"] == null) a["pwMode"] = "unknown" }
+            3 -> StartingFtp.applyIfMissing(a)
             4 -> { if (a["voice"] == null) a["voice"] = "voice"; if (a["freq"] == null) a["freq"] = "important" }
         }
     }

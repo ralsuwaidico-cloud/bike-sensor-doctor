@@ -148,7 +148,7 @@ private val PAGES = listOf(
     "About you" to "Four quick facts. Everything else is optional.",
     "Your goals" to "One main goal; add a second if you like.",
     "Your training routine" to "So the plan fits your week, not an ideal one.",
-    "Fitness & zones" to "Skip anything you don't know — the coach will say what is provisional.",
+    "Your starting fitness profile" to "Nothing to fill in. Your coach starts from what you told us and learns from your rides.",
     "Coaching preferences" to "Change these any time in the ME tab.",
     "Your personal coach" to "",
 )
@@ -264,24 +264,52 @@ private fun PageRoutine(a: RiderAnswers, pick: (String, String) -> Unit, toggle:
 
 @Composable
 private fun PageZones(a: RiderAnswers, pick: (String, String) -> Unit, saved: () -> Unit, changed: () -> Unit) {
-    FieldLabel("HEART RATE")
-    Chips(listOf("know" to "I know my numbers", "estimate" to "Estimate for now", "later" to "Set up later"), setOfNotNull(a["hrMode"]), small = true) { pick("hrMode", it) }
-    when (a["hrMode"]) {
-        "know" -> D7Card(Modifier.padding(top = 6.dp)) {
-            MetricRow(a, "maxHr", "Max HR", "bpm", 120, 220, saved, changed); MetricRow(a, "restHr", "Resting HR", "bpm", 30, 100, saved, changed); MetricRow(a, "lthr", "Threshold HR", "bpm", 110, 210, saved, changed)
-            Muted("Fill any you know. \"Tested\" values become confirmed zones; the rest stay provisional.", 11)
+    // v0.11 — the page shows what the coach starts from; nothing is required. The starting FTP comes from page 1 (weight × experience).
+    com.rashed.bikesensordoctor.core.StartingFtp.applyIfMissing(a)
+    val ftp = a.metric("ftp"); val w = a.int("weightKg"); val exp = a["experience"]
+    val assumed = ftp != null && ftp.how == com.rashed.bikesensordoctor.core.StartingFtp.HOW
+    var ownFtp by remember { mutableStateOf(ftp != null && !assumed) }
+    var ownHr by remember { mutableStateOf(a.metric("maxHr") != null || a.metric("restHr") != null || a.metric("lthr") != null) }
+
+    D7Card(accent = D7.Cyan, modifier = Modifier.padding(top = 4.dp)) {
+        CardTitle("STARTING FTP")
+        when {
+            ftp != null && !assumed -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${ftp.value} W", fontFamily = Rajdhani, fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 36.sp, color = D7.Fg, modifier = Modifier.weight(1f))
+                    Tag(when (ftp.how) { "measured" -> "TESTED"; "auto" -> "LEARNED"; "app" -> "FROM APP"; else -> "YOUR ESTIMATE" }, if (ftp.how == "measured") D7.Green else D7.Cyan)
+                }
+                Muted("Your existing FTP is kept. The coach only proposes a change when your rides give strong evidence — it never overwrites a tested value on its own.", 12)
+            }
+            ftp != null -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("${ftp.value} W", fontFamily = Rajdhani, fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 36.sp, color = D7.Fg, modifier = Modifier.weight(1f).testTag("starting_ftp"))
+                    Tag("ESTIMATED FROM EXPERIENCE", D7.Amber)
+                }
+                Muted("From your weight ($w kg) and experience (${com.rashed.bikesensordoctor.core.StartingFtp.LABEL[exp]}). A starting point, not a measurement — your coach replaces it automatically, up or down, once your rides show what you can hold.", 12)
+            }
+            else -> Muted(if (w == null) "Add your weight on page 1 and the coach starts from an experience-based estimate. Either way it learns your FTP from your rides." else "The coach learns your FTP from your rides.", 12)
         }
-        "estimate" -> Muted("Zone 2 will be estimated from ${if (a.int("age") != null) "your age" else "a default max HR"} and marked GENERIC until a calibration ride.", 12)
-        "later" -> Muted("Heart-rate guidance stays generic until you add numbers in the ME tab.", 12)
     }
-    FieldLabel("POWER")
-    Chips(listOf("know" to "I know my FTP", "unknown" to "Don't know yet"), setOfNotNull(a["pwMode"]), small = true) { pick("pwMode", it) }
-    when (a["pwMode"]) {
-        "know" -> D7Card(Modifier.padding(top = 6.dp)) { MetricRow(a, "ftp", "FTP", "W", 60, 450, saved, changed) }
-        "unknown" -> { val w = a.int("weightKg"); val sf = com.rashed.bikesensordoctor.core.StartingFtp.watts(w, a["experience"])
-            if (sf != null) Column(Modifier.padding(top = 6.dp)) { Row(verticalAlignment = Alignment.CenterVertically) { Text("Starting FTP $sf W", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = D7.Fg); Spacer(Modifier.width(6.dp)); Tag("STARTING ASSUMPTION", D7.Amber) }
-                Muted("$w kg × ${com.rashed.bikesensordoctor.core.StartingFtp.WKG[a["experience"]]} W/kg (${com.rashed.bikesensordoctor.core.StartingFtp.LABEL[a["experience"]]}). A reference, not a measurement: the coach judges effort against your own riding and replaces this number automatically once your sustained efforts give real evidence.", 11) }
-            else Muted("Enter your weight on page 1 and the coach starts from an experience-based assumption; it then learns your FTP from your rides.", 12) }
+    D7Card(Modifier.padding(top = 8.dp)) {
+        CardTitle("HEART-RATE ZONES")
+        if (ownHr && (a.metric("lthr") != null || a.metric("maxHr") != null)) Text("From the numbers you entered below.", fontSize = 14.sp, color = D7.Fg)
+        else Text("We'll learn these when you connect your HR strap.", fontSize = 14.sp, color = D7.Fg)
+        Muted("Until then the coach uses a general estimate from your age, marked GENERIC — it is not your measured threshold.", 12)
+    }
+    Text("Your coach will automatically improve these estimates as you ride.", fontSize = 13.sp, lineHeight = 17.sp, color = D7.Cyan, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+
+    // optional: a rider with a reliable existing FTP, or known heart-rate numbers
+    TextButton(onClick = { ownFtp = !ownFtp; if (!ownFtp && a.metric("ftp")?.how != com.rashed.bikesensordoctor.core.StartingFtp.HOW) { a.setMetric("ftp", null, null); com.rashed.bikesensordoctor.core.StartingFtp.applyIfMissing(a); changed() } },
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp), modifier = Modifier.testTag("own_ftp")) { Text(if (ownFtp) "▾ Enter my own FTP" else "▸ Enter my own FTP (optional)", color = D7.Cyan, fontSize = 12.sp) }
+    if (ownFtp) D7Card {
+        MetricRow(a, "ftp", "FTP", "W", 60, 450, saved, changed)
+        Muted("Only if you have a reliable value from a test or another app. Leave it empty to keep the starting estimate.", 11)
+    }
+    TextButton(onClick = { ownHr = !ownHr }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp), modifier = Modifier.testTag("own_hr")) { Text(if (ownHr) "▾ I know my heart-rate numbers" else "▸ I know my heart-rate numbers (optional)", color = D7.Cyan, fontSize = 12.sp) }
+    if (ownHr) D7Card {
+        MetricRow(a, "maxHr", "Max HR", "bpm", 120, 220, saved, changed); MetricRow(a, "restHr", "Resting HR", "bpm", 30, 100, saved, changed); MetricRow(a, "lthr", "Threshold HR", "bpm", 110, 210, saved, changed)
+        Muted("Fill any you know. \"Tested\" values become confirmed zones; the rest stay provisional.", 11)
     }
 }
 

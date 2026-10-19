@@ -88,6 +88,19 @@ class RiderProfileTest {
         assertNotNull(b.metric("lthr")); assertEquals(168, b.metric("lthr")!!.value)
     }
 
+    /** v0.11: the fitness page needs nothing — a beginner continues knowing nothing about FTP or zones; SKIP applies the starting assumption, a credible FTP survives. */
+    @Test fun fitnessPageNeedsNothingAndNeverOverwritesACredibleFtp() {
+        val fresh = RiderAnswers(mapOf("weightKg" to "75", "experience" to "returning"))
+        assertTrue(RiderProfile.pageValid(3, fresh))
+        RiderProfile.skipDefaults(3, fresh); assertEquals(169, fresh.metric("ftp")!!.value); assertEquals("assumed", fresh.metric("ftp")!!.how)
+        val tested = RiderAnswers(mapOf("weightKg" to "75", "experience" to "returning", "ftp.value" to "245", "ftp.how" to "measured"))
+        RiderProfile.skipDefaults(3, tested); assertEquals(245, tested.metric("ftp")!!.value); assertEquals("measured", tested.metric("ftp")!!.how)
+        val noWeight = RiderAnswers(mapOf("experience" to "new")); assertTrue(RiderProfile.pageValid(3, noWeight)); RiderProfile.skipDefaults(3, noWeight); assertNull(noWeight.metric("ftp"))
+        // age-based zones are GENERIC, never confirmed
+        val c = RiderProfile.deriveSetup(RiderAnswers(mapOf("age" to "40", "weightKg" to "75", "experience" to "new", "primary" to "fitness")))
+        assertEquals(ZoneConfidence.GENERIC, c.zoneConfidence)
+    }
+
     @Test fun skipDefaultsMakeEveryPageValid() {
         val a = RiderAnswers(); RiderProfile.skipAll(a)
         for (p in 0..5) assertTrue("page $p", RiderProfile.pageValid(p, a))
