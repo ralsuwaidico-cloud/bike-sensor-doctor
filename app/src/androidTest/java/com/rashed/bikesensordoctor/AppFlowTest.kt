@@ -10,6 +10,7 @@ import androidx.test.uiautomator.BySelector
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiObject2
 import androidx.test.uiautomator.Until
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -341,7 +342,8 @@ class AppFlowTest {
         shot("39_live_no_strap"); assertNoScrollLive("no strap")
         assertTrue("5-minute averages shown", has(tag("live_averages"), 2000))
         tap(tag("btn_finish")); tap(text("FINISH & SAVE")); find(tag("results_root"), 15_000)
-        tap(tag("exp_calibration")); assertTrue("simulated ride never becomes FTP evidence", visible(text("FTP ESTIMATE UNAVAILABLE"), 5000)); shot("40_results_ftp_unavailable")
+        // a simulated ride is labelled SIMULATED and offers no fitness estimates at all — it can never become FTP evidence
+        assertTrue("results are labelled SIMULATED", visible(text("SIMULATED"), 5000)); assertFalse("no estimates section for a simulated ride", has(tag("exp_calibration"), 1500)); shot("40_results_simulated_no_estimates")
         if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
         // cadence only: no power, no strap → cadence + pace + time coaching, both effort gauges say NO DATA / NO STRAP
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Cadence only (no power, no strap)")); tap(text("30×")); tap(tag("sim_start"))

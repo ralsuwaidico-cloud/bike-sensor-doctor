@@ -424,8 +424,8 @@ fun AveragesRow(a: com.rashed.bikesensordoctor.core.WindowAverages, label: Strin
     }
     Row(modifier.fillMaxWidth().testTag("live_averages"), verticalAlignment = Alignment.Bottom) {
         Text(label, fontFamily = PlexMono, fontSize = 7.sp, color = D7.Faint, modifier = Modifier.padding(end = 4.dp))
-        cell(GraphColors.Power, "PWR", a.powerW, "W", if (a.powerW != null && a.powerSec < a.windowSec) "gaps excl." else "", Modifier.weight(1.1f))
+        cell(GraphColors.Power, "PWR", a.powerW, "W", if (a.powerW != null && a.powerSec < a.windowSec) "gaps" else "", Modifier.weight(1.1f))
         cell(GraphColors.Hr, "HR", a.hrBpm, "bpm", "", Modifier.weight(0.9f))
-        cell(GraphColors.Cad, "CAD", a.cadElapsedRpm, "rpm", if (a.cadPedallingRpm != null && a.cadPedallingRpm != a.cadElapsedRpm) "${a.cadPedallingRpm} pedalling" else "", Modifier.weight(1.2f))
+        cell(GraphColors.Cad, "CAD", a.cadElapsedRpm, "rpm", if (a.cadPedallingRpm != null && a.cadPedallingRpm != a.cadElapsedRpm) "${a.cadPedallingRpm} pedal" else "", Modifier.weight(1.2f))
     }
 }
