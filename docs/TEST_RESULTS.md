@@ -1,9 +1,18 @@
-# Test results — Bike Computer v0.11.0 (review build, NOT released), 2026-10-19
+# Test results — Bike Computer v0.11.0, 2026-10-19
 
-Branch `design/v0.11-auto-coach`, commit `0f011cd`, versionCode 14 · versionName 0.11.0 · package `com.rashed.bikesensordoctor.debug`,
-signed with the same committed key as every build since 51. CI run 83: build + 160 unit tests ✓, Android 12 emulator
-(720 × 1520, 320 dpi — Nokia 5.3 geometry) 9 of 9 flow tests ✓, 1 500-event monkey ✓, no crash. The release step was skipped on
-purpose: no APK is published until the design and these results are approved. Previous report: `TEST_RESULTS_v0.10.md`.
+versionCode 14 · versionName 0.11.0 · package `com.rashed.bikesensordoctor.debug`, signed with the same committed key as every build
+since 51. Review runs on `design/v0.11-auto-coach`: run 83 (commit 0f011cd, approved) and run 85 (new onboarding Step 4): build +
+161 unit tests ✓, Android 12 emulator (720 × 1520, 320 dpi — Nokia 5.3 geometry) 9 of 9 flow tests ✓, 1 500-event monkey ✓, no
+crash. The release build on main is recorded at the end of this file. Previous report: `TEST_RESULTS_v0.10.md`.
+
+## Onboarding Step 4 replaced (requested from the Nokia, 19 Oct)
+"Fitness & zones" (I know my numbers / Estimate for now / Set up later · I know my FTP / Don't know yet) is gone. Step 4 is now
+**"Your starting fitness profile"**: Starting FTP from weight × experience with an ESTIMATED FROM EXPERIENCE tag and a one-line
+explanation; "Heart-rate zones — We'll learn these when you connect your HR strap" with the note that the age-based estimate is
+GENERIC, not a measured threshold; "Your coach will automatically improve these estimates as you ride."; CONTINUE enabled with nothing
+entered; "Enter my own FTP (optional)" and "I know my heart-rate numbers (optional)" folded away. An existing tested/estimated FTP is
+shown and kept (never replaced by the assumption). No other onboarding page asks fitness questions; the interactive artifact
+(version 14) shows the same page. Evidence: docs/evidence/v011-run85-onboarding.png.
 
 ## What is new in v0.11 (implemented as approved in artifact version 13)
 - **Layout**: three 84 dp gauges in one row (76 dp at large font), value in the centre, TARGET band inside the ring on the same scale;
