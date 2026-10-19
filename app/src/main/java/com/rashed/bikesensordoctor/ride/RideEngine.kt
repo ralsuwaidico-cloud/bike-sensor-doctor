@@ -432,6 +432,7 @@ class RideEngine(private val app: Application) {
             hrSum = 0; hrCount = 0; hrMax = 0; inZoneSec = 0; mainSec = 0; hrFirstHalf.clear(); hrSecondHalf.clear(); cueCount = 0
             series.clear(); seriesFlushed = 0; simDistKm = 0.0; simGain = 0.0; simMaxSpeed = 0.0; hrAtFinish = null; lastZoneSec = -1
             link.reset(); cooldownRequestedAtMs = null; clearCheckpoint(); restoredRide = false
+            liveBuffer.clear(); meter.reset()   // v0.11: the 5-min graph/averages and the meter-verification evidence never carry over from a previous ride
             if (simulator == null) rideSource = RideSource.DEVICE
             // v0.8: the recommended workout sets the session plan and the target bands; without a profile the old settings apply
             val s = setup; val w = workout

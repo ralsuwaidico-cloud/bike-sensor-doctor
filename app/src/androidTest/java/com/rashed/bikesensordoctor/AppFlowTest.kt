@@ -313,8 +313,8 @@ class AppFlowTest {
         tap(text("⚙")); tap(tag("open_simulation")); tap(text("Sensor drop-outs")); tap(text("10×")); tap(tag("sim_start"))
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause"))
         // meter silent at 2:00 (power + cadence missing together — one device), strap silent at 3:30
-        assertTrue("power card reports NO DATA during the meter gap", appears(text("— NO DATA"), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
-        assertTrue("no value is shown while the meter is silent", has(By.descContains("POWER no data"), 2000))
+        // at 10× a 30-s gap lasts 3 real seconds, so both checks happen in the same poll: the gauge shows no value AND the NO DATA status
+        assertTrue("power gauge shows no value and NO DATA during the meter gap", appears(By.descContains("POWER no data W, — NO DATA"), 40_000)); shot("35_live_meter_gap"); assertNoScrollLive("meter gap")
         assertTrue("HR card reports NO STRAP during the strap gap", appears(text("— NO STRAP"), 40_000)); shot("36_live_strap_gap"); assertNoScrollLive("strap gap")
         Thread.sleep(8000); shot("37_live_after_gaps")   // ≥ 5 min of ride: both gaps now visible in the 5-minute graph
         tap(tag("dash_details")); find(tag("detail_graphs")); shot("38_details_gaps"); device.pressBack(); find(tag("btn_finish"), 5000)
