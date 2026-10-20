@@ -116,7 +116,7 @@ fun GraphLegend(bands: GraphBands?, havePw: Boolean, haveHr: Boolean, haveCad: B
         Row(m, verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(width = 9.dp, height = 2.5.dp).background(if (have) color else color.copy(alpha = 0.4f)))
             Spacer(Modifier.width(3.dp))
-            Text(buildString { append(name); append(' '); append(if (have) band else "no signal") }, fontFamily = PlexMono, fontSize = 7.5.sp, color = if (have) D7.Mut else D7.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(buildString { append(name); append(' '); append(if (have) band else "no signal") }, fontFamily = PlexMono, fontSize = 7.5.sp, lineHeight = 9.sp, color = if (have) D7.Mut else D7.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
     Row(modifier.fillMaxWidth()) {
@@ -418,13 +418,13 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
 fun AveragesRow(a: com.rashed.bikesensordoctor.core.WindowAverages, label: String, modifier: Modifier = Modifier) {
     @Composable fun cell(col: Color, name: String, v: Int?, unit: String, sub: String, m: Modifier) {
         Row(m, verticalAlignment = Alignment.Bottom) {
-            Text(name, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = col); Spacer(Modifier.width(3.dp))
+            Text(name, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, lineHeight = 10.sp, color = col); Spacer(Modifier.width(3.dp))
             Text(v?.toString() ?: "—", fontFamily = Rajdhani, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 13.sp, color = if (v == null) D7.Faint else D7.Fg); Spacer(Modifier.width(2.dp))
-            Text(if (sub.isEmpty()) unit else "$unit · $sub", fontFamily = PlexMono, fontSize = 7.sp, color = D7.Mut, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (sub.isEmpty()) unit else "$unit · $sub", fontFamily = PlexMono, fontSize = 7.sp, lineHeight = 9.sp, color = D7.Mut, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
     Row(modifier.fillMaxWidth().testTag("live_averages"), verticalAlignment = Alignment.Bottom) {
-        Text(label, fontFamily = PlexMono, fontSize = 7.sp, color = D7.Faint, modifier = Modifier.padding(end = 4.dp))
+        Text(label, fontFamily = PlexMono, fontSize = 7.sp, lineHeight = 9.sp, color = D7.Faint, modifier = Modifier.padding(end = 4.dp))
         cell(GraphColors.Power, "PWR", a.powerW, "W", if (a.powerW != null && a.powerSec < a.windowSec) "gaps" else "", Modifier.weight(1.1f))
         cell(GraphColors.Hr, "HR", a.hrBpm, "bpm", "", Modifier.weight(0.9f))
         cell(GraphColors.Cad, "CAD", a.cadElapsedRpm, "rpm", if (a.cadPedallingRpm != null && a.cadPedallingRpm != a.cadElapsedRpm) "${a.cadPedallingRpm} pedal" else "", Modifier.weight(1.2f))

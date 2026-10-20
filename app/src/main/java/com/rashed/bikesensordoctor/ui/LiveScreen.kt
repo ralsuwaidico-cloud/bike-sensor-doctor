@@ -99,7 +99,8 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
             val hrLive = st.hrLive
             // v0.11.1 full-screen layout: the ring diameter is the largest that fits three across the actual screen width
             // (content width − 2 × 10 dp screen padding − 2 × 4 dp gaps, ÷ 3, minus 4 dp breathing room) — 104 dp on the Nokia 5.3 (360 dp wide)
-            val ring = ((screenW - 20.dp - 8.dp) / 3 - 4.dp).coerceIn(84.dp, 124.dp)
+            // at large system font the labels and status chips grow, so the ring gives back 12 dp to keep the graph readable (priority: gauges, coach, controls)
+            val ring = (((screenW - 20.dp - 8.dp) / 3 - 4.dp) - (if (bigFont) 12.dp else 0.dp)).coerceIn(80.dp, 124.dp)
             Row(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 // hybrid: Design-7 circular gauges; LIVE dot and TARGET band share the dial's scale (power 0..max(300, 1.5×FTP), HR 0..max HR, cadence 0..130)
                 CompactGauge(Modifier.weight(1f), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = if (d.simulated) "SIM" else "", reference = b?.pwReference == true,
@@ -110,7 +111,7 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
             }
 
             // ---- C · combined performance graph (takes whatever height is left) ----
-            GraphLegend(b, havePw = d.powerW != null, haveHr = hrLive != null, haveCad = d.cadenceRpm != null, modifier = Modifier.padding(top = if (short) 3.dp else 5.dp).testTag("live_targets"))
+            GraphLegend(b, havePw = d.powerW != null, haveHr = hrLive != null, haveCad = d.cadenceRpm != null, modifier = Modifier.padding(top = 3.dp).testTag("live_targets"))
             // v0.11: averages over the same 5-minute window the graph shows (time-weighted; a disconnected sensor is never zero)
             val avg = remember(d.graphVersion) { val buf = vm.engine.liveBuffer; val from = buf.windowStart(300); com.rashed.bikesensordoctor.core.WindowAverages.of((from until buf.size).map { buf.powerAt(it) }, (from until buf.size).map { buf.cadAt(it) }, (from until buf.size).map { buf.hrAt(it) }) }
             AveragesRow(avg, "AVG 5 MIN", Modifier.padding(top = 2.dp))
@@ -141,11 +142,14 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
                 if (d.rideState == RideStats.State.RUNNING && d.phase != Phase.COOLDOWN && d.coachMode != "FREE") Box(Modifier.weight(0.9f)) { LiveButton("COOL", D7.Violet, "btn_cool") { vm.engine.requestCooldown() } }
                 else Box(Modifier.weight(0.9f)) { LiveButton("COACH", D7.Violet, "btn_coach", 14) { onCoach() } }
             }
+            // v0.11.1: the links row was 51 dp tall because TextButton enforces a 48 dp touch target; 32 dp is still a comfortable tap and frees ~18 dp for the graph
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalMinimumInteractiveComponentSize provides 32.dp) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 SmallLink("‹ Home", "dash_home", onHome); SmallLink("Details", "dash_details", onDetails)
                 Spacer(Modifier.weight(1f))
                 d.linkQualityPct?.takeIf { d.rideState != RideStats.State.IDLE }?.let { q -> Text("LINK $q%", fontFamily = PlexMono, fontSize = 9.sp, color = if (q >= 95) D7.Faint else D7.Amber) }
                 SmallLink("⚙", "dash_settings", onSettings)
+            }
             }
         }
     }
