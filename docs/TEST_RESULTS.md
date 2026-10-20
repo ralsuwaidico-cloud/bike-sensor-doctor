@@ -91,3 +91,14 @@ Pre-publish checks requested on 19 Oct:
 6. Coaching without a strap: power-only and cadence-only profiles coached on the emulator (t04d) with no zone wording; missing sensors
    show "— NO DATA" / "— NO STRAP" with no value drawn (t04c); averages exclude missing seconds; 0 W counts only as a real coasting zero.
 APK built from commit fbb608f = the commit the emulator job tested in the same run.
+
+## v0.11.1 — full-screen live dashboard (CI run 90 on main, commit 02a160e, 20 Oct 2026)
+Requested from the Nokia photo: gauges too small, graph too short, empty band above the coach. Root cause in `LiveScreen.kt`: fixed 118 dp
+graph + `Spacer(weight 1f)` + hard-coded 84 dp rings + a 51 dp link row (Material 48 dp touch target). Now: ring = (screen width − 28 dp) / 3
+− 6 dp (104 dp on 360 dp; 92 dp at 1.3× font), value text scales with the ring, the graph takes all remaining height (167 dp on the
+emulator at 1.0×, 132 dp at 1.3×; more on the phone, whose status bar is smaller than the emulator's 68 dp), coach 2 dp below the graph,
+link row 32 dp. The flow test now fails if graph→coach > 12 dp or coach→controls > 16 dp and logs the geometry (docs/evidence/
+v0111-run89-layout.txt). Evidence: docs/evidence/v0111-run89-live-before-after.png. Nothing outside the live layout changed.
+Release: `BikeComputer-build90.apk` · 17.97 MB · SHA-256 `e75a99cad6543a2cf3f9b91d60656a2094f9038d430143ee9312181a8d208596` · versionCode 15 ·
+versionName 0.11.1 · same signing certificate `E2:51:4D:…:1E:4F` · build + 161 unit tests ✓ · emulator 9/9 ✓ · monkey ✓ · no app crash ·
+APK from the commit the emulator tested.
