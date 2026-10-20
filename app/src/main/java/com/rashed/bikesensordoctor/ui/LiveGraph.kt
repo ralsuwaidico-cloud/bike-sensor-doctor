@@ -46,6 +46,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rashed.bikesensordoctor.core.GraphBands
@@ -359,23 +360,23 @@ fun DetailGraphs(buf: LiveBuffer, version: Long, windowAverages: ((Int) -> com.r
  */
 @Composable
 fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, max: Int, lo: Int?, hi: Int?, color: Color, kind: String,
-                 tag: String = "", reference: Boolean = false, statusOverride: String? = null, compact: Boolean = false, testTag: String) {
+                 tag: String = "", reference: Boolean = false, statusOverride: String? = null, compact: Boolean = false, testTag: String, ring: Dp = 84.dp) {
     val status = GraphScale.status(value, lo, hi)
     val (word, wc) = statusLabel(status, kind)
     val statusWord = statusOverride ?: word
     val statusColor = if (statusOverride != null) D7.Faint else wc
-    // v0.11 approved layout: 84 dp rings (1.5× — the largest three-across on a 340 dp screen); 76 dp at large system font
-    val ring = if (compact) 76.dp else 84.dp
+    // v0.11.1: the ring diameter is given by the screen (LiveScreen computes the largest three-across size); the value scales with the ring
+    // so it stays readable outdoors and never spills out of the dial, whatever the system font size
     val ld = LocalDensity.current
-    val valuePx = with(ld) { (if (compact) 26.sp else 30.sp).toPx() }
-    val unitPx = with(ld) { 7.5.sp.toPx() }
+    val valuePx = with(ld) { (ring * 0.37f).toPx() }
+    val unitPx = with(ld) { 8.sp.toPx() }
     val paint = remember { android.graphics.Paint().apply { isAntiAlias = true; textAlign = android.graphics.Paint.Align.CENTER } }
     // the value is drawn, not a Text node: expose it to accessibility (and the UI tests) as a description
     val desc = "$label ${value?.toString() ?: "no data"} $unit, $statusWord"
     Column(modifier.testTag(testTag).semantics { contentDescription = desc }, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = color, letterSpacing = 1.sp, maxLines = 1, softWrap = false)
-        Canvas(Modifier.padding(top = 2.dp).size(ring)) {
-            val sw = 9f * density
+        Text(label, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 9.sp, color = color, letterSpacing = 1.sp, maxLines = 1, softWrap = false)
+        Canvas(Modifier.padding(top = 1.dp).size(ring)) {
+            val sw = (ring.toPx() / 9.5f).coerceAtLeast(8f * density)
             val over = sw / 2 + 1f * density
             val r = size.minDimension / 2 - over
             val c = Offset(size.width / 2, size.height / 2)
@@ -406,7 +407,7 @@ fun CompactGauge(modifier: Modifier, label: String, value: Int?, unit: String, m
             drawContext.canvas.nativeCanvas.drawText(unit, c.x, c.y + r + sw / 2 - unitPx * 0.2f, paint)
         }
         Box(Modifier.padding(top = 1.dp).background(statusColor.copy(alpha = 0.16f), RoundedCornerShape(7.dp)).border(1.dp, statusColor, RoundedCornerShape(7.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
-            Text(statusWord, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 7.sp, color = statusColor, maxLines = 1, softWrap = false)
+            Text(statusWord, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = statusColor, maxLines = 1, softWrap = false)
         }
     }
 }
