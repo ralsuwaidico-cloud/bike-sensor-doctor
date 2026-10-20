@@ -111,17 +111,30 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
                     // budget: everything else on the screen (status line, top stats, legend, averages, coach, controls, links, paddings)
                     // plus a readable graph minimum; the geometry shrinks the rings together until the block fits, never lets them overlap
                     val fixed = if (bigFont) 330.dp else 292.dp
-                    val minGraph = if (bigFont) 90.dp else 110.dp
+                    val minGraph = if (bigFont) 90.dp else 100.dp
                     val maxBlock = (screenH - fixed - minGraph).coerceAtLeast(150.dp)
+                    // label / chip heights as Compose really lays them out (measured on the emulator: a 102 dp ring column is 154 dp tall)
                     val g = remember(contentW, maxBlock, bigFont) {
-                        com.rashed.bikesensordoctor.core.PowerFocus.compute(contentW.value, maxBlock.value, if (bigFont) 17f else 13f, if (bigFont) 25f else 20f, if (bigFont) 110f else 96f)
+                        com.rashed.bikesensordoctor.core.PowerFocus.compute(contentW.value, maxBlock.value, if (bigFont) 18f else 14f, if (bigFont) 46f else 38f, if (bigFont) 110f else 96f)
                     }
-                    Box(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp).height(g.blockHeight.dp).testTag("gauges_power")) {
-                        CompactGauge(Modifier.offset(x = g.xLeft.dp, y = g.yLower.dp).width(g.colSmall.dp), "CADENCE", d.cadenceRpm, "RPM", com.rashed.bikesensordoctor.core.Targets.CADENCE_GAUGE_MAX, b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = simTag,
-                            statusOverride = cadStatus, compact = bigFont, testTag = "card_cad", ring = g.small.dp)
-                        CompactGauge(Modifier.offset(x = g.xPower.dp, y = g.yPower.dp).width(g.colPower.dp), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = simTag, reference = b?.pwReference == true,
-                            statusOverride = pwStatus, compact = bigFont, testTag = "card_power", ring = g.power.dp)
-                        CompactGauge(Modifier.offset(x = g.xRight.dp, y = g.yLower.dp).width(g.colSmall.dp), "HEART RATE", hrLive, "BPM", st.hrMaxGauge, b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = simTag, compact = bigFont, testTag = "card_hr", ring = g.small.dp)
+                    // a custom Layout: the columns are placed at the computed x/y, and the block's height comes from the MEASURED column
+                    // heights (label + ring + status chip), so nothing below can ever be drawn over a chip whatever the font metrics
+                    androidx.compose.ui.layout.Layout(
+                        modifier = Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp).testTag("gauges_power"),
+                        content = {
+                            CompactGauge(Modifier.width(g.colSmall.dp), "CADENCE", d.cadenceRpm, "RPM", com.rashed.bikesensordoctor.core.Targets.CADENCE_GAUGE_MAX, b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = simTag,
+                                statusOverride = cadStatus, compact = bigFont, testTag = "card_cad", ring = g.small.dp)
+                            CompactGauge(Modifier.width(g.colPower.dp), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = simTag, reference = b?.pwReference == true,
+                                statusOverride = pwStatus, compact = bigFont, testTag = "card_power", ring = g.power.dp)
+                            CompactGauge(Modifier.width(g.colSmall.dp), "HEART RATE", hrLive, "BPM", st.hrMaxGauge, b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = simTag, compact = bigFont, testTag = "card_hr", ring = g.small.dp)
+                        }
+                    ) { measurables, constraints ->
+                        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+                        val cad = measurables[0].measure(loose); val pw = measurables[1].measure(loose); val hr = measurables[2].measure(loose)
+                        val xL = g.xLeft.dp.roundToPx(); val xP = g.xPower.dp.roundToPx(); val xR = g.xRight.dp.roundToPx()
+                        val yP = g.yPower.dp.roundToPx(); val yL = g.yLower.dp.roundToPx()
+                        val h = maxOf(yP + pw.height, yL + cad.height, yL + hr.height)
+                        layout(constraints.maxWidth, h) { cad.placeRelative(xL, yL); pw.placeRelative(xP, yP); hr.placeRelative(xR, yL) }
                     }
                 }
                 com.rashed.bikesensordoctor.core.DashLayout.CLASSIC -> {

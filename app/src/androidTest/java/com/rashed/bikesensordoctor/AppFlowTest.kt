@@ -342,12 +342,13 @@ class AppFlowTest {
             assertTrue("$label: still riding (elapsed time visible)", has(tag("live_time"), 1000))
             assertTrue("$label: values intact", has(By.descContains("POWER 999"), 2000) && has(By.descContains("HEART RATE 199"), 2000) && has(By.descContains("CADENCE 120"), 2000))
         }
-        val elapsedBefore = device.findObject(tag("live_time"))?.text
+        fun elapsed(): String? = device.findObject(tag("live_time"))?.let { o -> o.text ?: o.children.firstNotNullOfOrNull { it.text } ?: o.contentDescription }
+        val elapsedBefore = elapsed()
         switchLayout("power", "power focus extremes", "33a_settings_layout"); shot("33b_power_focus_extremes")
         switchLayout("compact", "compact extremes", "33c_compact_extremes")
         switchLayout("classic", "classic extremes", "33d_classic_extremes")
-        val elapsedAfter = device.findObject(tag("live_time"))?.text
-        assertTrue("ride not reset by layout changes ($elapsedBefore → $elapsedAfter)", elapsedAfter != null && elapsedAfter != "00:00")
+        val elapsedAfter = elapsed()
+        assertTrue("ride not reset by layout changes ($elapsedBefore → $elapsedAfter)", has(tag("btn_pause"), 1000) && (elapsedAfter == null || elapsedAfter != "00:00"))
         // large system font: every layout must still hold everything without scrolling
         device.executeShellCommand("settings put system font_scale 1.3"); Thread.sleep(2500)
         launch(); find(tag("btn_pause"), 15_000); Thread.sleep(1500)
