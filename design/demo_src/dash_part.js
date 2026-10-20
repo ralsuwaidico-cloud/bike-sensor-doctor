@@ -70,7 +70,36 @@ function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 /* ---- geometry of the one-screen layout (viewBox 300×600 ≈ the Nokia 5.3 content area between the Android bars) ---- */
 /* v0.11 layout: gauges 1.5× (three at 2× would be 3 × 140 dp = 420 dp on a 340 dp-wide screen — they cannot sit in one row, and two rows
    would push the graph and coach off a 640 dp screen without scrolling), graph at half height with an averages row beneath the legend. */
-const G={ A:{y:16,h:44}, B:{y:60,h:150}, legendY:222, avgY:236, plot:{x:12,y:244,w:276,h:98}, axisY:354, D:{y:362,h:60}, btnY:432, linkY:498 };
+/* v0.12: three presentations of the same data, chosen per rider ("Power Focus" default for new riders, "Classic", "Compact").
+   The viewBox is 300 wide ≈ 360 dp, so 1 unit = 1.2 dp; content width 276 ≈ 331 dp. The Power-Focus geometry is a port of
+   core/DashLayout.kt: rings, labels and status chips are placed from circle/rectangle distances, never from guessed offsets. */
+let DL = (()=>{ try { return localStorage.getItem("bc.dashLayout") || "power"; } catch(e){ return "power"; } })();
+function setLayout(k){ DL=k; try{ localStorage.setItem("bc.dashLayout",k); }catch(e){} G=layoutGeometry(); if(view==="live") showView("live"); }
+function powerFocusGeometry(contentW,maxBlockH,labelH,chipH,chipW,labelW){
+  const GAP=6; const dist=(cx,cy,l,t,r,b)=>{ const nx=Math.min(Math.max(cx,l),r), ny=Math.min(Math.max(cy,t),b); return Math.hypot(cx-nx,cy-ny); };
+  let best=null;
+  for(let scale=1.10; scale>=0.55; scale-=0.02){
+    const p=Math.round(contentW*0.44*scale), s=Math.round(contentW*0.30*scale); const colS=Math.max(s,chipW), colP=Math.max(p,chipW);
+    const pcx=contentW/2, pcy=labelH+p/2, lcx=colS/2, rcx=contentW-colS/2, dx=pcx-lcx, need=(p+s)/2+GAP;
+    let dy = dx>=need ? 0 : Math.sqrt(need*need-dx*dx), lcy;
+    for(;;){ lcy=Math.max(pcy+dy, labelH+s/2); const lt=lcy-s/2-labelH, lb=lcy-s/2;
+      const labelClear = dist(pcx,pcy,lcx-labelW/2,lt,lcx+labelW/2,lb) >= p/2+GAP/2;
+      const chipClear = dist(lcx,lcy,pcx-chipW/2,pcy+p/2,pcx+chipW/2,pcy+p/2+chipH) >= s/2+GAP/2;
+      if(labelClear&&chipClear) break; dy+=1; if(dy>p) break; }
+    const blockH=Math.max(pcy+p/2+chipH, lcy+s/2+chipH);
+    const g={power:p,small:s,colP,colS,xPower:Math.round(pcx-colP/2),xLeft:0,xRight:Math.round(contentW-colS),yPower:0,yLower:Math.round(lcy-s/2-labelH),blockH:Math.round(blockH)+1,pc:[pcx,pcy],lc:[lcx,lcy],rc:[rcx,lcy]};
+    if(!best) best=g; if(blockH<=maxBlockH) return g; }
+  return best; }
+function layoutGeometry(){
+  // fixed parts (viewBox units): A header 44 from y=16; legend 12 + averages 14; coach 60; buttons 44; links row; a readable graph minimum of 90
+  const B_y=60, btnY=432, linkY=498, coachH=60, minPlot=90;
+  let Bh, gauges;
+  if(DL==="power"){ const maxBlock = btnY-10-coachH-10-minPlot-12-26-B_y; gauges=powerFocusGeometry(276, maxBlock, 11, 17, 80, 54); Bh=gauges.blockH; }
+  else if(DL==="classic"){ Bh=150; gauges=null; }
+  else { Bh=66; gauges=null; }
+  const legendY=B_y+Bh+12, avgY=legendY+14, plotY=avgY+8, Dy=btnY-10-coachH, plotH=Dy-14-plotY;
+  return { A:{y:16,h:44}, B:{y:B_y,h:Bh}, legendY, avgY, plot:{x:12,y:plotY,w:276,h:plotH}, axisY:plotY+plotH+12, D:{y:Dy,h:coachH}, btnY, linkY, pf:gauges }; }
+let G=layoutGeometry();
 const GR={r:42,sw:9,cy:78,val:32};
 /* ---- hybrid: compact Design-7 circular gauges. LIVE dot and TARGET band share one numerical scale (0..max of the dial), so their
    positions genuinely represent the reading and the range: power 0..max(300, 1.5×FTP), HR 0..max HR, cadence 0..130. */
@@ -81,17 +110,32 @@ function garc(cx,cy,r,a0,a1){ if(a1-a0<0.01) return ""; const [x0,y0]=gpol(cx,cy
 function gang(f){ return GS0+GSW*Math.max(0,Math.min(1,f)); }
 let view="live", detWin=300, detSel=null, latestTG=null;
 
-function metricCard(x,key,label,unit,tag){ const w=96,y=G.B.y, cx=x+w/2, cy=y+GR.cy, r=GR.r, sw=GR.sw; return `<g id="card_${key}">
-  <text x="${cx}" y="${y+9}" text-anchor="middle" fill="${GC[key]}" font-size="7.5" font-weight="700" letter-spacing="1">${label}</text>
+/* per-key gauge placement for the current layout: centre, radius, stroke, value size, chip position */
+function gaugeGeo(key){
+  if(DL==="power"){ const g=G.pf, big=key==="pw"; const [cx,cy]= big?g.pc:(key==="cad"?g.lc:g.rc); const d= big?g.power:g.small; const r=d/2-5.5; const sw=Math.max(7,d/9.5);
+    return {cx, cy:G.B.y+cy, r, sw, val:Math.round(d*0.37), labelY:G.B.y+cy-d/2-3, pillY:G.B.y+cy+d/2+2, pillW: big?80:64}; }
+  const x={pw:6,hr:102,cad:198}[key]; return {cx:x+48, cy:G.B.y+GR.cy, r:GR.r, sw:GR.sw, val:GR.val, labelY:G.B.y+9, pillY:G.B.y+132, pillW:64}; }
+function metricCard(x,key,label,unit,tag){
+  if(DL==="compact"){ const w=88,h=G.B.h,y=G.B.y; return `<g id="card_${key}">
+  <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${C.panel}" stroke="${C.line}"/><rect x="${x}" y="${y}" width="3" height="${h}" rx="1.5" fill="${GC[key]}"/>
+  <text x="${x+10}" y="${y+12}" fill="${GC[key]}" font-size="8" font-weight="700" letter-spacing="1">${label}</text>
+  <text id="${key}Val" x="${x+10}" y="${y+38}" fill="${C.fg}" font-size="27" font-weight="600" font-family="Rajdhani">—</text>
+  <text x="${x+w-6}" y="${y+38}" text-anchor="end" fill="${C.mut}" font-size="8">${unit}</text>
+  <rect x="${x+10}" y="${y+45}" width="${w-20}" height="4" rx="2" fill="${C.track}"/>
+  <rect id="${key}Band" x="0" y="${y+45}" width="0" height="4" rx="2" fill="${GC[key]}" opacity=".55"/>
+  <rect id="${key}Mark" x="0" y="${y+42}" width="3" height="10" rx="1" fill="${C.fg}" visibility="hidden"/>
+  <text id="${key}Stat" x="${x+10}" y="${y+59}" fill="${C.faint}" font-size="7.5" font-weight="700">— NO DATA</text></g>`; }
+  const g=gaugeGeo(key); const cx=g.cx, cy=g.cy, r=g.r, sw=g.sw; return `<g id="card_${key}">
+  <text x="${cx}" y="${g.labelY}" text-anchor="middle" fill="${GC[key]}" font-size="${DL==="power"&&key==="pw"?9:7.5}" font-weight="700" letter-spacing="1">${label}</text>
   <path d="${garc(cx,cy,r,GS0,GS0+GSW)}" fill="none" stroke="${C.track}" stroke-width="${sw}"/>
   <path id="${key}Prog" d="" fill="none" stroke="${GC[key]}" stroke-width="${sw}" stroke-linecap="round" opacity=".55"/>
   <path id="${key}Band" d="" fill="none" stroke="${C.fg}" stroke-width="3"/>
   <line id="${key}BandLo" stroke="${C.fg}" stroke-width="1.5"/><line id="${key}BandHi" stroke="${C.fg}" stroke-width="1.5"/>
   <circle id="${key}Live" r="6" fill="${C.bg}" stroke="${GC[key]}" stroke-width="3" visibility="hidden"/>
-  <text id="${key}Val" x="${cx}" y="${cy+11}" text-anchor="middle" fill="${C.fg}" font-size="${GR.val}" font-weight="600" font-family="Rajdhani">—</text>
+  <text id="${key}Val" x="${cx}" y="${cy+g.val*0.34}" text-anchor="middle" fill="${C.fg}" font-size="${g.val}" font-weight="600" font-family="Rajdhani">—</text>
   <text x="${cx}" y="${cy+r+sw/2-1}" text-anchor="middle" fill="${C.mut}" font-size="7.5">${unit}</text>
-  <rect id="${key}Pill" x="${cx-32}" y="${y+132}" width="64" height="15" rx="7.5" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/>
-  <text id="${key}Stat" x="${cx}" y="${y+142.5}" text-anchor="middle" fill="${C.faint}" font-size="7.2" font-weight="700">— NO DATA</text></g>`; }
+  <rect id="${key}Pill" x="${cx-g.pillW/2}" y="${g.pillY}" width="${g.pillW}" height="15" rx="7.5" fill="${C.faint}" fill-opacity=".16" stroke="${C.faint}"/>
+  <text id="${key}Stat" x="${cx}" y="${g.pillY+10.5}" text-anchor="middle" fill="${C.faint}" font-size="7.2" font-weight="700">— NO DATA</text></g>`; }
 
 function buildPhone(){
   const P=G.plot;
@@ -110,7 +154,8 @@ function buildPhone(){
     <text id="aPhaseSub" x="257" y="${G.A.y+33}" text-anchor="middle" fill="${C.violet}" font-size="7.5">04:59 left</text>
   </g>
   <!-- B · live sensor readings -->
-  ${metricCard(6,"pw","POWER","W","SIM")}${metricCard(102,"hr","HEART RATE","BPM","REAL")}${metricCard(198,"cad","CADENCE","RPM","SIM")}
+  ${DL==="compact" ? metricCard(12,"pw","POWER","W","SIM")+metricCard(106,"hr","HEART RATE","BPM","REAL")+metricCard(200,"cad","CADENCE","RPM","SIM")
+                   : metricCard(6,"pw","POWER","W","SIM")+metricCard(102,"hr","HEART RATE","BPM","REAL")+metricCard(198,"cad","CADENCE","RPM","SIM")}
   <!-- C · combined performance graph -->
   <g id="legend" font-size="7.5"></g>
   <g id="avgRow" font-size="7.5"></g>
@@ -159,9 +204,15 @@ function buildDetails(){ return `<svg id="detSvg" viewBox="0 0 ${W} ${H}" xmlns=
 
 /* ---- per-frame rendering ---- */
 function statusOf(n,v){ if(v==null) return "NONE"; if(v===0) return "ZERO"; if(n==null) return "NONE"; return n<0?"BELOW":n>1?"ABOVE":"ON"; }
-function setCard(key,v,lo,hi,unitStat){ const x={pw:6,hr:102,cad:198}[key]; const cx=x+48, cy=G.B.y+GR.cy, r=GR.r, sw=GR.sw; const max=GAUGE[key].max();
+function setCard(key,v,lo,hi,unitStat){ const gg=gaugeGeo(key); const cx=gg.cx, cy=gg.cy, r=gg.r, sw=gg.sw; const max=GAUGE[key].max();
   const n=normOf(v,lo,hi); let st=statusOf(n,v); if(key==="pw"&&v!=null&&v>0&&!CFG.powerVerified) st="UNVERIFIED";
   q("#"+key+"Val").textContent= v==null?"—":v; q("#"+key+"Val").setAttribute("fill", v==null?C.faint:C.fg);
+  if(DL==="compact"){ // v0.10 cards: lit band segment + marker on the same compressed scale as the graph
+    const x={pw:12,hr:106,cad:200}[key], w=88, bx=x+10, bw=w-20; const band=q("#"+key+"Band"), mark=q("#"+key+"Mark");
+    if(lo!=null&&hi!=null){ band.setAttribute("x",bx+bw*(1-BAND_BOT)); band.setAttribute("width",bw*(BAND_BOT-BAND_TOP)); } else band.setAttribute("width",0);
+    if(n!=null){ mark.setAttribute("x",bx+bw*(1-yFrac(n))-1.5); mark.setAttribute("visibility","visible"); } else mark.setAttribute("visibility","hidden");
+    const T={BELOW:["▼ BELOW",C.cyan],ON:["● ON TARGET",C.green],ABOVE:["▲ ABOVE",C.amber],ZERO:[key==="pw"?"○ COASTING":"○ STOPPED",C.faint],NONE:[key==="hr"?"— NO STRAP":"— NO DATA",C.faint],UNVERIFIED:["○ UNVERIFIED",C.faint]}[st];
+    const txt=q("#"+key+"Stat"); txt.textContent=T[0]; txt.setAttribute("fill",T[1]); return st; }
   // progress arc + LIVE dot at the reading, on the dial's scale
   const prog=q("#"+key+"Prog"), live=q("#"+key+"Live");
   if(v!=null){ const f=Math.min(1,v/max); prog.setAttribute("d",garc(cx,cy,r,GS0,gang(f))); const [lx,ly]=gpol(cx,cy,r,gang(f)); live.setAttribute("cx",lx.toFixed(1)); live.setAttribute("cy",ly.toFixed(1)); live.setAttribute("visibility","visible"); }

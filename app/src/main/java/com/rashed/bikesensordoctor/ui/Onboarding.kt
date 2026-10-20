@@ -51,71 +51,96 @@ import com.rashed.bikesensordoctor.ride.Rider
 
 @Composable
 fun SignInScreen(vm: DoctorViewModel, switching: Boolean, onDone: () -> Unit, onCancel: (() -> Unit)?) {
+    // v0.12 — real riders only ("Who's riding today?"); SAMPLE riders appear only in Developer / Test mode. A shared cycling
+    // computer: each person registers once, then taps their card. Last active rider is remembered by the store.
     val riders = remember { mutableStateOf(vm.engine.riders.list()) }
     var pinFor by remember { mutableStateOf<Rider?>(null) }
     var pin by remember { mutableStateOf("") }
     var pinError by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
     var newPin by remember { mutableStateOf("") }
     val active = vm.engine.rider?.id
+    val devMode = vm.engine.riders.devMode
     fun signIn(r: Rider) { if (vm.engine.switchRider(r.id)) onDone() }
 
-    Column(Modifier.fillMaxSize().background(D7.Bg).verticalScroll(rememberScrollState()).padding(14.dp)) {
-        D7TopBar(if (switching) "SWITCH RIDER" else "SIGN IN", if (onCancel != null) "Cancel" else null, onCancel)
-        Headline(if (switching) "Who is riding?" else "Choose your account")
-        Spacer(Modifier.height(4.dp))
-        Muted(if (switching) "The next ride is saved under the rider you pick. Their zones, coach, heart-rate strap and workout load with them."
-              else "Each rider's zones, coaching and rides are kept apart on this phone. Accounts are local for now — there is no cloud sign-in yet.")
-        Spacer(Modifier.height(10.dp))
-        riders.value.forEach { r ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).background(D7.Panel2, RoundedCornerShape(12.dp))
-                .border(1.dp, if (r.id == active) D7.Cyan else D7.Line, RoundedCornerShape(12.dp))
-                .clickable { if (r.pin != null) { pinFor = r; pin = ""; pinError = false } else signIn(r) }
-                .padding(horizontal = 10.dp, vertical = 8.dp).testTag("rider_${r.id}"), verticalAlignment = Alignment.CenterVertically) {
-                Avatar(r.initials)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(r.name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = D7.Fg)
-                        if (r.isSample) { Spacer(Modifier.width(6.dp)); SampleTag() }
-                    }
-                    Text((if (r.completed) RiderAnswers.GOAL_SHORT[RiderProfile.primaryGoal(r.answers)] ?: "" else "setup not finished") + (if (r.pin != null) " · PIN" else ""), fontSize = 12.sp, color = D7.Mut)
-                }
-                if (r.id == active) Text("ACTIVE", fontFamily = PlexMono, fontSize = 9.sp, color = D7.Cyan)
-            }
-            if (pinFor?.id == r.id) D7Card(Modifier.padding(vertical = 4.dp)) {
-                CardTitle("PIN FOR ${r.name.uppercase()}")
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(value = pin, onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = false }, singleLine = true, modifier = Modifier.width(130.dp).testTag("pin_box"),
-                        visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        textStyle = TextStyle(fontFamily = PlexMono, fontSize = 18.sp, color = D7.Fg),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = D7.Cyan, unfocusedBorderColor = D7.Line, cursorColor = D7.Cyan))
-                    Spacer(Modifier.width(8.dp))
-                    PrimaryButton("UNLOCK", Modifier.testTag("pin_ok")) { if (pin == r.pin) signIn(r) else { pinError = true; pin = "" } }
-                }
-                if (pinError) Text("Wrong PIN.", color = D7.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        D7Card {
-            CardTitle("CREATE ACCOUNT")
+    @Composable fun addForm(title: String) {
+        D7Card(Modifier.padding(top = 8.dp), accent = D7.Green) {
+            CardTitle(title)
+            OutlinedTextField(value = newName, onValueChange = { newName = it.take(18) }, singleLine = true, label = { Text("Rider name", fontSize = 12.sp) }, modifier = Modifier.fillMaxWidth().testTag("new_name"),
+                textStyle = TextStyle(fontSize = 17.sp, color = D7.Fg),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = D7.Cyan, unfocusedBorderColor = D7.Line, focusedLabelColor = D7.Cyan, unfocusedLabelColor = D7.Mut, cursorColor = D7.Cyan))
+            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(value = newName, onValueChange = { newName = it.take(18) }, singleLine = true, label = { Text("Display name", fontSize = 11.sp) }, modifier = Modifier.weight(1f).testTag("new_name"),
-                    textStyle = TextStyle(fontSize = 15.sp, color = D7.Fg),
+                OutlinedTextField(value = newPin, onValueChange = { newPin = it.filter { c -> c.isDigit() }.take(6) }, singleLine = true, label = { Text("PIN (optional)", fontSize = 12.sp) }, modifier = Modifier.width(150.dp).testTag("new_pin"),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), textStyle = TextStyle(fontFamily = PlexMono, fontSize = 17.sp, color = D7.Fg),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = D7.Cyan, unfocusedBorderColor = D7.Line, focusedLabelColor = D7.Cyan, unfocusedLabelColor = D7.Mut, cursorColor = D7.Cyan))
-                Spacer(Modifier.width(8.dp))
-                OutlinedTextField(value = newPin, onValueChange = { newPin = it.filter { c -> c.isDigit() }.take(6) }, singleLine = true, label = { Text("PIN (opt.)", fontSize = 11.sp) }, modifier = Modifier.width(110.dp).testTag("new_pin"),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), textStyle = TextStyle(fontFamily = PlexMono, fontSize = 15.sp, color = D7.Fg),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = D7.Cyan, unfocusedBorderColor = D7.Line, focusedLabelColor = D7.Cyan, unfocusedLabelColor = D7.Mut, cursorColor = D7.Cyan))
+                Spacer(Modifier.width(10.dp))
+                Muted("Only if you want to keep your profile private on this device.", 11)
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             PrimaryButton("CREATE & SET UP", Modifier.fillMaxWidth().testTag("create_btn"), enabled = newName.isNotBlank()) {
                 vm.engine.createRider(newName, newPin.ifBlank { null }); riders.value = vm.engine.riders.list(); onDone()
             }
+            Muted("Next: a two-minute setup — age, weight, experience and your goal. The coach works out the rest.", 11)
         }
-        Spacer(Modifier.height(10.dp))
-        Muted("Sample riders (Omar, Layla, Sami, Noor) are fictional and marked SAMPLE everywhere. They exist so the club and leaderboard have something to show.", 12)
-        Spacer(Modifier.height(20.dp))
+    }
+
+    Column(Modifier.fillMaxSize().background(D7.Bg)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 8.dp)) {
+            D7TopBar(if (switching) "SWITCH RIDER" else "RIDERS", if (onCancel != null) "Cancel" else null, onCancel)
+            if (riders.value.isEmpty()) {
+                // ---- first run: no riders yet ----
+                Spacer(Modifier.height(40.dp))
+                Eyebrow("BIKE COMPUTER")
+                Spacer(Modifier.height(8.dp))
+                Headline("Welcome to Bike Computer", 26)
+                Spacer(Modifier.height(10.dp))
+                Muted("Create your rider profile to get started.", 16)
+                Spacer(Modifier.height(24.dp))
+                if (!adding) PrimaryButton("CREATE RIDER PROFILE", Modifier.fillMaxWidth().height(56.dp).testTag("create_first")) { adding = true }
+                else addForm("YOUR RIDER PROFILE")
+            } else {
+                Headline("Who's riding today?", 24)
+                Spacer(Modifier.height(10.dp))
+                riders.value.forEach { r ->
+                    val selected = r.id == active
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(D7.Panel2, RoundedCornerShape(14.dp))
+                        .border(if (selected) 2.dp else 1.dp, if (selected) D7.Cyan else D7.Line, RoundedCornerShape(14.dp))
+                        .clickable { if (r.pin != null) { pinFor = r; pin = ""; pinError = false } else signIn(r) }
+                        .padding(horizontal = 14.dp, vertical = 14.dp).testTag("rider_${r.id}"), verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(r.initials, 44)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(r.name, fontFamily = Archivo, fontWeight = FontWeight.ExtraBold, fontSize = 19.sp, color = D7.Fg)
+                                if (r.isSample) { Spacer(Modifier.width(6.dp)); SampleTag() }
+                            }
+                            Text((if (r.completed) RiderAnswers.GOAL_SHORT[RiderProfile.primaryGoal(r.answers)] ?: "" else "Setup not finished") + (if (r.pin != null) " · PIN" else ""), fontSize = 12.sp, color = D7.Mut)
+                        }
+                        Text(if (selected && switching) "ACTIVE" else "SELECT ›", fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = D7.Cyan)
+                    }
+                    if (pinFor?.id == r.id) D7Card(Modifier.padding(vertical = 4.dp)) {
+                        CardTitle("PIN FOR ${r.name.uppercase()}")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(value = pin, onValueChange = { pin = it.filter { c -> c.isDigit() }.take(6); pinError = false }, singleLine = true, modifier = Modifier.width(130.dp).testTag("pin_box"),
+                                visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                                textStyle = TextStyle(fontFamily = PlexMono, fontSize = 18.sp, color = D7.Fg),
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = D7.Cyan, unfocusedBorderColor = D7.Line, cursorColor = D7.Cyan))
+                            Spacer(Modifier.width(8.dp))
+                            PrimaryButton("UNLOCK", Modifier.testTag("pin_ok")) { if (pin == r.pin) signIn(r) else { pinError = true; pin = "" } }
+                        }
+                        if (pinError) Text("Wrong PIN.", color = D7.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+                if (adding) addForm("NEW RIDER")
+                if (devMode) { Spacer(Modifier.height(8.dp)); Muted("Developer / Test mode is on: SAMPLE riders are fictional and never count on real boards. Turn it off in Settings.", 11) }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+        if (riders.value.isNotEmpty() && !adding) Box(Modifier.fillMaxWidth().background(D7.Panel).padding(12.dp)) {
+            PrimaryButton("+  ADD NEW RIDER", Modifier.fillMaxWidth().height(54.dp).testTag("add_rider")) { adding = true; newName = ""; newPin = "" }
+        }
     }
 }
 
@@ -131,7 +156,7 @@ fun WelcomeScreen(vm: DoctorViewModel, onStart: () -> Unit, onSkip: () -> Unit, 
         Spacer(Modifier.height(8.dp))
         Headline("Let's build your personal cycling coach${r?.name?.let { ", $it" } ?: ""}.", 26)
         Spacer(Modifier.height(12.dp))
-        Muted("Six short pages, about two minutes. Skip anything you don't know — the coach will say what it still needs to learn. Nothing leaves this phone.", 15)
+        Muted("Two minutes: your age, weight, experience and goal. You don't need to know your FTP or heart-rate zones — the coach starts from sensible estimates and learns from your rides. Nothing leaves this phone.", 15)
         Spacer(Modifier.height(28.dp))
         PrimaryButton("START", Modifier.fillMaxWidth().testTag("start_onboarding"), onClick = onStart)
         Spacer(Modifier.height(8.dp))

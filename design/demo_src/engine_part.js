@@ -212,6 +212,7 @@ const el=id=>document.getElementById(id);
 let ride="r1", speedX=10, t=0, playing=false, raf=null, lastTs=0, acc=0; let DROP={pw:false,hr:false,cad:false};
 let coach, protos, logEntries=[], latest=null, npAcc=0, npN=0, distKm=0, zoneSec=[0,0,0,0,0], cueCounts={};
 const phoneEl=el("phone");
+
 const q=sel=>phoneEl.querySelector(sel);
 
 function fmt(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), r=s%60; return (m<10?"0":"")+m+":"+(r<10?"0":"")+r; }

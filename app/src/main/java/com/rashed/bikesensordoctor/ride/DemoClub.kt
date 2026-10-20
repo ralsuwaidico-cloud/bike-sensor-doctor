@@ -61,7 +61,12 @@ object DemoClub {
 
     /** Club membership: sample riders are members; real riders join with the invite code (stored locally). */
     private const val MEMBERS = "club_members"
-    fun members(ctx: Context): Set<String> = ctx.getSharedPreferences("bike_accounts", Context.MODE_PRIVATE).getStringSet(MEMBERS, null) ?: SAMPLE_IDS.toSet()
+    fun members(ctx: Context): Set<String> {
+        val sp = ctx.getSharedPreferences("bike_accounts", Context.MODE_PRIVATE)
+        val stored = sp.getStringSet(MEMBERS, null) ?: emptySet()
+        // sample riders are club members only in Developer / Test mode; real members are whoever joined with the code
+        return if (sp.getBoolean("dev_mode", false)) stored + SAMPLE_IDS else stored - SAMPLE_IDS.toSet()
+    }
     fun join(ctx: Context, riderId: String) { val m = members(ctx).toMutableSet(); m += riderId; ctx.getSharedPreferences("bike_accounts", Context.MODE_PRIVATE).edit().putStringSet(MEMBERS, m).apply() }
     fun leave(ctx: Context, riderId: String) { val m = members(ctx).toMutableSet(); m -= riderId; ctx.getSharedPreferences("bike_accounts", Context.MODE_PRIVATE).edit().putStringSet(MEMBERS, m).apply() }
 
@@ -75,7 +80,7 @@ object DemoClub {
                 out += BoardRide(r.id, s.startedAtMs, s.distanceKm, (s.durationMs / 1000).toInt(), s.elevationGainM, s.inZonePct, s.source)
             }
         }
-        out += rides().filter { r -> riders.any { it.id == r.riderId } }
+        out += rides().filter { r -> riders.any { it.id == r.riderId && it.isSample } }   // SAMPLE rides exist only for listed sample riders (dev mode)
         return out
     }
 

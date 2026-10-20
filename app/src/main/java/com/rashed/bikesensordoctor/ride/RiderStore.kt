@@ -36,10 +36,21 @@ class RiderStore(private val context: Context) {
         get() = sp.getString("active", null)?.takeIf { dir(it).exists() }
         set(v) = sp.edit().putString("active", v).apply()
 
+    /**
+     * v0.12 Developer / Test mode (off by default). Only when ON do the fictional SAMPLE riders (Omar, Layla, Sami, Noor) exist in
+     * the rider list, the club and the demo board. Real installs never see them; turning it off hides them again (their folders
+     * stay, tagged sample=true, and are ignored everywhere).
+     */
+    var devMode: Boolean
+        get() = sp.getBoolean("dev_mode", false)
+        set(v) { sp.edit().putBoolean("dev_mode", v).apply(); if (v) DemoClub.seed(this) else if (activeId?.let { load(it)?.isSample } == true) activeId = null }
+
     fun dir(id: String): File = File(root, id)
     fun ridesDir(id: String): File = if (id == LEGACY_ID) File(context.filesDir, "rides") else File(dir(id), "rides")
 
-    fun list(): List<Rider> = root.listFiles()?.filter { it.isDirectory }?.mapNotNull { load(it.name) }?.sortedWith(compareBy({ it.isSample }, { it.createdMs })) ?: emptyList()
+    /** Real riders only, unless Developer / Test mode is on (then SAMPLE riders follow the real ones). */
+    fun list(): List<Rider> = listAll().filter { !it.isSample || devMode }
+    fun listAll(): List<Rider> = root.listFiles()?.filter { it.isDirectory }?.mapNotNull { load(it.name) }?.sortedWith(compareBy({ it.isSample }, { it.createdMs })) ?: emptyList()
 
     fun load(id: String): Rider? {
         val d = dir(id); val meta = File(d, "meta.txt"); if (!meta.exists()) return null
@@ -70,10 +81,14 @@ class RiderStore(private val context: Context) {
 
     /**
      * First run after the update: an existing single-rider install becomes rider "Me" (its rides/settings stay where
-     * they are). Sample club riders are seeded once so the club and leaderboard have something to show.
+     * they are). v0.12: no sample riders are created for a real installation — they exist only in Developer / Test mode.
+     * An install that was seeded by an earlier version keeps its real riders; its sample folders are simply hidden.
      */
     fun migrateIfNeeded() {
-        if (root.listFiles()?.any { it.isDirectory } == true) return
+        if (root.listFiles()?.any { it.isDirectory } == true) {
+            if (activeId?.let { load(it)?.isSample } == true && !devMode) activeId = null   // never start the app as a hidden sample rider
+            return
+        }
         val legacyRides = File(context.filesDir, "rides")
         val legacyPrefs = context.getSharedPreferences("bike_computer", Context.MODE_PRIVATE)
         val hadApp = (legacyRides.listFiles()?.isNotEmpty() == true) || legacyPrefs.all.isNotEmpty()
@@ -81,7 +96,6 @@ class RiderStore(private val context: Context) {
             val me = create("Me", null, id = LEGACY_ID)
             activeId = me.id
         }
-        DemoClub.seed(this)
     }
 
     companion object { const val LEGACY_ID = "me" }

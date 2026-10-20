@@ -19,7 +19,8 @@ class RiderAnswers(initial: Map<String, String> = emptyMap()) {
     fun list(key: String): List<String> = m[key]?.split(',')?.filter { it.isNotEmpty() } ?: emptyList()
     fun setList(key: String, v: List<String>) { set(key, v.joinToString(",")) }
     fun has(key: String) = m.containsKey(key)
-    val isEmpty get() = m.isEmpty()
+    /** True when the rider has not answered anything yet (device preferences such as the dashboard layout do not count as answers). */
+    val isEmpty get() = m.keys.all { it in PREFERENCE_KEYS }
     fun toMap(): Map<String, String> = LinkedHashMap(m)
     fun copy() = RiderAnswers(m)
 
@@ -35,6 +36,9 @@ class RiderAnswers(initial: Map<String, String> = emptyMap()) {
     fun snapshot(): String = m.entries.joinToString("\n") { "${it.key}=${it.value.replace("\n", " ")}" }
 
     companion object {
+        /** Keys that are per-rider preferences, not onboarding answers. */
+        val PREFERENCE_KEYS = setOf("dashLayout")
+
         fun restore(text: String): RiderAnswers {
             val out = RiderAnswers()
             text.lines().forEach { line -> val i = line.indexOf('='); if (i > 0) out[line.substring(0, i)] = line.substring(i + 1) }

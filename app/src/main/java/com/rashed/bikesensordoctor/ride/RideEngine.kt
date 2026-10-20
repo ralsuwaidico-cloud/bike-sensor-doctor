@@ -254,7 +254,11 @@ class RideEngine(private val app: Application) {
         return true
     }
     fun signOut(): Boolean { if (stats.state == RideStats.State.RUNNING || stats.state == RideStats.State.PAUSED) return false; riders.activeId = null; rider = null; loadRiderState(); return true }
-    fun createRider(name: String, pin: String?): Rider { val r = riders.create(name, pin); switchRider(r.id); return r }
+    fun createRider(name: String, pin: String?): Rider {
+        val r = riders.create(name, pin)
+        r.answers[com.rashed.bikesensordoctor.core.DashLayout.KEY] = com.rashed.bikesensordoctor.core.DashLayout.DEFAULT_NEW.key   // v0.12: new riders start on Power Focus; existing riders keep Classic
+        riders.save(r); switchRider(r.id); return r
+    }
     /** Persist edits to the active rider's profile and re-derive the coach. */
     fun saveRider() { rider?.let { riders.save(it) }; loadRiderState() }
 

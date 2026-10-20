@@ -154,9 +154,10 @@ class AppFlowTest {
 
     @Test fun t01_firstLaunch_signIn_create_onboard_home() {
         launch()
-        find(tag("rider_omar"), 15_000)         // sample riders are seeded on first launch
-        shot("01_sign_in")
-        find(tag("new_name")).text = "Rashed"
+        // v0.12: a fresh install has NO riders and NO sample riders — the first screen is the welcome
+        find(text("Welcome to Bike Computer"), 15_000); shot("01_first_run")
+        assertFalse("no sample riders on a real install", has(tag("rider_omar"), 500) || has(text("Omar"), 500))
+        tap(tag("create_first")); find(tag("new_name")).text = "Rashed"; shot("01b_create_first")
         tap(tag("create_btn"))
         find(tag("start_onboarding")); shot("02_welcome")
         tap(tag("start_onboarding"))
@@ -187,7 +188,7 @@ class AppFlowTest {
     /** v0.11: the starting assumption follows weight × experience for every new rider, and riders never share it. */
     @Test fun t01b_starting_ftp_for_beginner_and_intermediate_riders() {
         launch(); find(tag("start_ride"), 15_000)
-        tap(tag("switch_rider")); find(tag("new_name")).text = "Nora"; tap(tag("create_btn")); find(tag("start_onboarding")); tap(tag("start_onboarding"))
+        tap(tag("switch_rider")); find(text("Who's riding today?")); shot("01c_riders_one"); tap(tag("add_rider")); find(tag("new_name")).text = "Nora"; shot("01d_add_rider"); tap(tag("create_btn")); find(tag("start_onboarding")); tap(tag("start_onboarding"))
         find(tag("num_weight")).text = "60"; device.waitForIdle(); tap(text("New")); tap(tag("next_page"))
         tap(text("Endurance (Zone 2)")); tap(text("90% of a ride in Zone 2")); tap(tag("next_page"))
         find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); tap(tag("next_page"))
@@ -206,6 +207,9 @@ class AppFlowTest {
     @Test fun t02_club_board_profile_tabs_and_back() {
         launch()
         find(tag("start_ride"), 15_000)
+        // the demo club needs the fictional riders → Developer / Test mode ON (off by default)
+        tap(text("⚙")); scrollTo(tag("dev_mode")); tap(tag("dev_mode")); device.pressBack(); find(tag("start_ride"))
+        tap(tag("switch_rider")); find(tag("rider_omar")); assertTrue(has(text("SAMPLE"), 2000)); shot("09b_riders_dev_mode"); tap(By.textContains("Cancel")); find(tag("start_ride"))
         tap(text("CLUB")); find(tag("invite_code")); shot("10_club_not_member")
         find(tag("invite_code")).text = "DAWN-7Q2K"; device.waitForIdle(); tap(tag("join_btn"))
         find(text("Leave club"), 5000); shot("11_club_joined")
@@ -217,24 +221,40 @@ class AppFlowTest {
         tap(text("ME")); find(tag("confirm_profile")); shot("16_me")
         device.pressBack(); find(tag("start_ride"))   // back from ME → Home
         tap(text("BOARD")); device.pressBack(); find(tag("start_ride"))   // back from board → Home
+        // Developer / Test mode OFF again → the sample riders disappear from the rider screen
+        tap(text("⚙")); scrollTo(tag("dev_mode")); tap(tag("dev_mode")); device.pressBack(); find(tag("start_ride"))
+        tap(tag("switch_rider")); find(text("Who's riding today?")); assertFalse("samples hidden in production", has(tag("rider_omar"), 1500)); tap(By.textContains("Cancel")); find(tag("start_ride"))
         device.pressBack()   // back on Home leaves the app
         assertTrue(device.wait(Until.gone(By.pkg(pkg).depth(0)), 5000))
     }
 
+    /** v0.12: a third REAL rider with a PIN; switching loads each rider's own profile and FTP, never another's; no sample riders. */
     @Test fun t03_switch_rider_isolates_profiles() {
         launch()
         find(tag("switch_rider"), 15_000); tap(tag("switch_rider"))
-        find(tag("rider_omar")); shot("17_switch")
-        tap(tag("rider_omar"))
-        find(text("Riding as "), 8000); assertTrue("home shows Omar", has(text("Omar"), 2000)); shot("18_home_omar")
-        assertTrue("Omar: Zone 2 endurance, 90 min", has(text("Zone 2 endurance"), 2000) && has(By.textStartsWith("90 min"), 2000))
-        // Omar's own live screen (different zones, same fixed layout)
-        tap(tag("start_ride")); find(tag("btn_start")); shot("18b_live_omar"); assertNoScrollLive("omar idle"); tap(tag("dash_home")); find(tag("start_ride"))
-        tap(tag("switch_rider")); tap(tag("rider_layla")); find(text("Riding as "), 8000); assertTrue("home shows Layla", has(text("Layla"), 2000)); shot("19_home_layla")
-        assertTrue("Layla's FTP goal gives sweet-spot work", has(text("Sweet-spot intervals (3 × 10 min at 88–93% FTP)"), 3000) || has(text("Zone 2 endurance (easy day after weights)"), 500))
-        // back to the created rider
-        tap(tag("switch_rider")); find(tag("rider_omar")); val mine = device.findObjects(By.res(java.util.regex.Pattern.compile("rider_r.*"))).firstOrNull(); assertNotNull(mine); mine!!.click()
-        find(text("Rashed"), 5000)
+        find(text("Who's riding today?")); assertFalse("no sample riders", has(tag("rider_omar"), 500)); shot("17_switch")
+        // add Ahmed (80 kg, New → 140 W) with PIN 2468
+        tap(tag("add_rider")); find(tag("new_name")).text = "Ahmed"; find(tag("new_pin")).text = "2468"; tap(tag("create_btn")); find(tag("start_onboarding")); tap(tag("start_onboarding"))
+        find(tag("num_weight")).text = "80"; device.waitForIdle(); tap(text("New")); tap(tag("next_page"))
+        tap(text("General fitness")); tap(tag("next_page"))
+        find(text("3")); retry { device.findObjects(text("3")).first().click() }; device.waitForIdle(1000); retry { device.findObjects(text("4")).last().click() }; device.waitForIdle(1000); tap(tag("next_page"))
+        assertTrue("Ahmed 80 kg beginner → 140 W", visible(text("140 W"), 6000)); tap(tag("next_page"))
+        tap(text("On")); tap(text("Normal")); tap(tag("next_page"))
+        find(tag("confirm_profile"), 10_000); scrollTo(tag("confirm_profile")); tap(tag("confirm_profile"))
+        find(text("Riding as "), 8000); assertTrue("home shows Ahmed", has(text("Ahmed"), 2000)); shot("18_home_ahmed")
+        tap(text("ME")); find(tag("confirm_profile")); tap(tag("exp_profile")); assertTrue("Ahmed keeps his own FTP", visible(By.textContains("140 W (starting assumption)"), 4000)); device.pressBack(); find(tag("start_ride"))
+        // Ahmed's own live screen (same fixed layout)
+        tap(tag("start_ride")); find(tag("btn_start")); shot("18b_live_ahmed"); assertNoScrollLive("ahmed idle"); tap(tag("dash_home")); find(tag("start_ride"))
+        // switch to Rashed (no PIN): straight in, his own 300 W
+        tap(tag("switch_rider")); shot("19_riders_three"); val me = find(By.res(java.util.regex.Pattern.compile("rider_r.*")).hasDescendant(text("Rashed"))); me.click()
+        find(text("Riding as "), 8000); assertTrue("home shows Rashed", has(text("Rashed"), 2000))
+        tap(text("ME")); find(tag("confirm_profile")); tap(tag("exp_profile")); assertTrue("Rashed keeps 300 W", visible(By.textContains("300 W (starting assumption)"), 4000)); device.pressBack(); find(tag("start_ride"))
+        // back to Ahmed: PIN required, wrong PIN refused, right PIN opens his profile
+        tap(tag("switch_rider")); val ah = find(By.res(java.util.regex.Pattern.compile("rider_r.*")).hasDescendant(text("Ahmed"))); ah.click()
+        find(tag("pin_box")).text = "0000"; tap(tag("pin_ok")); assertTrue("wrong PIN refused", visible(text("Wrong PIN."), 3000)); shot("19b_pin_wrong")
+        find(tag("pin_box")).text = "2468"; tap(tag("pin_ok")); find(text("Riding as "), 8000); assertTrue(has(text("Ahmed"), 2000))
+        // leave the device on Rashed for the following tests
+        tap(tag("switch_rider")); find(By.res(java.util.regex.Pattern.compile("rider_r.*")).hasDescendant(text("Rashed"))).click(); find(text("Rashed"), 5000)
     }
 
     @Test fun t04_simulated_ride_full_session() {
@@ -315,12 +335,31 @@ class AppFlowTest {
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause")); Thread.sleep(6000)
         shot("33_live_extremes"); assertNoScrollLive("extremes")
         assertTrue("999 W shown", has(By.descContains("POWER 999"), 2000)); assertTrue("199 bpm shown", has(By.descContains("HEART RATE 199"), 2000)); assertTrue("120 rpm shown", has(By.descContains("CADENCE 120"), 2000))
-        // large system font: the fixed layout must still hold everything
+        // v0.12: all three layouts, switched DURING the ride from Settings (presentation only — the ride keeps running)
+        fun switchLayout(key: String, label: String, shotName: String) {
+            tap(text("⚙")); scrollTo(tag("layout_$key")); tap(tag("layout_$key")); if (shotName == "33a_settings_layout") shot(shotName); device.pressBack(); find(tag("btn_pause"), 8000); Thread.sleep(1500)
+            assertTrue("$label: layout container", has(tag("gauges_$key"), 3000)); if (shotName != "33a_settings_layout") shot(shotName); assertNoScrollLive(label)
+            assertTrue("$label: still riding (elapsed time visible)", has(tag("live_time"), 1000))
+            assertTrue("$label: values intact", has(By.descContains("POWER 999"), 2000) && has(By.descContains("HEART RATE 199"), 2000) && has(By.descContains("CADENCE 120"), 2000))
+        }
+        fun elapsed(): String? = device.findObject(tag("live_time"))?.let { o -> o.text ?: o.children.firstNotNullOfOrNull { it.text } ?: o.contentDescription }
+        val elapsedBefore = elapsed()
+        switchLayout("power", "power focus extremes", "33a_settings_layout"); shot("33b_power_focus_extremes")
+        switchLayout("compact", "compact extremes", "33c_compact_extremes")
+        switchLayout("classic", "classic extremes", "33d_classic_extremes")
+        val elapsedAfter = elapsed()
+        assertTrue("ride not reset by layout changes ($elapsedBefore → $elapsedAfter)", has(tag("btn_pause"), 1000) && (elapsedAfter == null || elapsedAfter != "00:00"))
+        // large system font: every layout must still hold everything without scrolling
         device.executeShellCommand("settings put system font_scale 1.3"); Thread.sleep(2500)
         launch(); find(tag("btn_pause"), 15_000); Thread.sleep(1500)
-        shot("34_live_font_1_3"); assertNoScrollLive("font 1.3")
+        shot("34_live_font_1_3"); assertNoScrollLive("font 1.3 classic")
+        switchLayout("power", "font 1.3 power focus", "34b_power_focus_font_1_3")
+        switchLayout("compact", "font 1.3 compact", "34c_compact_font_1_3")
         device.executeShellCommand("settings put system font_scale 1.0"); Thread.sleep(2500)
-        launch(); find(tag("btn_finish"), 15_000); tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
+        launch(); find(tag("btn_finish"), 15_000)
+        // leave Rashed on Power Focus (the default for new riders) and check it survives the restart in t05
+        switchLayout("power", "power focus normal", "34d_power_focus_normal")
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
         find(tag("results_root"), 15_000); if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
     }
 
@@ -388,6 +427,7 @@ class AppFlowTest {
         device.pressBack(); find(tag("start_ride"))
         // dashboard without simulation: no Bluetooth on the emulator → notice shown, app alive; still a fixed, non-scrolling layout
         tap(tag("start_ride")); find(tag("btn_start")); shot("32_dashboard_no_bluetooth"); assertNoScrollLive("idle")
+        assertTrue("v0.12: Rashed's Power Focus choice persisted across the restart", has(tag("gauges_power"), 2000))
         // the emulator may or may not have a Bluetooth adapter: either the notice shows or the header reports the link state
         assertTrue(has(tag("bt_notice"), 3000) || has(tag("live_root"), 2000))
         tap(tag("dash_home")); find(tag("start_ride"))

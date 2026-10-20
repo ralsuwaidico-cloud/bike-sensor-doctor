@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -725,6 +726,26 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
             Switch(checked = keepOn, onCheckedChange = { keepOn = it; prefs.keepScreenOn = it; onKeepScreenOnChanged() })
         }
         Spacer(Modifier.height(14.dp))
+        // ---- v0.12 Dashboard layout (per rider; presentation only) ----
+        vm.engine.rider?.let { r ->
+            var layout by remember { mutableStateOf(com.rashed.bikesensordoctor.core.DashLayout.of(r.answers)) }
+            Text("Dashboard Layout", fontSize = 18.sp, color = Color.White)
+            Text("How the live screen shows power, heart rate and cadence. Same sensors, coach and recording in every layout — switching changes only the picture, even mid-ride.", fontSize = 12.sp, color = Dim)
+            Spacer(Modifier.height(6.dp))
+            com.rashed.bikesensordoctor.core.DashLayout.values().forEach { opt ->
+                val on = opt == layout
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp).background(if (on) Cyan.copy(alpha = 0.10f) else Color.Transparent, RoundedCornerShape(12.dp))
+                    .border(if (on) 2.dp else 1.dp, if (on) Cyan else Dim.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .clickable { layout = opt; r.answers[com.rashed.bikesensordoctor.core.DashLayout.KEY] = opt.key; vm.engine.riders.save(r) }
+                    .padding(10.dp).testTag("layout_${opt.key}"), verticalAlignment = Alignment.CenterVertically) {
+                    LayoutPreview(opt, Modifier.size(width = 64.dp, height = 46.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) { Text(opt.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White); Text(opt.blurb, fontSize = 11.sp, color = Dim, lineHeight = 14.sp) }
+                    if (on) Text("✓", color = Cyan, fontSize = 18.sp)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+        }
         // ---- P0: power verification status ----
         Text("Power meter", fontSize = 18.sp, color = Color.White)
         if (powerVerified) Text("✓ Verified under load: max ${prefs.powerVerifiedMaxW} W on ${SimpleDateFormat("d MMM HH:mm", Locale.getDefault()).format(Date(prefs.powerVerifiedAtMs))}", fontSize = 13.sp, color = Green)
@@ -791,8 +812,14 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
         Spacer(Modifier.height(10.dp))
         TextButton(onClick = onDiagnose) { Text("Advanced: Diagnose & Repair sensor", color = Dim) }
         TextButton(onClick = onSimulation, modifier = Modifier.testTag("open_simulation")) { Text("Test tool: simulated sensors (SIMULATED rides)", color = Dim) }
+        // v0.12 Developer / Test mode: shows the fictional SAMPLE riders and demo club. Off by default; never affects real riders' data.
+        var dev by remember { mutableStateOf(vm.engine.riders.devMode) }
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) { Text("Developer / Test mode", fontSize = 13.sp, color = Dim); Text("Shows the fictional SAMPLE riders (Omar, Layla, Sami, Noor) and the demo club. Their rides never count as real.", fontSize = 11.sp, color = Dim) }
+            androidx.compose.material3.Switch(checked = dev, onCheckedChange = { dev = it; vm.engine.riders.devMode = it }, modifier = Modifier.testTag("dev_mode"))
+        }
         Spacer(Modifier.height(10.dp))
-        Text("Bike Computer v0.9 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
+        Text("Bike Computer v0.12 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
     }
 }
 
@@ -855,5 +882,21 @@ fun VerifyPowerScreen(vm: DoctorViewModel, onBack: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = Green, contentColor = Ink)) { Text(if (running) "CHECKING… PEDAL UNDER LOAD" else "START 60-SECOND CHECK", fontWeight = FontWeight.Black) }
         Spacer(Modifier.height(12.dp))
         Text("Nothing is written to the sensor. A PASS only records the date and the max watts seen; it does not change calibration.", fontSize = 12.sp, color = Dim)
+    }
+}
+
+
+/** Tiny schematic of a dashboard layout for the Settings picker: cyan = power, green = HR, violet = cadence. */
+@Composable
+fun LayoutPreview(layout: com.rashed.bikesensordoctor.core.DashLayout, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier.background(D7.Panel2, RoundedCornerShape(8.dp)).border(1.dp, D7.Line, RoundedCornerShape(8.dp))) {
+        val w = size.width; val h = size.height; val sw = 2.2f * density
+        fun ring(cx: Float, cy: Float, r: Float, c: Color) = drawArc(c, 135f, 270f, false, androidx.compose.ui.geometry.Offset(cx - r, cy - r), androidx.compose.ui.geometry.Size(2 * r, 2 * r), style = androidx.compose.ui.graphics.drawscope.Stroke(sw))
+        fun bar(x: Float, y: Float, bw: Float, c: Color) { drawRoundRect(c.copy(alpha = 0.25f), androidx.compose.ui.geometry.Offset(x, y), androidx.compose.ui.geometry.Size(bw, h * 0.42f), androidx.compose.ui.geometry.CornerRadius(2f * density)); drawRect(c, androidx.compose.ui.geometry.Offset(x + 2f * density, y + h * 0.3f), androidx.compose.ui.geometry.Size(bw - 4f * density, 2f * density)) }
+        when (layout) {
+            com.rashed.bikesensordoctor.core.DashLayout.POWER_FOCUS -> { ring(w / 2, h * 0.40f, h * 0.30f, GraphColors.Power); ring(w * 0.20f, h * 0.68f, h * 0.19f, GraphColors.Cad); ring(w * 0.80f, h * 0.68f, h * 0.19f, GraphColors.Hr) }
+            com.rashed.bikesensordoctor.core.DashLayout.CLASSIC -> { ring(w * 0.20f, h / 2, h * 0.24f, GraphColors.Power); ring(w / 2, h / 2, h * 0.24f, GraphColors.Hr); ring(w * 0.80f, h / 2, h * 0.24f, GraphColors.Cad) }
+            com.rashed.bikesensordoctor.core.DashLayout.COMPACT -> { val bw = w * 0.27f; bar(w * 0.06f, h * 0.29f, bw, GraphColors.Power); bar(w * 0.365f, h * 0.29f, bw, GraphColors.Hr); bar(w * 0.67f, h * 0.29f, bw, GraphColors.Cad) }
+        }
     }
 }

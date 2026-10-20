@@ -84,7 +84,8 @@ fun MetricCard(modifier: Modifier, label: String, value: Int?, unit: String, lo:
     val status = GraphScale.status(value, lo, hi)
     val (word, wc) = statusLabel(status, kind)
     val n = GraphScale.norm(value, lo, hi)
-    Column(modifier.background(D7.Panel2, RoundedCornerShape(10.dp)).border(1.dp, D7.Line, RoundedCornerShape(10.dp)).padding(start = 8.dp, end = 6.dp, top = 4.dp, bottom = 4.dp).testTag(testTag)) {
+    val desc = "$label ${value?.toString() ?: "no data"} $unit, ${statusOverride ?: word}"
+    Column(modifier.background(D7.Panel2, RoundedCornerShape(10.dp)).border(1.dp, D7.Line, RoundedCornerShape(10.dp)).padding(start = 8.dp, end = 6.dp, top = 4.dp, bottom = 4.dp).testTag(testTag).semantics { contentDescription = desc }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(width = 3.dp, height = 10.dp).background(color, RoundedCornerShape(1.dp))); Spacer(Modifier.width(4.dp))
             Text(label, fontFamily = PlexMono, fontWeight = FontWeight.Bold, fontSize = 8.sp, color = color, letterSpacing = 1.sp, maxLines = 1, softWrap = false, modifier = Modifier.weight(1f))
