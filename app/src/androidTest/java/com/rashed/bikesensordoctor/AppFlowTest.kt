@@ -294,6 +294,15 @@ class AppFlowTest {
         // nothing may overlap: every tagged element's bounds must be disjoint from the next section's
         val order = listOf("card_power", "live_targets", "live_graph", "coach_box").mapNotNull { device.findObject(tag(it))?.visibleBounds }
         for (i in 1 until order.size) assertTrue("$label: section $i overlaps the one above (${order[i - 1]} vs ${order[i]})", order[i].top >= order[i - 1].bottom - 1)
+        // v0.11.1: no large unexplained gap — the coach must start within 12 dp of the graph's bottom edge, and the controls within 16 dp of the coach
+        val dpPx = device.displayWidth / 360f
+        if (graph != null && box != null) assertTrue("$label: gap graph→coach ${(box.visibleBounds.top - graph.visibleBounds.bottom) / dpPx} dp", box.visibleBounds.top - graph.visibleBounds.bottom <= 12 * dpPx)
+        if (box != null && ctl != null) assertTrue("$label: gap coach→controls ${(ctl.visibleBounds.top - box.visibleBounds.bottom) / dpPx} dp", ctl.visibleBounds.top - box.visibleBounds.bottom <= 16 * dpPx)
+        // record the measured geometry (dp) for the layout report
+        val sb = StringBuilder("$label: display ${device.displayWidth}x${device.displayHeight} px (${(device.displayWidth / dpPx).toInt()}x${(device.displayHeight / dpPx).toInt()} dp)\n")
+        for (t in listOf("live_speed", "card_power", "card_hr", "card_cad", "live_targets", "live_averages", "live_graph", "coach_box")) device.findObject(tag(t))?.visibleBounds?.let { b -> sb.append("  $t: ${(b.width() / dpPx).toInt()}x${(b.height() / dpPx).toInt()} dp at y=${(b.top / dpPx).toInt()}\n") }
+        ctl?.visibleBounds?.let { b -> sb.append("  controls: ${(b.width() / dpPx).toInt()}x${(b.height() / dpPx).toInt()} dp at y=${(b.top / dpPx).toInt()}\n") }
+        File(shots(), "layout.txt").appendText(sb.toString())
     }
     private fun heapKb(): Long { Runtime.getRuntime().gc(); Thread.sleep(300); val r = Runtime.getRuntime(); return (r.totalMemory() - r.freeMemory()) / 1024 }
 
