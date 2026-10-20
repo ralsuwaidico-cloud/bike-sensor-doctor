@@ -380,3 +380,7 @@ el("resetAll").onclick=()=>{ DB={riders:{},activeId:null,club:null,version:1}; t
 el("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{ const t=b.dataset.tab; if(t==="scrHome") renderHome(); else if(t==="scrClub") renderClub(); else if(t==="scrBoard") renderBoard(); else if(t==="scrProfile") renderMember(P.id); });
 renderCmp(); renderMemoAll(); renderQa(); renderFeat(); resetRide();
 if(P.completed){ applyProfile(); renderHome(); } else if(Object.keys(P.answers).length){ renderPage(P.page||0); } else renderWelcome();
+
+// v0.12 dashboard layout selector (mirrors Settings → Dashboard Layout in the app)
+(function(){ const seg=el("layoutSeg"); if(!seg) return; const sync=()=>seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.layout===DL?"true":"false"));
+  seg.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ setLayout(b.dataset.layout); sync(); })); sync(); })();
