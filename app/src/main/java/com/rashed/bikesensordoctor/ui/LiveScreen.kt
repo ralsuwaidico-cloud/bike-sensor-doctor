@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -67,6 +68,7 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
     BoxWithConstraints(Modifier.fillMaxSize().background(D7.Bg).testTag("live_root")) {
         val short = maxHeight < 620.dp
         val screenW = maxWidth
+        val screenH = maxHeight
         Column(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 4.dp)) {
             // ---- status line ----
             val live = d.health == Health.CONNECTED_LIVE || d.health == Health.CONNECTED_IDLE || d.simulated
@@ -97,17 +99,51 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
             // ---- B · live sensor readings ----
             val b = d.bands
             val hrLive = st.hrLive
-            // v0.11.1 full-screen layout: the ring diameter is the largest that fits three across the actual screen width
-            // (content width − 2 × 10 dp screen padding − 2 × 4 dp gaps, ÷ 3, minus 4 dp breathing room) — 104 dp on the Nokia 5.3 (360 dp wide)
-            // at large system font the labels and status chips grow, so the ring gives back 12 dp to keep the graph readable (priority: gauges, coach, controls)
-            val ring = (((screenW - 20.dp - 8.dp) / 3 - 4.dp) - (if (bigFont) 12.dp else 0.dp)).coerceIn(80.dp, 124.dp)
-            Row(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                // hybrid: Design-7 circular gauges; LIVE dot and TARGET band share the dial's scale (power 0..max(300, 1.5×FTP), HR 0..max HR, cadence 0..130)
-                CompactGauge(Modifier.weight(1f), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = if (d.simulated) "SIM" else "", reference = b?.pwReference == true,
-                    statusOverride = when { d.powerW == null -> null; !d.powerVerified -> "○ UNVERIFIED"; b?.pwReference == true -> "○ NO TARGET"; else -> null }, compact = short || bigFont, testTag = "card_power", ring = ring)
-                CompactGauge(Modifier.weight(1f), "HEART RATE", hrLive, "BPM", st.hrMaxGauge, b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = if (d.simulated) "SIM" else "", compact = short || bigFont, testTag = "card_hr", ring = ring)
-                CompactGauge(Modifier.weight(1f), "CADENCE", d.cadenceRpm, "RPM", com.rashed.bikesensordoctor.core.Targets.CADENCE_GAUGE_MAX, b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = if (d.simulated) "SIM" else "",
-                    statusOverride = if (d.backwards) "▼ BACKWARDS" else null, compact = short || bigFont, testTag = "card_cad", ring = ring)
+            // v0.12: three presentations of the SAME data — Power Focus (default for new riders), Classic three gauges, Compact cards.
+            // The choice lives in the rider profile ("dashLayout") and changes presentation only.
+            val layout = com.rashed.bikesensordoctor.core.DashLayout.of(vm.engine.rider?.answers)
+            val contentW = screenW - 20.dp
+            val pwStatus = when { d.powerW == null -> null; !d.powerVerified -> "○ UNVERIFIED"; b?.pwReference == true -> "○ NO TARGET"; else -> null }
+            val cadStatus = if (d.backwards) "▼ BACKWARDS" else null
+            val simTag = if (d.simulated) "SIM" else ""
+            when (layout) {
+                com.rashed.bikesensordoctor.core.DashLayout.POWER_FOCUS -> {
+                    // budget: everything else on the screen (status line, top stats, legend, averages, coach, controls, links, paddings)
+                    // plus a readable graph minimum; the geometry shrinks the rings together until the block fits, never lets them overlap
+                    val fixed = if (bigFont) 330.dp else 292.dp
+                    val minGraph = if (bigFont) 90.dp else 110.dp
+                    val maxBlock = (screenH - fixed - minGraph).coerceAtLeast(150.dp)
+                    val g = remember(contentW, maxBlock, bigFont) {
+                        com.rashed.bikesensordoctor.core.PowerFocus.compute(contentW.value, maxBlock.value, if (bigFont) 17f else 13f, if (bigFont) 25f else 20f, if (bigFont) 110f else 96f)
+                    }
+                    Box(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp).height(g.blockHeight.dp).testTag("gauges_power")) {
+                        CompactGauge(Modifier.offset(x = g.xLeft.dp, y = g.yLower.dp).width(g.colSmall.dp), "CADENCE", d.cadenceRpm, "RPM", com.rashed.bikesensordoctor.core.Targets.CADENCE_GAUGE_MAX, b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = simTag,
+                            statusOverride = cadStatus, compact = bigFont, testTag = "card_cad", ring = g.small.dp)
+                        CompactGauge(Modifier.offset(x = g.xPower.dp, y = g.yPower.dp).width(g.colPower.dp), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = simTag, reference = b?.pwReference == true,
+                            statusOverride = pwStatus, compact = bigFont, testTag = "card_power", ring = g.power.dp)
+                        CompactGauge(Modifier.offset(x = g.xRight.dp, y = g.yLower.dp).width(g.colSmall.dp), "HEART RATE", hrLive, "BPM", st.hrMaxGauge, b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = simTag, compact = bigFont, testTag = "card_hr", ring = g.small.dp)
+                    }
+                }
+                com.rashed.bikesensordoctor.core.DashLayout.CLASSIC -> {
+                    // v0.11.1: the ring diameter is the largest that fits three across the actual screen width (104 dp on the Nokia 5.3);
+                    // at large system font the labels and status chips grow, so the ring gives back 12 dp to keep the graph readable
+                    val ring = (((screenW - 20.dp - 8.dp) / 3 - 4.dp) - (if (bigFont) 12.dp else 0.dp)).coerceIn(80.dp, 124.dp)
+                    Row(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp).testTag("gauges_classic"), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        CompactGauge(Modifier.weight(1f), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = simTag, reference = b?.pwReference == true,
+                            statusOverride = pwStatus, compact = short || bigFont, testTag = "card_power", ring = ring)
+                        CompactGauge(Modifier.weight(1f), "HEART RATE", hrLive, "BPM", st.hrMaxGauge, b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = simTag, compact = short || bigFont, testTag = "card_hr", ring = ring)
+                        CompactGauge(Modifier.weight(1f), "CADENCE", d.cadenceRpm, "RPM", com.rashed.bikesensordoctor.core.Targets.CADENCE_GAUGE_MAX, b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = simTag,
+                            statusOverride = cadStatus, compact = short || bigFont, testTag = "card_cad", ring = ring)
+                    }
+                }
+                com.rashed.bikesensordoctor.core.DashLayout.COMPACT -> {
+                    // the v0.10 numerical cards with a target bar — the smallest block, so the graph gets the most height
+                    Row(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp).testTag("gauges_compact"), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        MetricCard(Modifier.weight(1f), "POWER", d.powerW, "W", b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = simTag, statusOverride = pwStatus, compact = short || bigFont, testTag = "card_power")
+                        MetricCard(Modifier.weight(1f), "HEART RATE", hrLive, "BPM", b?.hrLo, b?.hrHi, GraphColors.Hr, "hr", tag = simTag, compact = short || bigFont, testTag = "card_hr")
+                        MetricCard(Modifier.weight(1f), "CADENCE", d.cadenceRpm, "RPM", b?.cadLo, b?.cadHi, GraphColors.Cad, "cad", tag = simTag, statusOverride = cadStatus, compact = short || bigFont, testTag = "card_cad")
+                    }
+                }
             }
 
             // ---- C · combined performance graph (takes whatever height is left) ----

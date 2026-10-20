@@ -209,7 +209,7 @@ class AppFlowTest {
         find(tag("start_ride"), 15_000)
         // the demo club needs the fictional riders → Developer / Test mode ON (off by default)
         tap(text("⚙")); scrollTo(tag("dev_mode")); tap(tag("dev_mode")); device.pressBack(); find(tag("start_ride"))
-        tap(tag("switch_rider")); find(tag("rider_omar")); assertTrue(has(text("SAMPLE"), 2000)); shot("09b_riders_dev_mode"); tap(text("Cancel")); find(tag("start_ride"))
+        tap(tag("switch_rider")); find(tag("rider_omar")); assertTrue(has(text("SAMPLE"), 2000)); shot("09b_riders_dev_mode"); tap(By.textContains("Cancel")); find(tag("start_ride"))
         tap(text("CLUB")); find(tag("invite_code")); shot("10_club_not_member")
         find(tag("invite_code")).text = "DAWN-7Q2K"; device.waitForIdle(); tap(tag("join_btn"))
         find(text("Leave club"), 5000); shot("11_club_joined")
@@ -223,7 +223,7 @@ class AppFlowTest {
         tap(text("BOARD")); device.pressBack(); find(tag("start_ride"))   // back from board → Home
         // Developer / Test mode OFF again → the sample riders disappear from the rider screen
         tap(text("⚙")); scrollTo(tag("dev_mode")); tap(tag("dev_mode")); device.pressBack(); find(tag("start_ride"))
-        tap(tag("switch_rider")); find(text("Who's riding today?")); assertFalse("samples hidden in production", has(tag("rider_omar"), 1500)); tap(text("Cancel")); find(tag("start_ride"))
+        tap(tag("switch_rider")); find(text("Who's riding today?")); assertFalse("samples hidden in production", has(tag("rider_omar"), 1500)); tap(By.textContains("Cancel")); find(tag("start_ride"))
         device.pressBack()   // back on Home leaves the app
         assertTrue(device.wait(Until.gone(By.pkg(pkg).depth(0)), 5000))
     }
@@ -335,12 +335,30 @@ class AppFlowTest {
         find(tag("btn_start")); tap(tag("btn_start")); find(tag("btn_pause")); Thread.sleep(6000)
         shot("33_live_extremes"); assertNoScrollLive("extremes")
         assertTrue("999 W shown", has(By.descContains("POWER 999"), 2000)); assertTrue("199 bpm shown", has(By.descContains("HEART RATE 199"), 2000)); assertTrue("120 rpm shown", has(By.descContains("CADENCE 120"), 2000))
-        // large system font: the fixed layout must still hold everything
+        // v0.12: all three layouts, switched DURING the ride from Settings (presentation only — the ride keeps running)
+        fun switchLayout(key: String, label: String, shotName: String) {
+            tap(text("⚙")); scrollTo(tag("layout_$key")); tap(tag("layout_$key")); if (shotName == "33a_settings_layout") shot(shotName); device.pressBack(); find(tag("btn_pause"), 8000); Thread.sleep(1500)
+            assertTrue("$label: layout container", has(tag("gauges_$key"), 3000)); if (shotName != "33a_settings_layout") shot(shotName); assertNoScrollLive(label)
+            assertTrue("$label: still riding (elapsed time visible)", has(tag("live_time"), 1000))
+            assertTrue("$label: values intact", has(By.descContains("POWER 999"), 2000) && has(By.descContains("HEART RATE 199"), 2000) && has(By.descContains("CADENCE 120"), 2000))
+        }
+        val elapsedBefore = device.findObject(tag("live_time"))?.text
+        switchLayout("power", "power focus extremes", "33a_settings_layout"); shot("33b_power_focus_extremes")
+        switchLayout("compact", "compact extremes", "33c_compact_extremes")
+        switchLayout("classic", "classic extremes", "33d_classic_extremes")
+        val elapsedAfter = device.findObject(tag("live_time"))?.text
+        assertTrue("ride not reset by layout changes ($elapsedBefore → $elapsedAfter)", elapsedAfter != null && elapsedAfter != "00:00")
+        // large system font: every layout must still hold everything without scrolling
         device.executeShellCommand("settings put system font_scale 1.3"); Thread.sleep(2500)
         launch(); find(tag("btn_pause"), 15_000); Thread.sleep(1500)
-        shot("34_live_font_1_3"); assertNoScrollLive("font 1.3")
+        shot("34_live_font_1_3"); assertNoScrollLive("font 1.3 classic")
+        switchLayout("power", "font 1.3 power focus", "34b_power_focus_font_1_3")
+        switchLayout("compact", "font 1.3 compact", "34c_compact_font_1_3")
         device.executeShellCommand("settings put system font_scale 1.0"); Thread.sleep(2500)
-        launch(); find(tag("btn_finish"), 15_000); tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
+        launch(); find(tag("btn_finish"), 15_000)
+        // leave Rashed on Power Focus (the default for new riders) and check it survives the restart in t05
+        switchLayout("power", "power focus normal", "34d_power_focus_normal")
+        tap(tag("btn_finish")); tap(text("FINISH & SAVE"))
         find(tag("results_root"), 15_000); if (visible(tag("save_post"), 4000)) { tap(tag("save_post")); find(tag("post_home")) }; tap(tag("post_home")); find(tag("start_ride"))
     }
 
@@ -408,6 +426,7 @@ class AppFlowTest {
         device.pressBack(); find(tag("start_ride"))
         // dashboard without simulation: no Bluetooth on the emulator → notice shown, app alive; still a fixed, non-scrolling layout
         tap(tag("start_ride")); find(tag("btn_start")); shot("32_dashboard_no_bluetooth"); assertNoScrollLive("idle")
+        assertTrue("v0.12: Rashed's Power Focus choice persisted across the restart", has(tag("gauges_power"), 2000))
         // the emulator may or may not have a Bluetooth adapter: either the notice shows or the header reports the link state
         assertTrue(has(tag("bt_notice"), 3000) || has(tag("live_root"), 2000))
         tap(tag("dash_home")); find(tag("start_ride"))
