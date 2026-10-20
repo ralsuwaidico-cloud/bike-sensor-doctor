@@ -791,8 +791,14 @@ fun SettingsScreen(vm: DoctorViewModel, onBack: () -> Unit, onDiagnose: () -> Un
         Spacer(Modifier.height(10.dp))
         TextButton(onClick = onDiagnose) { Text("Advanced: Diagnose & Repair sensor", color = Dim) }
         TextButton(onClick = onSimulation, modifier = Modifier.testTag("open_simulation")) { Text("Test tool: simulated sensors (SIMULATED rides)", color = Dim) }
+        // v0.12 Developer / Test mode: shows the fictional SAMPLE riders and demo club. Off by default; never affects real riders' data.
+        var dev by remember { mutableStateOf(vm.engine.riders.devMode) }
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) { Text("Developer / Test mode", fontSize = 13.sp, color = Dim); Text("Shows the fictional SAMPLE riders (Omar, Layla, Sami, Noor) and the demo club. Their rides never count as real.", fontSize = 11.sp, color = Dim) }
+            androidx.compose.material3.Switch(checked = dev, onCheckedChange = { dev = it; vm.engine.riders.devMode = it }, modifier = Modifier.testTag("dev_mode"))
+        }
         Spacer(Modifier.height(10.dp))
-        Text("Bike Computer v0.9 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
+        Text("Bike Computer v0.12 · never writes to the sensor except notification subscriptions", fontSize = 11.sp, color = Dim)
     }
 }
 
