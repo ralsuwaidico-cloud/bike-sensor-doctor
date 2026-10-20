@@ -102,3 +102,18 @@ v0111-run89-layout.txt). Evidence: docs/evidence/v0111-run89-live-before-after.p
 Release: `BikeComputer-build90.apk` · 17.97 MB · SHA-256 `e75a99cad6543a2cf3f9b91d60656a2094f9038d430143ee9312181a8d208596` · versionCode 15 ·
 versionName 0.11.1 · same signing certificate `E2:51:4D:…:1E:4F` · build + 161 unit tests ✓ · emulator 9/9 ✓ · monkey ✓ · no app crash ·
 APK from the commit the emulator tested.
+
+## v0.12.0 — real riders, dashboard layouts (CI run 95 on main, commit 9068b4f, 20 Oct 2026)
+Approved from run 94 (docs/evidence/v012-run94-*.png, geometry in v012-run94-layout.txt).
+- **Riders**: no sample riders on a real install (none created; folders from older installs hidden); "Welcome to Bike Computer → Create
+  rider profile" on first run; "Who's riding today?" with large cards and a fixed "+ ADD NEW RIDER"; optional PIN asked only when set;
+  Developer / Test mode switch in Settings (off by default) shows the fictional riders and demo club.
+- **Dashboard Layout** (Settings, per rider, presentation only): Power Focus (default for new riders; existing riders keep Classic),
+  Classic Three Gauges, Compact Metrics. Power-Focus geometry is computed in the portable core (`DashLayout.kt`, unit-tested for no
+  overlap on 300–480 dp widths); the live block height is measured, not estimated. Emulator at 360 × 760 dp: Power Focus 147 / 100 dp
+  rings + 104 dp graph (1.3×: 132 / 92 + 93 dp), Classic 104 dp rings + 170 dp graph, Compact 224 dp graph.
+Release: `BikeComputer-build95.apk` · 18.0 MB · SHA-256 `05b2fa85e985ad0d2308c1655967527308d6d1c5eb6e3543fd39eed4589fcdb7` · versionCode 16 ·
+versionName 0.12.0 · signing certificate `E2:51:4D:…:1E:4F` (unchanged since build 51) · build + 165 unit tests ✓ · emulator 9/9 ✓
+(fresh install, three real riders, PIN, per-rider FTP and layout, layout switch mid-ride, samples hidden/shown, restart persistence) ·
+1 500-event monkey ✓ · no app crash · APK from the commit the emulator tested. Rider storage format unchanged (meta.txt/answers.txt);
+the layout choice is an extra key in each rider's own answers file, so profiles, FTP history, rides and settings carry over untouched.
