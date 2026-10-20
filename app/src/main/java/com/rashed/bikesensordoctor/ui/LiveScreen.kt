@@ -66,6 +66,7 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
 
     BoxWithConstraints(Modifier.fillMaxSize().background(D7.Bg).testTag("live_root")) {
         val short = maxHeight < 620.dp
+        val screenW = maxWidth
         Column(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 4.dp)) {
             // ---- status line ----
             val live = d.health == Health.CONNECTED_LIVE || d.health == Health.CONNECTED_IDLE || d.simulated
@@ -98,7 +99,7 @@ fun LiveScreen(vm: DoctorViewModel, onCoach: () -> Unit, onDetails: () -> Unit, 
             val hrLive = st.hrLive
             // v0.11.1 full-screen layout: the ring diameter is the largest that fits three across the actual screen width
             // (content width − 2 × 10 dp screen padding − 2 × 4 dp gaps, ÷ 3, minus 4 dp breathing room) — 104 dp on the Nokia 5.3 (360 dp wide)
-            val ring = ((maxWidth - 20.dp - 8.dp) / 3 - 4.dp).coerceIn(84.dp, 124.dp)
+            val ring = ((screenW - 20.dp - 8.dp) / 3 - 4.dp).coerceIn(84.dp, 124.dp)
             Row(Modifier.fillMaxWidth().padding(top = if (short) 2.dp else 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 // hybrid: Design-7 circular gauges; LIVE dot and TARGET band share the dial's scale (power 0..max(300, 1.5×FTP), HR 0..max HR, cadence 0..130)
                 CompactGauge(Modifier.weight(1f), "POWER", d.powerW, "W", st.powerMax, b?.pwLo, b?.pwHi, GraphColors.Power, "pw", tag = if (d.simulated) "SIM" else "", reference = b?.pwReference == true,
