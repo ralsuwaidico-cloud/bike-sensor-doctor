@@ -2,3 +2,10 @@ build/
 sdkconfig
 sdkconfig.old
 test/host/test_bc_xds
+test/sim/obj/
+test/sim/liblvgl.a
+test/sim/sim
+test/sim/out/
+test/sim/simfs/
+test/sim/run.log
+test/host/test_bc_core

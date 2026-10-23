@@ -33,3 +33,5 @@ CONFIG_LV_USE_OBSERVER=y
 # FAT long file names for ride files
 CONFIG_FATFS_LFN_HEAP=y
 CONFIG_FATFS_MAX_LFN=64
+# 0.2.0: Wi-Fi is optional; if switched on its buffers go to PSRAM so the UI and Bluetooth keep internal RAM
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y

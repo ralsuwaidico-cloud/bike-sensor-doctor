@@ -1,0 +1,11 @@
+# Builds LVGL for the host with EXACTLY the firmware's configuration (the ESP-IDF-generated sdkconfig.h).
+LVGL=../../components/lvgl
+CFG=../../build/config
+SRCS:=$(shell find $(LVGL)/src -name '*.c' -not -path '*/drivers/*' -not -path '*/libs/*' ; find $(LVGL)/src/libs/bin_decoder -name '*.c' 2>/dev/null)
+OBJS:=$(patsubst $(LVGL)/%.c,obj/lvgl/%.o,$(SRCS))
+CFLAGS_LV=-O2 -g -w -DLV_CONF_KCONFIG_EXTERNAL_INCLUDE='"sdkconfig.h"' -DLV_CONF_SKIP -I$(CFG) -I$(LVGL) -I$(LVGL)/src
+liblvgl.a: $(OBJS)
+	ar rcs $@ $^
+obj/lvgl/%.o: $(LVGL)/%.c
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS_LV) -c $< -o $@

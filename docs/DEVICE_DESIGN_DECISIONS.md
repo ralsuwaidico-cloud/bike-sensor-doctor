@@ -29,3 +29,13 @@ its date and source, so approved screens are not redesigned by accident. Proposa
 
 ## Sequencing (2026-10-23, Rashed)
 Full onboarding implementation starts only after the display, touchscreen and XDS BLE connection have been physically tested on the device with the Phase A diagnostic build. Order: Windows recognises the board → confirm COM port and hardware identity → back up factory firmware → Rashed approves → flash diagnostic.
+
+## Round 2 (2026-10-23, firmware 0.2.0) — implemented from the approved designs, rendered by the real firmware
+Previews: test/sim (`make run` then `python3 sheet.py out`), every screen checked automatically against the round glass.
+| # | Decision | Options | Recommended | Status |
+|---|---|---|---|---|
+| 6 | Main ride page | A Power Focus (approved round 1) · B Split (watts top, cadence | HR below) · C Coach First (instruction + colour ring) | A | **PENDING** — A is the default; B and C selectable in Settings > Ride screen so the choice never blocks testing |
+| 7 | Ride controls | pull-down panel (swipe down or tap the top handle): hold 1 s PAUSE, tap RESUME, hold 2 s END | as built | implements approved navigation A |
+| 8 | Results | SAVE (tap) / discard (hold the bin 1.5 s) | as built | new |
+| 9 | Home | START RIDE + Sensors / History / Settings, status line (meter, HR, battery), FTP with PROVISIONAL label | as built | new |
+| 10 | Demo mode | orange DEMO badge on every screen, separate demo history, never changes FTP, OFF after every restart | as built | new |

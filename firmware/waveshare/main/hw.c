@@ -76,6 +76,7 @@ lv_display_t *hw_display_init(void)
 
     lvgl_port_cfg_t lcfg = ESP_LVGL_PORT_INIT_CONFIG();
     lcfg.task_affinity = 1;            /* UI on core 1; BLE/Wi-Fi run on core 0 */
+    lcfg.task_stack = 12288;           /* the UI builds screens with formatted text; head-room is logged every 60 s */
     ESP_ERROR_CHECK(lvgl_port_init(&lcfg));
     lvgl_port_display_cfg_t dcfg = {
         .io_handle = io, .panel_handle = panel, .buffer_size = BOARD_LCD_W * 40, .double_buffer = true,
@@ -113,7 +114,7 @@ bool hw_touch_init(lv_display_t *disp)
     if (e != ESP_OK || !tp) { SET(touch, HW_FAIL, "CST816S not found (%s)", esp_err_to_name(e)); return false; }
     lvgl_port_touch_cfg_t lt = { .disp = disp, .handle = tp };
     lvgl_port_add_touch(&lt);
-    SET(touch, HW_INFO, "CST816S ready - tap the TOUCH page");
+    SET(touch, HW_PASS, "CST816S ready");
     return true;
 }
 
