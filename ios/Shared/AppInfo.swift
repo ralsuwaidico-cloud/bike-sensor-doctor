@@ -1,0 +1,43 @@
+import Foundation
+
+/// Version and build information shared by the iPhone and Apple Watch apps.
+enum AppInfo {
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+    }
+
+    static var build: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+    }
+
+    /// "0.1.0 (12)"
+    static var label: String { "\(version) (\(build))" }
+}
+
+/// Messages exchanged between the iPhone app and the Watch app over WatchConnectivity.
+/// Phase 0 only carries a connectivity test ("ping"); heart rate and workout state come in Phase 3.
+enum WatchMessage {
+    static let kind = "kind"
+    static let ping = "ping"
+    static let pong = "pong"
+    static let sentAt = "sentAt"
+    static let build = "build"
+
+    static func makePing(now: Date = Date()) -> [String: Any] {
+        [kind: ping, sentAt: now.timeIntervalSince1970]
+    }
+
+    static func makePong(for message: [String: Any], build: String) -> [String: Any] {
+        var reply: [String: Any] = [kind: pong, build: build]
+        if let t = message[sentAt] as? Double { reply[sentAt] = t }
+        return reply
+    }
+
+    /// Round-trip time in milliseconds for a pong, or nil when the reply is not a valid pong.
+    static func roundTripMs(of reply: [String: Any], now: Date = Date()) -> Int? {
+        guard reply[kind] as? String == pong, let t = reply[sentAt] as? Double else { return nil }
+        let ms = (now.timeIntervalSince1970 - t) * 1000
+        guard ms >= 0, ms < 120_000 else { return nil }
+        return Int(ms.rounded())
+    }
+}

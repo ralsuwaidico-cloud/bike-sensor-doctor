@@ -1,0 +1,7 @@
+build/
+*.xcodeproj/
+*.xcworkspace/
+BikeComputer/Info.plist
+BikeComputerWatch/Info.plist
+*.entitlements
+DerivedData/

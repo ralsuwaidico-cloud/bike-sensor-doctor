@@ -1,0 +1,117 @@
+# XcodeGen spec for the BikeComputer iPhone + Apple Watch apps.
+# The .xcodeproj is generated on the GitHub macOS runner (never committed), so nobody needs to open Xcode.
+# Signing team and build number are passed in by CI (ios/ci/build.sh); nothing secret lives in this file.
+name: BikeComputer
+options:
+  bundleIdPrefix: com.ralsuwaidico
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  BikeComputer:
+    type: application
+    platform: iOS
+    sources:
+      - BikeComputer
+      - Shared
+    info:
+      path: BikeComputer/Info.plist
+      properties:
+        CFBundleDisplayName: BikeComputer
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+        NSBluetoothAlwaysUsageDescription: BikeComputer connects to your Waveshare cycling computer over Bluetooth to show live power and cadence.
+        NSLocationWhenInUseUsageDescription: BikeComputer sends your phone's GPS position, speed and distance to your cycling computer during a ride.
+        NSHealthShareUsageDescription: BikeComputer reads heart rate from your Apple Watch workout to show it on your cycling computer.
+        NSHealthUpdateUsageDescription: BikeComputer can save your finished rides to Apple Health when you choose to.
+    entitlements:
+      path: BikeComputer/BikeComputer.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ralsuwaidico.bikecomputer
+        PRODUCT_NAME: BikeComputer
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: BikeComputerWatch
+        embed: true
+        codeSign: true
+        copy:
+          destination: productsDirectory
+          subpath: $(CONTENTS_FOLDER_PATH)/Watch
+
+  BikeComputerWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - BikeComputerWatch
+      - Shared
+    info:
+      path: BikeComputerWatch/Info.plist
+      properties:
+        CFBundleDisplayName: BikeComputer
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.ralsuwaidico.bikecomputer
+        WKRunsIndependentlyOfCompanionApp: false
+        ITSAppUsesNonExemptEncryption: false
+        NSHealthShareUsageDescription: BikeComputer reads your live heart rate during a cycling workout and sends it to your iPhone and cycling computer.
+        NSHealthUpdateUsageDescription: BikeComputer records your cycling workout so the watch can measure heart rate. You choose whether it is saved to Apple Health.
+    entitlements:
+      path: BikeComputerWatch/BikeComputerWatch.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ralsuwaidico.bikecomputer.watchkitapp
+        PRODUCT_NAME: BikeComputerWatch
+        TARGETED_DEVICE_FAMILY: "4"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SKIP_INSTALL: YES
+
+  BikeComputerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - BikeComputerTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ralsuwaidico.bikecomputer.tests
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: BikeComputer
+
+schemes:
+  BikeComputer:
+    build:
+      targets:
+        BikeComputer: all
+        BikeComputerTests: [test]
+    test:
+      config: Debug
+      targets:
+        - BikeComputerTests
+    archive:
+      config: Release
