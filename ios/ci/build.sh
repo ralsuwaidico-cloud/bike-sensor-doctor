@@ -89,7 +89,7 @@ archive() {
   rm -rf "$ARCHIVE"
   xcodebuild archive -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
-    CURRENT_PROJECT_VERSION="${BUILD_NUMBER:-1}" "${TEAM_ARGS[@]}" "$@" > "$OUT/archive-$mode.log" 2>&1
+    CURRENT_PROJECT_VERSION="${BUILD_NUMBER:-1}" ${TEAM_ARGS[@]+"${TEAM_ARGS[@]}"} "$@" > "$OUT/archive-$mode.log" 2>&1
   local r=$?
   digest "$OUT/archive-$mode.log" "archive-$mode"
   return $r

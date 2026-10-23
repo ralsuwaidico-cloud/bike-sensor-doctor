@@ -27,8 +27,8 @@ enum WatchMessage {
         [kind: ping, sentAt: now.timeIntervalSince1970]
     }
 
-    static func makePong(for message: [String: Any], build: String) -> [String: Any] {
-        var reply: [String: Any] = [kind: pong, build: build]
+    static func makePong(for message: [String: Any], build appBuild: String) -> [String: Any] {
+        var reply: [String: Any] = [kind: pong, WatchMessage.build: appBuild]
         if let t = message[sentAt] as? Double { reply[sentAt] = t }
         return reply
     }
