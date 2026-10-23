@@ -106,6 +106,11 @@ note "RESULT archive: ok ($ARCH_MODE)"
 for app in "$ARCHIVE/Products/Applications/BikeComputer.app" "$ARCHIVE/Products/Applications/BikeComputer.app/Watch/BikeComputerWatch.app"; do
   if [ -d "$app" ]; then note "  contains $(basename "$app") $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Info.plist") ($(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Info.plist"))"
   else note "  MISSING $app"; STATUS=1; fi
+  if [ -d "$app" ]; then
+    if codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -q "com.apple.developer.healthkit"; then
+      note "    HealthKit entitlement embedded in archive: yes"
+    else note "    HealthKit entitlement embedded in archive: no"; fi
+  fi
 done
 
 # ---------------------------------------------------------------- export (App Store signing in Apple's cloud)
