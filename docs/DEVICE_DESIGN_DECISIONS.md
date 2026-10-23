@@ -20,9 +20,12 @@ its date and source, so approved screens are not redesigned by accident. Proposa
 ## Round 1 (proposed 2026-10-23) — design/device/device_design_r1.html
 | # | Decision | Options | Recommended | Status |
 |---|---|---|---|---|
-| 0 | Onboarding flow | Welcome → Name → Age → Weight → (Height) → Experience → Main goal → Pair power meter (live check) → (HR strap) → (Wi-Fi) → Ready (starting FTP estimated from experience) | as listed | PENDING |
+| 0 | Onboarding flow | Welcome → Name → Age → Weight → Experience → Main goal → Power meter → (HR strap) → (Wi-Fi) → Ready | as listed | **APPROVED** 2026-10-23 with: power-meter pairing skippable (setup never blocks); HR and Wi-Fi optional; wheels for age/weight, letter ring for name; initial FTP labelled a PROVISIONAL STARTING ASSUMPTION, never measured |
 | 1 | Navigation | A ride-pages carousel + pull-down panel, hold-to-confirm Pause/End · B circular hub · C watch list | A | **APPROVED A** 2026-10-23 |
 | 2 | Number entry | A spinning wheel · B edge dial · C − / + buttons | A | **APPROVED A** 2026-10-23 |
 | 3 | Name entry | A letter groups around the ring · B paged keyboard · C phone-assisted (extra only) | A | **APPROVED A** 2026-10-23 (letter ring only; no phone option) |
 | 4 | Ride dashboard | A Power Focus · B three gauges · C minimal + swipe | A | **APPROVED A** 2026-10-23 (built first) |
-| 5 | Height in onboarding | ask (optional) · leave to Settings | leave to Settings | PENDING |
+| 5 | Height in onboarding | ask (optional) · leave to Settings | leave to Settings | **APPROVED: Settings only** 2026-10-23 |
+
+## Sequencing (2026-10-23, Rashed)
+Full onboarding implementation starts only after the display, touchscreen and XDS BLE connection have been physically tested on the device with the Phase A diagnostic build. Order: Windows recognises the board → confirm COM port and hardware identity → back up factory firmware → Rashed approves → flash diagnostic.
