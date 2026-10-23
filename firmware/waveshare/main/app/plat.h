@@ -25,7 +25,9 @@ typedef struct {
     char name[20];
     int rssi;              /* dBm, 0 = unknown */
     uint32_t packets;
-    uint32_t age_ms;       /* since the last packet; UINT32_MAX = never */
+    uint32_t age_ms;       /* since the last packet of any kind; UINT32_MAX = never */
+    uint32_t valid_age_ms; /* since the last VALID (decoded + plausible) packet; UINT32_MAX = never */
+    uint32_t rejected;     /* packets rejected as short or implausible (never shown as data) */
     uint32_t reconnects;
 } plat_link_info_t;
 
@@ -58,6 +60,7 @@ long plat_file_read(const char *path, char *buf, size_t cap);           /* bytes
 long plat_file_read_at(const char *path, long offset, char *buf, size_t cap);
 bool plat_file_rename(const char *from, const char *to);
 bool plat_file_remove(const char *path);
+long plat_file_size(const char *path);                                  /* -1 if missing */
 bool plat_storage_ok(void);
 
 /* device */
@@ -74,6 +77,22 @@ void plat_restart(void);
 /** Multi-line self-test text for the Diagnostics screen (LVGL recolor syntax allowed). */
 void plat_selftest_text(char *buf, size_t cap);
 void plat_mem_text(char *buf, size_t cap);
+/** Device health for Settings > Diagnostics > Device Health. Numbers the platform cannot know are -1 / empty. */
+typedef struct {
+    char fw_version[24], build[24];
+    uint32_t uptime_s;
+    char reset_reason[24];
+    uint32_t boot_count, crash_total, crash_consecutive, safe_mode_entries, storage_errors, profile_save_errors;
+    long heap_free_k, heap_min_k, psram_free_k, psram_total_k;
+    long flash_total_k, app_used_k, app_slot_k, storage_free_k, storage_total_k;
+    int battery_mv, battery_pct; bool usb_power;
+    bool ble_ready, ble_scanning; uint32_t ble_devices_seen;
+    bool wifi_on; int wifi_networks;
+    bool display_ok, touch_ok, imu_ok, storage_ok;
+} plat_health_t;
+void plat_health(plat_health_t *out);
+/** Send a multi-line diagnostic report to the PC (serial) and keep a copy on the device (diag/report.txt). */
+void plat_export_report(const char *text);
 /** One line for the serial log. */
 void plat_log(const char *line);
 

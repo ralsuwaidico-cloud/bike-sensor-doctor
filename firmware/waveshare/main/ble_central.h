@@ -20,3 +20,5 @@ int ble_central_found(plat_sens_kind_t kind, plat_found_t *out, int max);
 /* thread-safe snapshot for the UI */
 void ble_central_snapshot(plat_sensors_t *out);
 uint32_t ble_central_devices_seen(void);
+bool ble_central_ready(void);
+bool ble_central_scanning(void);

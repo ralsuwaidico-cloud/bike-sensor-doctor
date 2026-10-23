@@ -8,6 +8,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
@@ -43,7 +44,7 @@ static int s_pair_kind = -1;
 static link_t *s_connecting;
 static plat_found_t s_found[2][8]; static int s_nfound[2]; static uint32_t s_found_ms[2][8];
 static uint8_t s_seen[48][6]; static int s_seen_n; static uint32_t s_seen_total;
-static esp_timer_handle_t s_tick, s_mtu_timer;
+static esp_timer_handle_t s_mtu_timer;
 
 static const char *st_name(plat_link_t s)
 {
@@ -267,6 +268,11 @@ static void tick(void *arg)
         return;
     }
     if (s_connecting) return;
+    static uint32_t s_rssi_t;
+    if (now - s_rssi_t > 2000) {   /* live link RSSI, read here (timer task) so the display never waits on the radio */
+        s_rssi_t = now;
+        for (int i = 0; i < 2; i++) { int8_t r; if (L[i].conn != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_rssi(L[i].conn, &r) == 0) { LOCK(); L[i].rssi = r; UNLOCK(); } }
+    }
     bool need = s_pair_kind >= 0;
     for (int i = 0; i < 2; i++) {
         link_t *l = &L[i];
@@ -292,11 +298,12 @@ static void on_sync(void)
 }
 static void on_reset(int reason) { ESP_LOGW(TAG, "host reset %d", reason); s_synced = false; s_scanning = false; }
 static void host_task(void *p) { nimble_port_run(); nimble_port_freertos_deinit(); }
+/* the manager runs in its own task (not the shared esp_timer task), so a slow radio call can never stall the
+   display tick or any other timer */
+static void mgr_task(void *p) { for (;;) { tick(NULL); vTaskDelay(pdMS_TO_TICKS(500)); } }
 
 void ble_central_start(void)
 {
-    esp_timer_create_args_t a = { .callback = tick, .name = "ble_mgr" };
-    ESP_ERROR_CHECK(esp_timer_create(&a, &s_tick));
     esp_timer_create_args_t m = { .callback = mtu_fallback, .name = "ble_mtu" };
     ESP_ERROR_CHECK(esp_timer_create(&m, &s_mtu_timer));
     ESP_ERROR_CHECK(nimble_port_init());
@@ -305,7 +312,7 @@ void ble_central_start(void)
     ble_att_set_preferred_mtu(247);
     ble_svc_gap_device_name_set("BikeComputer");
     nimble_port_freertos_init(host_task);
-    esp_timer_start_periodic(s_tick, 500 * 1000);
+    xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 4096, NULL, 4, NULL, 0);
 }
 
 void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t addr_type, const char *name)
@@ -336,13 +343,15 @@ int ble_central_found(plat_sens_kind_t kind, plat_found_t *out, int max)
 }
 
 uint32_t ble_central_devices_seen(void) { return s_seen_total; }
+bool ble_central_ready(void) { return s_synced; }
+bool ble_central_scanning(void) { return s_scanning; }
 
 void ble_central_snapshot(plat_sensors_t *o)
 {
     uint32_t now = hw_millis();
     memset(o, 0, sizeof *o);
     /* live RSSI of connected links (NimBLE calls are thread-safe) */
-    for (int i = 0; i < 2; i++) { int8_t r; if (L[i].conn != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_rssi(L[i].conn, &r) == 0) { LOCK(); L[i].rssi = r; UNLOCK(); } }
+    /* NOTE: no Bluetooth calls here — this runs in the UI task and must never wait on the radio (RSSI is read by tick()) */
     LOCK();
     int w, rpm, bpm; bool back = false;
     o->power_ok = L[0].state == PLAT_LINK_CONNECTED && bc_xds_live_power(&L[0].xds, now, &w) == BC_LIVE_OK; if (o->power_ok) o->watts = w;
@@ -354,7 +363,10 @@ void ble_central_snapshot(plat_sensors_t *o)
         snprintf(li->name, sizeof li->name, "%s", L[i].name);
         li->rssi = L[i].rssi;
         uint32_t pk = i == 0 ? L[0].xds.packets : L[1].hr.packets, last = i == 0 ? L[0].xds.last_packet_ms : L[1].hr.last_packet_ms;
+        bool hv = i == 0 ? L[0].xds.have : L[1].hr.have; uint32_t lv = i == 0 ? L[0].xds.last_ms : L[1].hr.last_ms;
         li->packets = pk; li->age_ms = pk ? now - last : UINT32_MAX; li->reconnects = L[i].reconnects;
+        li->valid_age_ms = hv ? now - lv : UINT32_MAX;
+        li->rejected = i == 0 ? L[0].xds.rejected + L[0].xds.short_packets : L[1].hr.rejected;
     }
     UNLOCK();
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;

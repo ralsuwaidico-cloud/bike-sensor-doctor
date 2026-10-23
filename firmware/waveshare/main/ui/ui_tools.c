@@ -1,0 +1,244 @@
+/* Settings > Display (ride-screen picker with preview, brightness), Settings > Diagnostics (Device Health, Sensor Test,
+ * Self-test) and the diagnostic report export. */
+#include "ui.h"
+#include <stdio.h>
+#include <string.h>
+
+static void back_settings(lv_event_t *e) { (void)e; ui_settings_show(); }
+
+/* ---------------- Display */
+static void picker_cb(lv_event_t *e) { (void)e; ui_style_picker_show(); }
+static void bright_cb(lv_event_t *e) { (void)e; ui_edit_show(UI_EDIT_BRIGHT, false); }
+
+void ui_display_show(void)
+{
+    bc_profile_t *p = app_profile();
+    lv_obj_t *scr = ui_screen_new(UI_SCR_SETTINGS, NULL);
+    ui_title(scr, "DISPLAY");
+    lv_obj_t *l = ui_scroll_area(scr, 56, 168);
+    char v[24];
+    snprintf(v, sizeof v, "%c  " LV_SYMBOL_RIGHT, ui_ride_design(p->ride_style)->letter); ui_row_btn(l, "Ride screen", v, C_CYAN, picker_cb, NULL);
+    snprintf(v, sizeof v, "%u%%", p->brightness); ui_row_btn(l, "Brightness", v, C_CYAN, bright_cb, NULL);
+    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 44, back_settings, NULL);
+    lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 176);
+    ui_screen_show(scr);
+}
+
+/* ---------------- Ride-screen picker: preview of each design, arrows to browse, USE to choose */
+static int pk_i;
+static lv_obj_t *pk_img, *pk_name, *pk_hint, *pk_use;
+
+static void picker_draw(void)
+{
+    const ui_ride_design_t *d = ui_ride_design(pk_i);
+    const lv_image_dsc_t *t = ui_ride_thumb(pk_i);
+    if (t) { lv_image_set_src(pk_img, t); lv_obj_remove_flag(pk_img, LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(pk_img, LV_OBJ_FLAG_HIDDEN);
+    char b[40]; snprintf(b, sizeof b, "%c  %s", d->letter, d->name); lv_label_set_text(pk_name, b);
+    bool cur = pk_i == app_profile()->ride_style;
+    snprintf(b, sizeof b, "%s", cur ? "in use" : d->hint);
+    lv_label_set_text(pk_hint, b);
+    lv_obj_set_style_text_color(pk_hint, cur ? C_GREEN : C_MUT, 0);
+    snprintf(b, sizeof b, cur ? "DONE" : "USE %c", d->letter);
+    lv_label_set_text(lv_obj_get_child(pk_use, 0), b);
+}
+static void pk_prev(lv_event_t *e) { (void)e; pk_i = (pk_i + ui_ride_design_count() - 1) % ui_ride_design_count(); picker_draw(); }
+static void pk_next(lv_event_t *e) { (void)e; pk_i = (pk_i + 1) % ui_ride_design_count(); picker_draw(); }
+static void pk_gesture(lv_event_t *e)
+{
+    (void)e;
+    lv_dir_t d = lv_indev_get_gesture_dir(lv_indev_active());
+    if (d == LV_DIR_LEFT) pk_next(NULL); else if (d == LV_DIR_RIGHT) pk_prev(NULL);
+}
+static void pk_use_cb(lv_event_t *e)
+{
+    (void)e;
+    app_profile()->ride_style = (uint8_t)pk_i;
+    app_profile_save();
+    ui_display_show();
+}
+
+void ui_style_picker_show(void)
+{
+    pk_i = app_profile()->ride_style;
+    lv_obj_t *scr = ui_screen_new(UI_SCR_SETTINGS, NULL);
+    ui_title(scr, "RIDE SCREEN");
+    pk_img = lv_image_create(scr);
+    lv_obj_set_size(pk_img, 100, 100);
+    lv_obj_align(pk_img, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_add_flag(pk_img, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    lv_obj_t *ring = lv_obj_create(scr);   /* thin bezel around the preview */
+    lv_obj_remove_style_all(ring);
+    lv_obj_set_size(ring, 104, 104); lv_obj_align(ring, LV_ALIGN_TOP_MID, 0, 48);
+    lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_border_width(ring, 2, 0); lv_obj_set_style_border_color(ring, C_FAINT, 0);
+    lv_obj_remove_flag(ring, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_t *l = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 40, pk_prev, NULL); lv_obj_align(l, LV_ALIGN_TOP_LEFT, 18, 80);
+    lv_obj_t *r = ui_round_btn(scr, LV_SYMBOL_RIGHT, C_PANEL, C_FG, 40, pk_next, NULL); lv_obj_align(r, LV_ALIGN_TOP_RIGHT, -18, 80);
+    pk_name = ui_label(scr, &bc_bold16, C_FG, ""); lv_obj_align(pk_name, LV_ALIGN_TOP_MID, 0, 156);
+    pk_hint = ui_label(scr, &lv_font_montserrat_12, C_MUT, ""); lv_obj_align(pk_hint, LV_ALIGN_TOP_MID, 0, 176);
+    pk_use = ui_pill(scr, "", C_CYAN, C_INK, 100, 32, pk_use_cb, NULL); lv_obj_align(pk_use, LV_ALIGN_TOP_MID, 0, 194);
+    lv_obj_add_event_cb(scr, pk_gesture, LV_EVENT_GESTURE, NULL);
+    picker_draw();
+    ui_screen_show(scr);
+}
+
+/* ---------------- Sensor Test: one page to prove the meter end to end */
+static lv_obj_t *st_src, *st_src_l, *st_state, *st_w, *st_wu, *st_rpm, *st_l1, *st_l2;
+static bool st_from_diag;
+
+static void age_text(char *b, size_t cap, uint32_t ms)
+{
+    if (ms == UINT32_MAX) snprintf(b, cap, "never");
+    else if (ms < 60000) snprintf(b, cap, "%lu.%lu s ago", (unsigned long)(ms / 1000), (unsigned long)(ms % 1000 / 100));
+    else snprintf(b, cap, "%lu min ago", (unsigned long)(ms / 60000));
+}
+
+static void st_update(void)
+{
+    app_live_t lv; app_live(&lv);
+    const plat_link_info_t *l = &lv.link[PLAT_SENS_POWER];
+    lv_label_set_text(st_src_l, lv.demo ? "SIMULATED" : "REAL SENSOR");
+    lv_obj_set_style_bg_color(st_src, lv.demo ? C_DEMO : C_GREEN, 0);
+    char b[64];
+    char rs0[16] = ""; if (l->rssi && l->link == PLAT_LINK_CONNECTED) snprintf(rs0, sizeof rs0, "  %d dBm", l->rssi);
+    snprintf(b, sizeof b, "%s%s", ui_link_text(l->link), rs0);
+    lv_label_set_text(st_state, b);
+    lv_obj_set_style_text_color(st_state, ui_link_color(l->link), 0);
+    if (lv.power_ok) { snprintf(b, sizeof b, "%d", lv.watts); lv_label_set_text(st_w, b); lv_obj_set_style_text_color(st_w, C_FG, 0); lv_label_set_text(st_wu, "WATTS"); lv_obj_set_style_text_color(st_wu, C_MUT, 0); }
+    else { lv_label_set_text(st_w, "--"); lv_obj_set_style_text_color(st_w, C_MUT, 0); lv_label_set_text(st_wu, "NO DATA"); lv_obj_set_style_text_color(st_wu, C_AMBER, 0); }
+    if (lv.cad_ok) snprintf(b, sizeof b, "%d rpm%s", lv.rpm, lv.backwards ? " (back)" : ""); else snprintf(b, sizeof b, "-- rpm");
+    lv_label_set_text(st_rpm, b);
+    lv_obj_set_style_text_color(st_rpm, lv.cad_ok ? C_VIOLET : C_MUT, 0);
+    char age[24]; age_text(age, sizeof age, l->valid_age_ms);
+    snprintf(b, sizeof b, "last valid %s", age);
+    lv_label_set_text(st_l1, b);
+    snprintf(b, sizeof b, "reconnects %lu  bad %lu", (unsigned long)l->reconnects, (unsigned long)l->rejected);
+    lv_label_set_text(st_l2, b);
+}
+
+static void st_back(lv_event_t *e) { (void)e; if (st_from_diag) ui_diag_menu_show(); else ui_sensors_show(); }
+
+void ui_sensor_test_show(bool from_diag)
+{
+    st_from_diag = from_diag;
+    lv_obj_t *scr = ui_screen_new(UI_SCR_SENSORS, st_update);
+    ui_title(scr, "SENSOR TEST");
+    st_src = lv_obj_create(scr); lv_obj_remove_style_all(st_src);
+    lv_obj_set_size(st_src, LV_SIZE_CONTENT, 20); lv_obj_set_style_pad_hor(st_src, 10, 0); lv_obj_set_style_radius(st_src, 10, 0);
+    lv_obj_set_style_bg_opa(st_src, LV_OPA_COVER, 0); lv_obj_align(st_src, LV_ALIGN_TOP_MID, 0, 52); lv_obj_remove_flag(st_src, LV_OBJ_FLAG_CLICKABLE);
+    st_src_l = ui_label(st_src, &lv_font_montserrat_12, C_INK, ""); lv_obj_center(st_src_l);
+    st_state = ui_label(scr, &lv_font_montserrat_14, C_MUT, ""); lv_obj_align(st_state, LV_ALIGN_TOP_MID, 0, 74);
+    st_w = ui_label(scr, &bc_num60, C_FG, ""); lv_obj_align(st_w, LV_ALIGN_TOP_MID, 0, 90);
+    st_wu = ui_label(scr, &lv_font_montserrat_12, C_MUT, ""); lv_obj_align(st_wu, LV_ALIGN_TOP_MID, 0, 146);
+    st_rpm = ui_label(scr, &bc_bold22, C_VIOLET, ""); lv_obj_align(st_rpm, LV_ALIGN_TOP_MID, 0, 160);
+    st_l1 = ui_label(scr, &lv_font_montserrat_12, C_FG, ""); lv_obj_align(st_l1, LV_ALIGN_TOP_MID, 0, 186);
+    st_l2 = ui_label(scr, &lv_font_montserrat_12, C_MUT, ""); lv_obj_align(st_l2, LV_ALIGN_TOP_MID, 0, 202);
+    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 36, st_back, NULL);
+    lv_obj_align(bk, LV_ALIGN_TOP_LEFT, 16, 102);
+    ui_screen_show(scr);
+}
+
+/* ---------------- Device Health */
+static lv_obj_t *h_txt, *h_note;
+
+static void dur(char *b, size_t cap, uint32_t s) { snprintf(b, cap, "%luh %02lum %02lus", (unsigned long)(s / 3600), (unsigned long)(s / 60 % 60), (unsigned long)(s % 60)); }
+
+static size_t health_text(char *b, size_t cap, bool markup)
+{
+    plat_health_t h; plat_health(&h);
+    app_live_t lv; app_live(&lv);
+    bc_profile_t *p = app_profile();
+    const char *K = markup ? "#8494a0 " : "", *E = markup ? "#" : "";
+    char up[24]; dur(up, sizeof up, h.uptime_s);
+    const plat_link_info_t *pw = &lv.link[PLAT_SENS_POWER], *hr = &lv.link[PLAT_SENS_HR];
+    int n = snprintf(b, cap,
+        "%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
+        "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
+        "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
+        "%sBattery%s %d mV, %d%%%s\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sWi-Fi%s %s\n"
+        "%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
+        K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
+        K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
+        K, E, (unsigned long)h.storage_errors, K, E, (unsigned long)h.profile_save_errors,
+        K, E, h.heap_free_k, h.heap_min_k, K, E, h.psram_free_k, h.psram_total_k, K, E, h.flash_total_k, h.app_slot_k,
+        K, E, h.storage_free_k, h.storage_total_k,
+        K, E, h.battery_mv, h.battery_pct, h.usb_power ? " (USB)" : "", K, E, h.ble_ready ? "ready" : "NOT READY",
+        h.ble_scanning ? ", scanning" : "", (unsigned long)h.ble_devices_seen,
+        K, E, p->power.paired ? p->power.name : "not paired", ui_link_text(pw->link),
+        K, E, p->hr.paired ? p->hr.name : "not paired", p->hr.paired ? ui_link_text(hr->link) : "",
+        K, E, p->wifi_on ? (h.wifi_networks >= 0 ? "on (scan done)" : "on") : "off",
+        K, E, h.display_ok ? "OK" : "FAIL", K, E, h.touch_ok ? "OK" : "FAIL", K, E, h.imu_ok ? "OK" : "not found",
+        K, E, app_demo() ? "ON" : "off");
+    return n > 0 && (size_t)n < cap ? (size_t)n : cap - 1;
+}
+
+static void health_update(void) { static char b[1100]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
+
+static void strip_markup(char *s)
+{
+    char *o = s;
+    for (char *i = s; *i;) {
+        if (*i == '#' && i[1] && strchr("0123456789abcdefABCDEF", i[1]) && strlen(i) > 7 && i[7] == ' ') { i += 8; continue; }
+        if (*i == '#') { i++; continue; }
+        *o++ = *i++;
+    }
+    *o = 0;
+}
+
+static void export_cb(lv_event_t *e)
+{
+    (void)e;
+    static char rep[2600];
+    size_t n = health_text(rep, 1300, false);
+    char st[520]; plat_selftest_text(st, sizeof st); strip_markup(st);
+    app_live_t lv; app_live(&lv);
+    bc_ride_summary_t r[3]; int nr = app_history(r, 3, false);
+    n += (size_t)snprintf(rep + n, sizeof rep - n, "\n--- self-test\n%s\n--- live\npower %s %d W, cadence %s %d rpm, hr %s\nsource %s\n--- rides: %d shown (newest first)\n",
+                          st, lv.power_ok ? "ok" : "NO DATA", lv.power_ok ? lv.watts : 0, lv.cad_ok ? "ok" : "NO DATA", lv.cad_ok ? lv.rpm : 0,
+                          lv.hr_ok ? "ok" : "none", lv.demo ? "SIMULATED (demo)" : "real sensors", nr);
+    for (int i = 0; i < nr && n < sizeof rep - 80; i++) {
+        char d[16]; bc_fmt_duration(r[i].duration_s, d, sizeof d);
+        n += (size_t)snprintf(rep + n, sizeof rep - n, "ride #%u %s avg %d W max %d W cad %d%s\n", r[i].id, d, r[i].avg_power, r[i].max_power,
+                              r[i].avg_cad, r[i].recovered ? " (recovered)" : "");
+    }
+    plat_export_report(rep);
+    lv_label_set_text(h_note, "Sent to the PC log\nand saved on the device.");
+}
+
+static void back_diag(lv_event_t *e) { (void)e; ui_diag_menu_show(); }
+
+void ui_health_show(void)
+{
+    lv_obj_t *scr = ui_screen_new(UI_SCR_DIAG, health_update);
+    ui_title(scr, "DEVICE HEALTH");
+    lv_obj_t *l = ui_scroll_area(scr, 50, 178);
+    h_txt = ui_label(l, &lv_font_montserrat_12, C_FG, "");
+    lv_obj_set_width(h_txt, lv_pct(100));
+    lv_label_set_long_mode(h_txt, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(h_txt, LV_TEXT_ALIGN_LEFT, 0);
+    lv_label_set_recolor(h_txt, true);
+    ui_pill(l, "SEND LOG TO PC", C_CYAN, C_INK, 160, 34, export_cb, NULL);
+    h_note = ui_label(l, &lv_font_montserrat_12, C_MUT, "Start READ-LOG on the PC first, then tap SEND.");
+    lv_obj_set_width(h_note, lv_pct(100)); lv_label_set_long_mode(h_note, LV_LABEL_LONG_WRAP);
+    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 44, back_diag, NULL);
+    lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 182);
+    ui_screen_show(scr);
+}
+
+/* ---------------- Diagnostics menu */
+static void m_health(lv_event_t *e) { (void)e; ui_health_show(); }
+static void m_sensor(lv_event_t *e) { (void)e; ui_sensor_test_show(true); }
+static void m_self(lv_event_t *e) { (void)e; ui_diag_show(); }
+
+void ui_diag_menu_show(void)
+{
+    lv_obj_t *scr = ui_screen_new(UI_SCR_DIAG, NULL);
+    ui_title(scr, "DIAGNOSTICS");
+    lv_obj_t *l = ui_scroll_area(scr, 50, 186);
+    ui_row_btn(l, "Device Health", LV_SYMBOL_RIGHT, C_CYAN, m_health, NULL);
+    ui_row_btn(l, "Sensor Test", LV_SYMBOL_RIGHT, C_CYAN, m_sensor, NULL);
+    ui_row_btn(l, "Self-test", LV_SYMBOL_RIGHT, C_CYAN, m_self, NULL);
+    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 44, back_settings, NULL);
+    lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 188);
+    lv_obj_set_size(bk, 36, 36);
+    ui_screen_show(scr);
+}

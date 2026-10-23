@@ -109,6 +109,7 @@ static void sensors_update(void)
 
 static void pair_power(lv_event_t *e) { (void)e; ui_pair_show(PLAT_SENS_POWER, false); }
 static void pair_hr(lv_event_t *e) { (void)e; ui_pair_show(PLAT_SENS_HR, false); }
+static void sensor_test(lv_event_t *e) { (void)e; ui_sensor_test_show(false); }
 static void back_home(lv_event_t *e) { (void)e; ui_home_show(); }
 
 void ui_sensors_show(void)
@@ -116,6 +117,7 @@ void ui_sensors_show(void)
     lv_obj_t *scr = ui_screen_new(UI_SCR_SENSORS, sensors_update);
     ui_title(scr, "SENSORS");
     lv_obj_t *list = ui_scroll_area(scr, 52, 180);
+    ui_pill(list, "SENSOR TEST", C_CYAN, C_INK, 150, 34, sensor_test, NULL);
     for (int k = 0; k < 3; k++) {
         s_rows[k] = ui_label(list, &lv_font_montserrat_14, C_FG, "");
         lv_label_set_recolor(s_rows[k], true);

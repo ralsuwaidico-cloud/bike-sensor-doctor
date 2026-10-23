@@ -103,6 +103,17 @@ typedef enum { UI_EDIT_NAME = 0, UI_EDIT_AGE, UI_EDIT_WEIGHT, UI_EDIT_HEIGHT, UI
                UI_EDIT_STYLE, UI_EDIT_BRIGHT, UI_EDIT_WIFI } ui_edit_t;
 void ui_edit_show(ui_edit_t what, bool onboarding);
 
+/* ride-screen designs (visual alternatives over the same data and coaching) */
+typedef struct { char letter; const char *name, *hint; void (*build)(lv_obj_t *tile); bool cad_inline; } ui_ride_design_t;
+int ui_ride_design_count(void);
+const ui_ride_design_t *ui_ride_design(int i);
+const lv_image_dsc_t *ui_ride_thumb(int i);     /* preview picture, NULL if none */
+void ui_display_show(void);
+void ui_style_picker_show(void);
+void ui_sensor_test_show(bool from_diag);
+void ui_health_show(void);
+void ui_diag_menu_show(void);
+
 /* test hooks */
 void ui_test_set_style(int style);
 

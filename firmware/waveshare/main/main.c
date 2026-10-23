@@ -1,5 +1,5 @@
 /*
- * Bike Computer — Waveshare ESP32-S3-Touch-LCD-1.28-B firmware 0.2.0.
+ * Bike Computer — Waveshare ESP32-S3-Touch-LCD-1.28-B firmware 0.2.1.
  * Standalone cycling computer: onboarding, home, ride (4 pages + controls), coach, results, history, settings, sensors,
  * DEMO MODE. App/UI code is shared with the PC test harness (test/sim); hardware lives in hw.c, ble_central.c, plat_esp.c.
  *
@@ -19,6 +19,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_lvgl_port.h"
+#include "nvs.h"
 #include "hw.h"
 #include "ble_central.h"
 #include "app.h"
@@ -29,6 +30,7 @@ static const char *TAG = "main";
 #define CRASHES_FOR_SAFE_MODE 3
 RTC_NOINIT_ATTR static uint32_t s_guard_magic;
 RTC_NOINIT_ATTR static uint32_t s_crash_count;
+uint32_t g_crash_consecutive;
 
 static const char *reason_name(esp_reset_reason_t r)
 {
@@ -82,6 +84,14 @@ static void safe_mode_screen(esp_reset_reason_t r)
     lvgl_port_unlock();
 }
 
+/* persistent counters for Device Health (NVS namespace "diag", next to the boot counter) */
+static void bump(const char *key)
+{
+    nvs_handle_t h; uint32_t v = 0;
+    if (nvs_open("diag", NVS_READWRITE, &h) != ESP_OK) return;
+    nvs_get_u32(h, key, &v); nvs_set_u32(h, key, v + 1); nvs_commit(h); nvs_close(h);
+}
+
 static void health(void)
 {
     char line[200]; app_health_line(line, sizeof line);
@@ -103,11 +113,14 @@ void app_main(void)
 
     hw_selftest_run();                    /* NVS must be up before BLE and the profile */
     ESP_LOGI(TAG, "STAGE 1 self-test OK");
+    g_crash_consecutive = s_crash_count;
+    if (is_crash(why)) bump("crashes");
     lv_display_t *disp = hw_display_init();
     ESP_LOGI(TAG, "STAGE 2 display OK");
 
     if (s_crash_count >= CRASHES_FOR_SAFE_MODE) {
         ESP_LOGW(TAG, "SAFE MODE: %u crash resets in a row - only the display runs", (unsigned)s_crash_count);
+        bump("safemode");
         safe_mode_screen(why);
         return;                           /* no touch, no UI, no Bluetooth, no Wi-Fi */
     }

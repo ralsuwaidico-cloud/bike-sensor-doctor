@@ -34,8 +34,9 @@ Full onboarding implementation starts only after the display, touchscreen and XD
 Previews: test/sim (`make run` then `python3 sheet.py out`), every screen checked automatically against the round glass.
 | # | Decision | Options | Recommended | Status |
 |---|---|---|---|---|
-| 6 | Main ride page | A Power Focus (approved round 1) · B Split (watts top, cadence | HR below) · C Coach First (instruction + colour ring) | A | **PENDING** — A is the default; B and C selectable in Settings > Ride screen so the choice never blocks testing |
+| 6 | Main ride page | A Power Focus · B Split · C Coach First | A | **DECIDED 2026-10-23 (Rashed): keep all three installed**, A default, chosen in Settings > Display > Ride Screen with a preview, remembered after restart, switchable during a ride (controls panel) without interrupting recording or coaching; designs are layouts over shared data (ride-design registry in ui_ride.c) |
 | 7 | Ride controls | pull-down panel (swipe down or tap the top handle): hold 1 s PAUSE, tap RESUME, hold 2 s END | as built | implements approved navigation A |
 | 8 | Results | SAVE (tap) / discard (hold the bin 1.5 s) | as built | new |
 | 9 | Home | START RIDE + Sensors / History / Settings, status line (meter, HR, battery), FTP with PROVISIONAL label | as built | new |
 | 10 | Demo mode | orange DEMO badge on every screen, separate demo history, never changes FTP, OFF after every restart | as built | new |
+| 11 | Diagnostics | Settings > Diagnostics: Device Health (firmware/build, uptime, restart reason, crash + safe-mode + storage-error counters, RAM/PSRAM, flash/storage, battery, BLE, paired sensors, Wi-Fi, display/touch/IMU) with SEND LOG TO PC; Sensor Test (REAL/SIMULATED, XDS state, live W + rpm, time since last valid packet, reconnects, rejected packets); Self-test | as built (0.2.1) | requested 2026-10-23 |

@@ -13,10 +13,16 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs.h"
+#include "esp_ota_ops.h"
+#include "esp_flash.h"
+#include "esp_vfs_fat.h"
+#include "esp_timer.h"
 #include "ble_central.h"
 #include "hw.h"
 
 static const char *TAG = "plat";
+static uint32_t s_storage_errors, s_profile_errors;
+extern uint32_t g_crash_consecutive;
 #define ROOT "/data/"
 
 uint32_t plat_ms(void) { return hw_millis(); }
@@ -49,7 +55,7 @@ bool plat_profile_save(const char *txt)
     esp_err_t e = nvs_set_str(h, "profile", txt);
     if (e == ESP_OK) e = nvs_commit(h);
     nvs_close(h);
-    if (e != ESP_OK) ESP_LOGE(TAG, "profile save failed: %s", esp_err_to_name(e));
+    if (e != ESP_OK) { s_profile_errors++; ESP_LOGE(TAG, "profile save failed: %s", esp_err_to_name(e)); }
     return e == ESP_OK;
 }
 
@@ -65,10 +71,11 @@ static void full(const char *rel, char *out, size_t cap)
 bool plat_file_append(const char *path, const char *data, size_t len, bool sync)
 {
     char p[96]; full(path, p, sizeof p);
-    FILE *f = fopen(p, "a"); if (!f) { ESP_LOGE(TAG, "append %s: errno %d", p, errno); return false; }
+    FILE *f = fopen(p, "a"); if (!f) { s_storage_errors++; ESP_LOGE(TAG, "append %s: errno %d", p, errno); return false; }
     size_t w = fwrite(data, 1, len, f);
     if (sync) { fflush(f); fsync(fileno(f)); }
     fclose(f);
+    if (w != len) s_storage_errors++;
     return w == len;
 }
 
@@ -92,6 +99,7 @@ long plat_file_read_at(const char *path, long off, char *buf, size_t cap)
 long plat_file_read(const char *path, char *buf, size_t cap) { return plat_file_read_at(path, 0, buf, cap); }
 bool plat_file_rename(const char *from, const char *to) { char a[96], b[96]; full(from, a, sizeof a); full(to, b, sizeof b); unlink(b); return rename(a, b) == 0; }
 bool plat_file_remove(const char *path) { char p[96]; full(path, p, sizeof p); return unlink(p) == 0; }
+long plat_file_size(const char *path) { char p[96]; full(path, p, sizeof p); struct stat st; return stat(p, &st) == 0 ? (long)st.st_size : -1; }
 bool plat_storage_ok(void) { return g_selftest.storage == HW_PASS; }
 
 /* ---- battery: averaged, read at most every 5 s */
@@ -156,3 +164,47 @@ void plat_mem_text(char *b, size_t cap)
              (unsigned)(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024), (unsigned)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024));
 }
 void plat_log(const char *line) { ESP_LOGI("app", "%s", line); }
+
+static uint32_t nvs_u32(const char *key)
+{
+    nvs_handle_t h; uint32_t v = 0;
+    if (nvs_open("diag", NVS_READONLY, &h) == ESP_OK) { nvs_get_u32(h, key, &v); nvs_close(h); }
+    return v;
+}
+
+void plat_health(plat_health_t *o)
+{
+    memset(o, 0, sizeof *o);
+    const esp_app_desc_t *d = esp_app_get_description();
+    snprintf(o->fw_version, sizeof o->fw_version, "%.23s", d->version);
+    snprintf(o->build, sizeof o->build, "%.6s %.5s", d->date, d->time);
+    o->uptime_s = (uint32_t)(esp_timer_get_time() / 1000000);
+    snprintf(o->reset_reason, sizeof o->reset_reason, "%s", plat_reset_reason());
+    o->boot_count = g_selftest.boot_count;
+    o->crash_total = nvs_u32("crashes"); o->safe_mode_entries = nvs_u32("safemode"); o->crash_consecutive = g_crash_consecutive;
+    o->storage_errors = s_storage_errors; o->profile_save_errors = s_profile_errors;
+    o->heap_free_k = (long)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024);
+    o->heap_min_k = (long)(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024);
+    o->psram_free_k = (long)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024);
+    o->psram_total_k = (long)(heap_caps_get_total_size(MALLOC_CAP_SPIRAM) / 1024);
+    uint32_t fsz = 0; esp_flash_get_size(NULL, &fsz); o->flash_total_k = (long)(fsz / 1024);
+    const esp_partition_t *run = esp_ota_get_running_partition();
+    o->app_slot_k = run ? (long)(run->size / 1024) : -1;
+    o->app_used_k = -1;
+    uint64_t tot = 0, fre = 0;
+    if (esp_vfs_fat_info("/data", &tot, &fre) == ESP_OK) { o->storage_total_k = (long)(tot / 1024); o->storage_free_k = (long)(fre / 1024); }
+    else o->storage_total_k = o->storage_free_k = -1;
+    o->battery_mv = plat_battery_mv(); o->battery_pct = plat_battery_pct(); o->usb_power = plat_usb_power();
+    o->ble_ready = ble_central_ready(); o->ble_scanning = ble_central_scanning(); o->ble_devices_seen = ble_central_devices_seen();
+    o->wifi_on = g_selftest.wifi == HW_PASS && net_wifi_count() >= 0; o->wifi_networks = net_wifi_count();
+    o->display_ok = g_selftest.display == HW_PASS; o->touch_ok = g_selftest.touch == HW_PASS;
+    o->imu_ok = g_selftest.imu == HW_PASS; o->storage_ok = g_selftest.storage == HW_PASS;
+}
+
+void plat_export_report(const char *text)
+{
+    /* plain printf (not the log macros) so long lines are never cut; the PC log reader records it */
+    printf("\n===== BIKE COMPUTER DIAGNOSTIC REPORT BEGIN =====\n%s\n===== BIKE COMPUTER DIAGNOSTIC REPORT END =====\n", text);
+    fflush(stdout);
+    plat_file_write("diag/report.txt", text, strlen(text));
+}

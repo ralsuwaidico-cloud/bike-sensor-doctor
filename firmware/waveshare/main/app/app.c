@@ -65,6 +65,7 @@ void app_live(app_live_t *o)
         o->link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED;
         snprintf(o->link[PLAT_SENS_POWER].name, sizeof o->link[0].name, "DEMO METER");
         o->link[PLAT_SENS_POWER].age_ms = o->power_ok ? 300 : 5000;
+        o->link[PLAT_SENS_POWER].valid_age_ms = o->power_ok ? 300 : 5000;
         o->link[PLAT_SENS_POWER].packets = age / 1000;
         o->link[PLAT_SENS_HR].link = PLAT_LINK_NOT_PAIRED;
         return;
@@ -168,7 +169,12 @@ static bool append_history(const bc_ride_summary_t *s)
     size_t n = bc_summary_to_line(s, line, sizeof line - 1);
     if (!n) return false;
     line[n++] = '\n';
-    return plat_file_append(s->demo ? HIST_DEMO : HIST_REAL, line, n, true);
+    const char *path = s->demo ? HIST_DEMO : HIST_REAL;
+    /* if a previous write was cut by a power loss (last line without newline), start on a fresh line so the torn
+       record is the only one lost and this ride is stored intact */
+    long sz = plat_file_size(path);
+    if (sz > 0) { char last = 0; if (plat_file_read_at(path, sz - 1, &last, 1) == 1 && last != '\n') plat_file_append(path, "\n", 1, false); }
+    return plat_file_append(path, line, n, true);
 }
 
 static void keep_samples(uint16_t id, bool demo)

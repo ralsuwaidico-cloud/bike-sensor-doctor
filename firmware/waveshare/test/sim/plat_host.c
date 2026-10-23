@@ -28,6 +28,7 @@ void plat_sensors(plat_sensors_t *o)
     o->power_ok = g_sim.power_ok; o->watts = g_sim.watts; o->cad_ok = g_sim.cad_ok; o->rpm = g_sim.rpm;
     o->hr_ok = g_sim.hr_ok; o->bpm = g_sim.bpm;
     for (int k = 0; k < PLAT_SENS_KINDS; k++) { o->link[k] = g_sim.link[k]; }
+    o->link[PLAT_SENS_POWER].valid_age_ms = g_sim.power_ok ? 700 : (g_sim.link[0].packets ? 9300 : UINT32_MAX);
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;
 }
 
@@ -77,6 +78,21 @@ bool plat_file_rename(const char *from, const char *to)
 }
 bool plat_file_remove(const char *path) { char p[512]; full(path, p, sizeof p); return unlink(p) == 0; }
 bool plat_storage_ok(void) { return true; }
+long plat_file_size(const char *path) { char p[512]; full(path, p, sizeof p); struct stat st; return stat(p, &st) == 0 ? (long)st.st_size : -1; }
+void plat_health(plat_health_t *o)
+{
+    memset(o, 0, sizeof *o);
+    snprintf(o->fw_version, sizeof o->fw_version, "0.2.1-sim"); snprintf(o->build, sizeof o->build, "Oct 23 22:00");
+    o->uptime_s = g_sim.now_ms / 1000; snprintf(o->reset_reason, sizeof o->reset_reason, "power-on");
+    o->boot_count = g_sim.boots; o->crash_total = 2; o->crash_consecutive = 0; o->safe_mode_entries = 0;
+    o->heap_free_k = 61; o->heap_min_k = 48; o->psram_free_k = 1890; o->psram_total_k = 2048;
+    o->flash_total_k = 16384; o->app_slot_k = 4096; o->app_used_k = -1; o->storage_free_k = 7980; o->storage_total_k = 8000;
+    o->battery_mv = plat_battery_mv(); o->battery_pct = g_sim.battery_pct; o->usb_power = g_sim.usb;
+    o->ble_ready = true; o->ble_scanning = g_sim.link[0].link == PLAT_LINK_SEARCHING; o->ble_devices_seen = 14;
+    o->wifi_networks = g_sim.wifi_on ? 4 : -1;
+    o->display_ok = o->touch_ok = o->imu_ok = o->storage_ok = true;
+}
+void plat_export_report(const char *text) { g_sim.exports++; plat_file_write("diag/report.txt", text, strlen(text)); }
 
 int plat_battery_pct(void) { return g_sim.battery_pct; }
 int plat_battery_mv(void) { return 3600 + g_sim.battery_pct * 6; }

@@ -178,7 +178,7 @@ static void wheel_save(lv_event_t *e)
     default: break;
     }
     save();
-    if (!s_onb) { ui_settings_show(); return; }
+    if (!s_onb) { if (s_edit == UI_EDIT_BRIGHT || s_edit == UI_EDIT_STYLE) ui_display_show(); else ui_settings_show(); return; }
     switch (s_edit) {
     case UI_EDIT_AGE: go_step(ST_WEIGHT); break;
     case UI_EDIT_WEIGHT: go_step(ST_EXP); break;
@@ -192,7 +192,7 @@ static void wheel_back(lv_event_t *e)
 {
     (void)e;
     if (s_edit == UI_EDIT_BRIGHT) plat_backlight(app_profile()->brightness);
-    if (!s_onb) { ui_settings_show(); return; }
+    if (!s_onb) { if (s_edit == UI_EDIT_BRIGHT || s_edit == UI_EDIT_STYLE) ui_display_show(); else ui_settings_show(); return; }
     switch (s_edit) {
     case UI_EDIT_AGE: go_step(ST_NAME); break;
     case UI_EDIT_WEIGHT: go_step(ST_AGE); break;

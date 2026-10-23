@@ -6,7 +6,8 @@
 
 static void edit_cb(lv_event_t *e) { ui_edit_show((ui_edit_t)(intptr_t)lv_event_get_user_data(e), false); }
 static void sensors_cb(lv_event_t *e) { (void)e; ui_sensors_show(); }
-static void diag_cb(lv_event_t *e) { (void)e; ui_diag_show(); }
+static void diag_cb(lv_event_t *e) { (void)e; ui_diag_menu_show(); }
+static void display_cb(lv_event_t *e) { (void)e; ui_display_show(); }
 static void home_cb(lv_event_t *e) { (void)e; ui_home_show(); }
 static void demo_cb(lv_event_t *e) { (void)e; app_set_demo(!app_demo()); ui_settings_show(); }
 static void setup_cb(lv_event_t *e) { (void)e; app_profile_reset(); ui_onboard_start(); }
@@ -35,8 +36,7 @@ void ui_settings_show(void)
     if (p->ftp_note[0]) { lv_obj_t *n = ui_label(l, &lv_font_montserrat_12, C_MUT, p->ftp_note); lv_obj_set_width(n, lv_pct(100)); lv_label_set_long_mode(n, LV_LABEL_LONG_WRAP); }
     if (p->max_hr) snprintf(v, sizeof v, "%u", p->max_hr); else snprintf(v, sizeof v, "est. %d", bc_profile_max_hr(p));
     ui_row_btn(l, "Max HR", v, C_CYAN, edit_cb, (void *)UI_EDIT_MAXHR);
-    snprintf(v, sizeof v, "%c", 'A' + p->ride_style); ui_row_btn(l, "Ride screen", v, C_CYAN, edit_cb, (void *)UI_EDIT_STYLE);
-    snprintf(v, sizeof v, "%u%%", p->brightness); ui_row_btn(l, "Brightness", v, C_CYAN, edit_cb, (void *)UI_EDIT_BRIGHT);
+    snprintf(v, sizeof v, "%c  " LV_SYMBOL_RIGHT, ui_ride_design(p->ride_style)->letter); ui_row_btn(l, "Display", v, C_CYAN, display_cb, NULL);
     ui_row_btn(l, "Sensors", LV_SYMBOL_RIGHT, C_CYAN, sensors_cb, NULL);
     ui_row_btn(l, "Wi-Fi", p->wifi_on ? "on" : "off", C_CYAN, edit_cb, (void *)UI_EDIT_WIFI);
     ui_row_btn(l, "Demo mode", app_demo() ? "ON" : "off", app_demo() ? C_DEMO : C_MUT, demo_cb, NULL);
@@ -63,12 +63,12 @@ static void diag_update(void)
              (unsigned long)plat_boot_count(), mem);
     lv_label_set_text(d_txt, b);
 }
-static void back_settings(lv_event_t *e) { (void)e; ui_settings_show(); }
+static void back_settings(lv_event_t *e) { (void)e; ui_diag_menu_show(); }
 
 void ui_diag_show(void)
 {
     lv_obj_t *scr = ui_screen_new(UI_SCR_DIAG, diag_update);
-    ui_title(scr, "DIAGNOSTICS");
+    ui_title(scr, "SELF-TEST");
     lv_obj_t *l = ui_scroll_area(scr, 50, 178);
     d_txt = ui_label(l, &lv_font_montserrat_12, C_FG, "");
     lv_obj_set_width(d_txt, lv_pct(100));

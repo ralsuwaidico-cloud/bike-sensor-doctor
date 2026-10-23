@@ -434,8 +434,8 @@ static void scenario(void)
       app_history(hh, 2, false); CHECK(hh[0].id == all[0].id && hh[1].id == all[1].id && all[0].id > all[1].id && all[2].id > all[3].id, "history newest first with a small window"); }
 
     printf("== 7 every editor and settings page\n");
-    const char *rows[] = { "Name", "Age", "Weight", "Height", "Level", "Goal", "FTP", "Max HR", "Ride screen", "Brightness", "Wi-Fi" };
-    for (int i = 0; i < 11; i++) {
+    const char *rows[] = { "Name", "Age", "Weight", "Height", "Level", "Goal", "FTP", "Max HR", "Display", "Wi-Fi" };
+    for (int i = 0; i < 10; i++) {
         ui_settings_show(); run(300);
         scroll_to(rows[i]);
         tap_text(rows[i]);
@@ -446,7 +446,65 @@ static void scenario(void)
     ui_settings_show(); run(300);
     scroll_to("SET UP AGAIN");
     shot("80_settings_bottom");
-    tap_text("Diagnostics"); shot("81_diagnostics");
+    tap_text("Diagnostics"); shot("81_diagnostics_menu");
+    tap_text("Self-test"); shot("81_selftest");
+    ui_diag_menu_show(); run(300); tap_text("Device Health"); shot("84_health_top");
+    scroll_to("SEND LOG TO PC"); shot("85_health_bottom");
+    tap_text("SEND LOG TO PC");
+    { char rb[4096]; long rn = plat_file_read("diag/report.txt", rb, sizeof rb - 1); if (rn > 0) rb[rn] = 0; else rb[0] = 0;
+      CHECK(g_sim.exports == 1 && rn > 200 && strstr(rb, "Firmware") && strstr(rb, "Power meter") && !strstr(rb, "#8494a0"), "diagnostic report exported (%ld bytes)", rn); }
+    shot("86_health_sent");
+
+    printf("== 9 ride-screen designs: picker with preview, persisted, switch during a ride\n");
+    app_profile()->ride_style = 0; app_profile_save();
+    ui_display_show(); run(300); shot("87_display");
+    tap_text("Ride screen"); shot("88_picker_A");
+    tap_text(LV_SYMBOL_RIGHT); shot("88_picker_B");
+    drag(165, 110, 75, 110); shot("88_picker_C");
+    CHECK(on_screen("Coach First"), "swipe in the picker shows design C");
+    tap_text("USE C");
+    CHECK(app_profile()->ride_style == 2 && on_screen("DISPLAY"), "design C chosen");
+    boot();
+    CHECK(app_profile()->ride_style == 2, "design choice kept after restart");
+    ui_test_set_style(-1);
+    sensors(true, 175, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile()->power.paired = true;
+    ui_home_show(); run(300); tap_text("START RIDE"); run_s(400);
+    bc_ride_summary_t s1; app_ride_totals(&s1); bc_cue_id_t cue1 = app_cue()->id;
+    shot("89_ride_C_before_switch");
+    drag(120, 60, 120, 190);
+    CHECK(on_screen("SCREEN C"), "controls show the current design");
+    shot("89_controls_design");
+    tap_text("SCREEN C"); run(300);
+    CHECK(app_profile()->ride_style == 0 && on_screen("SCREEN A"), "design switched during the ride");
+    tap_text("SCREEN A"); run(300); tap_text("SCREEN B"); run(300);
+    CHECK(app_profile()->ride_style == 2, "cycles A-B-C");
+    tap_text(LV_SYMBOL_UP);
+    run_s(5);
+    bc_ride_summary_t s2; app_ride_totals(&s2);
+    CHECK(app_ride_state() == BC_RIDE_RUNNING && s2.duration_s >= s1.duration_s + 5 && s2.power_s >= s1.power_s + 5 && app_cue()->id == cue1,
+          "ride and coaching continue through design switches (%lu -> %lu s)", (unsigned long)s1.duration_s, (unsigned long)s2.duration_s);
+    shot("89_ride_C_after_switch");
+    /* torn history line (power cut while writing) must not cost the next ride */
+    plat_file_append("rides/history.txt", "R1,99,0,0,12", 12, true);
+    bc_ride_summary_t hb[30]; int before_n = app_history(hb, 30, false); uint16_t want_id = app_profile()->next_ride_id;
+    drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE");
+    bc_ride_summary_t ha[30]; int after_n = app_history(ha, 30, false);
+    CHECK(after_n == before_n + 1 && ha[0].id == want_id && ha[0].duration_s >= s2.duration_s, "ride saved intact after a torn history line (%d -> %d)", before_n, after_n);
+
+    printf("== 10 sensor test screen\n");
+    ui_sensor_test_show(false); run(500);
+    CHECK(on_screen("REAL SENSOR") && on_screen("175") && on_screen("last valid"), "sensor test shows real live values");
+    shot("90a_sensor_test_live");
+    sensors(false, 0, false, 0, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_RETRY; g_sim.link[PLAT_SENS_POWER].reconnects = 3;
+    g_sim.link[PLAT_SENS_POWER].packets = 400;
+    run(600);
+    CHECK(on_screen("NO DATA") && on_screen("RECONNECTING") && on_screen("reconnects 3"), "sensor test: NO DATA + reconnecting");
+    shot("90b_sensor_test_nodata");
+    app_set_demo(true); run_s(2);
+    CHECK(on_screen("SIMULATED"), "sensor test labels demo data SIMULATED");
+    shot("90c_sensor_test_demo");
+    app_set_demo(false);
+    g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED;
     ui_sensors_show(); run(500); shot("82_sensors");
     tap_text("PAIR POWER"); run(2000); shot("83_pair_from_settings");
 

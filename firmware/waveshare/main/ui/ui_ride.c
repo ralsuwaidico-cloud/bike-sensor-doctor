@@ -51,10 +51,15 @@ static lv_obj_t *mk_arc(lv_obj_t *p, int size, int width, int a0, int a1, lv_col
 
 /* ---- page 1 variants */
 static lv_obj_t *w_cad_u, *w_hr_u;
-static void page_power(lv_obj_t *t)
+static void reset_widgets(void)
 {
     w_arc = w_band = w_ring = w_head = w_time1 = w_cad_u = w_hr_u = NULL;
-    if (r_style == BC_STYLE_FOCUS) {
+    w_status = w_watts = w_unit = w_cad = w_hr = w_cue = w_cue_lbl = NULL;
+}
+
+static void build_focus(lv_obj_t *t)
+{
+    {
         /* A — Power Focus (approved): power arc with the target band on its outer edge, huge watts, cadence + HR, coach pill */
         w_arc = mk_arc(t, 228, 10, 135, 45, C_TRACK, C_CYAN);
         lv_arc_set_range(w_arc, 0, 1000);
@@ -74,7 +79,12 @@ static void page_power(lv_obj_t *t)
         lv_obj_remove_flag(w_cue, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_flag(w_cue, LV_OBJ_FLAG_GESTURE_BUBBLE);
         w_cue_lbl = ui_label(w_cue, &bc_bold16, C_INK, ""); lv_obj_center(w_cue_lbl);
-    } else if (r_style == BC_STYLE_SPLIT) {
+    }
+}
+
+static void build_split(lv_obj_t *t)
+{
+    {
         /* B — Split: watts on top, cadence | heart rate below, coach word at the bottom */
         w_status = tile_label(t, &lv_font_montserrat_12, C_MUT, 24);
         w_watts = tile_label(t, &bc_num80, C_FG, 44);
@@ -90,7 +100,12 @@ static void page_power(lv_obj_t *t)
         lv_obj_t *l1 = ui_label(t, &lv_font_montserrat_12, C_MUT, "RPM"); lv_obj_align(l1, LV_ALIGN_TOP_MID, -46, 188);
         w_hr_u = ui_label(t, &lv_font_montserrat_12, C_MUT, "BPM"); lv_obj_align(w_hr_u, LV_ALIGN_TOP_MID, 46, 188);
         w_cue = NULL; w_cue_lbl = tile_label(t, &bc_bold16, C_GREEN, 203);
-    } else {
+    }
+}
+
+static void build_coach(lv_obj_t *t)
+{
+    {
         /* C — Coach First: the instruction leads, the ring colour says on target / more / less */
         w_ring = mk_arc(t, 230, 8, 0, 360, C_TRACK, C_GREEN);
         lv_arc_set_range(w_ring, 0, 100); lv_arc_set_value(w_ring, 100);
@@ -103,6 +118,28 @@ static void page_power(lv_obj_t *t)
         w_time1 = ui_label(t, &bc_bold16, C_FG, ""); lv_obj_align(w_time1, LV_ALIGN_TOP_MID, 40, 186);
         w_hr = NULL; w_cue = NULL; w_cue_lbl = NULL;
     }
+}
+
+/*
+ * Ride-screen designs. Every design is only a LAYOUT of the same widgets: ride_update() fills whatever widgets the
+ * design created (all fed from the same app/coach data), so designs are visual alternatives, not separate code paths.
+ * To add a design: write build_x(tile), add one line here, add its thumbnail (tools/make_thumbs.py) and raise
+ * BC_STYLE_COUNT. Every design must pass the round-screen checks in test/sim.
+ */
+static const ui_ride_design_t DESIGNS[] = {
+    { 'A', "Power Focus", "big watts + power arc", build_focus, false },
+    { 'B', "Split", "cadence + HR below", build_split, false },
+    { 'C', "Coach First", "instruction first", build_coach, true },
+};
+int ui_ride_design_count(void) { return (int)(sizeof DESIGNS / sizeof DESIGNS[0]); }
+const ui_ride_design_t *ui_ride_design(int i) { return &DESIGNS[(i >= 0 && i < ui_ride_design_count()) ? i : 0]; }
+
+static lv_obj_t *r_tile0;
+static void page_power(lv_obj_t *t)
+{
+    reset_widgets();
+    r_tile0 = t;
+    ui_ride_design(r_style)->build(t);
 }
 
 static void build_pages(lv_obj_t *scr)
@@ -153,6 +190,21 @@ static void end_cb(lv_event_t *e)
     ui_results_show(&s, true);
 }
 
+static lv_obj_t *p_design;
+static void ride_update(void);
+/* switch design during a ride: only page 1's widgets are rebuilt; recording and coaching carry on untouched */
+static void design_cb(lv_event_t *e)
+{
+    (void)e;
+    r_style = (r_style + 1) % ui_ride_design_count();
+    app_profile()->ride_style = (uint8_t)r_style;
+    app_profile_save();
+    lv_obj_clean(r_tile0);
+    ui_page_dots(r_tile0, 4, 0, 222);
+    page_power(r_tile0);
+    ride_update();
+}
+
 static void gesture_cb(lv_event_t *e)
 {
     (void)e;
@@ -171,17 +223,21 @@ static void build_panel(lv_obj_t *scr)
     lv_obj_add_flag(r_panel, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(r_panel, LV_OBJ_FLAG_GESTURE_BUBBLE);
     ui_title(r_panel, "CONTROLS");
-    p_time = ui_label(r_panel, &bc_bold22, C_FG, ""); lv_obj_align(p_time, LV_ALIGN_TOP_MID, 0, 52);
-    p_state = ui_label(r_panel, &lv_font_montserrat_12, C_MUT, ""); lv_obj_align(p_state, LV_ALIGN_TOP_MID, 0, 78);
-    p_pause = ui_hold_btn(r_panel, "HOLD: PAUSE", C_AMBER, C_INK, 168, 44, 1000, pause_cb, NULL);
-    lv_obj_align(p_pause, LV_ALIGN_TOP_MID, 0, 98);
+    p_time = ui_label(r_panel, &bc_bold22, C_FG, ""); lv_obj_align(p_time, LV_ALIGN_TOP_MID, 0, 48);
+    p_state = ui_label(r_panel, &lv_font_montserrat_12, C_MUT, ""); lv_obj_align(p_state, LV_ALIGN_TOP_MID, 0, 72);
+    p_design = ui_pill(r_panel, "", C_PANEL, C_CYAN, 150, 28, design_cb, NULL);
+    lv_obj_set_style_text_font(lv_obj_get_child(p_design, 0), &lv_font_montserrat_14, 0);
+    lv_obj_align(p_design, LV_ALIGN_TOP_MID, 0, 80);
+    p_pause = ui_hold_btn(r_panel, "HOLD: PAUSE", C_AMBER, C_INK, 168, 40, 1000, pause_cb, NULL);
+    lv_obj_align(p_pause, LV_ALIGN_TOP_MID, 0, 116);
     p_resume = ui_pill(r_panel, LV_SYMBOL_PLAY " RESUME", C_GREEN, C_INK, 168, 44, resume_cb, NULL);
     lv_obj_set_style_text_font(lv_obj_get_child(p_resume, 0), &lv_font_montserrat_20, 0);
-    lv_obj_align(p_resume, LV_ALIGN_TOP_MID, 0, 98);
-    lv_obj_t *end = ui_hold_btn(r_panel, "HOLD: END", C_RED, C_INK, 168, 44, 2000, end_cb, NULL);
-    lv_obj_align(end, LV_ALIGN_TOP_MID, 0, 150);
-    lv_obj_t *x = ui_round_btn(r_panel, LV_SYMBOL_UP, C_PANEL, C_FG, 36, panel_close_cb, NULL);
-    lv_obj_align(x, LV_ALIGN_TOP_MID, 0, 200);
+    lv_obj_align(p_resume, LV_ALIGN_TOP_MID, 0, 116);
+    lv_obj_t *end = ui_hold_btn(r_panel, "HOLD: END", C_RED, C_INK, 140, 38, 2000, end_cb, NULL);
+    lv_obj_align(end, LV_ALIGN_TOP_MID, 0, 160);
+    lv_obj_t *x = ui_round_btn(r_panel, LV_SYMBOL_UP, C_PANEL, C_FG, 30, panel_close_cb, NULL);
+    lv_obj_set_style_text_font(lv_obj_get_child(x, 0), &lv_font_montserrat_14, 0);
+    lv_obj_align(x, LV_ALIGN_TOP_MID, 0, 202);
     lv_obj_add_flag(r_panel, LV_OBJ_FLAG_HIDDEN);
 }
 
@@ -223,7 +279,7 @@ static void ride_update(void)
     if (!lv.power_ok) snprintf(b, sizeof b, "NO DATA");
     lv_label_set_text(w_unit, b);
     lv_obj_set_style_text_color(w_unit, lv.power_ok ? C_MUT : C_AMBER, 0);
-    if (r_style == BC_STYLE_COACH) {
+    if (ui_ride_design(r_style)->cad_inline) {
         if (lv.cad_ok) snprintf(b, sizeof b, "%d rpm", lv.rpm); else snprintf(b, sizeof b, "-- rpm");
         lv_label_set_text(w_cad, b);
     } else {
@@ -293,8 +349,10 @@ static void ride_update(void)
     lv_label_set_text(s_txt, b);
 
     /* panel */
-    lv_label_set_text(p_time, tm);
-    lv_label_set_text(p_state, paused ? "PAUSED - time stopped" : "riding");
+    { char pt[32]; snprintf(pt, sizeof pt, paused ? "PAUSED %s" : "%s", tm); lv_label_set_text(p_time, pt);
+      lv_obj_set_style_text_color(p_time, paused ? C_AMBER : C_FG, 0); }
+    lv_obj_add_flag(p_state, LV_OBJ_FLAG_HIDDEN);   /* state is shown in the time line */
+    { char d[40]; snprintf(d, sizeof d, "SCREEN %c " LV_SYMBOL_RIGHT, ui_ride_design(r_style)->letter); lv_label_set_text(lv_obj_get_child(p_design, 0), d); }
     if (paused) { lv_obj_add_flag(p_pause, LV_OBJ_FLAG_HIDDEN); lv_obj_remove_flag(p_resume, LV_OBJ_FLAG_HIDDEN); }
     else { lv_obj_remove_flag(p_pause, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(p_resume, LV_OBJ_FLAG_HIDDEN); }
 }

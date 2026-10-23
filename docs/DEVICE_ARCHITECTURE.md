@@ -55,3 +55,9 @@ Board: Waveshare ESP32-S3-Touch-LCD-1.28-B. It has a 240 × 240 round GC9A01 dis
 - Crash-loop guard: after 3 crash resets the board shows a SAFE MODE screen.
 - A `HEALTH` line every 60 s reports heap, minimum heap, LVGL memory and the free stack of the UI, NimBLE and main tasks.
 - `test/host make lint` blocks `%f` in LVGL format calls, which caused the 0.1.0 reboot loop.
+
+## 0.2.1 additions
+- **Ride-screen designs** are entries in a registry (`DESIGNS[]` in `main/ui/ui_ride.c`): letter, name, hint and a `build(tile)` function that only lays out the shared widgets; `ride_update()` fills whatever the design created from the same app/coach data. Adding a design = one build function + one table line + a thumbnail (`tools/make_thumbs.py` from the PC renders) + `BC_STYLE_COUNT`, and it must pass test/sim.
+- **Display never waits on the radio**: no Bluetooth call runs in the UI task; RSSI is read by the BLE manager, which has its own FreeRTOS task (not the shared esp_timer task).
+- **Torn-write protection**: if the history file's last line was cut by a power loss, the next save starts on a new line, so only the cut record is lost.
+- **Device Health / export**: `plat_health()` + `plat_export_report()` (printed between `BIKE COMPUTER DIAGNOSTIC REPORT BEGIN/END` on the serial port and kept as `/data/diag/report.txt`). Crash and safe-mode totals live in NVS `diag`.
