@@ -157,7 +157,11 @@ float hw_battery_volts(void)
 /* ------------------------------------------------------------------ memory, NVS, storage */
 void hw_selftest_run(void)
 {
+#if CONFIG_SPIRAM
     size_t ps = esp_psram_is_initialized() ? esp_psram_get_size() : 0;
+#else
+    size_t ps = 0;   /* PSRAM disabled in this build (QEMU emulator test only) */
+#endif
     SET(psram, ps >= 2 * 1024 * 1024 ? HW_PASS : HW_FAIL, "%u KB PSRAM, %u KB free internal", (unsigned)(ps / 1024),
         (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024));
 

@@ -74,12 +74,16 @@ static void tick(lv_timer_t *t)
     if (s.devices_seen > 0 && g_selftest.ble != HW_PASS) { g_selftest.ble = HW_PASS; snprintf(g_selftest.ble_s, sizeof g_selftest.ble_s, "scan OK, %u devices", (unsigned)s.devices_seen); }
     if (s.state == XDS_SUBSCRIBED && pw) snprintf(g_selftest.ble_s, sizeof g_selftest.ble_s, "XDS live, %u pkts", (unsigned)s.live.packets);
 
-    float v = hw_battery_volts();
-    lv_label_set_text_fmt(l_test,
-        "Display  %s\nTouch    %s\nPSRAM    %s\nFlash    %s\nNVS      %s\nStorage  %s\nIMU      %s\nBattery  %s %.2fV\nWi-Fi    %s\nBLE      %s\nboot #%u",
+    /* LVGL's built-in printf has no float support (LV_USE_FLOAT off): a %f there desynchronised the arguments and crashed
+     * (0.1.0-diag reboot loop, 2026-10-23). Rule: never pass %f to lv_*_fmt — format with the C library's snprintf instead. */
+    static char buf[420];
+    int mv = (int)(hw_battery_volts() * 1000.0f);
+    snprintf(buf, sizeof buf,
+        "Display  %s\nTouch    %s\nPSRAM    %s\nFlash    %s\nNVS      %s\nStorage  %s\nIMU      %s\nBattery  %s %d.%02dV\nWi-Fi    %s\nBLE      %s\nboot #%u",
         word(g_selftest.display), word(g_selftest.touch), word(g_selftest.psram), word(g_selftest.flash), word(g_selftest.nvs),
-        word(g_selftest.storage), word(g_selftest.imu), word(g_selftest.battery), v, word(g_selftest.wifi), word(g_selftest.ble),
-        (unsigned)g_selftest.boot_count);
+        word(g_selftest.storage), word(g_selftest.imu), word(g_selftest.battery), mv / 1000, (mv % 1000) / 10, word(g_selftest.wifi),
+        word(g_selftest.ble), (unsigned)g_selftest.boot_count);
+    lv_label_set_text(l_test, buf);
     lv_label_set_text_fmt(l_heap, "heap %uK  psram %uK  up %us", (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
                           (unsigned)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024), (unsigned)(now / 1000));
 }
