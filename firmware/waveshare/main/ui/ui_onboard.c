@@ -245,7 +245,7 @@ static void wifi_set(lv_event_t *e)
 {
     bool on = (bool)(intptr_t)lv_event_get_user_data(e);
     app_profile()->wifi_on = on; save();
-    plat_wifi_enable(on);
+    plat_wifi_set_enabled(on);
     if (s_onb) go_step(ST_READY); else ui_settings_show();
 }
 static void wifi_back(lv_event_t *e) { (void)e; if (s_onb) go_step(ST_HR); else ui_settings_show(); }

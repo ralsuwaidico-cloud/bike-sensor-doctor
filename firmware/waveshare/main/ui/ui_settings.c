@@ -8,6 +8,7 @@ static void edit_cb(lv_event_t *e) { ui_edit_show((ui_edit_t)(intptr_t)lv_event_
 static void sensors_cb(lv_event_t *e) { (void)e; ui_sensors_show(); }
 static void diag_cb(lv_event_t *e) { (void)e; ui_diag_menu_show(); }
 static void display_cb(lv_event_t *e) { (void)e; ui_display_show(); }
+static void wifi_cb(lv_event_t *e) { (void)e; ui_wifi_show(); }
 static void home_cb(lv_event_t *e) { (void)e; ui_home_show(); }
 static void demo_cb(lv_event_t *e) { (void)e; app_set_demo(!app_demo()); ui_settings_show(); }
 static void setup_cb(lv_event_t *e) { (void)e; app_profile_reset(); ui_onboard_start(); }
@@ -38,7 +39,7 @@ void ui_settings_show(void)
     ui_row_btn(l, "Max HR", v, C_CYAN, edit_cb, (void *)UI_EDIT_MAXHR);
     snprintf(v, sizeof v, "%c  " LV_SYMBOL_RIGHT, ui_ride_design(p->ride_style)->letter); ui_row_btn(l, "Display", v, C_CYAN, display_cb, NULL);
     ui_row_btn(l, "Sensors", LV_SYMBOL_RIGHT, C_CYAN, sensors_cb, NULL);
-    ui_row_btn(l, "Wi-Fi", p->wifi_on ? "on" : "off", C_CYAN, edit_cb, (void *)UI_EDIT_WIFI);
+    ui_row_btn(l, "Wi-Fi", p->wifi_on ? "on" : "off", C_CYAN, wifi_cb, NULL);
     ui_row_btn(l, "Demo mode", app_demo() ? "ON" : "off", app_demo() ? C_DEMO : C_MUT, demo_cb, NULL);
     ui_row_btn(l, "Diagnostics", LV_SYMBOL_RIGHT, C_CYAN, diag_cb, NULL);
     lv_obj_t *again = ui_hold_btn(l, "HOLD: SET UP AGAIN", C_PANEL, C_AMBER, lv_pct(100), 40, 2000, setup_cb, NULL);

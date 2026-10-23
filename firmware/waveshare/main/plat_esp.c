@@ -126,18 +126,6 @@ bool plat_usb_power(void) { return plat_battery_mv() > 4250; }
 
 void plat_backlight(int pct) { hw_backlight_set(pct < 5 ? 5 : pct); }
 
-/* ---- Wi-Fi: optional; one scan when switched on, radio off otherwise */
-void net_wifi_scan_once(void);
-int net_wifi_count(void);
-void net_wifi_off(void);
-static void wifi_task(void *a) { net_wifi_scan_once(); vTaskDelete(NULL); }
-void plat_wifi_enable(bool on)
-{
-    if (on) xTaskCreatePinnedToCore(wifi_task, "wifi_scan", 4096, NULL, 3, NULL, 0);
-    else net_wifi_off();
-}
-int plat_wifi_scan_count(void) { return net_wifi_count(); }
-
 const char *plat_fw_version(void) { return esp_app_get_description()->version; }
 const char *plat_reset_reason(void)
 {
@@ -196,7 +184,7 @@ void plat_health(plat_health_t *o)
     else o->storage_total_k = o->storage_free_k = -1;
     o->battery_mv = plat_battery_mv(); o->battery_pct = plat_battery_pct(); o->usb_power = plat_usb_power();
     o->ble_ready = ble_central_ready(); o->ble_scanning = ble_central_scanning(); o->ble_devices_seen = ble_central_devices_seen();
-    o->wifi_on = g_selftest.wifi == HW_PASS && net_wifi_count() >= 0; o->wifi_networks = net_wifi_count();
+    { plat_wifi_status_t w; plat_wifi_status(&w); o->wifi_on = w.state != PLAT_WIFI_OFF; } o->wifi_networks = plat_wifi_scan_count();
     o->display_ok = g_selftest.display == HW_PASS; o->touch_ok = g_selftest.touch == HW_PASS;
     o->imu_ok = g_selftest.imu == HW_PASS; o->storage_ok = g_selftest.storage == HW_PASS;
 }

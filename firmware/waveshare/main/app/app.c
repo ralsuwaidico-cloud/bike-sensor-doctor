@@ -139,6 +139,7 @@ void app_ride_start(void)
     char h[96]; snprintf(h, sizeof h, "J1 %u %d %d %d %d\n", id, s_demo, s_prof.ftp_w, s_prof.ftp_how, bc_ftp_established(&s_prof));
     s_jlen = 0; jput(h); jflush(true);
     s_next_ms = plat_ms() + 1000;
+    plat_wifi_set_quiet(true);            /* ride in progress: Wi-Fi never scans or retries on its own */
     char l[64]; snprintf(l, sizeof l, "RIDE START #%u%s", id, s_demo ? " (DEMO)" : ""); plat_log(l);
 }
 
@@ -158,6 +159,7 @@ void app_ride_end(void)
     jflush(true);
     finish(&s_ride, &s_coach);
     s_ftp_evidence = s_ride.s.demo ? 0 : bc_ride_ftp_estimate(&s_ride);
+    plat_wifi_set_quiet(false);
     char l[96]; snprintf(l, sizeof l, "RIDE END #%u %lus avg %dW", s_ride.s.id, (unsigned long)s_ride.s.duration_s, s_ride.s.avg_power); plat_log(l);
 }
 
@@ -322,6 +324,8 @@ void app_health_line(char *buf, size_t cap)
 {
     char mem[96]; plat_mem_text(mem, sizeof mem);
     app_live_t lv; app_live(&lv);
-    snprintf(buf, cap, "HEALTH up %lus %s ride=%d demo=%d pw=%s cad=%s hr=%s", (unsigned long)(plat_ms() / 1000), mem, s_ride.state, s_demo,
-             lv.power_ok ? "ok" : "--", lv.cad_ok ? "ok" : "--", lv.hr_ok ? "ok" : "--");
+    plat_wifi_status_t w; plat_wifi_status(&w);
+    snprintf(buf, cap, "HEALTH up %lus %s ride=%d demo=%d pw=%s cad=%s hr=%s gaps=%lu wifi=%d rssi=%d", (unsigned long)(plat_ms() / 1000), mem,
+             s_ride.state, s_demo, lv.power_ok ? "ok" : "--", lv.cad_ok ? "ok" : "--", lv.hr_ok ? "ok" : "--",
+             (unsigned long)lv.link[PLAT_SENS_POWER].gaps, (int)w.state, w.rssi);
 }

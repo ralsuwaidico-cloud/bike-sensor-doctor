@@ -6,6 +6,7 @@
 #include "bc_ride.h"
 #include "bc_coach.h"
 #include "bc_demo.h"
+#include "bc_wifi.h"
 
 static int fails, checks;
 #define CHECK(c) do { checks++; if (!(c)) { fails++; printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #c); } } while (0)
@@ -171,9 +172,38 @@ static void t_demo(void)
     bc_demo_init(&d, 180, true); bc_sample_t s = { 0, 0, 0 }; for (int i = 0; i < 400; i++) s = bc_demo_next(&d); CHECK(s.hr > 100 && s.hr < 200);
 }
 
+static void t_wifi(void)
+{
+    CHECK(bc_wifi_pass_valid("") && bc_wifi_pass_valid("12345678") && !bc_wifi_pass_valid("1234567") && !bc_wifi_pass_valid("bad\x01pass1"));
+    char p63[64]; memset(p63, 'a', 63); p63[63] = 0; CHECK(bc_wifi_pass_valid(p63));
+    char p64[65]; memset(p64, 'a', 64); p64[64] = 0; CHECK(!bc_wifi_pass_valid(p64));
+    CHECK(!bc_wifi_ssid_valid("") && bc_wifi_ssid_valid("Rashed's iPhone"));
+    bc_wifi_store_t st; bc_wifi_store_init(&st);
+    CHECK(bc_wifi_store_put(&st, "Home", "secret123") && bc_wifi_store_put(&st, "Rashed's iPhone", "p@ss w0rd!") && bc_wifi_store_put(&st, "Cafe", ""));
+    CHECK(st.n == 3 && !strcmp(st.c[0].ssid, "Cafe") && !strcmp(st.c[2].ssid, "Home"));
+    CHECK(!bc_wifi_store_put(&st, "X", "short"));
+    bc_wifi_store_put(&st, "Home", "newpass99"); CHECK(st.n == 3 && !strcmp(st.c[0].ssid, "Home") && !strcmp(st.c[0].pass, "newpass99"));
+    for (int i = 0; i < 6; i++) { char n[16]; snprintf(n, sizeof n, "N%d", i); bc_wifi_store_put(&st, n, "12345678"); }
+    CHECK(st.n == BC_WIFI_MAX_SAVED && !strcmp(st.c[0].ssid, "N5") && bc_wifi_store_find(&st, "Home") == NULL);
+    unsigned char buf[512]; size_t n = bc_wifi_store_pack(&st, buf, sizeof buf); CHECK(n > 10);
+    bc_wifi_store_t s2; CHECK(bc_wifi_store_unpack(&s2, buf, n) && s2.n == st.n && !strcmp(s2.c[4].ssid, st.c[4].ssid) && !strcmp(s2.c[1].pass, "12345678"));
+    CHECK(!bc_wifi_store_unpack(&s2, buf, n - 3) && s2.n == 0);     /* truncated flash data is rejected, not half-read */
+    CHECK(bc_wifi_store_remove(&st, "N3") && st.n == 4 && !bc_wifi_store_find(&st, "N3") && !bc_wifi_store_remove(&st, "N3"));
+    bc_wifi_store_init(&st); bc_wifi_store_put(&st, "Home", "12345678"); bc_wifi_store_put(&st, "Phone", "12345678");   /* Phone most recent */
+    const char seen[3][33] = { "Neighbour", "Home", "Phone" }; int rs[3] = { -40, -60, -62 };
+    CHECK(bc_wifi_pick(&st, seen, rs, 3) == 0);                        /* Phone (recent) kept: Home is not 3 dB stronger */
+    int rs2[3] = { -40, -50, -70 }; CHECK(bc_wifi_pick(&st, seen, rs2, 3) == 1);   /* Home clearly stronger */
+    const char none[1][33] = { "Other" }; int r1[1] = { -30 }; CHECK(bc_wifi_pick(&st, none, r1, 1) == -1);
+    CHECK(bc_wifi_map_reason(15, true, false) == BC_WIFI_ERR_WRONG_PASSWORD && bc_wifi_map_reason(202, true, false) == BC_WIFI_ERR_WRONG_PASSWORD);
+    CHECK(bc_wifi_map_reason(201, true, false) == BC_WIFI_ERR_NOT_FOUND && bc_wifi_map_reason(211, false, false) == BC_WIFI_ERR_NOT_FOUND);
+    CHECK(bc_wifi_map_reason(200, true, true) == BC_WIFI_ERR_LOST && bc_wifi_map_reason(8, true, true) == BC_WIFI_ERR_LOST);
+    CHECK(bc_wifi_backoff_s(0) == 5 && bc_wifi_backoff_s(2) == 30 && bc_wifi_backoff_s(9) == 60);
+    CHECK(strlen(bc_wifi_err_text(BC_WIFI_ERR_WRONG_PASSWORD)) > 5);
+}
+
 int main(void)
 {
-    t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo();
+    t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

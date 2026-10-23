@@ -35,3 +35,7 @@ CONFIG_FATFS_LFN_HEAP=y
 CONFIG_FATFS_MAX_LFN=64
 # 0.2.0: Wi-Fi is optional; if switched on its buffers go to PSRAM so the UI and Bluetooth keep internal RAM
 CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+# 0.3.0 Wi-Fi manager: keep Wi-Fi's internal-RAM footprint small so Bluetooth, the UI and ride recording keep theirs
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=6
+CONFIG_ESP_WIFI_RX_BA_WIN=4
+CONFIG_ESP_WIFI_TX_BA_WIN=4

@@ -31,6 +31,7 @@ static FILE *report;
 
 #define CHECK(c, ...) do { n_checks++; if (!(c)) { n_fail++; printf("  FAIL %s:%d %s  ", __FILE__, __LINE__, #c); printf(__VA_ARGS__); printf("\n"); } } while (0)
 
+void sim_wifi_reboot(void);
 static uint32_t tick_cb(void) { return g_sim.now_ms; }
 
 static void flush_cb(lv_display_t *d, const lv_area_t *a, uint8_t *px)
@@ -46,7 +47,8 @@ static void read_cb(lv_indev_t *i, lv_indev_data_t *d)
     (void)i; d->point.x = ptr.x; d->point.y = ptr.y; d->state = ptr.down ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
 }
 
-static void run(int ms) { for (int t = 0; t < ms; t += 5) { g_sim.now_ms += 5; lv_timer_handler(); } }
+void sim_wifi_pump(void);
+static void run(int ms) { for (int t = 0; t < ms; t += 5) { g_sim.now_ms += 5; lv_timer_handler(); if (g_sim.now_ms % 100 == 0) sim_wifi_pump(); } }
 static void run_s(int s) { for (int i = 0; i < s; i++) run(1000); }
 static void tap(int x, int y) { ptr.x = x; ptr.y = y; ptr.down = true; run(80); ptr.down = false; run(150); }
 static void hold(int x, int y, int ms) { ptr.x = x; ptr.y = y; ptr.down = true; run(ms); ptr.down = false; run(150); }
@@ -91,6 +93,8 @@ static bool tap_text(const char *txt)
     lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
     if (!c) c = l;
     lv_area_t a; lv_obj_get_coords(c, &a);
+    /* tap the part that is actually visible (a row can be half scrolled out of its list) */
+    for (lv_obj_t *p = lv_obj_get_parent(c); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_intersect(&a, &a, &pa); }
     tap((a.x1 + a.x2) / 2, (a.y1 + a.y2) / 2);
     return true;
 }
@@ -111,7 +115,7 @@ static bool on_screen(const char *txt) { return find_text(txt) != NULL; }
 static bool scroll_to(const char *txt)
 {
     for (int k = 0; k < 12 && !on_screen(txt); k++) drag(120, 90, 120, 170);   /* towards the top */
-    for (int k = 0; k < 14 && !on_screen(txt); k++) drag(120, 160, 120, 90);   /* towards the bottom */
+    for (int k = 0; k < 24 && !on_screen(txt); k++) drag(120, 150, 120, 115);  /* towards the bottom, small steps */
     return on_screen(txt);
 }
 
@@ -233,7 +237,9 @@ static void boot(void)
     lv_screen_load(blank);
     if (old) lv_obj_delete(old);
     g_sim.boots++;
+    sim_wifi_reboot();
     app_init();
+    if (app_profile()->wifi_on) plat_wifi_set_enabled(true);   /* as main.c does */
     ui_start();
     run(500);
 }
@@ -242,6 +248,26 @@ static int count_lines(const char *path)
 {
     char p[512]; snprintf(p, sizeof p, "simfs/%s", path);
     FILE *f = fopen(p, "r"); if (!f) return 0; int n = 0, c; while ((c = fgetc(f)) != EOF) if (c == '\n') n++; fclose(f); return n;
+}
+
+/* ---- ring keyboard driver: taps the same positions the firmware lays out */
+static const char *const KG[3][6] = {
+    { "abcde", "fghij", "klmno", "pqrst", "uvwxy", "z.-_@" },
+    { "ABCDE", "FGHIJ", "KLMNO", "PQRST", "UVWXY", "Z,!? " },
+    { "123456", "7890#$", "%&*+/=", "\\^()[]", "{}<>:;", "\"'`|~" } };
+static const int KA[6] = { 270, 330, 30, 90, 150, 210 };
+static int kb_mode;
+static void ring_pos(int ang, int *x, int *y) { *x = 120 + (int)(92 * lv_trigo_cos((int16_t)ang) / 32767); *y = 120 + (int)(92 * lv_trigo_sin((int16_t)ang) / 32767); }
+static void kb_type(const char *t)
+{
+    for (; *t; t++) {
+        int m, g = -1, i = -1;
+        for (m = 0; m < 3 && g < 0; m++) for (int gg = 0; gg < 6 && g < 0; gg++) { const char *p = strchr(KG[m][gg], *t); if (p) { g = gg; i = (int)(p - KG[m][gg]); } }
+        m--;
+        while (kb_mode != m) { tap(93, 123); kb_mode = (kb_mode + 1) % 3; }
+        int x, y; ring_pos(KA[g], &x, &y); tap(x, y);
+        int cnt = (int)strlen(KG[m][g]); ring_pos(KA[g] + (i * 2 - (cnt - 1)) * 21, &x, &y); tap(x, y);
+    }
 }
 
 static void scenario(void)
@@ -507,6 +533,101 @@ static void scenario(void)
     g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED;
     ui_sensors_show(); run(500); shot("82_sensors");
     tap_text("PAIR POWER"); run(2000); shot("83_pair_from_settings");
+
+    printf("== 11 Wi-Fi manager\n");
+    {
+        g_sim.n_ap = 4;
+        strcpy(g_sim.ap[0].ssid, "HomeNet"); g_sim.ap[0].rssi = -48; g_sim.ap[0].secured = true; strcpy(g_sim.ap[0].pass, "Secret-123"); g_sim.ap[0].present = true;
+        strcpy(g_sim.ap[1].ssid, "Rashed iPhone"); g_sim.ap[1].rssi = -62; g_sim.ap[1].secured = true; strcpy(g_sim.ap[1].pass, "bike ride!"); g_sim.ap[1].present = true;
+        strcpy(g_sim.ap[2].ssid, "CafeFree"); g_sim.ap[2].rssi = -75; g_sim.ap[2].secured = false; g_sim.ap[2].present = true;
+        strcpy(g_sim.ap[3].ssid, "AVeryLongNetworkNameForTest123"); g_sim.ap[3].rssi = -84; g_sim.ap[3].secured = true; strcpy(g_sim.ap[3].pass, "12345678"); g_sim.ap[3].present = true;
+        ui_settings_show(); run(300); scroll_to("Wi-Fi"); tap_text("Wi-Fi");
+        CHECK(on_screen("OFF") && on_screen("Optional"), "Wi-Fi screen, off");
+        shot("a0_wifi_off");
+        tap_text("Wi-Fi");
+        CHECK(app_profile()->wifi_on, "Wi-Fi switched on and remembered");
+        shot("a1_wifi_on");
+        tap_text("Networks"); run(2600);
+        CHECK(on_screen("4 found") && on_screen("HomeNet"), "scan lists the networks");
+        shot("a2_networks");
+        { plat_wifi_ap_t r[8]; int n = plat_wifi_results(r, 8); CHECK(n == 4 && r[0].rssi >= r[1].rssi && r[1].rssi >= r[2].rssi, "strongest first"); }
+        tap_text("HomeNet");
+        CHECK(on_screen("JOIN") && on_screen("empty = open"), "password keyboard");
+        kb_mode = 0;
+        shot("a3_keyboard");
+        { int x, y; ring_pos(KA[0], &x, &y); tap(x, y); shot("a4_keyboard_group_open"); tap(120, 138); }
+        kb_type("Secret-12");
+        CHECK(on_screen("9 chars"), "typed 9 characters (hidden)");
+        shot("a5_keyboard_typed_hidden");
+        tap(173, 123); shot("a6_keyboard_shown");
+        CHECK(on_screen("Secret-12"), "show password");
+        tap_text("JOIN"); run(500);
+        int ticks0 = g_sim.wifi_ui_ticks;
+        CHECK(on_screen("CONNECTING"), "connecting screen");
+        shot("a7_connecting");
+        run(3000);
+        CHECK(g_sim.wifi_ui_ticks > ticks0 + 8, "screen kept updating while connecting (%d polls)", g_sim.wifi_ui_ticks - ticks0);
+        CHECK(on_screen("Wrong password"), "wrong password error");
+        shot("a8_wrong_password");
+        tap_text("TRY AGAIN"); kb_mode = 0;
+        kb_type("Secret-123");
+        tap_text("JOIN"); run(3500);
+        CHECK(on_screen("CONNECTED") && on_screen("192.168.1.23"), "connected with IP");
+        shot("a9_connected");
+        tap_text("DONE");
+        CHECK(on_screen("-48 dBm") && on_screen("HomeNet"), "status shows network, signal, IP");
+        shot("b0_wifi_status");
+        { char sv[5][33]; CHECK(plat_wifi_saved(sv, 5) == 1 && !strcmp(sv[0], "HomeNet"), "network saved"); }
+        { char raw[512]; long n = plat_file_read("wifi.bin", raw, sizeof raw); CHECK(n > 0, "credentials stored"); }
+        ui_home_show(); run(300); shot("b1_home_wifi");
+        printf("   restart: joins the saved network by itself\n");
+        boot(); run_s(6);
+        { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_CONNECTED && !strcmp(w.ssid, "HomeNet"), "auto-reconnect after restart (state %d)", w.state); }
+        printf("   phone hotspot\n");
+        ui_wifi_show(); run(300); tap_text("Networks"); run(2600); tap_text("Rashed iPhone"); kb_mode = 0;
+        kb_type("bike ride!"); tap_text("JOIN"); run(3500);
+        CHECK(on_screen("CONNECTED"), "joined the phone hotspot (password with space and !)");
+        tap_text("DONE");
+        printf("   network disappears: falls back to the other saved one\n");
+        g_sim.ap[1].present = false; run_s(14);
+        { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_CONNECTED && !strcmp(w.ssid, "HomeNet"), "lost hotspot -> reconnected to HomeNet (%d %s)", w.state, w.ssid); }
+        g_sim.ap[1].present = true;
+        printf("   disconnect: no automatic reconnect until asked\n");
+        ui_wifi_show(); run(300); scroll_to("Disconnect"); tap_text("Disconnect"); run_s(30);
+        { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_IDLE, "stays disconnected (%d)", w.state); }
+        ui_wifi_show(); run(300); shot("b2_wifi_disconnected");
+        printf("   forget\n");
+        scroll_to("Saved"); tap_text("Saved"); shot("b3_saved");
+        tap_text("Rashed iPhone"); shot("b4_saved_detail");
+        hold_text("HOLD: FORGET", 1800);
+        { char sv[5][33]; CHECK(plat_wifi_saved(sv, 5) == 1 && !strcmp(sv[0], "HomeNet"), "hotspot forgotten"); }
+        printf("   errors: timeout, not found, no address\n");
+        g_sim.wifi_no_answer = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); run_s(21);
+        CHECK(on_screen("timeout"), "timeout error"); shot("b5_timeout"); g_sim.wifi_no_answer = false;
+        ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("Other network"); tap_text("Other network"); kb_mode = 0;
+        CHECK(on_screen("NAME") && on_screen("NEXT"), "hidden network: name first"); shot("b6_keyboard_ssid");
+        kb_type("ghost"); tap_text("NEXT"); kb_mode = 0; kb_type("whatever1"); tap_text("JOIN"); run_s(4);
+        CHECK(on_screen("not found"), "network not found error"); shot("b7_not_found");
+        g_sim.wifi_no_dhcp = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); run_s(4);
+        CHECK(on_screen("no address"), "no IP address error"); shot("b8_no_ip"); g_sim.wifi_no_dhcp = false;
+        tap_text("BACK"); scroll_to("Networks"); tap_text("Networks"); run(2600);
+        { plat_wifi_status_t w0; plat_wifi_status(&w0); tap_text(LV_SYMBOL_REFRESH); run(2600); plat_wifi_status_t w1; plat_wifi_status(&w1); CHECK(w1.scans == w0.scans + 1, "rescan"); }
+        printf("   during a ride Wi-Fi never scans or retries on its own\n");
+        g_sim.ap[0].present = false;               /* saved HomeNet out of range: the manager would keep retrying */
+        ui_home_show(); run(300); run_s(70);
+        int a0 = g_sim.wifi_auto_attempts;
+        CHECK(a0 > 0, "retries happen when not riding (%d)", a0);
+        sensors(true, 170, true, 88, false, 0);
+        tap_text("START RIDE"); run_s(300);
+        int a1 = g_sim.wifi_auto_attempts;
+        bc_ride_summary_t rs; app_ride_totals(&rs);
+        CHECK(a1 == a0 && rs.duration_s >= 299 && rs.power_s >= 299, "no Wi-Fi activity during the ride; recording intact (%d->%d, %lus)", a0, a1, (unsigned long)rs.duration_s);
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run_s(70);
+        CHECK(g_sim.wifi_auto_attempts > a1, "retries resume after the ride");
+        g_sim.ap[0].present = true;
+        ui_wifi_show(); run(300); tap_text("Wi-Fi"); 
+        { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_OFF && !app_profile()->wifi_on, "Wi-Fi off again"); }
+    }
 
     printf("== 8 long name and edge cases\n");
     snprintf(app_profile()->name, sizeof app_profile()->name, "Maximilianus Bob");

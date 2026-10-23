@@ -29,6 +29,7 @@ typedef struct {
     uint32_t valid_age_ms; /* since the last VALID (decoded + plausible) packet; UINT32_MAX = never */
     uint32_t rejected;     /* packets rejected as short or implausible (never shown as data) */
     uint32_t reconnects;
+    uint32_t gaps;         /* times valid data paused > 2.5 s while connected (to spot radio interference) */
 } plat_link_info_t;
 
 /** Raw live values from the real sensors (already freshness-checked: stale = absent). */
@@ -68,8 +69,32 @@ int plat_battery_pct(void);            /* -1 unknown */
 int plat_battery_mv(void);
 bool plat_usb_power(void);             /* best guess: voltage above full-charge level */
 void plat_backlight(int pct);
-void plat_wifi_enable(bool on);
-int plat_wifi_scan_count(void);        /* networks seen by the last scan, -1 if not scanned */
+/* ---- Wi-Fi manager (optional; the device is fully usable offline). Every call returns at once: the work happens in
+ * a background task, the UI polls plat_wifi_status(). During a ride the manager never scans or retries on its own. */
+typedef enum { PLAT_WIFI_OFF = 0, PLAT_WIFI_IDLE, PLAT_WIFI_SCANNING, PLAT_WIFI_CONNECTING, PLAT_WIFI_CONNECTED, PLAT_WIFI_FAILED } plat_wifi_state_t;
+typedef enum { PLAT_WIFI_ERR_NONE = 0, PLAT_WIFI_ERR_WRONG_PASSWORD, PLAT_WIFI_ERR_NOT_FOUND, PLAT_WIFI_ERR_TIMEOUT, PLAT_WIFI_ERR_NO_IP,
+               PLAT_WIFI_ERR_LOST, PLAT_WIFI_ERR_OTHER } plat_wifi_err_t;
+#define PLAT_WIFI_MAX_SAVED 5
+typedef struct { char ssid[33]; int rssi; bool secured; bool saved; } plat_wifi_ap_t;
+typedef struct {
+    plat_wifi_state_t state;
+    plat_wifi_err_t err;           /* why the last attempt failed (kept until the next attempt) */
+    char ssid[33];                 /* network connected to / being joined / that failed */
+    int rssi;                      /* dBm while connected, 0 otherwise */
+    char ip[16];                   /* "" until an address was obtained */
+    bool scan_done;                /* results available from the last scan */
+    uint32_t scans, connects, failures;
+} plat_wifi_status_t;
+void plat_wifi_set_enabled(bool on);                 /* radio on/off; on = reconnect to saved networks automatically */
+void plat_wifi_scan(void);
+int plat_wifi_results(plat_wifi_ap_t *out, int max); /* strongest first, one entry per name */
+void plat_wifi_connect(const char *ssid, const char *password, bool save);  /* password NULL = use the saved one */
+void plat_wifi_disconnect(void);                     /* stays on, no automatic reconnect until the next connect / restart */
+void plat_wifi_forget(const char *ssid);
+int plat_wifi_saved(char ssids[][33], int max);
+void plat_wifi_status(plat_wifi_status_t *out);
+void plat_wifi_set_quiet(bool riding);               /* ride in progress: no scans or retries */
+int plat_wifi_scan_count(void);                      /* networks seen by the last scan, -1 if never scanned */
 const char *plat_fw_version(void);
 const char *plat_reset_reason(void);
 uint32_t plat_boot_count(void);

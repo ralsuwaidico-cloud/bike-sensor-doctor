@@ -14,8 +14,11 @@ static void home_update(void)
     char bat[24]; ui_battery_text(bat, sizeof bat);
     const plat_link_info_t *pw = &lv.link[PLAT_SENS_POWER], *hr = &lv.link[PLAT_SENS_HR];
     char b[96];
-    snprintf(b, sizeof b, "#%06x " LV_SYMBOL_BLUETOOTH " PWR#  #%06x HR#  %s",
-             ui_hex(ui_link_color(pw->link)), ui_hex(ui_link_color(hr->link)), bat);
+    plat_wifi_status_t ws; plat_wifi_status(&ws);
+    char wf[32] = "";
+    if (ws.state != PLAT_WIFI_OFF) snprintf(wf, sizeof wf, " #%06x " LV_SYMBOL_WIFI "#", ui_hex(ws.state == PLAT_WIFI_CONNECTED ? C_GREEN : C_MUT));
+    snprintf(b, sizeof b, "#%06x " LV_SYMBOL_BLUETOOTH " PWR#  #%06x HR#  %s%s",
+             ui_hex(ui_link_color(pw->link)), ui_hex(ui_link_color(hr->link)), bat, wf);
     lv_label_set_text(h_status, b);
     if (lv.power_ok) snprintf(b, sizeof b, "%d W  %d rpm%s", lv.watts, lv.cad_ok ? lv.rpm : 0, lv.demo ? "  (sim)" : "");
     else if (pw->link == PLAT_LINK_NOT_PAIRED) snprintf(b, sizeof b, "power meter not paired");

@@ -29,7 +29,7 @@ typedef struct {
     bool paired; ble_addr_t addr; char name[20];
     plat_link_t state;
     uint16_t conn, svc_s, svc_e, val, cccd; bool disc_started;
-    int8_t rssi; uint32_t reconnects, connects; int backoff_s; uint32_t retry_at;
+    int8_t rssi; uint32_t reconnects, connects, gaps; int backoff_s; uint32_t retry_at;
     uint32_t state_since;
     bc_xds_live_t xds; bc_hr_live_t hr;
 } link_t;
@@ -231,7 +231,9 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         os_mbuf_copydata(ev->notify_rx.om, 0, n, buf);
         uint32_t now = hw_millis();
         LOCK();
-        if (l->kind == PLAT_SENS_POWER) bc_xds_live_feed(&l->xds, buf, n, now); else bc_hr_live_feed(&l->hr, buf, n, now);
+        uint32_t prev = l->kind == PLAT_SENS_POWER ? (l->xds.have ? l->xds.last_ms : 0) : (l->hr.have ? l->hr.last_ms : 0);
+        bool ok = l->kind == PLAT_SENS_POWER ? bc_xds_live_feed(&l->xds, buf, n, now) : bc_hr_live_feed(&l->hr, buf, n, now);
+        if (ok && prev && now - prev > 2500) l->gaps++;
         UNLOCK();
         return 0;
     }
@@ -366,6 +368,7 @@ void ble_central_snapshot(plat_sensors_t *o)
         bool hv = i == 0 ? L[0].xds.have : L[1].hr.have; uint32_t lv = i == 0 ? L[0].xds.last_ms : L[1].hr.last_ms;
         li->packets = pk; li->age_ms = pk ? now - last : UINT32_MAX; li->reconnects = L[i].reconnects;
         li->valid_age_ms = hv ? now - lv : UINT32_MAX;
+        li->gaps = L[i].gaps;
         li->rejected = i == 0 ? L[0].xds.rejected + L[0].xds.short_packets : L[1].hr.rejected;
     }
     UNLOCK();

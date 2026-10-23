@@ -24,6 +24,7 @@
 #include "ble_central.h"
 #include "app.h"
 #include "ui.h"
+void net_wifi_init(void);
 
 static const char *TAG = "main";
 #define GUARD_MAGIC 0xB1C0FFEEu
@@ -143,8 +144,9 @@ void app_main(void)
     lvgl_port_unlock();
     ESP_LOGI(TAG, "STAGE 5 app + screens OK (power meter %s, HR %s)", p->power.paired ? p->power.name : "not paired",
              p->hr.paired ? p->hr.name : "not paired");
-    if (p->wifi_on) { plat_wifi_enable(true); ESP_LOGI(TAG, "STAGE 6 Wi-Fi scan started (optional)"); }
-    else { g_selftest.wifi = HW_INFO; snprintf(g_selftest.wifi_s, sizeof g_selftest.wifi_s, "off (optional)"); }
+    net_wifi_init();                      /* background manager; radio stays off unless the rider switched Wi-Fi on */
+    g_selftest.wifi = HW_INFO; snprintf(g_selftest.wifi_s, sizeof g_selftest.wifi_s, p->wifi_on ? "on" : "off (optional)");
+    if (p->wifi_on) { plat_wifi_set_enabled(true); ESP_LOGI(TAG, "STAGE 6 Wi-Fi on (joins saved networks in the background)"); }
 
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(60000));

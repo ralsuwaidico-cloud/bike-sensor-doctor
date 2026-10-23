@@ -111,7 +111,7 @@ static void st_update(void)
     char age[24]; age_text(age, sizeof age, l->valid_age_ms);
     snprintf(b, sizeof b, "last valid %s", age);
     lv_label_set_text(st_l1, b);
-    snprintf(b, sizeof b, "reconnects %lu  bad %lu", (unsigned long)l->reconnects, (unsigned long)l->rejected);
+    snprintf(b, sizeof b, "reconnects %lu  gaps %lu", (unsigned long)l->reconnects, (unsigned long)l->gaps);
     lv_label_set_text(st_l2, b);
 }
 
@@ -150,12 +150,17 @@ static size_t health_text(char *b, size_t cap, bool markup)
     const char *K = markup ? "#8494a0 " : "", *E = markup ? "#" : "";
     char up[24]; dur(up, sizeof up, h.uptime_s);
     const plat_link_info_t *pw = &lv.link[PLAT_SENS_POWER], *hr = &lv.link[PLAT_SENS_HR];
+    plat_wifi_status_t ws; plat_wifi_status(&ws);
+    char wifi_line[64];
+    if (ws.state == PLAT_WIFI_OFF) snprintf(wifi_line, sizeof wifi_line, "off");
+    else if (ws.state == PLAT_WIFI_CONNECTED) snprintf(wifi_line, sizeof wifi_line, "%.20s %d dBm %s", ws.ssid, ws.rssi, ws.ip);
+    else snprintf(wifi_line, sizeof wifi_line, "on, not connected");
     int n = snprintf(b, cap,
         "%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
         "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
         "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
         "%sBattery%s %d mV, %d%%%s\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sWi-Fi%s %s\n"
-        "%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
+        "%sMeter gaps / bad%s %lu / %lu\n%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
         K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
         K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
         K, E, (unsigned long)h.storage_errors, K, E, (unsigned long)h.profile_save_errors,
@@ -165,7 +170,8 @@ static size_t health_text(char *b, size_t cap, bool markup)
         h.ble_scanning ? ", scanning" : "", (unsigned long)h.ble_devices_seen,
         K, E, p->power.paired ? p->power.name : "not paired", ui_link_text(pw->link),
         K, E, p->hr.paired ? p->hr.name : "not paired", p->hr.paired ? ui_link_text(hr->link) : "",
-        K, E, p->wifi_on ? (h.wifi_networks >= 0 ? "on (scan done)" : "on") : "off",
+        K, E, wifi_line,
+        K, E, (unsigned long)pw->gaps, (unsigned long)pw->rejected,
         K, E, h.display_ok ? "OK" : "FAIL", K, E, h.touch_ok ? "OK" : "FAIL", K, E, h.imu_ok ? "OK" : "not found",
         K, E, app_demo() ? "ON" : "off");
     return n > 0 && (size_t)n < cap ? (size_t)n : cap - 1;
