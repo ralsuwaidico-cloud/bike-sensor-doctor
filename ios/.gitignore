@@ -5,3 +5,4 @@ BikeComputer/Info.plist
 BikeComputerWatch/Info.plist
 *.entitlements
 DerivedData/
+__pycache__/
