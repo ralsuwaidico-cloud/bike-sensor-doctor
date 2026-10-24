@@ -38,8 +38,8 @@ final class BCLinkTests: XCTestCase {
         let d = BCLink.encodeGPS(g, seq: 2, tMs: 0)!
         let b = [UInt8](d)
         XCTAssertEqual(b[0], 0x21); XCTAssertEqual(b[2], 2)
-        XCTAssertEqual(Array(b[8..<14]), [0x01, 4, 0x78, 0x3A, 0x95, 0x0E])          // 244667000 LE
-        XCTAssertEqual(Array(b[14..<20]), [0x02, 4, 0x00, 0x95, 0x6C, 0x20])         // 544000000 LE
+        XCTAssertEqual(Array(b[8..<14]), [0x01, 4, 120, 82, 149, 14])          // 244667000 LE
+        XCTAssertEqual(Array(b[14..<20]), [0x02, 4, 0, 200, 108, 32])         // 544000000 LE
         XCTAssertTrue(d.count <= BCLink.maxMessage)
         // the source byte is last
         XCTAssertEqual(Array(b.suffix(3)), [0x09, 1, 3])
@@ -48,7 +48,7 @@ final class BCLinkTests: XCTestCase {
     func testTimeAndHREncoding() {
         let t = [UInt8](BCLink.encodeTime(epochMs: 1761300000000, uncertaintyMs: 50, tzMinutes: 240, seq: 1, tMs: 0)!)
         XCTAssertEqual(t[0], 0x20)
-        XCTAssertEqual(Array(t[8..<18]), [0x01, 8, 0x00, 0x0C, 0x16, 0x1A, 0x9A, 0x01, 0x00, 0x00])   // 1761300000000 LE
+        XCTAssertEqual(Array(t[8..<18]), [0x01, 8, 0, 45, 169, 21, 154, 1, 0, 0])   // 1761300000000 LE
         XCTAssertEqual(Array(t[18..<22]), [0x02, 2, 50, 0])
         XCTAssertEqual(Array(t[22..<26]), [0x03, 2, 0xF0, 0x00])
         let h = [UInt8](BCLink.encodeHR(bpm: 152, source: .appleWatch, sampleEpochMs: 1761300000000, quality: 2, seq: 3, tMs: 0)!)
