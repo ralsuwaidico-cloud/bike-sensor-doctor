@@ -1,0 +1,208 @@
+=== test: errors / failures ===
+GatherProvisioningInputs
+2026-10-24 20:54:35.174 xcodebuild[1361:10993]  iOSSimulator: 📱<DVTiPhoneSimulator (0x99a65f980), iPhone 17 Pro, unknown class, 26.5 (23F77), E839A11B-51B4-4AD3-ACF4-A53B95B7C957> unable to connect to "com.apple.instruments.deviceservice.lockdown" (Error Domain=DVTiPhoneSimulatorErrorDomain Code=-1 "DTServiceHubClient failed to bless service hub for simulator iPhone 17 Pro (E839A11B-51B4-4AD3-ACF4-A53B95B7C957)" UserInfo={NSLocalizedDescription=DTServiceHubClient failed to bless service hub for simulator iPhone 17 Pro (E839A11B-51B4-4AD3-ACF4-A53B95B7C957), NSUnderlyingError=0x99e04f360 {Error Domain=DTServiceHubClient Code=2 "Connection to Simulator service hub (3356) interrupted. Simulator service hub IS still alive." UserInfo={NSLocalizedDescription=Connection to Simulator service hub (3356) interrupted. Simulator service hub IS still alive.}}})
+2026-10-24 20:54:41.106033+0000 BikeComputer[3333:17824] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-24 20:54:44.352736+0000 BikeComputer[3333:15229] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' passed (0.038 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' passed (0.011 seconds).
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.062 (0.116) seconds
+Test Case '-[BikeComputerTests.LinkV12Tests testCapsGateEverything]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testProfileVectors]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testRiderProfileMapsToLinkMessageAndBack]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testSettingsVectors]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiRequestsMatchFirmwareVectors]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiScanResultWithCurlyApostrophe]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiStatusVector]' passed (0.001 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.012 (0.746) seconds
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' passed (0.019 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' passed (0.115 seconds).
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' passed (0.020 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' passed (0.085 seconds).
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekRespectsHoursAndLevel]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' passed (0.001 seconds).
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.288 (0.789) seconds
+Test Case '-[BikeComputerTests.RulesTests testBoardColours]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testCoachLineAndWhyNeverClaimRecoveryData]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOldProfileAndSettingsJSONLoad]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOptionalDevicesNeverRedUnlessEnabled]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPhoneColours]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPlanDayGroupsMultipleActivities]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testProfileVersionBumpsOnChangeOnly]' passed (0.050 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSyncRecordPerBoard]' passed (0.009 seconds).
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.068 (0.072) seconds
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' passed (0.497 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.501 (0.504) seconds
+	 Executed 43 tests, with 0 failures (0 unexpected) in 0.931 (4.322) seconds
+	 Executed 43 tests, with 0 failures (0 unexpected) in 0.931 (4.326) seconds
+2026-10-24 20:54:48.730978+0000 BikeComputer[3333:17832] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+** TEST SUCCEEDED **
+=== test: last 150 lines ===
+RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest
+
+Touch /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /usr/bin/touch -c /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest
+
+RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app
+
+Validate /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-validationUtility /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /usr/bin/touch -c /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app
+
+2026-10-24 20:54:35.174 xcodebuild[1361:10993]  iOSSimulator: 📱<DVTiPhoneSimulator (0x99a65f980), iPhone 17 Pro, unknown class, 26.5 (23F77), E839A11B-51B4-4AD3-ACF4-A53B95B7C957> unable to connect to "com.apple.instruments.deviceservice.lockdown" (Error Domain=DVTiPhoneSimulatorErrorDomain Code=-1 "DTServiceHubClient failed to bless service hub for simulator iPhone 17 Pro (E839A11B-51B4-4AD3-ACF4-A53B95B7C957)" UserInfo={NSLocalizedDescription=DTServiceHubClient failed to bless service hub for simulator iPhone 17 Pro (E839A11B-51B4-4AD3-ACF4-A53B95B7C957), NSUnderlyingError=0x99e04f360 {Error Domain=DTServiceHubClient Code=2 "Connection to Simulator service hub (3356) interrupted. Simulator service hub IS still alive." UserInfo={NSLocalizedDescription=Connection to Simulator service hub (3356) interrupted. Simulator service hub IS still alive.}}})
+2026-10-24 20:54:39.865046+0000 BikeComputer[3333:17822] [CoreBluetooth] XPC connection invalid
+2026-10-24 20:54:40.098691+0000 BikeComputer[3333:15229] [auth] Failed to determine authorization status: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-24 20:54:40.784343+0000 BikeComputer[3333:15229] [WC] WCSession has not been activated
+2026-10-24 20:54:40.784647+0000 BikeComputer[3333:15229] [WC] WCSession has not been activated
+2026-10-24 20:54:40.784898+0000 BikeComputer[3333:15229] [WC] WCSession has not been activated
+2026-10-24 20:54:41.106033+0000 BikeComputer[3333:17824] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-24 20:54:43.819751+0000 BikeComputer[3333:17822] [WC] -[WCSession onqueue_handleUpdateSessionState:]_block_invoke dropping as pairingIDs no longer match. pairingID (null), client pairingID: (null)
+2026-10-24 20:54:44.337553+0000 BikeComputer[3333:15229] [WC] WCSession is not paired
+2026-10-24 20:54:44.352736+0000 BikeComputer[3333:15229] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+Test Suite 'All tests' started at 2026-10-24 20:54:44.375.
+Test Suite 'BikeComputerTests.xctest' started at 2026-10-24 20:54:44.378.
+Test Suite 'BCLinkTests' started at 2026-10-24 20:54:44.379.
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' passed (0.038 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' passed (0.011 seconds).
+Test Suite 'BCLinkTests' passed at 2026-10-24 20:54:44.495.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.062 (0.116) seconds
+Test Suite 'LinkV12Tests' started at 2026-10-24 20:54:44.496.
+Test Case '-[BikeComputerTests.LinkV12Tests testCapsGateEverything]' started.
+Test Case '-[BikeComputerTests.LinkV12Tests testCapsGateEverything]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testProfileVectors]' started.
+Test Case '-[BikeComputerTests.LinkV12Tests testProfileVectors]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testRiderProfileMapsToLinkMessageAndBack]' started.
+Test Case '-[BikeComputerTests.LinkV12Tests testRiderProfileMapsToLinkMessageAndBack]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testSettingsVectors]' started.
+Test Case '-[BikeComputerTests.LinkV12Tests testSettingsVectors]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiRequestsMatchFirmwareVectors]' started.
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiRequestsMatchFirmwareVectors]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiScanResultWithCurlyApostrophe]' started.
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiScanResultWithCurlyApostrophe]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiStatusVector]' started.
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiStatusVector]' passed (0.001 seconds).
+Test Suite 'LinkV12Tests' passed at 2026-10-24 20:54:45.241.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.012 (0.746) seconds
+Test Suite 'ModelTests' started at 2026-10-24 20:54:47.334.
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' started.
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' passed (0.019 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' started.
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' started.
+2026-10-24 20:54:44.340193+0000 BikeComputer[3333:17822] [WC] WCSession is not paired
+2026-10-24 20:54:47.411160+0000 BikeComputer[3333:17822] [WC] -[WCSession onqueue_handleUpdateSessionState:]_block_invoke dropping as pairingIDs no longer match. pairingID (null), client pairingID: (null)
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' passed (0.115 seconds).
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' started.
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' started.
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' started.
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' started.
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' started.
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' passed (0.020 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' passed (0.085 seconds).
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' started.
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekRespectsHoursAndLevel]' started.
+Test Case '-[BikeComputerTests.ModelTests testWeekRespectsHoursAndLevel]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' started.
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' started.
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' passed (0.001 seconds).
+Test Suite 'ModelTests' passed at 2026-10-24 20:54:48.123.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.288 (0.789) seconds
+Test Suite 'RulesTests' started at 2026-10-24 20:54:48.123.
+Test Case '-[BikeComputerTests.RulesTests testBoardColours]' started.
+Test Case '-[BikeComputerTests.RulesTests testBoardColours]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testCoachLineAndWhyNeverClaimRecoveryData]' started.
+Test Case '-[BikeComputerTests.RulesTests testCoachLineAndWhyNeverClaimRecoveryData]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOldProfileAndSettingsJSONLoad]' started.
+Test Case '-[BikeComputerTests.RulesTests testOldProfileAndSettingsJSONLoad]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOptionalDevicesNeverRedUnlessEnabled]' started.
+Test Case '-[BikeComputerTests.RulesTests testOptionalDevicesNeverRedUnlessEnabled]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPhoneColours]' started.
+Test Case '-[BikeComputerTests.RulesTests testPhoneColours]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPlanDayGroupsMultipleActivities]' started.
+Test Case '-[BikeComputerTests.RulesTests testPlanDayGroupsMultipleActivities]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testProfileVersionBumpsOnChangeOnly]' started.
+Test Case '-[BikeComputerTests.RulesTests testProfileVersionBumpsOnChangeOnly]' passed (0.050 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown]' started.
+Test Case '-[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSyncRecordPerBoard]' started.
+Test Case '-[BikeComputerTests.RulesTests testSyncRecordPerBoard]' passed (0.009 seconds).
+Test Suite 'RulesTests' passed at 2026-10-24 20:54:48.195.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.068 (0.072) seconds
+Test Suite 'WatchMessageTests' started at 2026-10-24 20:54:48.195.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' passed (0.497 seconds).
+Test Suite 'WatchMessageTests' passed at 2026-10-24 20:54:48.699.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.501 (0.504) seconds
+Test Suite 'BikeComputerTests.xctest' passed at 2026-10-24 20:54:48.700.
+	 Executed 43 tests, with 0 failures (0 unexpected) in 0.931 (4.322) seconds
+Test Suite 'All tests' passed at 2026-10-24 20:54:48.701.
+	 Executed 43 tests, with 0 failures (0 unexpected) in 0.931 (4.326) seconds
+2026-10-24 20:54:48.730978+0000 BikeComputer[3333:17832] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-24 20:54:53.119 xcodebuild[1361:7304] [MT] IDETestOperationsObserverDebug: 196.631 elapsed -- Testing started completed.
+2026-10-24 20:54:53.119 xcodebuild[1361:7304] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-24 20:54:53.119 xcodebuild[1361:7304] [MT] IDETestOperationsObserverDebug: 196.631 sec, +196.631 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/tests.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
