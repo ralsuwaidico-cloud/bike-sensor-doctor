@@ -32,7 +32,7 @@ final class LinkV12Tests: XCTestCase {
 
     func testWiFiStatusVector() {
         let s = BCLink.decodeWiFiStatus(Data(bytes("65 00 09 00 00 00 00 00 01 01 04 02 01 00 03 07 48 6F 6D 65 4E 65 74 04 01 D0 05 01 02 06 01 01")))
-        XCTAssertEqual(s?.state, .connected); XCTAssertEqual(s?.error, .none); XCTAssertEqual(s?.ssid, "HomeNet")
+        XCTAssertEqual(s?.state, .connected); XCTAssertEqual(s?.error, BCLink.WiFiError.none); XCTAssertEqual(s?.ssid, "HomeNet")
         XCTAssertEqual(s?.rssi, -48); XCTAssertEqual(s?.savedCount, 2); XCTAssertEqual(s?.radioOn, true)
         // wrong password is a distinct, user-visible state
         let w = BCLink.decodeWiFiStatus(Data(bytes("65 00 09 00 00 00 00 00 01 01 01 02 01 01")))
