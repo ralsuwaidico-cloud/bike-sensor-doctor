@@ -153,9 +153,10 @@ check_app() {
   ent=$(codesign -d --entitlements - --xml "$app" 2>/dev/null)
   printf '%s\n' "--- $bundle" "$ent" | scrub >> "$LOGS/verify.txt"
   local appid hk gta
-  appid=$(printf '%s' "$ent" | plutil -extract application-identifier raw -o - - 2>/dev/null)
-  hk=$(printf '%s' "$ent" | plutil -extract com.apple.developer.healthkit raw -o - - 2>/dev/null)
-  gta=$(printf '%s' "$ent" | plutil -extract get-task-allow raw -o - - 2>/dev/null)
+  read -r appid hk gta < <(printf '%s' "$ent" | python3 -c '
+import plistlib,sys
+d=plistlib.loads(sys.stdin.buffer.read())
+print(d.get("application-identifier",""), str(d.get("com.apple.developer.healthkit",False)).lower(), str(d.get("get-task-allow",False)).lower())')
   local line="  $bundle: signature valid"
   [[ "$appid" == *".$bundle" ]] && line+=", app ID ok" || { line+=", app ID WRONG"; VERIFY_OK=0; }
   [ "$hk" = "true" ] && line+=", HealthKit ok" || { line+=", HealthKit MISSING"; VERIFY_OK=0; }
