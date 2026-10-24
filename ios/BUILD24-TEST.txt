@@ -1,0 +1,48 @@
+BikeComputer iPhone app 0.4.0 (TestFlight build 24) — real-device checklist
+===========================================================================
+Record PASS / FAIL / NOT TESTED per step. Everything new in 0.4.0 is simulator-tested only until you confirm it.
+Board: firmware 0.5.0 now. Steps marked [0.6.0] need firmware 0.6.0 on the board (kit prepared, not flashed) and will
+show "needs firmware 0.6.0" until then — record them NOT TESTED for now. Never USB and battery connected at the same time.
+
+iPhone
+ 1  Update to 0.4.0 (24). Profile, plan, rides and tile layout from build 21 are still there. Home opens with the coach
+    line ("Today: …"), the workout table, "Why this workout?" and a Connections card.
+ 2  Tap "Why this workout?": plain-language text about your last ride / this week / goal; it says no sleep or HRV source
+    is connected. Tap Alternative → list (easier, shorter, off the bike, skip); pick one → Home updates.
+ 3  Bottom bar: the middle round "Ride now" button is larger and raised; tapping it opens Ride and NOTHING starts
+    recording. Start ride on the Ride screen still works as before.
+ 4  Connections (Home card or Profile › Devices › Connections): rows for BikeComputer, Bluetooth, GPS, Internet,
+    Apple Watch, power meter, strap, speed/cadence, Apple Health, WHOOP, Garmin. Each row opens a page with status,
+    steps, measurements and troubleshooting. WHOOP/Garmin/strap are gray (not red).
+ 5  Switch the phone's Bluetooth off → Bluetooth and BikeComputer rows show a red "!". Switch it on → both return to
+    green/amber without touching the board (on 0.5.0 the board must be awake with its screen on).
+ 6  Connections › Apple Watch › toggle "Use the Apple Watch" OFF → row gray with "off (your choice)". ON again → status
+    follows the watch (ready / workout running / HR live).
+ 7  Profile › Delete account and all data → onboarding. Stage A: "Continue as guest" with a first name only. Stage B:
+    skip birth year, enter weight, choose sports and goal, skip heart rate, let FTP be estimated, choose devices
+    (watch on, strap off), Apple Health "Not now", summary shows "not set" for skipped items → Start.
+ 8  Onboarding again (Delete all data) and this time tap "Connect Apple Health" → iOS permission sheet → allow
+    workouts. The Health row in Connections turns green only after that; deny → stays red with "permission not
+    granted" (because you asked for it) — Not now → gray.
+ 9  Plan: tap today → "Add another activity on this day" → the day cell shows the ride plus a "+1" badge, nothing
+    overlaps; tap the cell → day list → tap an entry → its detail. Check in dark mode and with the largest text size
+    (Settings › Accessibility › Larger Text) that no card overflows the screen.
+10  Profile: enter birth year 1990 and max HR 186 → "Max heart rate entered by you"; zones update; "Profile version N"
+    increases by 1 per change. Kill and relaunch → values kept.
+
+Board (firmware 0.5.0 today)
+11  Connections › BikeComputer: shows link, firmware 0.5.0, signal, battery estimate; "Device settings and Wi-Fi" is
+    replaced by the note "…need firmware 0.6.0". Sync status page says "needs firmware 0.6.0 (board has 0.5.0)".
+12  Board ride start/pause/end from the phone and from the board behave exactly as in build 21 (one ride, one owner).
+
+After flashing firmware 0.6.0 (with approval)
+13  [0.6.0] First connection: Home shows "Phone and BikeComputer profiles differ" if they do → Sync status lists the
+    differences → "Use the phone's profile on the board" → state "in sync"; the board's Home greets you with the phone
+    name and FTP. Change FTP on the phone → within ~5 s the board shows the new value; Sync status "in sync".
+14  [0.6.0] Device settings: move Brightness → board brightness changes and the page says "synced"; set Screen timeout
+    2 min; set Wake gesture Double tap → board Settings › Power shows the same.
+15  [0.6.0] Wi-Fi setup: Scan → your networks with bars and lock; iPhone hotspot appears only with Maximize
+    Compatibility on and the Personal Hotspot screen open; enter a wrong password → "Wrong password"; correct →
+    "Connected"; Forget → gone from saved.
+
+Report PASS/FAIL/NOT TESTED per step plus screenshots of anything misaligned or any value shown without a live source.

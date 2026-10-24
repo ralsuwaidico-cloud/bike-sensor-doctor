@@ -1,5 +1,81 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
+## 0.4.0 (build 24) — 25 Oct 2026 — TestFlight, internal testers only
+
+Everything below is **simulator-tested** (43 XCTest cases in GitHub Actions, 0 failures). **Nothing new in this build is
+real-device-tested** until Rashed runs `BUILD24-TEST.txt`. Pairing, live data, GPS to the board and watch heart rate were
+device-tested in builds 14–21 and are unchanged in code. The board runs firmware 0.5.0; firmware 0.6.0 (prepared, not
+flashed) is needed for everything marked **(needs 0.6.0)** — the app checks the board's capability bits and says so.
+
+### Implemented
+- **Connections replaces Sensors.** Home shows a Connections card (BikeComputer, power meter, Apple Watch, phone GPS);
+  it opens a dashboard with BikeComputer (link, firmware, battery estimate), Phone (Bluetooth, GPS, Internet), Apple
+  Watch, Bluetooth sensors via the board (power meter, strap, speed/cadence = not supported yet) and other integrations
+  (Apple Health; WHOOP and Garmin listed as not connected). Colours: green connected and working · red "!" only for
+  connections you enabled or the ride setup requires · amber connecting / stale / limited · gray optional / off. Every
+  row opens status, pairing steps, measurements, reconnect and troubleshooting. Pairing the board: Connect → tap the
+  board → type the 6-digit code once.
+- **Reconnection without touching the board.** The phone keeps a pending Bluetooth connection open (state restoration,
+  `bluetooth-central` background mode, no polling) and attaches as soon as the board advertises. "Connect automatically"
+  (Profile › Settings and the BikeComputer page) switches that off locally; the board's own phone-link switch is a
+  device setting (needs 0.6.0). The screen-off BLE drop itself was a firmware defect, fixed in 0.6.0 (see
+  `firmware/waveshare/docs/FIRMWARE_0.6.0.md`); on 0.5.0 the board still has to be woken.
+- **Two-stage onboarding.** Stage A: Continue as guest (name only) · Sign in with Apple · Google / e-mail shown disabled
+  with the reason (account service not configured). Stage B, one question per screen, every screen skippable: name ·
+  birth year · weight + units · sports and activities · goal · experience and hours · max / resting heart rate and FTP
+  (tested value, or "estimate for me" labelled provisional) · devices you own (board, watch, strap, power meter) ·
+  Apple Health (save workouts / read workouts / read heart rate explained separately; marked connected only after iOS
+  confirms the permission) · summary. Skipped values stay "not set"; nothing is invented.
+- **Profile sync (needs 0.6.0).** Ownership: board alone, phone alone, or connected with the phone authoritative. At
+  first pairing the app reads the board's profile, lists the differences and asks: use the phone's profile on the board,
+  or keep the board's values (copied to the phone). After that every change on the phone (also through sliders and
+  text fields) bumps a version and is pushed with acknowledgement and three retries; an older version never overwrites
+  a newer one. Ride history, sensor pairings, calibration, Wi-Fi and the phone pairing on the board are never touched.
+  Sync status page under Profile › Devices and Connections › BikeComputer.
+- **Device settings from the phone (needs 0.6.0).** Brightness, screen timeout, wake gesture, ride layout, wake on
+  coach cue, phone link, deep sleep after idle, heart-rate source, board units, diagnostics. Only controls the connected
+  firmware reports as supported are shown; each change waits for the board's reply and shows synced / failed.
+- **Wi-Fi setup from the phone (needs 0.6.0).** Scan list with signal bars, lock and "saved", password entry (sent once
+  over the encrypted link, kept nowhere on the phone), connect progress, states Connected / Connecting / Wrong password /
+  Not found / Connected, no internet, Forget, Rescan, "Other network", 2.4 GHz note and the iPhone-hotspot
+  "Maximize Compatibility" hint.
+- **Home coach redesigned.** One line at the top ("Today: 45-minute endurance ride (Zone 2) to improve aerobic
+  fitness."), a compact table (workout, duration, target zone with watts, benefit, structure, status), "Why this
+  workout?" in plain words using only data the app has (last ride, this week, goal, level, FTP label — and it says that
+  no sleep/HRV/recovery source is connected), and Start / Adjust / Alternative (easier, shorter, off the bike, skip).
+- **Ride tab button.** Five tabs kept; the middle one is a raised circular "Ride now" button (turns green while
+  recording). Tapping it opens the Ride screen only; recording starts from Start ride there.
+- **Layout audit.** Plan week strip: several activities on one day are stacked (first shown + "+N" badge that opens the
+  day list; "Add another activity on this day"), cells have a minimum height and scale text instead of overlapping;
+  Home coach text wraps (no truncation); Connections rows are two-line with a status badge; tab bar labels scale with
+  Dynamic Type; all screens use system grouped backgrounds in light and dark.
+- **Profile tab.** Birth year, max / resting / threshold heart rate (entered values replace estimates and are labelled),
+  sports picker, FTP entry marked "tested", Devices section → Connections, BikeComputer settings and Wi-Fi, Sync status.
+- **Protocol.** `Shared/BCLink.swift` implements Link v1.2 (Wi-Fi 0x60–0x66, profile 0x70–0x73, settings 0x74–0x76,
+  INFO tag 07 device id, caps 0x80/0x100/0x200); `LinkV12Tests` reproduces the firmware's byte vectors from
+  `firmware/waveshare/docs/BLE_LINK_PROTOCOL.md` exactly.
+- **Store.** Schema stays 1; new fields are optional with defaults (tolerant decoding tested against a build-21 file).
+  Profiles and rides survive the update.
+
+### Known limitations
+- Google and e-mail sign-in remain disabled until Supabase + Google OAuth + Sign in with Apple service id are configured.
+- Everything marked (needs 0.6.0) shows "needs firmware 0.6.0" on the current 0.5.0 board; history sync too.
+- Board power state (display off / standby / deep sleep) is not reported over the link yet; the app shows link state only.
+- Apple Health: permission flow and status are real; saving rides as workouts is prepared but not active in this build.
+- Speed/cadence BLE sensors (0x1816) are listed as not supported (firmware).
+- WHOOP / Garmin: listed, not connected. Android skeleton unchanged.
+- Long locked-screen phone-only rides and background reconnection are untested on devices.
+
+### Testing checklist (short) — see BUILD24-TEST.txt
+1. Update; existing profile, plan and rides are intact; Home shows the coach line + table and the Connections card.
+2. Delete all data → onboarding: guest with a name only, skip screens, finish; Profile shows "not set" where skipped.
+3. Connections: board paired → green; switch Bluetooth off → red "!" on Bluetooth and BikeComputer; back on → reconnects
+   without touching the board.
+4. Watch toggle off → watch row gray, never red; on → status follows the workout.
+5. Plan: add a second activity on a day → stacked cell with "+1"; tap → day list.
+6. Ride now button opens Ride; nothing records until Start ride.
+7. With firmware 0.6.0 later: sync differences dialog, device settings synced/failed, Wi-Fi scan + connect.
+
 ## 0.3.1 (build 21) — 24 Oct 2026 — TestFlight, internal testers only
 
 Everything below is **simulator-tested** (27 XCTest cases in GitHub Actions, 0 failures). **Nothing is real-device-tested**
