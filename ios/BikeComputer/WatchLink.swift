@@ -2,8 +2,8 @@ import Foundation
 import WatchConnectivity
 
 /// iPhone side of the iPhone <-> Apple Watch connection (WatchConnectivity).
-/// Phase 0: reports whether a watch is paired, whether the Watch app is installed and reachable,
-/// and measures a ping round trip. Nothing here is simulated: every value comes from WCSession.
+/// Reports pairing/reachability, measures a ping round trip, and relays the watch's live heart rate to the board with
+/// its source (Apple Watch) and the sample time. A reading older than 6 s is never shown or forwarded.
 final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var supported = WCSession.isSupported()
     @Published private(set) var activated = false
@@ -12,6 +12,15 @@ final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var reachable = false
     @Published private(set) var lastResult = "Not tested yet"
     @Published private(set) var watchBuild: String?
+    @Published private(set) var hrBpm: Int?
+    @Published private(set) var hrAt: Date?
+    @Published private(set) var workoutState = "idle"
+    @Published private(set) var watchBattery: Int?
+    @Published private(set) var hrReceived = 0
+
+    weak var device: DeviceLink?
+
+    var hrIsFresh: Bool { guard let t = hrAt else { return false }; return Date().timeIntervalSince(t) < 6 }
 
     func activate() {
         guard WCSession.isSupported() else { return }
@@ -24,14 +33,8 @@ final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
     func ping() {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
-        guard session.activationState == .activated else {
-            lastResult = "Connection not ready yet"
-            return
-        }
-        guard session.isReachable else {
-            lastResult = "Watch app not reachable. Open BikeComputer on the watch and try again."
-            return
-        }
+        guard session.activationState == .activated else { lastResult = "Connection not ready yet"; return }
+        guard session.isReachable else { lastResult = "Watch app not reachable. Open BikeComputer on the watch and try again."; return }
         lastResult = "Sending…"
         session.sendMessage(WatchMessage.makePing(), replyHandler: { [weak self] reply in
             let ms = WatchMessage.roundTripMs(of: reply)
@@ -55,23 +58,33 @@ final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
         if Thread.isMainThread { update() } else { DispatchQueue.main.async(execute: update) }
     }
 
-    // MARK: WCSessionDelegate
-
-    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        refresh(session)
-        if let error {
-            DispatchQueue.main.async { self.lastResult = "Activation failed: \(error.localizedDescription)" }
+    private func handle(_ message: [String: Any]) {
+        guard message[WatchMessage.kind] as? String == WatchMessage.hr else { return }
+        let bpm = message[WatchMessage.bpm] as? Int
+        let at = (message[WatchMessage.at] as? Double).map { Date(timeIntervalSince1970: $0) } ?? Date()
+        let state = message[WatchMessage.workout] as? String ?? "idle"
+        let batt = message[WatchMessage.battery] as? Int
+        DispatchQueue.main.async {
+            self.workoutState = state
+            self.watchBattery = batt
+            if let b = bpm, b >= 25, b <= 250, Date().timeIntervalSince(at) < 6 {
+                self.hrBpm = b; self.hrAt = at; self.hrReceived += 1
+                self.device?.send(heartRate: b, source: .appleWatch, sampledAt: at)
+            } else {
+                self.hrBpm = nil
+            }
         }
     }
 
-    func sessionDidBecomeInactive(_ session: WCSession) { refresh(session) }
-
-    func sessionDidDeactivate(_ session: WCSession) {
-        // The user switched to another watch: activate again for the new one.
-        session.activate()
+    // MARK: WCSessionDelegate
+    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+        refresh(session)
+        if let error { DispatchQueue.main.async { self.lastResult = "Activation failed: \(error.localizedDescription)" } }
     }
-
+    func sessionDidBecomeInactive(_ session: WCSession) { refresh(session) }
+    func sessionDidDeactivate(_ session: WCSession) { session.activate() }
     func sessionReachabilityDidChange(_ session: WCSession) { refresh(session) }
-
     func sessionWatchStateDidChange(_ session: WCSession) { refresh(session) }
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) { handle(message) }
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) { handle(message); replyHandler([:]) }
 }

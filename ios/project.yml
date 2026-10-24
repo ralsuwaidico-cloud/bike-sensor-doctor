@@ -12,7 +12,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "0.2.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -36,6 +36,7 @@ targets:
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [bluetooth-central, location]
         ITSAppUsesNonExemptEncryption: false
         NSBluetoothAlwaysUsageDescription: BikeComputer connects to your Waveshare cycling computer over Bluetooth to show live power and cadence.
         NSLocationWhenInUseUsageDescription: BikeComputer sends your phone's GPS position, speed and distance to your cycling computer during a ride.
@@ -75,6 +76,7 @@ targets:
         WKApplication: true
         WKCompanionAppBundleIdentifier: com.ralsuwaidico.bikecomputer
         WKRunsIndependentlyOfCompanionApp: false
+        WKBackgroundModes: [workout-processing]
         ITSAppUsesNonExemptEncryption: false
         NSHealthShareUsageDescription: BikeComputer reads your live heart rate during a cycling workout and sends it to your iPhone and cycling computer.
         NSHealthUpdateUsageDescription: BikeComputer records your cycling workout so the watch can measure heart rate. You choose whether it is saved to Apple Health.

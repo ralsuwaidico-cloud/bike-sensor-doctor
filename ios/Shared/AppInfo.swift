@@ -22,6 +22,18 @@ enum WatchMessage {
     static let pong = "pong"
     static let sentAt = "sentAt"
     static let build = "build"
+    /// live heart rate from the watch workout: {kind: "hr", bpm: Int, at: Double (epoch s), workout: String}
+    static let hr = "hr"
+    static let bpm = "bpm"
+    static let at = "at"
+    static let workout = "workout"          /* "idle" | "running" | "paused" | "ended" */
+    static let battery = "battery"
+
+    static func makeHR(bpm: Int, at: Date, workout: String, battery: Int?) -> [String: Any] {
+        var m: [String: Any] = [kind: hr, WatchMessage.bpm: bpm, WatchMessage.at: at.timeIntervalSince1970, WatchMessage.workout: workout]
+        if let b = battery { m[WatchMessage.battery] = b }
+        return m
+    }
 
     static func makePing(now: Date = Date()) -> [String: Any] {
         [kind: ping, sentAt: now.timeIntervalSince1970]
