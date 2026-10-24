@@ -1,0 +1,196 @@
+=== test: errors / failures ===
+GatherProvisioningInputs
+2026-10-24 18:37:06.123318+0000 BikeComputer[3729:17119] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' passed (0.025 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' passed (0.001 seconds).
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.036 (0.042) seconds
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' passed (0.039 seconds).
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' passed (0.331 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' passed (0.011 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:230: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("29") is not equal to ("30")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:231: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("32") is not equal to ("33")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:232: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("29") is not equal to ("30")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:235: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("Optional(29)") is not equal to ("Optional(30)")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:236: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("Optional(32)") is not equal to ("Optional(33)")
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' failed (0.474 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekRespectsHoursAndLevel]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' passed (0.001 seconds).
+Test Suite 'ModelTests' failed at 2026-10-24 18:37:07.410.
+	 Executed 15 tests, with 5 failures (0 unexpected) in 0.902 (1.028) seconds
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' passed (0.001 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.005 (0.007) seconds
+Test Suite 'BikeComputerTests.xctest' failed at 2026-10-24 18:37:07.417.
+	 Executed 27 tests, with 5 failures (0 unexpected) in 0.944 (1.244) seconds
+Test Suite 'All tests' failed at 2026-10-24 18:37:07.417.
+	 Executed 27 tests, with 5 failures (0 unexpected) in 0.944 (1.247) seconds
+Failing tests:
+** TEST FAILED **
+=== test: last 150 lines ===
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-infoPlistUtility /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/empty-BikeComputerTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphonesimulator -o /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/Info.plist
+
+Ld /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/BikeComputerTests normal (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -bundle -isysroot /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -L/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -iframework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -iframework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -filelist /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @loader_path/Frameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -bundle_loader /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/BikeComputer -Xlinker -object_path_lto -Xlinker /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests.swiftmodule @/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests-linker-args.resp -Xlinker -needed_framework -Xlinker XCTest -framework XCTest -Xlinker -needed-lXCTestSwiftSupport -lXCTestSwiftSupport /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/BikeComputer.debug.dylib -o /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/BikeComputerTests
+
+CopySwiftLibs /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/BikeComputerTests --scan-folder /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/Frameworks --scan-folder /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/PlugIns --scan-folder /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/SystemExtensions --scan-folder /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/Extensions --platform iphonesimulator --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.A5ZINI/Metal.xctoolchain --toolchain /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v17.6.109.0.A5ZINI/Metal.xctoolchain --module-name BikeComputerTests --sdk-root /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 17.0 --bundle-identifier com.ralsuwaidico.bikecomputer.tests --output /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest --target-triple arm64-apple-ios17.0-simulator --binary-file /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/BikeComputerTests --dependency-file /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests_dependency_info.dat --stringsdata-file /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests.SwiftFileList --metadata-file-list /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/BikeComputerTests.DependencyMetadataFileList --static-metadata-file-list /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/BikeComputerTests.DependencyStaticMetadataFileList --swift-const-vals-list /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/Objects-normal/arm64/BikeComputerTests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-10-24 18:34:00.632 appintentsmetadataprocessor[2458:11076] Starting appintentsmetadataprocessor export
+2026-10-24 18:34:00.638 appintentsmetadataprocessor[2458:11076] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+AppIntentsSSUTraining (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/Info.plist --temp-dir-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/ssu --bundle-id com.ralsuwaidico.bikecomputer.tests --product-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest --extracted-metadata-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/Metadata.appintents --metadata-file-list /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerTests.build/BikeComputerTests.DependencyMetadataFileList --source-file /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest/Info.plist --archive-ssu-assets
+2026-10-24 18:34:00.683 appintentsnltrainingprocessor[2459:11079] Parsing options for appintentsnltrainingprocessor
+2026-10-24 18:34:00.683 appintentsnltrainingprocessor[2459:11079] Starting AppIntents SSU YAML Generation
+2026-10-24 18:34:00.684 appintentsnltrainingprocessor[2459:11079] No AppShortcuts found - Skipping.
+
+RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest
+
+Touch /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest (in target 'BikeComputerTests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /usr/bin/touch -c /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/PlugIns/BikeComputerTests.xctest
+
+RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app
+
+Validate /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-validationUtility /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app -shallow-bundle -infoplist-subpath Info.plist
+
+Touch /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /usr/bin/touch -c /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app
+
+2026-10-24 18:37:02.800022+0000 BikeComputer[3729:18928] [CoreBluetooth] XPC connection invalid
+2026-10-24 18:37:03.288087+0000 BikeComputer[3729:17119] [WC] WCSession has not been activated
+2026-10-24 18:37:03.288274+0000 BikeComputer[3729:17119] [WC] WCSession has not been activated
+2026-10-24 18:37:03.288387+0000 BikeComputer[3729:17119] [WC] WCSession has not been activated
+2026-10-24 18:37:05.465599+0000 BikeComputer[3729:18937] [WC] -[WCSession onqueue_handleUpdateSessionState:]_block_invoke dropping as pairingIDs no longer match. pairingID (null), client pairingID: (null)
+2026-10-24 18:37:05.841652+0000 BikeComputer[3729:18937] [WC] WCSession is not paired
+2026-10-24 18:37:05.848626+0000 BikeComputer[3729:18937] [WC] -[WCSession onqueue_handleUpdateSessionState:]_block_invoke dropping as pairingIDs no longer match. pairingID (null), client pairingID: (null)
+2026-10-24 18:37:05.857361+0000 BikeComputer[3729:18937] [WC] WCSession is not paired
+2026-10-24 18:37:05.858058+0000 BikeComputer[3729:18937] [WC] -[WCSession onqueue_handleUpdateSessionState:]_block_invoke dropping as pairingIDs no longer match. pairingID (null), client pairingID: (null)
+2026-10-24 18:37:05.858982+0000 BikeComputer[3729:18937] [WC] WCSession is not paired
+2026-10-24 18:37:05.860380+0000 BikeComputer[3729:18937] [WC] -[WCSession onqueue_handleUpdateSessionState:]_block_invoke dropping as pairingIDs no longer match. pairingID (null), client pairingID: (null)
+2026-10-24 18:37:05.863649+0000 BikeComputer[3729:18937] [WC] WCSession is not paired
+2026-10-24 18:37:06.122233+0000 BikeComputer[3729:17119] [WC] WCSession is not paired
+2026-10-24 18:37:06.123318+0000 BikeComputer[3729:17119] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+Test Suite 'All tests' started at 2026-10-24 18:37:06.170.
+Test Suite 'BikeComputerTests.xctest' started at 2026-10-24 18:37:06.173.
+Test Suite 'BCLinkTests' started at 2026-10-24 18:37:06.175.
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' passed (0.025 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' started.
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' passed (0.001 seconds).
+Test Suite 'BCLinkTests' passed at 2026-10-24 18:37:06.216.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.036 (0.042) seconds
+Test Suite 'ModelTests' started at 2026-10-24 18:37:06.382.
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' started.
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' started.
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' started.
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' passed (0.039 seconds).
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' started.
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' started.
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' started.
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' started.
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' started.
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' passed (0.331 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' started.
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:230: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("29") is not equal to ("30")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:231: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("32") is not equal to ("33")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:232: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("29") is not equal to ("30")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:235: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("Optional(29)") is not equal to ("Optional(30)")
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:236: error: -[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation] : XCTAssertEqual failed: ("Optional(32)") is not equal to ("Optional(33)")
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' failed (0.474 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekRespectsHoursAndLevel]' started.
+Test Case '-[BikeComputerTests.ModelTests testWeekRespectsHoursAndLevel]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' started.
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' started.
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' passed (0.001 seconds).
+Test Suite 'ModelTests' failed at 2026-10-24 18:37:07.410.
+	 Executed 15 tests, with 5 failures (0 unexpected) in 0.902 (1.028) seconds
+Test Suite 'WatchMessageTests' started at 2026-10-24 18:37:07.410.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' passed (0.001 seconds).
+Test Suite 'WatchMessageTests' passed at 2026-10-24 18:37:07.417.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.005 (0.007) seconds
+Test Suite 'BikeComputerTests.xctest' failed at 2026-10-24 18:37:07.417.
+	 Executed 27 tests, with 5 failures (0 unexpected) in 0.944 (1.244) seconds
+Test Suite 'All tests' failed at 2026-10-24 18:37:07.417.
+	 Executed 27 tests, with 5 failures (0 unexpected) in 0.944 (1.247) seconds
+2026-10-24 18:39:20.240 xcodebuild[1611:8452] [MT] IDETestOperationsObserverDebug: 316.622 elapsed -- Testing started completed.
+2026-10-24 18:39:20.253 xcodebuild[1611:8452] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-24 18:39:20.253 xcodebuild[1611:8452] [MT] IDETestOperationsObserverDebug: 316.726 sec, +316.725 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/tests.xcresult
+
+Failing tests:
+	ModelTests.testSuspensionBecomesGapNotInterpolation()
+	ModelTests.testSuspensionBecomesGapNotInterpolation()
+	ModelTests.testSuspensionBecomesGapNotInterpolation()
+	ModelTests.testSuspensionBecomesGapNotInterpolation()
+	ModelTests.testSuspensionBecomesGapNotInterpolation()
+
+** TEST FAILED **
+
+Testing started
