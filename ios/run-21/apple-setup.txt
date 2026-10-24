@@ -1,0 +1,8 @@
+Bundle IDs and capabilities:
+  bundle ID com.ralsuwaidico.bikecomputer: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer: already enabled
+  bundle ID com.ralsuwaidico.bikecomputer.watchkitapp: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer.watchkitapp: already enabled
+App Store Connect app record: found
+  TestFlight internal group 'Rashed devices': already exists
+  internal testers: 3 already in the group, 0 added now
