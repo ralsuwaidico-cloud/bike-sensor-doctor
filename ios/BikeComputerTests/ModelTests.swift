@@ -225,14 +225,14 @@ final class ModelTests: XCTestCase {
         XCTAssertTrue(r.start())
         r.tick(); r.tick()
         XCTAssertEqual(r.elapsedS, 2); XCTAssertEqual(r.gapSeconds, 0)
-        r.simulateSuspension(seconds: 30)
+        r.simulateSuspension(seconds: 30)          // last tick 30 s ago: 29 seconds were never observed, this tick is the 30th
         r.tick()
-        XCTAssertEqual(r.gapSeconds, 30)
-        XCTAssertEqual(r.elapsedS, 33)
-        XCTAssertEqual(r.samples.filter { $0.gap == true }.count, 30)
+        XCTAssertEqual(r.gapSeconds, 29)
+        XCTAssertEqual(r.elapsedS, 32)
+        XCTAssertEqual(r.samples.filter { $0.gap == true }.count, 29)
         XCTAssertTrue(r.samples.filter { $0.gap == true }.allSatisfy { $0.w == nil && $0.speedCms == nil && $0.hr == nil })
         r.end()
-        XCTAssertEqual(r.pendingResult?.gapSeconds, 30)
-        XCTAssertEqual(r.pendingResult?.durationS, 33)
+        XCTAssertEqual(r.pendingResult?.gapSeconds, 29)
+        XCTAssertEqual(r.pendingResult?.durationS, 32)
     }
 }
