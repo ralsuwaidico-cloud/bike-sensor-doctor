@@ -12,7 +12,8 @@ static uint32_t s_last_sample_ms, s_last_log_ms;
 static char s_alert[64]; static bool s_alert_pending;
 static int s_last_cue_id = -1;
 static uint32_t s_sleep_at_ms;          /* opt-in critical action pending (bat_protect == 1) */
-static bool s_inited;
+static uint32_t s_phone_off_at_ms;      /* SETTINGS from the phone: switch the link off once the reply is out */
+static bool s_inited, s_last_usb;
 
 const app_power_t *app_power(void) { return &P; }
 
@@ -35,6 +36,7 @@ void app_power_init(void)
     bc_usb_reset(&s_usb); bc_lowbat_reset(&s_low); bc_tap_reset(&s_tap); bc_drain_reset(&s_drain);
     s_last_sample_ms = 0; s_last_log_ms = 0; s_alert_pending = false; s_last_cue_id = -1; s_sleep_at_ms = 0;
     P.last_touch_ms = plat_ms();
+    s_phone_off_at_ms = 0; s_last_usb = false;
     P.woke_from_sleep = plat_woke_from_sleep();
     if (P.woke_from_sleep) plat_log("POWER wake from deep sleep (touch / RESET / USB)");
     plat_backlight(app_profile()->brightness);
@@ -47,6 +49,10 @@ static void sample(uint32_t now)
     int mv = plat_battery_mv();
     P.mv = mv; P.pct = bc_batt_pct_from_mv(mv);
     P.usb_likely = bc_usb_feed(&s_usb, mv, now) || plat_usb_power();
+    if (P.usb_likely != s_last_usb) {                        /* the decision that gates auto deep sleep: always in the log */
+        s_last_usb = P.usb_likely;
+        char l[96]; snprintf(l, sizeof l, "POWER source inferred: %s (%d mV; >=4.18 V for 30 s or rising = USB likely)", P.usb_likely ? "USB likely" : "battery", mv); plat_log(l);
+    }
     bc_bat_level_t before = s_low.level, lv = bc_lowbat_feed(&s_low, P.usb_likely ? 0 : mv);
     P.bat_level = lv;
     /* drain attribution */
@@ -83,9 +89,40 @@ static void sample(uint32_t now)
     }
 }
 
+static bool phone_connected(void)
+{
+    plat_phone_status_t ps; plat_phone_status(&ps);
+    return ps.state == PLAT_PHONE_CONNECTED || ps.state == PLAT_PHONE_PAIRING || ps.state == PLAT_PHONE_READY;
+}
+
+/* connected standby = screen off and no ride: Bluetooth stays up (slow advertising when no phone is connected), the
+   sensor side stops scanning. Anything else (screen on, or a ride) leaves standby. */
+static void standby_update(void)
+{
+    bool want = !P.screen_on && !riding() && !P.asleep;
+    if (want == P.standby) return;
+    P.standby = want;
+    if (want) P.standbys++;
+    plat_phone_set_standby(want);
+    plat_sensors_set_standby(want);
+    plat_log(want ? "POWER connected standby: screen off, Bluetooth link kept, sensor scanning paused" : "POWER standby left");
+}
+
+const char *app_power_state_text(void)
+{
+    if (P.asleep) return "deep sleep";
+    if (P.standby) return "standby, link on";
+    return P.screen_on ? "active" : "screen off, recording";
+}
+
+void app_power_phone_link_deferred_off(void) { s_phone_off_at_ms = plat_ms() + 1500; }
+
 void app_power_tick(uint32_t now)
 {
     if (!s_inited || P.asleep) return;
+    app_power_settle(now);
+    standby_update();
+    if (s_phone_off_at_ms && (int32_t)(now - s_phone_off_at_ms) >= 0) { s_phone_off_at_ms = 0; if (!app_profile()->phone_on) plat_phone_set_enabled(false); }
     if (!s_last_sample_ms || now - s_last_sample_ms >= SAMPLE_MS) { s_last_sample_ms = now; sample(now); }
     const bc_profile_t *p = app_profile();
     bool ride = riding();
@@ -101,20 +138,46 @@ void app_power_tick(uint32_t now)
         if (c->level == BC_LVL_WARN && (int)c->id != s_last_cue_id) { s_last_cue_id = (int)c->id; P.cue_wakes++; P.wake_until_ms = now + CUE_WAKE_MS; app_power_screen_wake(); P.wake_until_ms = now + CUE_WAKE_MS; }
     }
     if (ride) { const bc_cue_t *c = app_cue(); if (c->level != BC_LVL_WARN) s_last_cue_id = -1; }
-    /* auto-sleep: idle N minutes on battery, no ride */
-    if (!ride && p->onboarded && p->auto_sleep_min && !P.usb_likely && now - P.last_touch_ms >= (uint32_t)p->auto_sleep_min * 60000u) {
-        plat_log("POWER auto-sleep after idle time"); app_power_sleep();
-        return;
+    /* auto deep sleep (OFF by default since 0.6.0): idle N minutes, battery, no ride, and NO phone connected — deep sleep
+       switches Bluetooth off, so it must never cut a live phone link. The reason it is not sleeping is kept for the UI. */
+    P.sleep_block[0] = 0;
+    if (p->auto_sleep_min) {
+        if (ride) snprintf(P.sleep_block, sizeof P.sleep_block, "ride running");
+        else if (P.usb_likely) snprintf(P.sleep_block, sizeof P.sleep_block, "USB power likely");
+        else if (phone_connected()) snprintf(P.sleep_block, sizeof P.sleep_block, "phone connected");
+        else if (!p->onboarded) snprintf(P.sleep_block, sizeof P.sleep_block, "setup not finished");
+        else if (now - P.last_touch_ms >= (uint32_t)p->auto_sleep_min * 60000u) {
+            plat_log("POWER auto deep sleep after idle time (no ride, no phone, battery)"); app_power_sleep();
+            return;
+        }
     }
     if (s_sleep_at_ms && (int32_t)(now - s_sleep_at_ms) >= 0) { s_sleep_at_ms = 0; if (!riding()) app_power_sleep(); }
 }
 
-void app_power_touch(bool pressed, uint32_t now)
+int app_power_wake_taps_now(void)
+{
+    int t = app_profile()->wake_taps; if (t < 1 || t > 3) t = 3;
+    if (t == 1 && !riding()) t = 2;                       /* "any touch" only while a ride runs; idle in a bag: two taps */
+    return t;
+}
+const char *app_power_wake_name(int t) { return t == 1 ? "any touch" : t == 2 ? "2 taps" : "3 taps"; }
+int app_power_wake_next(int t) { return t == 3 ? 2 : t == 2 ? 1 : 3; }
+
+void app_power_touch_xy(bool pressed, int x, int y, uint32_t now)
 {
     if (pressed) P.last_touch_ms = now;
     if (!P.screen_on) {
-        if (bc_tap_feed(&s_tap, pressed, now)) { P.wakes++; app_power_screen_wake(); }
+        bc_tap_set_count(&s_tap, app_power_wake_taps_now());
+        uint32_t rej = s_tap.rejected_bursts + s_tap.rejected_slides + s_tap.rejected_long;
+        if (bc_tap_feed_xy(&s_tap, pressed, x, y, now)) { P.wakes++; app_power_screen_wake(); }
+        P.taps_rejected = rej;
     } else bc_tap_reset(&s_tap);
+}
+void app_power_touch(bool pressed, uint32_t now) { app_power_touch_xy(pressed, -1, -1, now); }
+void app_power_settle(uint32_t now)
+{
+    if (P.screen_on || P.asleep || s_tap.down) return;
+    if (bc_tap_feed_xy(&s_tap, false, -1, -1, now)) { P.wakes++; app_power_screen_wake(); }
 }
 
 void app_power_screen_off(void)
@@ -122,17 +185,21 @@ void app_power_screen_off(void)
     if (!P.screen_on) return;
     before_action("screen off");
     P.screen_on = false; P.screen_off_ms = plat_ms(); P.screen_offs++;
-    bc_tap_reset(&s_tap);
+    bc_tap_reset(&s_tap); bc_tap_set_count(&s_tap, app_power_wake_taps_now());
     plat_backlight(0);
     plat_panel_sleep(true);
+    plat_touch_screen_off(true);
+    standby_update();
 }
 
 void app_power_screen_wake(void)
 {
     if (P.screen_on) return;
+    plat_touch_screen_off(false);
     plat_panel_sleep(false);
     plat_backlight(app_profile()->brightness);
     P.screen_on = true; P.last_touch_ms = plat_ms();
+    standby_update();
     plat_log("POWER screen on");
 }
 
@@ -144,14 +211,15 @@ bool app_power_can_sleep(void) { return !riding(); }
 bool app_power_sleep(void)
 {
     if (!app_power_can_sleep()) { plat_log("POWER sleep refused: ride active"); return false; }
-    before_action("deep sleep");
+    before_action("deep sleep (connectivity off)");
     app_profile_save();
     plat_wifi_set_enabled(false);          /* radio only; the profile keeps wifi_on so it returns after the wake */
     plat_phone_set_enabled(false);
     plat_backlight(0);
     plat_panel_sleep(true);
-    P.sleeps_requested++; P.asleep = true; P.screen_on = false;
-    plat_deep_sleep();                     /* device: never returns. harness: boot() plays the wake */
+    P.sleeps_requested++; P.asleep = true; P.screen_on = false; P.standby = false;
+    int taps = app_profile()->wake_taps; if (taps < 2) taps = 2;    /* "any touch" never wakes a sleeping device in a bag */
+    plat_deep_sleep(taps);                 /* device: never returns. harness: boot() plays the wake */
     return true;
 }
 

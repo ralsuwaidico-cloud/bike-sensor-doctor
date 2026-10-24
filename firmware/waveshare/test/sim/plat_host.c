@@ -2,6 +2,7 @@
  * the Bluetooth hardware (set by the scenario), so screens can be tested in every state. Files live in SIM_FS. */
 #include "plat.h"
 #include "sim.h"
+#include "app_psvc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +83,7 @@ long plat_file_size(const char *path) { char p[512]; full(path, p, sizeof p); st
 void plat_health(plat_health_t *o)
 {
     memset(o, 0, sizeof *o);
-    snprintf(o->fw_version, sizeof o->fw_version, "0.5.0-sim"); snprintf(o->build, sizeof o->build, "Oct 23 22:00");
+    snprintf(o->fw_version, sizeof o->fw_version, "0.6.0-sim"); snprintf(o->build, sizeof o->build, "Oct 23 22:00");
     o->uptime_s = g_sim.now_ms / 1000; snprintf(o->reset_reason, sizeof o->reset_reason, "power-on");
     o->boot_count = g_sim.boots; o->crash_total = 2; o->crash_consecutive = 0; o->safe_mode_entries = 0;
     o->heap_free_k = 61; o->heap_min_k = 48; o->psram_free_k = 1890; o->psram_total_k = 2048;
@@ -100,7 +101,10 @@ int plat_battery_pct(void) { return g_sim.battery_mv ? bc_batt_pct_from_mv(g_sim
 bool plat_usb_power(void) { return g_sim.usb || plat_battery_mv() > 4250; }
 void plat_backlight(int pct) { g_sim.backlight = pct; }
 void plat_panel_sleep(bool sleep) { g_sim.panel_asleep = sleep; }
-void plat_deep_sleep(void) { g_sim.deep_sleeps++; g_sim.asleep = true; }
+void plat_touch_screen_off(bool off) { g_sim.touch_fast_poll = off; if (off) g_sim.touch_screen_offs++; }
+bool plat_device_id(uint8_t out[6]) { static const uint8_t id[6] = { 0x8c, 0xfd, 0x49, 0x9b, 0xef, 0x40 }; memcpy(out, id, 6); return true; }
+void plat_deep_sleep(int wake_taps) { g_sim.deep_sleeps++; g_sim.asleep = true; g_sim.sleep_wake_taps = wake_taps; }
+void plat_sensors_set_standby(bool standby) { g_sim.sensor_standby = standby; if (standby) g_sim.sensor_standbys++; }
 bool plat_woke_from_sleep(void) { return g_sim.woke_from_sleep; }
 uint32_t plat_uptime_s(void) { return g_sim.now_ms / 1000; }
 
@@ -122,7 +126,7 @@ static void wstore_io(bool save)
 static void w_load(void) { if (!wstore_loaded) { wstore_io(false); wstore_loaded = true; } }
 void sim_wifi_reboot(void) { wstore_loaded = false; memset(&ws, 0, sizeof ws); ws.state = PLAT_WIFI_OFF; w_enabled = w_quiet = w_user_off = false; w_op = 0; w_nres = 0; }
 
-static int ap_find(const char *ssid) { for (int i = 0; i < g_sim.n_ap; i++) if (g_sim.ap[i].present && !strcmp(g_sim.ap[i].ssid, ssid)) return i; return -1; }
+static int ap_find(const char *ssid) { for (int i = 0; i < g_sim.n_ap; i++) if (g_sim.ap[i].present && !g_sim.ap[i].ghz5_only && !strcmp(g_sim.ap[i].ssid, ssid)) return i; return -1; }
 
 static void start_connect(const char *ssid, const char *pass, bool save)
 {
@@ -134,9 +138,9 @@ static void start_connect(const char *ssid, const char *pass, bool save)
 static void finish_scan(void)
 {
     w_nres = 0;
-    for (int i = 0; i < g_sim.n_ap && w_nres < 16; i++) if (g_sim.ap[i].present) {
+    for (int i = 0; i < g_sim.n_ap && w_nres < 16; i++) if (g_sim.ap[i].present && !g_sim.ap[i].ghz5_only) {   /* the ESP32 radio cannot see 5 GHz networks */
         plat_wifi_ap_t *a = &w_res[w_nres++]; memset(a, 0, sizeof *a);
-        snprintf(a->ssid, sizeof a->ssid, "%s", g_sim.ap[i].ssid); a->rssi = g_sim.ap[i].rssi; a->secured = g_sim.ap[i].secured;
+        snprintf(a->ssid, sizeof a->ssid, "%s", g_sim.ap[i].ssid); a->rssi = g_sim.ap[i].rssi; a->secured = g_sim.ap[i].secured; a->channel = g_sim.ap[i].channel ? g_sim.ap[i].channel : 6;
         a->saved = bc_wifi_store_find(&wstore, a->ssid) != NULL;
     }
     for (int i = 1; i < w_nres; i++) for (int j = i; j > 0 && w_res[j].rssi > w_res[j - 1].rssi; j--) { plat_wifi_ap_t t = w_res[j]; w_res[j] = w_res[j - 1]; w_res[j - 1] = t; }
@@ -168,7 +172,7 @@ static void pump_core(void)
             else if (g_sim.wifi_no_dhcp) err = PLAT_WIFI_ERR_NO_IP;
             if (err) { ws.state = PLAT_WIFI_FAILED; ws.err = err; ws.failures++; w_next_auto = g_sim.now_ms + bc_wifi_backoff_s(w_attempt++) * 1000; }
             else {
-                ws.state = PLAT_WIFI_CONNECTED; ws.connects++; ws.rssi = g_sim.ap[a].rssi; snprintf(ws.ip, sizeof ws.ip, "192.168.1.23");
+                ws.state = PLAT_WIFI_CONNECTED; ws.connects++; ws.rssi = g_sim.ap[a].rssi; snprintf(ws.ip, sizeof ws.ip, "192.168.1.23"); ws.internet = g_sim.wifi_no_internet ? 2 : 1;
                 if (w_save) bc_wifi_store_put(&wstore, w_ssid, w_pass); else bc_wifi_store_touch(&wstore, w_ssid);
                 wstore_io(true); w_attempt = 0;
             }
@@ -198,12 +202,13 @@ void plat_wifi_connect(const char *ssid, const char *pass, bool save)
     start_connect(ssid, pass, save);
 }
 void plat_wifi_disconnect(void) { w_user_off = true; if (ws.state != PLAT_WIFI_OFF) { ws.state = PLAT_WIFI_IDLE; ws.ip[0] = 0; ws.err = PLAT_WIFI_ERR_NONE; } }
+void plat_wifi_save(const char *ssid, const char *pass) { w_load(); bc_wifi_store_put(&wstore, ssid, pass); wstore_io(true); }
 void plat_wifi_forget(const char *ssid) { w_load(); if (ws.state == PLAT_WIFI_CONNECTED && !strcmp(ws.ssid, ssid)) plat_wifi_disconnect(); bc_wifi_store_remove(&wstore, ssid); wstore_io(true); }
 int plat_wifi_saved(char ssids[][33], int max) { w_load(); int n = wstore.n < max ? wstore.n : max; for (int i = 0; i < n; i++) memcpy(ssids[i], wstore.c[i].ssid, 33); return n; }
 void plat_wifi_status(plat_wifi_status_t *o) { pump(); *o = ws; }
 void plat_wifi_set_quiet(bool riding) { w_quiet = riding; }
 int plat_wifi_scan_count(void) { return w_scan_count; }
-const char *plat_fw_version(void) { return "0.5.0-sim"; }
+const char *plat_fw_version(void) { return "0.6.0-sim"; }
 
 /* ---- phone link simulation */
 #define PH g_sim.phone
@@ -224,7 +229,7 @@ void plat_phone_ctrl_respond(const bc_ctrl_resp_t *r) { PH.last_resp = *r; PH.re
 void plat_phone_publish_live(const bc_live_t *l) { if (PH.connected && PH.bonded) { PH.last_live = *l; PH.lives++; } }
 void sim_phone_connect(bool bonded) { if (!PH.enabled) return; PH.connected = true; PH.rssi = -55; PH.bonded = bonded; PH.pairing = !bonded; PH.passkey = bonded ? 0 : 482913; }
 void sim_phone_enter_passkey(void) { if (PH.connected && PH.pairing) { PH.pairing = false; PH.bonded = true; PH.passkey = 0; } }
-void sim_phone_disconnect(void) { PH.connected = PH.pairing = false; }
+void sim_phone_disconnect(void) { PH.connected = PH.pairing = false; PH.svc_in_n = 0; app_psvc_on_disconnect(); }
 static bool ph_ok(void) { return PH.connected && PH.bonded; }
 void sim_phone_send_gps(int32_t lat, int32_t lon, uint16_t speed_cms, uint16_t hacc_dm)
 {
@@ -248,6 +253,41 @@ void sim_phone_send_time(uint64_t epoch_ms)
     if (bc_link_decode_time(b, n, &PH.in.time.v)) PH.in.time.rx_ms = g_sim.now_ms;
 }
 void sim_phone_ctrl(uint8_t cmd, uint16_t ride_id) { if (!ph_ok()) return; PH.ctrl.req_id++; PH.ctrl.cmd = cmd; PH.ctrl.ride_id = ride_id; PH.ctrl_pending = true; }
+/* 0.6.0 phone services: the harness writes the same bytes the iPhone app sends (queued like ble_link.c does) and decodes
+   every notification the board sends back, exactly as the iPhone app would. */
+bool sim_phone_write(int chr, const uint8_t *msg, size_t n)
+{
+    if (!ph_ok() || PH.svc_in_n >= 8 || n > BC_LINK_MAX) return false;
+    PH.svc_in[PH.svc_in_n].chr = (uint8_t)chr; PH.svc_in[PH.svc_in_n].len = n; memcpy(PH.svc_in[PH.svc_in_n].b, msg, n); PH.svc_in_n++;
+    return true;
+}
+int plat_phone_take_svc(uint8_t *chr, uint8_t *buf, size_t cap)
+{
+    if (!PH.svc_in_n || !ph_ok()) { PH.svc_in_n = 0; return 0; }
+    size_t n = PH.svc_in[0].len; if (n > cap) n = cap;
+    *chr = PH.svc_in[0].chr; memcpy(buf, PH.svc_in[0].b, n);
+    PH.svc_in_n--; memmove(&PH.svc_in[0], &PH.svc_in[1], sizeof PH.svc_in[0] * (size_t)PH.svc_in_n);
+    return (int)n;
+}
+bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
+{
+    if (!ph_ok()) return true;                               /* nobody listening: the transport drops it, like NimBLE */
+    if (PH.notify_full) return false;                        /* test hook: transport back-pressure */
+    PH.notifies++; PH.last_notify_chr = chr;
+    switch (b[0]) {
+    case BC_MSG_WIFI_SCAN_RESULT: if (PH.n_scan < 32 && bc_link_decode_wifi_scan_result(b, n, &PH.scan[PH.n_scan])) PH.n_scan++; break;
+    case BC_MSG_WIFI_SCAN_END: bc_link_decode_wifi_scan_end(b, n, &PH.scan_end); PH.scan_ends++; break;
+    case BC_MSG_WIFI_STATUS: bc_link_decode_wifi_status(b, n, &PH.wifi_status); PH.statuses++; break;
+    case BC_MSG_SYNC_RIDE: if (PH.n_rides < 64 && bc_link_decode_sync_ride(b, n, &PH.rides[PH.n_rides])) PH.n_rides++; break;
+    case BC_MSG_SYNC_END: bc_link_decode_sync_end(b, n, &PH.sync_end); PH.sync_ends++; break;
+    case BC_MSG_PROFILE: bc_link_decode_profile(b, n, &PH.profile); PH.profiles++; break;
+    case BC_MSG_PROFILE_ACK: bc_link_decode_profile_ack(b, n, &PH.profile_ack); PH.profile_acks++; break;
+    case BC_MSG_SETTINGS: bc_link_decode_settings(b, n, &PH.settings); PH.settings_msgs++; break;
+    default: PH.unknown_notifies++; break;
+    }
+    return true;
+}
+void plat_phone_set_standby(bool standby) { PH.standby = standby; if (standby) PH.standbys++; }
 #undef PH
 const char *plat_reset_reason(void) { return "power-on"; }
 uint32_t plat_boot_count(void) { return g_sim.boots; }

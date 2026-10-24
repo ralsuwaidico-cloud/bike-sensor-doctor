@@ -126,6 +126,9 @@ void ui_power_gesture(lv_dir_t d);
 void ui_qs_open(void);
 void ui_qs_close(void);
 bool ui_qs_is_open(void);
+bool ui_qs_handle_visible(void);          /* 0.6.0: the pull-down handle is shown on this screen */
+void ui_qs_handle_allow(bool allow);      /* a screen whose controls reach the top edge (ring keyboards) hides it; reset by ui_screen_show */
+void ui_qs_handle_rect(lv_area_t *a);     /* its touch target (for the round-screen checks) */
 void ui_power_settings_show(void);
 
 /* test hooks */

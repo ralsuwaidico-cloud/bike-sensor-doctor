@@ -48,12 +48,32 @@ void bc_lowbat_reset(bc_lowbat_t *l);
 bc_bat_level_t bc_lowbat_feed(bc_lowbat_t *l, int mv);
 const char *bc_bat_level_name(bc_bat_level_t l);
 
-/* ---- triple tap: three presses (press→release) within BC_TAP_WINDOW_MS; single and double taps are ignored */
-#define BC_TAP_WINDOW_MS 1500
-#define BC_TAP_MAX_PRESS_MS 600   /* a longer press is a hold, not a tap */
-typedef struct { uint32_t t[3]; int n; bool down; uint32_t down_ms; } bc_tap_t;
-void bc_tap_reset(bc_tap_t *t);
-/** Feed press state changes (or the current state every poll); returns true exactly once when the 3rd tap lands. */
+/* ---- wake taps (0.6.0): N presses (press -> release) within BC_TAP_WINDOW_MS, any position. Default N = 3.
+ * A tap is a press of 20..400 ms without sliding; the gap release -> next press is 60..900 ms. Longer presses, slides and
+ * bursts (> 6 presses in a second: vibration, rain) reset the counter; a burst also locks the detector for a second.
+ * Hardware notes: the first touch after the controller slept must be delivered too — see hw.c (auto-sleep disabled while
+ * the screen is off); the window is measured from the FIRST press, so a slow rider has 2.5 s for all taps. */
+#define BC_TAP_WINDOW_MS 2500
+#define BC_TAP_MIN_PRESS_MS 20
+#define BC_TAP_MAX_PRESS_MS 400
+#define BC_TAP_MIN_GAP_MS 60
+#define BC_TAP_MAX_GAP_MS 900
+#define BC_TAP_SLIDE_PX 15
+#define BC_TAP_BURST_N 6
+#define BC_TAP_LOCKOUT_MS 1000
+#define BC_TAP_SETTLE_MS 100      /* the gesture fires only when no further press follows the last tap within this time (vibration guard) */
+typedef struct {
+    int need;                    /* taps required (1..3) */
+    int n; uint32_t first_ms, last_release_ms;
+    bool down; uint32_t down_ms; int x0, y0; bool slid;
+    uint32_t press_ms[8]; int ph; uint32_t lockout_until_ms, pending_ms;
+    uint32_t rejected_bursts, rejected_slides, rejected_long;
+} bc_tap_t;
+void bc_tap_reset(bc_tap_t *t);                 /* keeps `need` (3 after a zeroed struct) */
+void bc_tap_set_count(bc_tap_t *t, int need);   /* 1..3 */
+/** Feed press state (every poll or on change) with the touch position (-1 = unknown); true exactly once when the gesture completes
+ *  (BC_TAP_SETTLE_MS after the last release, so keep feeding the released state). */
+bool bc_tap_feed_xy(bc_tap_t *t, bool pressed, int x, int y, uint32_t now_ms);
 bool bc_tap_feed(bc_tap_t *t, bool pressed, uint32_t now_ms);
 
 /* ---- consumption tracker: millivolts lost per hour in each operating mode */

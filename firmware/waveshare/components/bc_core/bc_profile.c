@@ -21,7 +21,7 @@ void bc_profile_defaults(bc_profile_t *p)
     memset(p, 0, sizeof *p);
     p->age = 35; p->weight_dg = 750; p->exp = BC_EXP_INTERMEDIATE; p->goal = BC_GOAL_ENDURANCE;
     p->brightness = 80; p->ride_style = BC_STYLE_FOCUS; p->next_ride_id = 1; p->next_demo_id = 1; p->phone_on = true;
-    p->scr_timeout_s = 60; p->auto_sleep_min = 10; p->bat_protect = 0; p->wake_on_cue = true;
+    p->scr_timeout_s = 60; p->auto_sleep_min = 0; p->bat_protect = 0; p->wake_on_cue = true; p->wake_taps = 3; p->pwr_v = 2;
 }
 
 int bc_starting_ftp(int weight_dg, int exp)
@@ -74,11 +74,14 @@ size_t bc_profile_to_text(const bc_profile_t *p, char *out, size_t cap)
     int n = snprintf(out, cap,
         "format=bc-profile-1\nonboarded=%d\nname=%s\nage=%u\nweight_dg=%u\nheight_cm=%u\nexp=%u\ngoal=%u\nftp_w=%u\nftp_how=%u\n"
         "ftp_from_ride=%u\nmax_hr=%u\npower.paired=%d\npower.mac=%s\npower.type=%u\npower.name=%s\nhr.paired=%d\nhr.mac=%s\nhr.type=%u\n"
-        "hr.name=%s\nwifi_on=%d\nphone_on=%d\nhr_pref=%u\nride_style=%u\nbrightness=%u\nscr_timeout_s=%u\nauto_sleep_min=%u\nbat_protect=%u\nwake_on_cue=%d\n"
+        "hr.name=%s\nwifi_on=%d\nphone_on=%d\nhr_pref=%u\nride_style=%u\nbrightness=%u\nscr_timeout_s=%u\nauto_sleep_min=%u\nbat_protect=%u\nwake_on_cue=%d\nwake_taps=%u\n"
+        "birth_year=%u\nrest_hr=%u\nlthr=%u\nunits=%u\nhours_wk=%u\nphone_prof_ver=%lu\nphone_prof_epoch=%lu\nprof_src=%u\nsett_ver=%lu\npwr_v=%u\n"
         "next_ride_id=%u\nnext_demo_id=%u\nftp_note=%s\n",
         p->onboarded, p->name, p->age, p->weight_dg, p->height_cm, p->exp, p->goal, p->ftp_w, p->ftp_how, p->ftp_from_ride, p->max_hr,
         p->power.paired, pm, p->power.addr_type, p->power.name, p->hr.paired, hm, p->hr.addr_type, p->hr.name, p->wifi_on, p->phone_on, p->hr_pref, p->ride_style,
-        p->brightness, p->scr_timeout_s, p->auto_sleep_min, p->bat_protect, p->wake_on_cue, p->next_ride_id, p->next_demo_id, p->ftp_note);
+        p->brightness, p->scr_timeout_s, p->auto_sleep_min, p->bat_protect, p->wake_on_cue, p->wake_taps,
+        p->birth_year, p->rest_hr, p->lthr, p->units, p->hours_wk, (unsigned long)p->phone_prof_ver, (unsigned long)p->phone_prof_epoch, p->prof_src, (unsigned long)p->sett_ver, p->pwr_v,
+        p->next_ride_id, p->next_demo_id, p->ftp_note);
     if (n < 0 || (size_t)n >= cap) return 0;
     return (size_t)n;
 }
@@ -96,6 +99,7 @@ bool bc_profile_from_text(bc_profile_t *p, const char *txt)
 {
     if (!txt) return false;
     bc_profile_defaults(p);
+    p->pwr_v = 0;                               /* set by the text when it was written by 0.6.0 or later */
     const char *s = txt;
     while (*s) {
         const char *eol = strchr(s, '\n'); size_t len = eol ? (size_t)(eol - s) : strlen(s);
@@ -131,10 +135,24 @@ bool bc_profile_from_text(bc_profile_t *p, const char *txt)
         else if (!strcmp(k, "auto_sleep_min")) p->auto_sleep_min = (uint8_t)clampi(iv, 0, 240);
         else if (!strcmp(k, "bat_protect")) p->bat_protect = iv ? 1 : 0;
         else if (!strcmp(k, "wake_on_cue")) p->wake_on_cue = iv != 0;
+        else if (!strcmp(k, "wake_taps")) p->wake_taps = (uint8_t)clampi(iv, 1, 3);
+        else if (!strcmp(k, "birth_year")) p->birth_year = (uint16_t)(iv >= 1900 && iv <= 2100 ? iv : 0);
+        else if (!strcmp(k, "rest_hr")) p->rest_hr = (uint8_t)clampi(iv, 0, 120);
+        else if (!strcmp(k, "lthr")) p->lthr = (uint8_t)clampi(iv, 0, 220);
+        else if (!strcmp(k, "units")) p->units = iv ? 1 : 0;
+        else if (!strcmp(k, "hours_wk")) p->hours_wk = (uint8_t)clampi(iv, 0, 60);
+        else if (!strcmp(k, "phone_prof_ver")) p->phone_prof_ver = (uint32_t)(iv < 0 ? 0 : iv);
+        else if (!strcmp(k, "phone_prof_epoch")) p->phone_prof_epoch = (uint32_t)(iv < 0 ? 0 : iv);
+        else if (!strcmp(k, "prof_src")) p->prof_src = iv ? 1 : 0;
+        else if (!strcmp(k, "sett_ver")) p->sett_ver = (uint32_t)(iv < 0 ? 0 : iv);
+        else if (!strcmp(k, "pwr_v")) p->pwr_v = (uint8_t)clampi(iv, 0, 255);
         else if (!strcmp(k, "next_ride_id")) p->next_ride_id = (uint16_t)clampi(iv, 1, 65535);
         else if (!strcmp(k, "next_demo_id")) p->next_demo_id = (uint16_t)clampi(iv, 1, 65535);
         else if (!strcmp(k, "ftp_note")) cpy(p->ftp_note, sizeof p->ftp_note, v);
     }
     if (p->ftp_w == 0) p->ftp_how = BC_FTP_NONE;
+    /* 0.5.0 wrote auto_sleep_min=10 as its default: that deep sleep switched Bluetooth off after 10 idle minutes and looked
+       like "the screen goes off and the phone is gone". 0.6.0 starts every older profile with auto deep sleep OFF, once. */
+    if (p->pwr_v < 2) { p->auto_sleep_min = 0; p->pwr_v = 2; }
     return true;
 }

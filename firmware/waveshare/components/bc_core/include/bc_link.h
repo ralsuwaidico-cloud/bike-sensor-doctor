@@ -10,13 +10,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "bc_ride.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define BC_LINK_VER_MAJOR 1
-#define BC_LINK_VER_MINOR 0
+#define BC_LINK_VER_MINOR 2        /* 1.1 ride-history sync, 1.2 Wi-Fi provisioning (firmware 0.6.0) */
 #define BC_LINK_HDR 8
 #define BC_LINK_MAX 180            /* fits one notification at the MTU 185 iOS negotiates; clients must request >= 185 */
 #define BC_LINK_NONE16 0xFFFFu     /* "no value / no data" for u16 ages and readings */
@@ -27,6 +28,14 @@ typedef enum {
     BC_MSG_IN_TIME = 0x20, BC_MSG_IN_GPS = 0x21, BC_MSG_IN_HR = 0x22, BC_MSG_IN_WEATHER = 0x23, BC_MSG_IN_BATTERY = 0x24,
     BC_MSG_CTRL_REQ = 0x30, BC_MSG_CTRL_RESP = 0x31,
     BC_MSG_EVENT = 0x40,
+    /* 1.1 ride-history sync (Sync characteristic 0006) */
+    BC_MSG_SYNC_REQ = 0x50, BC_MSG_SYNC_RIDE = 0x51, BC_MSG_SYNC_END = 0x52,
+    /* 1.2 Wi-Fi provisioning (Control characteristic 0005, encrypted link only) */
+    BC_MSG_WIFI_SCAN_REQ = 0x60, BC_MSG_WIFI_SCAN_RESULT = 0x61, BC_MSG_WIFI_SCAN_END = 0x62, BC_MSG_WIFI_SET = 0x63,
+    BC_MSG_WIFI_FORGET = 0x64, BC_MSG_WIFI_STATUS = 0x65, BC_MSG_WIFI_STATUS_REQ = 0x66,
+    /* 1.2 athlete profile sync + device settings (Control characteristic, encrypted link only) */
+    BC_MSG_PROFILE_GET = 0x70, BC_MSG_PROFILE_SET = 0x71, BC_MSG_PROFILE = 0x72, BC_MSG_PROFILE_ACK = 0x73,
+    BC_MSG_SETTINGS_SET = 0x74, BC_MSG_SETTINGS = 0x75, BC_MSG_SETTINGS_GET = 0x76,
 } bc_msg_type_t;
 
 /* sources of a reading (who measured it) */
@@ -48,6 +57,7 @@ void bc_lw_u32(bc_lw_t *w, uint8_t tag, uint32_t v);
 void bc_lw_u64(bc_lw_t *w, uint8_t tag, uint64_t v);
 void bc_lw_s16(bc_lw_t *w, uint8_t tag, int16_t v);
 void bc_lw_s32(bc_lw_t *w, uint8_t tag, int32_t v);
+void bc_lw_bytes(bc_lw_t *w, uint8_t tag, const void *p, size_t n);   /* raw value, n <= 255 */
 size_t bc_lw_end(bc_lw_t *w);                            /* 0 when it did not fit */
 
 typedef struct { const uint8_t *b; size_t len, pos; } bc_lr_t;
@@ -101,16 +111,96 @@ size_t bc_link_encode_ctrl_resp(const bc_ctrl_resp_t *v, uint8_t *buf, size_t ca
 bool bc_link_decode_ctrl_resp(const uint8_t *buf, size_t len, bc_ctrl_resp_t *v);
 
 /* ---- INFO characteristic value */
-typedef struct { uint8_t ver_major, ver_minor; char fw[24]; char name[24]; uint32_t caps; uint16_t max_msg; } bc_info_t;
+typedef struct { uint8_t ver_major, ver_minor; char fw[24]; char name[24]; uint32_t caps; uint16_t max_msg; bool has_device_id; uint8_t device_id[6]; } bc_info_t;
 #define BC_CAP_LIVE 0x01
 #define BC_CAP_GPS_IN 0x02
 #define BC_CAP_HR_IN 0x04
 #define BC_CAP_WEATHER_IN 0x08
 #define BC_CAP_RIDE_CTRL 0x10
 #define BC_CAP_TIME_SYNC 0x20
-#define BC_CAP_RIDE_SYNC 0x40      /* Phase 5 */
+#define BC_CAP_RIDE_SYNC 0x40      /* 1.1: SYNC_REQ / SYNC_RIDE / SYNC_END on the Sync characteristic */
+#define BC_CAP_WIFI_PROV 0x80      /* 1.2: WIFI_* messages on the Control characteristic */
+#define BC_CAP_PROFILE_SYNC 0x100  /* 1.2: PROFILE_* (phone is the authority once the rider confirmed) */
+#define BC_CAP_SETTINGS 0x200      /* 1.2: SETTINGS_* with supported_mask */
 size_t bc_link_encode_info(const bc_info_t *v, uint8_t *buf, size_t cap);
 bool bc_link_decode_info(const uint8_t *buf, size_t len, bc_info_t *v);
+
+/* ---- 1.1 ride-history sync: one finished ride per SYNC_RIDE (<= BC_LINK_MAX bytes). Decoding needs bc_ride.h's summary. */
+typedef struct { uint16_t after_ride_id; uint8_t max_count; } bc_sync_req_t;
+typedef struct { uint16_t count, total; bool more; } bc_sync_end_t;
+size_t bc_link_encode_sync_req(const bc_sync_req_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_sync_req(const uint8_t *buf, size_t len, bc_sync_req_t *v);
+size_t bc_link_encode_sync_end(const bc_sync_end_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_sync_end(const uint8_t *buf, size_t len, bc_sync_end_t *v);
+size_t bc_link_encode_sync_ride(const bc_ride_summary_t *s, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_sync_ride(const uint8_t *buf, size_t len, bc_ride_summary_t *s);
+
+/* ---- 1.2 Wi-Fi provisioning (phone -> board on Control; board -> phone as Control notifications) */
+typedef struct { uint8_t max; } bc_wifi_scan_req_t;                                  /* max 0 = default 16 */
+typedef struct { char ssid[33]; int8_t rssi; uint8_t secured, channel, saved; } bc_wifi_scan_result_t;
+typedef enum { BC_WIFI_SCAN_OK = 0, BC_WIFI_SCAN_RADIO_OFF = 1, BC_WIFI_SCAN_BUSY = 2, BC_WIFI_SCAN_FAILED = 3 } bc_wifi_scan_err_t;
+typedef struct { uint8_t count, err; } bc_wifi_scan_end_t;
+#define BC_WIFI_SET_CONNECT 0x01
+#define BC_WIFI_SET_SAVE 0x02
+typedef struct { char ssid[33]; char pass[65]; uint8_t flags; } bc_wifi_set_t;      /* pass "" = open network */
+typedef struct { char ssid[33]; } bc_wifi_forget_t;
+typedef enum { BC_WIFI_ST_OFF = 0, BC_WIFI_ST_DISCONNECTED = 1, BC_WIFI_ST_SCANNING = 2, BC_WIFI_ST_CONNECTING = 3, BC_WIFI_ST_CONNECTED = 4,
+               BC_WIFI_ST_CONNECTED_NO_INTERNET = 5 } bc_wifi_st_t;
+typedef enum { BC_WIFI_E_NONE = 0, BC_WIFI_E_WRONG_PASSWORD = 1, BC_WIFI_E_NOT_FOUND = 2, BC_WIFI_E_TIMEOUT = 3, BC_WIFI_E_OTHER = 4 } bc_wifi_e_t;
+typedef struct { uint8_t state, err; char ssid[33]; int8_t rssi; uint8_t saved_count, radio_on; } bc_wifi_status_msg_t;
+size_t bc_link_encode_wifi_scan_req(const bc_wifi_scan_req_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_wifi_scan_req(const uint8_t *buf, size_t len, bc_wifi_scan_req_t *v);
+size_t bc_link_encode_wifi_scan_result(const bc_wifi_scan_result_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_wifi_scan_result(const uint8_t *buf, size_t len, bc_wifi_scan_result_t *v);
+size_t bc_link_encode_wifi_scan_end(const bc_wifi_scan_end_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_wifi_scan_end(const uint8_t *buf, size_t len, bc_wifi_scan_end_t *v);
+size_t bc_link_encode_wifi_set(const bc_wifi_set_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+/** Rejected (false) without an SSID (1..32 bytes) or with a password over 63 bytes. The password is copied verbatim. */
+bool bc_link_decode_wifi_set(const uint8_t *buf, size_t len, bc_wifi_set_t *v);
+size_t bc_link_encode_wifi_forget(const bc_wifi_forget_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_wifi_forget(const uint8_t *buf, size_t len, bc_wifi_forget_t *v);
+size_t bc_link_encode_wifi_status(const bc_wifi_status_msg_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_wifi_status(const uint8_t *buf, size_t len, bc_wifi_status_msg_t *v);
+size_t bc_link_encode_wifi_status_req(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+
+/* ---- 1.2 athlete profile (docs/LINK_V1_2_SPEC.md). `has` = bit (tag-1) for every field present in the message; the board
+ * encodes everything it holds, a phone may send a subset. Strings are UTF-8 without NUL. */
+#define BC_PF_HAS(tag) (1u << ((tag) - 1))
+typedef struct {
+    uint32_t has;
+    uint32_t version, updated_epoch_s;          /* tags 01 02 */
+    char name[25];                              /* 03 (<= 24 bytes) */
+    uint16_t ftp_w; uint8_t ftp_how;            /* 04 05: 0 assumed, 1 entered, 2 estimated from rides, 3 tested */
+    uint16_t weight_kg_x10, birth_year;         /* 06 07 */
+    uint8_t max_hr, rest_hr, units, hours_per_week, level, goal, lthr;   /* 08..0E */
+    uint8_t source; uint32_t board_saved_epoch_s;                       /* 0F 10 (PROFILE only) */
+} bc_profile_msg_t;
+typedef enum { BC_PF_APPLIED = 0, BC_PF_OLDER = 1, BC_PF_BAD = 2 } bc_profile_ack_status_t;
+typedef struct { uint32_t version; uint8_t status; uint32_t board_version; } bc_profile_ack_t;
+size_t bc_link_encode_profile_get(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+size_t bc_link_encode_profile(uint8_t type /* BC_MSG_PROFILE_SET or BC_MSG_PROFILE */, const bc_profile_msg_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+/** Accepts PROFILE_SET and PROFILE; false when the type differs or no version was sent. Out-of-range values clear their `has` bit. */
+bool bc_link_decode_profile(const uint8_t *buf, size_t len, bc_profile_msg_t *v);
+size_t bc_link_encode_profile_ack(const bc_profile_ack_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_profile_ack(const uint8_t *buf, size_t len, bc_profile_ack_t *v);
+
+/* ---- 1.2 device settings. Tags 02..0A; `has` as above. SETTINGS adds 0F status and 10 supported_mask (bit n = tag n+1). */
+typedef struct {
+    uint32_t has;
+    uint32_t version;                           /* 01 */
+    uint8_t brightness_pct;                     /* 02: 10..100 */
+    uint16_t screen_timeout_s;                  /* 03: 0 never */
+    uint8_t wake_gesture;                       /* 04: 0 triple tap, 1 double tap, 2 any touch */
+    uint8_t phone_link_enabled, hr_pref;        /* 05 06 */
+    uint16_t auto_sleep_min;                    /* 07: 0 off */
+    uint8_t ride_layout, wake_on_cue, units;    /* 08 09 0A */
+    uint8_t status; uint32_t supported_mask;    /* 0F 10 (SETTINGS only) */
+} bc_settings_msg_t;
+typedef enum { BC_ST_APPLIED = 0, BC_ST_OLDER = 1, BC_ST_BAD = 2, BC_ST_UNSUPPORTED = 3 } bc_settings_status_t;
+#define BC_SETTINGS_SUPPORTED_ALL 0x3FFu        /* tags 01..0A */
+size_t bc_link_encode_settings_get(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+size_t bc_link_encode_settings(uint8_t type /* BC_MSG_SETTINGS_SET or BC_MSG_SETTINGS */, const bc_settings_msg_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_settings(const uint8_t *buf, size_t len, bc_settings_msg_t *v);
 
 /** Ride-control rules on the ESP32 side: what a request does to the ride given its current state (pure decision). */
 typedef enum { BC_ACT_NONE = 0, BC_ACT_START, BC_ACT_PAUSE, BC_ACT_RESUME, BC_ACT_ARM_STOP, BC_ACT_STOP } bc_ctrl_action_t;

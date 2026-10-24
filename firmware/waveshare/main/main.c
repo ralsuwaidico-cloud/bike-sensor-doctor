@@ -1,5 +1,5 @@
 /*
- * Bike Computer — Waveshare ESP32-S3-Touch-LCD-1.28-B firmware 0.5.0 (0.4.0 + power management).
+ * Bike Computer — Waveshare ESP32-S3-Touch-LCD-1.28-B firmware 0.6.0 (0.5.0 + connected standby, Quick Settings handle, Wi-Fi page, phone services).
  * Standalone cycling computer: onboarding, home, ride (4 pages + controls), coach, results, history, settings, sensors,
  * DEMO MODE. App/UI code is shared with the PC test harness (test/sim); hardware lives in hw.c, ble_central.c, plat_esp.c.
  *
@@ -113,11 +113,12 @@ void app_main(void)
     ESP_LOGI(TAG, "Bike Computer firmware %s (%s %s)", d->version, d->date, d->time);
     ESP_LOGI(TAG, "reset reason: %s, consecutive crash resets: %u", reason_name(why), (unsigned)s_crash_count);
 
-    /* 0.5.0: woken from deep sleep by a touch — a single accidental touch goes straight back to sleep (< 2 s awake); three
-       taps within 1.5 s start the device. RESET and USB wakes skip the check. NOT hardware-verified yet. */
+    /* 0.6.0: woken from deep sleep by a touch — the waking touch is tap 1; the remaining taps (rider's setting, 2 or 3 in
+       total) must follow within 2.5 s or the device goes straight back to sleep. RESET and USB wakes skip the check.
+       NOT hardware-verified yet (pc-kit/TEST-v0.6.0.txt, 20 trials). */
     if (why == ESP_RST_DEEPSLEEP && esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {
-        ESP_LOGI(TAG, "STAGE 0 touch wake: waiting for three taps");
-        if (!hw_wake_tap_check()) hw_deep_sleep_touch_wake();   /* never returns */
+        ESP_LOGI(TAG, "STAGE 0 touch wake: waiting for %d taps", hw_wake_taps_needed());
+        if (!hw_wake_tap_check()) hw_deep_sleep_touch_wake(hw_wake_taps_needed());   /* never returns */
     }
 
     hw_selftest_run();                    /* NVS must be up before BLE and the profile */

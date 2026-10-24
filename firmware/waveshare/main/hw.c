@@ -24,6 +24,8 @@
 #include "esp_lcd_touch_cst816s.h"
 #include "esp_lvgl_port.h"
 #include "esp_sleep.h"
+#include "esp_attr.h"
+#include "esp_mac.h"
 #include "driver/gpio.h"
 #include "driver/rtc_io.h"
 #include "freertos/FreeRTOS.h"
@@ -35,6 +37,11 @@ static i2c_master_bus_handle_t s_i2c;
 static esp_lcd_panel_handle_t s_panel;
 static esp_lcd_panel_io_handle_t s_panel_io;
 static esp_lcd_touch_handle_t s_tp;
+static esp_lcd_panel_io_handle_t s_tp_io;
+static lv_indev_t *s_indev;
+RTC_NOINIT_ATTR static int s_rtc_wake_taps;     /* survives deep sleep: taps the rider's setting asks for */
+#define WAKE_WINDOW_MS 2500
+#define WAKE_MAX_PRESS_MS 450
 
 uint32_t hw_millis(void) { return (uint32_t)(esp_timer_get_time() / 1000); }
 
@@ -117,6 +124,7 @@ static esp_err_t touch_create(bool reset)
     tcfg.scl_speed_hz = 400000;
     esp_err_t e = esp_lcd_new_panel_io_i2c(s_i2c, &tcfg, &tio);
     if (e != ESP_OK) return e;
+    s_tp_io = tio;
     esp_lcd_touch_config_t cfg = { .x_max = BOARD_LCD_W, .y_max = BOARD_LCD_H, .rst_gpio_num = reset ? BOARD_TP_RST : -1, .int_gpio_num = BOARD_TP_INT,
                                    .levels = { .reset = 0, .interrupt = 0 }, .flags = { .swap_xy = 0, .mirror_x = 0, .mirror_y = 0 } };
     return esp_lcd_touch_new_i2c_cst816s(tio, &cfg, &s_tp);
@@ -130,7 +138,8 @@ bool hw_touch_init(lv_display_t *disp)
     }
     esp_lcd_touch_handle_t tp = s_tp;
     lvgl_port_touch_cfg_t lt = { .disp = disp, .handle = tp };
-    lvgl_port_add_touch(&lt);
+    s_indev = lvgl_port_add_touch(&lt);
+    hw_touch_keep_awake(false);                        /* normal operation: controller auto-sleep (a wake check may have disabled it) */
     SET(touch, HW_PASS, "CST816S ready");
     return true;
 }
@@ -165,9 +174,28 @@ void hw_panel_sleep(bool sleep)
     }
 }
 
-void hw_deep_sleep_touch_wake(void)
+/* CST816S registers (register map in docs/POWER_FEASIBILITY.md sources): 0xFE DisAutoSleep (non-zero = never sleep),
+   0xF9 AutoSleepTime (s), 0xFA IrqCtl, 0xEC MotionMask. Written through the touch panel's own I2C io (8-bit register). */
+static void tp_write(uint8_t reg, uint8_t val) { if (s_tp_io) esp_lcd_panel_io_tx_param(s_tp_io, reg, &val, 1); }
+
+void hw_touch_keep_awake(bool keep)
 {
-    ESP_LOGI(TAG, "deep sleep: wake on touch (GPIO%d low), RESET or USB", BOARD_TP_INT);
+    /* Root cause of the 0.5.0 "many taps needed": the controller auto-sleeps 2 s after the last touch; the first touch then
+       only wakes it (tens of ms) and is never reported, so the rider's first tap was lost every time. Keeping it awake while
+       the screen is off costs roughly 1.5 mA extra (datasheet active current) — accepted for screen-off, not for deep sleep. */
+    tp_write(0xFE, keep ? 0x01 : 0x00);
+    if (!keep) tp_write(0xF9, 2);                                   /* back to the 2 s auto-sleep */
+    if (s_indev) { lv_timer_t *t = lv_indev_get_read_timer(s_indev); if (t) lv_timer_set_period(t, keep ? 15 : 30); }   /* 15 ms polling: a 40 ms tap gets 2 samples */
+}
+
+int hw_wake_taps_needed(void) { return (s_rtc_wake_taps >= 2 && s_rtc_wake_taps <= 3) ? s_rtc_wake_taps : 3; }
+bool hw_device_id(uint8_t out[6]) { return esp_read_mac(out, ESP_MAC_BT) == ESP_OK; }
+
+void hw_deep_sleep_touch_wake(int taps)
+{
+    s_rtc_wake_taps = (taps >= 2 && taps <= 3) ? taps : 3;
+    ESP_LOGI(TAG, "deep sleep: wake on touch (GPIO%d low, then %d taps), RESET or USB", BOARD_TP_INT, s_rtc_wake_taps);
+    hw_touch_keep_awake(false);                                       /* the controller must sleep so a touch raises INT and wakes us */
     /* backlight hard off and held through sleep (the FET gate must not float high) */
     ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
     gpio_reset_pin(BOARD_LCD_BL); gpio_set_direction(BOARD_LCD_BL, GPIO_MODE_OUTPUT); gpio_set_level(BOARD_LCD_BL, 0);
@@ -183,22 +211,35 @@ void hw_deep_sleep_touch_wake(void)
     esp_deep_sleep_start();
 }
 
+/* After an ext0 wake the chip needs ~200-300 ms to get here; the touch that woke it is tap 1 (a finger still down at this
+   point is that same touch and is counted when it lifts). Then press->release pairs of <= 450 ms count, anywhere on the
+   glass, until the stored number of taps is reached within 2.5 s of the wake. A hold (> 450 ms) or the window running out
+   puts the device back to sleep in < 200 ms. NOT hardware-verified: see pc-kit/TEST-v0.6.0.txt (20 trials). */
 bool hw_wake_tap_check(void)
 {
     gpio_deep_sleep_hold_dis(); gpio_hold_dis(BOARD_LCD_BL); gpio_hold_dis(BOARD_TP_RST);
     rtc_gpio_deinit(BOARD_TP_INT);
     if (touch_create(false) != ESP_OK || !s_tp) { ESP_LOGW(TAG, "wake check: touch not reachable, staying awake"); return true; }
-    int taps = 1, pressed_n = 0; bool down = false;   /* the touch that woke the chip is tap 1 */
-    uint32_t t0 = hw_millis();
-    while (hw_millis() - t0 < 1500) {
+    tp_write(0xFE, 0x01);                                             /* stay awake for the whole check: every tap must be reported */
+    int need = hw_wake_taps_needed();
+    int taps = 1, presses = 0; bool down = false; uint32_t t0 = hw_millis(), down_ms = 0;
+    /* is the waking finger still on the glass? then its release does not count as a new tap */
+    esp_lcd_touch_read_data(s_tp);
+    { uint16_t x, y, st; uint8_t n = 0; if (esp_lcd_touch_get_coordinates(s_tp, &x, &y, &st, &n, 1) && n > 0) { down = true; down_ms = t0; taps = 0; } }
+    while (hw_millis() - t0 < WAKE_WINDOW_MS) {
         esp_lcd_touch_read_data(s_tp);
         uint16_t x, y, st; uint8_t n = 0;
         bool p = esp_lcd_touch_get_coordinates(s_tp, &x, &y, &st, &n, 1) && n > 0;
-        if (p && !down) { down = true; pressed_n++; }
-        else if (!p && down) { down = false; taps++; if (taps >= 3) { ESP_LOGI(TAG, "wake check: 3 taps in %lu ms", (unsigned long)(hw_millis() - t0)); return true; } }
-        vTaskDelay(pdMS_TO_TICKS(10));
+        if (p && !down) { down = true; down_ms = hw_millis(); presses++; }
+        else if (!p && down) {
+            down = false;
+            if (hw_millis() - down_ms > WAKE_MAX_PRESS_MS) { ESP_LOGI(TAG, "wake check: a hold, not a tap - back to sleep"); break; }
+            taps++;
+            if (taps >= need) { ESP_LOGI(TAG, "wake check: %d taps in %lu ms", taps, (unsigned long)(hw_millis() - t0)); return true; }
+        }
+        vTaskDelay(pdMS_TO_TICKS(8));
     }
-    ESP_LOGI(TAG, "wake check: %d tap(s) only (%d presses) - back to sleep", taps, pressed_n);
+    ESP_LOGI(TAG, "wake check: %d tap(s) of %d (%d presses) - back to sleep", taps, need, presses);
     return false;
 }
 

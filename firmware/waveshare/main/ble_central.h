@@ -16,6 +16,7 @@ void ble_central_start(void);
 /* configure the device to use for a kind (NULL = none). Safe to call from the UI task. */
 void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t addr_type, const char *name);
 void ble_central_scan_for(int kind);      /* pairing list for a kind; -1 = stop the pairing list */
+void ble_central_set_standby(bool standby);   /* 0.6.0 connected standby: pause scanning for paired sensors */
 int ble_central_found(plat_sens_kind_t kind, plat_found_t *out, int max);
 /* thread-safe snapshot for the UI */
 void ble_central_snapshot(plat_sensors_t *out);

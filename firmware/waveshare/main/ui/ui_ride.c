@@ -391,7 +391,7 @@ void ui_ride_show(void)
     /* handle at the top: tap to open the controls (also: swipe down anywhere) */
     lv_obj_t *h = lv_button_create(scr);
     lv_obj_remove_style_all(h);
-    lv_obj_set_size(h, 72, 22);
+    lv_obj_set_size(h, 72, 20);          /* y 4..23: clear of design B's status row at y 24 */
     lv_obj_align(h, LV_ALIGN_TOP_MID, 0, 4);
     lv_obj_t *bar = lv_obj_create(h); lv_obj_remove_style_all(bar);
     lv_obj_set_size(bar, 30, 4); lv_obj_set_style_radius(bar, 2, 0); lv_obj_set_style_bg_color(bar, C_FAINT, 0); lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);

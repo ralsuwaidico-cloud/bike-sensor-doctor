@@ -26,6 +26,12 @@ void bc_lw_s16(bc_lw_t *w, uint8_t tag, int16_t v) { put(w, tag, (uint16_t)v, 2)
 void bc_lw_s32(bc_lw_t *w, uint8_t tag, int32_t v) { put(w, tag, (uint32_t)v, 4); }
 size_t bc_lw_end(bc_lw_t *w) { return w->ok ? w->len : 0; }
 
+void bc_lw_bytes(bc_lw_t *w, uint8_t tag, const void *p, size_t n)
+{
+    if (!w->ok || n > 255 || w->len + 2 + n > w->cap) { w->ok = false; return; }
+    w->b[w->len++] = tag; w->b[w->len++] = (uint8_t)n; memcpy(w->b + w->len, p, n); w->len += n;
+}
+
 static void put_str(bc_lw_t *w, uint8_t tag, const char *s)
 {
     size_t n = strlen(s); if (n > 31) n = 31;
@@ -264,6 +270,7 @@ size_t bc_link_encode_info(const bc_info_t *v, uint8_t *buf, size_t cap)
     bc_lw_u8(&w, 0x01, v->ver_major); bc_lw_u8(&w, 0x02, v->ver_minor);
     put_str(&w, 0x03, v->fw); put_str(&w, 0x04, v->name);
     bc_lw_u32(&w, 0x05, v->caps); bc_lw_u16(&w, 0x06, v->max_msg);
+    if (v->has_device_id) bc_lw_bytes(&w, 0x07, v->device_id, 6);
     return bc_lw_end(&w);
 }
 bool bc_link_decode_info(const uint8_t *buf, size_t len, bc_info_t *v)
@@ -278,6 +285,7 @@ bool bc_link_decode_info(const uint8_t *buf, size_t len, bc_info_t *v)
         else if (t == 0x04 && n < sizeof v->name) { memcpy(v->name, x, n); v->name[n] = 0; }
         else if (t == 0x05 && n == 4) v->caps = (uint32_t)bc_lr_uint(x, n);
         else if (t == 0x06 && n == 2) v->max_msg = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x07 && n == 6) { memcpy(v->device_id, x, 6); v->has_device_id = true; }
     }
     return v->ver_major != 0;
 }
@@ -320,4 +328,342 @@ uint32_t bc_geo_dist_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
     double x = dlon * cos(mlat), y = dlat;
     double d = R * sqrt(x * x + y * y);
     return d < 0 ? 0 : (uint32_t)(d + 0.5);
+}
+
+/* ---- 1.1 ride-history sync (layout: ios/SYNC_PROPOSAL.md; vectors: Swift BCLinkTests + test/host t_link) */
+size_t bc_link_encode_sync_req(const bc_sync_req_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_SYNC_REQ, seq, t_ms);
+    bc_lw_u16(&w, 0x01, v->after_ride_id); bc_lw_u8(&w, 0x02, v->max_count);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_sync_req(const uint8_t *buf, size_t len, bc_sync_req_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_SYNC_REQ) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 2) v->after_ride_id = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x02 && n == 1) v->max_count = x[0];
+    }
+    if (v->max_count == 0 || v->max_count > 50) v->max_count = 50;
+    return true;
+}
+size_t bc_link_encode_sync_end(const bc_sync_end_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_SYNC_END, seq, t_ms);
+    bc_lw_u16(&w, 0x01, v->count); bc_lw_u16(&w, 0x02, v->total); bc_lw_u8(&w, 0x03, v->more ? 1 : 0);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_sync_end(const uint8_t *buf, size_t len, bc_sync_end_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_SYNC_END) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 2) v->count = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x02 && n == 2) v->total = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x03 && n == 1) v->more = x[0] != 0;
+    }
+    return true;
+}
+static int16_t s16c(int v) { return (int16_t)(v < -32768 ? -32768 : v > 32767 ? 32767 : v); }
+size_t bc_link_encode_sync_ride(const bc_ride_summary_t *s, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_SYNC_RIDE, seq, t_ms);
+    bc_lw_u16(&w, 0x01, s->id); bc_lw_u8(&w, 0x02, (uint8_t)((s->demo ? 1 : 0) | (s->recovered ? 2 : 0)));
+    bc_lw_u32(&w, 0x03, s->duration_s); bc_lw_u32(&w, 0x04, s->paused_s);
+    bc_lw_s16(&w, 0x05, s16c(s->avg_power)); bc_lw_s16(&w, 0x06, s16c(s->max_power)); bc_lw_s16(&w, 0x07, s16c(s->avg_cad));
+    bc_lw_s16(&w, 0x08, s16c(s->avg_hr)); bc_lw_s16(&w, 0x09, s16c(s->max_hr));
+    bc_lw_u32(&w, 0x0A, s->power_s); bc_lw_u32(&w, 0x0B, s->cad_s); bc_lw_u32(&w, 0x0C, s->hr_s);
+    if (s->zones_valid) { uint8_t z[28]; for (int i = 0; i < 7; i++) for (int k = 0; k < 4; k++) z[i * 4 + k] = (uint8_t)(s->zone_s[i] >> (8 * k)); bc_lw_bytes(&w, 0x0D, z, 28); }
+    bc_lw_s16(&w, 0x0E, s16c(s->ftp_w)); bc_lw_u8(&w, 0x0F, s->ftp_how);
+    bc_lw_s16(&w, 0x10, s16c(s->kj)); bc_lw_s16(&w, 0x11, s16c(s->best20));
+    { int8_t ib = (int8_t)(s->inband_pct < -1 ? -1 : s->inband_pct > 100 ? 100 : s->inband_pct); bc_lw_bytes(&w, 0x12, &ib, 1); }
+    bc_lw_u16(&w, 0x13, (uint16_t)(s->ftp_new < 0 ? 0 : s->ftp_new)); bc_lw_u8(&w, 0x14, s->ftp_suggested_only ? 1 : 0);
+    bc_lw_u32(&w, 0x15, s->distance_m); bc_lw_u8(&w, 0x16, s->dist_src); bc_lw_u32(&w, 0x17, s->start_epoch_s);
+    if (s->coach[0]) {
+        size_t n = strlen(s->coach); if (n > 60) n = 60;
+        while (n > 0 && (s->coach[n] & 0xC0) == 0x80) n--;             /* cut at a UTF-8 character boundary */
+        if (n) bc_lw_bytes(&w, 0x18, s->coach, n);
+    }
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_sync_ride(const uint8_t *buf, size_t len, bc_ride_summary_t *s)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool got_id = false;
+    memset(s, 0, sizeof *s);
+    s->avg_power = s->max_power = s->avg_cad = s->avg_hr = s->max_hr = s->kj = s->best20 = s->inband_pct = -1;
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_SYNC_RIDE) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        switch (t) {
+        case 0x01: if (n == 2) { s->id = (uint16_t)bc_lr_uint(x, n); got_id = true; } break;
+        case 0x02: if (n == 1) { s->demo = (x[0] & 1) != 0; s->recovered = (x[0] & 2) != 0; } break;
+        case 0x03: if (n == 4) s->duration_s = (uint32_t)bc_lr_uint(x, n); break;
+        case 0x04: if (n == 4) s->paused_s = (uint32_t)bc_lr_uint(x, n); break;
+        case 0x05: if (n == 2) s->avg_power = (int)bc_lr_sint(x, n); break;
+        case 0x06: if (n == 2) s->max_power = (int)bc_lr_sint(x, n); break;
+        case 0x07: if (n == 2) s->avg_cad = (int)bc_lr_sint(x, n); break;
+        case 0x08: if (n == 2) s->avg_hr = (int)bc_lr_sint(x, n); break;
+        case 0x09: if (n == 2) s->max_hr = (int)bc_lr_sint(x, n); break;
+        case 0x0A: if (n == 4) s->power_s = (uint32_t)bc_lr_uint(x, n); break;
+        case 0x0B: if (n == 4) s->cad_s = (uint32_t)bc_lr_uint(x, n); break;
+        case 0x0C: if (n == 4) s->hr_s = (uint32_t)bc_lr_uint(x, n); break;
+        case 0x0D: if (n == 28) { s->zones_valid = true; for (int i = 0; i < 7; i++) s->zone_s[i] = (uint32_t)bc_lr_uint(x + 4 * i, 4); } break;
+        case 0x0E: if (n == 2) s->ftp_w = (int)bc_lr_sint(x, n); break;
+        case 0x0F: if (n == 1) s->ftp_how = x[0]; break;
+        case 0x10: if (n == 2) s->kj = (int)bc_lr_sint(x, n); break;
+        case 0x11: if (n == 2) s->best20 = (int)bc_lr_sint(x, n); break;
+        case 0x12: if (n == 1) s->inband_pct = (int)(int8_t)x[0]; break;
+        case 0x13: if (n == 2) s->ftp_new = (int)bc_lr_uint(x, n); break;
+        case 0x14: if (n == 1) s->ftp_suggested_only = x[0] != 0; break;
+        case 0x15: if (n == 4) s->distance_m = (uint32_t)bc_lr_uint(x, n); break;
+        case 0x16: if (n == 1) s->dist_src = x[0]; break;
+        case 0x17: if (n == 4) s->start_epoch_s = (uint32_t)bc_lr_uint(x, n); break;
+        case 0x18: if (n < sizeof s->coach) { memcpy(s->coach, x, n); s->coach[n] = 0; } break;
+        default: break;
+        }
+    }
+    return got_id;
+}
+
+/* ---- 1.2 Wi-Fi provisioning */
+static size_t slen(const char *s, size_t max) { size_t n = 0; while (n < max && s[n]) n++; return n; }
+static bool get_str(const uint8_t *x, uint8_t n, char *dst, size_t cap) { if (n >= cap) return false; memcpy(dst, x, n); dst[n] = 0; return true; }
+
+size_t bc_link_encode_wifi_scan_req(const bc_wifi_scan_req_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_WIFI_SCAN_REQ, seq, t_ms);
+    if (v && v->max) bc_lw_u8(&w, 0x01, v->max);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_wifi_scan_req(const uint8_t *buf, size_t len, bc_wifi_scan_req_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x;
+    memset(v, 0, sizeof *v); v->max = 16;
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_WIFI_SCAN_REQ) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) if (t == 0x01 && n == 1 && x[0]) v->max = x[0];
+    if (v->max > 32) v->max = 32;
+    return true;
+}
+size_t bc_link_encode_wifi_scan_result(const bc_wifi_scan_result_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_WIFI_SCAN_RESULT, seq, t_ms);
+    bc_lw_bytes(&w, 0x01, v->ssid, slen(v->ssid, 32)); bc_lw_bytes(&w, 0x02, &v->rssi, 1);
+    bc_lw_u8(&w, 0x03, v->secured ? 1 : 0); bc_lw_u8(&w, 0x04, v->channel); bc_lw_u8(&w, 0x05, v->saved ? 1 : 0);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_wifi_scan_result(const uint8_t *buf, size_t len, bc_wifi_scan_result_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool ssid = false;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_WIFI_SCAN_RESULT) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n >= 1 && n <= 32) ssid = get_str(x, n, v->ssid, sizeof v->ssid);
+        else if (t == 0x02 && n == 1) v->rssi = (int8_t)x[0];
+        else if (t == 0x03 && n == 1) v->secured = x[0] ? 1 : 0;
+        else if (t == 0x04 && n == 1) v->channel = x[0];
+        else if (t == 0x05 && n == 1) v->saved = x[0] ? 1 : 0;
+    }
+    return ssid;
+}
+size_t bc_link_encode_wifi_scan_end(const bc_wifi_scan_end_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_WIFI_SCAN_END, seq, t_ms);
+    bc_lw_u8(&w, 0x01, v->count); bc_lw_u8(&w, 0x02, v->err);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_wifi_scan_end(const uint8_t *buf, size_t len, bc_wifi_scan_end_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_WIFI_SCAN_END) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) { if (t == 0x01 && n == 1) v->count = x[0]; else if (t == 0x02 && n == 1) v->err = x[0]; }
+    return true;
+}
+size_t bc_link_encode_wifi_set(const bc_wifi_set_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_WIFI_SET, seq, t_ms);
+    bc_lw_bytes(&w, 0x01, v->ssid, slen(v->ssid, 32)); bc_lw_bytes(&w, 0x02, v->pass, slen(v->pass, 63)); bc_lw_u8(&w, 0x03, v->flags);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_wifi_set(const uint8_t *buf, size_t len, bc_wifi_set_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool ssid = false;
+    memset(v, 0, sizeof *v); v->flags = BC_WIFI_SET_CONNECT | BC_WIFI_SET_SAVE;
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_WIFI_SET) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01) { if (n < 1 || n > 32) return false; ssid = get_str(x, n, v->ssid, sizeof v->ssid); }
+        else if (t == 0x02) { if (n > 63) return false; get_str(x, n, v->pass, sizeof v->pass); }
+        else if (t == 0x03 && n == 1) v->flags = x[0];
+    }
+    return ssid;
+}
+size_t bc_link_encode_wifi_forget(const bc_wifi_forget_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_WIFI_FORGET, seq, t_ms);
+    bc_lw_bytes(&w, 0x01, v->ssid, slen(v->ssid, 32));
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_wifi_forget(const uint8_t *buf, size_t len, bc_wifi_forget_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool ssid = false;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_WIFI_FORGET) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) if (t == 0x01 && n >= 1 && n <= 32) ssid = get_str(x, n, v->ssid, sizeof v->ssid);
+    return ssid;
+}
+size_t bc_link_encode_wifi_status(const bc_wifi_status_msg_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_WIFI_STATUS, seq, t_ms);
+    bc_lw_u8(&w, 0x01, v->state); bc_lw_u8(&w, 0x02, v->err);
+    bc_lw_bytes(&w, 0x03, v->ssid, slen(v->ssid, 32)); bc_lw_bytes(&w, 0x04, &v->rssi, 1);
+    bc_lw_u8(&w, 0x05, v->saved_count); bc_lw_u8(&w, 0x06, v->radio_on ? 1 : 0);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_wifi_status(const uint8_t *buf, size_t len, bc_wifi_status_msg_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_WIFI_STATUS) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 1) v->state = x[0];
+        else if (t == 0x02 && n == 1) v->err = x[0];
+        else if (t == 0x03 && n <= 32) get_str(x, n, v->ssid, sizeof v->ssid);
+        else if (t == 0x04 && n == 1) v->rssi = (int8_t)x[0];
+        else if (t == 0x05 && n == 1) v->saved_count = x[0];
+        else if (t == 0x06 && n == 1) v->radio_on = x[0] ? 1 : 0;
+    }
+    return true;
+}
+size_t bc_link_encode_wifi_status_req(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_WIFI_STATUS_REQ, seq, t_ms);
+    return bc_lw_end(&w);
+}
+
+/* ---- 1.2 athlete profile + device settings */
+static void put_bytes_str(bc_lw_t *w, uint8_t tag, const char *s, size_t max)
+{
+    size_t n = slen(s, max);
+    while (n > 0 && (s[n] & 0xC0) == 0x80) n--;         /* never cut inside a UTF-8 character */
+    bc_lw_bytes(w, tag, s, n);
+}
+size_t bc_link_encode_profile_get(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_PROFILE_GET, seq, t_ms); return bc_lw_end(&w);
+}
+size_t bc_link_encode_profile(uint8_t type, const bc_profile_msg_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    if (type != BC_MSG_PROFILE_SET && type != BC_MSG_PROFILE) return 0;
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, (bc_msg_type_t)type, seq, t_ms);
+    uint32_t h = v->has;
+    bc_lw_u32(&w, 0x01, v->version);                                         /* always */
+    if (h & BC_PF_HAS(0x02)) bc_lw_u32(&w, 0x02, v->updated_epoch_s);
+    if (h & BC_PF_HAS(0x03)) put_bytes_str(&w, 0x03, v->name, 24);
+    if (h & BC_PF_HAS(0x04)) bc_lw_u16(&w, 0x04, v->ftp_w);
+    if (h & BC_PF_HAS(0x05)) bc_lw_u8(&w, 0x05, v->ftp_how);
+    if (h & BC_PF_HAS(0x06)) bc_lw_u16(&w, 0x06, v->weight_kg_x10);
+    if (h & BC_PF_HAS(0x07)) bc_lw_u16(&w, 0x07, v->birth_year);
+    if (h & BC_PF_HAS(0x08)) bc_lw_u8(&w, 0x08, v->max_hr);
+    if (h & BC_PF_HAS(0x09)) bc_lw_u8(&w, 0x09, v->rest_hr);
+    if (h & BC_PF_HAS(0x0A)) bc_lw_u8(&w, 0x0A, v->units);
+    if (h & BC_PF_HAS(0x0B)) bc_lw_u8(&w, 0x0B, v->hours_per_week);
+    if (h & BC_PF_HAS(0x0C)) bc_lw_u8(&w, 0x0C, v->level);
+    if (h & BC_PF_HAS(0x0D)) bc_lw_u8(&w, 0x0D, v->goal);
+    if (h & BC_PF_HAS(0x0E)) bc_lw_u8(&w, 0x0E, v->lthr);
+    if (type == BC_MSG_PROFILE) { bc_lw_u8(&w, 0x0F, v->source); bc_lw_u32(&w, 0x10, v->board_saved_epoch_s); }
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_profile(const uint8_t *buf, size_t len, bc_profile_msg_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool ver = false;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || (h.type != BC_MSG_PROFILE_SET && h.type != BC_MSG_PROFILE)) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        switch (t) {
+        case 0x01: if (n == 4) { v->version = (uint32_t)bc_lr_uint(x, n); ver = true; } break;
+        case 0x02: if (n == 4) { v->updated_epoch_s = (uint32_t)bc_lr_uint(x, n); v->has |= BC_PF_HAS(t); } break;
+        case 0x03: if (n <= 24) { memcpy(v->name, x, n); v->name[n] = 0; v->has |= BC_PF_HAS(t); } break;
+        case 0x04: if (n == 2) { uint16_t f = (uint16_t)bc_lr_uint(x, n); if (f <= 2000) { v->ftp_w = f; v->has |= BC_PF_HAS(t); } } break;
+        case 0x05: if (n == 1 && x[0] <= 3) { v->ftp_how = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x06: if (n == 2) { uint16_t k = (uint16_t)bc_lr_uint(x, n); if (k == 0 || (k >= 200 && k <= 3000)) { v->weight_kg_x10 = k; v->has |= BC_PF_HAS(t); } } break;
+        case 0x07: if (n == 2) { uint16_t y = (uint16_t)bc_lr_uint(x, n); if (y == 0 || (y >= 1900 && y <= 2100)) { v->birth_year = y; v->has |= BC_PF_HAS(t); } } break;
+        case 0x08: if (n == 1 && (x[0] == 0 || (x[0] >= 100 && x[0] <= 230))) { v->max_hr = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x09: if (n == 1 && (x[0] == 0 || (x[0] >= 25 && x[0] <= 120))) { v->rest_hr = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0A: if (n == 1 && x[0] <= 1) { v->units = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0B: if (n == 1 && x[0] <= 60) { v->hours_per_week = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0C: if (n == 1 && x[0] <= 2) { v->level = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0D: if (n == 1 && x[0] <= 4) { v->goal = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0E: if (n == 1 && (x[0] == 0 || (x[0] >= 80 && x[0] <= 220))) { v->lthr = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0F: if (n == 1) { v->source = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x10: if (n == 4) { v->board_saved_epoch_s = (uint32_t)bc_lr_uint(x, n); v->has |= BC_PF_HAS(t); } break;
+        default: break;
+        }
+    }
+    return ver;
+}
+size_t bc_link_encode_profile_ack(const bc_profile_ack_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_PROFILE_ACK, seq, t_ms);
+    bc_lw_u32(&w, 0x01, v->version); bc_lw_u8(&w, 0x02, v->status); bc_lw_u32(&w, 0x03, v->board_version);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_profile_ack(const uint8_t *buf, size_t len, bc_profile_ack_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_PROFILE_ACK) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 4) v->version = (uint32_t)bc_lr_uint(x, n);
+        else if (t == 0x02 && n == 1) v->status = x[0];
+        else if (t == 0x03 && n == 4) v->board_version = (uint32_t)bc_lr_uint(x, n);
+    }
+    return true;
+}
+size_t bc_link_encode_settings_get(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_SETTINGS_GET, seq, t_ms); return bc_lw_end(&w);
+}
+size_t bc_link_encode_settings(uint8_t type, const bc_settings_msg_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    if (type != BC_MSG_SETTINGS_SET && type != BC_MSG_SETTINGS) return 0;
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, (bc_msg_type_t)type, seq, t_ms);
+    uint32_t h = v->has;
+    bc_lw_u32(&w, 0x01, v->version);
+    if (h & BC_PF_HAS(0x02)) bc_lw_u8(&w, 0x02, v->brightness_pct);
+    if (h & BC_PF_HAS(0x03)) bc_lw_u16(&w, 0x03, v->screen_timeout_s);
+    if (h & BC_PF_HAS(0x04)) bc_lw_u8(&w, 0x04, v->wake_gesture);
+    if (h & BC_PF_HAS(0x05)) bc_lw_u8(&w, 0x05, v->phone_link_enabled);
+    if (h & BC_PF_HAS(0x06)) bc_lw_u8(&w, 0x06, v->hr_pref);
+    if (h & BC_PF_HAS(0x07)) bc_lw_u16(&w, 0x07, v->auto_sleep_min);
+    if (h & BC_PF_HAS(0x08)) bc_lw_u8(&w, 0x08, v->ride_layout);
+    if (h & BC_PF_HAS(0x09)) bc_lw_u8(&w, 0x09, v->wake_on_cue);
+    if (h & BC_PF_HAS(0x0A)) bc_lw_u8(&w, 0x0A, v->units);
+    if (type == BC_MSG_SETTINGS) { bc_lw_u8(&w, 0x0F, v->status); bc_lw_u32(&w, 0x10, v->supported_mask); }
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_settings(const uint8_t *buf, size_t len, bc_settings_msg_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool ver = false;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || (h.type != BC_MSG_SETTINGS_SET && h.type != BC_MSG_SETTINGS)) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        switch (t) {
+        case 0x01: if (n == 4) { v->version = (uint32_t)bc_lr_uint(x, n); ver = true; } break;
+        case 0x02: if (n == 1 && x[0] >= 10 && x[0] <= 100) { v->brightness_pct = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x03: if (n == 2) { uint16_t s = (uint16_t)bc_lr_uint(x, n); if (s <= 3600) { v->screen_timeout_s = s; v->has |= BC_PF_HAS(t); } } break;
+        case 0x04: if (n == 1 && x[0] <= 2) { v->wake_gesture = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x05: if (n == 1 && x[0] <= 1) { v->phone_link_enabled = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x06: if (n == 1 && x[0] <= 1) { v->hr_pref = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x07: if (n == 2) { uint16_t m = (uint16_t)bc_lr_uint(x, n); if (m <= 240) { v->auto_sleep_min = m; v->has |= BC_PF_HAS(t); } } break;
+        case 0x08: if (n == 1 && x[0] <= 2) { v->ride_layout = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x09: if (n == 1 && x[0] <= 1) { v->wake_on_cue = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0A: if (n == 1 && x[0] <= 1) { v->units = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x0F: if (n == 1) { v->status = x[0]; v->has |= BC_PF_HAS(t); } break;
+        case 0x10: if (n == 4) { v->supported_mask = (uint32_t)bc_lr_uint(x, n); v->has |= BC_PF_HAS(t); } break;
+        default: break;
+        }
+    }
+    return ver;
 }

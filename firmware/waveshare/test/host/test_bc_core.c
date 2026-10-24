@@ -324,16 +324,16 @@ static void t_power(void)
     CHECK(bc_lowbat_feed(&l, 0) == BC_BAT_OK);                   /* no reading: unchanged */
     CHECK(!strcmp(bc_bat_level_name(BC_BAT_CRITICAL), "CRITICAL"));
 
-    /* triple tap: 3 quick taps fire once; 2 taps + late tap do not; a hold is not a tap */
+    /* wake taps (default 3): 3 quick taps fire once; 2 taps + late tap do not; a hold is not a tap */
     bc_tap_t t; bc_tap_reset(&t); bool fired = false;
     uint32_t ms = 1000;
-    for (int i = 0; i < 3; i++) { fired |= bc_tap_feed(&t, true, ms); ms += 80; bool f = bc_tap_feed(&t, false, ms); ms += 200; if (i < 2) CHECK(!f); else CHECK(f); }
+    for (int i = 0; i < 3; i++) { fired |= bc_tap_feed(&t, true, ms); ms += 80; bool f = bc_tap_feed(&t, false, ms); CHECK(!f); ms += 200; f = bc_tap_feed(&t, false, ms); if (i < 2) CHECK(!f); else CHECK(f); }
     CHECK(!bc_tap_feed(&t, false, ms + 100));                    /* no second firing */
     bc_tap_reset(&t); ms = 5000;
     bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); bc_tap_feed(&t, true, ms + 300); bc_tap_feed(&t, false, ms + 380);
     bc_tap_feed(&t, true, ms + 1700); CHECK(!bc_tap_feed(&t, false, ms + 1780));   /* third tap too late: window restarts */
     bc_tap_feed(&t, true, ms + 1900); CHECK(!bc_tap_feed(&t, false, ms + 1980));
-    bc_tap_feed(&t, true, ms + 2100); CHECK(bc_tap_feed(&t, false, ms + 2180));    /* ...and completes with two more */
+    bc_tap_feed(&t, true, ms + 2100); bc_tap_feed(&t, false, ms + 2180); CHECK(bc_tap_feed(&t, false, ms + 2300));    /* ...and completes with two more */
     bc_tap_reset(&t); ms = 9000;
     bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); bc_tap_feed(&t, true, ms + 200); bc_tap_feed(&t, false, ms + 280);
     bc_tap_feed(&t, true, ms + 400); CHECK(!bc_tap_feed(&t, false, ms + 1200));    /* long press cancels */
@@ -355,17 +355,175 @@ static void t_power(void)
 
     /* profile: new power keys round-trip; an old 0.4.0 profile without them takes the defaults */
     bc_profile_t p, q; bc_profile_defaults(&p);
-    CHECK(p.scr_timeout_s == 60 && p.auto_sleep_min == 10 && p.bat_protect == 0 && p.wake_on_cue);
+    CHECK(p.scr_timeout_s == 60 && p.auto_sleep_min == 0 && p.bat_protect == 0 && p.wake_on_cue && p.pwr_v == 2);   /* 0.6.0: auto deep sleep off by default */
     p.scr_timeout_s = 300; p.auto_sleep_min = 0; p.bat_protect = 1; p.wake_on_cue = false;
     char txt[1024]; CHECK(bc_profile_to_text(&p, txt, sizeof txt) > 0);
     CHECK(bc_profile_from_text(&q, txt) && q.scr_timeout_s == 300 && q.auto_sleep_min == 0 && q.bat_protect == 1 && !q.wake_on_cue);
-    CHECK(bc_profile_from_text(&q, "format=bc-profile-1\nonboarded=1\nname=Rashed\nbrightness=70\n") && q.scr_timeout_s == 60 && q.auto_sleep_min == 10 && q.bat_protect == 0 && q.wake_on_cue && q.brightness == 70 && !strcmp(q.name, "Rashed"));
-    CHECK(bc_profile_from_text(&q, "scr_timeout_s=99999\nauto_sleep_min=999\nbat_protect=7\n") && q.scr_timeout_s == 3600 && q.auto_sleep_min == 240 && q.bat_protect == 1);
+    CHECK(bc_profile_from_text(&q, "format=bc-profile-1\nonboarded=1\nname=Rashed\nbrightness=70\n") && q.scr_timeout_s == 60 && q.auto_sleep_min == 0 && q.bat_protect == 0 && q.wake_on_cue && q.brightness == 70 && !strcmp(q.name, "Rashed"));
+    /* a 0.5.0 profile (no pwr_v) carried auto_sleep_min=10: migrated to off once; a 0.6.0 profile keeps what it says */
+    CHECK(bc_profile_from_text(&q, "scr_timeout_s=99999\nauto_sleep_min=999\nbat_protect=7\n") && q.scr_timeout_s == 3600 && q.auto_sleep_min == 0 && q.pwr_v == 2 && q.bat_protect == 1);
+    CHECK(bc_profile_from_text(&q, "auto_sleep_min=30\npwr_v=2\n") && q.auto_sleep_min == 30);
+    CHECK(bc_profile_from_text(&q, "auto_sleep_min=10\n") && q.auto_sleep_min == 0);
+    /* 0.6.0 shared athlete fields round-trip */
+    bc_profile_defaults(&p); p.birth_year = 1990; p.rest_hr = 52; p.lthr = 170; p.units = 1; p.hours_wk = 6; p.phone_prof_ver = 7; p.phone_prof_epoch = 1792850100u; p.prof_src = 1; p.sett_ver = 3;
+    CHECK(bc_profile_to_text(&p, txt, sizeof txt) > 0 && bc_profile_from_text(&q, txt) && q.birth_year == 1990 && q.rest_hr == 52 && q.lthr == 170 && q.units == 1 && q.hours_wk == 6 && q.phone_prof_ver == 7 && q.phone_prof_epoch == 1792850100u && q.prof_src == 1 && q.sett_ver == 3);
+}
+
+
+static void t_tap2(void)
+{
+    bc_tap_t t; memset(&t, 0, sizeof t); bc_tap_reset(&t); CHECK(t.need == 3);
+    /* slow but valid: 300 ms presses, 800 ms gaps → 3 taps in 2.3 s fire */
+    uint32_t ms = 1000; bool f = false;
+    for (int i = 0; i < 3; i++) { bc_tap_feed(&t, true, ms); ms += 300; f = bc_tap_feed(&t, false, ms); ms += 800; f |= bc_tap_feed(&t, false, ms - 600); }
+    CHECK(f);
+    /* gaps over 900 ms never complete */
+    bc_tap_reset(&t); ms = 10000; f = false;
+    for (int i = 0; i < 6; i++) { bc_tap_feed(&t, true, ms); ms += 100; f |= bc_tap_feed(&t, false, ms); ms += 950; f |= bc_tap_feed(&t, false, ms - 500); }
+    CHECK(!f);
+    /* a slide is not a tap */
+    bc_tap_reset(&t); ms = 20000;
+    bc_tap_feed_xy(&t, true, 100, 100, ms); bc_tap_feed_xy(&t, true, 130, 100, ms + 40); CHECK(!bc_tap_feed_xy(&t, false, 130, 100, ms + 80));
+    bc_tap_feed_xy(&t, true, 100, 100, ms + 300); bc_tap_feed_xy(&t, false, 102, 101, ms + 380);
+    bc_tap_feed_xy(&t, true, 100, 100, ms + 600); CHECK(!bc_tap_feed_xy(&t, false, 100, 100, ms + 680) && t.rejected_slides == 1);
+    bc_tap_feed_xy(&t, true, 100, 100, ms + 900); bc_tap_feed_xy(&t, false, 100, 100, ms + 980); CHECK(bc_tap_feed_xy(&t, false, 100, 100, ms + 1100));   /* 3 clean taps after the slide */
+    /* glitches under 20 ms are ignored without breaking the sequence */
+    bc_tap_reset(&t); ms = 30000;
+    bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); bc_tap_feed(&t, true, ms + 300); bc_tap_feed(&t, false, ms + 310);   /* glitch */
+    bc_tap_feed(&t, true, ms + 500); bc_tap_feed(&t, false, ms + 580); bc_tap_feed(&t, true, ms + 800); bc_tap_feed(&t, false, ms + 880); CHECK(bc_tap_feed(&t, false, ms + 1000));
+    /* vibration: 10 presses in a second → nothing fires and the detector locks for a second */
+    bc_tap_reset(&t); ms = 40000; f = false;
+    for (int i = 0; i < 10; i++) { f |= bc_tap_feed(&t, true, ms + i * 90); f |= bc_tap_feed(&t, false, ms + i * 90 + 40); }
+    f |= bc_tap_feed(&t, false, ms + 1000);
+    CHECK(!f && t.rejected_bursts >= 1 && t.lockout_until_ms);
+    bc_tap_feed(&t, true, ms + 1100); f = bc_tap_feed(&t, false, ms + 1180); f |= bc_tap_feed(&t, false, ms + 1300); CHECK(!f);          /* still locked */
+    /* double tap mode */
+    bc_tap_reset(&t); bc_tap_set_count(&t, 2); ms = 50000;
+    bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); CHECK(!bc_tap_feed(&t, false, ms + 200)); bc_tap_feed(&t, true, ms + 300); bc_tap_feed(&t, false, ms + 380); CHECK(bc_tap_feed(&t, false, ms + 500));
+    /* three human taps when two are needed: the third press fires the gesture at once (not a cancel) */
+    bc_tap_reset(&t); bc_tap_set_count(&t, 2); ms = 55000;
+    bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); bc_tap_feed(&t, true, ms + 300); bc_tap_feed(&t, false, ms + 380);
+    CHECK(bc_tap_feed(&t, true, ms + 530)); bc_tap_feed(&t, false, ms + 610); CHECK(!bc_tap_feed(&t, false, ms + 800));
+    /* ...but a press 40 ms after the completed gesture is bounce/vibration and cancels it */
+    bc_tap_reset(&t); ms = 56000;
+    bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); bc_tap_feed(&t, true, ms + 300); bc_tap_feed(&t, false, ms + 380);
+    CHECK(!bc_tap_feed(&t, true, ms + 420)); bc_tap_feed(&t, false, ms + 460); CHECK(!bc_tap_feed(&t, false, ms + 700) && t.rejected_bursts >= 1);
+    /* any touch */
+    bc_tap_set_count(&t, 1); bc_tap_feed(&t, true, ms + 2000); bc_tap_feed(&t, false, ms + 2080); CHECK(bc_tap_feed(&t, false, ms + 2200));
+    bc_tap_feed(&t, true, ms + 3000); bc_tap_feed(&t, false, ms + 3600); CHECK(!bc_tap_feed(&t, false, ms + 3800));   /* but a hold is still not a tap */
+    bc_tap_reset(&t); CHECK(t.need == 1);                                             /* reset keeps the setting */
+}
+
+static void t_link2(void)
+{
+    uint8_t b[BC_LINK_MAX]; size_t n;
+    /* INFO with device id (tag 07) + new caps; old decoders skip the tag */
+    bc_info_t i = { .ver_major = 1, .ver_minor = 2, .fw = "0.6.0", .name = "BikeComputer", .caps = 0xFF, .max_msg = 180, .has_device_id = true, .device_id = { 0x8c, 0xfd, 0x49, 0x9b, 0xef, 0x40 } };
+    n = bc_link_encode_info(&i, b, sizeof b); bc_info_t j; CHECK(n && bc_link_decode_info(b, n, &j) && j.has_device_id && j.device_id[5] == 0x40 && (j.caps & BC_CAP_WIFI_PROV) && (j.caps & BC_CAP_RIDE_SYNC));
+    /* SYNC_REQ: bytes identical to the Swift vector (BCLinkTests.testSyncRequestBytes) */
+    bc_sync_req_t q = { .after_ride_id = 7, .max_count = 50 };
+    n = bc_link_encode_sync_req(&q, b, sizeof b, 3, 1000);
+    const uint8_t want_req[] = { 0x50, 0x00, 0x03, 0x00, 0xE8, 0x03, 0x00, 0x00, 0x01, 0x02, 0x07, 0x00, 0x02, 0x01, 0x32 };
+    CHECK(n == sizeof want_req && !memcmp(b, want_req, n));
+    bc_sync_req_t q2; CHECK(bc_link_decode_sync_req(b, n, &q2) && q2.after_ride_id == 7 && q2.max_count == 50);
+    uint8_t req0[] = { 0x50, 0, 0, 0, 0, 0, 0, 0, 0x01, 0x02, 0, 0 }; CHECK(bc_link_decode_sync_req(req0, sizeof req0, &q2) && q2.after_ride_id == 0 && q2.max_count == 50);
+    /* SYNC_RIDE: the Swift testSyncRideRoundTrip ride, same header + first fields byte for byte, <= 180 bytes, round trip */
+    bc_ride_summary_t r; memset(&r, 0, sizeof r);
+    r.id = 12; r.recovered = true; r.duration_s = 3725; r.paused_s = 60; r.avg_power = 187; r.max_power = 612; r.avg_cad = 88; r.avg_hr = -1; r.max_hr = -1;
+    r.power_s = 3600; r.cad_s = 3500; r.hr_s = 0; r.zones_valid = true; uint32_t z[7] = { 600, 1800, 900, 300, 100, 20, 5 }; memcpy(r.zone_s, z, sizeof z);
+    r.ftp_w = 240; r.ftp_how = 2; r.kj = 673; r.best20 = 251; r.inband_pct = 72; r.ftp_new = 238; r.ftp_suggested_only = true;
+    r.distance_m = 31250; r.dist_src = 3; r.start_epoch_s = 1792850000u; snprintf(r.coach, sizeof r.coach, "Steady Z2 ride");
+    n = bc_link_encode_sync_ride(&r, b, sizeof b, 9, 55);
+    const uint8_t want_hdr[] = { 0x51, 0x00, 0x09, 0x00, 0x37, 0x00, 0x00, 0x00, 0x01, 0x02, 0x0C, 0x00, 0x02, 0x01, 0x02, 0x03 };
+    CHECK(n > 0 && n <= 180 && !memcmp(b, want_hdr, sizeof want_hdr));
+    bc_ride_summary_t d; CHECK(bc_link_decode_sync_ride(b, n, &d));
+    CHECK(d.id == 12 && d.recovered && !d.demo && d.duration_s == 3725 && d.paused_s == 60 && d.avg_power == 187 && d.max_power == 612 && d.avg_cad == 88 && d.avg_hr == -1 && d.max_hr == -1);
+    CHECK(d.power_s == 3600 && d.cad_s == 3500 && d.hr_s == 0 && d.zones_valid && !memcmp(d.zone_s, z, sizeof z) && d.ftp_w == 240 && d.ftp_how == 2 && d.kj == 673 && d.best20 == 251);
+    CHECK(d.inband_pct == 72 && d.ftp_new == 238 && d.ftp_suggested_only && d.distance_m == 31250 && d.dist_src == 3 && d.start_epoch_s == 1792850000u && !strcmp(d.coach, "Steady Z2 ride"));
+    { uint8_t ext[BC_LINK_MAX + 4]; memcpy(ext, b, n); ext[n] = 0x7E; ext[n + 1] = 1; ext[n + 2] = 0xFF; CHECK(bc_link_decode_sync_ride(ext, n + 3, &d) && d.id == 12); }   /* unknown tag skipped */
+    CHECK(!bc_link_decode_sync_ride(b, n - 1, &d));                                                                                               /* truncated rejected */
+    /* a ride with a 120-byte coach text and no zones still fits */
+    r.zones_valid = false; memset(r.coach, 'x', 119); r.coach[119] = 0; n = bc_link_encode_sync_ride(&r, b, sizeof b, 1, 1); CHECK(n > 0 && n <= 180 && bc_link_decode_sync_ride(b, n, &d) && strlen(d.coach) == 60);
+    /* SYNC_END: Swift testSyncEnd */
+    bc_sync_end_t e = { .count = 50, .total = 123, .more = true }; n = bc_link_encode_sync_end(&e, b, sizeof b, 1, 0);
+    const uint8_t want_end[] = { 0x52, 0, 1, 0, 0, 0, 0, 0, 0x01, 0x02, 0x32, 0x00, 0x02, 0x02, 0x7B, 0x00, 0x03, 0x01, 0x01 };
+    CHECK(n == sizeof want_end && !memcmp(b, want_end, n)); bc_sync_end_t e2; CHECK(bc_link_decode_sync_end(b, n, &e2) && e2.count == 50 && e2.total == 123 && e2.more);
+    CHECK(!bc_link_decode_sync_ride(b, n, &d));
+
+    /* Wi-Fi provisioning vectors (documented in docs/BLE_LINK_PROTOCOL.md) */
+    bc_wifi_scan_req_t sq = { .max = 0 }; n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 1, 0);
+    const uint8_t want_sq[] = { 0x60, 0, 1, 0, 0, 0, 0, 0 }; CHECK(n == sizeof want_sq && !memcmp(b, want_sq, n));
+    bc_wifi_scan_req_t sq2; CHECK(bc_link_decode_wifi_scan_req(b, n, &sq2) && sq2.max == 16);
+    sq.max = 8; n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 2, 0); CHECK(n == 11 && b[8] == 1 && b[9] == 1 && b[10] == 8 && bc_link_decode_wifi_scan_req(b, n, &sq2) && sq2.max == 8);
+    bc_wifi_scan_result_t sr = { .ssid = "Rashed\xE2\x80\x99s iPhone", .rssi = -62, .secured = 1, .channel = 6, .saved = 0 };
+    n = bc_link_encode_wifi_scan_result(&sr, b, sizeof b, 5, 0);
+    const uint8_t want_sr[] = { 0x61, 0, 5, 0, 0, 0, 0, 0, 0x01, 17, 'R','a','s','h','e','d',0xE2,0x80,0x99,'s',' ','i','P','h','o','n','e', 0x02, 1, 0xC2, 0x03, 1, 1, 0x04, 1, 6, 0x05, 1, 0 };
+    CHECK(n == sizeof want_sr && !memcmp(b, want_sr, n));
+    bc_wifi_scan_result_t sr2; CHECK(bc_link_decode_wifi_scan_result(b, n, &sr2) && !strcmp(sr2.ssid, sr.ssid) && sr2.rssi == -62 && sr2.secured && sr2.channel == 6 && !sr2.saved);
+    bc_wifi_scan_end_t se = { .count = 3, .err = 0 }; n = bc_link_encode_wifi_scan_end(&se, b, sizeof b, 6, 0);
+    const uint8_t want_se[] = { 0x62, 0, 6, 0, 0, 0, 0, 0, 0x01, 1, 3, 0x02, 1, 0 }; CHECK(n == sizeof want_se && !memcmp(b, want_se, n));
+    bc_wifi_set_t st = { .ssid = "HomeNet", .pass = "Secret-123", .flags = 3 }; n = bc_link_encode_wifi_set(&st, b, sizeof b, 7, 0);
+    const uint8_t want_set[] = { 0x63, 0, 7, 0, 0, 0, 0, 0, 0x01, 7, 'H','o','m','e','N','e','t', 0x02, 10, 'S','e','c','r','e','t','-','1','2','3', 0x03, 1, 3 };
+    CHECK(n == sizeof want_set && !memcmp(b, want_set, n));
+    bc_wifi_set_t st2; CHECK(bc_link_decode_wifi_set(b, n, &st2) && !strcmp(st2.ssid, "HomeNet") && !strcmp(st2.pass, "Secret-123") && st2.flags == 3);
+    { uint8_t open_[] = { 0x63, 0, 0, 0, 0, 0, 0, 0, 0x01, 4, 'C','a','f','e', 0x02, 0 }; CHECK(bc_link_decode_wifi_set(open_, sizeof open_, &st2) && st2.pass[0] == 0 && st2.flags == 3); }
+    { uint8_t nossid[] = { 0x63, 0, 0, 0, 0, 0, 0, 0, 0x02, 3, 'a','b','c' }; CHECK(!bc_link_decode_wifi_set(nossid, sizeof nossid, &st2)); }
+    bc_wifi_forget_t fg = { .ssid = "HomeNet" }; n = bc_link_encode_wifi_forget(&fg, b, sizeof b, 8, 0);
+    const uint8_t want_fg[] = { 0x64, 0, 8, 0, 0, 0, 0, 0, 0x01, 7, 'H','o','m','e','N','e','t' }; CHECK(n == sizeof want_fg && !memcmp(b, want_fg, n));
+    bc_wifi_forget_t fg2; CHECK(bc_link_decode_wifi_forget(b, n, &fg2) && !strcmp(fg2.ssid, "HomeNet"));
+    bc_wifi_status_msg_t ws = { .state = 4, .err = 0, .ssid = "HomeNet", .rssi = -48, .saved_count = 2, .radio_on = 1 }; n = bc_link_encode_wifi_status(&ws, b, sizeof b, 9, 0);
+    const uint8_t want_ws[] = { 0x65, 0, 9, 0, 0, 0, 0, 0, 0x01, 1, 4, 0x02, 1, 0, 0x03, 7, 'H','o','m','e','N','e','t', 0x04, 1, 0xD0, 0x05, 1, 2, 0x06, 1, 1 };
+    CHECK(n == sizeof want_ws && !memcmp(b, want_ws, n));
+    bc_wifi_status_msg_t ws2; CHECK(bc_link_decode_wifi_status(b, n, &ws2) && ws2.state == 4 && ws2.rssi == -48 && ws2.saved_count == 2 && ws2.radio_on && !strcmp(ws2.ssid, "HomeNet"));
+    n = bc_link_encode_wifi_status_req(b, sizeof b, 10, 0); const uint8_t want_wr[] = { 0x66, 0, 10, 0, 0, 0, 0, 0 }; CHECK(n == 8 && !memcmp(b, want_wr, 8));
+}
+
+static void t_link3(void)
+{
+    uint8_t b[BC_LINK_MAX]; size_t n;
+    /* PROFILE_GET / SETTINGS_GET: header only */
+    n = bc_link_encode_profile_get(b, sizeof b, 1, 0); const uint8_t want_pg[] = { 0x70, 0, 1, 0, 0, 0, 0, 0 }; CHECK(n == 8 && !memcmp(b, want_pg, 8));
+    n = bc_link_encode_settings_get(b, sizeof b, 3, 0); const uint8_t want_sg[] = { 0x76, 0, 3, 0, 0, 0, 0, 0 }; CHECK(n == 8 && !memcmp(b, want_sg, 8));
+    /* PROFILE_SET: full set, byte vector (docs/BLE_LINK_PROTOCOL.md) */
+    bc_profile_msg_t pm = { .version = 1, .updated_epoch_s = 1792850100u, .ftp_w = 250, .ftp_how = 1, .weight_kg_x10 = 780, .birth_year = 1990, .max_hr = 186, .rest_hr = 52, .units = 0, .hours_per_week = 6, .level = 2, .goal = 1, .lthr = 170 };
+    snprintf(pm.name, sizeof pm.name, "Rashed"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
+    n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 2, 0);
+    const uint8_t want_ps[] = { 0x71, 0, 2, 0, 0, 0, 0, 0,  0x01, 4, 1, 0, 0, 0,  0x02, 4, 0xB4, 0xB8, 0xDC, 0x6A,  0x03, 6, 'R','a','s','h','e','d',
+                                0x04, 2, 0xFA, 0x00,  0x05, 1, 1,  0x06, 2, 0x0C, 0x03,  0x07, 2, 0xC6, 0x07,  0x08, 1, 186,  0x09, 1, 52,  0x0A, 1, 0,  0x0B, 1, 6,  0x0C, 1, 2,  0x0D, 1, 1,  0x0E, 1, 170 };
+    CHECK(n == sizeof want_ps && !memcmp(b, want_ps, n));
+    bc_profile_msg_t d; CHECK(bc_link_decode_profile(b, n, &d) && d.version == 1 && d.updated_epoch_s == 1792850100u && !strcmp(d.name, "Rashed") && d.ftp_w == 250 && d.ftp_how == 1 && d.weight_kg_x10 == 780 && d.birth_year == 1990 && d.max_hr == 186 && d.rest_hr == 52 && d.units == 0 && d.hours_per_week == 6 && d.level == 2 && d.goal == 1 && d.lthr == 170 && d.has == pm.has);
+    /* partial SET: only the fields sent are flagged; out-of-range values are dropped (flag cleared) */
+    uint8_t part[] = { 0x71, 0, 0, 0, 0, 0, 0, 0,  0x01, 4, 5, 0, 0, 0,  0x04, 2, 0xFF, 0xFF,  0x08, 1, 186 };
+    CHECK(bc_link_decode_profile(part, sizeof part, &d) && d.version == 5 && d.has == BC_PF_HAS(0x08) && d.max_hr == 186 && !(d.has & BC_PF_HAS(0x04)));
+    uint8_t nover[] = { 0x71, 0, 0, 0, 0, 0, 0, 0, 0x08, 1, 186 }; CHECK(!bc_link_decode_profile(nover, sizeof nover, &d));
+    /* PROFILE (board -> phone) carries 0F source and 10 board_saved_epoch_s */
+    pm.source = 1; pm.board_saved_epoch_s = 1792850100u; n = bc_link_encode_profile(BC_MSG_PROFILE, &pm, b, sizeof b, 2, 0);
+    CHECK(n == sizeof want_ps + 9 && b[0] == 0x72 && b[n - 9] == 0x0F && b[n - 8] == 1 && b[n - 7] == 1 && b[n - 6] == 0x10 && b[n - 5] == 4 && bc_link_decode_profile(b, n, &d) && d.source == 1 && d.board_saved_epoch_s == 1792850100u);
+    CHECK(bc_link_encode_profile(BC_MSG_PROFILE_ACK, &pm, b, sizeof b, 1, 0) == 0);
+    /* PROFILE_ACK */
+    bc_profile_ack_t a = { .version = 1, .status = 0, .board_version = 1 }; n = bc_link_encode_profile_ack(&a, b, sizeof b, 2, 0);
+    const uint8_t want_pa[] = { 0x73, 0, 2, 0, 0, 0, 0, 0,  0x01, 4, 1, 0, 0, 0,  0x02, 1, 0,  0x03, 4, 1, 0, 0, 0 }; CHECK(n == sizeof want_pa && !memcmp(b, want_pa, n));
+    bc_profile_ack_t a2; CHECK(bc_link_decode_profile_ack(b, n, &a2) && a2.version == 1 && a2.status == 0 && a2.board_version == 1);
+    /* SETTINGS_SET vector */
+    bc_settings_msg_t sm = { .version = 1, .brightness_pct = 55, .screen_timeout_s = 120, .wake_gesture = 1, .has = BC_PF_HAS(2) | BC_PF_HAS(3) | BC_PF_HAS(4) };
+    n = bc_link_encode_settings(BC_MSG_SETTINGS_SET, &sm, b, sizeof b, 4, 0);
+    const uint8_t want_ss[] = { 0x74, 0, 4, 0, 0, 0, 0, 0,  0x01, 4, 1, 0, 0, 0,  0x02, 1, 55,  0x03, 2, 120, 0,  0x04, 1, 1 }; CHECK(n == sizeof want_ss && !memcmp(b, want_ss, n));
+    bc_settings_msg_t s2; CHECK(bc_link_decode_settings(b, n, &s2) && s2.version == 1 && s2.has == sm.has && s2.brightness_pct == 55 && s2.screen_timeout_s == 120 && s2.wake_gesture == 1);
+    /* SETTINGS reply: all tags + 0F status + 10 supported mask */
+    bc_settings_msg_t full = { .version = 2, .brightness_pct = 80, .screen_timeout_s = 60, .wake_gesture = 0, .phone_link_enabled = 1, .hr_pref = 0, .auto_sleep_min = 0, .ride_layout = 0, .wake_on_cue = 1, .units = 0, .status = 0, .supported_mask = BC_SETTINGS_SUPPORTED_ALL };
+    full.has = 0; for (int t = 2; t <= 0x10; t++) full.has |= BC_PF_HAS(t);
+    n = bc_link_encode_settings(BC_MSG_SETTINGS, &full, b, sizeof b, 5, 0);
+    const uint8_t want_sr[] = { 0x75, 0, 5, 0, 0, 0, 0, 0,  0x01, 4, 2, 0, 0, 0,  0x02, 1, 80,  0x03, 2, 60, 0,  0x04, 1, 0,  0x05, 1, 1,  0x06, 1, 0,  0x07, 2, 0, 0,  0x08, 1, 0,  0x09, 1, 1,  0x0A, 1, 0,  0x0F, 1, 0,  0x10, 4, 0xFF, 0x03, 0, 0 };
+    CHECK(n == sizeof want_sr && !memcmp(b, want_sr, n));
+    CHECK(bc_link_decode_settings(b, n, &s2) && s2.supported_mask == BC_SETTINGS_SUPPORTED_ALL && s2.status == 0 && s2.phone_link_enabled == 1);
+    /* bad values are dropped, not applied: brightness 5 (< 10), gesture 7 */
+    uint8_t bad[] = { 0x74, 0, 0, 0, 0, 0, 0, 0,  0x01, 4, 9, 0, 0, 0,  0x02, 1, 5,  0x04, 1, 7,  0x06, 1, 1 };
+    CHECK(bc_link_decode_settings(bad, sizeof bad, &s2) && s2.version == 9 && s2.has == BC_PF_HAS(6) && s2.hr_pref == 1);
 }
 
 int main(void)
 {
-    t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link(); t_power();
+    t_tap2(); t_link2(); t_link3(); t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link(); t_power();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

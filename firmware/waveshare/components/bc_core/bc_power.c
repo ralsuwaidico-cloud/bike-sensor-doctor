@@ -52,26 +52,68 @@ const char *bc_bat_level_name(bc_bat_level_t l)
     switch (l) { case BC_BAT_LOW: return "LOW"; case BC_BAT_VERY_LOW: return "VERY LOW"; case BC_BAT_CRITICAL: return "CRITICAL"; default: return "OK"; }
 }
 
-/* ---- triple tap */
-void bc_tap_reset(bc_tap_t *t) { memset(t, 0, sizeof *t); }
-
-bool bc_tap_feed(bc_tap_t *t, bool pressed, uint32_t now_ms)
+/* ---- wake taps */
+void bc_tap_reset(bc_tap_t *t)
 {
-    if (pressed && !t->down) { t->down = true; t->down_ms = now_ms; return false; }
-    if (!pressed && t->down) {
-        t->down = false;
-        if (now_ms - t->down_ms > BC_TAP_MAX_PRESS_MS) { t->n = 0; return false; }   /* a hold is not a tap */
-        /* drop taps older than the window */
-        int k = 0; for (int i = 0; i < t->n; i++) if (now_ms - t->t[i] <= BC_TAP_WINDOW_MS) t->t[k++] = t->t[i];
-        t->n = k;
-        if (t->n < 3) t->t[t->n++] = now_ms;
-        if (t->n >= 3 && now_ms - t->t[0] <= BC_TAP_WINDOW_MS) { t->n = 0; return true; }
+    int need = t->need; uint32_t rb = t->rejected_bursts, rs = t->rejected_slides, rl = t->rejected_long;
+    memset(t, 0, sizeof *t);
+    t->need = (need >= 1 && need <= 3) ? need : 3;
+    t->rejected_bursts = rb; t->rejected_slides = rs; t->rejected_long = rl;
+}
+void bc_tap_set_count(bc_tap_t *t, int need)
+{
+    int nn = (need >= 1 && need <= 3) ? need : 3;
+    if (nn != t->need) { t->need = nn; t->n = 0; t->pending_ms = 0; }   /* only a CHANGE restarts a sequence in progress */
+}
+
+static void clear_taps(bc_tap_t *t) { t->n = 0; t->first_ms = 0; t->last_release_ms = 0; t->pending_ms = 0; }
+
+bool bc_tap_feed_xy(bc_tap_t *t, bool pressed, int x, int y, uint32_t now_ms)
+{
+    if (t->need < 1 || t->need > 3) t->need = 3;
+    if (t->lockout_until_ms && (int32_t)(now_ms - t->lockout_until_ms) < 0) { t->down = pressed; t->down_ms = now_ms; return false; }
+    t->lockout_until_ms = 0;
+    if (pressed && !t->down) {                                   /* press begins */
+        t->down = true; t->down_ms = now_ms; t->x0 = x; t->y0 = y; t->slid = false;
+        /* burst detection: more than BC_TAP_BURST_N presses inside one second is not a hand */
+        t->press_ms[t->ph & 7] = now_ms; t->ph++;
+        int recent = 0; for (int i = 0; i < 8 && i < t->ph; i++) if (now_ms - t->press_ms[i] <= 1000) recent++;
+        if (recent > BC_TAP_BURST_N) { t->rejected_bursts++; clear_taps(t); t->lockout_until_ms = now_ms + BC_TAP_LOCKOUT_MS; return false; }
+        if (t->pending_ms) {
+            /* a press right after the completed gesture: within the bounce gap it is vibration/bounce (cancel), later it is a
+               human extra tap (3 taps when 2 are needed must still wake): fire now */
+            bool bounce = now_ms - t->last_release_ms < BC_TAP_MIN_GAP_MS;
+            clear_taps(t); t->down = true; t->down_ms = now_ms;
+            if (bounce) { t->rejected_bursts++; return false; }
+            return true;
+        }
+        /* a long pause since the previous tap: start a fresh sequence */
+        if (t->n && now_ms - t->last_release_ms > BC_TAP_MAX_GAP_MS) clear_taps(t);
         return false;
     }
-    /* idle: forget stale taps */
-    if (!pressed && t->n && now_ms - t->t[0] > BC_TAP_WINDOW_MS) { int k = 0; for (int i = 0; i < t->n; i++) if (now_ms - t->t[i] <= BC_TAP_WINDOW_MS) t->t[k++] = t->t[i]; t->n = k; }
+    if (pressed && t->down) {                                    /* finger moving? */
+        if (x >= 0 && t->x0 >= 0) { int dx = x - t->x0, dy = y - t->y0; if (dx < 0) dx = -dx; if (dy < 0) dy = -dy; if (dx > BC_TAP_SLIDE_PX || dy > BC_TAP_SLIDE_PX) t->slid = true; }
+        return false;
+    }
+    if (!pressed && t->down) {                                   /* release */
+        t->down = false;
+        uint32_t d = now_ms - t->down_ms;
+        if (d < BC_TAP_MIN_PRESS_MS) return false;                       /* glitch: ignore, keep the sequence */
+        if (d > BC_TAP_MAX_PRESS_MS) { t->rejected_long++; clear_taps(t); return false; }   /* a hold is not a tap */
+        if (t->slid) { t->rejected_slides++; clear_taps(t); return false; }
+        if (t->n && t->down_ms - t->last_release_ms < BC_TAP_MIN_GAP_MS) return false;     /* contact bounce */
+        if (t->n == 0) t->first_ms = t->down_ms;
+        t->n++; t->last_release_ms = now_ms;
+        if (now_ms - t->first_ms > BC_TAP_WINDOW_MS) { t->n = 1; t->first_ms = t->down_ms; }  /* too slow: this tap starts over */
+        if (t->n >= t->need) t->pending_ms = now_ms ? now_ms : 1;           /* complete: fire after the settle time */
+        return false;
+    }
+    /* idle */
+    if (t->pending_ms && now_ms - t->pending_ms >= BC_TAP_SETTLE_MS) { clear_taps(t); return true; }
+    if (!t->pending_ms && t->n && now_ms - t->last_release_ms > BC_TAP_MAX_GAP_MS) clear_taps(t);   /* cannot complete any more */
     return false;
 }
+bool bc_tap_feed(bc_tap_t *t, bool pressed, uint32_t now_ms) { return bc_tap_feed_xy(t, pressed, -1, -1, now_ms); }
 
 /* ---- drain */
 void bc_drain_reset(bc_drain_t *d) { memset(d, 0, sizeof *d); d->cur = -1; }

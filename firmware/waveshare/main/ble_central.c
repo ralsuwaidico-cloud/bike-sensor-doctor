@@ -146,6 +146,7 @@ static int kind_of(const struct ble_hs_adv_fields *f)
     return -1;
 }
 
+static volatile bool s_standby;   /* 0.6.0 connected standby */
 static int gap_event(struct ble_gap_event *ev, void *arg);
 
 static void scan_start(void)
@@ -281,7 +282,7 @@ static void tick(void *arg)
         for (int i = 0; i < 2; i++) { int8_t r; if (L[i].conn != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_rssi(L[i].conn, &r) == 0) { LOCK(); L[i].rssi = r; UNLOCK(); } }
     }
     bool need = s_pair_kind >= 0;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2 && !s_standby; i++) {   /* connected standby (0.6.0): no scanning for paired sensors; live connections are kept */
         link_t *l = &L[i];
         if (!l->paired) continue;
         if (l->state == PLAT_LINK_RETRY && (int32_t)(now - l->retry_at) >= 0) set_state(l, PLAT_LINK_SEARCHING);
@@ -308,7 +309,8 @@ static void on_reset(int reason) { ESP_LOGW(TAG, "host reset %d", reason); s_syn
 static void host_task(void *p) { nimble_port_run(); nimble_port_freertos_deinit(); }
 /* the manager runs in its own task (not the shared esp_timer task), so a slow radio call can never stall the
    display tick or any other timer */
-static void mgr_task(void *p) { for (;;) { tick(NULL); vTaskDelay(pdMS_TO_TICKS(500)); } }
+/* 0.6.0: the link side (notifications, incl. ride-history sync batches) every 100 ms, the sensor side every 500 ms */
+static void mgr_task(void *p) { for (int i = 0;; i++) { if (i % 5 == 0) tick(NULL); else ble_link_tick(); vTaskDelay(pdMS_TO_TICKS(100)); } }
 
 void ble_central_start(void)
 {
@@ -339,6 +341,7 @@ void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t
     set_state(l, mac ? PLAT_LINK_SEARCHING : PLAT_LINK_NOT_PAIRED);
 }
 
+void ble_central_set_standby(bool standby) { s_standby = standby; }
 void ble_central_scan_for(int kind) { s_pair_kind = kind; if (kind >= 0) { LOCK(); s_nfound[kind] = 0; UNLOCK(); } }
 
 int ble_central_found(plat_sens_kind_t kind, plat_found_t *out, int max)

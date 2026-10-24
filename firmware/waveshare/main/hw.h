@@ -19,7 +19,12 @@ void hw_backlight_set(int percent);      /* 0..100 */
 void hw_selftest_run(void);              /* PSRAM, flash, NVS boot counter, FAT storage R/W, IMU WHO_AM_I, battery */
 float hw_battery_volts(void);            /* < 0 when unavailable */
 uint32_t hw_millis(void);
-/* power (0.5.0) — NOT hardware-verified until the 0.5.0 device tests */
+/* power (0.5.0 / 0.6.0) — NOT hardware-verified until the device tests in pc-kit/TEST-v0.6.0.txt */
 void hw_panel_sleep(bool sleep);         /* GC9A01 display off + sleep-in (0x10) / sleep-out (0x11) + display on */
-void hw_deep_sleep_touch_wake(void);     /* backlight held off, TP_RST held high, ext0 wake on TP_INT (GPIO5, low); never returns */
-bool hw_wake_tap_check(void);            /* after an ext0 wake: wait <= 1.5 s for 3 taps (the wake touch counts as the 1st); needs only I2C */
+/** Screen-off mode: keep the CST816S awake (DisAutoSleep) so the first quick tap is reported instead of only waking the
+ *  controller, and poll it faster. keep=false restores auto-sleep (needed before deep sleep so a touch wakes the chip). */
+void hw_touch_keep_awake(bool keep);
+void hw_deep_sleep_touch_wake(int taps); /* backlight held off, TP_RST held high, ext0 wake on TP_INT (GPIO5, low); never returns. taps 2..3 */
+bool hw_wake_tap_check(void);            /* after an ext0 wake: the waking touch is tap 1; wait <= 2.5 s for the rest (profile setting kept in RTC memory) */
+int hw_wake_taps_needed(void);           /* what the last deep sleep asked for (diagnostics) */
+bool hw_device_id(uint8_t out[6]);       /* Bluetooth MAC */

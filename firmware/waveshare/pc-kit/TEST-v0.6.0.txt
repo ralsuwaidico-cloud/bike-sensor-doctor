@@ -1,0 +1,76 @@
+BikeComputer firmware 0.6.0 — hardware test checklist (25 Oct 2026)
+======================================================================
+Record PASS / FAIL / NOT TESTED per step, with numbers where asked. Everything in 0.6.0 is simulator-tested only
+until you confirm it here. Board on USB with the battery DISCONNECTED (HW-1), except step P8 which needs the battery
+alone (never USB and battery together). iPhone app: build 21 or newer (build 21 cannot yet use Wi-Fi setup / profile
+sync from the phone; those arrive with the next build — steps marked [app 0.4.0+] wait for it).
+
+Install
+ I1  INSTALL-v0.6.0.bat: finds COM port, reads the 16 MB backup, says "Backup verified: 16 MB, firmware 0.5.0",
+     asks YES, writes 2 regions, "INSTALLED". Board restarts to Home with your name and FTP.
+ I2  Settings > Diagnostics > Device Health: Firmware 0.6.0. History still lists your rides; power meter still paired.
+     (Rollback at any time: ROLLBACK-TO-v050.bat keeps data; RESTORE-BACKUP-BEFORE-v060.bat = exact image.)
+
+A. Phone link stays on with the screen off  (the 0.5.0 bug)
+ A1  Phone app connected (Ride tab shows board values). Pull down Quick Settings > Screen off.
+     Wait 5 minutes WITHOUT touching the board. Phone: still connected, values still updating?   PASS/FAIL
+ A2  Still dark: switch the phone's Bluetooth off for 20 s, then on. The phone reconnects by itself within ~15 s
+     without touching the board?   PASS/FAIL   (time to reconnect: ___ s)
+ A3  Leave the board idle (screen on) for 1 min: screen goes off by itself (auto timeout). Phone still connected?
+     Quick Settings > State says "standby, link on" after waking?   PASS/FAIL
+ A4  Start a ride, Quick Settings > Screen off, pedal 2 min: phone shows live watts/cadence the whole time; wake the
+     board: ride time advanced, XDS still connected (Sensors page).   PASS/FAIL
+ A5  Settings > Power: "Auto deep sleep" shows "off" (0.6.0 default). Leave it off.   PASS/FAIL
+
+B. Quick Settings handle
+ B1  Home: a small grey pill is visible at the very top. Tap it → Quick Settings slides down.   PASS/FAIL
+ B2  Swipe down starting on the pill → opens. Swipe down starting ~40 px from the top → opens.   PASS/FAIL
+ B3  Swipe up / arrow button closes it; after 20 s untouched it closes by itself.   PASS/FAIL
+ B4  Ride screens A, B and C: the pill at the top opens the RIDE CONTROLS (pause/end first); "QUICK SET." button
+     there opens Quick Settings. No metric is covered by the pill on A, B, C.   PASS/FAIL
+ B5  Settings > Display (name keyboard) and the Wi-Fi password keyboard: no pill (the top key is there).   PASS/FAIL
+
+C. Wake gesture — screen off (board awake)                       target: >= 19 of 20, 0 false wakes
+ C1  Quick Settings > Screen off. Tap 3 times at a normal pace anywhere on the glass. Repeat 20 times
+     (screen off again each time). Successes: ___ / 20.   Note any attempt that needed a 4th tap.
+ C2  Slow pace (about one tap per 0.7 s), 5 attempts: ___ / 5.
+ C3  Accidental touches, screen off: 10 single taps, 5 double taps, a palm press, a finger slide → the screen must stay
+     off every time. False wakes: ___ / 17.
+ C4  Settings > Power > Wake gesture = "2 taps": 10 double taps → ___ / 10; 5 single taps → false wakes ___ / 5.
+ C5  Wake gesture = "any touch", start a ride, Screen off, one tap wakes: ___ / 5. Back to "3 taps".
+
+D. Wake gesture — deep sleep                                     target: >= 19 of 20
+ D1  Quick Settings > Deep sleep: the page says CONNECTIVITY OFF and that standby keeps Bluetooth. HOLD: DEEP SLEEP.
+     Phone shows the board disconnected (expected).   PASS/FAIL
+ D2  Tap 3 times at a normal pace. Board boots to Home within ~3 s? Repeat 20 times. Successes: ___ / 20.
+     Attempts where a single tap woke it (false wake): ___.
+ D3  If D2 fails: press RESET → boots. Plug USB in → boots. (These are the documented fallbacks.)   PASS/FAIL
+ D4  After a deep-sleep wake the phone reconnects by itself within ~15 s (no toggling).   PASS/FAIL
+
+E. Wi-Fi — iPhone hotspot
+ E1  iPhone: Settings > Personal Hotspot > Maximize Compatibility ON. Keep that screen open.
+ E2  Board: Quick Settings > tap "Wi-Fi" → the Wi-Fi page opens (hold = on/off). Switch ON. Networks →
+     "Rashed's iPhone" listed with signal bars within ~5 s?   PASS/FAIL   (how many networks: ___)
+ E3  Tap it → ring keyboard → password → JOIN → CONNECTING → CONNECTED + "internet ok" (or "no internet" if the
+     phone has no data). Time to connect: ___ s.   PASS/FAIL
+ E4  Wrong password on purpose → "WRONG PASSWORD" + TRY AGAIN.   PASS/FAIL
+ E5  Restart the board (Quick Settings > HOLD: RESTART): joins the hotspot by itself.   PASS/FAIL
+ E6  Networks → tap the hotspot → NETWORK page → HOLD: FORGET → gone from Saved; status "ON - not connected".   PASS/FAIL
+ E7  During a ride: Networks page shows the amber "ride running" note; a scan still works; XDS stays connected
+     (watch the Sensors page during the scan).   PASS/FAIL
+ E8  [app 0.4.0+] Phone app: Devices > BikeComputer > Wi-Fi: scan list matches E2; set the hotspot with the phone
+     keyboard → board CONNECTED; phone shows the same status; Forget from the phone works.   PASS/FAIL
+
+F. Phone services  [app 0.4.0+]
+ F1  Ride history sync: Progress lists the board's rides (same count as the board's History), no duplicates.
+ F2  Profile sync: change FTP on the phone → board Home shows the new FTP within seconds; Settings > Phone says
+     "PROFILE phone v<n>". Board ride history unchanged.
+ F3  Settings from the phone: brightness and screen timeout change on the board and the phone shows "synced".
+
+G. Everything else still works
+ G1  XDS power/cadence live on screen A, B, C; a 10-minute ride recorded, ended, saved; coach cues shown.   PASS/FAIL
+ G2  Battery estimate still shows "~N%" and never the word "charging". (Battery test P8 only if you want: battery
+     alone, no USB — Device Health shows a voltage and "battery" as the source.)
+
+Report: PASS/FAIL/NOT TESTED per step plus the numbers in C and D. A FAIL in A or D4 → send the device log
+(4-READ-DEVICE-LOG.bat) to Claude.

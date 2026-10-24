@@ -51,9 +51,17 @@ typedef struct {
     uint8_t brightness;        /* 5..100 % */
     /* power (firmware 0.5.0); missing keys in an old profile take these defaults */
     uint16_t scr_timeout_s;    /* auto screen-off outside rides: 0 = never, default 60 */
-    uint8_t auto_sleep_min;    /* deep sleep after N idle minutes on battery, no ride: 0 = off, default 10 */
+    uint8_t auto_sleep_min;    /* deep sleep after N idle minutes on battery, no ride, no phone connected: 0 = off (default since 0.6.0) */
     uint8_t bat_protect;       /* 0 = alerts only (default); 1 = at the critical level also auto-save the ride and sleep (NOT validated) */
     bool wake_on_cue;          /* screen off during a ride: wake 5 s on a coach warning (default on) */
+    uint8_t wake_taps;         /* 0.6.0 wake gesture: 3 = triple tap (default), 2 = double tap, 1 = any touch (rides only; double tap otherwise) */
+    /* 0.6.0 shared athlete profile (phone sync, docs/LINK_V1_2_SPEC.md); 0 = unknown */
+    uint16_t birth_year; uint8_t rest_hr, lthr, units /* 0 metric, 1 imperial */, hours_wk;
+    uint32_t phone_prof_ver;   /* version of the last PROFILE_SET applied; 0 = device-only profile */
+    uint32_t phone_prof_epoch; /* updated_epoch_s the phone sent with it */
+    uint8_t prof_src;          /* 0 device-only, 1 phone-synced */
+    uint32_t sett_ver;         /* version of the last SETTINGS_SET applied */
+    uint8_t pwr_v;             /* power-settings schema: 0 = written by 0.5.0 (auto_sleep_min reset once), 2 = 0.6.0 */
     uint16_t next_ride_id;     /* real rides only; demo rides are numbered separately */
     uint16_t next_demo_id;
     char ftp_note[96];         /* last FTP change in plain words */

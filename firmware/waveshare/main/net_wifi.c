@@ -1,5 +1,10 @@
 /*
- * Wi-Fi manager (0.3.0). Optional: nothing on the device needs a network.
+ * Wi-Fi manager (0.3.0, reworked in 0.6.0 — see docs/WIFI_0.6.0.md). Optional: nothing on the device needs a network.
+ *
+ * 0.6.0 changes (hotspot investigation): longer scan dwell (120/300 ms) over channels 1-13 (country AE), 32 scan records,
+ * WPA2 threshold + PMF capable for iPhone WPA2/WPA3 hotspots, an internet check (DNS) after the address, reconnection
+ * backoff 5 -> 60 s that stops after 10 failed rounds until the rider rescans, "save only" for phone provisioning, and the
+ * channel of every network for the phone's list. Credentials never appear in logs.
  *
  * All radio work happens in one background task ("wifi_mgr", core 0). The UI only posts commands to a queue and reads
  * a status snapshot, so the screen never waits for Wi-Fi. Rules:
@@ -17,6 +22,8 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "lwip/netdb.h"
+#include "lwip/sockets.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -32,7 +39,7 @@ static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 #define LOCK() portENTER_CRITICAL(&s_mux)
 #define UNLOCK() portEXIT_CRITICAL(&s_mux)
 
-typedef enum { CMD_ENABLE, CMD_DISABLE, CMD_SCAN, CMD_CONNECT, CMD_DISCONNECT, CMD_FORGET } cmd_kind_t;
+typedef enum { CMD_ENABLE, CMD_DISABLE, CMD_SCAN, CMD_CONNECT, CMD_DISCONNECT, CMD_FORGET, CMD_SAVE } cmd_kind_t;
 typedef struct { cmd_kind_t k; char ssid[33]; char pass[65]; bool has_pass, save; } cmd_t;
 
 #define BIT_GOT_IP BIT0
@@ -46,7 +53,9 @@ static volatile bool s_quiet;
 static volatile int s_last_reason;
 static bc_wifi_store_t s_store;                 /* task-only */
 static plat_wifi_status_t s_st;                 /* under LOCK */
-static plat_wifi_ap_t s_aps[16]; static int s_naps;
+static plat_wifi_ap_t s_aps[32]; static int s_naps;
+#define AUTO_MAX_ROUNDS 10
+static bool s_auto_halted;                      /* 10 failed reconnection rounds: wait for the rider (Rescan / page / connect) */
 static char s_saved[PLAT_WIFI_MAX_SAVED][33]; static int s_nsaved;
 static int s_scan_count = -1;
 static unsigned s_attempt; static uint32_t s_next_auto_ms;
@@ -87,7 +96,7 @@ static void set_state(plat_wifi_state_t st, plat_wifi_err_t err, const char *ssi
     if (st == PLAT_WIFI_CONNECTING) s_st.err = PLAT_WIFI_ERR_NONE;
     if (err != PLAT_WIFI_ERR_NONE) s_st.err = err;
     if (ssid) snprintf(s_st.ssid, sizeof s_st.ssid, "%s", ssid);
-    if (st != PLAT_WIFI_CONNECTED) { s_st.ip[0] = 0; s_st.rssi = 0; }
+    if (st != PLAT_WIFI_CONNECTED) { s_st.ip[0] = 0; s_st.rssi = 0; s_st.internet = 0; }
     UNLOCK();
 }
 
@@ -135,6 +144,8 @@ static bool radio_on(void)
         esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_event, NULL);
         esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_event, NULL);
         esp_wifi_set_mode(WIFI_MODE_STA);
+        wifi_country_t cc = { .cc = "AE", .schan = 1, .nchan = 13, .policy = WIFI_COUNTRY_POLICY_MANUAL };   /* all 2.4 GHz channels 1-13 */
+        esp_wifi_set_country(&cc);
         s_radio_init = true;
     }
     if (!s_radio_on) {
@@ -161,21 +172,22 @@ static void do_scan(void)
     if (prev == PLAT_WIFI_CONNECTING) return;
     if (prev != PLAT_WIFI_CONNECTED) set_state(PLAT_WIFI_SCANNING, PLAT_WIFI_ERR_NONE, NULL);
     else { LOCK(); s_st.state = PLAT_WIFI_SCANNING; UNLOCK(); }
-    /* short dwell per channel so the Bluetooth link keeps its share of the radio */
-    wifi_scan_config_t sc = { .show_hidden = false, .scan_type = WIFI_SCAN_TYPE_ACTIVE, .scan_time.active = { .min = 40, .max = 100 } };
+    /* 0.6.0: 120-300 ms per channel (0.5.0 used 40-100 ms and could miss a hotspot that beacons every ~100 ms); the scan takes
+       about 2-4 s, Bluetooth keeps its connection events in between (coexistence), and it only runs on request */
+    wifi_scan_config_t sc = { .show_hidden = false, .scan_type = WIFI_SCAN_TYPE_ACTIVE, .scan_time.active = { .min = 120, .max = 300 } };
     esp_err_t e = esp_wifi_scan_start(&sc, true);
-    uint16_t n = 20; wifi_ap_record_t *rec = calloc(20, sizeof(wifi_ap_record_t));
+    uint16_t n = 32; wifi_ap_record_t *rec = calloc(32, sizeof(wifi_ap_record_t));
     if (rec && e == ESP_OK) esp_wifi_scan_get_ap_records(&n, rec); else n = 0;
-    plat_wifi_ap_t tmp[16]; int k = 0;
+    plat_wifi_ap_t tmp[32]; int k = 0;
     for (int i = 0; i < n; i++) {
         const char *ss = (const char *)rec[i].ssid;
         if (!ss[0]) continue;                             /* hidden networks: use "Other network" */
         int j; for (j = 0; j < k; j++) if (!strcmp(tmp[j].ssid, ss)) break;
         if (j < k) { if (rec[i].rssi > tmp[j].rssi) tmp[j].rssi = rec[i].rssi; continue; }
-        if (k >= 16) continue;
+        if (k >= 32) continue;
         memset(&tmp[k], 0, sizeof tmp[k]);
         snprintf(tmp[k].ssid, sizeof tmp[k].ssid, "%s", ss);
-        tmp[k].rssi = rec[i].rssi; tmp[k].secured = rec[i].authmode != WIFI_AUTH_OPEN;
+        tmp[k].rssi = rec[i].rssi; tmp[k].secured = rec[i].authmode != WIFI_AUTH_OPEN; tmp[k].channel = rec[i].primary;
         tmp[k].saved = bc_wifi_store_find(&s_store, ss) != NULL;
         k++;
     }
@@ -210,8 +222,10 @@ static bool do_connect(const char *ssid, const char *pass, bool save)
     wifi_config_t cfg = { 0 };
     memcpy(cfg.sta.ssid, ssid, strnlen(ssid, 32));
     memcpy(cfg.sta.password, pass, strnlen(pass, 64));
-    cfg.sta.threshold.authmode = pass[0] ? WIFI_AUTH_WPA_PSK : WIFI_AUTH_OPEN;   /* accepts WPA/WPA2/WPA3-personal */
-    cfg.sta.pmf_cfg.capable = true;
+    /* iPhone hotspots announce WPA2/WPA3-Personal (transition) with PMF: WPA2 threshold + PMF capable (not required) lets the
+       ESP32 join as WPA2 or, when the AP insists, WPA3-SAE (H2E and hunting-and-pecking both allowed) */
+    cfg.sta.threshold.authmode = pass[0] ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
+    cfg.sta.pmf_cfg.capable = true; cfg.sta.pmf_cfg.required = false;
     cfg.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
     cfg.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
     cfg.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
@@ -229,8 +243,16 @@ static bool do_connect(const char *ssid, const char *pass, bool save)
         LOCK(); s_st.connects++; UNLOCK();
         if (save) bc_wifi_store_put(&s_store, ssid, pass); else bc_wifi_store_touch(&s_store, ssid);
         store_save(); publish_saved();
-        s_attempt = 0;
+        s_attempt = 0; s_auto_halted = false;
         ESP_LOGI(TAG, "connected, IP %s", s_st.ip);
+        /* internet check: one DNS lookup (a connected hotspot without data shows "internet not reachable", never "connected"
+           pretending the world is there). Blocks only this task, a few seconds at most. */
+        LOCK(); s_st.internet = 0; UNLOCK();
+        struct addrinfo hints = { .ai_family = AF_INET, .ai_socktype = SOCK_STREAM }, *res = NULL;
+        int rc = getaddrinfo("captive.apple.com", "80", &hints, &res);
+        if (res) freeaddrinfo(res);
+        LOCK(); s_st.internet = rc == 0 ? 1 : 2; UNLOCK();
+        ESP_LOGI(TAG, "internet check: %s", rc == 0 ? "DNS ok" : "no DNS answer");
         return true;
     }
     plat_wifi_err_t err;
@@ -245,7 +267,7 @@ static bool do_connect(const char *ssid, const char *pass, bool save)
 
 static void auto_connect(void)
 {
-    if (!s_enabled || s_quiet || s_user_off || s_store.n == 0) return;
+    if (!s_enabled || s_quiet || s_user_off || s_store.n == 0 || s_auto_halted) return;
     LOCK(); plat_wifi_state_t st = s_st.state; UNLOCK();
     if (st == PLAT_WIFI_CONNECTED || st == PLAT_WIFI_CONNECTING) return;
     if ((int32_t)(hw_millis() - s_next_auto_ms) < 0) return;
@@ -255,7 +277,10 @@ static void auto_connect(void)
     int pick = bc_wifi_pick(&s_store, (const char (*)[33])names, rssi, n);
     bool ok = false;
     if (pick >= 0 && !s_quiet) { bc_wifi_cred_t c = s_store.c[pick]; ok = do_connect(c.ssid, c.pass, false); memset(&c, 0, sizeof c); }
-    if (!ok) { s_next_auto_ms = hw_millis() + bc_wifi_backoff_s(s_attempt) * 1000; if (s_attempt < 10) s_attempt++; }
+    if (!ok) {
+        s_next_auto_ms = hw_millis() + bc_wifi_backoff_s(s_attempt) * 1000;
+        if (++s_attempt >= AUTO_MAX_ROUNDS) { s_auto_halted = true; ESP_LOGW(TAG, "no saved network reachable after %u rounds: waiting for the rider (Rescan / Wi-Fi page)", s_attempt); }
+    }
 }
 
 static void mgr_task(void *arg)
@@ -265,16 +290,19 @@ static void mgr_task(void *arg)
         if (xQueueReceive(s_q, &m, pdMS_TO_TICKS(1000)) == pdTRUE) {
             switch (m.k) {
             case CMD_ENABLE:
-                s_enabled = true; s_user_off = false; s_attempt = 0; s_next_auto_ms = 0;
+                s_enabled = true; s_user_off = false; s_attempt = 0; s_next_auto_ms = 0; s_auto_halted = false;
                 if (radio_on()) set_state(PLAT_WIFI_IDLE, PLAT_WIFI_ERR_NONE, NULL);
                 break;
             case CMD_DISABLE: s_enabled = false; radio_off(); break;
-            case CMD_SCAN: if (s_enabled && radio_on()) do_scan(); break;
+            case CMD_SCAN: if (s_enabled && radio_on()) { do_scan(); s_attempt = 0; s_auto_halted = false; s_next_auto_ms = 0; } break;
             case CMD_CONNECT:
                 if (!s_enabled) break;
                 if (!m.has_pass) { const bc_wifi_cred_t *c = bc_wifi_store_find(&s_store, m.ssid); if (c) memcpy(m.pass, c->pass, sizeof m.pass); }
-                s_user_off = false;
+                s_user_off = false; s_attempt = 0; s_auto_halted = false;
                 if (radio_on()) do_connect(m.ssid, m.pass, m.save);
+                break;
+            case CMD_SAVE:
+                if (m.ssid[0]) { bc_wifi_store_put(&s_store, m.ssid, m.pass); store_save(); publish_saved(); s_auto_halted = false; s_next_auto_ms = 0; }
                 break;
             case CMD_DISCONNECT: s_user_off = true; do_disconnect(); break;
             case CMD_FORGET: {
@@ -325,6 +353,7 @@ void plat_wifi_scan(void) { post(CMD_SCAN, NULL, NULL, false); }
 void plat_wifi_connect(const char *ssid, const char *pass, bool save) { post(CMD_CONNECT, ssid, pass, save); }
 void plat_wifi_disconnect(void) { post(CMD_DISCONNECT, NULL, NULL, false); }
 void plat_wifi_forget(const char *ssid) { post(CMD_FORGET, ssid, NULL, false); }
+void plat_wifi_save(const char *ssid, const char *pass) { post(CMD_SAVE, ssid, pass ? pass : "", true); }
 void plat_wifi_set_quiet(bool riding) { s_quiet = riding; }
 int plat_wifi_scan_count(void) { return s_scan_count; }
 void plat_wifi_status(plat_wifi_status_t *o) { LOCK(); *o = s_st; UNLOCK(); }

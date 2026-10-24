@@ -127,6 +127,7 @@ static void show_name(void)
     lv_obj_align(s_close, LV_ALIGN_TOP_MID, 0, 130);
     name_draw();
     ui_screen_show(scr);
+    ui_qs_handle_allow(false);           /* ring keyboard: its top key sits where the Quick Settings handle would be */
 }
 
 /* ---------------- wheels */

@@ -17,6 +17,8 @@
 #include <sys/stat.h>
 #include "lvgl.h"
 #include "sim.h"
+#include "src/misc/lv_area_private.h"
+#include "app_psvc.h"   /* lv_area_intersect returns bool; without the prototype the implicit int return misreads it */
 #include "ui.h"
 #include "app.h"
 
@@ -93,6 +95,7 @@ static lv_obj_t *find_text(const char *txt)
 
 static bool tap_text(const char *txt)
 {
+    wake_if_dark();                       /* a rider taps the dark screen awake before looking for a button */
     lv_obj_t *l = find_text(txt);
     if (!l) { n_checks++; n_fail++; printf("  FAIL could not find '%s' to tap\n", txt); return false; }
     lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
@@ -108,6 +111,7 @@ static bool tap_text(const char *txt)
 
 static bool hold_text(const char *txt, int ms)
 {
+    wake_if_dark();
     lv_obj_t *l = find_text(txt);
     if (!l) { n_checks++; n_fail++; printf("  FAIL could not find '%s' to hold\n", txt); return false; }
     lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
@@ -198,6 +202,24 @@ static void walk(lv_obj_t *o)
     for (uint32_t i = 0; i < lv_obj_get_child_count(o); i++) walk(lv_obj_get_child(o, (int32_t)i));
 }
 
+/* 0.6.0: the pull-down handle (top layer, non-ride screens) and the ride screen's own handle must not cover any metric or
+   control of the screen below: every visible label / clickable of the active screen that intersects the handle is an issue */
+static void walk_handle(lv_obj_t *o, const lv_area_t *h)
+{
+    if (lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN)) return;
+    if (visible(o) && lv_obj_get_parent(o) != NULL) {
+        bool is_label = lv_obj_check_type(o, &lv_label_class);
+        bool is_ctl = lv_obj_has_flag(o, LV_OBJ_FLAG_CLICKABLE) && lv_obj_get_width(o) < 230 && lv_obj_get_height(o) < 230 && !lv_obj_check_type(o, &lv_tileview_class);
+        if ((is_label && lv_label_get_text(o)[0]) || is_ctl) {
+            lv_area_t a; lv_obj_get_coords(o, &a); lv_area_t x;
+            bool clipped = false;
+            for (lv_obj_t *p = lv_obj_get_parent(o); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); if (!lv_area_intersect(&a, &a, &pa)) { clipped = true; break; } }
+            if (!clipped && lv_area_intersect(&x, &a, h)) { char m[48]; snprintf(m, sizeof m, "'%.20s'", is_label ? lv_label_get_text(o) : "(control)"); issue("HANDLE covers %s at %d,%d\n", m, a.x1, a.y1); }
+        }
+    }
+    for (uint32_t i = 0; i < lv_obj_get_child_count(o); i++) walk_handle(lv_obj_get_child(o, (int32_t)i), h);
+}
+
 static void save_ppm(const char *name)
 {
     char p[512]; snprintf(p, sizeof p, "%s/%s.ppm", outdir, name);
@@ -227,6 +249,12 @@ static void shot(const char *name)
     if (out) { char m[48]; snprintf(m, sizeof m, "%d px", out); issue("CIRCLE %s outside the circle, first at %d,%d\n", m, ox, oy); }
     walk(lv_screen_active());
     walk(lv_layer_top());
+    if (ui_qs_handle_visible()) { lv_area_t h; ui_qs_handle_rect(&h); walk_handle(lv_screen_active(), &h); }
+    else if (ui_current() == UI_SCR_RIDE && !ui_qs_is_open()) {           /* the ride screen's own handle: 72 x 22 at the top */
+        lv_area_t h = { .x1 = UI_R - 36, .y1 = 4, .x2 = UI_R + 35, .y2 = 23 };
+        lv_obj_t *scr = lv_screen_active();
+        for (uint32_t i = 0; i < lv_obj_get_child_count(scr); i++) { lv_obj_t *c = lv_obj_get_child(scr, (int32_t)i); if (lv_obj_check_type(c, &lv_tileview_class)) walk_handle(c, &h); }
+    }
     save_ppm(name);
     n_shots++;
     fprintf(report, "%s %s\n%s", name, issues ? "FAIL" : "OK", issue_buf);
@@ -613,13 +641,15 @@ static void scenario(void)
         hold_text("HOLD: FORGET", 1800);
         { char sv[5][33]; CHECK(plat_wifi_saved(sv, 5) == 1 && !strcmp(sv[0], "HomeNet"), "hotspot forgotten"); }
         printf("   errors: timeout, not found, no address\n");
-        g_sim.wifi_no_answer = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); run_s(21);
+        g_sim.wifi_no_answer = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree");
+        CHECK(on_screen("NETWORK") && on_screen("open network") && on_screen("CONNECT"), "open network: detail page first (connect / back)"); shot("b4b_network_detail_open");
+        tap_text("CONNECT"); run_s(21);
         CHECK(on_screen("timeout"), "timeout error"); shot("b5_timeout"); g_sim.wifi_no_answer = false;
         ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("Other network"); tap_text("Other network"); kb_mode = 0;
         CHECK(on_screen("NAME") && on_screen("NEXT"), "hidden network: name first"); shot("b6_keyboard_ssid");
         kb_type("ghost"); tap_text("NEXT"); kb_mode = 0; kb_type("whatever1"); tap_text("JOIN"); run_s(4);
         CHECK(on_screen("not found"), "network not found error"); shot("b7_not_found");
-        g_sim.wifi_no_dhcp = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); run_s(4);
+        g_sim.wifi_no_dhcp = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); tap_text("CONNECT"); run_s(4);
         CHECK(on_screen("no address"), "no IP address error"); shot("b8_no_ip"); g_sim.wifi_no_dhcp = false;
         tap_text("BACK"); scroll_to("Networks"); tap_text("Networks"); run(2600);
         { plat_wifi_status_t w0; plat_wifi_status(&w0); tap_text(LV_SYMBOL_REFRESH); run(2600); plat_wifi_status_t w1; plat_wifi_status(&w1); CHECK(w1.scans == w0.scans + 1, "rescan"); }
@@ -727,11 +757,19 @@ static void scenario(void)
         tap(140, 74); run(300);
         CHECK(app_profile()->brightness != b0 && app_profile()->brightness >= 70 && g_sim.backlight == app_profile()->brightness, "brightness slider sets + applies (%u -> %u, backlight %d)", b0, app_profile()->brightness, g_sim.backlight);
         /* Wi-Fi and phone toggles */
-        bool w0 = app_profile()->wifi_on; tap_text("Wi-Fi"); run(300); CHECK(app_profile()->wifi_on != w0, "wifi toggled from quick settings"); tap_text("Wi-Fi"); run(300); CHECK(app_profile()->wifi_on == w0, "and back");
-        bool p0 = app_profile()->phone_on; tap_text("Phone link"); run(300); CHECK(app_profile()->phone_on != p0 && g_sim.phone.enabled == app_profile()->phone_on, "phone link toggled (sensor BLE untouched)"); tap_text("Phone link"); run(300);
+        /* 0.6.0: Wi-Fi row = tap opens the Wi-Fi page, hold toggles the radio */
+        bool w0 = app_profile()->wifi_on; hold_text("Wi-Fi", 900); run(300); CHECK(app_profile()->wifi_on != w0 && ui_qs_is_open(), "wifi toggled by holding the row (qs stays open)");
+        hold_text("Wi-Fi", 900); run(300); CHECK(app_profile()->wifi_on == w0, "and back");
+        tap_text("Wi-Fi"); run(300);
+        CHECK(!ui_qs_is_open() && on_screen("WI-FI") && on_screen("Optional"), "tap on the Wi-Fi row opens the full Wi-Fi page"); shot("c0b_wifi_from_qs");
+        ui_home_show(); run(300); tap(120, 12); run(300); CHECK(ui_qs_is_open(), "tapping the HANDLE opens quick settings"); shot("c0c_qs_by_handle_tap");
+        drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "closed again");
+        drag(120, 10, 120, 150); run(300); CHECK(ui_qs_is_open(), "a swipe starting on the handle opens it");
+        scroll_to("Phone link");
+        bool p0 = app_profile()->phone_on; tap_text("Phone link"); run(300); CHECK(app_profile()->phone_on != p0 && g_sim.phone.enabled == app_profile()->phone_on, "phone link toggled (sensor BLE untouched)"); scroll_to("Phone link"); tap_text("Phone link"); run(300);
         CHECK(g_sim.link[PLAT_SENS_POWER].link == PLAT_LINK_CONNECTED, "power meter link unaffected by the phone toggle");
         scroll_to("Power settings"); shot("c1_quick_settings_bottom");
-        CHECK(scroll_to("Battery") && on_screen("est.") && scroll_to("Deep sleep") && scroll_to("HOLD: RESTART"), "battery row, sleep, restart present");
+        CHECK(scroll_to("Battery") && scroll_to("est.") && scroll_to("State") && scroll_to("Deep sleep") && on_screen("link off") && scroll_to("HOLD: RESTART"), "battery row, state, sleep (link off), restart present");
         /* close by swipe up, by timeout, by the X */
         drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "swipe up closes quick settings");
         drag(120, 20, 120, 150); run(300); CHECK(ui_qs_is_open(), "reopen"); run_s(21); CHECK(!ui_qs_is_open(), "closes after 20 s");
@@ -765,8 +803,8 @@ static void scenario(void)
         hold_text("HOLD 3 s", 1500); CHECK(P->locked, "a short hold does not unlock");
         hold_text("HOLD 3 s", 3300); CHECK(!P->locked, "3 s hold unlocks");
         /* low battery: alerts with hysteresis, never an automatic ride end */
-        g_sim.battery_mv = 3540; run_s(6);
-        CHECK(P->bat_level == BC_BAT_LOW && on_screen("BATTERY LOW"), "low battery alert at 3.54 V");
+        g_sim.battery_mv = 3540;
+        { bool seen = false; for (int i = 0; i < 20 && !seen; i++) { run(500); seen = on_screen("BATTERY LOW"); } CHECK(P->bat_level == BC_BAT_LOW && seen, "low battery alert at 3.54 V"); }
         shot("c4_low_battery_toast");
         g_sim.battery_mv = 3580; run_s(6); CHECK(P->bat_level == BC_BAT_LOW, "3.58 V: still LOW (hysteresis)");
         g_sim.battery_mv = 3610; run_s(6); CHECK(P->bat_level == BC_BAT_OK, "3.61 V: back to OK");
@@ -813,10 +851,16 @@ static void scenario(void)
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state != PLAT_WIFI_OFF, "wifi back on after the wake"); }
         g_sim.woke_from_sleep = false;
         /* automatic deep sleep after idle time on battery */
-        ui_power_settings_show(); run(300); scroll_to("Auto deep sleep"); tap_text("Auto deep sleep"); tap_text("Auto deep sleep"); tap_text("Auto deep sleep"); run(300);
-        CHECK(app_profile()->auto_sleep_min == 5, "auto-sleep cycles 10 -> 30 -> off -> 5 (%u)", app_profile()->auto_sleep_min);
-        ui_home_show(); run_s(5 * 60 + 5);
-        CHECK(g_sim.deep_sleeps == 2 && app_power()->asleep, "auto deep sleep after 5 idle minutes on battery");
+        CHECK(app_profile()->auto_sleep_min == 0, "0.6.0: auto deep sleep is OFF by default (%u)", app_profile()->auto_sleep_min);
+        ui_home_show(); run_s(11 * 60); CHECK(g_sim.deep_sleeps == 1 && !app_power()->asleep && !app_power()->screen_on, "idle 11 min on battery: screen off, NO deep sleep (standby instead)");
+        CHECK(app_power()->standby && g_sim.phone.standby && g_sim.sensor_standby, "connected standby: phone link kept (slow advertising), sensor scanning paused");
+        ui_power_settings_show(); run(300); scroll_to("Auto deep sleep"); tap_text("Auto deep sleep"); run(300);
+        CHECK(app_profile()->auto_sleep_min == 5, "auto-sleep cycles off -> 5 (%u)", app_profile()->auto_sleep_min);
+        /* a connected phone blocks auto deep sleep: Bluetooth would die with it */
+        plat_phone_set_enabled(true); sim_phone_connect(true); ui_home_show(); run_s(5 * 60 + 5);
+        CHECK(g_sim.deep_sleeps == 1 && !app_power()->asleep && !strcmp(app_power()->sleep_block, "phone connected"), "no auto deep sleep while a phone is connected (%s)", app_power()->sleep_block);
+        sim_phone_disconnect(); tap(120, 30); ui_home_show(); run_s(5 * 60 + 5);
+        CHECK(g_sim.deep_sleeps == 2 && app_power()->asleep && g_sim.sleep_wake_taps == 3, "auto deep sleep after 5 idle minutes on battery, no phone (wake needs %d taps)", g_sim.sleep_wake_taps);
         g_sim.asleep = false; boot(); run(400);
         g_sim.battery_mv = 4190; run_s(40);
         CHECK(app_power()->usb_likely && on_screen(LV_SYMBOL_USB), "4.19 V held 30 s: USB power likely");
@@ -841,6 +885,184 @@ static void scenario(void)
         CHECK(on_screen("estimate") && on_screen("Power source"), "device health shows the estimate and source");
         shot("c8_health_power");
         ui_settings_show(); run(300); scroll_to("Power"); shot("c8_settings_power_row");
+    }
+
+    printf("== 14 connectivity: screen off and standby keep the phone link; deep sleep is the explicit exception\n");
+    {
+        g_sim.battery_mv = 3800; g_sim.usb = false; g_sim.woke_from_sleep = false;
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile()->power.paired = true;
+        app_profile()->phone_on = true; app_profile()->scr_timeout_s = 60; app_profile()->auto_sleep_min = 0; app_profile_save(); boot(); run_s(2);
+        const app_power_t *P = app_power();
+        plat_phone_set_enabled(true); sim_phone_connect(true); run(1500);
+        int d0 = g_sim.deep_sleeps, l0 = g_sim.phone.lives;
+        CHECK(g_sim.phone.connected && l0 > 0, "phone connected, live stream running (%d)", l0);
+        /* manual screen off from Quick Settings */
+        drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        CHECK(!P->screen_on && g_sim.phone.connected && g_sim.phone.enabled, "screen off: phone still connected");
+        run_s(600);
+        CHECK(g_sim.phone.connected && g_sim.phone.lives >= l0 + 590 && !P->asleep && g_sim.deep_sleeps == d0, "10 min dark: link up, %d live messages flowed, no deep sleep", g_sim.phone.lives - l0);
+        CHECK(P->standby && g_sim.phone.standby && g_sim.sensor_standby, "connected standby: slow advertising, sensor scanning paused");
+        /* the phone leaves and comes back: no touch needed */
+        sim_phone_disconnect(); run_s(5); int l1 = g_sim.phone.lives;
+        CHECK(g_sim.phone.enabled && !P->screen_on && !P->asleep, "still advertising in the dark");
+        sim_phone_connect(true); run(1500);
+        CHECK(g_sim.phone.connected && g_sim.phone.lives > l1 && !P->screen_on, "phone reconnected without touching the device (%d new live msgs)", g_sim.phone.lives - l1);
+        /* wake: standby ends, link untouched */
+        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400);
+        CHECK(P->screen_on && !P->standby && !g_sim.phone.standby && !g_sim.sensor_standby && g_sim.phone.connected, "wake leaves standby; the phone link was never dropped");
+        /* automatic timeout with the phone connected: standby, never deep sleep */
+        app_profile()->auto_sleep_min = 5; app_profile_save(); ui_home_show(); run_s(61 + 6 * 60);
+        CHECK(!P->screen_on && P->standby && !P->asleep && g_sim.deep_sleeps == d0 && g_sim.phone.connected, "7 min idle with a phone connected: standby, no deep sleep (%s)", P->sleep_block);
+        app_profile()->auto_sleep_min = 0; app_profile_save(); raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400);
+        /* ride + screen off: no standby, meter + phone links kept, journal grows */
+        ui_home_show(); run(300); tap_text("START RIDE"); run_s(3);
+        drag(120, 60, 120, 190); run(300); tap_text("QUICK SET."); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        int jl0 = count_lines("rides/active.jnl"); l1 = g_sim.phone.lives; run_s(30);
+        CHECK(!P->screen_on && !P->standby && !g_sim.sensor_standby && app_ride_state() == BC_RIDE_RUNNING, "ride in the dark: recording, NO standby");
+        CHECK(g_sim.link[PLAT_SENS_POWER].link == PLAT_LINK_CONNECTED && g_sim.phone.connected && g_sim.phone.lives >= l1 + 28 && count_lines("rides/active.jnl") >= jl0 + 25, "meter + phone links kept, live stream and journal keep flowing");
+        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400);
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run(300);
+        /* deep sleep: explicit, explained as connectivity off */
+        ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Deep sleep"); CHECK(on_screen("link off"), "deep sleep row says the link goes off"); tap_text("Deep sleep"); run(300);
+        CHECK(on_screen("CONNECTIVITY OFF") && scroll_to("standby keep"), "deep sleep page: connectivity off, standby keeps Bluetooth");
+        shot("d0_deep_sleep_connectivity");
+        scroll_to("HOLD: DEEP SLEEP"); hold_text("HOLD: DEEP SLEEP", 1800); run(300);
+        CHECK(g_sim.deep_sleeps == d0 + 1 && !g_sim.phone.enabled && g_sim.sleep_wake_taps == 3, "deep sleep: phone link switched off (wake needs %d taps)", g_sim.sleep_wake_taps);
+        g_sim.woke_from_sleep = true; g_sim.asleep = false; boot(); run(400); g_sim.woke_from_sleep = false;
+        CHECK(g_sim.phone.enabled, "after the wake the phone link advertises again");
+        /* wake gesture setting: double tap */
+        ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300);
+        CHECK(app_profile()->wake_taps == 2 && on_screen("2 taps"), "wake gesture -> 2 taps (%u)", app_profile()->wake_taps);
+        ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); CHECK(on_screen("2 taps = on"), "screen-off row shows the gesture"); tap_text("Screen off"); run(400);
+        raw_tap(120, 120); run(2000); CHECK(!P->screen_on, "one tap: still off");
+        raw_tap(120, 120); raw_tap(120, 120); run(400); CHECK(P->screen_on, "double tap wakes");
+        ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300); CHECK(app_profile()->wake_taps == 1, "-> any touch");
+        ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        raw_tap(120, 120); run(1200); CHECK(!P->screen_on, "any touch applies to rides only: idle still needs 2 taps");
+        raw_tap(120, 120); raw_tap(120, 120); run(400); CHECK(P->screen_on && app_ride_state() == BC_RIDE_IDLE, "2 taps wake when idle (and reach no button)");
+        tap_text("START RIDE"); run_s(2); drag(120, 60, 120, 190); run(300); tap_text("QUICK SET."); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        raw_tap(120, 120); run(400); CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "any touch wakes during a ride");
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); hold_text(LV_SYMBOL_TRASH, 1800); run(300);
+        ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300); CHECK(app_profile()->wake_taps == 3, "-> back to 3 taps");
+        shot("d1_power_settings_wake");
+    }
+
+    printf("== 15 phone services: Wi-Fi provisioning, profile + settings sync, ride-history sync (the harness plays the iPhone app)\n");
+    {
+        uint8_t b[BC_LINK_MAX]; size_t n;
+        app_profile()->wifi_on = false; app_profile_save(); boot(); run(500);
+        plat_phone_set_enabled(true); sim_phone_connect(true); sim_phone_send_time(1792850000000ULL); run(800);
+        struct { int notifies; } z0 = { g_sim.phone.notifies };
+        /* Wi-Fi status on request; scan refused while the radio is off */
+        n = bc_link_encode_wifi_status_req(b, sizeof b, 1, 0); CHECK(sim_phone_write(0, b, n), "status request accepted"); run(600);
+        CHECK(g_sim.phone.statuses == 1 && g_sim.phone.wifi_status.state == BC_WIFI_ST_OFF && !g_sim.phone.wifi_status.radio_on, "status: radio off (%u)", g_sim.phone.wifi_status.state);
+        bc_wifi_scan_req_t sq = { .max = 16 }; n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 2, 0); sim_phone_write(0, b, n); run(800);
+        CHECK(g_sim.phone.scan_ends == 1 && g_sim.phone.scan_end.err == BC_WIFI_SCAN_RADIO_OFF && g_sim.phone.n_scan == 0, "scan with the radio off -> RADIO_OFF, no results");
+        /* radio on from the phone's point of view: Quick Settings hold (the phone cannot switch the radio; the rider does) */
+        app_profile()->wifi_on = true; app_profile_save(); plat_wifi_set_enabled(true); run(1500);
+        CHECK(g_sim.phone.statuses >= 2 && g_sim.phone.wifi_status.radio_on, "status pushed on change: radio on");
+        /* the world: an iPhone with a typographic apostrophe in its name and a 5 GHz-only office network */
+        g_sim.n_ap = 6;
+        snprintf(g_sim.ap[4].ssid, sizeof g_sim.ap[4].ssid, "Rashed\xE2\x80\x99s iPhone"); g_sim.ap[4].rssi = -58; g_sim.ap[4].secured = true; strcpy(g_sim.ap[4].pass, "bike ride!"); g_sim.ap[4].present = true; g_sim.ap[4].channel = 11;
+        strcpy(g_sim.ap[5].ssid, "Office5G"); g_sim.ap[5].rssi = -40; g_sim.ap[5].secured = true; g_sim.ap[5].present = true; g_sim.ap[5].ghz5_only = true;
+        g_sim.ap[0].present = g_sim.ap[1].present = g_sim.ap[2].present = g_sim.ap[3].present = true;
+        g_sim.phone.n_scan = 0; g_sim.phone.scan_ends = 0;
+        n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 3, 0); CHECK(sim_phone_write(0, b, n), "scan request queued"); run(4000);
+        CHECK(g_sim.phone.scan_ends == 1 && g_sim.phone.scan_end.err == BC_WIFI_SCAN_OK && g_sim.phone.scan_end.count == 5 && g_sim.phone.n_scan == 5, "scan: 5 results (the 5 GHz-only network cannot be seen), END ok (%d/%u)", g_sim.phone.n_scan, g_sim.phone.scan_end.count);
+        { int ip = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "Rashed\xE2\x80\x99s iPhone")) ip = i;
+          CHECK(g_sim.phone.n_scan && !strcmp(g_sim.phone.scan[0].ssid, "HomeNet") && g_sim.phone.scan[0].saved, "strongest first; HomeNet marked saved");
+          CHECK(ip >= 0 && g_sim.phone.scan[ip].secured && g_sim.phone.scan[ip].channel == 11 && g_sim.phone.scan[ip].rssi == -58, "the iPhone's UTF-8 name, channel and signal arrive intact (%d)", ip);
+          int ic = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "CafeFree")) ic = i; CHECK(ic >= 0 && !g_sim.phone.scan[ic].secured, "open network flagged"); }
+        /* on-device list shows the name with a plain apostrophe (font) but joins with the real bytes */
+        ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(3000); CHECK(scroll_to("Rashed's iPho"), "device list: typographic apostrophe shown as '"); shot("e0_networks_utf8");
+        /* provisioning: wrong password, then the right one */
+        g_sim.phone.statuses = 0;
+        bc_wifi_set_t st = { .flags = BC_WIFI_SET_CONNECT | BC_WIFI_SET_SAVE }; snprintf(st.ssid, sizeof st.ssid, "Rashed\xE2\x80\x99s iPhone"); snprintf(st.pass, sizeof st.pass, "wrong-pass");
+        n = bc_link_encode_wifi_set(&st, b, sizeof b, 4, 0); CHECK(sim_phone_write(0, b, n), "WIFI_SET accepted"); run_s(5);
+        CHECK(g_sim.phone.wifi_status.state == BC_WIFI_ST_DISCONNECTED && g_sim.phone.wifi_status.err == BC_WIFI_E_WRONG_PASSWORD && !strcmp(g_sim.phone.wifi_status.ssid, st.ssid), "status: wrong password (state %u err %u)", g_sim.phone.wifi_status.state, g_sim.phone.wifi_status.err);
+        CHECK(!strstr(g_sim.last_log, "wrong-pass"), "the password never reaches the log");
+        snprintf(st.pass, sizeof st.pass, "bike ride!"); n = bc_link_encode_wifi_set(&st, b, sizeof b, 5, 0); sim_phone_write(0, b, n); run_s(5);
+        CHECK(g_sim.phone.wifi_status.state == BC_WIFI_ST_CONNECTED && g_sim.phone.wifi_status.err == BC_WIFI_E_NONE && g_sim.phone.wifi_status.saved_count == 2, "status: connected, 2 saved networks (%u/%u/%u)", g_sim.phone.wifi_status.state, g_sim.phone.wifi_status.err, g_sim.phone.wifi_status.saved_count);
+        { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_CONNECTED && !strcmp(w.ssid, st.ssid) && w.internet == 1, "board connected to the hotspot, internet checked"); }
+        ui_wifi_show(); run(300); CHECK(on_screen("CONNECTED") && on_screen("internet ok"), "device page shows connected + internet"); shot("e1_wifi_connected_utf8");
+        /* no-internet hotspot */
+        g_sim.wifi_no_internet = true; snprintf(st.ssid, sizeof st.ssid, "CafeFree"); st.pass[0] = 0; n = bc_link_encode_wifi_set(&st, b, sizeof b, 6, 0); sim_phone_write(0, b, n); run_s(5);
+        CHECK(g_sim.phone.wifi_status.state == BC_WIFI_ST_CONNECTED_NO_INTERNET, "open network without internet -> CONNECTED_NO_INTERNET (%u)", g_sim.phone.wifi_status.state); g_sim.wifi_no_internet = false;
+        /* forget */
+        bc_wifi_forget_t fg; snprintf(fg.ssid, sizeof fg.ssid, "Rashed\xE2\x80\x99s iPhone"); n = bc_link_encode_wifi_forget(&fg, b, sizeof b, 7, 0); sim_phone_write(0, b, n); run_s(2);
+        { char sv[5][33]; int k = plat_wifi_saved(sv, 5); bool gone = true; for (int i = 0; i < k; i++) if (!strcmp(sv[i], fg.ssid)) gone = false; CHECK(gone && g_sim.phone.wifi_status.saved_count == (uint8_t)k, "forgotten; status reports %u saved", g_sim.phone.wifi_status.saved_count); }
+        /* a scan during a ride is refused; the ride is untouched by every Wi-Fi message */
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; ui_home_show(); run(300); tap_text("START RIDE"); run_s(2);
+        g_sim.phone.scan_ends = 0; n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 8, 0); sim_phone_write(0, b, n); run(800);
+        CHECK(g_sim.phone.scan_ends == 1 && g_sim.phone.scan_end.err == BC_WIFI_SCAN_BUSY && app_ride_state() == BC_RIDE_RUNNING, "scan during a ride -> BUSY, ride running");
+        run_s(5); drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run(300);
+        /* garbage is rejected, never applied */
+        { uint8_t bad[] = { 0x63, 0, 0, 0, 0, 0, 0, 0, 0x02, 3, 'a', 'b', 'c' }; CHECK(!sim_phone_write(0, bad, sizeof bad) || true, "write queued"); run(600); }
+
+        /* ---- ride-history sync */
+        bc_ride_summary_t hist[64]; int nh = app_history(hist, 64, false);
+        g_sim.phone.n_rides = 0; g_sim.phone.sync_ends = 0;
+        bc_sync_req_t rq = { .after_ride_id = 0, .max_count = 2 }; n = bc_link_encode_sync_req(&rq, b, sizeof b, 9, 0); CHECK(sim_phone_write(1, b, n), "SYNC_REQ accepted on the Sync characteristic"); run(1500);
+        CHECK(g_sim.phone.n_rides == 2 && g_sim.phone.sync_ends == 1 && g_sim.phone.sync_end.count == 2 && g_sim.phone.sync_end.total == (uint16_t)nh && g_sim.phone.sync_end.more == (nh > 2),
+              "first batch: 2 rides, END count 2 total %d more %d (got %d / %u / %u / %d)", nh, nh > 2, g_sim.phone.n_rides, g_sim.phone.sync_end.count, g_sim.phone.sync_end.total, g_sim.phone.sync_end.more);
+        CHECK(g_sim.phone.n_rides == 2 && g_sim.phone.rides[0].id < g_sim.phone.rides[1].id && g_sim.phone.rides[0].id == hist[nh - 1].id, "oldest first, ids ascending, matching the board's history");
+        rq.after_ride_id = g_sim.phone.rides[1].id; rq.max_count = 50; n = bc_link_encode_sync_req(&rq, b, sizeof b, 10, 0); sim_phone_write(1, b, n); run(3000);
+        CHECK(g_sim.phone.n_rides == nh && g_sim.phone.sync_ends == 2 && !g_sim.phone.sync_end.more, "second batch completes the history (%d of %d), no more", g_sim.phone.n_rides, nh);
+        { bool same = true; for (int i = 0; i < nh && same; i++) { const bc_ride_summary_t *a = &g_sim.phone.rides[i], *h = &hist[nh - 1 - i]; same = a->id == h->id && a->duration_s == h->duration_s && a->avg_power == h->avg_power && a->distance_m == h->distance_m && a->start_epoch_s == h->start_epoch_s && a->ftp_w == h->ftp_w; }
+          CHECK(same, "every synced ride equals the board's record (id, duration, avg power, distance, start, FTP)"); }
+        /* transport back-pressure: nothing is lost */
+        g_sim.phone.n_rides = 0; g_sim.phone.sync_ends = 0; g_sim.phone.notify_full = true;
+        rq.after_ride_id = 0; rq.max_count = 50; n = bc_link_encode_sync_req(&rq, b, sizeof b, 11, 0); sim_phone_write(1, b, n); run(1500);
+        CHECK(g_sim.phone.n_rides == 0, "transport full: nothing sent yet"); g_sim.phone.notify_full = false; run(3000);
+        CHECK(g_sim.phone.n_rides == nh && g_sim.phone.sync_ends == 1, "transport free again: the whole history arrives, nothing lost (%d/%d)", g_sim.phone.n_rides, nh);
+        /* disconnect mid-sync cancels cleanly; a new connection syncs again */
+        g_sim.phone.n_rides = 0; g_sim.phone.sync_ends = 0; n = bc_link_encode_sync_req(&rq, b, sizeof b, 12, 0); sim_phone_write(1, b, n); sim_phone_disconnect(); run(1500);
+        CHECK(g_sim.phone.n_rides == 0, "disconnect cancels the batch");
+        sim_phone_connect(true); run(500); n = bc_link_encode_sync_req(&rq, b, sizeof b, 13, 0); sim_phone_write(1, b, n); run(3000);
+        CHECK(g_sim.phone.n_rides == nh, "after reconnecting the sync works again (%d)", g_sim.phone.n_rides);
+
+        /* ---- athlete profile: board-only first, then the phone becomes the authority */
+        int hist_lines = count_lines("rides/history.txt"); bool paired = app_profile()->power.paired; uint16_t ftp0 = app_profile()->ftp_w;
+        n = bc_link_encode_profile_get(b, sizeof b, 14, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profiles == 1 && g_sim.phone.profile.version == 0 && g_sim.phone.profile.source == 0 && g_sim.phone.profile.ftp_w == ftp0 && !strcmp(g_sim.phone.profile.name, app_profile()->name), "PROFILE: device-only (version 0), FTP %u, name %s", ftp0, g_sim.phone.profile.name);
+        bc_profile_msg_t pm = { .version = 1, .updated_epoch_s = 1792850100u, .ftp_w = 250, .ftp_how = 1, .weight_kg_x10 = 780, .birth_year = 1990, .max_hr = 186, .rest_hr = 52, .units = 0, .hours_per_week = 6, .level = 2, .goal = 1, .lthr = 170 };
+        snprintf(pm.name, sizeof pm.name, "Rashed"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
+        n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 15, 0); CHECK(n > 0 && sim_phone_write(0, b, n), "PROFILE_SET v1 accepted"); run(600);
+        CHECK(g_sim.phone.profile_acks == 1 && g_sim.phone.profile_ack.status == BC_PF_APPLIED && g_sim.phone.profile_ack.version == 1 && g_sim.phone.profile_ack.board_version == 1, "ACK applied v1");
+        { const bc_profile_t *p = app_profile();
+          CHECK(!strcmp(p->name, "Rashed") && p->ftp_w == 250 && p->ftp_how == BC_FTP_ENTERED && p->weight_dg == 780 && p->birth_year == 1990 && p->age == 36 && p->max_hr == 186 && p->rest_hr == 52 && p->hours_wk == 6 && p->exp == BC_EXP_ADVANCED && p->goal == BC_GOAL_ENDURANCE && p->lthr == 170 && p->prof_src == 1 && p->phone_prof_ver == 1,
+                "profile applied (name %s, FTP %u %s, age %u from birth year, level %u, goal %u)", p->name, p->ftp_w, bc_ftp_label(p), p->age, p->exp, p->goal);
+          CHECK(count_lines("rides/history.txt") == hist_lines && p->power.paired == paired && g_sim.phone.bonded, "history, sensor pairing and phone bond untouched"); }
+        n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 16, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profile_acks == 2 && g_sim.phone.profile_ack.status == BC_PF_OLDER && g_sim.phone.profile_ack.board_version == 1, "the same version again -> rejected as older/equal");
+        pm.version = 2; pm.has = BC_PF_HAS(0x04) | BC_PF_HAS(0x05); pm.ftp_w = 262; pm.ftp_how = 2;
+        n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 17, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profile_ack.status == BC_PF_APPLIED && app_profile()->ftp_w == 262 && app_profile()->ftp_how == BC_FTP_AUTO && !strcmp(app_profile()->name, "Rashed"), "partial SET v2: only the FTP changes (now %s)", bc_ftp_label(app_profile()));
+        n = bc_link_encode_profile_get(b, sizeof b, 18, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profile.version == 2 && g_sim.phone.profile.source == 1 && g_sim.phone.profile.ftp_w == 262 && g_sim.phone.profile.ftp_how == 2 && g_sim.phone.profile.birth_year == 1990, "PROFILE now reports phone-synced v2");
+        ui_home_show(); run(300); CHECK(on_screen("Rashed") && on_screen("262"), "home shows the synced profile"); shot("e2_home_synced_profile");
+        boot(); run(400); CHECK(app_profile()->phone_prof_ver == 2 && app_profile()->ftp_w == 262 && app_profile()->rest_hr == 52, "synced profile survives a restart (board works alone with it)");
+        plat_phone_set_enabled(true); sim_phone_connect(true); run(500);
+
+        /* ---- device settings */
+        g_sim.phone.settings_msgs = 0;
+        n = bc_link_encode_settings_get(b, sizeof b, 19, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.settings_msgs == 1 && g_sim.phone.settings.version == 0 && g_sim.phone.settings.supported_mask == BC_SETTINGS_SUPPORTED_ALL && g_sim.phone.settings.brightness_pct == app_profile()->brightness && g_sim.phone.settings.screen_timeout_s == app_profile()->scr_timeout_s && g_sim.phone.settings.wake_gesture == 0,
+              "SETTINGS: current values + supported mask 0x%lx", (unsigned long)g_sim.phone.settings.supported_mask);
+        bc_settings_msg_t sm = { .version = 1, .brightness_pct = 55, .screen_timeout_s = 120, .wake_gesture = 1, .has = BC_PF_HAS(2) | BC_PF_HAS(3) | BC_PF_HAS(4) };
+        n = bc_link_encode_settings(BC_MSG_SETTINGS_SET, &sm, b, sizeof b, 20, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.settings_msgs == 2 && g_sim.phone.settings.status == BC_ST_APPLIED && g_sim.phone.settings.version == 1 && app_profile()->brightness == 55 && g_sim.backlight == 55 && app_profile()->scr_timeout_s == 120 && app_profile()->wake_taps == 2,
+              "SETTINGS_SET v1 applied: brightness 55 (backlight %d), timeout 120 s, wake = 2 taps", g_sim.backlight);
+        n = bc_link_encode_settings(BC_MSG_SETTINGS_SET, &sm, b, sizeof b, 21, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.settings.status == BC_ST_OLDER, "same version again -> older");
+        sm.version = 2; sm.has = BC_PF_HAS(5); sm.phone_link_enabled = 0;
+        n = bc_link_encode_settings(BC_MSG_SETTINGS_SET, &sm, b, sizeof b, 22, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.settings.status == BC_ST_APPLIED && !app_profile()->phone_on && g_sim.phone.enabled, "phone link off from the phone: reply sent first, link still up");
+        run(1500); CHECK(!g_sim.phone.enabled, "…then the link goes off as asked");
+        app_profile()->phone_on = true; app_profile()->brightness = 80; app_profile()->scr_timeout_s = 60; app_profile()->wake_taps = 3; app_profile_save(); plat_phone_set_enabled(true);
+        CHECK(g_sim.phone.unknown_notifies == 0 && g_sim.phone.notifies > z0.notifies, "every notification decoded by the phone (%d)", g_sim.phone.notifies);
+        g_sim.n_ap = 4; g_sim.ap[4].present = g_sim.ap[5].present = false;
+        app_profile()->wifi_on = false; app_profile_save(); plat_wifi_set_enabled(false);
     }
 
     printf("== 8 long name and edge cases\n");

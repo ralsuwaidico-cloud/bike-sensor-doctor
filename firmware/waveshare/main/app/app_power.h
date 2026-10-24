@@ -31,12 +31,22 @@ typedef struct {
     int hours_left_x10;          /* for the current mode, -1 unknown */
     uint32_t last_touch_ms, screen_off_ms, wake_until_ms;
     uint32_t screen_offs, wakes, lock_count, sleeps_requested, restarts_requested, auto_offs, cue_wakes;
+    uint32_t taps_rejected;      /* presses on the dark screen that were not accepted as taps (slides, holds, bursts) */
     bool woke_from_sleep;        /* this boot was a wake from deep sleep */
+    bool standby;                /* 0.6.0 connected standby: screen off, no ride, Bluetooth link kept, sensor scanning paused */
+    uint32_t standbys;
+    char sleep_block[40];        /* why auto deep sleep is not happening right now ("" = nothing blocks it) */
 } app_power_t;
 
 void app_power_init(void);                       /* after app_init(); reads the profile settings */
 void app_power_tick(uint32_t now_ms);            /* every 250 ms from the UI timer */
 void app_power_touch(bool pressed, uint32_t now_ms);   /* every press/release seen by the touch layer */
+void app_power_touch_xy(bool pressed, int x, int y, uint32_t now_ms);   /* same, with the position (slide rejection) */
+void app_power_settle(uint32_t now_ms);                 /* screen off, finger up: lets a completed gesture fire (call every <= 50 ms) */
+/** Taps needed to wake the dark screen right now: profile wake_taps, but "any touch" (1) only during a ride (double tap otherwise). */
+int app_power_wake_taps_now(void);
+const char *app_power_wake_name(int taps);              /* "3 taps" / "2 taps" / "any touch" */
+int app_power_wake_next(int taps);                      /* Settings cycle 3 -> 2 -> 1 -> 3 */
 const app_power_t *app_power(void);
 
 void app_power_screen_off(void);                 /* allowed any time, also during a ride (recording continues) */
@@ -44,7 +54,11 @@ void app_power_screen_wake(void);
 void app_power_lock(void);
 void app_power_unlock(void);
 bool app_power_can_sleep(void);                  /* false while a ride runs or is paused */
-bool app_power_sleep(void);                      /* journal + profile saved, radios off, deep sleep; false if refused */
+bool app_power_sleep(void);
+/** Settings from the phone switched the phone link off: apply it after the reply has been sent (~1 s). */
+void app_power_phone_link_deferred_off(void);
+/** Human text for the three power states (Quick Settings / Device Health). */
+const char *app_power_state_text(void);                      /* journal + profile saved, radios off, deep sleep; false if refused */
 void app_power_restart(void);                    /* journal + profile saved, then restart */
 /** Pending one-line alert for a toast (low battery etc.); returns false when none. */
 bool app_power_take_alert(char *buf, uint32_t cap);

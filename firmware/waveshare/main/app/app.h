@@ -54,6 +54,7 @@ bool app_ride_is_demo(void);
 int app_coach_inband_pct(void);                  /* -1 until a minute has been judged */
 
 /* history (newest first). demo=true reads the separate demo history. */
+#define APP_HIST_REAL "rides/history.txt"       /* one line per saved real ride (bc_summary_to_line); streamed by app_psvc for the phone */
 int app_history(bc_ride_summary_t *out, int max, bool demo);
 bool app_history_clear(bool demo);
 

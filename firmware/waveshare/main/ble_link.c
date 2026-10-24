@@ -12,6 +12,7 @@
 #include "bc_link.h"
 #include "plat.h"
 #include "hw.h"
+#include "app_psvc.h"
 
 static const char *TAG = "link";
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -34,6 +35,14 @@ static bc_ctrl_req_t s_ctrl; static bool s_ctrl_pending;
 static uint8_t s_live_buf[BC_LINK_MAX]; static size_t s_live_len; static bool s_live_new;
 static uint8_t s_resp_buf[BC_LINK_MAX]; static size_t s_resp_len; static bool s_resp_new;
 static uint16_t s_seq;
+static bool s_standby, s_sync_sub;
+/* 0.6.0 phone services: writes from the phone wait here for the app task (app_psvc_pump); replies wait here for the BLE task */
+typedef struct { uint8_t chr, len, b[BC_LINK_MAX]; } svc_msg_t;
+#define SVC_Q 12
+static svc_msg_t s_svc_in[SVC_Q]; static int s_svc_in_n;
+static svc_msg_t s_svc_out[SVC_Q]; static int s_svc_out_n;
+static uint32_t s_svc_dropped;
+static uint8_t s_sync_end[32]; static size_t s_sync_end_len;
 
 static void set_state(plat_phone_state_t st) { LOCK(); s_st.state = st; UNLOCK(); }
 
@@ -56,7 +65,9 @@ static void adv_start(void)
     sr.name = (const uint8_t *)name; sr.name_len = (uint8_t)strlen(name); sr.name_is_complete = 1;
     int rc = ble_gap_adv_set_fields(&f);
     if (rc == 0) rc = ble_gap_adv_rsp_set_fields(&sr);
-    struct ble_gap_adv_params p = { .conn_mode = BLE_GAP_CONN_MODE_UND, .disc_mode = BLE_GAP_DISC_MODE_GEN, .itvl_min = 0x140, .itvl_max = 0x200 };
+    /* active: 200-320 ms; connected standby: ~1 s (the bonded phone still finds us without any touch, at a fraction of the power) */
+    struct ble_gap_adv_params p = { .conn_mode = BLE_GAP_CONN_MODE_UND, .disc_mode = BLE_GAP_DISC_MODE_GEN,
+                                    .itvl_min = s_standby ? 0x0640 : 0x140, .itvl_max = s_standby ? 0x0700 : 0x200 };
     if (rc == 0) rc = ble_gap_adv_start(s_own, NULL, BLE_HS_FOREVER, &p, gap_cb, NULL);
     if (rc == 0 || rc == BLE_HS_EALREADY) { s_adv = true; set_state(PLAT_PHONE_ADVERTISING); }
     else ESP_LOGW(TAG, "advertising start failed %d", rc);
@@ -93,25 +104,41 @@ static int chr_access(uint16_t conn, uint16_t attr, struct ble_gatt_access_ctxt 
     uint8_t buf[BC_LINK_MAX];
     if (c->op == BLE_GATT_ACCESS_OP_READ_CHR) {
         if (attr == h_info) {
-            bc_info_t i = { .ver_major = BC_LINK_VER_MAJOR, .ver_minor = BC_LINK_VER_MINOR, .caps = BC_CAP_LIVE | BC_CAP_GPS_IN | BC_CAP_HR_IN | BC_CAP_WEATHER_IN | BC_CAP_RIDE_CTRL | BC_CAP_TIME_SYNC, .max_msg = BC_LINK_MAX };
+            bc_info_t i = { .ver_major = BC_LINK_VER_MAJOR, .ver_minor = BC_LINK_VER_MINOR,
+                            .caps = BC_CAP_LIVE | BC_CAP_GPS_IN | BC_CAP_HR_IN | BC_CAP_WEATHER_IN | BC_CAP_RIDE_CTRL | BC_CAP_TIME_SYNC |
+                                    BC_CAP_RIDE_SYNC | BC_CAP_WIFI_PROV | BC_CAP_PROFILE_SYNC | BC_CAP_SETTINGS,
+                            .max_msg = BC_LINK_MAX };
             snprintf(i.fw, sizeof i.fw, "%.23s", esp_app_get_description()->version);
             snprintf(i.name, sizeof i.name, "%.23s", ble_svc_gap_device_name());
+            i.has_device_id = plat_device_id(i.device_id);
             size_t n = bc_link_encode_info(&i, buf, sizeof buf);
             return os_mbuf_append(c->om, buf, n) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
         }
         if (attr == h_live) { LOCK(); size_t n = s_live_len; memcpy(buf, s_live_buf, n); UNLOCK(); return os_mbuf_append(c->om, buf, n) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES; }
         if (attr == h_ctrl) { LOCK(); size_t n = s_resp_len; memcpy(buf, s_resp_buf, n); UNLOCK(); return os_mbuf_append(c->om, buf, n) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES; }
-        return 0;   /* sync / events: empty until Phase 5 */
+        if (attr == h_sync) { LOCK(); size_t n = s_sync_end_len; memcpy(buf, s_sync_end, n); UNLOCK(); return os_mbuf_append(c->om, buf, n) == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES; }   /* last SYNC_END */
+        return 0;   /* events: reserved */
     }
     if (c->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
         int n = write_in(c->om, buf, sizeof buf);
         if (n < 0) { LOCK(); s_st.rx_rejected++; UNLOCK(); return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN; }
         if (attr == h_input) { handle_input(buf, (size_t)n); return 0; }
-        if (attr == h_ctrl) {
+        if (attr == h_ctrl && n >= 1 && buf[0] == BC_MSG_CTRL_REQ) {
             bc_ctrl_req_t q;
             LOCK();
             if (bc_link_decode_ctrl_req(buf, (size_t)n, &q)) { s_ctrl = q; s_ctrl_pending = true; s_st.rx_msgs++; s_last_rx_ms = hw_millis(); }
             else s_st.rx_rejected++;
+            UNLOCK();
+            return 0;
+        }
+        if (attr == h_ctrl || attr == h_sync) {
+            /* 0.6.0 phone services (Wi-Fi provisioning, profile/settings, ride-history sync): encrypted links only; the app task
+               decodes and applies them (app_psvc) — nothing is parsed here beyond the type byte */
+            if (!s_encrypted) { LOCK(); s_st.rx_rejected++; UNLOCK(); return BLE_ATT_ERR_INSUFFICIENT_AUTHEN; }
+            if (n < BC_LINK_HDR || n > BC_LINK_MAX) { LOCK(); s_st.rx_rejected++; UNLOCK(); return BLE_ATT_ERR_INVALID_ATTR_VALUE_LEN; }
+            LOCK();
+            if (s_svc_in_n < SVC_Q) { svc_msg_t *m = &s_svc_in[s_svc_in_n++]; m->chr = attr == h_sync ? 1 : 0; m->len = (uint8_t)n; memcpy(m->b, buf, (size_t)n); s_st.rx_msgs++; s_last_rx_ms = hw_millis(); }
+            else { s_svc_dropped++; s_st.rx_rejected++; }
             UNLOCK();
             return 0;
         }
@@ -157,9 +184,10 @@ void ble_link_configure_security(void)
 static void on_disconnect(void)
 {
     LOCK();
-    s_conn = BLE_HS_CONN_HANDLE_NONE; s_encrypted = s_live_sub = s_ctrl_sub = false; s_st.passkey = 0; s_st.rssi = 0;
-    s_live_new = s_resp_new = false;
+    s_conn = BLE_HS_CONN_HANDLE_NONE; s_encrypted = s_live_sub = s_ctrl_sub = s_sync_sub = false; s_st.passkey = 0; s_st.rssi = 0;
+    s_live_new = s_resp_new = false; s_svc_in_n = 0; s_svc_out_n = 0;
     UNLOCK();
+    app_psvc_on_disconnect();
     set_state(s_enabled ? PLAT_PHONE_ADVERTISING : PLAT_PHONE_OFF);
     s_adv = false;
     adv_start();
@@ -214,6 +242,7 @@ static int gap_cb(struct ble_gap_event *ev, void *arg)
         LOCK();
         if (ev->subscribe.attr_handle == h_live) s_live_sub = ev->subscribe.cur_notify;
         if (ev->subscribe.attr_handle == h_ctrl) s_ctrl_sub = ev->subscribe.cur_notify;
+        if (ev->subscribe.attr_handle == h_sync) s_sync_sub = ev->subscribe.cur_notify;
         UNLOCK();
         return 0;
     case BLE_GAP_EVENT_MTU:
@@ -245,6 +274,19 @@ void ble_link_tick(void)
     if (s_encrypted && s_ctrl_sub && s_resp_new) { n = s_resp_len; memcpy(buf, s_resp_buf, n); s_resp_new = false; resp = true; }
     UNLOCK();
     if (resp && n) { struct os_mbuf *om = ble_hs_mbuf_from_flat(buf, (uint16_t)n); if (om && ble_gatts_notify_custom(s_conn, h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); } }
+    /* phone-service replies: all that are queued, each on its characteristic (subscribed or not: a read of Sync returns the last END) */
+    for (int guard = 0; guard < SVC_Q; guard++) {
+        svc_msg_t m; bool have = false;
+        LOCK();
+        if (s_svc_out_n && s_encrypted) { m = s_svc_out[0]; s_svc_out_n--; memmove(&s_svc_out[0], &s_svc_out[1], sizeof m * (size_t)s_svc_out_n); have = true; }
+        else if (s_svc_out_n) s_svc_out_n = 0;
+        UNLOCK();
+        if (!have) break;
+        bool sub = m.chr ? s_sync_sub : s_ctrl_sub;
+        if (!sub) continue;
+        struct os_mbuf *om = ble_hs_mbuf_from_flat(m.b, m.len);
+        if (om && ble_gatts_notify_custom(s_conn, m.chr ? h_sync : h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); }
+    }
     static uint32_t t; uint32_t now = hw_millis();
     if (now - t > 2000) { t = now; int8_t r; if (ble_gap_conn_rssi(s_conn, &r) == 0) { LOCK(); s_st.rssi = r; UNLOCK(); } }
 }
@@ -291,6 +333,36 @@ void plat_phone_ctrl_respond(const bc_ctrl_resp_t *r)
     uint8_t buf[BC_LINK_MAX];
     size_t n = bc_link_encode_ctrl_resp(r, buf, sizeof buf, ++s_seq, hw_millis());
     LOCK(); memcpy(s_resp_buf, buf, n); s_resp_len = n; s_resp_new = n > 0; UNLOCK();
+}
+
+int plat_phone_take_svc(uint8_t *chr, uint8_t *buf, size_t cap)
+{
+    int n = 0;
+    LOCK();
+    if (s_svc_in_n) { svc_msg_t *m = &s_svc_in[0]; n = m->len <= cap ? m->len : (int)cap; *chr = m->chr; memcpy(buf, m->b, (size_t)n); s_svc_in_n--; memmove(&s_svc_in[0], &s_svc_in[1], sizeof *m * (size_t)s_svc_in_n); }
+    UNLOCK();
+    return n;
+}
+
+bool plat_phone_notify_svc(uint8_t chr, const uint8_t *buf, size_t n)
+{
+    if (n == 0 || n > BC_LINK_MAX) return true;                      /* nothing to send */
+    bool ok;
+    LOCK();
+    if (chr == 1 && buf[0] == BC_MSG_SYNC_END && n <= sizeof s_sync_end) { memcpy(s_sync_end, buf, n); s_sync_end_len = n; }
+    if (s_conn == BLE_HS_CONN_HANDLE_NONE || !s_encrypted) ok = true;  /* nobody to notify: dropped, like the radio would */
+    else if (s_svc_out_n < SVC_Q) { svc_msg_t *m = &s_svc_out[s_svc_out_n++]; m->chr = chr; m->len = (uint8_t)n; memcpy(m->b, buf, n); ok = true; }
+    else ok = false;
+    UNLOCK();
+    return ok;
+}
+
+void plat_phone_set_standby(bool standby)
+{
+    if (s_standby == standby) return;
+    s_standby = standby;
+    /* restart advertising with the new interval when nobody is connected (connections are untouched) */
+    if (s_adv) { adv_stop(); adv_start(); }
 }
 
 void plat_phone_publish_live(const bc_live_t *l)

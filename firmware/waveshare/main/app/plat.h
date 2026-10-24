@@ -72,9 +72,12 @@ bool plat_usb_power(void);             /* raw hint only: voltage above any batte
 void plat_backlight(int pct);          /* 0 = off (screen-off mode), 5..100 = brightness */
 /* ---- power (firmware 0.5.0). The board has no power switch, no charge-status line and no VBUS sense; see docs/POWER_FEASIBILITY.md. */
 void plat_panel_sleep(bool sleep);     /* display controller sleep-in / wake (backlight is separate) */
+/** 0.6.0: the screen is off and the touch layer must catch every quick tap: the touch controller is kept awake (no first-touch
+ *  loss after its auto-sleep) and polled faster. Called with false when the screen is back on. Harness: bookkeeping only. */
+void plat_touch_screen_off(bool off);
 /** Deep sleep with touch wake (TP_INT, GPIO5) + RESET + USB. Does not return on the device; the host harness records it
  *  and the next sim boot() plays the wake. NOT hardware-verified until the 0.5.0 device tests. */
-void plat_deep_sleep(void);
+void plat_deep_sleep(int wake_taps);   /* wake_taps 2..3: taps needed after the waking touch is counted as tap 1 */
 bool plat_woke_from_sleep(void);       /* this boot is a wake from deep sleep (the chip, not necessarily a confirmed triple tap) */
 uint32_t plat_uptime_s(void);
 /* ---- Wi-Fi manager (optional; the device is fully usable offline). Every call returns at once: the work happens in
@@ -83,7 +86,7 @@ typedef enum { PLAT_WIFI_OFF = 0, PLAT_WIFI_IDLE, PLAT_WIFI_SCANNING, PLAT_WIFI_
 typedef enum { PLAT_WIFI_ERR_NONE = 0, PLAT_WIFI_ERR_WRONG_PASSWORD, PLAT_WIFI_ERR_NOT_FOUND, PLAT_WIFI_ERR_TIMEOUT, PLAT_WIFI_ERR_NO_IP,
                PLAT_WIFI_ERR_LOST, PLAT_WIFI_ERR_OTHER } plat_wifi_err_t;
 #define PLAT_WIFI_MAX_SAVED 5
-typedef struct { char ssid[33]; int rssi; bool secured; bool saved; } plat_wifi_ap_t;
+typedef struct { char ssid[33]; int rssi; bool secured; bool saved; uint8_t channel; } plat_wifi_ap_t;
 typedef struct {
     plat_wifi_state_t state;
     plat_wifi_err_t err;           /* why the last attempt failed (kept until the next attempt) */
@@ -91,6 +94,7 @@ typedef struct {
     int rssi;                      /* dBm while connected, 0 otherwise */
     char ip[16];                   /* "" until an address was obtained */
     bool scan_done;                /* results available from the last scan */
+    uint8_t internet;              /* while CONNECTED: 0 not checked yet, 1 DNS lookup succeeded, 2 failed ("no internet") */
     uint32_t scans, connects, failures;
 } plat_wifi_status_t;
 void plat_wifi_set_enabled(bool on);                 /* radio on/off; on = reconnect to saved networks automatically */
@@ -99,6 +103,7 @@ int plat_wifi_results(plat_wifi_ap_t *out, int max); /* strongest first, one ent
 void plat_wifi_connect(const char *ssid, const char *password, bool save);  /* password NULL = use the saved one */
 void plat_wifi_disconnect(void);                     /* stays on, no automatic reconnect until the next connect / restart */
 void plat_wifi_forget(const char *ssid);
+void plat_wifi_save(const char *ssid, const char *password);   /* store without connecting (phone provisioning, "save only") */
 int plat_wifi_saved(char ssids[][33], int max);
 void plat_wifi_status(plat_wifi_status_t *out);
 void plat_wifi_set_quiet(bool riding);               /* ride in progress: no scans or retries */
@@ -132,8 +137,18 @@ void plat_phone_inputs(plat_phone_in_t *out);
 bool plat_phone_take_ctrl(bc_ctrl_req_t *out);               /* pending ride-control request from the phone */
 void plat_phone_ctrl_respond(const bc_ctrl_resp_t *resp);
 void plat_phone_publish_live(const bc_live_t *live);         /* once per second from the app; sent when the phone listens */
+/* 0.6.0 phone services (ride-history sync, Wi-Fi provisioning, profile + settings sync — app_psvc). The transport only
+ * queues bytes: every write the phone made on Control (other than CTRL_REQ) or Sync is handed to the app task here,
+ * and the app's replies go back as notifications on the same characteristic. chr: 0 = Control, 1 = Sync. */
+int plat_phone_take_svc(uint8_t *chr, uint8_t *buf, size_t cap);   /* bytes copied, 0 = nothing pending */
+bool plat_phone_notify_svc(uint8_t chr, const uint8_t *buf, size_t n);   /* false = transport queue full, try again next tick */
+/** Connected standby (screen off, no ride): keep the link, advertise slowly (~1 s) when no phone is connected. */
+void plat_phone_set_standby(bool standby);
+/** Connected standby for the sensor side: no scanning for paired sensors; existing connections are kept. */
+void plat_sensors_set_standby(bool standby);
 
 const char *plat_fw_version(void);
+bool plat_device_id(uint8_t out[6]);   /* the board's Bluetooth address (INFO tag 07); false when unknown */
 const char *plat_reset_reason(void);
 uint32_t plat_boot_count(void);
 void plat_restart(void);

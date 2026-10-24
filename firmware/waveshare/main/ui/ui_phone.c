@@ -60,7 +60,7 @@ static void phone_update(void)
     plat_phone_status_t ps; plat_phone_status(&ps);
     app_live_t lv; app_live(&lv);
     bc_profile_t *p = app_profile();
-    char b[300], sig[20] = "", bat[40] = "", rx[40], gps[48], hr[48];
+    char b[400], sig[20] = "", bat[40] = "", rx[40], gps[48], hr[48];
     if (ps.rssi) snprintf(sig, sizeof sig, "  %d dBm", ps.rssi);
     if (ps.phone_batt != 0xFF) snprintf(bat, sizeof bat, "\n#8494a0 PHONE BATTERY# %u%%%s", ps.phone_batt, ps.watch_batt != 0xFF ? "" : "");
     if (ps.watch_batt != 0xFF) { size_t n = strlen(bat); snprintf(bat + n, sizeof bat - n, "  #8494a0 WATCH# %u%%", ps.watch_batt); }
@@ -71,8 +71,11 @@ static void phone_update(void)
     else snprintf(gps, sizeof gps, "#%06x %s#", ui_hex(ui_link_color(sp->link)), sp->link == PLAT_LINK_NOT_PAIRED ? "none" : ui_link_text(sp->link));
     if (lv.phone_hr) snprintf(hr, sizeof hr, "#56e08c %s# %d bpm%s", bc_src_name(lv.hr_ok ? (lv.hr_src == BC_SRC_BLE_STRAP ? BC_SRC_PHONE_STRAP : lv.hr_src) : BC_SRC_PHONE_STRAP), lv.hr_ok && lv.hr_src != BC_SRC_BLE_STRAP ? lv.bpm : 0, lv.hr_ok && lv.hr_src == BC_SRC_BLE_STRAP ? " (backup)" : "");
     else snprintf(hr, sizeof hr, "#8494a0 none#");
-    snprintf(b, sizeof b, "#%06x %s#%s\n%s%s\n#8494a0 GPS# %s\n#8494a0 HR VIA PHONE# %s\n%s",
-             ui_hex(state_color(ps.state)), state_text(ps.state), sig, rx, bat, gps, hr,
+    char sync[64];
+    if (p->prof_src) snprintf(sync, sizeof sync, "#8494a0 PROFILE# phone v%lu (shared settings)", (unsigned long)p->phone_prof_ver);
+    else snprintf(sync, sizeof sync, "#8494a0 PROFILE# this device only");
+    snprintf(b, sizeof b, "#%06x %s#%s\n%s%s\n#8494a0 GPS# %s\n#8494a0 HR VIA PHONE# %s\n%s\n%s",
+             ui_hex(state_color(ps.state)), state_text(ps.state), sig, rx, bat, gps, hr, sync,
              ps.bonded ? "a phone is remembered" : "no phone remembered yet:\npair from the BikeComputer app");
     lv_label_set_text(ph_txt, b);
     lv_label_set_text(lv_obj_get_child(ph_toggle, 0), p->phone_on ? "PHONE LINK: ON" : "PHONE LINK: OFF");

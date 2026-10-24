@@ -165,7 +165,7 @@ static size_t health_text(char *b, size_t cap, bool markup)
         "%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
         "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
         "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
-        "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sWi-Fi%s %s\n"
+        "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sPower state%s %s, %lu standbys\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sWi-Fi%s %s\n"
         "%sMeter gaps / bad%s %lu / %lu\n%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
         K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
         K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
@@ -174,6 +174,7 @@ static size_t health_text(char *b, size_t cap, bool markup)
         K, E, h.storage_free_k, h.storage_total_k,
         K, E, h.battery_mv, h.battery_pct, "", K, E, P->usb_likely ? "USB power likely (inferred)" : "battery",
         K, E, dr[0], dr[1], dr[2], K, E, hl, K, E, (unsigned long)P->screen_offs, (unsigned long)P->wakes, (unsigned long)P->auto_offs,
+        K, E, app_power_state_text(), (unsigned long)P->standbys,
         K, E, h.ble_ready ? "ready" : "NOT READY",
         h.ble_scanning ? ", scanning" : "", (unsigned long)h.ble_devices_seen,
         K, E, p->power.paired ? p->power.name : "not paired", ui_link_text(pw->link),

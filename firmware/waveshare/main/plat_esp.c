@@ -121,12 +121,15 @@ bool plat_usb_power(void) { return plat_battery_mv() > 4250; }
 
 void plat_backlight(int pct) { hw_backlight_set(pct <= 0 ? 0 : pct < 5 ? 5 : pct); }
 void plat_panel_sleep(bool sleep) { hw_panel_sleep(sleep); }
-void plat_deep_sleep(void)
+void plat_deep_sleep(int wake_taps)
 {
     esp_wifi_stop();                                   /* harmless when the radio was never started */
     vTaskDelay(pdMS_TO_TICKS(100));                    /* let the last log lines and NVS commits finish */
-    hw_deep_sleep_touch_wake();                        /* never returns */
+    hw_deep_sleep_touch_wake(wake_taps);               /* never returns */
 }
+void plat_touch_screen_off(bool off) { hw_touch_keep_awake(off); }
+bool plat_device_id(uint8_t out[6]) { return hw_device_id(out); }
+void plat_sensors_set_standby(bool standby) { ble_central_set_standby(standby); }
 bool plat_woke_from_sleep(void) { return esp_reset_reason() == ESP_RST_DEEPSLEEP; }
 uint32_t plat_uptime_s(void) { return (uint32_t)(esp_timer_get_time() / 1000000); }
 

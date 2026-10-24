@@ -4,9 +4,10 @@
 #include <string.h>
 #include "bc_demo.h"
 #include "bc_link.h"
+#include "app_psvc.h"
 
 #define JOURNAL "rides/active.jnl"
-#define HIST_REAL "rides/history.txt"
+#define HIST_REAL APP_HIST_REAL
 #define HIST_DEMO "demo/history.txt"
 #define FLUSH_EVERY_S 10
 
@@ -204,6 +205,7 @@ void app_tick(void)
         publish_live(&lv);
     }
     if ((int32_t)(now - s_next_ms) > 3000) s_next_ms = now + 1000;   /* long stall (e.g. debugger): do not invent seconds */
+    app_psvc_pump(now);                                                 /* 0.6.0 phone services: sync, Wi-Fi, profile, settings */
 }
 
 uint32_t app_phone_passkey(void) { plat_phone_status_t ps; plat_phone_status(&ps); return ps.state == PLAT_PHONE_PAIRING ? ps.passkey : 0; }
@@ -402,8 +404,12 @@ void app_init(void)
     if (plat_profile_load(buf, sizeof buf)) bc_profile_from_text(&s_prof, buf);
     memset(&s_ride, 0, sizeof s_ride);
     s_demo = false;
+    app_psvc_init();
     recover();
     plat_backlight(s_prof.brightness);
+    /* 0.6.0 fix: the phone link's advertising was only ever switched on by the Settings/Quick Settings toggle, never at
+       boot — after every restart or deep-sleep wake the board stayed invisible to the phone until the rider toggled it. */
+    plat_phone_set_enabled(s_prof.phone_on);
     char l[96]; snprintf(l, sizeof l, "APP profile %s, FTP %u W (%s), next ride #%u", s_prof.onboarded ? "loaded" : "new",
                          s_prof.ftp_w, bc_ftp_label(&s_prof), s_prof.next_ride_id);
     plat_log(l);

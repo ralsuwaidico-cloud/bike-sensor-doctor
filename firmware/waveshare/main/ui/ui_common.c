@@ -59,6 +59,7 @@ void ui_screen_show(lv_obj_t *scr)
     s_kind = UI_SCR_OTHER; s_update = NULL;
     for (int i = 0; i < 6; i++) if (s_tab[i].scr == scr) { s_kind = s_tab[i].kind; s_update = s_tab[i].update; }
     lv_obj_t *old = lv_screen_active();
+    ui_qs_handle_allow(true);
     lv_screen_load(scr);
     if (old && old != scr) lv_obj_delete_async(old);
     s_badge_hidden = false;
