@@ -41,7 +41,7 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        run: python3 ios/ci/asc.py | tee asc.txt
+        run: set -o pipefail; python3 ios/ci/asc.py 2>&1 | tee asc.txt
       - name: Keep the setup report
         if: always()
         uses: actions/upload-artifact@v4

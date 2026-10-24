@@ -86,7 +86,12 @@ def errors_text(payload):
 def ensure_bundle(identifier, name):
     st, res = call("GET", "/v1/bundleIds", query={"filter[identifier]": identifier, "limit": 50})
     if st != 200:
-        raise SystemExit(f"Could not list bundle IDs (HTTP {st}): {errors_text(res)}")
+        txt = errors_text(res)
+        if "agreement" in txt.lower() or "PLA" in txt:
+            raise SystemExit("Apple is waiting for the account holder to accept the updated Program License Agreement: "
+                             "sign in at developer.apple.com/account, accept the agreement banner, then run again. "
+                             f"(HTTP {st}: {txt})")
+        raise SystemExit(f"Could not list bundle IDs (HTTP {st}): {txt}")
     match = [b for b in res.get("data", []) if b["attributes"]["identifier"] == identifier]
     if match:
         bid = match[0]["id"]
