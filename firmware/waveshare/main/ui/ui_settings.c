@@ -5,11 +5,11 @@
 #include <string.h>
 
 static void edit_cb(lv_event_t *e) { ui_edit_show((ui_edit_t)(intptr_t)lv_event_get_user_data(e), false); }
-static void sensors_cb(lv_event_t *e) { (void)e; ui_sensors_show(); }
+static void sensors_cb(lv_event_t *e) { (void)e; ui_connections_show(); }
 static void diag_cb(lv_event_t *e) { (void)e; ui_diag_menu_show(); }
 static void display_cb(lv_event_t *e) { (void)e; ui_display_show(); }
-static void wifi_cb(lv_event_t *e) { (void)e; ui_wifi_show(); }
-static void phone_cb(lv_event_t *e) { (void)e; ui_phone_show(); }
+static void wifi_cb(lv_event_t *e) { (void)e; ui_set_return_connections(false); ui_wifi_show(); }
+static void phone_cb(lv_event_t *e) { (void)e; ui_set_return_connections(false); ui_phone_show(); }
 static void power_cb(lv_event_t *e) { (void)e; ui_power_settings_show(); }
 static void home_cb(lv_event_t *e) { (void)e; ui_home_show(); }
 static void demo_cb(lv_event_t *e) { (void)e; app_set_demo(!app_demo()); ui_settings_show(); }
@@ -40,7 +40,7 @@ void ui_settings_show(void)
     if (p->max_hr) snprintf(v, sizeof v, "%u", p->max_hr); else snprintf(v, sizeof v, "est. %d", bc_profile_max_hr(p));
     ui_row_btn(l, "Max HR", v, C_CYAN, edit_cb, (void *)UI_EDIT_MAXHR);
     snprintf(v, sizeof v, "%c  " LV_SYMBOL_RIGHT, ui_ride_design(p->ride_style)->letter); ui_row_btn(l, "Display", v, C_CYAN, display_cb, NULL);
-    ui_row_btn(l, "Sensors", LV_SYMBOL_RIGHT, C_CYAN, sensors_cb, NULL);
+    { int c, a; ui_conn_summary(&c, &a); snprintf(v, sizeof v, a ? "! %d  " LV_SYMBOL_RIGHT : "%d on  " LV_SYMBOL_RIGHT, a ? a : c); ui_row_btn(l, "Connections", v, a ? C_RED : C_CYAN, sensors_cb, NULL); }
     ui_row_btn(l, "Wi-Fi", p->wifi_on ? "on" : "off", C_CYAN, wifi_cb, NULL);
     { plat_phone_status_t ps; plat_phone_status(&ps); ui_row_btn(l, "Phone", !p->phone_on ? "off" : ps.state == PLAT_PHONE_READY ? "connected" : ps.bonded ? "remembered" : "not paired", ps.state == PLAT_PHONE_READY ? C_GREEN : C_CYAN, phone_cb, NULL); }
     { char bs[16]; app_power_batt_short(bs, sizeof bs); ui_row_btn(l, "Power", bs, C_CYAN, power_cb, NULL); }

@@ -28,6 +28,7 @@ extern uint32_t g_crash_consecutive;
 
 uint32_t plat_ms(void) { return hw_millis(); }
 void plat_sensors(plat_sensors_t *o) { ble_central_snapshot(o); }
+void plat_csc_wheel_mm(uint16_t mm) { ble_central_set_wheel_mm(mm); }
 
 static int s_scan_kind = -1;
 void plat_scan_begin(plat_sens_kind_t k) { s_scan_kind = (int)k; ble_central_scan_for((int)k); }

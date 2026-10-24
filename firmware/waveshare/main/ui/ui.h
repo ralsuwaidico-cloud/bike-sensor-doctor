@@ -95,7 +95,13 @@ void ui_ride_show(void);
 void ui_results_show(const bc_ride_summary_t *s, bool fresh);   /* fresh = just ended, offers save/discard */
 void ui_history_show(bool demo);
 void ui_settings_show(void);
-void ui_sensors_show(void);
+void ui_sensors_show(void);              /* old name = ui_connections_show */
+/* 0.6.0 Connections: category menu + detail pages (ui_conn.c) */
+void ui_connections_show(void);
+void ui_conn_detail_show(int cat);       /* 0 Phone, 1 Wi-Fi, 2 Power meter, 3 Heart rate, 4 Cadence, 5 Speed, 6 Other Bluetooth, 7 Device sync */
+void ui_conn_summary(int *connected, int *alerts);
+void ui_set_return_connections(bool from_connections);   /* Phone / Wi-Fi pages: where their back button goes */
+void ui_return(void);
 void ui_diag_show(void);
 void ui_pair_show(plat_sens_kind_t kind, bool onboarding);
 void ui_recovered_show(const bc_ride_summary_t *s);

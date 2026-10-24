@@ -35,7 +35,7 @@ static bc_ctrl_req_t s_ctrl; static bool s_ctrl_pending;
 static uint8_t s_live_buf[BC_LINK_MAX]; static size_t s_live_len; static bool s_live_new;
 static uint8_t s_resp_buf[BC_LINK_MAX]; static size_t s_resp_len; static bool s_resp_new;
 static uint16_t s_seq;
-static bool s_standby, s_sync_sub;
+static bool s_standby, s_sync_sub, s_events_sub;   /* s_events_sub: 0.6.0 Events characteristic (chr 2 in plat_phone_notify_svc) */
 /* 0.6.0 phone services: writes from the phone wait here for the app task (app_psvc_pump); replies wait here for the BLE task */
 typedef struct { uint8_t chr, len, b[BC_LINK_MAX]; } svc_msg_t;
 #define SVC_Q 12
@@ -184,7 +184,7 @@ void ble_link_configure_security(void)
 static void on_disconnect(void)
 {
     LOCK();
-    s_conn = BLE_HS_CONN_HANDLE_NONE; s_encrypted = s_live_sub = s_ctrl_sub = s_sync_sub = false; s_st.passkey = 0; s_st.rssi = 0;
+    s_conn = BLE_HS_CONN_HANDLE_NONE; s_encrypted = s_live_sub = s_ctrl_sub = s_sync_sub = s_events_sub = false; s_st.passkey = 0; s_st.rssi = 0;
     s_live_new = s_resp_new = false; s_svc_in_n = 0; s_svc_out_n = 0;
     UNLOCK();
     app_psvc_on_disconnect();
@@ -243,6 +243,7 @@ static int gap_cb(struct ble_gap_event *ev, void *arg)
         if (ev->subscribe.attr_handle == h_live) s_live_sub = ev->subscribe.cur_notify;
         if (ev->subscribe.attr_handle == h_ctrl) s_ctrl_sub = ev->subscribe.cur_notify;
         if (ev->subscribe.attr_handle == h_sync) s_sync_sub = ev->subscribe.cur_notify;
+        if (ev->subscribe.attr_handle == h_events) s_events_sub = ev->subscribe.cur_notify;
         UNLOCK();
         return 0;
     case BLE_GAP_EVENT_MTU:
@@ -282,10 +283,10 @@ void ble_link_tick(void)
         else if (s_svc_out_n) s_svc_out_n = 0;
         UNLOCK();
         if (!have) break;
-        bool sub = m.chr ? s_sync_sub : s_ctrl_sub;
+        bool sub = m.chr == 2 ? s_events_sub : m.chr ? s_sync_sub : s_ctrl_sub;
         if (!sub) continue;
         struct os_mbuf *om = ble_hs_mbuf_from_flat(m.b, m.len);
-        if (om && ble_gatts_notify_custom(s_conn, m.chr ? h_sync : h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); }
+        if (om && ble_gatts_notify_custom(s_conn, m.chr == 2 ? h_events : m.chr ? h_sync : h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); }
     }
     static uint32_t t; uint32_t now = hw_millis();
     if (now - t > 2000) { t = now; int8_t r; if (ble_gap_conn_rssi(s_conn, &r) == 0) { LOCK(); s_st.rssi = r; UNLOCK(); } }

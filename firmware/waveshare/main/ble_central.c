@@ -16,6 +16,7 @@
 #include "services/gap/ble_svc_gap.h"
 #include "bc_xds.h"
 #include "bc_hr.h"
+#include "bc_csc.h"
 #include "hw.h"
 #include "ble_link.h"
 void ble_store_config_init(void);
@@ -33,18 +34,27 @@ typedef struct {
     uint16_t conn, svc_s, svc_e, val, cccd; bool disc_started;
     int8_t rssi; uint32_t reconnects, connects, gaps; int backoff_s; uint32_t retry_at;
     uint32_t state_since;
-    bc_xds_live_t xds; bc_hr_live_t hr;
+    bc_xds_live_t xds; bc_hr_live_t hr; bc_csc_live_t csc;
 } link_t;
 
-static link_t L[2] = {
+/* 0.6.0: three links. Index = slot, not plat kind (CSC is kind 3, slot 2). */
+#define NL 3
+static link_t L[NL] = {
     { .kind = PLAT_SENS_POWER, .svc_uuid = 0x1828, .chr_uuid = 0x2A63, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
     { .kind = PLAT_SENS_HR, .svc_uuid = 0x180D, .chr_uuid = 0x2A37, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
+    { .kind = PLAT_SENS_CSC, .svc_uuid = 0x1816, .chr_uuid = 0x2A5B, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
 };
+static int slot_of(int kind) { return kind == PLAT_SENS_POWER ? 0 : kind == PLAT_SENS_HR ? 1 : kind == PLAT_SENS_CSC ? 2 : -1; }
+static const char *kind_name(int kind) { return kind == PLAT_SENS_POWER ? "power" : kind == PLAT_SENS_HR ? "hr" : "csc"; }
+static volatile uint16_t s_wheel_mm = 2096;
+/* Connections > Other Bluetooth: every advertiser, with the services it announces */
+#define NANY 12
+static plat_found_t s_any[NANY]; static int s_nany; static uint32_t s_any_ms[NANY];
 static uint8_t s_own;
 static bool s_synced, s_scanning;
 static int s_pair_kind = -1;
 static link_t *s_connecting;
-static plat_found_t s_found[2][8]; static int s_nfound[2]; static uint32_t s_found_ms[2][8];
+static plat_found_t s_found[NL][8]; static int s_nfound[NL]; static uint32_t s_found_ms[NL][8];
 static uint8_t s_seen[48][6]; static int s_seen_n; static uint32_t s_seen_total;
 static esp_timer_handle_t s_mtu_timer;
 
@@ -57,14 +67,14 @@ static const char *st_name(plat_link_t s)
 static void set_state(link_t *l, plat_link_t s)
 {
     LOCK(); l->state = s; l->state_since = hw_millis(); UNLOCK();
-    ESP_LOGI(TAG, "%s → %s", l->kind == PLAT_SENS_POWER ? "power" : "hr", st_name(s));
+    ESP_LOGI(TAG, "%s → %s", kind_name(l->kind), st_name(s));
 }
 
-static link_t *by_conn(uint16_t c) { for (int i = 0; i < 2; i++) if (L[i].conn == c) return &L[i]; return NULL; }
+static link_t *by_conn(uint16_t c) { for (int i = 0; i < NL; i++) if (L[i].conn == c) return &L[i]; return NULL; }
 
 static void fail(link_t *l, const char *why)
 {
-    ESP_LOGW(TAG, "%s: %s", l->kind == PLAT_SENS_POWER ? "power" : "hr", why);
+    ESP_LOGW(TAG, "%s: %s", kind_name(l->kind), why);
     if (l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
     else {
         if (s_connecting == l) s_connecting = NULL;
@@ -135,15 +145,42 @@ static int on_mtu(uint16_t conn, const struct ble_gatt_error *err, uint16_t mtu,
 static void mtu_fallback(void *arg) { ESP_LOGW(TAG, "no MTU response in 2 s — discovering anyway"); start_discovery(s_mtu_link); }
 
 /* ---- scanning */
-static int kind_of(const struct ble_hs_adv_fields *f)
+static uint16_t svcs_of(const struct ble_hs_adv_fields *f)
 {
+    uint16_t m = 0;
     for (int i = 0; i < f->num_uuids16; i++) {
         uint16_t u = ble_uuid_u16(&f->uuids16[i].u);
-        if (u == 0x1828) return PLAT_SENS_POWER;
-        if (u == 0x180D) return PLAT_SENS_HR;
+        if (u == 0x1828 || u == 0x1818) m |= PLAT_SVC_POWER;
+        if (u == 0x180D) m |= PLAT_SVC_HR;
+        if (u == 0x1816) m |= PLAT_SVC_CSC;
+        if (u == 0x180F) m |= PLAT_SVC_BATTERY;
+        if (u == 0x1826) m |= PLAT_SVC_FTMS;
     }
-    if (f->name && f->name_len >= 3 && memcmp(f->name, "XDS", 3) == 0) return PLAT_SENS_POWER;
+    if (f->name && f->name_len >= 3 && memcmp(f->name, "XDS", 3) == 0) m |= PLAT_SVC_POWER;
+    return m;
+}
+static int slot_of_svcs(uint16_t m)
+{
+    if (m & PLAT_SVC_POWER) return 0;
+    if (m & PLAT_SVC_HR) return 1;
+    if (m & PLAT_SVC_CSC) return 2;
     return -1;
+}
+static void note_any(const ble_addr_t *a, const struct ble_hs_adv_fields *f, int rssi, uint16_t svcs)
+{
+    uint32_t now = hw_millis();
+    LOCK();
+    int i;
+    for (i = 0; i < s_nany; i++) if (!memcmp(s_any[i].mac, a->val, 6)) break;
+    if (i == s_nany) {
+        if (s_nany < NANY) s_nany++;
+        else { int w = 0; for (int j = 1; j < NANY; j++) if (s_any[j].rssi < s_any[w].rssi) w = j; i = w; }   /* replace the weakest */
+        memset(&s_any[i], 0, sizeof s_any[i]); memcpy(s_any[i].mac, a->val, 6); s_any[i].addr_type = a->type;
+    }
+    s_any[i].rssi = rssi; s_any[i].svcs |= svcs;
+    if (f->name && f->name_len) { size_t n = f->name_len < 19 ? f->name_len : 19; memcpy(s_any[i].name, f->name, n); s_any[i].name[n] = 0; }
+    s_any_ms[i] = now;
+    UNLOCK();
 }
 
 static volatile bool s_standby;   /* 0.6.0 connected standby */
@@ -191,29 +228,32 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         if (i == s_seen_n) { if (s_seen_n < 48) memcpy(s_seen[s_seen_n++], a->val, 6); s_seen_total++; }
         struct ble_hs_adv_fields f;
         if (ble_hs_adv_parse_fields(&f, ev->disc.data, ev->disc.length_data) != 0) return 0;
-        int k = kind_of(&f);
+        uint16_t svcs = svcs_of(&f);
+        if (s_pair_kind == (int)PLAT_SENS_ANY) note_any(a, &f, ev->disc.rssi, svcs);
+        int k = slot_of_svcs(svcs);   /* k = link SLOT */
         if (k < 0) {   /* a scan response often carries only the name: attach it to a device already listed */
             LOCK();
-            for (int kk = 0; kk < 2 && k < 0; kk++) for (int j = 0; j < s_nfound[kk]; j++) if (!memcmp(s_found[kk][j].mac, a->val, 6)) { k = kk; break; }
+            for (int kk = 0; kk < NL && k < 0; kk++) for (int j = 0; j < s_nfound[kk]; j++) if (!memcmp(s_found[kk][j].mac, a->val, 6)) { k = kk; break; }
             UNLOCK();
         }
-        for (int j = 0; j < 2; j++) {
+        for (int j = 0; j < NL; j++) {
             link_t *l = &L[j];
             bool same_mac = !memcmp(l->addr.val, a->val, 6);
             bool same_name = l->name[0] && f.name && f.name_len == strlen(l->name) && !memcmp(f.name, l->name, f.name_len);
-            if (l->paired && !same_mac && same_name && k == l->kind) {   /* the meter changed its address: follow it by name */
+            if (l->paired && !same_mac && same_name && k == j) {   /* the meter changed its address: follow it by name */
                 ESP_LOGI(TAG, "paired %s seen under a new address", l->name);
                 memcpy(l->addr.val, a->val, 6); l->addr.type = a->type; same_mac = true;
             }
-            if (l->paired && same_mac) { LOCK(); l->rssi = ev->disc.rssi; UNLOCK(); if (k < 0) k = l->kind; }
+            if (l->paired && same_mac) { LOCK(); l->rssi = ev->disc.rssi; UNLOCK(); if (k < 0) k = j; }
         }
         if (k < 0) return 0;
         note_found(k, a, &f, ev->disc.rssi);
+        LOCK(); for (int j = 0; j < s_nfound[k]; j++) if (!memcmp(s_found[k][j].mac, a->val, 6)) s_found[k][j].svcs |= svcs; UNLOCK();
         link_t *l = &L[k];
         if (l->paired && !memcmp(l->addr.val, a->val, 6) && (l->state == PLAT_LINK_SEARCHING || l->state == PLAT_LINK_RETRY) &&
             (int32_t)(hw_millis() - l->retry_at) >= 0 && !s_connecting) {
             l->addr.type = a->type;
-            ESP_LOGI(TAG, "paired %s seen (rssi %d) — connecting", k == PLAT_SENS_POWER ? "meter" : "strap", ev->disc.rssi);
+            ESP_LOGI(TAG, "paired %s seen (rssi %d) — connecting", kind_name(l->kind), ev->disc.rssi);
             connect_to(l);
         }
         return 0;
@@ -223,7 +263,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         ble_link_central_busy(false);
         if (ev->connect.status != 0) { s_connecting = NULL; fail(l, "connect failed / timeout"); return 0; }
         l->conn = ev->connect.conn_handle; l->connects++;
-        LOCK(); if (l->kind == PLAT_SENS_POWER) bc_xds_live_reset(&l->xds); else bc_hr_live_reset(&l->hr); UNLOCK();
+        LOCK(); if (l->kind == PLAT_SENS_POWER) bc_xds_live_reset(&l->xds); else if (l->kind == PLAT_SENS_HR) bc_hr_live_reset(&l->hr); else bc_csc_live_reset(&l->csc); UNLOCK();
         s_mtu_link = l;
         ble_gattc_exchange_mtu(l->conn, on_mtu, NULL);
         esp_timer_stop(s_mtu_timer); esp_timer_start_once(s_mtu_timer, 2000 * 1000);
@@ -236,8 +276,8 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         os_mbuf_copydata(ev->notify_rx.om, 0, n, buf);
         uint32_t now = hw_millis();
         LOCK();
-        uint32_t prev = l->kind == PLAT_SENS_POWER ? (l->xds.have ? l->xds.last_ms : 0) : (l->hr.have ? l->hr.last_ms : 0);
-        bool ok = l->kind == PLAT_SENS_POWER ? bc_xds_live_feed(&l->xds, buf, n, now) : bc_hr_live_feed(&l->hr, buf, n, now);
+        uint32_t prev = l->kind == PLAT_SENS_POWER ? (l->xds.have ? l->xds.last_ms : 0) : l->kind == PLAT_SENS_HR ? (l->hr.have ? l->hr.last_ms : 0) : (l->csc.have_prev ? l->csc.last_ms : 0);
+        bool ok = l->kind == PLAT_SENS_POWER ? bc_xds_live_feed(&l->xds, buf, n, now) : l->kind == PLAT_SENS_HR ? bc_hr_live_feed(&l->hr, buf, n, now) : bc_csc_live_feed(&l->csc, buf, n, now);
         if (ok && prev && now - prev > 2500) l->gaps++;
         UNLOCK();
         return 0;
@@ -279,10 +319,10 @@ static void tick(void *arg)
     static uint32_t s_rssi_t;
     if (now - s_rssi_t > 2000) {   /* live link RSSI, read here (timer task) so the display never waits on the radio */
         s_rssi_t = now;
-        for (int i = 0; i < 2; i++) { int8_t r; if (L[i].conn != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_rssi(L[i].conn, &r) == 0) { LOCK(); L[i].rssi = r; UNLOCK(); } }
+        for (int i = 0; i < NL; i++) { int8_t r; if (L[i].conn != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_rssi(L[i].conn, &r) == 0) { LOCK(); L[i].rssi = r; UNLOCK(); } }
     }
     bool need = s_pair_kind >= 0;
-    for (int i = 0; i < 2 && !s_standby; i++) {   /* connected standby (0.6.0): no scanning for paired sensors; live connections are kept */
+    for (int i = 0; i < NL && !s_standby; i++) {   /* connected standby (0.6.0): no scanning for paired sensors; live connections are kept */
         link_t *l = &L[i];
         if (!l->paired) continue;
         if (l->state == PLAT_LINK_RETRY && (int32_t)(now - l->retry_at) >= 0) set_state(l, PLAT_LINK_SEARCHING);
@@ -290,9 +330,10 @@ static void tick(void *arg)
     }
     /* drop pairing-list entries not heard for 20 s */
     LOCK();
-    for (int k = 0; k < 2; k++) for (int i = 0; i < s_nfound[k]; i++) if (now - s_found_ms[k][i] > 20000) {
+    for (int k = 0; k < NL; k++) for (int i = 0; i < s_nfound[k]; i++) if (now - s_found_ms[k][i] > 20000) {
         s_found[k][i] = s_found[k][s_nfound[k] - 1]; s_found_ms[k][i] = s_found_ms[k][s_nfound[k] - 1]; s_nfound[k]--; i--;
     }
+    for (int i = 0; i < s_nany; i++) if (now - s_any_ms[i] > 20000) { s_any[i] = s_any[s_nany - 1]; s_any_ms[i] = s_any_ms[s_nany - 1]; s_nany--; i--; }
     UNLOCK();
     if (need) scan_start(); else scan_stop();
 }
@@ -330,8 +371,8 @@ void ble_central_start(void)
 
 void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t addr_type, const char *name)
 {
-    if (kind > PLAT_SENS_HR) return;
-    link_t *l = &L[kind];
+    int si = slot_of(kind); if (si < 0) return;
+    link_t *l = &L[si];
     if (l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
     LOCK();
     l->paired = mac != NULL;
@@ -342,15 +383,25 @@ void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t
 }
 
 void ble_central_set_standby(bool standby) { s_standby = standby; }
-void ble_central_scan_for(int kind) { s_pair_kind = kind; if (kind >= 0) { LOCK(); s_nfound[kind] = 0; UNLOCK(); } }
+void ble_central_scan_for(int kind)
+{
+    s_pair_kind = kind;
+    int si = slot_of(kind);
+    LOCK(); if (si >= 0) s_nfound[si] = 0; if (kind == (int)PLAT_SENS_ANY) s_nany = 0; UNLOCK();
+}
+void ble_central_set_wheel_mm(uint16_t mm) { s_wheel_mm = mm; }
 
 int ble_central_found(plat_sens_kind_t kind, plat_found_t *out, int max)
 {
-    if (kind > PLAT_SENS_HR) return 0;
-    LOCK();
-    int n = s_nfound[kind] < max ? s_nfound[kind] : max;
-    memcpy(out, s_found[kind], sizeof(plat_found_t) * (size_t)n);
-    UNLOCK();
+    int n;
+    if (kind == PLAT_SENS_ANY) { LOCK(); n = s_nany < max ? s_nany : max; memcpy(out, s_any, sizeof(plat_found_t) * (size_t)n); UNLOCK(); }
+    else {
+        int si = slot_of(kind); if (si < 0) return 0;
+        LOCK();
+        n = s_nfound[si] < max ? s_nfound[si] : max;
+        memcpy(out, s_found[si], sizeof(plat_found_t) * (size_t)n);
+        UNLOCK();
+    }
     /* strongest first */
     for (int i = 1; i < n; i++) for (int j = i; j > 0 && out[j].rssi > out[j - 1].rssi; j--) { plat_found_t t = out[j]; out[j] = out[j - 1]; out[j - 1] = t; }
     return n;
@@ -371,17 +422,23 @@ void ble_central_snapshot(plat_sensors_t *o)
     o->power_ok = L[0].state == PLAT_LINK_CONNECTED && bc_xds_live_power(&L[0].xds, now, &w) == BC_LIVE_OK; if (o->power_ok) o->watts = w;
     o->cad_ok = L[0].state == PLAT_LINK_CONNECTED && bc_xds_live_cadence(&L[0].xds, now, &rpm, &back) == BC_LIVE_OK; if (o->cad_ok) { o->rpm = rpm; o->backwards = back; }
     o->hr_ok = L[1].state == PLAT_LINK_CONNECTED && bc_hr_live_bpm(&L[1].hr, now, &bpm) == BC_LIVE_OK; if (o->hr_ok) o->bpm = bpm;
-    for (int i = 0; i < 2; i++) {
-        plat_link_info_t *li = &o->link[i];
+    { int cr, sp; bool on = L[2].state == PLAT_LINK_CONNECTED;
+      o->csc_cad_ok = on && bc_csc_live_cadence(&L[2].csc, now, &cr) == BC_LIVE_OK; if (o->csc_cad_ok) o->csc_rpm = cr;
+      o->csc_speed_ok = on && bc_csc_live_speed(&L[2].csc, now, s_wheel_mm, &sp) == BC_LIVE_OK; if (o->csc_speed_ok) o->csc_speed_dmh = sp;
+      o->csc_has_wheel = on && L[2].csc.has_wheel; o->csc_has_crank = on && L[2].csc.has_crank; }
+    for (int i = 0; i < NL; i++) {
+        plat_link_info_t *li = &o->link[L[i].kind];
         li->link = L[i].paired ? L[i].state : PLAT_LINK_NOT_PAIRED;
         snprintf(li->name, sizeof li->name, "%s", L[i].name);
         li->rssi = L[i].rssi;
-        uint32_t pk = i == 0 ? L[0].xds.packets : L[1].hr.packets, last = i == 0 ? L[0].xds.last_packet_ms : L[1].hr.last_packet_ms;
-        bool hv = i == 0 ? L[0].xds.have : L[1].hr.have; uint32_t lv = i == 0 ? L[0].xds.last_ms : L[1].hr.last_ms;
+        uint32_t pk = i == 0 ? L[0].xds.packets : i == 1 ? L[1].hr.packets : L[2].csc.packets;
+        uint32_t last = i == 0 ? L[0].xds.last_packet_ms : i == 1 ? L[1].hr.last_packet_ms : L[2].csc.last_packet_ms;
+        bool hv = i == 0 ? L[0].xds.have : i == 1 ? L[1].hr.have : L[2].csc.have_prev;
+        uint32_t lv = i == 0 ? L[0].xds.last_ms : i == 1 ? L[1].hr.last_ms : L[2].csc.last_ms;
         li->packets = pk; li->age_ms = pk ? now - last : UINT32_MAX; li->reconnects = L[i].reconnects;
         li->valid_age_ms = hv ? now - lv : UINT32_MAX;
         li->gaps = L[i].gaps;
-        li->rejected = i == 0 ? L[0].xds.rejected + L[0].xds.short_packets : L[1].hr.rejected;
+        li->rejected = i == 0 ? L[0].xds.rejected + L[0].xds.short_packets : i == 1 ? L[1].hr.rejected : L[2].csc.rejected;
     }
     UNLOCK();
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;

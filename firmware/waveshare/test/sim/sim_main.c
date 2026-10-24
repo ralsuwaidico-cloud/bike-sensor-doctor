@@ -570,8 +570,8 @@ static void scenario(void)
     shot("90c_sensor_test_demo");
     app_set_demo(false);
     g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED;
-    ui_sensors_show(); run(500); shot("82_sensors");
-    tap_text("PAIR POWER"); run(2000); shot("83_pair_from_settings");
+    ui_connections_show(); run(500); shot("82_connections");
+    tap_text("Power meter"); run(300); shot("82b_conn_power"); scroll_to("PAIR "); tap_text("PAIR "); run(2000); shot("83_pair_from_connections");
 
     printf("== 11 Wi-Fi manager\n");
     {
@@ -703,10 +703,10 @@ static void scenario(void)
         run_s(7); { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.hr_src == BC_SRC_BLE_STRAP && !lv.phone_hr, "stale watch HR dropped after 6 s, strap shown"); }
         sensors(true, 180, true, 90, false, 0); g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_NOT_PAIRED; run(400);
         { app_live_t lv; app_live(&lv); CHECK(!lv.hr_ok && !lv.speed_ok && lv.link[PLAT_SENS_SPEED].link == PLAT_LINK_STALE, "no HR at all; GPS marked STALE after 5 s"); }
-        /* Sensors page: five groups */
-        ui_sensors_show(); run(300); shot("99_sensors_groups");
-        CHECK(on_screen("POWER METER") && scroll_to("HEART RATE") && scroll_to("SPEED / CADENCE"), "sensor groups");
-        CHECK(scroll_to("WEARABLES") && scroll_to("PHONE SETTINGS") && on_screen("CONNECTED"), "wearables + phone rows"); shot("99_sensors_phone");
+        /* Connections menu (0.6.0): eight categories, phone shows connected */
+        ui_connections_show(); run(300); shot("99_connections_menu");
+        CHECK(on_screen("Phone") && on_screen("connected") && scroll_to("Heart rate") && scroll_to("Speed"), "connections rows");
+        CHECK(scroll_to("Other Bluetooth") && scroll_to("Device sync"), "other + sync rows"); shot("99_connections_bottom");
         /* ride controlled from the phone; the phone disconnecting never stops the recording */
         ui_home_show(); run(300);
         sim_phone_ctrl(BC_CMD_START, 0); run(1200);
@@ -1063,6 +1063,91 @@ static void scenario(void)
         CHECK(g_sim.phone.unknown_notifies == 0 && g_sim.phone.notifies > z0.notifies, "every notification decoded by the phone (%d)", g_sim.phone.notifies);
         g_sim.n_ap = 4; g_sim.ap[4].present = g_sim.ap[5].present = false;
         app_profile()->wifi_on = false; app_profile_save(); plat_wifi_set_enabled(false);
+    }
+
+    printf("== 16 connections: categories, badges, speed/cadence sensor, discovery, device sync\n");
+    {
+        sim_phone_disconnect(); g_sim.phone.bonded = true; run(300);
+        bc_profile_t *pr = app_profile();
+        pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001-9769"); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; sensors(true, 200, true, 92, false, 0);
+        pr->hr.paired = false; g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_NOT_PAIRED;
+        pr->csc.paired = false; g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_NOT_PAIRED; g_sim.csc_cad_ok = g_sim.csc_speed_ok = false;
+        pr->phone_on = true; app_profile_save(); plat_phone_set_enabled(true);
+        ui_home_show(); run(500); shot("f0_home_connections");
+        CHECK(on_screen("Connections") && on_screen("2 on") && on_screen("! 1"), "home: Connections row with 2 connected and 1 alert (remembered phone away)");
+        tap_text("Connections"); run(400); shot("f1_connections_menu");
+        CHECK(on_screen("CONNECTIONS") && on_screen("! not connected") && on_screen("200 W") && scroll_to("92 rpm"), "menu: phone alert, live power + cadence");
+        /* every category opens, Back returns to the menu */
+        const char *cats[6] = { "Power meter", "Heart rate", "Cadence", "Speed", "Other Bluetooth", "Device sync" };
+        const char *must[6] = { "unverified", "WHOOP", "power meter", "WHEEL", "searching", "ATHLETE PROFILE" };
+        for (int i = 0; i < 6; i++) {
+            scroll_to(cats[i]); tap_text(cats[i]); run(500);
+            char nm[40]; snprintf(nm, sizeof nm, "f2_%d_%s", i, cats[i]); for (char *c = nm; *c; c++) if (*c == ' ') *c = '_';
+            shot(nm);
+            CHECK(scroll_to(must[i]), "%s detail shows '%s'", cats[i], must[i]);
+            if (i == 0) CHECK(scroll_to("CALIBRATION") && on_screen("not available") && scroll_to("DIRECT"), "power meter: no calibration write, DIRECT tag");
+            if (i == 1) CHECK(scroll_to("unsupported") && scroll_to("VIA PHONE"), "heart rate: WHOOP unsupported, watch via phone");
+            scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400);
+            CHECK(on_screen("CONNECTIONS"), "back from %s returns to the menu", cats[i]);
+        }
+        /* Phone and Wi-Fi pages come back to the menu too */
+        scroll_to("Phone"); tap_text("Phone"); run(400); CHECK(on_screen("PHONE") && scroll_to("RECONNECT"), "phone page with RECONNECT"); shot("f3_conn_phone");
+        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "phone page back -> menu");
+        scroll_to("Wi-Fi"); tap_text("Wi-Fi"); run(400); CHECK(on_screen("WI-FI") || on_screen("Wi-Fi"), "wi-fi page opens");
+        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "wi-fi page back -> menu");
+        /* badge rules: a paired meter that is away gets the !, an unpaired one does not */
+        g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_SEARCHING; sensors(false, 0, false, 0, false, 0); run(500);
+        CHECK(on_screen("! not found"), "paired meter missing -> ! not found"); shot("f4_menu_meter_missing");
+        pr->power.paired = false; g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED; app_profile_save(); run(500);
+        CHECK(!on_screen("! not found") && on_screen("pair"), "never-paired meter: grey 'pair', no !");
+        /* pair a speed/cadence sensor from the Cadence page */
+        plat_found_t csc = { { 0xC5, 0xC1, 0x00, 0x00, 0x00, 0x01 }, 1, "CSC-Wahoo", -70, PLAT_SVC_CSC };
+        g_sim.found[PLAT_SENS_CSC][0] = csc; g_sim.found_n[PLAT_SENS_CSC] = 1;
+        scroll_to("Cadence"); tap_text("Cadence"); run(300); scroll_to("PAIR SENSOR"); tap_text("PAIR SENSOR"); run(2000); shot("f5_pair_csc");
+        int pc = g_sim.pair_calls; tap_text("CSC-Wahoo"); run(400);
+        CHECK(pr->csc.paired && g_sim.pair_calls == pc + 1 && !strcmp(pr->csc.name, "CSC-Wahoo"), "CSC sensor paired and stored");
+        g_sim.csc_cad_ok = true; g_sim.csc_rpm = 85; g_sim.csc_has_crank = true; g_sim.csc_speed_ok = true; g_sim.csc_speed_dmh = 253; g_sim.csc_has_wheel = true; run(600);
+        CHECK(on_screen("85 rpm") && on_screen("25.3 km/h"), "pairing page shows live rpm + speed from the sensor");
+        tap_text("DONE"); run(400); CHECK(on_screen("CADENCE") && scroll_to("crank data: yes") && scroll_to("85 rpm"), "cadence detail: sensor data"); shot("f6_cadence_csc");
+        { app_live_t lv; app_live(&lv); CHECK(lv.cad_ok && lv.rpm == 85 && lv.cad_src == BC_SRC_BLE_CSC && lv.speed_ok && lv.speed_dmh == 253 && lv.speed_src == BC_SRC_BLE_CSC, "live model: cadence + speed from the CSC sensor (no meter)"); }
+        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300);
+        scroll_to("Speed"); tap_text("Speed"); run(400); shot("f7_speed_csc");
+        CHECK(scroll_to("wheel data: yes") && on_screen("25.3 km/h"), "speed detail: wheel data + live speed");
+        scroll_to("+10"); tap_text("+10"); run(200); CHECK(pr->wheel_mm == 2106 && g_sim.wheel_mm == 2106 && on_screen("2106 mm"), "wheel circumference edited and applied");
+        tap_text("-10"); run(200); CHECK(pr->wheel_mm == 2096, "and back");
+        /* a ride records distance from the wheel sensor */
+        ui_home_show(); run(300); ui_test_set_style(0); tap_text("START RIDE"); run_s(10);
+        { bc_ride_summary_t t; app_ride_totals(&t); CHECK(t.distance_m >= 60 && t.distance_m <= 75 && t.dist_src == BC_SRC_BLE_CSC, "distance from the wheel sensor (%lu m)", (unsigned long)t.distance_m); }
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); run(400); hold_text(LV_SYMBOL_TRASH, 1800); run(400);
+        /* restart keeps the pairing */
+        boot(); CHECK(app_profile()->csc.paired && !strcmp(app_profile()->csc.name, "CSC-Wahoo") && g_sim.wheel_mm == 2096, "CSC pairing + wheel size survive a restart");
+        pr = app_profile();
+        /* sensor away -> ! in the menu; forget clears it */
+        g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_RETRY; g_sim.csc_cad_ok = g_sim.csc_speed_ok = false;
+        ui_connections_show(); run(500); CHECK(scroll_to("! sensor away"), "paired CSC sensor missing -> !"); shot("f8_menu_csc_missing");
+        scroll_to("Cadence"); tap_text("Cadence"); run(300); CHECK(scroll_to("SENSOR MISSING"), "troubleshooting text when the sensor is missing");
+        scroll_to("HOLD: FORGET"); hold_text("HOLD: FORGET", 1800); run(400);
+        CHECK(!pr->csc.paired && g_sim.link[PLAT_SENS_CSC].link == PLAT_LINK_NOT_PAIRED, "forget clears the CSC pairing");
+        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300); CHECK(!on_screen("! sensor away"), "no ! after forgetting");
+        /* other Bluetooth: discovery with service tags, nothing paired */
+        plat_found_t polar = { { 0xA0, 0x00, 0x00, 0x00, 0x00, 0x10 }, 1, "Polar H10", -60, PLAT_SVC_HR | PLAT_SVC_BATTERY };
+        plat_found_t rnd = { { 0xA0, 0x00, 0x00, 0x00, 0x00, 0x11 }, 0, "TV-Remote", -80, 0 };
+        g_sim.found_any[0] = polar; g_sim.found_any[1] = rnd; g_sim.found_any_n = 2; int pc2 = g_sim.pair_calls;
+        scroll_to("Other Bluetooth"); tap_text("Other Bluetooth"); run(2000); shot("f9_other_bluetooth");
+        CHECK(on_screen("Polar H10") && on_screen("HR") && scroll_to("TV-Remote") && scroll_to("not paired"), "discovery list with compatibility tags, nothing paired");
+        CHECK(pc2 == g_sim.pair_calls, "discovery never pairs by itself");
+        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300);
+        /* device sync page reflects the phone profile state */
+        scroll_to("Device sync"); tap_text("Device sync"); run(400); shot("fa_device_sync");
+        CHECK(on_screen("PHONE NOT CONNECTED") && (scroll_to("this device only") || scroll_to("from the phone")) && scroll_to("RIDE TRANSFER"), "device sync page");
+        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300);
+        /* Settings and Quick Settings rows say Connections */
+        ui_settings_show(); run(300); CHECK(scroll_to("Connections"), "settings row renamed"); shot("fb_settings_connections");
+        ui_home_show(); run(300); ui_qs_open(); run(500); CHECK(scroll_to("Connections"), "quick settings row renamed"); ui_qs_close(); run(300);
+        /* charging alerts: unavailable while HW-1 is open */
+        ui_power_settings_show(); run(300); CHECK(scroll_to("Charging alerts"), "power settings explain that charging alerts are unavailable"); shot("fc_power_charge_alerts");
+        g_sim.found_any_n = 0; g_sim.found_n[PLAT_SENS_CSC] = 0;
+        pr->power.paired = true; g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile_save();
     }
 
     printf("== 8 long name and edge cases\n");

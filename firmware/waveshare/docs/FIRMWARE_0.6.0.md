@@ -1,4 +1,6 @@
-# Firmware 0.6.0 — connected standby, Quick Settings handle, Wi-Fi page, phone services (25 Oct 2026)
+# Firmware 0.6.0 — Connections, connected standby, Quick Settings handle, Wi-Fi page, phone services (25 Oct 2026, rev 2)
+
+App image: `pc-kit/fw-v0.6.0/BC060-app.bin` sha256 cdecb1f4b28d6b5aaaed770b7879dfe3e85a520fad29fbc50bb112c70f738139 (1 766 320 B).
 
 Built on 0.5.0. Everything 0.4.0/0.5.0 did is kept (XDS power/cadence, phone link, Wi-Fi, coaching, history, recording,
 screens A/B/C, Quick Settings, screen off, touch lock, battery estimate + alerts, deep sleep, safe restart). Profiles and
@@ -76,23 +78,63 @@ touches history/pairings/bonds/Wi-Fi), device settings (0x200, with supported ma
 Control/Sync, are queued by the BLE task and applied by the app task (`main/app/app_psvc.c`, shared with the simulator);
 replies go out at up to 32 notifications/s. Byte vectors are in the protocol document and asserted by `test/host`.
 
+### 6. "The Home screen still says Sensors" → the Connections system (rev 2)
+`Sensors` is gone. Home has a **Connections** row with a live summary (`N on`, red `! M` for set-up connections that are
+missing); Settings and Quick Settings carry the same row. `main/ui/ui_conn.c` is a category menu with one detail page each:
+
+| category | what it shows | direct / via phone / cloud | actions |
+|---|---|---|---|
+| Phone | pairing code flow, state, signal, last data age, battery of phone/watch, what is relayed (GPS, time, watch HR), profile source, troubleshooting | VIA PHONE link itself | RECONNECT, Phone link on/off, HR preference, HOLD: FORGET |
+| Wi-Fi | the full Wi-Fi page (on/off, scan, nearby, saved, hotspot note, signal, forget) | — | as the Wi-Fi page |
+| Power meter | XDS/Branta: state, signal, last data, measurements (W, rpm), packets/bad, **power accuracy unverified** label, **calibration not available** (this firmware never writes the meter's control point 0x2A55 — safety rule) | DIRECT | PAIR / PAIR ANOTHER, RECONNECT, HOLD: FORGET, SENSOR TEST |
+| Heart rate | strap (DIRECT), watch/phone (VIA PHONE), WHOOP (CLOUD, **unsupported — planned**), current source + preference | mixed, tagged | PAIR HR STRAP, RECONNECT, HOLD: FORGET, HR: STRAP/WATCH FIRST |
+| Cadence | cadence from the power meter, or from a paired BLE speed/cadence sensor (0x1816) | DIRECT | PAIR SENSOR, RECONNECT, HOLD: FORGET |
+| Speed | wheel sensor (DIRECT, same CSC sensor) first, phone GPS (VIA PHONE) as fallback; wheel circumference editor (default 2096 mm) | mixed, tagged | PAIR SENSOR, RECONNECT, HOLD: FORGET, −10 / +10 mm |
+| Other Bluetooth | discovery list of nearby advertisers with name, RSSI and recognised services (PWR 0x1818/0x1828, HR 0x180D, CSC 0x1816, TRAINER 0x1826); green = compatible. Lists only — never pairs | — | — |
+| Device sync | athlete profile (device-only / phone-synced, version, last applied), settings version, ride transfer (rides on the device, sent this session), last successful sync | VIA PHONE | — |
+
+Badge rules (unit-tested in scenario 16): red `!` only for a paired meter/strap/CSC sensor or a remembered phone that is
+missing right now, and for a saved Wi-Fi network that fails with a wrong password; never for a device that was never set up.
+States everywhere: CONNECTED / CONNECTING / DISCONNECTED − searching / NOT PAIRED / DISABLED / UNSUPPORTED.
+
+**New in rev 2 — BLE speed/cadence sensors (CSC, service 0x1816, characteristic 0x2A5B)** are supported directly: a third link
+in `ble_central.c` (same safety rule: the only write is the CCCD subscription), decoder `bc_csc.c` (crank → rpm, wheel →
+km/h from the circumference, 0 after 3 s without an event, NO DATA after 4 s without a packet, nothing extrapolated).
+Cadence from the meter wins; a wheel sensor beats the phone's GPS for speed/distance (`dist_src` = CSC SENSOR, source id 10).
+The profile stores `csc.*` and `wheel_mm`; old profiles load unchanged. The phone app sees source id 10 in LIVE/history
+(`bc_src_t` BC_SRC_BLE_CSC) — the iOS app must map it (shown as "unknown" until then).
+
+### 7. Charging notifications → see `CHARGE_ALERTS.md`
+Decision: **unavailable** on this hardware (no USB/charge sensing, no buzzer, voltage-estimated percentage, HW-1 open).
+Settings › Power and Device Health say so. A phone EVENT (battery notice, estimate-labelled) is implemented behind a profile
+flag that defaults to off and has no menu toggle until HW-1 is resolved.
+
 ## Simulator and host tests
-- `test/sim`: 138 screens, 0 issues (including the new handle-coverage check); 263 functional checks, 0 failed.
+- `test/sim`: 157 screens, 0 issues (including the handle-coverage check); 304 functional checks, 0 failed.
+  New in rev 2: scenario 16 (Home Connections row and badge counts; every category opens and returns; Phone/Wi-Fi pages
+  return to the menu; `!` rules for a missing paired meter vs a never-paired one; pairing a CSC sensor from Cadence, live
+  rpm + speed from it, wheel circumference editor, a ride recording distance from the wheel sensor, pairing kept across a
+  restart, `!` when the sensor is away, troubleshooting text, forget; Other Bluetooth discovery with service tags and no
+  pairing; Device sync page; Settings / Quick Settings rows; the Charging-alerts row).
   New scenarios: 14 connectivity (10 simulated minutes dark with the live stream flowing, standby + reconnect without touch,
   ride in the dark keeps meter + phone + journal, deep sleep explained and explicit, wake gestures 3/2/any), 15 phone services
   (status, scan incl. UTF-8 name and 5 GHz exclusion, wrong/right password, no-internet, forget, busy during a ride, sync in
   batches with paging, transport back-pressure, disconnect mid-sync, profile get/set/older/partial, restart keeps the synced
   profile, settings get/set/older, phone-link-off ordering).
-- `test/host`: 1649 checks, 0 failures (tap detector vectors, profile migration, codec vectors for every 1.1/1.2 message).
-- LVGL heap peak 52 984 B of 93 840 (0.5.0: 51 624).
+- `test/host`: 1670 checks, 0 failures (tap detector vectors, profile migration, codec vectors for every 1.1/1.2 message, CSC decoder + rates + wrap, EVENT codec, profile keys for CSC/wheel/chg_notice).
+- LVGL heap peak 52 920 B of 93 832 (0.5.0: 51 624).
 
 ## Not hardware-verified (explicit)
 Everything in this release, in particular: Bluetooth staying up with the screen off on the real NimBLE stack; the 1 s
 advertising interval and reconnection without touch; CST816S register writes (DisAutoSleep) and the 15 ms poll; deep-sleep
 wake tap check; hotspot discovery and association; DNS check timing; the sync/provisioning/profile messages against the
-real iPhone app; power draw in standby and screen-off. The battery charging-current risk (HW-1) is unchanged by firmware.
+real iPhone app; power draw in standby and screen-off; a real CSC sensor (crank/wheel) on the third link; the generic
+discovery list on the real radio. The battery charging-current risk (HW-1) is unchanged by firmware.
 
 ## Behavioural changes vs 0.5.0
+- Home: the bottom row is **Connections** (summary badge), History, Settings; the old Sensors page is replaced by the
+  Connections menu (reachable from Home, Settings and Quick Settings). Pairing screens return to the matching category.
+- Ride screen page 4 is titled CONNECTIONS. Device Health lists the speed/cadence sensor and the charging line.
 - Auto deep sleep: default off (was 10 min); existing profiles migrated once.
 - Quick Settings: handle; Wi-Fi row tap opens the page (hold toggles); State row; "Deep sleep — link off".
 - Screen-off row shows the configured wake gesture; Power settings gained "Wake gesture".

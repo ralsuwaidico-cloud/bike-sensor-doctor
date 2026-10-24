@@ -8,6 +8,9 @@ typedef struct {
     bool power_ok, cad_ok, hr_ok; int watts, rpm, bpm;
     plat_link_info_t link[PLAT_SENS_KINDS];
     plat_found_t found[PLAT_SENS_KINDS][6]; int found_n[PLAT_SENS_KINDS];
+    plat_found_t found_any[12]; int found_any_n;                 /* Connections > Other Bluetooth discovery list */
+    /* 0.6.0 CSC sensor stand-in */
+    bool csc_cad_ok, csc_speed_ok, csc_has_wheel, csc_has_crank; int csc_rpm, csc_speed_dmh; uint16_t wheel_mm;
     int battery_pct; bool usb; int backlight; bool wifi_on; uint32_t boots; bool restart_requested;
     /* power (0.5.0): scripted cell voltage (0 = derive from battery_pct), panel/backlight state, deep-sleep bookkeeping */
     int battery_mv; bool panel_asleep; bool asleep; int deep_sleeps; bool woke_from_sleep;
@@ -22,7 +25,7 @@ typedef struct {
              /* 0.6.0 phone services: what the board notified */
              int notifies, unknown_notifies; bc_wifi_scan_result_t scan[32]; int n_scan; bc_wifi_scan_end_t scan_end; int scan_ends;
              bc_wifi_status_msg_t wifi_status; int statuses; bc_ride_summary_t rides[64]; int n_rides; bc_sync_end_t sync_end; int sync_ends;
-             bc_profile_msg_t profile; int profiles; bc_profile_ack_t profile_ack; int profile_acks; bc_settings_msg_t settings; int settings_msgs;
+             bc_profile_msg_t profile; int profiles; bc_profile_ack_t profile_ack; int profile_acks; bc_settings_msg_t settings; int settings_msgs; bc_event_t event; int events;
              struct { uint8_t chr; size_t len; uint8_t b[BC_LINK_MAX]; } svc_in[8]; int svc_in_n; bool notify_full; uint8_t last_notify_chr;
              bool standby; int standbys; } phone;
 } sim_hw_t;

@@ -70,6 +70,7 @@ void app_live(app_live_t *o)
         for (int k = 0; k < PLAT_SENS_KINDS; k++) o->link[k].link = PLAT_LINK_UNSUPPORTED;
         o->link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED;
         snprintf(o->link[PLAT_SENS_POWER].name, sizeof o->link[0].name, "DEMO METER");
+        o->cad_src = BC_SRC_DEMO;
         o->link[PLAT_SENS_POWER].age_ms = o->power_ok ? 300 : 5000;
         o->link[PLAT_SENS_POWER].valid_age_ms = o->power_ok ? 300 : 5000;
         o->link[PLAT_SENS_POWER].packets = age / 1000;
@@ -77,9 +78,13 @@ void app_live(app_live_t *o)
         return;
     }
     plat_sensors_t s; plat_sensors(&s);
-    o->power_ok = s.power_ok; o->watts = s.watts; o->cad_ok = s.cad_ok; o->rpm = s.rpm; o->backwards = s.backwards;
+    o->power_ok = s.power_ok; o->watts = s.watts; o->cad_ok = s.cad_ok; o->rpm = s.rpm; o->backwards = s.backwards; o->cad_src = BC_SRC_XDS;
+    if (!o->cad_ok && s.csc_cad_ok) { o->cad_ok = true; o->rpm = s.csc_rpm; o->backwards = false; o->cad_src = BC_SRC_BLE_CSC; }
     memcpy(o->link, s.link, sizeof o->link);
     app_phone_fold(o, s.hr_ok, s.bpm);
+    /* a wheel sensor paired to the board is the better speed source; the phone's GPS stays as the fallback */
+    o->csc_speed = s.csc_speed_ok;
+    if (s.csc_speed_ok) { o->speed_ok = true; o->speed_dmh = s.csc_speed_dmh; o->speed_src = BC_SRC_BLE_CSC; }
 }
 
 /* Phone-relayed inputs: heart rate from a watch (or a strap paired to the phone) and the phone's GPS. Every value keeps
@@ -95,7 +100,7 @@ static void app_phone_fold(app_live_t *o, bool strap_ok, int strap_bpm)
     else if (phone_hr) { o->hr_ok = true; o->bpm = in.hr.v.bpm; o->hr_src = in.hr.v.src; }
     bool gps_fresh = in.gps.rx_ms && now - in.gps.rx_ms <= APP_GPS_FRESH_MS;
     o->gps_age_ms = in.gps.rx_ms ? now - in.gps.rx_ms : UINT32_MAX;
-    if (gps_fresh && in.gps.v.speed_ok && in.gps.v.hacc_dm <= 500) { o->speed_ok = true; o->speed_dmh = (int)(in.gps.v.speed_cms * 36 / 100); o->speed_src = in.gps.v.src; }
+    if (gps_fresh && in.gps.v.speed_ok && in.gps.v.hacc_dm <= 500) { o->speed_ok = true; o->gps_speed = true; o->speed_dmh = (int)(in.gps.v.speed_cms * 36 / 100); o->speed_src = in.gps.v.src; }
     plat_link_info_t *sp = &o->link[PLAT_SENS_SPEED];
     plat_phone_status_t ps; plat_phone_status(&ps);
     memset(sp, 0, sizeof *sp);
@@ -407,6 +412,7 @@ void app_init(void)
     app_psvc_init();
     recover();
     plat_backlight(s_prof.brightness);
+    plat_csc_wheel_mm(s_prof.wheel_mm);
     /* 0.6.0 fix: the phone link's advertising was only ever switched on by the Settings/Quick Settings toggle, never at
        boot — after every restart or deep-sleep wake the board stayed invisible to the phone until the rider toggled it. */
     plat_phone_set_enabled(s_prof.phone_on);

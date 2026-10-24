@@ -44,6 +44,9 @@ typedef struct {
     uint16_t ftp_from_ride;    /* ride id that produced an automatic FTP (0 = none) */
     uint8_t max_hr;            /* optional, bpm; 0 = estimate from age */
     bc_sensor_pair_t power, hr;
+    bc_sensor_pair_t csc;      /* 0.6.0: optional speed/cadence sensor (BLE CSC 0x1816) */
+    uint16_t wheel_mm;         /* wheel circumference for a wheel-speed sensor; default 2096 (700x25c) */
+    uint8_t chg_notice;        /* 0.6.0: battery-notice events to the phone (docs/CHARGE_ALERTS.md). Default 0 = OFF, no UI toggle while HW-1 is open */
     bool wifi_on;
     bool phone_on;             /* phone link advertising (default on; pairing still needs the code on screen) */
     uint8_t hr_pref;           /* 0 = strap first, phone/watch as backup; 1 = phone/watch first */

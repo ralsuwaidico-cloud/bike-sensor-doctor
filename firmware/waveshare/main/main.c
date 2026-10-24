@@ -149,6 +149,7 @@ void app_main(void)
     bc_profile_t *p = app_profile();
     if (p->power.paired) ble_central_set_paired(PLAT_SENS_POWER, p->power.mac, p->power.addr_type, p->power.name);
     if (p->hr.paired) ble_central_set_paired(PLAT_SENS_HR, p->hr.mac, p->hr.addr_type, p->hr.name);
+    if (p->csc.paired) ble_central_set_paired(PLAT_SENS_CSC, p->csc.mac, p->csc.addr_type, p->csc.name);
     ui_start();
     lvgl_port_unlock();
     ESP_LOGI(TAG, "STAGE 5 app + screens OK (power meter %s, HR %s)", p->power.paired ? p->power.name : "not paired",

@@ -1,4 +1,4 @@
-/* Home, Sensors (status + pairing) and the recovered-ride notice. */
+/* Home, sensor pairing (power meter / HR strap / speed-cadence sensor) and the recovered-ride notice. Connections: ui_conn.c */
 #include "ui.h"
 #include <stdio.h>
 #include <string.h>
@@ -7,6 +7,7 @@ void ui_onboard_after_pair(plat_sens_kind_t k, bool forward);
 
 /* ---------------- Home */
 static lv_obj_t *h_status, *h_sub, *h_ftp;
+static void home_conn_refresh(void);
 
 static void home_update(void)
 {
@@ -26,28 +27,37 @@ static void home_update(void)
     else if (pw->link == PLAT_LINK_CONNECTED) snprintf(b, sizeof b, "meter connected, NO DATA");
     else snprintf(b, sizeof b, "meter %s", ui_link_text(pw->link));
     lv_label_set_text(h_sub, b);
+    home_conn_refresh();
 }
 
 static void go_ride(lv_event_t *e) { (void)e; app_ride_start(); ui_ride_show(); }
-static void go_sensors(lv_event_t *e) { (void)e; ui_sensors_show(); }
+static void go_sensors(lv_event_t *e) { (void)e; ui_connections_show(); }
 static void go_history(lv_event_t *e) { (void)e; ui_history_show(app_demo()); }
 static void go_settings(lv_event_t *e) { (void)e; ui_settings_show(); }
 
-static lv_obj_t *icon_btn(lv_obj_t *scr, const char *sym, const char *cap, int cx, int cy, lv_event_cb_t cb)
+static lv_obj_t *text_btn(lv_obj_t *scr, const char *cap, int cx, int cy, int w, int h, lv_event_cb_t cb)
 {
     lv_obj_t *b = lv_button_create(scr);
     lv_obj_remove_style_all(b);
     lv_obj_remove_flag(b, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(b, 54, 50);
-    lv_obj_set_style_radius(b, 18, 0);
+    lv_obj_set_size(b, w, h);
+    lv_obj_set_style_radius(b, 14, 0);
     lv_obj_set_style_bg_color(b, C_PANEL, 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(b, C_FAINT, LV_STATE_PRESSED);
-    lv_obj_set_pos(b, cx - 27, cy - 25);
-    lv_obj_t *i = ui_label(b, &lv_font_montserrat_20, C_FG, sym); lv_obj_align(i, LV_ALIGN_TOP_MID, 0, 5);
-    lv_obj_t *c = ui_label(b, &lv_font_montserrat_12, C_MUT, cap); lv_obj_align(c, LV_ALIGN_BOTTOM_MID, 0, -4);
+    lv_obj_set_pos(b, cx - w / 2, cy - h / 2);
+    lv_obj_t *c = ui_label(b, &lv_font_montserrat_14, C_FG, cap); lv_obj_center(c);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
     return b;
+}
+
+static lv_obj_t *h_conn_right;
+static void home_conn_refresh(void)
+{
+    int c, a; ui_conn_summary(&c, &a);
+    char b[32];
+    if (a) snprintf(b, sizeof b, "%d on  #ff5a5a ! %d#", c, a); else snprintf(b, sizeof b, "#56e08c %d on#", c);
+    if (h_conn_right) lv_label_set_text(h_conn_right, b);
 }
 
 void ui_home_show(void)
@@ -69,7 +79,7 @@ void ui_home_show(void)
     lv_obj_t *start = lv_button_create(scr);
     lv_obj_remove_style_all(start);
     lv_obj_remove_flag(start, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(start, 180, 50);
+    lv_obj_set_size(start, 180, 48);
     lv_obj_set_style_radius(start, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(start, C_GREEN, 0);
     lv_obj_set_style_bg_opa(start, LV_OPA_COVER, 0);
@@ -80,86 +90,24 @@ void ui_home_show(void)
     lv_obj_add_event_cb(start, go_ride, LV_EVENT_CLICKED, NULL);
 
     h_sub = ui_label(scr, &lv_font_montserrat_12, C_MUT, "");
-    lv_obj_align(h_sub, LV_ALIGN_TOP_MID, 0, 138);
+    lv_obj_align(h_sub, LV_ALIGN_TOP_MID, 0, 135);
 
-    icon_btn(scr, LV_SYMBOL_BLUETOOTH, "Sensors", 62, 180, go_sensors);
-    icon_btn(scr, LV_SYMBOL_LIST, "History", 120, 188, go_history);
-    icon_btn(scr, LV_SYMBOL_SETTINGS, "Settings", 178, 180, go_settings);
-    ui_screen_show(scr);
-}
+    /* 0.6.0: Connections replaces the old Sensors button — one wide row with the live summary (n connected, ! missing) */
+    lv_obj_t *cn = lv_button_create(scr);
+    lv_obj_remove_style_all(cn);
+    lv_obj_remove_flag(cn, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(cn, 184, 30);
+    lv_obj_set_style_radius(cn, 15, 0);
+    lv_obj_set_style_bg_color(cn, C_PANEL, 0); lv_obj_set_style_bg_opa(cn, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(cn, C_FAINT, LV_STATE_PRESSED);
+    lv_obj_align(cn, LV_ALIGN_TOP_MID, 0, 152);
+    lv_obj_t *cl = ui_label(cn, &lv_font_montserrat_14, C_FG, "Connections"); lv_obj_align(cl, LV_ALIGN_LEFT_MID, 12, 0);
+    h_conn_right = ui_label(cn, &lv_font_montserrat_12, C_MUT, ""); lv_label_set_recolor(h_conn_right, true); lv_obj_align(h_conn_right, LV_ALIGN_RIGHT_MID, -12, 0);
+    lv_obj_add_event_cb(cn, go_sensors, LV_EVENT_CLICKED, NULL);
+    home_conn_refresh();
 
-/* ---------------- Sensors: status of each link + pair buttons */
-/* Sensors page, five groups: POWER METER, HEART RATE (strap + wearable via the phone), SPEED / CADENCE, WEARABLES, PHONE.
-   Every row says the source, the connection state, how fresh the value is and the battery when known. */
-static lv_obj_t *s_rows[5];
-
-static void age_text(uint32_t age_ms, char *out, size_t cap)
-{
-    if (age_ms == UINT32_MAX) snprintf(out, cap, "no data yet");
-    else if (age_ms < 2000) snprintf(out, cap, "live");
-    else snprintf(out, cap, "%lus ago", (unsigned long)(age_ms / 1000));
-}
-
-static void sensors_update(void)
-{
-    app_live_t lv; app_live(&lv);
-    plat_phone_status_t ps; plat_phone_status(&ps);
-    char b[200], age[20], sig[24];
-    const plat_link_info_t *pw = &lv.link[PLAT_SENS_POWER], *hr = &lv.link[PLAT_SENS_HR], *sp = &lv.link[PLAT_SENS_SPEED];
-    /* 0 power meter */
-    sig[0] = 0; if (pw->link == PLAT_LINK_CONNECTED && pw->rssi) snprintf(sig, sizeof sig, "  %d dBm", pw->rssi);
-    age_text(pw->valid_age_ms, age, sizeof age);
-    if (lv.power_ok) snprintf(b, sizeof b, "#8494a0 POWER METER#\n#%06x %s#%s\n%d W  %d rpm  (%s)", ui_hex(ui_link_color(pw->link)), ui_link_text(pw->link), sig, lv.watts, lv.cad_ok ? lv.rpm : 0, lv.demo ? "SIMULATED" : "XDS");
-    else snprintf(b, sizeof b, "#8494a0 POWER METER#\n#%06x %s#%s\n%s", ui_hex(ui_link_color(pw->link)), ui_link_text(pw->link), sig, pw->link == PLAT_LINK_CONNECTED ? "NO DATA - pedal" : pw->link == PLAT_LINK_NOT_PAIRED ? "pair below" : age);
-    lv_label_set_text(s_rows[0], b);
-    /* 1 heart rate: strap (direct) and wearable via the phone, with the preference */
-    sig[0] = 0; if (hr->link == PLAT_LINK_CONNECTED && hr->rssi) snprintf(sig, sizeof sig, "  %d dBm", hr->rssi);
-    char strap[60], wear[60];
-    if (lv.strap_hr) snprintf(strap, sizeof strap, "#56e08c STRAP# %s%s", hr->name[0] ? hr->name : "", lv.hr_src == BC_SRC_BLE_STRAP ? "  <- shown" : "  (backup)");
-    else snprintf(strap, sizeof strap, "#%06x STRAP %s#%s", ui_hex(ui_link_color(hr->link)), hr->link == PLAT_LINK_NOT_PAIRED ? "not paired" : ui_link_text(hr->link), sig);
-    if (lv.phone_hr) snprintf(wear, sizeof wear, "#56e08c %s via phone#%s", bc_src_name(lv.hr_src != BC_SRC_BLE_STRAP ? lv.hr_src : BC_SRC_APPLE_WATCH), lv.hr_src != BC_SRC_BLE_STRAP ? "  <- shown" : "  (backup)");
-    else snprintf(wear, sizeof wear, "#8494a0 wearable via phone: none#");
-    snprintf(b, sizeof b, "#8494a0 HEART RATE#  %s\n%s\n%s", lv.hr_ok ? "" : "NO DATA", strap, wear);
-    if (lv.hr_ok) { char v[24]; snprintf(v, sizeof v, "%d bpm", lv.bpm); memmove(b + 23 + strlen(v), b + 23, strlen(b + 23) + 1); memcpy(b + 23, v, strlen(v)); }
-    lv_label_set_text(s_rows[1], b);
-    /* 2 speed / cadence */
-    age_text(sp->age_ms, age, sizeof age);
-    if (lv.speed_ok) snprintf(b, sizeof b, "#8494a0 SPEED / CADENCE#\n#56e08c %s# %d.%d km/h\ncadence from the power meter", bc_src_name(lv.speed_src), lv.speed_dmh / 10, lv.speed_dmh % 10);
-    else snprintf(b, sizeof b, "#8494a0 SPEED / CADENCE#\n#%06x %s %s# %s\nno speed sensor on this board", ui_hex(ui_link_color(sp->link)), sp->link == PLAT_LINK_NOT_PAIRED ? "phone GPS" : sp->name, sp->link == PLAT_LINK_NOT_PAIRED ? "needs the phone" : ui_link_text(sp->link), sp->link == PLAT_LINK_NOT_PAIRED ? "" : age);
-    lv_label_set_text(s_rows[2], b);
-    /* 3 wearables */
-    snprintf(b, sizeof b, "#8494a0 WEARABLES#\nwatches that broadcast HR\npair as a strap above;\nApple Watch: via the phone");
-    lv_label_set_text(s_rows[3], b);
-    /* 4 phone */
-    const char *st = ps.state == PLAT_PHONE_READY ? "CONNECTED" : ps.state == PLAT_PHONE_OFF ? "OFF" : ps.state == PLAT_PHONE_PAIRING ? "PAIRING" : ps.bonded ? "REMEMBERED, not connected" : "not paired";
-    char bat[32] = ""; if (ps.phone_batt != 0xFF) snprintf(bat, sizeof bat, "  battery %u%%", ps.phone_batt);
-    age_text(ps.last_rx_age_ms, age, sizeof age);
-    snprintf(b, sizeof b, "#8494a0 PHONE#\n#%06x %s#%s\n%s", ui_hex(ps.state == PLAT_PHONE_READY ? C_GREEN : ps.state == PLAT_PHONE_OFF ? C_MUT : C_AMBER), st, bat, ps.state == PLAT_PHONE_READY ? age : "pair from the BikeComputer app");
-    lv_label_set_text(s_rows[4], b);
-}
-static void phone_cb(lv_event_t *e) { (void)e; ui_phone_show(); }
-
-static void pair_power(lv_event_t *e) { (void)e; ui_pair_show(PLAT_SENS_POWER, false); }
-static void pair_hr(lv_event_t *e) { (void)e; ui_pair_show(PLAT_SENS_HR, false); }
-static void sensor_test(lv_event_t *e) { (void)e; ui_sensor_test_show(false); }
-static void back_home(lv_event_t *e) { (void)e; ui_home_show(); }
-
-void ui_sensors_show(void)
-{
-    lv_obj_t *scr = ui_screen_new(UI_SCR_SENSORS, sensors_update);
-    ui_title(scr, "SENSORS");
-    lv_obj_t *list = ui_scroll_area(scr, 52, 180);
-    ui_pill(list, "SENSOR TEST", C_CYAN, C_INK, 150, 34, sensor_test, NULL);
-    for (int k = 0; k < 5; k++) {
-        s_rows[k] = ui_label(list, &lv_font_montserrat_12, C_FG, "");
-        lv_label_set_recolor(s_rows[k], true);
-        lv_obj_set_width(s_rows[k], lv_pct(100)); lv_label_set_long_mode(s_rows[k], LV_LABEL_LONG_WRAP);
-        if (k == 0) ui_pill(list, "PAIR POWER", C_PANEL, C_CYAN, 140, 34, pair_power, NULL);
-        if (k == 1) ui_pill(list, "PAIR HR STRAP", C_PANEL, C_CYAN, 150, 34, pair_hr, NULL);
-        if (k == 4) ui_pill(list, "PHONE SETTINGS", C_PANEL, C_CYAN, 150, 34, phone_cb, NULL);
-    }
-    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 40, back_home, NULL);
-    lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 184);
+    text_btn(scr, "History", 86, 199, 64, 30, go_history);
+    text_btn(scr, "Settings", 154, 199, 64, 30, go_settings);
     ui_screen_show(scr);
 }
 
@@ -173,7 +121,7 @@ static void pair_pick(lv_event_t *e)
 {
     int i = (int)(intptr_t)lv_event_get_user_data(e);
     bc_profile_t *pr = app_profile();
-    bc_sensor_pair_t *sp = p_kind == PLAT_SENS_POWER ? &pr->power : &pr->hr;
+    bc_sensor_pair_t *sp = p_kind == PLAT_SENS_POWER ? &pr->power : p_kind == PLAT_SENS_HR ? &pr->hr : &pr->csc;
     memcpy(sp->mac, p_found[i].mac, 6); sp->addr_type = p_found[i].addr_type; sp->paired = true;
     snprintf(sp->name, sizeof sp->name, "%s", p_found[i].name);
     app_profile_save();
@@ -184,7 +132,7 @@ static void pair_forget(lv_event_t *e)
 {
     (void)e;
     bc_profile_t *pr = app_profile();
-    bc_sensor_pair_t *sp = p_kind == PLAT_SENS_POWER ? &pr->power : &pr->hr;
+    bc_sensor_pair_t *sp = p_kind == PLAT_SENS_POWER ? &pr->power : p_kind == PLAT_SENS_HR ? &pr->hr : &pr->csc;
     memset(sp, 0, sizeof *sp); app_profile_save();
     plat_pair(p_kind, NULL);
 }
@@ -192,15 +140,17 @@ static void pair_forget(lv_event_t *e)
 static void pair_update(void)
 {
     bc_profile_t *pr = app_profile();
-    const bc_sensor_pair_t *sp = p_kind == PLAT_SENS_POWER ? &pr->power : &pr->hr;
+    const bc_sensor_pair_t *sp = p_kind == PLAT_SENS_POWER ? &pr->power : p_kind == PLAT_SENS_HR ? &pr->hr : &pr->csc;
     app_live_t lv; app_live(&lv);
+    plat_sensors_t sn; plat_sensors(&sn);
     char b[96];
     if (sp->paired) {
         const plat_link_info_t *l = &lv.link[p_kind];
         if (p_kind == PLAT_SENS_POWER && lv.power_ok) snprintf(b, sizeof b, "#56e08c %s#\n%d W  %d rpm", sp->name, lv.watts, lv.cad_ok ? lv.rpm : 0);
         else if (p_kind == PLAT_SENS_HR && lv.hr_ok) snprintf(b, sizeof b, "#56e08c %s#\n%d bpm", sp->name, lv.bpm);
-        else snprintf(b, sizeof b, "#56e08c %s#\n%s%s", sp->name, ui_link_text(l->link), p_kind == PLAT_SENS_POWER ? " - pedal to wake" : "");
-    } else snprintf(b, sizeof b, "%s", p_kind == PLAT_SENS_POWER ? "Pedal so the meter wakes up,\nthen tap it below." : "Wear the strap (wet the pads),\nthen tap it below.");
+        else if (p_kind == PLAT_SENS_CSC && (sn.csc_cad_ok || sn.csc_speed_ok)) snprintf(b, sizeof b, "#56e08c %s#\n%d rpm  %d.%d km/h", sp->name, sn.csc_cad_ok ? sn.csc_rpm : 0, sn.csc_speed_dmh / 10, sn.csc_speed_dmh % 10);
+        else snprintf(b, sizeof b, "#56e08c %s#\n%s%s", sp->name, ui_link_text(l->link), p_kind == PLAT_SENS_HR ? "" : " - move it to wake");
+    } else snprintf(b, sizeof b, "%s", p_kind == PLAT_SENS_POWER ? "Pedal so the meter wakes up,\nthen tap it below." : p_kind == PLAT_SENS_HR ? "Wear the strap (wet the pads),\nthen tap it below." : "Spin the wheel or crank so the\nsensor wakes, then tap it below.");
     lv_label_set_text(p_status, b);
     if (p_next) lv_label_set_text(lv_obj_get_child(p_next, 0), p_onb ? (sp->paired ? "NEXT" : "SKIP") : "DONE");
 
@@ -220,15 +170,15 @@ static void pair_update(void)
 static void pair_done(lv_event_t *e)
 {
     (void)e; plat_scan_end();
-    if (p_onb) ui_onboard_after_pair(p_kind, true); else ui_sensors_show();
+    if (p_onb) ui_onboard_after_pair(p_kind, true); else ui_conn_detail_show(p_kind == PLAT_SENS_POWER ? 2 : p_kind == PLAT_SENS_HR ? 3 : 4);
 }
-static void pair_back(lv_event_t *e) { (void)e; plat_scan_end(); if (p_onb) ui_onboard_after_pair(p_kind, false); else ui_sensors_show(); }
+static void pair_back(lv_event_t *e) { (void)e; plat_scan_end(); if (p_onb) ui_onboard_after_pair(p_kind, false); else ui_conn_detail_show(p_kind == PLAT_SENS_POWER ? 2 : p_kind == PLAT_SENS_HR ? 3 : 4); }
 
 void ui_pair_show(plat_sens_kind_t kind, bool onboarding)
 {
     p_kind = kind; p_onb = onboarding; p_nfound = -1; p_t0 = plat_ms();
     lv_obj_t *scr = ui_screen_new(UI_SCR_SENSORS, pair_update);
-    ui_title(scr, kind == PLAT_SENS_POWER ? "POWER METER" : "HR STRAP");
+    ui_title(scr, kind == PLAT_SENS_POWER ? "POWER METER" : kind == PLAT_SENS_HR ? "HR STRAP" : "CSC SENSOR");
     if (onboarding) { lv_obj_t *o = ui_label(scr, &lv_font_montserrat_12, C_MUT, kind == PLAT_SENS_POWER ? "you can skip and pair later" : "optional"); lv_obj_align(o, LV_ALIGN_TOP_MID, 0, 48); }
     p_status = ui_label(scr, &lv_font_montserrat_12, C_FG, "");
     lv_label_set_recolor(p_status, true);

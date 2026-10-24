@@ -17,7 +17,10 @@
 extern "C" {
 #endif
 
-typedef enum { PLAT_SENS_POWER = 0, PLAT_SENS_HR, PLAT_SENS_SPEED, PLAT_SENS_KINDS } plat_sens_kind_t;
+/* PLAT_SENS_SPEED = the phone's GPS as seen by the app (never a radio of this board). PLAT_SENS_CSC (0.6.0) = an optional
+ * BLE speed/cadence sensor (service 0x1816) paired to the board directly. */
+typedef enum { PLAT_SENS_POWER = 0, PLAT_SENS_HR, PLAT_SENS_SPEED, PLAT_SENS_CSC, PLAT_SENS_KINDS } plat_sens_kind_t;
+#define PLAT_SENS_ANY PLAT_SENS_KINDS   /* plat_scan_begin(PLAT_SENS_ANY): list every nearby BLE device (Connections > Other Bluetooth) */
 typedef enum { PLAT_LINK_OFF = 0, PLAT_LINK_NOT_PAIRED, PLAT_LINK_SEARCHING, PLAT_LINK_CONNECTING, PLAT_LINK_CONNECTED,
                PLAT_LINK_RETRY, PLAT_LINK_UNSUPPORTED, PLAT_LINK_STALE /* source connected but its last value is too old to show */ } plat_link_t;
 
@@ -38,14 +41,22 @@ typedef struct {
     bool power_ok; int watts;
     bool cad_ok; int rpm; bool backwards;
     bool hr_ok; int bpm;
+    /* 0.6.0 CSC sensor: cadence (crank) and speed (wheel x circumference set with plat_csc_wheel_mm); 0 = coasting */
+    bool csc_cad_ok; int csc_rpm; bool csc_speed_ok; int csc_speed_dmh; bool csc_has_wheel, csc_has_crank;
     plat_link_info_t link[PLAT_SENS_KINDS];
 } plat_sensors_t;
+void plat_csc_wheel_mm(uint16_t mm);
 
 uint32_t plat_ms(void);
 void plat_sensors(plat_sensors_t *out);
 
 /* pairing: scan for devices of one kind; results while scanning */
-typedef struct { uint8_t mac[6]; uint8_t addr_type; char name[20]; int rssi; } plat_found_t;
+#define PLAT_SVC_HR 0x01       /* 0x180D heart rate */
+#define PLAT_SVC_POWER 0x02    /* 0x1818 cycling power (and the XDS name) */
+#define PLAT_SVC_CSC 0x04      /* 0x1816 speed / cadence */
+#define PLAT_SVC_BATTERY 0x08  /* 0x180F battery */
+#define PLAT_SVC_FTMS 0x10     /* 0x1826 fitness machine (trainer): recognised, not supported */
+typedef struct { uint8_t mac[6]; uint8_t addr_type; char name[20]; int rssi; uint16_t svcs; /* PLAT_SVC_* seen in the advertisement */ } plat_found_t;
 void plat_scan_begin(plat_sens_kind_t kind);
 int plat_scan_results(plat_found_t *out, int max);
 void plat_scan_end(void);
@@ -139,7 +150,7 @@ void plat_phone_ctrl_respond(const bc_ctrl_resp_t *resp);
 void plat_phone_publish_live(const bc_live_t *live);         /* once per second from the app; sent when the phone listens */
 /* 0.6.0 phone services (ride-history sync, Wi-Fi provisioning, profile + settings sync — app_psvc). The transport only
  * queues bytes: every write the phone made on Control (other than CTRL_REQ) or Sync is handed to the app task here,
- * and the app's replies go back as notifications on the same characteristic. chr: 0 = Control, 1 = Sync. */
+ * and the app's replies go back as notifications on the same characteristic. chr: 0 = Control, 1 = Sync, 2 = Events (notify only). */
 int plat_phone_take_svc(uint8_t *chr, uint8_t *buf, size_t cap);   /* bytes copied, 0 = nothing pending */
 bool plat_phone_notify_svc(uint8_t chr, const uint8_t *buf, size_t n);   /* false = transport queue full, try again next tick */
 /** Connected standby (screen off, no ride): keep the link, advertise slowly (~1 s) when no phone is connected. */

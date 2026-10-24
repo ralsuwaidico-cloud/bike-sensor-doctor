@@ -16,13 +16,14 @@ extern "C" {
 typedef struct {
     bool demo;                         /* values are SIMULATED (demo mode) */
     bool power_ok; int watts;
-    bool cad_ok; int rpm; bool backwards;
+    bool cad_ok; int rpm; bool backwards; uint8_t cad_src;   /* bc_src_t: XDS (meter) or BLE_CSC (0.6.0 crank sensor, used when the meter gives none) */
     bool hr_ok; int bpm; uint8_t hr_src;           /* bc_src_t: STRAP (direct BLE) or the phone-relayed source (WATCH, ...) */
     bool strap_hr, phone_hr;                       /* which HR sources have a fresh value right now (for "backup" labels) */
-    bool speed_ok; int speed_dmh; uint8_t speed_src;   /* km/h × 10 from the phone's GPS (fresh ≤ 5 s) */
+    bool speed_ok; int speed_dmh; uint8_t speed_src;   /* km/h × 10: a wheel sensor (BLE_CSC) first, else the phone's GPS (fresh ≤ 5 s) */
+    bool csc_speed, gps_speed;                     /* which speed sources are fresh right now */
     uint32_t gps_age_ms;                           /* since the last accepted position, UINT32_MAX = never */
     bool time_known; uint32_t epoch_s;             /* wall clock when a phone synced the time */
-    plat_link_info_t link[PLAT_SENS_KINDS];        /* SPEED = phone GPS: CONNECTED fresh, STALE old, NOT_PAIRED never */
+    plat_link_info_t link[PLAT_SENS_KINDS];        /* SPEED = phone GPS: CONNECTED fresh, STALE old, NOT_PAIRED never; CSC = the paired speed/cadence sensor */
 } app_live_t;
 #define APP_GPS_FRESH_MS 5000
 #define APP_PHONE_HR_FRESH_MS 6000                /* Apple Watch delivers about every 5 s: one missed sample = NO DATA, never a held value */

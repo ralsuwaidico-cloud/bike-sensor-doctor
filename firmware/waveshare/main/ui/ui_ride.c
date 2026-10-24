@@ -2,7 +2,7 @@
  * Ride screens — swipe carousel (approved navigation A) with a pull-down control panel (swipe down, or tap the handle
  * at the top). Pause and End are hold-to-confirm; Resume is a tap.
  *   1 POWER (style A Power Focus [approved] / B Split / C Coach First — chosen in Settings > Ride screen)
- *   2 COACH   3 RIDE (time and averages)   4 SENSORS
+ *   2 COACH   3 RIDE (time and averages)   4 CONNECTIONS (sensor states)
  * Missing data is shown as "--" with NO DATA / NO STRAP — never a held or invented value.
  */
 #include "ui.h"
@@ -169,7 +169,7 @@ static void build_pages(lv_obj_t *scr)
     m_l3 = tile_label(t[2], &lv_font_montserrat_12, C_MUT, 168);
     lv_label_set_recolor(m_l1, true); lv_label_set_recolor(m_l2, true);
 
-    ui_title(t[3], "SENSORS");
+    ui_title(t[3], "CONNECTIONS");
     s_txt = tile_label(t[3], &lv_font_montserrat_12, C_FG, 54);
     lv_label_set_recolor(s_txt, true);
     lv_obj_t *hint = tile_label(t[3], &lv_font_montserrat_12, C_MUT, 192);

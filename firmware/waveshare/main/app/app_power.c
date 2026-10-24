@@ -44,6 +44,24 @@ void app_power_init(void)
     s_inited = true;
 }
 
+/* Battery-notice events (docs/CHARGE_ALERTS.md). DISABLED by default (profile chg_notice = 0, no menu toggle) because this
+   board cannot see USB or the charger state, the percentage is a voltage ESTIMATE, there is no buzzer, and HW-1 (charge
+   current vs the 500 mAh cell) is open. When enabled: one EVENT per stage while "USB power likely", voltage bands labelled
+   as estimates; never a continuous alarm, never full brightness, never a claim that it replaces the charger's protection. */
+static int s_chg_stage;
+static void charge_notice(uint32_t now, int mv)
+{
+    if (!app_profile()->chg_notice || !P.usb_likely || mv <= 0) { if (!P.usb_likely) s_chg_stage = 0; return; }
+    int stage = mv >= 4170 ? 3 : mv >= 4080 ? 2 : mv >= 3980 ? 1 : 0;   /* ~98 / ~90 / ~80 % of a resting LiPo, under charge = rough */
+    if (stage <= s_chg_stage) return;
+    s_chg_stage = stage;
+    bc_event_t e = { .event_id = BC_EVT_BATTERY_NOTICE, .pct_est = (uint8_t)(P.pct < 0 ? 0 : P.pct), .mv = (uint16_t)mv, .stage = (uint8_t)stage };
+    uint8_t b[32]; size_t n = bc_link_encode_event(&e, b, sizeof b, (uint16_t)(now / 1000), now);
+    if (n) plat_phone_notify_svc(2, b, n);
+    char l[96]; snprintf(l, sizeof l, "POWER battery notice stage %d (~%d%% ESTIMATE, %d mV) -> phone event", stage, P.pct, mv); plat_log(l);
+    if (stage == 3) alert("BATTERY ~98% (estimate)");
+}
+
 static void sample(uint32_t now)
 {
     int mv = plat_battery_mv();
@@ -87,6 +105,7 @@ static void sample(uint32_t now)
     if (!ride && app_profile()->bat_protect == 1 && !P.usb_likely && mv > 0 && mv <= BC_BAT_EMPTY_MV && !s_sleep_at_ms) {
         before_action("empty: protection ON -> sleep"); s_sleep_at_ms = now + 2000;
     }
+    charge_notice(now, mv);
 }
 
 static bool phone_connected(void)

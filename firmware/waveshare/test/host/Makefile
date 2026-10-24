@@ -5,7 +5,7 @@ all: test_bc_xds test_bc_core
 	./test_bc_core
 test_bc_xds: test_bc_xds.c $(CORE)/bc_xds.c
 	$(CC) $(CFLAGS) -o $@ $^
-test_bc_core: test_bc_core.c $(CORE)/bc_xds.c $(CORE)/bc_hr.c $(CORE)/bc_profile.c $(CORE)/bc_ride.c $(CORE)/bc_coach.c $(CORE)/bc_demo.c $(CORE)/bc_wifi.c $(CORE)/bc_link.c $(CORE)/bc_power.c
+test_bc_core: test_bc_core.c $(CORE)/bc_xds.c $(CORE)/bc_hr.c $(CORE)/bc_csc.c $(CORE)/bc_profile.c $(CORE)/bc_ride.c $(CORE)/bc_coach.c $(CORE)/bc_demo.c $(CORE)/bc_wifi.c $(CORE)/bc_link.c $(CORE)/bc_power.c
 	$(CC) $(CFLAGS) -fsanitize=address,undefined -o $@ $^ -lm
 clean:
 	rm -f test_bc_xds test_bc_core

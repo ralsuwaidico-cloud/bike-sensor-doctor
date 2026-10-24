@@ -115,7 +115,7 @@ static void st_update(void)
     lv_label_set_text(st_l2, b);
 }
 
-static void st_back(lv_event_t *e) { (void)e; if (st_from_diag) ui_diag_menu_show(); else ui_sensors_show(); }
+static void st_back(lv_event_t *e) { (void)e; if (st_from_diag) ui_diag_menu_show(); else ui_conn_detail_show(2); }
 
 void ui_sensor_test_show(bool from_diag)
 {
@@ -165,20 +165,21 @@ static size_t health_text(char *b, size_t cap, bool markup)
         "%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
         "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
         "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
-        "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sPower state%s %s, %lu standbys\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sWi-Fi%s %s\n"
+        "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sCharging%s not detectable (no STAT/VBUS line);\n  alerts unavailable, HW-1 open\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sPower state%s %s, %lu standbys\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sSpeed/cad.%s %s %s\n%sWi-Fi%s %s\n"
         "%sMeter gaps / bad%s %lu / %lu\n%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
         K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
         K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
         K, E, (unsigned long)h.storage_errors, K, E, (unsigned long)h.profile_save_errors,
         K, E, h.heap_free_k, h.heap_min_k, K, E, h.psram_free_k, h.psram_total_k, K, E, h.flash_total_k, h.app_slot_k,
         K, E, h.storage_free_k, h.storage_total_k,
-        K, E, h.battery_mv, h.battery_pct, "", K, E, P->usb_likely ? "USB power likely (inferred)" : "battery",
+        K, E, h.battery_mv, h.battery_pct, "", K, E, P->usb_likely ? "USB power likely (inferred)" : "battery", K, E,
         K, E, dr[0], dr[1], dr[2], K, E, hl, K, E, (unsigned long)P->screen_offs, (unsigned long)P->wakes, (unsigned long)P->auto_offs,
         K, E, app_power_state_text(), (unsigned long)P->standbys,
         K, E, h.ble_ready ? "ready" : "NOT READY",
         h.ble_scanning ? ", scanning" : "", (unsigned long)h.ble_devices_seen,
         K, E, p->power.paired ? p->power.name : "not paired", ui_link_text(pw->link),
         K, E, p->hr.paired ? p->hr.name : "not paired", p->hr.paired ? ui_link_text(hr->link) : "",
+        K, E, p->csc.paired ? p->csc.name : "not paired", p->csc.paired ? ui_link_text(lv.link[PLAT_SENS_CSC].link) : "",
         K, E, wifi_line,
         K, E, (unsigned long)pw->gaps, (unsigned long)pw->rejected,
         K, E, h.display_ok ? "OK" : "FAIL", K, E, h.touch_ok ? "OK" : "FAIL", K, E, h.imu_ok ? "OK" : "not found",

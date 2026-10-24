@@ -231,7 +231,7 @@ bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t n
         bc_profile_msg_t m; if (!bc_link_decode_profile(msg, n, &m)) { S.st.profile_rejected++; return false; }
         S.st.profile_sets++;
         uint8_t st = profile_apply(&m);
-        if (st == BC_PF_APPLIED) S.st.profile_applied++; else S.st.profile_rejected++;
+        if (st == BC_PF_APPLIED) S.st.profile_applied++, S.st.last_profile_ms = (now ? now : 1); else S.st.profile_rejected++;
         S.ack.version = m.version; S.ack.status = st; S.ack.board_version = app_profile()->phone_prof_ver;
         S.profile_ack_due = true;
         return true; }
@@ -242,7 +242,7 @@ bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t n
         bc_settings_msg_t m; if (!bc_link_decode_settings(msg, n, &m)) { S.st.settings_rejected++; return false; }
         S.st.settings_sets++;
         uint8_t st = settings_apply(&m);
-        if (st == BC_ST_APPLIED) S.st.settings_applied++; else S.st.settings_rejected++;
+        if (st == BC_ST_APPLIED) S.st.settings_applied++, S.st.last_settings_ms = (now ? now : 1); else S.st.settings_rejected++;
         S.settings_status = st; S.settings_due = true;
         return true; }
     default:
@@ -315,6 +315,7 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
         }
         bc_sync_end_t e = { .count = S.sent, .total = S.total, .more = more };
         S.sync_active = false;
+        S.st.last_sync_ms = now ? now : 1; if (S.after_id > S.st.last_synced_id) S.st.last_synced_id = S.after_id; S.st.synced_all = !more;
         size_t n = bc_link_encode_sync_end(&e, buf, cap, ++S.seq, now);
         if (n && n <= sizeof S.last_end) { memcpy(S.last_end, buf, n); S.last_end_len = n; }
         *chr = APP_PSVC_SYNC;

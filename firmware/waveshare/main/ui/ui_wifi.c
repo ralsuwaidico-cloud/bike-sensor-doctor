@@ -78,7 +78,7 @@ static const char *state_text(const plat_wifi_status_t *s)
 /* ---------------- main Wi-Fi screen */
 static lv_obj_t *m_status, *m_list; static int m_last_state = -1; static bool m_last_on;
 
-static void back_settings(lv_event_t *e) { (void)e; ui_settings_show(); }
+static void back_settings(lv_event_t *e) { (void)e; ui_return(); }
 static void toggle_cb(lv_event_t *e)
 {
     (void)e;

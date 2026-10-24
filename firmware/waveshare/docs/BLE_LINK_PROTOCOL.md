@@ -57,7 +57,8 @@ Always: `08 u8 ride_state (0 idle,1 running,2 paused,3 ended)` `09 u16 ride_id` 
 - **IN_BATTERY 0x24**: `01 u8 phone_pct` `02 u8 watch_pct` (0xFF unknown).
 
 Sources (`bc_src_t`): 1 XDS, 2 BLE_STRAP, 3 PHONE_GPS, 4 APPLE_WATCH, 5 WEAR_OS, 6 PHONE_STRAP, 7 ONBOARD_GPS, 8 WEATHERKIT,
-9 OPEN_METEO, 0x7F DEMO.
+9 OPEN_METEO, 10 BLE_CSC (0.6.0: a speed/cadence sensor paired to the board; appears as `dist_src` and as the cadence source),
+0x7F DEMO.
 
 ### Ride control (Control characteristic)
 - **CTRL_REQ 0x30**: `01 u16 req_id` `02 u8 cmd` `03 u16 ride_id` (0 = any). cmd: 1 START, 2 PAUSE, 3 RESUME,
@@ -143,6 +144,13 @@ max 186, rest 52, metric, 6 h, experienced, endurance, LTHR 170, updated 1792850
 Vectors (t_link3): SETTINGS_GET seq 3 = `76 00 03 00 00 00 00 00`; SETTINGS_SET v1 brightness 55, timeout 120 s, double tap, seq 4 =
 `74 00 04 00 00 00 00 00 01 04 01 00 00 00 02 01 37 03 02 78 00 04 01 01`; SETTINGS reply v2 (80 %, 60 s, triple, link on, strap first, no auto sleep,
 layout A, cue wake on, metric, applied, mask 0x3FF) seq 5 = `75 00 05 00 00 00 00 00 01 04 02 00 00 00 02 01 50 03 02 3C 00 04 01 00 05 01 01 06 01 00 07 02 00 00 08 01 00 09 01 01 0A 01 00 0F 01 00 10 04 FF 03 00 00`.
+
+## EVENT (Events characteristic `0007`, notify) — firmware 0.6.0, emission OFF by default
+`EVENT 0x40`: `01 u8 event_id` `02 u8 level_pct_est` `03 u16 mv` `04 u8 stage`. One event defined: `event_id 0x10 battery_notice`
+(stage 1 ≈ 80 %, 2 ≈ 90 %, 3 ≈ 98 % — voltage-band ESTIMATES, see `CHARGE_ALERTS.md`). Not sent unless the board's `chg_notice`
+flag is on, which has no menu while HW-1 is open. Vector (seq 7, t 123456, 81 %, 3990 mV, stage 1):
+`40 00 07 00 40 E2 01 00 01 01 10 02 01 51 03 02 96 0F 04 01 01`. A phone that subscribes to Events should show it as a local
+notification labelled as an estimate and must not present it as a charger state.
 
 ## Power states and the link (firmware 0.6.0)
 | state | display | phone link | XDS / strap | recording |

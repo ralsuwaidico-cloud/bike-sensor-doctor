@@ -28,11 +28,14 @@ void plat_sensors(plat_sensors_t *o)
     memset(o, 0, sizeof *o);
     o->power_ok = g_sim.power_ok; o->watts = g_sim.watts; o->cad_ok = g_sim.cad_ok; o->rpm = g_sim.rpm;
     o->hr_ok = g_sim.hr_ok; o->bpm = g_sim.bpm;
+    o->csc_cad_ok = g_sim.csc_cad_ok; o->csc_rpm = g_sim.csc_rpm; o->csc_speed_ok = g_sim.csc_speed_ok; o->csc_speed_dmh = g_sim.csc_speed_dmh;
+    o->csc_has_wheel = g_sim.csc_has_wheel; o->csc_has_crank = g_sim.csc_has_crank;
     for (int k = 0; k < PLAT_SENS_KINDS; k++) { o->link[k] = g_sim.link[k]; }
     o->link[PLAT_SENS_POWER].valid_age_ms = g_sim.power_ok ? 700 : (g_sim.link[0].packets ? 9300 : UINT32_MAX);
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;
 }
 
+void plat_csc_wheel_mm(uint16_t mm) { g_sim.wheel_mm = mm; }
 static plat_sens_kind_t s_scan_kind; static bool s_scanning; static uint32_t s_scan_t0;
 void plat_scan_begin(plat_sens_kind_t k) { s_scan_kind = k; s_scanning = true; s_scan_t0 = g_sim.now_ms; }
 void plat_scan_end(void) { s_scanning = false; }
@@ -40,6 +43,7 @@ int plat_scan_results(plat_found_t *out, int max)
 {
     if (!s_scanning || g_sim.now_ms - s_scan_t0 < 1500) return 0;
     int n = 0;
+    if (s_scan_kind == PLAT_SENS_ANY) { for (int i = 0; i < g_sim.found_any_n && n < max; i++) out[n++] = g_sim.found_any[i]; return n; }
     for (int i = 0; i < g_sim.found_n[s_scan_kind] && n < max; i++) out[n++] = g_sim.found[s_scan_kind][i];
     return n;
 }
@@ -283,6 +287,7 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
     case BC_MSG_PROFILE: bc_link_decode_profile(b, n, &PH.profile); PH.profiles++; break;
     case BC_MSG_PROFILE_ACK: bc_link_decode_profile_ack(b, n, &PH.profile_ack); PH.profile_acks++; break;
     case BC_MSG_SETTINGS: bc_link_decode_settings(b, n, &PH.settings); PH.settings_msgs++; break;
+    case BC_MSG_EVENT: bc_link_decode_event(b, n, &PH.event); PH.events++; break;
     default: PH.unknown_notifies++; break;
     }
     return true;

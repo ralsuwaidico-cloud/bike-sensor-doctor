@@ -41,7 +41,7 @@ typedef enum {
 /* sources of a reading (who measured it) */
 typedef enum { BC_SRC_UNKNOWN = 0, BC_SRC_XDS = 1, BC_SRC_BLE_STRAP = 2, BC_SRC_PHONE_GPS = 3, BC_SRC_APPLE_WATCH = 4,
                BC_SRC_WEAR_OS = 5, BC_SRC_PHONE_STRAP = 6, BC_SRC_ONBOARD_GPS = 7, BC_SRC_WEATHERKIT = 8, BC_SRC_OPEN_METEO = 9,
-               BC_SRC_DEMO = 0x7F } bc_src_t;
+               BC_SRC_BLE_CSC = 10 /* 0.6.0: speed/cadence sensor paired to the board (service 0x1816) */, BC_SRC_DEMO = 0x7F } bc_src_t;
 
 typedef enum { BC_CMD_START = 1, BC_CMD_PAUSE = 2, BC_CMD_RESUME = 3, BC_CMD_STOP_REQUEST = 4, BC_CMD_STOP_CONFIRM = 5 } bc_cmd_t;
 typedef enum { BC_RESP_OK = 0, BC_RESP_BAD_STATE = 1, BC_RESP_NEEDS_CONFIRM = 2, BC_RESP_UNKNOWN = 3, BC_RESP_WRONG_RIDE = 4 } bc_resp_t;
@@ -132,6 +132,12 @@ size_t bc_link_encode_sync_req(const bc_sync_req_t *v, uint8_t *buf, size_t cap,
 bool bc_link_decode_sync_req(const uint8_t *buf, size_t len, bc_sync_req_t *v);
 size_t bc_link_encode_sync_end(const bc_sync_end_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_sync_end(const uint8_t *buf, size_t len, bc_sync_end_t *v);
+
+/* ---- EVENT (Events characteristic 0007, notify). 0.6.0 defines one event; emission is OFF by default (docs/CHARGE_ALERTS.md). */
+#define BC_EVT_BATTERY_NOTICE 0x10   /* 01 u8 event_id, 02 u8 level_pct_est (ESTIMATE from voltage), 03 u16 mv, 04 u8 stage (1 = ~80 %, 2 = ~90 %, 3 = ~98 %) */
+typedef struct { uint8_t event_id; uint8_t pct_est; uint16_t mv; uint8_t stage; } bc_event_t;
+size_t bc_link_encode_event(const bc_event_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_event(const uint8_t *buf, size_t len, bc_event_t *v);
 size_t bc_link_encode_sync_ride(const bc_ride_summary_t *s, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_sync_ride(const uint8_t *buf, size_t len, bc_ride_summary_t *s);
 

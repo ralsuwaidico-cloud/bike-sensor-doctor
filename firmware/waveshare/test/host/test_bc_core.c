@@ -521,9 +521,61 @@ static void t_link3(void)
     CHECK(bc_link_decode_settings(bad, sizeof bad, &s2) && s2.version == 9 && s2.has == BC_PF_HAS(6) && s2.hr_pref == 1);
 }
 
+
+/* 0.6.0: BLE speed/cadence sensor (CSC 0x2A5B) and the battery-notice EVENT codec */
+#include "bc_csc.h"
+static void csc_pkt(uint8_t *b, bool wheel, uint32_t wr, uint16_t wt, bool crank, uint16_t cr, uint16_t ct, size_t *n)
+{
+    size_t i = 0; b[i++] = (uint8_t)((wheel ? 1 : 0) | (crank ? 2 : 0));
+    if (wheel) { b[i++] = (uint8_t)wr; b[i++] = (uint8_t)(wr >> 8); b[i++] = (uint8_t)(wr >> 16); b[i++] = (uint8_t)(wr >> 24); b[i++] = (uint8_t)wt; b[i++] = (uint8_t)(wt >> 8); }
+    if (crank) { b[i++] = (uint8_t)cr; b[i++] = (uint8_t)(cr >> 8); b[i++] = (uint8_t)ct; b[i++] = (uint8_t)(ct >> 8); }
+    *n = i;
+}
+static void t_csc(void)
+{
+    bc_csc_meas_t m; uint8_t b[16]; size_t n;
+    csc_pkt(b, true, 1000, 2048, true, 50, 1024, &n); CHECK(n == 11 && bc_csc_decode(b, n, &m) && m.wheel_ok && m.crank_ok && m.wheel_revs == 1000 && m.wheel_t == 2048 && m.crank_revs == 50 && m.crank_t == 1024);
+    CHECK(!bc_csc_decode(b, 5, &m));                                 /* truncated wheel block */
+    uint8_t none[1] = { 0 }; CHECK(!bc_csc_decode(none, 1, &m));     /* flags without data */
+    bc_csc_live_t l; bc_csc_live_reset(&l);
+    int rpm = -1, sp = -1;
+    /* crank: 1 rev per 0.667 s (683/1024 s) = 90 rpm */
+    csc_pkt(b, false, 0, 0, true, 100, 10000, &n); CHECK(bc_csc_live_feed(&l, b, n, 1000));
+    CHECK(bc_csc_live_cadence(&l, 1000, &rpm) == BC_LIVE_NO_DATA);   /* one packet: no rate yet (nothing extrapolated) */
+    csc_pkt(b, false, 0, 0, true, 101, 10683, &n); CHECK(bc_csc_live_feed(&l, b, n, 1700));
+    CHECK(bc_csc_live_cadence(&l, 1800, &rpm) == BC_LIVE_OK && rpm == 90);
+    CHECK(bc_csc_live_speed(&l, 1800, 2096, &sp) == BC_LIVE_NO_DATA);   /* crank-only sensor: no speed */
+    /* same event time repeated = stopped pedalling: after 3 s the cadence reads 0, after 4 s without packets NO DATA */
+    csc_pkt(b, false, 0, 0, true, 101, 10683, &n); bc_csc_live_feed(&l, b, n, 2700);
+    CHECK(bc_csc_live_cadence(&l, 2800, &rpm) == BC_LIVE_OK && rpm == 90);
+    csc_pkt(b, false, 0, 0, true, 101, 10683, &n); bc_csc_live_feed(&l, b, n, 4900);
+    CHECK(bc_csc_live_cadence(&l, 5000, &rpm) == BC_LIVE_OK && rpm == 0);
+    CHECK(bc_csc_live_cadence(&l, 9500, &rpm) == BC_LIVE_NO_DATA);
+    /* wheel: 4 revs in 1.0 s (1024 ticks), 2096 mm -> 8.384 m/s = 30.18 km/h; 16-bit event time wraps */
+    bc_csc_live_reset(&l);
+    csc_pkt(b, true, 5000, 65000, false, 0, 0, &n); bc_csc_live_feed(&l, b, n, 1000);
+    csc_pkt(b, true, 5004, (uint16_t)(65000 + 1024), false, 0, 0, &n); bc_csc_live_feed(&l, b, n, 2000);
+    CHECK(bc_csc_live_speed(&l, 2100, 2096, &sp) == BC_LIVE_OK && sp >= 300 && sp <= 303);
+    CHECK(bc_csc_live_speed(&l, 2100, 100, &sp) == BC_LIVE_NO_DATA);     /* absurd circumference refused */
+    CHECK(bc_csc_live_cadence(&l, 2100, &rpm) == BC_LIVE_NO_DATA);        /* wheel-only: no cadence */
+    CHECK(l.wheel_total == 4);
+    /* event codec */
+    bc_event_t e = { .event_id = BC_EVT_BATTERY_NOTICE, .pct_est = 81, .mv = 3990, .stage = 1 }, d;
+    uint8_t eb[32]; size_t en = bc_link_encode_event(&e, eb, sizeof eb, 7, 123456);
+    static const uint8_t want[] = { 0x40, 0x00, 0x07, 0x00, 0x40, 0xE2, 0x01, 0x00, 0x01, 0x01, 0x10, 0x02, 0x01, 0x51, 0x03, 0x02, 0x96, 0x0F, 0x04, 0x01, 0x01 };
+    CHECK(en == sizeof want && !memcmp(eb, want, en));
+    CHECK(bc_link_decode_event(eb, en, &d) && d.event_id == BC_EVT_BATTERY_NOTICE && d.pct_est == 81 && d.mv == 3990 && d.stage == 1);
+    /* a profile with the new keys round-trips and old profiles take the defaults */
+    bc_profile_t p; bc_profile_defaults(&p); CHECK(p.wheel_mm == 2096 && p.chg_notice == 0 && !p.csc.paired);
+    p.csc.paired = true; memcpy(p.csc.mac, "\x01\x02\x03\x04\x05\x06", 6); p.csc.addr_type = 1; snprintf(p.csc.name, sizeof p.csc.name, "CSC-Wahoo"); p.wheel_mm = 2136;
+    char txt[1024]; CHECK(bc_profile_to_text(&p, txt, sizeof txt) > 0);
+    bc_profile_t q; bc_profile_defaults(&q); CHECK(bc_profile_from_text(&q, txt) && q.csc.paired && q.csc.mac[5] == 6 && !strcmp(q.csc.name, "CSC-Wahoo") && q.wheel_mm == 2136);
+    bc_profile_t r; bc_profile_defaults(&r); CHECK(bc_profile_from_text(&r, "format=bc-profile-1\nname=Old\n") && r.wheel_mm == 2096 && !r.csc.paired);
+}
+
 int main(void)
 {
-    t_tap2(); t_link2(); t_link3(); t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link(); t_power();
+    t_csc(); t_tap2(); t_link2(); t_link3(); t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link(); t_power();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

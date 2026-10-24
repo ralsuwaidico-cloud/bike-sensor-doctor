@@ -121,10 +121,10 @@ static void wifi_cb(lv_event_t *e)
         return;
     }
     if (s_wifi_long) { s_wifi_long = false; return; }
-    ui_qs_close(); ui_wifi_show();                       /* tap: the full Wi-Fi page (networks, password, forget) */
+    ui_qs_close(); ui_set_return_connections(true); ui_wifi_show();   /* tap: the full Wi-Fi page (networks, password, forget) */
 }
 static void phone_cb(lv_event_t *e) { (void)e; bc_profile_t *p = app_profile(); p->phone_on = !p->phone_on; app_profile_save(); plat_phone_set_enabled(p->phone_on); s_qs_dirty = true; }
-static void sensors_cb(lv_event_t *e) { (void)e; ui_qs_close(); ui_sensors_show(); }
+static void sensors_cb(lv_event_t *e) { (void)e; ui_qs_close(); ui_connections_show(); }
 static void lock_cb(lv_event_t *e) { (void)e; ui_qs_close(); app_power_lock(); }
 static void off_cb(lv_event_t *e) { (void)e; ui_qs_close(); app_power_screen_off(); }
 static void sleep_page_cb(lv_event_t *e) { (void)e; s_qs_page = 1; s_qs_dirty = true; }
@@ -169,7 +169,7 @@ static void qs_fill_list(void)
     plat_phone_status_t ps; plat_phone_status(&ps);
     q_phone = ui_row_btn(q_list, "Phone link", !p->phone_on ? "off" : ps.state == PLAT_PHONE_READY ? "connected" : "on", p->phone_on ? C_GREEN : C_MUT, phone_cb, NULL);
     lv_obj_t *n1 = ui_label(q_list, &lv_font_montserrat_12, C_MUT, "stays on with the screen off"); lv_obj_set_width(n1, lv_pct(100)); lv_label_set_long_mode(n1, LV_LABEL_LONG_WRAP);
-    ui_row_btn(q_list, "Sensors", LV_SYMBOL_RIGHT, C_CYAN, sensors_cb, NULL);
+    { int c, a; char cs[20]; ui_conn_summary(&c, &a); snprintf(cs, sizeof cs, a ? "! %d " LV_SYMBOL_RIGHT : "%d on " LV_SYMBOL_RIGHT, a ? a : c); ui_row_btn(q_list, "Connections", cs, a ? C_RED : C_CYAN, sensors_cb, NULL); }
     char bs[16]; app_power_batt_short(bs, sizeof bs);
     q_batt_row = row_static(q_list, "Battery", bs, P->bat_level >= BC_BAT_VERY_LOW ? C_RED : P->bat_level == BC_BAT_LOW ? C_AMBER : C_FG);
     char bd[96]; app_power_batt_detail(bd, sizeof bd);
@@ -354,6 +354,8 @@ void ui_power_settings_show(void)
     ui_row_btn(l, "Wake on warning", p->wake_on_cue ? "on" : "off", p->wake_on_cue ? C_GREEN : C_MUT, cue_cb, NULL);
     lv_obj_t *n3 = ui_label(l, &lv_font_montserrat_12, C_MUT, "screen off in a ride: 5 s on\nfor HR HIGH and similar"); lv_obj_set_width(n3, lv_pct(100)); lv_label_set_long_mode(n3, LV_LABEL_LONG_WRAP);
     ui_row_btn(l, "Low batt.", p->bat_protect ? "auto-save" : "alerts only", p->bat_protect ? C_AMBER : C_GREEN, prot_cb, NULL);
+    { lv_obj_t *ca = ui_row_btn(l, "Charging alerts", p->chg_notice ? "phone (test)" : "unavailable", p->chg_notice ? C_AMBER : C_MUT, NULL, NULL); lv_obj_remove_flag(ca, LV_OBJ_FLAG_CLICKABLE);
+      lv_obj_t *n7 = ui_label(l, &lv_font_montserrat_12, C_MUT, "no charge sensing, no buzzer, and\nthe charger's 1 A is too much for the\n500 mAh cell (HW-1): see Device Health"); lv_obj_set_width(n7, lv_pct(100)); lv_label_set_long_mode(n7, LV_LABEL_LONG_WRAP); }
     lv_obj_t *n4 = ui_label(l, &lv_font_montserrat_12, p->bat_protect ? C_AMBER : C_MUT,
         p->bat_protect ? "NOT VALIDATED: at ~5% the ride is\nended, saved and the device sleeps" : "alerts at ~20%, ~10%, ~5%;\nthe ride is never ended by itself");
     lv_obj_set_width(n4, lv_pct(100)); lv_label_set_long_mode(n4, LV_LABEL_LONG_WRAP);

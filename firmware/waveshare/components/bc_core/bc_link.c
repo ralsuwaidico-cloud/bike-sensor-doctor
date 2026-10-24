@@ -315,7 +315,7 @@ const char *bc_src_name(uint8_t src)
     switch (src) {
     case BC_SRC_XDS: return "XDS"; case BC_SRC_BLE_STRAP: return "STRAP"; case BC_SRC_PHONE_GPS: return "PHONE GPS";
     case BC_SRC_APPLE_WATCH: return "WATCH"; case BC_SRC_WEAR_OS: return "WEAR OS"; case BC_SRC_PHONE_STRAP: return "PHONE";
-    case BC_SRC_ONBOARD_GPS: return "GPS"; case BC_SRC_WEATHERKIT: return "WEATHERKIT"; case BC_SRC_OPEN_METEO: return "OPEN-METEO";
+    case BC_SRC_ONBOARD_GPS: return "GPS"; case BC_SRC_BLE_CSC: return "CSC SENSOR"; case BC_SRC_WEATHERKIT: return "WEATHERKIT"; case BC_SRC_OPEN_METEO: return "OPEN-METEO";
     case BC_SRC_DEMO: return "DEMO"; default: return "?";
     }
 }
@@ -366,6 +366,25 @@ bool bc_link_decode_sync_end(const uint8_t *buf, size_t len, bc_sync_end_t *v)
         else if (t == 0x03 && n == 1) v->more = x[0] != 0;
     }
     return true;
+}
+size_t bc_link_encode_event(const bc_event_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_EVENT, seq, t_ms);
+    bc_lw_u8(&w, 0x01, v->event_id); bc_lw_u8(&w, 0x02, v->pct_est); bc_lw_u16(&w, 0x03, v->mv); bc_lw_u8(&w, 0x04, v->stage);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_event(const uint8_t *buf, size_t len, bc_event_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_EVENT) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 1) v->event_id = x[0];
+        else if (t == 0x02 && n == 1) v->pct_est = x[0];
+        else if (t == 0x03 && n == 2) v->mv = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x04 && n == 1) v->stage = x[0];
+    }
+    return v->event_id != 0;
 }
 static int16_t s16c(int v) { return (int16_t)(v < -32768 ? -32768 : v > 32767 ? 32767 : v); }
 size_t bc_link_encode_sync_ride(const bc_ride_summary_t *s, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)

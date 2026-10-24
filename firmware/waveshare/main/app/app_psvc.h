@@ -44,6 +44,8 @@ void app_psvc_settings_msg(bc_settings_msg_t *out);
 /** Counters for Device Health / tests. */
 typedef struct { uint32_t wifi_msgs, wifi_rejected, scans, sets, forgets, status_sent, sync_reqs, rides_sent,
                  profile_gets, profile_sets, profile_applied, profile_rejected, settings_gets, settings_sets, settings_applied, settings_rejected;
+                 /* 0.6.0 Connections > Device sync: plat_ms() of the last completed action (0 = never this boot), last ride id streamed */
+                 uint32_t last_sync_ms, last_profile_ms, last_settings_ms; uint16_t last_synced_id; bool synced_all;
                  bool sync_active, status_watch; } app_psvc_stats_t;
 void app_psvc_stats(app_psvc_stats_t *out);
 
