@@ -1,5 +1,46 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
+## 0.3.1 (build 21) — 24 Oct 2026 — TestFlight, internal testers only
+
+Everything below is **simulator-tested** (27 XCTest cases in GitHub Actions, 0 failures). **Nothing is real-device-tested**
+until Rashed runs `BUILD21-TEST.txt`. The board is on firmware 0.5.0; the phone-link protocol is unchanged, so the
+build-17 board tests still apply.
+
+### Implemented
+- **Ride-history sync, client side** (`SYNC_PROPOSAL.md`): the app subscribes to the board's Sync characteristic and
+  requests finished rides — **only when the board's INFO advertises the RIDE_SYNC capability (bit 0x40)**. Firmware
+  0.4.0/0.5.0 do not, so the app shows "not supported by firmware 0.5.0 — sync coming" in Progress and never invents
+  rides. Imported board rides are owned by the board, keyed by board id + start time, merged with the phone's live
+  mirror of the same ride (board totals win, phone GPS track kept); demo rides are dropped. Conformance vectors for the
+  firmware author are in `BCLinkTests` (SYNC_REQ bytes, SYNC_RIDE round trip, SYNC_END).
+- **FTP from rides**: best 20-minute (and 60-minute) mean power from a ride's 1 Hz samples (needs power on ≥ 95 % of
+  the window). When 95 % of the best 20 min differs ≥ 2 % from the current FTP, a **"Suggested FTP" card** appears on
+  Home and in Progress: "95 % of the best 20-minute power (N W) from <date> ride", with Accept / Not now. Nothing
+  changes until Accept; an entered (tested) FTP is never replaced automatically. After Accept the label reads
+  "estimated from <date> ride". Best 20 / 60 min are shown in each ride's detail.
+- **Background phone-only recording**: the recorder now runs on its own 1 Hz timer (not the screen refresh), the
+  location background mode keeps GPS flowing with the screen locked, and watch heart rate keeps arriving over the
+  existing WatchConnectivity path. If iOS suspends the app, the unobserved seconds are stored as **marked gaps**
+  (time stays correct, no values are interpolated) and the ride detail says how many. A local notification
+  ("Recording in the background") appears when the app leaves the foreground during a ride; asked once, no new
+  entitlements.
+- **Apple Watch ride mirror and controls**: the watch shows the phone's ride (state, recorder, time, distance, W with
+  zone, rpm, bpm with source) at 1 Hz while reachable, and offers Start / Pause / Resume / End (End asks first). Commands
+  go to the phone, which applies the same one-owner rules as its own buttons (board records when connected with live
+  data, otherwise the phone), so the wrist can never create a second ride. The HealthKit workout flow is unchanged.
+- Store schema stays 1; new fields (`boardId`, `gapSeconds`, `ftpSuggestion`, `ftpFromDate`, sample `gap`) are optional,
+  so build-17 data loads unchanged.
+
+### Known limitations
+- Board rides recorded while the phone was away still stay on the board: the firmware side of the sync proposal is not
+  implemented yet (planned for firmware 0.6.0).
+- Google and e-mail sign-in remain disabled until Supabase + Google OAuth are configured (needs Rashed).
+- Watch controls need the phone app running (foreground or background); with the phone unreachable the watch says so.
+- Background recording depends on iOS keeping the app alive with the location background mode; a long locked-screen
+  ride is untested on a real phone.
+- Training load / form still "not enough data"; cloud integrations still "not connected"; Android unchanged (skeleton).
+- Build number is the GitHub run number (21); version 0.3.1.
+
 ## 0.3.0 (build 17) — 24 Oct 2026 — TestFlight, internal testers only
 
 The five-tab app from Prototype v3. Everything below is **simulator-tested** (XCTest in GitHub Actions: Link codec

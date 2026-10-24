@@ -1,0 +1,37 @@
+BikeComputer iPhone app 0.3.1 (TestFlight build 21) — real-device checklist
+===========================================================================
+Record PASS / FAIL / NOT TESTED per step. Everything is simulator-tested only until you confirm it.
+Board: firmware 0.5.0 (phone-link unchanged). Never USB and battery connected at the same time (HW-1).
+Build-17 steps (BUILD17-TEST.txt) still apply; this list covers only what is new in build 21.
+
+iPhone
+ 1  Update to 0.3.1 (21). Profile, plan, rides and tile layout from build 17 are still there (store kept).
+ 2  Progress → bottom of the ride list reads "Board history: not supported by firmware 0.5.0 — sync coming".
+    No new rides appeared by themselves.
+ 3  Phone-only ride, board off: Start → lock the phone and put it in your pocket for 5 minutes outdoors → unlock.
+    Time advanced by ~5 min, distance grew, the map line continued. A notification "Recording in the background"
+    appeared when you locked the phone.
+ 4  End → Save → ride detail. If the detail says "N s not observed by the phone", write down N (expected 0 or small).
+ 5  A ride with ≥ 20 min of steady power from the board (or an older one): if its best 20 min × 0.95 differs
+    ≥ 2 % from your FTP, a "Suggested FTP" card appears on Home and in Progress. FTP in Profile is UNCHANGED until
+    you tap Accept. Tap "Not now" → card disappears, FTP unchanged. (Accept only if you want the new value.)
+
+Apple Watch (phone app open or in the background)
+ 6  Watch app shows a "Ride" section: "not recording" or "board ready" when the board is connected with live data.
+ 7  Tap Start on the watch, board OFF → phone starts a phone-only ride within 2 s; watch shows time counting,
+    "on the phone", bpm when the watch workout is running.
+ 8  Pause / Resume from the watch → phone follows. Stop → "End the ride?" → End → phone shows the result sheet.
+ 9  Board ON and paired, watch Start → "Start on the board": the BOARD starts the ride (its screen changes),
+    phone says "on the board", watch shows W / rpm from the XDS. Only one ride exists afterwards (board history
+    + one entry on the phone).
+10  Put the phone in a pocket, ride 2 minutes: watch values keep updating (≤ 5 s stale allowed), bpm never holds
+    an old value when the workout is stopped.
+
+Board (firmware 0.5.0, USB only)
+11  During a board ride, switch the phone screen off for 1 minute: the board keeps recording and the phone resumes
+    showing values when unlocked (same ride, no second entry).
+12  Board ride ended from the board button: phone result sheet appears; Save; Progress shows ONE ride with the
+    "BikeComputer" pill.
+
+Report PASS/FAIL/NOT TESTED per step plus screenshots of any value that looks wrong. "--" when a source is absent is
+correct; a number without a live source is a bug.
