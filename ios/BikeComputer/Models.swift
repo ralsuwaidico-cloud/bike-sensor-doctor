@@ -132,34 +132,121 @@ struct RideRecord: Codable, Identifiable, Equatable {
     var samples: [Sample] = []      /* 1 Hz, kept for graphs; nil fields = no data that second */
     struct Sample: Codable, Equatable { var t: Int; var w: Int?; var cad: Int?; var hr: Int?; var speedCms: Int?; var lat: Double?; var lon: Double?; var alt: Double? }
 
-    var title: String { kj == nil && avgPower == nil ? "Ride (phone only)" : "Ride" }
+    var title: String { recorder == .phone ? "Ride (phone only)" : "Ride" }
+    var recordedBy: String { recorder == .board ? "BikeComputer" : "this phone" }
+    var hasPower: Bool { avgPower != nil }
+    var hasTrack: Bool { samples.contains { $0.lat != nil } }
 }
 
-// MARK: - Store (local JSON; cloud sync comes with the account service)
-final class Store: ObservableObject {
-    @Published var profile = RiderProfile() { didSet { save("profile", profile) } }
-    @Published var onboarded = false { didSet { UserDefaults.standard.set(onboarded, forKey: "bc.onboarded") } }
-    @Published var guest = true { didSet { UserDefaults.standard.set(guest, forKey: "bc.guest") } }
-    @Published var appleUserId: String? { didSet { UserDefaults.standard.set(appleUserId, forKey: "bc.appleUser") } }
-    @Published var plan: [Workout] = [] { didSet { save("plan", plan) } }
-    @Published var rides: [RideRecord] = [] { didSet { save("rides", rides) } }
-    @Published var tiles: [String] = ["power", "cadence", "hr", "speed", "time", "dist"] { didSet { save("tiles", tiles) } }
+// MARK: - Settings
+struct AppSettings: Codable, Equatable {
+    enum Units: String, Codable, CaseIterable { case metric, imperial; var title: String { self == .metric ? "km, m" : "mi, ft" } }
+    enum HRPref: String, Codable, CaseIterable { case strap, watch
+        var title: String { self == .strap ? "Strap / band via BikeComputer first" : "Apple Watch first" } }
+    var units: Units = .metric
+    /// Phone-only mode: the phone records even when a BikeComputer is connected (its live values are still shown).
+    var phoneOnlyMode = false
+    var hrPref: HRPref = .strap
+    var keepScreenOn = true
+}
 
-    private let dir: URL = {
+// MARK: - Store (local JSON file with a schema version; cloud sync comes with the account service)
+/// One file `store.json` in Application Support. `schema` lets a future build migrate instead of dropping data; build 15
+/// writes schema 1 and still imports the build-14 per-file layout (profile.json / plan.json / rides.json / tiles.json).
+struct StoreFile: Codable, Equatable {
+    static let currentSchema = 1
+    var schema = StoreFile.currentSchema
+    var profile = RiderProfile()
+    var settings = AppSettings()
+    var plan: [Workout] = []
+    var rides: [RideRecord] = []
+    var tiles: [String] = Store.defaultTiles
+    var onboarded = false
+    var guest = true
+    var appleUserId: String? = nil
+    var createdAt = Date()
+
+    init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
+        self.schema = schema; self.profile = profile; self.settings = settings; self.plan = plan; self.rides = rides; self.tiles = tiles
+        self.onboarded = onboarded; self.guest = guest; self.appleUserId = appleUserId; self.createdAt = createdAt
+    }
+
+    /// Tolerant decoding: a key missing from an older file takes its default instead of failing the whole load.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
+        profile = try c.decodeIfPresent(RiderProfile.self, forKey: .profile) ?? RiderProfile()
+        settings = try c.decodeIfPresent(AppSettings.self, forKey: .settings) ?? AppSettings()
+        plan = try c.decodeIfPresent([Workout].self, forKey: .plan) ?? []
+        rides = try c.decodeIfPresent([RideRecord].self, forKey: .rides) ?? []
+        tiles = try c.decodeIfPresent([String].self, forKey: .tiles) ?? Store.defaultTiles
+        onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? false
+        guest = try c.decodeIfPresent(Bool.self, forKey: .guest) ?? true
+        appleUserId = try c.decodeIfPresent(String.self, forKey: .appleUserId)
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+    }
+
+    /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
+    static func migrate(_ f: StoreFile) -> StoreFile {
+        var f = f
+        if f.schema < 1 { f.schema = 1 }          /* schema 0 never shipped; placeholder for the pattern */
+        if f.tiles.isEmpty { f.tiles = Store.defaultTiles }
+        if f.rides.contains(where: { $0.zoneSeconds.count != 7 }) { for i in f.rides.indices where f.rides[i].zoneSeconds.count != 7 { f.rides[i].zoneSeconds = Array(repeating: 0, count: 7) } }
+        return f
+    }
+}
+
+final class Store: ObservableObject {
+    static let defaultTiles = ["power", "cadence", "hr", "speed", "time", "dist"]
+    @Published var profile = RiderProfile() { didSet { persist() } }
+    @Published var settings = AppSettings() { didSet { persist() } }
+    @Published var onboarded = false { didSet { persist() } }
+    @Published var guest = true { didSet { persist() } }
+    @Published var appleUserId: String? { didSet { persist() } }
+    @Published var plan: [Workout] = [] { didSet { persist() } }
+    @Published var rides: [RideRecord] = [] { didSet { persist() } }
+    @Published var tiles: [String] = Store.defaultTiles { didSet { persist() } }
+    @Published private(set) var lastSaveError: String?
+
+    let dir: URL
+    private var loading = true
+    private var createdAt = Date()
+
+    static var defaultDirectory: URL {
         let u = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("BikeComputer", isDirectory: true)
         try? FileManager.default.createDirectory(at: u, withIntermediateDirectories: true)
         return u
-    }()
+    }
 
-    init() {
-        onboarded = UserDefaults.standard.bool(forKey: "bc.onboarded")
-        guest = UserDefaults.standard.object(forKey: "bc.guest") as? Bool ?? true
-        appleUserId = UserDefaults.standard.string(forKey: "bc.appleUser")
-        if let p: RiderProfile = load("profile") { profile = p }
-        if let w: [Workout] = load("plan") { plan = w }
-        if let r: [RideRecord] = load("rides") { rides = r }
-        if let t: [String] = load("tiles") { tiles = t }
-        ensurePlan()
+    init(directory: URL = Store.defaultDirectory, generatePlan: Bool = true) {
+        dir = directory
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        if let f = Self.read(dir.appendingPathComponent("store.json")) { apply(StoreFile.migrate(f)) }
+        else if let legacy = legacyImport() { apply(legacy) }
+        loading = false
+        if generatePlan { ensurePlan() }
+        if !FileManager.default.fileExists(atPath: dir.appendingPathComponent("store.json").path) { persist() }
+    }
+
+    private func apply(_ f: StoreFile) {
+        profile = f.profile; settings = f.settings; plan = f.plan; rides = f.rides; tiles = f.tiles
+        onboarded = f.onboarded; guest = f.guest; appleUserId = f.appleUserId; createdAt = f.createdAt
+    }
+
+    var snapshot: StoreFile { StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt) }
+
+    /// Build-14 layout: separate JSON files + UserDefaults flags. Imported once, then superseded by store.json.
+    private func legacyImport() -> StoreFile? {
+        var f = StoreFile(); var any = false
+        if let p: RiderProfile = Self.read(dir.appendingPathComponent("profile.json")) { f.profile = p; any = true }
+        if let w: [Workout] = Self.read(dir.appendingPathComponent("plan.json")) { f.plan = w; any = true }
+        if let r: [RideRecord] = Self.read(dir.appendingPathComponent("rides.json")) { f.rides = r; any = true }
+        if let t: [String] = Self.read(dir.appendingPathComponent("tiles.json")) { f.tiles = t; any = true }
+        let ud = UserDefaults.standard
+        if ud.object(forKey: "bc.onboarded") != nil { f.onboarded = ud.bool(forKey: "bc.onboarded"); any = true }
+        if let g = ud.object(forKey: "bc.guest") as? Bool { f.guest = g }
+        if let a = ud.string(forKey: "bc.appleUser") { f.appleUserId = a; f.guest = false }
+        return any ? f : nil
     }
 
     func ensurePlan() {
@@ -188,30 +275,64 @@ final class Store: ObservableObject {
         let da = plan[i].date; plan[i].date = plan[j].date; plan[j].date = da
     }
 
-    func addRide(_ r: RideRecord) {
-        guard !r.demo else { return }                         /* demo rides never enter real history */
-        if let b = r.boardRideId, rides.contains(where: { $0.boardRideId == b }) { return }   /* no duplicates from the board */
+    /// Adds a finished ride. Demo rides never enter history; a board ride already imported (same board ride id) is
+    /// ignored, so a ride can never appear twice or under two recorders.
+    @discardableResult
+    func addRide(_ r: RideRecord) -> Bool {
+        guard !r.demo else { return false }
+        if let b = r.boardRideId, rides.contains(where: { $0.boardRideId == b && $0.recorder == .board }) { return false }
+        if rides.contains(where: { $0.id == r.id }) { return false }
         rides.insert(r, at: 0)
         if let t = today, t.kind.isRide, !t.done { var w = t; w.done = true; update(w) }
+        return true
+    }
+    func deleteRide(_ r: RideRecord) { rides.removeAll { $0.id == r.id } }
+
+    /// Weekly totals for Progress (last `weeks` weeks, oldest first).
+    struct WeekTotal: Identifiable { var id: Date { monday }; let monday: Date; let minutes: Int; let km: Double; let rides: Int }
+    func weekTotals(weeks: Int = 8) -> [WeekTotal] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: today) + 5) % 7
+        let thisMonday = cal.date(byAdding: .day, value: -wd, to: today)!
+        return (0..<weeks).reversed().map { k in
+            let m = cal.date(byAdding: .day, value: -7 * k, to: thisMonday)!
+            let e = cal.date(byAdding: .day, value: 7, to: m)!
+            let rs = rides.filter { $0.start >= m && $0.start < e }
+            return WeekTotal(monday: m, minutes: rs.reduce(0) { $0 + $1.durationS } / 60, km: Double(rs.reduce(0) { $0 + $1.distanceM }) / 1000, rides: rs.count)
+        }
     }
 
+    /// Guideline 5.1.1(v): everything the app stores about the rider can be removed in-app.
     func resetAll() {
-        rides = []; plan = []; profile = RiderProfile(); onboarded = false; guest = true; appleUserId = nil
-        tiles = ["power", "cadence", "hr", "speed", "time", "dist"]
+        loading = true
+        rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil
+        tiles = Store.defaultTiles; createdAt = Date()
+        loading = false
+        for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
+        for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }
         ensurePlan()
     }
 
     // MARK: persistence
-    private func save<T: Encodable>(_ name: String, _ v: T) {
-        do { let d = try JSONEncoder().encode(v); try d.write(to: dir.appendingPathComponent(name + ".json"), options: .atomic) } catch { }
+    private func persist() {
+        guard !loading else { return }
+        do {
+            let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+            let d = try enc.encode(snapshot)
+            try d.write(to: dir.appendingPathComponent("store.json"), options: .atomic)
+            lastSaveError = nil
+        } catch { lastSaveError = error.localizedDescription }
     }
-    private func load<T: Decodable>(_ name: String) -> T? {
-        guard let d = try? Data(contentsOf: dir.appendingPathComponent(name + ".json")) else { return nil }
-        return try? JSONDecoder().decode(T.self, from: d)
+    private static func read<T: Decodable>(_ url: URL) -> T? {
+        guard let d = try? Data(contentsOf: url) else { return nil }
+        let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+        if let v = try? dec.decode(T.self, from: d) { return v }
+        return try? JSONDecoder().decode(T.self, from: d)      /* build-14 files used the default date encoding */
     }
 }
 
-// MARK: - Coach (deterministic, plain words). The cloud model narrates later; these sentences are the offline baseline.
+// MARK: - Coach (rules). Deterministic plain-word notes; no model is involved in this build and the UI says "Coach (rules)".
 enum Coach {
     static func homeNote(store s: Store, device: DeviceLink?) -> String {
         let last = s.rides.first

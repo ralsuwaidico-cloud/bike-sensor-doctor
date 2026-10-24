@@ -78,8 +78,8 @@ struct WorkoutDetail: View {
                                 Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpHow.label)). Heart-rate targets appear when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
                         }
                         HStack { Button("Move") { mode = 1 }.buttonStyle(.bordered); Button("Edit") { mode = 2 }.buttonStyle(.bordered); Button(workout.skipped ? "Unskip" : "Skip") { workout.skipped.toggle(); store.update(workout) }.buttonStyle(.bordered); Spacer() }
-                        if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), recorder.state == .idle {
-                            Button { if device.state == .ready { device.control(.start) } else { recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
+                        if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
+                            Button { if recorder.startMode(locationAuthorized: true) == .board { device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
                             Text("Targets are sent to the BikeComputer when the ride starts; the board shows them on its coach screen.").font(.footnote).foregroundStyle(.secondary)
                         }
                     } else if mode == 1 {

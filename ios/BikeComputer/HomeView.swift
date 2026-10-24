@@ -27,12 +27,13 @@ struct HomeView: View {
                             }
                         }.buttonStyle(.plain)
                     }
-                    Button { tab = 2; if recorder.state == .idle, device.state != .ready { recorder.start() } else if device.state == .ready { device.control(.start) } } label: {
-                        Label(device.state == .ready ? "Start ride" : "Start ride · phone only", systemImage: "play.fill").frame(maxWidth: .infinity)
-                    }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large).disabled(recorder.state == .running || recorder.state == .paused)
+                    let mode = recorder.startMode(locationAuthorized: true)
+                    Button { tab = 2; if !recorder.isActive { if mode == .board { device.control(.start) } else if mode == .phone { _ = recorder.start() } } } label: {
+                        Label(recorder.isActive ? "Ride in progress · open Ride" : mode == .board ? "Start ride on the BikeComputer" : mode == .blockedByBoardRide ? "Ride running on the BikeComputer" : "Start ride · phone only", systemImage: "play.fill").frame(maxWidth: .infinity)
+                    }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
 
                     Card {
-                        Eyebrow(t: "Coach")
+                        Eyebrow(t: "Coach (rules)")
                         Text(Coach.homeNote(store: store, device: device)).font(.subheadline)
                     }
                     Card {
@@ -50,7 +51,7 @@ struct HomeView: View {
                     Card {
                         HStack { Eyebrow(t: "Devices"); Spacer(); Button("Manage ›") { tab = 4 }.font(.caption.bold()) }
                         HStack(spacing: 10) {
-                            HStack(spacing: 5) { StatusDot(color: device.state == .ready ? BC.live : .secondary); Text(device.state == .ready ? "BikeComputer" : "no board · phone records").font(.caption) }
+                            HStack(spacing: 5) { StatusDot(color: device.state == .ready ? BC.live : .secondary); Text(device.state == .ready ? (store.settings.phoneOnlyMode ? "BikeComputer · phone-only mode" : "BikeComputer") : "no board · phone records").font(.caption) }
                             HStack(spacing: 5) { StatusDot(color: (device.live?.powerW != nil && device.liveIsFresh) ? BC.live : .secondary); Text("meter").font(.caption) }
                             HStack(spacing: 5) { StatusDot(color: watch.hrIsFresh ? BC.live : watch.appInstalled ? BC.stale : .secondary); Text("watch").font(.caption) }
                         }
