@@ -1,10 +1,10 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
-## 0.3.0 (build 16) — 24 Oct 2026 — TestFlight, internal testers only
+## 0.3.0 (build 17) — 24 Oct 2026 — TestFlight, internal testers only
 
 The five-tab app from Prototype v3. Everything below is **simulator-tested** (XCTest in GitHub Actions: Link codec
 vectors, plan engine, store persistence and migration, ride ownership, zones). **Nothing in this build is
-real-device-tested** until Rashed runs the checklist in `BUILD16-TEST.txt`; build-14 features that were device-tested
+real-device-tested** until Rashed runs the checklist in `BUILD17-TEST.txt`; build-14 features that were device-tested
 (pairing, live data, GPS to board, Watch HR relay) are carried over unchanged in code but must be re-confirmed.
 
 ### Implemented
@@ -55,10 +55,10 @@ real-device-tested** until Rashed runs the checklist in `BUILD16-TEST.txt`; buil
 - Imperial speed/distance conversions are display-only; stored data is always metric.
 - Background recording on the phone depends on iOS keeping the app alive with the location background mode; a long
   phone-only ride with the screen locked is untested.
-- Build number is the GitHub run number (16); the version is 0.3.0.
+- Build number is the GitHub run number (17); the version is 0.3.0.
 
-### Testing checklist (short) — see BUILD16-TEST.txt for the step-by-step version
-1. Install 0.3.0 (16) from TestFlight; first run shows onboarding; choose guest.
+### Testing checklist (short) — see BUILD17-TEST.txt for the step-by-step version
+1. Install 0.3.0 (17) from TestFlight; first run shows onboarding; choose guest.
 2. Profile → data from onboarding present; set a tested FTP; zones update.
 3. Board off: Ride → "Start ride · phone only" → walk 2 min → End → Save; Progress shows the ride with a map.
 4. Board on (0.4.0), paired: Ride shows "board ready"; Start → board starts; tiles show XDS power/cadence; End from

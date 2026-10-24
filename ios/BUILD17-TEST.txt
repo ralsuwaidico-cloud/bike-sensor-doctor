@@ -1,4 +1,4 @@
-BikeComputer iPhone app 0.3.0 (TestFlight build 16) — real-device checklist
+BikeComputer iPhone app 0.3.0 (TestFlight build 17) — real-device checklist
 ===========================================================================
 Record PASS / FAIL / NOT TESTED per step. Everything here is simulator-tested only until you confirm it.
 Firmware on the board: 0.4.0 (do not flash 0.5.0 for this list). Battery disconnected, USB power, as agreed.

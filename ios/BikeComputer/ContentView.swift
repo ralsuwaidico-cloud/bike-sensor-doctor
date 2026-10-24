@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Build 15: the five-tab app from Prototype v3. First run shows the onboarding; afterwards Home / Plan / Ride /
+/// Build 17 (0.3.0): the five-tab app from Prototype v3. First run shows the onboarding; afterwards Home / Plan / Ride /
 /// Progress / Profile. The Devices screen from build 14 lives under Profile › Devices unchanged.
 struct RootView: View {
     @EnvironmentObject private var store: Store

@@ -76,7 +76,7 @@ struct ProfileTabView: View {
                 Section("About") {
                     LabeledContent("Version", value: AppInfo.label)
                     LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1")
-                    Text("Build 15 is simulator-tested (unit tests in CI). Features marked live are device-tested only after Rashed's checklist; nothing in this build is device-verified yet.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Build 17 (0.3.0) is simulator-tested (unit tests in CI). Features marked live are device-tested only after Rashed's checklist; nothing in this build is device-verified yet.").font(.footnote).foregroundStyle(.secondary)
                     Text("Offline by design: no network calls in this build. Health data stays on this phone.").font(.footnote).foregroundStyle(.secondary)
                     if let e = store.lastSaveError { Text("Save problem: \(e)").font(.footnote).foregroundStyle(BC.warn) }
                 }
