@@ -1,0 +1,47 @@
+BUILD 14 TEST - iPhone + Apple Watch app with firmware 0.4.0      (print or keep on the phone)
+========================================================================================
+Needs: Waveshare on firmware 0.4.0 (section A of PHONE-TEST-v0.4.0.txt passed), iPhone with
+TestFlight build 14 (BikeComputer 0.2.0 (14)), Apple Watch with the Watch app, XDS power meter.
+Mark PASS / FAIL / not tested. Photos or screenshots of anything odd help most.
+
+1. BLE PAIRING
+ [ ] 1a iPhone > Devices tab > "Find my Waveshare": the board appears in the list within 10 s
+ [ ] 1b Tap it: the ROUND SCREEN shows a 6-digit code; iOS asks for it; type it
+ [ ] 1c Devices tab shows "Connected", firmware 0.4.0, protocol v1.0, a signal in dBm
+ [ ] 1d Board: Settings > Phone says CONNECTED, "a phone is remembered"
+ [ ] 1e Switch the board off and on: iPhone reconnects by itself WITHOUT a code (within 30 s)
+
+2. XDS POWER / CADENCE (board first, always)
+ [ ] 2a Pedal: watts and rpm on the round screen as before (unchanged by the phone)
+ [ ] 2b Ride tab on the iPhone shows the same watts/rpm within 1 s, source "XDS"
+ [ ] 2c Stop pedalling 5 s: both show "--" / NO DATA (no held number)
+ [ ] 2d Board Device Health after 10 min connected: meter "gaps" ______ (expect 0)
+
+3. PHONE GPS
+ [ ] 3a Devices tab > "Share GPS with the Waveshare" ON; iOS asks for location permission once
+ [ ] 3b Outdoors, walk or ride: status shows "±N m · N km/h"; "Fixes sent" climbs about 1/s
+ [ ] 3c Board ride page 3 (RIDE) shows speed with "PHONE GPS"; stand still 10 s -> "--" + STALE
+ [ ] 3d After 1 km (known distance): board distance ______ km (expect within 3%)
+ [ ] 3e Lock the iPhone screen for 2 min while moving: fixes keep arriving (blue bar / status)
+
+4. APPLE WATCH HEART RATE
+ [ ] 4a Watch app > Start cycling; allow Health when asked; bpm appears on the watch within 15 s
+ [ ] 4b iPhone Devices tab: "Live heart rate N bpm (Apple Watch)", "Readings forwarded" climbs
+ [ ] 4c Board: HR shows with "WATCH" under it (not BPM/STRAP); Ride tab shows "Apple Watch"
+ [ ] 4d End the workout on the watch: board HR goes to "--" within 6 s
+ [ ] 4e Watch: choose Discard -> no workout appears in the Fitness app (no duplicate)
+
+5. RECONNECTION
+ [ ] 5a Start a ride from the iPhone (Ride tab > Start ride): board jumps to its ride screen
+ [ ] 5b Walk 20+ m away from the board or switch Bluetooth off: iPhone says "Connecting..."
+ [ ] 5c Board keeps recording (timer runs, watts live); speed shows "--" on the board
+ [ ] 5d Come back / Bluetooth on: reconnects alone; live values return; speed returns
+ [ ] 5e Kill the iPhone app and reopen: it reconnects without a code
+
+6. RIDE RECORDING
+ [ ] 6a Ride 5+ min with phone connected; iPhone time/distance match the board
+ [ ] 6b iPhone > End: it asks to confirm; confirm -> board shows its results screen
+ [ ] 6c Board > SAVE: History lists the ride with distance (km) and a date
+ [ ] 6d Board Device Health: RAM free ______ KB (start) -> ______ KB (after 20 min), crashes 0
+
+STATUS: none of these is "hardware-verified" until you report it PASS here.
