@@ -1,0 +1,46 @@
+BikeComputer iPhone app 0.5.0 (TestFlight build 27) — real-device checklist
+===========================================================================
+Record PASS / FAIL / NOT TESTED per step. Everything is simulator-tested only until you confirm it.
+Board: firmware 0.5.0 (phone-link unchanged). Never USB and battery connected at the same time (HW-1).
+Build-24 steps still apply; this list covers what is new in build 27.
+
+iPhone — Profile and Plan
+ 1  Update to 0.5.0 (27). Profile opens as a menu of six categories; your name, FTP, weight, birth year, zones and
+    rides from build 24 are still there (open Rider information, Heart rate, Power & cycling to confirm).
+ 2  Profile › Training profile › "Training days and durations": set Mon rest, Tue cycle 45 min, Wed lift 30 min,
+    Thu cycle 60 min, Fri rest, Sat cycle 1 h 30 min, Sun other 45 min → Save. Plan tab: Tue/Thu/Sat are rides at those
+    durations, Wed is Strength 30 min, Sun is Other 45 min, Mon and Fri are Rest. Durations read "1 h 30 min", never
+    decimals.
+ 3  Plan: tap Saturday → Edit → 2 h → Save. The card shows "edited". Tap "Rebuild this week from my days" → the app asks
+    before replacing; choose "Keep my edits" → Saturday stays 2 h.
+ 4  Plan: set the weekly limit (Training profile) to 3 h while 4 h+ of riding is planned → the summary shows the
+    overage and concrete suggestions; no session disappears by itself.
+ 5  Plan: the History section lists your past rides newest first with duration, distance, HR, power, zones strip and
+    "completed"; tapping one opens the ride report. A past planned session you did not ride shows "missed".
+
+iPhone — Ride dashboard
+ 6  Ride tab, board OFF: dark dashboard, three gauges reading "—", pills NO SENSOR / NOT TURNING / NO HR SOURCE, coach
+    box "READY", header tag POWER UNVERIFIED. Nothing scrolls; START · PHONE ONLY visible at the bottom (iPhone SE/mini:
+    confirm nothing is cut off).
+ 7  Start a phone-only ride and walk 3 minutes: T counts, phase reads WARM-UP then MAIN after 5 min, distance and speed
+    fill from GPS, the live graph draws lines only for signals that exist (none without watch/board), coach box says
+    which sensors are missing. DETAILS › opens the map, sensors and classic tiles.
+ 8  Watch workout running: the heart-rate gauge shows bpm with "BPM · APPLE WATCH", the HR pill reads BELOW/ON/ABOVE
+    TGT, the red HR line appears on the graph; stop the workout → gauge back to "—" within 6 s.
+ 9  Board ON (0.5.0) and paired, pedal: power gauge shows watts with the zone label (e.g. "Z2 · 40%"), cadence gauge
+    rpm, pills follow the target (BELOW/ON/ABOVE), coasting shows COASTING / NOT TURNING, never a stale number.
+10  During a board ride with HR + power live for 2+ minutes: coach cues appear (e.g. "Push a little — HR below target",
+    "Pedal a little faster", "Keep it up"), the coach box colours and the EASE / ON TARGET / FASTER scale light up, cues
+    are spaced (no nagging every second). Tap "Start cool-down": phase COOL-DOWN, no more push cues.
+11  Pause / Lap / End from the dashboard work as in build 24 (one ride, right owner, results sheet, saved to History).
+
+Apple Watch
+12  Watch tiles still mirror the ride; Start/Pause/End from the wrist still route through the phone (unchanged).
+
+After flashing firmware 0.6.0 (record NOT TESTED until then)
+13  Profile › Power & cycling › wheel circumference, then board Connections › Speed shows the same value (entered on the
+    board — not synced in this build).
+14  Live data from a BLE cadence/speed sensor paired on the board shows the source "Cadence/speed sensor" on the phone.
+
+Report PASS/FAIL/NOT TESTED per step plus screenshots of any value that looks wrong, and of the dashboard on your phone
+(so the gauge sizes can be checked). "—" when a source is absent is correct; a number without a live source is a bug.

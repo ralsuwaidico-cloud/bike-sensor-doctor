@@ -1,5 +1,67 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
+## 0.5.0 (build 27) — 25 Oct 2026 — TestFlight, internal testers only
+
+Everything below is **simulator-tested** (62 XCTest cases in GitHub Actions, 0 failures — including the 16 shared coach
+vector files from the Nokia app, which the Swift coach engine now passes byte for byte). **Nothing new in this build is
+real-device-tested** until Rashed runs `BUILD27-TEST.txt`. The board runs firmware 0.5.0; firmware 0.6.0 (prepared, not
+flashed) is still needed for everything marked **(needs 0.6.0)**.
+
+### Implemented (Rashed's real-device findings on build 24, items 3–7)
+- **Profile is a category menu**: Rider information (name, birth year, optional gender, weight, height, units), Training
+  profile (goals, level, sports, weekly limit, training days → the availability editor, training history), Heart rate
+  (resting / max / LTHR, zone method % max HR or % LTHR, zones, sources), Power & cycling (FTP with its method, power
+  zones, meter status with "power unverified", cadence preference, bike name, wheel circumference), Connections & devices
+  (the dashboard), App & device settings (appearance, keep screen on, coach on/off and frequency, background-recording
+  notice, privacy + delete, phone-only mode, auto-connect, sync status, firmware, board settings). Every page saves into
+  the same store; no saved value is dropped (older `store.json` files load with defaults for the new fields).
+- **Plan rebuilt around your availability**: Profile › Training profile › "Training days" (also the calendar icon on
+  Plan) sets, per weekday, cycle / lift / other / rest and the preferred duration. The engine never schedules on a rest
+  day, puts strength on lift days, rides only on cycling days at the chosen duration, the longest cycling day is the long
+  ride, one quality session per week (tempo for beginners, threshold for strength/climbing goals), a recovery spin after
+  it. If riding time exceeds the weekly limit the summary shows concrete suggestions (shorten X, skip Y, raise the
+  limit) instead of silently cutting sessions.
+- **Plan page redesign**: readable day strip (icon + duration + zone bars, "+N" when a day has several activities),
+  weekly summary with a time-budget bar (riding / all training / done / budget), separate cards for workouts and for
+  rest/recovery days, tap a day to view / edit / move / replace / skip / remove / add. Hand-edited sessions are
+  flagged "edited" and never regenerated without confirmation ("Rebuild this week" asks first; completed sessions and
+  past days are never touched).
+- **Durations** everywhere through one formatter: "1 h 40 min", "45 min", "2 h" — never "1.66667 h".
+- **Historical timeline** under the plan: rides and past sessions, newest first, with duration, distance, avg / max HR,
+  avg power + NP, cadence, time-in-zone strip, training load (TSS only when NP and FTP both exist — otherwise blank),
+  completed / skipped / missed status; tap a ride for the full report with graphs and route. Sparkline trends (duration,
+  avg power, avg HR, load) once 5+ points exist. Duplicates across board sync and phone recordings are removed
+  (same board ride id, or same recorder within 5 minutes); Apple Health import is not connected and says so.
+- **Ride dashboard = the Nokia "Power Focus" design**, ported from `app/src/main/java/.../ui/{Design7,Dashboard}.kt`
+  and `core/DashLayout.kt`: a large power gauge on top with zone ticks, target band and the live dot; cadence and heart
+  rate gauges tucked below (computed, non-overlapping geometry for every iPhone width and the available height);
+  BELOW TGT / ON TARGET / ABOVE TGT / COASTING / NOT TURNING / NO SENSOR / NO HR SOURCE pills; the coach box with the
+  shape badge (▲ ✓ ▼) and the lit EASE · ON TARGET · FASTER scale; a combined live graph of power, HR and cadence each
+  normalised against its own target band (last 5 minutes); distance, speed, normalized power and lap; START / PAUSE /
+  LAP / END and "Start cool-down". No scrolling on the main screen; the route map, sensors and classic tiles are behind
+  "DETAILS ›". Header tags: POWER UNVERIFIED (always, until the XDS is validated), FTP ASSUMED, DEMO.
+- **Coach engine** (`Shared/CoachCore.swift`): line-by-line port of the Nokia `CoachEngine` v3 — HR is the authority
+  when present, power confirms or pre-empts, cadence only when effort is in order; gear intelligence (easier / harder
+  gear vs reduce pressure / increase effort); warm-up / main / cool-down phases from ride time (5 min each, cool-down
+  on request); smoothing, hold times, hysteresis, spacing and back-off; sensor-loss notices; relative-effort coaching
+  when the FTP is only an assumption; sensor-poor mode (cadence + pace only) when no effort sensor is live. The target
+  zone is today's planned session (free ride = Z2). Coach on/off and frequency in App settings.
+- **Source id 10 (BLE cadence/speed sensor on the board)** is named in live data and history; Connections wording aligned
+  with the board's Connections menu (Phone, Wi-Fi, Power meter, Heart rate, Cadence, Speed, Other Bluetooth, Device sync).
+
+### Known limitations
+- Nothing in the Nokia source was missing: the dashboard, gauge, coach, graph scaling and layout code were all present
+  and ported. Two things are intentionally different: the bundled Rajdhani / IBM Plex Mono fonts are replaced by the
+  system rounded / monospaced fonts (no font files are shipped), and the Nokia "Classic" and "Compact" layouts are not
+  offered — Power Focus is the only ride layout (the classic tiles remain under Details).
+- The XDS power stays labelled **unverified**; the Nokia 60-second "verify power" test is not ported yet.
+- Wheel circumference is stored on the phone; the Link v1.2 settings message has no wheel field, so it is entered on the
+  board as well (Connections › Speed) until a later protocol revision.
+- Coach cues are shown, not spoken (no audio in this build).
+- Google and e-mail sign-in still wait for Supabase + Google configuration; board history sync, Wi-Fi setup, profile and
+  device settings still need firmware 0.6.0 on the board.
+- Dynamic Type: the dashboard keeps its own sizes (it is a cockpit, not text); every other page follows the system size.
+
 ## 0.4.0 (build 24) — 25 Oct 2026 — TestFlight, internal testers only
 
 Everything below is **simulator-tested** (43 XCTest cases in GitHub Actions, 0 failures). **Nothing new in this build is
