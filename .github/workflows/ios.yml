@@ -66,6 +66,13 @@ jobs:
           APP_READY: ${{ needs.apple.outputs.app_ready }}
           UPLOAD: ${{ (github.event_name == 'workflow_dispatch' && inputs.upload) || contains(github.event.head_commit.message, '[testflight]') }}
         run: ios/ci/build.sh
+      - name: Fetch the Apple setup report
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-setup
+          path: ios/build/logs
+        continue-on-error: true
       - name: Summary
         if: always()
         run: cat ios/build/logs/summary.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
@@ -81,6 +88,7 @@ jobs:
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
           mkdir -p "ios/run-$N"
+          mv "$GITHUB_WORKSPACE"/ios/build/logs/asc.txt "$GITHUB_WORKSPACE"/ios/build/logs/apple-setup.txt 2>/dev/null || true
           cp "$GITHUB_WORKSPACE"/ios/build/logs/*.txt "ios/run-$N/" 2>/dev/null || echo "no logs produced" > "ios/run-$N/summary.txt"
           echo "commit $GITHUB_SHA  branch $GITHUB_REF_NAME  job ${{ job.status }}" >> "ios/run-$N/summary.txt"
           git add -A && git commit -q -m "iOS CI log run $N"
