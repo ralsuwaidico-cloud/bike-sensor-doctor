@@ -196,7 +196,7 @@ struct RideTabView: View {
     // MARK: sensors
     private var sensorsCard: some View {
         Card {
-            Eyebrow(t: "Sensors")
+            HStack { Eyebrow(t: "Connections"); Spacer(); NavigationLink { ConnectionsView() } label: { Text("Manage ›").font(.caption.bold()) } }
             SensorRow(name: "BikeComputer", detail: boardDetail, live: device.state == .ready)
             SensorRow(name: "Power meter (XDS)", detail: meterDetail, live: live?.meterLink == 4)
             SensorRow(name: "Heart rate", detail: hrValue != nil ? "\(hrSourceLabel) · live" : "none", live: hrValue != nil)

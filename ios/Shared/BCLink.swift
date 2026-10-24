@@ -18,7 +18,11 @@ enum BCLink {
         case info = 0x01, live = 0x10
         case inTime = 0x20, inGPS = 0x21, inHR = 0x22, inWeather = 0x23, inBattery = 0x24
         case ctrlReq = 0x30, ctrlResp = 0x31, event = 0x40
-        case syncReq = 0x50, syncRide = 0x51, syncEnd = 0x52      /* proposed in ios/SYNC_PROPOSAL.md; served by firmware only with caps & RIDE_SYNC */
+        case syncReq = 0x50, syncRide = 0x51, syncEnd = 0x52      /* 1.1 ride-history sync; served by firmware only with caps & RIDE_SYNC */
+        /* 1.2 (firmware 0.6.0, docs/LINK_V1_2_SPEC.md) — all on the Control characteristic, gated on caps */
+        case wifiScanReq = 0x60, wifiScanResult = 0x61, wifiScanEnd = 0x62, wifiSet = 0x63, wifiForget = 0x64, wifiStatus = 0x65, wifiStatusReq = 0x66
+        case profileGet = 0x70, profileSet = 0x71, profile = 0x72, profileAck = 0x73
+        case settingsSet = 0x74, settings = 0x75, settingsGet = 0x76
     }
 
     enum Source: UInt8 {
@@ -104,7 +108,11 @@ enum BCLink {
         /// Proposed INFO tag 0x07: the board's 6-byte BLE address, so rides can be keyed per board on every phone. nil until the firmware sends it.
         var deviceId: String? = nil
         static let capLive: UInt32 = 0x01, capGPS: UInt32 = 0x02, capHR: UInt32 = 0x04, capWeather: UInt32 = 0x08, capCtrl: UInt32 = 0x10, capTime: UInt32 = 0x20, capRideSync: UInt32 = 0x40
+        static let capWiFi: UInt32 = 0x80, capProfileSync: UInt32 = 0x100, capSettings: UInt32 = 0x200
         var hasRideSync: Bool { caps & Info.capRideSync != 0 }
+        var hasWiFi: Bool { caps & Info.capWiFi != 0 }
+        var hasProfileSync: Bool { caps & Info.capProfileSync != 0 }
+        var hasSettings: Bool { caps & Info.capSettings != 0 }
     }
 
     static func decodeInfo(_ d: Data) -> Info? {
@@ -313,6 +321,236 @@ enum BCLink {
             }
         }
         return r
+    }
+
+    // MARK: 1.2 Wi-Fi provisioning (cap 0x80) — docs/LINK_V1_2_SPEC.md
+    struct WiFiNetwork: Equatable, Identifiable {
+        var id: String { ssid }
+        var ssid = ""; var rssi: Int = -100; var secured = true; var channel = 0; var saved = false
+    }
+    struct WiFiScanEnd: Equatable { var count = 0; var err = 0
+        var errorText: String? { switch err { case 0: return nil; case 1: return "Wi-Fi radio is off on the board"; case 2: return "board busy (ride running)"; default: return "scan failed" } } }
+    enum WiFiState: UInt8 { case off = 0, disconnected = 1, scanning = 2, connecting = 3, connected = 4, connectedNoInternet = 5
+        var label: String { switch self { case .off: return "Wi-Fi off"; case .disconnected: return "Disconnected"; case .scanning: return "Scanning…"; case .connecting: return "Connecting…"; case .connected: return "Connected"; case .connectedNoInternet: return "Connected, no internet" } } }
+    enum WiFiError: UInt8 { case none = 0, wrongPassword = 1, notFound = 2, timeout = 3, other = 4
+        var label: String? { switch self { case .none: return nil; case .wrongPassword: return "Wrong password"; case .notFound: return "Network not found (2.4 GHz only)"; case .timeout: return "Timed out"; case .other: return "Could not connect" } } }
+    struct WiFiStatus: Equatable { var state: WiFiState = .off; var error: WiFiError = .none; var ssid = ""; var rssi: Int? = nil; var savedCount = 0; var radioOn = false }
+
+    static func encodeWiFiScanRequest(max: UInt8? = nil, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .wifiScanReq, seq: seq, tMs: tMs)
+        if let m = max { w.u8(0x01, m) }
+        return w.result
+    }
+    static func encodeWiFiStatusRequest(seq: UInt16, tMs: UInt32) -> Data? { Writer(type: .wifiStatusReq, seq: seq, tMs: tMs).result }
+    /// ssid 1–32 bytes, password 0–63 bytes (empty = open network). nil when the lengths are out of range.
+    static func encodeWiFiSet(ssid: String, password: String, connectNow: Bool = true, save: Bool = true, seq: UInt16, tMs: UInt32) -> Data? {
+        let s = Data(ssid.utf8), p = Data(password.utf8)
+        guard (1...32).contains(s.count), p.count <= 63 else { return nil }
+        var w = Writer(type: .wifiSet, seq: seq, tMs: tMs)
+        w.field(0x01, s); w.field(0x02, p); w.u8(0x03, (connectNow ? 1 : 0) | (save ? 2 : 0))
+        return w.result
+    }
+    static func encodeWiFiForget(ssid: String, seq: UInt16, tMs: UInt32) -> Data? {
+        let s = Data(ssid.utf8); guard (1...32).contains(s.count) else { return nil }
+        var w = Writer(type: .wifiForget, seq: seq, tMs: tMs); w.field(0x01, s); return w.result
+    }
+    static func decodeWiFiScanResult(_ d: Data) -> WiFiNetwork? {
+        guard let (h, f) = parse(d), h.type == MsgType.wifiScanResult.rawValue else { return nil }
+        var n = WiFiNetwork(); var got = false
+        for x in f {
+            let v = x.value
+            switch (x.tag, v.count) {
+            case (0x01, 1...32): n.ssid = String(decoding: v, as: UTF8.self); got = true
+            case (0x02, 1): n.rssi = Int(Int8(bitPattern: v[v.startIndex]))
+            case (0x03, 1): n.secured = v[v.startIndex] != 0
+            case (0x04, 1): n.channel = Int(v[v.startIndex])
+            case (0x05, 1): n.saved = v[v.startIndex] != 0
+            default: break
+            }
+        }
+        return got ? n : nil
+    }
+    static func decodeWiFiScanEnd(_ d: Data) -> WiFiScanEnd? {
+        guard let (h, f) = parse(d), h.type == MsgType.wifiScanEnd.rawValue else { return nil }
+        var e = WiFiScanEnd()
+        for x in f { switch (x.tag, x.value.count) { case (0x01, 1): e.count = Int(x.value[x.value.startIndex]); case (0x02, 1): e.err = Int(x.value[x.value.startIndex]); default: break } }
+        return e
+    }
+    static func decodeWiFiStatus(_ d: Data) -> WiFiStatus? {
+        guard let (h, f) = parse(d), h.type == MsgType.wifiStatus.rawValue else { return nil }
+        var s = WiFiStatus()
+        for x in f {
+            let v = x.value
+            switch (x.tag, v.count) {
+            case (0x01, 1): s.state = WiFiState(rawValue: v[v.startIndex]) ?? .off
+            case (0x02, 1): s.error = WiFiError(rawValue: v[v.startIndex]) ?? .other
+            case (0x03, _): s.ssid = String(decoding: v, as: UTF8.self)
+            case (0x04, 1): s.rssi = Int(Int8(bitPattern: v[v.startIndex]))
+            case (0x05, 1): s.savedCount = Int(v[v.startIndex])
+            case (0x06, 1): s.radioOn = v[v.startIndex] != 0
+            default: break
+            }
+        }
+        return s
+    }
+
+    // MARK: 1.2 athlete profile sync (cap 0x100)
+    /// The shared athlete settings as they travel over the link. Optional = "not carried / unknown" (0 on the wire for numbers).
+    struct ProfileMessage: Equatable {
+        var version: UInt32 = 0
+        var updatedEpochS: UInt32? = nil
+        var name: String? = nil
+        var ftpW: Int? = nil
+        var ftpHow: Int? = nil          /* 0 assumed, 1 entered, 2 estimated from rides, 3 tested */
+        var weightKgX10: Int? = nil
+        var birthYear: Int? = nil       /* 0 → nil */
+        var maxHR: Int? = nil           /* 0 → nil */
+        var restHR: Int? = nil
+        var units: Int? = nil           /* 0 metric, 1 imperial */
+        var hoursPerWeek: Int? = nil
+        var level: Int? = nil           /* 0 new, 1 regular, 2 experienced */
+        var goal: Int? = nil            /* 0 fitness, 1 endurance, 2 climbing, 3 event, 4 weight */
+        var lthr: Int? = nil
+        /* PROFILE (board → phone) only */
+        var source: Int? = nil          /* 0 device-only, 1 phone-synced */
+        var boardSavedEpochS: UInt32? = nil
+    }
+    struct ProfileAck: Equatable { var version: UInt32 = 0; var status = 0; var boardVersion: UInt32 = 0
+        var applied: Bool { status == 0 }
+        var statusText: String { switch status { case 0: return "applied"; case 1: return "board has a newer version"; case 2: return "a value was rejected"; default: return "unknown status \(status)" } } }
+
+    static func encodeProfileGet(seq: UInt16, tMs: UInt32) -> Data? { Writer(type: .profileGet, seq: seq, tMs: tMs).result }
+    private static func writeProfileFields(_ w: inout Writer, _ p: ProfileMessage) {
+        if let v = p.updatedEpochS { w.u32(0x02, v) }
+        if let n = p.name { w.field(0x03, Data(n.utf8.prefix(24))) }
+        if let v = p.ftpW { w.u16(0x04, UInt16(clamping: v)) }
+        if let v = p.ftpHow { w.u8(0x05, UInt8(clamping: v)) }
+        if let v = p.weightKgX10 { w.u16(0x06, UInt16(clamping: v)) }
+        if let v = p.birthYear { w.u16(0x07, UInt16(clamping: v)) }
+        if let v = p.maxHR { w.u8(0x08, UInt8(clamping: v)) }
+        if let v = p.restHR { w.u8(0x09, UInt8(clamping: v)) }
+        if let v = p.units { w.u8(0x0A, UInt8(clamping: v)) }
+        if let v = p.hoursPerWeek { w.u8(0x0B, UInt8(clamping: v)) }
+        if let v = p.level { w.u8(0x0C, UInt8(clamping: v)) }
+        if let v = p.goal { w.u8(0x0D, UInt8(clamping: v)) }
+        if let v = p.lthr { w.u8(0x0E, UInt8(clamping: v)) }
+    }
+    static func encodeProfileSet(_ p: ProfileMessage, seq: UInt16, tMs: UInt32) -> Data? {
+        guard p.version > 0 else { return nil }
+        var w = Writer(type: .profileSet, seq: seq, tMs: tMs)
+        w.u32(0x01, p.version); writeProfileFields(&w, p)
+        return w.result
+    }
+    /// Test helper mirroring the board's PROFILE reply.
+    static func encodeProfile(_ p: ProfileMessage, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .profile, seq: seq, tMs: tMs)
+        w.u32(0x01, p.version); writeProfileFields(&w, p)
+        if let s = p.source { w.u8(0x0F, UInt8(clamping: s)) }
+        if let t = p.boardSavedEpochS { w.u32(0x10, t) }
+        return w.result
+    }
+    static func decodeProfile(_ d: Data) -> ProfileMessage? {
+        guard let (h, f) = parse(d), h.type == MsgType.profile.rawValue || h.type == MsgType.profileSet.rawValue else { return nil }
+        var p = ProfileMessage()
+        func z(_ v: Data) -> Int? { let x = Int(uint(v)); return x == 0 ? nil : x }
+        for x in f {
+            let v = x.value
+            switch (x.tag, v.count) {
+            case (0x01, 4): p.version = UInt32(uint(v))
+            case (0x02, 4): p.updatedEpochS = UInt32(uint(v))
+            case (0x03, _): p.name = String(decoding: v, as: UTF8.self)
+            case (0x04, 2): p.ftpW = Int(uint(v))
+            case (0x05, 1): p.ftpHow = Int(v[v.startIndex])
+            case (0x06, 2): p.weightKgX10 = z(v)
+            case (0x07, 2): p.birthYear = z(v)
+            case (0x08, 1): p.maxHR = z(v)
+            case (0x09, 1): p.restHR = z(v)
+            case (0x0A, 1): p.units = Int(v[v.startIndex])
+            case (0x0B, 1): p.hoursPerWeek = Int(v[v.startIndex])
+            case (0x0C, 1): p.level = Int(v[v.startIndex])
+            case (0x0D, 1): p.goal = Int(v[v.startIndex])
+            case (0x0E, 1): p.lthr = z(v)
+            case (0x0F, 1): p.source = Int(v[v.startIndex])
+            case (0x10, 4): p.boardSavedEpochS = UInt32(uint(v))
+            default: break
+            }
+        }
+        return p
+    }
+    static func decodeProfileAck(_ d: Data) -> ProfileAck? {
+        guard let (h, f) = parse(d), h.type == MsgType.profileAck.rawValue else { return nil }
+        var a = ProfileAck()
+        for x in f { switch (x.tag, x.value.count) { case (0x01, 4): a.version = UInt32(uint(x.value)); case (0x02, 1): a.status = Int(x.value[x.value.startIndex]); case (0x03, 4): a.boardVersion = UInt32(uint(x.value)); default: break } }
+        return a
+    }
+    /// Test helper mirroring the board's PROFILE_ACK.
+    static func encodeProfileAck(_ a: ProfileAck, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .profileAck, seq: seq, tMs: tMs); w.u32(0x01, a.version); w.u8(0x02, UInt8(clamping: a.status)); w.u32(0x03, a.boardVersion); return w.result
+    }
+
+    // MARK: 1.2 device settings (cap 0x200)
+    /// Board settings on the wire. Optional = not carried. `supportedMask` bit n = tag n+1 supported (reply only).
+    struct SettingsMessage: Equatable {
+        var version: UInt32 = 0
+        var brightnessPct: Int? = nil          /* tag 02, 10–100 */
+        var screenTimeoutS: Int? = nil         /* tag 03, 0 never */
+        var wakeGesture: Int? = nil            /* tag 04, 0 triple, 1 double, 2 any touch */
+        var phoneLinkEnabled: Bool? = nil      /* tag 05 */
+        var hrPref: Int? = nil                 /* tag 06, 0 strap first, 1 watch first */
+        var autoSleepMin: Int? = nil           /* tag 07, 0 off */
+        var rideLayout: Int? = nil             /* tag 08, 0 A, 1 B, 2 C */
+        var wakeOnCue: Bool? = nil             /* tag 09 */
+        var units: Int? = nil                  /* tag 0A */
+        var status: Int? = nil                 /* tag 0F reply: 0 applied, 1 rejected older, 2 bad value, 3 unsupported tag */
+        var supportedMask: UInt32? = nil       /* tag 10 */
+        func supports(tag: Int) -> Bool { guard let m = supportedMask, tag >= 1 else { return false }; return m & (1 << UInt32(tag - 1)) != 0 }
+        var statusText: String { switch status { case 0: return "applied"; case 1: return "board has a newer version"; case 2: return "a value was rejected"; case 3: return "a setting is not supported by this firmware"; case nil: return "no reply"; default: return "unknown status" } }
+    }
+    static func encodeSettingsGet(seq: UInt16, tMs: UInt32) -> Data? { Writer(type: .settingsGet, seq: seq, tMs: tMs).result }
+    private static func writeSettingsFields(_ w: inout Writer, _ s: SettingsMessage) {
+        if let v = s.brightnessPct { w.u8(0x02, UInt8(clamping: v)) }
+        if let v = s.screenTimeoutS { w.u16(0x03, UInt16(clamping: v)) }
+        if let v = s.wakeGesture { w.u8(0x04, UInt8(clamping: v)) }
+        if let v = s.phoneLinkEnabled { w.u8(0x05, v ? 1 : 0) }
+        if let v = s.hrPref { w.u8(0x06, UInt8(clamping: v)) }
+        if let v = s.autoSleepMin { w.u16(0x07, UInt16(clamping: v)) }
+        if let v = s.rideLayout { w.u8(0x08, UInt8(clamping: v)) }
+        if let v = s.wakeOnCue { w.u8(0x09, v ? 1 : 0) }
+        if let v = s.units { w.u8(0x0A, UInt8(clamping: v)) }
+    }
+    static func encodeSettingsSet(_ s: SettingsMessage, seq: UInt16, tMs: UInt32) -> Data? {
+        guard s.version > 0 else { return nil }
+        var w = Writer(type: .settingsSet, seq: seq, tMs: tMs); w.u32(0x01, s.version); writeSettingsFields(&w, s); return w.result
+    }
+    /// Test helper mirroring the board's SETTINGS reply.
+    static func encodeSettings(_ s: SettingsMessage, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .settings, seq: seq, tMs: tMs); w.u32(0x01, s.version); writeSettingsFields(&w, s)
+        if let st = s.status { w.u8(0x0F, UInt8(clamping: st)) }
+        if let m = s.supportedMask { w.u32(0x10, m) }
+        return w.result
+    }
+    static func decodeSettings(_ d: Data) -> SettingsMessage? {
+        guard let (h, f) = parse(d), h.type == MsgType.settings.rawValue || h.type == MsgType.settingsSet.rawValue else { return nil }
+        var s = SettingsMessage()
+        for x in f {
+            let v = x.value
+            switch (x.tag, v.count) {
+            case (0x01, 4): s.version = UInt32(uint(v))
+            case (0x02, 1): s.brightnessPct = Int(v[v.startIndex])
+            case (0x03, 2): s.screenTimeoutS = Int(uint(v))
+            case (0x04, 1): s.wakeGesture = Int(v[v.startIndex])
+            case (0x05, 1): s.phoneLinkEnabled = v[v.startIndex] != 0
+            case (0x06, 1): s.hrPref = Int(v[v.startIndex])
+            case (0x07, 2): s.autoSleepMin = Int(uint(v))
+            case (0x08, 1): s.rideLayout = Int(v[v.startIndex])
+            case (0x09, 1): s.wakeOnCue = v[v.startIndex] != 0
+            case (0x0A, 1): s.units = Int(v[v.startIndex])
+            case (0x0F, 1): s.status = Int(v[v.startIndex])
+            case (0x10, 4): s.supportedMask = UInt32(uint(v))
+            default: break
+            }
+        }
+        return s
     }
 
     // MARK: helpers

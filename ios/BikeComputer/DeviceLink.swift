@@ -22,6 +22,26 @@ final class DeviceLink: NSObject, ObservableObject {
     /// Ride history sync (ios/SYNC_PROPOSAL.md). Inactive until the board's INFO has RIDE_SYNC.
     @Published private(set) var syncStatus = "not supported by this firmware"
     @Published private(set) var syncedRides = 0
+    /// 1.2 (firmware 0.6.0): Wi-Fi provisioning, athlete profile and device settings — all gated on the board's caps.
+    @Published private(set) var wifiNetworks: [BCLink.WiFiNetwork] = []
+    @Published private(set) var wifiScanning = false
+    @Published private(set) var wifiScanError: String?
+    @Published private(set) var wifiStatus: BCLink.WiFiStatus?
+    @Published private(set) var wifiStatusAt: Date?
+    @Published private(set) var boardProfile: BCLink.ProfileMessage?
+    @Published private(set) var boardProfileAt: Date?
+    @Published private(set) var lastProfileAck: BCLink.ProfileAck?
+    @Published private(set) var boardSettings: BCLink.SettingsMessage?
+    @Published private(set) var boardSettingsAt: Date?
+    @Published private(set) var lastSettingsReply: BCLink.SettingsMessage?
+    @Published private(set) var lastConnectedAt: Date?
+    @Published private(set) var lastDisconnectedAt: Date?
+    /// Off = the phone neither connects nor reconnects on its own (local choice; the board's own link switch is a device setting).
+    var autoConnect = true { didSet { if autoConnect, remembered { connect() } else if !autoConnect { disconnect() } } }
+    var onProfileAck: ((BCLink.ProfileAck) -> Void)?
+    var onBoardProfile: ((BCLink.ProfileMessage) -> Void)?
+    var onSettingsReply: ((BCLink.SettingsMessage) -> Void)?
+    var onReady: (() -> Void)?
     var onBoardRide: ((BCLink.RideSummary, String) -> Void)?
     /// Highest board ride id already stored for a given board id — the Store provides it so paging resumes where it left off.
     var highestStoredRideId: ((String) -> Int)?
@@ -153,8 +173,41 @@ final class DeviceLink: NSObject, ObservableObject {
     private func attach(_ p: CBPeripheral) {
         peripheral = p
         p.delegate = self
+        if p.state == .connected { setState(.connecting); p.discoverServices([serviceUUID]); return }   /* restored by iOS while we were suspended */
         setState(.connecting)
-        central.connect(p, options: nil)
+        // iOS keeps a pending connect alive (also in the background with bluetooth-central) until the board advertises again:
+        // this is the reconnect-without-touching-the-board path. No scanning, no polling.
+        central.connect(p, options: [CBConnectPeripheralOptionNotifyOnConnectionKey: true, CBConnectPeripheralOptionNotifyOnDisconnectionKey: true])
+    }
+
+    // MARK: 1.2 Wi-Fi provisioning
+    func wifiScan() {
+        guard state == .ready, info?.hasWiFi == true, let d = BCLink.encodeWiFiScanRequest(max: 16, seq: nextSeq(), tMs: nowMs()) else { return }
+        wifiNetworks = []; wifiScanning = true; wifiScanError = nil
+        _ = writeControl(d)
+    }
+    func wifiStatusRequest() { guard info?.hasWiFi == true, let d = BCLink.encodeWiFiStatusRequest(seq: nextSeq(), tMs: nowMs()) else { return }; _ = writeControl(d) }
+    /// Sends the credentials over the encrypted link. The password is not kept anywhere on the phone.
+    @discardableResult
+    func wifiSet(ssid: String, password: String) -> Bool {
+        guard info?.hasWiFi == true, let d = BCLink.encodeWiFiSet(ssid: ssid, password: password, seq: nextSeq(), tMs: nowMs()) else { return false }
+        return writeControl(d)
+    }
+    @discardableResult
+    func wifiForget(ssid: String) -> Bool { guard info?.hasWiFi == true, let d = BCLink.encodeWiFiForget(ssid: ssid, seq: nextSeq(), tMs: nowMs()) else { return false }; return writeControl(d) }
+
+    // MARK: 1.2 profile and settings
+    func profileGet() { guard info?.hasProfileSync == true, let d = BCLink.encodeProfileGet(seq: nextSeq(), tMs: nowMs()) else { return }; _ = writeControl(d) }
+    @discardableResult
+    func profileSet(_ m: BCLink.ProfileMessage) -> Bool { guard info?.hasProfileSync == true, let d = BCLink.encodeProfileSet(m, seq: nextSeq(), tMs: nowMs()) else { return false }; return writeControl(d) }
+    func settingsGet() { guard info?.hasSettings == true, let d = BCLink.encodeSettingsGet(seq: nextSeq(), tMs: nowMs()) else { return }; _ = writeControl(d) }
+    @discardableResult
+    func settingsSet(_ m: BCLink.SettingsMessage) -> Bool { guard info?.hasSettings == true, let d = BCLink.encodeSettingsSet(m, seq: nextSeq(), tMs: nowMs()) else { return false }; return writeControl(d) }
+
+    private func writeControl(_ d: Data) -> Bool {
+        guard let c = controlChr, let p = peripheral, state == .ready else { return false }
+        p.writeValue(d, for: c, type: .withResponse)
+        return true
     }
 
     private func startTimers() {
@@ -170,7 +223,7 @@ final class DeviceLink: NSObject, ObservableObject {
 extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManagerDidUpdateState(_ c: CBCentralManager) {
         switch c.state {
-        case .poweredOn: if wantConnection || remembered { wantConnection = true; connect() } else { setState(.idle) }
+        case .poweredOn: if (wantConnection || remembered) && autoConnect { wantConnection = true; connect() } else { setState(.idle) }
         case .unauthorized: setState(.unauthorized)
         case .poweredOff: setState(.off)
         default: setState(.idle)
@@ -190,7 +243,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
 
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) {
         stats.connects += 1
-        lastError = nil
+        lastError = nil; lastConnectedAt = Date()
         p.discoverServices([serviceUUID])
     }
 
@@ -200,12 +253,13 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     }
 
     func centralManager(_ c: CBCentralManager, didDisconnectPeripheral p: CBPeripheral, error: Error?) {
-        stats.disconnects += 1
+        stats.disconnects += 1; lastDisconnectedAt = Date()
         stopTimers()
         live = nil; liveReceivedAt = nil; rssi = nil
         inputChr = nil; controlChr = nil; liveChr = nil; syncChr = nil; syncInFlight = false
+        wifiScanning = false; wifiStatus = nil; boardSettings = nil
         if let e = error { lastError = e.localizedDescription }
-        if wantConnection { setState(.connecting); c.connect(p, options: nil) } else { setState(.idle) }
+        if wantConnection, autoConnect { attach(p) } else { setState(.idle) }
     }
 
     func peripheral(_ p: CBPeripheral, didDiscoverServices error: Error?) {
@@ -246,10 +300,14 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             else { syncStatus = "not supported by firmware \(i.fw) — sync coming" }
             sendTime()
             startTimers()
+            if i.hasWiFi { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.wifiStatusRequest() } }
+            if i.hasSettings { DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.settingsGet() } }
+            if i.hasProfileSync { DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in self?.profileGet() } }
+            onReady?()
         case BCLink.liveUUID:
             if let l = BCLink.decodeLive(d) { live = l; liveReceivedAt = Date(); stats.liveMsgs += 1 } else { stats.rejected += 1 }
         case BCLink.controlUUID:
-            if let r = BCLink.decodeControlResponse(d) { lastControl = r } else { stats.rejected += 1 }
+            handleControl(d)
         case BCLink.syncUUID:
             if let r = BCLink.decodeSyncRide(d) { syncedRides += 1; onBoardRide?(r, boardId) }
             else if let e = BCLink.decodeSyncEnd(d) {
@@ -258,6 +316,28 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 if e.more { startSync() }
             } else { stats.rejected += 1 }
         default: break
+        }
+    }
+
+    /// Control characteristic: ride-control replies (v1) and the 1.2 Wi-Fi / profile / settings replies, told apart by the type byte.
+    private func handleControl(_ d: Data) {
+        guard let t = d.first, let type = BCLink.MsgType(rawValue: t) else { stats.rejected += 1; return }
+        switch type {
+        case .ctrlResp: if let r = BCLink.decodeControlResponse(d) { lastControl = r } else { stats.rejected += 1 }
+        case .wifiScanResult:
+            if let n = BCLink.decodeWiFiScanResult(d) { if let i = wifiNetworks.firstIndex(where: { $0.ssid == n.ssid }) { wifiNetworks[i] = n } else { wifiNetworks.append(n) }; wifiNetworks.sort { $0.rssi > $1.rssi } } else { stats.rejected += 1 }
+        case .wifiScanEnd:
+            wifiScanning = false
+            if let e = BCLink.decodeWiFiScanEnd(d) { wifiScanError = e.errorText } else { stats.rejected += 1 }
+        case .wifiStatus:
+            if let s = BCLink.decodeWiFiStatus(d) { wifiStatus = s; wifiStatusAt = Date() } else { stats.rejected += 1 }
+        case .profile:
+            if let p = BCLink.decodeProfile(d) { boardProfile = p; boardProfileAt = Date(); onBoardProfile?(p) } else { stats.rejected += 1 }
+        case .profileAck:
+            if let a = BCLink.decodeProfileAck(d) { lastProfileAck = a; onProfileAck?(a) } else { stats.rejected += 1 }
+        case .settings:
+            if let s = BCLink.decodeSettings(d) { boardSettings = s; boardSettingsAt = Date(); lastSettingsReply = s; onSettingsReply?(s) } else { stats.rejected += 1 }
+        default: stats.rejected += 1
         }
     }
 

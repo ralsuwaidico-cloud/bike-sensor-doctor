@@ -7,6 +7,9 @@ struct BikeComputerApp: App {
     @StateObject private var watchLink: WatchLink
     @StateObject private var location: LocationService
     @StateObject private var recorder: RideRecorder
+    @StateObject private var sync: ProfileSync
+    @StateObject private var reach = Reachability()
+    @StateObject private var health = HealthAccess()
 
     init() {
         let s = Store()
@@ -14,6 +17,8 @@ struct BikeComputerApp: App {
         let w = WatchLink(); w.device = d
         let l = LocationService(device: d)
         let r = RideRecorder(); r.device = d; r.location = l; r.watch = w; r.phoneOnlyMode = s.settings.phoneOnlyMode
+        d.autoConnect = s.settings.autoConnectBoard
+        let ps = ProfileSync(store: s, device: d)
         d.onBoardRide = { [weak s] summary, boardId in s?.importBoardRide(summary, boardId: boardId) }
         d.highestStoredRideId = { [weak s] boardId in s?.highestBoardRideId(for: boardId) ?? 0 }
         // Apple Watch: ride mirror out, wrist commands in — same one-owner rules as the phone buttons
@@ -49,6 +54,7 @@ struct BikeComputerApp: App {
         _watchLink = StateObject(wrappedValue: w)
         _location = StateObject(wrappedValue: l)
         _recorder = StateObject(wrappedValue: r)
+        _sync = StateObject(wrappedValue: ps)
     }
 
     var body: some Scene {
@@ -59,6 +65,9 @@ struct BikeComputerApp: App {
                 .environmentObject(watchLink)
                 .environmentObject(location)
                 .environmentObject(recorder)
+                .environmentObject(sync)
+                .environmentObject(reach)
+                .environmentObject(health)
                 .onAppear { watchLink.activate() }
         }
     }

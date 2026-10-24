@@ -3,16 +3,26 @@ import Combine
 
 // MARK: - Rider profile (mirrors the board's bc_profile fields that matter to the app)
 struct RiderProfile: Codable, Equatable {
-    enum Goal: String, Codable, CaseIterable { case stronger, endurance, progress
-        var title: String { switch self { case .stronger: return "Get stronger"; case .endurance: return "Ride longer"; case .progress: return "Measure progress" } }
-        var hint: String { switch self { case .stronger: return "more power at the same effort"; case .endurance: return "aerobic base, Zone 2"; case .progress: return "see real change, no guesswork" } } }
+    enum Goal: String, Codable, CaseIterable { case fitness, endurance, stronger, climbing, event, weight, progress
+        var title: String { switch self { case .fitness: return "General fitness"; case .endurance: return "Ride longer"; case .stronger: return "Get stronger"; case .climbing: return "Climb better"; case .event: return "Prepare for an event"; case .weight: return "Manage weight"; case .progress: return "Measure progress" } }
+        var hint: String { switch self { case .fitness: return "health and energy, a few rides a week"; case .endurance: return "aerobic base, Zone 2"; case .stronger: return "more power at the same effort"; case .climbing: return "sustained power and W/kg"; case .event: return "a race, a tour or a long day"; case .weight: return "steady volume, mostly easy"; case .progress: return "see real change, no guesswork" } }
+        /// Link v1.2 goal code: 0 fitness, 1 endurance, 2 climbing, 3 event, 4 weight (stronger/progress have no board code → fitness).
+        var linkCode: Int { switch self { case .endurance: return 1; case .climbing: return 2; case .event: return 3; case .weight: return 4; default: return 0 } }
+        static func from(linkCode c: Int) -> Goal { switch c { case 1: return .endurance; case 2: return .climbing; case 3: return .event; case 4: return .weight; default: return .fitness } }
+        static var onboardingChoices: [Goal] { [.fitness, .endurance, .stronger, .climbing, .event, .weight] } }
     enum Level: String, Codable, CaseIterable { case beginner, intermediate, advanced
-        var title: String { rawValue.capitalized }
+        var title: String { switch self { case .beginner: return "New to training"; case .intermediate: return "Regular rider"; case .advanced: return "Experienced" } }
         var hint: String { switch self { case .beginner: return "new to training with power"; case .intermediate: return "ride regularly, some structure"; case .advanced: return "years of structured training" } }
         /// Starting-assumption W/kg, same table as the board (bc_exp_wkg_x100): 1.75 / 3.0 / 4.0
-        var wkg: Double { switch self { case .beginner: return 1.75; case .intermediate: return 3.0; case .advanced: return 4.0 } } }
-    enum FTPHow: String, Codable { case assumed, fromRides, entered
-        var label: String { switch self { case .assumed: return "provisional"; case .fromRides: return "estimated"; case .entered: return "entered" } } }
+        var wkg: Double { switch self { case .beginner: return 1.75; case .intermediate: return 3.0; case .advanced: return 4.0 } }
+        var linkCode: Int { switch self { case .beginner: return 0; case .intermediate: return 1; case .advanced: return 2 } }
+        static func from(linkCode c: Int) -> Level { c <= 0 ? .beginner : c == 1 ? .intermediate : .advanced } }
+    enum FTPHow: String, Codable { case assumed, fromRides, entered, tested
+        var label: String { switch self { case .assumed: return "provisional"; case .fromRides: return "estimated"; case .entered: return "entered"; case .tested: return "tested" } }
+        var linkCode: Int { switch self { case .assumed: return 0; case .entered: return 1; case .fromRides: return 2; case .tested: return 3 } }
+        static func from(linkCode c: Int) -> FTPHow { switch c { case 1: return .entered; case 2: return .fromRides; case 3: return .tested; default: return .assumed } } }
+    enum Sport: String, Codable, CaseIterable { case roadCycling, indoorCycling, mountainBike, commuting, running, swimming, strength, other
+        var title: String { switch self { case .roadCycling: return "Road cycling"; case .indoorCycling: return "Indoor cycling"; case .mountainBike: return "Mountain bike"; case .commuting: return "Commuting"; case .running: return "Running"; case .swimming: return "Swimming"; case .strength: return "Strength"; case .other: return "Other" } } }
 
     var name = ""
     var goal: Goal = .endurance
@@ -27,6 +37,18 @@ struct RiderProfile: Codable, Equatable {
     var hrPrefWatchFirst = false
     /// Date of the ride an estimated FTP came from (ftpHow == .fromRides); nil otherwise.
     var ftpFromDate: Date? = nil
+    /// Build 0.4.0 additions (all optional so an older store.json loads unchanged). nil = the rider did not say.
+    var birthYear: Int? = nil
+    var restHR: Int? = nil
+    var lthr: Int? = nil
+    var sports: [Sport] = [.roadCycling]
+    /// Monotonic version of the shared athlete settings; bumped on every change the rider makes. Drives profile sync.
+    var version: UInt32 = 1
+    var updatedAt: Date = Date()
+
+    /// Age from the birth year when known, else the stored `age` slider value.
+    var effectiveAge: Int { if let y = birthYear, y > 1900 { return max(10, Calendar.current.component(.year, from: Date()) - y) }; return age }
+    var maxHRLabel: String { maxHR != nil ? "measured / entered" : "estimated from age" }
 
     /// "provisional" / "entered" / "estimated from 24 Oct ride"
     var ftpLabel: String {
@@ -34,8 +56,64 @@ struct RiderProfile: Codable, Equatable {
         return ftpHow.label
     }
 
-    var estimatedMaxHR: Int { maxHR ?? Int((208.0 - 0.7 * Double(age)).rounded()) }
+    var estimatedMaxHR: Int { maxHR ?? Int((208.0 - 0.7 * Double(effectiveAge)).rounded()) }
     mutating func refreshAssumption() { if ftpHow == .assumed { ftpW = Int((weightKg * level.wkg).rounded()) } }
+    /// Marks a rider-made change: bumps the sync version and the timestamp.
+    mutating func touch(now: Date = Date()) { version &+= 1; if version == 0 { version = 1 }; updatedAt = now }
+    static func differIgnoringVersion(_ a: RiderProfile, _ b: RiderProfile) -> Bool {
+        var x = a, y = b; x.version = 0; y.version = 0; x.updatedAt = Date(timeIntervalSince1970: 0); y.updatedAt = x.updatedAt
+        return x != y
+    }
+
+    init() {}
+    /// Tolerant decoding: every key missing from an older store.json takes its default (profiles are never dropped on update).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        goal = (try? c.decodeIfPresent(Goal.self, forKey: .goal)) ?? .endurance
+        hoursPerWeek = try c.decodeIfPresent(Int.self, forKey: .hoursPerWeek) ?? 5
+        level = (try? c.decodeIfPresent(Level.self, forKey: .level)) ?? .intermediate
+        weightKg = try c.decodeIfPresent(Double.self, forKey: .weightKg) ?? 75
+        heightCm = try c.decodeIfPresent(Int.self, forKey: .heightCm)
+        maxHR = try c.decodeIfPresent(Int.self, forKey: .maxHR)
+        age = try c.decodeIfPresent(Int.self, forKey: .age) ?? 35
+        ftpW = try c.decodeIfPresent(Int.self, forKey: .ftpW) ?? 225
+        ftpHow = (try? c.decodeIfPresent(FTPHow.self, forKey: .ftpHow)) ?? .assumed
+        hrPrefWatchFirst = try c.decodeIfPresent(Bool.self, forKey: .hrPrefWatchFirst) ?? false
+        ftpFromDate = try c.decodeIfPresent(Date.self, forKey: .ftpFromDate)
+        birthYear = try c.decodeIfPresent(Int.self, forKey: .birthYear)
+        restHR = try c.decodeIfPresent(Int.self, forKey: .restHR)
+        lthr = try c.decodeIfPresent(Int.self, forKey: .lthr)
+        sports = (try? c.decodeIfPresent([Sport].self, forKey: .sports)) ?? [.roadCycling]
+        version = try c.decodeIfPresent(UInt32.self, forKey: .version) ?? 1
+        updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+    }
+
+    // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)
+    /// What the phone sends as the authoritative shared profile.
+    func linkMessage(units: AppSettings.Units) -> BCLink.ProfileMessage {
+        var m = BCLink.ProfileMessage()
+        m.version = version; m.updatedEpochS = UInt32(clamping: Int(updatedAt.timeIntervalSince1970))
+        m.name = name; m.ftpW = ftpW; m.ftpHow = ftpHow.linkCode; m.weightKgX10 = Int((weightKg * 10).rounded())
+        m.birthYear = birthYear ?? 0; m.maxHR = maxHR ?? 0; m.restHR = restHR ?? 0; m.units = units == .imperial ? 1 : 0
+        m.hoursPerWeek = hoursPerWeek; m.level = level.linkCode; m.goal = goal.linkCode; m.lthr = lthr ?? 0
+        return m
+    }
+    /// Human-readable differences between this profile and what the board reported (only the fields the board carries).
+    func differences(from b: BCLink.ProfileMessage, units: AppSettings.Units) -> [ProfileDifference] {
+        var out: [ProfileDifference] = []
+        func add(_ f: String, _ phone: String, _ board: String) { if phone != board { out.append(ProfileDifference(field: f, phone: phone, board: board)) } }
+        if let n = b.name { add("Name", name, n) }
+        if let v = b.ftpW { add("FTP", "\(ftpW) W (\(ftpHow.label))", "\(v) W (\(FTPHow.from(linkCode: b.ftpHow ?? 0).label))") }
+        if let v = b.weightKgX10 { add("Weight", String(format: "%.1f kg", weightKg), String(format: "%.1f kg", Double(v) / 10)) }
+        if let v = b.birthYear { add("Birth year", birthYear.map(String.init) ?? "not set", "\(v)") } else if birthYear != nil { add("Birth year", "\(birthYear!)", "not set") }
+        if let v = b.maxHR { add("Max heart rate", maxHR.map { "\($0) bpm" } ?? "estimated", "\(v) bpm") } else if let m = maxHR { add("Max heart rate", "\(m) bpm", "estimated") }
+        if let v = b.hoursPerWeek { add("Hours per week", "\(hoursPerWeek) h", "\(v) h") }
+        if let v = b.level { add("Experience", level.title, Level.from(linkCode: v).title) }
+        if let v = b.goal { add("Goal", Goal.from(linkCode: goal.linkCode).title, Goal.from(linkCode: v).title) }
+        if let v = b.units { add("Units", units == .imperial ? "mi, ft" : "km, m", v == 1 ? "mi, ft" : "km, m") }
+        return out
+    }
     /// Coggan zones from FTP: 55/75/90/105/120/150 %
     var powerZones: [(lo: Int, hi: Int?)] {
         let f = Double(ftpW); let b = [0.55, 0.75, 0.90, 1.05, 1.20, 1.50].map { Int((f * $0).rounded()) }
@@ -79,6 +157,36 @@ struct Workout: Codable, Identifiable, Equatable {
         case .mobility: return [.init(name: "Flow", duration: "\(minutes) min", target: "hips, back, calves")]
         case .other: return [.init(name: "Activity", duration: "\(minutes) min", target: "counted as training load, not as a ride")]
         case .recoveryDay, .rest: return []
+        }
+    }
+    /// Expected training benefit, in plain words (for the Home table).
+    var benefit: String {
+        switch kind {
+        case .endurance, .long: return "aerobic fitness"
+        case .tempo: return "sustainable power"
+        case .threshold, .ftpTest: return "FTP / threshold"
+        case .vo2: return "top-end power"
+        case .recovery, .recoveryDay, .rest: return "recovery"
+        case .strength: return "strength, injury prevention"
+        case .mobility: return "mobility"
+        case .other: return "general load"
+        }
+    }
+    /// Short structure, e.g. "3 × 8 min Z4" (for the Home table).
+    var structureText: String {
+        switch kind {
+        case .endurance: return "steady Z2"
+        case .tempo: return "2 × 15 min Z3"
+        case .threshold: return "3 × 8 min Z4"
+        case .vo2: return "5 × 3 min Z5"
+        case .recovery: return "easy Z1"
+        case .long: return "steady Z2, fuel every 30 min"
+        case .ftpTest: return "20-min test"
+        case .strength: return "3 × 10 min circuit"
+        case .mobility: return "flow"
+        case .other: return "free"
+        case .recoveryDay: return "light movement"
+        case .rest: return "—"
         }
     }
     var why: String {
@@ -179,6 +287,40 @@ struct AppSettings: Codable, Equatable {
     var phoneOnlyMode = false
     var hrPref: HRPref = .strap
     var keepScreenOn = true
+    /// Build 0.4.0: connect to the remembered BikeComputer automatically whenever it is in range (background included).
+    var autoConnectBoard = true
+    /// Which optional connections the rider turned on. Only these (plus what the ride configuration needs) may show a red "!".
+    var enabledConnections: Set<String> = ["board", "watch"]
+    /// Apple Health: the rider asked for it in onboarding/Connections. "Connected" is still decided by HealthKit's own authorization status.
+    var appleHealthWanted = false
+    var appleHealthExportRides = false
+
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        units = (try? c.decodeIfPresent(Units.self, forKey: .units)) ?? .metric
+        phoneOnlyMode = try c.decodeIfPresent(Bool.self, forKey: .phoneOnlyMode) ?? false
+        hrPref = (try? c.decodeIfPresent(HRPref.self, forKey: .hrPref)) ?? .strap
+        keepScreenOn = try c.decodeIfPresent(Bool.self, forKey: .keepScreenOn) ?? true
+        autoConnectBoard = try c.decodeIfPresent(Bool.self, forKey: .autoConnectBoard) ?? true
+        enabledConnections = (try? c.decodeIfPresent(Set<String>.self, forKey: .enabledConnections)) ?? ["board", "watch"]
+        appleHealthWanted = try c.decodeIfPresent(Bool.self, forKey: .appleHealthWanted) ?? false
+        appleHealthExportRides = try c.decodeIfPresent(Bool.self, forKey: .appleHealthExportRides) ?? false
+    }
+}
+
+/// One field where the phone and the board disagree (shown before the rider confirms the phone profile replaces the board's).
+struct ProfileDifference: Identifiable, Equatable { var id: String { field }; let field: String; let phone: String; let board: String }
+
+/// Per-board record of the profile sync: which version the board acknowledged, when, and the board's own profile at first pairing.
+struct BoardSyncRecord: Codable, Equatable {
+    var boardId: String
+    var ackedVersion: UInt32 = 0
+    var ackedAt: Date? = nil
+    /// true once the rider confirmed on this phone that the phone profile replaces the board's shared settings.
+    var confirmed = false
+    var boardFirmware: String? = nil
+    var settingsVersion: UInt32 = 0
 }
 
 // MARK: - Store (local JSON file with a schema version; cloud sync comes with the account service)
@@ -197,6 +339,9 @@ struct StoreFile: Codable, Equatable {
     var appleUserId: String? = nil
     var createdAt = Date()
     var ftpSuggestion: FTPSuggestion? = nil
+    /// 0.4.0: profile-sync bookkeeping per board (keyed by board id) and the onboarding stage reached.
+    var boardSync: [BoardSyncRecord] = []
+    var onboardingStage = 0
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
         self.schema = schema; self.profile = profile; self.settings = settings; self.plan = plan; self.rides = rides; self.tiles = tiles
@@ -221,6 +366,8 @@ struct StoreFile: Codable, Equatable {
         appleUserId = try c.decodeIfPresent(String.self, forKey: .appleUserId)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         ftpSuggestion = try c.decodeIfPresent(FTPSuggestion.self, forKey: .ftpSuggestion)
+        boardSync = (try? c.decodeIfPresent([BoardSyncRecord].self, forKey: .boardSync)) ?? []
+        onboardingStage = try c.decodeIfPresent(Int.self, forKey: .onboardingStage) ?? 0
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -246,7 +393,8 @@ struct FTPSuggestion: Codable, Equatable {
 
 final class Store: ObservableObject {
     static let defaultTiles = ["power", "cadence", "hr", "speed", "time", "dist"]
-    @Published var profile = RiderProfile() { didSet { persist() } }
+    /// Any rider-made change (including through SwiftUI bindings) bumps the profile version so connected boards get it.
+    @Published var profile = RiderProfile() { didSet { if !loading, RiderProfile.differIgnoringVersion(oldValue, profile) { profile.touch() }; persist() } }
     @Published var settings = AppSettings() { didSet { persist() } }
     @Published var onboarded = false { didSet { persist() } }
     @Published var guest = true { didSet { persist() } }
@@ -255,6 +403,8 @@ final class Store: ObservableObject {
     @Published var rides: [RideRecord] = [] { didSet { persist() } }
     @Published var tiles: [String] = Store.defaultTiles { didSet { persist() } }
     @Published var ftpSuggestion: FTPSuggestion? { didSet { persist() } }
+    @Published var boardSync: [BoardSyncRecord] = [] { didSet { persist() } }
+    @Published var onboardingStage = 0 { didSet { persist() } }
     @Published private(set) var lastSaveError: String?
 
     let dir: URL
@@ -280,9 +430,20 @@ final class Store: ObservableObject {
     private func apply(_ f: StoreFile) {
         profile = f.profile; settings = f.settings; plan = f.plan; rides = f.rides; tiles = f.tiles
         onboarded = f.onboarded; guest = f.guest; appleUserId = f.appleUserId; createdAt = f.createdAt; ftpSuggestion = f.ftpSuggestion
+        boardSync = f.boardSync; onboardingStage = f.onboardingStage
     }
 
-    var snapshot: StoreFile { StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt, ftpSuggestion: ftpSuggestion) }
+    var snapshot: StoreFile {
+        var f = StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt, ftpSuggestion: ftpSuggestion)
+        f.boardSync = boardSync; f.onboardingStage = onboardingStage
+        return f
+    }
+
+    // MARK: profile sync bookkeeping
+    func syncRecord(for boardId: String) -> BoardSyncRecord { boardSync.first { $0.boardId == boardId } ?? BoardSyncRecord(boardId: boardId) }
+    func setSyncRecord(_ r: BoardSyncRecord) { if let i = boardSync.firstIndex(where: { $0.boardId == r.boardId }) { boardSync[i] = r } else { boardSync.append(r) } }
+    /// Rider-made profile change: bump the version so connected boards receive it.
+    func updateProfile(_ change: (inout RiderProfile) -> Void) { var p = profile; change(&p); if p != profile { profile = p } }   /* didSet bumps the version */
 
     /// Build-14 layout: separate JSON files + UserDefaults flags. Imported once, then superseded by store.json.
     private func legacyImport() -> StoreFile? {
@@ -357,7 +518,7 @@ final class Store: ObservableObject {
     }
     func acceptFTPSuggestion() {
         guard let s = ftpSuggestion else { return }
-        profile.ftpW = s.watts; profile.ftpHow = .fromRides; profile.ftpFromDate = s.rideDate
+        updateProfile { $0.ftpW = s.watts; $0.ftpHow = .fromRides; $0.ftpFromDate = s.rideDate }
         ftpSuggestion = nil
     }
     func dismissFTPSuggestion() { ftpSuggestion = nil }
@@ -420,7 +581,7 @@ final class Store: ObservableObject {
     func resetAll() {
         loading = true
         rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil; ftpSuggestion = nil
-        tiles = Store.defaultTiles; createdAt = Date()
+        tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
         for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }
@@ -447,6 +608,47 @@ final class Store: ObservableObject {
 
 // MARK: - Coach (rules). Deterministic plain-word notes; no model is involved in this build and the UI says "Coach (rules)".
 enum Coach {
+    /// ONE line for the top of Home: "Today: 45-minute easy endurance ride to improve aerobic fitness."
+    static func todayLine(_ t: Workout?) -> String {
+        guard let t else { return "Today: nothing planned." }
+        switch t.kind {
+        case .rest: return "Today: rest day — adaptation happens here."
+        case .recoveryDay: return "Today: recovery day — light movement, early night."
+        case .strength, .mobility, .other: return "Today: \(t.minutes)-minute \(t.kind.title.lowercased()) session off the bike for \(t.benefit)."
+        case .recovery: return "Today: \(t.minutes)-minute easy recovery spin to loosen the legs."
+        case .ftpTest: return "Today: FTP test — \(t.minutes) minutes with a 20-minute all-out effort for a real number."
+        default: return "Today: \(t.minutes)-minute \(t.kind.title.lowercased()) ride (Zone \(t.kind.zone)) to improve \(t.benefit)."
+        }
+    }
+    /// "Why this workout?" — uses only what the app actually has: the plan, recent rides, the FTP label. Never sleep,
+    /// HRV or recovery data (no source is connected in this build), and says so.
+    static func why(_ t: Workout?, store s: Store) -> String {
+        guard let t else { return "No session is planned for today." }
+        var parts: [String] = [t.why]
+        let cal = Calendar.current
+        let recent = s.rides.filter { $0.start > cal.date(byAdding: .day, value: -7, to: Date())! }
+        if let last = s.rides.first {
+            let days = cal.dateComponents([.day], from: cal.startOfDay(for: last.start), to: cal.startOfDay(for: Date())).day ?? 0
+            var l = days == 0 ? "You rode today" : days == 1 ? "Your last ride was yesterday" : "Your last ride was \(days) days ago"
+            l += " (\(last.durationS / 60) min" + (last.avgPower.map { ", \($0) W average" } ?? ", no power data") + ")."
+            parts.append(l)
+            if days >= 1, days <= 2, last.avgPower.map({ s.profile.zone(forWatts: $0) >= 3 }) == true, t.kind.zone <= 2 { parts.append("Yesterday's effort was hard, so today stays easy on purpose.") }
+        } else { parts.append("No rides are recorded yet, so the plan starts from your goal, hours and level only.") }
+        if !recent.isEmpty { parts.append("This week so far: \(recent.reduce(0) { $0 + $1.durationS } / 60) min in \(recent.count) ride\(recent.count == 1 ? "" : "s") of your \(s.profile.hoursPerWeek) h.") }
+        parts.append("Goal: \(s.profile.goal.title.lowercased()); level: \(s.profile.level.title.lowercased()).")
+        if s.profile.ftpHow == .assumed { parts.append("Targets use a provisional FTP of \(s.profile.ftpW) W; they will tighten once a real 20-minute effort is recorded.") }
+        parts.append("No sleep, HRV or recovery source is connected, so recovery is not part of this recommendation.")
+        return parts.joined(separator: " ")
+    }
+    /// Alternatives for today: one easier, one shorter, one off the bike.
+    static func alternatives(for t: Workout) -> [Workout] {
+        var out: [Workout] = []
+        if t.kind.zone > 1 { var a = t; a.kind = .recovery; a.minutes = max(30, t.minutes / 2); out.append(a) }
+        if t.minutes > 45 { var b = t; b.minutes = max(30, t.minutes * 2 / 3); out.append(b) }
+        if t.kind.isRide { var c = t; c.kind = .mobility; c.minutes = 30; out.append(c) }
+        if !t.kind.isRide { var d = t; d.kind = .endurance; d.minutes = 45; out.append(d) }
+        return out
+    }
     static func homeNote(store s: Store, device: DeviceLink?) -> String {
         let last = s.rides.first
         guard let t = s.today else { return "No plan for today." }

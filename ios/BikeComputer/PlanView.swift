@@ -4,9 +4,13 @@ struct PlanView: View {
     @EnvironmentObject private var store: Store
     @State private var weekOffset = 0
     @State private var selected: Workout?
+    @State private var dayList: PlanDay?
 
     private var weekDate: Date { Calendar.current.date(byAdding: .day, value: 7 * weekOffset, to: Date())! }
     private var week: [Workout] { store.workouts(weekOf: weekDate) }
+    /// Seven days, each with its (possibly several) activities — never two cards drawn on top of each other.
+    private var days: [PlanDay] { PlanDay.group(week, weekOf: weekDate) }
+    private func cellMinutes(_ w: Workout) -> String { w.kind.isRide || w.minutes > 0 ? (w.minutes >= 60 ? String(format: "%g h", Double(w.minutes) / 60) : "\(w.minutes)′") : "—" }
 
     var body: some View {
         NavigationStack {
@@ -17,18 +21,24 @@ struct PlanView: View {
                         Spacer(); Text(weekOffset == 0 ? "This week" : weekOffset == 1 ? "Next week" : weekDate.dayAndDate).font(.headline); Spacer()
                         Button { weekOffset += 1 } label: { Image(systemName: "chevron.right") }.disabled(weekOffset >= 1)
                     }
-                    HStack(spacing: 5) {
-                        ForEach(week) { w in
-                            Button { selected = w } label: {
+                    // one cell per day; several activities on one day → the first plus a "+N" badge that opens the day list
+                    HStack(alignment: .top, spacing: 4) {
+                        ForEach(days, id: \.date) { day in
+                            Button { if day.items.count > 1 { dayList = day } else if let w = day.items.first { selected = w } } label: {
                                 VStack(spacing: 3) {
-                                    Text(w.date.shortDay).font(.caption2.weight(.heavy)).foregroundStyle(.secondary)
-                                    Text(w.kind.isRide || w.minutes > 0 ? (w.minutes >= 60 ? String(format: "%g h", Double(w.minutes) / 60) : "\(w.minutes)′") : "—").font(.system(size: 16, weight: .bold, design: .rounded))
-                                    Text(w.kind.title).font(.system(size: 8)).lineLimit(1).foregroundStyle(.secondary)
-                                    RoundedRectangle(cornerRadius: 2).fill(w.kind.zone > 0 ? BC.zone(w.kind.zone) : Color.secondary.opacity(0.3)).frame(height: 4)
-                                }.padding(.vertical, 8).padding(.horizontal, 2).frame(maxWidth: .infinity)
-                                .background(w.done ? BC.accent.opacity(0.15) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Calendar.current.isDateInToday(w.date) ? BC.accent : (w.skipped ? Color.secondary : Color.clear), lineWidth: 1.5))
+                                    Text(day.date.shortDay).font(.caption2.weight(.heavy)).foregroundStyle(.secondary)
+                                    Text(day.items.first.map(cellMinutes) ?? "—").font(.system(size: 15, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.7)
+                                    Text(day.items.first?.kind.title ?? "free").font(.system(size: 8)).lineLimit(1).minimumScaleFactor(0.8).foregroundStyle(.secondary)
+                                    HStack(spacing: 2) {
+                                        ForEach(day.items.prefix(3)) { w in RoundedRectangle(cornerRadius: 2).fill(w.kind.zone > 0 ? BC.zone(w.kind.zone) : Color.secondary.opacity(0.3)).frame(height: 4) }
+                                    }
+                                    if day.items.count > 1 { Text("+\(day.items.count - 1)").font(.system(size: 9, weight: .heavy)).padding(.horizontal, 4).background(BC.accent.opacity(0.18), in: Capsule()) }
+                                }
+                                .padding(.vertical, 8).padding(.horizontal, 2).frame(maxWidth: .infinity, minHeight: 74)
+                                .background(day.items.contains { $0.done } ? BC.accent.opacity(0.15) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Calendar.current.isDateInToday(day.date) ? BC.accent : (day.items.allSatisfy { $0.skipped } && !day.items.isEmpty ? Color.secondary : Color.clear), lineWidth: 1.5))
                             }.buttonStyle(.plain)
+                            .accessibilityLabel("\(day.date.dayAndDate): \(day.items.map { "\($0.kind.title) \($0.minutes) min" }.joined(separator: ", "))")
                         }
                     }
                     let planned = PlanEngine.rideMinutes(week), done = week.filter { $0.done }.reduce(0) { $0 + $1.minutes }
@@ -48,6 +58,17 @@ struct PlanView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Plan")
             .sheet(item: $selected) { w in WorkoutDetail(workout: w) }
+            .sheet(item: $dayList) { day in
+                NavigationStack {
+                    List(day.items) { w in
+                        Button { dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selected = w } } label: {
+                            HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.kind.title).bold().foregroundStyle(.primary); Text("\(w.minutes) min · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); if w.done { Pill(text: "done", color: BC.live) } else if w.skipped { Pill(text: "skipped") } }
+                        }
+                    }
+                    .navigationTitle(day.date.dayAndDate).navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dayList = nil } } }
+                }.presentationDetents([.medium])
+            }
         }
     }
     private func stat(_ t: String, _ v: String, warn: Bool = false) -> some View { VStack(alignment: .leading, spacing: 2) { Eyebrow(t: t); Text(v).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(warn ? BC.warn : .primary) }.frame(maxWidth: .infinity, alignment: .leading) }
@@ -78,6 +99,7 @@ struct WorkoutDetail: View {
                                 Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel)). Heart-rate targets appear when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
                         }
                         HStack { Button("Move") { mode = 1 }.buttonStyle(.bordered); Button("Edit") { mode = 2 }.buttonStyle(.bordered); Button(workout.skipped ? "Unskip" : "Skip") { workout.skipped.toggle(); store.update(workout) }.buttonStyle(.bordered); Spacer() }
+                        Button("Add another activity on this day") { store.plan.append(Workout(date: workout.date, kind: .mobility, minutes: 30)); dismiss() }.font(.footnote)
                         if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
                             Button { if recorder.startMode(locationAuthorized: true) == .board { device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
                             Text("Targets are sent to the BikeComputer when the ride starts; the board shows them on its coach screen.").font(.footnote).foregroundStyle(.secondary)
@@ -102,3 +124,20 @@ struct WorkoutDetail: View {
     private func hrRange(_ z: Int) -> String { let m = Double(store.profile.estimatedMaxHR); let b: [(Double, Double)] = [(0.5, 0.6), (0.6, 0.75), (0.75, 0.85), (0.85, 0.9), (0.9, 1.0), (0.9, 1.0), (0.9, 1.0)]; return "\(Int(m * b[z - 1].0))–\(Int(m * b[z - 1].1)) bpm" }
 }
 extension WorkoutKind { var minutes0: Bool { self == .rest || self == .recoveryDay } }
+
+/// Activities grouped per calendar day for the week strip (pure, unit-tested).
+struct PlanDay: Identifiable, Equatable {
+    var id: Date { date }
+    let date: Date
+    let items: [Workout]
+    static func group(_ week: [Workout], weekOf d: Date, calendar cal: Calendar = .current) -> [PlanDay] {
+        let d0 = cal.startOfDay(for: d)
+        let wd = (cal.component(.weekday, from: d0) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: d0)!
+        return (0..<7).map { i in
+            let day = cal.date(byAdding: .day, value: i, to: monday)!
+            let items = week.filter { cal.isDate($0.date, inSameDayAs: day) }.sorted { a, b in a.kind.isRide != b.kind.isRide ? a.kind.isRide : a.minutes > b.minutes }
+            return PlanDay(date: day, items: items)
+        }
+    }
+}
