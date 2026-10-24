@@ -173,7 +173,6 @@ def ensure_group(app_id):
         email = (a.get("username") or "").strip()
         if not email or not roles & {"ACCOUNT_HOLDER", "ADMIN"}:
             continue
-        print(f"::add-mask::{email}", flush=True)
         if email.lower() in have:
             continue
         st3, r3 = call("POST", "/v1/betaTesters", {

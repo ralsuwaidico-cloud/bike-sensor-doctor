@@ -42,7 +42,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
-          python3 ios/ci/asc.py > asc.txt 2>&1 || echo "SETUP FAILED (exit $?)" >> asc.txt
+          python3 ios/ci/asc.py 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<e-mail hidden>/g' > asc.txt || echo "SETUP FAILED" >> asc.txt
           cat asc.txt
           grep -q "app_ready=true" "$GITHUB_OUTPUT" || echo "app_ready=false" >> "$GITHUB_OUTPUT"
       - name: Keep the setup report
