@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "bc_link.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +19,7 @@ extern "C" {
 
 typedef enum { PLAT_SENS_POWER = 0, PLAT_SENS_HR, PLAT_SENS_SPEED, PLAT_SENS_KINDS } plat_sens_kind_t;
 typedef enum { PLAT_LINK_OFF = 0, PLAT_LINK_NOT_PAIRED, PLAT_LINK_SEARCHING, PLAT_LINK_CONNECTING, PLAT_LINK_CONNECTED,
-               PLAT_LINK_RETRY, PLAT_LINK_UNSUPPORTED } plat_link_t;
+               PLAT_LINK_RETRY, PLAT_LINK_UNSUPPORTED, PLAT_LINK_STALE /* source connected but its last value is too old to show */ } plat_link_t;
 
 typedef struct {
     plat_link_t link;
@@ -95,6 +96,36 @@ int plat_wifi_saved(char ssids[][33], int max);
 void plat_wifi_status(plat_wifi_status_t *out);
 void plat_wifi_set_quiet(bool riding);               /* ride in progress: no scans or retries */
 int plat_wifi_scan_count(void);                      /* networks seen by the last scan, -1 if never scanned */
+/* ---- phone link: BLE peripheral "BikeComputer Link" (protocol in bc_link.h / docs/BLE_LINK_PROTOCOL.md). Optional: the
+ * device is fully usable without a phone. Pairing = LE Secure Connections with a 6-digit code shown on this screen; the
+ * phone is remembered (bonded) so later connections need no code. A phone disconnect never touches the ride recording. */
+typedef enum { PLAT_PHONE_OFF = 0, PLAT_PHONE_ADVERTISING, PLAT_PHONE_CONNECTED /* link up, not yet authenticated */,
+               PLAT_PHONE_PAIRING /* passkey on screen */, PLAT_PHONE_READY /* encrypted with a remembered phone */ } plat_phone_state_t;
+typedef struct {
+    plat_phone_state_t state;
+    bool bonded;                      /* a phone is remembered */
+    int rssi;                         /* dBm while connected, 0 otherwise */
+    uint32_t passkey;                 /* code to show while PAIRING, 0 otherwise */
+    uint32_t connects, rx_msgs, rx_rejected, tx_msgs;
+    uint32_t last_rx_age_ms;          /* UINT32_MAX = never */
+    uint8_t phone_batt, watch_batt;   /* 0xFF unknown */
+} plat_phone_status_t;
+void plat_phone_set_enabled(bool on);
+void plat_phone_status(plat_phone_status_t *out);
+void plat_phone_forget(void);         /* forget every remembered phone and drop the connection */
+void plat_phone_disconnect(void);
+/** Latest inputs received from the phone (validated by bc_link). rx_ms = plat_ms() at reception, 0 = never received. */
+typedef struct {
+    struct { bc_in_gps_t v; uint32_t rx_ms; } gps;
+    struct { bc_in_hr_t v; uint32_t rx_ms; } hr;
+    struct { bc_in_time_t v; uint32_t rx_ms; } time;
+    struct { bc_in_weather_t v; uint32_t rx_ms; } weather;
+} plat_phone_in_t;
+void plat_phone_inputs(plat_phone_in_t *out);
+bool plat_phone_take_ctrl(bc_ctrl_req_t *out);               /* pending ride-control request from the phone */
+void plat_phone_ctrl_respond(const bc_ctrl_resp_t *resp);
+void plat_phone_publish_live(const bc_live_t *live);         /* once per second from the app; sent when the phone listens */
+
 const char *plat_fw_version(void);
 const char *plat_reset_reason(void);
 uint32_t plat_boot_count(void);
@@ -113,6 +144,7 @@ typedef struct {
     int battery_mv, battery_pct; bool usb_power;
     bool ble_ready, ble_scanning; uint32_t ble_devices_seen;
     bool wifi_on; int wifi_networks;
+    int phone_state; bool phone_bonded;
     bool display_ok, touch_ok, imu_ok, storage_ok;
 } plat_health_t;
 void plat_health(plat_health_t *out);

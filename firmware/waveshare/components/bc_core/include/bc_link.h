@@ -116,6 +116,11 @@ bool bc_link_decode_info(const uint8_t *buf, size_t len, bc_info_t *v);
 typedef enum { BC_ACT_NONE = 0, BC_ACT_START, BC_ACT_PAUSE, BC_ACT_RESUME, BC_ACT_ARM_STOP, BC_ACT_STOP } bc_ctrl_action_t;
 bc_ctrl_action_t bc_link_ctrl_decide(const bc_ctrl_req_t *q, uint8_t ride_state, uint16_t ride_id, bool stop_armed, uint8_t *status);
 
+/** Short display name of a source: "XDS", "STRAP", "PHONE GPS", "WATCH", "WEAR OS", "PHONE", "GPS", "DEMO", "?" */
+const char *bc_src_name(uint8_t src);
+/** Distance in metres between two positions (lat/lon × 1e7). Equirectangular: exact enough for 1–60 s GPS steps. */
+uint32_t bc_geo_dist_m(int32_t lat1_e7, int32_t lon1_e7, int32_t lat2_e7, int32_t lon2_e7);
+
 #ifdef __cplusplus
 }
 #endif

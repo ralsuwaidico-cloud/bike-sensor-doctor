@@ -7,6 +7,7 @@
 #include "bc_coach.h"
 #include "bc_demo.h"
 #include "bc_wifi.h"
+#include "bc_link.h"
 
 static int fails, checks;
 #define CHECK(c) do { checks++; if (!(c)) { fails++; printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #c); } } while (0)
@@ -201,9 +202,98 @@ static void t_wifi(void)
     CHECK(strlen(bc_wifi_err_text(BC_WIFI_ERR_WRONG_PASSWORD)) > 5);
 }
 
+static void t_link(void)
+{
+    {   /* 0.2.x history lines (R1) still parse; R2 round-trips distance */
+        bc_ride_summary_t s1;
+        CHECK(bc_summary_from_line(&s1, "R1,3,0,0,3600,0,200,400,85,150,170,3600,3000,3600,1,0,0,1800,1800,0,0,0,225,1,720,210,80,0,0,ok ride") && s1.id == 3 && s1.distance_m == 0 && s1.coach[0] == 'o');
+        bc_ride_t r; bc_ride_start(&r, 4, false, 225, 1, true);
+        bc_sample_t smp = { 200, 90, 150 };
+        for (int i = 0; i < 10; i++) { bc_ride_tick(&r, smp); bc_ride_add_speed(&r, 833, BC_SRC_PHONE_GPS); }   /* 30 km/h */
+        bc_ride_add_speed(&r, 30, BC_SRC_PHONE_GPS);        /* standing-still noise is ignored */
+        CHECK(r.s.distance_m == 83 && r.s.dist_src == BC_SRC_PHONE_GPS);
+        bc_ride_pause(&r); bc_ride_add_speed(&r, 833, BC_SRC_PHONE_GPS); CHECK(r.s.distance_m == 83);   /* paused: no distance */
+        bc_ride_resume(&r); bc_ride_end(&r); r.s.start_epoch_s = 1761300000u;
+        char line[400]; CHECK(bc_summary_to_line(&r.s, line, sizeof line) > 0 && !strncmp(line, "R2,", 3));
+        bc_ride_summary_t s2; CHECK(bc_summary_from_line(&s2, line) && s2.distance_m == 83 && s2.dist_src == BC_SRC_PHONE_GPS && s2.start_epoch_s == 1761300000u && s2.id == 4);
+    }
+    uint8_t buf[BC_LINK_MAX];
+    /* LIVE round trip, including "no data" fields left out */
+    bc_live_t a = { .power_ok = true, .power_w = 231, .power_age_ms = 400, .cad_ok = true, .cadence_rpm = 88, .cad_age_ms = 500,
+                    .hr_ok = false, .ride_state = 1, .ride_id = 12, .elapsed_s = 3600, .distance_m = 25000, .cue_id = 3,
+                    .battery_pct = 77, .meter_link = 4, .meter_gaps = 2, .demo = false };
+    size_t n = bc_link_encode_live(&a, buf, sizeof buf, 7, 123456);
+    CHECK(n > BC_LINK_HDR && n <= BC_LINK_MAX);
+    bc_live_t b; CHECK(bc_link_decode_live(buf, n, &b));
+    CHECK(b.power_ok && b.power_w == 231 && b.power_age_ms == 400 && b.cad_ok && b.cadence_rpm == 88 && !b.hr_ok);
+    CHECK(b.ride_state == 1 && b.ride_id == 12 && b.elapsed_s == 3600 && b.distance_m == 25000 && b.battery_pct == 77 && b.meter_gaps == 2 && !b.demo);
+    bc_link_hdr_t h; bc_lr_t r; CHECK(bc_lr_begin(&r, buf, n, &h) && h.type == BC_MSG_LIVE && h.seq == 7 && h.t_ms == 123456);
+    /* demo flag survives */
+    a.demo = true; n = bc_link_encode_live(&a, buf, sizeof buf, 8, 0); CHECK(bc_link_decode_live(buf, n, &b) && b.demo);
+    /* truncated field list → rejected whole */
+    CHECK(!bc_link_decode_live(buf, n - 1, &b));
+    CHECK(!bc_link_decode_live(buf, 5, &b));
+    /* unknown tag is skipped, wrong-length known tag is ignored */
+    uint8_t m[] = { BC_MSG_LIVE, 0, 1, 0, 0, 0, 0, 0, 0x7E, 3, 1, 2, 3, 0x01, 1, 9, 0x08, 1, 2 };
+    CHECK(bc_link_decode_live(m, sizeof m, &b) && !b.power_ok && b.ride_state == 2);
+    /* wrong type */
+    m[0] = BC_MSG_IN_GPS; CHECK(!bc_link_decode_live(m, sizeof m, &b));
+    /* too small buffer */
+    CHECK(bc_link_encode_live(&a, buf, 20, 1, 0) == 0);
+
+    /* time: sane range */
+    bc_in_time_t t = { .epoch_ms = 1761300000000ULL, .uncertainty_ms = 50, .tz_min = 240 }, t2;
+    n = bc_link_encode_time(&t, buf, sizeof buf, 1, 0); CHECK(bc_link_decode_time(buf, n, &t2) && t2.epoch_ms == t.epoch_ms && t2.tz_min == 240);
+    t.epoch_ms = 1000; n = bc_link_encode_time(&t, buf, sizeof buf, 1, 0); CHECK(!bc_link_decode_time(buf, n, &t2));
+
+    /* GPS: needs lat/lon in range and a GPS source; speed > 108 km/h not trusted */
+    bc_in_gps_t g = { .lat_e7 = 244667000, .lon_e7 = 544000000, .alt_ok = true, .alt_dm = 120, .hacc_dm = 50, .vacc_dm = 80,
+                      .speed_ok = true, .speed_cms = 833, .course_ok = true, .course_cdeg = 9000, .fix_epoch_ms = 1761300000000ULL, .src = BC_SRC_PHONE_GPS }, g2;
+    n = bc_link_encode_gps(&g, buf, sizeof buf, 2, 0); CHECK(n <= BC_LINK_MAX && bc_link_decode_gps(buf, n, &g2));
+    CHECK(g2.lat_e7 == g.lat_e7 && g2.lon_e7 == g.lon_e7 && g2.alt_ok && g2.alt_dm == 120 && g2.speed_ok && g2.speed_cms == 833 && g2.src == BC_SRC_PHONE_GPS);
+    g.src = BC_SRC_APPLE_WATCH; n = bc_link_encode_gps(&g, buf, sizeof buf, 2, 0); CHECK(!bc_link_decode_gps(buf, n, &g2));
+    g.src = BC_SRC_PHONE_GPS; g.lat_e7 = 950000000; n = bc_link_encode_gps(&g, buf, sizeof buf, 2, 0); CHECK(!bc_link_decode_gps(buf, n, &g2));
+    g.lat_e7 = 0; g.speed_cms = 5000; n = bc_link_encode_gps(&g, buf, sizeof buf, 2, 0); CHECK(bc_link_decode_gps(buf, n, &g2) && !g2.speed_ok);
+
+    /* HR: 25..250 with a source */
+    bc_in_hr_t hr = { .bpm = 152, .src = BC_SRC_APPLE_WATCH, .sample_epoch_ms = 1761300000000ULL, .quality = 2 }, hr2;
+    n = bc_link_encode_hr(&hr, buf, sizeof buf, 3, 0); CHECK(bc_link_decode_hr(buf, n, &hr2) && hr2.bpm == 152 && hr2.src == BC_SRC_APPLE_WATCH);
+    hr.bpm = 20; n = bc_link_encode_hr(&hr, buf, sizeof buf, 3, 0); CHECK(!bc_link_decode_hr(buf, n, &hr2));
+    hr.bpm = 150; hr.src = BC_SRC_UNKNOWN; n = bc_link_encode_hr(&hr, buf, sizeof buf, 3, 0); CHECK(!bc_link_decode_hr(buf, n, &hr2));
+
+    /* weather names its provider */
+    bc_in_weather_t w = { .temp_ok = true, .temp_dc = 345, .wind_ok = true, .wind_cms = 400, .wind_deg = 270, .humidity = 60, .provider = BC_SRC_OPEN_METEO }, w2;
+    n = bc_link_encode_weather(&w, buf, sizeof buf, 4, 0); CHECK(bc_link_decode_weather(buf, n, &w2) && w2.temp_dc == 345 && w2.provider == BC_SRC_OPEN_METEO);
+    w.provider = 0; n = bc_link_encode_weather(&w, buf, sizeof buf, 4, 0); CHECK(!bc_link_decode_weather(buf, n, &w2));
+
+    /* control: stop needs a confirmation, wrong ride id refused */
+    bc_ctrl_req_t q = { .req_id = 9, .cmd = BC_CMD_STOP_REQUEST, .ride_id = 12 }, q2; uint8_t st;
+    n = bc_link_encode_ctrl_req(&q, buf, sizeof buf, 5, 0); CHECK(bc_link_decode_ctrl_req(buf, n, &q2) && q2.cmd == BC_CMD_STOP_REQUEST && q2.req_id == 9);
+    CHECK(bc_link_ctrl_decide(&q2, 1, 12, false, &st) == BC_ACT_ARM_STOP && st == BC_RESP_NEEDS_CONFIRM);
+    q2.cmd = BC_CMD_STOP_CONFIRM; CHECK(bc_link_ctrl_decide(&q2, 1, 12, false, &st) == BC_ACT_NONE && st == BC_RESP_NEEDS_CONFIRM);
+    CHECK(bc_link_ctrl_decide(&q2, 1, 12, true, &st) == BC_ACT_STOP && st == BC_RESP_OK);
+    q2.ride_id = 13; CHECK(bc_link_ctrl_decide(&q2, 1, 12, true, &st) == BC_ACT_NONE && st == BC_RESP_WRONG_RIDE);
+    q2.ride_id = 0; q2.cmd = BC_CMD_START; CHECK(bc_link_ctrl_decide(&q2, 0, 0, false, &st) == BC_ACT_START);
+    CHECK(bc_link_ctrl_decide(&q2, 1, 12, false, &st) == BC_ACT_NONE && st == BC_RESP_BAD_STATE);
+    q2.cmd = BC_CMD_PAUSE; CHECK(bc_link_ctrl_decide(&q2, 1, 12, false, &st) == BC_ACT_PAUSE);
+    q2.cmd = BC_CMD_RESUME; CHECK(bc_link_ctrl_decide(&q2, 2, 12, false, &st) == BC_ACT_RESUME);
+    q2.cmd = 99; CHECK(bc_link_ctrl_decide(&q2, 2, 12, false, &st) == BC_ACT_NONE && st == BC_RESP_UNKNOWN);
+    bc_ctrl_resp_t rs = { .req_id = 9, .status = BC_RESP_OK, .ride_state = 1, .ride_id = 12 }, rs2;
+    n = bc_link_encode_ctrl_resp(&rs, buf, sizeof buf, 6, 0); CHECK(bc_link_decode_ctrl_resp(buf, n, &rs2) && rs2.req_id == 9 && rs2.ride_id == 12);
+
+    /* info */
+    bc_info_t inf = { .ver_major = 1, .ver_minor = 0, .fw = "0.4.0", .name = "BikeComputer", .caps = BC_CAP_LIVE | BC_CAP_GPS_IN, .max_msg = BC_LINK_MAX }, inf2;
+    n = bc_link_encode_info(&inf, buf, sizeof buf); CHECK(bc_link_decode_info(buf, n, &inf2) && inf2.ver_major == 1 && !strcmp(inf2.fw, "0.4.0") && !strcmp(inf2.name, "BikeComputer") && inf2.caps == (BC_CAP_LIVE | BC_CAP_GPS_IN));
+
+    /* geo: 100 m north at Abu Dhabi latitude; identical points = 0 */
+    uint32_t d = bc_geo_dist_m(244667000, 544000000, 244667000 + 8993, 544000000); CHECK(d >= 99 && d <= 101);
+    CHECK(bc_geo_dist_m(244667000, 544000000, 244667000, 544000000) == 0);
+    CHECK(!strcmp(bc_src_name(BC_SRC_APPLE_WATCH), "WATCH") && !strcmp(bc_src_name(0x55), "?"));
+}
+
 int main(void)
 {
-    t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi();
+    t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -25,6 +25,7 @@ static void refresh_cb(lv_timer_t *t)
     app_tick();
     if (s_update) s_update();
     ui_demo_badge_refresh();
+    ui_passkey_refresh();
 }
 
 static void scr_deleted(lv_event_t *e)
@@ -60,6 +61,7 @@ void ui_screen_show(lv_obj_t *scr)
     s_badge_hidden = false;
     if (s_update) s_update();
     ui_demo_badge_refresh();
+    ui_passkey_refresh();
 }
 
 /* ---- building blocks */
@@ -267,6 +269,7 @@ const char *ui_link_text(plat_link_t l)
 {
     switch (l) {
     case PLAT_LINK_OFF: return "OFF";
+    case PLAT_LINK_STALE: return "STALE";
     case PLAT_LINK_NOT_PAIRED: return "NOT PAIRED";
     case PLAT_LINK_SEARCHING: return "SEARCHING";
     case PLAT_LINK_CONNECTING: return "CONNECTING";
@@ -281,7 +284,7 @@ lv_color_t ui_link_color(plat_link_t l)
 {
     switch (l) {
     case PLAT_LINK_CONNECTED: return C_GREEN;
-    case PLAT_LINK_SEARCHING: case PLAT_LINK_CONNECTING: case PLAT_LINK_RETRY: return C_AMBER;
+    case PLAT_LINK_SEARCHING: case PLAT_LINK_CONNECTING: case PLAT_LINK_RETRY: case PLAT_LINK_STALE: return C_AMBER;
     default: return C_MUT;
     }
 }

@@ -629,6 +629,75 @@ static void scenario(void)
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_OFF && !app_profile()->wifi_on, "Wi-Fi off again"); }
     }
 
+    printf("== 12 phone link (the harness plays the iPhone app)\n");
+    {
+        /* enabled by default after onboarding; nothing paired yet */
+        boot(); plat_phone_set_enabled(app_profile()->phone_on); run(300);
+        CHECK(app_profile()->phone_on, "phone link on by default");
+        ui_settings_show(); run(300); scroll_to("Phone"); shot("97_settings_phone_row"); tap_text("Phone"); run(300);
+        CHECK(on_screen("WAITING FOR PHONE") && on_screen("no phone remembered"), "phone page before pairing");
+        shot("97_phone_waiting");
+        /* a new phone connects: the 6-digit code pops up over the current screen and blocks touches until done */
+        sim_phone_connect(false); run(400);
+        CHECK(on_screen("PHONE PAIRING") && on_screen("482") && on_screen("913"), "passkey shown on screen");
+        shot("98_passkey_popup");
+        sim_phone_enter_passkey(); run(400);
+        CHECK(!on_screen("PHONE PAIRING") && on_screen("CONNECTED") && on_screen("a phone is remembered"), "paired, remembered");
+        shot("98_phone_connected");
+        /* the phone sends time, GPS and watch heart rate; every value carries its source */
+        sim_phone_send_time(1761300000000ULL); sim_phone_send_gps(244667000, 544000000, 833, 60); sim_phone_send_hr(148, BC_SRC_APPLE_WATCH); run(1200);
+        { app_live_t lv; app_live(&lv);
+          CHECK(lv.speed_ok && lv.speed_dmh == 299 && lv.speed_src == BC_SRC_PHONE_GPS, "speed 29.9 km/h from PHONE GPS (%d)", lv.speed_dmh);
+          CHECK(lv.hr_ok && lv.bpm == 148 && lv.hr_src == BC_SRC_APPLE_WATCH && lv.phone_hr && !lv.strap_hr, "watch HR via phone");
+          CHECK(lv.time_known && lv.epoch_s >= 1761300000u && lv.epoch_s <= 1761300002u, "wall clock synced"); }
+        CHECK(on_screen("WATCH") && on_screen("29.9 km/h"), "phone page shows sources");
+        shot("98_phone_live");
+        /* strap present too: strap wins by default, watch is the backup; preference flips it */
+        sensors(true, 180, true, 90, true, 152); g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_CONNECTED; sim_phone_send_hr(148, BC_SRC_APPLE_WATCH); run(400);
+        { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.bpm == 152 && lv.hr_src == BC_SRC_BLE_STRAP && lv.strap_hr && lv.phone_hr, "strap first by default"); }
+        scroll_to("HR: STRAP FIRST"); tap_text("HR: STRAP FIRST"); run(300); sim_phone_send_hr(149, BC_SRC_APPLE_WATCH); run(300);
+        { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.bpm == 149 && lv.hr_src == BC_SRC_APPLE_WATCH && app_profile()->hr_pref == 1, "watch first after the toggle"); }
+        scroll_to("HR: WATCH FIRST"); tap_text("HR: WATCH FIRST"); run(300);
+        /* stale: 12 s without a watch value → falls back to the strap, never holds the old number */
+        run_s(12); { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.hr_src == BC_SRC_BLE_STRAP && !lv.phone_hr, "stale watch HR dropped, strap shown"); }
+        sensors(true, 180, true, 90, false, 0); g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_NOT_PAIRED; run(400);
+        { app_live_t lv; app_live(&lv); CHECK(!lv.hr_ok && !lv.speed_ok && lv.link[PLAT_SENS_SPEED].link == PLAT_LINK_STALE, "no HR at all; GPS marked STALE after 5 s"); }
+        /* Sensors page: five groups */
+        ui_sensors_show(); run(300); shot("99_sensors_groups");
+        CHECK(on_screen("POWER METER") && scroll_to("HEART RATE") && scroll_to("SPEED / CADENCE"), "sensor groups");
+        CHECK(scroll_to("WEARABLES") && scroll_to("PHONE SETTINGS") && on_screen("CONNECTED"), "wearables + phone rows"); shot("99_sensors_phone");
+        /* ride controlled from the phone; the phone disconnecting never stops the recording */
+        ui_home_show(); run(300);
+        sim_phone_ctrl(BC_CMD_START, 0); run(1200);
+        CHECK(app_ride_state() == BC_RIDE_RUNNING && g_sim.phone.last_resp.status == BC_RESP_OK, "ride started from the phone (resp %u)", g_sim.phone.last_resp.status);
+        run(600); CHECK(on_screen("WATTS") || on_screen("TARGET") || on_screen("PACE") || on_screen("NO DATA"), "home switched to the ride screen");
+        for (int i = 0; i < 20; i++) { sim_phone_send_gps(244667000 + i * 800, 544000000, 833, 60); run(1000); }
+        { bc_ride_summary_t t; app_ride_totals(&t); CHECK(t.distance_m >= 150 && t.distance_m <= 175 && t.dist_src == BC_SRC_PHONE_GPS, "distance integrated on the device (%lu m)", (unsigned long)t.distance_m);
+          CHECK(t.start_epoch_s >= 1761300000u, "ride start time stamped from the phone clock");
+          CHECK(g_sim.phone.lives > 15 && g_sim.phone.last_live.distance_m == t.distance_m && g_sim.phone.last_live.power_ok, "live values streamed to the phone"); }
+        drag(120, 120, 20, 120); run(300); drag(120, 120, 20, 120); run(300); shot("99_ride_metrics_gps");
+        CHECK(on_screen("km/h") && on_screen("PHONE GPS"), "metrics page shows speed + source");
+        sim_phone_ctrl(BC_CMD_STOP_CONFIRM, 0); run(1200);
+        CHECK(app_ride_state() == BC_RIDE_RUNNING && g_sim.phone.last_resp.status == BC_RESP_NEEDS_CONFIRM, "stop without request refused");
+        sim_phone_disconnect(); run_s(8);
+        { bc_ride_summary_t t; app_ride_totals(&t); CHECK(app_ride_state() == BC_RIDE_RUNNING && t.duration_s >= 27, "recording continues without the phone (%lus)", (unsigned long)t.duration_s);
+          app_live_t lv; app_live(&lv); CHECK(!lv.speed_ok && lv.link[PLAT_SENS_SPEED].link != PLAT_LINK_CONNECTED, "speed gone, not held"); }
+        shot("99_ride_phone_lost");
+        sim_phone_connect(true); run(400);   /* remembered phone: no code */
+        CHECK(!on_screen("PHONE PAIRING"), "no passkey for a remembered phone");
+        sim_phone_ctrl(BC_CMD_STOP_REQUEST, 0); run(1200); CHECK(g_sim.phone.last_resp.status == BC_RESP_NEEDS_CONFIRM && app_ride_state() == BC_RIDE_RUNNING, "stop request arms");
+        sim_phone_ctrl(BC_CMD_STOP_CONFIRM, 0); run(1200); CHECK(app_ride_state() == BC_RIDE_ENDED && g_sim.phone.last_resp.status == BC_RESP_OK, "stop confirmed ends the ride");
+        run(600); CHECK(on_screen("SAVE"), "results screen appears when the phone ends the ride");
+        tap_text("SAVE"); run(500);
+        { bc_ride_summary_t h[3]; int n = app_history(h, 3, false); CHECK(n >= 1 && h[0].distance_m >= 150 && h[0].dist_src == BC_SRC_PHONE_GPS, "distance saved in history (R2 line)"); }
+        /* forget → next connection pairs again; off → no advertising */
+        ui_phone_show(); run(300); scroll_to("FORGET PHONE"); hold_text("FORGET PHONE", 1800); run(300);
+        CHECK(g_sim.phone.forgets == 1 && scroll_to("no phone remembered"), "phone forgotten");
+        scroll_to("PHONE LINK: ON"); tap_text("PHONE LINK: ON"); run(300); CHECK(!app_profile()->phone_on && scroll_to("OFF"), "phone link switched off");
+        scroll_to("PHONE LINK: OFF"); tap_text("PHONE LINK: OFF"); run(300); CHECK(app_profile()->phone_on, "and on again");
+        shot("99_phone_after_forget");
+    }
+
     printf("== 8 long name and edge cases\n");
     snprintf(app_profile()->name, sizeof app_profile()->name, "Maximilianus Bob");
     app_profile_save();

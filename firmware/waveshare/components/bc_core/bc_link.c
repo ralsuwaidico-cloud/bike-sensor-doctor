@@ -1,5 +1,6 @@
 #include "bc_link.h"
 #include <string.h>
+#include <math.h>
 
 /* ---- writer */
 void bc_lw_begin(bc_lw_t *w, uint8_t *buf, size_t cap, bc_msg_type_t type, uint16_t seq, uint32_t t_ms)
@@ -299,4 +300,24 @@ bc_ctrl_action_t bc_link_ctrl_decide(const bc_ctrl_req_t *q, uint8_t st, uint16_
     }
     *status = BC_RESP_BAD_STATE;
     return BC_ACT_NONE;
+}
+
+const char *bc_src_name(uint8_t src)
+{
+    switch (src) {
+    case BC_SRC_XDS: return "XDS"; case BC_SRC_BLE_STRAP: return "STRAP"; case BC_SRC_PHONE_GPS: return "PHONE GPS";
+    case BC_SRC_APPLE_WATCH: return "WATCH"; case BC_SRC_WEAR_OS: return "WEAR OS"; case BC_SRC_PHONE_STRAP: return "PHONE";
+    case BC_SRC_ONBOARD_GPS: return "GPS"; case BC_SRC_WEATHERKIT: return "WEATHERKIT"; case BC_SRC_OPEN_METEO: return "OPEN-METEO";
+    case BC_SRC_DEMO: return "DEMO"; default: return "?";
+    }
+}
+
+uint32_t bc_geo_dist_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2)
+{
+    const double R = 6371000.0, k = 3.14159265358979323846 / 180.0 / 1e7;
+    double dlat = (double)(lat2 - lat1) * k, dlon = (double)(lon2 - lon1) * k;
+    double mlat = ((double)lat1 + (double)lat2) * 0.5 * k;
+    double x = dlon * cos(mlat), y = dlat;
+    double d = R * sqrt(x * x + y * y);
+    return d < 0 ? 0 : (uint32_t)(d + 0.5);
 }

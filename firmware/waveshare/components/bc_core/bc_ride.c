@@ -75,7 +75,7 @@ void bc_ride_live_summary(const bc_ride_t *r, bc_ride_summary_t *o)
     o->avg_cad = r->s.cad_s ? (int)((r->cad_sum + r->s.cad_s / 2) / r->s.cad_s) : -1;
     o->avg_hr = r->s.hr_s ? (int)((r->hr_sum + r->s.hr_s / 2) / r->s.hr_s) : -1;
     o->kj = (int)((r->energy_j + 500) / 1000);
-    o->best20 = r->best20_sum >= 0 ? (r->best20_sum + r->best20_valid / 2) / r->best20_valid : -1;
+    o->best20 = r->best20_sum >= 0 && r->best20_valid > 0 ? (r->best20_sum + r->best20_valid / 2) / r->best20_valid : -1;
 }
 
 void bc_ride_end(bc_ride_t *r)
@@ -116,18 +116,26 @@ bool bc_ride_apply_ftp(bc_ride_t *r, bc_profile_t *p)
     return true;
 }
 
+void bc_ride_add_speed(bc_ride_t *r, uint16_t speed_cms, uint8_t src)
+{
+    if (r->state != BC_RIDE_RUNNING || speed_cms < 50) return;
+    r->dist_cm_rem += speed_cms;
+    r->s.distance_m += r->dist_cm_rem / 100; r->dist_cm_rem %= 100;
+    r->s.dist_src = src;
+}
+
 /* ---- history line: comma-separated, coach text last (it may contain commas) */
 size_t bc_summary_to_line(const bc_ride_summary_t *s, char *out, size_t cap)
 {
     char coach[sizeof s->coach]; size_t j = 0;
     for (size_t i = 0; s->coach[i] && j + 1 < sizeof coach; i++) coach[j++] = (s->coach[i] == '\n' || s->coach[i] == '\r') ? ' ' : s->coach[i];
     coach[j] = 0;
-    int n = snprintf(out, cap, "R1,%u,%d,%d,%lu,%lu,%d,%d,%d,%d,%d,%lu,%lu,%lu,%d,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%d,%u,%d,%d,%d,%d,%d,%s",
+    int n = snprintf(out, cap, "R2,%u,%d,%d,%lu,%lu,%d,%d,%d,%d,%d,%lu,%lu,%lu,%d,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%d,%u,%d,%d,%d,%d,%d,%lu,%u,%lu,%s",
         s->id, s->demo, s->recovered, (unsigned long)s->duration_s, (unsigned long)s->paused_s, s->avg_power, s->max_power, s->avg_cad,
         s->avg_hr, s->max_hr, (unsigned long)s->power_s, (unsigned long)s->cad_s, (unsigned long)s->hr_s, s->zones_valid,
         (unsigned long)s->zone_s[0], (unsigned long)s->zone_s[1], (unsigned long)s->zone_s[2], (unsigned long)s->zone_s[3],
         (unsigned long)s->zone_s[4], (unsigned long)s->zone_s[5], (unsigned long)s->zone_s[6], s->ftp_w, s->ftp_how, s->kj, s->best20,
-        s->inband_pct, s->ftp_new, s->ftp_suggested_only, coach);
+        s->inband_pct, s->ftp_new, s->ftp_suggested_only, (unsigned long)s->distance_m, s->dist_src, (unsigned long)s->start_epoch_s, coach);
     if (n < 0 || (size_t)n >= cap) return 0;
     return (size_t)n;
 }
@@ -135,9 +143,10 @@ size_t bc_summary_to_line(const bc_ride_summary_t *s, char *out, size_t cap)
 bool bc_summary_from_line(bc_ride_summary_t *s, const char *line)
 {
     memset(s, 0, sizeof *s);
-    if (!line || strncmp(line, "R1,", 3) != 0) return false;
-    long v[28]; const char *p = line + 3;
-    for (int i = 0; i < 28; i++) {
+    if (!line || (strncmp(line, "R1,", 3) != 0 && strncmp(line, "R2,", 3) != 0)) return false;
+    int nf = line[1] == '2' ? 31 : 28;                   /* R1 = 0.2.x rides (no position data), R2 adds distance, source, start time */
+    long v[31] = { 0 }; const char *p = line + 3;
+    for (int i = 0; i < nf; i++) {
         char *e; v[i] = strtol(p, &e, 10);
         if (e == p || *e != ',') return false;
         p = e + 1;
@@ -147,6 +156,7 @@ bool bc_summary_from_line(bc_ride_summary_t *s, const char *line)
     s->zones_valid = v[13]; for (int z = 0; z < 7; z++) s->zone_s[z] = v[14 + z];
     s->ftp_w = v[21]; s->ftp_how = (uint8_t)v[22]; s->kj = v[23]; s->best20 = v[24]; s->inband_pct = v[25]; s->ftp_new = v[26];
     s->ftp_suggested_only = v[27];
+    s->distance_m = (uint32_t)v[28]; s->dist_src = (uint8_t)v[29]; s->start_epoch_s = (uint32_t)v[30];
     size_t i = 0; for (; p[i] && p[i] != '\n' && p[i] != '\r' && i + 1 < sizeof s->coach; i++) s->coach[i] = p[i];
     s->coach[i] = 0;
     return true;

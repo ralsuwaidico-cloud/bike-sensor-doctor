@@ -45,6 +45,8 @@ typedef struct {
     uint8_t max_hr;            /* optional, bpm; 0 = estimate from age */
     bc_sensor_pair_t power, hr;
     bool wifi_on;
+    bool phone_on;             /* phone link advertising (default on; pairing still needs the code on screen) */
+    uint8_t hr_pref;           /* 0 = strap first, phone/watch as backup; 1 = phone/watch first */
     uint8_t ride_style;        /* bc_ride_style_t */
     uint8_t brightness;        /* 5..100 % */
     uint16_t next_ride_id;     /* real rides only; demo rides are numbered separately */

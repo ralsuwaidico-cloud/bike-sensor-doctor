@@ -17,6 +17,8 @@
 #include "bc_xds.h"
 #include "bc_hr.h"
 #include "hw.h"
+#include "ble_link.h"
+void ble_store_config_init(void);
 
 static const char *TAG = "ble";
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -161,8 +163,9 @@ static void connect_to(link_t *l)
     s_connecting = l;
     l->svc_s = l->svc_e = l->val = l->cccd = 0; l->disc_started = false;
     set_state(l, PLAT_LINK_CONNECTING);
+    ble_link_central_busy(true);                      /* phone advertising pauses while we initiate (meter first, always) */
     int rc = ble_gap_connect(s_own, &l->addr, 10000, NULL, gap_event, l);
-    if (rc != 0) { ESP_LOGW(TAG, "connect start failed %d", rc); s_connecting = NULL; fail(l, "connect failed"); }
+    if (rc != 0) { ESP_LOGW(TAG, "connect start failed %d", rc); s_connecting = NULL; ble_link_central_busy(false); fail(l, "connect failed"); }
 }
 
 static void note_found(int kind, const ble_addr_t *a, const struct ble_hs_adv_fields *f, int rssi)
@@ -216,6 +219,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
     }
     case BLE_GAP_EVENT_CONNECT: {
         link_t *l = (link_t *)arg;
+        ble_link_central_busy(false);
         if (ev->connect.status != 0) { s_connecting = NULL; fail(l, "connect failed / timeout"); return 0; }
         l->conn = ev->connect.conn_handle; l->connects++;
         LOCK(); if (l->kind == PLAT_SENS_POWER) bc_xds_live_reset(&l->xds); else bc_hr_live_reset(&l->hr); UNLOCK();
@@ -261,6 +265,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
 static void tick(void *arg)
 {
     if (!s_synced) return;
+    ble_link_tick();
     uint32_t now = hw_millis();
     if (s_connecting && now - s_connecting->state_since > 15000) {   /* stuck connect/discovery */
         link_t *l = s_connecting;
@@ -297,6 +302,7 @@ static void on_sync(void)
     ble_hs_id_infer_auto(0, &s_own);
     s_synced = true;
     ESP_LOGI(TAG, "host synced");
+    ble_link_on_sync(s_own);
 }
 static void on_reset(int reason) { ESP_LOGW(TAG, "host reset %d", reason); s_synced = false; s_scanning = false; }
 static void host_task(void *p) { nimble_port_run(); nimble_port_freertos_deinit(); }
@@ -312,7 +318,10 @@ void ble_central_start(void)
     ble_hs_cfg.sync_cb = on_sync;
     ble_hs_cfg.reset_cb = on_reset;
     ble_att_set_preferred_mtu(247);
+    ble_link_configure_security();
+    ble_link_register_gatt();                         /* phone-link service; GAP + GATT services too */
     ble_svc_gap_device_name_set("BikeComputer");
+    ble_store_config_init();                          /* bonds persist in NVS (CONFIG_BT_NIMBLE_NVS_PERSIST) */
     nimble_port_freertos_init(host_task);
     xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 4096, NULL, 4, NULL, 0);
 }

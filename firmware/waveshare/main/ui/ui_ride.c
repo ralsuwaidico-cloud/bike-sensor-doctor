@@ -254,12 +254,15 @@ static void fmt_watts(lv_obj_t *l, bool ok, int w)
 
 static void ride_update(void)
 {
+    if (app_ride_state() == BC_RIDE_ENDED) {        /* ended from the phone: same results screen as the END button */
+        bc_ride_summary_t s; app_ride_totals(&s); ui_results_show(&s, true); return;
+    }
     app_live_t lv; app_live(&lv);
     bc_ride_summary_t s; app_ride_totals(&s);
     const bc_cue_t *cue = app_cue();
     bc_ride_state_t st = app_ride_state();
     int lo, hi; bool rel; app_target(&lo, &hi, &rel);
-    char b[160], tm[16]; bc_fmt_duration(s.duration_s, tm, sizeof tm);
+    char b[240], tm[16]; bc_fmt_duration(s.duration_s, tm, sizeof tm);
     bool paused = st == BC_RIDE_PAUSED;
     lv_color_t cc = ui_level_color(cue->level);
     const char *cshort = paused ? "PAUSED" : ui_cue_short(cue);
@@ -289,7 +292,8 @@ static void ride_update(void)
         if (lv.hr_ok) snprintf(b, sizeof b, "%d", lv.bpm); else snprintf(b, sizeof b, "--");
         lv_label_set_text(w_hr, b);
         lv_obj_set_style_text_color(w_hr, lv.hr_ok ? C_RED : C_MUT, 0);
-        lv_label_set_text(w_hr_u, !lv.hr_ok && lv.link[PLAT_SENS_HR].link == PLAT_LINK_NOT_PAIRED ? "NO STRAP" : "BPM");
+        /* the unit line names the heart-rate source (STRAP / WATCH / …) so a relayed value is never mistaken for the strap */
+        lv_label_set_text(w_hr_u, lv.hr_ok ? bc_src_name(lv.hr_src) : lv.link[PLAT_SENS_HR].link == PLAT_LINK_NOT_PAIRED && !lv.phone_hr ? "NO HR" : "BPM");
     }
     if (w_arc) {
         int maxw = hi > 0 ? hi * 2 : (app_profile()->ftp_w ? app_profile()->ftp_w * 3 / 2 : 400);
@@ -335,7 +339,17 @@ static void ride_update(void)
     if (s.avg_hr >= 0) snprintf(ah, sizeof ah, "%d", s.avg_hr); else snprintf(ah, sizeof ah, "--");
     snprintf(b, sizeof b, "#8494a0 AVG# %s W  #8494a0 MAX# %s W", ap, mp); lv_label_set_text(m_l1, b);
     snprintf(b, sizeof b, "#8494a0 CAD# %s  #8494a0 HR# %s  #8494a0 kJ# %d", ac, ah, s.kj); lv_label_set_text(m_l2, b);
-    lv_label_set_text(m_l3, "speed / distance:\nno sensor on this device");
+    {   /* speed / distance come only from a connected phone's GPS; stale or missing is said, never guessed */
+        const plat_link_info_t *sp = &lv.link[PLAT_SENS_SPEED];
+        char dist[20];
+        if (s.dist_src) snprintf(dist, sizeof dist, "%lu.%02lu km", (unsigned long)(s.distance_m / 1000), (unsigned long)(s.distance_m % 1000 / 10)); else snprintf(dist, sizeof dist, "--");
+        if (lv.speed_ok) snprintf(b, sizeof b, "%d.%d km/h  %s\n#56e08c %s#", lv.speed_dmh / 10, lv.speed_dmh % 10, dist, bc_src_name(lv.speed_src));
+        else if (sp->link == PLAT_LINK_STALE) snprintf(b, sizeof b, "-- km/h  %s\n#ffb64d %s STALE# %lus", dist, sp->name, (unsigned long)(sp->age_ms / 1000));
+        else if (sp->link == PLAT_LINK_SEARCHING) snprintf(b, sizeof b, "-- km/h  %s\n#ffb64d waiting for GPS#", dist);
+        else snprintf(b, sizeof b, "speed / distance: %s\nphone GPS not connected", dist);
+        lv_label_set_recolor(m_l3, true);
+        lv_label_set_text(m_l3, b);
+    }
 
     /* page 4: sensors */
     const plat_link_info_t *pw = &lv.link[PLAT_SENS_POWER], *hr = &lv.link[PLAT_SENS_HR];
@@ -343,9 +357,15 @@ static void ride_update(void)
     if (pw->age_ms != UINT32_MAX && pw->link == PLAT_LINK_CONNECTED) snprintf(age, sizeof age, "%lu.%lus", (unsigned long)(pw->age_ms / 1000), (unsigned long)(pw->age_ms % 1000 / 100));
     char bat[24]; ui_battery_text(bat, sizeof bat);
     char rssi[16]; if (pw->rssi) snprintf(rssi, sizeof rssi, "%d dBm", pw->rssi); else rssi[0] = 0;
-    snprintf(b, sizeof b, "#8494a0 POWER%s#\n#%06x %s# %s\nlast data %s\n#8494a0 HEART RATE#\n#%06x %s#\n#8494a0 BATTERY# %s",
-             lv.demo ? " (SIMULATED)" : "", ui_hex(ui_link_color(pw->link)), ui_link_text(pw->link), rssi, age,
-             ui_hex(ui_link_color(hr->link)), ui_link_text(hr->link), bat);
+    char hrs[40];
+    if (lv.hr_ok) snprintf(hrs, sizeof hrs, "#56e08c %s# %d bpm%s", bc_src_name(lv.hr_src), lv.bpm, (lv.strap_hr && lv.phone_hr) ? " +backup" : "");
+    else snprintf(hrs, sizeof hrs, "#%06x %s#", ui_hex(ui_link_color(hr->link)), hr->link == PLAT_LINK_NOT_PAIRED ? "NO STRAP / PHONE" : ui_link_text(hr->link));
+    const plat_link_info_t *sp = &lv.link[PLAT_SENS_SPEED];
+    char gps[40];
+    if (sp->link == PLAT_LINK_NOT_PAIRED) snprintf(gps, sizeof gps, "#8494a0 no phone#");
+    else snprintf(gps, sizeof gps, "#%06x %s %s#", ui_hex(ui_link_color(sp->link)), sp->name, ui_link_text(sp->link));
+    snprintf(b, sizeof b, "#8494a0 POWER%s#\n#%06x %s# %s\nlast data %s\n#8494a0 HEART RATE# %s\n#8494a0 GPS# %s\n#8494a0 BATTERY# %s",
+             lv.demo ? " (SIMULATED)" : "", ui_hex(ui_link_color(pw->link)), ui_link_text(pw->link), rssi, age, hrs, gps, bat);
     lv_label_set_text(s_txt, b);
 
     /* panel */

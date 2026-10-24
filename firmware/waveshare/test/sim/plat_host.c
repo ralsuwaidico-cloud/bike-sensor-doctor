@@ -198,7 +198,52 @@ int plat_wifi_saved(char ssids[][33], int max) { w_load(); int n = wstore.n < ma
 void plat_wifi_status(plat_wifi_status_t *o) { pump(); *o = ws; }
 void plat_wifi_set_quiet(bool riding) { w_quiet = riding; }
 int plat_wifi_scan_count(void) { return w_scan_count; }
-const char *plat_fw_version(void) { return "0.2.0-sim"; }
+const char *plat_fw_version(void) { return "0.4.0-sim"; }
+
+/* ---- phone link simulation */
+#define PH g_sim.phone
+void plat_phone_set_enabled(bool on) { PH.enabled = on; if (!on) { PH.connected = PH.pairing = false; PH.passkey = 0; } }
+void plat_phone_status(plat_phone_status_t *o)
+{
+    memset(o, 0, sizeof *o); o->phone_batt = o->watch_batt = 0xFF; o->last_rx_age_ms = UINT32_MAX;
+    o->bonded = PH.bonded; o->rssi = PH.connected ? PH.rssi : 0; o->passkey = PH.pairing ? PH.passkey : 0;
+    o->state = !PH.enabled ? PLAT_PHONE_OFF : !PH.connected ? PLAT_PHONE_ADVERTISING : PH.pairing ? PLAT_PHONE_PAIRING : PH.bonded ? PLAT_PHONE_READY : PLAT_PHONE_CONNECTED;
+    uint32_t last = 0; if (PH.in.gps.rx_ms > last) last = PH.in.gps.rx_ms; if (PH.in.hr.rx_ms > last) last = PH.in.hr.rx_ms; if (PH.in.time.rx_ms > last) last = PH.in.time.rx_ms;
+    if (last) o->last_rx_age_ms = g_sim.now_ms - last;
+}
+void plat_phone_forget(void) { PH.bonded = PH.connected = PH.pairing = false; PH.passkey = 0; PH.forgets++; }
+void plat_phone_disconnect(void) { PH.connected = PH.pairing = false; PH.passkey = 0; }
+void plat_phone_inputs(plat_phone_in_t *o) { *o = PH.in; }
+bool plat_phone_take_ctrl(bc_ctrl_req_t *o) { if (!PH.ctrl_pending) return false; *o = PH.ctrl; PH.ctrl_pending = false; return true; }
+void plat_phone_ctrl_respond(const bc_ctrl_resp_t *r) { PH.last_resp = *r; PH.resps++; }
+void plat_phone_publish_live(const bc_live_t *l) { if (PH.connected && PH.bonded) { PH.last_live = *l; PH.lives++; } }
+void sim_phone_connect(bool bonded) { if (!PH.enabled) return; PH.connected = true; PH.rssi = -55; PH.bonded = bonded; PH.pairing = !bonded; PH.passkey = bonded ? 0 : 482913; }
+void sim_phone_enter_passkey(void) { if (PH.connected && PH.pairing) { PH.pairing = false; PH.bonded = true; PH.passkey = 0; } }
+void sim_phone_disconnect(void) { PH.connected = PH.pairing = false; }
+static bool ph_ok(void) { return PH.connected && PH.bonded; }
+void sim_phone_send_gps(int32_t lat, int32_t lon, uint16_t speed_cms, uint16_t hacc_dm)
+{
+    if (!ph_ok()) return;
+    bc_in_gps_t g = { .lat_e7 = lat, .lon_e7 = lon, .hacc_dm = hacc_dm, .vacc_dm = BC_LINK_NONE16, .speed_ok = true, .speed_cms = speed_cms, .src = BC_SRC_PHONE_GPS, .fix_epoch_ms = 1761300000000ULL };
+    uint8_t b[BC_LINK_MAX]; size_t n = bc_link_encode_gps(&g, b, sizeof b, 1, 0);
+    if (bc_link_decode_gps(b, n, &PH.in.gps.v)) PH.in.gps.rx_ms = g_sim.now_ms;   /* same validation path as the device */
+}
+void sim_phone_send_hr(uint8_t bpm, uint8_t src)
+{
+    if (!ph_ok()) return;
+    bc_in_hr_t h = { .bpm = bpm, .src = src, .sample_epoch_ms = 1761300000000ULL, .quality = 2 };
+    uint8_t b[BC_LINK_MAX]; size_t n = bc_link_encode_hr(&h, b, sizeof b, 1, 0);
+    if (bc_link_decode_hr(b, n, &PH.in.hr.v)) PH.in.hr.rx_ms = g_sim.now_ms;
+}
+void sim_phone_send_time(uint64_t epoch_ms)
+{
+    if (!ph_ok()) return;
+    bc_in_time_t t = { .epoch_ms = epoch_ms, .uncertainty_ms = 50, .tz_min = 240 };
+    uint8_t b[BC_LINK_MAX]; size_t n = bc_link_encode_time(&t, b, sizeof b, 1, 0);
+    if (bc_link_decode_time(b, n, &PH.in.time.v)) PH.in.time.rx_ms = g_sim.now_ms;
+}
+void sim_phone_ctrl(uint8_t cmd, uint16_t ride_id) { if (!ph_ok()) return; PH.ctrl.req_id++; PH.ctrl.cmd = cmd; PH.ctrl.ride_id = ride_id; PH.ctrl_pending = true; }
+#undef PH
 const char *plat_reset_reason(void) { return "power-on"; }
 uint32_t plat_boot_count(void) { return g_sim.boots; }
 void plat_restart(void) { g_sim.restart_requested = true; }

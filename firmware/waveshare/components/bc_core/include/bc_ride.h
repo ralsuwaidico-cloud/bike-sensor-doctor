@@ -40,6 +40,9 @@ typedef struct {
     int ftp_new;                                         /* FTP applied (or suggested) from this ride, 0 = none */
     bool ftp_suggested_only;                             /* the rider's entered FTP was kept; ftp_new is only a suggestion */
     char coach[120];                                     /* plain-language coaching summary */
+    /* 0.4.0: position data from a connected phone (the ESP32 integrates distance itself; never from the phone's total) */
+    uint32_t distance_m; uint8_t dist_src;               /* dist_src 0 = no position data during the ride (bc_src_t) */
+    uint32_t start_epoch_s;                              /* wall-clock start when a phone had synced the time, 0 = unknown */
 } bc_ride_summary_t;
 
 typedef struct {
@@ -51,6 +54,7 @@ typedef struct {
     uint32_t win_pos;                                    /* seconds pushed so far */
     int64_t win_sum, win_sumsq; int win_valid;
     int best20_sum, best20_valid; double best20_cv;
+    uint32_t dist_cm_rem;                                /* sub-metre remainder of the distance integration */
 } bc_ride_t;
 
 void bc_ride_start(bc_ride_t *r, uint16_t id, bool demo, int ftp_w, uint8_t ftp_how, bool ftp_established);
@@ -59,6 +63,8 @@ void bc_ride_resume(bc_ride_t *r);
 /** One second of riding (call only while RUNNING; while PAUSED call bc_ride_tick_paused). */
 void bc_ride_tick(bc_ride_t *r, bc_sample_t smp);
 void bc_ride_tick_paused(bc_ride_t *r);
+/** Adds one second of GPS speed (cm/s) to the distance; src names the position source. Ignored below 50 cm/s (GPS noise). */
+void bc_ride_add_speed(bc_ride_t *r, uint16_t speed_cms, uint8_t src);
 /** Ends the ride, finalises averages. The summary stays in r->s. */
 void bc_ride_end(bc_ride_t *r);
 /** Averages so far (also valid while running). */

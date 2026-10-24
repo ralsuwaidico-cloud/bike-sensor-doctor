@@ -114,6 +114,8 @@ void ui_sensor_test_show(bool from_diag);
 void ui_health_show(void);
 void ui_diag_menu_show(void);
 void ui_wifi_show(void);
+void ui_phone_show(void);
+void ui_passkey_refresh(void);   /* pairing-code pop-up on any screen */
 
 /* test hooks */
 void ui_test_set_style(int style);

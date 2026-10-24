@@ -185,6 +185,7 @@ void plat_health(plat_health_t *o)
     o->battery_mv = plat_battery_mv(); o->battery_pct = plat_battery_pct(); o->usb_power = plat_usb_power();
     o->ble_ready = ble_central_ready(); o->ble_scanning = ble_central_scanning(); o->ble_devices_seen = ble_central_devices_seen();
     { plat_wifi_status_t w; plat_wifi_status(&w); o->wifi_on = w.state != PLAT_WIFI_OFF; } o->wifi_networks = plat_wifi_scan_count();
+    { plat_phone_status_t ph; plat_phone_status(&ph); o->phone_state = ph.state; o->phone_bonded = ph.bonded; }
     o->display_ok = g_selftest.display == HW_PASS; o->touch_ok = g_selftest.touch == HW_PASS;
     o->imu_ok = g_selftest.imu == HW_PASS; o->storage_ok = g_selftest.storage == HW_PASS;
 }

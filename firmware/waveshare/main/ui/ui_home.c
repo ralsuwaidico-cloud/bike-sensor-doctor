@@ -10,6 +10,7 @@ static lv_obj_t *h_status, *h_sub, *h_ftp;
 
 static void home_update(void)
 {
+    if (app_ride_state() == BC_RIDE_RUNNING || app_ride_state() == BC_RIDE_PAUSED) { ui_ride_show(); return; }   /* started from the phone */
     app_live_t lv; app_live(&lv);
     char bat[24]; ui_battery_text(bat, sizeof bat);
     const plat_link_info_t *pw = &lv.link[PLAT_SENS_POWER], *hr = &lv.link[PLAT_SENS_HR];
@@ -88,27 +89,55 @@ void ui_home_show(void)
 }
 
 /* ---------------- Sensors: status of each link + pair buttons */
-static lv_obj_t *s_rows[3];
+/* Sensors page, five groups: POWER METER, HEART RATE (strap + wearable via the phone), SPEED / CADENCE, WEARABLES, PHONE.
+   Every row says the source, the connection state, how fresh the value is and the battery when known. */
+static lv_obj_t *s_rows[5];
+
+static void age_text(uint32_t age_ms, char *out, size_t cap)
+{
+    if (age_ms == UINT32_MAX) snprintf(out, cap, "no data yet");
+    else if (age_ms < 2000) snprintf(out, cap, "live");
+    else snprintf(out, cap, "%lus ago", (unsigned long)(age_ms / 1000));
+}
 
 static void sensors_update(void)
 {
     app_live_t lv; app_live(&lv);
-    char b[128];
-    for (int k = 0; k < 3; k++) {
-        const plat_link_info_t *l = &lv.link[k];
-        const char *nm = k == PLAT_SENS_POWER ? "POWER" : k == PLAT_SENS_HR ? "HEART RATE" : "SPEED / GPS";
-        char val[40] = "";
-        if (k == PLAT_SENS_POWER) {
-            if (lv.power_ok) snprintf(val, sizeof val, "%d W  %d rpm", lv.watts, lv.cad_ok ? lv.rpm : 0); else snprintf(val, sizeof val, "NO DATA");
-        } else if (k == PLAT_SENS_HR) {
-            if (lv.hr_ok) snprintf(val, sizeof val, "%d bpm", lv.bpm); else snprintf(val, sizeof val, l->link == PLAT_LINK_NOT_PAIRED ? "optional" : "NO DATA");
-        } else snprintf(val, sizeof val, "not on this board");
-        char sig[24] = "";
-        if (l->link == PLAT_LINK_CONNECTED && l->rssi) snprintf(sig, sizeof sig, "  %d dBm", l->rssi);
-        snprintf(b, sizeof b, "#8494a0 %s#\n#%06x %s#%s\n%s", nm, ui_hex(ui_link_color(l->link)), ui_link_text(l->link), sig, val);
-        lv_label_set_text(s_rows[k], b);
-    }
+    plat_phone_status_t ps; plat_phone_status(&ps);
+    char b[200], age[20], sig[24];
+    const plat_link_info_t *pw = &lv.link[PLAT_SENS_POWER], *hr = &lv.link[PLAT_SENS_HR], *sp = &lv.link[PLAT_SENS_SPEED];
+    /* 0 power meter */
+    sig[0] = 0; if (pw->link == PLAT_LINK_CONNECTED && pw->rssi) snprintf(sig, sizeof sig, "  %d dBm", pw->rssi);
+    age_text(pw->valid_age_ms, age, sizeof age);
+    if (lv.power_ok) snprintf(b, sizeof b, "#8494a0 POWER METER#\n#%06x %s#%s\n%d W  %d rpm  (%s)", ui_hex(ui_link_color(pw->link)), ui_link_text(pw->link), sig, lv.watts, lv.cad_ok ? lv.rpm : 0, lv.demo ? "SIMULATED" : "XDS");
+    else snprintf(b, sizeof b, "#8494a0 POWER METER#\n#%06x %s#%s\n%s", ui_hex(ui_link_color(pw->link)), ui_link_text(pw->link), sig, pw->link == PLAT_LINK_CONNECTED ? "NO DATA - pedal" : pw->link == PLAT_LINK_NOT_PAIRED ? "pair below" : age);
+    lv_label_set_text(s_rows[0], b);
+    /* 1 heart rate: strap (direct) and wearable via the phone, with the preference */
+    sig[0] = 0; if (hr->link == PLAT_LINK_CONNECTED && hr->rssi) snprintf(sig, sizeof sig, "  %d dBm", hr->rssi);
+    char strap[60], wear[60];
+    if (lv.strap_hr) snprintf(strap, sizeof strap, "#56e08c STRAP# %s%s", hr->name[0] ? hr->name : "", lv.hr_src == BC_SRC_BLE_STRAP ? "  <- shown" : "  (backup)");
+    else snprintf(strap, sizeof strap, "#%06x STRAP %s#%s", ui_hex(ui_link_color(hr->link)), hr->link == PLAT_LINK_NOT_PAIRED ? "not paired" : ui_link_text(hr->link), sig);
+    if (lv.phone_hr) snprintf(wear, sizeof wear, "#56e08c %s via phone#%s", bc_src_name(lv.hr_src != BC_SRC_BLE_STRAP ? lv.hr_src : BC_SRC_APPLE_WATCH), lv.hr_src != BC_SRC_BLE_STRAP ? "  <- shown" : "  (backup)");
+    else snprintf(wear, sizeof wear, "#8494a0 wearable via phone: none#");
+    snprintf(b, sizeof b, "#8494a0 HEART RATE#  %s\n%s\n%s", lv.hr_ok ? "" : "NO DATA", strap, wear);
+    if (lv.hr_ok) { char v[24]; snprintf(v, sizeof v, "%d bpm", lv.bpm); memmove(b + 23 + strlen(v), b + 23, strlen(b + 23) + 1); memcpy(b + 23, v, strlen(v)); }
+    lv_label_set_text(s_rows[1], b);
+    /* 2 speed / cadence */
+    age_text(sp->age_ms, age, sizeof age);
+    if (lv.speed_ok) snprintf(b, sizeof b, "#8494a0 SPEED / CADENCE#\n#56e08c %s# %d.%d km/h\ncadence from the power meter", bc_src_name(lv.speed_src), lv.speed_dmh / 10, lv.speed_dmh % 10);
+    else snprintf(b, sizeof b, "#8494a0 SPEED / CADENCE#\n#%06x %s %s# %s\nno speed sensor on this board", ui_hex(ui_link_color(sp->link)), sp->link == PLAT_LINK_NOT_PAIRED ? "phone GPS" : sp->name, sp->link == PLAT_LINK_NOT_PAIRED ? "needs the phone" : ui_link_text(sp->link), sp->link == PLAT_LINK_NOT_PAIRED ? "" : age);
+    lv_label_set_text(s_rows[2], b);
+    /* 3 wearables */
+    snprintf(b, sizeof b, "#8494a0 WEARABLES#\nwatches that broadcast HR\npair as a strap above;\nApple Watch: via the phone");
+    lv_label_set_text(s_rows[3], b);
+    /* 4 phone */
+    const char *st = ps.state == PLAT_PHONE_READY ? "CONNECTED" : ps.state == PLAT_PHONE_OFF ? "OFF" : ps.state == PLAT_PHONE_PAIRING ? "PAIRING" : ps.bonded ? "REMEMBERED, not connected" : "not paired";
+    char bat[32] = ""; if (ps.phone_batt != 0xFF) snprintf(bat, sizeof bat, "  battery %u%%", ps.phone_batt);
+    age_text(ps.last_rx_age_ms, age, sizeof age);
+    snprintf(b, sizeof b, "#8494a0 PHONE#\n#%06x %s#%s\n%s", ui_hex(ps.state == PLAT_PHONE_READY ? C_GREEN : ps.state == PLAT_PHONE_OFF ? C_MUT : C_AMBER), st, bat, ps.state == PLAT_PHONE_READY ? age : "pair from the BikeComputer app");
+    lv_label_set_text(s_rows[4], b);
 }
+static void phone_cb(lv_event_t *e) { (void)e; ui_phone_show(); }
 
 static void pair_power(lv_event_t *e) { (void)e; ui_pair_show(PLAT_SENS_POWER, false); }
 static void pair_hr(lv_event_t *e) { (void)e; ui_pair_show(PLAT_SENS_HR, false); }
@@ -121,11 +150,13 @@ void ui_sensors_show(void)
     ui_title(scr, "SENSORS");
     lv_obj_t *list = ui_scroll_area(scr, 52, 180);
     ui_pill(list, "SENSOR TEST", C_CYAN, C_INK, 150, 34, sensor_test, NULL);
-    for (int k = 0; k < 3; k++) {
-        s_rows[k] = ui_label(list, &lv_font_montserrat_14, C_FG, "");
+    for (int k = 0; k < 5; k++) {
+        s_rows[k] = ui_label(list, &lv_font_montserrat_12, C_FG, "");
         lv_label_set_recolor(s_rows[k], true);
+        lv_obj_set_width(s_rows[k], lv_pct(100)); lv_label_set_long_mode(s_rows[k], LV_LABEL_LONG_WRAP);
         if (k == 0) ui_pill(list, "PAIR POWER", C_PANEL, C_CYAN, 140, 34, pair_power, NULL);
-        if (k == 1) ui_pill(list, "PAIR HR", C_PANEL, C_CYAN, 140, 34, pair_hr, NULL);
+        if (k == 1) ui_pill(list, "PAIR HR STRAP", C_PANEL, C_CYAN, 150, 34, pair_hr, NULL);
+        if (k == 4) ui_pill(list, "PHONE SETTINGS", C_PANEL, C_CYAN, 150, 34, phone_cb, NULL);
     }
     lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 40, back_home, NULL);
     lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 184);

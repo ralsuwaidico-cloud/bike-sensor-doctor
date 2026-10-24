@@ -17,9 +17,15 @@ typedef struct {
     bool demo;                         /* values are SIMULATED (demo mode) */
     bool power_ok; int watts;
     bool cad_ok; int rpm; bool backwards;
-    bool hr_ok; int bpm;
-    plat_link_info_t link[PLAT_SENS_KINDS];
+    bool hr_ok; int bpm; uint8_t hr_src;           /* bc_src_t: STRAP (direct BLE) or the phone-relayed source (WATCH, ...) */
+    bool strap_hr, phone_hr;                       /* which HR sources have a fresh value right now (for "backup" labels) */
+    bool speed_ok; int speed_dmh; uint8_t speed_src;   /* km/h × 10 from the phone's GPS (fresh ≤ 5 s) */
+    uint32_t gps_age_ms;                           /* since the last accepted position, UINT32_MAX = never */
+    bool time_known; uint32_t epoch_s;             /* wall clock when a phone synced the time */
+    plat_link_info_t link[PLAT_SENS_KINDS];        /* SPEED = phone GPS: CONNECTED fresh, STALE old, NOT_PAIRED never */
 } app_live_t;
+#define APP_GPS_FRESH_MS 5000
+#define APP_PHONE_HR_FRESH_MS 10000               /* watches deliver about every 5 s */
 
 void app_init(void);
 bc_profile_t *app_profile(void);
@@ -53,6 +59,9 @@ bool app_history_clear(bool demo);
 
 /* a ride interrupted by a crash or power loss is recovered at start-up */
 bool app_take_recovered(bc_ride_summary_t *out);
+
+/* phone link: pending pairing code (0 = none) for the pop-up, and the current phone status */
+uint32_t app_phone_passkey(void);
 
 /* health line for the serial log (memory etc. come from the platform) */
 void app_health_line(char *buf, size_t cap);
