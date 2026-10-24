@@ -36,7 +36,7 @@ struct ProgressTabView: View {
                     BarMark(x: .value("Week", w.monday, unit: .weekOfYear), y: .value("Minutes", w.minutes)).foregroundStyle(BC.accent)
                     RuleMark(y: .value("Target", store.profile.hoursPerWeek * 60)).foregroundStyle(BC.stale).lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
                 }
-                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let m = v.as(Int.self) { Text(m >= 60 ? String(format: "%g h", Double(m) / 60) : "\(m)′") } } } }
+                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let m = v.as(Int.self) { Text(Fmt.compact(minutes: m)) } } } }
                 .chartXAxis { AxisMarks(values: .stride(by: .weekOfYear)) { _ in AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: true) } }
                 .frame(height: 160)
                 Text(weekText(totals.last)).font(.footnote).foregroundStyle(.secondary)
@@ -47,7 +47,7 @@ struct ProgressTabView: View {
     private func weekText(_ w: Store.WeekTotal?) -> String {
         guard let last = w else { return "" }
         let rides = last.rides == 1 ? "1 ride" : "\(last.rides) rides"
-        return "This week: \(last.minutes / 60) h \(last.minutes % 60) min · \(String(format: "%.1f", last.km)) km · \(rides). Dashed line = your \(store.profile.hoursPerWeek) h limit."
+        return "This week: \(Fmt.duration(minutes: last.minutes)) · \(String(format: "%.1f", last.km)) km · \(rides). Dashed line = your \(store.profile.hoursPerWeek) h limit."
     }
     private var ftpCard: some View {
         Card {

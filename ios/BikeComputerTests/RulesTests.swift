@@ -54,7 +54,7 @@ final class RulesTests: XCTestCase {
         let cal = Calendar.current
         let monday = cal.date(from: DateComponents(year: 2026, month: 10, day: 19))!
         var p = RiderProfile(); p.hoursPerWeek = 6
-        var week = PlanEngine.week(starting: monday, profile: p)
+        var week = PlanEngine.week(starting: monday, profile: p, availability: WeeklyAvailability.suggested(hoursPerWeek: 6))
         week.append(Workout(date: cal.date(byAdding: .day, value: 1, to: monday)!, kind: .mobility, minutes: 30))
         week.append(Workout(date: cal.date(byAdding: .hour, value: 30, to: monday)!, kind: .strength, minutes: 20))   // Tuesday 06:00
         let days = PlanDay.group(week, weekOf: cal.date(byAdding: .day, value: 3, to: monday)!, calendar: cal)
@@ -127,7 +127,7 @@ final class RulesTests: XCTestCase {
     func testCoachLineAndWhyNeverClaimRecoveryData() {
         let s = Store(directory: tempDir(), generatePlan: false)
         let w = Workout(date: Date(), kind: .endurance, minutes: 45)
-        XCTAssertEqual(Coach.todayLine(w), "Today: 45-minute endurance ride (Zone 2) to improve aerobic fitness.")
+        XCTAssertEqual(Coach.todayLine(w), "Today: 45 min endurance ride (Zone 2) to improve aerobic fitness.")
         XCTAssertEqual(Coach.todayLine(Workout(date: Date(), kind: .rest, minutes: 0)), "Today: rest day — adaptation happens here.")
         let why = Coach.why(w, store: s)
         XCTAssertTrue(why.contains("No rides are recorded yet"))

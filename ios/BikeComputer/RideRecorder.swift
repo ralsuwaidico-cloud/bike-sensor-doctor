@@ -62,8 +62,10 @@ final class RideRecorder: ObservableObject {
     deinit { ticker?.invalidate(); if let o = bgObserver { NotificationCenter.default.removeObserver(o) } }
 
     /// Local notice while a ride keeps recording with the app in the background (no new entitlement needed).
+    /// Profile › App settings › Notifications; set by RootView from the store.
+    var backgroundNoticeEnabled = true
     private func enteredBackground() {
-        guard isActive else { return }
+        guard isActive, backgroundNoticeEnabled else { return }
         let c = UNUserNotificationCenter.current()
         let content = UNMutableNotificationContent()
         content.title = owner == .board ? "BikeComputer ride in progress" : "Recording in the background"

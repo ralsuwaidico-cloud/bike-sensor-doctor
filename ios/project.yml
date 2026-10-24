@@ -12,7 +12,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.4.0"
+    MARKETING_VERSION: "0.5.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -97,7 +97,11 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - BikeComputerTests
+      - path: BikeComputerTests
+        excludes: ["Resources/**"]
+      - path: BikeComputerTests/Resources/coach
+        buildPhase: resources
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ralsuwaidico.bikecomputer.tests

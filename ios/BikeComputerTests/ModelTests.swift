@@ -9,21 +9,93 @@ final class ModelTests: XCTestCase {
     }
 
     // MARK: PlanEngine
-    func testWeekRespectsHoursAndLevel() {
+    func testWeekIsBuiltAroundAvailability() {
         var p = RiderProfile(); p.hoursPerWeek = 5; p.level = .intermediate; p.goal = .endurance
         let monday = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 19))!
-        let w = PlanEngine.week(starting: monday, profile: p)
+        let a = WeeklyAvailability.suggested(hoursPerWeek: 5)
+        let w = PlanEngine.week(starting: monday, profile: p, availability: a)
         XCTAssertEqual(w.count, 7)
-        XCTAssertEqual(w[0].kind, .rest)
-        XCTAssertEqual(w[5].kind, .long); XCTAssertEqual(w[5].minutes, 100)        // 5 h × 20 min, clamped 60…180
-        XCTAssertLessThanOrEqual(Double(PlanEngine.rideMinutes(w)) / 60, 6.0)
-        p.hoursPerWeek = 3
-        let small = PlanEngine.week(starting: monday, profile: p)
-        XCTAssertEqual(small.filter { $0.kind.isRide }.count, 2)                   // hard day + long ride only
+        XCTAssertEqual(w[0].kind, .rest)                                              // Monday rest stays rest
+        XCTAssertEqual(w[5].kind, .long); XCTAssertEqual(w[5].minutes, 100)           // Saturday is the longest cycling day
+        XCTAssertEqual(w[6].kind, .strength)                                          // lift day → strength
+        XCTAssertEqual(w.filter { $0.kind.isRide }.count, a.cycleDays)                // every cycling day gets a ride, nothing else does
+        for (i, d) in a.days.enumerated() where d.activity == .rest { XCTAssertEqual(w[i].kind, .rest); XCTAssertEqual(w[i].minutes, 0) }
+        for (i, d) in a.days.enumerated() where d.activity == .cycle { XCTAssertEqual(w[i].minutes, max(20, d.minutes)) }   // per-day duration respected
+        XCTAssertEqual(w.filter { $0.kind == .tempo || $0.kind == .threshold }.count, 1)   // one quality session
         p.level = .beginner; p.goal = .stronger
-        XCTAssertEqual(PlanEngine.week(starting: monday, profile: p)[2].kind, .tempo)  // beginners never get threshold
+        XCTAssertEqual(PlanEngine.week(starting: monday, profile: p, availability: a).filter { $0.kind == .threshold }.count, 0)   // beginners never get threshold
         p.level = .advanced
-        XCTAssertEqual(PlanEngine.week(starting: monday, profile: p)[2].kind, .threshold)
+        XCTAssertEqual(PlanEngine.week(starting: monday, profile: p, availability: a).filter { $0.kind == .threshold }.count, 1)
+        // a custom schedule: cycle Mon/Wed/Fri 45 min, lift Tue, other Sun, rest the others
+        var c = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
+        c[0] = DayAvailability(activity: .cycle, minutes: 45); c[2] = DayAvailability(activity: .cycle, minutes: 45); c[4] = DayAvailability(activity: .cycle, minutes: 45)
+        c[1] = DayAvailability(activity: .lift, minutes: 40); c[6] = DayAvailability(activity: .other, minutes: 60)
+        let w2 = PlanEngine.week(starting: monday, profile: p, availability: WeeklyAvailability(days: c))
+        XCTAssertEqual(w2[1].kind, .strength); XCTAssertEqual(w2[1].minutes, 40)
+        XCTAssertEqual(w2[6].kind, .other); XCTAssertEqual(w2[6].minutes, 60)
+        XCTAssertEqual(w2[3].kind, .rest); XCTAssertEqual(w2[5].kind, .rest)
+        XCTAssertTrue([0, 2, 4].allSatisfy { w2[$0].kind.isRide && w2[$0].minutes == 45 })
+    }
+
+    func testOverHoursSuggestsAdjustmentsInsteadOfCutting() {
+        var p = RiderProfile(); p.hoursPerWeek = 3
+        let monday = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 19))!
+        var d = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
+        for i in [1, 3, 5] { d[i] = DayAvailability(activity: .cycle, minutes: 90) }
+        let w = PlanEngine.week(starting: monday, profile: p, availability: WeeklyAvailability(days: d))
+        XCTAssertEqual(PlanEngine.rideMinutes(w), 270)                                // planned as asked, not cut
+        let s = PlanEngine.suggestions(for: w, hoursPerWeek: 3)
+        XCTAssertFalse(s.isEmpty); XCTAssertTrue(s[0].contains("1 h 30 min over"))
+        XCTAssertTrue(PlanEngine.suggestions(for: w, hoursPerWeek: 5).isEmpty)
+    }
+
+    func testDurationFormatter() {
+        XCTAssertEqual(Fmt.duration(minutes: 100), "1 h 40 min")
+        XCTAssertEqual(Fmt.duration(minutes: 45), "45 min")
+        XCTAssertEqual(Fmt.duration(minutes: 120), "2 h")
+        XCTAssertEqual(Fmt.duration(minutes: 0), "0 min")
+        XCTAssertEqual(Fmt.duration(seconds: 5400), "1 h 30 min")
+        XCTAssertEqual(Fmt.compact(minutes: 100), "1h40"); XCTAssertEqual(Fmt.compact(minutes: 45), "45′"); XCTAssertEqual(Fmt.compact(minutes: 0), "—")
+    }
+
+    func testEditedWorkoutsSurviveRegeneration() {
+        let dir = tempDir()
+        let store = Store(directory: dir, generatePlan: true)
+        let cal = Calendar.current
+        let nextWeek = cal.date(byAdding: .day, value: 7, to: Date())!
+        guard let w = store.workouts(weekOf: nextWeek).first(where: { $0.kind.isRide }) else { return XCTFail("no ride next week") }
+        var e = w; e.minutes = 33; store.edit(e)
+        XCTAssertTrue(store.plan.first { $0.id == w.id }!.edited)
+        store.regenerate(weekOf: nextWeek, replaceEdited: false)
+        XCTAssertEqual(store.plan.first { $0.id == w.id }?.minutes, 33)              // kept
+        XCTAssertEqual(store.editedCount(weekOf: nextWeek), 1)
+        store.regenerate(weekOf: nextWeek, replaceEdited: true)
+        XCTAssertNil(store.plan.first { $0.id == w.id })                                // replaced after confirmation
+        XCTAssertEqual(store.workouts(weekOf: nextWeek).count, 7)
+        // an older store.json without "edited"/"availability" still loads
+        let reload = Store(directory: dir, generatePlan: false)
+        XCTAssertEqual(reload.plan.count, store.plan.count)
+    }
+
+    func testTimelineDedupesAndComputesTSS() {
+        XCTAssertEqual(Timeline.tss(normalizedPower: 200, durationS: 3600, ftp: 200), 100)
+        XCTAssertNil(Timeline.tss(normalizedPower: nil, durationS: 3600, ftp: 200))
+        XCTAssertNil(Timeline.tss(normalizedPower: 200, durationS: 3600, ftp: 0))
+        let t0 = Date(timeIntervalSince1970: 1_761_300_000)
+        var a = RideRecord(start: t0, durationS: 3600, distanceM: 30000, recorder: .board, sources: ["BikeComputer"]); a.boardRideId = 7; a.boardId = "aa"; a.avgPower = 180; a.normalizedPower = 190
+        var b = RideRecord(start: t0.addingTimeInterval(20), durationS: 3590, distanceM: 29900, recorder: .board, sources: ["BikeComputer"]); b.boardRideId = 7
+        var c = RideRecord(start: t0.addingTimeInterval(86400), durationS: 1800, distanceM: 12000, recorder: .phone, sources: ["Phone GPS"])
+        c.samples = [RideRecord.Sample(t: 0, w: nil, cad: nil, hr: 120, speedCms: 500, lat: nil, lon: nil, alt: nil)]
+        let plan = [Workout(date: t0.addingTimeInterval(-86400 * 2), kind: .strength, minutes: 30, done: true), Workout(date: t0.addingTimeInterval(-86400 * 3), kind: .endurance, minutes: 60), Workout(date: t0, kind: .endurance, minutes: 60)]
+        let tl = Timeline.build(rides: [a, b, c], plan: plan, ftp: 200, now: t0.addingTimeInterval(86400 * 3))
+        XCTAssertEqual(tl.filter { $0.rideId != nil }.count, 2)                        // the duplicate board ride is gone
+        XCTAssertEqual(tl.first { $0.rideId == a.id }?.tss, 90)                         // 3600 × 190² / (200² × 3600) × 100
+        XCTAssertNil(tl.first { $0.rideId == c.id }?.tss)
+        XCTAssertEqual(tl.filter { $0.workoutId != nil }.count, 2)                      // the ride on t0 represents its workout
+        XCTAssertEqual(tl.first { $0.title == "Endurance" }?.status, .missed)
+        XCTAssertEqual(tl.first { $0.title == "Strength" }?.status, .completed)
+        XCTAssertEqual(tl.first?.date, c.start)                                          // newest first
+        XCTAssertNil(Timeline.trend(tl) { $0.avgPower })                                 // < 5 points → no sparkline
     }
 
     func testWorkoutStepsUseFTP() {

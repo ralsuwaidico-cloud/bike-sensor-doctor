@@ -27,7 +27,7 @@ enum BCLink {
 
     enum Source: UInt8 {
         case unknown = 0, xds = 1, bleStrap = 2, phoneGPS = 3, appleWatch = 4, wearOS = 5, phoneStrap = 6, onboardGPS = 7
-        case weatherKit = 8, openMeteo = 9, demo = 0x7F
+        case weatherKit = 8, openMeteo = 9, bleCSC = 10, demo = 0x7F
 
         var label: String {
             switch self {
@@ -40,6 +40,7 @@ enum BCLink {
             case .onboardGPS: return "GPS"
             case .weatherKit: return "WeatherKit"
             case .openMeteo: return "Open-Meteo"
+            case .bleCSC: return "Cadence/speed sensor"
             case .demo: return "DEMO"
             case .unknown: return "?"
             }

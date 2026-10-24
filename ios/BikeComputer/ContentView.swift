@@ -14,7 +14,8 @@ struct RootView: View {
         Group {
             if store.onboarded { tabs } else { OnboardingView() }
         }
-        .onReceive(timer) { _ in recorder.phoneOnlyMode = store.settings.phoneOnlyMode }
+        .onReceive(timer) { _ in recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice }
+        .preferredColorScheme(store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil)
         .onChange(of: recorder.state) { _, s in idleTimer(s) }
         .onAppear { device.autoConnect = store.settings.autoConnectBoard }
     }

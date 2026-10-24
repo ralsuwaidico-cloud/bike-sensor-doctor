@@ -1,129 +1,300 @@
 import SwiftUI
 import AuthenticationServices
 
-/// Profile tab: rider details, zones, devices (live) vs integrations (cloud), account, settings, about.
+/// Profile tab (0.5.0): a category menu instead of one long page. Each category is its own page and saves straight
+/// into the Store (so nothing typed is lost); shared athlete fields keep syncing to the BikeComputer, where the phone
+/// is authoritative after pairing.
 struct ProfileTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
-    @EnvironmentObject private var watch: WatchLink
-    @EnvironmentObject private var location: LocationService
     @EnvironmentObject private var sync: ProfileSync
-    @State private var confirmReset = false
-    @State private var birthText = ""
-    @State private var maxHRText = ""
-    @State private var restHRText = ""
-    @State private var lthrText = ""
-    @State private var ftpText = ""
     @State private var showAccount = false
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Rider") {
-                    TextField("Name", text: $store.profile.name)
-                    Picker("Goal", selection: $store.profile.goal) { ForEach(RiderProfile.Goal.allCases, id: \.self) { Text($0.title).tag($0) } }
-                    Picker("Level", selection: $store.profile.level) { ForEach(RiderProfile.Level.allCases, id: \.self) { Text($0.title).tag($0) } }.onChange(of: store.profile.level) { _, _ in store.profile.refreshAssumption() }
-                    Stepper("Hours per week: \(store.profile.hoursPerWeek) h", value: $store.profile.hoursPerWeek, in: 2...20)
-                    HStack { Text("Weight"); Spacer(); Text(String(format: "%.0f kg", store.profile.weightKg)).foregroundStyle(.secondary) }
-                    Slider(value: $store.profile.weightKg, in: 40...150, step: 1).onChange(of: store.profile.weightKg) { _, _ in store.profile.refreshAssumption() }
-                    HStack { Text("Birth year"); Spacer(); TextField("not set", text: $birthText).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 90)
-                        .onAppear { birthText = store.profile.birthYear.map(String.init) ?? "" }
-                        .onChange(of: birthText) { _, v in let y = Int(v); let ok = (y ?? 0) >= 1900 && (y ?? 0) <= Calendar.current.component(.year, from: Date()); if store.profile.birthYear != (ok ? y : nil) { store.profile.birthYear = ok ? y : nil } } }
-                    HStack { Text("Max heart rate"); Spacer(); TextField("\(store.profile.estimatedMaxHR) (estimate)", text: $maxHRText).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 110)
-                        .onAppear { maxHRText = store.profile.maxHR.map(String.init) ?? "" }
-                        .onChange(of: maxHRText) { _, v in let n = Int(v); let ok = (n ?? 0) >= 100 && (n ?? 0) <= 230; if store.profile.maxHR != (ok ? n : nil) { store.profile.maxHR = ok ? n : nil } } }
-                    HStack { Text("Resting heart rate"); Spacer(); TextField("not set", text: $restHRText).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 90)
-                        .onAppear { restHRText = store.profile.restHR.map(String.init) ?? "" }
-                        .onChange(of: restHRText) { _, v in let n = Int(v); let ok = (n ?? 0) >= 25 && (n ?? 0) <= 120; if store.profile.restHR != (ok ? n : nil) { store.profile.restHR = ok ? n : nil } } }
-                    HStack { Text("Threshold heart rate (LTHR)"); Spacer(); TextField("not set", text: $lthrText).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 90)
-                        .onAppear { lthrText = store.profile.lthr.map(String.init) ?? "" }
-                        .onChange(of: lthrText) { _, v in let n = Int(v); let ok = (n ?? 0) >= 80 && (n ?? 0) <= 220; if store.profile.lthr != (ok ? n : nil) { store.profile.lthr = ok ? n : nil } } }
-                    Text(store.profile.maxHR == nil ? "Max heart rate is an estimate from age (\(store.profile.birthYear == nil ? "age not set, 35 assumed" : "born \(store.profile.birthYear!)")) until you enter it." : "Max heart rate entered by you.").font(.footnote).foregroundStyle(.secondary)
-                    NavigationLink("Sports and activities (\(store.profile.sports.count))") { SportsPicker() }
-                    Text("Profile version \(store.profile.version) · changes sync to the BikeComputer automatically once confirmed (Sync status).").font(.caption2).foregroundStyle(.secondary)
-                }
-
+            List {
                 Section {
-                    HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold(); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
-                    HStack {
-                        TextField("Tested FTP in watts", text: $ftpText).keyboardType(.numberPad)
-                        Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.updateProfile { $0.ftpW = v; $0.ftpHow = .tested }; ftpText = "" } }.disabled(Int(ftpText) == nil)
-                    }
-                    if store.profile.ftpHow != .assumed { Button("Back to the assumption from weight and level") { store.profile.ftpHow = .assumed; store.profile.refreshAssumption() }.font(.footnote) }
-                    ZoneBar()
-                    ForEach(Array(store.profile.powerZones.enumerated()), id: \.offset) { i, z in
-                        HStack { ZonePill(z: i + 1); Text(zoneName(i + 1)).font(.footnote); Spacer(); Text("\(z.lo)–\(z.hi.map(String.init) ?? "∞") W").font(.footnote).monospacedDigit(); Text("· \(hrRange(i + 1))").font(.caption2).foregroundStyle(.secondary) }
-                    }
-                } header: { Text("Zones") } footer: { Text("Power zones from FTP (Coggan). Heart-rate ranges from your max HR; they apply when a strap or watch provides heart rate.") }
-
-                Section {
-                    NavigationLink { ConnectionsView() } label: { Label("Connections", systemImage: "dot.radiowaves.left.and.right") }
-                    NavigationLink { DeviceSettingsView() } label: { Label("BikeComputer settings and Wi-Fi", systemImage: "slider.horizontal.3") }
-                    NavigationLink { SyncStatusView() } label: { HStack { Label("Sync status", systemImage: "arrow.triangle.2.circlepath"); Spacer(); Text(sync.state.label).font(.footnote).foregroundStyle(.secondary).lineLimit(1) } }
-                } header: { Text("Devices") } footer: { Text("Connections shows every device and integration with one status; the board's own settings (brightness, timeout, wake gesture, Wi-Fi) are controlled from the phone with firmware 0.6.0.") }
-
-                Section("Settings") {
-                    Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0.title).tag($0) } }
-                    Toggle("Phone-only mode", isOn: $store.settings.phoneOnlyMode)
-                    Text("On: this phone records every ride, even with a BikeComputer connected (its values are shown, not merged). Off: a connected BikeComputer is the recorder.").font(.footnote).foregroundStyle(.secondary)
-                    Picker("Heart-rate preference", selection: $store.settings.hrPref) { ForEach(AppSettings.HRPref.allCases, id: \.self) { Text($0.title).tag($0) } }
-                    Toggle("Keep the screen on during a ride", isOn: $store.settings.keepScreenOn)
-                    Toggle("Connect to the BikeComputer automatically", isOn: Binding(get: { store.settings.autoConnectBoard }, set: { store.settings.autoConnectBoard = $0; device.autoConnect = $0 }))
-                    Text("Off: the phone never connects on its own (Connections › BikeComputer › Reconnect now still works). The board's own link switch is under BikeComputer settings.").font(.footnote).foregroundStyle(.secondary)
+                    HStack(spacing: 14) {
+                        ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(BC.accent) }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
+                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h/week").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                            HStack(spacing: 6) {
+                                if store.guest { Pill(text: "guest", color: BC.stale) } else { Pill(text: "Apple ID", color: BC.live) }
+                                if device.state == .ready { Pill(text: "board connected", color: BC.live) }
+                            }
+                        }
+                        Spacer()
+                    }.padding(.vertical, 4)
                 }
-
+                Section("Profile") {
+                    link("Rider information", "person.text.rectangle", "name, birth year, weight, height, units") { RiderInfoPage() }
+                    link("Training profile", "target", "goals, level, activities, availability") { TrainingProfilePage() }
+                    link("Heart rate", "heart", hrSummary) { HeartRatePage() }
+                    link("Power & cycling", "bolt", "FTP \(store.profile.ftpW) W · zones · meter · bike") { PowerCyclingPage() }
+                }
+                Section("Devices") {
+                    link("Connections & devices", "dot.radiowaves.left.and.right", deviceSummary) { ConnectionsView() }
+                    link("App & device settings", "gearshape", "display, notifications, privacy, sync, firmware") { AppSettingsPage() }
+                }
                 Section("Account") {
                     if store.guest {
-                        HStack { Text("Guest"); Spacer(); Text("rides stay on this phone").foregroundStyle(.secondary).font(.footnote) }
-                        Button("Create account") { showAccount = true }
+                        Button { showAccount = true } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("rides stay on this phone").font(.caption).foregroundStyle(.secondary) } }
                     } else {
-                        HStack { Text("Signed in with Apple"); Spacer(); Pill(text: "local only · sync coming", color: BC.stale) }
+                        HStack { Label("Signed in with Apple", systemImage: "checkmark.seal"); Spacer(); Pill(text: "local only · sync coming", color: BC.stale) }
                         Button("Sign out (keeps data on this phone)") { store.guest = true; store.appleUserId = nil }
                     }
-                    Button("Delete account and all data on this phone", role: .destructive) { confirmReset = true }
                 }
-
-                Section("About") {
+                Section {
                     LabeledContent("Version", value: AppInfo.label)
-                    LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1")
-                    Text("This build is simulator-tested (unit tests in CI). Pairing, live data, GPS to the board and watch heart rate were device-tested in builds 14–21; everything new in 0.4.0 is device-tested only after Rashed's checklist.").font(.footnote).foregroundStyle(.secondary)
-                    if let i = device.info, !(i.hasSettings && i.hasProfileSync && i.hasWiFi) { Text("Board firmware \(i.fw): device settings, Wi-Fi setup and profile sync from the phone need firmware 0.6.0.").font(.footnote).foregroundStyle(BC.stale) }
-                    Text("Offline by design: no network calls in this build. Health data stays on this phone.").font(.footnote).foregroundStyle(.secondary)
+                    LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1.2")
+                    Text("Simulator-tested in CI; features become device-tested only after Rashed's checklist. Offline by design: no network calls in this build.").font(.footnote).foregroundStyle(.secondary)
                     if let e = store.lastSaveError { Text("Save problem: \(e)").font(.footnote).foregroundStyle(BC.warn) }
-                }
+                } header: { Text("About") }
             }
             .navigationTitle("Profile")
             .sheet(isPresented: $showAccount) { AccountSheet() }
-            .alert("Delete everything on this phone?", isPresented: $confirmReset) {
-                Button("Delete", role: .destructive) { device.forget(); store.resetAll() }
-                Button("Cancel", role: .cancel) {}
-            } message: { Text("Profile, plan, ride history and the remembered BikeComputer are removed. The board keeps its own data; use Forget phone on the board too.") }
         }
     }
+    private func link<D: View>(_ title: String, _ icon: String, _ subtitle: String, @ViewBuilder _ d: @escaping () -> D) -> some View {
+        NavigationLink { d() } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(BC.accent).frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) { Text(title).font(.body.weight(.semibold)); Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+            }.padding(.vertical, 2)
+        }
+    }
+    private var initials: String { let p = store.profile.name.split(separator: " "); return p.isEmpty ? "R" : p.prefix(2).map { String($0.prefix(1)).uppercased() }.joined() }
+    private var hrSummary: String { "max \(store.profile.estimatedMaxHR) bpm (\(store.profile.maxHRLabel))" + (store.profile.restHR.map { " · rest \($0)" } ?? "") }
+    private var deviceSummary: String {
+        var parts: [String] = []
+        parts.append(device.state == .ready ? "BikeComputer connected" : device.remembered ? "BikeComputer remembered" : "no BikeComputer")
+        parts.append(sync.state.label)
+        return parts.joined(separator: " · ")
+    }
+}
 
-    private var boardStatus: String {
-        if device.state == .ready { return "connected" }
-        if device.state == .idle { return device.remembered ? "remembered · not connected" : "not paired" }
-        return device.state.rawValue
+// MARK: - Rider information
+struct RiderInfoPage: View {
+    @EnvironmentObject private var store: Store
+    @State private var birth = ""
+    @State private var height = ""
+    private let genders = ["Prefer not to say", "Female", "Male", "Other"]
+    var body: some View {
+        Form {
+            Section("Name") { TextField("Your name", text: $store.profile.name).textContentType(.givenName) }
+            Section {
+                NumberRow(title: "Birth year", placeholder: "not set", text: $birth, range: 1900...Calendar.current.component(.year, from: Date())) { v in store.updateProfile { $0.birthYear = v } }
+                    .onAppear { birth = store.profile.birthYear.map(String.init) ?? "" }
+                Picker("Gender", selection: Binding(get: { store.profile.gender ?? genders[0] }, set: { g in store.updateProfile { $0.gender = g == genders[0] ? nil : g } })) { ForEach(genders, id: \.self) { Text($0).tag($0) } }
+            } footer: { Text("Birth year sets the estimated max heart rate until you enter a measured one. Gender is optional and only stored on this phone.") }
+            Section("Body") {
+                HStack { Text("Weight"); Spacer(); Text(weightText).foregroundStyle(.secondary).monospacedDigit() }
+                Slider(value: $store.profile.weightKg, in: 40...150, step: 0.5).onChange(of: store.profile.weightKg) { _, _ in store.profile.refreshAssumption() }
+                NumberRow(title: "Height (cm)", placeholder: "not set", text: $height, range: 120...230) { v in store.updateProfile { $0.heightCm = v } }
+                    .onAppear { height = store.profile.heightCm.map(String.init) ?? "" }
+            }
+            Section("Units") {
+                Picker("Distance and speed", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+                Text("Weight stays in kilograms; the board receives the same unit setting.").font(.footnote).foregroundStyle(.secondary)
+            }
+            Section { Text("Profile version \(store.profile.version). Name, weight, birth year and units are shared with the BikeComputer; the phone is the authority once paired.").font(.caption2).foregroundStyle(.secondary) }
+        }
+        .navigationTitle("Rider information").navigationBarTitleDisplayMode(.inline)
     }
-    private var liveNow: BCLink.Live? { device.state == .ready && device.liveIsFresh ? device.live : nil }
-    private var meterLive: Bool { liveNow?.meterLink == 4 }
-    private var meterStatus: String {
-        guard let l = liveNow else { return "via the BikeComputer" }
-        return l.meterLink == 4 ? "connected via board" : "board searching"
+    private var weightText: String { store.settings.units == .imperial ? String(format: "%.1f kg (%.0f lb)", store.profile.weightKg, store.profile.weightKg * 2.20462) : String(format: "%.1f kg", store.profile.weightKg) }
+}
+
+/// A numeric field that only writes a valid value (or nil when cleared) — never a half-typed number.
+struct NumberRow: View {
+    let title: String; let placeholder: String
+    @Binding var text: String
+    let range: ClosedRange<Int>
+    let commit: (Int?) -> Void
+    var body: some View {
+        HStack {
+            Text(title); Spacer()
+            TextField(placeholder, text: $text).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(width: 110)
+                .onChange(of: text) { _, v in
+                    if v.isEmpty { commit(nil); return }
+                    if let n = Int(v), range.contains(n) { commit(n) }
+                }
+        }
     }
-    private var strapLive: Bool { liveNow?.hrSource == .bleStrap && liveNow?.hrBpm != nil }
-    private var watchStatus: String {
-        if watch.hrIsFresh { return "heart rate live" }
-        if watch.appInstalled { return "app installed · start the workout on the watch" }
-        return watch.paired ? "watch paired · app not installed" : "no watch"
+}
+
+// MARK: - Training profile
+struct TrainingProfilePage: View {
+    @EnvironmentObject private var store: Store
+    @State private var showAvailability = false
+    var body: some View {
+        Form {
+            Section("Goal") {
+                ForEach(RiderProfile.Goal.onboardingChoices, id: \.self) { g in
+                    Button { store.updateProfile { $0.goal = g } } label: { HStack { VStack(alignment: .leading) { Text(g.title).foregroundStyle(.primary); Text(g.hint).font(.caption).foregroundStyle(.secondary) }; Spacer(); if store.profile.goal == g { Image(systemName: "checkmark").foregroundStyle(BC.accent) } } }
+                }
+            }
+            Section("Experience level") {
+                Picker("Level", selection: $store.profile.level) { ForEach(RiderProfile.Level.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+                    .onChange(of: store.profile.level) { _, _ in store.profile.refreshAssumption() }
+                Text(store.profile.level.hint).font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Sports and activities") { NavigationLink("Sports (\(store.profile.sports.count) selected)") { SportsPicker() } }
+            Section {
+                Stepper("Weekly limit: \(store.profile.hoursPerWeek) h", value: $store.profile.hoursPerWeek, in: 1...25)
+                Button { showAvailability = true } label: { HStack { Text("Training days and durations"); Spacer(); Text(availabilityText).font(.caption).foregroundStyle(.secondary) } }
+                let a = store.effectiveAvailability
+                HStack(spacing: 4) { ForEach(0..<7, id: \.self) { i in VStack(spacing: 2) { Text(WeeklyAvailability.dayNames[i]).font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary); Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent) }.frame(maxWidth: .infinity) } }
+            } header: { Text("Weekly availability") } footer: { Text("The plan is built around the days you choose; the limit is the most riding time the coach schedules per week.") }
+            Section("Training history") {
+                let rides = store.rides
+                LabeledContent("Rides recorded", value: "\(rides.count)")
+                LabeledContent("Total riding", value: Fmt.duration(seconds: rides.reduce(0) { $0 + $1.durationS }))
+                LabeledContent("Sessions completed", value: "\(store.plan.filter { $0.done }.count)")
+                if let first = rides.last { LabeledContent("First ride", value: first.start.dayAndDate) }
+            }
+        }
+        .navigationTitle("Training profile").navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
     }
-    private var gpsStatus: String {
-        guard location.authorized else { return "permission needed" }
-        return location.sharing ? location.status : "ready"
+    private var availabilityText: String { let a = store.effectiveAvailability; return "\(a.cycleDays) ride days · \(Fmt.duration(minutes: a.totalMinutes))" + (store.availability == nil ? " (suggested)" : "") }
+}
+
+// MARK: - Heart rate
+struct HeartRatePage: View {
+    @EnvironmentObject private var store: Store
+    @EnvironmentObject private var watch: WatchLink
+    @EnvironmentObject private var device: DeviceLink
+    @State private var rest = "", maxHR = "", lthr = ""
+    var body: some View {
+        Form {
+            Section {
+                NumberRow(title: "Resting HR", placeholder: "not set", text: $rest, range: 25...120) { v in store.updateProfile { $0.restHR = v } }.onAppear { rest = store.profile.restHR.map(String.init) ?? "" }
+                NumberRow(title: "Max HR", placeholder: "\(store.profile.estimatedMaxHR) estimated", text: $maxHR, range: 100...230) { v in store.updateProfile { $0.maxHR = v } }.onAppear { maxHR = store.profile.maxHR.map(String.init) ?? "" }
+                NumberRow(title: "Threshold HR (LTHR)", placeholder: "not set", text: $lthr, range: 80...220) { v in store.updateProfile { $0.lthr = v } }.onAppear { lthr = store.profile.lthr.map(String.init) ?? "" }
+            } header: { Text("Values") } footer: { Text(store.profile.maxHR == nil ? "Max heart rate is estimated from age (208 − 0.7 × age) until you enter a measured value." : "Max heart rate entered by you.") }
+            Section {
+                Picker("Zone method", selection: $store.profile.hrZoneMethod) { ForEach(RiderProfile.HRZoneMethod.allCases, id: \.self) { Text($0.title).tag($0) } }
+                if store.profile.hrZoneMethod == .lthr, store.profile.lthr == nil { Text("Enter your LTHR above; until then zones use max heart rate.").font(.footnote).foregroundStyle(BC.stale) }
+                ForEach(Array(store.profile.hrZones.enumerated()), id: \.offset) { i, z in
+                    HStack { Text("Z\(i + 1)").font(.caption.weight(.heavy)).padding(.horizontal, 7).padding(.vertical, 3).background(BC.zone(i + 1), in: Capsule()).foregroundStyle(.white); Text(HrZones.names[i].dropFirst(3)).font(.footnote); Spacer(); Text("\(z.lo)–\(z.hi.map(String.init) ?? "∞") bpm").font(.footnote).monospacedDigit() }
+                }
+            } header: { Text("Heart-rate zones") }
+            Section {
+                Picker("Preferred source", selection: $store.settings.hrPref) { ForEach(AppSettings.HRPref.allCases, id: \.self) { Text($0.title).tag($0) } }
+                LabeledContent("Apple Watch", value: watch.hrIsFresh ? "heart rate live" : watch.appInstalled ? "app installed · start the workout" : "no watch app")
+                LabeledContent("Strap via BikeComputer", value: device.state == .ready && device.live?.hrSource == .bleStrap ? "live" : "pairs on the board")
+                LabeledContent("WHOOP", value: "not connected · cloud only, never live HR")
+            } header: { Text("Sources") } footer: { Text("Live heart rate comes from the Apple Watch (via this phone) or a strap paired on the board (direct). The coach uses whichever is live; nothing is shown without a live source.") }
+        }
+        .navigationTitle("Heart rate").navigationBarTitleDisplayMode(.inline)
     }
-    private func zoneName(_ z: Int) -> String { ["Recovery", "Endurance", "Tempo", "Threshold", "VO2 max", "Anaerobic", "Neuromuscular"][z - 1] }
-    private func hrRange(_ z: Int) -> String { let m = Double(store.profile.estimatedMaxHR); let b: [(Double, Double)] = [(0.5, 0.6), (0.6, 0.75), (0.75, 0.85), (0.85, 0.9), (0.9, 1.0), (0.9, 1.0), (0.9, 1.0)]; return "\(Int(m * b[z - 1].0))–\(Int(m * b[z - 1].1)) bpm" }
+}
+
+// MARK: - Power & cycling
+struct PowerCyclingPage: View {
+    @EnvironmentObject private var store: Store
+    @EnvironmentObject private var device: DeviceLink
+    @State private var ftpText = ""
+    @State private var wheel = ""
+    var body: some View {
+        Form {
+            Section {
+                HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit(); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
+                HStack {
+                    TextField("Tested FTP in watts", text: $ftpText).keyboardType(.numberPad)
+                    Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.updateProfile { $0.ftpW = v; $0.ftpHow = .tested }; ftpText = "" } }.disabled(Int(ftpText) == nil)
+                }
+                if store.profile.ftpHow != .assumed { Button("Back to the assumption from weight and level") { store.updateProfile { $0.ftpHow = .assumed; $0.refreshAssumption() } }.font(.footnote) }
+                if let s = store.ftpSuggestion { Text("Suggested from your \(s.rideDate.dayAndDate) ride: \(s.watts) W (best 20 min \(s.best20) W). Accept it on Home or Progress.").font(.footnote).foregroundStyle(BC.accent) }
+            } header: { Text("FTP") } footer: { Text(ftpMethod) }
+            Section("Power zones") {
+                ZoneBar()
+                ForEach(Array(store.profile.powerZones.enumerated()), id: \.offset) { i, z in
+                    HStack { ZonePill(z: i + 1); Text(PowerZones.names[i].dropFirst(3)).font(.footnote); Spacer(); Text("\(z.lo)–\(z.hi.map(String.init) ?? "∞") W").font(.footnote).monospacedDigit() }
+                }
+            }
+            Section {
+                LabeledContent("XDS power meter", value: meterText)
+                Pill(text: "power unverified until validated", color: BC.stale)
+                Text("Calibration is not available: the app never writes to the meter's control point (safety rule). Pair and forget the meter on the board's Connections › Power meter.").font(.footnote).foregroundStyle(.secondary)
+            } header: { Text("Power meter") }
+            Section {
+                Stepper("Low: \(store.profile.cadenceLow) rpm", value: Binding(get: { store.profile.cadenceLow }, set: { v in store.updateProfile { $0.cadenceLow = min(v, $0.cadenceHigh - 5) } }), in: 50...110, step: 5)
+                Stepper("High: \(store.profile.cadenceHigh) rpm", value: Binding(get: { store.profile.cadenceHigh }, set: { v in store.updateProfile { $0.cadenceHigh = max(v, $0.cadenceLow + 5) } }), in: 60...130, step: 5)
+            } header: { Text("Cadence preference") } footer: { Text("The ride coach asks you to pedal faster or slower outside this range.") }
+            Section {
+                TextField("Bike name (optional)", text: Binding(get: { store.profile.bikeName ?? "" }, set: { v in store.updateProfile { $0.bikeName = v.isEmpty ? nil : v } }))
+                NumberRow(title: "Wheel circumference (mm)", placeholder: "2096", text: $wheel, range: 1000...2600) { v in store.updateProfile { $0.wheelMm = v ?? 2096 } }.onAppear { wheel = "\(store.profile.wheelMm)" }
+                Text("Used by a speed sensor on the board (firmware 0.6.0, Connections › Speed). 700×25c ≈ 2105 mm, 700×28c ≈ 2136 mm. \(device.info?.hasSettings == true ? "Sent to the board with the device settings." : "Stored on this phone until the board supports it.")").font(.footnote).foregroundStyle(.secondary)
+            } header: { Text("Bike") }
+        }
+        .navigationTitle("Power & cycling").navigationBarTitleDisplayMode(.inline)
+    }
+    private var ftpMethod: String {
+        switch store.profile.ftpHow {
+        case .assumed: return "Estimation method: weight × level (\(String(format: "%.2f", store.profile.level.wkg)) W/kg) — a starting assumption, replaced by a real 20-minute effort (0.95 × best 20 min) that you accept, or by a value you enter."
+        case .fromRides: return "Estimated from a ride: 0.95 × your best 20-minute power. A tested or entered value always wins."
+        case .entered: return "Entered by you."
+        case .tested: return "From a test you entered. Never replaced automatically."
+        }
+    }
+    private var meterText: String {
+        guard device.state == .ready, let l = device.live else { return device.remembered ? "via the BikeComputer (not connected)" : "pairs on the board" }
+        switch l.meterLink { case 4: return "connected (direct on the board)"; case 1: return "not paired"; case 2: return "searching"; case 3: return "connecting"; case 5: return "reconnecting"; default: return "off" }
+    }
+}
+
+// MARK: - App & device settings
+struct AppSettingsPage: View {
+    @EnvironmentObject private var store: Store
+    @EnvironmentObject private var device: DeviceLink
+    @EnvironmentObject private var sync: ProfileSync
+    @State private var confirmReset = false
+    var body: some View {
+        Form {
+            Section("Display and theme") {
+                Picker("Appearance", selection: $store.settings.appearance) { ForEach(AppSettings.Appearance.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+                Toggle("Keep the screen on during a ride", isOn: $store.settings.keepScreenOn)
+                NavigationLink("Ride tiles (classic layout)") { TilePicker() }
+            }
+            Section("Coach") {
+                Toggle("Coach instructions during rides", isOn: $store.settings.coachEnabled)
+                Picker("How much it talks", selection: $store.settings.coachTalk) { ForEach(AppSettings.CoachTalk.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+            }
+            Section {
+                Toggle("Show \"recording in the background\" notice", isOn: $store.settings.backgroundNotice)
+                Text("A local notification while a phone-only ride records with the screen locked. No push notifications are used.").font(.footnote).foregroundStyle(.secondary)
+            } header: { Text("Notifications") }
+            Section {
+                Text("Everything stays on this phone: profile, plan, rides and the GPS tracks. No network calls, no analytics. Apple Health is written only when you turn it on in Connections.").font(.footnote).foregroundStyle(.secondary)
+                Button("Delete account and all data on this phone", role: .destructive) { confirmReset = true }
+            } header: { Text("Privacy") }
+            Section("Recording") {
+                Toggle("Phone-only mode", isOn: $store.settings.phoneOnlyMode)
+                Text("On: this phone records every ride even with a BikeComputer connected (its values are shown, not merged). Off: a connected BikeComputer is the recorder.").font(.footnote).foregroundStyle(.secondary)
+                Toggle("Connect to the BikeComputer automatically", isOn: Binding(get: { store.settings.autoConnectBoard }, set: { store.settings.autoConnectBoard = $0; device.autoConnect = $0 }))
+            }
+            Section("Data synchronization") {
+                NavigationLink { SyncStatusView() } label: { HStack { Text("Sync status"); Spacer(); Text(sync.state.label).font(.footnote).foregroundStyle(.secondary).lineLimit(1) } }
+                Text("Cloud sync (Google / e-mail accounts) arrives with the account service; the BikeComputer sync works over Bluetooth with firmware 0.6.0.").font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Firmware") {
+                LabeledContent("Board firmware", value: device.info?.fw ?? (device.remembered ? "connect to read" : "no board"))
+                LabeledContent("Needed for sync / Wi-Fi / settings", value: "0.6.0")
+                Text("Firmware is installed from the PC installer kit (INSTALL-v0.x.x.bat); the app cannot update the board over the air in this build.").font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Device settings") {
+                NavigationLink { DeviceSettingsView() } label: { Label("BikeComputer settings and Wi-Fi", systemImage: "slider.horizontal.3") }
+                if let i = device.info, !(i.hasSettings && i.hasProfileSync && i.hasWiFi) { Text("Board firmware \(i.fw): device settings, Wi-Fi setup and profile sync from the phone need firmware 0.6.0.").font(.footnote).foregroundStyle(BC.stale) }
+            }
+        }
+        .navigationTitle("App & device settings").navigationBarTitleDisplayMode(.inline)
+        .alert("Delete everything on this phone?", isPresented: $confirmReset) {
+            Button("Delete", role: .destructive) { device.forget(); store.resetAll() }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("Profile, plan, ride history and the remembered BikeComputer are removed. The board keeps its own data; use Forget phone on the board too.") }
+    }
 }
 
 struct SportsPicker: View {
@@ -150,7 +321,6 @@ struct DeviceRow: View {
 }
 
 /// Account creation. Apple sign-in works now and only identifies the rider on this phone (no server yet).
-/// Google and e-mail arrive with the sync service; Apple requires Sign in with Apple when Google is offered.
 struct AccountSheet: View {
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss

@@ -32,8 +32,8 @@ struct ConnectionsView: View {
             Section {
                 NavigationLink { SensorConnectionDetail(kind: .meter) } label: { ConnRow(status: meterStatus, title: "Power meter (XDS)", subtitle: meterSubtitle, icon: "bolt") }
                 NavigationLink { SensorConnectionDetail(kind: .strap) } label: { ConnRow(status: strapStatus, title: "Heart-rate strap", subtitle: strapSubtitle, icon: "heart") }
-                NavigationLink { SensorConnectionDetail(kind: .speed) } label: { ConnRow(status: .gray, title: "Speed / cadence sensors", subtitle: "not supported by firmware 0.6.0 yet", icon: "gauge.with.dots.needle.33percent") }
-            } header: { Text("Bluetooth sensors (via the BikeComputer)") } footer: { Text("Sensors pair on the board (Settings › Sensors). The phone shows what the board reports.") }
+                NavigationLink { SensorConnectionDetail(kind: .speed) } label: { ConnRow(status: .gray, title: "Speed / cadence sensors", subtitle: (device.info?.fw ?? "") >= "0.6.0" ? "pair on the board: Connections › Cadence / Speed" : "needs firmware 0.6.0 (pairs on the board)", icon: "gauge.with.dots.needle.33percent") }
+            } header: { Text("Bluetooth sensors (via the BikeComputer)") } footer: { Text("Sensors pair on the board (its Connections menu: Power meter, Heart rate, Cadence, Speed). The phone shows what the board reports; a direct BLE connection on the board is marked \"direct\", data that passes through this phone \"via phone\".") }
             Section {
                 NavigationLink { HealthConnectionDetail() } label: { ConnRow(status: healthStatus, title: "Apple Health", subtitle: healthSubtitle, icon: "heart.text.square") }
                 ConnRow(status: .gray, title: "WHOOP", subtitle: "not connected · arrives with the account service", icon: "waveform.path.ecg")

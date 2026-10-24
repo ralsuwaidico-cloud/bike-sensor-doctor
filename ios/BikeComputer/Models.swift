@@ -45,6 +45,23 @@ struct RiderProfile: Codable, Equatable {
     /// Monotonic version of the shared athlete settings; bumped on every change the rider makes. Drives profile sync.
     var version: UInt32 = 1
     var updatedAt: Date = Date()
+    /// 0.5.0 additions (optional / defaulted so older files load unchanged).
+    var gender: String? = nil                       // only if the rider volunteers it
+    var bikeName: String? = nil
+    var wheelMm: Int = 2096                         // wheel circumference for a speed sensor (syncs to the board with 0.6.0)
+    var cadenceLow = 85, cadenceHigh = 95           // preferred cadence range for coaching
+    var hrZoneMethod: HRZoneMethod = .maxHR
+    enum HRZoneMethod: String, Codable, CaseIterable { case maxHR, lthr
+        var title: String { self == .maxHR ? "% of max heart rate" : "% of threshold (LTHR)" } }
+    /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
+    var hrZones: [(lo: Int, hi: Int?)] {
+        if hrZoneMethod == .lthr, let l = lthr, l > 0 {
+            let b = [0.85, 0.89, 0.94, 1.0].map { Int((Double(l) * $0).rounded()) }
+            return [(0, b[0]), (b[0], b[1]), (b[1], b[2]), (b[2], b[3]), (b[3], nil)]
+        }
+        let m = Double(estimatedMaxHR); let b = [0.60, 0.70, 0.80, 0.90].map { Int((m * $0).rounded()) }
+        return [(0, b[0]), (b[0], b[1]), (b[1], b[2]), (b[2], b[3]), (b[3], nil)]
+    }
 
     /// Age from the birth year when known, else the stored `age` slider value.
     var effectiveAge: Int { if let y = birthYear, y > 1900 { return max(10, Calendar.current.component(.year, from: Date()) - y) }; return age }
@@ -87,6 +104,12 @@ struct RiderProfile: Codable, Equatable {
         sports = (try? c.decodeIfPresent([Sport].self, forKey: .sports)) ?? [.roadCycling]
         version = try c.decodeIfPresent(UInt32.self, forKey: .version) ?? 1
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+        gender = try c.decodeIfPresent(String.self, forKey: .gender)
+        bikeName = try c.decodeIfPresent(String.self, forKey: .bikeName)
+        wheelMm = try c.decodeIfPresent(Int.self, forKey: .wheelMm) ?? 2096
+        cadenceLow = try c.decodeIfPresent(Int.self, forKey: .cadenceLow) ?? 85
+        cadenceHigh = try c.decodeIfPresent(Int.self, forKey: .cadenceHigh) ?? 95
+        hrZoneMethod = (try? c.decodeIfPresent(HRZoneMethod.self, forKey: .hrZoneMethod)) ?? .maxHR
     }
 
     // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)
@@ -140,6 +163,23 @@ struct Workout: Codable, Identifiable, Equatable {
     var done = false
     var skipped = false
     var note = ""
+    /// 0.5.0: the rider changed this session by hand (type, duration, move, add). Never regenerated without confirmation.
+    var edited = false
+
+    init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false) {
+        self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        date = try c.decode(Date.self, forKey: .date)
+        kind = (try? c.decode(WorkoutKind.self, forKey: .kind)) ?? .other
+        minutes = try c.decodeIfPresent(Int.self, forKey: .minutes) ?? 0
+        done = try c.decodeIfPresent(Bool.self, forKey: .done) ?? false
+        skipped = try c.decodeIfPresent(Bool.self, forKey: .skipped) ?? false
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        edited = try c.decodeIfPresent(Bool.self, forKey: .edited) ?? false
+    }
 
     struct Step: Equatable { let name: String; let duration: String; let target: String }
     /// Steps with power targets from the rider's FTP; HR targets appear only when the rider has an HR source (the caller decides).
@@ -207,28 +247,6 @@ struct Workout: Codable, Identifiable, Equatable {
     }
 }
 
-/// Deterministic week builder: the rider's hours and level decide the mix. No model involved.
-enum PlanEngine {
-    static func week(starting monday: Date, profile p: RiderProfile) -> [Workout] {
-        let cal = Calendar.current
-        let d = { (i: Int) in cal.date(byAdding: .day, value: i, to: monday)! }
-        let h = p.hoursPerWeek
-        let longMin = min(180, max(60, h * 20))
-        let hard: WorkoutKind = p.level == .beginner ? .tempo : (p.goal == .stronger ? .threshold : .tempo)
-        var w: [Workout] = [
-            Workout(date: d(0), kind: .rest, minutes: 0),
-            Workout(date: d(1), kind: .endurance, minutes: 60),
-            Workout(date: d(2), kind: hard, minutes: hard.defaultMinutes),
-            Workout(date: d(3), kind: h >= 6 ? .endurance : .rest, minutes: h >= 6 ? 60 : 0),
-            Workout(date: d(4), kind: .recovery, minutes: 45),
-            Workout(date: d(5), kind: .long, minutes: longMin),
-            Workout(date: d(6), kind: .strength, minutes: 30)]
-        if h <= 3 { w[1].kind = .rest; w[1].minutes = 0; w[4].kind = .rest; w[4].minutes = 0 }
-        return w
-    }
-    static func rideMinutes(_ w: [Workout]) -> Int { w.filter { $0.kind.isRide && !$0.skipped }.reduce(0) { $0 + $1.minutes } }
-}
-
 // MARK: - Rides
 struct RideRecord: Codable, Identifiable, Equatable {
     enum Recorder: String, Codable { case board, phone }
@@ -294,6 +312,13 @@ struct AppSettings: Codable, Equatable {
     /// Apple Health: the rider asked for it in onboarding/Connections. "Connected" is still decided by HealthKit's own authorization status.
     var appleHealthWanted = false
     var appleHealthExportRides = false
+    /// 0.5.0: appearance (system / light / dark), the background-recording notice, and the coach frequency.
+    enum Appearance: String, Codable, CaseIterable { case system, light, dark; var title: String { rawValue.capitalized } }
+    var appearance: Appearance = .system
+    var backgroundNotice = true
+    enum CoachTalk: String, Codable, CaseIterable { case quiet, normal, frequent; var title: String { rawValue.capitalized } }
+    var coachTalk: CoachTalk = .normal
+    var coachEnabled = true
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -306,6 +331,10 @@ struct AppSettings: Codable, Equatable {
         enabledConnections = (try? c.decodeIfPresent(Set<String>.self, forKey: .enabledConnections)) ?? ["board", "watch"]
         appleHealthWanted = try c.decodeIfPresent(Bool.self, forKey: .appleHealthWanted) ?? false
         appleHealthExportRides = try c.decodeIfPresent(Bool.self, forKey: .appleHealthExportRides) ?? false
+        appearance = (try? c.decodeIfPresent(Appearance.self, forKey: .appearance)) ?? .system
+        backgroundNotice = try c.decodeIfPresent(Bool.self, forKey: .backgroundNotice) ?? true
+        coachTalk = (try? c.decodeIfPresent(CoachTalk.self, forKey: .coachTalk)) ?? .normal
+        coachEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachEnabled) ?? true
     }
 }
 
@@ -342,6 +371,8 @@ struct StoreFile: Codable, Equatable {
     /// 0.4.0: profile-sync bookkeeping per board (keyed by board id) and the onboarding stage reached.
     var boardSync: [BoardSyncRecord] = []
     var onboardingStage = 0
+    /// 0.5.0: the rider's weekly availability; nil = not set yet (a suggestion from the weekly hours is used).
+    var availability: WeeklyAvailability? = nil
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
         self.schema = schema; self.profile = profile; self.settings = settings; self.plan = plan; self.rides = rides; self.tiles = tiles
@@ -368,6 +399,8 @@ struct StoreFile: Codable, Equatable {
         ftpSuggestion = try c.decodeIfPresent(FTPSuggestion.self, forKey: .ftpSuggestion)
         boardSync = (try? c.decodeIfPresent([BoardSyncRecord].self, forKey: .boardSync)) ?? []
         onboardingStage = try c.decodeIfPresent(Int.self, forKey: .onboardingStage) ?? 0
+        availability = try? c.decodeIfPresent(WeeklyAvailability.self, forKey: .availability)
+        if let a = availability, a.days.count != 7 { availability = nil }
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -405,6 +438,7 @@ final class Store: ObservableObject {
     @Published var ftpSuggestion: FTPSuggestion? { didSet { persist() } }
     @Published var boardSync: [BoardSyncRecord] = [] { didSet { persist() } }
     @Published var onboardingStage = 0 { didSet { persist() } }
+    @Published var availability: WeeklyAvailability? { didSet { persist() } }
     @Published private(set) var lastSaveError: String?
 
     let dir: URL
@@ -430,12 +464,12 @@ final class Store: ObservableObject {
     private func apply(_ f: StoreFile) {
         profile = f.profile; settings = f.settings; plan = f.plan; rides = f.rides; tiles = f.tiles
         onboarded = f.onboarded; guest = f.guest; appleUserId = f.appleUserId; createdAt = f.createdAt; ftpSuggestion = f.ftpSuggestion
-        boardSync = f.boardSync; onboardingStage = f.onboardingStage
+        boardSync = f.boardSync; onboardingStage = f.onboardingStage; availability = f.availability
     }
 
     var snapshot: StoreFile {
         var f = StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt, ftpSuggestion: ftpSuggestion)
-        f.boardSync = boardSync; f.onboardingStage = onboardingStage
+        f.boardSync = boardSync; f.onboardingStage = onboardingStage; f.availability = availability
         return f
     }
 
@@ -459,6 +493,9 @@ final class Store: ObservableObject {
         return any ? f : nil
     }
 
+    /// The availability in force: the rider's own, else a suggestion from the weekly hours (never stored until edited).
+    var effectiveAvailability: WeeklyAvailability { availability ?? WeeklyAvailability.suggested(hoursPerWeek: profile.hoursPerWeek) }
+
     func ensurePlan() {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
@@ -467,9 +504,33 @@ final class Store: ObservableObject {
         if plan.isEmpty || !plan.contains(where: { cal.isDate($0.date, inSameDayAs: today) }) {
             // keep history of past workouts, generate this week (and next) fresh
             let keep = plan.filter { $0.date < monday }
-            plan = keep + PlanEngine.week(starting: monday, profile: profile) + PlanEngine.week(starting: cal.date(byAdding: .day, value: 7, to: monday)!, profile: profile)
+            let a = effectiveAvailability
+            plan = keep + PlanEngine.week(starting: monday, profile: profile, availability: a) + PlanEngine.week(starting: cal.date(byAdding: .day, value: 7, to: monday)!, profile: profile, availability: a)
         }
     }
+
+    /// Rebuilds one week from the availability. Hand-edited sessions are kept unless `replaceEdited` is true (the
+    /// caller asks the rider first). Past days and completed sessions are never touched.
+    func regenerate(weekOf date: Date, replaceEdited: Bool) {
+        let cal = Calendar.current
+        let d0 = cal.startOfDay(for: date)
+        let wd = (cal.component(.weekday, from: d0) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: d0)!
+        let sunday = cal.date(byAdding: .day, value: 7, to: monday)!
+        let today = cal.startOfDay(for: Date())
+        let fresh = PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability)
+        var next = plan.filter { !($0.date >= monday && $0.date < sunday) }
+        let old = plan.filter { $0.date >= monday && $0.date < sunday }
+        for day in 0..<7 {
+            let date = cal.date(byAdding: .day, value: day, to: monday)!
+            let existing = old.filter { cal.isDate($0.date, inSameDayAs: date) }
+            let keep = existing.filter { $0.done || cal.startOfDay(for: $0.date) < today || ($0.edited && !replaceEdited) }
+            if keep.isEmpty { next.append(fresh[day]) } else { next.append(contentsOf: keep) }
+        }
+        plan = next.sorted { $0.date < $1.date }
+    }
+    /// Hand-edited sessions in a week (so the UI can ask before replacing them).
+    func editedCount(weekOf date: Date) -> Int { workouts(weekOf: date).filter { $0.edited && !$0.done }.count }
 
     var today: Workout? { plan.first { Calendar.current.isDateInToday($0.date) } }
     func workouts(weekOf date: Date) -> [Workout] {
@@ -480,9 +541,14 @@ final class Store: ObservableObject {
         return plan.filter { $0.date >= monday && $0.date < sunday }.sorted { $0.date < $1.date }
     }
     func update(_ w: Workout) { if let i = plan.firstIndex(where: { $0.id == w.id }) { plan[i] = w } }
+    /// A change the rider made by hand: saved and flagged so regeneration asks first.
+    func edit(_ w: Workout) { var x = w; x.edited = true; update(x) }
+    func remove(_ w: Workout) { plan.removeAll { $0.id == w.id } }
+    func add(_ w: Workout) { var x = w; x.edited = true; plan.append(x); plan.sort { $0.date < $1.date } }
     func swapDays(_ a: Workout, _ b: Workout) {
         guard let i = plan.firstIndex(where: { $0.id == a.id }), let j = plan.firstIndex(where: { $0.id == b.id }) else { return }
         let da = plan[i].date; plan[i].date = plan[j].date; plan[j].date = da
+        plan[i].edited = true; plan[j].edited = true
     }
 
     /// Adds a finished ride. Demo rides never enter history; a board ride already imported (same board ride id) is
@@ -581,7 +647,7 @@ final class Store: ObservableObject {
     func resetAll() {
         loading = true
         rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil; ftpSuggestion = nil
-        tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0
+        tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0; availability = nil
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
         for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }
@@ -614,10 +680,10 @@ enum Coach {
         switch t.kind {
         case .rest: return "Today: rest day — adaptation happens here."
         case .recoveryDay: return "Today: recovery day — light movement, early night."
-        case .strength, .mobility, .other: return "Today: \(t.minutes)-minute \(t.kind.title.lowercased()) session off the bike for \(t.benefit)."
-        case .recovery: return "Today: \(t.minutes)-minute easy recovery spin to loosen the legs."
+        case .strength, .mobility, .other: return "Today: \(Fmt.duration(minutes: t.minutes)) \(t.kind.title.lowercased()) session off the bike for \(t.benefit)."
+        case .recovery: return "Today: \(Fmt.duration(minutes: t.minutes)) easy recovery spin to loosen the legs."
         case .ftpTest: return "Today: FTP test — \(t.minutes) minutes with a 20-minute all-out effort for a real number."
-        default: return "Today: \(t.minutes)-minute \(t.kind.title.lowercased()) ride (Zone \(t.kind.zone)) to improve \(t.benefit)."
+        default: return "Today: \(Fmt.duration(minutes: t.minutes)) \(t.kind.title.lowercased()) ride (Zone \(t.kind.zone)) to improve \(t.benefit)."
         }
     }
     /// "Why this workout?" — uses only what the app actually has: the plan, recent rides, the FTP label. Never sleep,
@@ -630,11 +696,11 @@ enum Coach {
         if let last = s.rides.first {
             let days = cal.dateComponents([.day], from: cal.startOfDay(for: last.start), to: cal.startOfDay(for: Date())).day ?? 0
             var l = days == 0 ? "You rode today" : days == 1 ? "Your last ride was yesterday" : "Your last ride was \(days) days ago"
-            l += " (\(last.durationS / 60) min" + (last.avgPower.map { ", \($0) W average" } ?? ", no power data") + ")."
+            l += " (\(Fmt.duration(seconds: last.durationS))" + (last.avgPower.map { ", \($0) W average" } ?? ", no power data") + ")."
             parts.append(l)
             if days >= 1, days <= 2, last.avgPower.map({ s.profile.zone(forWatts: $0) >= 3 }) == true, t.kind.zone <= 2 { parts.append("Yesterday's effort was hard, so today stays easy on purpose.") }
         } else { parts.append("No rides are recorded yet, so the plan starts from your goal, hours and level only.") }
-        if !recent.isEmpty { parts.append("This week so far: \(recent.reduce(0) { $0 + $1.durationS } / 60) min in \(recent.count) ride\(recent.count == 1 ? "" : "s") of your \(s.profile.hoursPerWeek) h.") }
+        if !recent.isEmpty { parts.append("This week so far: \(Fmt.duration(seconds: recent.reduce(0) { $0 + $1.durationS })) in \(recent.count) ride\(recent.count == 1 ? "" : "s") of your \(s.profile.hoursPerWeek) h.") }
         parts.append("Goal: \(s.profile.goal.title.lowercased()); level: \(s.profile.level.title.lowercased()).")
         if s.profile.ftpHow == .assumed { parts.append("Targets use a provisional FTP of \(s.profile.ftpW) W; they will tighten once a real 20-minute effort is recorded.") }
         parts.append("No sleep, HRV or recovery source is connected, so recovery is not part of this recommendation.")
@@ -653,13 +719,13 @@ enum Coach {
         let last = s.rides.first
         guard let t = s.today else { return "No plan for today." }
         var out = ""
-        if let l = last, let p = l.avgPower { out += "Last ride: \(l.durationS / 60) min at \(p) W" + (l.avgHR.map { ", HR \($0)" } ?? "") + ". " }
-        else if let l = last { out += "Last ride: \(l.durationS / 60) min, \(String(format: "%.1f", Double(l.distanceM) / 1000)) km (no power data). " }
+        if let l = last, let p = l.avgPower { out += "Last ride: \(Fmt.duration(seconds: l.durationS)) at \(p) W" + (l.avgHR.map { ", HR \($0)" } ?? "") + ". " }
+        else if let l = last { out += "Last ride: \(Fmt.duration(seconds: l.durationS)), \(String(format: "%.1f", Double(l.distanceM) / 1000)) km (no power data). " }
         else { out += "No rides recorded yet. " }
         switch t.kind {
         case .rest: out += "Today is a rest day."
         case .recoveryDay: out += "Recovery day: light movement, early night."
-        default: out += "Today: \(t.kind.title.lowercased()), \(t.minutes) min."
+        default: out += "Today: \(t.kind.title.lowercased()), \(Fmt.duration(minutes: t.minutes))."
         }
         if s.profile.ftpHow == .assumed { out += " Your FTP is still an assumption; a steady 20-minute effort in a real ride will replace it." }
         return out

@@ -45,7 +45,7 @@ struct HomeView: View {
             if let t, t.kind != .rest {
                 VStack(spacing: 0) {
                     tableRow("Workout", t.kind.title)
-                    tableRow("Duration", t.minutes > 0 ? "\(t.minutes) min" : "—")
+                    tableRow("Duration", t.minutes > 0 ? Fmt.duration(minutes: t.minutes) : "—")
                     tableRow("Target", t.kind.zone > 0 ? "Zone \(t.kind.zone) · \(zoneWatts(t.kind.zone))" : t.kind.subtitle)
                     tableRow("Benefit", t.benefit)
                     tableRow("Structure", t.structureText)
@@ -85,7 +85,7 @@ struct HomeView: View {
                     Section("Instead of \(t.kind.title)") {
                         ForEach(Array(Coach.alternatives(for: t).enumerated()), id: \.offset) { _, a in
                             Button { var w = t; w.kind = a.kind; w.minutes = a.minutes; store.update(w); showAlternatives = false } label: {
-                                HStack { VStack(alignment: .leading) { Text(a.kind.title).bold().foregroundStyle(.primary); Text("\(a.minutes) min · \(a.kind.subtitle) · \(a.benefit)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); ZonePill(z: a.kind.zone) }
+                                HStack { VStack(alignment: .leading) { Text(a.kind.title).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: a.minutes)) · \(a.kind.subtitle) · \(a.benefit)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); ZonePill(z: a.kind.zone) }
                             }
                         }
                     }
@@ -129,7 +129,7 @@ struct HomeView: View {
             HStack { Eyebrow(t: "Next days"); Spacer(); Button("Plan ›") { tab = 1 }.font(.caption.bold()) }
             HStack(alignment: .top, spacing: 8) {
                 ForEach(upcoming, id: \.id) { w in
-                    VStack(alignment: .leading, spacing: 2) { Text(w.date.shortDay).font(.caption.weight(.heavy)).foregroundStyle(.secondary); Text(w.kind.title).font(.caption).lineLimit(2).minimumScaleFactor(0.8); HStack(spacing: 4) { if w.minutes > 0 { Text("\(w.minutes) min").font(.caption2).foregroundStyle(.secondary) }; ZonePill(z: w.kind.zone) } }.frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 2) { Text(w.date.shortDay).font(.caption.weight(.heavy)).foregroundStyle(.secondary); Text(w.kind.title).font(.caption).lineLimit(2).minimumScaleFactor(0.8); HStack(spacing: 4) { if w.minutes > 0 { Text(Fmt.duration(minutes: w.minutes)).font(.caption2).foregroundStyle(.secondary) }; ZonePill(z: w.kind.zone) } }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
