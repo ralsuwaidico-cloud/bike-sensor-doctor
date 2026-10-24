@@ -155,18 +155,26 @@ static size_t health_text(char *b, size_t cap, bool markup)
     if (ws.state == PLAT_WIFI_OFF) snprintf(wifi_line, sizeof wifi_line, "off");
     else if (ws.state == PLAT_WIFI_CONNECTED) snprintf(wifi_line, sizeof wifi_line, "%.20s %d dBm %s", ws.ssid, ws.rssi, ws.ip);
     else snprintf(wifi_line, sizeof wifi_line, "on, not connected");
+    const app_power_t *P = app_power();
+    char dr[3][12], hl[32];
+    for (int i = 0; i < 3; i++) { if (P->rate_mv_h[i] >= 0) snprintf(dr[i], sizeof dr[i], "%d", P->rate_mv_h[i]); else snprintf(dr[i], sizeof dr[i], "n/a"); }
+    if (P->usb_likely) snprintf(hl, sizeof hl, "n/a on USB");
+    else if (P->hours_left_x10 >= 0 && P->hours_left_x10 < 999) snprintf(hl, sizeof hl, "about %d.%d h (estimate)", P->hours_left_x10 / 10, P->hours_left_x10 % 10);
+    else snprintf(hl, sizeof hl, "after 20 min of data");
     int n = snprintf(b, cap,
         "%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
         "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
         "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
-        "%sBattery%s %d mV, %d%%%s\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sWi-Fi%s %s\n"
+        "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sWi-Fi%s %s\n"
         "%sMeter gaps / bad%s %lu / %lu\n%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
         K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
         K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
         K, E, (unsigned long)h.storage_errors, K, E, (unsigned long)h.profile_save_errors,
         K, E, h.heap_free_k, h.heap_min_k, K, E, h.psram_free_k, h.psram_total_k, K, E, h.flash_total_k, h.app_slot_k,
         K, E, h.storage_free_k, h.storage_total_k,
-        K, E, h.battery_mv, h.battery_pct, h.usb_power ? " (USB)" : "", K, E, h.ble_ready ? "ready" : "NOT READY",
+        K, E, h.battery_mv, h.battery_pct, "", K, E, P->usb_likely ? "USB power likely (inferred)" : "battery",
+        K, E, dr[0], dr[1], dr[2], K, E, hl, K, E, (unsigned long)P->screen_offs, (unsigned long)P->wakes, (unsigned long)P->auto_offs,
+        K, E, h.ble_ready ? "ready" : "NOT READY",
         h.ble_scanning ? ", scanning" : "", (unsigned long)h.ble_devices_seen,
         K, E, p->power.paired ? p->power.name : "not paired", ui_link_text(pw->link),
         K, E, p->hr.paired ? p->hr.name : "not paired", p->hr.paired ? ui_link_text(hr->link) : "",
@@ -177,7 +185,7 @@ static size_t health_text(char *b, size_t cap, bool markup)
     return n > 0 && (size_t)n < cap ? (size_t)n : cap - 1;
 }
 
-static void health_update(void) { static char b[1100]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
+static void health_update(void) { static char b[1400]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
 
 static void strip_markup(char *s)
 {
@@ -193,8 +201,8 @@ static void strip_markup(char *s)
 static void export_cb(lv_event_t *e)
 {
     (void)e;
-    static char rep[2600];
-    size_t n = health_text(rep, 1300, false);
+    static char rep[3000];
+    size_t n = health_text(rep, 1500, false);
     char st[520]; plat_selftest_text(st, sizeof st); strip_markup(st);
     app_live_t lv; app_live(&lv);
     bc_ride_summary_t r[3]; int nr = app_history(r, 3, false);

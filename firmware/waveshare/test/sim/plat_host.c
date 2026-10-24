@@ -82,7 +82,7 @@ long plat_file_size(const char *path) { char p[512]; full(path, p, sizeof p); st
 void plat_health(plat_health_t *o)
 {
     memset(o, 0, sizeof *o);
-    snprintf(o->fw_version, sizeof o->fw_version, "0.2.1-sim"); snprintf(o->build, sizeof o->build, "Oct 23 22:00");
+    snprintf(o->fw_version, sizeof o->fw_version, "0.5.0-sim"); snprintf(o->build, sizeof o->build, "Oct 23 22:00");
     o->uptime_s = g_sim.now_ms / 1000; snprintf(o->reset_reason, sizeof o->reset_reason, "power-on");
     o->boot_count = g_sim.boots; o->crash_total = 2; o->crash_consecutive = 0; o->safe_mode_entries = 0;
     o->heap_free_k = 61; o->heap_min_k = 48; o->psram_free_k = 1890; o->psram_total_k = 2048;
@@ -94,10 +94,15 @@ void plat_health(plat_health_t *o)
 }
 void plat_export_report(const char *text) { g_sim.exports++; plat_file_write("diag/report.txt", text, strlen(text)); }
 
-int plat_battery_pct(void) { return g_sim.battery_pct; }
-int plat_battery_mv(void) { return 3600 + g_sim.battery_pct * 6; }
-bool plat_usb_power(void) { return g_sim.usb; }
+#include "bc_power.h"
+int plat_battery_mv(void) { return g_sim.battery_mv ? g_sim.battery_mv : 3600 + g_sim.battery_pct * 6; }
+int plat_battery_pct(void) { return g_sim.battery_mv ? bc_batt_pct_from_mv(g_sim.battery_mv) : g_sim.battery_pct; }
+bool plat_usb_power(void) { return g_sim.usb || plat_battery_mv() > 4250; }
 void plat_backlight(int pct) { g_sim.backlight = pct; }
+void plat_panel_sleep(bool sleep) { g_sim.panel_asleep = sleep; }
+void plat_deep_sleep(void) { g_sim.deep_sleeps++; g_sim.asleep = true; }
+bool plat_woke_from_sleep(void) { return g_sim.woke_from_sleep; }
+uint32_t plat_uptime_s(void) { return g_sim.now_ms / 1000; }
 
 /* ---- simulated Wi-Fi manager: same API and timing shape as the device (asynchronous, polled) */
 #include "bc_wifi.h"
@@ -198,7 +203,7 @@ int plat_wifi_saved(char ssids[][33], int max) { w_load(); int n = wstore.n < ma
 void plat_wifi_status(plat_wifi_status_t *o) { pump(); *o = ws; }
 void plat_wifi_set_quiet(bool riding) { w_quiet = riding; }
 int plat_wifi_scan_count(void) { return w_scan_count; }
-const char *plat_fw_version(void) { return "0.4.0-sim"; }
+const char *plat_fw_version(void) { return "0.5.0-sim"; }
 
 /* ---- phone link simulation */
 #define PH g_sim.phone

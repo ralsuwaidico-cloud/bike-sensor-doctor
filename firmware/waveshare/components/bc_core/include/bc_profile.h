@@ -49,6 +49,11 @@ typedef struct {
     uint8_t hr_pref;           /* 0 = strap first, phone/watch as backup; 1 = phone/watch first */
     uint8_t ride_style;        /* bc_ride_style_t */
     uint8_t brightness;        /* 5..100 % */
+    /* power (firmware 0.5.0); missing keys in an old profile take these defaults */
+    uint16_t scr_timeout_s;    /* auto screen-off outside rides: 0 = never, default 60 */
+    uint8_t auto_sleep_min;    /* deep sleep after N idle minutes on battery, no ride: 0 = off, default 10 */
+    uint8_t bat_protect;       /* 0 = alerts only (default); 1 = at the critical level also auto-save the ride and sleep (NOT validated) */
+    bool wake_on_cue;          /* screen off during a ride: wake 5 s on a coach warning (default on) */
     uint16_t next_ride_id;     /* real rides only; demo rides are numbered separately */
     uint16_t next_demo_id;
     char ftp_note[96];         /* last FTP change in plain words */

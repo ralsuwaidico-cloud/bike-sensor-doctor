@@ -9,6 +9,8 @@ typedef struct {
     plat_link_info_t link[PLAT_SENS_KINDS];
     plat_found_t found[PLAT_SENS_KINDS][6]; int found_n[PLAT_SENS_KINDS];
     int battery_pct; bool usb; int backlight; bool wifi_on; uint32_t boots; bool restart_requested;
+    /* power (0.5.0): scripted cell voltage (0 = derive from battery_pct), panel/backlight state, deep-sleep bookkeeping */
+    int battery_mv; bool panel_asleep; bool asleep; int deep_sleeps; bool woke_from_sleep;
     int pair_calls, profile_saves, exports; bool verbose; char last_log[160];
     /* simulated Wi-Fi world */
     struct { char ssid[33]; int rssi; bool secured; char pass[65]; bool present; } ap[6]; int n_ap;

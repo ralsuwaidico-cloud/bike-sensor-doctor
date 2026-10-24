@@ -10,6 +10,7 @@ static void diag_cb(lv_event_t *e) { (void)e; ui_diag_menu_show(); }
 static void display_cb(lv_event_t *e) { (void)e; ui_display_show(); }
 static void wifi_cb(lv_event_t *e) { (void)e; ui_wifi_show(); }
 static void phone_cb(lv_event_t *e) { (void)e; ui_phone_show(); }
+static void power_cb(lv_event_t *e) { (void)e; ui_power_settings_show(); }
 static void home_cb(lv_event_t *e) { (void)e; ui_home_show(); }
 static void demo_cb(lv_event_t *e) { (void)e; app_set_demo(!app_demo()); ui_settings_show(); }
 static void setup_cb(lv_event_t *e) { (void)e; app_profile_reset(); ui_onboard_start(); }
@@ -42,6 +43,7 @@ void ui_settings_show(void)
     ui_row_btn(l, "Sensors", LV_SYMBOL_RIGHT, C_CYAN, sensors_cb, NULL);
     ui_row_btn(l, "Wi-Fi", p->wifi_on ? "on" : "off", C_CYAN, wifi_cb, NULL);
     { plat_phone_status_t ps; plat_phone_status(&ps); ui_row_btn(l, "Phone", !p->phone_on ? "off" : ps.state == PLAT_PHONE_READY ? "connected" : ps.bonded ? "remembered" : "not paired", ps.state == PLAT_PHONE_READY ? C_GREEN : C_CYAN, phone_cb, NULL); }
+    { char bs[16]; app_power_batt_short(bs, sizeof bs); ui_row_btn(l, "Power", bs, C_CYAN, power_cb, NULL); }
     ui_row_btn(l, "Demo mode", app_demo() ? "ON" : "off", app_demo() ? C_DEMO : C_MUT, demo_cb, NULL);
     ui_row_btn(l, "Diagnostics", LV_SYMBOL_RIGHT, C_CYAN, diag_cb, NULL);
     lv_obj_t *again = ui_hold_btn(l, "HOLD: SET UP AGAIN", C_PANEL, C_AMBER, lv_pct(100), 40, 2000, setup_cb, NULL);

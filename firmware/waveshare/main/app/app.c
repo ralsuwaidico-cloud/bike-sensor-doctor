@@ -122,6 +122,8 @@ static void jput(const char *line)
     memcpy(s_jbuf + s_jlen, line, n); s_jlen += n;
 }
 
+void app_journal_flush(void) { jflush(true); }
+
 static void ride_second(bc_sample_t smp)
 {
     char l[48];

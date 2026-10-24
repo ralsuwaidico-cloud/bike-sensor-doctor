@@ -8,6 +8,7 @@
 #include "bc_demo.h"
 #include "bc_wifi.h"
 #include "bc_link.h"
+#include "bc_power.h"
 
 static int fails, checks;
 #define CHECK(c) do { checks++; if (!(c)) { fails++; printf("FAIL %s:%d  %s\n", __FILE__, __LINE__, #c); } } while (0)
@@ -291,9 +292,80 @@ static void t_link(void)
     CHECK(!strcmp(bc_src_name(BC_SRC_APPLE_WATCH), "WATCH") && !strcmp(bc_src_name(0x55), "?"));
 }
 
+
+static void t_power(void)
+{
+    /* battery curve: estimate, monotonic, clamped */
+    CHECK(bc_batt_pct_from_mv(0) == -1 && bc_batt_pct_from_mv(3200) == 0 && bc_batt_pct_from_mv(3300) == 0 && bc_batt_pct_from_mv(4200) == 100 && bc_batt_pct_from_mv(4300) == 100);
+    CHECK(bc_batt_pct_from_mv(3800) == 50 && bc_batt_pct_from_mv(3700) == 30 && bc_batt_pct_from_mv(4100) == 90);
+    for (int mv = 3300; mv < 4200; mv += 10) CHECK(bc_batt_pct_from_mv(mv + 10) >= bc_batt_pct_from_mv(mv));
+
+    /* USB inference: 4.19 V for 30 s → likely; a drop back to 3.9 V ends it; +30 mV rise in 5 min → likely */
+    bc_usb_t u; bc_usb_reset(&u);
+    CHECK(!bc_usb_feed(&u, 4190, 1000));
+    CHECK(!bc_usb_feed(&u, 4190, 20000));
+    CHECK(bc_usb_feed(&u, 4190, 31500));
+    CHECK(!bc_usb_feed(&u, 3900, 40000));                        /* clear drop: no longer likely */
+    bc_usb_reset(&u);
+    CHECK(!bc_usb_feed(&u, 3800, 5000)); CHECK(!bc_usb_feed(&u, 3815, 60000)); CHECK(bc_usb_feed(&u, 3835, 120000));   /* rising on the bench */
+    bc_usb_reset(&u);
+    for (uint32_t t = 0; t < 600000; t += 5000) CHECK(!bc_usb_feed(&u, 3800 - (int)(t / 60000), t));   /* slow discharge never looks like USB */
+
+    /* low battery: levels rise at once, fall back only past 50 mV hysteresis */
+    bc_lowbat_t l; bc_lowbat_reset(&l);
+    CHECK(bc_lowbat_feed(&l, 3800) == BC_BAT_OK);
+    CHECK(bc_lowbat_feed(&l, 3550) == BC_BAT_LOW);
+    CHECK(bc_lowbat_feed(&l, 3580) == BC_BAT_LOW);               /* inside the band: stays */
+    CHECK(bc_lowbat_feed(&l, 3601) == BC_BAT_OK);                /* above threshold + 50: clears */
+    CHECK(bc_lowbat_feed(&l, 3340) == BC_BAT_CRITICAL);          /* jump straight to critical */
+    CHECK(bc_lowbat_feed(&l, 3390) == BC_BAT_CRITICAL);          /* sag recovery inside the band */
+    CHECK(bc_lowbat_feed(&l, 3401) == BC_BAT_VERY_LOW);
+    CHECK(bc_lowbat_feed(&l, 3700) == BC_BAT_OK);
+    CHECK(bc_lowbat_feed(&l, 0) == BC_BAT_OK);                   /* no reading: unchanged */
+    CHECK(!strcmp(bc_bat_level_name(BC_BAT_CRITICAL), "CRITICAL"));
+
+    /* triple tap: 3 quick taps fire once; 2 taps + late tap do not; a hold is not a tap */
+    bc_tap_t t; bc_tap_reset(&t); bool fired = false;
+    uint32_t ms = 1000;
+    for (int i = 0; i < 3; i++) { fired |= bc_tap_feed(&t, true, ms); ms += 80; bool f = bc_tap_feed(&t, false, ms); ms += 200; if (i < 2) CHECK(!f); else CHECK(f); }
+    CHECK(!bc_tap_feed(&t, false, ms + 100));                    /* no second firing */
+    bc_tap_reset(&t); ms = 5000;
+    bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); bc_tap_feed(&t, true, ms + 300); bc_tap_feed(&t, false, ms + 380);
+    bc_tap_feed(&t, true, ms + 1700); CHECK(!bc_tap_feed(&t, false, ms + 1780));   /* third tap too late: window restarts */
+    bc_tap_feed(&t, true, ms + 1900); CHECK(!bc_tap_feed(&t, false, ms + 1980));
+    bc_tap_feed(&t, true, ms + 2100); CHECK(bc_tap_feed(&t, false, ms + 2180));    /* ...and completes with two more */
+    bc_tap_reset(&t); ms = 9000;
+    bc_tap_feed(&t, true, ms); bc_tap_feed(&t, false, ms + 80); bc_tap_feed(&t, true, ms + 200); bc_tap_feed(&t, false, ms + 280);
+    bc_tap_feed(&t, true, ms + 400); CHECK(!bc_tap_feed(&t, false, ms + 1200));    /* long press cancels */
+    CHECK(t.n == 0);
+    /* single taps every 2 s for a minute: never fires */
+    bc_tap_reset(&t); fired = false; for (int i = 0; i < 30; i++) { fired |= bc_tap_feed(&t, true, 20000 + i * 2000); fired |= bc_tap_feed(&t, false, 20080 + i * 2000); } CHECK(!fired);
+
+    /* drain: 60 mV over 30 min riding, screen on → 120 mV/h; hours left from 3.80 V to 3.35 V = 3.75 h; nothing before 20 min */
+    bc_drain_t d; bc_drain_reset(&d);
+    int mv = 3800; uint32_t now = 0;
+    for (int i = 0; i <= 360; i++) { bc_drain_feed(&d, BC_MODE_RIDE_ON, mv, now, false); if (i == 120) CHECK(bc_drain_rate_mv_h(&d, BC_MODE_RIDE_ON) == -1); now += 5000; if (i % 30 == 29) mv -= 5; }
+    int r = bc_drain_rate_mv_h(&d, BC_MODE_RIDE_ON); CHECK(r >= 110 && r <= 130);
+    int hl = bc_drain_hours_left_x10(&d, BC_MODE_RIDE_ON, 3800); CHECK(hl >= 34 && hl <= 41);
+    CHECK(bc_drain_rate_mv_h(&d, BC_MODE_IDLE_ON) == -1 && bc_drain_hours_left_x10(&d, BC_MODE_IDLE_ON, 3800) == -1);
+    /* USB samples are ignored, voltage rising never counts as drain */
+    bc_drain_feed(&d, BC_MODE_RIDE_ON, 4190, now, true); now += 5000; bc_drain_feed(&d, BC_MODE_RIDE_ON, 4195, now, true);
+    CHECK(bc_drain_rate_mv_h(&d, BC_MODE_RIDE_ON) == r);
+    CHECK(!strcmp(bc_power_mode_name(BC_MODE_RIDE_OFF), "riding, screen off"));
+
+    /* profile: new power keys round-trip; an old 0.4.0 profile without them takes the defaults */
+    bc_profile_t p, q; bc_profile_defaults(&p);
+    CHECK(p.scr_timeout_s == 60 && p.auto_sleep_min == 10 && p.bat_protect == 0 && p.wake_on_cue);
+    p.scr_timeout_s = 300; p.auto_sleep_min = 0; p.bat_protect = 1; p.wake_on_cue = false;
+    char txt[1024]; CHECK(bc_profile_to_text(&p, txt, sizeof txt) > 0);
+    CHECK(bc_profile_from_text(&q, txt) && q.scr_timeout_s == 300 && q.auto_sleep_min == 0 && q.bat_protect == 1 && !q.wake_on_cue);
+    CHECK(bc_profile_from_text(&q, "format=bc-profile-1\nonboarded=1\nname=Rashed\nbrightness=70\n") && q.scr_timeout_s == 60 && q.auto_sleep_min == 10 && q.bat_protect == 0 && q.wake_on_cue && q.brightness == 70 && !strcmp(q.name, "Rashed"));
+    CHECK(bc_profile_from_text(&q, "scr_timeout_s=99999\nauto_sleep_min=999\nbat_protect=7\n") && q.scr_timeout_s == 3600 && q.auto_sleep_min == 240 && q.bat_protect == 1);
+}
+
 int main(void)
 {
-    t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link();
+    t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link(); t_power();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

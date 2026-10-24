@@ -180,6 +180,7 @@ static void build_pages(lv_obj_t *scr)
 static void panel_open(void) { lv_obj_remove_flag(r_panel, LV_OBJ_FLAG_HIDDEN); lv_obj_move_foreground(r_panel); }
 static void panel_close_cb(lv_event_t *e) { (void)e; lv_obj_add_flag(r_panel, LV_OBJ_FLAG_HIDDEN); }
 static void handle_cb(lv_event_t *e) { (void)e; panel_open(); }
+static void qs_cb(lv_event_t *e) { (void)e; lv_obj_add_flag(r_panel, LV_OBJ_FLAG_HIDDEN); ui_qs_open(); }
 static void pause_cb(lv_event_t *e) { (void)e; app_ride_pause(); }
 static void resume_cb(lv_event_t *e) { (void)e; app_ride_resume(); lv_obj_add_flag(r_panel, LV_OBJ_FLAG_HIDDEN); }
 static void end_cb(lv_event_t *e)
@@ -227,17 +228,22 @@ static void build_panel(lv_obj_t *scr)
     p_state = ui_label(r_panel, &lv_font_montserrat_12, C_MUT, ""); lv_obj_align(p_state, LV_ALIGN_TOP_MID, 0, 72);
     p_design = ui_pill(r_panel, "", C_PANEL, C_CYAN, 150, 28, design_cb, NULL);
     lv_obj_set_style_text_font(lv_obj_get_child(p_design, 0), &lv_font_montserrat_14, 0);
-    lv_obj_align(p_design, LV_ALIGN_TOP_MID, 0, 80);
-    p_pause = ui_hold_btn(r_panel, "HOLD: PAUSE", C_AMBER, C_INK, 168, 40, 1000, pause_cb, NULL);
-    lv_obj_align(p_pause, LV_ALIGN_TOP_MID, 0, 116);
-    p_resume = ui_pill(r_panel, LV_SYMBOL_PLAY " RESUME", C_GREEN, C_INK, 168, 44, resume_cb, NULL);
+    lv_obj_align(p_design, LV_ALIGN_TOP_MID, 0, 76);
+    /* ride controls stay first and unchanged: pause / resume / end (hold to confirm). Quick Settings is a plain button
+       below them and can never pause or end the ride. */
+    p_pause = ui_hold_btn(r_panel, "HOLD: PAUSE", C_AMBER, C_INK, 168, 38, 1000, pause_cb, NULL);
+    lv_obj_align(p_pause, LV_ALIGN_TOP_MID, 0, 108);
+    p_resume = ui_pill(r_panel, LV_SYMBOL_PLAY " RESUME", C_GREEN, C_INK, 168, 38, resume_cb, NULL);
     lv_obj_set_style_text_font(lv_obj_get_child(p_resume, 0), &lv_font_montserrat_20, 0);
-    lv_obj_align(p_resume, LV_ALIGN_TOP_MID, 0, 116);
-    lv_obj_t *end = ui_hold_btn(r_panel, "HOLD: END", C_RED, C_INK, 140, 38, 2000, end_cb, NULL);
-    lv_obj_align(end, LV_ALIGN_TOP_MID, 0, 160);
+    lv_obj_align(p_resume, LV_ALIGN_TOP_MID, 0, 108);
+    lv_obj_t *end = ui_hold_btn(r_panel, "HOLD: END", C_RED, C_INK, 140, 36, 2000, end_cb, NULL);
+    lv_obj_align(end, LV_ALIGN_TOP_MID, 0, 150);
+    lv_obj_t *qs = ui_pill(r_panel, LV_SYMBOL_SETTINGS " QUICK SET.", C_PANEL, C_CYAN, 98, 28, qs_cb, NULL);
+    lv_obj_set_style_text_font(lv_obj_get_child(qs, 0), &lv_font_montserrat_12, 0);
+    lv_obj_align(qs, LV_ALIGN_TOP_LEFT, 52, 188);
     lv_obj_t *x = ui_round_btn(r_panel, LV_SYMBOL_UP, C_PANEL, C_FG, 30, panel_close_cb, NULL);
     lv_obj_set_style_text_font(lv_obj_get_child(x, 0), &lv_font_montserrat_14, 0);
-    lv_obj_align(x, LV_ALIGN_TOP_MID, 0, 202);
+    lv_obj_align(x, LV_ALIGN_TOP_LEFT, 156, 187);
     lv_obj_add_flag(r_panel, LV_OBJ_FLAG_HIDDEN);
 }
 

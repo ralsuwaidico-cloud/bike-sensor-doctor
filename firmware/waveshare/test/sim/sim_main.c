@@ -50,10 +50,15 @@ static void read_cb(lv_indev_t *i, lv_indev_data_t *d)
 void sim_wifi_pump(void);
 static void run(int ms) { for (int t = 0; t < ms; t += 5) { g_sim.now_ms += 5; lv_timer_handler(); if (g_sim.now_ms % 100 == 0) sim_wifi_pump(); } }
 static void run_s(int s) { for (int i = 0; i < s; i++) run(1000); }
-static void tap(int x, int y) { ptr.x = x; ptr.y = y; ptr.down = true; run(80); ptr.down = false; run(150); }
-static void hold(int x, int y, int ms) { ptr.x = x; ptr.y = y; ptr.down = true; run(ms); ptr.down = false; run(150); }
+static void raw_tap(int x, int y) { ptr.x = x; ptr.y = y; ptr.down = true; run(80); ptr.down = false; run(150); }
+static int n_auto_wakes;
+/* a rider who finds the screen dark taps it three times before using it (0.5.0 screen-off); the harness does the same */
+static void wake_if_dark(void) { if (!app_power()->screen_on && !app_power()->asleep) { n_auto_wakes++; raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(300); } }
+static void tap(int x, int y) { wake_if_dark(); raw_tap(x, y); }
+static void hold(int x, int y, int ms) { wake_if_dark(); ptr.x = x; ptr.y = y; ptr.down = true; run(ms); ptr.down = false; run(150); }
 static void drag(int x0, int y0, int x1, int y1)
 {
+    wake_if_dark();
     ptr.x = x0; ptr.y = y0; ptr.down = true; run(30);
     for (int i = 1; i <= 10; i++) { ptr.x = x0 + (x1 - x0) * i / 10; ptr.y = y0 + (y1 - y0) * i / 10; run(15); }
     ptr.down = false; run(600);
@@ -93,7 +98,9 @@ static bool tap_text(const char *txt)
     lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
     if (!c) c = l;
     lv_area_t a; lv_obj_get_coords(c, &a);
-    /* tap the part that is actually visible (a row can be half scrolled out of its list) */
+    /* a row half scrolled out of its list: a rider scrolls it fully into view before tapping it */
+    { lv_area_t v = a; for (lv_obj_t *p = lv_obj_get_parent(c); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_intersect(&v, &v, &pa); }
+      if (lv_area_get_height(&v) < lv_area_get_height(&a)) { lv_obj_scroll_to_view_recursive(c, LV_ANIM_OFF); run(300); lv_obj_get_coords(c, &a); } }
     for (lv_obj_t *p = lv_obj_get_parent(c); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_intersect(&a, &a, &pa); }
     tap((a.x1 + a.x2) / 2, (a.y1 + a.y2) / 2);
     return true;
@@ -106,6 +113,8 @@ static bool hold_text(const char *txt, int ms)
     lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
     if (!c) c = l;
     lv_area_t a; lv_obj_get_coords(c, &a);
+    { lv_area_t v = a; for (lv_obj_t *p = lv_obj_get_parent(c); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_intersect(&v, &v, &pa); }
+      if (lv_area_get_height(&v) < lv_area_get_height(&a)) { lv_obj_scroll_to_view_recursive(c, LV_ANIM_OFF); run(300); lv_obj_get_coords(c, &a); } }
     for (lv_obj_t *p = lv_obj_get_parent(c); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_intersect(&a, &a, &pa); }
     hold((a.x1 + a.x2) / 2, (a.y1 + a.y2) / 2, ms);
     return true;
@@ -698,6 +707,140 @@ static void scenario(void)
         scroll_to("PHONE LINK: ON"); tap_text("PHONE LINK: ON"); run(300); CHECK(!app_profile()->phone_on && scroll_to("OFF"), "phone link switched off");
         scroll_to("PHONE LINK: OFF"); tap_text("PHONE LINK: OFF"); run(300); CHECK(app_profile()->phone_on, "and on again");
         shot("99_phone_after_forget");
+    }
+
+    printf("== 13 power: quick settings, screen off, triple tap, lock, timeouts, low battery, sleep, restart\n");
+    {
+        g_sim.battery_mv = 3800; g_sim.usb = false; g_sim.woke_from_sleep = false;
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile()->power.paired = true;
+        boot(); run_s(6);
+        const app_power_t *P = app_power();
+        CHECK(P->screen_on && !P->locked && P->mv == 3800 && P->pct == 50 && !P->usb_likely, "battery read: 3.80 V = ~50%% estimate (%d mV, %d%%)", P->mv, P->pct);
+        CHECK(on_screen("~50%"), "home shows the estimate with ~");
+        /* swipe down from the top edge opens Quick Settings on Home */
+        drag(120, 20, 120, 150); run(300);
+        CHECK(ui_qs_is_open() && on_screen("QUICK SETTINGS") && on_screen("Wi-Fi") && on_screen("Phone link"), "quick settings opened by a top-edge swipe");
+        shot("c0_quick_settings");
+        CHECK(!on_screen("harging"), "the word charging never appears");
+        /* brightness slider in the first row */
+        uint8_t b0 = app_profile()->brightness;
+        tap(140, 74); run(300);
+        CHECK(app_profile()->brightness != b0 && app_profile()->brightness >= 70 && g_sim.backlight == app_profile()->brightness, "brightness slider sets + applies (%u -> %u, backlight %d)", b0, app_profile()->brightness, g_sim.backlight);
+        /* Wi-Fi and phone toggles */
+        bool w0 = app_profile()->wifi_on; tap_text("Wi-Fi"); run(300); CHECK(app_profile()->wifi_on != w0, "wifi toggled from quick settings"); tap_text("Wi-Fi"); run(300); CHECK(app_profile()->wifi_on == w0, "and back");
+        bool p0 = app_profile()->phone_on; tap_text("Phone link"); run(300); CHECK(app_profile()->phone_on != p0 && g_sim.phone.enabled == app_profile()->phone_on, "phone link toggled (sensor BLE untouched)"); tap_text("Phone link"); run(300);
+        CHECK(g_sim.link[PLAT_SENS_POWER].link == PLAT_LINK_CONNECTED, "power meter link unaffected by the phone toggle");
+        scroll_to("Power settings"); shot("c1_quick_settings_bottom");
+        CHECK(scroll_to("Battery") && on_screen("est.") && scroll_to("Deep sleep") && scroll_to("HOLD: RESTART"), "battery row, sleep, restart present");
+        /* close by swipe up, by timeout, by the X */
+        drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "swipe up closes quick settings");
+        drag(120, 20, 120, 150); run(300); CHECK(ui_qs_is_open(), "reopen"); run_s(21); CHECK(!ui_qs_is_open(), "closes after 20 s");
+        drag(120, 20, 120, 150); run(300); tap(120, 202); run(300); CHECK(!ui_qs_is_open(), "X closes");
+        /* screen off: single and double taps do nothing, a triple tap wakes */
+        drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        CHECK(!P->screen_on && g_sim.backlight == 0 && g_sim.panel_asleep, "screen off: backlight 0, panel asleep");
+        shot("c2_screen_off");
+        raw_tap(120, 120); run(2000); CHECK(!P->screen_on, "one tap: still off");
+        raw_tap(120, 120); raw_tap(120, 120); run(2000); CHECK(!P->screen_on, "two taps: still off");
+        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(300);
+        CHECK(P->screen_on && g_sim.backlight == app_profile()->brightness && !g_sim.panel_asleep, "three taps: screen on, brightness restored");
+        CHECK(app_ride_state() == BC_RIDE_IDLE, "taps on the dark screen did not reach any button");
+        /* automatic timeout outside rides (60 s default), and the setting */
+        uint32_t offs = P->auto_offs; run_s(61); CHECK(!P->screen_on && P->auto_offs == offs + 1, "auto screen-off after 60 s idle");
+        ui_power_settings_show(); run(300);   /* (the harness wakes the screen with 3 taps first) */
+        shot("c9_power_settings");
+        CHECK(scroll_to("1 min") && scroll_to("alerts only") && scroll_to("never ended"), "power settings defaults"); scroll_to("Screen off after");
+        tap_text("Screen off after"); tap_text("Screen off after"); tap_text("Screen off after"); run(300);
+        CHECK(app_profile()->scr_timeout_s == 0 && on_screen("never"), "timeout cycles to never (%u)", app_profile()->scr_timeout_s);
+        ui_home_show(); run_s(130); CHECK(P->screen_on, "never: still on after 130 s");
+        ui_power_settings_show(); run(300); tap_text("Screen off after"); run(300); CHECK(app_profile()->scr_timeout_s == 30, "then 30 s");
+        ui_home_show(); run_s(32); CHECK(!P->screen_on, "off after 30 s"); 
+        ui_power_settings_show(); run(300); tap_text("Screen off after"); run(300); CHECK(app_profile()->scr_timeout_s == 60, "back to 1 min");
+        /* touch lock */
+        ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Touch lock"); tap_text("Touch lock"); run(300);
+        CHECK(P->locked && !ui_qs_is_open(), "locked");
+        shot("c3_locked");
+        tap_text("START RIDE"); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "locked: the start button does not react");
+        drag(120, 20, 120, 150); run(300); CHECK(!ui_qs_is_open(), "locked: no quick settings");
+        hold_text("HOLD 3 s", 1500); CHECK(P->locked, "a short hold does not unlock");
+        hold_text("HOLD 3 s", 3300); CHECK(!P->locked, "3 s hold unlocks");
+        /* low battery: alerts with hysteresis, never an automatic ride end */
+        g_sim.battery_mv = 3540; run_s(6);
+        CHECK(P->bat_level == BC_BAT_LOW && on_screen("BATTERY LOW"), "low battery alert at 3.54 V");
+        shot("c4_low_battery_toast");
+        g_sim.battery_mv = 3580; run_s(6); CHECK(P->bat_level == BC_BAT_LOW, "3.58 V: still LOW (hysteresis)");
+        g_sim.battery_mv = 3610; run_s(6); CHECK(P->bat_level == BC_BAT_OK, "3.61 V: back to OK");
+        g_sim.battery_mv = 3800; run_s(6);
+        tap_text("START RIDE"); run_s(5);
+        CHECK(app_ride_state() == BC_RIDE_RUNNING, "ride running at 3.80 V");
+        g_sim.battery_mv = 3340; run_s(12);
+        CHECK(app_ride_state() == BC_RIDE_RUNNING && P->bat_level == BC_BAT_CRITICAL && g_sim.deep_sleeps == 0, "critical voltage: alert only, ride NOT ended, no sleep (protection off by default)");
+        
+        g_sim.battery_mv = 3800; run_s(6);
+        /* screen off during the ride: recording and coaching continue, journal keeps growing */
+        int jl0 = count_lines("rides/active.jnl"); bc_ride_summary_t t0; app_ride_totals(&t0);
+        drag(120, 60, 120, 190); run(300); CHECK(on_screen("QUICK SET."), "ride controls carry a quick settings button");
+        shot("c5_ride_controls_qs");
+        tap_text("QUICK SET."); run(300); CHECK(ui_qs_is_open() && scroll_to("riding"), "quick settings in a ride: sleep greyed out");
+        shot("c5_ride_quick_settings");
+        CHECK(!app_power_sleep() && g_sim.deep_sleeps == 0 && app_ride_state() == BC_RIDE_RUNNING, "sleep refused while riding");
+        scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        CHECK(!P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "screen off during the ride");
+        run_s(30);
+        bc_ride_summary_t t1; app_ride_totals(&t1);
+        CHECK(t1.duration_s >= t0.duration_s + 30 && t1.power_s >= t0.power_s + 30 && count_lines("rides/active.jnl") >= jl0 + 25, "recording continued in the dark (%lu -> %lu s, journal %d -> %d lines)", (unsigned long)t0.duration_s, (unsigned long)t1.duration_s, jl0, count_lines("rides/active.jnl"));
+        CHECK(g_sim.phone.lives >= 0 && g_sim.backlight == 0, "backlight stayed off");
+        shot("c5_ride_screen_off");
+        /* coach warning wakes the screen for 5 s */
+        sensors(false, 0, false, 0, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_RETRY; run_s(7);
+        CHECK(P->screen_on && P->cue_wakes == 1, "NO SENSOR DATA warning woke the screen (%lu)", (unsigned long)P->cue_wakes);
+        shot("c5_ride_cue_wake");
+        run_s(6); CHECK(!P->screen_on, "and it went dark again after 5 s");
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; run_s(3);
+        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400); CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "triple tap wakes mid-ride");
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run(300);
+        /* deep sleep: page, hold, radios off, profile saved; the next boot is a wake */
+        ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); CHECK(ui_qs_is_open(), "qs open for sleep"); scroll_to("Deep sleep"); tap_text("Deep sleep"); run(300);
+        CHECK(on_screen("DEEP SLEEP") && on_screen("RESET") && scroll_to("not yet verified"), "sleep page explains recovery + unverified touch wake"); scroll_to("HOLD: DEEP SLEEP");
+        shot("c6_sleep_page");
+        int saves = g_sim.profile_saves; app_profile()->wifi_on = true; plat_wifi_set_enabled(true);
+        hold_text("HOLD: DEEP SLEEP", 1800); run(300);
+        CHECK(g_sim.deep_sleeps == 1 && P->asleep && g_sim.backlight == 0 && g_sim.panel_asleep && g_sim.profile_saves > saves, "deep sleep requested, profile saved, screen dark");
+        { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_OFF && app_profile()->wifi_on && !g_sim.phone.enabled, "radios off, wifi setting kept"); }
+        shot("c6_asleep");
+        g_sim.woke_from_sleep = true; g_sim.asleep = false; boot(); run(400);
+        CHECK(on_screen("START RIDE") && app_power()->woke_from_sleep && app_power()->screen_on && !strcmp(app_profile()->name, "Rashed"), "wake: home, profile intact");
+        { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state != PLAT_WIFI_OFF, "wifi back on after the wake"); }
+        g_sim.woke_from_sleep = false;
+        /* automatic deep sleep after idle time on battery */
+        ui_power_settings_show(); run(300); scroll_to("Auto deep sleep"); tap_text("Auto deep sleep"); tap_text("Auto deep sleep"); tap_text("Auto deep sleep"); run(300);
+        CHECK(app_profile()->auto_sleep_min == 5, "auto-sleep cycles 10 -> 30 -> off -> 5 (%u)", app_profile()->auto_sleep_min);
+        ui_home_show(); run_s(5 * 60 + 5);
+        CHECK(g_sim.deep_sleeps == 2 && app_power()->asleep, "auto deep sleep after 5 idle minutes on battery");
+        g_sim.asleep = false; boot(); run(400);
+        g_sim.battery_mv = 4190; run_s(40);
+        CHECK(app_power()->usb_likely && on_screen(LV_SYMBOL_USB), "4.19 V held 30 s: USB power likely");
+        shot("c7_home_usb_inferred");
+        ui_home_show(); run_s(5 * 60 + 5); CHECK(g_sim.deep_sleeps == 2, "no auto-sleep while USB power is likely");
+        app_profile()->auto_sleep_min = 10; app_profile_save(); tap(120, 30);   /* a touch on the status line: the idle timer restarts */
+        g_sim.battery_mv = 3800; run_s(6); CHECK(!app_power()->usb_likely && !app_power()->asleep, "drop to 3.80 V ends the inference");
+        /* restart from quick settings: profile saved, restart requested */
+        saves = g_sim.profile_saves; g_sim.restart_requested = false;
+        drag(120, 20, 120, 150); run(300); scroll_to("HOLD: RESTART"); hold_text("HOLD: RESTART", 1800); run(300);
+        CHECK(g_sim.restart_requested && g_sim.profile_saves > saves, "restart requested after saving");
+        /* protection setting + health page */
+        ui_power_settings_show(); run(300); scroll_to("Low batt."); tap_text("Low batt."); run(300);
+        CHECK(app_profile()->bat_protect == 1 && scroll_to("NOT VALIDATED"), "protection opt-in is labelled NOT VALIDATED");
+        shot("c9_power_settings_protect");
+        scroll_to("Low batt."); tap_text("Low batt."); run(300); CHECK(app_profile()->bat_protect == 0, "and off again");
+        /* settings round-trip across a restart */
+        app_profile()->scr_timeout_s = 120; app_profile()->wake_on_cue = false; app_profile_save(); boot();
+        CHECK(app_profile()->scr_timeout_s == 120 && !app_profile()->wake_on_cue && app_profile()->auto_sleep_min == 10 && app_profile()->bat_protect == 0, "power settings persist");
+        app_profile()->scr_timeout_s = 60; app_profile()->wake_on_cue = true; app_profile_save();
+        ui_health_show(); run(300); run_s(6);
+        CHECK(on_screen("estimate") && on_screen("Power source"), "device health shows the estimate and source");
+        shot("c8_health_power");
+        ui_settings_show(); run(300); scroll_to("Power"); shot("c8_settings_power_row");
     }
 
     printf("== 8 long name and edge cases\n");

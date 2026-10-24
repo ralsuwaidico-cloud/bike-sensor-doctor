@@ -23,10 +23,18 @@
 #include "esp_lcd_gc9a01.h"
 #include "esp_lcd_touch_cst816s.h"
 #include "esp_lvgl_port.h"
+#include "esp_sleep.h"
+#include "driver/gpio.h"
+#include "driver/rtc_io.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static const char *TAG = "hw";
 hw_selftest_t g_selftest;
 static i2c_master_bus_handle_t s_i2c;
+static esp_lcd_panel_handle_t s_panel;
+static esp_lcd_panel_io_handle_t s_panel_io;
+static esp_lcd_touch_handle_t s_tp;
 
 uint32_t hw_millis(void) { return (uint32_t)(esp_timer_get_time() / 1000); }
 
@@ -86,6 +94,7 @@ lv_display_t *hw_display_init(void)
         .flags = { .buff_dma = true, .swap_bytes = true },
     };
     lv_display_t *disp = lvgl_port_add_disp(&dcfg);
+    s_panel = panel; s_panel_io = io;
     hw_backlight_set(80);
     SET(display, disp ? HW_PASS : HW_FAIL, disp ? "GC9A01 240x240 @ %d MHz" : "init failed (%d MHz)", BOARD_LCD_PCLK_HZ / 1000000);
     return disp;
@@ -100,18 +109,26 @@ static void i2c_init(void)
     ESP_ERROR_CHECK(i2c_new_master_bus(&b, &s_i2c));
 }
 
-bool hw_touch_init(lv_display_t *disp)
+static esp_err_t touch_create(bool reset)
 {
     i2c_init();
     esp_lcd_panel_io_handle_t tio = NULL;
     esp_lcd_panel_io_i2c_config_t tcfg = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
     tcfg.scl_speed_hz = 400000;
-    if (esp_lcd_new_panel_io_i2c(s_i2c, &tcfg, &tio) != ESP_OK) { SET(touch, HW_FAIL, "I2C IO failed"); return false; }
-    esp_lcd_touch_config_t cfg = { .x_max = BOARD_LCD_W, .y_max = BOARD_LCD_H, .rst_gpio_num = BOARD_TP_RST, .int_gpio_num = BOARD_TP_INT,
+    esp_err_t e = esp_lcd_new_panel_io_i2c(s_i2c, &tcfg, &tio);
+    if (e != ESP_OK) return e;
+    esp_lcd_touch_config_t cfg = { .x_max = BOARD_LCD_W, .y_max = BOARD_LCD_H, .rst_gpio_num = reset ? BOARD_TP_RST : -1, .int_gpio_num = BOARD_TP_INT,
                                    .levels = { .reset = 0, .interrupt = 0 }, .flags = { .swap_xy = 0, .mirror_x = 0, .mirror_y = 0 } };
-    esp_lcd_touch_handle_t tp = NULL;
-    esp_err_t e = esp_lcd_touch_new_i2c_cst816s(tio, &cfg, &tp);
-    if (e != ESP_OK || !tp) { SET(touch, HW_FAIL, "CST816S not found (%s)", esp_err_to_name(e)); return false; }
+    return esp_lcd_touch_new_i2c_cst816s(tio, &cfg, &s_tp);
+}
+
+bool hw_touch_init(lv_display_t *disp)
+{
+    if (!s_tp) {                                       /* after a wake the check below may already have created it */
+        esp_err_t e = touch_create(true);
+        if (e != ESP_OK || !s_tp) { SET(touch, HW_FAIL, "CST816S not found (%s)", esp_err_to_name(e)); return false; }
+    }
+    esp_lcd_touch_handle_t tp = s_tp;
     lvgl_port_touch_cfg_t lt = { .disp = disp, .handle = tp };
     lvgl_port_add_touch(&lt);
     SET(touch, HW_PASS, "CST816S ready");
@@ -132,6 +149,57 @@ static void imu_check(void)
         if (e == ESP_OK) { SET(imu, who == 0x05 ? HW_PASS : HW_INFO, "QMI8658 @0x%02X WHO_AM_I=0x%02X", addrs[i], who); return; }
     }
     SET(imu, HW_FAIL, "QMI8658 not answering at 0x6B/0x6A");
+}
+
+/* ------------------------------------------------------------------ power (0.5.0) — not yet verified on the device */
+void hw_panel_sleep(bool sleep)
+{
+    if (!s_panel || !s_panel_io) return;
+    if (sleep) {
+        esp_lcd_panel_disp_on_off(s_panel, false);
+        esp_lcd_panel_io_tx_param(s_panel_io, 0x10, NULL, 0);          /* SLPIN */
+    } else {
+        esp_lcd_panel_io_tx_param(s_panel_io, 0x11, NULL, 0);          /* SLPOUT: the controller needs 120 ms before display-on */
+        vTaskDelay(pdMS_TO_TICKS(120));
+        esp_lcd_panel_disp_on_off(s_panel, true);
+    }
+}
+
+void hw_deep_sleep_touch_wake(void)
+{
+    ESP_LOGI(TAG, "deep sleep: wake on touch (GPIO%d low), RESET or USB", BOARD_TP_INT);
+    /* backlight hard off and held through sleep (the FET gate must not float high) */
+    ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+    gpio_reset_pin(BOARD_LCD_BL); gpio_set_direction(BOARD_LCD_BL, GPIO_MODE_OUTPUT); gpio_set_level(BOARD_LCD_BL, 0);
+    gpio_hold_en(BOARD_LCD_BL);
+    /* touch controller stays powered and out of reset so a finger pulls TP_INT low */
+    gpio_reset_pin(BOARD_TP_RST); gpio_set_direction(BOARD_TP_RST, GPIO_MODE_OUTPUT); gpio_set_level(BOARD_TP_RST, 1);
+    gpio_hold_en(BOARD_TP_RST);
+    gpio_deep_sleep_hold_en();
+    rtc_gpio_init(BOARD_TP_INT); rtc_gpio_set_direction(BOARD_TP_INT, RTC_GPIO_MODE_INPUT_ONLY);
+    rtc_gpio_pullup_en(BOARD_TP_INT); rtc_gpio_pulldown_dis(BOARD_TP_INT);
+    esp_sleep_enable_ext0_wakeup(BOARD_TP_INT, 0);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    esp_deep_sleep_start();
+}
+
+bool hw_wake_tap_check(void)
+{
+    gpio_deep_sleep_hold_dis(); gpio_hold_dis(BOARD_LCD_BL); gpio_hold_dis(BOARD_TP_RST);
+    rtc_gpio_deinit(BOARD_TP_INT);
+    if (touch_create(false) != ESP_OK || !s_tp) { ESP_LOGW(TAG, "wake check: touch not reachable, staying awake"); return true; }
+    int taps = 1, pressed_n = 0; bool down = false;   /* the touch that woke the chip is tap 1 */
+    uint32_t t0 = hw_millis();
+    while (hw_millis() - t0 < 1500) {
+        esp_lcd_touch_read_data(s_tp);
+        uint16_t x, y, st; uint8_t n = 0;
+        bool p = esp_lcd_touch_get_coordinates(s_tp, &x, &y, &st, &n, 1) && n > 0;
+        if (p && !down) { down = true; pressed_n++; }
+        else if (!p && down) { down = false; taps++; if (taps >= 3) { ESP_LOGI(TAG, "wake check: 3 taps in %lu ms", (unsigned long)(hw_millis() - t0)); return true; } }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    ESP_LOGI(TAG, "wake check: %d tap(s) only (%d presses) - back to sleep", taps, pressed_n);
+    return false;
 }
 
 /* ------------------------------------------------------------------ battery */

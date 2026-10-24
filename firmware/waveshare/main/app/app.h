@@ -63,6 +63,9 @@ bool app_take_recovered(bc_ride_summary_t *out);
 /* phone link: pending pairing code (0 = none) for the pop-up, and the current phone status */
 uint32_t app_phone_passkey(void);
 
+/* write any buffered journal seconds to flash now (power actions, low battery) */
+void app_journal_flush(void);
+
 /* health line for the serial log (memory etc. come from the platform) */
 void app_health_line(char *buf, size_t cap);
 

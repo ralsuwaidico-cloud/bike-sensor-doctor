@@ -263,6 +263,7 @@ void ui_recovered_show(const bc_ride_summary_t *s)
 void ui_start(void)
 {
     bc_ride_summary_t s;
+    ui_power_init();
     if (!app_profile()->onboarded) ui_onboard_start();
     else if (app_take_recovered(&s)) ui_recovered_show(&s);
     else ui_home_show();

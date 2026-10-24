@@ -19,6 +19,7 @@
 #include "esp_timer.h"
 #include "ble_central.h"
 #include "hw.h"
+#include "bc_power.h"
 
 static const char *TAG = "plat";
 static uint32_t s_storage_errors, s_profile_errors;
@@ -113,18 +114,21 @@ int plat_battery_mv(void)
     }
     return s_mv;
 }
-int plat_battery_pct(void)
-{
-    static const int MV[] = { 3300, 3500, 3600, 3700, 3800, 3900, 4000, 4100, 4200 }, PCT[] = { 0, 5, 15, 30, 50, 65, 80, 90, 100 };
-    int mv = plat_battery_mv(); if (mv < 0) return -1;
-    if (mv <= MV[0]) return 0;
-    for (int i = 1; i < 9; i++) if (mv <= MV[i]) return PCT[i - 1] + (PCT[i] - PCT[i - 1]) * (mv - MV[i - 1]) / (MV[i] - MV[i - 1]);
-    return 100;
-}
-/* The board has no charge-status line wired to the ESP32: above 4.25 V we assume USB power without a (full) battery. */
+int plat_battery_pct(void) { return bc_batt_pct_from_mv(plat_battery_mv()); }   /* ESTIMATE from the cell voltage */
+/* The board has no charge-status or VBUS line wired to the ESP32: above 4.25 V the reading cannot be a battery at all.
+   The app's inference (app_power / bc_usb_feed) is what the screens show as "USB power likely". */
 bool plat_usb_power(void) { return plat_battery_mv() > 4250; }
 
-void plat_backlight(int pct) { hw_backlight_set(pct < 5 ? 5 : pct); }
+void plat_backlight(int pct) { hw_backlight_set(pct <= 0 ? 0 : pct < 5 ? 5 : pct); }
+void plat_panel_sleep(bool sleep) { hw_panel_sleep(sleep); }
+void plat_deep_sleep(void)
+{
+    esp_wifi_stop();                                   /* harmless when the radio was never started */
+    vTaskDelay(pdMS_TO_TICKS(100));                    /* let the last log lines and NVS commits finish */
+    hw_deep_sleep_touch_wake();                        /* never returns */
+}
+bool plat_woke_from_sleep(void) { return esp_reset_reason() == ESP_RST_DEEPSLEEP; }
+uint32_t plat_uptime_s(void) { return (uint32_t)(esp_timer_get_time() / 1000000); }
 
 const char *plat_fw_version(void) { return esp_app_get_description()->version; }
 const char *plat_reset_reason(void)
@@ -132,7 +136,7 @@ const char *plat_reset_reason(void)
     switch (esp_reset_reason()) {
     case ESP_RST_POWERON: return "power-on"; case ESP_RST_SW: return "software"; case ESP_RST_PANIC: return "crash";
     case ESP_RST_INT_WDT: case ESP_RST_TASK_WDT: case ESP_RST_WDT: return "watchdog"; case ESP_RST_BROWNOUT: return "brownout";
-    case ESP_RST_USB: return "USB"; default: return "other";
+    case ESP_RST_USB: return "USB"; case ESP_RST_DEEPSLEEP: return "sleep wake"; default: return "other";
     }
 }
 uint32_t plat_boot_count(void) { return g_selftest.boot_count; }

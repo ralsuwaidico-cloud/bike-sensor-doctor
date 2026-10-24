@@ -1,0 +1,55 @@
+BIKE COMPUTER - FIRMWARE 0.5.0 (POWER) - HARDWARE TEST, ONE STEP AT A TIME
+==========================================================================
+Everything below was proven only in the PC simulator (130 screens, 186 checks) and the host unit tests.
+NOTHING here is hardware-verified until you tick it. Record PASS / FAIL / NOT TESTED for each step.
+Keep the battery as it is (connected). USB charging with the 500 mAh cell is NOT verified safe (risk HW-1):
+do not leave the board on USB unattended for hours during these tests.
+
+Recovery at any time: press RESET (side button) -> the board restarts into Home. If the screen stays dark after
+RESET, run ROLLBACK-TO-v040.bat. Your settings and rides are kept by every step below.
+
+P0  Install        INSTALL-v0.5.0.bat. Expect: backup verified "firmware 0.4.0", type YES, "INSTALLED. 2 regions".
+                   Board restarts into Home with "Hi Rashed". Settings > bottom shows "firmware 0.5.0".        [ ]
+P1  Data kept      Home shows your FTP; History shows the same rides as before; Sensors shows the XDS paired.   [ ]
+P2  Battery est.   Home top line shows a battery icon with "~NN%" (the ~ means estimate). Settings > Power
+                   shows "x.xx V ~NN% est." and "hours left: after 20 min".                                     [ ]
+P3  Quick Settings Swipe DOWN starting from the very top edge of Home. The QUICK SETTINGS list appears.
+                   Swipe UP from the bottom (or tap the ^ button) closes it. Leave it open 20 s: closes itself.  [ ]
+P4  Brightness     Quick Settings slider: drag left/right -> backlight changes at once; value kept after RESET. [ ]
+P5  Wi-Fi/Phone    Quick Settings "Wi-Fi" and "Phone link" rows toggle; Settings shows the same state.
+                   While toggling the phone link the XDS stays CONNECTED on the Sensors page.                  [ ]
+P6  Screen off     Quick Settings > Screen off. Backlight off, panel dark. Tap once: stays dark. Tap twice:
+                   stays dark. Tap 3 times quickly (within 1.5 s): screen back on at your brightness.           [ ]
+P7  Auto timeout   On Home do nothing for 60 s: screen goes dark by itself. 3 taps wake it. Settings > Power >
+                   "Screen off after" cycles 30 s / 1 / 2 / 5 min / never.                                      [ ]
+P8  Touch lock     Quick Settings > Touch lock. Tap START RIDE: nothing happens. Hold the "HOLD 3 s TO UNLOCK"
+                   button 3 s: unlocked.                                                                          [ ]
+P9  Ride + dark    Pedal the XDS, START RIDE, swipe down (ride controls) > QUICK SET. > Screen off. Keep
+                   pedalling 1 minute in the dark. 3 taps: ride time advanced by ~1 min, watts live, not paused.
+                   On the phone (if connected) the live watts kept flowing while the screen was dark.          [ ]
+P10 Wake on cue    Ride, screen off, stop pedalling / let the meter sleep: after ~5 s the screen wakes with
+                   NO SENSOR DATA for 5 s, then goes dark again (Settings > Power > Wake on warning).            [ ]
+P11 Sleep guard    During a ride open Quick Settings: "Deep sleep" row greyed out ("riding"). HOLD: END the ride,
+                   SAVE. Ride is in History with the right duration.                                             [ ]
+P12 Deep sleep     Home > swipe down > Deep sleep > read the page > HOLD: DEEP SLEEP. Screen off, board silent.
+                   a) Tap once: should stay asleep (chip wakes <2 s, no 3 taps, back to sleep). PASS/FAIL/UNSURE
+                   b) Tap 3 times within 1.5 s: board boots to Home (3-5 s).                       <-- NOT YET VERIFIED
+                   c) If (b) fails: press RESET -> board boots to Home (the documented fallback).               [ ]
+P13 Settings kept  After the wake: name, FTP, pairing, Wi-Fi setting, brightness, History all unchanged.        [ ]
+P14 Auto sleep     Unplug USB (battery only), do nothing for 10 min on Home: board goes to deep sleep by itself.
+                   Wake with 3 taps or RESET. (Settings > Power > Auto deep sleep: off / 5 / 10 / 30 min.)      [ ]
+P15 USB inference  Plug USB. Within ~30 s the battery icon changes to the USB symbol; Settings > Power says
+                   "USB power likely (inferred)". Nothing says "charging".                                      [ ]
+P16 Low battery    (only if the cell is already low) at about 3.55 V an amber toast "BATTERY LOW ~NN%" shows for
+                   4 s; the ride is never paused or ended by itself. Settings > Power > Low batt. stays
+                   "alerts only" (do NOT switch to auto-save: not validated).                                    [ ]
+P17 Restart        Quick Settings > HOLD: RESTART -> board restarts to Home; settings and rides intact.         [ ]
+P18 Health         Settings > Diagnostics > Device Health: lines "Battery ... (estimate)", "Power source",
+                   "Drain idle/ride/ride dark", "Hours left", "Screen N offs, N wakes". SEND LOG TO PC works.    [ ]
+P19 Consumption    Battery only, screen on, idle 30 min; then screen off (ride) 30 min: Device Health shows
+                   mV/h for each mode and "about N h left (estimate)". Write both numbers down.                 [ ]
+P20 Regression     0.4.0 checks still pass: XDS watts/cadence, phone pairing + live data, Wi-Fi join, coaching
+                   cues, ride screens A/B/C, history detail, recovered ride after RESET mid-ride.               [ ]
+
+Report back the list with PASS / FAIL / NOT TESTED and the P19 numbers. P12 (b) decides whether touch wake is
+marked verified in HW_RISK_REGISTER.md (HW-5).

@@ -1,0 +1,9 @@
+# Hardware risk register — BikeComputer (Waveshare ESP32-S3-Touch-LCD-1.28-B)
+
+| # | Risk | Status | Detail | Mitigation / decision |
+|---|---|---|---|---|
+| HW-1 | **USB-C charging current exceeds the battery rating** | OPEN — charging with this battery is **not verified safe** | Charger ETA6096 with R15 = 160 kΩ (schematic Rev3) sets ≈1 A fast charge. Fitted cell: HXJNLDC 503030, 500 mAh, max charge 0.5 A (seller spec). 1 A ≈ 2 C. Firmware cannot change the current (no STAT/ISET control). Pre-charge 200 mA and termination 130 mA are fixed in the chip. | Guide prepared for replacing R15 with 470 kΩ (predicted 340–380 mA), including before/after battery-lead measurements (not USB current). Rashed decided on 24 Oct 2026 to defer the hardware change; the battery remains connected and powers the device. Firmware never shows "charging" as a confirmed state and labels the percentage as an estimate. Re-open when the modification is scheduled. |
+| HW-2 | No charge-status or VBUS sense to the ESP32 | ACCEPTED | STAT pin not routed; no VBUS net to a GPIO. | Firmware infers "USB power likely" from voltage only and says so. |
+| HW-3 | No true power-off | ACCEPTED | No power switch, charger/regulator always on. | Deep sleep is the lowest state; UI labels it "Deep sleep (lowest power)" with recovery instructions. |
+| HW-4 | Deep-sleep current unknown | OPEN | Board figure unpublished. | Measure by voltage slope once 0.5.0 is on hardware. |
+| HW-5 | Touch wake from deep sleep untested on hardware | OPEN — implemented in 0.5.0, simulator-tested only | GPIO5 (TP_INT) is RTC-capable (ext0, low); TP_RST GPIO13 and backlight GPIO2 held through sleep; boot STAGE 0 polls the CST816S for 3 taps ≤ 1.5 s, else back to sleep. | RESET and USB plug remain as wake fallbacks and the Deep-sleep page says so. Verify with POWER-TEST-v0.5.0.txt step P12 before relying on it; HW-4 (sleep current) is measured in the same session. |

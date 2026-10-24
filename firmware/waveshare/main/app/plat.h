@@ -66,10 +66,17 @@ long plat_file_size(const char *path);                                  /* -1 if
 bool plat_storage_ok(void);
 
 /* device */
-int plat_battery_pct(void);            /* -1 unknown */
-int plat_battery_mv(void);
-bool plat_usb_power(void);             /* best guess: voltage above full-charge level */
-void plat_backlight(int pct);
+int plat_battery_pct(void);            /* -1 unknown; an ESTIMATE from the cell voltage (bc_batt_pct_from_mv) */
+int plat_battery_mv(void);             /* filtered measurement, -1 unknown */
+bool plat_usb_power(void);             /* raw hint only: voltage above any battery level (> 4.25 V). The app's inference (app_power) is what screens show */
+void plat_backlight(int pct);          /* 0 = off (screen-off mode), 5..100 = brightness */
+/* ---- power (firmware 0.5.0). The board has no power switch, no charge-status line and no VBUS sense; see docs/POWER_FEASIBILITY.md. */
+void plat_panel_sleep(bool sleep);     /* display controller sleep-in / wake (backlight is separate) */
+/** Deep sleep with touch wake (TP_INT, GPIO5) + RESET + USB. Does not return on the device; the host harness records it
+ *  and the next sim boot() plays the wake. NOT hardware-verified until the 0.5.0 device tests. */
+void plat_deep_sleep(void);
+bool plat_woke_from_sleep(void);       /* this boot is a wake from deep sleep (the chip, not necessarily a confirmed triple tap) */
+uint32_t plat_uptime_s(void);
 /* ---- Wi-Fi manager (optional; the device is fully usable offline). Every call returns at once: the work happens in
  * a background task, the UI polls plat_wifi_status(). During a ride the manager never scans or retries on its own. */
 typedef enum { PLAT_WIFI_OFF = 0, PLAT_WIFI_IDLE, PLAT_WIFI_SCANNING, PLAT_WIFI_CONNECTING, PLAT_WIFI_CONNECTED, PLAT_WIFI_FAILED } plat_wifi_state_t;

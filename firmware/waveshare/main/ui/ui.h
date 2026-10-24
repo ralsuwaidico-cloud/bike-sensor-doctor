@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include "lvgl.h"
 #include "app.h"
+#include "app_power.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -116,6 +117,16 @@ void ui_diag_menu_show(void);
 void ui_wifi_show(void);
 void ui_phone_show(void);
 void ui_passkey_refresh(void);   /* pairing-code pop-up on any screen */
+
+/* power (0.5.0): Quick Settings over any screen, screen-off/lock shield, Power settings page */
+void ui_power_init(void);                 /* once at ui_start (re-run after a simulated restart) */
+void ui_power_refresh(void);              /* from the 250 ms UI timer */
+void ui_power_attach_screen(lv_obj_t *scr, ui_scr_t kind);   /* top-edge swipe-down opens Quick Settings on non-ride screens */
+void ui_power_gesture(lv_dir_t d);
+void ui_qs_open(void);
+void ui_qs_close(void);
+bool ui_qs_is_open(void);
+void ui_power_settings_show(void);
 
 /* test hooks */
 void ui_test_set_style(int style);

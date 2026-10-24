@@ -23,7 +23,9 @@ static void refresh_cb(lv_timer_t *t)
 {
     (void)t;
     app_tick();
-    if (s_update) s_update();
+    ui_power_refresh();
+    if (app_power()->asleep) return;                 /* harness only: the device never returns from deep sleep */
+    if (s_update && app_power()->screen_on) s_update();   /* screen off: app and recording run, widgets are not redrawn */
     ui_demo_badge_refresh();
     ui_passkey_refresh();
 }
@@ -45,6 +47,7 @@ lv_obj_t *ui_screen_new(ui_scr_t kind, ui_update_cb_t update)
     lv_obj_remove_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
     for (int i = 0; i < 6; i++) if (!s_tab[i].scr) { s_tab[i].scr = scr; s_tab[i].kind = kind; s_tab[i].update = update; break; }
     lv_obj_add_event_cb(scr, scr_deleted, LV_EVENT_DELETE, NULL);
+    ui_power_attach_screen(scr, kind);
     return scr;
 }
 
@@ -90,7 +93,8 @@ static void style_btn(lv_obj_t *b, lv_color_t bg, int radius)
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(b, radius, 0);
     lv_obj_set_style_bg_color(b, lv_color_mix(bg, lv_color_white(), 200), LV_STATE_PRESSED);
-    lv_obj_set_style_transform_scale(b, 245, LV_STATE_PRESSED);
+    /* no transform on press: a scaled object makes LVGL render it through a 32-bit layer (~28 KB for a list row), which
+       on top of the ride screen + Quick Settings pushed the LVGL heap past 90 % (measured in test/sim, 0.5.0) */
     lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_remove_flag(b, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(b, LV_OBJ_FLAG_GESTURE_BUBBLE);
@@ -316,10 +320,12 @@ const char *ui_cue_short(const bc_cue_t *c)
 
 void ui_battery_text(char *buf, size_t cap)
 {
-    int pct = plat_battery_pct();
-    if (plat_usb_power()) snprintf(buf, cap, LV_SYMBOL_USB);
+    /* the percentage is an ESTIMATE from the voltage ("~"); "USB" is an inference, never a charging claim */
+    const app_power_t *P = app_power();
+    int pct = P->pct;
+    if (P->usb_likely) snprintf(buf, cap, LV_SYMBOL_USB);
     else if (pct < 0) snprintf(buf, cap, LV_SYMBOL_BATTERY_EMPTY " ?");
-    else snprintf(buf, cap, "%s %d%%", pct > 75 ? LV_SYMBOL_BATTERY_FULL : pct > 50 ? LV_SYMBOL_BATTERY_3 : pct > 25 ? LV_SYMBOL_BATTERY_2 :
+    else snprintf(buf, cap, "%s ~%d%%", pct > 75 ? LV_SYMBOL_BATTERY_FULL : pct > 50 ? LV_SYMBOL_BATTERY_3 : pct > 25 ? LV_SYMBOL_BATTERY_2 :
                   pct > 10 ? LV_SYMBOL_BATTERY_1 : LV_SYMBOL_BATTERY_EMPTY, pct);
 }
 
