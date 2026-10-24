@@ -1,0 +1,160 @@
+=== test: errors / failures ===
+GatherProvisioningInputs
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift:168:5: error: property wrapper can only apply to a single variable
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift:168:5: error: property wrapper can only apply to a single variable
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift:168:5: error: property wrapper can only apply to a single variable
+Testing failed:
+	Testing cancelled because the build failed.
+** TEST FAILED **
+The following build commands failed:
+=== test: last 150 lines ===
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/dnssd-ADI1EP21JY0T7XPB85BID4OJU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/XPC-55NK3COZI48F3N2K2V8KFWCC1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreGraphics-BLKTZREZS9TJL5Y3Y0V3MUFRO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CFNetwork-2GF6GF914KIFQ38MZKXVA3J7I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Security-95EHSFZOAPJ358UFK25YA3AQD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreText-4EBQHS853T98K6ZTQTFX16U9I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/ImageIO-1E2X9DD074CC95S3HN9D1IL5U.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Foundation-1PTEE9RGH68MBUWZNWKWC193Z.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/os-7HEU2P5Q9W31LMJ19ZXYYVXSS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/UIUtilities-DXFEK0IECSX8PAMNU2S9G0GGX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreBluetooth-4E73U6G5TED7JOL8I20K3L9LS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/DataDetection-6SYUEZOG1HRAXQ176ZCACSYXQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Accessibility-6RYZQOEO1N4UXHKDPKMT1D45A.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/WatchConnectivity-E6U8738L5J2XRV8PH9PBQQZGB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/OpenGLES-4NKEV3L6CLUARBBYKZS70K8V.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/UniformTypeIdentifiers-47LTBOG29G6NM2EM2NGT5R1T6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreData-8LDZC0X103VE8R8OBZTLG3OUC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/_LocationEssentials-6SZUXY6WL6IEM2CZVO7IXRBS0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/HealthKit-12DCPK89A2V30HKDQD3U109ZY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreLocation-D6RCRQPC3SQ66OKL5NCC8WD0J.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Symbols-9GQ0YDSHLIVN04OWAYR6HDOHL.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/FileProvider-EV22JPVA1HLL2AQ1VKDPT5ACG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/UserNotifications-7P7MEL69A4HM1XOO31HBWLEPC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/LocalAuthentication-DA3J9OLSV7OZG03PLFOVSPCLE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreTransferable-ATYR50YZ8UXEMVZ0C414V2ATZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/OSLog-JELT6ZLAXSAQA917ROMIQAQD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/IOSurface-97KA04QGQHV850AXUA05LMB58.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Network-3QROYKFIEUE3JVAFUBCFX7VVQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Metal-CLJRFHE5G9CUUKBMXC13CSYDO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreVideo-4QFECY7SPZQ1AQJAIUXCZ4GFZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/QuartzCore-66AHQ13MM6PSTBWUZAIY7XCW9.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/CoreImage-2XOWYSEH6N8WXT2PHC5R1THSB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/SwiftUICore-4XCD93VCTZTA0381JBAMF03NF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/UIKit-CVDQ4ZFZ3C09E3QHZA1IQWWUB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/MapKit-B0VWI7SEQ87L2GBGOHQUXNLQZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/AuthenticationServices-AH50H1KZ1S24JLPFDKQ4W19E8.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/SwiftUI-21HO5GXGWMPI9BSAIULZAIM08.pcm
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ BikeComputer (in target 'BikeComputer' from project 'BikeComputer')
+Failed frontend command:
+/Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -emit-module -experimental-skip-non-inlinable-function-bodies-without-types /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/AppInfo.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/BCLink.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/BikeComputerApp.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/CoachCore.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Connections.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ConnectionsView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ContentView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/DeviceLink.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/DeviceSettingsView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/HomeView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/LocationService.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Models.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/OnboardingView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/PlanView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Planning.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileSync.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProgressView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideDashboard.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideRecorder.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Theme.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WatchLink.swift /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/GeneratedAssetSymbols.swift -target arm64-apple-ios17.0-simulator -module-can-import-version DeveloperToolsSupport 23.40.26 23.40.26 -disable-cross-import-overlay-search -swift-module-cross-import AuthenticationServices /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/System/Cryptexes/OS/System/Library/Frameworks/AuthenticationServices.framework/Modules/AuthenticationServices.swiftcrossimport/SwiftUI.swiftoverlay -swift-module-cross-import AuthenticationServices /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/System/Library/Frameworks/AuthenticationServices.framework/Modules/AuthenticationServices.swiftcrossimport/SwiftUI.swiftoverlay -swift-module-cross-import MapKit /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/System/Library/Frameworks/MapKit.framework/Modules/MapKit.swiftcrossimport/SwiftUI.swiftoverlay -load-resolved-plugin /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libFoundationMacros.dylib\#/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#FoundationMacros -load-resolved-plugin /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libObservationMacros.dylib\#/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#ObservationMacros -load-resolved-plugin /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libPreviewsMacros.dylib\#/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#PreviewsMacros -load-resolved-plugin /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftMacros.dylib\#/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftMacros -load-resolved-plugin /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftUIMacros.dylib\#/Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftUIMacros -disable-implicit-swift-modules -Xcc -fno-implicit-modules -Xcc -fno-implicit-module-maps -explicit-swift-module-map-file /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-dependencies-1.json -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -I /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -F /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -no-color-diagnostics -Xcc -fno-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=4 -module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -swift-version 5 -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios -enable-anonymous-context-mangled-names -file-compilation-dir /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -Xcc -ivfsstatcache -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-688ef53f1462e2c8f657fdc38a81448ff45c64a1807a658693f2a61704f17a36.sdkstatcache -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-generated-files.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-own-target-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-project-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources -Xcc -DDEBUG\=1 -no-auto-bridging-header-chaining -module-name BikeComputer -frontend-parseable-output -disable-clang-spi -clang-target arm64-apple-ios26.5-simulator -target-sdk-version 26.5 -target-sdk-name iphonesimulator26.5 -in-process-plugin-server-path /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -emit-module-doc-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftdoc -emit-module-source-info-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftsourceinfo -emit-objc-header-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-Swift.h -serialize-diagnostics-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-primary-emit-module.dia -emit-dependencies-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-primary-emit-module.d -o /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftmodule -emit-abi-descriptor-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.abi.json
+
+EmitSwiftModule normal arm64 (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/PlanView.swift:177:1: warning: extension declares a conformance of imported type 'Date' to imported protocol 'Identifiable'; this will not behave correctly if the owners of 'Foundation' introduce this conformance in the future
+extension Date: Identifiable { public var id: TimeInterval { timeIntervalSince1970 } }
+^
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/PlanView.swift:177:1: note: add '@retroactive' to silence this warning
+extension Date: Identifiable { public var id: TimeInterval { timeIntervalSince1970 } }
+^               ~~~~~~~~~~~~
+                @retroactive Identifiable
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift:168:5: error: property wrapper can only apply to a single variable
+    @State private var rest = "", maxHR = "", lthr = ""
+    ^
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift:168:5: error: property wrapper can only apply to a single variable
+    @State private var rest = "", maxHR = "", lthr = ""
+    ^
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift:168:5: error: property wrapper can only apply to a single variable
+    @State private var rest = "", maxHR = "", lthr = ""
+    ^
+
+SwiftCompile normal arm64 Compiling\ AppInfo.swift,\ BCLink.swift,\ BikeComputerApp.swift,\ CoachCore.swift,\ Connections.swift,\ ConnectionsView.swift,\ ContentView.swift,\ DeviceLink.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/AppInfo.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/BCLink.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/BikeComputerApp.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/CoachCore.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Connections.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ConnectionsView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ContentView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/DeviceLink.swift (in target 'BikeComputer' from project 'BikeComputer')
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/AppInfo.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/BCLink.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/BikeComputerApp.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Shared/CoachCore.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Connections.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ConnectionsView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ContentView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/DeviceLink.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 Compiling\ ProfileView.swift,\ ProgressView.swift,\ RideDashboard.swift,\ RideRecorder.swift,\ RideView.swift,\ Theme.swift,\ WatchLink.swift,\ GeneratedAssetSymbols.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProgressView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideDashboard.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideRecorder.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Theme.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WatchLink.swift /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'BikeComputer' from project 'BikeComputer')
+
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/tests.xcresult
+
+Testing failed:
+	Property wrapper can only apply to a single variable
+	Testing cancelled because the build failed.
+
+** TEST FAILED **
+
+
+The following build commands failed:
+	SwiftEmitModule normal arm64 Emitting\ module\ for\ BikeComputer (in target 'BikeComputer' from project 'BikeComputer')
+	EmitSwiftModule normal arm64 (in target 'BikeComputer' from project 'BikeComputer')
+	Testing project BikeComputer with scheme BikeComputer
+(3 failures)
