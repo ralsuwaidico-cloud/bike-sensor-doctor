@@ -1,7 +1,8 @@
 BikeComputer iPhone app 0.3.0 (TestFlight build 17) — real-device checklist
 ===========================================================================
 Record PASS / FAIL / NOT TESTED per step. Everything here is simulator-tested only until you confirm it.
-Firmware on the board: 0.4.0 (do not flash 0.5.0 for this list). Battery disconnected, USB power, as agreed.
+Firmware on the board: 0.5.0 (installed by Rashed 24 Oct, 22:2x). The phone-link protocol is unchanged between 0.4.0 and 0.5.0,
+so this list applies as is; where a step says 0.4.0 read 0.5.0. Never USB and battery at the same time (HW-1).
 
 A. Install and first run
  A1  Update from TestFlight. App opens with "Welcome" (onboarding), not the old two-tab screen.
