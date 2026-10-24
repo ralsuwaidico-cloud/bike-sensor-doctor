@@ -221,7 +221,7 @@ final class Store: ObservableObject {
     init(directory: URL = Store.defaultDirectory, generatePlan: Bool = true) {
         dir = directory
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        if let f = Self.read(dir.appendingPathComponent("store.json")) { apply(StoreFile.migrate(f)) }
+        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { apply(StoreFile.migrate(f)) }
         else if let legacy = legacyImport() { apply(legacy) }
         loading = false
         if generatePlan { ensurePlan() }

@@ -39,12 +39,16 @@ struct ProgressTabView: View {
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let m = v.as(Int.self) { Text(m >= 60 ? String(format: "%g h", Double(m) / 60) : "\(m)′") } } } }
                 .chartXAxis { AxisMarks(values: .stride(by: .weekOfYear)) { _ in AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: true) } }
                 .frame(height: 160)
-                let last = totals.last!
-                Text("This week: \(last.minutes / 60) h \(last.minutes % 60) min · \(String(format: "%.1f", last.km)) km · \(last.rides) ride\(last.rides == 1 ? "" : "s"). Dashed line = your \(store.profile.hoursPerWeek) h limit.").font(.footnote).foregroundStyle(.secondary)
+                Text(weekText(totals.last)).font(.footnote).foregroundStyle(.secondary)
             }
         }
     }
 
+    private func weekText(_ w: Store.WeekTotal?) -> String {
+        guard let last = w else { return "" }
+        let rides = last.rides == 1 ? "1 ride" : "\(last.rides) rides"
+        return "This week: \(last.minutes / 60) h \(last.minutes % 60) min · \(String(format: "%.1f", last.km)) km · \(rides). Dashed line = your \(store.profile.hoursPerWeek) h limit."
+    }
     private var ftpCard: some View {
         Card {
             HStack { Eyebrow(t: "FTP"); Spacer(); Pill(text: store.profile.ftpHow.label, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
@@ -59,6 +63,12 @@ struct ProgressTabView: View {
         }
     }
 
+    private func rowText(_ r: RideRecord) -> String {
+        var t = "\(r.durationS.asDuration) · \(String(format: "%.1f", Double(r.distanceM) / 1000)) km"
+        if let p = r.avgPower { t += " · \(p) W" }
+        if let h = r.avgHR { t += " · \(h) bpm" }
+        return t
+    }
     private var history: some View {
         Card {
             HStack { Eyebrow(t: "Rides"); Spacer(); Text("\(store.rides.count)").font(.caption.bold()).foregroundStyle(.secondary) }
@@ -68,7 +78,7 @@ struct ProgressTabView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) { Text(r.start.dayAndDate).font(.subheadline.weight(.bold)); Pill(text: r.recorder == .board ? "BikeComputer" : "phone only", color: r.recorder == .board ? BC.accent : .secondary) }
-                            Text("\(r.durationS.asDuration) · \(String(format: "%.1f", Double(r.distanceM) / 1000)) km" + (r.avgPower.map { " · \($0) W" } ?? "") + (r.avgHR.map { " · \($0) bpm" } ?? "")).font(.caption).foregroundStyle(.secondary)
+                            Text(rowText(r)).font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }.padding(.vertical, 4)
@@ -175,11 +185,16 @@ struct RideDetailView: View {
             if total == 0 { Text("no data yet · needs power").font(.footnote).foregroundStyle(BC.stale) }
             else {
                 HStack(spacing: 2) { ForEach(0..<7, id: \.self) { z in if secs[z] > 0 { RoundedRectangle(cornerRadius: 3).fill(BC.zone(z + 1)).frame(width: max(4, CGFloat(secs[z]) / CGFloat(total) * 300), height: 14) } } }
-                Text((0..<7).compactMap { secs[$0] > 0 ? "Z\($0 + 1) \(secs[$0] / 60) min" : nil }.joined(separator: " · ") + " · FTP \(store.profile.ftpW) W (\(store.profile.ftpHow.label))").font(.caption2).foregroundStyle(.secondary)
+                Text(zoneText(secs)).font(.caption2).foregroundStyle(.secondary)
             }
         }
     }
 
+    private func zoneText(_ secs: [Int]) -> String {
+        var parts: [String] = []
+        for z in 0..<7 where secs[z] > 0 { parts.append("Z\(z + 1) \(secs[z] / 60) min") }
+        return parts.joined(separator: " · ") + " · FTP \(store.profile.ftpW) W (\(store.profile.ftpHow.label))"
+    }
     private var zoneSeconds: [Int] { var secs = Array(repeating: 0, count: 7); for w in ride.samples.compactMap({ $0.w }) { secs[store.profile.zone(forWatts: w) - 1] += 1 }; return secs }
 
     private var map: some View {

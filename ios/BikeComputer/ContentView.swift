@@ -10,21 +10,31 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if store.onboarded {
-                TabView(selection: $tab) {
-                    HomeView(tab: $tab).tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
-                    PlanView().tabItem { Label("Plan", systemImage: "calendar") }.tag(1)
-                    RideTabView().tabItem { Label("Ride", systemImage: "bicycle") }.tag(2)
-                    ProgressTabView().tabItem { Label("Progress", systemImage: "chart.xyaxis.line") }.tag(3)
-                    ProfileTabView().tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
-                }
-                .tint(BC.accent)
-            } else {
-                OnboardingView()
-            }
+            if store.onboarded { tabs } else { OnboardingView() }
         }
-        .onReceive(timer) { _ in recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.tick() }
-        .onChange(of: recorder.state) { _, s in UIApplication.shared.isIdleTimerDisabled = store.settings.keepScreenOn && (s == .running || s == .paused) }
+        .onReceive(timer) { _ in tickRecorder() }
+        .onChange(of: recorder.state) { _, s in idleTimer(s) }
+    }
+
+    private var tabs: some View {
+        TabView(selection: $tab) {
+            HomeView(tab: $tab).tabItem { Label("Home", systemImage: "house.fill") }.tag(0)
+            PlanView().tabItem { Label("Plan", systemImage: "calendar") }.tag(1)
+            RideTabView().tabItem { Label("Ride", systemImage: "bicycle") }.tag(2)
+            ProgressTabView().tabItem { Label("Progress", systemImage: "chart.xyaxis.line") }.tag(3)
+            ProfileTabView().tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
+        }
+        .tint(BC.accent)
+    }
+
+    private func tickRecorder() {
+        recorder.phoneOnlyMode = store.settings.phoneOnlyMode
+        recorder.tick()
+    }
+
+    private func idleTimer(_ s: RideRecorder.State) {
+        let active = s == .running || s == .paused
+        UIApplication.shared.isIdleTimerDisabled = store.settings.keepScreenOn && active
     }
 }
 

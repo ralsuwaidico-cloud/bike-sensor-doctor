@@ -22,7 +22,7 @@ struct ProfileTabView: View {
                     HStack { Text("Weight"); Spacer(); Text(String(format: "%.0f kg", store.profile.weightKg)).foregroundStyle(.secondary) }
                     Slider(value: $store.profile.weightKg, in: 40...150, step: 1).onChange(of: store.profile.weightKg) { _, _ in store.profile.refreshAssumption() }
                     Stepper("Age: \(store.profile.age)", value: $store.profile.age, in: 12...90)
-                    HStack { Text("Max heart rate"); Spacer(); Text("\(store.profile.estimatedMaxHR) bpm · \(store.profile.maxHR == nil ? "estimated from age" : "entered")").foregroundStyle(.secondary).font(.footnote) }
+                    HStack { Text("Max heart rate"); Spacer(); Text("\(store.profile.estimatedMaxHR) bpm · estimated from age").foregroundStyle(.secondary).font(.footnote) }
                 }
 
                 Section {
@@ -40,12 +40,12 @@ struct ProfileTabView: View {
 
                 Section("Devices") {
                     NavigationLink { DevicesView() } label: {
-                        DeviceRow(name: "Waveshare BikeComputer", status: device.state == .ready ? "connected" : device.state == .idle ? (device.remembered ? "remembered · not connected" : "not paired") : device.state.rawValue, live: device.state == .ready, caps: ["LIVE power", "LIVE cadence", "recorder"])
+                        DeviceRow(name: "Waveshare BikeComputer", status: boardStatus, live: device.state == .ready, caps: ["LIVE power", "LIVE cadence", "recorder"])
                     }
-                    DeviceRow(name: "XDS power meter", status: device.state == .ready && device.liveIsFresh ? (device.live?.meterLink == 4 ? "connected via board" : "board searching") : "via the BikeComputer", live: device.live?.meterLink == 4 && device.liveIsFresh, caps: ["LIVE via board"])
-                    DeviceRow(name: "Apple Watch", status: watch.hrIsFresh ? "heart rate live" : watch.appInstalled ? "app installed · start the workout on the watch" : watch.paired ? "watch paired · app not installed" : "no watch", live: watch.hrIsFresh, caps: ["LIVE HR", "workout"])
-                    DeviceRow(name: "Heart-rate strap or band", status: device.state == .ready && device.liveIsFresh && device.live?.hrSource == .bleStrap ? "live via board" : "pair on the BikeComputer (Sensors)", live: device.live?.hrSource == .bleStrap && device.liveIsFresh, caps: ["LIVE HR direct to board"])
-                    DeviceRow(name: "Phone GPS", status: location.authorized ? (location.sharing ? location.status : "ready") : "permission needed", live: location.sharing && location.last != nil, caps: ["speed", "distance", "map"])
+                    DeviceRow(name: "XDS power meter", status: meterStatus, live: meterLive, caps: ["LIVE via board"])
+                    DeviceRow(name: "Apple Watch", status: watchStatus, live: watch.hrIsFresh, caps: ["LIVE HR", "workout"])
+                    DeviceRow(name: "Heart-rate strap or band", status: strapLive ? "live via board" : "pair on the BikeComputer (Sensors)", live: strapLive, caps: ["LIVE HR direct to board"])
+                    DeviceRow(name: "Phone GPS", status: gpsStatus, live: location.sharing && location.last != nil, caps: ["speed", "distance", "map"])
                 }
 
                 Section {
@@ -90,6 +90,27 @@ struct ProfileTabView: View {
         }
     }
 
+    private var boardStatus: String {
+        if device.state == .ready { return "connected" }
+        if device.state == .idle { return device.remembered ? "remembered · not connected" : "not paired" }
+        return device.state.rawValue
+    }
+    private var liveNow: BCLink.Live? { device.state == .ready && device.liveIsFresh ? device.live : nil }
+    private var meterLive: Bool { liveNow?.meterLink == 4 }
+    private var meterStatus: String {
+        guard let l = liveNow else { return "via the BikeComputer" }
+        return l.meterLink == 4 ? "connected via board" : "board searching"
+    }
+    private var strapLive: Bool { liveNow?.hrSource == .bleStrap && liveNow?.hrBpm != nil }
+    private var watchStatus: String {
+        if watch.hrIsFresh { return "heart rate live" }
+        if watch.appInstalled { return "app installed · start the workout on the watch" }
+        return watch.paired ? "watch paired · app not installed" : "no watch"
+    }
+    private var gpsStatus: String {
+        guard location.authorized else { return "permission needed" }
+        return location.sharing ? location.status : "ready"
+    }
     private func zoneName(_ z: Int) -> String { ["Recovery", "Endurance", "Tempo", "Threshold", "VO2 max", "Anaerobic", "Neuromuscular"][z - 1] }
     private func hrRange(_ z: Int) -> String { let m = Double(store.profile.estimatedMaxHR); let b: [(Double, Double)] = [(0.5, 0.6), (0.6, 0.75), (0.75, 0.85), (0.85, 0.9), (0.9, 1.0), (0.9, 1.0), (0.9, 1.0)]; return "\(Int(m * b[z - 1].0))–\(Int(m * b[z - 1].1)) bpm" }
 }

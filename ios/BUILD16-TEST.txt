@@ -1,0 +1,55 @@
+BikeComputer iPhone app 0.3.0 (TestFlight build 16) — real-device checklist
+===========================================================================
+Record PASS / FAIL / NOT TESTED per step. Everything here is simulator-tested only until you confirm it.
+Firmware on the board: 0.4.0 (do not flash 0.5.0 for this list). Battery disconnected, USB power, as agreed.
+
+A. Install and first run
+ A1  Update from TestFlight. App opens with "Welcome" (onboarding), not the old two-tab screen.
+ A2  Tap "Try it first (guest)" → goal → hours/weight/level → "Continue with phone only". Home appears with "Hi".
+ A3  Home shows today's workout card, "Start ride · phone only", Coach (rules) card, Devices card saying
+     "no board · phone records".
+
+B. Phone-only ride (board OFF)
+ B1  Ride tab: chips read "not recording" / "no board" / "no HR source". Tiles show "--" and "no data".
+ B2  Tap "Start ride · phone only". Allow location when asked. Chip 1 → "on this phone". Time counts.
+ B3  Walk or ride 2 minutes outside: Speed tile shows a value with "Phone GPS"; Distance grows; the map draws a line.
+ B4  Pause → time stops; Resume → continues; Lap → tile "Lap 2" if shown.
+ B5  End → "End this ride?" → End ride → result sheet "Ride (phone only)", "recorded by this phone", power tiles "--".
+ B6  Save ride. Progress tab lists it as "phone only" with time and km; weekly chart shows a bar; detail has the map
+     and a graph (speed; HR only if the watch workout was running).
+
+C. Board ride (board ON, 0.4.0, phone paired from build 14)
+ C1  Profile → Devices → Waveshare BikeComputer → Connect. Status "Connected", firmware 0.4.0 shown.
+ C2  Ride tab: chip 1 "board ready", chip 2 "board · meter" when the XDS is awake (pedal once).
+ C3  Tap "Start ride on the BikeComputer". The board starts its ride; phone chip 1 → "on the board".
+ C4  Pedal: Power and Cadence tiles show XDS values with "XDS via board"; the zone bar highlights a zone.
+ C5  Pause from the phone → board pauses; Resume from the board → phone follows.
+ C6  End from the phone → confirm → board shows its results screen; phone shows the result sheet
+     "recorded by BikeComputer". Save → Progress lists it with the "BikeComputer" pill. Check the board's own history
+     has the ride too (one ride on each, not two on the phone).
+ C7  Start a ride ON THE BOARD (board button). Phone picks it up within 2 s: chip 1 "on the board", Start button gone.
+
+D. Link loss during a board ride
+ D1  During a board ride, turn the phone's Bluetooth off for 30 s: amber banner "Phone link lost…", tiles "--".
+ D2  Bluetooth on again: values return within ~10 s, time continues from the board's count (no reset).
+
+E. Heart rate
+ E1  Start the workout in the watch app. Phone Ride tab: HR tile shows a value with "Apple Watch" (phone-only ride)
+     or the board's source label (board ride, where the board receives the watch HR via the phone).
+ E2  Profile → Settings → Heart-rate preference "Apple Watch first" → HR tile source changes accordingly.
+ E3  Stop the watch workout: HR tile returns to "--" within 6 s (never a held value).
+
+F. Persistence and settings
+ F1  Force-quit the app and relaunch: profile, plan, rides and tile layout unchanged.
+ F2  Profile → Settings → Phone-only mode ON with the board connected: Ride chip 1 "phone only",
+     Start button says "phone only"; board values still visible in the tiles. Switch OFF again.
+ F3  Units → "mi, ft": speed/distance tiles switch to mph/mi.
+ F4  Ride → Tiles: remove one, add "Zone", reorder; relaunch; layout kept.
+
+G. Account and deletion
+ G1  Profile → Create account → Sign in with Apple completes; Account row shows "Signed in with Apple · local only".
+ G2  Sign out keeps the data. Delete account and all data → onboarding again; Profile › Devices shows
+     "not paired" (use Forget phone on the board as well before pairing again).
+
+Report: list PASS/FAIL/NOT TESTED per step plus any screenshot of a wrong value. Values shown as "--" are correct
+behaviour when a source is absent; a number shown without a live source is a bug.

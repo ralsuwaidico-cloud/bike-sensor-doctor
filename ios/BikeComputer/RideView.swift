@@ -54,12 +54,28 @@ struct RideTabView: View {
     }
 
     // MARK: statuses
+    private var recordingText: String {
+        if boardRecording { return recorder.boardLinkLost ? "board (phone lost)" : "on the board" }
+        if phoneRecording { return recorder.state == .paused ? "paused · phone" : "on this phone" }
+        if live != nil { return store.settings.phoneOnlyMode ? "phone only" : "board ready" }
+        return "not recording"
+    }
+    private var recordingColor: Color {
+        guard recorder.isActive else { return .secondary }
+        return (recorder.boardLinkLost || recorder.state == .paused) ? BC.stale : BC.live
+    }
+    private var devicesText: String {
+        if let l = live { return l.meterLink == 4 ? "board · meter" : "board · no meter" }
+        return device.state == .ready ? "board · no data" : "no board"
+    }
+    private var devicesColor: Color {
+        guard let l = live else { return .secondary }
+        return l.meterLink == 4 ? BC.live : BC.stale
+    }
     private var statuses: some View {
         HStack(spacing: 8) {
-            StatusChip(title: "Recording", value: boardRecording ? (recorder.boardLinkLost ? "board (phone lost)" : "on the board") : phoneRecording ? (recorder.state == .paused ? "paused · phone" : "on this phone") : live != nil ? (store.settings.phoneOnlyMode ? "phone only" : "board ready") : "not recording",
-                       color: recorder.isActive ? (recorder.boardLinkLost || recorder.state == .paused ? BC.stale : BC.live) : .secondary)
-            StatusChip(title: "Devices", value: live != nil ? (live?.meterLink == 4 ? "board · meter" : "board · no meter") : device.state == .ready ? "board · no data" : "no board",
-                       color: live != nil ? (live?.meterLink == 4 ? BC.live : BC.stale) : .secondary)
+            StatusChip(title: "Recording", value: recordingText, color: recordingColor)
+            StatusChip(title: "Devices", value: devicesText, color: devicesColor)
             StatusChip(title: "Heart rate", value: hrValue != nil ? hrSourceLabel : "no HR source", color: hrValue != nil ? BC.live : .secondary)
         }
     }
@@ -85,6 +101,11 @@ struct RideTabView: View {
     private var currentZone: Int? { powerValue.map { store.profile.zone(forWatts: $0) } }
     private var imperial: Bool { store.settings.units == .imperial }
 
+    private var distanceText: String? {
+        guard recorder.isActive || recorder.state == .ended else { return nil }
+        let km = Double(recorder.distanceM) / 1000
+        return String(format: "%.2f", imperial ? km / 1.60934 : km)
+    }
     private var tiles: some View {
         let defs = store.tiles.prefix(6)
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -98,7 +119,7 @@ struct RideTabView: View {
         case "hr": return MetricTile(title: "Heart rate", value: hrValue.map { "\($0)" }, unit: "bpm", source: hrSourceLabel, big: big)
         case "speed": return MetricTile(title: "Speed", value: speedKmh.map { String(format: "%.1f", imperial ? $0 / 1.609 : $0) }, unit: imperial ? "mph" : "km/h", source: "Phone GPS", big: big)
         case "time": return MetricTile(title: "Time", value: recorder.isActive || recorder.state == .ended ? recorder.elapsedS.asDuration : nil, unit: "", source: recorder.owner.label, big: big)
-        case "dist": return MetricTile(title: "Distance", value: recorder.isActive || recorder.state == .ended ? String(format: "%.2f", imperial ? Double(recorder.distanceM) / 1609.34 : Double(recorder.distanceM) / 1000) : nil, unit: imperial ? "mi" : "km", source: recorder.owner == .board ? "board (GPS)" : "Phone GPS", big: big)
+        case "dist": return MetricTile(title: "Distance", value: distanceText, unit: imperial ? "mi" : "km", source: recorder.owner == .board ? "board (GPS)" : "Phone GPS", big: big)
         case "lap": return MetricTile(title: "Lap \(recorder.lapCount)", value: recorder.isActive ? (recorder.elapsedS - recorder.lapStartS).asDuration : nil, unit: "", source: recorder.owner.label, big: big)
         case "zone": return MetricTile(title: "Zone", value: currentZone.map { "Z\($0)" }, unit: "", source: "from FTP \(store.profile.ftpW) W (\(store.profile.ftpHow.label))", big: big)
         case "np": return MetricTile(title: "Normalized", value: RideRecorder.normalized(recorder.samples.compactMap { $0.w }).map { "\($0)" }, unit: "W", source: "phone mirror of the board", big: big)
@@ -133,8 +154,15 @@ struct RideTabView: View {
             }
         }
         if !recorder.isActive {
-            Text(mode == .board ? "Recorder: BikeComputer (connected, live). The phone mirrors it and adds GPS for the map." : mode == .phone ? (device.state == .ready ? "Recorder: this phone (phone-only mode is on or the board has no live data). Board values are shown, not merged." : "Recorder: this phone. GPS speed/distance and watch heart rate; no power without a BikeComputer.") : "")
-                .font(.footnote).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+            Text(recorderHint(mode)).font(.footnote).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func recorderHint(_ mode: RideRecorder.StartMode) -> String {
+        switch mode {
+        case .board: return "Recorder: BikeComputer (connected, live). The phone mirrors it and adds GPS for the map."
+        case .phone: return device.state == .ready ? "Recorder: this phone (phone-only mode is on or the board has no live data). Board values are shown, not merged." : "Recorder: this phone. GPS speed/distance and watch heart rate; no power without a BikeComputer."
+        default: return ""
         }
     }
 
@@ -169,12 +197,23 @@ struct RideTabView: View {
     private var sensorsCard: some View {
         Card {
             Eyebrow(t: "Sensors")
-            SensorRow(name: "BikeComputer", detail: device.state == .ready ? "connected" + (device.rssi.map { " · \($0) dBm" } ?? "") + (live?.batteryPct.map { " · battery ≈\($0)%" } ?? "") : device.state.rawValue, live: device.state == .ready)
-            SensorRow(name: "Power meter (XDS)", detail: live.map { meterText($0.meterLink) + ($0.meterGaps > 0 ? " · \($0.meterGaps) gaps" : "") } ?? "via the BikeComputer", live: live?.meterLink == 4)
+            SensorRow(name: "BikeComputer", detail: boardDetail, live: device.state == .ready)
+            SensorRow(name: "Power meter (XDS)", detail: meterDetail, live: live?.meterLink == 4)
             SensorRow(name: "Heart rate", detail: hrValue != nil ? "\(hrSourceLabel) · live" : "none", live: hrValue != nil)
             SensorRow(name: "Phone GPS", detail: location.sharing ? location.status : "off until a ride starts", live: location.sharing && location.last != nil)
             SensorRow(name: "Apple Watch", detail: watch.hrIsFresh ? "heart rate live" : watch.appInstalled ? "app installed · workout \(watch.workoutState)" : "no watch app", live: watch.hrIsFresh)
         }
+    }
+    private var boardDetail: String {
+        guard device.state == .ready else { return device.state.rawValue }
+        var d = "connected"
+        if let r = device.rssi { d += " · \(r) dBm" }
+        if let b = live?.batteryPct { d += " · battery ≈\(b)%" }
+        return d
+    }
+    private var meterDetail: String {
+        guard let l = live else { return "via the BikeComputer" }
+        return meterText(l.meterLink) + (l.meterGaps > 0 ? " · \(l.meterGaps) gaps" : "")
     }
     private func meterText(_ s: Int) -> String { switch s { case 4: return "connected"; case 1: return "not paired"; case 2: return "searching"; case 3: return "connecting"; case 5: return "reconnecting"; default: return "off" } }
 }

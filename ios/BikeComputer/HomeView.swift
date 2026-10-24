@@ -29,7 +29,7 @@ struct HomeView: View {
                     }
                     let mode = recorder.startMode(locationAuthorized: true)
                     Button { tab = 2; if !recorder.isActive { if mode == .board { device.control(.start) } else if mode == .phone { _ = recorder.start() } } } label: {
-                        Label(recorder.isActive ? "Ride in progress · open Ride" : mode == .board ? "Start ride on the BikeComputer" : mode == .blockedByBoardRide ? "Ride running on the BikeComputer" : "Start ride · phone only", systemImage: "play.fill").frame(maxWidth: .infinity)
+                        Label(startLabel(mode), systemImage: "play.fill").frame(maxWidth: .infinity)
                     }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
 
                     Card {
@@ -63,6 +63,14 @@ struct HomeView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle(store.profile.name.isEmpty ? "Hi" : "Hi \(store.profile.name)")
             .sheet(isPresented: $showWorkout) { if let t = store.today { WorkoutDetail(workout: t) } }
+        }
+    }
+    private func startLabel(_ mode: RideRecorder.StartMode) -> String {
+        if recorder.isActive { return "Ride in progress · open Ride" }
+        switch mode {
+        case .board: return "Start ride on the BikeComputer"
+        case .blockedByBoardRide: return "Ride running on the BikeComputer"
+        default: return "Start ride · phone only"
         }
     }
     private var nextDays: [Workout] { store.plan.filter { $0.date > Date() }.sorted { $0.date < $1.date }.prefix(3).map { $0 } }
