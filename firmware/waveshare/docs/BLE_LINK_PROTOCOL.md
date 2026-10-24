@@ -50,7 +50,7 @@ Always: `08 u8 ride_state (0 idle,1 running,2 paused,3 ended)` `09 u16 ride_id` 
   The board integrates distance from speed itself (ignores fixes with hacc > 50 m; ignores speed < 1.8 km/h); the phone must
   **not** send a distance total.
 - **IN_HR 0x22**: `01 u8 bpm` `02 u8 src` `03 u64 sample_epoch_ms` `04 u8 quality`. Rejected outside 25–250 or without a
-  source. The board shows it only if it is ≤ 10 s old; a directly connected strap wins unless the rider chose "watch first".
+  source. The board shows it only if it is ≤ 6 s old (watches deliver about every 5 s); a directly connected strap wins unless the rider chose "watch first".
 - **IN_WEATHER 0x23**: `01 s16 temp_dc` `02 u16 wind_cms` `03 u16 wind_deg` `04 u8 humidity` `05 u8 provider` `06 u64 obs_epoch_ms`.
   Rejected without a provider.
 - **IN_BATTERY 0x24**: `01 u8 phone_pct` `02 u8 watch_pct` (0xFF unknown).

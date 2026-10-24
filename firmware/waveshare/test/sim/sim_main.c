@@ -104,7 +104,9 @@ static bool hold_text(const char *txt, int ms)
     lv_obj_t *l = find_text(txt);
     if (!l) { n_checks++; n_fail++; printf("  FAIL could not find '%s' to hold\n", txt); return false; }
     lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
-    lv_area_t a; lv_obj_get_coords(c ? c : l, &a);
+    if (!c) c = l;
+    lv_area_t a; lv_obj_get_coords(c, &a);
+    for (lv_obj_t *p = lv_obj_get_parent(c); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_intersect(&a, &a, &pa); }
     hold((a.x1 + a.x2) / 2, (a.y1 + a.y2) / 2, ms);
     return true;
 }
@@ -659,7 +661,7 @@ static void scenario(void)
         { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.bpm == 149 && lv.hr_src == BC_SRC_APPLE_WATCH && app_profile()->hr_pref == 1, "watch first after the toggle"); }
         scroll_to("HR: WATCH FIRST"); tap_text("HR: WATCH FIRST"); run(300);
         /* stale: 12 s without a watch value → falls back to the strap, never holds the old number */
-        run_s(12); { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.hr_src == BC_SRC_BLE_STRAP && !lv.phone_hr, "stale watch HR dropped, strap shown"); }
+        run_s(7); { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.hr_src == BC_SRC_BLE_STRAP && !lv.phone_hr, "stale watch HR dropped after 6 s, strap shown"); }
         sensors(true, 180, true, 90, false, 0); g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_NOT_PAIRED; run(400);
         { app_live_t lv; app_live(&lv); CHECK(!lv.hr_ok && !lv.speed_ok && lv.link[PLAT_SENS_SPEED].link == PLAT_LINK_STALE, "no HR at all; GPS marked STALE after 5 s"); }
         /* Sensors page: five groups */
@@ -692,7 +694,7 @@ static void scenario(void)
         { bc_ride_summary_t h[3]; int n = app_history(h, 3, false); CHECK(n >= 1 && h[0].distance_m >= 150 && h[0].dist_src == BC_SRC_PHONE_GPS, "distance saved in history (R2 line)"); }
         /* forget → next connection pairs again; off → no advertising */
         ui_phone_show(); run(300); scroll_to("FORGET PHONE"); hold_text("FORGET PHONE", 1800); run(300);
-        CHECK(g_sim.phone.forgets == 1 && scroll_to("no phone remembered"), "phone forgotten");
+        CHECK(g_sim.phone.forgets == 1, "forget called (%d)", g_sim.phone.forgets); CHECK(scroll_to("no phone remembered"), "phone page says not remembered");
         scroll_to("PHONE LINK: ON"); tap_text("PHONE LINK: ON"); run(300); CHECK(!app_profile()->phone_on && scroll_to("OFF"), "phone link switched off");
         scroll_to("PHONE LINK: OFF"); tap_text("PHONE LINK: OFF"); run(300); CHECK(app_profile()->phone_on, "and on again");
         shot("99_phone_after_forget");

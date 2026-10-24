@@ -1,0 +1,47 @@
+PHONE LINK TEST - firmware 0.4.0            (print or keep on the phone)
+=====================================================================
+What 0.4.0 adds: the Waveshare can be paired with the iPhone app (build 11+).
+The phone sends GPS speed, the time and the Apple Watch heart rate; the
+Waveshare records distance itself and keeps riding if the phone disappears.
+Everything from 0.2.1 / 0.3.0 is unchanged (onboarding, ride screens A/B/C,
+coach, history, settings, Wi-Fi). Your settings and rides are kept.
+
+Mark each line:  PASS / FAIL / not tested.  Send photos of anything odd.
+
+A. After installing (board alone, no phone yet)
+ [ ] A1 Board starts, Home shows "Hi <name>" and your FTP as before
+ [ ] A2 Settings > Phone shows "WAITING FOR PHONE", "no phone remembered yet"
+ [ ] A3 Pedal: power + cadence from the XDS appear as before (meter first!)
+ [ ] A4 Sensors page now has 5 groups: POWER METER, HEART RATE, SPEED /
+        CADENCE, WEARABLES, PHONE
+ [ ] A5 Settings > Diagnostics > Device Health: note "RAM free" ______ KB
+
+B. Pairing (iPhone app build 11, Devices tab > Waveshare > Connect)
+ [ ] B1 A 6-digit code appears on the ROUND SCREEN (nowhere else)
+ [ ] B2 Type it on the iPhone -> board shows CONNECTED, "a phone is remembered"
+ [ ] B3 Power + cadence KEEP flowing while the phone connects (watch the W)
+ [ ] B4 Switch the board off/on: the phone reconnects WITHOUT a code
+
+C. Live data
+ [ ] C1 iPhone shows the same watts / rpm as the round screen (within 1 s)
+ [ ] C2 Ride page 3 (RIDE): speed in km/h with "PHONE GPS" under it
+ [ ] C3 Stand still 10 s: speed shows "--" and "STALE" (never a held number)
+ [ ] C4 With the Watch app running a workout: HR shows with "WATCH" label
+ [ ] C5 Settings > Phone: "last data N s ago", GPS, HR via phone, battery
+
+D. Ride without the phone
+ [ ] D1 Start a ride from the iPhone; the board jumps to the ride screen
+ [ ] D2 Walk away with the phone (> 15 m) or switch Bluetooth off
+ [ ] D3 The ride timer and power keep running; speed goes to "--"
+ [ ] D4 Come back: phone reconnects by itself, speed returns
+ [ ] D5 End from the phone: it asks to confirm; the board shows results
+
+E. Protection
+ [ ] E1 History still lists your earlier rides
+ [ ] E2 Settings > Phone > HOLD: FORGET PHONE -> next connection asks a code
+ [ ] E3 Settings > Phone > PHONE LINK: OFF -> the iPhone cannot find the board
+ [ ] E4 Device Health after 20 min with phone + meter: "RAM free" ______ KB,
+        crashes ______ (expect 0), meter "gaps" ______
+
+Status categories (please keep): PC simulator = passed (124 checks);
+device alone = to test (A); device + phone = to test (B-E); bike = later.

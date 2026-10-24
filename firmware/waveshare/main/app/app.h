@@ -25,7 +25,7 @@ typedef struct {
     plat_link_info_t link[PLAT_SENS_KINDS];        /* SPEED = phone GPS: CONNECTED fresh, STALE old, NOT_PAIRED never */
 } app_live_t;
 #define APP_GPS_FRESH_MS 5000
-#define APP_PHONE_HR_FRESH_MS 10000               /* watches deliver about every 5 s */
+#define APP_PHONE_HR_FRESH_MS 6000                /* Apple Watch delivers about every 5 s: one missed sample = NO DATA, never a held value */
 
 void app_init(void);
 bc_profile_t *app_profile(void);
