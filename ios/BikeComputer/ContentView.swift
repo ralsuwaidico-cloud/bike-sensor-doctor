@@ -12,7 +12,7 @@ struct RootView: View {
         Group {
             if store.onboarded { tabs } else { OnboardingView() }
         }
-        .onReceive(timer) { _ in tickRecorder() }
+        .onReceive(timer) { _ in recorder.phoneOnlyMode = store.settings.phoneOnlyMode }
         .onChange(of: recorder.state) { _, s in idleTimer(s) }
     }
 
@@ -25,11 +25,6 @@ struct RootView: View {
             ProfileTabView().tabItem { Label("Profile", systemImage: "person.crop.circle") }.tag(4)
         }
         .tint(BC.accent)
-    }
-
-    private func tickRecorder() {
-        recorder.phoneOnlyMode = store.settings.phoneOnlyMode
-        recorder.tick()
     }
 
     private func idleTimer(_ s: RideRecorder.State) {

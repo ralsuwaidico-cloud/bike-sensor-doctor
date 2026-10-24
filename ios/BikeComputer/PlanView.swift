@@ -75,7 +75,7 @@ struct WorkoutDetail: View {
                         if workout.kind.zone > 0 {
                             Card { Eyebrow(t: "Target zone"); ZoneBar(current: workout.kind.zone)
                                 let z = store.profile.powerZones[workout.kind.zone - 1]
-                                Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpHow.label)). Heart-rate targets appear when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
+                                Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel)). Heart-rate targets appear when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
                         }
                         HStack { Button("Move") { mode = 1 }.buttonStyle(.bordered); Button("Edit") { mode = 2 }.buttonStyle(.bordered); Button(workout.skipped ? "Unskip" : "Skip") { workout.skipped.toggle(); store.update(workout) }.buttonStyle(.bordered); Spacer() }
                         if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {

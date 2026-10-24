@@ -77,4 +77,41 @@ final class BCLinkTests: XCTestCase {
         XCTAssertEqual(BCLink.sint(Data([0x00, 0x80, 0xFF, 0xFF])), -32768)
         XCTAssertEqual(BCLink.uint(Data([0x10, 0x0E, 0, 0])), 3600)
     }
+
+    // MARK: ride history sync (ios/SYNC_PROPOSAL.md) — conformance vectors for the firmware author
+    func testSyncRequestBytes() {
+        let d = BCLink.encodeSyncRequest(afterRideId: 7, maxCount: 50, seq: 3, tMs: 1000)!
+        XCTAssertEqual([UInt8](d), [0x50, 0x00, 0x03, 0x00, 0xE8, 0x03, 0x00, 0x00,  0x01, 0x02, 0x07, 0x00,  0x02, 0x01, 0x32])
+    }
+
+    func testSyncRideRoundTrip() {
+        var r = BCLink.RideSummary()
+        r.id = 12; r.recovered = true; r.durationS = 3725; r.pausedS = 60
+        r.avgPower = 187; r.maxPower = 612; r.avgCadence = 88; r.avgHR = nil; r.maxHR = nil
+        r.powerS = 3600; r.cadS = 3500; r.hrS = 0
+        r.zonesValid = true; r.zoneS = [600, 1800, 900, 300, 100, 20, 5]
+        r.ftpW = 240; r.ftpHow = 2; r.kj = 673; r.best20 = 251; r.inbandPct = 72; r.ftpNew = 238; r.ftpSuggestedOnly = true
+        r.distanceM = 31250; r.distSrc = 3; r.startEpochS = 1_792_850_000; r.coach = "Steady Z2 ride"
+        let d = BCLink.encodeSyncRide(r, seq: 9, tMs: 55)!
+        XCTAssertLessThanOrEqual(d.count, 180, "one SYNC_RIDE must fit one notification")
+        let back = BCLink.decodeSyncRide(d)
+        XCTAssertEqual(back, r)
+        // fixed header + first fields, so the firmware can check its writer byte for byte
+        XCTAssertEqual([UInt8](d.prefix(8)), [0x51, 0x00, 0x09, 0x00, 0x37, 0x00, 0x00, 0x00])
+        XCTAssertEqual([UInt8](d[8..<16]), [0x01, 0x02, 0x0C, 0x00,  0x02, 0x01, 0x02,  0x03])
+        // -1 fields decode as nil
+        XCTAssertNil(back?.avgHR)
+        // unknown tag is skipped, truncated message rejected
+        var ext = d; ext.append(contentsOf: [0x7E, 0x01, 0xFF])
+        XCTAssertEqual(BCLink.decodeSyncRide(ext), r)
+        XCTAssertNil(BCLink.decodeSyncRide(d.prefix(d.count - 1)))
+    }
+
+    func testSyncEnd() {
+        var w = BCLink.Writer(type: .syncEnd, seq: 1, tMs: 0)
+        w.u16(0x01, 50); w.u16(0x02, 123); w.u8(0x03, 1)
+        let e = BCLink.decodeSyncEnd(w.result!)
+        XCTAssertEqual(e, BCLink.SyncEnd(count: 50, total: 123, more: true))
+        XCTAssertNil(BCLink.decodeSyncRide(w.result!))
+    }
 }

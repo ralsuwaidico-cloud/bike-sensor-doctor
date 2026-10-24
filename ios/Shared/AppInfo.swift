@@ -28,6 +28,32 @@ enum WatchMessage {
     static let at = "at"
     static let workout = "workout"          /* "idle" | "running" | "paused" | "ended" */
     static let battery = "battery"
+    /// phone → watch, 1 Hz while the watch is reachable: the ride mirror {kind: "ride", state, owner, elapsed, dist, power?, cad?, hr?, hrSrc?, zone?}
+    static let ride = "ride"
+    static let state = "state"            /* "idle" | "running" | "paused" | "ended" */
+    static let owner = "owner"            /* "none" | "board" | "phone" */
+    static let elapsed = "elapsed"        /* Int seconds */
+    static let dist = "dist"              /* Int metres */
+    static let power = "power"
+    static let cad = "cad"
+    static let hrSrc = "hrSrc"
+    static let zone = "zone"
+    static let boardReady = "boardReady"  /* Bool: a connected board with live data would be the recorder */
+    /// watch → phone: {kind: "cmd", cmd: "start" | "pause" | "resume" | "end" | "endConfirm"}
+    static let cmd = "cmd"
+    static let cmdKey = "cmd"
+    static let cmdStart = "start", cmdPause = "pause", cmdResume = "resume", cmdEnd = "end", cmdEndConfirm = "endConfirm"
+
+    static func makeRide(state: String, owner: String, elapsed: Int, dist: Int, power: Int?, cad: Int?, hr: Int?, hrSrc: String?, zone: Int?, boardReady: Bool) -> [String: Any] {
+        var m: [String: Any] = [kind: ride, WatchMessage.state: state, WatchMessage.owner: owner, WatchMessage.elapsed: elapsed, WatchMessage.dist: dist, WatchMessage.boardReady: boardReady]
+        if let p = power { m[WatchMessage.power] = p }
+        if let c = cad { m[WatchMessage.cad] = c }
+        if let h = hr { m[WatchMessage.hr] = h }
+        if let s = hrSrc { m[WatchMessage.hrSrc] = s }
+        if let z = zone { m[WatchMessage.zone] = z }
+        return m
+    }
+    static func makeCommand(_ c: String) -> [String: Any] { [kind: cmd, cmdKey: c] }
 
     static func makeHR(bpm: Int, at: Date, workout: String, battery: Int?) -> [String: Any] {
         var m: [String: Any] = [kind: hr, WatchMessage.bpm: bpm, WatchMessage.at: at.timeIntervalSince1970, WatchMessage.workout: workout]

@@ -51,11 +51,12 @@ struct ProgressTabView: View {
     }
     private var ftpCard: some View {
         Card {
-            HStack { Eyebrow(t: "FTP"); Spacer(); Pill(text: store.profile.ftpHow.label, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
+            HStack { Eyebrow(t: "FTP"); Spacer(); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
             HStack(alignment: .firstTextBaseline) { Text("\(store.profile.ftpW)").font(BC.bigNum); Text("W · \(String(format: "%.1f", Double(store.profile.ftpW) / store.profile.weightKg)) W/kg").foregroundStyle(.secondary) }
             Text(store.profile.ftpHow == .assumed
                  ? "Starting assumption: \(String(format: "%.0f", store.profile.weightKg)) kg × \(String(format: "%.2f", store.profile.level.wkg)) W/kg for \(store.profile.level.title.lowercased()) riders. It becomes a measurement after a steady 20-minute effort recorded with the BikeComputer, or when you enter a tested value in Profile."
-                 : store.profile.ftpHow == .entered ? "Entered by you in Profile." : "Estimated from a recorded 20-minute effort.").font(.footnote).foregroundStyle(.secondary)
+                 : store.profile.ftpHow == .entered ? "Entered by you in Profile." : "Estimated as 95 % of the best 20-minute power of a recorded ride.").font(.footnote).foregroundStyle(.secondary)
+            if store.ftpSuggestion != nil { FTPSuggestionCard() }
             Divider()
             Eyebrow(t: "Fitness and form")
             Text("Not enough data yet").font(.subheadline.weight(.semibold)).foregroundStyle(BC.stale)
@@ -86,7 +87,23 @@ struct ProgressTabView: View {
                 if r.id != store.rides.last?.id { Divider() }
             }
             Divider()
-            Text(device.state == .ready ? "Rides recorded by the BikeComputer before this app existed stay in its own history (Tools › History on the board). Pulling them into the phone comes with the sync service." : "Rides recorded on the BikeComputer while the phone was not connected stay on the board; sync coming.").font(.caption2).foregroundStyle(.secondary)
+            Text("Board history: \(device.syncStatus). Rides recorded on the BikeComputer while the phone was away stay on the board until its firmware serves them (see SYNC_PROPOSAL); nothing is invented here.").font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// FTP proposal from a real ride. Nothing changes until the rider taps Accept.
+struct FTPSuggestionCard: View {
+    @EnvironmentObject private var store: Store
+    var body: some View {
+        if let s = store.ftpSuggestion {
+            VStack(alignment: .leading, spacing: 6) {
+                Divider()
+                HStack { Eyebrow(t: "Suggested FTP"); Spacer(); Pill(text: "from \(s.rideDate.dayAndDate) ride", color: BC.accent) }
+                HStack(alignment: .firstTextBaseline) { Text("\(s.watts)").font(BC.numFont); Text("W · was \(s.previousFTP) W").foregroundStyle(.secondary) }
+                Text("95 % of the best 20-minute power (\(s.best20) W)" + (s.best60.map { " · best 60 min \($0) W" } ?? "") + (store.profile.ftpHow == .entered ? ". Your entered FTP is kept unless you accept." : ".")).font(.footnote).foregroundStyle(.secondary)
+                HStack { Button("Accept \(s.watts) W") { store.acceptFTPSuggestion() }.buttonStyle(.borderedProminent).tint(BC.live); Button("Not now") { store.dismissFTPSuggestion() }.buttonStyle(.bordered) }
+            }
         }
     }
 }
@@ -114,7 +131,9 @@ struct RideDetailView: View {
                 zones
                 map
                 Card { Eyebrow(t: "Coach (rules)"); Text(Coach.rideSummary(ride, profile: store.profile)) }
+                if let b = ride.best20 { Text("Best 20 min \(b) W" + (ride.best60.map { " · best 60 min \($0) W" } ?? "")).font(.footnote).foregroundStyle(.secondary) }
                 Text("Sources: \(ride.sources.joined(separator: " · ")) · \(ride.samples.count) samples at 1 Hz").font(.footnote).foregroundStyle(.secondary)
+                if let g = ride.gapSeconds, g > 0 { Text("\(g) s not observed by the phone (app suspended in the background); those seconds count as time but hold no values.").font(.footnote).foregroundStyle(BC.stale) }
                 Button("Delete this ride", role: .destructive) { confirmDelete = true }.frame(maxWidth: .infinity)
             }.padding()
         }
@@ -193,7 +212,7 @@ struct RideDetailView: View {
     private func zoneText(_ secs: [Int]) -> String {
         var parts: [String] = []
         for z in 0..<7 where secs[z] > 0 { parts.append("Z\(z + 1) \(secs[z] / 60) min") }
-        return parts.joined(separator: " · ") + " · FTP \(store.profile.ftpW) W (\(store.profile.ftpHow.label))"
+        return parts.joined(separator: " · ") + " · FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel))"
     }
     private var zoneSeconds: [Int] { var secs = Array(repeating: 0, count: 7); for w in ride.samples.compactMap({ $0.w }) { secs[store.profile.zone(forWatts: w) - 1] += 1 }; return secs }
 

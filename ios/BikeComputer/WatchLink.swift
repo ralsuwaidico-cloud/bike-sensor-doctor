@@ -19,6 +19,9 @@ final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var hrReceived = 0
 
     weak var device: DeviceLink?
+    /// Ride commands from the wrist ("start", "pause", "resume", "end", "endConfirm"); the app maps them to the one-owner rules.
+    var onCommand: ((String) -> Void)?
+    private var lastContextAt: Date?
 
     var hrIsFresh: Bool { guard let t = hrAt else { return false }; return Date().timeIntervalSince(t) < 6 }
 
@@ -58,7 +61,20 @@ final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
         if Thread.isMainThread { update() } else { DispatchQueue.main.async(execute: update) }
     }
 
+    /// Mirror of the phone's ride for the watch: live message when reachable, application context (≤ every 10 s) otherwise.
+    func sendRide(_ m: [String: Any]) {
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        if session.isReachable { session.sendMessage(m, replyHandler: nil, errorHandler: nil) }
+        else if lastContextAt == nil || Date().timeIntervalSince(lastContextAt!) > 10 { lastContextAt = Date(); try? session.updateApplicationContext(m) }
+    }
+
     private func handle(_ message: [String: Any]) {
+        if message[WatchMessage.kind] as? String == WatchMessage.cmd, let c = message[WatchMessage.cmdKey] as? String {
+            DispatchQueue.main.async { self.onCommand?(c) }
+            return
+        }
         guard message[WatchMessage.kind] as? String == WatchMessage.hr else { return }
         let bpm = message[WatchMessage.bpm] as? Int
         let at = (message[WatchMessage.at] as? Double).map { Date(timeIntervalSince1970: $0) } ?? Date()

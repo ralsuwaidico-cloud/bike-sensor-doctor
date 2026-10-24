@@ -12,11 +12,13 @@ enum BCLink {
     static let liveUUID = "B1CE0003-7E3A-4C55-9D2B-5A0E1C7C0000"
     static let inputUUID = "B1CE0004-7E3A-4C55-9D2B-5A0E1C7C0000"
     static let controlUUID = "B1CE0005-7E3A-4C55-9D2B-5A0E1C7C0000"
+    static let syncUUID = "B1CE0006-7E3A-4C55-9D2B-5A0E1C7C0000"
 
     enum MsgType: UInt8 {
         case info = 0x01, live = 0x10
         case inTime = 0x20, inGPS = 0x21, inHR = 0x22, inWeather = 0x23, inBattery = 0x24
         case ctrlReq = 0x30, ctrlResp = 0x31, event = 0x40
+        case syncReq = 0x50, syncRide = 0x51, syncEnd = 0x52      /* proposed in ios/SYNC_PROPOSAL.md; served by firmware only with caps & RIDE_SYNC */
     }
 
     enum Source: UInt8 {
@@ -99,7 +101,10 @@ enum BCLink {
     // MARK: messages
     struct Info: Equatable {
         var verMajor: UInt8 = 0, verMinor: UInt8 = 0, fw = "", name = "", caps: UInt32 = 0, maxMsg: UInt16 = 0
-        static let capLive: UInt32 = 0x01, capGPS: UInt32 = 0x02, capHR: UInt32 = 0x04, capWeather: UInt32 = 0x08, capCtrl: UInt32 = 0x10, capTime: UInt32 = 0x20
+        /// Proposed INFO tag 0x07: the board's 6-byte BLE address, so rides can be keyed per board on every phone. nil until the firmware sends it.
+        var deviceId: String? = nil
+        static let capLive: UInt32 = 0x01, capGPS: UInt32 = 0x02, capHR: UInt32 = 0x04, capWeather: UInt32 = 0x08, capCtrl: UInt32 = 0x10, capTime: UInt32 = 0x20, capRideSync: UInt32 = 0x40
+        var hasRideSync: Bool { caps & Info.capRideSync != 0 }
     }
 
     static func decodeInfo(_ d: Data) -> Info? {
@@ -113,10 +118,104 @@ enum BCLink {
             case (0x04, _): i.name = String(decoding: x.value, as: UTF8.self)
             case (0x05, 4): i.caps = UInt32(uint(x.value))
             case (0x06, 2): i.maxMsg = UInt16(uint(x.value))
+            case (0x07, 6): i.deviceId = x.value.map { String(format: "%02x", $0) }.joined(separator: ":")
             default: break
             }
         }
         return i.verMajor != 0 ? i : nil
+    }
+
+    // MARK: ride history sync (proposal — see ios/SYNC_PROPOSAL.md; the app only uses it when INFO caps has RIDE_SYNC)
+    /// One finished ride as the board stores it (bc_ride_summary_t / history line R2). -1 fields become nil.
+    struct RideSummary: Equatable {
+        var id: Int = 0
+        var demo = false, recovered = false
+        var durationS: Int = 0, pausedS: Int = 0
+        var avgPower: Int?, maxPower: Int?, avgCadence: Int?, avgHR: Int?, maxHR: Int?
+        var powerS: Int = 0, cadS: Int = 0, hrS: Int = 0
+        var zoneS: [Int] = Array(repeating: 0, count: 7); var zonesValid = false
+        var ftpW: Int = 0, ftpHow: Int = 0
+        var kj: Int?
+        var best20: Int?
+        var inbandPct: Int?
+        var ftpNew: Int = 0, ftpSuggestedOnly = false
+        var distanceM: Int = 0, distSrc: Int = 0
+        var startEpochS: Int = 0          /* 0 = the board never had the wall clock during that ride */
+        var coach = ""
+    }
+
+    static func encodeSyncRequest(afterRideId: UInt16, maxCount: UInt8, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .syncReq, seq: seq, tMs: tMs)
+        w.u16(0x01, afterRideId); w.u8(0x02, maxCount)
+        return w.result
+    }
+
+    static func encodeSyncRide(_ r: RideSummary, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .syncRide, seq: seq, tMs: tMs)
+        w.u16(0x01, UInt16(r.id)); w.u8(0x02, (r.demo ? 1 : 0) | (r.recovered ? 2 : 0))
+        w.u32(0x03, UInt32(r.durationS)); w.u32(0x04, UInt32(r.pausedS))
+        w.s16(0x05, Int16(r.avgPower ?? -1)); w.s16(0x06, Int16(r.maxPower ?? -1)); w.s16(0x07, Int16(r.avgCadence ?? -1))
+        w.s16(0x08, Int16(r.avgHR ?? -1)); w.s16(0x09, Int16(r.maxHR ?? -1))
+        w.u32(0x0A, UInt32(r.powerS)); w.u32(0x0B, UInt32(r.cadS)); w.u32(0x0C, UInt32(r.hrS))
+        if r.zonesValid { var z = Data(); for v in r.zoneS.prefix(7) { z.append(le(UInt32(v))) }; w.field(0x0D, z) }
+        w.s16(0x0E, Int16(r.ftpW)); w.u8(0x0F, UInt8(r.ftpHow))
+        w.s16(0x10, Int16(r.kj ?? -1)); w.s16(0x11, Int16(r.best20 ?? -1)); w.field(0x12, Data([UInt8(bitPattern: Int8(r.inbandPct ?? -1))]))
+        w.u16(0x13, UInt16(r.ftpNew)); w.u8(0x14, r.ftpSuggestedOnly ? 1 : 0)
+        w.u32(0x15, UInt32(r.distanceM)); w.u8(0x16, UInt8(r.distSrc)); w.u32(0x17, UInt32(r.startEpochS))
+        if !r.coach.isEmpty { w.field(0x18, Data(r.coach.utf8.prefix(60))) }
+        return w.result
+    }
+
+    static func decodeSyncRide(_ d: Data) -> RideSummary? {
+        guard let (h, f) = parse(d), h.type == MsgType.syncRide.rawValue else { return nil }
+        var r = RideSummary(); var gotId = false
+        func opt(_ v: Data) -> Int? { let x = Int(sint(v)); return x < 0 ? nil : x }
+        for x in f {
+            let v = x.value
+            switch (x.tag, v.count) {
+            case (0x01, 2): r.id = Int(uint(v)); gotId = true
+            case (0x02, 1): r.demo = v[v.startIndex] & 1 != 0; r.recovered = v[v.startIndex] & 2 != 0
+            case (0x03, 4): r.durationS = Int(uint(v))
+            case (0x04, 4): r.pausedS = Int(uint(v))
+            case (0x05, 2): r.avgPower = opt(v)
+            case (0x06, 2): r.maxPower = opt(v)
+            case (0x07, 2): r.avgCadence = opt(v)
+            case (0x08, 2): r.avgHR = opt(v)
+            case (0x09, 2): r.maxHR = opt(v)
+            case (0x0A, 4): r.powerS = Int(uint(v))
+            case (0x0B, 4): r.cadS = Int(uint(v))
+            case (0x0C, 4): r.hrS = Int(uint(v))
+            case (0x0D, 28): r.zonesValid = true; r.zoneS = (0..<7).map { Int(uint(v.subdata(in: (v.startIndex + 4 * $0)..<(v.startIndex + 4 * $0 + 4)))) }
+            case (0x0E, 2): r.ftpW = Int(sint(v))
+            case (0x0F, 1): r.ftpHow = Int(v[v.startIndex])
+            case (0x10, 2): r.kj = opt(v)
+            case (0x11, 2): r.best20 = opt(v)
+            case (0x12, 1): r.inbandPct = opt(v)
+            case (0x13, 2): r.ftpNew = Int(uint(v))
+            case (0x14, 1): r.ftpSuggestedOnly = v[v.startIndex] != 0
+            case (0x15, 4): r.distanceM = Int(uint(v))
+            case (0x16, 1): r.distSrc = Int(v[v.startIndex])
+            case (0x17, 4): r.startEpochS = Int(uint(v))
+            case (0x18, _): r.coach = String(decoding: v, as: UTF8.self)
+            default: break
+            }
+        }
+        return gotId ? r : nil
+    }
+
+    struct SyncEnd: Equatable { var count: Int = 0; var total: Int = 0; var more = false }
+    static func decodeSyncEnd(_ d: Data) -> SyncEnd? {
+        guard let (h, f) = parse(d), h.type == MsgType.syncEnd.rawValue else { return nil }
+        var e = SyncEnd()
+        for x in f {
+            switch (x.tag, x.value.count) {
+            case (0x01, 2): e.count = Int(uint(x.value))
+            case (0x02, 2): e.total = Int(uint(x.value))
+            case (0x03, 1): e.more = x.value[x.value.startIndex] != 0
+            default: break
+            }
+        }
+        return e
     }
 
     /// Live values from the board. A nil value means "no data right now" — never a held value.

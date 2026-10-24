@@ -1,6 +1,8 @@
 import Foundation
 import Combine
 import CoreLocation
+import UIKit
+import UserNotifications
 
 /// Ride session on the phone with ONE owner per ride, fixed when the ride starts:
 ///  - `.board`: the Waveshare is the recorder. This object mirrors its live state and, when the board ends the ride,
@@ -27,6 +29,10 @@ final class RideRecorder: ObservableObject {
     @Published private(set) var note: String?
 
     private var distCm = 0
+    /// Wall-clock time of the last phone-owned second that was recorded; lets a late timer (app suspended) be
+    /// recognised as a gap instead of silently losing time.
+    private var lastPhoneTick: Date?
+    @Published private(set) var gapSeconds = 0
     private var hrSum = 0, hrN = 0, hrMax = 0
     private var startDate = Date()
     private var lastBoardState: BCLink.RideState = .idle
@@ -35,6 +41,42 @@ final class RideRecorder: ObservableObject {
     weak var location: LocationService?
     weak var watch: WatchLink?
     var phoneOnlyMode = false
+    /// Snapshot for the watch mirror and the background notice; refreshed every tick.
+    var onTick: (() -> Void)?
+
+    private var ticker: Timer?
+    private var bgObserver: Any?
+    private var notificationsAsked = false
+
+    /// `autoTick`: the recorder drives itself at 1 Hz from a run-loop timer (keeps counting in the background while the
+    /// location background mode keeps the app alive). Tests pass false and call tick() by hand.
+    init(autoTick: Bool = true) {
+        if autoTick {
+            let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.tick(); self?.onTick?() }
+            t.tolerance = 0.1
+            RunLoop.main.add(t, forMode: .common)
+            ticker = t
+            bgObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in self?.enteredBackground() }
+        }
+    }
+    deinit { ticker?.invalidate(); if let o = bgObserver { NotificationCenter.default.removeObserver(o) } }
+
+    /// Local notice while a ride keeps recording with the app in the background (no new entitlement needed).
+    private func enteredBackground() {
+        guard isActive else { return }
+        let c = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.title = owner == .board ? "BikeComputer ride in progress" : "Recording in the background"
+        content.body = owner == .board ? "The board records; the phone keeps mirroring it and sending GPS." : "GPS and heart rate keep recording. Open BikeComputer to see the ride."
+        content.sound = nil
+        c.add(UNNotificationRequest(identifier: "bc.ride.background", content: content, trigger: nil))
+    }
+    private func clearBackgroundNotice() { UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["bc.ride.background"]) }
+    private func askNotifications() {
+        guard !notificationsAsked else { return }
+        notificationsAsked = true
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { _, _ in }
+    }
 
     var recorderIsBoard: Bool { owner == .board }
     var isActive: Bool { state == .running || state == .paused }
@@ -67,12 +109,16 @@ final class RideRecorder: ObservableObject {
         if owner == .phone, state == .running { phoneSecond() }
     }
 
+    /// Test hook: pretend `seconds` passed with no tick (the app was suspended).
+    func simulateSuspension(seconds: Int) { if let t = lastPhoneTick { lastPhoneTick = t.addingTimeInterval(-Double(seconds)) } }
+
     // MARK: board-owned
     private func adopt(_ l: BCLink.Live) {
         owner = .board; samples = []; hrSum = 0; hrN = 0; hrMax = 0; lapCount = 1; lapStartS = 0
         startDate = Date().addingTimeInterval(-Double(l.elapsedS)); lastBoardRideId = l.rideId
         note = "The BikeComputer is recording; this phone mirrors it and adds GPS."
         location?.sharing = true
+        askNotifications()
     }
 
     private func mirror(_ l: BCLink.Live) {
@@ -94,7 +140,7 @@ final class RideRecorder: ObservableObject {
     private func boardRecord(_ l: BCLink.Live) -> RideRecord {
         let ws = samples.compactMap { $0.w }
         let cads = samples.compactMap { $0.cad }
-        var r = RideRecord(boardRideId: l.rideId, start: startDate, durationS: l.elapsedS, distanceM: l.distanceM,
+        var r = RideRecord(boardRideId: l.rideId, boardId: device?.boardId, start: startDate, durationS: l.elapsedS, distanceM: l.distanceM,
                            avgPower: ws.isEmpty ? nil : ws.reduce(0, +) / ws.count, maxPower: ws.max(), normalizedPower: Self.normalized(ws),
                            avgCadence: cads.isEmpty ? nil : cads.reduce(0, +) / cads.count, avgHR: hrN > 0 ? hrSum / hrN : nil, maxHR: hrN > 0 ? hrMax : nil,
                            kj: ws.isEmpty ? nil : ws.reduce(0, +) / 1000, recorder: .board,
@@ -111,27 +157,39 @@ final class RideRecorder: ObservableObject {
         guard state == .idle || state == .ended, owner != .board else { return false }
         if let l = device?.live, device?.state == .ready, device?.liveIsFresh ?? false, l.rideState == .running || l.rideState == .paused { return false }
         owner = .phone
-        state = .running; elapsedS = 0; distanceM = 0; distCm = 0; samples = []; hrSum = 0; hrN = 0; hrMax = 0; lapStartS = 0; lapCount = 1
-        startDate = Date(); boardLinkLost = false
+        state = .running; elapsedS = 0; distanceM = 0; distCm = 0; samples = []; hrSum = 0; hrN = 0; hrMax = 0; lapStartS = 0; lapCount = 1; gapSeconds = 0
+        startDate = Date(); boardLinkLost = false; lastPhoneTick = Date()
         note = device?.state == .ready ? "Phone-only ride: this phone records; the BikeComputer's values are shown but not merged." : "Phone-only ride: GPS speed and distance, heart rate from the watch."
         location?.sharing = true
+        askNotifications()
         return true
     }
     func pause() { if owner == .phone, state == .running { state = .paused } }
-    func resume() { if owner == .phone, state == .paused { state = .running } }
+    func resume() { if owner == .phone, state == .paused { state = .running; lastPhoneTick = Date() } }
     func lap() { lapCount += 1; lapStartS = elapsedS }
     func end() {
         guard owner == .phone, isActive else { return }
         state = .ended
         var r = RideRecord(start: startDate, durationS: elapsedS, distanceM: distanceM, avgHR: hrN > 0 ? hrSum / hrN : nil, maxHR: hrN > 0 ? hrMax : nil,
                            recorder: .phone, sources: ["Phone GPS"] + (hrN > 0 ? ["Apple Watch"] : []))
-        r.samples = samples
+        r.samples = samples; r.gapSeconds = gapSeconds
         pendingResult = r
     }
-    func discard() { pendingResult = nil; state = .idle; owner = .none; note = nil }
-    func finish() { pendingResult = nil; state = .idle; owner = .none; note = nil }
+    func discard() { pendingResult = nil; state = .idle; owner = .none; note = nil; clearBackgroundNotice() }
+    func finish() { pendingResult = nil; state = .idle; owner = .none; note = nil; clearBackgroundNotice() }
 
-    private func phoneSecond() {
+    private func phoneSecond(now: Date = Date()) {
+        // Gap handling: if more than one wall-clock second passed since the last recorded second (timer held back while
+        // the app was suspended), the missing seconds are stored as empty samples flagged `gap` — time stays right,
+        // nothing is interpolated.
+        if let last = lastPhoneTick {
+            let missed = Int(now.timeIntervalSince(last).rounded()) - 1
+            if missed >= 1 {
+                for _ in 0..<min(missed, 6 * 3600) { elapsedS += 1; var g = RideRecord.Sample(t: elapsedS); g.gap = true; samples.append(g) }
+                gapSeconds += missed
+            }
+        }
+        lastPhoneTick = now
         elapsedS += 1
         var s = RideRecord.Sample(t: elapsedS)
         if let loc = location?.last, Date().timeIntervalSince(loc.timestamp) < 3, loc.horizontalAccuracy >= 0, loc.horizontalAccuracy <= 50 {

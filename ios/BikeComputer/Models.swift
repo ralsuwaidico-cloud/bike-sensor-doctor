@@ -12,7 +12,7 @@ struct RiderProfile: Codable, Equatable {
         /// Starting-assumption W/kg, same table as the board (bc_exp_wkg_x100): 1.75 / 3.0 / 4.0
         var wkg: Double { switch self { case .beginner: return 1.75; case .intermediate: return 3.0; case .advanced: return 4.0 } } }
     enum FTPHow: String, Codable { case assumed, fromRides, entered
-        var label: String { switch self { case .assumed: return "provisional"; case .fromRides: return "from rides"; case .entered: return "entered" } } }
+        var label: String { switch self { case .assumed: return "provisional"; case .fromRides: return "estimated"; case .entered: return "entered" } } }
 
     var name = ""
     var goal: Goal = .endurance
@@ -25,6 +25,14 @@ struct RiderProfile: Codable, Equatable {
     var ftpW: Int = 225
     var ftpHow: FTPHow = .assumed
     var hrPrefWatchFirst = false
+    /// Date of the ride an estimated FTP came from (ftpHow == .fromRides); nil otherwise.
+    var ftpFromDate: Date? = nil
+
+    /// "provisional" / "entered" / "estimated from 24 Oct ride"
+    var ftpLabel: String {
+        if ftpHow == .fromRides, let d = ftpFromDate { return "estimated from \(d.dayAndDate) ride" }
+        return ftpHow.label
+    }
 
     var estimatedMaxHR: Int { maxHR ?? Int((208.0 - 0.7 * Double(age)).rounded()) }
     mutating func refreshAssumption() { if ftpHow == .assumed { ftpW = Int((weightKg * level.wkg).rounded()) } }
@@ -118,6 +126,10 @@ struct RideRecord: Codable, Identifiable, Equatable {
     enum Recorder: String, Codable { case board, phone }
     var id = UUID()
     var boardRideId: Int? = nil
+    /// Which board recorded it (BLE address or CoreBluetooth id); nil for phone-only rides.
+    var boardId: String? = nil
+    /// Seconds the phone did not observe during a phone-only ride (app suspended); nil/0 = none.
+    var gapSeconds: Int? = nil
     var start: Date
     var durationS: Int
     var distanceM: Int
@@ -130,9 +142,28 @@ struct RideRecord: Codable, Identifiable, Equatable {
     var sources: [String]
     var demo = false
     var samples: [Sample] = []      /* 1 Hz, kept for graphs; nil fields = no data that second */
-    struct Sample: Codable, Equatable { var t: Int; var w: Int?; var cad: Int?; var hr: Int?; var speedCms: Int?; var lat: Double?; var lon: Double?; var alt: Double? }
+    struct Sample: Codable, Equatable { var t: Int; var w: Int?; var cad: Int?; var hr: Int?; var speedCms: Int?; var lat: Double?; var lon: Double?; var alt: Double?
+        /// true = this second was not observed (phone suspended); shown as a gap, never filled in
+        var gap: Bool? = nil }
 
     var title: String { recorder == .phone ? "Ride (phone only)" : "Ride" }
+    var dateKnown: Bool { start.timeIntervalSince1970 > 1_600_000_000 }
+
+    /// Best mean power over `seconds` from the 1 Hz samples. Requires power on ≥ 95 % of the window's seconds and the
+    /// window to fit the ride; nil otherwise (never extrapolated).
+    func bestMeanPower(seconds n: Int) -> Int? {
+        let ws = samples.map { $0.w }
+        guard ws.count >= n, n > 0 else { return nil }
+        var sum = 0, have = 0, best: Int? = nil
+        for i in 0..<ws.count {
+            if let w = ws[i] { sum += w; have += 1 }
+            if i >= n, let w = ws[i - n] { sum -= w; have -= 1 }
+            if i >= n - 1, have * 100 >= n * 95 { let m = sum / max(1, have); best = max(best ?? 0, m) }
+        }
+        return best
+    }
+    var best20: Int? { bestMeanPower(seconds: 1200) }
+    var best60: Int? { bestMeanPower(seconds: 3600) }
     var recordedBy: String { recorder == .board ? "BikeComputer" : "this phone" }
     var hasPower: Bool { avgPower != nil }
     var hasTrack: Bool { samples.contains { $0.lat != nil } }
@@ -165,10 +196,15 @@ struct StoreFile: Codable, Equatable {
     var guest = true
     var appleUserId: String? = nil
     var createdAt = Date()
+    var ftpSuggestion: FTPSuggestion? = nil
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
         self.schema = schema; self.profile = profile; self.settings = settings; self.plan = plan; self.rides = rides; self.tiles = tiles
         self.onboarded = onboarded; self.guest = guest; self.appleUserId = appleUserId; self.createdAt = createdAt
+    }
+    init(schema: Int = StoreFile.currentSchema, profile: RiderProfile, settings: AppSettings, plan: [Workout], rides: [RideRecord], tiles: [String], onboarded: Bool, guest: Bool, appleUserId: String?, createdAt: Date, ftpSuggestion: FTPSuggestion?) {
+        self.init(schema: schema, profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt)
+        self.ftpSuggestion = ftpSuggestion
     }
 
     /// Tolerant decoding: a key missing from an older file takes its default instead of failing the whole load.
@@ -184,6 +220,7 @@ struct StoreFile: Codable, Equatable {
         guest = try c.decodeIfPresent(Bool.self, forKey: .guest) ?? true
         appleUserId = try c.decodeIfPresent(String.self, forKey: .appleUserId)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        ftpSuggestion = try c.decodeIfPresent(FTPSuggestion.self, forKey: .ftpSuggestion)
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -196,6 +233,17 @@ struct StoreFile: Codable, Equatable {
     }
 }
 
+/// An FTP the app proposes from a real ride. Applied only when the rider taps Accept; a tested (entered) FTP is never
+/// replaced without that tap either.
+struct FTPSuggestion: Codable, Equatable {
+    var watts: Int
+    var best20: Int
+    var best60: Int?
+    var rideId: UUID
+    var rideDate: Date
+    var previousFTP: Int
+}
+
 final class Store: ObservableObject {
     static let defaultTiles = ["power", "cadence", "hr", "speed", "time", "dist"]
     @Published var profile = RiderProfile() { didSet { persist() } }
@@ -206,6 +254,7 @@ final class Store: ObservableObject {
     @Published var plan: [Workout] = [] { didSet { persist() } }
     @Published var rides: [RideRecord] = [] { didSet { persist() } }
     @Published var tiles: [String] = Store.defaultTiles { didSet { persist() } }
+    @Published var ftpSuggestion: FTPSuggestion? { didSet { persist() } }
     @Published private(set) var lastSaveError: String?
 
     let dir: URL
@@ -230,10 +279,10 @@ final class Store: ObservableObject {
 
     private func apply(_ f: StoreFile) {
         profile = f.profile; settings = f.settings; plan = f.plan; rides = f.rides; tiles = f.tiles
-        onboarded = f.onboarded; guest = f.guest; appleUserId = f.appleUserId; createdAt = f.createdAt
+        onboarded = f.onboarded; guest = f.guest; appleUserId = f.appleUserId; createdAt = f.createdAt; ftpSuggestion = f.ftpSuggestion
     }
 
-    var snapshot: StoreFile { StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt) }
+    var snapshot: StoreFile { StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt, ftpSuggestion: ftpSuggestion) }
 
     /// Build-14 layout: separate JSON files + UserDefaults flags. Imported once, then superseded by store.json.
     private func legacyImport() -> StoreFile? {
@@ -284,9 +333,73 @@ final class Store: ObservableObject {
         if rides.contains(where: { $0.id == r.id }) { return false }
         rides.insert(r, at: 0)
         if let t = today, t.kind.isRide, !t.done { var w = t; w.done = true; update(w) }
+        considerFTP(from: r)
         return true
     }
-    func deleteRide(_ r: RideRecord) { rides.removeAll { $0.id == r.id } }
+    func deleteRide(_ r: RideRecord) { rides.removeAll { $0.id == r.id }; if ftpSuggestion?.rideId == r.id { ftpSuggestion = nil } }
+
+    // MARK: FTP from rides
+    /// 0.95 × best 20-minute power (Coggan). Proposed only; needs ≥ 2 % difference from the current FTP.
+    static func proposedFTP(best20: Int) -> Int { Int((Double(best20) * 0.95).rounded()) }
+    func considerFTP(from r: RideRecord) {
+        guard !r.demo, let b20 = r.best20 else { return }
+        let w = Self.proposedFTP(best20: b20)
+        guard abs(w - profile.ftpW) * 50 >= profile.ftpW else { return }       /* < 2 % change: nothing to propose */
+        if let s = ftpSuggestion, s.rideDate > r.start { return }               /* keep the newer suggestion */
+        ftpSuggestion = FTPSuggestion(watts: w, best20: b20, best60: r.best60, rideId: r.id, rideDate: r.start, previousFTP: profile.ftpW)
+    }
+    /// Same rule for a board summary that carries best20 but no samples.
+    func considerFTP(boardBest20 b20: Int, ride r: RideRecord) {
+        let w = Self.proposedFTP(best20: b20)
+        guard abs(w - profile.ftpW) * 50 >= profile.ftpW else { return }
+        if let s = ftpSuggestion, s.rideDate > r.start { return }
+        ftpSuggestion = FTPSuggestion(watts: w, best20: b20, best60: nil, rideId: r.id, rideDate: r.start, previousFTP: profile.ftpW)
+    }
+    func acceptFTPSuggestion() {
+        guard let s = ftpSuggestion else { return }
+        profile.ftpW = s.watts; profile.ftpHow = .fromRides; profile.ftpFromDate = s.rideDate
+        ftpSuggestion = nil
+    }
+    func dismissFTPSuggestion() { ftpSuggestion = nil }
+
+    // MARK: board history import (ios/SYNC_PROPOSAL.md) — the board owns these rides
+    /// Returns true when a record was added or merged. Keyed by board id + start time (or ride id when the clock was unknown).
+    @discardableResult
+    func importBoardRide(_ b: BCLink.RideSummary, boardId: String) -> Bool {
+        guard !b.demo else { return false }
+        let start = b.startEpochS > 0 ? Date(timeIntervalSince1970: TimeInterval(b.startEpochS)) : Date(timeIntervalSince1970: 0)
+        // 1. exact key match → refresh totals, keep samples
+        if let i = rides.firstIndex(where: { $0.recorder == .board && $0.boardId == boardId && (b.startEpochS > 0 ? abs($0.start.timeIntervalSince(start)) < 1 : $0.boardRideId == b.id) }) {
+            rides[i] = Self.merge(rides[i], with: b, boardId: boardId, start: start); return true
+        }
+        // 2. the phone's live mirror of the same ride (same board ride id, start within 10 min, not yet keyed)
+        if let i = rides.firstIndex(where: { $0.recorder == .board && $0.boardRideId == b.id && ($0.boardId == nil || $0.boardId == boardId) && (b.startEpochS == 0 || abs($0.start.timeIntervalSince(start)) < 600) }) {
+            rides[i] = Self.merge(rides[i], with: b, boardId: boardId, start: start); return true
+        }
+        // 3. new ride the phone never saw
+        var r = RideRecord(start: start, durationS: b.durationS, distanceM: b.distanceM, recorder: .board, sources: ["BikeComputer"])
+        r = Self.merge(r, with: b, boardId: boardId, start: start)
+        let at = rides.firstIndex { $0.start < r.start } ?? rides.count
+        rides.insert(r, at: at)
+        if let b20 = b.best20 { considerFTP(boardBest20: b20, ride: r) }
+        return true
+    }
+    private static func merge(_ r0: RideRecord, with b: BCLink.RideSummary, boardId: String, start: Date) -> RideRecord {
+        var r = r0
+        r.boardRideId = b.id; r.boardId = boardId
+        if b.startEpochS > 0 { r.start = start }
+        r.durationS = b.durationS; r.distanceM = b.distanceM
+        r.avgPower = b.avgPower; r.maxPower = b.maxPower; r.avgCadence = b.avgCadence; r.avgHR = b.avgHR; r.maxHR = b.maxHR; r.kj = b.kj
+        if b.zonesValid { r.zoneSeconds = b.zoneS }
+        var src = ["BikeComputer"]
+        if b.avgPower != nil { src.append("XDS") }
+        if b.avgHR != nil { src.append("Heart rate") }
+        if b.distSrc != 0 { src.append("GPS") }
+        if r.hasTrack { src.append("Phone GPS") }
+        r.sources = src
+        return r
+    }
+    func highestBoardRideId(for boardId: String) -> Int { rides.filter { $0.boardId == boardId }.compactMap { $0.boardRideId }.max() ?? 0 }
 
     /// Weekly totals for Progress (last `weeks` weeks, oldest first).
     struct WeekTotal: Identifiable { var id: Date { monday }; let monday: Date; let minutes: Int; let km: Double; let rides: Int }
@@ -306,7 +419,7 @@ final class Store: ObservableObject {
     /// Guideline 5.1.1(v): everything the app stores about the rider can be removed in-app.
     func resetAll() {
         loading = true
-        rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil
+        rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil; ftpSuggestion = nil
         tiles = Store.defaultTiles; createdAt = Date()
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
@@ -352,7 +465,7 @@ enum Coach {
     static func rideSummary(_ r: RideRecord, profile p: RiderProfile) -> String {
         guard let avg = r.avgPower else { return "Recorded on the phone without a power meter: distance and time are real, no power analysis is possible. Connect the BikeComputer for watts." }
         let z = p.zone(forWatts: avg)
-        var s = "Average \(avg) W is Zone \(z) for your FTP of \(p.ftpW) W (\(p.ftpHow.label))."
+        var s = "Average \(avg) W is Zone \(z) for your FTP of \(p.ftpW) W (\(p.ftpLabel))."
         if let hr = r.avgHR { s += String(format: " Efficiency %.2f W per beat.", Double(avg) / Double(hr)) }
         if r.durationS >= 1200, p.ftpHow == .assumed { s += " No qualifying 20-minute effort yet (needs a steady block clearly harder than the rest)." }
         return s

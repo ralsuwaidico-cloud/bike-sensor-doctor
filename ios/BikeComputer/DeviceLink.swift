@@ -19,12 +19,21 @@ final class DeviceLink: NSObject, ObservableObject {
     @Published private(set) var lastError: String?
     @Published private(set) var stats = Stats()
     @Published private(set) var found: [(id: UUID, name: String, rssi: Int)] = []
+    /// Ride history sync (ios/SYNC_PROPOSAL.md). Inactive until the board's INFO has RIDE_SYNC.
+    @Published private(set) var syncStatus = "not supported by this firmware"
+    @Published private(set) var syncedRides = 0
+    var onBoardRide: ((BCLink.RideSummary, String) -> Void)?
+    /// Highest board ride id already stored for a given board id — the Store provides it so paging resumes where it left off.
+    var highestStoredRideId: ((String) -> Int)?
+    /// Key for this board on this phone: its BLE address when the firmware sends it, else the CoreBluetooth identifier.
+    var boardId: String { info?.deviceId ?? peripheral?.identifier.uuidString ?? "unknown" }
 
     struct Stats { var connects = 0, liveMsgs = 0, rejected = 0, sentGPS = 0, sentHR = 0, sentTime = 0, disconnects = 0 }
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
-    private var inputChr: CBCharacteristic?, controlChr: CBCharacteristic?, liveChr: CBCharacteristic?
+    private var inputChr: CBCharacteristic?, controlChr: CBCharacteristic?, liveChr: CBCharacteristic?, syncChr: CBCharacteristic?
+    private var syncInFlight = false
     private var seq: UInt16 = 0
     private var reqId: UInt16 = 0
     private var timeTimer: Timer?
@@ -118,6 +127,15 @@ final class DeviceLink: NSObject, ObservableObject {
         return true
     }
 
+    /// Asks the board for rides after the highest id already stored. Does nothing when the firmware lacks RIDE_SYNC.
+    func startSync() {
+        guard state == .ready, let i = info, i.hasRideSync, let c = syncChr, let p = peripheral else { syncStatus = info?.hasRideSync == false ? "not supported by firmware \(info?.fw ?? "?") — sync coming" : syncStatus; return }
+        let after = highestStoredRideId?(boardId) ?? 0
+        guard let d = BCLink.encodeSyncRequest(afterRideId: UInt16(clamping: after), maxCount: 50, seq: nextSeq(), tMs: nowMs()) else { return }
+        syncInFlight = true; syncStatus = "syncing from ride \(after + 1)…"
+        p.writeValue(d, for: c, type: .withResponse)
+    }
+
     // MARK: internals
     private func nextSeq() -> UInt16 { seq &+= 1; return seq }
     private func nowMs() -> UInt32 { UInt32(truncatingIfNeeded: Int(Date().timeIntervalSince(boardStart) * 1000)) }
@@ -185,7 +203,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         stats.disconnects += 1
         stopTimers()
         live = nil; liveReceivedAt = nil; rssi = nil
-        inputChr = nil; controlChr = nil; liveChr = nil
+        inputChr = nil; controlChr = nil; liveChr = nil; syncChr = nil; syncInFlight = false
         if let e = error { lastError = e.localizedDescription }
         if wantConnection { setState(.connecting); c.connect(p, options: nil) } else { setState(.idle) }
     }
@@ -202,6 +220,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             case BCLink.liveUUID: liveChr = c
             case BCLink.inputUUID: inputChr = c
             case BCLink.controlUUID: controlChr = c
+            case BCLink.syncUUID: syncChr = c
             default: break
             }
         }
@@ -223,12 +242,21 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             setState(.ready)
             if let l = liveChr { p.setNotifyValue(true, for: l) }
             if let k = controlChr { p.setNotifyValue(true, for: k) }
+            if i.hasRideSync, let sc = syncChr { p.setNotifyValue(true, for: sc); syncStatus = "supported"; DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.startSync() } }
+            else { syncStatus = "not supported by firmware \(i.fw) — sync coming" }
             sendTime()
             startTimers()
         case BCLink.liveUUID:
             if let l = BCLink.decodeLive(d) { live = l; liveReceivedAt = Date(); stats.liveMsgs += 1 } else { stats.rejected += 1 }
         case BCLink.controlUUID:
             if let r = BCLink.decodeControlResponse(d) { lastControl = r } else { stats.rejected += 1 }
+        case BCLink.syncUUID:
+            if let r = BCLink.decodeSyncRide(d) { syncedRides += 1; onBoardRide?(r, boardId) }
+            else if let e = BCLink.decodeSyncEnd(d) {
+                syncInFlight = false
+                syncStatus = "\(e.total) rides on the board · \(syncedRides) received"
+                if e.more { startSync() }
+            } else { stats.rejected += 1 }
         default: break
         }
     }

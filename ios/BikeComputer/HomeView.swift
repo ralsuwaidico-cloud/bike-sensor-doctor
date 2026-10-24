@@ -32,6 +32,7 @@ struct HomeView: View {
                         Label(startLabel(mode), systemImage: "play.fill").frame(maxWidth: .infinity)
                     }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
 
+                    if store.ftpSuggestion != nil { Card(accent: true) { FTPSuggestionCard() } }
                     Card {
                         Eyebrow(t: "Coach (rules)")
                         Text(Coach.homeNote(store: store, device: device)).font(.subheadline)
@@ -57,7 +58,7 @@ struct HomeView: View {
                         }
                     }
                     if store.guest { Card { HStack { Text("Guest: rides stay on this phone.").font(.footnote).foregroundStyle(.secondary); Spacer(); Button("Create account") { tab = 4 }.font(.caption.bold()) } } }
-                    HStack { Text("FTP \(store.profile.ftpW) W").font(.footnote).foregroundStyle(.secondary); Pill(text: store.profile.ftpHow.label, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live); Spacer(); Text("\(store.profile.hoursPerWeek) h/week · \(store.profile.level.title.lowercased())").font(.footnote).foregroundStyle(.secondary) }
+                    HStack { Text("FTP \(store.profile.ftpW) W").font(.footnote).foregroundStyle(.secondary); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live); Spacer(); Text("\(store.profile.hoursPerWeek) h/week · \(store.profile.level.title.lowercased())").font(.footnote).foregroundStyle(.secondary) }
                 }.padding()
             }
             .background(Color(.systemGroupedBackground))

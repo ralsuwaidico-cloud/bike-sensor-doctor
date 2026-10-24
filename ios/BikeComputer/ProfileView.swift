@@ -26,7 +26,7 @@ struct ProfileTabView: View {
                 }
 
                 Section {
-                    HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold(); Pill(text: store.profile.ftpHow.label, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
+                    HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold(); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
                     HStack {
                         TextField("Tested FTP in watts", text: $ftpText).keyboardType(.numberPad)
                         Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.profile.ftpW = v; store.profile.ftpHow = .entered; ftpText = "" } }.disabled(Int(ftpText) == nil)

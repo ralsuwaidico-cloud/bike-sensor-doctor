@@ -121,7 +121,7 @@ struct RideTabView: View {
         case "time": return MetricTile(title: "Time", value: recorder.isActive || recorder.state == .ended ? recorder.elapsedS.asDuration : nil, unit: "", source: recorder.owner.label, big: big)
         case "dist": return MetricTile(title: "Distance", value: distanceText, unit: imperial ? "mi" : "km", source: recorder.owner == .board ? "board (GPS)" : "Phone GPS", big: big)
         case "lap": return MetricTile(title: "Lap \(recorder.lapCount)", value: recorder.isActive ? (recorder.elapsedS - recorder.lapStartS).asDuration : nil, unit: "", source: recorder.owner.label, big: big)
-        case "zone": return MetricTile(title: "Zone", value: currentZone.map { "Z\($0)" }, unit: "", source: "from FTP \(store.profile.ftpW) W (\(store.profile.ftpHow.label))", big: big)
+        case "zone": return MetricTile(title: "Zone", value: currentZone.map { "Z\($0)" }, unit: "", source: "from FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel))", big: big)
         case "np": return MetricTile(title: "Normalized", value: RideRecorder.normalized(recorder.samples.compactMap { $0.w }).map { "\($0)" }, unit: "W", source: "phone mirror of the board", big: big)
         case "battery": return MetricTile(title: "Board battery", value: live?.batteryPct.map { "≈\($0)" }, unit: "%", source: "estimate from voltage", big: big)
         default: return MetricTile(title: key, value: nil, unit: "", source: "", big: big)
