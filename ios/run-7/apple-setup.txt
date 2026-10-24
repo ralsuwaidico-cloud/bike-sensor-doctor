@@ -1,0 +1,3 @@
+Bundle IDs and capabilities:
+Apple is waiting for the account holder to accept the updated Program License Agreement: sign in at developer.apple.com/account, accept the agreement banner, then run again. (HTTP 403: FORBIDDEN.REQUIRED_AGREEMENTS_MISSING_OR_EXPIRED: This request requires an in-effect agreement that has not been signed or has expired.)
+SETUP FAILED (exit 1)

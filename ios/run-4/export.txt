@@ -1,0 +1,17 @@
+=== export: errors / failures ===
+error: exportArchive Unable to process request - PLA Update available
+error: exportArchive No profiles for 'com.ralsuwaidico.bikecomputer' were found
+error: exportArchive Unable to process request - PLA Update available
+error: exportArchive No profiles for 'com.ralsuwaidico.bikecomputer.watchkitapp' were found
+** EXPORT FAILED **
+=== export: last 150 lines ===
+2026-10-24 12:58:38.592 xcodebuild[7956:29568] [MT] IDEDistribution: -[IDEDistributionLogging _createLoggingBundleAtPath:]: Created bundle at path "/var/folders/n6/hn37q6pj7sj_9dmqqc2113800000gn/T/BikeComputer_2026-10-24_12-58-38.589.xcdistributionlogs".
+error: exportArchive Unable to process request - PLA Update available
+
+error: exportArchive No profiles for 'com.ralsuwaidico.bikecomputer' were found
+
+error: exportArchive Unable to process request - PLA Update available
+
+error: exportArchive No profiles for 'com.ralsuwaidico.bikecomputer.watchkitapp' were found
+
+** EXPORT FAILED **

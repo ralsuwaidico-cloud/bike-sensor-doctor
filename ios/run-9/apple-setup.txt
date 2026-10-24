@@ -1,0 +1,6 @@
+Bundle IDs and capabilities:
+  bundle ID com.ralsuwaidico.bikecomputer: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer: already enabled
+  bundle ID com.ralsuwaidico.bikecomputer.watchkitapp: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer.watchkitapp: already enabled
+::warning::The App Store Connect app record for com.ralsuwaidico.bikecomputer does not exist yet. Create it once at appstoreconnect.apple.com > Apps > + > New App (see ios/SETUP.md). Until then builds are compiled and signed-checked but not uploaded.

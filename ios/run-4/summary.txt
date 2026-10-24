@@ -1,0 +1,13 @@
+BikeComputer iOS CI — build 4 — 2026-10-24 12:55 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: ok (Executed 3 tests, with 0 failures)
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 0.1.0 (4)
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 0.1.0 (4)
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: FAILED (exit 70)
+commit 4caa72fe3c1636bccd481a03d174d3a7c6ef1c08  branch ios/dev  job failure

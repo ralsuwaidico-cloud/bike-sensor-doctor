@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 2 — 2026-10-23 20:53 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: ok (Executed 3 tests, with 0 failures)
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 0.1.0 (2)
+  contains BikeComputerWatch.app 0.1.0 (2)
+RESULT sign: skipped (App Store Connect secrets not set yet)
+commit e14072e58df78b2383d1ae4f6d45e439e25f3100  branch ios/dev  job success
