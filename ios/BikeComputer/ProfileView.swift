@@ -165,7 +165,9 @@ struct HeartRatePage: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var watch: WatchLink
     @EnvironmentObject private var device: DeviceLink
-    @State private var rest = "", maxHR = "", lthr = ""
+    @State private var rest = ""
+    @State private var maxHR = ""
+    @State private var lthr = ""
     var body: some View {
         Form {
             Section {
