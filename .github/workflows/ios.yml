@@ -41,7 +41,10 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-        run: set -o pipefail; python3 ios/ci/asc.py 2>&1 | tee asc.txt
+        run: |
+          python3 ios/ci/asc.py > asc.txt 2>&1 || echo "SETUP FAILED (exit $?)" >> asc.txt
+          cat asc.txt
+          grep -q "app_ready=true" "$GITHUB_OUTPUT" || echo "app_ready=false" >> "$GITHUB_OUTPUT"
       - name: Keep the setup report
         if: always()
         uses: actions/upload-artifact@v4
@@ -49,6 +52,19 @@ jobs:
           name: apple-setup
           path: asc.txt
           if-no-files-found: ignore
+      - name: Publish the setup report to branch ci-logs
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.run_number }}
+        run: |
+          W=$(mktemp -d); cd "$W"
+          git init -q && git config user.name "ios-ci" && git config user.email "ios-ci@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
+          mkdir -p "ios/run-$N" && cp "$GITHUB_WORKSPACE/asc.txt" "ios/run-$N/apple-setup.txt"
+          git add -A && git commit -q -m "iOS CI apple setup run $N" || exit 0
+          for i in 1 2 3; do git push -q origin HEAD:ci-logs && break; git fetch -q --depth 1 origin ci-logs && git rebase -q FETCH_HEAD || true; sleep 3; done
 
   build:
     needs: apple
