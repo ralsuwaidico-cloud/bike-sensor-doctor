@@ -15,6 +15,7 @@ struct ProgressTabView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     weekly
+                    if store.profile.trainingMode.includesLifting || !store.strength.isEmpty { lifting }
                     ftpCard
                     history
                 }.padding()
@@ -40,6 +41,26 @@ struct ProgressTabView: View {
                 .chartXAxis { AxisMarks(values: .stride(by: .weekOfYear)) { _ in AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: true) } }
                 .frame(height: 160)
                 Text(weekText(totals.last)).font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var lifting: some View {
+        let totals = store.strengthWeekTotals(weeks: range)
+        return Card {
+            HStack { Eyebrow(t: "Weekly lifting time"); Spacer(); Text("separate from riding").font(.caption2).foregroundStyle(.secondary) }
+            if store.strength.isEmpty {
+                Text("no sessions logged yet").font(.footnote).foregroundStyle(BC.stale)
+                Text("Log a session from Home or Plan (Log strength), or import strength workouts from Apple Health in Connections.").font(.footnote).foregroundStyle(.secondary)
+            } else {
+                Chart(totals) { w in
+                    BarMark(x: .value("Week", w.monday, unit: .weekOfYear), y: .value("Minutes", w.minutes)).foregroundStyle(BC.zone(5))
+                    if store.profile.liftingHoursPerWeek > 0 { RuleMark(y: .value("Budget", store.profile.liftingHoursPerWeek * 60)).foregroundStyle(BC.stale).lineStyle(StrokeStyle(lineWidth: 1, dash: [4])) }
+                }
+                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let m = v.as(Int.self) { Text(Fmt.compact(minutes: m)) } } } }
+                .chartXAxis { AxisMarks(values: .stride(by: .weekOfYear)) { _ in AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: true) } }
+                .frame(height: 120)
+                if let last = totals.last { Text("This week: \(Fmt.duration(minutes: last.minutes)) in \(last.sessions) session\(last.sessions == 1 ? "" : "s")" + (store.profile.liftingHoursPerWeek > 0 ? ". Dashed line = your \(store.profile.liftingHoursPerWeek) h lifting budget." : ".")).font(.footnote).foregroundStyle(.secondary) }
             }
         }
     }

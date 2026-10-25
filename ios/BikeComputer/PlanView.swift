@@ -11,6 +11,7 @@ struct PlanView: View {
     @State private var showAvailability = false
     @State private var confirmRegenerate = false
     @State private var addOn: Date?
+    @State private var showStrengthLog = false
 
     private var weekDate: Date { Calendar.current.date(byAdding: .day, value: 7 * weekOffset, to: Date())! }
     private var week: [Workout] { store.workouts(weekOf: weekDate) }
@@ -30,7 +31,11 @@ struct PlanView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Plan")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showAvailability = true } label: { Label("Days", systemImage: "calendar.badge.clock") } } }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { Button { showStrengthLog = true } label: { Label("Log strength", systemImage: "dumbbell") } }
+                ToolbarItem(placement: .topBarTrailing) { Button { showAvailability = true } label: { Label("Days", systemImage: "calendar.badge.clock") } }
+            }
+            .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet() }
             .sheet(item: $selected) { w in WorkoutDetail(workout: w) }
             .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
             .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
@@ -94,29 +99,35 @@ struct PlanView: View {
 
     // MARK: summary
     private var summary: some View {
-        let planned = PlanEngine.rideMinutes(week), total = PlanEngine.totalMinutes(week)
-        let done = week.filter { $0.done }.reduce(0) { $0 + $1.minutes }
-        let limit = store.profile.hoursPerWeek * 60
-        let suggestions = PlanEngine.suggestions(for: week, hoursPerWeek: store.profile.hoursPerWeek)
+        let planned = PlanEngine.rideMinutes(week), lifting = PlanEngine.liftMinutes(week), total = PlanEngine.totalMinutes(week)
+        let done = week.filter { $0.done && $0.kind.isRide }.reduce(0) { $0 + $1.minutes }
+        let liftDone = week.filter { $0.done && $0.kind == .strength }.reduce(0) { $0 + $1.minutes }
+        let limit = store.profile.hoursPerWeek * 60, liftLimit = store.profile.liftingHoursPerWeek * 60
+        let suggestions = PlanEngine.suggestions(for: week, hoursPerWeek: store.profile.hoursPerWeek) + PlanEngine.liftSuggestions(for: week, liftingHours: store.profile.liftingHoursPerWeek)
+        let lifts = store.profile.trainingMode.includesLifting || lifting > 0
         return Card {
-            HStack { Eyebrow(t: "Weekly summary"); Spacer(); Text("\(week.filter { $0.kind.isRide && !$0.skipped }.count) rides · \(week.filter { $0.kind.zone >= 3 }.count) hard").font(.caption).foregroundStyle(.secondary) }
+            HStack { Eyebrow(t: "Weekly summary"); Spacer(); Text("\(week.filter { $0.kind.isRide && !$0.skipped }.count) rides · \(week.filter { $0.kind == .strength && !$0.skipped }.count) lifts · \(week.filter { $0.kind.zone >= 3 }.count) hard").font(.caption).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8) }
             HStack(alignment: .top) {
                 stat("Riding", Fmt.duration(minutes: planned), warn: planned > limit)
+                if lifts { stat("Lifting", Fmt.duration(minutes: lifting), warn: liftLimit > 0 && lifting > liftLimit) }
                 stat("All training", Fmt.duration(minutes: total))
-                stat("Done", Fmt.duration(minutes: done))
-                stat("Budget", Fmt.duration(minutes: limit))
+                stat("Done", Fmt.duration(minutes: done + liftDone))
             }
-            VStack(alignment: .leading, spacing: 4) {
-                HStack { Text("Time budget").font(.caption2.weight(.heavy)).foregroundStyle(.secondary); Spacer(); Text(planned > limit ? "\(Fmt.duration(minutes: planned - limit)) over" : "\(Fmt.duration(minutes: limit - planned)) spare").font(.caption2.weight(.heavy)).foregroundStyle(planned > limit ? BC.warn : .secondary) }
-                GeometryReader { g in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color.secondary.opacity(0.18))
-                        Capsule().fill(planned > limit ? BC.warn : BC.accent).frame(width: g.size.width * min(1, limit > 0 ? Double(planned) / Double(limit) : 0))
-                        Capsule().fill(BC.live).frame(width: g.size.width * min(1, limit > 0 ? Double(done) / Double(limit) : 0))
-                    }
-                }.frame(height: 8)
-            }
+            budgetBar("Cycling budget", planned: planned, done: done, limit: limit, color: BC.accent)
+            if lifts { budgetBar("Lifting budget", planned: lifting, done: liftDone, limit: liftLimit, color: BC.zone(5)) }
             if !suggestions.isEmpty { ForEach(suggestions, id: \.self) { Text($0).font(.footnote).foregroundStyle(BC.warn) } }
+        }
+    }
+    private func budgetBar(_ title: String, planned: Int, done: Int, limit: Int, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack { Text(title).font(.caption2.weight(.heavy)).foregroundStyle(.secondary); Spacer(); Text(limit == 0 ? "no budget set" : planned > limit ? "\(Fmt.duration(minutes: planned - limit)) over \(Fmt.duration(minutes: limit))" : "\(Fmt.duration(minutes: limit - planned)) spare of \(Fmt.duration(minutes: limit))").font(.caption2.weight(.heavy)).foregroundStyle(planned > limit && limit > 0 ? BC.warn : .secondary) }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.secondary.opacity(0.18))
+                    Capsule().fill(planned > limit && limit > 0 ? BC.warn : color).frame(width: g.size.width * min(1, limit > 0 ? Double(planned) / Double(limit) : (planned > 0 ? 1 : 0)))
+                    Capsule().fill(BC.live).frame(width: g.size.width * min(1, limit > 0 ? Double(done) / Double(limit) : 0))
+                }
+            }.frame(height: 8)
         }
     }
     private func stat(_ t: String, _ v: String, warn: Bool = false) -> some View {
@@ -147,11 +158,11 @@ struct PlanView: View {
                     VStack(spacing: 3) {
                         Text(WeeklyAvailability.dayNames[i]).font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary)
                         Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent)
-                        Text(a.days[i].activity == .rest ? "—" : Fmt.compact(minutes: a.days[i].minutes)).font(.system(size: 10, weight: .bold)).monospacedDigit()
+                        Text(a.days[i].activity == .rest ? "—" : a.days[i].activity == .both ? "\(Fmt.compact(minutes: a.days[i].minutes))+\(Fmt.compact(minutes: a.days[i].liftingMinutes))" : Fmt.compact(minutes: a.days[i].minutes)).font(.system(size: 10, weight: .bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                     }.frame(maxWidth: .infinity)
                 }
             }
-            Text(store.availability == nil ? "Suggested from your \(store.profile.hoursPerWeek) h/week. Set the days you can train and the plan is built around them." : "\(a.cycleDays) cycling days · \(Fmt.duration(minutes: a.cycleMinutes)) riding · \(Fmt.duration(minutes: a.totalMinutes)) total").font(.footnote).foregroundStyle(.secondary)
+            Text(store.availability == nil ? "Suggested from your profile (\(store.profile.trainingMode.title.lowercased())). Set the days you can train and the plan is built around them." : "\(a.cycleDays) cycling days · \(Fmt.duration(minutes: a.cycleMinutes)) riding" + (a.liftDays > 0 ? " · \(a.liftDays) lift days · \(Fmt.duration(minutes: a.liftMinutes)) lifting" : "")).font(.footnote).foregroundStyle(.secondary)
             Button {
                 if store.editedCount(weekOf: weekDate) > 0 { confirmRegenerate = true } else { store.regenerate(weekOf: weekDate, replaceEdited: false) }
             } label: { Text("Rebuild this week from my days").frame(maxWidth: .infinity) }.buttonStyle(.bordered).disabled(weekOffset < 0)
@@ -163,7 +174,7 @@ struct PlanView: View {
             List {
                 ForEach(day.items) { w in
                     Button { dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selected = w } } label: {
-                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.kind.title).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); if w.done { Pill(text: "done", color: BC.live) } else if w.skipped { Pill(text: "skipped") } }
+                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.displayTitle).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); if w.done { Pill(text: "done", color: BC.live) } else if w.skipped { Pill(text: "skipped") } }
                     }
                 }
                 Button("Add another activity") { let d = day.date; dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { addOn = d } }
@@ -201,7 +212,7 @@ struct WorkoutCard: View {
         .background(quiet ? Color(.secondarySystemGroupedBackground).opacity(0.6) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .combine)
     }
-    private var titleBlock: some View { HStack(spacing: 6) { Text(workout.kind.title).font(.body.weight(.bold)).lineLimit(1).minimumScaleFactor(0.8); ZonePill(z: workout.kind.zone) } }
+    private var titleBlock: some View { HStack(spacing: 6) { Text(workout.displayTitle).font(.body.weight(.bold)).lineLimit(1).minimumScaleFactor(0.8); ZonePill(z: workout.kind.zone) } }
     private var durationBlock: some View { Text(workout.minutes > 0 ? Fmt.duration(minutes: workout.minutes) : "—").font(.system(size: 17, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1) }
 }
 
@@ -211,6 +222,7 @@ struct AvailabilityEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: WeeklyAvailability = WeeklyAvailability.suggested(hoursPerWeek: 5)
     @State private var loaded = false
+    private var showLift: Bool { store.profile.trainingMode.includesLifting || draft.days.contains { $0.activity.lifts } }
 
     var body: some View {
         NavigationStack {
@@ -220,23 +232,28 @@ struct AvailabilityEditor: View {
                 }
                 ForEach(0..<7, id: \.self) { i in
                     Section(WeeklyAvailability.longDayNames[i]) {
-                        Picker("Activity", selection: $draft.days[i].activity) { ForEach(DayAvailability.Activity.allCases, id: \.self) { Label($0.title, systemImage: $0.icon).tag($0) } }.pickerStyle(.segmented)
+                        Picker("Activity", selection: $draft.days[i].activity) { ForEach(DayAvailability.Activity.allCases.filter { showLift || !$0.lifts || $0 == .lift }, id: \.self) { Text($0.short).tag($0) } }.pickerStyle(.segmented)
                         if draft.days[i].activity != .rest {
                             HStack {
-                                Text("Preferred duration"); Spacer()
+                                Text(draft.days[i].activity == .both ? "Riding" : "Preferred duration"); Spacer()
                                 Text(Fmt.duration(minutes: draft.days[i].minutes)).monospacedDigit().foregroundStyle(.secondary)
                             }
                             Slider(value: Binding(get: { Double(draft.days[i].minutes) }, set: { draft.days[i].minutes = Int($0) }), in: 15...240, step: 5).tint(BC.accent)
-                                .onChange(of: draft.days[i].activity) { _, a in if draft.days[i].minutes == 0 { draft.days[i].minutes = a == .cycle ? 60 : 30 } }
+                                .onChange(of: draft.days[i].activity) { _, a in if draft.days[i].minutes == 0 { draft.days[i].minutes = a.cycles ? 60 : 30 }; if a == .both, draft.days[i].liftMinutes == nil { draft.days[i].liftMinutes = 30 } }
+                        }
+                        if draft.days[i].activity == .both {
+                            HStack { Text("Lifting"); Spacer(); Text(Fmt.duration(minutes: draft.days[i].liftMinutes ?? 30)).monospacedDigit().foregroundStyle(.secondary) }
+                            Slider(value: Binding(get: { Double(draft.days[i].liftMinutes ?? 30) }, set: { draft.days[i].liftMinutes = Int($0) }), in: 15...120, step: 5).tint(BC.zone(5))
                         }
                     }
                 }
                 Section {
-                    LabeledContent("Cycling", value: "\(draft.cycleDays) days · \(Fmt.duration(minutes: draft.cycleMinutes))")
+                    LabeledContent("Cycling", value: "\(draft.cycleDays) days · \(Fmt.duration(minutes: draft.cycleMinutes)) of \(store.profile.hoursPerWeek) h")
+                    if showLift { LabeledContent("Lifting", value: "\(draft.liftDays) days · \(Fmt.duration(minutes: draft.liftMinutes))" + (store.profile.liftingHoursPerWeek > 0 ? " of \(store.profile.liftingHoursPerWeek) h" : "")) }
                     LabeledContent("All training", value: Fmt.duration(minutes: draft.totalMinutes))
-                    LabeledContent("Your weekly limit", value: "\(store.profile.hoursPerWeek) h")
-                    if draft.cycleMinutes > store.profile.hoursPerWeek * 60 { Text("Riding time is over your weekly limit by \(Fmt.duration(minutes: draft.cycleMinutes - store.profile.hoursPerWeek * 60)). The plan will show suggestions rather than cut sessions; raise the limit in Profile › Training profile if this is realistic.").font(.footnote).foregroundStyle(BC.warn) }
-                    Button("Reset to the suggestion from my hours") { draft = WeeklyAvailability.suggested(hoursPerWeek: store.profile.hoursPerWeek) }
+                    if draft.cycleMinutes > store.profile.hoursPerWeek * 60 { Text("Riding time is over your cycling budget by \(Fmt.duration(minutes: draft.cycleMinutes - store.profile.hoursPerWeek * 60)). The plan will show suggestions rather than cut sessions; raise the budget in Profile › Training profile if this is realistic.").font(.footnote).foregroundStyle(BC.warn) }
+                    if store.profile.liftingHoursPerWeek > 0, draft.liftMinutes > store.profile.liftingHoursPerWeek * 60 { Text("Lifting time is over your lifting budget by \(Fmt.duration(minutes: draft.liftMinutes - store.profile.liftingHoursPerWeek * 60)).").font(.footnote).foregroundStyle(BC.warn) }
+                    Button("Reset to the suggestion from my profile") { draft = WeeklyAvailability.suggested(for: store.profile) }
                 }
             }
             .navigationTitle("Training days").navigationBarTitleDisplayMode(.inline)
@@ -249,7 +266,8 @@ struct AvailabilityEditor: View {
     }
     private func save() {
         for i in 0..<7 where draft.days[i].activity == .rest { draft.days[i].minutes = 0 }
-        for i in 0..<7 where draft.days[i].activity != .rest && draft.days[i].minutes == 0 { draft.days[i].minutes = draft.days[i].activity == .cycle ? 60 : 30 }
+        for i in 0..<7 where draft.days[i].activity != .rest && draft.days[i].minutes == 0 { draft.days[i].minutes = draft.days[i].activity.cycles ? 60 : 30 }
+        for i in 0..<7 where draft.days[i].activity != .both { draft.days[i].liftMinutes = nil }
         store.availability = draft
         // this week and next are rebuilt; hand-edited and completed sessions stay
         store.regenerate(weekOf: Date(), replaceEdited: false)
@@ -265,6 +283,7 @@ struct AddWorkoutSheet: View {
     let date: Date
     @State private var kind: WorkoutKind = .endurance
     @State private var minutes = 60
+    @State private var focus: StrengthFocus = .fullBody
     var body: some View {
         NavigationStack {
             Form {
@@ -273,12 +292,13 @@ struct AddWorkoutSheet: View {
                         ForEach(WorkoutKind.allCases.filter { $0 != .rest }, id: \.self) { k in Button(k.title) { kind = k; if k.minutes0 { minutes = 0 } else if minutes == 0 { minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(kind == k ? BC.accent : .secondary).controlSize(.small) }
                     }
                 }
+                if kind == .strength { Section("Body region") { Picker("Region", selection: $focus) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { Text($0.title).tag($0) } } } }
                 if !kind.minutes0 { Section("Duration") { HStack { Text(Fmt.duration(minutes: minutes)).font(BC.numFont).monospacedDigit(); Spacer() }; Slider(value: Binding(get: { Double(minutes) }, set: { minutes = Int($0) }), in: 15...240, step: 5).tint(BC.accent) } }
             }
             .navigationTitle(date.dayAndDate).navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Add") { store.add(Workout(date: Calendar.current.startOfDay(for: date).addingTimeInterval(7 * 3600), kind: kind, minutes: minutes)); dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Add") { store.add(Workout(date: Calendar.current.startOfDay(for: date).addingTimeInterval(7 * 3600), kind: kind, minutes: minutes, strengthFocus: kind == .strength ? focus : nil)); dismiss() } }
             }
         }
     }
@@ -293,12 +313,13 @@ struct WorkoutDetail: View {
     @State var workout: Workout
     @State private var mode = 0   // 0 detail, 1 move, 2 edit, 3 replace
     @State private var confirmDelete = false
+    @State private var showLog = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack { Text(workout.kind.title).font(.system(size: 28, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7); Spacer(); ZonePill(z: workout.kind.zone) }
+                    HStack { Text(workout.displayTitle).font(.system(size: 28, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7); Spacer(); ZonePill(z: workout.kind.zone) }
                     Text("\(workout.date.dayAndDate) · \(workout.minutes > 0 ? "\(Fmt.duration(minutes: workout.minutes)) · " : "")\(workout.kind.subtitle)").foregroundStyle(.secondary)
                     if workout.edited { Pill(text: "edited by you — kept when the week is rebuilt", color: BC.accent) }
                     if mode == 0 { detail } else if mode == 1 { move } else if mode == 2 { edit } else { replace }
@@ -307,6 +328,7 @@ struct WorkoutDetail: View {
             .background(Color(.systemGroupedBackground))
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .alert("Remove this session?", isPresented: $confirmDelete) { Button("Remove", role: .destructive) { store.remove(workout); dismiss() }; Button("Cancel", role: .cancel) {} }
+            .sheet(isPresented: $showLog, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { QuickStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus) }
         }
     }
 
@@ -326,6 +348,10 @@ struct WorkoutDetail: View {
             Button(workout.skipped ? "Unskip" : "Skip") { workout.skipped.toggle(); store.edit(workout) }.buttonStyle(.bordered)
             Button("Remove", role: .destructive) { confirmDelete = true }.buttonStyle(.bordered)
         }
+        if workout.kind == .strength, workout.date <= Date().addingTimeInterval(86_400), !workout.done {
+            Button { showLog = true } label: { Label("Log this session", systemImage: "dumbbell").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large)
+            Text("Quick log: region, duration and effort. It marks this session done and counts toward your lifting hours.").font(.footnote).foregroundStyle(.secondary)
+        }
         if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
             Button { if recorder.startMode(locationAuthorized: true) == .board { device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
             Text("The Ride screen coaches against this session's zone; targets reach the BikeComputer when it is connected.").font(.footnote).foregroundStyle(.secondary)
@@ -340,6 +366,7 @@ struct WorkoutDetail: View {
     }
     @ViewBuilder private var edit: some View {
         Card { Eyebrow(t: "Type"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(WorkoutKind.allCases, id: \.self) { k in Button(k.title) { workout.kind = k; if k.minutes0 { workout.minutes = 0 } else if workout.minutes == 0 { workout.minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(workout.kind == k ? BC.accent : .secondary).controlSize(.small) } } }
+        if workout.kind == .strength { Card { Eyebrow(t: "Body region"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { f in Button(f.title) { workout.strengthFocus = f }.buttonStyle(.bordered).tint(workout.strengthFocus == f ? BC.accent : .secondary).controlSize(.small) } } } }
         if !workout.kind.minutes0 { Card { Eyebrow(t: "Duration"); Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...240, step: 5).tint(BC.accent) } }
         Button { store.edit(workout); mode = 0 } label: { Text("Save").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
         Button("Cancel") { mode = 0 }
@@ -369,7 +396,7 @@ struct PlanDay: Identifiable, Equatable {
         let monday = cal.date(byAdding: .day, value: -wd, to: d0)!
         return (0..<7).map { i in
             let day = cal.date(byAdding: .day, value: i, to: monday)!
-            let items = week.filter { cal.isDate($0.date, inSameDayAs: day) }.sorted { a, b in a.kind.isRide != b.kind.isRide ? a.kind.isRide : a.minutes > b.minutes }
+            let items = week.filter { cal.isDate($0.date, inSameDayAs: day) }.sorted { a, b in a.sequence != b.sequence ? a.sequence < b.sequence : (a.kind.isRide != b.kind.isRide ? a.kind.isRide : a.minutes > b.minutes) }
             return PlanDay(date: day, items: items)
         }
     }
@@ -379,7 +406,7 @@ struct PlanDay: Identifiable, Equatable {
 struct TimelineSection: View {
     @EnvironmentObject private var store: Store
     @State private var showAll = false
-    private var entries: [TimelineEntry] { Timeline.build(rides: store.rides, plan: store.plan, ftp: store.profile.ftpW) }
+    private var entries: [TimelineEntry] { Timeline.build(rides: store.rides, plan: store.plan, ftp: store.profile.ftpW, strength: store.strength) }
 
     var body: some View {
         let all = entries
@@ -387,7 +414,7 @@ struct TimelineSection: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack { Eyebrow(t: "History"); Spacer(); Text("\(all.filter { $0.status == .completed }.count) completed").font(.caption).foregroundStyle(.secondary) }
             if all.isEmpty {
-                Card { Text("No rides or completed sessions yet. Rides recorded on this phone or on the BikeComputer appear here; Apple Health import is not connected in this build.").font(.footnote).foregroundStyle(.secondary) }
+                Card { Text("No rides, logged strength sessions or completed sessions yet. Rides from this phone or the BikeComputer, quick strength logs and Apple Health imports (Connections › Apple Health) appear here.").font(.footnote).foregroundStyle(.secondary) }
             } else {
                 trends(all)
                 ForEach(shown) { e in
@@ -429,7 +456,7 @@ struct TimelineRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             VStack(spacing: 2) {
-                Image(systemName: entry.rideId != nil ? "bicycle" : entry.title == "Strength" ? "dumbbell" : "figure.run").font(.system(size: 14, weight: .semibold)).foregroundStyle(statusColor)
+                Image(systemName: entry.rideId != nil ? "bicycle" : (entry.strengthId != nil || entry.title.hasPrefix("Strength")) ? "dumbbell" : "figure.run").font(.system(size: 14, weight: .semibold)).foregroundStyle(statusColor)
                 Circle().fill(statusColor).frame(width: 6, height: 6)
             }.frame(width: 24)
             VStack(alignment: .leading, spacing: 3) {

@@ -18,7 +18,7 @@ struct OnboardingView: View {
     @State private var maxHRText = ""
     @State private var restHRText = ""
     @State private var healthResult: String?
-    private let lastStep = 7
+    private let lastStep = 8
 
     var body: some View {
         NavigationStack {
@@ -28,12 +28,13 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         switch step {
                         case 0: welcome
-                        case 1: aboutYou
-                        case 2: sportsAndGoal
-                        case 3: experienceAndTime
-                        case 4: heartAndFTP
-                        case 5: devices
-                        case 6: appleHealth
+                        case 1: modeStep
+                        case 2: weekStep
+                        case 3: aboutYou
+                        case 4: sportsAndGoal
+                        case 5: heartAndFTP
+                        case 6: devices
+                        case 7: appleHealth
                         default: ready
                         }
                     }.padding(20)
@@ -132,14 +133,55 @@ struct OnboardingView: View {
         }
     }
 
-    private var experienceAndTime: some View {
+    // MARK: 0.6.0 — training mode, then the week (frequencies, priority, time, days). Short and skippable.
+    private var modeStep: some View {
         VStack(alignment: .leading, spacing: 14) {
-            title("Experience and time", "The plan never schedules more hours than you have.")
-            ForEach(RiderProfile.Level.allCases, id: \.self) { l in choice(l.title, l.hint, selected: store.profile.level == l) { store.profile.level = l; store.profile.refreshAssumption() } }
+            title("How do you train?", "One coach for everything you pick. You can change this any time in Profile › Training profile.")
+            ForEach(TrainingMode.allCases, id: \.self) { m in choice(m.title, m.hint, selected: store.profile.trainingMode == m) { store.updateProfile { p in p.trainingMode = m; if m == .cycling { p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0 } else if p.liftDaysPerWeek == 0 { p.liftDaysPerWeek = 2; p.liftingHoursPerWeek = 2 }; if m == .strength { p.priority = .strength } else if m == .cycling { p.priority = .cycling } } } }
+            if store.profile.trainingMode == .hybrid {
+                Card {
+                    Eyebrow(t: "Main priority")
+                    Picker("Priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+                    Text("Decides which session comes first on a shared day and which sport the coach protects when time is short.").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
             Card {
-                Eyebrow(t: "Hours per week")
-                HStack(alignment: .firstTextBaseline) { Text("\(store.profile.hoursPerWeek)").font(BC.bigNum); Text("hours").foregroundStyle(.secondary) }
-                Slider(value: Binding(get: { Double(store.profile.hoursPerWeek) }, set: { store.profile.hoursPerWeek = Int($0) }), in: 2...14, step: 1).tint(BC.accent)
+                Eyebrow(t: "Experience")
+                Picker("Level", selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v; $0.refreshAssumption() } })) { ForEach(RiderProfile.Level.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+                Text(store.profile.level.hint).font(.footnote).foregroundStyle(.secondary)
+            }
+            next()
+        }
+    }
+
+    private var weekStep: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            title("Your week", "Frequency, time and the days you prefer. The plan is built around these and never schedules more.")
+            if store.profile.trainingMode.includesCycling {
+                Card {
+                    Eyebrow(t: "Cycling")
+                    Stepper("\(store.profile.cyclingDaysPerWeek) ride\(store.profile.cyclingDaysPerWeek == 1 ? "" : "s") a week", value: Binding(get: { store.profile.cyclingDaysPerWeek }, set: { v in store.updateProfile { $0.cyclingDaysPerWeek = v } }), in: 1...6)
+                    Stepper("\(store.profile.hoursPerWeek) h riding a week", value: Binding(get: { store.profile.hoursPerWeek }, set: { v in store.updateProfile { $0.hoursPerWeek = v } }), in: 1...20)
+                }
+            }
+            if store.profile.trainingMode.includesLifting {
+                Card {
+                    Eyebrow(t: "Strength")
+                    Stepper("\(store.profile.liftDaysPerWeek) lift\(store.profile.liftDaysPerWeek == 1 ? "" : "s") a week", value: Binding(get: { store.profile.liftDaysPerWeek }, set: { v in store.updateProfile { $0.liftDaysPerWeek = v } }), in: 1...6)
+                    Stepper("\(store.profile.liftingHoursPerWeek) h lifting a week", value: Binding(get: { store.profile.liftingHoursPerWeek }, set: { v in store.updateProfile { $0.liftingHoursPerWeek = v } }), in: 1...12)
+                    Text("Cycling hours and lifting hours are tracked separately everywhere.").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            Card {
+                Eyebrow(t: "Preferred days (optional)")
+                HStack(spacing: 4) {
+                    ForEach(0..<7, id: \.self) { i in
+                        let on = store.profile.preferredDays.contains(i)
+                        Button(WeeklyAvailability.dayNames[i]) { store.updateProfile { p in if on { p.preferredDays.removeAll { $0 == i } } else { p.preferredDays.append(i); p.preferredDays.sort() } } }
+                            .buttonStyle(.bordered).tint(on ? BC.accent : .secondary).controlSize(.small).frame(maxWidth: .infinity)
+                    }
+                }
+                Text(store.profile.preferredDays.isEmpty ? "None picked: a sensible week is suggested; refine days and durations later in Plan › Days." : "Sessions go on these days first; the long ride takes the first weekend day you picked.").font(.footnote).foregroundStyle(.secondary)
             }
             next()
         }
@@ -206,7 +248,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             title("Apple Health (optional)", "Three separate things — allow what you want. Shown as connected only after iOS confirms.")
             Card { Eyebrow(t: "Save workouts"); Text("Finished rides saved into Health and Fitness as cycling workouts (one per ride, never duplicated with the watch workout).").font(.footnote) }
-            Card { Eyebrow(t: "Read workouts"); Text("Rides from other apps appear in the training calendar (later build).").font(.footnote) }
+            Card { Eyebrow(t: "Import workouts"); Text("Cycling and strength workouts from other apps or your Apple Watch appear in Plan › History as rides and strength sessions (marked Apple Health, never duplicated).").font(.footnote); Toggle("Import my workouts", isOn: $store.settings.appleHealthImportWorkouts).tint(BC.accent) }
             Card { Eyebrow(t: "Read heart rate"); Text("Heart-rate history for recovery views (later build). Live heart rate during a ride comes from the Apple Watch workout, not from Health.").font(.footnote) }
             if health.available {
                 Button { store.settings.appleHealthWanted = true; health.request { ok in healthResult = ok ? "Permission granted: Apple Health is connected." : "Not granted. You can allow it later in iOS Settings › Health › BikeComputer." } } label: { Text(health.workoutWriteAuthorized ? "Connected ✓" : "Connect Apple Health").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).disabled(health.workoutWriteAuthorized)
@@ -225,14 +267,17 @@ struct OnboardingView: View {
                 row("Account", store.guest ? "guest (this phone only)" : "Apple")
                 row("Birth year", store.profile.birthYear.map(String.init) ?? "not set")
                 row("Weight", String(format: "%.1f kg", store.profile.weightKg))
-                row("Goal", store.profile.goal.title); row("Experience", store.profile.level.title); row("Hours / week", "\(store.profile.hoursPerWeek) h")
+                row("Mode", store.profile.trainingMode.title + (store.profile.trainingMode == .hybrid ? " · \(store.profile.priority.title.lowercased()) priority" : ""))
+                row("Goal", store.profile.goal.title); row("Experience", store.profile.level.title)
+                row("Cycling", store.profile.trainingMode.includesCycling ? "\(store.profile.cyclingDaysPerWeek) rides · \(store.profile.hoursPerWeek) h/week" : "—")
+                if store.profile.trainingMode.includesLifting { row("Strength", "\(store.profile.liftDaysPerWeek) lifts · \(store.profile.liftingHoursPerWeek) h/week") }
                 row("Max HR", store.profile.maxHR.map { "\($0) bpm" } ?? "\(store.profile.estimatedMaxHR) bpm (estimate)")
                 row("FTP", "\(store.profile.ftpW) W (\(store.profile.ftpLabel))")
                 row("BikeComputer", device.state == .ready ? "connected" : "phone-only for now")
                 row("Apple Health", health.workoutWriteAuthorized ? "connected" : "not connected")
             }
             if device.state == .ready, device.info?.hasProfileSync == true { Text("The board will be asked for its profile; if it differs you decide which one wins (Connections › BikeComputer › Sync status).").font(.footnote).foregroundStyle(.secondary) }
-            Button { store.onboardingStage = 0; store.onboarded = true } label: { Text("Start").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
+            Button { store.onboardingStage = 0; store.availability = nil; store.regenerate(weekOf: Date(), replaceEdited: true); store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: true); store.onboarded = true } label: { Text("Start").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
         }
     }
     private func row(_ k: String, _ v: String) -> some View { HStack { Text(k).foregroundStyle(.secondary); Spacer(); Text(v).multilineTextAlignment(.trailing) }.font(.footnote) }

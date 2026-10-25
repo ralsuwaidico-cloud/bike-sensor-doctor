@@ -18,7 +18,7 @@ struct ProfileTabView: View {
                         ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(BC.accent) }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
-                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h/week").font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
                             HStack(spacing: 6) {
                                 if store.guest { Pill(text: "guest", color: BC.stale) } else { Pill(text: "Apple ID", color: BC.live) }
                                 if device.state == .ready { Pill(text: "board connected", color: BC.live) }
@@ -29,7 +29,7 @@ struct ProfileTabView: View {
                 }
                 Section("Profile") {
                     link("Rider information", "person.text.rectangle", "name, birth year, weight, height, units") { RiderInfoPage() }
-                    link("Training profile", "target", "goals, level, activities, availability") { TrainingProfilePage() }
+                    link("Training profile", "target", "\(store.profile.trainingMode.title.lowercased()) mode · goals, level, availability") { TrainingProfilePage() }
                     link("Heart rate", "heart", hrSummary) { HeartRatePage() }
                     link("Power & cycling", "bolt", "FTP \(store.profile.ftpW) W · zones · meter · bike") { PowerCyclingPage() }
                 }
@@ -129,6 +129,13 @@ struct TrainingProfilePage: View {
     @State private var showAvailability = false
     var body: some View {
         Form {
+            Section {
+                Picker("Training mode", selection: Binding(get: { store.profile.trainingMode }, set: { m in store.updateProfile { p in p.trainingMode = m; if m == .cycling { p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0 } else if p.liftDaysPerWeek == 0 { p.liftDaysPerWeek = 2; p.liftingHoursPerWeek = 2 } } })) { ForEach(TrainingMode.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+                Text(store.profile.trainingMode.hint).font(.footnote).foregroundStyle(.secondary)
+                if store.profile.trainingMode == .hybrid {
+                    Picker("Main priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }
+                }
+            } header: { Text("Training mode") } footer: { Text("Hybrid Athlete: one coach for cycling and lifting, with separate hour budgets. Changing the mode rebuilds the coming weeks around your days (hand-edited sessions are kept).") }
             Section("Goal") {
                 ForEach(RiderProfile.Goal.onboardingChoices, id: \.self) { g in
                     Button { store.updateProfile { $0.goal = g } } label: { HStack { VStack(alignment: .leading) { Text(g.title).foregroundStyle(.primary); Text(g.hint).font(.caption).foregroundStyle(.secondary) }; Spacer(); if store.profile.goal == g { Image(systemName: "checkmark").foregroundStyle(BC.accent) } } }
@@ -141,23 +148,33 @@ struct TrainingProfilePage: View {
             }
             Section("Sports and activities") { NavigationLink("Sports (\(store.profile.sports.count) selected)") { SportsPicker() } }
             Section {
-                Stepper("Weekly limit: \(store.profile.hoursPerWeek) h", value: $store.profile.hoursPerWeek, in: 1...25)
+                if store.profile.trainingMode.includesCycling {
+                    Stepper("Cycling: \(store.profile.cyclingDaysPerWeek) rides a week", value: Binding(get: { store.profile.cyclingDaysPerWeek }, set: { v in store.updateProfile { $0.cyclingDaysPerWeek = v } }), in: 1...6)
+                    Stepper("Cycling budget: \(store.profile.hoursPerWeek) h", value: $store.profile.hoursPerWeek, in: 1...25)
+                }
+                if store.profile.trainingMode.includesLifting {
+                    Stepper("Strength: \(store.profile.liftDaysPerWeek) lifts a week", value: Binding(get: { store.profile.liftDaysPerWeek }, set: { v in store.updateProfile { $0.liftDaysPerWeek = v } }), in: 1...6)
+                    Stepper("Lifting budget: \(store.profile.liftingHoursPerWeek) h", value: Binding(get: { store.profile.liftingHoursPerWeek }, set: { v in store.updateProfile { $0.liftingHoursPerWeek = v } }), in: 1...12)
+                }
                 Button { showAvailability = true } label: { HStack { Text("Training days and durations"); Spacer(); Text(availabilityText).font(.caption).foregroundStyle(.secondary) } }
                 let a = store.effectiveAvailability
                 HStack(spacing: 4) { ForEach(0..<7, id: \.self) { i in VStack(spacing: 2) { Text(WeeklyAvailability.dayNames[i]).font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary); Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent) }.frame(maxWidth: .infinity) } }
-            } header: { Text("Weekly availability") } footer: { Text("The plan is built around the days you choose; the limit is the most riding time the coach schedules per week.") }
+            } header: { Text("Weekly availability") } footer: { Text("The plan is built around the days you choose. Cycling hours and lifting hours are separate budgets; the coach schedules up to each and suggests changes instead of exceeding them.") }
             Section("Training history") {
                 let rides = store.rides
                 LabeledContent("Rides recorded", value: "\(rides.count)")
                 LabeledContent("Total riding", value: Fmt.duration(seconds: rides.reduce(0) { $0 + $1.durationS }))
                 LabeledContent("Sessions completed", value: "\(store.plan.filter { $0.done }.count)")
+                LabeledContent("Strength sessions logged", value: "\(store.strength.count)")
+                LabeledContent("Total lifting", value: Fmt.duration(minutes: store.strength.reduce(0) { $0 + $1.minutes }))
                 if let first = rides.last { LabeledContent("First ride", value: first.start.dayAndDate) }
             }
         }
         .navigationTitle("Training profile").navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
+        .onChange(of: store.profile.trainingMode) { _, _ in if store.availability == nil { store.regenerate(weekOf: Date(), replaceEdited: false); store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false) } }
     }
-    private var availabilityText: String { let a = store.effectiveAvailability; return "\(a.cycleDays) ride days · \(Fmt.duration(minutes: a.totalMinutes))" + (store.availability == nil ? " (suggested)" : "") }
+    private var availabilityText: String { let a = store.effectiveAvailability; return "\(a.cycleDays) ride · \(a.liftDays) lift days" + (store.availability == nil ? " (suggested)" : "") }
 }
 
 // MARK: - Heart rate

@@ -31,6 +31,45 @@ final class LaunchSmokeTests: XCTestCase {
         }
     }
 
+    /// A phone updated from build 30 (0.5.1): availability, edited sessions and the 0.5 profile fields present, no hybrid
+    /// keys. Must land on Home with the plan intact and open every tab.
+    func testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build30Store()
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        for label in ["Plan", "Ride now, open the Ride screen", "Progress", "Profile", "Home"] {
+            let b = app.buttons[label].firstMatch
+            XCTAssertTrue(b.waitForExistence(timeout: 10), "tab \(label) missing")
+            b.tap()
+            sleep(1)
+            XCTAssertEqual(app.state, .runningForeground, "app died after opening \(label)")
+        }
+    }
+
+    static func build30Store() -> String {
+        let iso = ISO8601DateFormatter()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: today) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: today)!
+        let kinds = ["rest", "endurance", "strength", "tempo", "rest", "long", "other"]
+        var plan: [String] = []
+        for i in 0..<7 {
+            let d = cal.date(byAdding: .day, value: i, to: monday)!.addingTimeInterval(7 * 3600)
+            plan.append("{\"id\":\"\(UUID().uuidString)\",\"date\":\"\(iso.string(from: d))\",\"kind\":\"\(kinds[i])\",\"minutes\":\(kinds[i] == "rest" ? 0 : 60),\"done\":\(i < wd),\"skipped\":false,\"note\":\"\",\"edited\":\(i == 3)}")
+        }
+        return """
+        {"schema":1,
+         "profile":{"name":"Rashed","goal":"endurance","hoursPerWeek":6,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
+                    "sports":["roadCycling","strength"],"version":9,"updatedAt":"2026-10-25T08:00:00Z","gender":null,"wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR"},
+         "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"],"appearance":"system","backgroundNotice":true,"coachTalk":"normal","coachEnabled":true},
+         "plan":[\(plan.joined(separator: ","))],
+         "rides":[],"tiles":["power","cadence","hr","speed","time","dist"],"onboarded":true,"guest":true,"createdAt":"2026-10-24T10:00:00Z","boardSync":[],"onboardingStage":0,
+         "availability":{"days":[{"activity":"rest","minutes":0},{"activity":"cycle","minutes":60},{"activity":"lift","minutes":30},{"activity":"cycle","minutes":60},{"activity":"rest","minutes":0},{"activity":"cycle","minutes":120},{"activity":"other","minutes":45}]}}
+        """
+    }
+
     /// A store.json as build 24 (0.4.0) wrote it: schema 1, no `availability`, no `edited` on workouts, profile without
     /// the 0.5.0 fields, one phone ride with 1 Hz samples, this week's plan including today.
     static func build24Store() -> String {

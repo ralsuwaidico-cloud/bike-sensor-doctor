@@ -68,7 +68,14 @@ struct BikeComputerApp: App {
                 .environmentObject(sync)
                 .environmentObject(reach)
                 .environmentObject(health)
-                .onAppear { watchLink.activate() }
+                .onAppear {
+                    watchLink.activate()
+                    // Apple Health import on launch, only while the rider keeps it on (dedupe makes it idempotent)
+                    if store.settings.appleHealthImportWorkouts, store.onboarded, health.available {
+                        let s = store
+                        health.importWorkouts(days: 30, into: s) { _ in s.settings.lastHealthImport = Date() }
+                    }
+                }
         }
     }
 }

@@ -11,12 +11,13 @@ struct HomeView: View {
     @State private var showWorkout = false
     @State private var showWhy = false
     @State private var showAlternatives = false
+    @State private var showStrengthLog = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
-                    coach
+                    if store.profile.trainingMode == .cycling { coach } else { HybridCoachCard(tab: $tab, showWorkout: $showWorkout, showAlternatives: $showAlternatives, showStrengthLog: $showStrengthLog) }
                     if store.ftpSuggestion != nil { Card(accent: true) { FTPSuggestionCard() } }
                     if sync.state == .needsConfirmation {
                         NavigationLink { SyncStatusView() } label: {
@@ -25,7 +26,7 @@ struct HomeView: View {
                     }
                     connections
                     nextDays
-                    HStack { Text("FTP \(store.profile.ftpW) W").font(.footnote).foregroundStyle(.secondary); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live); Spacer(); Text("\(store.profile.hoursPerWeek) h/week · \(store.profile.level.title.lowercased())").font(.footnote).foregroundStyle(.secondary) }
+                    HStack { Text("FTP \(store.profile.ftpW) W").font(.footnote).foregroundStyle(.secondary); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live); Spacer(); Text(budgetText).font(.footnote).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8) }
                     if store.guest { Card { HStack { Text("Guest: rides stay on this phone.").font(.footnote).foregroundStyle(.secondary); Spacer(); Button("Create account") { tab = 4 }.font(.caption.bold()) } } }
                 }.padding()
             }
@@ -33,6 +34,7 @@ struct HomeView: View {
             .navigationTitle(store.profile.name.isEmpty ? "Hi" : "Hi \(store.profile.name)")
             .sheet(isPresented: $showWorkout) { if let t = store.today { WorkoutDetail(workout: t) } }
             .sheet(isPresented: $showAlternatives) { alternativesSheet }
+            .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet(date: Date(), presetFocus: store.today?.strengthFocus) }
         }
     }
 
@@ -44,7 +46,7 @@ struct HomeView: View {
             Text(Coach.todayLine(t)).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             if let t, t.kind != .rest {
                 VStack(spacing: 0) {
-                    tableRow("Workout", t.kind.title)
+                    tableRow("Workout", t.displayTitle)
                     tableRow("Duration", t.minutes > 0 ? Fmt.duration(minutes: t.minutes) : "—")
                     tableRow("Target", t.kind.zone > 0 ? "Zone \(t.kind.zone) · \(zoneWatts(t.kind.zone))" : t.kind.subtitle)
                     tableRow("Benefit", t.benefit)
@@ -76,7 +78,8 @@ struct HomeView: View {
             if !last { Divider().padding(.leading, 10) }
         }
     }
-    private func zoneWatts(_ z: Int) -> String { let p = store.profile.powerZones[z - 1]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
+    private var budgetText: String { store.profile.trainingMode == .cycling ? "\(store.profile.hoursPerWeek) h/week · \(store.profile.level.title.lowercased())" : "\(store.profile.hoursPerWeek) h cycling · \(store.profile.liftingHoursPerWeek) h lifting" }
+    private func zoneWatts(_ z: Int) -> String { let p = store.profile.powerZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
 
     private var alternativesSheet: some View {
         NavigationStack {

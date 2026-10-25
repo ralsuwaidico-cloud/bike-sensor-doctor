@@ -265,6 +265,13 @@ struct SensorConnectionDetail: View {
 struct HealthConnectionDetail: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var health: HealthAccess
+    @State private var importing = false
+    @State private var importResult: String?
+    private func runImport() {
+        guard !importing else { return }
+        importing = true
+        health.importWorkouts(into: store) { r in importing = false; importResult = r.message; store.settings.lastHealthImport = Date() }
+    }
     var body: some View {
         List {
             Section("Status") {
@@ -276,6 +283,12 @@ struct HealthConnectionDetail: View {
                 if store.settings.appleHealthWanted, !health.workoutWriteAuthorized, health.available { Button("Grant permission") { health.request { _ in } } }
                 Toggle("Save finished rides as workouts", isOn: $store.settings.appleHealthExportRides).disabled(!health.workoutWriteAuthorized)
             } footer: { Text("Shown as connected only after iOS confirms the permission. Saving rides is prepared but not active in this build (it will write a cycling workout per saved ride).") }
+            Section {
+                Toggle("Import workouts from Apple Health", isOn: Binding(get: { store.settings.appleHealthImportWorkouts }, set: { v in store.settings.appleHealthImportWorkouts = v; if v { store.settings.appleHealthWanted = true; if !health.workoutWriteAuthorized { health.request { _ in runImport() } } else { runImport() } } }))
+                Button { runImport() } label: { HStack { Text(importing ? "Importing…" : "Import now (last 90 days)"); Spacer(); if importing { ProgressView() } } }.disabled(importing || !health.available)
+                if let r = importResult { Text(r).font(.footnote).foregroundStyle(.secondary) }
+                if let d = store.settings.lastHealthImport { LabeledContent("Last import", value: d.formatted(date: .abbreviated, time: .shortened)) }
+            } header: { Text("Workout import (0.6.0)") } footer: { Text("Cycling, traditional and functional strength workouts recorded by other apps or the Apple Watch become rides and strength sessions here, marked \"Apple Health\". Duplicates of what the phone or BikeComputer already recorded (same start within 2 minutes, similar duration) are skipped. Health workouts carry no body region, so they count as sessions but never as push / pull / lower evidence.") }
             Section("What each permission does") {
                 Text("Workouts (write): save a finished BikeComputer or phone ride into Health and Fitness.\nWorkouts (read): find rides recorded by other apps for the training calendar (later build).\nHeart rate (read): heart-rate history for recovery views (later build). iOS does not tell apps whether reading was allowed, so nothing is claimed about it.").font(.footnote)
                 Text("Live heart rate during a ride does not come from Health; it comes from the Apple Watch workout or a strap.").font(.footnote).foregroundStyle(.secondary)
