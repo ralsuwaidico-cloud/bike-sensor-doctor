@@ -27,7 +27,9 @@ typedef struct {
              bc_wifi_status_msg_t wifi_status; int statuses; bc_ride_summary_t rides[64]; int n_rides; bc_sync_end_t sync_end; int sync_ends;
              bc_profile_msg_t profile; int profiles; bc_profile_ack_t profile_ack; int profile_acks; bc_settings_msg_t settings; int settings_msgs; bc_event_t event; int events;
              struct { uint8_t chr; size_t len; uint8_t b[BC_LINK_MAX]; } svc_in[8]; int svc_in_n; bool notify_full; uint8_t last_notify_chr;
-             bool standby; int standbys; } phone;
+             bool standby; int standbys;
+             /* 0.7.0 pairing lifecycle: the board's identity generation (changes on forget/repair) and what the phone remembers */
+             uint8_t id_gen, phone_id_gen; bool phone_has_bond; bool enc_failed; int enc_fails, repairs; uint16_t last_disc_code; } phone;
 } sim_hw_t;
 
 extern sim_hw_t g_sim;
@@ -36,6 +38,11 @@ void sim_fs_root(const char *dir);
 void sim_phone_connect(bool already_bonded);   /* connects; if not bonded, the device shows a passkey */
 void sim_phone_enter_passkey(void);            /* the rider typed the code on the phone → encrypted + bonded */
 void sim_phone_disconnect(void);
+/* 0.7.0: the phone connects with whatever it remembers: a bond for the board's CURRENT identity → encrypted at once; a bond
+   for an identity the board has since replaced → the phone treats it as a new device → passkey; a bond the board no longer
+   holds (same identity) → encryption fails → REPAIR NEEDED. */
+void sim_phone_connect_remembered(void);
+void sim_phone_connect_stale(void);           /* force the stale-keys case (board wiped bonds, identity unchanged) */
 void sim_phone_send_gps(int32_t lat_e7, int32_t lon_e7, uint16_t speed_cms, uint16_t hacc_dm);
 void sim_phone_send_hr(uint8_t bpm, uint8_t src);
 void sim_phone_send_time(uint64_t epoch_ms);

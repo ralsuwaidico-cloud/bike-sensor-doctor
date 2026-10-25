@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-typedef enum { APP_PSVC_CTRL = 0, APP_PSVC_SYNC = 1 } app_psvc_chr_t;
+typedef enum { APP_PSVC_CTRL = 0, APP_PSVC_SYNC = 1, APP_PSVC_EVENTS = 2 } app_psvc_chr_t;
 
 void app_psvc_init(void);
 /** Take queued phone writes, apply them, send what is due. Call every ~250 ms from the app task. */
@@ -36,6 +36,9 @@ bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t n
 size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now_ms);
 /** The phone left: cancel a running sync and the status watch. */
 void app_psvc_on_disconnect(void);
+/** 0.7.0: profile-sync state for the PHONE screen and the LINK_DIAG event. */
+typedef enum { APP_PSYNC_DEVICE_ONLY = 0, APP_PSYNC_SYNCED = 1, APP_PSYNC_PENDING = 2 /* phone connected, nothing applied yet this connection */, APP_PSYNC_FAILED = 3 /* last PROFILE_SET rejected */ } app_psync_state_t;
+app_psync_state_t app_psvc_sync_state(void);
 /** Last SYNC_END (for a read of the Sync characteristic): 0 when none was sent yet. */
 size_t app_psvc_last_sync_end(uint8_t *buf, size_t cap);
 /** The board's current athlete profile / settings as the protocol carries them (also used by the UI "Sync status" text). */

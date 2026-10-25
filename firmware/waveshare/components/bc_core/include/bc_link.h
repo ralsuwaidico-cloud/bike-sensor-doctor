@@ -134,7 +134,8 @@ size_t bc_link_encode_sync_end(const bc_sync_end_t *v, uint8_t *buf, size_t cap,
 bool bc_link_decode_sync_end(const uint8_t *buf, size_t len, bc_sync_end_t *v);
 
 /* ---- EVENT (Events characteristic 0007, notify). 0.6.0 defines one event; emission is OFF by default (docs/CHARGE_ALERTS.md). */
-#define BC_EVT_BATTERY_NOTICE 0x10   /* 01 u8 event_id, 02 u8 level_pct_est (ESTIMATE from voltage), 03 u16 mv, 04 u8 stage (1 = ~80 %, 2 = ~90 %, 3 = ~98 %) */
+#define BC_EVT_BATTERY_NOTICE 0x10
+#define BC_EVT_LINK_DIAG 0x20        /* 0.7.0 (1.2.1): 01 u8 event_id, 02 u8 last_disconnect_reason (plat_phone_disc_t), 03 u16 bonded_phones, 04 u8 profile_sync_state (0 device-only, 1 synced, 2 pending, 3 failed); sent once per connection */   /* 01 u8 event_id, 02 u8 level_pct_est (ESTIMATE from voltage), 03 u16 mv, 04 u8 stage (1 = ~80 %, 2 = ~90 %, 3 = ~98 %) */
 typedef struct { uint8_t event_id; uint8_t pct_est; uint16_t mv; uint8_t stage; } bc_event_t;
 size_t bc_link_encode_event(const bc_event_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_event(const uint8_t *buf, size_t len, bc_event_t *v);
@@ -180,6 +181,7 @@ typedef struct {
     uint16_t weight_kg_x10, birth_year;         /* 06 07 */
     uint8_t max_hr, rest_hr, units, hours_per_week, level, goal, lthr;   /* 08..0E */
     uint8_t source; uint32_t board_saved_epoch_s;                       /* 0F 10 (PROFILE only) */
+    uint32_t invalid;                            /* 0.7.0: tags present but out of range (same bit layout as has); the board answers status 2 */
 } bc_profile_msg_t;
 typedef enum { BC_PF_APPLIED = 0, BC_PF_OLDER = 1, BC_PF_BAD = 2 } bc_profile_ack_status_t;
 typedef struct { uint32_t version; uint8_t status; uint32_t board_version; } bc_profile_ack_t;

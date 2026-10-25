@@ -14,7 +14,9 @@
 
 void ble_link_register_gatt(void);           /* before the host starts */
 void ble_link_configure_security(void);      /* ble_hs_cfg.sm_* for passkey display + bonding */
-void ble_link_on_sync(uint8_t own_addr_type);
+/** Host synced: applies the stored random-static identity (0.7.0) and starts advertising. Returns the own-address type the
+ *  central must use too (BLE_OWN_ADDR_RANDOM when the identity could be set, else the one passed in). */
+uint8_t ble_link_on_sync(uint8_t own_addr_type);
 void ble_link_tick(void);                    /* from the BLE manager task (~500 ms): pending notifications, RSSI */
 /** The central is about to initiate a connection: pause advertising so the controller is free (resume = false). */
 void ble_link_central_busy(bool busy);

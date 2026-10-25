@@ -222,19 +222,40 @@ void plat_phone_status(plat_phone_status_t *o)
 {
     memset(o, 0, sizeof *o); o->phone_batt = o->watch_batt = 0xFF; o->last_rx_age_ms = UINT32_MAX;
     o->bonded = PH.bonded; o->rssi = PH.connected ? PH.rssi : 0; o->passkey = PH.pairing ? PH.passkey : 0;
-    o->state = !PH.enabled ? PLAT_PHONE_OFF : !PH.connected ? PLAT_PHONE_ADVERTISING : PH.pairing ? PLAT_PHONE_PAIRING : PH.bonded ? PLAT_PHONE_READY : PLAT_PHONE_CONNECTED;
+    o->state = !PH.enabled ? PLAT_PHONE_OFF : PH.enc_failed ? PLAT_PHONE_REPAIR : !PH.connected ? PLAT_PHONE_ADVERTISING : PH.pairing ? PLAT_PHONE_PAIRING : PH.bonded ? PLAT_PHONE_READY : PLAT_PHONE_CONNECTED;
+    o->bonds = PH.bonded ? 1 : 0; o->enc_fails = (uint16_t)PH.enc_fails; o->id_gen = PH.id_gen ? PH.id_gen : 1;
+    o->id_addr[5] = 0xC0 | o->id_gen; o->id_addr[0] = 0x42;
+    o->last_disc_code = PH.last_disc_code; o->last_disc = PH.enc_failed ? PLAT_PHONE_DISC_KEY_MISSING : PH.last_disc_code == 0x13 ? PLAT_PHONE_DISC_PHONE_ENDED : PH.last_disc_code == 0x16 ? PLAT_PHONE_DISC_BOARD_ENDED : PH.last_disc_code == 0x08 ? PLAT_PHONE_DISC_TIMEOUT : PLAT_PHONE_DISC_NONE;
+    o->svc_ready = PH.connected && PH.bonded && !PH.pairing;
     uint32_t last = 0; if (PH.in.gps.rx_ms > last) last = PH.in.gps.rx_ms; if (PH.in.hr.rx_ms > last) last = PH.in.hr.rx_ms; if (PH.in.time.rx_ms > last) last = PH.in.time.rx_ms;
     if (last) o->last_rx_age_ms = g_sim.now_ms - last;
 }
-void plat_phone_forget(void) { PH.bonded = PH.connected = PH.pairing = false; PH.passkey = 0; PH.forgets++; }
-void plat_phone_disconnect(void) { PH.connected = PH.pairing = false; PH.passkey = 0; }
+void plat_phone_forget(void) { PH.bonded = PH.connected = PH.pairing = PH.enc_failed = false; PH.passkey = 0; PH.forgets++; PH.id_gen = (uint8_t)((PH.id_gen ? PH.id_gen : 1) + 1); PH.svc_in_n = 0; app_psvc_on_disconnect(); }
+void plat_phone_repair(void) { plat_phone_forget(); PH.enabled = true; PH.repairs++; }
+void plat_phone_disconnect(void) { if (PH.connected) PH.last_disc_code = 0x16; PH.connected = PH.pairing = false; PH.passkey = 0; PH.svc_in_n = 0; app_psvc_on_disconnect(); }
 void plat_phone_inputs(plat_phone_in_t *o) { *o = PH.in; }
 bool plat_phone_take_ctrl(bc_ctrl_req_t *o) { if (!PH.ctrl_pending) return false; *o = PH.ctrl; PH.ctrl_pending = false; return true; }
 void plat_phone_ctrl_respond(const bc_ctrl_resp_t *r) { PH.last_resp = *r; PH.resps++; }
 void plat_phone_publish_live(const bc_live_t *l) { if (PH.connected && PH.bonded) { PH.last_live = *l; PH.lives++; } }
-void sim_phone_connect(bool bonded) { if (!PH.enabled) return; PH.connected = true; PH.rssi = -55; PH.bonded = bonded; PH.pairing = !bonded; PH.passkey = bonded ? 0 : 482913; }
-void sim_phone_enter_passkey(void) { if (PH.connected && PH.pairing) { PH.pairing = false; PH.bonded = true; PH.passkey = 0; } }
-void sim_phone_disconnect(void) { PH.connected = PH.pairing = false; PH.svc_in_n = 0; app_psvc_on_disconnect(); }
+void sim_phone_connect(bool bonded) { if (!PH.enabled) return; PH.connected = true; PH.enc_failed = false; PH.rssi = -55; PH.bonded = bonded; PH.pairing = !bonded; PH.passkey = bonded ? 0 : 482913; if (bonded) { PH.phone_has_bond = true; PH.phone_id_gen = PH.id_gen ? PH.id_gen : 1; } }
+void sim_phone_enter_passkey(void) { if (PH.connected && PH.pairing) { PH.pairing = false; PH.bonded = true; PH.passkey = 0; PH.phone_has_bond = true; PH.phone_id_gen = PH.id_gen ? PH.id_gen : 1; } }
+void sim_phone_disconnect(void) { if (PH.connected) PH.last_disc_code = 0x13; PH.connected = PH.pairing = false; PH.svc_in_n = 0; app_psvc_on_disconnect(); }
+void sim_phone_connect_remembered(void)
+{
+    if (!PH.enabled) return;
+    uint8_t gen = PH.id_gen ? PH.id_gen : 1;
+    if (!PH.phone_has_bond || PH.phone_id_gen != gen) { sim_phone_connect(false); return; }   /* new device for the phone: pair */
+    if (PH.bonded) { sim_phone_connect(true); return; }                                       /* both sides agree */
+    sim_phone_connect_stale();
+}
+void sim_phone_connect_stale(void)
+{
+    /* the phone holds an LTK for this identity, the board holds nothing: the link encrypts for a moment, then fails (0x206) and
+       the phone drops it — exactly what iOS reports as "Peer removed pairing information" */
+    if (!PH.enabled) return;
+    PH.connected = false; PH.pairing = false; PH.bonded = false; PH.enc_failed = true; PH.enc_fails++; PH.last_disc_code = 0x206; PH.svc_in_n = 0;
+    app_psvc_on_disconnect();
+}
 static bool ph_ok(void) { return PH.connected && PH.bonded; }
 void sim_phone_send_gps(int32_t lat, int32_t lon, uint16_t speed_cms, uint16_t hacc_dm)
 {

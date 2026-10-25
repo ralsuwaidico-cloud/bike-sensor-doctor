@@ -1,0 +1,71 @@
+BikeComputer firmware 0.7.0 + iPhone app 0.8.0 — combined hardware checklist (26 Oct 2026)
+==========================================================================================
+0.7.0 = 0.6.1 (touch-wake fix, Settings layout) + pairing repair (new Bluetooth identity after a forget/data reset, stale-key
+detection with a REPAIR action, diagnostics), profile-sync hardening (field checks, last-sync time, survives restart), the
+compact PHONE screen. Record PASS / FAIL / NOT TESTED per step, with numbers where asked. EVERYTHING is SIMULATOR-TESTED ONLY
+until you confirm it here: the simulator cannot see the real radio, the iPhone's Bluetooth stack or the touch controller.
+Order: install the firmware first (section I), then the TestFlight build (0.8.0), then the tests. Board on USB, battery
+DISCONNECTED (HW-1: never USB and battery together).
+
+I. Install and recovery
+ I1  INSTALL-v0.7.0.bat: finds the COM port, reads the 16 MB backup, says "Backup verified: 16 MB, firmware 0.6.1" (or 0.6.0
+     rev N / 0.5.0 — whatever is on the board), asks YES, writes 2 regions, "INSTALLED". Board restarts to Home.   PASS/FAIL
+ I2  Settings footer: "firmware 0.7.0" + build stamp. History lists your rides; the power meter is still paired.   PASS/FAIL
+     Roll back any time: ROLLBACK-TO-v050.bat (0.5.0, keeps data) or RESTORE-BACKUP-BEFORE-v070.bat (exact image incl. data).
+     Touch ever dead: RESET always works; SAFE MODE = hold BOOT while pressing RESET (touch gate off for that boot).
+ I3  iPhone: install BikeComputer 0.8.0 from TestFlight (build number in the app's About page). Your profile, plan, rides and
+     templates from the previous build are still there.   PASS/FAIL
+
+1. Pairing lifecycle (Rashed's ten points) — both devices together
+ 1-1  FRESH PAIRING. Board: Connections > Phone shows SEARCHING with TURN OFF (or REPAIR NEEDED: then hold REPAIR first).
+      iPhone: Settings > Bluetooth: if "BikeComputer" is listed, tap (i) > Forget This Device. App: Connections > BikeComputer
+      > Connect. Stages shown: Searching -> Found -> Pairing (6-digit code on the board) -> Authenticating -> Connected ->
+      Syncing profile -> Ready. Board shows CONNECTED iPhone, Profile sync: synced hh:mm.   PASS/FAIL
+ 1-2  PAIRING AFTER A BOARD DATA RESET. Board: Phone > tap for details > HOLD: FORGET PHONE (this is what a data reset does to
+      the bonds). Board shows SEARCHING, identity gen +1 (Details page). iPhone app: Connect. Expected with 0.7.0: the phone
+      sees a NEW device and asks for the code again — NO "Peer removed pairing information". If the app instead shows the
+      Repair screen, follow it (Settings > Bluetooth > Forget, then Connect) and note that here.   PASS/FAIL
+      Also try the reverse: iPhone Settings > Bluetooth > Forget This Device while the board still remembers the phone; then
+      Connect in the app: the board drops its old bond by itself and shows the code again (repeat pairing).   PASS/FAIL
+ 1-3  APP RESTART. Force-quit the app, reopen: it reconnects by itself within ~15 s, no code, board stays CONNECTED.   PASS/FAIL
+ 1-4  BOARD RESTART. Press RESET on the board: the app reconnects within ~20 s without touching the board (link enabled at
+      boot). Profile sync shows synced again.   PASS/FAIL   (time: ___ s)
+ 1-5  SCREEN OFF. Quick Settings > Screen off, 5 min untouched: app still Ready and values updating.   PASS/FAIL
+ 1-6  OUT OF RANGE. Walk the phone ~20 m away (or Bluetooth off 30 s): app shows the link lost with a reason; board Phone
+      page: Details > LAST LINK END says "out of range / timeout" or "phone ended it".   PASS/FAIL
+ 1-7  AUTO RECONNECT. Come back / Bluetooth on: reconnected within ~15 s, no code, no touch on the board.   PASS/FAIL
+ 1-8  PROFILE SYNC. App: Profile > change weight by 1 kg and FTP by 5 W. Within ~5 s the board's Home shows the new FTP and
+      Settings > Rider shows the new weight; board Phone page: Profile sync "synced hh:mm" (your local time).   PASS/FAIL
+      Enter an impossible value on purpose if the app allows it (e.g. FTP 999): the app reports the board rejected it and the
+      board keeps the old value.   PASS/FAIL (or NOT POSSIBLE in the app)
+ 1-9  SYNC AFTER RESTART. RESET the board: Home still shows the synced FTP/name; Phone page "synced hh:mm" (same time as
+      before); the app's Sync status says synchronized, not pending.   PASS/FAIL
+ 1-10 STANDALONE THEN PAIR. Board: Settings > SET UP AGAIN (profile reset; rides kept), set a different name on the board.
+      Pair the phone: the app explains the two profiles differ and asks before applying the phone's; after confirming, the
+      board shows the phone's name/FTP; History untouched; power meter still paired.   PASS/FAIL
+
+2. PHONE screen (board)
+ 2-1  Everything essential visible without scrolling: title, status line, one primary button (CONNECT / TURN OFF / DISCONNECT /
+      HOLD: REPAIR by state), Profile sync row, Phone link row, hint line, "<".   PASS/FAIL
+ 2-2  Tap "Phone link" row: LINK OFF, primary becomes CONNECT; tap CONNECT: SEARCHING again.   PASS/FAIL
+ 2-3  Details page: state, phones remembered, last link end + code, encryption fails, identity, profile/settings versions,
+      data counters, how-to text; HR preference and HOLD: FORGET PHONE live here.   PASS/FAIL
+
+3. Touch and wake (unchanged from 0.6.1 — still unverified on the glass)
+ 3-1  RESET -> Home; Connections, History, Settings open on a normal tap.   PASS/FAIL
+ 3-2  Screen off -> one touch wakes -> lift -> tap Connections opens at once. Repeat 20 times: responsive ___ / 20 (target
+      20/20), wakes that pressed a button ___ (target 0).   PASS/FAIL
+ 3-3  Screen off, finger held 2 s on START RIDE, lift: no ride; then Connections opens.   PASS/FAIL
+ 3-4  Deep sleep (HOLD) -> one touch boots it (~1 s) -> Connections / Settings / History open. If touch does not wake it:
+      RESET, note it.   PASS/FAIL
+ 3-5  5 plain taps on START RIDE: no ride, toast "hold 1 s to start"; one 1 s hold: exactly ONE ride.   PASS/FAIL
+ 3-6  Ride running, Screen off, pedal 2 min, touch once: ride time advanced, watts live, XDS connected, ride screen responds.   PASS/FAIL
+
+4. Everything else from TEST-v0.6.0.txt / TEST-v0.6.1.txt still applies and was not changed by 0.7.0: Connections menu and
+   category pages, Wi-Fi hotspot (Maximize Compatibility!), phone Wi-Fi setup, CSC sensors, Settings layout, wake-gesture
+   options, deep-sleep trials, history sync into the app.
+
+Serial log (optional, very useful for anything in section 1): READ-LOG-v0.6.0.bat works for 0.7.0. Lines starting with
+"link" show: identity (random-static, gen N), every connect/disconnect with the reason code, "encryption ON/FAILED (status
+0x206 = key missing: the phone kept old keys)", "repeat pairing", "repair: bonds wiped, new identity". Lines "PROFILE synced
+from phone vN" / "PROFILE_SET vN rejected" show the sync. "TOUCH" lines show the wake gate as in 0.6.1.

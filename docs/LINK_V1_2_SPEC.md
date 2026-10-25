@@ -3,7 +3,8 @@
 Both sides implement EXACTLY this. Header + TLV as in v1 (bc_link / BCLink.swift). Unknown tags are skipped.
 All messages below travel on the **Control** characteristic 0005 (encrypted write + notify) unless stated.
 Caps (INFO tag 05, u32): 0x40 RIDE_SYNC (Sync char 0006, see ios/SYNC_PROPOSAL.md), 0x80 WIFI_PROV, 0x100 PROFILE_SYNC,
-0x200 SETTINGS. INFO tag 07 = u8[6] device_id (board BT MAC).
+0x200 SETTINGS. INFO tag 07 = u8[6] device_id (board BT MAC — stays the same across pairing repairs; the Bluetooth identity
+address the phone sees is a random static one that CHANGES on every forget/repair, see 1.2.1 below).
 
 ## Wi-Fi provisioning (cap 0x80) — the board rejects these when the link is not encrypted
 | msg | dir | fields |
@@ -43,3 +44,13 @@ A phone shows a control only when `supported_mask` has its bit; every change wai
 | Display off | off | **on, unchanged** | on | continues | wake gesture, coach cue (ride), phone command |
 | Connected standby (no ride, idle) | off | on (slow advertising when not connected) | off | — | wake gesture, phone connect |
 | Deep sleep (explicit, or auto-sleep setting) | off | **off** | off | never while a ride is active | wake gesture / RESET / USB |
+
+## 1.2.1 additions (firmware 0.7.0 / iOS 0.8.0) — no new tags on existing messages
+- Board identity: random static address persisted on the board; a new one after every Forget / Repair / data reset. The phone
+  must therefore NOT key the board by its CoreBluetooth peripheral identifier alone: re-discover by the Link service UUID +
+  name and accept a new identifier for the same `device_id` (INFO tag 07).
+- EVENT `event_id 0x20 link_diag` (tags 02 reason, 03 u16 bonds, 04 sync state) once per connection; PROFILE hello on connect;
+  PROFILE_SET whole-message validation with `status 2` — details and vectors in firmware/waveshare/docs/BLE_LINK_PROTOCOL.md.
+- Stale-key failure on the board side is `encryption status 0x206 (key missing)` → board state REPAIR NEEDED; the phone side
+  sees "Peer removed pairing information" / ATT insufficient authentication. Recovery = board REPAIR (new identity) +
+  iPhone Settings › Bluetooth › Forget, then pair again from the app.

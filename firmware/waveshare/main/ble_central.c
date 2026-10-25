@@ -344,7 +344,7 @@ static void on_sync(void)
     ble_hs_id_infer_auto(0, &s_own);
     s_synced = true;
     ESP_LOGI(TAG, "host synced");
-    ble_link_on_sync(s_own);
+    s_own = ble_link_on_sync(s_own);                  /* 0.7.0: random-static identity for both roles */
 }
 static void on_reset(int reason) { ESP_LOGW(TAG, "host reset %d", reason); s_synced = false; s_scanning = false; }
 static void host_task(void *p) { nimble_port_run(); nimble_port_freertos_deinit(); }

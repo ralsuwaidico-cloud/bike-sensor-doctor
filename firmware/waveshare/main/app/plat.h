@@ -126,7 +126,12 @@ int plat_wifi_scan_count(void);                      /* networks seen by the las
  * device is fully usable without a phone. Pairing = LE Secure Connections with a 6-digit code shown on this screen; the
  * phone is remembered (bonded) so later connections need no code. A phone disconnect never touches the ride recording. */
 typedef enum { PLAT_PHONE_OFF = 0, PLAT_PHONE_ADVERTISING, PLAT_PHONE_CONNECTED /* link up, not yet authenticated */,
-               PLAT_PHONE_PAIRING /* passkey on screen */, PLAT_PHONE_READY /* encrypted with a remembered phone */ } plat_phone_state_t;
+               PLAT_PHONE_PAIRING /* passkey on screen */, PLAT_PHONE_READY /* encrypted with a remembered phone */,
+               PLAT_PHONE_REPAIR /* 0.7.0: a phone tried its old keys and this board no longer has them (or the reverse):
+                                    encryption failed; the rider must REPAIR (forget + pair again) */ } plat_phone_state_t;
+/* 0.7.0 diagnostics: why the last connection ended (HCI reason, low byte) and how encryption went. */
+typedef enum { PLAT_PHONE_DISC_NONE = 0, PLAT_PHONE_DISC_PHONE_ENDED, PLAT_PHONE_DISC_BOARD_ENDED, PLAT_PHONE_DISC_TIMEOUT,
+               PLAT_PHONE_DISC_KEY_MISSING, PLAT_PHONE_DISC_AUTH_FAILED, PLAT_PHONE_DISC_FAILED_TO_ESTABLISH, PLAT_PHONE_DISC_OTHER } plat_phone_disc_t;
 typedef struct {
     plat_phone_state_t state;
     bool bonded;                      /* a phone is remembered */
@@ -135,10 +140,19 @@ typedef struct {
     uint32_t connects, rx_msgs, rx_rejected, tx_msgs;
     uint32_t last_rx_age_ms;          /* UINT32_MAX = never */
     uint8_t phone_batt, watch_batt;   /* 0xFF unknown */
+    /* 0.7.0 */
+    uint8_t bonds;                    /* remembered phones (0..3) */
+    plat_phone_disc_t last_disc;      /* why the last connection ended */
+    uint16_t last_disc_code;          /* raw reason/status code for the Help page and the log */
+    uint16_t enc_fails;               /* encryption attempts that failed since boot (stale keys on one side) */
+    uint8_t id_gen;                   /* identity generation: +1 on every forget/repair (the phone sees a new device) */
+    uint8_t id_addr[6];               /* the Bluetooth identity address the phone sees (random static); all 0 = public */
+    bool svc_ready;                   /* encrypted AND the phone listens on Control: phone services can notify */
 } plat_phone_status_t;
 void plat_phone_set_enabled(bool on);
 void plat_phone_status(plat_phone_status_t *out);
-void plat_phone_forget(void);         /* forget every remembered phone and drop the connection */
+void plat_phone_forget(void);         /* forget every remembered phone, drop the connection AND take a new identity (0.7.0) */
+void plat_phone_repair(void);         /* 0.7.0: forget + new identity + advertise again (the PHONE screen's REPAIR action) */
 void plat_phone_disconnect(void);
 /** Latest inputs received from the phone (validated by bc_link). rx_ms = plat_ms() at reception, 0 = never received. */
 typedef struct {

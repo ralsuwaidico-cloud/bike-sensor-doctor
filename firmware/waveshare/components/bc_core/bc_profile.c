@@ -75,12 +75,12 @@ size_t bc_profile_to_text(const bc_profile_t *p, char *out, size_t cap)
         "format=bc-profile-1\nonboarded=%d\nname=%s\nage=%u\nweight_dg=%u\nheight_cm=%u\nexp=%u\ngoal=%u\nftp_w=%u\nftp_how=%u\n"
         "ftp_from_ride=%u\nmax_hr=%u\npower.paired=%d\npower.mac=%s\npower.type=%u\npower.name=%s\nhr.paired=%d\nhr.mac=%s\nhr.type=%u\n"
         "hr.name=%s\ncsc.paired=%d\ncsc.mac=%s\ncsc.type=%u\ncsc.name=%s\nwheel_mm=%u\nchg_notice=%u\nwifi_on=%d\nphone_on=%d\nhr_pref=%u\nride_style=%u\nbrightness=%u\nscr_timeout_s=%u\nauto_sleep_min=%u\nbat_protect=%u\nwake_on_cue=%d\nwake_taps=%u\n"
-        "birth_year=%u\nrest_hr=%u\nlthr=%u\nunits=%u\nhours_wk=%u\nphone_prof_ver=%lu\nphone_prof_epoch=%lu\nprof_src=%u\nsett_ver=%lu\npwr_v=%u\n"
+        "birth_year=%u\nrest_hr=%u\nlthr=%u\nunits=%u\nhours_wk=%u\nphone_prof_ver=%lu\nphone_prof_epoch=%lu\nprof_src=%u\nsett_ver=%lu\npwr_v=%u\nprof_sync_epoch=%lu\n"
         "next_ride_id=%u\nnext_demo_id=%u\nftp_note=%s\n",
         p->onboarded, p->name, p->age, p->weight_dg, p->height_cm, p->exp, p->goal, p->ftp_w, p->ftp_how, p->ftp_from_ride, p->max_hr,
         p->power.paired, pm, p->power.addr_type, p->power.name, p->hr.paired, hm, p->hr.addr_type, p->hr.name, p->csc.paired, cm, p->csc.addr_type, p->csc.name, p->wheel_mm, p->chg_notice, p->wifi_on, p->phone_on, p->hr_pref, p->ride_style,
         p->brightness, p->scr_timeout_s, p->auto_sleep_min, p->bat_protect, p->wake_on_cue, p->wake_taps,
-        p->birth_year, p->rest_hr, p->lthr, p->units, p->hours_wk, (unsigned long)p->phone_prof_ver, (unsigned long)p->phone_prof_epoch, p->prof_src, (unsigned long)p->sett_ver, p->pwr_v,
+        p->birth_year, p->rest_hr, p->lthr, p->units, p->hours_wk, (unsigned long)p->phone_prof_ver, (unsigned long)p->phone_prof_epoch, p->prof_src, (unsigned long)p->sett_ver, p->pwr_v, (unsigned long)p->prof_sync_epoch,
         p->next_ride_id, p->next_demo_id, p->ftp_note);
     if (n < 0 || (size_t)n >= cap) return 0;
     return (size_t)n;
@@ -151,6 +151,7 @@ bool bc_profile_from_text(bc_profile_t *p, const char *txt)
         else if (!strcmp(k, "phone_prof_epoch")) p->phone_prof_epoch = (uint32_t)(iv < 0 ? 0 : iv);
         else if (!strcmp(k, "prof_src")) p->prof_src = iv ? 1 : 0;
         else if (!strcmp(k, "sett_ver")) p->sett_ver = (uint32_t)(iv < 0 ? 0 : iv);
+        else if (!strcmp(k, "prof_sync_epoch")) p->prof_sync_epoch = (uint32_t)(iv < 0 ? 0 : iv);
         else if (!strcmp(k, "pwr_v")) p->pwr_v = (uint8_t)clampi(iv, 0, 255);
         else if (!strcmp(k, "next_ride_id")) p->next_ride_id = (uint16_t)clampi(iv, 1, 65535);
         else if (!strcmp(k, "next_demo_id")) p->next_demo_id = (uint16_t)clampi(iv, 1, 65535);

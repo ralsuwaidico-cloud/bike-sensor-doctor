@@ -26,6 +26,8 @@ static struct {
     uint8_t held[BC_LINK_MAX]; size_t held_len; uint8_t held_chr;   /* a notification the transport could not take yet */
     uint16_t seq;
     app_psvc_stats_t st;
+    /* 0.7.0 */
+    bool was_ready, hello_due, diag_due; uint8_t last_set_status; bool set_seen; uint16_t last_disc_code; uint8_t last_disc;
 } S;
 
 void app_psvc_init(void) { memset(&S, 0, sizeof S); }
@@ -97,10 +99,31 @@ void app_psvc_profile_msg(bc_profile_msg_t *m)
 }
 
 /* applies a PROFILE_SET; returns the ack status. Only shared athlete fields change; everything device-specific is kept. */
+/* 0.7.0: every field the phone sends is range-checked before anything changes; one bad value rejects the whole message */
+static bool profile_valid(const bc_profile_msg_t *m)
+{
+    if (m->invalid) return false;                 /* the codec saw a tag whose value is outside its range */
+    if ((m->has & BC_PF_HAS(0x03)) && (m->name[0] == 0 || strlen(m->name) > 24)) return false;
+    if ((m->has & BC_PF_HAS(0x04)) && m->ftp_w && (m->ftp_w < 50 || m->ftp_w > 600)) return false;
+    if ((m->has & BC_PF_HAS(0x05)) && m->ftp_how > 3) return false;
+    if ((m->has & BC_PF_HAS(0x06)) && (m->weight_kg_x10 < 300 || m->weight_kg_x10 > 2000)) return false;
+    if ((m->has & BC_PF_HAS(0x07)) && m->birth_year && (m->birth_year < 1900 || m->birth_year > 2030)) return false;
+    if ((m->has & BC_PF_HAS(0x08)) && m->max_hr && (m->max_hr < 100 || m->max_hr > 230)) return false;
+    if ((m->has & BC_PF_HAS(0x09)) && m->rest_hr && (m->rest_hr < 25 || m->rest_hr > 120)) return false;
+    if ((m->has & BC_PF_HAS(0x0A)) && m->units > 1) return false;
+    if ((m->has & BC_PF_HAS(0x0B)) && m->hours_per_week > 40) return false;
+    if ((m->has & BC_PF_HAS(0x0C)) && m->level > 2) return false;
+    if ((m->has & BC_PF_HAS(0x0D)) && m->goal > 4) return false;
+    if ((m->has & BC_PF_HAS(0x0E)) && m->lthr && (m->lthr < 80 || m->lthr > 220)) return false;
+    if ((m->has & BC_PF_HAS(0x08)) && (m->has & BC_PF_HAS(0x09)) && m->max_hr && m->rest_hr && m->rest_hr >= m->max_hr) return false;
+    return true;
+}
+
 static uint8_t profile_apply(const bc_profile_msg_t *m)
 {
     bc_profile_t *p = app_profile();
     if (m->version == 0 || m->version <= p->phone_prof_ver) return BC_PF_OLDER;
+    if (!profile_valid(m)) { char l[64]; snprintf(l, sizeof l, "PROFILE_SET v%lu rejected: value out of range", (unsigned long)m->version); plat_log(l); return BC_PF_BAD; }
     bool ftp_changed = false;
     if (m->has & BC_PF_HAS(0x03)) { snprintf(p->name, sizeof p->name, "%.16s", m->name); size_t n = strlen(p->name); while (n && (p->name[n - 1] & 0xC0) == 0x80 && (p->name[n - 1] & 0xC0) != 0xC0) { /* trailing partial UTF-8 */ p->name[--n] = 0; if (n && (p->name[n - 1] & 0xC0) == 0xC0) { p->name[--n] = 0; break; } } }
     if (m->has & BC_PF_HAS(0x06)) p->weight_dg = m->weight_kg_x10;
@@ -117,6 +140,7 @@ static uint8_t profile_apply(const bc_profile_msg_t *m)
         snprintf(p->ftp_note, sizeof p->ftp_note, "FTP %u W from the phone (%s)", p->ftp_w, p->ftp_how == BC_FTP_ENTERED ? "entered/tested" : p->ftp_how == BC_FTP_AUTO ? "estimated from rides" : "assumed");
     } else if (!ftp_changed) bc_profile_refresh_assumption(p);   /* weight/level may have changed an assumed FTP */
     p->phone_prof_ver = m->version; p->phone_prof_epoch = (m->has & BC_PF_HAS(0x02)) ? m->updated_epoch_s : epoch_now(); p->prof_src = 1;
+    p->prof_sync_epoch = epoch_now();
     app_profile_save();
     char l[96]; snprintf(l, sizeof l, "PROFILE synced from phone v%lu (ftp %u W %s)", (unsigned long)m->version, p->ftp_w, bc_ftp_label(p)); plat_log(l);
     return BC_PF_APPLIED;
@@ -233,7 +257,7 @@ bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t n
         uint8_t st = profile_apply(&m);
         if (st == BC_PF_APPLIED) S.st.profile_applied++, S.st.last_profile_ms = (now ? now : 1); else S.st.profile_rejected++;
         S.ack.version = m.version; S.ack.status = st; S.ack.board_version = app_profile()->phone_prof_ver;
-        S.profile_ack_due = true;
+        S.profile_ack_due = true; S.set_seen = true; S.last_set_status = st;
         return true; }
     case BC_MSG_SETTINGS_GET:
         S.st.settings_gets++; S.settings_status = BC_ST_APPLIED; S.settings_due = true;
@@ -253,6 +277,14 @@ bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t n
 /* ---- notifications */
 size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now)
 {
+    /* 0.7.0 link diagnostics: one EVENT per connection (Events characteristic) — why the previous link ended, bonds, sync state */
+    if (S.diag_due && !S.profile_due && !S.profile_ack_due) {
+        S.diag_due = false;
+        plat_phone_status_t ps; plat_phone_status(&ps);
+        bc_event_t ev = { .event_id = BC_EVT_LINK_DIAG, .pct_est = (uint8_t)S.last_disc, .mv = ps.bonds, .stage = (uint8_t)app_psvc_sync_state() };
+        *chr = APP_PSVC_EVENTS;
+        return bc_link_encode_event(&ev, buf, cap, ++S.seq, now);
+    }
     /* 0. profile / settings replies first (small, the phone is waiting) */
     if (S.profile_ack_due) { S.profile_ack_due = false; *chr = APP_PSVC_CTRL; return bc_link_encode_profile_ack(&S.ack, buf, cap, ++S.seq, now); }
     if (S.profile_due) { S.profile_due = false; bc_profile_msg_t m; app_psvc_profile_msg(&m); *chr = APP_PSVC_CTRL; return bc_link_encode_profile(BC_MSG_PROFILE, &m, buf, cap, ++S.seq, now); }
@@ -324,8 +356,22 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
     return 0;
 }
 
+app_psync_state_t app_psvc_sync_state(void)
+{
+    const bc_profile_t *p = app_profile();
+    plat_phone_status_t ps; plat_phone_status(&ps);
+    if (S.set_seen && S.last_set_status == BC_PF_BAD) return APP_PSYNC_FAILED;
+    if (ps.state == PLAT_PHONE_READY && !S.set_seen && !p->prof_src) return APP_PSYNC_PENDING;   /* connected, phone has not sent its profile yet */
+    return p->prof_src ? APP_PSYNC_SYNCED : APP_PSYNC_DEVICE_ONLY;
+}
+
 void app_psvc_pump(uint32_t now)
 {
+    /* 0.7.0: when the phone is encrypted and listening, send PROFILE (so it can compare) and one LINK_DIAG event */
+    { plat_phone_status_t ps; plat_phone_status(&ps);
+      if (ps.svc_ready && !S.was_ready) { S.was_ready = true; S.hello_due = true; S.diag_due = true; S.set_seen = false; S.last_disc_code = ps.last_disc_code; S.last_disc = (uint8_t)ps.last_disc; }
+      if (!ps.svc_ready) S.was_ready = false; }
+    if (S.hello_due) { S.hello_due = false; S.profile_due = true; }
     uint8_t chr, b[BC_LINK_MAX]; int n, guard = 0;
     while ((n = plat_phone_take_svc(&chr, b, sizeof b)) > 0 && guard++ < 16) app_psvc_write(chr ? APP_PSVC_SYNC : APP_PSVC_CTRL, b, (size_t)n, now);
     if (S.held_len) { if (!plat_phone_notify_svc(S.held_chr, S.held, S.held_len)) return; S.held_len = 0; }
@@ -339,7 +385,7 @@ void app_psvc_pump(uint32_t now)
 void app_psvc_on_disconnect(void)
 {
     S.sync_active = false; S.scan_pending = false; S.status_watch = false; S.have_last = false; S.status_now = false;
-    S.profile_due = S.profile_ack_due = S.settings_due = false; S.held_len = 0;
+    S.profile_due = S.profile_ack_due = S.settings_due = false; S.held_len = 0; S.hello_due = S.diag_due = false; S.was_ready = false;
 }
 
 size_t app_psvc_last_sync_end(uint8_t *buf, size_t cap)

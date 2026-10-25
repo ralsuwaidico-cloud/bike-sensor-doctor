@@ -771,14 +771,14 @@ static void scenario(void)
         boot(); plat_phone_set_enabled(app_profile()->phone_on); run(300);
         CHECK(app_profile()->phone_on, "phone link on by default");
         ui_settings_show(); run(300); scroll_to("Phone"); shot("97_settings_phone_row"); tap_text("Phone"); run(300);
-        CHECK(on_screen("WAITING FOR PHONE") && on_screen("no phone remembered"), "phone page before pairing");
+        CHECK(on_screen("SEARCHING") && on_screen("TURN OFF") && on_screen("device only"), "phone page before pairing: SEARCHING, TURN OFF, sync device only");
         shot("97_phone_waiting");
         /* a new phone connects: the 6-digit code pops up over the current screen and blocks touches until done */
         sim_phone_connect(false); run(400);
         CHECK(on_screen("PHONE PAIRING") && on_screen("482") && on_screen("913"), "passkey shown on screen");
         shot("98_passkey_popup");
         sim_phone_enter_passkey(); run(400);
-        CHECK(!on_screen("PHONE PAIRING") && on_screen("CONNECTED") && on_screen("a phone is remembered"), "paired, remembered");
+        CHECK(!on_screen("PHONE PAIRING") && on_screen("CONNECTED") && on_screen("DISCONNECT"), "paired, remembered: CONNECTED with DISCONNECT");
         shot("98_phone_connected");
         /* the phone sends time, GPS and watch heart rate; every value carries its source */
         sim_phone_send_time(1761300000000ULL); sim_phone_send_gps(244667000, 544000000, 833, 60); sim_phone_send_hr(148, BC_SRC_APPLE_WATCH); run(1200);
@@ -786,14 +786,14 @@ static void scenario(void)
           CHECK(lv.speed_ok && lv.speed_dmh == 299 && lv.speed_src == BC_SRC_PHONE_GPS, "speed 29.9 km/h from PHONE GPS (%d)", lv.speed_dmh);
           CHECK(lv.hr_ok && lv.bpm == 148 && lv.hr_src == BC_SRC_APPLE_WATCH && lv.phone_hr && !lv.strap_hr, "watch HR via phone");
           CHECK(lv.time_known && lv.epoch_s >= 1761300000u && lv.epoch_s <= 1761300002u, "wall clock synced"); }
-        CHECK(on_screen("WATCH") && on_screen("29.9 km/h"), "phone page shows sources");
+        ui_conn_detail_show(3); run(300); CHECK(on_screen("WATCH") || on_screen("watch"), "heart-rate page shows the watch source"); ui_conn_detail_show(5); run(300); CHECK(on_screen("29.9"), "speed page shows 29.9 km/h from the phone"); ui_phone_show(); run(300);
         shot("98_phone_live");
         /* strap present too: strap wins by default, watch is the backup; preference flips it */
         sensors(true, 180, true, 90, true, 152); g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_CONNECTED; sim_phone_send_hr(148, BC_SRC_APPLE_WATCH); run(400);
         { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.bpm == 152 && lv.hr_src == BC_SRC_BLE_STRAP && lv.strap_hr && lv.phone_hr, "strap first by default"); }
-        scroll_to("HR: STRAP FIRST"); tap_text("HR: STRAP FIRST"); run(300); sim_phone_send_hr(149, BC_SRC_APPLE_WATCH); run(300);
+        tap_text("tap for details"); run(300); scroll_to("HR: STRAP FIRST"); tap_text("HR: STRAP FIRST"); run(300); sim_phone_send_hr(149, BC_SRC_APPLE_WATCH); run(300);
         { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.bpm == 149 && lv.hr_src == BC_SRC_APPLE_WATCH && app_profile()->hr_pref == 1, "watch first after the toggle"); }
-        scroll_to("HR: WATCH FIRST"); tap_text("HR: WATCH FIRST"); run(300);
+        tap_text("tap for details"); run(300); scroll_to("HR: WATCH FIRST"); tap_text("HR: WATCH FIRST"); run(300);
         /* stale: 12 s without a watch value → falls back to the strap, never holds the old number */
         run_s(7); { app_live_t lv; app_live(&lv); CHECK(lv.hr_ok && lv.hr_src == BC_SRC_BLE_STRAP && !lv.phone_hr, "stale watch HR dropped after 6 s, strap shown"); }
         sensors(true, 180, true, 90, false, 0); g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_NOT_PAIRED; run(400);
@@ -827,10 +827,10 @@ static void scenario(void)
         tap_text("SAVE"); run(500);
         { bc_ride_summary_t h[3]; int n = app_history(h, 3, false); CHECK(n >= 1 && h[0].distance_m >= 150 && h[0].dist_src == BC_SRC_PHONE_GPS, "distance saved in history (R2 line)"); }
         /* forget → next connection pairs again; off → no advertising */
-        ui_phone_show(); run(300); scroll_to("FORGET PHONE"); hold_text("FORGET PHONE", 1800); run(300);
-        CHECK(g_sim.phone.forgets == 1, "forget called (%d)", g_sim.phone.forgets); CHECK(scroll_to("no phone remembered"), "phone page says not remembered");
-        scroll_to("PHONE LINK: ON"); tap_text("PHONE LINK: ON"); run(300); CHECK(!app_profile()->phone_on && scroll_to("OFF"), "phone link switched off");
-        scroll_to("PHONE LINK: OFF"); tap_text("PHONE LINK: OFF"); run(300); CHECK(app_profile()->phone_on, "and on again");
+        ui_phone_show(); run(300); tap_text("tap for details"); run(300); scroll_to("HOLD: FORGET PHONE"); hold_text("HOLD: FORGET PHONE", 1800); run(300);
+        CHECK(g_sim.phone.forgets == 1, "forget called (%d)", g_sim.phone.forgets); CHECK(on_screen("SEARCHING") && on_screen("pair from the app"), "phone page back to SEARCHING, says pair from the app");
+        tap_text("Phone link"); run(300); CHECK(!app_profile()->phone_on && on_screen("LINK OFF"), "phone link switched off");
+        tap_text("Phone link"); run(300); CHECK(app_profile()->phone_on, "and on again");
         shot("99_phone_after_forget");
     }
 
@@ -880,8 +880,8 @@ static void scenario(void)
         CHECK(!P->screen_on && g_sim.backlight == 0 && g_sim.panel_asleep, "screen off: backlight 0, panel asleep");
         shot("c2_screen_off");
         CHECK(app_profile()->wake_taps == 1, "default wake gesture is any touch (%u)", app_profile()->wake_taps);
-        ptr.x = 120; ptr.y = 108; ptr.down = true; run(30);          /* a finger lands exactly on START RIDE */
-        CHECK(P->screen_on && app_power_gate_blocking(), "first contact wakes the screen at once (%d ms), touch swallowed", 30);
+        ptr.x = 120; ptr.y = 108; ptr.down = true; run(60);          /* a finger lands exactly on START RIDE (the sim polls every 30 ms; the device reads on the interrupt) */
+        CHECK(P->screen_on && app_power_gate_blocking(), "first contact wakes the screen at once (<= %d ms), touch swallowed", 60);
         run(1500); CHECK(app_ride_state() == BC_RIDE_IDLE, "finger held 1.5 s on START RIDE while waking: NO ride (swallowed)");
         ptr.down = false; run(100);
         CHECK(app_power_gate_blocking(), "guard active right after the release");
@@ -1132,7 +1132,7 @@ static void scenario(void)
         /* ---- athlete profile: board-only first, then the phone becomes the authority */
         int hist_lines = count_lines("rides/history.txt"); bool paired = app_profile()->power.paired; uint16_t ftp0 = app_profile()->ftp_w;
         n = bc_link_encode_profile_get(b, sizeof b, 14, 0); sim_phone_write(0, b, n); run(600);
-        CHECK(g_sim.phone.profiles == 1 && g_sim.phone.profile.version == 0 && g_sim.phone.profile.source == 0 && g_sim.phone.profile.ftp_w == ftp0 && !strcmp(g_sim.phone.profile.name, app_profile()->name), "PROFILE: device-only (version 0), FTP %u, name %s", ftp0, g_sim.phone.profile.name);
+        CHECK(g_sim.phone.profiles >= 1 && g_sim.phone.profile.version == 0 && g_sim.phone.profile.source == 0 && g_sim.phone.profile.ftp_w == ftp0 && !strcmp(g_sim.phone.profile.name, app_profile()->name), "PROFILE: device-only (version 0), FTP %u, name %s", ftp0, g_sim.phone.profile.name);
         bc_profile_msg_t pm = { .version = 1, .updated_epoch_s = 1792850100u, .ftp_w = 250, .ftp_how = 1, .weight_kg_x10 = 780, .birth_year = 1990, .max_hr = 186, .rest_hr = 52, .units = 0, .hours_per_week = 6, .level = 2, .goal = 1, .lthr = 170 };
         snprintf(pm.name, sizeof pm.name, "Rashed"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
         n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 15, 0); CHECK(n > 0 && sim_phone_write(0, b, n), "PROFILE_SET v1 accepted"); run(600);
@@ -1199,7 +1199,7 @@ static void scenario(void)
             CHECK(on_screen("CONNECTIONS"), "back from %s returns to the menu", cats[i]);
         }
         /* Phone and Wi-Fi pages come back to the menu too */
-        scroll_to("Phone"); tap_text("Phone"); run(400); CHECK(on_screen("PHONE") && scroll_to("RECONNECT"), "phone page with RECONNECT"); shot("f3_conn_phone");
+        scroll_to("Phone"); tap_text("Phone"); run(400); CHECK(on_screen("PHONE") && (on_screen("DISCONNECT") || on_screen("TURN OFF") || on_screen("CONNECT")), "phone page with its primary action"); shot("f3_conn_phone");
         scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "phone page back -> menu");
         scroll_to("Wi-Fi"); tap_text("Wi-Fi"); run(400); CHECK(on_screen("WI-FI") || on_screen("Wi-Fi"), "wi-fi page opens");
         scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "wi-fi page back -> menu");
@@ -1430,6 +1430,82 @@ static void scenario(void)
         CHECK(n_fail_shots == fails0, "layout sweep: %d screens, every text inside the circle, nothing overlapping or overflowing", n_shots - shots0);
         app_profile()->wake_taps = 1; app_profile()->scr_timeout_s = 60; app_profile()->auto_sleep_min = 0; app_profile()->bat_protect = 0; app_profile()->wake_on_cue = true;
         app_profile()->brightness = 80; app_profile()->hr_pref = 0; app_profile()->units = 0; app_profile()->ride_style = 0; app_profile_save(); ui_home_show(); run(300);
+    }
+
+    printf("== 19 (0.7.0) pairing lifecycle: stale keys -> REPAIR NEEDED -> repair -> new identity -> pair again; PHONE screen; profile validation + persistence\n");
+    {
+        app_profile()->phone_on = true; app_profile_save(); plat_phone_set_enabled(true); sim_phone_disconnect(); run(300);
+        uint32_t ver_start = app_profile()->phone_prof_ver; bool paired_start = app_profile()->power.paired; int hist_start = count_lines("rides/history.txt");
+        int prof0 = g_sim.phone.profiles, ev0 = g_sim.phone.events;
+        /* both sides bonded (as after scenario 12) */
+        sim_phone_connect_remembered(); run(600);
+        plat_phone_status_t ps; plat_phone_status(&ps);
+        CHECK(ps.state == PLAT_PHONE_READY && ps.svc_ready, "remembered phone connects without a code (state %d)", ps.state);
+        run(800);
+        CHECK(g_sim.phone.profiles > prof0, "PROFILE is sent on connect so the phone can compare (hello)");
+        CHECK(g_sim.phone.events > ev0 && g_sim.phone.event.event_id == BC_EVT_LINK_DIAG, "LINK_DIAG event once per connection (id 0x%x)", g_sim.phone.event.event_id);
+        ui_phone_show(); run(400); shot("19_phone_connected");
+        CHECK(on_screen("CONNECTED") && on_screen("DISCONNECT") && on_screen("Profile sync") && on_screen("Phone link") && !lv_obj_has_flag(find_text("DISCONNECT"), LV_OBJ_FLAG_HIDDEN), "PHONE screen: status, DISCONNECT primary, sync + link rows, no scrolling");
+        /* the board loses its bonds (forget) while the phone keeps its keys: before 0.7.0 the phone would fail forever */
+        uint8_t gen0 = ps.id_gen;
+        tap_text("tap for details"); run(400); shot("19_phone_details"); CHECK(on_screen("PHONE DETAILS") && on_screen("IDENTITY"), "Details page with diagnostics");
+        scroll_to("HOLD: FORGET PHONE"); hold_text("HOLD: FORGET PHONE", 1800); run(500);
+        plat_phone_status(&ps);
+        CHECK(!ps.bonded && ps.id_gen == gen0 + 1, "forget wipes the bond AND takes a new identity (gen %u -> %u)", gen0, ps.id_gen);
+        /* the phone remembers the OLD identity: it now sees a new device and pairs with a code instead of failing */
+        sim_phone_connect_remembered(); run(500);
+        plat_phone_status(&ps);
+        CHECK(ps.state == PLAT_PHONE_PAIRING && ps.passkey != 0, "phone with stale keys sees a NEW device -> passkey pairing, not an endless failure (state %d)", ps.state);
+        sim_phone_enter_passkey(); run(600); plat_phone_status(&ps);
+        CHECK(ps.state == PLAT_PHONE_READY && ps.bonded, "paired again");
+        /* the other failure: identity unchanged but keys gone on the board (e.g. a restored backup) -> encryption fails */
+        sim_phone_disconnect(); run(300);
+        sim_phone_connect_stale(); run(600); plat_phone_status(&ps);
+        CHECK(ps.state == PLAT_PHONE_REPAIR && ps.last_disc == PLAT_PHONE_DISC_KEY_MISSING && ps.enc_fails >= 1, "stale keys on the phone -> REPAIR NEEDED with the reason (0x%x)", ps.last_disc_code);
+        ui_phone_show(); run(400); shot("19_phone_repair");
+        CHECK(on_screen("REPAIR NEEDED") && on_screen("HOLD: REPAIR"), "PHONE screen shows REPAIR NEEDED with the one action");
+        ui_connections_show(); run(400); CHECK(on_screen("! repair needed"), "Connections flags it with a red !"); shot("19_connections_repair");
+        ui_phone_show(); run(300);
+        int rep0 = g_sim.phone.repairs; gen0 = ps.id_gen;
+        hold_text("HOLD: REPAIR", 1800); run(500); plat_phone_status(&ps);
+        CHECK(g_sim.phone.repairs == rep0 + 1 && ps.state == PLAT_PHONE_ADVERTISING && ps.id_gen == gen0 + 1 && !ps.bonded, "REPAIR: bonds wiped, new identity, searching again (state %d)", ps.state);
+        shot("19_phone_searching"); CHECK(on_screen("SEARCHING") && on_screen("TURN OFF"), "searching state with TURN OFF");
+        sim_phone_connect_remembered(); run(400); plat_phone_status(&ps); CHECK(ps.state == PLAT_PHONE_PAIRING, "phone pairs as with a new device");
+        sim_phone_enter_passkey(); run(600);
+        /* rides, sensor pairing and the profile survive all of this */
+        CHECK(app_profile()->power.paired == paired_start && app_profile()->phone_prof_ver == ver_start && count_lines("rides/history.txt") == hist_start && hist_start > 0, "history (%d rides), meter pairing and the profile (v%lu) untouched by forget/repair", hist_start, (unsigned long)ver_start);
+        /* ---- profile validation: a bad value rejects the whole message and changes nothing */
+        uint8_t b[BC_LINK_MAX]; size_t n; uint32_t v = app_profile()->phone_prof_ver;
+        bc_profile_msg_t bad = { .version = v + 1, .ftp_w = 999, .has = BC_PF_HAS(0x04) };
+        uint16_t ftp_before = app_profile()->ftp_w; int acks = g_sim.phone.profile_acks;
+        n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &bad, b, sizeof b, 30, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profile_acks == acks + 1 && g_sim.phone.profile_ack.status == BC_PF_BAD && app_profile()->ftp_w == ftp_before && app_profile()->phone_prof_ver == v, "FTP 999 W rejected (status 2), profile unchanged");
+        bad.ftp_w = 0; bad.has = BC_PF_HAS(0x08) | BC_PF_HAS(0x09); bad.max_hr = 150; bad.rest_hr = 160;
+        n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &bad, b, sizeof b, 31, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profile_ack.status == BC_PF_BAD && app_profile()->phone_prof_ver == v, "rest HR above max HR rejected");
+        ui_phone_show(); run(400); CHECK(on_screen("failed"), "sync row shows failed after a rejected SET"); shot("19_phone_sync_failed");
+        bc_profile_msg_t good = { .version = v + 1, .updated_epoch_s = 1792900000u, .weight_kg_x10 = 795, .has = BC_PF_HAS(0x02) | BC_PF_HAS(0x06) };
+        sim_phone_send_time(1792901234000ULL); run(300);
+        n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &good, b, sizeof b, 32, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profile_ack.status == BC_PF_APPLIED && app_profile()->weight_dg == 795 && app_profile()->prof_sync_epoch > 0, "valid SET applied, last-sync time recorded (%lu)", (unsigned long)app_profile()->prof_sync_epoch);
+        ui_phone_show(); run(400); CHECK(on_screen("synced"), "sync row shows synced hh:mm"); shot("19_phone_synced");
+        /* ---- persistence: restart, the board works alone with the synced profile, PROFILE_GET returns the same version */
+        uint32_t v2 = app_profile()->phone_prof_ver, se = app_profile()->prof_sync_epoch;
+        boot(); run(400);
+        CHECK(app_profile()->phone_prof_ver == v2 && app_profile()->weight_dg == 795 && app_profile()->prof_sync_epoch == se && app_profile()->prof_src == 1, "profile version, values and last-sync time survive a restart");
+        plat_phone_set_enabled(true); sim_phone_connect(true); run(800);
+        CHECK(g_sim.phone.profile.version == v2 && g_sim.phone.profile.weight_kg_x10 == 795 && g_sim.phone.profile.source == 1, "PROFILE after restart reports the same version %lu", (unsigned long)v2);
+        /* ---- standalone -> paired: a device-only board (version 0) accepts the phone's v1 */
+        app_profile()->phone_prof_ver = 0; app_profile()->prof_src = 0; app_profile()->prof_sync_epoch = 0; app_profile_save();
+        ui_phone_show(); run(400); CHECK(on_screen("pending") || on_screen("device only"), "device-only board, phone connected: sync pending/device only (not 'synced')");
+        bc_profile_msg_t first = { .version = 1, .ftp_w = 240, .ftp_how = 1, .has = BC_PF_HAS(0x04) | BC_PF_HAS(0x05) };
+        n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &first, b, sizeof b, 33, 0); sim_phone_write(0, b, n); run(600);
+        CHECK(g_sim.phone.profile_ack.status == BC_PF_APPLIED && app_profile()->prof_src == 1 && app_profile()->ftp_w == 240, "standalone board reconciled to the phone profile on first sync");
+        /* phone link toggle from the PHONE screen */
+        ui_phone_show(); run(300); tap_text("Phone link"); run(400); plat_phone_status(&ps);
+        CHECK(!app_profile()->phone_on && ps.state == PLAT_PHONE_OFF && on_screen("LINK OFF") && on_screen("CONNECT"), "Phone link row toggles the link off: status LINK OFF, primary CONNECT"); shot("19_phone_off");
+        tap_text("CONNECT"); run(400); CHECK(app_profile()->phone_on && on_screen("SEARCHING"), "CONNECT turns the link on again");
+        sim_phone_connect(true); run(500);
     }
 
 }

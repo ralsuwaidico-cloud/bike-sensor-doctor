@@ -37,6 +37,7 @@ static void cat_status(cat_t c, cat_status_t *o)
     case CAT_PHONE:
         if (!p->phone_on) snprintf(o->txt, sizeof o->txt, "off");
         else if (ps.state == PLAT_PHONE_READY) { snprintf(o->txt, sizeof o->txt, "connected"); o->color = C_GREEN; o->connected = true; }
+        else if (ps.state == PLAT_PHONE_REPAIR) { snprintf(o->txt, sizeof o->txt, "! repair needed"); o->color = C_RED; o->alert = true; }
         else if (ps.state == PLAT_PHONE_PAIRING || ps.state == PLAT_PHONE_CONNECTED) { snprintf(o->txt, sizeof o->txt, "pairing"); o->color = C_AMBER; }
         else if (ps.bonded) { snprintf(o->txt, sizeof o->txt, "! not connected"); o->color = C_RED; o->alert = true; }
         else snprintf(o->txt, sizeof o->txt, "not paired");

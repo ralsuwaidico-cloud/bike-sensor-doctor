@@ -495,9 +495,18 @@ static void t_link3(void)
                                 0x04, 2, 0xFA, 0x00,  0x05, 1, 1,  0x06, 2, 0x0C, 0x03,  0x07, 2, 0xC6, 0x07,  0x08, 1, 186,  0x09, 1, 52,  0x0A, 1, 0,  0x0B, 1, 6,  0x0C, 1, 2,  0x0D, 1, 1,  0x0E, 1, 170 };
     CHECK(n == sizeof want_ps && !memcmp(b, want_ps, n));
     bc_profile_msg_t d; CHECK(bc_link_decode_profile(b, n, &d) && d.version == 1 && d.updated_epoch_s == 1792850100u && !strcmp(d.name, "Rashed") && d.ftp_w == 250 && d.ftp_how == 1 && d.weight_kg_x10 == 780 && d.birth_year == 1990 && d.max_hr == 186 && d.rest_hr == 52 && d.units == 0 && d.hours_per_week == 6 && d.level == 2 && d.goal == 1 && d.lthr == 170 && d.has == pm.has);
-    /* partial SET: only the fields sent are flagged; out-of-range values are dropped (flag cleared) */
+    /* partial SET: only the fields sent are flagged; 0.7.0: an out-of-range value is not applied AND is flagged in `invalid`
+       (the board then answers status 2 and changes nothing) */
     uint8_t part[] = { 0x71, 0, 0, 0, 0, 0, 0, 0,  0x01, 4, 5, 0, 0, 0,  0x04, 2, 0xFF, 0xFF,  0x08, 1, 186 };
-    CHECK(bc_link_decode_profile(part, sizeof part, &d) && d.version == 5 && d.has == BC_PF_HAS(0x08) && d.max_hr == 186 && !(d.has & BC_PF_HAS(0x04)));
+    CHECK(bc_link_decode_profile(part, sizeof part, &d) && d.version == 5 && d.has == BC_PF_HAS(0x08) && d.max_hr == 186 && !(d.has & BC_PF_HAS(0x04)) && d.invalid == BC_PF_HAS(0x04));
+    uint8_t bad_rest[] = { 0x71, 0, 0, 0, 0, 0, 0, 0,  0x01, 4, 6, 0, 0, 0,  0x08, 1, 150,  0x09, 1, 160 };
+    CHECK(bc_link_decode_profile(bad_rest, sizeof bad_rest, &d) && d.has == BC_PF_HAS(0x08) && d.invalid == BC_PF_HAS(0x09));
+    CHECK(bc_link_decode_profile(b, n, &d) && d.invalid == 0);   /* the full valid set: nothing invalid */
+    /* 0.7.0 LINK_DIAG event vector (docs/BLE_LINK_PROTOCOL.md 1.2.1) */
+    { bc_event_t ev = { .event_id = BC_EVT_LINK_DIAG, .pct_est = 3, .mv = 1, .stage = 1 };
+      static const uint8_t want_ld[] = { 0x40, 0x00, 0x03, 0x00, 0xF4, 0x01, 0x00, 0x00, 0x01, 0x01, 0x20, 0x02, 0x01, 0x03, 0x03, 0x02, 0x01, 0x00, 0x04, 0x01, 0x01 };
+      size_t ln = bc_link_encode_event(&ev, b, sizeof b, 3, 500); bc_event_t ed;
+      CHECK(ln == sizeof want_ld && memcmp(b, want_ld, ln) == 0 && bc_link_decode_event(b, ln, &ed) && ed.event_id == 0x20 && ed.pct_est == 3 && ed.mv == 1 && ed.stage == 1); }
     uint8_t nover[] = { 0x71, 0, 0, 0, 0, 0, 0, 0, 0x08, 1, 186 }; CHECK(!bc_link_decode_profile(nover, sizeof nover, &d));
     /* PROFILE (board -> phone) carries 0F source and 10 board_saved_epoch_s */
     pm.source = 1; pm.board_saved_epoch_s = 1792850100u; n = bc_link_encode_profile(BC_MSG_PROFILE, &pm, b, sizeof b, 2, 0);

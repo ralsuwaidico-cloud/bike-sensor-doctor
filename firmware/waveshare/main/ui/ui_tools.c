@@ -1,6 +1,7 @@
 /* Settings > Display (ride-screen picker with preview, brightness), Settings > Diagnostics (Device Health, Sensor Test,
  * Self-test) and the diagnostic report export. */
 #include "ui.h"
+#include "app_psvc.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -161,11 +162,18 @@ static size_t health_text(char *b, size_t cap, bool markup)
     if (P->usb_likely) snprintf(hl, sizeof hl, "n/a on USB");
     else if (P->hours_left_x10 >= 0 && P->hours_left_x10 < 999) snprintf(hl, sizeof hl, "about %d.%d h (estimate)", P->hours_left_x10 / 10, P->hours_left_x10 % 10);
     else snprintf(hl, sizeof hl, "after 20 min of data");
+    plat_phone_status_t ph; plat_phone_status(&ph);
+    static const char *DISC[] = { "-", "phone ended", "board ended", "timeout", "KEYS MISSING", "AUTH FAILED", "not established", "other" };
+    char link_line[96];
+    snprintf(link_line, sizeof link_line, "%s, %u phone%s, id gen %u\n  last end %s (0x%x), enc fails %u, sync %s",
+             !p->phone_on ? "off" : ph.state == PLAT_PHONE_READY ? "connected" : ph.state == PLAT_PHONE_REPAIR ? "REPAIR NEEDED" : ph.state == PLAT_PHONE_ADVERTISING ? "searching" : "connecting",
+             ph.bonds, ph.bonds == 1 ? "" : "s", ph.id_gen, DISC[ph.last_disc > 7 ? 7 : ph.last_disc], ph.last_disc_code, ph.enc_fails,
+             (const char *[]){"device only", "synced", "pending", "FAILED"}[app_psvc_sync_state() & 3]);
     int n = snprintf(b, cap,
         "%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
         "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
         "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
-        "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sCharging%s not detectable (no STAT/VBUS line);\n  alerts unavailable, HW-1 open\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sTouch gate%s %s, %lu reports\n%sPower state%s %s, %lu standbys\n%sBluetooth%s %s%s, %lu seen\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sSpeed/cad.%s %s %s\n%sWi-Fi%s %s\n"
+        "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sCharging%s not detectable (no STAT/VBUS line);\n  alerts unavailable, HW-1 open\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sTouch gate%s %s, %lu reports\n%sPower state%s %s, %lu standbys\n%sBluetooth%s %s%s, %lu seen\n%sPhone link%s %s\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sSpeed/cad.%s %s %s\n%sWi-Fi%s %s\n"
         "%sMeter gaps / bad%s %lu / %lu\n%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
         K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
         K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
@@ -178,6 +186,7 @@ static size_t health_text(char *b, size_t cap, bool markup)
         K, E, app_power_state_text(), (unsigned long)P->standbys,
         K, E, h.ble_ready ? "ready" : "NOT READY",
         h.ble_scanning ? ", scanning" : "", (unsigned long)h.ble_devices_seen,
+        K, E, link_line,
         K, E, p->power.paired ? p->power.name : "not paired", ui_link_text(pw->link),
         K, E, p->hr.paired ? p->hr.name : "not paired", p->hr.paired ? ui_link_text(hr->link) : "",
         K, E, p->csc.paired ? p->csc.name : "not paired", p->csc.paired ? ui_link_text(lv.link[PLAT_SENS_CSC].link) : "",
@@ -188,7 +197,7 @@ static size_t health_text(char *b, size_t cap, bool markup)
     return n > 0 && (size_t)n < cap ? (size_t)n : cap - 1;
 }
 
-static void health_update(void) { static char b[1400]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
+static void health_update(void) { static char b[1600]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
 
 static void strip_markup(char *s)
 {

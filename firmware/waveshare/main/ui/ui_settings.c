@@ -42,7 +42,7 @@ void ui_settings_show(void)
     snprintf(v, sizeof v, "%c  " LV_SYMBOL_RIGHT, ui_ride_design(p->ride_style)->letter); ui_row_btn(l, "Display", v, C_CYAN, display_cb, NULL);
     { int c, a; ui_conn_summary(&c, &a); snprintf(v, sizeof v, a ? "! %d  " LV_SYMBOL_RIGHT : "%d on  " LV_SYMBOL_RIGHT, a ? a : c); ui_row_btn(l, "Connections", v, a ? C_RED : C_CYAN, sensors_cb, NULL); }
     ui_row_btn(l, "Wi-Fi", p->wifi_on ? "on" : "off", C_CYAN, wifi_cb, NULL);
-    { plat_phone_status_t ps; plat_phone_status(&ps); ui_row_btn(l, "Phone", !p->phone_on ? "off" : ps.state == PLAT_PHONE_READY ? "connected" : ps.bonded ? "remembered" : "not paired", ps.state == PLAT_PHONE_READY ? C_GREEN : C_CYAN, phone_cb, NULL); }
+    { plat_phone_status_t ps; plat_phone_status(&ps); ui_row_btn(l, "Phone", !p->phone_on ? "off" : ps.state == PLAT_PHONE_READY ? "connected" : ps.state == PLAT_PHONE_REPAIR ? "! repair" : ps.bonded ? "remembered" : "not paired", ps.state == PLAT_PHONE_READY ? C_GREEN : ps.state == PLAT_PHONE_REPAIR ? C_RED : C_CYAN, phone_cb, NULL); }
     { char bs[16]; app_power_batt_short(bs, sizeof bs); ui_row_btn(l, "Power", bs, C_CYAN, power_cb, NULL); }
     ui_row_btn(l, "Demo mode", app_demo() ? "ON" : "off", app_demo() ? C_DEMO : C_MUT, demo_cb, NULL);
     ui_row_btn(l, "Diagnostics", LV_SYMBOL_RIGHT, C_CYAN, diag_cb, NULL);

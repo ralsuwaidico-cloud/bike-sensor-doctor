@@ -63,6 +63,7 @@ typedef struct {
     uint32_t phone_prof_ver;   /* version of the last PROFILE_SET applied; 0 = device-only profile */
     uint32_t phone_prof_epoch; /* updated_epoch_s the phone sent with it */
     uint8_t prof_src;          /* 0 device-only, 1 phone-synced */
+    uint32_t prof_sync_epoch;  /* 0.7.0: wall-clock time the last PROFILE_SET was applied (0 = never / clock unknown) */
     uint32_t sett_ver;         /* version of the last SETTINGS_SET applied */
     uint8_t pwr_v;             /* power-settings schema: 0 = written by 0.5.0 (auto_sleep_min reset once), 2 = 0.6.0 */
     uint16_t next_ride_id;     /* real rides only; demo rides are numbered separately */

@@ -152,6 +152,20 @@ flag is on, which has no menu while HW-1 is open. Vector (seq 7, t 123456, 81 %,
 `40 00 07 00 40 E2 01 00 01 01 10 02 01 51 03 02 96 0F 04 01 01`. A phone that subscribes to Events should show it as a local
 notification labelled as an estimate and must not present it as a charger state.
 
+### 1.2.1 (firmware 0.7.0): `event_id 0x20 link_diag` — sent ONCE per connection, right after the board's PROFILE "hello"
+Same four tags, reinterpreted: `02 u8 last_disconnect_reason` (0 none, 1 phone ended it, 2 board ended it, 3 timeout / out of
+range, 4 keys missing (stale pairing), 5 authentication failed, 6 failed to establish, 7 other), `03 u16 bonded_phones`,
+`04 u8 profile_sync_state` (0 device-only, 1 synced, 2 pending, 3 failed). Informational: the app shows it on the Connection
+diagnostics page. Vector (seq 3, t 500, reason 3, 1 bond, synced): `40 00 03 00 F4 01 00 00 01 01 20 02 01 03 03 02 01 00 04 01 01`.
+
+### 1.2.1 (firmware 0.7.0): PROFILE hello and field validation
+- As soon as the link is encrypted and the phone subscribed to Control, the board sends one unsolicited `PROFILE 0x72` so the
+  phone can compare without asking (a PROFILE_GET still works).
+- `PROFILE_SET` is range-checked as a whole: name 1–24 bytes, FTP 50–600 W (0 = unchanged), weight 30.0–200.0 kg, birth year
+  1900–2030, max HR 100–230, rest HR 25–120 and below max HR, LTHR 80–220, units 0/1, hours ≤ 40, level ≤ 2, goal ≤ 4. Any
+  violation → `PROFILE_ACK status 2 (bad_value)` and NOTHING changes (before 0.7.0 an out-of-range tag was silently dropped
+  and the rest applied). The board stores the time it applied the last SET (`prof_sync_epoch`) and shows it as "synced hh:mm".
+
 ## Power states and the link (firmware 0.6.0)
 | state | display | phone link | XDS / strap | recording |
 |---|---|---|---|---|
