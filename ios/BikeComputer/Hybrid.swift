@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Hybrid Athlete Mode (0.6.0, phase 1). Phone-side only: nothing here travels over the Link protocol.
+// MARK: - Hybrid Athlete Mode (0.6.0 phase 1, 0.7.0 phase 2). Phone-side only: nothing here travels over the Link protocol.
 
 enum TrainingMode: String, Codable, CaseIterable {
     case cycling, strength, hybrid
@@ -21,19 +21,23 @@ enum TrainingPriority: String, Codable, CaseIterable {
     var title: String { switch self { case .cycling: return "Cycling"; case .strength: return "Strength"; case .balanced: return "Balanced" } }
 }
 
-/// Body region of a strength session as the rider LOGGED it. Only these labels are ever used for balance; nothing
-/// about muscles or movement patterns is inferred from them (that needs the detailed exercise log, phase 2).
+/// Body region / routine type of a strength session as the rider LOGGED or PLANNED it. Only these labels are used for
+/// region balance; muscle or movement coverage comes from detailed exercise logs alone (Strength.swift).
 enum StrengthFocus: String, Codable, CaseIterable {
-    case fullBody, upper, lower, push, pull, custom
-    var title: String { switch self { case .fullBody: return "Full body"; case .upper: return "Upper body"; case .lower: return "Lower body"; case .push: return "Push"; case .pull: return "Pull"; case .custom: return "Custom" } }
-    var icon: String { switch self { case .fullBody: return "figure.strengthtraining.traditional"; case .upper: return "figure.arms.open"; case .lower: return "figure.step.training"; case .push: return "arrow.up.circle"; case .pull: return "arrow.down.circle"; case .custom: return "square.and.pencil" } }
-    /// A lower-body or full-body session loads the legs; the planner keeps it away from hard rides when it can.
-    var loadsLegs: Bool { self == .lower || self == .fullBody }
+    case fullBody, upper, lower, push, pull, legs, custom
+    /// Short label for pickers (fits a 3-column grid).
+    var short: String { switch self { case .fullBody: return "Full Body"; case .upper: return "Upper"; case .lower: return "Lower"; case .push: return "Push"; case .pull: return "Pull"; case .legs: return "Legs"; case .custom: return "Custom" } }
+    var title: String { switch self { case .fullBody: return "Full body"; case .upper: return "Upper body"; case .lower: return "Lower body"; case .push: return "Push"; case .pull: return "Pull"; case .legs: return "Legs"; case .custom: return "Custom routine" } }
+    var icon: String { switch self { case .fullBody: return "figure.strengthtraining.traditional"; case .upper: return "figure.arms.open"; case .lower: return "figure.step.training"; case .push: return "arrow.up.circle"; case .pull: return "arrow.down.circle"; case .legs: return "figure.walk"; case .custom: return "square.and.pencil" } }
+    /// A lower-body, legs or full-body session loads the legs; the planner keeps it away from hard rides when it can.
+    var loadsLegs: Bool { self == .lower || self == .fullBody || self == .legs }
     var isUpperRegion: Bool { self == .upper || self == .push || self == .pull }
+    /// The six quick-log choices (Legs is a planning type; quick logs use Lower).
+    static let quickLog: [StrengthFocus] = [.fullBody, .upper, .lower, .push, .pull, .custom]
 }
 
-/// One strength session: a quick log (focus, duration, effort) or an Apple Health import. Detailed sets / reps /
-/// weights / supersets / templates are phase 2 and have no fields here yet — nothing is pretended.
+/// One strength session: a quick log (focus, duration, effort), a detailed log (exercises, sets, supersets) or an
+/// Apple Health import. `exercises == nil` means a quick log — nothing about movements is known from it.
 struct StrengthSession: Codable, Identifiable, Equatable {
     var id = UUID()
     var date: Date
@@ -46,9 +50,15 @@ struct StrengthSession: Codable, Identifiable, Equatable {
     /// "manual" or "Apple Health"
     var source: String = "manual"
     var healthUUID: String? = nil
+    /// 0.7.0: detailed exercise log (nil = quick log) and the template it came from.
+    var exercises: [ExerciseEntry]? = nil
+    var templateId: UUID? = nil
+    /// Set when this log was created for a planned session (so the plan entry is marked done, not duplicated).
+    var workoutId: UUID? = nil
 
-    init(id: UUID = UUID(), date: Date, minutes: Int, focus: StrengthFocus, customName: String = "", rpe: Int? = nil, notes: String = "", source: String = "manual", healthUUID: String? = nil) {
+    init(id: UUID = UUID(), date: Date, minutes: Int, focus: StrengthFocus, customName: String = "", rpe: Int? = nil, notes: String = "", source: String = "manual", healthUUID: String? = nil, exercises: [ExerciseEntry]? = nil, templateId: UUID? = nil, workoutId: UUID? = nil) {
         self.id = id; self.date = date; self.minutes = minutes; self.focus = focus; self.customName = customName; self.rpe = rpe; self.notes = notes; self.source = source; self.healthUUID = healthUUID
+        self.exercises = exercises; self.templateId = templateId; self.workoutId = workoutId
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -61,12 +71,32 @@ struct StrengthSession: Codable, Identifiable, Equatable {
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
         source = try c.decodeIfPresent(String.self, forKey: .source) ?? "manual"
         healthUUID = try c.decodeIfPresent(String.self, forKey: .healthUUID)
+        exercises = try? c.decodeIfPresent([ExerciseEntry].self, forKey: .exercises)
+        templateId = try? c.decodeIfPresent(UUID.self, forKey: .templateId)
+        workoutId = try? c.decodeIfPresent(UUID.self, forKey: .workoutId)
     }
 
+    var isDetailed: Bool { !(exercises ?? []).isEmpty }
+    var isImported: Bool { source != "manual" }
+    /// Stable identity across devices and imports: the Health UUID when imported, else the local id.
+    var sourceId: String { healthUUID.map { "health:\($0)" } ?? "local:\(id.uuidString)" }
     var title: String { focus == .custom ? (customName.isEmpty ? "Strength" : customName) : "Strength · \(focus.title)" }
     /// true when the rider named a body region; Health imports and custom names say nothing about regions.
     var regionKnown: Bool { focus != .custom }
     var effortLabel: String { guard let r = rpe else { return "effort not stated" }; return r <= 4 ? "easy (RPE \(r))" : r <= 7 ? "moderate (RPE \(r))" : "hard (RPE \(r))" }
+    var exerciseCount: Int { exercises?.count ?? 0 }
+    var setCount: Int { exercises?.reduce(0) { $0 + $1.doneSets.count } ?? 0 }
+    /// Movement patterns actually trained (detailed logs only).
+    var patterns: Set<MovementPattern> { Set((exercises ?? []).map { $0.pattern }) }
+    /// Heavy leg loading from evidence: a detailed log with ≥ 6 loaded squat/hinge/single-leg sets, or a quick log
+    /// labelled lower/legs/full body with RPE ≥ 7. Used only for the interference rule.
+    var heavyLegs: Bool {
+        if let ex = exercises, !ex.isEmpty {
+            let legSets = ex.filter { [.squat, .hinge, .singleLeg].contains($0.pattern) }.reduce(0) { $0 + $1.doneSets.filter { $0.weightKg != nil && !$0.bodyweight }.count }
+            return legSets >= 6
+        }
+        return focus.loadsLegs && (rpe ?? 0) >= 7
+    }
     /// Same session logged twice (quick log + Health import, or two imports): start within ±2 min and durations close.
     static func sameSession(_ a: StrengthSession, _ b: StrengthSession) -> Bool {
         abs(a.date.timeIntervalSince(b.date)) <= 120 && abs(a.minutes - b.minutes) <= max(5, min(a.minutes, b.minutes) / 5)
@@ -89,6 +119,22 @@ struct CoachFinding: Equatable, Identifiable {
     var id: String
     var severity: Severity
     var text: String
+    /// "estimate" / "insufficient evidence" / nil
+    var evidence: String? = nil
+}
+
+/// A change the coach proposes. Applied only on Accept; every applied proposal can be undone.
+struct CoachProposal: Equatable, Identifiable, Codable {
+    enum Change: Equatable, Codable {
+        case move(workoutId: UUID, to: Date)
+        case kind(workoutId: UUID, to: WorkoutKind)
+        case minutes(workoutId: UUID, to: Int)
+        case focus(workoutId: UUID, to: StrengthFocus)
+    }
+    var id: String
+    var text: String
+    var why: String
+    var change: Change
 }
 
 struct HybridAssessment: Equatable {
@@ -99,11 +145,25 @@ struct HybridAssessment: Equatable {
     var next: Workout?                  // the session the line refers to (today's, or the first missing one)
     var why: [String]                   // plain-language reasons, only from available evidence
     var combined: String                // "on track" / "cycling behind" / …
+    var proposals: [CoachProposal] = []
+    var coverage: CoverageReport? = nil
+}
+
+/// Last week compared with its plan (completed sessions only), with one suggested adjustment for the coming week.
+struct WeeklyReview: Equatable {
+    var monday: Date
+    var ridesPlanned: Int, ridesDone: Int, rideMinutesPlanned: Int, rideMinutesDone: Int
+    var liftsPlanned: Int, liftsDone: Int, liftMinutesPlanned: Int, liftMinutesDone: Int
+    var missedWorkouts: [Workout]
+    var suggestion: String
+    /// true when two or more recent weeks missed half or more of their sessions → offer to revise availability.
+    var offerRevise: Bool
+    var completionPct: Int { let p = ridesPlanned + liftsPlanned; return p > 0 ? (ridesDone + liftsDone) * 100 / p : 100 }
 }
 
 enum HybridCoach {
     /// Evaluates the current week from real data only: rides, strength logs, the plan and the rider's stated targets.
-    /// `now` and `calendar` are injectable for tests.
+    /// Planned sessions are NEVER counted as done. `now` and `calendar` are injectable for tests.
     static func assess(profile p: RiderProfile, plan: [Workout], rides: [RideRecord], strength: [StrengthSession], availability a: WeeklyAvailability, now: Date = Date(), calendar cal: Calendar = .current) -> HybridAssessment {
         let today = cal.startOfDay(for: now)
         let wd = (cal.component(.weekday, from: today) + 5) % 7
@@ -114,8 +174,9 @@ enum HybridCoach {
         let weekLifts = strength.filter { $0.date >= monday && $0.date < nextMonday }
         var findings: [CoachFinding] = []
         var why: [String] = []
+        var proposals: [CoachProposal] = []
 
-        // --- cycling
+        // --- cycling (completed rides only)
         var cyc: SportProgress? = nil
         if p.trainingMode.includesCycling {
             let done = weekRides.reduce(0) { $0 + $1.durationS } / 60
@@ -123,7 +184,6 @@ enum HybridCoach {
             let target = p.hoursPerWeek * 60
             let ridesTarget = max(p.cyclingDaysPerWeek, a.cycleDays)
             var note = "\(weekRides.count) of \(ridesTarget) rides · \(Fmt.duration(minutes: done)) of \(Fmt.duration(minutes: target))"
-            // intensity mix from real zone data only
             let zs = weekRides.map { $0.zoneSeconds }.filter { $0.count == 7 && $0.reduce(0, +) > 0 }
             if !zs.isEmpty {
                 let tot = zs.reduce(0) { $0 + $1.reduce(0, +) }
@@ -131,19 +191,20 @@ enum HybridCoach {
                 let pct = tot > 0 ? hard * 100 / tot : 0
                 note += " · \(pct) % at Zone 3 or above"
                 if pct > 50, weekRides.count >= 2 { findings.append(.init(id: "cyc-intensity", severity: .info, text: "More than half of this week's riding was Zone 3 or harder; the plan keeps the next ride easy.")) }
-            } else if !weekRides.isEmpty { note += " · intensity unknown (no power zones recorded)" }
+            } else if !weekRides.isEmpty { note += " · intensity unknown (no power zones recorded)"; findings.append(.init(id: "cyc-zones", severity: .info, text: "Intensity distribution: not known — no power or heart-rate zones were recorded this week.", evidence: "insufficient evidence")) }
+            let hrRides = weekRides.filter { $0.avgHR != nil }.count, pwRides = weekRides.filter { $0.avgPower != nil }.count
+            if !weekRides.isEmpty { note += " · power on \(pwRides), HR on \(hrRides) ride\(weekRides.count == 1 ? "" : "s")" }
             cyc = SportProgress(sessionsDone: weekRides.count, sessionsTarget: ridesTarget, minutesDone: done, minutesTarget: target, minutesPlanned: planned, note: note)
-            let daysLeft = 7 - wd
             let remainingPlanned = week.filter { $0.kind.isRide && !$0.skipped && !$0.done && cal.startOfDay(for: $0.date) >= today }.count
             if weekRides.count + remainingPlanned < ridesTarget {
                 findings.append(.init(id: "cyc-freq", severity: .gap, text: "Cycling: \(weekRides.count) ride\(weekRides.count == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(ridesTarget) per week — one ride is missing."))
             } else if weekRides.count >= ridesTarget { findings.append(.init(id: "cyc-ok", severity: .ok, text: "Cycling: \(weekRides.count) rides this week — frequency on target.")) }
-            if planned > target { findings.append(.init(id: "cyc-over", severity: .conflict, text: "Planned riding (\(Fmt.duration(minutes: planned))) is over your \(p.hoursPerWeek) h cycling budget; see the Plan suggestions.")) }
-            _ = daysLeft
+            if planned > target { findings.append(.init(id: "cyc-over", severity: .conflict, text: "Planned riding (\(Fmt.duration(minutes: planned))) is over your \(p.hoursPerWeek) h cycling budget; see Fix plan.")) }
         }
 
-        // --- strength
+        // --- strength (logged sessions only)
         var str: SportProgress? = nil
+        var coverage: CoverageReport? = nil
         if p.trainingMode.includesLifting {
             let done = weekLifts.reduce(0) { $0 + $1.minutes }
             let planned = week.filter { $0.kind == .strength && !$0.skipped }.reduce(0) { $0 + $1.minutes }
@@ -155,8 +216,9 @@ enum HybridCoach {
                 findings.append(.init(id: "str-freq", severity: .gap, text: "Strength: \(weekLifts.count) session\(weekLifts.count == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(liftsTarget) per week — a lift is missing."))
             } else if liftsTarget > 0, weekLifts.count >= liftsTarget { findings.append(.init(id: "str-ok", severity: .ok, text: "Strength: \(weekLifts.count) sessions this week — frequency on target.")) }
             if target > 0, planned > target { findings.append(.init(id: "str-over", severity: .conflict, text: "Planned lifting (\(Fmt.duration(minutes: planned))) is over your \(p.liftingHoursPerWeek) h lifting budget.")) }
-            // push / pull balance — only from Push / Pull logs of the last 28 days
-            let recent = strength.filter { $0.date >= cal.date(byAdding: .day, value: -28, to: today)! }
+            // region balance — only from Push / Pull labelled logs of the last 28 days
+            let since = cal.date(byAdding: .day, value: -28, to: today)!
+            let recent = strength.filter { $0.date >= since }
             let push = recent.filter { $0.focus == .push }.count, pull = recent.filter { $0.focus == .pull }.count
             if push + pull >= 3 {
                 if push >= 2 * pull + 1 { findings.append(.init(id: "str-pushpull", severity: .gap, text: "Push/pull: \(push) push vs \(pull) pull sessions in 4 weeks — add a pull session.")) }
@@ -164,19 +226,54 @@ enum HybridCoach {
                 else { findings.append(.init(id: "str-pushpull-ok", severity: .ok, text: "Push/pull balance looks even (\(push) push, \(pull) pull in 4 weeks).")) }
                 note += " · push \(push) / pull \(pull)"
             } else if recent.contains(where: { $0.regionKnown }) {
-                let lower = recent.filter { $0.focus == .lower }.count, upper = recent.filter { $0.focus.isUpperRegion }.count, full = recent.filter { $0.focus == .fullBody }.count
+                let lower = recent.filter { $0.focus == .lower || $0.focus == .legs }.count, upper = recent.filter { $0.focus.isUpperRegion }.count, full = recent.filter { $0.focus == .fullBody }.count
                 note += " · 4 wk: \(lower) lower, \(upper) upper, \(full) full body"
                 if lower == 0, upper >= 2 { findings.append(.init(id: "str-lower", severity: .gap, text: "No lower-body session logged in 4 weeks (\(upper) upper-body); legs matter for riding too.")) }
             }
-            findings.append(.init(id: "str-coverage", severity: .info, text: "Squat / hinge / single-leg / core coverage and exercise progression: not known from quick logs — detailed exercise logging arrives in a later build."))
+            // movement coverage and progression — detailed logs only
+            let cov = StrengthAnalysis.coverage(strength, since: since)
+            coverage = cov
+            if cov.known {
+                if cov.missing.isEmpty { findings.append(.init(id: "str-coverage-ok", severity: .ok, text: "Movement coverage in 4 weeks: squat, hinge, single-leg, core, push and pull all trained (\(cov.detailedSessions) detailed log\(cov.detailedSessions == 1 ? "" : "s")).")) }
+                else { findings.append(.init(id: "str-coverage", severity: .gap, text: "Not trained in 4 weeks of detailed logs: \(cov.missing.map { $0.title.lowercased() }.joined(separator: ", ")).")) }
+                if cov.quickOnlySessions > 0 { findings.append(.init(id: "str-coverage-partial", severity: .info, text: "\(cov.quickOnlySessions) quick log\(cov.quickOnlySessions == 1 ? "" : "s") in that window carry no exercises, so coverage is known only from the detailed ones.", evidence: "insufficient evidence")) }
+                if cov.pushSets + cov.pullSets >= 12 {
+                    if cov.pushSets >= cov.pullSets * 2 { findings.append(.init(id: "str-sets-pushpull", severity: .gap, text: "Sets in 4 weeks: \(cov.pushSets) push vs \(cov.pullSets) pull — add pulling work.")) }
+                    else if cov.pullSets >= cov.pushSets * 2 { findings.append(.init(id: "str-sets-pushpull", severity: .gap, text: "Sets in 4 weeks: \(cov.pullSets) pull vs \(cov.pushSets) push — add pushing work.")) }
+                }
+                let prog = StrengthAnalysis.progression(strength)
+                let down = prog.filter { $0.trend == .down }, up = prog.filter { $0.trend == .up }
+                if !up.isEmpty { findings.append(.init(id: "str-prog-up", severity: .ok, text: "Progressing: \(up.prefix(3).map { $0.name }.joined(separator: ", ")) (load × reps rising).")) }
+                if !down.isEmpty { findings.append(.init(id: "str-prog-down", severity: .info, text: "Load × reps fell over the last sessions of \(down.prefix(3).map { $0.name }.joined(separator: ", ")); worth a look (fatigue, or a deliberate deload?).", evidence: "estimate")) }
+                if prog.allSatisfy({ $0.trend == .insufficient }) { findings.append(.init(id: "str-prog-none", severity: .info, text: "Exercise progression: not enough repeated exercises yet (needs 4 logs of the same lift with weights).", evidence: "insufficient evidence")) }
+            } else {
+                findings.append(.init(id: "str-coverage", severity: .info, text: "Squat / hinge / single-leg / core coverage and exercise progression: not known from quick logs — log exercises in a detailed session and the coach checks them.", evidence: "insufficient evidence"))
+            }
             str = SportProgress(sessionsDone: weekLifts.count, sessionsTarget: liftsTarget, minutesDone: done, minutesTarget: target, minutesPlanned: planned, note: note)
         }
 
-        // --- scheduling conflicts (two hard days back to back) from the plan
+        // --- interference: a heavy leg session (logged, from evidence) right before a demanding planned ride, or two
+        //     hard planned days back to back. Proposals move only flexible, unedited, not-yet-done sessions.
+        let hardPlanned = week.filter { !$0.skipped && !$0.done && $0.kind.isRide && $0.kind.zone >= 3 && cal.startOfDay(for: $0.date) >= today }
+        for r in hardPlanned {
+            let dayBefore = cal.date(byAdding: .day, value: -1, to: cal.startOfDay(for: r.date))!
+            let heavy = strength.first { $0.heavyLegs && cal.isDate($0.date, inSameDayAs: dayBefore) }
+            let plannedLegs = week.first { $0.kind == .strength && !$0.skipped && ($0.strengthFocus?.loadsLegs ?? false) && cal.isDate($0.date, inSameDayAs: dayBefore) }
+            if heavy != nil || plannedLegs != nil {
+                findings.append(.init(id: "interf-\(r.id.uuidString.prefix(4))", severity: .conflict, text: "\(r.kind.title) on \(r.date.shortDay) follows a heavy leg session on \(dayBefore.shortDay)\(heavy != nil ? " (logged)" : " (planned)"). Legs may not be fresh for the quality ride."))
+                if !r.fixed, !r.edited {
+                    // softer ride instead of moving a fixed day
+                    proposals.append(CoachProposal(id: "soften-\(r.id.uuidString)", text: "Make \(r.date.shortDay)'s \(r.kind.title.lowercased()) an endurance ride (same duration)", why: "A heavy leg session the day before means the quality intervals would likely be done tired. Keeping the ride but at Zone 2 preserves the hours without the interference. Your fixed days and manual edits are untouched.", change: .kind(workoutId: r.id, to: .endurance)))
+                }
+                if let l = plannedLegs, !l.fixed, !l.edited, !l.done {
+                    proposals.append(CoachProposal(id: "upper-\(l.id.uuidString)", text: "Make \(l.date.shortDay)'s lift an upper-body session", why: "Keeps the lift on its day and your legs fresh for \(r.date.shortDay)'s \(r.kind.title.lowercased()). Only a proposal — nothing changes until you accept.", change: .focus(workoutId: l.id, to: .upper)))
+                }
+            }
+        }
         let hardDays = week.filter { !$0.skipped && (($0.kind.zone >= 3 && $0.kind.isRide) || ($0.kind == .strength && ($0.strengthFocus?.loadsLegs ?? false))) }.map { cal.startOfDay(for: $0.date) }
         let sortedHard = Array(Set(hardDays)).sorted()
         for i in 1..<max(1, sortedHard.count) where cal.dateComponents([.day], from: sortedHard[i - 1], to: sortedHard[i]).day == 1 {
-            findings.append(.init(id: "sched-\(i)", severity: .conflict, text: "\(sortedHard[i - 1].shortDay) and \(sortedHard[i].shortDay) are both hard days (hard ride or leg session back to back). Move one if you can."))
+            if !findings.contains(where: { $0.id.hasPrefix("interf") }) { findings.append(.init(id: "sched-\(i)", severity: .conflict, text: "\(sortedHard[i - 1].shortDay) and \(sortedHard[i].shortDay) are both hard days (hard ride or leg session back to back). Move one if you can.")) }
             break
         }
 
@@ -198,7 +295,6 @@ enum HybridCoach {
         if let g = findings.first(where: { $0.severity == .gap }) {
             why.append(g.text)
             if next == nil || next?.kind == .rest {
-                // suggest the missing sport on the next free day
                 if g.id.hasPrefix("str"), let free = week.first(where: { $0.kind == .rest && cal.startOfDay(for: $0.date) >= today }) {
                     next = Workout(date: free.date, kind: .strength, minutes: 30, strengthFocus: g.id == "str-lower" ? .lower : .fullBody)
                     line = "Next: a 30 min \(next!.strengthFocus!.title.lowercased()) strength session on \(free.date.shortDay) — a lift is missing this week."
@@ -208,10 +304,10 @@ enum HybridCoach {
                 }
             }
         }
-        if let c = cyc { why.append("Cycling this week: \(c.note).") }
-        if let s = str { why.append("Strength this week: \(s.note).") }
-        why.append("Priority: \(p.priority.title.lowercased()); mode: \(p.trainingMode.title.lowercased()).")
-        if p.trainingMode.includesLifting { why.append("Hard rides and leg sessions are kept on separate days when your availability allows it.") }
+        if let c = cyc { why.append("Cycling this week (completed rides only): \(c.note).") }
+        if let s = str { why.append("Strength this week (logged sessions only): \(s.note).") }
+        why.append("Priority: \(p.priority.title.lowercased()); mode: \(p.trainingMode.title.lowercased()). Planned sessions count only once they are recorded or logged.")
+        if p.trainingMode.includesLifting { why.append("Hard rides and leg sessions are kept on separate days when your availability allows it; fixed days are never moved by the coach.") }
         why.append("No sleep, HRV or recovery source is connected, so recovery is not part of this recommendation.")
 
         let gaps = findings.filter { $0.severity == .gap }
@@ -220,6 +316,44 @@ enum HybridCoach {
         else if gaps.allSatisfy({ $0.id.hasPrefix("cyc") }) { combined = "cycling behind" }
         else if gaps.allSatisfy({ $0.id.hasPrefix("str") }) { combined = "strength behind" }
         else { combined = "both behind" }
-        return HybridAssessment(cycling: cyc, strength: str, findings: findings, recommendation: line, next: next, why: why, combined: combined)
+        return HybridAssessment(cycling: cyc, strength: str, findings: findings, recommendation: line, next: next, why: why, combined: combined, proposals: proposals, coverage: coverage)
+    }
+
+    /// Review of the week before `now`'s week: planned vs completed per sport, the missed sessions, one suggestion.
+    static func weeklyReview(profile p: RiderProfile, plan: [Workout], rides: [RideRecord], strength: [StrengthSession], now: Date = Date(), calendar cal: Calendar = .current) -> WeeklyReview? {
+        let today = cal.startOfDay(for: now)
+        let wd = (cal.component(.weekday, from: today) + 5) % 7
+        let thisMonday = cal.date(byAdding: .day, value: -wd, to: today)!
+        func stats(_ monday: Date) -> (plannedR: [Workout], plannedL: [Workout], rides: [RideRecord], lifts: [StrengthSession]) {
+            let end = cal.date(byAdding: .day, value: 7, to: monday)!
+            let w = plan.filter { $0.date >= monday && $0.date < end && !$0.skipped }
+            return (w.filter { $0.kind.isRide }, w.filter { $0.kind == .strength }, rides.filter { $0.start >= monday && $0.start < end && !$0.demo }, strength.filter { $0.date >= monday && $0.date < end })
+        }
+        let last = cal.date(byAdding: .day, value: -7, to: thisMonday)!
+        let s = stats(last)
+        guard !s.plannedR.isEmpty || !s.plannedL.isEmpty || !s.rides.isEmpty || !s.lifts.isEmpty else { return nil }
+        // a planned session counts as missed when no ride / log exists on its day
+        let missed = (s.plannedR.filter { w in !s.rides.contains { cal.isDate($0.start, inSameDayAs: w.date) } } + s.plannedL.filter { w in !s.lifts.contains { cal.isDate($0.date, inSameDayAs: w.date) } }).sorted { $0.date < $1.date }
+        let ridesDone = min(s.plannedR.count, s.rides.count), liftsDone = min(s.plannedL.count, s.lifts.count)
+        var suggestion: String
+        let totalPlanned = s.plannedR.count + s.plannedL.count
+        let pct = totalPlanned > 0 ? (totalPlanned - missed.count) * 100 / totalPlanned : 100
+        if totalPlanned == 0 { suggestion = "Nothing was planned last week; this week follows your days." }
+        else if missed.isEmpty { suggestion = "Everything planned was done. If it felt comfortable, add 10 % to the long ride or one more set per exercise this week." }
+        else if pct < 50 { suggestion = "Half or more of last week was missed. This week keeps the same days; if that is not realistic, change your training days (Plan › Days) rather than carrying the same plan again." }
+        else { let m = missed[0]; suggestion = "\(missed.count) session\(missed.count == 1 ? "" : "s") missed, first on \(m.date.shortDay) (\(m.displayTitle.lowercased())). This week: keep the sessions, shorten \(m.date.shortDay)'s by a quarter if time was the problem." }
+        // repeated misses over the last three completed weeks
+        var badWeeks = 0
+        for k in 1...3 {
+            let m = cal.date(byAdding: .day, value: -7 * k, to: thisMonday)!
+            let st = stats(m)
+            let planned = st.plannedR.count + st.plannedL.count
+            guard planned > 0 else { continue }
+            let miss = st.plannedR.filter { w in !st.rides.contains { cal.isDate($0.start, inSameDayAs: w.date) } }.count + st.plannedL.filter { w in !st.lifts.contains { cal.isDate($0.date, inSameDayAs: w.date) } }.count
+            if miss * 2 >= planned { badWeeks += 1 }
+        }
+        return WeeklyReview(monday: last, ridesPlanned: s.plannedR.count, ridesDone: ridesDone, rideMinutesPlanned: s.plannedR.reduce(0) { $0 + $1.minutes }, rideMinutesDone: s.rides.reduce(0) { $0 + $1.durationS } / 60,
+                            liftsPlanned: s.plannedL.count, liftsDone: liftsDone, liftMinutesPlanned: s.plannedL.reduce(0) { $0 + $1.minutes }, liftMinutesDone: s.lifts.reduce(0) { $0 + $1.minutes },
+                            missedWorkouts: missed, suggestion: suggestion, offerRevise: badWeeks >= 2)
     }
 }

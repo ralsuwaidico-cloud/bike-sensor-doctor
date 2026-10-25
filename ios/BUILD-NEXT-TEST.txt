@@ -1,0 +1,56 @@
+BikeComputer iPhone app 0.7.0 (TestFlight build BUILDNO) — manual QA (Hybrid Athlete brief P0–P2)
+=============================================================================================
+Record PASS / FAIL / NOT TESTED per step. Everything is simulator-tested only until you confirm it here.
+Board on firmware 0.5.0 or 0.6.x; never USB and battery connected at the same time (HW-1). Build-30 steps still apply first.
+
+Layout (P0)
+ 1  Update to 0.7.0 (BUILDNO). Profile, plan, rides and strength logs from build 33 are intact. Home shows the hybrid
+    coach card and, below it, "Last week" with a Review › button.   PASS/FAIL
+ 2  Home › Log strength: the type picker is a neat 3-column grid (Full Body / Upper / Lower / Push / Pull / Custom), no
+    wrapped words. Settings › Accessibility › Larger Text at the largest size: the grid becomes 2 columns, nothing is
+    clipped; Plan calendar, cards and Profile pages still readable; set it back.   PASS/FAIL
+ 3  Plan summary is compact: Rides x/y, Lifts x/y, Riding, Lifting, two budget bars and ONE action line; no red
+    paragraphs. If a "Fix plan" button shows, tap it: options Raise budget / Edit days / Keep.   PASS/FAIL
+
+Budgets and days (P0/P1)
+ 4  Plan › Days: set Tuesday ride 65 min + Wednesday lift 70 min, Thursday ride 60, Saturday lift 60, rest otherwise.
+    Profile › Training profile: cycling budget 2 h, lifting budget 2 h. Preview & save → the preview says the days
+    exceed both budgets by 5 and 10 min and offers: raise, shorten flexible, drop a day. Choose "Save anyway":
+    Plan shows Riding 2 h and Lifting 2 h exactly (never 2 h 5 min / 2 h 10 min) and Fix plan lists what was trimmed.
+    PASS/FAIL
+ 5  Plan › Days: mark Saturday's ride "Fixed" and type "Long ride" 2 h 30 min, Tuesday flexible "Coach decides"; set
+    the cycling budget to 3 h → preview trims Tuesday, never Saturday; Saturday's card shows "fixed".   PASS/FAIL
+ 6  Plan › Days: make Monday "Flexible" (rest with the Flexible toggle on). The day shows "flex" in the days strip and
+    nothing is planned on it.   PASS/FAIL
+
+Strength logging (P1)
+ 7  Home › Log strength › "Log exercises, sets and weights instead": Add exercise → search "rdl" finds Romanian
+    deadlift; filter Single-leg shows only single-leg movements; add Bulgarian split squat with 3 sets 8 reps 20 kg
+    1-side; give both exercises superset A; switch on "Save as a template", name "Lower A", Save.   PASS/FAIL
+ 8  Plan › Log strength › Templates: "Lower A" is listed; Use → the sets are prefilled from step 7; change a weight,
+    Save. Plan › History: two detailed entries with "2 exercises · N sets"; tap one → exercises, sets, "Movements
+    trained: Hinge, Single-leg".   PASS/FAIL
+ 9  Add exercise › "Create my own exercise": name "Landmine row", movement Pull, equipment Barbell → it appears first
+    in search with a "yours" pill; Profile › Training profile › My exercises lists it.   PASS/FAIL
+
+Coaching (P2)
+10  Home › Why?: with only quick logs the coverage line reads "not known from quick logs"; after steps 7–8 it reads
+    "Not trained in 4 weeks of detailed logs: squat, core, push, pull" (or similar) and the coverage strip shows
+    Hinge and Single-leg green.   PASS/FAIL
+11  Plan: put a Lower lift the day before a Threshold ride (both flexible). Home › Coach proposals shows "Make …'s
+    threshold an endurance ride" and/or "Make …'s lift an upper-body session". Accept one → the plan changes; Undo →
+    restored. Mark the ride "Fixed" in Days and rebuild → no proposal touches it.   PASS/FAIL
+12  Mark every session this week done by hand (Plan › day › nothing logged): Home progress bars still show 0 sessions
+    done — planned is never counted as completed. Log a quick strength session: the Strength bar moves, Cycling does
+    not.   PASS/FAIL
+13  Home › Last week › Review ›: planned vs completed per sport, missed sessions listed, one suggestion. (If the last
+    two weeks were mostly missed, a "Revise my training days" button appears.)   PASS/FAIL
+
+Regression
+14  Phone-only ride (board off) start → map/gauges → End → Save: appears in History as completed; board ride (if the
+    board is on) still records on the board with one entry on the phone; Watch HR still shows; Connections unchanged.
+    PASS/FAIL
+15  Connections › Apple Health › Import: imported workouts show the "imported" status in History, none duplicated.
+    PASS/FAIL
+
+Report PASS/FAIL/NOT TESTED per step plus screenshots of anything clipped, overlapping or wrong.

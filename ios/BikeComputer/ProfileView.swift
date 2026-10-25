@@ -147,6 +147,12 @@ struct TrainingProfilePage: View {
                 Text(store.profile.level.hint).font(.footnote).foregroundStyle(.secondary)
             }
             Section("Sports and activities") { NavigationLink("Sports (\(store.profile.sports.count) selected)") { SportsPicker() } }
+            if store.profile.trainingMode.includesLifting {
+                Section("Strength") {
+                    NavigationLink { TemplatesView() } label: { HStack { Text("Workout templates"); Spacer(); Text("\(store.templates.count)").foregroundStyle(.secondary) } }
+                    NavigationLink { MyExercisesView() } label: { HStack { Text("My exercises"); Spacer(); Text("\(store.customExercises.count) custom · \(ExerciseCatalogue.builtIn.count) built in").font(.caption).foregroundStyle(.secondary) } }
+                }
+            }
             Section {
                 if store.profile.trainingMode.includesCycling {
                     Stepper("Cycling: \(store.profile.cyclingDaysPerWeek) rides a week", value: Binding(get: { store.profile.cyclingDaysPerWeek }, set: { v in store.updateProfile { $0.cyclingDaysPerWeek = v } }), in: 1...6)
@@ -174,7 +180,7 @@ struct TrainingProfilePage: View {
         .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
         .onChange(of: store.profile.trainingMode) { _, _ in if store.availability == nil { store.regenerate(weekOf: Date(), replaceEdited: false); store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false) } }
     }
-    private var availabilityText: String { let a = store.effectiveAvailability; return "\(a.cycleDays) ride · \(a.liftDays) lift days" + (store.availability == nil ? " (suggested)" : "") }
+    private var availabilityText: String { let a = store.effectiveAvailability; return "\(a.cycleDays) ride · \(a.liftDays) lift days" + (a.fixedAssignments > 0 ? " · \(a.fixedAssignments) fixed" : "") + (store.availability == nil ? " (suggested)" : "") }
 }
 
 // MARK: - Heart rate
@@ -362,5 +368,25 @@ struct AccountSheet: View {
             }.padding()
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Not now") { dismiss() } } }
         }
+    }
+}
+
+
+/// The rider's own exercises (built-in ones are listed read-only in the search sheet).
+struct MyExercisesView: View {
+    @EnvironmentObject private var store: Store
+    @State private var create = false
+    var body: some View {
+        List {
+            Section { Text("\(ExerciseCatalogue.builtIn.count) built-in exercises are searchable by name, equipment, movement and muscle when you log a session. Add anything missing here; your exercises appear first.").font(.footnote).foregroundStyle(.secondary) }
+            Section("Your exercises") {
+                if store.customExercises.isEmpty { Text("None yet.").foregroundStyle(.secondary) }
+                ForEach(store.customExercises) { e in VStack(alignment: .leading, spacing: 2) { Text(e.name); Text("\(e.pattern.title) · \(e.equipmentText)").font(.caption).foregroundStyle(.secondary) } }
+                    .onDelete { idx in for i in idx { store.removeCustomExercise(store.customExercises[i]) } }
+                Button { create = true } label: { Label("New exercise", systemImage: "plus") }
+            }
+        }
+        .navigationTitle("My exercises").navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $create) { CreateExerciseSheet(initialName: "") { store.addCustomExercise($0) } }
     }
 }

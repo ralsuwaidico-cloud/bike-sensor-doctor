@@ -19,31 +19,122 @@ enum Fmt {
     static func km(_ meters: Int, imperial: Bool) -> String { imperial ? String(format: "%.1f mi", Double(meters) / 1609.34) : String(format: "%.1f km", Double(meters) / 1000) }
 }
 
+// MARK: - Per-day sport assignment (0.7.0): what exactly happens each day
+enum CyclingType: String, Codable, CaseIterable {
+    case zone2, tempo, threshold, intervals, recovery, long, custom
+    var title: String { switch self { case .zone2: return "Zone 2 / endurance"; case .tempo: return "Tempo"; case .threshold: return "Threshold"; case .intervals: return "Intervals"; case .recovery: return "Recovery"; case .long: return "Long ride"; case .custom: return "Custom" } }
+    var short: String { switch self { case .zone2: return "Zone 2"; case .tempo: return "Tempo"; case .threshold: return "Threshold"; case .intervals: return "Intervals"; case .recovery: return "Recovery"; case .long: return "Long"; case .custom: return "Custom" } }
+    var kind: WorkoutKind { switch self { case .zone2: return .endurance; case .tempo: return .tempo; case .threshold: return .threshold; case .intervals: return .vo2; case .recovery: return .recovery; case .long: return .long; case .custom: return .endurance } }
+    var defaultMinutes: Int { kind.defaultMinutes }
+    var isHard: Bool { kind.zone >= 3 }
+}
+
+struct DayAssignment: Codable, Identifiable, Equatable {
+    enum Sport: String, Codable { case cycling, strength }
+    var id = UUID()
+    var sport: Sport
+    var cyclingType: CyclingType? = nil
+    var strengthType: StrengthFocus? = nil
+    var minutes: Int
+    /// Fixed = the coach never moves or changes it; flexible = the coach may propose changes within the budget.
+    var fixed = false
+
+    init(id: UUID = UUID(), sport: Sport, cyclingType: CyclingType? = nil, strengthType: StrengthFocus? = nil, minutes: Int, fixed: Bool = false) {
+        self.id = id; self.sport = sport; self.cyclingType = cyclingType; self.strengthType = strengthType; self.minutes = minutes; self.fixed = fixed
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        sport = (try? c.decodeIfPresent(Sport.self, forKey: .sport)) ?? .cycling
+        cyclingType = try? c.decodeIfPresent(CyclingType.self, forKey: .cyclingType)
+        strengthType = try? c.decodeIfPresent(StrengthFocus.self, forKey: .strengthType)
+        minutes = try c.decodeIfPresent(Int.self, forKey: .minutes) ?? 0
+        fixed = try c.decodeIfPresent(Bool.self, forKey: .fixed) ?? false
+    }
+    var title: String { sport == .cycling ? (cyclingType?.title ?? "Ride") : (strengthType?.title ?? "Strength") }
+    var short: String { sport == .cycling ? (cyclingType?.short ?? "Ride") : (strengthType?.short ?? "Lift") }
+}
+
 // MARK: - Weekly availability: the rider chooses the days, the engine plans around them
 struct DayAvailability: Codable, Equatable {
     enum Activity: String, Codable, CaseIterable {
         case cycle, lift, both, other, rest
-        var title: String { switch self { case .cycle: return "Cycle"; case .lift: return "Lift"; case .both: return "Ride + lift"; case .other: return "Other"; case .rest: return "Rest" } }
+        var title: String { switch self { case .cycle: return "Cycling"; case .lift: return "Strength"; case .both: return "Both"; case .other: return "Other"; case .rest: return "Rest" } }
         var short: String { switch self { case .cycle: return "Cycle"; case .lift: return "Lift"; case .both: return "Both"; case .other: return "Other"; case .rest: return "Rest" } }
         var icon: String { switch self { case .cycle: return "bicycle"; case .lift: return "dumbbell"; case .both: return "plus.circle"; case .other: return "figure.run"; case .rest: return "moon.zzz" } }
         var cycles: Bool { self == .cycle || self == .both }
         var lifts: Bool { self == .lift || self == .both }
     }
+    /// Legacy summary fields (0.5.0/0.6.0 files): kept in sync with `assignments` so older code paths and files agree.
     var activity: Activity
-    /// Minutes for the day's main activity (riding minutes on a "Ride + lift" day).
     var minutes: Int
-    /// 0.6.0: lifting minutes on a "Ride + lift" day (nil for every other day; older files never carry it).
     var liftMinutes: Int? = nil
+    /// 0.7.0: the exact activities of the day. Empty = rest. Derived from the legacy fields when a file lacks it.
+    var assignments: [DayAssignment] = []
+    /// A flexible day: the coach may use it (or not) and move sessions onto it; a day with only fixed assignments is fixed.
+    var flexible = false
+    /// "Other" minutes (run, swim…) — not cycling, not lifting.
+    var otherMinutes = 0
 
-    init(activity: Activity, minutes: Int, liftMinutes: Int? = nil) { self.activity = activity; self.minutes = minutes; self.liftMinutes = liftMinutes }
+    init(activity: Activity, minutes: Int, liftMinutes: Int? = nil) {
+        self.activity = activity; self.minutes = minutes; self.liftMinutes = liftMinutes
+        assignments = DayAvailability.legacyAssignments(activity: activity, minutes: minutes, liftMinutes: liftMinutes)
+        otherMinutes = activity == .other ? minutes : 0
+    }
+    init(assignments: [DayAssignment], flexible: Bool = false, otherMinutes: Int = 0) {
+        self.assignments = assignments; self.flexible = flexible; self.otherMinutes = otherMinutes
+        activity = .rest; minutes = 0
+        syncLegacy()
+    }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         activity = (try? c.decodeIfPresent(Activity.self, forKey: .activity)) ?? .rest
         minutes = try c.decodeIfPresent(Int.self, forKey: .minutes) ?? 0
         liftMinutes = try c.decodeIfPresent(Int.self, forKey: .liftMinutes)
+        flexible = (try? c.decodeIfPresent(Bool.self, forKey: .flexible)) ?? false
+        otherMinutes = (try? c.decodeIfPresent(Int.self, forKey: .otherMinutes)) ?? (activity == .other ? minutes : 0)
+        if let a = try? c.decodeIfPresent([DayAssignment].self, forKey: .assignments) { assignments = a; syncLegacy() }
+        else { assignments = DayAvailability.legacyAssignments(activity: activity, minutes: minutes, liftMinutes: liftMinutes) }
     }
-    var cycleMinutes: Int { activity.cycles ? minutes : 0 }
-    var liftingMinutes: Int { activity == .lift ? minutes : activity == .both ? (liftMinutes ?? 30) : 0 }
+    static func legacyAssignments(activity: Activity, minutes: Int, liftMinutes: Int?) -> [DayAssignment] {
+        switch activity {
+        case .rest, .other: return []
+        case .cycle: return [DayAssignment(sport: .cycling, cyclingType: nil, minutes: minutes)]
+        case .lift: return [DayAssignment(sport: .strength, strengthType: nil, minutes: minutes)]
+        case .both: return [DayAssignment(sport: .cycling, cyclingType: nil, minutes: minutes), DayAssignment(sport: .strength, strengthType: nil, minutes: liftMinutes ?? 30)]
+        }
+    }
+    /// Keeps the legacy summary in step with the assignments (called after every edit).
+    mutating func syncLegacy() {
+        let c = assignments.filter { $0.sport == .cycling }, s = assignments.filter { $0.sport == .strength }
+        if !c.isEmpty && !s.isEmpty { activity = .both; minutes = c.reduce(0) { $0 + $1.minutes }; liftMinutes = s.reduce(0) { $0 + $1.minutes } }
+        else if !c.isEmpty { activity = .cycle; minutes = c.reduce(0) { $0 + $1.minutes }; liftMinutes = nil }
+        else if !s.isEmpty { activity = .lift; minutes = s.reduce(0) { $0 + $1.minutes }; liftMinutes = nil }
+        else if otherMinutes > 0 { activity = .other; minutes = otherMinutes; liftMinutes = nil }
+        else { activity = .rest; minutes = 0; liftMinutes = nil }
+    }
+    var cycleMinutes: Int { assignments.filter { $0.sport == .cycling }.reduce(0) { $0 + $1.minutes } }
+    var liftingMinutes: Int { assignments.filter { $0.sport == .strength }.reduce(0) { $0 + $1.minutes } }
+    var cycles: Bool { assignments.contains { $0.sport == .cycling } }
+    var lifts: Bool { assignments.contains { $0.sport == .strength } }
+    var isRest: Bool { assignments.isEmpty && otherMinutes == 0 }
+    /// Cycling / Strength / Both / Rest / Flexible — the brief's day marks.
+    var mark: String { flexible && isRest ? "Flexible" : isRest ? "Rest" : (cycles && lifts) ? "Both" : cycles ? "Cycling" : lifts ? "Strength" : "Other" }
+    var fixedCount: Int { assignments.filter { $0.fixed }.count }
+    var totalMinutes: Int { cycleMinutes + liftingMinutes + otherMinutes }
+}
+
+/// One budget problem the engine refuses to plan through silently, with the ways to resolve it.
+struct PlanConflict: Equatable, Identifiable {
+    enum Sport: String { case cycling, lifting }
+    var id: String { sport.rawValue }
+    var sport: Sport
+    var plannedMinutes: Int
+    var budgetMinutes: Int
+    var overMinutes: Int { plannedMinutes - budgetMinutes }
+    /// Concrete options; the first is applied by `fit` when the rider has not chosen.
+    var options: [String]
+    var text: String { "Your \(sport.rawValue) days add up to \(Fmt.duration(minutes: plannedMinutes)) against a \(Fmt.duration(minutes: budgetMinutes)) \(sport.rawValue) budget — \(Fmt.duration(minutes: overMinutes)) over." }
 }
 
 struct WeeklyAvailability: Codable, Equatable {
@@ -51,6 +142,13 @@ struct WeeklyAvailability: Codable, Equatable {
     var days: [DayAvailability]
     static let dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     static let longDayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    init(days: [DayAvailability]) { self.days = days }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        days = (try? c.decodeIfPresent([DayAvailability].self, forKey: .days)) ?? []
+        if days.count != 7 { days = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7) }
+    }
 
     /// A sensible starting schedule from the rider's weekly hours: more hours → more cycling days, Saturday is the long ride.
     static func suggested(hoursPerWeek h: Int) -> WeeklyAvailability {
@@ -62,104 +160,210 @@ struct WeeklyAvailability: Codable, Equatable {
         d[6] = DayAvailability(activity: .lift, minutes: 30)                                 // Sunday strength
         if h >= 6 { d[3] = DayAvailability(activity: .cycle, minutes: 60) }
         if h <= 3 { d[1] = DayAvailability(activity: .rest, minutes: 0); d[4] = DayAvailability(activity: .rest, minutes: 0) }
+        d[2].assignments[0].cyclingType = .tempo
         return WeeklyAvailability(days: d)
     }
-    /// 0.6.0: a schedule from the rider's mode, frequencies, priority, budgets and preferred days. Cycling mode keeps the
+    /// A schedule from the rider's mode, frequencies, priority, budgets and preferred days. Cycling mode keeps the
     /// 0.5.0 suggestion. Lifts go on non-adjacent days where possible; the longest ride lands on Saturday (or the first
-    /// preferred weekend day); a "Ride + lift" day is used only when the rider wants more sessions than days.
+    /// preferred weekend day); a "Both" day is used only when the rider wants more sessions than days. Never exceeds
+    /// either budget: per-session minutes are the budget divided by the frequency.
     static func suggested(for p: RiderProfile) -> WeeklyAvailability {
-        guard p.trainingMode != .cycling else { return suggested(hoursPerWeek: p.hoursPerWeek) }
+        guard p.trainingMode != .cycling else { return WeeklyAvailability.fit(suggested(hoursPerWeek: p.hoursPerWeek), profile: p).availability }
         var d = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
         let preferred = p.preferredDays.isEmpty ? [1, 3, 5, 6, 2, 4, 0] : p.preferredDays + [1, 3, 5, 6, 2, 4, 0].filter { !p.preferredDays.contains($0) }
         let rides = p.trainingMode.includesCycling ? max(0, min(6, p.cyclingDaysPerWeek)) : 0
         let lifts = max(0, min(6, p.liftDaysPerWeek))
-        let rideMin = rides > 0 ? max(30, (p.hoursPerWeek * 60) / rides) : 0
-        let liftMin = lifts > 0 ? max(20, (max(1, p.liftingHoursPerWeek) * 60) / lifts) : 0
+        let rideBudget = p.hoursPerWeek * 60, liftBudget = max(1, p.liftingHoursPerWeek) * 60
+        var rideMin = rides > 0 ? max(30, rideBudget / rides) : 0
+        let liftMin = lifts > 0 ? max(20, liftBudget / lifts) : 0
         var order = preferred
-        // the long ride takes the first weekend day in the preference list
-        if rides > 0, let wk = order.first(where: { $0 >= 5 }) { d[wk] = DayAvailability(activity: .cycle, minutes: min(240, rideMin + rideMin / 2)); order.removeAll { $0 == wk } }
-        var ridesLeft = rides - d.filter { $0.activity.cycles }.count
+        if rides > 0, let wk = order.first(where: { $0 >= 5 }) {
+            // long ride = 1.5 × the others, with the rest shrunk so the week stays inside the budget
+            let longMin = rides > 1 ? min(240, (rideBudget * 3) / (2 * rides + 1)) : rideBudget
+            rideMin = rides > 1 ? max(30, (rideBudget - longMin) / (rides - 1)) : 0
+            d[wk] = DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: longMin >= 90 ? .long : .zone2, minutes: longMin)]); order.removeAll { $0 == wk }
+        }
+        var ridesLeft = rides - d.filter { $0.cycles }.count
         var liftsLeft = lifts
-        // alternate by priority so neither sport takes every good day
         var takeRide = p.priority != .strength
+        var qualityPlaced = false
         for day in order where ridesLeft > 0 || liftsLeft > 0 {
-            if (takeRide && ridesLeft > 0) || liftsLeft == 0 { d[day] = DayAvailability(activity: .cycle, minutes: rideMin); ridesLeft -= 1 }
-            else { d[day] = DayAvailability(activity: .lift, minutes: liftMin); liftsLeft -= 1 }
+            if (takeRide && ridesLeft > 0) || liftsLeft == 0 {
+                let t: CyclingType = (!qualityPlaced && rideMin >= 45) ? (p.level == .beginner ? .tempo : .threshold) : .zone2
+                if t != .zone2 { qualityPlaced = true }
+                d[day] = DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: t, minutes: rideMin)]); ridesLeft -= 1
+            } else { d[day] = DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: nil, minutes: liftMin)]); liftsLeft -= 1 }
             if ridesLeft > 0, liftsLeft > 0 { takeRide.toggle() }
         }
-        // more sessions than days: pair the remaining lifts with rides (ride first unless strength is the priority)
+        // more sessions than days: pair the remaining lifts with rides (upper body, so legs are not loaded twice) and
+        // the remaining rides with lifts — never an extra day
         var i = 0
-        while liftsLeft > 0, i < 7 { if d[i].activity == .cycle { d[i] = DayAvailability(activity: .both, minutes: d[i].minutes, liftMinutes: liftMin); liftsLeft -= 1 }; i += 1 }
-        return WeeklyAvailability(days: d)
+        while liftsLeft > 0, i < 7 {
+            if d[i].cycles, !d[i].lifts { var a = d[i].assignments; a.append(DayAssignment(sport: .strength, strengthType: .upper, minutes: liftMin)); d[i] = DayAvailability(assignments: a); liftsLeft -= 1 }
+            i += 1
+        }
+        i = 0
+        while ridesLeft > 0, i < 7 {
+            if d[i].lifts, !d[i].cycles { var a = d[i].assignments; a.append(DayAssignment(sport: .cycling, cyclingType: .zone2, minutes: rideMin)); d[i] = DayAvailability(assignments: a); ridesLeft -= 1 }
+            i += 1
+        }
+        return fit(WeeklyAvailability(days: d), profile: p).availability
     }
+
     var cycleMinutes: Int { days.reduce(0) { $0 + $1.cycleMinutes } }
-    var cycleDays: Int { days.filter { $0.activity.cycles }.count }
+    var cycleDays: Int { days.filter { $0.cycles }.count }
     var liftMinutes: Int { days.reduce(0) { $0 + $1.liftingMinutes } }
-    var liftDays: Int { days.filter { $0.activity.lifts }.count }
-    var totalMinutes: Int { days.reduce(0) { $0 + ($1.activity == .rest ? 0 : $1.cycleMinutes + $1.liftingMinutes + ($1.activity == .other ? $1.minutes : 0)) } }
+    var liftDays: Int { days.filter { $0.lifts }.count }
+    var totalMinutes: Int { days.reduce(0) { $0 + $1.totalMinutes } }
+    var fixedAssignments: Int { days.reduce(0) { $0 + $1.fixedCount } }
+
+    /// Budget check without changing anything: one conflict per sport that is over.
+    func conflicts(profile p: RiderProfile) -> [PlanConflict] {
+        var out: [PlanConflict] = []
+        let cb = p.hoursPerWeek * 60, lb = p.liftingHoursPerWeek * 60
+        if p.trainingMode.includesCycling, cycleMinutes > cb {
+            let longest = days.enumerated().flatMap { i, d in d.assignments.filter { $0.sport == .cycling }.map { (i, $0) } }.max { $0.1.minutes < $1.1.minutes }
+            var o = ["Raise the cycling budget to \(Fmt.duration(minutes: cycleMinutes)) in Profile › Training profile"]
+            if let l = longest { o.append("Shorten \(WeeklyAvailability.dayNames[l.0])'s \(l.1.short.lowercased()) ride to \(Fmt.duration(minutes: max(20, l.1.minutes - (cycleMinutes - cb))))") }
+            if cycleDays > 1 { o.append("Drop one cycling day") }
+            out.append(PlanConflict(sport: .cycling, plannedMinutes: cycleMinutes, budgetMinutes: cb, options: o))
+        }
+        if p.trainingMode.includesLifting, lb > 0, liftMinutes > lb {
+            let longest = days.enumerated().flatMap { i, d in d.assignments.filter { $0.sport == .strength }.map { (i, $0) } }.max { $0.1.minutes < $1.1.minutes }
+            var o = ["Raise the lifting budget to \(Fmt.duration(minutes: liftMinutes)) in Profile › Training profile"]
+            if let l = longest { o.append("Shorten \(WeeklyAvailability.dayNames[l.0])'s lift to \(Fmt.duration(minutes: max(15, l.1.minutes - (liftMinutes - lb))))") }
+            if liftDays > 1 { o.append("Drop one lifting day") }
+            out.append(PlanConflict(sport: .lifting, plannedMinutes: liftMinutes, budgetMinutes: lb, options: o))
+        }
+        return out
+    }
+
+    /// Makes the week fit both budgets WITHOUT adding days: flexible assignments are shortened first (longest first,
+    /// 5-minute steps, never under 20 min riding / 15 min lifting), then fixed ones. Returns what was trimmed so the
+    /// UI can show it and ask; the plan generated from the result can never exceed a budget by a minute.
+    static func fit(_ a: WeeklyAvailability, profile p: RiderProfile) -> (availability: WeeklyAvailability, conflicts: [PlanConflict], trimmed: [String]) {
+        var w = a
+        let conflicts = a.conflicts(profile: p)
+        var trimmed: [String] = []
+        func trim(sport: DayAssignment.Sport, budget: Int, floor: Int) {
+            var total = w.days.reduce(0) { $0 + $1.assignments.filter { $0.sport == sport }.reduce(0) { $0 + $1.minutes } }
+            var guardLoop = 0
+            while total > budget, guardLoop < 10_000 {
+                guardLoop += 1
+                // candidates: flexible first, longest first
+                var best: (day: Int, idx: Int)? = nil
+                var bestKey = (fixed: 2, minutes: -1)
+                for (di, d) in w.days.enumerated() { for (ai, x) in d.assignments.enumerated() where x.sport == sport && x.minutes > floor {
+                    let key = (fixed: x.fixed ? 1 : 0, minutes: x.minutes)
+                    if key.fixed < bestKey.fixed || (key.fixed == bestKey.fixed && key.minutes > bestKey.minutes) { bestKey = key; best = (di, ai) }
+                } }
+                guard let b = best else { break }
+                let step = min(5, total - budget, w.days[b.day].assignments[b.idx].minutes - floor)
+                guard step > 0 else { break }
+                w.days[b.day].assignments[b.idx].minutes -= step
+                w.days[b.day].syncLegacy()
+                total -= step
+                let name = "\(WeeklyAvailability.dayNames[b.day]) \(w.days[b.day].assignments[b.idx].short.lowercased())"
+                if let i = trimmed.firstIndex(where: { $0.hasPrefix(name) }) { trimmed[i] = "\(name): now \(Fmt.duration(minutes: w.days[b.day].assignments[b.idx].minutes))" } else { trimmed.append("\(name): now \(Fmt.duration(minutes: w.days[b.day].assignments[b.idx].minutes))") }
+            }
+        }
+        if p.trainingMode.includesCycling { trim(sport: .cycling, budget: p.hoursPerWeek * 60, floor: 20) }
+        if p.trainingMode.includesLifting, p.liftingHoursPerWeek > 0 { trim(sport: .strength, budget: p.liftingHoursPerWeek * 60, floor: 15) }
+        return (w, conflicts, trimmed)
+    }
+
+    /// Consistency check for the onboarding/editor preview: frequency vs days, durations vs budgets.
+    func consistency(profile p: RiderProfile) -> [String] {
+        var out: [String] = []
+        if p.trainingMode.includesCycling, cycleDays != p.cyclingDaysPerWeek { out.append("You asked for \(p.cyclingDaysPerWeek) rides a week but assigned \(cycleDays) cycling day\(cycleDays == 1 ? "" : "s").") }
+        if p.trainingMode.includesLifting, liftDays != p.liftDaysPerWeek { out.append("You asked for \(p.liftDaysPerWeek) lifts a week but assigned \(liftDays) strength day\(liftDays == 1 ? "" : "s").") }
+        for c in conflicts(profile: p) { out.append(c.text) }
+        return out
+    }
 }
 
-// MARK: - Plan engine (deterministic, built around the availability)
+// MARK: - Plan engine (deterministic, built around the availability; never over budget)
 enum PlanEngine {
-    /// The week for `monday`. Entries 0…6 are one session per day (rest days stay rest, lift days get strength, other
-    /// days get "other", cycling days get a ride mix: long on the longest day, one quality session, recovery after it,
-    /// endurance elsewhere), each at the rider's preferred duration. A "Ride + lift" day adds its strength session
-    /// AFTER the first seven entries (ordered by priority within the day via `sequence`). Rules stated in "Why?":
-    /// a hard ride (Zone 3+) and a leg-loading lift are not on consecutive days when the availability leaves a choice
-    /// (a long Zone 2 ride does not count as hard for this rule).
-    /// Never exceeds a day's minutes; weekly totals are reported, not silently cut.
-    static func week(starting monday: Date, profile p: RiderProfile, availability a: WeeklyAvailability, calendar cal: Calendar = .current) -> [Workout] {
+    /// The week for `monday`, one Workout per assignment (rest days produce a rest entry so every day has a card).
+    /// Rules: a day's sessions are ordered by the rider's priority; the long ride goes to the longest cycling
+    /// assignment that has no type; one quality session is picked for untyped rides; a leg-loading lift is not placed
+    /// next to a hard ride when a choice exists; fixed assignments keep their exact type and minutes. The availability
+    /// is fitted to both budgets first, so a generated week can never exceed either budget.
+    static func week(starting monday: Date, profile p: RiderProfile, availability raw: WeeklyAvailability, calendar cal: Calendar = .current) -> [Workout] {
+        let a = WeeklyAvailability.fit(raw, profile: p).availability
         let d = { (i: Int) in cal.date(byAdding: .day, value: i, to: monday)! }
-        let cyc = a.days.enumerated().filter { $0.element.activity.cycles }
-        let liftIdx = a.days.enumerated().filter { $0.element.activity.lifts }.map { $0.offset }
-        // strength focus per lift day: 1 → full body; 2 → lower + upper; 3 → lower, push, pull; 4+ → lower, push, pull, upper, full…
-        let focusCycle: [StrengthFocus] = liftIdx.count <= 1 ? [.fullBody] : liftIdx.count == 2 ? [.lower, .upper] : [.lower, .push, .pull, .upper, .fullBody, .lower]
-        // the leg-loading session goes to the lift day with the fewest cycling days next to it (hard rides live there)
-        func adjCycles(_ i: Int) -> Int { (a.days[(i + 1) % 7].activity.cycles ? 1 : 0) + (a.days[(i + 6) % 7].activity.cycles ? 1 : 0) + (a.days[i].activity == .both ? 2 : 0) }
-        let liftOrder = liftIdx.enumerated().sorted { (adjCycles($0.element), $0.offset) < (adjCycles($1.element), $1.offset) }.map { $0.element }
-        var focus = [Int: StrengthFocus]()
-        for (n, i) in liftOrder.enumerated() { focus[i] = focusCycle[n % focusCycle.count] }
-        // on a Ride + lift day the lift is upper-body so the legs are not loaded twice
-        for i in liftIdx where a.days[i].activity == .both { focus[i] = liftIdx.count == 1 ? .upper : (focus[i]?.loadsLegs == true ? .upper : focus[i]) }
-        let legDays = Set(liftIdx.filter { focus[$0]?.loadsLegs == true })
+        // --- cycling types for untyped (nil/custom-less) assignments
+        var cycTypes: [UUID: WorkoutKind] = [:]
+        let cyc: [(day: Int, a: DayAssignment)] = a.days.enumerated().flatMap { i, dd in dd.assignments.filter { $0.sport == .cycling }.map { (i, $0) } }
+        for c in cyc { if let t = c.a.cyclingType { cycTypes[c.a.id] = t.kind } }
+        let untyped = cyc.filter { $0.a.cyclingType == nil }
+        // --- strength focus per lift assignment (typed ones keep theirs)
+        let lifts: [(day: Int, a: DayAssignment)] = a.days.enumerated().flatMap { i, dd in dd.assignments.filter { $0.sport == .strength }.map { (i, $0) } }
+        let untypedLifts = lifts.filter { $0.a.strengthType == nil }
+        let focusCycle: [StrengthFocus] = lifts.count <= 1 ? [.fullBody] : lifts.count == 2 ? [.lower, .upper] : [.lower, .push, .pull, .upper, .fullBody, .lower]
+        // a neighbouring hard-typed ride weighs 2, any neighbouring ride 1 (its type may still become hard), a same-day ride 2
+        func load(_ i: Int) -> Int { a.days[i].assignments.contains { $0.sport == .cycling && ($0.cyclingType?.isHard ?? false) } ? 2 : (a.days[i].cycles ? 1 : 0) }
+        func adjHard(_ i: Int) -> Int { load((i + 1) % 7) + load((i + 6) % 7) + (a.days[i].cycles ? 2 : 0) }
+        var focus: [UUID: StrengthFocus] = [:]
+        for l in lifts { if let t = l.a.strengthType { focus[l.a.id] = t } }
+        let liftOrder = untypedLifts.sorted { (adjHard($0.day), $0.day) < (adjHard($1.day), $1.day) }
+        for (n, l) in liftOrder.enumerated() {
+            var f = focusCycle[n % focusCycle.count]
+            if a.days[l.day].cycles, f.loadsLegs { f = .upper }        // same-day ride: do not load the legs twice
+            focus[l.a.id] = f
+        }
+        let legDays = Set(lifts.filter { focus[$0.a.id]?.loadsLegs == true }.map { $0.day })
         func adjacentToLegs(_ i: Int) -> Bool { legDays.contains((i + 1) % 7) || legDays.contains((i + 6) % 7) }
-
-        var kinds = [Int: WorkoutKind]()
-        func longScore(_ e: (offset: Int, element: DayAvailability)) -> (Int, Int) { (e.element.minutes, adjacentToLegs(e.offset) ? 0 : 1) }
-        if let longest = cyc.max(by: { longScore($0) < longScore($1) }) { kinds[longest.offset] = longest.element.minutes >= 90 ? .long : .endurance }
-        let hard: WorkoutKind = p.level == .beginner ? .tempo : (p.goal == .stronger || p.goal == .climbing ? .threshold : .tempo)
-        if cyc.count >= 2 {
-            // quality session: the second-longest day that is not right before the long day, needs ≥ 45 min; prefer a day
-            // that is not next to a leg-loading lift (hybrid rule), fall back to any eligible day
-            let longIdx = kinds.keys.first
-            let eligible = cyc.filter { $0.offset != longIdx && $0.element.minutes >= 45 && (longIdx == nil || ($0.offset + 1) % 7 != longIdx!) }
-            let preferred = eligible.filter { !adjacentToLegs($0.offset) }
-            if let q = (preferred.isEmpty ? eligible : preferred).max(by: { $0.element.minutes < $1.element.minutes }) {
-                kinds[q.offset] = hard
-                if let next = cyc.first(where: { $0.offset == (q.offset + 1) % 7 }), kinds[next.offset] == nil { kinds[next.offset] = .recovery }
+        // long ride: the longest untyped assignment (prefer not next to a leg day); quality: second longest ≥ 45 min
+        if let longest = untyped.max(by: { ($0.a.minutes, adjacentToLegs($0.day) ? 0 : 1) < ($1.a.minutes, adjacentToLegs($1.day) ? 0 : 1) }) {
+            cycTypes[longest.a.id] = longest.a.minutes >= 90 ? .long : .endurance
+            let hard: WorkoutKind = p.level == .beginner ? .tempo : (p.goal == .stronger || p.goal == .climbing ? .threshold : .tempo)
+            let alreadyHard = cyc.contains { $0.a.cyclingType?.isHard ?? false }
+            if !alreadyHard, cyc.count >= 2 {
+                let eligible = untyped.filter { $0.a.id != longest.a.id && $0.a.minutes >= 45 && ($0.day + 1) % 7 != longest.day }
+                let preferred = eligible.filter { !adjacentToLegs($0.day) }
+                if let q = (preferred.isEmpty ? eligible : preferred).max(by: { $0.a.minutes < $1.a.minutes }) {
+                    cycTypes[q.a.id] = hard
+                    if let next = untyped.first(where: { $0.day == (q.day + 1) % 7 }), cycTypes[next.a.id] == nil { cycTypes[next.a.id] = .recovery }
+                }
             }
         }
-        var out: [Workout] = (0..<7).map { i in
+        // one primary entry per day first (rest days included), then the extra sessions of multi-activity days
+        var primary: [Workout] = [], extras: [Workout] = []
+        for i in 0..<7 {
             let day = a.days[i]
-            switch day.activity {
-            case .rest: return Workout(date: d(i), kind: .rest, minutes: 0)
-            case .lift: return Workout(date: d(i), kind: .strength, minutes: max(15, day.minutes), strengthFocus: focus[i])
-            case .other: return Workout(date: d(i), kind: .other, minutes: max(15, day.minutes))
-            case .cycle, .both:
-                let k = kinds[i] ?? (day.minutes < 40 ? .recovery : .endurance)
-                return Workout(date: d(i), kind: k, minutes: max(20, day.minutes), sequence: (day.activity == .both && p.priority == .strength) ? 1 : 0)
+            if day.isRest { primary.append(Workout(date: d(i), kind: .rest, minutes: 0)); continue }
+            var items: [Workout] = []
+            if day.otherMinutes > 0 { items.append(Workout(date: d(i), kind: .other, minutes: max(15, day.otherMinutes))) }
+            let ordered = day.assignments.sorted { x, y in
+                let xs = x.sport == .cycling ? 0 : 1, ys = y.sport == .cycling ? 0 : 1
+                return p.priority == .strength ? xs > ys : xs < ys
             }
+            for (n, x) in ordered.enumerated() {
+                let date = d(i).addingTimeInterval(TimeInterval(n))
+                if x.sport == .cycling {
+                    let k = cycTypes[x.id] ?? (x.minutes < 40 ? .recovery : .endurance)
+                    var w = Workout(date: date, kind: k, minutes: max(20, x.minutes), sequence: n)
+                    w.fixed = x.fixed; w.assignmentId = x.id
+                    if x.cyclingType == .custom { w.note = "custom ride" }
+                    items.append(w)
+                } else {
+                    var w = Workout(date: date, kind: .strength, minutes: max(15, x.minutes), strengthFocus: focus[x.id] ?? .fullBody, sequence: n)
+                    w.fixed = x.fixed; w.assignmentId = x.id
+                    items.append(w)
+                }
+            }
+            primary.append(items[0]); extras.append(contentsOf: items.dropFirst())
         }
-        for i in 0..<7 where a.days[i].activity == .both {
-            out.append(Workout(date: d(i).addingTimeInterval(1), kind: .strength, minutes: max(15, a.days[i].liftingMinutes), strengthFocus: focus[i], sequence: p.priority == .strength ? 0 : 1))
-        }
+        let out = primary + extras
         return out
     }
     static func rideMinutes(_ w: [Workout]) -> Int { w.filter { $0.kind.isRide && !$0.skipped }.reduce(0) { $0 + $1.minutes } }
     static func liftMinutes(_ w: [Workout]) -> Int { w.filter { $0.kind == .strength && !$0.skipped }.reduce(0) { $0 + $1.minutes } }
     static func totalMinutes(_ w: [Workout]) -> Int { w.filter { !$0.skipped }.reduce(0) { $0 + $1.minutes } }
 
-    /// When the planned riding time is over the rider's weekly hours: concrete adjustments, never a silent cut.
+    /// When the planned riding time is over the rider's weekly hours (only possible after manual edits): concrete
+    /// adjustments, never a silent cut.
     static func suggestions(for week: [Workout], hoursPerWeek h: Int) -> [String] {
         let planned = rideMinutes(week), limit = h * 60
         guard planned > limit else { return [] }
@@ -171,7 +375,7 @@ enum PlanEngine {
         out.append("Or raise the weekly limit in Profile › Training profile if \(Fmt.duration(minutes: planned)) is realistic for you.")
         return out
     }
-    /// Lifting budget, kept apart from riding (0.6.0). Empty when no lifting budget is set.
+    /// Lifting budget, kept apart from riding. Empty when no lifting budget is set.
     static func liftSuggestions(for week: [Workout], liftingHours h: Int) -> [String] {
         guard h > 0 else { return [] }
         let planned = liftMinutes(week), limit = h * 60
@@ -183,11 +387,28 @@ enum PlanEngine {
         if lifts.count >= 2, let e = lifts.last { out.append("Or drop \(e.date.shortDay)'s \(e.displayTitle.lowercased()).") }
         return out
     }
+    /// Meaningful differences between two weeks (for "what changed" when the mode or schedule changes).
+    static func changes(from old: [Workout], to new: [Workout], calendar cal: Calendar = .current) -> [String] {
+        var out: [String] = []
+        let or = rideMinutes(old), nr = rideMinutes(new), ol = liftMinutes(old), nl = liftMinutes(new)
+        if or != nr { out.append("Riding \(Fmt.duration(minutes: or)) → \(Fmt.duration(minutes: nr))") }
+        if ol != nl { out.append("Lifting \(Fmt.duration(minutes: ol)) → \(Fmt.duration(minutes: nl))") }
+        let oc = old.filter { $0.kind.isRide && !$0.skipped }.count, nc = new.filter { $0.kind.isRide && !$0.skipped }.count
+        if oc != nc { out.append("\(oc) → \(nc) rides") }
+        let os = old.filter { $0.kind == .strength && !$0.skipped }.count, ns = new.filter { $0.kind == .strength && !$0.skipped }.count
+        if os != ns { out.append("\(os) → \(ns) lifts") }
+        for i in 0..<7 {
+            let od = old.filter { cal.component(.weekday, from: $0.date) == (i + 1) % 7 + 1 && $0.kind != .rest }.map { $0.displayTitle }.sorted()
+            let nd = new.filter { cal.component(.weekday, from: $0.date) == (i + 1) % 7 + 1 && $0.kind != .rest }.map { $0.displayTitle }.sorted()
+            if od != nd, out.count < 6 { out.append("\(WeeklyAvailability.dayNames[i]): \(od.isEmpty ? "rest" : od.joined(separator: " + ")) → \(nd.isEmpty ? "rest" : nd.joined(separator: " + "))") }
+        }
+        return out
+    }
 }
 
-// MARK: - Historical timeline (rides + past workouts, deduplicated)
+// MARK: - Historical timeline (rides + strength + past workouts, deduplicated, stable source ids)
 struct TimelineEntry: Identifiable, Equatable {
-    enum Status: String { case completed, planned, skipped, missed }
+    enum Status: String { case completed, planned, skipped, missed, imported }
     var id: String
     var date: Date
     var title: String
@@ -203,6 +424,8 @@ struct TimelineEntry: Identifiable, Equatable {
     var workoutId: UUID?
     var recorder: String?
     var strengthId: UUID? = nil
+    var detail: String? = nil
+    var isStrength: Bool { strengthId != nil || (rideId == nil && title.hasPrefix("Strength")) }
 }
 
 enum Timeline {
@@ -212,13 +435,14 @@ enum Timeline {
         let v = Double(s) * Double(np) * Double(np) / (Double(ftp) * Double(ftp) * 3600) * 100
         return Int(v.rounded())
     }
-    /// Same ride recorded twice (board sync + phone mirror, or two imports): same board ride id, or starts within
+    /// Same ride recorded twice (board sync + phone mirror, or two imports): same stable source id, or starts within
     /// 5 minutes of each other with the same recorder. The record with more data wins.
     static func dedupe(_ rides: [RideRecord]) -> [RideRecord] {
         var out: [RideRecord] = []
         for r in rides.sorted(by: { ($0.samples.count, $0.avgPower != nil ? 1 : 0) > ($1.samples.count, $1.avgPower != nil ? 1 : 0) }) {
             let dup = out.contains { o in
                 if let a = o.boardRideId, let b = r.boardRideId, a == b, (o.boardId == nil || r.boardId == nil || o.boardId == r.boardId) { return true }
+                if let a = o.healthUUID, let b = r.healthUUID, a == b { return true }
                 return abs(o.start.timeIntervalSince(r.start)) < 300 && o.recorder == r.recorder && abs(o.durationS - r.durationS) < 120
             }
             if !dup { out.append(r) }
@@ -230,19 +454,21 @@ enum Timeline {
         var out: [TimelineEntry] = []
         let rs = dedupe(rides)
         for r in rs {
-            out.append(TimelineEntry(id: "ride-\(r.id.uuidString)", date: r.start, title: r.recorder == .board ? "Ride" : r.recorder == .health ? "Ride (Apple Health)" : "Ride (phone)", minutes: r.durationS / 60, distanceM: r.distanceM,
+            let imported = r.recorder == .health
+            out.append(TimelineEntry(id: "ride-\(r.sourceId)", date: r.start, title: r.recorder == .board ? "Ride" : imported ? "Ride (Apple Health)" : "Ride (phone)", minutes: r.durationS / 60, distanceM: r.distanceM,
                                      avgHR: r.avgHR, maxHR: r.maxHR, avgPower: r.avgPower, normalizedPower: r.normalizedPower, cadence: r.avgCadence, zoneSeconds: r.zoneSeconds,
-                                     tss: tss(normalizedPower: r.normalizedPower, durationS: r.durationS, ftp: ftp), status: .completed, rideId: r.id, workoutId: nil, recorder: r.recordedBy))
+                                     tss: tss(normalizedPower: r.normalizedPower, durationS: r.durationS, ftp: ftp), status: imported ? .imported : .completed, rideId: r.id, workoutId: nil, recorder: r.recordedBy))
         }
-        // strength sessions (quick logs + Health imports), already deduplicated by the store
         for s in strength {
-            out.append(TimelineEntry(id: "str-\(s.id.uuidString)", date: s.date, title: s.title, minutes: s.minutes, distanceM: nil, avgHR: nil, maxHR: nil, avgPower: nil, normalizedPower: nil, cadence: nil, zoneSeconds: [], tss: nil, status: .completed, rideId: nil, workoutId: nil, recorder: s.source == "manual" ? "quick log" + (s.rpe.map { " · RPE \($0)" } ?? "") : s.source, strengthId: s.id))
+            let detail = s.isDetailed ? "\(s.exerciseCount) exercise\(s.exerciseCount == 1 ? "" : "s") · \(s.setCount) sets" : nil
+            out.append(TimelineEntry(id: "str-\(s.sourceId)", date: s.date, title: s.title, minutes: s.minutes, distanceM: nil, avgHR: nil, maxHR: nil, avgPower: nil, normalizedPower: nil, cadence: nil, zoneSeconds: [], tss: nil, status: s.isImported ? .imported : .completed, rideId: nil, workoutId: nil, recorder: s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") + (s.rpe.map { " · RPE \($0)" } ?? "") : s.source, strengthId: s.id, detail: detail))
         }
-        // past workouts that are not represented by a recorded ride / logged session on that day
-        for w in plan where cal.startOfDay(for: w.date) < today && w.kind != .rest {
+        for w in plan where w.kind != .rest {
+            let past = cal.startOfDay(for: w.date) < today
             let hasRide = rs.contains { cal.isDate($0.start, inSameDayAs: w.date) }
-            if w.kind.isRide, hasRide { continue }                 // the ride entry already represents it
+            if w.kind.isRide, hasRide { continue }
             if w.kind == .strength, strength.contains(where: { cal.isDate($0.date, inSameDayAs: w.date) }) { continue }
+            guard past else { continue }     // future sessions live in the plan, not the timeline
             let status: TimelineEntry.Status = w.done ? .completed : w.skipped ? .skipped : .missed
             out.append(TimelineEntry(id: "wo-\(w.id.uuidString)", date: w.date, title: w.displayTitle, minutes: w.minutes, distanceM: nil, avgHR: nil, maxHR: nil, avgPower: nil, normalizedPower: nil, cadence: nil, zoneSeconds: [], tss: nil, status: status, rideId: nil, workoutId: w.id, recorder: nil))
         }

@@ -18,7 +18,9 @@ struct OnboardingView: View {
     @State private var maxHRText = ""
     @State private var restHRText = ""
     @State private var healthResult: String?
-    private let lastStep = 8
+    @State private var showDays = false
+    @State private var daysDraft: WeeklyAvailability? = nil
+    private let lastStep = 9
 
     var body: some View {
         NavigationStack {
@@ -30,11 +32,12 @@ struct OnboardingView: View {
                         case 0: welcome
                         case 1: modeStep
                         case 2: weekStep
-                        case 3: aboutYou
-                        case 4: sportsAndGoal
-                        case 5: heartAndFTP
-                        case 6: devices
-                        case 7: appleHealth
+                        case 3: daysStep
+                        case 4: aboutYou
+                        case 5: sportsAndGoal
+                        case 6: heartAndFTP
+                        case 7: devices
+                        case 8: appleHealth
                         default: ready
                         }
                     }.padding(20)
@@ -174,17 +177,38 @@ struct OnboardingView: View {
             }
             Card {
                 Eyebrow(t: "Preferred days (optional)")
-                HStack(spacing: 4) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
                     ForEach(0..<7, id: \.self) { i in
                         let on = store.profile.preferredDays.contains(i)
-                        Button(WeeklyAvailability.dayNames[i]) { store.updateProfile { p in if on { p.preferredDays.removeAll { $0 == i } } else { p.preferredDays.append(i); p.preferredDays.sort() } } }
-                            .buttonStyle(.bordered).tint(on ? BC.accent : .secondary).controlSize(.small).frame(maxWidth: .infinity)
+                        Button { store.updateProfile { p in if on { p.preferredDays.removeAll { $0 == i } } else { p.preferredDays.append(i); p.preferredDays.sort() } } } label: {
+                            Text(WeeklyAvailability.dayNames[i]).font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: .infinity, minHeight: 44)
+                                .background(on ? BC.accent.opacity(0.2) : Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10)).foregroundStyle(on ? BC.accent : .primary)
+                        }.buttonStyle(.plain).accessibilityLabel(WeeklyAvailability.longDayNames[i]).accessibilityAddTraits(on ? .isSelected : [])
                     }
                 }
                 Text(store.profile.preferredDays.isEmpty ? "None picked: a sensible week is suggested; refine days and durations later in Plan › Days." : "Sessions go on these days first; the long ride takes the first weekend day you picked.").font(.footnote).foregroundStyle(.secondary)
             }
             next()
         }
+    }
+
+    // MARK: 0.7.0 — what exactly happens each day (type, duration, fixed/flexible), with a readable preview
+    private var daysStep: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            title("Your days", "Say what happens Monday to Sunday — ride, lift, both, rest or flexible — with the type and the time for each. The coach plans around it and never adds a day.")
+            let a = daysDraft ?? WeeklyAvailability.suggested(for: store.profile)
+            Card {
+                HStack { Eyebrow(t: daysDraft == nil ? "Suggested from your answers" : "Your days"); Spacer(); Text("\(a.cycleDays) ride · \(a.liftDays) lift").font(.caption).foregroundStyle(.secondary) }
+                ForEach(0..<7, id: \.self) { i in PreviewDayRow(index: i, day: a.days[i]) }
+                let issues = a.consistency(profile: store.profile)
+                ForEach(issues, id: \.self) { Text($0).font(.caption).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
+                if issues.isEmpty { Text("Frequency, durations and both budgets agree.").font(.caption).foregroundStyle(BC.live) }
+                Button { showDays = true } label: { Label("Edit my days", systemImage: "calendar.badge.clock").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
+            }
+            Text("Cycling hours and lifting hours stay separate budgets; nothing above \(store.profile.hoursPerWeek) h riding\(store.profile.trainingMode.includesLifting ? " or \(store.profile.liftingHoursPerWeek) h lifting" : "") is ever generated.").font(.footnote).foregroundStyle(.secondary)
+            next()
+        }
+        .sheet(isPresented: $showDays) { AvailabilityEditor(onSave: { daysDraft = $0 }) }
     }
 
     private var heartAndFTP: some View {
@@ -271,13 +295,14 @@ struct OnboardingView: View {
                 row("Goal", store.profile.goal.title); row("Experience", store.profile.level.title)
                 row("Cycling", store.profile.trainingMode.includesCycling ? "\(store.profile.cyclingDaysPerWeek) rides · \(store.profile.hoursPerWeek) h/week" : "—")
                 if store.profile.trainingMode.includesLifting { row("Strength", "\(store.profile.liftDaysPerWeek) lifts · \(store.profile.liftingHoursPerWeek) h/week") }
+                row("Days", daysDraft == nil ? "suggested from your answers" : "\(daysDraft!.cycleDays) ride · \(daysDraft!.liftDays) lift · \(daysDraft!.fixedAssignments) fixed")
                 row("Max HR", store.profile.maxHR.map { "\($0) bpm" } ?? "\(store.profile.estimatedMaxHR) bpm (estimate)")
                 row("FTP", "\(store.profile.ftpW) W (\(store.profile.ftpLabel))")
                 row("BikeComputer", device.state == .ready ? "connected" : "phone-only for now")
                 row("Apple Health", health.workoutWriteAuthorized ? "connected" : "not connected")
             }
             if device.state == .ready, device.info?.hasProfileSync == true { Text("The board will be asked for its profile; if it differs you decide which one wins (Connections › BikeComputer › Sync status).").font(.footnote).foregroundStyle(.secondary) }
-            Button { store.onboardingStage = 0; store.availability = nil; store.regenerate(weekOf: Date(), replaceEdited: true); store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: true); store.onboarded = true } label: { Text("Start").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
+            Button { store.onboardingStage = 0; store.availability = daysDraft; _ = store.regenerate(weekOf: Date(), replaceEdited: true); _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: true); store.onboarded = true } label: { Text("Start").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
         }
     }
     private func row(_ k: String, _ v: String) -> some View { HStack { Text(k).foregroundStyle(.secondary); Spacer(); Text(v).multilineTextAlignment(.trailing) }.font(.footnote) }

@@ -1,12 +1,36 @@
 import SwiftUI
 
-/// Quick Strength Log (0.6.0 phase 1): focus, duration, effort, optional notes. Saved as a strength session with its
-/// own hours. Detailed sets / reps / weights / supersets / templates are phase 2 and are only announced here.
+// MARK: - Session type grid (P0): 3 columns, 2 on compact widths, short labels, ≥ 44 pt targets.
+struct StrengthTypeGrid: View {
+    @Binding var focus: StrengthFocus
+    var choices: [StrengthFocus] = StrengthFocus.quickLog
+    @Environment(\.dynamicTypeSize) private var dts
+    var body: some View {
+        let cols = dts.isAccessibilitySize ? 2 : 3
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: cols), spacing: 8) {
+            ForEach(choices, id: \.self) { f in
+                Button { focus = f } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: f.icon).font(.system(size: 18, weight: .semibold))
+                        Text(f.short).font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 52).padding(.vertical, 6)
+                    .background(focus == f ? BC.accent.opacity(0.18) : Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(focus == f ? BC.accent : Color.clear, lineWidth: 1.5))
+                    .foregroundStyle(focus == f ? BC.accent : .primary)
+                }.buttonStyle(.plain).accessibilityLabel(f.title).accessibilityAddTraits(focus == f ? .isSelected : [])
+            }
+        }
+    }
+}
+
+/// Quick Strength Log: type, duration, effort, optional notes. Saved as a strength session with its own hours.
 struct QuickStrengthLogSheet: View {
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
     var date: Date = Date()
     var presetFocus: StrengthFocus? = nil
+    var workoutId: UUID? = nil
     @State private var focus: StrengthFocus = .fullBody
     @State private var customName = ""
     @State private var minutes = 40
@@ -14,21 +38,18 @@ struct QuickStrengthLogSheet: View {
     @State private var notes = ""
     @State private var when = Date()
     @State private var loaded = false
+    @State private var detailed = false
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Session") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) {
-                        ForEach(StrengthFocus.allCases, id: \.self) { f in
-                            Button { focus = f } label: { Label(f.title, systemImage: f.icon).frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(focus == f ? BC.accent : .secondary).controlSize(.small)
-                        }
-                    }
+                Section("Session type") {
+                    StrengthTypeGrid(focus: $focus)
                     if focus == .custom { TextField("Name (e.g. Kettlebell circuit)", text: $customName) }
                     DatePicker("When", selection: $when, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
                 }
                 Section("Duration") {
-                    HStack { Text(Fmt.duration(minutes: minutes)).font(BC.numFont).monospacedDigit(); Spacer() }
+                    HStack { Text(Fmt.duration(minutes: minutes)).font(BC.numFont).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6); Spacer() }
                     Slider(value: Binding(get: { Double(minutes) }, set: { minutes = Int($0) }), in: 10...180, step: 5).tint(BC.accent)
                 }
                 Section {
@@ -37,26 +58,307 @@ struct QuickStrengthLogSheet: View {
                 } header: { Text("Effort") } footer: { Text("Rate of perceived exertion: how hard the whole session felt.") }
                 Section("Notes (optional)") { TextField("Anything worth remembering", text: $notes, axis: .vertical).lineLimit(2...4) }
                 Section {
-                    Text("Sets, reps, weights, supersets and reusable templates arrive in a later build. Until then the coach knows the body region you log here and nothing more — it never guesses muscles from a label.").font(.footnote).foregroundStyle(.secondary)
-                } header: { Text("Coming in a later build") }
+                    Button { detailed = true } label: { Label("Log exercises, sets and weights instead", systemImage: "list.bullet.rectangle") }
+                } footer: { Text("A quick log tells the coach the session type, duration and effort — nothing about movements. Log exercises when you want squat / hinge / push / pull coverage and progression checked.") }
             }
             .navigationTitle("Log strength").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(focus == .custom && customName.trimmingCharacters(in: .whitespaces).isEmpty) }
             }
-            .onAppear { if !loaded { loaded = true; when = min(date, Date()); if let f = presetFocus { focus = f } } }
+            .onAppear { if !loaded { loaded = true; when = min(date, Date()); if let f = presetFocus { focus = f == .legs ? .lower : f } } }
+            .sheet(isPresented: $detailed, onDismiss: { if store.strength.contains(where: { $0.workoutId != nil && $0.workoutId == workoutId }) || detailedSaved { dismiss() } }) {
+                DetailedStrengthLogSheet(date: when, presetFocus: focus, workoutId: workoutId, onSaved: { detailedSaved = true })
+            }
         }
     }
+    @State private var detailedSaved = false
     private func save() {
-        let s = StrengthSession(date: when, minutes: minutes, focus: focus, customName: customName.trimmingCharacters(in: .whitespaces), rpe: effort, notes: notes)
+        let s = StrengthSession(date: when, minutes: minutes, focus: focus, customName: customName.trimmingCharacters(in: .whitespaces), rpe: effort, notes: notes, workoutId: workoutId)
         _ = store.addStrength(s)
         dismiss()
     }
 }
 
-/// Home card for Strength and Hybrid Athlete modes: cycling and strength progress, one recommendation line, the
-/// compact workout table and "Why?" — all from the HybridCoach assessment (real data only).
+// MARK: - Detailed log: exercises → sets, supersets, templates
+struct DetailedStrengthLogSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    var date: Date = Date()
+    var presetFocus: StrengthFocus = .custom
+    var workoutId: UUID? = nil
+    var template: WorkoutTemplate? = nil
+    var editing: StrengthSession? = nil
+    var onSaved: (() -> Void)? = nil
+    @State private var entries: [ExerciseEntry] = []
+    @State private var name = ""
+    @State private var focus: StrengthFocus = .custom
+    @State private var minutes = 45
+    @State private var effort: Int? = nil
+    @State private var notes = ""
+    @State private var when = Date()
+    @State private var showSearch = false
+    @State private var saveAsTemplate = false
+    @State private var templateName = ""
+    @State private var loaded = false
+    @State private var expanded: UUID? = nil
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Session name (e.g. Lower A)", text: $name)
+                    Picker("Type", selection: $focus) { ForEach(StrengthFocus.allCases, id: \.self) { Text($0.title).tag($0) } }
+                    DatePicker("When", selection: $when, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
+                    HStack { Text("Duration"); Spacer(); Text(Fmt.duration(minutes: minutes)).monospacedDigit().foregroundStyle(.secondary) }
+                    Slider(value: Binding(get: { Double(minutes) }, set: { minutes = Int($0) }), in: 10...180, step: 5).tint(BC.accent)
+                }
+                Section {
+                    if entries.isEmpty { Text("No exercises yet. Add from the catalogue (search by name, equipment, movement or muscle) or create your own.").font(.footnote).foregroundStyle(.secondary) }
+                    ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }) }
+                    .onMove { entries.move(fromOffsets: $0, toOffset: $1) }
+                    Button { showSearch = true } label: { Label("Add exercise", systemImage: "plus.circle.fill") }
+                    if entries.count >= 2 { supersetControls }
+                } header: { HStack { Text("Exercises"); Spacer(); Text("\(entries.count) · \(entries.reduce(0) { $0 + $1.doneSets.count }) sets").font(.caption) } } footer: { Text("Superset: give two or more exercises the same letter (A, B…) to mark them as performed back to back. Reps are per side for one-sided movements.") }
+                Section("Effort and notes (optional)") {
+                    Picker("Effort", selection: Binding(get: { effort ?? 0 }, set: { effort = $0 == 0 ? nil : $0 })) { Text("—").tag(0); ForEach(1...10, id: \.self) { Text("RPE \($0)").tag($0) } }
+                    TextField("Notes", text: $notes, axis: .vertical).lineLimit(2...4)
+                }
+                Section {
+                    Toggle("Save as a template for next time", isOn: $saveAsTemplate).tint(BC.accent)
+                    if saveAsTemplate { TextField("Template name", text: $templateName) }
+                } footer: { Text(template != nil ? "This session started from the template “\(template!.name)”; saving updates the template's last values." : "Templates keep the exercise list and prefill the sets from your last session.") }
+            }
+            .navigationTitle(editing != nil ? "Edit session" : "Log exercises").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(entries.isEmpty || entries.allSatisfy { $0.doneSets.isEmpty }) }
+                ToolbarItem(placement: .topBarLeading) { if !entries.isEmpty { EditButton() } }
+            }
+            .sheet(isPresented: $showSearch) { ExerciseSearchSheet { ex in
+                var e = ExerciseEntry(exercise: ex, sets: [SetEntry(reps: 8, weightKg: nil, bodyweight: ex.equipment == ["bodyweight"], unilateral: ex.unilateral)])
+                if let last = lastValues(for: ex) { e.sets = last }
+                entries.append(e); expanded = e.id
+            } }
+            .onAppear { load() }
+        }
+    }
+    private var supersetControls: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Supersets").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+            ForEach($entries) { $e in
+                HStack {
+                    Text(e.name).font(.footnote).lineLimit(1); Spacer()
+                    Picker("", selection: Binding(get: { e.superset ?? "" }, set: { e.superset = $0.isEmpty ? nil : $0 })) { Text("—").tag(""); ForEach(["A", "B", "C", "D"], id: \.self) { Text($0).tag($0) } }.pickerStyle(.segmented).frame(maxWidth: 190)
+                }
+            }
+        }
+    }
+    /// Sets as last logged for this exercise (any session), so values carry over.
+    private func lastValues(for ex: Exercise) -> [SetEntry]? {
+        for s in store.strength.sorted(by: { $0.date > $1.date }) { if let e = s.exercises?.first(where: { $0.exerciseId == ex.id }), !e.sets.isEmpty { return e.sets.map { var t = $0; t.id = UUID(); t.done = true; return t } } }
+        return nil
+    }
+    private func load() {
+        guard !loaded else { return }; loaded = true
+        when = min(date, Date()); focus = presetFocus == .legs ? .lower : presetFocus
+        if let s = editing { entries = s.exercises ?? []; name = s.customName; focus = s.focus; minutes = s.minutes; effort = s.rpe; notes = s.notes; when = s.date }
+        else if let t = template { entries = t.prefilled(from: store.lastSession(template: t)); name = t.name; focus = t.focus; templateName = t.name }
+    }
+    private func save() {
+        var s = editing ?? StrengthSession(date: when, minutes: minutes, focus: focus, workoutId: workoutId)
+        s.date = when; s.minutes = minutes; s.focus = focus; s.customName = name.trimmingCharacters(in: .whitespaces); s.rpe = effort; s.notes = notes
+        s.exercises = entries; s.templateId = template?.id ?? editing?.templateId
+        if saveAsTemplate {
+            let tn = templateName.trimmingCharacters(in: .whitespaces).isEmpty ? (s.customName.isEmpty ? "\(focus.title) session" : s.customName) : templateName.trimmingCharacters(in: .whitespaces)
+            var t = template ?? WorkoutTemplate(name: tn, focus: focus, entries: [])
+            t.name = tn; t.focus = focus; t.entries = entries.map { e in var x = e; x.id = UUID(); return x }; t.updatedAt = Date(); t.lastUsed = when
+            store.saveTemplate(t); s.templateId = t.id
+        }
+        if editing != nil { store.updateStrength(s) } else { _ = store.addStrength(s) }
+        onSaved?()
+        dismiss()
+    }
+}
+
+struct ExerciseEntryRow: View {
+    @Binding var entry: ExerciseEntry
+    @Binding var expanded: Bool
+    var onDelete: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button { expanded.toggle() } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if let s = entry.superset { Text(s).font(.caption.weight(.heavy)).padding(5).background(BC.accent.opacity(0.18), in: Circle()) }
+                    VStack(alignment: .leading, spacing: 2) { Text(entry.name).font(.body.weight(.semibold)).foregroundStyle(.primary).lineLimit(2); Text("\(entry.pattern.title) · \(entry.summary)").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                    Spacer(); Image(systemName: expanded ? "chevron.up" : "chevron.down").foregroundStyle(.secondary).font(.caption)
+                }.frame(minHeight: 44)
+            }.buttonStyle(.plain)
+            if expanded {
+                ForEach($entry.sets) { $s in SetRow(set: $s, onDelete: { entry.sets.removeAll { $0.id == s.id } }) }
+                HStack {
+                    Button { var n = entry.sets.last ?? SetEntry(); n.id = UUID(); n.done = true; entry.sets.append(n) } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
+                    Spacer()
+                    Button(role: .destructive) { onDelete() } label: { Label("Remove", systemImage: "trash") }.buttonStyle(.bordered).controlSize(.small)
+                }
+                TextField("Notes for this exercise", text: $entry.notes).font(.footnote)
+            }
+        }
+    }
+}
+
+struct SetRow: View {
+    @Binding var set: SetEntry
+    var onDelete: () -> Void
+    @State private var weightText = ""
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { repsField; weightField; flags; deleteButton }
+            VStack(alignment: .leading, spacing: 6) { HStack(spacing: 8) { repsField; weightField; deleteButton }; flags }
+        }
+        .onAppear { weightText = set.weightKg.map { $0 == $0.rounded() ? "\(Int($0))" : String(format: "%.1f", $0) } ?? "" }
+    }
+    private var repsField: some View {
+        HStack(spacing: 4) {
+            Stepper("", value: $set.reps, in: 1...100).labelsHidden()
+            Text("\(set.reps) rep\(set.reps == 1 ? "" : "s")").font(.footnote).monospacedDigit().frame(minWidth: 52, alignment: .leading)
+        }
+    }
+    private var weightField: some View {
+        HStack(spacing: 4) {
+            TextField("kg", text: $weightText).keyboardType(.decimalPad).frame(width: 56).textFieldStyle(.roundedBorder).disabled(set.bodyweight)
+                .onChange(of: weightText) { _, v in set.weightKg = Double(v.replacingOccurrences(of: ",", with: ".")) }
+            Text(set.bodyweight ? "BW" : "kg").font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+    private var flags: some View {
+        HStack(spacing: 6) {
+            Toggle("BW", isOn: $set.bodyweight).toggleStyle(.button).controlSize(.small).tint(BC.accent).accessibilityLabel("Bodyweight")
+            Toggle("1-side", isOn: $set.unilateral).toggleStyle(.button).controlSize(.small).tint(BC.accent).accessibilityLabel("One side at a time")
+            Menu { Button("—") { set.rpe = nil }; ForEach(5...10, id: \.self) { r in Button("RPE \(r)") { set.rpe = r } } } label: { Text(set.rpe.map { "@\($0)" } ?? "RPE").font(.caption).padding(.horizontal, 6).frame(minHeight: 28) }.buttonStyle(.bordered).controlSize(.small)
+        }
+    }
+    private var deleteButton: some View { Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).foregroundStyle(.secondary).frame(minWidth: 32, minHeight: 32) }
+}
+
+// MARK: - Exercise search (name, equipment, movement, muscle) + create your own
+struct ExerciseSearchSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    var onPick: (Exercise) -> Void
+    @State private var query = ""
+    @State private var pattern: MovementPattern? = nil
+    @State private var equipment: String? = nil
+    @State private var showCreate = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            chip("All", pattern == nil) { pattern = nil }
+                            ForEach(MovementPattern.allCases, id: \.self) { p in chip(p.title, pattern == p) { pattern = pattern == p ? nil : p } }
+                        }
+                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            chip("Any equipment", equipment == nil) { equipment = nil }
+                            ForEach(ExerciseCatalogue.equipmentOptions, id: \.self) { e in chip(e.capitalized, equipment == e) { equipment = equipment == e ? nil : e } }
+                        }
+                    }
+                }
+                let results = ExerciseCatalogue.search(query, in: store.allExercises, pattern: pattern, equipment: equipment)
+                Section(results.isEmpty ? "No match" : "\(results.count) exercise\(results.count == 1 ? "" : "s")") {
+                    ForEach(results) { e in
+                        Button { onPick(e); dismiss() } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) { Text(e.name).foregroundStyle(.primary); if e.custom { Pill(text: "yours", color: BC.accent) } }
+                                    Text("\(e.pattern.title) · \(e.equipmentText)" + (e.muscles.isEmpty ? "" : " · \(e.muscles.joined(separator: ", "))")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                }
+                                Spacer(); Image(systemName: "plus.circle").foregroundStyle(BC.accent)
+                            }.frame(minHeight: 44)
+                        }
+                    }
+                    Button { showCreate = true } label: { Label(query.isEmpty ? "Create my own exercise" : "Create “\(query)”", systemImage: "square.and.pencil") }
+                }
+            }
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Name, equipment, movement or muscle")
+            .navigationTitle("Add exercise").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .sheet(isPresented: $showCreate) { CreateExerciseSheet(initialName: query) { e in store.addCustomExercise(e); onPick(e); dismiss() } }
+        }
+    }
+    private func chip(_ t: String, _ on: Bool, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) { Text(t).font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(minHeight: 34).background(on ? BC.accent.opacity(0.2) : Color(.tertiarySystemGroupedBackground), in: Capsule()).foregroundStyle(on ? BC.accent : .primary) }.buttonStyle(.plain)
+    }
+}
+
+struct CreateExerciseSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var initialName: String
+    var onCreate: (Exercise) -> Void
+    @State private var name = ""
+    @State private var pattern: MovementPattern = .other
+    @State private var equipment: Set<String> = []
+    @State private var muscles = ""
+    @State private var unilateral = false
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Name") { TextField("Exercise name", text: $name) }
+                Section { Picker("Movement", selection: $pattern) { ForEach(MovementPattern.allCases, id: \.self) { Text($0.title).tag($0) } }; Toggle("One side at a time", isOn: $unilateral).tint(BC.accent) } footer: { Text("The movement pattern is what the coach uses for coverage (squat, hinge, single-leg, core, push, pull). Choose the closest one.") }
+                Section("Equipment") { ForEach(ExerciseCatalogue.equipmentOptions, id: \.self) { e in Toggle(e.capitalized, isOn: Binding(get: { equipment.contains(e) }, set: { if $0 { equipment.insert(e) } else { equipment.remove(e) } })).tint(BC.accent) } }
+                Section("Main muscles (optional, comma-separated)") { TextField("e.g. glutes, hamstrings", text: $muscles) }
+            }
+            .navigationTitle("New exercise").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Create") {
+                    let n = name.trimmingCharacters(in: .whitespaces)
+                    onCreate(Exercise(id: "custom-\(UUID().uuidString)", name: n, equipment: Array(equipment).sorted(), pattern: pattern, muscles: muscles.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }, unilateral: unilateral, custom: true))
+                    dismiss()
+                }.disabled(name.trimmingCharacters(in: .whitespaces).isEmpty) }
+            }
+            .onAppear { name = initialName }
+        }
+    }
+}
+
+// MARK: - Templates
+struct TemplatesView: View {
+    @EnvironmentObject private var store: Store
+    @State private var use: WorkoutTemplate? = nil
+    @State private var rename: WorkoutTemplate? = nil
+    @State private var newName = ""
+    @State private var createNew = false
+    var body: some View {
+        List {
+            if store.templates.isEmpty { Text("No templates yet. Log a detailed session and switch on “Save as a template”, or create one here.").font(.footnote).foregroundStyle(.secondary) }
+            ForEach(store.templates) { t in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack { Text(t.name).font(.body.weight(.semibold)); Spacer(); Pill(text: t.focus.title) }
+                    Text(t.entries.map { $0.name }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    Text(t.lastUsed.map { "last used \($0.dayAndDate)" } ?? "never used").font(.caption2).foregroundStyle(.secondary)
+                    HStack { Button("Use") { use = t }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small); Button("Rename") { newName = t.name; rename = t }.buttonStyle(.bordered).controlSize(.small); Spacer() }
+                }.padding(.vertical, 4)
+            }
+            .onDelete { idx in for i in idx { store.deleteTemplate(store.templates[i]) } }
+            Button { createNew = true } label: { Label("New template (log a session and save it)", systemImage: "plus") }
+        }
+        .navigationTitle("Templates").navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $use) { t in DetailedStrengthLogSheet(presetFocus: t.focus, template: t) }
+        .sheet(isPresented: $createNew) { DetailedStrengthLogSheet() }
+        .alert("Rename template", isPresented: Binding(get: { rename != nil }, set: { if !$0 { rename = nil } })) {
+            TextField("Name", text: $newName)
+            Button("Save") { if var t = rename { t.name = newName.trimmingCharacters(in: .whitespaces); store.saveTemplate(t) }; rename = nil }
+            Button("Cancel", role: .cancel) { rename = nil }
+        }
+    }
+}
+
+// MARK: - Home card for Strength and Hybrid modes: progress, one line, compact table, Why?, proposals, review
 struct HybridCoachCard: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var recorder: RideRecorder
@@ -65,6 +367,8 @@ struct HybridCoachCard: View {
     @Binding var showAlternatives: Bool
     @Binding var showStrengthLog: Bool
     @State private var showWhy = false
+    @State private var showReview = false
+    @State private var lastApplied: String? = nil
 
     private var a: HybridAssessment { HybridCoach.assess(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength, availability: store.effectiveAvailability) }
 
@@ -73,32 +377,79 @@ struct HybridCoachCard: View {
         Card(accent: true) {
             HStack { Eyebrow(t: "\(store.profile.trainingMode.title) coach (rules) · \(Date().shortDay)"); Spacer(); Pill(text: a.combined, color: pillColor(a.combined)) }
             Text(a.recommendation).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 8) {
-                if let c = a.cycling { progress("Cycling", c, color: BC.accent) }
-                if let s = a.strength { progress("Strength", s, color: BC.zone(5)) }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { if let c = a.cycling { progress("Cycling", c, color: BC.accent) }; if let s = a.strength { progress("Strength", s, color: BC.zone(5)) } }
+                VStack(spacing: 8) { if let c = a.cycling { progress("Cycling", c, color: BC.accent) }; if let s = a.strength { progress("Strength", s, color: BC.zone(5)) } }
             }
             if let t = a.next, t.kind != .rest { table(t) }
             DisclosureGroup(isExpanded: $showWhy) {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(Array(a.why.enumerated()), id: \.offset) { _, line in Text(line).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     ForEach(a.findings.filter { $0.severity != .ok }) { f in
-                        HStack(alignment: .top, spacing: 6) { Image(systemName: f.severity == .gap ? "exclamationmark.circle.fill" : f.severity == .conflict ? "calendar.badge.exclamationmark" : "info.circle").foregroundStyle(f.severity == .gap ? BC.warn : f.severity == .conflict ? BC.stale : .secondary).font(.footnote); Text(f.text).font(.footnote).fixedSize(horizontal: false, vertical: true) }
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: f.severity == .gap ? "exclamationmark.circle.fill" : f.severity == .conflict ? "calendar.badge.exclamationmark" : "info.circle").foregroundStyle(f.severity == .gap ? BC.warn : f.severity == .conflict ? BC.stale : .secondary).font(.footnote)
+                            VStack(alignment: .leading, spacing: 2) { Text(f.text).font(.footnote).fixedSize(horizontal: false, vertical: true); if let e = f.evidence { Pill(text: e, color: BC.stale) } }
+                        }
                     }
+                    if let c = a.coverage, c.known { coverageStrip(c) }
                 }.padding(.top, 4)
             } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
+            if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
             actions(a)
             Text("Start opens the Ride screen; recording begins only when you hold Start ride there. Strength is logged, never recorded automatically.").font(.caption2).foregroundStyle(.secondary)
         }
+        if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
     }
+
+    @ViewBuilder private func proposals(_ a: HybridAssessment) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Eyebrow(t: "Coach proposals")
+            ForEach(a.proposals) { p in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(p.text).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                    Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    HStack { Button("Accept") { if store.apply(p) { lastApplied = p.text } }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small); Spacer() }
+                }.padding(8).background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+            }
+            if let last = store.appliedProposals.last {
+                HStack { Text("Applied: \(last.text)").font(.caption).foregroundStyle(.secondary).lineLimit(2); Spacer(); Button("Undo") { _ = store.undoLastProposal() }.font(.caption.bold()) }
+            }
+        }
+    }
+    private func coverageStrip(_ c: CoverageReport) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Movement coverage, 4 weeks (detailed logs)").font(.caption2.weight(.heavy)).foregroundStyle(.secondary)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 6)], spacing: 6) {
+                ForEach(MovementPattern.coverage, id: \.self) { p in
+                    HStack(spacing: 4) { Circle().fill(c.count(p) > 0 ? BC.live : BC.warn).frame(width: 7, height: 7); Text("\(p.title) \(c.count(p))").font(.caption2).lineLimit(1) }
+                }
+            }
+        }
+    }
+    private func reviewCard(_ r: WeeklyReview) -> some View {
+        Card {
+            HStack { Eyebrow(t: "Last week · \(r.completionPct) % completed"); Spacer(); Button(showReview ? "Hide" : "Review ›") { showReview.toggle() }.font(.caption.bold()) }
+            HStack(spacing: 10) {
+                if store.profile.trainingMode.includesCycling { stat("Rides", "\(r.ridesDone)/\(r.ridesPlanned)", Fmt.duration(minutes: r.rideMinutesDone)) }
+                if store.profile.trainingMode.includesLifting { stat("Lifts", "\(r.liftsDone)/\(r.liftsPlanned)", Fmt.duration(minutes: r.liftMinutesDone)) }
+                stat("Missed", "\(r.missedWorkouts.count)", "")
+            }
+            if showReview {
+                Text(r.suggestion).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                ForEach(r.missedWorkouts) { w in Text("· \(w.date.shortDay): \(w.displayTitle) (\(Fmt.duration(minutes: w.minutes)))").font(.caption).foregroundStyle(.secondary) }
+                if r.offerRevise { Button { tab = 1 } label: { Label("Revise my training days", systemImage: "calendar.badge.clock").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(BC.stale); Text("Two or more recent weeks missed half their sessions. Changing the days beats carrying the same plan again.").font(.caption2).foregroundStyle(.secondary) }
+            }
+        }
+    }
+    private func stat(_ t: String, _ v: String, _ sub: String) -> some View { VStack(alignment: .leading, spacing: 1) { Eyebrow(t: t); Text(v).font(.system(size: 18, weight: .bold, design: .rounded)).monospacedDigit(); if !sub.isEmpty { Text(sub).font(.caption2).foregroundStyle(.secondary) } }.frame(maxWidth: .infinity, alignment: .leading) }
+
     @ViewBuilder private func actions(_ a: HybridAssessment) -> some View {
         let next = a.next
         let rideNext = next?.kind.isRide == true && !recorder.isActive
         let liftNext = next?.kind == .strength
-        HStack(spacing: 8) {
-            if rideNext { startButton }
-            logButton(prominent: liftNext)
-            if store.today != nil { adjustButton }
-            if store.today != nil { alternativeButton }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { if rideNext { startButton }; logButton(prominent: liftNext); if store.today != nil { adjustButton; alternativeButton } }
+            VStack(spacing: 8) { HStack(spacing: 8) { if rideNext { startButton }; logButton(prominent: liftNext) }; if store.today != nil { HStack(spacing: 8) { adjustButton; alternativeButton } } }
         }
     }
     private var startButton: some View { Button { tab = 2 } label: { Label("Start", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live) }
@@ -128,21 +479,73 @@ struct HybridCoachCard: View {
         return t.kind.subtitle
     }
     private func pillColor(_ c: String) -> Color { c == "on track" ? BC.live : c.contains("check") ? BC.stale : BC.warn }
-    private func status(_ t: Workout) -> String { t.done ? "done" : t.skipped ? "skipped" : recorder.isActive ? "in progress" : "planned" }
+    private func status(_ t: Workout) -> String { t.done ? "done" : t.skipped ? "skipped" : recorder.isActive ? "in progress" : t.fixed ? "planned · fixed day" : "planned" }
     private func table(_ t: Workout) -> some View {
         VStack(spacing: 0) {
             row("Workout", t.displayTitle)
             row("Duration", t.minutes > 0 ? Fmt.duration(minutes: t.minutes) : "—")
             row("Intensity", intensity(t))
-            row("Outcome", t.benefit)
+            row("Benefit", t.benefit)
             row("Status", status(t), last: true)
         }.background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
     }
     private func row(_ k: String, _ v: String, last: Bool = false) -> some View {
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) { Text(k).font(.footnote).foregroundStyle(.secondary).frame(width: 84, alignment: .leading); Text(v).font(.footnote.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading) }.padding(.horizontal, 10).padding(.vertical, 6)
+            HStack(alignment: .firstTextBaseline) { Text(k).font(.footnote).foregroundStyle(.secondary).frame(width: 84, alignment: .leading); Text(v).font(.footnote.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true) }.padding(.horizontal, 10).padding(.vertical, 6)
             if !last { Divider().padding(.leading, 10) }
         }
     }
     private func zoneWatts(_ z: Int) -> String { let p = store.profile.powerZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
+}
+
+// MARK: - Strength session detail (timeline tap): exercises, sets, per-exercise progression, edit / delete
+struct StrengthSessionDetail: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let session: StrengthSession
+    @State private var edit = false
+    @State private var confirmDelete = false
+    private var live: StrengthSession { store.strength.first { $0.id == session.id } ?? session }
+    var body: some View {
+        let s = live
+        let prog = StrengthAnalysis.progression(store.strength)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack { Text(s.title).font(.system(size: 26, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7); Spacer(); Pill(text: s.isImported ? "imported" : "completed", color: s.isImported ? BC.zone(1) : BC.live) }
+                Text("\(s.date.dayAndDate) · \(Fmt.duration(minutes: s.minutes)) · \(s.effortLabel) · \(s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") : s.source)").font(.footnote).foregroundStyle(.secondary)
+                if let ex = s.exercises, !ex.isEmpty {
+                    Card {
+                        Eyebrow(t: "Exercises")
+                        ForEach(ex) { e in
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack { if let g = e.superset { Text(g).font(.caption.weight(.heavy)).padding(4).background(BC.accent.opacity(0.18), in: Circle()) }; Text(e.name).font(.body.weight(.semibold)); Spacer(); Text(e.pattern.title).font(.caption).foregroundStyle(.secondary) }
+                                Text(e.doneSets.map { $0.text }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                if let p = prog.first(where: { $0.exerciseId == e.exerciseId }) {
+                                    HStack(spacing: 6) {
+                                        Text(trendText(p)).font(.caption2).foregroundStyle(p.trend == .up ? BC.live : p.trend == .down ? BC.stale : .secondary)
+                                        if p.points.count >= 3 { Spark(title: "", values: p.points.compactMap { $0.tonnageKg.map { Int($0) } }, unit: "kg·reps", color: BC.zone(5)).frame(maxWidth: 140) }
+                                    }
+                                }
+                                if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary) }
+                            }.padding(.vertical, 4)
+                            if e.id != ex.last?.id { Divider() }
+                        }
+                    }
+                    let pats = s.patterns
+                    Card { Eyebrow(t: "Movements trained"); Text(MovementPattern.allCases.filter { pats.contains($0) }.map { $0.title }.joined(separator: ", ")).font(.footnote) }
+                } else {
+                    Card { Text(s.isImported ? "Imported from \(s.source): duration only. Add exercises to make it count for coverage and progression." : "Quick log: type, duration and effort. No exercises were recorded, so this session says nothing about movement coverage.").font(.footnote).foregroundStyle(.secondary) }
+                }
+                if !s.notes.isEmpty { Card { Eyebrow(t: "Notes"); Text(s.notes) } }
+                HStack { Button { edit = true } label: { Label(s.isDetailed ? "Edit" : "Add exercises", systemImage: "pencil").frame(maxWidth: .infinity) }.buttonStyle(.bordered); Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+            }.padding()
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Strength").navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $edit) { DetailedStrengthLogSheet(date: s.date, presetFocus: s.focus, editing: s) }
+        .alert("Delete this session?", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { store.deleteStrength(s); dismiss() }; Button("Cancel", role: .cancel) {} }
+    }
+    private func trendText(_ p: ExerciseProgression) -> String {
+        switch p.trend { case .up: return "Progressing (load × reps rising over \(p.points.count) sessions)"; case .down: return "Load × reps fell over the last sessions"; case .flat: return "Steady over \(p.points.count) sessions"; case .insufficient: return "\(p.points.count) session\(p.points.count == 1 ? "" : "s") logged · progression needs 4 with weights" }
+    }
 }

@@ -100,4 +100,65 @@ final class LaunchSmokeTests: XCTestCase {
          "boardSync":[],"onboardingStage":3}
         """
     }
+
+    /// A phone updated from build 33 (0.6.0): hybrid mode, legacy availability with a "both" day, quick strength logs, no
+    /// 0.7.0 keys (assignments, templates, exercises). Must land on Home, open every tab, and the 0.7.0 sheets must open
+    /// and close at an accessibility text size on the smallest supported layout path.
+    func testUpgradeFromBuild33OpensHybridSheetsAtLargeText() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build33Store()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.state, .runningForeground)
+        // Plan → Days editor (per-day assignments) opens and closes
+        app.buttons["Plan"].firstMatch.tap()
+        let days = app.buttons["Days"].firstMatch
+        XCTAssertTrue(days.waitForExistence(timeout: 10)); days.tap()
+        XCTAssertTrue(app.navigationBars["Training days"].waitForExistence(timeout: 10), "availability editor must open")
+        XCTAssertEqual(app.state, .runningForeground)
+        app.buttons["Cancel"].firstMatch.tap()
+        // Plan → Log strength → Quick log sheet opens with the type grid, closes
+        let log = app.buttons["Log strength"].firstMatch
+        XCTAssertTrue(log.waitForExistence(timeout: 10)); log.tap()
+        let quick = app.buttons["Quick log"].firstMatch
+        if quick.waitForExistence(timeout: 5) { quick.tap() }
+        XCTAssertTrue(app.navigationBars["Log strength"].waitForExistence(timeout: 10), "quick strength log must open")
+        XCTAssertTrue(app.buttons["Full body"].firstMatch.waitForExistence(timeout: 5) || app.staticTexts["Full Body"].firstMatch.waitForExistence(timeout: 2), "type grid visible")
+        app.buttons["Cancel"].firstMatch.tap()
+        // Profile → Training profile page
+        app.buttons["Profile"].firstMatch.tap()
+        let tp = app.buttons["Training profile"].firstMatch.exists ? app.buttons["Training profile"].firstMatch : app.staticTexts["Training profile"].firstMatch
+        XCTAssertTrue(tp.waitForExistence(timeout: 10)); tp.tap()
+        sleep(1)
+        XCTAssertEqual(app.state, .runningForeground, "app died opening Training profile at large text")
+        app.buttons["Home"].firstMatch.tap()
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
+    static func build33Store() -> String {
+        let iso = ISO8601DateFormatter()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: today) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: today)!
+        let kinds = ["rest", "endurance", "strength", "tempo", "rest", "long", "strength"]
+        var plan: [String] = []
+        for i in 0..<7 {
+            let d = cal.date(byAdding: .day, value: i, to: monday)!.addingTimeInterval(7 * 3600)
+            plan.append("{\"id\":\"\(UUID().uuidString)\",\"date\":\"\(iso.string(from: d))\",\"kind\":\"\(kinds[i])\",\"minutes\":\(kinds[i] == "rest" ? 0 : 60),\"done\":false,\"skipped\":false,\"note\":\"\",\"edited\":false,\"strengthFocus\":\(kinds[i] == "strength" ? "\"lower\"" : "null"),\"sequence\":0}")
+        }
+        let logDate = cal.date(byAdding: .day, value: -3, to: today)!.addingTimeInterval(18 * 3600)
+        return """
+        {"schema":1,
+         "profile":{"name":"Rashed","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
+                    "sports":["roadCycling","strength"],"version":12,"updatedAt":"2026-10-25T10:00:00Z","wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR",
+                    "trainingMode":"hybrid","priority":"balanced","cyclingDaysPerWeek":3,"liftDaysPerWeek":3,"liftingHoursPerWeek":2,"preferredDays":[1,3,5,6]},
+         "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"],"appearance":"system","backgroundNotice":true,"coachTalk":"normal","coachEnabled":true,"appleHealthImportWorkouts":false},
+         "plan":[\(plan.joined(separator: ","))],
+         "rides":[],"tiles":["power","cadence","hr","speed","time","dist"],"onboarded":true,"guest":true,"createdAt":"2026-10-24T10:00:00Z","boardSync":[],"onboardingStage":0,
+         "availability":{"days":[{"activity":"rest","minutes":0},{"activity":"both","minutes":60,"liftMinutes":30},{"activity":"lift","minutes":45},{"activity":"cycle","minutes":75},{"activity":"rest","minutes":0},{"activity":"cycle","minutes":150},{"activity":"lift","minutes":40}]},
+         "strength":[{"id":"\(UUID().uuidString)","date":"\(iso.string(from: logDate))","minutes":40,"focus":"upper","customName":"","rpe":6,"notes":"","source":"manual"}]}
+        """
+    }
 }

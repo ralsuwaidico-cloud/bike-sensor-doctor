@@ -184,10 +184,13 @@ struct Workout: Codable, Identifiable, Equatable {
     /// one day (0 first). Older files have neither; both default.
     var strengthFocus: StrengthFocus? = nil
     var sequence = 0
+    /// 0.7.0: generated from a FIXED day assignment — the coach never moves or changes it; and the assignment it came from.
+    var fixed = false
+    var assignmentId: UUID? = nil
 
-    init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0) {
+    init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
-        self.strengthFocus = strengthFocus; self.sequence = sequence
+        self.strengthFocus = strengthFocus; self.sequence = sequence; self.fixed = fixed
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -201,6 +204,8 @@ struct Workout: Codable, Identifiable, Equatable {
         edited = try c.decodeIfPresent(Bool.self, forKey: .edited) ?? false
         strengthFocus = try? c.decodeIfPresent(StrengthFocus.self, forKey: .strengthFocus)
         sequence = try c.decodeIfPresent(Int.self, forKey: .sequence) ?? 0
+        fixed = (try? c.decodeIfPresent(Bool.self, forKey: .fixed)) ?? false
+        assignmentId = try? c.decodeIfPresent(UUID.self, forKey: .assignmentId)
     }
     /// "Strength · Lower body" when a region is planned.
     var displayTitle: String { if kind == .strength, let f = strengthFocus { return "Strength · \(f.title)" }; return kind.title }
@@ -317,6 +322,12 @@ struct RideRecord: Codable, Identifiable, Equatable {
     var best20: Int? { bestMeanPower(seconds: 1200) }
     var best60: Int? { bestMeanPower(seconds: 3600) }
     var recordedBy: String { recorder == .board ? "BikeComputer" : recorder == .health ? "Apple Health" : "this phone" }
+    /// Stable identity across imports and devices: Health UUID, board id + ride id, else the local id.
+    var sourceId: String {
+        if let h = healthUUID { return "health:\(h)" }
+        if let b = boardRideId { return "board:\(boardId ?? "?"):\(b)" }
+        return "phone:\(id.uuidString)"
+    }
     var hasPower: Bool { avgPower != nil }
     var hasTrack: Bool { samples.contains { $0.lat != nil } }
 }
@@ -406,6 +417,10 @@ struct StoreFile: Codable, Equatable {
     var availability: WeeklyAvailability? = nil
     /// 0.6.0: strength sessions (quick logs and Apple Health imports) — their hours are kept apart from riding.
     var strength: [StrengthSession] = []
+    /// 0.7.0: reusable workout templates, the rider's own exercises, and the coach proposals applied (for Undo).
+    var templates: [WorkoutTemplate] = []
+    var customExercises: [Exercise] = []
+    var appliedProposals: [AppliedProposal] = []
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
         self.schema = schema; self.profile = profile; self.settings = settings; self.plan = plan; self.rides = rides; self.tiles = tiles
@@ -435,6 +450,9 @@ struct StoreFile: Codable, Equatable {
         availability = try? c.decodeIfPresent(WeeklyAvailability.self, forKey: .availability)
         if let a = availability, a.days.count != 7 { availability = nil }
         strength = (try? c.decodeIfPresent([StrengthSession].self, forKey: .strength)) ?? []
+        templates = (try? c.decodeIfPresent([WorkoutTemplate].self, forKey: .templates)) ?? []
+        customExercises = (try? c.decodeIfPresent([Exercise].self, forKey: .customExercises)) ?? []
+        appliedProposals = (try? c.decodeIfPresent([AppliedProposal].self, forKey: .appliedProposals)) ?? []
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -458,6 +476,14 @@ struct FTPSuggestion: Codable, Equatable {
     var previousFTP: Int
 }
 
+/// A coach proposal the rider accepted, with the workout as it was before — so it can be undone.
+struct AppliedProposal: Codable, Equatable, Identifiable {
+    var id: String
+    var text: String
+    var before: Workout
+    var appliedAt: Date
+}
+
 final class Store: ObservableObject {
     static let defaultTiles = ["power", "cadence", "hr", "speed", "time", "dist"]
     /// Any rider-made change (including through SwiftUI bindings) bumps the profile version so connected boards get it.
@@ -474,6 +500,9 @@ final class Store: ObservableObject {
     @Published var onboardingStage = 0 { didSet { persist() } }
     @Published var availability: WeeklyAvailability? { didSet { persist() } }
     @Published var strength: [StrengthSession] = [] { didSet { persist() } }
+    @Published var templates: [WorkoutTemplate] = [] { didSet { persist() } }
+    @Published var customExercises: [Exercise] = [] { didSet { persist() } }
+    @Published var appliedProposals: [AppliedProposal] = [] { didSet { persist() } }
     @Published private(set) var lastSaveError: String?
 
     let dir: URL
@@ -501,11 +530,13 @@ final class Store: ObservableObject {
         profile = f.profile; settings = f.settings; plan = f.plan; rides = f.rides; tiles = f.tiles
         onboarded = f.onboarded; guest = f.guest; appleUserId = f.appleUserId; createdAt = f.createdAt; ftpSuggestion = f.ftpSuggestion
         boardSync = f.boardSync; onboardingStage = f.onboardingStage; availability = f.availability; strength = f.strength
+        templates = f.templates; customExercises = f.customExercises; appliedProposals = f.appliedProposals
     }
 
     var snapshot: StoreFile {
         var f = StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt, ftpSuggestion: ftpSuggestion)
         f.boardSync = boardSync; f.onboardingStage = onboardingStage; f.availability = availability; f.strength = strength
+        f.templates = templates; f.customExercises = customExercises; f.appliedProposals = appliedProposals
         return f
     }
 
@@ -547,7 +578,11 @@ final class Store: ObservableObject {
 
     /// Rebuilds one week from the availability. Hand-edited sessions are kept unless `replaceEdited` is true (the
     /// caller asks the rider first). Past days and completed sessions are never touched.
-    func regenerate(weekOf date: Date, replaceEdited: Bool) {
+    /// The availability fitted to both budgets, with the conflicts and the trims the fit had to make (for Fix plan).
+    var fitReport: (availability: WeeklyAvailability, conflicts: [PlanConflict], trimmed: [String]) { WeeklyAvailability.fit(effectiveAvailability, profile: profile) }
+
+    @discardableResult
+    func regenerate(weekOf date: Date, replaceEdited: Bool) -> [String] {
         let cal = Calendar.current
         let d0 = cal.startOfDay(for: date)
         let wd = (cal.component(.weekday, from: d0) + 5) % 7
@@ -564,6 +599,7 @@ final class Store: ObservableObject {
             if keep.isEmpty { next.append(contentsOf: fresh.filter { cal.isDate($0.date, inSameDayAs: date) }) } else { next.append(contentsOf: keep) }
         }
         plan = next.sorted { $0.date < $1.date }
+        return PlanEngine.changes(from: old, to: plan.filter { $0.date >= monday && $0.date < sunday })
     }
     /// Hand-edited sessions in a week (so the UI can ask before replacing them).
     func editedCount(weekOf date: Date) -> Int { workouts(weekOf: date).filter { $0.edited && !$0.done }.count }
@@ -611,10 +647,56 @@ final class Store: ObservableObject {
         strength.insert(s, at: 0)
         strength.sort { $0.date > $1.date }
         let cal = Calendar.current
-        if let i = plan.firstIndex(where: { $0.kind == .strength && !$0.done && cal.isDate($0.date, inSameDayAs: s.date) }) { plan[i].done = true }
+        if let wid = s.workoutId, let i = plan.firstIndex(where: { $0.id == wid }) { plan[i].done = true }
+        else if let i = plan.firstIndex(where: { $0.kind == .strength && !$0.done && cal.isDate($0.date, inSameDayAs: s.date) }) { plan[i].done = true }
+        if let t = s.templateId, let i = templates.firstIndex(where: { $0.id == t }) { templates[i].lastUsed = s.date; if let ex = s.exercises, !ex.isEmpty { templates[i].entries = ex.map { e in var x = e; x.id = UUID(); return x }; templates[i].updatedAt = Date() } }
         return true
     }
     func deleteStrength(_ s: StrengthSession) { strength.removeAll { $0.id == s.id } }
+    func updateStrength(_ s: StrengthSession) { if let i = strength.firstIndex(where: { $0.id == s.id }) { strength[i] = s } }
+
+    // MARK: exercises and templates (0.7.0)
+    var allExercises: [Exercise] { customExercises + ExerciseCatalogue.builtIn.filter { b in !customExercises.contains { $0.id == b.id } } }
+    func addCustomExercise(_ e: Exercise) { var x = e; x.custom = true; if x.id.isEmpty { x.id = "custom-\(UUID().uuidString)" }; customExercises.insert(x, at: 0) }
+    func removeCustomExercise(_ e: Exercise) { customExercises.removeAll { $0.id == e.id } }
+    func saveTemplate(_ t: WorkoutTemplate) { if let i = templates.firstIndex(where: { $0.id == t.id }) { templates[i] = t } else { templates.insert(t, at: 0) } }
+    func deleteTemplate(_ t: WorkoutTemplate) { templates.removeAll { $0.id == t.id } }
+    func lastSession(template t: WorkoutTemplate) -> StrengthSession? { strength.filter { $0.templateId == t.id && $0.isDetailed }.max { $0.date < $1.date } }
+
+    // MARK: coach proposals (0.7.0): applied only on Accept, always undoable; fixed days and manual edits are refused
+    @discardableResult
+    func apply(_ p: CoachProposal) -> Bool {
+        func target(_ id: UUID) -> Int? { plan.firstIndex { $0.id == id && !$0.fixed && !$0.edited && !$0.done } }
+        switch p.change {
+        case .move(let id, let to):
+            guard let i = target(id) else { return false }
+            let before = plan[i]; plan[i].date = to
+            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+        case .kind(let id, let k):
+            guard let i = target(id) else { return false }
+            let before = plan[i]; plan[i].kind = k
+            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+        case .minutes(let id, let m):
+            guard let i = target(id) else { return false }
+            let before = plan[i]; plan[i].minutes = m
+            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+        case .focus(let id, let f):
+            guard let i = target(id) else { return false }
+            let before = plan[i]; plan[i].strengthFocus = f
+            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+        }
+        if appliedProposals.count > 20 { appliedProposals.removeFirst(appliedProposals.count - 20) }
+        return true
+    }
+    /// Restores the workout as it was before the most recent accepted proposal (if it still exists and is not done).
+    @discardableResult
+    func undoLastProposal() -> Bool {
+        guard let last = appliedProposals.last else { return false }
+        appliedProposals.removeLast()
+        guard let i = plan.firstIndex(where: { $0.id == last.before.id }), !plan[i].done else { return false }
+        plan[i] = last.before
+        return true
+    }
     /// Imports a ride that Apple Health knows about and the phone/board do not (start ±2 min, similar duration). Source
     /// "Apple Health"; no power, cadence or samples are invented.
     @discardableResult
@@ -726,6 +808,7 @@ final class Store: ObservableObject {
         loading = true
         rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil; ftpSuggestion = nil
         tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0; availability = nil; strength = []
+        templates = []; customExercises = []; appliedProposals = []
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
         for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }

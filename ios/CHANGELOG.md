@@ -1,5 +1,81 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
+## 0.7.0 (build BUILDNO) — 25 Oct 2026 — TestFlight, internal testers only
+
+**Hybrid Athlete brief, P0–P2.** Everything below is **simulator-tested** (XCTest unit tests + launch smoke tests on
+fresh, build-24, build-30 and build-33 data files, the last at an accessibility text size). **Nothing is device-tested**
+until Rashed runs `BUILDBUILDNO-TEST.txt`. No firmware change; the board profile sync is unchanged.
+
+### P0 — layout and budget correctness
+- Strength Log type picker is a 3-column grid (2 columns at accessibility text sizes) with the labels Full Body / Upper /
+  Lower / Push / Pull / Custom; ≥ 44 pt targets everywhere it appears (quick log, add workout, edit workout).
+- Audit of onboarding (day chips as a 7-column grid, 44 pt), weekly calendar, workout cards, summaries, Profile pages
+  and sheets: `ViewThatFits` fallbacks, line limits with scale factors instead of clipping, no fixed widths that
+  overflow on compact iPhones; long duration values always through the one formatter ("1 h 5 min").
+- **Budgets are enforced at plan generation.** The engine fits the week to both budgets before generating: a 2 h
+  cycling budget can never produce 2 h 5 min, a 2 h lifting budget never 2 h 10 min (unit-tested at the exact limits).
+  Flexible activities are shortened first (longest first, 5-minute steps, never under 20 min riding / 15 min lifting),
+  then fixed ones; nothing is ever added and no day is dropped. What was trimmed is shown, never silent.
+- Weekly summary is compact: rides and lifts planned/completed, two budget bars, ONE prioritised action. Warnings and
+  options moved behind **Fix plan** (raise the budget / edit the days / keep the trimmed version).
+
+### P1 — per-day sport assignment, exercise search and templates
+- Onboarding step **Your days**: for Monday–Sunday assign Cycling / Strength / Both / Rest / Flexible, several
+  activities per day, each with its type (cycling: Zone 2, tempo, threshold, intervals, recovery, long ride, custom;
+  strength: full body, upper, lower, push, pull, legs, custom routine), planned duration and **Fixed or Flexible**.
+  A readable weekly preview before saving; a consistency check compares frequency, per-day durations and both budgets
+  and, when they conflict, explains the conflict and asks which to relax (raise a budget, shorten flexible days, drop
+  the shortest flexible day). Guest entry stays name-only; the mode is editable in Profile › Training profile.
+- The same editor is Plan › Days. Older availability files (0.5.0/0.6.0 cycle/lift/both/rest + minutes) migrate into
+  the new model without loss and keep writing the legacy summary, so nothing breaks on the way back.
+- **Exercise search** by name, alias, equipment, movement pattern and muscle group over a built-in catalogue of
+  165 exercises (written for this app; users add their own, which appear first). Detailed sessions: exercises → sets
+  with reps, weight or bodyweight, one-sided flag, optional RPE per set, notes; supersets by letter; drag to reorder.
+- **Templates**: create from a session, rename, edit, reuse; the next use prefills the sets from the last session that
+  used the template. Quick Log remains for type / duration / effort without exercise detail.
+- Coverage (squat / hinge / single-leg / core / push / pull) and progression come **only** from detailed logs. A quick
+  log labelled "Full body" is never turned into muscle coverage; with no detailed logs the coach says "not known from
+  quick logs".
+
+### P2 — adaptive coaching, timeline, weekly review
+- The coach evaluates **completed** sessions only: recorded rides (frequency, hours, intensity distribution from
+  recorded zones, whether power/HR were present) and logged strength sessions (frequency, hours, region labels,
+  movement coverage, per-exercise progression = load × reps trend over the last sessions). Planned sessions are never
+  counted as done; cycling time is never lifting volume (unit-tested).
+- **Interference**: a heavy leg session (logged with evidence, or planned) the day before a quality ride is flagged,
+  and the coach **proposes** a change within the approved schedule — soften the ride to endurance, or make the lift
+  upper-body. Proposals need **Accept**; every accepted proposal has **Undo**. Fixed days and hand-edited sessions are
+  never changed by a proposal (refused in code, unit-tested).
+- Findings carry evidence labels ("estimate", "insufficient evidence"); "Why?" lists them under the recommendation.
+- Timeline statuses: planned / completed / skipped / missed / **imported** (Apple Health, board sync), with stable
+  source ids (`health:<uuid>`, `board:<id>:<ride>`, `phone:<uuid>`) and deduplication by them. Strength entries open a
+  detail page with exercises, sets, movements trained and progression sparklines.
+- **Weekly review** card on Home (Strength / Hybrid modes): planned vs completed per sport, missed sessions, one
+  suggested adjustment for the coming week; after two or more recent weeks with half their sessions missed it offers
+  to **revise the training days** instead of imposing the same plan again.
+- "What changed" line in Plan after a rebuild (riding/lifting hours, counts, per-day changes).
+
+### Automated results
+- Unit tests: see the CI run for the count (new `HybridV2Tests`: 16 tests covering budgets at the exact limit,
+  fit order fixed/flexible, legacy migration, day marks, suggested weeks inside both budgets, catalogue and search,
+  coverage unknown vs known, progression trend, template prefill, set tonnage, completed-only coaching, cycling ≠
+  lifting, interference proposals with fixed/edited refusal and undo, weekly review and the revise offer, stable
+  source ids and imported status, store round trip of templates/exercises/detailed logs, formatter and labels).
+- Launch smoke tests (Release build on the simulator): fresh install; build-24 store; build-30 store; **build-33 store
+  at accessibility text size, opening Plan › Days, the quick strength log and Profile › Training profile**.
+
+### Physically tested
+- Nothing in this build yet; build-24/27/30/33 device findings are what this release answers.
+
+### Known limitations
+- Coverage/progression need detailed logs; Health-imported strength workouts carry no exercises.
+- Interference rules are frequency/label/evidence based, not physiological; no recovery (sleep/HRV) source exists.
+- Proposals are limited to softening a ride or changing a lift's region; moving sessions across days remains a manual
+  action (Move) so fixed days and manual edits can never be overridden.
+- Exercise catalogue muscle names are plain words, not a medical taxonomy; add your own exercises when something is missing.
+- Google / e-mail sign-in still need Supabase + Google configuration; firmware 0.6.x features show "needs firmware" on
+  a 0.5.0 board; Android skeleton unchanged.
+
 ## 0.6.0 (build 33) — 25 Oct 2026 — TestFlight, internal testers only
 
 **Hybrid Athlete Mode, phase 1.** One coach that sees cycling and lifting side by side. Everything below is

@@ -1,0 +1,2473 @@
+{
+ "version": 1,
+ "note": "BikeComputer built-in exercise catalogue; names and groupings written for this app. Users add their own exercises in the app.",
+ "exercises": [
+  {
+   "id": "ex-001",
+   "name": "Back squat",
+   "aliases": [
+    "barbell squat",
+    "high bar squat",
+    "low bar squat"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-002",
+   "name": "Front squat",
+   "aliases": [
+    "front squats"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-003",
+   "name": "Goblet squat",
+   "aliases": [
+    "kettlebell squat"
+   ],
+   "equipment": [
+    "dumbbell",
+    "kettlebell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-004",
+   "name": "Box squat",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-005",
+   "name": "Safety bar squat",
+   "aliases": [
+    "SSB squat"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-006",
+   "name": "Zercher squat",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-007",
+   "name": "Hack squat",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-008",
+   "name": "Leg press",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-009",
+   "name": "Belt squat",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-010",
+   "name": "Air squat",
+   "aliases": [
+    "bodyweight squat"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-011",
+   "name": "Jump squat",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-012",
+   "name": "Wall sit",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-013",
+   "name": "Leg extension",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-014",
+   "name": "Sissy squat",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-015",
+   "name": "Overhead squat",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "shoulders",
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-016",
+   "name": "Landmine squat",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-017",
+   "name": "Cyclist squat",
+   "aliases": [
+    "heel-elevated squat"
+   ],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "squat",
+   "muscles": [
+    "quads"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-018",
+   "name": "Conventional deadlift",
+   "aliases": [
+    "deadlift"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "glutes",
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-019",
+   "name": "Sumo deadlift",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "hamstrings",
+    "adductors"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-020",
+   "name": "Romanian deadlift",
+   "aliases": [
+    "RDL"
+   ],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-021",
+   "name": "Stiff-leg deadlift",
+   "aliases": [
+    "SLDL"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-022",
+   "name": "Trap bar deadlift",
+   "aliases": [
+    "hex bar deadlift"
+   ],
+   "equipment": [
+    "trap bar"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "quads",
+    "glutes",
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-023",
+   "name": "Hip thrust",
+   "aliases": [
+    "barbell hip thrust"
+   ],
+   "equipment": [
+    "barbell",
+    "bodyweight"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-024",
+   "name": "Glute bridge",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "bodyweight"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-025",
+   "name": "Kettlebell swing",
+   "aliases": [
+    "KB swing"
+   ],
+   "equipment": [
+    "kettlebell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-026",
+   "name": "Good morning",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-027",
+   "name": "Back extension",
+   "aliases": [
+    "hyperextension",
+    "45-degree back extension"
+   ],
+   "equipment": [
+    "bodyweight",
+    "machine"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "back",
+    "glutes",
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-028",
+   "name": "Nordic hamstring curl",
+   "aliases": [
+    "nordic curl"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-029",
+   "name": "Lying leg curl",
+   "aliases": [
+    "leg curl"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-030",
+   "name": "Seated leg curl",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-031",
+   "name": "Cable pull-through",
+   "aliases": [],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-032",
+   "name": "Reverse hyperextension",
+   "aliases": [
+    "reverse hyper"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-033",
+   "name": "Rack pull",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "back",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-034",
+   "name": "Snatch-grip deadlift",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "back",
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-035",
+   "name": "Power clean",
+   "aliases": [
+    "clean"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "back",
+    "traps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-036",
+   "name": "Hang clean",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "back",
+    "traps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-037",
+   "name": "Dumbbell swing",
+   "aliases": [],
+   "equipment": [
+    "dumbbell"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "glutes",
+    "hamstrings"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-038",
+   "name": "Bulgarian split squat",
+   "aliases": [
+    "rear-foot elevated split squat",
+    "RFESS"
+   ],
+   "equipment": [
+    "barbell",
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-039",
+   "name": "Walking lunge",
+   "aliases": [
+    "lunges"
+   ],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-040",
+   "name": "Reverse lunge",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-041",
+   "name": "Forward lunge",
+   "aliases": [],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-042",
+   "name": "Lateral lunge",
+   "aliases": [
+    "side lunge"
+   ],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "adductors",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-043",
+   "name": "Step-up",
+   "aliases": [
+    "step ups"
+   ],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-044",
+   "name": "Single-leg Romanian deadlift",
+   "aliases": [
+    "single leg RDL"
+   ],
+   "equipment": [
+    "bodyweight",
+    "dumbbell",
+    "kettlebell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "hamstrings",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-045",
+   "name": "Pistol squat",
+   "aliases": [
+    "single-leg squat"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-046",
+   "name": "Skater squat",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-047",
+   "name": "Split squat",
+   "aliases": [
+    "static lunge"
+   ],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-048",
+   "name": "Single-leg hip thrust",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-049",
+   "name": "Single-leg glute bridge",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-050",
+   "name": "Single-leg leg press",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-051",
+   "name": "Curtsy lunge",
+   "aliases": [],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "glutes",
+    "quads"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-052",
+   "name": "Single-leg calf raise",
+   "aliases": [],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "calves"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-053",
+   "name": "Cossack squat",
+   "aliases": [],
+   "equipment": [
+    "bodyweight",
+    "kettlebell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "adductors",
+    "quads"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-054",
+   "name": "Box step-down",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-055",
+   "name": "Single-leg deadlift (kettlebell)",
+   "aliases": [],
+   "equipment": [
+    "kettlebell"
+   ],
+   "pattern": "singleLeg",
+   "muscles": [
+    "hamstrings",
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-056",
+   "name": "Bench press",
+   "aliases": [
+    "flat bench press",
+    "barbell bench"
+   ],
+   "equipment": [
+    "barbell",
+    "bench"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "triceps",
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-057",
+   "name": "Incline bench press",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "bench"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-058",
+   "name": "Decline bench press",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "bench"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-059",
+   "name": "Dumbbell bench press",
+   "aliases": [],
+   "equipment": [
+    "bench",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-060",
+   "name": "Incline dumbbell press",
+   "aliases": [],
+   "equipment": [
+    "bench",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-061",
+   "name": "Close-grip bench press",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "bench"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "triceps",
+    "chest"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-062",
+   "name": "Push-up",
+   "aliases": [
+    "press-up",
+    "pushup"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "triceps",
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-063",
+   "name": "Diamond push-up",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "triceps",
+    "chest"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-064",
+   "name": "Decline push-up",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-065",
+   "name": "Dip",
+   "aliases": [
+    "chest dip",
+    "parallel bar dip"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-066",
+   "name": "Chest press machine",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-067",
+   "name": "Cable fly",
+   "aliases": [
+    "cable crossover"
+   ],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-068",
+   "name": "Dumbbell fly",
+   "aliases": [],
+   "equipment": [
+    "bench",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-069",
+   "name": "Pec deck",
+   "aliases": [
+    "machine fly"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-070",
+   "name": "Single-arm dumbbell press",
+   "aliases": [],
+   "equipment": [
+    "bench",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "core"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-071",
+   "name": "Floor press",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "chest",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-072",
+   "name": "Overhead press",
+   "aliases": [
+    "military press",
+    "strict press",
+    "shoulder press"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-073",
+   "name": "Dumbbell shoulder press",
+   "aliases": [
+    "seated dumbbell press"
+   ],
+   "equipment": [
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-074",
+   "name": "Push press",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders",
+    "triceps",
+    "legs"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-075",
+   "name": "Arnold press",
+   "aliases": [],
+   "equipment": [
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-076",
+   "name": "Landmine press",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders",
+    "chest"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-077",
+   "name": "Pike push-up",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-078",
+   "name": "Handstand push-up",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders",
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-079",
+   "name": "Machine shoulder press",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-080",
+   "name": "Single-arm kettlebell press",
+   "aliases": [],
+   "equipment": [
+    "kettlebell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders",
+    "core"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-081",
+   "name": "Lateral raise",
+   "aliases": [
+    "side raise"
+   ],
+   "equipment": [
+    "cable",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-082",
+   "name": "Front raise",
+   "aliases": [],
+   "equipment": [
+    "cable",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-083",
+   "name": "Triceps pushdown",
+   "aliases": [
+    "cable pushdown",
+    "rope pushdown"
+   ],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-084",
+   "name": "Overhead triceps extension",
+   "aliases": [],
+   "equipment": [
+    "cable",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-085",
+   "name": "Skull crusher",
+   "aliases": [
+    "lying triceps extension"
+   ],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-086",
+   "name": "Bench dip",
+   "aliases": [],
+   "equipment": [
+    "bench",
+    "bodyweight"
+   ],
+   "pattern": "push",
+   "muscles": [
+    "triceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-087",
+   "name": "Barbell row",
+   "aliases": [
+    "bent-over row",
+    "Pendlay row"
+   ],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-088",
+   "name": "Dumbbell row",
+   "aliases": [
+    "one-arm row",
+    "single-arm dumbbell row"
+   ],
+   "equipment": [
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-089",
+   "name": "Seated cable row",
+   "aliases": [
+    "cable row"
+   ],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-090",
+   "name": "Chest-supported row",
+   "aliases": [
+    "seal row",
+    "incline bench row"
+   ],
+   "equipment": [
+    "dumbbell",
+    "machine"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-091",
+   "name": "T-bar row",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-092",
+   "name": "Inverted row",
+   "aliases": [
+    "Australian pull-up",
+    "body row"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-093",
+   "name": "Meadows row",
+   "aliases": [],
+   "equipment": [
+    "barbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-094",
+   "name": "Machine row",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-095",
+   "name": "Face pull",
+   "aliases": [],
+   "equipment": [
+    "band",
+    "cable"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "rear shoulders",
+    "upper back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-096",
+   "name": "Band pull-apart",
+   "aliases": [],
+   "equipment": [
+    "band"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "rear shoulders",
+    "upper back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-097",
+   "name": "Rear delt fly",
+   "aliases": [
+    "reverse fly"
+   ],
+   "equipment": [
+    "dumbbell",
+    "machine"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "rear shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-098",
+   "name": "Renegade row",
+   "aliases": [],
+   "equipment": [
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "core"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-099",
+   "name": "Kroc row",
+   "aliases": [],
+   "equipment": [
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "grip"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-100",
+   "name": "Pull-up",
+   "aliases": [
+    "pullup"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-101",
+   "name": "Chin-up",
+   "aliases": [
+    "chinup"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-102",
+   "name": "Neutral-grip pull-up",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-103",
+   "name": "Lat pulldown",
+   "aliases": [
+    "pulldown"
+   ],
+   "equipment": [
+    "cable",
+    "machine"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-104",
+   "name": "Assisted pull-up",
+   "aliases": [
+    "band-assisted pull-up"
+   ],
+   "equipment": [
+    "band",
+    "machine"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-105",
+   "name": "Straight-arm pulldown",
+   "aliases": [],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-106",
+   "name": "Single-arm lat pulldown",
+   "aliases": [],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "back"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-107",
+   "name": "Shrug",
+   "aliases": [
+    "barbell shrug",
+    "dumbbell shrug"
+   ],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "traps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-108",
+   "name": "Upright row",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "cable",
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "shoulders",
+    "traps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-109",
+   "name": "Biceps curl",
+   "aliases": [
+    "dumbbell curl",
+    "barbell curl"
+   ],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-110",
+   "name": "Hammer curl",
+   "aliases": [],
+   "equipment": [
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "biceps",
+    "forearms"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-111",
+   "name": "Incline dumbbell curl",
+   "aliases": [],
+   "equipment": [
+    "bench",
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-112",
+   "name": "Preacher curl",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "dumbbell",
+    "machine"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-113",
+   "name": "Cable curl",
+   "aliases": [],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-114",
+   "name": "Reverse curl",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "pull",
+   "muscles": [
+    "forearms",
+    "biceps"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-115",
+   "name": "Plank",
+   "aliases": [
+    "front plank"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-116",
+   "name": "Side plank",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "obliques",
+    "core"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-117",
+   "name": "Dead bug",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-118",
+   "name": "Bird dog",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "back"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-119",
+   "name": "Hanging leg raise",
+   "aliases": [
+    "hanging knee raise"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "hip flexors"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-120",
+   "name": "Ab wheel rollout",
+   "aliases": [
+    "ab rollout"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-121",
+   "name": "Pallof press",
+   "aliases": [],
+   "equipment": [
+    "band",
+    "cable"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "obliques",
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-122",
+   "name": "Cable woodchop",
+   "aliases": [
+    "woodchopper"
+   ],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "obliques"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-123",
+   "name": "Russian twist",
+   "aliases": [],
+   "equipment": [
+    "bodyweight",
+    "dumbbell"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "obliques"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-124",
+   "name": "Hollow hold",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-125",
+   "name": "Sit-up",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "hip flexors"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-126",
+   "name": "Crunch",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-127",
+   "name": "Cable crunch",
+   "aliases": [],
+   "equipment": [
+    "cable"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-128",
+   "name": "Mountain climber",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-129",
+   "name": "Copenhagen plank",
+   "aliases": [
+    "Copenhagen adductor plank"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "adductors",
+    "obliques"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-130",
+   "name": "Back extension hold",
+   "aliases": [
+    "superman hold"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "back",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-131",
+   "name": "Leg raise",
+   "aliases": [
+    "lying leg raise"
+   ],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core",
+    "hip flexors"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-132",
+   "name": "Toes to bar",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-133",
+   "name": "Stir the pot",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-134",
+   "name": "Suitcase hold",
+   "aliases": [],
+   "equipment": [
+    "dumbbell",
+    "kettlebell"
+   ],
+   "pattern": "core",
+   "muscles": [
+    "obliques",
+    "grip"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-135",
+   "name": "Farmer's carry",
+   "aliases": [
+    "farmer's walk",
+    "farmer carry"
+   ],
+   "equipment": [
+    "dumbbell",
+    "kettlebell",
+    "trap bar"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "grip",
+    "traps",
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-136",
+   "name": "Suitcase carry",
+   "aliases": [],
+   "equipment": [
+    "dumbbell",
+    "kettlebell"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "obliques",
+    "grip"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-137",
+   "name": "Overhead carry",
+   "aliases": [
+    "waiter walk"
+   ],
+   "equipment": [
+    "dumbbell",
+    "kettlebell"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "shoulders",
+    "core"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-138",
+   "name": "Front-rack carry",
+   "aliases": [],
+   "equipment": [
+    "kettlebell"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "core",
+    "upper back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-139",
+   "name": "Sled push",
+   "aliases": [
+    "prowler push"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-140",
+   "name": "Sled pull",
+   "aliases": [
+    "sled drag"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "hamstrings",
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-141",
+   "name": "Sandbag carry",
+   "aliases": [
+    "bear hug carry"
+   ],
+   "equipment": [
+    "sandbag"
+   ],
+   "pattern": "carry",
+   "muscles": [
+    "core",
+    "back"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-142",
+   "name": "Standing calf raise",
+   "aliases": [
+    "calf raise"
+   ],
+   "equipment": [
+    "bodyweight",
+    "dumbbell",
+    "machine"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "calves"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-143",
+   "name": "Seated calf raise",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "calves"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-144",
+   "name": "Hip abduction machine",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-145",
+   "name": "Hip adduction machine",
+   "aliases": [],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "adductors"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-146",
+   "name": "Clamshell",
+   "aliases": [],
+   "equipment": [
+    "band",
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-147",
+   "name": "Banded lateral walk",
+   "aliases": [
+    "monster walk"
+   ],
+   "equipment": [
+    "band"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-148",
+   "name": "Fire hydrant",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "glutes"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-149",
+   "name": "Tibialis raise",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "shins"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-150",
+   "name": "Wrist curl",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "forearms"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-151",
+   "name": "Neck curl",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "neck"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-152",
+   "name": "Box jump",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "quads",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-153",
+   "name": "Broad jump",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "glutes",
+    "quads"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-154",
+   "name": "Burpee",
+   "aliases": [],
+   "equipment": [
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "full body"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-155",
+   "name": "Battle ropes",
+   "aliases": [],
+   "equipment": [
+    "rope"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "shoulders",
+    "core"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-156",
+   "name": "Rowing machine",
+   "aliases": [
+    "erg",
+    "rower"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "full body"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-157",
+   "name": "Assault bike",
+   "aliases": [
+    "air bike"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "full body"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-158",
+   "name": "Thruster",
+   "aliases": [],
+   "equipment": [
+    "barbell",
+    "dumbbell"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "quads",
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-159",
+   "name": "Turkish get-up",
+   "aliases": [
+    "TGU"
+   ],
+   "equipment": [
+    "kettlebell"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "core",
+    "shoulders"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-160",
+   "name": "Kettlebell snatch",
+   "aliases": [],
+   "equipment": [
+    "kettlebell"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "glutes",
+    "shoulders"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-161",
+   "name": "Kettlebell clean",
+   "aliases": [],
+   "equipment": [
+    "kettlebell"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "glutes",
+    "back"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-162",
+   "name": "Medicine ball slam",
+   "aliases": [],
+   "equipment": [
+    "medicine ball"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "core",
+    "shoulders"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-163",
+   "name": "Hip flexor march",
+   "aliases": [
+    "banded march"
+   ],
+   "equipment": [
+    "band",
+    "bodyweight"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "hip flexors",
+    "core"
+   ],
+   "unilateral": true
+  },
+  {
+   "id": "ex-164",
+   "name": "Glute-ham raise",
+   "aliases": [
+    "GHR"
+   ],
+   "equipment": [
+    "machine"
+   ],
+   "pattern": "hinge",
+   "muscles": [
+    "hamstrings",
+    "glutes"
+   ],
+   "unilateral": false
+  },
+  {
+   "id": "ex-165",
+   "name": "Wall ball",
+   "aliases": [],
+   "equipment": [
+    "medicine ball"
+   ],
+   "pattern": "other",
+   "muscles": [
+    "quads",
+    "shoulders"
+   ],
+   "unilateral": false
+  }
+ ]
+}
