@@ -8,7 +8,7 @@ struct WatchContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("BikeComputer").font(.headline)
+                    Text("Athletics").font(.headline)
                     Spacer()
                     Image(systemName: phone.reachable ? "iphone" : "iphone.slash").foregroundStyle(phone.reachable ? .green : .secondary)
                 }
@@ -97,7 +97,7 @@ struct WatchContentView: View {
                 }
                 Text("Values come from the phone; \"--\" means no live source.").font(.caption2).foregroundStyle(.secondary)
             } else {
-                Text("Open BikeComputer on the iPhone to control the ride from here.").font(.caption2).foregroundStyle(.secondary)
+                Text("Open Athletics on the iPhone to control the ride from here.").font(.caption2).foregroundStyle(.secondary)
             }
         }
     }

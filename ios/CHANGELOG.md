@@ -1,4 +1,34 @@
-# BikeComputer iPhone + Apple Watch — changelog
+# Athletics (formerly BikeComputer) iPhone + Apple Watch — changelog
+
+## 1.0.0 (build BUILDNO) — 26 Oct 2026 — release candidate, TestFlight
+
+**Athletics.** The app is renamed; the cycling device stays "BikeComputer". Feature-frozen baseline = 0.8.0 (build 40);
+this build adds only the rebrand, accounts, legal pages and compliance items. Everything is **simulator/CI-tested**;
+nothing is device-tested until Rashed runs `BUILDBUILDNO-TEST.txt`. Firmware 0.7.0 is the matching board release.
+
+### Changed
+- Name, icon, launch screen and app-meaning strings → Athletics (see REBRAND.md). Bundle IDs, product names, URL scheme,
+  data folder and Bluetooth identifiers unchanged → existing data and pairings survive (launch tests on build-24/30/33/36/40 data).
+- Permission texts rewritten for the App Store review (what each permission is for, when it is used).
+- **Accounts** (Supabase Auth; the app never handles passwords itself): Sign in with Apple (native, nonce-checked),
+  Google (secure in-app browser via Supabase OAuth), e-mail (sign up with confirmation, sign in, reset link that opens the
+  app and asks for a new password), session in the Keychain, sign out keeps local data, guest → account upgrade uploads
+  everything already on the phone, **delete account and all data** (server function + local wipe, 3 taps from Profile),
+  **export my data** (JSON share sheet). When the build carries no Supabase values the app is exactly the 0.8.0 guest app
+  and says "Accounts not configured yet".
+- **Cloud sync**: rides, strength sessions, templates, plan and settings/profile pushed and pulled per user with
+  row-level security; last-writer-wins on the phone's change time; soft-delete tombstones; rides/sessions deduplicated by
+  origin id and time; offline queue, retry on sign-in / foreground / change; status and "Sync now" in Profile › Account and
+  App & device settings › Data synchronization. The BikeComputer Bluetooth profile sync is unchanged (phone authoritative).
+- Privacy policy and Terms bundled (Profile › About, account sheet) and exported under `ios/legal/` for hosting.
+- CI: account values injected from secrets at archive time (never in source or logs), display name verified in the archive.
+
+### Known limitations
+- Google and e-mail sign-in need the owner to create the Supabase project and Google OAuth client (backend/supabase/README.md);
+  until then only Apple (local identification) and guest mode are active.
+- Sync merges whole records (no field-level merge); a record edited on two devices at once keeps the newer edit.
+- Health-imported workouts sync as records but are not re-imported into Health on another device.
+- Android remains a skeleton (not releasable); see the Android gap list from TRACK 2.
 
 ## 0.8.0 (build 40) — 26 Oct 2026 — TestFlight, internal testers only — pairs with firmware 0.7.0
 

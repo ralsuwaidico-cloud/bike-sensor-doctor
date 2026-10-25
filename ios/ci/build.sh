@@ -9,6 +9,8 @@
 #   ASC_PRIVATE_KEY   secret  contents of the AuthKey_XXXX.p8 file
 #   APP_READY         "true" when the App Store Connect app record exists (from ci/asc.py)
 #   UPLOAD            "true" to upload to TestFlight (internal testers only)
+#   SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID
+#                     optional account-service values, written into Info.plist at build time (empty = accounts off)
 #
 # Secrets only ever go to a 0600 file in $RUNNER_TEMP that is deleted at the end, and every log line that leaves the
 # runner is passed through `scrub` (the repository and its logs are public).
@@ -28,7 +30,7 @@ note() { echo "$*" | tee -a "$SUMMARY"; }
 scrub() {
   local s
   s=$(cat)
-  for v in "${APPLE_TEAM_ID:-}" "${ASC_KEY_ID:-}" "${ASC_ISSUER_ID:-}"; do
+  for v in "${APPLE_TEAM_ID:-}" "${ASC_KEY_ID:-}" "${ASC_ISSUER_ID:-}" "${SUPABASE_ANON_KEY:-}" "${SUPABASE_URL:-}" "${GOOGLE_WEB_CLIENT_ID:-}" "${GOOGLE_IOS_CLIENT_ID:-}"; do
     [ -n "$v" ] && s=${s//"$v"/"<hidden>"}
   done
   printf '%s\n' "$s"
@@ -103,13 +105,17 @@ fi
 # so the App Store export can re-sign with Apple's cloud-managed distribution certificate.
 TEAM_ARGS=()
 [ -n "${APPLE_TEAM_ID:-}" ] && TEAM_ARGS=(DEVELOPMENT_TEAM="$APPLE_TEAM_ID")
+# account-service configuration → Info.plist (values stay out of the logs; only presence is reported)
+CLOUD_ARGS=(SUPABASE_URL="${SUPABASE_URL:-}" SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}" GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}" GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}")
+if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then note "Accounts: configured (Supabase)$( [ -n "${GOOGLE_WEB_CLIENT_ID:-}" ] && echo ', Google sign-in on' || echo ', Google sign-in off')"
+else note "Accounts: not configured (SUPABASE_URL / SUPABASE_ANON_KEY secrets absent) — the app runs guest-only"; fi
 ARCHIVE="$OUT/BikeComputer.xcarchive"
 archive() {
   local mode=$1; shift
   rm -rf "$ARCHIVE"
   xcodebuild archive -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
-    CURRENT_PROJECT_VERSION="${BUILD_NUMBER:-1}" ${TEAM_ARGS[@]+"${TEAM_ARGS[@]}"} "$@" > "$OUT/archive-$mode.log" 2>&1
+    CURRENT_PROJECT_VERSION="${BUILD_NUMBER:-1}" "${CLOUD_ARGS[@]}" ${TEAM_ARGS[@]+"${TEAM_ARGS[@]}"} "$@" > "$OUT/archive-$mode.log" 2>&1
   local r=$?
   digest "$OUT/archive-$mode.log" "archive-$mode"
   return $r
@@ -124,7 +130,10 @@ fi
 if [ -z "$ARCH_MODE" ]; then note "RESULT archive: FAILED"; exit 1; fi
 note "RESULT archive: ok ($ARCH_MODE)"
 for app in "$ARCHIVE/Products/Applications/BikeComputer.app" "$ARCHIVE/Products/Applications/BikeComputer.app/Watch/BikeComputerWatch.app"; do
-  if [ -d "$app" ]; then note "  contains $(basename "$app") $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Info.plist") ($(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Info.plist"))"
+  if [ -d "$app" ]; then
+    DN=$(/usr/libexec/PlistBuddy -c 'Print CFBundleDisplayName' "$app/Info.plist" 2>/dev/null)
+    note "  contains $(basename "$app") $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Info.plist") ($(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Info.plist")) — display name '$DN'"
+    [ "$DN" = "Athletics" ] || { note "    display name is not Athletics"; STATUS=1; }
   else note "  MISSING $app"; STATUS=1; fi
   if [ -d "$app" ]; then
     if codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -q "com.apple.developer.healthkit"; then

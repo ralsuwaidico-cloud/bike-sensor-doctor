@@ -11,7 +11,7 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_RESET"] = "1"
         app.launch()
-        XCTAssertTrue(app.staticTexts["BikeComputer"].waitForExistence(timeout: 20), "fresh launch must show the welcome screen")
+        XCTAssertTrue(app.staticTexts["Athletics"].waitForExistence(timeout: 20), "fresh launch must show the Athletics welcome screen")
         XCTAssertEqual(app.state, .runningForeground)
     }
 
@@ -68,6 +68,32 @@ final class LaunchSmokeTests: XCTestCase {
         app.buttons["Done"].firstMatch.tap()
         XCTAssertEqual(app.state, .runningForeground)
         Self.tapAllTabs(app)
+    }
+
+    /// A phone updated from build 40 (0.8.0): everything build 36 had plus weekday routine defaults, equipment and an
+    /// empty insight list. Must land on Home; the Account section must open and, with no account service configured in
+    /// CI, say so instead of offering a broken sign-in; Export must produce a share sheet. Nothing may be lost.
+    func testUpgradeFromBuild40OpensAccountAndLegalPages() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build40Store()
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        app.tabBars.buttons.element(boundBy: 4).tap()
+        let create = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Create account'")).firstMatch
+        XCTAssertTrue(create.waitForExistence(timeout: 10), "guest sees Create account in Profile › Account")
+        create.tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'not configured in this build'")).firstMatch.waitForExistence(timeout: 10), "without Supabase values the sheet says accounts are not available")
+        app.buttons["Not now"].firstMatch.tap()
+        let privacy = app.buttons["Privacy policy"].firstMatch
+        if privacy.waitForExistence(timeout: 5) { privacy.tap(); XCTAssertTrue(app.staticTexts["Athletics — Privacy policy"].firstMatch.waitForExistence(timeout: 10)); app.navigationBars.buttons.element(boundBy: 0).tap() }
+        XCTAssertEqual(app.state, .runningForeground)
+        Self.tapAllTabs(app)
+    }
+
+    static func build40Store() -> String {
+        var s = build36Store()
+        s = s.replacingOccurrences(of: "\"customExercises\":[],\"appliedProposals\":[],", with: "\"customExercises\":[],\"appliedProposals\":[],\"weekdayRoutines\":{\"1\":\"00000000-0000-0000-0000-000000000000\"},\"equipment\":{\"owned\":[\"dumbbells\",\"bench\"],\"excluded\":[]},\"activeSession\":null,\"ignoredInsights\":[],")
+        return s
     }
 
     static func build36Store() -> String {

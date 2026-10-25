@@ -10,6 +10,8 @@ struct BikeComputerApp: App {
     @StateObject private var sync: ProfileSync
     @StateObject private var reach = Reachability()
     @StateObject private var health = HealthAccess()
+    @StateObject private var account: AccountService
+    @StateObject private var cloud: SyncEngine
 
     init() {
         let s = Store()
@@ -55,6 +57,9 @@ struct BikeComputerApp: App {
         _location = StateObject(wrappedValue: l)
         _recorder = StateObject(wrappedValue: r)
         _sync = StateObject(wrappedValue: ps)
+        let acc = AccountService()
+        _account = StateObject(wrappedValue: acc)
+        _cloud = StateObject(wrappedValue: SyncEngine(store: s, account: acc))
     }
 
     var body: some Scene {
@@ -68,6 +73,10 @@ struct BikeComputerApp: App {
                 .environmentObject(sync)
                 .environmentObject(reach)
                 .environmentObject(health)
+                .environmentObject(account)
+                .environmentObject(cloud)
+                .onOpenURL { url in _ = account.handle(url: url) }
+                .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {
                     watchLink.activate()
                     // Apple Health import on launch, only while the rider keeps it on (dedupe makes it idempotent)

@@ -67,7 +67,7 @@ struct ConnectionsView: View {
         }
     }
     private var bluetoothStatus: ConnStatus { ConnectionRules.bluetooth(linkState: device.state, boardWanted: boardWanted) }
-    private var bluetoothSubtitle: String { switch device.state { case .off: return "Bluetooth is off on the phone"; case .unauthorized: return "permission needed (Settings › BikeComputer)"; default: return "on" } }
+    private var bluetoothSubtitle: String { switch device.state { case .off: return "Bluetooth is off on the phone"; case .unauthorized: return "permission needed (Settings › Athletics)"; default: return "on" } }
     private var gpsRequired: Bool { store.settings.phoneOnlyMode || !device.remembered }
     private var gpsStatus: ConnStatus { ConnectionRules.gps(authorized: location.authorized, sharing: location.sharing, hasFix: location.last != nil, requiredForRides: gpsRequired) }
     private var gpsSubtitle: String { location.authorized ? (location.sharing ? location.status : "ready · starts with a ride") : "location permission needed" }
@@ -77,7 +77,7 @@ struct ConnectionsView: View {
         if !watchEnabled { return "off (your choice)" }
         if watch.hrIsFresh { return "heart rate live · \(watch.hrBpm ?? 0) bpm" }
         if !watch.paired { return "no watch paired with this iPhone" }
-        if !watch.appInstalled { return "BikeComputer app not installed on the watch" }
+        if !watch.appInstalled { return "Athletics app not installed on the watch" }
         return watch.workoutState == "running" ? "workout running · waiting for heart rate" : "ready · start the workout on the watch"
     }
     private var meterEnabled: Bool { store.settings.enabledConnections.contains("meter") || device.remembered }
@@ -365,7 +365,7 @@ struct PhoneConnectionDetail: View {
             case .bluetooth:
                 Section("Status") { LabeledContent("Bluetooth", value: device.state == .off ? "off" : device.state == .unauthorized ? "permission needed" : "on") }
                 Section("Used for") { Text("The BikeComputer link (power, cadence, ride control, GPS to the board). Apple Watch uses its own connection.").font(.footnote) }
-                Section("Troubleshooting") { Text("Turn Bluetooth on in Control Centre or Settings. If permission was denied: Settings › BikeComputer › Bluetooth.").font(.footnote) }
+                Section("Troubleshooting") { Text("Turn Bluetooth on in Control Centre or Settings. If permission was denied: Settings › Athletics › Bluetooth.").font(.footnote) }
             case .gps:
                 Section("Status") {
                     LabeledContent("Permission", value: location.authorized ? "granted" : "not granted")
@@ -390,7 +390,7 @@ struct WatchConnectionDetail: View {
         List {
             Section("Status") {
                 StatusRow(title: "Watch paired with this iPhone", ok: watch.paired)
-                StatusRow(title: "BikeComputer app installed on the watch", ok: watch.appInstalled)
+                StatusRow(title: "Athletics app installed on the watch", ok: watch.appInstalled)
                 StatusRow(title: "Watch app reachable now", ok: watch.reachable)
                 LabeledContent("Workout on the watch", value: watch.workoutState)
                 LabeledContent("Live heart rate", value: watch.hrIsFresh ? "\(watch.hrBpm ?? 0) bpm" : "--")
@@ -403,7 +403,7 @@ struct WatchConnectionDetail: View {
                 Text(watch.lastResult).font(.footnote).foregroundStyle(.secondary)
             } footer: { Text("Off = the watch is never shown as missing. On = heart rate from the watch workout reaches the phone and the board, labelled Apple Watch; a reading older than 6 s is dropped, never held.") }
             Section("Steps") {
-                Text("1. Install BikeComputer on the watch (Watch app › Available Apps).\n2. Open it and tap Start: a cycling workout begins (one workout, no duplicates in Fitness).\n3. Heart rate appears here and on the board within a few seconds.").font(.footnote)
+                Text("1. Install Athletics on the watch (Watch app › Available Apps).\n2. Open it and tap Start: a cycling workout begins (one workout, no duplicates in Fitness).\n3. Heart rate appears here and on the board within a few seconds.").font(.footnote)
             }
             Section("Measurements") { Text("Heart rate (1 Hz), workout state, watch battery. Ride controls from the wrist: start, pause, resume, end.").font(.footnote) }
             Section("Troubleshooting") { Text("Not reachable: open the watch app once; make sure the iPhone's Bluetooth is on. No heart rate: the watch must sit snug and the workout must be running.").font(.footnote) }

@@ -8,7 +8,6 @@ struct ProfileTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
     @EnvironmentObject private var sync: ProfileSync
-    @State private var showAccount = false
 
     var body: some View {
         NavigationStack {
@@ -37,23 +36,17 @@ struct ProfileTabView: View {
                     link("Connections & devices", "dot.radiowaves.left.and.right", deviceSummary) { ConnectionsView() }
                     link("App & device settings", "gearshape", "display, notifications, privacy, sync, firmware") { AppSettingsPage() }
                 }
-                Section("Account") {
-                    if store.guest {
-                        Button { showAccount = true } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("rides stay on this phone").font(.caption).foregroundStyle(.secondary) } }
-                    } else {
-                        HStack { Label("Signed in with Apple", systemImage: "checkmark.seal"); Spacer(); Pill(text: "local only · sync coming", color: BC.stale) }
-                        Button("Sign out (keeps data on this phone)") { store.guest = true; store.appleUserId = nil }
-                    }
-                }
+                AccountSection()
                 Section {
-                    LabeledContent("Version", value: AppInfo.label)
+                    LabeledContent("Version", value: "Athletics \(AppInfo.label)")
+                    NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
+                    NavigationLink("Terms of use") { LegalView(kind: .terms) }
                     LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1.2")
-                    Text("Simulator-tested in CI; features become device-tested only after Rashed's checklist. Offline by design: no network calls in this build.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Works offline. Network is used only for your account and cloud sync when you sign in, and for Sign in with Apple. No analytics, no advertising.").font(.footnote).foregroundStyle(.secondary)
                     if let e = store.lastSaveError { Text("Save problem: \(e)").font(.footnote).foregroundStyle(BC.warn) }
                 } header: { Text("About") }
             }
             .navigationTitle("Profile")
-            .sheet(isPresented: $showAccount) { AccountSheet() }
         }
     }
     private func link<D: View>(_ title: String, _ icon: String, _ subtitle: String, @ViewBuilder _ d: @escaping () -> D) -> some View {
@@ -277,7 +270,6 @@ struct AppSettingsPage: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
     @EnvironmentObject private var sync: ProfileSync
-    @State private var confirmReset = false
     var body: some View {
         Form {
             Section("Display and theme") {
@@ -294,8 +286,9 @@ struct AppSettingsPage: View {
                 Text("A local notification while a phone-only ride records with the screen locked. No push notifications are used.").font(.footnote).foregroundStyle(.secondary)
             } header: { Text("Notifications") }
             Section {
-                Text("Everything stays on this phone: profile, plan, rides and the GPS tracks. No network calls, no analytics. Apple Health is written only when you turn it on in Connections.").font(.footnote).foregroundStyle(.secondary)
-                Button("Delete account and all data on this phone", role: .destructive) { confirmReset = true }
+                Text("Without an account everything stays on this phone. With an account, your data is stored in your own account and synced between your devices. No analytics, no advertising. Apple Health is written only when you turn it on in Connections.").font(.footnote).foregroundStyle(.secondary)
+                NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
+                Text("Delete your account or all data: Profile › Account.").font(.footnote).foregroundStyle(.secondary)
             } header: { Text("Privacy") }
             Section("Recording") {
                 Toggle("Phone-only mode", isOn: $store.settings.phoneOnlyMode)
@@ -304,7 +297,8 @@ struct AppSettingsPage: View {
             }
             Section("Data synchronization") {
                 NavigationLink { SyncStatusView() } label: { HStack { Text("Sync status"); Spacer(); Text(sync.state.label).font(.footnote).foregroundStyle(.secondary).lineLimit(1) } }
-                Text("Cloud sync (Google / e-mail accounts) arrives with the account service; the BikeComputer sync works over Bluetooth with firmware 0.6.0.").font(.footnote).foregroundStyle(.secondary)
+                CloudSyncRow()
+                Text("Cloud sync needs an account (Profile › Account). The BikeComputer sync works over Bluetooth with firmware 0.6.0 or newer.").font(.footnote).foregroundStyle(.secondary)
             }
             Section("Firmware") {
                 LabeledContent("Board firmware", value: device.info?.fw ?? (device.remembered ? "connect to read" : "no board"))
@@ -317,10 +311,6 @@ struct AppSettingsPage: View {
             }
         }
         .navigationTitle("App & device settings").navigationBarTitleDisplayMode(.inline)
-        .alert("Delete everything on this phone?", isPresented: $confirmReset) {
-            Button("Delete", role: .destructive) { device.forget(); store.resetAll() }
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("Profile, plan, ride history and the remembered BikeComputer are removed. The board keeps its own data; use Forget phone on the board too.") }
     }
 }
 
@@ -348,32 +338,6 @@ struct DeviceRow: View {
 }
 
 /// Account creation. Apple sign-in works now and only identifies the rider on this phone (no server yet).
-struct AccountSheet: View {
-    @EnvironmentObject private var store: Store
-    @Environment(\.dismiss) private var dismiss
-    @State private var error: String?
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Create an account").font(.system(size: 28, weight: .bold, design: .rounded))
-                Text("Your rides and plan are on this phone. An account lets them follow you to a new phone or Android once the sync service is live; until then Sign in with Apple only identifies you here.").foregroundStyle(.secondary)
-                SignInWithAppleButton(.signUp) { r in r.requestedScopes = [.fullName] } onCompletion: { result in
-                    switch result {
-                    case .success(let a): if let c = a.credential as? ASAuthorizationAppleIDCredential { store.appleUserId = c.user; store.guest = false; if let n = c.fullName?.givenName, !n.isEmpty, store.profile.name.isEmpty { store.profile.name = n }; dismiss() }
-                    case .failure(let e): error = e.localizedDescription
-                    }
-                }.signInWithAppleButtonStyle(.black).frame(height: 50).clipShape(RoundedRectangle(cornerRadius: 14))
-                Button { } label: { Text("Sign in with Google · coming with the sync service").frame(maxWidth: .infinity) }.buttonStyle(.bordered).disabled(true)
-                Button { } label: { Text("Continue with e-mail · coming with the sync service").frame(maxWidth: .infinity) }.buttonStyle(.bordered).disabled(true)
-                if let e = error { Text(e).font(.footnote).foregroundStyle(BC.warn) }
-                Spacer()
-            }.padding()
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Not now") { dismiss() } } }
-        }
-    }
-}
-
-
 /// The rider's own exercises (built-in ones are listed read-only in the search sheet).
 struct MyExercisesView: View {
     @EnvironmentObject private var store: Store

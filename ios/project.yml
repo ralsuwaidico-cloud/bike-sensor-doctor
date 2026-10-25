@@ -1,4 +1,4 @@
-# XcodeGen spec for the BikeComputer iPhone + Apple Watch apps.
+# XcodeGen spec for the Athletics iPhone + Apple Watch apps (product/bundle ids keep the original BikeComputer names).
 # The .xcodeproj is generated on the GitHub macOS runner (never committed), so nobody needs to open Xcode.
 # Signing team and build number are passed in by CI (ios/ci/build.sh); nothing secret lives in this file.
 name: BikeComputer
@@ -10,9 +10,18 @@ options:
   createIntermediateGroups: true
   generateEmptyDirectories: true
 
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: "2.5.0"
+
 settings:
   base:
-    MARKETING_VERSION: "0.8.0"
+    SUPABASE_URL: ""
+    SUPABASE_ANON_KEY: ""
+    GOOGLE_WEB_CLIENT_ID: ""
+    GOOGLE_IOS_CLIENT_ID: ""
+    MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -26,22 +35,42 @@ targets:
     sources:
       - BikeComputer
       - Shared
+    dependencies:
+      - package: Supabase
+        product: Supabase
+      - target: BikeComputerWatch
+        embed: true
+        codeSign: true
+        copy:
+          destination: productsDirectory
+          subpath: $(CONTENTS_FOLDER_PATH)/Watch
     info:
       path: BikeComputer/Info.plist
       properties:
-        CFBundleDisplayName: BikeComputer
+        CFBundleDisplayName: Athletics
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
-        UILaunchScreen: {}
+        CFBundleURLTypes:
+          - CFBundleURLName: com.ralsuwaidico.bikecomputer.auth
+            CFBundleURLSchemes: [com.ralsuwaidico.bikecomputer]
+        SUPABASE_URL: $(SUPABASE_URL)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        GOOGLE_WEB_CLIENT_ID: $(GOOGLE_WEB_CLIENT_ID)
+        GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchMark
+          UIImageRespectsSafeAreaInsets: true
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [bluetooth-central, location]
         ITSAppUsesNonExemptEncryption: false
-        NSBluetoothAlwaysUsageDescription: BikeComputer connects to your Waveshare cycling computer over Bluetooth to show live power and cadence.
-        NSLocationWhenInUseUsageDescription: BikeComputer sends your phone's GPS position, speed and distance to your cycling computer during a ride.
-        NSHealthShareUsageDescription: BikeComputer reads heart rate from your Apple Watch workout to show it on your cycling computer.
-        NSHealthUpdateUsageDescription: BikeComputer can save your finished rides to Apple Health when you choose to.
+        NSBluetoothAlwaysUsageDescription: Athletics uses Bluetooth to connect to your BikeComputer cycling device, send it your phone's GPS and show its live power and cadence during rides.
+        NSLocationWhenInUseUsageDescription: Athletics uses your location to record speed, distance and the route of your rides, and to send GPS to your BikeComputer device.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Athletics records speed, distance and the route while a ride is in progress, including when the screen is locked. Location is never used when no ride is running.
+        NSHealthShareUsageDescription: Athletics reads your heart rate during workouts and, if you choose, your past cycling and strength workouts, to show them in your training plan and history.
+        NSHealthUpdateUsageDescription: Athletics can save your finished rides and strength sessions to Apple Health when you choose to.
     entitlements:
       path: BikeComputer/BikeComputer.entitlements
       properties:
@@ -53,13 +82,6 @@ targets:
         PRODUCT_NAME: BikeComputer
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    dependencies:
-      - target: BikeComputerWatch
-        embed: true
-        codeSign: true
-        copy:
-          destination: productsDirectory
-          subpath: $(CONTENTS_FOLDER_PATH)/Watch
 
   BikeComputerWatch:
     type: application
@@ -70,7 +92,7 @@ targets:
     info:
       path: BikeComputerWatch/Info.plist
       properties:
-        CFBundleDisplayName: BikeComputer
+        CFBundleDisplayName: Athletics
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKApplication: true
@@ -78,8 +100,8 @@ targets:
         WKRunsIndependentlyOfCompanionApp: false
         WKBackgroundModes: [workout-processing]
         ITSAppUsesNonExemptEncryption: false
-        NSHealthShareUsageDescription: BikeComputer reads your live heart rate during a cycling workout and sends it to your iPhone and cycling computer.
-        NSHealthUpdateUsageDescription: BikeComputer records your cycling workout so the watch can measure heart rate. You choose whether it is saved to Apple Health.
+        NSHealthShareUsageDescription: Athletics reads your live heart rate during a cycling workout and sends it to your iPhone and BikeComputer device.
+        NSHealthUpdateUsageDescription: Athletics records your cycling workout so the watch can measure heart rate. You choose whether it is saved to Apple Health.
     entitlements:
       path: BikeComputerWatch/BikeComputerWatch.entitlements
       properties:

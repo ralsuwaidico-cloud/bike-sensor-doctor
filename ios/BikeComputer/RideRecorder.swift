@@ -69,7 +69,7 @@ final class RideRecorder: ObservableObject {
         let c = UNUserNotificationCenter.current()
         let content = UNMutableNotificationContent()
         content.title = owner == .board ? "BikeComputer ride in progress" : "Recording in the background"
-        content.body = owner == .board ? "The board records; the phone keeps mirroring it and sending GPS." : "GPS and heart rate keep recording. Open BikeComputer to see the ride."
+        content.body = owner == .board ? "The board records; the phone keeps mirroring it and sending GPS." : "GPS and heart rate keep recording. Open Athletics to see the ride."
         content.sound = nil
         c.add(UNNotificationRequest(identifier: "bc.ride.background", content: content, trigger: nil))
     }

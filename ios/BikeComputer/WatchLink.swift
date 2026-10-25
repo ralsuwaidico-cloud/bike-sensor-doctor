@@ -37,7 +37,7 @@ final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
         guard session.activationState == .activated else { lastResult = "Connection not ready yet"; return }
-        guard session.isReachable else { lastResult = "Watch app not reachable. Open BikeComputer on the watch and try again."; return }
+        guard session.isReachable else { lastResult = "Watch app not reachable. Open Athletics on the watch and try again."; return }
         lastResult = "Sending…"
         session.sendMessage(WatchMessage.makePing(), replyHandler: { [weak self] reply in
             let ms = WatchMessage.roundTripMs(of: reply)
