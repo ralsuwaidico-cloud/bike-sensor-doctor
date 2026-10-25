@@ -38,6 +38,9 @@ typedef struct {
     bool standby;                /* 0.6.0 connected standby: screen off, no ride, Bluetooth link kept, sensor scanning paused */
     uint32_t standbys;
     char sleep_block[40];        /* why auto deep sleep is not happening right now ("" = nothing blocks it) */
+    bool safe_mode;              /* 0.6.1: BOOT held at reset — touch gate forced open, defaults for display settings */
+    uint32_t touch_reports;      /* 0.6.1 diagnostics: raw reports from the touch driver since boot */
+    uint32_t touch_passed;       /* ... of which reached LVGL as a press */
 } app_power_t;
 
 void app_power_init(void);                       /* after app_init(); reads the profile settings */
@@ -56,6 +59,11 @@ int app_power_wake_next(int taps);                      /* Settings cycle 1 -> 2
 /** UI hook run right after the display wakes (backlight fade-in); may be NULL. */
 void app_power_set_wake_hook(void (*hook)(void));
 bool app_power_gate_blocking(void);                     /* true while touches are being swallowed / guarded */
+/** 0.6.1 SAFE MODE (BOOT held during RESET): the gate never swallows (a touch on a dark screen wakes it and is passed through),
+ *  wake gesture = any touch, touch lock off, brightness 80 %, screen timeout 5 min — in memory only, nothing saved. */
+void app_power_set_safe_mode(bool on);
+bool app_power_safe_mode(void);
+const char *app_power_gate_text(void);                  /* "pass" / "off" / "swallow" / "guard" (diagnostics) */
 /** A hold-to-confirm just fired and the screen is about to change: swallow the rest of this touch + guard, so the
  *  finger still on the glass cannot press whatever appears underneath (results screen, Home...). */
 void app_power_swallow_rest(void);

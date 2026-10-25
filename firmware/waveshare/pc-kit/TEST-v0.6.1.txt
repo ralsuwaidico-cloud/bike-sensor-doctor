@@ -1,0 +1,46 @@
+BikeComputer firmware 0.6.1 — hardware acceptance checklist (25 Oct 2026)
+=========================================================================
+0.6.1 = 0.6.0 (rev 3) + the fix for "touch dead after screen-off / sleep wake" + Settings layout fixes. Nothing else changed.
+Record PASS / FAIL / NOT TESTED per step. Everything below is SIMULATOR-TESTED ONLY until you confirm it here; the simulator
+now emulates the real touch controller's event-driven reads and reproduced the 0.6.0 freeze (20/20 cycles dead) before the
+fix and 0/20 after it — but only the glass can prove it. Board on USB, battery DISCONNECTED (HW-1).
+
+Install
+ I1  INSTALL-v0.6.1.bat: finds the COM port, reads the 16 MB backup, says "Backup verified: 16 MB, firmware 0.6.0 rev 3",
+     asks YES, writes 2 regions, "INSTALLED". Board restarts to Home with your name and FTP.   PASS/FAIL
+ I2  Settings footer: "firmware 0.6.1" and a build stamp "Oct 25 hh:mm id xxxxxxxx". History lists your rides; the power
+     meter is still paired.   PASS/FAIL
+     Rollback at any time: ROLLBACK-TO-v050.bat (0.5.0, keeps data) or RESTORE-BACKUP-BEFORE-v061.bat (exact image).
+     If touch is ever dead: press RESET (always works). SAFE MODE: hold BOOT while pressing RESET -> red "SAFE MODE" badge
+     on Home, the touch gate is off for that boot, nothing saved or erased.
+
+1. Required behaviour (Rashed, 25 Oct)
+ 1-1  RESET -> Home. Connections, History and Settings each open on a normal tap; "<" returns.   PASS/FAIL
+ 1-2  Quick Settings > Screen off. Touch the glass once anywhere: the display comes back (fade-in).   PASS/FAIL
+ 1-3  Lift the finger, then tap Connections: it opens at once (no second wake touch, no RESET).   PASS/FAIL
+ 1-4  Repeat 1-2 + 1-3 twenty times (vary the spot, mix taps and short swipes). Responsive afterwards: ___ / 20
+      (target 20/20). Any wake that pressed a button underneath: ___ (target 0).
+ 1-5  Screen off, then put your finger exactly where START RIDE sits and hold 2 s, lift: the screen woke, NO ride started;
+      then tap Connections normally: it opens.   PASS/FAIL
+ 1-6  Quick Settings > Deep sleep > HOLD: DEEP SLEEP. Touch once: the board boots (~1 s). Then tap Connections -> opens;
+      back; Settings -> opens; back; History -> opens.   PASS/FAIL   (if touch does not wake it: RESET, note it here)
+ 1-7  After that sleep wake: 5 plain taps on START RIDE -> no ride, toast "hold 1 s to start".   PASS/FAIL
+ 1-8  Hold START RIDE ~1 s: bar fills, "RECORDING STARTED", ride screen. History later: exactly ONE new ride.   PASS/FAIL
+ 1-9  Phone app connected (Ride tab shows values). Screen off, wait 5 min without touching: phone still connected and
+      updating.   PASS/FAIL
+ 1-10 During a ride: Screen off, pedal 2 min, touch once to wake: ride time advanced, watts live, XDS connected; the
+      ride screen responds to swipes/taps right after the wake.   PASS/FAIL
+
+2. Settings layout (every page)
+ 2-1  Settings (scroll top to bottom), Display, Power (scroll), Diagnostics, Device Health (scroll), Phone, Wi-Fi + Networks
+      + Saved, Connections menu + all 8 category pages, Quick Settings (scroll): no text over another control, nothing cut
+      by the round edge, long values end in "..." instead of running under the title, rows are finger-sized, "<" always
+      reachable. Note any page that fails: ______________________   PASS/FAIL
+ 2-2  Scroll a long list with a slow drag: nothing opens by itself.   PASS/FAIL
+
+3. Everything else from TEST-v0.6.0.txt still applies (Wi-Fi hotspot, CSC sensors, phone services, wake-gesture options,
+   deep-sleep trials). Those sections were not changed by 0.6.1.
+
+Serial log (optional but very useful): READ-LOG-v0.6.0.bat works for 0.6.1 too. Lines starting with "TOUCH" show the
+gate state on every wake ("swallow" -> "guard" -> "pass"), "touch wake check" shows the controller answering, and
+"WATCHDOG" means a release report was lost and recovered automatically.

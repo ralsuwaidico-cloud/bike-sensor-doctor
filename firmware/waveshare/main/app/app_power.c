@@ -15,9 +15,19 @@ static uint32_t s_sleep_at_ms;          /* opt-in critical action pending (bat_p
 static uint32_t s_phone_off_at_ms;      /* SETTINGS from the phone: switch the link off once the reply is out */
 static bool s_inited, s_last_usb;
 static void (*s_wake_hook)(void);
+static bool s_safe_mode;
 void app_power_set_wake_hook(void (*hook)(void)) { s_wake_hook = hook; }
-bool app_power_gate_blocking(void) { return bc_gate_blocking(&P.gate); }
-void app_power_swallow_rest(void) { if (s_inited && P.screen_on && !P.asleep) bc_gate_wake(&P.gate, true, plat_ms()); }
+bool app_power_gate_blocking(void) { return !s_safe_mode && bc_gate_blocking(&P.gate); }
+void app_power_swallow_rest(void) { if (s_inited && P.screen_on && !P.asleep && !s_safe_mode) bc_gate_wake(&P.gate, true, plat_ms()); }
+void app_power_set_safe_mode(bool on) { s_safe_mode = on; P.safe_mode = on; }
+bool app_power_safe_mode(void) { return s_safe_mode; }
+const char *app_power_gate_text(void) { return s_safe_mode ? "safe mode (open)" : bc_gate_state_name(P.gate.st); }
+static void gate_log(const char *why)
+{
+    char l[120]; snprintf(l, sizeof l, "TOUCH gate %s (%s) swallowed %u guarded %u watchdog %u", bc_gate_state_name(P.gate.st), why,
+                          (unsigned)P.gate.swallowed, (unsigned)P.gate.guarded, (unsigned)P.gate.watchdog_resets);
+    plat_log(l);
+}
 
 const app_power_t *app_power(void) { return &P; }
 
@@ -41,13 +51,18 @@ void app_power_init(void)
     s_last_sample_ms = 0; s_last_log_ms = 0; s_alert_pending = false; s_last_cue_id = -1; s_sleep_at_ms = 0;
     P.last_touch_ms = plat_ms();
     s_phone_off_at_ms = 0; s_last_usb = false;
+    P.safe_mode = s_safe_mode;
     P.woke_from_sleep = plat_woke_from_sleep();
     if (P.woke_from_sleep) {
         plat_log("POWER wake from deep sleep (touch / RESET / USB)");
-        /* the touch that woke the chip may still be on the glass, and the rider may tap again while the splash shows:
-           swallow it all + the guard, exactly like a screen-off wake, so the boot can never press a control */
-        bc_gate_wake(&P.gate, true, plat_ms());
+        /* 0.6.1: the touch that woke the chip is probably long gone by the time the UI starts (~1 s boot), and the driver
+           reports nothing until the next contact, so a SWALLOW here would never see its release (0.6.0 rev 3 froze after
+           every deep-sleep wake). Use a long GUARD instead: a finger still down when it ends is swallowed to its release,
+           a new touch after it is a real touch. Never a swallow without a finger the gate has actually seen. */
+        bc_gate_wake(&P.gate, false, plat_ms()); P.gate.guard_until_ms = plat_ms() + 1500;
     }
+    if (s_safe_mode) plat_log("TOUCH SAFE MODE: gate forced open (BOOT held at reset)");
+    gate_log("init");
     plat_backlight(app_profile()->brightness);
     plat_panel_sleep(false);
     s_inited = true;
@@ -148,6 +163,10 @@ void app_power_phone_link_deferred_off(void) { s_phone_off_at_ms = plat_ms() + 1
 void app_power_tick(uint32_t now)
 {
     if (!s_inited || P.asleep) return;
+    /* 0.6.1: the gate must advance without touch reports (the device reads the controller only on its interrupt) */
+    /* ... and while it blocks, read the controller ourselves so a release that raised no interrupt is still seen */
+    if (!s_safe_mode && P.screen_on && bc_gate_blocking(&P.gate)) plat_touch_poll();
+    { uint32_t wd = P.gate.watchdog_resets; if (!s_safe_mode && bc_gate_tick(&P.gate, now)) gate_log(P.gate.watchdog_resets != wd ? "WATCHDOG: release never seen, swallow abandoned" : "guard over"); }
     app_power_settle(now);
     standby_update();
     if (s_phone_off_at_ms && (int32_t)(now - s_phone_off_at_ms) >= 0) { s_phone_off_at_ms = 0; if (!app_profile()->phone_on) plat_phone_set_enabled(false); }
@@ -191,9 +210,30 @@ const char *app_power_wake_name(int t) { return t == 1 ? "any touch" : t == 2 ? 
 int app_power_wake_next(int t) { return t == 1 ? 2 : t == 2 ? 3 : 1; }
 
 /* rev 3: the gate. Everything the touch controller reports goes through here before LVGL sees it. */
+static bool app_power_touch_filter_gated(bool pressed, int x, int y, uint32_t now);
 bool app_power_touch_filter(bool pressed, int x, int y, uint32_t now)
 {
     if (!s_inited || P.asleep) return false;
+    P.touch_reports++;
+    if (P.touch_reports <= 5) {               /* serial diagnostics: the first reports after boot, with the gate state */
+        char l[96]; snprintf(l, sizeof l, "TOUCH report %u %s x=%d y=%d gate=%s screen=%s", (unsigned)P.touch_reports, pressed ? "down" : "up", x, y,
+                             app_power_gate_text(), P.screen_on ? "on" : "off");
+        plat_log(l);
+    }
+    if (s_safe_mode) {                        /* 0.6.1 SAFE MODE: never swallow; a touch on a dark screen wakes it and still counts */
+        if (pressed) P.last_touch_ms = now;
+        if (!P.screen_on && pressed) { P.wakes++; app_power_screen_wake(); bc_gate_reset(&P.gate); }
+        if (pressed) P.touch_passed++;
+        return true;
+    }
+    bc_gate_state_t before = P.gate.st;
+    bool pass = app_power_touch_filter_gated(pressed, x, y, now);
+    if (P.gate.st != before) gate_log(pressed ? "feed down" : "feed up");
+    if (pass && pressed) P.touch_passed++;
+    return pass;
+}
+static bool app_power_touch_filter_gated(bool pressed, int x, int y, uint32_t now)
+{
     if (!P.screen_on) {
         if (pressed) P.last_touch_ms = now;
         int need = app_power_wake_taps_now();

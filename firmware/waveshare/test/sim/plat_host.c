@@ -87,7 +87,7 @@ long plat_file_size(const char *path) { char p[512]; full(path, p, sizeof p); st
 void plat_health(plat_health_t *o)
 {
     memset(o, 0, sizeof *o);
-    snprintf(o->fw_version, sizeof o->fw_version, "0.6.0-sim"); snprintf(o->build, sizeof o->build, "%.6s %.5s #sim", __DATE__, __TIME__);
+    snprintf(o->fw_version, sizeof o->fw_version, "0.6.1-sim"); snprintf(o->build, sizeof o->build, "%.6s %.5s id 8494a0", __DATE__, __TIME__);
     o->uptime_s = g_sim.now_ms / 1000; snprintf(o->reset_reason, sizeof o->reset_reason, "power-on");
     o->boot_count = g_sim.boots; o->crash_total = 2; o->crash_consecutive = 0; o->safe_mode_entries = 0;
     o->heap_free_k = 61; o->heap_min_k = 48; o->psram_free_k = 1890; o->psram_total_k = 2048;
@@ -105,6 +105,7 @@ int plat_battery_pct(void) { return g_sim.battery_mv ? bc_batt_pct_from_mv(g_sim
 bool plat_usb_power(void) { return g_sim.usb || plat_battery_mv() > 4250; }
 void plat_backlight(int pct) { g_sim.backlight = pct; }
 void plat_panel_sleep(bool sleep) { g_sim.panel_asleep = sleep; }
+void plat_touch_poll(void) { g_sim.touch_polls++; g_sim.touch_poll_request = true; }
 void plat_touch_screen_off(bool off) { g_sim.touch_fast_poll = off; if (off) g_sim.touch_screen_offs++; }
 bool plat_device_id(uint8_t out[6]) { static const uint8_t id[6] = { 0x8c, 0xfd, 0x49, 0x9b, 0xef, 0x40 }; memcpy(out, id, 6); return true; }
 void plat_deep_sleep(int wake_taps) { g_sim.deep_sleeps++; g_sim.asleep = true; g_sim.sleep_wake_taps = wake_taps; }
@@ -212,7 +213,7 @@ int plat_wifi_saved(char ssids[][33], int max) { w_load(); int n = wstore.n < ma
 void plat_wifi_status(plat_wifi_status_t *o) { pump(); *o = ws; }
 void plat_wifi_set_quiet(bool riding) { w_quiet = riding; }
 int plat_wifi_scan_count(void) { return w_scan_count; }
-const char *plat_fw_version(void) { return "0.6.0-sim"; }
+const char *plat_fw_version(void) { return "0.6.1-sim"; }
 
 /* ---- phone link simulation */
 #define PH g_sim.phone

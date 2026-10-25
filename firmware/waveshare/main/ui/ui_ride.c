@@ -365,7 +365,7 @@ static void ride_update(void)
     char rssi[16]; if (pw->rssi) snprintf(rssi, sizeof rssi, "%d dBm", pw->rssi); else rssi[0] = 0;
     char hrs[40];
     if (lv.hr_ok) snprintf(hrs, sizeof hrs, "#56e08c %s# %d bpm%s", bc_src_name(lv.hr_src), lv.bpm, (lv.strap_hr && lv.phone_hr) ? " +backup" : "");
-    else snprintf(hrs, sizeof hrs, "#%06x %s#", ui_hex(ui_link_color(hr->link)), hr->link == PLAT_LINK_NOT_PAIRED ? "NO STRAP / PHONE" : ui_link_text(hr->link));
+    else snprintf(hrs, sizeof hrs, "#%06x %s#", ui_hex(ui_link_color(hr->link)), hr->link == PLAT_LINK_NOT_PAIRED ? "NO SOURCE" : ui_link_text(hr->link));
     const plat_link_info_t *sp = &lv.link[PLAT_SENS_SPEED];
     char gps[40];
     if (sp->link == PLAT_LINK_NOT_PAIRED) snprintf(gps, sizeof gps, "#8494a0 no phone#");

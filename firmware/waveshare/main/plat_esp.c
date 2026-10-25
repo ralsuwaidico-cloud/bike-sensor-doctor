@@ -128,7 +128,8 @@ void plat_deep_sleep(int wake_taps)
     vTaskDelay(pdMS_TO_TICKS(100));                    /* let the last log lines and NVS commits finish */
     hw_deep_sleep_touch_wake(wake_taps);               /* never returns */
 }
-void plat_touch_screen_off(bool off) { hw_touch_keep_awake(off); }
+void plat_touch_screen_off(bool off) { hw_touch_keep_awake(off); if (!off) hw_touch_wake_check(); }
+void plat_touch_poll(void) { hw_touch_poll(); }
 bool plat_device_id(uint8_t out[6]) { return hw_device_id(out); }
 void plat_sensors_set_standby(bool standby) { ble_central_set_standby(standby); }
 bool plat_woke_from_sleep(void) { return esp_reset_reason() == ESP_RST_DEEPSLEEP; }
@@ -175,7 +176,7 @@ void plat_health(plat_health_t *o)
     snprintf(o->fw_version, sizeof o->fw_version, "%.23s", d->version);
     /* build stamp = compile date/time + the first 4 bytes of the ELF SHA-256: unique per build, so the physical screen can
        prove which firmware is running (Settings footer and Device Health) */
-    snprintf(o->build, sizeof o->build, "%.6s %.5s #%02x%02x%02x%02x", d->date, d->time, d->app_elf_sha256[0], d->app_elf_sha256[1], d->app_elf_sha256[2], d->app_elf_sha256[3]);
+    snprintf(o->build, sizeof o->build, "%.6s %.5s id %02x%02x%02x%02x", d->date, d->time, d->app_elf_sha256[0], d->app_elf_sha256[1], d->app_elf_sha256[2], d->app_elf_sha256[3]);
     o->uptime_s = (uint32_t)(esp_timer_get_time() / 1000000);
     snprintf(o->reset_reason, sizeof o->reset_reason, "%s", plat_reset_reason());
     o->boot_count = g_selftest.boot_count;

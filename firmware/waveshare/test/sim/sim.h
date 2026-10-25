@@ -18,7 +18,7 @@ typedef struct {
     /* simulated Wi-Fi world */
     struct { char ssid[33]; int rssi; bool secured; char pass[65]; bool present; bool ghz5_only; uint8_t channel; } ap[6]; int n_ap;
     bool wifi_no_dhcp, wifi_no_answer, wifi_no_internet; int wifi_auto_attempts, wifi_ui_ticks;
-    bool touch_fast_poll; int touch_screen_offs; int sleep_wake_taps; bool sensor_standby; int sensor_standbys;
+    bool touch_fast_poll; int touch_screen_offs, touch_polls; bool touch_event_mode, touch_poll_request; int sleep_wake_taps; bool sensor_standby; int sensor_standbys;
     /* simulated phone: the harness plays the phone (what the iPhone app will send) */
     struct { bool enabled, connected, bonded, pairing; uint32_t passkey; int rssi; plat_phone_in_t in;
              bc_ctrl_req_t ctrl; bool ctrl_pending; bc_ctrl_resp_t last_resp; int resps; bc_live_t last_live; int lives; int forgets;

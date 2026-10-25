@@ -75,6 +75,9 @@ void ui_toast(const char *txt);           /* short amber notice at the top of an
 /* a vertically scrolling area kept inside the circle (y0..y1) */
 lv_obj_t *ui_scroll_area(lv_obj_t *p, int y0, int y1);
 /* a centred column of rows inside a scroll area */
+void ui_row_fit(lv_obj_t *row);
+void ui_row_set_value(lv_obj_t *row, const char *txt, lv_color_t color);   /* 0.6.1: set a row value (sizes first, see .c) */                 /* 0.6.1: title/value widths so neither runs under the other */
+lv_obj_t *ui_note(lv_obj_t *p, const char *txt, int at_y);   /* 0.6.1: wrapped muted description that fits the circle */
 lv_obj_t *ui_row_btn(lv_obj_t *list, const char *left, const char *right, lv_color_t right_c, lv_event_cb_t cb, void *ud);
 /* roller ("spinning wheel") */
 lv_obj_t *ui_wheel(lv_obj_t *p, const char *options, int sel, int w, int rows, const lv_font_t *f);

@@ -58,7 +58,7 @@ static void cat_status(cat_t c, cat_status_t *o)
         else if (lv.power_ok) { snprintf(o->txt, sizeof o->txt, "%d W", lv.watts); o->color = C_GREEN; o->connected = true; }
         else if (l->link == PLAT_LINK_CONNECTED) { snprintf(o->txt, sizeof o->txt, "no data"); o->color = C_AMBER; o->connected = true; }
         else if (l->link == PLAT_LINK_CONNECTING) { snprintf(o->txt, sizeof o->txt, "connecting"); o->color = C_AMBER; }
-        else { snprintf(o->txt, sizeof o->txt, "! not found"); o->color = C_RED; o->alert = true; }
+        else { snprintf(o->txt, sizeof o->txt, "! missing"); o->color = C_RED; o->alert = true; }
         break; }
     case CAT_HR: {
         const plat_link_info_t *l = &lv.link[PLAT_SENS_HR];
@@ -112,9 +112,8 @@ static void menu_update(void)
 {
     for (int k = 0; k < CAT_COUNT; k++) {
         cat_status_t s; cat_status((cat_t)k, &s);
-        lv_obj_t *r = lv_obj_get_child(m_rows[k], 1);
-        if (!r) continue;
-        lv_label_set_text(r, s.txt); lv_obj_set_style_text_color(r, s.color, 0);
+        if (!m_rows[k]) continue;
+        ui_row_set_value(m_rows[k], s.txt, s.color);
     }
 }
 static void detail_cb(lv_event_t *e) { ui_conn_detail_show((int)(intptr_t)lv_event_get_user_data(e)); }
@@ -215,7 +214,7 @@ static void detail_update(void)
         snprintf(b, sizeof b, "%s\n#8494a0 STRAP#  DIRECT\n#%06x %s#%s %s\n#8494a0 WATCH / PHONE#  VIA PHONE\n#%06x %s#\n#8494a0 WHOOP#  CLOUD\n#8494a0 unsupported - planned#\n#8494a0 PREFERENCE# %s\nthe other source is the backup\n",
                  shown, ui_hex(ui_link_color(p->hr.paired ? l->link : PLAT_LINK_NOT_PAIRED)), link_word(l->link, p->hr.paired), sig, p->hr.paired ? p->hr.name : "",
                  ui_hex(lv.phone_hr ? C_GREEN : ps.state == PLAT_PHONE_READY ? C_MUT : C_FAINT),
-                 lv.phone_hr ? "live" : ps.state == PLAT_PHONE_READY ? "phone connected, no HR relayed" : "phone not connected",
+                 lv.phone_hr ? "live" : ps.state == PLAT_PHONE_READY ? "connected, no HR yet" : "phone not connected",
                  p->hr_pref ? "watch first" : "strap first");
         if (p->hr.paired && l->link != PLAT_LINK_CONNECTED) { size_t n = strlen(b); snprintf(b + n, sizeof b - n, "#ff5a5a STRAP MISSING:# wet the pads, wear it\n30 s, check its battery, or RECONNECT"); }
         break; }

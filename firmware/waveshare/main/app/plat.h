@@ -86,6 +86,9 @@ void plat_panel_sleep(bool sleep);     /* display controller sleep-in / wake (ba
 /** 0.6.0: the screen is off and the touch layer must catch every quick tap: the touch controller is kept awake (no first-touch
  *  loss after its auto-sleep) and polled faster. Called with false when the screen is back on. Harness: bookkeeping only. */
 void plat_touch_screen_off(bool off);
+/** 0.6.1: force one read of the touch controller now (the device reads it only on its interrupt). Called while the wake gate
+ *  is swallowing / guarding so a release that raised no interrupt is still observed. No-op in the simulator. */
+void plat_touch_poll(void);
 /** Deep sleep with touch wake (TP_INT, GPIO5) + RESET + USB. Does not return on the device; the host harness records it
  *  and the next sim boot() plays the wake. NOT hardware-verified until the 0.5.0 device tests. */
 void plat_deep_sleep(int wake_taps);   /* wake_taps 1..3: the waking touch counts as tap 1 (1 = any touch wakes) */

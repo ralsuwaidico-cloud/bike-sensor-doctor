@@ -600,6 +600,40 @@ static void t_gate_hold(void)
     bc_gate_screen_off(&g); bc_gate_wake(&g, false, 9000);
     CHECK(g.st == BC_GATE_GUARD && !bc_gate_feed(&g, true, 9100) && !bc_gate_feed(&g, false, 9200) && bc_gate_feed(&g, false, 9400));
 
+    /* 0.6.1 regression (the "Home frozen" bug): on the device the controller is read ONLY on its interrupt, i.e. while a finger
+       is down plus one release report. No idle "released" feeds exist, so the guard must open by itself (tick) and a NEW press
+       seen after an expired guard must pass. Replay exactly the device sequence of 0.6.0 rev 3: screen off -> wake touch ->
+       release -> (silence) -> next tap. */
+    bc_gate_t e; bc_gate_reset(&e);
+    bc_gate_screen_off(&e);
+    CHECK(!bc_gate_feed(&e, true, 10000)); bc_gate_wake(&e, true, 10000);                 /* wake touch, swallowed */
+    CHECK(!bc_gate_feed(&e, true, 10030) && !bc_gate_feed(&e, false, 10200) && e.st == BC_GATE_GUARD);   /* release -> guard */
+    CHECK(bc_gate_feed(&e, true, 11000) && e.st == BC_GATE_PASS);                          /* first read after a quiet guard IS the next press: must pass */
+    CHECK(bc_gate_feed(&e, false, 11100) && bc_gate_feed(&e, true, 11200));
+    /* same, but the periodic tick opens the guard before the next press */
+    bc_gate_screen_off(&e); bc_gate_wake(&e, true, 20000); CHECK(!bc_gate_feed(&e, false, 20100) && e.st == BC_GATE_GUARD);
+    CHECK(!bc_gate_tick(&e, 20300) && e.st == BC_GATE_GUARD);
+    CHECK(bc_gate_tick(&e, 20600) && e.st == BC_GATE_PASS && bc_gate_feed(&e, true, 20700));
+    /* a finger that landed during the guard and is still down at its end is swallowed to its release (unchanged rule) */
+    bc_gate_screen_off(&e); bc_gate_wake(&e, false, 30000);
+    CHECK(!bc_gate_feed(&e, true, 30100) && e.guarded == 1 && !bc_gate_feed(&e, true, 30500) && e.st == BC_GATE_SWALLOW);
+    CHECK(!bc_gate_feed(&e, false, 30600) && e.st == BC_GATE_GUARD && !bc_gate_tick(&e, 30700) && bc_gate_tick(&e, 31000) && e.st == BC_GATE_PASS);
+    /* watchdog: a swallow whose release is never reported is abandoned after BC_GATE_WATCHDOG_MS (tick or next feed) */
+    bc_gate_screen_off(&e); bc_gate_wake(&e, true, 40000);
+    CHECK(!bc_gate_tick(&e, 41000) && e.st == BC_GATE_SWALLOW);
+    CHECK(bc_gate_tick(&e, 40000 + BC_GATE_WATCHDOG_MS) && e.st == BC_GATE_GUARD && e.watchdog_resets == 1 && !e.down);
+    CHECK(bc_gate_tick(&e, 40000 + BC_GATE_WATCHDOG_MS + BC_GATE_GUARD_MS) && e.st == BC_GATE_PASS);
+    bc_gate_screen_off(&e); bc_gate_wake(&e, true, 50000);
+    CHECK(!bc_gate_feed(&e, true, 50000 + BC_GATE_WATCHDOG_MS) && e.st == BC_GATE_GUARD && e.watchdog_resets == 2);   /* long press: swallow ends, guard, release opens */
+    CHECK(!bc_gate_feed(&e, false, 50000 + BC_GATE_WATCHDOG_MS + 100) && bc_gate_tick(&e, 50000 + BC_GATE_WATCHDOG_MS + BC_GATE_GUARD_MS + 1) && e.st == BC_GATE_PASS);
+    CHECK(!strcmp(bc_gate_state_name(BC_GATE_SWALLOW), "swallow"));
+    /* a finger the driver keeps reporting (active polling while the gate blocks) is swallowed for as long as it stays, with no
+       watchdog: resting a finger on START RIDE through the wake must never turn into a hold-to-start */
+    bc_gate_screen_off(&e); bc_gate_wake(&e, true, 60000);
+    for (uint32_t t = 60050; t <= 64000; t += 50) CHECK(!bc_gate_feed(&e, true, t) && e.st == BC_GATE_SWALLOW);
+    CHECK(e.watchdog_resets == 2 && !bc_gate_tick(&e, 64020));
+    CHECK(!bc_gate_feed(&e, false, 64100) && e.st == BC_GATE_GUARD && bc_gate_tick(&e, 64600) && e.st == BC_GATE_PASS);
+
     /* hold-to-confirm: 1000 ms */
     bc_hold_t h; bc_hold_init(&h, 1000);
     CHECK(bc_hold_feed(&h, true, 100, 100, 0) == BC_HOLD_HOLDING);

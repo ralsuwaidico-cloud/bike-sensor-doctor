@@ -45,11 +45,27 @@ static void flush_cb(lv_display_t *d, const lv_area_t *a, uint8_t *px)
 }
 
 /* the harness drives LVGL exactly like the device driver: raw touch -> app_power_touch_filter (wake swallow + guard) -> LVGL */
+/* 0.6.1: the real driver runs the LVGL input in EVENT mode - the CST816S is read only on its interrupt, i.e. at its scan rate
+   while a finger is on the glass plus ONE report for the release, then nothing at all until the next contact. That silence is
+   what froze 0.6.0 rev 3 after a wake (the gate waited for a report that never came). `g_sim.touch_event_mode` reproduces
+   it: reads reach the gate only while down and once after the release; the continuous polling mode stays for the older
+   scenarios. plat_touch_poll() (the firmware's own forced read while the gate blocks) still goes through the gate. */
+static bool s_was_down, s_release_pending;
+static lv_indev_state_t s_last_state = LV_INDEV_STATE_RELEASED;
+static void gate_read(lv_indev_data_t *d)
+{
+    bool pass = app_power_touch_filter(ptr.down, ptr.x, ptr.y, g_sim.now_ms);
+    s_last_state = (ptr.down && pass) ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+    d->state = s_last_state;
+}
 static void read_cb(lv_indev_t *i, lv_indev_data_t *d)
 {
     (void)i; d->point.x = ptr.x; d->point.y = ptr.y;
-    bool pass = app_power_touch_filter(ptr.down, ptr.x, ptr.y, g_sim.now_ms);
-    d->state = (ptr.down && pass) ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+    if (!g_sim.touch_event_mode) { gate_read(d); return; }
+    if (ptr.down) { s_was_down = true; s_release_pending = true; gate_read(d); return; }
+    if (s_release_pending) { s_release_pending = false; s_was_down = false; gate_read(d); return; }   /* the one release report */
+    if (g_sim.touch_poll_request) { g_sim.touch_poll_request = false; gate_read(d); return; }          /* firmware forced a read */
+    d->state = s_last_state;                                                                           /* silence: nothing reaches the gate */
 }
 
 void sim_wifi_pump(void);
@@ -90,7 +106,13 @@ static bool visible(lv_obj_t *o)
 
 static lv_obj_t *find_text_rec(lv_obj_t *o, const char *txt)
 {
-    if (lv_obj_check_type(o, &lv_label_class) && visible(o) && strstr(lv_label_get_text(o), txt)) return o;
+    if (lv_obj_check_type(o, &lv_label_class) && visible(o)) {
+        const char *t = lv_label_get_text(o);
+        if (strstr(t, txt)) return o;
+        /* 0.6.1: a row title shortened by LVGL's DOTS mode ("Rashed iPh...") still is that row for a rider who reads it */
+        size_t n = strlen(t);
+        if (n > 3 && !strcmp(t + n - 3, "...") && strlen(txt) >= n - 3 && !strncmp(t, txt, n - 3)) return o;
+    }
     for (uint32_t i = 0; i < lv_obj_get_child_count(o); i++) { lv_obj_t *r = find_text_rec(lv_obj_get_child(o, (int32_t)i), txt); if (r) return r; }
     return NULL;
 }
@@ -176,6 +198,46 @@ static void check_glyphs(lv_obj_t *o, const char *txt, const lv_font_t *f, bool 
     }
 }
 
+
+/* ---- 0.6.1 layout audit: the rectangle the label's TEXT really occupies (not the label box), clipped to its scrollable ancestors */
+typedef struct { lv_area_t a; lv_obj_t *o; } txt_rect_t;
+static txt_rect_t s_rects[256]; static int s_nrects;
+static bool label_text_rect(lv_obj_t *o, lv_area_t *out, bool *overflow)
+{
+    const char *t = lv_label_get_text(o); if (!t || !*t) return false;
+    const lv_font_t *f = lv_obj_get_style_text_font(o, LV_PART_MAIN);
+    lv_area_t c; lv_obj_get_content_coords(o, &c);
+    int32_t cw = lv_area_get_width(&c), ch = lv_area_get_height(&c);
+    lv_label_long_mode_t lm = lv_label_get_long_mode(o);
+    lv_text_flag_t fl = lv_label_get_recolor(o) ? LV_TEXT_FLAG_RECOLOR : LV_TEXT_FLAG_NONE;
+    lv_point_t sz; lv_text_get_size(&sz, t, f, lv_obj_get_style_text_letter_space(o, LV_PART_MAIN), lv_obj_get_style_text_line_space(o, LV_PART_MAIN),
+                                    lm == LV_LABEL_LONG_MODE_WRAP || lm == LV_LABEL_LONG_MODE_DOTS ? cw : LV_COORD_MAX, fl);
+    *overflow = (sz.x > cw + 1 && lm != LV_LABEL_LONG_MODE_SCROLL && lm != LV_LABEL_LONG_MODE_SCROLL_CIRCULAR && lm != LV_LABEL_LONG_MODE_DOTS) || sz.y > ch + 1;
+    lv_text_align_t al = lv_obj_calculate_style_text_align(o, LV_PART_MAIN, t);
+    int32_t w = sz.x < cw ? sz.x : cw, h = sz.y < ch ? sz.y : ch;
+    out->x1 = al == LV_TEXT_ALIGN_CENTER ? c.x1 + (cw - w) / 2 : al == LV_TEXT_ALIGN_RIGHT ? c.x2 - w : c.x1;
+    out->y1 = c.y1; out->x2 = out->x1 + w - 1; out->y2 = out->y1 + h - 1;
+    /* clip to every ancestor (a scroll area shows only part of a long list) */
+    for (lv_obj_t *p = lv_obj_get_parent(o); p; p = lv_obj_get_parent(p)) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_t x; if (!lv_area_intersect(&x, out, &pa)) return false; *out = x; }
+    return lv_area_get_width(out) > 0 && lv_area_get_height(out) > 0;
+}
+/* an opaque ancestor of `over` (below the screen) that fully contains `r` hides whatever is drawn under it (ride controls panel, popups) */
+static bool covered_by_overlay(lv_obj_t *over, const lv_area_t *r)
+{
+    for (lv_obj_t *p = over; p && lv_obj_get_parent(p); p = lv_obj_get_parent(p)) {
+        if (lv_obj_get_style_bg_opa(p, LV_PART_MAIN) >= LV_OPA_COVER) { lv_area_t pa; lv_obj_get_coords(p, &pa); lv_area_t x; if (lv_area_intersect(&x, &pa, r) && lv_area_is_equal(&x, r)) return true; }
+    }
+    return false;
+}
+static bool is_ancestor(lv_obj_t *a, lv_obj_t *b) { for (lv_obj_t *p = lv_obj_get_parent(b); p; p = lv_obj_get_parent(p)) if (p == a) return true; return false; }
+static bool corner_out(const lv_area_t *r)
+{
+    double lim = (UI_SAFE_R + 2.0) * (UI_SAFE_R + 2.0);
+    int xs[2] = { r->x1, r->x2 }, ys[2] = { r->y1, r->y2 };
+    for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) { double dx = xs[i] - 119.5, dy = ys[j] - 119.5; if (dx * dx + dy * dy > lim) return true; }
+    return false;
+}
+
 static void walk(lv_obj_t *o)
 {
     if (lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN)) return;
@@ -185,6 +247,14 @@ static void walk(lv_obj_t *o)
         bool is_label = lv_obj_check_type(o, &lv_label_class);
         if (is_label) {
             check_glyphs(o, lv_label_get_text(o), lv_obj_get_style_text_font(o, LV_PART_MAIN), lv_label_get_recolor(o));
+            /* 0.6.1 layout audit */
+            lv_area_t tr; bool ovf = false;
+            if (label_text_rect(o, &tr, &ovf)) {
+                char m[48]; snprintf(m, sizeof m, "'%.22s'", lv_label_get_text(o));
+                if (ovf) issue("OVERFLOW %s text larger than its label at %d,%d\n", m, a.x1, a.y1);
+                if (corner_out(&tr)) issue("EDGE %s text reaches outside the round screen at %d,%d\n", m, tr.x1, tr.y1);
+                if (s_nrects < (int)(sizeof s_rects / sizeof s_rects[0])) { s_rects[s_nrects].a = tr; s_rects[s_nrects].o = o; s_nrects++; }
+            }
         }
         if (lv_obj_check_type(o, &lv_roller_class)) {
             check_glyphs(o, lv_roller_get_options(o), lv_obj_get_style_text_font(o, LV_PART_MAIN), false);
@@ -255,8 +325,21 @@ static void shot(const char *name)
         if (dx * dx + dy * dy > lim && fb[y * UI_W + x] != bg) { if (!out) { ox = x; oy = y; } out++; }
     }
     if (out) { char m[48]; snprintf(m, sizeof m, "%d px", out); issue("CIRCLE %s outside the circle, first at %d,%d\n", m, ox, oy); }
+    s_nrects = 0;
     walk(lv_screen_active());
     walk(lv_layer_top());
+    /* 0.6.1 OVERLAP: two visible texts (or a text and an unrelated clickable) sharing pixels */
+    for (int i = 0; i < s_nrects; i++) for (int j = i + 1; j < s_nrects; j++) {
+        lv_area_t x, a = s_rects[i].a, b = s_rects[j].a;
+        a.x1++; a.y1++; a.x2--; a.y2--; b.x1++; b.y1++; b.x2--; b.y2--;
+        if (lv_area_get_width(&a) <= 0 || lv_area_get_width(&b) <= 0) continue;
+        if (!lv_area_intersect(&x, &a, &b) || is_ancestor(s_rects[i].o, s_rects[j].o) || is_ancestor(s_rects[j].o, s_rects[i].o)) continue;
+        if (lv_obj_get_screen(s_rects[i].o) != lv_obj_get_screen(s_rects[j].o)) continue;   /* top layer vs screen: the shield/toast may cover */
+        if ((!is_ancestor(s_rects[j].o, s_rects[i].o) && covered_by_overlay(s_rects[j].o, &s_rects[i].a) && !covered_by_overlay(s_rects[i].o, &s_rects[j].a)) ||
+            (covered_by_overlay(s_rects[i].o, &s_rects[j].a) && !covered_by_overlay(s_rects[j].o, &s_rects[i].a))) continue;   /* one is on an opaque panel over the other */
+        char m[64]; snprintf(m, sizeof m, "'%.14s' and '%.14s'", lv_label_get_text(s_rects[i].o), lv_label_get_text(s_rects[j].o));
+        issue("OVERLAP %s at %d,%d\n", m, x.x1, x.y1);
+    }
     if (ui_qs_handle_visible()) { lv_area_t h; ui_qs_handle_rect(&h); walk_handle(lv_screen_active(), &h); }
     else if (ui_current() == UI_SCR_RIDE && !ui_qs_is_open()) {           /* the ride screen's own handle: 72 x 22 at the top */
         lv_area_t h = { .x1 = UI_R - 36, .y1 = 4, .x2 = UI_R + 35, .y2 = 23 };
@@ -531,6 +614,7 @@ static void scenario(void)
       CHECK(g_sim.exports == 1 && rn > 200 && strstr(rb, "Firmware") && strstr(rb, "Power meter") && !strstr(rb, "#8494a0"), "diagnostic report exported (%ld bytes)", rn); }
     shot("86_health_sent");
 
+
     printf("== 9 ride-screen designs: picker with preview, persisted, switch during a ride\n");
     app_profile()->ride_style = 0; app_profile_save();
     ui_display_show(); run(300); shot("87_display");
@@ -659,7 +743,7 @@ static void scenario(void)
         ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("Other network"); tap_text("Other network"); kb_mode = 0;
         CHECK(on_screen("NAME") && on_screen("NEXT"), "hidden network: name first"); shot("b6_keyboard_ssid");
         kb_type("ghost"); tap_text("NEXT"); kb_mode = 0; kb_type("whatever1"); tap_text("JOIN"); run_s(4);
-        CHECK(on_screen("not found"), "network not found error"); shot("b7_not_found");
+        CHECK(on_screen("Not found") && on_screen("NOT FOUND"), "network not found error"); shot("b7_not_found");
         g_sim.wifi_no_dhcp = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); tap_text("CONNECT"); run_s(4);
         CHECK(on_screen("no address"), "no IP address error"); shot("b8_no_ip"); g_sim.wifi_no_dhcp = false;
         tap_text("BACK"); scroll_to("Networks"); tap_text("Networks"); run(2600);
@@ -1121,9 +1205,9 @@ static void scenario(void)
         scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "wi-fi page back -> menu");
         /* badge rules: a paired meter that is away gets the !, an unpaired one does not */
         g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_SEARCHING; sensors(false, 0, false, 0, false, 0); run(500);
-        CHECK(on_screen("! not found"), "paired meter missing -> ! not found"); shot("f4_menu_meter_missing");
+        CHECK(on_screen("! missing"), "paired meter missing -> ! missing"); shot("f4_menu_meter_missing");
         pr->power.paired = false; g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED; app_profile_save(); run(500);
-        CHECK(!on_screen("! not found") && on_screen("pair"), "never-paired meter: grey 'pair', no !");
+        CHECK(!on_screen("! missing") && on_screen("pair"), "never-paired meter: grey 'pair', no !");
         /* pair a speed/cadence sensor from the Cadence page */
         plat_found_t csc = { { 0xC5, 0xC1, 0x00, 0x00, 0x00, 0x01 }, 1, "CSC-Wahoo", -70, PLAT_SVC_CSC };
         g_sim.found[PLAT_SENS_CSC][0] = csc; g_sim.found_n[PLAT_SENS_CSC] = 1;
@@ -1223,6 +1307,81 @@ static void scenario(void)
         shot("g3_home_after_hold_flow");
     }
 
+
+    printf("== 18 (0.6.1) touch in EVENT mode like the device: wake -> release -> everything responds, 20 cycles, sleep wake, cue wake, phone wake\n");
+    {
+        g_sim.touch_event_mode = true; s_was_down = false; s_release_pending = false; s_last_state = LV_INDEV_STATE_RELEASED;
+        g_sim.battery_mv = 3800; g_sim.usb = false; g_sim.woke_from_sleep = false;
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile()->power.paired = true;
+        app_profile()->wake_taps = 1; app_profile()->scr_timeout_s = 60; app_profile()->auto_sleep_min = 0; app_profile()->phone_on = true; app_profile_save(); boot(); run_s(2);
+        const app_power_t *P = app_power();
+        plat_phone_set_enabled(true); sim_phone_connect(true); run(1500);
+        /* 1. plain boot: Connections, Settings, History respond to ordinary taps */
+        CHECK(P->gate.st == BC_GATE_PASS, "boot: gate open (%s)", app_power_gate_text());
+        tap_text("Connections"); run(300); CHECK(on_screen("CONNECTIONS") && on_screen("Power meter"), "Connections opens after boot");
+        ui_home_show(); run(300); tap_text("Settings"); run(300); CHECK(ui_current() == UI_SCR_SETTINGS && on_screen("SETTINGS"), "Settings opens after boot");
+        ui_home_show(); run(300); tap_text("History"); run(300); CHECK(on_screen("HISTORY") || on_screen("RIDES"), "History opens after boot");
+        ui_home_show(); run(300);
+        /* 2. screen off -> ONE touch wakes -> after the release the buttons respond, 20 times; the wake touch presses nothing */
+        int frozen = 0, pressed_by_wake = 0;
+        for (int k = 0; k < 20; k++) {
+            app_power_screen_off(); run(300); CHECK(!P->screen_on, "cycle %d dark", k + 1);
+            /* the wake touch lands where START RIDE / Connections sit: it must wake and press nothing */
+            raw_tap(k % 2 ? 120 : 70, k % 2 ? 108 : 160); run(600);
+            if (!P->screen_on) frozen++;
+            if (app_ride_state() != BC_RIDE_IDLE || ui_current() != UI_SCR_HOME) pressed_by_wake++;
+            /* now an ordinary tap must work: open Connections and come back */
+            if (!tap_text("Connections")) frozen++; run(300);
+            if (!(on_screen("CONNECTIONS") && on_screen("Power meter"))) frozen++;
+            ui_home_show(); run(300);
+        }
+        CHECK(frozen == 0 && pressed_by_wake == 0, "20 screen-off/wake cycles: %d times unresponsive, %d wake presses (both must be 0); watchdog fired %lu times",
+              frozen, pressed_by_wake, (unsigned long)P->gate.watchdog_resets);
+        CHECK(P->gate.watchdog_resets == 0, "the release report opened the gate every time; the watchdog was never needed (%lu)", (unsigned long)P->gate.watchdog_resets);
+        /* 2b. a LOST release report (the device's worst case): the watchdog opens the gate by itself */
+        app_power_screen_off(); run(300);
+        ptr.x = 120; ptr.y = 108; ptr.down = true; run(80); ptr.down = false; s_release_pending = false;   /* release never reported */
+        run(2500);
+        CHECK(P->screen_on && P->gate.st == BC_GATE_PASS, "lost release: the forced read / watchdog reopened the gate (%s, watchdog %lu, polls %d)", app_power_gate_text(), (unsigned long)P->gate.watchdog_resets, g_sim.touch_polls);
+        CHECK(tap_text("Settings") && ui_current() == UI_SCR_SETTINGS, "Settings responds after the lost release"); ui_home_show(); run(300);
+        /* 3. deep sleep -> wake -> Connections / Settings / History / hold-to-start */
+        drag(120, 20, 120, 150); run(300); scroll_to("Deep sleep"); tap_text("Deep sleep"); run(300); scroll_to("HOLD: DEEP SLEEP"); hold_text("HOLD: DEEP SLEEP", 1800); run(300);
+        CHECK(P->asleep, "asleep");
+        g_sim.woke_from_sleep = true; g_sim.asleep = false; s_was_down = false; s_release_pending = false; boot(); run(400); g_sim.woke_from_sleep = false;
+        CHECK(on_screen("START RIDE") && P->screen_on, "sleep -> wake: Home");
+        raw_tap(120, 108); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "a tap right after the sleep wake starts nothing (guard)");
+        run(1500);
+        CHECK(tap_text("Connections") && on_screen("Power meter"), "sleep -> wake -> Connections"); ui_home_show(); run(300);
+        CHECK(tap_text("Settings") && ui_current() == UI_SCR_SETTINGS, "sleep -> wake -> Settings"); ui_home_show(); run(300);
+        CHECK(tap_text("History") && (on_screen("HISTORY") || on_screen("RIDES")), "sleep -> wake -> History"); ui_home_show(); run(300);
+        for (int k = 0; k < 3; k++) raw_tap(120, 108);
+        run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "plain taps never start a ride");
+        uint16_t id0 = app_profile()->next_ride_id;
+        hold_text("START RIDE", 1300); run(300);
+        { bc_ride_summary_t t; app_ride_totals(&t); CHECK(app_ride_state() == BC_RIDE_RUNNING && t.id == id0 && app_profile()->next_ride_id == id0, "sleep -> wake -> 1 s hold starts exactly one ride"); }
+        /* 4. cue wake and phone-command wake leave the touch working */
+        drag(120, 60, 120, 190); run(300); tap_text("QUICK SET."); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        CHECK(!P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "dark during the ride, recording");
+        sensors(false, 0, false, 0, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_RETRY; run_s(7);
+        CHECK(P->screen_on, "coach warning woke the screen");
+        raw_tap(120, 120); run(300);                                /* a touch while awake must count as a real touch */
+        CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "touch after a cue wake: screen stays on, ride untouched");
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; run_s(6);
+        drag(120, 60, 120, 190); run(300); CHECK(on_screen("HOLD: END"), "ride controls open by swipe after the cue wake");
+        hold_text("HOLD: END", 1300); run(300); tap_text("SAVE"); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "ride ended and saved");
+        /* phone command wake: a passkey request wakes the screen */
+        app_power_screen_off(); run(300); CHECK(!P->screen_on, "dark again");
+        sim_phone_disconnect(); run(300); sim_phone_connect(false); run(1500);      /* new phone: passkey popup -> programmatic wake */
+        CHECK(P->screen_on, "passkey request woke the screen");
+        run(800);
+        sim_phone_enter_passkey(); run(1000);
+        CHECK(P->screen_on && P->gate.st == BC_GATE_PASS, "gate open after the phone-command wake (%s)", app_power_gate_text());
+        ui_home_show(); run(300);
+        CHECK(tap_text("Connections") && on_screen("Power meter"), "touch works after a phone-command wake");
+        ui_home_show(); run(300);
+        shot("h0_home_after_event_mode");
+        g_sim.touch_event_mode = false;
+    }
     printf("== 8 long name and edge cases\n");
     snprintf(app_profile()->name, sizeof app_profile()->name, "Maximilianus Bob");
     app_profile_save();
@@ -1241,6 +1400,38 @@ static void scenario(void)
     scroll_to("SET UP AGAIN");
     hold_text("SET UP AGAIN", 2300);
     CHECK(on_screen("Hello!") && count_lines("rides/history.txt") == before, "setup again keeps ride history");
+    printf("== 7b (0.6.1) layout sweep: every settings page and submenu in every option state, scrolled top to bottom\n");
+    {
+        static const uint16_t to[] = { 0, 30, 60, 120, 300 }; static const uint8_t sl[] = { 0, 5, 10, 30 };
+        int shots0 = n_shots, fails0 = n_fail_shots;
+        for (int i = 0; i < 5; i++) {
+            bc_profile_t *p = app_profile();
+            p->wake_taps = (uint8_t)(1 + i % 3); p->scr_timeout_s = to[i]; p->auto_sleep_min = sl[i % 4]; p->bat_protect = (uint8_t)(i % 2); p->wake_on_cue = i % 2 == 0;
+            p->brightness = (uint8_t)(20 + i * 20); p->hr_pref = (uint8_t)(i % 2); p->units = (uint8_t)(i % 2); p->ride_style = (uint8_t)(i % 3); app_profile_save();
+            char n[48];
+            ui_power_settings_show(); run(300); snprintf(n, sizeof n, "7b_power_%d_top", i); shot(n);
+            for (int k = 0; k < 4; k++) { drag(120, 170, 120, 70); } snprintf(n, sizeof n, "7b_power_%d_bottom", i); shot(n);
+            ui_display_show(); run(300); snprintf(n, sizeof n, "7b_display_%d", i); shot(n);
+            ui_settings_show(); run(300); snprintf(n, sizeof n, "7b_settings_%d_top", i); lv_obj_scroll_to_y(lv_obj_get_child(lv_screen_active(), 1), 0, LV_ANIM_OFF); run(200); shot(n);
+            for (int k = 0; k < 6; k++) { drag(120, 170, 120, 70); } snprintf(n, sizeof n, "7b_settings_%d_bottom", i); shot(n);
+            ui_home_show(); run(300); ui_qs_open(); run(400); snprintf(n, sizeof n, "7b_qs_%d_top", i); shot(n);
+            for (int k = 0; k < 4; k++) { drag(120, 170, 120, 70); } snprintf(n, sizeof n, "7b_qs_%d_bottom", i); shot(n);
+            ui_qs_close(); run(300);
+        }
+        /* every Connections category page, with and without the phone */
+        for (int ph = 0; ph < 2; ph++) {
+            if (ph) { plat_phone_set_enabled(true); sim_phone_connect(true); run(1200); } else { sim_phone_disconnect(); run(600); }
+            for (int c = 0; c < 8; c++) { char n[48]; ui_conn_detail_show(c); run(400); snprintf(n, sizeof n, "7b_conn_%d_%s_top", c, ph ? "phone" : "alone"); shot(n);
+                for (int k = 0; k < 3; k++) drag(120, 170, 120, 70); snprintf(n, sizeof n, "7b_conn_%d_%s_bottom", c, ph ? "phone" : "alone"); shot(n); }
+        }
+        ui_wifi_show(); run(300); shot("7b_wifi_main"); for (int k = 0; k < 3; k++) drag(120, 170, 120, 70); shot("7b_wifi_main_bottom");
+        ui_health_show(); run(300); shot("7b_health_top"); for (int k = 0; k < 8; k++) { char n[32]; drag(120, 170, 120, 70); snprintf(n, sizeof n, "7b_health_%d", k); shot(n); }
+        ui_phone_show(); run(300); shot("7b_phone_top"); for (int k = 0; k < 3; k++) drag(120, 170, 120, 70); shot("7b_phone_bottom");
+        CHECK(n_fail_shots == fails0, "layout sweep: %d screens, every text inside the circle, nothing overlapping or overflowing", n_shots - shots0);
+        app_profile()->wake_taps = 1; app_profile()->scr_timeout_s = 60; app_profile()->auto_sleep_min = 0; app_profile()->bat_protect = 0; app_profile()->wake_on_cue = true;
+        app_profile()->brightness = 80; app_profile()->hr_pref = 0; app_profile()->units = 0; app_profile()->ride_style = 0; app_profile_save(); ui_home_show(); run(300);
+    }
+
 }
 
 int main(int argc, char **argv)

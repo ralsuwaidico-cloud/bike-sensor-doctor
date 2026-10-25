@@ -398,7 +398,7 @@ static void conn_update(void)
         lv_label_set_text(c_state, err == PLAT_WIFI_ERR_WRONG_PASSWORD ? "WRONG PASSWORD" : err == PLAT_WIFI_ERR_NOT_FOUND ? "NOT FOUND" : "NOT CONNECTED");
         lv_obj_set_style_text_color(c_state, C_AMBER, 0);
         char b[160];
-        if (err == PLAT_WIFI_ERR_NOT_FOUND) snprintf(b, sizeof b, "%s\n2.4 GHz only. iPhone hotspot: Maximize Compatibility on, hotspot screen open.", bc_wifi_err_text((bc_wifi_err_t)err));
+        if (err == PLAT_WIFI_ERR_NOT_FOUND) snprintf(b, sizeof b, "Not found. 2.4 GHz only.\niPhone hotspot: Maximize\nCompatibility ON and keep\nthe hotspot screen open.");
         else snprintf(b, sizeof b, "%s", bc_wifi_err_text((bc_wifi_err_t)err));
         lv_label_set_text(c_msg, b);
         lv_label_set_text(lv_obj_get_child(c_btn, 0), "BACK"); show(c_btn, true); show(c_cancel, false);
@@ -420,8 +420,8 @@ static void connecting_show(void)
     lv_obj_t *n = ui_label(scr, &bc_bold16, C_FG, dn); lv_obj_set_width(n, 170); lv_label_set_long_mode(n, LV_LABEL_LONG_DOT); lv_obj_set_style_text_align(n, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(n, LV_ALIGN_TOP_MID, 0, 56);
     c_state = ui_label(scr, &bc_bold16, C_AMBER, "CONNECTING"); lv_obj_align(c_state, LV_ALIGN_TOP_MID, 0, 84);
-    c_msg = ui_label(scr, &lv_font_montserrat_14, C_FG, ""); lv_obj_set_width(c_msg, 180); lv_label_set_long_mode(c_msg, LV_LABEL_LONG_WRAP);
-    lv_obj_align(c_msg, LV_ALIGN_TOP_MID, 0, 108);
+    c_msg = ui_label(scr, &lv_font_montserrat_12, C_FG, ""); lv_obj_set_size(c_msg, 184, 66); lv_label_set_long_mode(c_msg, LV_LABEL_LONG_WRAP);   /* 0.6.1: bounded box above the buttons */
+    lv_obj_align(c_msg, LV_ALIGN_TOP_MID, 0, 106);
     c_btn = ui_pill(scr, "DONE", C_CYAN, C_INK, 100, 36, c_done_cb, NULL); lv_obj_align(c_btn, LV_ALIGN_TOP_MID, 0, 176); show(c_btn, false);
     c_btn2 = ui_pill(scr, "TRY AGAIN", C_PANEL, C_CYAN, 120, 30, c_retry_cb, NULL); lv_obj_align(c_btn2, LV_ALIGN_TOP_MID, 0, 142); show(c_btn2, false);
     c_cancel = ui_pill(scr, "CANCEL", C_PANEL, C_MUT, 100, 32, c_cancel_cb, NULL); lv_obj_align(c_cancel, LV_ALIGN_TOP_MID, 0, 178);

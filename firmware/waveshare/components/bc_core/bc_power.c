@@ -116,27 +116,52 @@ bool bc_tap_feed_xy(bc_tap_t *t, bool pressed, int x, int y, uint32_t now_ms)
 bool bc_tap_feed(bc_tap_t *t, bool pressed, uint32_t now_ms) { return bc_tap_feed_xy(t, pressed, -1, -1, now_ms); }
 
 /* ---- wake gate */
+static void gate_set(bc_gate_t *g, bc_gate_state_t st, uint32_t now_ms) { g->st = st; g->since_ms = now_ms; }
 void bc_gate_reset(bc_gate_t *g) { memset(g, 0, sizeof *g); g->st = BC_GATE_PASS; }
-void bc_gate_screen_off(bc_gate_t *g) { g->st = BC_GATE_OFF; g->guard_until_ms = 0; }
+void bc_gate_screen_off(bc_gate_t *g) { g->st = BC_GATE_OFF; g->guard_until_ms = 0; g->down = false; }
 void bc_gate_wake(bc_gate_t *g, bool finger_down, uint32_t now_ms)
 {
-    if (finger_down) { g->st = BC_GATE_SWALLOW; g->down = true; }
-    else { g->st = BC_GATE_GUARD; g->guard_until_ms = now_ms + BC_GATE_GUARD_MS; }
+    g->last_feed_ms = now_ms;
+    if (finger_down) { gate_set(g, BC_GATE_SWALLOW, now_ms); g->down = true; }
+    else { gate_set(g, BC_GATE_GUARD, now_ms); g->guard_until_ms = now_ms + BC_GATE_GUARD_MS; g->down = false; }
 }
 bool bc_gate_blocking(const bc_gate_t *g) { return g->st != BC_GATE_PASS; }
+const char *bc_gate_state_name(bc_gate_state_t st) { return st == BC_GATE_PASS ? "pass" : st == BC_GATE_OFF ? "off" : st == BC_GATE_SWALLOW ? "swallow" : "guard"; }
+/* 0.6.1 watchdog: a SWALLOW is legitimate for as long as the driver keeps reporting the finger (a rider resting a finger on the
+   dark glass). What must never happen is a swallow kept alive by SILENCE: on the device the controller is read only on its
+   interrupt, so a missed release report means no further reads at all - and 0.6.0 rev 3 then swallowed every later touch
+   ("Home frozen"). No report for BC_GATE_WATCHDOG_MS while swallowing -> the finger is gone: guard, then open. */
+static bool gate_watchdog(bc_gate_t *g, uint32_t now_ms)
+{
+    if (g->st != BC_GATE_SWALLOW || now_ms - g->last_feed_ms < BC_GATE_WATCHDOG_MS) return false;
+    g->watchdog_resets++; g->down = false; gate_set(g, BC_GATE_GUARD, now_ms); g->guard_until_ms = now_ms + BC_GATE_GUARD_MS;
+    return true;
+}
+bool bc_gate_tick(bc_gate_t *g, uint32_t now_ms)
+{
+    if (g->st == BC_GATE_GUARD && (int32_t)(now_ms - g->guard_until_ms) >= 0 && !g->down) { gate_set(g, BC_GATE_PASS, now_ms); return true; }
+    return gate_watchdog(g, now_ms);
+}
 bool bc_gate_feed(bc_gate_t *g, bool pressed, uint32_t now_ms)
 {
-    bool was = g->down; g->down = pressed;
+    bool was = g->down;
+    bool wd = gate_watchdog(g, now_ms);              /* silence since the last report: the release was never delivered */
+    g->last_feed_ms = now_ms; g->down = pressed;
+    if (wd) was = false;                             /* whatever is pressed now is a new touch */
     switch (g->st) {
     case BC_GATE_PASS: return true;
     case BC_GATE_OFF: if (pressed && !was) g->swallowed++; return false;
     case BC_GATE_SWALLOW:
-        if (!pressed) { g->st = BC_GATE_GUARD; g->guard_until_ms = now_ms + BC_GATE_GUARD_MS; }
-        return false;
+        if (!pressed) { gate_set(g, BC_GATE_GUARD, now_ms); g->guard_until_ms = now_ms + BC_GATE_GUARD_MS; }
+        return false;                                /* a finger the driver still reports is swallowed to its release, however long */
     case BC_GATE_GUARD:
         if ((int32_t)(now_ms - g->guard_until_ms) >= 0) {
-            if (pressed) { g->st = BC_GATE_SWALLOW; return false; }   /* landed during the guard: ride it out to the release */
-            g->st = BC_GATE_PASS; return true;
+            /* 0.6.1 root-cause fix: before, ANY press seen after the guard had expired was treated as "landed during the guard"
+               and swallowed again — correct for a finger that was already down (was == true), wrong for a NEW press. On the
+               device the first read after a quiet guard IS the next press (event-driven reads), so every touch after a wake
+               or a hold-to-start was swallowed for ever. A new press after the guard is a real press: open and pass it. */
+            if (pressed && was) { gate_set(g, BC_GATE_SWALLOW, now_ms); return false; }
+            gate_set(g, BC_GATE_PASS, now_ms); return true;
         }
         if (pressed && !was) g->guarded++;
         return false;

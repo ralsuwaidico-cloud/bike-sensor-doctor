@@ -82,8 +82,22 @@ lv_obj_t *ui_label(lv_obj_t *p, const lv_font_t *f, lv_color_t c, const char *tx
 lv_obj_t *ui_title(lv_obj_t *p, const char *txt)
 {
     lv_obj_t *l = ui_label(p, &bc_bold16, C_CYAN, txt);
-    lv_obj_set_style_text_letter_space(l, 1, 0);
+    int lim = 2 * ui_chord(38) - 8;                        /* 0.6.1: never wider than the circle at that height */
+    lv_point_t sz; lv_text_get_size(&sz, txt ? txt : "", &bc_bold16, 1, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    lv_obj_set_style_text_letter_space(l, sz.x > lim ? 0 : 1, 0);   /* long title: drop the letter spacing before shortening */
+    lv_obj_set_width(l, lim);
+    lv_label_set_long_mode(l, LV_LABEL_LONG_MODE_DOTS);
     lv_obj_align(l, LV_ALIGN_TOP_MID, 0, 30);
+    return l;
+}
+
+/* 0.6.1: a wrapped description for a list or page: width = the chord of the circle at the given height, never wider */
+lv_obj_t *ui_note(lv_obj_t *p, const char *txt, int at_y)
+{
+    lv_obj_t *l = ui_label(p, &lv_font_montserrat_12, C_MUT, txt);
+    if (lv_obj_has_flag(p, LV_OBJ_FLAG_USER_1)) lv_obj_set_width(l, lv_pct(100));   /* inside a list: the list's width */
+    else { int w = 2 * ui_chord(at_y) - 16; if (w > 212) w = 212; if (w < 120) w = 120; lv_obj_set_width(l, w); }
+    lv_label_set_long_mode(l, LV_LABEL_LONG_MODE_WRAP);
     return l;
 }
 
@@ -214,14 +228,84 @@ lv_obj_t *ui_row_btn(lv_obj_t *list, const char *left, const char *right, lv_col
 {
     lv_obj_t *b = lv_button_create(list);
     style_btn(b, C_PANEL, 12);
-    lv_obj_set_size(b, lv_pct(100), 40);
+    lv_obj_set_size(b, lv_pct(100), 44);                 /* 0.6.1: finger-sized rows (was 40) */
     lv_obj_remove_flag(b, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_add_flag(b, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
     lv_obj_t *l = ui_label(b, &lv_font_montserrat_14, C_FG, left);
+    lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_LEFT, 0);
+    lv_obj_set_height(l, lv_font_get_line_height(&lv_font_montserrat_14) + 2);   /* one line: a fixed box, else a long text wraps */
+    lv_label_set_long_mode(l, LV_LABEL_LONG_MODE_CLIP);
     lv_obj_align(l, LV_ALIGN_LEFT_MID, 10, 0);
-    if (right) { lv_obj_t *r = ui_label(b, &lv_font_montserrat_14, right_c, right); lv_obj_align(r, LV_ALIGN_RIGHT_MID, -10, 0); }
+    if (right) {
+        lv_obj_t *r = ui_label(b, &lv_font_montserrat_14, right_c, right);
+        lv_obj_set_style_text_align(r, LV_TEXT_ALIGN_RIGHT, 0);
+        lv_obj_set_height(r, lv_font_get_line_height(&lv_font_montserrat_14) + 2);
+        lv_label_set_long_mode(r, LV_LABEL_LONG_MODE_CLIP);
+        lv_obj_align(r, LV_ALIGN_RIGHT_MID, -10, 0);
+    }
     if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, ud);
+    ui_row_fit(b);
     return b;
+}
+
+/* 0.6.1: split a row's inner width between title and value: each gets what its text needs when both fit; otherwise the
+   title keeps at least 40 % and the value at least 20 %, and whichever is too long ends in "..." (DOTS). */
+static void row_split(int inner, int title_w, int value_w, int *lw, int *rw)
+{
+    const int gap = 8;
+    int r = value_w, l = title_w;
+    if (l + gap + r <= inner) { *lw = l; *rw = inner - gap - l; return; }   /* both fit: the value takes the slack */
+    /* too long together: the title is the row's identity and keeps its text (up to 70 %); the value gets the rest (>= 20 %) */
+    int max_l = inner * 70 / 100, min_r = inner * 20 / 100;
+    if (l > max_l) l = max_l;
+    r = inner - gap - l;
+    if (r < min_r) { r = min_r; l = inner - gap - r; }
+    *lw = l; *rw = r;
+}
+static int text_w(lv_obj_t *label, const char *txt)
+{
+    lv_point_t sz; lv_text_get_size(&sz, txt ? txt : "", lv_obj_get_style_text_font(label, LV_PART_MAIN), 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    return sz.x;
+}
+static int row_inner(lv_obj_t *row)
+{
+    lv_obj_t *par = lv_obj_get_parent(row);
+    int w = par ? lv_obj_get_content_width(par) : 0; if (w <= 80) w = lv_obj_get_width(row); if (w <= 80) w = 2 * ui_chord(60) - 4;
+    return w - 20;
+}
+/* DOTS rewrites the stored text when it does not fit; keep it for the label that really is too long, CLIP (text untouched) otherwise */
+static void fit_mode(lv_obj_t *label, int need_w, int have_w) { lv_label_set_long_mode(label, need_w > have_w ? LV_LABEL_LONG_MODE_DOTS : LV_LABEL_LONG_MODE_CLIP); }
+
+/* 0.6.1: change a row's value. The width is set from the NEW text before it is stored, because LVGL's DOTS mode rewrites a
+   stored text that does not fit ("! not..."), and a fit measured afterwards would only see the shortened text. */
+void ui_row_set_value(lv_obj_t *row, const char *txt, lv_color_t color)
+{
+    lv_obj_t *r = lv_obj_get_child_count(row) > 1 ? lv_obj_get_child(row, 1) : NULL;
+    if (!r || !lv_obj_check_type(r, &lv_label_class)) return;
+    lv_obj_t *l = lv_obj_get_child(row, 0);
+    bool l_ok = l && lv_obj_check_type(l, &lv_label_class);
+    int tw = l_ok ? text_w(l, lv_label_get_text(l)) : 0, vw = text_w(r, txt);
+    int lw, rw; row_split(row_inner(row), tw, vw, &lw, &rw);
+    if (l_ok) { fit_mode(l, tw, lw); lv_obj_set_width(l, lw); }
+    lv_label_set_long_mode(r, LV_LABEL_LONG_MODE_CLIP);   /* set the text with the stored copy intact, then choose the mode */
+    lv_obj_set_width(r, rw);
+    lv_obj_set_style_text_color(r, color, 0);
+    lv_label_set_text(r, txt);
+    fit_mode(r, vw, rw);
+}
+
+/* 0.6.1 layout rule for a row: the value keeps up to 55 % of the row, the title gets the rest; a title or value that is
+   still too long ends in "..." instead of running under the other. Call again after changing either text. */
+void ui_row_fit(lv_obj_t *row)
+{
+    lv_obj_t *l = lv_obj_get_child(row, 0), *r = lv_obj_get_child_count(row) > 1 ? lv_obj_get_child(row, 1) : NULL;
+    if (!l || !lv_obj_check_type(l, &lv_label_class)) return;
+    int inner = row_inner(row);
+    if (!r) { lv_obj_set_width(l, inner); return; }
+    int tw = text_w(l, lv_label_get_text(l)), vw = text_w(r, lv_label_get_text(r));
+    int lw, rw; row_split(inner, tw, vw, &lw, &rw);
+    fit_mode(r, vw, rw); lv_obj_set_width(r, rw);
+    fit_mode(l, tw, lw); lv_obj_set_width(l, lw);
 }
 
 lv_obj_t *ui_wheel(lv_obj_t *p, const char *options, int sel, int w, int rows, const lv_font_t *f)

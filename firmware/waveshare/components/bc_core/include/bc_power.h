@@ -83,19 +83,28 @@ bool bc_tap_feed(bc_tap_t *t, bool pressed, uint32_t now_ms);
  * finger still down when the guard ends keeps being swallowed until it lifts. So a wake can never press START RIDE or any
  * other control underneath. 2- and 3-tap wakes use bc_tap_t and get the same swallow + guard. */
 #define BC_GATE_GUARD_MS 400
+#define BC_GATE_WATCHDOG_MS 1500  /* 0.6.1: a swallow with NO touch report for this long is abandoned (event-driven touch reads
+                                     only arrive while a finger is on the glass; a missed release must never lock the UI) */
 typedef enum { BC_GATE_PASS = 0, BC_GATE_OFF, BC_GATE_SWALLOW, BC_GATE_GUARD } bc_gate_state_t;
 typedef struct {
     bc_gate_state_t st;
     uint32_t guard_until_ms;
+    uint32_t since_ms;           /* when the current state was entered */
+    uint32_t last_feed_ms;       /* 0.6.1: last touch report seen (any state); silence while swallowing trips the watchdog */
     bool down;                   /* finger currently down as seen by the gate */
     uint32_t swallowed, guarded; /* presses dropped (diagnostics) */
+    uint32_t watchdog_resets;    /* 0.6.1: SWALLOW abandoned because no release arrived in BC_GATE_WATCHDOG_MS */
 } bc_gate_t;
 void bc_gate_reset(bc_gate_t *g);
 void bc_gate_screen_off(bc_gate_t *g);                       /* screen went dark: nothing passes */
 void bc_gate_wake(bc_gate_t *g, bool finger_down, uint32_t now_ms);   /* display woke: swallow the rest of the gesture, then guard */
 /** Every touch poll: returns true when the press state may be handed to the UI, false when it must read as "released". */
 bool bc_gate_feed(bc_gate_t *g, bool pressed, uint32_t now_ms);
+/** 0.6.1: call periodically (every <= 250 ms) even when the touch driver reports nothing: ends an expired guard and abandons
+ *  a swallow that never saw its release (watchdog). Returns true when the state changed. */
+bool bc_gate_tick(bc_gate_t *g, uint32_t now_ms);
 bool bc_gate_blocking(const bc_gate_t *g);
+const char *bc_gate_state_name(bc_gate_state_t st);
 
 /* ---- hold-to-confirm (0.6.0 rev 3): START RIDE, END, delete, forget, restart, deep sleep.
  * Press and keep still for `hold_ms`: progress 0..100 for the ring; FIRE exactly once; release early or a slide of more than

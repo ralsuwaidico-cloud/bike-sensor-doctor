@@ -134,12 +134,39 @@ static esp_err_t touch_create(bool reset)
    guard after the wake). The port's own read callback does the I2C work; we only veto the press state. */
 static lv_indev_read_cb_t s_port_read;
 static hw_touch_filter_t s_filter;
+static uint32_t s_reads, s_presses;
 void hw_touch_set_filter(hw_touch_filter_t f) { s_filter = f; }
 static void gated_read(lv_indev_t *indev, lv_indev_data_t *data)
 {
     if (s_port_read) s_port_read(indev, data);
     bool pressed = data->state == LV_INDEV_STATE_PRESSED;
     if (s_filter && !s_filter(pressed, data->point.x, data->point.y, hw_millis())) data->state = LV_INDEV_STATE_RELEASED;
+    s_reads++; if (pressed) s_presses++;
+}
+static bool tp_read(uint8_t reg, uint8_t *val);
+void hw_touch_poll(void) { if (s_indev) lv_indev_read(s_indev); }   /* runs gated_read -> the port's I2C read; LVGL lock held by the caller */
+void hw_touch_wake_check(void)
+{
+    /* 0.6.1: after every screen wake make sure the CST816S still answers. If not, pulse TP_RST (GPIO13) and re-read; the
+       controller comes back with its defaults (auto-sleep on), which hw_touch_keep_awake() re-applies on the next screen-off. */
+    uint8_t id = 0;
+    bool ok = tp_read(0xA7, &id);
+    ESP_LOGI(TAG, "touch wake check: chip id %s0x%02X", ok ? "" : "NOT ANSWERING ", id);
+    if (ok) return;
+    gpio_set_level(BOARD_TP_RST, 0); vTaskDelay(pdMS_TO_TICKS(10)); gpio_set_level(BOARD_TP_RST, 1); vTaskDelay(pdMS_TO_TICKS(60));
+    ok = tp_read(0xA7, &id);
+    ESP_LOGW(TAG, "touch wake check: after TP_RST pulse chip id %s0x%02X", ok ? "" : "STILL NOT ANSWERING ", id);
+    hw_touch_diag_log("after reset pulse");
+}
+void hw_touch_counters(uint32_t *reads, uint32_t *presses) { if (reads) *reads = s_reads; if (presses) *presses = s_presses; }
+bool hw_boot_button_held(void)
+{
+    /* 0.6.1 SAFE MODE trigger: BOOT (GPIO0, pulled up, pressed = low) held while RESET is pressed. Sampled once at start-up. */
+    gpio_config_t c = { .pin_bit_mask = 1ULL << 0, .mode = GPIO_MODE_INPUT, .pull_up_en = GPIO_PULLUP_ENABLE };
+    gpio_config(&c);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    int held = 0; for (int i = 0; i < 5; i++) { if (gpio_get_level(0) == 0) held++; vTaskDelay(pdMS_TO_TICKS(5)); }
+    return held >= 4;
 }
 
 bool hw_touch_init(lv_display_t *disp)
@@ -152,6 +179,7 @@ bool hw_touch_init(lv_display_t *disp)
     lvgl_port_touch_cfg_t lt = { .disp = disp, .handle = tp };
     s_indev = lvgl_port_add_touch(&lt);
     if (s_indev) { s_port_read = lv_indev_get_read_cb(s_indev); lv_indev_set_read_cb(s_indev, gated_read); }
+    hw_touch_diag_log("init");
     hw_touch_keep_awake(false);                        /* normal operation: controller auto-sleep (a wake check may have disabled it) */
     SET(touch, HW_PASS, "CST816S ready");
     return true;
@@ -189,7 +217,23 @@ void hw_panel_sleep(bool sleep)
 
 /* CST816S registers (register map in docs/POWER_FEASIBILITY.md sources): 0xFE DisAutoSleep (non-zero = never sleep),
    0xF9 AutoSleepTime (s), 0xFA IrqCtl, 0xEC MotionMask. Written through the touch panel's own I2C io (8-bit register). */
-static void tp_write(uint8_t reg, uint8_t val) { if (s_tp_io) esp_lcd_panel_io_tx_param(s_tp_io, reg, &val, 1); }
+static void tp_write(uint8_t reg, uint8_t val)
+{
+    if (!s_tp_io) return;
+    esp_err_t e = esp_lcd_panel_io_tx_param(s_tp_io, reg, &val, 1);
+    ESP_LOGI(TAG, "touch: write reg 0x%02X = 0x%02X -> %s", reg, val, esp_err_to_name(e));   /* 0.6.1 diagnostics */
+}
+static bool tp_read(uint8_t reg, uint8_t *val) { return s_tp_io && esp_lcd_panel_io_rx_param(s_tp_io, reg, val, 1) == ESP_OK; }
+
+/* 0.6.1 diagnostics: who is on the I2C bus (CST816S ChipID 0xA7 = 0xB4/0xB5/0xB6 family, firmware 0xA9) and the sleep setting */
+void hw_touch_diag_log(const char *when)
+{
+    uint8_t id = 0, fw = 0, das = 0;
+    bool a = tp_read(0xA7, &id), b = tp_read(0xA9, &fw), c = tp_read(0xFE, &das);
+    ESP_LOGI(TAG, "touch diag (%s): chip id %s0x%02X fw %s0x%02X DisAutoSleep %s0x%02X, INT GPIO%d=%d, indev %s, mode %s",
+             when, a ? "" : "n/a ", id, b ? "" : "n/a ", fw, c ? "" : "n/a ", das, BOARD_TP_INT, gpio_get_level(BOARD_TP_INT),
+             s_indev ? "ok" : "MISSING", s_indev && lv_indev_get_mode(s_indev) == LV_INDEV_MODE_EVENT ? "event (reads on interrupt)" : "timer (polling)");
+}
 
 void hw_touch_keep_awake(bool keep)
 {

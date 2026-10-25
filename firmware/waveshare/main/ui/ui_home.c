@@ -1,5 +1,6 @@
 /* Home, sensor pairing (power meter / HR strap / speed-cadence sensor) and the recovered-ride notice. Connections: ui_conn.c */
 #include "ui.h"
+#include "app_power.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -19,7 +20,8 @@ static void home_update(void)
     plat_wifi_status_t ws; plat_wifi_status(&ws);
     char wf[32] = "";
     if (ws.state != PLAT_WIFI_OFF) snprintf(wf, sizeof wf, " #%06x " LV_SYMBOL_WIFI "#", ui_hex(ws.state == PLAT_WIFI_CONNECTED ? C_GREEN : C_MUT));
-    snprintf(b, sizeof b, "#%06x " LV_SYMBOL_BLUETOOTH " PWR#  #%06x HR#  %s%s",
+    if (app_power_safe_mode()) snprintf(b, sizeof b, "#%06x SAFE MODE (touch gate off)#", ui_hex(C_RED));   /* 0.6.1: BOOT held at reset */
+    else snprintf(b, sizeof b, "#%06x " LV_SYMBOL_BLUETOOTH " PWR#  #%06x HR#  %s%s",
              ui_hex(ui_link_color(pw->link)), ui_hex(ui_link_color(hr->link)), bat, wf);
     lv_label_set_text(h_status, b);
     if (lv.power_ok) snprintf(b, sizeof b, "%d W  %d rpm%s", lv.watts, lv.cad_ok ? lv.rpm : 0, lv.demo ? "  (sim)" : "");

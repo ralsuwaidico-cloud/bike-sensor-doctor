@@ -105,6 +105,20 @@ static void health(void)
              (unsigned)uxTaskGetStackHighWaterMark(NULL));
 }
 
+/* 0.6.1: ten seconds after boot, say over serial whether the touch controller has reported anything at all */
+static void touch_check_cb(void *arg)
+{
+    (void)arg;
+    uint32_t reads = 0, presses = 0; hw_touch_counters(&reads, &presses);
+    lvgl_port_lock(0);
+    hw_touch_diag_log("10 s self-check");
+    lvgl_port_unlock();
+    const app_power_t *pw = app_power();
+    ESP_LOGI(TAG, "touch 10 s self-check: driver reads %u (finger down %u), gate reports %u passed %u, gate=%s, screen %s%s",
+             (unsigned)reads, (unsigned)presses, (unsigned)pw->touch_reports, (unsigned)pw->touch_passed, app_power_gate_text(),
+             pw->screen_on ? "on" : "off", reads == 0 ? " - NO TOUCH REPORT YET (normal if the glass was not touched)" : "");
+}
+
 void app_main(void)
 {
     const esp_app_desc_t *d = esp_app_get_description();
@@ -140,15 +154,23 @@ void app_main(void)
     esp_timer_create_args_t ta = { .callback = stable_cb, .name = "stable" };
     if (esp_timer_create(&ta, &t) == ESP_OK) esp_timer_start_once(t, 20 * 1000 * 1000);
 
+    /* 0.6.1 SAFE MODE (touch): BOOT held while RESET is pressed -> the wake gate is forced open and the display settings run on
+       defaults for this boot only (nothing saved). Recovery path that does not depend on the touch gate or on saved settings. */
+    bool touch_safe = hw_boot_button_held();
     hw_touch_init(disp);
     hw_touch_set_filter(app_power_touch_filter);   /* wake gesture swallowed + guard: a wake can never press a control */
-    ESP_LOGI(TAG, "STAGE 3 touch OK");
+    app_power_set_safe_mode(touch_safe);
+    if (touch_safe) { ESP_LOGW(TAG, "SAFE MODE (touch gate off): BOOT was held at reset. Settings and rides untouched."); bump("touchsafe"); }
+    ESP_LOGI(TAG, "STAGE 3 touch OK%s", touch_safe ? " (SAFE MODE)" : "");
+    { esp_timer_handle_t t10; esp_timer_create_args_t a10 = { .callback = touch_check_cb, .name = "touch10s" };
+      if (esp_timer_create(&a10, &t10) == ESP_OK) esp_timer_start_once(t10, 10 * 1000 * 1000); }
     ble_central_start();
     ESP_LOGI(TAG, "STAGE 4 Bluetooth OK");
 
     lvgl_port_lock(0);
     app_init();                           /* profile from NVS; an interrupted ride is recovered here */
     bc_profile_t *p = app_profile();
+    if (touch_safe) { p->brightness = 80; p->scr_timeout_s = 300; p->wake_taps = 1; }   /* this boot only; app_profile_save() is not called here */
     if (p->power.paired) ble_central_set_paired(PLAT_SENS_POWER, p->power.mac, p->power.addr_type, p->power.name);
     if (p->hr.paired) ble_central_set_paired(PLAT_SENS_HR, p->hr.mac, p->hr.addr_type, p->hr.name);
     if (p->csc.paired) ble_central_set_paired(PLAT_SENS_CSC, p->csc.mac, p->csc.addr_type, p->csc.name);
