@@ -24,4 +24,4 @@ Read against every earlier requirement; nothing marked complete was rebuilt. "De
 
 Hardware-only (cannot be proven in the simulator): every Bluetooth stage and reason on the real iPhone + board, the
 Repair flow with the board's new identity, background reconnect timing, LINK_DIAG and PROFILE hello from firmware
-0.7.0, and the whole routines journey on the glass. These are `BUILD<run>-TEST.txt`.
+0.7.0, and the whole routines journey on the glass. These are `BUILD40-TEST.txt`.

@@ -1,12 +1,12 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
-## 0.8.0 (build BUILDNO) — 26 Oct 2026 — TestFlight, internal testers only — pairs with firmware 0.7.0
+## 0.8.0 (build 40) — 26 Oct 2026 — TestFlight, internal testers only — pairs with firmware 0.7.0
 
 **Consolidated release** (Rashed, 25 Oct 22:41): pairing lifecycle + profile sync (P0), routines on the calendar and
 the adaptive Train now button (P1), on top of everything in 0.7.0. Same Link protocol (v1.2.1) and profile schema as
 firmware 0.7.0; works with 0.6.x boards too (features the board lacks say "needs firmware …"). Everything below is
 **simulator-tested** (unit tests incl. the firmware's byte vectors, launch smoke tests on fresh, build-24, -30, -33 and
--36 data files). **Nothing is device-tested** until Rashed runs `BUILDBUILDNO-TEST.txt`.
+-36 data files). **Nothing is device-tested** until Rashed runs `BUILD40-TEST.txt`.
 
 ### P0 — Bluetooth pairing that recovers (PAIRING_SYNC_BRIEF)
 - Explicit connection stages **Searching → Found → Connecting → Pairing → Authenticating → Connected → Syncing profile →

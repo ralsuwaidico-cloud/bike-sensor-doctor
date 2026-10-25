@@ -1,7 +1,7 @@
-BikeComputer iPhone app 0.8.0 (TestFlight build BUILDNO) — real-device checklist, app side of the combined procedure
+BikeComputer iPhone app 0.8.0 (TestFlight build 40) — real-device checklist, app side of the combined procedure
 =====================================================================================================================
 Order: 1) install firmware 0.7.0 on the board (INSTALL-v0.7.0.bat, approval first; TEST-v0.7.0.txt has the board side),
-2) update the iPhone app to 0.8.0 (BUILDNO), 3) run this list. Record PASS / FAIL / NOT TESTED per step. Everything is
+2) update the iPhone app to 0.8.0 (40), 3) run this list. Record PASS / FAIL / NOT TESTED per step. Everything is
 simulator-tested only until you confirm it here. Never USB and battery connected at the same time (HW-1).
 Rollback: TestFlight › Previous builds (36); board: ROLLBACK-TO-v061.bat / RESTORE-BACKUP-BEFORE-v070.bat.
 
