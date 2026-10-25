@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 38 — 2026-10-25 19:33 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: FAILED (exit 65)
+RESULT launch smoke (Release): FAILED (exit 65)
+RESULT archive: FAILED
+commit b05fad743abbe390ea698a58f1e1c9eb6eeadd9c  branch ios/dev  job failure
