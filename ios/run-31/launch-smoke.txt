@@ -1,0 +1,159 @@
+=== launch-smoke: errors / failures ===
+GatherProvisioningInputs
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (100.631 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (95.683 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 196.314 (196.335) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 196.314 (196.337) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 196.314 (196.340) seconds
+** TEST SUCCEEDED **
+=== launch-smoke: last 150 lines ===
+
+CopyPlistFile /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Info.plist /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/Info.plist (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copyPlist --validate --convert xml1 --macro-expansion WRAPPEDPRODUCTNAME BikeComputerUITests-Runner --macro-expansion WRAPPEDPRODUCTBUNDLEIDENTIFIER com.ralsuwaidico.bikecomputer.uitests.xctrunner --macro-expansion TESTPRODUCTNAME BikeComputerUITests --macro-expansion TESTPRODUCTBUNDLEIDENTIFIER com.ralsuwaidico.bikecomputer.uitests --copy-value UIDeviceFamily /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/PlugIns/BikeComputerUITests.xctest/Info.plist --outdir /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app -- /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/Info.plist
+
+CopyAndPreserveArchs /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/BikeComputerUITests-Runner (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/XCTRunner -output /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/BikeComputerUITests-Runner -extract arm64 -extract x86_64
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/PkgInfo /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/PkgInfo (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/PkgInfo /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/libXCTestSwiftSupport.dylib /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/XCUnit.framework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCUnit.framework (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCUnit.framework /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/XCUIAutomation.framework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/XCTestSupport.framework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/XCTestCore.framework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/XCTest.framework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCTest.framework /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/XCTAutomationSupport.framework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/PlugIns/BikeComputerUITests.xctest (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/PlugIns/BikeComputerUITests.xctest
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks/Testing.framework /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/Testing.framework (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/Testing.framework /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/Frameworks
+
+Touch /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/PlugIns/BikeComputerUITests.xctest (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    /usr/bin/touch -c /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Release-iphonesimulator/BikeComputerUITests-Runner.app/PlugIns/BikeComputerUITests.xctest
+
+2026-10-25 07:36:21.541625+0000 BikeComputerUITests-Runner[9569:35322] [Default] Running tests...
+objc[9569]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x106bd0310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x109a98398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'All tests' started at 2026-10-25 07:36:33.337.
+Test Suite 'BikeComputerUITests.xctest' started at 2026-10-25 07:36:33.339.
+Test Suite 'LaunchSmokeTests' started at 2026-10-25 07:36:33.340.
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' started.
+    t =     0.00s Start Test at 2026-10-25 07:36:33.342
+    t =     2.32s Set Up
+    t =     2.34s Open com.ralsuwaidico.bikecomputer
+    t =     2.34s     Launch com.ralsuwaidico.bikecomputer
+2026-10-25 07:36:40.281 xcodebuild[4772:21227] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-25 07:36:40.282 xcodebuild[4772:21227] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    14.32s         Setting up automation session
+    t =    17.14s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    77.20s             App event loop idle notification not received, will attempt to continue.
+    t =    78.87s Waiting 20.0s for "BikeComputer" StaticText to exist
+    t =    80.97s     Checking `Expect predicate `existsNoRetry == 1` for object "BikeComputer" StaticText`
+    t =    80.98s         Checking existence of `"BikeComputer" StaticText`
+    t =    89.25s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (100.631 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' started.
+    t =     0.01s Start Test at 2026-10-25 07:38:13.994
+    t =     0.70s Set Up
+    t =     1.53s Open com.ralsuwaidico.bikecomputer
+    t =     1.67s     Launch com.ralsuwaidico.bikecomputer
+    t =     1.67s         Terminate com.ralsuwaidico.bikecomputer:10332
+2026-10-25 07:39:08.093 xcodebuild[4772:21227] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-25 07:39:08.094 xcodebuild[4772:21227] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    59.62s         Setting up automation session
+    t =    61.67s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    74.30s Waiting 25.0s for "Hi Rashed" NavigationBar to exist
+    t =    75.34s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    75.35s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    76.10s Waiting 10.0s for "Plan" Button to exist
+    t =    77.13s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =    77.13s         Checking existence of `"Plan" Button`
+    t =    77.21s Tap "Plan" Button
+    t =    77.21s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    77.21s     Find the "Plan" Button
+    t =    77.35s     Check for interrupting elements affecting "Plan" Button
+    t =    78.55s     Synthesize event
+    t =    79.02s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    80.04s Waiting 10.0s for "Ride now, open the Ride screen" Button to exist
+    t =    81.08s     Checking `Expect predicate `existsNoRetry == 1` for object "Ride now, open the Ride screen" Button`
+    t =    81.08s         Checking existence of `"Ride now, open the Ride screen" Button`
+    t =    81.62s Tap "Ride now, open the Ride screen" Button
+    t =    81.62s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    81.63s     Find the "Ride now, open the Ride screen" Button
+    t =    81.98s     Check for interrupting elements affecting "Ride now, open the Ride screen" Button
+    t =    82.64s     Synthesize event
+    t =    83.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    84.10s Waiting 10.0s for "Progress" Button to exist
+    t =    85.13s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    85.13s         Checking existence of `"Progress" Button`
+    t =    85.44s Tap "Progress" Button
+    t =    85.44s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    85.45s     Find the "Progress" Button
+    t =    85.63s     Check for interrupting elements affecting "Progress" Button
+    t =    86.03s     Synthesize event
+    t =    86.54s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    87.55s Waiting 10.0s for "Profile" Button to exist
+    t =    88.60s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =    88.60s         Checking existence of `"Profile" Button`
+    t =    88.86s Tap "Profile" Button
+    t =    88.86s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    88.87s     Find the "Profile" Button
+    t =    89.17s     Check for interrupting elements affecting "Profile" Button
+    t =    89.64s     Synthesize event
+    t =    90.07s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    91.08s Waiting 10.0s for "Home" Button to exist
+    t =    92.09s     Checking `Expect predicate `existsNoRetry == 1` for object "Home" Button`
+    t =    92.09s         Checking existence of `"Home" Button`
+    t =    92.14s Tap "Home" Button
+    t =    92.14s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    92.16s     Find the "Home" Button
+    t =    92.19s     Check for interrupting elements affecting "Home" Button
+    t =    92.46s     Synthesize event
+    t =    92.77s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    93.80s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (95.683 seconds).
+Test Suite 'LaunchSmokeTests' passed at 2026-10-25 07:39:49.675.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 196.314 (196.335) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-10-25 07:39:49.676.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 196.314 (196.337) seconds
+Test Suite 'All tests' passed at 2026-10-25 07:39:49.677.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 196.314 (196.340) seconds
+2026-10-25 07:39:54.147 xcodebuild[4772:21227] [MT] IDETestOperationsObserverDebug: 312.456 elapsed -- Testing started completed.
+2026-10-25 07:39:54.148 xcodebuild[4772:21227] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-25 07:39:54.148 xcodebuild[4772:21227] [MT] IDETestOperationsObserverDebug: 312.456 sec, +312.456 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/uitests.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
