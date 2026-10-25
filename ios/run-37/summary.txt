@@ -1,0 +1,18 @@
+BikeComputer iOS CI — build 37 — 2026-10-25 17:34 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+RESULT tests: ok (Executed 91 tests, with 0 failures)
+RESULT launch smoke (Release): ok (Executed 4 tests, with 0 failures)
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 0.7.0 (37)
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 0.7.0 (37)
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 3319336 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: skipped (not requested for this run)
+commit ba2766a21208b5499ac870c936c4955a42361ce9  branch ios/dev  job success
