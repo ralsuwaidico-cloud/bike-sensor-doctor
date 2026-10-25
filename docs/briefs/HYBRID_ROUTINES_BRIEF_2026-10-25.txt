@@ -1,0 +1,115 @@
+Claude, I have tested BikeComputer iOS Build 36 and found an important missing workflow. Please implement the following improvements in the next TestFlight build.
+
+Problem 1: Saved strength templates are disconnected from the training schedule.
+
+I created a custom template called “Short Full Body Workout” with my actual exercises, but when I open Tuesday’s planned strength session, it still shows a generic bodyweight circuit with squats, lunges and planks.
+
+I train at home and have limited equipment. The coach must respect the workouts I create and the equipment I actually own.
+
+Implement:
+
+1. Allow me to assign any saved strength template to any strength session on the calendar.
+2. Add a clear “Choose routine” or “Use template” action inside scheduled strength sessions.
+3. Allow a routine to be assigned as the default for specific weekdays, such as Tuesday, Thursday and Saturday.
+4. Support different routines for different days.
+5. When generating future weeks, reuse my assigned routines unless I explicitly change them.
+6. Preserve exercise order, sets, reps, weights, supersets and notes.
+7. Make the assigned routine directly accessible when I start the scheduled workout.
+8. Support editing, replacing or removing a template assignment without deleting the original template.
+9. Keep the routine duration within my stated weekly lifting budget.
+10. Allow me to mark which equipment I own and which exercises I cannot perform.
+
+Problem 2: The coach doesn’t yet build around my real strength workouts.
+
+The coach should use my saved routines and completed training logs as its starting point.
+
+Add a compact “Next workout insight” card showing one actionable suggestion.
+
+Examples:
+
+* Increase dumbbell chest press by one repetition if previous performance supports it.
+* Maintain the current weight because the last session was difficult.
+* Consider adding a hamstring exercise if my logged routine consistently misses that movement pattern.
+* Reduce demanding leg work before a hard cycling session.
+
+Recommendations must be evidence-based and clearly distinguish suggestions from confirmed findings.
+
+The coach must:
+
+* Respect my equipment limitations.
+* Never silently replace my saved exercises.
+* Never change fixed workout days without approval.
+* Respect the time I allocated to cycling and lifting.
+* Suggest improvements within my existing routine.
+* Explain why each adjustment is recommended.
+* Let me Accept, Ignore or Undo a suggestion.
+
+If there is insufficient exercise history, say so rather than inventing progression advice.
+
+Problem 3: The center navigation button should adapt to the day’s workout.
+
+Currently the center button always says “Ride now” and opens the cycling interface.
+
+Change it dynamically:
+
+* Cycling day: bicycle icon, “Ride now”, opens the cycling dashboard.
+* Strength day: dumbbell icon, “Train now”, opens the scheduled strength workout with my assigned template and exercise logging.
+* Day with both: “Train now”, opens a choice between cycling and strength.
+* Rest day: “Train now”, offers an optional unplanned session.
+
+Use the user’s local calendar date and actual scheduled activities.
+
+If the planned workout is already completed, show a sensible next action rather than inviting duplicate logging.
+
+Preserve the prominent center-button design and the five-tab navigation.
+
+Problem 4: Improve the scheduled strength workout interface.
+
+The current scheduled strength sheet contains a generic circuit and five scattered action buttons: Move, Edit, Replace, Skip and Remove.
+
+Redesign this screen around the actual assigned routine.
+
+Show:
+
+* Workout name and duration
+* Exercises in order
+* Planned sets and repetitions
+* Previous weights/reps where available
+* A prominent “Start workout” button
+* One compact coach suggestion with “Why?”
+* Secondary actions grouped neatly under an Edit or More menu
+
+During a strength session, allow me to record each set, actual reps and weight, mark sets completed, see previous performance and finish or pause the workout.
+
+Ensure partial sessions can be saved and resumed.
+
+Problem 5: Make template creation independent of workout logging.
+
+The current interface suggests creating a template by logging a session and saving it.
+
+Also allow me to create a template directly, without pretending I completed a workout.
+
+Keep templates, scheduled sessions and completed sessions as separate data types.
+
+A saved template must not count as completed training.
+
+Acceptance criteria
+
+Test this complete journey:
+
+1. Create a strength template with multiple exercises.
+2. Assign it to Tuesday.
+3. See its name and details in the Tuesday calendar session.
+4. Open Tuesday and see the actual saved routine, not a generic circuit.
+5. Press the center “Train now” button on Tuesday.
+6. Start the assigned routine and log sets.
+7. Finish the workout and verify the completed session appears in history.
+8. Verify the coach uses the completed sets for future suggestions.
+9. Verify the next week’s Tuesday routine remains assigned.
+10. Verify cycling days still open the existing cycling dashboard.
+
+Also test days containing both cycling and lifting, rest days, missed sessions, offline use, app restarts and migrations from Build 36.
+
+Do not overwrite existing templates, completed rides, strength logs or user-edited plans.
+
+Deliver the next TestFlight build with automated tests and a clear list of features that still require real-device verification.
