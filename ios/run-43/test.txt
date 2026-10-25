@@ -1,0 +1,294 @@
+=== test: errors / failures ===
+GatherProvisioningInputs
+2026-10-25 21:32:46.927276+0000 BikeComputer[10225:37276] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' passed (0.035 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' passed (0.001 seconds).
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.050 (0.869) seconds
+Test Case '-[BikeComputerTests.CoachCoreTests testAllCoachVectorsPass]' passed (0.396 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testFallbackBandsComeFromZones]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGaugeScaleAndFractions]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGaugeTextNeverDressesUpMissingData]' passed (8.480 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryDegenerateSizesReturnImmediatelyAndFinite]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryIPhoneSizesNeverOverlap]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryLargeFontShrinksButNeverOverlaps]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryNormalFontGivesALargePowerRing]' passed (19.576 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testHRAndCadenceStatus]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testNormalisationIsPerSignalAgainstItsOwnBand]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testPowerStatusAgainstZone2]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testRideCoachTicksOnlyRealSignalsAndKeepsAWindow]' passed (0.265 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testSessionPhasesAndWorkoutRamps]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testStatusKeepsZeroAsAValue]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testZonePercentAndShapes]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testZoneRanges]' passed (0.003 seconds).
+	 Executed 16 tests, with 0 failures (0 unexpected) in 28.729 (28.867) seconds
+Test Case '-[BikeComputerTests.HybridTests testBuild30StoreLoadsWithHybridDefaults]' passed (0.027 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachBalancedWeek]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachFindsUnderLifting]' passed (0.022 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachFindsUnderRiding]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachPushPullImbalanceOnlyFromLabels]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCyclingModeIgnoresStrength]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.HybridTests testHybridWeekFollowsAvailabilityWithSeparateHours]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.HybridTests testQuickLogMarksPlannedStrengthDoneAndTimelineShowsIt]' passed (0.029 seconds).
+Test Case '-[BikeComputerTests.HybridTests testStrengthPriorityPutsLiftFirstOnSharedDay]' passed (0.189 seconds).
+Test Case '-[BikeComputerTests.HybridTests testSuggestedAvailabilityFromProfile]' passed (0.001 seconds).
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.315 (1.637) seconds
+Test Case '-[BikeComputerTests.HybridV2Tests testCatalogueLoadsAndSearchWorks]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testCoverageIsUnknownFromQuickLogsAndKnownFromDetailedOnes]' passed (0.738 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testCyclingTimeIsNeverLiftingVolume]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testDayMarksAndFlexibleDays]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testFitTrimsFlexibleBeforeFixedAndKeepsTypes]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testFormatterAndShortLabels]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testInterferenceProposalRespectsFixedAndEditedAndCanBeUndone]' passed (0.024 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testLegacyAvailabilityMigratesWithoutLoss]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testPlannedSessionsAreNeverCountedAsCompleted]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testPlanNeverExceedsEitherBudgetByAMinute]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testProgressionTrendNeedsFourLoadedSessions]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testSetEntryTonnageAndText]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testStableSourceIdsAndImportedStatus]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testStoreRoundTripKeepsTemplatesExercisesAndDetailedLogs]' passed (0.018 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testSuggestedAvailabilityIsInsideBothBudgets]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testTemplatePrefillsFromLastSession]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testWeeklyReviewComparesPlannedWithCompletedAndOffersRevision]' passed (0.001 seconds).
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.809 (2.325) seconds
+Test Case '-[BikeComputerTests.LinkV12Tests testCapsGateEverything]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testProfileVectors]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testRiderProfileMapsToLinkMessageAndBack]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testSettingsVectors]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiRequestsMatchFirmwareVectors]' passed (0.837 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiScanResultWithCurlyApostrophe]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiStatusVector]' passed (0.002 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.854 (1.126) seconds
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDurationFormatter]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testEditedWorkoutsSurviveRegeneration]' passed (0.014 seconds).
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' passed (0.055 seconds).
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' passed (0.014 seconds).
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testOverHoursSuggestsAdjustmentsInsteadOfCutting]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' passed (0.015 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' passed (0.091 seconds).
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testTimelineDedupesAndComputesTSS]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekIsBuiltAroundAvailability]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' passed (0.003 seconds).
+	 Executed 19 tests, with 0 failures (0 unexpected) in 0.230 (1.406) seconds
+Test Case '-[BikeComputerTests.PairingTests testBoardRowIsRedWhenPairingIsLost]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.PairingTests testLinkDiagVectorFromFirmware]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.PairingTests testProfileSyncStateWords]' passed (0.702 seconds).
+Test Case '-[BikeComputerTests.PairingTests testProfileValidationMirrorsTheBoardRanges]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.PairingTests testStagesAreOrderedAsTheBriefLists]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.PairingTests testStaleKeysMapToRepair]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.PairingTests testSyncRecordPersistsLastSuccessfulSync]' passed (0.021 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.758 (1.050) seconds
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptanceJourney]' passed (0.143 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptEditsOnlyThatSessionAndUndoRestores]' passed (0.032 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testBothRestMissedAndDoneDays]' passed (0.034 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testEquipmentAndExclusionsFilterSuggestionsButNeverEditRoutines]' passed (0.020 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testInsufficientHistoryIsSaidNotInvented]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testLiftingBudgetWarningOnAssignment]' passed (0.015 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testMigrationFromBuild36StoreKeepsEverything]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testPartialSessionSurvivesRestart]' passed (0.038 seconds).
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.298 (1.102) seconds
+Test Case '-[BikeComputerTests.RulesTests testBoardColours]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testCoachLineAndWhyNeverClaimRecoveryData]' passed (0.229 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOldProfileAndSettingsJSONLoad]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOptionalDevicesNeverRedUnlessEnabled]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPhoneColours]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPlanDayGroupsMultipleActivities]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testProfileVersionBumpsOnChangeOnly]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSyncRecordPerBoard]' passed (0.003 seconds).
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.251 (0.329) seconds
+Test Case '-[BikeComputerTests.SyncMergeTests testBothMovedNewerClientWins]' passed (0.072 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testCloudConfigAbsentMeansGuestOnly]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testIsoDatesFromPostgres]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testOnlyServerMovedTakesRemote]' passed (0.001 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/SyncMergeTests.swift:70: error: -[BikeComputerTests.SyncMergeTests testPayloadRoundTripKeepsJSON] : failed: caught error: "DecodingError.typeMismatch: expected value of type Int. Path: zoneSeconds[0]. Debug description: Expected to decode Int but found bool instead."
+Test Case '-[BikeComputerTests.SyncMergeTests testPayloadRoundTripKeepsJSON]' failed (13.194 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testRemoteDeletionHonouredUnlessEditedAfter]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testRideDedupeBySourceIdAndByTime]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testSameHashNeedsNothing]' passed (0.042 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testStrengthDedupe]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testUnknownLocallyTakesRemote]' passed (0.001 seconds).
+Test Suite 'SyncMergeTests' failed at 2026-10-25 21:33:47.356.
+	 Executed 10 tests, with 1 failure (1 unexpected) in 13.321 (13.326) seconds
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' passed (0.001 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.005 (0.253) seconds
+Test Suite 'BikeComputerTests.xctest' failed at 2026-10-25 21:33:47.610.
+	 Executed 116 tests, with 1 failure (1 unexpected) in 45.620 (52.296) seconds
+Test Suite 'All tests' failed at 2026-10-25 21:33:47.610.
+	 Executed 116 tests, with 1 failure (1 unexpected) in 45.620 (52.297) seconds
+2026-10-25 21:33:47.695185+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:33:48.039593+0000 BikeComputer[10225:42961] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-25 21:33:58.083824+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:34:08.122004+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:34:19.135941+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:34:29.152836+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+Failing tests:
+** TEST FAILED **
+=== test: last 150 lines ===
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' started.
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testOverHoursSuggestsAdjustmentsInsteadOfCutting]' started.
+Test Case '-[BikeComputerTests.ModelTests testOverHoursSuggestsAdjustmentsInsteadOfCutting]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' started.
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' started.
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' started.
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' passed (0.015 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' started.
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' passed (0.091 seconds).
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' started.
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testTimelineDedupesAndComputesTSS]' started.
+Test Case '-[BikeComputerTests.ModelTests testTimelineDedupesAndComputesTSS]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekIsBuiltAroundAvailability]' started.
+Test Case '-[BikeComputerTests.ModelTests testWeekIsBuiltAroundAvailability]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' started.
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' started.
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' passed (0.003 seconds).
+Test Suite 'ModelTests' passed at 2026-10-25 21:33:31.546.
+	 Executed 19 tests, with 0 failures (0 unexpected) in 0.230 (1.406) seconds
+Test Suite 'PairingTests' started at 2026-10-25 21:33:31.547.
+Test Case '-[BikeComputerTests.PairingTests testBoardRowIsRedWhenPairingIsLost]' started.
+Test Case '-[BikeComputerTests.PairingTests testBoardRowIsRedWhenPairingIsLost]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.PairingTests testLinkDiagVectorFromFirmware]' started.
+Test Case '-[BikeComputerTests.PairingTests testLinkDiagVectorFromFirmware]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.PairingTests testProfileSyncStateWords]' started.
+Test Case '-[BikeComputerTests.PairingTests testProfileSyncStateWords]' passed (0.702 seconds).
+Test Case '-[BikeComputerTests.PairingTests testProfileValidationMirrorsTheBoardRanges]' started.
+Test Case '-[BikeComputerTests.PairingTests testProfileValidationMirrorsTheBoardRanges]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.PairingTests testStagesAreOrderedAsTheBriefLists]' started.
+Test Case '-[BikeComputerTests.PairingTests testStagesAreOrderedAsTheBriefLists]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.PairingTests testStaleKeysMapToRepair]' started.
+Test Case '-[BikeComputerTests.PairingTests testStaleKeysMapToRepair]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.PairingTests testSyncRecordPersistsLastSuccessfulSync]' started.
+Test Case '-[BikeComputerTests.PairingTests testSyncRecordPersistsLastSuccessfulSync]' passed (0.021 seconds).
+Test Suite 'PairingTests' passed at 2026-10-25 21:33:32.598.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.758 (1.050) seconds
+Test Suite 'RoutinesTests' started at 2026-10-25 21:33:32.598.
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptanceJourney]' started.
+2026-10-25 21:33:30.549926+0000 BikeComputer[10225:39367] [WC] WCSession is not paired
+2026-10-25 21:33:32.614241+0000 BikeComputer[10225:39367] [WC] -[WCSession onqueue_handleUpdateSessionState:]_block_invoke dropping as pairingIDs no longer match. pairingID (null), client pairingID: (null)
+2026-10-25 21:33:32.661529+0000 BikeComputer[10225:39367] [WC] WCSession is not paired
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptanceJourney]' passed (0.143 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptEditsOnlyThatSessionAndUndoRestores]' started.
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptEditsOnlyThatSessionAndUndoRestores]' passed (0.032 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testBothRestMissedAndDoneDays]' started.
+Test Case '-[BikeComputerTests.RoutinesTests testBothRestMissedAndDoneDays]' passed (0.034 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testEquipmentAndExclusionsFilterSuggestionsButNeverEditRoutines]' started.
+Test Case '-[BikeComputerTests.RoutinesTests testEquipmentAndExclusionsFilterSuggestionsButNeverEditRoutines]' passed (0.020 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testInsufficientHistoryIsSaidNotInvented]' started.
+Test Case '-[BikeComputerTests.RoutinesTests testInsufficientHistoryIsSaidNotInvented]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testLiftingBudgetWarningOnAssignment]' started.
+Test Case '-[BikeComputerTests.RoutinesTests testLiftingBudgetWarningOnAssignment]' passed (0.015 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testMigrationFromBuild36StoreKeepsEverything]' started.
+Test Case '-[BikeComputerTests.RoutinesTests testMigrationFromBuild36StoreKeepsEverything]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testPartialSessionSurvivesRestart]' started.
+Test Case '-[BikeComputerTests.RoutinesTests testPartialSessionSurvivesRestart]' passed (0.038 seconds).
+Test Suite 'RoutinesTests' passed at 2026-10-25 21:33:33.700.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.298 (1.102) seconds
+Test Suite 'RulesTests' started at 2026-10-25 21:33:33.700.
+Test Case '-[BikeComputerTests.RulesTests testBoardColours]' started.
+Test Case '-[BikeComputerTests.RulesTests testBoardColours]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testCoachLineAndWhyNeverClaimRecoveryData]' started.
+Test Case '-[BikeComputerTests.RulesTests testCoachLineAndWhyNeverClaimRecoveryData]' passed (0.229 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOldProfileAndSettingsJSONLoad]' started.
+Test Case '-[BikeComputerTests.RulesTests testOldProfileAndSettingsJSONLoad]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.RulesTests testOptionalDevicesNeverRedUnlessEnabled]' started.
+Test Case '-[BikeComputerTests.RulesTests testOptionalDevicesNeverRedUnlessEnabled]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPhoneColours]' started.
+Test Case '-[BikeComputerTests.RulesTests testPhoneColours]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.RulesTests testPlanDayGroupsMultipleActivities]' started.
+Test Case '-[BikeComputerTests.RulesTests testPlanDayGroupsMultipleActivities]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testProfileVersionBumpsOnChangeOnly]' started.
+Test Case '-[BikeComputerTests.RulesTests testProfileVersionBumpsOnChangeOnly]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown]' started.
+Test Case '-[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RulesTests testSyncRecordPerBoard]' started.
+Test Case '-[BikeComputerTests.RulesTests testSyncRecordPerBoard]' passed (0.003 seconds).
+Test Suite 'RulesTests' passed at 2026-10-25 21:33:34.030.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.251 (0.329) seconds
+Test Suite 'SyncMergeTests' started at 2026-10-25 21:33:34.030.
+Test Case '-[BikeComputerTests.SyncMergeTests testBothMovedNewerClientWins]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testBothMovedNewerClientWins]' passed (0.072 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testCloudConfigAbsentMeansGuestOnly]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testCloudConfigAbsentMeansGuestOnly]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testIsoDatesFromPostgres]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testIsoDatesFromPostgres]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testOnlyServerMovedTakesRemote]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testOnlyServerMovedTakesRemote]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testPayloadRoundTripKeepsJSON]' started.
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/SyncMergeTests.swift:70: error: -[BikeComputerTests.SyncMergeTests testPayloadRoundTripKeepsJSON] : failed: caught error: "DecodingError.typeMismatch: expected value of type Int. Path: zoneSeconds[0]. Debug description: Expected to decode Int but found bool instead."
+Test Case '-[BikeComputerTests.SyncMergeTests testPayloadRoundTripKeepsJSON]' failed (13.194 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testRemoteDeletionHonouredUnlessEditedAfter]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testRemoteDeletionHonouredUnlessEditedAfter]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testRideDedupeBySourceIdAndByTime]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testRideDedupeBySourceIdAndByTime]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testSameHashNeedsNothing]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testSameHashNeedsNothing]' passed (0.042 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testStrengthDedupe]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testStrengthDedupe]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testUnknownLocallyTakesRemote]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testUnknownLocallyTakesRemote]' passed (0.001 seconds).
+Test Suite 'SyncMergeTests' failed at 2026-10-25 21:33:47.356.
+	 Executed 10 tests, with 1 failure (1 unexpected) in 13.321 (13.326) seconds
+Test Suite 'WatchMessageTests' started at 2026-10-25 21:33:47.357.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' passed (0.001 seconds).
+Test Suite 'WatchMessageTests' passed at 2026-10-25 21:33:47.610.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.005 (0.253) seconds
+Test Suite 'BikeComputerTests.xctest' failed at 2026-10-25 21:33:47.610.
+	 Executed 116 tests, with 1 failure (1 unexpected) in 45.620 (52.296) seconds
+Test Suite 'All tests' failed at 2026-10-25 21:33:47.610.
+	 Executed 116 tests, with 1 failure (1 unexpected) in 45.620 (52.297) seconds
+2026-10-25 21:33:47.625458+0000 BikeComputer[10225:35520] [WC] WCSession is not paired
+2026-10-25 21:33:47.695185+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:33:48.039593+0000 BikeComputer[10225:42961] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-25 21:33:58.082528+0000 BikeComputer[10225:35520] [WC] WCSession is not paired
+2026-10-25 21:33:58.083824+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:34:08.121273+0000 BikeComputer[10225:35520] [WC] WCSession is not paired
+2026-10-25 21:34:08.122004+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:34:19.134820+0000 BikeComputer[10225:35520] [WC] WCSession is not paired
+2026-10-25 21:34:19.135941+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:34:29.151963+0000 BikeComputer[10225:35520] [WC] WCSession is not paired
+2026-10-25 21:34:29.152836+0000 BikeComputer[10225:35520] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-25 21:34:34.207423+0000 BikeComputer[10225:42961] [Default] Xcode took 46.42 seconds to acknowledge that testing finished.
+2026-10-25 21:35:47.452 xcodebuild[4169:16710] [MT] IDETestOperationsObserverDebug: 402.398 elapsed -- Testing started completed.
+2026-10-25 21:35:47.452 xcodebuild[4169:16710] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-25 21:35:47.452 xcodebuild[4169:16710] [MT] IDETestOperationsObserverDebug: 402.398 sec, +402.398 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/tests.xcresult
+
+Failing tests:
+	SyncMergeTests.testPayloadRoundTripKeepsJSON()
+
+** TEST FAILED **
+
+Testing started

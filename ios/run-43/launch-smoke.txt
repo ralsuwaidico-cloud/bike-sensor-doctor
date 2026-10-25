@@ -1,0 +1,168 @@
+=== launch-smoke: errors / failures ===
+GatherProvisioningInputs
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (20.287 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (31.007 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (33.163 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (42.031 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (44.956 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LaunchSmokeTests.swift:81: error: -[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages] : Failed to tap Button (Element at index 4): No matches found for Descendants matching type TabBar from input {(
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages]' failed (16.329 seconds).
+Test Suite 'LaunchSmokeTests' failed at 2026-10-25 21:46:41.527.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 187.774 (187.785) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-25 21:46:41.528.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 187.774 (187.787) seconds
+Test Suite 'All tests' failed at 2026-10-25 21:46:41.528.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 187.774 (187.790) seconds
+Failing tests:
+** TEST FAILED **
+=== launch-smoke: last 150 lines ===
+    t =    40.95s     Find the "Home" Button
+    t =    41.09s     Check for interrupting elements affecting "Home" Button
+    t =    41.44s     Synthesize event
+    t =    41.74s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    41.75s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (42.031 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' started.
+    t =     0.00s Start Test at 2026-10-25 21:45:40.238
+    t =     0.04s Set Up
+    t =     0.04s Open com.ralsuwaidico.bikecomputer
+    t =     0.04s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.04s         Terminate com.ralsuwaidico.bikecomputer:30352
+2026-10-25 21:45:42.300 xcodebuild[15362:52822] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-25 21:45:42.300 xcodebuild[15362:52822] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     3.43s         Setting up automation session
+    t =     4.76s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     9.02s Waiting 25.0s for "Hi Rashed" NavigationBar to exist
+    t =    10.08s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    10.08s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    10.67s Waiting 10.0s for "centreButton" Button to exist
+    t =    11.71s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    11.71s         Checking existence of `"centreButton" Button`
+    t =    11.77s Find the "centreButton" Button
+    t =    11.80s Tap "centreButton" Button
+    t =    11.80s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    11.80s     Find the "centreButton" Button
+    t =    11.83s     Check for interrupting elements affecting "centreButton" Button
+    t =    12.04s     Synthesize event
+    t =    12.35s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    12.80s Waiting 10.0s for "Short Full Body Workout" StaticText to exist
+    t =    13.83s     Checking `Expect predicate `existsNoRetry == 1` for object "Short Full Body Workout" StaticText`
+    t =    13.83s         Checking existence of `"Short Full Body Workout" StaticText`
+    t =    15.67s Waiting 5.0s for "startWorkout" Button to exist
+    t =    16.70s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkout" Button`
+    t =    16.70s         Checking existence of `"startWorkout" Button`
+    t =    20.96s         Capturing element debug description
+    t =    20.96s     Checking existence of `"startWorkout" Button`
+    t =    24.92s Checking existence of `"Replace" Button`
+    t =    25.30s Tap "Done" Button
+    t =    25.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    25.30s     Find the "Done" Button
+    t =    25.96s     Check for interrupting elements affecting "Done" Button
+    t =    26.20s     Synthesize event
+    t =    26.62s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    27.51s Waiting 10.0s for "Plan" Button to exist
+    t =    28.52s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =    28.52s         Checking existence of `"Plan" Button`
+    t =    28.65s Tap "Plan" Button
+    t =    28.65s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    28.65s     Find the "Plan" Button
+    t =    28.73s     Check for interrupting elements affecting "Plan" Button
+    t =    28.96s     Synthesize event
+    t =    29.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    30.82s Waiting 10.0s for "centreButton" Button to exist
+    t =    31.88s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    31.88s         Checking existence of `"centreButton" Button`
+    t =    31.92s Tap "centreButton" Button
+    t =    31.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    31.92s     Find the "centreButton" Button
+    t =    31.95s     Check for interrupting elements affecting "centreButton" Button
+    t =    32.17s     Synthesize event
+    t =    32.48s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    33.73s Checking existence of `"Done" Button`
+    t =    33.94s Find the "Done" Button
+    t =    34.20s Tap "Done" Button
+    t =    34.20s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    34.20s     Find the "Done" Button
+    t =    34.58s     Check for interrupting elements affecting "Done" Button
+    t =    34.87s     Synthesize event
+    t =    35.21s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    35.97s Waiting 10.0s for "Progress" Button to exist
+    t =    37.02s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    37.02s         Checking existence of `"Progress" Button`
+    t =    37.16s Tap "Progress" Button
+    t =    37.16s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    37.16s     Find the "Progress" Button
+    t =    37.29s     Check for interrupting elements affecting "Progress" Button
+    t =    37.64s     Synthesize event
+    t =    38.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.02s Waiting 10.0s for "Profile" Button to exist
+    t =    40.06s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =    40.06s         Checking existence of `"Profile" Button`
+    t =    40.18s Tap "Profile" Button
+    t =    40.18s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    40.19s     Find the "Profile" Button
+    t =    40.32s     Check for interrupting elements affecting "Profile" Button
+    t =    40.58s     Synthesize event
+    t =    40.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    41.93s Waiting 10.0s for "Home" Button to exist
+    t =    42.97s     Checking `Expect predicate `existsNoRetry == 1` for object "Home" Button`
+    t =    42.97s         Checking existence of `"Home" Button`
+    t =    43.03s Tap "Home" Button
+    t =    43.03s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    43.04s     Find the "Home" Button
+    t =    43.12s     Check for interrupting elements affecting "Home" Button
+    t =    43.33s     Synthesize event
+    t =    43.68s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    44.69s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (44.956 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages]' started.
+    t =     0.00s Start Test at 2026-10-25 21:46:25.199
+    t =     0.04s Set Up
+    t =     0.04s Open com.ralsuwaidico.bikecomputer
+    t =     0.04s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.04s         Terminate com.ralsuwaidico.bikecomputer:30728
+2026-10-25 21:46:26.618 xcodebuild[15362:52822] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-25 21:46:26.618 xcodebuild[15362:52822] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     3.52s         Setting up automation session
+    t =     5.16s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     8.93s Waiting 25.0s for "Hi Rashed" NavigationBar to exist
+    t =     9.97s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =     9.97s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    11.39s Tap Button (Element at index 4)
+    t =    11.39s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    11.43s     Find the Button (Element at index 4)
+    t =    13.14s         Find the Button (Element at index 4) (retry 1)
+    t =    14.34s         Find the Button (Element at index 4) (retry 2)
+    t =    14.51s Requesting snapshot of accessibility hierarchy for app with pid 31640
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LaunchSmokeTests.swift:81: error: -[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages] : Failed to tap Button (Element at index 4): No matches found for Descendants matching type TabBar from input {(
+    Application, pid: 31640
+)}
+Possibly caused by runtime issues:
+Automation type mismatch: computed Button from legacy attributes vs DisclosureTriangle from modern attribute. Input attributes and values: {
+    "XC_kAXXCAttributeAutomationType" = 13;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934593;
+}
+See test report attachments for more detail.
+    t =    15.63s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages]' failed (16.329 seconds).
+Test Suite 'LaunchSmokeTests' failed at 2026-10-25 21:46:41.527.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 187.774 (187.785) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-25 21:46:41.528.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 187.774 (187.787) seconds
+Test Suite 'All tests' failed at 2026-10-25 21:46:41.528.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 187.774 (187.790) seconds
+2026-10-25 21:47:28.686 xcodebuild[15362:52822] [MT] IDETestOperationsObserverDebug: 386.569 elapsed -- Testing started completed.
+2026-10-25 21:47:28.688 xcodebuild[15362:52822] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-25 21:47:28.688 xcodebuild[15362:52822] [MT] IDETestOperationsObserverDebug: 386.569 sec, +386.569 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/uitests.xcresult
+
+Failing tests:
+	LaunchSmokeTests.testUpgradeFromBuild40OpensAccountAndLegalPages()
+
+** TEST FAILED **
+
+Testing started
