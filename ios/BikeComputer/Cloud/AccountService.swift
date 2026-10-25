@@ -63,7 +63,7 @@ final class AccountService: NSObject, ObservableObject {
         }
     }
 
-    private func apply(session: Session) {
+    private func apply(session: Auth.Session) {
         let u = session.user
         let provider = (u.appMetadata["provider"]?.stringValue ?? "e-mail").replacingOccurrences(of: "apple", with: "Apple").replacingOccurrences(of: "google", with: "Google").replacingOccurrences(of: "email", with: "e-mail")
         state = .signedIn(userId: u.id.uuidString.lowercased(), email: u.email, provider: provider)
