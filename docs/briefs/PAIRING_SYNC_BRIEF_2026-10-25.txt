@@ -1,0 +1,134 @@
+Claude, I am testing BikeComputer on my actual iPhone and Waveshare ESP32-S3 device. I have found three important problems. Please prioritize fixing these before adding more features.
+
+P0 — Bluetooth pairing is broken
+
+The iPhone app shows:
+
+* Link: Connecting…
+* Profile sync: no BikeComputer connected
+* Error: Peer removed pairing information
+
+The ESP32 Phone screen shows PHONE LINK: ON, but the devices are not connecting properly.
+
+This happened even after I reset the device data.
+
+Investigate the complete BLE pairing and bonding lifecycle on both iOS and ESP32.
+
+Specifically:
+
+1. Check whether resetting the ESP32 clears Bluetooth bonding keys but leaves stale pairing information on iOS.
+2. Ensure a pairing mismatch can be detected and recovered without repeatedly resetting the whole device.
+3. Implement a proper “Repair connection” workflow that clears only the necessary Bluetooth credentials on both sides.
+4. Ensure the ESP32 advertises correctly and the iPhone discovers the intended device.
+5. Verify that BLE services and characteristics are exposed correctly after reconnecting.
+6. Check whether iOS background reconnect and firmware sleep behavior interfere with pairing.
+7. Ensure the connection can recover after app restart, device restart, screen-off and temporary loss of range.
+8. Preserve saved workouts, user settings, ride history and sensor configurations.
+9. Show a clear error message and actionable recovery button instead of remaining indefinitely on “Connecting…”.
+10. Add diagnostic logs on both sides identifying the actual disconnect reason, bonding state, authentication result and profile-sync state.
+
+Do not assume the cause is confirmed until the logs support it.
+
+P0 — Phone and device profiles must synchronize
+
+Once connected, the iPhone and ESP32 should share the same supported rider information.
+
+The phone is the authoritative source for rider-profile settings when a phone profile exists.
+
+Synchronize supported fields such as:
+
+* Rider name
+* Age or birth year
+* Weight
+* FTP and its provisional/verified status
+* Heart-rate thresholds and zones
+* Training goals and relevant coaching settings
+* Units and supported device preferences
+
+Implement a versioned profile schema with field validation and acknowledgments.
+
+Requirements:
+
+* Detect differences between phone and device values.
+* During initial pairing, explain which profile will be applied.
+* After confirmation, use the phone profile as the authority.
+* Do not silently overwrite completed rides or independent sensor pairing data.
+* Save the last successfully synchronized profile version.
+* Automatically retry interrupted synchronization.
+* Show last sync time and whether data is pending, synchronized or failed.
+* Support standalone ESP32 setup when no phone is paired.
+* When a standalone device later pairs with a phone, reconcile the profiles according to the phone-authoritative rule.
+* Do not claim synchronization succeeded merely because Bluetooth connected.
+
+Test actual field values moving from iPhone to ESP32 and surviving device restart.
+
+P1 — Redesign the ESP32 Phone connection screen
+
+The current 240×240 circular display has too much wording, and important controls are difficult to reach.
+
+Redesign it as a compact screen with:
+
+Title: PHONE
+
+Status: Connected / Searching / Pairing / Disconnected
+
+Primary action: Connect / Repair / Disconnect, depending on state
+
+Secondary information:
+
+* Connected phone name, if available
+* Profile sync status
+* Phone Link ON/OFF
+* Last successful sync
+
+Use short labels, large touch targets and minimal explanatory text.
+
+Put detailed instructions and diagnostics behind a separate Help or Details screen.
+
+Do not require scrolling to reach essential controls.
+
+Audit other ESP32 settings screens for overflowing text and unreachable buttons.
+
+P1 — Improve the iPhone Connections screen
+
+Replace the indefinite Connecting state with explicit connection stages:
+
+Searching → Found → Pairing → Authenticating → Connected → Syncing profile → Ready
+
+Show the current stage and a meaningful failure reason.
+
+Provide:
+
+* Connect
+* Repair
+* Disconnect
+* Forget device
+* Retry profile sync
+* Connection diagnostics
+
+Use clear warnings when a previously paired ESP32 has lost its bonding information.
+
+Avoid contradictory UI states, such as offering Disconnect while no active connection exists.
+
+Verification requirements
+
+Run automated tests, but do not describe the fix as hardware-verified until tested on the real ESP32 and iPhone.
+
+Prepare a concise hardware test checklist covering:
+
+1. Fresh pairing
+2. Pairing after ESP32 data reset
+3. iPhone app restart
+4. ESP32 restart
+5. ESP32 screen-off
+6. Temporary out-of-range disconnect
+7. Automatic reconnect
+8. Profile synchronization
+9. Profile synchronization after restart
+10. Standalone ESP32 setup followed by phone pairing
+
+Preserve existing XDS power meter support, cycling recorder, coaching, ride history and iOS training functionality.
+
+Tell me exactly which firmware and TestFlight builds contain the fix, and provide the installation instructions.
+
+Do not flash firmware without my approval.
