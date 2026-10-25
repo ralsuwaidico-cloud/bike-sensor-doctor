@@ -1,0 +1,9 @@
+Running altool at path '/Applications/Xcode_26.6.app/Contents/SharedFrameworks/ContentDelivery.framework/Resources/altool'...
+
+2026-10-25 17:33:04.038  INFO: [ContentDelivery.Uploader.9E7044380] 
+==========================================
+UPLOAD SUCCEEDED with no errors
+Delivery UUID: d23ee365-fad1-4829-98bc-36bb9d91af98
+Transferred 3319336 bytes in 0.055 seconds (59.9MB/s, 479.539Mbps)
+==========================================
+No errors uploading archive at '/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/export/BikeComputer.ipa'.

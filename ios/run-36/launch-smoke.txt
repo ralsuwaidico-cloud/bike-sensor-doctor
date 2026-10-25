@@ -1,0 +1,161 @@
+=== launch-smoke: errors / failures ===
+GatherProvisioningInputs
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (20.915 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (24.718 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (23.623 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (51.923 seconds).
+	 Executed 4 tests, with 0 failures (0 unexpected) in 121.180 (121.186) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 121.180 (121.194) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 121.180 (121.197) seconds
+** TEST SUCCEEDED **
+=== launch-smoke: last 150 lines ===
+    t =    10.93s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    10.93s     Find the "Plan" Button
+    t =    10.96s     Check for interrupting elements affecting "Plan" Button
+    t =    11.24s     Synthesize event
+    t =    11.55s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    12.58s Waiting 10.0s for "Ride now, open the Ride screen" Button to exist
+    t =    13.59s     Checking `Expect predicate `existsNoRetry == 1` for object "Ride now, open the Ride screen" Button`
+    t =    13.59s         Checking existence of `"Ride now, open the Ride screen" Button`
+    t =    13.61s Tap "Ride now, open the Ride screen" Button
+    t =    13.61s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    13.62s     Find the "Ride now, open the Ride screen" Button
+    t =    13.68s     Check for interrupting elements affecting "Ride now, open the Ride screen" Button
+    t =    13.97s     Synthesize event
+    t =    14.28s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    15.30s Waiting 10.0s for "Progress" Button to exist
+    t =    16.32s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    16.32s         Checking existence of `"Progress" Button`
+    t =    16.38s Tap "Progress" Button
+    t =    16.38s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    16.38s     Find the "Progress" Button
+    t =    16.47s     Check for interrupting elements affecting "Progress" Button
+    t =    16.74s     Synthesize event
+    t =    17.06s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    18.07s Waiting 10.0s for "Profile" Button to exist
+    t =    19.10s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =    19.11s         Checking existence of `"Profile" Button`
+    t =    19.15s Tap "Profile" Button
+    t =    19.15s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    19.15s     Find the "Profile" Button
+    t =    19.17s     Check for interrupting elements affecting "Profile" Button
+    t =    19.36s     Synthesize event
+    t =    19.67s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    20.67s Waiting 10.0s for "Home" Button to exist
+    t =    21.70s     Checking `Expect predicate `existsNoRetry == 1` for object "Home" Button`
+    t =    21.71s         Checking existence of `"Home" Button`
+    t =    21.75s Tap "Home" Button
+    t =    21.75s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    21.75s     Find the "Home" Button
+    t =    21.79s     Check for interrupting elements affecting "Home" Button
+    t =    22.01s     Synthesize event
+    t =    22.31s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    23.32s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (23.623 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' started.
+    t =     0.00s Start Test at 2026-10-25 17:28:05.418
+    t =     0.03s Set Up
+    t =     0.04s Open com.ralsuwaidico.bikecomputer
+    t =     0.04s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.04s         Terminate com.ralsuwaidico.bikecomputer:21367
+2026-10-25 17:28:06.476 xcodebuild[9332:34879] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-25 17:28:06.476 xcodebuild[9332:34879] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     2.10s         Setting up automation session
+    t =     3.70s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     7.36s Waiting 25.0s for "Hi Rashed" NavigationBar to exist
+    t =     8.37s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =     8.37s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =     8.98s Tap "Plan" Button
+    t =     8.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     9.01s     Find the "Plan" Button
+    t =     9.03s     Check for interrupting elements affecting "Plan" Button
+    t =     9.22s     Synthesize event
+    t =     9.53s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    10.15s Waiting 10.0s for "Days" Button to exist
+    t =    11.15s     Checking `Expect predicate `existsNoRetry == 1` for object "Days" Button`
+    t =    11.15s         Checking existence of `"Days" Button`
+    t =    11.33s Tap "Days" Button
+    t =    11.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    11.34s     Find the "Days" Button
+    t =    11.99s     Check for interrupting elements affecting "Days" Button
+    t =    12.33s     Synthesize event
+    t =    12.70s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    13.67s Waiting 10.0s for "Training days" NavigationBar to exist
+    t =    14.69s     Checking `Expect predicate `existsNoRetry == 1` for object "Training days" NavigationBar`
+    t =    14.69s         Checking existence of `"Training days" NavigationBar`
+    t =    15.37s Tap "Cancel" Button
+    t =    15.37s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    15.75s     Find the "Cancel" Button
+    t =    17.14s     Check for interrupting elements affecting "Cancel" Button
+    t =    17.50s     Synthesize event
+    t =    17.84s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    18.63s Waiting 10.0s for "Log strength" Button to exist
+    t =    19.66s     Checking `Expect predicate `existsNoRetry == 1` for object "Log strength" Button`
+    t =    19.66s         Checking existence of `"Log strength" Button`
+    t =    19.75s Tap "Log strength" Button
+    t =    19.76s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    19.76s     Find the "Log strength" Button
+    t =    19.91s     Check for interrupting elements affecting "Log strength" Button
+    t =    20.15s     Synthesize event
+    t =    20.51s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    22.02s Waiting 5.0s for "Quick log" Button to exist
+    t =    23.05s     Checking `Expect predicate `existsNoRetry == 1` for object "Quick log" Button`
+    t =    23.05s         Checking existence of `"Quick log" Button`
+    t =    23.34s Tap "Quick log" Button
+    t =    23.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    23.34s     Find the "Quick log" Button
+    t =    23.60s     Check for interrupting elements affecting "bolt" Button
+    t =    23.87s     Synthesize event
+    t =    24.21s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    27.14s Waiting 10.0s for "Log strength" NavigationBar to exist
+    t =    28.15s     Checking `Expect predicate `existsNoRetry == 1` for object "Log strength" NavigationBar`
+    t =    28.15s         Checking existence of `"Log strength" NavigationBar`
+    t =    28.48s Waiting 5.0s for "Full body" Button to exist
+    t =    29.49s     Checking `Expect predicate `existsNoRetry == 1` for object "Full body" Button`
+    t =    29.49s         Checking existence of `"Full body" Button`
+    t =    32.76s Tap "Cancel" Button
+    t =    32.76s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    32.78s     Find the "Cancel" Button
+    t =    35.33s     Check for interrupting elements affecting "Cancel" Button
+    t =    35.85s     Synthesize event
+    t =    36.19s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    37.00s Tap "Profile" Button
+    t =    37.01s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    37.03s     Find the "Profile" Button
+    t =    37.52s     Check for interrupting elements affecting "Profile" Button
+    t =    37.87s     Synthesize event
+    t =    38.19s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    38.20s Checking existence of `"Training profile" Button`
+    t =    43.16s Waiting 10.0s for "Training profile" StaticText to exist
+    t =    44.18s     Checking `Expect predicate `existsNoRetry == 1` for object "Training profile" StaticText`
+    t =    44.18s         Checking existence of `"Training profile" StaticText`
+    t =    47.34s Tap "Training profile" StaticText
+    t =    47.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    47.35s     Find the "Training profile" StaticText
+    t =    49.04s     Check for interrupting elements affecting "Training profile" StaticText
+    t =    49.30s     Synthesize event
+    t =    49.62s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    50.89s Tap "Home" Button
+    t =    50.89s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    50.89s     Find the "Home" Button
+    t =    50.97s     Check for interrupting elements affecting "Home" Button
+    t =    51.28s     Synthesize event
+    t =    51.61s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    51.61s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (51.923 seconds).
+Test Suite 'LaunchSmokeTests' passed at 2026-10-25 17:28:57.342.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 121.180 (121.186) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-10-25 17:28:57.350.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 121.180 (121.194) seconds
+Test Suite 'All tests' passed at 2026-10-25 17:28:57.350.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 121.180 (121.197) seconds
+2026-10-25 17:28:58.644 xcodebuild[9332:34879] [MT] IDETestOperationsObserverDebug: 322.994 elapsed -- Testing started completed.
+2026-10-25 17:28:58.644 xcodebuild[9332:34879] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-25 17:28:58.644 xcodebuild[9332:34879] [MT] IDETestOperationsObserverDebug: 322.994 sec, +322.994 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/uitests.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
