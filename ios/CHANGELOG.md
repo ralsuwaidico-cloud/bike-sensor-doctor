@@ -1,5 +1,67 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
+## 0.6.0 (build 33) — 25 Oct 2026 — TestFlight, internal testers only
+
+**Hybrid Athlete Mode, phase 1.** One coach that sees cycling and lifting side by side. Everything below is
+**simulator-tested** (unit tests + the launch smoke tests on seeded build-24 and build-30 data files); nothing is
+device-tested until Rashed runs `BUILD33-TEST.txt`. No firmware change; the board profile sync is unchanged.
+
+### Implemented
+- **Training mode** Cycling / Strength / Hybrid Athlete, chosen in onboarding right after the name and editable any time in
+  Profile › Training profile (changing it rebuilds the coming weeks; hand-edited sessions are kept).
+- **Short onboarding** stays name-first: mode (+ priority for Hybrid, + experience) → your week (rides per week, cycling
+  hours, lifts per week, lifting hours, preferred days) → the existing skippable profile steps. Nothing unknown is invented.
+- **One weekly plan across both sports**: rest, ride, lift and "Ride + lift" days (the editor has a fifth day type with
+  separate riding and lifting minutes). The engine respects mode, frequencies, priority (which session comes first on a
+  shared day), availability and BOTH hour budgets; combined days only when the day's time allows; the leg-loading lift
+  (lower / full body) goes to the lift day with the fewest rides next to it and a hard ride (Zone 3+) is kept off the days
+  around it when the availability leaves a choice — a long Zone 2 ride does not count as hard. Move / edit / skip / replace
+  / add / remove as before; edited sessions are never regenerated without confirmation; planned strength sessions carry a
+  body region you can change.
+- **Quick Strength Log** (Home, Plan toolbar, any planned strength session): Full body / Upper / Lower / Push / Pull /
+  Custom, duration, effort (easy / moderate / hard or RPE 1–10), optional notes, date. Logging marks that day's planned
+  strength session done and counts toward the lifting hours only. Sets / reps / weights / supersets / templates are
+  announced as "coming in a later build" — nothing fake.
+- **Hybrid coach on Home** (Strength and Hybrid modes): cycling progress and strength progress bars (sessions and hours vs
+  your targets, planned vs done), one recommendation line, the compact workout table (type, duration, intensity,
+  expected outcome, status) and "Why?" with the reasons. The "Why?" uses only what exists: rides (count, hours, intensity
+  mix from recorded power zones), strength logs (count, hours, body regions as you labelled them), the plan, your
+  targets. It states that no sleep / HRV / recovery source is connected.
+- **Missing-training detection from evidence only**: ride frequency vs target, lift frequency vs target, push/pull balance
+  (only from Push / Pull logs, ≥ 3 in 4 weeks), no lower-body session while upper sessions exist, over-budget weeks, two
+  hard days back to back. Squat / hinge / single-leg / core coverage and exercise progression are reported as "not known
+  from quick logs"; a Full-body or Custom label is never turned into muscle coverage.
+- **Cycling hours and lifting hours separate** everywhere: Plan summary (two budget bars, two suggestion lists), Progress
+  (a weekly lifting chart beside the riding chart), Profile (two budgets, lifting history), Home footer.
+- **Apple Health import** (Connections › Apple Health, and in onboarding): with the workouts read permission, cycling and
+  traditional / functional strength workouts of the last 90 days (30 on every launch while the switch is on) become rides
+  and strength sessions marked "Apple Health". Duplicates of what the phone or BikeComputer already recorded — start
+  within 2 minutes and a similar duration — or of a quick log are skipped; the same Health workout is never imported
+  twice. Health workouts carry no body region and no power, and none is invented. "Connected" still appears only after iOS
+  confirms the permission; iOS does not reveal read permission, so an empty import says so instead of claiming an error.
+- **Timeline / history** lists strength sessions (quick log · RPE, or Apple Health) next to rides; a logged session stands
+  in for the planned one on that day (no duplicate rows).
+- **Store**: schema stays 1; new fields are optional with defaults, verified against a build-30-shaped file and the
+  build-24 file in the launch smoke tests. Nothing saved is lost.
+
+### Known limitations
+- Phase 2 not in this build: detailed exercise logging (sets, reps, weights, supersets, templates), progression tracking,
+  movement-pattern coverage — the coach says "not known from quick logs" wherever those would apply.
+- The hybrid coach is rule-based ("coach (rules)"); no AI model is involved yet.
+- Apple Health heart-rate history, sleep and recovery are not read; a Health ride shows duration, distance and energy only.
+- Hybrid fields (mode, priority, frequencies, lifting budget) live on the phone; the board keeps receiving the shared
+  athlete profile as before and knows nothing about lifting.
+- Firmware 0.6.0 (Connections, Wi-Fi setup, settings, history sync) is still waiting for Rashed's approval to flash; on
+  0.5.0 those app features show "needs firmware 0.6.0".
+- Google / e-mail sign-in still need the Supabase + Google configuration.
+
+### Testing checklist (short) — step-by-step version in BUILD33-TEST.txt
+1. Update; your profile, plan and rides are intact. 2. Profile › Training profile → Hybrid Athlete, balanced, 3 rides /
+5 h, 3 lifts / 2 h → Plan rebuilds with rides and lifts on your days, two budgets shown. 3. Home shows the hybrid coach
+with two progress bars, one line, the table and "Why?". 4. Log a strength session from Home → strength progress updates,
+Plan marks the day done, Progress shows the lifting chart. 5. Connections › Apple Health → Import now → Watch strength
+workouts appear once, labelled Apple Health. 6. Fresh install (optional): name → mode → week → … → Home.
+
 ## 0.5.1 (build 30) — 25 Oct 2026 — TestFlight, internal testers only — HOTFIX
 
 **Fixes the launch crash of build 27** (black screen, app killed immediately) on phones that already had data from

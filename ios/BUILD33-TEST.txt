@@ -1,0 +1,47 @@
+BikeComputer iPhone app 0.6.0 (TestFlight build 33) — real-device checklist (Hybrid Athlete Mode, phase 1)
+==================================================================================================================
+Record PASS / FAIL / NOT TESTED per step. Everything is simulator-tested only until you confirm it here. Board on
+firmware 0.5.0 (or 0.6.0 once approved); never USB and battery connected at the same time (HW-1).
+Build-30 steps (launch, data intact) still apply first.
+
+Profile and plan
+ 1  Update to 0.6.0 (33). App opens to Home; Profile › Rider information, Power & cycling and Plan still show your
+    data; Plan › History lists your earlier rides.   PASS/FAIL
+ 2  Profile › Training profile → Training mode "Hybrid Athlete", priority Balanced, Cycling 3 rides / 5 h, Strength
+    3 lifts / 2 h. Plan tab: this week now has rides AND strength sessions on your days ("Strength · Lower body" etc.),
+    the summary shows a Cycling budget bar and a Lifting budget bar with separate hours.   PASS/FAIL
+ 3  Plan › Days: set Tuesday to "Both" (ride 60 min + lifting 30 min), Wednesday Lift 45, Thursday Cycle 75, Saturday
+    Cycle 150, Sunday Lift 40, Monday/Friday Rest → Save. Tuesday shows two cards (ride first); Saturday is the long ride;
+    the lower-body lift is NOT the day before or after the Tempo/Threshold ride.   PASS/FAIL
+ 4  Edit Saturday to 2 h → "edited" pill. Change priority to Strength in Profile → Tuesday's lift now comes first;
+    Saturday keeps 2 h (edited sessions survive).   PASS/FAIL
+ 5  Set the lifting budget to 1 h → Plan summary shows "… over your 1 h lifting budget" with concrete suggestions; no
+    session disappears. Set it back to 2 h.   PASS/FAIL
+
+Home coach (Hybrid)
+ 6  Home: card "Hybrid Athlete coach (rules)" with a status pill, two progress bars (Cycling x/3, Strength x/3), one
+    recommendation line, the table (Workout / Duration / Intensity / Outcome / Status) and "Why?". Open "Why?": it names
+    your rides and logs this week and says no sleep/HRV/recovery source is connected.   PASS/FAIL
+ 7  "Why?" contains the line about squat / hinge / single-leg / core coverage being "not known from quick logs".
+    (It must never claim muscle coverage.)   PASS/FAIL
+
+Quick Strength Log
+ 8  Home → Log strength → Lower body, 40 min, Hard → Save. Strength progress bar moves to 1/3; Plan: today's strength
+    session (or the day you picked) shows "done"; Progress shows "Weekly lifting time" with a bar; Plan › History lists
+    "Strength · Lower body · quick log · RPE 8". Riding hours did NOT change.   PASS/FAIL
+ 9  Log 3 Push sessions on past days (date picker) and no Pull → "Why?" shows "Push/pull: 3 push vs 0 pull — add a
+    pull session". Delete them afterwards from Plan › History if you like (swipe is not available — leave them or reset
+    later).   PASS/FAIL
+
+Apple Health import (needs strength or cycling workouts recorded by the Apple Watch or another app)
+10  Connections › Apple Health → "Import workouts from Apple Health" ON → allow when iOS asks → "Import now". Result line
+    says how many were read/added. Plan › History shows them as "Ride (Apple Health)" / "Strength training (Apple Health)"
+    with duration; a ride you also recorded with the phone or board appears ONCE.   PASS/FAIL
+11  Tap "Import now" again → "0 added · the rest were already here" (no duplicates).   PASS/FAIL
+
+Onboarding (optional, fresh install or Profile › App & device settings › Delete all data)
+12  Guest: name → "How do you train?" (Cycling / Strength / Hybrid Athlete) → "Your week" (rides, hours, lifts, lifting
+    hours, preferred days) → the usual steps → Ready shows Mode, Cycling and Strength lines → Start → Home with the hybrid
+    coach and a plan on your preferred days.   PASS/FAIL
+
+Report PASS/FAIL/NOT TESTED per step plus screenshots of anything that looks wrong.
