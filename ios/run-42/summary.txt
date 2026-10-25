@@ -1,0 +1,10 @@
+BikeComputer iOS CI — build 42 — 2026-10-25 21:16 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: FAILED (exit 65)
+RESULT launch smoke (Release): FAILED (exit 65)
+Accounts: not configured (SUPABASE_URL / SUPABASE_ANON_KEY secrets absent) — the app runs guest-only
+RESULT archive: FAILED
+commit 1affc3339a77c5315531688ce9ab4060ae361c6d  branch ios/dev  job failure
