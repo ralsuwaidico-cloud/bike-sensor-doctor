@@ -1,0 +1,165 @@
+=== test: errors / failures ===
+GatherProvisioningInputs
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:83:48: error: cannot find 'CodingKeys' in scope
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:83:29: error: generic parameter 'Key' could not be inferred
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:84:69: error: cannot infer contextual base in reference to member 'owned'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:85:72: error: cannot infer contextual base in reference to member 'excluded'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:88:44: error: cannot find 'CodingKeys' in scope
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:88:25: error: generic parameter 'Key' could not be inferred
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:89:47: error: cannot infer contextual base in reference to member 'owned'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:89:96: error: cannot infer contextual base in reference to member 'excluded'
+Testing failed:
+	Testing cancelled because the build failed.
+** TEST FAILED **
+The following build commands failed:
+=== test: last 150 lines ===
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideRecorder.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:83:48: error: cannot find 'CodingKeys' in scope
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+                                               ^~~~~~~~~~
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:83:29: error: generic parameter 'Key' could not be inferred
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+                            ^
+Swift.Decoder.container:2:6: note: in call to function 'container(keyedBy:)'
+func container<Key>(keyedBy type: Key.Type) throws -> KeyedDecodingContainer<Key> where Key : CodingKey}
+     ^
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:84:69: error: cannot infer contextual base in reference to member 'owned'
+        owned = Set((try? c.decodeIfPresent([String].self, forKey: .owned)) ?? [])
+                                                                   ~^~~~~
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:85:72: error: cannot infer contextual base in reference to member 'excluded'
+        excluded = Set((try? c.decodeIfPresent([String].self, forKey: .excluded)) ?? [])
+                                                                      ~^~~~~~~~
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:88:44: error: cannot find 'CodingKeys' in scope
+        var c = encoder.container(keyedBy: CodingKeys.self)
+                                           ^~~~~~~~~~
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:88:25: error: generic parameter 'Key' could not be inferred
+        var c = encoder.container(keyedBy: CodingKeys.self)
+                        ^
+Swift.Encoder.container:2:6: note: in call to function 'container(keyedBy:)'
+func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey}
+     ^
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:89:47: error: cannot infer contextual base in reference to member 'owned'
+        try c.encode(owned.sorted(), forKey: .owned); try c.encode(excluded.sorted(), forKey: .excluded)
+                                             ~^~~~~
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift:89:96: error: cannot infer contextual base in reference to member 'excluded'
+        try c.encode(owned.sorted(), forKey: .owned); try c.encode(excluded.sorted(), forKey: .excluded)
+                                                                                              ~^~~~~~~~
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthLog.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthWorkout.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Theme.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/UITestSupport.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WatchLink.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+LinkAssetCatalog /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Assets.xcassets (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-linkAssetCatalog --thinned /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/assetcatalog_output/thinned --thinned-dependencies /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/assetcatalog_generated_info.plist_unthinned --output /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app --plist-output /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/assetcatalog_generated_info.plist
+note: Emplaced /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/AppIcon60x60@2x.png (in target 'BikeComputer' from project 'BikeComputer')
+note: Emplaced /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/AppIcon76x76@2x~ipad.png (in target 'BikeComputer' from project 'BikeComputer')
+note: Emplaced /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.app/Assets.car (in target 'BikeComputer' from project 'BikeComputer')
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for BikeComputer (in target 'BikeComputer' from project 'BikeComputer')
+
+SwiftDriver\ Compilation\ Requirements BikeComputer normal arm64 com.apple.xcode.tools.swift.compiler (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name BikeComputer -Onone @/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -F /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-688ef53f1462e2c8f657fdc38a81448ff45c64a1807a658693f2a61704f17a36.sdkstatcache -output-file-map /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-generated-files.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-own-target-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/BikeComputer-project-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-Swift.h -working-directory /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios -experimental-emit-module-separately -disable-cmo
+
+SwiftCompile normal arm64 Compiling\ HomeView.swift,\ Hybrid.swift,\ LocationService.swift,\ Models.swift,\ OnboardingView.swift,\ PlanView.swift,\ Planning.swift,\ ProfileSync.swift,\ ProfileView.swift,\ ProgressView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/HomeView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Hybrid.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/LocationService.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Models.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/OnboardingView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/PlanView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Planning.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileSync.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProgressView.swift (in target 'BikeComputer' from project 'BikeComputer')
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/HomeView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Hybrid.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/LocationService.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Models.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/OnboardingView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/PlanView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Planning.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileSync.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProgressView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftMergeGeneratedHeaders /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/BikeComputer-Swift.h /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-Swift.h (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-swiftHeaderTool -arch arm64 /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-Swift.h -o /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/BikeComputer-Swift.h
+
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/tests.xcresult
+
+Testing failed:
+	Cannot find 'CodingKeys' in scope
+	Generic parameter 'Key' could not be inferred
+	Cannot infer contextual base in reference to member 'owned'
+	Cannot infer contextual base in reference to member 'excluded'
+	Cannot find 'CodingKeys' in scope
+	Generic parameter 'Key' could not be inferred
+	Cannot infer contextual base in reference to member 'owned'
+	Cannot infer contextual base in reference to member 'excluded'
+	Testing cancelled because the build failed.
+
+** TEST FAILED **
+
+
+The following build commands failed:
+	SwiftCompile normal arm64 Compiling\ RideDashboard.swift,\ RideRecorder.swift,\ RideView.swift,\ Strength.swift,\ StrengthLog.swift,\ StrengthWorkout.swift,\ Theme.swift,\ UITestSupport.swift,\ WatchLink.swift,\ GeneratedAssetSymbols.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideDashboard.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideRecorder.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthLog.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthWorkout.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Theme.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/UITestSupport.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WatchLink.swift /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'BikeComputer' from project 'BikeComputer')
+	SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift (in target 'BikeComputer' from project 'BikeComputer')
+	Testing project BikeComputer with scheme BikeComputer
+(3 failures)
