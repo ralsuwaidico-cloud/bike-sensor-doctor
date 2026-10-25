@@ -38,18 +38,29 @@ enum PowerFocus {
     }
     /// Shrinks both rings together (power 0.44 → small 0.30 of the width at scale 1) until the block fits maxBlockH.
     static func compute(contentW: Double, maxBlockH: Double, labelH: Double, chipH: Double, chipW: Double, labelW: Double = 64) -> PowerFocusGeometry {
+        // Build 27 hung at launch here: SwiftUI's GeometryReader reports a 0 × 0 size on its first pass (and the Ride
+        // tab is laid out hidden behind Home), contentW − chip widths went negative, the square root below became NaN,
+        // every comparison in the fitting loop was false and `dy += 1` never passed `dy > p` — an endless loop on the
+        // main thread, killed by the iOS watchdog (black screen). Degenerate sizes now return a plain fallback at once
+        // and the loops are bounded, so no size can hang the UI.
+        guard contentW.isFinite, maxBlockH.isFinite, contentW >= max(2 * chipW, 160) else { return fallback(contentW: max(0, contentW.isFinite ? contentW : 0), labelH: labelH, chipH: chipH, chipW: chipW) }
         var best: PowerFocusGeometry? = nil
         var scale = 1.10
-        while scale >= 0.55 {
+        var guardOuter = 0
+        while scale >= 0.55, guardOuter < 64 {
+            guardOuter += 1
             let p = (contentW * 0.44 * scale).rounded(), s = (contentW * 0.30 * scale).rounded()
             let colS = max(s, chipW), colP = max(p, chipW)
             let pcx = contentW / 2, pcy = labelH + p / 2
             let lcx = colS / 2, rcx = contentW - colS / 2
             let dx = pcx - lcx
             let need = (p + s) / 2 + gap
-            var dy = dx >= need ? 0 : (need * need - dx * dx).squareRoot()
+            var dy = dx >= need ? 0 : max(0, need * need - dx * dx).squareRoot()
+            if !dy.isFinite { dy = 0 }
             var lcy = 0.0
-            while true {
+            var guardInner = 0
+            while guardInner < 4096 {
+                guardInner += 1
                 lcy = max(pcy + dy, labelH + s / 2)
                 let labelTop = lcy - s / 2 - labelH, labelBot = lcy - s / 2
                 let labelClear = distRectCircle(pcx, pcy, lcx - labelW / 2, labelTop, lcx + labelW / 2, labelBot) >= p / 2 + gap / 2
@@ -67,7 +78,19 @@ enum PowerFocus {
             if blockH <= maxBlockH { return g }
             scale -= 0.02
         }
-        return best!
+        return best ?? fallback(contentW: contentW, labelH: labelH, chipH: chipH, chipW: chipW)
+    }
+    /// A safe layout for sizes the fitting loop must not run on (first layout pass, tiny or non-finite widths):
+    /// three stacked columns that cannot overlap. Replaced by the computed geometry as soon as a real size arrives.
+    static func fallback(contentW: Double, labelH: Double, chipH: Double, chipW: Double) -> PowerFocusGeometry {
+        let w = max(contentW, 3 * chipW + 2 * gap)
+        let p = (w * 0.44).rounded(), s = (w * 0.30).rounded()
+        let colS = max(s, chipW), colP = max(p, chipW)
+        let pcy = labelH + p / 2
+        let lcy = pcy + p / 2 + chipH + gap + labelH + s / 2
+        return PowerFocusGeometry(power: p, small: s, colPower: colP, colSmall: colS, xPower: ((w - colP) / 2).rounded(), xLeft: 0, xRight: (w - colS).rounded(),
+                                  yPower: 0, yLower: (lcy - s / 2 - labelH).rounded(), blockHeight: (lcy + s / 2 + chipH).rounded() + 1,
+                                  powerCenter: CGPoint(x: w / 2, y: pcy), leftCenter: CGPoint(x: colS / 2, y: lcy), rightCenter: CGPoint(x: w - colS / 2, y: lcy))
     }
     static func ringsClear(_ g: PowerFocusGeometry) -> Bool {
         func d(_ a: CGPoint, _ b: CGPoint) -> Double { ((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)).squareRoot() }

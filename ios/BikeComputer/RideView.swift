@@ -25,7 +25,10 @@ struct RideTabView: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { g in dashboard(g.size) }
+            GeometryReader { g in
+                // first layout pass (and the tab hidden behind Home) can report 0 × 0: draw nothing until there is a real size
+                if g.size.width >= 200, g.size.height >= 300 { dashboard(g.size) } else { Color.clear }
+            }
                 .background(D7.bg.ignoresSafeArea())
                 .toolbar(.hidden, for: .navigationBar)
                 .onReceive(timer) { now in tick = now; coachTick() }

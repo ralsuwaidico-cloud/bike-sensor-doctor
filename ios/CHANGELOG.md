@@ -1,5 +1,24 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
+## 0.5.1 (build BUILDNO) — 25 Oct 2026 — TestFlight, internal testers only — HOTFIX
+
+**Fixes the launch crash of build 27** (black screen, app killed immediately) on phones that already had data from
+build 24. Nothing else changes; profile, plan, rides and settings are untouched.
+
+- **Cause**: the Ride dashboard's gauge-layout fitting loop. At launch all five tabs are laid out at once and SwiftUI's
+  GeometryReader reports a 0 × 0 size on its first pass for the hidden Ride tab; the dashboard subtracted its padding
+  (−28 pt), the loop's square root became NaN, every comparison was false and the loop never ended — the main thread
+  hung and iOS's watchdog killed the app before the first screen appeared. A fresh install never showed the Ride tab
+  (onboarding comes first), which is why it only hit updated phones.
+- **Fix**: degenerate or non-finite sizes return a safe fallback layout at once, both loops are bounded, and the Ride
+  tab draws nothing until it has a real size. Regression test with widths −28 … 159, NaN and ∞ must finish in < 0.5 s.
+- **Pipeline**: a new launch smoke test runs the **Release** build on the simulator before every archive — fresh
+  install (Welcome must appear) and an upgrade from a build-24-shaped store (Home must appear, then all five tabs are
+  opened). Any launch crash or hang now fails CI instead of reaching TestFlight. Run 29 reproduced the hang with it.
+
+### Known limitations
+Unchanged from 0.5.0 (below).
+
 ## 0.5.0 (build 27) — 25 Oct 2026 — TestFlight, internal testers only
 
 Everything below is **simulator-tested** (62 XCTest cases in GitHub Actions, 0 failures — including the 16 shared coach

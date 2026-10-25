@@ -167,6 +167,21 @@ final class CoachCoreTests: XCTestCase {
         // iPhone SE (375 − 28 pad), 13 mini, 14/15, Plus/Max widths × the heights the Ride screen can offer
         for w in [347.0, 362.0, 365.0, 402.0, 416.0] { for h in [150.0, 190.0, 230.0, 280.0, 320.0] { check(w, h, 0, 24, 112) } }
     }
+    /// Build 27 regression: GeometryReader's first pass hands the dashboard 0 × 0 (padding made it −28), the fitting
+    /// loop produced NaN and never ended, and iOS killed the app at launch. Every degenerate size must return at once.
+    func testGeometryDegenerateSizesReturnImmediatelyAndFinite() {
+        for w in [-28.0, 0.0, 1.0, 50.0, 54.0, 100.0, 159.0, Double.nan, Double.infinity] {
+            for h in [-300.0, 0.0, 150.0, Double.nan] {
+                let t0 = Date()
+                let g = PowerFocus.compute(contentW: w, maxBlockH: h, labelH: 0, chipH: 24, chipW: 112)
+                XCTAssertLessThan(Date().timeIntervalSince(t0), 0.5, "compute(\(w), \(h)) must not loop")
+                for v in [g.power, g.small, g.colPower, g.colSmall, g.xPower, g.xLeft, g.xRight, g.yPower, g.yLower, g.blockHeight, g.powerCenter.x, g.powerCenter.y, g.leftCenter.y] {
+                    XCTAssertTrue(v.isFinite, "non-finite geometry for \(w) × \(h): \(g)")
+                }
+                XCTAssertTrue(PowerFocus.ringsClear(g), "fallback rings overlap for \(w) × \(h)")
+            }
+        }
+    }
     func testGaugeTextNeverDressesUpMissingData() {
         XCTAssertEqual(GaugeText.status(.unknown, kind: "pow", signal: .fresh), "COASTING")
         XCTAssertEqual(GaugeText.status(.unknown, kind: "pow", signal: .none), "NO SENSOR")
