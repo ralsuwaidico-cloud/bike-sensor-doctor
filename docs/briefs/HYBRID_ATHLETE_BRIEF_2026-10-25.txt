@@ -1,0 +1,105 @@
+ BikeComputer | Hybrid Athlete
+ Claude implementation brief - iOS UX, onboarding, planning, logging and adaptive coaching
+ Instruction: Implement the changes in the actual iOS application and deliver a TestFlight build. Use the
+ supplied screenshots and the existing Hybrid Athlete proposal as references. Preserve existing ride
+ recording, BLE, device sync, routes, gauges, and history. Do not substitute mockups for working
+ functionality.
+
+
+ 1. Fix visual defects throughout the app
+  • Strength Log selection buttons currently wrap "Upper body", "Lower body" and "Custom" awkwardly.
+    Replace with a responsive 2- or 3-column selection layout using concise labels: Full Body, Upper, Lower,
+    Push, Pull, Custom.
+  • Audit onboarding, preferred-day chips, weekly calendar, workout cards, summaries, Profile and modal
+    sheets for clipped text, inconsistent spacing, off-screen content and overlapping elements.
+  • Support small iPhone screens, safe areas, scrolling, Dynamic Type and both themes. Do not solve by
+    shrinking all text to unreadable sizes. Maintain touch targets of approximately 44 points.
+
+
+ 2. Onboarding: specify exactly what happens each day
+  • Keep guest entry simple: ask for name only, then offer optional progressive training setup. Allow Cycling,
+    Strength or Hybrid Athlete, editable later.
+  • For each Monday-Sunday day, assign Cycling, Strength, Both, Rest or Flexible. Allow different activities on
+    the same day, and mark each assignment Fixed or Flexible.
+  • Ask the type and planned duration for each activity. Cycling choices: Zone 2/endurance, tempo,
+    threshold, intervals, recovery, long ride, custom. Strength choices: full body, upper, lower, push, pull,
+    legs, custom routine.
+  • Show a readable weekly preview before saving. Confirm that chosen frequency, per-day durations and
+    separate cycling/lifting weekly budgets are mutually consistent.
+  • When constraints conflict, explain the conflict and ask which to relax; never silently add extra days or
+    exceed available hours.
+
+
+ 3. Searchable strength routines
+  • Provide an exercise search by name, equipment, movement and muscle group. Support sets, repetitions,
+    weight, bodyweight, unilateral movements, supersets, optional RPE and notes.
+  • Let users create, rename, edit and reuse workout templates, including prefilled values from the last
+    session. Quick Log remains available for session type, duration and effort without exercise detail.
+  • Do not infer precise muscle coverage from generic labels such as "Full Body"; mark missing evidence as
+    unknown.
+
+
+ 4. Adaptive coaching across cycling AND lifting
+  • Use actual completed sessions, not merely scheduled sessions. Analyze cycling frequency, duration,
+    intensity distribution, HR/power/cadence where available, strength frequency, exercise progression and
+    push/pull, squat/hinge, single-leg and core coverage.
+  • Identify potential interference: hard leg workouts adjacent to demanding rides; suggest changes within
+    the user-approved schedule and recovery constraints, without medical claims.
+  • Provide one clear Home recommendation, a compact table (type, duration, intensity, expected benefit),
+    and a "Why?" explanation grounded in available data. Label estimates and insufficient evidence.
+
+
+
+
+BikeComputer - Claude implementation brief                                                                  Page 1
+  • Coach may adapt intensity, exercise selection and duration within approved limits. Never move fixed
+    days or overwrite manual edits without explicit approval. Offer proposals and undo.
+
+
+ 5. Weekly Plan: clean, feasible and editable
+  • Make the week readable: seven day cards with concise icons and formatted durations such as "1 h 5
+    min". Tap any day to view, add, edit, move, replace, skip or complete its workouts.
+  • Enforce separate cycling and lifting time budgets at plan generation time. Do not generate 2 h 5 min
+    against a 2 h cycling limit, or 2 h 10 min against a 2 h lifting limit.
+  • Show a compact summary: rides planned/completed, lifts planned/completed, time budget, and one
+    prioritized action. Move lengthy red warning paragraphs behind "Why?" or "Fix Plan".
+  • Explain meaningful changes between weeks, especially when training mode or schedule changes.
+    Preserve historical plans and manually edited sessions.
+
+
+ 6. History, sync and personalization
+  • Below the weekly plan, add a timeline of previous rides and strength workouts with status: planned,
+    completed, skipped, missed or imported. Tap for available metrics and exercise progression.
+  • Import permitted Apple Health activities and ESP32 rides with stable source IDs and deduplication.
+    Preserve offline strength logs and sync later without duplication.
+  • If workouts are repeatedly missed, offer to revise availability rather than repeatedly imposing the same
+    plan. Include a weekly review comparing planned vs completed work and a suggested next-week
+    adjustment.
+  • Maintain phone-authoritative shared athlete settings after pairing, with safe conflict handling; preserve
+    independent ESP32 ride records and offline operation.
+
+
+ 7. Acceptance tests and delivery
+  • Test layout on compact and large iPhones, large text, dark/light themes; verify no clipping, overlapping
+    controls or accidental taps.
+  • Test fixed/flexible day behavior, combined sessions, exact budget limits, quick/detailed strength logging,
+    templates, edits, undo, offline sync and duplicate prevention.
+  • Verify coach recommendations cite actual data and never count uncompleted sessions as completed.
+    Confirm that cycling time is not counted as lifting volume.
+  • Regression-test existing phone-only rides, ESP32 recording, Bluetooth, Apple Watch/HR, maps, Ride Now
+    gauges, ride history and profile sync.
+  • Deliver the TestFlight build number, changelog, automated test results, what was physically tested,
+    outstanding limitations and a concise manual QA checklist. Do not claim simulator-tested behavior is
+    hardware-verified.
+
+
+ Suggested priority order
+ P0: layout defects and schedule/budget correctness. P1: per-day sport assignment and exercise
+ search/templates. P2: integrated coaching, timeline and weekly review. Keep the first release functional
+ and incremental.
+
+
+
+
+BikeComputer - Claude implementation brief                                                                 Page 2
+
