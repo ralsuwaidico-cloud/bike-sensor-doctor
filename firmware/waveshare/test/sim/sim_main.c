@@ -44,9 +44,12 @@ static void flush_cb(lv_display_t *d, const lv_area_t *a, uint8_t *px)
     lv_display_flush_ready(d);
 }
 
+/* the harness drives LVGL exactly like the device driver: raw touch -> app_power_touch_filter (wake swallow + guard) -> LVGL */
 static void read_cb(lv_indev_t *i, lv_indev_data_t *d)
 {
-    (void)i; d->point.x = ptr.x; d->point.y = ptr.y; d->state = ptr.down ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+    (void)i; d->point.x = ptr.x; d->point.y = ptr.y;
+    bool pass = app_power_touch_filter(ptr.down, ptr.x, ptr.y, g_sim.now_ms);
+    d->state = (ptr.down && pass) ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
 }
 
 void sim_wifi_pump(void);
@@ -54,10 +57,15 @@ static void run(int ms) { for (int t = 0; t < ms; t += 5) { g_sim.now_ms += 5; l
 static void run_s(int s) { for (int i = 0; i < s; i++) run(1000); }
 static void raw_tap(int x, int y) { ptr.x = x; ptr.y = y; ptr.down = true; run(80); ptr.down = false; run(150); }
 static int n_auto_wakes;
-/* a rider who finds the screen dark taps it three times before using it (0.5.0 screen-off); the harness does the same */
-static void wake_if_dark(void) { if (!app_power()->screen_on && !app_power()->asleep) { n_auto_wakes++; raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(300); } }
+/* a rider who finds the screen dark wakes it with the configured gesture (one touch by default), then waits out the
+   guard before using it; the harness does the same */
+static void wake_if_dark(void) { if (!app_power()->screen_on && !app_power()->asleep) { n_auto_wakes++; int need = app_power_wake_taps_now(); for (int k = 0; k < need; k++) raw_tap(120, 120); run(600); } }
 static void tap(int x, int y) { wake_if_dark(); raw_tap(x, y); }
-static void hold(int x, int y, int ms) { wake_if_dark(); ptr.x = x; ptr.y = y; ptr.down = true; run(ms); ptr.down = false; run(150); }
+/* START RIDE is a 1 s hold (rev 3): a tap only shows the hint */
+static bool hold_text(const char *txt, int ms);
+static void start_ride(void) { hold_text("START RIDE", 1300); }
+/* after a hold the firmware swallows the rest of the touch and guards 400 ms (a lingering finger must press nothing): wait it out */
+static void hold(int x, int y, int ms) { wake_if_dark(); ptr.x = x; ptr.y = y; ptr.down = true; run(ms); ptr.down = false; run(550); }
 static void drag(int x0, int y0, int x1, int y1)
 {
     wake_if_dark();
@@ -255,6 +263,9 @@ static void shot(const char *name)
         lv_obj_t *scr = lv_screen_active();
         for (uint32_t i = 0; i < lv_obj_get_child_count(scr); i++) { lv_obj_t *c = lv_obj_get_child(scr, (int32_t)i); if (lv_obj_check_type(c, &lv_tileview_class)) walk_handle(c, &h); }
     }
+    /* WORDS (rev 3): the old "Sensors" button/page must be gone from every screen; Home must say "Connections" */
+    if (find_text("Sensors") || find_text("SENSORS")) issue("WORDS %s the word 'Sensors' is still visible\n", "", 0, 0);
+    if (ui_current() == UI_SCR_HOME && app_power()->screen_on && !ui_qs_is_open() && !find_text("Connections") && find_text("START RIDE")) issue("WORDS %s Home without a 'Connections' button\n", "", 0, 0);
     save_ppm(name);
     n_shots++;
     fprintf(report, "%s %s\n%s", name, issues ? "FAIL" : "OK", issue_buf);
@@ -378,7 +389,7 @@ static void scenario(void)
         app_profile()->ride_style = (uint8_t)st;
         sensors(true, 182, true, 88, false, 0);
         ui_home_show(); run(300);
-        tap_text("START RIDE");
+        start_ride();
         CHECK(app_ride_state() == BC_RIDE_RUNNING, "ride running");
         run_s(20);
         char n[48];
@@ -446,7 +457,7 @@ static void scenario(void)
     CHECK(on_screen("DEMO"), "DEMO badge visible");
     tap_text(LV_SYMBOL_HOME);
     shot("41_home_demo");
-    tap_text("START RIDE");
+    start_ride();
     CHECK(app_ride_is_demo(), "ride is a demo ride");
     run_s(30); shot("42_demo_warmup");
     run_s(600); shot("43_demo_steady");
@@ -468,7 +479,7 @@ static void scenario(void)
 
     printf("== 5 crash / power-loss recovery\n");
     sensors(true, 170, true, 86, false, 0);
-    tap_text("START RIDE");
+    start_ride();
     run_s(125);
     /* power cut: no end, no save; the journal survives */
     boot();
@@ -482,7 +493,7 @@ static void scenario(void)
 
     printf("== 6 FTP learns from a real qualifying effort\n");
     ui_home_show(); run(300);
-    tap_text("START RIDE");
+    start_ride();
     sensors(true, 150, true, 86, false, 0); run_s(900);
     sensors(true, 265, true, 92, false, 0); run_s(1200);
     shot("60_ride_A_hard_effort");
@@ -533,7 +544,7 @@ static void scenario(void)
     CHECK(app_profile()->ride_style == 2, "design choice kept after restart");
     ui_test_set_style(-1);
     sensors(true, 175, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile()->power.paired = true;
-    ui_home_show(); run(300); tap_text("START RIDE"); run_s(400);
+    ui_home_show(); run(300); start_ride(); run_s(400);
     bc_ride_summary_t s1; app_ride_totals(&s1); bc_cue_id_t cue1 = app_cue()->id;
     shot("89_ride_C_before_switch");
     drag(120, 60, 120, 190);
@@ -659,7 +670,7 @@ static void scenario(void)
         int a0 = g_sim.wifi_auto_attempts;
         CHECK(a0 > 0, "retries happen when not riding (%d)", a0);
         sensors(true, 170, true, 88, false, 0);
-        tap_text("START RIDE"); run_s(300);
+        start_ride(); run_s(300);
         int a1 = g_sim.wifi_auto_attempts;
         bc_ride_summary_t rs; app_ride_totals(&rs);
         CHECK(a1 == a0 && rs.duration_s >= 299 && rs.power_s >= 299, "no Wi-Fi activity during the ride; recording intact (%d->%d, %lus)", a0, a1, (unsigned long)rs.duration_s);
@@ -765,6 +776,12 @@ static void scenario(void)
         ui_home_show(); run(300); tap(120, 12); run(300); CHECK(ui_qs_is_open(), "tapping the HANDLE opens quick settings"); shot("c0c_qs_by_handle_tap");
         drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "closed again");
         drag(120, 10, 120, 150); run(300); CHECK(ui_qs_is_open(), "a swipe starting on the handle opens it");
+        drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "closed");
+        /* rev 3 fix: a swipe that starts in the top 48 px but OFF the handle (x = 60, y = 40) must open it too */
+        ptr.x = 60; ptr.y = 40; ptr.down = true; run(60); for (int i = 1; i <= 10; i++) { ptr.y = 40 + 11 * i; run(15); } ptr.down = false; run(600);
+        CHECK(ui_qs_is_open(), "a swipe from the top zone beside the handle opens quick settings"); shot("c0d_qs_by_zone_swipe");
+        drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "closed again");
+        drag(120, 10, 120, 150); run(300);
         scroll_to("Phone link");
         bool p0 = app_profile()->phone_on; tap_text("Phone link"); run(300); CHECK(app_profile()->phone_on != p0 && g_sim.phone.enabled == app_profile()->phone_on, "phone link toggled (sensor BLE untouched)"); scroll_to("Phone link"); tap_text("Phone link"); run(300);
         CHECK(g_sim.link[PLAT_SENS_POWER].link == PLAT_LINK_CONNECTED, "power meter link unaffected by the phone toggle");
@@ -774,15 +791,19 @@ static void scenario(void)
         drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "swipe up closes quick settings");
         drag(120, 20, 120, 150); run(300); CHECK(ui_qs_is_open(), "reopen"); run_s(21); CHECK(!ui_qs_is_open(), "closes after 20 s");
         drag(120, 20, 120, 150); run(300); tap(120, 202); run(300); CHECK(!ui_qs_is_open(), "X closes");
-        /* screen off: single and double taps do nothing, a triple tap wakes */
+        /* screen off (rev 3): ONE touch anywhere wakes; the waking touch and the guard after it never press a control */
         drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
         CHECK(!P->screen_on && g_sim.backlight == 0 && g_sim.panel_asleep, "screen off: backlight 0, panel asleep");
         shot("c2_screen_off");
-        raw_tap(120, 120); run(2000); CHECK(!P->screen_on, "one tap: still off");
-        raw_tap(120, 120); raw_tap(120, 120); run(2000); CHECK(!P->screen_on, "two taps: still off");
-        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(300);
-        CHECK(P->screen_on && g_sim.backlight == app_profile()->brightness && !g_sim.panel_asleep, "three taps: screen on, brightness restored");
-        CHECK(app_ride_state() == BC_RIDE_IDLE, "taps on the dark screen did not reach any button");
+        CHECK(app_profile()->wake_taps == 1, "default wake gesture is any touch (%u)", app_profile()->wake_taps);
+        ptr.x = 120; ptr.y = 108; ptr.down = true; run(30);          /* a finger lands exactly on START RIDE */
+        CHECK(P->screen_on && app_power_gate_blocking(), "first contact wakes the screen at once (%d ms), touch swallowed", 30);
+        run(1500); CHECK(app_ride_state() == BC_RIDE_IDLE, "finger held 1.5 s on START RIDE while waking: NO ride (swallowed)");
+        ptr.down = false; run(100);
+        CHECK(app_power_gate_blocking(), "guard active right after the release");
+        raw_tap(120, 108); CHECK(app_ride_state() == BC_RIDE_IDLE && P->screen_on, "tap during the guard: ignored");
+        run(600); CHECK(!app_power_gate_blocking() && g_sim.backlight == app_profile()->brightness && !g_sim.panel_asleep, "guard over: normal touch, brightness restored (%d)", g_sim.backlight);
+        CHECK(app_ride_state() == BC_RIDE_IDLE, "nothing on the dark screen reached any button");
         /* automatic timeout outside rides (60 s default), and the setting */
         uint32_t offs = P->auto_offs; run_s(61); CHECK(!P->screen_on && P->auto_offs == offs + 1, "auto screen-off after 60 s idle");
         ui_power_settings_show(); run(300);   /* (the harness wakes the screen with 3 taps first) */
@@ -798,7 +819,7 @@ static void scenario(void)
         ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Touch lock"); tap_text("Touch lock"); run(300);
         CHECK(P->locked && !ui_qs_is_open(), "locked");
         shot("c3_locked");
-        tap_text("START RIDE"); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "locked: the start button does not react");
+        hold_text("START RIDE", 1300); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "locked: the start button does not react");
         drag(120, 20, 120, 150); run(300); CHECK(!ui_qs_is_open(), "locked: no quick settings");
         hold_text("HOLD 3 s", 1500); CHECK(P->locked, "a short hold does not unlock");
         hold_text("HOLD 3 s", 3300); CHECK(!P->locked, "3 s hold unlocks");
@@ -809,7 +830,7 @@ static void scenario(void)
         g_sim.battery_mv = 3580; run_s(6); CHECK(P->bat_level == BC_BAT_LOW, "3.58 V: still LOW (hysteresis)");
         g_sim.battery_mv = 3610; run_s(6); CHECK(P->bat_level == BC_BAT_OK, "3.61 V: back to OK");
         g_sim.battery_mv = 3800; run_s(6);
-        tap_text("START RIDE"); run_s(5);
+        start_ride(); run_s(5);
         CHECK(app_ride_state() == BC_RIDE_RUNNING, "ride running at 3.80 V");
         g_sim.battery_mv = 3340; run_s(12);
         CHECK(app_ride_state() == BC_RIDE_RUNNING && P->bat_level == BC_BAT_CRITICAL && g_sim.deep_sleeps == 0, "critical voltage: alert only, ride NOT ended, no sleep (protection off by default)");
@@ -835,8 +856,8 @@ static void scenario(void)
         shot("c5_ride_cue_wake");
         run_s(6); CHECK(!P->screen_on, "and it went dark again after 5 s");
         sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; run_s(3);
-        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400); CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "triple tap wakes mid-ride");
-        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run(300);
+        raw_tap(120, 120); run(600); CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "one touch wakes mid-ride, recording untouched");
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 1300); tap_text("SAVE"); run(300);
         /* deep sleep: page, hold, radios off, profile saved; the next boot is a wake */
         ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); CHECK(ui_qs_is_open(), "qs open for sleep"); scroll_to("Deep sleep"); tap_text("Deep sleep"); run(300);
         CHECK(on_screen("DEEP SLEEP") && on_screen("RESET") && scroll_to("not yet verified"), "sleep page explains recovery + unverified touch wake"); scroll_to("HOLD: DEEP SLEEP");
@@ -860,7 +881,7 @@ static void scenario(void)
         plat_phone_set_enabled(true); sim_phone_connect(true); ui_home_show(); run_s(5 * 60 + 5);
         CHECK(g_sim.deep_sleeps == 1 && !app_power()->asleep && !strcmp(app_power()->sleep_block, "phone connected"), "no auto deep sleep while a phone is connected (%s)", app_power()->sleep_block);
         sim_phone_disconnect(); tap(120, 30); ui_home_show(); run_s(5 * 60 + 5);
-        CHECK(g_sim.deep_sleeps == 2 && app_power()->asleep && g_sim.sleep_wake_taps == 3, "auto deep sleep after 5 idle minutes on battery, no phone (wake needs %d taps)", g_sim.sleep_wake_taps);
+        CHECK(g_sim.deep_sleeps == 2 && app_power()->asleep && g_sim.sleep_wake_taps == 1, "auto deep sleep after 5 idle minutes on battery, no phone (wake = %d touch)", g_sim.sleep_wake_taps);
         g_sim.asleep = false; boot(); run(400);
         g_sim.battery_mv = 4190; run_s(40);
         CHECK(app_power()->usb_likely && on_screen(LV_SYMBOL_USB), "4.19 V held 30 s: USB power likely");
@@ -908,42 +929,45 @@ static void scenario(void)
         sim_phone_connect(true); run(1500);
         CHECK(g_sim.phone.connected && g_sim.phone.lives > l1 && !P->screen_on, "phone reconnected without touching the device (%d new live msgs)", g_sim.phone.lives - l1);
         /* wake: standby ends, link untouched */
-        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400);
+        raw_tap(120, 120); run(600);
         CHECK(P->screen_on && !P->standby && !g_sim.phone.standby && !g_sim.sensor_standby && g_sim.phone.connected, "wake leaves standby; the phone link was never dropped");
         /* automatic timeout with the phone connected: standby, never deep sleep */
         app_profile()->auto_sleep_min = 5; app_profile_save(); ui_home_show(); run_s(61 + 6 * 60);
         CHECK(!P->screen_on && P->standby && !P->asleep && g_sim.deep_sleeps == d0 && g_sim.phone.connected, "7 min idle with a phone connected: standby, no deep sleep (%s)", P->sleep_block);
-        app_profile()->auto_sleep_min = 0; app_profile_save(); raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400);
+        app_profile()->auto_sleep_min = 0; app_profile_save(); raw_tap(120, 120); run(600);
         /* ride + screen off: no standby, meter + phone links kept, journal grows */
-        ui_home_show(); run(300); tap_text("START RIDE"); run_s(3);
+        ui_home_show(); run(300); start_ride(); run_s(3);
         drag(120, 60, 120, 190); run(300); tap_text("QUICK SET."); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
         int jl0 = count_lines("rides/active.jnl"); l1 = g_sim.phone.lives; run_s(30);
         CHECK(!P->screen_on && !P->standby && !g_sim.sensor_standby && app_ride_state() == BC_RIDE_RUNNING, "ride in the dark: recording, NO standby");
         CHECK(g_sim.link[PLAT_SENS_POWER].link == PLAT_LINK_CONNECTED && g_sim.phone.connected && g_sim.phone.lives >= l1 + 28 && count_lines("rides/active.jnl") >= jl0 + 25, "meter + phone links kept, live stream and journal keep flowing");
-        raw_tap(120, 120); raw_tap(120, 120); raw_tap(120, 120); run(400);
-        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run(300);
+        raw_tap(120, 120); run(600);
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 1300); tap_text("SAVE"); run(300);
         /* deep sleep: explicit, explained as connectivity off */
         ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Deep sleep"); CHECK(on_screen("link off"), "deep sleep row says the link goes off"); tap_text("Deep sleep"); run(300);
         CHECK(on_screen("CONNECTIVITY OFF") && scroll_to("standby keep"), "deep sleep page: connectivity off, standby keeps Bluetooth");
         shot("d0_deep_sleep_connectivity");
         scroll_to("HOLD: DEEP SLEEP"); hold_text("HOLD: DEEP SLEEP", 1800); run(300);
-        CHECK(g_sim.deep_sleeps == d0 + 1 && !g_sim.phone.enabled && g_sim.sleep_wake_taps == 3, "deep sleep: phone link switched off (wake needs %d taps)", g_sim.sleep_wake_taps);
+        CHECK(g_sim.deep_sleeps == d0 + 1 && !g_sim.phone.enabled && g_sim.sleep_wake_taps == 1, "deep sleep: phone link switched off (wake = %d touch)", g_sim.sleep_wake_taps);
         g_sim.woke_from_sleep = true; g_sim.asleep = false; boot(); run(400); g_sim.woke_from_sleep = false;
         CHECK(g_sim.phone.enabled, "after the wake the phone link advertises again");
-        /* wake gesture setting: double tap */
+        /* wake gesture setting: any touch (default) -> 2 taps -> 3 taps -> any touch; every variant is swallowed + guarded */
         ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300);
         CHECK(app_profile()->wake_taps == 2 && on_screen("2 taps"), "wake gesture -> 2 taps (%u)", app_profile()->wake_taps);
         ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); CHECK(on_screen("2 taps = on"), "screen-off row shows the gesture"); tap_text("Screen off"); run(400);
-        raw_tap(120, 120); run(2000); CHECK(!P->screen_on, "one tap: still off");
-        raw_tap(120, 120); raw_tap(120, 120); run(400); CHECK(P->screen_on, "double tap wakes");
-        ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300); CHECK(app_profile()->wake_taps == 1, "-> any touch");
+        raw_tap(120, 108); run(2000); CHECK(!P->screen_on && app_ride_state() == BC_RIDE_IDLE, "one tap on START: still off, no ride");
+        raw_tap(120, 108); raw_tap(120, 108); run(600); CHECK(P->screen_on && app_ride_state() == BC_RIDE_IDLE, "double tap on START wakes, starts nothing");
+        ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300); CHECK(app_profile()->wake_taps == 3, "-> 3 taps");
         ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
-        raw_tap(120, 120); run(1200); CHECK(!P->screen_on, "any touch applies to rides only: idle still needs 2 taps");
-        raw_tap(120, 120); raw_tap(120, 120); run(400); CHECK(P->screen_on && app_ride_state() == BC_RIDE_IDLE, "2 taps wake when idle (and reach no button)");
-        tap_text("START RIDE"); run_s(2); drag(120, 60, 120, 190); run(300); tap_text("QUICK SET."); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
-        raw_tap(120, 120); run(400); CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "any touch wakes during a ride");
-        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); hold_text(LV_SYMBOL_TRASH, 1800); run(300);
-        ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300); CHECK(app_profile()->wake_taps == 3, "-> back to 3 taps");
+        raw_tap(120, 108); raw_tap(120, 108); run(2000); CHECK(!P->screen_on, "two taps: still off");
+        raw_tap(120, 108); raw_tap(120, 108); raw_tap(120, 108); run(600); CHECK(P->screen_on && app_ride_state() == BC_RIDE_IDLE, "three taps on START wake, start nothing");
+        ui_power_settings_show(); run(300); scroll_to("Wake gesture"); tap_text("Wake gesture"); run(300); CHECK(app_profile()->wake_taps == 1, "-> back to any touch");
+        ui_home_show(); run(300); drag(120, 20, 120, 150); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        ptr.x = 120; ptr.y = 160; ptr.down = true; run(30); for (int i = 1; i <= 10; i++) { ptr.y = 160 - 10 * i; run(15); } ptr.down = false; run(600);
+        CHECK(P->screen_on && ui_current() == UI_SCR_HOME && !ui_qs_is_open() && app_ride_state() == BC_RIDE_IDLE, "a swipe on the dark screen wakes it and changes nothing (still Home, no quick settings)");
+        start_ride(); run_s(2); drag(120, 60, 120, 190); run(300); tap_text("QUICK SET."); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        raw_tap(120, 120); run(600); CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "any touch wakes during a ride");
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 1300); hold_text(LV_SYMBOL_TRASH, 1800); run(300);
         shot("d1_power_settings_wake");
     }
 
@@ -992,7 +1016,7 @@ static void scenario(void)
         bc_wifi_forget_t fg; snprintf(fg.ssid, sizeof fg.ssid, "Rashed\xE2\x80\x99s iPhone"); n = bc_link_encode_wifi_forget(&fg, b, sizeof b, 7, 0); sim_phone_write(0, b, n); run_s(2);
         { char sv[5][33]; int k = plat_wifi_saved(sv, 5); bool gone = true; for (int i = 0; i < k; i++) if (!strcmp(sv[i], fg.ssid)) gone = false; CHECK(gone && g_sim.phone.wifi_status.saved_count == (uint8_t)k, "forgotten; status reports %u saved", g_sim.phone.wifi_status.saved_count); }
         /* a scan during a ride is refused; the ride is untouched by every Wi-Fi message */
-        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; ui_home_show(); run(300); tap_text("START RIDE"); run_s(2);
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; ui_home_show(); run(300); start_ride(); run_s(2);
         g_sim.phone.scan_ends = 0; n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 8, 0); sim_phone_write(0, b, n); run(800);
         CHECK(g_sim.phone.scan_ends == 1 && g_sim.phone.scan_end.err == BC_WIFI_SCAN_BUSY && app_ride_state() == BC_RIDE_RUNNING, "scan during a ride -> BUSY, ride running");
         run_s(5); drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run(300);
@@ -1047,7 +1071,7 @@ static void scenario(void)
         /* ---- device settings */
         g_sim.phone.settings_msgs = 0;
         n = bc_link_encode_settings_get(b, sizeof b, 19, 0); sim_phone_write(0, b, n); run(600);
-        CHECK(g_sim.phone.settings_msgs == 1 && g_sim.phone.settings.version == 0 && g_sim.phone.settings.supported_mask == BC_SETTINGS_SUPPORTED_ALL && g_sim.phone.settings.brightness_pct == app_profile()->brightness && g_sim.phone.settings.screen_timeout_s == app_profile()->scr_timeout_s && g_sim.phone.settings.wake_gesture == 0,
+        CHECK(g_sim.phone.settings_msgs == 1 && g_sim.phone.settings.version == 0 && g_sim.phone.settings.supported_mask == BC_SETTINGS_SUPPORTED_ALL && g_sim.phone.settings.brightness_pct == app_profile()->brightness && g_sim.phone.settings.screen_timeout_s == app_profile()->scr_timeout_s && g_sim.phone.settings.wake_gesture == 2,
               "SETTINGS: current values + supported mask 0x%lx", (unsigned long)g_sim.phone.settings.supported_mask);
         bc_settings_msg_t sm = { .version = 1, .brightness_pct = 55, .screen_timeout_s = 120, .wake_gesture = 1, .has = BC_PF_HAS(2) | BC_PF_HAS(3) | BC_PF_HAS(4) };
         n = bc_link_encode_settings(BC_MSG_SETTINGS_SET, &sm, b, sizeof b, 20, 0); sim_phone_write(0, b, n); run(600);
@@ -1116,7 +1140,7 @@ static void scenario(void)
         scroll_to("+10"); tap_text("+10"); run(200); CHECK(pr->wheel_mm == 2106 && g_sim.wheel_mm == 2106 && on_screen("2106 mm"), "wheel circumference edited and applied");
         tap_text("-10"); run(200); CHECK(pr->wheel_mm == 2096, "and back");
         /* a ride records distance from the wheel sensor */
-        ui_home_show(); run(300); ui_test_set_style(0); tap_text("START RIDE"); run_s(10);
+        ui_home_show(); run(300); ui_test_set_style(0); start_ride(); run_s(10);
         { bc_ride_summary_t t; app_ride_totals(&t); CHECK(t.distance_m >= 60 && t.distance_m <= 75 && t.dist_src == BC_SRC_BLE_CSC, "distance from the wheel sensor (%lu m)", (unsigned long)t.distance_m); }
         drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); run(400); hold_text(LV_SYMBOL_TRASH, 1800); run(400);
         /* restart keeps the pairing */
@@ -1150,6 +1174,55 @@ static void scenario(void)
         pr->power.paired = true; g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile_save();
     }
 
+    printf("== 17 wake swallow + hold-to-start: taps never start a ride, one hold starts exactly one, wake touches press nothing\n");
+    {
+        g_sim.battery_mv = 3800; g_sim.usb = false; g_sim.woke_from_sleep = false;
+        sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; app_profile()->power.paired = true;
+        app_profile()->wake_taps = 1; app_profile()->scr_timeout_s = 60; app_profile_save(); boot(); run_s(2);
+        const app_power_t *P = app_power();
+        uint16_t id0 = app_profile()->next_ride_id;
+        /* ordinary taps cannot start a ride */
+        for (int k = 0; k < 5; k++) raw_tap(120, 108);
+        run(300); CHECK(app_ride_state() == BC_RIDE_IDLE && on_screen("hold 1 s"), "five taps on START RIDE: no ride, the hint toast appears");
+        shot("g0_start_hint");
+        /* a short hold does not start; a slide away cancels */
+        hold(120, 108, 600); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "0.6 s hold: no ride");
+        ptr.x = 120; ptr.y = 108; ptr.down = true; run(500); for (int i = 1; i <= 8; i++) { ptr.y = 108 + i * 8; run(40); } run(900); ptr.down = false; run(200);
+        CHECK(app_ride_state() == BC_RIDE_IDLE, "finger slid away during the hold: cancelled, no ride");
+        /* the hold: ring fills, fires once */
+        ptr.x = 120; ptr.y = 108; ptr.down = true; run(500);
+        CHECK(app_ride_state() == BC_RIDE_IDLE, "half way through the hold: not started yet"); shot("g1_start_hold_ring");
+        run(700); CHECK(app_ride_state() == BC_RIDE_RUNNING && ui_current() == UI_SCR_RIDE, "1 s hold starts the ride, ride screen shown");
+        CHECK(on_screen("RECORDING STARTED"), "clear confirmation toast (%s)", find_text("RECORDING") ? "found RECORDING" : "no toast text");
+        shot("g2_recording_started");
+        run(1500); ptr.down = false; run(300);        /* finger kept down 1.5 s after the start: the ride screen must not react */
+        bc_ride_summary_t t; app_ride_totals(&t);
+        CHECK(app_ride_state() == BC_RIDE_RUNNING && t.id == id0 && app_profile()->next_ride_id == id0, "exactly one ride (#%u), nothing pressed on the ride screen by the lingering finger", t.id);
+        /* a second start attempt while running changes nothing */
+        ui_home_show(); run(300); CHECK(ui_current() == UI_SCR_RIDE, "home redirects to the running ride");
+        app_ride_totals(&t); CHECK(t.id == id0 && app_ride_state() == BC_RIDE_RUNNING, "still the same ride");
+        /* screen off during the ride, one touch wakes, the wake touch presses nothing even on the ride controls */
+        drag(120, 60, 120, 190); run(300); tap_text("QUICK SET."); run(300); scroll_to("Screen off"); tap_text("Screen off"); run(400);
+        CHECK(!P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "dark, recording");
+        for (int k = 0; k < 20; k++) {                 /* 20 wake attempts, screen off again each time: every one wakes, none presses */
+            raw_tap(60 + (k * 37) % 120, 60 + (k * 53) % 120); run(600);
+            CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING, "wake attempt %d: on, ride untouched", k + 1);
+            app_power_screen_off(); run(300);
+        }
+        /* a 3 s press on the dark screen exactly where HOLD: END sits once the panel opens: wakes, swallowed, nothing ends */
+        ptr.x = 120; ptr.y = 150; ptr.down = true; run(3000); ptr.down = false; run(600);
+        CHECK(P->screen_on && app_ride_state() == BC_RIDE_RUNNING && ui_current() == UI_SCR_RIDE, "3 s wake press: swallowed, ride still running");
+        /* END: 1 s hold, the finger lingering 1.3 s more presses nothing on the results screen */
+        drag(120, 60, 120, 190); run(300);
+        { lv_obj_t *l = find_text("HOLD: END"); lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
+          lv_area_t a; lv_obj_get_coords(c, &a); ptr.x = (a.x1 + a.x2) / 2; ptr.y = (a.y1 + a.y2) / 2; ptr.down = true; run(1200);
+          CHECK(app_ride_state() == BC_RIDE_ENDED && on_screen("SAVE"), "END fired after 1 s: results screen");
+          run(1300); ptr.down = false; run(600);
+          CHECK(app_ride_state() == BC_RIDE_ENDED && on_screen("SAVE"), "lingering finger pressed nothing on the results screen"); }
+        tap_text("SAVE"); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE && app_profile()->next_ride_id == id0 + 1, "saved once (next id %u)", app_profile()->next_ride_id);
+        shot("g3_home_after_hold_flow");
+    }
+
     printf("== 8 long name and edge cases\n");
     snprintf(app_profile()->name, sizeof app_profile()->name, "Maximilianus Bob");
     app_profile_save();
@@ -1159,7 +1232,7 @@ static void scenario(void)
     g_sim.usb = true; ui_home_show(); run(300); shot("93_home_usb");
     app_profile()->power.paired = false; g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED; sensors(false, 0, false, 0, false, 0);
     ui_home_show(); run(300); shot("94_home_no_meter");
-    ui_test_set_style(0); tap_text("START RIDE"); run_s(10); shot("95_ride_no_meter_paired");
+    ui_test_set_style(0); start_ride(); run_s(10); shot("95_ride_no_meter_paired");
     drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); shot("96_results_no_data");
     hold_text(LV_SYMBOL_TRASH, 1800);
     /* re-run setup keeps history */

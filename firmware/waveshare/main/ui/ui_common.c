@@ -136,46 +136,58 @@ void ui_nav(lv_obj_t *p, lv_event_cb_t back, const char *next_txt, lv_event_cb_t
     }
 }
 
-/* ---- hold-to-confirm */
-typedef struct { uint32_t t0; uint32_t hold; bool fired, down; lv_obj_t *ring; } hold_t;
+/* ---- hold-to-confirm (state machine in bc_core: bc_hold_t) */
+typedef struct { bc_hold_t h; lv_obj_t *ring; } hold_t;
+
+static void hold_apply(lv_obj_t *b, hold_t *st, bc_hold_ev_t ev)
+{
+    switch (ev) {
+    case BC_HOLD_HOLDING: lv_obj_remove_flag(st->ring, LV_OBJ_FLAG_HIDDEN); lv_bar_set_value(st->ring, st->h.progress, LV_ANIM_OFF); break;
+    case BC_HOLD_FIRED: lv_bar_set_value(st->ring, 100, LV_ANIM_OFF); app_power_swallow_rest(); lv_obj_send_event(b, LV_EVENT_READY, NULL); break;
+    case BC_HOLD_CANCELLED: lv_bar_set_value(st->ring, 0, LV_ANIM_OFF); lv_obj_add_flag(st->ring, LV_OBJ_FLAG_HIDDEN); lv_obj_send_event(b, LV_EVENT_CANCEL, NULL); break;
+    default: break;
+    }
+}
 
 static void hold_cb(lv_event_t *e)
 {
     lv_obj_t *b = lv_event_get_current_target(e);
-    hold_t *h = (hold_t *)lv_event_get_user_data(e);
+    hold_t *st = (hold_t *)lv_event_get_user_data(e);
     lv_event_code_t c = lv_event_get_code(e);
-    if (c == LV_EVENT_DELETE) { lv_free(h); return; }
-    if (c == LV_EVENT_PRESSED) { h->t0 = lv_tick_get(); h->fired = false; h->down = true; lv_arc_set_value(h->ring, 0); lv_obj_remove_flag(h->ring, LV_OBJ_FLAG_HIDDEN); }
-    else if (c == LV_EVENT_PRESSING && h->down && !h->fired) {
-        uint32_t el = lv_tick_elaps(h->t0);
-        lv_arc_set_value(h->ring, (int32_t)(el >= h->hold ? 100 : el * 100 / h->hold));
-        if (el >= h->hold) { h->fired = true; lv_obj_send_event(b, LV_EVENT_READY, NULL); }
-    } else if (c == LV_EVENT_RELEASED || c == LV_EVENT_PRESS_LOST) {
-        h->down = false; lv_arc_set_value(h->ring, 0); lv_obj_add_flag(h->ring, LV_OBJ_FLAG_HIDDEN);
-    }
+    if (c == LV_EVENT_DELETE) { lv_free(st); return; }
+    if (c != LV_EVENT_PRESSED && c != LV_EVENT_PRESSING && c != LV_EVENT_RELEASED && c != LV_EVENT_PRESS_LOST) return;
+    lv_indev_t *i = lv_indev_active(); lv_point_t pt = { -1, -1 }; if (i) lv_indev_get_point(i, &pt);
+    bool pressed = (c == LV_EVENT_PRESSED || c == LV_EVENT_PRESSING);
+    bc_hold_ev_t ev = bc_hold_feed(&st->h, pressed, pt.x, pt.y, lv_tick_get());
+    if (c == LV_EVENT_RELEASED || c == LV_EVENT_PRESS_LOST) { lv_bar_set_value(st->ring, 0, LV_ANIM_OFF); lv_obj_add_flag(st->ring, LV_OBJ_FLAG_HIDDEN); }
+    hold_apply(b, st, ev);
 }
 
 lv_obj_t *ui_hold_btn(lv_obj_t *p, const char *txt, lv_color_t bg, lv_color_t fg, int w, int h, uint32_t hold_ms, lv_event_cb_t cb, void *ud)
 {
     lv_obj_t *b = ui_pill(p, txt, bg, fg, w, h, NULL, NULL);
     lv_obj_remove_flag(b, LV_OBJ_FLAG_GESTURE_BUBBLE);
-    hold_t *st = lv_malloc(sizeof(hold_t)); memset(st, 0, sizeof *st); st->hold = hold_ms;
-    /* progress: a bar along the bottom of the pill */
-    lv_obj_t *r = lv_arc_create(b);   /* arc used as a simple 0..100 progress holder drawn as a ring around the label */
+    hold_t *st = lv_malloc(sizeof(hold_t)); memset(st, 0, sizeof *st); bc_hold_init(&st->h, hold_ms);
+    /* progress: the pill fills from the left while the finger stays still (a bar under the label, hidden when idle) */
+    lv_obj_t *r = lv_bar_create(b);
     lv_obj_remove_style_all(r);
-    lv_obj_set_size(r, h - 8, h - 8);
-    lv_obj_align(r, LV_ALIGN_RIGHT_MID, -6, 0);
-    lv_arc_set_bg_angles(r, 0, 360); lv_arc_set_rotation(r, 270); lv_arc_set_range(r, 0, 100); lv_arc_set_value(r, 0);
-    lv_obj_set_style_arc_width(r, 4, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_color(r, fg, LV_PART_INDICATOR);
-    lv_obj_set_style_arc_rounded(r, false, LV_PART_INDICATOR);
+    lv_obj_set_size(r, lv_pct(100), lv_pct(100));
+    lv_obj_center(r);
+    lv_obj_set_style_radius(r, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_radius(r, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(r, lv_color_mix(fg, bg, 120), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa(r, LV_OPA_70, LV_PART_INDICATOR);
+    lv_bar_set_range(r, 0, 100); lv_bar_set_value(r, 0, LV_ANIM_OFF);
     lv_obj_remove_flag(r, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(r, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_background(r);
     st->ring = r;
     lv_obj_add_event_cb(b, hold_cb, LV_EVENT_ALL, st);
     if (cb) lv_obj_add_event_cb(b, cb, LV_EVENT_READY, ud);
     return b;
 }
+lv_obj_t *ui_hold_label(lv_obj_t *hold_btn) { return lv_obj_get_child(hold_btn, 1); }   /* child 0 is the fill bar */
 
 /* ---- scroll area + rows */
 lv_obj_t *ui_scroll_area(lv_obj_t *p, int y0, int y1)

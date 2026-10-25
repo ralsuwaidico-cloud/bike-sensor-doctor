@@ -48,7 +48,8 @@ void bc_lowbat_reset(bc_lowbat_t *l);
 bc_bat_level_t bc_lowbat_feed(bc_lowbat_t *l, int mv);
 const char *bc_bat_level_name(bc_bat_level_t l);
 
-/* ---- wake taps (0.6.0): N presses (press -> release) within BC_TAP_WINDOW_MS, any position. Default N = 3.
+/* ---- wake taps (0.6.0): N presses (press -> release) within BC_TAP_WINDOW_MS, any position. Used for the 2- and 3-tap
+ * wake options; the default since rev 3 is any touch (bc_gate_t below handles the swallow + guard for every variant).
  * A tap is a press of 20..400 ms without sliding; the gap release -> next press is 60..900 ms. Longer presses, slides and
  * bursts (> 6 presses in a second: vibration, rain) reset the counter; a burst also locks the detector for a second.
  * Hardware notes: the first touch after the controller slept must be delivered too — see hw.c (auto-sleep disabled while
@@ -75,6 +76,43 @@ void bc_tap_set_count(bc_tap_t *t, int need);   /* 1..3 */
  *  (BC_TAP_SETTLE_MS after the last release, so keep feeding the released state). */
 bool bc_tap_feed_xy(bc_tap_t *t, bool pressed, int x, int y, uint32_t now_ms);
 bool bc_tap_feed(bc_tap_t *t, bool pressed, uint32_t now_ms);
+
+/* ---- wake gate (0.6.0 rev 3): what reaches the UI while the screen is off / just woke.
+ * Default wake = ANY touch (profile wake_taps = 1): the first contact wakes the display at once. The whole waking gesture is
+ * SWALLOWED (no press reaches LVGL until every finger is lifted), then a GUARD of BC_GATE_GUARD_MS ignores touches too; a
+ * finger still down when the guard ends keeps being swallowed until it lifts. So a wake can never press START RIDE or any
+ * other control underneath. 2- and 3-tap wakes use bc_tap_t and get the same swallow + guard. */
+#define BC_GATE_GUARD_MS 400
+typedef enum { BC_GATE_PASS = 0, BC_GATE_OFF, BC_GATE_SWALLOW, BC_GATE_GUARD } bc_gate_state_t;
+typedef struct {
+    bc_gate_state_t st;
+    uint32_t guard_until_ms;
+    bool down;                   /* finger currently down as seen by the gate */
+    uint32_t swallowed, guarded; /* presses dropped (diagnostics) */
+} bc_gate_t;
+void bc_gate_reset(bc_gate_t *g);
+void bc_gate_screen_off(bc_gate_t *g);                       /* screen went dark: nothing passes */
+void bc_gate_wake(bc_gate_t *g, bool finger_down, uint32_t now_ms);   /* display woke: swallow the rest of the gesture, then guard */
+/** Every touch poll: returns true when the press state may be handed to the UI, false when it must read as "released". */
+bool bc_gate_feed(bc_gate_t *g, bool pressed, uint32_t now_ms);
+bool bc_gate_blocking(const bc_gate_t *g);
+
+/* ---- hold-to-confirm (0.6.0 rev 3): START RIDE, END, delete, forget, restart, deep sleep.
+ * Press and keep still for `hold_ms`: progress 0..100 for the ring; FIRE exactly once; release early or a slide of more than
+ * BC_HOLD_SLIDE_PX cancels; after a fire the next press is ignored for BC_HOLD_COOLDOWN_MS (bounce / duplicate start). */
+#define BC_HOLD_SLIDE_PX 20
+#define BC_HOLD_COOLDOWN_MS 1500
+typedef enum { BC_HOLD_IDLE = 0, BC_HOLD_HOLDING, BC_HOLD_FIRED, BC_HOLD_CANCELLED } bc_hold_ev_t;
+typedef struct {
+    uint32_t hold_ms;
+    bool down, fired, slid; uint32_t t0; int x0, y0;
+    uint32_t cooldown_until_ms;
+    int progress;                /* 0..100 while holding */
+    uint32_t fires, cancels_release, cancels_slide, ignored_cooldown;
+} bc_hold_t;
+void bc_hold_init(bc_hold_t *h, uint32_t hold_ms);
+/** Feed press state + position on every event/poll. Returns FIRED exactly once per completed hold. */
+bc_hold_ev_t bc_hold_feed(bc_hold_t *h, bool pressed, int x, int y, uint32_t now_ms);
 
 /* ---- consumption tracker: millivolts lost per hour in each operating mode */
 typedef enum { BC_MODE_IDLE_ON = 0, BC_MODE_RIDE_ON, BC_MODE_RIDE_OFF, BC_MODE_COUNT } bc_power_mode_t;

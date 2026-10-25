@@ -225,7 +225,7 @@ static void detail_show(void)
     lv_obj_align(i, LV_ALIGN_TOP_MID, 0, 86);
     lv_obj_t *c = ui_pill(scr, connected ? "RECONNECT" : "CONNECT", C_CYAN, C_INK, 140, 34, d_connect_cb, NULL); lv_obj_align(c, LV_ALIGN_TOP_MID, 0, 118);
     if (saved && (!w_sel_known || w_sel.secured)) { lv_obj_t *pw = ui_pill(scr, "NEW PASSWORD", C_PANEL, C_CYAN, 140, 26, d_pass_cb, NULL); lv_obj_set_style_text_font(lv_obj_get_child(pw, 0), &lv_font_montserrat_12, 0); lv_obj_align(pw, LV_ALIGN_TOP_MID, 0, 156); }
-    if (saved) { lv_obj_t *f = ui_hold_btn(scr, "HOLD: FORGET", C_PANEL, C_RED, 120, 26, 1500, d_forget_cb, NULL); lv_obj_set_style_text_font(lv_obj_get_child(f, 0), &lv_font_montserrat_12, 0); lv_obj_align(f, LV_ALIGN_TOP_MID, 0, 186); }
+    if (saved) { lv_obj_t *f = ui_hold_btn(scr, "HOLD: FORGET", C_PANEL, C_RED, 120, 26, 1500, d_forget_cb, NULL); lv_obj_set_style_text_font(ui_hold_label(f), &lv_font_montserrat_12, 0); lv_obj_align(f, LV_ALIGN_TOP_MID, 0, 186); }
     lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 30, d_back_cb, NULL); lv_obj_set_pos(bk, 14, 120);
     lv_obj_set_style_text_font(lv_obj_get_child(bk, 0), &lv_font_montserrat_14, 0);
     ui_screen_show(scr);

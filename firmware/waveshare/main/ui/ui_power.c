@@ -56,10 +56,22 @@ static void shield_refresh(void)
 /* ---------------- toast */
 static void toast(const char *txt)
 {
+    if (!s_toast) return;
     lv_label_set_text(s_toast_lbl, txt);
     lv_obj_remove_flag(s_toast, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_toast);
     s_toast_until_ms = plat_ms() + TOAST_MS;
+}
+void ui_toast(const char *txt) { toast(txt); }
+
+/* ---------------- wake fade-in: backlight 0 -> set level in ~150 ms, so the rider sees the wake while the guard still swallows touches */
+#define WAKE_FADE_MS 150
+static void fade_exec(void *o, int32_t v) { (void)o; plat_backlight((int)v); }
+static void wake_hook(void)
+{
+    int to = app_profile()->brightness; if (to < 10) to = 10;
+    lv_anim_t a; lv_anim_init(&a); lv_anim_set_var(&a, &s_inited); lv_anim_set_exec_cb(&a, fade_exec);
+    lv_anim_set_values(&a, 0, to); lv_anim_set_duration(&a, WAKE_FADE_MS); lv_anim_set_path_cb(&a, lv_anim_path_ease_out); lv_anim_start(&a);
 }
 
 /* ---------------- Quick Settings */
@@ -178,19 +190,20 @@ static void qs_fill_list(void)
     ui_row_btn(q_list, "Touch lock", LV_SYMBOL_EYE_CLOSE, C_CYAN, lock_cb, NULL);
     char wk[20]; snprintf(wk, sizeof wk, "%s = on", app_power_wake_name(app_power_wake_taps_now()));
     ui_row_btn(q_list, "Screen off", wk, C_CYAN, off_cb, NULL);
-    lv_obj_t *n4 = ui_label(q_list, &lv_font_montserrat_12, C_MUT, "Bluetooth, sensors and recording\ncontinue with the screen off"); lv_obj_set_width(n4, lv_pct(100)); lv_label_set_long_mode(n4, LV_LABEL_LONG_WRAP);
+    lv_obj_t *n4 = ui_label(q_list, &lv_font_montserrat_12, C_MUT, "Bluetooth, sensors and recording\ncontinue with the screen off;\nthe waking touch presses nothing"); lv_obj_set_width(n4, lv_pct(100)); lv_label_set_long_mode(n4, LV_LABEL_LONG_WRAP);
     q_sleep = ui_row_btn(q_list, "Deep sleep", ride ? "riding" : "link off " LV_SYMBOL_RIGHT, ride ? C_FAINT : C_CYAN, sleep_page_cb, NULL);
     if (ride) { lv_obj_remove_flag(q_sleep, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_style_text_color(lv_obj_get_child(q_sleep, 0), C_FAINT, 0); }
     lv_obj_t *rs = ui_hold_btn(q_list, "HOLD: RESTART", C_PANEL, C_AMBER, lv_pct(100), 40, 1500, restart_cb, NULL);
-    lv_obj_set_style_text_font(lv_obj_get_child(rs, 0), &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(ui_hold_label(rs), &lv_font_montserrat_12, 0);
     if (ride) { lv_obj_t *n2 = ui_label(q_list, &lv_font_montserrat_12, C_MUT, "the ride is saved to the journal\nand recovered after a restart"); lv_obj_set_width(n2, lv_pct(100)); lv_label_set_long_mode(n2, LV_LABEL_LONG_WRAP); }
     ui_row_btn(q_list, "Power settings", LV_SYMBOL_RIGHT, C_CYAN, power_settings_cb, NULL);
 }
 
 static void qs_fill_power_page(void)
 {
-    char tx[360]; int taps = app_profile()->wake_taps < 2 ? 2 : app_profile()->wake_taps;
-    snprintf(tx, sizeof tx, "This board has no power switch:\nthe lowest state is DEEP SLEEP.\n\nCONNECTIVITY OFF: the phone\nlink and sensors disconnect\nuntil the device wakes.\n(Screen off / standby keep\nBluetooth on instead.)\n\nWake it up: tap the screen\n%d times, press RESET, or\nplug in USB.\n\nSettings and rides are saved\nfirst. Not possible during a ride.", taps);
+    char tx[440]; int taps = app_power_wake_taps_now();
+    snprintf(tx, sizeof tx, "This board has no power switch:\nthe lowest state is DEEP SLEEP.\n\nCONNECTIVITY OFF: the phone\nlink and sensors disconnect\nuntil the device wakes.\n(Screen off / standby keep\nBluetooth on instead.)\n\nWake it up: %s, press\nRESET, or plug in USB. The\nfirst second shows the boot\nlogo; the waking touch never\npresses anything.\n\nSettings and rides are saved\nfirst. Not possible during a ride.",
+             taps == 1 ? "touch the screen" : taps == 2 ? "tap the screen twice" : "tap the screen 3 times");
     lv_obj_t *t = ui_label(q_list, &lv_font_montserrat_12, C_FG, tx);
     lv_obj_set_width(t, lv_pct(100)); lv_label_set_long_mode(t, LV_LABEL_LONG_WRAP);
     if (app_power_can_sleep()) ui_hold_btn(q_list, "HOLD: DEEP SLEEP", C_PANEL, C_CYAN, lv_pct(100), 40, 1500, sleep_go_cb, NULL);
@@ -253,13 +266,23 @@ void ui_power_gesture(lv_dir_t d)
     if (d == LV_DIR_BOTTOM && s_press.y < TOP_EDGE_Y && !s_qs && ui_current() != UI_SCR_RIDE) ui_qs_open();
 }
 static void scr_gesture_cb(lv_event_t *e) { (void)e; ui_power_gesture(lv_indev_get_gesture_dir(lv_indev_active())); }
-void ui_power_attach_screen(lv_obj_t *scr, ui_scr_t kind) { if (kind != UI_SCR_RIDE) lv_obj_add_event_cb(scr, scr_gesture_cb, LV_EVENT_GESTURE, NULL); }
+/* rev 3 fix: LVGL creates a screen WITHOUT LV_OBJ_FLAG_PRESS_LOCK, so while a finger swiped down from the top zone the
+   "pressed object" was re-searched on every read and jumped to whatever control the finger crossed (START RIDE...), which then
+   received PRESSED + the gesture instead of the screen — a swipe that did not start exactly on the handle did nothing
+   (Rashed: "swiping down from the top is difficult"). With PRESS_LOCK the screen keeps the touch it received, the gesture reaches
+   it, and no control underneath is pressed by a swipe. */
+void ui_power_attach_screen(lv_obj_t *scr, ui_scr_t kind)
+{
+    lv_obj_add_flag(scr, LV_OBJ_FLAG_PRESS_LOCK);
+    if (kind != UI_SCR_RIDE) lv_obj_add_event_cb(scr, scr_gesture_cb, LV_EVENT_GESTURE, NULL);
+}
 
 /* ---------------- init + periodic refresh (from ui_common's 250 ms timer) */
 void ui_power_init(void)
 {
     if (s_inited) { app_power_init(); ui_qs_close(); shield_refresh(); return; }
     s_inited = true;
+    app_power_set_wake_hook(wake_hook);
     app_power_init();
     lv_indev_t *i = lv_indev_get_next(NULL);
     if (i) { lv_indev_add_event_cb(i, indev_cb, LV_EVENT_PRESSED, NULL); lv_indev_add_event_cb(i, indev_cb, LV_EVENT_RELEASED, NULL); lv_indev_add_event_cb(i, indev_cb, LV_EVENT_PRESS_LOST, NULL); }
@@ -271,19 +294,19 @@ void ui_power_init(void)
     lv_obj_remove_flag(s_shield, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_add_event_cb(s_shield, shield_cb, LV_EVENT_CLICKED, NULL);
     s_lock_btn = ui_hold_btn(s_shield, "HOLD 3 s TO UNLOCK", C_PANEL, C_FG, 180, 44, 3000, unlock_cb, NULL);
-    lv_obj_set_style_text_font(lv_obj_get_child(s_lock_btn, 0), &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(ui_hold_label(s_lock_btn), &lv_font_montserrat_14, 0);
     lv_obj_align(s_lock_btn, LV_ALIGN_CENTER, 0, 0);
     s_lock_hint = ui_label(s_shield, &lv_font_montserrat_14, C_MUT, LV_SYMBOL_EYE_CLOSE "  touch locked");
     lv_obj_align(s_lock_hint, LV_ALIGN_CENTER, 0, -40);
     lv_obj_add_flag(s_shield, LV_OBJ_FLAG_HIDDEN);
     s_toast = lv_obj_create(lv_layer_top());
     lv_obj_remove_style_all(s_toast);
-    lv_obj_set_size(s_toast, 134, 22); lv_obj_set_style_radius(s_toast, 11, 0);
+    lv_obj_set_size(s_toast, 156, 22); lv_obj_set_style_radius(s_toast, 11, 0);
     lv_obj_set_style_bg_color(s_toast, C_AMBER, 0); lv_obj_set_style_bg_opa(s_toast, LV_OPA_COVER, 0);
-    lv_obj_align(s_toast, LV_ALIGN_TOP_MID, 0, 28);
+    lv_obj_align(s_toast, LV_ALIGN_TOP_MID, 0, 34);   /* 156 px fits the circle's chord at y = 34 */
     lv_obj_remove_flag(s_toast, LV_OBJ_FLAG_CLICKABLE);
     s_toast_lbl = ui_label(s_toast, &lv_font_montserrat_12, C_INK, ""); lv_obj_center(s_toast_lbl);
-    lv_obj_set_size(s_toast_lbl, 124, 14); lv_label_set_long_mode(s_toast_lbl, LV_LABEL_LONG_DOT); lv_obj_center(s_toast_lbl);
+    lv_obj_set_size(s_toast_lbl, 146, 14); lv_label_set_long_mode(s_toast_lbl, LV_LABEL_LONG_DOT); lv_obj_center(s_toast_lbl);
     lv_obj_add_flag(s_toast, LV_OBJ_FLAG_HIDDEN);
     /* the pull-down handle: a 60 x 28 touch target holding a 44 x 6 pill, above every non-ride screen (titles start at y = 30) */
     s_handle = lv_button_create(lv_layer_top());
@@ -348,7 +371,7 @@ void ui_power_settings_show(void)
     ui_row_btn(l, "Screen off after", app_power_timeout_name(p->scr_timeout_s), C_CYAN, to_cb, NULL);
     lv_obj_t *n1 = ui_label(l, &lv_font_montserrat_12, C_MUT, "outside rides only; Bluetooth\nstays on (connected standby)"); lv_obj_set_width(n1, lv_pct(100)); lv_label_set_long_mode(n1, LV_LABEL_LONG_WRAP);
     ui_row_btn(l, "Wake gesture", app_power_wake_name(p->wake_taps), C_CYAN, wake_cb, NULL);
-    lv_obj_t *n6 = ui_label(l, &lv_font_montserrat_12, C_MUT, p->wake_taps == 1 ? "any touch: rides only;\notherwise 2 taps" : "taps anywhere, within 2.5 s;\nslides and holds are ignored"); lv_obj_set_width(n6, lv_pct(100)); lv_label_set_long_mode(n6, LV_LABEL_LONG_WRAP);
+    lv_obj_t *n6 = ui_label(l, &lv_font_montserrat_12, C_MUT, p->wake_taps == 1 ? "one touch anywhere wakes the\nscreen; it never presses a button\n(2/3 taps: fewer accidental wakes)" : "taps anywhere, within 2.5 s;\nslides and holds are ignored;\nthe taps never press a button"); lv_obj_set_width(n6, lv_pct(100)); lv_label_set_long_mode(n6, LV_LABEL_LONG_WRAP);
     ui_row_btn(l, "Auto deep sleep", app_power_autosleep_name(p->auto_sleep_min), C_CYAN, as_cb, NULL);
     lv_obj_t *n2 = ui_label(l, &lv_font_montserrat_12, C_MUT, "idle on battery, no ride, no phone\nconnected; switches Bluetooth OFF"); lv_obj_set_width(n2, lv_pct(100)); lv_label_set_long_mode(n2, LV_LABEL_LONG_WRAP);
     ui_row_btn(l, "Wake on warning", p->wake_on_cue ? "on" : "off", p->wake_on_cue ? C_GREEN : C_MUT, cue_cb, NULL);

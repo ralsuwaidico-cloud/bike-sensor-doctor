@@ -47,9 +47,9 @@ void ui_settings_show(void)
     ui_row_btn(l, "Demo mode", app_demo() ? "ON" : "off", app_demo() ? C_DEMO : C_MUT, demo_cb, NULL);
     ui_row_btn(l, "Diagnostics", LV_SYMBOL_RIGHT, C_CYAN, diag_cb, NULL);
     lv_obj_t *again = ui_hold_btn(l, "HOLD: SET UP AGAIN", C_PANEL, C_AMBER, lv_pct(100), 40, 2000, setup_cb, NULL);
-    lv_obj_set_style_text_font(lv_obj_get_child(again, 0), &lv_font_montserrat_12, 0);
-    snprintf(v, sizeof v, "firmware %s", plat_fw_version());
-    ui_label(l, &lv_font_montserrat_12, C_MUT, v);
+    lv_obj_set_style_text_font(ui_hold_label(again), &lv_font_montserrat_12, 0);
+    { plat_health_t h; plat_health(&h); char fb[64]; snprintf(fb, sizeof fb, "firmware %s\nbuild %s", plat_fw_version(), h.build);
+      lv_obj_t *f = ui_label(l, &lv_font_montserrat_12, C_MUT, fb); lv_obj_set_width(f, lv_pct(100)); lv_label_set_long_mode(f, LV_LABEL_LONG_WRAP); }
     lv_obj_add_event_cb(l, remember_scroll, LV_EVENT_SCROLL_END, NULL);
     lv_obj_update_layout(l);
     lv_obj_scroll_to_y(l, s_scroll_y, LV_ANIM_OFF);

@@ -24,6 +24,7 @@
 #include "hw.h"
 #include "ble_central.h"
 #include "app.h"
+#include "app_power.h"
 #include "ui.h"
 void net_wifi_init(void);
 
@@ -140,6 +141,7 @@ void app_main(void)
     if (esp_timer_create(&ta, &t) == ESP_OK) esp_timer_start_once(t, 20 * 1000 * 1000);
 
     hw_touch_init(disp);
+    hw_touch_set_filter(app_power_touch_filter);   /* wake gesture swallowed + guard: a wake can never press a control */
     ESP_LOGI(TAG, "STAGE 3 touch OK");
     ble_central_start();
     ESP_LOGI(TAG, "STAGE 4 Bluetooth OK");

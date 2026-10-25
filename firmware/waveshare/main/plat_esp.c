@@ -173,7 +173,9 @@ void plat_health(plat_health_t *o)
     memset(o, 0, sizeof *o);
     const esp_app_desc_t *d = esp_app_get_description();
     snprintf(o->fw_version, sizeof o->fw_version, "%.23s", d->version);
-    snprintf(o->build, sizeof o->build, "%.6s %.5s", d->date, d->time);
+    /* build stamp = compile date/time + the first 4 bytes of the ELF SHA-256: unique per build, so the physical screen can
+       prove which firmware is running (Settings footer and Device Health) */
+    snprintf(o->build, sizeof o->build, "%.6s %.5s #%02x%02x%02x%02x", d->date, d->time, d->app_elf_sha256[0], d->app_elf_sha256[1], d->app_elf_sha256[2], d->app_elf_sha256[3]);
     o->uptime_s = (uint32_t)(esp_timer_get_time() / 1000000);
     snprintf(o->reset_reason, sizeof o->reset_reason, "%s", plat_reset_reason());
     o->boot_count = g_selftest.boot_count;

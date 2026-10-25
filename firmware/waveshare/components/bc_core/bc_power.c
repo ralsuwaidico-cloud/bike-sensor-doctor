@@ -115,6 +115,63 @@ bool bc_tap_feed_xy(bc_tap_t *t, bool pressed, int x, int y, uint32_t now_ms)
 }
 bool bc_tap_feed(bc_tap_t *t, bool pressed, uint32_t now_ms) { return bc_tap_feed_xy(t, pressed, -1, -1, now_ms); }
 
+/* ---- wake gate */
+void bc_gate_reset(bc_gate_t *g) { memset(g, 0, sizeof *g); g->st = BC_GATE_PASS; }
+void bc_gate_screen_off(bc_gate_t *g) { g->st = BC_GATE_OFF; g->guard_until_ms = 0; }
+void bc_gate_wake(bc_gate_t *g, bool finger_down, uint32_t now_ms)
+{
+    if (finger_down) { g->st = BC_GATE_SWALLOW; g->down = true; }
+    else { g->st = BC_GATE_GUARD; g->guard_until_ms = now_ms + BC_GATE_GUARD_MS; }
+}
+bool bc_gate_blocking(const bc_gate_t *g) { return g->st != BC_GATE_PASS; }
+bool bc_gate_feed(bc_gate_t *g, bool pressed, uint32_t now_ms)
+{
+    bool was = g->down; g->down = pressed;
+    switch (g->st) {
+    case BC_GATE_PASS: return true;
+    case BC_GATE_OFF: if (pressed && !was) g->swallowed++; return false;
+    case BC_GATE_SWALLOW:
+        if (!pressed) { g->st = BC_GATE_GUARD; g->guard_until_ms = now_ms + BC_GATE_GUARD_MS; }
+        return false;
+    case BC_GATE_GUARD:
+        if ((int32_t)(now_ms - g->guard_until_ms) >= 0) {
+            if (pressed) { g->st = BC_GATE_SWALLOW; return false; }   /* landed during the guard: ride it out to the release */
+            g->st = BC_GATE_PASS; return true;
+        }
+        if (pressed && !was) g->guarded++;
+        return false;
+    }
+    return true;
+}
+
+/* ---- hold-to-confirm */
+void bc_hold_init(bc_hold_t *h, uint32_t hold_ms) { memset(h, 0, sizeof *h); h->hold_ms = hold_ms ? hold_ms : 1000; }
+bc_hold_ev_t bc_hold_feed(bc_hold_t *h, bool pressed, int x, int y, uint32_t now_ms)
+{
+    if (pressed && !h->down) {                                   /* press begins */
+        h->down = true; h->fired = false; h->slid = false; h->t0 = now_ms; h->x0 = x; h->y0 = y; h->progress = 0;
+        if (h->cooldown_until_ms && (int32_t)(now_ms - h->cooldown_until_ms) < 0) { h->ignored_cooldown++; h->fired = true; return BC_HOLD_IDLE; }
+        return BC_HOLD_HOLDING;
+    }
+    if (pressed && h->down) {
+        if (h->fired) return BC_HOLD_IDLE;
+        if (x >= 0 && h->x0 >= 0) { int dx = x - h->x0, dy = y - h->y0; if (dx < 0) dx = -dx; if (dy < 0) dy = -dy; if (dx > BC_HOLD_SLIDE_PX || dy > BC_HOLD_SLIDE_PX) h->slid = true; }
+        if (h->slid) { h->fired = true; h->progress = 0; h->cancels_slide++; return BC_HOLD_CANCELLED; }
+        uint32_t el = now_ms - h->t0;
+        h->progress = el >= h->hold_ms ? 100 : (int)(el * 100 / h->hold_ms);
+        if (el >= h->hold_ms) { h->fired = true; h->fires++; h->cooldown_until_ms = now_ms + BC_HOLD_COOLDOWN_MS; return BC_HOLD_FIRED; }
+        return BC_HOLD_HOLDING;
+    }
+    if (!pressed && h->down) {                                   /* release */
+        h->down = false;
+        bool early = !h->fired;
+        h->progress = 0;
+        if (early) { h->cancels_release++; return BC_HOLD_CANCELLED; }
+        return BC_HOLD_IDLE;
+    }
+    return BC_HOLD_IDLE;
+}
+
 /* ---- drain */
 void bc_drain_reset(bc_drain_t *d) { memset(d, 0, sizeof *d); d->cur = -1; }
 

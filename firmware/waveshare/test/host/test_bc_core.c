@@ -355,14 +355,17 @@ static void t_power(void)
 
     /* profile: new power keys round-trip; an old 0.4.0 profile without them takes the defaults */
     bc_profile_t p, q; bc_profile_defaults(&p);
-    CHECK(p.scr_timeout_s == 60 && p.auto_sleep_min == 0 && p.bat_protect == 0 && p.wake_on_cue && p.pwr_v == 2);   /* 0.6.0: auto deep sleep off by default */
+    CHECK(p.scr_timeout_s == 60 && p.auto_sleep_min == 0 && p.bat_protect == 0 && p.wake_on_cue && p.pwr_v == 3 && p.wake_taps == 1);   /* 0.6.0: auto deep sleep off, any touch wakes */
     p.scr_timeout_s = 300; p.auto_sleep_min = 0; p.bat_protect = 1; p.wake_on_cue = false;
     char txt[1024]; CHECK(bc_profile_to_text(&p, txt, sizeof txt) > 0);
     CHECK(bc_profile_from_text(&q, txt) && q.scr_timeout_s == 300 && q.auto_sleep_min == 0 && q.bat_protect == 1 && !q.wake_on_cue);
     CHECK(bc_profile_from_text(&q, "format=bc-profile-1\nonboarded=1\nname=Rashed\nbrightness=70\n") && q.scr_timeout_s == 60 && q.auto_sleep_min == 0 && q.bat_protect == 0 && q.wake_on_cue && q.brightness == 70 && !strcmp(q.name, "Rashed"));
     /* a 0.5.0 profile (no pwr_v) carried auto_sleep_min=10: migrated to off once; a 0.6.0 profile keeps what it says */
-    CHECK(bc_profile_from_text(&q, "scr_timeout_s=99999\nauto_sleep_min=999\nbat_protect=7\n") && q.scr_timeout_s == 3600 && q.auto_sleep_min == 0 && q.pwr_v == 2 && q.bat_protect == 1);
+    CHECK(bc_profile_from_text(&q, "scr_timeout_s=99999\nauto_sleep_min=999\nbat_protect=7\n") && q.scr_timeout_s == 3600 && q.auto_sleep_min == 0 && q.pwr_v == 3 && q.bat_protect == 1);
     CHECK(bc_profile_from_text(&q, "auto_sleep_min=30\npwr_v=2\n") && q.auto_sleep_min == 30);
+    /* rev 3: a 0.6.0 rev-1/2 profile (pwr_v=2) with triple tap is migrated once to any touch; a rev-3 profile keeps its choice */
+    CHECK(bc_profile_from_text(&q, "wake_taps=3\npwr_v=2\n") && q.wake_taps == 1 && q.pwr_v == 3);
+    CHECK(bc_profile_from_text(&q, "wake_taps=3\npwr_v=3\n") && q.wake_taps == 3);
     CHECK(bc_profile_from_text(&q, "auto_sleep_min=10\n") && q.auto_sleep_min == 0);
     /* 0.6.0 shared athlete fields round-trip */
     bc_profile_defaults(&p); p.birth_year = 1990; p.rest_hr = 52; p.lthr = 170; p.units = 1; p.hours_wk = 6; p.phone_prof_ver = 7; p.phone_prof_epoch = 1792850100u; p.prof_src = 1; p.sett_ver = 3;
@@ -573,9 +576,55 @@ static void t_csc(void)
     bc_profile_t r; bc_profile_defaults(&r); CHECK(bc_profile_from_text(&r, "format=bc-profile-1\nname=Old\n") && r.wheel_mm == 2096 && !r.csc.paired);
 }
 
+
+/* rev 3: wake gate (swallow + guard) and hold-to-confirm, with timing vectors */
+static void t_gate_hold(void)
+{
+    bc_gate_t g; bc_gate_reset(&g);
+    CHECK(bc_gate_feed(&g, true, 100) && bc_gate_feed(&g, false, 200));          /* screen on: everything passes */
+    bc_gate_screen_off(&g);
+    CHECK(!bc_gate_feed(&g, true, 1000) && !bc_gate_feed(&g, true, 1050) && !bc_gate_feed(&g, false, 1100) && g.swallowed == 1);   /* dark: nothing passes */
+    /* any-touch wake: finger lands at 2000, wake decided, swallowed until the release at 3500 (even a long press) */
+    bc_gate_wake(&g, true, 2000);
+    for (uint32_t t = 2000; t < 3500; t += 15) CHECK(!bc_gate_feed(&g, true, t));
+    CHECK(!bc_gate_feed(&g, false, 3500) && g.st == BC_GATE_GUARD && g.guard_until_ms == 3500 + BC_GATE_GUARD_MS);
+    /* guard: a tap inside it is dropped */
+    CHECK(!bc_gate_feed(&g, true, 3600) && !bc_gate_feed(&g, false, 3700) && g.guarded == 1);
+    /* a finger that lands in the guard and stays past its end keeps being swallowed until it lifts */
+    CHECK(!bc_gate_feed(&g, true, 3850) && !bc_gate_feed(&g, true, 3950) && g.st == BC_GATE_SWALLOW && !bc_gate_feed(&g, true, 4100));
+    CHECK(!bc_gate_feed(&g, false, 4200) && g.st == BC_GATE_GUARD);
+    CHECK(!bc_gate_feed(&g, false, 4300));
+    CHECK(bc_gate_feed(&g, false, 4200 + BC_GATE_GUARD_MS) && g.st == BC_GATE_PASS);  /* quiet guard over: open */
+    CHECK(bc_gate_feed(&g, true, 4700) && bc_gate_feed(&g, false, 4800));               /* normal touches pass again */
+    /* wake decided on a release (2/3 taps): straight to the guard */
+    bc_gate_screen_off(&g); bc_gate_wake(&g, false, 9000);
+    CHECK(g.st == BC_GATE_GUARD && !bc_gate_feed(&g, true, 9100) && !bc_gate_feed(&g, false, 9200) && bc_gate_feed(&g, false, 9400));
+
+    /* hold-to-confirm: 1000 ms */
+    bc_hold_t h; bc_hold_init(&h, 1000);
+    CHECK(bc_hold_feed(&h, true, 100, 100, 0) == BC_HOLD_HOLDING);
+    CHECK(bc_hold_feed(&h, true, 100, 100, 500) == BC_HOLD_HOLDING && h.progress == 50);
+    CHECK(bc_hold_feed(&h, false, 100, 100, 600) == BC_HOLD_CANCELLED && h.cancels_release == 1 && h.progress == 0);   /* early release */
+    CHECK(bc_hold_feed(&h, true, 100, 100, 1000) == BC_HOLD_HOLDING);
+    CHECK(bc_hold_feed(&h, true, 100, 125, 1300) == BC_HOLD_CANCELLED && h.cancels_slide == 1);                      /* slid 25 px */
+    CHECK(bc_hold_feed(&h, true, 100, 130, 1400) == BC_HOLD_IDLE);                                                   /* stays cancelled while down */
+    CHECK(bc_hold_feed(&h, false, 100, 130, 1500) == BC_HOLD_IDLE);
+    CHECK(bc_hold_feed(&h, true, 50, 50, 2000) == BC_HOLD_HOLDING);
+    CHECK(bc_hold_feed(&h, true, 60, 55, 2990) == BC_HOLD_HOLDING && h.progress == 99);                               /* 10/5 px jitter is fine */
+    CHECK(bc_hold_feed(&h, true, 60, 55, 3000) == BC_HOLD_FIRED && h.fires == 1 && h.progress == 100);
+    CHECK(bc_hold_feed(&h, true, 60, 55, 3500) == BC_HOLD_IDLE);                                                      /* never fires twice while held */
+    CHECK(bc_hold_feed(&h, false, 60, 55, 3600) == BC_HOLD_IDLE);
+    CHECK(bc_hold_feed(&h, true, 60, 55, 3700) == BC_HOLD_IDLE && h.ignored_cooldown == 1);                          /* bounce / duplicate inside the cool-down */
+    CHECK(bc_hold_feed(&h, true, 60, 55, 4900) == BC_HOLD_IDLE && bc_hold_feed(&h, false, 60, 55, 5000) == BC_HOLD_IDLE && h.fires == 1);
+    CHECK(bc_hold_feed(&h, true, 60, 55, 5200) == BC_HOLD_HOLDING);                                                   /* after the cool-down: a new hold */
+    CHECK(bc_hold_feed(&h, true, 60, 55, 6200) == BC_HOLD_FIRED && h.fires == 2);
+    /* a position-less feed (-1) never counts as a slide */
+    bc_hold_init(&h, 1000); CHECK(bc_hold_feed(&h, true, -1, -1, 0) == BC_HOLD_HOLDING && bc_hold_feed(&h, true, -1, -1, 1000) == BC_HOLD_FIRED);
+}
+
 int main(void)
 {
-    t_csc(); t_tap2(); t_link2(); t_link3(); t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link(); t_power();
+    t_gate_hold(); t_csc(); t_tap2(); t_link2(); t_link3(); t_hr(); t_profile(); t_ride(); t_auto_ftp(); t_coach(); t_demo(); t_wifi(); t_link(); t_power();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

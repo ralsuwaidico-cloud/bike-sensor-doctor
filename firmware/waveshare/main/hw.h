@@ -15,6 +15,8 @@ extern hw_selftest_t g_selftest;
 
 lv_display_t *hw_display_init(void);     /* SPI + GC9A01 + LVGL port; returns the LVGL display */
 bool hw_touch_init(lv_display_t *disp);  /* CST816S on I2C0 + LVGL input */
+typedef bool (*hw_touch_filter_t)(bool pressed, int x, int y, uint32_t now_ms);
+void hw_touch_set_filter(hw_touch_filter_t f);   /* veto presses before LVGL (wake gesture swallow + guard) */
 void hw_backlight_set(int percent);      /* 0..100 */
 void hw_selftest_run(void);              /* PSRAM, flash, NVS boot counter, FAT storage R/W, IMU WHO_AM_I, battery */
 float hw_battery_volts(void);            /* < 0 when unavailable */
@@ -24,7 +26,7 @@ void hw_panel_sleep(bool sleep);         /* GC9A01 display off + sleep-in (0x10)
 /** Screen-off mode: keep the CST816S awake (DisAutoSleep) so the first quick tap is reported instead of only waking the
  *  controller, and poll it faster. keep=false restores auto-sleep (needed before deep sleep so a touch wakes the chip). */
 void hw_touch_keep_awake(bool keep);
-void hw_deep_sleep_touch_wake(int taps); /* backlight held off, TP_RST held high, ext0 wake on TP_INT (GPIO5, low); never returns. taps 2..3 */
+void hw_deep_sleep_touch_wake(int taps); /* backlight held off, TP_RST held high, ext0 wake on TP_INT (GPIO5, low); never returns. taps 1..3 (1 = the waking touch alone) */
 bool hw_wake_tap_check(void);            /* after an ext0 wake: the waking touch is tap 1; wait <= 2.5 s for the rest (profile setting kept in RTC memory) */
 int hw_wake_taps_needed(void);           /* what the last deep sleep asked for (diagnostics) */
 bool hw_device_id(uint8_t out[6]);       /* Bluetooth MAC */

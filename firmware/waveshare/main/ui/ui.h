@@ -67,7 +67,11 @@ lv_obj_t *ui_round_btn(lv_obj_t *p, const char *sym, lv_color_t bg, lv_color_t f
 /* bottom navigation: optional back button + main action pill */
 void ui_nav(lv_obj_t *p, lv_event_cb_t back, const char *next_txt, lv_event_cb_t next, void *ud);
 /* a button that must be held for hold_ms (progress ring) before cb fires — for Pause/End/Delete */
+/* hold-to-confirm pill (rev 3, bc_hold_t): a ring fills while the finger stays still for hold_ms; LV_EVENT_READY fires exactly
+ * once (cb); release before the end or a slide > 20 px cancels and sends LV_EVENT_CANCEL (hint toasts); 1.5 s cool-down. */
 lv_obj_t *ui_hold_btn(lv_obj_t *p, const char *txt, lv_color_t bg, lv_color_t fg, int w, int h, uint32_t hold_ms, lv_event_cb_t cb, void *ud);
+lv_obj_t *ui_hold_label(lv_obj_t *hold_btn);   /* the text label of a hold button (for font changes) */
+void ui_toast(const char *txt);           /* short amber notice at the top of any screen (4 s) */
 /* a vertically scrolling area kept inside the circle (y0..y1) */
 lv_obj_t *ui_scroll_area(lv_obj_t *p, int y0, int y1);
 /* a centred column of rows inside a scroll area */

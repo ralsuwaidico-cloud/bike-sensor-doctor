@@ -66,7 +66,7 @@ void ui_results_show(const bc_ride_summary_t *s, bool fresh)
     if (fresh) {
         line(list, &lv_font_montserrat_12, C_MUT, "SAVE keeps this ride.\nHold the bin 1.5 s to discard.");
         lv_obj_t *del = ui_hold_btn(scr, LV_SYMBOL_TRASH, C_PANEL, C_RED, 44, 44, 1500, discard_cb, NULL);
-        lv_obj_set_style_text_font(lv_obj_get_child(del, 0), &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_font(ui_hold_label(del), &lv_font_montserrat_20, 0);
         lv_obj_align(del, LV_ALIGN_TOP_LEFT, 54, 166);
         lv_obj_t *sv = ui_pill(scr, "SAVE", C_GREEN, C_INK, 96, 44, save_cb, NULL);
         lv_obj_align(sv, LV_ALIGN_TOP_LEFT, 106, 166);

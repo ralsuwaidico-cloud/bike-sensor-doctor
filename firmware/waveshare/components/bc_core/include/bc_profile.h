@@ -57,7 +57,7 @@ typedef struct {
     uint8_t auto_sleep_min;    /* deep sleep after N idle minutes on battery, no ride, no phone connected: 0 = off (default since 0.6.0) */
     uint8_t bat_protect;       /* 0 = alerts only (default); 1 = at the critical level also auto-save the ride and sleep (NOT validated) */
     bool wake_on_cue;          /* screen off during a ride: wake 5 s on a coach warning (default on) */
-    uint8_t wake_taps;         /* 0.6.0 wake gesture: 3 = triple tap (default), 2 = double tap, 1 = any touch (rides only; double tap otherwise) */
+    uint8_t wake_taps;         /* wake gesture: 1 = any touch (default since 0.6.0 rev 3; the waking gesture never reaches a button), 2 = double tap, 3 = triple tap */
     /* 0.6.0 shared athlete profile (phone sync, docs/LINK_V1_2_SPEC.md); 0 = unknown */
     uint16_t birth_year; uint8_t rest_hr, lthr, units /* 0 metric, 1 imperial */, hours_wk;
     uint32_t phone_prof_ver;   /* version of the last PROFILE_SET applied; 0 = device-only profile */

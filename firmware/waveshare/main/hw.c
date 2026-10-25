@@ -130,6 +130,18 @@ static esp_err_t touch_create(bool reset)
     return esp_lcd_touch_new_i2c_cst816s(tio, &cfg, &s_tp);
 }
 
+/* rev 3: every touch poll goes through the application's gate before LVGL sees it (screen-off wake gesture swallowed,
+   guard after the wake). The port's own read callback does the I2C work; we only veto the press state. */
+static lv_indev_read_cb_t s_port_read;
+static hw_touch_filter_t s_filter;
+void hw_touch_set_filter(hw_touch_filter_t f) { s_filter = f; }
+static void gated_read(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    if (s_port_read) s_port_read(indev, data);
+    bool pressed = data->state == LV_INDEV_STATE_PRESSED;
+    if (s_filter && !s_filter(pressed, data->point.x, data->point.y, hw_millis())) data->state = LV_INDEV_STATE_RELEASED;
+}
+
 bool hw_touch_init(lv_display_t *disp)
 {
     if (!s_tp) {                                       /* after a wake the check below may already have created it */
@@ -139,6 +151,7 @@ bool hw_touch_init(lv_display_t *disp)
     esp_lcd_touch_handle_t tp = s_tp;
     lvgl_port_touch_cfg_t lt = { .disp = disp, .handle = tp };
     s_indev = lvgl_port_add_touch(&lt);
+    if (s_indev) { s_port_read = lv_indev_get_read_cb(s_indev); lv_indev_set_read_cb(s_indev, gated_read); }
     hw_touch_keep_awake(false);                        /* normal operation: controller auto-sleep (a wake check may have disabled it) */
     SET(touch, HW_PASS, "CST816S ready");
     return true;
@@ -188,12 +201,12 @@ void hw_touch_keep_awake(bool keep)
     if (s_indev) { lv_timer_t *t = lv_indev_get_read_timer(s_indev); if (t) lv_timer_set_period(t, keep ? 15 : 30); }   /* 15 ms polling: a 40 ms tap gets 2 samples */
 }
 
-int hw_wake_taps_needed(void) { return (s_rtc_wake_taps >= 2 && s_rtc_wake_taps <= 3) ? s_rtc_wake_taps : 3; }
+int hw_wake_taps_needed(void) { return (s_rtc_wake_taps >= 1 && s_rtc_wake_taps <= 3) ? s_rtc_wake_taps : 1; }
 bool hw_device_id(uint8_t out[6]) { return esp_read_mac(out, ESP_MAC_BT) == ESP_OK; }
 
 void hw_deep_sleep_touch_wake(int taps)
 {
-    s_rtc_wake_taps = (taps >= 2 && taps <= 3) ? taps : 3;
+    s_rtc_wake_taps = (taps >= 1 && taps <= 3) ? taps : 1;
     ESP_LOGI(TAG, "deep sleep: wake on touch (GPIO%d low, then %d taps), RESET or USB", BOARD_TP_INT, s_rtc_wake_taps);
     hw_touch_keep_awake(false);                                       /* the controller must sleep so a touch raises INT and wakes us */
     /* backlight hard off and held through sleep (the FET gate must not float high) */

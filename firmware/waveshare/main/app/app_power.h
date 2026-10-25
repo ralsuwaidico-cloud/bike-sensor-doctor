@@ -1,5 +1,5 @@
 /*
- * Power management (firmware 0.5.0): battery estimate + USB inference, screen off / triple-tap wake, touch lock,
+ * Power management (0.5.0, reworked 0.6.0): battery estimate + USB inference, screen off / any-touch wake (gesture swallowed + guard), touch lock,
  * automatic screen timeout, deep sleep (no ride active), low-battery alerts, safe restart. Shared by the device and
  * the PC harness; the hardware side is behind plat.h (plat_backlight, plat_panel_sleep, plat_deep_sleep).
  *
@@ -32,6 +32,8 @@ typedef struct {
     uint32_t last_touch_ms, screen_off_ms, wake_until_ms;
     uint32_t screen_offs, wakes, lock_count, sleeps_requested, restarts_requested, auto_offs, cue_wakes;
     uint32_t taps_rejected;      /* presses on the dark screen that were not accepted as taps (slides, holds, bursts) */
+    bc_gate_t gate;              /* rev 3: swallows the waking gesture + a guard so a wake never presses a control */
+    uint32_t wake_at_ms;         /* when the display last woke (0 = never) */
     bool woke_from_sleep;        /* this boot was a wake from deep sleep */
     bool standby;                /* 0.6.0 connected standby: screen off, no ride, Bluetooth link kept, sensor scanning paused */
     uint32_t standbys;
@@ -43,10 +45,20 @@ void app_power_tick(uint32_t now_ms);            /* every 250 ms from the UI tim
 void app_power_touch(bool pressed, uint32_t now_ms);   /* every press/release seen by the touch layer */
 void app_power_touch_xy(bool pressed, int x, int y, uint32_t now_ms);   /* same, with the position (slide rejection) */
 void app_power_settle(uint32_t now_ms);                 /* screen off, finger up: lets a completed gesture fire (call every <= 50 ms) */
-/** Taps needed to wake the dark screen right now: profile wake_taps, but "any touch" (1) only during a ride (double tap otherwise). */
+/** THE touch gate (rev 3). Called by the input driver's read callback on every poll with the raw press state and position.
+ *  Returns true when the press may be handed to LVGL; false = report "released" (screen off, waking gesture, guard period).
+ *  Wake detection happens here: any touch (default) wakes on the first contact; 2/3 taps use the tap detector. */
+bool app_power_touch_filter(bool pressed, int x, int y, uint32_t now_ms);
+/** Taps needed to wake the dark screen right now: the profile's wake_taps (1 = any touch, default). */
 int app_power_wake_taps_now(void);
-const char *app_power_wake_name(int taps);              /* "3 taps" / "2 taps" / "any touch" */
-int app_power_wake_next(int taps);                      /* Settings cycle 3 -> 2 -> 1 -> 3 */
+const char *app_power_wake_name(int taps);              /* "any touch" / "2 taps" / "3 taps" */
+int app_power_wake_next(int taps);                      /* Settings cycle 1 -> 2 -> 3 -> 1 */
+/** UI hook run right after the display wakes (backlight fade-in); may be NULL. */
+void app_power_set_wake_hook(void (*hook)(void));
+bool app_power_gate_blocking(void);                     /* true while touches are being swallowed / guarded */
+/** A hold-to-confirm just fired and the screen is about to change: swallow the rest of this touch + guard, so the
+ *  finger still on the glass cannot press whatever appears underneath (results screen, Home...). */
+void app_power_swallow_rest(void);
 const app_power_t *app_power(void);
 
 void app_power_screen_off(void);                 /* allowed any time, also during a ride (recording continues) */

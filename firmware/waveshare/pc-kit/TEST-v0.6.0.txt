@@ -1,92 +1,99 @@
-BikeComputer firmware 0.6.0 — hardware test checklist (25 Oct 2026)
-======================================================================
-Record PASS / FAIL / NOT TESTED per step, with numbers where asked. Everything in 0.6.0 is simulator-tested only
-until you confirm it here. Board on USB with the battery DISCONNECTED (HW-1), except step P8 which needs the battery
-alone (never USB and battery together). iPhone app: build 21 or newer (build 21 cannot yet use Wi-Fi setup / profile
-sync from the phone; those arrive with the next build — steps marked [app 0.4.0+] wait for it).
+BikeComputer firmware 0.6.0 (rev 3) — hardware test checklist (25 Oct 2026)
+==============================================================================
+Record PASS / FAIL / NOT TESTED per step, with numbers where asked. Everything in 0.6.0 is SIMULATOR-TESTED ONLY
+until you confirm it here; the simulator cannot see the real touch controller, radio or panel. Board on USB with the
+battery DISCONNECTED (HW-1), except the optional battery step G2 (battery alone, never USB and battery together).
+iPhone app: build 24 or newer (profile / settings / Wi-Fi from the phone need the app 0.4.0+ = build 24+).
 
 Install
- I1  INSTALL-v0.6.0.bat: finds COM port, reads the 16 MB backup, says "Backup verified: 16 MB, firmware 0.5.0",
-     asks YES, writes 2 regions, "INSTALLED". Board restarts to Home with your name and FTP.
- I2  Settings > Diagnostics > Device Health: Firmware 0.6.0. History still lists your rides; power meter still paired.
+ I1  INSTALL-v0.6.0.bat: finds the COM port, reads the 16 MB backup, says "Backup verified: 16 MB, firmware 0.5.0",
+     asks YES, writes 2 regions, "INSTALLED". Board restarts to Home with your name and FTP.   PASS/FAIL
+ I2  Settings: the footer reads "firmware 0.6.0" and a build stamp "Oct 25 hh:mm #xxxxxxxx" — that stamp is how you
+     prove on the glass which build is running (Device Health shows it too). History still lists your rides; the power
+     meter is still paired.   PASS/FAIL
      (Rollback at any time: ROLLBACK-TO-v050.bat keeps data; RESTORE-BACKUP-BEFORE-v060.bat = exact image.)
 
-A. Phone link stays on with the screen off  (the 0.5.0 bug)
- A1  Phone app connected (Ride tab shows board values). Pull down Quick Settings > Screen off.
-     Wait 5 minutes WITHOUT touching the board. Phone: still connected, values still updating?   PASS/FAIL
- A2  Still dark: switch the phone's Bluetooth off for 20 s, then on. The phone reconnects by itself within ~15 s
-     without touching the board?   PASS/FAIL   (time to reconnect: ___ s)
- A3  Leave the board idle (screen on) for 1 min: screen goes off by itself (auto timeout). Phone still connected?
-     Quick Settings > State says "standby, link on" after waking?   PASS/FAIL
- A4  Start a ride, Quick Settings > Screen off, pedal 2 min: phone shows live watts/cadence the whole time; wake the
-     board: ride time advanced, XDS still connected (Connections > Power meter).   PASS/FAIL
- A5  Settings > Power: "Auto deep sleep" shows "off" (0.6.0 default). Leave it off.   PASS/FAIL
+1. ACCEPTANCE (Rashed's ten points)
+ 1-1  Home: the bottom-left button reads "Connections" (never "Sensors") with "N on" and a red "! M" only when
+      something you set up is missing.   PASS/FAIL
+ 1-2  Tap Connections: menu with Phone, Wi-Fi, Power meter, Heart rate, Cadence, Speed, Other Bluetooth, Device sync.
+      Open every row: a page with state, last data, measurements, Pair/Reconnect, troubleshooting; < returns.   PASS/FAIL
+ 1-3  Quick Settings > Screen off. Touch the glass ONCE anywhere: the screen comes back (fade-in ~0.15 s).   PASS/FAIL
+      Time from touch to picture: ___ (feels instant / noticeable delay)
+ 1-4  Screen off again. Put your finger exactly on where START RIDE sits and hold it for 2 s, lift: the screen woke,
+      NO ride started, nothing else happened. Repeat with one quick tap on the START RIDE spot: no ride.   PASS/FAIL
+ 1-5  Repeat 1-3 twenty times (screen off each time, touch different places, some taps some swipes):
+      wakes ___ / 20 (target >= 19); any wake that pressed something: ___ (target 0).
+ 1-6  Screen on, Home. Tap START RIDE 5 times quickly (plain taps): no ride starts; toast "hold 1 s to start".   PASS/FAIL
+ 1-7  Press and hold START RIDE: the pill fills from the left; after ~1 s the ride starts, "RECORDING STARTED" shows,
+      the ride screen appears. History later shows exactly ONE new ride for this.   PASS/FAIL
+ 1-8  Hold START RIDE for ~half a second and release before it fills: nothing starts. Then start a hold and slide
+      your finger away: nothing starts.   PASS/FAIL
+ 1-9  Phone app connected (Ride tab shows board values). Screen off. Wait 5 minutes without touching the board:
+      phone still connected, values still updating.   PASS/FAIL   Then: phone Bluetooth off 20 s → on: reconnects
+      by itself within ~15 s without touching the board (time: ___ s).   PASS/FAIL
+ 1-10 Start a ride (hold), Screen off, pedal 2 minutes: phone shows live watts/cadence the whole time; wake with one
+      touch: ride time advanced, XDS still connected (Connections > Power meter), coach cues still appear.   PASS/FAIL
 
-B. Quick Settings handle
- B1  Home: a small grey pill is visible at the very top. Tap it → Quick Settings slides down.   PASS/FAIL
- B2  Swipe down starting on the pill → opens. Swipe down starting ~40 px from the top → opens.   PASS/FAIL
- B3  Swipe up / arrow button closes it; after 20 s untouched it closes by itself.   PASS/FAIL
- B4  Ride screens A, B and C: the pill at the top opens the RIDE CONTROLS (pause/end first); "QUICK SET." button
-     there opens Quick Settings. No metric is covered by the pill on A, B, C.   PASS/FAIL
- B5  Settings > Display (name keyboard) and the Wi-Fi password keyboard: no pill (the top key is there).   PASS/FAIL
+2. Wake details
+ 2-1  While the screen is off, a palm press / a finger slide / a tap: each wakes the screen but presses nothing
+      (Home stays Home, no Quick Settings, no ride).   PASS/FAIL
+ 2-2  Right after a wake (within half a second) tap START RIDE: nothing (guard). Half a second later it works.   PASS/FAIL
+ 2-3  Settings > Power > Wake gesture: cycles "any touch" → "2 taps" → "3 taps" → "any touch". With "2 taps":
+      single taps on the dark screen do nothing (___ / 5 false wakes, target 0), double taps wake (___ / 10).
+      Back to "any touch".   PASS/FAIL
+ 2-4  Hold-to-confirm elsewhere: HOLD: END (1 s), HOLD: PAUSE, delete (trash) on the results page, HOLD: FORGET
+      (phone / meter / Wi-Fi), HOLD: RESTART, HOLD: DEEP SLEEP, HOLD 3 s TO UNLOCK — each fills while held, a short
+      press does nothing, and the finger lingering after it fires presses nothing on the next screen.   PASS/FAIL
 
-C. Wake gesture — screen off (board awake)                       target: >= 19 of 20, 0 false wakes
- C1  Quick Settings > Screen off. Tap 3 times at a normal pace anywhere on the glass. Repeat 20 times
-     (screen off again each time). Successes: ___ / 20.   Note any attempt that needed a 4th tap.
- C2  Slow pace (about one tap per 0.7 s), 5 attempts: ___ / 5.
- C3  Accidental touches, screen off: 10 single taps, 5 double taps, a palm press, a finger slide → the screen must stay
-     off every time. False wakes: ___ / 17.
- C4  Settings > Power > Wake gesture = "2 taps": 10 double taps → ___ / 10; 5 single taps → false wakes ___ / 5.
- C5  Wake gesture = "any touch", start a ride, Screen off, one tap wakes: ___ / 5. Back to "3 taps".
+3. Deep sleep (separate mode: connectivity OFF)                   target: >= 19 of 20
+ 3-1  Quick Settings > Deep sleep: the page says CONNECTIVITY OFF, that standby keeps Bluetooth instead, and how to
+      wake (touch / RESET / USB). HOLD: DEEP SLEEP. Phone shows the board disconnected (expected).   PASS/FAIL
+ 3-2  Touch the glass once. The board boots (logo ~1 s) to Home? Repeat 20 times. Successes: ___ / 20.
+      Did a touch during the boot logo ever press anything on Home afterwards? ___ (target: never)
+ 3-3  If 3-2 fails: RESET → boots; USB plug → boots (documented fallbacks).   PASS/FAIL
+ 3-4  After a deep-sleep wake the phone reconnects by itself within ~15 s.   PASS/FAIL
+ 3-5  Settings > Power: "Auto deep sleep" is "off" (default). Leave it off.   PASS/FAIL
 
-D. Wake gesture — deep sleep                                     target: >= 19 of 20
- D1  Quick Settings > Deep sleep: the page says CONNECTIVITY OFF and that standby keeps Bluetooth. HOLD: DEEP SLEEP.
-     Phone shows the board disconnected (expected).   PASS/FAIL
- D2  Tap 3 times at a normal pace. Board boots to Home within ~3 s? Repeat 20 times. Successes: ___ / 20.
-     Attempts where a single tap woke it (false wake): ___.
- D3  If D2 fails: press RESET → boots. Plug USB in → boots. (These are the documented fallbacks.)   PASS/FAIL
- D4  After a deep-sleep wake the phone reconnects by itself within ~15 s (no toggling).   PASS/FAIL
+4. Quick Settings handle
+ 4-1  Home: grey pill at the very top. Tap it → Quick Settings slides down.   PASS/FAIL
+ 4-2  Swipe down starting on the pill → opens. Swipe down starting ~40 px below the top edge, beside the pill → opens
+      (rev 3 fix). Swipe up / arrow closes; 20 s untouched closes.   PASS/FAIL
+ 4-3  Ride screens A, B, C: the pill opens the RIDE CONTROLS (pause/end first); "QUICK SET." opens Quick Settings.
+      No metric is covered by the pill.   PASS/FAIL
 
-E. Wi-Fi — iPhone hotspot
- E1  iPhone: Settings > Personal Hotspot > Maximize Compatibility ON. Keep that screen open.
- E2  Board: Quick Settings > tap "Wi-Fi" → the Wi-Fi page opens (hold = on/off). Switch ON. Networks →
-     "Rashed's iPhone" listed with signal bars within ~5 s?   PASS/FAIL   (how many networks: ___)
- E3  Tap it → ring keyboard → password → JOIN → CONNECTING → CONNECTED + "internet ok" (or "no internet" if the
-     phone has no data). Time to connect: ___ s.   PASS/FAIL
- E4  Wrong password on purpose → "WRONG PASSWORD" + TRY AGAIN.   PASS/FAIL
- E5  Restart the board (Quick Settings > HOLD: RESTART): joins the hotspot by itself.   PASS/FAIL
- E6  Networks → tap the hotspot → NETWORK page → HOLD: FORGET → gone from Saved; status "ON - not connected".   PASS/FAIL
- E7  During a ride: Networks page shows the amber "ride running" note; a scan still works; XDS stays connected
-     (watch the Connections page during the scan).   PASS/FAIL
- E8  [app 0.4.0+] Phone app: Devices > BikeComputer > Wi-Fi: scan list matches E2; set the hotspot with the phone
-     keyboard → board CONNECTED; phone shows the same status; Forget from the phone works.   PASS/FAIL
+5. Wi-Fi — iPhone hotspot
+ 5-1  iPhone: Settings > Personal Hotspot > Maximize Compatibility ON. Keep that screen open.
+ 5-2  Board: Quick Settings > tap "Wi-Fi" → Wi-Fi page (hold = on/off). ON. Networks → "Rashed's iPhone" listed with
+      signal bars within ~5 s?   PASS/FAIL   (networks seen: ___)
+ 5-3  Tap it → keyboard → password → JOIN → CONNECTING → CONNECTED (+ "internet ok" / "no internet").
+      Time: ___ s.   PASS/FAIL
+ 5-4  Wrong password on purpose → "WRONG PASSWORD" + TRY AGAIN.   PASS/FAIL
+ 5-5  HOLD: RESTART: joins the hotspot by itself.   PASS/FAIL
+ 5-6  Network page → HOLD: FORGET → gone from Saved; status "ON - not connected".   PASS/FAIL
+ 5-7  During a ride a scan still works and the XDS stays connected.   PASS/FAIL
+ 5-8  [app build 24+] Phone: Profile > Connections > BikeComputer > Wi-Fi: scan list matches 5-2; set the hotspot
+      from the phone → board CONNECTED; Forget from the phone works.   PASS/FAIL
 
-F. Phone services  [app 0.4.0+]
- F1  Ride history sync: Progress lists the board's rides (same count as the board's History), no duplicates.
- F2  Profile sync: change FTP on the phone → board Home shows the new FTP within seconds; Settings > Phone says
-     "PROFILE phone v<n>". Board ride history unchanged.
- F3  Settings from the phone: brightness and screen timeout change on the board and the phone shows "synced".
+6. Phone services  [app build 24+]
+ 6-1  Ride history sync: Progress lists the board's rides (same count as the board's History), no duplicates.
+ 6-2  Profile sync: change FTP on the phone → board Home shows it within seconds; Device sync page shows the version.
+      Board ride history unchanged.
+ 6-3  Settings from the phone: brightness, screen timeout and wake gesture change on the board; phone shows "synced".
 
-H. Connections (replaces Sensors)
- H1  Home: bottom row shows "Connections" with "N on" (and a red "! M" only when something set up is missing).
-     Tap it → CONNECTIONS menu with Phone, Wi-Fi, Power meter, Heart rate, Cadence, Speed, Other Bluetooth,
-     Device sync. Every row opens a page and the < button returns to the menu.   PASS/FAIL
- H2  Power meter page: state, last data, "200 W  90 rpm" while pedalling, "POWER ACCURACY unverified",
-     "CALIBRATION not available". RECONNECT drops and re-finds the meter within ~10 s.   PASS/FAIL
- H3  Switch the XDS off (or walk away): menu shows "! not found" on Power meter; Home shows "! 1".
-     Back on → "N W" again, no !.   PASS/FAIL
- H4  Heart rate page: strap DIRECT (if you have one), watch VIA PHONE live when the watch workout runs,
-     WHOOP "unsupported - planned".   PASS/FAIL
- H5  Other Bluetooth: lists nearby devices with -dBm or tags (PWR / HR / CSC); nothing gets paired by itself.   PASS/FAIL
- H6  Device sync page: "PHONE CONNECTED" when the app is open; profile source and versions shown.   PASS/FAIL
- H7  [if you have a BLE speed/cadence sensor] Cadence > PAIR SENSOR → found → tap → rpm shown; Speed shows
-     km/h from the wheel with the circumference; Forget clears it.   PASS/FAIL/NOT TESTED
- H8  Settings > Power shows "Charging alerts: unavailable" with the reason (no beeps, no alarm).   PASS/FAIL
+7. Connections details
+ 7-1  Power meter page: "200 W  90 rpm" while pedalling, "POWER ACCURACY unverified", "CALIBRATION not available".
+      RECONNECT drops and re-finds the meter within ~10 s.   PASS/FAIL
+ 7-2  Switch the XDS off: Power meter row "! not found", Home "! 1". Back on → values, no !.   PASS/FAIL
+ 7-3  Heart rate page: watch VIA PHONE live when the watch workout runs; WHOOP "unsupported - planned".   PASS/FAIL
+ 7-4  Other Bluetooth: nearby devices with -dBm and tags (PWR / HR / CSC); nothing pairs by itself.   PASS/FAIL
+ 7-5  [if you have a BLE speed/cadence sensor] Cadence > PAIR SENSOR → rpm; Speed → km/h; Forget.   PASS/FAIL/NOT TESTED
+ 7-6  Settings > Power shows "Charging alerts: unavailable" with the reason (no beeps, no alarm).   PASS/FAIL
 
 G. Everything else still works
- G1  XDS power/cadence live on screen A, B, C; a 10-minute ride recorded, ended, saved; coach cues shown.   PASS/FAIL
- G2  Battery estimate still shows "~N%" and never the word "charging". (Battery test P8 only if you want: battery
-     alone, no USB — Device Health shows a voltage and "battery" as the source.)
+ G1  XDS power/cadence live on A, B, C; a 10-minute ride recorded, ended (HOLD: END), saved; coach cues shown.   PASS/FAIL
+ G2  Battery estimate shows "~N%" and never the word "charging". (Optional: battery alone, no USB — Device Health
+     shows a voltage and "battery" as the source.)
 
-Report: PASS/FAIL/NOT TESTED per step plus the numbers in C and D. A FAIL in A or D4 → send the device log
-(4-READ-DEVICE-LOG.bat) to Claude.
+Report: PASS/FAIL/NOT TESTED per step plus the numbers in 1-5, 2-3 and 3-2. A FAIL in 1-9, 1-10 or 3-4 → send the
+device log (4-READ-DEVICE-LOG.bat) to Claude.

@@ -236,7 +236,7 @@ static void build_panel(lv_obj_t *scr)
     p_resume = ui_pill(r_panel, LV_SYMBOL_PLAY " RESUME", C_GREEN, C_INK, 168, 38, resume_cb, NULL);
     lv_obj_set_style_text_font(lv_obj_get_child(p_resume, 0), &lv_font_montserrat_20, 0);
     lv_obj_align(p_resume, LV_ALIGN_TOP_MID, 0, 108);
-    lv_obj_t *end = ui_hold_btn(r_panel, "HOLD: END", C_RED, C_INK, 140, 36, 2000, end_cb, NULL);
+    lv_obj_t *end = ui_hold_btn(r_panel, "HOLD: END", C_RED, C_INK, 140, 36, 1000, end_cb, NULL);
     lv_obj_align(end, LV_ALIGN_TOP_MID, 0, 150);
     lv_obj_t *qs = ui_pill(r_panel, LV_SYMBOL_SETTINGS " QUICK SET.", C_PANEL, C_CYAN, 98, 28, qs_cb, NULL);
     lv_obj_set_style_text_font(lv_obj_get_child(qs, 0), &lv_font_montserrat_12, 0);

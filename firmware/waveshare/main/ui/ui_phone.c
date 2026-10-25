@@ -106,7 +106,7 @@ void ui_phone_show(void)
     lv_obj_t *tr = ui_label(l, &lv_font_montserrat_12, C_MUT, "RELAYS: GPS speed, time, watch HR\nTROUBLE? open the BikeComputer app,\nBluetooth on, within 5 m; forget on\nboth sides and pair again if the\ncode never appears");
     lv_obj_set_width(tr, lv_pct(100)); lv_label_set_long_mode(tr, LV_LABEL_LONG_WRAP);
     ph_forget = ui_hold_btn(l, "HOLD: FORGET PHONE", C_PANEL, C_RED, 160, 34, 1500, forget_cb, NULL);
-    lv_obj_set_style_text_font(lv_obj_get_child(ph_forget, 0), &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(ui_hold_label(ph_forget), &lv_font_montserrat_12, 0);
     lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 40, back_cb, NULL);
     lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 184);
     ui_screen_show(scr);

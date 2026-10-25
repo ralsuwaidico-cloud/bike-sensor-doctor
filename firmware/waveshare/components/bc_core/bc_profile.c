@@ -21,7 +21,7 @@ void bc_profile_defaults(bc_profile_t *p)
     memset(p, 0, sizeof *p);
     p->age = 35; p->weight_dg = 750; p->exp = BC_EXP_INTERMEDIATE; p->goal = BC_GOAL_ENDURANCE;
     p->brightness = 80; p->ride_style = BC_STYLE_FOCUS; p->next_ride_id = 1; p->next_demo_id = 1; p->phone_on = true;
-    p->wheel_mm = 2096; p->scr_timeout_s = 60; p->auto_sleep_min = 0; p->bat_protect = 0; p->wake_on_cue = true; p->wake_taps = 3; p->pwr_v = 2;
+    p->wheel_mm = 2096; p->scr_timeout_s = 60; p->auto_sleep_min = 0; p->bat_protect = 0; p->wake_on_cue = true; p->wake_taps = 1; p->pwr_v = 3;
 }
 
 int bc_starting_ftp(int weight_dg, int exp)
@@ -160,5 +160,6 @@ bool bc_profile_from_text(bc_profile_t *p, const char *txt)
     /* 0.5.0 wrote auto_sleep_min=10 as its default: that deep sleep switched Bluetooth off after 10 idle minutes and looked
        like "the screen goes off and the phone is gone". 0.6.0 starts every older profile with auto deep sleep OFF, once. */
     if (p->pwr_v < 2) { p->auto_sleep_min = 0; p->pwr_v = 2; }
+    if (p->pwr_v < 3) { p->wake_taps = 1; p->pwr_v = 3; }   /* 0.6.0 rev 3: any touch wakes (the gesture is swallowed, so it cannot press anything) */
     return true;
 }

@@ -30,7 +30,16 @@ static void home_update(void)
     home_conn_refresh();
 }
 
-static void go_ride(lv_event_t *e) { (void)e; app_ride_start(); ui_ride_show(); }
+/* START RIDE = hold 1 s (rev 3): a plain tap only shows the hint; the wake gesture and its guard never reach this button */
+static void go_ride(lv_event_t *e)
+{
+    (void)e;
+    if (app_ride_state() == BC_RIDE_RUNNING || app_ride_state() == BC_RIDE_PAUSED) { ui_ride_show(); return; }   /* never a second ride */
+    app_ride_start();
+    ui_toast("RECORDING STARTED");
+    ui_ride_show();
+}
+static void start_hint(lv_event_t *e) { (void)e; ui_toast("hold 1 s to start"); }
 static void go_sensors(lv_event_t *e) { (void)e; ui_connections_show(); }
 static void go_history(lv_event_t *e) { (void)e; ui_history_show(app_demo()); }
 static void go_settings(lv_event_t *e) { (void)e; ui_settings_show(); }
@@ -76,18 +85,11 @@ void ui_home_show(void)
     h_ftp = ui_label(scr, &lv_font_montserrat_12, bc_ftp_established(p) ? C_MUT : C_AMBER, b);
     lv_obj_align(h_ftp, LV_ALIGN_TOP_MID, 0, 66);
 
-    lv_obj_t *start = lv_button_create(scr);
-    lv_obj_remove_style_all(start);
-    lv_obj_remove_flag(start, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(start, 180, 48);
-    lv_obj_set_style_radius(start, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(start, C_GREEN, 0);
-    lv_obj_set_style_bg_opa(start, LV_OPA_COVER, 0);
+    lv_obj_t *start = ui_hold_btn(scr, LV_SYMBOL_PLAY "  START RIDE", C_GREEN, C_INK, 180, 48, 1000, go_ride, NULL);
+    lv_obj_set_style_text_font(ui_hold_label(start), &lv_font_montserrat_20, 0);
     lv_obj_set_style_bg_color(start, lv_color_hex(0x8FF0B4), LV_STATE_PRESSED);
     lv_obj_align(start, LV_ALIGN_TOP_MID, 0, 84);
-    lv_obj_t *sl = ui_label(start, &lv_font_montserrat_20, C_INK, LV_SYMBOL_PLAY "  START RIDE");
-    lv_obj_center(sl);
-    lv_obj_add_event_cb(start, go_ride, LV_EVENT_CLICKED, NULL);
+    lv_obj_add_event_cb(start, start_hint, LV_EVENT_CANCEL, NULL);
 
     h_sub = ui_label(scr, &lv_font_montserrat_12, C_MUT, "");
     lv_obj_align(h_sub, LV_ALIGN_TOP_MID, 0, 135);

@@ -87,7 +87,7 @@ long plat_file_size(const char *path) { char p[512]; full(path, p, sizeof p); st
 void plat_health(plat_health_t *o)
 {
     memset(o, 0, sizeof *o);
-    snprintf(o->fw_version, sizeof o->fw_version, "0.6.0-sim"); snprintf(o->build, sizeof o->build, "Oct 23 22:00");
+    snprintf(o->fw_version, sizeof o->fw_version, "0.6.0-sim"); snprintf(o->build, sizeof o->build, "%.6s %.5s #sim", __DATE__, __TIME__);
     o->uptime_s = g_sim.now_ms / 1000; snprintf(o->reset_reason, sizeof o->reset_reason, "power-on");
     o->boot_count = g_sim.boots; o->crash_total = 2; o->crash_consecutive = 0; o->safe_mode_entries = 0;
     o->heap_free_k = 61; o->heap_min_k = 48; o->psram_free_k = 1890; o->psram_total_k = 2048;

@@ -21,7 +21,7 @@ if ((Get-Item $bk).Length -ne 16777216) { Stop-With "factory_backup_16MB.bin is 
 Write-Host "  Factory backup present (16 MB) - kept untouched." -ForegroundColor Green
 $fw = @(
   @{ off = '0xf000';  file = 'fw-v0.6.0\BC060-otadata.bin'; sha = '7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f' },
-  @{ off = '0x20000'; file = 'fw-v0.6.0\BC060-app.bin';     sha = 'cdecb1f4b28d6b5aaaed770b7879dfe3e85a520fad29fbc50bb112c70f738139' }
+  @{ off = '0x20000'; file = 'fw-v0.6.0\BC060-app.bin';     sha = '2cccc1fe893493194dbbf5471dd4e05f99b0292ca936c66eabd3c9b5e94f9a00' }
 )
 $same = @(   # shipped for completeness; identical to 0.5.0, so they are verified but NOT written
   @{ file = 'fw-v0.6.0\BC060-bootloader.bin'; sha = 'de894772ccc6b4e0908608aaa4fb0e138bdb533354f90b42d9c1075eca0e724b' },

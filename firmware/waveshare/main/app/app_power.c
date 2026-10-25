@@ -14,6 +14,10 @@ static int s_last_cue_id = -1;
 static uint32_t s_sleep_at_ms;          /* opt-in critical action pending (bat_protect == 1) */
 static uint32_t s_phone_off_at_ms;      /* SETTINGS from the phone: switch the link off once the reply is out */
 static bool s_inited, s_last_usb;
+static void (*s_wake_hook)(void);
+void app_power_set_wake_hook(void (*hook)(void)) { s_wake_hook = hook; }
+bool app_power_gate_blocking(void) { return bc_gate_blocking(&P.gate); }
+void app_power_swallow_rest(void) { if (s_inited && P.screen_on && !P.asleep) bc_gate_wake(&P.gate, true, plat_ms()); }
 
 const app_power_t *app_power(void) { return &P; }
 
@@ -33,12 +37,17 @@ void app_power_init(void)
     memset(&P, 0, sizeof P);
     P.screen_on = true; P.mv = -1; P.pct = -1; P.hours_left_x10 = -1;
     for (int i = 0; i < BC_MODE_COUNT; i++) P.rate_mv_h[i] = -1;
-    bc_usb_reset(&s_usb); bc_lowbat_reset(&s_low); bc_tap_reset(&s_tap); bc_drain_reset(&s_drain);
+    bc_usb_reset(&s_usb); bc_lowbat_reset(&s_low); bc_tap_reset(&s_tap); bc_drain_reset(&s_drain); bc_gate_reset(&P.gate);
     s_last_sample_ms = 0; s_last_log_ms = 0; s_alert_pending = false; s_last_cue_id = -1; s_sleep_at_ms = 0;
     P.last_touch_ms = plat_ms();
     s_phone_off_at_ms = 0; s_last_usb = false;
     P.woke_from_sleep = plat_woke_from_sleep();
-    if (P.woke_from_sleep) plat_log("POWER wake from deep sleep (touch / RESET / USB)");
+    if (P.woke_from_sleep) {
+        plat_log("POWER wake from deep sleep (touch / RESET / USB)");
+        /* the touch that woke the chip may still be on the glass, and the rider may tap again while the splash shows:
+           swallow it all + the guard, exactly like a screen-off wake, so the boot can never press a control */
+        bc_gate_wake(&P.gate, true, plat_ms());
+    }
     plat_backlight(app_profile()->brightness);
     plat_panel_sleep(false);
     s_inited = true;
@@ -175,28 +184,48 @@ void app_power_tick(uint32_t now)
 
 int app_power_wake_taps_now(void)
 {
-    int t = app_profile()->wake_taps; if (t < 1 || t > 3) t = 3;
-    if (t == 1 && !riding()) t = 2;                       /* "any touch" only while a ride runs; idle in a bag: two taps */
+    int t = app_profile()->wake_taps; if (t < 1 || t > 3) t = 1;
     return t;
 }
 const char *app_power_wake_name(int t) { return t == 1 ? "any touch" : t == 2 ? "2 taps" : "3 taps"; }
-int app_power_wake_next(int t) { return t == 3 ? 2 : t == 2 ? 1 : 3; }
+int app_power_wake_next(int t) { return t == 1 ? 2 : t == 2 ? 3 : 1; }
 
+/* rev 3: the gate. Everything the touch controller reports goes through here before LVGL sees it. */
+bool app_power_touch_filter(bool pressed, int x, int y, uint32_t now)
+{
+    if (!s_inited || P.asleep) return false;
+    if (!P.screen_on) {
+        if (pressed) P.last_touch_ms = now;
+        int need = app_power_wake_taps_now();
+        bc_tap_set_count(&s_tap, need);
+        if (need == 1) {
+            /* any touch: wake on the first contact, swallow this gesture until the finger lifts, then guard */
+            bool was = P.gate.down; bc_gate_feed(&P.gate, pressed, now);
+            if (pressed && !was) { P.wakes++; app_power_screen_wake(); bc_gate_wake(&P.gate, true, now); }
+            return false;
+        }
+        uint32_t rej = s_tap.rejected_bursts + s_tap.rejected_slides + s_tap.rejected_long;
+        bc_gate_feed(&P.gate, pressed, now);
+        if (bc_tap_feed_xy(&s_tap, pressed, x, y, now)) { P.wakes++; app_power_screen_wake(); bc_gate_wake(&P.gate, pressed, now); }
+        P.taps_rejected = s_tap.rejected_bursts + s_tap.rejected_slides + s_tap.rejected_long; (void)rej;
+        return false;
+    }
+    bool pass = bc_gate_feed(&P.gate, pressed, now);
+    if (pass && pressed) P.last_touch_ms = now;
+    return pass;
+}
+
+/* LVGL-side press bookkeeping (only presses that passed the gate arrive here) */
 void app_power_touch_xy(bool pressed, int x, int y, uint32_t now)
 {
+    (void)x; (void)y;
     if (pressed) P.last_touch_ms = now;
-    if (!P.screen_on) {
-        bc_tap_set_count(&s_tap, app_power_wake_taps_now());
-        uint32_t rej = s_tap.rejected_bursts + s_tap.rejected_slides + s_tap.rejected_long;
-        if (bc_tap_feed_xy(&s_tap, pressed, x, y, now)) { P.wakes++; app_power_screen_wake(); }
-        P.taps_rejected = rej;
-    } else bc_tap_reset(&s_tap);
 }
 void app_power_touch(bool pressed, uint32_t now) { app_power_touch_xy(pressed, -1, -1, now); }
 void app_power_settle(uint32_t now)
 {
-    if (P.screen_on || P.asleep || s_tap.down) return;
-    if (bc_tap_feed_xy(&s_tap, false, -1, -1, now)) { P.wakes++; app_power_screen_wake(); }
+    if (P.screen_on || P.asleep || s_tap.down || app_power_wake_taps_now() == 1) return;
+    if (bc_tap_feed_xy(&s_tap, false, -1, -1, now)) { P.wakes++; app_power_screen_wake(); bc_gate_wake(&P.gate, false, now); }
 }
 
 void app_power_screen_off(void)
@@ -205,6 +234,7 @@ void app_power_screen_off(void)
     before_action("screen off");
     P.screen_on = false; P.screen_off_ms = plat_ms(); P.screen_offs++;
     bc_tap_reset(&s_tap); bc_tap_set_count(&s_tap, app_power_wake_taps_now());
+    bc_gate_screen_off(&P.gate);
     plat_backlight(0);
     plat_panel_sleep(true);
     plat_touch_screen_off(true);
@@ -216,8 +246,10 @@ void app_power_screen_wake(void)
     if (P.screen_on) return;
     plat_touch_screen_off(false);
     plat_panel_sleep(false);
-    plat_backlight(app_profile()->brightness);
-    P.screen_on = true; P.last_touch_ms = plat_ms();
+    P.screen_on = true; P.last_touch_ms = plat_ms(); P.wake_at_ms = plat_ms();
+    if (P.gate.st == BC_GATE_OFF) bc_gate_wake(&P.gate, P.gate.down, plat_ms());   /* programmatic wake (cue, passkey): guard too */
+    if (s_wake_hook) s_wake_hook();                        /* UI: backlight fade-in 0 -> level in ~150 ms */
+    else plat_backlight(app_profile()->brightness);
     standby_update();
     plat_log("POWER screen on");
 }
@@ -237,7 +269,7 @@ bool app_power_sleep(void)
     plat_backlight(0);
     plat_panel_sleep(true);
     P.sleeps_requested++; P.asleep = true; P.screen_on = false; P.standby = false;
-    int taps = app_profile()->wake_taps; if (taps < 2) taps = 2;    /* "any touch" never wakes a sleeping device in a bag */
+    int taps = app_profile()->wake_taps; if (taps < 1 || taps > 3) taps = 1;
     plat_deep_sleep(taps);                 /* device: never returns. harness: boot() plays the wake */
     return true;
 }

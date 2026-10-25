@@ -88,7 +88,7 @@ void plat_panel_sleep(bool sleep);     /* display controller sleep-in / wake (ba
 void plat_touch_screen_off(bool off);
 /** Deep sleep with touch wake (TP_INT, GPIO5) + RESET + USB. Does not return on the device; the host harness records it
  *  and the next sim boot() plays the wake. NOT hardware-verified until the 0.5.0 device tests. */
-void plat_deep_sleep(int wake_taps);   /* wake_taps 2..3: taps needed after the waking touch is counted as tap 1 */
+void plat_deep_sleep(int wake_taps);   /* wake_taps 1..3: the waking touch counts as tap 1 (1 = any touch wakes) */
 bool plat_woke_from_sleep(void);       /* this boot is a wake from deep sleep (the chip, not necessarily a confirmed triple tap) */
 uint32_t plat_uptime_s(void);
 /* ---- Wi-Fi manager (optional; the device is fully usable offline). Every call returns at once: the work happens in
@@ -168,7 +168,7 @@ void plat_selftest_text(char *buf, size_t cap);
 void plat_mem_text(char *buf, size_t cap);
 /** Device health for Settings > Diagnostics > Device Health. Numbers the platform cannot know are -1 / empty. */
 typedef struct {
-    char fw_version[24], build[24];
+    char fw_version[24], build[32];
     uint32_t uptime_s;
     char reset_reason[24];
     uint32_t boot_count, crash_total, crash_consecutive, safe_mode_entries, storage_errors, profile_save_errors;
