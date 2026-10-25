@@ -71,12 +71,32 @@ for rt,devs in d.items():
 print(best[1] if best else "")')
 note "Test simulator: ${SIM:-none found}"
 xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Debug \
-  -destination "id=$SIM" -resultBundlePath "$OUT/tests.xcresult" \
+  -destination "id=$SIM" -resultBundlePath "$OUT/tests.xcresult" -only-testing:BikeComputerTests \
   CODE_SIGNING_ALLOWED=NO > "$OUT/test.log" 2>&1
 T=$?
 digest "$OUT/test.log" test
 if [ $T -eq 0 ]; then note "RESULT tests: ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/test.log" | tail -1))"
 else note "RESULT tests: FAILED (exit $T)"; STATUS=1; fi
+
+# ---------------------------------------------------------------- launch smoke tests, RELEASE build on the simulator
+# The shipped app is a Release build: build 27 crashed at launch on devices updated from build 24 while every Debug
+# unit test passed. These tests launch the Release app fresh and with a build-24-shaped store and open all five tabs.
+# Any crash fails the run before archiving, and the simulator's crash report is kept with the logs.
+xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
+  -destination "id=$SIM" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests \
+  CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/uitest.log" 2>&1
+U=$?
+digest "$OUT/uitest.log" launch-smoke
+if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1))"
+else
+  note "RESULT launch smoke (Release): FAILED (exit $U)"; STATUS=1
+  # crash reports of the app from the simulator run, scrubbed, as text
+  find "$HOME/Library/Logs/DiagnosticReports" -name 'BikeComputer*' -newer "$OUT/test.log" 2>/dev/null | head -5 | while read -r f; do
+    { echo "=== $(basename "$f") ==="; head -c 60000 "$f"; } | scrub >> "$LOGS/crash-reports.txt"
+  done
+  xcrun simctl spawn "$SIM" log show --last 15m --predicate 'process == "BikeComputer" OR (eventMessage CONTAINS "BikeComputer" AND messageType == error)' 2>/dev/null \
+    | grep -v "^Filtering" | tail -400 | scrub > "$LOGS/sim-app-log.txt"
+fi
 
 # ---------------------------------------------------------------- archive (device build)
 # The archive is ad-hoc signed ("-"): no certificate, no registered device. The entitlements (HealthKit) are embedded

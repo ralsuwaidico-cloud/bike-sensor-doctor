@@ -453,6 +453,7 @@ final class Store: ObservableObject {
 
     init(directory: URL = Store.defaultDirectory, generatePlan: Bool = true) {
         dir = directory
+        UITestSupport.prepareStoreDirectory(dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { apply(StoreFile.migrate(f)) }
         else if let legacy = legacyImport() { apply(legacy) }

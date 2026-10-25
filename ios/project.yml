@@ -12,7 +12,7 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "0.5.0"
+    MARKETING_VERSION: "0.5.1"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
@@ -109,15 +109,32 @@ targets:
     dependencies:
       - target: BikeComputer
 
+  # Launch smoke tests (fresh install + upgrade from an older store). Run in Release on the simulator by ci/build.sh,
+  # because the shipped app is a Release build and a Release-only crash must fail CI before anything is archived.
+  BikeComputerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - BikeComputerUITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ralsuwaidico.bikecomputer.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: BikeComputer
+    dependencies:
+      - target: BikeComputer
+
 schemes:
   BikeComputer:
     build:
       targets:
         BikeComputer: all
         BikeComputerTests: [test]
+        BikeComputerUITests: [test]
     test:
       config: Debug
       targets:
         - BikeComputerTests
+        - BikeComputerUITests
     archive:
       config: Release
