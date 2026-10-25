@@ -77,6 +77,7 @@ struct EquipmentProfile: Codable, Equatable {
     /// Exercise ids the rider cannot or does not want to perform.
     var excluded: Set<String> = []
     var isSet: Bool { !owned.isEmpty }
+    enum CodingKeys: String, CodingKey { case owned, excluded }
 
     init(owned: Set<String> = [], excluded: Set<String> = []) { self.owned = owned; self.excluded = excluded }
     init(from decoder: Decoder) throws {

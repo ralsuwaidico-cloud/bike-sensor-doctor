@@ -457,6 +457,12 @@ struct StoreFile: Codable, Equatable {
     var activeSession: StrengthSession? = nil
     var ignoredInsights: [String] = []
 
+    /// Explicit because both init(from:) and encode(to:) are hand-written (the compiler then synthesises no keys).
+    enum CodingKeys: String, CodingKey {
+        case schema, profile, settings, plan, rides, tiles, onboarded, guest, appleUserId, createdAt, ftpSuggestion, boardSync, onboardingStage, availability
+        case strength, templates, customExercises, appliedProposals, weekdayRoutines, equipment, activeSession, ignoredInsights
+    }
+
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
         self.schema = schema; self.profile = profile; self.settings = settings; self.plan = plan; self.rides = rides; self.tiles = tiles
         self.onboarded = onboarded; self.guest = guest; self.appleUserId = appleUserId; self.createdAt = createdAt
