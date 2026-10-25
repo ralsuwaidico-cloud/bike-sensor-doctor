@@ -235,7 +235,11 @@ struct StageStrip: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Connection stage: \(title)")
     }
-    private var effective: DeviceLink.Stage { stage == .failed ? (failure?.stage ?? .idle) : stage == .waiting || stage == .connecting ? .found : stage }
+    private var effective: DeviceLink.Stage {
+        if stage == .failed { return failure?.stage ?? .idle }
+        if stage == .waiting || stage == .connecting { return .found }
+        return stage
+    }
     private func colour(_ s: DeviceLink.Stage) -> Color {
         let cur = effective.order
         if stage == .failed, s.order == cur { return BC.warn }

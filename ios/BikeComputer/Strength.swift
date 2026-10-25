@@ -340,7 +340,7 @@ enum InsightEngine {
         let since = cal.date(byAdding: .day, value: -28, to: cal.startOfDay(for: now))!
         let cov = StrengthAnalysis.coverage(sessions, since: since)
         if cov.detailedSessions >= 3, let miss = cov.missing.first(where: { $0 != .carry }) {
-            let candidates = catalogue.filter { $0.pattern == miss && equipment.canDo($0) && !planned.contains { p in p.exerciseId == $0.id } }
+            let candidates = catalogue.filter { c in c.pattern == miss && equipment.canDo(c) && !planned.contains { p in p.exerciseId == c.id } }
             let name = candidates.first.map { $0.name } ?? miss.title.lowercased()
             return WorkoutInsight(id: "cov-\(miss.rawValue)", kind: .coverage, label: .suggestion, text: "Consider adding a \(miss.title.lowercased()) exercise (e.g. \(name)).",
                                   why: "In \(cov.detailedSessions) detailed sessions over 4 weeks no \(miss.title.lowercased()) movement was logged. This is read from your logged exercises only; a session labelled “full body” is not counted as coverage. Suggested exercises are limited to equipment you own.",
