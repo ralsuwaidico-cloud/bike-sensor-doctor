@@ -326,34 +326,53 @@ struct CreateExerciseSheet: View {
     }
 }
 
-// MARK: - Templates
+// MARK: - Templates (routines): created directly, edited, assigned to weekdays — never a completed session
 struct TemplatesView: View {
     @EnvironmentObject private var store: Store
-    @State private var use: WorkoutTemplate? = nil
-    @State private var rename: WorkoutTemplate? = nil
-    @State private var newName = ""
+    @State private var edit: WorkoutTemplate? = nil
     @State private var createNew = false
+    @State private var startNow: WorkoutTemplate? = nil
     var body: some View {
         List {
-            if store.templates.isEmpty { Text("No templates yet. Log a detailed session and switch on “Save as a template”, or create one here.").font(.footnote).foregroundStyle(.secondary) }
-            ForEach(store.templates) { t in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack { Text(t.name).font(.body.weight(.semibold)); Spacer(); Pill(text: t.focus.title) }
-                    Text(t.entries.map { $0.name }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                    Text(t.lastUsed.map { "last used \($0.dayAndDate)" } ?? "never used").font(.caption2).foregroundStyle(.secondary)
-                    HStack { Button("Use") { use = t }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small); Button("Rename") { newName = t.name; rename = t }.buttonStyle(.bordered).controlSize(.small); Spacer() }
-                }.padding(.vertical, 4)
+            Section {
+                NavigationLink { WeekdayRoutinesPage() } label: { HStack { Label("Routine per weekday", systemImage: "calendar"); Spacer(); Text("\(store.weekdayRoutines.count) set").foregroundStyle(.secondary) } }
+                NavigationLink { EquipmentPage() } label: { HStack { Label("Equipment I own", systemImage: "wrench.and.screwdriver"); Spacer(); Text(store.equipment.isSet ? "\(store.equipment.owned.count)" : "not set").foregroundStyle(.secondary) } }
             }
-            .onDelete { idx in for i in idx { store.deleteTemplate(store.templates[i]) } }
-            Button { createNew = true } label: { Label("New template (log a session and save it)", systemImage: "plus") }
+            Section(store.templates.isEmpty ? "No routines yet" : "Your routines") {
+                if store.templates.isEmpty { Text("Create a routine with your own exercises, sets and equipment. Then assign it to a day on the calendar or make it the default for a weekday. Creating a routine never logs a workout.").font(.footnote).foregroundStyle(.secondary) }
+                ForEach(store.templates) { t in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack { Text(t.name).font(.body.weight(.semibold)); Spacer(); Pill(text: t.focus.title); Text("≈ \(Fmt.duration(minutes: t.estimatedMinutes))").font(.caption).foregroundStyle(.secondary) }
+                        Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        let days = store.weekdayRoutines.filter { $0.value == t.id }.keys.sorted().map { WeeklyAvailability.dayNames[$0] }
+                        Text((t.lastUsed.map { "last used \($0.dayAndDate)" } ?? "never used") + (days.isEmpty ? "" : " · default on \(days.joined(separator: ", "))")).font(.caption2).foregroundStyle(.secondary)
+                        HStack { Button("Edit") { edit = t }.buttonStyle(.bordered).controlSize(.small); Button("Start now") { startNow = t }.buttonStyle(.bordered).controlSize(.small).disabled(store.activeSession != nil); Spacer() }
+                    }.padding(.vertical, 4)
+                }
+                .onDelete { idx in for i in idx { store.deleteTemplateEverywhere(store.templates[i]) } }
+                Button { createNew = true } label: { Label("New routine", systemImage: "plus") }.accessibilityIdentifier("newRoutine")
+            }
         }
-        .navigationTitle("Templates").navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $use) { t in DetailedStrengthLogSheet(presetFocus: t.focus, template: t) }
-        .sheet(isPresented: $createNew) { DetailedStrengthLogSheet() }
-        .alert("Rename template", isPresented: Binding(get: { rename != nil }, set: { if !$0 { rename = nil } })) {
-            TextField("Name", text: $newName)
-            Button("Save") { if var t = rename { t.name = newName.trimmingCharacters(in: .whitespaces); store.saveTemplate(t) }; rename = nil }
-            Button("Cancel", role: .cancel) { rename = nil }
+        .navigationTitle("Routines").navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $edit) { t in TemplateEditor(template: t) }
+        .sheet(isPresented: $createNew) { TemplateEditor(template: nil) }
+        .sheet(item: $startNow) { t in UnplannedStartSheet(template: t) }
+    }
+}
+
+/// Start a routine that is not on today's calendar: adds today's session (hand-added) and opens it.
+struct UnplannedStartSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let template: WorkoutTemplate
+    @State private var workoutId: UUID? = nil
+    var body: some View {
+        Group {
+            if let id = workoutId { StrengthWorkoutScreen(workoutId: id) } else { ProgressView().onAppear {
+                var w = Workout(date: Date(), kind: .strength, minutes: template.estimatedMinutes, strengthFocus: template.focus == .custom ? nil : template.focus)
+                w.templateId = template.id; w.routineManual = true
+                store.add(w); workoutId = w.id
+            } }
         }
     }
 }
@@ -398,7 +417,14 @@ struct HybridCoachCard: View {
             actions(a)
             Text("Start opens the Ride screen; recording begins only when you hold Start ride there. Strength is logged, never recorded automatically.").font(.caption2).foregroundStyle(.secondary)
         }
+        if let w = nextStrength { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
         if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
+    }
+
+    /// The next open strength session (today or later this week) — the insight card on Home is about that one.
+    private var nextStrength: Workout? {
+        let today = Calendar.current.startOfDay(for: Date())
+        return store.plan.filter { $0.kind == .strength && !$0.done && !$0.skipped && $0.date >= today }.min { $0.date < $1.date }
     }
 
     @ViewBuilder private func proposals(_ a: HybridAssessment) -> some View {

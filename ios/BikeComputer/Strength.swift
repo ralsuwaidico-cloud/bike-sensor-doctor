@@ -66,7 +66,38 @@ struct ExerciseCatalogue {
         } else { r.sort { a, b in a.custom != b.custom ? a.custom : a.name < b.name } }
         return r
     }
-    static let equipmentOptions = ["bodyweight", "barbell", "dumbbell", "kettlebell", "cable", "machine", "band", "trap bar", "bench"]
+    static let equipmentOptions = ["bodyweight", "barbell", "dumbbell", "kettlebell", "cable", "machine", "band", "trap bar", "bench", "pull-up bar"]
+}
+
+// MARK: - Equipment the rider owns and exercises they cannot do (0.8.0)
+/// Everything the coach suggests is filtered by this; a saved exercise is never swapped silently.
+struct EquipmentProfile: Codable, Equatable {
+    /// Owned equipment (catalogue vocabulary). Empty = not set yet → nothing is filtered out.
+    var owned: Set<String> = []
+    /// Exercise ids the rider cannot or does not want to perform.
+    var excluded: Set<String> = []
+    var isSet: Bool { !owned.isEmpty }
+
+    init(owned: Set<String> = [], excluded: Set<String> = []) { self.owned = owned; self.excluded = excluded }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        owned = Set((try? c.decodeIfPresent([String].self, forKey: .owned)) ?? [])
+        excluded = Set((try? c.decodeIfPresent([String].self, forKey: .excluded)) ?? [])
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(owned.sorted(), forKey: .owned); try c.encode(excluded.sorted(), forKey: .excluded)
+    }
+    /// An exercise is doable when it is not excluded and (when equipment is set) every piece it needs is owned.
+    /// Bodyweight exercises need nothing; "bench" is treated as owned when a dumbbell or barbell is owned and the
+    /// rider did not say otherwise only if they listed it — no guessing: it must be in the list.
+    func canDo(_ e: Exercise) -> Bool {
+        if excluded.contains(e.id) { return false }
+        guard isSet else { return true }
+        let need = e.equipment.filter { $0 != "bodyweight" }
+        return need.allSatisfy { owned.contains($0) }
+    }
+    static let allOptions: [String] = ExerciseCatalogue.equipmentOptions.filter { $0 != "bodyweight" }
 }
 
 // MARK: - Detailed logging: exercises → sets; supersets; templates
@@ -141,8 +172,8 @@ struct WorkoutTemplate: Codable, Identifiable, Equatable {
     var updatedAt = Date()
     var lastUsed: Date? = nil
 
-    init(id: UUID = UUID(), name: String, focus: StrengthFocus = .custom, entries: [ExerciseEntry], updatedAt: Date = Date(), lastUsed: Date? = nil) {
-        self.id = id; self.name = name; self.focus = focus; self.entries = entries; self.updatedAt = updatedAt; self.lastUsed = lastUsed
+    init(id: UUID = UUID(), name: String, focus: StrengthFocus = .custom, entries: [ExerciseEntry], updatedAt: Date = Date(), lastUsed: Date? = nil, minutesEstimate: Int? = nil) {
+        self.id = id; self.name = name; self.focus = focus; self.entries = entries; self.updatedAt = updatedAt; self.lastUsed = lastUsed; self.minutesEstimate = minutesEstimate
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -152,7 +183,17 @@ struct WorkoutTemplate: Codable, Identifiable, Equatable {
         entries = try c.decodeIfPresent([ExerciseEntry].self, forKey: .entries) ?? []
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
         lastUsed = try c.decodeIfPresent(Date.self, forKey: .lastUsed)
+        minutesEstimate = try? c.decodeIfPresent(Int.self, forKey: .minutesEstimate)
     }
+    /// Planned duration: the rider's own estimate when set, else ~2.5 min per planned set (+5 min warm-up), 15–180.
+    var minutesEstimate: Int? = nil
+    var estimatedMinutes: Int {
+        if let m = minutesEstimate, m > 0 { return m }
+        let sets = entries.reduce(0) { $0 + $1.sets.count }
+        return min(180, max(15, 5 + Int((Double(sets) * 2.5).rounded())))
+    }
+    var exerciseNames: String { entries.map { $0.name }.joined(separator: " · ") }
+    var setCount: Int { entries.reduce(0) { $0 + $1.sets.count } }
     /// Entries prefilled from the most recent detailed session that used this template (or the template's own values).
     func prefilled(from last: StrengthSession?) -> [ExerciseEntry] {
         guard let last, let ex = last.exercises else { return entries.map { e in var x = e; x.id = UUID(); x.sets = x.sets.map { s in var t = s; t.id = UUID(); t.done = true; return t }; return x } }
@@ -220,5 +261,105 @@ enum StrengthAnalysis {
             }
         }
         return map.filter { $0.value.1.count >= 2 }.map { ExerciseProgression(exerciseId: $0.key, name: $0.value.0, points: $0.value.1) }.sorted { $0.name < $1.name }
+    }
+}
+
+// MARK: - Next workout insight (0.8.0): ONE actionable item from completed sessions, labelled suggestion vs finding
+
+/// What the rider sees on Home and on the scheduled strength screen. `change` is applied only on Accept, and only to
+/// the planned sets of THAT session (the template is touched only when the rider also asks for it).
+struct WorkoutInsight: Equatable, Identifiable, Codable {
+    enum Kind: String, Codable { case progression, hold, coverage, interference, insufficient }
+    enum Label: String, Codable { case suggestion, finding }
+    /// A concrete, undoable edit to one exercise's planned sets.
+    struct SetChange: Equatable, Codable { var exerciseId: String; var repsDelta: Int; var weightDeltaKg: Double }
+    var id: String
+    var kind: Kind
+    var label: Label
+    var text: String
+    var why: String
+    var evidence: String            // e.g. "2 sessions, 12 Oct and 19 Oct" or "insufficient evidence"
+    var change: SetChange? = nil
+    var exerciseName: String? = nil
+}
+
+enum InsightEngine {
+    /// Rules (all from completed, detailed sessions; quick logs only feed interference):
+    /// 1. Interference: a demanding ride is planned within 1 day after this strength session and the routine loads
+    ///    the legs → finding + suggestion to keep leg work light (no set change; the rider decides).
+    /// 2. Progression: for an exercise in the routine logged ≥ 2 times, the last session hit every planned rep with
+    ///    RPE ≤ 8 (or no RPE recorded but all reps done and the one before was at least as heavy) → +1 rep (bodyweight /
+    ///    unknown load) or +2.5 kg (loaded, dumbbell +1 kg per hand… we use +2.5 kg for barbell/machine, +1 kg for
+    ///    dumbbell/kettlebell); labelled suggestion.
+    /// 3. Hold: last session had RPE ≥ 9 or missed reps on that exercise → keep weight; labelled finding.
+    /// 4. Coverage: ≥ 3 detailed sessions in 28 days and a coverage pattern never trained → "consider adding …",
+    ///    suggestion, only exercises the rider can do are named.
+    /// 5. Otherwise: insufficient evidence, say so.
+    static func next(routine: WorkoutTemplate?, planned: [ExerciseEntry], sessions: [StrengthSession], plan: [Workout], equipment: EquipmentProfile, catalogue: [Exercise], on date: Date, now: Date = Date(), calendar cal: Calendar = .current) -> WorkoutInsight {
+        let detailed = sessions.filter { $0.isDetailed }.sorted { $0.date > $1.date }
+        let day = cal.startOfDay(for: date)
+        let fmt = DateFormatter(); fmt.dateFormat = "d MMM"
+        // 1. interference
+        let loadsLegs = planned.contains { [.squat, .hinge, .singleLeg].contains($0.pattern) && $0.sets.count >= 2 } || (routine?.focus.loadsLegs ?? false)
+        if loadsLegs {
+            let hard = plan.first { w in w.kind.isRide && w.kind.zone >= 3 && !w.skipped && !w.done && { let d = cal.startOfDay(for: w.date); return d > day && cal.dateComponents([.day], from: day, to: d).day! <= 1 }() }
+            if let h = hard {
+                return WorkoutInsight(id: "interf-\(h.id.uuidString.prefix(6))", kind: .interference, label: .suggestion,
+                                      text: "Keep the leg work light today — a \(h.kind.title.lowercased()) ride is planned on \(h.date.shortDay).",
+                                      why: "Heavy squats, hinges or lunges the day before a hard ride usually mean tired legs for the quality intervals. Your routine is not changed; do the leg exercises at a lighter weight or fewer sets, or move the ride if that day is flexible.",
+                                      evidence: "from the plan: \(h.kind.title) \(h.date.shortDay)")
+            }
+        }
+        // 2/3. progression or hold, exercise by exercise in routine order
+        for e in planned {
+            let history = detailed.compactMap { s in s.exercises?.first(where: { $0.exerciseId == e.exerciseId && !$0.doneSets.isEmpty }).map { (s.date, $0) } }
+            guard history.count >= 2 else { continue }
+            let (lastDate, last) = history[0], (prevDate, prev) = history[1]
+            let plannedReps = e.sets.map { $0.reps }
+            let lastReps = last.doneSets.map { $0.reps }
+            let allHit = !lastReps.isEmpty && zip(lastReps, plannedReps).allSatisfy { $0 >= $1 } && lastReps.count >= min(plannedReps.count, lastReps.count)
+            let maxRPE = last.doneSets.compactMap { $0.rpe }.max()
+            let lastTop = last.doneSets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
+            let prevTop = prev.doneSets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
+            let ev = "\(history.count) sessions, \(fmt.string(from: prevDate)) and \(fmt.string(from: lastDate))"
+            if let r = maxRPE, r >= 9 { return WorkoutInsight(id: "hold-\(e.exerciseId)", kind: .hold, label: .finding, text: "Keep \(e.name) at the same weight — last time was RPE \(r).", why: "The last session of \(e.name) was rated very hard (RPE \(r)). Repeating the same load lets you consolidate it before adding more.", evidence: ev, exerciseName: e.name) }
+            if !allHit, !lastReps.isEmpty { return WorkoutInsight(id: "hold-\(e.exerciseId)", kind: .hold, label: .finding, text: "Repeat \(e.name) at the same weight — not every planned rep was completed last time.", why: "Last session: \(lastReps.map(String.init).joined(separator: "/")) reps against \(plannedReps.map(String.init).joined(separator: "/")) planned. Hit the planned reps first, then progress.", evidence: ev, exerciseName: e.name) }
+            if allHit, (maxRPE ?? 8) <= 8 {
+                let loaded = lastTop != nil
+                let dumbbell = catalogue.first { $0.id == e.exerciseId }?.equipment.contains { $0 == "dumbbell" || $0 == "kettlebell" } ?? false
+                let notRegressed = lastTop == nil || prevTop == nil || lastTop! >= prevTop!
+                guard notRegressed else { continue }
+                let change = loaded ? WorkoutInsight.SetChange(exerciseId: e.exerciseId, repsDelta: 0, weightDeltaKg: dumbbell ? 1 : 2.5) : WorkoutInsight.SetChange(exerciseId: e.exerciseId, repsDelta: 1, weightDeltaKg: 0)
+                let what = loaded ? "add \(dumbbell ? "1 kg" : "2.5 kg") to \(e.name)" : "add one rep per set to \(e.name)"
+                return WorkoutInsight(id: "prog-\(e.exerciseId)", kind: .progression, label: .suggestion, text: "Suggestion: \(what).",
+                                      why: "You completed every planned rep of \(e.name) last time\(maxRPE.map { " at RPE \($0)" } ?? "")\(lastTop.map { " with \(Int($0)) kg" } ?? ""), and the session before was not heavier. A small step keeps progress without a jump. Accept changes only today's planned sets; your template stays as it is unless you choose to update it.",
+                                      evidence: ev, change: change, exerciseName: e.name)
+            }
+        }
+        // 4. coverage from detailed logs
+        let since = cal.date(byAdding: .day, value: -28, to: cal.startOfDay(for: now))!
+        let cov = StrengthAnalysis.coverage(sessions, since: since)
+        if cov.detailedSessions >= 3, let miss = cov.missing.first(where: { $0 != .carry }) {
+            let candidates = catalogue.filter { $0.pattern == miss && equipment.canDo($0) && !planned.contains { p in p.exerciseId == $0.id } }
+            let name = candidates.first.map { $0.name } ?? miss.title.lowercased()
+            return WorkoutInsight(id: "cov-\(miss.rawValue)", kind: .coverage, label: .suggestion, text: "Consider adding a \(miss.title.lowercased()) exercise (e.g. \(name)).",
+                                  why: "In \(cov.detailedSessions) detailed sessions over 4 weeks no \(miss.title.lowercased()) movement was logged. This is read from your logged exercises only; a session labelled “full body” is not counted as coverage. Suggested exercises are limited to equipment you own.",
+                                  evidence: "\(cov.detailedSessions) detailed sessions, 28 days")
+        }
+        // 5. insufficient
+        let n = detailed.count
+        return WorkoutInsight(id: "none", kind: .insufficient, label: .finding,
+                              text: n == 0 ? "No exercise history yet — log sets in a session and the coach can suggest progression next time." : "Not enough history for a progression call yet (\(n) detailed session\(n == 1 ? "" : "s"); needs 2 of the same exercise).",
+                              why: "Progression suggestions compare at least two completed sessions of the same exercise (reps, weight and effort). Until then the coach makes no claim.", evidence: "insufficient evidence")
+    }
+
+    /// Applies a progression change to the planned entries of one session (not the template).
+    static func apply(_ c: WorkoutInsight.SetChange, to entries: inout [ExerciseEntry]) {
+        for i in entries.indices where entries[i].exerciseId == c.exerciseId {
+            for j in entries[i].sets.indices {
+                entries[i].sets[j].reps = max(1, entries[i].sets[j].reps + c.repsDelta)
+                if c.weightDeltaKg != 0, let w = entries[i].sets[j].weightKg, !entries[i].sets[j].bodyweight { entries[i].sets[j].weightKg = w + c.weightDeltaKg }
+            }
+        }
     }
 }

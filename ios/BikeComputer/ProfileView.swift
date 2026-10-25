@@ -149,7 +149,9 @@ struct TrainingProfilePage: View {
             Section("Sports and activities") { NavigationLink("Sports (\(store.profile.sports.count) selected)") { SportsPicker() } }
             if store.profile.trainingMode.includesLifting {
                 Section("Strength") {
-                    NavigationLink { TemplatesView() } label: { HStack { Text("Workout templates"); Spacer(); Text("\(store.templates.count)").foregroundStyle(.secondary) } }
+                    NavigationLink { TemplatesView() } label: { HStack { Text("Routines (templates)"); Spacer(); Text("\(store.templates.count)").foregroundStyle(.secondary) } }
+                    NavigationLink { WeekdayRoutinesPage() } label: { HStack { Text("Routine per weekday"); Spacer(); Text("\(store.weekdayRoutines.count) set").foregroundStyle(.secondary) } }
+                    NavigationLink { EquipmentPage() } label: { HStack { Text("Equipment I own"); Spacer(); Text(store.equipment.isSet ? "\(store.equipment.owned.count) items" : "not set").foregroundStyle(.secondary) } }
                     NavigationLink { MyExercisesView() } label: { HStack { Text("My exercises"); Spacer(); Text("\(store.customExercises.count) custom · \(ExerciseCatalogue.builtIn.count) built in").font(.caption).foregroundStyle(.secondary) } }
                 }
             }

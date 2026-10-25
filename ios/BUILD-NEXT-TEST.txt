@@ -1,0 +1,59 @@
+BikeComputer iPhone app 0.8.0 (TestFlight build BUILDNO) — real-device checklist, app side of the combined procedure
+=====================================================================================================================
+Order: 1) install firmware 0.7.0 on the board (INSTALL-v0.7.0.bat, approval first; TEST-v0.7.0.txt has the board side),
+2) update the iPhone app to 0.8.0 (BUILDNO), 3) run this list. Record PASS / FAIL / NOT TESTED per step. Everything is
+simulator-tested only until you confirm it here. Never USB and battery connected at the same time (HW-1).
+Rollback: TestFlight › Previous builds (36); board: ROLLBACK-TO-v061.bat / RESTORE-BACKUP-BEFORE-v070.bat.
+
+A. Pairing (PAIRING_SYNC_BRIEF items 1–10) — Profile › Connections & devices › BikeComputer
+ 1  Fresh pairing: board Connections › Phone › CONNECT (SEARCHING). App: Connect → Found → tap the board → the stage strip
+    walks Pairing → Authenticating (type the 6-digit code) → Connected → Syncing profile → Ready. No stage sits more than
+    20 s without a message.   PASS/FAIL
+ 2  Pairing after a board data reset: board Settings › reset data (or RESTORE a backup) → app shows "Failed while pairing:
+    The BikeComputer no longer has this phone's keys" with a Repair button (not "Connecting…" forever).   PASS/FAIL
+ 2b Repair: tap Repair connection → follow the three steps (board HOLD: REPAIR; iPhone Settings › Bluetooth › Forget;
+    Start repair) → the app finds the board under its new identity, asks for the code, reaches Ready; Diagnostics shows
+    the same board id and the old identifier marked stale.   PASS/FAIL
+ 3  iPhone app restart (swipe it away, reopen): reconnects by itself within ~10 s, Ready, no code asked.   PASS/FAIL
+ 4  Board restart (RESET): app shows the stages again and reaches Ready without a code; Diagnostics › LINK_DIAG says
+    "the board ended it" or similar for the previous link.   PASS/FAIL
+ 5  Board screen off (Quick Settings › Screen off): app stays Ready; live values keep updating for 2 min.   PASS/FAIL
+ 6  Out of range: walk the phone away until it drops → "Waiting for the board (not in range)" (not Failed); come back →
+    Ready within ~15 s, no touch on the board.   PASS/FAIL   (time: ___ s)
+ 7  Automatic reconnect with the app in the background: lock the phone, RESET the board, unlock after 1 min → Ready;
+    Diagnostics stage history shows the reconnect while backgrounded.   PASS/FAIL
+ 8  Profile sync: Profile › Rider information → change weight by 1 kg → BikeComputer page "Profile sync: pending —
+    sending…" then "synced hh:mm"; the board's PHONE screen shows the same time; the board's Rider page shows the new
+    weight.   PASS/FAIL
+ 9  Sync after restart: RESET the board, reconnect → "synced" with the SAME version (no re-send needed); kill and reopen
+    the app → the last successful sync time is still shown.   PASS/FAIL
+10  Standalone then pair: on the board set a different FTP by hand (device-only), connect the phone → the app lists the
+    differences and says the phone's profile will be applied; confirm → board shows the phone's FTP; the board's rides
+    and the XDS pairing are untouched.   PASS/FAIL
+10b Validation: set FTP 999 W in Profile → "failed: not sent — FTP must be 50–600 W" (nothing sent); fix it → synced.   PASS/FAIL
+
+B. Routines journey (HYBRID_ROUTINES_BRIEF) — Profile › Training profile › Routines
+11  Create "Short Full Body Workout" directly (New routine, add 3 exercises with sets/weights, one superset) → it appears
+    with "never used"; Plan › History shows NO new completed session.   PASS/FAIL
+12  Plan: open Tuesday's strength session → Choose routine → pick it, toggle "Also use it every Tuesday" → the Tuesday card
+    shows the routine's name and exercise count; opening it lists your exercises in order (not a generic circuit),
+    planned sets × reps, "no previous log".   PASS/FAIL
+13  Centre button on a strength day reads "Train now" with a dumbbell and opens that session; on a ride day it reads
+    "Ride now" and opens the Ride dashboard; a day with both offers the choice; a rest day offers an optional session.
+    A single tap never starts recording.   PASS/FAIL
+14  Start workout → tick sets, change a weight, Pause, kill the app, reopen → "In progress" on the centre button → resume
+    → Finish → the session appears in Plan › History with the sets you ticked; the Tuesday card shows "done"; the
+    template itself is unchanged.   PASS/FAIL
+15  Next week's Tuesday (Plan › next week) still shows the routine. Change the weekday default to another routine → next
+    week follows, this week's hand-chosen session does not.   PASS/FAIL
+16  After two completed sessions of the same exercise with all reps done: Home › "Next workout insight" suggests +1 rep /
+    +1 kg / +2.5 kg for that exercise with Why? and the evidence (two dates); Accept → only that session's planned sets
+    change; Undo restores them. With one session only it says there is not enough history.   PASS/FAIL
+17  Equipment: Profile › Training profile › Equipment I own = dumbbells only; exclude Push-up → coverage suggestions name
+    only dumbbell exercises; your saved routine keeps its exercises.   PASS/FAIL
+18  Offline: airplane mode on → everything above still works; a strength session logged offline is there after
+    reconnecting; no duplicate appears.   PASS/FAIL
+19  Migration: your templates, rides, strength logs and edited plan from build 36 are all present after the update.   PASS/FAIL
+
+Report PASS/FAIL/NOT TESTED per step plus screenshots of anything wrong. Items marked "needs firmware 0.7.0" in the app
+are expected while the board still runs 0.6.x.

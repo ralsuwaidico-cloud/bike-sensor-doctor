@@ -16,13 +16,16 @@ final class ProfileSync: ObservableObject {
             switch self {
             case .noBoard: return "no BikeComputer connected"
             case .notSupported(let fw): return "needs firmware 0.6.0 (board has \(fw))"
-            case .waitingForBoard: return "reading the board's profile…"
-            case .needsConfirmation: return "phone and board differ — confirm"
-            case .pushing(let v): return "sending version \(v)…"
-            case .inSync: return "in sync"
+            case .waitingForBoard: return "pending — reading the board's profile"
+            case .needsConfirmation: return "pending — phone and board differ, confirm"
+            case .pushing(let v): return "pending — sending version \(v)"
+            case .inSync: return "synced"
             case .failed(let r): return "failed: \(r)"
             }
         }
+        /// The three words the brief asks for: pending / synced / failed (or none).
+        var word: String { switch self { case .inSync: return "synced"; case .failed: return "failed"; case .noBoard, .notSupported: return "—"; default: return "pending" } }
+        var isFailed: Bool { if case .failed = self { return true }; return false }
     }
     @Published private(set) var state: State = .noBoard
     @Published private(set) var differences: [ProfileDifference] = []
@@ -55,12 +58,25 @@ final class ProfileSync: ObservableObject {
 
     var boardId: String? { device?.state == .ready ? device?.boardId : nil }
     var record: BoardSyncRecord? { guard let id = boardId, let s = store else { return nil }; return s.syncRecord(for: id) }
+    /// Last successful sync with the board that is connected now, or the last one on record for the known board —
+    /// persisted in the store so it survives app restarts (never claims success because Bluetooth connected).
+    var lastSuccessful: (version: UInt32, at: Date)? {
+        guard let s = store else { return nil }
+        let id = boardId ?? device?.knownDeviceId
+        guard let id, let r = s.boardSync.first(where: { $0.boardId == id }), let at = r.ackedAt, r.ackedVersion > 0 else { return nil }
+        return (r.ackedVersion, at)
+    }
+    var statusLine: String {
+        if let l = lastSuccessful, case .inSync = state { return "synced \(l.at.formatted(date: .omitted, time: .shortened)) · v\(l.version)" }
+        if let l = lastSuccessful, state == .noBoard { return "last synced \(l.at.formatted(date: .abbreviated, time: .shortened)) · board away" }
+        return state.label
+    }
 
     private func linkStateChanged(_ s: DeviceLink.State) {
         guard let d = device else { return }
         if s != .ready { state = .noBoard; retryTimer?.invalidate(); return }
         guard let i = d.info else { return }
-        if !i.hasProfileSync { state = .notSupported(i.fw); return }
+        if !i.hasProfileSync { state = .notSupported(i.fw); d.profileSyncSettled(); return }
         state = .waitingForBoard
     }
 
@@ -70,13 +86,17 @@ final class ProfileSync: ObservableObject {
         differences = s.profile.differences(from: p, units: s.settings.units)
         if rec.confirmed {
             s.setSyncRecord(rec)
-            if p.version >= s.profile.version, differences.isEmpty { rec.ackedVersion = p.version; s.setSyncRecord(rec); state = .inSync; lastSyncAt = Date() }
+            if p.version >= s.profile.version, differences.isEmpty { rec.ackedVersion = p.version; rec.ackedAt = rec.ackedAt ?? Date(); s.setSyncRecord(rec); state = .inSync; lastSyncAt = rec.ackedAt; device?.profileSyncSettled() }
             else { push() }
             return
         }
-        // first pairing with this board: the rider decides. Identical profiles need no question.
-        if differences.isEmpty { rec.confirmed = true; s.setSyncRecord(rec); push() } else { s.setSyncRecord(rec); state = .needsConfirmation }
+        // first pairing with this board: the rider decides. Identical profiles need no question. A board used on its own
+        // before (source device-only, version 0) is reconciled the same way: the phone profile wins once confirmed.
+        if differences.isEmpty { rec.confirmed = true; s.setSyncRecord(rec); push() } else { s.setSyncRecord(rec); state = .needsConfirmation; device?.profileSyncSettled() }
     }
+
+    /// Manual retry from the Connections screen: re-reads the board profile; the comparison then pushes if needed.
+    func retry() { attempts = 0; guard let d = device, d.state == .ready, d.info?.hasProfileSync == true else { return }; state = .waitingForBoard; d.retryProfile() }
 
     /// The rider agreed: the phone profile replaces the board's shared settings from now on (history etc. untouched).
     func confirmPhoneIsAuthoritative() {
@@ -107,16 +127,18 @@ final class ProfileSync: ObservableObject {
 
     private func push() {
         guard let s = store, let d = device, d.state == .ready, d.info?.hasProfileSync == true else { return }
+        let issues = s.profile.linkValidationIssues()
+        if !issues.isEmpty { state = .failed("not sent — " + issues.joined(separator: "; ") + ". Fix it in Profile."); d.profileSyncFailed(issues.joined(separator: "; ")); return }
         var m = s.profile.linkMessage(units: s.settings.units)
         // the board refuses versions ≤ its stored one; if ours fell behind (another phone), jump above it once
         if let bv = d.boardProfile?.version, m.version <= bv { var p = s.profile; p.version = bv; p.touch(); s.profile = p; m = s.profile.linkMessage(units: s.settings.units) }
         pushedVersion = m.version; attempts += 1
-        guard d.profileSet(m) else { state = .failed("could not write to the board"); return }
+        guard d.profileSet(m) else { state = .failed("could not write to the board"); d.profileSyncFailed("could not write to the board"); return }
         state = .pushing(m.version)
         retryTimer?.invalidate()
         retryTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { [weak self] _ in
             guard let self else { return }
-            if self.attempts < 3 { self.push() } else { self.attempts = 0; self.state = .failed("no acknowledgement from the board") }
+            if self.attempts < 3 { self.push() } else { self.attempts = 0; self.state = .failed("no acknowledgement from the board after 3 tries"); self.device?.profileSyncFailed("no acknowledgement from the board") }
         }
     }
 
@@ -125,10 +147,14 @@ final class ProfileSync: ObservableObject {
         guard let s = store, let id = boardId else { return }
         var rec = s.syncRecord(for: id)
         switch a.status {
-        case 0: rec.ackedVersion = a.version; rec.ackedAt = Date(); s.setSyncRecord(rec); state = .inSync; lastSyncAt = Date(); differences = []
+        case 0: rec.ackedVersion = a.version; rec.ackedAt = Date(); s.setSyncRecord(rec); state = .inSync; lastSyncAt = Date(); differences = []; device?.profileSyncSettled()
         case 1:   /* board has a newer version: never overwrite blindly — re-read and let the rider see the differences */
             state = .failed("the board holds a newer profile (v\(a.boardVersion))"); device?.profileGet()
-        default: state = .failed(a.statusText)
+        case 2:
+            let issues = s.profile.linkValidationIssues()
+            state = .failed(issues.isEmpty ? "the board rejected a value (out of range); check FTP, weight, birth year and heart rates in Profile" : "rejected — " + issues.joined(separator: "; "))
+            device?.profileSyncFailed("a value was rejected")
+        default: state = .failed(a.statusText); device?.profileSyncFailed(a.statusText)
         }
     }
 

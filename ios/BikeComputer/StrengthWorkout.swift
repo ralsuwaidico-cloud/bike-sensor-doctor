@@ -1,0 +1,587 @@
+import SwiftUI
+
+// MARK: - Scheduled strength session (0.8.0): built around the assigned routine
+/// Shows the routine's name and duration, exercises in order with planned sets × reps and the previous performance,
+/// a prominent Start workout, one insight with Why?, and the secondary actions under More.
+struct StrengthWorkoutScreen: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let workoutId: UUID
+    @State private var chooseRoutine = false
+    @State private var editEntries = false
+    @State private var showMove = false
+    @State private var showEdit = false
+    @State private var confirmRemove = false
+    @State private var showSession = false
+    @State private var budgetNote: String? = nil
+    @State private var quickLog = false
+
+    private var workout: Workout? { store.plan.first { $0.id == workoutId } }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let w = workout { content(w) } else { ContentUnavailableView("Session removed", systemImage: "calendar.badge.minus") }
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle("Strength").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                if let w = workout, !w.done { ToolbarItem(placement: .topBarLeading) { moreMenu(w) } }
+            }
+            .sheet(isPresented: $chooseRoutine) { if let w = workout { ChooseRoutineSheet(workout: w) { note in budgetNote = note } } }
+            .sheet(isPresented: $editEntries) { if let w = workout { PlannedSetsEditor(workout: w) } }
+            .sheet(isPresented: $showMove) { if let w = workout { MoveWorkoutSheet(workout: w) } }
+            .sheet(isPresented: $showEdit) { if let w = workout { EditWorkoutSheet(workout: w) } }
+            .sheet(isPresented: $quickLog) { if let w = workout { QuickStrengthLogSheet(date: w.date, presetFocus: w.strengthFocus, workoutId: w.id) } }
+            .fullScreenCover(isPresented: $showSession) { StrengthSessionView() }
+            .alert("Remove this session?", isPresented: $confirmRemove) { Button("Remove", role: .destructive) { if let w = workout { store.remove(w) }; dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("The routine template itself is kept.") }
+            .onAppear { if store.activeSession != nil, store.activeSession?.workoutId == workoutId { showSession = true } }
+        }
+    }
+
+    @ViewBuilder private func content(_ w: Workout) -> some View {
+        let routine = store.routine(for: w)
+        let entries = store.plannedEntries(for: w)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                header(w, routine)
+                if let note = budgetNote { Text(note).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
+                if routine == nil { noRoutine(w) } else { exercises(entries) }
+                if !w.done, routine != nil || !entries.isEmpty {
+                    startButton(w, entries)
+                } else if w.done { Pill(text: "completed", color: BC.live) }
+                InsightCard(workout: w, entries: entries)
+                if w.fixed { Text("Fixed day — the coach never moves or changes it.").font(.caption2).foregroundStyle(.secondary) }
+            }.padding()
+        }
+    }
+
+    private func header(_ w: Workout, _ r: WorkoutTemplate?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(r?.name ?? w.displayTitle).font(.system(size: 26, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7)
+                Spacer()
+                Text(Fmt.duration(minutes: w.minutes)).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit()
+            }
+            HStack(spacing: 6) {
+                Text(w.date.dayAndDate).font(.footnote).foregroundStyle(.secondary)
+                if let r { Pill(text: r.focus.title); Text("\(r.entries.count) exercises · \(r.setCount) sets").font(.footnote).foregroundStyle(.secondary) }
+                if w.edited { Pill(text: "edited", color: BC.accent) }
+                if w.routineManual { Pill(text: "your choice", color: BC.zone(5)) }
+            }
+        }
+    }
+
+    private func noRoutine(_ w: Workout) -> some View {
+        Card {
+            Eyebrow(t: "No routine assigned")
+            Text(store.templates.isEmpty ? "Create a routine with your exercises and equipment, then assign it here. Until then this is a \(w.strengthFocus?.title.lowercased() ?? "strength") session of \(Fmt.duration(minutes: w.minutes)) without exercise detail." : "Choose one of your saved routines for this session, or set a default for every \(WeeklyAvailability.longDayNames[Store.weekdayIndex(w.date)]).").font(.footnote).foregroundStyle(.secondary)
+            Button { chooseRoutine = true } label: { Label(store.templates.isEmpty ? "Create a routine" : "Choose routine", systemImage: "doc.on.doc").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large)
+            if !w.done { Button { quickLog = true } label: { Text("Quick log without exercises").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+        }
+    }
+
+    private func exercises(_ entries: [ExerciseEntry]) -> some View {
+        Card {
+            HStack { Eyebrow(t: "Exercises in order"); Spacer(); Button("Adjust sets") { editEntries = true }.font(.caption.bold()) }
+            ForEach(entries) { e in
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        if let g = e.superset { Text(g).font(.caption.weight(.heavy)).padding(4).background(BC.accent.opacity(0.18), in: Circle()) }
+                        Text(e.name).font(.body.weight(.semibold)).lineLimit(2)
+                        Spacer()
+                        Text(plannedText(e)).font(.subheadline.weight(.semibold)).monospacedDigit().foregroundStyle(.primary)
+                    }
+                    HStack(spacing: 8) {
+                        Text(e.pattern.title).font(.caption2).foregroundStyle(.secondary)
+                        if let prev = previous(e) { Text("last: \(prev)").font(.caption2).foregroundStyle(.secondary).lineLimit(1) } else { Text("no previous log").font(.caption2).foregroundStyle(.secondary) }
+                    }
+                    if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary) }
+                }.padding(.vertical, 4)
+                if e.id != entries.last?.id { Divider() }
+            }
+        }
+    }
+    private func plannedText(_ e: ExerciseEntry) -> String {
+        guard !e.sets.isEmpty else { return "—" }
+        let reps = e.sets.map { $0.reps }
+        let w = e.sets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
+        let r = Set(reps).count == 1 ? "\(e.sets.count) × \(reps[0])" : "\(e.sets.count) × \(reps.min()!)–\(reps.max()!)"
+        return r + (w.map { " · \(Int($0)) kg" } ?? (e.sets.first?.bodyweight == true ? " · BW" : ""))
+    }
+    /// Last completed performance of this exercise (any session), compact.
+    private func previous(_ e: ExerciseEntry) -> String? {
+        for s in store.strength.sorted(by: { $0.date > $1.date }) {
+            if let x = s.exercises?.first(where: { $0.exerciseId == e.exerciseId }), !x.doneSets.isEmpty {
+                let f = DateFormatter(); f.dateFormat = "d MMM"
+                return "\(x.summary) (\(f.string(from: s.date)))"
+            }
+        }
+        return nil
+    }
+
+    private func startButton(_ w: Workout, _ entries: [ExerciseEntry]) -> some View {
+        VStack(spacing: 6) {
+            Button {
+                if store.activeSession == nil { _ = store.startStrengthSession(for: w, template: store.routine(for: w), entries: entries) }
+                showSession = true
+            } label: { Label(store.activeSession?.workoutId == w.id ? "Resume workout" : "Start workout", systemImage: "play.fill").frame(maxWidth: .infinity) }
+            .buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large).accessibilityIdentifier("startWorkout")
+            .disabled(store.activeSession != nil && store.activeSession?.workoutId != w.id)
+            if store.activeSession != nil, store.activeSession?.workoutId != w.id { Text("Another strength session is in progress; finish or discard it first.").font(.caption2).foregroundStyle(BC.warn) }
+            else { Text("Record each set as you go; pause any time. Partial sessions are saved and can be resumed after a restart.").font(.caption2).foregroundStyle(.secondary) }
+        }
+    }
+
+    private func moreMenu(_ w: Workout) -> some View {
+        Menu {
+            Button { chooseRoutine = true } label: { Label(store.routine(for: w) == nil ? "Choose routine" : "Replace routine", systemImage: "doc.on.doc") }
+            if let r = store.routine(for: w) {
+                let wd = Store.weekdayIndex(w.date)
+                if store.weekdayRoutines[wd] != r.id { Button { store.setWeekdayRoutine(r, weekday: wd) } label: { Label("Set as every \(WeeklyAvailability.longDayNames[wd])", systemImage: "calendar.badge.plus") } }
+                else { Button { store.setWeekdayRoutine(nil, weekday: wd) } label: { Label("Stop using as \(WeeklyAvailability.longDayNames[wd]) default", systemImage: "calendar.badge.minus") } }
+                Button(role: .destructive) { budgetNote = store.assign(template: nil, to: w) } label: { Label("Remove routine from this session", systemImage: "xmark.circle") }
+            }
+            Divider()
+            Button { showEdit = true } label: { Label("Edit type / duration", systemImage: "pencil") }
+            Button { showMove = true } label: { Label("Move to another day", systemImage: "arrow.left.arrow.right") }
+            Button { var x = w; x.skipped.toggle(); store.edit(x) } label: { Label(w.skipped ? "Unskip" : "Skip", systemImage: "forward") }
+            Button { quickLog = true } label: { Label("Quick log instead", systemImage: "bolt") }
+            Button(role: .destructive) { confirmRemove = true } label: { Label("Remove session", systemImage: "trash") }
+        } label: { Label("More", systemImage: "ellipsis.circle") }.accessibilityIdentifier("moreMenu")
+    }
+}
+
+// MARK: - Insight card: ONE suggestion/finding, Why?, Accept / Ignore / Undo
+struct InsightCard: View {
+    @EnvironmentObject private var store: Store
+    let workout: Workout?
+    let entries: [ExerciseEntry]
+    @State private var showWhy = false
+    @State private var askTemplate = false
+    @State private var pendingInsight: WorkoutInsight? = nil
+
+    private var insight: WorkoutInsight {
+        InsightEngine.next(routine: workout.flatMap { store.routine(for: $0) }, planned: entries, sessions: store.strength, plan: store.plan, equipment: store.equipment, catalogue: store.allExercises, on: workout?.date ?? Date())
+    }
+    var body: some View {
+        let ins = insight
+        let ignored = store.ignoredInsights.contains(ins.id)
+        let undoable = store.appliedProposals.last.map { $0.id == "insight-\(ins.id)" && $0.before.id == workout?.id } ?? false
+        Card {
+            HStack { Eyebrow(t: "Next workout insight"); Spacer(); Pill(text: ins.label.rawValue, color: ins.label == .suggestion ? BC.accent : BC.stale) }
+            Text(ignored ? "Ignored: \(ins.text)" : ins.text).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true).foregroundStyle(ignored ? .secondary : .primary)
+            Text("Evidence: \(ins.evidence)").font(.caption2).foregroundStyle(.secondary)
+            DisclosureGroup(isExpanded: $showWhy) { Text(ins.why).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).padding(.top, 2) } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
+            if ins.kind != .insufficient {
+                HStack(spacing: 8) {
+                    if ins.change != nil, let w = workout, !w.done, !ignored, !undoable { Button("Accept") { pendingInsight = ins; askTemplate = true }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small) }
+                    if !ignored, !undoable { Button("Ignore") { store.ignoreInsight(ins) }.buttonStyle(.bordered).controlSize(.small) }
+                    if undoable { Button("Undo") { _ = store.undoLastProposal() }.buttonStyle(.bordered).controlSize(.small); Text("applied to this session").font(.caption2).foregroundStyle(.secondary) }
+                    Spacer()
+                }
+            }
+        }
+        .confirmationDialog("Apply to this session only, or also update the template?", isPresented: $askTemplate, titleVisibility: .visible) {
+            Button("This session only") { if let p = pendingInsight, let w = workout { _ = store.acceptInsight(p, for: w, alsoTemplate: false) } }
+            Button("Also update my template") { if let p = pendingInsight, let w = workout { _ = store.acceptInsight(p, for: w, alsoTemplate: true) } }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+}
+
+// MARK: - Choose routine: assign a template to the session, optionally as the weekday default; create new
+struct ChooseRoutineSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let workout: Workout
+    var onAssigned: (String?) -> Void = { _ in }
+    @State private var createNew = false
+    @State private var asDefault = false
+    var body: some View {
+        let wd = Store.weekdayIndex(workout.date)
+        NavigationStack {
+            List {
+                Section {
+                    Toggle("Also use it every \(WeeklyAvailability.longDayNames[wd])", isOn: $asDefault).tint(BC.accent)
+                } footer: { Text("A weekday default is reused when future weeks are generated, until you change it. Different days can have different routines.") }
+                Section(store.templates.isEmpty ? "No routines yet" : "Your routines") {
+                    ForEach(store.templates) { t in
+                        Button {
+                            let note = store.assign(template: t, to: workout)
+                            if asDefault { store.setWeekdayRoutine(t, weekday: wd) }
+                            onAssigned(note); dismiss()
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 6) { Text(t.name).font(.body.weight(.semibold)).foregroundStyle(.primary); Pill(text: t.focus.title); if store.weekdayRoutines[wd] == t.id { Pill(text: "\(WeeklyAvailability.dayNames[wd]) default", color: BC.zone(5)) } }
+                                    Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                    Text("\(t.entries.count) exercises · \(t.setCount) sets · ≈ \(Fmt.duration(minutes: t.estimatedMinutes))" + budgetHint(t)).font(.caption2).foregroundStyle(budgetHint(t).isEmpty ? .secondary : BC.warn)
+                                }
+                                Spacer(); if workout.templateId == t.id { Image(systemName: "checkmark").foregroundStyle(BC.accent) }
+                            }.frame(minHeight: 44)
+                        }
+                    }
+                    Button { createNew = true } label: { Label("Create a new routine", systemImage: "plus") }
+                }
+                if workout.templateId != nil { Section { Button(role: .destructive) { onAssigned(store.assign(template: nil, to: workout)); dismiss() } label: { Label("No routine for this session", systemImage: "xmark.circle") } } footer: { Text("Removes the assignment only; the template is kept.") } }
+            }
+            .navigationTitle("Choose routine").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .sheet(isPresented: $createNew) { TemplateEditor(template: nil) { t in let note = store.assign(template: t, to: workout); if asDefault { store.setWeekdayRoutine(t, weekday: wd) }; onAssigned(note); dismiss() } }
+        }
+    }
+    private func budgetHint(_ t: WorkoutTemplate) -> String {
+        let b = store.profile.liftingHoursPerWeek * 60
+        guard b > 0 else { return "" }
+        let others = PlanEngine.liftMinutes(store.workouts(weekOf: workout.date).filter { $0.id != workout.id })
+        return others + t.estimatedMinutes > b ? " · over the \(Fmt.duration(minutes: b)) lifting budget" : ""
+    }
+}
+
+// MARK: - Template editor: create or edit a routine directly (no completed session is created)
+struct TemplateEditor: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let template: WorkoutTemplate?
+    var onSaved: (WorkoutTemplate) -> Void = { _ in }
+    @State private var name = ""
+    @State private var focus: StrengthFocus = .fullBody
+    @State private var entries: [ExerciseEntry] = []
+    @State private var minutes: Int? = nil
+    @State private var showSearch = false
+    @State private var expanded: UUID? = nil
+    @State private var loaded = false
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Routine name (e.g. Short Full Body)", text: $name).accessibilityIdentifier("templateName")
+                    Picker("Type", selection: $focus) { ForEach(StrengthFocus.allCases, id: \.self) { Text($0.title).tag($0) } }
+                    HStack { Text("Planned duration"); Spacer(); Text(Fmt.duration(minutes: minutes ?? estimate)).monospacedDigit().foregroundStyle(.secondary) }
+                    Slider(value: Binding(get: { Double(minutes ?? estimate) }, set: { minutes = Int($0) }), in: 10...180, step: 5).tint(BC.accent)
+                    if minutes != nil { Button("Use the estimate (\(Fmt.duration(minutes: estimate)))") { minutes = nil }.font(.footnote) }
+                } footer: { Text("The estimate is about 2.5 minutes per set plus a warm-up. The duration counts toward your lifting budget when the routine is on the calendar.") }
+                Section {
+                    if entries.isEmpty { Text("Add your exercises in the order you do them. Sets, reps and weights here are the plan; actual values are recorded in the workout.").font(.footnote).foregroundStyle(.secondary) }
+                    ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }) }
+                    .onMove { entries.move(fromOffsets: $0, toOffset: $1) }
+                    Button { showSearch = true } label: { Label("Add exercise", systemImage: "plus.circle.fill") }.accessibilityIdentifier("addExercise")
+                    if entries.count >= 2 { supersets }
+                } header: { HStack { Text("Exercises"); Spacer(); Text("\(entries.count) · \(entries.reduce(0) { $0 + $1.sets.count }) sets").font(.caption) } }
+                if !store.equipment.isSet { Section { Text("Tip: list the equipment you own in Profile › Training profile › Equipment and the coach only suggests exercises you can do.").font(.footnote).foregroundStyle(.secondary) } }
+            }
+            .navigationTitle(template == nil ? "New routine" : "Edit routine").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || entries.isEmpty).accessibilityIdentifier("saveTemplate") }
+                ToolbarItem(placement: .topBarLeading) { if !entries.isEmpty { EditButton() } }
+            }
+            .sheet(isPresented: $showSearch) { ExerciseSearchSheet { ex in
+                var e = ExerciseEntry(exercise: ex, sets: (0..<3).map { _ in SetEntry(reps: 10, weightKg: nil, bodyweight: ex.equipment == ["bodyweight"], unilateral: ex.unilateral) })
+                if let last = lastValues(for: ex) { e.sets = last }
+                entries.append(e); expanded = e.id
+            } }
+            .onAppear { if !loaded { loaded = true; if let t = template { name = t.name; focus = t.focus; entries = t.entries; minutes = t.minutesEstimate } } }
+        }
+    }
+    private var estimate: Int { min(180, max(15, 5 + Int((Double(entries.reduce(0) { $0 + $1.sets.count }) * 2.5).rounded()))) }
+    private var supersets: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Supersets").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+            ForEach($entries) { $e in
+                HStack { Text(e.name).font(.footnote).lineLimit(1); Spacer()
+                    Picker("", selection: Binding(get: { e.superset ?? "" }, set: { e.superset = $0.isEmpty ? nil : $0 })) { Text("—").tag(""); ForEach(["A", "B", "C", "D"], id: \.self) { Text($0).tag($0) } }.pickerStyle(.segmented).frame(maxWidth: 190) }
+            }
+        }
+    }
+    private func lastValues(for ex: Exercise) -> [SetEntry]? {
+        for s in store.strength.sorted(by: { $0.date > $1.date }) { if let e = s.exercises?.first(where: { $0.exerciseId == ex.id }), !e.sets.isEmpty { return e.sets.map { var t = $0; t.id = UUID(); t.done = true; return t } } }
+        return nil
+    }
+    private func save() {
+        var t = template ?? WorkoutTemplate(name: "", entries: [])
+        t.name = name.trimmingCharacters(in: .whitespaces); t.focus = focus; t.entries = entries; t.minutesEstimate = minutes; t.updatedAt = Date()
+        store.saveTemplate(t)
+        // keep sessions that use this routine in step with its duration (not-yet-done, not hand-edited duration)
+        for i in store.plan.indices where store.plan[i].templateId == t.id && !store.plan[i].done && !store.plan[i].edited { store.plan[i].minutes = t.estimatedMinutes }
+        onSaved(t); dismiss()
+    }
+}
+
+// MARK: - Adjust this session's planned sets (not the template)
+struct PlannedSetsEditor: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let workout: Workout
+    @State private var entries: [ExerciseEntry] = []
+    @State private var expanded: UUID? = nil
+    @State private var loaded = false
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section { ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }) }.onMove { entries.move(fromOffsets: $0, toOffset: $1) } } footer: { Text("Changes apply to this session only. The routine template stays as you saved it.") }
+                Section { Button("Reset to the routine") { if let r = store.routine(for: workout) { entries = r.prefilled(from: store.lastSession(template: r)) } } }
+            }
+            .navigationTitle("This session's sets").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { if let i = store.plan.firstIndex(where: { $0.id == workout.id }) { store.plan[i].plannedEntries = entries }; dismiss() } }
+            }
+            .onAppear { if !loaded { loaded = true; entries = store.plannedEntries(for: workout) } }
+        }
+    }
+}
+
+struct MoveWorkoutSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let workout: Workout
+    var body: some View {
+        NavigationStack {
+            List {
+                Section { ForEach(store.workouts(weekOf: workout.date).filter { $0.id != workout.id }) { o in
+                    Button { store.swapDays(workout, o); dismiss() } label: { HStack { Text(o.date.dayAndDate).bold().foregroundStyle(.primary); Spacer(); Text("now \(o.displayTitle(routine: store.routine(for: o)))").font(.caption).foregroundStyle(.secondary) }.frame(minHeight: 44) }
+                } } footer: { Text(workout.fixed ? "This is a fixed day; moving it is your decision, the coach never does it." : "The two days swap.") }
+            }
+            .navigationTitle("Move to").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        }
+    }
+}
+
+struct EditWorkoutSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    @State var workout: Workout
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Body region") { StrengthTypeGrid(focus: Binding(get: { workout.strengthFocus ?? .fullBody }, set: { workout.strengthFocus = $0 }), choices: StrengthFocus.allCases.filter { $0 != .custom }) }
+                Section("Duration") { Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...180, step: 5).tint(BC.accent) }
+            }
+            .navigationTitle("Edit session").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { store.edit(workout); dismiss() } }
+            }
+        }
+    }
+}
+
+// MARK: - Workout session mode: record each set, see previous performance, pause / resume / finish; resumable
+struct StrengthSessionView: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    @State private var showFinish = false
+    @State private var confirmDiscard = false
+    @State private var rpe: Int? = nil
+    @State private var notes = ""
+    @State private var expanded: UUID? = nil
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    @State private var now = Date()
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let s = store.activeSession { content(s) } else { ContentUnavailableView("No workout in progress", systemImage: "dumbbell") }
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(store.activeSession?.customName.isEmpty == false ? store.activeSession!.customName : "Workout").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Finish") { showFinish = true }.bold().accessibilityIdentifier("finishWorkout") }
+            }
+            .onReceive(timer) { now = $0 }
+            .sheet(isPresented: $showFinish) { finishSheet }
+            .alert("Discard this workout?", isPresented: $confirmDiscard) { Button("Discard", role: .destructive) { store.discardActiveSession(); dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("Nothing is saved. The planned session stays open.") }
+        }
+    }
+
+    @ViewBuilder private func content(_ s: StrengthSession) -> some View {
+        let done = s.exercises?.reduce(0) { $0 + $1.doneSets.count } ?? 0, total = s.exercises?.reduce(0) { $0 + $1.sets.count } ?? 0
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Card {
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 2) { Eyebrow(t: s.pausedAt != nil ? "Paused" : "Working time"); Text(clock(s.elapsedSeconds(now: now))).font(.system(size: 34, weight: .bold, design: .rounded)).monospacedDigit() }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) { Eyebrow(t: "Sets"); Text("\(done) / \(total)").font(.system(size: 26, weight: .bold, design: .rounded)).monospacedDigit() }
+                    }
+                    HStack(spacing: 8) {
+                        if s.pausedAt == nil { Button { store.pauseActiveSession() } label: { Label("Pause", systemImage: "pause.fill").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+                        else { Button { store.resumeActiveSession() } label: { Label("Resume", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)) }
+                        Button(role: .destructive) { confirmDiscard = true } label: { Text("Discard").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
+                    }
+                    Text("Saved as you go — close the app and come back later if you need to.").font(.caption2).foregroundStyle(.secondary)
+                }
+                ForEach(Array((s.exercises ?? []).enumerated()), id: \.element.id) { idx, e in exerciseCard(e, index: idx) }
+                Button { showFinish = true } label: { Label("Finish workout", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
+            }.padding()
+        }
+    }
+
+    private func exerciseCard(_ e: ExerciseEntry, index: Int) -> some View {
+        Card {
+            HStack(alignment: .firstTextBaseline) {
+                if let g = e.superset { Text(g).font(.caption.weight(.heavy)).padding(4).background(BC.accent.opacity(0.18), in: Circle()) }
+                Text(e.name).font(.body.weight(.bold)).lineLimit(2); Spacer()
+                Text("\(e.doneSets.count)/\(e.sets.count)").font(.caption.weight(.heavy)).monospacedDigit().foregroundStyle(e.doneSets.count == e.sets.count && !e.sets.isEmpty ? BC.live : .secondary)
+            }
+            if let prev = previousText(e) { Text("Previous: \(prev)").font(.caption).foregroundStyle(.secondary).lineLimit(2) } else { Text("No previous log for this exercise").font(.caption).foregroundStyle(.secondary) }
+            ForEach(Array(e.sets.enumerated()), id: \.element.id) { si, st in
+                LiveSetRow(number: si + 1, set: st, onChange: { newSet in store.updateActiveSession { $0.exercises?[index].sets[si] = newSet } })
+                if si < e.sets.count - 1 { Divider() }
+            }
+            HStack {
+                Button { store.updateActiveSession { var n = $0.exercises?[index].sets.last ?? SetEntry(); n.id = UUID(); n.done = false; $0.exercises?[index].sets.append(n) } } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
+                Spacer()
+                if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
+            }
+        }
+    }
+    private func previousText(_ e: ExerciseEntry) -> String? {
+        for s in store.strength.sorted(by: { $0.date > $1.date }) { if let x = s.exercises?.first(where: { $0.exerciseId == e.exerciseId }), !x.doneSets.isEmpty { return x.doneSets.map { $0.text }.joined(separator: " · ") } }
+        return nil
+    }
+    private func clock(_ s: Int) -> String { String(format: "%d:%02d", s / 60, s % 60) }
+
+    private var finishSheet: some View {
+        NavigationStack {
+            Form {
+                Section("How did it feel?") {
+                    Picker("Effort", selection: Binding(get: { rpe ?? 0 }, set: { rpe = $0 == 0 ? nil : $0 })) { Text("—").tag(0); ForEach(1...10, id: \.self) { Text("RPE \($0)").tag($0) } }
+                    TextField("Notes (optional)", text: $notes, axis: .vertical).lineLimit(2...4)
+                }
+                Section { Text("Only the sets you marked done are saved. The session is recorded as completed and counts toward your lifting hours; the planned session on the calendar is marked done.").font(.footnote).foregroundStyle(.secondary) }
+            }
+            .navigationTitle("Finish workout").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Back") { showFinish = false } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { _ = store.finishActiveSession(rpe: rpe, notes: notes); showFinish = false; dismiss() }.bold().accessibilityIdentifier("saveWorkout") }
+            }
+        }.presentationDetents([.medium])
+    }
+}
+
+/// One set during a workout: tick when done, adjust actual reps / weight.
+struct LiveSetRow: View {
+    let number: Int
+    let set: SetEntry
+    var onChange: (SetEntry) -> Void
+    @State private var weightText = ""
+    var body: some View {
+        HStack(spacing: 8) {
+            Button { var s = set; s.done.toggle(); onChange(s) } label: { Image(systemName: set.done ? "checkmark.circle.fill" : "circle").font(.system(size: 26)).foregroundStyle(set.done ? BC.live : .secondary).frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel(set.done ? "Set \(number) done" : "Mark set \(number) done")
+            Text("Set \(number)").font(.footnote.weight(.semibold)).frame(width: 44, alignment: .leading)
+            Stepper("", value: Binding(get: { set.reps }, set: { var s = set; s.reps = $0; onChange(s) }), in: 1...100).labelsHidden()
+            Text("\(set.reps)\(set.unilateral ? "/side" : "")").font(.footnote).monospacedDigit().frame(minWidth: 44, alignment: .leading)
+            if set.bodyweight { Text("BW").font(.footnote).foregroundStyle(.secondary) }
+            else {
+                TextField("kg", text: $weightText).keyboardType(.decimalPad).frame(width: 56).textFieldStyle(.roundedBorder)
+                    .onChange(of: weightText) { _, v in var s = set; s.weightKg = Double(v.replacingOccurrences(of: ",", with: ".")); onChange(s) }
+                Text("kg").font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+        .onAppear { weightText = set.weightKg.map { $0 == $0.rounded() ? "\(Int($0))" : String(format: "%.1f", $0) } ?? "" }
+        .opacity(set.done ? 1 : 0.9)
+    }
+}
+
+// MARK: - Equipment and exclusions
+struct EquipmentPage: View {
+    @EnvironmentObject private var store: Store
+    @State private var query = ""
+    var body: some View {
+        Form {
+            Section {
+                ForEach(EquipmentProfile.allOptions, id: \.self) { e in
+                    Toggle(e.capitalized, isOn: Binding(get: { store.equipment.owned.contains(e) }, set: { on in if on { store.equipment.owned.insert(e) } else { store.equipment.owned.remove(e) } })).tint(BC.accent)
+                }
+            } header: { Text("Equipment I own") } footer: { Text(store.equipment.isSet ? "The coach only suggests exercises that use this equipment or bodyweight. Your saved routines are never changed because of it." : "Nothing selected yet: every exercise is treated as possible. Select what you own and suggestions are filtered.") }
+            Section {
+                let excluded = store.allExercises.filter { store.equipment.excluded.contains($0.id) }
+                if excluded.isEmpty { Text("None").foregroundStyle(.secondary) }
+                ForEach(excluded) { e in HStack { Text(e.name); Spacer(); Button("Allow") { store.equipment.excluded.remove(e.id) }.font(.caption.bold()) } }
+                let results = query.isEmpty ? [] : ExerciseCatalogue.search(query, in: store.allExercises).filter { !store.equipment.excluded.contains($0.id) }.prefix(8)
+                TextField("Search an exercise to exclude", text: $query)
+                ForEach(Array(results)) { e in Button { store.equipment.excluded.insert(e.id); query = "" } label: { HStack { Text(e.name).foregroundStyle(.primary); Spacer(); Image(systemName: "minus.circle").foregroundStyle(BC.warn) } } }
+            } header: { Text("Exercises I cannot do") } footer: { Text("Excluded exercises are never suggested. If one is in a saved routine, the routine keeps it — change the routine yourself.") }
+        }
+        .navigationTitle("Equipment").navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Weekday defaults overview (Profile / Plan)
+struct WeekdayRoutinesPage: View {
+    @EnvironmentObject private var store: Store
+    @State private var pick: Int? = nil
+    var body: some View {
+        List {
+            Section {
+                ForEach(0..<7, id: \.self) { wd in
+                    HStack {
+                        Text(WeeklyAvailability.longDayNames[wd]).frame(width: 96, alignment: .leading)
+                        Spacer()
+                        Menu {
+                            ForEach(store.templates) { t in Button(t.name) { store.setWeekdayRoutine(t, weekday: wd) } }
+                            if store.weekdayRoutines[wd] != nil { Divider(); Button("No default", role: .destructive) { store.setWeekdayRoutine(nil, weekday: wd) } }
+                        } label: { Text(store.template(store.weekdayRoutines[wd])?.name ?? "—").foregroundStyle(store.weekdayRoutines[wd] == nil ? .secondary : .primary).lineLimit(1) }
+                        .disabled(store.templates.isEmpty)
+                    }.frame(minHeight: 44)
+                }
+            } footer: { Text(store.templates.isEmpty ? "Create a routine first (Templates)." : "Defaults fill the strength sessions of that weekday in this and future weeks, unless you chose a routine for a session by hand.") }
+        }
+        .navigationTitle("Routine per weekday").navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Train now: choice / unplanned session sheets
+struct TrainNowSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let action: Store.TodayAction
+    var openRide: () -> Void
+    var openStrength: (Workout) -> Void
+    @State private var quickLog = false
+    @State private var createRoutine = false
+    var body: some View {
+        NavigationStack {
+            List {
+                switch action {
+                case .choose(let items):
+                    Section("Today's sessions") {
+                        ForEach(items) { w in
+                            Button { dismiss(); if w.kind.isRide { openRide() } else { openStrength(w) } } label: {
+                                HStack { Image(systemName: w.kind.isRide ? "bicycle" : "dumbbell").foregroundStyle(BC.accent); VStack(alignment: .leading) { Text(w.displayTitle(routine: store.routine(for: w))).foregroundStyle(.primary); Text(Fmt.duration(minutes: w.minutes)).font(.caption).foregroundStyle(.secondary) }; Spacer(); if w.done { Pill(text: "done", color: BC.live) } }.frame(minHeight: 44)
+                            }.disabled(w.done)
+                        }
+                    }
+                case .rest, .doneToday:
+                    Section {
+                        if case .doneToday(let next) = action { Text(next.map { "Today is done. Next: \($0.date.shortDay) \($0.displayTitle(routine: store.routine(for: $0)).lowercased()) (\(Fmt.duration(minutes: $0.minutes)))." } ?? "Today is done — nothing more is planned this week.").font(.footnote).foregroundStyle(.secondary) }
+                        else { Text("Nothing is planned today. An optional session is fine if you feel fresh; it counts like any other.").font(.footnote).foregroundStyle(.secondary) }
+                    }
+                    Section("Optional session") {
+                        Button { dismiss(); openRide() } label: { Label("Ride (opens the Ride screen; recording starts with Start ride)", systemImage: "bicycle") }
+                        Button { quickLog = true } label: { Label("Log a strength session", systemImage: "bolt") }
+                        ForEach(store.templates.prefix(4)) { t in Button { startUnplanned(t) } label: { Label("Start \(t.name)", systemImage: "dumbbell") } }
+                        if store.templates.isEmpty { Button { createRoutine = true } label: { Label("Create a routine", systemImage: "plus") } }
+                    }
+                default: EmptyView()
+                }
+            }
+            .navigationTitle("Train now").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .sheet(isPresented: $quickLog) { QuickStrengthLogSheet() }
+            .sheet(isPresented: $createRoutine) { TemplateEditor(template: nil) }
+        }.presentationDetents([.medium, .large])
+    }
+    private func startUnplanned(_ t: WorkoutTemplate) {
+        var w = Workout(date: Date(), kind: .strength, minutes: t.estimatedMinutes, strengthFocus: t.focus == .custom ? nil : t.focus)
+        w.templateId = t.id; w.routineManual = true
+        store.add(w)
+        dismiss(); openStrength(w)
+    }
+}

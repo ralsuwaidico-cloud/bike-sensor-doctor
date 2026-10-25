@@ -55,10 +55,24 @@ struct StrengthSession: Codable, Identifiable, Equatable {
     var templateId: UUID? = nil
     /// Set when this log was created for a planned session (so the plan entry is marked done, not duplicated).
     var workoutId: UUID? = nil
+    /// 0.8.0 workout mode: when the session was started, when it was finished (nil while in progress), accumulated
+    /// paused seconds and whether it is paused now. A session that is in progress lives in `Store.activeSession`,
+    /// never in the completed list — a template or a started-but-unfinished session never counts as completed.
+    var startedAt: Date? = nil
+    var finishedAt: Date? = nil
+    var pausedSeconds: Int = 0
+    var pausedAt: Date? = nil
 
     init(id: UUID = UUID(), date: Date, minutes: Int, focus: StrengthFocus, customName: String = "", rpe: Int? = nil, notes: String = "", source: String = "manual", healthUUID: String? = nil, exercises: [ExerciseEntry]? = nil, templateId: UUID? = nil, workoutId: UUID? = nil) {
         self.id = id; self.date = date; self.minutes = minutes; self.focus = focus; self.customName = customName; self.rpe = rpe; self.notes = notes; self.source = source; self.healthUUID = healthUUID
         self.exercises = exercises; self.templateId = templateId; self.workoutId = workoutId
+    }
+    var inProgress: Bool { startedAt != nil && finishedAt == nil }
+    /// Elapsed working seconds (pauses excluded).
+    func elapsedSeconds(now: Date = Date()) -> Int {
+        guard let s = startedAt else { return 0 }
+        let end = finishedAt ?? pausedAt ?? now
+        return max(0, Int(end.timeIntervalSince(s)) - pausedSeconds)
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -74,6 +88,10 @@ struct StrengthSession: Codable, Identifiable, Equatable {
         exercises = try? c.decodeIfPresent([ExerciseEntry].self, forKey: .exercises)
         templateId = try? c.decodeIfPresent(UUID.self, forKey: .templateId)
         workoutId = try? c.decodeIfPresent(UUID.self, forKey: .workoutId)
+        startedAt = try? c.decodeIfPresent(Date.self, forKey: .startedAt)
+        finishedAt = try? c.decodeIfPresent(Date.self, forKey: .finishedAt)
+        pausedSeconds = (try? c.decodeIfPresent(Int.self, forKey: .pausedSeconds)) ?? 0
+        pausedAt = try? c.decodeIfPresent(Date.self, forKey: .pausedAt)
     }
 
     var isDetailed: Bool { !(exercises ?? []).isEmpty }

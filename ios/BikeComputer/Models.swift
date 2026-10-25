@@ -137,6 +137,21 @@ struct RiderProfile: Codable, Equatable {
         m.hoursPerWeek = hoursPerWeek; m.level = level.linkCode; m.goal = goal.linkCode; m.lthr = lthr ?? 0
         return m
     }
+    /// 1.2.1: the board range-checks a PROFILE_SET as a whole and rejects it (status 2) without saying which field. The phone
+    /// checks the same ranges first and names the field so the rider can fix it in Profile.
+    func linkValidationIssues() -> [String] {
+        var out: [String] = []
+        let n = name.trimmingCharacters(in: .whitespaces)
+        if n.isEmpty || n.utf8.count > 24 { out.append("Name must be 1–24 characters") }
+        if ftpW != 0, !(50...600).contains(ftpW) { out.append("FTP must be 50–600 W") }
+        if !(30...200).contains(weightKg) { out.append("Weight must be 30–200 kg") }
+        if let b = birthYear, !(1900...2030).contains(b) { out.append("Birth year must be 1900–2030") }
+        if let m = maxHR, !(100...230).contains(m) { out.append("Max heart rate must be 100–230 bpm") }
+        if let r = restHR { if !(25...120).contains(r) { out.append("Resting heart rate must be 25–120 bpm") }; if let m = maxHR, r >= m { out.append("Resting heart rate must be below max heart rate") } }
+        if let l = lthr, !(80...220).contains(l) { out.append("Threshold heart rate must be 80–220 bpm") }
+        if hoursPerWeek > 40 { out.append("Hours per week must be 40 or fewer") }
+        return out
+    }
     /// Human-readable differences between this profile and what the board reported (only the fields the board carries).
     func differences(from b: BCLink.ProfileMessage, units: AppSettings.Units) -> [ProfileDifference] {
         var out: [ProfileDifference] = []
@@ -187,10 +202,17 @@ struct Workout: Codable, Identifiable, Equatable {
     /// 0.7.0: generated from a FIXED day assignment — the coach never moves or changes it; and the assignment it came from.
     var fixed = false
     var assignmentId: UUID? = nil
+    /// 0.8.0: the strength routine assigned to this session (a saved template id), and the planned sets for THIS
+    /// session when the rider or an accepted insight changed them (nil = use the template as it is). The template
+    /// itself is never modified by either. `templateId == nil` on a strength session = "no routine assigned".
+    var templateId: UUID? = nil
+    var plannedEntries: [ExerciseEntry]? = nil
+    /// true when the rider chose the routine by hand (kept when the week is rebuilt; weekday defaults fill the rest).
+    var routineManual = false
 
-    init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false) {
+    init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false, templateId: UUID? = nil) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
-        self.strengthFocus = strengthFocus; self.sequence = sequence; self.fixed = fixed
+        self.strengthFocus = strengthFocus; self.sequence = sequence; self.fixed = fixed; self.templateId = templateId
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -206,9 +228,14 @@ struct Workout: Codable, Identifiable, Equatable {
         sequence = try c.decodeIfPresent(Int.self, forKey: .sequence) ?? 0
         fixed = (try? c.decodeIfPresent(Bool.self, forKey: .fixed)) ?? false
         assignmentId = try? c.decodeIfPresent(UUID.self, forKey: .assignmentId)
+        templateId = try? c.decodeIfPresent(UUID.self, forKey: .templateId)
+        plannedEntries = try? c.decodeIfPresent([ExerciseEntry].self, forKey: .plannedEntries)
+        routineManual = (try? c.decodeIfPresent(Bool.self, forKey: .routineManual)) ?? false
     }
     /// "Strength · Lower body" when a region is planned.
     var displayTitle: String { if kind == .strength, let f = strengthFocus { return "Strength · \(f.title)" }; return kind.title }
+    /// Title with the assigned routine's name when one is assigned (the calendar shows the rider's own workout name).
+    func displayTitle(routine: WorkoutTemplate?) -> String { if kind == .strength, let r = routine { return r.name }; return displayTitle }
 
     struct Step: Equatable { let name: String; let duration: String; let target: String }
     /// Steps with power targets from the rider's FTP; HR targets appear only when the rider has an HR source (the caller decides).
@@ -394,6 +421,8 @@ struct BoardSyncRecord: Codable, Equatable {
     var settingsVersion: UInt32 = 0
 }
 
+extension UUID: @retroactive Identifiable { public var id: UUID { self } }
+
 // MARK: - Store (local JSON file with a schema version; cloud sync comes with the account service)
 /// One file `store.json` in Application Support. `schema` lets a future build migrate instead of dropping data; build 15
 /// writes schema 1 and still imports the build-14 per-file layout (profile.json / plan.json / rides.json / tiles.json).
@@ -421,6 +450,12 @@ struct StoreFile: Codable, Equatable {
     var templates: [WorkoutTemplate] = []
     var customExercises: [Exercise] = []
     var appliedProposals: [AppliedProposal] = []
+    /// 0.8.0: default routine per weekday (Monday = 0 … Sunday = 6, template id), equipment the rider owns / exercises
+    /// excluded, the strength session in progress (resumable after a restart) and insights the rider ignored.
+    var weekdayRoutines: [Int: UUID] = [:]
+    var equipment = EquipmentProfile()
+    var activeSession: StrengthSession? = nil
+    var ignoredInsights: [String] = []
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
         self.schema = schema; self.profile = profile; self.settings = settings; self.plan = plan; self.rides = rides; self.tiles = tiles
@@ -453,6 +488,20 @@ struct StoreFile: Codable, Equatable {
         templates = (try? c.decodeIfPresent([WorkoutTemplate].self, forKey: .templates)) ?? []
         customExercises = (try? c.decodeIfPresent([Exercise].self, forKey: .customExercises)) ?? []
         appliedProposals = (try? c.decodeIfPresent([AppliedProposal].self, forKey: .appliedProposals)) ?? []
+        if let wr = try? c.decodeIfPresent([String: String].self, forKey: .weekdayRoutines) { weekdayRoutines = Dictionary(uniqueKeysWithValues: wr.compactMap { k, v in Int(k).flatMap { i in UUID(uuidString: v).map { (i, $0) } } }) }
+        equipment = (try? c.decodeIfPresent(EquipmentProfile.self, forKey: .equipment)) ?? EquipmentProfile()
+        activeSession = try? c.decodeIfPresent(StrengthSession.self, forKey: .activeSession)
+        ignoredInsights = (try? c.decodeIfPresent([String].self, forKey: .ignoredInsights)) ?? []
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schema, forKey: .schema); try c.encode(profile, forKey: .profile); try c.encode(settings, forKey: .settings); try c.encode(plan, forKey: .plan)
+        try c.encode(rides, forKey: .rides); try c.encode(tiles, forKey: .tiles); try c.encode(onboarded, forKey: .onboarded); try c.encode(guest, forKey: .guest)
+        try c.encodeIfPresent(appleUserId, forKey: .appleUserId); try c.encode(createdAt, forKey: .createdAt); try c.encodeIfPresent(ftpSuggestion, forKey: .ftpSuggestion)
+        try c.encode(boardSync, forKey: .boardSync); try c.encode(onboardingStage, forKey: .onboardingStage); try c.encodeIfPresent(availability, forKey: .availability)
+        try c.encode(strength, forKey: .strength); try c.encode(templates, forKey: .templates); try c.encode(customExercises, forKey: .customExercises); try c.encode(appliedProposals, forKey: .appliedProposals)
+        try c.encode(Dictionary(uniqueKeysWithValues: weekdayRoutines.map { (String($0.key), $0.value.uuidString) }), forKey: .weekdayRoutines)
+        try c.encode(equipment, forKey: .equipment); try c.encodeIfPresent(activeSession, forKey: .activeSession); try c.encode(ignoredInsights, forKey: .ignoredInsights)
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -503,6 +552,10 @@ final class Store: ObservableObject {
     @Published var templates: [WorkoutTemplate] = [] { didSet { persist() } }
     @Published var customExercises: [Exercise] = [] { didSet { persist() } }
     @Published var appliedProposals: [AppliedProposal] = [] { didSet { persist() } }
+    @Published var weekdayRoutines: [Int: UUID] = [:] { didSet { persist() } }
+    @Published var equipment = EquipmentProfile() { didSet { persist() } }
+    @Published var activeSession: StrengthSession? = nil { didSet { persist() } }
+    @Published var ignoredInsights: [String] = [] { didSet { persist() } }
     @Published private(set) var lastSaveError: String?
 
     let dir: URL
@@ -531,12 +584,14 @@ final class Store: ObservableObject {
         onboarded = f.onboarded; guest = f.guest; appleUserId = f.appleUserId; createdAt = f.createdAt; ftpSuggestion = f.ftpSuggestion
         boardSync = f.boardSync; onboardingStage = f.onboardingStage; availability = f.availability; strength = f.strength
         templates = f.templates; customExercises = f.customExercises; appliedProposals = f.appliedProposals
+        weekdayRoutines = f.weekdayRoutines; equipment = f.equipment; activeSession = f.activeSession; ignoredInsights = f.ignoredInsights
     }
 
     var snapshot: StoreFile {
         var f = StoreFile(profile: profile, settings: settings, plan: plan, rides: rides, tiles: tiles, onboarded: onboarded, guest: guest, appleUserId: appleUserId, createdAt: createdAt, ftpSuggestion: ftpSuggestion)
         f.boardSync = boardSync; f.onboardingStage = onboardingStage; f.availability = availability; f.strength = strength
         f.templates = templates; f.customExercises = customExercises; f.appliedProposals = appliedProposals
+        f.weekdayRoutines = weekdayRoutines; f.equipment = equipment; f.activeSession = activeSession; f.ignoredInsights = ignoredInsights
         return f
     }
 
@@ -572,8 +627,130 @@ final class Store: ObservableObject {
             // keep history of past workouts, generate this week (and next) fresh
             let keep = plan.filter { $0.date < monday }
             let a = effectiveAvailability
-            plan = keep + PlanEngine.week(starting: monday, profile: profile, availability: a) + PlanEngine.week(starting: cal.date(byAdding: .day, value: 7, to: monday)!, profile: profile, availability: a)
+            plan = keep + applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: a)) + applyWeekdayRoutines(PlanEngine.week(starting: cal.date(byAdding: .day, value: 7, to: monday)!, profile: profile, availability: a))
         }
+    }
+
+    // MARK: routines on the calendar (0.8.0)
+    /// Monday = 0 … Sunday = 6 for a date.
+    static func weekdayIndex(_ d: Date, calendar cal: Calendar = .current) -> Int { (cal.component(.weekday, from: d) + 5) % 7 }
+    /// Fills freshly generated strength sessions with the weekday's default routine (if one is set and still exists).
+    func applyWeekdayRoutines(_ ws: [Workout]) -> [Workout] {
+        ws.map { w in
+            guard w.kind == .strength, w.templateId == nil, let t = weekdayRoutines[Store.weekdayIndex(w.date)], templates.contains(where: { $0.id == t }) else { return w }
+            var x = w; x.templateId = t; return x
+        }
+    }
+    func template(_ id: UUID?) -> WorkoutTemplate? { id.flatMap { i in templates.first { $0.id == i } } }
+    func routine(for w: Workout) -> WorkoutTemplate? { w.kind == .strength ? template(w.templateId) : nil }
+    /// Planned entries for a session: the session's own (edited / accepted insight), else the template prefilled from
+    /// the last completed use of that template.
+    func plannedEntries(for w: Workout) -> [ExerciseEntry] {
+        if let e = w.plannedEntries, !e.isEmpty { return e }
+        guard let t = routine(for: w) else { return [] }
+        return t.prefilled(from: lastSession(template: t))
+    }
+    /// Assigns a routine to one session. `nil` removes the assignment (the template is untouched). Returns the budget
+    /// warning text when the routine's estimated duration would push the week over the lifting budget (assignment still
+    /// made; the UI shows the warning so the rider can decide).
+    @discardableResult
+    func assign(template t: WorkoutTemplate?, to w: Workout) -> String? {
+        guard let i = plan.firstIndex(where: { $0.id == w.id }) else { return nil }
+        plan[i].templateId = t?.id; plan[i].plannedEntries = nil; plan[i].routineManual = t != nil
+        if let t { plan[i].minutes = t.estimatedMinutes; if t.focus != .custom { plan[i].strengthFocus = t.focus } }
+        return liftingBudgetWarning(weekOf: plan[i].date)
+    }
+    /// Sets (or clears) the default routine for a weekday and applies it to that weekday's not-yet-done, not manually
+    /// assigned strength sessions in the current and coming weeks.
+    func setWeekdayRoutine(_ t: WorkoutTemplate?, weekday: Int) {
+        if let t { weekdayRoutines[weekday] = t.id } else { weekdayRoutines.removeValue(forKey: weekday) }
+        let today = Calendar.current.startOfDay(for: Date())
+        for i in plan.indices where plan[i].kind == .strength && !plan[i].done && !plan[i].routineManual && plan[i].date >= today && Store.weekdayIndex(plan[i].date) == weekday {
+            plan[i].templateId = t?.id; plan[i].plannedEntries = nil
+            if let t { plan[i].minutes = t.estimatedMinutes; if t.focus != .custom { plan[i].strengthFocus = t.focus } }
+        }
+    }
+    /// Lifting minutes planned in the week of `date` against the budget; nil when within budget or no budget.
+    func liftingBudgetWarning(weekOf date: Date) -> String? {
+        let b = profile.liftingHoursPerWeek * 60
+        guard b > 0 else { return nil }
+        let planned = PlanEngine.liftMinutes(workouts(weekOf: date))
+        guard planned > b else { return nil }
+        return "Lifting this week is now \(Fmt.duration(minutes: planned)) against your \(Fmt.duration(minutes: b)) budget (\(Fmt.duration(minutes: planned - b)) over). Shorten a routine, skip a session or raise the budget in Profile › Training profile."
+    }
+    /// Deleting a template clears its assignments (sessions fall back to "no routine"); completed sessions keep their log.
+    func deleteTemplateEverywhere(_ t: WorkoutTemplate) {
+        templates.removeAll { $0.id == t.id }
+        for i in plan.indices where plan[i].templateId == t.id && !plan[i].done { plan[i].templateId = nil; plan[i].plannedEntries = nil; plan[i].routineManual = false }
+        weekdayRoutines = weekdayRoutines.filter { $0.value != t.id }
+    }
+
+    // MARK: workout mode (0.8.0): start → record sets → pause/resume → finish; partial sessions survive a restart
+    /// Starts a strength session for a planned workout (or an unplanned one). Refuses while another is in progress.
+    @discardableResult
+    func startStrengthSession(for w: Workout?, template t: WorkoutTemplate?, entries: [ExerciseEntry], name: String? = nil, now: Date = Date()) -> Bool {
+        guard activeSession == nil else { return false }
+        var s = StrengthSession(date: now, minutes: 0, focus: t?.focus ?? w?.strengthFocus ?? .custom, customName: name ?? t?.name ?? "", workoutId: w?.id)
+        s.templateId = t?.id
+        s.exercises = entries.map { e in var x = e; x.sets = x.sets.map { st in var y = st; y.done = false; return y }; return x }
+        s.startedAt = now
+        activeSession = s
+        return true
+    }
+    func updateActiveSession(_ change: (inout StrengthSession) -> Void) { guard var s = activeSession else { return }; change(&s); activeSession = s }
+    func pauseActiveSession(now: Date = Date()) { updateActiveSession { if $0.pausedAt == nil { $0.pausedAt = now } } }
+    func resumeActiveSession(now: Date = Date()) { updateActiveSession { if let p = $0.pausedAt { $0.pausedSeconds += Int(now.timeIntervalSince(p)); $0.pausedAt = nil } } }
+    /// Finishes the active session: only completed sets are kept; duration = elapsed working time. Adds it to history
+    /// (marking the planned session done) and clears the active one. Returns the stored session.
+    @discardableResult
+    func finishActiveSession(rpe: Int?, notes: String, now: Date = Date()) -> StrengthSession? {
+        guard var s = activeSession else { return nil }
+        if s.pausedAt != nil { s.pausedSeconds += Int(now.timeIntervalSince(s.pausedAt!)); s.pausedAt = nil }
+        s.finishedAt = now
+        s.minutes = max(1, (s.elapsedSeconds(now: now) + 30) / 60)
+        s.rpe = rpe; s.notes = notes
+        s.exercises = s.exercises?.map { e in var x = e; x.sets = x.sets.filter { $0.done }; return x }.filter { !$0.sets.isEmpty }
+        if (s.exercises ?? []).isEmpty { s.exercises = nil }
+        activeSession = nil
+        _ = addStrength(s)
+        return s
+    }
+    func discardActiveSession() { activeSession = nil }
+
+    // MARK: insights (0.8.0): Accept edits one session's planned sets; Ignore remembers; Undo restores
+    @discardableResult
+    func acceptInsight(_ ins: WorkoutInsight, for w: Workout, alsoTemplate: Bool) -> Bool {
+        guard let c = ins.change, let i = plan.firstIndex(where: { $0.id == w.id }), !plan[i].done else { return false }
+        let before = plan[i]
+        var entries = plannedEntries(for: plan[i])
+        InsightEngine.apply(c, to: &entries)
+        plan[i].plannedEntries = entries
+        appliedProposals.append(AppliedProposal(id: "insight-\(ins.id)", text: ins.text, before: before, appliedAt: Date()))
+        if alsoTemplate, let tid = plan[i].templateId, let ti = templates.firstIndex(where: { $0.id == tid }) { var e = templates[ti].entries; InsightEngine.apply(c, to: &e); templates[ti].entries = e; templates[ti].updatedAt = Date() }
+        if appliedProposals.count > 20 { appliedProposals.removeFirst(appliedProposals.count - 20) }
+        return true
+    }
+    func ignoreInsight(_ ins: WorkoutInsight) { if !ignoredInsights.contains(ins.id) { ignoredInsights.append(ins.id); if ignoredInsights.count > 50 { ignoredInsights.removeFirst() } } }
+
+    /// What the centre tab button means today (local calendar date, actual scheduled activities, completion).
+    enum TodayAction: Equatable, Identifiable {
+        case ride(Workout), train(Workout), choose([Workout]), rest, doneToday(next: Workout?), inProgress
+        var id: String { switch self { case .ride(let w): return "ride-\(w.id)"; case .train(let w): return "train-\(w.id)"; case .choose(let ws): return "choose-\(ws.map { $0.id.uuidString }.joined())"; case .rest: return "rest"; case .doneToday: return "done"; case .inProgress: return "inprogress" } }
+    }
+    func todayAction(now: Date = Date(), calendar cal: Calendar = .current) -> TodayAction {
+        if activeSession != nil { return .inProgress }
+        let items = plan.filter { cal.isDate($0.date, inSameDayAs: now) && $0.kind != .rest && $0.kind != .recoveryDay && !$0.skipped }.sorted { $0.sequence < $1.sequence }
+        let open = items.filter { !$0.done }
+        if items.isEmpty { return .rest }
+        if open.isEmpty {
+            let next = plan.filter { $0.date > cal.startOfDay(for: now).addingTimeInterval(86_400) && $0.kind != .rest && !$0.done && !$0.skipped }.min { $0.date < $1.date }
+            return .doneToday(next: next)
+        }
+        let rides = open.filter { $0.kind.isRide }, lifts = open.filter { $0.kind == .strength }
+        if !rides.isEmpty, !lifts.isEmpty { return .choose(open) }
+        if let r = rides.first { return .ride(r) }
+        if let l = lifts.first { return .train(l) }
+        return .choose(open)
     }
 
     /// Rebuilds one week from the availability. Hand-edited sessions are kept unless `replaceEdited` is true (the
@@ -589,14 +766,20 @@ final class Store: ObservableObject {
         let monday = cal.date(byAdding: .day, value: -wd, to: d0)!
         let sunday = cal.date(byAdding: .day, value: 7, to: monday)!
         let today = cal.startOfDay(for: Date())
-        let fresh = PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability)
+        let fresh = applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability))
         var next = plan.filter { !($0.date >= monday && $0.date < sunday) }
         let old = plan.filter { $0.date >= monday && $0.date < sunday }
         for day in 0..<7 {
             let date = cal.date(byAdding: .day, value: day, to: monday)!
             let existing = old.filter { cal.isDate($0.date, inSameDayAs: date) }
             let keep = existing.filter { $0.done || cal.startOfDay(for: $0.date) < today || ($0.edited && !replaceEdited) }
-            if keep.isEmpty { next.append(contentsOf: fresh.filter { cal.isDate($0.date, inSameDayAs: date) }) } else { next.append(contentsOf: keep) }
+            if keep.isEmpty {
+                // a hand-assigned routine on a replaced strength session carries over to the new session of that day
+                let manual = existing.first { $0.kind == .strength && $0.routineManual && $0.templateId != nil }
+                next.append(contentsOf: fresh.filter { cal.isDate($0.date, inSameDayAs: date) }.map { w in
+                    guard w.kind == .strength, let m = manual else { return w }
+                    var x = w; x.templateId = m.templateId; x.plannedEntries = m.plannedEntries; x.routineManual = true; return x })
+            } else { next.append(contentsOf: keep) }
         }
         plan = next.sorted { $0.date < $1.date }
         return PlanEngine.changes(from: old, to: plan.filter { $0.date >= monday && $0.date < sunday })
@@ -649,7 +832,9 @@ final class Store: ObservableObject {
         let cal = Calendar.current
         if let wid = s.workoutId, let i = plan.firstIndex(where: { $0.id == wid }) { plan[i].done = true }
         else if let i = plan.firstIndex(where: { $0.kind == .strength && !$0.done && cal.isDate($0.date, inSameDayAs: s.date) }) { plan[i].done = true }
-        if let t = s.templateId, let i = templates.firstIndex(where: { $0.id == t }) { templates[i].lastUsed = s.date; if let ex = s.exercises, !ex.isEmpty { templates[i].entries = ex.map { e in var x = e; x.id = UUID(); return x }; templates[i].updatedAt = Date() } }
+        // 0.8.0: a completed session never rewrites its template (exercise order, sets and notes stay as the rider saved
+        // them); the next use is prefilled from this session via lastSession(template:).
+        if let t = s.templateId, let i = templates.firstIndex(where: { $0.id == t }) { templates[i].lastUsed = s.date }
         return true
     }
     func deleteStrength(_ s: StrengthSession) { strength.removeAll { $0.id == s.id } }
@@ -809,6 +994,7 @@ final class Store: ObservableObject {
         rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil; ftpSuggestion = nil
         tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0; availability = nil; strength = []
         templates = []; customExercises = []; appliedProposals = []
+        weekdayRoutines = [:]; equipment = EquipmentProfile(); activeSession = nil; ignoredInsights = []
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
         for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }

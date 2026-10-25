@@ -14,8 +14,9 @@ enum ConnectionRules {
     /// A connection that is down is red only when it is wanted (enabled by the rider or required by the ride setup).
     static func down(wanted: Bool) -> ConnStatus { wanted ? .red : .gray }
 
-    static func board(linkState: DeviceLink.State, liveFresh: Bool, remembered: Bool, autoConnect: Bool, phoneOnlyMode: Bool) -> ConnStatus {
+    static func board(linkState: DeviceLink.State, liveFresh: Bool, remembered: Bool, autoConnect: Bool, phoneOnlyMode: Bool, pairingLost: Bool = false) -> ConnStatus {
         if !autoConnect { return .gray }                                   /* rider switched the phone link off */
+        if pairingLost, remembered || linkState != .ready { return .red }  /* keys gone on one side: needs the rider (Repair) */
         switch linkState {
         case .ready: return liveFresh ? .green : .amber
         case .connecting, .scanning, .pairing: return .amber

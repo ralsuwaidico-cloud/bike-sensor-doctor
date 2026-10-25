@@ -13,6 +13,7 @@ enum BCLink {
     static let inputUUID = "B1CE0004-7E3A-4C55-9D2B-5A0E1C7C0000"
     static let controlUUID = "B1CE0005-7E3A-4C55-9D2B-5A0E1C7C0000"
     static let syncUUID = "B1CE0006-7E3A-4C55-9D2B-5A0E1C7C0000"
+    static let eventsUUID = "B1CE0007-7E3A-4C55-9D2B-5A0E1C7C0000"
 
     enum MsgType: UInt8 {
         case info = 0x01, live = 0x10
@@ -556,4 +557,44 @@ enum BCLink {
 
     // MARK: helpers
     static func le<T: FixedWidthInteger>(_ v: T) -> Data { withUnsafeBytes(of: v.littleEndian) { Data($0) } }
+
+    // MARK: EVENT 0x40 (Events characteristic 0007) — 1.2.1 link_diag (firmware 0.7.0), battery notice (flag-gated)
+    /// `01 u8 event_id` · `02 u8` · `03 u16` · `04 u8`; the meaning of tags 2–4 depends on the event id.
+    struct Event: Equatable {
+        var eventId: Int = 0
+        var b2: Int? = nil, w3: Int? = nil, b4: Int? = nil
+        var isLinkDiag: Bool { eventId == 0x20 }
+        var isBatteryNotice: Bool { eventId == 0x10 }
+    }
+    /// What the board reports once per connection (event_id 0x20): why the previous link ended, how many phones it
+    /// remembers and the state of profile sync on its side. Informational — shown on the Connection diagnostics page.
+    struct LinkDiag: Equatable {
+        var reason = 0, bonds = 0, syncState = 0
+        var reasonText: String {
+            switch reason {
+            case 0: return "none"; case 1: return "the phone ended it"; case 2: return "the board ended it"; case 3: return "timeout / out of range"
+            case 4: return "keys missing (stale pairing)"; case 5: return "authentication failed"; case 6: return "failed to establish"; default: return "other (\(reason))"
+            }
+        }
+        var syncText: String { switch syncState { case 0: return "device-only"; case 1: return "synced"; case 2: return "pending"; case 3: return "failed"; default: return "unknown (\(syncState))" } }
+    }
+    static func decodeEvent(_ d: Data) -> Event? {
+        guard let (h, f) = parse(d), h.type == MsgType.event.rawValue else { return nil }
+        var e = Event()
+        var seen = false
+        for x in f {
+            switch (x.tag, x.value.count) {
+            case (0x01, 1): e.eventId = Int(x.value[x.value.startIndex]); seen = true
+            case (0x02, 1): e.b2 = Int(x.value[x.value.startIndex])
+            case (0x03, 2): e.w3 = Int(uint(x.value))
+            case (0x04, 1): e.b4 = Int(x.value[x.value.startIndex])
+            default: break
+            }
+        }
+        return seen ? e : nil
+    }
+    static func linkDiag(from e: Event) -> LinkDiag? {
+        guard e.isLinkDiag else { return nil }
+        return LinkDiag(reason: e.b2 ?? 0, bonds: e.w3 ?? 0, syncState: e.b4 ?? 0)
+    }
 }

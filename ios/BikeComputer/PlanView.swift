@@ -35,13 +35,13 @@ struct PlanView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Plan")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }; Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle") }; Button { showTemplates = true } label: { Label("Templates", systemImage: "doc.on.doc") } } label: { Label("Log strength", systemImage: "dumbbell") } }
+                ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }; Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle") }; Button { showTemplates = true } label: { Label("Routines", systemImage: "doc.on.doc") } } label: { Label("Log strength", systemImage: "dumbbell") } }
                 ToolbarItem(placement: .topBarTrailing) { Button { showAvailability = true } label: { Label("Days", systemImage: "calendar.badge.clock") } }
             }
             .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet() }
             .sheet(isPresented: $showDetailedLog) { DetailedStrengthLogSheet() }
             .sheet(isPresented: $showTemplates) { NavigationStack { TemplatesView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showTemplates = false } } } } }
-            .sheet(item: $selected) { w in WorkoutDetail(workout: w) }
+            .sheet(item: $selected) { w in if w.kind == .strength { StrengthWorkoutScreen(workoutId: w.id) } else { WorkoutDetail(workout: w) } }
             .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
             .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
             .sheet(item: $dayList) { day in dayListSheet(day) }
@@ -156,7 +156,7 @@ struct PlanView: View {
                     Button { addOn = day.date } label: { HStack { Text(day.date.dayAndDate).font(.subheadline.weight(.semibold)); Spacer(); Text("free · add").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
                 } else {
                     ForEach(day.items) { w in
-                        Button { selected = w } label: { WorkoutCard(workout: w) }.buttonStyle(.plain)
+                        Button { selected = w } label: { WorkoutCard(workout: w, routine: store.routine(for: w)) }.buttonStyle(.plain)
                     }
                 }
             }
@@ -189,7 +189,7 @@ struct PlanView: View {
             List {
                 ForEach(day.items) { w in
                     Button { dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selected = w } } label: {
-                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.displayTitle).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); if w.done { Pill(text: "done", color: BC.live) } else if w.skipped { Pill(text: "skipped") } }
+                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.displayTitle(routine: store.routine(for: w))).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); if w.done { Pill(text: "done", color: BC.live) } else if w.skipped { Pill(text: "skipped") } }
                     }
                 }
                 Button("Add another activity") { let d = day.date; dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { addOn = d } }
@@ -205,6 +205,7 @@ extension Date: Identifiable { public var id: TimeInterval { timeIntervalSince19
 /// One session as a card: rides and off-bike sessions look different, recovery/rest days are quiet.
 struct WorkoutCard: View {
     let workout: Workout
+    var routine: WorkoutTemplate? = nil
     @Environment(\.dynamicTypeSize) private var dts
     var body: some View {
         let quiet = workout.kind == .rest || workout.kind == .recoveryDay
@@ -220,14 +221,16 @@ struct WorkoutCard: View {
                     HStack(alignment: .firstTextBaseline) { titleBlock; Spacer(); durationBlock }
                     VStack(alignment: .leading, spacing: 4) { titleBlock; durationBlock }
                 }
-                if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                if let r = routine { Text("\(r.entries.count) exercises · \(r.setCount) sets · " + r.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                else if workout.kind == .strength { Text("no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                else if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
             }
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .background(quiet ? Color(.secondarySystemGroupedBackground).opacity(0.6) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .combine)
     }
-    private var titleBlock: some View { HStack(spacing: 6) { Text(workout.displayTitle).font(.body.weight(.bold)).lineLimit(1).minimumScaleFactor(0.8); ZonePill(z: workout.kind.zone) } }
+    private var titleBlock: some View { HStack(spacing: 6) { Text(workout.displayTitle(routine: routine)).font(.body.weight(.bold)).lineLimit(1).minimumScaleFactor(0.8); ZonePill(z: workout.kind.zone) } }
     private var durationBlock: some View { Text(workout.minutes > 0 ? Fmt.duration(minutes: workout.minutes) : "—").font(.system(size: 17, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1) }
 }
 

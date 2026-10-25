@@ -8,6 +8,9 @@ struct RootView: View {
     @EnvironmentObject private var recorder: RideRecorder
     @EnvironmentObject private var device: DeviceLink
     @State private var tab = 0
+    @State private var trainSheet: Store.TodayAction? = nil
+    @State private var strengthWorkout: UUID? = nil
+    @State private var resumeSession = false
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -31,10 +34,25 @@ struct RootView: View {
                 ProfileTabView().tabPage(4, tab)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            RideTabBar(selected: $tab, recording: recorder.isActive)
+            RideTabBar(selected: $tab, recording: recorder.isActive, action: store.todayAction(), onCentre: centreTapped)
         }
         .ignoresSafeArea(.keyboard)
         .tint(BC.accent)
+        .sheet(item: $trainSheet) { a in TrainNowSheet(action: a, openRide: { tab = 2 }, openStrength: { strengthWorkout = $0.id }) }
+        .sheet(item: $strengthWorkout) { id in StrengthWorkoutScreen(workoutId: id) }
+        .fullScreenCover(isPresented: $resumeSession) { StrengthSessionView() }
+    }
+
+    /// The centre button adapts to today: a ride opens the cycling dashboard; a strength day opens the scheduled
+    /// workout with its routine; both → a choice; rest / done → an optional-session sheet. It never starts recording.
+    private func centreTapped() {
+        let a = store.todayAction()
+        switch a {
+        case .ride: tab = 2
+        case .train(let w): strengthWorkout = w.id
+        case .inProgress: resumeSession = true
+        case .choose, .rest, .doneToday: trainSheet = a
+        }
     }
 
     private func idleTimer(_ s: RideRecorder.State) {
@@ -47,7 +65,22 @@ struct RootView: View {
 struct RideTabBar: View {
     @Binding var selected: Int
     let recording: Bool
+    var action: Store.TodayAction = .rest
+    var onCentre: (() -> Void)? = nil
     @Environment(\.dynamicTypeSize) private var dts
+
+    /// Icon and label from today's scheduled activities (local calendar date). "Ride now" only on a cycling day.
+    private var centre: (icon: String, label: String, hint: String) {
+        if recording { return ("bicycle", "Riding", "Ride in progress, open Ride") }
+        switch action {
+        case .ride: return ("bicycle", "Ride now", "Ride now, open the Ride screen")
+        case .train: return ("dumbbell.fill", "Train now", "Train now, open today's strength workout")
+        case .choose: return ("figure.mixed.cardio", "Train now", "Train now, choose between today's ride and strength session")
+        case .inProgress: return ("dumbbell.fill", "In progress", "Strength workout in progress, resume it")
+        case .doneToday: return ("checkmark", "Done today", "Today's training is done, see the next step")
+        case .rest: return ("dumbbell.fill", "Train now", "Rest day, optional session")
+        }
+    }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
@@ -77,20 +110,22 @@ struct RideTabBar: View {
     }
 
     private var rideButton: some View {
-        Button { selected = 2 } label: {
+        let c = centre
+        return Button { if let onCentre, !recording { onCentre() } else { selected = 2 } } label: {
             VStack(spacing: 3) {
                 ZStack {
                     Circle().fill(recording ? BC.live : BC.accent).frame(width: 58, height: 58).shadow(color: .black.opacity(0.18), radius: 6, y: 3)
-                    Image(systemName: "bicycle").font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
+                    Image(systemName: c.icon).font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
                 }
                 .overlay(Circle().stroke(selected == 2 ? Color.primary.opacity(0.35) : Color.clear, lineWidth: 2))
                 .offset(y: -14)
-                Text(recording ? "Riding" : "Ride now").font(.caption2.weight(.bold)).foregroundStyle(selected == 2 ? BC.accent : .secondary).offset(y: -12)
+                Text(c.label).font(.caption2.weight(.bold)).foregroundStyle(selected == 2 ? BC.accent : .secondary).offset(y: -12).lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(recording ? "Ride in progress, open Ride" : "Ride now, open the Ride screen")
+        .accessibilityLabel(c.hint)
+        .accessibilityIdentifier("centreButton")
     }
 }
 

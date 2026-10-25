@@ -206,8 +206,11 @@ struct SyncStatusView: View {
     var body: some View {
         List {
             Section("Profile sync") {
-                HStack { StatusBadge(status: colour); Text(sync.state.label) }
-                if let t = sync.lastSyncAt { LabeledContent("Last sync", value: t.formatted(date: .abbreviated, time: .shortened)) }
+                HStack { StatusBadge(status: colour); Text(sync.statusLine) }
+                if let l = sync.lastSuccessful { LabeledContent("Last successful sync", value: "\(l.at.formatted(date: .abbreviated, time: .shortened)) · v\(l.version)") } else { LabeledContent("Last successful sync", value: "never") }
+                if sync.state.isFailed { Button("Retry now") { sync.retry() } }
+                let issues = store.profile.linkValidationIssues()
+                if !issues.isEmpty { Text("Will be rejected by the board until fixed: " + issues.joined(separator: "; ")).font(.footnote).foregroundStyle(BC.warn) }
                 LabeledContent("Phone profile version", value: "\(store.profile.version)")
                 if let r = sync.record { LabeledContent("Board acknowledged", value: r.ackedVersion == 0 ? "nothing yet" : "version \(r.ackedVersion)"); LabeledContent("Phone is authoritative", value: r.confirmed ? "yes (confirmed)" : "not yet") }
                 if let b = device.boardProfile { LabeledContent("Board profile", value: b.source == 1 ? "synced from a phone (v\(b.version))" : "set on the board (device-only)") }
@@ -215,6 +218,7 @@ struct SyncStatusView: View {
             if sync.state == .needsConfirmation {
                 Section {
                     ForEach(sync.differences) { d in VStack(alignment: .leading, spacing: 2) { Text(d.field).font(.footnote.weight(.semibold)); HStack { Text("phone: \(d.phone)").font(.footnote); Spacer(); Text("board: \(d.board)").font(.footnote).foregroundStyle(.secondary) } } }
+                    Text("The phone's profile will be applied to the board after you confirm; the board then keeps using it when the phone is away.").font(.footnote).foregroundStyle(.secondary)
                     Button { sync.confirmPhoneIsAuthoritative() } label: { Text("Use the phone's profile on the board").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent)
                     Button("Keep the board's values (copy them to the phone)") { sync.adoptBoardProfile() }
                 } header: { Text("The phone and the board differ") } footer: { Text("Only the shared athlete settings (name, FTP, weight, birth year, heart rate, hours, experience, goal, units) are replaced. Ride history, sensor pairings, calibration and the phone pairing on the board stay as they are. After this, changes made on the phone sync automatically.") }

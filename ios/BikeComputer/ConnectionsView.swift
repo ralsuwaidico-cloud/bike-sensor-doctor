@@ -47,7 +47,7 @@ struct ConnectionsView: View {
     // MARK: statuses
     private var boardWanted: Bool { store.settings.enabledConnections.contains("board") && device.remembered && store.settings.autoConnectBoard }
     private var liveNow: BCLink.Live? { device.state == .ready && device.liveIsFresh ? device.live : nil }
-    private var boardStatus: ConnStatus { ConnectionRules.board(linkState: device.state, liveFresh: device.liveIsFresh, remembered: device.remembered, autoConnect: store.settings.autoConnectBoard, phoneOnlyMode: store.settings.phoneOnlyMode) }
+    private var boardStatus: ConnStatus { ConnectionRules.board(linkState: device.state, liveFresh: device.liveIsFresh, remembered: device.remembered, autoConnect: store.settings.autoConnectBoard, phoneOnlyMode: store.settings.phoneOnlyMode, pairingLost: device.failure?.action == .repair) }
     private var boardSubtitle: String {
         if !store.settings.autoConnectBoard { return "phone link off (your choice)" }
         switch device.state {
@@ -57,8 +57,13 @@ struct ConnectionsView: View {
             if let b = liveNow?.batteryPct { s += " · battery ≈\(b) % (estimate)" }
             if !device.liveIsFresh { s += " · no live data" }
             return s
-        case .idle: return device.remembered ? "not in range · reconnects by itself" : "not paired yet"
-        default: return device.state.rawValue
+        case .idle:
+            if let f = device.failure, f.action == .repair { return "pairing lost — tap for Repair" }
+            return device.remembered ? "not in range · reconnects by itself" : "not paired yet"
+        default:
+            if device.stage == .failed, let f = device.failure { return "\(f.stage.rawValue.lowercased()) failed — " + (f.action == .repair ? "tap for Repair" : "tap for details") }
+            if device.stage == .waiting { return "waiting for the board (not in range)" }
+            return device.stage.rawValue.lowercased() + "…"
         }
     }
     private var bluetoothStatus: ConnStatus { ConnectionRules.bluetooth(linkState: device.state, boardWanted: boardWanted) }
@@ -123,55 +128,225 @@ struct BoardConnectionDetail: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
     @EnvironmentObject private var sync: ProfileSync
+    @State private var confirmForget = false
+    @State private var showRepairHelp = false
     var body: some View {
         List {
+            Section {
+                StageStrip(stage: device.stage, failure: device.failure)
+                if let f = device.failure { FailureBanner(failure: f, onRepair: { showRepairHelp = true }) }
+                if device.stage == .pairing || device.stage == .authenticating { Text("Look at the round screen: it shows a 6-digit code. Type it into the iPhone dialog. This happens once per phone.").font(.footnote).foregroundStyle(BC.stale) }
+                if device.stage == .waiting { Text("iOS keeps the request open and connects the moment the board advertises — no touch on the board needed. On firmware 0.6.0+ the board advertises with the screen off; in deep sleep it does not.").font(.footnote).foregroundStyle(.secondary) }
+            } header: { Text("Connection stage") }
             Section("Status") {
-                LabeledContent("Link", value: device.state.rawValue)
                 if let i = device.info { LabeledContent("Firmware", value: i.fw); LabeledContent("Protocol", value: "v\(i.verMajor).\(i.verMinor)"); if let id = i.deviceId { LabeledContent("Board id", value: id) } }
+                else if let k = device.knownDeviceId { LabeledContent("Board id (last seen)", value: k) }
                 if let r = device.rssi { LabeledContent("Signal", value: "\(r) dBm") }
                 if let l = device.live, device.liveIsFresh { LabeledContent("Board battery", value: l.batteryPct.map { "≈\($0) % (estimate from voltage)" } ?? "unknown") }
-                if let t = device.lastConnectedAt { LabeledContent("Connected since", value: t.formatted(date: .omitted, time: .shortened)) }
+                if let t = device.lastConnectedAt, device.state == .ready { LabeledContent("Connected since", value: t.formatted(date: .omitted, time: .shortened)) }
                 if let t = device.lastDisconnectedAt, device.state != .ready { LabeledContent("Last seen", value: t.formatted(date: .abbreviated, time: .shortened)) }
-                LabeledContent("Profile sync", value: sync.state.label)
+                LabeledContent("Profile sync", value: sync.statusLine)
+                if sync.state == .needsConfirmation { NavigationLink("Review the differences") { SyncStatusView() } }
             }
             Section {
                 Toggle("Connect automatically", isOn: Binding(get: { store.settings.autoConnectBoard }, set: { store.settings.autoConnectBoard = $0; device.autoConnect = $0 }))
-                if device.state == .pairing { Text("Look at the round screen: it shows a 6-digit code. Type it into the iPhone dialog. This happens once.").font(.footnote).foregroundStyle(BC.stale) }
-                if device.state == .scanning {
-                    if device.found.isEmpty { Text("Searching… the board must be on and its Settings › Phone must say WAITING FOR PHONE.").font(.footnote).foregroundStyle(.secondary) }
-                    ForEach(device.found, id: \.id) { f in Button { device.connect(to: f.id) } label: { HStack { Text(f.name); Spacer(); Text("\(f.rssi) dBm").foregroundStyle(.secondary) } } }
+                if device.stage == .searching || device.stage == .found {
+                    if device.found.isEmpty { Text("Searching… the board must be on and its Phone screen must say SEARCHING / WAITING.").font(.footnote).foregroundStyle(.secondary) }
+                    ForEach(device.found, id: \.id) { f in Button { device.connect(to: f.id) } label: { HStack { Text(f.name); Spacer(); Text("\(f.rssi) dBm").foregroundStyle(.secondary) } }.frame(minHeight: 44) }
                 }
-                HStack {
-                    if device.state == .ready || device.state == .connecting || device.state == .pairing { Button("Disconnect") { device.disconnect() } }
-                    else { Button(device.remembered ? "Reconnect now" : "Find my BikeComputer") { device.connect() }.bold() }
-                    Spacer()
-                    if device.remembered { Button("Forget", role: .destructive) { device.forget() } }
-                }
-                if let e = device.lastError { Text(e).font(.footnote).foregroundStyle(BC.warn) }
-            } header: { Text("Connection") } footer: {
-                Text("With \"Connect automatically\" on, iOS keeps a connection request open in the background and the phone attaches as soon as the board advertises — no touch on the board needed (firmware 0.6.0 keeps advertising with the screen off; 0.5.0 drops the link when it sleeps).")
+                actionButtons
+            } header: { Text("Actions") } footer: { Text(actionsFooter) }
+            Section {
+                NavigationLink { ConnectionDiagnosticsView() } label: { Label("Connection diagnostics", systemImage: "stethoscope") }
+                if device.info?.hasSettings == true || device.info?.hasWiFi == true { NavigationLink("Device settings and Wi-Fi") { DeviceSettingsView() } }
+                else if device.state == .ready { Text("Device settings, Wi-Fi setup and profile sync from the phone need firmware 0.6.0 or newer (board has \(device.info?.fw ?? "?")).").font(.footnote).foregroundStyle(.secondary) }
             }
             Section("Pairing steps") {
-                step(1, "Switch the BikeComputer on and keep it within a metre.")
-                step(2, "Tap Find my BikeComputer, then the board in the list.")
+                step(1, "Switch the BikeComputer on and keep it within a metre. Its Phone screen (Connections › Phone) shows SEARCHING.")
+                step(2, "Tap Connect, then the board in the list.")
                 step(3, "Type the 6-digit code shown on the round screen into the iPhone dialog.")
-                step(4, "Done: the phone is remembered on the board and reconnects by itself.")
+                step(4, "Done: the phone is remembered on the board and reconnects by itself; the profile is compared and, after your confirmation, the phone's profile is applied.")
             }
             Section("What it provides") {
-                Text("Live power and cadence from the XDS, ride state, time and distance, board battery estimate, heart rate from a strap paired on the board, finished rides (history sync, firmware 0.6.0).").font(.footnote)
-            }
-            if device.info?.hasSettings == true || device.info?.hasWiFi == true {
-                Section { NavigationLink("Device settings and Wi-Fi") { DeviceSettingsView() } }
-            } else if device.state == .ready {
-                Section { Text("Device settings, Wi-Fi setup and profile sync from the phone need firmware 0.6.0 (board has \(device.info?.fw ?? "?")).").font(.footnote).foregroundStyle(.secondary) }
+                Text("Live power and cadence from the XDS, ride state, time and distance, board battery estimate, heart rate from a strap paired on the board, finished rides (history sync), Wi-Fi setup, device settings and the shared athlete profile (firmware 0.6.0+).").font(.footnote)
             }
             Section("Troubleshooting") {
-                Text("• Nothing found: the board's Settings › Phone must show WAITING FOR PHONE; Bluetooth on the phone must be on.\n• Pairing code refused: on the board choose Forget phone, and in iOS Settings › Bluetooth › BikeComputer choose Forget This Device, then pair again.\n• Connected but no values: pedal once so the XDS wakes; the board shows the meter state on its Sensors page.\n• Drops when the board screen turns off: fixed in firmware 0.6.0; on 0.5.0 wake the board.").font(.footnote)
-                Text("Sent: \(device.stats.sentGPS) GPS · \(device.stats.sentHR) HR · \(device.stats.sentTime) time   Received: \(device.stats.liveMsgs) live · \(device.stats.rejected) rejected · \(device.stats.disconnects) drops").font(.caption2).foregroundStyle(.secondary)
+                Text("• Nothing found: Phone link must be ON on the board (Connections › Phone); Bluetooth on the phone must be on; firmware 0.5.0 stops advertising when its screen sleeps.\n• \"Peer removed pairing information\" / pairing refused: the board lost this phone's keys (data reset, Forget phone, restored backup). Use Repair below.\n• Connected but no values: pedal once so the XDS wakes; the board shows the meter state under Connections › Power meter.\n• Drops when the board screen turns off: fixed in firmware 0.6.0.").font(.footnote)
+                Text("Sent: \(device.stats.sentGPS) GPS · \(device.stats.sentHR) HR · \(device.stats.sentTime) time   Received: \(device.stats.liveMsgs) live · \(device.stats.events) events · \(device.stats.rejected) rejected · \(device.stats.disconnects) drops").font(.caption2).foregroundStyle(.secondary)
             }
-        }.navigationTitle("BikeComputer")
+        }
+        .navigationTitle("BikeComputer")
+        .alert("Forget this BikeComputer?", isPresented: $confirmForget) {
+            Button("Forget", role: .destructive) { device.forget() }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("The phone forgets the board and its pairing record here. Your rides, plan and profile stay. To pair again you also remove it in iOS Settings › Bluetooth and hold FORGET PHONE on the board.") }
+        .sheet(isPresented: $showRepairHelp) { RepairSheet() }
+    }
+
+    /// One consistent set of buttons per state: never Disconnect without a live connection, never Connect while connected.
+    @ViewBuilder private var actionButtons: some View {
+        switch device.stage {
+        case .ready, .connected, .syncingProfile:
+            Button("Disconnect") { device.disconnect() }.frame(minHeight: 44)
+            if sync.state.isFailed || sync.state == .needsConfirmation { Button("Retry profile sync") { sync.retry() }.frame(minHeight: 44) }
+            Button("Forget device", role: .destructive) { confirmForget = true }.frame(minHeight: 44)
+        case .searching, .found, .connecting, .waiting, .pairing, .authenticating:
+            Button("Cancel") { device.disconnect() }.frame(minHeight: 44)
+            Button("Repair connection") { showRepairHelp = true }.frame(minHeight: 44)
+        case .failed:
+            if device.failure?.action == .repair { Button("Repair connection") { showRepairHelp = true }.bold().frame(minHeight: 44) }
+            Button(device.remembered ? "Try again" : "Connect") { device.connect() }.frame(minHeight: 44)
+            if device.failure?.action != .repair, device.remembered { Button("Repair connection") { showRepairHelp = true }.frame(minHeight: 44) }
+            if device.remembered { Button("Forget device", role: .destructive) { confirmForget = true }.frame(minHeight: 44) }
+        case .off: Button("Open Settings (turn Bluetooth on)") { DeviceLink.openSettings() }.frame(minHeight: 44)
+        case .unauthorized: Button("Open Settings (allow Bluetooth)") { DeviceLink.openSettings() }.frame(minHeight: 44)
+        case .idle:
+            Button(device.remembered ? "Connect" : "Find my BikeComputer") { device.connect() }.bold().frame(minHeight: 44)
+            if device.remembered { Button("Repair connection") { showRepairHelp = true }.frame(minHeight: 44); Button("Forget device", role: .destructive) { confirmForget = true }.frame(minHeight: 44) }
+        }
+    }
+    private var actionsFooter: String {
+        switch device.stage {
+        case .ready: return "Repair is only needed when pairing fails; Forget removes the board from this phone."
+        default: return "With \"Connect automatically\" on, iOS keeps a connection request open in the background and the phone attaches as soon as the board advertises — no touch on the board needed."
+        }
     }
     private func step(_ n: Int, _ t: String) -> some View { HStack(alignment: .top, spacing: 10) { Text("\(n)").font(.caption.bold()).frame(width: 22, height: 22).background(BC.accent.opacity(0.18), in: Circle()); Text(t).font(.footnote) } }
+}
+
+/// Searching → Found → Pairing → Authenticating → Connected → Syncing profile → Ready, the current one highlighted.
+struct StageStrip: View {
+    let stage: DeviceLink.Stage
+    let failure: DeviceLink.Failure?
+    private let steps: [DeviceLink.Stage] = [.searching, .found, .pairing, .authenticating, .connected, .syncingProfile, .ready]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
+                ForEach(steps, id: \.self) { s in
+                    Capsule().fill(colour(s)).frame(height: 6)
+                }
+            }
+            HStack {
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(stage == .failed ? BC.warn : .primary)
+                Spacer()
+                if stage.isAttempt { ProgressView().controlSize(.small) }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Connection stage: \(title)")
+    }
+    private var effective: DeviceLink.Stage { stage == .failed ? (failure?.stage ?? .idle) : stage == .waiting || stage == .connecting ? .found : stage }
+    private func colour(_ s: DeviceLink.Stage) -> Color {
+        let cur = effective.order
+        if stage == .failed, s.order == cur { return BC.warn }
+        if s.order < cur || (s == effective && stage == .ready) { return BC.live }
+        if s == effective { return BC.accent }
+        return Color.secondary.opacity(0.25)
+    }
+    private var title: String {
+        switch stage {
+        case .failed: return "Failed while \(failure?.stage.rawValue.lowercased() ?? "connecting")"
+        case .waiting: return "Waiting for the board (not in range)"
+        default: return stage.rawValue + (stage == .pairing ? " — type the code shown on the board" : "")
+        }
+    }
+}
+
+struct FailureBanner: View {
+    let failure: DeviceLink.Failure
+    var onRepair: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(failure.reason).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true)
+            if let c = failure.code { Text("\(failure.at.formatted(date: .omitted, time: .standard)) · \(c)").font(.caption2).foregroundStyle(.secondary) }
+            if failure.action == .repair { Text("The iPhone still holds the old pairing while the board has none. Repair clears it on both sides.").font(.caption2).foregroundStyle(.secondary) }
+        }
+    }
+}
+
+/// The repair flow, step by step. Only the iOS Settings step cannot be done by the app.
+struct RepairSheet: View {
+    @EnvironmentObject private var device: DeviceLink
+    @Environment(\.dismiss) private var dismiss
+    @State private var started = false
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("A pairing breaks when one side loses its keys: the board after a data reset, a restored backup or FORGET PHONE; the iPhone still remembers the old pairing and refuses to pair again with the same device. Repair fixes both sides without touching rides, settings or sensor pairings.").font(.footnote)
+                } header: { Text("Why") }
+                Section("Steps") {
+                    step(1, "On the board: Connections › Phone › hold REPAIR. The board forgets this phone and takes a new Bluetooth identity (firmware 0.7.0+). On 0.6.x use FORGET PHONE instead.")
+                    step(2, "On the iPhone: Settings › Bluetooth › \"BikeComputer Link\" › Forget This Device — the one step the app cannot do.", action: ("Open Settings", { DeviceLink.openSettings() }))
+                    step(3, "Back here: tap Start repair. The app forgets the old identity, searches for the board and pairs again with the 6-digit code.", action: (started ? "Searching…" : "Start repair", { device.repair(); started = true }))
+                }
+                if started {
+                    Section("Progress") {
+                        StageStrip(stage: device.stage, failure: device.failure)
+                        if let f = device.failure { FailureBanner(failure: f, onRepair: {}) }
+                        if device.stage == .ready { Text("Repaired: connected and paired again.").font(.footnote).foregroundStyle(BC.live) }
+                        if let k = device.knownDeviceId { Text("Board id \(k)" + (device.staleIdentifier != nil ? " · previous identity \(device.staleIdentifier!.prefix(8))… marked stale" : "")).font(.caption2).foregroundStyle(.secondary) }
+                    }
+                }
+            }
+            .navigationTitle("Repair connection").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(device.stage == .ready ? "Done" : "Close") { dismiss() } } }
+        }
+    }
+    private func step(_ n: Int, _ t: String, action: (String, () -> Void)? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 10) { Text("\(n)").font(.caption.bold()).frame(width: 22, height: 22).background(BC.accent.opacity(0.18), in: Circle()); Text(t).font(.footnote) }
+            if let a = action { Button(a.0) { a.1() }.buttonStyle(.bordered).controlSize(.small).padding(.leading, 32).disabled(a.0 == "Searching…") }
+        }
+    }
+}
+
+/// Stage history with timestamps, last failure, the board's own LINK_DIAG, identities, sync state, app state.
+struct ConnectionDiagnosticsView: View {
+    @EnvironmentObject private var device: DeviceLink
+    @EnvironmentObject private var sync: ProfileSync
+    @EnvironmentObject private var store: Store
+    var body: some View {
+        List {
+            Section("Now") {
+                LabeledContent("Stage", value: device.stage.rawValue)
+                LabeledContent("Link usable", value: device.state == .ready ? "yes" : "no")
+                LabeledContent("App state", value: device.appBackgroundState)
+                LabeledContent("Connect automatically", value: store.settings.autoConnectBoard ? "on" : "off")
+                if let f = device.failure { LabeledContent("Last failure", value: "\(f.stage.rawValue): \(f.reason)"); if let c = f.code { LabeledContent("Error code", value: c) } }
+                if let e = device.lastError, device.failure == nil { LabeledContent("Last error", value: e) }
+            }
+            Section("Identity") {
+                LabeledContent("Board id (INFO)", value: device.info?.deviceId ?? device.knownDeviceId ?? "unknown")
+                LabeledContent("Remembered identifier", value: device.rememberedIdentifier.map { String($0.prefix(13)) + "…" } ?? "none")
+                if let s = device.staleIdentifier { LabeledContent("Stale identifier", value: String(s.prefix(13)) + "…") }
+                if let i = device.info { LabeledContent("Firmware / protocol", value: "\(i.fw) · v\(i.verMajor).\(i.verMinor) · caps 0x\(String(i.caps, radix: 16))") }
+            }
+            Section("Board's report (LINK_DIAG, once per connection)") {
+                if let d = device.linkDiag {
+                    LabeledContent("Previous link ended by", value: d.reasonText)
+                    LabeledContent("Phones remembered on the board", value: "\(d.bonds)")
+                    LabeledContent("Board profile sync", value: d.syncText)
+                    if let t = device.linkDiagAt { LabeledContent("Received", value: t.formatted(date: .omitted, time: .standard)) }
+                } else { Text("Not received yet (firmware 0.7.0 sends it right after connecting).").font(.footnote).foregroundStyle(.secondary) }
+            }
+            Section("Profile sync") {
+                LabeledContent("State", value: sync.statusLine)
+                if let l = sync.lastSuccessful { LabeledContent("Last successful", value: "v\(l.version) at \(l.at.formatted(date: .abbreviated, time: .shortened))") }
+                LabeledContent("Phone profile version", value: "\(store.profile.version)")
+                if let b = device.boardProfile { LabeledContent("Board profile version", value: "\(b.version) (\(b.source == 1 ? "phone-synced" : "device-only"))") }
+                if let a = device.lastProfileAck { LabeledContent("Last ack", value: "v\(a.version) · \(a.statusText)") }
+            }
+            Section("Stage history") {
+                if device.log.isEmpty { Text("Nothing yet").foregroundStyle(.secondary) }
+                ForEach(device.log.reversed()) { l in HStack(alignment: .top) { Text(l.at.formatted(date: .omitted, time: .standard)).font(.caption2).monospacedDigit().foregroundStyle(.secondary).frame(width: 68, alignment: .leading); Text(l.text).font(.caption) } }
+            }
+            Section("Counters") {
+                Text("Connects \(device.stats.connects) · drops \(device.stats.disconnects) · live \(device.stats.liveMsgs) · events \(device.stats.events) · rejected \(device.stats.rejected) · sent GPS \(device.stats.sentGPS), HR \(device.stats.sentHR), time \(device.stats.sentTime)").font(.caption)
+            }
+        }
+        .navigationTitle("Connection diagnostics").navigationBarTitleDisplayMode(.inline)
+    }
 }
 
 struct PhoneConnectionDetail: View {

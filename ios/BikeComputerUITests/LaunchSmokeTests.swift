@@ -22,13 +22,7 @@ final class LaunchSmokeTests: XCTestCase {
         // Home: the navigation title carries the rider's name from the seeded profile
         XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5),
                       "an existing rider must land on Home, not crash or see onboarding")
-        for label in ["Plan", "Ride now, open the Ride screen", "Progress", "Profile", "Home"] {
-            let b = app.buttons[label].firstMatch
-            XCTAssertTrue(b.waitForExistence(timeout: 10), "tab \(label) missing")
-            b.tap()
-            sleep(1)
-            XCTAssertEqual(app.state, .runningForeground, "app died after opening \(label)")
-        }
+        Self.tapAllTabs(app)
     }
 
     /// A phone updated from build 30 (0.5.1): availability, edited sessions and the 0.5 profile fields present, no hybrid
@@ -38,13 +32,72 @@ final class LaunchSmokeTests: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build30Store()
         app.launch()
         XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
-        for label in ["Plan", "Ride now, open the Ride screen", "Progress", "Profile", "Home"] {
+        Self.tapAllTabs(app)
+    }
+
+    /// Taps every tab including the centre button (whose label depends on today's plan — a strength day opens a sheet,
+    /// which is dismissed again) and asserts the app is still alive.
+    static func tapAllTabs(_ app: XCUIApplication) {
+        for label in ["Plan", "centreButton", "Progress", "Profile", "Home"] {
             let b = app.buttons[label].firstMatch
             XCTAssertTrue(b.waitForExistence(timeout: 10), "tab \(label) missing")
             b.tap()
             sleep(1)
             XCTAssertEqual(app.state, .runningForeground, "app died after opening \(label)")
+            if label == "centreButton" {
+                // a sheet (Train now / strength workout) may be up: close it so the next tab is reachable
+                for name in ["Done", "Cancel", "Close"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
+            }
         }
+    }
+
+    /// Build 36 (0.7.0) data with a routine, an edited plan and a detailed strength log, and TODAY a strength session:
+    /// the centre button must read "Train now" and open the scheduled strength workout (routine shown, Start workout).
+    func testUpgradeFromBuild36CentreButtonOpensStrengthWorkout() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build36Store()
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        let centre = app.buttons["centreButton"].firstMatch
+        XCTAssertTrue(centre.waitForExistence(timeout: 10))
+        XCTAssertTrue(centre.label.contains("Train now"), "a strength day must say Train now, got \(centre.label)")
+        centre.tap()
+        XCTAssertTrue(app.staticTexts["Short Full Body Workout"].firstMatch.waitForExistence(timeout: 10), "the assigned routine, not a generic circuit")
+        XCTAssertTrue(app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 5), "Start workout visible")
+        XCTAssertFalse(app.buttons["Replace"].exists, "secondary actions live under More")
+        app.buttons["Done"].firstMatch.tap()
+        XCTAssertEqual(app.state, .runningForeground)
+        Self.tapAllTabs(app)
+    }
+
+    static func build36Store() -> String {
+        let iso = ISO8601DateFormatter()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: today) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: today)!
+        let tid = UUID().uuidString
+        var plan: [String] = []
+        for i in 0..<7 {
+            let d = cal.date(byAdding: .day, value: i, to: monday)!.addingTimeInterval(7 * 3600)
+            let kind = i == wd ? "strength" : (i % 2 == 0 ? "rest" : "endurance")
+            let tpl = i == wd ? "\"templateId\":\"\(tid)\",\"routineManual\":true," : ""
+            plan.append("{\"id\":\"\(UUID().uuidString)\",\"date\":\"\(iso.string(from: d))\",\"kind\":\"\(kind)\",\"minutes\":\(kind == "rest" ? 0 : 45),\"done\":false,\"skipped\":false,\"note\":\"\",\"edited\":\(i == wd),\(tpl)\"strengthFocus\":\(kind == "strength" ? "\"fullBody\"" : "null"),\"sequence\":0}")
+        }
+        let logDate = cal.date(byAdding: .day, value: -4, to: today)!.addingTimeInterval(18 * 3600)
+        let set = "{\"id\":\"\(UUID().uuidString)\",\"reps\":10,\"weightKg\":20,\"bodyweight\":false,\"unilateral\":false,\"done\":true}"
+        return """
+        {"schema":1,
+         "profile":{"name":"Rashed","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
+                    "sports":["roadCycling","strength"],"version":14,"updatedAt":"2026-10-25T20:00:00Z","wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR",
+                    "trainingMode":"hybrid","priority":"balanced","cyclingDaysPerWeek":3,"liftDaysPerWeek":3,"liftingHoursPerWeek":2,"preferredDays":[1,3,5,6]},
+         "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"],"appearance":"system","backgroundNotice":true,"coachTalk":"normal","coachEnabled":true,"appleHealthImportWorkouts":false},
+         "plan":[\(plan.joined(separator: ","))],
+         "rides":[],"tiles":["power","cadence","hr","speed","time","dist"],"onboarded":true,"guest":true,"createdAt":"2026-10-24T10:00:00Z","boardSync":[],"onboardingStage":0,
+         "templates":[{"id":"\(tid)","name":"Short Full Body Workout","focus":"fullBody","entries":[{"id":"\(UUID().uuidString)","exerciseId":"ex-003","name":"Goblet squat","pattern":"squat","sets":[\(set),\(set)],"notes":""},{"id":"\(UUID().uuidString)","exerciseId":"ex-088","name":"Dumbbell row","pattern":"pull","sets":[\(set),\(set)],"superset":"A","notes":""}],"updatedAt":"2026-10-25T19:00:00Z"}],
+         "customExercises":[],"appliedProposals":[],
+         "strength":[{"id":"\(UUID().uuidString)","date":"\(iso.string(from: logDate))","minutes":35,"focus":"fullBody","customName":"","rpe":7,"notes":"","source":"manual","templateId":"\(tid)","exercises":[{"id":"\(UUID().uuidString)","exerciseId":"ex-003","name":"Goblet squat","pattern":"squat","sets":[\(set),\(set)],"notes":""}]}]}
+        """
     }
 
     static func build30Store() -> String {

@@ -1,5 +1,89 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
+## 0.8.0 (build BUILDNO) — 26 Oct 2026 — TestFlight, internal testers only — pairs with firmware 0.7.0
+
+**Consolidated release** (Rashed, 25 Oct 22:41): pairing lifecycle + profile sync (P0), routines on the calendar and
+the adaptive Train now button (P1), on top of everything in 0.7.0. Same Link protocol (v1.2.1) and profile schema as
+firmware 0.7.0; works with 0.6.x boards too (features the board lacks say "needs firmware …"). Everything below is
+**simulator-tested** (unit tests incl. the firmware's byte vectors, launch smoke tests on fresh, build-24, -30, -33 and
+-36 data files). **Nothing is device-tested** until Rashed runs `BUILDBUILDNO-TEST.txt`.
+
+### P0 — Bluetooth pairing that recovers (PAIRING_SYNC_BRIEF)
+- Explicit connection stages **Searching → Found → Connecting → Pairing → Authenticating → Connected → Syncing profile →
+  Ready**, shown as a strip on the BikeComputer page with the current stage; a 20-second watchdog per stage, so
+  "Connecting…" is never indefinite: it becomes "Waiting for the board (not in range)" or a failure with a reason.
+- Failure reasons in plain words from the real iOS/ATT error: *"The BikeComputer no longer has this phone's keys"*
+  (CBError peerRemovedPairingInformation, ATT insufficient authentication / encryption) → the **Repair** action;
+  timeouts / out of range → Try again; Bluetooth off / no permission → Open Settings.
+- **Repair connection** flow (sheet): why it happens, the three steps (board: Connections › Phone › HOLD: REPAIR —
+  firmware 0.7.0 takes a new Bluetooth identity; iPhone: Settings › Bluetooth › Forget This Device — the only step
+  the app cannot do, with an Open Settings button; app: Start repair = forget the old identifier (kept as "stale"),
+  scan by the Link service, accept the board under its new identity, pair with the code). Same board recognised by
+  its board id (INFO tag 07) across identity changes.
+- Buttons by state, never contradictory: Connect / Repair / Disconnect / Forget device / Retry profile sync /
+  Connection diagnostics; Disconnect only while a link exists, Connect only without one.
+- **Connection diagnostics** page: stage history with timestamps, last failure + error code, identities (board id,
+  remembered / stale identifier), firmware + caps, the board's **LINK_DIAG** report (why the previous link ended, phones
+  remembered on the board, board sync state — firmware 0.7.0 sends it once per connection; decoder tested against the
+  firmware vector), profile versions and last ack, app foreground/background state, counters.
+- Background reconnect unchanged in principle (state restoration + pending connect); a repair-type failure stops the
+  automatic retry loop so the phone does not hammer a board that cannot pair; the dashboard row turns red "pairing
+  lost — tap for Repair".
+
+### P0 — Profile synchronisation you can trust
+- The phone range-checks the profile with the **same limits as the board** (name 1–24, FTP 50–600 W, weight 30–200 kg,
+  birth year 1900–2030, max HR 100–230, rest HR 25–120 and below max, LTHR 80–220, hours ≤ 40) and names the field
+  instead of sending something the board would reject; a board `status 2` is explained the same way.
+- Status is **pending / synced hh:mm / failed: reason**, with the last successful version and time persisted per
+  board (survives app restart; shown even while the board is away); "Retry profile sync" and "Retry now" buttons;
+  automatic retry on every reconnect; success is claimed only after the board's acknowledgement, never on connect.
+- Firmware 0.7.0 sends its profile right after connecting ("hello"); older 0.6.x boards are asked. First pairing shows
+  the differences and says the phone's profile will be applied after confirmation; a board set up on its own
+  (device-only, version 0) is reconciled the same way. Rides and sensor pairings are never part of it.
+- The connection stage reaches Ready only when the sync question is settled (in sync / needs your confirmation /
+  unsupported firmware); a sync failure is shown but does not take the link down.
+
+### P1 — Your routines on the calendar (HYBRID_ROUTINES_BRIEF)
+- **Choose routine** on any strength session; **"Set as every Tuesday"** weekday defaults (different routines per day),
+  reused when future weeks are generated unless you changed that session by hand; the calendar card shows the routine's
+  name, exercises and set count instead of a generic circuit. Order, sets, reps, weights, supersets and notes are kept;
+  the lifting budget is checked at assignment (warning shown) and at generation.
+- Edit / replace / remove an assignment without touching the template; deleting a template clears its assignments.
+- **Equipment I own** and **exercises I cannot do** (Profile › Training profile): coach suggestions are filtered by
+  both; a saved exercise is never swapped silently.
+- **Next workout insight** (Home and the scheduled strength screen): ONE item — progression (+1 rep bodyweight / +1 kg
+  dumbbell / +2.5 kg loaded, only when the last two completed sessions support it), hold (last session RPE ≥ 9 or missed
+  reps), coverage gap (from detailed logs only, with a doable exercise named), interference (demanding ride planned
+  within a day) — each labelled *suggestion* or *finding*, with Why? and the evidence; **Accept** (this session only or
+  also the template) / **Ignore** / **Undo**; insufficient history is stated, never invented.
+- **Centre button adapts to the day**: cycling day → bicycle, "Ride now" (Ride dashboard); strength day → dumbbell,
+  "Train now" (the scheduled workout with its routine); both → choice; rest → optional session; everything done →
+  "Done today" with the next session; in progress → resume. It never starts recording.
+- **Scheduled strength screen** rebuilt around the routine: name and duration, exercises in order with planned sets ×
+  reps and the previous performance per exercise, prominent **Start workout**, one insight with Why?, secondary actions
+  (choose/replace routine, weekday default, adjust this session's sets, edit, move, skip, quick log, remove) under
+  **More**. Workout mode: tick each set, adjust actual reps and weight, previous performance visible, pause / resume /
+  finish (only completed sets are saved, working time excludes pauses); **partial sessions are saved as you go and
+  resumable after an app restart**; a second session cannot start while one is in progress.
+- **Templates are created directly** (Profile › Routines, Choose routine › Create) — no completed session is created;
+  templates, scheduled sessions and completed sessions are three separate types; a completed session never rewrites its
+  template (the next use is prefilled from it instead).
+
+### Preserved (audited, not rebuilt)
+Five tabs, Connections dashboard rules, onboarding, Ride dashboard + coach engine, Plan / availability / timeline,
+hybrid phase 1 and the 0.7.0 brief (budgets, per-day assignments, exercise search, weekly review), Wi-Fi setup, device
+settings, history sync client, store schema 1 (new keys optional; build-24/30/33/36 files load unchanged).
+
+### Known limitations
+- The iPhone's own Bluetooth bond cannot be deleted by an app: after a board data reset the Settings › Bluetooth ›
+  Forget step is the rider's (the Repair sheet opens Settings). With firmware 0.7.0 the board's new identity usually
+  makes this unnecessary; it is still listed in the checklist.
+- LINK_DIAG, PROFILE hello and the new identity exist only on firmware 0.7.0; on 0.6.x the diagnostics page says "not
+  received yet" and the app asks for the profile itself.
+- Insights adjust sets in place; they do not move sessions across days (manual Move keeps fixed days inviolable).
+- Health-imported strength carries no exercises; Google / e-mail sign-in still wait for Supabase + Google configuration.
+- The board's power state (display off / standby / deep sleep) is not reported over the link; the app shows link state.
+
 ## 0.7.0 (build 36) — 25 Oct 2026 — TestFlight, internal testers only
 
 **Hybrid Athlete brief, P0–P2.** Everything below is **simulator-tested** (XCTest unit tests + launch smoke tests on
