@@ -53,6 +53,8 @@ struct DayAssignment: Codable, Identifiable, Equatable {
     }
     var title: String { sport == .cycling ? (cyclingType?.title ?? "Ride") : (strengthType?.title ?? "Strength") }
     var short: String { sport == .cycling ? (cyclingType?.short ?? "Ride") : (strengthType?.short ?? "Lift") }
+    /// Equality by content: two schedules with the same activities are the same schedule whatever the row ids.
+    static func == (a: DayAssignment, b: DayAssignment) -> Bool { a.sport == b.sport && a.cyclingType == b.cyclingType && a.strengthType == b.strengthType && a.minutes == b.minutes && a.fixed == b.fixed }
 }
 
 // MARK: - Weekly availability: the rider chooses the days, the engine plans around them
@@ -160,7 +162,6 @@ struct WeeklyAvailability: Codable, Equatable {
         d[6] = DayAvailability(activity: .lift, minutes: 30)                                 // Sunday strength
         if h >= 6 { d[3] = DayAvailability(activity: .cycle, minutes: 60) }
         if h <= 3 { d[1] = DayAvailability(activity: .rest, minutes: 0); d[4] = DayAvailability(activity: .rest, minutes: 0) }
-        d[2].assignments[0].cyclingType = .tempo
         return WeeklyAvailability(days: d)
     }
     /// A schedule from the rider's mode, frequencies, priority, budgets and preferred days. Cycling mode keeps the

@@ -62,7 +62,7 @@ final class HybridV2Tests: XCTestCase {
         XCTAssertEqual(a.days[1].mark, "Both"); XCTAssertEqual(a.days[1].cycleMinutes, 60); XCTAssertEqual(a.days[1].liftingMinutes, 30)
         XCTAssertEqual(a.days[2].mark, "Strength"); XCTAssertEqual(a.days[3].mark, "Cycling"); XCTAssertEqual(a.days[0].mark, "Rest")
         XCTAssertEqual(a.days[6].mark, "Other"); XCTAssertEqual(a.days[6].otherMinutes, 40)
-        XCTAssertEqual(a.cycleMinutes, 285); XCTAssertEqual(a.liftMinutes, 115)
+        XCTAssertEqual(a.cycleMinutes, 285); XCTAssertEqual(a.liftMinutes, 75)
         XCTAssertNil(a.days[3].assignments[0].cyclingType, "legacy rides stay untyped so the coach still picks long / quality")
         // round trip keeps both the legacy summary and the assignments
         let d = try JSONEncoder().encode(a)

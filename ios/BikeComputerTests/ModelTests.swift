@@ -37,16 +37,28 @@ final class ModelTests: XCTestCase {
         XCTAssertTrue([0, 2, 4].allSatisfy { w2[$0].kind.isRide && w2[$0].minutes == 45 })
     }
 
+    /// 0.7.0: the engine never generates over a budget; the over-hours is reported as a conflict with options and the
+    /// flexible days are trimmed (shown, not silent). Suggestions still appear when the rider's own edits push a week over.
     func testOverHoursSuggestsAdjustmentsInsteadOfCutting() {
         var p = RiderProfile(); p.hoursPerWeek = 3
         let monday = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 19))!
         var d = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
         for i in [1, 3, 5] { d[i] = DayAvailability(activity: .cycle, minutes: 90) }
-        let w = PlanEngine.week(starting: monday, profile: p, availability: WeeklyAvailability(days: d))
-        XCTAssertEqual(PlanEngine.rideMinutes(w), 270)                                // planned as asked, not cut
-        let s = PlanEngine.suggestions(for: w, hoursPerWeek: 3)
+        let a = WeeklyAvailability(days: d)
+        let c = a.conflicts(profile: p)
+        XCTAssertEqual(c.count, 1); XCTAssertEqual(c[0].overMinutes, 90); XCTAssertTrue(c[0].text.contains("1 h 30 min over"))
+        XCTAssertGreaterThanOrEqual(c[0].options.count, 2)
+        let fit = WeeklyAvailability.fit(a, profile: p)
+        XCTAssertEqual(fit.availability.cycleMinutes, 180); XCTAssertEqual(fit.availability.cycleDays, 3, "no day dropped"); XCTAssertFalse(fit.trimmed.isEmpty, "the trim is explained")
+        let w = PlanEngine.week(starting: monday, profile: p, availability: a)
+        XCTAssertEqual(PlanEngine.rideMinutes(w), 180, "never over the 3 h budget")
+        XCTAssertTrue(PlanEngine.suggestions(for: w, hoursPerWeek: 3).isEmpty)
+        // the rider edits a session to 2 h by hand → the week is over → suggestions, nothing cut
+        var edited = w; if let i = edited.firstIndex(where: { $0.kind.isRide }) { edited[i].minutes = 150; edited[i].edited = true }
+        let s = PlanEngine.suggestions(for: edited, hoursPerWeek: 3)
         XCTAssertFalse(s.isEmpty); XCTAssertTrue(s[0].contains("1 h 30 min over"))
-        XCTAssertTrue(PlanEngine.suggestions(for: w, hoursPerWeek: 5).isEmpty)
+        XCTAssertEqual(PlanEngine.rideMinutes(edited), 270)
+        XCTAssertTrue(PlanEngine.suggestions(for: edited, hoursPerWeek: 5).isEmpty)
     }
 
     func testDurationFormatter() {
