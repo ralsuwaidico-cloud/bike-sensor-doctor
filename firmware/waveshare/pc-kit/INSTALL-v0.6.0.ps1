@@ -37,6 +37,8 @@ if (-not (Test-Path '.\esptool.exe')) { Stop-With "esptool.exe is missing." }
 # rollback kit must be complete before we start
 $v050 = 'c7c9f047a2a78ad203012206fadd522c938e11f5bc3fc61cda6b68711a3a25b8'
 $v040 = 'b181796f1df4b6de47eea32661ee2f5dd1683ab9bcdd3119a67a4d6e61c5eb0b'
+$v060r1 = '7cc2ebe00552d5bbc60017caecf0e081ec59d9562cfb39f58caaa279055d3bbc'   # 0.6.0 rev 1 (24 Oct, Sensors button)
+$v060r2 = 'cdecb1f4b28d6b5aaaed770b7879dfe3e85a520fad29fbc50bb112c70f738139'   # 0.6.0 rev 2 (25 Oct, Connections)
 if (-not (Test-Path 'ROLLBACK-TO-v050.ps1') -or -not (Test-Path 'fw-v0.5.0\BC050-app.bin')) { Stop-With "the 0.5.0 rollback files (ROLLBACK-TO-v050.ps1, fw-v0.5.0) are missing." }
 if ((Get-FileHash 'fw-v0.5.0\BC050-app.bin' -Algorithm SHA256).Hash.ToLower() -ne $v050) { Stop-With "fw-v0.5.0\BC050-app.bin is damaged - rollback would not be possible." }
 Write-Host "  Rollback to 0.5.0 available (ROLLBACK-TO-v050.bat, checksum OK)." -ForegroundColor Green
@@ -67,7 +69,7 @@ $pos = [int][Math]::Ceiling(($pos + 1) / 16.0) * 16     # checksum byte + paddin
 if ($hdr[23] -eq 1) { $pos += 32 }                       # appended SHA-256
 $img = New-Object byte[] $pos; $fs.Seek(0x20000, 'Begin') | Out-Null; $fs.Read($img, 0, $pos) | Out-Null; $fs.Close()
 $sha = [System.Security.Cryptography.SHA256]::Create(); $h = ([BitConverter]::ToString($sha.ComputeHash($img)) -replace '-', '').ToLower()
-if ($h -eq $v050) { $found = "0.5.0" } elseif ($h -eq $v040) { $found = "0.4.0" } else { $found = "" }
+if ($h -eq $v050) { $found = "0.5.0" } elseif ($h -eq $v040) { $found = "0.4.0" } elseif ($h -eq $v060r1) { $found = "0.6.0 rev 1" } elseif ($h -eq $v060r2) { $found = "0.6.0 rev 2" } else { $found = "" }
 if (-not $found) { Stop-With "the backup holds firmware '$ver' at 0x20000 with an unknown checksum ($h, $pos bytes). Tell Claude before installing." }
 Write-Host "  Backup verified: 16 MB, firmware $found (reports '$ver') + settings + rides saved in $pre" -ForegroundColor Green
 "Backup $pre verified: app $found at 0x20000, hash $h, $pos bytes" | Out-File $log -Append -Encoding utf8
