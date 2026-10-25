@@ -1,0 +1,7 @@
+# Athletics 1.0 — release brief (Rashed, 26 Oct 2026 00:59)
+Baseline = iOS 0.8.0 build 40 + firmware 0.7.0. Feature freeze: only crashes, auth, data loss/sync, security/privacy, critical UI, store compliance.
+1. Rebrand to **Athletics** (iOS + Android display name, splash, onboarding, navigation, icon, branding; keep turquoise; no data loss; device stays "BikeComputer"; keep bundle/package IDs and BLE identifiers; explain consequences of any ID change).
+2. Accounts: Sign in with Apple, Google, e-mail (register/login/reset/verification), guest → account upgrade without data loss, secure sessions/logout, account + data deletion, cross-device sync of workouts, schedules, templates, settings. Production backend = Supabase Auth; no custom password system; must work on real devices.
+3. Release prep: ASC listing, Sign in with Apple config, screenshots/description/keywords/privacy/support links, Health permissions/entitlements, RC on TestFlight, review readiness. Android: Play listing, Google Sign-In, permissions/background, signed AAB, internal testing — or an honest gap list.
+4. Separate backlog for future versions. 5. Keep BikeComputer integration; label hardware-dependent features; don't claim connectivity verified.
+6. Before submitting: name/branding, build status, auth test results, backend/sync readiness, privacy policy + deletion, compliance checklist, owner actions, blockers. Approval before publishing publicly or paid agreements.
