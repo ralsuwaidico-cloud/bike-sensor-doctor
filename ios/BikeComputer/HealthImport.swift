@@ -56,7 +56,8 @@ extension HealthAccess {
                     guard k != .ignored else { continue }
                     r.seen += 1
                     let dist = w.statistics(for: HKQuantityType(.distanceCycling))?.sumQuantity()?.doubleValue(for: .meter()).rounded()
-                    let kj = w.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie()).map { Int(($0 * 4.184).rounded()) }
+                    let kcal = w.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie())
+                    let kj = kcal.map { Int(($0 * 4.184).rounded()) }
                     let added = HealthWorkoutMapper.apply(kind: k, start: w.startDate, durationS: Int(w.duration), distanceM: dist.map(Int.init), kj: kj, uuid: w.uuid.uuidString, to: store)
                     if added.ride { r.ridesAdded += 1 }
                     if added.strength { r.strengthAdded += 1 }

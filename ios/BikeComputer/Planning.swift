@@ -125,7 +125,8 @@ enum PlanEngine {
         func adjacentToLegs(_ i: Int) -> Bool { legDays.contains((i + 1) % 7) || legDays.contains((i + 6) % 7) }
 
         var kinds = [Int: WorkoutKind]()
-        if let longest = cyc.max(by: { ($0.element.minutes, -(adjacentToLegs($0.offset) ? 1 : 0)) < ($1.element.minutes, -(adjacentToLegs($1.offset) ? 1 : 0)) }) { kinds[longest.offset] = longest.element.minutes >= 90 ? .long : .endurance }
+        func longScore(_ e: (offset: Int, element: DayAvailability)) -> (Int, Int) { (e.element.minutes, adjacentToLegs(e.offset) ? 0 : 1) }
+        if let longest = cyc.max(by: { longScore($0) < longScore($1) }) { kinds[longest.offset] = longest.element.minutes >= 90 ? .long : .endurance }
         let hard: WorkoutKind = p.level == .beginner ? .tempo : (p.goal == .stronger || p.goal == .climbing ? .threshold : .tempo)
         if cyc.count >= 2 {
             // quality session: the second-longest day that is not right before the long day, needs ≥ 45 min; prefer a day
