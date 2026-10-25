@@ -1,0 +1,13 @@
+BikeComputer iPhone app 0.5.1 (TestFlight build 30) — real-device checklist (hotfix for the build-27 launch crash)
+================================================================================================================
+Record PASS / FAIL per step. Board stays on firmware 0.5.0; never USB and battery connected at the same time (HW-1).
+
+ 1  Update to 0.5.1 (30) in TestFlight (over build 27 or build 24 — both are fine). Tap the icon: the app opens to
+    Home ("Hi Rashed") within a few seconds, no black screen. Repeat the launch 3 times (swipe the app away in between).
+ 2  Your data is still there: Profile › Rider information shows your name and weight; Power & cycling shows your FTP;
+    Plan shows this week; Progress / Plan › History lists your earlier rides.
+ 3  Tap each tab — Home, Plan, Ride now, Progress, Profile — and come back to Home. The Ride tab shows the three
+    gauges with "—" (board off) and START · PHONE ONLY at the bottom; nothing is cut off, nothing scrolls.
+ 4  Start a phone-only ride, wait 30 s, End → Discard. The app stays responsive throughout.
+
+Then continue with BUILD27-TEST.txt (all its steps still apply to 0.5.1).

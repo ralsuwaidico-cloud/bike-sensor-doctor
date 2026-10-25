@@ -1,6 +1,6 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
-## 0.5.1 (build BUILDNO) — 25 Oct 2026 — TestFlight, internal testers only — HOTFIX
+## 0.5.1 (build 30) — 25 Oct 2026 — TestFlight, internal testers only — HOTFIX
 
 **Fixes the launch crash of build 27** (black screen, app killed immediately) on phones that already had data from
 build 24. Nothing else changes; profile, plan, rides and settings are untouched.
