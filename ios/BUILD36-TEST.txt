@@ -1,10 +1,10 @@
-BikeComputer iPhone app 0.7.0 (TestFlight build BUILDNO) — manual QA (Hybrid Athlete brief P0–P2)
+BikeComputer iPhone app 0.7.0 (TestFlight build 36) — manual QA (Hybrid Athlete brief P0–P2)
 =============================================================================================
 Record PASS / FAIL / NOT TESTED per step. Everything is simulator-tested only until you confirm it here.
 Board on firmware 0.5.0 or 0.6.x; never USB and battery connected at the same time (HW-1). Build-30 steps still apply first.
 
 Layout (P0)
- 1  Update to 0.7.0 (BUILDNO). Profile, plan, rides and strength logs from build 33 are intact. Home shows the hybrid
+ 1  Update to 0.7.0 (36). Profile, plan, rides and strength logs from build 33 are intact. Home shows the hybrid
     coach card and, below it, "Last week" with a Review › button.   PASS/FAIL
  2  Home › Log strength: the type picker is a neat 3-column grid (Full Body / Upper / Lower / Push / Pull / Custom), no
     wrapped words. Settings › Accessibility › Larger Text at the largest size: the grid becomes 2 columns, nothing is

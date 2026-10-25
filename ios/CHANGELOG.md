@@ -1,10 +1,10 @@
 # BikeComputer iPhone + Apple Watch — changelog
 
-## 0.7.0 (build BUILDNO) — 25 Oct 2026 — TestFlight, internal testers only
+## 0.7.0 (build 36) — 25 Oct 2026 — TestFlight, internal testers only
 
 **Hybrid Athlete brief, P0–P2.** Everything below is **simulator-tested** (XCTest unit tests + launch smoke tests on
 fresh, build-24, build-30 and build-33 data files, the last at an accessibility text size). **Nothing is device-tested**
-until Rashed runs `BUILDBUILDNO-TEST.txt`. No firmware change; the board profile sync is unchanged.
+until Rashed runs `BUILD36-TEST.txt`. No firmware change; the board profile sync is unchanged.
 
 ### P0 — layout and budget correctness
 - Strength Log type picker is a 3-column grid (2 columns at accessibility text sizes) with the labels Full Body / Upper /
@@ -56,7 +56,7 @@ until Rashed runs `BUILDBUILDNO-TEST.txt`. No firmware change; the board profile
 - "What changed" line in Plan after a rebuild (riding/lifting hours, counts, per-day changes).
 
 ### Automated results
-- Unit tests: see the CI run for the count (new `HybridV2Tests`: 16 tests covering budgets at the exact limit,
+- Unit tests: 91 passed, 0 failures (run 40215413686; new `HybridV2Tests`: 16 tests covering budgets at the exact limit,
   fit order fixed/flexible, legacy migration, day marks, suggested weeks inside both budgets, catalogue and search,
   coverage unknown vs known, progression trend, template prefill, set tonnage, completed-only coaching, cycling ≠
   lifting, interference proposals with fixed/edited refusal and undo, weekly review and the revise offer, stable
