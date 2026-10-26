@@ -1,0 +1,31 @@
+App code: ios/dev (ea52c03)
+Screenshot simulator: iPhone 17 Pro Max
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' passed (69.675 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 69.675 (69.678) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 69.675 (69.679) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 69.675 (69.681) seconds
+** TEST EXECUTE SUCCEEDED **
+BikeComputerUITests/StoreScreenshots/test1StrengthDay (light appearance): exit 0
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' passed (29.721 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 29.721 (29.723) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 29.721 (29.724) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 29.721 (29.751) seconds
+** TEST EXECUTE SUCCEEDED **
+BikeComputerUITests/StoreScreenshots/test2RideDay (dark appearance): exit 0
+Watch simulator: Apple Watch Ultra 3 (49mm)
+An error was encountered processing the command (domain=NSPOSIXErrorDomain, code=45):
+Simulator device failed to complete the requested operation.
+Operation not supported
+Underlying error (domain=NSPOSIXErrorDomain, code=45):
+	Status bar overrides not supported on this platform.
+	Operation not supported
+com.ralsuwaidico.bikecomputer.watchkitapp: 24036
+Detected file type from extension: PNG
+Note: No display specified. Defaulting to display: A57CD588-4AEF-4E94-A3A5-01F340900BE5 (screenID: 1, name: LCD)
+Wrote screenshot to: /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/shots/06-watch.png
+01-home.png 1320 2868 
+02-strength-workout.png 1320 2868 
+03-plan.png 1320 2868 
+04-progress.png 1320 2868 
+05-ride.png 1320 2868 
+06-watch.png 422 514 
