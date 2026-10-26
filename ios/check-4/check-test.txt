@@ -1,0 +1,42 @@
+test exit 65
+2026-10-26 19:02:04.326473+0000 BikeComputer[4964:22823] [workouts] [mirroring] Failed to set remote session observer with XPC error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-26 19:02:05.771963+0000 BikeComputer[4964:22884] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-26 19:02:05.772272+0000 BikeComputer[4964:22834] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.786 (1.161) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.025 (0.058) seconds
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.933 (1.006) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.017 (0.403) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.032 (0.704) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.006 (1.874) seconds
+	 Executed 23 tests, with 0 failures (0 unexpected) in 7.872 (8.199) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.025 (0.405) seconds
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.097 (0.193) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.799 (2.559) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.129 (0.367) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/ModelTests.swift:271: error: -[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied] : XCTAssertTrue failed
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' failed (1.102 seconds).
+Test Suite 'ModelTests' failed at 2026-10-26 19:02:29.593.
+	 Executed 19 tests, with 1 failure (0 unexpected) in 1.647 (4.959) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.062 (5.170) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.158 (0.163) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 1.220 (1.226) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.910 (0.950) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.316 (0.513) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerTests/RulesTests.swift:116: error: -[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown] : XCTAssertEqual failed: ("Provisional estimate") is not equal to ("provisional")
+Test Case '-[BikeComputerTests.RulesTests testSkippedOnboardingValuesStayUnknown]' failed (0.311 seconds).
+Test Suite 'RulesTests' failed at 2026-10-26 19:02:40.230.
+	 Executed 9 tests, with 1 failure (0 unexpected) in 0.383 (1.845) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.017 (0.892) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.021 (0.062) seconds
+	 Executed 23 tests, with 0 failures (0 unexpected) in 1.523 (2.028) seconds
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.325 (0.365) seconds
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.232 (0.757) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 2.590 (2.592) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.071 (0.441) seconds
+Test Suite 'BikeComputerTests.xctest' failed at 2026-10-26 19:02:47.415.
+	 Executed 257 tests, with 2 failures (0 unexpected) in 20.197 (39.717) seconds
+Test Suite 'All tests' failed at 2026-10-26 19:02:47.416.
+	 Executed 257 tests, with 2 failures (0 unexpected) in 20.197 (39.720) seconds
+2026-10-26 19:02:47.439303+0000 BikeComputer[4964:24275] [workouts] [mirroring] Failed to set remote session observer with XPC error: Error Domain=co2026-10-26 19:02:47.449038+0000 BikeComputer[4964:21256] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-26 19:02:48.133073+0000 BikeComputer[4964:24275] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-26 19:02:48.133223+0000 BikeComputer[4964:22885] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
