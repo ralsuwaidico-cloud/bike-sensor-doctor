@@ -25,7 +25,8 @@ struct RootView: View {
         }
         .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: false); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice
             let d = Calendar.current.startOfDay(for: Date()); if d != day { day = d; store.ensurePlan() } }
-        .preferredColorScheme(store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil)
+        // The Ride screen is always dark: show it with a dark window so the status bar (clock, battery) stays readable.
+        .preferredColorScheme(store.onboarded && tab == 2 ? .dark : (store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil))
         .onChange(of: recorder.state) { _, s in idleTimer(s) }
         .onAppear { device.autoConnect = store.settings.autoConnectBoard }
     }

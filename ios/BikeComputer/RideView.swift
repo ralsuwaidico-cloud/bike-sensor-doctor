@@ -154,11 +154,14 @@ struct RideTabView: View {
         if boardLive != nil { return D7.green }
         if device.state == .ready { return D7.cyan }
         if device.state == .scanning || device.state == .connecting { return D7.amber }
-        return phoneRecording ? D7.green : (hub.reading(.heartRate) != nil || hub.reading(.speed) != nil ? D7.cyan : D7.red)
+        if phoneRecording { return D7.green }
+        if hub.reading(.heartRate) != nil || hub.reading(.speed) != nil { return D7.cyan }
+        // red only for a BikeComputer the rider paired that is now missing; the device is optional otherwise
+        return device.remembered ? D7.red : D7.grey
     }
     private var linkText: String {
         var s: String
-        if boardLive?.demo == true { s = "SIMULATED" } else if boardLive != nil { s = "LIVE" } else if device.state == .ready { s = "READY" } else if device.state == .scanning || device.state == .connecting { s = "CONNECTING" } else { s = phoneRecording ? "PHONE" : "NO BIKECOMPUTER" }
+        if boardLive?.demo == true { s = "SIMULATED" } else if boardLive != nil { s = "LIVE" } else if device.state == .ready { s = "READY" } else if device.state == .scanning || device.state == .connecting { s = "CONNECTING" } else { s = phoneRecording ? "PHONE" : (device.remembered ? "BIKECOMPUTER NOT FOUND" : "PHONE ONLY") }
         if boardRecording { s += recorder.boardLinkLost ? " · BOARD RECORDS (LINK LOST)" : " · BOARD RECORDS" } else if phoneRecording { s += " · PHONE RECORDS" }
         if let b = boardLive?.batteryPct { s += " · BAT ≈\(b)%" }
         return s
