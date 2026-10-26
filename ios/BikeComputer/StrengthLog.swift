@@ -438,11 +438,11 @@ struct HybridCoachCard: View {
                         }
                     }
                     if let c = a.coverage, c.known { coverageStrip(c) }
+                    Text("Start opens the Ride screen; recording begins only when you hold Start ride there. Strength is logged, never recorded automatically.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(.top, 4)
             } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
             if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
-            actions(a)
-            Text("Start opens the Ride screen; recording begins only when you hold Start ride there. Strength is logged, never recorded automatically.").font(.caption2).foregroundStyle(.secondary)
+            ActionRow(actions: actionSpecs(a)).accessibilityIdentifier("coachActions")
         }
         if let w = nextStrength { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
         if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
@@ -494,23 +494,21 @@ struct HybridCoachCard: View {
             }
         }
     }
-    private func stat(_ t: String, _ v: String, _ sub: String) -> some View { VStack(alignment: .leading, spacing: 1) { Eyebrow(t: t); Text(v).font(.system(size: 18, weight: .bold, design: .rounded)).monospacedDigit(); if !sub.isEmpty { Text(sub).font(.caption2).foregroundStyle(.secondary) } }.frame(maxWidth: .infinity, alignment: .leading) }
+    private func stat(_ t: String, _ v: String, _ sub: String) -> some View { VStack(alignment: .leading, spacing: 1) { Eyebrow(t: t); Text(v).font(.headline).monospacedDigit(); if !sub.isEmpty { Text(sub).font(.caption).foregroundStyle(.secondary) } }.frame(maxWidth: .infinity, alignment: .leading) }
 
-    @ViewBuilder private func actions(_ a: HybridAssessment) -> some View {
+    /// Short labels that never wrap or hyphenate (the full action is the VoiceOver label): Start · Log · Adjust · Swap.
+    private func actionSpecs(_ a: HybridAssessment) -> [ActionSpec] {
         let next = a.next
         let rideNext = next?.kind.isRide == true && !recorder.isActive
         let liftNext = next?.kind == .strength
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { if rideNext { startButton }; logButton(prominent: liftNext); if store.today != nil { adjustButton; alternativeButton } }
-            VStack(spacing: 8) { HStack(spacing: 8) { if rideNext { startButton }; logButton(prominent: liftNext) }; if store.today != nil { HStack(spacing: 8) { adjustButton; alternativeButton } } }
+        var out: [ActionSpec] = []
+        if rideNext { out.append(ActionSpec(label: "Start", a11y: "Start: opens the Ride screen", icon: "play.fill", prominent: true, tint: BC.live, identifier: "coachStart") { tab = 2 }) }
+        out.append(ActionSpec(label: "Log", a11y: "Log strength", icon: liftNext ? "dumbbell" : nil, prominent: liftNext, tint: liftNext ? BC.zone(5) : nil, identifier: "coachLog") { showStrengthLog = true })
+        if store.today != nil {
+            out.append(ActionSpec(label: "Adjust", a11y: "Adjust today's session", identifier: "coachAdjust") { showWorkout = true })
+            out.append(ActionSpec(label: "Swap", a11y: "Swap today's session for an alternative", identifier: "coachSwap") { showAlternatives = true })
         }
-    }
-    private var startButton: some View { Button { tab = 2 } label: { Label("Start", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live) }
-    private var adjustButton: some View { Button { showWorkout = true } label: { Text("Adjust").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
-    private var alternativeButton: some View { Button { showAlternatives = true } label: { Text("Alternative").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
-    @ViewBuilder private func logButton(prominent: Bool) -> some View {
-        if prominent { Button { showStrengthLog = true } label: { Label("Log strength", systemImage: "dumbbell").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)) }
-        else { Button { showStrengthLog = true } label: { Text("Log strength").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+        return out
     }
     private func progress(_ title: String, _ p: SportProgress, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -522,7 +520,7 @@ struct HybridCoachCard: View {
                     Capsule().fill(color).frame(width: g.size.width * min(1, p.minutesTarget > 0 ? p.ratio : (p.minutesDone > 0 ? 1 : 0)))
                 }
             }.frame(height: 7)
-            Text(p.minutesTarget > 0 ? "\(Fmt.duration(minutes: p.minutesDone)) of \(Fmt.duration(minutes: p.minutesTarget))" : "\(Fmt.duration(minutes: p.minutesDone)) · no budget set").font(.caption2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+            Text(p.minutesTarget > 0 ? "\(Fmt.duration(minutes: p.minutesDone)) of \(Fmt.duration(minutes: p.minutesTarget))" : "\(Fmt.duration(minutes: p.minutesDone)) · no budget set").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }.frame(maxWidth: .infinity).padding(8).background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
         .accessibilityLabel("\(title): \(p.note)")
     }
@@ -532,7 +530,11 @@ struct HybridCoachCard: View {
         return t.kind.subtitle
     }
     private func pillColor(_ c: String) -> Color { c == "on track" ? BC.live : c.contains("check") ? BC.stale : BC.warn }
-    private func status(_ t: Workout) -> String { t.done ? "done" : t.skipped ? "skipped" : recorder.isActive ? "in progress" : t.fixed ? "planned · fixed day" : "planned" }
+    private func status(_ t: Workout) -> String {
+        let st = store.status(t)
+        if st == .planned { return recorder.isActive && t.kind.isRide ? "in progress" : t.fixed ? "planned · fixed day" : "planned" }
+        return st.title.lowercased()
+    }
     private func table(_ t: Workout) -> some View {
         VStack(spacing: 0) {
             row("Workout", t.displayTitle(routine: store.routine(for: t)))

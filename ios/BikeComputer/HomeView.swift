@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var showWhy = false
     @State private var showAlternatives = false
     @State private var showStrengthLog = false
+    @Environment(\.dynamicTypeSize) private var dts
 
     var body: some View {
         NavigationStack {
@@ -28,7 +29,8 @@ struct HomeView: View {
                     }
                     connections
                     nextDays
-                    HStack { Text("FTP \(store.profile.ftpW) W").font(.footnote).foregroundStyle(.secondary); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live); Spacer(); Text(budgetText).font(.footnote).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8) }
+                    FlowRow(spacing: DS.s) { Text("FTP \(store.profile.ftpW) W").font(.footnote).foregroundStyle(.secondary); FTPConfidencePill(profile: store.profile); Text(budgetText).font(.footnote).foregroundStyle(.secondary) }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }.padding()
             }
             .background(Color(.systemGroupedBackground))
@@ -94,7 +96,7 @@ struct HomeView: View {
                     Section { Button("Skip today") { var w = t; w.skipped = true; store.update(w); showAlternatives = false } }
                 }
             }
-            .navigationTitle("Alternatives").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Swap today's session").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showAlternatives = false } } }
         }
     }
@@ -104,7 +106,7 @@ struct HomeView: View {
     private var connections: some View {
         NavigationLink { ConnectionsView() } label: {
             Card {
-                HStack { Eyebrow(t: "Connections"); Spacer(); Text("Manage ›").font(.caption.bold()).foregroundStyle(BC.accent) }
+                HStack { Eyebrow(t: "Connections"); Spacer(); Text("Manage ›").font(.footnote.bold()).foregroundStyle(BC.accent) }
                 VStack(spacing: 6) {
                     connLine(boardStatus, "BikeComputer", boardText)
                     connLine(ConnectionRules.meter(boardLive: liveNow != nil, meterLink: liveNow?.meterLink, enabled: store.settings.enabledConnections.contains("meter") || device.remembered), "Power meter", meterText)
@@ -128,13 +130,20 @@ struct HomeView: View {
 
     private var nextDays: some View {
         Card {
-            HStack { Eyebrow(t: "Next days"); Spacer(); Button("Plan ›") { tab = 1 }.font(.caption.bold()) }
-            HStack(alignment: .top, spacing: 8) {
-                ForEach(upcoming, id: \.id) { w in
-                    VStack(alignment: .leading, spacing: 2) { Text(w.date.shortDay).font(.caption.weight(.heavy)).foregroundStyle(.secondary); Text(w.kind == .strength ? w.displayTitle(routine: store.routine(for: w)) : w.kind.title).font(.caption).lineLimit(2).minimumScaleFactor(0.8); HStack(spacing: 4) { if w.minutes > 0 { Text(Fmt.duration(minutes: w.minutes)).font(.caption2).foregroundStyle(.secondary) }; ZonePill(z: w.kind.zone) } }.frame(maxWidth: .infinity, alignment: .leading)
-                }
+            HStack { Eyebrow(t: "Next days"); Spacer(); Button("Plan ›") { tab = 1 }.font(.footnote.bold()).frame(minHeight: DS.minTap) }
+            if dts.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: DS.s) { ForEach(upcoming, id: \.id) { w in dayCell(w) } }
+            } else {
+                HStack(alignment: .top, spacing: DS.s) { ForEach(upcoming, id: \.id) { w in dayCell(w) } }
             }
         }
+    }
+    private func dayCell(_ w: Workout) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(w.date.shortDay).font(.caption.weight(.heavy)).foregroundStyle(.secondary)
+            Text(w.kind == .strength ? w.displayTitle(routine: store.routine(for: w)) : w.kind.title).font(.caption).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 4) { if w.minutes > 0 { Text(Fmt.duration(minutes: w.minutes)).font(.caption2).foregroundStyle(.secondary) }; ZonePill(z: w.kind.zone) }
+        }.frame(maxWidth: .infinity, alignment: .leading).accessibilityElement(children: .combine)
     }
     private var upcoming: [Workout] { store.plan.filter { $0.date > Date() }.sorted { $0.date < $1.date }.prefix(3).map { $0 } }
 }
