@@ -59,6 +59,7 @@ struct BikeComputerApp: App {
         _recorder = StateObject(wrappedValue: r)
         _sync = StateObject(wrappedValue: ps)
         let h = SensorHub(); h.hrWatchFirst = { [weak s] in s?.settings.hrPref == .watch }
+        h.attach(store: s)      /* direct Bluetooth sensors paired on this phone reconnect from launch (A3) */
         _hub = StateObject(wrappedValue: h)
         let acc = AccountService()
         _account = StateObject(wrappedValue: acc)
@@ -83,6 +84,7 @@ struct BikeComputerApp: App {
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {
                     watchLink.activate()
+                    hub.health = health
                     // Apple Health import on launch, only while the rider keeps it on (dedupe makes it idempotent)
                     if store.settings.appleHealthImportWorkouts, store.onboarded, health.available {
                         let s = store

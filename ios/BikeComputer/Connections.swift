@@ -49,6 +49,16 @@ enum ConnectionRules {
         if hrFromStrap { return .green }
         return enabled ? (boardLive ? .amber : .gray) : .gray
     }
+    /// Generic colour for a source from the hub's source model (direct BLE sensors, planned providers): red only when the
+    /// rider configured it (paired / enabled) and it is missing; planned or not set up is gray, never red or green.
+    static func source(_ s: SourceStatus) -> ConnStatus {
+        switch s.state {
+        case .connected: return s.quality == .stale ? .amber : .green
+        case .connecting: return .amber
+        case .disconnected, .notAuthorized: return down(wanted: s.configured)
+        case .notConfigured, .planned: return .gray
+        }
+    }
     static func health(wanted: Bool, authorized: Bool, available: Bool) -> ConnStatus {
         guard available else { return .gray }
         if authorized { return .green }
