@@ -96,7 +96,11 @@ Final pass: descriptive lines that used to end in "…" (profile header, setting
 "Previous:" lines, adjustment titles) now wrap; summary lists (exercise names of a routine) keep a 1–2 line summary at
 normal sizes and wrap from XXXL up (`clampLines`). Every small bordered button (Accept / Not now / Undo / Edit / chips /
 set toggles) uses the large control size; delete-set and remove buttons and the filter chips have 44 pt targets. Swap
-alternatives are plain rows (name in the primary colour, reasons in secondary, chevron). Watch: heart rate and ride tile
+alternatives are plain rows (name in the primary colour, reasons in secondary, chevron). Text-link buttons (Plan ›,
+Review ›, Show all, Adjust sets) use `TapTargetStyle` so the 44 × 44 pt area is really tappable (a frame around a plain
+button is not), week arrows and ride rows are 44 pt, and the "Why?" disclosure rows are 44 pt tall. `FlowLayout` now
+breaks lines with exactly the width it was measured for: at XXXL a History row measured with two lines was placed with
+three, drawing the "completed" pill over the ride metrics (seen in the CI screenshot `standard-xxxl-10-history`). Watch: heart rate and ride tile
 numerals scale with the wearer's text size (`@ScaledMetric`), shrinking only if a value would not fit on one line.
 
 ## 3. Tests

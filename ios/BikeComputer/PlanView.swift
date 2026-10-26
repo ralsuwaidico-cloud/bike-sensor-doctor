@@ -56,14 +56,14 @@ struct PlanView: View {
     // MARK: header + calendar
     private var weekHeader: some View {
         HStack {
-            Button { weekOffset -= 1 } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }.accessibilityLabel("Previous week")
+            Button { weekOffset -= 1 } label: { Image(systemName: "chevron.left").frame(width: DS.minTap, height: DS.minTap).contentShape(Rectangle()) }.accessibilityLabel("Previous week")
             Spacer()
             VStack(spacing: 2) {
                 Text(weekOffset == 0 ? "This week" : weekOffset == 1 ? "Next week" : weekOffset == -1 ? "Last week" : weekTitle).font(.headline)
                 Text(weekRange).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { weekOffset += 1 } label: { Image(systemName: "chevron.right").frame(width: 36, height: 36) }.disabled(weekOffset >= 1).accessibilityLabel("Next week")
+            Button { weekOffset += 1 } label: { Image(systemName: "chevron.right").frame(width: DS.minTap, height: DS.minTap).contentShape(Rectangle()) }.disabled(weekOffset >= 1).accessibilityLabel("Next week")
         }
     }
     private var weekTitle: String { let f = DateFormatter(); f.dateFormat = "d MMM"; return "Week of \(f.string(from: days.first?.date ?? weekDate))" }
@@ -401,7 +401,7 @@ struct TimelineSection: View {
                         NavigationLink { StrengthSessionDetail(session: st) } label: { TimelineRow(entry: e, units: store.settings.units) }.buttonStyle(.plain)
                     } else { TimelineRow(entry: e, units: store.settings.units) }
                 }
-                if all.count > 12 { Button(showAll ? "Show less" : "Show all \(all.count)") { showAll.toggle() }.font(.footnote.bold()) }
+                if all.count > 12 { Button(showAll ? "Show less" : "Show all \(all.count)") { showAll.toggle() }.font(.footnote.bold()).buttonStyle(.tapTarget) }
             }
         }
     }

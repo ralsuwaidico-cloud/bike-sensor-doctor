@@ -443,7 +443,7 @@ struct HybridCoachCard: View {
                     if let c = a.coverage, c.known { coverageStrip(c) }
                     Text("Start opens the Ride screen; recording begins only when you hold Start ride there. Strength is logged, never recorded automatically.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(.top, 4)
-            } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
+            } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
             if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
             ActionRow(actions: actionSpecs(a))
         }
@@ -484,7 +484,7 @@ struct HybridCoachCard: View {
     }
     private func reviewCard(_ r: WeeklyReview) -> some View {
         Card {
-            HeaderRow(title: r.ridesPlanned + r.liftsPlanned > 0 ? "Last week · \(r.completionPct) % of plan done" : "Last week · nothing planned") { Button(showReview ? "Hide" : "Review ›") { showReview.toggle() }.font(.footnote.bold()).frame(minHeight: DS.minTap) }
+            HeaderRow(title: r.ridesPlanned + r.liftsPlanned > 0 ? "Last week · \(r.completionPct) % of plan done" : "Last week · nothing planned") { Button(showReview ? "Hide" : "Review ›") { showReview.toggle() }.font(.footnote.bold()).buttonStyle(.tapTarget) }
             HStack(spacing: 10) {
                 if store.profile.trainingMode.includesCycling { stat("Rides", r.ridesPlanned > 0 ? "\(r.ridesDone)/\(r.ridesPlanned)" : "—", Fmt.duration(minutes: r.rideMinutesDone)) }
                 if store.profile.trainingMode.includesLifting { stat("Lifts", r.liftsPlanned > 0 ? "\(r.liftsDone)/\(r.liftsPlanned)" : "—", Fmt.duration(minutes: r.liftMinutesDone)) }

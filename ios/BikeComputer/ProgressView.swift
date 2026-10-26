@@ -116,7 +116,7 @@ struct ProgressTabView: View {
                             Text(rowText(r)).font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }.padding(.vertical, 4)
+                    }.padding(.vertical, 4).frame(minHeight: DS.minTap).contentShape(Rectangle())
                 }.buttonStyle(.plain)
                 if r.id != store.rides.min(by: { $0.start < $1.start })?.id { Divider() }
             }

@@ -200,7 +200,7 @@ struct FlowLayout: Layout {
         var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, widest: CGFloat = 0
         for v in subviews {
             let s = v.sizeThatFits(ProposedViewSize(width: maxW.isFinite ? maxW : nil, height: nil))
-            if x > 0 && x + s.width > maxW { y += rowH + spacing; x = 0; rowH = 0 }
+            if x > 0 && x + s.width > maxW + 0.5 { y += rowH + spacing; x = 0; rowH = 0 }
             x += s.width + spacing
             rowH = max(rowH, s.height)
             widest = max(widest, x - spacing)
@@ -208,11 +208,15 @@ struct FlowLayout: Layout {
         return CGSize(width: maxW.isFinite ? min(widest, maxW) : widest, height: y + rowH)
     }
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
+        // Line breaks use exactly the width the size was measured for (the proposal), with the same rule and tolerance
+        // as sizeThatFits: a bounds width a fraction of a point narrower must never add a row the height did not
+        // include (that drew the next row over the text below at large sizes).
+        let maxW = proposal.width.map { $0.isFinite ? $0 : bounds.width } ?? bounds.width
+        var x: CGFloat = 0, y = bounds.minY, rowH: CGFloat = 0
         for v in subviews {
-            let s = v.sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
-            if x > bounds.minX && x + s.width > bounds.maxX { y += rowH + spacing; x = bounds.minX; rowH = 0 }
-            v.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: ProposedViewSize(width: min(s.width, bounds.width), height: s.height))
+            let s = v.sizeThatFits(ProposedViewSize(width: maxW, height: nil))
+            if x > 0 && x + s.width > maxW + 0.5 { y += rowH + spacing; x = 0; rowH = 0 }
+            v.place(at: CGPoint(x: bounds.minX + x, y: y), anchor: .topLeading, proposal: ProposedViewSize(width: min(s.width, maxW), height: s.height))
             x += s.width + spacing
             rowH = max(rowH, s.height)
         }
@@ -273,3 +277,14 @@ struct ClampLines: ViewModifier {
     func body(content: Content) -> some View { content.lineLimit(dts >= .xxxLarge ? nil : n) }
 }
 extension View { func clampLines(_ n: Int) -> some View { modifier(ClampLines(n: n)) } }
+
+/// Text-link buttons ("Plan ›", "Review ›", "Show all", "Adjust sets") with a 44 × 44 pt hit area that is also the
+/// accessibility frame (a frame put around a plain Button does not enlarge where it can be tapped).
+struct TapTargetStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.foregroundStyle(BC.accent)
+            .frame(minWidth: DS.minTap, minHeight: DS.minTap).contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.5 : 1)
+    }
+}
+extension ButtonStyle where Self == TapTargetStyle { static var tapTarget: TapTargetStyle { TapTargetStyle() } }

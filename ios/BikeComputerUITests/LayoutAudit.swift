@@ -75,7 +75,9 @@ final class LayoutAudit: XCTestCase {
             XCTAssertLessThanOrEqual(f.maxX, win.maxX + 1, "\(screen) \(id) clipped right \(f)")
             XCTAssertGreaterThanOrEqual(f.height, minHeight - 0.5, "\(screen) \(id) shorter than \(minHeight) pt: \(f.height)")
         }
-        if let first = ids.first { let b = app.buttons[first].firstMatch; if b.exists, b.frame.maxY < win.maxY { XCTAssertTrue(b.isHittable, "\(screen) \(first) not hittable") } }
+        // hittable when it is on screen above the tab bar zone (a control lower down scrolls into view; the scroll content
+        // has a bottom inset so it can always come above the bar — checked on the "lower" screenshots)
+        if let first = ids.first { let b = app.buttons[first].firstMatch; if b.exists, b.frame.minY > win.minY + 100, b.frame.maxY < win.maxY - 120 { XCTAssertTrue(b.isHittable, "\(screen) \(first) not hittable") } else if b.exists { note("\(screen): \(first) outside the checked zone (\(Int(b.frame.minY))–\(Int(b.frame.maxY)) of \(Int(win.height)))") } }
         for i in frames.indices { for j in frames.indices where j > i {
             let inter = frames[i].1.intersection(frames[j].1)
             XCTAssertTrue(inter.isNull || inter.width < 1 || inter.height < 1, "\(screen): \(frames[i].0) overlaps \(frames[j].0)")
@@ -136,6 +138,7 @@ final class LayoutAudit: XCTestCase {
             checkKey(app, ids: ["coachLog", "coachAdjust", "coachSwap"].filter { app.buttons[$0].exists }, screen: "\(size) home")
             checkTexts(app, screen: "\(size) home")
             scrollUp(app); shot("\(tag)-02-home-lower"); checkTexts(app, screen: "\(size) home lower")
+            checkKey(app, ids: ["coachLog", "coachAdjust", "coachSwap"].filter { app.buttons[$0].exists }, screen: "\(size) home lower")
             // today's strength session (centre button): status, exercises with Why? / Swap
             let centre = app.buttons["centreButton"].firstMatch
             if centre.waitForExistence(timeout: 5) {

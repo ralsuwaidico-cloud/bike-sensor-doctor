@@ -146,7 +146,7 @@ struct StrengthWorkoutScreen: View {
 
     private func exercises(_ w: Workout, _ entries: [ExerciseEntry], editable: Bool) -> some View {
         Card {
-            HStack { Eyebrow(t: "Exercises in order"); Spacer(); if editable { Button("Adjust sets") { editEntries = true }.font(.footnote.bold()).frame(minHeight: DS.minTap).accessibilityIdentifier("adjustSets") } }
+            HStack { Eyebrow(t: "Exercises in order"); Spacer(); if editable { Button("Adjust sets") { editEntries = true }.font(.footnote.bold()).buttonStyle(.tapTarget).accessibilityIdentifier("adjustSets") } }
             ForEach(entries) { e in
                 VStack(alignment: .leading, spacing: DS.xs) {
                     ViewThatFits(in: .horizontal) {

@@ -60,7 +60,7 @@ struct HomeView: View {
             }
             DisclosureGroup(isExpanded: $showWhy) {
                 Text(Coach.why(t, store: store)).font(.footnote).foregroundStyle(.secondary).padding(.top, 4).fixedSize(horizontal: false, vertical: true)
-            } label: { Text("Why this workout?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
+            } label: { Text("Why this workout?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
             if let t, t.kind != .rest {
                 ActionRow(actions: coachActions(t))
             }
@@ -125,7 +125,7 @@ struct HomeView: View {
 
     private var nextDays: some View {
         Card {
-            HStack { Eyebrow(t: "Next days"); Spacer(); Button("Plan ›") { tab = 1 }.font(.footnote.bold()).frame(minHeight: DS.minTap) }
+            HStack { Eyebrow(t: "Next days"); Spacer(); Button("Plan ›") { tab = 1 }.font(.footnote.bold()).buttonStyle(.tapTarget) }
             if dts.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: DS.s) { ForEach(upcoming, id: \.id) { w in dayCell(w) } }
             } else {
