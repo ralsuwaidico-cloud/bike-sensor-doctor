@@ -109,7 +109,8 @@ final class LaunchSmokeTests: XCTestCase {
         let alert = app.alerts["Delete everything on this phone?"].firstMatch
         XCTAssertTrue(alert.waitForExistence(timeout: 10), "deletion must ask for confirmation")
         alert.buttons["Cancel"].tap()
-        XCTAssertFalse(alert.waitForExistence(timeout: 2))
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: alert)
+        wait(for: [gone], timeout: 10)
 
         // legal page still opens from About
         let privacy = app.buttons["Privacy policy"].firstMatch
