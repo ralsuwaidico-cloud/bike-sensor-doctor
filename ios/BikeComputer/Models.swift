@@ -62,6 +62,17 @@ struct RiderProfile: Codable, Equatable {
     var liftingHoursPerWeek = 0
     /// Preferred training days as the rider stated them in onboarding (0 = Monday); the availability editor refines them.
     var preferredDays: [Int] = []
+    /// Adaptive coach (hybrid onboarding, ios/ADAPTIVE_COACH.md). All optional: nil / empty = not answered, the plan
+    /// keeps the 0.8.0 behaviour. No split implies a number of days.
+    var hybridGoal: HybridGoal? = nil
+    var hybridGoalNote: String? = nil
+    var trainingDaysPerWeek: Int? = nil
+    var strengthSplit: StrengthSplit? = nil
+    var customSplit: [SplitSlot] = []
+    var cyclingSessionMinutes: Int? = nil
+    var strengthSessionMinutes: Int? = nil
+    /// Saved routines the rider wants kept as they are; the coach builds sessions around them first.
+    var preservedTemplateIds: [UUID] = []
     /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
     var hrZones: [(lo: Int, hi: Int?)] {
         if hrZoneMethod == .lthr, let l = lthr, l > 0 {
@@ -125,6 +136,14 @@ struct RiderProfile: Codable, Equatable {
         liftDaysPerWeek = try c.decodeIfPresent(Int.self, forKey: .liftDaysPerWeek) ?? 0
         liftingHoursPerWeek = try c.decodeIfPresent(Int.self, forKey: .liftingHoursPerWeek) ?? 0
         preferredDays = (try? c.decodeIfPresent([Int].self, forKey: .preferredDays)) ?? []
+        hybridGoal = try? c.decodeIfPresent(HybridGoal.self, forKey: .hybridGoal)
+        hybridGoalNote = try? c.decodeIfPresent(String.self, forKey: .hybridGoalNote)
+        trainingDaysPerWeek = try? c.decodeIfPresent(Int.self, forKey: .trainingDaysPerWeek)
+        strengthSplit = try? c.decodeIfPresent(StrengthSplit.self, forKey: .strengthSplit)
+        customSplit = (try? c.decodeIfPresent([SplitSlot].self, forKey: .customSplit)) ?? []
+        cyclingSessionMinutes = try? c.decodeIfPresent(Int.self, forKey: .cyclingSessionMinutes)
+        strengthSessionMinutes = try? c.decodeIfPresent(Int.self, forKey: .strengthSessionMinutes)
+        preservedTemplateIds = (try? c.decodeIfPresent([UUID].self, forKey: .preservedTemplateIds)) ?? []
     }
 
     // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)
@@ -183,6 +202,10 @@ enum WorkoutKind: String, Codable, CaseIterable {
     var zone: Int { switch self { case .endurance, .long: return 2; case .tempo: return 3; case .threshold, .ftpTest: return 4; case .vo2: return 5; case .recovery: return 1; default: return 0 } }
     var isRide: Bool { zone > 0 }
     var defaultMinutes: Int { switch self { case .long: return 120; case .tempo: return 75; case .threshold: return 70; case .vo2: return 60; case .recovery: return 45; case .strength, .mobility: return 30; case .other: return 60; case .ftpTest: return 60; case .endurance: return 60; default: return 0 } }
+    /// Interval sessions (adaptive coach may change the repetitions ±1): default reps, work and recovery minutes.
+    var defaultIntervalReps: Int? { switch self { case .threshold: return 3; case .vo2: return 5; default: return nil } }
+    var intervalWorkMinutes: Int { switch self { case .threshold: return 8; case .vo2: return 3; default: return 0 } }
+    var intervalRestMinutes: Int { switch self { case .threshold, .vo2: return 3; default: return 0 } }
 }
 
 struct Workout: Codable, Identifiable, Equatable {
@@ -209,6 +232,14 @@ struct Workout: Codable, Identifiable, Equatable {
     var plannedEntries: [ExerciseEntry]? = nil
     /// true when the rider chose the routine by hand (kept when the week is rebuilt; weekday defaults fill the rest).
     var routineManual = false
+    /// Adaptive coach: interval repetitions for threshold / VO2 sessions (nil = the kind's default), whether
+    /// `plannedEntries` were built by the coach from the rider's exercises (not typed by the rider), and the session as
+    /// planned before the coach's automatic changes (nil = never adjusted).
+    var intervalReps: Int? = nil
+    var coachOriginal: WorkoutPlanSnapshot? = nil
+    /// Stored only when true, so sessions of older builds encode exactly as before (no sync churn).
+    var entriesByCoach: Bool? = nil
+    var generatedEntries: Bool { get { entriesByCoach ?? false } set { entriesByCoach = newValue ? true : nil } }
 
     init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false, templateId: UUID? = nil) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
@@ -231,9 +262,20 @@ struct Workout: Codable, Identifiable, Equatable {
         templateId = try? c.decodeIfPresent(UUID.self, forKey: .templateId)
         plannedEntries = try? c.decodeIfPresent([ExerciseEntry].self, forKey: .plannedEntries)
         routineManual = (try? c.decodeIfPresent(Bool.self, forKey: .routineManual)) ?? false
+        intervalReps = try? c.decodeIfPresent(Int.self, forKey: .intervalReps)
+        entriesByCoach = (try? c.decodeIfPresent(Bool.self, forKey: .entriesByCoach)) == true ? true : nil
+        coachOriginal = try? c.decodeIfPresent(WorkoutPlanSnapshot.self, forKey: .coachOriginal)
     }
     /// "Strength · Lower body" when a region is planned.
-    var displayTitle: String { if kind == .strength, let f = strengthFocus { return "Strength · \(f.title)" }; return kind.title }
+    var displayTitle: String {
+        if kind == .strength, let f = strengthFocus {
+            if f == .custom, !note.isEmpty { return "Strength · \(note)" }      // a custom split slot, e.g. "Core / joints"
+            return "Strength · \(f.title)"
+        }
+        return kind.title
+    }
+    /// Interval repetitions in force (threshold 3 × 8 min, VO2 5 × 3 min unless the coach changed them).
+    var effectiveIntervalReps: Int? { kind.defaultIntervalReps.map { intervalReps ?? $0 } }
     /// Title with the assigned routine's name when one is assigned (the calendar shows the rider's own workout name).
     func displayTitle(routine: WorkoutTemplate?) -> String { if kind == .strength, let r = routine { return r.name }; return displayTitle }
 
@@ -244,8 +286,8 @@ struct Workout: Codable, Identifiable, Equatable {
         switch kind {
         case .endurance: return [.init(name: "Warm-up", duration: "10 min", target: "\(z(0.45, 0.6)) · 85–95 rpm"), .init(name: "Main", duration: "\(max(5, minutes - 15)) min", target: "\(z(0.65, 0.75)) (Z2) · 85–95 rpm"), .init(name: "Cool-down", duration: "5 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
         case .tempo: return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "Block 1", duration: "15 min", target: "\(z(0.84, 0.9)) (Z3) · 85–90 rpm"), .init(name: "Easy", duration: "10 min", target: "\(Int(Double(ftp) * 0.55)) W"), .init(name: "Block 2", duration: "15 min", target: "\(z(0.84, 0.9)) (Z3)"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
-        case .threshold: return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "3 × 8 min", duration: "24 min", target: "\(z(0.93, 1.02)) (Z4) · 3 min easy between"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
-        case .vo2: return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "5 × 3 min", duration: "15 min", target: "\(z(1.06, 1.18)) (Z5) · 3 min easy between"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
+        case .threshold: let r = effectiveIntervalReps ?? 3; return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "\(r) × 8 min", duration: "\(r * 8) min", target: "\(z(0.93, 1.02)) (Z4) · 3 min easy between"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
+        case .vo2: let r = effectiveIntervalReps ?? 5; return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "\(r) × 3 min", duration: "\(r * 3) min", target: "\(z(1.06, 1.18)) (Z5) · 3 min easy between"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
         case .recovery: return [.init(name: "Easy spin", duration: "\(minutes) min", target: "under \(Int(Double(ftp) * 0.58)) W · 90+ rpm")]
         case .long: return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "Main", duration: "\(max(10, minutes - 25)) min", target: "\(z(0.65, 0.75)) (Z2) · eat every 30 min"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
         case .ftpTest: return [.init(name: "Warm-up", duration: "20 min", target: "with 3 × 1 min fast"), .init(name: "Test", duration: "20 min", target: "as hard as you can hold steady"), .init(name: "Cool-down", duration: "10 min", target: "easy")]
@@ -273,8 +315,8 @@ struct Workout: Codable, Identifiable, Equatable {
         switch kind {
         case .endurance: return "steady Z2"
         case .tempo: return "2 × 15 min Z3"
-        case .threshold: return "3 × 8 min Z4"
-        case .vo2: return "5 × 3 min Z5"
+        case .threshold: return "\(effectiveIntervalReps ?? 3) × 8 min Z4"
+        case .vo2: return "\(effectiveIntervalReps ?? 5) × 3 min Z5"
         case .recovery: return "easy Z1"
         case .long: return "steady Z2, fuel every 30 min"
         case .ftpTest: return "20-min test"
@@ -326,6 +368,10 @@ struct RideRecord: Codable, Identifiable, Equatable {
     var sources: [String]
     var demo = false
     var samples: [Sample] = []      /* 1 Hz, kept for graphs; nil fields = no data that second */
+    /// Adaptive coach: the rider's post-ride check-in, and whether the ride's power was verified (nil = unknown →
+    /// treated as unverified: never used to progress intensity). Optional, so older files decode unchanged.
+    var checkIn: CheckIn? = nil
+    var powerVerified: Bool? = nil
     struct Sample: Codable, Equatable { var t: Int; var w: Int?; var cad: Int?; var hr: Int?; var speedCms: Int?; var lat: Double?; var lon: Double?; var alt: Double?
         /// true = this second was not observed (phone suspended); shown as a gap, never filled in
         var gap: Bool? = nil }
@@ -390,6 +436,8 @@ struct AppSettings: Codable, Equatable {
     var bleSensors: [PairedSensor] = []
     /// Cyclift 1.0: the live ride layout (Ride › settings or the quick switch on the ride screen). Presentation only.
     var rideLayout: RideLayout = .coach
+    /// Adaptive coach: small bounded changes to future sessions are applied automatically (always listed, undoable).
+    var autoAdapt = true
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -410,6 +458,7 @@ struct AppSettings: Codable, Equatable {
         lastHealthImport = try c.decodeIfPresent(Date.self, forKey: .lastHealthImport)
         bleSensors = (try? c.decodeIfPresent([PairedSensor].self, forKey: .bleSensors)) ?? []
         rideLayout = (try? c.decodeIfPresent(RideLayout.self, forKey: .rideLayout)) ?? .coach
+        autoAdapt = (try? c.decodeIfPresent(Bool.self, forKey: .autoAdapt)) ?? true
     }
 }
 
@@ -462,11 +511,19 @@ struct StoreFile: Codable, Equatable {
     var equipment = EquipmentProfile()
     var activeSession: StrengthSession? = nil
     var ignoredInsights: [String] = []
+    /// Adaptive coach: active automatic adjustments, keys the rider undid or declined, keys the rider approved,
+    /// pending approval proposals and the last analysis.
+    var adaptations: [PlanAdjustment] = []
+    var dismissedAdaptations: [String] = []
+    var approvedAdaptations: [String] = []
+    var adaptiveProposals: [AdaptiveProposal] = []
+    var lastAdaptation: AdaptationSummary? = nil
 
     /// Explicit because both init(from:) and encode(to:) are hand-written (the compiler then synthesises no keys).
     enum CodingKeys: String, CodingKey {
         case schema, profile, settings, plan, rides, tiles, onboarded, guest, appleUserId, createdAt, ftpSuggestion, boardSync, onboardingStage, availability
         case strength, templates, customExercises, appliedProposals, weekdayRoutines, equipment, activeSession, ignoredInsights
+        case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation
     }
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
@@ -504,6 +561,11 @@ struct StoreFile: Codable, Equatable {
         equipment = (try? c.decodeIfPresent(EquipmentProfile.self, forKey: .equipment)) ?? EquipmentProfile()
         activeSession = try? c.decodeIfPresent(StrengthSession.self, forKey: .activeSession)
         ignoredInsights = (try? c.decodeIfPresent([String].self, forKey: .ignoredInsights)) ?? []
+        adaptations = (try? c.decodeIfPresent([PlanAdjustment].self, forKey: .adaptations)) ?? []
+        dismissedAdaptations = (try? c.decodeIfPresent([String].self, forKey: .dismissedAdaptations)) ?? []
+        approvedAdaptations = (try? c.decodeIfPresent([String].self, forKey: .approvedAdaptations)) ?? []
+        adaptiveProposals = (try? c.decodeIfPresent([AdaptiveProposal].self, forKey: .adaptiveProposals)) ?? []
+        lastAdaptation = try? c.decodeIfPresent(AdaptationSummary.self, forKey: .lastAdaptation)
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -514,6 +576,8 @@ struct StoreFile: Codable, Equatable {
         try c.encode(strength, forKey: .strength); try c.encode(templates, forKey: .templates); try c.encode(customExercises, forKey: .customExercises); try c.encode(appliedProposals, forKey: .appliedProposals)
         try c.encode(Dictionary(uniqueKeysWithValues: weekdayRoutines.map { (String($0.key), $0.value.uuidString) }), forKey: .weekdayRoutines)
         try c.encode(equipment, forKey: .equipment); try c.encodeIfPresent(activeSession, forKey: .activeSession); try c.encode(ignoredInsights, forKey: .ignoredInsights)
+        try c.encode(adaptations, forKey: .adaptations); try c.encode(dismissedAdaptations, forKey: .dismissedAdaptations); try c.encode(approvedAdaptations, forKey: .approvedAdaptations)
+        try c.encode(adaptiveProposals, forKey: .adaptiveProposals); try c.encodeIfPresent(lastAdaptation, forKey: .lastAdaptation)
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -568,6 +632,11 @@ final class Store: ObservableObject {
     @Published var equipment = EquipmentProfile() { didSet { persist() } }
     @Published var activeSession: StrengthSession? = nil { didSet { persist() } }
     @Published var ignoredInsights: [String] = [] { didSet { persist() } }
+    @Published var adaptations: [PlanAdjustment] = [] { didSet { persist() } }
+    @Published var dismissedAdaptations: [String] = [] { didSet { persist() } }
+    @Published var approvedAdaptations: [String] = [] { didSet { persist() } }
+    @Published var adaptiveProposals: [AdaptiveProposal] = [] { didSet { persist() } }
+    @Published var lastAdaptation: AdaptationSummary? = nil { didSet { persist() } }
     @Published private(set) var lastSaveError: String?
 
     let dir: URL
@@ -597,6 +666,8 @@ final class Store: ObservableObject {
         boardSync = f.boardSync; onboardingStage = f.onboardingStage; availability = f.availability; strength = f.strength
         templates = f.templates; customExercises = f.customExercises; appliedProposals = f.appliedProposals
         weekdayRoutines = f.weekdayRoutines; equipment = f.equipment; activeSession = f.activeSession; ignoredInsights = f.ignoredInsights
+        adaptations = f.adaptations; dismissedAdaptations = f.dismissedAdaptations; approvedAdaptations = f.approvedAdaptations
+        adaptiveProposals = f.adaptiveProposals; lastAdaptation = f.lastAdaptation
     }
 
     var snapshot: StoreFile {
@@ -604,6 +675,8 @@ final class Store: ObservableObject {
         f.boardSync = boardSync; f.onboardingStage = onboardingStage; f.availability = availability; f.strength = strength
         f.templates = templates; f.customExercises = customExercises; f.appliedProposals = appliedProposals
         f.weekdayRoutines = weekdayRoutines; f.equipment = equipment; f.activeSession = activeSession; f.ignoredInsights = ignoredInsights
+        f.adaptations = adaptations; f.dismissedAdaptations = dismissedAdaptations; f.approvedAdaptations = approvedAdaptations
+        f.adaptiveProposals = adaptiveProposals; f.lastAdaptation = lastAdaptation
         return f
     }
 
@@ -653,8 +726,10 @@ final class Store: ObservableObject {
     /// Fills freshly generated strength sessions with the weekday's default routine (if one is set and still exists).
     func applyWeekdayRoutines(_ ws: [Workout]) -> [Workout] {
         ws.map { w in
-            guard w.kind == .strength, w.templateId == nil, let t = weekdayRoutines[Store.weekdayIndex(w.date)], templates.contains(where: { $0.id == t }) else { return w }
-            var x = w; x.templateId = t; return x
+            guard w.kind == .strength, w.templateId == nil else { return w }
+            if let t = weekdayRoutines[Store.weekdayIndex(w.date)], templates.contains(where: { $0.id == t }) { var x = w; x.templateId = t; return x }
+            // adaptive coach (split chosen): a session without a routine is built from the rider's own exercises
+            return programmedSession(w)
         }
     }
     func template(_ id: UUID?) -> WorkoutTemplate? { id.flatMap { i in templates.first { $0.id == i } } }
@@ -881,8 +956,8 @@ final class Store: ObservableObject {
 
     // MARK: coach proposals (0.7.0): applied only on Accept, always undoable; fixed days and manual edits are refused
     @discardableResult
-    func apply(_ p: CoachProposal) -> Bool {
-        func target(_ id: UUID) -> Int? { plan.firstIndex { $0.id == id && !$0.fixed && !$0.edited && !$0.done } }
+    func apply(_ p: CoachProposal, allowFixed: Bool = false) -> Bool {
+        func target(_ id: UUID) -> Int? { plan.firstIndex { $0.id == id && (allowFixed || !$0.fixed) && !$0.edited && !$0.done } }
         switch p.change {
         case .move(let id, let to):
             guard let i = target(id) else { return false }
@@ -1026,6 +1101,7 @@ final class Store: ObservableObject {
         tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0; availability = nil; strength = []
         templates = []; customExercises = []; appliedProposals = []
         weekdayRoutines = [:]; equipment = EquipmentProfile(); activeSession = nil; ignoredInsights = []
+        adaptations = []; dismissedAdaptations = []; approvedAdaptations = []; adaptiveProposals = []; lastAdaptation = nil
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
         for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }

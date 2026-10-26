@@ -22,6 +22,7 @@ struct OnboardingView: View {
     @State private var healthResult: String?
     @State private var showDays = false
     @State private var daysDraft: WeeklyAvailability? = nil
+    @State private var showHybrid = false
     private let lastStep = 9
 
     var body: some View {
@@ -214,8 +215,26 @@ struct OnboardingView: View {
                 }
                 Text(store.profile.preferredDays.isEmpty ? "None picked: a sensible week is suggested; refine days and durations later in Plan › Days." : "Sessions go on these days first; the long ride takes the first weekend day you picked.").font(.footnote).foregroundStyle(.secondary)
             }
+            if store.profile.trainingMode == .hybrid {
+                // adaptive coach: the hybrid answers (all optional, skippable; editable later in Profile › Training profile)
+                Card {
+                    Eyebrow(t: "Hybrid plan (optional)")
+                    Text(hybridSummary).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Button { showHybrid = true } label: { Label("Goal, training days, split, equipment", systemImage: "slider.horizontal.3").frame(maxWidth: .infinity) }.buttonStyle(.bordered).accessibilityIdentifier("onboardingHybridPlan")
+                }
+            }
             next()
         }
+        .sheet(isPresented: $showHybrid) { HybridPlanEditor(asSheet: true) }
+    }
+
+    private var hybridSummary: String {
+        let p = store.profile
+        var parts: [String] = []
+        if let g = p.hybridGoal { parts.append("Goal: \(g.title.lowercased())") }
+        if let d = p.trainingDaysPerWeek { parts.append("\(d) training days") }
+        if let s = p.strengthSplit { parts.append("split: \(s.title)") }
+        return parts.isEmpty ? "Primary goal, total training days, session length, strength split (or your own), equipment and the routines to keep. Skip it and the coach decides." : parts.joined(separator: " · ")
     }
 
     // MARK: 0.7.0 — what exactly happens each day (type, duration, fixed/flexible), with a readable preview

@@ -66,6 +66,7 @@ struct AvailabilityEditor: View {
         store.availability = draft
         let c1 = store.regenerate(weekOf: Date(), replaceEdited: false)
         _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false)
+        _ = store.runAdaptation()          // plan rebuilt → the adaptive coach re-checks the coming sessions
         changes = c1
         dismiss()
     }
@@ -228,5 +229,5 @@ struct FixPlanSheet: View {
             .sheet(isPresented: $showEditor) { AvailabilityEditor() }
         }
     }
-    private func rebuild() { _ = store.regenerate(weekOf: Date(), replaceEdited: false); _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false); dismiss() }
+    private func rebuild() { _ = store.regenerate(weekOf: Date(), replaceEdited: false); _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false); _ = store.runAdaptation(); dismiss() }
 }

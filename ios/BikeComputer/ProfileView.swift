@@ -131,7 +131,9 @@ struct TrainingProfilePage: View {
                 Text(store.profile.trainingMode.hint).font(.footnote).foregroundStyle(.secondary)
                 if store.profile.trainingMode == .hybrid {
                     Picker("Main priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }
+                    NavigationLink { HybridPlanEditor() } label: { HStack { Text("Hybrid plan"); Spacer(); Text(hybridSummary).font(.caption).foregroundStyle(.secondary).lineLimit(1) } }.accessibilityIdentifier("hybridPlanLink")
                 }
+                NavigationLink { AdjustmentsView() } label: { HStack { Text("Coach adjustments"); Spacer(); Text(store.activeAdaptations.isEmpty ? (store.settings.autoAdapt ? "none in force" : "automatic off") : "\(store.activeAdaptations.count) in force").font(.caption).foregroundStyle(.secondary) } }
             } header: { Text("Training mode") } footer: { Text("Hybrid Athlete: one coach for cycling and lifting, with separate hour budgets. Changing the mode rebuilds the coming weeks around your days (hand-edited sessions are kept).") }
             Section("Goal") {
                 ForEach(RiderProfile.Goal.onboardingChoices, id: \.self) { g in
@@ -178,6 +180,14 @@ struct TrainingProfilePage: View {
         .navigationTitle("Training profile").navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
         .onChange(of: store.profile.trainingMode) { _, _ in if store.availability == nil { store.regenerate(weekOf: Date(), replaceEdited: false); store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false) } }
+    }
+    private var hybridSummary: String {
+        let p = store.profile
+        var parts: [String] = []
+        if let g = p.hybridGoal { parts.append(g.title.lowercased()) }
+        if let d = p.trainingDaysPerWeek { parts.append("\(d) days") }
+        if let s = p.strengthSplit { parts.append(s.short) }
+        return parts.isEmpty ? "goal, split, equipment" : parts.joined(separator: " · ")
     }
     private var availabilityText: String { let a = store.effectiveAvailability; return "\(a.cycleDays) ride · \(a.liftDays) lift days" + (a.fixedAssignments > 0 ? " · \(a.fixedAssignments) fixed" : "") + (store.availability == nil ? " (suggested)" : "") }
 }

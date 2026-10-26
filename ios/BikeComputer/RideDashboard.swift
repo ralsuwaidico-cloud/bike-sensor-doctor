@@ -151,7 +151,8 @@ final class RideCoach: ObservableObject {
     func configure(profile p: RiderProfile, settings s: AppSettings, workout: Workout?, powerTrusted: Bool) {
         var c = engine.config
         let ride = workout.flatMap { $0.kind.isRide ? $0 : nil }
-        let iv = Self.intervalPlan(for: ride?.kind)
+        var iv = Self.intervalPlan(for: ride?.kind)
+        if let r = ride?.intervalReps, iv != nil { iv?.repeats = max(1, r) }      // adaptive coach changed the repetitions
         c.mode = s.coachEnabled ? (iv != nil ? .INTERVAL : .ZONE2) : .FREE
         let z = min(5, max(1, ride?.kind.zone ?? 2))
         c.targetPowerZone = z; c.targetHrZone = z

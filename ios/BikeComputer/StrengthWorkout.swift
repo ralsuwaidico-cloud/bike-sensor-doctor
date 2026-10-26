@@ -49,7 +49,11 @@ struct StrengthWorkoutScreen: View {
                 header(w, routine)
                 if let note = budgetNote { Text(note).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
                 if w.done { completed(w) }
-                if removed { removedRoutine(w) } else if routine == nil { noRoutine(w) } else { exercises(entries, editable: !w.done) }
+                if removed { removedRoutine(w) } else if routine == nil && entries.isEmpty { noRoutine(w) } else {
+                    if routine == nil, w.generatedEntries { Text("Built by the coach from your exercises and equipment. Adjust the sets, or choose one of your routines under More.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                    exercises(entries, editable: !w.done)
+                }
+                if w.coachAdjusted, !w.done { Text("Adjusted by the coach — see Home › Coach adjustments for why, or to undo.").font(.caption2).foregroundStyle(BC.accent).fixedSize(horizontal: false, vertical: true) }
                 if !w.done, !removed, routine != nil || !entries.isEmpty { startButton(w, entries) }
                 if !w.done { InsightCard(workout: w, entries: entries) }
                 if w.fixed { Text("Fixed day — the coach never moves or changes it.").font(.caption2).foregroundStyle(.secondary) }
@@ -365,7 +369,8 @@ struct PlannedSetsEditor: View {
             .navigationTitle("This session's sets").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { if let i = store.plan.firstIndex(where: { $0.id == workout.id }) { store.plan[i].plannedEntries = entries }; dismiss() } }
+                // a hand change: flagged so the coach never overrides it (and a rebuild asks first)
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { if let i = store.plan.firstIndex(where: { $0.id == workout.id }) { store.plan[i].plannedEntries = entries; store.plan[i].generatedEntries = false; store.plan[i].edited = true }; dismiss() } }
             }
             .onAppear { if !loaded { loaded = true; entries = store.plannedEntries(for: workout) } }
         }
@@ -419,6 +424,8 @@ struct StrengthSessionView: View {
     @State private var expanded: UUID? = nil
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     @State private var now = Date()
+    /// Adaptive coach: the finished session waiting for its check-in (the finish sheet turns into the check-in).
+    @State private var checkInFor: UUID? = nil
 
     var body: some View {
         NavigationStack {
@@ -432,7 +439,10 @@ struct StrengthSessionView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Finish") { showFinish = true }.bold().accessibilityIdentifier("finishWorkout") }
             }
             .onReceive(timer) { now = $0 }
-            .sheet(isPresented: $showFinish) { finishSheet }
+            .sheet(isPresented: $showFinish) {
+                if let id = checkInFor { CheckInFlow(target: .strength(id), initialEffort: rpe) { showFinish = false; dismiss() } }
+                else { finishSheet }
+            }
             .alert("Discard this workout?", isPresented: $confirmDiscard) { Button("Discard", role: .destructive) { store.discardActiveSession(); dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("Nothing is saved. The planned session stays open.") }
         }
     }
@@ -500,7 +510,7 @@ struct StrengthSessionView: View {
             .navigationTitle("Finish workout").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Back") { showFinish = false } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { _ = store.finishActiveSession(rpe: rpe, notes: notes); showFinish = false; dismiss() }.bold().accessibilityIdentifier("saveWorkout") }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { if let s = store.finishActiveSession(rpe: rpe, notes: notes), store.strength.contains(where: { $0.id == s.id }) { checkInFor = s.id } else { showFinish = false; dismiss() } }.bold().accessibilityIdentifier("saveWorkout") }
             }
         }.presentationDetents([.medium])
     }

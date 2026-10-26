@@ -62,6 +62,8 @@ struct StrengthSession: Codable, Identifiable, Equatable {
     var finishedAt: Date? = nil
     var pausedSeconds: Int = 0
     var pausedAt: Date? = nil
+    /// Adaptive coach: the rider's post-session check-in (performance, effort, pain, note). nil = not given.
+    var checkIn: CheckIn? = nil
 
     init(id: UUID = UUID(), date: Date, minutes: Int, focus: StrengthFocus, customName: String = "", rpe: Int? = nil, notes: String = "", source: String = "manual", healthUUID: String? = nil, exercises: [ExerciseEntry]? = nil, templateId: UUID? = nil, workoutId: UUID? = nil) {
         self.id = id; self.date = date; self.minutes = minutes; self.focus = focus; self.customName = customName; self.rpe = rpe; self.notes = notes; self.source = source; self.healthUUID = healthUUID
@@ -92,6 +94,7 @@ struct StrengthSession: Codable, Identifiable, Equatable {
         finishedAt = try? c.decodeIfPresent(Date.self, forKey: .finishedAt)
         pausedSeconds = (try? c.decodeIfPresent(Int.self, forKey: .pausedSeconds)) ?? 0
         pausedAt = try? c.decodeIfPresent(Date.self, forKey: .pausedAt)
+        checkIn = try? c.decodeIfPresent(CheckIn.self, forKey: .checkIn)
     }
 
     var isDetailed: Bool { !(exercises ?? []).isEmpty }

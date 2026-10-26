@@ -171,12 +171,17 @@ struct WeeklyAvailability: Codable, Equatable {
     static func suggested(for p: RiderProfile) -> WeeklyAvailability {
         guard p.trainingMode != .cycling else { return WeeklyAvailability.fit(suggested(hoursPerWeek: p.hoursPerWeek), profile: p).availability }
         var d = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
-        let preferred = p.preferredDays.isEmpty ? [1, 3, 5, 6, 2, 4, 0] : p.preferredDays + [1, 3, 5, 6, 2, 4, 0].filter { !p.preferredDays.contains($0) }
-        let rides = p.trainingMode.includesCycling ? max(0, min(6, p.cyclingDaysPerWeek)) : 0
-        let lifts = max(0, min(6, p.liftDaysPerWeek))
+        var preferred = p.preferredDays.isEmpty ? [1, 3, 5, 6, 2, 4, 0] : p.preferredDays + [1, 3, 5, 6, 2, 4, 0].filter { !p.preferredDays.contains($0) }
+        // adaptive coach: the rider's total training days (the preferred days first); the other days are rest days
+        if let n = p.trainingDaysPerWeek, n >= 1, n < 7 { preferred = Array(preferred.prefix(n)) }
+        let trainingDays = preferred
+        let split: StrengthSplit? = p.trainingMode.includesLifting ? p.strengthSplit : nil
+        let rides = p.trainingMode.includesCycling ? max(0, min(p.trainingDaysPerWeek != nil ? 10 : 6, p.cyclingDaysPerWeek)) : 0
+        let lifts = max(0, min(p.trainingDaysPerWeek != nil ? 10 : 6, p.liftDaysPerWeek))
         let rideBudget = p.hoursPerWeek * 60, liftBudget = max(1, p.liftingHoursPerWeek) * 60
         var rideMin = rides > 0 ? max(30, rideBudget / rides) : 0
-        let liftMin = lifts > 0 ? max(20, liftBudget / lifts) : 0
+        var liftMin = lifts > 0 ? max(20, liftBudget / lifts) : 0
+        if let m = p.strengthSessionMinutes, m > 0, liftMin > 0 { liftMin = min(liftMin, max(15, m)) }
         var order = preferred
         if rides > 0, let wk = order.first(where: { $0 >= 5 }) {
             // long ride = 1.5 × the others, with the rest shrunk so the week stays inside the budget
@@ -184,13 +189,15 @@ struct WeeklyAvailability: Codable, Equatable {
             rideMin = rides > 1 ? max(30, (rideBudget - longMin) / (rides - 1)) : 0
             d[wk] = DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: longMin >= 90 ? .long : .zone2, minutes: longMin)]); order.removeAll { $0 == wk }
         }
+        if let m = p.cyclingSessionMinutes, m > 0, rideMin > 0 { rideMin = min(rideMin, max(20, m)) }
         var ridesLeft = rides - d.filter { $0.cycles }.count
         var liftsLeft = lifts
         var takeRide = p.priority != .strength
         var qualityPlaced = false
         for day in order where ridesLeft > 0 || liftsLeft > 0 {
             if (takeRide && ridesLeft > 0) || liftsLeft == 0 {
-                let t: CyclingType = (!qualityPlaced && rideMin >= 45) ? (p.level == .beginner ? .tempo : .threshold) : .zone2
+                // with a strength split the quality ride is left to the plan engine, which keeps it off leg days
+                let t: CyclingType? = split != nil ? nil : ((!qualityPlaced && rideMin >= 45) ? (p.level == .beginner ? .tempo : .threshold) : .zone2)
                 if t != .zone2 { qualityPlaced = true }
                 d[day] = DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: t, minutes: rideMin)]); ridesLeft -= 1
             } else { d[day] = DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: nil, minutes: liftMin)]); liftsLeft -= 1 }
@@ -200,13 +207,24 @@ struct WeeklyAvailability: Codable, Equatable {
         // the remaining rides with lifts — never an extra day
         var i = 0
         while liftsLeft > 0, i < 7 {
-            if d[i].cycles, !d[i].lifts { var a = d[i].assignments; a.append(DayAssignment(sport: .strength, strengthType: .upper, minutes: liftMin)); d[i] = DayAvailability(assignments: a); liftsLeft -= 1 }
+            if d[i].cycles, !d[i].lifts { var a = d[i].assignments; a.append(DayAssignment(sport: .strength, strengthType: split != nil ? nil : .upper, minutes: liftMin)); d[i] = DayAvailability(assignments: a); liftsLeft -= 1 }
             i += 1
         }
         i = 0
         while ridesLeft > 0, i < 7 {
             if d[i].lifts, !d[i].cycles { var a = d[i].assignments; a.append(DayAssignment(sport: .cycling, cyclingType: .zone2, minutes: rideMin)); d[i] = DayAvailability(assignments: a); ridesLeft -= 1 }
             i += 1
+        }
+        // adaptive coach: still more sessions than slots (frequency above the training days) → a further session on
+        // the training day with the fewest, never a new day
+        var extraGuard = 0
+        while p.trainingDaysPerWeek != nil, ridesLeft > 0 || liftsLeft > 0, !trainingDays.isEmpty, extraGuard < 40 {
+            extraGuard += 1
+            guard let day = trainingDays.min(by: { (d[$0].assignments.count, $0) < (d[$1].assignments.count, $1) }) else { break }
+            var a = d[day].assignments
+            if liftsLeft > 0, ridesLeft == 0 || !d[day].lifts { a.append(DayAssignment(sport: .strength, strengthType: nil, minutes: liftMin)); liftsLeft -= 1 }
+            else { a.append(DayAssignment(sport: .cycling, cyclingType: .zone2, minutes: rideMin)); ridesLeft -= 1 }
+            d[day] = DayAvailability(assignments: a)
         }
         return fit(WeeklyAvailability(days: d), profile: p).availability
     }
@@ -307,14 +325,24 @@ enum PlanEngine {
         func adjHard(_ i: Int) -> Int { load((i + 1) % 7) + load((i + 6) % 7) + (a.days[i].cycles ? 2 : 0) }
         var focus: [UUID: StrengthFocus] = [:]
         for l in lifts { if let t = l.a.strengthType { focus[l.a.id] = t } }
-        let liftOrder = untypedLifts.sorted { (adjHard($0.day), $0.day) < (adjHard($1.day), $1.day) }
-        for (n, l) in liftOrder.enumerated() {
-            var f = focusCycle[n % focusCycle.count]
-            if a.days[l.day].cycles, f.loadsLegs { f = .upper }        // same-day ride: do not load the legs twice
-            focus[l.a.id] = f
+        // adaptive coach: a chosen split is followed in day order (its rotation, not a fixed number of days)
+        let split: StrengthSplit? = p.trainingMode.includesLifting ? p.strengthSplit : nil
+        var slotFor: [UUID: SplitSlot] = [:]
+        if let split {
+            let seq = StrengthSplit.sessions(split: split, slots: p.customSplit, count: untypedLifts.count)
+            for (n, l) in untypedLifts.enumerated() where n < seq.count { focus[l.a.id] = seq[n].focus; slotFor[l.a.id] = seq[n] }
+        } else {
+            let liftOrder = untypedLifts.sorted { (adjHard($0.day), $0.day) < (adjHard($1.day), $1.day) }
+            for (n, l) in liftOrder.enumerated() {
+                var f = focusCycle[n % focusCycle.count]
+                if a.days[l.day].cycles, f.loadsLegs { f = .upper }        // same-day ride: do not load the legs twice
+                focus[l.a.id] = f
+            }
         }
         let legDays = Set(lifts.filter { focus[$0.a.id]?.loadsLegs == true }.map { $0.day })
         func adjacentToLegs(_ i: Int) -> Bool { legDays.contains((i + 1) % 7) || legDays.contains((i + 6) % 7) }
+        /// With a split, a leg session may share a day with a ride: that ride is never the quality one.
+        func legClash(_ i: Int) -> Bool { adjacentToLegs(i) || (split != nil && legDays.contains(i)) }
         // long ride: the longest untyped assignment (prefer not next to a leg day); quality: second longest ≥ 45 min
         if let longest = untyped.max(by: { ($0.a.minutes, adjacentToLegs($0.day) ? 0 : 1) < ($1.a.minutes, adjacentToLegs($1.day) ? 0 : 1) }) {
             cycTypes[longest.a.id] = longest.a.minutes >= 90 ? .long : .endurance
@@ -322,8 +350,8 @@ enum PlanEngine {
             let alreadyHard = cyc.contains { $0.a.cyclingType?.isHard ?? false }
             if !alreadyHard, cyc.count >= 2 {
                 let eligible = untyped.filter { $0.a.id != longest.a.id && $0.a.minutes >= 45 && ($0.day + 1) % 7 != longest.day }
-                let preferred = eligible.filter { !adjacentToLegs($0.day) }
-                if let q = (preferred.isEmpty ? eligible : preferred).max(by: { $0.a.minutes < $1.a.minutes }) {
+                let preferred = eligible.filter { !legClash($0.day) }
+                if let q = (preferred.isEmpty ? (split != nil ? [] : eligible) : preferred).max(by: { $0.a.minutes < $1.a.minutes }) {
                     cycTypes[q.a.id] = hard
                     if let next = untyped.first(where: { $0.day == (q.day + 1) % 7 }), cycTypes[next.a.id] == nil { cycTypes[next.a.id] = .recovery }
                 }
@@ -351,6 +379,10 @@ enum PlanEngine {
                 } else {
                     var w = Workout(date: date, kind: .strength, minutes: max(15, x.minutes), strengthFocus: focus[x.id] ?? .fullBody, sequence: n)
                     w.fixed = x.fixed; w.assignmentId = x.id
+                    if let slot = slotFor[x.id] {
+                        if slot.focus == .custom, !slot.label.isEmpty { w.note = slot.label }
+                        if let t = slot.templateId { w.templateId = t }
+                    }
                     items.append(w)
                 }
             }

@@ -46,8 +46,8 @@ struct PlanView: View {
             .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
             .sheet(item: $dayList) { day in dayListSheet(day) }
             .alert("Replace your edited sessions?", isPresented: $confirmRegenerate) {
-                Button("Replace", role: .destructive) { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: true) }
-                Button("Keep my edits") { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: false) }
+                Button("Replace", role: .destructive) { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: true); _ = store.runAdaptation() }
+                Button("Keep my edits") { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: false); _ = store.runAdaptation() }
                 Button("Cancel", role: .cancel) {}
             } message: { Text("\(store.editedCount(weekOf: weekDate)) session(s) this week were changed by hand. Completed sessions and past days are never touched.") }
         }
@@ -179,7 +179,7 @@ struct PlanView: View {
             Text(store.availability == nil ? "Suggested from your profile (\(store.profile.trainingMode.title.lowercased())). Set what happens each day and the plan is built around it." : "\(a.cycleDays) cycling days · \(Fmt.duration(minutes: a.cycleMinutes)) riding" + (a.liftDays > 0 ? " · \(a.liftDays) lift days · \(Fmt.duration(minutes: a.liftMinutes)) lifting" : "") + (a.fixedAssignments > 0 ? " · \(a.fixedAssignments) fixed" : "")).font(.footnote).foregroundStyle(.secondary)
             if !lastChanges.isEmpty { Text("Changed: " + lastChanges.joined(separator: "; ")).font(.caption).foregroundStyle(BC.accent).fixedSize(horizontal: false, vertical: true) }
             Button {
-                if store.editedCount(weekOf: weekDate) > 0 { confirmRegenerate = true } else { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: false) }
+                if store.editedCount(weekOf: weekDate) > 0 { confirmRegenerate = true } else { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: false); _ = store.runAdaptation() }
             } label: { Text("Rebuild this week from my days").frame(maxWidth: .infinity) }.buttonStyle(.bordered).disabled(weekOffset < 0)
         }
     }
@@ -217,7 +217,7 @@ struct WorkoutCard: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(workout.date.dayAndDate).font(.caption.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(workout.date) ? BC.accent : .secondary)
                     Spacer()
-                    if workout.done { Pill(text: "done", color: BC.live) } else if workout.skipped { Pill(text: "skipped") } else if workout.edited { Pill(text: "edited", color: BC.accent) } else if workout.fixed { Pill(text: "fixed", color: BC.stale) }
+                    if workout.done { Pill(text: "done", color: BC.live) } else if workout.skipped { Pill(text: "skipped") } else if workout.edited { Pill(text: "edited", color: BC.accent) } else if workout.coachAdjusted { Pill(text: "coach-adjusted", color: BC.accent) } else if workout.fixed { Pill(text: "fixed", color: BC.stale) }
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline) { titleBlock; Spacer(); durationBlock }
@@ -225,6 +225,7 @@ struct WorkoutCard: View {
                 }
                 if let r = routine { Text("\(r.entries.count) exercises · \(r.setCount) sets · " + r.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
                 else if workout.kind == .strength, routineRemoved, !workout.done { Text("routine removed — tap to choose another").font(.caption).foregroundStyle(BC.warn).lineLimit(2) }
+                else if workout.kind == .strength, !workout.done, let e = workout.plannedEntries, !e.isEmpty { Text("\(e.count) exercises · " + e.map { $0.name }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
                 else if workout.kind == .strength { Text(workout.done ? "logged without a routine" : "no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
                 else if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
             }

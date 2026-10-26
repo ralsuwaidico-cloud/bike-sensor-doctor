@@ -334,7 +334,13 @@ struct RideResultSheet: View {
     @Environment(\.dismiss) private var dismiss
     let ride: RideRecord
     @State private var confirmDiscard = false
+    /// Adaptive coach: after Save the sheet turns into the post-ride check-in.
+    @State private var checkIn = false
     var body: some View {
+        if checkIn { CheckInFlow(target: .ride(ride.id)) { recorder.finish(); dismiss() } }
+        else { result }
+    }
+    private var result: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -344,7 +350,7 @@ struct RideResultSheet: View {
                     Card { Eyebrow(t: "Coach (rules)"); Text(Coach.rideSummary(ride, profile: store.profile)) }
                     Text("Sources: \(ride.sources.joined(separator: " · "))").font(.footnote).foregroundStyle(.secondary)
                     if ride.recorder == .board { Text("The BikeComputer keeps its own copy of this ride in its history; this is the phone's mirror with the GPS track.").font(.footnote).foregroundStyle(.secondary) }
-                    Button { _ = store.addRide(ride); recorder.finish(); dismiss() } label: { Text(ride.demo ? "Close (demo, not saved)" : "Save ride").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
+                    Button { if store.addRide(ride) { checkIn = true } else { recorder.finish(); dismiss() } } label: { Text(ride.demo ? "Close (demo, not saved)" : "Save ride").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
                     Button("Discard", role: .destructive) { confirmDiscard = true }.frame(maxWidth: .infinity)
                 }.padding()
             }

@@ -39,8 +39,14 @@ struct QuickStrengthLogSheet: View {
     @State private var when = Date()
     @State private var loaded = false
     @State private var detailed = false
+    /// Adaptive coach: the saved session waiting for its check-in (the sheet turns into the check-in).
+    @State private var checkInFor: UUID? = nil
 
     var body: some View {
+        if let id = checkInFor { CheckInFlow(target: .strength(id), initialEffort: effort) { dismiss() } }
+        else { logForm }
+    }
+    private var logForm: some View {
         NavigationStack {
             Form {
                 Section("Session type") {
@@ -85,7 +91,7 @@ struct QuickStrengthLogSheet: View {
     private func save(asExtra: Bool = false) {
         if !asExtra, let d = store.existingLog(forWorkout: workoutId, on: when) { duplicate = d; return }
         let s = StrengthSession(date: when, minutes: minutes, focus: focus, customName: customName.trimmingCharacters(in: .whitespaces), rpe: effort, notes: notes, workoutId: asExtra ? nil : workoutId)
-        if store.addStrength(s) { dismiss() } else { rejected = true }
+        if store.addStrength(s) { checkInFor = s.id } else { rejected = true }
     }
 }
 
@@ -111,8 +117,13 @@ struct DetailedStrengthLogSheet: View {
     @State private var templateName = ""
     @State private var loaded = false
     @State private var expanded: UUID? = nil
+    @State private var checkInFor: UUID? = nil
 
     var body: some View {
+        if let id = checkInFor { CheckInFlow(target: .strength(id), initialEffort: effort) { dismiss() } }
+        else { logForm }
+    }
+    private var logForm: some View {
         NavigationStack {
             Form {
                 Section {
@@ -189,9 +200,9 @@ struct DetailedStrengthLogSheet: View {
             t.name = tn; t.focus = focus; t.entries = entries.map { e in var x = e; x.id = UUID(); return x }; t.updatedAt = Date(); t.lastUsed = when
             store.saveTemplate(t); s.templateId = t.id
         }
-        if editing != nil { store.updateStrength(s) } else { _ = store.addStrength(s) }
-        onSaved?()
-        dismiss()
+        if editing != nil { store.updateStrength(s); onSaved?(); dismiss(); return }
+        // a new completed session: ask for the check-in before closing (adaptive coach)
+        if store.addStrength(s) { onSaved?(); checkInFor = s.id } else { onSaved?(); dismiss() }
     }
 }
 

@@ -1,5 +1,20 @@
 # Athletics (formerly BikeComputer) iPhone + Apple Watch — changelog
 
+## Unreleased — adaptive hybrid-athlete coach (branch `ios/cyclift-adapt`, 26 Oct 2026)
+
+See `ios/ADAPTIVE_COACH.md`. Simulator / CI-tested only.
+- **Hybrid plan** answers (Hybrid Athlete mode, optional, in onboarding "Your week" and Profile › Training profile):
+  primary goal, total training days, sessions per sport, session length, budgets, strength split (Full Body /
+  Push-Pull-Legs / Upper-Lower / Custom list with per-week counts and routines), equipment, routines to keep. No split
+  implies a day count; extra sessions share a training day, never a new day.
+- Sessions without a routine are built from the rider's own exercises and equipment (once a split is chosen).
+- **Check-in** after every ride and strength session (performance, effort, pain, note), stored on the record.
+- **Adaptive engine** (rules-based, deterministic): session-RPE load, 4-week baselines, two-session trends, fatigue vs
+  improvement flags; bounded automatic changes to future sessions; approval for fixed days, session count, split,
+  replacing saved exercises, budgets and > 10 % load. "Coach adjustments": Why this changed?, Undo per change, Restore
+  original plan. Pain → progression stops in that area with plain advice, no diagnosis. Low confidence → plan kept.
+- Store: new optional keys only; files from builds 24–40 load unchanged; completed logs and rides are never changed.
+
 ## 1.0.0 (build BUILDNO) — 26 Oct 2026 — release candidate, TestFlight
 
 **Athletics.** The app is renamed; the cycling device stays "BikeComputer". Feature-frozen baseline = 0.8.0 (build 40);

@@ -18,6 +18,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     if store.profile.trainingMode == .cycling { coach } else { HybridCoachCard(tab: $tab, showWorkout: $showWorkout, showAlternatives: $showAlternatives, showStrengthLog: $showStrengthLog) }
+                    AdjustmentHomeLine()
                     if store.ftpSuggestion != nil { Card(accent: true) { FTPSuggestionCard() } }
                     if sync.state == .needsConfirmation {
                         NavigationLink { SyncStatusView() } label: {
