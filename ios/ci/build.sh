@@ -102,6 +102,55 @@ else
     | grep -v "^Filtering" | tail -400 | scrub > "$LOGS/sim-app-log.txt"
 fi
 
+# ---------------------------------------------------------------- layout audit (quality release)
+# The LayoutAudit UI test (skipped unless LAYOUT_DIR is set) on a small iPhone, a standard iPhone and a Pro Max at
+# several text sizes: PNG screenshots of the key screens (published, downscaled, to the ci-logs branch) and frame checks
+# of the key controls (inside the window, no overlap, >= 44 pt, hittable). Demo data only ("Demo" rider).
+LAYOUT="$OUT/layout"; mkdir -p "$LAYOUT"
+simpick() {  # $1 = exact name preferred, $2 = substring fallback
+  xcrun simctl list devices available -j | python3 -c '
+import json,sys
+exact,sub=sys.argv[1:3]
+d=json.load(sys.stdin)["devices"]; best=None
+for rt,devs in d.items():
+    if ".iOS-" not in rt: continue
+    ver=tuple(int(x) for x in rt.split(".iOS-")[1].split("-"))
+    for x in devs:
+        n=x["name"]
+        if n!=exact and sub not in n: continue
+        rank=(ver, n==exact)
+        if best is None or rank>best[0]: best=(rank,x["udid"],n)
+print((best[1]+"|"+best[2]) if best else "")' "$1" "$2"; }
+RT=$(xcrun simctl list runtimes -j | python3 -c '
+import json,sys
+r=[x for x in json.load(sys.stdin)["runtimes"] if x.get("isAvailable") and ".iOS-" in x["identifier"]]
+r.sort(key=lambda x: [int(p) for p in x["version"].split(".")])
+print(r[-1]["identifier"] if r else "")')
+SMALL=""
+for T in iPhone-SE-3rd-generation iPhone-SE-2nd-generation iPhone-13-mini iPhone-12-mini; do
+  U=$(xcrun simctl create "Audit small" "com.apple.CoreSimulator.SimDeviceType.$T" "$RT" 2>/dev/null) && { SMALL="$U|$T"; break; }
+done
+[ -n "$SMALL" ] || SMALL=$(simpick "iPhone 16e" "16e")
+STD=$(simpick "iPhone 17" "iPhone 16"); [ -n "$STD" ] || STD="$SIM|default"
+MAX=$(simpick "iPhone 17 Pro Max" "Pro Max")
+note "Layout audit simulators: small=${SMALL#*|} standard=${STD#*|} max=${MAX#*|} (runtime ${RT##*.})"
+LAYOUT_OK=1
+for spec in "small|${SMALL%%|*}|L,XXXL,AX3" "standard|${STD%%|*}|L,AX3" "promax|${MAX%%|*}|L,XXXL"; do
+  IFS='|' read -r LNAME LID LSIZES <<< "$spec"
+  [ -n "$LID" ] || { note "  layout $LNAME: no simulator"; continue; }
+  TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" \
+  xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
+    -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit \
+    CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
+  L=$?
+  digest "$OUT/layout-$LNAME.log" "layout-$LNAME"
+  if [ $L -eq 0 ]; then note "  layout $LNAME ($LSIZES): ok"; else note "  layout $LNAME ($LSIZES): FAILED (exit $L)"; LAYOUT_OK=0; fi
+done
+N_PNG=$(ls "$LAYOUT"/*.png 2>/dev/null | wc -l | tr -d ' ')
+for f in "$LAYOUT"/*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done
+cp "$LAYOUT"/*.txt "$LOGS/" 2>/dev/null || true
+if [ $LAYOUT_OK -eq 1 ]; then note "RESULT layout audit: ok ($N_PNG screenshots)"; else note "RESULT layout audit: FAILED ($N_PNG screenshots)"; STATUS=1; fi
+
 # ---------------------------------------------------------------- archive (device build)
 # The archive is ad-hoc signed ("-"): no certificate, no registered device. The entitlements (HealthKit) are embedded
 # so the App Store export can re-sign with Apple's cloud-managed distribution certificate.

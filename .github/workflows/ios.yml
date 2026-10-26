@@ -111,6 +111,8 @@ jobs:
           mkdir -p "ios/run-$N"
           mv "$GITHUB_WORKSPACE"/ios/build/logs/asc.txt "$GITHUB_WORKSPACE"/ios/build/logs/apple-setup.txt 2>/dev/null || true
           cp "$GITHUB_WORKSPACE"/ios/build/logs/*.txt "ios/run-$N/" 2>/dev/null || echo "no logs produced" > "ios/run-$N/summary.txt"
+          # layout audit screenshots (demo data only, downscaled by ios/ci/build.sh)
+          if ls "$GITHUB_WORKSPACE"/ios/build/layout/*.png >/dev/null 2>&1; then mkdir -p "ios/run-$N/layout" && cp "$GITHUB_WORKSPACE"/ios/build/layout/*.png "ios/run-$N/layout/"; fi
           echo "commit $GITHUB_SHA  branch $GITHUB_REF_NAME  job ${{ job.status }}" >> "ios/run-$N/summary.txt"
           git add -A && git commit -q -m "iOS CI log run $N"
           for i in 1 2 3; do
