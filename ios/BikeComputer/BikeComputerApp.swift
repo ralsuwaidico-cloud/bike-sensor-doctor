@@ -12,6 +12,7 @@ struct BikeComputerApp: App {
     @StateObject private var health = HealthAccess()
     @StateObject private var account: AccountService
     @StateObject private var cloud: SyncEngine
+    @StateObject private var hub: SensorHub
 
     init() {
         let s = Store()
@@ -57,6 +58,8 @@ struct BikeComputerApp: App {
         _location = StateObject(wrappedValue: l)
         _recorder = StateObject(wrappedValue: r)
         _sync = StateObject(wrappedValue: ps)
+        let h = SensorHub(); h.hrWatchFirst = { [weak s] in s?.settings.hrPref == .watch }
+        _hub = StateObject(wrappedValue: h)
         let acc = AccountService()
         _account = StateObject(wrappedValue: acc)
         _cloud = StateObject(wrappedValue: SyncEngine(store: s, account: acc))
@@ -75,6 +78,7 @@ struct BikeComputerApp: App {
                 .environmentObject(health)
                 .environmentObject(account)
                 .environmentObject(cloud)
+                .environmentObject(hub)
                 .onOpenURL { url in _ = account.handle(url: url) }
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {

@@ -7,6 +7,9 @@ struct RootView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var recorder: RideRecorder
     @EnvironmentObject private var device: DeviceLink
+    @EnvironmentObject private var watch: WatchLink
+    @EnvironmentObject private var location: LocationService
+    @EnvironmentObject private var hub: SensorHub
     @State private var tab = 0
     @State private var trainSheet: Store.TodayAction? = nil
     @State private var strengthWorkout: UUID? = nil
@@ -17,7 +20,7 @@ struct RootView: View {
         Group {
             if store.onboarded { tabs } else { OnboardingView() }
         }
-        .onReceive(timer) { _ in recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice }
+        .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: false); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice }
         .preferredColorScheme(store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil)
         .onChange(of: recorder.state) { _, s in idleTimer(s) }
         .onAppear { device.autoConnect = store.settings.autoConnectBoard }

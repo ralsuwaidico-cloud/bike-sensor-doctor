@@ -1,0 +1,146 @@
+Claude, I have further changes to the approved app before publication. Please integrate these with all previous instructions and the existing codebase.
+
+1. Final app name: CYCLIFT
+
+Replace the proposed name Athletics with Cyclift everywhere in the app, branding, onboarding, login screens, store preparation and user-facing materials.
+
+Keep BikeComputer as the name of our physical ESP32 cycling device.
+
+Do not unnecessarily change the iOS bundle identifier, Android package name, BLE device identifiers or existing backend records.
+
+Check app-store name availability and potential trademark conflicts before final submission. Do not assume the name is legally available.
+
+2. Make Cyclift a universal training platform
+
+The app must NOT be designed around my personal XDS power meter, heart-rate strap or ESP32.
+
+The current Ride Coach screen explicitly displays “WATTS · XDS”. This should instead display a generic metric such as “POWER · W” and show the connected source separately.
+
+The app should support an extensible source architecture for:
+
+* Our ESP32 BikeComputer.
+* Compatible Bluetooth power meters.
+* Compatible Bluetooth heart-rate monitors.
+* Cadence and speed sensors.
+* Apple Watch and Apple Health.
+* Garmin.
+* WHOOP.
+* Oura Ring.
+* Other providers added later.
+
+Use standard Bluetooth profiles where supported and dedicated adapters where required.
+
+Do not hardcode XDS, a specific HR strap or a specific manufacturer as the default.
+
+Create a source management system that identifies:
+
+* Source name.
+* Connection method.
+* Live versus imported data.
+* Available metrics.
+* Connection and authorization status.
+* Last successful update.
+* Data quality and confidence.
+* Source priority and fallback behavior.
+
+Do not pretend Garmin, WHOOP or Oura provide real-time data if their actual APIs do not support it. Verify provider capabilities and authorization requirements before implementing integrations.
+
+If multiple sources provide the same metric, apply a clear priority rule to avoid duplicates and conflicting values.
+
+Show “No power source” or “No heart-rate source” when a metric is unavailable, without implying a particular brand is required.
+
+Allow cycling workouts without a power meter, using available heart-rate, speed, cadence, GPS or perceived-exertion data.
+
+The coach must adapt to the sensors actually available.
+
+3. Restore all previously developed ride interfaces
+
+The current Ride Coach interface must NOT replace the earlier cycling dashboards.
+
+Review the project’s previous builds, screens, commits and design requirements and restore the previously approved ride layouts as selectable options.
+
+At minimum preserve or restore:
+
+* Classic metric dashboard.
+* Large power/heart-rate/cadence gauges.
+* Compact three-ring hybrid dashboard.
+* Live combined graph with watts, BPM and RPM.
+* Current Ride Coach dashboard.
+
+Do not create duplicate implementations unnecessarily. Reuse existing components and ride-recording logic.
+
+Add a simple “Ride layout” selector in Ride Now settings.
+
+Remember the selected layout between rides.
+
+Allow users to switch layouts during a ride without interrupting recording, disconnecting sensors or losing data.
+
+Maintain the one-screen, no-scrolling requirement for the live ride interface on the target iPhone sizes.
+
+Keep all metrics readable and ensure the interface works with partial sensor availability.
+
+4. Embed the AI coach in every ride layout
+
+The coach must be part of the actual ride screen, not hidden behind a separate page.
+
+Use a compact, prominent coaching panel that can show instructions such as:
+
+* Maintain current effort.
+* Increase cadence slightly.
+* Shift to an easier gear.
+* Reduce intensity to return to Zone 2.
+* Recover for the next interval.
+
+The coaching system must:
+
+* Adapt to the selected workout.
+* Use only available and sufficiently reliable sensor data.
+* Account for power, heart rate, cadence and GPS when available.
+* Continue providing useful guidance without a power meter or heart-rate strap.
+* Explain recommendations through an optional “Why?” action.
+* Avoid inventing sensor values.
+* Clearly distinguish provisional FTP and unverified power data.
+* Update coaching advice during the ride without excessive or distracting notifications.
+
+Preserve existing coaching calculations and rules where appropriate.
+
+Do not claim an advanced AI model is being used unless a real model is integrated. Rule-based coaching can remain as a reliable offline fallback.
+
+5. Keep the hybrid strength features
+
+Do not remove the previously requested:
+
+* Strength workout templates.
+* Calendar assignment of saved routines.
+* Home-equipment limitations.
+* Adaptive strength recommendations.
+* Exercise logging and progression.
+* Context-sensitive Ride Now / Train Now button.
+* Weekly cycling and strength planning.
+
+Cyclift must support both sports equally.
+
+6. Publication and release preparation
+
+Combine these changes with the earlier instructions for:
+
+* Apple and Google login.
+* Account management.
+* Data synchronization.
+* ESP32 connectivity reliability.
+* Phone-authoritative profile synchronization.
+* App Store and Google Play readiness.
+
+Avoid introducing new unnecessary features beyond these requirements.
+
+Preserve existing user data and all previously approved working functionality.
+
+Prepare one coordinated release candidate with compatible iOS and firmware versions.
+
+Run automated regression tests and identify what still needs physical-device testing.
+
+Do not flash the ESP32 or submit the app publicly without my approval.
+
+The goal is Cyclift: a general-purpose hybrid training app, not an XDS or BikeComputer companion app. The physical BikeComputer is simply one supported accessory.
+
+Please audit what is already implemented before writing new code, restore rather than replace the previous ride interfaces, and deliver one consolidated release report.
