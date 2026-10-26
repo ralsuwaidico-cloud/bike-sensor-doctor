@@ -335,6 +335,7 @@ final class AdaptationEngineTests: XCTestCase {
         let t0 = wholeSecondNow()
         let a = lift(1, [entry(squat)], base: t0), b = lift(2, [entry(press)], base: t0)
         var done = lift(-1, [entry(squat)], base: t0); done.done = true
+        s.customExercises = [squat, press, row]          // known exercises → the dumbbell load step (1 kg per hand)
         s.plan = [done, a, b]
         s.strength = [logged(-2, [entry(squat), entry(press)], base: t0), logged(-5, [entry(squat), entry(press)], base: t0)]
         s.runAdaptation(now: t0)
