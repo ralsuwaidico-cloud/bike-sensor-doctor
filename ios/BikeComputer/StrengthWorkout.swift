@@ -168,7 +168,7 @@ struct StrengthWorkoutScreen: View {
             if let r = store.routine(for: w) {
                 let wd = Store.weekdayIndex(w.date)
                 if store.weekdayRoutines[wd] != r.id { Button { budgetNote = store.setWeekdayRoutine(r, weekday: wd) } label: { Label("Set as every \(WeeklyAvailability.longDayNames[wd])", systemImage: "calendar.badge.plus") } }
-                else { Button { store.setWeekdayRoutine(nil, weekday: wd) } label: { Label("Stop using as \(WeeklyAvailability.longDayNames[wd]) default", systemImage: "calendar.badge.minus") } }
+                else { Button { _ = store.setWeekdayRoutine(nil, weekday: wd) } label: { Label("Stop using as \(WeeklyAvailability.longDayNames[wd]) default", systemImage: "calendar.badge.minus") } }
                 Button(role: .destructive) { budgetNote = store.assign(template: nil, to: w) } label: { Label("Remove routine from this session", systemImage: "xmark.circle") }
             }
             Divider()
@@ -573,7 +573,7 @@ struct WeekdayRoutinesPage: View {
                         Spacer()
                         Menu {
                             ForEach(store.templates) { t in Button(t.name) { note = store.setWeekdayRoutine(t, weekday: wd) } }
-                            if store.weekdayRoutines[wd] != nil { Divider(); Button("No default", role: .destructive) { store.setWeekdayRoutine(nil, weekday: wd) } }
+                            if store.weekdayRoutines[wd] != nil { Divider(); Button("No default", role: .destructive) { _ = store.setWeekdayRoutine(nil, weekday: wd); note = nil } }
                         } label: { Text(store.template(store.weekdayRoutines[wd])?.name ?? "—").foregroundStyle(store.weekdayRoutines[wd] == nil ? .secondary : .primary).lineLimit(1) }
                         .disabled(store.templates.isEmpty)
                     }.frame(minHeight: 44)

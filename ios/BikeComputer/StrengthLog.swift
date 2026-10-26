@@ -565,7 +565,7 @@ struct StrengthSessionDetail: View {
                                 if let p = prog.first(where: { $0.exerciseId == e.exerciseId }) {
                                     HStack(spacing: 6) {
                                         Text(trendText(p)).font(.caption2).foregroundStyle(p.trend == .up ? BC.live : p.trend == .down ? BC.stale : .secondary)
-                                        if p.points.count >= 3 { Spark(title: "", values: p.points.compactMap { $0.tonnageKg.map { Int($0) } }, unit: "kg·reps", color: BC.zone(5)).frame(maxWidth: 140) }
+                                        if p.points.count >= 3 { Spark(title: "", values: p.points.compactMap { $0.tonnageKg.map { Int(WeightFmt.value($0, store.settings.units)) } }, unit: "\(WeightFmt.unit(store.settings.units))·reps", color: BC.zone(5)).frame(maxWidth: 140) }
                                     }
                                 }
                                 if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary) }
