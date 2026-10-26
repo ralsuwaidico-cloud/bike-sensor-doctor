@@ -1,18 +1,18 @@
-# Athletics — Terms of use
+# Cyclift — Terms of use
 
 Last updated: 26 October 2026.
 
 ## Using the app
 
-Athletics helps you plan and record cycling and strength training. It is provided as is; use it at your own risk and within your abilities. Training suggestions are rule-based estimates from the data you record and are not medical advice. Consult a professional before starting or changing a training programme, especially with a medical condition.
+Cyclift helps you plan and record cycling and strength training. It is provided as is; use it at your own risk and within your abilities. Training suggestions are rule-based estimates from the data you record and are not medical advice. Consult a professional before starting or changing a training programme, especially with a medical condition.
 
 ## Measurements
 
-Values from sensors (power meters, heart-rate sensors, GPS) are shown as received and may be inaccurate; power readings are labelled unverified until you validate them. The app never invents measurements.
+Values from sensors and other sources (power meters, heart-rate sensors, cadence and speed sensors, Apple Watch, GPS) are shown as received and may be inaccurate; power readings are labelled unverified until you validate them. The app never invents measurements.
 
-## BikeComputer device
+## Sensors and the BikeComputer device
 
-The companion BikeComputer device is separate hardware; the app's device features depend on compatible firmware and are labelled when a connection is required. Battery charging safety of third-party hardware is outside the app's control.
+Cyclift works with the phone alone and with compatible standard Bluetooth sensors. The BikeComputer is an optional, separate handlebar device; the app's device features depend on compatible firmware and are labelled when a connection is required. Third-party sensors and hardware, including their battery and charging safety, are outside the app's control.
 
 ## Accounts
 
@@ -24,4 +24,4 @@ To the extent permitted by law, the developer is not liable for injuries, losses
 
 ## Contact
 
-ralsuwaidico@gmail.com
+SUPPORT_EMAIL

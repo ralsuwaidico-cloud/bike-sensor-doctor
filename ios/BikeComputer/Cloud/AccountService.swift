@@ -36,6 +36,9 @@ final class AccountService: NSObject, ObservableObject {
     let client: SupabaseClient?
     private var authTask: Task<Void, Never>?
     private var currentNonce: String?
+    /// ASWebAuthenticationSession must stay strongly referenced while the browser sheet is up, otherwise iOS tears it
+    /// down immediately and Google sign-in ends with "cancelled" before the user can type anything.
+    private var webSession: ASWebAuthenticationSession?
     /// Fired after every sign-in (the sync engine uploads local data) and sign-out.
     let sessionChanged = PassthroughSubject<Bool, Never>()
 
@@ -50,8 +53,11 @@ final class AccountService: NSObject, ObservableObject {
                 guard let self else { return }
                 switch event {
                 case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
-                    if let s = session { self.apply(session: s); if event == .signedIn { self.sessionChanged.send(true) } }
-                    else if event == .initialSession { self.state = .signedOut }
+                    if let s = session {
+                        self.apply(session: s)
+                        // a stored session at launch also starts a sync (not only a fresh sign-in)
+                        if event == .signedIn || event == .initialSession { self.sessionChanged.send(true) }
+                    } else if event == .initialSession { self.state = .signedOut }
                 case .signedOut, .userDeleted:
                     self.state = .signedOut; self.sessionChanged.send(false)
                 case .passwordRecovery:
@@ -109,13 +115,19 @@ final class AccountService: NSObject, ObservableObject {
         }
     }
     private func webAuth(url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { cont in
+        defer { webSession = nil }
+        return try await withCheckedThrowingContinuation { cont in
+            let once = ResumeOnce()
+            let finish: (Result<URL, Error>) -> Void = { r in once.run { cont.resume(with: r) } }
             let s = ASWebAuthenticationSession(url: url, callbackURLScheme: CloudConfig.redirectURL.scheme) { cb, err in
-                if let cb { cont.resume(returning: cb) } else { cont.resume(throwing: err ?? URLError(.cancelled)) }
+                if let cb { finish(.success(cb)) }
+                else if let e = err as? ASWebAuthenticationSessionError, e.code == .canceledLogin { finish(.failure(URLError(.cancelled))) }
+                else { finish(.failure(err ?? URLError(.cancelled))) }
             }
             s.presentationContextProvider = self
             s.prefersEphemeralWebBrowserSession = false
-            if !s.start() { cont.resume(throwing: URLError(.cannotConnectToHost)) }
+            webSession = s
+            if !s.start() { finish(.failure(URLError(.cannotConnectToHost))) }
         }
     }
 
@@ -203,5 +215,17 @@ extension AccountService: ASWebAuthenticationPresentationContextProviding {
         MainActor.assumeIsolated {
             (UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first?.windows.first { $0.isKeyWindow }) ?? ASPresentationAnchor()
         }
+    }
+}
+
+/// Resumes a continuation at most once (the web-auth completion and a failed start() must not both resume it).
+final class ResumeOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    func run(_ body: () -> Void) {
+        lock.lock(); defer { lock.unlock() }
+        guard !done else { return }
+        done = true
+        body()
     }
 }

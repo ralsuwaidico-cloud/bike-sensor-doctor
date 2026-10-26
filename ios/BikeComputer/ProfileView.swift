@@ -8,6 +8,7 @@ struct ProfileTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
     @EnvironmentObject private var sync: ProfileSync
+    @EnvironmentObject private var account: AccountService
 
     var body: some View {
         NavigationStack {
@@ -19,7 +20,7 @@ struct ProfileTabView: View {
                             Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
                             Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
                             HStack(spacing: 6) {
-                                if store.guest { Pill(text: "guest", color: BC.stale) } else { Pill(text: "Apple ID", color: BC.live) }
+                                if account.state.isSignedIn { Pill(text: "account", color: BC.live) } else if store.guest { Pill(text: "guest", color: BC.stale) } else { Pill(text: "Apple ID · this phone", color: BC.live) }
                                 if device.state == .ready { Pill(text: "board connected", color: BC.live) }
                             }
                         }
@@ -38,9 +39,10 @@ struct ProfileTabView: View {
                 }
                 AccountSection()
                 Section {
-                    LabeledContent("Version", value: "Athletics \(AppInfo.label)")
+                    LabeledContent("Version", value: "Cyclift \(AppInfo.label)")
                     NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
                     NavigationLink("Terms of use") { LegalView(kind: .terms) }
+                    Link(destination: SupportInfo.supportPage) { HStack { Text("Support"); Spacer(); Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary) } }
                     LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1.2")
                     Text("Works offline. Network is used only for your account and cloud sync when you sign in, and for Sign in with Apple. No analytics, no advertising.").font(.footnote).foregroundStyle(.secondary)
                     if let e = store.lastSaveError { Text("Save problem: \(e)").font(.footnote).foregroundStyle(BC.warn) }

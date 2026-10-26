@@ -73,14 +73,16 @@ extension Date {
     var dayAndDate: String { let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f.string(from: self) }
 }
 
-/// The Athletics mark: the launch-screen image on an accent-coloured rounded square. Same artwork as the app icon
+/// The Cyclift mark: the launch-screen image on an accent-coloured rounded square. Same artwork as the app icon
 /// (ios/tools/make_icon.py draws it); used on the onboarding welcome and the account pages.
-struct AthleticsMark: View {
+struct CycliftMark: View {
     var size: CGFloat = 44
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.225, style: .continuous).fill(BC.accent)
             Image("LaunchMark").resizable().scaledToFit().frame(width: size * 0.9, height: size * 0.9)
-        }.frame(width: size, height: size).accessibilityLabel("Athletics")
+        }.frame(width: size, height: size).accessibilityLabel("Cyclift")
     }
 }
+/// Old name of the mark (Athletics 1.0 RC), kept so code written against it still compiles.
+typealias AthleticsMark = CycliftMark

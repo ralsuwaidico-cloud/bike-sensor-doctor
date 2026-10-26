@@ -131,7 +131,7 @@ final class WorkoutManager: NSObject, ObservableObject, HKWorkoutSessionDelegate
             WCSession.default.sendMessage(msg, replyHandler: nil) { [weak self] e in DispatchQueue.main.async { self?.status = "Phone unreachable: \(e.localizedDescription)" } }
             if bpm != nil { sentCount += 1 }
         } else {
-            status = "iPhone not reachable — open Athletics on the phone"
+            status = "iPhone not reachable — open Cyclift on the phone"
         }
     }
 

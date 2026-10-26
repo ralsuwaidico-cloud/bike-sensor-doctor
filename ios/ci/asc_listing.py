@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""App Store Connect listing preparation for Athletics 1.0 — DRAFTS ONLY. Run by .github/workflows/asc-listing.yml.
+"""App Store Connect listing preparation for Cyclift 1.0 — DRAFTS ONLY. Run by .github/workflows/asc-listing.yml.
 
 MODE=check  read-only: reports the app record, name, version, localizations, capabilities, screenshots, builds.
 MODE=apply  writes draft metadata to the version that is still being prepared (never submits, never releases,
@@ -32,7 +32,8 @@ MODE = os.environ.get("MODE", "check").strip().lower()
 APPLY = MODE == "apply"
 SHOT_DIR = os.environ.get("SCREENSHOT_DIR", "").strip()
 REPORT = os.environ.get("REPORT", "asc-listing-report.txt")
-SHOT_PREFIX = "athletics-store-"
+SHOT_PREFIX = "cyclift-store-"
+OLD_SHOT_PREFIXES = ("athletics-store-",)   # earlier uploads by this script (pre-rename) are replaced too
 TARGET_VERSION = "1.0.0"
 EDITABLE_INFO = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"}
 EDITABLE_VERSION = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"}
@@ -59,7 +60,7 @@ def shown_name(n):
         cands = [c.strip() for c in read("name_candidates.txt").splitlines() if c.strip()]
     except OSError:
         cands = []
-    return f"'{n}'" if n in cands else f"(not an Athletics candidate yet, {len(n or '')} characters — hidden)"
+    return f"'{n}'" if n in cands else f"(not a Cyclift candidate yet, {len(n or '')} characters — hidden)"
 
 
 def read(name):
@@ -384,7 +385,7 @@ def screenshots(loc_id):
     existing = res.get("data", []) if st == 200 else []
     keep = 0
     for s in existing:
-        if (s["attributes"].get("fileName") or "").startswith(SHOT_PREFIX):
+        if (s["attributes"].get("fileName") or "").startswith((SHOT_PREFIX,) + OLD_SHOT_PREFIXES):
             st2, _ = call("DELETE", f"/v1/appScreenshots/{s['id']}")
             out(f"  removed earlier script screenshot: {'ok' if st2 in (200, 204) else st2}")
         else:
@@ -441,7 +442,7 @@ def main():
             out(f"App Store Connect secret {k} missing — nothing done.")
             return 1
     asc.TOKEN = asc.token()
-    out(f"Athletics App Store listing — mode {MODE.upper()} (drafts only; never submits, releases, prices or accepts agreements)")
+    out(f"Cyclift App Store listing — mode {MODE.upper()} (drafts only; never submits, releases, prices or accepts agreements)")
     out()
     sign_in_with_apple()
     out()

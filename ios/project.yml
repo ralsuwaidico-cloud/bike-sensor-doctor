@@ -1,4 +1,4 @@
-# XcodeGen spec for the Athletics iPhone + Apple Watch apps (product/bundle ids keep the original BikeComputer names).
+# XcodeGen spec for the Cyclift iPhone + Apple Watch apps (product/bundle ids keep the original BikeComputer names).
 # The .xcodeproj is generated on the GitHub macOS runner (never committed), so nobody needs to open Xcode.
 # Signing team and build number are passed in by CI (ios/ci/build.sh); nothing secret lives in this file.
 name: BikeComputer
@@ -21,6 +21,7 @@ settings:
     SUPABASE_ANON_KEY: ""
     GOOGLE_WEB_CLIENT_ID: ""
     GOOGLE_IOS_CLIENT_ID: ""
+    CYCLIFT_SUPPORT_EMAIL: ""
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
@@ -47,7 +48,7 @@ targets:
     info:
       path: BikeComputer/Info.plist
       properties:
-        CFBundleDisplayName: Athletics
+        CFBundleDisplayName: Cyclift
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSRequiresIPhoneOS: true
@@ -58,6 +59,7 @@ targets:
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
         GOOGLE_WEB_CLIENT_ID: $(GOOGLE_WEB_CLIENT_ID)
         GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
+        CYCLIFT_SUPPORT_EMAIL: $(CYCLIFT_SUPPORT_EMAIL)
         UILaunchScreen:
           UIColorName: LaunchBackground
           UIImageName: LaunchMark
@@ -93,7 +95,7 @@ targets:
     info:
       path: BikeComputerWatch/Info.plist
       properties:
-        CFBundleDisplayName: Athletics
+        CFBundleDisplayName: Cyclift
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKApplication: true

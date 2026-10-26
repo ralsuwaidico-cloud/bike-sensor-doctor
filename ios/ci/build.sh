@@ -11,6 +11,7 @@
 #   UPLOAD            "true" to upload to TestFlight (internal testers only)
 #   SUPABASE_URL, SUPABASE_ANON_KEY, GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID
 #                     optional account-service values, written into Info.plist at build time (empty = accounts off)
+#   CYCLIFT_SUPPORT_EMAIL optional public support address for the in-app legal pages (empty = "see the support page")
 #
 # Secrets only ever go to a 0600 file in $RUNNER_TEMP that is deleted at the end, and every log line that leaves the
 # runner is passed through `scrub` (the repository and its logs are public).
@@ -106,7 +107,7 @@ fi
 TEAM_ARGS=()
 [ -n "${APPLE_TEAM_ID:-}" ] && TEAM_ARGS=(DEVELOPMENT_TEAM="$APPLE_TEAM_ID")
 # account-service configuration → Info.plist (values stay out of the logs; only presence is reported)
-CLOUD_ARGS=(SUPABASE_URL="${SUPABASE_URL:-}" SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}" GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}" GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}")
+CLOUD_ARGS=(SUPABASE_URL="${SUPABASE_URL:-}" SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}" GOOGLE_WEB_CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}" GOOGLE_IOS_CLIENT_ID="${GOOGLE_IOS_CLIENT_ID:-}" CYCLIFT_SUPPORT_EMAIL="${CYCLIFT_SUPPORT_EMAIL:-}")
 if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then note "Accounts: configured (Supabase)$( [ -n "${GOOGLE_WEB_CLIENT_ID:-}" ] && echo ', Google sign-in on' || echo ', Google sign-in off')"
 else note "Accounts: not configured (SUPABASE_URL / SUPABASE_ANON_KEY secrets absent) — the app runs guest-only"; fi
 ARCHIVE="$OUT/BikeComputer.xcarchive"
@@ -133,7 +134,7 @@ for app in "$ARCHIVE/Products/Applications/BikeComputer.app" "$ARCHIVE/Products/
   if [ -d "$app" ]; then
     DN=$(/usr/libexec/PlistBuddy -c 'Print CFBundleDisplayName' "$app/Info.plist" 2>/dev/null)
     note "  contains $(basename "$app") $(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Info.plist") ($(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$app/Info.plist")) — display name '$DN'"
-    [ "$DN" = "Athletics" ] || { note "    display name is not Athletics"; STATUS=1; }
+    [ "$DN" = "Cyclift" ] || { note "    display name is not Cyclift"; STATUS=1; }
   else note "  MISSING $app"; STATUS=1; fi
   if [ -d "$app" ]; then
     if codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -q "com.apple.developer.healthkit"; then

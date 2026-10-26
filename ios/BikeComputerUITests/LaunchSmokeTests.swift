@@ -11,7 +11,7 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_RESET"] = "1"
         app.launch()
-        XCTAssertTrue(app.staticTexts["Athletics"].waitForExistence(timeout: 20), "fresh launch must show the Athletics welcome screen")
+        XCTAssertTrue(app.staticTexts["Cyclift"].waitForExistence(timeout: 20), "fresh launch must show the Cyclift welcome screen")
         XCTAssertEqual(app.state, .runningForeground)
     }
 
@@ -91,7 +91,7 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'not configured in this build'")).firstMatch.waitForExistence(timeout: 10), "without Supabase values the sheet says accounts are not available")
         app.buttons["Not now"].firstMatch.tap()
         let privacy = app.buttons["Privacy policy"].firstMatch
-        if privacy.waitForExistence(timeout: 5) { privacy.tap(); XCTAssertTrue(app.staticTexts["Athletics — Privacy policy"].firstMatch.waitForExistence(timeout: 10)); app.navigationBars.buttons.element(boundBy: 0).tap() }
+        if privacy.waitForExistence(timeout: 5) { privacy.tap(); XCTAssertTrue(app.staticTexts["Cyclift — Privacy policy"].firstMatch.waitForExistence(timeout: 10)); app.navigationBars.buttons.element(boundBy: 0).tap() }
         XCTAssertEqual(app.state, .runningForeground)
         Self.tapAllTabs(app)
     }
