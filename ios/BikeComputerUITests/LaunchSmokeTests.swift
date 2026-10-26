@@ -89,7 +89,9 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(create.waitForExistence(timeout: 10), "guest sees Create account in Profile › Account")
         create.tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'not configured in this build'")).firstMatch.waitForExistence(timeout: 10), "without Supabase values the sheet says accounts are not available")
-        app.buttons["Not now"].firstMatch.tap()
+        let notNow = app.buttons["Not now"].firstMatch
+        XCTAssertTrue(notNow.waitForExistence(timeout: 10), "the account sheet stays open with its Not now button")
+        notNow.tap()
         let privacy = app.buttons["Privacy policy"].firstMatch
         if privacy.waitForExistence(timeout: 5) { privacy.tap(); XCTAssertTrue(app.staticTexts["Cyclift — Privacy policy"].firstMatch.waitForExistence(timeout: 10)); app.navigationBars.buttons.element(boundBy: 0).tap() }
         XCTAssertEqual(app.state, .runningForeground)

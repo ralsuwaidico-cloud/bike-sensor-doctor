@@ -9,6 +9,7 @@ struct ProfileTabView: View {
     @EnvironmentObject private var device: DeviceLink
     @EnvironmentObject private var sync: ProfileSync
     @EnvironmentObject private var account: AccountService
+    @State private var showAccount = false
 
     var body: some View {
         NavigationStack {
@@ -37,7 +38,7 @@ struct ProfileTabView: View {
                     link("Connections & devices", "dot.radiowaves.left.and.right", deviceSummary) { ConnectionsView() }
                     link("App & device settings", "gearshape", "display, notifications, privacy, sync, firmware") { AppSettingsPage() }
                 }
-                AccountSection()
+                AccountSection(present: $showAccount)
                 Section {
                     LabeledContent("Version", value: "Cyclift \(AppInfo.label)")
                     NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
@@ -49,6 +50,7 @@ struct ProfileTabView: View {
                 } header: { Text("About") }
             }
             .navigationTitle("Profile")
+            .sheet(isPresented: $showAccount) { AccountSheet() }
         }
     }
     private func link<D: View>(_ title: String, _ icon: String, _ subtitle: String, @ViewBuilder _ d: @escaping () -> D) -> some View {

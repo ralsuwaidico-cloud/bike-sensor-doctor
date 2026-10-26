@@ -13,20 +13,24 @@ struct AccountSection: View {
     @State private var deleting = false
     @State private var exportURL: URL?
     @State private var deleteError: String?
+    /// When the host list owns the sheet (Profile), the section only flips this binding. A sheet attached to a row
+    /// inside a List is torn down when the list re-renders the row, which closed the sign-in sheet unpredictably.
+    var present: Binding<Bool>? = nil
+    private func openAccount() { if let present { present.wrappedValue = true } else { showAccount = true } }
 
     var body: some View {
         Section("Account") {
             switch account.state {
             case .notConfigured:
                 if store.guest {
-                    Button { showAccount = true } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("not available yet").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
+                    Button { openAccount() } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("not available yet").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
                 } else {
                     HStack { Label("Signed in with Apple", systemImage: "checkmark.seal"); Spacer(); Pill(text: "local only", color: BC.stale) }
                     Button("Sign out (keeps data on this phone)") { store.guest = true; store.appleUserId = nil }
                 }
                 Text("Cyclift accounts and cloud sync are switched off in this build; everything stays on this phone.").font(.footnote).foregroundStyle(.secondary)
             case .signedOut:
-                Button { showAccount = true } label: { HStack { Label("Create account or sign in", systemImage: "person.badge.plus"); Spacer(); Text("guest · data on this phone").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
+                Button { openAccount() } label: { HStack { Label("Create account or sign in", systemImage: "person.badge.plus"); Spacer(); Text("guest · data on this phone").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
                 Text("An account keeps your workouts, plan, templates and settings in sync across your devices. Guest data is uploaded when you sign in — nothing is lost.").font(.footnote).foregroundStyle(.secondary)
             case .signedIn(_, let email, let provider):
                 HStack { Label("Signed in with \(provider)", systemImage: "checkmark.seal"); Spacer(); if let e = email { Text(e).font(.caption).foregroundStyle(.secondary).lineLimit(1) } }
