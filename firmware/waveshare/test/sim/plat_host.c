@@ -3,6 +3,7 @@
 #include "plat.h"
 #include "sim.h"
 #include "app_psvc.h"
+#include "bc_pipe.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +33,22 @@ void plat_sensors(plat_sensors_t *o)
     o->csc_has_wheel = g_sim.csc_has_wheel; o->csc_has_crank = g_sim.csc_has_crank;
     for (int k = 0; k < PLAT_SENS_KINDS; k++) { o->link[k] = g_sim.link[k]; }
     o->link[PLAT_SENS_POWER].valid_age_ms = g_sim.power_ok ? 700 : (g_sim.link[0].packets ? 9300 : UINT32_MAX);
+    /* 0.7.2: a scripted link without an explicit stage gets the stage its scripted state implies */
+    for (int k = 0; k < PLAT_SENS_KINDS; k++) {
+        plat_link_info_t *l = &o->link[k];
+        if (l->stage) continue;
+        bool valid = k == PLAT_SENS_POWER ? g_sim.power_ok : k == PLAT_SENS_HR ? g_sim.hr_ok : k == PLAT_SENS_CSC ? (g_sim.csc_cad_ok || g_sim.csc_speed_ok) : false;
+        switch (l->link) {
+        case PLAT_LINK_SEARCHING: case PLAT_LINK_RETRY: l->stage = BC_STG_SEARCHING; break;
+        case PLAT_LINK_CONNECTING: l->stage = BC_STG_CONNECTING; break;
+        case PLAT_LINK_CONNECTED: l->stage = valid ? BC_STG_VALID : l->packets ? BC_STG_STALE : BC_STG_SUBSCRIBED; break;
+        case PLAT_LINK_STALE: l->stage = BC_STG_STALE; break;
+        default: l->stage = BC_STG_NOT_PAIRED; break;
+        }
+        if (k == PLAT_SENS_HR && l->stage == BC_STG_VALID) l->valid_age_ms = 900;
+        if (k == PLAT_SENS_CSC && l->stage == BC_STG_VALID) l->valid_age_ms = 800;
+    }
+    if (g_sim.fake.on) sim_fake_snapshot(o);
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;
 }
 
@@ -49,6 +66,14 @@ int plat_scan_results(plat_found_t *out, int max)
 }
 void plat_pair(plat_sens_kind_t k, const plat_found_t *d)
 {
+    if (k == PLAT_SENS_POWER && g_sim.fake.on) {      /* the fake meter: forget / re-pair restarts its connection */
+        g_sim.fake.paired = d != NULL; g_sim.fake.state = d ? 1 : 0; g_sim.fake.retry_at = 0; g_sim.fake.backoff_s = 1;
+        memset(g_sim.fake.enabled, 0, sizeof g_sim.fake.enabled);
+        bc_pipe_set_link(&g_sim.fake.pipe, d ? BC_STG_SEARCHING : BC_STG_NOT_PAIRED, g_sim.now_ms);
+        if (!d) bc_pipe_set_link(&g_sim.fake.pipe, BC_STG_NOT_PAIRED, g_sim.now_ms);
+        g_sim.link[k].link = d ? PLAT_LINK_SEARCHING : PLAT_LINK_NOT_PAIRED; g_sim.pair_calls++;
+        return;
+    }
     g_sim.link[k].link = d ? PLAT_LINK_CONNECTED : PLAT_LINK_NOT_PAIRED;
     if (d) snprintf(g_sim.link[k].name, sizeof g_sim.link[k].name, "%s", d->name);
     g_sim.pair_calls++;
@@ -309,7 +334,11 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
     case BC_MSG_PROFILE: bc_link_decode_profile(b, n, &PH.profile); PH.profiles++; break;
     case BC_MSG_PROFILE_ACK: bc_link_decode_profile_ack(b, n, &PH.profile_ack); PH.profile_acks++; break;
     case BC_MSG_SETTINGS: bc_link_decode_settings(b, n, &PH.settings); PH.settings_msgs++; break;
-    case BC_MSG_EVENT: bc_link_decode_event(b, n, &PH.event); PH.events++; break;
+    case BC_MSG_EVENT: {
+        bc_sensor_diag_t d;
+        if (bc_link_decode_sensor_diag(b, n, &d)) { PH.diag[PH.ndiag % 16] = d; PH.ndiag++; PH.diags++; }   /* 0.7.2 SENSOR_DIAG */
+        else { bc_link_decode_event(b, n, &PH.event); PH.events++; }
+        break; }
     default: PH.unknown_notifies++; break;
     }
     return true;

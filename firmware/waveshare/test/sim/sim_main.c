@@ -69,7 +69,7 @@ static void read_cb(lv_indev_t *i, lv_indev_data_t *d)
 }
 
 void sim_wifi_pump(void);
-static void run(int ms) { for (int t = 0; t < ms; t += 5) { g_sim.now_ms += 5; lv_timer_handler(); if (g_sim.now_ms % 100 == 0) sim_wifi_pump(); } }
+static void run(int ms) { for (int t = 0; t < ms; t += 5) { g_sim.now_ms += 5; lv_timer_handler(); if (g_sim.now_ms % 100 == 0) { sim_wifi_pump(); sim_fake_pump(); } } }
 static void run_s(int s) { for (int i = 0; i < s; i++) run(1000); }
 static void raw_tap(int x, int y) { ptr.x = x; ptr.y = y; ptr.down = true; run(80); ptr.down = false; run(150); }
 static int n_auto_wakes;
@@ -155,6 +155,31 @@ static bool hold_text(const char *txt, int ms)
 }
 
 static bool on_screen(const char *txt) { return find_text(txt) != NULL; }
+
+/* 0.7.2: a control is usable WITHOUT scrolling: its clickable box lies fully inside every ancestor, no scrollable ancestor is
+   scrolled, and all four corners are inside the round glass (radius 120). */
+static bool btn_visible_at_top(const char *txt)
+{
+    lv_obj_t *l = find_text(txt); if (!l) return false;
+    lv_obj_t *c = l; while (c && !lv_obj_has_flag(c, LV_OBJ_FLAG_CLICKABLE)) c = lv_obj_get_parent(c);
+    if (!c) return false;
+    lv_area_t a; lv_obj_get_coords(c, &a);
+    for (lv_obj_t *p = lv_obj_get_parent(c); p; p = lv_obj_get_parent(p)) {
+        lv_area_t pa; lv_obj_get_coords(p, &pa);
+        if (a.x1 < pa.x1 || a.y1 < pa.y1 || a.x2 > pa.x2 || a.y2 > pa.y2) return false;
+        if (lv_obj_get_scroll_y(p) != 0) return false;
+    }
+    int xs[2] = { a.x1, a.x2 }, ys[2] = { a.y1, a.y2 };
+    for (int i = 0; i < 2; i++) for (int j = 0; j < 2; j++) { int dx = xs[i] - 120, dy = ys[j] - 120; if (dx * dx + dy * dy > 120 * 120) return false; }
+    return true;
+}
+/* the primary action (first of the candidates found) and Back, both usable at scroll position 0 */
+static bool primary_and_back_ok(const char *const *cands, int n, const char **which)
+{
+    *which = "?";
+    for (int i = 0; i < n; i++) if (on_screen(cands[i])) { *which = cands[i]; return btn_visible_at_top(cands[i]) && btn_visible_at_top(LV_SYMBOL_LEFT); }
+    return false;
+}
 
 /* scroll the screen's scroll area until txt is visible (tries both directions) */
 static bool scroll_to(const char *txt)
@@ -658,7 +683,7 @@ static void scenario(void)
     sensors(false, 0, false, 0, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_RETRY; g_sim.link[PLAT_SENS_POWER].reconnects = 3;
     g_sim.link[PLAT_SENS_POWER].packets = 400;
     run(600);
-    CHECK(on_screen("NO DATA") && on_screen("RECONNECTING") && on_screen("reconnects 3"), "sensor test: NO DATA + reconnecting");
+    CHECK(on_screen("NO DATA") && on_screen("RETRYING") && on_screen("reconnects 3"), "sensor test: NO DATA + the real pipeline stage (RETRYING)");
     shot("90b_sensor_test_nodata");
     app_set_demo(true); run_s(2);
     CHECK(on_screen("SIMULATED"), "sensor test labels demo data SIMULATED");
@@ -666,7 +691,7 @@ static void scenario(void)
     app_set_demo(false);
     g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED;
     ui_connections_show(); run(500); shot("82_connections");
-    tap_text("Power meter"); run(300); shot("82b_conn_power"); scroll_to("PAIR "); tap_text("PAIR "); run(2000); shot("83_pair_from_connections");
+    tap_text("POWER"); run(300); shot("82b_conn_power"); tap_text("HELP"); run(300); scroll_to("PAIR ANOTHER"); tap_text("PAIR ANOTHER"); run(2000); shot("83_pair_from_connections");
 
     printf("== 11 Wi-Fi manager\n");
     {
@@ -676,12 +701,13 @@ static void scenario(void)
         strcpy(g_sim.ap[2].ssid, "CafeFree"); g_sim.ap[2].rssi = -75; g_sim.ap[2].secured = false; g_sim.ap[2].present = true;
         strcpy(g_sim.ap[3].ssid, "AVeryLongNetworkNameForTest123"); g_sim.ap[3].rssi = -84; g_sim.ap[3].secured = true; strcpy(g_sim.ap[3].pass, "12345678"); g_sim.ap[3].present = true;
         ui_settings_show(); run(300); scroll_to("Wi-Fi"); tap_text("Wi-Fi");
-        CHECK(on_screen("OFF") && on_screen("Optional"), "Wi-Fi screen, off");
+        CHECK(on_screen("OFF") && on_screen("optional") && btn_visible_at_top("TURN ON") && btn_visible_at_top(LV_SYMBOL_LEFT), "Wi-Fi screen, off: TURN ON + Back visible without scrolling");
         shot("a0_wifi_off");
-        tap_text("Wi-Fi");
+        tap_text("TURN ON");
         CHECK(app_profile()->wifi_on, "Wi-Fi switched on and remembered");
         shot("a1_wifi_on");
-        tap_text("Networks"); run(2600);
+        CHECK(btn_visible_at_top("NETWORKS") && btn_visible_at_top("SAVED") && btn_visible_at_top("HELP") && btn_visible_at_top("OFF"), "Wi-Fi on: NETWORKS, SAVED, HELP, OFF all visible at once");
+        tap_text("NETWORKS"); run(2600);
         CHECK(on_screen("4 found") && on_screen("HomeNet"), "scan lists the networks");
         shot("a2_networks");
         { plat_wifi_ap_t r[8]; int n = plat_wifi_results(r, 8); CHECK(n == 4 && r[0].rssi >= r[1].rssi && r[1].rssi >= r[2].rssi, "strongest first"); }
@@ -718,7 +744,7 @@ static void scenario(void)
         boot(); run_s(6);
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_CONNECTED && !strcmp(w.ssid, "HomeNet"), "auto-reconnect after restart (state %d)", w.state); }
         printf("   phone hotspot\n");
-        ui_wifi_show(); run(300); tap_text("Networks"); run(2600); tap_text("Rashed iPhone"); kb_mode = 0;
+        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); tap_text("Rashed iPhone"); kb_mode = 0;
         kb_type("bike ride!"); tap_text("JOIN"); run(3500);
         CHECK(on_screen("CONNECTED"), "joined the phone hotspot (password with space and !)");
         tap_text("DONE");
@@ -727,26 +753,26 @@ static void scenario(void)
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_CONNECTED && !strcmp(w.ssid, "HomeNet"), "lost hotspot -> reconnected to HomeNet (%d %s)", w.state, w.ssid); }
         g_sim.ap[1].present = true;
         printf("   disconnect: no automatic reconnect until asked\n");
-        ui_wifi_show(); run(300); scroll_to("Disconnect"); tap_text("Disconnect"); run_s(30);
+        ui_wifi_show(); run(300); tap_text("HELP"); run(300); tap_text("DISCONNECT"); run_s(30);
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_IDLE, "stays disconnected (%d)", w.state); }
         ui_wifi_show(); run(300); shot("b2_wifi_disconnected");
         printf("   forget\n");
-        scroll_to("Saved"); tap_text("Saved"); shot("b3_saved");
+        tap_text("SAVED"); shot("b3_saved");
         tap_text("Rashed iPhone"); shot("b4_saved_detail");
         hold_text("HOLD: FORGET", 1800);
         { char sv[5][33]; CHECK(plat_wifi_saved(sv, 5) == 1 && !strcmp(sv[0], "HomeNet"), "hotspot forgotten"); }
         printf("   errors: timeout, not found, no address\n");
-        g_sim.wifi_no_answer = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree");
+        g_sim.wifi_no_answer = true; ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree");
         CHECK(on_screen("NETWORK") && on_screen("open network") && on_screen("CONNECT"), "open network: detail page first (connect / back)"); shot("b4b_network_detail_open");
         tap_text("CONNECT"); run_s(21);
         CHECK(on_screen("timeout"), "timeout error"); shot("b5_timeout"); g_sim.wifi_no_answer = false;
-        ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("Other network"); tap_text("Other network"); kb_mode = 0;
+        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); scroll_to("Other network"); tap_text("Other network"); kb_mode = 0;
         CHECK(on_screen("NAME") && on_screen("NEXT"), "hidden network: name first"); shot("b6_keyboard_ssid");
         kb_type("ghost"); tap_text("NEXT"); kb_mode = 0; kb_type("whatever1"); tap_text("JOIN"); run_s(4);
         CHECK(on_screen("Not found") && on_screen("NOT FOUND"), "network not found error"); shot("b7_not_found");
-        g_sim.wifi_no_dhcp = true; ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); tap_text("CONNECT"); run_s(4);
+        g_sim.wifi_no_dhcp = true; ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); scroll_to("CafeFree"); tap_text("CafeFree"); tap_text("CONNECT"); run_s(4);
         CHECK(on_screen("no address"), "no IP address error"); shot("b8_no_ip"); g_sim.wifi_no_dhcp = false;
-        tap_text("BACK"); scroll_to("Networks"); tap_text("Networks"); run(2600);
+        tap_text("BACK"); run(300); if (on_screen("WI-FI")) tap_text("NETWORKS"); run(2600);
         { plat_wifi_status_t w0; plat_wifi_status(&w0); tap_text(LV_SYMBOL_REFRESH); run(2600); plat_wifi_status_t w1; plat_wifi_status(&w1); CHECK(w1.scans == w0.scans + 1, "rescan"); }
         printf("   during a ride Wi-Fi never scans or retries on its own\n");
         g_sim.ap[0].present = false;               /* saved HomeNet out of range: the manager would keep retrying */
@@ -761,7 +787,7 @@ static void scenario(void)
         drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); tap_text("SAVE"); run_s(70);
         CHECK(g_sim.wifi_auto_attempts > a1, "retries resume after the ride");
         g_sim.ap[0].present = true;
-        ui_wifi_show(); run(300); tap_text("Wi-Fi"); 
+        ui_wifi_show(); run(300); tap_text("OFF"); run(300);
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_OFF && !app_profile()->wifi_on, "Wi-Fi off again"); }
     }
 
@@ -800,8 +826,8 @@ static void scenario(void)
         { app_live_t lv; app_live(&lv); CHECK(!lv.hr_ok && !lv.speed_ok && lv.link[PLAT_SENS_SPEED].link == PLAT_LINK_STALE, "no HR at all; GPS marked STALE after 5 s"); }
         /* Connections menu (0.6.0): eight categories, phone shows connected */
         ui_connections_show(); run(300); shot("99_connections_menu");
-        CHECK(on_screen("Phone") && on_screen("connected") && scroll_to("Heart rate") && scroll_to("Speed"), "connections rows");
-        CHECK(scroll_to("Other Bluetooth") && scroll_to("Device sync"), "other + sync rows"); shot("99_connections_bottom");
+        CHECK(on_screen("PHONE") && on_screen("CONNECTED") && on_screen("HEART") && on_screen("CADENCE") && !on_screen("SPEED"), "table rows PHONE / POWER / HEART / CADENCE at scroll 0 (no SPEED row without a CSC sensor)");
+        CHECK(scroll_to("BLUETOOTH") && scroll_to("SYNC") && scroll_to("WI-FI"), "Wi-Fi, other Bluetooth + sync rows below"); shot("99_connections_bottom");
         /* ride controlled from the phone; the phone disconnecting never stops the recording */
         ui_home_show(); run(300);
         sim_phone_ctrl(BC_CMD_START, 0); run(1200);
@@ -856,7 +882,7 @@ static void scenario(void)
         bool w0 = app_profile()->wifi_on; hold_text("Wi-Fi", 900); run(300); CHECK(app_profile()->wifi_on != w0 && ui_qs_is_open(), "wifi toggled by holding the row (qs stays open)");
         hold_text("Wi-Fi", 900); run(300); CHECK(app_profile()->wifi_on == w0, "and back");
         tap_text("Wi-Fi"); run(300);
-        CHECK(!ui_qs_is_open() && on_screen("WI-FI") && on_screen("Optional"), "tap on the Wi-Fi row opens the full Wi-Fi page"); shot("c0b_wifi_from_qs");
+        CHECK(!ui_qs_is_open() && on_screen("WI-FI") && on_screen("optional"), "tap on the Wi-Fi row opens the full Wi-Fi page"); shot("c0b_wifi_from_qs");
         ui_home_show(); run(300); tap(120, 12); run(300); CHECK(ui_qs_is_open(), "tapping the HANDLE opens quick settings"); shot("c0c_qs_by_handle_tap");
         drag(120, 215, 120, 60); run(300); CHECK(!ui_qs_is_open(), "closed again");
         drag(120, 10, 120, 150); run(300); CHECK(ui_qs_is_open(), "a swipe starting on the handle opens it");
@@ -1082,7 +1108,7 @@ static void scenario(void)
           CHECK(ip >= 0 && g_sim.phone.scan[ip].secured && g_sim.phone.scan[ip].channel == 11 && g_sim.phone.scan[ip].rssi == -58, "the iPhone's UTF-8 name, channel and signal arrive intact (%d)", ip);
           int ic = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "CafeFree")) ic = i; CHECK(ic >= 0 && !g_sim.phone.scan[ic].secured, "open network flagged"); }
         /* on-device list shows the name with a plain apostrophe (font) but joins with the real bytes */
-        ui_wifi_show(); run(300); scroll_to("Networks"); tap_text("Networks"); run(3000); CHECK(scroll_to("Rashed's iPho"), "device list: typographic apostrophe shown as '"); shot("e0_networks_utf8");
+        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(3000); CHECK(scroll_to("Rashed's iPho"), "device list: typographic apostrophe shown as '"); shot("e0_networks_utf8");
         /* provisioning: wrong password, then the right one */
         g_sim.phone.statuses = 0;
         bc_wifi_set_t st = { .flags = BC_WIFI_SET_CONNECT | BC_WIFI_SET_SAVE }; snprintf(st.ssid, sizeof st.ssid, "Rashed\xE2\x80\x99s iPhone"); snprintf(st.pass, sizeof st.pass, "wrong-pass");
@@ -1182,46 +1208,54 @@ static void scenario(void)
         pr->csc.paired = false; g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_NOT_PAIRED; g_sim.csc_cad_ok = g_sim.csc_speed_ok = false;
         pr->phone_on = true; app_profile_save(); plat_phone_set_enabled(true);
         ui_home_show(); run(500); shot("f0_home_connections");
-        CHECK(on_screen("Connections") && on_screen("2 on") && on_screen("! 1"), "home: Connections row with 2 connected and 1 alert (remembered phone away)");
+        /* 0.7.2: the meter counts once (its cadence row follows it), so 1 connected + the remembered phone away */
+        CHECK(on_screen("Connections") && on_screen("1 on") && on_screen("! 1"), "home: Connections row with 1 connected and 1 alert (remembered phone away)");
         tap_text("Connections"); run(400); shot("f1_connections_menu");
-        CHECK(on_screen("CONNECTIONS") && on_screen("! not connected") && on_screen("200 W") && scroll_to("92 rpm"), "menu: phone alert, live power + cadence");
-        /* every category opens, Back returns to the menu */
-        const char *cats[6] = { "Power meter", "Heart rate", "Cadence", "Speed", "Other Bluetooth", "Device sync" };
-        const char *must[6] = { "unverified", "WHOOP", "power meter", "WHEEL", "searching", "ATHLETE PROFILE" };
-        for (int i = 0; i < 6; i++) {
-            scroll_to(cats[i]); tap_text(cats[i]); run(500);
-            char nm[40]; snprintf(nm, sizeof nm, "f2_%d_%s", i, cats[i]); for (char *c = nm; *c; c++) if (*c == ' ') *c = '_';
-            shot(nm);
-            CHECK(scroll_to(must[i]), "%s detail shows '%s'", cats[i], must[i]);
-            if (i == 0) CHECK(scroll_to("CALIBRATION") && on_screen("not available") && scroll_to("DIRECT"), "power meter: no calibration write, DIRECT tag");
-            if (i == 1) CHECK(scroll_to("unsupported") && scroll_to("VIA PHONE"), "heart rate: WHOOP unsupported, watch via phone");
-            scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400);
-            CHECK(on_screen("CONNECTIONS"), "back from %s returns to the menu", cats[i]);
+        CHECK(on_screen("CONNECTIONS") && on_screen("SEARCHING") && on_screen("200 W") && on_screen("92 RPM"), "table: phone SEARCHING, fresh 200 W and 92 RPM at scroll 0");
+        { ui_row_status_t r; ui_conn_row_status(UI_ROW_PHONE, &r); CHECK(r.alert && lv_color_eq(r.color, C_RED), "remembered phone away = red alert row"); }
+        /* every row opens its page; the primary action and Back are usable without scrolling; Back returns to the table */
+        const char *rows[5] = { "POWER", "HEART", "CADENCE", "MORE", "SYNC" };
+        const char *must[5] = { "live 200 W 92 rpm", "no strap, no phone", "live 92 rpm METER", "searching", "PHONE NOT CONNECTED" };
+        static const char *const PRIM[] = { "PAIR METER", "PAIR STRAP", "PAIR SENSOR", "RETRY", "TEST" };
+        for (int i = 0; i < 5; i++) {
+            scroll_to(rows[i]); tap_text(rows[i]); run(500);
+            char nm[40]; snprintf(nm, sizeof nm, "f2_%d_%s", i, rows[i]); shot(nm);
+            CHECK(on_screen(must[i]), "%s page shows '%s'", rows[i], must[i]);
+            if (i < 3) { const char *w; CHECK(primary_and_back_ok(PRIM, 5, &w), "%s page: primary '%s' and Back visible at scroll 0", rows[i], w); }
+            if (i == 0) {
+                CHECK(on_screen("TEST") && !on_screen("RETRY"), "live meter: primary is TEST, nothing to fix");
+                tap_text("HELP"); run(300); shot("f2_0_power_help");
+                CHECK(on_screen("STAGE") && scroll_to("never writes") && scroll_to("not verified"), "power Help: stage + numbers, no settings write, accuracy not verified");
+                tap_text(LV_SYMBOL_LEFT); run(300); CHECK(on_screen("POWER METER"), "Help back -> power page");
+            }
+            tap_text(LV_SYMBOL_LEFT); run(400);
+            CHECK(on_screen("CONNECTIONS"), "back from %s returns to the table", rows[i]);
         }
-        /* Phone and Wi-Fi pages come back to the menu too */
-        scroll_to("Phone"); tap_text("Phone"); run(400); CHECK(on_screen("PHONE") && (on_screen("DISCONNECT") || on_screen("TURN OFF") || on_screen("CONNECT")), "phone page with its primary action"); shot("f3_conn_phone");
-        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "phone page back -> menu");
-        scroll_to("Wi-Fi"); tap_text("Wi-Fi"); run(400); CHECK(on_screen("WI-FI") || on_screen("Wi-Fi"), "wi-fi page opens");
-        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "wi-fi page back -> menu");
-        /* badge rules: a paired meter that is away gets the !, an unpaired one does not */
+        /* Phone and Wi-Fi pages come back to the table too */
+        tap_text("PHONE"); run(400); CHECK(on_screen("PHONE") && (on_screen("DISCONNECT") || on_screen("TURN OFF") || on_screen("CONNECT")), "phone page with its primary action"); shot("f3_conn_phone");
+        tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "phone page back -> table");
+        scroll_to("WI-FI"); tap_text("WI-FI"); run(400); CHECK(on_screen("WI-FI") && (on_screen("TURN ON") || on_screen("NETWORKS")), "wi-fi page opens with its primary action");
+        tap_text(LV_SYMBOL_LEFT); run(400); CHECK(on_screen("CONNECTIONS"), "wi-fi page back -> table");
+        /* badge rules: a paired meter that is away gets the alert, an unpaired one does not */
         g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_SEARCHING; sensors(false, 0, false, 0, false, 0); run(500);
-        CHECK(on_screen("! missing"), "paired meter missing -> ! missing"); shot("f4_menu_meter_missing");
+        { ui_row_status_t r; ui_conn_row_status(UI_ROW_POWER, &r); CHECK(r.alert && !strcmp(r.value, "SEARCHING"), "paired meter missing -> SEARCHING with alert (%s)", r.value); } shot("f4_menu_meter_missing");
         pr->power.paired = false; g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED; app_profile_save(); run(500);
-        CHECK(!on_screen("! missing") && on_screen("pair"), "never-paired meter: grey 'pair', no !");
+        { ui_row_status_t r; ui_conn_row_status(UI_ROW_POWER, &r); CHECK(!r.alert && !strcmp(r.value, "PAIR") && on_screen("PAIR"), "never-paired meter: grey PAIR, no alert"); }
         /* pair a speed/cadence sensor from the Cadence page */
         plat_found_t csc = { { 0xC5, 0xC1, 0x00, 0x00, 0x00, 0x01 }, 1, "CSC-Wahoo", -70, PLAT_SVC_CSC };
         g_sim.found[PLAT_SENS_CSC][0] = csc; g_sim.found_n[PLAT_SENS_CSC] = 1;
-        scroll_to("Cadence"); tap_text("Cadence"); run(300); scroll_to("PAIR SENSOR"); tap_text("PAIR SENSOR"); run(2000); shot("f5_pair_csc");
+        tap_text("CADENCE"); run(300); CHECK(btn_visible_at_top("PAIR SENSOR"), "cadence page: PAIR SENSOR visible at once"); tap_text("PAIR SENSOR"); run(2000); shot("f5_pair_csc");
         int pc = g_sim.pair_calls; tap_text("CSC-Wahoo"); run(400);
         CHECK(pr->csc.paired && g_sim.pair_calls == pc + 1 && !strcmp(pr->csc.name, "CSC-Wahoo"), "CSC sensor paired and stored");
         g_sim.csc_cad_ok = true; g_sim.csc_rpm = 85; g_sim.csc_has_crank = true; g_sim.csc_speed_ok = true; g_sim.csc_speed_dmh = 253; g_sim.csc_has_wheel = true; run(600);
         CHECK(on_screen("85 rpm") && on_screen("25.3 km/h"), "pairing page shows live rpm + speed from the sensor");
-        tap_text("DONE"); run(400); CHECK(on_screen("CADENCE") && scroll_to("crank data: yes") && scroll_to("85 rpm"), "cadence detail: sensor data"); shot("f6_cadence_csc");
+        tap_text("DONE"); run(400); CHECK(on_screen("CADENCE") && on_screen("live 85 rpm SENSOR"), "cadence page: live from the sensor"); shot("f6_cadence_csc");
         { app_live_t lv; app_live(&lv); CHECK(lv.cad_ok && lv.rpm == 85 && lv.cad_src == BC_SRC_BLE_CSC && lv.speed_ok && lv.speed_dmh == 253 && lv.speed_src == BC_SRC_BLE_CSC, "live model: cadence + speed from the CSC sensor (no meter)"); }
-        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300);
-        scroll_to("Speed"); tap_text("Speed"); run(400); shot("f7_speed_csc");
-        CHECK(scroll_to("wheel data: yes") && on_screen("25.3 km/h"), "speed detail: wheel data + live speed");
-        scroll_to("+10"); tap_text("+10"); run(200); CHECK(pr->wheel_mm == 2106 && g_sim.wheel_mm == 2106 && on_screen("2106 mm"), "wheel circumference edited and applied");
+        tap_text(LV_SYMBOL_LEFT); run(300);
+        CHECK(scroll_to("SPEED") && on_screen("25.3 KM/H"), "SPEED row appears once a CSC sensor is paired");
+        tap_text("SPEED"); run(400); shot("f7_speed_csc");
+        CHECK(on_screen("live 25.3 km/h"), "speed page: live wheel speed");
+        tap_text("HELP"); run(300); scroll_to("+10"); tap_text("+10"); run(200); CHECK(pr->wheel_mm == 2106 && g_sim.wheel_mm == 2106 && on_screen("2106 mm"), "wheel circumference edited and applied (Help page)");
         tap_text("-10"); run(200); CHECK(pr->wheel_mm == 2096, "and back");
         /* a ride records distance from the wheel sensor */
         ui_home_show(); run(300); ui_test_set_style(0); start_ride(); run_s(10);
@@ -1230,25 +1264,28 @@ static void scenario(void)
         /* restart keeps the pairing */
         boot(); CHECK(app_profile()->csc.paired && !strcmp(app_profile()->csc.name, "CSC-Wahoo") && g_sim.wheel_mm == 2096, "CSC pairing + wheel size survive a restart");
         pr = app_profile();
-        /* sensor away -> ! in the menu; forget clears it */
+        /* sensor away -> alert in the table; RETRY is the one action; hold FORGET clears it */
         g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_RETRY; g_sim.csc_cad_ok = g_sim.csc_speed_ok = false;
-        ui_connections_show(); run(500); CHECK(scroll_to("! sensor away"), "paired CSC sensor missing -> !"); shot("f8_menu_csc_missing");
-        scroll_to("Cadence"); tap_text("Cadence"); run(300); CHECK(scroll_to("SENSOR MISSING"), "troubleshooting text when the sensor is missing");
-        scroll_to("HOLD: FORGET"); hold_text("HOLD: FORGET", 1800); run(400);
-        CHECK(!pr->csc.paired && g_sim.link[PLAT_SENS_CSC].link == PLAT_LINK_NOT_PAIRED, "forget clears the CSC pairing");
-        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300); CHECK(!on_screen("! sensor away"), "no ! after forgetting");
+        ui_connections_show(); run(500);
+        { ui_row_status_t r; ui_conn_row_status(UI_ROW_CADENCE, &r); CHECK(r.alert && on_screen("RETRYING"), "paired CSC sensor away -> RETRYING with alert"); } shot("f8_menu_csc_missing");
+        tap_text("CADENCE"); run(300); CHECK(on_screen("reconnecting") && btn_visible_at_top("RETRY"), "cadence page: 'reconnecting' + RETRY visible");
+        { int pc3 = g_sim.pair_calls; tap_text("RETRY"); run(300); CHECK(g_sim.pair_calls == pc3 + 1, "RETRY restarts the search"); }
+        g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_RETRY; run(300);
+        hold_text("FORGET", 1800); run(400);
+        CHECK(!pr->csc.paired && g_sim.link[PLAT_SENS_CSC].link == PLAT_LINK_NOT_PAIRED, "hold FORGET clears the CSC pairing");
+        tap_text(LV_SYMBOL_LEFT); run(300); CHECK(!on_screen("RETRYING") && !on_screen("SPEED"), "no alert and no SPEED row after forgetting");
         /* other Bluetooth: discovery with service tags, nothing paired */
         plat_found_t polar = { { 0xA0, 0x00, 0x00, 0x00, 0x00, 0x10 }, 1, "Polar H10", -60, PLAT_SVC_HR | PLAT_SVC_BATTERY };
         plat_found_t rnd = { { 0xA0, 0x00, 0x00, 0x00, 0x00, 0x11 }, 0, "TV-Remote", -80, 0 };
         g_sim.found_any[0] = polar; g_sim.found_any[1] = rnd; g_sim.found_any_n = 2; int pc2 = g_sim.pair_calls;
-        scroll_to("Other Bluetooth"); tap_text("Other Bluetooth"); run(2000); shot("f9_other_bluetooth");
-        CHECK(on_screen("Polar H10") && on_screen("HR") && scroll_to("TV-Remote") && scroll_to("not paired"), "discovery list with compatibility tags, nothing paired");
+        scroll_to("MORE"); tap_text("MORE"); run(2000); shot("f9_other_bluetooth");
+        CHECK(on_screen("Polar H10") && on_screen("HR") && scroll_to("TV-Remote"), "discovery list with compatibility tags");
         CHECK(pc2 == g_sim.pair_calls, "discovery never pairs by itself");
-        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300);
+        tap_text(LV_SYMBOL_LEFT); run(300);
         /* device sync page reflects the phone profile state */
-        scroll_to("Device sync"); tap_text("Device sync"); run(400); shot("fa_device_sync");
-        CHECK(on_screen("PHONE NOT CONNECTED") && (scroll_to("this device only") || scroll_to("from the phone")) && scroll_to("RIDE TRANSFER"), "device sync page");
-        scroll_to(LV_SYMBOL_LEFT); tap_text(LV_SYMBOL_LEFT); run(300);
+        scroll_to("SYNC"); tap_text("SYNC"); run(400); shot("fa_device_sync");
+        CHECK(on_screen("PHONE NOT CONNECTED") && (on_screen("device only") || on_screen("phone v") || on_screen("PROFILE")) && on_screen("RIDES SENT"), "device sync page");
+        tap_text(LV_SYMBOL_LEFT); run(300);
         /* Settings and Quick Settings rows say Connections */
         ui_settings_show(); run(300); CHECK(scroll_to("Connections"), "settings row renamed"); shot("fb_settings_connections");
         ui_home_show(); run(300); ui_qs_open(); run(500); CHECK(scroll_to("Connections"), "quick settings row renamed"); ui_qs_close(); run(300);
@@ -1318,7 +1355,7 @@ static void scenario(void)
         plat_phone_set_enabled(true); sim_phone_connect(true); run(1500);
         /* 1. plain boot: Connections, Settings, History respond to ordinary taps */
         CHECK(P->gate.st == BC_GATE_PASS, "boot: gate open (%s)", app_power_gate_text());
-        tap_text("Connections"); run(300); CHECK(on_screen("CONNECTIONS") && on_screen("Power meter"), "Connections opens after boot");
+        tap_text("Connections"); run(300); CHECK(on_screen("CONNECTIONS") && on_screen("POWER"), "Connections opens after boot");
         ui_home_show(); run(300); tap_text("Settings"); run(300); CHECK(ui_current() == UI_SCR_SETTINGS && on_screen("SETTINGS"), "Settings opens after boot");
         ui_home_show(); run(300); tap_text("History"); run(300); CHECK(on_screen("HISTORY") || on_screen("RIDES"), "History opens after boot");
         ui_home_show(); run(300);
@@ -1332,7 +1369,7 @@ static void scenario(void)
             if (app_ride_state() != BC_RIDE_IDLE || ui_current() != UI_SCR_HOME) pressed_by_wake++;
             /* now an ordinary tap must work: open Connections and come back */
             if (!tap_text("Connections")) frozen++; run(300);
-            if (!(on_screen("CONNECTIONS") && on_screen("Power meter"))) frozen++;
+            if (!(on_screen("CONNECTIONS") && on_screen("POWER"))) frozen++;
             ui_home_show(); run(300);
         }
         CHECK(frozen == 0 && pressed_by_wake == 0, "20 screen-off/wake cycles: %d times unresponsive, %d wake presses (both must be 0); watchdog fired %lu times",
@@ -1351,7 +1388,7 @@ static void scenario(void)
         CHECK(on_screen("START RIDE") && P->screen_on, "sleep -> wake: Home");
         raw_tap(120, 108); run(300); CHECK(app_ride_state() == BC_RIDE_IDLE, "a tap right after the sleep wake starts nothing (guard)");
         run(1500);
-        CHECK(tap_text("Connections") && on_screen("Power meter"), "sleep -> wake -> Connections"); ui_home_show(); run(300);
+        CHECK(tap_text("Connections") && on_screen("POWER"), "sleep -> wake -> Connections"); ui_home_show(); run(300);
         CHECK(tap_text("Settings") && ui_current() == UI_SCR_SETTINGS, "sleep -> wake -> Settings"); ui_home_show(); run(300);
         CHECK(tap_text("History") && (on_screen("HISTORY") || on_screen("RIDES")), "sleep -> wake -> History"); ui_home_show(); run(300);
         for (int k = 0; k < 3; k++) raw_tap(120, 108);
@@ -1377,7 +1414,7 @@ static void scenario(void)
         sim_phone_enter_passkey(); run(1000);
         CHECK(P->screen_on && P->gate.st == BC_GATE_PASS, "gate open after the phone-command wake (%s)", app_power_gate_text());
         ui_home_show(); run(300);
-        CHECK(tap_text("Connections") && on_screen("Power meter"), "touch works after a phone-command wake");
+        CHECK(tap_text("Connections") && on_screen("POWER"), "touch works after a phone-command wake");
         ui_home_show(); run(300);
         shot("h0_home_after_event_mode");
         g_sim.touch_event_mode = false;
@@ -1464,7 +1501,7 @@ static void scenario(void)
         CHECK(ps.state == PLAT_PHONE_REPAIR && ps.last_disc == PLAT_PHONE_DISC_KEY_MISSING && ps.enc_fails >= 1, "stale keys on the phone -> REPAIR NEEDED with the reason (0x%x)", ps.last_disc_code);
         ui_phone_show(); run(400); shot("19_phone_repair");
         CHECK(on_screen("REPAIR NEEDED") && on_screen("HOLD: REPAIR"), "PHONE screen shows REPAIR NEEDED with the one action");
-        ui_connections_show(); run(400); CHECK(on_screen("! repair needed"), "Connections flags it with a red !"); shot("19_connections_repair");
+        ui_connections_show(); run(400); { ui_row_status_t r; ui_conn_row_status(UI_ROW_PHONE, &r); CHECK(on_screen("REPAIR") && r.alert, "Connections flags it: PHONE REPAIR, red alert"); } shot("19_connections_repair");
         ui_phone_show(); run(300);
         int rep0 = g_sim.phone.repairs; gen0 = ps.id_gen;
         hold_text("HOLD: REPAIR", 1800); run(500); plat_phone_status(&ps);
@@ -1506,6 +1543,105 @@ static void scenario(void)
         CHECK(!app_profile()->phone_on && ps.state == PLAT_PHONE_OFF && on_screen("LINK OFF") && on_screen("CONNECT"), "Phone link row toggles the link off: status LINK OFF, primary CONNECT"); shot("19_phone_off");
         tap_text("CONNECT"); run(400); CHECK(app_profile()->phone_on && on_screen("SEARCHING"), "CONNECT turns the link on again");
         sim_phone_connect(true); run(500);
+    }
+
+    printf("== 20 (0.7.2) sensor pipeline: fake GATT meter through bc_gatt/bc_pipe/bc_xds, recovery, SENSOR_DIAG, compact table, watch HR\n");
+    {
+        bc_profile_t *pr = app_profile();
+        sim_phone_disconnect(); run(300);
+        app_set_demo(false);
+        pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001-9769");
+        pr->hr.paired = false; pr->csc.paired = false; app_profile_save();
+        g_sim.link[PLAT_SENS_HR].link = PLAT_LINK_NOT_PAIRED; g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_NOT_PAIRED;
+        sensors(false, 0, false, 0, false, 0); g_sim.csc_cad_ok = g_sim.csc_speed_ok = false;
+        /* a) THE BUG: 0.7.1 CCCD search on the Mesh-Proxy order (2A63 then 2ADE): "connected", never a power value */
+        sim_fake_meter(true, 1, true); run_s(12);
+        { plat_sensors_t sn; plat_sensors(&sn);
+          CHECK(g_sim.fake.wrong_writes >= 1 && g_sim.fake.last_cccd == 0x0018 && g_sim.fake.pipe.packets == 0 && !sn.power_ok && sn.link[0].link == PLAT_LINK_CONNECTED,
+                "0.7.1 logic reproduced: CCCD 0x%04X of 2ADE enabled, link 'CONNECTED', 0 power packets", g_sim.fake.last_cccd);
+          CHECK(sn.link[0].stage == BC_STG_SUBSCRIBED && g_sim.fake.resubs == 1, "pipeline says SUBSCRIBED (not OK) and already re-subscribed once at 8 s"); }
+        ui_connections_show(); run(400); shot("20a_bug_table_no_data");
+        CHECK(on_screen("NO DATA") && !on_screen("142 W"), "table: POWER NO DATA, never a value");
+        /* b) THE FIX on the same table: the CCCD of 2A63 (0x0013), VALID within ~2 s of connecting */
+        sim_fake_meter(true, 1, false); run_s(3);
+        { plat_sensors_t sn; plat_sensors(&sn);
+          CHECK(g_sim.fake.last_cccd == 0x0013 && g_sim.fake.wrong_writes == 0 && g_sim.fake.cccd_writes == 1, "fix: CCCD 0x0013 (0x2A63's own) written, nothing else");
+          CHECK(sn.link[0].stage == BC_STG_VALID && sn.power_ok && sn.watts == 142 && sn.cad_ok && sn.rpm == 82, "power VALID: 142 W 82 rpm (stage %u)", sn.link[0].stage);
+          bool sub = false, val = false; for (int i = 0; i < 8; i++) { if (strstr(g_sim.fake.log[i], "SUBSCRIBED (cccd 0x0013 read back 01 00)")) sub = true; if (strstr(g_sim.fake.log[i], "VALID 142 W")) val = true; }
+          CHECK(sub && val, "pipe log: 'SUBSCRIBED (cccd 0x0013 read back 01 00)' then 'VALID 142 W'"); }
+        ui_connections_show(); run(400); shot("20b_fix_table_live");
+        CHECK(on_screen("142 W") && on_screen("82 RPM"), "table: fresh 142 W and 82 RPM");
+        /* the XDS table itself (2A55 control point after 2A63): its CCCD is never touched */
+        sim_fake_meter(true, 0, false); run_s(3);
+        { plat_sensors_t sn; plat_sensors(&sn); CHECK(g_sim.fake.last_cccd == 0x0023 && g_sim.fake.enabled[0x2A] == 0 && sn.link[0].stage == BC_STG_VALID, "XDS table: CCCD 0x0023, control point CCCD 0x002A never written, VALID"); }
+        /* c) packets stop -> STALE after 3 s -> automatic re-subscribe after 10 s -> data back, no reconnect */
+        g_sim.fake.stall = true; run_s(5);
+        { plat_sensors_t sn; plat_sensors(&sn); CHECK(sn.link[0].stage == BC_STG_STALE && !sn.power_ok, "packets stopped: STALE, no value shown"); }
+        ui_connections_show(); run(300); CHECK(on_screen("STALE") && !on_screen("142 W"), "table: POWER STALE"); shot("20c_stale");
+        run_s(8);
+        { plat_sensors_t sn; plat_sensors(&sn); CHECK(g_sim.fake.resubs == 1 && g_sim.fake.reconnects == 0 && sn.link[0].stage == BC_STG_VALID && sn.link[0].resubscribes == 1, "auto re-subscribe after 10 s stale -> VALID again (resubs %d)", g_sim.fake.resubs); }
+        /* d) packets arrive but none decodes -> 'unreadable data' after 10 s, hex logged once, error shown */
+        sim_fake_meter(true, 0, false); g_sim.fake.garbage = true; run_s(14);
+        { plat_sensors_t sn; plat_sensors(&sn);
+          CHECK(sn.link[0].stage == BC_STG_RECEIVING && sn.link[0].unreadable && !strcmp(sn.link[0].err, "unreadable data") && g_sim.fake.dumps == 1, "all rejected: RECEIVING + unreadable data, hex dumped once (%d)", g_sim.fake.dumps);
+          bool hex = false; for (int i = 0; i < 8; i++) if (strstr(g_sim.fake.log[i], "unreadable data [1] 8E 00 00 00 00")) hex = true; CHECK(hex, "first packet hex in the log (sensor bytes only)"); }
+        ui_connections_show(); run(300); CHECK(on_screen("BAD DATA"), "table: POWER BAD DATA"); shot("20d_unreadable");
+        ui_health_show(); run(300); CHECK(on_screen("unreadable data"), "Device Health: 'POWER  unreadable data'"); shot("20d_health_unreadable");
+        tap_text(LV_SYMBOL_LEFT); run(300);
+        /* e) subscribed, the meter sends nothing at all: re-subscribe at 8 s, reconnect at 15 s, back-off grows (never faster) */
+        sim_fake_meter(true, 0, false); g_sim.fake.streaming = false;
+        uint32_t t0 = g_sim.now_ms; int d_prev = 0; uint32_t disc_t[4] = { 0 }; int nd = 0;
+        while (g_sim.now_ms - t0 < 90000) { run(100); if (g_sim.fake.disconnects != d_prev) { d_prev = g_sim.fake.disconnects; if (nd < 4) disc_t[nd++] = g_sim.now_ms - t0; } }
+        CHECK(nd >= 3 && disc_t[0] >= 15000 && disc_t[0] < 17000, "no data: first reconnect ~15 s after subscribing (%lu ms)", (unsigned long)disc_t[0]);
+        CHECK(nd >= 3 && disc_t[1] - disc_t[0] > disc_t[0] && disc_t[2] - disc_t[1] > disc_t[1] - disc_t[0], "back-off grows between automatic reconnects (%lu, %lu, %lu ms)", (unsigned long)disc_t[0], (unsigned long)(disc_t[1] - disc_t[0]), (unsigned long)(disc_t[2] - disc_t[1]));
+        { plat_sensors_t sn; plat_sensors(&sn); CHECK(!strcmp(sn.link[0].err, "no data") || sn.link[0].stage <= BC_STG_SUBSCRIBED, "last error 'no data' kept for the phone and the Help page (%s)", sn.link[0].err); }
+        /* f) the phone connects: one SENSOR_DIAG per paired sensor at once, then on stage changes, then every 5 s below VALID */
+        sim_fake_meter(true, 0, false); run_s(3);
+        g_sim.phone.diags = 0; g_sim.phone.ndiag = 0;
+        plat_phone_set_enabled(true); sim_phone_connect(true); run(1500);
+        CHECK(g_sim.phone.diags == 1 && g_sim.phone.diag[0].sensor == 1 && g_sim.phone.diag[0].stage == BC_STG_VALID && g_sim.phone.diag[0].packets > 0 && g_sim.phone.diag[0].valid_age_ds < 30,
+              "phone connects: SENSOR_DIAG power VALID (%d events, stage %u, %lu pkts)", g_sim.phone.diags, g_sim.phone.diag[0].stage, (unsigned long)g_sim.phone.diag[0].packets);
+        run_s(10); CHECK(g_sim.phone.diags == 1, "all VALID: no periodic diag traffic (%d)", g_sim.phone.diags);
+        g_sim.fake.stall = true; run_s(5);
+        { int k = g_sim.phone.ndiag - 1; CHECK(g_sim.phone.diags >= 2 && g_sim.phone.diag[k % 16].stage == BC_STG_STALE, "stage change -> SENSOR_DIAG STALE (%d)", g_sim.phone.diags); }
+        int dd = g_sim.phone.diags; run_s(7);   /* re-subscribe (10 s after the last valid packet) brings it back */
+        { int k = g_sim.phone.ndiag - 1; CHECK(g_sim.phone.diags > dd && g_sim.phone.diag[k % 16].stage == BC_STG_VALID, "recovery -> SENSOR_DIAG VALID"); }
+        g_sim.fake.streaming = false; g_sim.fake.stall = true; run_s(4); dd = g_sim.phone.diags; run_s(10);
+        CHECK(g_sim.phone.diags >= dd + 2, "below VALID: periodic SENSOR_DIAG every 5 s (%d in 10 s)", g_sim.phone.diags - dd);
+        /* LIVE (the phone's source of truth) carries power + cadence with real ages */
+        g_sim.fake.streaming = true; sim_fake_meter(true, 0, false); run_s(4);
+        CHECK(g_sim.phone.last_live.power_ok && g_sim.phone.last_live.power_w == 142 && g_sim.phone.last_live.power_age_ms < 3000 && g_sim.phone.last_live.cad_ok && g_sim.phone.last_live.cadence_rpm == 82 && g_sim.phone.last_live.cad_age_ms < 3000,
+              "LIVE: 142 W (age %u ms) 82 rpm (age %u ms)", g_sim.phone.last_live.power_age_ms, g_sim.phone.last_live.cad_age_ms);
+        /* g) Apple Watch HR relayed by the phone: HEART row value, WATCH source, real age, gone after 6 s */
+        sim_phone_send_hr(151, BC_SRC_APPLE_WATCH); run(1200);
+        ui_connections_show(); run(300); CHECK(on_screen("151 BPM"), "table: HEART 151 BPM from the watch"); shot("20g_table_watch_hr");
+        CHECK(g_sim.phone.last_live.hr_ok && g_sim.phone.last_live.hr_bpm == 151 && g_sim.phone.last_live.hr_src == BC_SRC_APPLE_WATCH && g_sim.phone.last_live.hr_age_ms >= 100 && g_sim.phone.last_live.hr_age_ms < 6000,
+              "LIVE echoes watch HR with source WATCH and its real age (%u ms)", g_sim.phone.last_live.hr_age_ms);
+        tap_text("HEART"); run(300); CHECK(on_screen("151") && on_screen("WATCH"), "heart page: live 151 bpm WATCH"); shot("20g_heart_watch");
+        ui_home_show(); run(300); ui_test_set_style(0); start_ride(); sim_phone_send_hr(151, BC_SRC_APPLE_WATCH); run(1500);
+        CHECK(on_screen("151") && on_screen("WATCH"), "ride screen shows 151 with the WATCH source"); shot("20g_ride_watch_hr");
+        run_s(6); CHECK(!on_screen("151"), "watch HR older than 6 s disappears (never held)");
+        drag(120, 60, 120, 190); hold_text("HOLD: END", 2300); run(400); hold_text(LV_SYMBOL_TRASH, 1800); run(400);
+        /* h) every Connections page: primary action + Back usable at scroll position 0 (paired and unpaired, phone on and off) */
+        static const char *const PRIM[] = { "PAIR METER", "PAIR STRAP", "PAIR SENSOR", "RETRY", "TEST", "CONNECT", "TURN OFF", "DISCONNECT", "HOLD: REPAIR", "TURN ON", "NETWORKS" };
+        int bad = 0;
+        for (int pass = 0; pass < 4; pass++) {
+            if (pass == 1) sim_phone_disconnect();
+            if (pass == 2) { pr->power.paired = false; app_profile_save(); plat_pair(PLAT_SENS_POWER, NULL); }
+            if (pass == 3) { pr->csc.paired = true; snprintf(pr->csc.name, sizeof pr->csc.name, "CSC-Wahoo"); g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_RETRY; app_profile_save(); }
+            run(500);
+            int cats[6] = { 0, 1, 2, 3, 4, 5 };
+            for (int i = 0; i < 6; i++) {
+                ui_conn_detail_show(cats[i]); run(400);
+                const char *w; bool ok = primary_and_back_ok(PRIM, (int)(sizeof PRIM / sizeof *PRIM), &w);
+                if (!ok) { bad++; printf("  primary/back not visible: page %d pass %d (%s)\n", cats[i], pass, w); }
+                char n[40]; snprintf(n, sizeof n, "20h_page_%d_pass_%d", cats[i], pass); shot(n);
+            }
+        }
+        CHECK(bad == 0, "primary action + Back visible without scrolling on every Phone / Wi-Fi / Power / HR / Cadence / Speed page (24 states)");
+        /* tidy up for later scenarios */
+        pr->csc.paired = false; g_sim.link[PLAT_SENS_CSC].link = PLAT_LINK_NOT_PAIRED; app_profile_save();
+        sim_fake_meter(false, 0, false); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED;
     }
 
 }

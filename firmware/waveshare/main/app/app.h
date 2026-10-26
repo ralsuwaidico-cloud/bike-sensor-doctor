@@ -18,6 +18,7 @@ typedef struct {
     bool power_ok; int watts;
     bool cad_ok; int rpm; bool backwards; uint8_t cad_src;   /* bc_src_t: XDS (meter) or BLE_CSC (0.6.0 crank sensor, used when the meter gives none) */
     bool hr_ok; int bpm; uint8_t hr_src;           /* bc_src_t: STRAP (direct BLE) or the phone-relayed source (WATCH, ...) */
+    uint32_t hr_age_ms, cad_age_ms;                /* 0.7.2: age of the shown HR / cadence value (UINT32_MAX = none) — the LIVE message carries them */
     bool strap_hr, phone_hr;                       /* which HR sources have a fresh value right now (for "backup" labels) */
     bool speed_ok; int speed_dmh; uint8_t speed_src;   /* km/h × 10: a wheel sensor (BLE_CSC) first, else the phone's GPS (fresh ≤ 5 s) */
     bool csc_speed, gps_speed;                     /* which speed sources are fresh right now */

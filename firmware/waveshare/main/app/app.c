@@ -1,4 +1,5 @@
 #include "app.h"
+#include "bc_pipe.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,7 @@ void app_live(app_live_t *o)
         o->power_ok = s_demo_last.power >= 0; o->watts = s_demo_last.power;
         o->cad_ok = s_demo_last.cad >= 0; o->rpm = s_demo_last.cad;
         o->hr_ok = s_demo_last.hr > 0; o->bpm = s_demo_last.hr; o->hr_src = BC_SRC_DEMO;
+        o->hr_age_ms = o->cad_age_ms = 300;
         for (int k = 0; k < PLAT_SENS_KINDS; k++) o->link[k].link = PLAT_LINK_UNSUPPORTED;
         o->link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED;
         snprintf(o->link[PLAT_SENS_POWER].name, sizeof o->link[0].name, "DEMO METER");
@@ -81,6 +83,7 @@ void app_live(app_live_t *o)
     o->power_ok = s.power_ok; o->watts = s.watts; o->cad_ok = s.cad_ok; o->rpm = s.rpm; o->backwards = s.backwards; o->cad_src = BC_SRC_XDS;
     if (!o->cad_ok && s.csc_cad_ok) { o->cad_ok = true; o->rpm = s.csc_rpm; o->backwards = false; o->cad_src = BC_SRC_BLE_CSC; }
     memcpy(o->link, s.link, sizeof o->link);
+    o->cad_age_ms = !o->cad_ok ? UINT32_MAX : o->link[o->cad_src == BC_SRC_BLE_CSC ? PLAT_SENS_CSC : PLAT_SENS_POWER].valid_age_ms;
     app_phone_fold(o, s.hr_ok, s.bpm);
     /* a wheel sensor paired to the board is the better speed source; the phone's GPS stays as the fallback */
     o->csc_speed = s.csc_speed_ok;
@@ -96,8 +99,9 @@ static void app_phone_fold(app_live_t *o, bool strap_ok, int strap_bpm)
     bool phone_hr = in.hr.rx_ms && now - in.hr.rx_ms <= APP_PHONE_HR_FRESH_MS;
     o->strap_hr = strap_ok; o->phone_hr = phone_hr;
     bool phone_first = s_prof.hr_pref == 1;
-    if (strap_ok && !(phone_first && phone_hr)) { o->hr_ok = true; o->bpm = strap_bpm; o->hr_src = BC_SRC_BLE_STRAP; }
-    else if (phone_hr) { o->hr_ok = true; o->bpm = in.hr.v.bpm; o->hr_src = in.hr.v.src; }
+    o->hr_age_ms = UINT32_MAX;
+    if (strap_ok && !(phone_first && phone_hr)) { o->hr_ok = true; o->bpm = strap_bpm; o->hr_src = BC_SRC_BLE_STRAP; o->hr_age_ms = o->link[PLAT_SENS_HR].valid_age_ms; }
+    else if (phone_hr) { o->hr_ok = true; o->bpm = in.hr.v.bpm; o->hr_src = in.hr.v.src; o->hr_age_ms = now - in.hr.rx_ms; }
     bool gps_fresh = in.gps.rx_ms && now - in.gps.rx_ms <= APP_GPS_FRESH_MS;
     o->gps_age_ms = in.gps.rx_ms ? now - in.gps.rx_ms : UINT32_MAX;
     if (gps_fresh && in.gps.v.speed_ok && in.gps.v.hacc_dm <= 500) { o->speed_ok = true; o->gps_speed = true; o->speed_dmh = (int)(in.gps.v.speed_cms * 36 / 100); o->speed_src = in.gps.v.src; }
@@ -181,8 +185,9 @@ static void publish_live(const app_live_t *lv)
     bc_ride_summary_t t; app_ride_totals(&t);
     bc_live_t L = { 0 };
     L.power_ok = lv->power_ok; L.power_w = (uint16_t)(lv->power_ok ? lv->watts : 0); L.power_age_ms = (uint16_t)(lv->link[PLAT_SENS_POWER].valid_age_ms > 60000 ? BC_LINK_NONE16 : lv->link[PLAT_SENS_POWER].valid_age_ms);
-    L.cad_ok = lv->cad_ok; L.cadence_rpm = (uint8_t)(lv->cad_ok && lv->rpm >= 0 && lv->rpm < 255 ? lv->rpm : 0); L.cad_age_ms = L.power_age_ms;
-    L.hr_ok = lv->hr_ok; L.hr_bpm = (uint8_t)(lv->hr_ok ? lv->bpm : 0); L.hr_src = lv->hr_src; L.hr_age_ms = 0;
+    /* 0.7.2: every value carries its real age (ms) — the phone treats these ages as the authority for "fresh" */
+    L.cad_ok = lv->cad_ok; L.cadence_rpm = (uint8_t)(lv->cad_ok && lv->rpm >= 0 && lv->rpm < 255 ? lv->rpm : 0); L.cad_age_ms = (uint16_t)(lv->cad_age_ms > 60000 ? BC_LINK_NONE16 : lv->cad_age_ms);
+    L.hr_ok = lv->hr_ok; L.hr_bpm = (uint8_t)(lv->hr_ok ? lv->bpm : 0); L.hr_src = lv->hr_src; L.hr_age_ms = (uint16_t)(lv->hr_age_ms > 60000 ? BC_LINK_NONE16 : lv->hr_age_ms);
     L.ride_state = (uint8_t)s_ride.state; L.ride_id = s_ride.s.id; L.elapsed_s = t.duration_s; L.distance_m = t.distance_m;
     L.cue_id = (uint8_t)s_cue.id; int bp = plat_battery_pct(); L.battery_pct = (uint8_t)(bp < 0 ? 0xFF : bp);
     L.meter_link = (uint8_t)lv->link[PLAT_SENS_POWER].link; L.meter_gaps = (uint16_t)lv->link[PLAT_SENS_POWER].gaps;
@@ -427,8 +432,11 @@ void app_health_line(char *buf, size_t cap)
     app_live_t lv; app_live(&lv);
     plat_wifi_status_t w; plat_wifi_status(&w);
     plat_phone_status_t ph; plat_phone_status(&ph);
-    snprintf(buf, cap, "HEALTH up %lus %s ride=%d demo=%d pw=%s cad=%s hr=%s gaps=%lu wifi=%d rssi=%d phone=%d rx=%lu rej=%lu gps=%s",
+    plat_sensors_t sn; plat_sensors(&sn);   /* 0.7.2: the real pipeline stage of each sensor link (bc_pipe.h order 0..8) */
+    snprintf(buf, cap, "HEALTH up %lus %s ride=%d demo=%d pw=%s cad=%s hr=%s gaps=%lu wifi=%d rssi=%d phone=%d rx=%lu rej=%lu gps=%s stage pw=%s(%lu/%lu) hr=%s csc=%s",
              (unsigned long)(plat_ms() / 1000), mem, s_ride.state, s_demo, lv.power_ok ? "ok" : "--", lv.cad_ok ? "ok" : "--",
              lv.hr_ok ? bc_src_name(lv.hr_src) : "--", (unsigned long)lv.link[PLAT_SENS_POWER].gaps, (int)w.state, w.rssi,
-             (int)ph.state, (unsigned long)ph.rx_msgs, (unsigned long)ph.rx_rejected, lv.speed_ok ? "ok" : "--");
+             (int)ph.state, (unsigned long)ph.rx_msgs, (unsigned long)ph.rx_rejected, lv.speed_ok ? "ok" : "--",
+             bc_stage_name((bc_stage_t)sn.link[PLAT_SENS_POWER].stage), (unsigned long)sn.link[PLAT_SENS_POWER].packets, (unsigned long)sn.link[PLAT_SENS_POWER].rejected,
+             bc_stage_name((bc_stage_t)sn.link[PLAT_SENS_HR].stage), bc_stage_name((bc_stage_t)sn.link[PLAT_SENS_CSC].stage));
 }

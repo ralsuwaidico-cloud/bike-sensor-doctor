@@ -137,6 +137,18 @@ bool bc_link_decode_sync_end(const uint8_t *buf, size_t len, bc_sync_end_t *v);
 #define BC_EVT_BATTERY_NOTICE 0x10
 #define BC_EVT_LINK_DIAG 0x20        /* 0.7.0 (1.2.1): 01 u8 event_id, 02 u8 last_disconnect_reason (plat_phone_disc_t), 03 u16 bonded_phones, 04 u8 profile_sync_state (0 device-only, 1 synced, 2 pending, 3 failed); sent once per connection */   /* 01 u8 event_id, 02 u8 level_pct_est (ESTIMATE from voltage), 03 u16 mv, 04 u8 stage (1 = ~80 %, 2 = ~90 %, 3 = ~98 %) */
 typedef struct { uint8_t event_id; uint8_t pct_est; uint16_t mv; uint8_t stage; } bc_event_t;
+/* 0.7.2 (Link 1.2.2): event_id 0x21 sensor_diag — one sensor link's pipeline stage. Tags: 01 u8 event_id, 02 u8 sensor
+ * (1 power meter, 2 HR strap, 3 CSC), 03 u8 stage (bc_pipe.h order 0..8), 04 u32 packets since connect, 05 u16 rejected,
+ * 06 u16 last packet age (ds, 0xFFFF none), 07 u16 last valid age (ds, 0xFFFF none), 08 utf8 <= 20 last error (omitted when
+ * there is none). Sent on every stage change, every 5 s while a paired link is below VALID, and once per paired sensor
+ * when the phone connects. Vectors: docs/BLE_LINK_PROTOCOL.md. */
+#define BC_EVT_SENSOR_DIAG 0x21
+typedef struct { uint8_t sensor, stage; uint32_t packets; uint16_t rejected, pkt_age_ds, valid_age_ds; char err[21]; } bc_sensor_diag_t;
+size_t bc_link_encode_sensor_diag(const bc_sensor_diag_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+/** False unless an EVENT with event_id 0x21. */
+bool bc_link_decode_sensor_diag(const uint8_t *buf, size_t len, bc_sensor_diag_t *v);
+/** Age in ms -> deciseconds for the wire: UINT32_MAX -> 0xFFFF (none), otherwise capped at 0xFFFE. */
+uint16_t bc_link_age_ds(uint32_t age_ms);
 size_t bc_link_encode_event(const bc_event_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_event(const uint8_t *buf, size_t len, bc_event_t *v);
 size_t bc_link_encode_sync_ride(const bc_ride_summary_t *s, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);

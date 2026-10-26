@@ -16,6 +16,7 @@ static void networks_show(void);
 static void saved_show(void);
 static void keyboard_show(bool for_ssid);
 static void connecting_show(void);
+static void back_main(lv_event_t *e);
 
 static char w_ssid[33];          /* network being joined */
 static char w_pass[65];          /* typed password (wiped after use) */
@@ -75,63 +76,110 @@ static const char *state_text(const plat_wifi_status_t *s)
     return "";
 }
 
-/* ---------------- main Wi-Fi screen */
-static lv_obj_t *m_status, *m_list; static int m_last_state = -1; static bool m_last_on;
+/* ---------------- main Wi-Fi screen (0.7.2 compact: status, detail, ONE primary action, SAVED / HELP / OFF, Back) */
+static lv_obj_t *m_status, *m_info, *m_primary, *m_row; static int m_last_state = -1; static bool m_last_on; static int m_kind = -1;
 
 static void back_settings(lv_event_t *e) { (void)e; ui_return(); }
-static void toggle_cb(lv_event_t *e)
-{
-    (void)e;
-    bc_profile_t *p = app_profile();
-    p->wifi_on = !p->wifi_on; app_profile_save();
-    plat_wifi_set_enabled(p->wifi_on);
-    wifi_main();
-}
-static void nets_cb(lv_event_t *e) { (void)e; networks_show(); }
+static void set_on(bool on) { bc_profile_t *p = app_profile(); p->wifi_on = on; app_profile_save(); plat_wifi_set_enabled(on); wifi_main(); }
+static void off_cb(lv_event_t *e) { (void)e; set_on(false); }
 static void saved_cb(lv_event_t *e) { (void)e; saved_show(); }
-static void disc_cb(lv_event_t *e) { (void)e; plat_wifi_disconnect(); }
-
+static void help_show(void);
+static void help_cb(lv_event_t *e) { (void)e; help_show(); }
+/* 0 TURN ON, 1 NETWORKS (DISCONNECT lives on the Help page: rarely needed, OFF covers the usual case) */
+static int main_kind(const plat_wifi_status_t *s) { (void)s; return !app_profile()->wifi_on ? 0 : 1; }
+static void primary_cb(lv_event_t *e)
+{
+    (void)e; plat_wifi_status_t s; plat_wifi_status(&s);
+    if (main_kind(&s) == 0) set_on(true); else networks_show();
+}
+static lv_obj_t *small_pill(lv_obj_t *p, const char *t, lv_color_t fg, int w, lv_event_cb_t cb)
+{
+    lv_obj_t *b = ui_pill(p, t, C_PANEL, fg, w, 32, cb, NULL);
+    lv_obj_set_style_text_font(lv_obj_get_child(b, 0), &lv_font_montserrat_12, 0);
+    return b;
+}
 static void build_rows(void)
 {
-    lv_obj_clean(m_list);
     bool on = app_profile()->wifi_on;
     plat_wifi_status_t s; plat_wifi_status(&s);
-    ui_row_btn(m_list, "Wi-Fi", on ? "ON" : "OFF", on ? C_GREEN : C_MUT, toggle_cb, NULL);
-    m_status = ui_label(m_list, &lv_font_montserrat_14, C_FG, "");
-    lv_obj_set_width(m_status, lv_pct(100)); lv_label_set_long_mode(m_status, LV_LABEL_LONG_WRAP); lv_label_set_recolor(m_status, true);
+    lv_obj_t *scr = lv_obj_get_parent(m_status);
+    if (m_row) { lv_obj_delete(m_row); m_row = NULL; }
+    m_row = lv_obj_create(scr); lv_obj_remove_style_all(m_row); lv_obj_set_size(m_row, 196, 34); lv_obj_align(m_row, LV_ALIGN_TOP_MID, 0, 147);
+    lv_obj_remove_flag(m_row, LV_OBJ_FLAG_SCROLLABLE); lv_obj_add_flag(m_row, LV_OBJ_FLAG_GESTURE_BUBBLE);
     if (on) {
-        ui_row_btn(m_list, "Networks", LV_SYMBOL_RIGHT, C_CYAN, nets_cb, NULL);
-        char saved[PLAT_WIFI_MAX_SAVED][33]; char v[16]; snprintf(v, sizeof v, "%d  " LV_SYMBOL_RIGHT, plat_wifi_saved(saved, PLAT_WIFI_MAX_SAVED));
-        ui_row_btn(m_list, "Saved", v, C_CYAN, saved_cb, NULL);
-        if (s.state == PLAT_WIFI_CONNECTED) ui_row_btn(m_list, "Disconnect", NULL, C_MUT, disc_cb, NULL);
-    }
-    lv_obj_t *n = ui_label(m_list, &lv_font_montserrat_12, C_MUT, "Optional. Rides, coaching and history work without Wi-Fi. 2.4 GHz networks only (no 5 GHz). Easiest: set it up from the phone app.");
-    lv_obj_set_width(n, lv_pct(100)); lv_label_set_long_mode(n, LV_LABEL_LONG_WRAP);
+        char sv[16]; char saved[PLAT_WIFI_MAX_SAVED][33]; snprintf(sv, sizeof sv, "SAVED %d", plat_wifi_saved(saved, PLAT_WIFI_MAX_SAVED));
+        lv_obj_align(small_pill(m_row, sv, C_CYAN, 68, saved_cb), LV_ALIGN_LEFT_MID, 0, 0);
+        lv_obj_align(small_pill(m_row, "HELP", C_CYAN, 56, help_cb), LV_ALIGN_CENTER, 0, 0);
+        lv_obj_align(small_pill(m_row, "OFF", C_FG, 56, off_cb), LV_ALIGN_RIGHT_MID, 0, 0);
+    } else lv_obj_align(small_pill(m_row, "HELP", C_CYAN, 80, help_cb), LV_ALIGN_CENTER, 0, 0);
     m_last_state = s.state; m_last_on = on;
 }
 
 static void main_update(void)
 {
     plat_wifi_status_t s; plat_wifi_status(&s);
-    if ((int)s.state != m_last_state || m_last_on != app_profile()->wifi_on) build_rows();
-    char b[160];
-    char dn[40]; ssid_display(s.ssid, dn, sizeof dn, 20);
-    if (s.state == PLAT_WIFI_CONNECTED) snprintf(b, sizeof b, "#56e08c CONNECTED#  %s\n%s\n%d dBm   %s", s.internet == 1 ? "#56e08c internet ok#" : s.internet == 2 ? "#ffb64d no internet#" : "", dn, s.rssi, s.ip[0] ? s.ip : "no IP yet");
-    else if (s.state == PLAT_WIFI_FAILED || (s.state == PLAT_WIFI_IDLE && s.err != PLAT_WIFI_ERR_NONE))
-        snprintf(b, sizeof b, "#ffb64d %s#\n%s\n%s", state_text(&s), dn, bc_wifi_err_text((bc_wifi_err_t)s.err));
-    else if (s.state == PLAT_WIFI_CONNECTING) snprintf(b, sizeof b, "#ffb64d CONNECTING...#\n%s", dn);
-    else snprintf(b, sizeof b, "%s", state_text(&s));
-    lv_label_set_text(m_status, b);
+    bool on = app_profile()->wifi_on;
+    if ((int)s.state != m_last_state || m_last_on != on) build_rows();
+    char b[96], dn[40]; ssid_display(s.ssid, dn, sizeof dn, 16);
+    lv_color_t c = C_MUT;
+    if (!on) { snprintf(b, sizeof b, LV_SYMBOL_MINUS " OFF"); }
+    else if (s.state == PLAT_WIFI_CONNECTED) { snprintf(b, sizeof b, LV_SYMBOL_OK " CONNECTED"); c = C_GREEN; }
+    else if (s.state == PLAT_WIFI_CONNECTING) { snprintf(b, sizeof b, LV_SYMBOL_REFRESH " CONNECTING"); c = C_AMBER; }
+    else if (s.state == PLAT_WIFI_SCANNING) { snprintf(b, sizeof b, LV_SYMBOL_REFRESH " SCANNING"); c = C_AMBER; }
+    else if (s.state == PLAT_WIFI_FAILED || (s.state == PLAT_WIFI_IDLE && s.err != PLAT_WIFI_ERR_NONE)) { snprintf(b, sizeof b, LV_SYMBOL_WARNING " %s", state_text(&s)); c = C_RED; }
+    else snprintf(b, sizeof b, "ON - NOT CONNECTED");
+    lv_label_set_text(m_status, b); lv_obj_set_style_text_color(m_status, c, 0);
+    if (!on) snprintf(b, sizeof b, "optional - rides work offline");
+    else if (s.state == PLAT_WIFI_CONNECTED) snprintf(b, sizeof b, "%s  %d dBm  %s", s.internet == 1 ? "internet ok" : s.internet == 2 ? "no internet" : "checking", s.rssi, dn);   /* the name last: a long one is cut, never the state */
+    else if (s.state == PLAT_WIFI_FAILED || (s.state == PLAT_WIFI_IDLE && s.err != PLAT_WIFI_ERR_NONE)) snprintf(b, sizeof b, "%s: %s", dn, bc_wifi_err_text((bc_wifi_err_t)s.err));
+    else if (s.state == PLAT_WIFI_CONNECTING) snprintf(b, sizeof b, "%s", dn);
+    else snprintf(b, sizeof b, "pick a network");
+    lv_label_set_text(m_info, b);
+    int k = main_kind(&s);
+    if (k != m_kind) {
+        m_kind = k;
+        lv_label_set_text(lv_obj_get_child(m_primary, 0), k == 0 ? "TURN ON" : k == 2 ? "DISCONNECT" : "NETWORKS");
+        lv_obj_set_style_bg_color(m_primary, k == 2 ? C_PANEL : C_CYAN, 0);
+        lv_obj_set_style_text_color(lv_obj_get_child(m_primary, 0), k == 2 ? C_FG : C_INK, 0);
+    }
 }
 
 static void wifi_main(void)
 {
     lv_obj_t *scr = ui_screen_new(UI_SCR_SETTINGS, main_update);
     ui_title(scr, "WI-FI");
-    m_list = ui_scroll_area(scr, 50, 178);
+    m_status = ui_label(scr, &lv_font_montserrat_14, C_FG, "");
+    lv_obj_set_width(m_status, 2 * ui_chord(56) - 16); lv_label_set_long_mode(m_status, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_height(m_status, lv_font_get_line_height(&lv_font_montserrat_14) + 1);
+    lv_obj_align(m_status, LV_ALIGN_TOP_MID, 0, 56);
+    m_info = ui_label(scr, &lv_font_montserrat_12, C_MUT, "");
+    lv_obj_set_width(m_info, 2 * ui_chord(80) - 20); lv_label_set_long_mode(m_info, LV_LABEL_LONG_MODE_DOTS);
+    lv_obj_set_height(m_info, lv_font_get_line_height(&lv_font_montserrat_12) + 1);
+    lv_obj_align(m_info, LV_ALIGN_TOP_MID, 0, 79);
+    m_primary = ui_pill(scr, "", C_CYAN, C_INK, 150, 40, primary_cb, NULL);
+    lv_obj_align(m_primary, LV_ALIGN_TOP_MID, 0, 100);
+    m_row = NULL; m_kind = -1; m_last_state = -1;
     build_rows();
-    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 40, back_settings, NULL);
-    lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 184);
+    main_update();
+    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 36, back_settings, NULL);
+    lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 188);
+    ui_screen_show(scr);
+}
+
+/* Wi-Fi > Help: the explanations (kept off the main screen) */
+static void disc_cb(lv_event_t *e) { (void)e; plat_wifi_disconnect(); wifi_main(); }
+static void help_show(void)
+{
+    lv_obj_t *scr = ui_screen_new(UI_SCR_SETTINGS, NULL);
+    ui_title(scr, "WI-FI HELP");
+    lv_obj_t *l = ui_scroll_area(scr, 50, 182);
+    { plat_wifi_status_t s; plat_wifi_status(&s);
+      if (s.state == PLAT_WIFI_CONNECTED) { ui_pill(l, "DISCONNECT", C_PANEL, C_FG, 150, 34, disc_cb, NULL); ui_note(l, "stays on; no automatic reconnect until you connect again", 0); } }
+    ui_note(l, "Optional: rides, coaching and history work without Wi-Fi. 2.4 GHz networks only (no 5 GHz). Easiest: set it up from the phone app.", 0);
+    ui_note(l, "iPhone hotspot: Settings > Personal Hotspot > Maximize Compatibility ON, keep that screen open, then scan.", 0);
+    ui_note(l, "During a ride the board never scans or retries on its own.", 0);
+    lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 36, back_main, NULL);
+    lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 188);
     ui_screen_show(scr);
 }
 

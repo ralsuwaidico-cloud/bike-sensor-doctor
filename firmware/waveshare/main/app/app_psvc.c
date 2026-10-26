@@ -5,6 +5,7 @@
 #include "app_power.h"
 #include "bc_link.h"
 #include "bc_ride.h"
+#include "bc_pipe.h"
 
 #define SCAN_TIMEOUT_MS 25000       /* a connect attempt in flight (<= 20 s) delays the scan */
 #define STATUS_MIN_GAP_MS 500
@@ -28,7 +29,28 @@ static struct {
     app_psvc_stats_t st;
     /* 0.7.0 */
     bool was_ready, hello_due, diag_due; uint8_t last_set_status; bool set_seen; uint16_t last_disc_code; uint8_t last_disc;
+    /* 0.7.2 SENSOR_DIAG (Link 1.2.2): per sensor (0 power, 1 HR strap, 2 CSC) the last stage seen and what is due */
+    uint8_t sd_stage[3]; bool sd_known[3]; uint8_t sd_due; uint32_t sd_period_ms;
 } S;
+
+static const plat_sens_kind_t SD_KIND[3] = { PLAT_SENS_POWER, PLAT_SENS_HR, PLAT_SENS_CSC };
+
+/* which SENSOR_DIAG events are due: stage changes, every 5 s for a paired link below VALID, all paired ones on connect */
+static void sd_scan(uint32_t now, bool phone_connected_now)
+{
+    plat_sensors_t s; plat_sensors(&s);
+    bool below = false; uint8_t below_mask = 0;
+    for (int i = 0; i < 3; i++) {
+        const plat_link_info_t *li = &s.link[SD_KIND[i]];
+        bool paired = li->link != PLAT_LINK_NOT_PAIRED && li->link != PLAT_LINK_UNSUPPORTED && li->link != PLAT_LINK_OFF;
+        if (S.sd_known[i] && li->stage != S.sd_stage[i]) S.sd_due |= (uint8_t)(1u << i);
+        S.sd_stage[i] = li->stage; S.sd_known[i] = true;
+        if (phone_connected_now && paired) S.sd_due |= (uint8_t)(1u << i);
+        if (paired && li->stage != BC_STG_VALID) { below = true; below_mask |= (uint8_t)(1u << i); }
+    }
+    if (!below) S.sd_period_ms = now;
+    else if (now - S.sd_period_ms >= 5000) { S.sd_period_ms = now; S.sd_due |= below_mask; }
+}
 
 void app_psvc_init(void) { memset(&S, 0, sizeof S); }
 void app_psvc_stats(app_psvc_stats_t *o) { *o = S.st; o->sync_active = S.sync_active; o->status_watch = S.status_watch; }
@@ -289,6 +311,21 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
     if (S.profile_ack_due) { S.profile_ack_due = false; *chr = APP_PSVC_CTRL; return bc_link_encode_profile_ack(&S.ack, buf, cap, ++S.seq, now); }
     if (S.profile_due) { S.profile_due = false; bc_profile_msg_t m; app_psvc_profile_msg(&m); *chr = APP_PSVC_CTRL; return bc_link_encode_profile(BC_MSG_PROFILE, &m, buf, cap, ++S.seq, now); }
     if (S.settings_due) { S.settings_due = false; bc_settings_msg_t m; app_psvc_settings_msg(&m); *chr = APP_PSVC_CTRL; return bc_link_encode_settings(BC_MSG_SETTINGS, &m, buf, cap, ++S.seq, now); }
+    /* 0.7.2 sensor pipeline diagnostics (Events characteristic), one sensor per message */
+    if (S.sd_due) {
+        plat_sensors_t s; plat_sensors(&s);
+        for (int i = 0; i < 3; i++) if (S.sd_due & (1u << i)) {
+            S.sd_due &= (uint8_t)~(1u << i);
+            const plat_link_info_t *li = &s.link[SD_KIND[i]];
+            bc_sensor_diag_t d; memset(&d, 0, sizeof d);
+            d.sensor = (uint8_t)(i + 1); d.stage = li->stage; d.packets = li->packets; d.rejected = (uint16_t)(li->rejected > 0xFFFF ? 0xFFFF : li->rejected);
+            d.pkt_age_ds = bc_link_age_ds(li->age_ms); d.valid_age_ds = bc_link_age_ds(li->valid_age_ms);
+            snprintf(d.err, sizeof d.err, "%s", li->err);
+            S.st.sensor_diags++;
+            *chr = APP_PSVC_EVENTS;
+            return bc_link_encode_sensor_diag(&d, buf, cap, ++S.seq, now);
+        }
+    }
     /* 1. scan results, then the end marker */
     if (S.scan_pending) {
         if (!S.scan_ending) {
@@ -369,8 +406,11 @@ void app_psvc_pump(uint32_t now)
 {
     /* 0.7.0: when the phone is encrypted and listening, send PROFILE (so it can compare) and one LINK_DIAG event */
     { plat_phone_status_t ps; plat_phone_status(&ps);
-      if (ps.svc_ready && !S.was_ready) { S.was_ready = true; S.hello_due = true; S.diag_due = true; S.set_seen = false; S.last_disc_code = ps.last_disc_code; S.last_disc = (uint8_t)ps.last_disc; }
-      if (!ps.svc_ready) S.was_ready = false; }
+      bool rising = ps.svc_ready && !S.was_ready;
+      if (rising) { S.was_ready = true; S.hello_due = true; S.diag_due = true; S.set_seen = false; S.last_disc_code = ps.last_disc_code; S.last_disc = (uint8_t)ps.last_disc; }
+      if (!ps.svc_ready) { S.was_ready = false; S.sd_due = 0; }
+      sd_scan(now, rising);                                /* 0.7.2 SENSOR_DIAG bookkeeping (sent only while the phone listens) */
+      if (!ps.svc_ready) S.sd_due = 0; }
     if (S.hello_due) { S.hello_due = false; S.profile_due = true; }
     uint8_t chr, b[BC_LINK_MAX]; int n, guard = 0;
     while ((n = plat_phone_take_svc(&chr, b, sizeof b)) > 0 && guard++ < 16) app_psvc_write(chr ? APP_PSVC_SYNC : APP_PSVC_CTRL, b, (size_t)n, now);
@@ -385,7 +425,7 @@ void app_psvc_pump(uint32_t now)
 void app_psvc_on_disconnect(void)
 {
     S.sync_active = false; S.scan_pending = false; S.status_watch = false; S.have_last = false; S.status_now = false;
-    S.profile_due = S.profile_ack_due = S.settings_due = false; S.held_len = 0; S.hello_due = S.diag_due = false; S.was_ready = false;
+    S.profile_due = S.profile_ack_due = S.settings_due = false; S.held_len = 0; S.hello_due = S.diag_due = false; S.was_ready = false; S.sd_due = 0;
 }
 
 size_t app_psvc_last_sync_end(uint8_t *buf, size_t cap)

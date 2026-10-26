@@ -43,6 +43,7 @@ typedef struct {
     uint32_t last_ms;          /* time of last plausible sample */
     uint32_t last_packet_ms;   /* time of last packet of any kind */
     uint32_t packets, rejected, short_packets;
+    bool no_cad;               /* 0.7.2: the meter sends no cadence (standard Cycling Power without crank data): cadence = NO DATA */
 } bc_xds_live_t;
 
 typedef enum { BC_LIVE_NO_DATA = 0, BC_LIVE_OK } bc_live_status_t;
@@ -50,6 +51,9 @@ typedef enum { BC_LIVE_NO_DATA = 0, BC_LIVE_OK } bc_live_status_t;
 void bc_xds_live_reset(bc_xds_live_t *l);
 /** Feed one raw packet received at now_ms. Returns true when it was decoded and plausible. */
 bool bc_xds_live_feed(bc_xds_live_t *l, const uint8_t *b, size_t n, uint32_t now_ms);
+/** 0.7.2: feed an already-decoded sample (standard Cycling Power meters, bc_cp). s = NULL counts a short packet,
+ *  an implausible sample counts as rejected. has_cad = false: this sample carries no cadence. */
+bool bc_xds_live_feed_sample(bc_xds_live_t *l, const bc_xds_sample_t *s, bool has_cad, uint32_t now_ms);
 /** Live power / cadence at now_ms: BC_LIVE_NO_DATA when there is no sample younger than BC_STALE_MS. */
 bc_live_status_t bc_xds_live_power(const bc_xds_live_t *l, uint32_t now_ms, int *watts);
 bc_live_status_t bc_xds_live_cadence(const bc_xds_live_t *l, uint32_t now_ms, int *rpm, bool *backwards);
