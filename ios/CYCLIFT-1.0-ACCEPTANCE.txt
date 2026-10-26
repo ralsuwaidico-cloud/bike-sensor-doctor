@@ -1,0 +1,29 @@
+Cyclift 1.0.0 (build 61) - real-iPhone acceptance test before App Store submission          26 Oct 2026
+=========================================================================================================
+About 20 minutes. No BikeComputer, no sensors needed (that is what Apple's reviewer will see).
+Mark each PASS / FAIL. Any FAIL = tell Claude before submitting.
+
+Fresh-install view (what the reviewer sees)
+ 1  On a second iPhone, or after deleting the app (your data is lost only on that phone), install build 61 from
+    TestFlight. App name under the icon: "Cyclift". First screen: "Get started", asks only for a first name - no
+    Apple / Google / e-mail sign-in anywhere.
+ 2  Enter a name, Continue, skip or answer the setup steps, choose "Continue with phone only". Home appears.
+ 3  Plan tab: a week is planned; tap a strength day > Start workout > tick two sets > Finish > the check-in appears
+    (performance, effort, pain) > Submit. Coach adjustments opens; Done.
+ 4  Centre button: says "Ride now" on a ride day or "Train now" on a strength day and opens the right screen; it never
+    starts recording by itself.
+ 5  Ride: Start (allow location "While Using"), walk outside 2 minutes with the phone locked, unlock, End > Save >
+    check-in. Progress shows the ride with distance and a map. No brand names (no "XDS"), missing sensors read
+    "No power source" / "No heart-rate source".
+ 6  Ride layouts: tap the layout name; all five fit the screen; the coach panel and "Why?" work.
+ 7  Profile > Your data: Export opens the share sheet; Delete all data asks first (tap Cancel). About > Contact
+    support opens an e-mail to the support address. Privacy policy and Terms open.
+ 8  Connections: no Garmin / WHOOP / Oura / "planned" / "coming soon" rows; Apple Watch and Bluetooth sensors are
+    optional.
+
+Your own phone (update, not a fresh install)
+ 9  Update to build 61: all your plans, templates, strength logs and rides are still there.
+10  Apple Watch (if you use it): start the watch workout, heart rate appears in the Ride screen.
+
+Website (after you switch on GitHub Pages)
+11  These open in Safari: .../bike-sensor-doctor/site/support.html, privacy.html and index.html.
