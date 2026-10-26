@@ -1,0 +1,4 @@
+support=https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/support.html
+marketing=https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/index.html
+privacy=https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/privacy.html
+terms=https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/terms.html

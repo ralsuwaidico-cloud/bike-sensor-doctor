@@ -1,0 +1,135 @@
+# Athletics App Store listing preparation — DRAFTS ONLY. Started by hand (Actions › App Store listing › Run workflow).
+#
+#  mode = check : read-only report of the App Store Connect record (name, version, texts, screenshots, builds).
+#  mode = apply : writes draft metadata (ios/store/en-US), enables Sign in with Apple on the bundle ID and uploads the
+#                 simulator screenshots to the 6.9" iPhone set. It NEVER submits for review, releases, changes the price
+#                 or availability, or accepts agreements — those stay with the account owner.
+#
+#  job screenshots : (macOS) generates the project, boots an iPhone Pro Max simulator, runs the StoreScreenshots UI test
+#                    on the real app with a seeded rider and keeps the PNGs. No secrets are used in this job.
+#  job listing     : (Linux) runs ios/ci/asc_listing.py with the App Store Connect API key; publishes the scrubbed report
+#                    and the screenshots to branch ci-logs under ios/asc-listing/run-N/ (this repository is public).
+name: App Store listing
+on:
+  # Pushing to branch asc-listing/check or asc-listing/apply runs that mode (lets the workflow run before it is on the
+  # default branch); afterwards it can also be started from the Actions tab.
+  push:
+    branches: ["asc-listing/check", "asc-listing/apply"]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check = read-only report; apply = write drafts (never submits)"
+        type: choice
+        options: [check, apply]
+        default: check
+      screenshots:
+        description: "Take App Store screenshots on the simulator"
+        type: boolean
+        default: true
+permissions:
+  contents: write
+concurrency:
+  group: asc-listing
+  cancel-in-progress: false
+
+jobs:
+  screenshots:
+    if: ${{ github.event_name == 'push' || inputs.screenshots }}
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Take screenshots
+        run: |
+          set -uo pipefail
+          cd ios
+          mkdir -p build/shots build/logs
+          command -v xcodegen >/dev/null || brew install xcodegen >/dev/null 2>&1
+          xcodegen generate --spec project.yml > build/logs/xcodegen.txt 2>&1 || { echo "xcodegen failed"; tail -50 build/logs/xcodegen.txt; exit 1; }
+          SIM=$(xcrun simctl list devices available -j | python3 -c '
+          import json,sys
+          d=json.load(sys.stdin)["devices"]; best=None
+          for rt,devs in d.items():
+              if ".iOS-" not in rt: continue
+              ver=tuple(int(x) for x in rt.split(".iOS-")[1].split("-"))
+              for x in devs:
+                  n=x["name"]
+                  if "Pro Max" not in n: continue
+                  rank=(ver, n.startswith("iPhone 17"), n)
+                  if best is None or rank>best[0]: best=(rank,x["udid"],n)
+          print((best[1]+"|"+best[2]) if best else "")')
+          UDID=${SIM%%|*}; NAME=${SIM#*|}
+          echo "Screenshot simulator: ${NAME:-none}" | tee build/logs/screenshots.txt
+          [ -n "$UDID" ] || { echo "no Pro Max simulator available" | tee -a build/logs/screenshots.txt; exit 1; }
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b >/dev/null 2>&1 || true
+          xcrun simctl status_override "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+            --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
+          xcrun simctl ui "$UDID" appearance light || true
+          TEST_RUNNER_SCREENSHOT_DIR="$PWD/build/shots" xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer \
+            -configuration Debug -destination "id=$UDID" -only-testing:BikeComputerUITests/StoreScreenshots \
+            CODE_SIGNING_ALLOWED=NO > build/xcodebuild.log 2>&1
+          RC=$?
+          grep -E "error:|Test Case .* (passed|failed|skipped)|Executed [0-9]+ test|\*\* .* (SUCCEEDED|FAILED) \*\*" build/xcodebuild.log | head -200 >> build/logs/screenshots.txt
+          tail -80 build/xcodebuild.log >> build/logs/screenshots.txt
+          echo "xcodebuild exit $RC" >> build/logs/screenshots.txt
+          for f in build/shots/*.png; do [ -f "$f" ] && echo "$(basename "$f") $(sips -g pixelWidth -g pixelHeight "$f" | awk '/pixel/{printf "%s ", $2}')" >> build/logs/screenshots.txt; done
+          cat build/logs/screenshots.txt
+          ls build/shots/*.png >/dev/null 2>&1 || exit 1
+      - name: Keep screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: store-screenshots
+          path: |
+            ios/build/shots/*.png
+            ios/build/logs/screenshots.txt
+          if-no-files-found: ignore
+
+  listing:
+    needs: screenshots
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet pyjwt cryptography
+      - name: Fetch screenshots
+        if: ${{ github.event_name == 'push' || inputs.screenshots }}
+        uses: actions/download-artifact@v4
+        with:
+          name: store-screenshots
+          path: shots
+        continue-on-error: true
+      - name: App Store Connect listing
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          MODE: ${{ inputs.mode || (github.ref_name == 'asc-listing/apply' && 'apply' || 'check') }}
+        run: |
+          mkdir -p shots flat
+          find shots -name '*.png' -exec cp {} flat/ \; 2>/dev/null || true
+          export SCREENSHOT_DIR="$PWD/flat"
+          echo "screenshots received: $(ls flat | wc -l)"
+          export REPORT="$PWD/report.txt"
+          python3 ios/ci/asc_listing.py 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<e-mail hidden>/g' > run.txt || echo "LISTING SCRIPT FAILED" >> run.txt
+          cat run.txt
+          [ -f report.txt ] || cp run.txt report.txt
+      - name: Publish the report and screenshots to branch ci-logs
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.run_number }}
+        run: |
+          W=$(mktemp -d); cd "$W"
+          git init -q && git config user.name "ios-ci" && git config user.email "ios-ci@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
+          D="ios/asc-listing/run-$N"; mkdir -p "$D/screenshots"
+          cp "$GITHUB_WORKSPACE/report.txt" "$D/report.txt" 2>/dev/null || echo "no report" > "$D/report.txt"
+          cp "$GITHUB_WORKSPACE/run.txt" "$D/run.txt" 2>/dev/null || true
+          find "$GITHUB_WORKSPACE/shots" -name 'screenshots.txt' -exec cp {} "$D/screenshots.txt" \; 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE"/flat/*.png "$D/screenshots/" 2>/dev/null || true
+          echo "mode ${{ inputs.mode || github.ref_name }}  commit $GITHUB_SHA  branch $GITHUB_REF_NAME" >> "$D/report.txt"
+          git add -A && git commit -q -m "App Store listing run $N" || exit 0
+          for i in 1 2 3; do git push -q origin HEAD:ci-logs && break; git fetch -q --depth 1 origin ci-logs && git rebase -q FETCH_HEAD || true; sleep 3; done

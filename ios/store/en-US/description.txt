@@ -1,0 +1,37 @@
+Athletics is a training app for people who ride and lift. It puts your cycling and your strength work into one weekly plan, records what you actually do, and suggests the next step from your own data.
+
+PLAN YOUR WEEK YOUR WAY
+• Choose Cycling, Strength or Hybrid Athlete mode.
+• Tell the app which days you ride, lift, do both or rest, and how long you have.
+• Cycling hours and lifting hours have separate budgets; the plan never schedules more than you set.
+• Move, edit, skip or replace any session. Sessions you change by hand are kept when the week is rebuilt.
+
+RECORD RIDES
+• Phone-only rides with GPS speed, distance and a route map — no extra hardware needed.
+• Heart rate from Apple Watch during the ride.
+• Large live gauges for power, heart rate and cadence with target zones when the sensors are connected.
+• Optional: pair the BikeComputer handlebar device for power-meter data and on-bike display. Device features are clearly marked and are not needed to use the app.
+
+LOG STRENGTH TRAINING
+• Quick log (Full Body, Upper, Lower, Push, Pull, Custom) with duration and effort.
+• Detailed logging with exercises, sets, reps, weight or bodyweight, supersets, RPE and notes.
+• Build your own routines from an exercise library, mark the equipment you own, and assign routines to your training days.
+• See your previous weights and reps while you train; pause and resume a session.
+
+SUGGESTIONS, NOT GUESSES
+• The coach looks at sessions you completed — never planned ones — and offers one suggestion at a time, such as adding a repetition when your last sessions support it.
+• Every suggestion explains why, and says so when there is not enough history yet.
+• Suggestions are labelled as suggestions. You accept, ignore or undo them; fixed days and your own edits are never changed without your approval.
+
+HISTORY AND PROGRESS
+• Timeline of rides and strength sessions with duration, distance, heart rate, power, zones and completion status.
+• Weekly review of planned versus completed training.
+• Import cycling and strength workouts from Apple Health if you allow it, without duplicates.
+
+YOUR DATA
+• Works fully offline in guest mode — no account required.
+• Optional account (Sign in with Apple, Google or e-mail) to sync across devices.
+• Export all your data or delete your account and data from inside the app.
+• No ads, no tracking, no analytics.
+
+Athletics provides training suggestions based on the data you record. It is not a medical device and does not give medical advice.

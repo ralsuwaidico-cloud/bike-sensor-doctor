@@ -1,0 +1,9 @@
+No account is needed to review Athletics: on the first screen, under "Continue as guest", enter any first name and tap Continue (onboarding steps after that can be skipped). Every feature (planning, ride recording with phone GPS, strength logging, routines, coach suggestions, history) works in guest mode and offline. Optional accounts (Sign in with Apple, Google, e-mail) are for syncing across devices; e-mail accounts require confirming the address, so a demo account is not provided.
+
+Background modes:
+- bluetooth-central: keeps the connection to the optional BikeComputer handlebar device (a separate cycling computer the rider owns) during a ride, so power, cadence and recording continue with the phone in a pocket. The device is optional and not required for review; without it the app records rides with the phone alone.
+- location: records speed, distance and the route while a ride is in progress, including when the screen is locked. Location is not used when no ride is running.
+
+HealthKit: with the rider's permission, the app reads heart rate during workouts and past cycling/strength workouts to show them in the plan and history, and saves finished sessions to Apple Health when the rider chooses. Health data is not used for advertising and is not shared.
+
+Account deletion: Profile > Account > Delete account and all data.
