@@ -1,0 +1,46 @@
+Cyclift 1.0.0 release candidate - real-device checklist (iPhone + Apple Watch + BikeComputer 0.7.1)      26 Oct 2026
+====================================================================================================================
+Do INSTALL-AND-TEST-PROCEDURE.txt steps 1-9 first (board 0.7.1, then this app, then pairing).
+Record PASS / FAIL / NOT TESTED. Everything here passed automated tests in the cloud simulator only; nothing is
+verified on your devices until you mark it. Board on USB with the battery disconnected (HW-1).
+
+A. Update and data
+ A1  Install the newest Cyclift build. Home-screen name is "Cyclift" with the new turquoise icon. App opens on Home
+     (no onboarding), your name, plan, rides, templates and strength logs are all still there.
+ A2  Force-quit and reopen: same data. Profile > About shows "Cyclift 1.0.0".
+
+B. Pairing and sync with the BikeComputer (the device is optional - also do E without it)
+ B1  Connections: the BikeComputer row shows stages up to "Ready"; board PHONE screen says Connected.
+ B2  Board RESET: the phone reconnects by itself within ~15 s, no touch on either device.
+ B3  Board screen off 5 min (Quick Settings > Screen off): phone stays connected, values keep updating.
+ B4  Change your weight in Profile > Rider information: the app shows "synced hh:mm"; board Settings > Rider shows it;
+     board RESET: still there.
+ B5  Walk out of range ~1 min and back: reconnects by itself; no second ride appears.
+
+C. Sensors without the board (universal sources)
+ C1  Board OFF. Connections > Add a sensor: any standard Bluetooth heart-rate strap, power meter or speed/cadence sensor
+     you own appears by its own name; tap to pair; it shows Connected with its metrics. (Skip if you own none.)
+ C2  Ride screen with nothing connected: tiles say "No power source", "No heart-rate source" - no brand names anywhere.
+ C3  Apple Watch workout running: heart rate shows with source "Apple Watch".
+ C4  Connections > Imported: Apple Health real; Garmin, WHOOP, Oura say "Planned - not available yet" (never connected).
+
+D. Ride layouts and coach
+ D1  Ride tab: tap the layout name repeatedly: Ride Coach > Large gauges > Classic > Rings > Analytics. Each fits one
+     screen, no scrolling; power reads "POWER - W" with the source on a separate line.
+ D2  Start a ride (board ride or phone-only), switch layouts while recording: time and distance keep counting, nothing
+     disconnects, End gives ONE ride in history.
+ D3  Every layout shows the coach panel; tap "Why?" - it explains with your actual numbers or says which sensor is missing.
+ D4  Next ride opens in the layout you used last.
+
+E. Strength, plan and the adaptive coach
+ E1  Plan: Tuesday shows your assigned routine by name; centre button on a strength day says "Train now" and opens it.
+ E2  Start workout, tick sets with real reps and kg, Finish. The check-in appears (performance, effort, pain): submit.
+ E3  "Coach adjustments" opens; any change has "Why this changed?" and Undo; "Restore original plan" works.
+ E4  Log a second quick log for the same session: the app says "Already logged" (no duplicate).
+ E5  Profile > Training profile > Hybrid plan: goal, days, split and budgets are there and editable.
+
+F. Accounts (only meaningful after the Supabase setup; until then)
+ F1  Profile > Account > Create account: the sheet says accounts are not configured yet; guest mode keeps working.
+
+Report FAIL with a screenshot. Values shown as "--" or "No ... source" are correct when a source is absent; a number with
+no live source is a bug.
