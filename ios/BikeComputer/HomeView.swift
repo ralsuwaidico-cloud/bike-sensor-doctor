@@ -32,9 +32,9 @@ struct HomeView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle(store.profile.name.isEmpty ? "Hi" : "Hi \(store.profile.name)")
-            .sheet(isPresented: $showWorkout) { if let t = store.today { WorkoutDetail(workout: t) } }
+            .sheet(isPresented: $showWorkout) { if let t = store.today { if t.kind == .strength { StrengthWorkoutScreen(workoutId: t.id) } else { WorkoutDetail(workout: t) } } }
             .sheet(isPresented: $showAlternatives) { alternativesSheet }
-            .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet(date: Date(), presetFocus: store.today?.strengthFocus) }
+            .sheet(isPresented: $showStrengthLog) { let open = store.openStrength(on: Date()); QuickStrengthLogSheet(date: Date(), presetFocus: open?.strengthFocus ?? store.today?.strengthFocus, workoutId: open?.id) }
         }
     }
 
@@ -132,7 +132,7 @@ struct HomeView: View {
             HStack { Eyebrow(t: "Next days"); Spacer(); Button("Plan ›") { tab = 1 }.font(.caption.bold()) }
             HStack(alignment: .top, spacing: 8) {
                 ForEach(upcoming, id: \.id) { w in
-                    VStack(alignment: .leading, spacing: 2) { Text(w.date.shortDay).font(.caption.weight(.heavy)).foregroundStyle(.secondary); Text(w.kind.title).font(.caption).lineLimit(2).minimumScaleFactor(0.8); HStack(spacing: 4) { if w.minutes > 0 { Text(Fmt.duration(minutes: w.minutes)).font(.caption2).foregroundStyle(.secondary) }; ZonePill(z: w.kind.zone) } }.frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 2) { Text(w.date.shortDay).font(.caption.weight(.heavy)).foregroundStyle(.secondary); Text(w.kind == .strength ? w.displayTitle(routine: store.routine(for: w)) : w.kind.title).font(.caption).lineLimit(2).minimumScaleFactor(0.8); HStack(spacing: 4) { if w.minutes > 0 { Text(Fmt.duration(minutes: w.minutes)).font(.caption2).foregroundStyle(.secondary) }; ZonePill(z: w.kind.zone) } }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }

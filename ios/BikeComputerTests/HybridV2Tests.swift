@@ -152,7 +152,8 @@ final class HybridV2Tests: XCTestCase {
     }
 
     func testTemplatePrefillsFromLastSession() {
-        let t = WorkoutTemplate(name: "Lower A", focus: .lower, entries: [ExerciseEntry(exercise: Exercise(id: "sq", name: "Back squat", pattern: .squat), sets: [SetEntry(reps: 5, weightKg: 60)])])
+        // the template was last edited before that session (an edit made AFTER the session wins — StrengthAuditTests)
+        let t = WorkoutTemplate(name: "Lower A", focus: .lower, entries: [ExerciseEntry(exercise: Exercise(id: "sq", name: "Back squat", pattern: .squat), sets: [SetEntry(reps: 5, weightKg: 60)])], updatedAt: .distantPast)
         var last = detailed(0, [("Back squat", .squat, [(5, 90), (5, 90), (5, 90)])]); last.templateId = t.id
         last.exercises![0].exerciseId = "sq"
         let e = t.prefilled(from: last)

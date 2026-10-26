@@ -624,17 +624,21 @@ final class Store: ObservableObject {
     /// The availability in force: the rider's own, else a suggestion from the weekly hours (never stored until edited).
     var effectiveAvailability: WeeklyAvailability { availability ?? WeeklyAvailability.suggested(for: profile) }
 
-    func ensurePlan() {
+    /// Makes sure this week and next week exist. Cyclift A5: only a week with NO entries is generated; a week that
+    /// already exists is never rebuilt here (a removed session used to trigger a rebuild that dropped hand edits,
+    /// assigned routines and done flags). Called at launch and when the calendar day changes.
+    func ensurePlan(now: Date = Date()) {
         let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
+        let today = cal.startOfDay(for: now)
         let weekday = (cal.component(.weekday, from: today) + 5) % 7   // Monday = 0
         let monday = cal.date(byAdding: .day, value: -weekday, to: today)!
-        if plan.isEmpty || !plan.contains(where: { cal.isDate($0.date, inSameDayAs: today) }) {
-            // keep history of past workouts, generate this week (and next) fresh
-            let keep = plan.filter { $0.date < monday }
-            let a = effectiveAvailability
-            plan = keep + applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: a)) + applyWeekdayRoutines(PlanEngine.week(starting: cal.date(byAdding: .day, value: 7, to: monday)!, profile: profile, availability: a))
+        let a = effectiveAvailability
+        var next = plan, added = false
+        for k in 0..<2 {
+            let m = cal.date(byAdding: .day, value: 7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
+            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a)); added = true }
         }
+        if added { plan = next.sorted { $0.date < $1.date } }
     }
 
     // MARK: routines on the calendar (0.8.0)
@@ -661,20 +665,25 @@ final class Store: ObservableObject {
     /// made; the UI shows the warning so the rider can decide).
     @discardableResult
     func assign(template t: WorkoutTemplate?, to w: Workout) -> String? {
-        guard let i = plan.firstIndex(where: { $0.id == w.id }) else { return nil }
+        guard let i = plan.firstIndex(where: { $0.id == w.id }), !plan[i].done else { return nil }
         plan[i].templateId = t?.id; plan[i].plannedEntries = nil; plan[i].routineManual = t != nil
         if let t { plan[i].minutes = t.estimatedMinutes; if t.focus != .custom { plan[i].strengthFocus = t.focus } }
         return liftingBudgetWarning(weekOf: plan[i].date)
     }
     /// Sets (or clears) the default routine for a weekday and applies it to that weekday's not-yet-done, not manually
     /// assigned strength sessions in the current and coming weeks.
-    func setWeekdayRoutine(_ t: WorkoutTemplate?, weekday: Int) {
+    @discardableResult
+    func setWeekdayRoutine(_ t: WorkoutTemplate?, weekday: Int, now: Date = Date()) -> String? {
         if let t { weekdayRoutines[weekday] = t.id } else { weekdayRoutines.removeValue(forKey: weekday) }
-        let today = Calendar.current.startOfDay(for: Date())
+        let today = Calendar.current.startOfDay(for: now)
+        var touched: [Date] = []
         for i in plan.indices where plan[i].kind == .strength && !plan[i].done && !plan[i].routineManual && plan[i].date >= today && Store.weekdayIndex(plan[i].date) == weekday {
             plan[i].templateId = t?.id; plan[i].plannedEntries = nil
-            if let t { plan[i].minutes = t.estimatedMinutes; if t.focus != .custom { plan[i].strengthFocus = t.focus } }
+            if let t { if !plan[i].edited { plan[i].minutes = t.estimatedMinutes }; if t.focus != .custom { plan[i].strengthFocus = t.focus } }
+            touched.append(plan[i].date)
         }
+        guard t != nil else { return nil }
+        return touched.sorted().lazy.compactMap { self.liftingBudgetWarning(weekOf: $0) }.first
     }
     /// Lifting minutes planned in the week of `date` against the budget; nil when within budget or no budget.
     func liftingBudgetWarning(weekOf date: Date) -> String? {
@@ -684,10 +693,12 @@ final class Store: ObservableObject {
         guard planned > b else { return nil }
         return "Lifting this week is now \(Fmt.duration(minutes: planned)) against your \(Fmt.duration(minutes: b)) budget (\(Fmt.duration(minutes: planned - b)) over). Shorten a routine, skip a session or raise the budget in Profile › Training profile."
     }
-    /// Deleting a template clears its assignments (sessions fall back to "no routine"); completed sessions keep their log.
+    /// Deleting a template clears weekday defaults and per-session sets; open sessions show "routine removed"; completed sessions keep their log.
     func deleteTemplateEverywhere(_ t: WorkoutTemplate) {
         templates.removeAll { $0.id == t.id }
-        for i in plan.indices where plan[i].templateId == t.id && !plan[i].done { plan[i].templateId = nil; plan[i].plannedEntries = nil; plan[i].routineManual = false }
+        // open sessions keep the (now dangling) id so they show "routine removed — choose another" instead of silently
+        // turning into a generic session; their own planned sets are dropped with the routine. Completed ones are untouched.
+        for i in plan.indices where plan[i].templateId == t.id && !plan[i].done { plan[i].plannedEntries = nil; plan[i].routineManual = false }
         weekdayRoutines = weekdayRoutines.filter { $0.value != t.id }
     }
 
@@ -696,6 +707,7 @@ final class Store: ObservableObject {
     @discardableResult
     func startStrengthSession(for w: Workout?, template t: WorkoutTemplate?, entries: [ExerciseEntry], name: String? = nil, now: Date = Date()) -> Bool {
         guard activeSession == nil else { return false }
+        if let id = w?.id, plan.first(where: { $0.id == id })?.done == true { return false }   // already completed: no second log
         var s = StrengthSession(date: now, minutes: 0, focus: t?.focus ?? w?.strengthFocus ?? .custom, customName: name ?? t?.name ?? "", workoutId: w?.id)
         s.templateId = t?.id
         s.exercises = entries.map { e in var x = e; x.sets = x.sets.map { st in var y = st; y.done = false; return y }; return x }
@@ -749,7 +761,8 @@ final class Store: ObservableObject {
         let open = items.filter { !$0.done }
         if items.isEmpty { return .rest }
         if open.isEmpty {
-            let next = plan.filter { $0.date > cal.startOfDay(for: now).addingTimeInterval(86_400) && $0.kind != .rest && !$0.done && !$0.skipped }.min { $0.date < $1.date }
+            let tomorrow = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now))!
+            let next = plan.filter { $0.date >= tomorrow && $0.kind != .rest && $0.kind != .recoveryDay && !$0.done && !$0.skipped }.min { $0.date < $1.date }
             return .doneToday(next: next)
         }
         let rides = open.filter { $0.kind.isRide }, lifts = open.filter { $0.kind == .strength }
@@ -832,6 +845,12 @@ final class Store: ObservableObject {
     @discardableResult
     func addStrength(_ s: StrengthSession) -> Bool {
         if let h = s.healthUUID, strength.contains(where: { $0.healthUUID == h }) { return false }
+        if strength.contains(where: { $0.id == s.id }) { return false }
+        // A5: one completed log per planned workout. A detailed log replaces a quick log of the same workout; a quick
+        // log (or import) for a workout that already has a log is refused instead of counted twice.
+        if let wid = s.workoutId, let j = strength.firstIndex(where: { $0.workoutId == wid }) {
+            if s.isDetailed && !strength[j].isDetailed { strength.remove(at: j) } else if !s.isDetailed { return false }
+        }
         if strength.contains(where: { StrengthSession.sameSession($0, s) }) { return false }
         strength.insert(s, at: 0)
         strength.sort { $0.date > $1.date }

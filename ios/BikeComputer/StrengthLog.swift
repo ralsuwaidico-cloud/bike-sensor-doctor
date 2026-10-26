@@ -67,16 +67,25 @@ struct QuickStrengthLogSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(focus == .custom && customName.trimmingCharacters(in: .whitespaces).isEmpty) }
             }
             .onAppear { if !loaded { loaded = true; when = min(date, Date()); if let f = presetFocus { focus = f == .legs ? .lower : f } } }
+            .alert("Already logged", isPresented: Binding(get: { duplicate != nil }, set: { if !$0 { duplicate = nil } }), presenting: duplicate) { _ in
+                Button("Save as an extra session") { save(asExtra: true) }
+                Button("Cancel", role: .cancel) {}
+            } message: { d in Text("This session is already in your history (\(d.title.lowercased()), \(Fmt.duration(minutes: d.minutes)), \(d.date.dayAndDate)). Logging it again would count it twice. Save only if this was another workout.") }
+            .alert("Not saved", isPresented: $rejected) { Button("OK", role: .cancel) {} } message: { Text("A session with the same time and duration is already in your history, so it was not added twice.") }
             .sheet(isPresented: $detailed, onDismiss: { if store.strength.contains(where: { $0.workoutId != nil && $0.workoutId == workoutId }) || detailedSaved { dismiss() } }) {
                 DetailedStrengthLogSheet(date: when, presetFocus: focus, workoutId: workoutId, onSaved: { detailedSaved = true })
             }
         }
     }
     @State private var detailedSaved = false
-    private func save() {
-        let s = StrengthSession(date: when, minutes: minutes, focus: focus, customName: customName.trimmingCharacters(in: .whitespaces), rpe: effort, notes: notes, workoutId: workoutId)
-        _ = store.addStrength(s)
-        dismiss()
+    @State private var duplicate: StrengthSession? = nil
+    @State private var rejected = false
+    /// A5: a second log of the same planned session is not saved silently. The rider sees what is already logged and
+    /// may save this one as an extra, unplanned session instead.
+    private func save(asExtra: Bool = false) {
+        if !asExtra, let d = store.existingLog(forWorkout: workoutId, on: when) { duplicate = d; return }
+        let s = StrengthSession(date: when, minutes: minutes, focus: focus, customName: customName.trimmingCharacters(in: .whitespaces), rpe: effort, notes: notes, workoutId: asExtra ? nil : workoutId)
+        if store.addStrength(s) { dismiss() } else { rejected = true }
     }
 }
 
@@ -115,7 +124,7 @@ struct DetailedStrengthLogSheet: View {
                 }
                 Section {
                     if entries.isEmpty { Text("No exercises yet. Add from the catalogue (search by name, equipment, movement or muscle) or create your own.").font(.footnote).foregroundStyle(.secondary) }
-                    ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }) }
+                    ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }, units: store.settings.units) }
                     .onMove { entries.move(fromOffsets: $0, toOffset: $1) }
                     Button { showSearch = true } label: { Label("Add exercise", systemImage: "plus.circle.fill") }
                     if entries.count >= 2 { supersetControls }
@@ -132,7 +141,7 @@ struct DetailedStrengthLogSheet: View {
             .navigationTitle(editing != nil ? "Edit session" : "Log exercises").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { save() }.disabled(entries.isEmpty || entries.allSatisfy { $0.doneSets.isEmpty }) }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { if editing == nil, store.existingLog(forWorkout: workoutId, on: when).map({ $0.isDetailed || workoutId == nil }) == true { askExtra = true } else { save() } }.disabled(entries.isEmpty || entries.allSatisfy { $0.doneSets.isEmpty }) }
                 ToolbarItem(placement: .topBarLeading) { if !entries.isEmpty { EditButton() } }
             }
             .sheet(isPresented: $showSearch) { ExerciseSearchSheet { ex in
@@ -141,8 +150,13 @@ struct DetailedStrengthLogSheet: View {
                 entries.append(e); expanded = e.id
             } }
             .onAppear { load() }
+            .alert("Already logged", isPresented: $askExtra) {
+                Button("Save as an extra session") { save(asExtra: true) }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("This day's session is already in your history. Logging it again would count it twice. Save only if this was another workout.") }
         }
     }
+    @State private var askExtra = false
     private var supersetControls: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Supersets").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
@@ -165,8 +179,8 @@ struct DetailedStrengthLogSheet: View {
         if let s = editing { entries = s.exercises ?? []; name = s.customName; focus = s.focus; minutes = s.minutes; effort = s.rpe; notes = s.notes; when = s.date }
         else if let t = template { entries = t.prefilled(from: store.lastSession(template: t)); name = t.name; focus = t.focus; templateName = t.name }
     }
-    private func save() {
-        var s = editing ?? StrengthSession(date: when, minutes: minutes, focus: focus, workoutId: workoutId)
+    private func save(asExtra: Bool = false) {
+        var s = editing ?? StrengthSession(date: when, minutes: minutes, focus: focus, workoutId: asExtra ? nil : workoutId)
         s.date = when; s.minutes = minutes; s.focus = focus; s.customName = name.trimmingCharacters(in: .whitespaces); s.rpe = effort; s.notes = notes
         s.exercises = entries; s.templateId = template?.id ?? editing?.templateId
         if saveAsTemplate {
@@ -185,17 +199,18 @@ struct ExerciseEntryRow: View {
     @Binding var entry: ExerciseEntry
     @Binding var expanded: Bool
     var onDelete: () -> Void
+    var units: AppSettings.Units = .metric
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Button { expanded.toggle() } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     if let s = entry.superset { Text(s).font(.caption.weight(.heavy)).padding(5).background(BC.accent.opacity(0.18), in: Circle()) }
-                    VStack(alignment: .leading, spacing: 2) { Text(entry.name).font(.body.weight(.semibold)).foregroundStyle(.primary).lineLimit(2); Text("\(entry.pattern.title) · \(entry.summary)").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                    VStack(alignment: .leading, spacing: 2) { Text(entry.name).font(.body.weight(.semibold)).foregroundStyle(.primary).lineLimit(2); Text("\(entry.pattern.title) · \(entry.summary(units: units))").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
                     Spacer(); Image(systemName: expanded ? "chevron.up" : "chevron.down").foregroundStyle(.secondary).font(.caption)
                 }.frame(minHeight: 44)
             }.buttonStyle(.plain)
             if expanded {
-                ForEach($entry.sets) { $s in SetRow(set: $s, onDelete: { entry.sets.removeAll { $0.id == s.id } }) }
+                ForEach($entry.sets) { $s in SetRow(set: $s, onDelete: { entry.sets.removeAll { $0.id == s.id } }, units: units) }
                 HStack {
                     Button { var n = entry.sets.last ?? SetEntry(); n.id = UUID(); n.done = true; entry.sets.append(n) } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
                     Spacer()
@@ -210,13 +225,14 @@ struct ExerciseEntryRow: View {
 struct SetRow: View {
     @Binding var set: SetEntry
     var onDelete: () -> Void
+    var units: AppSettings.Units = .metric
     @State private var weightText = ""
     var body: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) { repsField; weightField; flags; deleteButton }
             VStack(alignment: .leading, spacing: 6) { HStack(spacing: 8) { repsField; weightField; deleteButton }; flags }
         }
-        .onAppear { weightText = set.weightKg.map { $0 == $0.rounded() ? "\(Int($0))" : String(format: "%.1f", $0) } ?? "" }
+        .onAppear { weightText = set.weightKg.map { WeightFmt.number($0, units) } ?? "" }
     }
     private var repsField: some View {
         HStack(spacing: 4) {
@@ -226,9 +242,9 @@ struct SetRow: View {
     }
     private var weightField: some View {
         HStack(spacing: 4) {
-            TextField("kg", text: $weightText).keyboardType(.decimalPad).frame(width: 56).textFieldStyle(.roundedBorder).disabled(set.bodyweight)
-                .onChange(of: weightText) { _, v in set.weightKg = Double(v.replacingOccurrences(of: ",", with: ".")) }
-            Text(set.bodyweight ? "BW" : "kg").font(.footnote).foregroundStyle(.secondary)
+            TextField(WeightFmt.unit(units), text: $weightText).keyboardType(.decimalPad).frame(width: 56).textFieldStyle(.roundedBorder).disabled(set.bodyweight)
+                .onChange(of: weightText) { _, v in if v != (set.weightKg.map { WeightFmt.number($0, units) } ?? "") { set.weightKg = WeightFmt.parse(v, units) } }
+            Text(set.bodyweight ? "BW" : WeightFmt.unit(units)).font(.footnote).foregroundStyle(.secondary)
         }
     }
     private var flags: some View {
@@ -508,7 +524,7 @@ struct HybridCoachCard: View {
     private func status(_ t: Workout) -> String { t.done ? "done" : t.skipped ? "skipped" : recorder.isActive ? "in progress" : t.fixed ? "planned · fixed day" : "planned" }
     private func table(_ t: Workout) -> some View {
         VStack(spacing: 0) {
-            row("Workout", t.displayTitle)
+            row("Workout", t.displayTitle(routine: store.routine(for: t)))
             row("Duration", t.minutes > 0 ? Fmt.duration(minutes: t.minutes) : "—")
             row("Intensity", intensity(t))
             row("Benefit", t.benefit)
@@ -545,7 +561,7 @@ struct StrengthSessionDetail: View {
                         ForEach(ex) { e in
                             VStack(alignment: .leading, spacing: 3) {
                                 HStack { if let g = e.superset { Text(g).font(.caption.weight(.heavy)).padding(4).background(BC.accent.opacity(0.18), in: Circle()) }; Text(e.name).font(.body.weight(.semibold)); Spacer(); Text(e.pattern.title).font(.caption).foregroundStyle(.secondary) }
-                                Text(e.doneSets.map { $0.text }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                Text(e.doneSets.map { $0.text(units: store.settings.units) }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                                 if let p = prog.first(where: { $0.exerciseId == e.exerciseId }) {
                                     HStack(spacing: 6) {
                                         Text(trendText(p)).font(.caption2).foregroundStyle(p.trend == .up ? BC.live : p.trend == .down ? BC.stale : .secondary)
