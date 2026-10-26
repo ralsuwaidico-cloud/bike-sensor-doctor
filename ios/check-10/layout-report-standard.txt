@@ -1,0 +1,10 @@
+L home: key controls coachLog 108×62, coachAdjust 108×62, coachSwap 108×62
+L home: no text outside the window
+L home lower: no text outside the window
+L strength: no text outside the window
+L plan: no text outside the window
+L progress: no text outside the window
+L progress lower: no text outside the window
+L profile: no text outside the window
+L tab bar: key controls Home 78×52, Plan 78×52, centreButton 58×76, Progress 78×52, Profile 78×52
+L connections: no text outside the window

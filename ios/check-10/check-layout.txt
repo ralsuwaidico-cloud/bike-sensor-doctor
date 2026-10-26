@@ -1,0 +1,13 @@
+small=7555A5A2-861B-42CF-AF4B-8EBBE99C031E max=8B500E0C-CA36-4F12-853D-3B697FBEA084 std=E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+== small exit 0
+	 Executed 1 test, with 0 failures (0 unexpected) in 377.495 (377.504) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 377.495 (377.511) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 377.495 (377.514) seconds
+== standard exit 0
+	 Executed 1 test, with 0 failures (0 unexpected) in 333.191 (333.196) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 333.191 (333.197) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 333.191 (333.199) seconds
+== promax exit 0
+	 Executed 1 test, with 0 failures (0 unexpected) in 243.311 (243.319) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 243.311 (243.322) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 243.311 (243.326) seconds

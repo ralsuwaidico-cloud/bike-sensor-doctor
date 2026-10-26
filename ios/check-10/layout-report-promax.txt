@@ -1,0 +1,9 @@
+XXXL home: key controls coachLog 121×62, coachAdjust 121×62, coachSwap 121×62
+XXXL home: no text outside the window
+XXXL home lower: no text outside the window
+XXXL strength: no text outside the window
+XXXL plan: no text outside the window
+XXXL progress: no text outside the window
+XXXL progress lower: no text outside the window
+XXXL profile: no text outside the window
+XXXL tab bar: key controls Home 85×52, Plan 85×52, centreButton 71×81, Progress 85×52, Profile 85×52
