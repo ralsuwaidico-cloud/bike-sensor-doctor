@@ -1,10 +1,10 @@
-BikeComputer iOS CI — build 67 — 2026-10-26 15:38 UTC
+BikeComputer iOS CI — build 67 — 2026-10-26 16:15 UTC
 macOS 26.6.2, Xcode 26.6 Build version 17F113 
 XcodeGen Version: 2.46.0
 RESULT generate: ok
-Test simulator: E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
 RESULT tests: ok (Executed 224 tests, with 0 failures)
-RESULT launch smoke (Release): FAILED (exit 65)
+RESULT launch smoke (Release): ok (Executed 1 test, with 0 failures)
 Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
 RESULT archive: ok (adhoc)
   contains BikeComputer.app 1.0.0 (67) — display name 'Cyclift'
@@ -13,9 +13,9 @@ RESULT archive: ok (adhoc)
   contains BikeComputerWatch.app 1.0.0 (67) — display name 'Cyclift'
     privacy manifest: present, tracking false
     HealthKit entitlement embedded in archive: yes
-RESULT sign: ok (BikeComputer.ipa, 7596364 bytes)
+RESULT sign: ok (BikeComputer.ipa, 7596355 bytes)
   com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
   com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
 RESULT verify: ok
-RESULT upload: skipped (tests failed)
-commit 2f4199f898880a97c6e2f3fec0d887a13907bbaf  branch ios/dev  job failure
+RESULT upload: ok — build 67 sent to App Store Connect; TestFlight processing takes about 5-30 minutes
+commit 2f4199f898880a97c6e2f3fec0d887a13907bbaf  branch ios/dev  job success
