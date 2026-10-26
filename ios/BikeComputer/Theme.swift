@@ -56,7 +56,7 @@ struct MetricTile: View {
     var missing: String? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            HStack { Eyebrow(t: title); Spacer(); if let h = onHide { Button("hide", action: h).font(.caption2.bold()).buttonStyle(.bordered).controlSize(.mini) } }
+            HStack { Eyebrow(t: title); Spacer(); if let h = onHide { Button("hide", action: h).font(.caption2.bold()).buttonStyle(.bordered).controlSize(.large) } }
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(value ?? "--").font(big ? BC.bigNum : BC.numFont).monospacedDigit().foregroundStyle(value == nil ? .secondary : .primary).lineLimit(1).minimumScaleFactor(0.6)
                 Text(unit).font(.caption.weight(.bold)).foregroundStyle(.secondary)

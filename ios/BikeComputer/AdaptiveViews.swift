@@ -161,7 +161,7 @@ struct AdjustmentsView: View {
                         Image(systemName: icon(a.category)).foregroundStyle(color(a.category)).font(.footnote)
                         Text(a.summary).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 4)
-                        Button("Undo") { store.undoAdaptation(a.key) }.font(.caption.bold()).buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("undoAdjustment")
+                        Button("Undo") { store.undoAdaptation(a.key) }.font(.caption.bold()).buttonStyle(.bordered).controlSize(.large).accessibilityIdentifier("undoAdjustment")
                     }
                     DisclosureGroup(isExpanded: Binding(get: { openWhy.contains(a.key) }, set: { if $0 { openWhy.insert(a.key) } else { openWhy.remove(a.key) } })) {
                         Text(a.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -178,8 +178,8 @@ struct AdjustmentsView: View {
             Text(p.text).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
-                if !p.adjustments.isEmpty { Button("Accept") { _ = store.acceptAdaptiveProposal(p) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small) }
-                Button(p.adjustments.isEmpty ? "OK" : "Not now") { store.dismissAdaptiveProposal(p) }.buttonStyle(.bordered).controlSize(.small)
+                if !p.adjustments.isEmpty { Button("Accept") { _ = store.acceptAdaptiveProposal(p) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large) }
+                Button(p.adjustments.isEmpty ? "OK" : "Not now") { store.dismissAdaptiveProposal(p) }.buttonStyle(.bordered).controlSize(.large)
                 Spacer()
             }
         }.padding(.vertical, 4)
@@ -319,7 +319,7 @@ struct SplitSlotRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Picker("Type", selection: Binding(get: { slot.focus }, set: { v in var s = slot; s.focus = v; onChange(s) })) { ForEach(StrengthFocus.allCases, id: \.self) { Text($0.title).tag($0) } }
-                Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).foregroundStyle(.secondary).frame(minWidth: 32, minHeight: 32)
+                Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle").frame(minWidth: DS.minTap, minHeight: DS.minTap).contentShape(Rectangle()) }.buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Remove")
             }
             if slot.focus == .custom { TextField("Name, e.g. Core / joints", text: Binding(get: { slot.label }, set: { v in var s = slot; s.label = v; onChange(s) })) }
             Picker("Routine", selection: Binding(get: { slot.templateId }, set: { v in var s = slot; s.templateId = v; onChange(s) })) {

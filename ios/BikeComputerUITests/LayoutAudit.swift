@@ -92,6 +92,14 @@ final class LayoutAudit: XCTestCase {
             if f.minX < win.minX - 1 || f.maxX > win.maxX + 1 { bad += 1; note("\(screen): text out of window \(Int(f.minX))…\(Int(f.maxX)) of \(Int(win.width)): \"\(t.label.prefix(40))\"") }
         }
         if bad == 0 { note("\(screen): no text outside the window") }
+        // soft: on-screen buttons shorter than 44 pt (listed in the report)
+        var small: [String] = []
+        for b in elements(app) where b.elementType == .button {
+            let f = b.frame
+            guard f.minY >= win.minY + 50, f.maxY <= win.maxY - 90, f.width > 0, f.height > 0 else { continue }
+            if f.height < 43.5 { small.append("\(b.identifier.isEmpty ? b.label.prefix(24) : b.identifier.prefix(24)) \(Int(f.width))×\(Int(f.height))") }
+        }
+        note("\(screen): " + (small.isEmpty ? "every on-screen button ≥ 44 pt tall" : "buttons under 44 pt: " + small.joined(separator: ", ")))
     }
     private func scrollUp(_ app: XCUIApplication) { app.swipeUp(); sleep(1) }
     /// A button of the given identifier prefix that is fully on screen (below the bars), if any.

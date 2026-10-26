@@ -71,7 +71,10 @@ labels and a responsive design pass. Old line numbers refer to `b485265` (before
 Check-ins (performance, RPE, pain) now also rebuild coach-built sessions through the planner (pain → exclusion + hold,
 fatigue → deload) before the existing adaptive engine applies its conservative, explained, individually undoable
 adjustments. Progression never comes from manual completions or quick logs (they carry no sets); records waiting for
-review are not evidence.
+review are not evidence. The check-in result screen lists every session that check-in changed ("Thu 29 Oct · Strength:
+14 → 11 sets, left out: Goblet squat. Knee pain reported …") with one **Undo these changes** (`Store.checkInRebuild`,
+`undoCheckInRebuild`): the sessions go back exactly as they were and are kept as the rider's own, so neither the planner
+nor the adaptive engine rebuilds them on its own afterwards. Completed logs are never touched.
 
 ### Progress
 - Health-style weekly charts (`TrendCharts.swift`): horizontally scrollable (`chartScrollableAxes`, opens at the most
@@ -89,34 +92,56 @@ Spacing scale, Dynamic Type styles instead of fixed point sizes, `ActionRow` (on
 never truncated or hyphenated, full action name for VoiceOver), `FlowRow` (pills and meta text wrap), `InfoButton`
 (long helper text behind (i)), ≥ 44 pt targets, short labels (Log · Adjust · Swap · Start), content inset above the
 raised centre button, tab bar capped at xxLarge with the large-content viewer, watch HR row reflows.
+Final pass: descriptive lines that used to end in "…" (profile header, settings subtitles, plan rows, exercise names,
+"Previous:" lines, adjustment titles) now wrap; summary lists (exercise names of a routine) keep a 1–2 line summary at
+normal sizes and wrap from XXXL up (`clampLines`). Every small bordered button (Accept / Not now / Undo / Edit / chips /
+set toggles) uses the large control size; delete-set and remove buttons and the filter chips have 44 pt targets. Swap
+alternatives are plain rows (name in the primary colour, reasons in secondary, chevron). Watch: heart rate and ride tile
+numerals scale with the wearer's text size (`@ScaledMetric`), shrinking only if a value would not fit on one line.
 
 ## 3. Tests
 See the CI section at the end for the run, counts and screenshots.
-- Unit (`QualityReleaseTests`, 21 new): owner scenario (tomorrow + zero-set finish), states incl. manual / imported /
+- Unit (`QualityReleaseTests`, 27 new): owner scenario (tomorrow + zero-set finish), states incl. manual / imported /
   skipped and "no date-driven completion", delete + Undo (same ids, no duplicates, 30-day purge), revert / reopen /
   delete workout + Undo, manual → detailed conversion without double counting, edit / delete sets, migration fixture
   (M1–M4, idempotent), cross-screen consistency Home = Plan = Progress = chart = History before and after review,
   different profiles → different programs, equipment incl. custom items, fixed days / own routines kept, interference
   (key ride next day, after a long ride, high-load week), progression from logged sets only (no transfer), pain
   exclusions, swap alternatives / reasons / persistence, always-prefer pick, FTP labels and conservative zones, chart
-  bucketing / visible-range aggregate / selection / callout / non-overlapping labels.
+  bucketing / visible-range aggregate / selection / callout / non-overlapping labels; deload on fatigue and in the 4th
+  consecutive training week (quick logs do not count), movement-pattern coverage per session type and a short session
+  trimming sets before patterns, a hard logged effort (RPE 9 / missed reps) holding the load, Why? lines equal to the
+  planner's recorded decision (load rule, dose, key-ride interaction, place in week), no progression from quick logs or
+  "Mark done" (planner and adaptive engine), and a pain check-in changing the next session with an explained, exact Undo.
 - Existing tests updated only where the meaning changed on purpose: FTP label wording (ModelTests, RulesTests) and a
   timeline fixture whose "completed" strength session had no evidence (now explicitly marked done).
 - UI: `LayoutAudit` (CI layout stage) on a small iPhone, a standard iPhone and a Pro Max at L / XXXL / AX3 with demo
   data reproducing the owner's case: screenshots of Home, the strength sheet (exercises, Why?, Swap), Plan, History,
   Progress (incl. a selected bar), Profile; hard checks that the coach actions and tab items are inside the window,
-  do not overlap, are ≥ 44 pt and hittable; every on-screen text outside the window is listed in
-  `layout-report-<device>.txt`.
+  do not overlap, are ≥ 44 pt and hittable; every on-screen text outside the window and every on-screen button under
+  44 pt is listed in `layout-report-<device>.txt`. Text sizes per device: small iPhone L + AX3, standard iPhone L + XXXL
+  (plus Why?, Swap, tomorrow's session, a selected chart bar, Training profile, Connections), Pro Max L.
+- Watch: `ci/watch-shots.sh` builds the watch app for the simulator and screenshots it on the smallest and largest
+  Apple Watch at L / XXXL / AX3 (soft stage, published with the layout screenshots).
+- Launch smoke (`LaunchSmokeTests`, Release build, 6 tests): fresh install, upgrades from builds 24 / 30 / 33 / 36 / 40
+  stores, all tabs, centre button, export / delete-cancel, hybrid sheets at accessibility text size — unchanged and
+  passing with the renamed labels.
 
 ## 4. Remaining limitations
-- Planner rebuilds after a check-in are explained in Why? but are not individually undoable (the adaptive engine's own
-  adjustments are); a session the rider edits is never rebuilt.
+- A check-in's changes are undone together (one Undo per check-in, on its result screen; the adaptive engine's own
+  changes stay individually undoable in Coach adjustments). After that Undo those sessions are kept as the rider's own,
+  so later logged progress does not reshape them automatically until the rider edits or regenerates the week.
 - Exercise metadata (pattern slot, muscles, loading tags, difficulty) is derived from the catalogue's names and
   patterns by rules (`ExerciseLibrary.meta`); unusual custom names may be classified coarsely.
 - Power verification depends on the existing pipeline flag; until a ride carries verified power, accepted estimates are
   "Unverified" and targets stay conservative.
-- Chart selection on a scrollable chart is touch-and-hold (Swift Charts behaviour, as in the Health app); a quick tap
-  scrolls.
+- Chart selection: a tap selects a week (second tap clears) and touch-and-drag moves the selection (Swift Charts);
+  a horizontal swipe scrolls. Verified in the simulator by a scripted tap; drag feel needs the physical check below.
+- Watch: screenshots cover the first screen of the watch app (no phone paired, so no ride mirror) on the smallest and
+  largest watch at L / XXXL / AX3; there is no automated frame check on the watch (no watch UI-test target). The text
+  size is set by launch argument because `simctl ui content_size` is not available for watchOS simulators.
+- The live ride dashboard (`RideDashboard`, `RideView`) keeps its fixed-size, glanceable bike-computer numerals by
+  design; it is outside this release's Dynamic Type pass.
 
 ## 5. Check on a physical iPhone
 - The owner's store after the update: tomorrow's session reads **Planned**; the 1-minute record appears in History as
@@ -125,4 +150,6 @@ See the CI section at the end for the run, counts and screenshots.
 - Swap with each reason, then reopen the app: preferences persist; equipment change visible in Profile.
 - Progress charts: scroll, change range, touch-and-hold a bar, VoiceOver audio graph.
 - Larger Text (Settings › Accessibility) on the owner's phone and an SE / mini: Home actions, strength sheet, Plan.
-- Apple Watch app at large text sizes.
+- Apple Watch app at large text sizes, with the iPhone paired and a ride running (ride mirror tiles, Pause / End).
+- Submit a check-in with "Concerning pain · knees": the result screen lists the changed session(s); Undo these changes
+  restores them; reopening the app keeps them.

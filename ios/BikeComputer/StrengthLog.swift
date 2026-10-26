@@ -223,9 +223,9 @@ struct ExerciseEntryRow: View {
             if expanded {
                 ForEach($entry.sets) { $s in SetRow(set: $s, onDelete: { entry.sets.removeAll { $0.id == s.id } }, units: units) }
                 HStack {
-                    Button { var n = entry.sets.last ?? SetEntry(); n.id = UUID(); n.done = true; entry.sets.append(n) } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
+                    Button { var n = entry.sets.last ?? SetEntry(); n.id = UUID(); n.done = true; entry.sets.append(n) } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.large)
                     Spacer()
-                    Button(role: .destructive) { onDelete() } label: { Label("Remove", systemImage: "trash") }.buttonStyle(.bordered).controlSize(.small)
+                    Button(role: .destructive) { onDelete() } label: { Label("Remove", systemImage: "trash") }.buttonStyle(.bordered).controlSize(.large)
                 }
                 TextField("Notes for this exercise", text: $entry.notes).font(.footnote)
             }
@@ -260,12 +260,12 @@ struct SetRow: View {
     }
     private var flags: some View {
         HStack(spacing: 6) {
-            Toggle("BW", isOn: $set.bodyweight).toggleStyle(.button).controlSize(.small).tint(BC.accent).accessibilityLabel("Bodyweight")
-            Toggle("1-side", isOn: $set.unilateral).toggleStyle(.button).controlSize(.small).tint(BC.accent).accessibilityLabel("One side at a time")
-            Menu { Button("—") { set.rpe = nil }; ForEach(5...10, id: \.self) { r in Button("RPE \(r)") { set.rpe = r } } } label: { Text(set.rpe.map { "@\($0)" } ?? "RPE").font(.caption).padding(.horizontal, 6).frame(minHeight: 28) }.buttonStyle(.bordered).controlSize(.small)
+            Toggle("BW", isOn: $set.bodyweight).toggleStyle(.button).controlSize(.large).tint(BC.accent).accessibilityLabel("Bodyweight")
+            Toggle("1-side", isOn: $set.unilateral).toggleStyle(.button).controlSize(.large).tint(BC.accent).accessibilityLabel("One side at a time")
+            Menu { Button("—") { set.rpe = nil }; ForEach(5...10, id: \.self) { r in Button("RPE \(r)") { set.rpe = r } } } label: { Text(set.rpe.map { "@\($0)" } ?? "RPE").font(.caption).padding(.horizontal, 6).frame(minHeight: 28) }.buttonStyle(.bordered).controlSize(.large)
         }
     }
-    private var deleteButton: some View { Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).foregroundStyle(.secondary).frame(minWidth: 32, minHeight: 32) }
+    private var deleteButton: some View { Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle").frame(minWidth: DS.minTap, minHeight: DS.minTap).contentShape(Rectangle()) }.buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Delete set") }
 }
 
 // MARK: - Exercise search (name, equipment, movement, muscle) + create your own
@@ -318,7 +318,7 @@ struct ExerciseSearchSheet: View {
         }
     }
     private func chip(_ t: String, _ on: Bool, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(t).font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(minHeight: 34).background(on ? BC.accent.opacity(0.2) : Color(.tertiarySystemGroupedBackground), in: Capsule()).foregroundStyle(on ? BC.accent : .primary) }.buttonStyle(.plain)
+        Button(action: action) { Text(t).font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(minHeight: DS.minTap).background(on ? BC.accent.opacity(0.2) : Color(.tertiarySystemGroupedBackground), in: Capsule()).contentShape(Capsule()).foregroundStyle(on ? BC.accent : .primary) }.buttonStyle(.plain)
     }
 }
 
@@ -376,7 +376,7 @@ struct TemplatesView: View {
                         Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).clampLines(2)
                         let days = store.weekdayRoutines.filter { $0.value == t.id }.keys.sorted().map { WeeklyAvailability.dayNames[$0] }
                         Text((t.lastUsed.map { "last used \($0.dayAndDate)" } ?? "never used") + (days.isEmpty ? "" : " · default on \(days.joined(separator: ", "))")).font(.caption2).foregroundStyle(.secondary)
-                        HStack { Button("Edit") { edit = t }.buttonStyle(.bordered).controlSize(.small); Button("Start now") { startNow = t }.buttonStyle(.bordered).controlSize(.small).disabled(store.activeSession != nil); Spacer() }
+                        HStack { Button("Edit") { edit = t }.buttonStyle(.bordered).controlSize(.large); Button("Start now") { startNow = t }.buttonStyle(.bordered).controlSize(.large).disabled(store.activeSession != nil); Spacer() }
                     }.padding(.vertical, 4)
                 }
                 .onDelete { idx in for i in idx { store.deleteTemplateEverywhere(store.templates[i]) } }
@@ -464,7 +464,7 @@ struct HybridCoachCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(p.text).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                     Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    HStack { Button("Accept") { if store.apply(p) { lastApplied = p.text } }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small); Spacer() }
+                    HStack { Button("Accept") { if store.apply(p) { lastApplied = p.text } }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large); Spacer() }
                 }.padding(8).background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
             }
             if let last = store.appliedProposals.last {

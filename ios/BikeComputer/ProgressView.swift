@@ -202,7 +202,7 @@ struct RideDetailView: View {
         Card {
             HStack { Eyebrow(t: "Graph"); Spacer()
                 ForEach([("power", hasW), ("hr", hasHR), ("cadence", hasCad), ("speed", hasSpd)], id: \.0) { k, ok in
-                    Button(k.capitalized) { if series.contains(k) { series.remove(k) } else { series.insert(k) } }.font(.caption2.bold()).buttonStyle(.bordered).controlSize(.mini).tint(series.contains(k) ? color(k) : .secondary).disabled(!ok)
+                    Button(k.capitalized) { if series.contains(k) { series.remove(k) } else { series.insert(k) } }.font(.caption2.bold()).buttonStyle(.bordered).controlSize(.large).tint(series.contains(k) ? color(k) : .secondary).disabled(!ok)
                 }
             }
             let shown = series.filter { k in (k == "power" && hasW) || (k == "hr" && hasHR) || (k == "cadence" && hasCad) || (k == "speed" && hasSpd) }

@@ -257,7 +257,7 @@ struct AddWorkoutSheet: View {
             Form {
                 Section("Type") {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) {
-                        ForEach(WorkoutKind.allCases.filter { $0 != .rest }, id: \.self) { k in Button(k.title) { kind = k; if k.minutes0 { minutes = 0 } else if minutes == 0 { minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(kind == k ? BC.accent : .secondary).controlSize(.small) }
+                        ForEach(WorkoutKind.allCases.filter { $0 != .rest }, id: \.self) { k in Button(k.title) { kind = k; if k.minutes0 { minutes = 0 } else if minutes == 0 { minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(kind == k ? BC.accent : .secondary).controlSize(.large) }
                     }
                 }
                 if kind == .strength { Section("Body region") { Picker("Region", selection: $focus) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { Text($0.title).tag($0) } } } }
@@ -342,8 +342,8 @@ struct WorkoutDetail: View {
         Button("Cancel") { mode = 0 }
     }
     @ViewBuilder private var edit: some View {
-        Card { Eyebrow(t: "Type"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(WorkoutKind.allCases, id: \.self) { k in Button(k.title) { workout.kind = k; if k.minutes0 { workout.minutes = 0 } else if workout.minutes == 0 { workout.minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(workout.kind == k ? BC.accent : .secondary).controlSize(.small) } } }
-        if workout.kind == .strength { Card { Eyebrow(t: "Body region"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { f in Button(f.short) { workout.strengthFocus = f }.buttonStyle(.bordered).tint(workout.strengthFocus == f ? BC.accent : .secondary).controlSize(.small) } } } }
+        Card { Eyebrow(t: "Type"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(WorkoutKind.allCases, id: \.self) { k in Button(k.title) { workout.kind = k; if k.minutes0 { workout.minutes = 0 } else if workout.minutes == 0 { workout.minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(workout.kind == k ? BC.accent : .secondary).controlSize(.large) } } }
+        if workout.kind == .strength { Card { Eyebrow(t: "Body region"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { f in Button(f.short) { workout.strengthFocus = f }.buttonStyle(.bordered).tint(workout.strengthFocus == f ? BC.accent : .secondary).controlSize(.large) } } } }
         if !workout.kind.minutes0 { Card { Eyebrow(t: "Duration"); Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...240, step: 5).tint(BC.accent) } }
         Button { store.edit(workout); mode = 0 } label: { Text("Save").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
         Button("Cancel") { mode = 0 }

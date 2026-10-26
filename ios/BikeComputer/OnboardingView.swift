@@ -106,7 +106,7 @@ struct OnboardingView: View {
                     ForEach(RiderProfile.Sport.allCases, id: \.self) { s in
                         let on = store.profile.sports.contains(s)
                         Button(s.title) { if on { store.profile.sports.removeAll { $0 == s } } else { store.profile.sports.append(s) } }
-                            .buttonStyle(.bordered).tint(on ? BC.accent : .secondary).controlSize(.small)
+                            .buttonStyle(.bordered).tint(on ? BC.accent : .secondary).controlSize(.large)
                     }
                 }
             }

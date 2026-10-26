@@ -246,16 +246,16 @@ struct InsightCard: View {
         Card {
             HStack { Eyebrow(t: "Next workout insight"); Spacer(); Pill(text: ins.label.rawValue, color: ins.label == .suggestion ? BC.accent : BC.stale) }
             if let a = applied {
-                HStack(alignment: .firstTextBaseline) { Text("Applied to this session: \(a.text)").font(.footnote).fixedSize(horizontal: false, vertical: true); Spacer(); Button("Undo") { _ = store.undoLastProposal() }.buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("insightUndo") }
+                HStack(alignment: .firstTextBaseline) { Text("Applied to this session: \(a.text)").font(.footnote).fixedSize(horizontal: false, vertical: true); Spacer(); Button("Undo") { _ = store.undoLastProposal() }.buttonStyle(.bordered).controlSize(.large).accessibilityIdentifier("insightUndo") }
             }
             Text(ignored ? "Ignored: \(ins.text)" : ins.text).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true).foregroundStyle(ignored ? .secondary : .primary)
             Text("Evidence: \(ins.evidence)").font(.caption2).foregroundStyle(.secondary)
             DisclosureGroup(isExpanded: $showWhy) { Text(ins.why).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).padding(.top, 2) } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
             if ins.kind != .insufficient {
                 HStack(spacing: 8) {
-                    if ins.change != nil, let w = workout, !w.done, !ignored, applied == nil { Button("Accept") { pendingInsight = ins; askTemplate = true }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small).accessibilityIdentifier("insightAccept") }
-                    if ignored { Button("Undo ignore") { store.unignoreInsight(ins.id) }.buttonStyle(.bordered).controlSize(.small) }
-                    else if applied == nil { Button("Ignore") { store.ignoreInsight(ins) }.buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("insightIgnore") }
+                    if ins.change != nil, let w = workout, !w.done, !ignored, applied == nil { Button("Accept") { pendingInsight = ins; askTemplate = true }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier("insightAccept") }
+                    if ignored { Button("Undo ignore") { store.unignoreInsight(ins.id) }.buttonStyle(.bordered).controlSize(.large) }
+                    else if applied == nil { Button("Ignore") { store.ignoreInsight(ins) }.buttonStyle(.bordered).controlSize(.large).accessibilityIdentifier("insightIgnore") }
                     Spacer()
                 }
             }
@@ -527,7 +527,7 @@ struct StrengthSessionView: View {
                 if si < e.sets.count - 1 { Divider() }
             }
             HStack {
-                Button { store.updateActiveSession { var n = $0.exercises?[index].sets.last ?? SetEntry(); n.id = UUID(); n.done = false; $0.exercises?[index].sets.append(n) } } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
+                Button { store.updateActiveSession { var n = $0.exercises?[index].sets.last ?? SetEntry(); n.id = UUID(); n.done = false; $0.exercises?[index].sets.append(n) } } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.large)
                 Spacer()
                 if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary).clampLines(1) }
             }
