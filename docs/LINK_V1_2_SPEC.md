@@ -71,3 +71,23 @@ changes, every 5 s while any paired link is below VALID, and right after the pho
 Unknown tags skipped as usual. The phone shows the same stage words as the board:
 Not paired · Searching · Connecting · Connected — waiting for data · Receiving — no valid readings · Live · Data stale · Error.
 LIVE (0x10) is unchanged; its per-metric ages remain the authority for "fresh".
+
+## 1.2.3 — diagnostic report transfer (firmware 0.7.3 / iOS 1.0.0 b68+, 26 Oct 2026)
+Cap bit 0x400 DIAG_XFER in INFO. All messages on the Control characteristic 0005 (encrypted write + notify), phone-driven
+(pull) so a transfer resumes exactly where it stopped after any interruption. Reports are immutable once written; the board
+never deletes an unsent report to make room (it stops recording new low-priority events instead and says so).
+| msg | dir | fields |
+|---|---|---|
+| DIAG_LIST_REQ 0x80 | phone→board | — |
+| DIAG_INFO 0x81 | board→phone, one per stored report, then DIAG_LIST_END | 01 u32 report_id (monotonic, never reused) · 02 u32 size bytes · 03 u32 crc32 (IEEE, of the whole report) · 04 u32 created_epoch_s (0 = unknown) · 05 u8 kind (1 crash, 2 recovery session, 3 manual "send logs", 4 periodic health) · 06 u8 state (0 pending, 1 sent/acknowledged) · 07 utf8 ≤ 40 summary ("panic in nimble_host", …) · 08 utf8 ≤ 16 firmware version |
+| DIAG_LIST_END 0x82 | board→phone | 01 u8 count · 02 u8 pending |
+| DIAG_CHUNK_REQ 0x83 | phone→board | 01 u32 report_id · 02 u32 offset · 03 u16 max_len (≤ 180 − overhead; phone uses 160) |
+| DIAG_CHUNK 0x84 | board→phone | 01 u32 report_id · 02 u32 offset · 03 bytes data (≤ 160) · 04 u8 last (1 when offset+len == size) |
+| DIAG_ACK 0x85 | phone→board | 01 u32 report_id · 02 u32 crc32 the phone computed — board marks the report sent only if it matches; replies DIAG_INFO with state 1 |
+| DIAG_ERR 0x86 | board→phone | 01 u32 report_id · 02 u8 code (1 unknown id, 2 bad offset, 3 storage read error, 4 busy) |
+| EVENT 0x40 event_id 0x22 diag_ready | board→phone, on connect and when a new report is stored | 02 u8 pending count · 03 u32 newest report_id |
+Report content (board side): UTF-8 text, sections `[header] [reset] [panic] [backtrace] [tasks] [heap] [events] [sensors] [phone] [wifi] [recovery]`,
+no names, no e-mail, no Wi-Fi passwords, no locations; BLE addresses truncated to the last 2 bytes.
+Phone side: stores reports in Application Support/Diagnostics/<board-id>/<report_id>.txt, verifies crc32 before ACK, dedupes by
+(board id, report_id), shows "Diagnostic report ready" / "Report saved", shares via the system share sheet. No server upload
+without explicit owner authorization (a disabled-by-default upload hook only).
