@@ -54,3 +54,20 @@ A phone shows a control only when `supported_mask` has its bit; every change wai
 - Stale-key failure on the board side is `encryption status 0x206 (key missing)` → board state REPAIR NEEDED; the phone side
   sees "Peer removed pairing information" / ATT insufficient authentication. Recovery = board REPAIR (new identity) +
   iPhone Settings › Bluetooth › Forget, then pair again from the app.
+
+## 1.2.2 — sensor pipeline diagnostics (firmware 0.7.2 / iOS 1.0.0 b65+, 26 Oct 2026)
+Purpose: never treat "Bluetooth connected" as success. Each board sensor link reports its real stage.
+EVENT 0x40 on the Events characteristic (0007), `01 u8 event_id = 0x21 sensor_diag`, sent by the board whenever a stage
+changes, every 5 s while any paired link is below VALID, and right after the phone connects (one per paired sensor):
+| tag | type | field |
+|---|---|---|
+| 02 | u8 | sensor: 1 power meter, 2 heart-rate strap, 3 speed/cadence (CSC) |
+| 03 | u8 | stage: 0 not paired, 1 searching, 2 connecting, 3 connected (GATT up), 4 subscribed (CCCD written OK), 5 receiving (packets arriving), 6 valid (fresh decoded measurement ≤ 3 s), 7 stale (no valid measurement > 3 s after having one), 8 error |
+| 04 | u32 | packets received since connect |
+| 05 | u16 | packets rejected (short / implausible) |
+| 06 | u16 | age of last packet, deciseconds (0xFFFF = none) |
+| 07 | u16 | age of last valid measurement, deciseconds (0xFFFF = none) |
+| 08 | utf8 ≤ 20 | last error, short ("no CCCD", "CCCD write failed", "no 0x2A63", …) |
+Unknown tags skipped as usual. The phone shows the same stage words as the board:
+Not paired · Searching · Connecting · Connected — waiting for data · Receiving — no valid readings · Live · Data stale · Error.
+LIVE (0x10) is unchanged; its per-metric ages remain the authority for "fresh".
