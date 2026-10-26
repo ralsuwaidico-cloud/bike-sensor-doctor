@@ -445,7 +445,7 @@ struct HybridCoachCard: View {
                 }.padding(.top, 4)
             } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
             if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
-            ActionRow(actions: actionSpecs(a)).accessibilityIdentifier("coachActions")
+            ActionRow(actions: actionSpecs(a))
         }
         if let w = nextStrength, !w.plannerBuilt { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
         if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
@@ -484,10 +484,10 @@ struct HybridCoachCard: View {
     }
     private func reviewCard(_ r: WeeklyReview) -> some View {
         Card {
-            HStack { Eyebrow(t: "Last week · \(r.completionPct) % completed"); Spacer(); Button(showReview ? "Hide" : "Review ›") { showReview.toggle() }.font(.caption.bold()) }
+            HeaderRow(title: r.ridesPlanned + r.liftsPlanned > 0 ? "Last week · \(r.completionPct) % of plan done" : "Last week · nothing planned") { Button(showReview ? "Hide" : "Review ›") { showReview.toggle() }.font(.footnote.bold()).frame(minHeight: DS.minTap) }
             HStack(spacing: 10) {
-                if store.profile.trainingMode.includesCycling { stat("Rides", "\(r.ridesDone)/\(r.ridesPlanned)", Fmt.duration(minutes: r.rideMinutesDone)) }
-                if store.profile.trainingMode.includesLifting { stat("Lifts", "\(r.liftsDone)/\(r.liftsPlanned)", Fmt.duration(minutes: r.liftMinutesDone)) }
+                if store.profile.trainingMode.includesCycling { stat("Rides", r.ridesPlanned > 0 ? "\(r.ridesDone)/\(r.ridesPlanned)" : "—", Fmt.duration(minutes: r.rideMinutesDone)) }
+                if store.profile.trainingMode.includesLifting { stat("Lifts", r.liftsPlanned > 0 ? "\(r.liftsDone)/\(r.liftsPlanned)" : "—", Fmt.duration(minutes: r.liftMinutesDone)) }
                 stat("Missed", "\(r.missedWorkouts.count)", "")
             }
             if showReview {
@@ -506,7 +506,7 @@ struct HybridCoachCard: View {
         let liftNext = next?.kind == .strength
         var out: [ActionSpec] = []
         if rideNext { out.append(ActionSpec(label: "Start", a11y: "Start: opens the Ride screen", icon: "play.fill", prominent: true, tint: BC.live, identifier: "coachStart") { tab = 2 }) }
-        out.append(ActionSpec(label: "Log", a11y: "Log strength", icon: liftNext ? "dumbbell" : nil, prominent: liftNext, tint: liftNext ? BC.zone(5) : nil, identifier: "coachLog") { showStrengthLog = true })
+        out.append(ActionSpec(label: "Log", a11y: "Log strength", icon: liftNext ? "dumbbell" : nil, prominent: liftNext, tint: liftNext ? BC.live : nil, identifier: "coachLog") { showStrengthLog = true })
         if store.today != nil {
             out.append(ActionSpec(label: "Adjust", a11y: "Adjust today's session", identifier: "coachAdjust") { showWorkout = true })
             out.append(ActionSpec(label: "Swap", a11y: "Swap today's session for an alternative", identifier: "coachSwap") { showAlternatives = true })

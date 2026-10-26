@@ -161,7 +161,7 @@ struct WeeklyTrendChart: View {
                 .pickerStyle(.segmented).accessibilityIdentifier("\(identifier)-range")
             header(sum: sum, sel: sel)
             chart(sel: sel)
-            Text("Touch and hold a bar for its week; swipe to see earlier weeks.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Text("Tap a bar for its week; swipe to see earlier weeks.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .onAppear { if !positioned { positioned = true; scrollStart = TrendChartMath.initialScrollStart(buckets, weeks: range.weeks) } }
         .onChange(of: range) { _, r in selected = nil; scrollStart = TrendChartMath.initialScrollStart(buckets, weeks: r.weeks) }
@@ -229,6 +229,19 @@ struct WeeklyTrendChart: View {
         .chartXVisibleDomain(length: TrendChartMath.weekSeconds * Double(range.weeks))
         .chartScrollPosition(x: $scrollStart)
         .chartXSelection(value: $selected)
+        // a tap selects a week too (and a second tap on it clears the selection), like the Health app
+        .chartOverlay { proxy in
+            GeometryReader { geo in
+                Rectangle().fill(.clear).contentShape(Rectangle())
+                    .onTapGesture { loc in
+                        guard let pf = proxy.plotFrame else { return }
+                        let x = loc.x - geo[pf].origin.x
+                        guard let d: Date = proxy.value(atX: x) else { return }
+                        let m = TrainingLedger.monday(of: d)
+                        selected = selected.map { TrainingLedger.monday(of: $0) } == m ? nil : m.addingTimeInterval(TrendChartMath.labelOffset)
+                    }
+            }
+        }
         .frame(height: dts.isAccessibilitySize ? 260 : 200)
         // axis labels stop growing at xxLarge (like the Health app); the header above carries the large text
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)

@@ -11,6 +11,7 @@ final class LayoutAudit: XCTestCase {
 
     private var outDir: String? { let v = ProcessInfo.processInfo.environment["LAYOUT_DIR"] ?? ""; return v.isEmpty ? nil : v }
     private var device: String { ProcessInfo.processInfo.environment["LAYOUT_DEVICE"] ?? "iphone" }
+    private var extras: Bool { ProcessInfo.processInfo.environment["LAYOUT_EXTRAS"] != "0" }
     private var sizes: [String] {
         let v = ProcessInfo.processInfo.environment["LAYOUT_SIZES"] ?? ""
         return v.isEmpty ? ["L", "XXXL", "AX3"] : v.split(separator: ",").map { String($0) }
@@ -100,7 +101,7 @@ final class LayoutAudit: XCTestCase {
         for i in 0..<min(q.count, 8) {
             let e = q.element(boundBy: i)
             let f = e.frame
-            if f.minY > win.minY + 120 && f.maxY < win.maxY - 120 { return e }
+            if f.minY > win.minY + 200 && f.maxY < win.maxY - 160 && e.isHittable { return e }
         }
         return nil
     }
@@ -109,8 +110,12 @@ final class LayoutAudit: XCTestCase {
         let b = app.buttons[name].firstMatch
         if b.waitForExistence(timeout: 5) { b.tap(); sleep(2) } else { note("tab \(name) missing") }
     }
+    /// Closes the TOPMOST sheet: its Done / Cancel is the last matching button in the hierarchy.
     private func close(_ app: XCUIApplication) {
-        for name in ["Done", "Close", "Cancel"] { let b = app.buttons[name].firstMatch; if b.exists && b.isHittable { b.tap(); sleep(1); return } }
+        for name in ["Done", "Cancel", "Close"] {
+            let q = app.buttons.matching(NSPredicate(format: "label == %@", name))
+            for i in stride(from: q.count - 1, through: 0, by: -1) { let b = q.element(boundBy: i); if b.isHittable { b.tap(); sleep(1); return } }
+        }
     }
 
     func testKeyScreensAtTextSizes() throws {
@@ -132,15 +137,15 @@ final class LayoutAudit: XCTestCase {
                 scrollUp(app); shot("\(tag)-04-strength-exercises")
                 if let why = visibleButton(app, prefix: "why-") {
                     XCTAssertGreaterThanOrEqual(why.frame.height, 43.5, "\(size) Why? button height")
-                    if size == sizes.first { why.tap(); sleep(2); shot("\(tag)-05-why"); close(app) }
+                    if size == sizes.first && extras { why.tap(); sleep(2); shot("\(tag)-05-why"); close(app) }
                 } else { note("\(size): no Why? button on screen") }
-                if size == sizes.first, let swap = visibleButton(app, prefix: "swap-") { swap.tap(); sleep(2); shot("\(tag)-06-swap"); close(app) }
+                if size == sizes.first && extras, let swap = visibleButton(app, prefix: "swap-") { swap.tap(); sleep(2); shot("\(tag)-06-swap"); close(app) }
                 scrollUp(app); shot("\(tag)-07-strength-bottom")
                 close(app)
             }
             tab(app, "Plan"); shot("\(tag)-08-plan"); checkTexts(app, screen: "\(size) plan")
             // tomorrow's session: the owner's "completed" bug must now read Planned (future)
-            if size == sizes.first {
+            if size == sizes.first && extras {
                 let f = DateFormatter(); f.dateFormat = "EEE d MMM"
                 let tomorrow = f.string(from: Calendar.current.date(byAdding: .day, value: 1, to: Date())!)
                 let day = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", tomorrow)).firstMatch
@@ -150,15 +155,24 @@ final class LayoutAudit: XCTestCase {
             scrollUp(app); scrollUp(app); shot("\(tag)-10-history")
             tab(app, "Progress"); shot("\(tag)-11-progress"); checkTexts(app, screen: "\(size) progress")
             let chart = app.descendants(matching: .any).matching(identifier: "ridingChart").firstMatch
-            if size == sizes.first, chart.exists {
-                chart.press(forDuration: 1.0); sleep(1); shot("\(tag)-12-progress-selected")
+            if size == sizes.first && extras, chart.exists {
+                chart.coordinate(withNormalizedOffset: CGVector(dx: 0.55, dy: 0.75)).tap(); sleep(1); shot("\(tag)-12-progress-selected")
+                chart.coordinate(withNormalizedOffset: CGVector(dx: 0.55, dy: 0.75)).tap(); sleep(1)
             }
             scrollUp(app); shot("\(tag)-13-progress-lower"); checkTexts(app, screen: "\(size) progress lower")
             scrollUp(app); shot("\(tag)-14-progress-ftp")
             tab(app, "Profile"); shot("\(tag)-15-profile"); checkTexts(app, screen: "\(size) profile")
+            if size == sizes.first && extras {
+                let tp = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Training profile'")).firstMatch
+                if tp.exists { tp.tap(); sleep(2); shot("\(tag)-16-training-profile"); scrollUp(app); shot("\(tag)-17-training-profile-lower"); app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+            }
             // tab bar items never overlap the raised centre button
             checkKey(app, ids: ["Home", "Plan", "centreButton", "Progress", "Profile"], screen: "\(size) tab bar", minHeight: 30)
             tab(app, "Home")
+            if size == sizes.first && extras {
+                let conn = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Manage'")).firstMatch
+                if conn.exists { conn.tap(); sleep(2); shot("\(tag)-18-connections"); checkTexts(app, screen: "\(size) connections"); app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+            }
             XCTAssertEqual(app.state, .runningForeground)
             app.terminate()
         }

@@ -544,15 +544,20 @@ enum StrengthPlanner {
         }
         // time fit: drop the least important exercises, then sets, until the session fits its minutes
         func estimate() -> Double { 6 + zip(entries, rats).reduce(0.0) { $0 + Double($1.0.sets.count) * ($1.1.role == Role.main.rawValue ? 3.0 : $1.1.role == Role.secondary.rawValue ? 2.5 : 2.0) } }
+        // keep movement coverage: first take sets off (least important exercise first, never below 2; main lifts keep
+        // 3), only then leave whole exercises out from the end
         var trimmed: [String] = []
+        let before = entries.map { $0.sets.count }
         let limit = Double(max(15, w.minutes))
-        while estimate() > limit, entries.count > 2 { trimmed.append(entries.removeLast().name); rats.removeLast() }
         var guardN = 0
-        while estimate() > limit, guardN < 40 {
+        while estimate() > limit, guardN < 60 {
             guardN += 1
-            guard let j = entries.indices.reversed().first(where: { entries[$0].sets.count > 2 }) else { break }
+            let floor: (Int) -> Int = { rats[$0].role == Role.main.rawValue ? 3 : 2 }
+            guard let j = entries.indices.reversed().first(where: { entries[$0].sets.count > floor($0) }) else { break }
             entries[j].sets.removeLast()
         }
+        while estimate() > limit, entries.count > 3 { trimmed.append(entries.removeLast().name); rats.removeLast() }
+        for i in entries.indices where entries[i].sets.count < before[i] { rats[i].dose += " Trimmed to \(entries[i].sets.count) sets so the session fits \(Fmt.duration(minutes: w.minutes))." }
         var notes: [String] = [goalReason(goal)]
         if let t = interferenceText { notes.append(t) }
         if week.highCyclingLoad, let r = week.highLoadReason { notes.append("Lower-body volume is reduced by a quarter this week because \(r).") }

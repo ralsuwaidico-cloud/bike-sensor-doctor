@@ -118,7 +118,8 @@ struct RideTabBar: View {
                 Image(systemName: icon).font(.system(size: 20, weight: .medium))
                 Text(title).font(.caption2).lineLimit(1)
             }
-            .frame(maxWidth: .infinity).padding(.vertical, 6)
+            .frame(maxWidth: .infinity, minHeight: 48).padding(.vertical, 2)
+            .contentShape(Rectangle())
             .foregroundStyle(selected == i ? BC.accent : Color.secondary)
         }
         .buttonStyle(.plain)

@@ -62,7 +62,7 @@ struct HomeView: View {
                 Text(Coach.why(t, store: store)).font(.footnote).foregroundStyle(.secondary).padding(.top, 4).fixedSize(horizontal: false, vertical: true)
             } label: { Text("Why this workout?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
             if let t, t.kind != .rest {
-                ActionRow(actions: coachActions(t)).accessibilityIdentifier("coachActions")
+                ActionRow(actions: coachActions(t))
             }
         }
     }

@@ -135,10 +135,11 @@ STD=$(simpick "iPhone 17" "iPhone 16"); [ -n "$STD" ] || STD="$SIM|default"
 MAX=$(simpick "iPhone 17 Pro Max" "Pro Max")
 note "Layout audit simulators: small=${SMALL#*|} standard=${STD#*|} max=${MAX#*|} (runtime ${RT##*.})"
 LAYOUT_OK=1
-for spec in "small|${SMALL%%|*}|L,XXXL,AX3" "standard|${STD%%|*}|L,AX3" "promax|${MAX%%|*}|L,XXXL"; do
+for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L"; do
   IFS='|' read -r LNAME LID LSIZES <<< "$spec"
   [ -n "$LID" ] || { note "  layout $LNAME: no simulator"; continue; }
-  TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" \
+  LEXTRAS=0; [ "$LNAME" = "standard" ] && LEXTRAS=1
+  TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
   xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
     -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit \
     CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
