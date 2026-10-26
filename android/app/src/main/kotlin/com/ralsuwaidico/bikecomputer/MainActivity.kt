@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.ralsuwaidico.bikecomputer.link.BCLink
 
 /**
- * Athletics for Android — foundation only (build 15 of the iOS app is the reference). It shows the five tabs as
+ * Cyclift for Android — foundation only (build 15 of the iOS app is the reference). It shows the five tabs as
  * empty states and carries the shared Link codec; BLE, GPS and recording follow in the Android phase. Nothing here
  * displays example data as a measurement.
  */

@@ -980,7 +980,7 @@ final class Store: ObservableObject {
         r.avgPower = b.avgPower; r.maxPower = b.maxPower; r.avgCadence = b.avgCadence; r.avgHR = b.avgHR; r.maxHR = b.maxHR; r.kj = b.kj
         if b.zonesValid { r.zoneSeconds = b.zoneS }
         var src = ["BikeComputer"]
-        if b.avgPower != nil { src.append("XDS") }
+        if b.avgPower != nil { src.append("Power meter") }
         if b.avgHR != nil { src.append("Heart rate") }
         if b.distSrc != 0 { src.append("GPS") }
         if r.hasTrack { src.append("Phone GPS") }

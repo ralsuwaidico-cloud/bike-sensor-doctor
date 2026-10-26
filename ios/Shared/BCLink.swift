@@ -32,7 +32,7 @@ enum BCLink {
 
         var label: String {
             switch self {
-            case .xds: return "XDS"
+            case .xds: return "Power meter"   // protocol id stays BC_SRC_XDS = 1; label is brand-neutral
             case .bleStrap: return "Strap"
             case .phoneGPS: return "Phone GPS"
             case .appleWatch: return "Apple Watch"

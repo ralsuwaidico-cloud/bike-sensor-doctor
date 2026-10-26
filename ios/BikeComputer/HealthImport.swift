@@ -10,7 +10,7 @@ struct HealthImportResult: Equatable {
     var strengthAdded = 0
     var seen = 0
     var message: String {
-        if seen == 0 { return "No eligible workouts found in Apple Health (or reading is not allowed — check iOS Settings › Health › Athletics)." }
+        if seen == 0 { return "No eligible workouts found in Apple Health (or reading is not allowed — check iOS Settings › Health › Cyclift)." }
         return "\(seen) workout\(seen == 1 ? "" : "s") read · \(ridesAdded) ride\(ridesAdded == 1 ? "" : "s") and \(strengthAdded) strength session\(strengthAdded == 1 ? "" : "s") added · the rest were already here."
     }
 }

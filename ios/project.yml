@@ -68,11 +68,11 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIBackgroundModes: [bluetooth-central, location]
         ITSAppUsesNonExemptEncryption: false
-        NSBluetoothAlwaysUsageDescription: Athletics uses Bluetooth to connect to your BikeComputer cycling device, send it your phone's GPS and show its live power and cadence during rides.
-        NSLocationWhenInUseUsageDescription: Athletics uses your location to record speed, distance and the route of your rides, and to send GPS to your BikeComputer device.
-        NSLocationAlwaysAndWhenInUseUsageDescription: Athletics records speed, distance and the route while a ride is in progress, including when the screen is locked. Location is never used when no ride is running.
-        NSHealthShareUsageDescription: Athletics reads your heart rate during workouts and, if you choose, your past cycling and strength workouts, to show them in your training plan and history.
-        NSHealthUpdateUsageDescription: Athletics can save your finished rides and strength sessions to Apple Health when you choose to.
+        NSBluetoothAlwaysUsageDescription: Cyclift uses Bluetooth to connect to the fitness sensors and the optional BikeComputer device you pair (heart rate, power, speed and cadence) and show their live data during rides.
+        NSLocationWhenInUseUsageDescription: Cyclift uses your location to record speed, distance and the route of your rides, and to send GPS to a paired BikeComputer device.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Cyclift records speed, distance and the route while a ride is in progress, including when the screen is locked. Location is never used when no ride is running.
+        NSHealthShareUsageDescription: Cyclift reads your heart rate during workouts and, if you choose, your past cycling and strength workouts, to show them in your training plan and history.
+        NSHealthUpdateUsageDescription: Cyclift can save your finished rides and strength sessions to Apple Health when you choose to.
     entitlements:
       path: BikeComputer/BikeComputer.entitlements
       properties:
@@ -103,8 +103,8 @@ targets:
         WKRunsIndependentlyOfCompanionApp: false
         WKBackgroundModes: [workout-processing]
         ITSAppUsesNonExemptEncryption: false
-        NSHealthShareUsageDescription: Athletics reads your live heart rate during a cycling workout and sends it to your iPhone and BikeComputer device.
-        NSHealthUpdateUsageDescription: Athletics records your cycling workout so the watch can measure heart rate. You choose whether it is saved to Apple Health.
+        NSHealthShareUsageDescription: Cyclift reads your live heart rate during a cycling workout and sends it to your iPhone (and a paired BikeComputer device).
+        NSHealthUpdateUsageDescription: Cyclift records your cycling workout so the watch can measure heart rate. You choose whether it is saved to Apple Health.
     entitlements:
       path: BikeComputerWatch/BikeComputerWatch.entitlements
       properties:

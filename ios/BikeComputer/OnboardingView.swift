@@ -282,7 +282,7 @@ struct OnboardingView: View {
                 Eyebrow(t: "I also use")
                 toggleRow("Apple Watch", "watch", detail: watch.paired ? "watch paired" : "no watch paired with this iPhone")
                 toggleRow("Heart-rate strap (pairs on the board)", "strap", detail: nil)
-                toggleRow("Power meter (XDS, pairs on the board)", "meter", detail: nil)
+                toggleRow("Power meter (Bluetooth, on the phone or the BikeComputer)", "meter", detail: nil)
             }
             Text("No BikeComputer? Ride with the phone alone: GPS speed, distance, map and watch heart rate. When a board is connected later it becomes the recorder.").font(.footnote).foregroundStyle(.secondary)
             next(device.state == .ready ? "Next" : "Continue with phone only")

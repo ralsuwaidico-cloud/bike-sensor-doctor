@@ -550,7 +550,7 @@ struct PhoneConnectionDetail: View {
             case .bluetooth:
                 Section("Status") { LabeledContent("Bluetooth", value: device.state == .off ? "off" : device.state == .unauthorized ? "permission needed" : "on") }
                 Section("Used for") { Text("Bluetooth sensors paired with this phone (heart rate, power, speed, cadence) and the optional BikeComputer link. Apple Watch uses its own connection.").font(.footnote) }
-                Section("Troubleshooting") { Text("Turn Bluetooth on in Control Centre or Settings. If permission was denied: Settings › Athletics › Bluetooth.").font(.footnote) }
+                Section("Troubleshooting") { Text("Turn Bluetooth on in Control Centre or Settings. If permission was denied: Settings › Cyclift › Bluetooth.").font(.footnote) }
             case .gps:
                 Section("Status") {
                     LabeledContent("Permission", value: location.authorized ? "granted" : "not granted")
@@ -575,7 +575,7 @@ struct WatchConnectionDetail: View {
         List {
             Section("Status") {
                 StatusRow(title: "Watch paired with this iPhone", ok: watch.paired)
-                StatusRow(title: "Athletics app installed on the watch", ok: watch.appInstalled)
+                StatusRow(title: "Cyclift app installed on the watch", ok: watch.appInstalled)
                 StatusRow(title: "Watch app reachable now", ok: watch.reachable)
                 LabeledContent("Workout on the watch", value: watch.workoutState)
                 LabeledContent("Live heart rate", value: watch.hrIsFresh ? "\(watch.hrBpm ?? 0) bpm" : "--")
@@ -588,7 +588,7 @@ struct WatchConnectionDetail: View {
                 Text(watch.lastResult).font(.footnote).foregroundStyle(.secondary)
             } footer: { Text("Off = the watch is never shown as missing. On = heart rate from the watch workout reaches the phone and the board, labelled Apple Watch; a reading older than 6 s is dropped, never held.") }
             Section("Steps") {
-                Text("1. Install Athletics on the watch (Watch app › Available Apps).\n2. Open it and tap Start: a cycling workout begins (one workout, no duplicates in Fitness).\n3. Heart rate appears here and on the board within a few seconds.").font(.footnote)
+                Text("1. Install Cyclift on the watch (Watch app › Available Apps).\n2. Open it and tap Start: a cycling workout begins (one workout, no duplicates in Fitness).\n3. Heart rate appears here and on the board within a few seconds.").font(.footnote)
             }
             Section("Measurements") { Text("Heart rate (1 Hz), workout state, watch battery. Ride controls from the wrist: start, pause, resume, end.").font(.footnote) }
             Section("Troubleshooting") { Text("Not reachable: open the watch app once; make sure the iPhone's Bluetooth is on. No heart rate: the watch must sit snug and the workout must be running.").font(.footnote) }

@@ -1,0 +1,167 @@
+Claude, I want to upgrade Cyclift’s coaching architecture into a genuinely adaptive hybrid-athlete training system.
+
+The app must automatically adjust future cycling and strength sessions based on completed workouts, post-workout feedback, historical performance, available equipment and my training preferences.
+
+This must be integrated with the existing Cyclift work, not implemented as a disconnected feature.
+
+A. Personalized hybrid-athlete onboarding
+
+When the user selects Hybrid Athlete, ask:
+
+1. Primary goal: strength, cycling endurance, balanced hybrid, general fitness or custom.
+2. Total training days per week.
+3. Number of cycling sessions per week.
+4. Number of strength sessions per week.
+5. Preferred rest days and fixed/flexible training days.
+6. Preferred strength split: Full Body, Push/Pull/Legs, Upper/Lower or Custom.
+7. Frequency of each workout type.
+8. Session duration and weekly time budget for each sport.
+9. Available gym/home equipment.
+10. Existing workout templates the user wants to preserve.
+
+Do not assume Push/Pull/Legs always requires six days or Full Body always requires three.
+
+Allow multiple sessions on the same day when the selected frequency exceeds available training days.
+
+For custom splits, support examples such as:
+
+* Two full-body sessions plus one core/joint-strengthening session.
+* One upper-body, one lower-body and one mobility/strength session.
+* Three custom lifting templates.
+* Any combination of cycling and strength consistent with the user’s limits.
+
+Users must be able to choose their own fixed days and rest days.
+
+B. Equipment-aware strength programming
+
+Maintain an equipment profile.
+
+Allow users to select exact available equipment and save their existing exercises and templates.
+
+The coach must build around those exercises.
+
+Never prescribe equipment the user has marked unavailable.
+
+Recommend compatible substitutes when necessary, but do not silently replace exercises.
+
+C. Post-workout feedback
+
+After every cycling or strength session, ask:
+
+* Performance: 1–10, where 10 means excellent performance relative to expectations.
+* Perceived effort: 1–10, where 10 means maximal effort.
+* Pain or unusual discomfort: none, normal soreness or concerning pain.
+
+Optionally allow short notes.
+
+Keep this check-in fast and simple.
+
+For strength sessions, also analyze:
+
+* Exercises performed.
+* Sets, reps and weights.
+* Completion rate.
+* RPE or reps in reserve where available.
+* Previous performance on the same exercises.
+
+For cycling, analyze available:
+
+* Duration and intensity.
+* Heart rate and heart-rate zones.
+* Power and cadence.
+* Training load.
+* Perceived effort.
+* Recovery trends.
+* Data reliability and source quality.
+
+Never invent missing metrics.
+
+D. Automatic adaptation engine
+
+Build a deterministic, testable adaptation engine that combines objective training data with subjective post-workout feedback.
+
+The engine must:
+
+1. Compare current performance against the athlete’s personal baseline.
+2. Consider both cycling and lifting workload.
+3. Detect possible accumulated fatigue or improving performance.
+4. Adjust future training volume or intensity conservatively.
+5. Maintain the user’s chosen training days and overall time limits.
+6. Respect fixed sessions and selected strength splits.
+7. Avoid automatic progression when pain or unreliable data is reported.
+8. Avoid overreacting to one unusual workout.
+9. Use rolling trends and historical performance where available.
+10. Explain each automatic adjustment.
+
+Use appropriate sports-science principles, but do not claim that subjective scores alone diagnose recovery, overtraining or injury.
+
+The coach should be able to change:
+
+* Strength repetitions.
+* Strength weights, when justified by actual logged performance.
+* Number of sets.
+* Cycling intensity targets.
+* Interval repetitions.
+* Session duration.
+* Recovery emphasis.
+
+For low-confidence situations, maintain the existing plan and request additional feedback.
+
+E. Automatic versus approval-required changes
+
+Automatically apply small, bounded changes to future sessions.
+
+Require approval for:
+
+* Changing fixed training days.
+* Adding or removing weekly sessions.
+* Changing the user’s strength split.
+* Replacing saved exercises.
+* Exceeding time budgets.
+* Major training-load increases.
+
+All automatic changes must be visible and reversible.
+
+Include “Why this changed?” and “Restore original plan.”
+
+F. Continuous learning loop
+
+The system should follow:
+
+Plan → Perform → Log → Rate → Analyze → Adapt → Repeat.
+
+The coach must learn the athlete’s individual response over time.
+
+Separate:
+
+* Rules and constraints.
+* Quantitative training analysis.
+* Optional AI-generated explanations and broader recommendations.
+
+Do not pretend a language model is providing reasoning unless an actual model is integrated.
+
+Use the deterministic engine as the reliable fallback when offline or when AI services are unavailable.
+
+G. Testing and delivery
+
+Create tests for:
+
+* Five training days with two cycling and three lifting sessions.
+* Custom split with two full-body days and one core/joints day.
+* Six-day Push/Pull/Legs with cycling overlap.
+* Limited equipment.
+* Repeated high-effort sessions.
+* Improving strength performance.
+* Cycling fatigue affecting strength recommendations.
+* Strength fatigue affecting cycling recommendations.
+* Missed workouts.
+* Missing sensors.
+* Pain reports.
+* Preserving fixed days and time budgets.
+* Reverting automatic changes.
+
+Preserve existing profiles, workout templates, ride history, scheduled workouts and completed logs.
+
+Integrate this into the current Cyclift project without disrupting the release preparation.
+
+The goal is for Cyclift to behave like a personal hybrid-athlete coach that automatically improves my training program based on my actual responses—not a static workout generator.

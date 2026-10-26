@@ -239,7 +239,7 @@ struct PowerCyclingPage: View {
                 }
             }
             Section {
-                LabeledContent("XDS power meter", value: meterText)
+                LabeledContent("Power meter", value: meterText)
                 Pill(text: "power unverified until validated", color: BC.stale)
                 Text("Calibration is not available: the app never writes to the meter's control point (safety rule). Pair and forget the meter on the board's Connections › Power meter.").font(.footnote).foregroundStyle(.secondary)
             } header: { Text("Power meter") }

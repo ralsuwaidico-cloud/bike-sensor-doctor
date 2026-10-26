@@ -283,7 +283,7 @@ final class DeviceLink: NSObject, ObservableObject {
     private func noteBluetoothState() {
         switch central.state {
         case .poweredOff: setState(.off); setStage(.off); failure = Failure(stage: .off, reason: "Bluetooth is off on the phone.", action: .bluetoothOn, at: Date(), code: nil)
-        case .unauthorized: setState(.unauthorized); setStage(.unauthorized); failure = Failure(stage: .unauthorized, reason: "Athletics has no Bluetooth permission.", action: .permission, at: Date(), code: nil)
+        case .unauthorized: setState(.unauthorized); setStage(.unauthorized); failure = Failure(stage: .unauthorized, reason: "Cyclift has no Bluetooth permission.", action: .permission, at: Date(), code: nil)
         default: break
         }
     }
