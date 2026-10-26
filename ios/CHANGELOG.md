@@ -1,6 +1,11 @@
 # Cyclift (formerly BikeComputer / Athletics) iPhone + Apple Watch — changelog
 
-## 1.0.0 release candidate — Cyclift (26 Oct 2026, TestFlight internal testers only)
+## 1.0.0 — Cyclift App Store release build (26 Oct 2026)
+
+The build intended for App Store submission: the release candidate below plus the release hardening (no accounts in 1.0,
+no placeholder features, privacy manifests, final legal/support pages). Submission only after the owner's go-ahead.
+
+### Release candidate (26 Oct 2026, TestFlight build 58)
 
 One integrated build of five workstreams, each CI-tested on its own branch and again after merging. Nothing below is
 real-device tested until Rashed confirms it. Firmware: compatible with BikeComputer 0.7.0 (protocol 1.2.1); the
