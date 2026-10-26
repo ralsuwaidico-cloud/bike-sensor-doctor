@@ -73,6 +73,8 @@ final class DeviceLink: NSObject, ObservableObject {
     @Published private(set) var knownDeviceId: String? = UserDefaults.standard.string(forKey: "bikecomputer.deviceId")
     @Published private(set) var staleIdentifier: String? = UserDefaults.standard.string(forKey: "bikecomputer.stale")
     @Published private(set) var repairing = false
+    /// One pending auto-choice check per search (see didDiscover).
+    private var autoPickPending = false
     /// Off = the phone neither connects nor reconnects on its own (local choice; the board's own link switch is a device setting).
     var autoConnect = true { didSet { if autoConnect, remembered { connect() } else if !autoConnect { disconnect() } } }
     var onProfileAck: ((BCLink.ProfileAck) -> Void)?
@@ -395,6 +397,24 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         if stage == .searching { setStage(.found) }
         // one board remembered → connect to it as soon as it is seen; nothing remembered → the user picks from the list
         if let idStr = UserDefaults.standard.string(forKey: rememberedKey), idStr == p.identifier.uuidString { c.stopScan(); attach(p); return }
+        // nothing remembered (first pairing, or after Forget/Repair/data reset): the scan only finds BikeComputers (Link
+        // service), so when exactly one answers, connect to it after a short settle time; a list is only needed when
+        // several boards are nearby. During a repair the stale identity is also accepted after 6 s when it is the only
+        // board seen (a firmware that does not change its identity), so the rider is never left at "seen but not chosen".
+        if UserDefaults.standard.string(forKey: rememberedKey) == nil, !autoPickPending {
+            autoPickPending = true
+            let wait: Double = repairing ? 6 : 2
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+                guard let self else { return }
+                self.autoPickPending = false
+                guard UserDefaults.standard.string(forKey: self.rememberedKey) == nil, self.state != .ready,
+                      self.stage == .found || self.stage == .searching, self.found.count == 1, let f = self.found.first else { return }
+                if self.repairing, f.id.uuidString != self.staleIdentifier { return }   /* the normal repair path below handles new identities */
+                self.note("Only one BikeComputer nearby — connecting to it")
+                self.repairing = false
+                self.connect(to: f.id)
+            }
+        }
         // repairing: the board advertises under a NEW identity — accept the first board that is not the stale one
         if repairing, p.identifier.uuidString != staleIdentifier {
             c.stopScan()
