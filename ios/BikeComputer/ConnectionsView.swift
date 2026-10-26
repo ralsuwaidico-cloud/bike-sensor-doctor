@@ -586,11 +586,13 @@ struct WatchConnectionDetail: View {
             }
             Section {
                 Toggle("Use the Apple Watch", isOn: Binding(get: { store.settings.enabledConnections.contains("watch") }, set: { if $0 { store.settings.enabledConnections.insert("watch") } else { store.settings.enabledConnections.remove("watch") } }))
+                Button("Start watch workout (heart rate)") { watch.startWatchWorkout(reason: "manual") }
+                if let r = watch.watchStartResult { Text(r).font(.footnote).foregroundStyle(.secondary) }
                 Button("Test connection to the watch") { watch.ping() }
                 Text(watch.lastResult).font(.footnote).foregroundStyle(.secondary)
             } footer: { Text("Off = the watch is never shown as missing. On = heart rate from the watch workout reaches the phone and the board, labelled Apple Watch; a reading older than 6 s is dropped, never held.") }
             Section("Steps") {
-                Text("1. Install Cyclift on the watch (Watch app › Available Apps).\n2. Open it and tap Start: a cycling workout begins (one workout, no duplicates in Fitness).\n3. Heart rate appears here and on the board within a few seconds.").font(.footnote)
+                Text("1. Install Cyclift on the watch (Watch app › Available Apps).\n2. Starting a ride on the iPhone starts the watch workout automatically (or tap Start watch workout here, or open Cyclift on the watch and tap Start). One workout, no duplicates in Fitness.\n3. Heart rate appears here and on the board within a few seconds.").font(.footnote)
             }
             Section("Measurements") { Text("Heart rate (1 Hz), workout state, watch battery. Ride controls from the wrist: start, pause, resume, end.").font(.footnote) }
             Section("Troubleshooting") { Text("Not reachable: open the watch app once; make sure the iPhone's Bluetooth is on. No heart rate: the watch must sit snug and the workout must be running.").font(.footnote) }

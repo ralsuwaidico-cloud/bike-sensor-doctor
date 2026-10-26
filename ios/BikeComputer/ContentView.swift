@@ -27,7 +27,10 @@ struct RootView: View {
             let d = Calendar.current.startOfDay(for: Date()); if d != day { day = d; store.ensurePlan() } }
         // The Ride screen is always dark: show it with a dark window so the status bar (clock, battery) stays readable.
         .preferredColorScheme(store.onboarded && tab == 2 ? .dark : (store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil))
-        .onChange(of: recorder.state) { _, s in idleTimer(s) }
+        .onChange(of: recorder.state) { old, s in
+            idleTimer(s)
+            if old != .running, old != .paused, s == .running, store.settings.enabledConnections.contains("watch") { watch.startWatchWorkout() }
+        }
         .onAppear { device.autoConnect = store.settings.autoConnectBoard }
     }
 

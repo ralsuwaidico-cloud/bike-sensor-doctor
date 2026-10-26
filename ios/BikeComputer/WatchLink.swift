@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import HealthKit
 
 /// iPhone side of the iPhone <-> Apple Watch connection (WatchConnectivity).
 /// Reports pairing/reachability, measures a ping round trip, and relays the watch's live heart rate to the board with
@@ -24,6 +25,24 @@ final class WatchLink: NSObject, ObservableObject, WCSessionDelegate {
     private var lastContextAt: Date?
 
     var hrIsFresh: Bool { guard let t = hrAt else { return false }; return Date().timeIntervalSince(t) < 6 }
+
+    // MARK: start the watch workout from the iPhone
+    /// Live heart rate exists only while the watch runs its workout. Apple's supported way for the iPhone to start it:
+    /// HKHealthStore.startWatchApp(with:) launches/wakes the Cyclift watch app, which then starts the cycling workout
+    /// (WatchAppDelegate.handle(_:) on the watch). No-op when no watch app is installed or the workout already runs.
+    @Published private(set) var watchStartResult: String?
+    private let hk = HKHealthStore()
+    func startWatchWorkout(reason: String = "ride") {
+        guard HKHealthStore.isHealthDataAvailable(), paired, appInstalled else { watchStartResult = "No paired watch with Cyclift installed"; return }
+        if hrIsFresh || workoutState == "running" { watchStartResult = "Watch workout already running"; return }
+        let cfg = HKWorkoutConfiguration(); cfg.activityType = .cycling; cfg.locationType = .outdoor
+        watchStartResult = "Starting the watch workout…"
+        hk.startWatchApp(with: cfg) { [weak self] ok, err in
+            DispatchQueue.main.async {
+                self?.watchStartResult = ok ? "Watch workout requested — heart rate appears within a few seconds" : "Could not start the watch: \(err?.localizedDescription ?? "unknown error"). Open Cyclift on the watch and tap Start."
+            }
+        }
+    }
 
     func activate() {
         guard WCSession.isSupported() else { return }

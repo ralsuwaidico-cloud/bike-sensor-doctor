@@ -11,6 +11,8 @@ import WatchKit
 /// in Fitness by accident (the Waveshare keeps its own ride record regardless).
 final class WorkoutManager: NSObject, ObservableObject, HKWorkoutSessionDelegate, HKLiveWorkoutBuilderDelegate {
     enum Phase: String { case idle, running, paused, ended }
+    /// One instance for the app and the application delegate (the iPhone's start request arrives at the delegate).
+    static let shared = WorkoutManager()
 
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var hrBpm: Int?
