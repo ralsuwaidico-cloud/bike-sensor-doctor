@@ -1,0 +1,169 @@
+=== launch-smoke: errors / failures ===
+GatherProvisioningInputs
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (17.009 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (24.450 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (27.885 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (42.916 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (33.280 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LaunchSmokeTests.swift:91: error: -[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages] : XCTAssertTrue failed - without Supabase values the sheet says accounts are not available
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages]' failed (33.082 seconds).
+Test Suite 'LaunchSmokeTests' failed at 2026-10-26 07:10:08.247.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 178.622 (178.627) seconds
+	 Executed 2 tests, with 2 tests skipped and 0 failures (0 unexpected) in 0.681 (0.683) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-26 07:10:08.932.
+	 Executed 8 tests, with 2 tests skipped and 1 failure (0 unexpected) in 179.304 (179.312) seconds
+Test Suite 'All tests' failed at 2026-10-26 07:10:08.932.
+	 Executed 8 tests, with 2 tests skipped and 1 failure (0 unexpected) in 179.304 (179.314) seconds
+Failing tests:
+** TEST FAILED **
+=== launch-smoke: last 150 lines ===
+    t =    18.46s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =    18.46s         Checking existence of `"Plan" Button`
+    t =    18.49s Tap "Plan" Button
+    t =    18.49s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    18.49s     Find the "Plan" Button
+    t =    18.50s     Check for interrupting elements affecting "Plan" Button
+    t =    18.66s     Synthesize event
+    t =    18.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    20.55s Waiting 10.0s for "centreButton" Button to exist
+    t =    21.60s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    21.60s         Checking existence of `"centreButton" Button`
+    t =    21.61s Tap "centreButton" Button
+    t =    21.61s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    21.61s     Find the "centreButton" Button
+    t =    21.63s     Check for interrupting elements affecting "centreButton" Button
+    t =    21.76s     Synthesize event
+    t =    22.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    23.16s Checking existence of `"Done" Button`
+    t =    23.35s Find the "Done" Button
+    t =    23.54s Tap "Done" Button
+    t =    23.54s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    23.54s     Find the "Done" Button
+    t =    23.69s     Check for interrupting elements affecting "Done" Button
+    t =    24.01s     Synthesize event
+    t =    24.35s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    25.26s Waiting 10.0s for "Progress" Button to exist
+    t =    26.26s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =    26.26s         Checking existence of `"Progress" Button`
+    t =    26.31s Tap "Progress" Button
+    t =    26.31s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    26.31s     Find the "Progress" Button
+    t =    26.38s     Check for interrupting elements affecting "Progress" Button
+    t =    26.59s     Synthesize event
+    t =    26.89s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    27.91s Waiting 10.0s for "Profile" Button to exist
+    t =    28.94s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =    28.94s         Checking existence of `"Profile" Button`
+    t =    28.98s Tap "Profile" Button
+    t =    28.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    28.98s     Find the "Profile" Button
+    t =    29.00s     Check for interrupting elements affecting "Profile" Button
+    t =    29.19s     Synthesize event
+    t =    29.48s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    30.49s Waiting 10.0s for "Home" Button to exist
+    t =    31.53s     Checking `Expect predicate `existsNoRetry == 1` for object "Home" Button`
+    t =    31.53s         Checking existence of `"Home" Button`
+    t =    31.54s Tap "Home" Button
+    t =    31.54s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    31.54s     Find the "Home" Button
+    t =    31.55s     Check for interrupting elements affecting "Home" Button
+    t =    31.70s     Synthesize event
+    t =    32.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    33.01s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (33.280 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages]' started.
+    t =     0.00s Start Test at 2026-10-26 07:09:35.165
+    t =     0.03s Set Up
+    t =     0.04s Open com.ralsuwaidico.bikecomputer
+    t =     0.04s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.04s         Terminate com.ralsuwaidico.bikecomputer:29210
+2026-10-26 07:09:36.226 xcodebuild[13543:46171] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-26 07:09:36.226 xcodebuild[13543:46171] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     2.49s         Setting up automation session
+    t =     4.11s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =     7.70s Waiting 25.0s for "Hi Rashed" NavigationBar to exist
+    t =     8.73s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =     8.73s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =     9.14s Waiting 10.0s for "Profile" Button to exist
+    t =    10.19s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =    10.19s         Checking existence of `"Profile" Button`
+    t =    10.22s Tap "Profile" Button
+    t =    10.23s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    10.23s     Find the "Profile" Button
+    t =    10.27s     Check for interrupting elements affecting "Profile" Button
+    t =    10.44s     Synthesize event
+    t =    10.73s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    10.74s Checking existence of `"profileCreateAccount" Button`
+    t =    11.56s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    11.56s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    11.65s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    11.80s     Check for interrupting elements affecting "Athletics" Application
+    t =    11.99s     Synthesize event
+    t =    12.43s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    14.68s Checking existence of `"profileCreateAccount" Button`
+    t =    15.18s Find the "profileCreateAccount" Button
+    t =    15.86s Waiting 10.0s for "profileCreateAccount" Button to exist
+    t =    16.89s     Checking `Expect predicate `existsNoRetry == 1` for object "profileCreateAccount" Button`
+    t =    16.89s         Checking existence of `"profileCreateAccount" Button`
+    t =    17.56s Tap "profileCreateAccount" Button
+    t =    17.56s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    17.57s     Find the "profileCreateAccount" Button
+    t =    18.16s     Check for interrupting elements affecting "profileCreateAccount" Button
+    t =    18.48s     Synthesize event
+    t =    18.78s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    19.10s Waiting 10.0s for StaticText (First Match) to exist
+    t =    20.15s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =    20.15s         Checking existence of `StaticText (First Match)`
+    t =    20.83s         Capturing element debug description
+    t =    21.14s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =    21.14s         Checking existence of `StaticText (First Match)`
+    t =    22.36s         Capturing element debug description
+    t =    23.20s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =    23.20s         Checking existence of `StaticText (First Match)`
+    t =    25.34s         Capturing element debug description
+    t =    26.16s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =    26.16s         Checking existence of `StaticText (First Match)`
+    t =    28.91s         Capturing element debug description
+    t =    29.11s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =    29.11s         Checking existence of `StaticText (First Match)`
+    t =    29.40s         Capturing element debug description
+    t =    29.40s     Checking existence of `StaticText (First Match)`
+    t =    31.99s Collecting debug information to assist test failure triage
+    t =    31.99s     Requesting snapshot of accessibility hierarchy for app with pid 30552
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LaunchSmokeTests.swift:91: error: -[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages] : XCTAssertTrue failed - without Supabase values the sheet says accounts are not available
+    t =    32.78s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40OpensAccountAndLegalPages]' failed (33.082 seconds).
+Test Suite 'LaunchSmokeTests' failed at 2026-10-26 07:10:08.247.
+	 Executed 6 tests, with 1 failure (0 unexpected) in 178.622 (178.627) seconds
+Test Suite 'StoreScreenshots' started at 2026-10-26 07:10:08.248.
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' started.
+    t =     0.00s Start Test at 2026-10-26 07:10:08.249
+    t =     0.03s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift:43: -[BikeComputerUITests.StoreScreenshots test1StrengthDay] : Test skipped - SCREENSHOT_DIR not set — store screenshots are only taken by the asc-listing workflow
+    t =     0.07s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' skipped (0.119 seconds).
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' started.
+    t =     0.00s Start Test at 2026-10-26 07:10:08.369
+    t =     0.03s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift:60: -[BikeComputerUITests.StoreScreenshots test2RideDay] : Test skipped - SCREENSHOT_DIR not set — store screenshots are only taken by the asc-listing workflow
+    t =     0.04s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' skipped (0.562 seconds).
+Test Suite 'StoreScreenshots' passed at 2026-10-26 07:10:08.931.
+	 Executed 2 tests, with 2 tests skipped and 0 failures (0 unexpected) in 0.681 (0.683) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-26 07:10:08.932.
+	 Executed 8 tests, with 2 tests skipped and 1 failure (0 unexpected) in 179.304 (179.312) seconds
+Test Suite 'All tests' failed at 2026-10-26 07:10:08.932.
+	 Executed 8 tests, with 2 tests skipped and 1 failure (0 unexpected) in 179.304 (179.314) seconds
+2026-10-26 07:10:42.304 xcodebuild[13543:46171] [MT] IDETestOperationsObserverDebug: 322.013 elapsed -- Testing started completed.
+2026-10-26 07:10:42.305 xcodebuild[13543:46171] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-26 07:10:42.305 xcodebuild[13543:46171] [MT] IDETestOperationsObserverDebug: 322.013 sec, +322.013 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/uitests.xcresult
+
+Failing tests:
+	LaunchSmokeTests.testUpgradeFromBuild40OpensAccountAndLegalPages()
+
+** TEST FAILED **
+
+Testing started
