@@ -146,12 +146,13 @@ extension Store {
     }
 
     // MARK: B — sessions built from the rider's own exercises (only once a split was chosen)
+    /// Quality release: built by the personalised planner (StrengthPlanner) — goal, priority, experience, equipment,
+    /// preferences, logged performance and the rides around the session — with its reasons stored for "Why?".
     func programmedSession(_ w: Workout) -> Workout {
         guard profile.trainingMode.includesLifting, profile.strengthSplit != nil, w.kind == .strength, w.templateId == nil, w.plannedEntries == nil else { return w }
-        let e = StrengthProgrammer.entries(focus: w.strengthFocus ?? .fullBody, label: w.note, templates: templates, preserved: profile.preservedTemplateIds,
-                                           custom: customExercises, catalogue: ExerciseCatalogue.builtIn, equipment: equipment)
-        guard !e.isEmpty else { return w }
-        var x = w; x.plannedEntries = e; x.generatedEntries = true
+        let b = StrengthPlanner.build(for: w, ctx: plannerContext())
+        guard !b.entries.isEmpty else { return w }
+        var x = w; x.plannedEntries = b.entries; x.generatedEntries = true; x.rationale = b.rationale
         return x
     }
 

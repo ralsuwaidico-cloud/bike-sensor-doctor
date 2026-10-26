@@ -43,16 +43,16 @@ struct HomeView: View {
     private var coach: some View {
         let t = store.today
         return Card(accent: true) {
-            HStack { Eyebrow(t: "Coach (rules) · \(Date().shortDay)"); Spacer(); if let t { if t.done { Pill(text: "done", color: BC.live) } else if t.skipped { Pill(text: "skipped") } else { ZonePill(z: t.kind.zone) } } }
+            HStack { Eyebrow(t: "Coach (rules) · \(Date().shortDay)"); Spacer(); if let t { let st = store.status(t); if st.isCompleted || st == .skipped { StatusPill(status: st) } else { ZonePill(z: t.kind.zone) } } }
             Text(Coach.todayLine(t)).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             if let t, t.kind != .rest {
                 VStack(spacing: 0) {
                     tableRow("Workout", t.displayTitle)
                     tableRow("Duration", t.minutes > 0 ? Fmt.duration(minutes: t.minutes) : "—")
-                    tableRow("Target", t.kind.zone > 0 ? "Zone \(t.kind.zone) · \(zoneWatts(t.kind.zone))" : t.kind.subtitle)
+                    tableRow("Target", t.kind.zone > 0 ? "Zone \(t.kind.zone) · \(zoneWatts(t.kind.zone))\(store.profile.ftpConfidence.isConfident ? "" : " (conservative)")" : t.kind.subtitle)
                     tableRow("Benefit", t.benefit)
                     tableRow("Structure", t.structureText)
-                    tableRow("Status", t.done ? "done" : t.skipped ? "skipped" : recorder.isActive ? "in progress" : "planned", last: true)
+                    tableRow("Status", recorder.isActive && t.kind.isRide ? "in progress" : store.status(t).title.lowercased(), last: true)
                 }
                 .background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
             }
@@ -60,18 +60,16 @@ struct HomeView: View {
                 Text(Coach.why(t, store: store)).font(.footnote).foregroundStyle(.secondary).padding(.top, 4).fixedSize(horizontal: false, vertical: true)
             } label: { Text("Why this workout?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
             if let t, t.kind != .rest {
-                HStack(spacing: 8) {
-                    if t.kind.isRide, !recorder.isActive {
-                        Button { tab = 2 } label: { Label("Start", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live)
-                    } else if t.kind.isRide {
-                        Button { tab = 2 } label: { Label("Open ride", systemImage: "bicycle").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live)
-                    }
-                    Button { showWorkout = true } label: { Text("Adjust").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
-                    Button { showAlternatives = true } label: { Text("Alternative").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
-                }
-                Text("Start opens the Ride screen; recording begins only when you tap Start ride there.").font(.caption2).foregroundStyle(.secondary)
+                ActionRow(actions: coachActions(t)).accessibilityIdentifier("coachActions")
             }
         }
+    }
+    private func coachActions(_ t: Workout) -> [ActionSpec] {
+        var a: [ActionSpec] = []
+        if t.kind.isRide { a.append(ActionSpec(label: recorder.isActive ? "Ride" : "Start", a11y: recorder.isActive ? "Open ride" : "Start: opens the Ride screen, recording starts there", icon: recorder.isActive ? "bicycle" : "play.fill", prominent: true, tint: BC.live, identifier: "coachStart") { tab = 2 }) }
+        a.append(ActionSpec(label: "Adjust", a11y: "Adjust today's session", identifier: "coachAdjust") { showWorkout = true })
+        a.append(ActionSpec(label: "Swap", a11y: "Swap today's session", identifier: "coachSwap") { showAlternatives = true })
+        return a
     }
     private func tableRow(_ k: String, _ v: String, last: Bool = false) -> some View {
         VStack(spacing: 0) {

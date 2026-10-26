@@ -592,6 +592,8 @@ enum AdaptationEngine {
     static func strengthDecision(_ e: ExerciseEntry, session s: Workout, input: AdaptationInput) -> PlanAdjustment? {
         let known = input.catalogue.first { $0.id == e.exerciseId }
         if input.equipment.excluded.contains(e.exerciseId) { return nil }
+        // quality release: loads of planner-built sessions already follow double progression from the logs (no stacking)
+        if s.rationale?.exercise(e.exerciseId) != nil { return nil }
         // an exercise the rider cannot do with their equipment is never progressed (a replacement is proposed instead)
         if let k = known, !input.equipment.canDo(k) { return nil }
         let hist: [(StrengthSession, ExerciseEntry)] = input.strength.filter { !$0.inProgress && $0.date <= input.now }.sorted { $0.date > $1.date }
