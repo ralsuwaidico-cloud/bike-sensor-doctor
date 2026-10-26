@@ -15,6 +15,14 @@ enum BCLink {
     static let syncUUID = "B1CE0006-7E3A-4C55-9D2B-5A0E1C7C0000"
     static let eventsUUID = "B1CE0007-7E3A-4C55-9D2B-5A0E1C7C0000"
 
+    /// Readable name of a Link characteristic for diagnostics ("Live", "Events", …); other UUIDs as given.
+    static func shortName(_ uuid: String) -> String {
+        switch uuid.uppercased() {
+        case infoUUID: return "Info"; case liveUUID: return "Live"; case inputUUID: return "Input"; case controlUUID: return "Control"
+        case syncUUID: return "Sync"; case eventsUUID: return "Events"; default: return uuid.uppercased()
+        }
+    }
+
     enum MsgType: UInt8 {
         case info = 0x01, live = 0x10
         case inTime = 0x20, inGPS = 0x21, inHR = 0x22, inWeather = 0x23, inBattery = 0x24
@@ -596,5 +604,71 @@ enum BCLink {
     static func linkDiag(from e: Event) -> LinkDiag? {
         guard e.isLinkDiag else { return nil }
         return LinkDiag(reason: e.b2 ?? 0, bonds: e.w3 ?? 0, syncState: e.b4 ?? 0)
+    }
+
+    // MARK: 1.2.2 SENSOR_DIAG (firmware 0.7.2) — docs/LINK_V1_2_SPEC.md section "1.2.2"
+    /// EVENT 0x40, `01 u8 event_id = 0x21`. One message per board sensor link, sent on every stage change, every 5 s
+    /// while a paired link is below VALID, and right after the phone connects. Tags (little-endian):
+    /// `02 u8 sensor` · `03 u8 stage` · `04 u32 packets` · `05 u16 rejected` · `06 u16 packet age (ds, 0xFFFF none)` ·
+    /// `07 u16 valid age (ds, 0xFFFF none)` · `08 utf8 ≤ 20 last error`. Unknown tags and wrong-length fields are skipped.
+    static let sensorDiagEventId = 0x21
+    struct SensorDiag: Equatable, Codable {
+        enum Sensor: UInt8, Codable, CaseIterable { case power = 1, hrStrap = 2, csc = 3
+            var title: String { switch self { case .power: return "Power meter"; case .hrStrap: return "Heart-rate strap"; case .csc: return "Speed / cadence sensor" } } }
+        enum Stage: UInt8, Codable { case notPaired = 0, searching = 1, connecting = 2, connected = 3, subscribed = 4, receiving = 5, valid = 6, stale = 7, error = 8
+            /// The words the board shows (spec 1.2.2) — the phone uses the same ones.
+            var words: String {
+                switch self {
+                case .notPaired: return "Not paired"; case .searching: return "Searching"; case .connecting: return "Connecting"
+                case .connected, .subscribed: return "Connected — waiting for data"; case .receiving: return "Receiving — no valid readings"
+                case .valid: return "Live"; case .stale: return "Data stale"; case .error: return "Error"
+                }
+            }
+        }
+        var sensorRaw: UInt8 = 0
+        var stageRaw: UInt8 = 0
+        var packets: UInt32? = nil
+        var rejected: UInt16? = nil
+        /// Ages in deciseconds as sent; nil = field absent or 0xFFFF ("none yet").
+        var packetAgeDs: UInt16? = nil
+        var validAgeDs: UInt16? = nil
+        var lastError: String? = nil
+        var seq: UInt16 = 0
+        var boardTimeMs: UInt32 = 0
+        var sensor: Sensor? { Sensor(rawValue: sensorRaw) }
+        var stage: Stage? { Stage(rawValue: stageRaw) }
+        var packetAgeS: Double? { packetAgeDs.map { Double($0) / 10 } }
+        var validAgeS: Double? { validAgeDs.map { Double($0) / 10 } }
+    }
+    /// nil for anything that is not a well-formed SENSOR_DIAG (other events, missing sensor or stage, truncated TLV).
+    static func decodeSensorDiag(_ d: Data) -> SensorDiag? {
+        guard let (h, f) = parse(d), h.type == MsgType.event.rawValue else { return nil }
+        var s = SensorDiag(); s.seq = h.seq; s.boardTimeMs = h.tMs
+        var isDiag = false, gotSensor = false, gotStage = false
+        for x in f {
+            let v = x.value
+            switch (x.tag, v.count) {
+            case (0x01, 1): isDiag = Int(v[v.startIndex]) == sensorDiagEventId
+            case (0x02, 1): s.sensorRaw = v[v.startIndex]; gotSensor = true
+            case (0x03, 1): s.stageRaw = v[v.startIndex]; gotStage = true
+            case (0x04, 4): s.packets = UInt32(uint(v))
+            case (0x05, 2): s.rejected = UInt16(uint(v))
+            case (0x06, 2): let a = UInt16(uint(v)); s.packetAgeDs = a == 0xFFFF ? nil : a
+            case (0x07, 2): let a = UInt16(uint(v)); s.validAgeDs = a == 0xFFFF ? nil : a
+            case (0x08, 0...20): s.lastError = v.isEmpty ? nil : String(decoding: v, as: UTF8.self)
+            default: break
+            }
+        }
+        return isDiag && gotSensor && gotStage ? s : nil
+    }
+    /// Test helper mirroring the board's SENSOR_DIAG encoder (same tag order as the spec table).
+    static func encodeSensorDiag(_ s: SensorDiag, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .event, seq: seq, tMs: tMs)
+        w.u8(0x01, UInt8(sensorDiagEventId)); w.u8(0x02, s.sensorRaw); w.u8(0x03, s.stageRaw)
+        if let p = s.packets { w.u32(0x04, p) }
+        if let r = s.rejected { w.u16(0x05, r) }
+        w.u16(0x06, s.packetAgeDs ?? 0xFFFF); w.u16(0x07, s.validAgeDs ?? 0xFFFF)
+        if let e = s.lastError { w.field(0x08, Data(e.utf8.prefix(20))) }
+        return w.result
     }
 }

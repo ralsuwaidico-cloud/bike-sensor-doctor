@@ -13,6 +13,7 @@ struct BikeComputerApp: App {
     @StateObject private var account: AccountService
     @StateObject private var cloud: SyncEngine
     @StateObject private var hub: SensorHub
+    @StateObject private var monitor: PipelineMonitor
 
     init() {
         let s = Store()
@@ -61,6 +62,10 @@ struct BikeComputerApp: App {
         let h = SensorHub(); h.hrWatchFirst = { [weak s] in s?.settings.hrPref == .watch }
         h.attach(store: s)      /* direct Bluetooth sensors paired on this phone reconnect from launch (A3) */
         _hub = StateObject(wrappedValue: h)
+        // automatic pipeline diagnostics + safe recovery (ios/PIPELINE_HEALTH.md); the watch's mirrored workout handler
+        // is registered by WatchLink above, at every launch, as HealthKit requires
+        let m = PipelineMonitor(); m.attach(device: d, watch: w, hub: h, recorder: r, store: s)
+        _monitor = StateObject(wrappedValue: m)
         let acc = AccountService()
         _account = StateObject(wrappedValue: acc)
         _cloud = StateObject(wrappedValue: SyncEngine(store: s, account: acc))
@@ -80,6 +85,7 @@ struct BikeComputerApp: App {
                 .environmentObject(account)
                 .environmentObject(cloud)
                 .environmentObject(hub)
+                .environmentObject(monitor)
                 .onOpenURL { url in if ReleaseFlags.accountsEnabled { _ = account.handle(url: url) } }
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {

@@ -5,6 +5,10 @@ import SwiftUI
 struct RideMetric: Equatable {
     let kind: MetricKind
     let reading: MetricReading?
+    /// Why there is no value although a source is set up ("Connected — waiting for data", "No power data", "Data stale"),
+    /// from the pipeline monitor; nil → the plain `kind.missingText`.
+    var missing: String? = nil
+    var missingText: String { missing ?? kind.missingText }
 
     /// A stale reading is never shown or coached as live.
     var usable: Bool { reading.map { $0.quality != .stale } ?? false }
@@ -22,7 +26,7 @@ struct RideMetric: Equatable {
         case .stale: return nil
         }
     }
-    var sourceOrMissing: String { sourceLine ?? kind.missingText }
+    var sourceOrMissing: String { sourceLine ?? missingText }
 }
 
 /// Everything a layout draws, computed once per render from the hub, the profile and the coach's targets.
@@ -34,9 +38,9 @@ struct RideLive {
     var imperial: Bool
     var ftpProvisional: Bool
 
-    init(power: MetricReading?, hr: MetricReading?, cadence: MetricReading?, speed: MetricReading?, profile: RiderProfile, imperial: Bool, targetZone: Int, targetHrZone: Int? = nil) {
-        self.power = RideMetric(kind: .power, reading: power); self.hr = RideMetric(kind: .heartRate, reading: hr)
-        self.cadence = RideMetric(kind: .cadence, reading: cadence); self.speed = RideMetric(kind: .speed, reading: speed)
+    init(power: MetricReading?, hr: MetricReading?, cadence: MetricReading?, speed: MetricReading?, profile: RiderProfile, imperial: Bool, targetZone: Int, targetHrZone: Int? = nil, missing: [MetricKind: String] = [:]) {
+        self.power = RideMetric(kind: .power, reading: power, missing: missing[.power]); self.hr = RideMetric(kind: .heartRate, reading: hr, missing: missing[.heartRate])
+        self.cadence = RideMetric(kind: .cadence, reading: cadence, missing: missing[.cadence]); self.speed = RideMetric(kind: .speed, reading: speed, missing: missing[.speed])
         ftp = profile.ftpW; maxHr = profile.estimatedMaxHR; cadLo = profile.cadenceLow; cadHi = profile.cadenceHigh
         self.targetZone = targetZone; self.targetHrZone = targetHrZone ?? targetZone
         hrZoneRanges = profile.hrZones; self.imperial = imperial
@@ -44,7 +48,7 @@ struct RideLive {
     }
     static func from(hub: SensorHub, profile: RiderProfile, settings: AppSettings, coach: RideCoach) -> RideLive {
         RideLive(power: hub.reading(.power), hr: hub.reading(.heartRate), cadence: hub.reading(.cadence), speed: hub.reading(.speed),
-                 profile: profile, imperial: settings.units == .imperial, targetZone: coach.targetZone, targetHrZone: coach.targetHrZone)
+                 profile: profile, imperial: settings.units == .imperial, targetZone: coach.targetZone, targetHrZone: coach.targetHrZone, missing: hub.missingReason)
     }
 
     // MARK: derived (CoachCore rules; the UI only draws)
@@ -58,7 +62,7 @@ struct RideLive {
 
     /// Pill text: a missing source says so in plain words ("NO POWER SOURCE"); a valid zero is named (COASTING …).
     func statusText(_ m: RideMetric) -> String {
-        guard m.usable else { return m.kind.missingText.uppercased() }
+        guard m.usable else { return m.missingText.uppercased() }
         switch m.kind {
         case .power: return GaugeText.status(powerStatus, kind: "pow")
         case .cadence: return GaugeText.status(cadStatus, kind: "cad")
@@ -109,10 +113,10 @@ enum RideTiles {
     static func tile(_ key: String, live l: RideLive, recorder: RideRecorder, profile: RiderProfile, boardBattery: Int?, big: Bool = false) -> MetricTile {
         let active = recorder.isActive || recorder.state == .ended
         switch key {
-        case "power": return MetricTile(title: "Power", value: l.power.value.map { "\($0)" }, unit: "W", source: l.power.sourceOrMissing, big: big, missing: MetricKind.power.missingText)
-        case "cadence": return MetricTile(title: "Cadence", value: l.cadence.value.map { "\($0)" }, unit: "rpm", source: l.cadence.sourceOrMissing, big: big, missing: MetricKind.cadence.missingText)
-        case "hr": return MetricTile(title: "Heart rate", value: l.hr.value.map { "\($0)" }, unit: "bpm", source: l.hr.sourceOrMissing, big: big, missing: MetricKind.heartRate.missingText)
-        case "speed": return MetricTile(title: "Speed", value: l.speedKmh.map { String(format: "%.1f", l.imperial ? $0 / 1.609 : $0) }, unit: l.imperial ? "mph" : "km/h", source: l.speed.sourceOrMissing, big: big, missing: MetricKind.speed.missingText)
+        case "power": return MetricTile(title: "Power", value: l.power.value.map { "\($0)" }, unit: "W", source: l.power.sourceOrMissing, big: big, missing: l.power.missingText)
+        case "cadence": return MetricTile(title: "Cadence", value: l.cadence.value.map { "\($0)" }, unit: "rpm", source: l.cadence.sourceOrMissing, big: big, missing: l.cadence.missingText)
+        case "hr": return MetricTile(title: "Heart rate", value: l.hr.value.map { "\($0)" }, unit: "bpm", source: l.hr.sourceOrMissing, big: big, missing: l.hr.missingText)
+        case "speed": return MetricTile(title: "Speed", value: l.speedKmh.map { String(format: "%.1f", l.imperial ? $0 / 1.609 : $0) }, unit: l.imperial ? "mph" : "km/h", source: l.speed.sourceOrMissing, big: big, missing: l.speed.missingText)
         case "time": return MetricTile(title: "Time", value: active ? recorder.elapsedS.asDuration : nil, unit: "", source: recorder.owner.label, big: big, missing: "starts with the ride")
         case "dist": return MetricTile(title: "Distance", value: active ? String(format: "%.2f", l.imperial ? Double(recorder.distanceM) / 1609.34 : Double(recorder.distanceM) / 1000) : nil, unit: l.imperial ? "mi" : "km", source: recorder.owner == .board ? "BikeComputer (GPS)" : "Phone GPS", big: big, missing: "starts with the ride")
         case "lap": return MetricTile(title: "Lap \(recorder.lapCount)", value: recorder.isActive ? (recorder.elapsedS - recorder.lapStartS).asDuration : nil, unit: "", source: recorder.owner.label, big: big, missing: "starts with the ride")

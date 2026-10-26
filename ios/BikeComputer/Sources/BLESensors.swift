@@ -57,6 +57,20 @@ final class BLESensors: NSObject, ObservableObject {
     @Published private(set) var links: [String: Link] = [:]
     @Published private(set) var lastData: [String: Date] = [:]
     @Published private(set) var lastError: String?
+    /// Per-sensor pipeline counters (PIPELINE_HEALTH.md): connected since, services and measurement characteristics
+    /// found, subscription confirmed by iOS, packets received / rejected, last packet and last valid measurement.
+    struct Counters: Equatable {
+        var connectedAt: Date?
+        var services: [String] = []
+        var measurementChars: [String] = []
+        var subscribed: Bool?
+        var subscribeError: String?
+        var packets = 0
+        var rejected = 0
+        var lastPacketAt: Date?
+        var lastValidAt: Date?
+    }
+    @Published private(set) var counters: [String: Counters] = [:]
 
     weak var hub: SensorHub?
     var wheelMm: () -> Int = { 2096 }
@@ -216,6 +230,7 @@ extension BLESensors: CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManager(_ c: CBCentralManager, didConnect p: CBPeripheral) {
         guard sensor(p) != nil else { c.cancelPeripheralConnection(p); return }     /* only sensors the rider paired */
         links[p.identifier.uuidString] = .connected
+        counters[p.identifier.uuidString] = Counters(connectedAt: Date(), packets: counters[p.identifier.uuidString]?.packets ?? 0, rejected: counters[p.identifier.uuidString]?.rejected ?? 0)
         lastError = nil
         p.delegate = self
         p.discoverServices(services)
@@ -236,6 +251,7 @@ extension BLESensors: CBCentralManagerDelegate, CBPeripheralDelegate {
         let key = p.identifier.uuidString
         hub?.withdraw(sourceId: "ble:" + key)
         crank[key] = nil; wheel[key] = nil
+        counters[key]?.connectedAt = nil; counters[key]?.subscribed = nil
         guard sensor(p) != nil else { links[key] = nil; return }
         links[key] = .connecting
         c.connect(p, options: nil)          /* pending reconnect: completes when the sensor is back in range */
@@ -253,6 +269,7 @@ extension BLESensors: CBCentralManagerDelegate, CBPeripheralDelegate {
             kinds.append(k)
             p.discoverCharacteristics([CBUUID(string: k.measurementId)], for: s)
         }
+        counters[p.identifier.uuidString, default: Counters()].services = (p.services ?? []).map { $0.uuid.uuidString.uppercased() }
         noteKinds(p, kinds)
     }
 
@@ -260,6 +277,7 @@ extension BLESensors: CBCentralManagerDelegate, CBPeripheralDelegate {
         guard error == nil else { lastError = error?.localizedDescription; return }
         // Subscribe only (the client characteristic configuration descriptor). No characteristic value is ever written.
         for c in s.characteristics ?? [] where measurements.contains(c.uuid) && (c.properties.contains(.notify) || c.properties.contains(.indicate)) {
+            counters[p.identifier.uuidString, default: Counters()].measurementChars.append(c.uuid.uuidString.uppercased())
             p.setNotifyValue(true, for: c)
         }
     }
@@ -268,12 +286,15 @@ extension BLESensors: CBCentralManagerDelegate, CBPeripheralDelegate {
         guard error == nil, let d = c.value, let s = sensor(p) else { return }
         let now = Date()
         let key = s.id
+        counters[key, default: Counters()].packets += 1
+        counters[key]?.lastPacketAt = now
+        func reject() { counters[key]?.rejected += 1 }
         switch c.uuid.uuidString.uppercased() {
         case BLESensorKind.heartRate.measurementId:
-            guard let bpm = BLEDecode.heartRate(d) else { return }
+            guard let bpm = BLEDecode.heartRate(d) else { reject(); return }
             offer(.heartRate, Double(bpm), s, at: now)
         case BLESensorKind.power.measurementId:
-            guard let m = BLEDecode.cyclingPower(d) else { return }
+            guard let m = BLEDecode.cyclingPower(d) else { reject(); return }
             offer(.power, Double(m.powerW), s, at: now)
             if let k = m.crank {
                 var r = crank[key] ?? .crank(); r.update(k, at: now); crank[key] = r
@@ -283,7 +304,7 @@ extension BLESensors: CBCentralManagerDelegate, CBPeripheralDelegate {
                 var r = wheel[key] ?? .powerWheel(); r.update(w, at: now); wheel[key] = r
             }
         case BLESensorKind.speedCadence.measurementId:
-            guard let m = BLEDecode.csc(d) else { return }
+            guard let m = BLEDecode.csc(d) else { reject(); return }
             if let k = m.crank {
                 var r = crank[key] ?? .crank(); r.update(k, at: now); crank[key] = r
                 if let v = r.rate(at: now), v <= 250 { offer(.cadence, v, s, at: now) }
@@ -297,11 +318,14 @@ extension BLESensors: CBCentralManagerDelegate, CBPeripheralDelegate {
             }
         default: return
         }
+        counters[key]?.lastValidAt = now
         lastData[key] = now
         if links[key] != .connected { links[key] = .connected }
     }
 
     func peripheral(_ p: CBPeripheral, didUpdateNotificationStateFor c: CBCharacteristic, error: Error?) {
-        if let e = error { lastError = e.localizedDescription }
+        let key = p.identifier.uuidString
+        if let e = error { lastError = e.localizedDescription; counters[key, default: Counters()].subscribeError = e.localizedDescription }
+        counters[key, default: Counters()].subscribed = error == nil && c.isNotifying
     }
 }

@@ -145,6 +145,8 @@ final class SensorHub: ObservableObject {
     @Published private(set) var candidates: [MetricKind: [String: MetricReading]] = [:]
     /// Every known source with its state, rebuilt once per second by `refresh` (live, imported and planned).
     @Published private(set) var sources: [SourceStatus] = []
+    /// Per metric: why nothing is shown although a source is set up (set by the PipelineMonitor; empty = plain "No … source").
+    @Published var missingReason: [MetricKind: String] = [:]
     var hrWatchFirst: () -> Bool = { false }
     var now: () -> Date = Date.init
     /// Direct Bluetooth sensors on the phone (created idle; no Bluetooth activity until configured or opened).
@@ -212,13 +214,22 @@ final class SensorHub: ObservableObject {
         }
     }
 
+    /// When a board value was measured: arrival time minus the board's age field (ignored when absent or ≥ 60 s = "none").
+    static func sampleTime(received: Date, ageMs: Int?) -> Date {
+        guard let a = ageMs, a >= 0, a < 60_000 else { return received }
+        return received.addingTimeInterval(-Double(a) / 1000)
+    }
+
     /// Pulls the current values from the existing links once per second (called by the root view's timer).
     func refresh(device: DeviceLink, watch: WatchLink, location: LocationService, powerVerified: Bool) {
         let t = now()
         if device.state == .ready, device.liveIsFresh, let l = device.live {
             var meter = Self.bikeComputer; meter.name = "Power meter"; meter.relayedBy = "BikeComputer"
-            if let p = l.powerW { offer(MetricReading(kind: .power, value: Double(p), at: t, source: meter, quality: powerVerified ? .good : .unverified)) }
-            if let c = l.cadenceRpm { offer(MetricReading(kind: .cadence, value: Double(c), at: t, source: meter, quality: .good)) }
+            // the board's per-metric age (LIVE tags 02 / 04) is the authority for "fresh" (spec 1.2.2): a value the board
+            // measured 2.5 s ago is 2.5 s old here too, so it turns stale on time instead of being re-stamped every second
+            let lt = device.liveReceivedAt ?? t
+            if let p = l.powerW { offer(MetricReading(kind: .power, value: Double(p), at: Self.sampleTime(received: lt, ageMs: l.powerAgeMs), source: meter, quality: powerVerified ? .good : .unverified)) }
+            if let c = l.cadenceRpm { offer(MetricReading(kind: .cadence, value: Double(c), at: Self.sampleTime(received: lt, ageMs: l.cadAgeMs), source: meter, quality: .good)) }
             if let h = l.hrBpm, let name = Self.boardHRName(l.hrSource) {
                 var s = Self.bikeComputer; s.name = name; s.relayedBy = "BikeComputer"
                 offer(MetricReading(kind: .heartRate, value: Double(h), at: t, source: s, quality: .good))
