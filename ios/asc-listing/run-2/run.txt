@@ -1,0 +1,59 @@
+Athletics App Store listing — mode APPLY (drafts only; never submits, releases, prices or accepts agreements)
+
+Sign in with Apple capability on com.ralsuwaidico.bikecomputer:
+  capabilities now: HEALTHKIT, IN_APP_PURCHASE
+  Sign in with Apple: enabled now
+
+App record: found; store name (not an Athletics candidate yet, 22 characters — hidden), primary language en-US
+
+App information:
+  app info d42c830b…: state PREPARE_FOR_SUBMISSION
+  locale en-US: name (not an Athletics candidate yet, 22 characters — hidden), subtitle '', privacy URL empty
+  name: 'Athletics' rejected (HTTP 409): ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE.DIFFERENT_ACCOUNT: The app name you entered is already being used. If you have trademark rights to this name and would like it released for your use, submit a claim.
+  name: 'Athletics: Hybrid Training' ACCEPTED
+  subtitle: set
+  privacyPolicyUrl: set
+  primary category now: none
+  categories HEALTH_AND_FITNESS / SPORTS: set
+  age rating declaration: 30 questions, 27 unanswered
+  age rating: 22 answers set
+  ! age rating questions left for the owner (unknown to this script): developerAgeRatingInfoUrl, gracRatingClassificationNumber, kidsAgeBand, socialMedia, socialMediaAgeRestricted
+
+Version:
+  version 1.0: PREPARE_FOR_SUBMISSION
+  version copyright, versionString: set
+  build attached to the version: none (the owner selects it before submission)
+
+Version text:
+  version localization en-US: description empty, keywords empty, promotionalText empty, supportUrl empty, marketingUrl empty
+  description: set
+  keywords: set
+  promotionalText: set
+  supportUrl: set
+  marketingUrl: set
+
+App Review:
+  review detail: none yet
+  review notes + demo account not required: set
+
+Screenshots:
+  screenshots taken by the simulator job: 5
+    01-home.png (1320, 2868)
+    02-strength-workout.png (1320, 2868)
+    03-plan.png (1320, 2868)
+    04-progress.png (1320, 2868)
+    05-ride.png (1320, 2868)
+  screenshot set APP_IPHONE_69: not created (HTTP 409): ENTITY_ERROR.ATTRIBUTE.TYPE: 'APP_IPHONE_69' is not a valid value for the attribute 'screenshotDisplayType'. Expected one of: 'IMESSAGE_APP_IPHONE_58', 'IMESSAGE_APP_IPHONE_55', 'APP_WATCH_SERIES_10', 'IMESSAGE_APP_IPAD_105', 'IMESSAGE_APP_IPAD_PRO_3GEN_129', 'APP_IPAD_PRO_3GEN_11', 'APP_IPHONE_35', 'IMESSAGE_APP_IPAD_PRO_3GEN_11', 'IMESSAGE_APP_IPAD_97', 'APP_WATCH_SERIES_7', 'APP_IPAD_PRO_129', 'APP_WATCH_SERIES_3', 'APP_WATCH_SERIES_4', 'APP_IPHONE_58', 'APP_APPLE_VISION_PRO', 'APP_IPHONE_55', 'APP_IPAD_PRO_3GEN_129', 'APP_DESKTOP', 'APP_IPAD_97', 'APP_APPLE_TV', 'IMESSAGE_APP_IPHONE_47', 'APP_IPAD_105', 'IMESSAGE_APP_IPHONE_DUO', 'IMESSAGE_APP_IPHONE_40', 'IMESSAGE_APP_IPHONE_67', 'IMESSAGE_APP_IPHONE_65', 'APP_IPHONE_DUO', 'IMESSAGE_APP_IPHONE_61', 'APP_IPHONE_47', 'IMESSAGE_APP_IPAD_PRO_129', 'APP_IPHONE_40', 'APP_IPHONE_67', 'APP_WATCH_ULTRA', 'APP_IPHONE_65', 'APP_IPHONE_61'
+  screenshot set APP_IPHONE_67: created
+  screenshots uploaded to APP_IPHONE_67: 5/5 (Apple processes them in a few minutes)
+
+Builds and pricing (read only):
+  build 40: VALID, uploaded 2026-10-25T13:02
+  build 36: VALID, uploaded 2026-10-25T10:34
+  build 33: VALID, uploaded 2026-10-25T03:13
+  price schedule: exists (not changed by this script)
+
+Problems: 1
+  - age rating questions left for the owner (unknown to this script): developerAgeRatingInfoUrl, gracRatingClassificationNumber, kidsAgeBand, socialMedia, socialMediaAgeRestricted
+
+Not possible through the API (owner, in App Store Connect): App Privacy questionnaire, price (Free) and availability, App Review contact name/phone/e-mail, choosing the build, Submit for Review.
