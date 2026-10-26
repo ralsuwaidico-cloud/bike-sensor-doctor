@@ -313,7 +313,7 @@ bc_ctrl_action_t bc_link_ctrl_decide(const bc_ctrl_req_t *q, uint8_t st, uint16_
 const char *bc_src_name(uint8_t src)
 {
     switch (src) {
-    case BC_SRC_XDS: return "XDS"; case BC_SRC_BLE_STRAP: return "STRAP"; case BC_SRC_PHONE_GPS: return "PHONE GPS";
+    case BC_SRC_XDS: return "POWER METER"; case BC_SRC_BLE_STRAP: return "STRAP"; case BC_SRC_PHONE_GPS: return "PHONE GPS";
     case BC_SRC_APPLE_WATCH: return "WATCH"; case BC_SRC_WEAR_OS: return "WEAR OS"; case BC_SRC_PHONE_STRAP: return "PHONE";
     case BC_SRC_ONBOARD_GPS: return "GPS"; case BC_SRC_BLE_CSC: return "CSC SENSOR"; case BC_SRC_WEATHERKIT: return "WEATHERKIT"; case BC_SRC_OPEN_METEO: return "OPEN-METEO";
     case BC_SRC_DEMO: return "DEMO"; default: return "?";

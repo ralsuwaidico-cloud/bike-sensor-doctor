@@ -197,7 +197,7 @@ static void detail_update(void)
         if (lv.demo) snprintf(b, sizeof b, "#ff8a1f SIMULATED (demo mode)#\n%d W  %d rpm\nno real meter is read while demo is on", lv.watts, lv.rpm);
         else {
             snprintf(b, sizeof b, "#%06x %s#%s  #8494a0 DIRECT#\n%s\n#8494a0 LAST DATA# %s\n#8494a0 MEASURES# power (W), cadence (rpm)\n",
-                     ui_hex(ui_link_color(p->power.paired ? l->link : PLAT_LINK_NOT_PAIRED)), link_word(l->link, p->power.paired), sig, p->power.paired ? p->power.name : "XDS / Branta meter", age);
+                     ui_hex(ui_link_color(p->power.paired ? l->link : PLAT_LINK_NOT_PAIRED)), link_word(l->link, p->power.paired), sig, p->power.paired ? p->power.name : "Bluetooth power meter", age);
             size_t n = strlen(b);
             if (lv.power_ok) snprintf(b + n, sizeof b - n, "#56e08c %d W  %d rpm#  (%lu pkts, %lu bad)\n", lv.watts, lv.cad_ok ? lv.rpm : 0, (unsigned long)l->packets, (unsigned long)l->rejected);
             else if (l->link == PLAT_LINK_CONNECTED) snprintf(b + n, sizeof b - n, "#ffb64d NO DATA# - pedal to wake the meter\n");

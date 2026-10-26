@@ -97,3 +97,11 @@ discovery; CSC sensors; standby / screen-off current. The combined checklist is 
 otadata identical to 0.5.0–0.6.1, so only 0xf000 + 0x20000 are written), `INSTALL-v0.7.0.{ps1,bat}` (the pre-install backup
 may hold 0.6.1, 0.6.0 rev 1/2/3, 0.5.0 or 0.4.0), `RESTORE-BACKUP-BEFORE-v070.{ps1,bat}`, `ROLLBACK-TO-v050` unchanged,
 `TEST-v0.7.0.txt`. Not flashed. Battery: HW-1 unchanged — USB charging with the 500 mAh cell is still not verified safe.
+
+## 0.7.1 (26 Oct 2026) — brand-neutral labels for Cyclift
+Same as 0.7.0 except two on-screen labels: the unpaired power-meter row reads "Bluetooth power meter" (was "XDS / Branta
+meter") and the source name of the board's power-meter link reads "POWER METER" (was "XDS"). The meter link already accepts
+any standard Cycling Power (0x1818) device; the name-prefix match for meters that do not advertise the service UUID stays
+as a compatibility shim, not a default. Protocol unchanged (1.2.1, source id 1 unchanged). Host 1899/0, simulator 251
+screens / 0 issues, 418 checks / 0 failed, idf.py build OK. App hash 63ace07e…; bootloader/partitions/otadata unchanged →
+INSTALL-v0.7.1 writes only 0xf000 + 0x20000. Not flashed.

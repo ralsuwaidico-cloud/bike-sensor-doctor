@@ -1,21 +1,21 @@
-BikeComputer - ONE combined update: firmware 0.7.0 + iPhone app 0.8.0 (build 40)         26 Oct 2026
+BikeComputer - ONE combined update: firmware 0.7.1 + Cyclift app 1.0.0 (release candidate)         26 Oct 2026
 =====================================================================================================
 Order matters: board first, then the phone app. Both speak Link protocol 1.2.1 and the same profile schema.
 Board on USB with the battery DISCONNECTED (HW-1: USB charging with the 500 mAh cell is NOT verified safe).
 
-A. Board - firmware 0.7.0  (needs your approval; nothing is flashed until you run the installer)
- 1. Connect the board by USB. Double-click INSTALL-v0.7.0.bat.
+A. Board - firmware 0.7.1  (needs your approval; nothing is flashed until you run the installer)
+ 1. Connect the board by USB. Double-click INSTALL-v0.7.1.bat.
  2. It reads a full 16 MB backup (about 3.5 min) and must print "Backup verified: 16 MB, firmware <what is on the board>".
-    It accepts 0.6.1, 0.6.0 rev 1/2/3, 0.5.0 or 0.4.0. If it STOPS, nothing was changed - send me the message.
+    It accepts 0.7.0, 0.6.1, 0.6.0 rev 1/2/3, 0.5.0 or 0.4.0. If it STOPS, nothing was changed - send me the message.
  3. Type YES. It writes 2 regions only (app + OTA selector). Settings, FTP, pairings and rides are kept.
- 4. The board restarts to Home. Settings footer must read "firmware 0.7.0".
+ 4. The board restarts to Home. Settings footer must read "firmware 0.7.1".
     Rollback at any time (data kept): ROLLBACK-TO-v061.bat (touch fix, old pairing) or ROLLBACK-TO-v050.bat.
-    Exact image incl. data as it was before step 2: RESTORE-BACKUP-BEFORE-v070.bat.
+    Exact image incl. data as it was before step 2: RESTORE-BACKUP-BEFORE-v071.bat.
     Touch ever dead: press RESET. SAFE MODE: hold BOOT while pressing RESET (touch gate off for that boot).
 
-B. iPhone - TestFlight build 40 (0.8.0)
- 5. TestFlight > BikeComputer > install build 40. Your data (profile, rides, templates, plan) is kept.
-    Previous build 36 stays available under "Previous builds".
+B. iPhone - Cyclift 1.0.0 release candidate (TestFlight)
+ 5. TestFlight > Cyclift (the app formerly called BikeComputer) > install the newest build (Cyclift 1.0.0). Your data (profile, rides, templates, plan) is kept.
+    Previous the previous build stays available under "Previous builds".
 
 C. Pair the two (first time after the board's data reset)
  6. On the board: Connections > Phone. If it says "REPAIR NEEDED", hold REPAIR (the board takes a new Bluetooth
@@ -28,7 +28,7 @@ C. Pair the two (first time after the board's data reset)
     must now show your phone's name/FTP/weight; app shows "synced hh:mm".
 
 D. Test - record PASS / FAIL / NOT TESTED, with notes
- 10. TEST-v0.7.0.txt  (board + both devices: 10 pairing points, PHONE screen, touch/wake 20 cycles, Connections, Wi-Fi)
- 11. BUILD40-TEST.txt (app: pairing stages, Repair, profile sync + validation, routines journey, Train now, both/rest
+ 10. TEST-v0.7.1.txt  (board + both devices: 10 pairing points, PHONE screen, touch/wake 20 cycles, Connections, Wi-Fi)
+ 11. CYCLIFT-RC-TEST.txt (app: pairing stages, Repair, profile sync + validation, routines journey, Train now, both/rest
      days, offline, restart, migration)
 Everything in both releases is simulator/automated-tested only until you confirm it here.
