@@ -322,6 +322,13 @@ def review_detail(vid):
     if not APPLY:
         return
     attrs = {"notes": notes, "demoAccountRequired": False}
+    if d and d["attributes"].get("notes") == notes and d["attributes"].get("demoAccountRequired") is False:
+        out("  review notes + demo account not required: already set")
+        return
+    if d and not all(d["attributes"].get(k) for k in contact):
+        # Apple only accepts an update once the owner has entered the contact fields in App Store Connect
+        problem("review notes differ from ios/store/en-US/review_notes.txt but cannot be updated until the owner fills the App Review contact fields")
+        return
     if d:
         st2, r2 = patch("appStoreReviewDetails", d["id"], attrs)
     else:
