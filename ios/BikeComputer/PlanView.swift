@@ -156,7 +156,7 @@ struct PlanView: View {
                     Button { addOn = day.date } label: { HStack { Text(day.date.dayAndDate).font(.subheadline.weight(.semibold)); Spacer(); Text("free · add").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
                 } else {
                     ForEach(day.items) { w in
-                        Button { selected = w } label: { WorkoutCard(workout: w, routine: store.routine(for: w)) }.buttonStyle(.plain)
+                        Button { selected = w } label: { WorkoutCard(workout: w, routine: store.routine(for: w), routineRemoved: store.isRoutineRemoved(w)) }.buttonStyle(.plain)
                     }
                 }
             }
@@ -206,6 +206,8 @@ extension Date: Identifiable { public var id: TimeInterval { timeIntervalSince19
 struct WorkoutCard: View {
     let workout: Workout
     var routine: WorkoutTemplate? = nil
+    /// The assigned routine was deleted: the card says so instead of falling back to a generic session.
+    var routineRemoved = false
     @Environment(\.dynamicTypeSize) private var dts
     var body: some View {
         let quiet = workout.kind == .rest || workout.kind == .recoveryDay
@@ -222,7 +224,8 @@ struct WorkoutCard: View {
                     VStack(alignment: .leading, spacing: 4) { titleBlock; durationBlock }
                 }
                 if let r = routine { Text("\(r.entries.count) exercises · \(r.setCount) sets · " + r.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                else if workout.kind == .strength { Text("no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                else if workout.kind == .strength, routineRemoved, !workout.done { Text("routine removed — tap to choose another").font(.caption).foregroundStyle(BC.warn).lineLimit(2) }
+                else if workout.kind == .strength { Text(workout.done ? "logged without a routine" : "no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
                 else if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
             }
         }

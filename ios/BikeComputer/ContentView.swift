@@ -14,13 +14,17 @@ struct RootView: View {
     @State private var trainSheet: Store.TodayAction? = nil
     @State private var strengthWorkout: UUID? = nil
     @State private var resumeSession = false
+    /// A5: the local calendar day; when it changes (midnight, or back from the background) the centre button is
+    /// re-evaluated and missing plan weeks are generated.
+    @State private var day = Calendar.current.startOfDay(for: Date())
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         Group {
             if store.onboarded { tabs } else { OnboardingView() }
         }
-        .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: false); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice }
+        .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: false); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice
+            let d = Calendar.current.startOfDay(for: Date()); if d != day { day = d; store.ensurePlan() } }
         .preferredColorScheme(store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil)
         .onChange(of: recorder.state) { _, s in idleTimer(s) }
         .onAppear { device.autoConnect = store.settings.autoConnectBoard }
@@ -37,7 +41,7 @@ struct RootView: View {
                 ProfileTabView().tabPage(4, tab)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            RideTabBar(selected: $tab, recording: recorder.isActive, action: store.todayAction(), onCentre: centreTapped)
+            RideTabBar(selected: $tab, recording: recorder.isActive, action: store.todayAction(now: max(Date(), day)), onCentre: centreTapped)
         }
         .ignoresSafeArea(.keyboard)
         .tint(BC.accent)

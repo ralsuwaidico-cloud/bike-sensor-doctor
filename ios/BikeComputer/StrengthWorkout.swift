@@ -42,16 +42,16 @@ struct StrengthWorkoutScreen: View {
 
     @ViewBuilder private func content(_ w: Workout) -> some View {
         let routine = store.routine(for: w)
-        let entries = store.plannedEntries(for: w)
+        let removed = store.isRoutineRemoved(w)
+        let entries = removed ? [] : store.plannedEntries(for: w)
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 header(w, routine)
                 if let note = budgetNote { Text(note).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
-                if routine == nil { noRoutine(w) } else { exercises(entries) }
-                if !w.done, routine != nil || !entries.isEmpty {
-                    startButton(w, entries)
-                } else if w.done { Pill(text: "completed", color: BC.live) }
-                InsightCard(workout: w, entries: entries)
+                if w.done { completed(w) }
+                if removed { removedRoutine(w) } else if routine == nil { noRoutine(w) } else { exercises(entries, editable: !w.done) }
+                if !w.done, !removed, routine != nil || !entries.isEmpty { startButton(w, entries) }
+                if !w.done { InsightCard(workout: w, entries: entries) }
                 if w.fixed { Text("Fixed day — the coach never moves or changes it.").font(.caption2).foregroundStyle(.secondary) }
             }.padding()
         }
@@ -70,6 +70,32 @@ struct StrengthWorkoutScreen: View {
                 if w.edited { Pill(text: "edited", color: BC.accent) }
                 if w.routineManual { Pill(text: "your choice", color: BC.zone(5)) }
             }
+            if let r, !w.done, r.estimatedMinutes != w.minutes {
+                Text("The routine takes about \(Fmt.duration(minutes: r.estimatedMinutes)); \(Fmt.duration(minutes: w.minutes)) is planned for this day (that is what counts toward your lifting budget).").font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// The session is completed: say what was logged, and do not invite a second log.
+    private func completed(_ w: Workout) -> some View {
+        Card {
+            HStack { Pill(text: "completed", color: BC.live); Spacer() }
+            if let s = store.existingLog(forWorkout: w.id, on: w.date) {
+                Text("Logged \(s.date.dayAndDate) · \(Fmt.duration(minutes: s.minutes))" + (s.isDetailed ? " · \(s.exerciseCount) exercises, \(s.setCount) sets" : " · quick log") + (s.rpe.map { " · RPE \($0)" } ?? "")).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            } else { Text("Marked done on the calendar.").font(.footnote).foregroundStyle(.secondary) }
+            Text("It is in your history (Plan › History). To change it, edit that log rather than logging again.").font(.caption2).foregroundStyle(.secondary)
+        }.accessibilityIdentifier("sessionCompleted")
+    }
+
+    /// The assigned routine was deleted (here or on another device): say so, offer another one.
+    private func removedRoutine(_ w: Workout) -> some View {
+        Card {
+            Eyebrow(t: "Routine removed")
+            Text("The routine assigned to this session no longer exists. Choose another routine, or log the session without exercises.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if !w.done {
+                Button { chooseRoutine = true } label: { Label("Choose another routine", systemImage: "doc.on.doc").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large).accessibilityIdentifier("chooseAnotherRoutine")
+                Button { quickLog = true } label: { Text("Quick log without exercises").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
+            }
         }
     }
 
@@ -77,14 +103,16 @@ struct StrengthWorkoutScreen: View {
         Card {
             Eyebrow(t: "No routine assigned")
             Text(store.templates.isEmpty ? "Create a routine with your exercises and equipment, then assign it here. Until then this is a \(w.strengthFocus?.title.lowercased() ?? "strength") session of \(Fmt.duration(minutes: w.minutes)) without exercise detail." : "Choose one of your saved routines for this session, or set a default for every \(WeeklyAvailability.longDayNames[Store.weekdayIndex(w.date)]).").font(.footnote).foregroundStyle(.secondary)
-            Button { chooseRoutine = true } label: { Label(store.templates.isEmpty ? "Create a routine" : "Choose routine", systemImage: "doc.on.doc").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large)
-            if !w.done { Button { quickLog = true } label: { Text("Quick log without exercises").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+            if !w.done {
+                Button { chooseRoutine = true } label: { Label(store.templates.isEmpty ? "Create a routine" : "Choose routine", systemImage: "doc.on.doc").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large)
+                Button { quickLog = true } label: { Text("Quick log without exercises").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
+            }
         }
     }
 
-    private func exercises(_ entries: [ExerciseEntry]) -> some View {
+    private func exercises(_ entries: [ExerciseEntry], editable: Bool) -> some View {
         Card {
-            HStack { Eyebrow(t: "Exercises in order"); Spacer(); Button("Adjust sets") { editEntries = true }.font(.caption.bold()) }
+            HStack { Eyebrow(t: "Exercises in order"); Spacer(); if editable { Button("Adjust sets") { editEntries = true }.font(.caption.bold()) } }
             ForEach(entries) { e in
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -108,14 +136,14 @@ struct StrengthWorkoutScreen: View {
         let reps = e.sets.map { $0.reps }
         let w = e.sets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
         let r = Set(reps).count == 1 ? "\(e.sets.count) × \(reps[0])" : "\(e.sets.count) × \(reps.min()!)–\(reps.max()!)"
-        return r + (w.map { " · \(Int($0)) kg" } ?? (e.sets.first?.bodyweight == true ? " · BW" : ""))
+        return r + (w.map { " · \(WeightFmt.text($0, store.settings.units))" } ?? (e.sets.first?.bodyweight == true ? " · BW" : ""))
     }
     /// Last completed performance of this exercise (any session), compact.
     private func previous(_ e: ExerciseEntry) -> String? {
         for s in store.strength.sorted(by: { $0.date > $1.date }) {
             if let x = s.exercises?.first(where: { $0.exerciseId == e.exerciseId }), !x.doneSets.isEmpty {
                 let f = DateFormatter(); f.dateFormat = "d MMM"
-                return "\(x.summary) (\(f.string(from: s.date)))"
+                return "\(x.summary(units: store.settings.units)) (\(f.string(from: s.date)))"
             }
         }
         return nil
@@ -136,11 +164,11 @@ struct StrengthWorkoutScreen: View {
 
     private func moreMenu(_ w: Workout) -> some View {
         Menu {
-            Button { chooseRoutine = true } label: { Label(store.routine(for: w) == nil ? "Choose routine" : "Replace routine", systemImage: "doc.on.doc") }
+            Button { chooseRoutine = true } label: { Label(store.isRoutineRemoved(w) ? "Choose another routine" : store.routine(for: w) == nil ? "Choose routine" : "Replace routine", systemImage: "doc.on.doc") }
             if let r = store.routine(for: w) {
                 let wd = Store.weekdayIndex(w.date)
-                if store.weekdayRoutines[wd] != r.id { Button { store.setWeekdayRoutine(r, weekday: wd) } label: { Label("Set as every \(WeeklyAvailability.longDayNames[wd])", systemImage: "calendar.badge.plus") } }
-                else { Button { store.setWeekdayRoutine(nil, weekday: wd) } label: { Label("Stop using as \(WeeklyAvailability.longDayNames[wd]) default", systemImage: "calendar.badge.minus") } }
+                if store.weekdayRoutines[wd] != r.id { Button { budgetNote = store.setWeekdayRoutine(r, weekday: wd) } label: { Label("Set as every \(WeeklyAvailability.longDayNames[wd])", systemImage: "calendar.badge.plus") } }
+                else { Button { _ = store.setWeekdayRoutine(nil, weekday: wd) } label: { Label("Stop using as \(WeeklyAvailability.longDayNames[wd]) default", systemImage: "calendar.badge.minus") } }
                 Button(role: .destructive) { budgetNote = store.assign(template: nil, to: w) } label: { Label("Remove routine from this session", systemImage: "xmark.circle") }
             }
             Divider()
@@ -162,23 +190,24 @@ struct InsightCard: View {
     @State private var askTemplate = false
     @State private var pendingInsight: WorkoutInsight? = nil
 
-    private var insight: WorkoutInsight {
-        InsightEngine.next(routine: workout.flatMap { store.routine(for: $0) }, planned: entries, sessions: store.strength, plan: store.plan, equipment: store.equipment, catalogue: store.allExercises, on: workout?.date ?? Date())
-    }
     var body: some View {
-        let ins = insight
+        let ins = store.insight(for: workout, entries: entries)
         let ignored = store.ignoredInsights.contains(ins.id)
-        let undoable = store.appliedProposals.last.map { $0.id == "insight-\(ins.id)" && $0.before.id == workout?.id } ?? false
+        // Undo follows the change that was applied, even when the insight shown afterwards is a different one
+        let applied = store.lastAcceptedInsight(for: workout?.id)
         Card {
             HStack { Eyebrow(t: "Next workout insight"); Spacer(); Pill(text: ins.label.rawValue, color: ins.label == .suggestion ? BC.accent : BC.stale) }
+            if let a = applied {
+                HStack(alignment: .firstTextBaseline) { Text("Applied to this session: \(a.text)").font(.footnote).fixedSize(horizontal: false, vertical: true); Spacer(); Button("Undo") { _ = store.undoLastProposal() }.buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("insightUndo") }
+            }
             Text(ignored ? "Ignored: \(ins.text)" : ins.text).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true).foregroundStyle(ignored ? .secondary : .primary)
             Text("Evidence: \(ins.evidence)").font(.caption2).foregroundStyle(.secondary)
             DisclosureGroup(isExpanded: $showWhy) { Text(ins.why).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).padding(.top, 2) } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
             if ins.kind != .insufficient {
                 HStack(spacing: 8) {
-                    if ins.change != nil, let w = workout, !w.done, !ignored, !undoable { Button("Accept") { pendingInsight = ins; askTemplate = true }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small) }
-                    if !ignored, !undoable { Button("Ignore") { store.ignoreInsight(ins) }.buttonStyle(.bordered).controlSize(.small) }
-                    if undoable { Button("Undo") { _ = store.undoLastProposal() }.buttonStyle(.bordered).controlSize(.small); Text("applied to this session").font(.caption2).foregroundStyle(.secondary) }
+                    if ins.change != nil, let w = workout, !w.done, !ignored, applied == nil { Button("Accept") { pendingInsight = ins; askTemplate = true }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small).accessibilityIdentifier("insightAccept") }
+                    if ignored { Button("Undo ignore") { store.unignoreInsight(ins.id) }.buttonStyle(.bordered).controlSize(.small) }
+                    else if applied == nil { Button("Ignore") { store.ignoreInsight(ins) }.buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("insightIgnore") }
                     Spacer()
                 }
             }
@@ -209,8 +238,8 @@ struct ChooseRoutineSheet: View {
                 Section(store.templates.isEmpty ? "No routines yet" : "Your routines") {
                     ForEach(store.templates) { t in
                         Button {
-                            let note = store.assign(template: t, to: workout)
-                            if asDefault { store.setWeekdayRoutine(t, weekday: wd) }
+                            var note = store.assign(template: t, to: workout)
+                            if asDefault { note = store.setWeekdayRoutine(t, weekday: wd) ?? note }
                             onAssigned(note); dismiss()
                         } label: {
                             HStack {
@@ -229,7 +258,7 @@ struct ChooseRoutineSheet: View {
             }
             .navigationTitle("Choose routine").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-            .sheet(isPresented: $createNew) { TemplateEditor(template: nil) { t in let note = store.assign(template: t, to: workout); if asDefault { store.setWeekdayRoutine(t, weekday: wd) }; onAssigned(note); dismiss() } }
+            .sheet(isPresented: $createNew) { TemplateEditor(template: nil) { t in var note = store.assign(template: t, to: workout); if asDefault { note = store.setWeekdayRoutine(t, weekday: wd) ?? note }; onAssigned(note); dismiss() } }
         }
     }
     private func budgetHint(_ t: WorkoutTemplate) -> String {
@@ -265,7 +294,7 @@ struct TemplateEditor: View {
                 } footer: { Text("The estimate is about 2.5 minutes per set plus a warm-up. The duration counts toward your lifting budget when the routine is on the calendar.") }
                 Section {
                     if entries.isEmpty { Text("Add your exercises in the order you do them. Sets, reps and weights here are the plan; actual values are recorded in the workout.").font(.footnote).foregroundStyle(.secondary) }
-                    ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }) }
+                    ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }, units: store.settings.units) }
                     .onMove { entries.move(fromOffsets: $0, toOffset: $1) }
                     Button { showSearch = true } label: { Label("Add exercise", systemImage: "plus.circle.fill") }.accessibilityIdentifier("addExercise")
                     if entries.count >= 2 { supersets }
@@ -286,6 +315,14 @@ struct TemplateEditor: View {
             .onAppear { if !loaded { loaded = true; if let t = template { name = t.name; focus = t.focus; entries = t.entries; minutes = t.minutesEstimate } } }
         }
     }
+    /// The saved template: the edit time moves only when the content changed (a rename keeps last session's weights).
+    static func apply(name: String, focus: StrengthFocus, entries: [ExerciseEntry], minutes: Int?, to old: WorkoutTemplate?, now: Date = Date()) -> WorkoutTemplate {
+        var t = old ?? WorkoutTemplate(name: "", entries: [], updatedAt: now)
+        let changed = old == nil || old!.entries != entries || old!.focus != focus || old!.minutesEstimate != minutes
+        t.name = name.trimmingCharacters(in: .whitespaces); t.focus = focus; t.entries = entries; t.minutesEstimate = minutes
+        if changed { t.updatedAt = now }
+        return t
+    }
     private var estimate: Int { min(180, max(15, 5 + Int((Double(entries.reduce(0) { $0 + $1.sets.count }) * 2.5).rounded()))) }
     private var supersets: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -301,11 +338,12 @@ struct TemplateEditor: View {
         return nil
     }
     private func save() {
-        var t = template ?? WorkoutTemplate(name: "", entries: [])
-        t.name = name.trimmingCharacters(in: .whitespaces); t.focus = focus; t.entries = entries; t.minutesEstimate = minutes; t.updatedAt = Date()
+        let t = TemplateEditor.apply(name: name, focus: focus, entries: entries, minutes: minutes, to: template)
         store.saveTemplate(t)
-        // keep sessions that use this routine in step with its duration (not-yet-done, not hand-edited duration)
-        for i in store.plan.indices where store.plan[i].templateId == t.id && !store.plan[i].done && !store.plan[i].edited { store.plan[i].minutes = t.estimatedMinutes }
+        // future, open sessions using this routine follow its duration (completed and past sessions, and hand-edited
+        // durations, are never changed). Their exercises follow automatically: plannedEntries reads the template.
+        let today = Calendar.current.startOfDay(for: Date())
+        for i in store.plan.indices where store.plan[i].templateId == t.id && !store.plan[i].done && !store.plan[i].edited && store.plan[i].date >= today { store.plan[i].minutes = t.estimatedMinutes }
         onSaved(t); dismiss()
     }
 }
@@ -321,7 +359,7 @@ struct PlannedSetsEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section { ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }) }.onMove { entries.move(fromOffsets: $0, toOffset: $1) } } footer: { Text("Changes apply to this session only. The routine template stays as you saved it.") }
+                Section { ForEach($entries) { $e in ExerciseEntryRow(entry: $e, expanded: Binding(get: { expanded == e.id }, set: { expanded = $0 ? e.id : nil }), onDelete: { entries.removeAll { $0.id == e.id } }, units: store.settings.units) }.onMove { entries.move(fromOffsets: $0, toOffset: $1) } } footer: { Text("Changes apply to this session only. The routine template stays as you saved it.") }
                 Section { Button("Reset to the routine") { if let r = store.routine(for: workout) { entries = r.prefilled(from: store.lastSession(template: r)) } } }
             }
             .navigationTitle("This session's sets").navigationBarTitleDisplayMode(.inline)
@@ -414,7 +452,7 @@ struct StrengthSessionView: View {
                         else { Button { store.resumeActiveSession() } label: { Label("Resume", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)) }
                         Button(role: .destructive) { confirmDiscard = true } label: { Text("Discard").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
                     }
-                    Text("Saved as you go — close the app and come back later if you need to.").font(.caption2).foregroundStyle(.secondary)
+                    Text("Saved as you go — close Cyclift and come back later if you need to.").font(.caption2).foregroundStyle(.secondary)
                 }
                 ForEach(Array((s.exercises ?? []).enumerated()), id: \.element.id) { idx, e in exerciseCard(e, index: idx) }
                 Button { showFinish = true } label: { Label("Finish workout", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
@@ -431,7 +469,7 @@ struct StrengthSessionView: View {
             }
             if let prev = previousText(e) { Text("Previous: \(prev)").font(.caption).foregroundStyle(.secondary).lineLimit(2) } else { Text("No previous log for this exercise").font(.caption).foregroundStyle(.secondary) }
             ForEach(Array(e.sets.enumerated()), id: \.element.id) { si, st in
-                LiveSetRow(number: si + 1, set: st, onChange: { newSet in store.updateActiveSession { $0.exercises?[index].sets[si] = newSet } })
+                LiveSetRow(number: si + 1, set: st, units: store.settings.units, onChange: { newSet in store.updateActiveSession { $0.exercises?[index].sets[si] = newSet } })
                 if si < e.sets.count - 1 { Divider() }
             }
             HStack {
@@ -442,7 +480,7 @@ struct StrengthSessionView: View {
         }
     }
     private func previousText(_ e: ExerciseEntry) -> String? {
-        for s in store.strength.sorted(by: { $0.date > $1.date }) { if let x = s.exercises?.first(where: { $0.exerciseId == e.exerciseId }), !x.doneSets.isEmpty { return x.doneSets.map { $0.text }.joined(separator: " · ") } }
+        for s in store.strength.sorted(by: { $0.date > $1.date }) { if let x = s.exercises?.first(where: { $0.exerciseId == e.exerciseId }), !x.doneSets.isEmpty { return x.doneSets.map { $0.text(units: store.settings.units) }.joined(separator: " · ") } }
         return nil
     }
     private func clock(_ s: Int) -> String { String(format: "%d:%02d", s / 60, s % 60) }
@@ -454,7 +492,10 @@ struct StrengthSessionView: View {
                     Picker("Effort", selection: Binding(get: { rpe ?? 0 }, set: { rpe = $0 == 0 ? nil : $0 })) { Text("—").tag(0); ForEach(1...10, id: \.self) { Text("RPE \($0)").tag($0) } }
                     TextField("Notes (optional)", text: $notes, axis: .vertical).lineLimit(2...4)
                 }
-                Section { Text("Only the sets you marked done are saved. The session is recorded as completed and counts toward your lifting hours; the planned session on the calendar is marked done.").font(.footnote).foregroundStyle(.secondary) }
+                Section {
+                    if (store.activeSession?.exercises ?? []).allSatisfy({ $0.doneSets.isEmpty }) { Text("No set is ticked as done yet: the session would be saved with its duration only (like a quick log). Go back and tick the sets you did, or save anyway.").font(.footnote).foregroundStyle(BC.warn) }
+                    Text("Only the sets you marked done are saved. The session is recorded as completed and counts toward your lifting hours; the planned session on the calendar is marked done.").font(.footnote).foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("Finish workout").navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -469,6 +510,7 @@ struct StrengthSessionView: View {
 struct LiveSetRow: View {
     let number: Int
     let set: SetEntry
+    var units: AppSettings.Units = .metric
     var onChange: (SetEntry) -> Void
     @State private var weightText = ""
     var body: some View {
@@ -479,12 +521,16 @@ struct LiveSetRow: View {
             Text("\(set.reps)\(set.unilateral ? "/side" : "")").font(.footnote).monospacedDigit().frame(minWidth: 44, alignment: .leading)
             if set.bodyweight { Text("BW").font(.footnote).foregroundStyle(.secondary) }
             else {
-                TextField("kg", text: $weightText).keyboardType(.decimalPad).frame(width: 56).textFieldStyle(.roundedBorder)
-                    .onChange(of: weightText) { _, v in var s = set; s.weightKg = Double(v.replacingOccurrences(of: ",", with: ".")); onChange(s) }
-                Text("kg").font(.footnote).foregroundStyle(.secondary)
+                TextField(WeightFmt.unit(units), text: $weightText).keyboardType(.decimalPad).frame(width: 56).textFieldStyle(.roundedBorder)
+                    .onChange(of: weightText) { _, v in
+                        // only a real edit changes the stored kilograms (no drift from showing 20 kg as 44.1 lb)
+                        guard v != (set.weightKg.map { WeightFmt.number($0, units) } ?? "") else { return }
+                        var s = set; s.weightKg = WeightFmt.parse(v, units); onChange(s)
+                    }
+                Text(WeightFmt.unit(units)).font(.footnote).foregroundStyle(.secondary)
             }
         }
-        .onAppear { weightText = set.weightKg.map { $0 == $0.rounded() ? "\(Int($0))" : String(format: "%.1f", $0) } ?? "" }
+        .onAppear { weightText = set.weightKg.map { WeightFmt.number($0, units) } ?? "" }
         .opacity(set.done ? 1 : 0.9)
     }
 }
@@ -517,6 +563,7 @@ struct EquipmentPage: View {
 struct WeekdayRoutinesPage: View {
     @EnvironmentObject private var store: Store
     @State private var pick: Int? = nil
+    @State private var note: String? = nil
     var body: some View {
         List {
             Section {
@@ -525,13 +572,14 @@ struct WeekdayRoutinesPage: View {
                         Text(WeeklyAvailability.longDayNames[wd]).frame(width: 96, alignment: .leading)
                         Spacer()
                         Menu {
-                            ForEach(store.templates) { t in Button(t.name) { store.setWeekdayRoutine(t, weekday: wd) } }
-                            if store.weekdayRoutines[wd] != nil { Divider(); Button("No default", role: .destructive) { store.setWeekdayRoutine(nil, weekday: wd) } }
+                            ForEach(store.templates) { t in Button(t.name) { note = store.setWeekdayRoutine(t, weekday: wd) } }
+                            if store.weekdayRoutines[wd] != nil { Divider(); Button("No default", role: .destructive) { _ = store.setWeekdayRoutine(nil, weekday: wd); note = nil } }
                         } label: { Text(store.template(store.weekdayRoutines[wd])?.name ?? "—").foregroundStyle(store.weekdayRoutines[wd] == nil ? .secondary : .primary).lineLimit(1) }
                         .disabled(store.templates.isEmpty)
                     }.frame(minHeight: 44)
                 }
-            } footer: { Text(store.templates.isEmpty ? "Create a routine first (Templates)." : "Defaults fill the strength sessions of that weekday in this and future weeks, unless you chose a routine for a session by hand.") }
+            } footer: { Text(store.templates.isEmpty ? "Create a routine first (Templates)." : "Defaults fill the strength sessions of that weekday in this and future weeks, unless you chose a routine for a session by hand. Completed sessions are never changed.") }
+            if let note { Section { Text(note).font(.footnote).foregroundStyle(BC.warn) } }
         }
         .navigationTitle("Routine per weekday").navigationBarTitleDisplayMode(.inline)
     }
