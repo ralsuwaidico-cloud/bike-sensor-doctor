@@ -212,7 +212,10 @@ def app_info(app_id, primary_locale):
                       "sexualContentGraphicAndNudity", "sexualContentOrNudity", "violenceCartoonOrFantasy",
                       "violenceRealistic", "violenceRealisticProlongedGraphicOrSadistic", "gunsOrOtherWeapons"}
             falses = {"gambling", "unrestrictedWebAccess", "lootBox", "messagingAndChat", "userGeneratedContent",
-                      "advertising", "parentalControls", "ageAssurance", "seventeenPlus"}
+                      "advertising", "parentalControls", "ageAssurance", "seventeenPlus", "socialMedia",
+                      "socialMediaAgeRestricted"}
+            optional = {"developerAgeRatingInfoUrl", "gracRatingClassificationNumber", "kidsAgeBand",
+                        "ageRatingOverride", "ageRatingOverrideV2", "koreaAgeRatingOverride"}   # not a kids app; no override
             trues = {"healthOrWellnessTopics"}   # honest answer for a fitness-training app
             new = {}
             for k in attrs:
@@ -222,7 +225,7 @@ def app_info(app_id, primary_locale):
                     new[k] = False
                 elif k in trues:
                     new[k] = True
-            skipped = sorted(k for k in attrs if k not in new and attrs[k] is None)
+            skipped = sorted(k for k in attrs if k not in new and k not in optional and attrs[k] is None)
             st2, r2 = patch("ageRatingDeclarations", decl["id"], new)
             out(f"  age rating: {len(new)} answers " + ("set" if st2 == 200 else f"FAILED (HTTP {st2}): {err(r2)}"))
             if st2 != 200:
@@ -347,12 +350,14 @@ def screenshots(loc_id):
     for s in sets:
         sid = s["id"]
         st3, r3 = call("GET", f"/v1/appScreenshotSets/{sid}/appScreenshots", query={"limit": 50})
-        n = len(r3.get("data", [])) if st3 == 200 else "?"
-        out(f"  screenshot set {s['attributes'].get('screenshotDisplayType')}: {n} screenshot(s)")
+        items = r3.get("data", []) if st3 == 200 else []
+        states = [((i["attributes"].get("assetDeliveryState") or {}).get("state") or "?") for i in items]
+        out(f"  screenshot set {s['attributes'].get('screenshotDisplayType')}: {len(items)} screenshot(s)" + (f" — {', '.join(states)}" if states else ""))
     if not APPLY or not files:
         return
     sizes = {png_size(f) for f in files}
-    display = "APP_IPHONE_67" if sizes <= {(1290, 2796), (1284, 2778)} else "APP_IPHONE_69"
+    # The API has no separate 6.9" type: APP_IPHONE_67 is the largest iPhone set and accepts 1320x2868 (verified 26 Oct 2026).
+    display = "APP_IPHONE_67" if sizes <= {(1290, 2796), (1284, 2778), (1320, 2868)} else "APP_IPHONE_69"
     target = next((s for s in sets if s["attributes"].get("screenshotDisplayType") in (display,)), None)
     if target is None:
         for dt in ([display, "APP_IPHONE_67"] if display == "APP_IPHONE_69" else [display]):
