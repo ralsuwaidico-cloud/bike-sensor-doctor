@@ -1,0 +1,19 @@
+BikeComputer iOS CI — build 56 — 2026-10-26 08:43 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+RESULT tests: FAILED (exit 65)
+RESULT launch smoke (Release): ok (Executed 1 test, with 0 failures)
+Accounts: not configured (SUPABASE_URL / SUPABASE_ANON_KEY secrets absent) — the app runs guest-only
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 1.0.0 (56) — display name 'Cyclift'
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (56) — display name 'Cyclift'
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 7462537 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: skipped (not requested for this run)
+commit 218ebc99b860c85de713f34bf66942242ec8082a  branch ios/cyclift-adapt  job failure
