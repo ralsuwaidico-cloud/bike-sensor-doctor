@@ -1,0 +1,3 @@
+build exit 65
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:174:86: error: pattern cannot match values of type '(offset: Int, element: Int)'
+commit e9c676644e540b20baadf137bda174a1a193a6d2
