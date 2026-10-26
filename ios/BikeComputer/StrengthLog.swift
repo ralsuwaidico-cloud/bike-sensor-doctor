@@ -424,7 +424,7 @@ struct HybridCoachCard: View {
     var body: some View {
         let a = self.a
         Card(accent: true) {
-            HStack { Eyebrow(t: "\(store.profile.trainingMode.title) coach (rules) · \(Date().shortDay)"); Spacer(); Pill(text: a.combined, color: pillColor(a.combined)) }
+            HeaderRow(title: "\(store.profile.trainingMode.title) coach (rules) · \(Date().shortDay)") { Pill(text: a.combined, color: pillColor(a.combined)) }
             Text(a.recommendation).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) { if let c = a.cycling { progress("Cycling", c, color: BC.accent) }; if let s = a.strength { progress("Strength", s, color: BC.zone(5)) } }
@@ -447,7 +447,7 @@ struct HybridCoachCard: View {
             if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
             ActionRow(actions: actionSpecs(a)).accessibilityIdentifier("coachActions")
         }
-        if let w = nextStrength { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
+        if let w = nextStrength, !w.plannerBuilt { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
         if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
     }
 
@@ -547,12 +547,7 @@ struct HybridCoachCard: View {
             row("Status", status(t), last: true)
         }.background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
     }
-    private func row(_ k: String, _ v: String, last: Bool = false) -> some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) { Text(k).font(.footnote).foregroundStyle(.secondary).frame(width: 84, alignment: .leading); Text(v).font(.footnote.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true) }.padding(.horizontal, 10).padding(.vertical, 6)
-            if !last { Divider().padding(.leading, 10) }
-        }
-    }
+    private func row(_ k: String, _ v: String, last: Bool = false) -> some View { KeyValueRow(key: k, value: v, last: last) }
     private func zoneWatts(_ z: Int) -> String { let p = store.profile.prescriptionZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
 }
 

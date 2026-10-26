@@ -108,11 +108,21 @@ enum TrendChartMath {
         return max(s, b.first?.start ?? s)
     }
 
-    /// Axis label positions: every n-th Monday counted back from the newest week (stable while scrolling).
-    static func labelDates(_ b: [WeekBucket], stride n: Int) -> [Date] {
+    /// Axis label weeks: every n-th week, phased so that the OLDEST week of the window the chart opens on is labelled.
+    /// The next label to the left is then a full stride away and never shows as a clipped fragment at the edge.
+    static func labelDates(_ b: [WeekBucket], stride n: Int, visibleWeeks w: Int) -> [Date] {
         let starts = b.map { $0.start }
         guard !starts.isEmpty, n > 0 else { return [] }
-        return starts.enumerated().filter { (starts.count - 1 - $0.offset) % n == 0 }.map { $0.element }
+        let phase = max(0, w - 1) % n
+        return starts.enumerated().filter { (starts.count - 1 - $0.offset) % n == phase }.map { $0.element }
+    }
+    /// Labels sit under the middle of their bar (Thursday noon of the week).
+    static let labelOffset: TimeInterval = 3.5 * 86_400
+    /// Y grid in whole hours: about four lines whatever the range.
+    static func yTicks(maxMinutes: Int) -> [Double] {
+        let hours = max(1.0, Double(maxMinutes) / 60)
+        let step = max(1, Int((hours / 4).rounded(.up)))
+        return stride(from: 0, through: Double(Int(hours.rounded(.up)) + step), by: Double(step)).map { $0 * 60 }
     }
     static func axisLabel(_ d: Date, calendar cal: Calendar = .current) -> String {
         let df = DateFormatter(); df.locale = Locale(identifier: "en_GB"); df.calendar = cal; df.timeZone = cal.timeZone; df.dateFormat = "d MMM"
@@ -175,8 +185,9 @@ struct WeeklyTrendChart: View {
 
     private func chart(sel: WeekBucket?) -> some View {
         let stride = range.labelStride(accessibility: dts.isAccessibilitySize)
-        let labels = TrendChartMath.labelDates(buckets, stride: stride)
+        let labels = TrendChartMath.labelDates(buckets, stride: stride, visibleWeeks: range.weeks).map { $0.addingTimeInterval(TrendChartMath.labelOffset) }
         let maxY = max(buckets.map { $0.minutes }.max() ?? 0, target ?? 0, 60)
+        let ticks = TrendChartMath.yTicks(maxMinutes: maxY)
         return Chart {
             ForEach(buckets) { b in
                 BarMark(x: .value("Week", b.start, unit: .weekOfYear), y: .value("Minutes", Double(b.minutes)), width: .ratio(0.7))
@@ -200,18 +211,18 @@ struct WeeklyTrendChart: View {
                     }
             }
         }
-        .chartYScale(domain: 0...(Double(maxY) * 1.15))
+        .chartYScale(domain: 0...max(Double(maxY) * 1.15, ticks.last ?? 60))
         .chartXAxis {
             AxisMarks(values: labels) { v in
                 AxisGridLine()
                 AxisTick()
-                AxisValueLabel { if let d = v.as(Date.self) { Text(TrendChartMath.axisLabel(d)).font(.caption) } }
+                AxisValueLabel { if let d = v.as(Date.self) { Text(TrendChartMath.axisLabel(d.addingTimeInterval(-TrendChartMath.labelOffset))).font(.caption) } }
             }
         }
         .chartYAxis {
-            AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { v in
+            AxisMarks(position: .trailing, values: ticks) { v in
                 AxisGridLine()
-                AxisValueLabel { if let m = v.as(Double.self) { Text(Fmt.compact(minutes: Int(m))).font(.caption) } }
+                AxisValueLabel { if let m = v.as(Double.self) { Text(m == 0 ? "0" : "\(Int(m / 60)) h").font(.caption) } }
             }
         }
         .chartScrollableAxes(.horizontal)
@@ -219,6 +230,8 @@ struct WeeklyTrendChart: View {
         .chartScrollPosition(x: $scrollStart)
         .chartXSelection(value: $selected)
         .frame(height: dts.isAccessibilitySize ? 260 : 200)
+        // axis labels stop growing at xxLarge (like the Health app); the header above carries the large text
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .accessibilityChartDescriptor(TrendChartDescriptor(title: title, buckets: buckets, singular: singular, plural: plural))
         .accessibilityIdentifier(identifier)
     }

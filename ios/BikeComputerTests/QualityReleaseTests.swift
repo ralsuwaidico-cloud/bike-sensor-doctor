@@ -504,12 +504,17 @@ final class QualityReleaseTests: XCTestCase {
         XCTAssertEqual(TrendChartMath.rangeText(f.date(from: "2026-09-28")!, f.date(from: "2026-10-04")!, now: f.date(from: "2026-10-26")!), "28 Sep – 4 Oct")
         XCTAssertEqual(TrendChartMath.rangeText(f.date(from: "2025-12-29")!, f.date(from: "2026-01-04")!, now: f.date(from: "2026-10-26")!), "29 Dec 2025 – 4 Jan 2026")
         XCTAssertEqual(TrendChartMath.clock(125), "2 h 05 min"); XCTAssertEqual(TrendChartMath.clock(45), "45 min")
+        XCTAssertEqual(TrendChartMath.yTicks(maxMinutes: 300), [0, 120, 240, 360])
+        XCTAssertEqual(TrendChartMath.yTicks(maxMinutes: 150), [0, 60, 120, 180, 240])
         let b = (0..<104).map { WeekBucket(start: cal.date(byAdding: .day, value: -7 * (103 - $0), to: TrainingLedger.monday(of: Date()))!, minutes: 0, sessions: 0) }
         for r in ChartRange.allCases {
             for ax in [false, true] {
                 let n = r.labelStride(accessibility: ax)
-                let labels = TrendChartMath.labelDates(b, stride: n)
-                XCTAssertEqual(labels.last, b.last?.start, "the newest week is always labelled")
+                let labels = TrendChartMath.labelDates(b, stride: n, visibleWeeks: r.weeks)
+                // the oldest week of the window the chart opens on is labelled; the label before it is a full stride away
+                let oldestVisible = b[b.count - r.weeks].start
+                XCTAssertTrue(labels.contains(oldestVisible), "\(r) ax=\(ax)")
+                XCTAssertFalse(labels.contains { $0 < oldestVisible && $0 >= b[b.count - r.weeks - n + 1 < 0 ? 0 : b.count - r.weeks - n + 1].start })
                 // at most 5 labels (6 at the 1-year range) in any visible window: "12 Oct" labels never overlap
                 let perWindow = Int((Double(r.weeks) / Double(n)).rounded(.up))
                 XCTAssertLessThanOrEqual(perWindow, ax ? 3 : 5, "\(r) ax=\(ax)")

@@ -224,3 +224,43 @@ struct FlowRow<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View { FlowLayout(spacing: spacing).callAsFunction { content } }
 }
+
+/// Key / value table row: side by side normally, stacked at accessibility sizes (no hyphenated keys).
+struct KeyValueRow: View {
+    let key: String
+    let value: String
+    var last = false
+    @Environment(\.dynamicTypeSize) private var dts
+    var body: some View {
+        VStack(spacing: 0) {
+            Group {
+                if dts.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(key).font(.footnote).foregroundStyle(.secondary)
+                        Text(value).font(.footnote.weight(.medium)).fixedSize(horizontal: false, vertical: true)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(key).font(.footnote).foregroundStyle(.secondary).frame(width: 84, alignment: .leading)
+                        Text(value).font(.footnote.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .accessibilityElement(children: .combine)
+            if !last { Divider().padding(.leading, 10) }
+        }
+    }
+}
+
+/// Card header: eyebrow and a trailing pill side by side, or stacked when they do not fit on one line.
+struct HeaderRow<Trailing: View>: View {
+    let title: String
+    @ViewBuilder var trailing: Trailing
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) { Eyebrow(t: title).fixedSize(); Spacer(minLength: DS.s); trailing }
+            VStack(alignment: .leading, spacing: DS.xs) { Eyebrow(t: title).fixedSize(horizontal: false, vertical: true); trailing }
+        }
+    }
+}

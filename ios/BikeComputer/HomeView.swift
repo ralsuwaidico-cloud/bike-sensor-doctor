@@ -73,12 +73,7 @@ struct HomeView: View {
         a.append(ActionSpec(label: "Swap", a11y: "Swap today's session", identifier: "coachSwap") { showAlternatives = true })
         return a
     }
-    private func tableRow(_ k: String, _ v: String, last: Bool = false) -> some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) { Text(k).font(.footnote).foregroundStyle(.secondary).frame(width: 84, alignment: .leading); Text(v).font(.footnote.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading) }.padding(.horizontal, 10).padding(.vertical, 6)
-            if !last { Divider().padding(.leading, 10) }
-        }
-    }
+    private func tableRow(_ k: String, _ v: String, last: Bool = false) -> some View { KeyValueRow(key: k, value: v, last: last) }
     private var budgetText: String { store.profile.trainingMode == .cycling ? "\(store.profile.hoursPerWeek) h/week · \(store.profile.level.title.lowercased())" : "\(store.profile.hoursPerWeek) h cycling · \(store.profile.liftingHoursPerWeek) h lifting" }
     private func zoneWatts(_ z: Int) -> String { let p = store.profile.prescriptionZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
 

@@ -326,6 +326,13 @@ enum StrengthPlanner {
         if e.custom { sc += 2 }
         if !history(e.id, ctx: ctx).isEmpty { sc += 3 }
         if (spec.role == .main || spec.role == .secondary) && m.compound { sc += 3 }
+        // main / secondary lifts: prefer exercises the rider can load with equipment they own (a loaded hinge beats a
+        // bodyweight bridge as the main lift; progression needs a load)
+        if spec.role == .main || spec.role == .secondary {
+            let loadOptions = Set(e.equipment.map(EquipmentProfile.normalised)).subtracting(ExerciseLibrary.accessories).subtracting(["bodyweight"])
+            let owned = Set(ctx.equipment.owned.map(EquipmentProfile.normalised))
+            if !loadOptions.isEmpty && (!ctx.equipment.isSet || !loadOptions.isDisjoint(with: owned)) { sc += 2 }
+        }
         switch ctx.experience {
         case .beginner: if m.difficulty == 1 { sc += 2 }
         case .intermediate: if m.difficulty == 2 && spec.role == .main { sc += 1 }
@@ -504,6 +511,8 @@ enum StrengthPlanner {
         for i in picked.indices where picked[i].0.role == .core || ["arms", "accessory", "core"].contains(region(ExerciseLibrary.meta(picked[i].1).slot)) {
             sets[i] = picked[i].0.role == .core ? (week.deload ? 2 : 3) : min(3, max(2, sets[i]))
         }
+        // a main lift always gets at least 3 working sets before deload / interference reductions
+        for i in picked.indices where picked[i].0.role == .main { sets[i] = min(maxSets, max(3, sets[i])) }
         // interference: lower body light before a key ride / after a long or hard one
         let legsKept = week.hardRideNext != nil || week.hardRideSameDayAfter != nil || week.hardRideBefore != nil
         var interferenceText: String? = nil
@@ -516,6 +525,8 @@ enum StrengthPlanner {
         for (i, (spec, e)) in picked.enumerated() {
             let m = ExerciseLibrary.meta(e)
             var d = dose(role: spec.role, goal: goal, experience: exp)
+            // bodyweight-only with the rider's equipment: higher reps (a load cannot be added)
+            if bodyweightOnly(e, ctx: ctx), !isHold(e) { d.reps = max(10, d.reps.lowerBound)...max(15, d.reps.upperBound) }
             var n = sets[i]
             var cyclingNote: String? = nil
             if m.slot.isLower && legsKept { n = max(2, n - 1); d.rpe = min(d.rpe, 6); cyclingNote = interferenceText }
@@ -554,6 +565,11 @@ enum StrengthPlanner {
         return Built(entries: entries, rationale: r)
     }
 
+    static func bodyweightOnly(_ e: Exercise, ctx: PlannerContext) -> Bool {
+        let loadOptions = Set(e.equipment.map(EquipmentProfile.normalised)).subtracting(ExerciseLibrary.accessories).subtracting(["bodyweight"])
+        let owned = Set(ctx.equipment.owned.map(EquipmentProfile.normalised))
+        return loadOptions.isEmpty || (ctx.equipment.isSet && loadOptions.isDisjoint(with: owned))
+    }
     static func isHold(_ e: Exercise) -> Bool { let n = e.name.lowercased(); return ["plank", "hold", "wall sit", "hollow"].contains { n.contains($0) } }
 
     static func setsReason(_ region: String, ctx: PlannerContext, week: WeekContext) -> String {

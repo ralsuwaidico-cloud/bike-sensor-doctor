@@ -58,36 +58,52 @@ final class LayoutAudit: XCTestCase {
         return app
     }
 
-    // MARK: frame checks
+    // MARK: frame checks — one accessibility snapshot per screen (querying elements one by one is far too slow)
+    private func flatten(_ s: XCUIElementSnapshot) -> [XCUIElementSnapshot] { [s] + s.children.flatMap { flatten($0) } }
+    private func elements(_ app: XCUIApplication) -> [XCUIElementSnapshot] { (try? app.snapshot()).map { flatten($0) } ?? [] }
+
     private func checkKey(_ app: XCUIApplication, ids: [String], screen: String, minHeight: CGFloat = 44) {
+        let all = elements(app)
         let win = app.windows.firstMatch.frame
         var frames: [(String, CGRect)] = []
         for id in ids {
-            let e = app.buttons[id].firstMatch
-            guard e.exists else { note("\(screen): \(id) not found"); continue }
+            guard let e = all.first(where: { $0.elementType == .button && ($0.identifier == id || $0.label == id) }) else { note("\(screen): \(id) not found"); continue }
             let f = e.frame
             frames.append((id, f))
             XCTAssertGreaterThanOrEqual(f.minX, win.minX - 1, "\(screen) \(id) clipped left \(f)")
             XCTAssertLessThanOrEqual(f.maxX, win.maxX + 1, "\(screen) \(id) clipped right \(f)")
             XCTAssertGreaterThanOrEqual(f.height, minHeight - 0.5, "\(screen) \(id) shorter than \(minHeight) pt: \(f.height)")
-            if f.maxY <= win.maxY && f.minY >= win.minY { XCTAssertTrue(e.isHittable, "\(screen) \(id) not hittable") }
         }
+        if let first = ids.first { let b = app.buttons[first].firstMatch; if b.exists, b.frame.maxY < win.maxY { XCTAssertTrue(b.isHittable, "\(screen) \(first) not hittable") } }
         for i in frames.indices { for j in frames.indices where j > i {
             let inter = frames[i].1.intersection(frames[j].1)
             XCTAssertTrue(inter.isNull || inter.width < 1 || inter.height < 1, "\(screen): \(frames[i].0) overlaps \(frames[j].0)")
         } }
+        note("\(screen): key controls " + frames.map { "\($0.0) \(Int($0.1.width))×\(Int($0.1.height))" }.joined(separator: ", "))
     }
     /// On-screen texts that leave the window horizontally (soft check, listed in the report).
     private func checkTexts(_ app: XCUIApplication, screen: String) {
         let win = app.windows.firstMatch.frame
-        let texts = app.staticTexts.allElementsBoundByIndex.prefix(80)
-        for t in texts {
+        var bad = 0
+        for t in elements(app) where t.elementType == .staticText {
             let f = t.frame
             guard f.minY >= win.minY, f.maxY <= win.maxY, f.width > 0 else { continue }
-            if f.minX < win.minX - 1 || f.maxX > win.maxX + 1 { note("\(screen): text out of window \(Int(f.minX))…\(Int(f.maxX)) of \(Int(win.width)): \"\(t.label.prefix(40))\"") }
+            if f.minX < win.minX - 1 || f.maxX > win.maxX + 1 { bad += 1; note("\(screen): text out of window \(Int(f.minX))…\(Int(f.maxX)) of \(Int(win.width)): \"\(t.label.prefix(40))\"") }
         }
+        if bad == 0 { note("\(screen): no text outside the window") }
     }
-    private func scrollUp(_ app: XCUIApplication) { app.swipeUp(velocity: .slow); sleep(1) }
+    private func scrollUp(_ app: XCUIApplication) { app.swipeUp(); sleep(1) }
+    /// A button of the given identifier prefix that is fully on screen (below the bars), if any.
+    private func visibleButton(_ app: XCUIApplication, prefix: String) -> XCUIElement? {
+        let win = app.windows.firstMatch.frame
+        let q = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", prefix))
+        for i in 0..<min(q.count, 8) {
+            let e = q.element(boundBy: i)
+            let f = e.frame
+            if f.minY > win.minY + 120 && f.maxY < win.maxY - 120 { return e }
+        }
+        return nil
+    }
 
     private func tab(_ app: XCUIApplication, _ name: String) {
         let b = app.buttons[name].firstMatch
@@ -114,24 +130,26 @@ final class LayoutAudit: XCTestCase {
                 shot("\(tag)-03-strength")
                 checkTexts(app, screen: "\(size) strength")
                 scrollUp(app); shot("\(tag)-04-strength-exercises")
-                let why = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'why-'")).firstMatch
-                if why.exists && why.isHittable {
+                if let why = visibleButton(app, prefix: "why-") {
                     XCTAssertGreaterThanOrEqual(why.frame.height, 43.5, "\(size) Why? button height")
                     if size == sizes.first { why.tap(); sleep(2); shot("\(tag)-05-why"); close(app) }
-                }
-                let swap = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'swap-'")).firstMatch
-                if size == sizes.first, swap.exists, swap.isHittable { swap.tap(); sleep(2); shot("\(tag)-06-swap"); close(app) }
+                } else { note("\(size): no Why? button on screen") }
+                if size == sizes.first, let swap = visibleButton(app, prefix: "swap-") { swap.tap(); sleep(2); shot("\(tag)-06-swap"); close(app) }
                 scrollUp(app); shot("\(tag)-07-strength-bottom")
                 close(app)
             }
             tab(app, "Plan"); shot("\(tag)-08-plan"); checkTexts(app, screen: "\(size) plan")
             // tomorrow's session: the owner's "completed" bug must now read Planned (future)
-            let tomorrowCard = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'planned' AND label CONTAINS[c] 'Strength'")).firstMatch
-            _ = tomorrowCard
+            if size == sizes.first {
+                let f = DateFormatter(); f.dateFormat = "EEE d MMM"
+                let tomorrow = f.string(from: Calendar.current.date(byAdding: .day, value: 1, to: Date())!)
+                let day = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", tomorrow)).firstMatch
+                if day.exists { day.tap(); sleep(2); shot("\(tag)-08b-tomorrow"); scrollUp(app); shot("\(tag)-08c-tomorrow-lower"); close(app) } else { note("tomorrow's day button not found") }
+            }
             scrollUp(app); shot("\(tag)-09-plan-lower")
             scrollUp(app); scrollUp(app); shot("\(tag)-10-history")
             tab(app, "Progress"); shot("\(tag)-11-progress"); checkTexts(app, screen: "\(size) progress")
-            let chart = app.otherElements["ridingChart"].firstMatch
+            let chart = app.descendants(matching: .any).matching(identifier: "ridingChart").firstMatch
             if size == sizes.first, chart.exists {
                 chart.press(forDuration: 1.0); sleep(1); shot("\(tag)-12-progress-selected")
             }

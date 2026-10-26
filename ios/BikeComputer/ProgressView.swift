@@ -58,11 +58,18 @@ struct ProgressTabView: View {
         }
     }
 
+    static func weekLine(_ w: TrainingLedger.SportWeek) -> String {
+        var parts: [String] = []
+        if w.logged > 0 { parts.append("\(w.logged) logged") }
+        if w.manual > 0 { parts.append("\(w.manual) marked or quick") }
+        if w.imported > 0 { parts.append("\(w.imported) imported") }
+        return "This week: \(w.completed) done of \(w.planned) planned" + (parts.isEmpty ? "." : " (" + parts.joined(separator: ", ") + ").")
+    }
     /// One definition for every screen (Home, Plan, History, Progress).
     private func definitions(riding: Bool) -> some View {
         let w = riding ? store.ledger.riding(weekOf: TrainingLedger.monday(of: Date())) : store.ledger.lifting(weekOf: TrainingLedger.monday(of: Date()))
         return HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
-            Text("This week: \(w.completed) done (\(w.logged) logged · \(w.manual) marked/quick · \(w.imported) imported) of \(w.planned) planned.")
+            Text(Self.weekLine(w))
                 .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier(riding ? "ridingWeekCounts" : "liftingWeekCounts")
             Spacer(minLength: 0)
@@ -82,7 +89,7 @@ struct ProgressTabView: View {
             }
             Text(p.ftpConfidence.title).font(.subheadline.weight(.semibold)).accessibilityIdentifier("ftpConfidenceTitle")
             Text(p.ftpSourceText).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("ftpSource")
-            if let c = p.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
+            if let c = p.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             if store.ftpSuggestion != nil { FTPSuggestionCard() }
             Divider()
             Eyebrow(t: "Fitness and form")
@@ -101,7 +108,7 @@ struct ProgressTabView: View {
         Card {
             HStack { Eyebrow(t: "Rides"); Spacer(); Text("\(store.rides.count)").font(.caption.bold()).foregroundStyle(.secondary) }
             if store.rides.isEmpty { Text("no data yet").font(.footnote).foregroundStyle(BC.stale) }
-            ForEach(store.rides) { r in
+            ForEach(store.rides.sorted { $0.start > $1.start }) { r in
                 NavigationLink { RideDetailView(ride: r) } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -111,7 +118,7 @@ struct ProgressTabView: View {
                         Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }.padding(.vertical, 4)
                 }.buttonStyle(.plain)
-                if r.id != store.rides.last?.id { Divider() }
+                if r.id != store.rides.min(by: { $0.start < $1.start })?.id { Divider() }
             }
             Divider()
             Text("Board history: \(device.syncStatus). Rides recorded on the BikeComputer while the phone was away stay on the board until its firmware serves them (see SYNC_PROPOSAL); nothing is invented here.").font(.caption2).foregroundStyle(.secondary)

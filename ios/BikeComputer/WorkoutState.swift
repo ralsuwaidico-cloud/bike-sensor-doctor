@@ -365,3 +365,8 @@ enum StoreMigration {
         return f
     }
 }
+
+extension Workout {
+    /// Exercises filled by the personalised planner (its progression and reasons are in `rationale`).
+    var plannerBuilt: Bool { generatedEntries && rationale != nil && templateId == nil }
+}

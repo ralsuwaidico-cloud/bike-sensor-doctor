@@ -76,7 +76,8 @@ struct StrengthWorkoutScreen: View {
                 if w.coachAdjusted, !closed { Text("Adjusted by the coach — Home › Coach adjustments shows why, with Undo.").font(.footnote).foregroundStyle(BC.accent).fixedSize(horizontal: false, vertical: true) }
                 if !closed, !future, !removed, routine != nil || !entries.isEmpty { startButton(w, entries) }
                 if !closed && !future { statusCard(w) }
-                if !closed { InsightCard(workout: w, entries: entries) }
+                // planner-built sessions already apply progression from the logs (Why? per exercise): no second suggestion on top
+                if !closed && !w.plannerBuilt { InsightCard(workout: w, entries: entries) }
                 if w.fixed { Text("Fixed day — the coach never moves or changes it.").font(.footnote).foregroundStyle(.secondary) }
             }.padding()
         }
@@ -203,7 +204,7 @@ struct StrengthWorkoutScreen: View {
                 if store.activeSession == nil { _ = store.startStrengthSession(for: w, template: store.routine(for: w), entries: entries) }
                 showSession = true
             } label: { Label(store.activeSession?.workoutId == w.id ? "Resume workout" : "Start workout", systemImage: "play.fill").frame(maxWidth: .infinity) }
-            .buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large).accessibilityIdentifier("startWorkout")
+            .buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large).accessibilityIdentifier("startWorkout")
             .disabled(store.activeSession != nil && store.activeSession?.workoutId != w.id)
             if store.activeSession != nil, store.activeSession?.workoutId != w.id { Text("Another strength session is in progress; finish or discard it first.").font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
         }
