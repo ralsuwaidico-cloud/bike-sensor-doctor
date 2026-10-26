@@ -78,8 +78,13 @@ final class LaunchSmokeTests: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build40Store()
         app.launch()
         XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
-        app.tabBars.buttons.element(boundBy: 4).tap()
+        // The app draws its own tab bar (raised centre button), so there is no system TabBar to index into.
+        let profileTab = app.buttons["Profile"].firstMatch
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 10), "Profile tab missing")
+        profileTab.tap()
         let create = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Create account'")).firstMatch
+        var tries = 0
+        while !(create.exists && create.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }   // the Account section is below the fold
         XCTAssertTrue(create.waitForExistence(timeout: 10), "guest sees Create account in Profile › Account")
         create.tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'not configured in this build'")).firstMatch.waitForExistence(timeout: 10), "without Supabase values the sheet says accounts are not available")

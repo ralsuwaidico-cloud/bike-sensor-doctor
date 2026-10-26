@@ -118,6 +118,14 @@ struct JSONFragment: Codable {
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.singleValueContainer()
+        // JSONSerialization hands numbers back as NSNumber, and `as Bool` also matches the NSNumbers 0 and 1, which
+        // silently turned integer 0/1 into false/true. Decide by the number's real CoreFoundation type first.
+        if let n = object as? NSNumber, !(object is String) {
+            if CFGetTypeID(n) == CFBooleanGetTypeID() { try c.encode(n.boolValue) }
+            else if CFNumberIsFloatType(n) { try c.encode(n.doubleValue) }
+            else { try c.encode(n.int64Value) }
+            return
+        }
         switch object {
         case is NSNull: try c.encodeNil()
         case let b as Bool: try c.encode(b)
