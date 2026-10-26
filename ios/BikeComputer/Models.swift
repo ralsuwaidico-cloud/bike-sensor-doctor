@@ -388,6 +388,8 @@ struct AppSettings: Codable, Equatable {
     var lastHealthImport: Date? = nil
     /// Cyclift 1.0: Bluetooth sensors paired directly with this phone (heart rate, power, speed/cadence), by peripheral id.
     var bleSensors: [PairedSensor] = []
+    /// Cyclift 1.0: the live ride layout (Ride › settings or the quick switch on the ride screen). Presentation only.
+    var rideLayout: RideLayout = .coach
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -407,6 +409,7 @@ struct AppSettings: Codable, Equatable {
         appleHealthImportWorkouts = try c.decodeIfPresent(Bool.self, forKey: .appleHealthImportWorkouts) ?? false
         lastHealthImport = try c.decodeIfPresent(Date.self, forKey: .lastHealthImport)
         bleSensors = (try? c.decodeIfPresent([PairedSensor].self, forKey: .bleSensors)) ?? []
+        rideLayout = (try? c.decodeIfPresent(RideLayout.self, forKey: .rideLayout)) ?? .coach
     }
 }
 

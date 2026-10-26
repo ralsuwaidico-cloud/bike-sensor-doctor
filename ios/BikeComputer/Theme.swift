@@ -51,6 +51,8 @@ struct ZoneBar: View {
 /// A metric tile: value or "--", unit, and the source line (green live / orange "no data").
 struct MetricTile: View {
     let title: String; let value: String?; let unit: String; let source: String; var big = false; var onHide: (() -> Void)? = nil
+    /// Shown instead of "no data" when nothing provides the metric (e.g. "No power source"); never names a brand.
+    var missing: String? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack { Eyebrow(t: title); Spacer(); if let h = onHide { Button("hide", action: h).font(.caption2.bold()).buttonStyle(.bordered).controlSize(.mini) } }
@@ -58,7 +60,7 @@ struct MetricTile: View {
                 Text(value ?? "--").font(big ? BC.bigNum : BC.numFont).monospacedDigit().foregroundStyle(value == nil ? .secondary : .primary).lineLimit(1).minimumScaleFactor(0.6)
                 Text(unit).font(.caption.weight(.bold)).foregroundStyle(.secondary)
             }
-            Text(value == nil ? "no data" : source).font(.caption2.weight(.heavy)).foregroundStyle(value == nil ? BC.stale : BC.live)
+            Text(value == nil ? (missing ?? "no data") : source).lineLimit(1).minimumScaleFactor(0.7).font(.caption2.weight(.heavy)).foregroundStyle(value == nil ? BC.stale : BC.live)
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(12)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))

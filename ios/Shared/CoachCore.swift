@@ -809,3 +809,93 @@ final class CoachEngine {
         return CoachCue(type: type, headline: w.head, detail: w.detail, spoken: w.spoken, reason: reason, action: w.action, sources: w.sources, live: liveText(), short: sh, why: why)
     }
 }
+
+// MARK: - Cyclift 1.0 additions (additive: the engine and its vectors above are unchanged)
+
+/// Display-side rate limit for the on-screen coach panel. The engine already spaces its own cues (minAlertMs,
+/// sameRepeatMs); the gate additionally HOLDS the cue on screen for at least `holdMs` (15 s) so the instruction does
+/// not flicker between rules. A newer cue that arrives during the hold is kept as `pending` and shown when the hold
+/// ends (if it is still recent). Only clearly necessary cues cut the hold short: a safety ease-off (heart rate two
+/// zones above target), a sensor that dropped out, and phase changes (warm-up / main / recovery / cool-down).
+struct CueGate {
+    var holdMs: Int64 = 15_000
+    /// A pending cue older than this when the hold ends is stale and dropped (the engine says it again if it still applies).
+    var pendingMaxAgeMs: Int64 = 20_000
+    private(set) var shown: CoachCue = .none
+    private(set) var shownAtMs: Int64? = nil
+    private(set) var pending: CoachCue? = nil
+    private var pendingAtMs: Int64 = 0
+
+    static func isUrgent(_ c: CoachCue) -> Bool {
+        switch c.type {
+        case .SENSOR_LOST, .WARMUP, .COOLDOWN, .RECOVER, .WORK: return true
+        default: return c.reason == "HR_SAFETY" || c.reason == "PHASE_MAIN"
+        }
+    }
+
+    /// Feed every engine result (including `.none`) once per second. Returns true when the shown cue changed.
+    @discardableResult
+    mutating func offer(_ c: CoachCue, nowMs: Int64) -> Bool {
+        if c.type != .NONE {
+            let held = shownAtMs.map { nowMs - $0 < holdMs } ?? false
+            if !held || Self.isUrgent(c) || shown.type == .NONE { show(c, nowMs); return true }
+            pending = c; pendingAtMs = nowMs
+            return false
+        }
+        if let p = pending, let t = shownAtMs, nowMs - t >= holdMs {
+            pending = nil
+            if nowMs - pendingAtMs <= pendingMaxAgeMs { show(p, nowMs); return true }
+        }
+        return false
+    }
+    mutating func reset() { shown = .none; shownAtMs = nil; pending = nil; pendingAtMs = 0 }
+    private mutating func show(_ c: CoachCue, _ now: Int64) { shown = c; shownAtMs = now; pending = nil }
+}
+
+/// Plain-language instruction for the ride-screen coach panel, from the engine's action. Wording only — the decision
+/// is the engine's. `targetZone` lets an ease-off name the zone the rider is returning to.
+enum CoachWording {
+    static func instruction(_ c: CoachCue, targetZone: Int) -> String {
+        switch c.action {
+        case .STABLE_MAINTAIN, .HOLD_PACE, .STEADY_MILESTONE: return "Maintain current effort"
+        case .RECOVERED: return "Good — back on target, maintain it"
+        case .PEDAL_FASTER: return "Increase cadence slightly"
+        case .PEDAL_SLOWER: return "Lower cadence slightly"
+        case .EASIER_GEAR: return "Shift to an easier gear"
+        case .HARDER_GEAR: return "Shift to a harder gear"
+        case .REDUCE_PRESSURE, .HR_RISING_EASE: return "Reduce intensity to return to Zone \(min(5, max(1, targetZone)))"
+        case .INCREASE_EFFORT: return "Increase effort slightly"
+        case .RECOVER: return "Recover for the next interval"
+        case .WIND_DOWN, .START_COOLDOWN: return "Ease down — cool-down"
+        case .WARM_UP: return "Warm up — easy spinning"
+        default: return c.short.isEmpty ? c.headline : c.short
+        }
+    }
+    /// The rule behind a cue, with the values the engine used. Never invents a reading: values come from the cue.
+    static func rule(_ c: CoachCue) -> String {
+        switch c.reason {
+        case "HR_ABOVE": return "Heart rate stayed above the target band for at least 8 s."
+        case "HR_BELOW": return "Heart rate stayed below the target band for at least 8 s while power was not already on target."
+        case "HR_SAFETY": return "Heart rate is two or more zones above the target — safety rule, shown at once."
+        case "HR_RISING": return "Heart rate is climbing about 6 bpm/min or more while power stays steady, near the top of the band."
+        case "PW_ABOVE": return "Smoothed power stayed above the target zone for at least 2 s."
+        case "PW_BELOW": return "Smoothed power stayed below the target zone for at least 2 s."
+        case "PW_SURGE", "PW_SPIKE", "REL_SPIKE": return "Power surged well above the target; surges cost more than steady watts."
+        case "PW_UNSTEADY": return "Average power is on target but swung more than ±20 % over the last minute."
+        case "REL_DROP": return "Last-minute power is more than 15 % below your own steady output for a minute."
+        case "CAD_LOW": return "Cadence stayed below your range for at least 5 s while effort was fine."
+        case "CAD_HIGH": return "Cadence stayed above your range for at least 5 s while effort was fine."
+        case "CAD_UNEVEN": return "Cadence varied more than ±12 % over the last minute."
+        case "ALL_GOOD": return "Effort has been inside the target band for at least 5 s."
+        case "SPEED_UNEVEN": return "Speed varied more than ±25 % over two minutes (terrain and wind count)."
+        case "TIME_MILESTONE", "REL_MILESTONE": return "Time-based check-in every 10 minutes."
+        case "PHASE_WARMUP": return "The first 5 minutes are a warm-up: no 'push' cues yet."
+        case "PHASE_COOLDOWN", "COOLDOWN_RAMP", "COOLDOWN_HR_ABOVE": return "Cool-down: the ceiling comes down gradually; no more 'push' cues."
+        case "PHASE_RECOVERY", "RECOVERY_PW_ABOVE": return "Recovery interval of the workout: spin easy so the next interval counts."
+        case "PHASE_MAIN": return "The main block of the workout started."
+        case "POWER_LOST", "HR_LOST": return "A sensor stopped reporting; the coach continues from what is still live."
+        case "NO_SIGNAL", "NO_POWER": return "No heart rate and no loaded power: the coach cannot judge effort."
+        default: return "Rule-based coach decision."
+        }
+    }
+}
