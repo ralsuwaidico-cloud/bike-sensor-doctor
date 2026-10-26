@@ -107,6 +107,13 @@ void ui_sensors_show(void);              /* old name = ui_connections_show */
 void ui_connections_show(void);
 void ui_conn_detail_show(int cat);       /* 0 Phone, 1 Wi-Fi, 2 Power meter, 3 Heart rate, 4 Cadence, 5 Speed, 6 Other Bluetooth, 7 Device sync */
 void ui_conn_summary(int *connected, int *alerts);
+/* 0.7.2 compact live status of one Connections row (table, detail pages, Device Health). value = the FRESH reading
+ * ("142 W") or a 1-2 word state ("NO DATA"); line = one lower-case status line ("connected - no data"). */
+typedef enum { UI_ROW_PHONE = 0, UI_ROW_POWER, UI_ROW_HEART, UI_ROW_CADENCE, UI_ROW_SPEED, UI_ROW_WIFI, UI_ROW_COUNT } ui_row_id_t;
+typedef struct { char value[24]; char line[48]; lv_color_t color; const char *icon; bool ok, alert, connected; } ui_row_status_t;
+void ui_conn_row_status(int row, ui_row_status_t *o);
+const char *ui_stage_word(const plat_link_info_t *l);            /* "LIVE", "NO DATA", "SEARCHING", "RETRYING", "ERROR" ... */
+void ui_conn_health_lines(char *buf, size_t cap, bool markup);   /* Device Health: one line per sensor */
 void ui_set_return_connections(bool from_connections);   /* Phone / Wi-Fi pages: where their back button goes */
 void ui_return(void);
 void ui_diag_show(void);

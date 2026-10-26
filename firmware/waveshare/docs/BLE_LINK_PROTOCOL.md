@@ -158,6 +158,34 @@ range, 4 keys missing (stale pairing), 5 authentication failed, 6 failed to esta
 `04 u8 profile_sync_state` (0 device-only, 1 synced, 2 pending, 3 failed). Informational: the app shows it on the Connection
 diagnostics page. Vector (seq 3, t 500, reason 3, 1 bond, synced): `40 00 03 00 F4 01 00 00 01 01 20 02 01 03 03 02 01 00 04 01 01`.
 
+### 1.2.2 (firmware 0.7.2): `event_id 0x21 sensor_diag` — the real pipeline stage of each board sensor link
+Spec: `docs/LINK_V1_2_SPEC.md` section "1.2.2". Encoder/decoder: `bc_link_encode_sensor_diag` / `bc_link_decode_sensor_diag`
+(bc_core), host-tested in `test/host/test_bc_pipe.c` against the exact bytes below.
+`EVENT 0x40`: `01 u8 event_id = 0x21` `02 u8 sensor` (1 power meter, 2 HR strap, 3 CSC) `03 u8 stage` (0 not paired, 1 searching,
+2 connecting, 3 connected, 4 subscribed, 5 receiving, 6 valid, 7 stale, 8 error) `04 u32 packets since connect` `05 u16 rejected`
+`06 u16 last packet age (ds)` `07 u16 last valid age (ds)` (0xFFFF = none; ages are capped at 0xFFFE) `08 utf8 <= 20 last error` —
+**tag 08 is omitted when there is no error**. Only stage 6 means the sensor works.
+When the board sends it: on every stage change of a paired link; every 5 s for each paired link below VALID; and once per paired
+sensor right after the phone becomes ready (encrypted + subscribed to Control). Nothing for unpaired sensors except the change to
+"not paired". Board-side last-error strings: `no service 0x1828`, `no 0x2A63`, `not notifiable`, `no CCCD`, `CCCD write failed`,
+`CCCD reads XX XX`, `service discovery`, `characteristic discovery`, `descriptor discovery`, `connect failed`, `connect timeout`,
+`no data` (subscribed, nothing for 15 s → reconnected), `data stopped` (stale 25 s → reconnected), `unreadable data`,
+`link lost 0x..` (HCI disconnect reason). The error is cleared by the next valid measurement.
+
+Vectors (header seq / t_ms = 100000 = `A0 86 01 00`):
+| case | bytes |
+|---|---|
+| V1 power VALID, 142 packets, 0 rejected, ages 0.4 s, seq 5 | `40 00 05 00 A0 86 01 00 01 01 21 02 01 01 03 01 06 04 04 8E 00 00 00 05 02 00 00 06 02 04 00 07 02 04 00` |
+| V2 power SUBSCRIBED, nothing yet, seq 6 | `40 00 06 00 A0 86 01 00 01 01 21 02 01 01 03 01 04 04 04 00 00 00 00 05 02 00 00 06 02 FF FF 07 02 FF FF` |
+| V3 power ERROR "no CCCD", seq 7 | `40 00 07 00 A0 86 01 00 01 01 21 02 01 01 03 01 08 04 04 00 00 00 00 05 02 00 00 06 02 FF FF 07 02 FF FF 08 07 6E 6F 20 43 43 43 44` |
+| V4 HR strap RECEIVING, 12 packets all rejected, last 0.8 s ago, "unreadable data", seq 8 | `40 00 08 00 A0 86 01 00 01 01 21 02 01 02 03 01 05 04 04 0C 00 00 00 05 02 0C 00 06 02 08 00 07 02 FF FF 08 0F 75 6E 72 65 61 64 61 62 6C 65 20 64 61 74 61` |
+| V5 CSC STALE, 300 packets, 2 rejected, ages 5.2 s, seq 9 | `40 00 09 00 A0 86 01 00 01 01 21 02 01 03 03 01 07 04 04 2C 01 00 00 05 02 02 00 06 02 34 00 07 02 34 00` |
+
+A phone that decodes EVENT with the 0x10/0x20 layout must check `event_id` first: tags 02..04 mean different things in 0x21.
+LIVE (0x10) is unchanged; from 0.7.2 its `cad_age_ms` is the age of the cadence actually shown (meter or CSC sensor) and
+`hr_age_ms` the age of the heart rate shown (strap, or the phone-relayed watch value counted from when the board received it) —
+before 0.7.2 `hr_age_ms` was always 0 and `cad_age_ms` copied the power age.
+
 ### 1.2.1 (firmware 0.7.0): PROFILE hello and field validation
 - As soon as the link is encrypted and the phone subscribed to Control, the board sends one unsolicited `PROFILE 0x72` so the
   phone can compare without asking (a PROFILE_GET still works).

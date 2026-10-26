@@ -5,8 +5,11 @@
  *   CSC    an optional speed/cadence sensor (0.6.0) — service 0x1816, characteristic 0x2A5B (bc_csc decoder)
  * Plus a pairing scan that lists nearby meters / straps for the Sensors and onboarding screens.
  *
- * SAFETY: the only write ever sent to any device is the standard CCCD subscription (01 00). No control point
- * (0x2A55), no vendor characteristics, no bonding. Reconnect automatically with back-off 1, 2, 4, 8, 16 s.
+ * SAFETY: the only write ever sent to any device is the standard CCCD subscription (01 00; 02 00 for an indicate-only data
+ * characteristic) on the data characteristic's OWN CCCD (0.7.2: bc_gatt_pick_cccd — never a CCCD of a later
+ * characteristic such as the 0x2A55 control point). No control point writes, no vendor characteristics, no bonding.
+ * The CCCD is read back to confirm. Reconnect automatically with back-off 1, 2, 4, 8, 16 s (reset only when valid data
+ * flows). 0.7.2: every link has a pipeline stage (bc_pipe.h, serial tag "pipe") and automatic recovery.
  */
 #pragma once
 #include <stdbool.h>

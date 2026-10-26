@@ -34,6 +34,13 @@ typedef struct {
     uint32_t rejected;     /* packets rejected as short or implausible (never shown as data) */
     uint32_t reconnects;
     uint32_t gaps;         /* times valid data paused > 2.5 s while connected (to spot radio interference) */
+    /* 0.7.2 sensor pipeline (bc_pipe.h). "link == CONNECTED" only means subscribed; the link is OK only at stage VALID. */
+    uint8_t stage;         /* bc_stage_t: NOT PAIRED .. VALID / STALE / ERROR */
+    uint32_t stage_age_ms; /* time in this stage */
+    char err[21];          /* last error ("no CCCD", "no data", "unreadable data", ...), "" = none */
+    bool unreadable;       /* packets arrive but none decodes (after 10 s) */
+    uint16_t svc_uuid, cccd, data_handle;   /* where the data comes from (0 = not found yet) — Device Health / Help */
+    uint32_t resubscribes, auto_reconnects; /* automatic recoveries this boot */
 } plat_link_info_t;
 
 /** Raw live values from the real sensors (already freshness-checked: stale = absent). */

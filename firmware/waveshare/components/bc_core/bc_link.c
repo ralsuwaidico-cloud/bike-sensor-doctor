@@ -386,6 +386,40 @@ bool bc_link_decode_event(const uint8_t *buf, size_t len, bc_event_t *v)
     }
     return v->event_id != 0;
 }
+/* ---- 1.2.2 SENSOR_DIAG (EVENT 0x40, event_id 0x21) */
+uint16_t bc_link_age_ds(uint32_t age_ms)
+{
+    if (age_ms == UINT32_MAX) return BC_LINK_NONE16;
+    uint32_t ds = age_ms / 100;
+    return (uint16_t)(ds > 0xFFFEu ? 0xFFFEu : ds);
+}
+size_t bc_link_encode_sensor_diag(const bc_sensor_diag_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_EVENT, seq, t_ms);
+    bc_lw_u8(&w, 0x01, BC_EVT_SENSOR_DIAG); bc_lw_u8(&w, 0x02, v->sensor); bc_lw_u8(&w, 0x03, v->stage);
+    bc_lw_u32(&w, 0x04, v->packets); bc_lw_u16(&w, 0x05, v->rejected); bc_lw_u16(&w, 0x06, v->pkt_age_ds); bc_lw_u16(&w, 0x07, v->valid_age_ds);
+    size_t n = 0; while (n < 20 && v->err[n]) n++;
+    if (n) bc_lw_bytes(&w, 0x08, v->err, n);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_sensor_diag(const uint8_t *buf, size_t len, bc_sensor_diag_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; uint8_t id = 0;
+    memset(v, 0, sizeof *v); v->pkt_age_ds = v->valid_age_ds = BC_LINK_NONE16;
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_EVENT) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 1) id = x[0];
+        else if (t == 0x02 && n == 1) v->sensor = x[0];
+        else if (t == 0x03 && n == 1) v->stage = x[0];
+        else if (t == 0x04 && n == 4) v->packets = (uint32_t)bc_lr_uint(x, n);
+        else if (t == 0x05 && n == 2) v->rejected = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x06 && n == 2) v->pkt_age_ds = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x07 && n == 2) v->valid_age_ds = (uint16_t)bc_lr_uint(x, n);
+        else if (t == 0x08 && n <= 20) { memcpy(v->err, x, n); v->err[n] = 0; }
+    }
+    return id == BC_EVT_SENSOR_DIAG;
+}
+
 static int16_t s16c(int v) { return (int16_t)(v < -32768 ? -32768 : v > 32767 ? 32767 : v); }
 size_t bc_link_encode_sync_ride(const bc_ride_summary_t *s, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
 {

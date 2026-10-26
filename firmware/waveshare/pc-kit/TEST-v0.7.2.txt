@@ -1,0 +1,46 @@
+BikeComputer firmware 0.7.2 - first hardware test (power meter data fix) - 26 Oct 2026
+===================================================================================
+0.7.2 = 0.7.1 + the fix for "the power meter connects but no power readings appear" + honest per-sensor stages + automatic
+recovery + compact Connections pages. EVERYTHING below is SIMULATOR-TESTED ONLY until you confirm it here: the simulator
+plays a fake power meter with the same attribute table, but it cannot see the real radio or the real XDS meter.
+Board on USB, battery DISCONNECTED (HW-1: never USB and battery together). Bike on the trainer or a stand you can pedal.
+
+I. Install
+ I1  INSTALL-v0.7.2.bat: finds the COM port, reads the 16 MB backup, "Backup verified: 16 MB, firmware 0.7.1" (or whatever
+     is on the board), asks YES, writes 2 regions, "INSTALLED". Board restarts to Home.                       PASS/FAIL
+ I2  Settings footer: "firmware 0.7.2". History lists your rides; the power meter is still paired.             PASS/FAIL
+     Go back any time: RESTORE-BACKUP-BEFORE-v072.bat (exact image incl. data) or ROLLBACK-TO-v050.bat.
+
+II. The serial log (this is the important part - it shows each stage of the meter link)
+ II1 Keep the USB cable in. Double-click READ-LOG-v0.7.2.bat. Press RESET on the board. Pedal so the meter wakes and keep
+     pedalling for about a minute. The window stops by itself after 3 minutes and saves device-log-v072-<time>.txt in
+     this folder. Send that file to Claude.                                                                     DONE / NOT DONE
+     What Claude looks for (tag "pipe"):
+       pipe: power: service 0x1828 0x00..                  <- the meter's data service was found
+       pipe: power: 0x2A63 value 0x00xx, descriptors 0x00xx..0x00xx (1), CCCD 0x00xx   <- ONE descriptor, its own
+       pipe: power → SUBSCRIBED (cccd 0x00xx read back 01 00; 0x2A63 in 0x1828)        <- subscription confirmed
+       pipe: power → VALID 142 W 82 rpm (pkts 2)           <- real data decoded
+     Bad signs (send the log anyway): "→ ERROR no CCCD", "CCCD reads 00 00", "subscribed, no packet in 8 s",
+     "unreadable data" followed by hex lines, "notification on handle 0x.... ignored".
+
+III. On the screen
+ III1 Connections: four rows visible at once - PHONE, POWER, HEART, CADENCE - each with a status icon. While pedalling:
+      POWER shows a number in W (e.g. "142 W"), CADENCE a number in RPM. Stop pedalling: watts drop to 0 W; take the
+      meter out of range (or stop for a minute so it sleeps): POWER changes to STALE / RETRYING, never an old number.
+      Watts: ___  rpm: ___                                                                                       PASS/FAIL
+ III2 Tap POWER: one status line ("live 142 W 82 rpm"), a numbers line (packets / bad / age), ONE big button (TEST while
+      live, RETRY when not), HELP and HOLD: FORGET, and the back arrow - nothing to scroll.                      PASS/FAIL
+ III3 Settings > Diagnostics > Device Health: the first lines read e.g. "POWER  live 142 W 82 rpm", "HEART  ...".  PASS/FAIL
+ III4 Wi-Fi page: status line, one big button (TURN ON / NETWORKS), SAVED / HELP / OFF, back - nothing to scroll.   PASS/FAIL
+
+IV. Automatic recovery (watch the screen; the log shows the same)
+ IV1 With live power, switch the meter off or carry the board 15 m away for 30 s, then come back and pedal: the board
+     reconnects by itself and POWER shows watts again without touching anything. Time to watts again: ___ s    PASS/FAIL
+ IV2 Phone app connected (iPhone): its sensor page shows the same stage words as the board (Live / Searching / Data stale).
+                                                                                                                 PASS/FAIL
+ IV3 Apple Watch heart rate through the phone: board HEART row shows "151 BPM"-style values; the ride screen labels it
+     WATCH; take the watch off: the value disappears within ~6 s (never held).                                   PASS/FAIL
+
+Safety (unchanged): the only thing the board ever writes to a sensor is the standard "send me notifications" switch on the
+data characteristic itself. It never writes the 0x2A55 control point or any vendor setting. Watts are the meter's own
+reading; their accuracy is not verified by this test.

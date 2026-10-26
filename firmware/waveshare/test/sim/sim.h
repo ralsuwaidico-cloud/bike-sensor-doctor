@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "plat.h"
+#include "bc_pipe.h"
+#include "bc_xds.h"
 
 typedef struct {
     uint32_t now_ms;
@@ -29,7 +31,14 @@ typedef struct {
              struct { uint8_t chr; size_t len; uint8_t b[BC_LINK_MAX]; } svc_in[8]; int svc_in_n; bool notify_full; uint8_t last_notify_chr;
              bool standby; int standbys;
              /* 0.7.0 pairing lifecycle: the board's identity generation (changes on forget/repair) and what the phone remembers */
-             uint8_t id_gen, phone_id_gen; bool phone_has_bond; bool enc_failed; int enc_fails, repairs; uint16_t last_disc_code; } phone;
+             uint8_t id_gen, phone_id_gen; bool phone_has_bond; bool enc_failed; int enc_fails, repairs; uint16_t last_disc_code;
+             bc_sensor_diag_t diag[16]; int ndiag; int diags; } phone;
+    /* 0.7.2 fake GATT power meter (sim_gatt.c): a real attribute table driven through bc_gatt / bc_pipe / bc_xds */
+    struct { bool on, legacy_pick, paired, in_range, streaming, stall, garbage; int variant, state; uint32_t t, retry_at, next_pkt; int backoff_s;
+             int watts, rpm; uint16_t angle, val, last_cccd; uint16_t enabled[64];
+             bc_pipe_t pipe; bc_xds_live_t xds;
+             int connects, disconnects, discoveries, cccd_writes, wrong_writes, resubs, reconnects, dumps, packets_sent, other_notifies;
+             char log[8][96]; int nlog; } fake;
 } sim_hw_t;
 
 extern sim_hw_t g_sim;
@@ -48,3 +57,8 @@ void sim_phone_send_hr(uint8_t bpm, uint8_t src);
 void sim_phone_send_time(uint64_t epoch_ms);
 void sim_phone_ctrl(uint8_t cmd, uint16_t ride_id);
 bool sim_phone_write(int chr, const uint8_t *msg, size_t n);   /* chr 0 = Control, 1 = Sync; returns the board's accept/reject */
+/* 0.7.2 fake GATT power meter: variant 0 = XDS table (2A55 after 2A63), 1 = Mesh order (2ADE after 2A63);
+   legacy_pick = use the 0.7.1 CCCD search (reproduces "connected, no power") */
+void sim_fake_meter(bool on, int variant, bool legacy_pick);
+void sim_fake_pump(void);
+void sim_fake_snapshot(plat_sensors_t *o);

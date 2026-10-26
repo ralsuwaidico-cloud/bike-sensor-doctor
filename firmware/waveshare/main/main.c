@@ -97,7 +97,7 @@ static void bump(const char *key)
 
 static void health(void)
 {
-    char line[200]; app_health_line(line, sizeof line);
+    char line[320]; app_health_line(line, sizeof line);
     lv_mem_monitor_t m; lvgl_port_lock(0); lv_mem_monitor(&m); lvgl_port_unlock();
     TaskHandle_t lv = xTaskGetHandle("taskLVGL"), nb = xTaskGetHandle("nimble_host");
     ESP_LOGI(TAG, "%s lvgl %u%% (max %uB) stack-free lvgl %u nimble %u main %u", line, m.used_pct, (unsigned)m.max_used,

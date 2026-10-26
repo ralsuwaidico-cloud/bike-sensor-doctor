@@ -153,7 +153,7 @@ static void pair_update(void)
         if (p_kind == PLAT_SENS_POWER && lv.power_ok) snprintf(b, sizeof b, "#56e08c %s#\n%d W  %d rpm", sp->name, lv.watts, lv.cad_ok ? lv.rpm : 0);
         else if (p_kind == PLAT_SENS_HR && lv.hr_ok) snprintf(b, sizeof b, "#56e08c %s#\n%d bpm", sp->name, lv.bpm);
         else if (p_kind == PLAT_SENS_CSC && (sn.csc_cad_ok || sn.csc_speed_ok)) snprintf(b, sizeof b, "#56e08c %s#\n%d rpm  %d.%d km/h", sp->name, sn.csc_cad_ok ? sn.csc_rpm : 0, sn.csc_speed_dmh / 10, sn.csc_speed_dmh % 10);
-        else snprintf(b, sizeof b, "#56e08c %s#\n%s%s", sp->name, ui_link_text(l->link), p_kind == PLAT_SENS_HR ? "" : " - move it to wake");
+        else snprintf(b, sizeof b, "#56e08c %s#\n%s%s", sp->name, ui_stage_word(l), l->stage <= 2 && p_kind != PLAT_SENS_HR ? " - move it to wake" : "");
     } else snprintf(b, sizeof b, "%s", p_kind == PLAT_SENS_POWER ? "Pedal so the meter wakes up,\nthen tap it below." : p_kind == PLAT_SENS_HR ? "Wear the strap (wet the pads),\nthen tap it below." : "Spin the wheel or crank so the\nsensor wakes, then tap it below.");
     lv_label_set_text(p_status, b);
     if (p_next) lv_label_set_text(lv_obj_get_child(p_next, 0), p_onb ? (sp->paired ? "NEXT" : "SKIP") : "DONE");

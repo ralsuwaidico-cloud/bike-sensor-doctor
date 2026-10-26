@@ -49,7 +49,8 @@ typedef struct { uint32_t wifi_msgs, wifi_rejected, scans, sets, forgets, status
                  profile_gets, profile_sets, profile_applied, profile_rejected, settings_gets, settings_sets, settings_applied, settings_rejected;
                  /* 0.6.0 Connections > Device sync: plat_ms() of the last completed action (0 = never this boot), last ride id streamed */
                  uint32_t last_sync_ms, last_profile_ms, last_settings_ms; uint16_t last_synced_id; bool synced_all;
-                 bool sync_active, status_watch; } app_psvc_stats_t;
+                 bool sync_active, status_watch;
+                 uint32_t sensor_diags;   /* 0.7.2 SENSOR_DIAG events sent */ } app_psvc_stats_t;
 void app_psvc_stats(app_psvc_stats_t *out);
 
 #ifdef __cplusplus

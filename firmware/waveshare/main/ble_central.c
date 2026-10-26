@@ -1,7 +1,13 @@
 /*
- * NimBLE central: paired power meter + optional HR strap + pairing scan. See ble_central.h for the safety rules.
- * The power-meter sequence is the one proven in 0.1.x / PORTING_SPEC §1–§5: connect → MTU exchange (≤ 2 s) →
- * discover 0x1828 → 0x2A63 → CCCD → write 01 00 → decode notifications with bc_core.
+ * NimBLE central: paired power meter + optional HR strap + optional CSC sensor + pairing scan. See ble_central.h for the
+ * safety rules. Sequence per link (0.7.2): connect → MTU exchange (≤ 2 s) → discover services → pick the service
+ * (power: 0x1828 for XDS-named meters, else 0x1818; bc_gatt_power_services) → discover its characteristics → the data
+ * characteristic's OWN descriptor range (up to the next characteristic declaration) → its CCCD (bc_gatt_pick_cccd) →
+ * write 01 00 (02 00 if it only indicates) → read the CCCD back → decode notifications on the data handle with bc_core.
+ *
+ * 0.7.2 root cause fixed here: up to 0.7.1 on_dsc() searched descriptors from the 0x2A63 value handle to the END OF THE
+ * SERVICE and kept the LAST 0x2902, i.e. the CCCD of a later characteristic (on the XDS: the 0x2A55 control point). The
+ * board reported "connected" and never received a power packet. Every stage is now tracked by bc_pipe (serial tag "pipe").
  */
 #include "ble_central.h"
 #include <string.h>
@@ -17,6 +23,9 @@
 #include "bc_xds.h"
 #include "bc_hr.h"
 #include "bc_csc.h"
+#include "bc_cp.h"
+#include "bc_gatt.h"
+#include "bc_pipe.h"
 #include "hw.h"
 #include "ble_link.h"
 void ble_store_config_init(void);
@@ -26,23 +35,32 @@ static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 #define LOCK() portENTER_CRITICAL(&s_mux)
 #define UNLOCK() portEXIT_CRITICAL(&s_mux)
 
+#define NSV 12
+#define NCH 16
+#define NDS 16
 typedef struct {
     int kind;
-    uint16_t svc_uuid, chr_uuid;
+    uint16_t chr_uuid; uint16_t cand[2]; int ncand;  /* data characteristic + the services to look in, in order */
     bool paired; ble_addr_t addr; char name[20];
     plat_link_t state;
-    uint16_t conn, svc_s, svc_e, val, cccd; bool disc_started;
+    uint16_t conn, svc_s, svc_e, svc_uuid, val, cccd, chr_end, cccd_val; bool disc_started;
+    struct { uint16_t s, e, uuid; } sv[NSV]; int nsv, svc_try; bool svc_seen;
+    bc_gatt_chr_t ch[NCH]; int nch;
+    bc_gatt_attr_t ds[NDS]; int nds;
+    bc_pfmt_t fmt;                                   /* power: XDS 11-byte packet or standard Cycling Power */
     int8_t rssi; uint32_t reconnects, connects, gaps; int backoff_s; uint32_t retry_at;
     uint32_t state_since;
-    bc_xds_live_t xds; bc_hr_live_t hr; bc_csc_live_t csc;
+    uint32_t other_notifies; bool other_logged, valid_seen;
+    bc_pipe_t pipe;
+    bc_xds_live_t xds; bc_cp_cad_t cp; bc_hr_live_t hr; bc_csc_live_t csc;
 } link_t;
 
 /* 0.6.0: three links. Index = slot, not plat kind (CSC is kind 3, slot 2). */
 #define NL 3
 static link_t L[NL] = {
-    { .kind = PLAT_SENS_POWER, .svc_uuid = 0x1828, .chr_uuid = 0x2A63, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
-    { .kind = PLAT_SENS_HR, .svc_uuid = 0x180D, .chr_uuid = 0x2A37, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
-    { .kind = PLAT_SENS_CSC, .svc_uuid = 0x1816, .chr_uuid = 0x2A5B, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
+    { .kind = PLAT_SENS_POWER, .chr_uuid = 0x2A63, .cand = { 0x1828, 0x1818 }, .ncand = 2, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
+    { .kind = PLAT_SENS_HR, .chr_uuid = 0x2A37, .cand = { 0x180D }, .ncand = 1, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
+    { .kind = PLAT_SENS_CSC, .chr_uuid = 0x2A5B, .cand = { 0x1816 }, .ncand = 1, .conn = BLE_HS_CONN_HANDLE_NONE, .backoff_s = 1 },
 };
 static int slot_of(int kind) { return kind == PLAT_SENS_POWER ? 0 : kind == PLAT_SENS_HR ? 1 : kind == PLAT_SENS_CSC ? 2 : -1; }
 static const char *kind_name(int kind) { return kind == PLAT_SENS_POWER ? "power" : kind == PLAT_SENS_HR ? "hr" : "csc"; }
@@ -61,13 +79,54 @@ static esp_timer_handle_t s_mtu_timer;
 static const char *st_name(plat_link_t s)
 {
     switch (s) { case PLAT_LINK_NOT_PAIRED: return "NOT PAIRED"; case PLAT_LINK_SEARCHING: return "SEARCHING"; case PLAT_LINK_CONNECTING: return "CONNECTING";
-                 case PLAT_LINK_CONNECTED: return "CONNECTED"; case PLAT_LINK_RETRY: return "RECONNECTING"; default: return "OFF"; }
+                 case PLAT_LINK_CONNECTED: return "SUBSCRIBED"; case PLAT_LINK_RETRY: return "RECONNECTING"; default: return "OFF"; }
+}
+
+/* ---- pipeline log: one serial line per stage change, tag "pipe" (sensor data and counts only, nothing personal) */
+static void pipe_line(link_t *l, char *b, size_t cap)
+{
+    const bc_pipe_t *p = &l->pipe; uint32_t now = hw_millis();
+    int n = snprintf(b, cap, "%s → %s", kind_name(l->kind), bc_stage_name(p->stage));
+    if (n < 0 || (size_t)n >= cap) return;
+    switch (p->stage) {
+    case BC_STG_SUBSCRIBED:
+        if (p->cccd_readback == 0xFFFF) snprintf(b + n, cap - (size_t)n, " (cccd 0x%04X written %02X %02X, read back n/a; 0x%04X in 0x%04X)", p->cccd, l->cccd_val & 0xFF, l->cccd_val >> 8, l->chr_uuid, l->svc_uuid);
+        else snprintf(b + n, cap - (size_t)n, " (cccd 0x%04X read back %02X %02X; 0x%04X in 0x%04X)", p->cccd, p->cccd_readback & 0xFF, p->cccd_readback >> 8, l->chr_uuid, l->svc_uuid);
+        break;
+    case BC_STG_VALID: {
+        int v = 0, r = 0; bool bk = false;
+        if (l->kind == PLAT_SENS_POWER) { bc_xds_live_power(&l->xds, now, &v); bool c = bc_xds_live_cadence(&l->xds, now, &r, &bk) == BC_LIVE_OK;
+                                          if (c) snprintf(b + n, cap - (size_t)n, " %d W %d rpm (pkts %lu)", v, r, (unsigned long)p->packets); else snprintf(b + n, cap - (size_t)n, " %d W (pkts %lu)", v, (unsigned long)p->packets); }
+        else if (l->kind == PLAT_SENS_HR) { bc_hr_live_bpm(&l->hr, now, &v); snprintf(b + n, cap - (size_t)n, " %d bpm (pkts %lu)", v, (unsigned long)p->packets); }
+        else snprintf(b + n, cap - (size_t)n, " (pkts %lu)", (unsigned long)p->packets);
+        break; }
+    case BC_STG_ERROR: snprintf(b + n, cap - (size_t)n, " %s", p->err); break;
+    case BC_STG_RECEIVING: case BC_STG_STALE:
+        snprintf(b + n, cap - (size_t)n, " (pkts %lu, rejected %lu%s%s)", (unsigned long)p->packets, (unsigned long)p->rejected, p->err[0] ? ", " : "", p->err); break;
+    default: break;
+    }
+}
+static void pipe_log(link_t *l)
+{
+    char line[128]; bool ch;
+    LOCK(); ch = bc_pipe_take_change(&l->pipe); if (ch) pipe_line(l, line, sizeof line); UNLOCK();
+    if (ch) ESP_LOGI("pipe", "%s", line);
 }
 
 static void set_state(link_t *l, plat_link_t s)
 {
-    LOCK(); l->state = s; l->state_since = hw_millis(); UNLOCK();
+    uint32_t now = hw_millis();
+    LOCK();
+    l->state = s; l->state_since = now;
+    switch (s) {
+    case PLAT_LINK_NOT_PAIRED: bc_pipe_set_link(&l->pipe, BC_STG_NOT_PAIRED, now); break;
+    case PLAT_LINK_SEARCHING: case PLAT_LINK_RETRY: bc_pipe_set_link(&l->pipe, BC_STG_SEARCHING, now); break;   /* keeps ERROR visible */
+    case PLAT_LINK_CONNECTING: bc_pipe_set_link(&l->pipe, BC_STG_CONNECTING, now); break;
+    default: break;
+    }
+    UNLOCK();
     ESP_LOGI(TAG, "%s → %s", kind_name(l->kind), st_name(s));
+    pipe_log(l);
 }
 
 static link_t *by_conn(uint16_t c) { for (int i = 0; i < NL; i++) if (L[i].conn == c) return &L[i]; return NULL; }
@@ -75,6 +134,8 @@ static link_t *by_conn(uint16_t c) { for (int i = 0; i < NL; i++) if (L[i].conn 
 static void fail(link_t *l, const char *why)
 {
     ESP_LOGW(TAG, "%s: %s", kind_name(l->kind), why);
+    LOCK(); bc_pipe_error(&l->pipe, why, hw_millis()); UNLOCK();
+    pipe_log(l);
     if (l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
     else {
         if (s_connecting == l) s_connecting = NULL;
@@ -84,54 +145,109 @@ static void fail(link_t *l, const char *why)
     }
 }
 
-/* ---- GATT chain */
+/* ---- GATT chain: services → characteristics → the data characteristic's own descriptors → CCCD write → read back */
+static uint16_t u16_of(const ble_uuid_t *u) { return u->type == BLE_UUID_TYPE_16 ? ble_uuid_u16(u) : 0; }
+static void try_next_service(link_t *l);
+
+static int on_cccd_read(uint16_t conn, const struct ble_gatt_error *err, struct ble_gatt_attr *attr, void *arg)
+{
+    link_t *l = by_conn(conn); if (!l) return 0;
+    uint16_t rb = 0xFFFF;
+    if (err->status == 0 && attr && attr->om && OS_MBUF_PKTLEN(attr->om) >= 2) { uint8_t v[2]; os_mbuf_copydata(attr->om, 0, 2, v); rb = (uint16_t)(v[0] | (v[1] << 8)); }
+    else ESP_LOGW("pipe", "%s: CCCD 0x%04X read back failed (status %d) - written OK, continuing", kind_name(l->kind), l->cccd, err->status);
+    if (rb != 0xFFFF && rb != l->cccd_val) {
+        char why[21]; snprintf(why, sizeof why, "CCCD reads %02X %02X", rb & 0xFF, rb >> 8);
+        fail(l, why);
+        return 0;
+    }
+    s_connecting = NULL;
+    LOCK(); bc_pipe_subscribed(&l->pipe, l->cccd, rb, hw_millis()); UNLOCK();
+    set_state(l, PLAT_LINK_CONNECTED);              /* "CONNECTED" = subscribed; the pipeline says whether data flows */
+    return 0;
+}
+
 static int on_cccd(uint16_t conn, const struct ble_gatt_error *err, struct ble_gatt_attr *attr, void *arg)
 {
     link_t *l = by_conn(conn); if (!l) return 0;
-    if (err->status == 0) { l->backoff_s = 1; s_connecting = NULL; set_state(l, PLAT_LINK_CONNECTED); ESP_LOGI(TAG, "subscribed 0x%04X", l->chr_uuid); }
-    else fail(l, "CCCD write failed");
+    if (err->status != 0) { fail(l, "CCCD write failed"); return 0; }
+    if (ble_gattc_read(conn, l->cccd, on_cccd_read, NULL) != 0) { struct ble_gatt_error e = { .status = BLE_HS_EUNKNOWN }; on_cccd_read(conn, &e, NULL, NULL); }
     return 0;
 }
 
 static int on_dsc(uint16_t conn, const struct ble_gatt_error *err, uint16_t chr_val, const struct ble_gatt_dsc *dsc, void *arg)
 {
     link_t *l = by_conn(conn); if (!l) return 0;
-    if (err->status == 0 && dsc && ble_uuid_cmp(&dsc->uuid.u, BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16)) == 0) l->cccd = dsc->handle;
-    if (err->status == BLE_HS_EDONE) {
-        if (!l->cccd) { fail(l, "no CCCD"); return 0; }
-        static const uint8_t on[2] = { 0x01, 0x00 };   /* notifications on — the ONLY write this firmware sends */
-        ble_gattc_write_flat(conn, l->cccd, on, sizeof on, on_cccd, NULL);
-    }
+    if (err->status == 0 && dsc) { if (l->nds < NDS) { l->ds[l->nds].handle = dsc->handle; l->ds[l->nds].uuid16 = u16_of(&dsc->uuid.u); l->nds++; } return 0; }
+    if (err->status != BLE_HS_EDONE) { fail(l, "descriptor discovery"); return 0; }
+    l->cccd = bc_gatt_pick_cccd(l->ds, l->nds, l->val, l->chr_end);   /* ONLY this characteristic's CCCD (0.7.2 fix) */
+    ESP_LOGI("pipe", "%s: 0x%04X value 0x%04X, descriptors 0x%04X..0x%04X (%d), CCCD 0x%04X", kind_name(l->kind), l->chr_uuid, l->val, l->val + 1, l->chr_end, l->nds, l->cccd);
+    if (!l->cccd) { fail(l, "no CCCD"); return 0; }
+    uint8_t on[2] = { (uint8_t)(l->cccd_val & 0xFF), (uint8_t)(l->cccd_val >> 8) };   /* 01 00 notify / 02 00 indicate — the ONLY write this firmware sends */
+    if (ble_gattc_write_flat(conn, l->cccd, on, sizeof on, on_cccd, NULL) != 0) fail(l, "CCCD write failed");
     return 0;
 }
 
 static int on_chr(uint16_t conn, const struct ble_gatt_error *err, const struct ble_gatt_chr *chr, void *arg)
 {
     link_t *l = by_conn(conn); if (!l) return 0;
-    if (err->status == 0 && chr) l->val = chr->val_handle;
-    if (err->status == BLE_HS_EDONE) {
-        if (!l->val) { fail(l, "characteristic not found"); return 0; }
-        ble_gattc_disc_all_dscs(conn, l->val, l->svc_e, on_dsc, NULL);
+    if (err->status == 0 && chr) {
+        if (l->nch < NCH) { bc_gatt_chr_t *c = &l->ch[l->nch++]; c->def_handle = chr->def_handle; c->val_handle = chr->val_handle; c->props = chr->properties; c->uuid16 = u16_of(&chr->uuid.u); }
+        return 0;
     }
+    if (err->status != BLE_HS_EDONE) { fail(l, "characteristic discovery"); return 0; }
+    int i = bc_gatt_find_chr(l->ch, l->nch, l->chr_uuid);
+    if (i < 0) { ESP_LOGW("pipe", "%s: no 0x%04X in service 0x%04X (%d characteristics)", kind_name(l->kind), l->chr_uuid, l->svc_uuid, l->nch); try_next_service(l); return 0; }
+    l->val = l->ch[i].val_handle;
+    l->chr_end = bc_gatt_chr_end(l->ch, l->nch, i, l->svc_e);
+    l->cccd_val = bc_gatt_cccd_value(l->ch[i].props);
+    if (l->kind == PLAT_SENS_POWER) l->fmt = bc_gatt_power_format(l->svc_uuid);
+    if (!l->cccd_val) { fail(l, "not notifiable"); return 0; }
+    if (l->chr_end <= l->val) { fail(l, "no CCCD"); return 0; }
+    l->nds = 0;
+    if (ble_gattc_disc_all_dscs(conn, l->val, l->chr_end, on_dsc, NULL) != 0) fail(l, "descriptor discovery");
     return 0;
+}
+
+static void try_next_service(link_t *l)
+{
+    while (l->svc_try < l->ncand) {
+        uint16_t want = l->cand[l->svc_try++];
+        for (int i = 0; i < l->nsv; i++) if (l->sv[i].uuid == want) {
+            l->svc_seen = true; l->svc_s = l->sv[i].s; l->svc_e = l->sv[i].e; l->svc_uuid = want; l->nch = 0;
+            ESP_LOGI("pipe", "%s: service 0x%04X 0x%04X..0x%04X", kind_name(l->kind), want, l->svc_s, l->svc_e);
+            if (ble_gattc_disc_all_chrs(l->conn, l->svc_s, l->svc_e, on_chr, NULL) != 0) fail(l, "characteristic discovery");
+            return;
+        }
+    }
+    char why[21];
+    if (l->svc_seen) snprintf(why, sizeof why, "no 0x%04X", l->chr_uuid); else snprintf(why, sizeof why, "no service 0x%04X", l->cand[0]);
+    fail(l, why);
 }
 
 static int on_svc(uint16_t conn, const struct ble_gatt_error *err, const struct ble_gatt_svc *svc, void *arg)
 {
     link_t *l = by_conn(conn); if (!l) return 0;
-    if (err->status == 0 && svc) { l->svc_s = svc->start_handle; l->svc_e = svc->end_handle; }
-    if (err->status == BLE_HS_EDONE) {
-        if (!l->svc_s) { fail(l, "service not found"); return 0; }
-        ble_gattc_disc_chrs_by_uuid(conn, l->svc_s, l->svc_e, BLE_UUID16_DECLARE(l->chr_uuid), on_chr, NULL);
-    }
+    if (err->status == 0 && svc) { if (l->nsv < NSV) { l->sv[l->nsv].s = svc->start_handle; l->sv[l->nsv].e = svc->end_handle; l->sv[l->nsv].uuid = u16_of(&svc->uuid.u); l->nsv++; } return 0; }
+    if (err->status != BLE_HS_EDONE) { fail(l, "service discovery"); return 0; }
+    try_next_service(l);
     return 0;
+}
+
+/* (re)discovery from scratch on the live connection — also the automatic RESUBSCRIBE of the pipeline */
+static void disc_begin(link_t *l)
+{
+    /* val / cccd stay as they are until the new discovery sets them, so a re-subscribe never drops packets in between */
+    l->svc_s = l->svc_e = l->svc_uuid = l->chr_end = 0;
+    l->nsv = l->nch = l->nds = 0; l->svc_try = 0; l->svc_seen = false;
+    if (l->kind == PLAT_SENS_POWER) l->ncand = bc_gatt_power_services(l->name, l->cand);
+    if (ble_gattc_disc_all_svcs(l->conn, on_svc, NULL) != 0) fail(l, "service discovery");
 }
 
 static void start_discovery(link_t *l)
 {
     if (!l || l->disc_started || l->conn == BLE_HS_CONN_HANDLE_NONE) return;
     l->disc_started = true;
-    ble_gattc_disc_svc_by_uuid(l->conn, BLE_UUID16_DECLARE(l->svc_uuid), on_svc, NULL);
+    disc_begin(l);
 }
 
 static link_t *s_mtu_link;
@@ -200,6 +316,7 @@ static void connect_to(link_t *l)
     scan_stop();
     s_connecting = l;
     l->svc_s = l->svc_e = l->val = l->cccd = 0; l->disc_started = false;
+    l->other_notifies = 0; l->other_logged = false;
     set_state(l, PLAT_LINK_CONNECTING);
     ble_link_central_busy(true);                      /* phone advertising pauses while we initiate (meter first, always) */
     int rc = ble_gap_connect(s_own, &l->addr, 10000, NULL, gap_event, l);
@@ -263,7 +380,9 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         ble_link_central_busy(false);
         if (ev->connect.status != 0) { s_connecting = NULL; fail(l, "connect failed / timeout"); return 0; }
         l->conn = ev->connect.conn_handle; l->connects++;
-        LOCK(); if (l->kind == PLAT_SENS_POWER) bc_xds_live_reset(&l->xds); else if (l->kind == PLAT_SENS_HR) bc_hr_live_reset(&l->hr); else bc_csc_live_reset(&l->csc); UNLOCK();
+        LOCK(); if (l->kind == PLAT_SENS_POWER) { bc_xds_live_reset(&l->xds); bc_cp_cad_reset(&l->cp); } else if (l->kind == PLAT_SENS_HR) bc_hr_live_reset(&l->hr); else bc_csc_live_reset(&l->csc);
+        bc_pipe_connected(&l->pipe, hw_millis()); UNLOCK();
+        pipe_log(l);
         s_mtu_link = l;
         ble_gattc_exchange_mtu(l->conn, on_mtu, NULL);
         esp_timer_stop(s_mtu_timer); esp_timer_start_once(s_mtu_timer, 2000 * 1000);
@@ -271,15 +390,26 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
     }
     case BLE_GAP_EVENT_NOTIFY_RX: {
         link_t *l = by_conn(ev->notify_rx.conn_handle);
-        if (!l || ev->notify_rx.attr_handle != l->val) return 0;
+        if (!l) return 0;
+        if (ev->notify_rx.attr_handle != l->val) {        /* not the data characteristic: counted, never decoded */
+            l->other_notifies++;
+            if (!l->other_logged) { l->other_logged = true; ESP_LOGW("pipe", "%s: notification on handle 0x%04X ignored (data handle 0x%04X)", kind_name(l->kind), ev->notify_rx.attr_handle, l->val); }
+            return 0;
+        }
         uint8_t buf[32]; uint16_t n = OS_MBUF_PKTLEN(ev->notify_rx.om); if (n > sizeof buf) n = sizeof buf;
         os_mbuf_copydata(ev->notify_rx.om, 0, n, buf);
         uint32_t now = hw_millis();
+        bool first_valid = false;
         LOCK();
         uint32_t prev = l->kind == PLAT_SENS_POWER ? (l->xds.have ? l->xds.last_ms : 0) : l->kind == PLAT_SENS_HR ? (l->hr.have ? l->hr.last_ms : 0) : (l->csc.have_prev ? l->csc.last_ms : 0);
-        bool ok = l->kind == PLAT_SENS_POWER ? bc_xds_live_feed(&l->xds, buf, n, now) : l->kind == PLAT_SENS_HR ? bc_hr_live_feed(&l->hr, buf, n, now) : bc_csc_live_feed(&l->csc, buf, n, now);
+        bool ok = l->kind == PLAT_SENS_POWER ? (l->fmt == BC_PFMT_CPS ? bc_cp_live_feed(&l->xds, &l->cp, buf, n, now) : bc_xds_live_feed(&l->xds, buf, n, now))
+                : l->kind == PLAT_SENS_HR ? bc_hr_live_feed(&l->hr, buf, n, now) : bc_csc_live_feed(&l->csc, buf, n, now);
         if (ok && prev && now - prev > 2500) l->gaps++;
+        bc_pipe_packet(&l->pipe, buf, n, ok, now);
+        if (ok && !l->valid_seen) { l->valid_seen = true; first_valid = true; }
+        if (ok) l->backoff_s = 1;                        /* back-off resets only when real data flows (not on a bare subscribe) */
         UNLOCK();
+        if (first_valid) { LOCK(); bc_pipe_tick(&l->pipe, now); UNLOCK(); pipe_log(l); }   /* log the first VALID at once */
         return 0;
     }
     case BLE_GAP_EVENT_DISCONNECT: {
@@ -288,7 +418,9 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         if (!l) return 0;
         l->conn = BLE_HS_CONN_HANDLE_NONE;
         if (s_connecting == l) s_connecting = NULL;
-        LOCK(); l->reconnects++; UNLOCK();
+        LOCK(); l->reconnects++;
+        if (l->pipe.stage != BC_STG_ERROR && !l->pipe.err[0]) snprintf(l->pipe.err, sizeof l->pipe.err, "link lost 0x%x", ev->disconnect.reason);
+        l->valid_seen = false; UNLOCK();
         l->retry_at = hw_millis() + (uint32_t)l->backoff_s * 1000;
         l->backoff_s = l->backoff_s >= 16 ? 16 : l->backoff_s * 2;
         set_state(l, l->paired ? PLAT_LINK_RETRY : PLAT_LINK_NOT_PAIRED);
@@ -308,6 +440,28 @@ static void tick(void *arg)
     if (!s_synced) return;
     ble_link_tick();
     uint32_t now = hw_millis();
+    /* 0.7.2 pipeline: stage from the clock + automatic recovery for every live connection */
+    for (int i = 0; i < NL; i++) {
+        link_t *l = &L[i];
+        if (l->conn == BLE_HS_CONN_HANDLE_NONE) continue;
+        LOCK(); bc_pipe_act_t a = bc_pipe_tick(&l->pipe, now); UNLOCK();
+        pipe_log(l);
+        switch (a) {
+        case BC_PIPE_RESUBSCRIBE:
+            ESP_LOGW("pipe", "%s: %s - discovering and subscribing again", kind_name(l->kind), l->pipe.have_valid ? "data stale > 10 s" : "subscribed, no packet in 8 s");
+            disc_begin(l);
+            break;
+        case BC_PIPE_RECONNECT:
+            ESP_LOGW("pipe", "%s: %s - reconnecting (back-off %d s)", kind_name(l->kind), l->pipe.err, l->backoff_s);
+            ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
+            break;
+        case BC_PIPE_DUMP_HEX: {
+            ESP_LOGW("pipe", "%s: unreadable data - %lu packets, none decodes; first packets (sensor data only):", kind_name(l->kind), (unsigned long)l->pipe.packets);
+            for (int k = 0; k < l->pipe.nhex; k++) { char h[64]; LOCK(); bc_pipe_hex(&l->pipe, k, h, sizeof h); UNLOCK(); ESP_LOGW("pipe", "%s   [%d] %s", kind_name(l->kind), k + 1, h); }
+            break; }
+        default: break;
+        }
+    }
     if (s_connecting && now - s_connecting->state_since > 15000) {   /* stuck connect/discovery */
         link_t *l = s_connecting;
         ESP_LOGW(TAG, "connection set-up took > 15 s — retrying");
@@ -378,6 +532,7 @@ void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t
     l->paired = mac != NULL;
     if (mac) { memcpy(l->addr.val, mac, 6); l->addr.type = addr_type; snprintf(l->name, sizeof l->name, "%s", name ? name : ""); }
     l->backoff_s = 1; l->retry_at = 0;
+    bc_pipe_init(&l->pipe); l->pipe.stage_ms = hw_millis();          /* a new pairing / RETRY starts a clean pipeline */
     UNLOCK();
     set_state(l, mac ? PLAT_LINK_SEARCHING : PLAT_LINK_NOT_PAIRED);
 }
@@ -436,9 +591,15 @@ void ble_central_snapshot(plat_sensors_t *o)
         bool hv = i == 0 ? L[0].xds.have : i == 1 ? L[1].hr.have : L[2].csc.have_prev;
         uint32_t lv = i == 0 ? L[0].xds.last_ms : i == 1 ? L[1].hr.last_ms : L[2].csc.last_ms;
         li->packets = pk; li->age_ms = pk ? now - last : UINT32_MAX; li->reconnects = L[i].reconnects;
+        const bc_pipe_t *pp = &L[i].pipe;
+        li->stage = (uint8_t)(L[i].paired ? pp->stage : BC_STG_NOT_PAIRED); li->stage_age_ms = now - pp->stage_ms;
+        snprintf(li->err, sizeof li->err, "%s", pp->err); li->unreadable = pp->unreadable;
+        li->svc_uuid = L[i].svc_uuid; li->cccd = pp->cccd; li->data_handle = L[i].val;
+        li->resubscribes = pp->resubscribes; li->auto_reconnects = pp->reconnects;
         li->valid_age_ms = hv ? now - lv : UINT32_MAX;
         li->gaps = L[i].gaps;
         li->rejected = i == 0 ? L[0].xds.rejected + L[0].xds.short_packets : i == 1 ? L[1].hr.rejected : L[2].csc.rejected;
+        if (pp->stage >= BC_STG_SUBSCRIBED && pp->stage != BC_STG_ERROR) { li->packets = pp->packets; li->rejected = pp->rejected; }
     }
     UNLOCK();
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;

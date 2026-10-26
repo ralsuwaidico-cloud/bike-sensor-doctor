@@ -37,6 +37,18 @@ bool bc_xds_live_feed(bc_xds_live_t *l, const uint8_t *b, size_t n, uint32_t now
     return true;
 }
 
+bool bc_xds_live_feed_sample(bc_xds_live_t *l, const bc_xds_sample_t *s, bool has_cad, uint32_t now_ms)
+{
+    l->packets++;
+    l->last_packet_ms = now_ms;
+    if (!s) { l->short_packets++; return false; }
+    if (!bc_xds_plausible(s)) { l->rejected++; return false; }
+    l->last = *s; l->no_cad = !has_cad;
+    l->last_ms = now_ms;
+    l->have = true;
+    return true;
+}
+
 static bool fresh(const bc_xds_live_t *l, uint32_t now_ms) { return l->have && (uint32_t)(now_ms - l->last_ms) <= BC_STALE_MS; }
 
 bc_live_status_t bc_xds_live_power(const bc_xds_live_t *l, uint32_t now_ms, int *watts)
@@ -48,7 +60,7 @@ bc_live_status_t bc_xds_live_power(const bc_xds_live_t *l, uint32_t now_ms, int 
 
 bc_live_status_t bc_xds_live_cadence(const bc_xds_live_t *l, uint32_t now_ms, int *rpm, bool *backwards)
 {
-    if (!fresh(l, now_ms)) return BC_LIVE_NO_DATA;
+    if (!fresh(l, now_ms) || l->no_cad) return BC_LIVE_NO_DATA;
     if (rpm) *rpm = bc_xds_cadence_rpm(&l->last);
     if (backwards) *backwards = bc_xds_backwards(&l->last);
     return BC_LIVE_OK;

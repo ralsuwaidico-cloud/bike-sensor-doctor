@@ -9,3 +9,4 @@ test/sim/out/
 test/sim/simfs/
 test/sim/run.log
 test/host/test_bc_core
+test/host/test_bc_pipe

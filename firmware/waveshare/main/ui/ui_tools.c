@@ -101,9 +101,9 @@ static void st_update(void)
     lv_obj_set_style_bg_color(st_src, lv.demo ? C_DEMO : C_GREEN, 0);
     char b[64];
     char rs0[16] = ""; if (l->rssi && l->link == PLAT_LINK_CONNECTED) snprintf(rs0, sizeof rs0, "  %d dBm", l->rssi);
-    snprintf(b, sizeof b, "%s%s", ui_link_text(l->link), rs0);
+    if (lv.demo) snprintf(b, sizeof b, "%s", ui_link_text(l->link)); else snprintf(b, sizeof b, "%s%s", ui_stage_word(l), rs0);   /* 0.7.2: the real stage */
     lv_label_set_text(st_state, b);
-    lv_obj_set_style_text_color(st_state, ui_link_color(l->link), 0);
+    lv_obj_set_style_text_color(st_state, lv.demo ? ui_link_color(l->link) : l->stage == 6 ? C_GREEN : l->stage == 8 || l->unreadable ? C_RED : C_AMBER, 0);
     if (lv.power_ok) { snprintf(b, sizeof b, "%d", lv.watts); lv_label_set_text(st_w, b); lv_obj_set_style_text_color(st_w, C_FG, 0); lv_label_set_text(st_wu, "WATTS"); lv_obj_set_style_text_color(st_wu, C_MUT, 0); }
     else { lv_label_set_text(st_w, "--"); lv_obj_set_style_text_color(st_w, C_MUT, 0); lv_label_set_text(st_wu, "NO DATA"); lv_obj_set_style_text_color(st_wu, C_AMBER, 0); }
     if (lv.cad_ok) snprintf(b, sizeof b, "%d rpm%s", lv.rpm, lv.backwards ? " (back)" : ""); else snprintf(b, sizeof b, "-- rpm");
@@ -169,13 +169,15 @@ static size_t health_text(char *b, size_t cap, bool markup)
              !p->phone_on ? "off" : ph.state == PLAT_PHONE_READY ? "connected" : ph.state == PLAT_PHONE_REPAIR ? "REPAIR NEEDED" : ph.state == PLAT_PHONE_ADVERTISING ? "searching" : "connecting",
              ph.bonds, ph.bonds == 1 ? "" : "s", ph.id_gen, DISC[ph.last_disc > 7 ? 7 : ph.last_disc], ph.last_disc_code, ph.enc_fails,
              (const char *[]){"device only", "synced", "pending", "FAILED"}[app_psvc_sync_state() & 3]);
+    /* 0.7.2: the sensor lines first (automatic diagnosis, refreshed every 250 ms): "POWER  live 142 W" */
+    char sens[320]; ui_conn_health_lines(sens, sizeof sens, markup);
     int n = snprintf(b, cap,
-        "%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
+        "%s%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
         "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
         "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
         "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sCharging%s not detectable (no STAT/VBUS line);\n  alerts unavailable, HW-1 open\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sTouch gate%s %s, %lu reports\n%sPower state%s %s, %lu standbys\n%sBluetooth%s %s%s, %lu seen\n%sPhone link%s %s\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sSpeed/cad.%s %s %s\n%sWi-Fi%s %s\n"
         "%sMeter gaps / bad%s %lu / %lu\n%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
-        K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
+        sens, K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
         K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
         K, E, (unsigned long)h.storage_errors, K, E, (unsigned long)h.profile_save_errors,
         K, E, h.heap_free_k, h.heap_min_k, K, E, h.psram_free_k, h.psram_total_k, K, E, h.flash_total_k, h.app_slot_k,
@@ -187,9 +189,9 @@ static size_t health_text(char *b, size_t cap, bool markup)
         K, E, h.ble_ready ? "ready" : "NOT READY",
         h.ble_scanning ? ", scanning" : "", (unsigned long)h.ble_devices_seen,
         K, E, link_line,
-        K, E, p->power.paired ? p->power.name : "not paired", ui_link_text(pw->link),
-        K, E, p->hr.paired ? p->hr.name : "not paired", p->hr.paired ? ui_link_text(hr->link) : "",
-        K, E, p->csc.paired ? p->csc.name : "not paired", p->csc.paired ? ui_link_text(lv.link[PLAT_SENS_CSC].link) : "",
+        K, E, p->power.paired ? p->power.name : "not paired", p->power.paired ? ui_stage_word(pw) : "",
+        K, E, p->hr.paired ? p->hr.name : "not paired", p->hr.paired ? ui_stage_word(hr) : "",
+        K, E, p->csc.paired ? p->csc.name : "not paired", p->csc.paired ? ui_stage_word(&lv.link[PLAT_SENS_CSC]) : "",
         K, E, wifi_line,
         K, E, (unsigned long)pw->gaps, (unsigned long)pw->rejected,
         K, E, h.display_ok ? "OK" : "FAIL", K, E, h.touch_ok ? "OK" : "FAIL", K, E, h.imu_ok ? "OK" : "not found",
@@ -197,7 +199,7 @@ static size_t health_text(char *b, size_t cap, bool markup)
     return n > 0 && (size_t)n < cap ? (size_t)n : cap - 1;
 }
 
-static void health_update(void) { static char b[1600]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
+static void health_update(void) { static char b[2000]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
 
 static void strip_markup(char *s)
 {
@@ -213,8 +215,8 @@ static void strip_markup(char *s)
 static void export_cb(lv_event_t *e)
 {
     (void)e;
-    static char rep[3000];
-    size_t n = health_text(rep, 1500, false);
+    static char rep[3400];
+    size_t n = health_text(rep, 1900, false);
     char st[520]; plat_selftest_text(st, sizeof st); strip_markup(st);
     app_live_t lv; app_live(&lv);
     bc_ride_summary_t r[3]; int nr = app_history(r, 3, false);
