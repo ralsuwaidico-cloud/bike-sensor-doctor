@@ -34,7 +34,7 @@ screenshots: branch `ci-logs`, folder `ios/asc-listing/run-N/`. Nothing is ever 
 | Age rating | set (24 answers; kids band / overrides left empty) |
 | Version | **1.0.0**, copyright "2026 Cyclift" — set |
 | Description, keywords, support + marketing URLs | set from `ios/store/en-US/` (Cyclift text, standard Bluetooth sensors, BikeComputer optional) |
-| Promotional text | run 4 refused it (178 > 170 characters); shortened to 153 — set on the next listing run |
+| Promotional text | set (run 5; shortened to 153 characters after run 4 refused 178 > 170) |
 | App Review notes | **old (Athletics) notes still on Apple's side**: Apple accepts an update only after the owner fills the App Review contact fields; then re-run the listing workflow |
 | Screenshots | 5 × 1320×2868 from the real app (simulator, seeded rider "Alex"), uploaded. **Retake after the ride-layout and sources workstreams are merged** (the ride screenshot shows the pre-Cyclift ride screen) |
 | Sign in with Apple | capability on the App ID enabled; entitlement in project.yml since commit b67cfd4 (CI verifies it in the signed app) |

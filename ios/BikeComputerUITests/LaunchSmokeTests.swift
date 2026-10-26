@@ -207,10 +207,16 @@ final class LaunchSmokeTests: XCTestCase {
         app.buttons["Cancel"].firstMatch.tap()
         // Plan → Log strength → Quick log sheet opens with the type grid, closes
         let log = app.buttons["Log strength"].firstMatch
-        XCTAssertTrue(log.waitForExistence(timeout: 10)); log.tap()
-        let quick = app.buttons["Quick log"].firstMatch
-        if quick.waitForExistence(timeout: 5) { quick.tap() }
-        XCTAssertTrue(app.navigationBars["Log strength"].waitForExistence(timeout: 10), "quick strength log must open")
+        XCTAssertTrue(log.waitForExistence(timeout: 10))
+        // The toolbar menu can still be animating at accessibility text sizes: open it again once if the sheet did not appear.
+        var opened = false
+        for _ in 0..<2 where !opened {
+            log.tap()
+            let quick = app.buttons["Quick log"].firstMatch
+            if quick.waitForExistence(timeout: 5) { quick.tap() }
+            opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
+        }
+        XCTAssertTrue(opened, "quick strength log must open")
         XCTAssertTrue(app.buttons["Full body"].firstMatch.waitForExistence(timeout: 5) || app.staticTexts["Full Body"].firstMatch.waitForExistence(timeout: 2), "type grid visible")
         app.buttons["Cancel"].firstMatch.tap()
         // Profile → Training profile page
