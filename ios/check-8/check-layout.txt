@@ -1,0 +1,5 @@
+small=DE951DF8-E5AA-4D73-AFBF-DE4CCA3D13A8 max=CDFBE5B7-49AC-41DA-BEF5-734F34972AEC std=77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+== small exit 0
+	 Executed 1 test, with 0 failures (0 unexpected) in 1532.222 (1532.228) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 1532.222 (1532.230) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 1532.222 (1532.231) seconds
