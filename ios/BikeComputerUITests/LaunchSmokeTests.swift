@@ -82,7 +82,8 @@ final class LaunchSmokeTests: XCTestCase {
         let profileTab = app.buttons["Profile"].firstMatch
         XCTAssertTrue(profileTab.waitForExistence(timeout: 10), "Profile tab missing")
         profileTab.tap()
-        let create = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Create account'")).firstMatch
+        // Home's guest card has its own small "Create account" link (hidden tab, still in the tree): use the Profile row's id.
+        let create = app.buttons["profileCreateAccount"].firstMatch
         var tries = 0
         while !(create.exists && create.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }   // the Account section is below the fold
         XCTAssertTrue(create.waitForExistence(timeout: 10), "guest sees Create account in Profile › Account")

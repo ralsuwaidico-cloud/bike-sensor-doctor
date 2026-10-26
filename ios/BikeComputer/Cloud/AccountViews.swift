@@ -19,14 +19,14 @@ struct AccountSection: View {
             switch account.state {
             case .notConfigured:
                 if store.guest {
-                    Button { showAccount = true } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("not available yet").font(.caption).foregroundStyle(.secondary) } }
+                    Button { showAccount = true } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("not available yet").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
                 } else {
                     HStack { Label("Signed in with Apple", systemImage: "checkmark.seal"); Spacer(); Pill(text: "local only", color: BC.stale) }
                     Button("Sign out (keeps data on this phone)") { store.guest = true; store.appleUserId = nil }
                 }
                 Text("Accounts and cloud sync are switched off in this build; everything stays on this phone.").font(.footnote).foregroundStyle(.secondary)
             case .signedOut:
-                Button { showAccount = true } label: { HStack { Label("Create account or sign in", systemImage: "person.badge.plus"); Spacer(); Text("guest · data on this phone").font(.caption).foregroundStyle(.secondary) } }
+                Button { showAccount = true } label: { HStack { Label("Create account or sign in", systemImage: "person.badge.plus"); Spacer(); Text("guest · data on this phone").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
                 Text("An account keeps your workouts, plan, templates and settings in sync across your devices. Guest data is uploaded when you sign in — nothing is lost.").font(.footnote).foregroundStyle(.secondary)
             case .signedIn(_, let email, let provider):
                 HStack { Label("Signed in with \(provider)", systemImage: "checkmark.seal"); Spacer(); if let e = email { Text(e).font(.caption).foregroundStyle(.secondary).lineLimit(1) } }

@@ -181,15 +181,18 @@ check_app() {
   if ! codesign --verify --strict "$app" 2>>"$LOGS/verify.txt"; then note "  $bundle: signature INVALID"; VERIFY_OK=0; return; fi
   ent=$(codesign -d --entitlements - --xml "$app" 2>/dev/null)
   printf '%s\n' "--- $bundle" "$ent" | scrub >> "$LOGS/verify.txt"
-  local appid hk gta
-  read -r appid hk gta < <(printf '%s' "$ent" | python3 -c '
+  local appid hk gta siwa
+  read -r appid hk gta siwa < <(printf '%s' "$ent" | python3 -c '
 import plistlib,sys
 d=plistlib.loads(sys.stdin.buffer.read())
-print(d.get("application-identifier",""), str(d.get("com.apple.developer.healthkit",False)).lower(), str(d.get("get-task-allow",False)).lower())')
+print(d.get("application-identifier",""), str(d.get("com.apple.developer.healthkit",False)).lower(), str(d.get("get-task-allow",False)).lower(), "yes" if d.get("com.apple.developer.applesignin") else "no")')
   local line="  $bundle: signature valid"
   [[ "$appid" == *".$bundle" ]] && line+=", app ID ok" || { line+=", app ID WRONG"; VERIFY_OK=0; }
   [ "$hk" = "true" ] && line+=", HealthKit ok" || { line+=", HealthKit MISSING"; VERIFY_OK=0; }
   [ "$gta" = "true" ] && { line+=", debug flag set (not App Store)"; VERIFY_OK=0; }
+  if [ "$bundle" = "com.ralsuwaidico.bikecomputer" ]; then
+    [ "$siwa" = "yes" ] && line+=", Sign in with Apple ok" || { line+=", Sign in with Apple MISSING"; VERIFY_OK=0; }
+  fi
   note "$line"
 }
 check_app "$OUT/ipa/Payload/BikeComputer.app" com.ralsuwaidico.bikecomputer
