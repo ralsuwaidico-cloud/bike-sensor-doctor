@@ -68,6 +68,19 @@ final class DeviceLink: NSObject, ObservableObject {
     @Published private(set) var linkDiag: BCLink.LinkDiag?
     @Published private(set) var linkDiagAt: Date?
     @Published private(set) var batteryNotice: BCLink.Event?
+    /// 1.2.2 (firmware 0.7.2): the board's per-sensor pipeline stage (SENSOR_DIAG), latest per sensor, with arrival time.
+    @Published private(set) var sensorDiag: [UInt8: BCLink.SensorDiag] = [:]
+    @Published private(set) var sensorDiagAt: [UInt8: Date] = [:]
+    var onSensorDiag: ((BCLink.SensorDiag) -> Void)?
+    /// Pipeline diagnostics (PIPELINE_HEALTH.md): what this link really saw — characteristics found, which ones iOS
+    /// confirmed as notifying, the first LIVE after connecting, and the last messages that could not be parsed.
+    @Published private(set) var characteristicsSeen: [String] = []
+    @Published private(set) var notifying: [String: Bool] = [:]
+    @Published private(set) var notifyErrors: [String: String] = [:]
+    @Published private(set) var firstLiveAt: Date?
+    @Published private(set) var readyAt: Date?
+    @Published private(set) var parseErrors: [String] = []
+    private(set) var liveResubscribes = 0
     /// The board id (INFO tag 07) seen on the last good connection, so a board that took a new Bluetooth identity after a
     /// Repair / Forget is recognised as the same device. The stale CoreBluetooth identifier is kept only for diagnostics.
     @Published private(set) var knownDeviceId: String? = UserDefaults.standard.string(forKey: "bikecomputer.deviceId")
@@ -89,7 +102,9 @@ final class DeviceLink: NSObject, ObservableObject {
     var boardId: String { info?.deviceId ?? peripheral?.identifier.uuidString ?? "unknown" }
     var rememberedIdentifier: String? { UserDefaults.standard.string(forKey: rememberedKey) }
 
-    struct Stats { var connects = 0, liveMsgs = 0, rejected = 0, sentGPS = 0, sentHR = 0, sentTime = 0, disconnects = 0, events = 0 }
+    struct Stats { var connects = 0, liveMsgs = 0, rejected = 0, sentGPS = 0, sentHR = 0, sentTime = 0, disconnects = 0, events = 0, sensorDiags = 0 }
+    /// Time the last HR reading went to the board (watch or phone strap), for the "Forwarded" pipeline stage.
+    @Published private(set) var lastHRSentAt: Date?
 
     /// Seconds a stage may last before it is reported as failed (the brief: never an indefinite "Connecting…").
     static let stageTimeout: TimeInterval = 20
@@ -103,7 +118,7 @@ final class DeviceLink: NSObject, ObservableObject {
     private var timeTimer: Timer?
     private var rssiTimer: Timer?
     private var stageTimer: Timer?
-    private var wantConnection = false
+    private(set) var wantConnection = false
     private let rememberedKey = "bikecomputer.peripheral"
     private let serviceUUID = CBUUID(string: BCLink.serviceUUID)
     private let boardStart = Date()
@@ -193,6 +208,32 @@ final class DeviceLink: NSObject, ObservableObject {
     /// The Connections screen's "Retry profile sync": asks the board for its profile again (the sync layer compares).
     func retryProfile() { guard state == .ready else { return }; setStage(.syncingProfile); profileGet() }
 
+    /// Automatic recovery when the link is up but no LIVE arrives: ask iOS to (re)enable notifications on Live, Control
+    /// and Events. Harmless when they are already on.
+    func resubscribeLive() {
+        guard state == .ready, let p = peripheral else { return }
+        liveResubscribes += 1
+        note("Re-subscribing to live data (attempt \(liveResubscribes))")
+        for c in [liveChr, controlChr, eventsChr].compactMap({ $0 }) { p.setNotifyValue(true, for: c) }
+    }
+    /// Automatic recovery of last resort: drop the link and connect again (pending connect, no scanning).
+    func reconnect() {
+        guard remembered, let p = peripheral else { connect(); return }
+        note("Reconnecting automatically")
+        central.cancelPeripheralConnection(p)       /* didDisconnect re-attaches while wantConnection is set */
+        wantConnection = true
+    }
+    /// Live data size limit on this link (ATT MTU − 3) for the diagnostic report; nil while not connected.
+    var maxNotifyBytes: Int? { peripheral?.state == .connected ? peripheral?.maximumWriteValueLength(for: .withoutResponse) : nil }
+    var liveAge: TimeInterval? { liveReceivedAt.map { Date().timeIntervalSince($0) } }
+
+    private func noteParseError(_ what: String, _ d: Data) {
+        stats.rejected += 1
+        let head = d.prefix(12).map { String(format: "%02X", $0) }.joined(separator: " ")
+        parseErrors.append("\(Date().formatted(date: .omitted, time: .standard)) \(what): \(d.count) bytes [\(head)\(d.count > 12 ? " …" : "")]")
+        if parseErrors.count > 20 { parseErrors.removeFirst(parseErrors.count - 20) }
+    }
+
     /// Called by the profile-sync layer when the sync question is settled (in sync, needs confirmation or unsupported).
     func profileSyncSettled() { if stage == .syncingProfile || stage == .connected { setStage(.ready) } }
     func profileSyncFailed(_ reason: String) { if stage == .syncingProfile { fail(.syncingProfile, reason, .retry) ; setStage(.ready) } }
@@ -208,7 +249,7 @@ final class DeviceLink: NSObject, ObservableObject {
 
     func send(heartRate bpm: Int, source: BCLink.Source, sampledAt: Date) {
         guard bpm >= 25, bpm <= 250, let d = BCLink.encodeHR(bpm: UInt8(bpm), source: source, sampleEpochMs: UInt64(sampledAt.timeIntervalSince1970 * 1000), quality: 2, seq: nextSeq(), tMs: nowMs()) else { return }
-        if write(d, to: inputChr) { stats.sentHR += 1 }
+        if write(d, to: inputChr) { stats.sentHR += 1; lastHRSentAt = Date() }
     }
 
     func sendTime() {
@@ -441,6 +482,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         stats.disconnects += 1; lastDisconnectedAt = Date()
         stopTimers(); stageTimer?.invalidate()
         live = nil; liveReceivedAt = nil; rssi = nil
+        notifying = [:]; notifyErrors = [:]; firstLiveAt = nil; readyAt = nil; sensorDiag = [:]; sensorDiagAt = [:]; liveResubscribes = 0
         inputChr = nil; controlChr = nil; liveChr = nil; syncChr = nil; eventsChr = nil; syncInFlight = false
         wifiScanning = false; wifiStatus = nil; boardSettings = nil
         let wasPairing = stage == .pairing || stage == .authenticating
@@ -462,6 +504,8 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
 
     func peripheral(_ p: CBPeripheral, didDiscoverCharacteristicsFor s: CBService, error: Error?) {
         if let e = error { let d = DeviceLink.describe(e); fail(.connected, d.reason, d.action, code: d.code); return }
+        characteristicsSeen = (s.characteristics ?? []).map { BCLink.shortName($0.uuid.uuidString) }
+        for c in s.characteristics ?? [] where c.isNotifying { notifying[BCLink.shortName(c.uuid.uuidString)] = true }   /* restored link: already on */
         for c in s.characteristics ?? [] {
             switch c.uuid.uuidString {
             case BCLink.infoUUID: setState(.pairing); setStage(.pairing); p.readValue(for: c)       /* first secure read: triggers the passkey dialog on a new phone */
@@ -488,7 +532,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         guard let d = c.value else { return }
         switch c.uuid.uuidString {
         case BCLink.infoUUID:
-            guard let i = BCLink.decodeInfo(d) else { stats.rejected += 1; fail(.connected, "unreadable device info", .retry); return }
+            guard let i = BCLink.decodeInfo(d) else { noteParseError("INFO", d); fail(.connected, "unreadable device info", .retry); return }
             info = i
             UserDefaults.standard.set(p.identifier.uuidString, forKey: rememberedKey); remembered = true
             if let id = i.deviceId {
@@ -497,7 +541,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 knownDeviceId = id; UserDefaults.standard.set(id, forKey: "bikecomputer.deviceId")
             }
             repairing = false; failure = nil
-            setState(.ready); setStage(.connected)
+            setState(.ready); setStage(.connected); readyAt = Date(); firstLiveAt = nil
             if let l = liveChr { p.setNotifyValue(true, for: l) }
             if let k = controlChr { p.setNotifyValue(true, for: k) }
             if let ev = eventsChr { p.setNotifyValue(true, for: ev) }
@@ -514,7 +558,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             } else { setStage(.ready) }
             onReady?()
         case BCLink.liveUUID:
-            if let l = BCLink.decodeLive(d) { live = l; liveReceivedAt = Date(); stats.liveMsgs += 1 } else { stats.rejected += 1 }
+            if let l = BCLink.decodeLive(d) { live = l; liveReceivedAt = Date(); stats.liveMsgs += 1; if firstLiveAt == nil { firstLiveAt = liveReceivedAt; note("First live data from the board") } } else { noteParseError("LIVE", d) }
         case BCLink.controlUUID:
             handleControl(d)
         case BCLink.syncUUID:
@@ -523,9 +567,17 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 syncInFlight = false
                 syncStatus = "\(e.total) rides on the board · \(syncedRides) received"
                 if e.more { startSync() }
-            } else { stats.rejected += 1 }
+            } else { noteParseError("SYNC", d) }
         case BCLink.eventsUUID:
-            guard let ev = BCLink.decodeEvent(d) else { stats.rejected += 1; return }
+            if let sd = BCLink.decodeSensorDiag(d) {
+                stats.events += 1; stats.sensorDiags += 1
+                let old = sensorDiag[sd.sensorRaw]
+                sensorDiag[sd.sensorRaw] = sd; sensorDiagAt[sd.sensorRaw] = Date()
+                if old?.stageRaw != sd.stageRaw { note("Board: \(sd.sensor?.title ?? "sensor \(sd.sensorRaw)") — \(sd.stage?.words ?? "stage \(sd.stageRaw)")" + (sd.lastError.map { " (\($0))" } ?? "")) }
+                onSensorDiag?(sd)
+                return
+            }
+            guard let ev = BCLink.decodeEvent(d) else { noteParseError("EVENT", d); return }
             stats.events += 1
             if let diag = BCLink.linkDiag(from: ev) { linkDiag = diag; linkDiagAt = Date(); note("Board: previous link ended by \(diag.reasonText); \(diag.bonds) phone(s) remembered; profile \(diag.syncText)") }
             else if ev.isBatteryNotice { batteryNotice = ev }
@@ -557,6 +609,14 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
     }
 
     func peripheral(_ p: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) { if error == nil { rssi = RSSI.intValue } }
+
+    /// iOS confirms (or refuses) each subscription: "Subscribed" is a pipeline stage only after this callback says so.
+    func peripheral(_ p: CBPeripheral, didUpdateNotificationStateFor c: CBCharacteristic, error: Error?) {
+        let k = BCLink.shortName(c.uuid.uuidString)
+        notifying[k] = error == nil && c.isNotifying
+        if let e = error { notifyErrors[k] = DeviceLink.describe(e).reason; note("Subscribing to \(k) failed: \(DeviceLink.describe(e).reason)") }
+        else { notifyErrors[k] = nil }
+    }
 
     func peripheral(_ p: CBPeripheral, didWriteValueFor c: CBCharacteristic, error: Error?) {
         if let e = error { lastError = DeviceLink.describe(e).reason }

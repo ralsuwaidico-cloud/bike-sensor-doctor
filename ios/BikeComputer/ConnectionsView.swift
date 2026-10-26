@@ -14,11 +14,17 @@ struct ConnectionsView: View {
     @EnvironmentObject private var health: HealthAccess
     @EnvironmentObject private var sync: ProfileSync
     @EnvironmentObject private var hub: SensorHub
+    @EnvironmentObject private var monitor: PipelineMonitor
     @State private var tick = Date()
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
         List {
+            Section {
+                PipelineBanner(monitor: monitor)
+                NavigationLink { PipelineDiagnosticsView() } label: { Label("Diagnostics", systemImage: "stethoscope") }
+                    .accessibilityIdentifier("connectionsDiagnostics")
+            } footer: { Text("Checked every second; reconnects and restarts happen automatically. Export a technical report from Diagnostics.") }
             Section {
                 InUseNowRows(hub: hub)
             } header: { Text("In use now") } footer: {
@@ -89,16 +95,25 @@ struct ConnectionsView: View {
     private var watchStatus: ConnStatus { ConnectionRules.watch(paired: watch.paired, appInstalled: watch.appInstalled, hrFresh: watch.hrIsFresh, workoutRunning: watch.workoutState == "running", enabled: watchEnabled) }
     private var watchSubtitle: String {
         if !watchEnabled { return "off (your choice)" }
-        if watch.hrIsFresh { return "heart rate live · \(watch.hrBpm ?? 0) bpm" }
+        if watch.paired, watch.appInstalled, watch.version == .watchOlder { return "watch app outdated — update it in the Watch app" }
+        if watch.hrIsFresh { return "heart rate live · \(watch.hrBpm ?? 0) bpm" + (watch.mirror.active ? " · mirrored" : "") }
+        if let w = monitor.reports.first(where: { $0.id == "watch.hr" }), w.health.needsMessage { return w.message }
         if !watch.paired { return "no watch paired with this iPhone" }
         if !watch.appInstalled { return "watch app not installed" }
         return watch.workoutState == "running" ? "workout running · waiting for heart rate" : "ready · start the workout on the watch"
     }
     private var meterEnabled: Bool { store.settings.enabledConnections.contains("meter") || device.remembered }
-    private var meterStatus: ConnStatus { ConnectionRules.meter(boardLive: liveNow != nil, meterLink: liveNow?.meterLink, enabled: meterEnabled) }
+    /// Green only with a live power value — "connected" alone is never success (PIPELINE_HEALTH.md).
+    private var powerPipeline: PipelineReport? { monitor.reports.first { $0.id == "board.power" } }
+    private var meterStatus: ConnStatus {
+        let base = ConnectionRules.meter(boardLive: liveNow != nil, meterLink: liveNow?.meterLink, enabled: meterEnabled)
+        if base == .green, liveNow?.powerW == nil { return powerPipeline?.health == .noData || powerPipeline?.health == .failed ? .red : .amber }
+        return base
+    }
     private var meterSubtitle: String {
+        if let p = powerPipeline, p.health != .live, p.health != .notSetUp, !p.message.isEmpty { return p.message }
         guard let l = liveNow else { return device.remembered ? "reported by the board when connected" : "pairs on the board" }
-        switch l.meterLink { case 4: return "connected to the board" + (l.powerW.map { " · \($0) W" } ?? ""); case 2: return "board searching (pedal once)"; case 3: return "connecting"; case 5: return "reconnecting"; case 1: return "not paired on the board"; default: return "off" }
+        switch l.meterLink { case 4: return l.powerW.map { "live · \($0) W" } ?? "connected — waiting for data"; case 7: return "connected — data stale"; case 2: return "board searching (pedal once)"; case 3: return "connecting"; case 5: return "reconnecting"; case 1: return "not paired on the board"; default: return "off" }
     }
     private var strapEnabled: Bool { store.settings.enabledConnections.contains("strap") }
     private var strapStatus: ConnStatus { ConnectionRules.strap(boardLive: liveNow != nil, hrFromStrap: liveNow?.hrSource == .bleStrap && liveNow?.hrBpm != nil, enabled: strapEnabled) }
@@ -120,7 +135,7 @@ struct InUseNowRows: View {
                         Text(r.sourceLabel + (r.quality == .good ? "" : " · " + r.quality.title)).font(.caption).foregroundStyle(r.quality == .unverified ? BC.stale : .secondary)
                     }
                 } else {
-                    Text(k.missingText).font(.subheadline).foregroundStyle(.secondary)
+                    Text(hub.missingReason[k] ?? k.missingText).font(.subheadline).foregroundStyle(hub.missingReason[k] == nil ? Color.secondary : BC.stale)
                 }
                 Spacer()
             }
@@ -581,7 +596,14 @@ struct WatchConnectionDetail: View {
                 StatusRow(title: "Watch app reachable now", ok: watch.reachable)
                 LabeledContent("Workout on the watch", value: watch.workoutState)
                 LabeledContent("Live heart rate", value: watch.hrIsFresh ? "\(watch.hrBpm ?? 0) bpm" : "--")
-                LabeledContent("Readings forwarded to the board", value: "\(watch.hrReceived)")
+                LabeledContent("Live channel", value: watch.mirror.active ? "workout mirroring (works in the background)" : watch.reachable ? "Watch Connectivity (app open)" : "none")
+                LabeledContent("Last delivery", value: SourceFormat.ago(watch.lastDeliveryAt))
+                LabeledContent("Readings accepted", value: "\(watch.hrReceived)")
+                LabeledContent("Watch app", value: watch.watchBuild ?? "not reported yet")
+                if watch.version == .watchOlder {
+                    Text(WatchVersion.updateInstruction).font(.footnote).foregroundStyle(BC.stale)
+                    Text("TestFlight installs the new watch app by itself only when Automatic App Install is on (Watch app on iPhone › General).").font(.caption2).foregroundStyle(.secondary)
+                }
                 if let b = watch.watchBattery { LabeledContent("Watch battery", value: "\(b) %") }
             }
             Section {

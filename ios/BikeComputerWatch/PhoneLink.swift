@@ -9,6 +9,7 @@ final class PhoneLink: NSObject, ObservableObject, WCSessionDelegate {
         var elapsed = 0, dist = 0
         var power: Int?, cad: Int?, hr: Int?, hrSrc: String?, zone: Int?
         var boardReady = false
+        var phoneBuild: String?
         var receivedAt = Date.distantPast
         var isFresh: Bool { Date().timeIntervalSince(receivedAt) < 5 }
         var active: Bool { state == "running" || state == "paused" }
@@ -20,6 +21,9 @@ final class PhoneLink: NSObject, ObservableObject, WCSessionDelegate {
     @Published private(set) var pingsAnswered = 0
     @Published private(set) var ride = RideMirror()
     @Published private(set) var lastCommand = ""
+    /// Version handshake: the iPhone app's build as it reports it in the ride mirror.
+    @Published private(set) var phoneBuild: String?
+    var versionMismatch: Bool { if let p = phoneBuild { return WatchVersion.compare(phone: p, watch: AppInfo.label) == .watchOlder } else { return false } }
 
     func activate() {
         guard WCSession.isSupported() else { return }
@@ -41,6 +45,10 @@ final class PhoneLink: NSObject, ObservableObject, WCSessionDelegate {
             self.activated = session.activationState == .activated
             self.reachable = session.isReachable
         }
+        // tell the phone which watch build is installed (and the Health permission state) — survives app restarts
+        if session.activationState == .activated {
+            try? session.updateApplicationContext(WatchMessage.makeWatchInfo(build: AppInfo.label, workoutAuth: WorkoutManager.shared.workoutWriteStatus))
+        }
     }
 
     private func apply(_ m: [String: Any]) {
@@ -51,8 +59,9 @@ final class PhoneLink: NSObject, ObservableObject, WCSessionDelegate {
         r.power = m[WatchMessage.power] as? Int; r.cad = m[WatchMessage.cad] as? Int; r.hr = m[WatchMessage.hr] as? Int
         r.hrSrc = m[WatchMessage.hrSrc] as? String; r.zone = m[WatchMessage.zone] as? Int
         r.boardReady = m[WatchMessage.boardReady] as? Bool ?? false
+        r.phoneBuild = m[WatchMessage.phoneBuild] as? String
         r.receivedAt = Date()
-        DispatchQueue.main.async { self.ride = r }
+        DispatchQueue.main.async { self.ride = r; if let b = r.phoneBuild { self.phoneBuild = b } }
     }
 
     // MARK: WCSessionDelegate

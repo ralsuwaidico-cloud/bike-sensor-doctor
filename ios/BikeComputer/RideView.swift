@@ -13,6 +13,7 @@ struct RideTabView: View {
     @EnvironmentObject private var location: LocationService
     @EnvironmentObject private var recorder: RideRecorder
     @EnvironmentObject private var hub: SensorHub
+    @EnvironmentObject private var monitor: PipelineMonitor
     @StateObject private var coach = RideCoach()
     @State private var confirmEnd = false
     @State private var showDetails = false
@@ -119,6 +120,7 @@ struct RideTabView: View {
                 if l.power.unverified { DashTag(text: RideLabels.powerUnverified, color: D7.amber) }
                 if l.power.usable || l.ftpProvisional { DashTag(text: l.ftpProvisional ? RideLabels.ftpProvisional : "FTP \(l.ftp) W", color: D7.mut) }
             }
+            PipelineBanner(monitor: monitor, dark: true)
             ZStack(alignment: .leading) { D7.line.frame(height: 3); (coach.cueActive && recorder.state == .running ? D7.cyan : D7.line).frame(height: 3) }.clipShape(Capsule())
         }
     }
@@ -149,10 +151,12 @@ struct RideTabView: View {
         let what = coach.intervals != nil ? "Z\(z) INTERVALS" : "Z\(z) TARGET"
         return "\(coach.workoutTitle.uppercased()) · \(what) · \(cad)"
     }
+    /// The board counts as LIVE only while one of its metrics is actually shown — a connected link alone is not.
+    private var boardHasData: Bool { [MetricKind.power, .cadence, .heartRate].contains { hub.reading($0)?.source.method == .bikeComputer } }
     private var linkColor: Color {
         if boardLive?.demo == true { return D7.amber }
-        if boardLive != nil { return D7.green }
-        if device.state == .ready { return D7.cyan }
+        if boardLive != nil { return boardHasData ? D7.green : D7.amber }
+        if device.state == .ready { return D7.amber }
         if device.state == .scanning || device.state == .connecting { return D7.amber }
         if phoneRecording { return D7.green }
         if hub.reading(.heartRate) != nil || hub.reading(.speed) != nil { return D7.cyan }
@@ -161,7 +165,7 @@ struct RideTabView: View {
     }
     private var linkText: String {
         var s: String
-        if boardLive?.demo == true { s = "SIMULATED" } else if boardLive != nil { s = "LIVE" } else if device.state == .ready { s = "READY" } else if device.state == .scanning || device.state == .connecting { s = "CONNECTING" } else { s = phoneRecording ? "PHONE" : (device.remembered ? "BIKECOMPUTER NOT FOUND" : "PHONE ONLY") }
+        if boardLive?.demo == true { s = "SIMULATED" } else if boardLive != nil { s = boardHasData ? "LIVE" : "BOARD CONNECTED · NO SENSOR DATA" } else if device.state == .ready { s = "BOARD CONNECTED · NO LIVE DATA" } else if device.state == .scanning || device.state == .connecting { s = "CONNECTING" } else { s = phoneRecording ? "PHONE" : (device.remembered ? "BIKECOMPUTER NOT FOUND" : "PHONE ONLY") }
         if boardRecording { s += recorder.boardLinkLost ? " · BOARD RECORDS (LINK LOST)" : " · BOARD RECORDS" } else if phoneRecording { s += " · PHONE RECORDS" }
         if let b = boardLive?.batteryPct { s += " · BAT ≈\(b)%" }
         return s
@@ -272,10 +276,10 @@ struct RideDetailsSheet: View {
         Card {
             HStack { Eyebrow(t: "Connections"); Spacer(); NavigationLink { ConnectionsView() } label: { Text("Manage ›").font(.caption.bold()) } }
             SensorRow(name: "BikeComputer", detail: boardDetail, live: device.state == .ready)
-            if device.state == .ready { SensorRow(name: "Power meter via BikeComputer", detail: meterDetail, live: live?.meterLink == 4) }
+            if device.state == .ready { SensorRow(name: "Power meter via BikeComputer", detail: meterDetail, live: live?.powerW != nil) }
             ForEach(MetricKind.allCases, id: \.self) { k in
-                let m = RideMetric(kind: k, reading: hub.reading(k))
-                SensorRow(name: k.title, detail: m.usable ? "\(m.sourceOrMissing) · live" : k.missingText, live: m.usable)
+                let m = RideMetric(kind: k, reading: hub.reading(k), missing: hub.missingReason[k])
+                SensorRow(name: k.title, detail: m.usable ? "\(m.sourceOrMissing) · live" : m.missingText, live: m.usable)
             }
             SensorRow(name: "Phone GPS", detail: location.sharing ? location.status : "off until a ride starts", live: location.sharing && location.last != nil)
             SensorRow(name: "Apple Watch", detail: watch.hrIsFresh ? "heart rate live" : watch.appInstalled ? "app installed · workout \(watch.workoutState)" : "no watch app", live: watch.hrIsFresh)
@@ -283,12 +287,12 @@ struct RideDetailsSheet: View {
     }
     private var boardDetail: String {
         guard device.state == .ready else { return device.state.rawValue }
-        var d = "connected"; if let r = device.rssi { d += " · \(r) dBm" }; if let b = live?.batteryPct { d += " · battery ≈\(b)%" }
+        var d = device.liveIsFresh ? "connected · live data" : "connected — no live data"; if let r = device.rssi { d += " · \(r) dBm" }; if let b = live?.batteryPct { d += " · battery ≈\(b)%" }
         return d
     }
     private var meterDetail: String {
         guard let l = live else { return "via the BikeComputer" }
-        let t: String; switch l.meterLink { case 4: t = "connected"; case 1: t = "not paired"; case 2: t = "searching"; case 3: t = "connecting"; case 5: t = "reconnecting"; default: t = "off" }
+        let t: String; switch l.meterLink { case 4: t = l.powerW != nil ? "connected · \(l.powerW!) W live" : "connected — waiting for data"; case 7: t = "connected — data stale"; case 1: t = "not paired"; case 2: t = "searching"; case 3: t = "connecting"; case 5: t = "reconnecting"; default: t = "off" }
         return t + (l.meterGaps > 0 ? " · \(l.meterGaps) gaps" : "")
     }
 }
