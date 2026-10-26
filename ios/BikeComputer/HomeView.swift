@@ -80,7 +80,7 @@ struct HomeView: View {
         }
     }
     private var budgetText: String { store.profile.trainingMode == .cycling ? "\(store.profile.hoursPerWeek) h/week · \(store.profile.level.title.lowercased())" : "\(store.profile.hoursPerWeek) h cycling · \(store.profile.liftingHoursPerWeek) h lifting" }
-    private func zoneWatts(_ z: Int) -> String { let p = store.profile.powerZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
+    private func zoneWatts(_ z: Int) -> String { let p = store.profile.prescriptionZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
 
     private var alternativesSheet: some View {
         NavigationStack {

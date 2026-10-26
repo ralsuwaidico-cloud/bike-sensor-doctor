@@ -226,11 +226,11 @@ struct OnboardingView: View {
             Card {
                 Eyebrow(t: "FTP (watts)")
                 TextField("tested FTP, if you have one", text: $ftpText).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
-                    .onChange(of: ftpText) { _, v in if let n = Int(v), n >= 50, n <= 600 { store.profile.ftpW = n; store.profile.ftpHow = .tested } else if v.isEmpty, store.profile.ftpHow == .tested { store.profile.ftpHow = .assumed; store.profile.refreshAssumption() } }
+                    .onChange(of: ftpText) { _, v in if let n = Int(v), n >= 50, n <= 600 { store.profile.ftpW = n; store.profile.ftpHow = .entered } else if v.isEmpty, store.profile.ftpHow == .entered || store.profile.ftpHow == .tested { store.profile.ftpHow = .assumed; store.profile.refreshAssumption() } }
                 if store.profile.ftpHow == .assumed {
                     Text("Estimate for me: \(store.profile.ftpW) W from \(String(format: "%.0f", store.profile.weightKg)) kg × \(String(format: "%.2f", store.profile.level.wkg)) W/kg. Marked provisional until a real 20-minute effort or a tested value replaces it.").font(.footnote).foregroundStyle(.secondary)
                 } else {
-                    HStack { Text("\(store.profile.ftpW) W").bold(); Pill(text: store.profile.ftpLabel, color: BC.live) }
+                    HStack { Text("\(store.profile.ftpW) W").bold(); FTPConfidencePill(profile: store.profile) }
                 }
             }
             next()

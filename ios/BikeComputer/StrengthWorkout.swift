@@ -53,6 +53,7 @@ struct StrengthWorkoutScreen: View {
             .alert("Remove this session?", isPresented: $confirmRemove) { Button("Remove", role: .destructive) { if let w = workout { store.remove(w) }; dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("The routine template itself is kept.") }
             .onAppear { if store.activeSession != nil, store.activeSession?.workoutId == workoutId { showSession = true } }
         }
+        .undoSnackbar()
     }
 
     @ViewBuilder private func content(_ w: Workout) -> some View {
@@ -603,13 +604,28 @@ struct LiveSetRow: View {
 struct EquipmentPage: View {
     @EnvironmentObject private var store: Store
     @State private var query = ""
+    @State private var customItem = ""
+    private func addCustom() {
+        let t = customItem.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !t.isEmpty else { return }
+        store.equipment.owned.insert(EquipmentProfile.normalised(t)); customItem = ""
+        store.refreshGeneratedSessions()
+    }
     var body: some View {
         Form {
             Section {
                 ForEach(EquipmentProfile.allOptions, id: \.self) { e in
                     Toggle(e.capitalized, isOn: Binding(get: { store.equipment.owned.contains(e) }, set: { on in if on { store.equipment.owned.insert(e) } else { store.equipment.owned.remove(e) } })).tint(BC.accent)
                 }
-            } header: { Text("Equipment I own") } footer: { Text(store.equipment.isSet ? "The coach only suggests exercises that use this equipment or bodyweight. Your saved routines are never changed because of it." : "Nothing selected yet: every exercise is treated as possible. Select what you own and suggestions are filtered.") }
+                // custom equipment (anything not in the list, e.g. "sandbag", "rings"): matched by name in your own exercises
+                ForEach(store.equipment.owned.filter { !ExerciseCatalogue.equipmentOptions.contains(EquipmentProfile.normalised($0)) }.sorted(), id: \.self) { e in
+                    HStack { Text(e.capitalized); Spacer(); Button("Remove") { store.equipment.owned.remove(e) }.font(.footnote.bold()).frame(minHeight: DS.minTap) }
+                }
+                HStack {
+                    TextField("Other equipment (e.g. sandbag)", text: $customItem).submitLabel(.done).onSubmit(addCustom)
+                    Button("Add", action: addCustom).disabled(customItem.trimmingCharacters(in: .whitespaces).isEmpty).frame(minHeight: DS.minTap)
+                }
+            } header: { Text("Equipment I own") } footer: { Text(store.equipment.isSet ? "The coach only suggests exercises that use this equipment or bodyweight. Your saved routines are never changed because of it. Items you add yourself can be chosen when you create an exercise." : "Nothing selected yet: every exercise is treated as possible. Select what you own and suggestions are filtered.") }
             Section {
                 let excluded = store.allExercises.filter { store.equipment.excluded.contains($0.id) }
                 if excluded.isEmpty { Text("None").foregroundStyle(.secondary) }

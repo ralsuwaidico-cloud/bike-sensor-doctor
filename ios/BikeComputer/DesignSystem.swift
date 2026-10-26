@@ -185,6 +185,8 @@ extension RiderProfile {
     }
     /// FTP used for power targets: the value itself when confident, else 5 % lower (conservative zones).
     var prescriptionFTP: Int { ftpConfidence.isConfident ? ftpW : Int((Double(ftpW) * 0.95).rounded()) }
+    /// Power zones for prescriptions (targets): conservative when the FTP is not verified.
+    var prescriptionZones: [(lo: Int, hi: Int?)] { var p = self; p.ftpW = prescriptionFTP; return p.powerZones }
     var ftpCaution: String? {
         ftpConfidence.isConfident ? nil : "FTP \(ftpConfidence.short): power targets are set 5 % lower and the ride coach does not claim zones from power. Ride by feel and heart rate; a verified FTP test replaces it."
     }

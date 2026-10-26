@@ -157,6 +157,7 @@ struct TrainingProfilePage: View {
                     NavigationLink { TemplatesView() } label: { HStack { Text("Routines (templates)"); Spacer(); Text("\(store.templates.count)").foregroundStyle(.secondary) } }
                     NavigationLink { WeekdayRoutinesPage() } label: { HStack { Text("Routine per weekday"); Spacer(); Text("\(store.weekdayRoutines.count) set").foregroundStyle(.secondary) } }
                     NavigationLink { EquipmentPage() } label: { HStack { Text("Equipment I own"); Spacer(); Text(store.equipment.isSet ? "\(store.equipment.owned.count) items" : "not set").foregroundStyle(.secondary) } }
+                    NavigationLink { StrengthPrefsPage() } label: { HStack { Text("Strength programming"); Spacer(); Text(store.plannerContext().goal.title).font(.footnote).foregroundStyle(.secondary) } }.accessibilityIdentifier("strengthProgramming")
                     NavigationLink { MyExercisesView() } label: { HStack { Text("My exercises"); Spacer(); Text("\(store.customExercises.count) custom · \(ExerciseCatalogue.builtIn.count) built in").font(.caption).foregroundStyle(.secondary) } }
                 }
             }
@@ -171,7 +172,7 @@ struct TrainingProfilePage: View {
                 }
                 Button { showAvailability = true } label: { HStack { Text("Training days and durations"); Spacer(); Text(availabilityText).font(.caption).foregroundStyle(.secondary) } }
                 let a = store.effectiveAvailability
-                HStack(spacing: 4) { ForEach(0..<7, id: \.self) { i in VStack(spacing: 2) { Text(WeeklyAvailability.dayNames[i]).font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary); Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent) }.frame(maxWidth: .infinity) } }
+                HStack(spacing: 4) { ForEach(0..<7, id: \.self) { i in VStack(spacing: 2) { Text(WeeklyAvailability.dayNames[i]).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).lineLimit(1); Image(systemName: a.days[i].activity.icon).font(.caption).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent) }.frame(maxWidth: .infinity) } }
             } header: { Text("Weekly availability") } footer: { Text("The plan is built around the days you choose. Cycling hours and lifting hours are separate budgets; the coach schedules up to each and suggests changes instead of exceeding them.") }
             Section("Training history") {
                 let rides = store.rides
@@ -239,10 +240,14 @@ struct PowerCyclingPage: View {
     var body: some View {
         Form {
             Section {
-                HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit(); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
+                ViewThatFits(in: .horizontal) {
+                    HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit(); FTPConfidencePill(profile: store.profile) }
+                    VStack(alignment: .leading) { HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit() }; FTPConfidencePill(profile: store.profile) }
+                }
                 HStack {
-                    TextField("Tested FTP in watts", text: $ftpText).keyboardType(.numberPad)
-                    Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.updateProfile { $0.ftpW = v; $0.ftpHow = .tested }; ftpText = "" } }.disabled(Int(ftpText) == nil)
+                    TextField("FTP in watts", text: $ftpText).keyboardType(.numberPad)
+                    // quality release: a typed value is "entered" (Unverified) — only a recorded FTP test ride with verified power is a verified test
+                    Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.updateProfile { $0.ftpW = v; $0.ftpHow = .entered; $0.ftpVerifiedTest = nil; $0.ftpPowerVerified = nil }; ftpText = "" } }.disabled(Int(ftpText) == nil).frame(minHeight: DS.minTap)
                 }
                 if store.profile.ftpHow != .assumed { Button("Back to the assumption from weight and level") { store.updateProfile { $0.ftpHow = .assumed; $0.refreshAssumption() } }.font(.footnote) }
                 if let s = store.ftpSuggestion { Text("Suggested from your \(s.rideDate.dayAndDate) ride: \(s.watts) W (best 20 min \(s.best20) W). Accept it on Home or Progress.").font(.footnote).foregroundStyle(BC.accent) }
@@ -271,6 +276,10 @@ struct PowerCyclingPage: View {
         .navigationTitle("Power & cycling").navigationBarTitleDisplayMode(.inline)
     }
     private var ftpMethod: String {
+        let p = store.profile
+        return p.ftpSourceText + (p.ftpCaution.map { " " + $0 } ?? "")
+    }
+    private var ftpMethodOld: String {
         switch store.profile.ftpHow {
         case .assumed: return "Estimation method: weight × level (\(String(format: "%.2f", store.profile.level.wkg)) W/kg) — a starting assumption, replaced by a real 20-minute effort (0.95 × best 20 min) that you accept, or by a value you enter."
         case .fromRides: return "Estimated from a ride: 0.95 × your best 20-minute power. A tested or entered value always wins."

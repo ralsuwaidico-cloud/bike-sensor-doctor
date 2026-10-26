@@ -441,7 +441,7 @@ enum PlanEngine {
 
 // MARK: - Historical timeline (rides + strength + past workouts, deduplicated, stable source ids)
 struct TimelineEntry: Identifiable, Equatable {
-    enum Status: String { case completed, planned, skipped, missed, imported }
+    enum Status: String { case completed, planned, skipped, missed, imported, review = "needs review" }
     var id: String
     var date: Date
     var title: String
@@ -492,17 +492,25 @@ enum Timeline {
                                      avgHR: r.avgHR, maxHR: r.maxHR, avgPower: r.avgPower, normalizedPower: r.normalizedPower, cadence: r.avgCadence, zoneSeconds: r.zoneSeconds,
                                      tss: tss(normalizedPower: r.normalizedPower, durationS: r.durationS, ftp: ftp), status: imported ? .imported : .completed, rideId: r.id, workoutId: nil, recorder: r.recordedBy))
         }
+        // quality release: states come from the one query layer (TrainingLedger) — same as Home, Plan and Progress
+        let ledger = TrainingLedger(plan: plan, strength: strength, rides: rides, calendar: cal)
         for s in strength {
-            let detail = s.isDetailed ? "\(s.exerciseCount) exercise\(s.exerciseCount == 1 ? "" : "s") · \(s.setCount) sets" : nil
-            out.append(TimelineEntry(id: "str-\(s.sourceId)", date: s.date, title: s.title, minutes: s.minutes, distanceM: nil, avgHR: nil, maxHR: nil, avgPower: nil, normalizedPower: nil, cadence: nil, zoneSeconds: [], tss: nil, status: s.isImported ? .imported : .completed, rideId: nil, workoutId: nil, recorder: s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") + (s.rpe.map { " · RPE \($0)" } ?? "") : s.source, strengthId: s.id, detail: detail))
+            var detail = s.isDetailed ? "\(s.exerciseCount) exercise\(s.exerciseCount == 1 ? "" : "s") · \(s.setCount) sets" : nil
+            if s.awaitingReview { detail = (detail.map { $0 + " · " } ?? "") + "not counted until you confirm it" }
+            let status: TimelineEntry.Status = s.awaitingReview ? .review : s.isImported ? .imported : .completed
+            out.append(TimelineEntry(id: "str-\(s.sourceId)", date: s.date, title: s.title, minutes: s.minutes, distanceM: nil, avgHR: nil, maxHR: nil, avgPower: nil, normalizedPower: nil, cadence: nil, zoneSeconds: [], tss: nil, status: status, rideId: nil, workoutId: s.workoutId, recorder: s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") + (s.rpe.map { " · RPE \($0)" } ?? "") : s.source, strengthId: s.id, detail: detail))
         }
         for w in plan where w.kind != .rest {
             let past = cal.startOfDay(for: w.date) < today
-            let hasRide = rs.contains { cal.isDate($0.start, inSameDayAs: w.date) }
-            if w.kind.isRide, hasRide { continue }
-            if w.kind == .strength, strength.contains(where: { cal.isDate($0.date, inSameDayAs: w.date) }) { continue }
+            if w.kind.isRide, rs.contains(where: { cal.isDate($0.start, inSameDayAs: w.date) }) { continue }
+            if w.kind == .strength, ledger.log(for: w) != nil { continue }
+            let st = ledger.status(w)
+            if st == .completedManual {
+                out.append(TimelineEntry(id: "wo-\(w.id.uuidString)", date: w.date, title: w.displayTitle, minutes: w.manualMinutes ?? 0, distanceM: nil, avgHR: nil, maxHR: nil, avgPower: nil, normalizedPower: nil, cadence: nil, zoneSeconds: [], tss: nil, status: .completed, rideId: nil, workoutId: w.id, recorder: "marked done (no details)"))
+                continue
+            }
             guard past else { continue }     // future sessions live in the plan, not the timeline
-            let status: TimelineEntry.Status = w.done ? .completed : w.skipped ? .skipped : .missed
+            let status: TimelineEntry.Status = st == .skipped ? .skipped : .missed
             out.append(TimelineEntry(id: "wo-\(w.id.uuidString)", date: w.date, title: w.displayTitle, minutes: w.minutes, distanceM: nil, avgHR: nil, maxHR: nil, avgPower: nil, normalizedPower: nil, cadence: nil, zoneSeconds: [], tss: nil, status: status, rideId: nil, workoutId: w.id, recorder: nil))
         }
         return out.sorted { $0.date > $1.date }

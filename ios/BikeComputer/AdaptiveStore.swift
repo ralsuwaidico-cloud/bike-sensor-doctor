@@ -16,7 +16,8 @@ extension Store {
         let today = Calendar.current.startOfDay(for: now)
         var entries: [UUID: [ExerciseEntry]] = [:]
         for w in plan where w.kind == .strength && !w.done && w.date >= today { entries[w.id] = originalEntries(for: w) }
-        return AdaptationInput(profile: profile, plan: plan, rides: rides, strength: strength, availability: effectiveAvailability, equipment: equipment,
+        // records waiting for the rider's review (migration) are not evidence of anything until confirmed
+        return AdaptationInput(profile: profile, plan: plan, rides: rides, strength: strength.filter { !$0.awaitingReview }, availability: effectiveAvailability, equipment: equipment,
                                catalogue: allExercises, templates: templates, originalEntries: entries, dismissed: Set(dismissedAdaptations),
                                approved: Set(approvedAdaptations), active: adaptations, units: settings.units, now: now, calendar: .current)
     }
@@ -72,12 +73,14 @@ extension Store {
     func recordCheckIn(_ c: CheckIn, rideId: UUID, now: Date = Date()) -> AdaptationResult? {
         guard let i = rides.firstIndex(where: { $0.id == rideId }) else { return nil }
         rides[i].checkIn = c
+        refreshGeneratedSessions(now: now)      // planner: fatigue / pain from the check-in shape coach-built sessions
         return runAdaptation(now: now)
     }
     @discardableResult
     func recordCheckIn(_ c: CheckIn, strengthId: UUID, now: Date = Date()) -> AdaptationResult? {
         guard let i = strength.firstIndex(where: { $0.id == strengthId }) else { return nil }
         strength[i].checkIn = c
+        refreshGeneratedSessions(now: now)
         return runAdaptation(now: now)
     }
 

@@ -113,7 +113,7 @@ final class RulesTests: XCTestCase {
     func testSkippedOnboardingValuesStayUnknown() {
         var p = RiderProfile()
         XCTAssertNil(p.birthYear); XCTAssertNil(p.maxHR); XCTAssertNil(p.restHR); XCTAssertNil(p.lthr)
-        XCTAssertEqual(p.ftpHow, .assumed); XCTAssertEqual(p.ftpLabel, "provisional")
+        XCTAssertEqual(p.ftpHow, .assumed); XCTAssertEqual(p.ftpLabel, "Provisional estimate")
         XCTAssertEqual(p.maxHRLabel, "estimated from age")
         p.birthYear = 1990; XCTAssertEqual(p.effectiveAge, Calendar.current.component(.year, from: Date()) - 1990)
         p.maxHR = 186; XCTAssertEqual(p.estimatedMaxHR, 186); XCTAssertEqual(p.maxHRLabel, "measured / entered")

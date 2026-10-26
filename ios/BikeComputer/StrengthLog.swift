@@ -324,6 +324,9 @@ struct ExerciseSearchSheet: View {
 
 struct CreateExerciseSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: Store
+    /// The catalogue vocabulary plus the rider's own equipment items (Profile › Equipment).
+    private var equipmentChoices: [String] { ExerciseCatalogue.equipmentOptions + store.equipment.owned.filter { !ExerciseCatalogue.equipmentOptions.contains(EquipmentProfile.normalised($0)) }.sorted() }
     var initialName: String
     var onCreate: (Exercise) -> Void
     @State private var name = ""
@@ -336,7 +339,7 @@ struct CreateExerciseSheet: View {
             Form {
                 Section("Name") { TextField("Exercise name", text: $name) }
                 Section { Picker("Movement", selection: $pattern) { ForEach(MovementPattern.allCases, id: \.self) { Text($0.title).tag($0) } }; Toggle("One side at a time", isOn: $unilateral).tint(BC.accent) } footer: { Text("The movement pattern is what the coach uses for coverage (squat, hinge, single-leg, core, push, pull). Choose the closest one.") }
-                Section("Equipment") { ForEach(ExerciseCatalogue.equipmentOptions, id: \.self) { e in Toggle(e.capitalized, isOn: Binding(get: { equipment.contains(e) }, set: { if $0 { equipment.insert(e) } else { equipment.remove(e) } })).tint(BC.accent) } }
+                Section("Equipment") { ForEach(equipmentChoices, id: \.self) { e in Toggle(e.capitalized, isOn: Binding(get: { equipment.contains(e) }, set: { if $0 { equipment.insert(e) } else { equipment.remove(e) } })).tint(BC.accent) } }
                 Section("Main muscles (optional, comma-separated)") { TextField("e.g. glutes, hamstrings", text: $muscles) }
             }
             .navigationTitle("New exercise").navigationBarTitleDisplayMode(.inline)
@@ -550,7 +553,7 @@ struct HybridCoachCard: View {
             if !last { Divider().padding(.leading, 10) }
         }
     }
-    private func zoneWatts(_ z: Int) -> String { let p = store.profile.powerZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
+    private func zoneWatts(_ z: Int) -> String { let p = store.profile.prescriptionZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
 }
 
 // MARK: - Strength session detail (timeline tap): exercises, sets, per-exercise progression, edit / delete
@@ -566,8 +569,18 @@ struct StrengthSessionDetail: View {
         let prog = StrengthAnalysis.progression(store.strength)
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text(s.title).font(.system(size: 26, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7); Spacer(); Pill(text: s.isImported ? "imported" : "completed", color: s.isImported ? BC.zone(1) : BC.live) }
-                Text("\(s.date.dayAndDate) · \(Fmt.duration(minutes: s.minutes)) · \(s.effortLabel) · \(s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") : s.source)").font(.footnote).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) { Text(s.title).font(DS.screenTitle).fixedSize(horizontal: false, vertical: true); Spacer(minLength: DS.s); Pill(text: s.awaitingReview ? "needs review" : s.isImported ? "imported" : s.isDetailed ? "logged" : "quick log", color: s.awaitingReview ? BC.warn : s.isImported ? BC.zone(1) : BC.live) }
+                Text("\(s.date.dayAndDate) · \(s.minutes > 0 ? Fmt.duration(minutes: s.minutes) : "duration not recorded") · \(s.effortLabel) · \(s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") : s.source)").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if s.awaitingReview {
+                    Card {
+                        Eyebrow(t: "Needs your review")
+                        Text(s.migrationNote ?? "This record was saved without any completed set.").font(.footnote).fixedSize(horizontal: false, vertical: true)
+                        ActionRow(actions: [
+                            ActionSpec(label: "Keep it", a11y: "Keep it: it counts as a session", identifier: "confirmReviewed") { store.confirmReviewed(s.id) },
+                            ActionSpec(label: "Delete", a11y: "Delete this record (Undo available)", tint: BC.warn, identifier: "deleteReviewed") { store.deleteStrength(s); dismiss() }
+                        ])
+                    }
+                } else if let n = s.migrationNote { Text(n).font(.caption).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
                 if let ex = s.exercises, !ex.isEmpty {
                     Card {
                         Eyebrow(t: "Exercises")
@@ -592,13 +605,16 @@ struct StrengthSessionDetail: View {
                     Card { Text(s.isImported ? "Imported from \(s.source): duration only. Add exercises to make it count for coverage and progression." : "Quick log: type, duration and effort. No exercises were recorded, so this session says nothing about movement coverage.").font(.footnote).foregroundStyle(.secondary) }
                 }
                 if !s.notes.isEmpty { Card { Eyebrow(t: "Notes"); Text(s.notes) } }
-                HStack { Button { edit = true } label: { Label(s.isDetailed ? "Edit" : "Add exercises", systemImage: "pencil").frame(maxWidth: .infinity) }.buttonStyle(.bordered); Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+                ActionRow(actions: [
+                    ActionSpec(label: s.isDetailed ? "Edit" : "Add exercises", a11y: s.isDetailed ? "Edit exercises and sets" : "Add exercises to this session", icon: "pencil", identifier: "editLog") { edit = true },
+                    ActionSpec(label: "Delete", a11y: "Delete this session (Undo available)", icon: "trash", tint: BC.warn, identifier: "deleteLog") { confirmDelete = true }
+                ])
             }.padding()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Strength").navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $edit) { DetailedStrengthLogSheet(date: s.date, presetFocus: s.focus, editing: s) }
-        .alert("Delete this session?", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { store.deleteStrength(s); dismiss() }; Button("Cancel", role: .cancel) {} }
+        .alert("Delete this session?", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { store.deleteStrength(s); dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("You can undo this for a few seconds; the planned session it completed goes back to planned.") }
     }
     private func trendText(_ p: ExerciseProgression) -> String {
         switch p.trend { case .up: return "Progressing (load × reps rising over \(p.points.count) sessions)"; case .down: return "Load × reps fell over the last sessions"; case .flat: return "Steady over \(p.points.count) sessions"; case .insufficient: return "\(p.points.count) session\(p.points.count == 1 ? "" : "s") logged · progression needs 4 with weights" }

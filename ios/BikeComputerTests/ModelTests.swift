@@ -268,7 +268,8 @@ final class ModelTests: XCTestCase {
         s.acceptFTPSuggestion()
         XCTAssertEqual(s.profile.ftpW, 266); XCTAssertEqual(s.profile.ftpHow, .fromRides); XCTAssertNotNil(s.profile.ftpFromDate)
         XCTAssertNil(s.ftpSuggestion)
-        XCTAssertTrue(s.profile.ftpLabel.hasPrefix("estimated from"))
+        // quality release: 95 % of a ride's best 20 min is an estimate, never "tested"; this ride's power was not verified
+        XCTAssertEqual(s.profile.ftpConfidence, .unverified); XCTAssertEqual(s.profile.ftpLabel, "Unverified")
         // a ride within 2 % of the current FTP proposes nothing; a demo ride proposes nothing
         XCTAssertTrue(s.addRide(powerRide(Array(repeating: 282, count: 1200), start: Date().addingTimeInterval(60))))
         XCTAssertNil(s.ftpSuggestion)
