@@ -1,0 +1,3 @@
+start Mon Oct 26 18:48:19 UTC 2026
+build exit 65
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/DesignSystem.swift:135:8: error: invalid redeclaration of 'StatusPill'
