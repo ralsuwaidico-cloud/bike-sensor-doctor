@@ -1,0 +1,63 @@
+Cyclift App Store listing — mode APPLY (drafts only; never submits, releases, prices or accepts agreements)
+
+Sign in with Apple capability on com.ralsuwaidico.bikecomputer:
+  capabilities now: APPLE_ID_AUTH, HEALTHKIT, IN_APP_PURCHASE
+  Sign in with Apple: already enabled
+
+App record: found; store name (not a Cyclift candidate yet, 26 characters — hidden), primary language en-US
+
+App information:
+  app info d42c830b…: state PREPARE_FOR_SUBMISSION
+  locale en-US: name (not a Cyclift candidate yet, 26 characters — hidden), subtitle 'Ride, lift and plan your week', privacy URL set
+  name: 'Cyclift' ACCEPTED
+  subtitle: set
+  privacyPolicyUrl: set
+  primary category now: HEALTH_AND_FITNESS
+  categories HEALTH_AND_FITNESS / SPORTS: set
+  age rating declaration: 30 questions, 3 unanswered
+  age rating: 24 answers set
+
+Version:
+  version 1.0.0: PREPARE_FOR_SUBMISSION
+  version copyright: set
+  build attached to the version: none (the owner selects it before submission)
+
+Version text:
+  version localization en-US: description set, keywords set, promotionalText set, supportUrl set, marketingUrl set
+  description: set
+  keywords: set
+  promotionalText: FAILED (HTTP 409): ENTITY_ERROR.ATTRIBUTE.INVALID.TOO_LONG: Promotional text cannot be longer than 170 characters.
+  supportUrl: set
+  marketingUrl: set
+
+App Review:
+  review detail: notes set; contact fields: FirstName empty, LastName empty, Phone empty, Email empty
+  ! review notes differ from ios/store/en-US/review_notes.txt but cannot be updated until the owner fills the App Review contact fields
+
+Screenshots:
+  screenshots taken by the simulator job: 5
+    01-home.png (1320, 2868)
+    02-strength-workout.png (1320, 2868)
+    03-plan.png (1320, 2868)
+    04-progress.png (1320, 2868)
+    05-ride.png (1320, 2868)
+  screenshot set APP_IPHONE_67: 5 screenshot(s) — COMPLETE, COMPLETE, COMPLETE, COMPLETE, COMPLETE
+  removed earlier script screenshot: ok
+  removed earlier script screenshot: ok
+  removed earlier script screenshot: ok
+  removed earlier script screenshot: ok
+  removed earlier script screenshot: ok
+  screenshots uploaded to APP_IPHONE_67: 5/5 (Apple processes them in a few minutes)
+
+Builds and pricing (read only):
+  build 40: VALID, uploaded 2026-10-25T13:02
+  build 36: VALID, uploaded 2026-10-25T10:34
+  build 33: VALID, uploaded 2026-10-25T03:13
+  price schedule: exists (not changed by this script)
+
+Problems: 2
+  - promotionalText not set: ENTITY_ERROR.ATTRIBUTE.INVALID.TOO_LONG: Promotional text cannot be longer than 170 characters.
+  - review notes differ from ios/store/en-US/review_notes.txt but cannot be updated until the owner fills the App Review contact fields
+
+Not possible through the API (owner, in App Store Connect): App Privacy questionnaire, price (Free) and availability, App Review contact name/phone/e-mail, choosing the build, Submit for Review.
+mode asc-listing/apply  commit a470f076c32abec19bf08d119b340dbc5afca9b9  branch asc-listing/apply

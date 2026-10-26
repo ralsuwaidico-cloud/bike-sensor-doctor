@@ -1,0 +1,93 @@
+Screenshot simulator: iPhone 17 Pro Max
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' passed (61.440 seconds).
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' passed (24.425 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 85.864 (85.868) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 85.864 (85.869) seconds
+	 Executed 2 tests, with 0 failures (0 unexpected) in 85.864 (85.870) seconds
+** TEST SUCCEEDED **
+    t =    37.07s         Checking existence of `"Hi Alex" NavigationBar`
+    t =    41.13s Added attachment named '01-home'
+    t =    41.14s Waiting 10.0s for "centreButton" Button to exist
+    t =    42.17s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    42.17s         Checking existence of `"centreButton" Button`
+    t =    42.35s Tap "centreButton" Button
+    t =    42.35s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    42.36s     Find the "centreButton" Button
+    t =    42.48s     Check for interrupting elements affecting "centreButton" Button
+    t =    43.14s     Synthesize event
+    t =    43.60s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    44.47s Waiting 10.0s for "startWorkout" Button to exist
+    t =    45.52s     Checking `Expect predicate `existsNoRetry == 1` for object "startWorkout" Button`
+    t =    45.52s         Checking existence of `"startWorkout" Button`
+    t =    49.43s Added attachment named '02-strength-workout'
+    t =    49.43s Checking existence of `"Done" Button`
+    t =    49.84s Find the "Done" Button
+    t =    50.28s Tap "Done" Button
+    t =    50.28s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    50.28s     Find the "Done" Button
+    t =    51.28s     Check for interrupting elements affecting "Done" Button
+    t =    51.86s     Synthesize event
+    t =    52.18s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    54.00s Tap "Plan" Button
+    t =    54.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    54.10s     Find the "Plan" Button
+    t =    54.22s     Check for interrupting elements affecting "Plan" Button
+    t =    54.51s     Synthesize event
+    t =    54.86s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    57.70s Added attachment named '03-plan'
+    t =    57.70s Tap "Progress" Button
+    t =    57.70s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    57.71s     Find the "Progress" Button
+    t =    57.76s     Check for interrupting elements affecting "Progress" Button
+    t =    58.36s     Synthesize event
+    t =    58.68s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    60.96s Added attachment named '04-progress'
+    t =    60.97s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' passed (61.440 seconds).
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' started.
+    t =     0.00s Start Test at 2026-10-26 07:02:07.421
+    t =     0.08s Set Up
+    t =     0.08s Open com.ralsuwaidico.bikecomputer
+    t =     0.08s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.09s         Terminate com.ralsuwaidico.bikecomputer:13492
+2026-10-26 07:02:09.552 xcodebuild[4536:18593] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-10-26 07:02:09.553 xcodebuild[4536:18593] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     3.64s         Setting up automation session
+    t =    11.21s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    16.23s Waiting 25.0s for "Hi Alex" NavigationBar to exist
+    t =    17.26s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Alex" NavigationBar`
+    t =    17.26s         Checking existence of `"Hi Alex" NavigationBar`
+    t =    18.15s Waiting 10.0s for "centreButton" Button to exist
+    t =    19.17s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    19.17s         Checking existence of `"centreButton" Button`
+    t =    19.30s Tap "centreButton" Button
+    t =    19.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    19.31s     Find the "centreButton" Button
+    t =    19.35s     Check for interrupting elements affecting "centreButton" Button
+    t =    19.58s     Synthesize event
+    t =    19.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    24.17s Added attachment named '05-ride'
+    t =    24.18s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' passed (24.425 seconds).
+Test Suite 'StoreScreenshots' passed at 2026-10-26 07:02:31.846.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 85.864 (85.868) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-10-26 07:02:31.846.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 85.864 (85.869) seconds
+Test Suite 'Selected tests' passed at 2026-10-26 07:02:31.847.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 85.864 (85.870) seconds
+2026-10-26 07:02:37.035 xcodebuild[4536:18593] [MT] IDETestOperationsObserverDebug: 141.351 elapsed -- Testing started completed.
+2026-10-26 07:02:37.040 xcodebuild[4536:18593] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-26 07:02:37.040 xcodebuild[4536:18593] [MT] IDETestOperationsObserverDebug: 141.351 sec, +141.351 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Logs/Test/Test-BikeComputer-2026.10.26_06-57-14-+0000.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
+xcodebuild exit 0
+01-home.png 1320 2868 
+02-strength-workout.png 1320 2868 
+03-plan.png 1320 2868 
+04-progress.png 1320 2868 
+05-ride.png 1320 2868 
