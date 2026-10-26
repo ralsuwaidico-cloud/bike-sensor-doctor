@@ -1,6 +1,23 @@
-# Athletics (formerly BikeComputer) iPhone + Apple Watch — changelog
+# Cyclift (formerly BikeComputer / Athletics) iPhone + Apple Watch — changelog
 
-## Unreleased — adaptive hybrid-athlete coach (branch `ios/cyclift-adapt`, 26 Oct 2026)
+## 1.0.0 release candidate — Cyclift (26 Oct 2026, TestFlight internal testers only)
+
+One integrated build of five workstreams, each CI-tested on its own branch and again after merging. Nothing below is
+real-device tested until Rashed confirms it. Firmware: compatible with BikeComputer 0.7.0 (protocol 1.2.1); the
+BikeComputer is optional.
+- **Cyclift** name, icon and launch screen; display name checked by CI; store name "Cyclift" accepted as a draft in
+  App Store Connect (not submitted). Bundle IDs, BLE identifiers and data locations unchanged — all data kept.
+- **Universal sources** (`docs/INTEGRATIONS.md`): phone connects directly to standard Bluetooth heart-rate (0x180D),
+  power (0x1818) and speed/cadence (0x1816) sensors; per-source status; one priority rule per metric; Garmin / WHOOP /
+  Oura listed as planned only. No brand in metric labels ("POWER · W" + source shown separately).
+- **Ride layouts** (`ios/RIDE_LAYOUTS.md`): Ride Coach, Large gauges, Classic, Rings, Analytics — restored from earlier
+  builds, switchable during a ride without touching recording; coach panel with "Why?" in every layout.
+- **Strength audit** (`ios/STRENGTH_AUDIT.md`): 11 fixes (plan rebuild no longer wipes edits, progression compares
+  against the routine, duplicate logs prevented, kg/lb display, midnight centre button, deleted-template state …).
+- **Accounts** (Supabase; inactive until the owner configures it): 9 sync/auth fixes; support address via secret only.
+- **Adaptive coach** (below).
+
+### Adaptive hybrid-athlete coach (26 Oct 2026)
 
 See `ios/ADAPTIVE_COACH.md`. Simulator / CI-tested only.
 - **Hybrid plan** answers (Hybrid Athlete mode, optional, in onboarding "Your week" and Profile › Training profile):
