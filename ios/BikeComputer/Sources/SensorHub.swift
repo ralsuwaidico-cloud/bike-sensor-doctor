@@ -280,9 +280,9 @@ final class SensorHub: ObservableObject {
         let h = health
         out.append(SourceStatus(descriptor: Self.appleHealth,
                                 state: SourceStateRules.health(available: h?.available ?? false, authorized: h?.workoutWriteAuthorized ?? false, wanted: settings.appleHealthWanted),
-                                metrics: [], provides: "Imports cycling and strength workouts; can save finished rides. Not a live source.",
+                                metrics: [], provides: "Imports cycling and strength workouts. Not a live source.",
                                 lastUpdate: settings.lastHealthImport, quality: nil, configured: settings.appleHealthWanted))
-        out += ProviderCatalog.planned.map(\.status)
+        if ReleaseFlags.plannedProvidersVisible { out += ProviderCatalog.planned.map(\.status) }
         return out
     }
 }

@@ -21,7 +21,6 @@ settings:
     SUPABASE_ANON_KEY: ""
     GOOGLE_WEB_CLIENT_ID: ""
     GOOGLE_IOS_CLIENT_ID: ""
-    CYCLIFT_SUPPORT_EMAIL: ""
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "5.0"
@@ -34,9 +33,15 @@ targets:
     type: application
     platform: iOS
     sources:
-      - BikeComputer
+      - path: BikeComputer
+        excludes: ["PrivacyInfo.xcprivacy"]
+      # privacy manifest (App Store requirement): explicitly a bundle resource, whatever XcodeGen infers for the type
+      - path: BikeComputer/PrivacyInfo.xcprivacy
+        buildPhase: resources
       - Shared
     dependencies:
+      # Accounts/sync (Supabase) stay compiled for 1.1 but are switched off in 1.0 by ReleaseFlags.accountsEnabled:
+      # no client is created and no request is made. The package ships its own privacy manifest.
       - package: Supabase
         product: Supabase
       - target: BikeComputerWatch
@@ -59,7 +64,8 @@ targets:
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
         GOOGLE_WEB_CLIENT_ID: $(GOOGLE_WEB_CLIENT_ID)
         GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
-        CYCLIFT_SUPPORT_EMAIL: $(CYCLIFT_SUPPORT_EMAIL)
+        # public support contact chosen by the owner (1.0 decisions); static, not a build variable
+        CYCLIFT_SUPPORT_EMAIL: ralsuwaidico@gmail.com
         UILaunchScreen:
           UIColorName: LaunchBackground
           UIImageName: LaunchMark
@@ -69,10 +75,9 @@ targets:
         UIBackgroundModes: [bluetooth-central, location]
         ITSAppUsesNonExemptEncryption: false
         NSBluetoothAlwaysUsageDescription: Cyclift uses Bluetooth to connect to the fitness sensors and the optional BikeComputer device you pair (heart rate, power, speed and cadence) and show their live data during rides.
-        NSLocationWhenInUseUsageDescription: Cyclift uses your location to record speed, distance and the route of your rides, and to send GPS to a paired BikeComputer device.
-        NSLocationAlwaysAndWhenInUseUsageDescription: Cyclift records speed, distance and the route while a ride is in progress, including when the screen is locked. Location is never used when no ride is running.
-        NSHealthShareUsageDescription: Cyclift reads your heart rate during workouts and, if you choose, your past cycling and strength workouts, to show them in your training plan and history.
-        NSHealthUpdateUsageDescription: Cyclift can save your finished rides and strength sessions to Apple Health when you choose to.
+        NSLocationWhenInUseUsageDescription: Cyclift uses your location while you record a ride, also with the screen locked, to measure speed, distance and your route, and to send your position to the optional BikeComputer device if you use one.
+        NSHealthShareUsageDescription: Cyclift reads your cycling and strength workouts from Apple Health, if you allow it, to show them in your training plan and history, and reads heart rate for the Cyclift Apple Watch workout.
+        NSHealthUpdateUsageDescription: Cyclift saves the cycling workouts you record with the Cyclift Apple Watch app to Apple Health when you choose Save.
     entitlements:
       path: BikeComputer/BikeComputer.entitlements
       properties:
@@ -90,7 +95,10 @@ targets:
     type: application
     platform: watchOS
     sources:
-      - BikeComputerWatch
+      - path: BikeComputerWatch
+        excludes: ["PrivacyInfo.xcprivacy"]
+      - path: BikeComputerWatch/PrivacyInfo.xcprivacy
+        buildPhase: resources
       - Shared
     info:
       path: BikeComputerWatch/Info.plist

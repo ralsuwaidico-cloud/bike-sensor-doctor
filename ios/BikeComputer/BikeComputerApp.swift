@@ -80,7 +80,7 @@ struct BikeComputerApp: App {
                 .environmentObject(account)
                 .environmentObject(cloud)
                 .environmentObject(hub)
-                .onOpenURL { url in _ = account.handle(url: url) }
+                .onOpenURL { url in if ReleaseFlags.accountsEnabled { _ = account.handle(url: url) } }
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {
                     watchLink.activate()

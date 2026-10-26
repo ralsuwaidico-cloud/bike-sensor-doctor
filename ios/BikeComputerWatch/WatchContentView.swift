@@ -43,7 +43,7 @@ struct WatchContentView: View {
                     Text("Save this workout to Apple Health?").font(.footnote)
                     Button("Save to Health") { workout.saveToHealth() }.tint(.green)
                     Button("Discard") { workout.discard() }.tint(.red)
-                    Text("The ride on the Waveshare is kept either way.").font(.caption2).foregroundStyle(.secondary)
+                    Text("The ride on your iPhone or BikeComputer is kept either way.").font(.caption2).foregroundStyle(.secondary)
                 }
 
                 Divider()
@@ -52,7 +52,7 @@ struct WatchContentView: View {
                 if !workout.permissionAsked {
                     Button("Allow heart rate") { workout.requestPermission() }.font(.caption)
                 }
-                Text("Test build \(AppInfo.label)").font(.caption2).foregroundStyle(.secondary)
+                Text("Version \(AppInfo.label)").font(.caption2).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

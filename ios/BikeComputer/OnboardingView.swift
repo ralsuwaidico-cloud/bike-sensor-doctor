@@ -1,8 +1,8 @@
 import SwiftUI
-import AuthenticationServices
 
 /// Two-stage first run.
-/// Stage A — account entry: guest (name only), Sign in with Apple, Google / e-mail (disabled until the sync service is configured).
+/// Stage A — "Get started": first name only. Cyclift 1.0 has no accounts (ReleaseFlags.accountsEnabled), so there is no
+/// sign-in of any kind here; everything stays on the phone.
 /// Stage B — progressive fitness & device profile, one question per screen, every screen skippable. Nothing unknown is
 /// invented: skipped values stay empty (nil) and the app says "not set" instead of showing a number.
 struct OnboardingView: View {
@@ -11,9 +11,6 @@ struct OnboardingView: View {
     @EnvironmentObject private var watch: WatchLink
     @EnvironmentObject private var health: HealthAccess
     @State private var step = 0
-    @State private var authError: String?
-    @State private var showAccount = false
-    @EnvironmentObject private var account: AccountService
     @State private var guestName = ""
     @State private var birthText = ""
     @State private var ftpText = ""
@@ -54,7 +51,6 @@ struct OnboardingView: View {
             }
             .onAppear { if store.onboardingStage > 0 { step = min(store.onboardingStage, lastStep) } }
             .onChange(of: step) { _, s in store.onboardingStage = s }
-            .sheet(isPresented: $showAccount) { AccountSheet(onDone: { step = 1 }) }
         }
     }
 
@@ -62,57 +58,14 @@ struct OnboardingView: View {
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(size: 36, weight: .bold, design: .rounded)) }
-            Text("Cycling and strength training in one plan, with one coach. Works with your phone alone, standard Bluetooth sensors, Apple Watch and Apple Health — and with the optional BikeComputer device. Choose how to start; you can create an account later.").foregroundStyle(.secondary)
+            Text("Cycling and strength training in one plan, with one coach. Works with your iPhone alone, standard Bluetooth sensors, Apple Watch and Apple Health — and with the optional BikeComputer device.").foregroundStyle(.secondary)
             Card {
-                Eyebrow(t: "Continue as guest")
-                TextField("Your first name", text: $guestName).textFieldStyle(.roundedBorder).textContentType(.givenName)
-                Button { store.guest = true; store.profile.name = guestName.trimmingCharacters(in: .whitespaces); step = 1 } label: { Text("Continue").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
-                Text("No account, nothing leaves the phone. Only a first name, so the app (and a paired BikeComputer) can greet you.").font(.footnote).foregroundStyle(.secondary)
+                Eyebrow(t: "Get started")
+                TextField("Your first name", text: $guestName).textFieldStyle(.roundedBorder).textContentType(.givenName).accessibilityIdentifier("onboardingName")
+                Button { store.guest = true; store.profile.name = guestName.trimmingCharacters(in: .whitespaces); step = 1 } label: { Text("Continue").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier("onboardingContinue")
+                Text("Everything you enter stays on this iPhone. The first name is only used so the app (and a paired BikeComputer) can greet you.").font(.footnote).foregroundStyle(.secondary)
             }
-            SignInWithAppleButton(.signIn) { req in
-                req.requestedScopes = [.fullName, .email]
-                if account.state != .notConfigured { req.nonce = account.prepareAppleRequest() }
-            } onCompletion: { result in
-                if account.state != .notConfigured {
-                    Task {
-                        if await account.completeApple(result) {
-                            store.guest = false
-                            if let n = account.pendingGivenName, !n.isEmpty, store.profile.name.isEmpty { store.profile.name = n; account.pendingGivenName = nil }
-                            step = 1
-                        } else if case .error(let e) = account.notice { authError = e }
-                    }
-                    return
-                }
-                switch result {                                   // accounts not configured: Apple identifies the rider on this phone only
-                case .success(let auth):
-                    if let c = auth.credential as? ASAuthorizationAppleIDCredential {
-                        store.appleUserId = c.user; store.guest = false
-                        if let n = c.fullName?.givenName, !n.isEmpty { store.profile.name = n }
-                        step = 1
-                    }
-                case .failure(let e): authError = e.localizedDescription
-                }
-            }
-            .signInWithAppleButtonStyle(.black).frame(height: 50).clipShape(RoundedRectangle(cornerRadius: 14))
-            if account.state == .notConfigured {
-                disabledSignIn("Sign in with Google", "Accounts are not configured in this build.")
-                disabledSignIn("Continue with e-mail", "Accounts are not configured in this build.")
-            } else {
-                Button { showAccount = true } label: { signInRow("Sign in with Google", CloudConfig.googleEnabled ? "Opens Google in a secure in-app browser." : "Not configured yet.") }.buttonStyle(.plain).disabled(!CloudConfig.googleEnabled)
-                Button { showAccount = true } label: { signInRow("Continue with e-mail", "Create an account or sign in with your e-mail address.") }.buttonStyle(.plain)
-            }
-            if let e = authError { Text(e).font(.footnote).foregroundStyle(BC.warn) }
         }
-    }
-    private func signInRow(_ title: String, _ why: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) { Text(title).font(.body.weight(.bold)); Text(why).font(.caption).foregroundStyle(.secondary) }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(13)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
-    }
-    private func disabledSignIn(_ title: String, _ why: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) { Text(title).font(.body.weight(.bold)); Text(why).font(.caption).foregroundStyle(.secondary) }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(13)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14)).opacity(0.55)
     }
 
     // MARK: Stage B
@@ -288,7 +241,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 14) {
             title("Devices and sensors", "Tell the app what you own so it only warns about those. Everything can change later in Connections.")
             Card {
-                HStack { Eyebrow(t: "Waveshare BikeComputer"); Spacer(); if device.state == .ready { Pill(text: "connected", color: BC.live) } }
+                HStack { Eyebrow(t: "BikeComputer (optional)"); Spacer(); if device.state == .ready { Pill(text: "connected", color: BC.live) } }
                 if device.state == .ready { if let i = device.info { Text("Firmware \(i.fw)").font(.footnote).foregroundStyle(.secondary) } }
                 else {
                     Text("Switch it on, tap Connect, type the 6-digit code from its round screen once.").font(.footnote).foregroundStyle(.secondary)
@@ -300,7 +253,7 @@ struct OnboardingView: View {
             Card {
                 Eyebrow(t: "I also use")
                 toggleRow("Apple Watch", "watch", detail: watch.paired ? "watch paired" : "no watch paired with this iPhone")
-                toggleRow("Heart-rate strap (pairs on the board)", "strap", detail: nil)
+                toggleRow("Heart-rate strap (on the phone or the BikeComputer)", "strap", detail: nil)
                 toggleRow("Power meter (Bluetooth, on the phone or the BikeComputer)", "meter", detail: nil)
             }
             Text("No BikeComputer? Ride with the phone alone: GPS speed, distance, map and watch heart rate. When a board is connected later it becomes the recorder.").font(.footnote).foregroundStyle(.secondary)
@@ -315,10 +268,10 @@ struct OnboardingView: View {
 
     private var appleHealth: some View {
         VStack(alignment: .leading, spacing: 14) {
-            title("Apple Health (optional)", "Three separate things — allow what you want. Shown as connected only after iOS confirms.")
-            Card { Eyebrow(t: "Save workouts"); Text("Finished rides saved into Health and Fitness as cycling workouts (one per ride, never duplicated with the watch workout).").font(.footnote) }
+            title("Apple Health (optional)", "Allow what you want. Shown as connected only after iOS confirms.")
+            Card { Eyebrow(t: "Save workouts"); Text("Cycling workouts you record with the Cyclift Apple Watch app are saved to Health and Fitness when you choose Save at the end.").font(.footnote) }
             Card { Eyebrow(t: "Import workouts"); Text("Cycling and strength workouts from other apps or your Apple Watch appear in Plan › History as rides and strength sessions (marked Apple Health, never duplicated).").font(.footnote); Toggle("Import my workouts", isOn: $store.settings.appleHealthImportWorkouts).tint(BC.accent) }
-            Card { Eyebrow(t: "Read heart rate"); Text("Heart-rate history for recovery views (later build). Live heart rate during a ride comes from the Apple Watch workout, not from Health.").font(.footnote) }
+            Card { Eyebrow(t: "Heart rate"); Text("Live heart rate during a ride comes from the Cyclift Apple Watch workout or a Bluetooth heart-rate sensor, not from Health.").font(.footnote) }
             if health.available {
                 Button { store.settings.appleHealthWanted = true; health.request { ok in healthResult = ok ? "Permission granted: Apple Health is connected." : "Not granted. You can allow it later in iOS Settings › Health › Cyclift." } } label: { Text(health.workoutWriteAuthorized ? "Connected ✓" : "Connect Apple Health").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).disabled(health.workoutWriteAuthorized)
                 if let r = healthResult { Text(r).font(.footnote).foregroundStyle(health.workoutWriteAuthorized ? BC.live : BC.stale) }
@@ -333,7 +286,7 @@ struct OnboardingView: View {
             title("Ready", "Here is what the app will use. Anything marked estimate or not set can be completed later in Profile.")
             Card {
                 row("Name", store.profile.name.isEmpty ? "not set" : store.profile.name)
-                row("Account", store.guest ? "guest (this phone only)" : "Apple")
+                row("Data", "on this iPhone")
                 row("Birth year", store.profile.birthYear.map(String.init) ?? "not set")
                 row("Weight", String(format: "%.1f kg", store.profile.weightKg))
                 row("Mode", store.profile.trainingMode.title + (store.profile.trainingMode == .hybrid ? " · \(store.profile.priority.title.lowercased()) priority" : ""))
