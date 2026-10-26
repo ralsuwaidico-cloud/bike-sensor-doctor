@@ -14,6 +14,7 @@ struct BikeComputerApp: App {
     @StateObject private var cloud: SyncEngine
     @StateObject private var hub: SensorHub
     @StateObject private var monitor: PipelineMonitor
+    @StateObject private var diag: DiagReportCenter
 
     init() {
         let s = Store()
@@ -66,6 +67,11 @@ struct BikeComputerApp: App {
         // is registered by WatchLink above, at every launch, as HealthKit requires
         let m = PipelineMonitor(); m.attach(device: d, watch: w, hub: h, recorder: r, store: s)
         _monitor = StateObject(wrappedValue: m)
+        // BikeComputer diagnostic reports (Link 1.2.3, firmware 0.7.3+): pulled, verified and kept on this phone
+        let dc = DiagReportCenter(); dc.attach(device: d, recorder: r)
+        dc.onLog = { [weak m] t in m?.log("board", t) }
+        m.diagCenter = dc
+        _diag = StateObject(wrappedValue: dc)
         let acc = AccountService()
         _account = StateObject(wrappedValue: acc)
         _cloud = StateObject(wrappedValue: SyncEngine(store: s, account: acc))
@@ -86,6 +92,7 @@ struct BikeComputerApp: App {
                 .environmentObject(cloud)
                 .environmentObject(hub)
                 .environmentObject(monitor)
+                .environmentObject(diag)
                 .onOpenURL { url in if ReleaseFlags.accountsEnabled { _ = account.handle(url: url) } }
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {

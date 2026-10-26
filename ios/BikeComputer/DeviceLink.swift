@@ -94,6 +94,11 @@ final class DeviceLink: NSObject, ObservableObject {
     var onBoardProfile: ((BCLink.ProfileMessage) -> Void)?
     var onSettingsReply: ((BCLink.SettingsMessage) -> Void)?
     var onReady: (() -> Void)?
+    /// 1.2.3 (firmware 0.7.3, cap 0x400): DIAG_INFO / DIAG_LIST_END / DIAG_CHUNK / DIAG_ERR from Control and the
+    /// diag_ready EVENT (Events or Control), passed raw to the report transfer engine (Diagnostics/DiagReportCenter).
+    var onDiagMessage: ((Data) -> Void)?
+    /// Called when the link drops, so the report transfer stops cleanly (received bytes stay on disk).
+    var onLinkDown: (() -> Void)?
     var onBoardRide: ((BCLink.RideSummary, String) -> Void)?
     var onEvent: ((BCLink.Event) -> Void)?
     /// Highest board ride id already stored for a given board id — the Store provides it so paging resumes where it left off.
@@ -400,6 +405,10 @@ final class DeviceLink: NSObject, ObservableObject {
     @discardableResult
     func settingsSet(_ m: BCLink.SettingsMessage) -> Bool { guard info?.hasSettings == true, let d = BCLink.encodeSettingsSet(m, seq: nextSeq(), tMs: nowMs()) else { return false }; return writeControl(d) }
 
+    /// 1.2.3 report transfer: one request on Control. Never sent to firmware without DIAG_XFER.
+    @discardableResult
+    func sendDiag(_ d: Data) -> Bool { guard info?.hasDiagXfer == true else { return false }; return writeControl(d) }
+
     private func writeControl(_ d: Data) -> Bool {
         guard let c = controlChr, let p = peripheral, state == .ready else { return false }
         p.writeValue(d, for: c, type: .withResponse)
@@ -485,6 +494,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         notifying = [:]; notifyErrors = [:]; firstLiveAt = nil; readyAt = nil; sensorDiag = [:]; sensorDiagAt = [:]; liveResubscribes = 0
         inputChr = nil; controlChr = nil; liveChr = nil; syncChr = nil; eventsChr = nil; syncInFlight = false
         wifiScanning = false; wifiStatus = nil; boardSettings = nil
+        onLinkDown?()
         let wasPairing = stage == .pairing || stage == .authenticating
         if let e = error {
             let d = DeviceLink.describe(e)
@@ -577,6 +587,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 onSensorDiag?(sd)
                 return
             }
+            if BCLink.decodeDiagReady(d) != nil { stats.events += 1; note("Board: diagnostic report ready"); onDiagMessage?(d); return }
             guard let ev = BCLink.decodeEvent(d) else { noteParseError("EVENT", d); return }
             stats.events += 1
             if let diag = BCLink.linkDiag(from: ev) { linkDiag = diag; linkDiagAt = Date(); note("Board: previous link ended by \(diag.reasonText); \(diag.bonds) phone(s) remembered; profile \(diag.syncText)") }
@@ -604,6 +615,10 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             if let a = BCLink.decodeProfileAck(d) { lastProfileAck = a; note("Profile ack v\(a.version): \(a.statusText)"); onProfileAck?(a) } else { stats.rejected += 1 }
         case .settings:
             if let s = BCLink.decodeSettings(d) { boardSettings = s; boardSettingsAt = Date(); lastSettingsReply = s; onSettingsReply?(s) } else { stats.rejected += 1 }
+        case .diagInfo, .diagListEnd, .diagChunk, .diagErr:
+            if BCLink.parse(d) != nil { onDiagMessage?(d) } else { noteParseError("DIAG", d) }
+        case .event:
+            if BCLink.decodeDiagReady(d) != nil { stats.events += 1; onDiagMessage?(d) } else { stats.rejected += 1 }
         default: stats.rejected += 1
         }
     }

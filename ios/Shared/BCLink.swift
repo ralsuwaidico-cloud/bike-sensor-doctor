@@ -32,6 +32,8 @@ enum BCLink {
         case wifiScanReq = 0x60, wifiScanResult = 0x61, wifiScanEnd = 0x62, wifiSet = 0x63, wifiForget = 0x64, wifiStatus = 0x65, wifiStatusReq = 0x66
         case profileGet = 0x70, profileSet = 0x71, profile = 0x72, profileAck = 0x73
         case settingsSet = 0x74, settings = 0x75, settingsGet = 0x76
+        /* 1.2.3 diagnostic report transfer (firmware 0.7.3, cap 0x400) — Control characteristic, phone-driven pull */
+        case diagListReq = 0x80, diagInfo = 0x81, diagListEnd = 0x82, diagChunkReq = 0x83, diagChunk = 0x84, diagAck = 0x85, diagErr = 0x86
     }
 
     enum Source: UInt8 {
@@ -119,6 +121,8 @@ enum BCLink {
         var deviceId: String? = nil
         static let capLive: UInt32 = 0x01, capGPS: UInt32 = 0x02, capHR: UInt32 = 0x04, capWeather: UInt32 = 0x08, capCtrl: UInt32 = 0x10, capTime: UInt32 = 0x20, capRideSync: UInt32 = 0x40
         static let capWiFi: UInt32 = 0x80, capProfileSync: UInt32 = 0x100, capSettings: UInt32 = 0x200
+        static let capDiagXfer: UInt32 = 0x400
+        var hasDiagXfer: Bool { caps & Info.capDiagXfer != 0 }
         var hasRideSync: Bool { caps & Info.capRideSync != 0 }
         var hasWiFi: Bool { caps & Info.capWiFi != 0 }
         var hasProfileSync: Bool { caps & Info.capProfileSync != 0 }

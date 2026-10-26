@@ -20,6 +20,7 @@ final class PipelineMonitor: ObservableObject {
     weak var hub: SensorHub?
     weak var recorder: RideRecorder?
     weak var store: Store?
+    weak var diagCenter: DiagReportCenter?
 
     private var timer: Timer?
     private var lastHealth: [String: PipelineHealth] = [:]
@@ -283,12 +284,14 @@ final class PipelineMonitor: ObservableObject {
         case .watchOlder: check = "watch app is OLDER — update it"
         case .watchNewer: check = "watch app is newer than the phone app"
         }
-        return DiagnosticReport(
+        var report = DiagnosticReport(
             generatedAt: now, app: AppInfo.label, system: "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)",
             watchApp: w?.watchBuild, watchVersionCheck: check,
             topMessage: top?.message, pipelines: reports, board: board, watch: watchSection, directSensors: directs,
             recentEvents: events, sensorDiagHistory: sensorDiagHistory,
             boardStageLog: (d?.log ?? []).suffix(50).map { "\($0.at.formatted(.iso8601)) \($0.text)" })
+        report.boardReports = diagCenter?.exportEntries()
+        return report
     }
 
     /// Strings that must never leave the phone in a report: the rider's name and the advertised names of paired sensors.

@@ -8,4 +8,7 @@ enum ReleaseFlags {
     static let accountsEnabled = false
     /// Garmin / WHOOP / Oura entries (not integrated). Off in 1.0: no "planned" placeholders in the UI (App Review 2.1).
     static let plannedProvidersVisible = false
+    /// Upload of BikeComputer diagnostic reports to a server (Link 1.2.3). Off: the consent toggle is hidden and
+    /// `DiagUploadHook.upload` never sends anything. Reports leave the phone only through the share sheet.
+    static let diagUploadEnabled = false
 }
