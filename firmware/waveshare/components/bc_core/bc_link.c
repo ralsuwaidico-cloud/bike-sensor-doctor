@@ -720,3 +720,129 @@ bool bc_link_decode_settings(const uint8_t *buf, size_t len, bc_settings_msg_t *
     }
     return ver;
 }
+
+/* ---- 1.2.3 diagnostic report transfer */
+static size_t utf8_cut(const char *s, size_t max)
+{
+    size_t n = strlen(s); if (n <= max) return n;
+    n = max; while (n > 0 && ((uint8_t)s[n] & 0xC0) == 0x80) n--;   /* never split a multi-byte character */
+    return n;
+}
+static void get_str_cut(char *dst, size_t cap, const uint8_t *x, uint8_t n)
+{
+    size_t k = n < cap - 1 ? n : cap - 1;
+    while (k > 0 && k < n && ((uint8_t)x[k] & 0xC0) == 0x80) k--;
+    memcpy(dst, x, k); dst[k] = 0;
+}
+size_t bc_link_encode_diag_list_req(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{ bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_LIST_REQ, seq, t_ms); return bc_lw_end(&w); }
+bool bc_link_decode_diag_list_req(const uint8_t *buf, size_t len) { bc_lr_t r; bc_link_hdr_t h; return bc_lr_begin(&r, buf, len, &h) && h.type == BC_MSG_DIAG_LIST_REQ; }
+size_t bc_link_encode_diag_info(const bc_diag_info_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_INFO, seq, t_ms);
+    bc_lw_u32(&w, 0x01, v->id); bc_lw_u32(&w, 0x02, v->size); bc_lw_u32(&w, 0x03, v->crc); bc_lw_u32(&w, 0x04, v->epoch_s);
+    bc_lw_u8(&w, 0x05, v->kind); bc_lw_u8(&w, 0x06, v->state);
+    bc_lw_bytes(&w, 0x07, v->summary, utf8_cut(v->summary, BC_DIAG_SUMMARY_MAX));
+    bc_lw_bytes(&w, 0x08, v->fw, utf8_cut(v->fw, BC_DIAG_FW_MAX));
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_diag_info(const uint8_t *buf, size_t len, bc_diag_info_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool id = false;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_DIAG_INFO) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 4) { v->id = (uint32_t)bc_lr_uint(x, n); id = true; }
+        else if (t == 0x02 && n == 4) v->size = (uint32_t)bc_lr_uint(x, n);
+        else if (t == 0x03 && n == 4) v->crc = (uint32_t)bc_lr_uint(x, n);
+        else if (t == 0x04 && n == 4) v->epoch_s = (uint32_t)bc_lr_uint(x, n);
+        else if (t == 0x05 && n == 1) v->kind = x[0];
+        else if (t == 0x06 && n == 1) v->state = x[0];
+        else if (t == 0x07) get_str_cut(v->summary, sizeof v->summary, x, n);
+        else if (t == 0x08) get_str_cut(v->fw, sizeof v->fw, x, n);
+    }
+    return id;
+}
+size_t bc_link_encode_diag_list_end(const bc_diag_list_end_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{ bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_LIST_END, seq, t_ms); bc_lw_u8(&w, 0x01, v->count); bc_lw_u8(&w, 0x02, v->pending); return bc_lw_end(&w); }
+bool bc_link_decode_diag_list_end(const uint8_t *buf, size_t len, bc_diag_list_end_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_DIAG_LIST_END) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) { if (t == 0x01 && n == 1) v->count = x[0]; else if (t == 0x02 && n == 1) v->pending = x[0]; }
+    return true;
+}
+size_t bc_link_encode_diag_chunk_req(const bc_diag_chunk_req_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{ bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_CHUNK_REQ, seq, t_ms); bc_lw_u32(&w, 0x01, v->id); bc_lw_u32(&w, 0x02, v->offset); bc_lw_u16(&w, 0x03, v->max_len); return bc_lw_end(&w); }
+bool bc_link_decode_diag_chunk_req(const uint8_t *buf, size_t len, bc_diag_chunk_req_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool id = false, off = false;
+    memset(v, 0, sizeof *v); v->max_len = BC_DIAG_CHUNK_MAX;
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_DIAG_CHUNK_REQ) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 4) { v->id = (uint32_t)bc_lr_uint(x, n); id = true; }
+        else if (t == 0x02 && n == 4) { v->offset = (uint32_t)bc_lr_uint(x, n); off = true; }
+        else if (t == 0x03 && n == 2) v->max_len = (uint16_t)bc_lr_uint(x, n);
+    }
+    return id && off;
+}
+size_t bc_link_encode_diag_chunk(const bc_diag_chunk_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_CHUNK, seq, t_ms);
+    bc_lw_u32(&w, 0x01, v->id); bc_lw_u32(&w, 0x02, v->offset);
+    bc_lw_bytes(&w, 0x03, v->data, v->len > BC_DIAG_CHUNK_MAX ? BC_DIAG_CHUNK_MAX : v->len);
+    bc_lw_u8(&w, 0x04, v->last ? 1 : 0);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_diag_chunk(const uint8_t *buf, size_t len, bc_diag_chunk_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool id = false, off = false, data = false;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_DIAG_CHUNK) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 4) { v->id = (uint32_t)bc_lr_uint(x, n); id = true; }
+        else if (t == 0x02 && n == 4) { v->offset = (uint32_t)bc_lr_uint(x, n); off = true; }
+        else if (t == 0x03 && n <= BC_DIAG_CHUNK_MAX) { memcpy(v->data, x, n); v->len = n; data = true; }
+        else if (t == 0x04 && n == 1) v->last = x[0] != 0;
+    }
+    return id && off && data;
+}
+size_t bc_link_encode_diag_ack(const bc_diag_ack_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{ bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_ACK, seq, t_ms); bc_lw_u32(&w, 0x01, v->id); bc_lw_u32(&w, 0x02, v->crc); return bc_lw_end(&w); }
+bool bc_link_decode_diag_ack(const uint8_t *buf, size_t len, bc_diag_ack_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool id = false, crc = false;
+    memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_DIAG_ACK) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 4) { v->id = (uint32_t)bc_lr_uint(x, n); id = true; }
+        else if (t == 0x02 && n == 4) { v->crc = (uint32_t)bc_lr_uint(x, n); crc = true; }
+    }
+    return id && crc;
+}
+size_t bc_link_encode_diag_err(const bc_diag_err_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{ bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_ERR, seq, t_ms); bc_lw_u32(&w, 0x01, v->id); bc_lw_u8(&w, 0x02, v->code); return bc_lw_end(&w); }
+bool bc_link_decode_diag_err(const uint8_t *buf, size_t len, bc_diag_err_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_DIAG_ERR) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) { if (t == 0x01 && n == 4) v->id = (uint32_t)bc_lr_uint(x, n); else if (t == 0x02 && n == 1) v->code = x[0]; }
+    return v->code != 0;
+}
+size_t bc_link_encode_diag_ready(const bc_diag_ready_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
+{
+    bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_EVENT, seq, t_ms);
+    bc_lw_u8(&w, 0x01, BC_EVT_DIAG_READY); bc_lw_u8(&w, 0x02, v->pending); bc_lw_u32(&w, 0x03, v->newest_id);
+    return bc_lw_end(&w);
+}
+bool bc_link_decode_diag_ready(const uint8_t *buf, size_t len, bc_diag_ready_t *v)
+{
+    bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; uint8_t id = 0; memset(v, 0, sizeof *v);
+    if (!bc_lr_begin(&r, buf, len, &h) || h.type != BC_MSG_EVENT) return false;
+    while (bc_lr_next(&r, &t, &x, &n)) {
+        if (t == 0x01 && n == 1) id = x[0];
+        else if (t == 0x02 && n == 1) v->pending = x[0];
+        else if (t == 0x03 && n == 4) v->newest_id = (uint32_t)bc_lr_uint(x, n);
+    }
+    return id == BC_EVT_DIAG_READY;
+}

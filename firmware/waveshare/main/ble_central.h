@@ -10,15 +10,25 @@
  * characteristic such as the 0x2A55 control point). No control point writes, no vendor characteristics, no bonding.
  * The CCCD is read back to confirm. Reconnect automatically with back-off 1, 2, 4, 8, 16 s (reset only when valid data
  * flows). 0.7.2: every link has a pipeline stage (bc_pipe.h, serial tag "pipe") and automatic recovery.
+ *
+ * THREADING (0.7.3): every Bluetooth call and every change of a link's state happens on the NimBLE host task. The manager
+ * task, the MTU fallback timer and the UI only post NimBLE events (ble_npl_eventq_put) or set request flags; the host task
+ * does the work in order with the GATT/GAP callbacks. The UI reads copies through ble_central_snapshot (spinlock, no
+ * Bluetooth call inside). 0.7.2 ran the recovery actions on the manager task in parallel with the host callbacks.
  */
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
 #include "plat.h"
 
-void ble_central_start(void);
-/* configure the device to use for a kind (NULL = none). Safe to call from the UI task. */
+/* Starts NimBLE (host task + manager task) and the phone link. sensors = false: the sensor central stays off (no scan,
+   no sensor link) until ble_central_enable_sensors(true) — recovery mode "SEND LOGS" and the staged boot use that. */
+void ble_central_start(bool sensors);
+void ble_central_enable_sensors(bool on);
+/* configure the device to use for a kind (NULL = none). Safe to call from the UI task (applied on the host task). */
 void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t addr_type, const char *name);
+/* 0.7.3 staged boot: a sensor link disabled after a crash keeps its pairing but is not connected until enabled again */
+void ble_central_set_disabled(plat_sens_kind_t kind, bool disabled);
 void ble_central_scan_for(int kind);      /* pairing list for a kind; -1 = stop the pairing list */
 void ble_central_set_standby(bool standby);
 void ble_central_set_wheel_mm(uint16_t mm);   /* wheel circumference for the CSC speed (profile.wheel_mm) */   /* 0.6.0 connected standby: pause scanning for paired sensors */

@@ -244,7 +244,7 @@ static bool do_connect(const char *ssid, const char *pass, bool save)
         if (save) bc_wifi_store_put(&s_store, ssid, pass); else bc_wifi_store_touch(&s_store, ssid);
         store_save(); publish_saved();
         s_attempt = 0; s_auto_halted = false;
-        ESP_LOGI(TAG, "connected, IP %s", s_st.ip);
+        ESP_LOGI(TAG, "connected (IP obtained)");   /* 0.7.3: no addresses in logs (they end up in diagnostic reports) */
         /* internet check: one DNS lookup (a connected hotspot without data shows "internet not reachable", never "connected"
            pretending the world is there). Blocks only this task, a few seconds at most. */
         LOCK(); s_st.internet = 0; UNLOCK();

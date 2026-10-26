@@ -8,6 +8,15 @@
  * 0.7.2 root cause fixed here: up to 0.7.1 on_dsc() searched descriptors from the 0x2A63 value handle to the END OF THE
  * SERVICE and kept the LAST 0x2902, i.e. the CCCD of a later characteristic (on the XDS: the 0x2A55 control point). The
  * board reported "connected" and never received a power packet. Every stage is now tracked by bc_pipe (serial tag "pipe").
+ *
+ * 0.7.3 (docs/CRASH_0.7.2.md): ONE task owns the links. In 0.7.2 the manager task ran tick() — and with it the automatic
+ * re-subscribe (disc_begin), reconnect (ble_gap_terminate) and the stuck-connect handling — in parallel with the NimBLE host
+ * task's GATT/GAP callbacks that change the same link_t fields, and the MTU fallback timer started discovery from the
+ * esp_timer task while the MTU answer could start it on the host task (double discovery). Now the manager task and the
+ * timer only post NimBLE events; tick(), ble_link_tick(), the MTU fallback and pairing changes all run on the host task.
+ * GATT callbacks carry the link slot + a discovery generation in `arg`, so an answer to an older discovery (one that was
+ * replaced by a re-subscribe, or belongs to a previous connection) is ignored instead of being applied to the new one; a
+ * re-subscribe is never started while a discovery/subscription is still in flight.
  */
 #include "ble_central.h"
 #include <string.h>
@@ -41,9 +50,11 @@ static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 typedef struct {
     int kind;
     uint16_t chr_uuid; uint16_t cand[2]; int ncand;  /* data characteristic + the services to look in, in order */
-    bool paired; ble_addr_t addr; char name[20];
+    bool paired, disabled; ble_addr_t addr; char name[20];
     plat_link_t state;
     uint16_t conn, svc_s, svc_e, svc_uuid, val, cccd, chr_end, cccd_val; bool disc_started;
+    uint8_t dgen;                                    /* 0.7.3 discovery generation: callbacks of older ones are ignored */
+    bool busy; uint32_t busy_since;                  /* 0.7.3 a discovery / CCCD write / read-back is in flight (since) */
     struct { uint16_t s, e, uuid; } sv[NSV]; int nsv, svc_try; bool svc_seen;
     bc_gatt_chr_t ch[NCH]; int nch;
     bc_gatt_attr_t ds[NDS]; int nds;
@@ -69,12 +80,29 @@ static volatile uint16_t s_wheel_mm = 2096;
 #define NANY 12
 static plat_found_t s_any[NANY]; static int s_nany; static uint32_t s_any_ms[NANY];
 static uint8_t s_own;
-static bool s_synced, s_scanning;
-static int s_pair_kind = -1;
+static volatile bool s_synced, s_scanning;
+static volatile int s_pair_kind = -1;
+static volatile bool s_sensors_on = true;
 static link_t *s_connecting;
 static plat_found_t s_found[NL][8]; static int s_nfound[NL]; static uint32_t s_found_ms[NL][8];
 static uint8_t s_seen[48][6]; static int s_seen_n; static uint32_t s_seen_total;
 static esp_timer_handle_t s_mtu_timer;
+/* 0.7.3: work handed to the host task */
+static struct ble_npl_event s_ev_tick, s_ev_link, s_ev_mtu, s_ev_req;
+static volatile bool s_events_ready;
+typedef struct { bool pending; bool paired; uint8_t mac[6], addr_type; char name[20]; bool set_disabled, disabled; } pair_req_t;
+static pair_req_t s_req[NL];                         /* guarded by LOCK; applied on the host task */
+
+/* GATT callback argument: link slot + discovery generation (never a pointer that could outlive the procedure) */
+static void *cb_arg(const link_t *l) { return (void *)(uintptr_t)((unsigned)(l - L) | ((unsigned)l->dgen << 8)); }
+static link_t *link_of(uint16_t conn, void *arg)
+{
+    unsigned v = (unsigned)(uintptr_t)arg, slot = v & 0xFF, gen = (v >> 8) & 0xFF;
+    if (slot >= NL) return NULL;
+    link_t *l = &L[slot];
+    if (l->conn != conn || l->dgen != gen) return NULL;   /* an older discovery or a previous connection: ignore */
+    return l;
+}
 
 static const char *st_name(plat_link_t s)
 {
@@ -134,6 +162,7 @@ static link_t *by_conn(uint16_t c) { for (int i = 0; i < NL; i++) if (L[i].conn 
 static void fail(link_t *l, const char *why)
 {
     ESP_LOGW(TAG, "%s: %s", kind_name(l->kind), why);
+    l->busy = false; l->dgen++;                      /* every answer still in flight for this link is now stale */
     LOCK(); bc_pipe_error(&l->pipe, why, hw_millis()); UNLOCK();
     pipe_log(l);
     if (l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
@@ -151,7 +180,7 @@ static void try_next_service(link_t *l);
 
 static int on_cccd_read(uint16_t conn, const struct ble_gatt_error *err, struct ble_gatt_attr *attr, void *arg)
 {
-    link_t *l = by_conn(conn); if (!l) return 0;
+    link_t *l = link_of(conn, arg); if (!l) return 0;
     uint16_t rb = 0xFFFF;
     if (err->status == 0 && attr && attr->om && OS_MBUF_PKTLEN(attr->om) >= 2) { uint8_t v[2]; os_mbuf_copydata(attr->om, 0, 2, v); rb = (uint16_t)(v[0] | (v[1] << 8)); }
     else ESP_LOGW("pipe", "%s: CCCD 0x%04X read back failed (status %d) - written OK, continuing", kind_name(l->kind), l->cccd, err->status);
@@ -160,7 +189,8 @@ static int on_cccd_read(uint16_t conn, const struct ble_gatt_error *err, struct 
         fail(l, why);
         return 0;
     }
-    s_connecting = NULL;
+    l->busy = false;
+    if (s_connecting == l) s_connecting = NULL;
     LOCK(); bc_pipe_subscribed(&l->pipe, l->cccd, rb, hw_millis()); UNLOCK();
     set_state(l, PLAT_LINK_CONNECTED);              /* "CONNECTED" = subscribed; the pipeline says whether data flows */
     return 0;
@@ -168,28 +198,28 @@ static int on_cccd_read(uint16_t conn, const struct ble_gatt_error *err, struct 
 
 static int on_cccd(uint16_t conn, const struct ble_gatt_error *err, struct ble_gatt_attr *attr, void *arg)
 {
-    link_t *l = by_conn(conn); if (!l) return 0;
+    link_t *l = link_of(conn, arg); if (!l) return 0;
     if (err->status != 0) { fail(l, "CCCD write failed"); return 0; }
-    if (ble_gattc_read(conn, l->cccd, on_cccd_read, NULL) != 0) { struct ble_gatt_error e = { .status = BLE_HS_EUNKNOWN }; on_cccd_read(conn, &e, NULL, NULL); }
+    if (ble_gattc_read(conn, l->cccd, on_cccd_read, cb_arg(l)) != 0) { struct ble_gatt_error e = { .status = BLE_HS_EUNKNOWN }; on_cccd_read(conn, &e, NULL, cb_arg(l)); }
     return 0;
 }
 
 static int on_dsc(uint16_t conn, const struct ble_gatt_error *err, uint16_t chr_val, const struct ble_gatt_dsc *dsc, void *arg)
 {
-    link_t *l = by_conn(conn); if (!l) return 0;
+    link_t *l = link_of(conn, arg); if (!l) return 0;
     if (err->status == 0 && dsc) { if (l->nds < NDS) { l->ds[l->nds].handle = dsc->handle; l->ds[l->nds].uuid16 = u16_of(&dsc->uuid.u); l->nds++; } return 0; }
     if (err->status != BLE_HS_EDONE) { fail(l, "descriptor discovery"); return 0; }
     l->cccd = bc_gatt_pick_cccd(l->ds, l->nds, l->val, l->chr_end);   /* ONLY this characteristic's CCCD (0.7.2 fix) */
     ESP_LOGI("pipe", "%s: 0x%04X value 0x%04X, descriptors 0x%04X..0x%04X (%d), CCCD 0x%04X", kind_name(l->kind), l->chr_uuid, l->val, l->val + 1, l->chr_end, l->nds, l->cccd);
     if (!l->cccd) { fail(l, "no CCCD"); return 0; }
     uint8_t on[2] = { (uint8_t)(l->cccd_val & 0xFF), (uint8_t)(l->cccd_val >> 8) };   /* 01 00 notify / 02 00 indicate — the ONLY write this firmware sends */
-    if (ble_gattc_write_flat(conn, l->cccd, on, sizeof on, on_cccd, NULL) != 0) fail(l, "CCCD write failed");
+    if (ble_gattc_write_flat(conn, l->cccd, on, sizeof on, on_cccd, cb_arg(l)) != 0) fail(l, "CCCD write failed");
     return 0;
 }
 
 static int on_chr(uint16_t conn, const struct ble_gatt_error *err, const struct ble_gatt_chr *chr, void *arg)
 {
-    link_t *l = by_conn(conn); if (!l) return 0;
+    link_t *l = link_of(conn, arg); if (!l) return 0;
     if (err->status == 0 && chr) {
         if (l->nch < NCH) { bc_gatt_chr_t *c = &l->ch[l->nch++]; c->def_handle = chr->def_handle; c->val_handle = chr->val_handle; c->props = chr->properties; c->uuid16 = u16_of(&chr->uuid.u); }
         return 0;
@@ -197,25 +227,25 @@ static int on_chr(uint16_t conn, const struct ble_gatt_error *err, const struct 
     if (err->status != BLE_HS_EDONE) { fail(l, "characteristic discovery"); return 0; }
     int i = bc_gatt_find_chr(l->ch, l->nch, l->chr_uuid);
     if (i < 0) { ESP_LOGW("pipe", "%s: no 0x%04X in service 0x%04X (%d characteristics)", kind_name(l->kind), l->chr_uuid, l->svc_uuid, l->nch); try_next_service(l); return 0; }
-    l->val = l->ch[i].val_handle;
+    LOCK(); l->val = l->ch[i].val_handle; UNLOCK();   /* the UI snapshot reads it */
     l->chr_end = bc_gatt_chr_end(l->ch, l->nch, i, l->svc_e);
     l->cccd_val = bc_gatt_cccd_value(l->ch[i].props);
     if (l->kind == PLAT_SENS_POWER) l->fmt = bc_gatt_power_format(l->svc_uuid);
     if (!l->cccd_val) { fail(l, "not notifiable"); return 0; }
     if (l->chr_end <= l->val) { fail(l, "no CCCD"); return 0; }
     l->nds = 0;
-    if (ble_gattc_disc_all_dscs(conn, l->val, l->chr_end, on_dsc, NULL) != 0) fail(l, "descriptor discovery");
+    if (ble_gattc_disc_all_dscs(conn, l->val, l->chr_end, on_dsc, cb_arg(l)) != 0) fail(l, "descriptor discovery");
     return 0;
 }
 
 static void try_next_service(link_t *l)
 {
-    while (l->svc_try < l->ncand) {
+    while (l->svc_try >= 0 && l->svc_try < l->ncand && l->svc_try < 2) {
         uint16_t want = l->cand[l->svc_try++];
-        for (int i = 0; i < l->nsv; i++) if (l->sv[i].uuid == want) {
-            l->svc_seen = true; l->svc_s = l->sv[i].s; l->svc_e = l->sv[i].e; l->svc_uuid = want; l->nch = 0;
+        for (int i = 0; i < l->nsv && i < NSV; i++) if (l->sv[i].uuid == want) {
+            l->svc_seen = true; l->svc_s = l->sv[i].s; l->svc_e = l->sv[i].e; LOCK(); l->svc_uuid = want; UNLOCK(); l->nch = 0;
             ESP_LOGI("pipe", "%s: service 0x%04X 0x%04X..0x%04X", kind_name(l->kind), want, l->svc_s, l->svc_e);
-            if (ble_gattc_disc_all_chrs(l->conn, l->svc_s, l->svc_e, on_chr, NULL) != 0) fail(l, "characteristic discovery");
+            if (ble_gattc_disc_all_chrs(l->conn, l->svc_s, l->svc_e, on_chr, cb_arg(l)) != 0) fail(l, "characteristic discovery");
             return;
         }
     }
@@ -226,21 +256,23 @@ static void try_next_service(link_t *l)
 
 static int on_svc(uint16_t conn, const struct ble_gatt_error *err, const struct ble_gatt_svc *svc, void *arg)
 {
-    link_t *l = by_conn(conn); if (!l) return 0;
+    link_t *l = link_of(conn, arg); if (!l) return 0;
     if (err->status == 0 && svc) { if (l->nsv < NSV) { l->sv[l->nsv].s = svc->start_handle; l->sv[l->nsv].e = svc->end_handle; l->sv[l->nsv].uuid = u16_of(&svc->uuid.u); l->nsv++; } return 0; }
     if (err->status != BLE_HS_EDONE) { fail(l, "service discovery"); return 0; }
     try_next_service(l);
     return 0;
 }
 
-/* (re)discovery from scratch on the live connection — also the automatic RESUBSCRIBE of the pipeline */
+/* (re)discovery from scratch on the live connection — also the automatic RESUBSCRIBE of the pipeline. Host task only. */
 static void disc_begin(link_t *l)
 {
+    if (l->conn == BLE_HS_CONN_HANDLE_NONE) return;
     /* val / cccd stay as they are until the new discovery sets them, so a re-subscribe never drops packets in between */
-    l->svc_s = l->svc_e = l->svc_uuid = l->chr_end = 0;
+    l->dgen++; l->busy = true; l->busy_since = hw_millis();   /* answers to an older discovery on this link are ignored from now on */
+    l->svc_s = l->svc_e = l->chr_end = 0; LOCK(); l->svc_uuid = 0; UNLOCK();
     l->nsv = l->nch = l->nds = 0; l->svc_try = 0; l->svc_seen = false;
     if (l->kind == PLAT_SENS_POWER) l->ncand = bc_gatt_power_services(l->name, l->cand);
-    if (ble_gattc_disc_all_svcs(l->conn, on_svc, NULL) != 0) fail(l, "service discovery");
+    if (ble_gattc_disc_all_svcs(l->conn, on_svc, cb_arg(l)) != 0) fail(l, "service discovery");
 }
 
 static void start_discovery(link_t *l)
@@ -250,15 +282,25 @@ static void start_discovery(link_t *l)
     disc_begin(l);
 }
 
-static link_t *s_mtu_link;
+static link_t *s_mtu_link; static uint16_t s_mtu_conn = BLE_HS_CONN_HANDLE_NONE;
 static int on_mtu(uint16_t conn, const struct ble_gatt_error *err, uint16_t mtu, void *arg)
 {
     ESP_LOGI(TAG, "MTU exchange: status %d, mtu %u", err->status, mtu);
-    esp_timer_stop(s_mtu_timer);
-    start_discovery(by_conn(conn));                  /* discovery only after the MTU exchange (PORTING_SPEC §2) */
+    link_t *l = link_of(conn, arg);
+    if (l && s_mtu_link == l) esp_timer_stop(s_mtu_timer);
+    start_discovery(l);                              /* discovery only after the MTU exchange (PORTING_SPEC §2) */
     return 0;
 }
-static void mtu_fallback(void *arg) { ESP_LOGW(TAG, "no MTU response in 2 s — discovering anyway"); start_discovery(s_mtu_link); }
+/* esp_timer task: only hands the fallback to the host task */
+static void mtu_fallback_timer(void *arg) { (void)arg; if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_mtu); }
+static void mtu_fallback_ev(struct ble_npl_event *ev)
+{
+    (void)ev;
+    link_t *l = s_mtu_link;
+    if (!l || l->disc_started || l->conn == BLE_HS_CONN_HANDLE_NONE || l->conn != s_mtu_conn) return;   /* answered, or a different connection by now */
+    ESP_LOGW(TAG, "no MTU response in 2 s — discovering anyway");
+    start_discovery(l);
+}
 
 /* ---- scanning */
 static uint16_t svcs_of(const struct ble_hs_adv_fields *f)
@@ -315,11 +357,11 @@ static void connect_to(link_t *l)
 {
     scan_stop();
     s_connecting = l;
-    l->svc_s = l->svc_e = l->val = l->cccd = 0; l->disc_started = false;
+    l->svc_s = l->svc_e = l->cccd = 0; LOCK(); l->val = 0; UNLOCK(); l->disc_started = false; l->busy = false; l->dgen++;
     l->other_notifies = 0; l->other_logged = false;
     set_state(l, PLAT_LINK_CONNECTING);
     ble_link_central_busy(true);                      /* phone advertising pauses while we initiate (meter first, always) */
-    int rc = ble_gap_connect(s_own, &l->addr, 10000, NULL, gap_event, l);
+    int rc = ble_gap_connect(s_own, &l->addr, 10000, NULL, gap_event, (void *)(uintptr_t)(l - L));
     if (rc != 0) { ESP_LOGW(TAG, "connect start failed %d", rc); s_connecting = NULL; ble_link_central_busy(false); fail(l, "connect failed"); }
 }
 
@@ -335,6 +377,8 @@ static void note_found(int kind, const ble_addr_t *a, const struct ble_hs_adv_fi
     s_found_ms[kind][i] = now;
     UNLOCK();
 }
+
+static bool link_wanted(const link_t *l) { return l->paired && !l->disabled && s_sensors_on; }
 
 static int gap_event(struct ble_gap_event *ev, void *arg)
 {
@@ -358,7 +402,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
             bool same_mac = !memcmp(l->addr.val, a->val, 6);
             bool same_name = l->name[0] && f.name && f.name_len == strlen(l->name) && !memcmp(f.name, l->name, f.name_len);
             if (l->paired && !same_mac && same_name && k == j) {   /* the meter changed its address: follow it by name */
-                ESP_LOGI(TAG, "paired %s seen under a new address", l->name);
+                ESP_LOGI(TAG, "paired %s seen under a new address", kind_name(l->kind));
                 memcpy(l->addr.val, a->val, 6); l->addr.type = a->type; same_mac = true;
             }
             if (l->paired && same_mac) { LOCK(); l->rssi = ev->disc.rssi; UNLOCK(); if (k < 0) k = j; }
@@ -367,8 +411,8 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         note_found(k, a, &f, ev->disc.rssi);
         LOCK(); for (int j = 0; j < s_nfound[k]; j++) if (!memcmp(s_found[k][j].mac, a->val, 6)) s_found[k][j].svcs |= svcs; UNLOCK();
         link_t *l = &L[k];
-        if (l->paired && !memcmp(l->addr.val, a->val, 6) && (l->state == PLAT_LINK_SEARCHING || l->state == PLAT_LINK_RETRY) &&
-            (int32_t)(hw_millis() - l->retry_at) >= 0 && !s_connecting) {
+        if (link_wanted(l) && !memcmp(l->addr.val, a->val, 6) && (l->state == PLAT_LINK_SEARCHING || l->state == PLAT_LINK_RETRY) &&
+            (int32_t)(hw_millis() - l->retry_at) >= 0 && !s_connecting && l->conn == BLE_HS_CONN_HANDLE_NONE) {
             l->addr.type = a->type;
             ESP_LOGI(TAG, "paired %s seen (rssi %d) — connecting", kind_name(l->kind), ev->disc.rssi);
             connect_to(l);
@@ -376,28 +420,30 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         return 0;
     }
     case BLE_GAP_EVENT_CONNECT: {
-        link_t *l = (link_t *)arg;
+        unsigned slot = (unsigned)(uintptr_t)arg; if (slot >= NL) return 0;
+        link_t *l = &L[slot];
         ble_link_central_busy(false);
-        if (ev->connect.status != 0) { s_connecting = NULL; fail(l, "connect failed / timeout"); return 0; }
-        l->conn = ev->connect.conn_handle; l->connects++;
+        if (ev->connect.status != 0) { if (s_connecting == l) s_connecting = NULL; fail(l, "connect failed / timeout"); return 0; }
+        l->conn = ev->connect.conn_handle; l->connects++; l->dgen++; l->busy = false; l->disc_started = false;
+        if (!link_wanted(l)) { ESP_LOGI(TAG, "%s: connected after it was switched off - closing", kind_name(l->kind)); ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM); return 0; }
         LOCK(); if (l->kind == PLAT_SENS_POWER) { bc_xds_live_reset(&l->xds); bc_cp_cad_reset(&l->cp); } else if (l->kind == PLAT_SENS_HR) bc_hr_live_reset(&l->hr); else bc_csc_live_reset(&l->csc);
         bc_pipe_connected(&l->pipe, hw_millis()); UNLOCK();
         pipe_log(l);
-        s_mtu_link = l;
-        ble_gattc_exchange_mtu(l->conn, on_mtu, NULL);
+        s_mtu_link = l; s_mtu_conn = l->conn;
+        if (ble_gattc_exchange_mtu(l->conn, on_mtu, cb_arg(l)) != 0) start_discovery(l);
         esp_timer_stop(s_mtu_timer); esp_timer_start_once(s_mtu_timer, 2000 * 1000);
         return 0;
     }
     case BLE_GAP_EVENT_NOTIFY_RX: {
         link_t *l = by_conn(ev->notify_rx.conn_handle);
         if (!l) return 0;
-        if (ev->notify_rx.attr_handle != l->val) {        /* not the data characteristic: counted, never decoded */
+        if (!l->val || ev->notify_rx.attr_handle != l->val) {   /* not the data characteristic: counted, never decoded */
             l->other_notifies++;
             if (!l->other_logged) { l->other_logged = true; ESP_LOGW("pipe", "%s: notification on handle 0x%04X ignored (data handle 0x%04X)", kind_name(l->kind), ev->notify_rx.attr_handle, l->val); }
             return 0;
         }
-        uint8_t buf[32]; uint16_t n = OS_MBUF_PKTLEN(ev->notify_rx.om); if (n > sizeof buf) n = sizeof buf;
-        os_mbuf_copydata(ev->notify_rx.om, 0, n, buf);
+        uint8_t buf[32]; uint16_t n = ev->notify_rx.om ? OS_MBUF_PKTLEN(ev->notify_rx.om) : 0; if (n > sizeof buf) n = sizeof buf;
+        if (n && os_mbuf_copydata(ev->notify_rx.om, 0, n, buf) != 0) n = 0;
         uint32_t now = hw_millis();
         bool first_valid = false;
         LOCK();
@@ -416,8 +462,9 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         link_t *l = by_conn(ev->disconnect.conn.conn_handle);
         ESP_LOGW(TAG, "disconnected, reason 0x%x", ev->disconnect.reason);
         if (!l) return 0;
-        l->conn = BLE_HS_CONN_HANDLE_NONE;
+        l->conn = BLE_HS_CONN_HANDLE_NONE; l->busy = false; l->dgen++; l->disc_started = false;
         if (s_connecting == l) s_connecting = NULL;
+        if (s_mtu_link == l) { s_mtu_link = NULL; s_mtu_conn = BLE_HS_CONN_HANDLE_NONE; esp_timer_stop(s_mtu_timer); }
         LOCK(); l->reconnects++;
         if (l->pipe.stage != BC_STG_ERROR && !l->pipe.err[0]) snprintf(l->pipe.err, sizeof l->pipe.err, "link lost 0x%x", ev->disconnect.reason);
         l->valid_seen = false; UNLOCK();
@@ -434,17 +481,46 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
     }
 }
 
-/* ---- manager: every 500 ms decide whether to scan */
-static void tick(void *arg)
+/* ---- pairing changes from the UI: applied here, on the host task */
+static void apply_requests(void)
+{
+    for (int i = 0; i < NL; i++) {
+        pair_req_t r; LOCK(); r = s_req[i]; s_req[i].pending = false; s_req[i].set_disabled = false; UNLOCK();
+        link_t *l = &L[i];
+        if (r.set_disabled) {
+            LOCK(); l->disabled = r.disabled; UNLOCK();
+            ESP_LOGI(TAG, "%s link %s", kind_name(l->kind), r.disabled ? "disabled (staged boot / after a crash)" : "enabled");
+            if (r.disabled && l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
+            if (r.disabled && s_connecting == l && l->conn == BLE_HS_CONN_HANDLE_NONE) { ble_gap_conn_cancel(); s_connecting = NULL; }
+            if (!r.disabled && l->paired && l->state != PLAT_LINK_CONNECTED && l->conn == BLE_HS_CONN_HANDLE_NONE) { l->retry_at = 0; set_state(l, PLAT_LINK_SEARCHING); }
+        }
+        if (!r.pending) continue;
+        if (l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
+        else if (s_connecting == l) { ble_gap_conn_cancel(); s_connecting = NULL; }
+        LOCK();
+        l->paired = r.paired;
+        if (r.paired) { memcpy(l->addr.val, r.mac, 6); l->addr.type = r.addr_type; memcpy(l->name, r.name, sizeof l->name); }
+        l->backoff_s = 1; l->retry_at = 0;
+        bc_pipe_init(&l->pipe); l->pipe.stage_ms = hw_millis();          /* a new pairing / RETRY starts a clean pipeline */
+        UNLOCK();
+        set_state(l, r.paired ? PLAT_LINK_SEARCHING : PLAT_LINK_NOT_PAIRED);
+    }
+}
+
+/* ---- manager: every 500 ms decide whether to scan (host task) */
+static void tick(void)
 {
     if (!s_synced) return;
     ble_link_tick();
+    apply_requests();
     uint32_t now = hw_millis();
     /* 0.7.2 pipeline: stage from the clock + automatic recovery for every live connection */
     for (int i = 0; i < NL; i++) {
         link_t *l = &L[i];
         if (l->conn == BLE_HS_CONN_HANDLE_NONE) continue;
-        LOCK(); bc_pipe_act_t a = bc_pipe_tick(&l->pipe, now); UNLOCK();
+        if (l->busy && now - l->busy_since > 20000) { fail(l, "set-up timeout"); continue; }   /* a GATT answer never came */
+        bool busy = l->busy;
+        LOCK(); bc_pipe_act_t a = busy ? BC_PIPE_NONE : bc_pipe_tick(&l->pipe, now); UNLOCK();   /* no recovery while a discovery is in flight */
         pipe_log(l);
         switch (a) {
         case BC_PIPE_RESUBSCRIBE:
@@ -453,35 +529,37 @@ static void tick(void *arg)
             break;
         case BC_PIPE_RECONNECT:
             ESP_LOGW("pipe", "%s: %s - reconnecting (back-off %d s)", kind_name(l->kind), l->pipe.err, l->backoff_s);
+            l->dgen++; l->busy = false;
             ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
             break;
         case BC_PIPE_DUMP_HEX: {
             ESP_LOGW("pipe", "%s: unreadable data - %lu packets, none decodes; first packets (sensor data only):", kind_name(l->kind), (unsigned long)l->pipe.packets);
-            for (int k = 0; k < l->pipe.nhex; k++) { char h[64]; LOCK(); bc_pipe_hex(&l->pipe, k, h, sizeof h); UNLOCK(); ESP_LOGW("pipe", "%s   [%d] %s", kind_name(l->kind), k + 1, h); }
+            for (int k = 0; k < l->pipe.nhex && k < BC_PIPE_HEX_N; k++) { char h[64]; LOCK(); bc_pipe_hex(&l->pipe, k, h, sizeof h); UNLOCK(); ESP_LOGW("pipe", "%s   [%d] %s", kind_name(l->kind), k + 1, h); }
             break; }
         default: break;
         }
     }
-    if (s_connecting && now - s_connecting->state_since > 15000) {   /* stuck connect/discovery */
-        link_t *l = s_connecting;
+    link_t *sc = s_connecting;
+    if (sc && now - sc->state_since > 15000) {   /* stuck connect/discovery */
         ESP_LOGW(TAG, "connection set-up took > 15 s — retrying");
-        if (l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
-        else { ble_gap_conn_cancel(); s_connecting = NULL; fail(l, "connect timeout"); }
+        if (sc->conn != BLE_HS_CONN_HANDLE_NONE) { sc->dgen++; sc->busy = false; ble_gap_terminate(sc->conn, BLE_ERR_REM_USER_CONN_TERM); }
+        else { ble_gap_conn_cancel(); s_connecting = NULL; fail(sc, "connect timeout"); }
         return;
     }
     if (s_connecting) return;
     static uint32_t s_rssi_t;
-    if (now - s_rssi_t > 2000) {   /* live link RSSI, read here (timer task) so the display never waits on the radio */
+    if (now - s_rssi_t > 2000) {   /* live link RSSI, read here so the display never waits on the radio */
         s_rssi_t = now;
         for (int i = 0; i < NL; i++) { int8_t r; if (L[i].conn != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_rssi(L[i].conn, &r) == 0) { LOCK(); L[i].rssi = r; UNLOCK(); } }
     }
     bool need = s_pair_kind >= 0;
     for (int i = 0; i < NL && !s_standby; i++) {   /* connected standby (0.6.0): no scanning for paired sensors; live connections are kept */
         link_t *l = &L[i];
-        if (!l->paired) continue;
+        if (!link_wanted(l)) continue;
         if (l->state == PLAT_LINK_RETRY && (int32_t)(now - l->retry_at) >= 0) set_state(l, PLAT_LINK_SEARCHING);
         if (l->state == PLAT_LINK_SEARCHING) need = true;
     }
+    if (!s_sensors_on && s_pair_kind < 0) need = false;
     /* drop pairing-list entries not heard for 20 s */
     LOCK();
     for (int k = 0; k < NL; k++) for (int i = 0; i < s_nfound[k]; i++) if (now - s_found_ms[k][i] > 20000) {
@@ -491,6 +569,9 @@ static void tick(void *arg)
     UNLOCK();
     if (need) scan_start(); else scan_stop();
 }
+static void tick_ev(struct ble_npl_event *ev) { (void)ev; tick(); }
+static void link_ev(struct ble_npl_event *ev) { (void)ev; if (s_synced) { ble_link_tick(); apply_requests(); } }
+static void req_ev(struct ble_npl_event *ev) { (void)ev; if (s_synced) apply_requests(); }
 
 static void on_sync(void)
 {
@@ -502,16 +583,24 @@ static void on_sync(void)
 }
 static void on_reset(int reason) { ESP_LOGW(TAG, "host reset %d", reason); s_synced = false; s_scanning = false; }
 static void host_task(void *p) { nimble_port_run(); nimble_port_freertos_deinit(); }
-/* the manager runs in its own task (not the shared esp_timer task), so a slow radio call can never stall the
-   display tick or any other timer */
-/* 0.6.0: the link side (notifications, incl. ride-history sync batches) every 100 ms, the sensor side every 500 ms */
-static void mgr_task(void *p) { for (int i = 0;; i++) { if (i % 5 == 0) tick(NULL); else ble_link_tick(); vTaskDelay(pdMS_TO_TICKS(100)); } }
-
-void ble_central_start(void)
+/* the manager task only paces the work: the link side every 100 ms, the sensor side every 500 ms, both run on the host task */
+static void mgr_task(void *p)
 {
-    esp_timer_create_args_t m = { .callback = mtu_fallback, .name = "ble_mtu" };
+    struct ble_npl_eventq *q = nimble_port_get_dflt_eventq();
+    for (int i = 0;; i++) { ble_npl_eventq_put(q, i % 5 == 0 ? &s_ev_tick : &s_ev_link); vTaskDelay(pdMS_TO_TICKS(100)); }
+}
+
+void ble_central_start(bool sensors)
+{
+    s_sensors_on = sensors;
+    esp_timer_create_args_t m = { .callback = mtu_fallback_timer, .name = "ble_mtu" };
     ESP_ERROR_CHECK(esp_timer_create(&m, &s_mtu_timer));
     ESP_ERROR_CHECK(nimble_port_init());
+    ble_npl_event_init(&s_ev_tick, tick_ev, NULL);
+    ble_npl_event_init(&s_ev_link, link_ev, NULL);
+    ble_npl_event_init(&s_ev_mtu, mtu_fallback_ev, NULL);
+    ble_npl_event_init(&s_ev_req, req_ev, NULL);
+    s_events_ready = true;
     ble_hs_cfg.sync_cb = on_sync;
     ble_hs_cfg.reset_cb = on_reset;
     ble_att_set_preferred_mtu(247);
@@ -520,21 +609,27 @@ void ble_central_start(void)
     ble_svc_gap_device_name_set("BikeComputer");
     ble_store_config_init();                          /* bonds persist in NVS (CONFIG_BT_NIMBLE_NVS_PERSIST) */
     nimble_port_freertos_init(host_task);
-    xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 4096, NULL, 4, NULL, 0);
+    xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 3072, NULL, 4, NULL, 0);
 }
+
+void ble_central_enable_sensors(bool on) { s_sensors_on = on; if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req); }
 
 void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t addr_type, const char *name)
 {
     int si = slot_of(kind); if (si < 0) return;
-    link_t *l = &L[si];
-    if (l->conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(l->conn, BLE_ERR_REM_USER_CONN_TERM);
+    pair_req_t *r = &s_req[si];
     LOCK();
-    l->paired = mac != NULL;
-    if (mac) { memcpy(l->addr.val, mac, 6); l->addr.type = addr_type; snprintf(l->name, sizeof l->name, "%s", name ? name : ""); }
-    l->backoff_s = 1; l->retry_at = 0;
-    bc_pipe_init(&l->pipe); l->pipe.stage_ms = hw_millis();          /* a new pairing / RETRY starts a clean pipeline */
-    UNLOCK();
-    set_state(l, mac ? PLAT_LINK_SEARCHING : PLAT_LINK_NOT_PAIRED);
+    r->pending = true; r->paired = mac != NULL;
+    if (mac) { memcpy(r->mac, mac, 6); r->addr_type = addr_type; snprintf(r->name, sizeof r->name, "%s", name ? name : ""); }
+    UNLOCK();                                         /* the link itself changes on the host task (apply_requests) */
+    if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req);
+}
+
+void ble_central_set_disabled(plat_sens_kind_t kind, bool disabled)
+{
+    int si = slot_of(kind); if (si < 0) return;
+    LOCK(); s_req[si].set_disabled = true; s_req[si].disabled = disabled; UNLOCK();
+    if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req);
 }
 
 void ble_central_set_standby(bool standby) { s_standby = standby; }
@@ -549,6 +644,7 @@ void ble_central_set_wheel_mm(uint16_t mm) { s_wheel_mm = mm; }
 int ble_central_found(plat_sens_kind_t kind, plat_found_t *out, int max)
 {
     int n;
+    if (max <= 0) return 0;
     if (kind == PLAT_SENS_ANY) { LOCK(); n = s_nany < max ? s_nany : max; memcpy(out, s_any, sizeof(plat_found_t) * (size_t)n); UNLOCK(); }
     else {
         int si = slot_of(kind); if (si < 0) return 0;
@@ -570,7 +666,6 @@ void ble_central_snapshot(plat_sensors_t *o)
 {
     uint32_t now = hw_millis();
     memset(o, 0, sizeof *o);
-    /* live RSSI of connected links (NimBLE calls are thread-safe) */
     /* NOTE: no Bluetooth calls here — this runs in the UI task and must never wait on the radio (RSSI is read by tick()) */
     LOCK();
     int w, rpm, bpm; bool back = false;
@@ -600,6 +695,7 @@ void ble_central_snapshot(plat_sensors_t *o)
         li->gaps = L[i].gaps;
         li->rejected = i == 0 ? L[0].xds.rejected + L[0].xds.short_packets : i == 1 ? L[1].hr.rejected : L[2].csc.rejected;
         if (pp->stage >= BC_STG_SUBSCRIBED && pp->stage != BC_STG_ERROR) { li->packets = pp->packets; li->rejected = pp->rejected; }
+        li->disabled = L[i].paired && (L[i].disabled || !s_sensors_on);
     }
     UNLOCK();
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;

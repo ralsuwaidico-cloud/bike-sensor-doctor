@@ -29,7 +29,7 @@ void ui_settings_show(void)
     char v[32];
     ui_row_btn(l, "Name", bc_profile_display_name(p), C_CYAN, edit_cb, (void *)UI_EDIT_NAME);
     snprintf(v, sizeof v, "%u", p->age); ui_row_btn(l, "Age", v, C_CYAN, edit_cb, (void *)UI_EDIT_AGE);
-    snprintf(v, sizeof v, "%u.%u kg", p->weight_dg / 10, p->weight_dg % 10); ui_row_btn(l, "Weight", v, C_CYAN, edit_cb, (void *)UI_EDIT_WEIGHT);
+    snprintf(v, sizeof v, "%u.%u kg", (unsigned)(p->weight_dg / 10), (unsigned)(p->weight_dg % 10)); ui_row_btn(l, "Weight", v, C_CYAN, edit_cb, (void *)UI_EDIT_WEIGHT);
     if (p->height_cm) snprintf(v, sizeof v, "%u cm", p->height_cm); else snprintf(v, sizeof v, "not set");
     ui_row_btn(l, "Height", v, C_CYAN, edit_cb, (void *)UI_EDIT_HEIGHT);
     ui_row_btn(l, "Level", bc_exp_name(p->exp), C_CYAN, edit_cb, (void *)UI_EDIT_EXP);

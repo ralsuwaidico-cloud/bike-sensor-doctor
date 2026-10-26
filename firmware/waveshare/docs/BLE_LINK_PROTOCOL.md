@@ -194,6 +194,44 @@ before 0.7.2 `hr_age_ms` was always 0 and `cad_age_ms` copied the power age.
   violation → `PROFILE_ACK status 2 (bad_value)` and NOTHING changes (before 0.7.0 an out-of-range tag was silently dropped
   and the rest applied). The board stores the time it applied the last SET (`prof_sync_epoch`) and shows it as "synced hh:mm".
 
+## 1.2.3 Diagnostic report transfer (Control `0005`, cap 0x400 DIAG_XFER) — firmware 0.7.3
+
+Spec: `docs/LINK_V1_2_SPEC.md` section "1.2.3" (the iOS receiver is built from the same text and these bytes). Phone-driven pull,
+encrypted link only. Reports are immutable UTF-8 text with the sections `[header] [reset] [panic] [backtrace] [tasks] [heap]
+[events] [sensors] [phone] [wifi] [recovery]`; `crc32` = CRC-32/ISO-HDLC (zlib) of the whole report; check value
+`crc32("123456789") = 0xCBF43926`.
+
+Board behaviour the phone must expect (firmware 0.7.3):
+- **Chunk size.** A DIAG_CHUNK must fit one 180-byte message: 8 header + 6 (id) + 6 (offset) + 2 + data + 3 (last), so the
+  board sends **at most 155 data bytes** and clamps `max_len` (the phone may ask for 160). The phone continues at
+  `offset + len` of the CHUNK it received — never at `offset + max_len`. `offset == size` returns an empty chunk with `last = 1`.
+- Up to **4** CHUNK_REQs may be outstanding; they are answered in order. A 5th gets DIAG_ERR code 4 (busy) — retry after the
+  next CHUNK arrives.
+- A disconnect drops whatever was due; after reconnecting the phone simply asks again from the offset it has (resume).
+- ACK with the matching crc → the board stores state 1 and answers DIAG_INFO with `06 = 1`. A wrong crc → DIAG_INFO with
+  `06 = 0` (the report stays pending). An unknown id → DIAG_ERR code 1. Offset past the end → code 2. Storage read error → 3.
+- `diag_ready` (EVENT on Events `0007`, `event_id 0x22`) is sent once on every new encrypted connection and whenever a new
+  report is stored: `02 u8` pending count, `03 u32` newest report_id. EVENT decoders must switch on `event_id` (0x10, 0x20,
+  0x21 and 0x22 use tags 02/03 differently).
+- The board never deletes an unsent report to make room (max 12 reports / 96 KB). When the store is full of unsent reports a
+  new one is not stored (counted, and listed in the next report's events).
+
+Vectors (`test/host/test_bc_diag.c`, `test_vectors`; seq / t_ms as given):
+
+| message | fields | bytes |
+|---|---|---|
+| DIAG_LIST_REQ 0x80 | seq 1, t 0x01020304 | `80 00 01 00 04 03 02 01` |
+| DIAG_INFO 0x81 | seq 2, t 0x10; id 7, size 4321, crc 0xCBF43926, epoch 1761480000, kind 1 (crash), state 0, "panic in nimble_host", "0.7.3" | `81 00 02 00 10 00 00 00 01 04 07 00 00 00 02 04 E1 10 00 00 03 04 26 39 F4 CB 04 04 40 0D FE 68 05 01 01 06 01 00 07 14 70 61 6E 69 63 20 69 6E 20 6E 69 6D 62 6C 65 5F 68 6F 73 74 08 05 30 2E 37 2E 33` |
+| DIAG_LIST_END 0x82 | seq 3, t 0x10; count 1, pending 1 | `82 00 03 00 10 00 00 00 01 01 01 02 01 01` |
+| DIAG_CHUNK_REQ 0x83 | seq 4, t 0x20; id 7, offset 0, max_len 160 | `83 00 04 00 20 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 02 A0 00` |
+| DIAG_CHUNK 0x84 | seq 5, t 0x21; id 7, offset 0, data "[header]\n" (9 bytes), last 0 | `84 00 05 00 21 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 09 5B 68 65 61 64 65 72 5D 0A 04 01 00` |
+| DIAG_ACK 0x85 | seq 6, t 0x30; id 7, crc 0xCBF43926 | `85 00 06 00 30 00 00 00 01 04 07 00 00 00 02 04 26 39 F4 CB` |
+| DIAG_ERR 0x86 | seq 7, t 0x31; id 9, code 1 (unknown id) | `86 00 07 00 31 00 00 00 01 04 09 00 00 00 02 01 01` |
+| EVENT diag_ready 0x40/0x22 | seq 8, t 0x40; pending 1, newest id 7 | `40 00 08 00 40 00 00 00 01 01 22 02 01 01 03 04 07 00 00 00` |
+
+A full chunk (155 data bytes) is exactly 180 bytes on the wire. Strings: summary <= 40 bytes, firmware <= 16 bytes, UTF-8,
+never cut inside a character (a longer summary received from a sender is cut back to the last whole character).
+
 ## Power states and the link (firmware 0.6.0)
 | state | display | phone link | XDS / strap | recording |
 |---|---|---|---|---|

@@ -16,6 +16,7 @@
 #include "ui.h"
 #include "app_psvc.h"
 #include "bc_pipe.h"
+#include "app_diag.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -32,6 +33,7 @@ static void age_text(uint32_t age_ms, char *out, size_t cap)
 
 const char *ui_stage_word(const plat_link_info_t *l)
 {
+    if (l->disabled) return "DISABLED";              /* 0.7.3: disabled after a crash (staged boot) - RETRY */
     switch ((bc_stage_t)l->stage) {
     case BC_STG_NOT_PAIRED: return "NOT PAIRED";
     case BC_STG_SEARCHING: return l->link == PLAT_LINK_RETRY ? "RETRYING" : "SEARCHING";
@@ -48,6 +50,7 @@ const char *ui_stage_word(const plat_link_info_t *l)
 /* one line for Device Health / detail pages: "connected - no data", "reconnecting", "error: no CCCD", ... */
 static void stage_line(const plat_link_info_t *l, char *b, size_t cap)
 {
+    if (l->disabled) { snprintf(b, cap, "off after a crash"); return; }
     switch ((bc_stage_t)l->stage) {
     case BC_STG_NOT_PAIRED: snprintf(b, cap, "not paired"); break;
     case BC_STG_SEARCHING: snprintf(b, cap, l->link == PLAT_LINK_RETRY ? "reconnecting" : "searching"); break;
@@ -82,6 +85,10 @@ static const char *icon_for(lv_color_t c)
 /* a paired sensor's row from its pipeline stage; value only at VALID (set by the caller) */
 static void sensor_state(const plat_link_info_t *l, ui_row_status_t *o)
 {
+    if (l->disabled) {
+        snprintf(o->value, sizeof o->value, "DISABLED"); snprintf(o->line, sizeof o->line, "off after a crash");
+        o->color = C_AMBER; o->connected = false; o->alert = true; return;
+    }
     snprintf(o->value, sizeof o->value, "%s", ui_stage_word(l));
     stage_line(l, o->line, sizeof o->line);
     o->color = stage_color(l);
@@ -119,6 +126,7 @@ void ui_conn_row_status(int row, ui_row_status_t *o)
         if (lv.demo) { snprintf(o->value, sizeof o->value, "%d W", lv.watts); snprintf(o->line, sizeof o->line, "SIMULATED %d W", lv.watts); o->color = C_DEMO; o->connected = o->ok = true; break; }
         if (!p->power.paired) { snprintf(o->value, sizeof o->value, "PAIR"); snprintf(o->line, sizeof o->line, "not paired"); break; }
         sensor_state(l, o);
+        if (l->disabled) break;                       /* 0.7.3: disabled after a crash - no value is shown */
         if (lv.power_ok && l->stage == BC_STG_VALID) {
             snprintf(o->value, sizeof o->value, "%d W", lv.watts);
             if (lv.cad_ok && lv.cad_src == BC_SRC_XDS) snprintf(o->line, sizeof o->line, "live %d W %d rpm", lv.watts, lv.rpm); else snprintf(o->line, sizeof o->line, "live %d W", lv.watts);
@@ -270,6 +278,8 @@ static void retry(plat_sens_kind_t k)
 {
     bc_sensor_pair_t *sp = k == PLAT_SENS_POWER ? &app_profile()->power : k == PLAT_SENS_HR ? &app_profile()->hr : &app_profile()->csc;
     if (!sp->paired) return;
+    { plat_sensors_t sn; plat_sensors(&sn);
+      if (sn.link[k].disabled) { app_diag_retry(k == PLAT_SENS_POWER ? BC_SS_POWER : k == PLAT_SENS_HR ? BC_SS_HR : BC_SS_CSC); ui_toast("starting again"); return; } }
     plat_found_t f; memcpy(f.mac, sp->mac, 6); f.addr_type = sp->addr_type; snprintf(f.name, sizeof f.name, "%s", sp->name); f.rssi = 0; f.svcs = 0;
     plat_pair(k, &f);   /* drops the link (if any) and searches again from the stored address */
     ui_toast("retrying");
@@ -341,6 +351,7 @@ static void detail_update(void)
     bc_sensor_pair_t *sp = cat_pair(d_cat);
     const plat_link_info_t *l = &lv.link[cat_kind(d_cat)];
     if (lv.demo && d_cat == CAT_POWER) snprintf(b, sizeof b, "demo mode - no meter is read");
+    else if (sp->paired && l->disabled) snprintf(b, sizeof b, "Retry starts it again");
     else if (d_cat == CAT_HR && !sp->paired) snprintf(b, sizeof b, "watch via phone: %s", lv.phone_hr ? "live" : "no data");
     else if (d_cat == CAT_CADENCE && !sp->paired) snprintf(b, sizeof b, "from the power meter");
     else if (!sp->paired) snprintf(b, sizeof b, "nothing paired");

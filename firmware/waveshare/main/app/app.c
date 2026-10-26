@@ -1,5 +1,6 @@
 #include "app.h"
 #include "bc_pipe.h"
+#include "app_diag.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,6 +194,7 @@ static void publish_live(const app_live_t *lv)
     L.meter_link = (uint8_t)lv->link[PLAT_SENS_POWER].link; L.meter_gaps = (uint16_t)lv->link[PLAT_SENS_POWER].gaps;
     L.demo = lv->demo;
     plat_phone_publish_live(&L);
+    app_diag_note_live();                          /* 0.7.3 health monitor: LIVE forwarding */
 }
 
 void app_tick(void)
@@ -216,6 +218,7 @@ void app_tick(void)
     }
     if ((int32_t)(now - s_next_ms) > 3000) s_next_ms = now + 1000;   /* long stall (e.g. debugger): do not invent seconds */
     app_psvc_pump(now);                                                 /* 0.6.0 phone services: sync, Wi-Fi, profile, settings */
+    app_diag_tick(now);                                                 /* 0.7.3 event log + health monitor (writes <= 1 / 10 s) */
 }
 
 uint32_t app_phone_passkey(void) { plat_phone_status_t ps; plat_phone_status(&ps); return ps.state == PLAT_PHONE_PAIRING ? ps.passkey : 0; }

@@ -96,6 +96,7 @@ const char *ui_cue_short(const bc_cue_t *c);
 void ui_battery_text(char *buf, size_t cap);
 
 /* screens */
+void ui_recovery_show(void);             /* 0.7.3 RECOVERY MODE (ui_recovery.c): own timer, no app / power manager */
 void ui_onboard_start(void);
 void ui_home_show(void);
 void ui_ride_show(void);

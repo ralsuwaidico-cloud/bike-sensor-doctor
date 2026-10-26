@@ -12,6 +12,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "bc_link.h"
+#include "bc_diag.h"
+#include "bc_boot.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,6 +43,7 @@ typedef struct {
     bool unreadable;       /* packets arrive but none decodes (after 10 s) */
     uint16_t svc_uuid, cccd, data_handle;   /* where the data comes from (0 = not found yet) — Device Health / Help */
     uint32_t resubscribes, auto_reconnects; /* automatic recoveries this boot */
+    bool disabled;         /* 0.7.3: paired, but not started this boot (disabled after a crash in a staged boot, or recovery mode) */
 } plat_link_info_t;
 
 /** Raw live values from the real sensors (already freshness-checked: stale = absent). */
@@ -209,6 +212,34 @@ void plat_health(plat_health_t *out);
 void plat_export_report(const char *text);
 /** One line for the serial log. */
 void plat_log(const char *line);
+
+/* ---- 0.7.3 crash evidence, boot modes, diagnostics (app_diag.c) */
+typedef struct {
+    bool have;                         /* a core dump of the last crash is stored (flash partition 'coredump') */
+    char task[16];                     /* the task that crashed */
+    uint32_t pc, exccause, excvaddr;
+    char reason[64];                   /* panic reason text when the core dump carries it ("abort()...", "stack overflow ...") */
+    uint32_t bt[16]; uint8_t bt_depth; bool bt_corrupted;
+} plat_crash_t;
+bool plat_crash_info(plat_crash_t *out);
+/** The crash report is stored: keep the raw dump as diag/core-<id>.elf (decode offline) and free the partition. */
+void plat_crash_consumed(uint32_t report_id);
+/** The last log lines written before this boot (kept in RTC memory across the reset), privacy-filtered. */
+size_t plat_log_tail(char *buf, size_t cap);
+bc_reset_t plat_reset_kind(void);
+bc_boot_rtc_t *plat_boot_rtc(void);                 /* RTC_NOINIT on the device */
+uint16_t plat_boot_skip_load(void);                 /* subsystems disabled after a crash, for THIS firmware (NVS) */
+void plat_boot_skip_save(uint16_t skip);
+int plat_tasks(bc_diag_task_t *out, int max);       /* task name + stack never used (bytes) */
+void plat_heap(uint32_t *free_b, uint32_t *min_b, uint32_t *largest_b, uint32_t *psram_free_b);
+void plat_build_ids(char build[32], char elf_sha_hex[65]);
+/** Write len bytes at off (file created / extended as needed), flushed to the medium. */
+bool plat_file_write_at(const char *path, long off, const void *data, size_t len);
+/** Staged boot: a sensor link disabled after a crash (pairing kept) / enabled again (RETRY). */
+void plat_sensor_set_disabled(plat_sens_kind_t k, bool disabled);
+/** Recovery mode SEND LOGS: start ONLY the phone link (no sensor central, no Wi-Fi). Idempotent. */
+void plat_phone_only_start(void);
+uint32_t plat_crash_total(void);                    /* NVS diag/crashes */
 
 #ifdef __cplusplus
 }

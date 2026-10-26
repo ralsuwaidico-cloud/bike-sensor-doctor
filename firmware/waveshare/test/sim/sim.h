@@ -32,7 +32,13 @@ typedef struct {
              bool standby; int standbys;
              /* 0.7.0 pairing lifecycle: the board's identity generation (changes on forget/repair) and what the phone remembers */
              uint8_t id_gen, phone_id_gen; bool phone_has_bond; bool enc_failed; int enc_fails, repairs; uint16_t last_disc_code;
-             bc_sensor_diag_t diag[16]; int ndiag; int diags; } phone;
+             bc_sensor_diag_t diag[16]; int ndiag; int diags;
+             /* 0.7.3 Link 1.2.3: what the board answered to the phone's DIAG_* requests */
+             bc_diag_info_t dinfo[32]; int ndinfo; bc_diag_list_end_t dlist_end; int dlist_ends; bc_diag_err_t derr; int derrs;
+             bc_diag_ready_t dready; int dreadys; bc_diag_chunk_t dchunk; int dchunks; uint8_t dbuf[16384]; uint32_t dbuf_len; } phone;
+    /* 0.7.3 crash evidence + boot modes (plat_host.c) */
+    bc_reset_t reset_kind; plat_crash_t crash; char log_tail[1024]; uint16_t nvs_skip; uint32_t nvs_skip_fw, fw_id; uint32_t crash_total;
+    bool phone_only_started; int crash_consumed; uint32_t heap_free, heap_min;
     /* 0.7.2 fake GATT power meter (sim_gatt.c): a real attribute table driven through bc_gatt / bc_pipe / bc_xds */
     struct { bool on, legacy_pick, paired, in_range, streaming, stall, garbage; int variant, state; uint32_t t, retry_at, next_pkt; int backoff_s;
              int watts, rpm; uint16_t angle, val, last_cccd; uint16_t enabled[64];

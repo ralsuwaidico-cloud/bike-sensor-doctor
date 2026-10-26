@@ -24,6 +24,8 @@ void hw_touch_poll(void);                        /* 0.6.1: read the controller n
 void hw_touch_wake_check(void);                  /* 0.6.1: after a screen wake: is the controller answering? else TP_RST pulse */                  /* 0.6.1: BOOT (GPIO0) low at start-up -> SAFE MODE */
 void hw_backlight_set(int percent);      /* 0..100 */
 void hw_selftest_run(void);              /* PSRAM, flash, NVS boot counter, FAT storage R/W, IMU WHO_AM_I, battery */
+void hw_selftest_nvs(void);              /* 0.7.3: PSRAM, flash, NVS + boot counter */
+bool hw_selftest_storage(void);          /* 0.7.3: FAT mount + R/W check, IMU, battery; true = storage usable */
 float hw_battery_volts(void);            /* < 0 when unavailable */
 uint32_t hw_millis(void);
 /* power (0.5.0 / 0.6.0) — NOT hardware-verified until the device tests in pc-kit/TEST-v0.6.0.txt */

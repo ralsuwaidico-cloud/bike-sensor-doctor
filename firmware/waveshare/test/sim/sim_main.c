@@ -21,6 +21,7 @@
 #include "app_psvc.h"   /* lv_area_intersect returns bool; without the prototype the implicit int return misreads it */
 #include "ui.h"
 #include "app.h"
+#include "app_diag.h"
 
 static uint16_t fb[UI_W * UI_W];
 static uint16_t drawbuf[UI_W * UI_W];
@@ -1646,6 +1647,225 @@ static void scenario(void)
 
 }
 
+/* ===================================================================================== 0.7.3: crash evidence + recovery */
+/* the device's start-up sequence (main.c) in the harness: plan, subsystem markers, diagnostics, recovery screen or the app.
+   s_crash_at = the subsystem whose start "crashes" the board in this run (the marker stays there, like the RTC memory). */
+static bc_subsys_t s_crash_at; static bc_boot_plan_t s_plan;
+static void script_crash(const char *task, uint32_t pc)
+{
+    memset(&g_sim.crash, 0, sizeof g_sim.crash);
+    g_sim.crash.have = true; snprintf(g_sim.crash.task, sizeof g_sim.crash.task, "%s", task); g_sim.crash.pc = pc; g_sim.crash.exccause = 28; g_sim.crash.excvaddr = 0x17C;
+    g_sim.crash.bt_depth = 4; g_sim.crash.bt[0] = pc; g_sim.crash.bt[1] = 0x4200E71C; g_sim.crash.bt[2] = 0x4202D8D4; g_sim.crash.bt[3] = 0x40385099;
+    snprintf(g_sim.crash.reason, sizeof g_sim.crash.reason, "LoadProhibited");
+    snprintf(g_sim.log_tail, sizeof g_sim.log_tail, "I (812) link: identity random-static C1:22:33:44:55:66 gen 2\nI (900) wifi: connected (IP obtained) 192.168.1.23\nI (3120) pipe: power -> SUBSCRIBED (cccd 0x0023)\n");
+    g_sim.crash_total++;
+}
+static bool device_boot(bc_reset_t reset)
+{
+    g_sim.reset_kind = reset;
+    lv_obj_t *old = lv_screen_active(); lv_obj_t *blank = lv_obj_create(NULL); lv_screen_load(blank); if (old) lv_obj_delete(old);
+    g_sim.boots++; sim_wifi_reboot(); g_sim.restart_requested = false; g_sim.phone_only_started = false;
+    for (int k = 0; k < PLAT_SENS_KINDS; k++) g_sim.link[k].disabled = false;
+    bc_boot_rtc_t *R = plat_boot_rtc();
+    bc_boot_plan(R, reset, plat_boot_skip_load(), &s_plan);
+    if (s_plan.newly_skipped) plat_boot_skip_save(s_plan.skip);
+    bc_boot_mark(R, BC_SS_DISPLAY); bc_boot_mark(R, BC_SS_STORAGE);
+    app_diag_init(&s_plan, true); app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, 1);
+    if (s_plan.mode == BC_BOOT_RECOVERY) { ui_recovery_show(); run(400); return true; }
+    app_init(); ui_start(); run(200);
+    static const bc_subsys_t ORDER[] = { BC_SS_PHONE, BC_SS_WIFI, BC_SS_CENTRAL, BC_SS_POWER, BC_SS_HR, BC_SS_CSC };
+    for (size_t i = 0; i < sizeof ORDER / sizeof *ORDER; i++) {
+        bc_subsys_t ss = ORDER[i];
+        plat_sens_kind_t k = ss == BC_SS_POWER ? PLAT_SENS_POWER : ss == BC_SS_HR ? PLAT_SENS_HR : PLAT_SENS_CSC;
+        if (ss >= BC_SS_POWER && !(ss == BC_SS_POWER ? app_profile()->power.paired : ss == BC_SS_HR ? app_profile()->hr.paired : app_profile()->csc.paired)) continue;
+        bc_boot_mark(R, ss); app_diag_stage(ss, 0);
+        bool skip = (s_plan.skip & BC_SS_BIT(ss)) || (ss >= BC_SS_POWER && (s_plan.skip & BC_SS_BIT(BC_SS_CENTRAL)));
+        if (skip) {
+            if (ss >= BC_SS_POWER) plat_sensor_set_disabled(k, true);
+            if (ss == BC_SS_PHONE) plat_phone_set_enabled(false);
+            app_diag_stage(ss, 2); continue;
+        }
+        if (s_crash_at == ss) return false;                     /* the board resets here; RTC marker = ss */
+        app_diag_stage(ss, 1); run(s_plan.mode == BC_BOOT_STAGED ? 1000 : 50);
+    }
+    bc_boot_mark(R, BC_SS_RUNNING); run(300);
+    return true;
+}
+static void device_stable(void) { run(1000); bc_boot_stable(plat_boot_rtc()); if (s_plan.mode == BC_BOOT_STAGED) app_diag_store_report(BC_DIAG_KIND_RECOVERY, "staged boot completed"); app_diag_stage(BC_SS_STABLE, 1); }
+static int events_of(uint8_t type)
+{
+    static uint8_t raw[APP_DIAG_EV_SLOTS * BC_EV_SIZE]; memset(raw, 0xFF, sizeof raw);
+    plat_file_read(APP_DIAG_EVENTS_FILE, (char *)raw, sizeof raw);
+    static bc_ev_t ev[APP_DIAG_EV_SLOTS]; int n = bc_evlog_newest(raw, APP_DIAG_EV_SLOTS, ev, APP_DIAG_EV_SLOTS), k = 0;
+    for (int i = 0; i < n; i++) if (ev[i].type == type) k++;
+    return k;
+}
+static void phone_req(uint8_t type, uint32_t id, uint32_t off, uint16_t maxl, uint32_t crc)
+{
+    uint8_t m[BC_LINK_MAX]; size_t n;
+    if (type == BC_MSG_DIAG_LIST_REQ) n = bc_link_encode_diag_list_req(m, sizeof m, 1, 0);
+    else if (type == BC_MSG_DIAG_CHUNK_REQ) { bc_diag_chunk_req_t q = { id, off, maxl }; n = bc_link_encode_diag_chunk_req(&q, m, sizeof m, 1, 0); }
+    else { bc_diag_ack_t a = { id, crc }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
+    sim_phone_write(0, m, n);
+}
+/* Cyclift's pull: chunk by chunk from `off`, max_len 160 (the board clamps); optional interruption after `cut` chunks */
+static uint32_t pull_report(uint32_t id, uint32_t size, int cut, int *chunks_out)
+{
+    uint32_t off = 0; int chunks = 0, stall = 0; g_sim.phone.dbuf_len = 0;
+    while (off < size && stall < 20) {
+        if (cut && chunks == cut) { sim_phone_disconnect(); run(600); sim_phone_connect(true); run(600); cut = 0; }
+        int before = g_sim.phone.dchunks; phone_req(BC_MSG_DIAG_CHUNK_REQ, id, off, 160, 0); run(400);
+        if (g_sim.phone.dchunks == before || g_sim.phone.dchunk.offset != off) { stall++; continue; }
+        off += g_sim.phone.dchunk.len; chunks++;
+        if (g_sim.phone.dchunk.last) break;
+    }
+    if (chunks_out) *chunks_out = chunks;
+    return off;
+}
+
+static void scenario_073(void)
+{
+    printf("\n== 21. firmware 0.7.3: crash evidence, recovery mode, staged boot, report transfer\n");
+    bc_profile_t *pr = app_profile();
+    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; snprintf(pr->name, sizeof pr->name, "Rashed"); app_profile_save();
+    g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; g_sim.power_ok = true; g_sim.watts = 142;
+    g_sim.fw_id = 0x073; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));           /* power-on: RTC memory blank */
+    /* a) clean power-on: BOOT + STAGE events, no report */
+    CHECK(device_boot(BC_RST_POWERON) && s_plan.mode == BC_BOOT_NORMAL, "power-on: normal start");
+    device_stable(); app_diag_flush(true);
+    app_diag_status_t st; app_diag_status(&st);
+    CHECK(!st.crashed && st.stored == 0 && events_of(BC_EV_BOOT) == 1 && events_of(BC_EV_STAGE) >= 8, "clean start: BOOT + STAGE events written, no report (%d stage events)", events_of(BC_EV_STAGE));
+    /* b) three crashes in a row (the power meter link crashes nimble_host each time) -> RECOVERY MODE */
+    s_crash_at = BC_SS_POWER;
+    for (int k = 0; k < 3; k++) { script_crash("nimble_host", 0x4200F4BC); bool up = device_boot(BC_RST_PANIC); if (k < 2) CHECK(!up && s_plan.mode == BC_BOOT_NORMAL, "crash %d: normal start again (streak %lu)", k + 1, (unsigned long)plat_boot_rtc()->crash_streak); }
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE") && on_screen("Crash detected") && on_screen("panic - nimble_host"), "3 crashes in a row: RECOVERY MODE screen, 'panic - nimble_host'");
+    CHECK(btn_visible_at_top("RESTART & DIAGNOSE") && btn_visible_at_top("SEND LOGS") && on_screen("Logs saved"), "both buttons fully visible at scroll 0, 'Logs saved'");
+    shot("21b_recovery_mode");
+    app_diag_status(&st);
+    CHECK(st.stored == 3 && st.pending == 3 && g_sim.crash_consumed == 3, "one crash report per crash, all pending, core dump consumed each time (%d stored)", st.stored);
+    { char p[64]; snprintf(p, sizeof p, "diag/r%06lu.txt", (unsigned long)st.crash_report); static char t[BC_DIAG_REPORT_MAX]; long n = plat_file_read(p, t, sizeof t - 1); if (n < 0) n = 0; t[n] = 0;
+      CHECK(strstr(t, "[header]") && strstr(t, "[recovery]") && strstr(t, "task nimble_host") && strstr(t, "0x4200F4BC 0x4200E71C") && strstr(t, "marker 6") && strstr(t, "log_before_reset"),
+            "crash report: sections, task, backtrace addresses, marker = power meter, log tail");
+      CHECK(!strstr(t, "Rashed") && !strstr(t, "C1:22:33") && !strstr(t, "192.168") && strstr(t, "..:..:..:..:55:66"), "crash report: no name, address cut to 2 bytes, IP masked"); }
+    /* c) SEND LOGS: only the phone link starts; Cyclift connects, lists, pulls (interrupted + resumed) and acknowledges */
+    tap_text("SEND LOGS"); run(500);
+    CHECK(g_sim.phone_only_started && on_screen("Waiting for Cyclift"), "SEND LOGS: phone link only, 'Waiting for Cyclift'");
+    shot("21c_recovery_waiting");
+    app_diag_status(&st); CHECK(st.stored == 4, "SEND LOGS stored a manual report (%d)", st.stored);
+    g_sim.phone.dreadys = 0; sim_phone_connect(true); run(800);
+    CHECK(g_sim.phone.dreadys == 1 && g_sim.phone.dready.pending == 4, "on connect: diag_ready with 4 pending (%d events, pending %u)", g_sim.phone.dreadys, g_sim.phone.dready.pending);
+    g_sim.phone.ndinfo = 0; g_sim.phone.dlist_ends = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(800);
+    CHECK(g_sim.phone.ndinfo == 4 && g_sim.phone.dlist_ends == 1 && g_sim.phone.dlist_end.count == 4 && g_sim.phone.dinfo[0].kind == 1 && g_sim.phone.dinfo[3].kind == 3, "LIST: 4 DIAG_INFO + LIST_END");
+    bc_diag_info_t want = g_sim.phone.dinfo[2]; int chunks = 0;
+    uint32_t got = pull_report(want.id, want.size, 5, &chunks);
+    uint32_t crc = bc_crc32(0, g_sim.phone.dbuf, got);
+    CHECK(got == want.size && crc == want.crc && chunks == (int)((want.size + 154) / 155), "transfer interrupted after 5 chunks and resumed: %lu/%lu bytes in %d chunks, crc %s",
+          (unsigned long)got, (unsigned long)want.size, chunks, crc == want.crc ? "ok" : "BAD");
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_ACK, want.id, 0, 0, crc); run(600);
+    CHECK(g_sim.phone.ndinfo == 1 && g_sim.phone.dinfo[0].state == 1, "ACK with the matching crc: DIAG_INFO state 1");
+    run(300); CHECK(on_screen("Sent to Cyclift"), "status 'Sent to Cyclift'"); shot("21c_recovery_sent");
+    g_sim.phone.derrs = 0; phone_req(BC_MSG_DIAG_CHUNK_REQ, 999, 0, 160, 0); run(400); CHECK(g_sim.phone.derrs == 1 && g_sim.phone.derr.code == BC_DIAG_ERR_UNKNOWN_ID, "unknown report id -> DIAG_ERR 1");
+    /* d) RESTART & DIAGNOSE (1 s hold) -> staged boot; the power meter crashes again -> it is disabled, the rest starts */
+    hold_text("RESTART & DIAGNOSE", 1300);
+    CHECK(g_sim.restart_requested && plat_boot_rtc()->request == 1, "RESTART & DIAGNOSE held 1 s: restart with a staged-boot request");
+    sim_phone_disconnect();
+    script_crash("nimble_host", 0x4200F4BC);   /* will not happen: the request turns into a clean software restart */
+    g_sim.crash.have = false;
+    bool up = device_boot(BC_RST_SW);
+    CHECK(!up && s_plan.mode == BC_BOOT_STAGED, "staged boot: crashes while the power meter starts");
+    script_crash("nimble_host", 0x4200F4BC); up = device_boot(BC_RST_PANIC);
+    CHECK(up && s_plan.mode == BC_BOOT_STAGED && (s_plan.skip & BC_SS_BIT(BC_SS_POWER)) && s_plan.newly_skipped, "next staged boot skips the power meter instead of looping (skip 0x%03X)", s_plan.skip);
+    device_stable(); run(500);
+    ui_connections_show(); run(400);
+    CHECK(on_screen("DISABLED"), "Connections: POWER row 'DISABLED'"); shot("21d_conn_power_disabled");
+    tap_text("POWER"); run(400);
+    CHECK(on_screen("off after a crash") && on_screen("Retry starts it again") && btn_visible_at_top("RETRY"), "power page: 'off after a crash' + RETRY at scroll 0"); shot("21d_power_disabled_retry");
+    CHECK(g_sim.nvs_skip & BC_SS_BIT(BC_SS_POWER), "the skip survives a power cycle (NVS)");
+    s_crash_at = BC_SS_NONE;
+    tap_text("RETRY"); run(600);
+    CHECK(!g_sim.link[PLAT_SENS_POWER].disabled && !(g_sim.nvs_skip & BC_SS_BIT(BC_SS_POWER)) && !(app_diag_skip() & BC_SS_BIT(BC_SS_POWER)), "RETRY: link enabled, skip cleared (RTC + NVS)");
+    app_diag_status(&st); CHECK(st.stored >= 6, "staged boot stored a 'recovery session' report (%d reports)", st.stored);
+    /* e) logs preserved across restarts */
+    app_diag_flush(true); int boots = events_of(BC_EV_BOOT);
+    CHECK(boots >= 6 && events_of(BC_EV_CRASH) >= 4 && events_of(BC_EV_REPORT) >= 5, "event log kept across %d boots (crash %d, report %d events)", boots, events_of(BC_EV_CRASH), events_of(BC_EV_REPORT));
+    /* f) repeated failed staged boots -> back to RECOVERY */
+    plat_boot_rtc()->request = 1; bc_boot_request_staged(plat_boot_rtc());
+    s_crash_at = BC_SS_PHONE; device_boot(BC_RST_SW);
+    script_crash("ble_mgr", 0x4200F048); device_boot(BC_RST_PANIC);    /* phone skipped -> crashes at WIFI? no: crash_at PHONE is skipped now */
+    s_crash_at = BC_SS_WIFI; script_crash("wifi_mgr", 0x42011080); device_boot(BC_RST_PANIC);
+    s_crash_at = BC_SS_CENTRAL; script_crash("nimble_host", 0x4200F4BC); device_boot(BC_RST_PANIC);
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE"), "three crashed staged boots in a row: RECOVERY MODE (fails %u)", plat_boot_rtc()->staged_fails);
+    shot("21f_recovery_again");
+    /* g) missing phone: SEND LOGS waits, nothing is deleted */
+    app_diag_status(&st); int stored = st.stored;
+    tap_text("SEND LOGS"); run(3000);
+    CHECK(on_screen("Waiting for Cyclift"), "no phone: keeps waiting");
+    app_diag_status(&st); CHECK(st.stored == stored + 1 || st.not_stored > 0, "the manual report is stored (or counted as not stored when full)");
+    /* h) store full of unsent reports: nothing unsent is ever deleted */
+    for (int k = 0; k < 14; k++) app_diag_store_report(BC_DIAG_KIND_MANUAL, "fill");
+    app_diag_status(&st); CHECK(st.stored == BC_DIAG_MAX_REPORTS && st.not_stored > 0, "store full of unsent reports: %d kept, %lu not stored", st.stored, (unsigned long)st.not_stored);
+    /* i) a fixed firmware: RESET (power-on) -> normal start, skips from the old firmware ignored, no crash report */
+    g_sim.fw_id = 0x074; s_crash_at = BC_SS_NONE; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    app_diag_status(&st); int before = st.stored;
+    CHECK(device_boot(BC_RST_POWERON) && s_plan.mode == BC_BOOT_NORMAL && s_plan.skip == 0, "new firmware after a power-on: normal start, nothing disabled");
+    device_stable(); app_diag_status(&st);
+    CHECK(!st.crashed && st.stored == before && !on_screen("RECOVERY MODE"), "clean boot: no new report, normal screens");
+    /* j) power loss while writing the event log: one torn record, the rest readable */
+    app_diag_flush(true);
+    { long sz = plat_file_size(APP_DIAG_EVENTS_FILE); uint8_t junk[20] = { 0 }; plat_file_write_at(APP_DIAG_EVENTS_FILE, 32 * 5 + 3, junk, sizeof junk);
+      int b2 = events_of(BC_EV_BOOT) + events_of(BC_EV_STAGE) + events_of(BC_EV_SENSOR);
+      CHECK(sz == (long)(APP_DIAG_EV_SLOTS * BC_EV_SIZE) && b2 > 10, "torn record skipped, %d records still readable", b2); }
+    pr->power.paired = false; app_profile_save(); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED; g_sim.power_ok = false;
+}
+
+/* ===================================================================================== 0.7.3 stress (sanitizer build) */
+static uint32_t rnd32(void) { static uint32_t x = 0x1234567; x ^= x << 13; x ^= x >> 17; x ^= x << 5; return x; }
+static void scenario_stress(int cycles)
+{
+    printf("\n== 22. stress: %d cycles of phone connect/disconnect + SENSOR_DIAG + report pulls, meter chaos, malformed data, Wi-Fi toggles\n", cycles);
+    uint32_t t0 = g_sim.now_ms; int connects = 0, pulls = 0, acks = 0, meter_flips = 0, wifi_flips = 0, junk = 0, reports = 0, retries = 0;
+    bc_profile_t *pr = app_profile(); pr->power.paired = true; pr->phone_on = true; app_profile_save();
+    plat_phone_set_enabled(true);
+    sim_fake_meter(true, 0, false);
+    int diags0 = g_sim.phone.diags;
+    for (int i = 0; i < cycles; i++) {
+        /* one rapid phone cycle: connect, a few random things happen while it is up (SENSOR_DIAG flows, reports are pulled,
+           the meter changes, malformed bytes arrive), then it drops at a random moment — sometimes in the middle of a pull */
+        sim_phone_connect(true); connects++;
+        int steps = 1 + (int)(rnd32() % 4);
+        for (int k = 0; k < steps; k++) {
+            uint32_t r = rnd32();
+            switch (r % 10) {
+            case 0: g_sim.fake.streaming = !g_sim.fake.streaming; meter_flips++; break;
+            case 1: g_sim.fake.stall = !g_sim.fake.stall; meter_flips++; break;
+            case 2: g_sim.fake.garbage = !g_sim.fake.garbage; meter_flips++; break;
+            case 3: sim_fake_meter(rnd32() % 4 != 0, (int)(rnd32() % 2), false); meter_flips++; break;
+            case 4: { bool on = rnd32() % 2; plat_wifi_set_enabled(on); if (on) plat_wifi_scan(); wifi_flips++; break; }
+            case 5: phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); pulls++; break;
+            case 6: { app_diag_status_t st; app_diag_status(&st); if (st.stored && g_sim.phone.ndinfo) { bc_diag_info_t *f = &g_sim.phone.dinfo[rnd32() % (uint32_t)g_sim.phone.ndinfo];
+                        phone_req(BC_MSG_DIAG_CHUNK_REQ, f->id, rnd32() % (f->size + 20), (uint16_t)(rnd32() % 200), 0); pulls++;
+                        if (rnd32() % 3 == 0) { phone_req(BC_MSG_DIAG_ACK, f->id, 0, 0, rnd32() % 2 ? f->crc : 1); acks++; } } break; }
+            case 7: { uint8_t m[BC_LINK_MAX]; size_t n = rnd32() % 60; for (size_t q = 0; q < n; q++) m[q] = (uint8_t)rnd32(); if (n) m[0] = (uint8_t)(0x60 + rnd32() % 0x30); if (n >= 8) sim_phone_write((int)(rnd32() % 2), m, n); junk++; break; }
+            case 8: if (rnd32() % 8 == 0) { app_diag_store_report(BC_DIAG_KIND_MANUAL, "stress"); reports++; } break;
+            case 9: if (rnd32() % 6 == 0) { plat_found_t f = { { 0 }, 0, "XDS-A001", -50, PLAT_SVC_POWER }; plat_pair(PLAT_SENS_POWER, &f); retries++; } break;
+            }
+            run((int)(20 + rnd32() % 400));
+        }
+        if (g_sim.phone.ndinfo > 24) g_sim.phone.ndinfo = 0;
+        sim_phone_disconnect();
+        run((int)(20 + rnd32() % 300));
+    }
+    sim_phone_disconnect(); run(1000);
+    app_diag_status_t st; app_diag_status(&st); app_diag_flush(true);
+    int boot_ev = events_of(BC_EV_BOOT), sens_ev = events_of(BC_EV_SENSOR), rec_ev = events_of(BC_EV_RECOVERY), ph_ev = events_of(BC_EV_PHONE);
+    printf("  %d cycles in %lu s simulated: %d phone connects, %d SENSOR_DIAG events, %d DIAG requests, %d ACKs, %d meter changes, %d Wi-Fi toggles, %d malformed writes, %d reports, %d re-pairs\n",
+           cycles, (unsigned long)((g_sim.now_ms - t0) / 1000), connects, g_sim.phone.diags - diags0, pulls, acks, meter_flips, wifi_flips, junk, reports, retries);
+    printf("  event log: %lu records written this boot, sensor %d phone %d recovery %d boot %d; reports stored %d pending %d not stored %lu\n",
+           (unsigned long)st.events_written, sens_ev, ph_ev, rec_ev, boot_ev, st.stored, st.pending, (unsigned long)st.not_stored);
+    CHECK(connects > cycles / 20 && g_sim.phone.diags > diags0 && st.events_written > 100 && st.stored <= BC_DIAG_MAX_REPORTS, "stress ran with real traffic and kept every invariant");
+    sim_fake_meter(false, 0, false); pr->power.paired = false; app_profile_save(); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED;
+}
+
 int main(int argc, char **argv)
 {
     if (argc > 1) snprintf(outdir, sizeof outdir, "%s", argv[1]);
@@ -1663,6 +1883,8 @@ int main(int argc, char **argv)
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, read_cb);
     scenario();
+    scenario_073();
+    scenario_stress(getenv("SIM_STRESS") ? atoi(getenv("SIM_STRESS")) : 1000);
     lv_mem_monitor_t m; lv_mem_monitor(&m);
     printf("\nLVGL memory: %u%% used, max used %u bytes of %u, fragmentation %u%%\n", m.used_pct, (unsigned)m.max_used, (unsigned)m.total_size, m.frag_pct);
     CHECK(m.max_used < m.total_size * 85 / 100, "LVGL heap stays under 85%% (max %u of %u)", (unsigned)m.max_used, (unsigned)m.total_size);

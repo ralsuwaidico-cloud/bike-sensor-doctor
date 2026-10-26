@@ -37,7 +37,7 @@ void plat_scan_end(void) { s_scan_kind = -1; ble_central_scan_for(-1); }
 void plat_pair(plat_sens_kind_t k, const plat_found_t *d)
 {
     if (d) ble_central_set_paired(k, d->mac, d->addr_type, d->name); else ble_central_set_paired(k, NULL, 0, NULL);
-    ESP_LOGI(TAG, "%s %s %s", k == PLAT_SENS_POWER ? "power meter" : "HR strap", d ? "paired:" : "forgotten", d ? d->name : "");
+    ESP_LOGI(TAG, "%s %s", k == PLAT_SENS_POWER ? "power meter" : k == PLAT_SENS_HR ? "HR strap" : "speed/cadence sensor", d ? "paired" : "forgotten");   /* no names in logs (0.7.3) */
 }
 
 /* ---- profile in NVS (power-loss safe) */
@@ -89,6 +89,18 @@ bool plat_file_write(const char *path, const char *data, size_t len)
     if (w != len) { unlink(t); return false; }
     unlink(p);
     return rename(t, p) == 0;
+}
+
+/* 0.7.3: in-place write (event-log ring). r+b keeps the rest of the file; created when missing. Flushed to the medium. */
+bool plat_file_write_at(const char *path, long off, const void *data, size_t len)
+{
+    char p[96]; full(path, p, sizeof p);
+    FILE *f = fopen(p, "r+b"); if (!f) f = fopen(p, "w+b");
+    if (!f) { s_storage_errors++; return false; }
+    bool ok = fseek(f, off, SEEK_SET) == 0 && fwrite(data, 1, len, f) == len;
+    fflush(f); fsync(fileno(f)); fclose(f);
+    if (!ok) s_storage_errors++;
+    return ok;
 }
 
 long plat_file_read_at(const char *path, long off, char *buf, size_t cap)

@@ -10,3 +10,10 @@ test/sim/simfs/
 test/sim/run.log
 test/host/test_bc_core
 test/host/test_bc_pipe
+test/host/test_bc_diag
+test/host/test_partitions
+test/sim/sim_asan
+test/sim/out_asan/
+test/blehost/stress
+test/blehost/stress_tsan
+test/blehost/tsan.log

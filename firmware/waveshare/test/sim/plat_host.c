@@ -49,6 +49,10 @@ void plat_sensors(plat_sensors_t *o)
         if (k == PLAT_SENS_CSC && l->stage == BC_STG_VALID) l->valid_age_ms = 800;
     }
     if (g_sim.fake.on) sim_fake_snapshot(o);
+    /* 0.7.3: a link disabled after a crash delivers nothing (like ble_central_snapshot) */
+    if (o->link[PLAT_SENS_POWER].disabled) { o->power_ok = o->cad_ok = false; o->link[PLAT_SENS_POWER].link = PLAT_LINK_SEARCHING; o->link[PLAT_SENS_POWER].stage = BC_STG_SEARCHING; }
+    if (o->link[PLAT_SENS_HR].disabled) { o->hr_ok = false; o->link[PLAT_SENS_HR].stage = BC_STG_SEARCHING; }
+    if (o->link[PLAT_SENS_CSC].disabled) { o->csc_cad_ok = o->csc_speed_ok = false; o->link[PLAT_SENS_CSC].stage = BC_STG_SEARCHING; }
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;
 }
 
@@ -238,7 +242,7 @@ int plat_wifi_saved(char ssids[][33], int max) { w_load(); int n = wstore.n < ma
 void plat_wifi_status(plat_wifi_status_t *o) { pump(); *o = ws; }
 void plat_wifi_set_quiet(bool riding) { w_quiet = riding; }
 int plat_wifi_scan_count(void) { return w_scan_count; }
-const char *plat_fw_version(void) { return "0.6.1-sim"; }
+const char *plat_fw_version(void) { return "0.7.3-sim"; }
 
 /* ---- phone link simulation */
 #define PH g_sim.phone
@@ -335,17 +339,54 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
     case BC_MSG_PROFILE_ACK: bc_link_decode_profile_ack(b, n, &PH.profile_ack); PH.profile_acks++; break;
     case BC_MSG_SETTINGS: bc_link_decode_settings(b, n, &PH.settings); PH.settings_msgs++; break;
     case BC_MSG_EVENT: {
-        bc_sensor_diag_t d;
+        bc_sensor_diag_t d; bc_diag_ready_t r;
         if (bc_link_decode_sensor_diag(b, n, &d)) { PH.diag[PH.ndiag % 16] = d; PH.ndiag++; PH.diags++; }   /* 0.7.2 SENSOR_DIAG */
+        else if (bc_link_decode_diag_ready(b, n, &r)) { PH.dready = r; PH.dreadys++; }                       /* 0.7.3 diag_ready */
         else { bc_link_decode_event(b, n, &PH.event); PH.events++; }
         break; }
+    /* 0.7.3 Link 1.2.3: the phone side of the report transfer (what Cyclift does) */
+    case BC_MSG_DIAG_INFO: if (PH.ndinfo < 32 && bc_link_decode_diag_info(b, n, &PH.dinfo[PH.ndinfo])) PH.ndinfo++; break;
+    case BC_MSG_DIAG_LIST_END: bc_link_decode_diag_list_end(b, n, &PH.dlist_end); PH.dlist_ends++; break;
+    case BC_MSG_DIAG_ERR: bc_link_decode_diag_err(b, n, &PH.derr); PH.derrs++; break;
+    case BC_MSG_DIAG_CHUNK:
+        if (bc_link_decode_diag_chunk(b, n, &PH.dchunk)) {
+            PH.dchunks++;
+            if (PH.dchunk.offset + PH.dchunk.len <= sizeof PH.dbuf) { memcpy(PH.dbuf + PH.dchunk.offset, PH.dchunk.data, PH.dchunk.len); if (PH.dchunk.offset + PH.dchunk.len > PH.dbuf_len) PH.dbuf_len = PH.dchunk.offset + PH.dchunk.len; }
+        }
+        break;
     default: PH.unknown_notifies++; break;
     }
     return true;
 }
 void plat_phone_set_standby(bool standby) { PH.standby = standby; if (standby) PH.standbys++; }
 #undef PH
-const char *plat_reset_reason(void) { return "power-on"; }
+const char *plat_reset_reason(void) { return bc_reset_name(g_sim.reset_kind); }
+
+/* ---- 0.7.3 crash evidence and boot modes (scripted by the scenario) */
+static bc_boot_rtc_t s_rtc;                             /* "RTC memory": survives sim reboots unless the scenario power-cycles */
+bc_boot_rtc_t *plat_boot_rtc(void) { return &s_rtc; }
+bc_reset_t plat_reset_kind(void) { return g_sim.reset_kind; }
+bool plat_crash_info(plat_crash_t *o) { *o = g_sim.crash; return g_sim.crash.have; }
+void plat_crash_consumed(uint32_t id) { (void)id; g_sim.crash.have = false; g_sim.crash_consumed++; }
+size_t plat_log_tail(char *buf, size_t cap) { snprintf(buf, cap, "%s", g_sim.log_tail); bc_diag_redact(buf); return strlen(buf); }
+uint16_t plat_boot_skip_load(void) { return g_sim.nvs_skip_fw == g_sim.fw_id ? g_sim.nvs_skip : 0; }
+void plat_boot_skip_save(uint16_t skip) { g_sim.nvs_skip = skip; g_sim.nvs_skip_fw = g_sim.fw_id; }
+uint32_t plat_crash_total(void) { return g_sim.crash_total; }
+int plat_tasks(bc_diag_task_t *o, int max)
+{
+    static const char *const N[] = { "taskLVGL", "nimble_host", "ble_mgr", "esp_timer", "main" }; static const uint32_t F[] = { 6100, 3300, 2100, 2900, 5200 };
+    int n = 0; for (int i = 0; i < 5 && n < max; i++) { snprintf(o[n].name, sizeof o[n].name, "%s", N[i]); o[n].stack_free = F[i]; n++; } return n;
+}
+void plat_heap(uint32_t *fr, uint32_t *mn, uint32_t *lg, uint32_t *ps) { *fr = g_sim.heap_free ? g_sim.heap_free : 150000; *mn = g_sim.heap_min ? g_sim.heap_min : 120000; *lg = 90000; *ps = 1900000; }
+void plat_build_ids(char build[32], char sha[65]) { snprintf(build, 32, "Oct 26 2026 sim"); for (int i = 0; i < 32; i++) snprintf(sha + 2 * i, 3, "%02x", (unsigned)((g_sim.fw_id >> (8 * (i % 4))) & 0xFF)); }
+bool plat_file_write_at(const char *path, long off, const void *data, size_t len)
+{
+    char p[512]; full(path, p, sizeof p);
+    FILE *f = fopen(p, "r+b"); if (!f) f = fopen(p, "w+b"); if (!f) return false;
+    bool ok = fseek(f, off, SEEK_SET) == 0 && fwrite(data, 1, len, f) == len; fclose(f); return ok;
+}
+void plat_phone_only_start(void) { g_sim.phone_only_started = true; g_sim.phone.enabled = true; }
+void plat_sensor_set_disabled(plat_sens_kind_t k, bool disabled) { if (k < PLAT_SENS_KINDS) g_sim.link[k].disabled = disabled; }
 uint32_t plat_boot_count(void) { return g_sim.boots; }
 void plat_restart(void) { g_sim.restart_requested = true; }
 void plat_selftest_text(char *b, size_t cap)

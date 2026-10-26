@@ -36,6 +36,9 @@ typedef enum {
     /* 1.2 athlete profile sync + device settings (Control characteristic, encrypted link only) */
     BC_MSG_PROFILE_GET = 0x70, BC_MSG_PROFILE_SET = 0x71, BC_MSG_PROFILE = 0x72, BC_MSG_PROFILE_ACK = 0x73,
     BC_MSG_SETTINGS_SET = 0x74, BC_MSG_SETTINGS = 0x75, BC_MSG_SETTINGS_GET = 0x76,
+    /* 1.2.3 diagnostic report transfer (Control characteristic 0005, encrypted link only; firmware 0.7.3) */
+    BC_MSG_DIAG_LIST_REQ = 0x80, BC_MSG_DIAG_INFO = 0x81, BC_MSG_DIAG_LIST_END = 0x82, BC_MSG_DIAG_CHUNK_REQ = 0x83,
+    BC_MSG_DIAG_CHUNK = 0x84, BC_MSG_DIAG_ACK = 0x85, BC_MSG_DIAG_ERR = 0x86,
 } bc_msg_type_t;
 
 /* sources of a reading (who measured it) */
@@ -122,6 +125,7 @@ typedef struct { uint8_t ver_major, ver_minor; char fw[24]; char name[24]; uint3
 #define BC_CAP_WIFI_PROV 0x80      /* 1.2: WIFI_* messages on the Control characteristic */
 #define BC_CAP_PROFILE_SYNC 0x100  /* 1.2: PROFILE_* (phone is the authority once the rider confirmed) */
 #define BC_CAP_SETTINGS 0x200      /* 1.2: SETTINGS_* with supported_mask */
+#define BC_CAP_DIAG_XFER 0x400     /* 1.2.3: DIAG_* report transfer (firmware 0.7.3) */
 size_t bc_link_encode_info(const bc_info_t *v, uint8_t *buf, size_t cap);
 bool bc_link_decode_info(const uint8_t *buf, size_t len, bc_info_t *v);
 
@@ -221,6 +225,44 @@ typedef enum { BC_ST_APPLIED = 0, BC_ST_OLDER = 1, BC_ST_BAD = 2, BC_ST_UNSUPPOR
 size_t bc_link_encode_settings_get(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 size_t bc_link_encode_settings(uint8_t type /* BC_MSG_SETTINGS_SET or BC_MSG_SETTINGS */, const bc_settings_msg_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_settings(const uint8_t *buf, size_t len, bc_settings_msg_t *v);
+
+/* ---- 1.2.3 diagnostic report transfer (docs/LINK_V1_2_SPEC.md "1.2.3", vectors in docs/BLE_LINK_PROTOCOL.md). Phone-driven
+ * pull on Control: LIST_REQ -> one DIAG_INFO per stored report + LIST_END; CHUNK_REQ(id, offset, max_len) -> CHUNK (data
+ * <= BC_DIAG_CHUNK_MAX: the board clamps max_len so the whole message fits BC_LINK_MAX; the phone continues at offset + len
+ * of the CHUNK it received); ACK(id, crc32) -> DIAG_INFO with state 1 when the crc matches (state 0 when it does not);
+ * errors -> DIAG_ERR. EVENT 0x40 event_id 0x22 diag_ready (Events characteristic) on connect and when a report is stored. */
+#define BC_EVT_DIAG_READY 0x22
+#define BC_DIAG_CHUNK_MAX 155      /* 180 - header 8 - id 6 - offset 6 - data tag 2 - last 3 */
+#define BC_DIAG_SUMMARY_MAX 40
+#define BC_DIAG_FW_MAX 16
+typedef enum { BC_DIAG_KIND_CRASH = 1, BC_DIAG_KIND_RECOVERY = 2, BC_DIAG_KIND_MANUAL = 3, BC_DIAG_KIND_HEALTH = 4 } bc_diag_kind_t;
+typedef enum { BC_DIAG_ERR_UNKNOWN_ID = 1, BC_DIAG_ERR_BAD_OFFSET = 2, BC_DIAG_ERR_STORAGE = 3, BC_DIAG_ERR_BUSY = 4 } bc_diag_err_code_t;
+typedef struct { uint32_t id, size, crc, epoch_s; uint8_t kind, state; char summary[BC_DIAG_SUMMARY_MAX + 1]; char fw[BC_DIAG_FW_MAX + 1]; } bc_diag_info_t;
+typedef struct { uint8_t count, pending; } bc_diag_list_end_t;
+typedef struct { uint32_t id, offset; uint16_t max_len; } bc_diag_chunk_req_t;
+typedef struct { uint32_t id, offset; uint8_t len; bool last; uint8_t data[BC_DIAG_CHUNK_MAX]; } bc_diag_chunk_t;
+typedef struct { uint32_t id, crc; } bc_diag_ack_t;
+typedef struct { uint32_t id; uint8_t code; } bc_diag_err_t;
+typedef struct { uint8_t pending; uint32_t newest_id; } bc_diag_ready_t;
+size_t bc_link_encode_diag_list_req(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_diag_list_req(const uint8_t *buf, size_t len);
+size_t bc_link_encode_diag_info(const bc_diag_info_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+/** False unless DIAG_INFO with a report_id. Strings are cut at a UTF-8 character boundary. */
+bool bc_link_decode_diag_info(const uint8_t *buf, size_t len, bc_diag_info_t *v);
+size_t bc_link_encode_diag_list_end(const bc_diag_list_end_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_diag_list_end(const uint8_t *buf, size_t len, bc_diag_list_end_t *v);
+size_t bc_link_encode_diag_chunk_req(const bc_diag_chunk_req_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+/** False unless CHUNK_REQ with report_id and offset; a missing max_len means BC_DIAG_CHUNK_MAX. */
+bool bc_link_decode_diag_chunk_req(const uint8_t *buf, size_t len, bc_diag_chunk_req_t *v);
+size_t bc_link_encode_diag_chunk(const bc_diag_chunk_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_diag_chunk(const uint8_t *buf, size_t len, bc_diag_chunk_t *v);
+size_t bc_link_encode_diag_ack(const bc_diag_ack_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_diag_ack(const uint8_t *buf, size_t len, bc_diag_ack_t *v);
+size_t bc_link_encode_diag_err(const bc_diag_err_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+bool bc_link_decode_diag_err(const uint8_t *buf, size_t len, bc_diag_err_t *v);
+size_t bc_link_encode_diag_ready(const bc_diag_ready_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
+/** False unless an EVENT with event_id 0x22. */
+bool bc_link_decode_diag_ready(const uint8_t *buf, size_t len, bc_diag_ready_t *v);
 
 /** Ride-control rules on the ESP32 side: what a request does to the ride given its current state (pure decision). */
 typedef enum { BC_ACT_NONE = 0, BC_ACT_START, BC_ACT_PAUSE, BC_ACT_RESUME, BC_ACT_ARM_STOP, BC_ACT_STOP } bc_ctrl_action_t;

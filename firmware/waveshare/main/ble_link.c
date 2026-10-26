@@ -42,6 +42,8 @@ static bool s_standby, s_sync_sub, s_events_sub;
    factory Bluetooth MAC, so the phone's records stay keyed to the same board. */
 static uint8_t s_id_addr[6]; static uint8_t s_id_gen; static bool s_id_random;
 static bool s_repair_pending;        /* forget/repair asked from the UI task: done on the host task in ble_link_tick */
+/* 0.7.3: every other UI request is a flag too; ble_link_tick (host task) applies it — no NimBLE call from the UI task */
+static volatile bool s_req_apply_enabled, s_req_disconnect, s_req_standby_changed;
 static uint8_t s_enc_fail_streak;   /* s_events_sub: 0.6.0 Events characteristic (chr 2 in plat_phone_notify_svc) */
 /* 0.6.0 phone services: writes from the phone wait here for the app task (app_psvc_pump); replies wait here for the BLE task */
 typedef struct { uint8_t chr, len, b[BC_LINK_MAX]; } svc_msg_t;
@@ -56,6 +58,7 @@ static void set_state(plat_phone_state_t st) { LOCK(); s_st.state = st; UNLOCK()
 static int count_bonds(void)
 {
     int n = 0;
+    if (!s_synced) return s_st.bonds;                /* 0.7.3: NimBLE not running (recovery mode, early boot report): last known */
     ble_store_util_count(BLE_STORE_OBJ_TYPE_OUR_SEC, &n);
     return n;
 }
@@ -89,8 +92,8 @@ static uint8_t id_apply(bool fresh)
     s_id_gen = gen;
     int rc = ble_hs_id_set_rnd(s_id_addr);
     s_id_random = rc == 0;
-    ESP_LOGI(TAG, "identity %s %02X:%02X:%02X:%02X:%02X:%02X gen %u (rc %d)", s_id_random ? "random-static" : "PUBLIC (fallback)",
-             s_id_addr[5], s_id_addr[4], s_id_addr[3], s_id_addr[2], s_id_addr[1], s_id_addr[0], s_id_gen, rc);
+    ESP_LOGI(TAG, "identity %s ..:%02X:%02X gen %u (rc %d)", s_id_random ? "random-static" : "PUBLIC (fallback)",
+             s_id_addr[1], s_id_addr[0], s_id_gen, rc);   /* 0.7.3: addresses in logs are cut to their last 2 bytes */
     LOCK(); memcpy(s_st.id_addr, s_id_random ? s_id_addr : (uint8_t[6]){0}, 6); s_st.id_gen = s_id_gen; UNLOCK();
     return s_id_random ? BLE_OWN_ADDR_RANDOM : s_own;
 }
@@ -160,7 +163,7 @@ static int chr_access(uint16_t conn, uint16_t attr, struct ble_gatt_access_ctxt 
         if (attr == h_info) {
             bc_info_t i = { .ver_major = BC_LINK_VER_MAJOR, .ver_minor = BC_LINK_VER_MINOR,
                             .caps = BC_CAP_LIVE | BC_CAP_GPS_IN | BC_CAP_HR_IN | BC_CAP_WEATHER_IN | BC_CAP_RIDE_CTRL | BC_CAP_TIME_SYNC |
-                                    BC_CAP_RIDE_SYNC | BC_CAP_WIFI_PROV | BC_CAP_PROFILE_SYNC | BC_CAP_SETTINGS,
+                                    BC_CAP_RIDE_SYNC | BC_CAP_WIFI_PROV | BC_CAP_PROFILE_SYNC | BC_CAP_SETTINGS | BC_CAP_DIAG_XFER,
                             .max_msg = BC_LINK_MAX };
             snprintf(i.fw, sizeof i.fw, "%.23s", esp_app_get_description()->version);
             snprintf(i.name, sizeof i.name, "%.23s", ble_svc_gap_device_name());
@@ -238,10 +241,11 @@ void ble_link_configure_security(void)
 static void on_disconnect(uint16_t reason)
 {
     bool was_repair = s_st.state == PLAT_PHONE_REPAIR;
+    int bonds = count_bonds();                        /* 0.7.3: NimBLE's host lock is never taken inside our spinlock */
     LOCK();
     s_conn = BLE_HS_CONN_HANDLE_NONE; s_encrypted = s_live_sub = s_ctrl_sub = s_sync_sub = s_events_sub = false; s_st.passkey = 0; s_st.rssi = 0;
     s_live_new = s_resp_new = false; s_svc_in_n = 0; s_svc_out_n = 0; s_st.svc_ready = false;
-    s_st.last_disc_code = reason; s_st.last_disc = disc_map(reason); s_st.bonds = (uint8_t)count_bonds(); s_st.bonded = s_st.bonds > 0;
+    s_st.last_disc_code = reason; s_st.last_disc = disc_map(reason); s_st.bonds = (uint8_t)bonds; s_st.bonded = bonds > 0;
     UNLOCK();
     app_psvc_on_disconnect();
     /* a failed encryption keeps the REPAIR state visible after the phone drops the link; it clears on the next good connection */
@@ -257,11 +261,12 @@ static int gap_cb(struct ble_gap_event *ev, void *arg)
     case BLE_GAP_EVENT_CONNECT:
         s_adv = false;
         if (ev->connect.status != 0) { adv_start(); return 0; }
-        LOCK(); s_conn = ev->connect.conn_handle; s_st.connects++; s_st.bonds = (uint8_t)count_bonds(); UNLOCK();
+        { int bonds = count_bonds();                  /* 0.7.3: outside the spinlock (0.7.0-0.7.2 called it inside: NimBLE host lock under portENTER_CRITICAL) */
+          LOCK(); s_conn = ev->connect.conn_handle; s_st.connects++; s_st.bonds = (uint8_t)bonds; UNLOCK(); }
         set_state(PLAT_PHONE_CONNECTED);
         { struct ble_gap_conn_desc d; if (ble_gap_conn_find(ev->connect.conn_handle, &d) == 0)
-            ESP_LOGI(TAG, "phone connected: peer %s %02X..%02X, bonds %d, itvl %u, our identity gen %u", d.peer_id_addr.type ? "random" : "public",
-                     d.peer_id_addr.val[5], d.peer_id_addr.val[0], count_bonds(), d.conn_itvl, s_id_gen); }
+            ESP_LOGI(TAG, "phone connected: peer %s ..:%02X:%02X, bonds %d, itvl %u, our identity gen %u", d.peer_id_addr.type ? "random" : "public",
+                     d.peer_id_addr.val[1], d.peer_id_addr.val[0], count_bonds(), d.conn_itvl, s_id_gen); }
         return 0;
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGI(TAG, "phone disconnected: reason 0x%x (%s), bonds %d", ev->disconnect.reason,
@@ -309,7 +314,7 @@ static int gap_cb(struct ble_gap_event *ev, void *arg)
            the phone has no stale keys in this direction) */
         struct ble_gap_conn_desc d;
         if (ble_gap_conn_find(ev->repeat_pairing.conn_handle, &d) == 0) { ble_store_util_delete_peer(&d.peer_id_addr); ESP_LOGI(TAG, "repeat pairing: old bond for this phone dropped, pairing again"); }
-        LOCK(); s_st.bonds = (uint8_t)count_bonds(); UNLOCK();
+        { int bonds = count_bonds(); LOCK(); s_st.bonds = (uint8_t)bonds; UNLOCK(); }
         return BLE_GAP_REPEAT_PAIRING_RETRY;
     }
     case BLE_GAP_EVENT_SUBSCRIBE:
@@ -362,6 +367,12 @@ void ble_link_central_busy(bool busy)
 void ble_link_tick(void)
 {
     if (!s_synced) return;
+    if (s_req_apply_enabled) {
+        s_req_apply_enabled = false;
+        if (!s_enabled) { adv_stop(); if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); }
+    }
+    if (s_req_disconnect) { s_req_disconnect = false; if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); }
+    if (s_req_standby_changed) { s_req_standby_changed = false; if (s_adv) { adv_stop(); adv_start(); } }
     if (s_repair_pending) { do_repair(); if (s_repair_pending) return; }
     if (s_conn == BLE_HS_CONN_HANDLE_NONE) { adv_start(); return; }
     uint8_t buf[BC_LINK_MAX]; size_t n = 0; bool live = false, resp = false;
@@ -394,8 +405,9 @@ void ble_link_tick(void)
 void plat_phone_set_enabled(bool on)
 {
     s_enabled = on;
-    if (!on) { adv_stop(); if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); set_state(PLAT_PHONE_OFF); }
-    else if (s_conn == BLE_HS_CONN_HANDLE_NONE) set_state(PLAT_PHONE_ADVERTISING);   /* the manager task starts advertising */
+    s_req_apply_enabled = true;                       /* advertising stop / disconnect happen on the host task (ble_link_tick) */
+    if (!on) set_state(PLAT_PHONE_OFF);
+    else if (s_conn == BLE_HS_CONN_HANDLE_NONE) set_state(PLAT_PHONE_ADVERTISING);   /* the host task starts advertising */
 }
 
 void plat_phone_status(plat_phone_status_t *o)
@@ -413,7 +425,7 @@ void plat_phone_status(plat_phone_status_t *o)
 void plat_phone_forget(void) { s_repair_pending = true; ESP_LOGI(TAG, "forget requested: wiping remembered phones and taking a new identity"); }
 void plat_phone_repair(void) { s_enabled = true; s_repair_pending = true; ESP_LOGI(TAG, "repair requested"); }
 
-void plat_phone_disconnect(void) { if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); }
+void plat_phone_disconnect(void) { s_req_disconnect = true; }   /* host task: ble_link_tick */
 
 void plat_phone_inputs(plat_phone_in_t *o) { LOCK(); *o = s_in; UNLOCK(); }
 
@@ -457,8 +469,8 @@ void plat_phone_set_standby(bool standby)
 {
     if (s_standby == standby) return;
     s_standby = standby;
-    /* restart advertising with the new interval when nobody is connected (connections are untouched) */
-    if (s_adv) { adv_stop(); adv_start(); }
+    /* restart advertising with the new interval when nobody is connected (connections are untouched) — on the host task */
+    s_req_standby_changed = true;
 }
 
 void plat_phone_publish_live(const bc_live_t *l)

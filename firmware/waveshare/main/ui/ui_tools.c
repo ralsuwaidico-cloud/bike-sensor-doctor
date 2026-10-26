@@ -1,6 +1,7 @@
 /* Settings > Display (ride-screen picker with preview, brightness), Settings > Diagnostics (Device Health, Sensor Test,
  * Self-test) and the diagnostic report export. */
 #include "ui.h"
+#include "app_diag.h"
 #include "app_psvc.h"
 #include <stdio.h>
 #include <string.h>
@@ -229,7 +230,9 @@ static void export_cb(lv_event_t *e)
                               r[i].avg_cad, r[i].recovered ? " (recovered)" : "");
     }
     plat_export_report(rep);
-    lv_label_set_text(h_note, "Sent to the PC log\nand saved on the device.");
+    /* 0.7.3: also a manual diagnostic report (kind 3) for Cyclift (Link 1.2.3); announced to a connected phone at once */
+    uint32_t id = app_diag_store_report(BC_DIAG_KIND_MANUAL, "Device Health: SEND LOG");
+    lv_label_set_text(h_note, id ? "Sent to the PC log, saved,\nand ready for Cyclift." : "Sent to the PC log\nand saved on the device.");
 }
 
 static void back_diag(lv_event_t *e) { (void)e; ui_diag_menu_show(); }

@@ -322,7 +322,8 @@ float hw_battery_volts(void)
 }
 
 /* ------------------------------------------------------------------ memory, NVS, storage */
-void hw_selftest_run(void)
+/* 0.7.3: split so the boot planner can read NVS before the display, and storage is its own start-up stage */
+void hw_selftest_nvs(void)
 {
 #if CONFIG_SPIRAM
     size_t ps = esp_psram_is_initialized() ? esp_psram_get_size() : 0;
@@ -343,7 +344,11 @@ void hw_selftest_run(void)
         g_selftest.boot_count = boots;
         SET(nvs, HW_PASS, "boot #%u remembered", (unsigned)boots);
     } else SET(nvs, HW_FAIL, "%s", esp_err_to_name(e));
+}
 
+bool hw_selftest_storage(void)
+{
+    esp_err_t e;
     /* the 'storage' FAT partition is new space created by this firmware's partition table (the factory app is backed up first) */
     static wl_handle_t wl = WL_INVALID_HANDLE;
     esp_vfs_fat_mount_config_t m = { .format_if_mount_failed = true, .max_files = 4, .allocation_unit_size = 4096 };
@@ -361,4 +366,7 @@ void hw_selftest_run(void)
     if (v < 0) SET(battery, HW_FAIL, "ADC unavailable");
     else SET(battery, HW_INFO, "%.2f V %s", v, v > 4.3f ? "(USB, no battery?)" : v < 3.0f ? "(no battery / reading low)" : "");
     ESP_LOGI(TAG, "self-test done");
+    return g_selftest.storage == HW_PASS;
 }
+
+void hw_selftest_run(void) { hw_selftest_nvs(); hw_selftest_storage(); }

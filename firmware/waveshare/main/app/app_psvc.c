@@ -6,6 +6,7 @@
 #include "bc_link.h"
 #include "bc_ride.h"
 #include "bc_pipe.h"
+#include "app_diag.h"
 
 #define SCAN_TIMEOUT_MS 25000       /* a connect attempt in flight (<= 20 s) delays the scan */
 #define STATUS_MIN_GAP_MS 500
@@ -34,6 +35,8 @@ static struct {
 } S;
 
 static const plat_sens_kind_t SD_KIND[3] = { PLAT_SENS_POWER, PLAT_SENS_HR, PLAT_SENS_CSC };
+static void apply_disconnect(void);
+static volatile bool s_disc_pending;
 
 /* which SENSOR_DIAG events are due: stage changes, every 5 s for a paired link below VALID, all paired ones on connect */
 static void sd_scan(uint32_t now, bool phone_connected_now)
@@ -237,6 +240,7 @@ bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t n
 {
     if (!msg || n < BC_LINK_HDR) return false;
     uint8_t type = msg[0];
+    if (chr == APP_PSVC_CTRL && app_diag_write(msg, n)) return true;   /* 0.7.3 Link 1.2.3 DIAG_* (0x80..0x86) */
     if (chr == APP_PSVC_SYNC) {
         bc_sync_req_t q;
         if (type != BC_MSG_SYNC_REQ || !bc_link_decode_sync_req(msg, n, &q)) return false;
@@ -307,6 +311,8 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
         *chr = APP_PSVC_EVENTS;
         return bc_link_encode_event(&ev, buf, cap, ++S.seq, now);
     }
+    /* 0.7.3 diagnostic reports (Link 1.2.3): diag_ready event, then the replies the phone pulled */
+    { uint8_t c; size_t m = app_diag_next(&c, buf, cap, now); if (m) { *chr = c == 2 ? APP_PSVC_EVENTS : APP_PSVC_CTRL; return m; } }
     /* 0. profile / settings replies first (small, the phone is waiting) */
     if (S.profile_ack_due) { S.profile_ack_due = false; *chr = APP_PSVC_CTRL; return bc_link_encode_profile_ack(&S.ack, buf, cap, ++S.seq, now); }
     if (S.profile_due) { S.profile_due = false; bc_profile_msg_t m; app_psvc_profile_msg(&m); *chr = APP_PSVC_CTRL; return bc_link_encode_profile(BC_MSG_PROFILE, &m, buf, cap, ++S.seq, now); }
@@ -404,11 +410,13 @@ app_psync_state_t app_psvc_sync_state(void)
 
 void app_psvc_pump(uint32_t now)
 {
+    if (s_disc_pending) { s_disc_pending = false; apply_disconnect(); }
     /* 0.7.0: when the phone is encrypted and listening, send PROFILE (so it can compare) and one LINK_DIAG event */
     { plat_phone_status_t ps; plat_phone_status(&ps);
       bool rising = ps.svc_ready && !S.was_ready;
       if (rising) { S.was_ready = true; S.hello_due = true; S.diag_due = true; S.set_seen = false; S.last_disc_code = ps.last_disc_code; S.last_disc = (uint8_t)ps.last_disc; }
       if (!ps.svc_ready) { S.was_ready = false; S.sd_due = 0; }
+      app_diag_phone_ready(ps.svc_ready);                  /* 0.7.3: diag_ready on every new connection */
       sd_scan(now, rising);                                /* 0.7.2 SENSOR_DIAG bookkeeping (sent only while the phone listens) */
       if (!ps.svc_ready) S.sd_due = 0; }
     if (S.hello_due) { S.hello_due = false; S.profile_due = true; }
@@ -422,10 +430,14 @@ void app_psvc_pump(uint32_t now)
     }
 }
 
-void app_psvc_on_disconnect(void)
+/* 0.7.3: called by the phone link on the NimBLE host task — only a flag here; the app task applies it in app_psvc_pump
+   (0.7.0-0.7.2 reset these fields from the host task while the app task was using them) */
+void app_psvc_on_disconnect(void) { s_disc_pending = true; }
+static void apply_disconnect(void)
 {
     S.sync_active = false; S.scan_pending = false; S.status_watch = false; S.have_last = false; S.status_now = false;
     S.profile_due = S.profile_ack_due = S.settings_due = false; S.held_len = 0; S.hello_due = S.diag_due = false; S.was_ready = false; S.sd_due = 0;
+    app_diag_phone_ready(false);
 }
 
 size_t app_psvc_last_sync_end(uint8_t *buf, size_t cap)

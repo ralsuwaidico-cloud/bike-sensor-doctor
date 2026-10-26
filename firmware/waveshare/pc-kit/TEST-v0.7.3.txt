@@ -1,0 +1,20 @@
+BikeComputer firmware 0.7.3 - short hardware test (stability + crash records) - 26 Oct 2026
+=========================================================================================
+0.7.3 = 0.7.2 + all Bluetooth work on one task + crash records kept on the board + RECOVERY screen + reports for Cyclift.
+Everything is SIMULATOR/HOST-TESTED ONLY until you confirm it here. Board on USB, battery DISCONNECTED (HW-1).
+
+1  INSTALL-v0.7.3.bat: backup verified, one line about the partition table, YES, "INSTALLED", then it records the first
+   minute by itself and ends with "RESULT: BOOTED OK".                                                        PASS/FAIL
+2  Settings footer: "firmware 0.7.3". Rides, profile and the paired power meter are still there.               PASS/FAIL
+3  Cyclift open next to the board: the phone connects (PHONE row CONNECTED) and stays connected 5 minutes.   PASS/FAIL
+4  Pedal: POWER shows watts, CADENCE shows rpm (the 0.7.2 power fix is kept). Stop: 0 W, then STALE/RETRYING.  PASS/FAIL
+5  Close and reopen Cyclift 10 times, pedalling now and then. No restart, no RECOVERY screen.                  PASS/FAIL
+6  If the board ever restarts by itself or shows RECOVERY MODE: do not press anything for a moment, run
+   CAPTURE-CRASH.bat, and in Cyclift use "Diagnostic report" (or press SEND LOGS on the RECOVERY screen).
+   Send crash-log-*.txt and the report to Claude. The board keeps the record even if you restart it.          DONE / N/A
+7  RECOVERY screen only (if it appears): hold RESTART & DIAGNOSE 1 s. The board starts one part at a time
+   ("Starting the phone link", "Connecting the power meter", ...). If one part crashes again, the next start shows
+   "... disabled after a crash - RETRY" and everything else works.                                           PASS/FAIL/N/A
+
+Go back: ROLLBACK-TO-v071.bat (keeps data, works with the 0.7.3 partition table) or RESTORE-CHOSEN-BACKUP.bat
+(pick backup-before-v073-<time>.bin, NOT a 0.7.2 one).

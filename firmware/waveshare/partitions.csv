@@ -1,8 +1,11 @@
 # 16 MB flash. Two OTA app slots (future firmware updates from the companion app / Wi-Fi), FAT storage for rides.
+# 0.7.3: ota_1 shrinks by 64 KB (never used: the installers always boot ota_0) to make room for a core dump partition that
+# keeps the evidence of a crash across the reset. Every other partition keeps its offset and size (docs/PARTITIONS_0.7.3.md).
 # Name,    Type, SubType,  Offset,   Size
 nvs,       data, nvs,      0x9000,   0x6000
 otadata,   data, ota,      0xF000,   0x2000
 phy_init,  data, phy,      0x11000,  0x1000
 ota_0,     app,  ota_0,    0x20000,  0x400000
-ota_1,     app,  ota_1,    0x420000, 0x400000
+ota_1,     app,  ota_1,    0x420000, 0x3F0000
+coredump,  data, coredump, 0x810000, 0x10000
 storage,   data, fat,      0x820000, 0x7E0000
