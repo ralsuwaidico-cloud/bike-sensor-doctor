@@ -15,6 +15,11 @@ struct StrengthWorkoutScreen: View {
     @State private var showSession = false
     @State private var budgetNote: String? = nil
     @State private var quickLog = false
+    @State private var showDetails = false
+    @State private var detailsFor: DetailTarget = .new
+    @State private var whyFor: ExerciseEntry? = nil
+    @State private var swapFor: ExerciseEntry? = nil
+    enum DetailTarget { case new, edit(StrengthSession) }
 
     private var workout: Workout? { store.plan.first { $0.id == workoutId } }
 
@@ -27,13 +32,23 @@ struct StrengthWorkoutScreen: View {
             .navigationTitle("Strength").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
-                if let w = workout, !w.done { ToolbarItem(placement: .topBarLeading) { moreMenu(w) } }
+                if let w = workout, !store.status(w).isCompleted { ToolbarItem(placement: .topBarLeading) { moreMenu(w) } }
             }
             .sheet(isPresented: $chooseRoutine) { if let w = workout { ChooseRoutineSheet(workout: w) { note in budgetNote = note } } }
             .sheet(isPresented: $editEntries) { if let w = workout { PlannedSetsEditor(workout: w) } }
             .sheet(isPresented: $showMove) { if let w = workout { MoveWorkoutSheet(workout: w) } }
             .sheet(isPresented: $showEdit) { if let w = workout { EditWorkoutSheet(workout: w) } }
             .sheet(isPresented: $quickLog) { if let w = workout { QuickStrengthLogSheet(date: w.date, presetFocus: w.strengthFocus, workoutId: w.id) } }
+            .sheet(isPresented: $showDetails) {
+                if let w = workout {
+                    switch detailsFor {
+                    case .new: DetailedStrengthLogSheet(date: w.date, presetFocus: w.strengthFocus ?? .custom, workoutId: w.id)
+                    case .edit(let s): DetailedStrengthLogSheet(date: s.date, presetFocus: s.focus, editing: s)
+                    }
+                }
+            }
+            .sheet(item: $whyFor) { e in if let w = workout { ExerciseWhySheet(workout: w, entry: e) } }
+            .sheet(item: $swapFor) { e in if let w = workout { SwapExerciseSheet(workout: w, entry: e) } }
             .fullScreenCover(isPresented: $showSession) { StrengthSessionView() }
             .alert("Remove this session?", isPresented: $confirmRemove) { Button("Remove", role: .destructive) { if let w = workout { store.remove(w) }; dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("The routine template itself is kept.") }
             .onAppear { if store.activeSession != nil, store.activeSession?.workoutId == workoutId { showSession = true } }
@@ -44,51 +59,64 @@ struct StrengthWorkoutScreen: View {
         let routine = store.routine(for: w)
         let removed = store.isRoutineRemoved(w)
         let entries = removed ? [] : store.plannedEntries(for: w)
+        let st = store.status(w)
+        let closed = st.isCompleted || st == .skipped
+        let future = store.isFuture(w)
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: DS.m) {
                 header(w, routine)
                 if let note = budgetNote { Text(note).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
-                if w.done { completed(w) }
+                // state first when it is not simply "open today": completed, skipped, or planned for a later day
+                if closed || future { statusCard(w) }
                 if removed { removedRoutine(w) } else if routine == nil && entries.isEmpty { noRoutine(w) } else {
-                    if routine == nil, w.generatedEntries { Text("Built by the coach from your exercises and equipment. Adjust the sets, or choose one of your routines under More.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
-                    exercises(entries, editable: !w.done)
+                    if routine == nil, w.generatedEntries, !closed { coachBuiltLine(w) }
+                    exercises(w, entries, editable: !closed && store.activeSession?.workoutId != w.id)
                 }
-                if w.coachAdjusted, !w.done { Text("Adjusted by the coach — see Home › Coach adjustments for why, or to undo.").font(.caption2).foregroundStyle(BC.accent).fixedSize(horizontal: false, vertical: true) }
-                if !w.done, !removed, routine != nil || !entries.isEmpty { startButton(w, entries) }
-                if !w.done { InsightCard(workout: w, entries: entries) }
-                if w.fixed { Text("Fixed day — the coach never moves or changes it.").font(.caption2).foregroundStyle(.secondary) }
+                if w.coachAdjusted, !closed { Text("Adjusted by the coach — Home › Coach adjustments shows why, with Undo.").font(.footnote).foregroundStyle(BC.accent).fixedSize(horizontal: false, vertical: true) }
+                if !closed, !future, !removed, routine != nil || !entries.isEmpty { startButton(w, entries) }
+                if !closed && !future { statusCard(w) }
+                if !closed { InsightCard(workout: w, entries: entries) }
+                if w.fixed { Text("Fixed day — the coach never moves or changes it.").font(.footnote).foregroundStyle(.secondary) }
             }.padding()
         }
     }
 
+    private func statusCard(_ w: Workout) -> some View {
+        WorkoutStatusCard(workout: w) { log in detailsFor = log.map { DetailTarget.edit($0) } ?? .new; showDetails = true }
+    }
+
+    /// One short line; the planner's reasons are behind (i) and the per-exercise Why?.
+    private func coachBuiltLine(_ w: Workout) -> some View {
+        HStack(alignment: .center, spacing: DS.xs) {
+            Text("Built by the coach for you.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            InfoButton(title: "How this session was built", text: (w.rationale?.notes ?? ["Built from your exercises and equipment."]).joined(separator: "\n\n") + "\n\nAdjust the sets, swap an exercise, or choose one of your routines under More.")
+        }
+    }
+
     private func header(_ w: Workout, _ r: WorkoutTemplate?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(r?.name ?? w.displayTitle).font(.system(size: 26, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7)
-                Spacer()
-                Text(Fmt.duration(minutes: w.minutes)).font(.system(size: 20, weight: .bold, design: .rounded)).monospacedDigit()
+        VStack(alignment: .leading, spacing: DS.xs) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(r?.name ?? w.displayTitle).font(DS.screenTitle).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: DS.s)
+                    Text(Fmt.duration(minutes: w.minutes)).font(.title3.weight(.bold)).monospacedDigit()
+                }
+                VStack(alignment: .leading, spacing: DS.xs) {
+                    Text(r?.name ?? w.displayTitle).font(DS.screenTitle).fixedSize(horizontal: false, vertical: true)
+                    Text(Fmt.duration(minutes: w.minutes)).font(.title3.weight(.bold)).monospacedDigit()
+                }
             }
-            HStack(spacing: 6) {
+            FlowRow {
                 Text(w.date.dayAndDate).font(.footnote).foregroundStyle(.secondary)
                 if let r { Pill(text: r.focus.title); Text("\(r.entries.count) exercises · \(r.setCount) sets").font(.footnote).foregroundStyle(.secondary) }
                 if w.edited { Pill(text: "edited", color: BC.accent) }
                 if w.routineManual { Pill(text: "your choice", color: BC.zone(5)) }
             }
             if let r, !w.done, r.estimatedMinutes != w.minutes {
-                Text("The routine takes about \(Fmt.duration(minutes: r.estimatedMinutes)); \(Fmt.duration(minutes: w.minutes)) is planned for this day (that is what counts toward your lifting budget).").font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text("Routine ≈ \(Fmt.duration(minutes: r.estimatedMinutes)); \(Fmt.duration(minutes: w.minutes)) counts toward your lifting budget.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
-    }
-
-    /// The session is completed: say what was logged, and do not invite a second log.
-    private func completed(_ w: Workout) -> some View {
-        Card {
-            HStack { Pill(text: "completed", color: BC.live); Spacer() }
-            if let s = store.existingLog(forWorkout: w.id, on: w.date) {
-                Text("Logged \(s.date.dayAndDate) · \(Fmt.duration(minutes: s.minutes))" + (s.isDetailed ? " · \(s.exerciseCount) exercises, \(s.setCount) sets" : " · quick log") + (s.rpe.map { " · RPE \($0)" } ?? "")).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            } else { Text("Marked done on the calendar.").font(.footnote).foregroundStyle(.secondary) }
-            Text("It is in your history (Plan › History). To change it, edit that log rather than logging again.").font(.caption2).foregroundStyle(.secondary)
-        }.accessibilityIdentifier("sessionCompleted")
     }
 
     /// The assigned routine was deleted (here or on another device): say so, offer another one.
@@ -96,7 +124,7 @@ struct StrengthWorkoutScreen: View {
         Card {
             Eyebrow(t: "Routine removed")
             Text("The routine assigned to this session no longer exists. Choose another routine, or log the session without exercises.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            if !w.done {
+            if !w.done && !store.isFuture(w) {
                 Button { chooseRoutine = true } label: { Label("Choose another routine", systemImage: "doc.on.doc").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large).accessibilityIdentifier("chooseAnotherRoutine")
                 Button { quickLog = true } label: { Text("Quick log without exercises").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
             }
@@ -114,26 +142,41 @@ struct StrengthWorkoutScreen: View {
         }
     }
 
-    private func exercises(_ entries: [ExerciseEntry], editable: Bool) -> some View {
+    private func exercises(_ w: Workout, _ entries: [ExerciseEntry], editable: Bool) -> some View {
         Card {
-            HStack { Eyebrow(t: "Exercises in order"); Spacer(); if editable { Button("Adjust sets") { editEntries = true }.font(.caption.bold()) } }
+            HStack { Eyebrow(t: "Exercises in order"); Spacer(); if editable { Button("Adjust sets") { editEntries = true }.font(.footnote.bold()).frame(minHeight: DS.minTap).accessibilityIdentifier("adjustSets") } }
             ForEach(entries) { e in
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        if let g = e.superset { Text(g).font(.caption.weight(.heavy)).padding(4).background(BC.accent.opacity(0.18), in: Circle()) }
-                        Text(e.name).font(.body.weight(.semibold)).lineLimit(2)
-                        Spacer()
-                        Text(plannedText(e)).font(.subheadline.weight(.semibold)).monospacedDigit().foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: DS.xs) {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: DS.s) {
+                            supersetBadge(e)
+                            Text(e.name).font(.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: DS.s)
+                            Text(plannedText(e)).font(.subheadline.weight(.semibold)).monospacedDigit()
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(alignment: .firstTextBaseline, spacing: DS.s) { supersetBadge(e); Text(e.name).font(.body.weight(.semibold)).fixedSize(horizontal: false, vertical: true) }
+                            Text(plannedText(e)).font(.subheadline.weight(.semibold)).monospacedDigit()
+                        }
                     }
-                    HStack(spacing: 8) {
-                        Text(e.pattern.title).font(.caption2).foregroundStyle(.secondary)
-                        if let prev = previous(e) { Text("last: \(prev)").font(.caption2).foregroundStyle(.secondary).lineLimit(1) } else { Text("no previous log").font(.caption2).foregroundStyle(.secondary) }
+                    Text(e.pattern.title + " · " + (previous(e).map { "last: \($0)" } ?? "no logged sets yet")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if !e.notes.isEmpty { Text(e.notes).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                    HStack(spacing: DS.s) {
+                        Button { whyFor = e } label: { Label("Why?", systemImage: "questionmark.circle").font(.footnote.weight(.semibold)).frame(minHeight: DS.minTap) }
+                            .buttonStyle(.borderless).accessibilityLabel("Why \(e.name)?").accessibilityIdentifier("why-\(e.exerciseId)")
+                        if editable {
+                            Button { swapFor = e } label: { Label("Swap", systemImage: "arrow.triangle.2.circlepath").font(.footnote.weight(.semibold)).frame(minHeight: DS.minTap) }
+                                .buttonStyle(.borderless).accessibilityLabel("Swap \(e.name)").accessibilityIdentifier("swap-\(e.exerciseId)")
+                        }
+                        Spacer(minLength: 0)
                     }
-                    if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary) }
-                }.padding(.vertical, 4)
+                }.padding(.vertical, DS.xs)
                 if e.id != entries.last?.id { Divider() }
             }
         }
+    }
+    @ViewBuilder private func supersetBadge(_ e: ExerciseEntry) -> some View {
+        if let g = e.superset { Text(g).font(.caption.weight(.heavy)).padding(4).background(BC.accent.opacity(0.18), in: Circle()).accessibilityLabel("superset \(g)") }
     }
     private func plannedText(_ e: ExerciseEntry) -> String {
         guard !e.sets.isEmpty else { return "—" }
@@ -161,8 +204,7 @@ struct StrengthWorkoutScreen: View {
             } label: { Label(store.activeSession?.workoutId == w.id ? "Resume workout" : "Start workout", systemImage: "play.fill").frame(maxWidth: .infinity) }
             .buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large).accessibilityIdentifier("startWorkout")
             .disabled(store.activeSession != nil && store.activeSession?.workoutId != w.id)
-            if store.activeSession != nil, store.activeSession?.workoutId != w.id { Text("Another strength session is in progress; finish or discard it first.").font(.caption2).foregroundStyle(BC.warn) }
-            else { Text("Record each set as you go; pause any time. Partial sessions are saved and can be resumed after a restart.").font(.caption2).foregroundStyle(.secondary) }
+            if store.activeSession != nil, store.activeSession?.workoutId != w.id { Text("Another strength session is in progress; finish or discard it first.").font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
         }
     }
 
@@ -179,7 +221,7 @@ struct StrengthWorkoutScreen: View {
             Button { showEdit = true } label: { Label("Edit type / duration", systemImage: "pencil") }
             Button { showMove = true } label: { Label("Move to another day", systemImage: "arrow.left.arrow.right") }
             Button { var x = w; x.skipped.toggle(); store.edit(x) } label: { Label(w.skipped ? "Unskip" : "Skip", systemImage: "forward") }
-            Button { quickLog = true } label: { Label("Quick log instead", systemImage: "bolt") }
+            if !store.isFuture(w) { Button { quickLog = true } label: { Label("Quick log instead", systemImage: "bolt") } }
             Button(role: .destructive) { confirmRemove = true } label: { Label("Remove session", systemImage: "trash") }
         } label: { Label("More", systemImage: "ellipsis.circle") }.accessibilityIdentifier("moreMenu")
     }
@@ -453,9 +495,9 @@ struct StrengthSessionView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Card {
                     HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 2) { Eyebrow(t: s.pausedAt != nil ? "Paused" : "Working time"); Text(clock(s.elapsedSeconds(now: now))).font(.system(size: 34, weight: .bold, design: .rounded)).monospacedDigit() }
+                        VStack(alignment: .leading, spacing: 2) { Eyebrow(t: s.pausedAt != nil ? "Paused" : "Working time"); Text(clock(s.elapsedSeconds(now: now))).font(DS.number).monospacedDigit() }
                         Spacer()
-                        VStack(alignment: .trailing, spacing: 2) { Eyebrow(t: "Sets"); Text("\(done) / \(total)").font(.system(size: 26, weight: .bold, design: .rounded)).monospacedDigit() }
+                        VStack(alignment: .trailing, spacing: 2) { Eyebrow(t: "Sets"); Text("\(done) / \(total)").font(.title2.weight(.bold)).monospacedDigit() }
                     }
                     HStack(spacing: 8) {
                         if s.pausedAt == nil { Button { store.pauseActiveSession() } label: { Label("Pause", systemImage: "pause.fill").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
@@ -496,23 +538,35 @@ struct StrengthSessionView: View {
     private func clock(_ s: Int) -> String { String(format: "%d:%02d", s / 60, s % 60) }
 
     private var finishSheet: some View {
-        NavigationStack {
+        let nothing = store.activeSession.map(Store.finishWouldSaveNothing) ?? false
+        let planned = store.activeSession?.workoutId
+        return NavigationStack {
             Form {
-                Section("How did it feel?") {
-                    Picker("Effort", selection: Binding(get: { rpe ?? 0 }, set: { rpe = $0 == 0 ? nil : $0 })) { Text("—").tag(0); ForEach(1...10, id: \.self) { Text("RPE \($0)").tag($0) } }
-                    TextField("Notes (optional)", text: $notes, axis: .vertical).lineLimit(2...4)
-                }
-                Section {
-                    if (store.activeSession?.exercises ?? []).allSatisfy({ $0.doneSets.isEmpty }) { Text("No set is ticked as done yet: the session would be saved with its duration only (like a quick log). Go back and tick the sets you did, or save anyway.").font(.footnote).foregroundStyle(BC.warn) }
-                    Text("Only the sets you marked done are saved. The session is recorded as completed and counts toward your lifting hours; the planned session on the calendar is marked done.").font(.footnote).foregroundStyle(.secondary)
+                if nothing {
+                    Section {
+                        Text("No set is ticked as done, so there is nothing to save as a workout log. Go back and tick the sets you did.").font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true)
+                        if let wid = planned {
+                            Button { store.discardActiveSession(); store.markDone(wid); showFinish = false; dismiss() } label: { Text("Mark done without details") }.accessibilityIdentifier("finishMarkDone")
+                        }
+                        Button(role: .destructive) { store.discardActiveSession(); showFinish = false; dismiss() } label: { Text("Discard — nothing is saved") }
+                    } footer: { Text("Mark done records the session as done with no sets, weights or duration.") }
+                } else {
+                    Section("How did it feel?") {
+                        Picker("Effort", selection: Binding(get: { rpe ?? 0 }, set: { rpe = $0 == 0 ? nil : $0 })) { Text("—").tag(0); ForEach(1...10, id: \.self) { Text("RPE \($0)").tag($0) } }
+                        TextField("Notes (optional)", text: $notes, axis: .vertical).lineLimit(2...4)
+                    }
+                    Section { Text("Only the sets you ticked are saved, with the measured working time.").font(.footnote).foregroundStyle(.secondary) }
                 }
             }
             .navigationTitle("Finish workout").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Back") { showFinish = false } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { if let s = store.finishActiveSession(rpe: rpe, notes: notes), store.strength.contains(where: { $0.id == s.id }) { checkInFor = s.id } else { showFinish = false; dismiss() } }.bold().accessibilityIdentifier("saveWorkout") }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { if let s = store.finishActiveSession(rpe: rpe, notes: notes), store.strength.contains(where: { $0.id == s.id }) { checkInFor = s.id } else if store.activeSession == nil { showFinish = false; dismiss() } }
+                        .bold().disabled(nothing).accessibilityIdentifier("saveWorkout")
+                }
             }
-        }.presentationDetents([.medium])
+        }.presentationDetents([.medium, .large])
     }
 }
 

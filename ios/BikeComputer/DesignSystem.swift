@@ -132,7 +132,7 @@ struct FTPConfidencePill: View {
 }
 
 /// Status pill of a planned session from the one query layer.
-struct StatusPill: View {
+struct WorkoutStatusPill: View {
     let status: WorkoutStatus
     var body: some View {
         switch status {
@@ -188,4 +188,37 @@ extension RiderProfile {
     var ftpCaution: String? {
         ftpConfidence.isConfident ? nil : "FTP \(ftpConfidence.short): power targets are set 5 % lower and the ride coach does not claim zones from power. Ride by feel and heart rate; a verified FTP test replaces it."
     }
+}
+
+// MARK: - Wrapping row (pills, meta text): wraps to the next line instead of clipping or shrinking text
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxW = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, widest: CGFloat = 0
+        for v in subviews {
+            let s = v.sizeThatFits(ProposedViewSize(width: maxW.isFinite ? maxW : nil, height: nil))
+            if x > 0 && x + s.width > maxW { y += rowH + spacing; x = 0; rowH = 0 }
+            x += s.width + spacing
+            rowH = max(rowH, s.height)
+            widest = max(widest, x - spacing)
+        }
+        return CGSize(width: maxW.isFinite ? min(widest, maxW) : widest, height: y + rowH)
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
+        for v in subviews {
+            let s = v.sizeThatFits(ProposedViewSize(width: bounds.width, height: nil))
+            if x > bounds.minX && x + s.width > bounds.maxX { y += rowH + spacing; x = bounds.minX; rowH = 0 }
+            v.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: ProposedViewSize(width: min(s.width, bounds.width), height: s.height))
+            x += s.width + spacing
+            rowH = max(rowH, s.height)
+        }
+    }
+}
+
+struct FlowRow<Content: View>: View {
+    var spacing: CGFloat = 6
+    @ViewBuilder var content: Content
+    var body: some View { FlowLayout(spacing: spacing).callAsFunction { content } }
 }

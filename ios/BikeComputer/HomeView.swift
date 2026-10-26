@@ -43,7 +43,7 @@ struct HomeView: View {
     private var coach: some View {
         let t = store.today
         return Card(accent: true) {
-            HStack { Eyebrow(t: "Coach (rules) · \(Date().shortDay)"); Spacer(); if let t { let st = store.status(t); if st.isCompleted || st == .skipped { StatusPill(status: st) } else { ZonePill(z: t.kind.zone) } } }
+            HStack { Eyebrow(t: "Coach (rules) · \(Date().shortDay)"); Spacer(); if let t { let st = store.status(t); if st.isCompleted || st == .skipped { WorkoutStatusPill(status: st) } else { ZonePill(z: t.kind.zone) } } }
             Text(Coach.todayLine(t)).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             if let t, t.kind != .rest {
                 VStack(spacing: 0) {
