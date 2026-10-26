@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Connections dashboard (replaces "Sensors"): every device and integration with one status colour, tappable for
-/// details, pairing steps, what it measures, reconnect and troubleshooting. Red only for what the rider enabled or the
-/// ride configuration requires (ConnectionRules).
+/// Connections dashboard, built on the hub's source model (docs/INTEGRATIONS.md). Every live source — the optional
+/// BikeComputer, Bluetooth sensors paired directly with this phone, the Apple Watch, phone GPS — and every imported
+/// source (Apple Health; Garmin, WHOOP and Oura listed as planned) with one status colour, tappable for details. Red only
+/// for what the rider set up or the ride configuration requires (ConnectionRules). Nothing here is required: the app
+/// rides with the phone alone.
 struct ConnectionsView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
@@ -11,34 +13,42 @@ struct ConnectionsView: View {
     @EnvironmentObject private var reach: Reachability
     @EnvironmentObject private var health: HealthAccess
     @EnvironmentObject private var sync: ProfileSync
+    @EnvironmentObject private var hub: SensorHub
     @State private var tick = Date()
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
         List {
             Section {
+                InUseNowRows(hub: hub)
+            } header: { Text("In use now") } footer: {
+                Text("One value per metric. When two sources give the same metric, the first available wins: heart rate — strap on the BikeComputer, strap paired here, Apple Watch (or the watch first if you chose it in Profile); speed — wheel sensor, then phone GPS; power and cadence — power meter via the BikeComputer, then a sensor paired here.")
+            }
+            Section {
                 NavigationLink { BoardConnectionDetail() } label: { ConnRow(status: boardStatus, title: "BikeComputer", subtitle: boardSubtitle, icon: "circle.hexagongrid.circle") }
-            } header: { Text("Cycling computer") } footer: {
-                if !device.remembered { Text("Pair once: switch the board on, tap BikeComputer, Connect, type the 6-digit code from its round screen. Afterwards the phone reconnects by itself whenever the board is in range.") }
+                BLESensorRows(ble: hub.ble, hub: hub)
+                NavigationLink { WatchConnectionDetail() } label: { ConnRow(status: watchStatus, title: "Apple Watch", subtitle: watchSubtitle, icon: "applewatch") }
+                NavigationLink { PhoneConnectionDetail(kind: .gps) } label: { ConnRow(status: gpsStatus, title: "Phone GPS", subtitle: gpsSubtitle, icon: "location") }
+            } header: { Text("Live sources") } footer: {
+                Text("Ride with any combination: the phone alone (GPS), Bluetooth sensors paired here, an Apple Watch, or the optional BikeComputer.")
+            }
+            if device.remembered || liveNow != nil {
+                Section {
+                    NavigationLink { SensorConnectionDetail(kind: .meter) } label: { ConnRow(status: meterStatus, title: "Power meter via BikeComputer", subtitle: meterSubtitle, icon: "bolt") }
+                    NavigationLink { SensorConnectionDetail(kind: .strap) } label: { ConnRow(status: strapStatus, title: "Heart-rate strap via BikeComputer", subtitle: strapSubtitle, icon: "heart") }
+                    NavigationLink { SensorConnectionDetail(kind: .speed) } label: { ConnRow(status: .gray, title: "Speed / cadence via BikeComputer", subtitle: (device.info?.fw ?? "") >= "0.6.0" ? "pair on the board: Connections › Cadence / Speed" : "pair it with this phone instead (Bluetooth sensors)", icon: "gauge.with.dots.needle.33percent") }
+                } header: { Text("Sensors paired on the BikeComputer") } footer: { Text("These pair on the board (its Connections menu). The phone shows what the board reports.") }
             }
             Section("Phone") {
                 NavigationLink { PhoneConnectionDetail(kind: .bluetooth) } label: { ConnRow(status: bluetoothStatus, title: "Bluetooth", subtitle: bluetoothSubtitle, icon: "antenna.radiowaves.left.and.right") }
-                NavigationLink { PhoneConnectionDetail(kind: .gps) } label: { ConnRow(status: gpsStatus, title: "GPS", subtitle: gpsSubtitle, icon: "location") }
                 NavigationLink { PhoneConnectionDetail(kind: .internet) } label: { ConnRow(status: ConnectionRules.internet(online: reach.online), title: "Internet", subtitle: reach.online ? "online via \(reach.kind)" : "offline · the app keeps working", icon: "network") }
             }
-            Section("Apple Watch") {
-                NavigationLink { WatchConnectionDetail() } label: { ConnRow(status: watchStatus, title: "Apple Watch", subtitle: watchSubtitle, icon: "applewatch") }
-            }
-            Section {
-                NavigationLink { SensorConnectionDetail(kind: .meter) } label: { ConnRow(status: meterStatus, title: "Power meter (XDS)", subtitle: meterSubtitle, icon: "bolt") }
-                NavigationLink { SensorConnectionDetail(kind: .strap) } label: { ConnRow(status: strapStatus, title: "Heart-rate strap", subtitle: strapSubtitle, icon: "heart") }
-                NavigationLink { SensorConnectionDetail(kind: .speed) } label: { ConnRow(status: .gray, title: "Speed / cadence sensors", subtitle: (device.info?.fw ?? "") >= "0.6.0" ? "pair on the board: Connections › Cadence / Speed" : "needs firmware 0.6.0 (pairs on the board)", icon: "gauge.with.dots.needle.33percent") }
-            } header: { Text("Bluetooth sensors (via the BikeComputer)") } footer: { Text("Sensors pair on the board (its Connections menu: Power meter, Heart rate, Cadence, Speed). The phone shows what the board reports; a direct BLE connection on the board is marked \"direct\", data that passes through this phone \"via phone\".") }
             Section {
                 NavigationLink { HealthConnectionDetail() } label: { ConnRow(status: healthStatus, title: "Apple Health", subtitle: healthSubtitle, icon: "heart.text.square") }
-                ConnRow(status: .gray, title: "WHOOP", subtitle: "not connected · arrives with the account service", icon: "waveform.path.ecg")
-                ConnRow(status: .gray, title: "Garmin Connect", subtitle: "not connected · arrives with the account service", icon: "arrow.triangle.2.circlepath")
-            } header: { Text("Other integrations") } footer: { Text("Cloud services provide recovery and history, never live heart rate. Gray = optional and not set up; nothing is shown from them until they are connected.") }
+                ForEach(ProviderCatalog.planned) { p in
+                    NavigationLink { PlannedProviderDetail(provider: p) } label: { ConnRow(status: ConnectionRules.source(p.status), title: p.name, subtitle: "Planned — not available yet", icon: p.icon) }
+                }
+            } header: { Text("Imported (after the activity)") } footer: { Text("Imported sources add history, recovery and sleep after the activity — never live values. Planned services are not connected and show no data until they are built and you sign in.") }
         }
         .navigationTitle("Connections")
         .onReceive(timer) { tick = $0; health.refresh() }
@@ -49,6 +59,7 @@ struct ConnectionsView: View {
     private var liveNow: BCLink.Live? { device.state == .ready && device.liveIsFresh ? device.live : nil }
     private var boardStatus: ConnStatus { ConnectionRules.board(linkState: device.state, liveFresh: device.liveIsFresh, remembered: device.remembered, autoConnect: store.settings.autoConnectBoard, phoneOnlyMode: store.settings.phoneOnlyMode, pairingLost: device.failure?.action == .repair) }
     private var boardSubtitle: String {
+        if !device.remembered, device.state != .ready, !device.stage.isAttempt, device.stage != .failed { return "optional · not set up" }
         if !store.settings.autoConnectBoard { return "phone link off (your choice)" }
         switch device.state {
         case .ready:
@@ -59,15 +70,16 @@ struct ConnectionsView: View {
             return s
         case .idle:
             if let f = device.failure, f.action == .repair { return "pairing lost — tap for Repair" }
-            return device.remembered ? "not in range · reconnects by itself" : "not paired yet"
+            return device.remembered ? "not in range · reconnects by itself" : "optional · not set up"
         default:
             if device.stage == .failed, let f = device.failure { return "\(f.stage.rawValue.lowercased()) failed — " + (f.action == .repair ? "tap for Repair" : "tap for details") }
             if device.stage == .waiting { return "waiting for the board (not in range)" }
             return device.stage.rawValue.lowercased() + "…"
         }
     }
-    private var bluetoothStatus: ConnStatus { ConnectionRules.bluetooth(linkState: device.state, boardWanted: boardWanted) }
-    private var bluetoothSubtitle: String { switch device.state { case .off: return "Bluetooth is off on the phone"; case .unauthorized: return "permission needed (Settings › Athletics)"; default: return "on" } }
+    private var sensorsWanted: Bool { !hub.ble.paired.isEmpty }
+    private var bluetoothStatus: ConnStatus { ConnectionRules.bluetooth(linkState: device.state, boardWanted: boardWanted || sensorsWanted) }
+    private var bluetoothSubtitle: String { switch device.state { case .off: return "Bluetooth is off on the phone"; case .unauthorized: return "permission needed (iOS Settings)"; default: return "on" } }
     private var gpsRequired: Bool { store.settings.phoneOnlyMode || !device.remembered }
     private var gpsStatus: ConnStatus { ConnectionRules.gps(authorized: location.authorized, sharing: location.sharing, hasFix: location.last != nil, requiredForRides: gpsRequired) }
     private var gpsSubtitle: String { location.authorized ? (location.sharing ? location.status : "ready · starts with a ride") : "location permission needed" }
@@ -77,7 +89,7 @@ struct ConnectionsView: View {
         if !watchEnabled { return "off (your choice)" }
         if watch.hrIsFresh { return "heart rate live · \(watch.hrBpm ?? 0) bpm" }
         if !watch.paired { return "no watch paired with this iPhone" }
-        if !watch.appInstalled { return "Athletics app not installed on the watch" }
+        if !watch.appInstalled { return "watch app not installed" }
         return watch.workoutState == "running" ? "workout running · waiting for heart rate" : "ready · start the workout on the watch"
     }
     private var meterEnabled: Bool { store.settings.enabledConnections.contains("meter") || device.remembered }
@@ -91,6 +103,179 @@ struct ConnectionsView: View {
     private var strapSubtitle: String { strapStatus == .green ? "live via the board" : strapEnabled ? "pair on the board · Settings › Sensors" : "optional" }
     private var healthStatus: ConnStatus { ConnectionRules.health(wanted: store.settings.appleHealthWanted, authorized: health.workoutWriteAuthorized, available: health.available) }
     private var healthSubtitle: String { !health.available ? "not available on this device" : health.workoutWriteAuthorized ? "workouts can be saved" : store.settings.appleHealthWanted ? "permission not granted yet" : "optional · not connected" }
+}
+
+/// The value each metric shows right now and where it comes from — or the plain "No … source".
+struct InUseNowRows: View {
+    @ObservedObject var hub: SensorHub
+    var body: some View {
+        ForEach(MetricKind.allCases, id: \.self) { k in
+            HStack(alignment: .firstTextBaseline) {
+                Text(k.title).font(.subheadline.weight(.semibold)).frame(width: 92, alignment: .leading)
+                if let r = hub.reading(k) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(SourceFormat.value(r) + " " + k.unit).font(.subheadline.monospacedDigit())
+                        Text(r.sourceLabel + (r.quality == .good ? "" : " · " + r.quality.title)).font(.caption).foregroundStyle(r.quality == .unverified ? BC.stale : .secondary)
+                    }
+                } else {
+                    Text(k.missingText).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+}
+
+enum SourceFormat {
+    static func value(_ r: MetricReading) -> String { r.kind == .speed ? String(format: "%.1f", r.value) : "\(r.intValue)" }
+    static func ago(_ d: Date?, now: Date = Date()) -> String {
+        guard let d else { return "never" }
+        let s = Int(now.timeIntervalSince(d))
+        if s < 5 { return "just now" }
+        if s < 60 { return "\(s) s ago" }
+        if s < 3600 { return "\(s / 60) min ago" }
+        return d.formatted(date: .abbreviated, time: .shortened)
+    }
+}
+
+/// Paired direct sensors (one row each) and the "Add a Bluetooth sensor" entry.
+struct BLESensorRows: View {
+    @ObservedObject var ble: BLESensors
+    @ObservedObject var hub: SensorHub
+    var body: some View {
+        ForEach(ble.paired) { s in
+            NavigationLink { BLESensorDetail(ble: ble, hub: hub, sensorId: s.id) } label: {
+                ConnRow(status: ConnectionRules.source(status(s)), title: s.name, subtitle: subtitle(s), icon: icon(s))
+            }
+        }
+        NavigationLink { BLEPairView(ble: ble) } label: {
+            Label(ble.paired.isEmpty ? "Add a Bluetooth sensor (heart rate, power, speed, cadence)" : "Add another Bluetooth sensor", systemImage: "plus.circle").font(.subheadline)
+        }
+    }
+    private func status(_ s: PairedSensor) -> SourceStatus {
+        hub.status(s.sourceId) ?? SourceStatus(descriptor: ble.descriptor(s), state: SourceStateRules.bleSensor(radio: ble.radio, link: ble.link(s.id)), metrics: s.metrics, provides: "", configured: true)
+    }
+    private func subtitle(_ s: PairedSensor) -> String {
+        let st = SourceStateRules.bleSensor(radio: ble.radio, link: ble.link(s.id))
+        let what = s.kinds.isEmpty ? "sensor" : s.kinds.map { $0.title.lowercased() }.joined(separator: " · ")
+        switch st {
+        case .connected:
+            let vals = hub.readings(from: s.sourceId).map { SourceFormat.value($0) + " " + $0.kind.unit }
+            return "connected · " + (vals.isEmpty ? what : vals.joined(separator: " · "))
+        case .connecting: return "\(what) · waiting for the sensor (wake it up)"
+        case .notAuthorized: return "Bluetooth permission needed"
+        default: return ble.radio == .off ? "Bluetooth is off" : "\(what) · not connected"
+        }
+    }
+    private func icon(_ s: PairedSensor) -> String {
+        if s.kinds.contains(.power) { return "bolt" }
+        if s.kinds.contains(.heartRate) { return "heart" }
+        return "gauge.with.dots.needle.33percent"
+    }
+}
+
+/// Search for standard sensors; nothing pairs until the rider taps one.
+struct BLEPairView: View {
+    @ObservedObject var ble: BLESensors
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        List {
+            Section {
+                switch ble.radio {
+                case .off: Text("Bluetooth is off. Turn it on in Control Centre or Settings.").foregroundStyle(BC.warn)
+                case .unauthorized:
+                    Text("This app has no Bluetooth permission.").foregroundStyle(BC.warn)
+                    Button("Open Settings") { DeviceLink.openSettings() }
+                case .unsupported: Text("Bluetooth is not available on this device.").foregroundStyle(.secondary)
+                default:
+                    if ble.discovered.isEmpty {
+                        HStack { Text(ble.scanning ? "Searching… wake the sensor (pedal, spin the wheel, or wear the strap)." : "Search stopped."); Spacer(); if ble.scanning { ProgressView() } }.font(.footnote)
+                    }
+                    ForEach(ble.discovered) { d in
+                        Button { ble.pair(d.id); dismiss() } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(d.name).font(.body.weight(.semibold))
+                                    Text(d.kinds.isEmpty ? "standard sensor" : d.kinds.map(\.title).joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text("\(d.rssi) dBm").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }.frame(minHeight: 44)
+                    }
+                    if !ble.scanning { Button("Search again") { ble.startScan() } }
+                }
+            } header: { Text("Sensors nearby") } footer: {
+                Text("Tap a sensor to add it. Nothing is added automatically. Added sensors reconnect by themselves whenever they are awake and in range. The app only reads from sensors — it never changes their settings or calibration.")
+            }
+            Section("What can be added") {
+                Text("Any standard Bluetooth heart-rate monitor, power meter, or speed / cadence sensor. Watches and bands that broadcast heart rate over Bluetooth also work while broadcasting (for example Garmin \"Broadcast Heart Rate\", WHOOP \"Heart Rate Broadcast\", Polar or COROS heart-rate broadcast).").font(.footnote)
+                Text("A sensor that is already connected to another phone or app may not appear; close that app first.").font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Add a sensor")
+        .onAppear { ble.startScan() }
+        .onDisappear { ble.stopScan() }
+    }
+}
+
+struct BLESensorDetail: View {
+    @ObservedObject var ble: BLESensors
+    @ObservedObject var hub: SensorHub
+    let sensorId: String
+    @State private var confirmForget = false
+    @Environment(\.dismiss) private var dismiss
+    private var sensor: PairedSensor? { ble.paired.first { $0.id == sensorId } }
+    var body: some View {
+        List {
+            if let s = sensor {
+                let st = SourceStateRules.bleSensor(radio: ble.radio, link: ble.link(s.id))
+                Section("Status") {
+                    LabeledContent("Connection", value: st.title)
+                    LabeledContent("Connected by", value: ConnectionMethod.bleDirect.title)
+                    LabeledContent("Data", value: "live")
+                    LabeledContent("Last update", value: SourceFormat.ago(hub.status(s.sourceId)?.lastUpdate ?? ble.lastData[s.id]))
+                    ForEach(hub.readings(from: s.sourceId), id: \.kind) { r in
+                        LabeledContent(r.kind.title, value: SourceFormat.value(r) + " " + r.kind.unit + (r.quality == .good ? "" : " · " + r.quality.title))
+                    }
+                    if let e = ble.lastError, st != .connected { Text(e).font(.footnote).foregroundStyle(.secondary) }
+                }
+                Section("Measures") {
+                    Text(s.metrics.isEmpty ? "Found when the sensor connects." : s.metrics.map(\.title).joined(separator: ", ")).font(.footnote)
+                    if s.kinds.contains(.power) { Text("Power from a meter that has not been checked against a reference is marked unverified; the coach treats it as provisional.").font(.footnote).foregroundStyle(.secondary) }
+                    if s.kinds.contains(.speedCadence) { Text("Speed uses your wheel circumference (Profile › \(hub.ble.wheelMm()) mm).").font(.footnote).foregroundStyle(.secondary) }
+                }
+                Section {
+                    Button("Reconnect") { ble.reconnect(s.id) }.frame(minHeight: 44)
+                    Button("Forget this sensor", role: .destructive) { confirmForget = true }.frame(minHeight: 44)
+                } footer: { Text("Sensors sleep when not in use; they reconnect by themselves once awake. Forget removes it from this phone only.") }
+            } else {
+                Text("This sensor was removed.").foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle(sensor?.name ?? "Sensor")
+        .alert("Forget this sensor?", isPresented: $confirmForget) {
+            Button("Forget", role: .destructive) { ble.forget(sensorId); dismiss() }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("The phone stops connecting to it. You can add it again any time.") }
+    }
+}
+
+/// A cloud provider that is not built yet: honest status, what it will provide, what works today.
+struct PlannedProviderDetail: View {
+    let provider: PlannedProvider
+    var body: some View {
+        List {
+            Section("Status") {
+                LabeledContent("Status", value: "Planned — not available yet")
+                LabeledContent("Data", value: "after the activity (imported)")
+            }
+            Section("Will provide") { Text(provider.willProvide).font(.footnote) }
+            Section("Live heart rate today") { Text(provider.liveNow).font(.footnote) }
+            Section { Text("This connection needs an approved developer account with \(provider.name) and your sign-in. Nothing is read from \(provider.name) in this version.").font(.footnote).foregroundStyle(.secondary) }
+        }.navigationTitle(provider.name)
+    }
 }
 
 struct ConnRow: View {
@@ -168,10 +353,10 @@ struct BoardConnectionDetail: View {
                 step(4, "Done: the phone is remembered on the board and reconnects by itself; the profile is compared and, after your confirmation, the phone's profile is applied.")
             }
             Section("What it provides") {
-                Text("Live power and cadence from the XDS, ride state, time and distance, board battery estimate, heart rate from a strap paired on the board, finished rides (history sync), Wi-Fi setup, device settings and the shared athlete profile (firmware 0.6.0+).").font(.footnote)
+                Text("Live power and cadence from the power meter paired on the board, ride state, time and distance, board battery estimate, heart rate from a strap paired on the board, finished rides (history sync), Wi-Fi setup, device settings and the shared athlete profile (firmware 0.6.0+).").font(.footnote)
             }
             Section("Troubleshooting") {
-                Text("• Nothing found: Phone link must be ON on the board (Connections › Phone); Bluetooth on the phone must be on; firmware 0.5.0 stops advertising when its screen sleeps.\n• \"Peer removed pairing information\" / pairing refused: the board lost this phone's keys (data reset, Forget phone, restored backup). Use Repair below.\n• Connected but no values: pedal once so the XDS wakes; the board shows the meter state under Connections › Power meter.\n• Drops when the board screen turns off: fixed in firmware 0.6.0.").font(.footnote)
+                Text("• Nothing found: Phone link must be ON on the board (Connections › Phone); Bluetooth on the phone must be on; firmware 0.5.0 stops advertising when its screen sleeps.\n• \"Peer removed pairing information\" / pairing refused: the board lost this phone's keys (data reset, Forget phone, restored backup). Use Repair below.\n• Connected but no values: pedal once so the power meter wakes; the board shows the meter state under Connections › Power meter.\n• Drops when the board screen turns off: fixed in firmware 0.6.0.").font(.footnote)
                 Text("Sent: \(device.stats.sentGPS) GPS · \(device.stats.sentHR) HR · \(device.stats.sentTime) time   Received: \(device.stats.liveMsgs) live · \(device.stats.events) events · \(device.stats.rejected) rejected · \(device.stats.disconnects) drops").font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -364,7 +549,7 @@ struct PhoneConnectionDetail: View {
             switch kind {
             case .bluetooth:
                 Section("Status") { LabeledContent("Bluetooth", value: device.state == .off ? "off" : device.state == .unauthorized ? "permission needed" : "on") }
-                Section("Used for") { Text("The BikeComputer link (power, cadence, ride control, GPS to the board). Apple Watch uses its own connection.").font(.footnote) }
+                Section("Used for") { Text("Bluetooth sensors paired with this phone (heart rate, power, speed, cadence) and the optional BikeComputer link. Apple Watch uses its own connection.").font(.footnote) }
                 Section("Troubleshooting") { Text("Turn Bluetooth on in Control Centre or Settings. If permission was denied: Settings › Athletics › Bluetooth.").font(.footnote) }
             case .gps:
                 Section("Status") {
@@ -427,17 +612,17 @@ struct SensorConnectionDetail: View {
                     if let w = live?.powerW { LabeledContent("Power", value: "\(w) W") }
                     if let c = live?.cadenceRpm { LabeledContent("Cadence", value: "\(c) rpm") }
                 }
-                Section("Pairing") { Text("The XDS pairs on the BikeComputer (Settings › Sensors › Power meter). Pedal once to wake it; the board connects to the meter before it accepts the phone.").font(.footnote) }
+                Section("Pairing") { Text("A power meter can pair on the BikeComputer (Settings › Sensors › Power meter) or directly with this phone (Connections › Add a Bluetooth sensor). Pedal once to wake it.").font(.footnote) }
                 Section("Measurements") { Text("Power (W), cadence (rpm), energy (kJ), zones — recorded by the board, mirrored here.").font(.footnote) }
             case .strap:
                 Section("Status") { LabeledContent("Heart rate from a strap", value: live?.hrSource == .bleStrap ? "\(live?.hrBpm ?? 0) bpm live" : "none") }
                 Section {
                     Toggle("I use a heart-rate strap", isOn: Binding(get: { store.settings.enabledConnections.contains("strap") }, set: { if $0 { store.settings.enabledConnections.insert("strap") } else { store.settings.enabledConnections.remove("strap") } }))
-                } footer: { Text("Pairs on the board (Settings › Sensors › Heart rate, standard Bluetooth 0x180D). A strap on the board wins over the watch unless you prefer the watch in Settings.") }
+                } footer: { Text("Pairs on the board (Settings › Sensors › Heart rate, standard Bluetooth 0x180D) — or directly with this phone under Bluetooth sensors. A strap wins over the watch unless you prefer the watch in Profile.") }
             case .speed:
-                Section { Text("Standard Bluetooth speed/cadence sensors (0x1816) are not supported by firmware 0.6.0. Speed and distance come from the phone's GPS; cadence from the XDS. Planned for a later firmware.").font(.footnote) }
+                Section { Text("Standard Bluetooth speed / cadence sensors pair directly with this phone: Connections › Add a Bluetooth sensor. On the BikeComputer they need a firmware that lists Cadence / Speed under Connections. Without one, speed and distance come from the phone's GPS and cadence from the power meter.").font(.footnote) }
             }
-        }.navigationTitle(kind == .meter ? "Power meter" : kind == .strap ? "Heart-rate strap" : "Speed / cadence")
+        }.navigationTitle(kind == .meter ? "Power meter via BikeComputer" : kind == .strap ? "Heart-rate strap via BikeComputer" : "Speed / cadence")
     }
 }
 
