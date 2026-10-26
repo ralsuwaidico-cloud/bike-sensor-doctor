@@ -171,7 +171,10 @@ final class LayoutAudit: XCTestCase {
         var rides: [[String: Any]] = []
         for k in 0..<16 {
             let m = cal.date(byAdding: .day, value: -7 * (k + 1), to: monday)!
-            for (j, len) in [[50, 75], [45, 60, 110], [60, 90], [40, 70, 95]][k % 4].enumerated() {
+            let pattern: [[Int]] = [[50, 75], [45, 60, 110], [60, 90], [40, 70, 95]]
+            let lens: [Int] = pattern[k % 4]
+            for j in 0..<lens.count {
+                let len = lens[j]
                 let start = cal.date(byAdding: .day, value: j * 2 + 1, to: m)!
                 rides.append(["id": UUID().uuidString, "start": d(start, 6.5), "durationS": len * 60, "distanceM": len * 470, "avgHR": 136, "maxHR": 160,
                               "zoneSeconds": [len * 6, len * 42, len * 12, 0, 0, 0, 0], "recorder": "phone", "sources": ["Phone GPS"], "demo": false, "samples": [] as [Any]])

@@ -152,7 +152,7 @@ struct RideDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text(ride.start.dayAndDate).font(.system(size: 26, weight: .bold, design: .rounded)); Spacer(); Pill(text: "recorded by \(ride.recordedBy)", color: BC.accent) }
+                FlowRow(spacing: DS.s) { Text(ride.start.dayAndDate).font(DS.screenTitle); Pill(text: "recorded by \(ride.recordedBy)", color: BC.accent) }
                 RideSummaryTiles(ride: ride, units: store.settings.units)
                 graph
                 zones

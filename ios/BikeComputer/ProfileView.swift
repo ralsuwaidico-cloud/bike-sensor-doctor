@@ -16,7 +16,7 @@ struct ProfileTabView: View {
             List {
                 Section {
                     HStack(spacing: 14) {
-                        ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(BC.accent) }
+                        ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(.title2, design: .rounded).weight(.bold)).foregroundStyle(BC.accent) }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
                             Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
@@ -41,7 +41,7 @@ struct ProfileTabView: View {
                     NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
                     NavigationLink("Terms of use") { LegalView(kind: .terms) }
                     if let mail = SupportInfo.mailURL, let address = SupportInfo.email {
-                        Link(destination: mail) { HStack { Text("Contact support"); Spacer(); Text(address).font(.footnote).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7) } }
+                        Link(destination: mail) { HStack { Text("Contact support"); Spacer(); Text(address).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) } }
                     }
                     Link(destination: SupportInfo.supportPage) { HStack { Text("Support page"); Spacer(); Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary) } }
                     LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1.2")

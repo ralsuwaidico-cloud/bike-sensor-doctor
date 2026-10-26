@@ -138,7 +138,7 @@ struct WeekPreviewSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Your week").font(.system(size: 26, weight: .bold, design: .rounded))
+                    Text("Your week").font(DS.screenTitle)
                     ForEach(0..<7, id: \.self) { i in PreviewDayRow(index: i, day: draft.days[i]) }
                     Card {
                         LabeledContent("Cycling", value: "\(draft.cycleDays) days · \(Fmt.duration(minutes: draft.cycleMinutes)) of \(store.profile.hoursPerWeek) h")
@@ -193,7 +193,7 @@ struct PreviewDayRow: View {
     private func assignmentLine(_ a: DayAssignment) -> some View {
         HStack(spacing: 6) {
             Image(systemName: a.sport == .cycling ? "bicycle" : "dumbbell").font(.caption).foregroundStyle(BC.accent)
-            Text(a.sport == .cycling ? (a.cyclingType?.title ?? "Ride · coach decides") : (a.strengthType?.title ?? "Strength · coach decides")).font(.subheadline).lineLimit(1).minimumScaleFactor(0.8)
+            Text(a.sport == .cycling ? (a.cyclingType?.title ?? "Ride · coach decides") : (a.strengthType?.title ?? "Strength · coach decides")).font(.subheadline).fixedSize(horizontal: false, vertical: true)
             Spacer()
             Text(Fmt.duration(minutes: a.minutes)).font(.subheadline.weight(.semibold)).monospacedDigit()
             if a.fixed { Pill(text: "fixed", color: BC.stale) }

@@ -12,7 +12,7 @@ struct StrengthTypeGrid: View {
                 Button { focus = f } label: {
                     VStack(spacing: 4) {
                         Image(systemName: f.icon).font(.system(size: 18, weight: .semibold))
-                        Text(f.short).font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                        Text(f.short).font(.footnote.weight(.semibold)).lineLimit(2).multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, minHeight: 52).padding(.vertical, 6)
                     .background(focus == f ? BC.accent.opacity(0.18) : Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
@@ -55,7 +55,7 @@ struct QuickStrengthLogSheet: View {
                     DatePicker("When", selection: $when, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
                 }
                 Section("Duration") {
-                    HStack { Text(Fmt.duration(minutes: minutes)).font(BC.numFont).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6); Spacer() }
+                    HStack { Text(Fmt.duration(minutes: minutes)).font(BC.numFont).monospacedDigit(); Spacer() }
                     Slider(value: Binding(get: { Double(minutes) }, set: { minutes = Int($0) }), in: 10...180, step: 5).tint(BC.accent)
                 }
                 Section {

@@ -57,7 +57,7 @@ struct OnboardingView: View {
     // MARK: Stage A
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(size: 36, weight: .bold, design: .rounded)) }
+            HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(.largeTitle, design: .rounded).weight(.bold)) }
             Text("Cycling and strength training in one plan, with one coach. Works with your iPhone alone, standard Bluetooth sensors, Apple Watch and Apple Health — and with the optional BikeComputer device.").foregroundStyle(.secondary)
             Card {
                 Eyebrow(t: "Get started")
@@ -70,7 +70,7 @@ struct OnboardingView: View {
 
     // MARK: Stage B
     private func title(_ t: String, _ sub: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) { Text(t).font(.system(size: 30, weight: .bold, design: .rounded)); Text(sub).foregroundStyle(.secondary) }
+        VStack(alignment: .leading, spacing: 6) { Text(t).font(.system(.title, design: .rounded).weight(.bold)).fixedSize(horizontal: false, vertical: true); Text(sub).foregroundStyle(.secondary) }
     }
     private func next(_ label: String = "Next") -> some View {
         Button { step += 1 } label: { Text(label).frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)

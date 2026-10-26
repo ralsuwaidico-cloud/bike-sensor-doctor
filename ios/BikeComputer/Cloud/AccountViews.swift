@@ -113,7 +113,7 @@ struct AccountSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    HStack(spacing: 10) { CycliftMark(size: 40); Text(mode == 1 ? "Create your account" : "Sign in").font(.system(size: 26, weight: .bold, design: .rounded)) }
+                    HStack(spacing: 10) { CycliftMark(size: 40); Text(mode == 1 ? "Create your account" : "Sign in").font(DS.screenTitle) }
                     if account.state == .notConfigured {
                         Card { Eyebrow(t: "Not available yet"); Text("Cyclift accounts are not configured in this build. Everything you do stays on this phone and works offline; you can keep using Cyclift as a guest.").foregroundStyle(.secondary) }
                     } else {

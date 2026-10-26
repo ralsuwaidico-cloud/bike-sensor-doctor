@@ -173,7 +173,7 @@ struct PlanView: View {
             HStack(spacing: 4) {
                 ForEach(0..<7, id: \.self) { i in
                     VStack(spacing: 3) {
-                        Text(WeeklyAvailability.dayNames[i]).font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary)
+                        Text(WeeklyAvailability.dayNames[i]).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).lineLimit(1)
                         Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].isRest ? (a.days[i].flexible ? BC.stale : .secondary) : BC.accent)
                         Text(a.days[i].isRest ? (a.days[i].flexible ? "flex" : "—") : a.days[i].activity == .both ? "\(Fmt.compact(minutes: a.days[i].cycleMinutes))+\(Fmt.compact(minutes: a.days[i].liftingMinutes))" : Fmt.compact(minutes: a.days[i].totalMinutes)).font(.system(size: 10, weight: .bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                     }.frame(maxWidth: .infinity)
@@ -422,10 +422,10 @@ struct Spark: View {
     let title: String; let values: [Int]; let unit: String; let color: Color
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title.uppercased()).font(.system(size: 8, weight: .heavy)).foregroundStyle(.secondary)
+            Text(title.uppercased()).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Chart(Array(values.enumerated()), id: \.offset) { i, v in LineMark(x: .value("i", i), y: .value("v", v)).foregroundStyle(color).interpolationMethod(.catmullRom) }
                 .chartXAxis(.hidden).chartYAxis(.hidden).frame(height: 28)
-            Text("\(values.last ?? 0) \(unit)").font(.system(size: 11, weight: .bold, design: .rounded)).monospacedDigit()
+            Text("\(values.last ?? 0) \(unit)").font(.caption.weight(.bold)).monospacedDigit()
         }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
     }
 }
@@ -439,20 +439,19 @@ struct TimelineRow: View {
                 Circle().fill(statusColor).frame(width: 6, height: 6)
             }.frame(width: 24)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline) {
+                FlowRow(spacing: DS.s) {
                     Text(entry.date.dayAndDate).font(.caption.weight(.heavy)).foregroundStyle(.secondary)
-                    Text(entry.title).font(.subheadline.weight(.bold)).lineLimit(1)
-                    Spacer()
+                    Text(entry.title).font(.subheadline.weight(.bold))
                     Pill(text: entry.status.rawValue, color: statusColor)
                 }
-                HStack(spacing: 10) {
+                FlowRow(spacing: 10) {
                     metric(entry.minutes > 0 ? Fmt.duration(minutes: entry.minutes) : "no duration", "")
                     if let d = entry.distanceM { metric(Fmt.km(d, imperial: units == .imperial), "") }
                     if let p = entry.avgPower { metric("\(p)", "W" + (entry.normalizedPower.map { " · NP \($0)" } ?? "")) }
                     if let h = entry.avgHR { metric("\(h)", "bpm" + (entry.maxHR.map { " · max \($0)" } ?? "")) }
                     if let c = entry.cadence { metric("\(c)", "rpm") }
                     if let t = entry.tss { metric("\(t)", "TSS") }
-                }.font(.caption).lineLimit(1).minimumScaleFactor(0.7)
+                }.font(.caption)
                 if entry.zoneSeconds.reduce(0, +) > 0 { ZoneStrip(seconds: entry.zoneSeconds) }
                 if let d = entry.detail { Text(d).font(.caption2).foregroundStyle(.secondary) }
                 if let r = entry.recorder { Text(entry.isStrength ? r : "recorded by \(r)").font(.caption2).foregroundStyle(.secondary) }
