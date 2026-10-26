@@ -1,0 +1,90 @@
+Cyclift App Store Connect — mode ATTACH (drafts only; never submits, releases, accepts agreements or sets a paid price)
+
+Listing texts in ios/store/en-US (local checks):
+  subtitle: 29/30 characters, wording OK
+  keywords: 98/100 characters, wording OK
+  promotionalText: 153/170 characters, wording OK
+  description: 2960/4000 characters, wording OK
+  review notes: 1624/4000 characters
+Listing URLs (fetched from this runner):
+  marketing: https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/index.html — HTTP 404 (not published yet?)
+  support: https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/support.html — HTTP 404 (not published yet?)
+  privacy: https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/privacy.html — HTTP 404 (not published yet?)
+  terms: https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/terms.html — HTTP 404 (not published yet?)
+
+App record: found; store name 'Cyclift', primary language en-US
+  content rights: DOES_NOT_USE_THIRD_PARTY_CONTENT
+  bundle ID capabilities (read only): APPLE_ID_AUTH, HEALTHKIT, IN_APP_PURCHASE
+
+App information:
+  app info d42c830b…: state PREPARE_FOR_SUBMISSION — computed rating: appStoreAgeRating=FOUR_PLUS, brazilAgeRating=L, brazilAgeRatingV2=SELF_RATED_L
+  locale en-US: name 'Cyclift', subtitle matches, privacy URL matches
+  categories now: HEALTH_AND_FITNESS / SPORTS
+  age rating declaration: 30 questions; 24/24 answered as intended; content levels other than NONE: none; 'yes' answers: healthOrWellnessTopics; optional left empty: developerAgeRatingInfoUrl, gracRatingClassificationNumber, kidsAgeBand
+
+Pricing and availability:
+  price schedule: base territory USA; manual prices: USA 0.0
+  availability: 175 of 175 territories available (Apple lists 175), available in new territories: True
+  territory content statuses: ['CANNOT_SELL', 'AVAILABLE_FOR_SALE_UNRELEASED_APP']; ['TRADER_STATUS_NOT_PROVIDED', 'CANNOT_SELL', 'AVAILABLE_FOR_SALE_UNRELEASED_APP']
+  EU Digital Services Act trader status not provided — blocks sale in 27 territories: AUT, BEL, BGR, CYP, CZE, DEU, DNK, ESP, EST, FIN, FRA, GRC, HRV, HUN, IRL, ITA, LTU, LUX, LVA, MLT, NLD, POL, PRT, ROU, SVK, SVN, SWE
+
+Version:
+  version 1.0.0: PREPARE_FOR_SUBMISSION, release type MANUAL, copyright set
+  build attached: none
+
+Version text:
+  version localization en-US: description matches, keywords matches, promotionalText matches, supportUrl matches, marketingUrl matches; whatsNew empty (not used for a first version)
+
+App Review:
+  review detail: notes differ; demo account required: False; contact fields: FirstName empty, LastName empty, Phone empty, Email empty
+
+Build attachment:
+  waiting for build 61 of 1.0.0 to be VALID (up to 75 min)
+  build 61: VALID, expired False, usesNonExemptEncryption False
+  attach build 61 to version 1.0.0: done
+
+Screenshots:
+  set APP_WATCH_ULTRA: 1 screenshot(s) — COMPLETE
+  set APP_IPHONE_67: 5 screenshot(s) — COMPLETE, COMPLETE, COMPLETE, COMPLETE, COMPLETE
+
+Builds and review submissions (read only):
+  build 61 (1.0.0): VALID, uploaded 2026-10-26T05:01, encryption answer False, expired False
+  build 58 (1.0.0): VALID, uploaded 2026-10-26T03:23, encryption answer False, expired False
+  build 40 (0.8.0): VALID, uploaded 2026-10-25T13:02, encryption answer False, expired False
+  build 36 (0.7.0): VALID, uploaded 2026-10-25T10:34, encryption answer False, expired False
+  build 33 (0.6.0): VALID, uploaded 2026-10-25T03:13, encryption answer False, expired False
+  review submissions: none
+
+SUBMISSION READINESS (Apple validates the rest when the owner presses Add for Review):
+  [  OK   ] App name
+  [  OK   ] Subtitle
+  [  OK   ] Privacy policy URL (set in ASC)
+  [ OWNER ] Privacy page online                            publish GitHub Pages (see APP_STORE_SUBMISSION.md)
+  [ OWNER ] Support page online                            publish GitHub Pages (see APP_STORE_SUBMISSION.md)
+  [ OWNER ] Marketing page online                          publish GitHub Pages (see APP_STORE_SUBMISSION.md)
+  [  OK   ] Support URL (set in ASC)
+  [  OK   ] Description
+  [  OK   ] Keywords
+  [  OK   ] Promotional text (optional)
+  [  OK   ] Category Health & Fitness / Sports
+  [  OK   ] Copyright
+  [  OK   ] Version string 1.0.0                           PREPARE_FOR_SUBMISSION
+  [  OK   ] Release type MANUAL                            MANUAL
+  [  OK   ] Age rating questionnaire                       computed FOUR_PLUS
+  [  OK   ] Content rights
+  [  OK   ] Price Free
+  [  OK   ] Availability (all territories + new)           175/175 territories, new territories True
+  [  OK   ] iPhone 6.9"/6.7" screenshots                   5 complete — retake from the final build
+  [  OK   ] Apple Watch screenshots (app has a Watch app)  1 complete
+  [  OK   ] Build attached                                 61 (VALID)
+  [  OK   ] Export compliance answered                     False
+  [MISSING] App Review notes
+  [ OWNER ] App Review contact (name/phone/e-mail)         absent
+  [ OWNER ] EU trader status (Digital Services Act)        not provided — app cannot be sold in 27 EU territories
+  [ OWNER ] App Privacy questionnaire                      not readable through the API: 'Data Not Collected'
+  [ OWNER ] Agreements / tax / banking                     not in the API; Free Apps agreement — check the Business page
+  [  OK   ] No review submission exists
+  -> 1 missing for the script/CI, 7 owner items
+
+Problems: none
+mode attach  commit 63c81bf6dd86a039539b48735b2cd533e693cd47  trigger asc-listing/attach-61  app code ios/dev
