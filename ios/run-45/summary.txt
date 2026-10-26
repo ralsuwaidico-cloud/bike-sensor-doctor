@@ -1,0 +1,19 @@
+BikeComputer iOS CI — build 45 — 2026-10-26 06:18 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+RESULT tests: ok (Executed 116 tests, with 0 failures)
+RESULT launch smoke (Release): FAILED (exit 65)
+Accounts: not configured (SUPABASE_URL / SUPABASE_ANON_KEY secrets absent) — the app runs guest-only
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 1.0.0 (45) — display name 'Athletics'
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (45) — display name 'Athletics'
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 6515413 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: skipped (tests failed)
+commit b67cfd46ccbbb8f099dfea2bda2a56e336476205  branch ios/dev  job failure
