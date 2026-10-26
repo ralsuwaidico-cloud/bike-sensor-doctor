@@ -12,6 +12,7 @@
 #include <string.h>
 
 static int fails, checks;
+#include "diag_fixture.h"
 #define CHECK(c, ...) do { checks++; if (!(c)) { fails++; printf("FAIL %s:%d %s  ", __FILE__, __LINE__, #c); printf(__VA_ARGS__); printf("\n"); } } while (0)
 
 static void hex(const uint8_t *b, size_t n, char *out) { for (size_t i = 0; i < n; i++) sprintf(out + 3 * i, "%02X%s", b[i], i + 1 < n ? " " : ""); if (!n) out[0] = 0; }
@@ -190,6 +191,7 @@ static void test_server(void)
         bc_diag_info_t *r = &S_IDX.r[S_IDX.n++]; r->id = (uint32_t)(10 + i); r->size = (uint32_t)len; r->crc = bc_crc32(0, S_TXT[i], len); r->kind = (uint8_t)(i ? 3 : 1);
     }
     bc_diag_store_t st = { NULL, s_index, s_read, s_mark }; bc_diag_srv_t s; bc_diag_srv_init(&s, &st);
+    bc_diag_srv_set_link(&s, 185, false);                 /* iOS negotiates ATT MTU 185 */
     uint8_t o[BC_LINK_MAX]; size_t n;
     uint8_t notdiag[8] = { BC_MSG_PROFILE_GET }; CHECK(!bc_diag_srv_write(&s, notdiag, 8), "other messages are left to app_psvc");
     n = req(&s, BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0, o);
@@ -201,7 +203,7 @@ static void test_server(void)
     /* pull report 10 with max_len 160: the board clamps to 155; interrupt after 9 chunks, resume at the offset reached */
     static uint8_t got[5000]; uint32_t off = 0; int chunks = 0; bool last = false;
     while (!last && chunks < 100) {
-        if (chunks == 9) { bc_diag_srv_reset(&s); }   /* the phone disconnected; on reconnect it asks again from `off` */
+        if (chunks == 9) { bc_diag_srv_reset(&s); bc_diag_srv_set_link(&s, 185, false); }   /* the phone disconnected; on reconnect it asks again from `off` */
         n = req(&s, BC_MSG_DIAG_CHUNK_REQ, 10, off, 160, 0, o);
         bc_diag_chunk_t c; if (!(n && bc_link_decode_diag_chunk(o, n, &c))) { CHECK(0, "chunk %d did not decode", chunks); break; }
         CHECK(c.offset == off && c.len <= BC_DIAG_CHUNK_MAX && n <= BC_LINK_MAX, "chunk at %lu len %u", (unsigned long)c.offset, c.len);
@@ -232,6 +234,120 @@ static void test_server(void)
         while ((n = bc_diag_srv_next(&s, o, sizeof o, 1, 0)) > 0) { replies++; if (n > BC_LINK_MAX) { CHECK(0, "oversized reply"); break; } }
     }
     CHECK(replies > 0, "fuzzed 20000 random DIAG messages (%d replies, all <= 180 bytes)", replies);
+}
+
+
+/* ------------------------------------------------------------------ 0.7.3 final: chunk size from the NEGOTIATED ATT MTU */
+static void test_chunk_size_contract(void)
+{
+    /* overhead is exact: an n-byte chunk is n + 25 bytes on the wire, for every n */
+    for (unsigned d = 0; d <= BC_DIAG_CHUNK_MAX; d++) {
+        bc_diag_chunk_t c; memset(&c, 0, sizeof c); c.id = 0xFFFFFFFF; c.offset = 0xFFFFFFFF; c.len = (uint8_t)d; c.last = true;
+        uint8_t b[BC_LINK_MAX]; size_t n = bc_link_encode_diag_chunk(&c, b, sizeof b, 1, 0);
+        if (n != d + BC_DIAG_CHUNK_OVERHEAD) { CHECK(0, "chunk of %u data bytes is %zu bytes (want %u)", d, n, d + BC_DIAG_CHUNK_OVERHEAD); break; }
+    }
+    CHECK(BC_DIAG_CHUNK_OVERHEAD == 25 && BC_DIAG_CHUNK_MAX == 155, "overhead 25 = 8 + 6 + 6 + 2 + 3; max data 155 = 180 - 25 (data 0..155 checked)");
+    /* the formula: min(max_len, 155, ATT_MTU - 3 - 25) */
+    static const struct { uint16_t max_len, mtu, want; } T[] = {
+        { 160, 23, 0 }, { 155, 23, 0 }, { 0, 0, 0 }, { 155, 28, 0 }, { 155, 29, 1 }, { 155, 100, 72 }, { 160, 185, 155 }, { 155, 185, 155 },
+        { 0, 185, 155 }, { 160, 247, 155 }, { 160, 517, 155 }, { 50, 517, 50 }, { 157, 185, 155 }, { 72, 100, 72 }, { 73, 100, 72 } };
+    for (size_t i = 0; i < sizeof T / sizeof *T; i++)
+        CHECK(bc_diag_chunk_data_max(T[i].max_len, T[i].mtu) == T[i].want, "data_max(max_len %u, MTU %u) = %u (want %u)", T[i].max_len, T[i].mtu,
+              bc_diag_chunk_data_max(T[i].max_len, T[i].mtu), T[i].want);
+    printf("  chunk data: MTU 23 -> %u (ERR 5), 100 -> %u, 185 -> %u, 247 -> %u, 517 -> %u\n", bc_diag_chunk_data_max(155, 23), bc_diag_chunk_data_max(155, 100),
+           bc_diag_chunk_data_max(155, 185), bc_diag_chunk_data_max(155, 247), bc_diag_chunk_data_max(155, 517));
+    /* the old phone request (max_len 160, a 185-byte message) never produces an oversized notification at any MTU */
+    for (unsigned mtu = 23; mtu <= 517; mtu++) {
+        unsigned d = bc_diag_chunk_data_max(160, (uint16_t)mtu);
+        if (d && (d + BC_DIAG_CHUNK_OVERHEAD > mtu - 3 || d + BC_DIAG_CHUNK_OVERHEAD > BC_LINK_MAX)) { CHECK(0, "MTU %u: %u data bytes do not fit", mtu, d); break; }
+    }
+    CHECK(1, "every MTU 23..517: chunk + 25 <= min(MTU - 3, 180)");
+}
+
+/* the firmware's real report, pulled at each MTU with the request Cyclift sends on that link; CRC over the reassembled bytes */
+static void test_fixture_transfers(void)
+{
+    fx_store_init();
+    const bc_diag_info_t *R = &FX_IDX.r[0];
+    CHECK(R->size > 3000 && R->size == FX_LEN && strstr(FX_TXT, "[backtrace]") && strstr(FX_TXT, "..:..:..:..:55:4") && !strstr(FX_TXT, "C1:22"),
+          "fixture report from the real builder: %lu bytes, crc %08lX, redacted", (unsigned long)R->size, (unsigned long)R->crc);
+    static const uint16_t MTUS[] = { 23, 100, 185, 247, 517 };
+    for (size_t t = 0; t < sizeof MTUS / sizeof *MTUS; t++) {
+        uint16_t mtu = MTUS[t], pml = fx_phone_max_len(mtu);
+        bc_diag_srv_t s; fx_srv(&s, mtu, false);
+        uint8_t o[BC_LINK_MAX]; size_t n;
+        if (!pml) {
+            n = req(&s, BC_MSG_DIAG_CHUNK_REQ, R->id, 0, 160, 0, o); bc_diag_err_t e;
+            CHECK(bc_link_decode_diag_err(o, n, &e) && e.code == BC_DIAG_ERR_MTU && s.mtu_errs == 1, "MTU %u: Cyclift does not ask; a request anyway -> DIAG_ERR 5", mtu);
+            continue;
+        }
+        static uint8_t got[BC_DIAG_REPORT_MAX]; uint32_t off = 0; int chunks = 0; bool last = false, sizes_ok = true;
+        while (!last && chunks < 1000) {
+            n = req(&s, BC_MSG_DIAG_CHUNK_REQ, R->id, off, pml, 0, o);
+            bc_diag_chunk_t c; if (!bc_link_decode_diag_chunk(o, n, &c)) { CHECK(0, "MTU %u chunk %d", mtu, chunks); break; }
+            if (n + 3 > mtu || n > BC_LINK_MAX || c.offset != off || (!c.last && c.len != bc_diag_chunk_data_max(pml, mtu))) sizes_ok = false;
+            memcpy(got + off, c.data, c.len); off += c.len; last = c.last; chunks++;
+        }
+        uint32_t want_chunks = (R->size + bc_diag_chunk_data_max(pml, mtu) - 1) / bc_diag_chunk_data_max(pml, mtu);
+        CHECK(sizes_ok && off == R->size && (uint32_t)chunks == want_chunks && bc_crc32(0, got, off) == R->crc,
+              "MTU %u: max_len %u, %d chunks of %u, every notification <= MTU-3, crc32 %08lX ok", mtu, pml, chunks, bc_diag_chunk_data_max(pml, mtu), (unsigned long)bc_crc32(0, got, off));
+    }
+    /* ride priority in the server: chunks BUSY while a ride records, LIST + ACK still answered, chunks again after the ride */
+    bc_diag_srv_t s; fx_srv(&s, 185, true); uint8_t o[BC_LINK_MAX]; size_t n; bc_diag_err_t e; bc_diag_info_t i;
+    CHECK(!bc_diag_srv_chunk_next(&s), "nothing due");
+    n = req(&s, BC_MSG_DIAG_CHUNK_REQ, R->id, 0, 155, 0, o); CHECK(bc_link_decode_diag_err(o, n, &e) && e.code == BC_DIAG_ERR_BUSY && s.busy_ride == 1, "ride recording: CHUNK_REQ -> BUSY");
+    n = req(&s, BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0, o); CHECK(bc_link_decode_diag_info(o, n, &i) && i.id == R->id, "ride recording: LIST still answered");
+    while (bc_diag_srv_next(&s, o, sizeof o, 1, 0)) {}
+    bc_diag_srv_set_link(&s, 185, false);
+    bc_diag_chunk_req_t q = { R->id, 0, 155 }; uint8_t m[BC_LINK_MAX]; n = bc_link_encode_diag_chunk_req(&q, m, sizeof m, 1, 0); bc_diag_srv_write(&s, m, n);
+    CHECK(bc_diag_srv_chunk_next(&s), "after the ride: a chunk is due (the app layer paces it)");
+    bc_diag_chunk_t c; n = bc_diag_srv_next(&s, o, sizeof o, 1, 0); CHECK(bc_link_decode_diag_chunk(o, n, &c) && c.len == 155, "after the ride: chunk sent");
+    CHECK(!bc_diag_pace_ok(1000, 900, true, true) && bc_diag_pace_ok(1100, 900, true, true) && !bc_diag_pace_ok(5000, 0, true, false) && bc_diag_pace_ok(5, 0, false, true),
+          "pacing: >= %u ms between chunks and only with link room", BC_DIAG_CHUNK_GAP_MS);
+}
+
+/* iOS -> firmware: the exact bytes Cyclift's encoder produces (DiagTransferTests / DiagFirmwareVectorTests assert the Swift
+   encoder emits these) go through the firmware parser and server */
+static size_t unhex(const char *h, uint8_t *b) { size_t n = 0; while (*h) { while (*h == ' ') h++; if (!*h) break; unsigned v; sscanf(h, "%2x", &v); b[n++] = (uint8_t)v; h += 2; } return n; }
+static void test_ios_requests(void)
+{
+    uint8_t b[64]; size_t n;
+    n = unhex("80 00 01 00 00 00 00 00", b); CHECK(bc_link_decode_diag_list_req(b, n), "iOS DIAG_LIST_REQ parses");
+    bc_diag_chunk_req_t q;
+    n = unhex("83 00 02 00 00 00 00 00 01 04 07 00 00 00 02 04 40 01 00 00 03 02 A0 00", b);
+    CHECK(bc_link_decode_diag_chunk_req(b, n, &q) && q.id == 7 && q.offset == 320 && q.max_len == 160, "iOS (old) CHUNK_REQ id 7 off 320 max 160 parses");
+    n = unhex("83 00 03 00 00 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 02 9B 00", b);
+    CHECK(bc_link_decode_diag_chunk_req(b, n, &q) && q.id == 7 && q.offset == 0 && q.max_len == 155, "iOS CHUNK_REQ at MTU 185 (max_len 155) parses");
+    n = unhex("83 00 04 00 00 00 00 00 01 04 07 00 00 00 02 04 90 00 00 00 03 02 48 00", b);
+    CHECK(bc_link_decode_diag_chunk_req(b, n, &q) && q.offset == 144 && q.max_len == 72, "iOS CHUNK_REQ at MTU 100 (max_len 72) parses");
+    bc_diag_ack_t a; n = unhex("85 00 05 00 00 00 00 00 01 04 07 00 00 00 02 04 26 39 F4 CB", b);
+    CHECK(bc_link_decode_diag_ack(b, n, &a) && a.id == 7 && a.crc == 0xCBF43926u, "iOS DIAG_ACK parses");
+    /* end to end through the server with the fixture store: the iOS ACK of the real report marks it sent only on a crc match */
+    fx_store_init(); bc_diag_srv_t s; fx_srv(&s, 185, false); uint8_t o[BC_LINK_MAX]; bc_diag_info_t i;
+    n = unhex("83 00 03 00 00 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 02 9B 00", b); bc_diag_srv_write(&s, b, n);
+    bc_diag_chunk_t c; size_t k = bc_diag_srv_next(&s, o, sizeof o, 1, 0);
+    CHECK(bc_link_decode_diag_chunk(o, k, &c) && c.len == 155 && k == 180 && !memcmp(c.data, FX_TXT, 155), "iOS request at MTU 185 -> a full 180-byte chunk");
+    bc_diag_ack_t ack = { 7, FX_IDX.r[0].crc ^ 0x10 }; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 9, 0); bc_diag_srv_write(&s, b, n);
+    k = bc_diag_srv_next(&s, o, sizeof o, 1, 0); CHECK(bc_link_decode_diag_info(o, k, &i) && i.state == 0 && FX_IDX.r[0].state == 0, "ACK with a wrong crc: report stays pending");
+    ack.crc = FX_IDX.r[0].crc; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 10, 0); bc_diag_srv_write(&s, b, n);
+    k = bc_diag_srv_next(&s, o, sizeof o, 1, 0); CHECK(bc_link_decode_diag_info(o, k, &i) && i.state == 1 && FX_IDX.r[0].state == 1, "ACK with the matching crc: marked sent");
+}
+
+/* firmware with the cap + an app that never speaks DIAG (older Cyclift): the board keeps every report, across restarts, and
+   never deletes an unsent one to make room */
+static void test_old_app_keeps_reports(void)
+{
+    bc_diag_index_t x; memset(&x, 0, sizeof x); x.next_id = 1;
+    for (int i = 0; i < 5; i++) { bc_diag_info_t *r = &x.r[x.n++]; r->id = x.next_id++; r->size = 6000; r->crc = (uint32_t)i; r->kind = 1; }
+    uint8_t b[1200]; bc_diag_index_t y;
+    for (int boot = 0; boot < 20; boot++) {   /* 20 restarts with phone connections that send only LIVE/profile traffic */
+        size_t n = bc_diag_index_encode(&x, b, sizeof b); if (!bc_diag_index_decode(b, n, &y)) { CHECK(0, "index decode at boot %d", boot); break; }
+        x = y;
+        int room = bc_diag_index_make_room(&x, 6000);
+        if (room >= 0) { CHECK(0, "an unsent report would be deleted"); break; }
+        if (room == -1) { bc_diag_info_t *r = &x.r[x.n++]; r->id = x.next_id++; r->size = 6000; r->kind = 4; } else x.not_stored++;
+    }
+    CHECK(bc_diag_index_pending(&x) == x.n && x.r[0].id == 1 && x.not_stored > 0, "old app: %d reports kept pending after 20 boots, oldest id 1 still there, %lu not stored", x.n, (unsigned long)x.not_stored);
 }
 
 /* ------------------------------------------------------------------ boot modes */
@@ -269,6 +385,10 @@ int main(void)
     test_report();
     test_vectors();
     test_server();
+    test_chunk_size_contract();
+    test_fixture_transfers();
+    test_ios_requests();
+    test_old_app_keeps_reports();
     test_boot();
     printf("test_bc_diag: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

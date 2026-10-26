@@ -311,8 +311,6 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
         *chr = APP_PSVC_EVENTS;
         return bc_link_encode_event(&ev, buf, cap, ++S.seq, now);
     }
-    /* 0.7.3 diagnostic reports (Link 1.2.3): diag_ready event, then the replies the phone pulled */
-    { uint8_t c; size_t m = app_diag_next(&c, buf, cap, now); if (m) { *chr = c == 2 ? APP_PSVC_EVENTS : APP_PSVC_CTRL; return m; } }
     /* 0. profile / settings replies first (small, the phone is waiting) */
     if (S.profile_ack_due) { S.profile_ack_due = false; *chr = APP_PSVC_CTRL; return bc_link_encode_profile_ack(&S.ack, buf, cap, ++S.seq, now); }
     if (S.profile_due) { S.profile_due = false; bc_profile_msg_t m; app_psvc_profile_msg(&m); *chr = APP_PSVC_CTRL; return bc_link_encode_profile(BC_MSG_PROFILE, &m, buf, cap, ++S.seq, now); }
@@ -332,6 +330,9 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
             return bc_link_encode_sensor_diag(&d, buf, cap, ++S.seq, now);
         }
     }
+    /* 0.7.3 diagnostic reports (Link 1.2.3): diag_ready event, then the replies the phone pulled. Lower priority than every
+       reply above; its data chunks are additionally held back while LIVE / the transport need the link (app_diag_next). */
+    { uint8_t c; size_t m = app_diag_next(&c, buf, cap, now); if (m) { *chr = c == 2 ? APP_PSVC_EVENTS : APP_PSVC_CTRL; return m; } }
     /* 1. scan results, then the end marker */
     if (S.scan_pending) {
         if (!S.scan_ending) {

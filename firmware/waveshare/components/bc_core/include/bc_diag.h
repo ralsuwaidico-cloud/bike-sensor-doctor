@@ -132,9 +132,22 @@ typedef struct {
     bc_diag_chunk_req_t q[4]; int nq;                /* CHUNK_REQs answered in order (a phone may pipeline up to 4) */
     bool info_due; uint32_t info_id;                 /* DIAG_INFO after an ACK */
     bool err_due; bc_diag_err_t err;
-    uint32_t chunks_sent, acks_ok, acks_bad, reqs;
+    uint16_t att_mtu;                                /* negotiated ATT MTU of the phone connection (0 = not known = 23) */
+    bool paused;                                     /* a ride is recording: CHUNK_REQs are answered BUSY (LIST / ACK still work) */
+    uint32_t chunks_sent, acks_ok, acks_bad, reqs, busy_ride, mtu_errs;
 } bc_diag_srv_t;
 void bc_diag_srv_init(bc_diag_srv_t *s, const bc_diag_store_t *st);
+/** Link facts for the next replies: the phone connection's negotiated ATT MTU and whether a ride is recording. */
+void bc_diag_srv_set_link(bc_diag_srv_t *s, uint16_t att_mtu, bool ride_recording);
+/** True when the next reply bc_diag_srv_next would produce is a DIAG_CHUNK with data (the bulk traffic that is paced). */
+bool bc_diag_srv_chunk_next(const bc_diag_srv_t *s);
+/* Ride priority (the app layer, app_diag_next): a DIAG_CHUNK is handed to the phone link only when
+ *  - the link has room (plat_phone_bulk_room: LIVE already sent, the notify queue empty, NimBLE mbufs free, no recent notify
+ *    failure), and
+ *  - at least BC_DIAG_CHUNK_GAP_MS passed since the previous chunk (<= 5 chunks/s, <= ~0.8 KB/s);
+ * while a ride is RECORDING the server answers chunk requests BUSY instead (the phone retries after 10 s). */
+#define BC_DIAG_CHUNK_GAP_MS 200u
+bool bc_diag_pace_ok(uint32_t now_ms, uint32_t last_chunk_ms, bool have_sent, bool link_room);
 /** A message the phone wrote on Control. False when it is not a DIAG request (the caller handles it). */
 bool bc_diag_srv_write(bc_diag_srv_t *s, const uint8_t *msg, size_t n);
 /** The next reply to notify on Control (0 = nothing due). */

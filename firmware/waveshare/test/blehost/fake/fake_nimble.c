@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-fake_cfg_t g_fake = { .speed = 20, .meter_in_range = true, .meter_streams = true };
+fake_cfg_t g_fake = { .speed = 20, .meter_in_range = true, .meter_streams = true, .phone_mtu = 185 };
 fake_stats_t g_fstats;
 struct ble_hs_cfg ble_hs_cfg;
 
@@ -134,7 +134,7 @@ static uint16_t svc_end(int i) { for (int j = i + 1; j < NDB; j++) if (DB[j].typ
 
 /* ------------------------------------------------------------------ connections, procedures, the host event queue */
 enum { ROLE_NONE = 0, ROLE_METER, ROLE_PHONE };
-typedef struct { int role; ble_gap_event_fn *cb; void *arg; uint16_t cccd[64]; bool enc; uint32_t gen; } conn_t;
+typedef struct { int role; ble_gap_event_fn *cb; void *arg; uint16_t cccd[64]; bool enc; uint32_t gen; uint16_t mtu; } conn_t;
 #define NCONN 4
 static conn_t s_conn[NCONN];
 static uint32_t s_gen;
@@ -156,6 +156,9 @@ static void q_push(uint32_t delay, ev_fn fn, void *p, struct ble_npl_event *npl)
     pthread_cond_signal(&s_qc); pthread_mutex_unlock(&s_qm);
 }
 static int conn_alive(uint16_t c) { return c < NCONN && s_conn[c].role != ROLE_NONE; }
+#define TXQ 64
+static struct { uint16_t h, n; uint8_t b[256]; } s_txq[TXQ]; static int s_txq_n; static int s_msys_free = 12;
+
 
 /* ---- the host's own work: break a connection (procs fail first, then the GAP event) */
 typedef struct { uint16_t conn; int reason; } brk_t;
@@ -165,6 +168,7 @@ static void ev_break(void *p)
     hs_lock();
     if (!conn_alive(c)) { hs_unlock(); return; }
     conn_t cc = s_conn[c]; s_conn[c].role = ROLE_NONE;
+    if (cc.role == ROLE_PHONE) { __atomic_add_fetch(&s_msys_free, s_txq_n, __ATOMIC_SEQ_CST); s_txq_n = 0; }   /* queued notifications die with the link */
     proc_t failed[NPROC]; int nf = 0;
     for (int i = 0; i < NPROC; i++) if (s_proc[i].used && s_proc[i].conn == c) { failed[nf++] = s_proc[i]; s_proc[i].used = false; }
     hs_unlock();
@@ -400,14 +404,64 @@ void ble_svc_gatt_init(void) {}
 static char s_name[32] = "BikeComputer";
 const char *ble_svc_gap_device_name(void) { return s_name; }
 int ble_svc_gap_device_name_set(const char *n) { snprintf(s_name, sizeof s_name, "%s", n); return 0; }
+/* 0.7.3 radio model (g_fake.radio): notifications take a block of the msys pool (CONFIG_BT_NIMBLE_MSYS_1_BLOCK_COUNT 12)
+   until the radio sends them, `radio_per_event` per connection event every `radio_itvl_ms`; a full pool refuses the notify
+   with BLE_HS_ENOMEM (NimBLE frees the mbuf either way). The fake phone receives them in order (fake_cfg.on_phone_rx). */
+int os_msys_num_free(void) { return __atomic_load_n(&s_msys_free, __ATOMIC_SEQ_CST); }
+uint16_t ble_att_mtu(uint16_t c) { hs_lock(); uint16_t m = conn_alive(c) ? (s_conn[c].mtu ? s_conn[c].mtu : 23) : 0; hs_unlock(); return m; }
+uint16_t fake_server_handle(int i) { return i < s_nschr ? s_schr[i].h : 0; }
 int ble_gatts_notify_custom(uint16_t c, uint16_t h, struct os_mbuf *om)
 {
-    (void)h;
-    hs_lock(); int ok = conn_alive(c) && s_conn[c].role == ROLE_PHONE; hs_unlock();
+    hs_lock(); int ok = conn_alive(c) && s_conn[c].role == ROLE_PHONE; uint16_t mtu = ok ? (s_conn[c].mtu ? s_conn[c].mtu : 23) : 0; hs_unlock();
+    if (!ok) { fake_mbuf_free(om); return BLE_HS_ENOTCONN; }
+    if (om->len + 3 > mtu) { __atomic_add_fetch(&g_fstats.oversize_notifies, 1, __ATOMIC_SEQ_CST); if (g_fake.strict_mtu) fake_violation("notification of %u bytes on ATT MTU %u", om->len, mtu); }
+    if (g_fake.radio) {
+        hs_lock();
+        if (s_msys_free <= 0 || s_txq_n >= TXQ) { hs_unlock(); fake_mbuf_free(om); __atomic_add_fetch(&g_fstats.notify_enomem, 1, __ATOMIC_SEQ_CST); return BLE_HS_ENOMEM; }
+        __atomic_sub_fetch(&s_msys_free, 1, __ATOMIC_SEQ_CST);
+        s_txq[s_txq_n].h = h; s_txq[s_txq_n].n = om->len < 256 ? om->len : 256; memcpy(s_txq[s_txq_n].b, om->data, s_txq[s_txq_n].n); s_txq_n++;
+        hs_unlock();
+    }
     fake_mbuf_free(om);
-    if (!ok) return BLE_HS_ENOTCONN;
     __atomic_add_fetch(&g_fstats.phone_notifies, 1, __ATOMIC_SEQ_CST); return 0;
 }
+static void ev_radio(void *p)
+{
+    (void)p;
+    for (int k = 0; k < g_fake.radio_per_event; k++) {
+        hs_lock();
+        if (!s_txq_n) { hs_unlock(); break; }
+        uint16_t h = s_txq[0].h, n = s_txq[0].n; uint8_t b[256]; memcpy(b, s_txq[0].b, n);
+        s_txq_n--; memmove(&s_txq[0], &s_txq[1], sizeof s_txq[0] * (size_t)s_txq_n);
+        __atomic_add_fetch(&s_msys_free, 1, __ATOMIC_SEQ_CST);
+        hs_unlock();
+        if (g_fake.on_phone_rx) g_fake.on_phone_rx(h, b, n, fake_now());
+    }
+    if (s_run && g_fake.radio) q_push((uint32_t)g_fake.radio_itvl_ms, ev_radio, NULL, NULL);
+}
+/* the phone writes a characteristic (on the host thread, like a received ATT write) */
+typedef struct { uint16_t h, n; uint8_t b[256]; } pw_t;
+static void ev_phone_write(void *pp)
+{
+    pw_t *w = pp;
+    hs_lock(); int c = -1; for (int i = 0; i < NCONN; i++) if (s_conn[i].role == ROLE_PHONE) c = i; hs_unlock();
+    if (c >= 0) for (int i = 0; i < s_nschr; i++) if (s_schr[i].h == w->h) {
+        struct os_mbuf *om = ble_hs_mbuf_from_flat(w->b, w->n); struct ble_gatt_access_ctxt ctx = { .op = BLE_GATT_ACCESS_OP_WRITE_CHR, .om = om };
+        s_schr[i].cb((uint16_t)c, w->h, &ctx, s_schr[i].arg); fake_mbuf_free(om);
+    }
+    free(w);
+}
+/* the phone reads a characteristic of the board's GATT server (access callback, like an ATT read) */
+int fake_server_read(int i, uint8_t *out, int cap)
+{
+    if (i >= s_nschr) return -1;
+    hs_lock(); int c = -1; for (int k = 0; k < NCONN; k++) if (s_conn[k].role == ROLE_PHONE) c = k; hs_unlock();
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(NULL, 0); struct ble_gatt_access_ctxt ctx = { .op = BLE_GATT_ACCESS_OP_READ_CHR, .om = om };
+    int rc = s_schr[i].cb((uint16_t)(c < 0 ? 0 : c), s_schr[i].h, &ctx, s_schr[i].arg);
+    int n = rc == 0 && om->len <= cap ? om->len : -1; if (n > 0) memcpy(out, om->data, (size_t)n);
+    fake_mbuf_free(om); return n;
+}
+void fake_phone_write(uint16_t h, const uint8_t *b, uint16_t n) { pw_t *w = calloc(1, sizeof *w); w->h = h; w->n = n < 256 ? n : 256; memcpy(w->b, b, w->n); q_push(1, ev_phone_write, w, NULL); }
 static bool s_adv; static ble_gap_event_fn *s_adv_cb; static void *s_adv_arg;
 int ble_gap_adv_set_fields(const struct ble_hs_adv_fields *f) { (void)f; hs_lock(); hs_unlock(); return 0; }
 int ble_gap_adv_rsp_set_fields(const struct ble_hs_adv_fields *f) { (void)f; hs_lock(); hs_unlock(); return 0; }
@@ -438,6 +492,10 @@ static void ev_phone(void *pp)
         ble_gap_event_fn *cb = s_adv_cb; void *arg = s_adv_arg; hs_unlock();
         struct ble_gap_event ev; memset(&ev, 0, sizeof ev); ev.type = BLE_GAP_EVENT_CONNECT; ev.connect.status = 0; ev.connect.conn_handle = (uint16_t)c;
         cb(&ev, arg);
+        if (g_fake.phone_mtu) {                             /* iOS exchanges the MTU right after connecting */
+            hs_lock(); s_conn[c].mtu = (uint16_t)g_fake.phone_mtu; hs_unlock();
+            memset(&ev, 0, sizeof ev); ev.type = BLE_GAP_EVENT_MTU; ev.mtu.conn_handle = (uint16_t)c; ev.mtu.value = (uint16_t)g_fake.phone_mtu; cb(&ev, arg);
+        }
         p->step = 1; q_push(10 + rnd() % 50, ev_phone, p, NULL); return;
     }
     uint16_t c = s_phone_conn;
@@ -520,6 +578,7 @@ void nimble_port_run(void)
 {
     if (ble_hs_cfg.sync_cb) ble_hs_cfg.sync_cb();
     q_push(50, ev_scan, NULL, NULL); q_push(100, ev_notify, NULL, NULL);
+    if (g_fake.radio) q_push((uint32_t)g_fake.radio_itvl_ms, ev_radio, NULL, NULL);
     while (s_run) {
         pthread_mutex_lock(&s_qm);
         qev_t *e = s_q;

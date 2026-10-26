@@ -5,7 +5,8 @@ $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 function Stop-With($msg) { Write-Host ""; Write-Host "  STOPPED: $msg" -ForegroundColor Red; Write-Host "  Nothing was changed on the board."; Read-Host "  Press Enter to close"; exit 1 }
 $known = @{
-  '735c2699009d5e723a8755975720a570240fed7375ed5a43c06727458d4d6560' = '0.7.3';
+  '181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5' = '0.7.3';
+  '735c2699009d5e723a8755975720a570240fed7375ed5a43c06727458d4d6560' = '0.7.3 draft (26 Oct, never released)';
   '33b425022eb12ed7d4b55f343cb76c94ad6677864379112b08352eb36c779a60' = '0.7.2 (the firmware that crash-looped)';
   '63ace07eebd16c6f5c829a0cf67349863cd23ae6a3ff59925bf785678b14ea0f' = '0.7.1';
   '1d4dd740d5a86516b79d16a23df1d5cb6155f3007ff71823dc928d82082a6c67' = '0.7.0';
