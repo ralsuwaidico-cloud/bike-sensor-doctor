@@ -4,11 +4,11 @@ Sign in with Apple capability on com.ralsuwaidico.bikecomputer:
   capabilities now: HEALTHKIT, IN_APP_PURCHASE
   Sign in with Apple: NOT enabled (apply mode enables it)
 
-App record: found; store name 'BikeComputer by Rashed', primary language en-US
+App record: found; store name (previous name hidden), primary language en-US
 
 App information:
   app info d42c830b…: state PREPARE_FOR_SUBMISSION
-  locale en-US: name 'BikeComputer by Rashed', subtitle '', privacy URL empty
+  locale en-US: name (previous name hidden), subtitle '', privacy URL empty
   primary category now: none
   age rating declaration: 30 questions, 27 unanswered
 
