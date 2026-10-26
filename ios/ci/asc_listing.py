@@ -536,6 +536,14 @@ def availability(app_id):
         states = sorted({str(t["attributes"].get("contentStatuses") or "") for t in tas} - {""})
         if states:
             out("  territory content statuses: " + "; ".join(states)[:400])
+        tid = {}
+        for t in tas:
+            rel = ((t.get("relationships") or {}).get("territory") or {}).get("data") or {}
+            tid[t["id"]] = rel.get("id") or "?"
+        trader = sorted(tid[t["id"]] for t in tas if "TRADER_STATUS_NOT_PROVIDED" in (t["attributes"].get("contentStatuses") or []))
+        STATE["trader_missing"] = trader
+        if trader:
+            out(f"  EU Digital Services Act trader status not provided — blocks sale in {len(trader)} territories: {', '.join(trader)}")
         if WRITE and off:
             fixed = 0
             for t in off:
@@ -785,6 +793,8 @@ def readiness():
         row("Export compliance answered", "OK" if s.get("build_encryption") is not None else "MISSING", str(s.get("build_encryption")))
     row("App Review notes", "OK" if s.get("notes") else "MISSING")
     row("App Review contact (name/phone/e-mail)", "OK" if s.get("contact") else "OWNER", "present" if s.get("contact") else "absent")
+    if s.get("trader_missing"):
+        row("EU trader status (Digital Services Act)", "OWNER", f"not provided — app cannot be sold in {len(s['trader_missing'])} EU territories")
     row("App Privacy questionnaire", "OWNER", "not readable through the API: 'Data Not Collected'")
     row("Agreements / tax / banking", "OWNER", "not in the API; Free Apps agreement — check the Business page")
     row("No review submission exists", "OK" if not s.get("submissions") else "CHECK", ", ".join(map(str, s.get("submissions") or [])))
