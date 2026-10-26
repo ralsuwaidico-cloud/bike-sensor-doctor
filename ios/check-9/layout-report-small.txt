@@ -1,0 +1,4 @@
+L home: key controls 
+L home: no text outside the window
+L home lower: no text outside the window
+L strength: no text outside the window

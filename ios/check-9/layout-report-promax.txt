@@ -1,0 +1,9 @@
+L home: key controls 
+L home: no text outside the window
+L home lower: no text outside the window
+L strength: no text outside the window
+L plan: no text outside the window
+L progress: no text outside the window
+L progress lower: no text outside the window
+L profile: no text outside the window
+L tab bar: key controls Home 31×39, Plan 22×36, centreButton 58×76, Progress 46×36, Profile 34×38

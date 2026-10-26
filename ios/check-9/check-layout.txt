@@ -1,0 +1,19 @@
+small=3B2DA8FB-1B7A-40A8-A8B4-250B080F2899 max=8B500E0C-CA36-4F12-853D-3B697FBEA084 std=E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+== small exit 65
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:137: error: -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to not hittable: Button, {{96.5, 143.0}, {58.5, 44.0}}, identifier: 'swap-ex-003'
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' failed (178.892 seconds).
+Test Suite 'LayoutAudit' failed at 2026-10-26 20:34:03.703.
+	 Executed 1 test, with 1 failure (0 unexpected) in 178.892 (178.897) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-26 20:34:03.704.
+	 Executed 1 test, with 1 failure (0 unexpected) in 178.892 (178.898) seconds
+Test Suite 'Selected tests' failed at 2026-10-26 20:34:03.704.
+	 Executed 1 test, with 1 failure (0 unexpected) in 178.892 (178.904) seconds
+== standard exit 0
+2026-10-26 20:39:34.193 xcodebuild[18173:79082]  iOSSimulator: 📱<DVTiPhoneSimulator (0xa87c2f980), iPhone 17 Pro, unknown class, 26.5 (23F77), E839A11B-51B4-4AD3-ACF4-A53B95B7C957> unable to connect to "com.apple.instruments.deviceservice.lockdown" (Error Domain=DVTiPhoneSimulatorErrorDomain Code=-1 "DTServiceHubClient failed to bless service hub for simulator iPhone 17 Pro (E839A11B-51B4-4AD3-ACF4-A53B95B7C957)" UserInfo={NSLocalizedDescription=DTServiceHubClient failed to bless service hub for simulator iPhone 17 Pro (E839A11B-51B4-4AD3-ACF4-A53B95B7C957), NSUnderlyingError=0xa8a3b8cf0 {Error Domain=DTServiceHubClient Code=2 "Connection to Simulator service hub (23914) interrupted. Simulator service hub IS still alive." UserInfo={NSLocalizedDescription=Connection to Simulator service hub (23914) interrupted. Simulator service hub IS still alive.}}})
+	 Executed 1 test, with 0 failures (0 unexpected) in 493.764 (493.768) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 493.764 (493.771) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 493.764 (493.773) seconds
+== promax exit 0
+	 Executed 1 test, with 0 failures (0 unexpected) in 329.364 (329.371) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 329.364 (329.380) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 329.364 (329.381) seconds
