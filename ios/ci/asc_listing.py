@@ -53,6 +53,15 @@ def problem(msg):
     out("  ! " + msg)
 
 
+def shown_name(n):
+    """The current store name may contain the owner's personal name: show it only when it is one of our candidates."""
+    try:
+        cands = [c.strip() for c in read("name_candidates.txt").splitlines() if c.strip()]
+    except OSError:
+        cands = []
+    return f"'{n}'" if n in cands else f"(not an Athletics candidate yet, {len(n or '')} characters — hidden)"
+
+
 def read(name):
     with open(os.path.join(STORE, name), encoding="utf-8") as f:
         return f.read().strip()
@@ -148,7 +157,7 @@ def app_info(app_id, primary_locale):
         problem(f"no app info localization for {primary_locale} (HTTP {st}: {err(res) if st != 200 else 'empty'})")
     else:
         a = loc["attributes"]
-        out(f"  locale {a.get('locale')}: name '{a.get('name')}', subtitle '{a.get('subtitle') or ''}', "
+        out(f"  locale {a.get('locale')}: name {shown_name(a.get('name'))}, subtitle '{a.get('subtitle') or ''}', "
             f"privacy URL {'set' if a.get('privacyPolicyUrl') else 'empty'}")
         if APPLY:
             names = [n.strip() for n in read("name_candidates.txt").splitlines() if n.strip()]
@@ -431,7 +440,7 @@ def main():
     st, res = call("GET", f"/v1/apps/{app_id}")
     attrs = res.get("data", {}).get("attributes", {}) if st == 200 else {}
     primary = attrs.get("primaryLocale") or "en-US"
-    out(f"App record: found; store name '{attrs.get('name')}', primary language {primary}")
+    out(f"App record: found; store name {shown_name(attrs.get('name'))}, primary language {primary}")
     out()
     out("App information:")
     app_info(app_id, primary)
