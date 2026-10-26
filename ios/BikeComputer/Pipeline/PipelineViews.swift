@@ -54,7 +54,7 @@ struct PipelineDiagnosticsView: View {
                     Label("Export diagnostic report", systemImage: "square.and.arrow.up")
                 }
             } header: { Text("Now") } footer: {
-                Text("The report contains versions, connection stages, Bluetooth services and counters, the last 50 events and the board's sensor reports — no names, e-mail addresses, locations or health history.")
+                Text("The report contains versions, connection stages, Bluetooth services and counters, the last 50 events, the board's sensor reports and the list of saved BikeComputer reports (size and checksum, not their text) — no names, e-mail addresses, locations or health history.")
             }
             ForEach(monitor.reports.filter { $0.health != .notSetUp }) { r in
                 Section {
@@ -70,6 +70,7 @@ struct PipelineDiagnosticsView: View {
                     if let n = r.note { Text(n).font(.caption2).foregroundStyle(BC.stale) }
                 } header: { Text(r.title) }
             }
+            BoardDiagReportSection()
             if watch.paired && watch.appInstalled {
                 Section("Apple Watch app") {
                     LabeledContent("iPhone app", value: AppInfo.label)

@@ -50,6 +50,20 @@ struct DiagnosticReport: Codable {
     var recentEvents: [DiagEvent]
     var sensorDiagHistory: [SensorDiagRecord]
     var boardStageLog: [String]
+    /// Board diagnostic reports saved on this phone (Link 1.2.3): list + crc only, never their text.
+    var boardReports: [BoardReport]? = nil
+
+    struct BoardReport: Codable, Equatable {
+        var reportId: UInt32
+        var kind: String
+        var firmware: String
+        var createdAt: Date?
+        var receivedAt: Date
+        var sizeBytes: UInt32
+        var crc32: String
+        var summary: String
+        var boardAcknowledged: Bool
+    }
 
     struct Board: Codable {
         var firmware: String?
