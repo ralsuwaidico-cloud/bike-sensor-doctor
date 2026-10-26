@@ -42,6 +42,9 @@ final class RideLayoutTests: XCTestCase {
     func testRawValuesMatchTheContract() {
         XCTAssertEqual(RideLayout.allCases.map(\.rawValue), ["coach", "gauges", "classic", "rings", "analytics"])
         XCTAssertEqual(Set(RideLayout.allCases.map(\.title)).count, 5, "distinct titles for the selector")
+        var l = RideLayout.coach, seen: [RideLayout] = []
+        for _ in 0..<5 { l = l.next; seen.append(l) }
+        XCTAssertEqual(seen, [.gauges, .classic, .rings, .analytics, .coach], "one tap per layout, wraps around")
     }
 
     // MARK: switching never touches the recorder, the hub or BLE

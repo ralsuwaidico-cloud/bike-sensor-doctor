@@ -35,6 +35,8 @@ enum RideLayout: String, Codable, CaseIterable, Identifiable {
         case .analytics: return "chart.xyaxis.line"
         }
     }
+    /// The quick switch's one-tap order (wraps around).
+    var next: RideLayout { let all = Self.allCases; return all[(all.firstIndex(of: self)! + 1) % all.count] }
     /// UI-test / accessibility identifier of the layout's content container.
     var accessibilityId: String { "rideLayout.\(rawValue)" }
 }

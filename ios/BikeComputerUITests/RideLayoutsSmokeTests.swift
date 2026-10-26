@@ -24,13 +24,11 @@ final class RideLayoutsSmokeTests: XCTestCase {
         XCTAssertTrue(app.otherElements["rideLayout.coach"].firstMatch.waitForExistence(timeout: 10), "default layout is Ride Coach")
         XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel embedded")
 
+        // one tap on the layout name = next layout (coach → gauges → classic → rings → analytics → coach)
         let order: [(String, String)] = [("gauges", "Large gauges"), ("classic", "Classic"), ("rings", "Rings"), ("analytics", "Analytics"), ("coach", "Ride Coach")]
         for (raw, title) in order {
+            XCTAssertTrue(menu.waitForExistence(timeout: 5))
             menu.tap()
-            var option = app.buttons["rideLayoutOption.\(raw)"].firstMatch
-            if !option.waitForExistence(timeout: 5) { option = app.buttons[title].firstMatch }
-            XCTAssertTrue(option.waitForExistence(timeout: 5), "menu offers \(title)")
-            option.tap()
             XCTAssertTrue(app.otherElements["rideLayout.\(raw)"].firstMatch.waitForExistence(timeout: 10), "\(title) layout shown")
             XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel embedded in \(title)")
             XCTAssertEqual(app.state, .runningForeground, "app alive after switching to \(title)")

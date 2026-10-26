@@ -122,7 +122,8 @@ struct RideTabView: View {
             ZStack(alignment: .leading) { D7.line.frame(height: 3); (coach.cueActive && recorder.state == .running ? D7.cyan : D7.line).frame(height: 3) }.clipShape(Capsule())
         }
     }
-    /// Quick switch, usable during a ride: only writes AppSettings.rideLayout (RideLayoutSwitch).
+    /// Quick switch, usable during a ride with one tap (next layout) or a long press (choose from the list).
+    /// Only writes AppSettings.rideLayout (RideLayoutSwitch) — recording and sensors carry on.
     private var layoutMenu: some View {
         Menu {
             ForEach(RideLayout.allCases) { l in
@@ -136,8 +137,11 @@ struct RideTabView: View {
                 Text(layout.title.uppercased()).font(.system(size: 13, design: .monospaced)).tracking(2).foregroundStyle(D7.cyan).lineLimit(1).minimumScaleFactor(0.7)
                 Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(D7.cyan)
             }
+        } primaryAction: {
+            RideLayoutSwitch.select(layout.next, store: store)
         }
         .accessibilityLabel("\(RideLabels.layoutMenu): \(layout.title)")
+        .accessibilityHint("Tap for the next layout, touch and hold to choose one")
         .accessibilityIdentifier("rideLayoutMenu")
     }
     private var workoutName: String {
