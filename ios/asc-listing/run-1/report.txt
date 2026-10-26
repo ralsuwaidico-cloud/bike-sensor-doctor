@@ -1,0 +1,42 @@
+Athletics App Store listing — mode CHECK (drafts only; never submits, releases, prices or accepts agreements)
+
+Sign in with Apple capability on com.ralsuwaidico.bikecomputer:
+  capabilities now: HEALTHKIT, IN_APP_PURCHASE
+  Sign in with Apple: NOT enabled (apply mode enables it)
+
+App record: found; store name 'BikeComputer by Rashed', primary language en-US
+
+App information:
+  app info d42c830b…: state PREPARE_FOR_SUBMISSION
+  locale en-US: name 'BikeComputer by Rashed', subtitle '', privacy URL empty
+  primary category now: none
+  age rating declaration: 30 questions, 27 unanswered
+
+Version:
+  version 1.0: PREPARE_FOR_SUBMISSION
+  build attached to the version: none (the owner selects it before submission)
+
+Version text:
+  version localization en-US: description empty, keywords empty, promotionalText empty, supportUrl empty, marketingUrl empty
+
+App Review:
+  review detail: none yet
+
+Screenshots:
+  screenshots taken by the simulator job: 5
+    01-home.png (1320, 2868)
+    02-strength-workout.png (1320, 2868)
+    03-plan.png (1320, 2868)
+    04-progress.png (1320, 2868)
+    05-ride.png (1320, 2868)
+
+Builds and pricing (read only):
+  build 40: VALID, uploaded 2026-10-25T13:02
+  build 36: VALID, uploaded 2026-10-25T10:34
+  build 33: VALID, uploaded 2026-10-25T03:13
+  price schedule: exists (not changed by this script)
+
+Problems: none
+
+Not possible through the API (owner, in App Store Connect): App Privacy questionnaire, price (Free) and availability, App Review contact name/phone/e-mail, choosing the build, Submit for Review.
+mode asc-listing/check  commit b8c57c490940f59b12c9f49e3a2c7d7dc3629266  branch asc-listing/check
