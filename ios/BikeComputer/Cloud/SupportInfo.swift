@@ -1,17 +1,21 @@
 import Foundation
 
-/// Public contact details for Cyclift. The bundled privacy policy and terms (Resources/*.md, mirrored in ios/legal and
-/// docs/site) carry the placeholder `SUPPORT_EMAIL`. The real address is never committed to the (public) repository:
-/// CI writes it into Info.plist (key CYCLIFT_SUPPORT_EMAIL) from an optional secret. Without it the pages point to the
-/// support web page instead.
+/// Public contact details for Cyclift. The owner chose to publish his address as the support contact (1.0 decisions):
+/// it is a static Info.plist value (CYCLIFT_SUPPORT_EMAIL in project.yml) and is written into the bundled privacy
+/// policy and terms (Resources/*.md, mirrored in ios/legal and docs/site). `render` still replaces a `SUPPORT_EMAIL`
+/// placeholder, so an older document or a build without the key never shows the raw placeholder.
 enum SupportInfo {
     static let placeholder = "SUPPORT_EMAIL"
+    /// The published support address (also in project.yml, the legal pages and docs/site).
+    static let publicAddress = "ralsuwaidico@gmail.com"
     static let supportPage = URL(string: "https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/support.html")!
     static let privacyPage = URL(string: "https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/privacy.html")!
     static let termsPage = URL(string: "https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/terms.html")!
 
     /// The configured public support address, or nil (unset, empty, unexpanded build variable or not an address).
     static var email: String? { cleaned(Bundle.main.object(forInfoDictionaryKey: "CYCLIFT_SUPPORT_EMAIL") as? String) }
+    /// "mailto:" link for the About section, or nil without an address.
+    static var mailURL: URL? { email.flatMap { URL(string: "mailto:\($0)?subject=Cyclift%20support") } }
 
     static func cleaned(_ raw: String?) -> String? {
         guard let t = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty, !t.hasPrefix("$("),

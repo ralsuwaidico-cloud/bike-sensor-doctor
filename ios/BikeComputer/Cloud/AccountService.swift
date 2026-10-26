@@ -34,6 +34,8 @@ final class AccountService: NSObject, ObservableObject {
     @Published var recoveryPending = false
 
     let client: SupabaseClient?
+    /// False in Cyclift 1.0 (ReleaseFlags.accountsEnabled): no client, so no network request can be made.
+    var hasClient: Bool { client != nil }
     private var authTask: Task<Void, Never>?
     private var currentNonce: String?
     /// ASWebAuthenticationSession must stay strongly referenced while the browser sheet is up, otherwise iOS tears it
@@ -43,7 +45,9 @@ final class AccountService: NSObject, ObservableObject {
     let sessionChanged = PassthroughSubject<Bool, Never>()
 
     override init() {
-        if let url = CloudConfig.supabaseURL, let key = CloudConfig.anonKey {
+        // No client at all unless accounts are switched on for this release (ReleaseFlags) AND the build carries values:
+        // in Cyclift 1.0 nothing here can reach the network, restore a stored session or refresh a token.
+        if CloudConfig.isConfigured, let url = CloudConfig.supabaseURL, let key = CloudConfig.anonKey {
             client = SupabaseClient(supabaseURL: url, supabaseKey: key)
         } else { client = nil }
         super.init()

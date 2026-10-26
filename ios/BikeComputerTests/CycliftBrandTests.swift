@@ -1,7 +1,7 @@
 import XCTest
 @testable import BikeComputer
 
-/// Cyclift rebrand: names, legal pages and the support-contact placeholder (no personal address in the bundle).
+/// Cyclift rebrand: names, legal pages and the public support contact.
 final class CycliftBrandTests: XCTestCase {
     private func bundled(_ name: String) throws -> String {
         let url = Bundle.main.url(forResource: name, withExtension: "md") ?? Bundle.main.url(forResource: name, withExtension: "md", subdirectory: "Resources")
@@ -15,25 +15,31 @@ final class CycliftBrandTests: XCTestCase {
         XCTAssertEqual(CloudConfig.redirectURL.scheme, "com.ralsuwaidico.bikecomputer")
     }
 
-    func testLegalPagesAreCycliftAndCarryNoPersonalAddress() throws {
+    /// 1.0: the owner published his address as the support contact; the bundled pages carry it directly and describe
+    /// the no-account, on-device app truthfully (no sign-in, no server, no third-party integrations advertised).
+    func testLegalPagesAreCycliftWithSupportAddressAndNoAccounts() throws {
         for name in ["privacy", "terms"] {
             let text = try bundled(name)
             XCTAssertTrue(text.hasPrefix("# Cyclift — "), "\(name) title")
             XCTAssertFalse(text.contains("Athletics"), "\(name) still names the old app")
-            XCTAssertFalse(text.lowercased().contains("@gmail"), "\(name) contains a personal address")
-            XCTAssertTrue(text.contains(SupportInfo.placeholder), "\(name) keeps the placeholder for the support address")
+            XCTAssertTrue(text.contains(SupportInfo.publicAddress), "\(name) shows the support address")
+            XCTAssertFalse(text.contains(SupportInfo.placeholder), "\(name) still has the placeholder")
+            for gone in ["Supabase", "Sign in with", "Google", "Profile › Account", "sync between", "later build", "coming soon"] {
+                XCTAssertFalse(text.contains(gone), "\(name) still mentions \(gone)")
+            }
         }
         let privacy = try bundled("privacy")
-        for source in ["Bluetooth", "Apple Watch", "Apple Health", "BikeComputer", "Garmin, WHOOP and Oura"] {
+        for source in ["Bluetooth", "Apple Watch", "Apple Health", "BikeComputer", "Location", "no account", "Profile › Your data", "Children"] {
             XCTAssertTrue(privacy.contains(source), "privacy policy describes \(source)")
         }
+        XCTAssertFalse(privacy.contains("WHOOP") || privacy.contains("Oura") || privacy.contains("Garmin"), "1.0 does not advertise those services")
+        XCTAssertTrue(try bundled("terms").contains("not medical advice"), "terms carry the training-guidance disclaimer")
     }
 
-    func testSupportContactWithoutConfiguredAddress() throws {
+    func testSupportContactRendersUnchangedWithAddress() throws {
         for name in ["privacy", "terms"] {
-            let shown = SupportInfo.render(try bundled(name), email: nil)
-            XCTAssertFalse(shown.contains(SupportInfo.placeholder), "\(name): placeholder left visible")
-            XCTAssertTrue(shown.contains("Contact: see the [support page](\(SupportInfo.supportPage.absoluteString))"), "\(name): contact line")
+            let raw = try bundled(name)
+            XCTAssertEqual(SupportInfo.render(raw, email: SupportInfo.email), raw, "\(name): nothing left to replace")
         }
     }
 
@@ -50,7 +56,8 @@ final class CycliftBrandTests: XCTestCase {
         XCTAssertNil(SupportInfo.cleaned("SUPPORT_EMAIL"))
         XCTAssertNil(SupportInfo.cleaned("not an address"))
         XCTAssertEqual(SupportInfo.cleaned(" help@example.com "), "help@example.com")
-        // CI leaves the key empty when the optional secret is not set: the app must fall back to the support page
-        XCTAssertNil(SupportInfo.email)
+        // 1.0: static Info.plist value (project.yml), shown in Profile › About › Contact support
+        XCTAssertEqual(SupportInfo.email, SupportInfo.publicAddress)
+        XCTAssertEqual(SupportInfo.mailURL?.scheme, "mailto")
     }
 }

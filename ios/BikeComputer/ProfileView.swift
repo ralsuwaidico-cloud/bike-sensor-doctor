@@ -1,5 +1,4 @@
 import SwiftUI
-import AuthenticationServices
 
 /// Profile tab (0.5.0): a category menu instead of one long page. Each category is its own page and saves straight
 /// into the Store (so nothing typed is lost); shared athlete fields keep syncing to the BikeComputer, where the phone
@@ -8,8 +7,9 @@ struct ProfileTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
     @EnvironmentObject private var sync: ProfileSync
-    @EnvironmentObject private var account: AccountService
-    @State private var showAccount = false
+    @EnvironmentObject private var cloud: SyncEngine
+    @State private var exportURL: URL?
+    @State private var confirmDelete = false
 
     var body: some View {
         NavigationStack {
@@ -20,10 +20,7 @@ struct ProfileTabView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
                             Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
-                            HStack(spacing: 6) {
-                                if account.state.isSignedIn { Pill(text: "account", color: BC.live) } else if store.guest { Pill(text: "guest", color: BC.stale) } else { Pill(text: "Apple ID · this phone", color: BC.live) }
-                                if device.state == .ready { Pill(text: "board connected", color: BC.live) }
-                            }
+                            if device.state == .ready { Pill(text: "board connected", color: BC.live) }
                         }
                         Spacer()
                     }.padding(.vertical, 4)
@@ -38,19 +35,28 @@ struct ProfileTabView: View {
                     link("Connections & devices", "dot.radiowaves.left.and.right", deviceSummary) { ConnectionsView() }
                     link("App & device settings", "gearshape", "display, notifications, privacy, sync, firmware") { AppSettingsPage() }
                 }
-                AccountSection(present: $showAccount)
+                YourDataSection(exportURL: $exportURL, confirmDelete: $confirmDelete, snapshot: { store.snapshot })
                 Section {
                     LabeledContent("Version", value: "Cyclift \(AppInfo.label)")
                     NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
                     NavigationLink("Terms of use") { LegalView(kind: .terms) }
-                    Link(destination: SupportInfo.supportPage) { HStack { Text("Support"); Spacer(); Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary) } }
+                    if let mail = SupportInfo.mailURL, let address = SupportInfo.email {
+                        Link(destination: mail) { HStack { Text("Contact support"); Spacer(); Text(address).font(.footnote).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7) } }
+                    }
+                    Link(destination: SupportInfo.supportPage) { HStack { Text("Support page"); Spacer(); Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary) } }
                     LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1.2")
-                    Text("Works offline. Network is used only for your account and cloud sync when you sign in, and for Sign in with Apple. No analytics, no advertising.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Works offline. No account, no server, no analytics, no advertising: your data stays on this iPhone.").font(.footnote).foregroundStyle(.secondary)
                     if let e = store.lastSaveError { Text("Save problem: \(e)").font(.footnote).foregroundStyle(BC.warn) }
                 } header: { Text("About") }
             }
             .navigationTitle("Profile")
-            .sheet(isPresented: $showAccount) { AccountSheet() }
+            .sheet(item: $exportURL) { url in ShareSheet(items: [url]) }
+            .alert("Delete everything on this phone?", isPresented: $confirmDelete) {
+                Button("Delete", role: .destructive) { cloud.reset(); device.forget(); store.resetAll(); store.guest = true }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Profile, plan, ride history, strength logs, templates and the remembered BikeComputer are removed from this phone permanently. The BikeComputer keeps its own data; use Forget phone on the device too.")
+            }
         }
     }
     private func link<D: View>(_ title: String, _ icon: String, _ subtitle: String, @ViewBuilder _ d: @escaping () -> D) -> some View {
@@ -218,8 +224,7 @@ struct HeartRatePage: View {
                 Picker("Preferred source", selection: $store.settings.hrPref) { ForEach(AppSettings.HRPref.allCases, id: \.self) { Text($0.title).tag($0) } }
                 LabeledContent("Apple Watch", value: watch.hrIsFresh ? "heart rate live" : watch.appInstalled ? "app installed · start the workout" : "no watch app")
                 LabeledContent("Strap via BikeComputer", value: device.state == .ready && device.live?.hrSource == .bleStrap ? "live" : "pairs on the board")
-                LabeledContent("WHOOP", value: "not connected · cloud only, never live HR")
-            } header: { Text("Sources") } footer: { Text("Live heart rate comes from the Apple Watch (via this phone) or a strap paired on the board (direct). The coach uses whichever is live; nothing is shown without a live source.") }
+            } header: { Text("Sources") } footer: { Text("Live heart rate comes from the Apple Watch (via this phone), a Bluetooth heart-rate sensor paired with this phone, or a strap paired on the BikeComputer. The coach uses whichever is live; nothing is shown without a live source.") }
         }
         .navigationTitle("Heart rate").navigationBarTitleDisplayMode(.inline)
     }
@@ -251,7 +256,7 @@ struct PowerCyclingPage: View {
             Section {
                 LabeledContent("Power meter", value: meterText)
                 Pill(text: "power unverified until validated", color: BC.stale)
-                Text("Calibration is not available: the app never writes to the meter's control point (safety rule). Pair and forget the meter on the board's Connections › Power meter.").font(.footnote).foregroundStyle(.secondary)
+                Text("Cyclift does not calibrate power meters: it only reads them and never writes to the meter's control point (safety rule). Pair and forget the meter on the board's Connections › Power meter.").font(.footnote).foregroundStyle(.secondary)
             } header: { Text("Power meter") }
             Section {
                 Stepper("Low: \(store.profile.cadenceLow) rpm", value: Binding(get: { store.profile.cadenceLow }, set: { v in store.updateProfile { $0.cadenceLow = min(v, $0.cadenceHigh - 5) } }), in: 50...110, step: 5)
@@ -300,24 +305,23 @@ struct AppSettingsPage: View {
                 Text("A local notification while a phone-only ride records with the screen locked. No push notifications are used.").font(.footnote).foregroundStyle(.secondary)
             } header: { Text("Notifications") }
             Section {
-                Text("Without an account everything stays on this phone. With an account, your data is stored in your own account and synced between your devices. No analytics, no advertising. Apple Health is written only when you turn it on in Connections.").font(.footnote).foregroundStyle(.secondary)
+                Text("Everything stays on this iPhone: Cyclift has no account and no server. No analytics, no advertising. Apple Health is used only when you connect it in Connections.").font(.footnote).foregroundStyle(.secondary)
                 NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
-                Text("Delete your account or all data: Profile › Account.").font(.footnote).foregroundStyle(.secondary)
+                Text("Export or delete your data: Profile › Your data.").font(.footnote).foregroundStyle(.secondary)
             } header: { Text("Privacy") }
             Section("Recording") {
                 Toggle("Phone-only mode", isOn: $store.settings.phoneOnlyMode)
                 Text("On: this phone records every ride even with a BikeComputer connected (its values are shown, not merged). Off: a connected BikeComputer is the recorder.").font(.footnote).foregroundStyle(.secondary)
                 Toggle("Connect to the BikeComputer automatically", isOn: Binding(get: { store.settings.autoConnectBoard }, set: { store.settings.autoConnectBoard = $0; device.autoConnect = $0 }))
             }
-            Section("Data synchronization") {
+            Section("BikeComputer sync") {
                 NavigationLink { SyncStatusView() } label: { HStack { Text("Sync status"); Spacer(); Text(sync.state.label).font(.footnote).foregroundStyle(.secondary).lineLimit(1) } }
-                CloudSyncRow()
-                Text("Cloud sync needs an account (Profile › Account). The BikeComputer sync works over Bluetooth with firmware 0.6.0 or newer.").font(.footnote).foregroundStyle(.secondary)
+                Text("Profile sync with the BikeComputer works over Bluetooth with firmware 0.6.0 or newer.").font(.footnote).foregroundStyle(.secondary)
             }
             Section("Firmware") {
                 LabeledContent("Board firmware", value: device.info?.fw ?? (device.remembered ? "connect to read" : "no board"))
                 LabeledContent("Needed for sync / Wi-Fi / settings", value: "0.6.0")
-                Text("Firmware is installed from the PC installer kit (INSTALL-v0.x.x.bat); the app cannot update the board over the air in this build.").font(.footnote).foregroundStyle(.secondary)
+                Text("BikeComputer firmware is installed from a computer with the BikeComputer installer; the app does not update the device.").font(.footnote).foregroundStyle(.secondary)
             }
             Section("Device settings") {
                 NavigationLink { DeviceSettingsView() } label: { Label("BikeComputer settings and Wi-Fi", systemImage: "slider.horizontal.3") }
@@ -351,7 +355,6 @@ struct DeviceRow: View {
     }
 }
 
-/// Account creation. Apple sign-in works now and only identifies the rider on this phone (no server yet).
 /// The rider's own exercises (built-in ones are listed read-only in the search sheet).
 struct MyExercisesView: View {
     @EnvironmentObject private var store: Store
@@ -368,5 +371,35 @@ struct MyExercisesView: View {
         }
         .navigationTitle("My exercises").navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $create) { CreateExerciseSheet(initialName: "") { store.addCustomExercise($0) } }
+    }
+}
+
+/// Profile › Your data (Cyclift 1.0 has no accounts): where the data lives, export (JSON share sheet) and the local
+/// wipe (App Review 5.1.1 v: everything the app stores can be deleted in-app; there is no server copy to delete).
+/// The section only flips state owned by the Profile list: a sheet or alert attached to a row inside a List is torn
+/// down when the list re-renders that row.
+struct YourDataSection: View {
+    @Binding var exportURL: URL?
+    @Binding var confirmDelete: Bool
+    @State private var exportError: String?
+    let snapshot: () -> StoreFile
+
+    var body: some View {
+        Section {
+            Label("Your data stays on this iPhone", systemImage: "iphone")
+            Button { export() } label: { Label("Export my data", systemImage: "square.and.arrow.up") }.accessibilityIdentifier("exportData")
+            if let e = exportError { Text(e).font(.footnote).foregroundStyle(BC.warn) }
+            Button(role: .destructive) { confirmDelete = true } label: { Label("Delete all data on this phone", systemImage: "trash") }.accessibilityIdentifier("deleteAllData")
+        } header: { Text("Your data") } footer: {
+            Text("Profile, plan, rides, strength sessions and templates are stored only in Cyclift on this iPhone. Export creates one JSON file with all of it.")
+        }
+    }
+
+    private func export() {
+        exportError = nil
+        let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]; enc.dateEncodingStrategy = .iso8601
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("cyclift-export-\(Int(Date().timeIntervalSince1970)).json")
+        do { try enc.encode(snapshot()).write(to: url, options: .atomic); exportURL = url }
+        catch { exportError = "Export failed: \(error.localizedDescription)" }
     }
 }

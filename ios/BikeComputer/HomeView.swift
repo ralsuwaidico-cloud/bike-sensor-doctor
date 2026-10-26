@@ -28,7 +28,6 @@ struct HomeView: View {
                     connections
                     nextDays
                     HStack { Text("FTP \(store.profile.ftpW) W").font(.footnote).foregroundStyle(.secondary); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live); Spacer(); Text(budgetText).font(.footnote).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8) }
-                    if store.guest { Card { HStack { Text("Guest: rides stay on this phone.").font(.footnote).foregroundStyle(.secondary); Spacer(); Button("Create account") { tab = 4 }.font(.caption.bold()) } } }
                 }.padding()
             }
             .background(Color(.systemGroupedBackground))

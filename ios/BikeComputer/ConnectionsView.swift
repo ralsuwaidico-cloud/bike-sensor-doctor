@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Connections dashboard, built on the hub's source model (docs/INTEGRATIONS.md). Every live source — the optional
 /// BikeComputer, Bluetooth sensors paired directly with this phone, the Apple Watch, phone GPS — and every imported
-/// source (Apple Health; Garmin, WHOOP and Oura listed as planned) with one status colour, tappable for details. Red only
+/// source (Apple Health; the planned cloud providers only when ReleaseFlags allows — never in 1.0) with one status colour, tappable for details. Red only
 /// for what the rider set up or the ride configuration requires (ConnectionRules). Nothing here is required: the app
 /// rides with the phone alone.
 struct ConnectionsView: View {
@@ -45,10 +45,12 @@ struct ConnectionsView: View {
             }
             Section {
                 NavigationLink { HealthConnectionDetail() } label: { ConnRow(status: healthStatus, title: "Apple Health", subtitle: healthSubtitle, icon: "heart.text.square") }
-                ForEach(ProviderCatalog.planned) { p in
-                    NavigationLink { PlannedProviderDetail(provider: p) } label: { ConnRow(status: ConnectionRules.source(p.status), title: p.name, subtitle: "Planned — not available yet", icon: p.icon) }
+                if ReleaseFlags.plannedProvidersVisible {
+                    ForEach(ProviderCatalog.planned) { p in
+                        NavigationLink { PlannedProviderDetail(provider: p) } label: { ConnRow(status: ConnectionRules.source(p.status), title: p.name, subtitle: "Planned — not available yet", icon: p.icon) }
+                    }
                 }
-            } header: { Text("Imported (after the activity)") } footer: { Text("Imported sources add history, recovery and sleep after the activity — never live values. Planned services are not connected and show no data until they are built and you sign in.") }
+            } header: { Text("Imported (after the activity)") } footer: { Text("Imported workouts add to your history after the activity — never live values.") }
         }
         .navigationTitle("Connections")
         .onReceive(timer) { tick = $0; health.refresh() }
@@ -102,7 +104,7 @@ struct ConnectionsView: View {
     private var strapStatus: ConnStatus { ConnectionRules.strap(boardLive: liveNow != nil, hrFromStrap: liveNow?.hrSource == .bleStrap && liveNow?.hrBpm != nil, enabled: strapEnabled) }
     private var strapSubtitle: String { strapStatus == .green ? "live via the board" : strapEnabled ? "pair on the board · Settings › Sensors" : "optional" }
     private var healthStatus: ConnStatus { ConnectionRules.health(wanted: store.settings.appleHealthWanted, authorized: health.workoutWriteAuthorized, available: health.available) }
-    private var healthSubtitle: String { !health.available ? "not available on this device" : health.workoutWriteAuthorized ? "workouts can be saved" : store.settings.appleHealthWanted ? "permission not granted yet" : "optional · not connected" }
+    private var healthSubtitle: String { !health.available ? "not available on this device" : health.workoutWriteAuthorized ? "connected" : store.settings.appleHealthWanted ? "permission not granted yet" : "optional · not connected" }
 }
 
 /// The value each metric shows right now and where it comes from — or the plain "No … source".
@@ -210,7 +212,7 @@ struct BLEPairView: View {
                 Text("Tap a sensor to add it. Nothing is added automatically. Added sensors reconnect by themselves whenever they are awake and in range. The app only reads from sensors — it never changes their settings or calibration.")
             }
             Section("What can be added") {
-                Text("Any standard Bluetooth heart-rate monitor, power meter, or speed / cadence sensor. Watches and bands that broadcast heart rate over Bluetooth also work while broadcasting (for example Garmin \"Broadcast Heart Rate\", WHOOP \"Heart Rate Broadcast\", Polar or COROS heart-rate broadcast).").font(.footnote)
+                Text("Any standard Bluetooth heart-rate monitor, power meter, or speed / cadence sensor. Watches and bands that broadcast heart rate over standard Bluetooth also work while broadcasting.").font(.footnote)
                 Text("A sensor that is already connected to another phone or app may not appear; close that app first.").font(.footnote).foregroundStyle(.secondary)
             }
         }
@@ -559,10 +561,10 @@ struct PhoneConnectionDetail: View {
                 }
                 Section("Used for") { Text("Speed, distance and the route map for phone-only rides; speed and distance for the BikeComputer, which has no GPS of its own.").font(.footnote) }
                 Section { if !location.authorized { Button("Allow location") { location.requestPermission() } } ; Toggle("GPS on now", isOn: $location.sharing) }
-                Section("Troubleshooting") { Text("Allow \"While Using\" at least; background recording needs the app to be allowed in the background (iOS asks once). GPS is weak indoors.").font(.footnote) }
+                Section("Troubleshooting") { Text("Allow \"While Using the App\". Once a ride is recording, GPS keeps working with the screen locked. GPS is weak indoors.").font(.footnote) }
             case .internet:
                 Section("Status") { LabeledContent("Internet", value: reach.online ? "online (\(reach.kind))" : "offline") }
-                Section("Used for") { Text("Nothing yet: this build makes no network calls. Rides, plan and profile stay on the phone and the board. The account service (sync, Google/e-mail sign-in) arrives later and will use it; everything keeps working offline.").font(.footnote) }
+                Section("Used for") { Text("Cyclift does not need the internet: rides, plan and profile stay on this iPhone (and the optional BikeComputer), and everything works offline. Maps of your rides load from Apple Maps when online.").font(.footnote) }
             }
         }.navigationTitle(kind == .bluetooth ? "Bluetooth" : kind == .gps ? "GPS" : "Internet")
     }
@@ -645,16 +647,15 @@ struct HealthConnectionDetail: View {
             Section {
                 Toggle("Use Apple Health", isOn: Binding(get: { store.settings.appleHealthWanted }, set: { v in store.settings.appleHealthWanted = v; if v, !health.workoutWriteAuthorized { health.request { _ in } } }))
                 if store.settings.appleHealthWanted, !health.workoutWriteAuthorized, health.available { Button("Grant permission") { health.request { _ in } } }
-                Toggle("Save finished rides as workouts", isOn: $store.settings.appleHealthExportRides).disabled(!health.workoutWriteAuthorized)
-            } footer: { Text("Shown as connected only after iOS confirms the permission. Saving rides is prepared but not active in this build (it will write a cycling workout per saved ride).") }
+            } footer: { Text("Shown as connected only after iOS confirms the permission. Cycling workouts recorded with the Cyclift Apple Watch app are saved to Health when you choose Save on the watch.") }
             Section {
                 Toggle("Import workouts from Apple Health", isOn: Binding(get: { store.settings.appleHealthImportWorkouts }, set: { v in store.settings.appleHealthImportWorkouts = v; if v { store.settings.appleHealthWanted = true; if !health.workoutWriteAuthorized { health.request { _ in runImport() } } else { runImport() } } }))
                 Button { runImport() } label: { HStack { Text(importing ? "Importing…" : "Import now (last 90 days)"); Spacer(); if importing { ProgressView() } } }.disabled(importing || !health.available)
                 if let r = importResult { Text(r).font(.footnote).foregroundStyle(.secondary) }
                 if let d = store.settings.lastHealthImport { LabeledContent("Last import", value: d.formatted(date: .abbreviated, time: .shortened)) }
-            } header: { Text("Workout import (0.6.0)") } footer: { Text("Cycling, traditional and functional strength workouts recorded by other apps or the Apple Watch become rides and strength sessions here, marked \"Apple Health\". Duplicates of what the phone or BikeComputer already recorded (same start within 2 minutes, similar duration) are skipped. Health workouts carry no body region, so they count as sessions but never as push / pull / lower evidence.") }
+            } header: { Text("Workout import") } footer: { Text("Cycling, traditional and functional strength workouts recorded by other apps or the Apple Watch become rides and strength sessions here, marked \"Apple Health\". Duplicates of what the phone or BikeComputer already recorded (same start within 2 minutes, similar duration) are skipped. Health workouts carry no body region, so they count as sessions but never as push / pull / lower evidence.") }
             Section("What each permission does") {
-                Text("Workouts (write): save a finished BikeComputer or phone ride into Health and Fitness.\nWorkouts (read): find rides recorded by other apps for the training calendar (later build).\nHeart rate (read): heart-rate history for recovery views (later build). iOS does not tell apps whether reading was allowed, so nothing is claimed about it.").font(.footnote)
+                Text("Workouts (write): save the cycling workout you record with the Cyclift Apple Watch app.\nWorkouts (read): import cycling and strength workouts recorded by other apps or the Apple Watch into your history.\nHeart rate and active energy (read): used by the watch app during your workout. iOS does not tell apps whether reading was allowed, so nothing is claimed about it.").font(.footnote)
                 Text("Live heart rate during a ride does not come from Health; it comes from the Apple Watch workout or a strap.").font(.footnote).foregroundStyle(.secondary)
             }
         }.navigationTitle("Apple Health")

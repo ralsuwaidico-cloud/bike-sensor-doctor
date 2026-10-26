@@ -9,13 +9,34 @@ BikeComputer is optional.
   App Store Connect (not submitted). Bundle IDs, BLE identifiers and data locations unchanged — all data kept.
 - **Universal sources** (`docs/INTEGRATIONS.md`): phone connects directly to standard Bluetooth heart-rate (0x180D),
   power (0x1818) and speed/cadence (0x1816) sensors; per-source status; one priority rule per metric; Garmin / WHOOP /
-  Oura listed as planned only. No brand in metric labels ("POWER · W" + source shown separately).
+  Oura listed as planned only (hidden in 1.0). No brand in metric labels ("POWER · W" + source shown separately).
 - **Ride layouts** (`ios/RIDE_LAYOUTS.md`): Ride Coach, Large gauges, Classic, Rings, Analytics — restored from earlier
   builds, switchable during a ride without touching recording; coach panel with "Why?" in every layout.
 - **Strength audit** (`ios/STRENGTH_AUDIT.md`): 11 fixes (plan rebuild no longer wipes edits, progression compares
   against the routine, duplicate logs prevented, kg/lb display, midnight centre button, deleted-template state …).
-- **Accounts** (Supabase; inactive until the owner configures it): 9 sync/auth fixes; support address via secret only.
+- **Accounts** (Supabase): 9 sync/auth fixes — then switched off for 1.0 (see Release hardening below).
 - **Adaptive coach** (below).
+
+### Release hardening for the App Store (26 Oct 2026, owner decisions `docs/briefs/RELEASE_1_0_DECISIONS.md`)
+
+- **No accounts in 1.0.** `ReleaseFlags.accountsEnabled = false`: `CloudConfig.isConfigured` is always false (even if a
+  build carries Supabase values), no Supabase client is created, the sync engine never starts, sign-in links are ignored.
+  No sign-in surface anywhere: onboarding starts with **Get started** (first name only); Profile has **Your data**
+  (data stays on this iPhone · Export my data · Delete all data on this phone, with confirmation) instead of Account;
+  Home's "Create account" card and the cloud-sync rows in App & device settings are gone. The account and sync code
+  stays compiled (and unit-tested) for 1.1; the Sign in with Apple entitlement stays.
+- **No placeholders (App Review 2.1).** Garmin / WHOOP / Oura rows hidden (`ReleaseFlags.plannedProvidersVisible`), the
+  WHOOP row on the Heart rate page removed, "(later build)", "sync coming", "prepared but not active", "arrives later",
+  "Test build" and "Waveshare" wording replaced with what the app does today; the non-functional "Save finished rides
+  as workouts" toggle (the iPhone never wrote rides to Health) removed — Health saving is the watch workout's Save.
+- **Privacy manifests** (`PrivacyInfo.xcprivacy`) in the iPhone and Watch apps: no tracking, no tracking domains, no
+  collected data; required-reason API: UserDefaults `CA92.1` (iPhone only). CI checks both manifests in the archive.
+- **Support contact** ralsuwaidico@gmail.com (owner's choice): static Info.plist value, Profile › About › Contact support,
+  privacy policy, terms and the four web pages. Privacy policy rewritten for 1.0 (no account, no server, on-device data,
+  Health never leaves the device, location only while recording, Bluetooth only for sensors/BikeComputer, export +
+  delete, children); terms with the training-guidance (not medical advice) and hardware-optional clauses.
+- **Permissions**: the unused "Always" location string removed (the app asks for When In Use only); location, Health
+  read and Health write strings describe exactly what 1.0 does.
 
 ### Adaptive hybrid-athlete coach (26 Oct 2026)
 

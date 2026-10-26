@@ -71,9 +71,10 @@ final class LaunchSmokeTests: XCTestCase {
     }
 
     /// A phone updated from build 40 (0.8.0): everything build 36 had plus weekday routine defaults, equipment and an
-    /// empty insight list. Must land on Home; the Account section must open and, with no account service configured in
-    /// CI, say so instead of offering a broken sign-in; Export must produce a share sheet. Nothing may be lost.
-    func testUpgradeFromBuild40OpensAccountAndLegalPages() {
+    /// empty insight list. Must land on Home. Cyclift 1.0 has no accounts: Profile shows no sign-in at all, but
+    /// "Your data" — Export must open a share sheet, and Delete all data must ask first; Cancel keeps every record
+    /// (the rider still lands on Home with the seeded name and the routine is still on today's centre button).
+    func testUpgradeFromBuild40YourDataExportAndDeleteCancelKeepsData() {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build40Store()
         app.launch()
@@ -82,20 +83,64 @@ final class LaunchSmokeTests: XCTestCase {
         let profileTab = app.buttons["Profile"].firstMatch
         XCTAssertTrue(profileTab.waitForExistence(timeout: 10), "Profile tab missing")
         profileTab.tap()
-        // Home's guest card has its own small "Create account" link (hidden tab, still in the tree): use the Profile row's id.
-        let create = app.buttons["profileCreateAccount"].firstMatch
+        XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 10))
+        let export = app.buttons["exportData"].firstMatch
         var tries = 0
-        while !(create.exists && create.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }   // the Account section is below the fold
-        XCTAssertTrue(create.waitForExistence(timeout: 10), "guest sees Create account in Profile › Account")
-        create.tap()
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'not configured in this build'")).firstMatch.waitForExistence(timeout: 10), "without Supabase values the sheet says accounts are not available")
-        let notNow = app.buttons["Not now"].firstMatch
-        XCTAssertTrue(notNow.waitForExistence(timeout: 10), "the account sheet stays open with its Not now button")
-        notNow.tap()
+        while !(export.exists && export.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }   // the section is below the fold
+        XCTAssertTrue(export.waitForExistence(timeout: 10), "Profile › Your data › Export my data")
+        // no sign-in surface anywhere in 1.0
+        XCTAssertFalse(app.buttons["profileCreateAccount"].exists, "no Create account row")
+        let signIn = NSPredicate(format: "label CONTAINS[c] 'sign in' OR label CONTAINS[c] 'create account' OR label CONTAINS[c] 'not configured'")
+        XCTAssertEqual(app.buttons.matching(signIn).count, 0, "no sign-in button")
+        XCTAssertEqual(app.staticTexts.matching(signIn).count, 0, "no sign-in text")
+
+        // Export → the iOS share sheet with the JSON file
+        export.tap()
+        XCTAssertTrue(Self.waitForShareSheet(app), "Export must open the share sheet")
+        Self.closeShareSheet(app)
+        XCTAssertEqual(app.state, .runningForeground)
+
+        // Delete all data → confirmation; Cancel keeps everything
+        let delete = app.buttons["deleteAllData"].firstMatch
+        tries = 0
+        while !(delete.exists && delete.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(delete.waitForExistence(timeout: 10))
+        delete.tap()
+        let alert = app.alerts["Delete everything on this phone?"].firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 10), "deletion must ask for confirmation")
+        alert.buttons["Cancel"].tap()
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: alert)
+        wait(for: [gone], timeout: 10)
+
+        // legal page still opens from About
         let privacy = app.buttons["Privacy policy"].firstMatch
         if privacy.waitForExistence(timeout: 5) { privacy.tap(); XCTAssertTrue(app.staticTexts["Cyclift — Privacy policy"].firstMatch.waitForExistence(timeout: 10)); app.navigationBars.buttons.element(boundBy: 0).tap() }
+
+        // data preserved: still onboarded, same rider, today's routine still scheduled
+        app.buttons["Home"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 10), "Cancel must keep the profile")
+        let centre = app.buttons["centreButton"].firstMatch
+        XCTAssertTrue(centre.waitForExistence(timeout: 10))
+        XCTAssertTrue(centre.label.contains("Train now"), "Cancel must keep the plan, got \(centre.label)")
         XCTAssertEqual(app.state, .runningForeground)
         Self.tapAllTabs(app)
+    }
+
+    /// The share sheet's elements differ between iOS versions: accept any of its known markers.
+    static func waitForShareSheet(_ app: XCUIApplication, timeout: TimeInterval = 15) -> Bool {
+        let file = NSPredicate(format: "label BEGINSWITH 'cyclift-export'")
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            if app.otherElements["ActivityListView"].exists || app.staticTexts.matching(file).firstMatch.exists
+                || app.buttons["Copy"].exists || app.cells["Copy"].exists || app.buttons["Save to Files"].exists || app.cells["Save to Files"].exists { return true }
+            usleep(300_000)
+        }
+        return false
+    }
+    static func closeShareSheet(_ app: XCUIApplication) {
+        for name in ["Close", "Cancel"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
+        sleep(1)
+        if !app.buttons["exportData"].firstMatch.isHittable { app.swipeDown(velocity: .fast); sleep(1) }
     }
 
     static func build40Store() -> String {

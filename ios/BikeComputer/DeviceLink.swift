@@ -13,7 +13,7 @@ import UIKit
 /// the board's LINK_DIAG event. The coarse `state` stays for the rest of the app (`.ready` = usable link).
 final class DeviceLink: NSObject, ObservableObject {
     enum State: String { case off = "Bluetooth off", idle = "Not connected", scanning = "Searching…", connecting = "Connecting…",
-                         pairing = "Pairing — type the code shown on the Waveshare", ready = "Connected", unauthorized = "Bluetooth permission needed" }
+                         pairing = "Pairing — type the code shown on the BikeComputer", ready = "Connected", unauthorized = "Bluetooth permission needed" }
 
     /// Fine-grained stage of the current attempt (the brief's list) plus the resting states.
     enum Stage: String, CaseIterable {
@@ -231,7 +231,7 @@ final class DeviceLink: NSObject, ObservableObject {
 
     /// Asks the board for rides after the highest id already stored. Does nothing when the firmware lacks RIDE_SYNC.
     func startSync() {
-        guard state == .ready, let i = info, i.hasRideSync, let c = syncChr, let p = peripheral else { syncStatus = info?.hasRideSync == false ? "not supported by firmware \(info?.fw ?? "?") — sync coming" : syncStatus; return }
+        guard state == .ready, let i = info, i.hasRideSync, let c = syncChr, let p = peripheral else { syncStatus = info?.hasRideSync == false ? "needs a newer BikeComputer firmware (this one is \(info?.fw ?? "?"))" : syncStatus; return }
         let after = highestStoredRideId?(boardId) ?? 0
         guard let d = BCLink.encodeSyncRequest(afterRideId: UInt16(clamping: after), maxCount: 50, seq: nextSeq(), tMs: nowMs()) else { return }
         syncInFlight = true; syncStatus = "syncing from ride \(after + 1)…"
@@ -482,7 +482,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             if let k = controlChr { p.setNotifyValue(true, for: k) }
             if let ev = eventsChr { p.setNotifyValue(true, for: ev) }
             if i.hasRideSync, let sc = syncChr { p.setNotifyValue(true, for: sc); syncStatus = "supported"; DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in self?.startSync() } }
-            else { syncStatus = "not supported by firmware \(i.fw) — sync coming" }
+            else { syncStatus = "needs a newer BikeComputer firmware (this one is \(i.fw))" }
             sendTime()
             startTimers()
             if i.hasWiFi { DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.wifiStatusRequest() } }

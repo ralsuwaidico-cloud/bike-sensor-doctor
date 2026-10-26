@@ -1,47 +1,39 @@
 # Cyclift — Privacy policy
 
-Last updated: 26 October 2026. Cyclift is a cycling, strength and hybrid-training app for iPhone and Apple Watch, made by its developer in the United Arab Emirates (the "developer"). Contact: SUPPORT_EMAIL.
+Last updated: 26 October 2026. This policy covers Cyclift 1.0 for iPhone and Apple Watch, made by its independent developer in the United Arab Emirates (the "developer"). Contact: ralsuwaidico@gmail.com.
 
 ## The short version
 
-Your training data belongs to you. Without an account, nothing leaves your phone. With an account, your data is stored in your own account at our hosting provider so it can follow you to another device, and you can export or delete all of it at any time from inside the app.
+Cyclift has no account, no server, no analytics, no advertising and no tracking. Everything you enter or record stays on your iPhone (and, while you use them, on your paired Apple Watch and your optional BikeComputer device). The developer never receives any of your data.
 
-## Where the app's data comes from
+## What the app stores, and where
 
-Cyclift works with the sources you choose to connect, and with none: the phone alone records rides with GPS. Supported sources in version 1.0 are standard Bluetooth fitness sensors (heart-rate monitors, power meters, cadence and speed sensors that use the standard Bluetooth profiles), Apple Watch, Apple Health, and the optional BikeComputer handlebar device. The app reads only the measurements these sources provide (for example power, heart rate, cadence, speed) and shows which source each value came from. Garmin, WHOOP and Oura accounts are not connected or integrated in version 1.0; the app does not contact those services.
-
-## What the app stores
-
-Profile you enter: name, birth year, weight, height, gender if you choose to give it, units, training goals, experience, weekly availability, FTP and heart-rate values. Training data you create or record: rides (time, distance, speed, GPS route, power, cadence, heart rate when a source provides it), strength sessions (exercises, sets, repetitions, weights, effort, notes), workout templates, your weekly plan and coach decisions. Source data: the names and identifiers of the sensors and devices you pair (for example a heart-rate strap or your BikeComputer) and their settings, so the app can reconnect to them.
+Profile you enter: first name, birth year, weight, height, gender if you choose to give it, units, training goals, experience, weekly availability, FTP and heart-rate values. Training data you create or record: rides (time, distance, speed, GPS route, power, cadence and heart rate when a source provides them), strength sessions (exercises, sets, repetitions, weights, effort, notes), workout templates, your weekly plan and the coach's adjustments. Devices: the names and Bluetooth identifiers of the sensors and the BikeComputer you pair, so the app can reconnect to them. All of this is stored only in the app's storage on your iPhone. It is included in your iPhone's own backup if you use iCloud or computer backups, which Apple handles under your Apple account.
 
 ## Location
 
-While a ride is recording, the app uses your location to measure speed and distance and to draw the route, including when the screen is locked. Location is never used when no ride is running, is never shared with anyone, and stays part of your ride data under your control.
+The app uses your location only while you record a ride (also with the screen locked) or when you switch GPS on yourself in Connections, to measure speed and distance and to draw the route. It asks for "While Using the App" permission only. Location is stored with your ride on the iPhone and, if you use a BikeComputer, the phone's GPS position and speed are sent to it over Bluetooth so it can measure distance (the BikeComputer has no GPS of its own). Maps are drawn with Apple Maps; iOS downloads the map images from Apple. Your route is never sent to the developer or anyone else.
 
 ## Bluetooth
 
-Bluetooth is used only to find and connect to fitness sensors and the BikeComputer device that you choose to pair, and to receive their measurements during workouts. No Bluetooth scanning happens for any other purpose, and nearby devices you do not pair are not stored.
+Bluetooth is used only to find and connect to the fitness sensors you choose to pair (standard heart-rate monitors, power meters, speed and cadence sensors) and the optional BikeComputer device, and to receive their measurements. The app only reads from sensors and never changes their settings. Nearby devices you do not pair are not stored. When you use a BikeComputer, the app sends it your first name, weight, birth year, units and training settings so the device can show your zones, and imports the rides recorded on it.
 
 ## Apple Watch and Apple Health
 
-The Apple Watch app measures heart rate during a workout you start and sends it to your iPhone. If you allow it, the app reads workouts and heart rate from Apple Health to show them in your plan and history, and writes rides and sessions you choose to save. Health data is never sent to our servers unless it is part of a workout you record and sync with an account; Apple Health data is never used for advertising or shared with third parties, in line with Apple's HealthKit rules.
-
-## Accounts and sync
-
-Accounts are optional. When you create one (Sign in with Apple, Google or e-mail), authentication is handled by Supabase (hosted in Frankfurt, Germany). We receive your e-mail address (or Apple's private relay address) and a user identifier. Your training data is then stored in your account's rows, protected so only you can read them, and synchronised between your devices. Passwords are never seen or stored by the app.
+The Cyclift Apple Watch app measures heart rate during a cycling workout you start and sends it to your iPhone (and from there to a BikeComputer, if you use one). At the end you choose whether that workout is saved to Apple Health. If you allow it, the iPhone app reads cycling and strength workouts from Apple Health (with their duration, distance and energy) to show them in your plan and history; heart rate is read only by the watch app during your workout. Health access is only requested when you choose to connect Apple Health, can be changed at any time in the iOS Settings app, and Apple Health data never leaves your devices: it is not sent to the developer or to any third party and is never used for advertising or marketing.
 
 ## What we do not do
 
-No advertising, no tracking across apps or websites, no analytics SDKs, no selling or sharing of personal data. The app makes network connections only to the account service when you are signed in, to Apple for Sign in with Apple, and to Google when you choose Sign in with Google.
+No account or sign-in, no server, no cloud sync, no analytics or crash-reporting SDKs, no advertising, no tracking across apps or websites, no selling or sharing of personal data. Cyclift itself makes no network connections; it works fully offline.
 
-## Your rights
+## Export and delete
 
-Export: Profile › Account › Export my data gives you a complete JSON file. Delete: Profile › Account › Delete account and all data removes your account and every record from our servers and from the phone, immediately and permanently. You can also simply delete the app; local data is removed with it. For any other request, contact us: SUPPORT_EMAIL.
+Export: Profile › Your data › Export my data creates a complete JSON file of everything the app stores, which you can save or share with the iOS share sheet. Delete: Profile › Your data › Delete all data on this phone removes your profile, plan, rides, strength sessions, templates and remembered devices from the iPhone immediately and permanently (the BikeComputer keeps its own ride history until you clear it on the device). Deleting the app also removes all of its data from the iPhone.
 
 ## Children
 
-Cyclift is not directed at children under 16 and does not knowingly collect their data.
+Cyclift is not directed at children under 16 and does not knowingly collect data from them; in any case, no data is sent to the developer.
 
-## Changes
+## Changes and contact
 
-If this policy changes, the new version ships with the app update and the date above changes.
+If this policy changes, the new version ships with the app update and the date above changes. Questions or requests: ralsuwaidico@gmail.com.
