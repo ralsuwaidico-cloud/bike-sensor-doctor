@@ -2,7 +2,7 @@ import SwiftUI
 
 // Ride dashboard — SwiftUI port of the Nokia BikeComputer "Power Focus" design (app/.../ui/Design7.kt, Dashboard.kt,
 // core/DashLayout.kt). Three circular target gauges (power large on top, cadence and heart rate tucked below), a
-// coach box with shape badge and EASE · ON TARGET · FASTER scale, a combined live graph, stats and controls — on one
+// coach panel with shape badge and EASE · ON TARGET · FASTER scale, a combined live graph, stats and controls — on one
 // screen without scrolling. Every decision (zone, status, cue) comes from Shared/CoachCore.swift; the UI only draws.
 
 // MARK: - Palette (identical to the Nokia mockup)
@@ -118,24 +118,42 @@ enum GaugeText {
 struct LiveSamplePoint: Equatable { var sec: Int; var powerW: Int?; var hr: Int?; var cadRpm: Int?; var bands: GraphBands }
 
 final class RideCoach: ObservableObject {
+    /// The cue on screen: the engine's latest decision after the display gate (held ≥ 15 s unless clearly necessary).
     @Published private(set) var cue: CoachCue = .none
     @Published private(set) var cueAt: Date? = nil
     @Published private(set) var phase: Phase = .WARMUP
     @Published private(set) var samples: [LiveSamplePoint] = []
     @Published private(set) var bands: GraphBands = GraphBands(pwLo: 100, pwHi: 200, hrLo: 110, hrHi: 130, cadLo: 85, cadHi: 95, pwReference: true)
     let engine = CoachEngine()
+    private(set) var gate = CueGate()
     private(set) var targetZone = 2
     private(set) var targetHrZone = 2
+    /// Interval workouts (threshold, VO2) coach work / recovery blocks; nil = one steady target.
+    private(set) var intervals: IntervalPlan? = nil
+    private(set) var workoutTitle = "Free ride"
     private var cooldownRequestedAtMs: Int64? = nil
     private var plannedSec: Int? = nil
-    private var powerTrusted = false
+    private var mainStartSec: Int? = nil
+    private(set) var powerTrusted = false
     static let keepSeconds = 300
 
-    /// Applies the rider's profile, the app settings and today's session (its zone is the target).
+    /// Interval structure per workout kind (the plan's sessions carry a kind and minutes, not a block list).
+    static func intervalPlan(for kind: WorkoutKind?) -> IntervalPlan? {
+        switch kind {
+        case .threshold?: return IntervalPlan(workSec: 480, restSec: 240, repeats: 4)
+        case .vo2?: return IntervalPlan(workSec: 180, restSec: 180, repeats: 5)
+        default: return nil
+        }
+    }
+
+    /// Applies the rider's profile, the app settings and today's session (a ride's zone is the target; a strength or
+    /// rest day coaches a free Zone 2 ride). `powerTrusted` = the power reading is verified (hub quality .good).
     func configure(profile p: RiderProfile, settings s: AppSettings, workout: Workout?, powerTrusted: Bool) {
         var c = engine.config
-        c.mode = s.coachEnabled ? .ZONE2 : .FREE
-        let z = min(5, max(1, workout?.kind.zone ?? 2))
+        let ride = workout.flatMap { $0.kind.isRide ? $0 : nil }
+        let iv = Self.intervalPlan(for: ride?.kind)
+        c.mode = s.coachEnabled ? (iv != nil ? .INTERVAL : .ZONE2) : .FREE
+        let z = min(5, max(1, ride?.kind.zone ?? 2))
         c.targetPowerZone = z; c.targetHrZone = z
         c.ftpW = p.ftpW; c.maxHr = p.estimatedMaxHR
         c.cadenceLow = p.cadenceLow; c.cadenceHigh = p.cadenceHigh
@@ -143,28 +161,38 @@ final class RideCoach: ObservableObject {
         c.powerCoaching = true
         c = c.withFrequency(s.coachTalk == .quiet ? .quiet : s.coachTalk == .frequent ? .frequent : .normal)
         engine.config = c
+        if let iv { engine.interval = iv }
+        intervals = iv
         targetZone = z; targetHrZone = z
-        plannedSec = workout.map { $0.minutes * 60 }
+        workoutTitle = ride?.kind.title ?? "Free ride"
+        plannedSec = ride.map { $0.minutes * 60 }
         self.powerTrusted = powerTrusted
         bands = GraphBands.resolve(targets: nil, ftpW: p.ftpW, powerTrusted: powerTrusted, maxHr: p.estimatedMaxHR, targetZone: z, cadLo: p.cadenceLow, cadHi: p.cadenceHigh)
     }
-    func reset() { engine.reset(); cue = .none; cueAt = nil; samples = []; cooldownRequestedAtMs = nil; phase = .WARMUP }
+    func reset() { engine.reset(); gate.reset(); cue = .none; cueAt = nil; samples = []; cooldownRequestedAtMs = nil; mainStartSec = nil; phase = .WARMUP }
     func requestCooldown(elapsedS: Int) { cooldownRequestedAtMs = Int64(elapsedS) * 1000 }
 
     /// One second of ride time. nil = no reading this second (never invented).
     func tick(elapsedS: Int, cadence: Int?, hr: Int?, power: Int?, speedKmh: Double?) {
         let ms = Int64(elapsedS) * 1000
         let plan = SessionPlan(warmupSec: 300, cooldownSec: 300, plannedSec: plannedSec)
-        phase = Session.phaseAt(plan, elapsedMs: ms, cooldownRequestedAtMs: cooldownRequestedAtMs)
-        let input = CoachInput(nowMs: ms, phase: phase, cadence: cadence.map { Signal(value: $0) } ?? .none, hr: hr.map { Signal(value: $0) } ?? .none, power: power.map { Signal(value: $0) } ?? .none, targets: nil, speedKmh: speedKmh)
+        var ph = Session.phaseAt(plan, elapsedMs: ms, cooldownRequestedAtMs: cooldownRequestedAtMs)
+        let input = CoachInput(nowMs: ms, phase: ph, cadence: cadence.map { Signal(value: $0) } ?? .none, hr: hr.map { Signal(value: $0) } ?? .none, power: power.map { Signal(value: $0) } ?? .none, targets: nil, speedKmh: speedKmh)
+        // the label follows the engine's own interval clock (work → recovery → … → cool-down)
+        if ph == .MAIN, let iv = intervals {
+            if mainStartSec == nil { mainStartSec = elapsedS }
+            let t = elapsedS - (mainStartSec ?? elapsedS), cycle = iv.workSec + iv.restSec
+            if cycle > 0, iv.repeats > 0 { ph = t >= cycle * iv.repeats ? .COOLDOWN : (t % cycle) >= iv.workSec ? .RECOVERY : .MAIN }
+        }
+        phase = ph
         let c = engine.update(input)
-        if c.type != .NONE { cue = c; cueAt = Date() }
+        if gate.offer(c, nowMs: ms) { cue = gate.shown; cueAt = Date() }
         samples.append(LiveSamplePoint(sec: elapsedS, powerW: power, hr: hr, cadRpm: cadence, bands: bands))
         if samples.count > Self.keepSeconds { samples.removeFirst(samples.count - Self.keepSeconds) }
     }
     var cueActive: Bool { guard let t = cueAt else { return false }; return cue.type != .NONE && Date().timeIntervalSince(t) < 45 }
     var phaseLabel: String {
-        switch phase { case .WARMUP: return "WARM-UP"; case .MAIN: return "MAIN"; case .RECOVERY: return "RECOVERY"; case .COOLDOWN: return "COOL-DOWN" }
+        switch phase { case .WARMUP: return "WARM-UP"; case .MAIN: return intervals != nil ? "WORK" : "MAIN"; case .RECOVERY: return "RECOVERY"; case .COOLDOWN: return "COOL-DOWN" }
     }
 }
 
@@ -175,6 +203,9 @@ struct TargetGauge: View {
     var band: (Double, Double)? = nil
     var sub: String?; var unit: String; var big: Bool
     var status: TargetStatus; var statusText: String; var showTgtLabel: Bool
+    /// The source line under the pill ("Apple Watch", "Power meter via BikeComputer"); nil = no line.
+    var source: String? = nil
+    var sourceWarning = false
     private let start = 135.0, sweep = 270.0
 
     var body: some View {
@@ -218,14 +249,15 @@ struct TargetGauge: View {
                 VStack(spacing: 0) {
                     Text((sub ?? " ").count > 8 && !big ? " " : (sub ?? " ")).font(.system(size: big ? 12 : 9, design: .monospaced)).foregroundStyle(color).lineLimit(1)
                     Text(value.map(String.init) ?? "—").font(.system(size: big ? 58 : 26, weight: .medium, design: .rounded)).monospacedDigit().foregroundStyle(value == nil ? D7.faint : D7.fg).lineLimit(1).minimumScaleFactor(0.5)
-                    Text(unit).font(.system(size: big ? 12 : 9, design: .monospaced)).tracking(1).foregroundStyle(D7.mut)
+                    Text(unit).font(.system(size: big ? 12 : 9, design: .monospaced)).tracking(1).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.6)
                 }.padding(.horizontal, big ? 30 : 22)
             }
             .aspectRatio(1, contentMode: .fit)
             StatusPill(status: status, text: statusText, big: big)
+            if let source { Text(source).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(sourceWarning ? D7.amber : D7.mut).lineLimit(1).minimumScaleFactor(0.6).frame(height: 11) }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(unit) \(value.map(String.init) ?? "no data"), \(statusText.lowercased())")
+        .accessibilityLabel("\(unit) \(value.map(String.init) ?? "no data"), \(statusText.lowercased())\(source.map { ", \($0)" } ?? "")")
     }
 }
 
@@ -240,31 +272,7 @@ struct StatusPill: View {
     }
 }
 
-// MARK: - Coach box
-struct CoachBox: View {
-    let headline: String; let detail: String; let color: Color; let shape: CoachShape; let direction: Int?; let active: Bool
-    var body: some View {
-        let bg = active ? color : D7.panel2
-        let ink = active ? D7.ink : D7.fg
-        let sub = active ? D7.ink.opacity(0.82) : D7.mut
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                CoachBadge(shape: shape, badge: ink, glyph: active ? color : D7.faint)
-                VStack(spacing: 2) {
-                    Text(headline).font(.system(size: headline.count >= 24 ? 15 : headline.count >= 14 ? 18 : 22, weight: .heavy, design: .rounded)).foregroundStyle(ink).lineLimit(2).minimumScaleFactor(0.6).multilineTextAlignment(.center)
-                    if !detail.isEmpty { Text(detail).font(.system(size: 12)).foregroundStyle(sub).lineLimit(2).minimumScaleFactor(0.8).multilineTextAlignment(.center) }
-                }.frame(maxWidth: .infinity)
-                Color.clear.frame(width: 36, height: 1)
-            }
-            CoachScale(direction: direction, lit: active ? color : D7.faint, ink: ink, active: active)
-        }
-        .padding(.horizontal, 12).padding(.vertical, 10)
-        .background(bg, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(active ? Color.clear : D7.line, lineWidth: 1))
-        .accessibilityElement(children: .combine)
-    }
-}
-
+// MARK: - Coach panel parts (CoachPanel lives in Ride/CoachPanel.swift and is embedded in every layout)
 struct CoachBadge: View {
     let shape: CoachShape; let badge: Color; let glyph: Color
     var body: some View {

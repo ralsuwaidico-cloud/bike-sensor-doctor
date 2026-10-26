@@ -386,6 +386,8 @@ struct AppSettings: Codable, Equatable {
     /// 0.6.0: import cycling + strength workouts from Apple Health when the rider asks (and on launch while on).
     var appleHealthImportWorkouts = false
     var lastHealthImport: Date? = nil
+    /// Cyclift 1.0: the live ride layout (Ride › settings or the quick switch on the ride screen). Presentation only.
+    var rideLayout: RideLayout = .coach
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -404,6 +406,7 @@ struct AppSettings: Codable, Equatable {
         coachEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachEnabled) ?? true
         appleHealthImportWorkouts = try c.decodeIfPresent(Bool.self, forKey: .appleHealthImportWorkouts) ?? false
         lastHealthImport = try c.decodeIfPresent(Date.self, forKey: .lastHealthImport)
+        rideLayout = (try? c.decodeIfPresent(RideLayout.self, forKey: .rideLayout)) ?? .coach
     }
 }
 
