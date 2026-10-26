@@ -168,8 +168,10 @@ struct SwapExerciseSheet: View {
                                 if o.flagged { Pill(text: "check", color: BC.warn) }
                             }
                             Text(o.reasons.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        }.frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
-                    }.accessibilityIdentifier("swapOption-\(o.exercise.id)")
+                        }.padding(.trailing, DS.l).frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
+                        .overlay(alignment: .trailing) { Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary).accessibilityHidden(true) }
+                        .contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("swapOption-\(o.exercise.id)")
                 }
             } header: { Text("Alternatives") } footer: { Text("Only exercises your equipment allows. Sets and reps stay the same; a weight is used only from your own logs of the new exercise.") }
         }
@@ -185,8 +187,8 @@ struct SwapExerciseSheet: View {
                             VStack(alignment: .leading, spacing: 2) { Text(r.title).foregroundStyle(.primary); Text(r.detail).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                             Spacer(minLength: DS.s)
                             if reason == r { Image(systemName: "checkmark").foregroundStyle(BC.accent) }
-                        }.frame(minHeight: DS.minTap)
-                    }.accessibilityIdentifier("swapReason-\(r.rawValue)").accessibilityAddTraits(reason == r ? .isSelected : [])
+                        }.frame(minHeight: DS.minTap).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("swapReason-\(r.rawValue)").accessibilityAddTraits(reason == r ? .isSelected : [])
                 }
                 if reason == .temporarilyUnavailable {
                     Picker("For", selection: $tempMode) { Text("Next 3 sessions").tag(0); Text("2 weeks").tag(1) }.pickerStyle(.segmented)

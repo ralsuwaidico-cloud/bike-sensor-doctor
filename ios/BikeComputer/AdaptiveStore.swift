@@ -72,16 +72,55 @@ extension Store {
     @discardableResult
     func recordCheckIn(_ c: CheckIn, rideId: UUID, now: Date = Date()) -> AdaptationResult? {
         guard let i = rides.firstIndex(where: { $0.id == rideId }) else { return nil }
+        let before = plan
         rides[i].checkIn = c
         refreshGeneratedSessions(now: now)      // planner: fatigue / pain from the check-in shape coach-built sessions
-        return runAdaptation(now: now)
+        let r = runAdaptation(now: now)
+        noteCheckInRebuild(before: before, now: now)
+        return r
     }
     @discardableResult
     func recordCheckIn(_ c: CheckIn, strengthId: UUID, now: Date = Date()) -> AdaptationResult? {
         guard let i = strength.firstIndex(where: { $0.id == strengthId }) else { return nil }
+        let before = plan
         strength[i].checkIn = c
         refreshGeneratedSessions(now: now)
-        return runAdaptation(now: now)
+        let r = runAdaptation(now: now)
+        noteCheckInRebuild(before: before, now: now)
+        return r
+    }
+
+    /// Remembers which open sessions this check-in changed (planner rebuild and/or adaptive changes), as they were, with
+    /// a one-line explanation each, so the result screen can offer one Undo for all of them.
+    func noteCheckInRebuild(before: [Workout], now: Date = Date()) {
+        var changed: [Workout] = [], lines: [String] = []
+        for b in before where b.kind == .strength && !b.done {
+            guard let a = plan.first(where: { $0.id == b.id }), a.plannedEntries != b.plannedEntries else { continue }
+            changed.append(b)
+            let sb = (b.plannedEntries ?? []).reduce(0) { $0 + $1.sets.count }, sa = (a.plannedEntries ?? []).reduce(0) { $0 + $1.sets.count }
+            let removed = Set((b.plannedEntries ?? []).map { $0.name }).subtracting((a.plannedEntries ?? []).map { $0.name }).sorted()
+            var t = "\(a.date.dayAndDate) · \(a.displayTitle): \(sb == sa ? "\(sa) sets" : "\(sb) → \(sa) sets")"
+            if !removed.isEmpty { t += ", left out: \(removed.joined(separator: ", "))" }
+            if let why = a.rationale?.notes.first(where: { $0.hasPrefix("Deload") || $0.lowercased().contains("pain") }) { t += ". \(why)" }
+            else if let adj = adaptations.first(where: { $0.workoutId == a.id }) { t += ". \(adj.summary)" }
+            lines.append(t)
+        }
+        checkInRebuild = changed.isEmpty ? nil : CheckInRebuild(before: changed, lines: lines, at: now)
+    }
+
+    /// Undo everything the latest check-in changed: those sessions go back exactly as they were and are kept that way
+    /// (marked as the rider's own, so neither the planner nor the adaptive coach rebuilds them on its own again).
+    func undoCheckInRebuild() {
+        guard let r = checkInRebuild else { return }
+        var p = plan, d = dismissedAdaptations
+        let ids = Set(r.before.map { $0.id })
+        for b in r.before { if let i = p.firstIndex(where: { $0.id == b.id }), !p[i].done { var x = b; x.edited = true; p[i] = x } }
+        for a in adaptations where ids.contains(a.workoutId) && !d.contains(a.key) { d.append(a.key) }
+        adaptations.removeAll { ids.contains($0.workoutId) }
+        dismissedAdaptations = d
+        plan = p
+        checkInRebuild = nil
+        trimAdaptationKeys()
     }
 
     // MARK: visible and reversible (brief E)
@@ -167,4 +206,11 @@ extension Store {
         _ = regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: now)!, replaceEdited: false)
         _ = runAdaptation(now: now)
     }
+}
+
+/// What the latest check-in changed in the open plan (for the result screen's Undo).
+struct CheckInRebuild: Equatable {
+    var before: [Workout]
+    var lines: [String]
+    var at: Date
 }

@@ -264,3 +264,12 @@ struct HeaderRow<Trailing: View>: View {
         }
     }
 }
+
+/// A summary line limit that is lifted at the largest text sizes (XXXL and accessibility sizes), so long names and
+/// lists wrap instead of ending in "…" when the rider has asked for bigger text.
+struct ClampLines: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dts
+    let n: Int
+    func body(content: Content) -> some View { content.lineLimit(dts >= .xxxLarge ? nil : n) }
+}
+extension View { func clampLines(_ n: Int) -> some View { modifier(ClampLines(n: n)) } }

@@ -522,4 +522,128 @@ final class QualityReleaseTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - 8. Deloads, coverage, effort feedback, Why? and adaptive coaching after a workout
+
+    func testDeloadOnFatigueAndEveryFourthTrainingWeek() {
+        let w = strengthWorkout(today, minutes: 60)
+        let normal = StrengthPlanner.build(for: w, ctx: ctx(plan: [w]))
+        XCTAssertFalse(normal.rationale.deload)
+        var tired = ctx(plan: [w]); tired.fatigue = true
+        let d1 = StrengthPlanner.build(for: w, ctx: tired)
+        XCTAssertTrue(d1.rationale.deload)
+        XCTAssertTrue(d1.rationale.notes.contains { $0.hasPrefix("Deload week") && $0.contains("fatigue") })
+        XCTAssertLessThan(d1.entries.reduce(0) { $0 + $1.sets.count }, normal.entries.reduce(0) { $0 + $1.sets.count }, "fewer sets in a deload")
+        XCTAssertTrue(d1.rationale.exercises.allSatisfy { ($0.targetRPE ?? 10) <= 6 })
+        // three consecutive weeks with logged sessions → this (4th) week is a deload
+        let goblet = catalogue[1]
+        let logs = (1...3).map { k in StrengthSession(date: cal.date(byAdding: .day, value: -7 * k + 1, to: monday)!.addingTimeInterval(18 * 3600), minutes: 40, focus: .fullBody,
+                                                      exercises: [ExerciseEntry(exercise: goblet, sets: sets([10, 10, 10], kg: 20))]) }
+        let wk = StrengthPlanner.weekContext(for: w, ctx: ctx(plan: [w], logs: logs))
+        XCTAssertTrue(wk.deload); XCTAssertTrue(wk.deloadReason?.contains("week 4") == true)
+        // quick logs (no sets) do not count as training weeks for the deload rhythm either
+        let quick = (1...3).map { k in StrengthSession(date: cal.date(byAdding: .day, value: -7 * k + 1, to: monday)!.addingTimeInterval(18 * 3600), minutes: 40, focus: .fullBody) }
+        XCTAssertFalse(StrengthPlanner.weekContext(for: w, ctx: ctx(plan: [w], logs: quick)).deload)
+    }
+
+    func testSessionsCoverMovementPatternsAndFitTheirMinutes() {
+        func slots(_ b: StrengthPlanner.Built) -> [MovementSlot] { b.entries.map { e in ExerciseLibrary.meta(catalogue.first { $0.id == e.exerciseId }!).slot } }
+        let full = strengthWorkout(today, minutes: 60)
+        let f = slots(StrengthPlanner.build(for: full, ctx: ctx(plan: [full])))
+        XCTAssertTrue(f.contains(.squat) && f.contains(.hinge), "\(f)")
+        XCTAssertTrue(f.contains { $0.family == .push } && f.contains { $0.family == .pull }, "\(f)")
+        let upper = strengthWorkout(today, minutes: 60, focus: .upper)
+        let u = slots(StrengthPlanner.build(for: upper, ctx: ctx(plan: [upper])))
+        XCTAssertTrue(u.allSatisfy { !$0.isLower }); XCTAssertTrue(u.contains { $0.family == .push } && u.contains { $0.family == .pull })
+        // a short session keeps the main patterns: sets are trimmed first, and it says so
+        let short = strengthWorkout(today, minutes: 25)
+        let b = StrengthPlanner.build(for: short, ctx: ctx(plan: [short]))
+        let sl = slots(b)
+        XCTAssertGreaterThanOrEqual(b.entries.count, 3)
+        XCTAssertTrue(sl.contains(.squat) && sl.contains(.hinge), "\(sl)")
+        XCTAssertLessThan(b.entries.reduce(0) { $0 + $1.sets.count }, StrengthPlanner.build(for: full, ctx: ctx(plan: [full])).entries.reduce(0) { $0 + $1.sets.count })
+        XCTAssertTrue(b.rationale.exercises.contains { $0.dose.contains("Trimmed") || $0.dose.contains("fits") } || b.entries.count < 8)
+    }
+
+    func testHardLoggedEffortHoldsTheLoad() {
+        let goblet = catalogue[1]
+        let old = cal.date(byAdding: .day, value: -3, to: now)!
+        let hard = ctx(logs: [StrengthSession(date: old, minutes: 40, focus: .fullBody, exercises: [ExerciseEntry(exercise: goblet, sets: sets([10, 10, 10], kg: 24, rpe: 9))])])
+        let l = StrengthPlanner.prescribeLoad(goblet, meta: ExerciseLibrary.meta(goblet), reps: 6...10, sets: 3, painBlocked: false, ctx: hard)
+        XCTAssertEqual(l.weight, 24); XCTAssertFalse(l.progressed); XCTAssertTrue(l.why.contains("RPE 9"), l.why)
+        let short = ctx(logs: [StrengthSession(date: old, minutes: 40, focus: .fullBody, exercises: [ExerciseEntry(exercise: goblet, sets: sets([8, 5, 4], kg: 24, rpe: 8))])])
+        let m = StrengthPlanner.prescribeLoad(goblet, meta: ExerciseLibrary.meta(goblet), reps: 6...10, sets: 3, painBlocked: false, ctx: short)
+        XCTAssertEqual(m.weight, 24); XCTAssertEqual(m.reps, 6); XCTAssertFalse(m.progressed)
+    }
+
+    func testWhyLinesComeFromThePlannerDecision() {
+        let goblet = catalogue[1]
+        var w = strengthWorkout(today, minutes: 60, focus: .lower)
+        let key = Workout(date: tomorrow.addingTimeInterval(7 * 3600), kind: .threshold, minutes: 70)
+        let logs = [StrengthSession(date: cal.date(byAdding: .day, value: -4, to: now)!, minutes: 40, focus: .lower, exercises: [ExerciseEntry(exercise: goblet, sets: sets([10, 10, 10], kg: 20, rpe: 7))])]
+        let c = ctx(owned: ["dumbbell", "bench"], plan: [w, key], logs: logs)
+        let b = StrengthPlanner.build(for: w, ctx: c)
+        w.plannedEntries = b.entries; w.rationale = b.rationale; w.generatedEntries = true
+        guard let e = b.entries.first(where: { $0.exerciseId == goblet.id }) else { return XCTFail("goblet squat expected with dumbbells: \(b.entries.map { $0.name })") }
+        let lines = StrengthPlanner.why(entry: e, workout: w, ctx: c, routineName: nil)
+        let byTitle = Dictionary(uniqueKeysWithValues: lines.map { ($0.title, $0.text) })
+        XCTAssertEqual(byTitle["Load"], b.rationale.exercise(goblet.id)?.load, "Why? shows the load rule the planner applied")
+        XCTAssertTrue(byTitle["Load"]?.contains("Last logged") == true)
+        XCTAssertEqual(byTitle["Sets, reps and effort"], b.rationale.exercise(goblet.id)?.dose)
+        XCTAssertTrue(byTitle["With your rides"]?.contains("key ride") == true, byTitle["With your rides"] ?? "")
+        XCTAssertTrue(byTitle["Place in your week"]?.contains("strength session 1 of 1") == true)
+        XCTAssertNotNil(byTitle["Muscles and movement"]); XCTAssertNotNil(byTitle["For your goal"])
+    }
+
+    func testManualCompletionsNeverDriveProgression() {
+        let goblet = catalogue[1]
+        var next = strengthWorkout(tomorrow); next.plannedEntries = [ExerciseEntry(exercise: goblet, sets: sets([10, 10, 10], kg: 20))]; next.generatedEntries = true
+        let quick = [StrengthSession(date: cal.date(byAdding: .day, value: -2, to: now)!, minutes: 40, focus: .fullBody, rpe: 6),
+                     StrengthSession(date: cal.date(byAdding: .day, value: -5, to: now)!, minutes: 40, focus: .fullBody, rpe: 6)]
+        let p = hybridProfile()
+        let input = AdaptationInput(profile: p, plan: [next], rides: [], strength: quick, availability: WeeklyAvailability.suggested(for: p), equipment: EquipmentProfile(),
+                                    catalogue: catalogue, templates: [], originalEntries: [next.id: next.plannedEntries!], now: now, calendar: cal)
+        let r = AdaptationEngine.run(input)
+        XCTAssertFalse(r.adjustments.contains { $0.workoutId == next.id && $0.category == .progression }, "quick logs / marked sessions carry no sets: no progression")
+        // a session marked done in the app does not either
+        let s = store()
+        s.customExercises = catalogue
+        let today0 = strengthWorkout(today)
+        s.plan = [today0, next]
+        XCTAssertTrue(s.markDone(today0.id, minutes: 40))
+        XCTAssertNil(StrengthPlanner.prescribeLoad(goblet, meta: ExerciseLibrary.meta(goblet), reps: 6...10, sets: 3, painBlocked: false, ctx: s.plannerContext(now: now)).weight)
+    }
+
+    func testCheckInChangesAreExplainedAndUndoable() {
+        let s = store()
+        var p = hybridProfile(); p.strengthSplit = .fullBody
+        s.profile = p
+        s.customExercises = catalogue
+        s.equipment = EquipmentProfile(owned: ["dumbbell", "bench", "kettlebell"])
+        let w = strengthWorkout(tomorrow, minutes: 60, focus: .lower)
+        s.plan = [w]
+        s.refreshGeneratedSessions(now: now)
+        XCTAssertTrue(s.plan[0].generatedEntries)
+        let built = s.plan[0]
+        func kneeLoaded(_ w: Workout) -> Bool { (w.plannedEntries ?? []).contains { e in s.allExercises.first { $0.id == e.exerciseId }.map { ExerciseLibrary.meta($0).tags.contains(.kneeFlexion) } ?? false } }
+        XCTAssertTrue(kneeLoaded(built), "a lower session loads the knees before any pain report")
+        let log = StrengthSession(date: now, minutes: 40, focus: .upper, exercises: [ExerciseEntry(exercise: catalogue[7], sets: sets([8, 8], kg: 18))])
+        XCTAssertTrue(s.addStrength(log))
+        let before = s.plan.first { $0.id == w.id }!
+        _ = s.recordCheckIn(CheckIn(performance: 4, effort: 8, pain: .concerning, painArea: .knees, at: now), strengthId: log.id, now: now)
+        let after = s.plan.first { $0.id == w.id }!
+        XCTAssertFalse(kneeLoaded(after), "knee pain → no knee-flexion loading in the next session")
+        guard let rb = s.checkInRebuild else { return XCTFail("the change is listed for Undo") }
+        XCTAssertEqual(rb.before.map { $0.id }, [w.id]); XCTAssertEqual(rb.lines.count, 1)
+        XCTAssertTrue(rb.lines[0].contains("sets"), rb.lines[0])
+        XCTAssertEqual(s.strength.first { $0.id == log.id }?.exercises, log.exercises, "the completed log is never changed")
+        // Undo: exactly as before, and kept (no automatic rebuild afterwards)
+        s.undoCheckInRebuild()
+        XCTAssertNil(s.checkInRebuild)
+        let undone = s.plan.first { $0.id == w.id }!
+        XCTAssertEqual(undone.plannedEntries, before.plannedEntries)
+        XCTAssertTrue(undone.edited)
+        s.refreshGeneratedSessions(now: now); _ = s.runAdaptation(now: now)
+        XCTAssertEqual(s.plan.first { $0.id == w.id }!.plannedEntries, before.plannedEntries)
+    }
 }

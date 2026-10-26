@@ -173,7 +173,7 @@ struct DetailedStrengthLogSheet: View {
             Text("Supersets").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
             ForEach($entries) { $e in
                 HStack {
-                    Text(e.name).font(.footnote).lineLimit(1); Spacer()
+                    Text(e.name).font(.footnote).clampLines(1); Spacer()
                     Picker("", selection: Binding(get: { e.superset ?? "" }, set: { e.superset = $0.isEmpty ? nil : $0 })) { Text("—").tag(""); ForEach(["A", "B", "C", "D"], id: \.self) { Text($0).tag($0) } }.pickerStyle(.segmented).frame(maxWidth: 190)
                 }
             }
@@ -216,7 +216,7 @@ struct ExerciseEntryRow: View {
             Button { expanded.toggle() } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     if let s = entry.superset { Text(s).font(.caption.weight(.heavy)).padding(5).background(BC.accent.opacity(0.18), in: Circle()) }
-                    VStack(alignment: .leading, spacing: 2) { Text(entry.name).font(.body.weight(.semibold)).foregroundStyle(.primary).lineLimit(2); Text("\(entry.pattern.title) · \(entry.summary(units: units))").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                    VStack(alignment: .leading, spacing: 2) { Text(entry.name).font(.body.weight(.semibold)).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true); Text("\(entry.pattern.title) · \(entry.summary(units: units))").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     Spacer(); Image(systemName: expanded ? "chevron.up" : "chevron.down").foregroundStyle(.secondary).font(.caption)
                 }.frame(minHeight: 44)
             }.buttonStyle(.plain)
@@ -302,7 +302,7 @@ struct ExerciseSearchSheet: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 6) { Text(e.name).foregroundStyle(.primary); if e.custom { Pill(text: "yours", color: BC.accent) } }
-                                    Text("\(e.pattern.title) · \(e.equipmentText)" + (e.muscles.isEmpty ? "" : " · \(e.muscles.joined(separator: ", "))")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                    Text("\(e.pattern.title) · \(e.equipmentText)" + (e.muscles.isEmpty ? "" : " · \(e.muscles.joined(separator: ", "))")).font(.caption).foregroundStyle(.secondary).clampLines(2)
                                 }
                                 Spacer(); Image(systemName: "plus.circle").foregroundStyle(BC.accent)
                             }.frame(minHeight: 44)
@@ -373,7 +373,7 @@ struct TemplatesView: View {
                 ForEach(store.templates) { t in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack { Text(t.name).font(.body.weight(.semibold)); Spacer(); Pill(text: t.focus.title); Text("≈ \(Fmt.duration(minutes: t.estimatedMinutes))").font(.caption).foregroundStyle(.secondary) }
-                        Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).clampLines(2)
                         let days = store.weekdayRoutines.filter { $0.value == t.id }.keys.sorted().map { WeeklyAvailability.dayNames[$0] }
                         Text((t.lastUsed.map { "last used \($0.dayAndDate)" } ?? "never used") + (days.isEmpty ? "" : " · default on \(days.joined(separator: ", "))")).font(.caption2).foregroundStyle(.secondary)
                         HStack { Button("Edit") { edit = t }.buttonStyle(.bordered).controlSize(.small); Button("Start now") { startNow = t }.buttonStyle(.bordered).controlSize(.small).disabled(store.activeSession != nil); Spacer() }

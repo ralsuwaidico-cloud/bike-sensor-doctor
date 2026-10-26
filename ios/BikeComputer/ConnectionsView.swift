@@ -302,7 +302,7 @@ struct ConnRow: View {
             Image(systemName: icon).font(.title3).foregroundStyle(.secondary).frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body.weight(.semibold))
-                Text(subtitle).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                Text(subtitle).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             StatusBadge(status: status)

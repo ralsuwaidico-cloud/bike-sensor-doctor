@@ -679,6 +679,8 @@ final class Store: ObservableObject {
     @Published var migrationLog: [String] = [] { didSet { persist() } }
     /// The last deletion that can still be undone from the snackbar (not persisted; the record itself is in `trash`).
     @Published var undoToast: UndoToast? = nil
+    /// Sessions the planner / adaptive coach rebuilt after the latest check-in, as they were before (one-tap Undo).
+    @Published var checkInRebuild: CheckInRebuild? = nil
     @Published private(set) var lastSaveError: String?
 
     let dir: URL

@@ -229,11 +229,11 @@ struct WorkoutCard: View {
                     HStack(alignment: .firstTextBaseline) { titleBlock; Spacer(); durationBlock }
                     VStack(alignment: .leading, spacing: 4) { titleBlock; durationBlock }
                 }
-                if let r = routine { Text("\(r.entries.count) exercises · \(r.setCount) sets · " + r.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                else if workout.kind == .strength, routineRemoved, !workout.done { Text("routine removed — tap to choose another").font(.caption).foregroundStyle(BC.warn).lineLimit(2) }
-                else if workout.kind == .strength, !workout.done, let e = workout.plannedEntries, !e.isEmpty { Text("\(e.count) exercises · " + e.map { $0.name }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                else if workout.kind == .strength { Text(workout.done ? "logged without a routine" : "no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                else if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                if let r = routine { Text("\(r.entries.count) exercises · \(r.setCount) sets · " + r.exerciseNames).font(.caption).foregroundStyle(.secondary).clampLines(2) }
+                else if workout.kind == .strength, routineRemoved, !workout.done { Text("routine removed — tap to choose another").font(.caption).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
+                else if workout.kind == .strength, !workout.done, let e = workout.plannedEntries, !e.isEmpty { Text("\(e.count) exercises · " + e.map { $0.name }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).clampLines(2) }
+                else if workout.kind == .strength { Text(workout.done ? "logged without a routine" : "no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                else if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)

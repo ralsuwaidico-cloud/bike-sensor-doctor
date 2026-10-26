@@ -112,7 +112,7 @@ struct HomeView: View {
         }.buttonStyle(.plain)
     }
     private func connLine(_ s: ConnStatus, _ name: String, _ detail: String) -> some View {
-        HStack(spacing: 8) { StatusBadge(status: s).frame(width: 20); Text(name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary); Spacer(minLength: 6); Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail) }
+        HStack(spacing: 8) { StatusBadge(status: s).frame(width: 20); Text(name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary); Spacer(minLength: 6); Text(detail).font(.caption).foregroundStyle(.secondary).clampLines(1).truncationMode(.tail) }
     }
     private var boardStatus: ConnStatus { ConnectionRules.board(linkState: device.state, liveFresh: device.liveIsFresh, remembered: device.remembered, autoConnect: store.settings.autoConnectBoard, phoneOnlyMode: store.settings.phoneOnlyMode) }
     private var boardText: String {

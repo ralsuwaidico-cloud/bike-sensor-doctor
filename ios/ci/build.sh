@@ -147,6 +147,9 @@ for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MA
   digest "$OUT/layout-$LNAME.log" "layout-$LNAME"
   if [ $L -eq 0 ]; then note "  layout $LNAME ($LSIZES): ok"; else note "  layout $LNAME ($LSIZES): FAILED (exit $L)"; LAYOUT_OK=0; fi
 done
+# Apple Watch screenshots at L / XXXL / AX3 (soft: reported, never fails the run)
+bash ci/watch-shots.sh "$LAYOUT" || true
+note "  watch screenshots: $(ls "$LAYOUT"/watch-*.png 2>/dev/null | wc -l | tr -d ' ') — $(tr '\n' ' ' < "$LOGS/watch-shots.txt" 2>/dev/null | head -c 400)"
 N_PNG=$(ls "$LAYOUT"/*.png 2>/dev/null | wc -l | tr -d ' ')
 for f in "$LAYOUT"/*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done
 cp "$LAYOUT"/*.txt "$LOGS/" 2>/dev/null || true

@@ -19,7 +19,7 @@ struct ProfileTabView: View {
                         ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(.title2, design: .rounded).weight(.bold)).foregroundStyle(BC.accent) }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
-                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             if device.state == .ready { Pill(text: "board connected", color: BC.live) }
                         }
                         Spacer()
@@ -63,7 +63,7 @@ struct ProfileTabView: View {
         NavigationLink { d() } label: {
             HStack(spacing: 12) {
                 Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(BC.accent).frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) { Text(title).font(.body.weight(.semibold)); Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                VStack(alignment: .leading, spacing: 2) { Text(title).font(.body.weight(.semibold)); Text(subtitle).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }.padding(.vertical, 2)
         }
     }
@@ -137,7 +137,7 @@ struct TrainingProfilePage: View {
                 Text(store.profile.trainingMode.hint).font(.footnote).foregroundStyle(.secondary)
                 if store.profile.trainingMode == .hybrid {
                     Picker("Main priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }
-                    NavigationLink { HybridPlanEditor() } label: { HStack { Text("Hybrid plan"); Spacer(); Text(hybridSummary).font(.caption).foregroundStyle(.secondary).lineLimit(1) } }.accessibilityIdentifier("hybridPlanLink")
+                    NavigationLink { HybridPlanEditor() } label: { HStack { Text("Hybrid plan"); Spacer(); Text(hybridSummary).font(.caption).foregroundStyle(.secondary).clampLines(1) } }.accessibilityIdentifier("hybridPlanLink")
                 }
                 NavigationLink { AdjustmentsView() } label: { HStack { Text("Coach adjustments"); Spacer(); Text(store.activeAdaptations.isEmpty ? (store.settings.autoAdapt ? "none in force" : "automatic off") : "\(store.activeAdaptations.count) in force").font(.caption).foregroundStyle(.secondary) } }
             } header: { Text("Training mode") } footer: { Text("Hybrid Athlete: one coach for cycling and lifting, with separate hour budgets. Changing the mode rebuilds the coming weeks around your days (hand-edited sessions are kept).") }

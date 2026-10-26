@@ -293,7 +293,7 @@ struct ChooseRoutineSheet: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     HStack(spacing: 6) { Text(t.name).font(.body.weight(.semibold)).foregroundStyle(.primary); Pill(text: t.focus.title); if store.weekdayRoutines[wd] == t.id { Pill(text: "\(WeeklyAvailability.dayNames[wd]) default", color: BC.zone(5)) } }
-                                    Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                    Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).clampLines(2)
                                     Text("\(t.entries.count) exercises · \(t.setCount) sets · ≈ \(Fmt.duration(minutes: t.estimatedMinutes))" + budgetHint(t)).font(.caption2).foregroundStyle(budgetHint(t).isEmpty ? .secondary : BC.warn)
                                 }
                                 Spacer(); if workout.templateId == t.id { Image(systemName: "checkmark").foregroundStyle(BC.accent) }
@@ -376,7 +376,7 @@ struct TemplateEditor: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Supersets").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
             ForEach($entries) { $e in
-                HStack { Text(e.name).font(.footnote).lineLimit(1); Spacer()
+                HStack { Text(e.name).font(.footnote).clampLines(1); Spacer()
                     Picker("", selection: Binding(get: { e.superset ?? "" }, set: { e.superset = $0.isEmpty ? nil : $0 })) { Text("—").tag(""); ForEach(["A", "B", "C", "D"], id: \.self) { Text($0).tag($0) } }.pickerStyle(.segmented).frame(maxWidth: 190) }
             }
         }
@@ -518,10 +518,10 @@ struct StrengthSessionView: View {
         Card {
             HStack(alignment: .firstTextBaseline) {
                 if let g = e.superset { Text(g).font(.caption.weight(.heavy)).padding(4).background(BC.accent.opacity(0.18), in: Circle()) }
-                Text(e.name).font(.body.weight(.bold)).lineLimit(2); Spacer()
+                Text(e.name).font(.body.weight(.bold)).fixedSize(horizontal: false, vertical: true); Spacer()
                 Text("\(e.doneSets.count)/\(e.sets.count)").font(.caption.weight(.heavy)).monospacedDigit().foregroundStyle(e.doneSets.count == e.sets.count && !e.sets.isEmpty ? BC.live : .secondary)
             }
-            if let prev = previousText(e) { Text("Previous: \(prev)").font(.caption).foregroundStyle(.secondary).lineLimit(2) } else { Text("No previous log for this exercise").font(.caption).foregroundStyle(.secondary) }
+            if let prev = previousText(e) { Text("Previous: \(prev)").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) } else { Text("No previous log for this exercise").font(.caption).foregroundStyle(.secondary) }
             ForEach(Array(e.sets.enumerated()), id: \.element.id) { si, st in
                 LiveSetRow(number: si + 1, set: st, units: store.settings.units, onChange: { newSet in store.updateActiveSession { $0.exercises?[index].sets[si] = newSet } })
                 if si < e.sets.count - 1 { Divider() }
@@ -529,7 +529,7 @@ struct StrengthSessionView: View {
             HStack {
                 Button { store.updateActiveSession { var n = $0.exercises?[index].sets.last ?? SetEntry(); n.id = UUID(); n.done = false; $0.exercises?[index].sets.append(n) } } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
                 Spacer()
-                if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
+                if !e.notes.isEmpty { Text(e.notes).font(.caption2).foregroundStyle(.secondary).clampLines(1) }
             }
         }
     }

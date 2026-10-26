@@ -108,6 +108,13 @@ struct AdjustmentsView: View {
                     Label { Text(f).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "text.bubble").foregroundStyle(BC.stale) }
                 }
             }
+            if afterCheckIn, let rb = store.checkInRebuild {
+                Section {
+                    ForEach(Array(rb.lines.enumerated()), id: \.offset) { _, l in Text(l).font(.footnote).fixedSize(horizontal: false, vertical: true) }
+                    Button { store.undoCheckInRebuild() } label: { Label("Undo these changes", systemImage: "arrow.uturn.backward").frame(minHeight: DS.minTap) }
+                        .accessibilityIdentifier("undoCheckInRebuild")
+                } header: { Text("Changed after this check-in") } footer: { Text("Undo puts these sessions back exactly as they were and keeps them that way. Progression never comes from sessions marked done without details.") }
+            }
             if !sessions.isEmpty {
                 Section {
                     ForEach(sessions) { w in sessionBlock(w, groups[w.id] ?? []) }
@@ -136,6 +143,7 @@ struct AdjustmentsView: View {
     }
 
     private func headline(_ n: Int) -> String {
+        if afterCheckIn, let rb = store.checkInRebuild, rb.before.count > n { return "Check-in saved. The coach updated \(rb.before.count) upcoming session\(rb.before.count == 1 ? "" : "s")." }
         if afterCheckIn { return n == 0 ? "Check-in saved. No change to your plan this time." : "Check-in saved. The coach adjusted \(n) upcoming session\(n == 1 ? "" : "s")." }
         return n == 0 ? "No automatic changes in force." : "\(n) upcoming session\(n == 1 ? "" : "s") adjusted automatically."
     }
@@ -144,7 +152,7 @@ struct AdjustmentsView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(w.date.dayAndDate).font(.caption.weight(.heavy)).foregroundStyle(.secondary)
-                Text(w.displayTitle(routine: store.routine(for: w))).font(.subheadline.weight(.semibold)).lineLimit(2)
+                Text(w.displayTitle(routine: store.routine(for: w))).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
             ForEach(list) { a in

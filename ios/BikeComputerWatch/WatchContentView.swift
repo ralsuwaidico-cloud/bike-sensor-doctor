@@ -13,12 +13,16 @@ struct WatchContentView: View {
     @EnvironmentObject private var phone: PhoneLink
     @EnvironmentObject private var workout: WorkoutManager
     @State private var now = Date()
+    // quality release: numerals follow the wearer's text size (Dynamic Type) instead of a fixed point size
+    @ScaledMetric(relativeTo: .largeTitle) private var hrSize: CGFloat = 46
+    @ScaledMetric(relativeTo: .body) private var tileSize: CGFloat = 18
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var hrValue: some View {
         HStack(alignment: .firstTextBaseline, spacing: 2) {
             Text(workout.hrIsFresh ? "\(workout.hrBpm ?? 0)" : "--")
-                .font(.system(size: 46, weight: .bold, design: .rounded)).monospacedDigit()
+                .font(.system(size: hrSize, weight: .bold, design: .rounded)).monospacedDigit()
+                .lineLimit(1).minimumScaleFactor(0.7)
                 .foregroundStyle(workout.hrIsFresh ? .red : .secondary)
             Text("bpm").font(.caption).foregroundStyle(.secondary)
         }.accessibilityElement(children: .combine)
@@ -155,7 +159,7 @@ struct WatchContentView: View {
     }
     private func tile(_ unit: String, _ v: String?, _ sub: String?) -> some View {
         VStack(spacing: 0) {
-            Text(v ?? "--").font(.system(size: 18, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(v == nil ? .secondary : .primary)
+            Text(v ?? "--").font(.system(size: tileSize, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6).foregroundStyle(v == nil ? .secondary : .primary)
             Text(sub ?? unit).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
         }.frame(maxWidth: .infinity)
     }
