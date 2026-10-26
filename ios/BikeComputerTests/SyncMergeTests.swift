@@ -76,4 +76,42 @@ final class SyncMergeTests: XCTestCase {
         XCTAssertFalse(CloudConfig.isConfigured)
         XCTAssertFalse(CloudConfig.googleEnabled)
     }
+    // MARK: Cyclift 1.0 audit fixes
+
+    func testUnconfirmedLocalEditCountsAsLocalChange() {
+        // The engine records a moved hash as (new hash, syncedAt nil) BEFORE pulling: that must still count as a local
+        // change, otherwise a newer edit on this phone always lost to an older server row.
+        let e = LedgerEntry(hash: "c", changedAt: t0.addingTimeInterval(120), syncedAt: nil)
+        XCTAssertEqual(MergeRules.decide(localHash: "c", local: e, remoteHash: "b", remoteClientUpdatedAt: t0.addingTimeInterval(60), remoteDeleted: false), .pushLocal)
+        XCTAssertEqual(MergeRules.decide(localHash: "c", local: e, remoteHash: "b", remoteClientUpdatedAt: t0.addingTimeInterval(600), remoteDeleted: false), .takeRemote)
+        XCTAssertEqual(MergeRules.decide(localHash: "c", local: e, remoteHash: "", remoteClientUpdatedAt: t0.addingTimeInterval(60), remoteDeleted: true), .pushLocal, "edited here after the deletion elsewhere")
+        XCTAssertEqual(MergeRules.decide(localHash: "c", local: e, remoteHash: "", remoteClientUpdatedAt: t0.addingTimeInterval(600), remoteDeleted: true), .deleteLocal)
+    }
+
+    func testSecondPhoneTakesTheAccountProfileInsteadOfItsDefaults() {
+        let now = t0.addingTimeInterval(9_999)
+        XCTAssertEqual(MergeRules.firstSeenChangedAt(table: "profiles", now: now), MergeRules.neverChanged)
+        XCTAssertEqual(MergeRules.firstSeenChangedAt(table: "settings", now: now), MergeRules.neverChanged)
+        XCTAssertEqual(MergeRules.firstSeenChangedAt(table: "rides", now: now), now)
+        let firstSeen = LedgerEntry(hash: "defaults", changedAt: MergeRules.firstSeenChangedAt(table: "profiles", now: now), syncedAt: nil)
+        XCTAssertEqual(MergeRules.decide(localHash: "defaults", local: firstSeen, remoteHash: "account", remoteClientUpdatedAt: t0, remoteDeleted: false), .takeRemote)
+        // a new local ride on first sync is still pushed when the server has an older copy with the same id
+        let ride = LedgerEntry(hash: "r", changedAt: MergeRules.firstSeenChangedAt(table: "rides", now: now), syncedAt: nil)
+        XCTAssertEqual(MergeRules.decide(localHash: "r", local: ride, remoteHash: "s", remoteClientUpdatedAt: t0, remoteDeleted: false), .pushLocal)
+    }
+
+    func testTombstonesOnlyForRecordsThisPhoneSyncedAndNoLongerHas() {
+        let ledger = ["a": LedgerEntry(hash: "1", changedAt: t0, syncedAt: t0),      // synced, deleted here → tombstone
+                      "b": LedgerEntry(hash: "2", changedAt: t0, syncedAt: t0),      // synced, still here
+                      "c": LedgerEntry(hash: "3", changedAt: t0, syncedAt: nil)]     // never confirmed → no tombstone
+        XCTAssertEqual(MergeRules.tombstoneIds(ledger: ledger, localIds: ["b"]), ["a"])
+        XCTAssertEqual(MergeRules.tombstoneIds(ledger: [:], localIds: ["x"]), [])
+    }
+
+    func testUpsertsAreBatched() {
+        XCTAssertEqual(MergeRules.batches(Array(0..<120)).map(\.count), [50, 50, 20])
+        XCTAssertEqual(MergeRules.batches(Array(0..<50)).map(\.count), [50])
+        XCTAssertTrue(MergeRules.batches([Int]()).isEmpty)
+        XCTAssertEqual(MergeRules.batches(Array(0..<5), size: 2).flatMap { $0 }, Array(0..<5))
+    }
 }

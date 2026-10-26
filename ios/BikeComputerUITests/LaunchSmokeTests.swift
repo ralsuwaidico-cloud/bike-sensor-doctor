@@ -11,7 +11,7 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_RESET"] = "1"
         app.launch()
-        XCTAssertTrue(app.staticTexts["Athletics"].waitForExistence(timeout: 20), "fresh launch must show the Athletics welcome screen")
+        XCTAssertTrue(app.staticTexts["Cyclift"].waitForExistence(timeout: 20), "fresh launch must show the Cyclift welcome screen")
         XCTAssertEqual(app.state, .runningForeground)
     }
 
@@ -89,9 +89,11 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(create.waitForExistence(timeout: 10), "guest sees Create account in Profile › Account")
         create.tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'not configured in this build'")).firstMatch.waitForExistence(timeout: 10), "without Supabase values the sheet says accounts are not available")
-        app.buttons["Not now"].firstMatch.tap()
+        let notNow = app.buttons["Not now"].firstMatch
+        XCTAssertTrue(notNow.waitForExistence(timeout: 10), "the account sheet stays open with its Not now button")
+        notNow.tap()
         let privacy = app.buttons["Privacy policy"].firstMatch
-        if privacy.waitForExistence(timeout: 5) { privacy.tap(); XCTAssertTrue(app.staticTexts["Athletics — Privacy policy"].firstMatch.waitForExistence(timeout: 10)); app.navigationBars.buttons.element(boundBy: 0).tap() }
+        if privacy.waitForExistence(timeout: 5) { privacy.tap(); XCTAssertTrue(app.staticTexts["Cyclift — Privacy policy"].firstMatch.waitForExistence(timeout: 10)); app.navigationBars.buttons.element(boundBy: 0).tap() }
         XCTAssertEqual(app.state, .runningForeground)
         Self.tapAllTabs(app)
     }
@@ -205,10 +207,16 @@ final class LaunchSmokeTests: XCTestCase {
         app.buttons["Cancel"].firstMatch.tap()
         // Plan → Log strength → Quick log sheet opens with the type grid, closes
         let log = app.buttons["Log strength"].firstMatch
-        XCTAssertTrue(log.waitForExistence(timeout: 10)); log.tap()
-        let quick = app.buttons["Quick log"].firstMatch
-        if quick.waitForExistence(timeout: 5) { quick.tap() }
-        XCTAssertTrue(app.navigationBars["Log strength"].waitForExistence(timeout: 10), "quick strength log must open")
+        XCTAssertTrue(log.waitForExistence(timeout: 10))
+        // The toolbar menu can still be animating at accessibility text sizes: open it again once if the sheet did not appear.
+        var opened = false
+        for _ in 0..<2 where !opened {
+            log.tap()
+            let quick = app.buttons["Quick log"].firstMatch
+            if quick.waitForExistence(timeout: 5) { quick.tap() }
+            opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
+        }
+        XCTAssertTrue(opened, "quick strength log must open")
         XCTAssertTrue(app.buttons["Full body"].firstMatch.waitForExistence(timeout: 5) || app.staticTexts["Full Body"].firstMatch.waitForExistence(timeout: 2), "type grid visible")
         app.buttons["Cancel"].firstMatch.tap()
         // Profile → Training profile page

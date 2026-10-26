@@ -60,13 +60,13 @@ struct OnboardingView: View {
     // MARK: Stage A
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) { AthleticsMark(size: 44); Text("Athletics").font(.system(size: 36, weight: .bold, design: .rounded)) }
-            Text("Cycling, strength and hybrid training with one coach — with your BikeComputer cycling device and power meter, or with the phone alone. Choose how to start; you can create an account later.").foregroundStyle(.secondary)
+            HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(size: 36, weight: .bold, design: .rounded)) }
+            Text("Cycling and strength training in one plan, with one coach. Works with your phone alone, standard Bluetooth sensors, Apple Watch and Apple Health — and with the optional BikeComputer device. Choose how to start; you can create an account later.").foregroundStyle(.secondary)
             Card {
                 Eyebrow(t: "Continue as guest")
                 TextField("Your first name", text: $guestName).textFieldStyle(.roundedBorder).textContentType(.givenName)
                 Button { store.guest = true; store.profile.name = guestName.trimmingCharacters(in: .whitespaces); step = 1 } label: { Text("Continue").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
-                Text("No account, nothing leaves the phone. Only a name so the board can greet you.").font(.footnote).foregroundStyle(.secondary)
+                Text("No account, nothing leaves the phone. Only a first name, so the app (and a paired BikeComputer) can greet you.").font(.footnote).foregroundStyle(.secondary)
             }
             SignInWithAppleButton(.signIn) { req in
                 req.requestedScopes = [.fullName, .email]
@@ -301,7 +301,7 @@ struct OnboardingView: View {
             Card { Eyebrow(t: "Import workouts"); Text("Cycling and strength workouts from other apps or your Apple Watch appear in Plan › History as rides and strength sessions (marked Apple Health, never duplicated).").font(.footnote); Toggle("Import my workouts", isOn: $store.settings.appleHealthImportWorkouts).tint(BC.accent) }
             Card { Eyebrow(t: "Read heart rate"); Text("Heart-rate history for recovery views (later build). Live heart rate during a ride comes from the Apple Watch workout, not from Health.").font(.footnote) }
             if health.available {
-                Button { store.settings.appleHealthWanted = true; health.request { ok in healthResult = ok ? "Permission granted: Apple Health is connected." : "Not granted. You can allow it later in iOS Settings › Health › Athletics." } } label: { Text(health.workoutWriteAuthorized ? "Connected ✓" : "Connect Apple Health").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).disabled(health.workoutWriteAuthorized)
+                Button { store.settings.appleHealthWanted = true; health.request { ok in healthResult = ok ? "Permission granted: Apple Health is connected." : "Not granted. You can allow it later in iOS Settings › Health › Cyclift." } } label: { Text(health.workoutWriteAuthorized ? "Connected ✓" : "Connect Apple Health").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).disabled(health.workoutWriteAuthorized)
                 if let r = healthResult { Text(r).font(.footnote).foregroundStyle(health.workoutWriteAuthorized ? BC.live : BC.stale) }
             } else { Text("Health is not available on this device.").font(.footnote).foregroundStyle(.secondary) }
             Button("Not now") { step += 1 }.frame(maxWidth: .infinity)

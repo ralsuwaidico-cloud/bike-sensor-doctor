@@ -13,20 +13,24 @@ struct AccountSection: View {
     @State private var deleting = false
     @State private var exportURL: URL?
     @State private var deleteError: String?
+    /// When the host list owns the sheet (Profile), the section only flips this binding. A sheet attached to a row
+    /// inside a List is torn down when the list re-renders the row, which closed the sign-in sheet unpredictably.
+    var present: Binding<Bool>? = nil
+    private func openAccount() { if let present { present.wrappedValue = true } else { showAccount = true } }
 
     var body: some View {
         Section("Account") {
             switch account.state {
             case .notConfigured:
                 if store.guest {
-                    Button { showAccount = true } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("not available yet").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
+                    Button { openAccount() } label: { HStack { Label("Create account", systemImage: "person.badge.plus"); Spacer(); Text("not available yet").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
                 } else {
                     HStack { Label("Signed in with Apple", systemImage: "checkmark.seal"); Spacer(); Pill(text: "local only", color: BC.stale) }
                     Button("Sign out (keeps data on this phone)") { store.guest = true; store.appleUserId = nil }
                 }
-                Text("Accounts and cloud sync are switched off in this build; everything stays on this phone.").font(.footnote).foregroundStyle(.secondary)
+                Text("Cyclift accounts and cloud sync are switched off in this build; everything stays on this phone.").font(.footnote).foregroundStyle(.secondary)
             case .signedOut:
-                Button { showAccount = true } label: { HStack { Label("Create account or sign in", systemImage: "person.badge.plus"); Spacer(); Text("guest · data on this phone").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
+                Button { openAccount() } label: { HStack { Label("Create account or sign in", systemImage: "person.badge.plus"); Spacer(); Text("guest · data on this phone").font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("profileCreateAccount")
                 Text("An account keeps your workouts, plan, templates and settings in sync across your devices. Guest data is uploaded when you sign in — nothing is lost.").font(.footnote).foregroundStyle(.secondary)
             case .signedIn(_, let email, let provider):
                 HStack { Label("Signed in with \(provider)", systemImage: "checkmark.seal"); Spacer(); if let e = email { Text(e).font(.caption).foregroundStyle(.secondary).lineLimit(1) } }
@@ -39,7 +43,7 @@ struct AccountSection: View {
                 if case .failed(let why) = cloud.state { Text(why).font(.footnote).foregroundStyle(BC.warn) }
                 Button("Sign out (keeps data on this phone)") { Task { await account.signOut(); store.guest = true } }
             }
-            Button { exportURL = exportFile() } label: { Label("Export my data (JSON)", systemImage: "square.and.arrow.up") }
+            Button { Task { exportURL = await exportFile() } } label: { Label("Export my data (JSON)", systemImage: "square.and.arrow.up") }
             Button(role: .destructive) { confirmDelete = true } label: { Label(account.state.isSignedIn ? "Delete account and all data" : "Delete all data on this phone", systemImage: "trash") }
             if let e = deleteError { Text(e).font(.footnote).foregroundStyle(BC.warn) }
         }
@@ -71,10 +75,16 @@ struct AccountSection: View {
         }
         cloud.reset(); device.forget(); store.resetAll(); store.guest = true
     }
-    private func exportFile() -> URL? {
+    /// The phone's data as JSON; when signed in, the copy held by the account service is added under "account".
+    private func exportFile() async -> URL? {
         let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]; enc.dateEncodingStrategy = .iso8601
-        guard let data = try? enc.encode(store.snapshot) else { return nil }
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("athletics-export-\(Int(Date().timeIntervalSince1970)).json")
+        guard var data = try? enc.encode(store.snapshot) else { return nil }
+        if account.state.isSignedIn, let server = await account.exportServerData(),
+           let local = try? JSONSerialization.jsonObject(with: data), let remote = try? JSONSerialization.jsonObject(with: server),
+           let both = try? JSONSerialization.data(withJSONObject: ["app": "Cyclift", "phone": local, "account": remote], options: [.prettyPrinted, .sortedKeys]) {
+            data = both
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("cyclift-export-\(Int(Date().timeIntervalSince1970)).json")
         try? data.write(to: url, options: .atomic)
         return url
     }
@@ -103,11 +113,11 @@ struct AccountSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    HStack(spacing: 10) { AthleticsMark(size: 40); Text(mode == 1 ? "Create your account" : "Sign in").font(.system(size: 26, weight: .bold, design: .rounded)) }
+                    HStack(spacing: 10) { CycliftMark(size: 40); Text(mode == 1 ? "Create your account" : "Sign in").font(.system(size: 26, weight: .bold, design: .rounded)) }
                     if account.state == .notConfigured {
-                        Card { Eyebrow(t: "Not available yet"); Text("Accounts are not configured in this build. Everything you do stays on this phone; sign-in arrives with the account service.").foregroundStyle(.secondary) }
+                        Card { Eyebrow(t: "Not available yet"); Text("Cyclift accounts are not configured in this build. Everything you do stays on this phone and works offline; you can keep using Cyclift as a guest.").foregroundStyle(.secondary) }
                     } else {
-                        Text("Your workouts, plan, templates and settings follow you to any device. What is already on this phone is uploaded — nothing is lost.").foregroundStyle(.secondary).font(.subheadline)
+                        Text("With a Cyclift account your workouts, plan, templates and settings follow you to any device. What is already on this phone is uploaded — nothing is lost.").foregroundStyle(.secondary).font(.subheadline)
                         SignInWithAppleButton(mode == 1 ? .signUp : .signIn) { req in req.requestedScopes = [.fullName, .email]; req.nonce = account.prepareAppleRequest() } onCompletion: { result in
                             Task { if await account.completeApple(result) { finish() } }
                         }
@@ -137,6 +147,7 @@ struct AccountSheet: View {
             .background(Color(.systemGroupedBackground))
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Not now") { dismiss() } } }
             .overlay { if account.busy { ProgressView().controlSize(.large) } }
+            .onAppear { if case .passwordRecovery = account.notice {} else { account.notice = .none } }
         }
     }
     private var valid: Bool {
@@ -201,7 +212,8 @@ struct LegalView: View {
     }
     private var paragraphs: [String] {
         let url = Bundle.main.url(forResource: kind.rawValue, withExtension: "md") ?? Bundle.main.url(forResource: kind.rawValue, withExtension: "md", subdirectory: "Resources")
-        let text = url.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Document not bundled."
+        let raw = url.flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Document not bundled."
+        let text = SupportInfo.render(raw, email: SupportInfo.email)
         return text.components(separatedBy: "\n\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
     }
 }

@@ -1,4 +1,4 @@
-# Athletics App Store listing preparation — DRAFTS ONLY. Started by hand (Actions › App Store listing › Run workflow).
+# Cyclift App Store listing preparation — DRAFTS ONLY. Started by hand (Actions › App Store listing › Run workflow).
 #
 #  mode = check : read-only report of the App Store Connect record (name, version, texts, screenshots, builds).
 #  mode = apply : writes draft metadata (ios/store/en-US), enables Sign in with Apple on the bundle ID and uploads the

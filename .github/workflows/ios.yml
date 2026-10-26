@@ -85,6 +85,8 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
+          # optional public support address shown on the in-app legal pages (empty = "see the support page")
+          CYCLIFT_SUPPORT_EMAIL: ${{ secrets.CYCLIFT_SUPPORT_EMAIL }}
           UPLOAD: ${{ (github.event_name == 'workflow_dispatch' && inputs.upload) || contains(github.event.head_commit.message, '[testflight]') }}
         run: ios/ci/build.sh
       - name: Fetch the Apple setup report

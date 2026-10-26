@@ -1,4 +1,4 @@
-Athletics is a training app for people who ride and lift. It puts your cycling and your strength work into one weekly plan, records what you actually do, and suggests the next step from your own data.
+Cyclift is a training app for people who ride and lift. It puts your cycling and your strength work into one weekly plan, records what you actually do, and suggests the next step from your own data.
 
 PLAN YOUR WEEK YOUR WAY
 • Choose Cycling, Strength or Hybrid Athlete mode.
@@ -6,11 +6,12 @@ PLAN YOUR WEEK YOUR WAY
 • Cycling hours and lifting hours have separate budgets; the plan never schedules more than you set.
 • Move, edit, skip or replace any session. Sessions you change by hand are kept when the week is rebuilt.
 
-RECORD RIDES
-• Phone-only rides with GPS speed, distance and a route map — no extra hardware needed.
+RECORD RIDES WITH WHAT YOU HAVE
+• Phone-only rides with GPS speed, distance and a route map — no extra hardware needed, no power meter required.
+• Works with standard Bluetooth heart-rate monitors, power meters, and cadence and speed sensors.
 • Heart rate from Apple Watch during the ride.
-• Large live gauges for power, heart rate and cadence with target zones when the sensors are connected.
-• Optional: pair the BikeComputer handlebar device for power-meter data and on-bike display. Device features are clearly marked and are not needed to use the app.
+• Choose your ride screen: coach view, large gauges, classic metrics, rings or a live graph. Every live value shows which source it comes from, and missing sensors are simply shown as missing.
+• Optional: pair the BikeComputer handlebar device, an accessory with its own display that relays your sensors. Device features are clearly marked and are not needed to use the app.
 
 LOG STRENGTH TRAINING
 • Quick log (Full Body, Upper, Lower, Push, Pull, Custom) with duration and effort.
@@ -19,9 +20,10 @@ LOG STRENGTH TRAINING
 • See your previous weights and reps while you train; pause and resume a session.
 
 SUGGESTIONS, NOT GUESSES
-• The coach looks at sessions you completed — never planned ones — and offers one suggestion at a time, such as adding a repetition when your last sessions support it.
-• Every suggestion explains why, and says so when there is not enough history yet.
-• Suggestions are labelled as suggestions. You accept, ignore or undo them; fixed days and your own edits are never changed without your approval.
+• A rule-based coach looks at sessions you completed — never planned ones — and offers one suggestion at a time, such as adding a repetition when your last sessions support it.
+• During a ride it adapts to the sensors you actually have, and every cue has a "Why?".
+• Every suggestion explains why, and says so when there is not enough history yet. Unverified power and provisional FTP are labelled as such.
+• You accept, ignore or undo suggestions; fixed days and your own edits are never changed without your approval.
 
 HISTORY AND PROGRESS
 • Timeline of rides and strength sessions with duration, distance, heart rate, power, zones and completion status.
@@ -34,4 +36,4 @@ YOUR DATA
 • Export all your data or delete your account and data from inside the app.
 • No ads, no tracking, no analytics.
 
-Athletics provides training suggestions based on the data you record. It is not a medical device and does not give medical advice.
+Cyclift provides training suggestions based on the data you record. It is not a medical device and does not give medical advice.

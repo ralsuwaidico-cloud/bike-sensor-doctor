@@ -1,10 +1,11 @@
-# Athletics 1.0 — App Store compliance checklist (what the build already satisfies, what the owner confirms)
+# Cyclift 1.0 — App Store compliance checklist (what the build already satisfies, what the owner confirms)
 
 | Guideline / requirement | Status in the build | Owner action |
 |---|---|---|
+| Name / trademark | App Store name **Cyclift** accepted (draft); no live trademark for the exact word found in public mirrors — see `ios/NAME_CHECK.md` | Commission a trademark clearance search before submission (not legal advice) |
 | 4.8 Sign in with Apple required when another third-party login (Google) is offered | Apple is offered first, natively, on onboarding and in Profile › Account | Enable the Sign in with Apple capability on the App ID; configure the Apple provider in Supabase (backend/supabase/README.md) |
 | 5.1.1 (i) Privacy policy link in the app and in App Store Connect | Profile › About › Privacy policy (bundled); `ios/legal/privacy.md` for hosting | Host the two legal pages (TRACK 2 publishes them on GitHub Pages); paste the URL in ASC › App Privacy and the listing |
-| 5.1.1 (ii) Permission purpose strings | All usage descriptions rewritten for Athletics (Bluetooth, Location when-in-use + always-and-when-in-use, Health share/update, Watch Health) | — |
+| 5.1.1 (ii) Permission purpose strings | All usage descriptions still start with "Athletics" — rename to Cyclift when the workstreams are merged (A2 report lists the exact texts); otherwise describe exactly what each permission is for (Bluetooth, Location when-in-use + always-and-when-in-use, Health share/update, Watch Health) | — |
 | 5.1.1 (v) Account deletion inside the app | Profile › Account › Delete account and all data (3 taps): server RPC `auth_delete_user` + local wipe; also works for guests (local wipe) | Run `schema.sql` so the RPC exists |
 | 5.1.1 (iv) Account not required to use the app | Guest mode is first on onboarding; every feature works offline without an account | — |
 | 5.1.2 Data use and sharing | No analytics, no ads, no third-party SDKs besides Supabase (auth + the user's own rows). Data export in Profile › Account | Fill ASC App Privacy: Contact info (e-mail, for accounts), Health & Fitness (workouts, HR), Location (precise, while recording), Identifiers (user ID) — all "linked to the user", none used for tracking |
@@ -20,50 +21,64 @@ Nothing here is hardware-verified; the device-side checklist remains TEST-v0.7.0
 
 ---
 
-## App Store Connect listing — status (26 Oct 2026, written by `ios/ci/asc_listing.py`, drafts only)
+## App Store Connect listing — status (26 Oct 2026, `ios/ci/asc_listing.py`, drafts only, run `ios/asc-listing/run-4`)
 
-Run with the **App Store listing** workflow (Actions tab, or push to branch `asc-listing/check` / `asc-listing/apply`).
-Reports and screenshots: branch `ci-logs`, folder `ios/asc-listing/run-N/`. Nothing is ever submitted by the script.
+Run with the **App Store listing** workflow (push to branch `asc-listing/apply`, or Actions tab). Reports and
+screenshots: branch `ci-logs`, folder `ios/asc-listing/run-N/`. Nothing is ever submitted by the script.
 
 | Item | Status |
 |---|---|
-| Store name | **"Athletics: Hybrid Training"** (plain "Athletics" is taken by another developer — HTTP 409 DUPLICATE.DIFFERENT_ACCOUNT). Home-screen name stays "Athletics". |
+| Store name | **"Cyclift" — ACCEPTED** (replaces "Athletics: Hybrid Training"). Home-screen name "Cyclift". |
 | Subtitle, privacy policy URL | set ("Ride, lift and plan your week") |
 | Categories | Health & Fitness / Sports — set |
-| Age rating | content questions answered "None"/No, health-or-wellness topics Yes, social media No — set; kids band / overrides left empty (not a kids app) |
-| Version | 1.0 renamed to **1.0.0** (matches the build), copyright "2026 Athletics" — set |
-| Description, keywords, promotional text, support + marketing URLs | set from `ios/store/en-US/` |
-| App Review notes, demo account not required | set (guest mode, background modes, HealthKit, deletion path explained); later edits need the owner's contact fields first (Apple rule) |
-| Screenshots | 5 × 1320×2868 from the real app (simulator, seeded rider "Alex") in the largest iPhone set (`APP_IPHONE_67`, which takes the 6.9" size) |
-| Sign in with Apple capability on the App ID | enabled by the script (`APPLE_ID_AUTH`) |
-| **Sign in with Apple entitlement in the app** | **MISSING** — `ios/project.yml` entitlements lack `com.apple.developer.applesignin: [Default]`; native Apple sign-in fails on a real iPhone (error 1000) until it is added and a new build is uploaded |
-| Build attached to the version | none yet — owner picks the 1.0.0 release-candidate build |
-| Legal/support pages | prepared in `docs/site/` (privacy, terms, support, index); **not online yet** — see owner actions |
+| Age rating | set (24 answers; kids band / overrides left empty) |
+| Version | **1.0.0**, copyright "2026 Cyclift" — set |
+| Description, keywords, support + marketing URLs | set from `ios/store/en-US/` (Cyclift text, standard Bluetooth sensors, BikeComputer optional) |
+| Promotional text | set (run 5; shortened to 153 characters after run 4 refused 178 > 170) |
+| App Review notes | **old (Athletics) notes still on Apple's side**: Apple accepts an update only after the owner fills the App Review contact fields; then re-run the listing workflow |
+| Screenshots | 5 × 1320×2868 from the real app (simulator, seeded rider "Alex"), uploaded. **Retake after the ride-layout and sources workstreams are merged** (the ride screenshot shows the pre-Cyclift ride screen) |
+| Sign in with Apple | capability on the App ID enabled; entitlement in project.yml since commit b67cfd4 (CI verifies it in the signed app) |
+| App icon | new Cyclift icon (ships with the next build; the store icon comes from the build) |
+| Build attached to the version | none — owner picks the 1.0.0 release candidate |
+| Legal/support pages | Cyclift versions in `docs/site/`; **not online yet**; contain `SUPPORT_EMAIL` placeholders |
 
-### Owner actions (account holder, in App Store Connect / GitHub)
-1. **Support e-mail**: decide which address is public. Replace `SUPPORT_EMAIL` in `docs/site/*.html` (Claude can do it once you name the address). The in-app privacy policy and terms still contain your personal Gmail — say if that should change too.
-2. **Publish the legal pages** (one toggle): GitHub › repository Settings › Pages › Source "Deploy from a branch", branch `ios/dev` (or `main` after merging), folder `/docs` → Save. The URLs used in the listing are then live:
-   - https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/privacy.html
-   - https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/terms.html
-   - https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/support.html
-   - https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/index.html
-3. **App Privacy** (App Store Connect › App Privacy › Get Started) — answer exactly:
-   - Do you collect data? **Yes** (only when the rider creates an account; guest mode collects nothing).
-   - Contact Info › **Email Address** — App Functionality; linked to the user; not used for tracking.
-   - Health & Fitness › **Health**, **Fitness** — App Functionality; linked; not tracking.
-   - Location › **Precise Location** — App Functionality; linked; not tracking (route of synced rides).
-   - Identifiers › **User ID** — App Functionality; linked; not tracking.
-   - User Content › **Other User Content** (notes on workouts) — App Functionality; linked; not tracking.
-   - Everything else (purchases, financial, contacts, browsing, search, usage data, diagnostics, sensitive info, advertising data): **not collected**. Tracking: **No**.
-   - Privacy Policy URL: the privacy URL above (already in the listing).
-4. **Pricing and Availability**: price **Free** (a price schedule exists — confirm it is Free); availability: all countries or your choice.
-5. **App Review information**: contact first/last name, phone, e-mail (the script never writes personal data). Sign-in required: **No**.
-6. **Build**: after the 1.0.0 RC is on TestFlight and tested, select it on the 1.0.0 version page.
-7. **Accounts backend** (needed before Google/e-mail sign-in work): `backend/supabase/README.md` — Supabase project, Apple Services ID + key, Google OAuth clients, GitHub secrets.
-8. **Submit for Review** — only you, after approving everything above. Nothing is submitted automatically.
+### Owner actions (account holder)
+1. **Trademark**: read `ios/NAME_CHECK.md`; commission a clearance search (UAE + US + EU/WIPO) before submitting. Check
+   the domains cyclift.com / cyclift.app at a registrar if you want them.
+2. **Support e-mail**: choose the public address. Then (a) tell Claude to put it into `docs/site/*.html` (or replace
+   `SUPPORT_EMAIL` there), and (b) add GitHub secret `CYCLIFT_SUPPORT_EMAIL` (Settings › Secrets and variables ›
+   Actions) so the in-app privacy policy and terms show it; without it they say "Contact: see the support page".
+   Your personal Gmail has been removed from every page in the app and repository.
+3. **Publish the legal pages** (one toggle): GitHub › Settings › Pages › Source "Deploy from a branch", branch `ios/dev`
+   (or `main` after merging), folder `/docs` → Save. The listing URLs then work:
+   https://ralsuwaidico-cloud.github.io/bike-sensor-doctor/site/privacy.html · …/terms.html · …/support.html · …/index.html
+4. **App Review contact** (App Store Connect › 1.0.0 › App Review Information): first/last name, phone, e-mail. Then
+   ask Claude to re-run the listing workflow so the Cyclift review notes and promotional text are written.
+5. **App Privacy** (App Store Connect › App Privacy): Collect data — Yes (only with an account). Contact Info › Email
+   Address; Health & Fitness › Health, Fitness; Location › Precise Location; Identifiers › User ID; User Content › Other
+   User Content — each: App Functionality, linked to the user, not used for tracking. Everything else: not collected.
+   Tracking: No. Privacy Policy URL as above.
+6. **Pricing and Availability**: confirm price **Free**; choose countries.
+7. **Accounts backend** (Apple/Google/e-mail sign-in on real phones): follow `backend/supabase/README.md` (Supabase
+   project, `schema.sql`, Apple Services ID e.g. `com.ralsuwaidico.cyclift.signin` + key, Google OAuth clients, GitHub
+   secrets `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `GOOGLE_WEB_CLIENT_ID`). Until then the app is guest-only and says so.
+8. **Build**: after the merged 1.0.0 RC is on TestFlight and tested on the iPhone + Watch (+ BikeComputer), select it on
+   the 1.0.0 page.
+9. **Submit for Review** — only you, after approving everything above. Nothing is submitted automatically.
 
-### Android (Google Play)
-Not releasable as 1.0: the Android app is a Compose skeleton (Link codec + five empty tabs). Missing for a Play release:
-recording, plan/strength/coach screens, BLE device link, Google Sign-In/Supabase, Health Connect, background location
-service, signed AAB + Play App Signing, store listing, Data safety form, account deletion web link. Do not create a Play
-listing for 1.0; iOS ships first.
+## Android (Google Play) — gap list (honest status: not releasable as 1.0)
+The Android app is a Jetpack Compose **skeleton**: Link codec + five empty tabs, label "Cyclift" and the new icon
+(CI builds a debug APK). Missing before a Play release:
+1. **Feature parity**: onboarding, weekly plan, ride recording (GPS foreground service, recording/storage), ride layouts
+   + coach panel, strength logging/routines/templates, progress/history, profile pages, data export, deletion.
+2. **Sources**: BLE direct sensors (standard HR 0x180D, power 0x1818, CSC 0x1816), BikeComputer link (pairing, profile
+   sync, ride mirroring), Health Connect instead of Apple Health, Wear OS instead of Apple Watch (or none).
+3. **Accounts + sync**: Supabase Auth (Google via Credential Manager, e-mail, Sign in with Apple optional on Android),
+   session storage in EncryptedSharedPreferences/Keystore, the same sync engine and merge rules as iOS.
+4. **Permissions/background**: BLUETOOTH_SCAN/CONNECT, location (fine + background with Play's declaration form),
+   foreground-service type `location|connectedDevice`, notifications.
+5. **Release plumbing**: upload keystore + Play App Signing, signed **AAB** (release build in CI), versioning, ProGuard/R8.
+6. **Play Console**: store listing (texts can reuse `ios/store/en-US`), screenshots, Data safety form, content rating,
+   privacy-policy URL, account-deletion web URL (required by Play), target-API compliance, internal testing track.
+7. **Play developer account**: one-time registration fee — a **paid agreement the owner must approve**; nothing has been
+   created. Recommendation: ship iOS 1.0 first; Android as a later version.

@@ -23,12 +23,14 @@ enum MergeRules {
         }
         if remoteDeleted {
             // deleted elsewhere: honour it unless this phone changed the record after that deletion
-            let changedHere = local.map { $0.hash != localHash } ?? true
+            let changedHere = local.map { $0.syncedAt == nil || $0.hash != localHash } ?? true
             let when = local?.changedAt ?? Date.distantPast
             return changedHere && when > remoteClientUpdatedAt ? .pushLocal : .deleteLocal
         }
         if remoteHash == localHash { return .nothing }
-        let localChanged = local.map { $0.hash != localHash } ?? true        // changed since last sync
+        // changed since the last sync: the engine re-records a moved hash with syncedAt = nil before pulling, so an
+        // unconfirmed entry counts as a local change (comparing hashes alone would always let the server win)
+        let localChanged = local.map { $0.syncedAt == nil || $0.hash != localHash } ?? true
         guard localChanged else { return .takeRemote }                       // only the server moved
         let localTime = local?.changedAt ?? Date.distantPast
         return localTime > remoteClientUpdatedAt ? .pushLocal : .takeRemote  // both moved: newer client time wins
@@ -47,6 +49,29 @@ enum MergeRules {
     }
 
     static func hash(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
+
+    /// The one-row-per-user records (profile, settings).
+    static func isSingleton(_ table: String) -> Bool { table == "profiles" || table == "settings" }
+
+    /// "Changed at" for a record the ledger has never seen. Collections (rides, sessions, templates, plan) count as new
+    /// local changes. The profile and settings rows count as the oldest possible change, so a phone that signs in to an
+    /// account that already has a profile takes the account's profile instead of overwriting it with its own defaults
+    /// (a brand-new account has no row yet, so the guest's profile is uploaded — the guest → account upgrade).
+    static let neverChanged = Date(timeIntervalSince1970: 0)
+    static func firstSeenChangedAt(table: String, now: Date) -> Date { isSingleton(table) ? neverChanged : now }
+
+    /// Server tombstones are sent only for records this phone actually held and synced, never for remote rows the phone
+    /// skipped (a duplicate of a local ride, or a payload this app version could not read).
+    static func tombstoneIds(ledger: [String: LedgerEntry], localIds: Set<String>) -> [String] {
+        ledger.compactMap { kv in !localIds.contains(kv.key) && kv.value.syncedAt != nil ? kv.key : nil }.sorted()
+    }
+
+    /// Rows per upsert request, so a long ride history never becomes one oversized request.
+    static let batchSize = 50
+    static func batches<T>(_ items: [T], size: Int = batchSize) -> [[T]] {
+        guard size > 0, !items.isEmpty else { return items.isEmpty ? [] : [items] }
+        return stride(from: 0, to: items.count, by: size).map { Array(items[$0..<min($0 + size, items.count)]) }
+    }
 }
 
 // MARK: - ledger (persisted next to store.json)
@@ -188,7 +213,11 @@ final class SyncEngine: ObservableObject {
         state = account.state.isSignedIn ? .idle : .off
         account.sessionChanged.sink { [weak self] signedIn in
             guard let self else { return }
-            if signedIn { self.state = .idle; Task { await self.syncNow(reason: "signed in") } }
+            if signedIn {
+                // also covers sign-ins that did not go through the account sheet (e-mail confirmation link, OAuth fallback)
+                if self.store.guest { self.store.guest = false }
+                self.state = .idle; Task { await self.syncNow(reason: "signed in") }
+            }
             else { self.state = .off }
         }.store(in: &bag)
         // a store change → push ~10 s later (coalesced), only while signed in
@@ -249,14 +278,14 @@ final class SyncEngine: ObservableObject {
     }
 
     private func syncTable(_ table: String, api: REST, userId: String) async throws -> (pushed: Int, pulled: Int, removed: Int) {
-        let singleton = table == "profiles" || table == "settings"
+        let singleton = MergeRules.isSingleton(table)
         let locals = localSets()[table] ?? []
         var entries = ledger.records[table] ?? [:]
         let now = Date()
         // 1. note local changes (hash moved since the ledger last saw it)
         for l in locals {
             if let e = entries[l.id] { if e.hash != l.hash { entries[l.id] = LedgerEntry(hash: l.hash, changedAt: now, syncedAt: nil) } }
-            else { entries[l.id] = LedgerEntry(hash: l.hash, changedAt: now, syncedAt: nil) }
+            else { entries[l.id] = LedgerEntry(hash: l.hash, changedAt: MergeRules.firstSeenChangedAt(table: table, now: now), syncedAt: nil) }
         }
         // 2. pull what changed on the server since the last pull
         let since = ledger.lastPull[table]
@@ -277,60 +306,85 @@ final class SyncEngine: ObservableObject {
             }
             if let u = ISO.date(row.updated_at), highWater == nil || u > highWater! { highWater = u }
         }
-        if !takeRemote.isEmpty { applyRemote(table: table, rows: takeRemote) }
+        if !takeRemote.isEmpty {
+            let applied = applyRemote(table: table, rows: takeRemote)
+            // The ledger keeps the hash of the record as THIS phone encodes it, so a payload the server re-formatted
+            // (number formatting, key order) does not look like a local change and is not pushed back on every sync.
+            let after = localSets()[table] ?? []
+            for r in takeRemote {
+                let rid = singleton ? userId : (r.id ?? "").lowercased()
+                let rcu = ISO.date(r.client_updated_at) ?? now
+                if applied.contains(rid), let l = after.first(where: { $0.id == rid }) {
+                    entries[rid] = LedgerEntry(hash: l.hash, changedAt: rcu, syncedAt: now)
+                } else if singleton, let l = after.first(where: { $0.id == rid }) {
+                    // unreadable profile/settings row (newer app version): keep ours locally, do not overwrite the server
+                    entries[rid] = LedgerEntry(hash: l.hash, changedAt: MergeRules.neverChanged, syncedAt: now)
+                } else {
+                    // not applied (duplicate of a local record, unreadable payload): forgotten, so it is neither
+                    // re-uploaded nor tombstoned (a tombstone would delete it for the device that created it)
+                    entries[rid] = nil
+                }
+            }
+        }
         if let hw = highWater { ledger.lastPull[table] = hw }
         // 3. push local records whose hash is not confirmed, and tombstones for records the ledger knew but the phone no longer has
         let fresh = localSets()[table] ?? []
         var upserts: [CloudRow] = []
         for l in fresh where entries[l.id]?.syncedAt == nil || entries[l.id]?.hash != l.hash {
-            let e = entries[l.id] ?? LedgerEntry(hash: l.hash, changedAt: now, syncedAt: nil)
+            var e = entries[l.id] ?? LedgerEntry(hash: l.hash, changedAt: now, syncedAt: nil)
+            if e.changedAt == MergeRules.neverChanged { e.changedAt = now; entries[l.id] = e }   // first upload of the guest's profile/settings
             upserts.append(CloudRow(id: singleton ? nil : l.id, user_id: userId, source_id: l.sourceId, started_at: l.startedAt.map(ISO.string),
                                     day: l.day.map { Self.dayString($0) }, payload: AnyCodableJSON(data: l.data), client_updated_at: ISO.string(e.changedAt), updated_at: nil, deleted_at: nil))
         }
         var tombstones: [CloudRow] = []
         if !singleton {
-            for (id, e) in entries where !fresh.contains(where: { $0.id == id }) && e.syncedAt != nil {
+            for id in MergeRules.tombstoneIds(ledger: entries, localIds: Set(fresh.map(\.id))) {
                 let needsStart = table == "rides" || table == "strength_sessions"
                 tombstones.append(CloudRow(id: id, user_id: userId, source_id: nil, started_at: needsStart ? ISO.string(now) : nil, day: table == "plans" ? Self.dayString(now) : nil,
                                            payload: AnyCodableJSON(data: Data("{}".utf8)), client_updated_at: ISO.string(now), updated_at: nil, deleted_at: ISO.string(now)))
             }
         }
-        if !upserts.isEmpty { try await api.upsert(table: table, rows: upserts, conflict: singleton ? "user_id" : "id") }
-        if !tombstones.isEmpty { try await api.upsert(table: table, rows: tombstones, conflict: "id") }
+        for chunk in MergeRules.batches(upserts) { try await api.upsert(table: table, rows: chunk, conflict: singleton ? "user_id" : "id") }
+        for chunk in MergeRules.batches(tombstones) { try await api.upsert(table: table, rows: chunk, conflict: "id") }
         for l in fresh where upserts.contains(where: { singleton || $0.id == l.id }) { entries[l.id] = LedgerEntry(hash: l.hash, changedAt: entries[l.id]?.changedAt ?? now, syncedAt: now) }
         for t in tombstones { if let i = t.id { entries[i] = nil } }
         ledger.records[table] = entries
         return (upserts.count, pulled, removed)
     }
 
-    private func applyRemote(table: String, rows: [CloudRow]) {
+    /// Applies pulled rows to the store; returns the ids that were actually applied.
+    @discardableResult
+    private func applyRemote(table: String, rows: [CloudRow]) -> Set<String> {
+        var applied = Set<String>()
+        func key(_ id: UUID) -> String { id.uuidString.lowercased() }
         switch table {
         case "rides":
             var rides = store.rides
             for r in rows { guard let v = try? dec.decode(RideRecord.self, from: r.payload.data) else { continue }
-                if let i = rides.firstIndex(where: { $0.id == v.id }) { rides[i] = v } else if !MergeRules.isDuplicateRide(v, in: rides) { rides.append(v) } }
+                if let i = rides.firstIndex(where: { $0.id == v.id }) { rides[i] = v; applied.insert(key(v.id)) } else if !MergeRules.isDuplicateRide(v, in: rides) { rides.append(v); applied.insert(key(v.id)) } }
             store.rides = rides.sorted { $0.start > $1.start }
         case "strength_sessions":
             var s = store.strength
             for r in rows { guard let v = try? dec.decode(StrengthSession.self, from: r.payload.data) else { continue }
-                if let i = s.firstIndex(where: { $0.id == v.id }) { s[i] = v } else if !MergeRules.isDuplicateStrength(v, in: s) { s.append(v) } }
+                if let i = s.firstIndex(where: { $0.id == v.id }) { s[i] = v; applied.insert(key(v.id)) } else if !MergeRules.isDuplicateStrength(v, in: s) { s.append(v); applied.insert(key(v.id)) } }
             store.strength = s.sorted { $0.date > $1.date }
         case "templates":
             var t = store.templates
             for r in rows { guard let v = try? dec.decode(WorkoutTemplate.self, from: r.payload.data) else { continue }
-                if let i = t.firstIndex(where: { $0.id == v.id }) { t[i] = v } else { t.append(v) } }
+                if let i = t.firstIndex(where: { $0.id == v.id }) { t[i] = v } else { t.append(v) }; applied.insert(key(v.id)) }
             store.templates = t
         case "plans":
             var p = store.plan
             for r in rows { guard let v = try? dec.decode(Workout.self, from: r.payload.data) else { continue }
-                if let i = p.firstIndex(where: { $0.id == v.id }) { p[i] = v } else { p.append(v) } }
+                if let i = p.firstIndex(where: { $0.id == v.id }) { p[i] = v } else { p.append(v) }; applied.insert(key(v.id)) }
             store.plan = p.sorted { $0.date < $1.date }
         case "profiles":
-            if let r = rows.last, let v = try? dec.decode(RiderProfile.self, from: r.payload.data) { store.profile = v }
+            if let r = rows.last, let v = try? dec.decode(RiderProfile.self, from: r.payload.data) { store.profile = v; applied.insert(r.user_id.lowercased()) }
         case "settings":
-            if let r = rows.last, let v = try? dec.decode(SettingsBundle.self, from: r.payload.data) { v.apply(to: store) }
+            if let r = rows.last, let v = try? dec.decode(SettingsBundle.self, from: r.payload.data) { v.apply(to: store); applied.insert(r.user_id.lowercased()) }
         default: break
         }
+        return applied
     }
     private func applyDelete(table: String, id: String) {
         switch table {

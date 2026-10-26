@@ -1,4 +1,4 @@
--- Athletics — Supabase schema (run once in the SQL editor of the project; idempotent).
+-- Cyclift — Supabase schema (run once in the SQL editor of the project; idempotent).
 -- Every row belongs to one auth.users id. Row-level security: owners only. Sync = last-writer-wins on
 -- client_updated_at (set by the phone), soft deletes via deleted_at so other devices remove the row too.
 
