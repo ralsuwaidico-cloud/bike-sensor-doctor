@@ -1,0 +1,45 @@
+Cyclift + BikeComputer - END-TO-END ACCEPTANCE TEST (real hardware)                         26 Oct 2026
+==============================================================================================================
+Board firmware 0.7.2 + newest Cyclift TestFlight build + Cyclift on the Apple Watch (same build number).
+Nothing below counts as passed until YOU see it on the real devices. Write PASS / FAIL and the numbers.
+Board on USB, battery DISCONNECTED (HW-1). Bike on a trainer or stand you can pedal.
+
+0. Setup (once)
+ 0.1 Board: run INSTALL-v0.7.2.bat (backup, YES). Then READ-LOG-v0.7.2.bat while doing section A - send the log.
+ 0.2 iPhone: install the newest Cyclift build from TestFlight.
+ 0.3 Watch: iPhone "Watch" app > Cyclift > the version must match the phone (Cyclift > Profile > About shows both).
+     If the watch is older: Watch app > Cyclift > Update/Install. (TestFlight only updates the watch by itself when
+     Watch app > General > Automatic App Install is on.)
+ 0.4 Phone: Connections > BikeComputer > Connect (type the code from the board if asked). Stage must reach "Ready".
+
+A. Power meter -> BikeComputer
+ A1 Pedal: board Connections shows POWER "___ W" and CADENCE "___ RPM", changing as you pedal harder/slower.  PASS/FAIL
+ A2 Stop pedalling: watts fall to 0 within ~3 s; cadence 0.                                              PASS/FAIL
+
+B. BikeComputer -> iPhone (same numbers)
+ B1 Phone Ride screen while pedalling: POWER and CADENCE show the same values as the board (+/- one second).   PASS/FAIL
+ B2 Phone Connections: Power meter row says "Live" (not just "Connected"). Switch the meter off / wait 1 min:
+    the phone says "Data stale" or "No power data" - never an old number.                                   PASS/FAIL
+
+C. Apple Watch -> iPhone -> BikeComputer
+ C1 On the phone, Ride > Start (phone-only or board ride). Do NOT touch the watch: within ~10 s the Cyclift workout
+    starts on the watch by itself and heart rate appears on the phone, labelled Apple Watch.                 PASS/FAIL
+ C2 The board's HEART row shows the same bpm (source WATCH) within ~2 s of the phone.                         PASS/FAIL
+ C3 Lock the phone and put it in your pocket for 5 minutes while pedalling: heart rate keeps updating on the board;
+    unlock - the phone has it too, no gaps longer than ~10 s.                                                 PASS/FAIL
+ C4 Take the watch off: heart rate disappears within ~6 s on phone and board (never held).                    PASS/FAIL
+
+D. Interruptions and recovery (no tapping allowed except where stated)
+ D1 Board screen off (Quick Settings > Screen off) for 2 minutes while pedalling: the phone keeps updating.     PASS/FAIL
+ D2 Turn the phone's Bluetooth off 20 s, on again: board link and values come back by themselves.             PASS/FAIL
+ D3 Press RESET on the board: within ~20 s the phone reconnects and power is live again.                      PASS/FAIL
+ D4 Swipe Cyclift away (force-quit), reopen: it reconnects to the board and the watch by itself.             PASS/FAIL
+ D5 Phone app in background 3 minutes (go to Home screen) while riding: recording continues.                 PASS/FAIL
+
+E. Full ride
+ E1 Ride 10 minutes with board + watch, End > Save > check-in. History shows ONE ride with power, cadence, heart rate
+    and duration. Board history has the same ride; no duplicate on the phone. One workout in Apple Fitness.  PASS/FAIL
+
+F. If anything fails
+ F1 Phone: Connections > Diagnostics > Export diagnostic report - send the file to Claude (no personal data inside).
+ F2 Board: the READ-LOG-v0.7.2 log file.
