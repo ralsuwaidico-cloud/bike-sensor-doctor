@@ -228,7 +228,8 @@ final class DeviceLink: NSObject, ObservableObject {
         central.cancelPeripheralConnection(p)       /* didDisconnect re-attaches while wantConnection is set */
         wantConnection = true
     }
-    /// Live data size limit on this link (ATT MTU − 3) for the diagnostic report; nil while not connected.
+    /// Largest single ATT packet on this link = negotiated ATT MTU − 3 (iOS: MTU 185 → 182). Sizes the Link 1.2.3 report chunks
+    /// (BCLink.diagRequestMaxLen); notifications from the board use the same MTU. nil while not connected.
     var maxNotifyBytes: Int? { peripheral?.state == .connected ? peripheral?.maximumWriteValueLength(for: .withoutResponse) : nil }
     var liveAge: TimeInterval? { liveReceivedAt.map { Date().timeIntervalSince($0) } }
 
@@ -407,7 +408,7 @@ final class DeviceLink: NSObject, ObservableObject {
 
     /// 1.2.3 report transfer: one request on Control. Never sent to firmware without DIAG_XFER.
     @discardableResult
-    func sendDiag(_ d: Data) -> Bool { guard info?.hasDiagXfer == true else { return false }; return writeControl(d) }
+    func sendDiag(_ d: Data) -> Bool { guard DiagReportCenter.transferAllowed(info) else { return false }; return writeControl(d) }
 
     private func writeControl(_ d: Data) -> Bool {
         guard let c = controlChr, let p = peripheral, state == .ready else { return false }

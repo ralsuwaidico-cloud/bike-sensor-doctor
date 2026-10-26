@@ -61,7 +61,7 @@ final class DiagCodecTests: XCTestCase {
     func testFullSizeChunkIsLongerThan180AndStillDecodes() throws {
         let payload = Data(repeating: 0x41, count: 160)
         let d = BCLink.encodeDiagChunk(BCLink.DiagChunk(reportId: 1, offset: 160, data: payload, last: false), seq: 1, tMs: 0)
-        XCTAssertEqual(d.count, 185)           /* 8 header + 6 id + 6 offset + 2+160 data + 3 last — see DIAG_TRANSFER.md */
+        XCTAssertEqual(d.count, 185)           /* 8 header + 6 id + 6 offset + 2+160 data + 3 last: never sent by 0.7.3 (it clamps to 155) */
         XCTAssertEqual(try XCTUnwrap(BCLink.decodeDiagChunk(d)).data, payload)
     }
 
@@ -101,6 +101,9 @@ final class FakeDiagBoard {
     var corruptPasses: [UInt32: Int] = [:]
     var errQueue: [UInt8] = []
     var acks: [(id: UInt32, crc: UInt32)] = []
+    /// The board's clamp (firmware bc_diag_chunk_data_max): min(max_len, 155, ATT_MTU − 3 − 25). MTU 185 by default.
+    var attMtu = 185
+    var ridingOnBoard = false
     private var seq: UInt16 = 0
 
     func add(id: UInt32, size: Int, kind: UInt8 = 1, state: UInt8 = 0, summary: String = "panic in nimble_host") {
@@ -123,9 +126,12 @@ final class FakeDiagBoard {
             if dropNextChunks > 0 { dropNextChunks -= 1; return [] }
             if let s = stopAfterChunks, chunksServed >= s { return [] }
             if !errQueue.isEmpty { return [BCLink.encodeDiagErr(reportId: id, code: errQueue.removeFirst(), seq: next(), tMs: 0)] }
+            if ridingOnBoard { return [BCLink.encodeDiagErr(reportId: id, code: 4, seq: next(), tMs: 0)] }
             guard let r = reports.first(where: { $0.info.reportId == id }) else { return [BCLink.encodeDiagErr(reportId: id, code: 1, seq: next(), tMs: 0)] }
             guard off <= r.info.size else { return [BCLink.encodeDiagErr(reportId: id, code: 2, seq: next(), tMs: 0)] }
-            let end = min(Int(off) + min(maxLen, 160), r.data.count)
+            let room = min(maxLen == 0 ? 155 : maxLen, 155, attMtu - 3 - 25)
+            guard room >= 1 else { return [BCLink.encodeDiagErr(reportId: id, code: 5, seq: next(), tMs: 0)] }
+            let end = min(Int(off) + room, r.data.count)
             var part = Data(r.data[Int(off)..<end])
             if off == 0, let n = corruptPasses[id], n > 0, !part.isEmpty { corruptPasses[id] = n - 1; part[part.startIndex] ^= 0xFF }
             chunksServed += 1
@@ -151,12 +157,15 @@ final class DiagTransferTests: XCTestCase {
     var sent: [Data] = []
     var now = Date(timeIntervalSince1970: 1_800_000_000)
     var ride = false
+    var boardRide = false
+    var linkPayload: Int? = 182                              /* iOS: ATT MTU 185 − 3 */
     var saved: [DiagReportMeta] = []
 
     override func setUp() {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("diag-\(UUID().uuidString)", isDirectory: true)
         store = DiagStore(root: root)
         fake = FakeDiagBoard()
+        sent = []; outbox = []; saved = []
         engine = makeEngine()
     }
     override func tearDown() { try? FileManager.default.removeItem(at: root) }
@@ -164,6 +173,8 @@ final class DiagTransferTests: XCTestCase {
     func makeEngine() -> DiagTransfer {
         let e = DiagTransfer(boardId: Self.board, store: store) { [unowned self] d in self.outbox.append(d); self.sent.append(d); return true }
         e.rideActive = { [unowned self] in self.ride }
+        e.boardRecording = { [unowned self] in self.boardRide }
+        e.linkPayload = { [unowned self] in self.linkPayload }
         e.onSaved = { [unowned self] m in self.saved.append(m) }
         return e
     }
@@ -193,8 +204,8 @@ final class DiagTransferTests: XCTestCase {
         fake.add(id: 3, size: 1000)
         start()
         XCTAssertEqual(listRequests, 1)
-        XCTAssertEqual(chunkRequests.map(\.offset), [0, 160, 320, 480, 640, 800, 960])
-        XCTAssertTrue(chunkRequests.allSatisfy { $0.maxLen == 160 && $0.id == 3 })
+        XCTAssertEqual(chunkRequests.map(\.offset), [0, 155, 310, 465, 620, 775, 930])
+        XCTAssertTrue(chunkRequests.allSatisfy { $0.maxLen == 155 && $0.id == 3 }, "MTU 185: max_len = 182 - 25 = 155")
         assertSaved(3)
         XCTAssertEqual(acksSent.count, 1); XCTAssertEqual(acksSent.first?.crc, fake.reports[0].info.crc32)
         XCTAssertEqual(fake.reports[0].info.state, 1, "board marked it sent")
@@ -220,13 +231,13 @@ final class DiagTransferTests: XCTestCase {
         fake.add(id: 5, size: 1000)
         fake.stopAfterChunks = 3
         start()
-        XCTAssertEqual(store.partialLength(Self.board, 5), 480, "bytes persisted as they arrive")
+        XCTAssertEqual(store.partialLength(Self.board, 5), 465, "bytes persisted as they arrive")
         engine.linkDown()                                   /* disconnect / board restart */
         XCTAssertEqual(acksSent.count, 0)
         fake.stopAfterChunks = nil
         let before = chunkRequests.count
         start()
-        XCTAssertEqual(chunkRequests[before].offset, 480, "resumes at the last offset, not 0")
+        XCTAssertEqual(chunkRequests[before].offset, 465, "resumes at the last offset, not 0")
         assertSaved(5)
         XCTAssertEqual(acksSent.count, 1)
     }
@@ -235,13 +246,13 @@ final class DiagTransferTests: XCTestCase {
         fake.add(id: 6, size: 700)
         fake.stopAfterChunks = 2
         start()
-        XCTAssertEqual(store.partialLength(Self.board, 6), 320)
+        XCTAssertEqual(store.partialLength(Self.board, 6), 310)
         engine = makeEngine()                               /* app killed and relaunched: only the disk survives */
         store = DiagStore(root: root)
         fake.stopAfterChunks = nil
         let before = chunkRequests.count
         start()
-        XCTAssertEqual(chunkRequests[before].offset, 320)
+        XCTAssertEqual(chunkRequests[before].offset, 310)
         assertSaved(6)
     }
 
@@ -265,7 +276,7 @@ final class DiagTransferTests: XCTestCase {
         fake.add(id: 1, size: 400)
         fake.corruptPasses[1] = 1
         start()
-        XCTAssertEqual(chunkRequests.map(\.offset), [0, 160, 320, 0, 160, 320])
+        XCTAssertEqual(chunkRequests.map(\.offset), [0, 155, 310, 0, 155, 310])
         assertSaved(1)
         XCTAssertEqual(acksSent.count, 1, "one ACK, after the good pass")
         XCTAssertEqual(acksSent.first?.crc, fake.reports[0].info.crc32)
@@ -332,7 +343,7 @@ final class DiagTransferTests: XCTestCase {
         fake.stopAfterChunks = nil; fake.errQueue = [2]
         let before = chunkRequests.count
         start()
-        XCTAssertEqual(chunkRequests[before].offset, 160)
+        XCTAssertEqual(chunkRequests[before].offset, 155)
         XCTAssertEqual(chunkRequests[before + 1].offset, 0, "bad offset → partial dropped, start again at 0")
         assertSaved(1)
     }
@@ -359,7 +370,7 @@ final class DiagTransferTests: XCTestCase {
         XCTAssertEqual(chunkRequests.count - before, 4)
         XCTAssertEqual(engine.phase, .idle)
         XCTAssertNotNil(engine.lastError)
-        XCTAssertEqual(store.partialLength(Self.board, 1), 160, "kept for the next connection")
+        XCTAssertEqual(store.partialLength(Self.board, 1), 155, "kept for the next connection")
         XCTAssertTrue(acksSent.isEmpty)
     }
 
@@ -375,7 +386,7 @@ final class DiagTransferTests: XCTestCase {
     }
 
     // MARK: timeouts
-    func testChunkTimeoutRetriesSameOffsetWithSmallerChunks() {
+    func testChunkTimeoutRetriesSameOffsetSameSize() {
         fake.add(id: 1, size: 400)
         fake.dropNextChunks = 1
         start()
@@ -384,7 +395,7 @@ final class DiagTransferTests: XCTestCase {
         XCTAssertEqual(chunkRequests.count, 1, "5 s per chunk")
         advance(1)
         XCTAssertEqual(chunkRequests[1].offset, 0)
-        XCTAssertEqual(chunkRequests[1].maxLen, 128, "falls back to 128-byte chunks after a timeout")
+        XCTAssertEqual(chunkRequests[1].maxLen, 155, "the size comes from the link MTU, never from a timeout")
         assertSaved(1)
     }
 
@@ -396,7 +407,7 @@ final class DiagTransferTests: XCTestCase {
         XCTAssertEqual(chunkRequests.count, 5, "1 answered + 1 unanswered + 3 retries")
         XCTAssertEqual(engine.phase, .idle)
         XCTAssertNotNil(engine.lastError)
-        XCTAssertEqual(store.partialLength(Self.board, 1), 160)
+        XCTAssertEqual(store.partialLength(Self.board, 1), 155)
         fake.stopAfterChunks = nil
         start()                                              /* next connect / diag_ready */
         assertSaved(1)
@@ -430,6 +441,83 @@ final class DiagTransferTests: XCTestCase {
         fake.add(id: 2, size: 1000)
         start()
         XCTAssertNotNil(store.meta(Self.board, 2))
+    }
+
+    // MARK: chunk size from the negotiated link (docs/LINK_V1_2_SPEC.md 1.2.3) — never learned from failures
+    func testChunkSizeComesFromTheLinkMTU() {
+        for (payload, want) in [(182, 155), (244, 155), (514, 155), (97, 72), (26, 1)] {
+            setUp(); linkPayload = payload; fake.attMtu = payload + 3
+            fake.add(id: 1, size: 400)
+            start()
+            XCTAssertTrue(chunkRequests.allSatisfy { Int($0.maxLen) == want }, "ATT MTU \(payload + 3): max_len \(want)")
+            assertSaved(1)
+            XCTAssertEqual(chunkRequests.count, (400 + want - 1) / want)
+            tearDown()
+        }
+        setUp(); linkPayload = nil                            /* size unknown (not connected): the protocol maximum; the board clamps */
+        fake.add(id: 1, size: 400); start()
+        XCTAssertEqual(chunkRequests.first?.maxLen, 155); assertSaved(1)
+    }
+
+    func testLinkTooSmallAsksNothingAndKeepsTheReportOnTheBoard() {
+        linkPayload = 20; fake.attMtu = 23                    /* MTU 23: no exchange happened */
+        fake.add(id: 1, size: 400)
+        start()
+        XCTAssertEqual(listRequests, 1)
+        XCTAssertTrue(chunkRequests.isEmpty, "no request that could never fit")
+        XCTAssertEqual(engine.phase, .idle); XCTAssertNotNil(engine.lastError)
+        XCTAssertEqual(fake.reports[0].info.state, 0)
+    }
+
+    func testErrLinkTooSmallFromTheBoardPausesWithoutRetry() {
+        linkPayload = 182; fake.attMtu = 23                   /* the phone believes 185, the board has 23 */
+        fake.add(id: 1, size: 400)
+        start()
+        XCTAssertEqual(chunkRequests.count, 1)
+        for _ in 0..<5 { advance(10) }
+        XCTAssertEqual(chunkRequests.count, 1, "DIAG_ERR 5 is not retried")
+        XCTAssertEqual(engine.phase, .idle); XCTAssertNotNil(engine.lastError)
+        XCTAssertTrue(acksSent.isEmpty)
+    }
+
+    // MARK: ride priority on the phone side
+    func testNoChunkRequestsWhileTheBoardRecordsARide() {
+        fake.add(id: 1, size: 1000)
+        boardRide = true; fake.ridingOnBoard = true
+        start()
+        XCTAssertEqual(listRequests, 1, "the list (one small write) still happens")
+        for _ in 0..<12 { advance(5) }                       /* one minute of riding */
+        XCTAssertTrue(chunkRequests.isEmpty, "no chunk request during the board's ride: LIVE has the link to itself")
+        XCTAssertEqual(sent.count, 1, "one write in a minute")
+        boardRide = false; fake.ridingOnBoard = false
+        advance(10)
+        assertSaved(1)
+    }
+
+    func testBusyFromABoardRideIsRetriedEveryTenSeconds() {
+        fake.add(id: 1, size: 300)
+        fake.ridingOnBoard = true                             /* LIVE not seen yet (older app state): the board says BUSY */
+        start()
+        for _ in 0..<6 { advance(5) }
+        XCTAssertEqual(chunkRequests.count, 4, "first + one every 10 s for 30 s")
+        fake.ridingOnBoard = false
+        advance(10)
+        assertSaved(1)
+    }
+
+    func testPhoneRideNeverMoreThanOneChunkRequestPerSecond() {
+        ride = true
+        fake.add(id: 1, size: 5000)                           /* 33 chunks */
+        start()
+        var times: [Date] = [now]
+        for _ in 0..<160 {
+            let n = chunkRequests.count
+            advance(0.25)
+            if chunkRequests.count > n { times.append(now) }
+        }
+        assertSaved(1)
+        let gaps = zip(times.dropFirst(), times).map { $0.timeIntervalSince($1) }
+        XCTAssertTrue(gaps.allSatisfy { $0 >= 0.999 }, "smallest gap \(gaps.min() ?? 0) s")
     }
 
     // MARK: triggers
