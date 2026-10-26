@@ -98,7 +98,10 @@ final class ModelTests: XCTestCase {
         var b = RideRecord(start: t0.addingTimeInterval(20), durationS: 3590, distanceM: 29900, recorder: .board, sources: ["BikeComputer"]); b.boardRideId = 7
         var c = RideRecord(start: t0.addingTimeInterval(86400), durationS: 1800, distanceM: 12000, recorder: .phone, sources: ["Phone GPS"])
         c.samples = [RideRecord.Sample(t: 0, w: nil, cad: nil, hr: 120, speedCms: 500, lat: nil, lon: nil, alt: nil)]
-        let plan = [Workout(date: t0.addingTimeInterval(-86400 * 2), kind: .strength, minutes: 30, done: true), Workout(date: t0.addingTimeInterval(-86400 * 3), kind: .endurance, minutes: 60), Workout(date: t0, kind: .endurance, minutes: 60)]
+        // quality release: a session is completed only by evidence or an explicit "Mark done" (completion = .marked);
+        // a bare done flag without either is not shown as completed (StoreMigration rule M3 resets such flags)
+        var marked = Workout(date: t0.addingTimeInterval(-86400 * 2), kind: .strength, minutes: 30, done: true); marked.completion = .marked
+        let plan = [marked, Workout(date: t0.addingTimeInterval(-86400 * 3), kind: .endurance, minutes: 60), Workout(date: t0, kind: .endurance, minutes: 60)]
         let tl = Timeline.build(rides: [a, b, c], plan: plan, ftp: 200, now: t0.addingTimeInterval(86400 * 3))
         XCTAssertEqual(tl.filter { $0.rideId != nil }.count, 2)                        // the duplicate board ride is gone
         XCTAssertEqual(tl.first { $0.rideId == a.id }?.tss, 90)                         // 3600 × 190² / (200² × 3600) × 100

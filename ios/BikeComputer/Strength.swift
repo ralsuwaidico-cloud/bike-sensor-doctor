@@ -446,8 +446,9 @@ extension Store {
     /// strength session) would duplicate. nil = nothing logged yet / a genuinely extra session.
     func existingLog(forWorkout id: UUID?, on date: Date, calendar cal: Calendar = .current) -> StrengthSession? {
         if let id {
-            if let s = strength.first(where: { $0.workoutId == id }) { return s }
-            if let w = plan.first(where: { $0.id == id }), w.done { return strength.first { cal.isDate($0.date, inSameDayAs: w.date) } }
+            if let s = strength.first(where: { $0.workoutId == id && !$0.awaitingReview }) { return s }
+            // quality release: the one query layer decides which log completed the session (never an unrelated one)
+            if let w = plan.first(where: { $0.id == id }) { return ledger.log(for: w) }
             return nil
         }
         // no planned workout given: only when every strength session planned that day is already done

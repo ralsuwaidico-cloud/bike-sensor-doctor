@@ -366,9 +366,12 @@ enum HybridCoach {
         let last = cal.date(byAdding: .day, value: -7, to: thisMonday)!
         let s = stats(last)
         guard !s.plannedR.isEmpty || !s.plannedL.isEmpty || !s.rides.isEmpty || !s.lifts.isEmpty else { return nil }
-        // a planned session counts as missed when no ride / log exists on its day
-        let missed = (s.plannedR.filter { w in !s.rides.contains { cal.isDate($0.start, inSameDayAs: w.date) } } + s.plannedL.filter { w in !s.lifts.contains { cal.isDate($0.date, inSameDayAs: w.date) } }).sorted { $0.date < $1.date }
-        let ridesDone = min(s.plannedR.count, s.rides.count), liftsDone = min(s.plannedL.count, s.lifts.count)
+        // a planned session counts as missed when the one query layer does not see it completed (no ride / log on its
+        // day, not marked done) — the same definition as Home, Plan, Progress and History
+        let ledger = TrainingLedger(plan: plan, strength: strength, rides: rides, calendar: cal)
+        let missed = (s.plannedR + s.plannedL).filter { !ledger.status($0).isCompleted }.sorted { $0.date < $1.date }
+        let rw = ledger.riding(weekOf: last), lw = ledger.lifting(weekOf: last)
+        let ridesDone = min(s.plannedR.count, rw.completed), liftsDone = min(s.plannedL.count, lw.completed)
         var suggestion: String
         let totalPlanned = s.plannedR.count + s.plannedL.count
         let pct = totalPlanned > 0 ? (totalPlanned - missed.count) * 100 / totalPlanned : 100
@@ -383,11 +386,11 @@ enum HybridCoach {
             let st = stats(m)
             let planned = st.plannedR.count + st.plannedL.count
             guard planned > 0 else { continue }
-            let miss = st.plannedR.filter { w in !st.rides.contains { cal.isDate($0.start, inSameDayAs: w.date) } }.count + st.plannedL.filter { w in !st.lifts.contains { cal.isDate($0.date, inSameDayAs: w.date) } }.count
+            let miss = (st.plannedR + st.plannedL).filter { !ledger.status($0).isCompleted }.count
             if miss * 2 >= planned { badWeeks += 1 }
         }
-        return WeeklyReview(monday: last, ridesPlanned: s.plannedR.count, ridesDone: ridesDone, rideMinutesPlanned: s.plannedR.reduce(0) { $0 + $1.minutes }, rideMinutesDone: s.rides.reduce(0) { $0 + $1.durationS } / 60,
-                            liftsPlanned: s.plannedL.count, liftsDone: liftsDone, liftMinutesPlanned: s.plannedL.reduce(0) { $0 + $1.minutes }, liftMinutesDone: s.lifts.reduce(0) { $0 + $1.minutes },
+        return WeeklyReview(monday: last, ridesPlanned: s.plannedR.count, ridesDone: ridesDone, rideMinutesPlanned: s.plannedR.reduce(0) { $0 + $1.minutes }, rideMinutesDone: rw.minutes,
+                            liftsPlanned: s.plannedL.count, liftsDone: liftsDone, liftMinutesPlanned: s.plannedL.reduce(0) { $0 + $1.minutes }, liftMinutesDone: lw.minutes,
                             missedWorkouts: missed, suggestion: suggestion, offerRevise: badWeeks >= 2)
     }
 }
