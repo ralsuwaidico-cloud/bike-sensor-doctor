@@ -1,1 +1,1 @@
-cycling,strength,hybrid,training plan,workout log,gym,bike,ride,heart rate,power,cadence,sensors
+cycling,strength,hybrid,training,workout log,gym,bike,heart rate,power meter,cadence,bluetooth,gps

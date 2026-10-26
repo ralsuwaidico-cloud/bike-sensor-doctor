@@ -1,13 +1,15 @@
-No account is needed to review Cyclift: on the first screen, under "Continue as guest", enter any first name and tap Continue (onboarding steps after that can be skipped). Every feature (planning, ride recording with phone GPS, strength logging, routines, coach suggestions, history) works in guest mode and offline, without any sensor or accessory. Optional accounts (Sign in with Apple, Google, e-mail) are for syncing across devices; e-mail accounts require confirming the address, so a demo account is not provided.
+No account is needed and there is no sign-in in this version. Everything works on first launch: enter any first name and tap Continue (the remaining onboarding steps can be skipped). A demo account is not required.
 
-Sensors and accessories (all optional, none required for review): standard Bluetooth fitness sensors (heart rate, power, cadence/speed), Apple Watch (heart rate during a workout), Apple Health, and the BikeComputer, a separate handlebar cycling computer the rider may own. Without any of them the app records rides with the phone alone and shows "No power source" / "No heart-rate source" instead of values.
+BikeComputer: an optional Bluetooth accessory (a custom ESP32-based handlebar bike computer) that the rider may own. It is not needed to review the app; every feature is reachable without it, and screens that use it show "not connected" instead of values.
+
+Phone-only ride: Ride tab > Start. The ride is recorded with the iPhone's GPS (speed, distance, route) — walk outside or simulate a location in Xcode. Standard Bluetooth heart-rate, power and speed/cadence sensors are optional. The Apple Watch app is a companion that provides live heart rate during a workout; it is optional too.
 
 Background modes:
-- bluetooth-central: keeps the connection to the rider's paired Bluetooth sensors and the optional BikeComputer device during a ride, so power, heart rate, cadence and recording continue with the phone in a pocket.
-- location: records speed, distance and the route while a ride is in progress, including when the screen is locked. Location is not used when no ride is running.
+- bluetooth-central: keeps the link to the rider's Bluetooth sensors and the optional BikeComputer accessory during a recorded ride while the screen is locked.
+- location: records speed, distance and the route during a ride while the screen is locked. Location is never used when no ride is running.
 
-HealthKit: with the rider's permission, the app reads heart rate during workouts and past cycling/strength workouts to show them in the plan and history, and saves finished sessions to Apple Health when the rider chooses. Health data is not used for advertising and is not shared.
+HealthKit: only with the rider's permission, the app reads workouts and heart rate (to show past cycling/strength workouts and heart rate in the plan and history) and writes completed workouts to Apple Health. No data leaves the device.
 
-Coaching is rule-based (no AI model); suggestions are labelled as estimates and not medical advice.
+All data is stored on the iPhone. Profile lets the rider export all data or delete all data on this phone.
 
-Account deletion: Profile > Account > Delete account and all data.
+No ads, no tracking, no analytics, no third-party SDKs. The coach is rule-based; its suggestions are labelled as training suggestions, not medical advice.
