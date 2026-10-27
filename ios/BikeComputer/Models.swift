@@ -262,6 +262,9 @@ struct Workout: Codable, Identifiable, Equatable {
     var migrationNote: String? = nil
     /// The strength planner's decision factors for a session it generated (Why? per exercise).
     var rationale: SessionRationale? = nil
+    /// Coach remediation: the ride as generated before a safety cap (health check / return after a break) changed it, so
+    /// the cap can be lifted again when it no longer applies (nil = not capped).
+    var safetyOriginal: SafetyOriginal? = nil
 
     init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false, templateId: UUID? = nil) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
@@ -292,6 +295,7 @@ struct Workout: Codable, Identifiable, Equatable {
         manualMinutes = try? c.decodeIfPresent(Int.self, forKey: .manualMinutes)
         migrationNote = try? c.decodeIfPresent(String.self, forKey: .migrationNote)
         rationale = try? c.decodeIfPresent(SessionRationale.self, forKey: .rationale)
+        safetyOriginal = try? c.decodeIfPresent(SafetyOriginal.self, forKey: .safetyOriginal)
     }
     /// "Strength · Lower body" when a region is planned.
     var displayTitle: String {

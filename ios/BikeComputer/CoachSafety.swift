@@ -246,10 +246,14 @@ extension Store {
     }
 }
 
+struct SafetyOriginal: Codable, Equatable { var kind: WorkoutKind; var minutes: Int; var intervalReps: Int?; var note: String }
+
 extension Store {
     /// M-01 / M-02 for rides that were generated BEFORE the health check or the break was known (weeks are generated up to
     /// two weeks ahead): future coach-generated rides (not fixed, not edited, not done or started) are capped here at
-    /// launch, like strength sessions are refreshed. Never touches a fixed or hand-edited ride; never makes a ride harder.
+    /// launch, day change and check-ins, like strength sessions are refreshed — and restored to what was generated once the
+    /// cap no longer applies (screen answered / cleared, return phase over). Never touches a fixed or hand-edited ride and
+    /// never makes a ride harder than it was generated.
     func refreshRideSafety(now: Date = Date()) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
@@ -259,13 +263,18 @@ extension Store {
         for i in p.indices {
             let w = p[i]
             guard w.kind.isRide, !w.fixed, !w.edited, !w.done, !w.skipped, w.completion == nil, cal.startOfDay(for: w.date) >= today, w.coachOriginal == nil else { continue }
+            let o = w.safetyOriginal ?? SafetyOriginal(kind: w.kind, minutes: w.minutes, intervalReps: w.intervalReps, note: w.note)
             var x = w
-            if w.kind.zone > readiness.maxRideZone, let r = readiness.restriction { x.kind = .endurance; x.intervalReps = nil; x.note = "Planned easy because \(r)." }
-            if let b = back, b.active, x.kind.zone >= 3 || x.kind == .long, !x.note.hasPrefix("Back after") {
+            x.kind = o.kind; x.minutes = o.minutes; x.intervalReps = o.intervalReps; x.note = o.note
+            if x.kind.zone > readiness.maxRideZone, let r = readiness.restriction { x.kind = .endurance; x.intervalReps = nil; x.note = "Planned easy because \(r)." }
+            if let b = back, b.active, x.kind.zone >= 3 || x.kind == .long {
                 x.kind = .endurance; x.intervalReps = nil
-                x.minutes = max(30, Int((Double(w.minutes) * 0.75 / 5).rounded()) * 5)
+                x.minutes = max(30, Int((Double(o.minutes) * 0.75 / 5).rounded()) * 5)
                 x.note = "Back after \(b.weeksText) off: steady endurance at about three quarters of the usual time; intensity returns after \(ReturnPhase.phaseSessions) rides."
             }
+            let capped = x.kind != o.kind || x.minutes != o.minutes || x.intervalReps != o.intervalReps
+            x.safetyOriginal = capped ? o : nil
+            if !capped { x.note = o.note }
             if x != w { p[i] = x; changed = true }
         }
         if changed { plan = p }

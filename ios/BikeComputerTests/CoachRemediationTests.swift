@@ -343,5 +343,13 @@ final class CoachRemediationTests: XCTestCase {
         t.refreshRideSafety(now: now)
         XCTAssertEqual(t.plan.first?.kind, .endurance)
         XCTAssertTrue(t.plan.first?.note.contains("health check") ?? false)
+        // answering the check lifts the cap again: the ride is restored exactly as generated
+        t.profile = profile(screened: true)
+        t.refreshRideSafety(now: now)
+        XCTAssertEqual(t.plan.first?.kind, .threshold); XCTAssertNil(t.plan.first?.safetyOriginal); XCTAssertEqual(t.plan.first?.note, "")
+        // the break ends (three rides logged since): the long ride comes back
+        s.rides += [-1, -2, -3].map { RideRecord(start: day($0, hour: 7), durationS: 3600, distanceM: 25000, recorder: .phone, sources: []) }
+        s.refreshRideSafety(now: now)
+        XCTAssertEqual(s.plan.first { $0.id == long.id }?.kind, .long); XCTAssertEqual(s.plan.first { $0.id == long.id }?.minutes, 150)
     }
 }
