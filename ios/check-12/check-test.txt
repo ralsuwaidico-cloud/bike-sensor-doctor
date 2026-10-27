@@ -1,0 +1,39 @@
+test exit 0
+2026-10-27 01:22:20.510772+0000 BikeComputer[10598:37327] [workouts] [mirroring] Failed to set remote session observer with XPC error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-27 01:22:21.746321+0000 BikeComputer[10598:37332] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-27 01:22:21.759476+0000 BikeComputer[10598:37318] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+	 Executed 15 tests, with 0 failures (0 unexpected) in 5.657 (11.142) seconds
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.816 (1.468) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 1.759 (1.763) seconds
+	 Executed 16 tests, with 0 failures (0 unexpected) in 3.943 (5.483) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 1.379 (1.381) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.749 (0.751) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.128 (0.160) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.239 (0.255) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.448 (0.452) seconds
+	 Executed 29 tests, with 0 failures (0 unexpected) in 0.494 (11.141) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.180 (0.181) seconds
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.338 (0.347) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.089 (0.276) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.011 (0.070) seconds
+	 Executed 19 tests, with 0 failures (0 unexpected) in 1.287 (1.313) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.076 (0.518) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.012 (0.043) seconds
+	 Executed 27 tests, with 0 failures (0 unexpected) in 0.621 (0.629) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.034) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.071 (0.177) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 2.612 (2.636) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.052 (0.058) seconds
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.026 (0.028) seconds
+	 Executed 23 tests, with 0 failures (0 unexpected) in 0.059 (0.124) seconds
+	 Executed 12 tests, with 0 failures (0 unexpected) in 4.145 (4.189) seconds
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.037 (0.154) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+2026-10-27 01:23:16.828485+0000 BikeComputer[10598:37318] [workouts] [mirroring] Failed to set remote session observer with XPC error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.007 (0.093) seconds
+	 Executed 317 tests, with 0 failures (0 unexpected) in 25.242 (46.629) seconds
+	 Executed 317 tests, with 0 failures (0 unexpected) in 25.242 (46.630) seconds
+2026-10-27 01:23:16.930424+0000 BikeComputer[10598:36467] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-27 01:23:17.022491+0000 BikeComputer[10598:38262] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-27 01:23:17.022665+0000 BikeComputer[10598:37318] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}

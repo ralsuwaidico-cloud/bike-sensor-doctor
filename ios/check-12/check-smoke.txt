@@ -1,0 +1,4 @@
+smoke exit 0
+	 Executed 6 tests, with 0 failures (0 unexpected) in 280.089 (280.097) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 280.089 (280.098) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 280.089 (280.099) seconds
