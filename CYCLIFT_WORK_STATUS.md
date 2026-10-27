@@ -1,6 +1,6 @@
 # Cyclift / BikeComputer — work status (checkpoint)
 
-Updated: 27 Oct 2026 08:25 (Dubai). Source of truth for resuming work — update at every stage.
+Updated: 27 Oct 2026 09:35 (Dubai). Source of truth for resuming work — update at every stage.
 
 ## Standing rules
 - No App Store submission/release, no TestFlight upload, no firmware flashing, no board reboots without the owner's approval.
@@ -16,6 +16,7 @@ Updated: 27 Oct 2026 08:25 (Dubai). Source of truth for resuming work — update
 | iOS diag receiver | `fix/iosdiag` → `ios/diag-receiver` — /home/claude/ws-iosdiag | 7ab3c92 | DONE, CI run 69 green (275 tests) |
 | Cyclift quality + coach fixes | `fix/quality` → `ios/quality` — /home/claude/ws-quality | 32a0676 | code complete; final CI run 73 (attempt 2) running |
 | Coach audit baseline | detached — /home/claude/ws-audit | 2b2c104 | frozen, read-only |
+| Coach remediation | `fix/coach` → `ios/coach` — /home/claude/ws-coach | from 32a0676 | stages 1–3 done (a726af5, 7127389, a84560c); CI run 74 running; harness re-run running |
 
 ## Workstreams
 1. **Firmware 0.7.3** — DONE. App SHA-256 181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5 (1,830,352 B).
@@ -33,6 +34,15 @@ Updated: 27 Oct 2026 08:25 (Dubai). Source of truth for resuming work — update
 4. **Cyclift quality release** — code complete on fix/quality (21 commits since b485265). Includes audit fixes G-01..G-09, G-11, G-21
    (harness 38/54 → 51/54 on the new code). Run 72: 317 unit tests 0 failed, 74 layout screenshots ok, archive/sign ok;
    1 UI smoke flake ("Quick log" not hittable yet) — fixed in 32a0676; run 73 stuck 1 h 24 min on GitHub → cancelled, re-run.
+
+## Coach remediation (owner brief 27 Oct 08:27 — coach NOT approved for release)
+- Stage 1 M-01 health check (PAR-Q+-style), M-02 return after a break — done.
+- Stage 2 M-06 age/recovery, M-03 rest, M-04 starting loads, G-17 lift spacing — done.
+- Stage 3 M-05 cycling intensity + blocks, G-10, G-12, G-13, G-14, G-15, G-18, G-19, G-20 — done.
+- Linux engine tests (coach-harness/test.sh): 121 run, 0 failed. Harness: base 32a0676 50/54; after stage 1 52/54.
+- Stage 4 (running): all 54 audit checks unchanged + N01–N14 new scenarios; iOS CI run 74.
+- Stage 5: independent reviewer (separate agent, not shown the implementation reasoning) + before/after audit + GO/NO-GO.
+- Not addressed (documented): M-07 strength-experience onboarding question, M-08 HRV/sleep, M-09 HR drift analysis, M-10 per-muscle volume, M-11 bodyweight progressions.
 
 ## Next stages
 - A. Run 73 green → merge fix/quality into ios/dev → full CI on ios/dev (no upload) = TestFlight release candidate, awaiting approval.
