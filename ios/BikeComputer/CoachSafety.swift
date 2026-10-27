@@ -91,24 +91,24 @@ struct HealthScreen: Codable, Equatable {
          ("bone", boneJointProblem), ("supervised", supervisedOnly), ("pregnancy", pregnancy), ("operation", recentOperation)].filter { $0.1 }.map { $0.0 }
     }
     /// The recorded clearance counts only when (review N-08 / P3-02 / P3-17):
-    /// - it is not dated after the answers were saved (no future clearance);
+    /// - it is not dated in the future (review P3-17; the form's date picker cannot pick one either);
     /// - the rider confirmed it after the yes answers it must cover last changed (an older clearance never carries over
     ///   to a new or changed answer);
     /// - for symptoms (chest pain, dizziness / fainting) the clearance is dated on or after the day they were reported —
     ///   a clearance given before the symptoms cannot cover them;
     /// - otherwise it is no more than 12 months older than those answers.
-    var clearanceValid: Bool {
+    func clearanceValid(now: Date = Date()) -> Bool {
         guard let c = clearedAt, let a = answeredAt else { return false }
         let cal = Calendar.current
         let changed = conditionsChangedAt ?? a, confirmed = clearanceConfirmedAt ?? a
-        guard cal.startOfDay(for: c) <= a, confirmed >= changed else { return false }
+        guard cal.startOfDay(for: c) <= now, confirmed >= changed else { return false }
         if stopAnswers { return cal.startOfDay(for: c) >= cal.startOfDay(for: changed) }
         return c >= changed.addingTimeInterval(-Double(Self.validityDays) * 86_400)
     }
 
     func status(now: Date = Date()) -> Status {
         // review N-07: a "see a doctor" result never expires into "not answered" — it stays until answered again
-        let stopNow = supervisedOnly || (stopAnswers && !clearanceValid)
+        let stopNow = supervisedOnly || (stopAnswers && !clearanceValid(now: now))
         guard let at = answeredAt, now.timeIntervalSince(at) < Double(Self.validityDays) * 86_400, questionSet == Self.currentQuestionSet else {
             // review P3-09: an illness pause also stays until the rider answers again (it never expires into training)
             return answeredAt != nil && stopNow ? .stop : (answeredAt != nil && currentIllness ? .paused : .notAnswered)
@@ -118,7 +118,7 @@ struct HealthScreen: Codable, Equatable {
         // review N-05 / PAR-Q+: a temporary illness delays training; no doctor needed — answer again when recovered
         if currentIllness { return .paused }
         if !clearable { return .clear }
-        return clearanceValid ? .cleared : .needsClearance
+        return clearanceValid(now: now) ? .cleared : .needsClearance
     }
     var status: Status { status() }
 
