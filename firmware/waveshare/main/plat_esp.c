@@ -14,6 +14,7 @@
 #include "freertos/task.h"
 #include "nvs.h"
 #include "esp_ota_ops.h"
+#include "esp_image_format.h"
 #include "esp_flash.h"
 #include "esp_vfs_fat.h"
 #include "esp_timer.h"
@@ -159,8 +160,11 @@ bool plat_file_remove(const char *path)
 }
 long plat_file_size(const char *path) { char p[96]; full(path, p, sizeof p); if (!fs_mounted()) return -1; struct stat st; return stat(p, &st) == 0 ? (long)st.st_size : -1; }
 bool plat_storage_ok(void) { return hw_storage_state() == BC_STOR_OK; }
+bool plat_settings_ok(void) { return hw_settings_ok(); }
 bc_stor_state_t plat_storage_state(void) { return hw_storage_state(); }
 void plat_storage_facts(bc_stor_facts_t *o) { hw_storage_facts(o); }
+bool plat_storage_recheck(void) { return hw_storage_recheck(); }
+bool plat_storage_fat_consistent(char *why, size_t cap) { return hw_storage_fat_consistent(why, cap); }
 /** 0.7.4: category of the last failed write ("Storage full" for ENOSPC, else "Write failed"); the boot state if writes are refused. */
 bc_stor_state_t plat_storage_write_failure(void)
 {
@@ -264,6 +268,33 @@ void plat_health(plat_health_t *o)
     { plat_phone_status_t ph; plat_phone_status(&ph); o->phone_state = ph.state; o->phone_bonded = ph.bonded; }
     o->display_ok = g_selftest.display == HW_PASS; o->touch_ok = g_selftest.touch == HW_PASS;
     o->imu_ok = g_selftest.imu == HW_PASS; o->storage_ok = g_selftest.storage == HW_PASS;
+}
+
+uint8_t plat_crash_run_update(bc_reset_t reset)
+{
+    nvs_handle_t h; uint8_t v = 0;
+    if (nvs_open("bootrec", NVS_READWRITE, &h) != ESP_OK) return 0;
+    nvs_get_u8(h, "crashrun", &v);
+    uint8_t n = bc_boot_next_run(v, reset);
+    if (n != v) { if (nvs_set_u8(h, "crashrun", n) != ESP_OK || nvs_commit(h) != ESP_OK) n = 0; }   /* one write only when it changes */
+    nvs_close(h);
+    return n;
+}
+void plat_flash_usage(uint32_t *slot_kb, uint32_t *used_kb, uint16_t *nvs_used, uint16_t *nvs_free)
+{
+    *slot_kb = *used_kb = 0; *nvs_used = *nvs_free = 0;
+    const esp_partition_t *p = esp_ota_get_running_partition();
+    if (p) {
+        *slot_kb = (uint32_t)(p->size / 1024);
+        static uint32_t s_img_len;                          /* the image does not change while it runs: read once */
+        if (!s_img_len) {
+            esp_partition_pos_t pos = { .offset = p->address, .size = p->size }; esp_image_metadata_t md;
+            if (esp_image_get_metadata(&pos, &md) == ESP_OK) s_img_len = md.image_len;
+        }
+        *used_kb = (s_img_len + 1023) / 1024;
+    }
+    nvs_stats_t st;
+    if (nvs_get_stats(NULL, &st) == ESP_OK) { *nvs_used = (uint16_t)(st.used_entries > 0xFFFF ? 0xFFFF : st.used_entries); *nvs_free = (uint16_t)(st.free_entries > 0xFFFF ? 0xFFFF : st.free_entries); }
 }
 
 void *plat_alloc_ext(size_t n)

@@ -23,7 +23,8 @@ extern "C" {
 
 typedef enum {
     BC_CUE_NONE = 0, BC_CUE_NO_DATA, BC_CUE_HR_HIGH, BC_CUE_COASTING, BC_CUE_WARMUP, BC_CUE_WARMUP_EASY, BC_CUE_LEARNING,
-    BC_CUE_EASE_OFF, BC_CUE_MORE, BC_CUE_SURGE, BC_CUE_DROPPING, BC_CUE_CAD_LOW, BC_CUE_CAD_HIGH, BC_CUE_HOLD, BC_CUE_COUNT
+    BC_CUE_EASE_OFF, BC_CUE_MORE, BC_CUE_SURGE, BC_CUE_DROPPING, BC_CUE_CAD_LOW, BC_CUE_CAD_HIGH, BC_CUE_HOLD,
+    BC_CUE_PHONE /* 0.7.5: Cyclift coaches (Link 1.3 mirror); head = its instruction */, BC_CUE_COUNT
 } bc_cue_id_t;
 
 /* Colour class for the display: GOOD green, UP cyan (more), DOWN amber (less), WARN red, INFO grey */

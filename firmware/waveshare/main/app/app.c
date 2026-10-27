@@ -1,6 +1,7 @@
 #include "app.h"
 #include "bc_pipe.h"
 #include "app_diag.h"
+#include "app_link13.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -197,6 +198,7 @@ static void publish_live(const app_live_t *lv)
     L.cue_id = (uint8_t)s_cue.id; int bp = plat_battery_pct(); L.battery_pct = (uint8_t)(bp < 0 ? 0xFF : bp);
     L.meter_link = (uint8_t)lv->link[PLAT_SENS_POWER].link; L.meter_gaps = (uint16_t)lv->link[PLAT_SENS_POWER].gaps;
     L.demo = lv->demo;
+    app_link13_live(&L, plat_ms());                /* 0.7.5 Link 1.3 tags 11..15 (absent when there is nothing to say) */
     plat_phone_publish_live(&L);
     app_diag_note_live();                          /* 0.7.3 health monitor: LIVE forwarding */
 }
@@ -296,24 +298,68 @@ static void keep_samples(uint16_t id, bool demo)
     /* the per-second file is kept for real rides (future export to the phone apps); demo samples are dropped */
     if (demo) { plat_file_remove(JOURNAL); return; }
     char path[32]; snprintf(path, sizeof path, "rides/r%04u.txt", id);
-    plat_file_remove(path);
+    /* rc3 (QA QF-24): an existing samples file is never overwritten - it belongs to another ride (ids repeat only if the
+       ride counter was lost): it is moved aside first, and if that fails the new samples stay in the journal */
+    if (plat_file_size(path) >= 0) {
+        char aside[40]; snprintf(aside, sizeof aside, "rides/r%04u-old%05lu.txt", id, (unsigned long)(plat_boot_count() % 100000u));
+        if (!plat_file_rename(path, aside)) { char l[160]; snprintf(l, sizeof l, "RIDE #%u: %.31s exists and could not be moved aside - samples kept in the journal", id, path); plat_log(l); return; }
+        char l[160]; snprintf(l, sizeof l, "RIDE #%u: an older %.31s was moved to %.39s (never overwritten)", id, path, aside); plat_log(l);
+    }
     /* 0.7.4: 0.7.3 deleted the journal when the rename failed - the per-second ride data was lost silently. Now it stays as
        rides/active.jnl and the next ride start moves it aside (rides/unsaved-*.jnl). */
     if (!plat_file_rename(JOURNAL, path)) { char l[112]; snprintf(l, sizeof l, "RIDE #%u: samples NOT moved to %s - journal kept", id, path); plat_log(l); }
 }
 
-bool app_ride_save(void)
+/* allocated on first use, in PSRAM on the board (plat_alloc_ext): internal RAM is what the Bluetooth start lacks */
+static bc_ride_summary_t *s_unsaved; static int s_nunsaved;
+int app_unsaved_rides(bc_ride_summary_t *out, int max)
 {
-    if (s_ride.state != BC_RIDE_ENDED) return false;
+    int n = s_nunsaved < max ? s_nunsaved : max;
+    for (int i = 0; i < n; i++) out[i] = s_unsaved[i];
+    return n;
+}
+int app_unsaved_count(void) { return s_nunsaved; }
+bool app_unsaved_release(uint16_t id)
+{
+    for (int i = 0; i < s_nunsaved; i++) if (s_unsaved[i].id == id) {
+        memmove(&s_unsaved[i], &s_unsaved[i + 1], sizeof s_unsaved[0] * (size_t)(s_nunsaved - i - 1)); s_nunsaved--;
+        char l[80]; snprintf(l, sizeof l, "RIDE #%u: the phone confirmed it - memory slot freed (%d left)", id, s_nunsaved); plat_log(l);
+        return true;
+    }
+    return false;
+}
+/* a real ride whose summary could not be written: keep it in RAM (QA QF-01: never lose it silently) */
+static bool keep_in_ram(const bc_ride_summary_t *s)
+{
+    if (s_nunsaved >= APP_UNSAVED_MAX) return false;
+    if (!s_unsaved) s_unsaved = plat_alloc_ext(sizeof *s_unsaved * APP_UNSAVED_MAX);
+    if (!s_unsaved) return false;
+    /* stored exactly as the history file would hold it (line round trip), so the phone receives the same bytes either way */
+    bc_ride_summary_t *d = &s_unsaved[s_nunsaved]; char line[400];
+    size_t n = bc_summary_to_line(s, line, sizeof line - 1);
+    if (!n) *d = *s; else { line[n] = 0; if (!bc_summary_from_line(d, line)) *d = *s; }
+    s_nunsaved++;
+    return true;
+}
+
+app_save_result_t app_ride_save_ex(void)
+{
+    if (s_ride.state != BC_RIDE_ENDED) return APP_SAVE_NOTHING;
     if (!s_ride.s.demo) bc_ride_apply_ftp(&s_ride, &s_prof);
     bool ok = append_history(&s_ride.s);
-    if (s_ride.s.demo) s_prof.next_demo_id++; else s_prof.next_ride_id++;
+    app_save_result_t res = ok ? APP_SAVE_OK : s_ride.s.demo ? APP_SAVE_LOST : keep_in_ram(&s_ride.s) ? APP_SAVE_RAM_ONLY : APP_SAVE_LOST;
+    if (s_ride.s.demo) s_prof.next_demo_id++;
+    else if (res != APP_SAVE_LOST) s_prof.next_ride_id++;          /* the id is used only by a ride that exists somewhere */
     app_profile_save();
-    keep_samples(s_ride.s.id, s_ride.s.demo);
-    char l[64]; snprintf(l, sizeof l, "RIDE SAVED #%u%s %s", s_ride.s.id, s_ride.s.demo ? " (DEMO)" : "", ok ? "OK" : "FAILED"); plat_log(l);
+    if (ok) keep_samples(s_ride.s.id, s_ride.s.demo);
+    char l[112]; snprintf(l, sizeof l, "RIDE SAVED #%u%s %s", s_ride.s.id, s_ride.s.demo ? " (DEMO)" : "",
+                          res == APP_SAVE_OK ? "OK" : res == APP_SAVE_RAM_ONLY ? "NOT ON STORAGE - kept in RAM for Cyclift until power-off" : "FAILED - not kept");
+    plat_log(l);
     s_ride.state = BC_RIDE_IDLE;
-    return ok;
+    if (!s_ride.s.demo && res != APP_SAVE_LOST) app_link13_ride_closed();   /* 0.7.5: rides_pending to a Link 1.3 phone */
+    return res;
 }
+bool app_ride_save(void) { return app_ride_save_ex() == APP_SAVE_OK; }
 
 void app_ride_discard(void)
 {
@@ -327,8 +373,29 @@ void app_ride_totals(bc_ride_summary_t *out)
     if (s_ride.state == BC_RIDE_ENDED) *out = s_ride.s; else bc_ride_live_summary(&s_ride, out);
 }
 
-const bc_cue_t *app_cue(void) { return &s_cue; }
-void app_target(int *lo, int *hi, bool *rel) { bc_coach_target(&s_coach, lo, hi, rel); }
+/* 0.7.5: while Cyclift coaches (Link 1.3 COACH), its instruction and targets replace the board's own coach on every ride
+   screen design; the board's coach keeps running underneath (summary, recovery) and takes over again when there is none */
+static bc_cue_t s_mirror_cue;
+static bool mirror(bc_cm_view_t *v) { return (s_ride.state == BC_RIDE_RUNNING || s_ride.state == BC_RIDE_PAUSED) && app_link13_coach(v); }
+const bc_cue_t *app_cue(void)
+{
+    bc_cm_view_t v;
+    if (!mirror(&v)) return &s_cue;
+    memset(&s_mirror_cue, 0, sizeof s_mirror_cue);
+    s_mirror_cue.id = BC_CUE_PHONE;
+    s_mirror_cue.level = (bc_cue_level_t)bc_cm_instr_level(v.instruction);
+    const char *t = v.no_hr ? "NO HR - BY FEEL" : bc_cm_instr_text(v.instruction);
+    if (!t[0]) t = v.text[0] ? v.text : (v.mode == BC_CM_FOLLOWING ? "CYCLIFT COACH" : "LAST TARGET");
+    snprintf(s_mirror_cue.head, sizeof s_mirror_cue.head, "%.23s", t);
+    snprintf(s_mirror_cue.why, sizeof s_mirror_cue.why, "%s", v.mode == BC_CM_FOLLOWING ? "Cyclift coach" : "phone lost - board follows");
+    return &s_mirror_cue;
+}
+void app_target(int *lo, int *hi, bool *rel)
+{
+    bc_cm_view_t v;
+    if (mirror(&v)) { *rel = false; if (v.kind == BC_TK_POWER) { *lo = v.lo; *hi = v.hi; } else { *lo = *hi = 0; } return; }
+    bc_coach_target(&s_coach, lo, hi, rel);
+}
 
 /* ---- history */
 int app_history(bc_ride_summary_t *out, int max, bool demo)
@@ -351,6 +418,8 @@ int app_history(bc_ride_summary_t *out, int max, bool demo)
         if (used == 0) break;
         off += used;
     }
+    /* 0.7.4: rides kept only in RAM (storage damaged) are the newest: added to the ring like file lines */
+    if (!demo) for (int i = 0; i < s_nunsaved; i++) out[total++ % max] = s_unsaved[i];
     int k = total < max ? total : max;
     /* out[] holds the newest k entries in ring order (oldest at total % max once wrapped): rotate, then reverse in place */
     if (total > max) {
@@ -406,17 +475,20 @@ static void recover(void)
     finish(&r, &c);
     r.s.recovered = true;
     char l[96];
-    if (demo || r.s.duration_s < 10) {
-        snprintf(l, sizeof l, "RECOVERY: interrupted %s ride #%u (%lus) not kept", demo ? "DEMO" : "very short", id, (unsigned long)r.s.duration_s);
+    /* rc3 (QA QF-29): a real interrupted ride is kept however short (0.7.4 dropped < 10 s with a log line only); it gets the
+       RECOVERED notice and goes to the history / the RAM queue like any ride. Only DEMO rides are dropped (simulated data). */
+    if (demo) {
+        snprintf(l, sizeof l, "RECOVERY: interrupted DEMO ride #%u (%lus) not kept (simulated data)", id, (unsigned long)r.s.duration_s);
         plat_log(l); plat_file_remove(JOURNAL); memset(&s_ride, 0, sizeof s_ride); return;
     }
     if (id >= s_prof.next_ride_id) s_prof.next_ride_id = (uint16_t)(id + 1);
     bc_ride_apply_ftp(&r, &s_prof);
-    append_history(&r.s);
+    if (!append_history(&r.s)) keep_in_ram(&r.s);
     app_profile_save();
     keep_samples(r.s.id, false);
     s_recovered = r.s; s_have_recovered = true;
     snprintf(l, sizeof l, "RECOVERY: ride #%u restored, %lus, saved to history", id, (unsigned long)r.s.duration_s); plat_log(l);
+    app_link13_ride_closed();
     memset(&s_ride, 0, sizeof s_ride);
 #undef r
 }
@@ -427,15 +499,39 @@ bool app_take_recovered(bc_ride_summary_t *out)
     *out = s_recovered; s_have_recovered = false; return true;
 }
 
+/* rc3 (QA QF-24): ride ids are never reused, even when the settings memory (NVS, which holds the counter) is unusable and the
+   profile starts from defaults every boot: the next id is above every id in the ride history and the RAM queue. */
+static void ride_id_floor(void)
+{
+    uint16_t max = 0; long off = 0; char *chunk = s_io; bc_ride_summary_t s;
+    for (;;) {
+        long n = plat_file_read_at(HIST_REAL, off, chunk, 4096);
+        if (n <= 0) break;
+        chunk[n] = 0; char *p = chunk, *e; long used = 0;
+        while ((e = strchr(p, '\n')) != NULL) { *e = 0; if (bc_summary_from_line(&s, p) && s.id > max) max = s.id; used = (e - chunk) + 1; p = e + 1; }
+        if (!used) break;
+        off += used;
+    }
+    for (int i = 0; i < s_nunsaved; i++) if (s_unsaved[i].id > max) max = s_unsaved[i].id;
+    if (max && s_prof.next_ride_id <= max) {
+        char l[96]; snprintf(l, sizeof l, "RIDE ids: counter %u is not above the newest ride #%u - continuing at %u", s_prof.next_ride_id, max, max + 1); plat_log(l);
+        s_prof.next_ride_id = (uint16_t)(max + 1);
+        app_profile_save();
+    }
+}
+
 void app_init(void)
 {
     static char buf[1024];
     bc_profile_defaults(&s_prof);
     if (plat_profile_load(buf, sizeof buf)) bc_profile_from_text(&s_prof, buf);
+    else if (!plat_settings_ok()) s_prof.onboarded = true;   /* NVS needs repair: ride on defaults, no onboarding (nothing could be saved) */
     memset(&s_ride, 0, sizeof s_ride);
     s_demo = false;
     app_psvc_init();
+    s_nunsaved = 0;                /* RAM-only rides do not survive a restart (a no-op on the board, which starts fresh; the PC harness restarts without power loss) */
     recover();
+    ride_id_floor();               /* rc3 (QA QF-24) */
     plat_backlight(s_prof.brightness);
     plat_csc_wheel_mm(s_prof.wheel_mm);
     /* 0.6.0 fix: the phone link's advertising was only ever switched on by the Settings/Quick Settings toggle, never at

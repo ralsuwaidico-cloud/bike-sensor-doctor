@@ -128,12 +128,21 @@ void plat_crash_consumed(uint32_t report_id)
         uint8_t *buf = malloc(4096);
         if (p && buf) {
             char path[32]; snprintf(path, sizeof path, "diag/core-%06lu.elf", (unsigned long)report_id);
-            bool ok = true;
+            bool ok = true; uint32_t crc_part = 0, crc_file = 0;
             for (size_t off = 0; off < size && ok; off += 4096) {
                 size_t n = size - off < 4096 ? size - off : 4096;
                 ok = esp_partition_read(p, addr - p->address + off, buf, n) == ESP_OK && plat_file_write_at(path, (long)off, buf, n);
+                if (ok) crc_part = bc_crc32(crc_part, buf, n);
             }
-            ESP_LOGI(TAG, "core dump (%u bytes) %s diag/core-%06lu.elf", (unsigned)size, ok ? "kept as" : "could NOT be copied to", (unsigned long)report_id);
+            /* 0.7.4 (QA QF-05): read the copy back from the FAT and compare before the partition may be erased */
+            for (size_t off = 0; off < size && ok; off += 4096) {
+                size_t n = size - off < 4096 ? size - off : 4096;
+                ok = plat_file_read_at(path, (long)off, (char *)buf, n) == (long)n;
+                if (ok) crc_file = bc_crc32(crc_file, buf, n);
+            }
+            ok = ok && crc_file == crc_part;
+            ESP_LOGI(TAG, "core dump (%u bytes, crc %08lx) %s diag/core-%06lu.elf", (unsigned)size, (unsigned long)crc_part,
+                     ok ? "copied and verified as" : "could NOT be copied + verified to", (unsigned long)report_id);
             copied = ok;
         }
         free(buf);
@@ -191,14 +200,18 @@ void plat_build_ids(char build[32], char sha[65])
 /* ---- 0.7.4 boot records: FAT-independent evidence in NVS ("bootrec"/"ring", one 576-byte blob, bc_bootrec.h). Written only
    from app_main / the start-up path (never from a panic handler); read and printed at the next boot. */
 static bc_bootring_t *s_brec;
+static bool s_brec_saved;   /* QA QF-08: the newest record really reached NVS (else no decision is taken from stale records) */
 static void ring_save(void)
 {
     if (!s_brec) return;
     bc_bootring_seal(s_brec);
-    nvs_handle_t h;
-    if (nvs_open("bootrec", NVS_READWRITE, &h) != ESP_OK) return;
-    if (nvs_set_blob(h, "ring", s_brec, sizeof *s_brec) == ESP_OK) nvs_commit(h);
-    nvs_close(h);
+    nvs_handle_t h; bool ok = false;
+    if (nvs_open("bootrec", NVS_READWRITE, &h) == ESP_OK) {
+        ok = nvs_set_blob(h, "ring", s_brec, sizeof *s_brec) == ESP_OK && nvs_commit(h) == ESP_OK;
+        nvs_close(h);
+    }
+    if (!ok && s_brec_saved) ESP_LOGE(TAG, "BOOTREC could not be written to NVS - boot-record decisions disabled this boot");
+    s_brec_saved = ok;
 }
 void diag_esp_bootrec_begin(const bc_boot_plan_t *plan, bc_stor_state_t storage)
 {
@@ -208,6 +221,7 @@ void diag_esp_bootrec_begin(const bc_boot_plan_t *plan, bc_stor_state_t storage)
     if (nvs_open("bootrec", NVS_READONLY, &h) == ESP_OK) { ok = nvs_get_blob(h, "ring", s_brec, &n) == ESP_OK && bc_bootring_valid(s_brec, n); nvs_close(h); }
     if (!ok) { bc_bootring_init(s_brec); ESP_LOGI(TAG, "BOOTREC no previous boot records (first start of 0.7.4 or records unreadable)"); }
     char line[400];
+    if (s_brec->last_bt_try.boot) { bc_bootrec_describe(&s_brec->last_bt_try, line, sizeof line); ESP_LOGW(TAG, "BOOTREC last Bluetooth start: %s", line); }
     for (int i = s_brec->count - 1; i >= 0; i--) { bc_bootrec_describe(bc_bootring_get(s_brec, i), line, sizeof line); ESP_LOGW(TAG, "BOOTREC previous[-%d] %s", i + 1, line); }
     bc_bootrec_t *r = bc_bootring_push(s_brec, plat_boot_count());
     r->reset = (uint8_t)plat_reset_kind(); r->mode = (uint8_t)plan->mode; r->suspect = plan->suspect; r->skip = plan->skip; r->storage = (uint8_t)storage;
@@ -215,20 +229,27 @@ void diag_esp_bootrec_begin(const bc_boot_plan_t *plan, bc_stor_state_t storage)
     if (plan->crashed) { plat_crash_t *c = plat_alloc_ext(sizeof *c); if (c) { if (plat_crash_info(c)) { r->crash_pc = c->pc; snprintf(r->crash_task, sizeof r->crash_task, "%.11s", c->task); } free(c); } }
     ring_save();
 }
-void diag_esp_bootrec_bt(const ble_central_init_t *bi, bool skipped)
+void diag_esp_bootrec_bt(const ble_central_init_t *bi, bool skipped, uint16_t skip)
 {
     bc_bootrec_t *r = s_brec ? bc_bootring_newest(s_brec) : NULL;
     if (!r) return;
+    r->skip = skip;
     r->bt_result = skipped ? BC_BT_SKIPPED : bi->failed ? bi->result : bi->stack_ok ? BC_BT_OK : BC_BT_NOT_TRIED;
     memcpy(r->bt, bi->step, sizeof r->bt);
     r->fail_alloc_size = bi->fail_alloc_size; r->fail_alloc_caps = bi->fail_alloc_caps; r->fail_allocs = bi->fail_allocs;
+    bc_bootring_note_bt(s_brec);                     /* QA QF-06: the last real attempt is pinned, later SKIPPED boots keep it */
     ring_save();
 }
 void diag_esp_bootrec_reached(uint8_t subsys) { bc_bootrec_t *r = s_brec ? bc_bootring_newest(s_brec) : NULL; if (!r) return; r->reached = subsys; ring_save(); }
-int diag_esp_bt_fail_streak(void) { return s_brec ? bc_bootring_bt_fail_streak(s_brec) : 0; }
+int diag_esp_bt_fail_streak(void) { return s_brec && s_brec_saved ? bc_bootring_bt_fail_streak(s_brec) : 0; }
+int diag_esp_crash_streak(void) { return s_brec && s_brec_saved ? bc_bootring_crash_streak(s_brec) : 0; }
 size_t plat_bootrec_text(char *buf, size_t cap)
 {
     size_t n = 0; if (!cap) return 0; buf[0] = 0;
+    if (s_brec && s_brec->last_bt_try.boot) {        /* the pinned last Bluetooth attempt first (QA QF-06) */
+        char line[400]; bc_bootrec_describe(&s_brec->last_bt_try, line, sizeof line);
+        int k = snprintf(buf, cap, "last BT start: %s\n", line); if (k > 0) n = (size_t)k < cap ? (size_t)k : cap - 1;
+    }
     for (int i = 0; s_brec && i < s_brec->count && n + 2 < cap; i++) {
         char line[400]; bc_bootrec_describe(bc_bootring_get(s_brec, i), line, sizeof line);
         int k = snprintf(buf + n, cap - n, "%s%s", i ? "\n" : "", line); if (k < 0) break; n += (size_t)k; if (n >= cap) { n = cap - 1; break; }

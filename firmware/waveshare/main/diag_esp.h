@@ -9,6 +9,7 @@ void diag_esp_bt_disabled(const char *why);
 #include "bc_storage.h"
 #include "ble_central.h"
 void diag_esp_bootrec_begin(const bc_boot_plan_t *plan, bc_stor_state_t storage);
-void diag_esp_bootrec_bt(const ble_central_init_t *bi, bool skipped);
+void diag_esp_bootrec_bt(const ble_central_init_t *bi, bool skipped, uint16_t skip);
 void diag_esp_bootrec_reached(uint8_t subsys);
-int diag_esp_bt_fail_streak(void);   /* previous boots in a row whose Bluetooth start failed (no crash) */
+int diag_esp_bt_fail_streak(void);
+int diag_esp_crash_streak(void);     /* QA QF-09: consecutive crash resets in the NVS records, this boot included */   /* previous boots in a row whose Bluetooth start failed (no crash) */

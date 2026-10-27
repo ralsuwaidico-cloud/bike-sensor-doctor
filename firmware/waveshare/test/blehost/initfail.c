@@ -1,11 +1,13 @@
 /*
  * 0.7.4 start-up failure test: the REAL main/ble_central.c + main/ble_link.c on the fake NimBLE, with nimble_port_init()
- * failing exactly like the owner's board on 27 Oct ("BLE_INIT: hci inits failed" -> ESP_FAIL), and with the NimBLE host task
+ * failing with the same error as the owner's board on 27 Oct ("BLE_INIT: hci inits failed" -> ESP_FAIL; the heap figures and
+ * the 8256 B allocation are INJECTED by the fake, not measured - QA QF-14), and with the NimBLE host task
  * that cannot be created. 0.7.3 aborted (ESP_ERROR_CHECK). Now: no abort, Bluetooth reported unavailable with the reason and
  * the heap figures, every API the UI / app call afterwards is safe, and the phone link reports PLAT_PHONE_UNAVAILABLE.
  * Exit 0 = all checks passed (built with ASan + UBSan).
  */
 #include "fake_nimble.h"
+#include "esp_task_wdt.h"
 #include "ble_central.h"
 #include "ble_link.h"
 #include "plat.h"
@@ -38,6 +40,7 @@ int main(int argc, char **argv)
               && in->step[BC_BT_STEP_CTRL_ENABLE].rc == 0 && in->step[BC_BT_STEP_HOST_INIT].rc == ESP_FAIL, "per-step return codes + heap recorded");
         CHECK(in->fail_allocs == 1 && in->fail_alloc_size == 8256 && in->fail_alloc_caps == (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), "the failing allocation is named: %u B caps 0x%x", in->fail_alloc_size, in->fail_alloc_caps);
         CHECK(!ble_central_stack_init(), "no blind retry in the same boot");
+        CHECK(in->alloc_fails_total == 2, "the other task's failed allocation is counted in the total (%u)", in->alloc_fails_total);
         CHECK(!xTaskGetHandle("nimble_host") && !xTaskGetHandle("ble_mgr"), "no Bluetooth task was created");
     } else if (mode == 2) {
         CHECK(!stack && !up && in->result == BC_BT_FAIL_CTRL_INIT && in->step[BC_BT_STEP_CTRL_INIT].rc == ESP_ERR_NO_MEM && strstr(in->reason, "controller"), "controller init failure recorded at step 1 (%s)", in->reason);
@@ -47,6 +50,9 @@ int main(int argc, char **argv)
         CHECK(!xTaskGetHandle("ble_mgr"), "manager task not created either");
     }
     CHECK(ble_central_unavailable(), "unavailable flag");
+    CHECK(g_fake_wdt_subscribed == 0 && g_fake_wdt_timeout_ms == 5000 && !g_fake_wdt_panic, "watchdog guard removed after the start (sub %d, %u ms, panic %d)",
+          g_fake_wdt_subscribed, g_fake_wdt_timeout_ms, g_fake_wdt_panic);
+    CHECK(g_fake_wdt_guard_seen == 1, "the start ran under the 15 s panic watchdog");
     /* everything the UI / app does afterwards must be harmless */
     ble_central_enable_sensors(true);
     ble_central_set_paired(PLAT_SENS_POWER, MAC, 0, "XDS-A001");

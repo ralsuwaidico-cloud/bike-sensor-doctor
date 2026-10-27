@@ -74,6 +74,14 @@ BaseType_t xTaskCreatePinnedToCore(void (*fn)(void *), const char *name, uint32_
 }
 TaskHandle_t xTaskGetHandle(const char *name) { for (int i = 0; i < s_ntasks; i++) if (!strcmp(s_tasks[i].name, name)) return &s_tasks[i]; return NULL; }
 UBaseType_t uxTaskGetStackHighWaterMark(TaskHandle_t t) { (void)t; return 1000; }
+static __thread int t_self;                              /* any thread: a distinct handle per thread */
+TaskHandle_t xTaskGetCurrentTaskHandle(void) { return &t_self; }
+#include "esp_task_wdt.h"
+int g_fake_wdt_subscribed; uint32_t g_fake_wdt_timeout_ms = 5000; bool g_fake_wdt_panic;
+esp_err_t esp_task_wdt_reconfigure(const esp_task_wdt_config_t *c) { g_fake_wdt_timeout_ms = c->timeout_ms; g_fake_wdt_panic = c->trigger_panic; return ESP_OK; }
+int g_fake_wdt_guard_seen;
+esp_err_t esp_task_wdt_add(TaskHandle_t t) { (void)t; g_fake_wdt_subscribed++; if (g_fake_wdt_timeout_ms == 15000 && g_fake_wdt_panic) g_fake_wdt_guard_seen = 1; return ESP_OK; }
+esp_err_t esp_task_wdt_delete(TaskHandle_t t) { (void)t; g_fake_wdt_subscribed--; return ESP_OK; }
 
 /* ------------------------------------------------------------------ NVS (in memory) */
 typedef struct { char ns[16], key[16]; uint8_t v[64]; size_t n; } nvs_item_t;
@@ -462,6 +470,7 @@ int fake_server_read(int i, uint8_t *out, int cap)
     int n = rc == 0 && om->len <= cap ? om->len : -1; if (n > 0) memcpy(out, om->data, (size_t)n);
     fake_mbuf_free(om); return n;
 }
+__attribute__((weak)) size_t fake_link13_valid(uint8_t *b, size_t cap, uint32_t r) { (void)b; (void)cap; (void)r; return 0; }
 void fake_phone_write(uint16_t h, const uint8_t *b, uint16_t n) { pw_t *w = calloc(1, sizeof *w); w->h = h; w->n = n < 256 ? n : 256; memcpy(w->b, b, w->n); q_push(1, ev_phone_write, w, NULL); }
 static bool s_adv; static ble_gap_event_fn *s_adv_cb; static void *s_adv_arg;
 int ble_gap_adv_set_fields(const struct ble_hs_adv_fields *f) { (void)f; hs_lock(); hs_unlock(); return 0; }
@@ -524,8 +533,11 @@ static void ev_phone(void *pp)
         else {
             ctx.op = BLE_GATT_ACCESS_OP_WRITE_CHR;
             uint8_t b[200]; uint16_t n = (uint16_t)(rnd() % 200); for (int i = 0; i < n; i++) b[i] = (uint8_t)rnd();
-            static const uint8_t TYPES[] = { 0x20, 0x21, 0x22, 0x24, 0x30, 0x50, 0x60, 0x66, 0x70, 0x76, 0x80, 0x83, 0x85 };
-            if (n >= 8 && rnd() % 2) { b[0] = TYPES[rnd() % sizeof TYPES]; uint16_t p2 = 8; while (p2 + 2 < n) { uint8_t l = (uint8_t)(rnd() % 6); if (p2 + 2 + l > n) break; b[p2 + 1] = l; p2 += 2 + l; } n = p2; }
+            static const uint8_t TYPES[] = { 0x20, 0x21, 0x22, 0x24, 0x30, 0x50, 0x60, 0x66, 0x70, 0x76, 0x80, 0x83, 0x85,
+                                             0x08, 0x90, 0x93, 0x95, 0xA0, 0xA2, 0xB0, 0xB2, 0xB3 /* 0.7.5 Link 1.3 */ };
+            size_t v = rnd() % 3 == 0 ? fake_link13_valid(b, sizeof b, rnd()) : 0;   /* 0.7.5: a well-formed Link 1.3 message */
+            if (v) n = (uint16_t)v;
+            else if (n >= 8 && rnd() % 2) { b[0] = TYPES[rnd() % sizeof TYPES]; uint16_t p2 = 8; while (p2 + 2 < n) { uint8_t l = (uint8_t)(rnd() % 6); if (p2 + 2 + l > n) break; b[p2 + 1] = l; p2 += 2 + l; } n = p2; }
             os_mbuf_append(om, b, n);
         }
         s->cb(c, s->h, &ctx, s->arg);
@@ -584,8 +596,18 @@ esp_err_t esp_bt_controller_init(esp_bt_controller_config_t *cfg) { (void)cfg; c
 esp_err_t esp_bt_controller_enable(esp_bt_mode_t mode) { (void)mode; return ESP_OK; }
 esp_err_t esp_bt_controller_disable(void) { return ESP_OK; }
 esp_err_t esp_bt_controller_deinit(void) { return ESP_OK; }
-/* like ble_buf_alloc on the board: the msys-2 pool (24 x 344 B = 8256 B, internal RAM) does not fit -> the hook fires */
-esp_err_t esp_nimble_init(void) { if (g_fake_nimble_init_err != ESP_OK && s_alloc_hook) s_alloc_hook(8256, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT, "heap_caps_calloc"); return g_fake_nimble_init_err; }
+/* INJECTED by this fake, NOT a measurement (QA QF-14): when a failure is requested, the hook is fired with the size of the
+   msys-2 pool (24 x 344 B = 8256 B from the 5.5.1 sdkconfig) because that is the largest single internal allocation of
+   ble_buf_alloc - the board has not shown which allocation fails; the rc2 instrumentation is there to measure it. */
+static void *other_task_alloc(void *p) { (void)p; s_alloc_hook(100, MALLOC_CAP_INTERNAL, "lvgl"); return NULL; }
+esp_err_t esp_nimble_init(void)
+{
+    if (g_fake_nimble_init_err != ESP_OK && s_alloc_hook) {
+        pthread_t th; pthread_create(&th, NULL, other_task_alloc, NULL); pthread_join(th, NULL);   /* another task fails first */
+        s_alloc_hook(8256, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT, "heap_caps_calloc");
+    }
+    return g_fake_nimble_init_err;
+}
 void nimble_port_run(void)
 {
     if (ble_hs_cfg.sync_cb) ble_hs_cfg.sync_cb();

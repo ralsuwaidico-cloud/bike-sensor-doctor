@@ -86,11 +86,18 @@ bool plat_file_rename(const char *from, const char *to);
 bool plat_file_remove(const char *path);
 long plat_file_size(const char *path);                                  /* -1 if missing */
 bool plat_storage_ok(void);
+/** 0.7.4 (QA QF-02): false when NVS could not be opened (it is never erased automatically): the app runs on defaults and
+ *  must not send the rider into onboarding; nothing is saved this boot. */
+bool plat_settings_ok(void);
 /* 0.7.4 storage health, measured once by the storage start-up stage (bc_storage.h). plat_storage_ok() == (state == OK).
    When the state is not OK the FAT is not written at all (no mkdir, no file create): a damaged directory is left exactly as it
    is until an owner-approved repair, so whatever is still recoverable stays recoverable. Reads remain possible if mounted. */
 bc_stor_state_t plat_storage_state(void);
 void plat_storage_facts(bc_stor_facts_t *out);
+bool plat_storage_recheck(void);
+/** rc3 (QA QF-28): the FAT itself is consistent (every chain valid, no cross-link, no lost cluster): only then may a clean-up
+ *  delete files. why (may be NULL) gets the first problem. */
+bool plat_storage_fat_consistent(char *why, size_t cap);   /* rc2: re-classify a FULL storage after sent reports were removed; true = OK now */
 /** Core-dump partition: missing / empty / holds a dump (size in *dump_bytes when not NULL). */
 bc_crashpart_t plat_crash_partition(uint32_t *dump_bytes);
 /** Category of the last failed file write: Storage full (ENOSPC) / Write failed, or the boot state when writes are refused. */
@@ -238,6 +245,10 @@ void plat_log(const char *line);
 /** 0.7.4: a zeroed block for long-lived app state, from PSRAM on the device (internal RAM is kept for the radio, DMA and
  *  task stacks); NULL when out of memory. Never freed. */
 void *plat_alloc_ext(size_t n);
+/** 0.7.5 (Link 1.3 STORAGE_STATUS): firmware slot size / used by the running image (KB), NVS entries used / free. */
+/** rc3 (QA QF-26): the NVS crash-run counter for this start (bc_boot_next_run), written before storage starts; 0 if NVS fails. */
+uint8_t plat_crash_run_update(bc_reset_t reset);
+void plat_flash_usage(uint32_t *app_slot_kb, uint32_t *app_used_kb, uint16_t *nvs_used, uint16_t *nvs_free);
 
 /* ---- 0.7.3 crash evidence, boot modes, diagnostics (app_diag.c) */
 typedef struct {

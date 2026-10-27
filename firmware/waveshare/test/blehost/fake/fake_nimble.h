@@ -83,6 +83,9 @@ void fake_crit_exit(portMUX_TYPE *m);
 void vTaskDelay(TickType_t t);
 BaseType_t xTaskCreatePinnedToCore(void (*fn)(void *), const char *name, uint32_t stack, void *arg, UBaseType_t prio, TaskHandle_t *h, BaseType_t core);
 TaskHandle_t xTaskGetHandle(const char *name);
+TaskHandle_t xTaskGetCurrentTaskHandle(void);
+/* 0.7.5: stress.c provides well-formed Link 1.3 phone messages (seq 0xBEEF) for the phone writes; weak default: none */
+size_t fake_link13_valid(uint8_t *b, size_t cap, uint32_t r);
 UBaseType_t uxTaskGetStackHighWaterMark(TaskHandle_t t);
 
 /* ---- NVS */

@@ -190,6 +190,7 @@ void app_power_tick(uint32_t now)
     P.sleep_block[0] = 0;
     if (p->auto_sleep_min) {
         if (ride) snprintf(P.sleep_block, sizeof P.sleep_block, "ride running");
+        else if (app_unsaved_count()) snprintf(P.sleep_block, sizeof P.sleep_block, "rides only in memory");   /* rc3 QF-23 */
         else if (P.usb_likely) snprintf(P.sleep_block, sizeof P.sleep_block, "USB power likely");
         else if (phone_connected()) snprintf(P.sleep_block, sizeof P.sleep_block, "phone connected");
         else if (!p->onboarded) snprintf(P.sleep_block, sizeof P.sleep_block, "setup not finished");
@@ -198,7 +199,7 @@ void app_power_tick(uint32_t now)
             return;
         }
     }
-    if (s_sleep_at_ms && (int32_t)(now - s_sleep_at_ms) >= 0) { s_sleep_at_ms = 0; if (!riding()) app_power_sleep(); }
+    if (s_sleep_at_ms && (int32_t)(now - s_sleep_at_ms) >= 0) { s_sleep_at_ms = 0; if (!riding() && !app_unsaved_count()) app_power_sleep(); }
 }
 
 int app_power_wake_taps_now(void)

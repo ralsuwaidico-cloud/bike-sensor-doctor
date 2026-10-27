@@ -15,6 +15,9 @@
 #include "plat.h"
 #include "bc_link.h"
 #include "bc_pipe.h"
+#include "bc_link13.h"
+#include "bc_cmirror.h"
+#include "bc_diag.h"
 #include <unistd.h>
 
 /* what ble_link.c needs from the app / platform */
@@ -26,6 +29,46 @@ void ble_store_config_init(void) {}
 int fake_mbufs_live(void);
 /* 0.7.3 hooks (weak so the 0.7.2 tree links too) */
 __attribute__((weak)) void diag_event(int type, int a, int b, int c) { (void)type; (void)a; (void)b; (void)c; }
+
+/* 0.7.5 Link 1.3 traffic: the phone writes well-formed 1.3 messages (seq 0xBEEF) among the fuzz; the app thread decodes
+   every one it takes (a valid one must decode), feeds coach messages to the real coach mirror, and pushes paced 180-byte
+   RIDEQ_CHUNK notifications (bulk) while the meter streams - LIVE and sensor traffic must be unaffected */
+#define VALID_SEQ 0xBEEF
+size_t fake_link13_valid(uint8_t *b, size_t cap, uint32_t r)
+{
+    switch (r % 6) {
+    case 0: { bc_hello_t h = { 1, 3, BC_CAPS_LINK13, "stress" }; return bc_link_encode_hello(&h, b, cap, VALID_SEQ, r); }
+    case 1: { bc_coach_state_t s; memset(&s, 0, sizeof s); s.workout_id = 9; s.seq = (uint16_t)r; s.kind = BC_TK_POWER; s.lo = 140; s.hi = 155; s.instruction = (uint8_t)(r % 17);
+              s.has = 0x3FFFF; return bc_link_encode_coach_state(&s, b, cap, VALID_SEQ, r); }
+    case 2: { bc_cseg_t g[3] = { { 300, 11, 1, 100, 140, 80, 90 }, { 600, 2, 1, 140, 155, 80, 90 }, { 0xFFFF, 12, 2, 100, 125, 0, 0 } };
+              bc_coach_plan_msg_t p; memset(&p, 0, sizeof p); p.workout_id = 9; p.parts = 1; p.nseg = 3; memcpy(p.seg, g, sizeof g); p.head = true; p.total_segments = 3;
+              p.plan_crc32 = bc_cm_plan_crc(g, 3); p.t0_elapsed_s = BC_COACH_T0_RIDE_START; snprintf(p.name, sizeof p.name, "stress plan");
+              return bc_link_encode_coach_plan(&p, b, cap, VALID_SEQ, r); }
+    case 3: { bc_diag_chunk_req_t q = { 7, r % 4096, 155 }; return bc_link_encode_rideq_chunk_req(&q, b, cap, VALID_SEQ, r); }
+    case 4: { bc_rideq_ack_t a = { 7, r, ~r, 1 }; return bc_link_encode_rideq_ack(&a, b, cap, VALID_SEQ, r); }
+    default: { bc_storage_clean_req_t c = { (uint8_t)(r & 7) }; return bc_link_encode_storage_clean_req(&c, b, cap, VALID_SEQ, r); }
+    }
+}
+static uint64_t s_l13_valid, s_l13_bad, s_l13_fuzz, s_bulk, s_cm_applied;
+static bc_cmirror_t s_cm;
+static void take_link13(const uint8_t *b, size_t n)
+{
+    if (n < BC_LINK_HDR) return;
+    bool valid = (uint16_t)(b[2] | (b[3] << 8)) == VALID_SEQ;
+    bool ok = true;
+    switch (b[0]) {
+    case 0x08: { bc_hello_t h; ok = bc_link_decode_hello(b, n, &h); break; }
+    case 0xB0: { bc_coach_plan_msg_t p; ok = bc_link_decode_coach_plan(b, n, &p); if (ok) { uint16_t np; bc_cm_plan_part(&s_cm, &p, &np); } break; }
+    case 0xB2: { bc_coach_state_t s; ok = bc_link_decode_coach_state(b, n, &s); if (ok && bc_cm_state(&s_cm, &s, hw_millis())) s_cm_applied++; break; }
+    case 0xB3: { bc_coach_end_t e; ok = bc_link_decode_coach_end(b, n, &e); break; }
+    case 0x93: { bc_diag_chunk_req_t q; ok = bc_link_decode_rideq_chunk_req(b, n, &q); break; }
+    case 0x95: { bc_rideq_ack_t a; ok = bc_link_decode_rideq_ack(b, n, &a); break; }
+    case 0xA2: { bc_storage_clean_req_t c; ok = bc_link_decode_storage_clean_req(b, n, &c); break; }
+    default: return;
+    }
+    if (valid) { s_l13_valid++; if (!ok) { s_l13_bad++; fake_violation("well-formed Link 1.3 message type 0x%02X rejected", b[0]); } }
+    else s_l13_fuzz++;
+}
 
 static volatile bool s_stop;
 static const uint8_t MAC[6] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66 };
@@ -40,7 +83,14 @@ static void *app_thread(void *p)
         if (s.link[PLAT_SENS_POWER].stage == BC_STG_VALID) s_snap_valid++;
         if (s.link[PLAT_SENS_POWER].stage > BC_STG_ERROR) fake_violation("snapshot stage out of range %u", s.link[0].stage);
         plat_phone_status_t ps; plat_phone_status(&ps);
-        uint8_t chr, b[BC_LINK_MAX]; while (plat_phone_take_svc(&chr, b, sizeof b) > 0) s_svc++;
+        uint8_t chr, b[BC_LINK_MAX]; int tn; while ((tn = plat_phone_take_svc(&chr, b, sizeof b)) > 0) { s_svc++; if (chr == 0) take_link13(b, (size_t)tn); }
+        { bc_cm_view_t v; bc_cm_view(&s_cm, ps.svc_ready, hw_millis(), n, &v); (void)v; }
+        static uint32_t last_bulk; static bool bulk_sent;
+        if (ps.svc_ready && bc_diag_pace_ok(hw_millis(), last_bulk, bulk_sent, plat_phone_bulk_room())) {   /* 0.7.5: ride-queue chunks while the meter streams */
+            bc_diag_chunk_t c; memset(&c, 0, sizeof c); c.id = 7; c.offset = n * 155u; c.len = 155; for (int i = 0; i < 155; i++) c.data[i] = (uint8_t)i;
+            size_t m = bc_link_encode_rideq_chunk(&c, b, sizeof b, (uint16_t)n, hw_millis());
+            if (plat_phone_notify_svc(0, b, m)) { s_bulk++; last_bulk = hw_millis(); bulk_sent = true; }
+        }
         if (ps.svc_ready) {   /* like app_psvc: one SENSOR_DIAG per pump while the phone listens */
             bc_sensor_diag_t d; memset(&d, 0, sizeof d); d.sensor = 1; d.stage = s.link[0].stage; d.packets = s.link[0].packets;
             snprintf(d.err, sizeof d.err, "%s", s.link[0].err);
@@ -110,11 +160,16 @@ int main(int argc, char **argv)
            (unsigned long long)g_fstats.cccd_writes, (unsigned long long)g_fstats.notifies_rx, (unsigned long long)g_fstats.bad_packets, (unsigned long long)g_fstats.mtu_timeouts);
     printf("  app: %llu snapshot loops (%llu with power VALID), %llu RETRY re-pairs, host-task events %llu\n",
            (unsigned long long)s_app_loops, (unsigned long long)s_snap_valid, (unsigned long long)s_retries, (unsigned long long)g_fstats.npl_events);
+    printf("  Link 1.3: %llu well-formed phone messages decoded (%llu rejected), %llu fuzzed ones handled, %llu coach states applied, %llu 180-B RIDEQ_CHUNK notifications\n",
+           (unsigned long long)s_l13_valid, (unsigned long long)s_l13_bad, (unsigned long long)s_l13_fuzz, (unsigned long long)s_cm_applied, (unsigned long long)s_bulk);
     printf("  stale-handle API calls %llu (refused ENOTCONN), mbufs still allocated %d\n", (unsigned long long)g_fstats.stale_conn_ops, fake_mbufs_live());
     printf("  INVARIANTS: host lock inside critical section %llu, sensor GATT ops on the phone connection %llu, non-CCCD writes to a sensor %llu\n",
            (unsigned long long)g_fstats.crit_lock_violations, (unsigned long long)g_fstats.foreign_gatt_ops, (unsigned long long)g_fstats.bad_writes);
     if (g_fstats.first_violation[0]) printf("  first violation: %s\n", g_fstats.first_violation);
     bool ok = !g_fstats.first_violation[0] && g_fstats.connects > 0 && g_fstats.phone_connects > 0;
+#ifndef BLEHOST_072
+    ok = ok && s_l13_valid > 0 && s_bulk > 0 && s_live > 0;
+#endif
     printf("RESULT %s\n", ok ? "PASS" : "FAIL");
     fflush(stdout);
     _exit(ok ? 0 : 1);

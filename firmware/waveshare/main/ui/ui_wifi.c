@@ -25,7 +25,7 @@ static bool w_sel_known, d_from_saved;
 
 static void wipe(void) { memset(w_pass, 0, sizeof w_pass); }
 
-/* 0.6.0: SSIDs are UTF-8 (an iPhone is "Rashed’s iPhone" with U+2019). The label fonts only have ASCII, so for DISPLAY the
+/* 0.6.0: SSIDs are UTF-8 (an iPhone is "Rider’s iPhone" with U+2019). The label fonts only have ASCII, so for DISPLAY the
    typographic quotes/dashes become ' " - and any other non-ASCII character a '?'. Matching and joining always use the
    original bytes. max = characters shown; longer names get ".." */
 static void ssid_display(const char *in, char *out, size_t cap, int max)

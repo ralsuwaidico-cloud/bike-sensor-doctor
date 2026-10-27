@@ -70,6 +70,24 @@ typedef struct {
     int probe_errno;         /* errno of the failed fopen/fwrite (0 if none) */
 } bc_stor_facts_t;
 
+/* rc3 (QA QF-28): consistency of a FAT12/16 volume before ANY clean-up deletes a file. A FAT whose allocation table or
+ * directories are damaged (the owner's FAT had 713 phantom-used clusters) can free another file's clusters on unlink.
+ * Checks: boot sector, every directory entry (root + subdirectories, depth <= 6) is valid, every chain stays in range, ends
+ * with an end-of-chain mark, has exactly ceil(size / cluster) clusters for a file, no cluster belongs to two chains (no
+ * cross-link / loop), and no cluster is marked used in the table without belonging to a chain (lost clusters). */
+typedef bool (*bc_fat_read_fn)(void *ctx, uint32_t off, void *buf, uint32_t n);   /* false = read error */
+typedef struct {
+    bool ok;                                   /* consistent: safe to delete files */
+    uint32_t clusters, used, reachable, lost;  /* data clusters / marked used in FAT / reached through directories / used-but-unreached */
+    uint16_t files, dirs, bad_entries, bad_chains, crosslinks;
+    char why[48];                              /* first problem found ("" when ok) */
+} bc_fat_check_t;
+/** Work memory needed for a volume whose boot sector is `boot` (FAT copy + cluster bitmap + one cluster); 0 = not FAT12/16. */
+size_t bc_fat_check_work(const uint8_t *boot, size_t n);
+bool bc_fat_check(bc_fat_read_fn rd, void *ctx, uint32_t vol_len, void *work, size_t work_cap, bc_fat_check_t *out);
+
+/** 0.7.4: any erased or malformed root entry (partial damage included): never write into such a directory. */
+bool bc_stor_root_damaged(const bc_stor_facts_t *f);
 /** Decide the category from the facts (pure; the same input always gives the same answer). */
 bc_stor_state_t bc_stor_classify(const bc_stor_facts_t *f);
 /** One line for the serial log / Device Health / reports, e.g.

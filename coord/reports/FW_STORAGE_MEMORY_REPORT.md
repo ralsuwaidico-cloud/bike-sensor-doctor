@@ -254,3 +254,34 @@ Every backup is preserved untouched (read-only copies were analysed); no erase o
 Real-image tests: `test/host/test_storage_fixture.c` uses the actual filesystem heads of the 24 Oct and 27 Oct backups
 (boot sector, both FATs, root directory; no file contents) — classified OK and "Directory corrupted", free space 5096 KB = the
 board's own log.
+
+## 9. Round 3 — QA review of rc1 (QF-01..QF-20) → firmware 0.7.4-rc2
+
+Nothing here ran on the board. Everything below is host/simulator-tested; the cause of the Bluetooth start failure is still
+an **inference** (internal-RAM shortage) until the board's first-boot log of rc2 shows the per-step figures.
+
+| QA id | Change in rc2 (root cause) | Test |
+|---|---|---|
+| QF-01 P1 | Ride save on damaged storage is never silent: red warning on the result screen before SAVE; after SAVE "NOT SAVED ON BOARD" (storage category shown) or "RIDE NOT SAVED" when the RAM queue is full; the summary is kept in RAM (≤ 4 rides, PSRAM) and listed in History and in the phone's SYNC stream; the ride id is used only if the ride is kept (a lost ride does not burn an id). Crash-recovered rides follow the same path. | sim 24d (8 checks + 3 screens) |
+| QF-02 P1 | No automatic NVS erase at all. NO_FREE_PAGES / NEW_VERSION → "needs repair" in Device Health, toast "Settings memory needs repair", the board runs on defaults and saves nothing; repair is owner-approved only. | code; sim (plat_settings_ok) |
+| QF-03 | New boot stage DIAG; boot record + crash-streak + BT rule + app_diag_init all run inside it; a RECOVERY boot after a crash in the storage stage skips storage (`no_storage`) and the DIAG stage; after a crash in DIAG it skips DIAG. | host 12-boot model (storage + diag), sim 26a |
+| QF-04 | Boot record is written BEFORE app_diag copies/erases the core dump → crash PC/task in the NVS record in all cases. | code order |
+| QF-05 | Core dump erased only after the FAT copy is read back and its CRC equals the CRC of the partition data. | code |
+| QF-06 | Ring keeps a pinned `last_bt_try` (newest record that really attempted Bluetooth); skipped / not-tried boots never overwrite it; printed first ("last BT start") in Device Health and the serial log. The installer no longer boots the firmware twice (QF-13). | host (20 skipped boots), sim 25a |
+| QF-07 | The "2 failed starts" rule runs before app_diag_init → RETRY on the disabling boot itself. | sim 25a |
+| QF-08 | NVS write of the ring checked; streak decisions (BT disable, crash streak) are made only when the ring was saved this boot. | code |
+| QF-09 | NVS crash streak (≥ 4 crash resets in a row in the ring, independent of RTC and of the 20 s stable mark) forces RECOVERY. | host, sim 26b |
+| QF-10 | Bluetooth stack start runs under a 15 s task-watchdog with panic (main task subscribed only for the start; settings restored after) → a hang becomes a crash reset with the BTSTACK marker → skipped after two. | blehost initfail (guard set + removed) |
+| QF-11 | Failed-alloc hook is IRAM_ATTR, counts only the BT-starting task's failures (other tasks only in the total); IDF 5.5.1 cannot unregister the hook (NULL rejected) — documented. | blehost initfail (other-task failure ignored) |
+| QF-12 | Any erased or garbage root entry = "Directory corrupted"; the probe write is not attempted in a damaged directory. | host test_bc_storage |
+| QF-13 | Installer: backup and write with `--after no-reset` (the old firmware never runs between backup and write); the installer then opens the port and starts the board itself, recording the very first boot for 90 s; result counts `BT init step` and `BOOTREC` lines. | script review (not run) |
+| QF-14 | "as measured" / "27 Oct board" wording in tests replaced: the 8,256 B allocation and the heap figures are injected by the fake. | — |
+| QF-15 | ble_link.c / ble_central.c UI→host flags use `__atomic_*` (exchange for test-and-clear); `on_disconnect` reads the state under the lock. TSan: firmware frames 0 (was 18 reports at 300 cycles, 8 left, all in the fake/harness). | blehost tsan |
+| QF-16 | ROLLBACK-TO-v073 warns on screen (0.7.3 aborts at every start on this board). | kit |
+| QF-17 | Contract v1.1 published (answers to the iOS review); Link 1.3 not implemented (FW-4), rc2 wire-identical to 1.2.3. | — |
+| QF-18 | Storage FULL at start: sent reports + their core copies are removed (removal is allowed on FULL), the storage is re-checked, and if usable again diagnostics continue. Unsent reports and rides are never removed. | sim 26c |
+| QF-19 | `s_events_ready` reset when the host task cannot be created. | code |
+| QF-20 | RUNNING-stage record write removed: 4 ring writes per boot instead of 5. | code |
+
+Internal RAM: DIRAM free 34,201 B (rc1 34,645 B; −444 B: the IRAM hook and new code). The RAM ride queue (944 B) is
+allocated in PSRAM on first use, not in internal RAM.

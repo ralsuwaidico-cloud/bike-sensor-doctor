@@ -116,7 +116,10 @@ bool plat_file_rename(const char *from, const char *to)
 }
 bool plat_file_remove(const char *path) { char p[512]; full(path, p, sizeof p); if (g_sim.storage_state != BC_STOR_OK && g_sim.storage_state != BC_STOR_FULL && sim_refuse(path)) return false; return unlink(p) == 0; }
 bool plat_storage_ok(void) { return g_sim.storage_state == BC_STOR_OK; }
+bool plat_settings_ok(void) { return true; }
 bc_stor_state_t plat_storage_state(void) { return (bc_stor_state_t)g_sim.storage_state; }
+bool plat_storage_fat_consistent(char *why, size_t cap) { if (why && cap) snprintf(why, cap, "%s", g_sim.fat_inconsistent ? "clusters marked used but in no file (lost)" : ""); return g_sim.storage_state != BC_STOR_FS_UNAVAILABLE && !g_sim.fat_inconsistent; }
+bool plat_storage_recheck(void) { if (g_sim.storage_state == BC_STOR_FULL && g_sim.full_clears_on_cleanup) g_sim.storage_state = BC_STOR_OK; return g_sim.storage_state == BC_STOR_OK; }
 void plat_storage_facts(bc_stor_facts_t *o) { memset(o, 0, sizeof *o); o->partition_found = o->mounted = g_sim.storage_state != BC_STOR_FS_UNAVAILABLE; o->probe_attempted = true; o->probe_ok = g_sim.storage_state == BC_STOR_OK; }
 bc_stor_state_t plat_storage_write_failure(void) { return g_sim.storage_state == BC_STOR_OK ? BC_STOR_WRITE_FAILED : (bc_stor_state_t)g_sim.storage_state; }
 bc_crashpart_t plat_crash_partition(uint32_t *b) { if (b) *b = g_sim.crashpart_bytes; return (bc_crashpart_t)g_sim.crashpart; }
@@ -350,6 +353,8 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
     case BC_MSG_SETTINGS: bc_link_decode_settings(b, n, &PH.settings); PH.settings_msgs++; break;
     case BC_MSG_EVENT: {
         bc_sensor_diag_t d; bc_diag_ready_t r;
+        bc_rides_pending_t rp;
+        if (bc_link_decode_rides_pending(b, n, &rp)) { PH.rpend = rp; PH.rpends++; PH.link13_msgs++; break; }   /* 0.7.5 EVENT 0x23 */
         if (bc_link_decode_sensor_diag(b, n, &d)) { PH.diag[PH.ndiag % 16] = d; PH.ndiag++; PH.diags++; }   /* 0.7.2 SENSOR_DIAG */
         else if (bc_link_decode_diag_ready(b, n, &r)) { PH.dready = r; PH.dreadys++; }                       /* 0.7.3 diag_ready */
         else { bc_link_decode_event(b, n, &PH.event); PH.events++; }
@@ -367,8 +372,24 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
             if (PH.dchunk.offset + PH.dchunk.len <= sizeof PH.dbuf) { memcpy(PH.dbuf + PH.dchunk.offset, PH.dchunk.data, PH.dchunk.len); if (PH.dchunk.offset + PH.dchunk.len > PH.dbuf_len) PH.dbuf_len = PH.dchunk.offset + PH.dchunk.len; }
         }
         break;
+    /* 0.7.5 Link 1.3 (Cyclift's side) */
+    case BC_MSG_HELLO_ACK: bc_link_decode_hello_ack(b, n, &PH.hello_ack); PH.hello_acks++; break;
+    case BC_MSG_COACH_PLAN_ACK: bc_link_decode_coach_plan_ack(b, n, &PH.plan_ack); PH.plan_acks++; break;
+    case BC_MSG_RIDEQ_INFO: if (PH.n_rqinfo < 64 && bc_link_decode_rideq_info(b, n, &PH.rqinfo[PH.n_rqinfo])) PH.n_rqinfo++; break;
+    case BC_MSG_RIDEQ_LIST_END: bc_link_decode_rideq_list_end(b, n, &PH.rq_end); PH.rq_ends++; break;
+    case BC_MSG_RIDEQ_ERR: bc_link_decode_rideq_err(b, n, &PH.rq_err); PH.rq_errs++; break;
+    case BC_MSG_RIDEQ_CHUNK:
+        if (n + 3 > (size_t)(PH.mtu ? PH.mtu : 185)) PH.unknown_notifies += 1000;
+        if (bc_link_decode_rideq_chunk(b, n, &PH.rq_chunk)) {
+            PH.rq_chunks++;
+            if (PH.rq_chunk.offset + PH.rq_chunk.len <= sizeof PH.rqbuf) { memcpy(PH.rqbuf + PH.rq_chunk.offset, PH.rq_chunk.data, PH.rq_chunk.len); if (PH.rq_chunk.offset + PH.rq_chunk.len > PH.rqbuf_len) PH.rqbuf_len = PH.rq_chunk.offset + PH.rq_chunk.len; }
+        }
+        break;
+    case BC_MSG_STORAGE_STATUS: bc_link_decode_storage_status(b, n, &PH.sstat); PH.sstats++; break;
+    case BC_MSG_STORAGE_CLEAN_RESULT: bc_link_decode_storage_clean_result(b, n, &PH.clean); PH.cleans++; break;
     default: PH.unknown_notifies++; break;
     }
+    if (b[0] == BC_MSG_HELLO_ACK || b[0] == BC_MSG_COACH_PLAN_ACK || (b[0] >= BC_MSG_RIDEQ_LIST_REQ && b[0] <= BC_MSG_RIDEQ_ERR) || b[0] == BC_MSG_STORAGE_STATUS || b[0] == BC_MSG_STORAGE_CLEAN_RESULT) { PH.link13_msgs++; PH.last13_type = b[0]; }
     return true;
 }
 void plat_phone_set_standby(bool standby) { PH.standby = standby; if (standby) PH.standbys++; }
@@ -416,9 +437,15 @@ void plat_selftest_text(char *b, size_t cap)
 void plat_mem_text(char *b, size_t cap) { snprintf(b, cap, "heap 180K min 150K psram 1900K"); }
 void plat_log(const char *line) { if (g_sim.verbose) printf("  [log] %s\n", line); snprintf(g_sim.last_log, sizeof g_sim.last_log, "%s", line); }
 void *plat_alloc_ext(size_t n) { return calloc(1, n); }   /* 0.7.4 */
+uint8_t plat_crash_run_update(bc_reset_t reset) { g_sim.nvs_crash_run = bc_boot_next_run(g_sim.nvs_crash_run, reset); return g_sim.nvs_crash_run; }
+void plat_flash_usage(uint32_t *slot_kb, uint32_t *used_kb, uint16_t *nvs_used, uint16_t *nvs_free) { *slot_kb = 4032; *used_kb = 1804; *nvs_used = 310; *nvs_free = 320; }
 size_t plat_bootrec_text(char *buf, size_t cap)   /* 0.7.4: the simulated NVS boot-record ring (sim_main.c device_boot) */
 {
     size_t n = 0; if (!cap) return 0; buf[0] = 0;
+    if (g_sim.ring_init && g_sim.ring.last_bt_try.boot) {   /* as diag_esp.c: the pinned last Bluetooth attempt first */
+        char line[400]; bc_bootrec_describe(&g_sim.ring.last_bt_try, line, sizeof line);
+        int k = snprintf(buf, cap, "last BT start: %s\n", line); if (k > 0) n = (size_t)k < cap ? (size_t)k : cap - 1;
+    }
     for (int i = 0; g_sim.ring_init && i < g_sim.ring.count && n + 2 < cap; i++) {
         char line[400]; bc_bootrec_describe(bc_bootring_get(&g_sim.ring, i), line, sizeof line);
         int k = snprintf(buf + n, cap - n, "%s%s", i ? "\n" : "", line); if (k < 0) break; n += (size_t)k; if (n >= cap) { n = cap - 1; break; }

@@ -38,11 +38,11 @@ static void t_profile(void)
     CHECK(!strcmp(bc_ftp_label(&p), "PROVISIONAL"));
     p.weight_dg = 905; bc_profile_refresh_assumption(&p); CHECK(p.ftp_w == 272);  /* 90.5 × 3.0 = 271.5 → 272 */
     p.ftp_how = BC_FTP_ENTERED; p.ftp_w = 250; p.weight_dg = 600; bc_profile_refresh_assumption(&p); CHECK(p.ftp_w == 250);
-    strcpy(p.name, "Rashed Al S"); p.power.paired = true; p.power.mac[0] = 0xAB; p.power.mac[5] = 0x01; p.power.addr_type = 1;
+    strcpy(p.name, "Rider A Tst"); p.power.paired = true; p.power.mac[0] = 0xAB; p.power.mac[5] = 0x01; p.power.addr_type = 1;
     strcpy(p.power.name, "XDS-A001-9769"); p.height_cm = 178; p.onboarded = true; p.ride_style = BC_STYLE_COACH;
     char buf[1024]; size_t n = bc_profile_to_text(&p, buf, sizeof buf); CHECK(n > 0);
     CHECK(bc_profile_from_text(&q, buf));
-    CHECK(!strcmp(q.name, "Rashed Al S") && q.age == p.age && q.weight_dg == 600 && q.height_cm == 178 && q.ftp_w == 250);
+    CHECK(!strcmp(q.name, "Rider A Tst") && q.age == p.age && q.weight_dg == 600 && q.height_cm == 178 && q.ftp_w == 250);
     CHECK(q.ftp_how == BC_FTP_ENTERED && q.power.paired && q.power.mac[0] == 0xAB && q.power.mac[5] == 1 && q.power.addr_type == 1);
     CHECK(!strcmp(q.power.name, "XDS-A001-9769") && q.onboarded && q.ride_style == BC_STYLE_COACH && !q.hr.paired);
     CHECK(bc_profile_from_text(&q, "garbage\nage=500\nexp=99\nunknown=1\n") && q.age == 120 && q.exp == BC_EXP_COMPETITIVE && !q.onboarded);
@@ -179,9 +179,9 @@ static void t_wifi(void)
     CHECK(bc_wifi_pass_valid("") && bc_wifi_pass_valid("12345678") && !bc_wifi_pass_valid("1234567") && !bc_wifi_pass_valid("bad\x01pass1"));
     char p63[64]; memset(p63, 'a', 63); p63[63] = 0; CHECK(bc_wifi_pass_valid(p63));
     char p64[65]; memset(p64, 'a', 64); p64[64] = 0; CHECK(!bc_wifi_pass_valid(p64));
-    CHECK(!bc_wifi_ssid_valid("") && bc_wifi_ssid_valid("Rashed's iPhone"));
+    CHECK(!bc_wifi_ssid_valid("") && bc_wifi_ssid_valid("Rider A's iPhone"));
     bc_wifi_store_t st; bc_wifi_store_init(&st);
-    CHECK(bc_wifi_store_put(&st, "Home", "secret123") && bc_wifi_store_put(&st, "Rashed's iPhone", "p@ss w0rd!") && bc_wifi_store_put(&st, "Cafe", ""));
+    CHECK(bc_wifi_store_put(&st, "Home", "secret123") && bc_wifi_store_put(&st, "Rider A's iPhone", "p@ss w0rd!") && bc_wifi_store_put(&st, "Cafe", ""));
     CHECK(st.n == 3 && !strcmp(st.c[0].ssid, "Cafe") && !strcmp(st.c[2].ssid, "Home"));
     CHECK(!bc_wifi_store_put(&st, "X", "short"));
     bc_wifi_store_put(&st, "Home", "newpass99"); CHECK(st.n == 3 && !strcmp(st.c[0].ssid, "Home") && !strcmp(st.c[0].pass, "newpass99"));
@@ -359,7 +359,7 @@ static void t_power(void)
     p.scr_timeout_s = 300; p.auto_sleep_min = 0; p.bat_protect = 1; p.wake_on_cue = false;
     char txt[1024]; CHECK(bc_profile_to_text(&p, txt, sizeof txt) > 0);
     CHECK(bc_profile_from_text(&q, txt) && q.scr_timeout_s == 300 && q.auto_sleep_min == 0 && q.bat_protect == 1 && !q.wake_on_cue);
-    CHECK(bc_profile_from_text(&q, "format=bc-profile-1\nonboarded=1\nname=Rashed\nbrightness=70\n") && q.scr_timeout_s == 60 && q.auto_sleep_min == 0 && q.bat_protect == 0 && q.wake_on_cue && q.brightness == 70 && !strcmp(q.name, "Rashed"));
+    CHECK(bc_profile_from_text(&q, "format=bc-profile-1\nonboarded=1\nname=Rider A\nbrightness=70\n") && q.scr_timeout_s == 60 && q.auto_sleep_min == 0 && q.bat_protect == 0 && q.wake_on_cue && q.brightness == 70 && !strcmp(q.name, "Rider A"));
     /* a 0.5.0 profile (no pwr_v) carried auto_sleep_min=10: migrated to off once; a 0.6.0 profile keeps what it says */
     CHECK(bc_profile_from_text(&q, "scr_timeout_s=99999\nauto_sleep_min=999\nbat_protect=7\n") && q.scr_timeout_s == 3600 && q.auto_sleep_min == 0 && q.pwr_v == 3 && q.bat_protect == 1);
     CHECK(bc_profile_from_text(&q, "auto_sleep_min=30\npwr_v=2\n") && q.auto_sleep_min == 30);
@@ -447,6 +447,12 @@ static void t_link2(void)
     CHECK(!bc_link_decode_sync_ride(b, n - 1, &d));                                                                                               /* truncated rejected */
     /* a ride with a 120-byte coach text and no zones still fits */
     r.zones_valid = false; memset(r.coach, 'x', 119); r.coach[119] = 0; n = bc_link_encode_sync_ride(&r, b, sizeof b, 1, 1); CHECK(n > 0 && n <= 180 && bc_link_decode_sync_ride(b, n, &d) && strlen(d.coach) == 60);
+    /* 0.7.4-rc2: zones + a long coaching text used to exceed 180 B -> encoder returned 0 -> the ride was never synced */
+    { bc_ride_summary_t z = r; z.zones_valid = true; for (int i = 0; i < 7; i++) z.zone_s[i] = 100u * (uint32_t)i;
+      memset(z.coach, 'y', 119); z.coach[119] = 0; z.coach[40] = (char)0xC3; z.coach[41] = (char)0xA9;   /* a 2-byte UTF-8 char near the cut */
+      uint8_t bb[400]; size_t m = bc_link_encode_sync_ride(&z, bb, sizeof bb, 1, 1); bc_ride_summary_t dz;
+      CHECK(m > 0 && m <= BC_LINK_MAX && bc_link_decode_sync_ride(bb, m, &dz) && dz.zones_valid && strlen(dz.coach) > 0 && strlen(dz.coach) < 60);
+      size_t m2 = bc_link_encode_sync_ride(&z, b, BC_LINK_MAX, 1, 1); CHECK(m2 == m && !memcmp(b, bb, m)); }
     /* SYNC_END: Swift testSyncEnd */
     bc_sync_end_t e = { .count = 50, .total = 123, .more = true }; n = bc_link_encode_sync_end(&e, b, sizeof b, 1, 0);
     const uint8_t want_end[] = { 0x52, 0, 1, 0, 0, 0, 0, 0, 0x01, 0x02, 0x32, 0x00, 0x02, 0x02, 0x7B, 0x00, 0x03, 0x01, 0x01 };
@@ -458,9 +464,9 @@ static void t_link2(void)
     const uint8_t want_sq[] = { 0x60, 0, 1, 0, 0, 0, 0, 0 }; CHECK(n == sizeof want_sq && !memcmp(b, want_sq, n));
     bc_wifi_scan_req_t sq2; CHECK(bc_link_decode_wifi_scan_req(b, n, &sq2) && sq2.max == 16);
     sq.max = 8; n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 2, 0); CHECK(n == 11 && b[8] == 1 && b[9] == 1 && b[10] == 8 && bc_link_decode_wifi_scan_req(b, n, &sq2) && sq2.max == 8);
-    bc_wifi_scan_result_t sr = { .ssid = "Rashed\xE2\x80\x99s iPhone", .rssi = -62, .secured = 1, .channel = 6, .saved = 0 };
+    bc_wifi_scan_result_t sr = { .ssid = "RiderA\xE2\x80\x99s iPhone", .rssi = -62, .secured = 1, .channel = 6, .saved = 0 };
     n = bc_link_encode_wifi_scan_result(&sr, b, sizeof b, 5, 0);
-    const uint8_t want_sr[] = { 0x61, 0, 5, 0, 0, 0, 0, 0, 0x01, 17, 'R','a','s','h','e','d',0xE2,0x80,0x99,'s',' ','i','P','h','o','n','e', 0x02, 1, 0xC2, 0x03, 1, 1, 0x04, 1, 6, 0x05, 1, 0 };
+    const uint8_t want_sr[] = { 0x61, 0, 5, 0, 0, 0, 0, 0, 0x01, 17, 'R','i','d','e','r','A',0xE2,0x80,0x99,'s',' ','i','P','h','o','n','e', 0x02, 1, 0xC2, 0x03, 1, 1, 0x04, 1, 6, 0x05, 1, 0 };
     CHECK(n == sizeof want_sr && !memcmp(b, want_sr, n));
     bc_wifi_scan_result_t sr2; CHECK(bc_link_decode_wifi_scan_result(b, n, &sr2) && !strcmp(sr2.ssid, sr.ssid) && sr2.rssi == -62 && sr2.secured && sr2.channel == 6 && !sr2.saved);
     bc_wifi_scan_end_t se = { .count = 3, .err = 0 }; n = bc_link_encode_wifi_scan_end(&se, b, sizeof b, 6, 0);
@@ -489,12 +495,12 @@ static void t_link3(void)
     n = bc_link_encode_settings_get(b, sizeof b, 3, 0); const uint8_t want_sg[] = { 0x76, 0, 3, 0, 0, 0, 0, 0 }; CHECK(n == 8 && !memcmp(b, want_sg, 8));
     /* PROFILE_SET: full set, byte vector (docs/BLE_LINK_PROTOCOL.md) */
     bc_profile_msg_t pm = { .version = 1, .updated_epoch_s = 1792850100u, .ftp_w = 250, .ftp_how = 1, .weight_kg_x10 = 780, .birth_year = 1990, .max_hr = 186, .rest_hr = 52, .units = 0, .hours_per_week = 6, .level = 2, .goal = 1, .lthr = 170 };
-    snprintf(pm.name, sizeof pm.name, "Rashed"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
+    snprintf(pm.name, sizeof pm.name, "RiderA"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
     n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 2, 0);
-    const uint8_t want_ps[] = { 0x71, 0, 2, 0, 0, 0, 0, 0,  0x01, 4, 1, 0, 0, 0,  0x02, 4, 0xB4, 0xB8, 0xDC, 0x6A,  0x03, 6, 'R','a','s','h','e','d',
+    const uint8_t want_ps[] = { 0x71, 0, 2, 0, 0, 0, 0, 0,  0x01, 4, 1, 0, 0, 0,  0x02, 4, 0xB4, 0xB8, 0xDC, 0x6A,  0x03, 6, 'R','i','d','e','r','A',
                                 0x04, 2, 0xFA, 0x00,  0x05, 1, 1,  0x06, 2, 0x0C, 0x03,  0x07, 2, 0xC6, 0x07,  0x08, 1, 186,  0x09, 1, 52,  0x0A, 1, 0,  0x0B, 1, 6,  0x0C, 1, 2,  0x0D, 1, 1,  0x0E, 1, 170 };
     CHECK(n == sizeof want_ps && !memcmp(b, want_ps, n));
-    bc_profile_msg_t d; CHECK(bc_link_decode_profile(b, n, &d) && d.version == 1 && d.updated_epoch_s == 1792850100u && !strcmp(d.name, "Rashed") && d.ftp_w == 250 && d.ftp_how == 1 && d.weight_kg_x10 == 780 && d.birth_year == 1990 && d.max_hr == 186 && d.rest_hr == 52 && d.units == 0 && d.hours_per_week == 6 && d.level == 2 && d.goal == 1 && d.lthr == 170 && d.has == pm.has);
+    bc_profile_msg_t d; CHECK(bc_link_decode_profile(b, n, &d) && d.version == 1 && d.updated_epoch_s == 1792850100u && !strcmp(d.name, "RiderA") && d.ftp_w == 250 && d.ftp_how == 1 && d.weight_kg_x10 == 780 && d.birth_year == 1990 && d.max_hr == 186 && d.rest_hr == 52 && d.units == 0 && d.hours_per_week == 6 && d.level == 2 && d.goal == 1 && d.lthr == 170 && d.has == pm.has);
     /* partial SET: only the fields sent are flagged; 0.7.0: an out-of-range value is not applied AND is flagged in `invalid`
        (the board then answers status 2 and changes nothing) */
     uint8_t part[] = { 0x71, 0, 0, 0, 0, 0, 0, 0,  0x01, 4, 5, 0, 0, 0,  0x04, 2, 0xFF, 0xFF,  0x08, 1, 186 };

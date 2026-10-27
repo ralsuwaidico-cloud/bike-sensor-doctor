@@ -82,7 +82,7 @@ static void fx_store_init(void)
 }
 static void fx_srv(bc_diag_srv_t *s, uint16_t mtu, bool riding)
 {
-    bc_diag_store_t st = { NULL, fx_index, fx_read, fx_mark };
+    bc_diag_store_t st = { NULL, fx_index, fx_read, fx_mark, NULL };
     bc_diag_srv_init(s, &st); bc_diag_srv_set_link(s, mtu, riding);
 }
 /* what Cyclift asks for on a link whose ATT MTU is `mtu` (ios: BCLink.diagRequestMaxLen) — 0 = it does not ask */

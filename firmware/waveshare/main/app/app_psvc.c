@@ -7,13 +7,16 @@
 #include "bc_ride.h"
 #include "bc_pipe.h"
 #include "app_diag.h"
+#include "app_link13.h"
 
 #define SCAN_TIMEOUT_MS 25000       /* a connect attempt in flight (<= 20 s) delays the scan */
 #define STATUS_MIN_GAP_MS 500
 #define STATUS_PERIOD_MS 15000      /* while connected: refresh the signal strength for the phone */
 #define NOTIFY_PER_PUMP 8
 
-static struct {
+/* 0.7.5: the service state (~2.7 KB) lives in PSRAM (plat_alloc_ext in app_psvc_init): internal RAM is kept for the
+   Bluetooth stack; every entry point returns early until it exists */
+typedef struct {
     /* Wi-Fi scan in flight */
     bool scan_pending, scan_issued; uint8_t scan_max; uint32_t scan_t0, scans_before; int scan_sent; int scan_total; bool scan_ending; uint8_t scan_err;
     plat_wifi_ap_t aps[32]; int naps;
@@ -22,7 +25,7 @@ static struct {
     /* profile / settings replies due */
     bool profile_due, profile_ack_due, settings_due; bc_profile_ack_t ack; uint8_t settings_status;
     /* sync */
-    bool sync_active; uint16_t after_id; uint8_t max_count; uint16_t sent, total; long off; bool eof;
+    bool sync_active; int ram_i; uint16_t after_id; uint8_t max_count; uint16_t sent, total; long off; bool eof;
     char line[320]; int line_len; char chunk[512]; int chunk_pos, chunk_len;
     uint8_t last_end[32]; size_t last_end_len;
     uint8_t held[BC_LINK_MAX]; size_t held_len; uint8_t held_chr;   /* a notification the transport could not take yet */
@@ -32,7 +35,12 @@ static struct {
     bool was_ready, hello_due, diag_due; uint8_t last_set_status; bool set_seen; uint16_t last_disc_code; uint8_t last_disc;
     /* 0.7.2 SENSOR_DIAG (Link 1.2.2): per sensor (0 power, 1 HR strap, 2 CSC) the last stage seen and what is due */
     uint8_t sd_stage[3]; bool sd_known[3]; uint8_t sd_due; uint32_t sd_period_ms;
-} S;
+    /* rc3 (QA QF-22): RAM-only rides already streamed as SYNC_RIDE; a later SYNC_REQ whose after_ride_id covers one = the
+       phone has it (Cyclift asks "after the newest ride I hold") -> its memory slot is freed */
+    uint16_t ram_sent[APP_UNSAVED_MAX]; int n_ram_sent;
+} psvc_t;
+static psvc_t *s_ps;
+#define S (*s_ps)
 
 static const plat_sens_kind_t SD_KIND[3] = { PLAT_SENS_POWER, PLAT_SENS_HR, PLAT_SENS_CSC };
 static void apply_disconnect(void);
@@ -55,8 +63,13 @@ static void sd_scan(uint32_t now, bool phone_connected_now)
     else if (now - S.sd_period_ms >= 5000) { S.sd_period_ms = now; S.sd_due |= below_mask; }
 }
 
-void app_psvc_init(void) { memset(&S, 0, sizeof S); }
-void app_psvc_stats(app_psvc_stats_t *o) { *o = S.st; o->sync_active = S.sync_active; o->status_watch = S.status_watch; }
+void app_psvc_init(void)
+{
+    if (!s_ps) s_ps = plat_alloc_ext(sizeof *s_ps);
+    if (s_ps) memset(s_ps, 0, sizeof *s_ps); else plat_log("PSVC: no memory for the phone services");
+    app_link13_init();
+}
+void app_psvc_stats(app_psvc_stats_t *o) { if (!s_ps) { memset(o, 0, sizeof *o); return; } *o = S.st; o->sync_active = S.sync_active; o->status_watch = S.status_watch; }
 
 static bool riding(void) { bc_ride_state_t s = app_ride_state(); return s == BC_RIDE_RUNNING || s == BC_RIDE_PAUSED; }
 
@@ -227,20 +240,26 @@ static void sync_rewind(void) { S.off = 0; S.eof = false; S.chunk_pos = S.chunk_
 
 static void sync_start(const bc_sync_req_t *q)
 {
+    for (int i = 0; i < S.n_ram_sent; ) {
+        if (q->after_ride_id && S.ram_sent[i] <= q->after_ride_id) { app_unsaved_release(S.ram_sent[i]); S.ram_sent[i] = S.ram_sent[--S.n_ram_sent]; }
+        else i++;
+    }
     S.sync_active = true; S.after_id = q->after_ride_id; S.max_count = q->max_count; S.sent = 0; S.total = 0;
     /* counting pass: how many rides the board holds */
     sync_rewind(); bc_ride_summary_t s;
     while (sync_next_line()) if (S.line_len && bc_summary_from_line(&s, S.line)) S.total++;
     sync_rewind();
+    S.ram_i = 0; { bc_ride_summary_t u[APP_UNSAVED_MAX]; S.total += app_unsaved_rides(u, APP_UNSAVED_MAX); }   /* 0.7.4: RAM-only rides */
     S.st.sync_reqs++;
 }
 
 /* ---- writes from the phone */
 bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t now)
 {
-    if (!msg || n < BC_LINK_HDR) return false;
+    if (!s_ps || !msg || n < BC_LINK_HDR) return false;
     uint8_t type = msg[0];
     if (chr == APP_PSVC_CTRL && app_diag_write(msg, n)) return true;   /* 0.7.3 Link 1.2.3 DIAG_* (0x80..0x86) */
+    if (chr == APP_PSVC_CTRL && app_link13_write(msg, n, now)) return true;   /* 0.7.5 Link 1.3 (HELLO-gated) */
     if (chr == APP_PSVC_SYNC) {
         bc_sync_req_t q;
         if (type != BC_MSG_SYNC_REQ || !bc_link_decode_sync_req(msg, n, &q)) return false;
@@ -303,6 +322,7 @@ bool app_psvc_write(app_psvc_chr_t chr, const uint8_t *msg, size_t n, uint32_t n
 /* ---- notifications */
 size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now)
 {
+    if (!s_ps) return 0;
     /* 0.7.0 link diagnostics: one EVENT per connection (Events characteristic) — why the previous link ended, bonds, sync state */
     if (S.diag_due && !S.profile_due && !S.profile_ack_due) {
         S.diag_due = false;
@@ -330,6 +350,8 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
             return bc_link_encode_sensor_diag(&d, buf, cap, ++S.seq, now);
         }
     }
+    /* 0.7.5 Link 1.3 replies (HELLO_ACK, PLAN_ACK, storage, ride queue; queue chunks paced like diag chunks) */
+    { uint8_t c; size_t m = app_link13_next(&c, buf, cap, now); if (m) { *chr = c == 2 ? APP_PSVC_EVENTS : APP_PSVC_CTRL; return m; } }
     /* 0.7.3 diagnostic reports (Link 1.2.3): diag_ready event, then the replies the phone pulled. Lower priority than every
        reply above; its data chunks are additionally held back while LIVE / the transport need the link (app_diag_next). */
     { uint8_t c; size_t m = app_diag_next(&c, buf, cap, now); if (m) { *chr = c == 2 ? APP_PSVC_EVENTS : APP_PSVC_CTRL; return m; } }
@@ -382,8 +404,23 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
             *chr = APP_PSVC_SYNC;
             return n;
         }
+        /* 0.7.4: then the rides kept only in RAM (storage damaged), oldest first - the shipped Cyclift imports them like any ride */
+        { bc_ride_summary_t u[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(u, APP_UNSAVED_MAX);
+          while (S.sent < S.max_count && S.ram_i < nu) {
+              bc_ride_summary_t *r = &u[S.ram_i++];
+              if (r->id <= S.after_id) continue;
+              size_t n = bc_link_encode_sync_ride(r, buf, cap, ++S.seq, now);
+              if (!n) continue;
+              S.sent++; S.after_id = r->id; S.st.rides_sent++;
+              { bool have = false; for (int k = 0; k < S.n_ram_sent; k++) if (S.ram_sent[k] == r->id) have = true;
+                if (!have && S.n_ram_sent < APP_UNSAVED_MAX) S.ram_sent[S.n_ram_sent++] = r->id; }
+              *chr = APP_PSVC_SYNC;
+              return n;
+          } }
         /* batch complete (max reached or end of file): is there more? peek ahead, then restore the reader completely */
         bool more = false;
+        { bc_ride_summary_t u[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(u, APP_UNSAVED_MAX);
+          for (int i = S.ram_i; i < nu; i++) if (u[i].id > S.after_id) more = true; }
         if (S.sent >= S.max_count) {
             long off = S.off; bool eof = S.eof; int cp = S.chunk_pos, cl = S.chunk_len; char chunk[512]; memcpy(chunk, S.chunk, sizeof chunk);
             while (sync_next_line()) if (S.line_len && bc_summary_from_line(&s, S.line) && s.id > S.after_id) { more = true; break; }
@@ -404,13 +441,14 @@ app_psync_state_t app_psvc_sync_state(void)
 {
     const bc_profile_t *p = app_profile();
     plat_phone_status_t ps; plat_phone_status(&ps);
-    if (S.set_seen && S.last_set_status == BC_PF_BAD) return APP_PSYNC_FAILED;
-    if (ps.state == PLAT_PHONE_READY && !S.set_seen && !p->prof_src) return APP_PSYNC_PENDING;   /* connected, phone has not sent its profile yet */
+    if (s_ps && S.set_seen && S.last_set_status == BC_PF_BAD) return APP_PSYNC_FAILED;
+    if (ps.state == PLAT_PHONE_READY && !(s_ps && S.set_seen) && !p->prof_src) return APP_PSYNC_PENDING;   /* connected, phone has not sent its profile yet */
     return p->prof_src ? APP_PSYNC_SYNCED : APP_PSYNC_DEVICE_ONLY;
 }
 
 void app_psvc_pump(uint32_t now)
 {
+    if (!s_ps) return;
     if (s_disc_pending) { s_disc_pending = false; apply_disconnect(); }
     /* 0.7.0: when the phone is encrypted and listening, send PROFILE (so it can compare) and one LINK_DIAG event */
     { plat_phone_status_t ps; plat_phone_status(&ps);
@@ -418,6 +456,7 @@ void app_psvc_pump(uint32_t now)
       if (rising) { S.was_ready = true; S.hello_due = true; S.diag_due = true; S.set_seen = false; S.last_disc_code = ps.last_disc_code; S.last_disc = (uint8_t)ps.last_disc; }
       if (!ps.svc_ready) { S.was_ready = false; S.sd_due = 0; }
       app_diag_phone_ready(ps.svc_ready);                  /* 0.7.3: diag_ready on every new connection */
+      app_link13_phone_ready(ps.svc_ready);                /* 0.7.5: a new connection is 1.2.3 until its APP_HELLO */
       sd_scan(now, rising);                                /* 0.7.2 SENSOR_DIAG bookkeeping (sent only while the phone listens) */
       if (!ps.svc_ready) S.sd_due = 0; }
     if (S.hello_due) { S.hello_due = false; S.profile_due = true; }
@@ -436,13 +475,16 @@ void app_psvc_pump(uint32_t now)
 void app_psvc_on_disconnect(void) { s_disc_pending = true; }
 static void apply_disconnect(void)
 {
+    if (!s_ps) return;
     S.sync_active = false; S.scan_pending = false; S.status_watch = false; S.have_last = false; S.status_now = false;
     S.profile_due = S.profile_ack_due = S.settings_due = false; S.held_len = 0; S.hello_due = S.diag_due = false; S.was_ready = false; S.sd_due = 0;
     app_diag_phone_ready(false);
+    app_link13_phone_ready(false);
 }
 
 size_t app_psvc_last_sync_end(uint8_t *buf, size_t cap)
 {
+    if (!s_ps) return 0;
     if (!S.last_end_len || S.last_end_len > cap) return 0;
     memcpy(buf, S.last_end, S.last_end_len); return S.last_end_len;
 }

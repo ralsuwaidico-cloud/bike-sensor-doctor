@@ -73,9 +73,12 @@ static void test_classify(void)
     CHECK(bc_stor_classify(&f) == BC_STOR_DIR_CORRUPTED, "measured board state -> Directory corrupted, NOT storage full");
     char line[200]; bc_stor_describe(&f, bc_stor_classify(&f), line, sizeof line);
     CHECK(strstr(line, "Directory corrupted") && strstr(line, "5096/7964 KB free") && strstr(line, "erased 512") && strstr(line, "errno 13"), "description: %s", line);
-    /* the probe still passes (some free slot somewhere): OK, even with erased entries */
-    f.root.free_slots = 3; f.root.erased = 509; f.probe_ok = true;
-    CHECK(bc_stor_classify(&f) == BC_STOR_OK, "probe OK -> OK");
+    /* 0.7.4 (QA QF-12): partial damage - one WL sector of the root erased (128 entries), 384 free slots, probe would pass */
+    f.root.free_slots = 384; f.root.erased = 128; f.probe_ok = true;
+    CHECK(bc_stor_classify(&f) == BC_STOR_DIR_CORRUPTED && bc_stor_root_damaged(&f), "partial damage (128 erased, 384 free) -> Directory corrupted, not written");
+    f.root.erased = 0; f.root.garbage = 1; CHECK(bc_stor_classify(&f) == BC_STOR_DIR_CORRUPTED, "a single malformed entry -> Directory corrupted");
+    f.root.garbage = 0; f.root.used = 10; f.root.free_slots = 502;
+    CHECK(bc_stor_classify(&f) == BC_STOR_OK, "clean directory + probe OK -> OK");
     /* full of real entries */
     f.probe_ok = false; f.root.free_slots = 0; f.root.erased = 0; f.root.used = 512;
     CHECK(bc_stor_classify(&f) == BC_STOR_FULL, "root full of valid entries -> full");
@@ -98,8 +101,75 @@ static void test_classify(void)
     char small[8]; size_t n = bc_stor_describe(&f, BC_STOR_DIR_CORRUPTED, small, sizeof small); CHECK(n == 7 && small[7] == 0, "describe truncates safely");
 }
 
+
+/* ---- rc3 (QA QF-28): FAT consistency check on a synthetic FAT12 volume (1 MB, 4 KB clusters) */
+#include <stdlib.h>
+#define VOL (1024 * 1024)
+static uint8_t *V;
+static bool vread(void *ctx, uint32_t off, void *buf, uint32_t n) { (void)ctx; if (off + n > VOL) return false; memcpy(buf, V + off, n); return true; }
+enum { BPS = 512, SPC = 8, RSV = 1, NFAT = 2, ROOTENT = 512, FATSZ = 1 };
+static uint32_t root_off(void) { return (RSV + NFAT * FATSZ) * BPS; }
+static uint32_t data_off(void) { return root_off() + ROOTENT * 32; }
+static void fat_set(uint32_t c, uint32_t v)
+{
+    for (int f = 0; f < NFAT; f++) {
+        uint8_t *fat = V + (RSV + f * FATSZ) * BPS; uint32_t o = c + c / 2;
+        if (c & 1) { fat[o] = (uint8_t)((fat[o] & 0x0F) | ((v << 4) & 0xF0)); fat[o + 1] = (uint8_t)(v >> 4); }
+        else { fat[o] = (uint8_t)v; fat[o + 1] = (uint8_t)((fat[o + 1] & 0xF0) | ((v >> 8) & 0x0F)); }
+    }
+}
+static void dent(uint8_t *e, const char *name11, uint8_t attr, uint16_t start, uint32_t size)
+{
+    memset(e, 0, 32); memcpy(e, name11, 11); e[11] = attr; e[26] = (uint8_t)start; e[27] = (uint8_t)(start >> 8);
+    e[28] = (uint8_t)size; e[29] = (uint8_t)(size >> 8); e[30] = (uint8_t)(size >> 16); e[31] = (uint8_t)(size >> 24);
+}
+static void mkvol(void)
+{
+    memset(V, 0, VOL);
+    uint8_t *b = V; b[11] = BPS & 0xFF; b[12] = BPS >> 8; b[13] = SPC; b[14] = RSV; b[16] = NFAT; b[17] = ROOTENT & 0xFF; b[18] = ROOTENT >> 8;
+    uint16_t tot = VOL / BPS; b[19] = (uint8_t)tot; b[20] = (uint8_t)(tot >> 8); b[22] = FATSZ; b[510] = 0x55; b[511] = 0xAA;
+    fat_set(0, 0xFF8); fat_set(1, 0xFFF);
+    uint8_t *root = V + root_off();
+    dent(root, "HISTORY TXT", 0x20, 2, 5000); fat_set(2, 3); fat_set(3, 0xFFF);                 /* 2 clusters */
+    dent(root + 32, "DIAG       ", 0x10, 4, 0); fat_set(4, 0xFFF);                              /* directory */
+    uint8_t *d = V + data_off() + (4 - 2) * 4096;
+    dent(d, ".          ", 0x10, 4, 0); dent(d + 32, "..         ", 0x10, 0, 0);
+    dent(d + 64, "R000007 TXT", 0x20, 5, 9000); fat_set(5, 6); fat_set(6, 7); fat_set(7, 0xFFF);   /* 3 clusters */
+    dent(d + 96, "EMPTY   TXT", 0x20, 0, 0);
+}
+static void test_fat_check(void)
+{
+    V = calloc(1, VOL);
+    static uint8_t work[16384]; bc_fat_check_t c;
+    mkvol();
+    CHECK(bc_fat_check_work(V, 512) > 0 && bc_fat_check_work(V, 512) <= sizeof work, "work size %zu", bc_fat_check_work(V, 512));
+    CHECK(bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && c.files == 3 && c.dirs == 1 && c.used == 6 && c.reachable == 6 && c.lost == 0,
+          "consistent volume: %u files, %u dirs, %u used = %u reachable (%s)", c.files, c.dirs, c.used, c.reachable, c.why);
+    mkvol(); fat_set(40, 0xFFF);   /* phantom-used cluster (the owner's FAT had 713) */
+    CHECK(!bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && c.lost == 1 && strstr(c.why, "lost"), "a used cluster in no file: not consistent (%s)", c.why);
+    mkvol(); { uint8_t *d = V + data_off() + 2 * 4096; dent(d + 96, "CROSS   TXT", 0x20, 6, 100); }
+    CHECK(!bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && c.crosslinks >= 1, "cross-linked file: not consistent (%s)", c.why);
+    mkvol(); dent(V + root_off(), "HISTORY TXT", 0x20, 2, 9000);
+    CHECK(!bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && strstr(c.why, "size"), "size longer than its chain: not consistent (%s)", c.why);
+    mkvol(); fat_set(3, 2);
+    CHECK(!bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && c.crosslinks >= 1, "chain loop: not consistent (%s)", c.why);
+    mkvol(); fat_set(6, 0);
+    CHECK(!bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && strstr(c.why, "free cluster"), "free cluster inside a chain (%s)", c.why);
+    mkvol(); memset(V + root_off() + 64, 0xFF, 32);
+    CHECK(!bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && c.bad_entries == 1, "erased root entry: not consistent (%s)", c.why);
+    mkvol(); fat_set(5, 0x900);
+    CHECK(!bc_fat_check(vread, NULL, VOL, work, sizeof work, &c) && strstr(c.why, "leaves"), "chain pointing outside the volume (%s)", c.why);
+    mkvol(); CHECK(!bc_fat_check(vread, NULL, VOL, work, 100, &c) && strstr(c.why, "work"), "too little work memory: refused");
+    /* the REAL head of the owner's corrupted 0.7.3 image (metadata only): never judged consistent */
+    FILE *f = fopen("fixtures/storage_073_head.bin", "rb");
+    if (f) { memset(V, 0, VOL); size_t n = fread(V, 1, VOL, f); fclose(f);
+             CHECK(n > 0 && !bc_fat_check(vread, NULL, VOL, work, sizeof work, &c), "the owner's corrupted image head: not consistent (%s)", c.why); }
+    free(V);
+}
+
 int main(void)
 {
+    test_fat_check();
     test_location();
     test_scan();
     test_classify();

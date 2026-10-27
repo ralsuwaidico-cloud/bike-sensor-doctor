@@ -144,7 +144,7 @@ static void test_vectors(void)
     bc_diag_chunk_t ch; memset(&ch, 0, sizeof ch); ch.id = 7; ch.offset = 0; ch.len = 9; memcpy(ch.data, "[header]\n", 9); ch.last = false;
     n = bc_link_encode_diag_chunk(&ch, b, sizeof b, 5, 0x21);
     expect_hex("DIAG_CHUNK", b, n, "84 00 05 00 21 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 09 5B 68 65 61 64 65 72 5D 0A 04 01 00");
-    bc_diag_ack_t ak = { 7, 0xCBF43926u }; n = bc_link_encode_diag_ack(&ak, b, sizeof b, 6, 0x30);
+    bc_diag_ack_t ak = { 7, 0xCBF43926u, 0 }; n = bc_link_encode_diag_ack(&ak, b, sizeof b, 6, 0x30);
     expect_hex("DIAG_ACK", b, n, "85 00 06 00 30 00 00 00 01 04 07 00 00 00 02 04 26 39 F4 CB");
     bc_diag_err_t er = { 9, BC_DIAG_ERR_UNKNOWN_ID }; n = bc_link_encode_diag_err(&er, b, sizeof b, 7, 0x31);
     expect_hex("DIAG_ERR", b, n, "86 00 07 00 31 00 00 00 01 04 09 00 00 00 02 01 01");
@@ -173,13 +173,15 @@ static bc_diag_index_t S_IDX; static char S_TXT[2][5000]; static bool S_FAIL_REA
 static const bc_diag_index_t *s_index(void *c) { (void)c; return &S_IDX; }
 static long s_read(void *c, uint32_t id, uint32_t off, uint8_t *buf, size_t n)
 { (void)c; if (S_FAIL_READ) return -1; for (int i = 0; i < S_IDX.n; i++) if (S_IDX.r[i].id == id) { memcpy(buf, S_TXT[i] + off, n); return (long)n; } return -1; }
+static int S_REMOVED;
+static bool s_remove(void *c, uint32_t id) { (void)c; for (int i = 0; i < S_IDX.n; i++) if (S_IDX.r[i].id == id) { memmove(&S_IDX.r[i], &S_IDX.r[i + 1], sizeof S_IDX.r[0] * (size_t)(S_IDX.n - i - 1)); S_IDX.n--; S_REMOVED++; return true; } return false; }
 static bool s_mark(void *c, uint32_t id) { (void)c; for (int i = 0; i < S_IDX.n; i++) if (S_IDX.r[i].id == id) { S_IDX.r[i].state = 1; S_MARKS++; return true; } return false; }
 static size_t req(bc_diag_srv_t *s, uint8_t type, uint32_t id, uint32_t off, uint16_t maxl, uint32_t crc, uint8_t *out)
 {
     uint8_t m[BC_LINK_MAX]; size_t n = 0;
     if (type == BC_MSG_DIAG_LIST_REQ) n = bc_link_encode_diag_list_req(m, sizeof m, 1, 0);
     else if (type == BC_MSG_DIAG_CHUNK_REQ) { bc_diag_chunk_req_t q = { id, off, maxl }; n = bc_link_encode_diag_chunk_req(&q, m, sizeof m, 1, 0); }
-    else { bc_diag_ack_t a = { id, crc }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
+    else { bc_diag_ack_t a = { id, crc, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
     bc_diag_srv_write(s, m, n);
     return bc_diag_srv_next(s, out, BC_LINK_MAX, 2, 0);
 }
@@ -190,7 +192,7 @@ static void test_server(void)
         size_t len = i ? 300 : 4321; for (size_t k = 0; k < len; k++) S_TXT[i][k] = (char)('a' + (k * 7 + i) % 26);
         bc_diag_info_t *r = &S_IDX.r[S_IDX.n++]; r->id = (uint32_t)(10 + i); r->size = (uint32_t)len; r->crc = bc_crc32(0, S_TXT[i], len); r->kind = (uint8_t)(i ? 3 : 1);
     }
-    bc_diag_store_t st = { NULL, s_index, s_read, s_mark }; bc_diag_srv_t s; bc_diag_srv_init(&s, &st);
+    bc_diag_store_t st = { NULL, s_index, s_read, s_mark, s_remove }; bc_diag_srv_t s; bc_diag_srv_init(&s, &st);
     bc_diag_srv_set_link(&s, 185, false);                 /* iOS negotiates ATT MTU 185 */
     uint8_t o[BC_LINK_MAX]; size_t n;
     uint8_t notdiag[8] = { BC_MSG_PROFILE_GET }; CHECK(!bc_diag_srv_write(&s, notdiag, 8), "other messages are left to app_psvc");
@@ -234,6 +236,22 @@ static void test_server(void)
         while ((n = bc_diag_srv_next(&s, o, sizeof o, 1, 0)) > 0) { replies++; if (n > BC_LINK_MAX) { CHECK(0, "oversized reply"); break; } }
     }
     CHECK(replies > 0, "fuzzed 20000 random DIAG messages (%d replies, all <= 180 bytes)", replies);
+    {   /* Link 1.3 DIAG_AUTO: ACK with 03 delete -> DIAG_INFO state 1 first, then deleted; not without DIAG_AUTO, not with a bad CRC */
+        S_REMOVED = 0; uint8_t m[BC_LINK_MAX], o2[BC_LINK_MAX]; size_t k; bc_diag_info_t di;
+        uint32_t id = S_IDX.r[0].id, crc = S_IDX.r[0].crc;
+        bc_diag_ack_t a = { id, crc, 1 }; k = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0);
+        bc_diag_srv_write(&s, m, k); k = bc_diag_srv_next(&s, o2, sizeof o2, 5, 0);
+        CHECK(k && bc_link_decode_diag_info(o2, k, &di) && di.state == 1 && S_REMOVED == 0, "delete flag without DIAG_AUTO enabled: ignored (1.2.3 behaviour)");
+        s.auto_delete = true;
+        bc_diag_ack_t bad = { id, crc ^ 1, 1 }; k = bc_link_encode_diag_ack(&bad, m, sizeof m, 1, 0);
+        bc_diag_srv_write(&s, m, k); bc_diag_srv_next(&s, o2, sizeof o2, 6, 0);
+        CHECK(S_REMOVED == 0, "bad CRC: never deleted");
+        k = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); bc_diag_srv_write(&s, m, k); int n0 = S_IDX.n;
+        k = bc_diag_srv_next(&s, o2, sizeof o2, 7, 0);
+        CHECK(k && bc_link_decode_diag_info(o2, k, &di) && di.id == id && di.state == 1 && S_REMOVED == 1 && S_IDX.n == n0 - 1 && !bc_diag_index_find(&S_IDX, id),
+              "DIAG_AUTO: DIAG_INFO state 1 sent, then the report is deleted");
+        bc_diag_srv_reset(&s); CHECK(!s.auto_delete, "disconnect turns DIAG_AUTO off");
+    }
 }
 
 
@@ -327,7 +345,7 @@ static void test_ios_requests(void)
     n = unhex("83 00 03 00 00 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 02 9B 00", b); bc_diag_srv_write(&s, b, n);
     bc_diag_chunk_t c; size_t k = bc_diag_srv_next(&s, o, sizeof o, 1, 0);
     CHECK(bc_link_decode_diag_chunk(o, k, &c) && c.len == 155 && k == 180 && !memcmp(c.data, FX_TXT, 155), "iOS request at MTU 185 -> a full 180-byte chunk");
-    bc_diag_ack_t ack = { 7, FX_IDX.r[0].crc ^ 0x10 }; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 9, 0); bc_diag_srv_write(&s, b, n);
+    bc_diag_ack_t ack = { 7, FX_IDX.r[0].crc ^ 0x10, 0 }; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 9, 0); bc_diag_srv_write(&s, b, n);
     k = bc_diag_srv_next(&s, o, sizeof o, 1, 0); CHECK(bc_link_decode_diag_info(o, k, &i) && i.state == 0 && FX_IDX.r[0].state == 0, "ACK with a wrong crc: report stays pending");
     ack.crc = FX_IDX.r[0].crc; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 10, 0); bc_diag_srv_write(&s, b, n);
     k = bc_diag_srv_next(&s, o, sizeof o, 1, 0); CHECK(bc_link_decode_diag_info(o, k, &i) && i.state == 1 && FX_IDX.r[0].state == 1, "ACK with the matching crc: marked sent");
@@ -415,6 +433,70 @@ static void test_boot_same_suspect(void)
     bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r); bc_boot_plan(&r, BC_RST_SW, 0, &p);
     bc_boot_mark(&r, BC_SS_PHONE); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
     CHECK(!p.newly_skipped && r.crash_streak == 1, "same subsystem, but a stable start in between: first crash of a new streak");
+
+    /* rc2 (QA QF-03): a deterministic crash in the storage or diagnostics stage (they run before anything else that can be
+       skipped) must not loop: RECOVERY then starts WITHOUT that stage, and the board reaches a stable start */
+    for (int which = 0; which < 2; which++) {
+        bc_subsys_t bad = which ? BC_SS_DIAG : BC_SS_STORAGE;
+        memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+        int crashes = 0, stable_at = -1; bool storage_ran_in_recovery = false, diag_ran_in_recovery = false;
+        for (int boot = 0; boot < 12 && stable_at < 0; boot++) {
+            bc_boot_mark(&r, BC_SS_DISPLAY);
+            bc_boot_mark(&r, BC_SS_STORAGE);
+            if (!p.no_storage) { if (p.mode == BC_BOOT_RECOVERY) storage_ran_in_recovery = true; if (bad == BC_SS_STORAGE) { crashes++; bc_boot_plan(&r, BC_RST_PANIC, 0, &p); continue; } }
+            bc_boot_mark(&r, BC_SS_DIAG);
+            if (!p.no_diag) { if (p.mode == BC_BOOT_RECOVERY) diag_ran_in_recovery = true; if (bad == BC_SS_DIAG) { crashes++; bc_boot_plan(&r, BC_RST_PANIC, 0, &p); continue; } }
+            bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r); stable_at = boot;
+        }
+        CHECK(stable_at >= 0 && crashes == 3 && p.mode == BC_BOOT_RECOVERY && !storage_ran_in_recovery == (bad == BC_SS_STORAGE) && !diag_ran_in_recovery,
+              "crash in %s at every start: %d crashes, then RECOVERY without it -> stable at boot %d", bc_subsys_name(bad), crashes, stable_at);
+    }
+    CHECK(!strcmp(bc_subsys_name(BC_SS_DIAG), "diagnostics"), "DIAG name");
+    /* rc3 (QA QF-26): brownouts are a power problem: no RECOVERY however many; the same subsystem at two in a row is skipped */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    for (int k = 0; k < 6; k++) { bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_BROWNOUT, 0, &p); }
+    CHECK(p.mode == BC_BOOT_NORMAL && p.brownout && p.brown_streak == 6 && !p.crashed && r.crash_streak == 0 && p.run_streak == 0, "6 brownouts in a row: NORMAL, brown streak 6, no crash streak");
+    bc_boot_plan(&r, BC_RST_POWERON, 0, &p); CHECK(p.brown_streak == 0 && !p.brownout, "a normal start clears the brownout streak");
+    bc_boot_mark(&r, BC_SS_BTSTACK); bc_boot_plan(&r, BC_RST_BROWNOUT, 0, &p);
+    bc_boot_mark(&r, BC_SS_BTSTACK); bc_boot_plan(&r, BC_RST_BROWNOUT, 0, &p);
+    CHECK(p.newly_skipped && (p.skip & BC_SS_BIT(BC_SS_BTSTACK)) && p.mode == BC_BOOT_NORMAL, "brownout twice while the Bluetooth stack starts: it is skipped (radio current on a weak battery cannot loop)");
+    /* rc3 (QF-26): late crash loop (each > 20 s after start): the RTC run streak is not cleared by 'stable' */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    for (int k = 0; k < 4; k++) { bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r); bc_boot_plan(&r, BC_RST_PANIC, 0, &p); bc_boot_limit(&r, &p, 0); }
+    CHECK(p.mode == BC_BOOT_RECOVERY && p.limited && p.run_streak == 4 && !p.no_storage, "4 late crashes (NVS ring unusable): RECOVERY from the RTC run streak, storage kept");
+    /* rc3 (QF-26): RTC lost at every crash + crash in the storage stage: only the NVS crash-run counter sees it -> ladder */
+    { uint8_t run = 0; int boots = 0; bool stable = false;
+      for (int k = 0; k < 12 && !stable; k++) {
+          memset(&r, 0xA5, sizeof r);                                /* RTC lost */
+          run = bc_boot_next_run(run, k ? BC_RST_PANIC : BC_RST_POWERON); bc_boot_plan(&r, k ? BC_RST_PANIC : BC_RST_POWERON, 0, &p); bc_boot_limit(&r, &p, run); boots++;
+          if (!p.no_storage) continue;                               /* storage starts -> crash */
+          stable = true;
+      }
+      CHECK(stable && boots == 5 && p.mode == BC_BOOT_RECOVERY && p.no_storage && !p.no_diag, "RTC lost + crash in storage: NVS counter -> RECOVERY without storage at boot %d", boots); }
+    { uint8_t run = 0; int boots = 0; bool stable = false;   /* ... and when the diagnostics stage crashes too */
+      for (int k = 0; k < 14 && !stable; k++) {
+          memset(&r, 0xA5, sizeof r); run = bc_boot_next_run(run, k ? BC_RST_PANIC : BC_RST_POWERON);
+          bc_boot_plan(&r, k ? BC_RST_PANIC : BC_RST_POWERON, 0, &p); bc_boot_limit(&r, &p, run); boots++;
+          if (!p.no_diag) continue;
+          stable = true;
+      }
+      CHECK(stable && boots == 7 && p.no_storage && p.no_diag && !p.minimal, "... a crash in diagnostics too: without diagnostics at boot %d", boots); }
+    CHECK(bc_boot_next_run(3, BC_RST_BROWNOUT) == 3 && bc_boot_next_run(3, BC_RST_SW) == 0 && bc_boot_next_run(3, BC_RST_WDT) == 4 && bc_boot_next_run(3, BC_RST_DEEPSLEEP) == 3, "NVS crash-run counter rules");
+    /* rc3 (QA QF-25): a crash inside the recovery screen -> minimal text (with boot record + report), then halt */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    for (int k = 0; k < 3; k++) { bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_PANIC, 0, &p); }
+    CHECK(p.mode == BC_BOOT_RECOVERY, "RECOVERY");
+    bc_boot_mark(&r, BC_SS_RECUI); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_RECOVERY && p.minimal && !p.halt && !p.no_diag && p.suspect == BC_SS_RECUI && !strcmp(bc_subsys_name(BC_SS_RECUI), "recovery screen"), "recovery screen crashed: minimal text next, report attributed to the recovery screen");
+    bc_boot_mark(&r, BC_SS_RECMIN); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.minimal && p.halt, "minimal text crashed too: halt (no loop)");
+    bc_boot_plan(&r, BC_RST_POWERON, 0, &p); CHECK(p.mode == BC_BOOT_NORMAL && !p.minimal && !p.halt, "power-on: normal again");
+
+    /* rc2 (QA QF-09): the NVS crash streak forces RECOVERY when RTC memory did not keep count */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_NORMAL, "RTC lost: looks like a first crash");
+    bc_boot_force_recovery(&r, &p);
+    CHECK(p.mode == BC_BOOT_RECOVERY && bc_boot_rtc_valid(&r) && r.mode == BC_BOOT_RECOVERY, "force_recovery: plan + RTC say RECOVERY (sealed)");
 
     /* the boot that has just disabled the subsystem is not sent to RECOVERY even when it is the 3rd crash in a row */
     memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);

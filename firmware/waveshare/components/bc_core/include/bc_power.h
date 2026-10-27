@@ -3,7 +3,7 @@
  * levels with hysteresis, the triple-tap detector and the consumption (drain) tracker. Pure functions and small state
  * machines fed with milliseconds and millivolts, so test/host can prove them and the device and the simulator share them.
  *
- * Honesty rules (Rashed, 24 Oct 2026):
+ * Honesty rules (owner, 24 Oct 2026):
  *  - the percentage is an ESTIMATE from the cell voltage under load; every display adds "~" or "est.";
  *  - the board cannot see the charger: "USB power likely" is an inference from the voltage, never "charging";
  *  - low-battery thresholds are alerts only until validated on hardware; any automatic action is opt-in.

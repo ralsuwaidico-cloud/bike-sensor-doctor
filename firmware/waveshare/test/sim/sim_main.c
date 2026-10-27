@@ -17,6 +17,8 @@
 #include <sys/stat.h>
 #include "lvgl.h"
 #include "sim.h"
+#include "app_link13.h"
+#include "bc_cmirror.h"
 #include "src/misc/lv_area_private.h"
 #include "app_psvc.h"   /* lv_area_intersect returns bool; without the prototype the implicit int return misreads it */
 #include "ui.h"
@@ -110,7 +112,7 @@ static lv_obj_t *find_text_rec(lv_obj_t *o, const char *txt)
     if (lv_obj_check_type(o, &lv_label_class) && visible(o)) {
         const char *t = lv_label_get_text(o);
         if (strstr(t, txt)) return o;
-        /* 0.6.1: a row title shortened by LVGL's DOTS mode ("Rashed iPh...") still is that row for a rider who reads it */
+        /* 0.6.1: a row title shortened by LVGL's DOTS mode ("Rider A iP...") still is that row for a rider who reads it */
         size_t n = strlen(t);
         if (n > 3 && !strcmp(t + n - 3, "...") && strlen(txt) >= n - 3 && !strncmp(t, txt, n - 3)) return o;
     }
@@ -445,10 +447,10 @@ static void scenario(void)
     shot("01_welcome");
     tap_text("START");
     shot("02_name_ring");
-    /* type "Rashed": P-T group -> R, A-E -> A, P-T -> S, F-J -> H, A-E -> E, A-E -> D */
-    const char *seq[][2] = { { "P-T", "R" }, { "A-E", "A" }, { "P-T", "S" }, { "F-J", "H" }, { "A-E", "E" }, { "A-E", "D" } };
-    for (int i = 0; i < 6; i++) { tap_text(seq[i][0]); if (i == 0) shot("03_name_letters"); tap_text(seq[i][1]); }
-    CHECK(on_screen("Rashed_"), "name typed with the letter ring");
+    /* type "Rae" (a made-up test rider): P-T group -> R, A-E -> A, A-E -> E */
+    const char *seq[][2] = { { "P-T", "R" }, { "A-E", "A" }, { "A-E", "E" } };
+    for (int i = 0; i < 3; i++) { tap_text(seq[i][0]); if (i == 0) shot("03_name_letters"); tap_text(seq[i][1]); }
+    CHECK(on_screen("Rae_"), "name typed with the letter ring");
     shot("04_name_typed");
     tap_text("NEXT");
     CHECK(on_screen("AGE"), "age wheel");
@@ -490,7 +492,7 @@ static void scenario(void)
     int age = app_profile()->age, wdg = app_profile()->weight_dg;
     boot();
     CHECK(on_screen("START RIDE") && !on_screen("Hello!"), "restart goes straight to Home");
-    CHECK(app_profile()->age == age && app_profile()->weight_dg == wdg && !strcmp(app_profile()->name, "Rashed"), "profile restored after restart");
+    CHECK(app_profile()->age == age && app_profile()->weight_dg == wdg && !strcmp(app_profile()->name, "Rae"), "profile restored after restart");
     CHECK(app_profile()->power.paired, "pairing restored after restart");
 
     printf("== 3 real ride (scripted sensor values standing in for the meter)\n");
@@ -698,7 +700,7 @@ static void scenario(void)
     {
         g_sim.n_ap = 4;
         strcpy(g_sim.ap[0].ssid, "HomeNet"); g_sim.ap[0].rssi = -48; g_sim.ap[0].secured = true; strcpy(g_sim.ap[0].pass, "Secret-123"); g_sim.ap[0].present = true;
-        strcpy(g_sim.ap[1].ssid, "Rashed iPhone"); g_sim.ap[1].rssi = -62; g_sim.ap[1].secured = true; strcpy(g_sim.ap[1].pass, "bike ride!"); g_sim.ap[1].present = true;
+        strcpy(g_sim.ap[1].ssid, "Rider A iPhone"); g_sim.ap[1].rssi = -62; g_sim.ap[1].secured = true; strcpy(g_sim.ap[1].pass, "bike ride!"); g_sim.ap[1].present = true;
         strcpy(g_sim.ap[2].ssid, "CafeFree"); g_sim.ap[2].rssi = -75; g_sim.ap[2].secured = false; g_sim.ap[2].present = true;
         strcpy(g_sim.ap[3].ssid, "AVeryLongNetworkNameForTest123"); g_sim.ap[3].rssi = -84; g_sim.ap[3].secured = true; strcpy(g_sim.ap[3].pass, "12345678"); g_sim.ap[3].present = true;
         ui_settings_show(); run(300); scroll_to("Wi-Fi"); tap_text("Wi-Fi");
@@ -745,7 +747,7 @@ static void scenario(void)
         boot(); run_s(6);
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_CONNECTED && !strcmp(w.ssid, "HomeNet"), "auto-reconnect after restart (state %d)", w.state); }
         printf("   phone hotspot\n");
-        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); tap_text("Rashed iPhone"); kb_mode = 0;
+        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); tap_text("Rider A iPhone"); kb_mode = 0;
         kb_type("bike ride!"); tap_text("JOIN"); run(3500);
         CHECK(on_screen("CONNECTED"), "joined the phone hotspot (password with space and !)");
         tap_text("DONE");
@@ -759,7 +761,7 @@ static void scenario(void)
         ui_wifi_show(); run(300); shot("b2_wifi_disconnected");
         printf("   forget\n");
         tap_text("SAVED"); shot("b3_saved");
-        tap_text("Rashed iPhone"); shot("b4_saved_detail");
+        tap_text("Rider A iPhone"); shot("b4_saved_detail");
         hold_text("HOLD: FORGET", 1800);
         { char sv[5][33]; CHECK(plat_wifi_saved(sv, 5) == 1 && !strcmp(sv[0], "HomeNet"), "hotspot forgotten"); }
         printf("   errors: timeout, not found, no address\n");
@@ -979,7 +981,7 @@ static void scenario(void)
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_OFF && app_profile()->wifi_on && !g_sim.phone.enabled, "radios off, wifi setting kept"); }
         shot("c6_asleep");
         g_sim.woke_from_sleep = true; g_sim.asleep = false; boot(); run(400);
-        CHECK(on_screen("START RIDE") && app_power()->woke_from_sleep && app_power()->screen_on && !strcmp(app_profile()->name, "Rashed"), "wake: home, profile intact");
+        CHECK(on_screen("START RIDE") && app_power()->woke_from_sleep && app_power()->screen_on && !strcmp(app_profile()->name, "Rae"), "wake: home, profile intact");
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state != PLAT_WIFI_OFF, "wifi back on after the wake"); }
         g_sim.woke_from_sleep = false;
         /* automatic deep sleep after idle time on battery */
@@ -1098,21 +1100,21 @@ static void scenario(void)
         CHECK(g_sim.phone.statuses >= 2 && g_sim.phone.wifi_status.radio_on, "status pushed on change: radio on");
         /* the world: an iPhone with a typographic apostrophe in its name and a 5 GHz-only office network */
         g_sim.n_ap = 6;
-        snprintf(g_sim.ap[4].ssid, sizeof g_sim.ap[4].ssid, "Rashed\xE2\x80\x99s iPhone"); g_sim.ap[4].rssi = -58; g_sim.ap[4].secured = true; strcpy(g_sim.ap[4].pass, "bike ride!"); g_sim.ap[4].present = true; g_sim.ap[4].channel = 11;
+        snprintf(g_sim.ap[4].ssid, sizeof g_sim.ap[4].ssid, "Rider A\xE2\x80\x99s iPhone"); g_sim.ap[4].rssi = -58; g_sim.ap[4].secured = true; strcpy(g_sim.ap[4].pass, "bike ride!"); g_sim.ap[4].present = true; g_sim.ap[4].channel = 11;
         strcpy(g_sim.ap[5].ssid, "Office5G"); g_sim.ap[5].rssi = -40; g_sim.ap[5].secured = true; g_sim.ap[5].present = true; g_sim.ap[5].ghz5_only = true;
         g_sim.ap[0].present = g_sim.ap[1].present = g_sim.ap[2].present = g_sim.ap[3].present = true;
         g_sim.phone.n_scan = 0; g_sim.phone.scan_ends = 0;
         n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 3, 0); CHECK(sim_phone_write(0, b, n), "scan request queued"); run(4000);
         CHECK(g_sim.phone.scan_ends == 1 && g_sim.phone.scan_end.err == BC_WIFI_SCAN_OK && g_sim.phone.scan_end.count == 5 && g_sim.phone.n_scan == 5, "scan: 5 results (the 5 GHz-only network cannot be seen), END ok (%d/%u)", g_sim.phone.n_scan, g_sim.phone.scan_end.count);
-        { int ip = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "Rashed\xE2\x80\x99s iPhone")) ip = i;
+        { int ip = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "Rider A\xE2\x80\x99s iPhone")) ip = i;
           CHECK(g_sim.phone.n_scan && !strcmp(g_sim.phone.scan[0].ssid, "HomeNet") && g_sim.phone.scan[0].saved, "strongest first; HomeNet marked saved");
           CHECK(ip >= 0 && g_sim.phone.scan[ip].secured && g_sim.phone.scan[ip].channel == 11 && g_sim.phone.scan[ip].rssi == -58, "the iPhone's UTF-8 name, channel and signal arrive intact (%d)", ip);
           int ic = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "CafeFree")) ic = i; CHECK(ic >= 0 && !g_sim.phone.scan[ic].secured, "open network flagged"); }
         /* on-device list shows the name with a plain apostrophe (font) but joins with the real bytes */
-        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(3000); CHECK(scroll_to("Rashed's iPho"), "device list: typographic apostrophe shown as '"); shot("e0_networks_utf8");
+        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(3000); CHECK(scroll_to("Rider A's iP"), "device list: typographic apostrophe shown as '"); shot("e0_networks_utf8");
         /* provisioning: wrong password, then the right one */
         g_sim.phone.statuses = 0;
-        bc_wifi_set_t st = { .flags = BC_WIFI_SET_CONNECT | BC_WIFI_SET_SAVE }; snprintf(st.ssid, sizeof st.ssid, "Rashed\xE2\x80\x99s iPhone"); snprintf(st.pass, sizeof st.pass, "wrong-pass");
+        bc_wifi_set_t st = { .flags = BC_WIFI_SET_CONNECT | BC_WIFI_SET_SAVE }; snprintf(st.ssid, sizeof st.ssid, "Rider A\xE2\x80\x99s iPhone"); snprintf(st.pass, sizeof st.pass, "wrong-pass");
         n = bc_link_encode_wifi_set(&st, b, sizeof b, 4, 0); CHECK(sim_phone_write(0, b, n), "WIFI_SET accepted"); run_s(5);
         CHECK(g_sim.phone.wifi_status.state == BC_WIFI_ST_DISCONNECTED && g_sim.phone.wifi_status.err == BC_WIFI_E_WRONG_PASSWORD && !strcmp(g_sim.phone.wifi_status.ssid, st.ssid), "status: wrong password (state %u err %u)", g_sim.phone.wifi_status.state, g_sim.phone.wifi_status.err);
         CHECK(!strstr(g_sim.last_log, "wrong-pass"), "the password never reaches the log");
@@ -1124,7 +1126,7 @@ static void scenario(void)
         g_sim.wifi_no_internet = true; snprintf(st.ssid, sizeof st.ssid, "CafeFree"); st.pass[0] = 0; n = bc_link_encode_wifi_set(&st, b, sizeof b, 6, 0); sim_phone_write(0, b, n); run_s(5);
         CHECK(g_sim.phone.wifi_status.state == BC_WIFI_ST_CONNECTED_NO_INTERNET, "open network without internet -> CONNECTED_NO_INTERNET (%u)", g_sim.phone.wifi_status.state); g_sim.wifi_no_internet = false;
         /* forget */
-        bc_wifi_forget_t fg; snprintf(fg.ssid, sizeof fg.ssid, "Rashed\xE2\x80\x99s iPhone"); n = bc_link_encode_wifi_forget(&fg, b, sizeof b, 7, 0); sim_phone_write(0, b, n); run_s(2);
+        bc_wifi_forget_t fg; snprintf(fg.ssid, sizeof fg.ssid, "Rider A\xE2\x80\x99s iPhone"); n = bc_link_encode_wifi_forget(&fg, b, sizeof b, 7, 0); sim_phone_write(0, b, n); run_s(2);
         { char sv[5][33]; int k = plat_wifi_saved(sv, 5); bool gone = true; for (int i = 0; i < k; i++) if (!strcmp(sv[i], fg.ssid)) gone = false; CHECK(gone && g_sim.phone.wifi_status.saved_count == (uint8_t)k, "forgotten; status reports %u saved", g_sim.phone.wifi_status.saved_count); }
         /* a scan during a ride is refused; the ride is untouched by every Wi-Fi message */
         sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; ui_home_show(); run(300); start_ride(); run_s(2);
@@ -1161,21 +1163,21 @@ static void scenario(void)
         n = bc_link_encode_profile_get(b, sizeof b, 14, 0); sim_phone_write(0, b, n); run(600);
         CHECK(g_sim.phone.profiles >= 1 && g_sim.phone.profile.version == 0 && g_sim.phone.profile.source == 0 && g_sim.phone.profile.ftp_w == ftp0 && !strcmp(g_sim.phone.profile.name, app_profile()->name), "PROFILE: device-only (version 0), FTP %u, name %s", ftp0, g_sim.phone.profile.name);
         bc_profile_msg_t pm = { .version = 1, .updated_epoch_s = 1792850100u, .ftp_w = 250, .ftp_how = 1, .weight_kg_x10 = 780, .birth_year = 1990, .max_hr = 186, .rest_hr = 52, .units = 0, .hours_per_week = 6, .level = 2, .goal = 1, .lthr = 170 };
-        snprintf(pm.name, sizeof pm.name, "Rashed"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
+        snprintf(pm.name, sizeof pm.name, "Rider A"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
         n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 15, 0); CHECK(n > 0 && sim_phone_write(0, b, n), "PROFILE_SET v1 accepted"); run(600);
         CHECK(g_sim.phone.profile_acks == 1 && g_sim.phone.profile_ack.status == BC_PF_APPLIED && g_sim.phone.profile_ack.version == 1 && g_sim.phone.profile_ack.board_version == 1, "ACK applied v1");
         { const bc_profile_t *p = app_profile();
-          CHECK(!strcmp(p->name, "Rashed") && p->ftp_w == 250 && p->ftp_how == BC_FTP_ENTERED && p->weight_dg == 780 && p->birth_year == 1990 && p->age == 36 && p->max_hr == 186 && p->rest_hr == 52 && p->hours_wk == 6 && p->exp == BC_EXP_ADVANCED && p->goal == BC_GOAL_ENDURANCE && p->lthr == 170 && p->prof_src == 1 && p->phone_prof_ver == 1,
+          CHECK(!strcmp(p->name, "Rider A") && p->ftp_w == 250 && p->ftp_how == BC_FTP_ENTERED && p->weight_dg == 780 && p->birth_year == 1990 && p->age == 36 && p->max_hr == 186 && p->rest_hr == 52 && p->hours_wk == 6 && p->exp == BC_EXP_ADVANCED && p->goal == BC_GOAL_ENDURANCE && p->lthr == 170 && p->prof_src == 1 && p->phone_prof_ver == 1,
                 "profile applied (name %s, FTP %u %s, age %u from birth year, level %u, goal %u)", p->name, p->ftp_w, bc_ftp_label(p), p->age, p->exp, p->goal);
           CHECK(count_lines("rides/history.txt") == hist_lines && p->power.paired == paired && g_sim.phone.bonded, "history, sensor pairing and phone bond untouched"); }
         n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 16, 0); sim_phone_write(0, b, n); run(600);
         CHECK(g_sim.phone.profile_acks == 2 && g_sim.phone.profile_ack.status == BC_PF_OLDER && g_sim.phone.profile_ack.board_version == 1, "the same version again -> rejected as older/equal");
         pm.version = 2; pm.has = BC_PF_HAS(0x04) | BC_PF_HAS(0x05); pm.ftp_w = 262; pm.ftp_how = 2;
         n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 17, 0); sim_phone_write(0, b, n); run(600);
-        CHECK(g_sim.phone.profile_ack.status == BC_PF_APPLIED && app_profile()->ftp_w == 262 && app_profile()->ftp_how == BC_FTP_AUTO && !strcmp(app_profile()->name, "Rashed"), "partial SET v2: only the FTP changes (now %s)", bc_ftp_label(app_profile()));
+        CHECK(g_sim.phone.profile_ack.status == BC_PF_APPLIED && app_profile()->ftp_w == 262 && app_profile()->ftp_how == BC_FTP_AUTO && !strcmp(app_profile()->name, "Rider A"), "partial SET v2: only the FTP changes (now %s)", bc_ftp_label(app_profile()));
         n = bc_link_encode_profile_get(b, sizeof b, 18, 0); sim_phone_write(0, b, n); run(600);
         CHECK(g_sim.phone.profile.version == 2 && g_sim.phone.profile.source == 1 && g_sim.phone.profile.ftp_w == 262 && g_sim.phone.profile.ftp_how == 2 && g_sim.phone.profile.birth_year == 1990, "PROFILE now reports phone-synced v2");
-        ui_home_show(); run(300); CHECK(on_screen("Rashed") && on_screen("262"), "home shows the synced profile"); shot("e2_home_synced_profile");
+        ui_home_show(); run(300); CHECK(on_screen("Rider A") && on_screen("262"), "home shows the synced profile"); shot("e2_home_synced_profile");
         boot(); run(400); CHECK(app_profile()->phone_prof_ver == 2 && app_profile()->ftp_w == 262 && app_profile()->rest_hr == 52, "synced profile survives a restart (board works alone with it)");
         plat_phone_set_enabled(true); sim_phone_connect(true); run(500);
 
@@ -1650,7 +1652,7 @@ static void scenario(void)
 /* ===================================================================================== 0.7.3: crash evidence + recovery */
 /* the device's start-up sequence (main.c) in the harness: plan, subsystem markers, diagnostics, recovery screen or the app.
    s_crash_at = the subsystem whose start "crashes" the board in this run (the marker stays there, like the RTC memory). */
-static bc_subsys_t s_crash_at; static bc_boot_plan_t s_plan;
+static bc_subsys_t s_crash_at; static bc_boot_plan_t s_plan; static int s_medium;
 static void script_crash(const char *task, uint32_t pc)
 {
     memset(&g_sim.crash, 0, sizeof g_sim.crash);
@@ -1667,20 +1669,40 @@ static bool device_boot(bc_reset_t reset)
     g_sim.boots++; sim_wifi_reboot(); g_sim.restart_requested = false; g_sim.phone_only_started = false;
     for (int k = 0; k < PLAT_SENS_KINDS; k++) g_sim.link[k].disabled = false;
     bc_boot_rtc_t *R = plat_boot_rtc();
+    uint8_t nrun = plat_crash_run_update(reset);                       /* rc3: as main.c, before storage */
     bc_boot_plan(R, reset, plat_boot_skip_load(), &s_plan);
+    bc_boot_limit(R, &s_plan, nrun);
     if (s_plan.newly_skipped) plat_boot_skip_save(s_plan.skip);
+    g_sim.halted = s_plan.halt; if (s_plan.halt) return true;          /* rc3 (QF-25): nothing started, no loop */
+    /* rc2: the same order as main.c - storage stage, then the DIAG stage (boot record, NVS crash streak, the Bluetooth rule,
+       then app_diag_init); a RECOVERY boot skips the stage the last crash happened in (QA QF-03) */
     bc_boot_mark(R, BC_SS_DISPLAY); bc_boot_mark(R, BC_SS_STORAGE);
-    bool sok = g_sim.storage_state == BC_STOR_OK;                       /* 0.7.4: the measured storage category */
-    app_diag_init(&s_plan, sok); app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, sok ? 1 : 3);
-    /* 0.7.4 boot record (the device keeps this ring in NVS, independent of the FAT) */
-    if (!g_sim.ring_init) { bc_bootring_init(&g_sim.ring); g_sim.ring_init = true; }
-    bc_bootrec_t *rec = bc_bootring_push(&g_sim.ring, g_sim.boots);
-    rec->reset = (uint8_t)reset; rec->mode = (uint8_t)s_plan.mode; rec->suspect = s_plan.suspect; rec->skip = s_plan.skip; rec->storage = (uint8_t)g_sim.storage_state;
+    if (s_medium) { g_sim.storage_state = s_medium - 1; s_medium = 0; }
+    if (!s_plan.no_storage && s_crash_at == BC_SS_STORAGE) return false;
+    bool sok = !s_plan.no_storage && g_sim.storage_state == BC_STOR_OK;   /* 0.7.4: the measured storage category */
+    int saved_state = g_sim.storage_state; if (s_plan.no_storage) g_sim.storage_state = BC_STOR_NOT_CHECKED;
     g_sim.bt_unavailable = false;
-    if (s_plan.mode == BC_BOOT_RECOVERY) { ui_recovery_show(); run(400); return true; }
-    /* 0.7.4 (main.c): two boots in a row with a failed (non-crashing) Bluetooth start -> Bluetooth disabled until RETRY */
-    if (!(s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) && bc_bootring_bt_fail_streak(&g_sim.ring) >= 2) {
-        bc_boot_disable(R, BC_SS_BTSTACK); s_plan.skip |= BC_SS_BIT(BC_SS_BTSTACK); plat_boot_skip_save(s_plan.skip);
+    bc_boot_mark(R, BC_SS_DIAG);
+    bc_bootrec_t *rec = NULL; bc_bootrec_t dummy;
+    if (!s_plan.no_diag) {
+        if (s_crash_at == BC_SS_DIAG) { if (s_plan.no_storage) g_sim.storage_state = saved_state; return false; }
+        /* boot record (the device keeps this ring in NVS, independent of the FAT) */
+        if (!g_sim.ring_init) { bc_bootring_init(&g_sim.ring); g_sim.ring_init = true; }
+        rec = bc_bootring_push(&g_sim.ring, g_sim.boots);
+        rec->reset = (uint8_t)reset; rec->mode = (uint8_t)s_plan.mode; rec->suspect = s_plan.suspect; rec->skip = s_plan.skip; rec->storage = (uint8_t)g_sim.storage_state;
+        if (s_plan.mode == BC_BOOT_NORMAL && bc_bootring_crash_streak(&g_sim.ring) >= 4) bc_boot_force_recovery(R, &s_plan);
+        /* two boots in a row with a failed (non-crashing) Bluetooth start -> disabled until RETRY, before app_diag_init (QF-07) */
+        if (s_plan.mode != BC_BOOT_RECOVERY && !(s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) && bc_bootring_bt_fail_streak(&g_sim.ring) >= 2) {
+            bc_boot_disable(R, BC_SS_BTSTACK); s_plan.skip |= BC_SS_BIT(BC_SS_BTSTACK); plat_boot_skip_save(s_plan.skip); rec->skip = s_plan.skip;
+        }
+        app_diag_init(&s_plan, sok); app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, s_plan.no_storage ? 2 : sok ? 1 : 3);
+    } else { memset(&dummy, 0, sizeof dummy); rec = &dummy; app_diag_off(); }
+    /* a boot that did not start storage sees it as unavailable; the medium itself is unchanged (restored next boot) */
+    if (s_plan.no_storage) s_medium = saved_state + 1;
+    if (s_plan.mode == BC_BOOT_RECOVERY) {
+        if (s_plan.minimal) { bc_boot_mark(R, BC_SS_RECMIN); if (s_crash_at == BC_SS_RECMIN) return false; ui_recovery_minimal_show(); }
+        else { bc_boot_mark(R, BC_SS_RECUI); if (s_crash_at == BC_SS_RECUI) return false; ui_recovery_show(); }
+        run(400); return true;
     }
     /* 0.7.4: the Bluetooth stack stage comes before the screens (main.c); a disabled stack = no phone link, no sensors */
     bc_boot_mark(R, BC_SS_BTSTACK); app_diag_stage(BC_SS_BTSTACK, 0);
@@ -1688,6 +1710,7 @@ static bool device_boot(bc_reset_t reset)
     else if (s_crash_at == BC_SS_BTSTACK) return false;
     else if (g_sim.bt_fail_on_init) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "HCI init failed"); app_diag_stage(BC_SS_BTSTACK, 3); rec->bt_result = BC_BT_FAIL_HOST_INIT; rec->bt[BC_BT_STEP_HOST_INIT].rc = -1; }
     else { app_diag_stage(BC_SS_BTSTACK, 1); rec->bt_result = BC_BT_OK; }
+    if (rec != &dummy) bc_bootring_note_bt(&g_sim.ring);
     app_init(); ui_start(); run(200);
     static const bc_subsys_t ORDER[] = { BC_SS_PHONE, BC_SS_WIFI, BC_SS_CENTRAL, BC_SS_POWER, BC_SS_HR, BC_SS_CSC };
     for (size_t i = 0; i < sizeof ORDER / sizeof *ORDER; i++) {
@@ -1722,7 +1745,7 @@ static void phone_req(uint8_t type, uint32_t id, uint32_t off, uint16_t maxl, ui
     uint8_t m[BC_LINK_MAX]; size_t n;
     if (type == BC_MSG_DIAG_LIST_REQ) n = bc_link_encode_diag_list_req(m, sizeof m, 1, 0);
     else if (type == BC_MSG_DIAG_CHUNK_REQ) { bc_diag_chunk_req_t q = { id, off, maxl }; n = bc_link_encode_diag_chunk_req(&q, m, sizeof m, 1, 0); }
-    else { bc_diag_ack_t a = { id, crc }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
+    else { bc_diag_ack_t a = { id, crc, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
     sim_phone_write(0, m, n);
 }
 /* Cyclift's pull: chunk by chunk from `off`, max_len 160 (the board clamps); optional interruption after `cut` chunks */
@@ -1744,7 +1767,7 @@ static void scenario_073(void)
 {
     printf("\n== 21. firmware 0.7.3: crash evidence, recovery mode, staged boot, report transfer\n");
     bc_profile_t *pr = app_profile();
-    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; snprintf(pr->name, sizeof pr->name, "Rashed"); app_profile_save();
+    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; snprintf(pr->name, sizeof pr->name, "Rider A"); app_profile_save();
     g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; g_sim.power_ok = true; g_sim.watts = 142;
     g_sim.fw_id = 0x073; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));           /* power-on: RTC memory blank */
     /* a) clean power-on: BOOT + STAGE events, no report */
@@ -1764,7 +1787,7 @@ static void scenario_073(void)
     { char p[64]; snprintf(p, sizeof p, "diag/r%06lu.txt", (unsigned long)st.crash_report); static char t[BC_DIAG_REPORT_MAX]; long n = plat_file_read(p, t, sizeof t - 1); if (n < 0) n = 0; t[n] = 0;
       CHECK(strstr(t, "[header]") && strstr(t, "[recovery]") && strstr(t, "task nimble_host") && strstr(t, "0x4200F4BC 0x4200E71C") && strstr(t, "marker 6") && strstr(t, "log_before_reset"),
             "crash report: sections, task, backtrace addresses, marker = power meter, log tail");
-      CHECK(!strstr(t, "Rashed") && !strstr(t, "C1:22:33") && !strstr(t, "192.168") && strstr(t, "..:..:..:..:55:66"), "crash report: no name, address cut to 2 bytes, IP masked"); }
+      CHECK(!strstr(t, "Rider A") && !strstr(t, "C1:22:33") && !strstr(t, "192.168") && strstr(t, "..:..:..:..:55:66"), "crash report: no name, address cut to 2 bytes, IP masked"); }
     /* c) SEND LOGS: only the phone link starts; Cyclift connects, lists, pulls (interrupted + resumed) and acknowledges */
     tap_text("SEND LOGS"); run(500);
     CHECK(g_sim.phone_only_started && on_screen("Waiting for Cyclift"), "SEND LOGS: phone link only, 'Waiting for Cyclift'");
@@ -1899,8 +1922,36 @@ static void scenario_074(void)
     CHECK(on_screen("Directory corrupted"), "Device Health storage line names the category");
     /* d) a ride started on damaged storage: no journal is written, deleted or moved (refused), the ride still runs */
     uint32_t refused0 = g_sim.fat_writes_refused;
-    app_ride_start(); run_s(3); app_ride_end(); app_ride_save();
-    CHECK(g_sim.fat_writes_refused > refused0 && plat_file_size("rides/active.jnl") < 0, "ride on damaged storage: journal writes refused, nothing created (%lu refused)", (unsigned long)(g_sim.fat_writes_refused - refused0));
+    uint16_t id0 = app_profile()->next_ride_id;
+    { bc_ride_summary_t h0[30]; int nh0 = app_history(h0, 30, false);
+      app_ride_start(); run_s(3); app_ride_end();
+      CHECK(g_sim.fat_writes_refused > refused0 && plat_file_size("rides/active.jnl") < 0, "ride on damaged storage: journal writes refused, nothing created (%lu refused)", (unsigned long)(g_sim.fat_writes_refused - refused0));
+      /* rc2 (QA QF-01): never silent - a warning before SAVE, a notice after it, the ride kept in RAM for the phone */
+      bc_ride_summary_t fin; app_ride_totals(&fin); ui_results_show(&fin, true); run(300);
+      CHECK(scroll_to("Board storage damaged") && on_screen("Board storage damaged"), "Results: red warning before SAVE ('Board storage damaged ... kept in memory')"); shot("24d_results_storage_warning");
+      scroll_to("SAVE"); tap_text("SAVE"); run(300);
+      CHECK(on_screen("NOT SAVED ON BOARD") && on_screen("dir corrupted") && on_screen("Open Cyclift"), "SAVE on damaged storage: 'NOT SAVED ON BOARD' notice with the storage state");
+      shot("24d_not_saved_on_board");
+      bc_ride_summary_t un[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(un, APP_UNSAVED_MAX);
+      bc_ride_summary_t h1[30]; int nh1 = app_history(h1, 30, false);
+      CHECK(nu == 1 && un[0].id == id0 && nh1 == nh0 + 1 && h1[0].id == id0, "the ride is kept in RAM (#%u) and listed in History (%d -> %d)", un[0].id, nh0, nh1);
+      CHECK(app_profile()->next_ride_id == id0 + 1, "the id is used by the kept ride (next %u)", app_profile()->next_ride_id);
+      tap_text("OK"); run(300);
+      /* fill the RAM queue: the ride that cannot be kept says so, and does NOT use up an id */
+      for (int k = nu; k < APP_UNSAVED_MAX; k++) { app_ride_start(); run_s(2); app_ride_end(); CHECK(app_ride_save_ex() == APP_SAVE_RAM_ONLY, "ride %d kept in RAM", k + 1); }
+      uint16_t idq = app_profile()->next_ride_id;
+      app_ride_start(); run_s(2); app_ride_end(); app_ride_totals(&fin); ui_results_show(&fin, true); run(300); scroll_to("SAVE"); tap_text("SAVE"); run(300);
+      CHECK(on_screen("RIDE NOT SAVED") && app_profile()->next_ride_id == idq, "RAM queue full: 'RIDE NOT SAVED' on screen, ride id not burned (%u)", app_profile()->next_ride_id);
+      shot("24d_ride_not_saved_queue_full");
+      tap_text("OK"); run(300);
+      /* the phone's sync sees the RAM rides */
+      sim_phone_connect(true); run(800);
+      CHECK(app_unsaved_rides(un, APP_UNSAVED_MAX) == APP_UNSAVED_MAX, "%d rides wait in RAM for the phone", APP_UNSAVED_MAX);
+      { uint8_t b[64]; bc_sync_req_t rq = { .after_ride_id = 0, .max_count = 50 }; g_sim.phone.n_rides = 0;
+        size_t n = bc_link_encode_sync_req(&rq, b, sizeof b, 31, 0); sim_phone_write(1, b, n); run(4000);
+        int seen = 0; for (int i = 0; i < g_sim.phone.n_rides; i++) for (int k = 0; k < APP_UNSAVED_MAX; k++) if (g_sim.phone.rides[i].id == un[k].id) seen++;
+        CHECK(seen == APP_UNSAVED_MAX, "Cyclift's ride sync (Link 1.2.3 SYNC_REQ) receives the %d RAM-only rides (%d of %d rides sent)", APP_UNSAVED_MAX, seen, g_sim.phone.n_rides); }
+      sim_phone_disconnect(); run(300); }
     g_sim.storage_state = BC_STOR_OK; pr->power.paired = false; app_profile_save();
     memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); s_crash_at = BC_SS_NONE;
     CHECK(device_boot(BC_RST_POWERON), "storage repaired (simulated): normal start, diagnostics written again"); device_stable();
@@ -1942,11 +1993,17 @@ static void scenario_074rc(void)
     for (int k = 0; k < 12; k++) {
         bool up = device_boot(k % 3 ? BC_RST_SW : BC_RST_POWERON); if (!up) loops++; if (s_plan.mode == BC_BOOT_RECOVERY) recov++;
         device_stable();
-        if (skipped_from < 0 && (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK))) skipped_from = k;
+        if (skipped_from < 0 && (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK))) {
+            skipped_from = k;
+            ui_phone_show(); run(400);   /* rc2 (QA QF-07): RETRY already on the boot that disabled Bluetooth */
+            CHECK(on_screen("RETRY") && !on_screen("WHY?"), "the boot that disables Bluetooth already offers RETRY (not WHY?)"); shot("25a_phone_retry_first_disabled_boot");
+        }
     }
     CHECK(loops == 0 && recov == 0, "12 starts with a failing Bluetooth start: %d crashes, %d RECOVERY", loops, recov);
     CHECK(skipped_from == 2 && g_sim.bt_unavailable && (g_sim.nvs_skip & BC_SS_BIT(BC_SS_BTSTACK)), "after 2 failed starts Bluetooth is disabled (from start %d), saved in NVS", skipped_from + 1);
     { char br[1400]; plat_bootrec_text(br, sizeof br); CHECK(strstr(br, "Bluetooth off (disabled)") != NULL, "boot records (NVS ring) say 'Bluetooth off (disabled)'"); }
+    { char br[1400]; plat_bootrec_text(br, sizeof br);   /* rc2 (QA QF-06): the failing start's figures survive 10 skipped boots */
+      CHECK(strstr(br, "last BT start") && strstr(br, "HCI"), "boot records keep the last real Bluetooth attempt: %.80s", br); }
     ui_phone_show(); run(400); CHECK(on_screen("RETRY") && on_screen("NO BLUETOOTH"), "Phone screen: NO BLUETOOTH + RETRY");
     g_sim.bt_fail_on_init = 0; tap_text("RETRY"); run(300);
     CHECK(device_boot(BC_RST_SW) && !g_sim.bt_unavailable, "RETRY + a fixed condition: Bluetooth starts again"); device_stable();
@@ -1957,6 +2014,310 @@ static void scenario_074rc(void)
     g_sim.bt_fail_on_init = 0; g_sim.storage_state = BC_STOR_OK; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); g_sim.nvs_skip = 0;
     CHECK(device_boot(BC_RST_POWERON), "back to normal"); device_stable();
     pr->power.paired = false; app_profile_save();
+}
+
+/* ===================================================================================== 0.7.4 rc2: QA findings QF-03, QF-09, QF-18 */
+static void scenario_074rc2(void)
+{
+    printf("\n== 26. firmware 0.7.4-rc2: crash in the storage / diagnostics stage, late crash loop, full storage clean-up\n");
+    g_sim.fw_id = 0x0743; g_sim.bt_fail_on_init = 0; g_sim.storage_state = BC_STOR_OK; g_sim.nvs_skip = 0;
+    /* a) QF-03: a crash at every start while storage (or the diagnostics init) starts -> RECOVERY without that stage, stable */
+    for (int which = 0; which < 2; which++) {
+        bc_subsys_t bad = which ? BC_SS_DIAG : BC_SS_STORAGE;
+        memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); bc_bootring_init(&g_sim.ring); s_crash_at = bad;
+        int crashes = 0; bool up = false;
+        for (int k = 0; k < 8 && !up; k++) { up = device_boot(k ? BC_RST_PANIC : BC_RST_POWERON); if (!up) { crashes++; script_crash("main", 0x42012BA0); } }
+        CHECK(up && crashes == 3 && s_plan.mode == BC_BOOT_RECOVERY && (bad == BC_SS_STORAGE ? s_plan.no_storage : !s_plan.no_storage) && s_plan.no_diag,
+              "crash while %s starts: %d crashes, then RECOVERY without it", bc_subsys_name(bad), crashes);
+        run_s(10);
+        CHECK(on_screen("RECOVERY MODE") && !g_sim.restart_requested, "%s crash: STABLE recovery screen (10 s, no restart)", bc_subsys_name(bad));
+        CHECK(on_screen(bad == BC_SS_STORAGE ? "Not saved: not checked" : "Not saved: diag off") && !on_screen("Logs saved"), "status line says the logs are not stored this boot");
+        char nm[40]; snprintf(nm, sizeof nm, "26a_recovery_%s", which ? "diag" : "storage"); shot(nm);
+    }
+    s_crash_at = BC_SS_NONE; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    CHECK(device_boot(BC_RST_POWERON) && s_plan.mode == BC_BOOT_NORMAL && g_sim.storage_state == BC_STOR_OK, "fixed: normal start, storage seen again"); device_stable();
+    /* b) QF-09: a crash 20+ s after every start (the RTC counter is cleared at 'stable' each time) -> the NVS boot records
+          count the crash resets and send the 4th one to RECOVERY */
+    bc_bootring_init(&g_sim.ring); memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    device_boot(BC_RST_POWERON); device_stable();
+    int k; for (k = 0; k < 8 && s_plan.mode != BC_BOOT_RECOVERY; k++) { script_crash("main", 0x42012BA0); device_boot(BC_RST_PANIC); if (s_plan.mode != BC_BOOT_RECOVERY) device_stable(); }
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && k == 4 && on_screen("RECOVERY MODE"), "late crash at every start: RECOVERY after %d crash resets (RTC streak alone: never)", k);
+    shot("26b_recovery_late_crash_loop");
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); CHECK(device_boot(BC_RST_POWERON) && s_plan.mode == BC_BOOT_NORMAL, "power-on: normal again"); device_stable();
+    memset(&g_sim.crash, 0, sizeof g_sim.crash);   /* no core dump left over from b) */
+    /* c) QF-18: storage FULL -> sent reports (and their core copies) are removed at start, storage usable again */
+    app_diag_store_report(BC_DIAG_KIND_MANUAL, "rc2 full test");
+    sim_phone_connect(true); run(800);
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(2000);
+    bc_diag_info_t list[32]; int n0 = g_sim.phone.ndinfo; memcpy(list, g_sim.phone.dinfo, sizeof list);
+    for (int i = 0; i < n0; i++) if (list[i].state == 0) { phone_req(BC_MSG_DIAG_ACK, list[i].id, 0, 0, list[i].crc); run(300); }
+    sim_phone_disconnect(); run(300);
+    app_diag_status_t st; app_diag_status(&st);
+    CHECK(n0 > 0 && st.pending == 0, "%d reports, all acknowledged by the phone", n0);
+    g_sim.storage_state = BC_STOR_FULL; g_sim.full_clears_on_cleanup = true; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    CHECK(device_boot(BC_RST_POWERON) && g_sim.storage_state == BC_STOR_OK, "boot with FULL storage: sent reports removed, storage usable again");
+    app_diag_status(&st); CHECK(st.stored == 0, "no sent report left (%d)", st.stored);
+    device_stable();
+    /* unsent reports are never removed: FULL with only unsent reports stays FULL */
+    app_diag_store_report(BC_DIAG_KIND_MANUAL, "unsent");
+    g_sim.storage_state = BC_STOR_FULL; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    device_boot(BC_RST_POWERON);
+    app_diag_status(&st); CHECK(g_sim.storage_state == BC_STOR_FULL && plat_file_size(APP_DIAG_INDEX_FILE) > 0, "only an unsent report: nothing removed, storage stays FULL");
+    g_sim.full_clears_on_cleanup = false; g_sim.storage_state = BC_STOR_OK; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    CHECK(device_boot(BC_RST_POWERON), "back to normal"); device_stable();
+}
+
+/* ===================================================================================== 0.7.5: Link 1.3 (BLE_CONTRACT.md v1.1) */
+static uint16_t s13_seq;
+static void p13(const uint8_t *m, size_t n) { sim_phone_write(0, m, n); run(500); }
+static void hello13(uint32_t caps) { bc_hello_t h = { 1, 3, caps, "1.0 (sim)" }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_hello(&h, b, sizeof b, ++s13_seq, 0)); }
+static const bc_cseg_t PLAN3[3] = { { 120, BC_WT_WARMUP, BC_TK_POWER, 100, 140, 80, 90 }, { 600, BC_WT_ENDURANCE, BC_TK_POWER, 140, 155, 80, 90 },
+                                    { 180, BC_WT_RECOVERY, BC_TK_POWER, 100, 120, 0, 0 } };
+static void plan13(uint32_t id)
+{
+    bc_coach_plan_msg_t p; memset(&p, 0, sizeof p);
+    p.workout_id = id; p.part = 0; p.parts = 1; p.first_segment = 0; p.nseg = 3; memcpy(p.seg, PLAN3, sizeof PLAN3);
+    p.head = true; snprintf(p.name, sizeof p.name, "Endurance 15"); p.total_segments = 3; p.total_duration_s = 900; p.plan_crc32 = bc_cm_plan_crc(PLAN3, 3); p.t0_elapsed_s = BC_COACH_T0_RIDE_START;
+    uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_plan(&p, b, sizeof b, ++s13_seq, 0));
+}
+static uint16_t cs_seq;
+static void state13(uint32_t id, uint8_t kind, uint16_t lo, uint16_t hi, uint8_t instr, uint8_t hr_src)
+{
+    bc_coach_state_t s; memset(&s, 0, sizeof s);
+    s.workout_id = id; s.seq = ++cs_seq; s.type = BC_WT_ENDURANCE; s.kind = kind; s.lo = lo; s.hi = hi; s.cad_lo = 80; s.cad_hi = 90;
+    s.interval_index = 1; s.interval_count = 3; s.remaining_s = 300; s.interval_dur_s = 600;
+    s.next_type = BC_WT_RECOVERY; s.next_kind = BC_TK_POWER; s.next_lo = 100; s.next_hi = 120; s.next_dur_s = 180;
+    s.instruction = instr; s.session_state = BC_SESS_RUNNING; s.hr_src = hr_src; s.zone = 2; s.has = 0x7FFFFF & ~BC_CS_HAS(0x13);
+    uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_state(&s, b, sizeof b, ++s13_seq, 0));
+}
+static void rq_list13(void) { uint8_t b[BC_LINK_MAX]; g_sim.phone.n_rqinfo = 0; int e0 = g_sim.phone.rq_ends; size_t n = bc_link_encode_rideq_list_req(b, sizeof b, ++s13_seq, 0); sim_phone_write(0, b, n);
+                              for (int k = 0; k < 40 && g_sim.phone.rq_ends == e0; k++) run(250); }
+static const bc_rideq_info_t *rq_find13(uint32_t id) { for (int i = 0; i < g_sim.phone.n_rqinfo; i++) if (g_sim.phone.rqinfo[i].ride_id == id) return &g_sim.phone.rqinfo[i]; return NULL; }
+static void rq_ack13(uint32_t id, uint32_t scrc, uint32_t sumcrc, bool del) { bc_rideq_ack_t a = { id, scrc, sumcrc, del ? 1 : 0 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_rideq_ack(&a, b, sizeof b, ++s13_seq, 0)); }
+static void clean13(uint8_t what) { bc_storage_clean_req_t c = { what }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_storage_clean_req(&c, b, sizeof b, ++s13_seq, 0)); }
+static void ride_page(int page) { for (int i = 0; i < page; i++) { drag(200, 120, 40, 120); run(300); } }
+
+static void scenario_075(void)
+{
+    printf("\n== 27. firmware 0.7.5: Link 1.3 - HELLO gate, Cyclift coach on every ride design, phone drop, offline ride queue, storage clean-up, diag auto-delete\n");
+    bc_profile_t *pr = app_profile();
+    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; app_profile_save();
+    g_sim.storage_state = BC_STOR_OK; g_sim.bt_fail_on_init = 0; s_crash_at = BC_SS_NONE; g_sim.nvs_skip = 0; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    CHECK(device_boot(BC_RST_POWERON), "0.7.5 starts"); device_stable();
+    g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; sensors(true, 145, true, 84, false, 0);
+    sim_phone_connect(true); run(1500);
+    /* a) Cyclift RC1 (no HELLO): exactly Link 1.2.3 */
+    int m0 = g_sim.phone.link13_msgs, u0 = g_sim.phone.unknown_notifies;
+    state13(500, BC_TK_POWER, 140, 155, BC_CI_ON_TARGET, 2); plan13(500);
+    CHECK(app_link13_enabled() == 0 && g_sim.phone.link13_msgs == m0 && g_sim.phone.hello_acks == 0 && g_sim.phone.unknown_notifies == u0, "no APP_HELLO: COACH_* ignored, nothing new sent");
+    CHECK(!g_sim.phone.last_live.has_coach && g_sim.phone.last_live.storage_state == 0 && g_sim.phone.last_live.rides_unsynced == 0, "LIVE without 1.3 tags (old LIVE bytes)");
+    { bc_cm_view_t v; CHECK(!app_link13_coach(&v), "no coach view from un-gated messages"); }
+    /* b) HELLO */
+    int s0 = g_sim.phone.sstats, rp0 = g_sim.phone.rpends;
+    hello13(BC_CAPS_LINK13 | 0x00010000u /* a future bit the board does not know */);
+    CHECK(g_sim.phone.hello_acks == 1 && g_sim.phone.hello_ack.enabled_caps == BC_CAPS_LINK13 && app_link13_enabled() == BC_CAPS_LINK13, "HELLO_ACK enabled = INFO caps AND app caps (0x%lx)", (unsigned long)g_sim.phone.hello_ack.enabled_caps);
+    CHECK(g_sim.phone.sstats == s0 + 1 && g_sim.phone.sstat.state == 0 && !strcmp(g_sim.phone.sstat.code, "ok") && g_sim.phone.sstat.app_slot_kb == 4032 && g_sim.phone.sstat.health == 0,
+          "STORAGE_STATUS pushed after HELLO (state %u %s)", g_sim.phone.sstat.state, g_sim.phone.sstat.code);
+    CHECK(g_sim.phone.rpends == rp0 + 1, "EVENT rides_pending after HELLO (%u unsynced)", g_sim.phone.rpend.unsynced);
+    /* c) coach mirror in every ride design */
+    plan13(501);
+    CHECK(g_sim.phone.plan_acks >= 1 && g_sim.phone.plan_ack.workout_id == 501 && g_sim.phone.plan_ack.status == BC_PLAN_COMPLETE, "COACH_PLAN stored (ACK status %u)", g_sim.phone.plan_ack.status);
+    for (int st = 0; st < ui_ride_design_count(); st++) {
+        ui_test_set_style(st); app_ride_start(); ui_ride_show(); run(400);
+        state13(501, BC_TK_POWER, 140, 155, BC_CI_ON_TARGET, 2); run_s(2);
+        char nm[48];
+        CHECK(on_screen("ON TARGET") && (st == 2 || on_screen("TARGET 140-155")), "design %c: Cyclift instruction + target on the power page", ui_ride_design(st)->letter);
+        snprintf(nm, sizeof nm, "27c_ride_%c_cyclift_coach", ui_ride_design(st)->letter); shot(nm);
+        ride_page(1); state13(501, BC_TK_POWER, 140, 155, BC_CI_ON_TARGET, 2); run(400);
+        CHECK(on_screen("CYCLIFT COACH") && on_screen("ENDURANCE 2/3") && on_screen("POWER 145 W") && on_screen("TARGET 140-155 W") && on_screen("CADENCE 84") && on_screen("TARGET 80-90")
+              && on_screen("COACH: ON TARGET") && on_screen("NEXT: RECOVERY - 3 MIN"), "design %c: coach card (owner's example)", ui_ride_design(st)->letter);
+        snprintf(nm, sizeof nm, "27c_card_%c", ui_ride_design(st)->letter); shot(nm);
+        CHECK(g_sim.phone.last_live.has_coach && g_sim.phone.last_live.coach_mode == BC_CM_FOLLOWING && g_sim.phone.last_live.coach_seq == cs_seq, "LIVE coach_seq %u / mode %u echoed", g_sim.phone.last_live.coach_seq, g_sim.phone.last_live.coach_mode);
+        app_ride_end(); app_ride_discard(); ui_home_show(); run(300);
+    }
+    ui_test_set_style(-1);
+    /* d) phone drop: the stored plan continues on the ride clock; reconnect; COACH_END; last target + watch HR honesty */
+    ui_test_set_style(0); app_ride_start(); ui_ride_show(); run(300); state13(501, BC_TK_POWER, 140, 155, BC_CI_MORE_POWER, 2); ride_page(1); run(400);
+    sim_phone_disconnect(); run_s(3);
+    CHECK(on_screen("CYCLIFT COACH") && on_screen("WARM-UP 1/3") && on_screen("TARGET 100-140 W") && on_screen("PHONE LOST") && on_screen("NEXT: ENDURANCE - 10 MIN"),
+          "phone lost: the board follows the stored plan (warm-up by its own ride clock)");
+    shot("27d_phone_lost_plan");
+    run_s(120);
+    CHECK(on_screen("ENDURANCE 2/3") && on_screen("TARGET 140-155 W"), "two minutes later: the next segment, from the plan");
+    sim_phone_connect(true); run(1500);
+    CHECK(g_sim.phone.last_live.has_coach && g_sim.phone.last_live.coach_mode == BC_CM_PLAN_OFFLINE && app_link13_enabled() == 0, "reconnected, before HELLO: LIVE says mode 2 (board follows the plan), 1.3 not enabled yet");
+    hello13(BC_CAPS_LINK13); state13(501, BC_TK_POWER, 150, 160, BC_CI_HOLD_STEADY, 2); run(1200);
+    CHECK(on_screen("COACH: HOLD STEADY") && on_screen("TARGET 150-160 W") && !on_screen("PHONE LOST") && g_sim.phone.last_live.coach_mode == BC_CM_FOLLOWING, "after HELLO + COACH_STATE: following Cyclift again");
+    { uint16_t keep = cs_seq; cs_seq -= 2; state13(501, BC_TK_POWER, 90, 95, BC_CI_EASY, 2); cs_seq = keep;
+      CHECK(on_screen("TARGET 150-160 W") && !on_screen("TARGET 90-95"), "an older COACH_STATE (seq) is ignored"); }
+    { bc_coach_end_t e = { 501, 0 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_end(&e, b, sizeof b, ++s13_seq, 0)); run(600); }
+    CHECK(!on_screen("CYCLIFT COACH") && on_screen("COACH"), "COACH_END: the board's own coach page again");
+    state13(502, BC_TK_HR, 120, 135, BC_CI_ON_TARGET, BC_SRC_APPLE_WATCH); run(600);
+    sim_phone_disconnect(); run_s(2);
+    CHECK(on_screen("NO HR - RIDE BY FEEL") && on_screen("NO PHONE - LAST TARGET") && on_screen("TARGET 120-135 BPM"), "no plan + phone lost + watch HR: last targets, 'NO HR - RIDE BY FEEL'");
+    shot("27d_last_target_no_hr");
+    sim_phone_connect(true); run(1200); hello13(BC_CAPS_LINK13);
+    { bc_coach_end_t e = { 502, 1 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_end(&e, b, sizeof b, ++s13_seq, 0)); }
+    /* a real ride is saved -> rides_pending */
+    int rp1 = g_sim.phone.rpends; run_s(20); app_ride_end();
+    bc_ride_summary_t hist[4]; app_ride_totals(&hist[0]); uint32_t rid = hist[0].id;
+    app_save_result_t sr = app_ride_save_ex(); ui_home_show(); run(800);
+    { int nh = app_history(hist, 4, false); for (int i = 1; i < nh && hist[0].id != rid; i++) if (hist[i].id == rid) hist[0] = hist[i]; }
+    CHECK(sr == APP_SAVE_OK && g_sim.phone.rpends == rp1 + 1 && g_sim.phone.rpend.newest_id == rid && g_sim.phone.rpend.unsynced >= 1, "ride #%lu saved: EVENT rides_pending (%u unsynced)", (unsigned long)rid, g_sim.phone.rpend.unsynced);
+    /* e) offline queue: list, pull, verify, ack */
+    rq_list13();
+    const bc_rideq_info_t *qi = rq_find13(rid);
+    char sp[32]; snprintf(sp, sizeof sp, "rides/r%04u.txt", (unsigned)rid); long fsz = plat_file_size(sp);
+    CHECK(qi && qi->state == BC_RQ_UNSYNCED && fsz > 0 && qi->samples_size == (uint32_t)fsz && qi->summary_crc == bc_ride_summary_crc(&hist[0]) && g_sim.phone.rq_ends >= 1 && g_sim.phone.rq_end.unsynced >= 1,
+          "RIDEQ_INFO: ride #%lu unsynced, %ld B samples, summary CRC of its SYNC_RIDE", (unsigned long)rid, fsz);
+    for (int i = 0; i < g_sim.phone.n_rqinfo; i++) CHECK(!(g_sim.phone.rqinfo[i].flags & 1), "no demo ride in the queue");
+    bc_rideq_info_t q = *qi;
+    { /* pull while a ride records: BUSY */
+      app_ride_start(); run(300); int e0 = g_sim.phone.rq_errs;
+      bc_diag_chunk_req_t cq = { rid, 0, 155 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_rideq_chunk_req(&cq, b, sizeof b, ++s13_seq, 0));
+      CHECK(g_sim.phone.rq_errs == e0 + 1 && g_sim.phone.rq_err.code == BC_DIAG_ERR_BUSY, "chunk request while a ride records: BUSY (4)");
+      rq_ack13(rid, q.samples_crc, q.summary_crc, true);
+      CHECK(plat_file_size(sp) == fsz, "an ACK while recording never deletes samples");
+      app_ride_end(); app_ride_discard(); ui_home_show(); run(300); }
+    g_sim.phone.rqbuf_len = 0; uint32_t off = 0; int stall = 0;
+    while (off < q.samples_size && stall < 10) {
+        int c0 = g_sim.phone.rq_chunks; bc_diag_chunk_req_t cq = { rid, off, 155 }; uint8_t b[BC_LINK_MAX]; size_t n = bc_link_encode_rideq_chunk_req(&cq, b, sizeof b, ++s13_seq, 0);
+        sim_phone_write(0, b, n); for (int w = 0; w < 20 && g_sim.phone.rq_chunks == c0; w++) run(50);
+        if (g_sim.phone.rq_chunks == c0 || g_sim.phone.rq_chunk.offset != off) { stall++; continue; }
+        off += g_sim.phone.rq_chunk.len; if (g_sim.phone.rq_chunk.last) break;
+    }
+    CHECK(off == q.samples_size && bc_crc32(0, g_sim.phone.rqbuf, g_sim.phone.rqbuf_len) == q.samples_crc, "samples pulled in chunks (%lu B), CRC matches RIDEQ_INFO", (unsigned long)off);
+    CHECK(!memcmp(g_sim.phone.rqbuf, "J1 ", 3), "samples file starts with the J1 header (contract 6.1)");
+    { int e0 = g_sim.phone.rq_errs; rq_ack13(rid, q.samples_crc ^ 1, q.summary_crc, true);
+      CHECK(g_sim.phone.rq_errs == e0 + 1 && g_sim.phone.rq_err.code == BC_RQ_ERR_CRC && plat_file_size(sp) == fsz, "ACK with a wrong CRC: RIDEQ_ERR 6, nothing deleted"); }
+    int ni = g_sim.phone.n_rqinfo; rq_ack13(rid, q.samples_crc, q.summary_crc, true);
+    CHECK(g_sim.phone.n_rqinfo == ni + 1 && g_sim.phone.rqinfo[ni].ride_id == rid && g_sim.phone.rqinfo[ni].state == BC_RQ_SAMPLES_DELETED && plat_file_size(sp) < 0,
+          "verified ACK with delete: RIDEQ_INFO state 4, samples deleted");
+    rq_list13(); CHECK(rq_find13(rid) && rq_find13(rid)->state == BC_RQ_SAMPLES_DELETED, "the ride stays listed as state 4 (summary kept)");
+    /* RAM-only ride (QF-01) on a damaged board */
+    g_sim.storage_state = BC_STOR_DIR_CORRUPTED; run(1200);
+    CHECK(g_sim.phone.last_live.storage_state == BC_STOR_DIR_CORRUPTED, "LIVE tag 13: storage state 3");
+    app_ride_start(); run_s(15); app_ride_end(); CHECK(app_ride_save_ex() == APP_SAVE_RAM_ONLY, "a ride on the damaged board is kept in RAM"); ui_home_show(); run(600);
+    bc_ride_summary_t un[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(un, APP_UNSAVED_MAX); uint32_t ram_id = un[nu - 1].id;
+    rq_list13(); const bc_rideq_info_t *ri = rq_find13(ram_id);
+    CHECK(ri && ri->state == BC_RQ_UNSYNCED && (ri->flags & BC_RQF_RAM_ONLY) && ri->samples_size == 0, "RAM-only ride listed with flag bit4, no samples");
+    rq_ack13(ram_id, 0, ri ? ri->summary_crc : 0, true);
+    CHECK(g_sim.phone.n_rqinfo > 0 && g_sim.phone.rqinfo[g_sim.phone.n_rqinfo - 1].ride_id == ram_id && g_sim.phone.rqinfo[g_sim.phone.n_rqinfo - 1].state == BC_RQ_VERIFIED,
+          "RAM-only ride verified by the phone: RIDEQ_INFO state 3");
+    rq_list13(); CHECK(!rq_find13(ram_id) && app_unsaved_count() == nu - 1, "rc3 (QF-22): its memory slot is freed (%d RAM rides left)", app_unsaved_count());
+    /* f) storage clean-up rules */
+    int sc0 = g_sim.phone.sstats; clean13(BC_CLEAN_REPORTS | BC_CLEAN_SAMPLES | BC_CLEAN_CACHES);
+    CHECK(g_sim.phone.clean.status == BC_CLEAN_REFUSED && g_sim.phone.sstats == sc0 + 1 && g_sim.phone.sstat.state == BC_STOR_DIR_CORRUPTED && !strcmp(g_sim.phone.sstat.code, "dir_corrupted") && g_sim.phone.sstat.health == 2,
+          "directory corrupted: CLEAN refused (2), STORAGE_STATUS follows (dir_corrupted, failed)");
+    g_sim.storage_state = BC_STOR_FULL; g_sim.full_clears_on_cleanup = true;
+    app_diag_store_report(BC_DIAG_KIND_MANUAL, "link13 clean test");
+    { g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+      for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].state == 0) { phone_req(BC_MSG_DIAG_ACK, g_sim.phone.dinfo[i].id, 0, 0, g_sim.phone.dinfo[i].crc); run(300); } }
+    sc0 = g_sim.phone.sstats; clean13(BC_CLEAN_REPORTS);
+    CHECK(g_sim.phone.clean.status == BC_CLEAN_DONE && g_sim.phone.clean.items >= 1 && g_sim.phone.sstats == sc0 + 1 && g_sim.storage_state == BC_STOR_OK,
+          "storage full: CLEAN allowed, %u sent report(s) removed, storage OK again", g_sim.phone.clean.items);
+    g_sim.full_clears_on_cleanup = false;
+    app_ride_start(); run(300); clean13(BC_CLEAN_SAMPLES); CHECK(g_sim.phone.clean.status == BC_CLEAN_BUSY, "CLEAN while recording: busy (3)");
+    app_ride_end(); app_ride_discard(); ui_home_show(); run(300);
+    /* g) DIAG_AUTO: ACK with delete */
+    uint32_t did = app_diag_store_report(BC_DIAG_KIND_MANUAL, "auto delete");
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+    bc_diag_info_t di; memset(&di, 0, sizeof di); for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].id == did) di = g_sim.phone.dinfo[i];
+    { bc_diag_ack_t a = { did, di.crc, 1 }; uint8_t b[BC_LINK_MAX]; int n0 = g_sim.phone.ndinfo; p13(b, bc_link_encode_diag_ack(&a, b, sizeof b, ++s13_seq, 0)); run(600);
+      CHECK(di.id == did && g_sim.phone.ndinfo == n0 + 1 && g_sim.phone.dinfo[n0].state == 1, "DIAG_ACK delete: DIAG_INFO state 1 first"); }
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+    { bool gone = true; for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].id == did) gone = false; CHECK(gone, "then the report is gone from the board"); }
+    sim_phone_disconnect(); run(300);
+    pr->power.paired = false; app_profile_save(); sensors(false, 0, false, 0, false, 0);
+}
+
+/* ===================================================================================== 0.7.4-rc3: QA findings QF-21..QF-29 */
+static void scenario_074rc3(void)
+{
+    printf("\n== 28. firmware 0.7.4-rc3: honest ride messages without Bluetooth, RAM slots freed, confirmations, ride ids, recovery-screen crash, brownouts, FAT check, short interrupted rides\n");
+    bc_profile_t *pr = app_profile();
+    g_sim.storage_state = BC_STOR_OK; g_sim.bt_fail_on_init = 0; s_crash_at = BC_SS_NONE; g_sim.nvs_skip = 0; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); g_sim.fat_inconsistent = false;
+    pr->phone_on = true; pr->onboarded = true; app_profile_save();
+    CHECK(device_boot(BC_RST_POWERON), "starts"); device_stable();
+    sensors(true, 160, true, 85, false, 0);
+    /* a) QF-21: damaged storage + Bluetooth unavailable: the screens never say "Open Cyclift" */
+    g_sim.storage_state = BC_STOR_DIR_CORRUPTED; g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "HCI init failed");
+    app_ride_start(); run_s(12); app_ride_end();
+    { bc_ride_summary_t fin; app_ride_totals(&fin); ui_results_show(&fin, true); run(300);
+      CHECK(scroll_to("Bluetooth is off") && !on_screen("Open Cyclift"), "results: 'Bluetooth is off: it cannot reach Cyclift' instead of 'Open Cyclift'"); shot("28a_results_no_bt");
+      scroll_to("SAVE"); tap_text("SAVE"); run(300);
+      CHECK(on_screen("NOT SAVED ON BOARD") && on_screen("Bluetooth is off") && !on_screen("Open Cyclift"), "notice: kept until power-off or sleep, Bluetooth off"); shot("28a_notice_no_bt");
+      tap_text("OK"); run(300); }
+    /* b) QF-23: rides only in memory -> RESTART needs a second, explicit confirmation */
+    CHECK(app_unsaved_count() == 1, "one ride only in memory");
+    ui_home_show(); run(300); ui_qs_open(); run(500); scroll_to("HOLD: RESTART"); hold_text("HOLD: RESTART", 1700); run(300);
+    CHECK(!g_sim.restart_requested && on_screen("RIDES IN MEMORY") && on_screen("LOSE + RESTART") && on_screen("cannot"), "RESTART with a RAM-only ride: confirmation page, no restart yet");
+    shot("28b_confirm_restart");
+    scroll_to("BACK"); tap_text("BACK"); run(300); CHECK(!g_sim.restart_requested, "BACK: no restart");
+    scroll_to("HOLD: RESTART"); hold_text("HOLD: RESTART", 1700); run(300); scroll_to("LOSE + RESTART"); hold_text("LOSE + RESTART", 3300); run(300);
+    CHECK(g_sim.restart_requested, "held 3 s on the confirmation: restart");
+    g_sim.restart_requested = false; ui_qs_close(); run(300);
+    { int d0 = g_sim.deep_sleeps; uint16_t as = pr->auto_sleep_min; pr->auto_sleep_min = 1; bool ob = pr->onboarded; pr->onboarded = true; sim_phone_disconnect();
+      g_sim.usb = false; run_s(80);
+      CHECK(g_sim.deep_sleeps == d0 && !strcmp(app_power()->sleep_block, "rides only in memory"), "auto deep sleep is blocked while rides exist only in memory (%s)", app_power()->sleep_block);
+      pr->auto_sleep_min = as; pr->onboarded = ob; }
+    /* c) QF-22: Link 1.2 ride sync: a RAM ride the phone already has frees its slot */
+    g_sim.bt_unavailable = false; sim_phone_connect(true); run(1200);
+    { uint8_t b[64]; bc_sync_req_t rq = { .after_ride_id = 0, .max_count = 50 }; g_sim.phone.n_rides = 0;
+      sim_phone_write(1, b, bc_link_encode_sync_req(&rq, b, sizeof b, 41, 0)); run(4000);
+      uint16_t top = 0; for (int i = 0; i < g_sim.phone.n_rides; i++) if (g_sim.phone.rides[i].id > top) top = g_sim.phone.rides[i].id;
+      CHECK(app_unsaved_count() == 1, "sent but not yet confirmed: still in memory");
+      rq.after_ride_id = top; sim_phone_write(1, b, bc_link_encode_sync_req(&rq, b, sizeof b, 42, 0)); run(2000);
+      CHECK(app_unsaved_count() == 0, "next SYNC_REQ after the newest ride the phone holds: memory slot freed"); }
+    sim_phone_disconnect(); run(300);
+    /* d) QF-29: an interrupted ride of 5 s is kept (RECOVERED), never just a log line */
+    g_sim.storage_state = BC_STOR_OK;
+    { uint16_t id = pr->next_ride_id; app_ride_start(); run_s(5); app_journal_flush(); boot();
+      bool shown = on_screen("RECOVERED");
+      bc_ride_summary_t h[3]; int nh = app_history(h, 3, false);
+      CHECK(shown && nh > 0 && h[0].id == id && h[0].recovered && h[0].duration_s <= 6, "a 5-second interrupted ride is kept and shown as RECOVERED (#%u want %u, %lu s, shown %d rec %d)", h[0].id, id, (unsigned long)h[0].duration_s, shown, h[0].recovered);
+      shot("28d_short_ride_recovered"); }
+    /* e) QF-24: ride counter lost (settings memory unusable -> defaults): ids continue above the history; an existing
+          samples file is never overwritten */
+    { bc_ride_summary_t h[1]; app_history(h, 1, false); uint16_t top = h[0].id;
+      char sp[32]; snprintf(sp, sizeof sp, "rides/r%04u.txt", (unsigned)(top + 1)); plat_file_write(sp, "J1 old\n", 7);
+      pr->next_ride_id = 1; app_profile_save(); boot(); run(300);
+      CHECK(app_profile()->next_ride_id == top + 1, "counter reset to 1 -> continues at %u (newest ride #%u)", app_profile()->next_ride_id, top);
+      app_ride_start(); run_s(3); app_ride_end(); app_ride_save_ex(); ui_home_show(); run(300);
+      char old[80]; long osz = -1; for (int b = 0; b < 400 && osz < 0; b++) { snprintf(old, sizeof old, "rides/r%04u-old%05lu.txt", (unsigned)(top + 1), (unsigned long)b); osz = plat_file_size(old); }
+      CHECK(osz == 7 && plat_file_size(sp) > 7, "the older r%04u.txt was moved aside (%s), the new ride's samples are in place", (unsigned)(top + 1), old); }
+    /* f) QF-26: brownouts are a power warning, not RECOVERY */
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON); device_stable();
+    for (int k = 0; k < 4; k++) device_boot(BC_RST_BROWNOUT);
+    CHECK(s_plan.mode == BC_BOOT_NORMAL && s_plan.brown_streak == 4 && !on_screen("RECOVERY MODE"), "4 brownouts in a row: NORMAL start (brown streak %u)", s_plan.brown_streak);
+    device_boot(BC_RST_POWERON); device_stable();
+    /* g) QF-25: a crash inside the recovery screen -> minimal text (with the crash report), then halt */
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON); device_stable();
+    for (int k = 0; k < 3; k++) { script_crash("main", 0x42012BA0); device_boot(BC_RST_PANIC); }
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE"), "RECOVERY");
+    script_crash("main", 0x42013000); bool up = device_boot(BC_RST_PANIC);   /* the recovery screen (marker RECUI) crashed */
+    { app_diag_status_t st; app_diag_status(&st);
+      CHECK(up && s_plan.minimal && on_screen("RECOVERY (MINIMAL)") && !s_plan.no_diag && st.crash_report, "recovery screen crashed: minimal text; boot record + crash report still written (report %lu)", (unsigned long)st.crash_report); }
+    shot("28g_recovery_minimal");
+    script_crash("main", 0x42013100); device_boot(BC_RST_PANIC);              /* the minimal text (marker RECMIN) crashed too */
+    CHECK(g_sim.halted, "the minimal text crashed too: halt (no loop)");
+    g_sim.halted = false; memset(&g_sim.crash, 0, sizeof g_sim.crash);
+    device_boot(BC_RST_POWERON); device_stable();
+    /* h) QF-28: storage FULL whose FAT is not consistent: nothing deleted at start, phone clean-up refused */
+    app_diag_store_report(BC_DIAG_KIND_MANUAL, "fat check");
+    sim_phone_connect(true); run(800); hello13(BC_CAPS_LINK13);
+    { g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+      for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].state == 0) { phone_req(BC_MSG_DIAG_ACK, g_sim.phone.dinfo[i].id, 0, 0, g_sim.phone.dinfo[i].crc); run(300); } }
+    app_diag_status_t s0; app_diag_status(&s0);
+    g_sim.storage_state = BC_STOR_FULL; g_sim.full_clears_on_cleanup = true; g_sim.fat_inconsistent = true;
+    clean13(BC_CLEAN_REPORTS);
+    CHECK(g_sim.phone.clean.status == BC_CLEAN_REFUSED && g_sim.storage_state == BC_STOR_FULL, "phone clean-up on a FULL storage with an inconsistent FAT: refused (2)");
+    sim_phone_disconnect(); run(300);
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON);
+    CHECK(g_sim.storage_state == BC_STOR_FULL && plat_file_size(APP_DIAG_INDEX_FILE) > 0, "start with FULL + inconsistent FAT: nothing removed, stays FULL");
+    g_sim.fat_inconsistent = false; g_sim.full_clears_on_cleanup = false; g_sim.storage_state = BC_STOR_OK;
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON); device_stable();
+    sensors(false, 0, false, 0, false, 0);
 }
 
 /* ===================================================================================== 0.7.3 final: safe report + transfer contract */
@@ -2110,6 +2471,9 @@ int main(int argc, char **argv)
     scenario_073_transfer();
     scenario_074();
     scenario_074rc();
+    scenario_074rc2();
+    scenario_075();
+    scenario_074rc3();
     scenario_stress(getenv("SIM_STRESS") ? atoi(getenv("SIM_STRESS")) : 1000);
     lv_mem_monitor_t m; lv_mem_monitor(&m);
     printf("\nLVGL memory: %u%% used, max used %u bytes of %u, fragmentation %u%%\n", m.used_pct, (unsigned)m.max_used, (unsigned)m.total_size, m.frag_pct);

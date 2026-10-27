@@ -80,7 +80,7 @@ static void key_cb(lv_event_t *e)
     else if (k == '_') { if (n && n < 16 && s_name[n - 1] != ' ') { s_name[n] = ' '; s_name[n + 1] = 0; } }
     else if (n < 16) {
         char c = k;
-        if (n > 0 && s_name[n - 1] != ' ') c = (char)(c - 'A' + 'a');   /* "Rashed": capital at the start and after a space */
+        if (n > 0 && s_name[n - 1] != ' ') c = (char)(c - 'A' + 'a');   /* "Rider A": capital at the start and after a space */
         s_name[n] = c; s_name[n + 1] = 0;
     }
     s_open = -1; name_draw();

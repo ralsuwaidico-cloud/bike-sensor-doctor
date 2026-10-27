@@ -4,7 +4,8 @@
 FW ?= ../..
 CORE = $(FW)/components/bc_core
 SRC = stress.c fake/fake_nimble.c $(FW)/main/ble_central.c $(FW)/main/ble_link.c \
-      $(CORE)/bc_xds.c $(CORE)/bc_hr.c $(CORE)/bc_csc.c $(CORE)/bc_cp.c $(CORE)/bc_gatt.c $(CORE)/bc_pipe.c $(CORE)/bc_link.c $(CORE)/bc_ride.c
+      $(CORE)/bc_xds.c $(CORE)/bc_hr.c $(CORE)/bc_csc.c $(CORE)/bc_cp.c $(CORE)/bc_gatt.c $(CORE)/bc_pipe.c $(CORE)/bc_link.c $(CORE)/bc_ride.c \
+      $(CORE)/bc_link13.c $(CORE)/bc_cmirror.c $(CORE)/bc_diag.c $(CORE)/bc_boot.c
 INC = -Ifake -I$(FW)/main -I$(FW)/main/app -I$(CORE)/include
 CFLAGS = -D_GNU_SOURCE -std=gnu11 -g -O1 -Wall -Wno-unused-function -Wno-unused-parameter -Wno-missing-field-initializers -pthread
 CYCLES ?= 1000
