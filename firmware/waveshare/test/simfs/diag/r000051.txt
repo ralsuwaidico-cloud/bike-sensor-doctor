@@ -1,0 +1,125 @@
+[header]
+format bikecomputer-diag 1
+report 51
+kind 3 manual (send logs)
+summary manual report
+firmware 0.7.3-sim
+build Oct 26 2026 sim
+app_elf_sha256 4307000043070000430700004307000043070000430700004307000043070000
+board ..:F7:01
+created_epoch 1792902719
+uptime_s 11681
+
+[reset]
+reason power-on / RESET button (power-on / RESET button)
+crash_streak 0
+boot_count 125
+crashes_total 48
+boot_mode normal
+marker 0
+skip 0x000
+staged_fails 0
+
+[panic]
+core_dump none
+
+[backtrace]
+none
+
+[tasks]
+taskLVGL stack_free 6100
+nimble_host stack_free 3300
+ble_mgr stack_free 2100
+esp_timer stack_free 2900
+main stack_free 5200
+
+[heap]
+free 150000
+min_free_ever 120000
+largest_block 90000
+psram_free 1900000
+
+[events]
+#1867 b125 +11661.5s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1868 b125 +11661.7s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1869 b125 +11661.9s REPORT 50 kind 3 stored
+#1870 b125 +11662.7s WIFI off err 0 rssi -48
+#1871 b125 +11663.2s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1872 b125 +11663.7s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1873 b125 +11664.0s WIFI scanning err 0 rssi -48
+#1874 b125 +11664.5s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1875 b125 +11665.0s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1876 b125 +11665.1s REPORT 0 kind 3 NOT stored (store full of unsent reports)
+#1877 b125 +11665.2s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1878 b125 +11665.5s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1879 b125 +11666.2s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1880 b125 +11666.5s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1881 b125 +11666.7s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1882 b125 +11667.2s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1883 b125 +11667.2s WIFI off err 0 rssi -48
+#1884 b125 +11668.7s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1885 b125 +11669.0s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1886 b125 +11669.0s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1887 b125 +11669.5s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1888 b125 +11669.7s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1889 b125 +11670.0s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1890 b125 +11670.0s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1891 b125 +11670.2s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1892 b125 +11671.2s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1893 b125 +11671.5s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1894 b125 +11672.5s SENSOR power -> SEARCHING pkts 0 rej 0 valid age none
+#1895 b125 +11672.7s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1896 b125 +11673.0s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1897 b125 +11673.0s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1898 b125 +11673.2s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1899 b125 +11673.7s REPORT 43 kind 3 sent (crc ok)
+#1900 b125 +11674.0s SENSOR power -> RECEIVING pkts 1 rej 1 valid age none
+#1901 b125 +11674.0s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1902 b125 +11674.2s REPORT 39 kind 1 sent (crc ok)
+#1903 b125 +11674.2s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1904 b125 +11674.2s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1905 b125 +11674.7s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1906 b125 +11675.7s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1907 b125 +11676.2s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1908 b125 +11676.5s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1909 b125 +11676.7s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1910 b125 +11676.7s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1911 b125 +11677.2s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1912 b125 +11677.2s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1913 b125 +11677.5s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1914 b125 +11678.2s SENSOR power -> VALID pkts 1 rej 0 valid age 250ms
+#1915 b125 +11678.2s READING 142 W 82 rpm -- (power age 250ms, hr age 4294967295ms, hr src 0)
+#1916 b125 +11679.2s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1917 b125 +11679.5s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1918 b125 +11679.5s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1919 b125 +11679.7s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1920 b125 +11680.0s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1921 b125 +11680.0s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+#1922 b125 +11680.7s SENSOR power -> CONNECTING pkts 0 rej 0 valid age none
+#1923 b125 +11681.2s SENSOR power -> SUBSCRIBED pkts 0 rej 0 valid age none
+#1924 b125 +11681.2s PHONE advertising (last disconnect 0x13, connects 0, bonds 1)
+#1925 b125 +11681.5s SENSOR power -> STALE pkts 400 rej 0 valid age 9300ms
+#1926 b125 +11681.5s PHONE ready (last disconnect 0x13, connects 0, bonds 1)
+
+[sensors]
+power stage STALE pkts 400 rej 0 resub 0 reconn 0 valid_age 9300ms
+hr not paired
+csc not paired
+
+[phone]
+enabled 1
+state ready
+bonds 1
+last_disconnect 1 (0x13)
+connects 0
+tx 0 rx 0
+live_sent 392
+
+[wifi]
+on 0
+state off
+error 0
+rssi -48
+
+[recovery]
+stress

@@ -2297,6 +2297,18 @@ static void scenario_074rc4(void)
     CHECK(on_screen("TARGET 210-230") && on_screen("ON TARGET"), "keepalive (workout_id + seq only): targets and instruction kept");
     { bc_coach_state_t k; memset(&k, 0, sizeof k); k.workout_id = 601; k.seq = ++cs_seq; k.instruction = BC_CI_MORE_POWER; k.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(0x12); state13x(&k); run(500); }
     CHECK(on_screen("TARGET 210-230") && on_screen("MORE POWER"), "partial COACH_STATE (instruction only): merged, targets kept");
+    for (int st = 0; st < ui_ride_design_count(); st++) {   /* v1.4 (Q-iOS-15): next_type 0xFF hides NEXT in every design's card */
+        app_ride_end(); app_ride_discard(); ui_home_show(); run(300);
+        ui_test_set_style(st); app_ride_start(); ui_ride_show(); run(300); ride_page(1);
+        state13(601, BC_TK_POWER, 210, 230, BC_CI_ON_TARGET, 2); run(500);
+        bool had = on_screen("NEXT: RECOVERY - 3 MIN");
+        bc_coach_state_t nn; memset(&nn, 0, sizeof nn); nn.workout_id = 601; nn.seq = ++cs_seq; nn.next_type = BC_COACH_NO_NEXT;
+        nn.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(0x0D) | BC_CS_HAS(0x0E) | BC_CS_HAS(0x0F) | BC_CS_HAS(0x10) | BC_CS_HAS(0x11); state13x(&nn); run(500);
+        char nm[40]; snprintf(nm, sizeof nm, "29b_card_%c_no_next", ui_ride_design(st)->letter); shot(nm);
+        CHECK(had && !on_screen("NEXT:") && on_screen("TARGET 210-230 W"), "design %c: next_type 0xFF -> no NEXT line (was shown before), targets kept", ui_ride_design(st)->letter);
+    }
+    app_ride_end(); app_ride_discard(); ui_home_show(); run(300); ui_test_set_style(0); app_ride_start(); ui_ride_show(); run(300);
+    state13(601, BC_TK_POWER, 210, 230, BC_CI_MORE_POWER, 2); run(500);
     for (int k = 0; k < 4; k++) { run_s(5); bc_coach_state_t ka; memset(&ka, 0, sizeof ka); ka.workout_id = 601; ka.seq = ++cs_seq; ka.has = BC_CS_HAS(1) | BC_CS_HAS(2); state13x(&ka); }
     run(500);
     CHECK(on_screen("TARGET 210-230") && g_sim.phone.last_live.coach_mode == BC_CM_FOLLOWING, "keepalives keep it fresh: still following after 20 s");

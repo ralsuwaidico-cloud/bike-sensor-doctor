@@ -110,6 +110,10 @@ static void generate(void)
     { bc_coach_state_t pi; memset(&pi, 0, sizeof pi); pi.workout_id = p0.workout_id; pi.seq = 43; pi.instruction = BC_CI_MORE_POWER; pi.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(0x12);
       n = bc_link_encode_coach_state(&pi, b, sizeof b, 5, 0);
       vec("coach_state_partial_instruction", "phone_to_board", b, n, "\"seq\": 5, \"workout_id\": %u, \"state_seq\": 43, \"instruction\": 2, \"after_merge\": {\"target_lo\": 140, \"target_hi\": 155, \"instruction\": 2}", pi.workout_id); }
+    { bc_coach_state_t nn; memset(&nn, 0, sizeof nn); nn.workout_id = p0.workout_id; nn.seq = 44; nn.next_type = BC_COACH_NO_NEXT;
+      nn.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(0x0D) | BC_CS_HAS(0x0E) | BC_CS_HAS(0x0F) | BC_CS_HAS(0x10) | BC_CS_HAS(0x11);
+      n = bc_link_encode_coach_state(&nn, b, sizeof b, 5, 0);
+      vec("coach_state_no_next", "phone_to_board", b, n, "\"seq\": 5, \"workout_id\": %u, \"state_seq\": 44, \"next_type\": 255, \"next_target_kind\": 0, \"next_lo\": 0, \"next_hi\": 0, \"next_duration_s\": 0, \"semantics\": \"v1.4: next_type 255 = no next interval, NEXT line hidden\"", nn.workout_id); }
     bc_coach_end_t ce = { p0.workout_id, 0 }; n = bc_link_encode_coach_end(&ce, b, sizeof b, 6, 0);
     vec("coach_end", "phone_to_board", b, n, "\"seq\": 6, \"workout_id\": %u, \"reason\": 0", ce.workout_id);
 

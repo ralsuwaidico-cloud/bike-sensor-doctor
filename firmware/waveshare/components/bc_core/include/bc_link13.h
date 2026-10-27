@@ -46,6 +46,7 @@ bool bc_link_decode_hello_ack(const uint8_t *buf, size_t len, bc_hello_ack_t *v)
 #define BC_COACH_SEGS_PART 14
 #define BC_COACH_SEG_BYTES 10
 #define BC_COACH_OPEN_ENDED 0xFFFFu      /* v1.1: segment duration "until the ride ends" (last segment only) */
+#define BC_COACH_NO_NEXT 0xFF         /* contract v1.4 (Q-iOS-15): COACH_STATE next_type = 0xFF -> no next interval (NEXT line hidden) */
 #define BC_COACH_T0_RIDE_START 0xFFFFFFFFu
 typedef enum { BC_TK_NONE = 0, BC_TK_POWER = 1, BC_TK_HR = 2, BC_TK_CADENCE = 3, BC_TK_RPE = 4 } bc_target_kind_t;
 typedef enum { BC_WT_FREE = 0, BC_WT_RECOVERY, BC_WT_ENDURANCE, BC_WT_TEMPO, BC_WT_SWEET_SPOT, BC_WT_THRESHOLD, BC_WT_VO2MAX,

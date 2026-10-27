@@ -178,7 +178,22 @@ static void state_tests(void)
     /* rc4: a stored plan only stands in for its own workout */
       k.plan_ok = true; k.plan_id = 999; k.nseg = 1; bc_cm_view(&k, false, 23500, 10, &kv);
       CHECK(kv.mode == BC_CM_LAST_TARGET && kv.lo == 99, "phone lost, plan for another workout: last target of the current one (mode %u)", kv.mode);
-      k.plan_ok = false; }
+      k.plan_ok = false;
+    /* v1.4 (Q-iOS-15): next_type 0xFF = no next interval (merge cannot clear by omission) */
+      bc_coach_state_t nx = rs2; nx.seq = 3; nx.has |= BC_CS_HAS(0x0D) | BC_CS_HAS(0x0E) | BC_CS_HAS(0x0F) | BC_CS_HAS(0x10) | BC_CS_HAS(0x11);
+      nx.next_type = BC_WT_RECOVERY; nx.next_kind = BC_TK_POWER; nx.next_lo = 100; nx.next_hi = 120; nx.next_dur_s = 180;
+      bc_cm_state(&k, &nx, 24000); bc_cm_view(&k, true, 24000, 0, &kv); char NL[BC_CM_CARD_LINES][BC_CM_LINE]; bc_cm_card(&kv, 150, 85, -1, NL);
+      CHECK(kv.has_next && !strcmp(NL[7], "NEXT: RECOVERY - 3 MIN"), "next interval shown (%s)", NL[7]);
+      bc_coach_state_t nn; memset(&nn, 0, sizeof nn); nn.workout_id = nx.workout_id; nn.seq = 4; nn.next_type = BC_COACH_NO_NEXT;
+      nn.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(0x0D) | BC_CS_HAS(0x0E) | BC_CS_HAS(0x0F) | BC_CS_HAS(0x10) | BC_CS_HAS(0x11);
+      CHECK(bc_cm_state(&k, &nn, 24100), "next_type 0xFF applied");
+      bc_cm_view(&k, true, 24100, 0, &kv); bc_cm_card(&kv, 150, 85, -1, NL);
+      CHECK(!kv.has_next && !NL[7][0] && kv.lo == nx.lo, "next_type 0xFF: no NEXT line (not 'NEXT: WORKOUT'), targets kept (line 7 '%s')", NL[7]);
+      bc_coach_state_t ka2; memset(&ka2, 0, sizeof ka2); ka2.workout_id = nx.workout_id; ka2.seq = 5; ka2.has = BC_CS_HAS(1) | BC_CS_HAS(2);
+      bc_cm_state(&k, &ka2, 24200); bc_cm_view(&k, true, 24200, 0, &kv); CHECK(!kv.has_next, "a keepalive keeps 'no next'");
+      nx.seq = 6; bc_cm_state(&k, &nx, 24300); bc_cm_view(&k, true, 24300, 0, &kv); CHECK(kv.has_next && kv.next_type == BC_WT_RECOVERY, "a real next_type shows it again");
+      bc_cm_view_t nv; memset(&nv, 0, sizeof nv); nv.has_next = true; nv.next_type = BC_COACH_NO_NEXT; nv.mode = BC_CM_FOLLOWING; bc_cm_card(&nv, -1, -1, -1, NL);
+      CHECK(!NL[7][0], "card never prints NEXT for 0xFF"); }
     CHECK(!strcmp(bc_cm_instr_text(99), "") && !strcmp(bc_cm_type_name(99), "WORKOUT"), "unknown codes");
 }
 

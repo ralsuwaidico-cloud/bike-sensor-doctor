@@ -135,7 +135,7 @@ void bc_cm_view(const bc_cmirror_t *m, bool phone_live, uint32_t now_ms, uint32_
             v->has_remaining = true; v->remaining_s = (uint16_t)(s->remaining_s > gone ? s->remaining_s - gone : 0);
             if (s->session_state == BC_SESS_PAUSED) v->remaining_s = s->remaining_s;   /* the phone's countdown is paused too */
         }
-        if (s->has & BC_CS_HAS(0x0D)) {
+        if ((s->has & BC_CS_HAS(0x0D)) && s->next_type != BC_COACH_NO_NEXT) {   /* v1.4: 0xFF clears "next" under the merge */
             v->has_next = true; v->next_type = s->next_type; v->next_kind = s->next_kind; v->next_lo = s->next_lo; v->next_hi = s->next_hi;
             v->next_dur_s = (s->has & BC_CS_HAS(0x11)) ? s->next_dur_s : 0;
         }
@@ -220,7 +220,7 @@ int bc_cm_card(const bc_cm_view_t *v, int power_w, int cad_rpm, int hr_bpm, char
     if (v->no_hr) snprintf(L[6], BC_CM_LINE, "NO HR - RIDE BY FEEL");
     else if (it[0]) snprintf(L[6], BC_CM_LINE, "COACH: %s", it);
     else if (v->text[0]) snprintf(L[6], BC_CM_LINE, "COACH: %.20s", v->text);
-    if (v->has_next) {
+    if (v->has_next && v->next_type != BC_COACH_NO_NEXT) {
         if (v->next_dur_s && v->next_dur_s != BC_COACH_OPEN_ENDED) { char d[12]; fmt_dur(d, sizeof d, v->next_dur_s); snprintf(L[7], BC_CM_LINE, "NEXT: %.12s - %.6s", bc_cm_type_name(v->next_type), d); }
         else snprintf(L[7], BC_CM_LINE, "NEXT: %s", bc_cm_type_name(v->next_type));
     }
