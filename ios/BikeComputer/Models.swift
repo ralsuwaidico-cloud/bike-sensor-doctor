@@ -265,6 +265,10 @@ struct Workout: Codable, Identifiable, Equatable {
     /// Coach remediation: the ride as generated before a safety cap (health check / return after a break) changed it, so
     /// the cap can be lifted again when it no longer applies (nil = not capped).
     var safetyOriginal: SafetyOriginal? = nil
+    /// Review P3-01: a change the rider made by hand. The session is theirs from now on: a safety original captured
+    /// before the edit is dropped (it would otherwise be restored over the edit, uncapped). A session paused by the health
+    /// check (rest + original) keeps its original, which is what comes back.
+    mutating func markRiderEdited() { edited = true; if kind != .rest { safetyOriginal = nil } }
 
     init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false, templateId: UUID? = nil) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
@@ -989,14 +993,14 @@ final class Store: ObservableObject {
     }
     func update(_ w: Workout) { if let i = plan.firstIndex(where: { $0.id == w.id }) { plan[i] = w } }
     /// A change the rider made by hand: saved and flagged so regeneration asks first.
-    func edit(_ w: Workout) { var x = w; x.edited = true; update(x) }
+    func edit(_ w: Workout) { var x = w; x.markRiderEdited(); update(x) }
     /// Removes a planned session (soft: kept in `trash` with Undo; logs that completed it are kept as extra sessions).
     func remove(_ w: Workout) { deleteWorkout(w) }
-    func add(_ w: Workout) { var x = w; x.edited = true; plan.append(x); plan.sort { $0.date < $1.date } }
+    func add(_ w: Workout) { var x = w; x.markRiderEdited(); plan.append(x); plan.sort { $0.date < $1.date } }
     func swapDays(_ a: Workout, _ b: Workout) {
         guard let i = plan.firstIndex(where: { $0.id == a.id }), let j = plan.firstIndex(where: { $0.id == b.id }) else { return }
         let da = plan[i].date; plan[i].date = plan[j].date; plan[j].date = da
-        plan[i].edited = true; plan[j].edited = true
+        plan[i].markRiderEdited(); plan[j].markRiderEdited()
     }
 
     /// Adds a finished ride. Demo rides never enter history; a board ride already imported (same board ride id) is

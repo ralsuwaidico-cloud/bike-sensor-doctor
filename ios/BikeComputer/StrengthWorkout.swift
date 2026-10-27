@@ -414,7 +414,7 @@ struct PlannedSetsEditor: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 // a hand change: flagged so the coach never overrides it (and a rebuild asks first)
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { if let i = store.plan.firstIndex(where: { $0.id == workout.id }) { store.plan[i].plannedEntries = entries; store.plan[i].generatedEntries = false; store.plan[i].edited = true }; dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { if let i = store.plan.firstIndex(where: { $0.id == workout.id }) { store.plan[i].plannedEntries = entries; store.plan[i].generatedEntries = false; store.plan[i].markRiderEdited() }; dismiss() } }
             }
             .onAppear { if !loaded { loaded = true; entries = store.plannedEntries(for: workout) } }
         }

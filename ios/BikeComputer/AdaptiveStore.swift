@@ -26,6 +26,7 @@ extension Store {
     /// Pain areas currently holding progression (the same analysis the coach and the planner use).
     func activePainAreas(now: Date = Date()) -> [PainArea] { TrainingAnalyzer.analyze(adaptationInput(now: now)).painAreas }
     func painReviewDue(now: Date = Date()) -> [PainArea] { TrainingAnalyzer.analyze(adaptationInput(now: now)).painReviewDue }
+    func painPersistent(now: Date = Date()) -> [PainArea] { TrainingAnalyzer.analyze(adaptationInput(now: now)).painPersistent }
 
     /// The rider confirms a reported pain has gone: that area is released at once (audit G-06), the coach-built
     /// sessions are rebuilt and the coach runs again. Later reports hold the area again.
@@ -139,7 +140,7 @@ extension Store {
         guard let r = checkInRebuild else { return }
         var p = plan, d = dismissedAdaptations
         let ids = Set(r.before.map { $0.id })
-        for b in r.before { if let i = p.firstIndex(where: { $0.id == b.id }), !p[i].done { var x = b; x.edited = true; p[i] = x } }
+        for b in r.before { if let i = p.firstIndex(where: { $0.id == b.id }), !p[i].done { var x = b; x.markRiderEdited(); p[i] = x } }
         for a in adaptations where ids.contains(a.workoutId) && !d.contains(a.key) { d.append(a.key) }
         adaptations.removeAll { ids.contains($0.workoutId) }
         dismissedAdaptations = d

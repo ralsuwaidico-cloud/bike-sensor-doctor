@@ -975,7 +975,7 @@ extension Store {
         let ctx = plannerContext(now: now)
         entries[k] = StrengthPlanner.swappedEntry(old: old, to: new, ctx: ctx)
         plan[i].plannedEntries = entries
-        plan[i].edited = true                      // the rider's choice for this session; the coach does not override it
+        plan[i].markRiderEdited()                  // the rider's choice for this session; the coach does not override it
         plan[i].generatedEntries = false
         var p = strengthPrefs
         let msg: String

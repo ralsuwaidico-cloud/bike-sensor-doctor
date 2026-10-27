@@ -292,7 +292,7 @@ extension Store {
         let cal = Calendar.current
         let t = cal.dateComponents([.hour, .minute, .second], from: plan[i].date)
         plan[i].date = cal.date(bySettingHour: t.hour ?? 7, minute: t.minute ?? 0, second: t.second ?? 0, of: now) ?? now
-        plan[i].edited = true
+        plan[i].markRiderEdited()
         plan.sort { $0.date < $1.date }
         return true
     }

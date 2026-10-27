@@ -373,18 +373,28 @@ extension Store {
         let back = cyclingReturnPhase(now: now)
         var p = plan, changed = false
         for i in p.indices {
-            let w = p[i]
+            var w = p[i]
             guard !w.done, !w.skipped, w.completion == nil, cal.startOfDay(for: w.date) >= today, activeSession?.workoutId != w.id else { continue }
-            let isRideOrStopped = w.kind.isRide || (w.kind == .rest && w.safetyOriginal != nil) || (!readiness.trainingAllowed && w.kind == .strength)
+            // review P3-05: a "see a doctor" / illness answer pauses EVERY planned session (other activities and mobility
+            // too), as the week builder does
+            let isRideOrStopped = w.kind.isRide || (w.kind == .rest && w.safetyOriginal != nil) || (!readiness.trainingAllowed && w.kind != .rest)
             guard isRideOrStopped else { continue }
             let userOwned = w.fixed || w.edited
-            // review N-01: a session the rider edited is theirs — its safety original is dropped (never restored over
-            // the edit); only a "see a doctor" / illness answer still pauses it
-            if w.edited && readiness.trainingAllowed {
-                if w.safetyOriginal != nil, w.kind != .rest { var x = w; x.safetyOriginal = nil; p[i] = x; changed = true }
-                if w.kind != .rest { continue }
+            // review N-01 / P3-01: a session the rider edited is theirs — a safety original from before the edit is dropped
+            // whatever the health check says, so the stop / pause path stores (and later restores) the EDITED session,
+            // never the stale generated one. A paused edited session (rest + original) keeps its original: that is the edit.
+            if w.edited, w.kind != .rest, w.safetyOriginal != nil { w.safetyOriginal = nil; p[i] = w; changed = true }
+            if w.edited && readiness.trainingAllowed && w.kind != .rest {
+                // review P3-08: an edited hard ride is kept as the rider set it, with the same caution as a fixed day
+                let x = Self.withCaution(w, readiness: readiness)
+                if x != w { p[i] = x; changed = true }
+                continue
             }
-            if userOwned && readiness.trainingAllowed && w.safetyOriginal == nil { continue }
+            if userOwned && readiness.trainingAllowed && w.safetyOriginal == nil {
+                let x = Self.withCaution(w, readiness: readiness)
+                if x != w { p[i] = x; changed = true }
+                continue
+            }
             // the base: what was generated (before any safety cap), with the adaptive coach's own change on top
             let o = w.safetyOriginal ?? SafetyOriginal(kind: w.kind, minutes: w.minutes, intervalReps: w.intervalReps, note: w.note)
             var x = w
@@ -421,9 +431,27 @@ extension Store {
                 x.safetyOriginal = so
                 if origSnap != x.coachOriginal { x.coachOriginal = origSnap }
             } else { x.safetyOriginal = nil; x.note = o.note }
+            // a fixed or edited ride restored after a pause keeps the rider's version, with the caution when it is hard
+            if readiness.trainingAllowed, userOwned, x.safetyOriginal == nil { x = Self.withCaution(x, readiness: readiness) }
             if x != w { p[i] = x; changed = true }
         }
         if changed { plan = p }
+    }
+
+    /// Review P3-08: the visible caution on a ride the rider owns (fixed or edited) that is harder or longer than the
+    /// health check allows; removed again once it no longer applies. The rest of the rider's note is kept.
+    static let cautionSuffix = "ride it easy until then."
+    static func withCaution(_ w: Workout, readiness: CoachReadiness) -> Workout {
+        guard w.kind.isRide else { return w }
+        var rest = w.note
+        if rest.hasPrefix("Caution: "), let r = rest.range(of: cautionSuffix) { rest = String(rest[r.upperBound...]).trimmingCharacters(in: .whitespaces) }
+        let tooHard = w.kind.zone > readiness.maxRideZone || (readiness.maxRideMinutes.map { w.minutes > $0 } ?? false)
+        var x = w
+        if tooHard, let r = readiness.restriction {
+            let c = "Caution: \(r). This \(w.fixed ? "fixed" : "edited") ride is kept as you set it — \(cautionSuffix)"
+            x.note = rest.isEmpty ? c : c + " " + rest
+        } else { x.note = rest }
+        return x
     }
 }
 
