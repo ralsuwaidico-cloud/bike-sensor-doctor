@@ -83,7 +83,7 @@ static void generate(void)
     n = chunk_req(m, 7, 320, 160, 2); put(", {\"type\": \"chunk\", \"id\": 7, \"offset\": 320, \"max_len\": 160, \"seq\": 2, \"bytes\": "); b64(m, n); put("}");
     n = chunk_req(m, 7, 0, 155, 3); put(", {\"type\": \"chunk\", \"id\": 7, \"offset\": 0, \"max_len\": 155, \"seq\": 3, \"bytes\": "); b64(m, n); put("}");
     n = chunk_req(m, 7, 144, 72, 4); put(", {\"type\": \"chunk\", \"id\": 7, \"offset\": 144, \"max_len\": 72, \"seq\": 4, \"bytes\": "); b64(m, n); put("}");
-    { bc_diag_ack_t a = { 7, 0xCBF43926u }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 5, 0); }
+    { bc_diag_ack_t a = { 7, 0xCBF43926u, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 5, 0); }
     put(", {\"type\": \"ack\", \"id\": 7, \"crc32\": %lu, \"seq\": 5, \"bytes\": ", 0xCBF43926ul); b64(m, n); put("}");
     put("],\n");
 
@@ -116,8 +116,8 @@ static void generate(void)
     /* ACK, duplicates, end-of-report, errors */
     fx_srv(&s, 185, false);
     put("\"cases\": {\n");
-    { bc_diag_ack_t a = { R->id, R->crc ^ 1u }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 40, 0); k = ask(&s, m, n, o, 140); pair("ack_bad_crc", m, n, o, k); put(",\n"); }
-    { bc_diag_ack_t a = { R->id, R->crc }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 41, 0); k = ask(&s, m, n, o, 141); pair("ack_ok", m, n, o, k); put(",\n"); }
+    { bc_diag_ack_t a = { R->id, R->crc ^ 1u, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 40, 0); k = ask(&s, m, n, o, 140); pair("ack_bad_crc", m, n, o, k); put(",\n"); }
+    { bc_diag_ack_t a = { R->id, R->crc, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 41, 0); k = ask(&s, m, n, o, 141); pair("ack_ok", m, n, o, k); put(",\n"); }
     fx_store_init(); fx_srv(&s, 185, false);
     n = chunk_req(m, R->id, 310, 155, 42); k = ask(&s, m, n, o, 142); pair("duplicate_first", m, n, o, k); put(",\n");
     k = ask(&s, m, n, o, 143); pair("duplicate_second", m, n, o, k); put(",\n");
@@ -131,7 +131,7 @@ static void generate(void)
     n = chunk_req(m, R->id, 0, 155, 53); k = ask(&s, m, n, o, 153); pair("err_busy_ride", m, n, o, k); put(",\n");
     bc_diag_srv_set_link(&s, 23, false);
     n = chunk_req(m, R->id, 0, 155, 54); k = ask(&s, m, n, o, 154); pair("err_mtu", m, n, o, k); put(",\n");
-    { bc_diag_ack_t a = { 99, 1 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 55, 0); bc_diag_srv_set_link(&s, 185, false); k = ask(&s, m, n, o, 155); pair("ack_unknown_id", m, n, o, k); }
+    { bc_diag_ack_t a = { 99, 1, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 55, 0); bc_diag_srv_set_link(&s, 185, false); k = ask(&s, m, n, o, 155); pair("ack_unknown_id", m, n, o, k); }
     put("\n}\n}\n");
 }
 

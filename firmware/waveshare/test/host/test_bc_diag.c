@@ -144,7 +144,7 @@ static void test_vectors(void)
     bc_diag_chunk_t ch; memset(&ch, 0, sizeof ch); ch.id = 7; ch.offset = 0; ch.len = 9; memcpy(ch.data, "[header]\n", 9); ch.last = false;
     n = bc_link_encode_diag_chunk(&ch, b, sizeof b, 5, 0x21);
     expect_hex("DIAG_CHUNK", b, n, "84 00 05 00 21 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 09 5B 68 65 61 64 65 72 5D 0A 04 01 00");
-    bc_diag_ack_t ak = { 7, 0xCBF43926u }; n = bc_link_encode_diag_ack(&ak, b, sizeof b, 6, 0x30);
+    bc_diag_ack_t ak = { 7, 0xCBF43926u, 0 }; n = bc_link_encode_diag_ack(&ak, b, sizeof b, 6, 0x30);
     expect_hex("DIAG_ACK", b, n, "85 00 06 00 30 00 00 00 01 04 07 00 00 00 02 04 26 39 F4 CB");
     bc_diag_err_t er = { 9, BC_DIAG_ERR_UNKNOWN_ID }; n = bc_link_encode_diag_err(&er, b, sizeof b, 7, 0x31);
     expect_hex("DIAG_ERR", b, n, "86 00 07 00 31 00 00 00 01 04 09 00 00 00 02 01 01");
@@ -179,7 +179,7 @@ static size_t req(bc_diag_srv_t *s, uint8_t type, uint32_t id, uint32_t off, uin
     uint8_t m[BC_LINK_MAX]; size_t n = 0;
     if (type == BC_MSG_DIAG_LIST_REQ) n = bc_link_encode_diag_list_req(m, sizeof m, 1, 0);
     else if (type == BC_MSG_DIAG_CHUNK_REQ) { bc_diag_chunk_req_t q = { id, off, maxl }; n = bc_link_encode_diag_chunk_req(&q, m, sizeof m, 1, 0); }
-    else { bc_diag_ack_t a = { id, crc }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
+    else { bc_diag_ack_t a = { id, crc, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
     bc_diag_srv_write(s, m, n);
     return bc_diag_srv_next(s, out, BC_LINK_MAX, 2, 0);
 }
@@ -327,7 +327,7 @@ static void test_ios_requests(void)
     n = unhex("83 00 03 00 00 00 00 00 01 04 07 00 00 00 02 04 00 00 00 00 03 02 9B 00", b); bc_diag_srv_write(&s, b, n);
     bc_diag_chunk_t c; size_t k = bc_diag_srv_next(&s, o, sizeof o, 1, 0);
     CHECK(bc_link_decode_diag_chunk(o, k, &c) && c.len == 155 && k == 180 && !memcmp(c.data, FX_TXT, 155), "iOS request at MTU 185 -> a full 180-byte chunk");
-    bc_diag_ack_t ack = { 7, FX_IDX.r[0].crc ^ 0x10 }; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 9, 0); bc_diag_srv_write(&s, b, n);
+    bc_diag_ack_t ack = { 7, FX_IDX.r[0].crc ^ 0x10, 0 }; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 9, 0); bc_diag_srv_write(&s, b, n);
     k = bc_diag_srv_next(&s, o, sizeof o, 1, 0); CHECK(bc_link_decode_diag_info(o, k, &i) && i.state == 0 && FX_IDX.r[0].state == 0, "ACK with a wrong crc: report stays pending");
     ack.crc = FX_IDX.r[0].crc; n = bc_link_encode_diag_ack(&ack, b, sizeof b, 10, 0); bc_diag_srv_write(&s, b, n);
     k = bc_diag_srv_next(&s, o, sizeof o, 1, 0); CHECK(bc_link_decode_diag_info(o, k, &i) && i.state == 1 && FX_IDX.r[0].state == 1, "ACK with the matching crc: marked sent");

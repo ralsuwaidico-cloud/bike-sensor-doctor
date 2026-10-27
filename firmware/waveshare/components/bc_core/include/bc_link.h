@@ -24,6 +24,7 @@ extern "C" {
 
 typedef enum {
     BC_MSG_INFO = 0x01,
+    BC_MSG_APP_HELLO = 0x08, BC_MSG_HELLO_ACK = 0x09,                                  /* 1.3 (bc_link13.h) */
     BC_MSG_LIVE = 0x10,
     BC_MSG_IN_TIME = 0x20, BC_MSG_IN_GPS = 0x21, BC_MSG_IN_HR = 0x22, BC_MSG_IN_WEATHER = 0x23, BC_MSG_IN_BATTERY = 0x24,
     BC_MSG_CTRL_REQ = 0x30, BC_MSG_CTRL_RESP = 0x31,
@@ -39,6 +40,11 @@ typedef enum {
     /* 1.2.3 diagnostic report transfer (Control characteristic 0005, encrypted link only; firmware 0.7.3) */
     BC_MSG_DIAG_LIST_REQ = 0x80, BC_MSG_DIAG_INFO = 0x81, BC_MSG_DIAG_LIST_END = 0x82, BC_MSG_DIAG_CHUNK_REQ = 0x83,
     BC_MSG_DIAG_CHUNK = 0x84, BC_MSG_DIAG_ACK = 0x85, BC_MSG_DIAG_ERR = 0x86,
+    /* 1.3 (BLE_CONTRACT.md v1.1, bc_link13.h): offline ride queue, storage, coach mirroring — after APP_HELLO only */
+    BC_MSG_RIDEQ_LIST_REQ = 0x90, BC_MSG_RIDEQ_INFO = 0x91, BC_MSG_RIDEQ_LIST_END = 0x92, BC_MSG_RIDEQ_CHUNK_REQ = 0x93,
+    BC_MSG_RIDEQ_CHUNK = 0x94, BC_MSG_RIDEQ_ACK = 0x95, BC_MSG_RIDEQ_ERR = 0x96,
+    BC_MSG_STORAGE_STATUS_REQ = 0xA0, BC_MSG_STORAGE_STATUS = 0xA1, BC_MSG_STORAGE_CLEAN_REQ = 0xA2, BC_MSG_STORAGE_CLEAN_RESULT = 0xA3,
+    BC_MSG_COACH_PLAN = 0xB0, BC_MSG_COACH_PLAN_ACK = 0xB1, BC_MSG_COACH_STATE = 0xB2, BC_MSG_COACH_END = 0xB3,
 } bc_msg_type_t;
 
 /* sources of a reading (who measured it) */
@@ -79,6 +85,10 @@ typedef struct {
     uint8_t ride_state; uint16_t ride_id; uint32_t elapsed_s; uint32_t distance_m;
     uint8_t cue_id; uint8_t battery_pct; uint8_t meter_link; uint16_t meter_gaps;
     bool demo;                                           /* values are SIMULATED (demo mode) */
+    /* 1.3 tags (absent = none; old apps skip them): 11 coach_seq + 12 coach_mode when has_coach, 13 storage_state when it is
+       not OK (storage_state != 0), 14 rides_unsynced when > 0, 15 bt_flags when != 0 */
+    bool has_coach; uint16_t coach_seq; uint8_t coach_mode;
+    uint8_t storage_state, rides_unsynced, bt_flags;
 } bc_live_t;
 size_t bc_link_encode_live(const bc_live_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_live(const uint8_t *buf, size_t len, bc_live_t *v);
@@ -255,7 +265,7 @@ typedef struct { uint32_t id, size, crc, epoch_s; uint8_t kind, state; char summ
 typedef struct { uint8_t count, pending; } bc_diag_list_end_t;
 typedef struct { uint32_t id, offset; uint16_t max_len; } bc_diag_chunk_req_t;
 typedef struct { uint32_t id, offset; uint8_t len; bool last; uint8_t data[BC_DIAG_CHUNK_MAX]; } bc_diag_chunk_t;
-typedef struct { uint32_t id, crc; } bc_diag_ack_t;
+typedef struct { uint32_t id, crc; uint8_t del; } bc_diag_ack_t;   /* del: 1.3 tag 03 (DIAG_AUTO) — sent only when 1 */
 typedef struct { uint32_t id; uint8_t code; } bc_diag_err_t;
 typedef struct { uint8_t pending; uint32_t newest_id; } bc_diag_ready_t;
 size_t bc_link_encode_diag_list_req(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);

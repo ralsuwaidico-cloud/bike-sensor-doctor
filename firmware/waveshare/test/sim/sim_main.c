@@ -1736,7 +1736,7 @@ static void phone_req(uint8_t type, uint32_t id, uint32_t off, uint16_t maxl, ui
     uint8_t m[BC_LINK_MAX]; size_t n;
     if (type == BC_MSG_DIAG_LIST_REQ) n = bc_link_encode_diag_list_req(m, sizeof m, 1, 0);
     else if (type == BC_MSG_DIAG_CHUNK_REQ) { bc_diag_chunk_req_t q = { id, off, maxl }; n = bc_link_encode_diag_chunk_req(&q, m, sizeof m, 1, 0); }
-    else { bc_diag_ack_t a = { id, crc }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
+    else { bc_diag_ack_t a = { id, crc, 0 }; n = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); }
     sim_phone_write(0, m, n);
 }
 /* Cyclift's pull: chunk by chunk from `off`, max_len 160 (the board clamps); optional interruption after `cut` chunks */

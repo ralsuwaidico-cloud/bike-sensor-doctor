@@ -80,6 +80,10 @@ size_t bc_link_encode_live(const bc_live_t *v, uint8_t *buf, size_t cap, uint16_
     bc_lw_u8(&w, 0x08, v->ride_state); bc_lw_u16(&w, 0x09, v->ride_id); bc_lw_u32(&w, 0x0A, v->elapsed_s); bc_lw_u32(&w, 0x0B, v->distance_m);
     bc_lw_u8(&w, 0x0C, v->cue_id); bc_lw_u8(&w, 0x0D, v->battery_pct); bc_lw_u8(&w, 0x0E, v->meter_link); bc_lw_u16(&w, 0x0F, v->meter_gaps);
     if (v->demo) bc_lw_u8(&w, 0x10, 1);
+    if (v->has_coach) { bc_lw_u16(&w, 0x11, v->coach_seq); bc_lw_u8(&w, 0x12, v->coach_mode); }
+    if (v->storage_state) bc_lw_u8(&w, 0x13, v->storage_state);
+    if (v->rides_unsynced) bc_lw_u8(&w, 0x14, v->rides_unsynced);
+    if (v->bt_flags) bc_lw_u8(&w, 0x15, v->bt_flags);
     return bc_lw_end(&w);
 }
 
@@ -106,6 +110,11 @@ bool bc_link_decode_live(const uint8_t *buf, size_t len, bc_live_t *v)
         case 0x0E: FIELD(1); v->meter_link = x[0]; break;
         case 0x0F: FIELD(2); v->meter_gaps = (uint16_t)bc_lr_uint(x, n); break;
         case 0x10: FIELD(1); v->demo = x[0] != 0; break;
+        case 0x11: FIELD(2); v->has_coach = true; v->coach_seq = (uint16_t)bc_lr_uint(x, n); break;
+        case 0x12: FIELD(1); v->has_coach = true; v->coach_mode = x[0]; break;
+        case 0x13: FIELD(1); v->storage_state = x[0]; break;
+        case 0x14: FIELD(1); v->rides_unsynced = x[0]; break;
+        case 0x15: FIELD(1); v->bt_flags = x[0]; break;
         default: break;                                   /* unknown tag: skipped */
         }
     }
@@ -823,7 +832,7 @@ bool bc_link_decode_diag_chunk(const uint8_t *buf, size_t len, bc_diag_chunk_t *
     return id && off && data;
 }
 size_t bc_link_encode_diag_ack(const bc_diag_ack_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
-{ bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_ACK, seq, t_ms); bc_lw_u32(&w, 0x01, v->id); bc_lw_u32(&w, 0x02, v->crc); return bc_lw_end(&w); }
+{ bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_ACK, seq, t_ms); bc_lw_u32(&w, 0x01, v->id); bc_lw_u32(&w, 0x02, v->crc); if (v->del) bc_lw_u8(&w, 0x03, 1); return bc_lw_end(&w); }
 bool bc_link_decode_diag_ack(const uint8_t *buf, size_t len, bc_diag_ack_t *v)
 {
     bc_lr_t r; bc_link_hdr_t h; uint8_t t, n; const uint8_t *x; bool id = false, crc = false;
@@ -832,6 +841,7 @@ bool bc_link_decode_diag_ack(const uint8_t *buf, size_t len, bc_diag_ack_t *v)
     while (bc_lr_next(&r, &t, &x, &n)) {
         if (t == 0x01 && n == 4) { v->id = (uint32_t)bc_lr_uint(x, n); id = true; }
         else if (t == 0x02 && n == 4) { v->crc = (uint32_t)bc_lr_uint(x, n); crc = true; }
+        else if (t == 0x03 && n == 1) v->del = x[0] ? 1 : 0;
     }
     return id && crc;
 }
