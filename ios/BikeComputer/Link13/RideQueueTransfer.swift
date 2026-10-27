@@ -36,7 +36,7 @@ final class RideQueueTransfer {
     /// CRC-32 the phone computed over the summary it received for this ride (SYNC_RIDE fields), nil = none received.
     var summaryCrc: (UInt32) -> UInt32? = { _ in nil }
     /// Writes ONE Link 1.1 SYNC_REQ on the Sync characteristic (QA RC3-01): the summary of a held ride is asked for BY ID,
-    /// `after_ride_id = id − 1, max 1`, never "after the highest id in the history" (a ride already in the history — live
+    /// `after_ride_id = id − 1, max 1, only_ride_id = id` (v1.3; older boards ignore tag 03), never "after the highest id in the history" (a ride already in the history — live
     /// mirror or queue import — would never be sent, so it could never be verified and ACKed).
     var sendSync: (Data) -> Bool = { _ in false }
     /// The connect-time history sync is running on the Sync characteristic: wait for its SYNC_END first.
@@ -101,7 +101,7 @@ final class RideQueueTransfer {
     private func pumpSummaries(now: Date) {
         guard summaryOutstanding == nil, !syncBusy(), let id = summaryQueue.first else { return }
         summaryQueue.removeFirst()
-        guard let d = BCLink.encodeSyncRequest(afterRideId: UInt16(clamping: max(0, Int(id) - 1)), maxCount: 1, seq: nextSeq(), tMs: 0) else { return }
+        guard let d = BCLink.encodeSyncRequest(onlyRideId: id, seq: nextSeq(), tMs: 0) else { return }      /* v1.3: after id−1, max 1, only id */
         summaryAttempts[id, default: 0] += 1
         if sendSync(d) { summaryOutstanding = (id, now) } else { summaryQueue.insert(id, at: 0) }
         onChange?()

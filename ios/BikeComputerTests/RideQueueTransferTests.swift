@@ -125,9 +125,10 @@ final class RideQueueTransferTests: XCTestCase {
         e.deliver = { _, _ in .stored(UUID()) }
         e.start(now: Date(timeIntervalSince1970: 0)); pump(e, b)
         XCTAssertTrue(b.acks.isEmpty); XCTAssertEqual(e.holds[5], .summaryNotVerified)
-        // the summary is asked for BY ID (after_ride_id = 4, max 1), once more after a timeout, then the ride stays held
+        // the summary is asked for BY ID (after_ride_id = 4, max 1, v1.3 only_ride_id = 5), once more after a timeout, then held
         XCTAssertEqual(asked.count, 2)
-        XCTAssertEqual(asked.first, BCLink.encodeSyncRequest(afterRideId: 4, maxCount: 1, seq: BCLink.parse(asked[0])!.0.seq, tMs: 0))
+        XCTAssertEqual(asked.first, BCLink.encodeSyncRequest(onlyRideId: 5, seq: BCLink.parse(asked[0])!.0.seq, tMs: 0))
+        XCTAssertEqual(asked.first.flatMap { BCLink.parse($0)?.1.map { $0.tag } }, [0x01, 0x02, 0x03])
         // a wrong summary is not accepted either
         sums[5] = 0xDEAD; e.summaryArrived(rideId: 5, now: Date(timeIntervalSince1970: 200)); pump(e, b, from: Date(timeIntervalSince1970: 200))
         XCTAssertTrue(b.acks.isEmpty)

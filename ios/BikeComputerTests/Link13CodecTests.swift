@@ -118,7 +118,8 @@ final class Link13CodecTests: XCTestCase {
         s.instruction = .onTarget; s.sessionState = .running; s.hrSource = 4; s.zone = 2; s.flags = 0x06
         let d = try XCTUnwrap(BCLink.encodeCoachState(s, seq: 11, tMs: 0))
         XCTAssertEqual(d, bytes("B2 00 0B 00 00 00 00 00 01 04 63 00 00 00 02 02 05 00 03 01 02 04 01 01 05 02 8C 00 06 02 9B 00 07 01 50 08 01 5A "
-                                + "09 02 01 00 0A 02 03 00 0B 02 B4 00 0C 02 8C 0A 12 01 01 14 01 01 15 01 04 16 01 02 17 01 06"), "no next interval → tags 0D–11 left out; no text → 13 left out")
+                                + "09 02 01 00 0A 02 03 00 0B 02 B4 00 0C 02 8C 0A 0D 01 FF 0E 01 00 0F 02 00 00 10 02 00 00 11 02 00 00 12 01 01 13 00 14 01 01 15 01 04 16 01 02 17 01 06"),
+                       "v1.3 merge: every field is sent — no next interval = next_type 0xFF, no text = empty text (never left out)")
         XCTAssertEqual(BCLink.decodeCoachState(d), s)
         // every field + the longest text stays inside one Link message
         s.nextType = .recovery; s.nextTargetKind = .powerW; s.nextLo = 70; s.nextHi = 100; s.nextDurationS = 180

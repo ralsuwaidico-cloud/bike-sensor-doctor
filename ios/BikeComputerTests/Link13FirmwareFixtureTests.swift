@@ -38,7 +38,8 @@ final class Link13FirmwareFixtureTests: XCTestCase {
             "coach_state_full", "coach_card_example", "coach_state_keepalive", "coach_end", "rideq_list_req", "ride_23", "rideq_info", "rideq_info_ram_only",
             "rideq_list_end", "rideq_chunk_req", "rideq_chunk", "rideq_ack", "rideq_info_after_ack", "rideq_err_crc", "rideq_err_busy_recording",
             "event_rides_pending", "storage_status_req", "storage_status_dir_corrupted", "storage_clean_req", "storage_clean_refused", "storage_clean_done",
-            "storage_clean_rule", "live_with_link13_tags", "diag_ack_delete"]
+            "storage_clean_rule", "live_with_link13_tags", "diag_ack_delete",
+            "coach_state_partial_instruction", "live_link13_zero", "sync_req_only_ride"]
         XCTAssertEqual(Set(vectors.keys), covered, "a new firmware vector needs a check here")
     }
 
@@ -93,12 +94,22 @@ final class Link13FirmwareFixtureTests: XCTestCase {
         XCTAssertEqual(s.flags, BCLink.CoachState.flagFtpDerived | BCLink.CoachState.flagWatchHRLive)
         XCTAssertEqual(BCLink.encodeCoachState(s, seq: 4, tMs: 0), sb, "Cyclift COACH_STATE = firmware COACH_STATE")
 
-        // the firmware's minimal form (id + seq only). The board REPLACES its whole state with every COACH_STATE
-        // (bc_cm_state), so Cyclift never sends this form: its keepalive is the full state with a newer seq.
+        // v1.3 keepalive = workout_id + seq only (the board merges; nothing else changes). Cyclift's encoder = firmware's.
         let kb = try bytes("coach_state_keepalive")
         let k = try XCTUnwrap(BCLink.decodeCoachState(kb))
         XCTAssertEqual(k.workoutId, plan.workoutId); XCTAssertEqual(k.seq, 42)
-        XCTAssertEqual(BCLink.rawMessage(.coachState, seq: 5, tMs: 0, [(0x01, BCLink.le(k.workoutId)), (0x02, BCLink.le(k.seq))]), kb)
+        XCTAssertEqual(BCLink.encodeCoachKeepalive(workoutId: plan.workoutId, stateSeq: 42, seq: 5, tMs: 0), kb)
+        // a partial state (instruction only) — merged by the board; Cyclift itself always sends complete states
+        let pb = try bytes("coach_state_partial_instruction")
+        let (ph, pf) = try XCTUnwrap(BCLink.parse(pb))
+        XCTAssertEqual(ph.type, 0xB2); XCTAssertEqual(pf.map { $0.tag }, [0x01, 0x02, 0x12])
+        XCTAssertEqual(BCLink.decodeCoachState(pb)?.instruction, .morePower); XCTAssertEqual(BCLink.decodeCoachState(pb)?.seq, 43)
+        XCTAssertEqual(BCLink.rawMessage(.coachState, seq: 5, tMs: 0, [(0x01, BCLink.le(plan.workoutId)), (0x02, BCLink.le(UInt16(43))), (0x12, Data([2]))]), pb)
+        // Cyclift's complete state carries every tag 01–17 (also next_* and text when there is none), so a merge never
+        // leaves a stale value on the board
+        var lastSeg = s; lastSeg.nextType = nil; lastSeg.text = ""
+        let full = try XCTUnwrap(BCLink.encodeCoachState(lastSeg, seq: 9, tMs: 0))
+        XCTAssertEqual(try XCTUnwrap(BCLink.parse(full)).1.map { $0.tag }, Array(0x01...0x17).map { UInt8($0) })
 
         XCTAssertEqual(BCLink.encodeCoachEnd(workoutId: plan.workoutId, reason: .completed, seq: 6, tMs: 0), try bytes("coach_end"))
     }
@@ -230,7 +241,13 @@ final class Link13FirmwareFixtureTests: XCTestCase {
         }
         let l = try XCTUnwrap(BCLink.decodeLive(try bytes("live_with_link13_tags")))
         XCTAssertEqual(l.powerW, 145); XCTAssertEqual(l.cadenceRpm, 84); XCTAssertEqual(l.rideId, 23); XCTAssertEqual(l.elapsedS, 1830)
-        XCTAssertEqual(l.coachSeq, 41); XCTAssertEqual(l.coachMode, 2); XCTAssertEqual(l.storageState, 3); XCTAssertEqual(l.ridesUnsynced, 1); XCTAssertEqual(l.btFlags ?? 0, 0, "bt_flags 0 is left out by the board (absent = none)")
+        XCTAssertEqual(l.coachSeq, 41); XCTAssertEqual(l.coachMode, 2); XCTAssertEqual(l.storageState, 3); XCTAssertEqual(l.ridesUnsynced, 1); XCTAssertEqual(l.btFlags, 0, "rc4: always sent")
+        // rc4 sends 13–15 also when 0: a real 0, not "unknown"; 11/12 absent = no workout mirrored
+        let z = try XCTUnwrap(BCLink.decodeLive(try bytes("live_link13_zero")))
+        XCTAssertEqual(z.storageState, 0); XCTAssertEqual(z.ridesUnsynced, 0); XCTAssertEqual(z.btFlags, 0); XCTAssertNil(z.coachSeq); XCTAssertNil(z.coachMode)
+        // v1.3 SYNC_REQ by id: Cyclift's request = the firmware's vector
+        XCTAssertEqual(BCLink.encodeSyncRequest(onlyRideId: UInt32(n("sync_req_only_ride", "only_ride_id")), seq: 22, tMs: 0), try bytes("sync_req_only_ride"))
+        XCTAssertEqual(n("sync_req_only_ride", "after_ride_id"), 41); XCTAssertEqual(n("sync_req_only_ride", "max_count"), 1)
         XCTAssertEqual(BCLink.encodeDiagAck(reportId: 7, crc32: u32("diag_ack_delete", "crc32"), delete: true, seq: 20, tMs: 0), try bytes("diag_ack_delete"))
     }
 }

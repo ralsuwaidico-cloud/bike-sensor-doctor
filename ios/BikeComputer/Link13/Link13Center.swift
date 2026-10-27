@@ -28,6 +28,11 @@ final class Link13Center: ObservableObject {
     private weak var diag: DiagReportCenter?
     private var timer: Timer?
     private var seq: UInt16 = 0
+    /// Last second the ride screen fed the coach mirror, and what it fed. Older than 2 s (another tab, app in the
+    /// background) → the center keeps feeding from the ride clock itself (`feedWithoutRideScreen`).
+    private var lastCoachTickAt: Date?
+    private var lastFeed: (plan: CoachPlanInput?, live: CoachLiveInput, boardOwnsRide: Bool, phoneOwnsRide: Bool)?
+    private var lastSelfFeedAt: Date?
     var onLog: ((String) -> Void)?
     /// RIDEQ_INFO flags bit4 (v1.1): the board's storage is damaged and the ride exists only in its memory.
     static let ramOnlyWarning = "Only in the BikeComputer's memory: lost if the board powers off before Cyclift saves it. Keep the board on and connected."
@@ -148,6 +153,21 @@ final class Link13Center: ObservableObject {
     /// `plan`: what the phone coach runs now (nil = coach off / nothing to mirror); `live`: what it shows this second.
     func coachTick(plan input: CoachPlanInput?, live: CoachLiveInput, boardOwnsRide: Bool, phoneOwnsRide: Bool) {
         let now = Date()
+        lastCoachTickAt = now; lastFeed = (input, live, boardOwnsRide, phoneOwnsRide)
+        feed(plan: input, live: live, boardOwnsRide: boardOwnsRide, phoneOwnsRide: phoneOwnsRide, now: now)
+    }
+    /// Without the ride screen (QA: its timer may pause off the Ride tab; the board declares the phone gone after 12 s):
+    /// the SAME plan and timeline from the ride clock, so intervals keep advancing on the board; no coaching cue (the
+    /// phone's cue engine runs on the ride screen) and no heart-rate source claimed.
+    private func feedWithoutRideScreen(now: Date) {
+        guard let f = lastFeed, let r = recorder, lastSelfFeedAt.map({ now.timeIntervalSince($0) >= 1 }) ?? true else { return }
+        lastSelfFeedAt = now
+        var live = f.live
+        live.elapsedS = r.elapsedS; live.session = CoachMirrorAdapter.session(r)
+        live.cueActive = false; live.cue = .NONE; live.hrLive = false; live.adaptedNow = false
+        feed(plan: f.plan, live: live, boardOwnsRide: r.owner == .board && (r.isActive || r.state == .ended), phoneOwnsRide: r.owner == .phone && (r.isActive || r.state == .ended), now: now)
+    }
+    private func feed(plan input: CoachPlanInput?, live: CoachLiveInput, boardOwnsRide: Bool, phoneOwnsRide: Bool, now: Date) {
         defer { publish() }
         guard session.coach else { coachMirroring = false; return }
         // a ride recorded by the phone alone runs on the phone's clock, not the board's: nothing to mirror
@@ -187,8 +207,10 @@ final class Link13Center: ObservableObject {
         if s.tick(now: now) { sendHello() }
         if s != session { session = s }
         mirror.tick(now: now)
+        // the ride screen stopped feeding (other tab, background): keep the board's coach current (≤ 5 s, board limit 12 s)
+        if session.coach, coachMirroring, lastCoachTickAt.map({ now.timeIntervalSince($0) > 2 }) ?? true { feedWithoutRideScreen(now: now) }
         rideEngine?.tick(now: now)
-        if !(session.isWaiting || mirror.planStatus.isSending || rideEngine?.isBusy == true || cleanPending) { stopTimer() }
+        if !(session.isWaiting || mirror.planStatus.isSending || rideEngine?.isBusy == true || cleanPending || (session.coach && coachMirroring)) { stopTimer() }
         publish()
     }
 

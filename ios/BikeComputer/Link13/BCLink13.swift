@@ -220,11 +220,15 @@ extension BCLink {
         w.u32(0x01, s.workoutId); w.u16(0x02, s.seq); w.u8(0x03, s.type.rawValue); w.u8(0x04, s.targetKind.rawValue)
         w.u16(0x05, s.targetLo); w.u16(0x06, s.targetHi); w.u8(0x07, s.cadLo); w.u8(0x08, s.cadHi)
         w.u16(0x09, s.intervalIndex); w.u16(0x0A, s.intervalCount); w.u16(0x0B, s.remainingS); w.u16(0x0C, s.intervalDurationS)
+        // v1.3 merge: EVERY field is sent every time (an omitted one would keep a stale value on the board) — no next
+        // interval is sent as next_type 0xFF, no text as an empty text
         if let n = s.nextType {
             w.u8(0x0D, n.rawValue); w.u8(0x0E, s.nextTargetKind.rawValue); w.u16(0x0F, s.nextLo); w.u16(0x10, s.nextHi); w.u16(0x11, s.nextDurationS)
+        } else {
+            w.u8(0x0D, coachNoNextType); w.u8(0x0E, 0); w.u16(0x0F, 0); w.u16(0x10, 0); w.u16(0x11, 0)
         }
         w.u8(0x12, s.instruction.rawValue)
-        if !s.text.isEmpty { w.field(0x13, utf8Prefix(s.text, max: 24)) }
+        w.field(0x13, utf8Prefix(s.text, max: 24))
         w.u8(0x14, s.sessionState.rawValue); w.u8(0x15, s.hrSource); w.u8(0x16, s.zone); w.u8(0x17, s.flags)
         return w.result
     }
@@ -249,7 +253,7 @@ extension BCLink {
             case (0x0A, 2): s.intervalCount = w()
             case (0x0B, 2): s.remainingS = w()
             case (0x0C, 2): s.intervalDurationS = w()
-            case (0x0D, 1): s.nextType = CoachWorkoutType(rawValue: b()) ?? .custom
+            case (0x0D, 1): s.nextType = b() == coachNoNextType ? nil : (CoachWorkoutType(rawValue: b()) ?? .custom)
             case (0x0E, 1): s.nextTargetKind = CoachTargetKind(rawValue: b()) ?? .none
             case (0x0F, 2): s.nextLo = w()
             case (0x10, 2): s.nextHi = w()
@@ -265,6 +269,14 @@ extension BCLink {
         }
         return gotId && gotSeq ? s : nil
     }
+
+    /// v1.3 keepalive: `01 workout_id` + `02 seq` only — refreshes the board's 12 s freshness, changes nothing else.
+    static func encodeCoachKeepalive(workoutId: UInt32, stateSeq: UInt16, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .coachState, seq: seq, tMs: tMs); w.u32(0x01, workoutId); w.u16(0x02, stateSeq); return w.result
+    }
+    /// "No next interval" (last segment). v1.3 merges COACH_STATE, so an omitted next_* would keep the previous NEXT on the
+    /// board; Cyclift therefore always sends the next tags and uses this value for "none" (contract question Q-iOS-15).
+    static let coachNoNextType: UInt8 = 0xFF
 
     enum CoachEndReason: UInt8 { case completed = 0, stoppedByRider = 1, replaced = 2 }
     static func encodeCoachEnd(workoutId: UInt32, reason: CoachEndReason, seq: UInt16, tMs: UInt32) -> Data? {
@@ -405,6 +417,14 @@ extension BCLink {
     }
     static func encodeRidesPending(unsynced: UInt8, newest: UInt32, seq: UInt16, tMs: UInt32) -> Data {
         rawMessage(.event, seq: seq, tMs: tMs, [(0x01, Data([UInt8(ridesPendingEventId)])), (0x02, Data([unsynced])), (0x03, le(newest))])
+    }
+
+    /// v1.3 SYNC_REQ with `03 u16 only_ride_id`: a board ≥ 0.7.4-rc4 answers exactly that ride's SYNC_RIDE (or nothing) and
+    /// releases nothing; an older board ignores tag 03 and answers the after/max part (`after = id − 1, max 1`).
+    static func encodeSyncRequest(onlyRideId id: UInt32, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .syncReq, seq: seq, tMs: tMs)
+        w.u16(0x01, UInt16(clamping: max(0, Int(id) - 1))); w.u8(0x02, 1); w.u16(0x03, UInt16(clamping: id))
+        return w.result
     }
 
     // MARK: §7 storage status and safe cleanup

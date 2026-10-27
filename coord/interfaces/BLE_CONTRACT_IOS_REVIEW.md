@@ -83,3 +83,15 @@ firmware's bytes sends exactly the firmware's RIDEQ_ACK. Notes for the firmware 
   board's targets. Cyclift never sends that form; its keepalive is the full state with a newer seq. Suggest the contract
   says so (or the board merges only the tags present).
 - LIVE `15 bt_flags` is left out when 0 — fine ("absent = none"), noted only because §4 lists it as always sent.
+
+## 6. Round 4 — contract v1.3 (firmware 0.7.4-rc4)
+
+Adopted in Cyclift: SYNC_REQ `03 only_ride_id` (with `after = id − 1, max 1`) for every held ride; seq window reset on
+HELLO noted (Cyclift still persists seq per workout); COACH_STATE merge — Cyclift sends every tag 01–17 in every full
+state, so nothing relies on replace semantics; LIVE 13–15 read as real values when present, absent = unknown; 11/12
+absent = no workout mirrored. Regenerated fixture (33 vectors) cross-checked byte for byte.
+
+**Q-iOS-15 (new, needs a contract decision):** with the v1.3 merge there is no way to CLEAR "next interval". Once a state
+carried `0D next_type`, the board keeps `has_next` for that workout (`d->has |= s->has`), so on the last segment it keeps
+showing the previous "NEXT: …". Cyclift sends `0D = 0xFF` (and 0E–11 = 0) for "no next interval"; rc4 renders 0xFF as
+"NEXT: WORKOUT". Proposal: `next_type 0xFF` = no next interval (board clears `has_next`), or a dedicated flag.

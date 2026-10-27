@@ -22,6 +22,9 @@ final class RideQueueEndToEndTests: XCTestCase {
         var syncRequests: [(after: Int, max: Int)] = []
         var acks: [Data] = []
         var ramSlotsFreed: [UInt32] = []
+        /// firmware ≥ 0.7.4-rc4 answers SYNC_REQ `03 only_ride_id` with exactly that ride; older boards ignore the tag.
+        var honoursOnlyRide = true
+        var syncOnly: [Int?] = []
         func control(_ d: Data) {
             guard let (h, f) = BCLink.parse(d) else { return }
             func u(_ t: UInt8) -> UInt64 { f.first { $0.tag == t }.map { BCLink.uint($0.value) } ?? 0 }
@@ -53,8 +56,10 @@ final class RideQueueEndToEndTests: XCTestCase {
         func sync(_ d: Data) -> Bool {
             guard let (h, f) = BCLink.parse(d), h.type == 0x50 else { return false }
             let after = Int(f.first { $0.tag == 1 }.map { BCLink.uint($0.value) } ?? 0), mx = Int(f.first { $0.tag == 2 }.map { BCLink.uint($0.value) } ?? 50)
-            syncRequests.append((after, mx))
-            let all = rides.sorted { $0.info.rideId < $1.info.rideId }.filter { Int($0.info.rideId) > after }
+            let only = f.first { $0.tag == 3 }.map { Int(BCLink.uint($0.value)) }
+            syncRequests.append((after, mx)); syncOnly.append(only)
+            var all = rides.sorted { $0.info.rideId < $1.info.rideId }.filter { Int($0.info.rideId) > after && !$0.syncRide.isEmpty }   /* empty = not in the board's history */
+            if honoursOnlyRide, let o = only { all = all.filter { Int($0.info.rideId) == o } }
             for r in all.prefix(mx) { syncOut.append(r.syncRide) }
             let more: UInt8 = all.count > mx ? 1 : 0
             syncOut.append(BCLink.rawMessage(.syncEnd, seq: 0, tMs: 0, [(0x01, BCLink.le(UInt16(min(mx, all.count)))), (0x02, BCLink.le(UInt16(rides.count))), (0x03, Data([more]))]))
@@ -174,6 +179,32 @@ final class RideQueueEndToEndTests: XCTestCase {
         XCTAssertEqual(Set(history.rides.compactMap { $0.boardRideId }), [23, 24, 25, 26, 27]); XCTAssertEqual(history.rides.count, 5, "no duplicates")
         XCTAssertTrue(e.holds.isEmpty, "nothing left held: \(e.holds)")
         XCTAssertEqual(b.syncRequests.filter { $0.max == 1 }.map { $0.after }.sorted(), [22, 23, 24, 25, 26], "one by-id request per held ride")
+        XCTAssertEqual(b.syncOnly.compactMap { $0 }.sorted(), [23, 24, 25, 26, 27], "v1.3: each carries only_ride_id = the ride")
+    }
+
+    /// The same five rides on a board before rc4 (it ignores `03 only_ride_id` and answers after/max): still all verified,
+    /// ACKed and freed — the after = id − 1, max 1 part does the job.
+    func testOlderBoardIgnoringOnlyRideIdStillWorks() throws {
+        let b = Board(); b.honoursOnlyRide = false
+        b.rides = [try ride23(), try ride(24, ramOnly: true), try ride(25), try ride(26, ramOnly: true), try ride(27, ramOnly: true)]
+        let history = Store(directory: dir.appendingPathComponent("store"), generatePlan: false)
+        let e = run(b, history: history, seconds: 120)
+        XCTAssertEqual(Set(acked(b)), [23, 24, 25, 26, 27]); XCTAssertEqual(Set(b.ramSlotsFreed), [24, 26, 27])
+        XCTAssertEqual(history.rides.count, 5); XCTAssertTrue(e.holds.isEmpty, "\(e.holds)")
+    }
+
+    /// rc4 answers `only_ride_id` with exactly that ride or nothing: a held ride the board can no longer summarise is
+    /// NOT confused with the next ride (an older board would send ride 25 for "after 23, max 1").
+    func testOnlyRideIdNeverVerifiesAnotherRide() throws {
+        var r24 = try ride(24); r24.syncRide = Data()          /* the board can no longer send ride 24's summary */
+        let b = Board(); b.rides = [r24, try ride(25)]
+        let history = Store(directory: dir.appendingPathComponent("store"), generatePlan: false)
+        var m = RideRecord(start: Date(timeIntervalSince1970: TimeInterval(1_792_860_000 + 25 * 3600)), durationS: 90, distanceM: 0, recorder: .board, sources: ["BikeComputer"])
+        m.boardRideId = 25; m.boardId = Self.board; history.rides.append(m)
+        let e = run(b, history: history, seconds: 60)
+        XCTAssertFalse(acked(b).contains(24), "never ACKed against another ride's summary"); XCTAssertEqual(e.holds[24], .summaryNotVerified)
+        XCTAssertTrue(acked(b).contains(25))
+        XCTAssertTrue(b.syncOnly.contains(24), "asked for ride 24 only")
     }
 
     /// A wrong summary is never accepted: the board's summary of the ride does not match → no ACK, ride kept.

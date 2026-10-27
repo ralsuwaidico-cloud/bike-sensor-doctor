@@ -166,6 +166,12 @@ struct Link13StatusSection: View {
             Section {
                 LabeledContent("Link", value: link13.session.summary).accessibilityIdentifier("link13Summary")
                 if !link13.coachStatus.isEmpty { LabeledContent("Coach on the BikeComputer", value: link13.coachStatus) }
+                // LIVE 15 bt_flags (always sent by firmware ≥ 0.7.4-rc4; absent = older board = unknown, nothing shown)
+                if let f = device.live?.btFlags, device.liveIsFresh, f & 0x03 != 0 {
+                    Label(f & 0x01 != 0 ? "The board switched its Bluetooth sensors off after a crash (details in its diagnostic report)." : "The phone link on the board is degraded.",
+                          systemImage: "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("link13BtFlags")
+                }
                 if link13.session.rideQueue {
                     LabeledContent("Offline rides waiting", value: link13.unsyncedOnBoard.map { "\($0)" } ?? "not reported yet")
                     let atRisk = link13.boardRides.filter { $0.ramOnly && $0.needsImport }.count

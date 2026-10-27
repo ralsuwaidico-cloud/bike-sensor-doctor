@@ -102,3 +102,19 @@ Release launch smoke ok; layout audit ok on all three iPhones (82 screenshots); 
   ride list (kept current by the board's replies), else this connection's STORAGE_STATUS; otherwise "not reported yet".
   An omitted tag is never 0 and nothing from an earlier connection is reused (list and storage status cleared on link down).
 - **CI run 88 (commit 0b51813): green** — 360 tests, 0 failures (incl. the 5 end-to-end tests and the seq test); Release launch smoke, layout audit (82 screenshots), archive / sign / verify ok; upload skipped.
+
+## Round 4 (lead) — contract v1.3 / firmware rc4 (merge d0c21b5)
+
+- By-id summary request now `after_ride_id = id − 1, max_count = 1, only_ride_id = id` (`BCLink.encodeSyncRequest(onlyRideId:)`,
+  byte-identical to the firmware vector `sync_req_only_ride`).
+- COACH_STATE merge: every full state carries all tags 01–17; "no next interval" = `next_type 0xFF` + zeros, no text =
+  empty text (never omitted). Seq still persisted per workout (board also reopens its window on each HELLO).
+- Off the Ride tab / in the background: Link13Center keeps feeding COACH_STATE once a second from the ride clock when the
+  ride screen has not fed it for 2 s (same plan and timeline, intervals advance; no cue, no HR source claimed), so the
+  board never reaches its 12 s "phone gone" while Cyclift runs. Full state every ≤ 5 s (keepalive interval unchanged).
+- LIVE: 13–15 used as real values when present (rc4 always sends them), absent = unknown; bt_flags bit0/bit1 shown on
+  Connections › BikeComputer; 11/12 absent = no workout mirrored.
+- Tests: fixture cross-check extended to the regenerated fixture (33 vectors incl. keepalive, partial instruction,
+  live_link13_zero, sync_req_only_ride); RideQueueEndToEndTests 7 tests incl. tag 03, an older board ignoring tag 03
+  (all five rides still ACKed / freed) and "only_ride_id never verifies another ride".
+- Open: Q-iOS-15 (no way to clear "next interval" under merge) in BLE_CONTRACT_IOS_REVIEW.md §6.
