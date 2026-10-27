@@ -43,6 +43,15 @@ extension Store {
         return r
     }
 
+    /// Same planned session apart from generated entry / set ids (and the stored original's ids).
+    static func sameContent(_ a: Workout, _ b: Workout) -> Bool {
+        func key(_ e: [ExerciseEntry]?) -> [String] { (e ?? []).map { x in "\(x.exerciseId)|\(x.name)|\(x.superset ?? "")|\(x.notes)|" + x.sets.map { "\($0.reps),\($0.weightKg ?? -1),\($0.bodyweight),\($0.unilateral),\($0.rpe ?? -1),\($0.done)" }.joined(separator: ";") } }
+        func snap(_ s: WorkoutPlanSnapshot?) -> String { s.map { "\($0.kind)|\($0.minutes)|\($0.intervalReps ?? -1)|\($0.generatedEntries)|" + key($0.plannedEntries).joined(separator: "#") } ?? "-" }
+        var a0 = a, b0 = b
+        a0.plannedEntries = nil; b0.plannedEntries = nil; a0.coachOriginal = nil; b0.coachOriginal = nil
+        return a0 == b0 && key(a.plannedEntries) == key(b.plannedEntries) && snap(a.coachOriginal) == snap(b.coachOriginal)
+    }
+
     /// Applies an engine result: each open future session is recomputed from its ORIGINAL values with exactly the
     /// changes wanted now (so changes never stack and a withdrawn reason restores the original). Sessions the rider
     /// edited or skipped are left as they are. With automatic changes off, only approved ones are applied.
@@ -69,7 +78,9 @@ extension Store {
             }
             var x = AdaptiveRules.apply(desired, to: base, entries: originalEntries(for: base))
             x.coachOriginal = base.planSnapshot
-            p[i] = x
+            // re-running the coach with the same inputs must not change the plan: a routine's entries are prefilled
+            // afresh (new ids) on every run, so the same content keeps the ids already in the plan
+            if !Self.sameContent(x, w) { p[i] = x }
             for d in desired {
                 if let old = adaptations.first(where: { $0.key == d.key && $0.change == d.change }) { active.append(old) } else { active.append(d) }
             }

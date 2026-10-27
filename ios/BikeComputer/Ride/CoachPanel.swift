@@ -175,7 +175,7 @@ struct CoachPanel: View {
                     Text(showWhy ? "Close" : "Why?").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(ink)
                         .padding(.horizontal, 8).padding(.vertical, 5).overlay(Capsule().stroke(ink.opacity(0.6), lineWidth: 1))
                 }
-                .buttonStyle(.plain).disabled(model.why.isEmpty)
+                .buttonStyle(.minTap).disabled(model.why.isEmpty)
                 .accessibilityIdentifier("coachWhy").accessibilityLabel(showWhy ? "Close the explanation" : "Why? Explain this advice")
             }
             if !showWhy { CoachScale(direction: model.direction, lit: active ? color : D7.faint, ink: ink, active: active) }

@@ -376,10 +376,19 @@ struct DashTag: View {
     var body: some View { Text(text).font(.system(size: 8, weight: .bold, design: .monospaced)).foregroundStyle(color).padding(.horizontal, 5).padding(.vertical, 2).overlay(RoundedRectangle(cornerRadius: 4).stroke(color, lineWidth: 1)).lineLimit(1) }
 }
 
+struct BigButtonStyle: ButtonStyle {
+    let color: Color
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.frame(maxWidth: .infinity).frame(height: 52)
+            .background(color, in: RoundedRectangle(cornerRadius: 14)).contentShape(RoundedRectangle(cornerRadius: 14))
+            .opacity(configuration.isPressed ? 0.75 : 1)
+    }
+}
 struct BigButton: View {
     let text: String; let color: Color; var size: CGFloat = 17; let action: () -> Void
     var body: some View {
-        Button(action: action) { Text(text).font(.system(size: size, weight: .heavy, design: .rounded)).foregroundStyle(D7.ink).frame(maxWidth: .infinity).frame(height: 52).lineLimit(1).minimumScaleFactor(0.7) }
-            .background(color, in: RoundedRectangle(cornerRadius: 14)).buttonStyle(.plain)
+        // the whole 52 pt coloured block is the button (hit area and accessibility frame), not just the word
+        Button(action: action) { Text(text).font(.system(size: size, weight: .heavy, design: .rounded)).foregroundStyle(D7.ink).lineLimit(1).minimumScaleFactor(0.7) }
+            .buttonStyle(BigButtonStyle(color: color))
     }
 }

@@ -68,8 +68,8 @@ struct InfoButton: View {
     let text: String
     @State private var show = false
     var body: some View {
-        Button { show = true } label: { Image(systemName: "info.circle").font(.body).frame(minWidth: DS.minTap, minHeight: DS.minTap) }
-            .buttonStyle(.plain).foregroundStyle(BC.accent)
+        Button { show = true } label: { Image(systemName: "info.circle").font(.body).foregroundStyle(BC.accent) }
+            .buttonStyle(.minTap)
             .accessibilityLabel("About \(title)")
             .sheet(isPresented: $show) {
                 NavigationStack {
@@ -288,3 +288,13 @@ struct TapTargetStyle: ButtonStyle {
     }
 }
 extension ButtonStyle where Self == TapTargetStyle { static var tapTarget: TapTargetStyle { TapTargetStyle() } }
+
+/// Like a plain button, but the 44 × 44 pt minimum is the real hit area AND the accessibility frame (a frame inside a
+/// plain button's label does not enlarge either — the layout audit measured an (i) button at 17 × 17 pt).
+struct MinTapStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.frame(minWidth: DS.minTap, minHeight: DS.minTap).contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.6 : 1)
+    }
+}
+extension ButtonStyle where Self == MinTapStyle { static var minTap: MinTapStyle { MinTapStyle() } }
