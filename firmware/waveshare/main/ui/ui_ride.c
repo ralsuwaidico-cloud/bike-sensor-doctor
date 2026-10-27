@@ -60,6 +60,39 @@ static void reset_widgets(void)
     w_status = w_watts = w_unit = w_cad = w_hr = w_cue = w_cue_lbl = NULL;
 }
 
+/*
+ * rc4 (QA RC3-02): page-1 texts that can grow (the coach word, the target line) are fitted to the round edge at the
+ * height they are drawn: the widest the circle allows at the worse of the label's top and bottom rows, minus the pill
+ * padding. Too wide in the big font -> the small font; still too wide -> clipped with "..." at that width. Never wider.
+ */
+static int fit_max_w(int y_top, int h, int pad)
+{
+    int a = ui_chord(y_top), b = ui_chord(y_top + h - 1);    /* first and last pixel row of the line box */
+    return 2 * (a < b ? a : b) - 2 * pad - 2;
+}
+static int text_w(const char *t, const lv_font_t *f) { lv_point_t sz; lv_text_get_size(&sz, t, f, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE); return sz.x; }
+static void fit_label(lv_obj_t *l, const char *txt, const lv_font_t *big, int y_top, int pad)
+{
+    const lv_font_t *small = &lv_font_montserrat_12, *f = big;
+    int maxw = fit_max_w(y_top, lv_font_get_line_height(big), pad);
+    char b[48]; snprintf(b, sizeof b, "%s", txt);
+    if (text_w(b, f) > maxw) {
+        f = small;
+        if (text_w(b, f) > maxw) {                     /* abbreviate: drop whole UTF-8 characters, end with ".." */
+            size_t n = strlen(b);
+            while (n > 0) {
+                do n--; while (n > 0 && ((uint8_t)b[n] & 0xC0) == 0x80);
+                memcpy(b + n, "..", 3);
+                if (text_w(b, f) <= maxw) break;
+            }
+        }
+    }
+    if (lv_obj_get_style_text_font(l, LV_PART_MAIN) != f) lv_obj_set_style_text_font(l, f, 0);
+    if (strcmp(lv_label_get_text(l), b)) lv_label_set_text(l, b);
+}
+/* the y each page-1 fitted label is drawn at in the current design (set by build_*) */
+static int s_unit_y, s_cue_y, s_cue_pad;
+
 static void build_focus(lv_obj_t *t)
 {
     {
@@ -71,7 +104,8 @@ static void build_focus(lv_obj_t *t)
         lv_obj_set_style_arc_rounded(w_band, false, LV_PART_INDICATOR);
         w_status = tile_label(t, &lv_font_montserrat_12, C_MUT, 30);
         w_watts = tile_label(t, &bc_num80, C_FG, 46);
-        w_unit = tile_label(t, &lv_font_montserrat_12, C_MUT, 128);
+        w_unit = tile_label(t, &lv_font_montserrat_12, C_MUT, 128); s_unit_y = 128;
+        s_cue_y = 186 + (26 - 18) / 2; s_cue_pad = 10;      /* the pill: 26 high at y 186, 10 px side padding */
         w_cad = ui_label(t, &bc_bold22, C_VIOLET, ""); lv_obj_align(w_cad, LV_ALIGN_TOP_MID, -42, 142);
         w_hr = ui_label(t, &bc_bold22, C_MUT, ""); lv_obj_align(w_hr, LV_ALIGN_TOP_MID, 42, 142);
         w_cad_u = ui_label(t, &lv_font_montserrat_12, C_MUT, "RPM"); lv_obj_align(w_cad_u, LV_ALIGN_TOP_MID, -42, 166);
@@ -91,7 +125,7 @@ static void build_split(lv_obj_t *t)
         /* B — Split: watts on top, cadence | heart rate below, coach word at the bottom */
         w_status = tile_label(t, &lv_font_montserrat_12, C_MUT, 24);
         w_watts = tile_label(t, &bc_num80, C_FG, 44);
-        w_unit = tile_label(t, &lv_font_montserrat_12, C_MUT, 124);
+        w_unit = tile_label(t, &lv_font_montserrat_12, C_MUT, 124); s_unit_y = 124;
         lv_obj_t *line = lv_obj_create(t); lv_obj_remove_style_all(line);
         lv_obj_set_size(line, 196, 2); lv_obj_set_style_bg_color(line, C_FAINT, 0); lv_obj_set_style_bg_opa(line, LV_OPA_COVER, 0);
         lv_obj_align(line, LV_ALIGN_TOP_MID, 0, 140); lv_obj_remove_flag(line, LV_OBJ_FLAG_CLICKABLE);
@@ -102,7 +136,7 @@ static void build_split(lv_obj_t *t)
         w_hr = ui_label(t, &bc_num44, C_MUT, ""); lv_obj_align(w_hr, LV_ALIGN_TOP_MID, 46, 142);
         lv_obj_t *l1 = ui_label(t, &lv_font_montserrat_12, C_MUT, "RPM"); lv_obj_align(l1, LV_ALIGN_TOP_MID, -46, 188);
         w_hr_u = ui_label(t, &lv_font_montserrat_12, C_MUT, "BPM"); lv_obj_align(w_hr_u, LV_ALIGN_TOP_MID, 46, 188);
-        w_cue = NULL; w_cue_lbl = tile_label(t, &bc_bold16, C_GREEN, 203);
+        w_cue = NULL; w_cue_lbl = tile_label(t, &bc_bold16, C_GREEN, 203); s_cue_y = 203; s_cue_pad = 0;
     }
 }
 
@@ -113,10 +147,12 @@ static void build_coach(lv_obj_t *t)
         w_ring = mk_arc(t, 230, 8, 0, 360, C_TRACK, C_GREEN);
         lv_arc_set_range(w_ring, 0, 100); lv_arc_set_value(w_ring, 100);
         w_head = ui_label(t, &bc_bold22, C_FG, ""); lv_obj_set_width(w_head, 150);
-        lv_label_set_long_mode(w_head, LV_LABEL_LONG_WRAP); lv_obj_align(w_head, LV_ALIGN_TOP_MID, 0, 40);
+        lv_label_set_long_mode(w_head, LV_LABEL_LONG_DOT); lv_obj_align(w_head, LV_ALIGN_TOP_MID, 0, 40);
+        lv_obj_set_style_text_align(w_head, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_height(w_head, 2 * lv_font_get_line_height(&bc_bold22));   /* rc4: at most two lines, above the watts */
         w_status = NULL;
         w_watts = tile_label(t, &bc_num80, C_FG, 90);
-        w_unit = tile_label(t, &lv_font_montserrat_12, C_MUT, 170);
+        w_unit = tile_label(t, &lv_font_montserrat_12, C_MUT, 170); s_unit_y = 170;
         w_cad = ui_label(t, &bc_bold16, C_VIOLET, ""); lv_obj_align(w_cad, LV_ALIGN_TOP_MID, -38, 186);
         w_time1 = ui_label(t, &bc_bold16, C_FG, ""); lv_obj_align(w_time1, LV_ALIGN_TOP_MID, 40, 186);
         w_hr = NULL; w_cue = NULL; w_cue_lbl = NULL;
@@ -294,7 +330,7 @@ static void ride_update(void)
     if (lo > 0) snprintf(b, sizeof b, "%s %d-%d", rel ? "PACE" : "TARGET", lo, hi);
     else snprintf(b, sizeof b, "WATTS");
     if (!lv.power_ok) snprintf(b, sizeof b, "NO DATA");
-    lv_label_set_text(w_unit, b);
+    fit_label(w_unit, b, &lv_font_montserrat_12, s_unit_y, 0);
     lv_obj_set_style_text_color(w_unit, lv.power_ok ? C_MUT : C_AMBER, 0);
     if (ui_ride_design(r_style)->cad_inline) {
         if (lv.cad_ok) snprintf(b, sizeof b, "%d rpm", lv.rpm); else snprintf(b, sizeof b, "-- rpm");
@@ -320,8 +356,8 @@ static void ride_update(void)
             lv_obj_remove_flag(w_band, LV_OBJ_FLAG_HIDDEN);
         } else lv_obj_add_flag(w_band, LV_OBJ_FLAG_HIDDEN);
     }
-    if (w_cue) { lv_obj_set_style_bg_color(w_cue, cc, 0); lv_label_set_text(w_cue_lbl, cshort); }
-    else if (w_cue_lbl) { lv_obj_set_style_text_color(w_cue_lbl, cc, 0); lv_label_set_text(w_cue_lbl, cshort); }
+    if (w_cue) { lv_obj_set_style_bg_color(w_cue, cc, 0); fit_label(w_cue_lbl, cshort, &bc_bold16, s_cue_y, s_cue_pad); }
+    else if (w_cue_lbl) { lv_obj_set_style_text_color(w_cue_lbl, cc, 0); fit_label(w_cue_lbl, cshort, &bc_bold16, s_cue_y, 0); }
     if (w_ring) { lv_obj_set_style_arc_color(w_ring, cc, LV_PART_INDICATOR); }
     if (w_head) { lv_label_set_text(w_head, paused ? "PAUSED" : (cue->head[0] ? cue->head : "READY")); lv_obj_set_style_text_color(w_head, cue->level == BC_LVL_INFO && !paused ? C_FG : cc, 0); }
     if (w_time1) lv_label_set_text(w_time1, tm);
@@ -337,7 +373,7 @@ static void ride_update(void)
         bc_cm_card(&cv, lv.power_ok ? lv.watts : -1, lv.cad_ok ? lv.rpm : -1, lv.hr_ok ? lv.bpm : -1, L);
         if (cv.mode == BC_CM_FOLLOWING && !L[8][0]) snprintf(L[8], sizeof L[8], "CYCLIFT CONNECTED");
         for (int i = 1; i < BC_CM_CARD_LINES; i++) {
-            if (strcmp(lv_label_get_text(k_line[i]), L[i])) lv_label_set_text(k_line[i], L[i]);
+            fit_label(k_line[i], L[i], i >= 7 ? &lv_font_montserrat_12 : &lv_font_montserrat_14, 52 + (i - 1) * 19, 0);   /* rc4: free text can be wide */
             lv_obj_remove_flag(k_line[i], LV_OBJ_FLAG_HIDDEN);
         }
         lv_obj_set_style_text_color(k_line[6], ui_level_color((bc_cue_level_t)(cv.no_hr ? BC_LVL_WARN : bc_cm_instr_level(cv.instruction))), 0);

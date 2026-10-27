@@ -149,6 +149,36 @@ static void state_tests(void)
     bc_cm_end(&m, 77); bc_cm_view(&m, true, 9600, 60, &v); CHECK(v.mode == BC_CM_NONE && !bc_cm_state(&m, &s, 9700), "COACH_END: nothing shown, later states of that workout ignored");
     s.workout_id = 78; s.seq = 1; CHECK(bc_cm_state(&m, &s, 9800), "a new workout id is accepted");
     for (int i = 0; i < 20; i++) CHECK(bc_cm_instr_text((uint8_t)i) != NULL && strlen(bc_cm_instr_text((uint8_t)i)) <= 20, "instr text %d", i);
+    for (int i = 0; i < 20; i++) CHECK(strlen(bc_cm_instr_short((uint8_t)i)) <= 10 && (i >= BC_CI_COUNT || !i || bc_cm_instr_short((uint8_t)i)[0]), "rc4: short instruction %d '%s' <= 10 chars", i, bc_cm_instr_short((uint8_t)i));
+
+    /* v1.3 (QA RC3-04): a COACH_STATE that omits fields keeps the previous values (merge); a keepalive refreshes only */
+    { static bc_cmirror_t k; bc_cm_init(&k); bc_coach_state_t f; memset(&f, 0, sizeof f);
+      f.workout_id = 300; f.seq = 5; f.type = BC_WT_THRESHOLD; f.kind = BC_TK_POWER; f.lo = 250; f.hi = 265; f.cad_lo = 85; f.cad_hi = 95; f.instruction = BC_CI_ON_TARGET;
+      f.remaining_s = 400; snprintf(f.text, sizeof f.text, "steady"); f.session_state = BC_SESS_RUNNING; f.hr_src = 2; f.has = 0x7FFFFF;
+      CHECK(bc_cm_state(&k, &f, 1000), "full state applied");
+      bc_coach_state_t ka; memset(&ka, 0, sizeof ka); ka.workout_id = 300; ka.seq = 6; ka.has = BC_CS_HAS(1) | BC_CS_HAS(2);
+      CHECK(bc_cm_state(&k, &ka, 11000), "keepalive (workout_id + seq) applied");
+      bc_cm_view_t kv; bc_cm_view(&k, true, 20000, 0, &kv);
+      CHECK(kv.mode == BC_CM_FOLLOWING && kv.lo == 250 && kv.hi == 265 && kv.cad_lo == 85 && kv.instruction == BC_CI_ON_TARGET && !strcmp(kv.text, "steady") && kv.type == BC_WT_THRESHOLD,
+            "keepalive: targets, instruction, text kept; still fresh 9 s later (mode %u lo %u)", kv.mode, kv.lo);
+      CHECK(kv.has_remaining && kv.remaining_s == 400 - 19, "keepalive: the countdown runs from the last state that carried it (%u)", kv.remaining_s);
+      bc_coach_state_t pi; memset(&pi, 0, sizeof pi); pi.workout_id = 300; pi.seq = 7; pi.instruction = BC_CI_MORE_POWER; pi.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(0x12);
+      bc_cm_state(&k, &pi, 21000); bc_cm_view(&k, true, 21000, 0, &kv);
+      CHECK(kv.instruction == BC_CI_MORE_POWER && kv.lo == 250 && kv.hi == 265, "instruction-only state: merged, targets kept");
+      bc_coach_state_t nw; memset(&nw, 0, sizeof nw); nw.workout_id = 301; nw.seq = 1; nw.kind = BC_TK_POWER; nw.lo = 100; nw.hi = 120; nw.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(4) | BC_CS_HAS(5) | BC_CS_HAS(6);
+      bc_cm_state(&k, &nw, 22000); bc_cm_view(&k, true, 22000, 0, &kv);
+      CHECK(kv.workout_id == 301 && kv.lo == 100 && kv.instruction == 0 && !kv.text[0] && kv.cad_lo == 0, "a new workout replaces (no values carried over from the old one)");
+      bc_cm_view(&k, true, 22000 + BC_CM_STATE_STALE_MS + 1, 0, &kv); CHECK(kv.mode != BC_CM_FOLLOWING, "no state or keepalive for 12 s: not following");
+    /* v1.3 (QA RC3-03): each APP_HELLO opens a new seq window */
+      bc_coach_state_t lo = nw; lo.seq = 9000; bc_cm_state(&k, &lo, 23000);
+      bc_coach_state_t rs = nw; rs.seq = 1; rs.lo = 140; CHECK(!bc_cm_state(&k, &rs, 23100), "without a new HELLO a restarted phone's seq 1 is old: ignored");
+      bc_cm_new_session(&k); CHECK(bc_cm_state(&k, &rs, 23200) && k.st.lo == 140, "after APP_HELLO: the first state is accepted whatever its seq");
+      bc_coach_state_t rs2 = rs; rs2.lo = 99; CHECK(!bc_cm_state(&k, &rs2, 23300), "then strictly newer again (an equal seq is ignored)");
+      rs2.seq = 2; CHECK(bc_cm_state(&k, &rs2, 23400), "seq 2 applied");
+    /* rc4: a stored plan only stands in for its own workout */
+      k.plan_ok = true; k.plan_id = 999; k.nseg = 1; bc_cm_view(&k, false, 23500, 10, &kv);
+      CHECK(kv.mode == BC_CM_LAST_TARGET && kv.lo == 99, "phone lost, plan for another workout: last target of the current one (mode %u)", kv.mode);
+      k.plan_ok = false; }
     CHECK(!strcmp(bc_cm_instr_text(99), "") && !strcmp(bc_cm_type_name(99), "WORKOUT"), "unknown codes");
 }
 
@@ -210,7 +240,16 @@ static void live_diag_tests(void)
     l.has_coach = true; l.coach_seq = 12; l.coach_mode = 2; l.storage_state = 3; l.rides_unsynced = 4; l.bt_flags = 1;
     n = bc_link_encode_live(&l, b, sizeof b, 1, 0);
     bc_live_t d; CHECK(n == n0 + 4 + 3 + 3 + 3 + 3 && bc_link_decode_live(b, n, &d) && d.has_coach && d.coach_seq == 12 && d.coach_mode == 2 && d.storage_state == 3 && d.rides_unsynced == 4 && d.bt_flags == 1, "LIVE 1.3 tags 11..15");
-    memset(&l, 0, sizeof l); l.ride_state = 1; CHECK(bc_link_encode_live(&l, b, sizeof b, 1, 0) == n0, "no 1.3 tag when there is nothing to say (old LIVE bytes unchanged)");
+    memset(&l, 0, sizeof l); l.ride_state = 1; CHECK(bc_link_encode_live(&l, b, sizeof b, 1, 0) == n0, "encoder: no 1.3 tag when has_l13 is unset and all are 0");
+    l.has_l13 = true; n = bc_link_encode_live(&l, b, sizeof b, 1, 0);
+    CHECK(n == n0 + 9 && bc_link_decode_live(b, n, &d) && d.has_l13 && d.storage_state == 0 && d.rides_unsynced == 0 && d.bt_flags == 0 && !d.has_coach,
+          "v1.3 (RC3-08): firmware sets has_l13 -> 13/14/15 always sent, also as 0 (queue count 0 is a real 0)");
+    { bc_live_t o; memset(&o, 0, sizeof o); o.ride_state = 1; size_t m = bc_link_encode_live(&o, b, sizeof b, 1, 0); bc_live_t od; bc_link_decode_live(b, m, &od);
+      CHECK(!od.has_l13, "decoder: no tag 13-15 -> has_l13 false (older board: unknown, not 0)"); }
+    { bc_sync_req_t q = { .after_ride_id = 41, .max_count = 1, .only_ride_id = 42 }; n = bc_link_encode_sync_req(&q, b, sizeof b, 1, 0);
+      bc_sync_req_t dq; CHECK(bc_link_decode_sync_req(b, n, &dq) && dq.after_ride_id == 41 && dq.max_count == 1 && dq.only_ride_id == 42, "v1.3 (RC3-01): SYNC_REQ tag 03 only_ride_id round trip");
+      bc_sync_req_t q0 = { .after_ride_id = 41, .max_count = 1 }; size_t m = bc_link_encode_sync_req(&q0, b, sizeof b, 1, 0);
+      CHECK(m + 4 == n && bc_link_decode_sync_req(b, m, &dq) && dq.only_ride_id == 0, "without it: the 1.2.3 bytes (%zu B)", m); }
     bc_diag_ack_t a = { 5, 0xABCD, 0 }; n = bc_link_encode_diag_ack(&a, b, sizeof b, 1, 0);
     CHECK(n == 8 + 12, "DIAG_ACK without delete = the 1.2.3 bytes");
     a.del = 1; n = bc_link_encode_diag_ack(&a, b, sizeof b, 1, 0);

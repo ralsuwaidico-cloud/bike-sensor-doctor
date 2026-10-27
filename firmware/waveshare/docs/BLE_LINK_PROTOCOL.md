@@ -78,6 +78,8 @@ Sources (`bc_src_t`): 1 XDS, 2 BLE_STRAP, 3 PHONE_GPS, 4 APPLE_WATCH, 5 WEAR_OS,
 ## 1.1 Ride-history sync (Sync characteristic `0006`, cap 0x40) — firmware 0.6.0
 Layout exactly as proposed by the phone app in `ios/SYNC_PROPOSAL.md`; the board streams `rides/history.txt` (R1/R2 lines) oldest first.
 - **SYNC_REQ 0x50** (phone → board, write): `01 u16 after_ride_id` (0 = from the oldest) `02 u8 max_count` (1…50, 0 → 50).
+  Contract v1.3 (firmware ≥ 0.7.4-rc4): optional `03 u16 only_ride_id` — exactly that ride (file or RAM-only) or none, then
+  SYNC_END; nothing released (coord/interfaces/BLE_CONTRACT.md §6).
   A new request cancels a batch in flight; a disconnect cancels it too.
 - **SYNC_RIDE 0x51** (board → phone, one notify per ride, ≤ 180 B): `01 u16 id` `02 u8 flags (bit0 demo, bit1 recovered)` `03 u32 duration_s`
   `04 u32 paused_s` `05–09 s16 avg_power, max_power, avg_cad, avg_hr, max_hr (−1 = none)` `0A–0C u32 power_s, cad_s, hr_s` `0D u32[7] zone_s (only when valid)`

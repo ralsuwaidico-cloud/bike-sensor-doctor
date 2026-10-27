@@ -291,8 +291,15 @@ void app_main(void)
     app_diag_stage(BC_SS_STABLE, 1);
     lvgl_port_unlock();
 
+    /* rc4 (QA RC3-05): the crash-loop counters count crashes that come close together. After 10 minutes of normal running
+       they are cleared (RTC + NVS), so sporadic crashes days apart never add up to a forced RECOVERY in the middle of a ride. */
+    int run_min = 0; bool run_cleared = false;
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(60000));
         health();
+        if (!run_cleared && ++run_min * 60000u >= BC_BOOT_RUN_CLEAR_MS) {
+            run_cleared = true; bc_boot_long_stable(R); plat_crash_run_clear();
+            ESP_LOGI(TAG, "running %d min without a crash: crash-loop counters cleared", run_min);
+        }
     }
 }

@@ -158,3 +158,25 @@ coach-mirror core + fixture), 6a2f57c (board logic + UI + sim 27), then the stre
   Residual QF-26: RTC lost at every crash AND NVS failing - no counter survives (S4b with both stores gone).
 * Kit 0.7.4-rc3: /home/claude/coord/deliver/fw-v0.7.4/ (rc2 files in /home/claude/coord/deliver/fw-v0.7.4-rc2-superseded/).
   App SHA-256 10c9a7a79085c47a304a52789223368b61d8479c6c13ca71626396941585f306 (1,875,840 B).
+
+## Round 6 — 0.7.4-rc4 (QA rc3 findings RC3-01..RC3-08)
+* Commits dac2f8c (firmware + tests + fixture), 0ee42ab (BLE_CONTRACT v1.3 [skip ci]), then the kit commit. Not run on hardware.
+* RC3-01: SYNC_REQ tag 03 `only_ride_id` = exactly that ride (file or RAM), releases nothing; plain `after = id-1` also
+  works for RAM rides now (RAM loop filtered by the requested after-id, not the advancing file cursor). iOS recommended
+  form: after = id-1, max 1, only = id. Sim 29c.
+* RC3-02: page-1 coach word = short table (bc_cm_instr_short, <= 10 chars) + fit_label (chord at the label's first/last
+  pixel rows; font step-down to montserrat_12; then ".." abbreviation); applied to the A pill, the B word, the TARGET line
+  and the page-2 card lines; design C headline capped at 2 lines. Sim 29a: 15 worst-case shots; without the fit 3 fail.
+* RC3-03: bc_cm_new_session on every HELLO (first COACH_STATE after it accepted whatever its seq).
+* RC3-04: merge (has bits); keepalive refreshes freshness only; remaining_s counted from the last state with tag 0B
+  (rem_rx_ms); found and fixed in the sim: a stored plan was used offline for a DIFFERENT workout - now only its own.
+* RC3-05: bc_boot_next_run: deep-sleep wake -> 0; 10 min stable -> bc_boot_long_stable + plat_crash_run_clear (NVS only
+  written if non-zero). 3 crashes in a row still -> RECOVERY.
+* RC3-06: rides/synced.txt "id scrc sumcrc epoch"; verified only if id + summary CRC + start time match (epoch 0 wildcard;
+  old 2/3-field lines still read).
+* RC3-08: LIVE 13/14/15 always sent (has_l13); contract: absent = older board = unknown.
+* Tests: host all green (link13 141, diag 195 ...), blehost PASS (+tsan: RESULT PASS, 9 reports in the fake NimBLE
+  harness, pre-existing class), sim 336 screens / 698 checks 0 failed, sim_asan clean. DIRAM free 44,625 B.
+* Kit 0.7.4-rc4: /home/claude/coord/deliver/fw-v0.7.4/ (rc3 in fw-v0.7.4-rc3-superseded/). App SHA-256
+  2530042f9f44e9fa57fa804f640c36c6d2759d143a3438552734b72be3fa11e6 (1,877,632 B). Partition table, bootloader, otadata
+  unchanged. README explains the 4 RAM places plainly; TEST D4 rewritten (sync only at connection), F1 fit check, F5.

@@ -12,7 +12,7 @@
 
 #define RQ_MAX 56                 /* newest 50 saved rides + RAM-only rides + the ride being recorded */
 #define RQ_HIST 50
-#define SYNCED_FILE "rides/synced.txt"   /* one line per verified ride: "<id> <samples_crc> <summary_crc>" */
+#define SYNCED_FILE "rides/synced.txt"   /* one line per verified ride: "<id> <samples_crc> <summary_crc> <start_epoch_s>" */
 #define SYNCED_MAX 256
 
 typedef struct {
@@ -25,8 +25,10 @@ typedef struct {
     /* ride queue */
     rq_ent_t q[RQ_MAX]; int nq; bool built;
     bc_ride_summary_t hist[RQ_HIST], un[APP_UNSAVED_MAX];
-    rq_ent_t old[RQ_MAX];
-    uint32_t synced[SYNCED_MAX]; int nsynced;     /* ids verified on the phone (file + RAM-only rides) */
+    rq_ent_t old[RQ_MAX], old2[RQ_MAX];
+    /* rides verified on the phone (file + RAM-only). rc4 (QA RC3-06): keyed by id + summary CRC + start time, so a repeated
+       id (no persistent counter) is never taken for the verified ride */
+    struct { uint32_t id, sumcrc, epoch; } synced[SYNCED_MAX]; int nsynced;
     int list_i; bool listing, list_end_due;
     bc_diag_chunk_req_t cq[4]; int ncq; uint32_t last_chunk_ms; bool chunk_sent;
     bool rinfo_due; uint32_t rinfo_id; rq_ent_t rinfo_ent; bool rinfo_has_ent; bool rerr_due; bc_diag_err_t rerr;
@@ -64,22 +66,36 @@ static bool phone_live(void)
 
 /* ------------------------------------------------------------------ ride queue store */
 static void samples_path(uint32_t id, char *p, size_t cap) { snprintf(p, cap, "rides/r%04u.txt", (unsigned)(id & 0xFFFF)); }
-static bool is_synced(uint32_t id) { for (int i = 0; i < L->nsynced; i++) if (L->synced[i] == id) return true; return false; }
-static void add_synced(uint32_t id) { if (!is_synced(id) && L->nsynced < SYNCED_MAX) L->synced[L->nsynced++] = id; }
+static bool key_match(int i, uint32_t id, uint32_t sumcrc, uint32_t epoch)
+{
+    return L->synced[i].id == id && L->synced[i].sumcrc == sumcrc && (!L->synced[i].epoch || !epoch || L->synced[i].epoch == epoch);
+}
+static bool is_synced_k(uint32_t id, uint32_t sumcrc, uint32_t epoch) { for (int i = 0; i < L->nsynced; i++) if (key_match(i, id, sumcrc, epoch)) return true; return false; }
+static bool is_synced(const rq_ent_t *e) { return is_synced_k(e->id, e->sumcrc, e->epoch); }
+static void add_synced(uint32_t id, uint32_t sumcrc, uint32_t epoch)
+{
+    if (is_synced_k(id, sumcrc, epoch) || L->nsynced >= SYNCED_MAX) return;
+    L->synced[L->nsynced].id = id; L->synced[L->nsynced].sumcrc = sumcrc; L->synced[L->nsynced].epoch = epoch; L->nsynced++;
+}
 static void load_synced(void)
 {
     /* RAM-only acks survive a list rebuild; the file holds the rest */
-    uint32_t keep[SYNCED_MAX]; int nk = 0;
-    for (int i = 0; i < L->nq; i++) if (L->q[i].ram && is_synced(L->q[i].id) && nk < SYNCED_MAX) keep[nk++] = L->q[i].id;
+    rq_ent_t *keep = L->old2; int nk = 0;
+    for (int i = 0; i < L->nq; i++) if (L->q[i].ram && is_synced(&L->q[i]) && nk < RQ_MAX) keep[nk++] = L->q[i];
     L->nsynced = 0;
     char b[257]; long off = 0, n;
     while ((n = plat_file_read_at(SYNCED_FILE, off, b, sizeof b - 1)) > 0) {
         b[n] = 0; char *s = b, *e; long used = 0;
-        while ((e = strchr(s, '\n')) != NULL) { *e = 0; unsigned long id; if (sscanf(s, "%lu", &id) == 1) add_synced((uint32_t)id); used = (e - b) + 1; s = e + 1; }
+        while ((e = strchr(s, '\n')) != NULL) {
+            *e = 0; unsigned long id, sc, sum, ep = 0;
+            int k = sscanf(s, "%lu %lu %lu %lu", &id, &sc, &sum, &ep);
+            if (k >= 3) add_synced((uint32_t)id, (uint32_t)sum, (uint32_t)ep);   /* a line without its summary CRC never counts */
+            used = (e - b) + 1; s = e + 1;
+        }
         if (!used) break;
         off += used;
     }
-    for (int i = 0; i < nk; i++) add_synced(keep[i]);
+    for (int i = 0; i < nk; i++) add_synced(keep[i].id, keep[i].sumcrc, keep[i].epoch);
 }
 static uint32_t file_crc(const char *path, uint32_t size)
 {
@@ -94,7 +110,7 @@ static void ent_state(rq_ent_t *e)
     if (sz >= 0) { if ((uint32_t)sz != e->size) e->crc_known = false; e->size = (uint32_t)sz; } else { e->size = 0; e->crc_known = true; e->scrc = 0; }
     e->flags &= (uint8_t)~(BC_RQF_SUMMARY_ONLY | BC_RQF_RAM_ONLY);
     if (e->ram) e->flags |= BC_RQF_RAM_ONLY;
-    if (is_synced(e->id)) e->state = (sz >= 0 || e->ram) ? BC_RQ_VERIFIED : BC_RQ_SAMPLES_DELETED;   /* a RAM-only ride had no samples to delete */
+    if (is_synced(e)) e->state = (sz >= 0 || e->ram) ? BC_RQ_VERIFIED : BC_RQ_SAMPLES_DELETED;   /* a RAM-only ride had no samples to delete */
     else { e->state = e->xfer ? BC_RQ_TRANSFER : BC_RQ_UNSYNCED; if (sz < 0 && !e->ram) e->flags |= BC_RQF_SUMMARY_ONLY; }
 }
 static void build_list(void)
@@ -151,12 +167,12 @@ static void rq_ack(const bc_rideq_ack_t *a)
     ensure_crc(e);
     bool samples_ok = (e->flags & (BC_RQF_SUMMARY_ONLY | BC_RQF_RAM_ONLY)) || e->state == BC_RQ_SAMPLES_DELETED || a->samples_crc == e->scrc;
     if (!samples_ok || a->summary_crc != e->sumcrc) { rq_err(a->ride_id, BC_RQ_ERR_CRC); L->st.rq_acks_bad++; return; }   /* v1.1: state unchanged */
-    if (!is_synced(e->id)) {
+    if (!is_synced(e)) {
         if (!e->ram) {
-            char line[48]; int k = snprintf(line, sizeof line, "%lu %lu %lu\n", (unsigned long)e->id, (unsigned long)e->scrc, (unsigned long)e->sumcrc);
+            char line[64]; int k = snprintf(line, sizeof line, "%lu %lu %lu %lu\n", (unsigned long)e->id, (unsigned long)e->scrc, (unsigned long)e->sumcrc, (unsigned long)e->epoch);
             if (!plat_file_append(SYNCED_FILE, line, (size_t)k, true)) { rq_err(a->ride_id, BC_DIAG_ERR_STORAGE); return; }   /* not persisted: not verified */
         }
-        add_synced(e->id);
+        add_synced(e->id, e->sumcrc, e->epoch);
     }
     L->st.rq_acks_ok++;
     if (a->delete_samples && !recording() && !e->ram) {          /* never while a ride records; the phone has it verified */
@@ -239,7 +255,8 @@ bool app_link13_write(const uint8_t *msg, size_t n, uint32_t now)
     switch (t) {
     case BC_MSG_APP_HELLO: {
         bc_hello_t h; if (!bc_link_decode_hello(msg, n, &h)) return true;
-        s_enabled = BC_CAPS_BOARD & h.app_caps; L->st.hellos++;   /* contract §4: enabled_caps = INFO caps AND app_caps */
+        s_enabled = BC_CAPS_BOARD & h.app_caps; L->st.hellos++;
+        bc_cm_new_session(&L->cm);                            /* v1.3 (QA RC3-03): a relaunched app restarts its seq */   /* contract §4: enabled_caps = INFO caps AND app_caps */
         L->hello_ack_due = true;
         app_diag_set_auto_delete((s_enabled & BC_CAP_DIAG_AUTO) != 0);
         if (s_enabled & BC_CAP_STORAGE) L->status_due = true;
@@ -372,7 +389,9 @@ void app_link13_ride_closed(void)
 
 void app_link13_live(bc_live_t *l, uint32_t now)
 {
+    l->has_l13 = true;                                        /* v1.3 (RC3-08): 13..15 always sent */
     if (!L) return;
+    if (!L->built) build_list();                              /* the queue count is real from the first LIVE on */
     bc_cm_view_t v; bc_cm_view(&L->cm, phone_live(), now, elapsed_now(), &v);
     if (v.mode != BC_CM_NONE) { l->has_coach = true; l->coach_seq = L->cm.have_state ? L->cm.st.seq : 0; l->coach_mode = v.mode; }
     uint8_t s = (uint8_t)plat_storage_state(); l->storage_state = s;

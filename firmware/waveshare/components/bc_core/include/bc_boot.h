@@ -92,6 +92,11 @@ void bc_boot_limit(bc_boot_rtc_t *r, bc_boot_plan_t *p, uint8_t nvs_run);
 /** The NVS crash-run counter for this start: +1 after a panic / watchdog reset, unchanged after a brownout or deep-sleep
  *  wake, 0 after power-on / software restart. */
 uint8_t bc_boot_next_run(uint8_t prev, bc_reset_t reset);
+/* rc4 (QA RC3-05): crashes count toward the limiter only when they come close together: the counters are cleared after
+ * BC_BOOT_RUN_CLEAR_MS of normal running (bc_boot_long_stable + the NVS counter) and by a deep-sleep wake (a quiet idle
+ * period), as well as by power-on / software restart. A loop of crashes later than 20 s but sooner than 10 min is still caught. */
+#define BC_BOOT_RUN_CLEAR_MS 600000u
+void bc_boot_long_stable(bc_boot_rtc_t *r);
 
 bool bc_boot_rtc_valid(const bc_boot_rtc_t *r);
 /** Decide this boot. reset = bc_reset_t of esp_reset_reason(); nvs_skip = subsystems disabled in NVS for this firmware. */

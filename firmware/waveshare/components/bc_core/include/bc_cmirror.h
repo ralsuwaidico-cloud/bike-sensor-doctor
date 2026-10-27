@@ -28,8 +28,9 @@ typedef struct {
     bool rx_active; uint32_t rx_id; uint16_t rx_parts, rx_next_part, rx_total, rx_n; uint32_t rx_crc, rx_total_dur, rx_t0; char rx_name[21];
     bc_cseg_t rx_seg[BC_COACH_MAX_SEGMENTS];
     /* the last applied coach state */
-    bool have_state; bc_coach_state_t st; uint32_t st_rx_ms;
+    bool have_state; bc_coach_state_t st; uint32_t st_rx_ms, rem_rx_ms;   /* rem_rx_ms: when remaining_s (tag 0B) last came */
     uint32_t ended_id; bool ended;       /* COACH_END received for this workout */
+    bool seq_open;                       /* v1.3: the next COACH_STATE is applied whatever its seq (new APP_HELLO session) */
     uint32_t states_applied, states_ignored, plans_ok, plans_bad;
 } bc_cmirror_t;
 
@@ -49,8 +50,11 @@ typedef struct {
 void bc_cm_init(bc_cmirror_t *m);
 /** One COACH_PLAN part. Returns bc_plan_status_t; *next_part = the part the board expects next. */
 uint8_t bc_cm_plan_part(bc_cmirror_t *m, const bc_coach_plan_msg_t *p, uint16_t *next_part);
-/** A COACH_STATE: applied (true) only when it is for a new workout or its seq is strictly newer (serial order mod 2^16). */
+/** A COACH_STATE: applied (true) when it is for a new workout, the first one after bc_cm_new_session, or its seq is strictly
+ *  newer (serial order mod 2^16). v1.3: fields it omits keep their previous values for the same workout (merge). */
 bool bc_cm_state(bc_cmirror_t *m, const bc_coach_state_t *s, uint32_t now_ms);
+/** v1.3 (QA RC3-03): a new APP_HELLO session - the phone's seq may have restarted; the next COACH_STATE resets the window. */
+void bc_cm_new_session(bc_cmirror_t *m);
 /** COACH_END: the workout stops being shown (plan and state cleared when they belong to it). */
 void bc_cm_end(bc_cmirror_t *m, uint32_t workout_id);
 /** What the board shows now. phone_live = the phone link is up and Link 1.3 COACH is enabled on it; elapsed_s = the board's
@@ -58,6 +62,8 @@ void bc_cm_end(bc_cmirror_t *m, uint32_t workout_id);
 void bc_cm_view(const bc_cmirror_t *m, bool phone_live, uint32_t now_ms, uint32_t elapsed_s, bc_cm_view_t *v);
 /** "ON TARGET", "MORE POWER" ... (ASCII, <= 20 chars); "" for none / unknown */
 const char *bc_cm_instr_text(uint8_t instruction);
+/* rc4 (QA RC3-02): <= 10-character form of the instruction for the ride page-1 pill (designs A/B), "" for none */
+const char *bc_cm_instr_short(uint8_t instruction);
 /** "ENDURANCE", "SWEET SPOT" ... ("WORKOUT" for unknown) */
 const char *bc_cm_type_name(uint8_t type);
 /** Colour class of an instruction (bc_coach.h levels): 0 info, 1 good, 2 up, 3 down, 4 warn */

@@ -106,7 +106,10 @@ static void generate(void)
       put("]}"); free(m); }
     bc_coach_state_t ka; memset(&ka, 0, sizeof ka); ka.workout_id = p0.workout_id; ka.seq = 42;
     n = bc_link_encode_coach_state(&ka, b, sizeof b, 5, 0);
-    vec("coach_state_keepalive", "phone_to_board", b, n, "\"seq\": 5, \"workout_id\": %u, \"state_seq\": 42", ka.workout_id);
+    vec("coach_state_keepalive", "phone_to_board", b, n, "\"seq\": 5, \"workout_id\": %u, \"state_seq\": 42, \"semantics\": \"v1.3: merge - every omitted field keeps its previous value; refreshes the 12 s freshness\"", ka.workout_id);
+    { bc_coach_state_t pi; memset(&pi, 0, sizeof pi); pi.workout_id = p0.workout_id; pi.seq = 43; pi.instruction = BC_CI_MORE_POWER; pi.has = BC_CS_HAS(1) | BC_CS_HAS(2) | BC_CS_HAS(0x12);
+      n = bc_link_encode_coach_state(&pi, b, sizeof b, 5, 0);
+      vec("coach_state_partial_instruction", "phone_to_board", b, n, "\"seq\": 5, \"workout_id\": %u, \"state_seq\": 43, \"instruction\": 2, \"after_merge\": {\"target_lo\": 140, \"target_hi\": 155, \"instruction\": 2}", pi.workout_id); }
     bc_coach_end_t ce = { p0.workout_id, 0 }; n = bc_link_encode_coach_end(&ce, b, sizeof b, 6, 0);
     vec("coach_end", "phone_to_board", b, n, "\"seq\": 6, \"workout_id\": %u, \"reason\": 0", ce.workout_id);
 
@@ -169,9 +172,14 @@ static void generate(void)
     /* LIVE with the 1.3 tags, DIAG_ACK with delete */
     bc_live_t lv; memset(&lv, 0, sizeof lv);
     lv.power_ok = true; lv.power_w = 145; lv.power_age_ms = 400; lv.cad_ok = true; lv.cadence_rpm = 84; lv.cad_age_ms = 400; lv.ride_state = 1; lv.ride_id = 23; lv.elapsed_s = 1830;
-    lv.distance_m = 12000; lv.cue_id = 0; lv.battery_pct = 80; lv.meter_link = 2; lv.has_coach = true; lv.coach_seq = 41; lv.coach_mode = 2; lv.storage_state = 3; lv.rides_unsynced = 1; lv.bt_flags = 0;
+    lv.distance_m = 12000; lv.cue_id = 0; lv.battery_pct = 80; lv.meter_link = 2; lv.has_coach = true; lv.coach_seq = 41; lv.coach_mode = 2; lv.storage_state = 3; lv.rides_unsynced = 1; lv.bt_flags = 0; lv.has_l13 = true;
     n = bc_link_encode_live(&lv, b, sizeof b, 19, 0x100E);
     vec("live_with_link13_tags", "board_to_phone", b, n, "\"seq\": 19, \"power_w\": 145, \"cadence_rpm\": 84, \"ride_id\": 23, \"elapsed_s\": 1830, \"coach_seq\": 41, \"coach_mode\": 2, \"storage_state\": 3, \"rides_unsynced\": 1, \"bt_flags\": 0");
+    { bc_live_t l0; memset(&l0, 0, sizeof l0); l0.ride_state = 0; l0.battery_pct = 80; l0.has_l13 = true;
+      n = bc_link_encode_live(&l0, b, sizeof b, 21, 0x100F);
+      vec("live_link13_zero", "board_to_phone", b, n, "\"seq\": 21, \"storage_state\": 0, \"rides_unsynced\": 0, \"bt_flags\": 0, \"note\": \"v1.3: firmware >= 0.7.4-rc4 always sends tags 13-15; absent = older board (unknown)\""); }
+    { bc_sync_req_t q = { .after_ride_id = 41, .max_count = 1, .only_ride_id = 42 }; n = bc_link_encode_sync_req(&q, b, sizeof b, 22, 0);
+      vec("sync_req_only_ride", "phone_to_board", b, n, "\"seq\": 22, \"after_ride_id\": 41, \"max_count\": 1, \"only_ride_id\": 42"); }
     bc_diag_ack_t da = { 7, 0xCBF43926u, 1 }; n = bc_link_encode_diag_ack(&da, b, sizeof b, 20, 0);
     vec("diag_ack_delete", "phone_to_board", b, n, "\"seq\": 20, \"report_id\": 7, \"crc32\": %u, \"delete\": 1", da.crc);
     put("\n]\n}\n");

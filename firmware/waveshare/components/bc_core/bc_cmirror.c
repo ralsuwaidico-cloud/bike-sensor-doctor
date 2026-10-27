@@ -51,11 +51,32 @@ uint8_t bc_cm_plan_part(bc_cmirror_t *m, const bc_coach_plan_msg_t *p, uint16_t 
     return BC_PLAN_COMPLETE;
 }
 
+void bc_cm_new_session(bc_cmirror_t *m) { m->seq_open = true; }
+
+/* contract v1.3 (QA RC3-04): fields a COACH_STATE omits keep their previous values for the same workout (merge); a
+   keepalive = workout_id + seq only refreshes the link. A new workout id starts from an empty state. */
+static void merge(bc_coach_state_t *d, const bc_coach_state_t *s)
+{
+#define M(tag, f) if (s->has & BC_CS_HAS(tag)) d->f = s->f
+    M(0x03, type); M(0x04, kind); M(0x05, lo); M(0x06, hi); M(0x07, cad_lo); M(0x08, cad_hi);
+    M(0x09, interval_index); M(0x0A, interval_count); M(0x0B, remaining_s); M(0x0C, interval_dur_s);
+    M(0x0D, next_type); M(0x0E, next_kind); M(0x0F, next_lo); M(0x10, next_hi); M(0x11, next_dur_s);
+    M(0x12, instruction); M(0x14, session_state); M(0x15, hr_src); M(0x16, zone); M(0x17, flags);
+#undef M
+    if (s->has & BC_CS_HAS(0x13)) memcpy(d->text, s->text, sizeof d->text);
+    d->has |= s->has; d->seq = s->seq; d->workout_id = s->workout_id;
+}
+
 bool bc_cm_state(bc_cmirror_t *m, const bc_coach_state_t *s, uint32_t now_ms)
 {
     if (m->ended && s->workout_id == m->ended_id) { m->states_ignored++; return false; }
-    if (m->have_state && s->workout_id == m->st.workout_id && (int16_t)(uint16_t)(s->seq - m->st.seq) <= 0) { m->states_ignored++; return false; }
-    m->st = *s; m->have_state = true; m->st_rx_ms = now_ms; m->states_applied++;
+    bool same = m->have_state && s->workout_id == m->st.workout_id;
+    /* contract v1.3 (QA RC3-03): the seq window restarts with every APP_HELLO (an app relaunch restarts its seq) */
+    if (same && !m->seq_open && (int16_t)(uint16_t)(s->seq - m->st.seq) <= 0) { m->states_ignored++; return false; }
+    m->seq_open = false;
+    if (same) merge(&m->st, s); else m->st = *s;
+    if (!same || (s->has & BC_CS_HAS(0x0B))) m->rem_rx_ms = now_ms;    /* a keepalive must not restart the countdown */
+    m->have_state = true; m->st_rx_ms = now_ms; m->states_applied++;
     return true;
 }
 
@@ -110,7 +131,7 @@ void bc_cm_view(const bc_cmirror_t *m, bool phone_live, uint32_t now_ms, uint32_
         v->type = s->type; v->kind = s->kind; v->lo = s->lo; v->hi = s->hi; v->cad_lo = s->cad_lo; v->cad_hi = s->cad_hi;
         v->instruction = s->instruction; snprintf(v->text, sizeof v->text, "%s", s->text);
         if (s->has & BC_CS_HAS(0x0B)) {
-            uint32_t gone = (now_ms - m->st_rx_ms) / 1000u;
+            uint32_t gone = (now_ms - m->rem_rx_ms) / 1000u;
             v->has_remaining = true; v->remaining_s = (uint16_t)(s->remaining_s > gone ? s->remaining_s - gone : 0);
             if (s->session_state == BC_SESS_PAUSED) v->remaining_s = s->remaining_s;   /* the phone's countdown is paused too */
         }
@@ -123,8 +144,10 @@ void bc_cm_view(const bc_cmirror_t *m, bool phone_live, uint32_t now_ms, uint32_
         if (s->session_state == BC_SESS_FINISHED) { v->done = true; if (!v->instruction) v->instruction = BC_CI_DONE; }
         return;
     }
-    if (coach_live && m->plan_ok) { v->mode = BC_CM_FOLLOWING; plan_view(m, elapsed_s, v); return; }
-    if (m->plan_ok) {
+    /* rc4: a stored plan only stands in for the workout it belongs to (a newer workout without a plan -> its last target) */
+    bool plan = m->plan_ok && (!m->have_state || m->st.workout_id == m->plan_id);
+    if (coach_live && plan) { v->mode = BC_CM_FOLLOWING; plan_view(m, elapsed_s, v); return; }
+    if (plan) {
         v->mode = BC_CM_PLAN_OFFLINE; plan_view(m, elapsed_s, v);
         if (m->have_state) { v->hr_src = s->hr_src; v->seq = s->seq; }
     } else if (m->have_state && s->session_state != BC_SESS_FINISHED && s->session_state != BC_SESS_ABANDONED) {
@@ -142,6 +165,12 @@ const char *bc_cm_instr_text(uint8_t i)
     static const char *T[BC_CI_COUNT] = { "", "ON TARGET", "MORE POWER", "LESS POWER", "CADENCE UP", "CADENCE DOWN", "HOLD STEADY",
         "GET READY", "EASY / RECOVER", "GO!", "COOL DOWN", "HR HIGH - EASE OFF", "DRINK / FUEL", "PAUSED", "WORKOUT DONE", "NO DATA",
         "TARGET CHANGED" };
+    return i < BC_CI_COUNT ? T[i] : "";
+}
+const char *bc_cm_instr_short(uint8_t i)
+{
+    static const char *T[BC_CI_COUNT] = { "", "ON TARGET", "MORE POWER", "LESS POWER", "RPM UP", "RPM DOWN", "HOLD", "GET READY", "EASY",
+        "GO!", "COOL DOWN", "HR HIGH", "DRINK", "PAUSED", "DONE", "NO DATA", "NEW TARGET" };
     return i < BC_CI_COUNT ? T[i] : "";
 }
 const char *bc_cm_type_name(uint8_t t)

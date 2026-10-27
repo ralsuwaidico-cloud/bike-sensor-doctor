@@ -413,7 +413,7 @@ const char *ui_cue_short(const bc_cue_t *c)
     case BC_CUE_CAD_LOW: return "HIGHER RPM";
     case BC_CUE_CAD_HIGH: return "LOWER RPM";
     case BC_CUE_HOLD: return c->why[0] == 'n' ? "CADENCE OK" : "HOLD THIS";
-    case BC_CUE_PHONE: return c->head;
+    case BC_CUE_PHONE: return c->word[0] ? c->word : c->head;
     default: return "READY";
     }
 }

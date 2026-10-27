@@ -81,9 +81,9 @@ size_t bc_link_encode_live(const bc_live_t *v, uint8_t *buf, size_t cap, uint16_
     bc_lw_u8(&w, 0x0C, v->cue_id); bc_lw_u8(&w, 0x0D, v->battery_pct); bc_lw_u8(&w, 0x0E, v->meter_link); bc_lw_u16(&w, 0x0F, v->meter_gaps);
     if (v->demo) bc_lw_u8(&w, 0x10, 1);
     if (v->has_coach) { bc_lw_u16(&w, 0x11, v->coach_seq); bc_lw_u8(&w, 0x12, v->coach_mode); }
-    if (v->storage_state) bc_lw_u8(&w, 0x13, v->storage_state);
-    if (v->rides_unsynced) bc_lw_u8(&w, 0x14, v->rides_unsynced);
-    if (v->bt_flags) bc_lw_u8(&w, 0x15, v->bt_flags);
+    if (v->has_l13 || v->storage_state) bc_lw_u8(&w, 0x13, v->storage_state);
+    if (v->has_l13 || v->rides_unsynced) bc_lw_u8(&w, 0x14, v->rides_unsynced);
+    if (v->has_l13 || v->bt_flags) bc_lw_u8(&w, 0x15, v->bt_flags);
     return bc_lw_end(&w);
 }
 
@@ -112,9 +112,9 @@ bool bc_link_decode_live(const uint8_t *buf, size_t len, bc_live_t *v)
         case 0x10: FIELD(1); v->demo = x[0] != 0; break;
         case 0x11: FIELD(2); v->has_coach = true; v->coach_seq = (uint16_t)bc_lr_uint(x, n); break;
         case 0x12: FIELD(1); v->has_coach = true; v->coach_mode = x[0]; break;
-        case 0x13: FIELD(1); v->storage_state = x[0]; break;
-        case 0x14: FIELD(1); v->rides_unsynced = x[0]; break;
-        case 0x15: FIELD(1); v->bt_flags = x[0]; break;
+        case 0x13: FIELD(1); v->storage_state = x[0]; v->has_l13 = true; break;
+        case 0x14: FIELD(1); v->rides_unsynced = x[0]; v->has_l13 = true; break;
+        case 0x15: FIELD(1); v->bt_flags = x[0]; v->has_l13 = true; break;
         default: break;                                   /* unknown tag: skipped */
         }
     }
@@ -344,6 +344,7 @@ size_t bc_link_encode_sync_req(const bc_sync_req_t *v, uint8_t *buf, size_t cap,
 {
     bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_SYNC_REQ, seq, t_ms);
     bc_lw_u16(&w, 0x01, v->after_ride_id); bc_lw_u8(&w, 0x02, v->max_count);
+    if (v->only_ride_id) bc_lw_u16(&w, 0x03, v->only_ride_id);
     return bc_lw_end(&w);
 }
 bool bc_link_decode_sync_req(const uint8_t *buf, size_t len, bc_sync_req_t *v)
@@ -354,6 +355,7 @@ bool bc_link_decode_sync_req(const uint8_t *buf, size_t len, bc_sync_req_t *v)
     while (bc_lr_next(&r, &t, &x, &n)) {
         if (t == 0x01 && n == 2) v->after_ride_id = (uint16_t)bc_lr_uint(x, n);
         else if (t == 0x02 && n == 1) v->max_count = x[0];
+        else if (t == 0x03 && n == 2) v->only_ride_id = (uint16_t)bc_lr_uint(x, n);
     }
     if (v->max_count == 0 || v->max_count > 50) v->max_count = 50;
     return true;

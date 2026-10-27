@@ -387,6 +387,9 @@ const bc_cue_t *app_cue(void)
     const char *t = v.no_hr ? "NO HR - BY FEEL" : bc_cm_instr_text(v.instruction);
     if (!t[0]) t = v.text[0] ? v.text : (v.mode == BC_CM_FOLLOWING ? "CYCLIFT COACH" : "LAST TARGET");
     snprintf(s_mirror_cue.head, sizeof s_mirror_cue.head, "%.23s", t);
+    /* page-1 word (designs A/B): the short form; free text and the fallbacks are fitted to the round edge by the UI */
+    const char *w = v.no_hr ? "NO HR" : bc_cm_instr_short(v.instruction);
+    snprintf(s_mirror_cue.word, sizeof s_mirror_cue.word, "%.11s", w[0] ? w : (v.text[0] ? "" : v.mode == BC_CM_FOLLOWING ? "COACH" : v.mode == BC_CM_PLAN_OFFLINE ? "PLAN" : "LAST TGT"));
     snprintf(s_mirror_cue.why, sizeof s_mirror_cue.why, "%s", v.mode == BC_CM_FOLLOWING ? "Cyclift coach" : "phone lost - board follows");
     return &s_mirror_cue;
 }

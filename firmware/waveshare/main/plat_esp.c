@@ -280,6 +280,13 @@ uint8_t plat_crash_run_update(bc_reset_t reset)
     nvs_close(h);
     return n;
 }
+void plat_crash_run_clear(void)
+{
+    nvs_handle_t h; uint8_t v = 0;
+    if (nvs_open("bootrec", NVS_READWRITE, &h) != ESP_OK) return;
+    if (nvs_get_u8(h, "crashrun", &v) == ESP_OK && v) { nvs_set_u8(h, "crashrun", 0); nvs_commit(h); }
+    nvs_close(h);
+}
 void plat_flash_usage(uint32_t *slot_kb, uint32_t *used_kb, uint16_t *nvs_used, uint16_t *nvs_free)
 {
     *slot_kb = *used_kb = 0; *nvs_used = *nvs_free = 0;

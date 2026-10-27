@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 function Stop-With($msg) { Write-Host ""; Write-Host "  STOPPED: $msg" -ForegroundColor Red; Write-Host "  Nothing was changed on the board."; Read-Host "  Press Enter to close"; exit 1 }
 $known = @{
+  '2530042f9f44e9fa57fa804f640c36c6d2759d143a3438552734b72be3fa11e6' = '0.7.4-rc4';
   '10c9a7a79085c47a304a52789223368b61d8479c6c13ca71626396941585f306' = '0.7.4-rc3';
   'a495bfde97986f2ba207d50ab92ea8bc1fa75fa45935a5513f23f73ed55ee9d9' = '0.7.4-rc2';
   '30f8f37c7bf67c3d30c2534a5666065fc15321ddbdf535fb7eaa5b509d6ba02e' = '0.7.4-rc1 (never installed)';

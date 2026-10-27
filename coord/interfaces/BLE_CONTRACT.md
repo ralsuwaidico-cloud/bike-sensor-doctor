@@ -1,12 +1,24 @@
 # Cyclift ↔ BikeComputer — phone-first architecture and BLE data contract
 
-**Version: contract v1.2 = BikeComputer Link 1.3.** Author: firmware agent, 27 Oct 2026. Review: iOS agent (v1 review:
+**Version: contract v1.3 = BikeComputer Link 1.3** (firmware ≥ 0.7.4-rc4). Author: firmware agent, 28 Oct 2026. Review: iOS agent (v1 review:
 `ios/phonefirst-dev` @ 994f3e7, `coord/interfaces/BLE_CONTRACT_IOS_REVIEW.md`), QA.
-Status: **agreed design; nothing in sections 4–8 is implemented in the firmware yet** (firmware FW-4; firmware 0.7.4-rc2 is
-still wire-identical to Link 1.2.3). Cyclift's `ios/BikeComputer/Link13/` implements the phone side from this document.
+Status: **implemented** in firmware 0.7.4-rc3 (Link 1.3 per v1.2) and 0.7.4-rc4 (v1.3 additions below), host/simulator
+tested; nothing in sections 4–8 has been verified on hardware yet. Cyclift's `ios/BikeComputer/Link13/` implements the phone side from this document.
 Sections 2–3 describe what is shipped today (Link 1.2.3, firmware 0.7.3 / Cyclift RC1) and must keep working unchanged.
 
 ### Change log
+
+**v1.3 (28 Oct 2026, firmware 0.7.4-rc4) — QA rc3 findings RC3-01/03/04/06/08.** ⚠ = Cyclift's Link13 code must follow.
+Link minor stays 3 and the INFO/HELLO caps are unchanged; every addition is optional and older boards ignore it.
+| QA | Change | Section |
+|---|---|---|
+| RC3-01 ⚠ | **SYNC_REQ `03 u16 only_ride_id`** (new, optional): the board answers with exactly that ride's SYNC_RIDE (file or RAM-only ride) or nothing, then SYNC_END; it releases nothing. Recommended re-request of a ride the board still holds but did not confirm: `after_ride_id = id − 1`, `max_count = 1`, `only_ride_id = id` (a board before rc4 ignores tag 03 and answers the after/max part). Firmware rc4 also answers a plain `after_ride_id = id − 1` correctly for RAM-only rides, but that form still releases older RAM rides already sent (rule below) and may answer a newer ride first. | §3, §6 |
+| RC3-03 ⚠ | The COACH_STATE seq window **restarts on every APP_HELLO**: the first COACH_STATE after a HELLO is applied whatever its seq; strictly newer after that. Cyclift also persists its seq per workout across app relaunches. | §5.3 |
+| RC3-04 ⚠ | COACH_STATE is a **merge**: for the same `workout_id`, a field that is omitted keeps its previous value (it is not cleared). To clear a value send it explicitly (0 / empty text). **Keepalive** = `01 workout_id` + `02 seq` only: refreshes the 12 s freshness, changes nothing else, does not restart the `remaining_s` countdown (counted from the last state that carried tag 0B). A new `workout_id` replaces everything. | §5.3 |
+| RC3-04 | A stored plan stands in offline only for its own `workout_id`; if the latest COACH_STATE is for another workout the board holds that workout's last targets (`coach_mode 3`). | §5.4 |
+| RC3-08 ⚠ | LIVE `13 storage_state`, `14 rides_unsynced`, `15 bt_flags` are **always sent** by firmware ≥ 0.7.4-rc4, also when 0 (a 0 queue count is a real 0). Absent = older board = unknown, never "0". `11`/`12` absent = no workout mirrored (`coach_mode 0`). | §4 |
+| RC3-06 | Board-internal: a ride counts as verified only when id **and** summary CRC **and** start time match the verified entry (an id from an older life of the board never marks a new ride synced). No wire change. | §6 |
+
 
 **v1.2 (27 Oct 2026, firmware 0.7.4-rc3) — behaviour only, no wire change** (QA QF-22 / QF-28 / QF-29).
 | Change | Section |
@@ -122,10 +134,13 @@ before a HELLO enabling it on the current connection. New LIVE tags (below) are 
 | Cyclift 1.3 + board 0.7.3 (no cap 0x0800) | app does not send HELLO / COACH / RIDEQ / STORAGE; uses SYNC_RIDE + DIAG; shows "update BikeComputer for coach mirroring" |
 | Cyclift 1.3 + board 1.3 | HELLO → enabled caps → everything below |
 
-New LIVE tags (board → phone, 1 Hz; absent = unknown/none):
+New LIVE tags (board → phone, 1 Hz):
 `11 u16 coach_seq` (last applied COACH_STATE seq) · `12 u8 coach_mode` (0 none, 1 following phone, 2 phone lost → board follows
-the stored plan, 3 phone lost → holding last targets, no plan) · `13 u8 storage_state` (bc_stor_state_t, present only when not
-OK) · `14 u8 rides_unsynced` · `15 u8 bt_flags` (bit0 sensors disabled after a crash, bit1 phone link degraded).
+the stored plan, 3 phone lost → holding last targets, no plan) — 11/12 are sent only while a workout is mirrored; absent =
+`coach_mode 0`. · `13 u8 storage_state` (bc_stor_state_t, 0 OK) · `14 u8 rides_unsynced` · `15 u8 bt_flags` (bit0 sensors
+disabled after a crash, bit1 phone link degraded) — v1.3: **13/14/15 are always sent** by firmware ≥ 0.7.4-rc4, also as 0,
+before and after HELLO. If a LIVE frame has none of 13/14/15 the board is older (0.7.4-rc3 or earlier sent them only when
+non-zero): treat the values as **unknown**, not 0 (Cyclift: show nothing rather than "0 rides waiting"). Same rule for bt_flags.
 
 ## 5. Coach mirroring (cap COACH)
 
@@ -158,7 +173,9 @@ A new workout_id replaces the stored plan; the board keeps one plan in RAM (≤ 
 
 ### 5.3 COACH_STATE 0xB2 (phone → board, Control, write-with-response) — on every change + every 5 s while a workout runs
 `01 u32 workout_id` · `02 u16 seq` (incremented on every send, keepalives included; applied only if strictly newer than the
-last applied seq of the same workout in serial-number order, i.e. `(int16_t)(seq − last) > 0`; a new `workout_id` resets it) · `03 u8 workout_type` · `04 u8 target_kind`
+last applied seq of the same workout in serial-number order, i.e. `(int16_t)(seq − last) > 0`; a new `workout_id` resets it;
+v1.3: **every APP_HELLO also resets it** — the first COACH_STATE after a HELLO is applied whatever its seq — and Cyclift
+persists its seq per workout so a relaunched app continues upward) · `03 u8 workout_type` · `04 u8 target_kind`
 · `05 u16 target_lo` · `06 u16 target_hi` · `07 u8 cad_lo` · `08 u8 cad_hi` · `09 u16 interval_index` (= the plan's segment index, warm-up = 0) · `0A u16 interval_count` (= plan segments)
 · `0B u16 remaining_s` (seconds left in the interval at the moment the board **receives** the message; the board does not map
 the phone's ms clock) · `0C u16 interval_duration_s` · `0D u8 next_type` · `0E u8 next_target_kind` ·
@@ -167,6 +184,12 @@ cut at a character boundary)` · `14 u8 session_state` (0 not started, 1 running
 `15 u8 hr_src` · `16 u8 zone` (1–7 power / 1–5 HR, 0 none) · `17 u8 flags` (bit0 targets changed by adaptation now,
 bit1 targets are %FTP-derived from the board profile FTP, bit2 Apple Watch HR live on the phone).
 Size: ≤ 8 + 23 fields ≈ 110 B. The board echoes `seq` in LIVE `11`; the phone resends if the echo lags > 3 s.
+**v1.3 merge rule:** for the same `workout_id` the board merges: every field present replaces the stored value, every
+field omitted **keeps** its previous value. A COACH_STATE for a new `workout_id` replaces the whole state (nothing carried
+over). To clear a field, send it (`12 instruction = 0`, `13 text` empty, …).
+**Keepalive** (every 5 s while a workout runs with nothing changed) = `01 workout_id` + `02 seq` only. It keeps the state
+fresh (the board treats the phone as gone after 12 s without any COACH_STATE) and changes nothing else; the `remaining_s`
+countdown keeps running from the last COACH_STATE that carried `0B`.
 Example screen (round 240×240, any layout, coach overlay): `CYCLIFT COACH / ENDURANCE / POWER 145 W / TARGET 140–155 W /
 CADENCE 84 / TARGET 80–90 / ON TARGET / NEXT: RECOVERY – 3 MIN`.
 
@@ -175,6 +198,8 @@ CADENCE 84 / TARGET 80–90 / ON TARGET / NEXT: RECOVERY – 3 MIN`.
 ### 5.4 Offline behaviour (board)
 * Phone link lost while a plan is stored → `coach_mode 2`: the board advances through the stored segments on its own ride
   timeline, shows the targets of the current segment, "PHONE LOST", and the countdown. No adaptation happens offline.
+* The stored plan is used only for its own workout (v1.3): if the latest COACH_STATE is for another `workout_id`, the
+  board treats it as "no plan stored".
 * No plan stored → `coach_mode 3`: keep the last COACH_STATE targets, labelled "LAST TARGET", no countdown beyond the interval.
 * HR-based targets: if the HR source was Apple Watch (via phone) the board has no HR → instruction "NO HR – RIDE BY FEEL"
   (power/cadence targets still shown); never shows a stale HR.
@@ -217,7 +242,18 @@ history and are cleared by the board's own retention or STORAGE_CLEAN bit2).
 * The phone stores the ride (Cyclift history, HealthKit/cloud per its own settings) **before** sending RIDEQ_ACK.
 * The board never deletes a state-1/2 ride. Storage full during a ride → samples stop (flag bit2), the summary is always
   kept (NVS-sized), and the screen says "STORAGE FULL – SUMMARY ONLY".
-* SYNC_REQ (1.1) keeps working for old apps (summaries only).
+* SYNC_REQ (1.1) keeps working for old apps (summaries only). v1.3 adds an optional field `03 u16 only_ride_id`:
+  * present (non-zero): the board sends exactly that ride's SYNC_RIDE (a file ride or a RAM-only ride), or none if it does not
+    hold it, then SYNC_END; `after_ride_id` / `max_count` are ignored and **nothing is released**;
+  * absent: unchanged 1.2.3 behaviour — rides with id > `after_ride_id`, up to `max_count`; RAM-only rides are filtered by the
+    requested `after_ride_id` (rc4 fix: a newer file ride no longer hides an older RAM ride); a RAM-only ride already sent
+    is released when a later SYNC_REQ has `after_ride_id` ≥ its id (v1.2 rule).
+  * **Re-requesting a ride the phone holds but has not confirmed (RC3-01)**: send `after_ride_id = id − 1`, `max_count = 1`,
+    `only_ride_id = id`. Firmware ≥ rc4 answers by id; older firmware ignores tag 03 and answers the after/max part (which on
+    those boards can return a newer file ride instead). The by-id form is the safer one: it cannot release any other RAM
+    ride and does not depend on ordering or `max_count`.
+* Verified-ride key (board-internal, v1.3): the board's verified list (`rides/synced.txt`) stores id, samples CRC, summary CRC
+  and start time; a ride is "verified" only if id, summary CRC and start time all match (start time 0 = unknown = id + CRC).
 
 ### 6.1 Samples file grammar (`rides/r####.txt`, as firmware ≥ 0.7.0 writes it)
 ASCII, lines end with `\n` (no `\r`). Line 1 is the header; then exactly one line per second of the ride clock from the
@@ -282,7 +318,8 @@ J1 <ride_id> <demo 0|1> <ftp_w> <ftp_how> <ftp_established 0|1>      header (onc
 | 0xA0–0xA3 | STORAGE_* | both | Control | cap 0x4000 + HELLO |
 | 0xB0–0xB3 | COACH_PLAN / PLAN_ACK / STATE / END | both | Control | cap 0x1000 + HELLO |
 | 0x40 / 0x23 | EVENT rides_pending | B→P | Events | HELLO |
-| LIVE 11–15 | coach_seq, coach_mode, storage_state, rides_unsynced, bt_flags | B→P | Live | always (ignored by old apps) |
+| LIVE 11–15 | coach_seq, coach_mode, storage_state, rides_unsynced, bt_flags | B→P | Live | 13–15 always (v1.3); 11/12 while a workout is mirrored; ignored by old apps |
+| SYNC_REQ 03 | only_ride_id (v1.3) | P→B | Sync | optional; ignored by boards before 0.7.4-rc4 |
 
 Test vectors: to be generated by `bc_link` encoders in firmware FW-4 and committed as a fixture shared with
 `ios/BikeComputerTests` (same pattern as `diag_fw_fixture.json`). Until then this document is the reference.
