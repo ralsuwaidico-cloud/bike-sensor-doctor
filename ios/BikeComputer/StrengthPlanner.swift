@@ -912,7 +912,14 @@ extension String { var capitalizingFirst: String { prefix(1).uppercased() + drop
 extension Store {
     func plannerContext(now: Date = Date()) -> PlannerContext {
         let analysis = TrainingAnalyzer.analyze(adaptationInput(now: now))
-        let hold: String? = analysis.adherenceBlock ? "\(analysis.missed.count) planned sessions were missed in the last 7 days, so nothing is increased until you are back on track" : nil
+        var hold: String? = analysis.adherenceBlock ? "\(analysis.missed.count) planned sessions were missed in the last 7 days, so nothing is increased until you are back on track" : nil
+        // harness P25 (s8): the adaptive coach answers ride fatigue with "no progression until the signals ease" (it
+        // never progresses a routine while any fatigue flag is set); coach-built sessions follow the same shared hold, so
+        // a rider whose rides are declining is not given heavier squats and deadlifts that week. Lifting or combined
+        // fatigue already turns the session into a deload (ctx.fatigue), which holds progression on its own.
+        if hold == nil, analysis.cyclingFatigue, !(analysis.strengthFatigue || analysis.combinedFatigue) {
+            hold = "your last rides show fatigue, so nothing is increased until the signals ease"
+        }
         return PlannerContext(profile: profile, prefs: strengthPrefs, equipment: equipment, catalogue: allExercises, templates: templates,
                               logs: strength.filter { !$0.awaitingReview && !$0.inProgress }, rides: rides, plan: plan,
                               painAreas: analysis.painAreas, discomfortAreas: analysis.discomfortAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now,

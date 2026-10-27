@@ -103,6 +103,25 @@ final class AuditFixTests: XCTestCase {
         XCTAssertNotNil(s.plannerContext(now: now).progressionHold, "the planner holds when the coach says nothing is increased")
     }
 
+    /// Harness P25 (run s8): with ride fatigue the coach says "no progression until the signals ease"; coach-built lifting
+    /// sessions must not add load (legs carry the cycling fatigue). No fatigue → no hold.
+    func testRideFatigueHoldsThePlannerLikeTheCoach() {
+        let s = Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bc-audit-\(UUID().uuidString)", isDirectory: true), generatePlan: false)
+        s.profile = profile()
+        s.plan = []
+        XCTAssertNil(s.plannerContext(now: now).progressionHold, "no fatigue, no missed sessions → nothing held")
+        s.rides = [1, 3].map { n in
+            var r = RideRecord(start: day(-n, hour: 7), durationS: 3600, distanceM: 27000, recorder: .phone, sources: [])
+            r.checkIn = CheckIn(performance: 3, effort: 9, at: r.start); return r
+        }
+        let a = TrainingAnalyzer.analyze(s.adaptationInput(now: now))
+        XCTAssertTrue(a.cyclingFatigue)
+        XCTAssertFalse(a.strengthFatigue || a.combinedFatigue)
+        let hold = s.plannerContext(now: now).progressionHold
+        XCTAssertNotNil(hold, "ride fatigue holds the planner's progression too")
+        XCTAssertTrue(hold?.contains("rides show fatigue") ?? false)
+    }
+
     // MARK: G-04 — "Coach decides" split
 
     func testCoachDecidesSplitGetsRealExercises() {
