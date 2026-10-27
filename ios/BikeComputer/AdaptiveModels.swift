@@ -82,7 +82,9 @@ enum StrengthSplit: String, Codable, CaseIterable {
     /// The strength sessions of one week in order. Custom slots are interleaved (2 × Full body + 1 × Core gives
     /// Full body, Core, Full body) so the same type is not stacked; a count different from the slots' sum repeats or
     /// truncates the sequence.
-    static func sessions(split: StrengthSplit, slots: [SplitSlot], count: Int) -> [SplitSlot] {
+    /// `offset` continues the rotation across weeks (audit G-07): week n starts where week n − 1 stopped, so PPL with
+    /// 2 lifts a week trains push, pull · legs, push · pull, legs … instead of never reaching legs.
+    static func sessions(split: StrengthSplit, slots: [SplitSlot], count: Int, offset: Int = 0) -> [SplitSlot] {
         guard count > 0 else { return [] }
         var base: [SplitSlot]
         if split == .custom {
@@ -97,7 +99,16 @@ enum StrengthSplit: String, Codable, CaseIterable {
         } else {
             base = split.rotation.map { SplitSlot(focus: $0) }
         }
-        return (0..<count).map { base[$0 % base.count] }
+        if base.isEmpty { base = [SplitSlot(focus: .fullBody)] }
+        let o = ((offset % base.count) + base.count) % base.count
+        return (0..<count).map { base[($0 + o) % base.count] }
+    }
+    /// Weeks since a fixed Monday (5 Jan 2026), for `offset`: the rotation position of a week never depends on when
+    /// the plan was generated.
+    static func weekIndex(of monday: Date, calendar cal: Calendar = .current) -> Int {
+        let ref = cal.date(from: DateComponents(year: 2026, month: 1, day: 5)) ?? Date(timeIntervalSince1970: 0)
+        let days = cal.dateComponents([.day], from: cal.startOfDay(for: ref), to: cal.startOfDay(for: monday)).day ?? 0
+        return Int((Double(days) / 7).rounded(.down))
     }
 }
 

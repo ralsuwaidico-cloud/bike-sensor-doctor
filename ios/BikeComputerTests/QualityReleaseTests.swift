@@ -340,10 +340,11 @@ final class QualityReleaseTests: XCTestCase {
 
     func testProgressionOnlyFromLoggedSetsOfTheSameExercise() {
         let goblet = catalogue[1], dbBench = catalogue[7], bench = catalogue[6]
-        let old = cal.date(byAdding: .day, value: -3, to: now)!
-        let logs = [StrengthSession(date: old, minutes: 40, focus: .fullBody, rpe: 7, exercises: [
+        let old = cal.date(byAdding: .day, value: -3, to: now)!, older = cal.date(byAdding: .day, value: -6, to: now)!
+        // audit G-02: a load increase needs two sessions in a row at the top of the range (one is not enough)
+        let logs = [old, older].map { d in StrengthSession(date: d, minutes: 40, focus: .fullBody, rpe: 7, exercises: [
             ExerciseEntry(exercise: goblet, sets: sets([10, 10, 10], kg: 24, rpe: 7)),
-            ExerciseEntry(exercise: bench, sets: sets([8, 8, 8], kg: 60, rpe: 7))])]
+            ExerciseEntry(exercise: bench, sets: sets([8, 8, 8], kg: 60, rpe: 7))]) }
         let c = ctx(logs: logs)
         let up = StrengthPlanner.prescribeLoad(goblet, meta: ExerciseLibrary.meta(goblet), reps: 6...10, sets: 3, painBlocked: false, ctx: c)
         XCTAssertEqual(up.weight, 25); XCTAssertEqual(up.reps, 6); XCTAssertTrue(up.progressed)

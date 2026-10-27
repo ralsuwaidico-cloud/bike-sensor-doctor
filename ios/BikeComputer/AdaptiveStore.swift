@@ -19,7 +19,20 @@ extension Store {
         // records waiting for the rider's review (migration) are not evidence of anything until confirmed
         return AdaptationInput(profile: profile, plan: plan, rides: rides, strength: strength.filter { !$0.awaitingReview }, availability: effectiveAvailability, equipment: equipment,
                                catalogue: allExercises, templates: templates, originalEntries: entries, dismissed: Set(dismissedAdaptations),
-                               approved: Set(approvedAdaptations), active: adaptations, units: settings.units, now: now, calendar: .current)
+                               approved: Set(approvedAdaptations), active: adaptations, units: settings.units, now: now, calendar: .current,
+                               painClearances: painClearances)
+    }
+
+    /// Pain areas currently holding progression (the same analysis the coach and the planner use).
+    func activePainAreas(now: Date = Date()) -> [PainArea] { TrainingAnalyzer.analyze(adaptationInput(now: now)).painAreas }
+
+    /// The rider confirms a reported pain has gone: that area is released at once (audit G-06), the coach-built
+    /// sessions are rebuilt and the coach runs again. Later reports hold the area again.
+    func confirmPainGone(_ area: PainArea, now: Date = Date()) {
+        painClearances.append(PainClearance(area: area, at: now))
+        if painClearances.count > 50 { painClearances.removeFirst(painClearances.count - 50) }
+        refreshGeneratedSessions(now: now)
+        _ = runAdaptation(now: now)
     }
 
     /// Analyze → Adapt: runs the engine and applies its result to the open future sessions.
@@ -187,12 +200,12 @@ extension Store {
         if approvedAdaptations.count > 300 { approvedAdaptations.removeFirst(approvedAdaptations.count - 300) }
     }
 
-    // MARK: B — sessions built from the rider's own exercises (only once a split was chosen)
+    // MARK: B — coach-built sessions (with or without a chosen split; "Coach decides" included — audit G-04)
     /// Quality release: built by the personalised planner (StrengthPlanner) — goal, priority, experience, equipment,
     /// preferences, logged performance and the rides around the session — with its reasons stored for "Why?".
-    func programmedSession(_ w: Workout) -> Workout {
-        guard profile.trainingMode.includesLifting, profile.strengthSplit != nil, w.kind == .strength, w.templateId == nil, w.plannedEntries == nil else { return w }
-        let b = StrengthPlanner.build(for: w, ctx: plannerContext())
+    func programmedSession(_ w: Workout, ctx: PlannerContext? = nil) -> Workout {
+        guard profile.trainingMode.includesLifting, w.kind == .strength, w.templateId == nil, w.plannedEntries == nil else { return w }
+        let b = StrengthPlanner.build(for: w, ctx: ctx ?? plannerContext())
         guard !b.entries.isEmpty else { return w }
         var x = w; x.plannedEntries = b.entries; x.generatedEntries = true; x.rationale = b.rationale
         return x

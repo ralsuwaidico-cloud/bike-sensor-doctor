@@ -148,6 +148,7 @@ final class RideRecorder: ObservableObject {
                            kj: ws.isEmpty ? nil : ws.reduce(0, +) / 1000, recorder: .board,
                            sources: ["BikeComputer", "Power meter"] + (hrN > 0 ? ["Heart rate"] : []) + (samples.contains { $0.lat != nil } ? ["Phone GPS"] : []), demo: l.demo)
         r.samples = samples
+        r.powerVerified = PowerTrust.meterVerified          // explicit: watts from an unverified meter are advisory
         if ws.count < l.elapsedS / 2 { r.sources.append("phone mirror incomplete") }   /* the board's own history has the full numbers */
         return r
     }

@@ -329,7 +329,7 @@ enum PlanEngine {
         let split: StrengthSplit? = p.trainingMode.includesLifting ? p.strengthSplit : nil
         var slotFor: [UUID: SplitSlot] = [:]
         if let split {
-            let seq = StrengthSplit.sessions(split: split, slots: p.customSplit, count: untypedLifts.count)
+            let seq = StrengthSplit.sessions(split: split, slots: p.customSplit, count: untypedLifts.count, offset: StrengthSplit.weekIndex(of: monday, calendar: cal) * untypedLifts.count)
             for (n, l) in untypedLifts.enumerated() where n < seq.count { focus[l.a.id] = seq[n].focus; slotFor[l.a.id] = seq[n] }
         } else {
             let liftOrder = untypedLifts.sorted { (adjHard($0.day), $0.day) < (adjHard($1.day), $1.day) }

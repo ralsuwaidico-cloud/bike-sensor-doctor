@@ -297,6 +297,12 @@ struct Workout: Codable, Identifiable, Equatable {
     }
     /// Interval repetitions in force (threshold 3 × 8 min, VO2 5 × 3 min unless the coach changed them).
     var effectiveIntervalReps: Int? { kind.defaultIntervalReps.map { intervalReps ?? $0 } }
+    /// The interval structure the live ride coach runs — the SAME one the plan, Home and the steps show (audit G-11:
+    /// the ride screen used to run threshold as 4 × 8 min / 4 min while the plan said 3 × 8 min / 3 min easy).
+    var liveIntervalPlan: IntervalPlan? {
+        guard let r = effectiveIntervalReps, kind.intervalWorkMinutes > 0 else { return nil }
+        return IntervalPlan(workSec: kind.intervalWorkMinutes * 60, restSec: kind.intervalRestMinutes * 60, repeats: max(1, r))
+    }
     /// Title with the assigned routine's name when one is assigned (the calendar shows the rider's own workout name).
     func displayTitle(routine: WorkoutTemplate?) -> String { if kind == .strength, let r = routine { return r.name }; return displayTitle }
 
@@ -367,6 +373,15 @@ struct Workout: Codable, Identifiable, Equatable {
 }
 
 // MARK: - Rides
+/// The ONE answer to "may watts drive coaching?" (audit G-05). The pipeline marks power readings `.good` only when
+/// this is true (`SensorHub.refresh(powerVerified:)`), rides store it in `RideRecord.powerVerified`, the adaptive coach
+/// uses verified power only, and the live ride coach falls back to heart rate / the rider's own steady output when it
+/// is false. No power meter can pass a verification check in this build (the 60-second check of the Android
+/// prototype is not ported), so it is false: power is shown and recorded, labelled "unverified", and advisory only.
+enum PowerTrust {
+    static let meterVerified = false
+}
+
 struct RideRecord: Codable, Identifiable, Equatable {
     enum Recorder: String, Codable { case board, phone, health }
     var id = UUID()
@@ -540,6 +555,7 @@ struct StoreFile: Codable, Equatable {
     var approvedAdaptations: [String] = []
     var adaptiveProposals: [AdaptiveProposal] = []
     var lastAdaptation: AdaptationSummary? = nil
+    var painClearances: [PainClearance] = []
     /// Quality release: the rider's strength-programming preferences (swaps, favourites, discomfort, temporary
     /// unavailability), deleted records kept for Undo, and the human-readable log of data corrections a migration made.
     var strengthPrefs = StrengthPrefs()
@@ -550,7 +566,7 @@ struct StoreFile: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case schema, profile, settings, plan, rides, tiles, onboarded, guest, appleUserId, createdAt, ftpSuggestion, boardSync, onboardingStage, availability
         case strength, templates, customExercises, appliedProposals, weekdayRoutines, equipment, activeSession, ignoredInsights
-        case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation
+        case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation, painClearances
         case strengthPrefs, trash, migrationLog
     }
 
@@ -594,6 +610,7 @@ struct StoreFile: Codable, Equatable {
         approvedAdaptations = (try? c.decodeIfPresent([String].self, forKey: .approvedAdaptations)) ?? []
         adaptiveProposals = (try? c.decodeIfPresent([AdaptiveProposal].self, forKey: .adaptiveProposals)) ?? []
         lastAdaptation = try? c.decodeIfPresent(AdaptationSummary.self, forKey: .lastAdaptation)
+        painClearances = (try? c.decodeIfPresent([PainClearance].self, forKey: .painClearances)) ?? []
         strengthPrefs = (try? c.decodeIfPresent(StrengthPrefs.self, forKey: .strengthPrefs)) ?? StrengthPrefs()
         trash = (try? c.decodeIfPresent([TrashItem].self, forKey: .trash)) ?? []
         migrationLog = (try? c.decodeIfPresent([String].self, forKey: .migrationLog)) ?? []
@@ -608,7 +625,7 @@ struct StoreFile: Codable, Equatable {
         try c.encode(Dictionary(uniqueKeysWithValues: weekdayRoutines.map { (String($0.key), $0.value.uuidString) }), forKey: .weekdayRoutines)
         try c.encode(equipment, forKey: .equipment); try c.encodeIfPresent(activeSession, forKey: .activeSession); try c.encode(ignoredInsights, forKey: .ignoredInsights)
         try c.encode(adaptations, forKey: .adaptations); try c.encode(dismissedAdaptations, forKey: .dismissedAdaptations); try c.encode(approvedAdaptations, forKey: .approvedAdaptations)
-        try c.encode(adaptiveProposals, forKey: .adaptiveProposals); try c.encodeIfPresent(lastAdaptation, forKey: .lastAdaptation)
+        try c.encode(adaptiveProposals, forKey: .adaptiveProposals); try c.encodeIfPresent(lastAdaptation, forKey: .lastAdaptation); try c.encode(painClearances, forKey: .painClearances)
         try c.encode(strengthPrefs, forKey: .strengthPrefs); try c.encode(trash, forKey: .trash); try c.encode(migrationLog, forKey: .migrationLog)
     }
 
@@ -674,6 +691,8 @@ final class Store: ObservableObject {
     @Published var approvedAdaptations: [String] = [] { didSet { persist() } }
     @Published var adaptiveProposals: [AdaptiveProposal] = [] { didSet { persist() } }
     @Published var lastAdaptation: AdaptationSummary? = nil { didSet { persist() } }
+    /// The rider's "this pain is gone" confirmations (audit G-06).
+    @Published var painClearances: [PainClearance] = [] { didSet { persist() } }
     @Published var strengthPrefs = StrengthPrefs() { didSet { persist() } }
     @Published var trash: [TrashItem] = [] { didSet { persist() } }
     @Published var migrationLog: [String] = [] { didSet { persist() } }
@@ -715,7 +734,7 @@ final class Store: ObservableObject {
         templates = f.templates; customExercises = f.customExercises; appliedProposals = f.appliedProposals
         weekdayRoutines = f.weekdayRoutines; equipment = f.equipment; activeSession = f.activeSession; ignoredInsights = f.ignoredInsights
         adaptations = f.adaptations; dismissedAdaptations = f.dismissedAdaptations; approvedAdaptations = f.approvedAdaptations
-        adaptiveProposals = f.adaptiveProposals; lastAdaptation = f.lastAdaptation
+        adaptiveProposals = f.adaptiveProposals; lastAdaptation = f.lastAdaptation; painClearances = f.painClearances
         strengthPrefs = f.strengthPrefs; trash = f.trash; migrationLog = f.migrationLog
     }
 
@@ -725,7 +744,7 @@ final class Store: ObservableObject {
         f.templates = templates; f.customExercises = customExercises; f.appliedProposals = appliedProposals
         f.weekdayRoutines = weekdayRoutines; f.equipment = equipment; f.activeSession = activeSession; f.ignoredInsights = ignoredInsights
         f.adaptations = adaptations; f.dismissedAdaptations = dismissedAdaptations; f.approvedAdaptations = approvedAdaptations
-        f.adaptiveProposals = adaptiveProposals; f.lastAdaptation = lastAdaptation
+        f.adaptiveProposals = adaptiveProposals; f.lastAdaptation = lastAdaptation; f.painClearances = painClearances
         f.strengthPrefs = strengthPrefs; f.trash = trash; f.migrationLog = migrationLog
         return f
     }
@@ -775,11 +794,19 @@ final class Store: ObservableObject {
     static func weekdayIndex(_ d: Date, calendar cal: Calendar = .current) -> Int { (cal.component(.weekday, from: d) + 5) % 7 }
     /// Fills freshly generated strength sessions with the weekday's default routine (if one is set and still exists).
     func applyWeekdayRoutines(_ ws: [Workout]) -> [Workout] {
-        ws.map { w in
+        // the planner sees the NEW week (its rides for interference, its lifts for the session index and the weekly
+        // volume share), not the week being replaced
+        var ctx: PlannerContext? = nil
+        if profile.trainingMode.includesLifting, ws.contains(where: { $0.kind == .strength && $0.templateId == nil }), let lo = ws.map({ $0.date }).min(), let hi = ws.map({ $0.date }).max() {
+            let cal = Calendar.current
+            let m = TrainingLedger.monday(of: lo, calendar: cal), e = cal.date(byAdding: .day, value: 7, to: TrainingLedger.monday(of: hi, calendar: cal))!
+            var c = plannerContext(); c.plan = plan.filter { $0.date < m || $0.date >= e } + ws; ctx = c
+        }
+        return ws.map { w in
             guard w.kind == .strength, w.templateId == nil else { return w }
             if let t = weekdayRoutines[Store.weekdayIndex(w.date)], templates.contains(where: { $0.id == t }) { var x = w; x.templateId = t; return x }
-            // adaptive coach (split chosen): a session without a routine is built from the rider's own exercises
-            return programmedSession(w)
+            // adaptive coach (with or without a chosen split): a session without a routine is built by the planner
+            return programmedSession(w, ctx: ctx)
         }
     }
     func template(_ id: UUID?) -> WorkoutTemplate? { id.flatMap { i in templates.first { $0.id == i } } }
@@ -1113,6 +1140,7 @@ final class Store: ObservableObject {
         }
         // 3. new ride the phone never saw
         var r = RideRecord(start: start, durationS: b.durationS, distanceM: b.distanceM, recorder: .board, sources: ["BikeComputer"])
+        r.powerVerified = PowerTrust.meterVerified
         r = Self.merge(r, with: b, boardId: boardId, start: start)
         let at = rides.firstIndex { $0.start < r.start } ?? rides.count
         rides.insert(r, at: at)
@@ -1174,7 +1202,7 @@ final class Store: ObservableObject {
         tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0; availability = nil; strength = []
         templates = []; customExercises = []; appliedProposals = []
         weekdayRoutines = [:]; equipment = EquipmentProfile(); activeSession = nil; ignoredInsights = []
-        adaptations = []; dismissedAdaptations = []; approvedAdaptations = []; adaptiveProposals = []; lastAdaptation = nil
+        adaptations = []; dismissedAdaptations = []; approvedAdaptations = []; adaptiveProposals = []; lastAdaptation = nil; painClearances = []
         strengthPrefs = StrengthPrefs(); trash = []; migrationLog = []; undoToast = nil
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }

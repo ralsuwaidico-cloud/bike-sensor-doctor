@@ -241,6 +241,9 @@ struct PlannerContext {
     var plan: [Workout] = []
     var painAreas: [PainArea] = []
     var fatigue = false
+    /// Shared hold (audit G-03): when the adaptive coach says "nothing is increased" (≥ 2 missed sessions in the last
+    /// 7 days), the planner holds every load, rep and hold time too. The text completes "Held — …".
+    var progressionHold: String? = nil
     var units: AppSettings.Units = .metric
     var now = Date()
     var calendar: Calendar = .current
@@ -547,7 +550,7 @@ enum StrengthPlanner {
         // keep movement coverage: first take sets off (least important exercise first, never below 2; main lifts keep
         // 3), only then leave whole exercises out from the end
         var trimmed: [String] = []
-        let before = entries.map { $0.sets.count }
+        let before = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0.sets.count) })
         let limit = Double(max(15, w.minutes))
         var guardN = 0
         while estimate() > limit, guardN < 60 {
@@ -556,14 +559,33 @@ enum StrengthPlanner {
             guard let j = entries.indices.reversed().first(where: { entries[$0].sets.count > floor($0) }) else { break }
             entries[j].sets.removeLast()
         }
-        while estimate() > limit, entries.count > 3 { trimmed.append(entries.removeLast().name); rats.removeLast() }
-        for i in entries.indices where entries[i].sets.count < before[i] { rats[i].dose += " Trimmed to \(entries[i].sets.count) sets so the session fits \(Fmt.duration(minutes: w.minutes))." }
+        // audit G-08: keep the four main patterns (squat, hinge, push, pull) as long as possible — first leave out
+        // accessories / core from the end, then take main lifts to 2 sets, and only then drop one main pattern
+        func family(_ i: Int) -> MovementPattern? { ctx.catalogue.first { $0.id == entries[i].exerciseId }.map { ExerciseLibrary.meta($0).slot.family } }
+        func essential(_ i: Int) -> Bool { [Role.main.rawValue, Role.secondary.rawValue].contains(rats[i].role) && [.squat, .hinge, .push, .pull].contains(family(i) ?? .other) }
+        while estimate() > limit, entries.count > 3, let j = entries.indices.reversed().first(where: { !essential($0) }) { trimmed.append(entries.remove(at: j).name); rats.remove(at: j) }
+        if estimate() > limit {
+            while estimate() > limit, let j = entries.indices.reversed().first(where: { rats[$0].role == Role.main.rawValue && entries[$0].sets.count > 2 }) { entries[j].sets.removeLast() }
+        }
+        // still too long: leave out one main pattern, a different one in each session of the week (pull, hinge, push,
+        // squat), so the week as a whole keeps all four
+        let dropOrder: [MovementPattern] = [.pull, .hinge, .push, .squat]
+        var k = 0
+        while estimate() > limit, entries.count > 2, k < 8 {
+            let want = dropOrder[(week.sessionIndex + k) % dropOrder.count]
+            k += 1
+            guard let j = entries.indices.last(where: { family($0) == want }) else { continue }
+            trimmed.append(entries.remove(at: j).name); rats.remove(at: j)
+        }
+        while estimate() > limit, entries.count > 2 { trimmed.append(entries.removeLast().name); rats.removeLast() }
+        for i in entries.indices where entries[i].sets.count < (before[entries[i].id] ?? 0) { rats[i].dose += " Trimmed to \(entries[i].sets.count) sets so the session fits \(Fmt.duration(minutes: w.minutes))." }
         var notes: [String] = [goalReason(goal)]
         if let t = interferenceText { notes.append(t) }
         if week.highCyclingLoad, let r = week.highLoadReason { notes.append("Lower-body volume is reduced by a quarter this week because \(r).") }
         if week.deload, let r = week.deloadReason { notes.append("Deload week: fewer sets and lighter efforts because \(r).") }
         if !trimmed.isEmpty { notes.append("To fit \(Fmt.duration(minutes: w.minutes)), these were left out: \(trimmed.joined(separator: ", ")).") }
         if !ctx.equipment.isSet { notes.append("Your equipment is not set, so exercises that need only dumbbells or bodyweight are preferred. Set it in Profile › Training profile › Equipment.") }
+        if let h = ctx.progressionHold { notes.append("Loads and reps are held: \(h).") }
         if !ctx.painAreas.isEmpty { notes.append("You reported pain (\(ctx.painAreas.map { $0.title.lowercased() }.joined(separator: ", "))): exercises that load that area this way are left out and not progressed.") }
         if w.fixed { notes.append("Fixed day: the day and session type are yours; only the exercises were filled in.") }
         let r = SessionRationale(generatedAt: ctx.now, goal: goal.title, notes: notes, exercises: rats, deload: week.deload)
@@ -589,53 +611,93 @@ enum StrengthPlanner {
     struct Load { var weight: Double?; var reps: Int; var bodyweight: Bool; var progressed: Bool; var why: String }
 
     /// Load and reps from LOGGED sets of this exact exercise only (double progression). Never copied from another one.
+    /// Audit fixes (vs 2b2c104): a load increase needs TWO logged sessions in a row with every set at the top of the
+    /// range at a known effort ≤ RPE 8 (G-02); an unknown effort is not evidence (G-02 / X04); the step is the smallest
+    /// one available, whatever its percentage of a light load (G-01); two failed sessions at RPE ≥ 9 bring the load down
+    /// (G-16); a shared hold (missed sessions, pain, deload) stops every kind of progression (G-03).
     static func prescribeLoad(_ e: Exercise, meta m: ExerciseMeta, reps range: ClosedRange<Int>, sets: Int, painBlocked: Bool, ctx: PlannerContext) -> Load {
         let req = ExerciseLibrary.requirement(e)
         let loadOptions = Set(e.equipment.map(EquipmentProfile.normalised)).subtracting(ExerciseLibrary.accessories).subtracting(["bodyweight"])
         let owned = Set(ctx.equipment.owned.map(EquipmentProfile.normalised))
         let loadable = !loadOptions.isEmpty && (!ctx.equipment.isSet || !loadOptions.isDisjoint(with: owned))
         let bw = !loadable && req.anyOf.isEmpty
-        if isHold(e) {
-            let h = history(e.id, ctx: ctx).first.map { $0.entry.doneSets.map { $0.reps }.min() ?? 30 } ?? 30
-            let next = painBlocked ? h : min(60, h + 5)
-            return Load(weight: nil, reps: max(20, next), bodyweight: true, progressed: !painBlocked && h < 60 && !history(e.id, ctx: ctx).isEmpty, why: history(e.id, ctx: ctx).isEmpty ? "Start with 30-second holds with good form." : "Last logged hold: \(h) s. \(painBlocked ? "Kept the same." : "5 s longer this time.")")
-        }
+        let holdWhy: String? = painBlocked ? "Held — no progression while pain is reported or during a deload." : ctx.progressionHold.map { "Held — \($0)." }
         let hist = history(e.id, ctx: ctx)
+        func effort(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Int? { x.entry.doneSets.compactMap { $0.rpe }.max() ?? x.session.rpe ?? x.session.checkIn?.effort }
+        if isHold(e) {
+            let h = hist.first.map { $0.entry.doneSets.map { $0.reps }.min() ?? 30 } ?? 30
+            let known = hist.first.flatMap { effort($0) }
+            let grow = holdWhy == nil && known.map { $0 <= 8 } == true && h < 60
+            let next = grow ? min(60, h + 5) : h
+            let why: String
+            if hist.isEmpty { why = "Start with 30-second holds with good form." }
+            else if let hw = holdWhy { why = "Last logged hold: \(h) s. \(hw)" }
+            else if known == nil { why = "Last logged hold: \(h) s. No effort was logged, so the hold stays the same — log how hard it felt and it can grow." }
+            else { why = "Last logged hold: \(h) s. \(grow ? "5 s longer this time." : "Kept the same.")" }
+            return Load(weight: nil, reps: max(20, next), bodyweight: true, progressed: grow && !hist.isEmpty, why: why)
+        }
         let df = DateFormatter(); df.dateFormat = "d MMM"
         guard let last = hist.first else {
             if bw { return Load(weight: nil, reps: range.lowerBound, bodyweight: true, progressed: false, why: "Bodyweight. Aim for \(range.lowerBound)–\(range.upperBound) controlled reps; when every set reaches \(range.upperBound), the next session adds reps or a harder variation.") }
             return Load(weight: nil, reps: range.lowerBound, bodyweight: false, progressed: false, why: "New exercise — find your working weight: start light and add load set by set until \(range.lowerBound) reps feel like you could do 2–3 more. No weight is copied from another exercise, even a similar one.")
         }
+        func topWeight(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Double? { x.entry.doneSets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max() }
         let done = last.entry.doneSets
         let reps = done.map { $0.reps }
-        let top = done.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
-        let rpe = done.compactMap { $0.rpe }.max() ?? last.session.rpe ?? last.session.checkIn?.effort
+        let top = topWeight(last)
+        let rpe = effort(last)
         let when = df.string(from: last.session.date)
         let lastText = "Last logged \(when): \(done.count) × \(reps.map(String.init).joined(separator: "/"))" + (top.map { " @ \(WeightFmt.text($0, ctx.units))" } ?? (done.first?.bodyweight == true ? " bodyweight" : ""))
         let rpeText = rpe.map { " at RPE \($0)" } ?? ""
         let minReps = reps.min() ?? range.lowerBound
-        if painBlocked {
-            return Load(weight: top, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: top == nil && bw, progressed: false, why: "\(lastText)\(rpeText). Held — no progression while pain is reported or during a deload.")
+        if let hw = holdWhy {
+            return Load(weight: top, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: top == nil && bw, progressed: false, why: "\(lastText)\(rpeText). \(hw)")
         }
+        let unknownEffort = "No effort (RPE) was logged, so nothing is increased: an unrated session is not evidence that it was easy. Log RPE next time and the coach can progress it."
         guard let w = top else {
+            if rpe == nil { return Load(weight: nil, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: true, progressed: false, why: "\(lastText). \(unknownEffort)") }
+            if minReps < range.lowerBound || (rpe ?? 0) >= 9 { return Load(weight: nil, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: true, progressed: false, why: "\(lastText)\(rpeText): it was very hard or short of \(range.lowerBound) reps, so the reps stay the same.") }
             let next = min(range.upperBound, max(range.lowerBound, minReps + 1))
-            return Load(weight: nil, reps: next, bodyweight: true, progressed: next > minReps, why: "\(lastText)\(rpeText). One more rep per set (\(next)); weight progression needs a logged load.")
+            return Load(weight: nil, reps: next, bodyweight: true, progressed: next > minReps, why: "\(lastText)\(rpeText). \(next > minReps ? "One more rep per set (\(next))" : "Every set is at the top of the range — keep \(next) reps and slow the lowering, or choose a harder variation"); weight progression needs a logged load.")
         }
-        let allTop = done.count >= sets && reps.allSatisfy { $0 >= range.upperBound } && (rpe ?? 8) <= 8
-        let missed = minReps < range.lowerBound || (rpe ?? 0) >= 9
-        if allTop {
-            let dumbbell = e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell")
-            let step = WeightFmt.step(dumbbell: dumbbell, ctx.units)
-            if step <= w * 0.05 + 0.0001 {
-                return Load(weight: ((w + step) * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: true, why: "\(lastText)\(rpeText): every set reached the top of the range (\(range.upperBound)). Double progression: \(WeightFmt.text(step, ctx.units)) more\(dumbbell ? " per hand" : ""), back to \(range.lowerBound) reps. If that weight is not available, add a rep instead.")
+        let minSets = min(sets, 2)
+        /// Every set at the top of the range, at THIS weight, at a known effort ≤ RPE 8.
+        func atTop(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Bool {
+            let d = x.entry.doneSets
+            return d.count >= minSets && d.allSatisfy { $0.reps >= range.upperBound } && topWeight(x) == w && (effort(x).map { $0 <= 8 } ?? false)
+        }
+        /// Short of the bottom of the range at RPE ≥ 9 (or reps clearly missed), at THIS weight.
+        func failed(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Bool {
+            let r = x.entry.doneSets.map { $0.reps }.min() ?? 0
+            return topWeight(x) == w && r < range.lowerBound && (effort(x) ?? 0) >= 9
+        }
+        let last2 = Array(hist.prefix(2))
+        let dumbbell = e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell")
+        let step = WeightFmt.step(dumbbell: dumbbell, ctx.units)
+        if rpe == nil {
+            return Load(weight: w, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: false, progressed: false, why: "\(lastText). \(unknownEffort)")
+        }
+        if last2.count == 2, last2.allSatisfy(atTop) {
+            let next = ((w + step) * 100).rounded() / 100
+            let pct = Int((step / w * 100).rounded())
+            let big = step / w > 0.1 ? " That is a big jump for this weight: if the first set is harder than RPE 8, go back to \(WeightFmt.text(w, ctx.units)) and add a rep instead." : ""
+            return Load(weight: next, reps: range.lowerBound, bodyweight: false, progressed: true, why: "\(lastText)\(rpeText): every set reached the top of the range (\(range.upperBound)) on two sessions in a row at RPE 8 or less. The smallest step available, \(WeightFmt.text(step, ctx.units))\(dumbbell ? " per hand" : "") (\(pct) %), back to \(range.lowerBound) reps.\(big) If that weight is not available, add a rep instead.")
+        }
+        if atTop(last) {
+            return Load(weight: w, reps: range.upperBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): every set reached the top of the range (\(range.upperBound)). Same weight once more — the weight goes up after two sessions like this in a row, never after one.")
+        }
+        if last2.count == 2, last2.allSatisfy(failed) {
+            let down = max(step, ((w * 0.9) / step).rounded(.down) * step)
+            let next = min(w - step, down)
+            if next > 0 {
+                return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): two sessions in a row short of \(range.lowerBound) reps at a very hard effort. The weight comes down to \(WeightFmt.text(next, ctx.units)) (about 10 % less) so every set reaches \(range.lowerBound) clean reps; it builds back up from there.")
             }
-            return Load(weight: w, reps: range.upperBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): top of the range reached, but the next weight step would be more than 5 % of the load, so the weight stays; aim for \(range.upperBound) on every set with cleaner reps.")
         }
-        if missed {
+        if minReps < range.lowerBound || (rpe ?? 0) >= 9 {
             return Load(weight: w, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): \(minReps < range.lowerBound ? "some sets fell short of \(range.lowerBound) reps" : "it was very hard"). Same weight, aim for \(range.lowerBound) reps on every set before adding anything.")
         }
         let next = min(range.upperBound, max(range.lowerBound, minReps + 1))
-        return Load(weight: w, reps: next, bodyweight: false, progressed: next > minReps, why: "\(lastText)\(rpeText). Same weight, one more rep per set (\(next)) — double progression: reps first, weight once every set reaches \(range.upperBound).")
+        return Load(weight: w, reps: next, bodyweight: false, progressed: next > minReps, why: "\(lastText)\(rpeText). Same weight, one more rep per set (\(next)) — double progression: reps first, weight once every set reaches \(range.upperBound) on two sessions in a row.")
     }
 
     // MARK: Why? for any session (planner-built or the rider's own routine)
@@ -741,16 +803,19 @@ extension String { var capitalizingFirst: String { prefix(1).uppercased() + drop
 extension Store {
     func plannerContext(now: Date = Date()) -> PlannerContext {
         let analysis = TrainingAnalyzer.analyze(adaptationInput(now: now))
+        let hold: String? = analysis.adherenceBlock ? "\(analysis.missed.count) planned sessions were missed in the last 7 days, so nothing is increased until you are back on track" : nil
         return PlannerContext(profile: profile, prefs: strengthPrefs, equipment: equipment, catalogue: allExercises, templates: templates,
                               logs: strength.filter { !$0.awaitingReview && !$0.inProgress }, rides: rides, plan: plan,
-                              painAreas: analysis.painAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, units: settings.units, now: now)
+                              painAreas: analysis.painAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now)
     }
 
     /// Coach-built future sessions (never ones the rider edited, completed, skipped or started) are rebuilt from the
     /// current preferences, equipment and logged performance. A session the adaptive coach adjusted keeps its
     /// adjustment on top of the new base (it is recomputed on the next check-in).
     func refreshGeneratedSessions(now: Date = Date()) {
-        guard profile.trainingMode.includesLifting, profile.strengthSplit != nil else { return }
+        // audit G-04: "Coach decides" (no split chosen) gets real exercises too — the week builder already gives each
+        // lift a focus (lower / upper / full body), so the planner fills it like any other coach-built session
+        guard profile.trainingMode.includesLifting else { return }
         let today = Calendar.current.startOfDay(for: now)
         let ctx = plannerContext(now: now)
         var p = plan

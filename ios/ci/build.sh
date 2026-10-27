@@ -144,6 +144,17 @@ for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MA
     -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit \
     CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
   L=$?
+  # one retry ONLY when the simulator failed to launch the app (infrastructure, run 71) — never for a failed check
+  if [ $L -ne 0 ] && grep -q "Timed out while launching application\|Simulator device failed to launch" "$OUT/layout-$LNAME.log"; then
+    note "  layout $LNAME: simulator could not launch the app — rebooting it and retrying once"
+    mv "$OUT/layout-$LNAME.log" "$OUT/layout-$LNAME-launchfail.log"
+    xcrun simctl shutdown "$LID" >/dev/null 2>&1; xcrun simctl boot "$LID" >/dev/null 2>&1; sleep 20
+    TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
+    xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
+      -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit \
+      CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
+    L=$?
+  fi
   digest "$OUT/layout-$LNAME.log" "layout-$LNAME"
   if [ $L -eq 0 ]; then note "  layout $LNAME ($LSIZES): ok"; else note "  layout $LNAME ($LSIZES): FAILED (exit $L)"; LAYOUT_OK=0; fi
 done

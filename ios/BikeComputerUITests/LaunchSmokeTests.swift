@@ -76,6 +76,7 @@ final class LaunchSmokeTests: XCTestCase {
     /// (the rider still lands on Home with the seeded name and the routine is still on today's centre button).
     func testUpgradeFromBuild40YourDataExportAndDeleteCancelKeepsData() {
         let app = XCUIApplication()
+        let seededDay = Calendar.current.startOfDay(for: Date())     // the seed puts the routine on TODAY
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build40Store()
         app.launch()
         XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
@@ -121,7 +122,12 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 10), "Cancel must keep the profile")
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
-        XCTAssertTrue(centre.label.contains("Train now"), "Cancel must keep the plan, got \(centre.label)")
+        // run 71 crossed midnight during this test: the next day of the seeded week is a ride day ("Ride now")
+        if Calendar.current.startOfDay(for: Date()) == seededDay {
+            XCTAssertTrue(centre.label.contains("Train now"), "Cancel must keep the plan, got \(centre.label)")
+        } else {
+            XCTAssertTrue(centre.label.contains("Ride now") || centre.label.contains("Train now"), "Cancel must keep the plan, got \(centre.label)")
+        }
         XCTAssertEqual(app.state, .runningForeground)
         Self.tapAllTabs(app)
     }

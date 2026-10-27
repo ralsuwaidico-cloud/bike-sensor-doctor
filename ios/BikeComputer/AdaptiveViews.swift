@@ -103,6 +103,14 @@ struct AdjustmentsView: View {
                 }
                 if let s = store.lastAdaptation, let p = s.painAdvice {
                     Label { Text(p).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "cross.case").foregroundStyle(BC.warn) }
+                    // audit G-06: only the rider (or pain-free sessions that load the same area) clears a report
+                    ForEach(store.activePainAreas(), id: \.self) { area in
+                        Button { store.confirmPainGone(area) } label: {
+                            Label("\(area.title): it's fine now", systemImage: "checkmark.circle").frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
+                        }
+                        .accessibilityIdentifier("painGone-\(area.rawValue)")
+                        .accessibilityHint("Releases the hold on \(area.title.lowercased()) so the coach can progress that area again")
+                    }
                 }
                 if let s = store.lastAdaptation, let f = s.feedbackRequest {
                     Label { Text(f).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "text.bubble").foregroundStyle(BC.stale) }
@@ -271,7 +279,7 @@ struct HybridPlanEditor: View {
                     ForEach(StrengthSplit.allCases, id: \.self) { Text($0.title).tag(StrengthSplit?.some($0)) }
                 }
                 if let s = p.strengthSplit {
-                    Text("This week: " + StrengthSplit.sessions(split: s, slots: p.customSplit, count: max(1, p.liftDaysPerWeek)).map { $0.title }.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary)
+                    Text("This week: " + StrengthSplit.sessions(split: s, slots: p.customSplit, count: max(1, p.liftDaysPerWeek), offset: StrengthSplit.weekIndex(of: TrainingLedger.monday(of: Date())) * max(1, p.liftDaysPerWeek)).map { $0.title }.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary)
                 }
                 if p.strengthSplit == .custom {
                     ForEach(p.customSplit) { slot in

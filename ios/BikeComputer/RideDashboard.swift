@@ -137,28 +137,29 @@ final class RideCoach: ObservableObject {
     private(set) var powerTrusted = false
     static let keepSeconds = 300
 
-    /// Interval structure per workout kind (the plan's sessions carry a kind and minutes, not a block list).
-    static func intervalPlan(for kind: WorkoutKind?) -> IntervalPlan? {
-        switch kind {
-        case .threshold?: return IntervalPlan(workSec: 480, restSec: 240, repeats: 4)
-        case .vo2?: return IntervalPlan(workSec: 180, restSec: 180, repeats: 5)
-        default: return nil
-        }
-    }
+    /// Interval structure of today's ride: exactly the planned one (`Workout.liveIntervalPlan`, adaptive changes to the
+    /// repetitions included); nil = one steady target.
+    static func intervalPlan(for ride: Workout?) -> IntervalPlan? { ride?.liveIntervalPlan }
 
     /// Applies the rider's profile, the app settings and today's session (a ride's zone is the target; a strength or
     /// rest day coaches a free Zone 2 ride). `powerTrusted` = the power reading is verified (hub quality .good).
     func configure(profile p: RiderProfile, settings s: AppSettings, workout: Workout?, powerTrusted: Bool) {
         var c = engine.config
         let ride = workout.flatMap { $0.kind.isRide ? $0 : nil }
-        var iv = Self.intervalPlan(for: ride?.kind)
-        if let r = ride?.intervalReps, iv != nil { iv?.repeats = max(1, r) }      // adaptive coach changed the repetitions
+        let iv = Self.intervalPlan(for: ride)
         c.mode = s.coachEnabled ? (iv != nil ? .INTERVAL : .ZONE2) : .FREE
         let z = min(5, max(1, ride?.kind.zone ?? 2))
         c.targetPowerZone = z; c.targetHrZone = z
         c.ftpW = p.ftpW; c.maxHr = p.estimatedMaxHR
         c.cadenceLow = p.cadenceLow; c.cadenceHigh = p.cadenceHigh
-        c.ftpAssumed = p.ftpHow == .assumed
+        // audit G-05: watts drive zone cues only when the power reading is verified (hub quality .good, which follows
+        // `PowerTrust.meterVerified`). Unverified power — every meter in this build — coaches like an assumed FTP:
+        // heart rate when there is a strap, otherwise "hold your own steady output" without claiming a zone.
+        c.ftpAssumed = p.ftpHow == .assumed || !powerTrusted
+        // audit G-21: the rider's own HR zones (LTHR method included), as fractions of the max HR the engine uses
+        let maxHr = Double(max(1, p.estimatedMaxHR))
+        let bounds = p.hrZones.compactMap { $0.hi }.map { Double($0) / maxHr }
+        if bounds.count == 4 { c.hrZoneBounds = bounds }
         c.powerCoaching = true
         c = c.withFrequency(s.coachTalk == .quiet ? .quiet : s.coachTalk == .frequent ? .frequent : .normal)
         engine.config = c

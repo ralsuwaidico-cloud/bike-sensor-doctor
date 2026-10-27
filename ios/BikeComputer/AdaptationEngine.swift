@@ -30,7 +30,12 @@ struct AdaptationInput {
     var units: AppSettings.Units = .metric
     var now: Date = Date()
     var calendar: Calendar = .current
+    /// The rider's explicit "this pain is gone" confirmations (clear an earlier report in that area at once).
+    var painClearances: [PainClearance] = []
 }
+
+/// "My knees are fine now": the rider's own confirmation that a reported pain has gone (audit G-06).
+struct PainClearance: Codable, Equatable { var area: PainArea; var at: Date }
 
 struct AdaptationResult {
     /// Changes to apply to future sessions (automatic ones plus approved ones), each with its why.
@@ -52,8 +57,9 @@ enum AdaptiveRules {
     static let durationFraction = 0.10          // ±10 % duration, rounded to 5 min
     static let majorLoadFraction = 0.10         // > 10 % more planned weekly load → approval
     static let baselineDays = 28                // personal baselines: rolling 4 weeks
-    static let painHoldDays = 14                // a concerning-pain report blocks progression for 14 days …
-    static let painClearCheckIns = 2            // … unless the 2 check-ins after it report no pain
+    static let painHoldDays = 14                // (kept for reference; since the audit fix pain no longer expires by date)
+    static let painMinHoldDays = 7              // a concerning-pain report holds its area at least 7 days …
+    static let painClearCheckIns = 2            // … and then until 2 pain-free sessions that loaded that area the same way
     static let fatigueHorizonDays = 7           // fatigue responses touch the next 7 days only
     static let progressionHorizonDays = 14      // progressions: the next session of each exercise within 14 days
     static let minUsableSessions = 2            // fewer usable sessions in 14 days → low confidence, plan kept
@@ -245,12 +251,18 @@ enum TrainingAnalyzer {
         out.unusableRides = badRides.count
         out.unverifiedPowerOnly = badRides.filter { $0.hasUnverifiedPower }.count
 
-        // --- loads: acute (7 days) vs chronic (mean weekly load of days 7–34), only when ≥ 3 weeks of history exist
+        // --- loads (audit G-09): acute = the last 7 COMPLETED days (today is still running and not counted), chronic =
+        // the mean weekly load of the up-to-4 weeks before them, divided by the weeks actually covered — and only once
+        // ≥ 28 days of history exist (≥ 3 weeks before the acute week), so a new rider's repeated week reads ≈ 1.0.
         let loaded = sessions.filter { $0.load != nil }
-        let acuteStart = cal.date(byAdding: .day, value: -6, to: today)!
-        out.acuteLoad = loaded.isEmpty ? nil : loaded.filter { $0.date >= acuteStart }.reduce(0) { $0 + ($1.load ?? 0) }
-        if let oldest = loaded.last?.date, oldest < daysAgo(21) {
-            let chronic = loaded.filter { $0.date < acuteStart && $0.date >= daysAgo(34) }.reduce(0) { $0 + ($1.load ?? 0) } / 4
+        let acuteStart = cal.date(byAdding: .day, value: -7, to: today)!
+        let recent7 = cal.date(byAdding: .day, value: -6, to: today)!          // the 7 calendar days incl. today (hard-effort count)
+        out.acuteLoad = loaded.isEmpty ? nil : loaded.filter { $0.date >= acuteStart && $0.date < today }.reduce(0) { $0 + ($1.load ?? 0) }
+        if let oldest = loaded.last?.date, cal.startOfDay(for: oldest) <= daysAgo(28) {
+            let chronicStart = max(cal.startOfDay(for: oldest), daysAgo(35))
+            let days = Double(cal.dateComponents([.day], from: chronicStart, to: acuteStart).day ?? 28)
+            let weeks = max(1.0, days / 7.0)
+            let chronic = loaded.filter { $0.date < acuteStart && $0.date >= chronicStart }.reduce(0) { $0 + ($1.load ?? 0) } / weeks
             out.chronicWeeklyLoad = chronic > 0 ? chronic : nil
         }
 
@@ -291,7 +303,7 @@ enum TrainingAnalyzer {
         if !out.fatigue.contains(where: { $0.scope == .strength }), let s = lastTwoVeryHard(str) {
             out.fatigue.append(FatigueFlag(id: "str-high-effort", scope: .strength, text: "Your last two strength sessions were rated near-maximal (RPE \(nums(s, { $0.effort })) of 10)."))
         }
-        let hard7 = sessions.filter { ($0.effort ?? 0) >= 9 && $0.date >= acuteStart }
+        let hard7 = sessions.filter { ($0.effort ?? 0) >= 9 && $0.date >= recent7 }
         if hard7.count >= 3, !(out.cyclingFatigue && out.strengthFatigue) {
             out.fatigue.append(FatigueFlag(id: "all-high-effort", scope: .combined, text: "\(hard7.count) sessions in the last 7 days (cycling and lifting together) were rated 9 or 10 out of 10."))
         }
@@ -340,14 +352,30 @@ enum TrainingAnalyzer {
         out.missed = lastWeek.missed.sorted { $0.date < $1.date }
         out.repeatedMisses = lastWeek.planned >= 2 && weekBefore.planned >= 2 && lastWeek.missed.count * 2 >= lastWeek.planned && weekBefore.missed.count * 2 >= weekBefore.planned
 
-        // --- pain: a concerning report holds progression in its area for 14 days unless the next 2 check-ins say none
-        let checkIns = sessions.filter { $0.hasCheckIn }
+        // --- pain (audit G-06): a concerning report holds progression in its area until the rider confirms it is gone,
+        // or until at least 7 days have passed AND the next 2 sessions that loaded the same area the same way (the same
+        // activity: a ride for a riding report, a lift with that movement for a lifting report) were rated pain-free.
+        // Pain-free check-ins of other activities (two rides after knee pain from squats) clear nothing.
+        struct Exposure { var sport: SessionSignal.Sport; var date: Date; var pain: PainLevel; var area: PainArea?; var patterns: Set<MovementPattern> }
+        var exposures: [Exposure] = []
+        for r in input.rides where !r.demo && r.start <= now { if let c = r.checkIn { exposures.append(Exposure(sport: .cycling, date: r.start, pain: c.pain, area: c.painArea, patterns: [])) } }
+        for x in input.strength where !x.inProgress && x.date <= now {
+            guard let c = x.checkIn else { continue }
+            exposures.append(Exposure(sport: .strength, date: x.date, pain: c.pain, area: c.painArea, patterns: Self.loadedPatterns(x)))
+        }
+        exposures.sort { $0.date > $1.date }
         var areas: [PainArea] = []
-        for (i, s) in checkIns.enumerated() where s.pain == .concerning && s.date >= daysAgo(AdaptiveRules.painHoldDays) {
-            let after = checkIns.prefix(i)          // newer ones
-            let cleared = after.count >= AdaptiveRules.painClearCheckIns && after.prefix(AdaptiveRules.painClearCheckIns).allSatisfy { $0.pain == .noPain }
-            let area = s.painArea ?? .other
-            if !cleared, !areas.contains(area) { areas.append(area) }
+        for (i, s) in exposures.enumerated() where s.pain == .concerning {
+            let area = s.area ?? .other
+            guard !areas.contains(area) else { continue }
+            if input.painClearances.contains(where: { $0.area == area && $0.at > s.date }) { continue }
+            let same = exposures.prefix(i).reversed().filter { x in      // newer ones, oldest first
+                guard x.sport == s.sport else { return false }
+                return s.sport == .cycling || area == .other || !x.patterns.isDisjoint(with: area.patterns)
+            }
+            let held = (cal.dateComponents([.day], from: cal.startOfDay(for: s.date), to: today).day ?? 0) < AdaptiveRules.painMinHoldDays
+            let cleared = !held && same.count >= AdaptiveRules.painClearCheckIns && same.prefix(AdaptiveRules.painClearCheckIns).allSatisfy { $0.pain == .noPain }
+            if !cleared { areas.append(area) }
         }
         out.painAreas = areas
 
@@ -367,8 +395,8 @@ enum TrainingAnalyzer {
 
         // --- findings in plain words, with the numbers
         if let a = out.acuteLoad {
-            if let c = out.chronicWeeklyLoad { let ratio = String(format: "%.2f", a / c); out.findings.append("Combined load (session effort × minutes): \(Int(a)) AU in the last 7 days; your 4-week weekly average is \(Int(c)) AU (ratio \(ratio)).") }
-            else { out.findings.append("Combined load (session effort × minutes): \(Int(a)) AU in the last 7 days. A 4-week baseline needs 3 weeks of rated sessions.") }
+            if let c = out.chronicWeeklyLoad { let ratio = String(format: "%.2f", a / c); out.findings.append("Combined load (session effort × minutes): \(Int(a)) AU in the last 7 completed days; your weekly average before that is \(Int(c)) AU (ratio \(ratio)).") }
+            else { out.findings.append("Combined load (session effort × minutes): \(Int(a)) AU in the last 7 completed days. A weekly baseline needs 4 weeks of rated sessions.") }
         }
         out.findings += out.fatigue.map { $0.text }
         if !improving.isEmpty { out.findings.append("Above your 4-week baseline: \(improving.joined(separator: "; ")).") }
@@ -380,6 +408,21 @@ enum TrainingAnalyzer {
         }
         if out.unusableRides > 0 { out.findings.append("\(out.unusableRides) recent ride\(out.unusableRides == 1 ? "" : "s") had no check-in, no heart rate and no verified power\(out.unverifiedPowerOnly > 0 ? " (unverified power is not used to judge intensity)" : "") — not used for decisions.") }
         return out
+    }
+
+    /// Movement patterns a strength session actually loaded: its logged exercises, else (quick log) its focus.
+    static func loadedPatterns(_ x: StrengthSession) -> Set<MovementPattern> {
+        let logged = Set((x.exercises ?? []).filter { !$0.doneSets.isEmpty }.map { $0.pattern })
+        if !logged.isEmpty { return logged }
+        if x.isDetailed { return [] }
+        switch x.focus {
+        case .fullBody: return [.squat, .hinge, .push, .pull, .core]
+        case .lower, .legs: return [.squat, .hinge, .singleLeg]
+        case .upper: return [.push, .pull]
+        case .push: return [.push]
+        case .pull: return [.pull]
+        case .custom: return []
+        }
     }
 
     /// 1…5 from the rider's heart-rate zones.
@@ -409,7 +452,7 @@ enum AdaptationExplainer {
     static func painAdvice(_ areas: [PainArea]) -> String? {
         guard !areas.isEmpty else { return nil }
         let names = areas.map { $0.title.lowercased() }.joined(separator: ", ")
-        return "You reported concerning pain (\(names)). The coach stops progressing that area: no extra weight, reps, sets or intensity there until two check-ins in a row report no pain. Ease off or stop whatever hurts. If the pain is sharp, keeps coming back or gets worse, consider seeing a doctor or physiotherapist — the app cannot tell what is causing it."
+        return "You reported concerning pain (\(names)). The coach stops progressing that area: no extra weight, reps, sets or intensity there for at least a week and until two sessions that load that area the same way are rated pain-free, or until you confirm it is gone (Coach adjustments › “It's fine now”). Ease off or stop whatever hurts. If the pain is sharp, keeps coming back or gets worse, consider seeing a doctor or physiotherapist — the app cannot tell what is causing it."
     }
     static func lowConfidenceRequest(_ a: TrainingAnalysis) -> String {
         if a.unusableRides > 0 { return "Not enough reliable data to change your plan: \(a.unusableRides) recent ride\(a.unusableRides == 1 ? "" : "s") had no check-in, no heart rate and no verified power. Rate each session after you finish (performance, effort, pain — 10 seconds) so the coach can adapt. Your plan stays as it is." }
