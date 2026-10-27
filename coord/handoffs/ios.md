@@ -58,3 +58,25 @@ uses the Store's public `rides` / `lastSaveError`).
    shown, mirroring pauses until the Ride tab is visible again (the board keeps following the stored plan offline, §5.4).
    Moving the tick into an app-level object would remove that dependency; not done to keep RideCoach where it is.
 4. Not verified on hardware: everything. Needs firmware FW-4 (Link 1.3) on a board for an end-to-end check.
+
+## Round 2 (lead, 27 Oct evening) — contract v1.1/v1.2, firmware fixture, HR decision, made-up test rider
+
+Commits: 2800d39 (merge fw/phonefirst, no conflicts), 06bb718 (round 2). **CI run 86: green** — 354 tests, 0 failures;
+Release launch smoke ok; layout audit ok on all three iPhones (82 screenshots); archive / sign / verify ok; upload skipped.
+
+- Aligned to v1.1/v1.2: RIDEQ_ERR 6 (the ACK is not confirmed → ride kept on the board, shown on the Storage page);
+  RAM-only rides (flag bit4) imported first and shown as at risk ("lost if the board powers off"); duplicate check also
+  on `start_epoch_s`; samples CRC ignored for summary-only / RAM-only rides; samples grammar (`J1` header skipped, `-1` =
+  no data, `-` = paused second, torn last line ignored). Already matching: summary CRC, 0xFFFF last segment, cleanup
+  allowed for 0/1/6, HELLO 4 s + one retry, seq increments on every send, interval_index = plan segment index.
+- Fixture cross-check (`Link13FirmwareFixtureTests`, 8 tests over all 30 entries, also run on Linux): every vector
+  byte-identical in both directions; ride 23's SYNC_RIDE re-encodes byte-identically and its CRC equals `summary_crc32`;
+  the ride-queue engine fed the firmware's bytes sends exactly the firmware's RIDEQ_ACK; the coach card words match.
+- Still different (no code mismatch, notes for firmware): `coach_state_keepalive` is a minimal id + seq message, but the
+  board replaces its whole state with every COACH_STATE (`bc_cm_state`), so Cyclift sends the full state as keepalive;
+  LIVE `bt_flags` is omitted when 0.
+- HR decision implemented: when the power reading is unverified (always in this build), the plan and COACH_STATE carry the
+  rider's heart-rate zone in bpm, the same target the phone coach uses.
+- Tests use a made-up rider ("Rider A"; "RiderA" in byte vectors, same length so SCAN_RESULT / PROFILE_SET bytes match the
+  firmware docs). The real first name remains only in iOS docs (AUDIT_0.8.0.md, BUILD30-TEST.txt, RIDE_LAYOUTS.md package
+  path) — not test files; left for the lead to decide.
