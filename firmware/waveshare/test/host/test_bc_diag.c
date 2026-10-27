@@ -376,6 +376,63 @@ static void test_boot(void)
     CHECK(!strcmp(bc_subsys_name(BC_SS_POWER), "power meter") && !strcmp(bc_boot_mode_name(BC_BOOT_STAGED), "staged"), "names");
 }
 
+/* 0.7.4: the 27 Oct board log - NORMAL boots, every one aborting while the phone link / Bluetooth starts. 0.7.3 printed
+   "crashed subsystem phone link, disabled 0x000" three times and went to RECOVERY. Now the second crash in a row at the same
+   subsystem disables it, the boot after that runs without it, and RECOVERY is only for crashes that keep coming. */
+static void test_boot_same_suspect(void)
+{
+    bc_boot_rtc_t r; memset(&r, 0, sizeof r); bc_boot_plan_t p;
+    bc_boot_plan(&r, BC_RST_POWERON, 0, &p);                                       /* RESET button */
+    bc_boot_mark(&r, BC_SS_DISPLAY); bc_boot_mark(&r, BC_SS_STORAGE); bc_boot_mark(&r, BC_SS_BTSTACK);
+    bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_NORMAL && p.suspect == BC_SS_BTSTACK && !p.skip && !p.newly_skipped && r.crash_streak == 1, "crash 1 at the Bluetooth stack: suspect named, nothing disabled yet");
+    bc_boot_mark(&r, BC_SS_BTSTACK);
+    bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_NORMAL && p.newly_skipped && p.skip == BC_SS_BIT(BC_SS_BTSTACK) && r.crash_streak == 2, "crash 2 at the same subsystem: disabled (skip 0x%03X)", p.skip);
+    bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r);
+    bc_boot_plan(&r, BC_RST_SW, 0, &p);
+    CHECK(p.mode == BC_BOOT_NORMAL && p.skip == BC_SS_BIT(BC_SS_BTSTACK) && r.crash_streak == 0, "stable without it; stays disabled this power cycle");
+    bc_boot_unskip(&r, BC_SS_BTSTACK); bc_boot_plan(&r, BC_RST_SW, 0, &p); CHECK(p.skip == 0, "RETRY re-enables it");
+
+    /* different subsystems: no skip, RECOVERY at 3 */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    bc_boot_mark(&r, BC_SS_POWER); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    bc_boot_mark(&r, BC_SS_PHONE); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(!p.newly_skipped && !p.skip && p.mode == BC_BOOT_NORMAL, "two different subsystems: nothing disabled");
+    bc_boot_mark(&r, BC_SS_HR); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_RECOVERY && !p.skip, "third crash, all different: RECOVERY");
+
+    /* crash without marker in between breaks the 'same twice in a row' chain */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    bc_boot_mark(&r, BC_SS_PHONE); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    bc_boot_mark(&r, BC_SS_PHONE); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(!p.newly_skipped && p.mode == BC_BOOT_RECOVERY, "phone, unknown, phone: not 'twice in a row' -> RECOVERY at 3");
+
+    /* a stable boot in between: the streak restarts */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    bc_boot_mark(&r, BC_SS_PHONE); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r); bc_boot_plan(&r, BC_RST_SW, 0, &p);
+    bc_boot_mark(&r, BC_SS_PHONE); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(!p.newly_skipped && r.crash_streak == 1, "same subsystem, but a stable start in between: first crash of a new streak");
+
+    /* the boot that has just disabled the subsystem is not sent to RECOVERY even when it is the 3rd crash in a row */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    bc_boot_mark(&r, BC_SS_POWER); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    bc_boot_mark(&r, BC_SS_POWER); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_NORMAL && p.newly_skipped && p.skip == BC_SS_BIT(BC_SS_POWER) && r.crash_streak == 3, "3rd crash in a row disables the power meter and tries once more");
+    bc_boot_mark(&r, BC_SS_HR); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_RECOVERY && (p.skip & BC_SS_BIT(BC_SS_POWER)), "and a 4th crash elsewhere -> RECOVERY, the power meter stays disabled");
+
+    /* display and storage are never disabled */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    bc_boot_mark(&r, BC_SS_DISPLAY); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    bc_boot_mark(&r, BC_SS_DISPLAY); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(!p.skip && !p.newly_skipped, "display crashing twice: never disabled");
+    CHECK(!strcmp(bc_subsys_name(BC_SS_BTSTACK), "Bluetooth stack"), "name");
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -390,6 +447,7 @@ int main(void)
     test_ios_requests();
     test_old_app_keeps_reports();
     test_boot();
+    test_boot_same_suspect();
     printf("test_bc_diag: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }

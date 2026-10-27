@@ -5,8 +5,10 @@
  * device): it survives panics, watchdog and software resets, not a power loss (then it is re-initialised: magic + CRC).
  *
  *   NORMAL     everything starts at once. A subsystem marker is still written before each one (the crash report shows
- *              which subsystem was starting). 3 crash resets in a row, each within 20 s of the previous start
- *              (bc_boot_stable clears the streak) -> RECOVERY.
+ *              which subsystem was starting). 0.7.4: 2 crash resets in a row while the SAME skippable subsystem was starting
+ *              -> that subsystem is disabled on the next boot (newly_skipped; the caller saves it in NVS and shows it).
+ *              3 crash resets in a row, each within 20 s of the previous start (bc_boot_stable clears the streak) -> RECOVERY
+ *              (unless the boot that follows has just disabled the crashing subsystem: then it gets one more try).
  *   RECOVERY   only display + touch + NVS + storage start (no Bluetooth, no Wi-Fi, no sensors): the recovery screen.
  *              RESTART & DIAGNOSE -> bc_boot_request_staged + software restart. SEND LOGS starts only the phone link.
  *              Pressing RESET (a non-crash reset) tries a NORMAL start again.
@@ -27,10 +29,16 @@
 extern "C" {
 #endif
 
+/* 0.7.4: BC_SS_BTSTACK = the Bluetooth controller + NimBLE port (memory for the radio and the host). It is started before the
+   phone link and the sensor central (both need it); skipping it means no Bluetooth at all this boot. Value 9 is new: older
+   Cyclift builds show it as a number in the text report, nothing else depends on it. */
 typedef enum { BC_SS_NONE = 0, BC_SS_DISPLAY = 1, BC_SS_STORAGE = 2, BC_SS_PHONE = 3, BC_SS_WIFI = 4, BC_SS_CENTRAL = 5,
-               BC_SS_POWER = 6, BC_SS_HR = 7, BC_SS_CSC = 8, BC_SS_RUNNING = 14, BC_SS_STABLE = 15 } bc_subsys_t;
+               BC_SS_POWER = 6, BC_SS_HR = 7, BC_SS_CSC = 8, BC_SS_BTSTACK = 9, BC_SS_RUNNING = 14, BC_SS_STABLE = 15 } bc_subsys_t;
 #define BC_SS_BIT(s) ((uint16_t)(1u << (s)))
-#define BC_SS_SKIPPABLE (BC_SS_BIT(BC_SS_PHONE) | BC_SS_BIT(BC_SS_WIFI) | BC_SS_BIT(BC_SS_CENTRAL) | BC_SS_BIT(BC_SS_POWER) | BC_SS_BIT(BC_SS_HR) | BC_SS_BIT(BC_SS_CSC))
+#define BC_SS_SKIPPABLE (BC_SS_BIT(BC_SS_PHONE) | BC_SS_BIT(BC_SS_WIFI) | BC_SS_BIT(BC_SS_CENTRAL) | BC_SS_BIT(BC_SS_POWER) | BC_SS_BIT(BC_SS_HR) | BC_SS_BIT(BC_SS_CSC) | BC_SS_BIT(BC_SS_BTSTACK))
+/* 0.7.4: in a NORMAL boot, this many crash resets in a row while the SAME skippable subsystem was starting disable it (0.7.3
+   only disabled subsystems in a STAGED boot, so a deterministic start-up crash looped into RECOVERY: "disabled 0x000"). */
+#define BC_BOOT_SAME_SUSPECT_TO_SKIP 2
 typedef enum { BC_BOOT_NORMAL = 0, BC_BOOT_STAGED = 1, BC_BOOT_RECOVERY = 2 } bc_boot_mode_t;
 #define BC_BOOT_CRASHES_FOR_RECOVERY 3
 #define BC_BOOT_STAGED_FAILS_FOR_RECOVERY 3
@@ -43,7 +51,7 @@ typedef struct {
     uint8_t marker;            /* bc_subsys_t being started (or RUNNING / STABLE) */
     uint16_t skip;             /* subsystems disabled after a crash (this power cycle; the caller mirrors it in NVS) */
     uint8_t staged_fails;      /* crashed staged boots in a row */
-    uint8_t last_failed;       /* bc_subsys_t of the last crash with a subsystem marker */
+    uint8_t last_failed;       /* bc_subsys_t of the last crash with a subsystem marker (NONE after a crash without one) */
     uint8_t request;           /* 1 = the rider asked for a staged boot (applied on the next start) */
     uint8_t crashed_last;      /* this boot follows a crash */
     uint32_t boots;            /* starts since the RTC state was created */
