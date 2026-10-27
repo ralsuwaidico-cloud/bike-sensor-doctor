@@ -42,8 +42,10 @@ uses the Store's public `rides` / `lastSaveError`).
   CI-only), `RideQueueTransferTests` (9), `BoardStorageModelTests` (2), `DiagTransferTests.testAckCarriesDeleteOnlyWithDiagAuto`.
 - CI run 83 (commit d40e6f4): build ok, **unit tests ok (346, 0 failures)**, Release launch smoke ok, archive/sign/verify ok,
   layout audit small + Pro Max ok with the new storage screenshots; layout "standard" failed at the pre-existing Plan step
-  (a sheet behind the Why sheet was closed — timing). Fixed in the test (close() waits for the sheet) → see the next run in
-  the progress log.
+  (a sheet behind the Why sheet was closed — timing). Fixed in the test (close() waits for the sheet).
+- **CI run 84 (commit 7ae69f6): green** — tests ok (346, 0 failures), Release launch smoke ok, layout audit ok on small /
+  standard / Pro Max (82 screenshots, 8 of them the new Storage screen at L and XXXL), archive / sign / verify ok, upload
+  skipped. Soft note: at AX3 on the small iPhone the audit did not reach the Storage link (no screenshot at AX3).
 - Contract vectors are hand-built from BLE_CONTRACT.md: the firmware has no Link 1.3 encoder yet (FW-4). When it publishes a
   Link 1.3 fixture, copy it next to diag_fw_fixture.json and cross-check like DiagFirmwareVectorTests.
 
