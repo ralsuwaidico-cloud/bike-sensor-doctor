@@ -52,7 +52,7 @@ final class CoachRemediationTests: XCTestCase {
         XCTAssertEqual(s.status, .needsClearance)
         s.clearedAt = now
         XCTAssertEqual(s.status, .cleared)
-        XCTAssertEqual(HealthScreen.questions.count, 9)
+        XCTAssertEqual(HealthScreen.questions.count, 10)          // review P3-09: operation recovery is its own question
         // F-01: symptoms stop planning until a recorded clearance; supervised-only is never cleared in the app
         var sym = HealthScreen(); sym.answeredAt = now; sym.chestPain = true
         XCTAssertEqual(sym.status, .stop); sym.clearedAt = now; XCTAssertEqual(sym.status, .cleared)

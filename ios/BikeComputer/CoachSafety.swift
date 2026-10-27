@@ -34,19 +34,30 @@ struct HealthScreen: Codable, Equatable {
     var supervisedOnly = false
     /// Currently pregnant or gave birth in the last 6 months.
     var pregnancy = false
-    /// Currently ill (e.g. a fever or infection) or recovering from an illness or operation.
+    /// Currently ill (e.g. a fever or infection) or recovering from an illness — a temporary pause, no doctor needed.
     var currentIllness = false
+    /// Review P3-09: had an operation in the last 6 months or still recovering from one — a surgeon's / doctor's clearance
+    /// is needed before hard training (it is not treated like a cold).
+    var recentOperation = false
     /// The rider states that a doctor examined them and cleared them for unrestricted training, on this date.
     var clearedAt: Date? = nil
+    /// Review P3-02: when the yes answers that need a doctor (`clearable` / stop answers) last changed. A clearance only
+    /// covers the answers it was given for: it must have been confirmed after this moment, and for symptoms (stop answers)
+    /// the clearance itself must be dated on or after the day they were answered. nil (older builds) = `answeredAt`.
+    var conditionsChangedAt: Date? = nil
+    /// Review P3-02: when the rider ticked "a doctor cleared me" (nil, older builds = `answeredAt`).
+    var clearanceConfirmedAt: Date? = nil
     /// The question set these answers belong to; answers to an older set count as not answered (asked again).
     var questionSet: Int? = HealthScreen.currentQuestionSet
-    static let currentQuestionSet = 2
+    /// 3: the operation question was split from the illness question (review P3-09).
+    static let currentQuestionSet = 3
 
     enum Status: String, Codable { case notAnswered, clear, needsClearance, cleared, stop, paused }
 
     init() {}
     /// Tolerant decoding (review N-12): answers saved by earlier builds decode with their known questions; a missing
-    /// question stays false and the older question set counts as not answered, so the form asks again pre-filled.
+    /// question stays false and the older question set counts as not answered, so the form asks every question again
+    /// (it starts empty — review P3-16); a "see a doctor" or illness answer stays in force until then.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         answeredAt = try? c.decodeIfPresent(Date.self, forKey: .answeredAt)
@@ -59,7 +70,10 @@ struct HealthScreen: Codable, Equatable {
         supervisedOnly = (try? c.decodeIfPresent(Bool.self, forKey: .supervisedOnly)) ?? false
         pregnancy = (try? c.decodeIfPresent(Bool.self, forKey: .pregnancy)) ?? false
         currentIllness = (try? c.decodeIfPresent(Bool.self, forKey: .currentIllness)) ?? false
+        recentOperation = (try? c.decodeIfPresent(Bool.self, forKey: .recentOperation)) ?? false
         clearedAt = try? c.decodeIfPresent(Date.self, forKey: .clearedAt)
+        conditionsChangedAt = try? c.decodeIfPresent(Date.self, forKey: .conditionsChangedAt)
+        clearanceConfirmedAt = try? c.decodeIfPresent(Date.self, forKey: .clearanceConfirmedAt)
         questionSet = try? c.decodeIfPresent(Int.self, forKey: .questionSet)
     }
 
@@ -67,19 +81,37 @@ struct HealthScreen: Codable, Equatable {
 
     /// Symptoms / supervision: no training is planned until cleared (supervised-only: never in the app).
     var stopAnswers: Bool { chestPain || dizzinessOrFainting || supervisedOnly }
-    var anyYes: Bool { heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || supervisedOnly || pregnancy || currentIllness }
+    var anyYes: Bool { heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || supervisedOnly || pregnancy || currentIllness || recentOperation }
     /// A doctor's clearance can be recorded in the app: not for "supervised only", and not needed for a temporary
     /// illness (the rider answers again when recovered).
-    var clearable: Bool { (heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || pregnancy) && !supervisedOnly }
-    /// The recorded clearance counts only when it is recent relative to the answers (review N-08: within the 12 months
-    /// before them, or after them).
-    var clearanceValid: Bool { guard let c = clearedAt, let a = answeredAt else { return false }; return c >= a.addingTimeInterval(-Double(Self.validityDays) * 86_400) }
+    var clearable: Bool { (heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || pregnancy || recentOperation) && !supervisedOnly }
+    /// The yes answers a clearance has to cover (changes to any of them invalidate an earlier clearance, review P3-02).
+    var conditionKeys: [String] {
+        [("heart", heartOrBloodPressure), ("chest", chestPain), ("dizzy", dizzinessOrFainting), ("chronic", otherChronicCondition), ("medication", chronicMedication),
+         ("bone", boneJointProblem), ("supervised", supervisedOnly), ("pregnancy", pregnancy), ("operation", recentOperation)].filter { $0.1 }.map { $0.0 }
+    }
+    /// The recorded clearance counts only when (review N-08 / P3-02 / P3-17):
+    /// - it is not dated after the answers were saved (no future clearance);
+    /// - the rider confirmed it after the yes answers it must cover last changed (an older clearance never carries over
+    ///   to a new or changed answer);
+    /// - for symptoms (chest pain, dizziness / fainting) the clearance is dated on or after the day they were reported —
+    ///   a clearance given before the symptoms cannot cover them;
+    /// - otherwise it is no more than 12 months older than those answers.
+    var clearanceValid: Bool {
+        guard let c = clearedAt, let a = answeredAt else { return false }
+        let cal = Calendar.current
+        let changed = conditionsChangedAt ?? a, confirmed = clearanceConfirmedAt ?? a
+        guard cal.startOfDay(for: c) <= a, confirmed >= changed else { return false }
+        if stopAnswers { return cal.startOfDay(for: c) >= cal.startOfDay(for: changed) }
+        return c >= changed.addingTimeInterval(-Double(Self.validityDays) * 86_400)
+    }
 
     func status(now: Date = Date()) -> Status {
         // review N-07: a "see a doctor" result never expires into "not answered" — it stays until answered again
         let stopNow = supervisedOnly || (stopAnswers && !clearanceValid)
         guard let at = answeredAt, now.timeIntervalSince(at) < Double(Self.validityDays) * 86_400, questionSet == Self.currentQuestionSet else {
-            return answeredAt != nil && stopNow ? .stop : .notAnswered
+            // review P3-09: an illness pause also stays until the rider answers again (it never expires into training)
+            return answeredAt != nil && stopNow ? .stop : (answeredAt != nil && currentIllness ? .paused : .notAnswered)
         }
         if !anyYes { return .clear }
         if stopNow { return .stop }
@@ -99,7 +131,8 @@ struct HealthScreen: Codable, Equatable {
         (\.boneJointProblem, "Do you have a bone, joint or soft-tissue problem now that more activity could make worse?"),
         (\.supervisedOnly, "Has a doctor said you should only exercise under medical supervision?"),
         (\.pregnancy, "Are you pregnant, or did you give birth in the last 6 months?"),
-        (\.currentIllness, "Are you ill right now, or recovering from an illness or operation?"),
+        (\.currentIllness, "Are you ill right now (for example a fever or an infection), or still recovering from an illness?"),
+        (\.recentOperation, "Have you had an operation in the last 6 months, or are you still recovering from one?"),
     ]
 }
 
