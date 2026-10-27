@@ -1,0 +1,37 @@
+Cyclift RC1 + BikeComputer 0.7.3 - PHYSICAL TEST (the 8 checks)                                27 Oct 2026
+==============================================================================================================
+Only these checks on the real devices count. Write PASS / FAIL and what you saw. Nothing earlier was hardware-tested.
+Before: firmware 0.7.3 installed with INSTALL-v0.7.3.bat ("RESULT: BOOTED OK"); Cyclift RC1 from TestFlight on the
+iPhone and the Watch (same build number - Cyclift > Profile > About). Board on USB, battery UNPLUGGED (HW-1).
+If anything fails: Cyclift > Connections > Diagnostics > Export, and the board's report arrives in Cyclift by itself.
+
+1  Power meter -> BikeComputer
+   Pedal: board shows POWER "___ W" and CADENCE "___ rpm" that follow your effort. Stop: both reach 0 within ~3 s.
+2  BikeComputer -> Cyclift
+   Phone Ride screen shows the same watts/cadence as the board (+/- 1 s). Connections: power says "Live", not just
+   "Connected". Meter off 1 min: phone says "Data stale" / "No power data" - never an old number.
+3  Apple Watch -> Cyclift
+   Start a ride on the phone without touching the watch: the watch workout starts by itself within ~10 s and heart rate
+   appears on the phone. Phone locked in your pocket 5 min: heart rate keeps updating (no gap over ~10 s).
+4  Cyclift -> BikeComputer
+   The board's HEART row shows the same bpm as the phone (source WATCH) within ~2 s. Watch off: it disappears within ~6 s.
+5  BikeComputer -> Cyclift diagnostic report  (no crash needed)
+   Follow DIAG-TEST-v0.7.3.txt: board Settings > Diagnostics > HOLD: SAVE REPORT (3 times) -> Cyclift shows
+   "Diagnostic report ready" by itself -> turn the phone's Bluetooth off halfway, on again -> it resumes -> "verified" ->
+   open it -> Share. During all of it power/cadence/heart rate keep updating.
+6  Strength logging
+   a A planned strength session for a LATER day cannot be started or marked done.
+   b Today's session: tap Why? on one exercise (short reason), Swap on another -> pick "I don't have this equipment":
+     the replacement uses only your equipment, and next week's plan no longer uses that equipment.
+   c Log a few sets, Finish. History shows exactly those sets - nothing invented. Edit one set's weight, delete one set,
+     delete the whole workout, tap Undo: it comes back once, no duplicate. Home, Plan and Progress show the same count.
+   d Finishing with no sets ticked saves nothing (it offers "Mark done without details" - that shows as "done", not "logged").
+7  Coach adjustment
+   After a logged session, give the check-in (performance / effort). Home shows what changed for the next session and why,
+   with Undo. A session only "marked done" never raises your weights.
+8  Data, reconnection, recovery
+   a After installing 0.7.3 and Cyclift RC1: old rides, profile, routines and pairings are all still there.
+   b Phone Bluetooth off 20 s / on: board link and live values come back by themselves. Board RESET: back within ~20 s.
+   c Progress: swipe the riding chart sideways, tap a bar - exact value and dates; labels readable. FTP label is honest
+     ("Provisional estimate" / "Estimated..." - not "tested" unless you did a test).
+   d Crash recovery cannot be tested without a crash - it is NOT part of this test (no intentional crash).
