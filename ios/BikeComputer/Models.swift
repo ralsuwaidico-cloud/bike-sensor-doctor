@@ -824,9 +824,9 @@ final class Store: ObservableObject {
     /// Planned entries for a session: the session's own (edited / accepted insight), else the template prefilled from
     /// the last completed use of that template.
     func plannedEntries(for w: Workout) -> [ExerciseEntry] {
-        if let e = w.plannedEntries, !e.isEmpty { return e }
+        if let e = w.plannedEntries, !e.isEmpty { return w.generatedEntries ? e : returnAdjusted(e, for: w) }
         guard let t = routine(for: w) else { return [] }
-        return t.prefilled(from: lastSession(template: t))
+        return returnAdjusted(t.prefilled(from: lastSession(template: t)), for: w)
     }
     /// Assigns a routine to one session. `nil` removes the assignment (the template is untouched). Returns the budget
     /// warning text when the routine's estimated duration would push the week over the lifting budget (assignment still

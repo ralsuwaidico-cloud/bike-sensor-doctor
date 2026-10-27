@@ -416,4 +416,50 @@ final class CoachRemediationTests: XCTestCase {
         XCTAssertEqual(BlockClock.weeks(before: nextMonday, activity: past2, plannedMondays: [thisMonday], now: now), 3)
         XCTAssertEqual(BlockClock.weeks(before: nextMonday, activity: past2, plannedMondays: [], now: now), 0, "without the planned week the streak breaks")
     }
+
+    func testLoadRatioIsInformationOnly() {
+        // F-15: a big jump in this week's load never creates a fatigue flag by itself
+        func ride(_ d: Int, _ min: Int) -> RideRecord { var r = RideRecord(start: day(d, hour: 7), durationS: min * 60, distanceM: 25000, recorder: .phone, sources: []); r.checkIn = CheckIn(performance: 7, effort: 6, at: r.start); return r }
+        let old = stride(from: -35, through: -8, by: 3).map { ride($0, 40) }
+        let spike = [-1, -2, -3, -4, -5].map { ride($0, 150) }
+        let p = profile()
+        let a = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: old + spike, strength: [], availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
+        XCTAssertGreaterThan(a.acwr ?? 0, 1.5)
+        XCTAssertFalse(a.fatigue.contains { $0.id == "load-spike" })
+        XCTAssertTrue(a.findings.contains { $0.contains("for information") })
+    }
+
+    func testKneePainClearsAfterAWeekAndTwoPainFreeLiftsEvenWithoutKneeExercises() {
+        // F-12: knee exercises are left out while knees are held, so two pain-free lifts after the 7-day hold clear it
+        let press = catalogue[2]
+        let pain = CheckIn(performance: 6, effort: 6, pain: .concerning, painArea: .knees, at: day(-10))
+        var l0 = log(10, squat, reps: [8, 8, 8], kg: 60, rpe: 7); l0.checkIn = pain
+        var l1 = log(5, press, reps: [8, 8, 8], kg: 40, rpe: 7); l1.checkIn = CheckIn(performance: 7, effort: 6, at: l1.date)
+        var l2 = log(2, press, reps: [8, 8, 8], kg: 40, rpe: 7); l2.checkIn = CheckIn(performance: 7, effort: 6, at: l2.date)
+        let p = profile()
+        let a = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [], strength: [l0, l1, l2], availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
+        XCTAssertTrue(a.painAreas.isEmpty, "\(a.painAreas)")
+        // but only one pain-free lift → still held
+        let b = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [], strength: [l0, l2], availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
+        XCTAssertEqual(b.painAreas, [.knees])
+    }
+
+    func testRoutineAfterABreakRestartsLighterWithoutChangingTheRoutine() {
+        // F-06
+        let d = FileManager.default.temporaryDirectory.appendingPathComponent("rt-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        let s = Store(directory: d, generatePlan: false)
+        s.profile = profile()
+        s.customExercises = [squat]
+        let t = WorkoutTemplate(name: "Legs", focus: .lower, entries: [ExerciseEntry(exercise: squat, sets: (0..<5).map { _ in SetEntry(reps: 5, weightKg: 100) })], updatedAt: Date(timeIntervalSince1970: 0))
+        s.saveTemplate(t)
+        var l = log(60, squat, reps: [5, 5, 5, 5, 5], kg: 100, rpe: 8); l.templateId = t.id
+        s.strength = [l]
+        var w = Workout(date: day(1), kind: .strength, minutes: 60, strengthFocus: .lower); w.templateId = t.id
+        s.plan = [w]
+        let e = s.plannedEntries(for: w)
+        XCTAssertLessThan(e.first?.sets.first?.weightKg ?? 100, 100)
+        XCTAssertTrue(e.first?.notes.contains("Back after") ?? false)
+        XCTAssertEqual(s.templates.first { $0.id == t.id }?.entries.first?.sets.first?.weightKg, 100, "the routine itself is unchanged")
+    }
 }

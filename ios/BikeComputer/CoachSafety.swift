@@ -354,3 +354,37 @@ extension Store {
         if changed { plan = p }
     }
 }
+
+extension Store {
+    /// Independent review F-06: the rider's own routine after a break. For a session still to come, every exercise whose
+    /// last log is three or more weeks old restarts lighter (by the same break-length factor as coach-built sessions,
+    /// rounded down to the smallest step, never below the empty bar), with a note. Computed when shown — the routine
+    /// and the stored session are never rewritten.
+    func returnAdjusted(_ entries: [ExerciseEntry], for w: Workout, now: Date = Date()) -> [ExerciseEntry] {
+        let cal = Calendar.current
+        guard !w.done, w.completion == nil, cal.startOfDay(for: w.date) >= cal.startOfDay(for: now) else { return entries }
+        let logs = strength.filter { !$0.awaitingReview && !$0.inProgress && !$0.isImported && $0.date <= now }
+        return entries.map { e in
+            guard let top = e.sets.compactMap({ $0.bodyweight ? nil : $0.weightKg }).max(), top > 0,
+                  let last = logs.filter({ s in (s.exercises ?? []).contains { $0.exerciseId == e.exerciseId && !$0.doneSets.isEmpty } }).map({ $0.date }).max() else { return e }
+            let gap = cal.dateComponents([.day], from: cal.startOfDay(for: last), to: cal.startOfDay(for: now)).day ?? 0
+            guard gap >= ReturnPhase.breakThresholdDays else { return e }
+            let phase = ReturnPhase(breakDays: gap, sessionsSince: 0, ongoing: true)
+            let ex = allExercises.first { $0.id == e.exerciseId }
+            let dumbbell = ex?.equipment.contains { $0 == "dumbbell" || $0 == "kettlebell" } ?? false
+            let step = WeightFmt.step(dumbbell: dumbbell, settings.units)
+            let floorKg = ex.flatMap { x -> Double? in
+                let eq = Set(x.equipment.map { $0.lowercased() })
+                return eq.contains("barbell") && eq.subtracting(["barbell", "bench", "rack", "plates", "bodyweight"]).isEmpty ? (settings.units == .imperial ? 20.41 : 20) : nil
+            }
+            let target = max(floorKg ?? step, ((top * phase.loadFactor) / step).rounded(.down) * step)
+            guard target < top else { return e }
+            var x = e
+            x.sets = e.sets.map { var st = $0; if let kg = st.weightKg, !st.bodyweight { st.weightKg = min(kg, (target * 100).rounded() / 100) }; return st }
+            let pct = Int(((1 - target / top) * 100).rounded())
+            let note = "Back after \(phase.weeksText): about \(pct) % lighter (\(WeightFmt.text(target, settings.units))) for now; your routine is unchanged."
+            x.notes = x.notes.isEmpty ? note : x.notes + " " + note
+            return x
+        }
+    }
+}

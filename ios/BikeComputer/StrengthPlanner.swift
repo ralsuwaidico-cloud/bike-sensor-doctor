@@ -554,8 +554,25 @@ enum StrengthPlanner {
         else if let s = week.hardRideSameDayAfter { interferenceText = "Your \(s.kind.title.lowercased()) is later today: lift first only if you must; lower-body work stays light (one set fewer, 3+ reps in reserve)." }
         else if let b = week.hardRideBefore { interferenceText = "After \(b): lower-body work stays light (one set fewer, 3+ reps in reserve) while your legs recover." }
         if strengthFirst, nearKeyRide {
-            let which = week.hardRideNext.map { "\($0.kind.title.lowercased()) on \($0.date.shortDay)" } ?? week.hardRideSameDayAfter.map { "\($0.kind.title.lowercased()) later today" } ?? week.hardRideBefore ?? "the ride next to it"
-            interferenceText = "Strength is your priority, so the leg work stays as planned. Keep the \(which) easy (conversational pace) so your legs recover for lifting."
+            // independent review F-20: no advice that contradicts the plan — a hard ride next to the leg session is one the
+            // rider fixed (the week builder never puts one there for strength priority), so suggest moving it instead
+            let hardOne = [week.hardRideNext, week.hardRideSameDayAfter].compactMap { $0 }.first { $0.kind.zone >= 3 }
+            if let h = hardOne { interferenceText = "Strength is your priority, so the leg work stays as planned. Your \(h.kind.title.lowercased()) on \(h.date.shortDay) is next to it — if your legs feel heavy, move that ride by a day." }
+            else {
+                let which = week.hardRideNext.map { "\($0.kind.title.lowercased()) on \($0.date.shortDay)" } ?? week.hardRideSameDayAfter.map { "\($0.kind.title.lowercased()) later today" } ?? week.hardRideBefore ?? "the ride next to it"
+                interferenceText = "Strength is your priority, so the leg work stays as planned. The \(which) is a steady ride; keep it conversational."
+            }
+        }
+        // independent review F-23: cycling-focused riders still get one heavy lower-body dose a week (heavy strength work
+        // helps cycling economy and performance: Rønnestad & Mujika 2014, Scand J Med Sci Sports 24(4):603–612) — when
+        // every lower session of the week sits next to a key ride, the first one keeps its main lifts heavy
+        var protectHeavyLegs = false
+        if legsKept, ctx.priority == .cycling || goal == .enduranceSupport {
+            let cal = ctx.calendar
+            let monday = TrainingLedger.monday(of: w.date, calendar: cal), end = cal.date(byAdding: .day, value: 7, to: monday)!
+            let lowerLifts = ctx.plan.filter { $0.kind == .strength && !$0.skipped && $0.date >= monday && $0.date < end && ($0.strengthFocus ?? .fullBody).loadsLegs }.sorted { $0.date < $1.date }
+            let free = lowerLifts.contains { l in let c = weekContext(for: l, ctx: ctx); return c.hardRideNext == nil && c.hardRideSameDayAfter == nil && c.hardRideBefore == nil }
+            if !free, lowerLifts.first?.id == w.id || lowerLifts.isEmpty { protectHeavyLegs = true }
         }
         // dose, load and explanation per exercise
         var entries: [ExerciseEntry] = []
@@ -569,7 +586,11 @@ enum StrengthPlanner {
             if bodyweightOnly(e, ctx: ctx), !isHold(e) { d.reps = max(10, d.reps.lowerBound)...max(15, d.reps.upperBound) }
             var n = sets[i]
             var cyclingNote: String? = nil
-            if m.slot.isLower && legsKept { n = max(2, n - 1); d.rpe = min(d.rpe, 6); cyclingNote = interferenceText }
+            if m.slot.isLower && legsKept && protectHeavyLegs && spec.role == .main {
+                n = max(3, n); d.rpe = min(d.rpe, 7)
+                cyclingNote = "Every leg session this week sits next to a key ride, so this one keeps its main lift heavy (\(n) sets, RPE 7) — once a week is enough to keep the strength that helps your riding; the other leg work stays light."
+            }
+            else if m.slot.isLower && legsKept { n = max(2, n - 1); d.rpe = min(d.rpe, 6); cyclingNote = interferenceText }
             else if m.slot.isLower && strengthFirst && nearKeyRide { cyclingNote = interferenceText }      // G-14: flagged, not lightened
             else if m.slot.isLower && week.highCyclingLoad { cyclingNote = "Lower-body volume is reduced this week because \(week.highLoadReason ?? "your cycling load is high")." }
             if week.deload { n = max(2, n - 1); d.rpe = min(d.rpe, 6) }

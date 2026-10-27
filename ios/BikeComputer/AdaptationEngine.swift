@@ -335,7 +335,9 @@ enum TrainingAnalyzer {
         }
         if let r = out.acwr, r > 1.5, out.chronicWeeklyLoad != nil {
             let ratio = String(format: "%.1f", r)
-            out.fatigue.append(FatigueFlag(id: "load-spike", scope: .combined, text: "This week's combined load (\(Int(out.acuteLoad ?? 0)) AU) is \(ratio) × your 4-week weekly average (\(Int(out.chronicWeeklyLoad ?? 0)) AU)."))
+            // independent review F-15: the acute:chronic ratio is contested (Impellizzeri et al. 2020) — shown as information,
+            // never a trigger for automatic reductions
+            out.findings.append("This week's combined load (\(Int(out.acuteLoad ?? 0)) AU) is \(ratio) × your 4-week weekly average (\(Int(out.chronicWeeklyLoad ?? 0)) AU). Shown for information; the coach does not change your plan on this number alone.")
         }
 
         // --- missed sessions (planned, past, no ride / log of that sport on the day). Never crammed in later.
@@ -370,8 +372,10 @@ enum TrainingAnalyzer {
             guard !areas.contains(area) else { continue }
             if input.painClearances.contains(where: { $0.area == area && $0.at > s.date }) { continue }
             let same = exposures.prefix(i).reversed().filter { x in      // newer ones, oldest first
-                guard x.sport == s.sport else { return false }
-                return s.sport == .cycling || area == .other || !x.patterns.isDisjoint(with: area.patterns)
+                // same activity only (pain-free rides never clear lifting pain, G-06). Independent review F-12: the
+                // exercises that load the area are left out while it is held, so any pain-free LIFTING session after the
+                // minimum hold counts (rated for that area) — otherwise the hold could never clear on its own
+                return x.sport == s.sport
             }
             let held = (cal.dateComponents([.day], from: cal.startOfDay(for: s.date), to: today).day ?? 0) < AdaptiveRules.painMinHoldDays
             let cleared = !held && same.count >= AdaptiveRules.painClearCheckIns && same.prefix(AdaptiveRules.painClearCheckIns).allSatisfy { $0.pain == .noPain }
@@ -380,6 +384,9 @@ enum TrainingAnalyzer {
         out.painAreas = areas
 
         // --- cycling improving: the last two rated rides went well at a moderate effort and were completed
+        let cycBase = Array(cyc.filter { $0.hasCheckIn }.dropFirst(2)).filter { $0.date >= daysAgo(AdaptiveRules.baselineDays + 7) }
+        let cycPerfBase: Double? = cycBase.count >= 3 ? Double(cycBase.compactMap { $0.performance }.reduce(0, +)) / Double(cycBase.count) : nil
+        let cycEffortBase: Double? = cycBase.count >= 3 ? Double(cycBase.compactMap { $0.effort }.reduce(0, +)) / Double(cycBase.count) : nil
         let ratedRides = cyc.filter { $0.hasCheckIn && $0.date >= daysAgo(14) }
         if ratedRides.count >= 2 {
             let l2 = Array(ratedRides.prefix(2))
@@ -387,12 +394,13 @@ enum TrainingAnalyzer {
                 let completed = x.plannedMinutes.map { pm in Double(x.minutes) >= 0.9 * Double(pm) } ?? true
                 // audit G-15: "better than usual", not "as usual" — against the rider's own 4-week baseline when it
                 // exists (performance ≥ baseline + 1 and effort ≤ baseline − 1), else a clearly good rating (8 / 5)
-                let pNeed = out.performanceBaseline.map { max(7.0, $0 + 1) } ?? 8, eMax = out.effortBaseline.map { min(6.0, $0 - 1) } ?? 5
+                // independent review F-24: the rider's CYCLING baseline (rides only), not one pooled with lifts
+                let pNeed = cycPerfBase.map { max(7.0, $0 + 1) } ?? 8, eMax = cycEffortBase.map { min(6.0, $0 - 1) } ?? 5
                 return Double(x.performance ?? 0) >= pNeed && Double(x.effort ?? 10) <= eMax && x.pain != .concerning && completed
             }
             if ok {
                 out.cyclingImproving = true
-                let ref = out.performanceBaseline != nil ? String(format: "better than your 4-week baseline (performance %.1f, effort %.1f)", out.performanceBaseline!, out.effortBaseline!) : "clearly good ratings (no 4-week baseline yet)"
+                let ref = cycPerfBase != nil ? String(format: "better than your 4-week riding baseline (performance %.1f, effort %.1f)", cycPerfBase!, cycEffortBase ?? 0) : "clearly good ratings (no 4-week riding baseline yet)"
                 out.cyclingImprovingText = "Your last two rides went well (performance \(nums(l2, { $0.performance }))) at a moderate effort (\(nums(l2, { $0.effort })) of 10), \(ref), and were completed."
             }
         }
@@ -544,7 +552,8 @@ enum AdaptationEngine {
             // for a key ride may have nothing left to cut; then the following one carries the reduction)
             let all = a.strengthFatigue || a.combinedFatigue
             func cuttable(_ w: Workout) -> [ExerciseEntry] { entries(w).filter { $0.sets.count >= 3 && (all || AdaptiveRules.legPatterns.contains($0.pattern)) } }
-            let candidates = future.filter { $0.kind == .strength && $0.date < fatigueEnd && auto($0) }
+            // independent review F-25: a planner-built session that is already a deload for this fatigue is not cut again
+            let candidates = future.filter { $0.kind == .strength && $0.date < fatigueEnd && auto($0) && !($0.rationale?.deload ?? false) }
             if let s = candidates.first(where: { !cuttable($0).isEmpty }) ?? candidates.first {
                 let es = cuttable(s)
                 let cause = all ? "" : " Your legs carry the cycling fatigue, so the leg exercises lose a set; upper-body work stays as planned."
@@ -555,6 +564,18 @@ enum AdaptationEngine {
                     let d = AdaptiveRules.roundTo5(Double(s.minutes) * AdaptiveRules.durationFraction)
                     autoAdj.append(make(s, .minutes(delta: -d), .reduction, "\(s.displayTitle): \(Fmt.duration(minutes: s.minutes)) → \(Fmt.duration(minutes: s.minutes - d))", "\(flags)\(cause) This session has no exercise list, so it is 10 % shorter instead (\(d) min less)."))
                 }
+            }
+        }
+
+        // ---------- independent review F-26: concerning pain reported on a ride → the next hard ride within 7 days is eased
+        // (one zone step, same minutes); fixed days only on approval. Progression is held by painBlocksCycling below.
+        if a.painBlocksCycling, let r = future.first(where: { $0.kind.isRide && $0.kind.zone >= 3 && $0.date < fatigueEnd }), !autoAdj.contains(where: { $0.workoutId == r.id }) {
+            let to: WorkoutKind = AdaptiveRules.stepDown(r.kind) ?? .endurance
+            let why = "You reported concerning pain (\(a.painAreas.filter { $0.affectsCycling }.map { $0.title.lowercased() }.joined(separator: ", "))) that riding also loads. So \(AdaptationExplainer.day(r.date))'s \(r.kind.title.lowercased()) becomes \(to.title.lowercased()), same \(r.minutes) min, until the area is pain-free again. If the pain persists or is sharp, get it checked."
+            let adj = make(r, .kind(to: to), .reduction, "\(r.kind.title) → \(to.title) (pain reported)", why)
+            if auto(r) { autoAdj.append(adj) }
+            else if r.fixed, AdaptiveRules.approvalEligible(r, now: now, calendar: cal) {
+                proposals.append(AdaptiveProposal(id: "fixed|\(adj.key)", reason: .fixedDay, text: "Ease your fixed \(AdaptationExplainer.day(r.date)) \(r.kind.title.lowercased()) because of the pain you reported?", why: why + " It is a fixed day, so the coach only changes it if you accept.", adjustments: [adj]))
             }
         }
 
@@ -664,7 +685,10 @@ enum AdaptationEngine {
         func complete(_ ses: StrengthSession, _ x: ExerciseEntry) -> Bool {
             let r = x.doneSets.map { $0.reps }
             let fromWorkout = ses.startedAt != nil && ses.workoutId != nil && !x.sets.isEmpty
-            let need = fromWorkout ? min(plannedReps.count, x.sets.count) : plannedReps.count
+            // independent review F-21: a log linked to its planned session is also judged against that session's own
+            // planned sets (coach changes included), however it was logged
+            let linkedPlan = ses.workoutId.flatMap { id in input.plan.first { $0.id == id } }.flatMap { $0.plannedEntries?.first { $0.exerciseId == x.exerciseId } }
+            let need = fromWorkout ? min(plannedReps.count, x.sets.count) : (linkedPlan.map { min(plannedReps.count, $0.sets.count) } ?? plannedReps.count)
             return r.count >= need && x.doneSets.count == (fromWorkout ? x.sets.count : x.doneSets.count) && zip(r, plannedReps.prefix(need)).allSatisfy { $0 >= $1 }
         }
         func rpe(_ ses: StrengthSession, _ x: ExerciseEntry) -> Int? { x.doneSets.compactMap { $0.rpe }.max() ?? ses.rpe ?? ses.checkIn?.effort }
@@ -680,16 +704,18 @@ enum AdaptationEngine {
             if let top = currentTop, top > 0, ownsIt {
                 let dumbbell = known?.equipment.contains { $0 == "dumbbell" || $0 == "kettlebell" } ?? false
                 let step = WeightFmt.step(dumbbell: dumbbell, u)
-                let cap = min(AdaptiveRules.maxWeightStepKg, top * AdaptiveRules.maxWeightFraction)
-                if step <= cap + 0.0001 {
-                    return PlanAdjustment(workoutId: s.id, change: .weight(exerciseId: e.exerciseId, deltaKg: step), category: .progression, summary: "\(e.name): \(AdaptationExplainer.kg(top, u)) → \(AdaptationExplainer.kg(top + step, u))\(dumbbell ? " per hand" : "")", why: "\(evidence) So \(AdaptationExplainer.day(s.date)) adds \(AdaptationExplainer.kg(step, u))\(dumbbell ? " per hand" : "") (\(AdaptationExplainer.kg(top, u)) → \(AdaptationExplainer.kg(top + step, u))). A load step is capped at 2.5 kg and 5 % of the current load. If that weight is not available to you, do one more rep per set instead.", createdAt: input.now)
+                // independent review F-17: the same rule as the planner (G-01) — the smallest available step, whatever its
+                // percentage of a light load, with a caution above 10 %; never more than one step
+                if step <= AdaptiveRules.maxWeightStepKg + 0.0001 {
+                    let big = step / top > 0.1 ? " That is a big jump for this weight: if the first set is harder than RPE 8, go back to \(AdaptationExplainer.kg(top, u)) and add a rep instead." : ""
+                    return PlanAdjustment(workoutId: s.id, change: .weight(exerciseId: e.exerciseId, deltaKg: step), category: .progression, summary: "\(e.name): \(AdaptationExplainer.kg(top, u)) → \(AdaptationExplainer.kg(top + step, u))\(dumbbell ? " per hand" : "")", why: "\(evidence) So \(AdaptationExplainer.day(s.date)) adds the smallest step, \(AdaptationExplainer.kg(step, u))\(dumbbell ? " per hand" : "") (\(AdaptationExplainer.kg(top, u)) → \(AdaptationExplainer.kg(top + step, u))).\(big) If that weight is not available to you, do one more rep per set instead.", createdAt: input.now)
                 }
             }
             let maxReps = e.sets.map { $0.reps }.max() ?? 0
             if maxReps < 20 {
                 let reason: String
                 if currentTop != nil && !ownsIt { reason = "The equipment for \(e.name) is not in your equipment list, so a rep is added rather than weight." }
-                else if currentTop != nil { reason = "The smallest load step would be more than 2.5 kg or 5 % of the current load, so a rep is added instead." }
+                else if currentTop != nil { reason = "The smallest load step would be more than 2.5 kg, so a rep is added instead." }
                 else { reason = "No load is recorded for \(e.name), so a rep is added." }
                 return PlanAdjustment(workoutId: s.id, change: .reps(exerciseId: e.exerciseId, delta: AdaptiveRules.maxRepsStep), category: .progression, summary: "\(e.name): \(maxReps) → \(maxReps + 1) reps per set", why: "\(evidence) \(reason)", createdAt: input.now)
             }

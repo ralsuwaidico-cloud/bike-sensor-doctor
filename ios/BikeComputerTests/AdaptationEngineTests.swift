@@ -197,11 +197,12 @@ final class AdaptationEngineTests: XCTestCase {
         XCTAssertEqual(a?.category, .progression)
         XCTAssertTrue(a?.summary.contains("20 kg → 21 kg") == true, a?.summary ?? "")
         XCTAssertTrue(a?.why.contains("RPE 7") == true)
-        // barbell 60 kg → +2.5 kg; 40 kg → 2.5 kg would be over 5 % → one rep instead
+        // barbell 60 kg → +2.5 kg; 40 kg → also the smallest step, +2.5 kg (independent review F-17: the same rule as the
+        // planner, G-01 — the old 5 % cap froze light loads and only added reps)
         let b60 = lift(1, [entry(backSquat, kg: 60)])
         XCTAssertTrue(has(AdaptationEngine.run(input(plan: [b60], strength: [logged(-2, [entry(backSquat, kg: 60)]), logged(-5, [entry(backSquat, kg: 60)])])), .weight(exerciseId: backSquat.id, deltaKg: 2.5)))
         let b40 = lift(1, [entry(backSquat, kg: 40)])
-        XCTAssertTrue(has(AdaptationEngine.run(input(plan: [b40], strength: [logged(-2, [entry(backSquat, kg: 40)]), logged(-5, [entry(backSquat, kg: 40)])])), .reps(exerciseId: backSquat.id, delta: 1)))
+        XCTAssertTrue(has(AdaptationEngine.run(input(plan: [b40], strength: [logged(-2, [entry(backSquat, kg: 40)]), logged(-5, [entry(backSquat, kg: 40)])])), .weight(exerciseId: backSquat.id, deltaKg: 2.5)))
         // RPE 9 on one of the two → no progression; only one session → no progression
         XCTAssertTrue(adjustments(AdaptationEngine.run(input(plan: [next], strength: [logged(-2, [entry(squat)], rpe: 9), logged(-5, [entry(squat)])])), for: next).isEmpty)
         XCTAssertTrue(adjustments(AdaptationEngine.run(input(plan: [next], strength: [logged(-2, [entry(squat)]), logged(-5, [entry(press)])])), for: next).isEmpty)
@@ -294,7 +295,9 @@ final class AdaptationEngineTests: XCTestCase {
         XCTAssertEqual(r.analysis.painAreas, [.knees])
         XCTAssertFalse(adjustments(r, for: next).contains { a in if case .weight(let id, _) = a.change { return id == squat.id }; if case .reps(let id, _) = a.change { return id == squat.id }; return false }, "no progression for the knees")
         XCTAssertTrue(has(r, .weight(exerciseId: press.id, deltaKg: 1)), "upper body unaffected")
-        XCTAssertTrue(adjustments(r, for: thr).isEmpty, "knees carry the riding load too: no cycling progression")
+        // knees carry the riding load too: no cycling progression, and (independent review F-26) the next hard ride is eased
+        XCTAssertFalse(adjustments(r, for: thr).contains { $0.category == .progression }, "no cycling progression")
+        XCTAssertTrue(adjustments(r, for: thr).contains { $0.change == .kind(to: .tempo) && $0.category == .reduction })
         let advice = r.summary.painAdvice ?? ""
         XCTAssertTrue(advice.contains("physiotherapist")); XCTAssertTrue(advice.contains("cannot tell"))
         XCTAssertFalse(advice.lowercased().contains("diagnos"), "never a diagnosis")
