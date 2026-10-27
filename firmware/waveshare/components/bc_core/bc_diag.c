@@ -254,7 +254,18 @@ void bc_diag_redact(char *s)
 
 /* ------------------------------------------------------------------ Link 1.2.3 server */
 void bc_diag_srv_init(bc_diag_srv_t *s, const bc_diag_store_t *st) { memset(s, 0, sizeof *s); s->st = *st; }
-void bc_diag_srv_reset(bc_diag_srv_t *s) { s->listing = false; s->nq = 0; s->info_due = s->err_due = false; }
+void bc_diag_srv_reset(bc_diag_srv_t *s) { s->listing = false; s->nq = 0; s->info_due = s->err_due = false; s->att_mtu = 0; }
+void bc_diag_srv_set_link(bc_diag_srv_t *s, uint16_t att_mtu, bool ride_recording) { s->att_mtu = att_mtu; s->paused = ride_recording; }
+bool bc_diag_srv_chunk_next(const bc_diag_srv_t *s)
+{
+    if (s->err_due || s->info_due || !s->nq || s->paused) return false;
+    const bc_diag_info_t *r = bc_diag_index_find(s->st.index(s->st.ctx), s->q[0].id);
+    return r && s->q[0].offset < r->size && bc_diag_chunk_data_max(s->q[0].max_len, s->att_mtu) > 0;
+}
+bool bc_diag_pace_ok(uint32_t now_ms, uint32_t last_chunk_ms, bool have_sent, bool link_room)
+{
+    return link_room && (!have_sent || now_ms - last_chunk_ms >= BC_DIAG_CHUNK_GAP_MS);
+}
 static void err(bc_diag_srv_t *s, uint32_t id, uint8_t code) { s->err_due = true; s->err.id = id; s->err.code = code; }
 bool bc_diag_srv_write(bc_diag_srv_t *s, const uint8_t *msg, size_t n)
 {
@@ -291,11 +302,14 @@ size_t bc_diag_srv_next(bc_diag_srv_t *s, uint8_t *buf, size_t cap, uint16_t seq
         const bc_diag_chunk_req_t *q = &qq;
         const bc_diag_info_t *r = bc_diag_index_find(x, q->id);
         bc_diag_err_t e = { q->id, 0 };
+        uint16_t room = bc_diag_chunk_data_max(q->max_len, s->att_mtu);
         if (!r) e.code = BC_DIAG_ERR_UNKNOWN_ID;
         else if (q->offset > r->size) e.code = BC_DIAG_ERR_BAD_OFFSET;
+        else if (s->paused && q->offset < r->size) { e.code = BC_DIAG_ERR_BUSY; s->busy_ride++; }     /* a ride is recording */
+        else if (!room && q->offset < r->size) { e.code = BC_DIAG_ERR_MTU; s->mtu_errs++; }           /* MTU leaves no room */
         if (e.code) return bc_link_encode_diag_err(&e, buf, cap, seq, t_ms);
         bc_diag_chunk_t c; memset(&c, 0, sizeof c); c.id = q->id; c.offset = q->offset;
-        uint32_t want = q->max_len ? q->max_len : BC_DIAG_CHUNK_MAX; if (want > BC_DIAG_CHUNK_MAX) want = BC_DIAG_CHUNK_MAX;
+        uint32_t want = room;
         uint32_t left = r->size - q->offset; if (want > left) want = left;
         if (want) { long got = s->st.read(s->st.ctx, q->id, q->offset, c.data, want); if (got != (long)want) { e.code = BC_DIAG_ERR_STORAGE; return bc_link_encode_diag_err(&e, buf, cap, seq, t_ms); } }
         c.len = (uint8_t)want; c.last = q->offset + want == r->size;

@@ -1,5 +1,6 @@
 ﻿# Bike Computer - install firmware 0.7.3 (stability + diagnostics: Bluetooth work moved to one task, crash records kept on the
-# board, RECOVERY screen instead of SAFE MODE, reports for Cyclift). Run via INSTALL-v0.7.3.bat.
+# board, RECOVERY screen instead of SAFE MODE, reports for Cyclift; 27 Oct build: report chunks sized from the phone link,
+# LIVE always first, Settings > Diagnostics > HOLD: SAVE REPORT). Run via INSTALL-v0.7.3.bat. App SHA-256 181b2e5c...
 # Safety, in this order:
 #   1. factory backup present (16 MB); every 0.7.3 file matches its SHA-256; the rollback files (0.7.1, 0.5.0) are present and intact;
 #   2. a COMPLETE 16 MB backup of the board as it is now (firmware + settings + rides) is read to backup-before-v073-<time>.bin
@@ -20,7 +21,7 @@ $bk = Join-Path $PSScriptRoot 'factory_backup_16MB.bin'
 if (-not (Test-Path $bk)) { Stop-With "factory_backup_16MB.bin is not in this folder." }
 if ((Get-Item $bk).Length -ne 16777216) { Stop-With "factory_backup_16MB.bin is not 16 MB - the backup looks damaged." }
 Write-Host "  Factory backup present (16 MB) - kept untouched." -ForegroundColor Green
-$app = @{ off = '0x20000'; file = 'fw-v0.7.3\BC073-app.bin';      sha = '735c2699009d5e723a8755975720a570240fed7375ed5a43c06727458d4d6560' }
+$app = @{ off = '0x20000'; file = 'fw-v0.7.3\BC073-app.bin';      sha = '181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5' }
 $ota = @{ off = '0xf000';  file = 'fw-v0.7.3\BC073-otadata.bin';  sha = '7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f' }
 $pt  = @{ off = '0x8000';  file = 'fw-v0.7.3\BC073-partitions.bin'; sha = 'f08892b0911b15439bc0552bf1c6190067c3fe62378553cc55156b783caa7d37' }
 $bl  = @{ file = 'fw-v0.7.3\BC073-bootloader.bin'; sha = '6f379e6765dd7eb087415739b4e02a7dae4b44566074e91e12425054291562b9' }   # verified only, never written
@@ -33,7 +34,8 @@ foreach ($f in @($app, $ota, $pt, $bl)) {
 if (-not (Test-Path '.\esptool.exe')) { Stop-With "esptool.exe is missing." }
 # known firmware images (app at 0x20000) and partition tables (0x8000, 3072 bytes)
 $known = [ordered]@{
-  '735c2699009d5e723a8755975720a570240fed7375ed5a43c06727458d4d6560' = '0.7.3';
+  '181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5' = '0.7.3';
+  '735c2699009d5e723a8755975720a570240fed7375ed5a43c06727458d4d6560' = '0.7.3 draft (26 Oct, never released)';
   '33b425022eb12ed7d4b55f343cb76c94ad6677864379112b08352eb36c779a60' = '0.7.2';
   '63ace07eebd16c6f5c829a0cf67349863cd23ae6a3ff59925bf785678b14ea0f' = '0.7.1';
   '1d4dd740d5a86516b79d16a23df1d5cb6155f3007ff71823dc928d82082a6c67' = '0.7.0';

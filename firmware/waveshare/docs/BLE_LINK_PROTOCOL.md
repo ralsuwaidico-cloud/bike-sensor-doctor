@@ -202,12 +202,28 @@ encrypted link only. Reports are immutable UTF-8 text with the sections `[header
 `crc32("123456789") = 0xCBF43926`.
 
 Board behaviour the phone must expect (firmware 0.7.3):
-- **Chunk size.** A DIAG_CHUNK must fit one 180-byte message: 8 header + 6 (id) + 6 (offset) + 2 + data + 3 (last), so the
-  board sends **at most 155 data bytes** and clamps `max_len` (the phone may ask for 160). The phone continues at
-  `offset + len` of the CHUNK it received — never at `offset + max_len`. `offset == size` returns an empty chunk with `last = 1`.
+- **Chunk size (exact formula, both sides).** A DIAG_CHUNK is `BC_DIAG_CHUNK_OVERHEAD` 25 + data bytes: 8 header + 6 (`01`
+  id) + 6 (`02` offset) + 2 (`03` tag + length) + 3 (`04` last). It must fit one Link message (180) and one notification
+  (`ATT_MTU − 3`), so the board sends `data = min(max_len, 155, (ATT_MTU − 3) − 25, bytes left)` —
+  `bc_diag_chunk_data_max()` — where ATT_MTU is the value negotiated on the phone connection (`BLE_GAP_EVENT_MTU`, re-read
+  with `ble_att_mtu(conn)` every link tick; 23 until the exchange). No room for one byte (MTU < 29) → DIAG_ERR **5**.
+  The phone asks for `max_len = min(155, (ATT_MTU − 3) − 25)` from `maximumWriteValueLength(.withoutResponse)`:
+  MTU 185 → 155 (180-byte message) · 247 → 155 · 517 → 155 · 100 → 72 (97-byte message) · 23 → no request.
+  Sizing never relies on a refused notification. The phone continues at `offset + len` of the CHUNK it received — never at
+  `offset + max_len`. `offset == size` returns an empty chunk with `last = 1`.
+- **Ride priority.** A chunk is handed to the radio only when `plat_phone_bulk_room()` (the second's LIVE frame has gone, the
+  notify queue is empty, >= 4 of the 12 NimBLE msys blocks free, no refused notification in the last 500 ms) and at most one
+  per `BC_DIAG_CHUNK_GAP_MS` 200 ms; it is held (never dropped) otherwise. A notification NimBLE refuses (LIVE, ride-control
+  reply or service message) is retried on the next 100 ms link tick instead of being dropped (0.6.0-0.7.2 dropped it).
+  While a ride is RECORDING on the board every CHUNK_REQ is answered DIAG_ERR **4** busy (LIST / ACK still answered).
+  Measured in `test/blehost` `prio` (LIVE cadence with and without a transfer) and simulator section 23.
 - Up to **4** CHUNK_REQs may be outstanding; they are answered in order. A 5th gets DIAG_ERR code 4 (busy) — retry after the
   next CHUNK arrives.
 - A disconnect drops whatever was due; after reconnecting the phone simply asks again from the offset it has (resume).
+- Cross-tests: `test/host/gen_diag_fixture.c` exports the firmware's real report (report builder) and every reply of the real
+  server at ATT MTU 23 / 100 / 185 / 247 / 517 to `test/host/fixtures/diag_fw_fixture.json` (+ a Swift copy); the same files are
+  in `ios/BikeComputerTests` and decoded by `DiagFirmwareVectorTests`. `make` in test/host fails if the committed fixture is
+  stale. Cyclift's request bytes go through the firmware parser in `test_bc_diag.c` `test_ios_requests`.
 - ACK with the matching crc → the board stores state 1 and answers DIAG_INFO with `06 = 1`. A wrong crc → DIAG_INFO with
   `06 = 0` (the report stays pending). An unknown id → DIAG_ERR code 1. Offset past the end → code 2. Storage read error → 3.
 - `diag_ready` (EVENT on Events `0007`, `event_id 0x22`) is sent once on every new encrypted connection and whenever a new
@@ -229,7 +245,7 @@ Vectors (`test/host/test_bc_diag.c`, `test_vectors`; seq / t_ms as given):
 | DIAG_ERR 0x86 | seq 7, t 0x31; id 9, code 1 (unknown id) | `86 00 07 00 31 00 00 00 01 04 09 00 00 00 02 01 01` |
 | EVENT diag_ready 0x40/0x22 | seq 8, t 0x40; pending 1, newest id 7 | `40 00 08 00 40 00 00 00 01 01 22 02 01 01 03 04 07 00 00 00` |
 
-A full chunk (155 data bytes) is exactly 180 bytes on the wire. Strings: summary <= 40 bytes, firmware <= 16 bytes, UTF-8,
+A full chunk (155 data bytes) is exactly 180 bytes on the wire (182 + 3 = a 185-byte ATT MTU: iOS's default fits exactly). Strings: summary <= 40 bytes, firmware <= 16 bytes, UTF-8,
 never cut inside a character (a longer summary received from a sender is cut back to the last whole character).
 
 ## Power states and the link (firmware 0.6.0)

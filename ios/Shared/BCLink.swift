@@ -6,6 +6,8 @@ enum BCLink {
     static let verMajor: UInt8 = 1
     static let verMinor: UInt8 = 0
     static let maxMessage = 180
+    /// type u8, flags u8, seq u16, sender time ms u32 (every message starts with it)
+    static let headerSize = 8
 
     static let serviceUUID = "B1CE0000-7E3A-4C55-9D2B-5A0E1C7C0000"
     static let infoUUID = "B1CE0002-7E3A-4C55-9D2B-5A0E1C7C0000"

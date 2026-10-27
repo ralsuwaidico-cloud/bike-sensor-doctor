@@ -38,8 +38,11 @@ final class DiagReportCenter: ObservableObject {
     }
 
     // MARK: link
+    /// Version compatibility (1.2.3): only a board whose INFO carries cap 0x400 DIAG_XFER (firmware 0.7.3+) is ever asked;
+    /// older firmware never sees a DIAG_* byte. (A board with the cap and an older app simply keeps its reports.)
+    static func transferAllowed(_ info: BCLink.Info?) -> Bool { info?.hasDiagXfer == true }
     private func linkReady() {
-        guard let d = device, let info = d.info, info.hasDiagXfer else { boardSupports = false; engine?.linkDown(); engine = nil; publish(); return }
+        guard let d = device, Self.transferAllowed(d.info) else { boardSupports = false; engine?.linkDown(); engine = nil; publish(); return }
         boardSupports = true
         let boardId = d.boardId
         if engine?.boardId != boardId { engine = makeEngine(boardId) }
@@ -57,6 +60,10 @@ final class DiagReportCenter: ObservableObject {
     private func makeEngine(_ boardId: String) -> DiagTransfer {
         let e = DiagTransfer(boardId: boardId, store: store) { [weak self] d in self?.device?.sendDiag(d) ?? false }
         e.rideActive = { [weak self] in self?.recorder?.isActive ?? false }
+        // the board records a ride (its LIVE says so, and it is fresh): it would answer BUSY, so the phone does not ask
+        e.boardRecording = { [weak self] in guard let d = self?.device, d.liveIsFresh else { return false }; return d.live?.rideState == .running }
+        // chunk size from the NEGOTIATED link (ATT MTU − 3), never from failures — docs/LINK_V1_2_SPEC.md 1.2.3
+        e.linkPayload = { [weak self] in self?.device?.maxNotifyBytes }
         e.onSaved = { [weak self] m in
             guard let self else { return }
             self.savedThisSession.append(m)

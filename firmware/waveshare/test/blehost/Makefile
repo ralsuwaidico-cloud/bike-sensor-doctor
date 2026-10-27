@@ -11,7 +11,16 @@ CYCLES ?= 1000
 ifneq ($(OLD),)
 CFLAGS += -DBLEHOST_072
 endif
-all: run
+all: run prio-run
+# 0.7.3 Link 1.2.3 ride priority: LIVE cadence with and without a report transfer on a congested radio (prio.c)
+PSRC = prio.c fake/fake_nimble.c $(FW)/main/ble_central.c $(FW)/main/ble_link.c \
+      $(CORE)/bc_xds.c $(CORE)/bc_hr.c $(CORE)/bc_csc.c $(CORE)/bc_cp.c $(CORE)/bc_gatt.c $(CORE)/bc_pipe.c $(CORE)/bc_link.c $(CORE)/bc_ride.c \
+      $(CORE)/bc_diag.c $(CORE)/bc_boot.c
+prio: $(PSRC) fake/fake_nimble.h
+	$(CC) $(CFLAGS) -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer $(INC) -o $@ $(PSRC) -lm
+prio-run: prio
+	ASAN_OPTIONS=detect_leaks=0 ./prio 40 30
+	ASAN_OPTIONS=detect_leaks=0 ./prio 40 150
 stress: $(SRC) fake/fake_nimble.h
 	$(CC) $(CFLAGS) -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer $(INC) -o $@ $(SRC) -lm
 stress_tsan: $(SRC) fake/fake_nimble.h
@@ -23,4 +32,4 @@ tsan: stress_tsan
 	  echo "ThreadSanitizer data-race reports: $$(grep -c 'WARNING: ThreadSanitizer: data race' tsan.log)"; \
 	  grep -A6 'WARNING: ThreadSanitizer: data race' tsan.log | grep -E '#0 ' | sed 's/ (.*//' | sort | uniq -c | sort -rn | head -20
 clean:
-	rm -f stress stress_tsan tsan.log
+	rm -f stress stress_tsan tsan.log prio

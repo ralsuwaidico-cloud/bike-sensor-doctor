@@ -72,11 +72,11 @@ existed (pipeline re-subscribe/reconnect, Wi-Fi off on low RAM) are recorded.
 
 | Test | Result |
 |---|---|
-| Host unit tests, ASan + UBSan (`test/host`, `make`) | xds 228, core 1899, pipe 89, **diag 124** (CRC, record/ring incl. torn record + wrap + resume + batching, index + never-delete-unsent, report sections + privacy, 1.2.3 vectors, server incl. interrupted transfer resume + pipelining + all errors + 20 000-message fuzz, boot modes), **partitions 63** — **2403 checks, 0 failed**; `make lint` OK |
-| PC harness `test/sim` (`make run`) and the same with ASan + UBSan (`make run-asan`) | **289 screens 0 issues, 489 checks 0 failed** (both). New scenario 21: three crashes → RECOVERY screen (layout + circle checks), report contents + privacy, SEND LOGS (phone link only), diag_ready, LIST, pull interrupted after 5 chunks and resumed, crc ACK → "Sent to Cyclift", RESTART & DIAGNOSE (1 s hold) → staged boot → power meter disabled → DISABLED row + RETRY → enabled, event log kept across 6 boots, 3 crashed staged boots → RECOVERY, no phone → waiting, store full of unsent reports → none deleted, new firmware → clean normal start, torn event record skipped. Scenario 22 stress: **1000 rapid phone connect/disconnect cycles (735 s simulated)** with 1125 SENSOR_DIAG events, 425 report requests, 1004 meter changes (silent / stalled / garbage / variants), 252 Wi-Fi toggles, 248 malformed writes, 29 reports — clean under ASan/UBSan (also 5000 cycles) |
+| Host unit tests, ASan + UBSan (`test/host`, `make`) | (27 Oct final: **diag 162**, total **2441 checks, 0 failed**, + fixture check) — 26 Oct: xds 228, core 1899, pipe 89, **diag 124** (CRC, record/ring incl. torn record + wrap + resume + batching, index + never-delete-unsent, report sections + privacy, 1.2.3 vectors, server incl. interrupted transfer resume + pipelining + all errors + 20 000-message fuzz, boot modes), **partitions 63** — **2403 checks, 0 failed**; `make lint` OK |
+| PC harness `test/sim` (`make run`) and the same with ASan + UBSan (`make run-asan`) | (27 Oct final: **291 screens 0 issues, 509 checks 0 failed**, both, incl. scenario 23) — 26 Oct: **289 screens 0 issues, 489 checks 0 failed** (both). New scenario 21: three crashes → RECOVERY screen (layout + circle checks), report contents + privacy, SEND LOGS (phone link only), diag_ready, LIST, pull interrupted after 5 chunks and resumed, crc ACK → "Sent to Cyclift", RESTART & DIAGNOSE (1 s hold) → staged boot → power meter disabled → DISABLED row + RETRY → enabled, event log kept across 6 boots, 3 crashed staged boots → RECOVERY, no phone → waiting, store full of unsent reports → none deleted, new firmware → clean normal start, torn event record skipped. Scenario 22 stress: **1000 rapid phone connect/disconnect cycles (735 s simulated)** with 1125 SENSOR_DIAG events, 425 report requests, 1004 meter changes (silent / stalled / garbage / variants), 252 Wi-Fi toggles, 248 malformed writes, 29 reports — clean under ASan/UBSan (also 5000 cycles) |
 | BLE glue stress `test/blehost` (real `ble_central.c` + `ble_link.c` on a fake NimBLE, device task layout, fault injection) | ASan/UBSan **1000 phone cycles PASS** (118 meter connections, 662 GATT procedures, 3759 notifications of which 210 malformed, 17 500 host-task events, 0 invariant violations, 0 leaked mbufs). TSan: only single-byte request flags remain. Same harness on the exact 0.7.2 source: 2000 "host lock inside critical section" violations, 41 TSan reports |
 | cppcheck, gcc -fanalyzer | 0 real findings (one harmless format fixed); -fanalyzer 0 warnings on 34 files |
-| `idf.py build` | OK, app 1 828 752 bytes = 44 % of the smaller app slot; app SHA-256 `735c2699009d5e723a8755975720a570240fed7375ed5a43c06727458d4d6560` |
+| `idf.py build` | OK. **27 Oct final: app 1 830 352 bytes (44 % of the smaller slot), SHA-256 `181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5`** (26 Oct draft `735c2699…`, never released) |
 | Partition change | `test_partitions` (above) |
 
 ## 6. What needs the hardware
@@ -92,3 +92,20 @@ one-line explanation, YES, writes app + OTA selector + table if needed, then rec
 `RESTORE-CHOSEN-BACKUP.bat/.ps1` (lists every backup with the firmware inside, you pick the number — replaces the "newest
 backup" restore, which would now pick the crashing 0.7.2), `ROLLBACK-TO-v071` (unchanged; valid with the new table),
 `TEST-v0.7.3.txt`.
+
+## 8. 27 Oct final: Link 1.2.3 integration with Cyclift
+
+* **Chunk size contract** (`bc_diag_chunk_data_max`, docs/LINK_V1_2_SPEC.md 1.2.3): DIAG_CHUNK = 25 + data bytes;
+  data = min(phone max_len, 180 − 25 = 155, (ATT_MTU − 3) − 25), ATT_MTU = the phone connection's negotiated MTU
+  (`BLE_GAP_EVENT_MTU`, `ble_att_mtu(conn)` every link tick; `plat_phone_status().att_mtu`). MTU < 29 → DIAG_ERR 5. Cyclift
+  asks for min(155, maximumWriteValueLength(.withoutResponse) − 25); its 128-byte timeout fallback is gone.
+* **Ride priority**: chunks only when `plat_phone_bulk_room()` (LIVE gone, queue empty, ≥ 4 free msys blocks, no refused
+  notify in 500 ms) and ≤ 1 per 200 ms; BUSY while a ride is RUNNING; diag replies after every other phone-service reply;
+  a notification NimBLE refuses is retried (LIVE, control reply, service queue) instead of dropped.
+* **Safe report**: Settings › Diagnostics › **HOLD: SAVE REPORT** (1 s) stores a kind-3 report and announces it (diag_ready).
+* **Cross-tests**: `test/host/gen_diag_fixture` exports the real report + server replies at MTU 23/100/185/247/517 for the iOS
+  tests (`make` fails on a stale fixture); `test_bc_diag` `test_chunk_size_contract`, `test_fixture_transfers`,
+  `test_ios_requests`, `test_old_app_keeps_reports`; simulator scenario 23; `test/blehost/prio` measures LIVE latency with and
+  without a transfer (30 ms and 150 ms connection events).
+* Kit: fw-v0.7.3 refreshed (app `181b2e5c…`), INSTALL / RESTORE-CHOSEN-BACKUP know the new hash, README-v0.7.3.txt,
+  DIAG-TEST-v0.7.3.txt.

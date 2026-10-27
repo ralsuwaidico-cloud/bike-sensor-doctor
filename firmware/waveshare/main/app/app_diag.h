@@ -32,7 +32,9 @@ void app_diag_note_live(void);                  /* one LIVE message handed to th
 uint32_t app_diag_store_report(uint8_t kind, const char *recovery_note);
 /* phone transfer (Link 1.2.3) */
 bool app_diag_write(const uint8_t *msg, size_t n);           /* a Control write; true when it was a DIAG message */
-size_t app_diag_next(uint8_t *chr, uint8_t *buf, size_t cap, uint32_t now_ms);   /* chr 0 Control, 2 Events */
+/** Next diag reply (chr 0 Control, 2 Events). Chunks are sized from the negotiated ATT MTU, refused BUSY while a ride is
+ *  RUNNING, and released only when plat_phone_bulk_room() and at most one per BC_DIAG_CHUNK_GAP_MS (LIVE keeps priority). */
+size_t app_diag_next(uint8_t *chr, uint8_t *buf, size_t cap, uint32_t now_ms);
 void app_diag_phone_ready(bool ready);
 /** Recovery mode: the phone link runs without the app task; this moves its Control messages to / from the diag server. */
 void app_diag_recovery_pump(uint32_t now_ms);
@@ -57,6 +59,9 @@ typedef struct {
     bool storage_ok;
     uint32_t events_written, events_dropped;
     bool phone_ready;
+    /* Link 1.2.3 ride priority evidence: chunks sent, held back because the link had no room (LIVE first / mbufs / queue),
+       delayed by the pacing gap, refused BUSY because a ride was recording */
+    uint32_t chunks_sent, chunks_held, chunks_paced, busy_ride;
 } app_diag_status_t;
 void app_diag_status(app_diag_status_t *out);
 

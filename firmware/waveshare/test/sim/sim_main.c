@@ -1818,6 +1818,88 @@ static void scenario_073(void)
     pr->power.paired = false; app_profile_save(); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED; g_sim.power_ok = false;
 }
 
+
+/* ===================================================================================== 0.7.3 final: safe report + transfer contract */
+static int pull_paced(uint32_t id, uint32_t size, uint16_t maxl, uint32_t *got, uint32_t *max_msg, int *lives)
+{
+    uint32_t off = 0; int chunks = 0, stall = 0, lives0 = g_sim.phone.lives; *max_msg = 0; g_sim.phone.dbuf_len = 0;
+    while (off < size && stall < 20) {
+        int before = g_sim.phone.dchunks; phone_req(BC_MSG_DIAG_CHUNK_REQ, id, off, maxl, 0);
+        for (int w = 0; w < 40 && g_sim.phone.dchunks == before; w++) run(25);      /* Cyclift waits for the answer (<= 1 s) */
+        if (g_sim.phone.dchunks == before || g_sim.phone.dchunk.offset != off) { stall++; continue; }
+        uint32_t wire = (uint32_t)g_sim.phone.dchunk.len + BC_DIAG_CHUNK_OVERHEAD; if (wire > *max_msg) *max_msg = wire;
+        off += g_sim.phone.dchunk.len; chunks++;
+        if (g_sim.phone.dchunk.last) break;
+    }
+    *got = off; *lives = g_sim.phone.lives - lives0;
+    return chunks;
+}
+static void scenario_073_transfer(void)
+{
+    printf("\n== 23. firmware 0.7.3 final: SAVE REPORT (no crash needed), chunk size from the negotiated MTU, ride priority\n");
+    app_diag_status_t st;
+    /* the store is full of unsent reports from section 21: Cyclift acknowledges them (crc from the list) so they may go */
+    sim_phone_connect(true); run(800);
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(2000);
+    int n0 = g_sim.phone.ndinfo; bc_diag_info_t list[32]; memcpy(list, g_sim.phone.dinfo, sizeof list);
+    for (int i = 0; i < n0; i++) if (list[i].state == 0) { phone_req(BC_MSG_DIAG_ACK, list[i].id, 0, 0, list[i].crc); run(300); }
+    app_diag_status(&st); CHECK(n0 == BC_DIAG_MAX_REPORTS && st.pending == 0, "Cyclift acknowledged all %d reports (pending %d)", n0, st.pending);
+    /* a) Settings > Diagnostics > HOLD: SAVE REPORT -> a kind-3 report, announced to the connected phone */
+    ui_settings_show(); run(300); scroll_to("Diagnostics"); tap_text("Diagnostics"); run(300);
+    CHECK(scroll_to("HOLD: SAVE REPORT"), "Diagnostics menu: 'HOLD: SAVE REPORT'"); shot("23a_diag_save_report");
+    int stored0 = st.stored; g_sim.phone.dreadys = 0;
+    tap_text("HOLD: SAVE REPORT"); run(400); app_diag_status(&st); CHECK(st.stored == stored0, "a short tap does not save");
+    hold_text("HOLD: SAVE REPORT", 1300); run(600); app_diag_status(&st);
+    CHECK(st.stored == stored0 && st.pending == 1 && on_screen("saved"), "held 1 s: report saved (oldest sent one made room), toast shown (%d stored, %d pending)", st.stored, st.pending);
+    shot("23a_diag_report_saved");
+    CHECK(g_sim.phone.dreadys >= 1 && g_sim.phone.dready.pending == 1, "connected Cyclift is told at once: diag_ready pending 1");
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(2000);
+    bc_diag_info_t want; memset(&want, 0, sizeof want);
+    for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].state == 0) want = g_sim.phone.dinfo[i];
+    CHECK(want.id && want.kind == BC_DIAG_KIND_MANUAL && want.size > 1000, "the new report is listed: id %lu kind 3, %lu bytes", (unsigned long)want.id, (unsigned long)want.size);
+    /* b) MTU 185 (iOS): Cyclift asks for 155; every notification <= 182 bytes; >= 200 ms between chunks; LIVE keeps 1 Hz */
+    g_sim.phone.mtu = 185; g_sim.phone.min_chunk_gap_ms = UINT32_MAX; g_sim.phone.unknown_notifies = 0;
+    uint32_t got, maxw; int lives; uint32_t t0 = g_sim.now_ms;
+    int chunks = pull_paced(want.id, want.size, 155, &got, &maxw, &lives);
+    uint32_t dur = g_sim.now_ms - t0; uint32_t crc = bc_crc32(0, g_sim.phone.dbuf, got);
+    CHECK(got == want.size && crc == want.crc && chunks == (int)((want.size + 154) / 155) && maxw <= 180 && maxw + 3 <= 185 && g_sim.phone.unknown_notifies == 0,
+          "MTU 185: %d chunks, largest message %lu bytes (<= MTU-3), crc ok", chunks, (unsigned long)maxw);
+    CHECK(g_sim.phone.min_chunk_gap_ms >= BC_DIAG_CHUNK_GAP_MS, "chunks paced: smallest gap %lu ms (>= %u)", (unsigned long)g_sim.phone.min_chunk_gap_ms, BC_DIAG_CHUNK_GAP_MS);
+    CHECK(lives >= (int)(dur / 1000) - 1, "LIVE kept its 1 Hz during the transfer: %d LIVE in %lu ms", lives, (unsigned long)dur);
+    printf("  MTU 185 transfer: %lu bytes in %lu ms, %d chunks, min gap %lu ms, %d LIVE messages meanwhile\n", (unsigned long)got, (unsigned long)dur, chunks, (unsigned long)g_sim.phone.min_chunk_gap_ms, lives);
+    /* c) MTU 100: Cyclift asks for 72; the board would clamp an old 160 request to 72 too */
+    g_sim.phone.mtu = 100; chunks = pull_paced(want.id, want.size, 160, &got, &maxw, &lives);
+    CHECK(got == want.size && bc_crc32(0, g_sim.phone.dbuf, got) == want.crc && maxw == 97 && g_sim.phone.unknown_notifies == 0, "MTU 100: a 160-byte request is clamped to 72 data bytes (97-byte messages), crc ok");
+    /* d) MTU 23 (no exchange): DIAG_ERR 5, nothing oversized */
+    g_sim.phone.mtu = 23; g_sim.phone.derrs = 0; phone_req(BC_MSG_DIAG_CHUNK_REQ, want.id, 0, 160, 0); run(600);
+    CHECK(g_sim.phone.derrs == 1 && g_sim.phone.derr.code == BC_DIAG_ERR_MTU, "MTU 23: DIAG_ERR 5 (link too small), no chunk");
+    g_sim.phone.mtu = 185;
+    /* e) congestion: LIVE / NimBLE need the link -> the chunk waits (never dropped), then goes */
+    g_sim.phone.congested = true; int before = g_sim.phone.dchunks; app_diag_status(&st); uint32_t held0 = st.chunks_held;
+    phone_req(BC_MSG_DIAG_CHUNK_REQ, want.id, 0, 155, 0); run(2000); app_diag_status(&st);
+    CHECK(g_sim.phone.dchunks == before && st.chunks_held > held0, "link congested: the chunk is held (%lu holds), not sent", (unsigned long)(st.chunks_held - held0));
+    g_sim.phone.congested = false; run(600);
+    CHECK(g_sim.phone.dchunks == before + 1 && g_sim.phone.dchunk.offset == 0, "congestion gone: the held chunk is sent");
+    /* f) a ride recording on the board: chunk requests answered BUSY, list still works, LIVE untouched; after the ride it resumes */
+    app_ride_start(); run(1200);
+    CHECK(app_ride_state() == BC_RIDE_RUNNING, "ride recording");
+    g_sim.phone.derrs = 0; before = g_sim.phone.dchunks; int lives0 = g_sim.phone.lives;
+    for (int k = 0; k < 5; k++) { phone_req(BC_MSG_DIAG_CHUNK_REQ, want.id, 0, 155, 0); run(1000); }
+    CHECK(g_sim.phone.dchunks == before && g_sim.phone.derrs == 5 && g_sim.phone.derr.code == BC_DIAG_ERR_BUSY, "ride recording: 5 chunk requests -> 5 x BUSY, no data");
+    CHECK(g_sim.phone.lives - lives0 >= 4, "LIVE during the ride: %d in 5 s", g_sim.phone.lives - lives0);
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500); CHECK(g_sim.phone.ndinfo >= 1, "ride recording: the list is still answered");
+    app_ride_end(); run(300); app_ride_discard(); run(600);
+    chunks = pull_paced(want.id, want.size, 155, &got, &maxw, &lives); crc = bc_crc32(0, g_sim.phone.dbuf, got);
+    CHECK(got == want.size && crc == want.crc, "after the ride: the transfer completes (%d chunks), crc ok", chunks);
+    /* g) ACK only with the matching crc; the report then may be replaced when the store fills */
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_ACK, want.id, 0, 0, crc ^ 1); run(600);
+    CHECK(g_sim.phone.ndinfo == 1 && g_sim.phone.dinfo[0].state == 0, "wrong crc: still pending");
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_ACK, want.id, 0, 0, crc); run(600);
+    app_diag_status(&st); CHECK(g_sim.phone.ndinfo == 1 && g_sim.phone.dinfo[0].state == 1 && st.pending == 0, "matching crc: sent");
+    sim_phone_disconnect(); run(300);
+    ui_home_show(); run(300);
+}
+
 /* ===================================================================================== 0.7.3 stress (sanitizer build) */
 static uint32_t rnd32(void) { static uint32_t x = 0x1234567; x ^= x << 13; x ^= x >> 17; x ^= x << 5; return x; }
 static void scenario_stress(int cycles)
@@ -1884,6 +1966,7 @@ int main(int argc, char **argv)
     lv_indev_set_read_cb(indev, read_cb);
     scenario();
     scenario_073();
+    scenario_073_transfer();
     scenario_stress(getenv("SIM_STRESS") ? atoi(getenv("SIM_STRESS")) : 1000);
     lv_mem_monitor_t m; lv_mem_monitor(&m);
     printf("\nLVGL memory: %u%% used, max used %u bytes of %u, fragmentation %u%%\n", m.used_pct, (unsigned)m.max_used, (unsigned)m.total_size, m.frag_pct);
