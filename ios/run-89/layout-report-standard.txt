@@ -32,7 +32,7 @@ XXXL plan: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32, Log s
 XXXL progress: no text outside the window
 XXXL progress: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32
 XXXL progress lower: no text outside the window
-XXXL progress lower: every on-screen button ≥ 44 pt tall
+XXXL progress lower: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32
 XXXL profile: no text outside the window
 XXXL profile: every on-screen button ≥ 44 pt tall
 XXXL tab bar: Home outside the checked zone (788–840 of 874)

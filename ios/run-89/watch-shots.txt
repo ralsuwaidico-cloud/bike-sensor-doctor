@@ -1,20 +1,20 @@
 small: Apple Watch SE 3 (40mm)
   content_size large not supported here
-com.ralsuwaidico.bikecomputer.watchkitapp: 2918
+com.ralsuwaidico.bikecomputer.watchkitapp: 93564
   screenshot l ok
   content_size extra-extra-extra-large not supported here
-com.ralsuwaidico.bikecomputer.watchkitapp: 3363
+com.ralsuwaidico.bikecomputer.watchkitapp: 94124
   screenshot xxxl ok
   content_size accessibility-extra-large not supported here
-com.ralsuwaidico.bikecomputer.watchkitapp: 3490
+com.ralsuwaidico.bikecomputer.watchkitapp: 94686
   screenshot ax3 ok
 large: Apple Watch Ultra 3 (49mm)
   content_size large not supported here
-com.ralsuwaidico.bikecomputer.watchkitapp: 12940
+com.ralsuwaidico.bikecomputer.watchkitapp: 4835
   screenshot l ok
   content_size extra-extra-extra-large not supported here
-com.ralsuwaidico.bikecomputer.watchkitapp: 13395
+com.ralsuwaidico.bikecomputer.watchkitapp: 5427
   screenshot xxxl ok
   content_size accessibility-extra-large not supported here
-com.ralsuwaidico.bikecomputer.watchkitapp: 13988
+com.ralsuwaidico.bikecomputer.watchkitapp: 6010
   screenshot ax3 ok

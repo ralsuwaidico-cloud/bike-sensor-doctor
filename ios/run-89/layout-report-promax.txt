@@ -11,7 +11,7 @@ L plan: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32, 8 wk 126
 L progress: no text outside the window
 L progress: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32, 8 wk 126×32, 16 wk 127×32, 1 yr 127×32
 L progress lower: no text outside the window
-L progress lower: every on-screen button ≥ 44 pt tall
+L progress lower: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32
 L profile: no text outside the window
 L profile: every on-screen button ≥ 44 pt tall
 L tab bar: Home outside the checked zone (870–922 of 956)
