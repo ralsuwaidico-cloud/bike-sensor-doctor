@@ -465,11 +465,18 @@ extension Store {
         // review N-10: a session the rider edited keeps the weights they typed
         guard !w.done, w.completion == nil, !w.edited, cal.startOfDay(for: w.date) >= cal.startOfDay(for: now) else { return entries }
         let logs = strength.filter { !$0.awaitingReview && !$0.inProgress && !$0.isImported && $0.date <= now }
-        return entries.map { e in
-            // review N-03: entries already reduced (and saved back by an edit, swap or accepted insight) are not reduced again
-            if e.notes.contains("Back after") { return e }
-            guard let top = e.sets.compactMap({ $0.bodyweight ? nil : $0.weightKg }).max(), top > 0,
-                  let last = logs.filter({ s in (s.exercises ?? []).contains { $0.exerciseId == e.exerciseId && !$0.doneSets.isEmpty } }).map({ $0.date }).max() else { return e }
+        return entries.map { e0 in
+            var e = e0
+            let last = logs.filter({ s in (s.exercises ?? []).contains { $0.exerciseId == e.exerciseId && !$0.doneSets.isEmpty } }).map({ $0.date }).max()
+            // review N-03 / P3-07: an entry already reduced (and saved back by an edit, swap or accepted insight) carries a
+            // structured marker and is not reduced again while nothing has been logged since; once the exercise is logged
+            // again the marker and its note are dropped (no stale "Back after" note), and a new break is judged afresh
+            if let m = e.returnMark {
+                if last.map({ $0 < m.at }) ?? true { return e }
+                e.notes = e.notes.replacingOccurrences(of: m.note, with: "").trimmingCharacters(in: .whitespaces)
+                e.returnMark = nil
+            }
+            guard let top = e.sets.compactMap({ $0.bodyweight ? nil : $0.weightKg }).max(), top > 0, let last else { return e }
             let gap = cal.dateComponents([.day], from: cal.startOfDay(for: last), to: cal.startOfDay(for: now)).day ?? 0
             guard gap >= ReturnPhase.breakThresholdDays else { return e }
             let phase = ReturnPhase(breakDays: gap, sessionsSince: 0, ongoing: true)
@@ -487,6 +494,7 @@ extension Store {
             let pct = Int(((1 - target / top) * 100).rounded())
             let note = "Back after \(phase.weeksText): about \(pct) % lighter (\(WeightFmt.text(target, settings.units))) for now; your routine is unchanged."
             x.notes = x.notes.isEmpty ? note : x.notes + " " + note
+            x.returnMark = ExerciseEntry.ReturnMark(at: now, note: note)
             return x
         }
     }

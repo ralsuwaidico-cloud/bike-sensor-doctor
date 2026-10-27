@@ -185,6 +185,10 @@ struct ExerciseEntry: Codable, Identifiable, Equatable {
     var notes = ""
     /// Coach remediation M-03: planned rest between sets in seconds (nil = not prescribed, e.g. the rider's own routine).
     var restSeconds: Int? = nil
+    /// Review P3-07: set when the coach lowered this entry's weights for a return after a break (computed for display);
+    /// a structured marker instead of matching note text, so a rider's own note never switches the reduction off.
+    var returnMark: ReturnMark? = nil
+    struct ReturnMark: Codable, Equatable { var at: Date; var note: String }
 
     init(id: UUID = UUID(), exercise: Exercise, sets: [SetEntry] = [], superset: String? = nil, notes: String = "") {
         self.id = id; exerciseId = exercise.id; name = exercise.name; pattern = exercise.pattern; self.sets = sets; self.superset = superset; self.notes = notes
@@ -199,6 +203,7 @@ struct ExerciseEntry: Codable, Identifiable, Equatable {
         superset = try c.decodeIfPresent(String.self, forKey: .superset)
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
         restSeconds = try? c.decodeIfPresent(Int.self, forKey: .restSeconds)
+        returnMark = try? c.decodeIfPresent(ReturnMark.self, forKey: .returnMark)
     }
     var doneSets: [SetEntry] { sets.filter { $0.done } }
     var tonnageKg: Double? { let t = doneSets.compactMap { $0.tonnageKg }; return t.isEmpty ? nil : t.reduce(0, +) }
