@@ -23,3 +23,5 @@ test/host/test_bc_storage
 test/blehost/initfail
 test/host/test_bc_bootrec
 test/host/test_storage_fixture
+test/host/test_bc_link13
+test/host/gen_link13_fixture
