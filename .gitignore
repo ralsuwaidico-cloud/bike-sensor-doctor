@@ -6,3 +6,4 @@
 *.iml
 /.kotlin
 /*.apk
+firmware/waveshare/test/simfs/
