@@ -80,3 +80,24 @@ Release launch smoke ok; layout audit ok on all three iPhones (82 screenshots); 
 - Tests use a made-up rider ("Rider A"; "RiderA" in byte vectors, same length so SCAN_RESULT / PROFILE_SET bytes match the
   firmware docs). The real first name remains only in iOS docs (AUDIT_0.8.0.md, BUILD30-TEST.txt, RIDE_LAYOUTS.md package
   path) — not test files; left for the lead to decide.
+
+## Round 3 (lead, QA rc3 review) — RC3-01 (P1), RC3-03, RC3-08
+
+- **RC3-01 fixed at the root, no firmware change.** For every queue ride Cyclift holds but has not ACKed, it asks the board
+  for that ride's summary BY ID: one Link 1.1 SYNC_REQ with `after_ride_id = id − 1, max 1` (`RideQueueTransfer.wantSummary`
+  → `DeviceLink.sendSyncRequest`, one at a time, never while another sync runs, 6 s timeout, 2 attempts). The SYNC_RIDE
+  goes through ONE path for every board (`BoardSummaryIngest` / `RideQueueTransfer.handleSync`): history import, CRC kept,
+  the held ride ACKed at once if the board's `summary_crc32` matches. A ride watched live is ACKed only after the board's
+  summary of it verified. A targeted SYNC_END does not start the old paging.
+- **End-to-end test** `RideQueueEndToEndTests` (5 tests, Linux + CI): real Store, the engine and the Center's Sync handler
+  against a fake board that answers RIDEQ and SYNC like the firmware (ids > after only) with the firmware fixture bytes
+  for ride 23. Cases: ride watched live (history already holds it → connect-time sync sends nothing), ride imported from the
+  queue before the connect-time sync, RAM-only ride (slot freed), five rides incl. three RAM-only and two watched live (all
+  ACKed, all slots freed, no duplicates), wrong summary never ACKed. The ACK equals the firmware's RIDEQ_ACK byte for byte.
+  Negative control: with the request built the old way (after the highest id) 4 of the 5 tests fail (the mismatch one
+  passes either way, as it must).
+- **RC3-03:** COACH_STATE seq is persisted per workout_id (`DefaultsCoachSeqStore`, ≤ 16 workouts) and restored with a +64
+  jump, so it is strictly newer (serial-number order, wrap included) after a relaunch. Test `testSeqStaysNewerAfterARelaunch`.
+- **RC3-08:** "offline rides waiting" comes only from this connection: LIVE tag 14 when present, else this connection's
+  ride list (kept current by the board's replies), else this connection's STORAGE_STATUS; otherwise "not reported yet".
+  An omitted tag is never 0 and nothing from an earlier connection is reused (list and storage status cleared on link down).

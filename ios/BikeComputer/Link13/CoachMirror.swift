@@ -207,6 +207,32 @@ enum CoachStateBuilder {
     }
 }
 
+/// Where the last COACH_STATE seq per workout_id is kept, so seq stays strictly increasing across app relaunches for the
+/// same workout (QA RC3-03: the board ignores a seq that is not newer than the last one it applied for that workout).
+protocol CoachSeqStore: AnyObject {
+    func lastSeq(_ workoutId: UInt32) -> UInt16?
+    func save(_ workoutId: UInt32, _ seq: UInt16)
+}
+final class MemoryCoachSeqStore: CoachSeqStore {
+    private var m: [UInt32: UInt16] = [:]
+    func lastSeq(_ id: UInt32) -> UInt16? { m[id] }
+    func save(_ id: UInt32, _ seq: UInt16) { m[id] = seq }
+}
+/// UserDefaults-backed (the app): at most 16 workouts remembered, newest kept.
+final class DefaultsCoachSeqStore: CoachSeqStore {
+    private let key: String; private let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard, key: String = "cyclift.link13.coachSeq") { self.defaults = defaults; self.key = key }
+    private var table: [String: [Int]] { (defaults.dictionary(forKey: key) as? [String: [Int]]) ?? [:] }      /* id → [seq, order] */
+    func lastSeq(_ id: UInt32) -> UInt16? { table[String(id)].flatMap { $0.first }.map { UInt16(truncatingIfNeeded: $0) } }
+    func save(_ id: UInt32, _ seq: UInt16) {
+        var t = table
+        let order = (t.values.compactMap { $0.last }.max() ?? 0) + 1
+        t[String(id)] = [Int(seq), order]
+        if t.count > 16, let oldest = t.min(by: { ($0.value.last ?? 0) < ($1.value.last ?? 0) })?.key { t[oldest] = nil }
+        defaults.set(t, forKey: key)
+    }
+}
+
 /// The sender: plan transfer with per-part ACKs and CRC, COACH_STATE on change + 5 s keepalive + resend when the
 /// board's LIVE echo lags, COACH_END. Pure and synchronous like DiagTransfer: the caller feeds board messages, LIVE
 /// echoes and the clock; `send` writes one Control message.
@@ -236,6 +262,11 @@ final class CoachMirror {
     private var crcRetries = 0
     private var retryAt: Date?
 
+    /// Last sent seq per workout (RC3-03). Restored with a safety jump of `seqRestoreJump` so a value lost before the app
+    /// was killed (not yet written) can never make the next seq "older" for the board.
+    var seqStore: CoachSeqStore = MemoryCoachSeqStore()
+    static let seqRestoreJump: UInt16 = 64
+
     init(send: @escaping (Data) -> Bool) { self.send = send }
 
     /// New connection: the board's RAM plan may be gone (it keeps one plan in RAM only) → send everything again.
@@ -245,7 +276,7 @@ final class CoachMirror {
     func setPlan(_ p: BCLink.CoachPlan?, now: Date) {
         guard p?.workoutId != plan?.workoutId || p?.segments != plan?.segments else { if case .sending(-1) = planStatus { sendPart(0, now: now) }; return }
         plan = p; crcRetries = 0; ended = nil
-        stateSeq = 0; lastState = nil
+        stateSeq = p.flatMap { seqStore.lastSeq($0.workoutId) }.map { $0 &+ Self.seqRestoreJump } ?? 0; lastState = nil
         if p != nil { sendPart(0, now: now) } else { planStatus = .none }
     }
 
@@ -261,7 +292,7 @@ final class CoachMirror {
         guard due else { return }
         stateSeq &+= 1
         var s = s0; s.seq = stateSeq
-        if let d = BCLink.encodeCoachState(s, seq: nextSeq(), tMs: 0), send(d) { lastState = s; lastStateAt = now; statesSent += 1 }
+        if let d = BCLink.encodeCoachState(s, seq: nextSeq(), tMs: 0), send(d) { lastState = s; lastStateAt = now; statesSent += 1; seqStore.save(s.workoutId, s.seq) }
     }
 
     /// The workout is over / replaced / the rider stopped: one COACH_END.

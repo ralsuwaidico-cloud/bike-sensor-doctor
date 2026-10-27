@@ -102,12 +102,13 @@ final class DeviceLink: NSObject, ObservableObject {
     var onBoardRide: ((BCLink.RideSummary, String) -> Void)?
     /// Link 1.3 (BikeComputer/Link13): link ready / down, the board's Link 1.3 replies (HELLO_ACK, RIDEQ_*, STORAGE_*,
     /// COACH_PLAN_ACK, rides_pending), the CRC of each SYNC_RIDE's fields (ride id, crc) and the end of a SYNC session.
-    /// Nothing calls them for a board without cap 0x0800 except onBoardRideSummaryCrc / onSyncEnd (harmless bookkeeping).
+    /// Nothing calls them for a board without cap 0x0800 except onSyncData (every Sync message, all boards: the history
+    /// import of SYNC_RIDE summaries lives in BoardSummaryIngest).
     var onLink13Ready: (() -> Void)?
     var onLink13Down: (() -> Void)?
     var onLink13Message: ((Data) -> Void)?
-    var onBoardRideSummaryCrc: ((UInt32, UInt32) -> Void)?
-    var onSyncEnd: (() -> Void)?
+    /// Every message on the Sync characteristic (SYNC_RIDE, SYNC_END) with the board id, for BoardSummaryIngest.
+    var onSyncData: ((Data, String) -> Void)?
     var onEvent: ((BCLink.Event) -> Void)?
     /// Highest board ride id already stored for a given board id — the Store provides it so paging resumes where it left off.
     var highestStoredRideId: ((String) -> Int)?
@@ -125,7 +126,9 @@ final class DeviceLink: NSObject, ObservableObject {
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var inputChr: CBCharacteristic?, controlChr: CBCharacteristic?, liveChr: CBCharacteristic?, syncChr: CBCharacteristic?, eventsChr: CBCharacteristic?
-    private var syncInFlight = false
+    private(set) var syncInFlight = false
+    /// The SYNC_REQ in flight asks for ONE ride by id (Link13 RIDEQ verification, QA RC3-01): no automatic paging after it.
+    private var targetedSync = false
     private var seq: UInt16 = 0
     private var reqId: UInt16 = 0
     private var timeTimer: Timer?
@@ -291,8 +294,18 @@ final class DeviceLink: NSObject, ObservableObject {
         guard state == .ready, let i = info, i.hasRideSync, let c = syncChr, let p = peripheral else { syncStatus = info?.hasRideSync == false ? "needs a newer BikeComputer firmware (this one is \(info?.fw ?? "?"))" : syncStatus; return }
         let after = highestStoredRideId?(boardId) ?? 0
         guard let d = BCLink.encodeSyncRequest(afterRideId: UInt16(clamping: after), maxCount: 50, seq: nextSeq(), tMs: nowMs()) else { return }
-        syncInFlight = true; syncStatus = "syncing from ride \(after + 1)…"
+        syncInFlight = true; targetedSync = false; syncStatus = "syncing from ride \(after + 1)…"
         p.writeValue(d, for: c, type: .withResponse)
+    }
+
+    /// Link13 ride-queue verification (QA RC3-01): one SYNC_REQ built by RideQueueTransfer (`after_ride_id = id − 1, max 1`),
+    /// so the board sends the summary of a ride that is ALREADY in the history. Not while another sync runs.
+    @discardableResult
+    func sendSyncRequest(_ d: Data) -> Bool {
+        guard state == .ready, info?.hasRideSync == true, !syncInFlight, let c = syncChr, let p = peripheral else { return false }
+        syncInFlight = true; targetedSync = true
+        p.writeValue(d, for: c, type: .withResponse)
+        return true
     }
 
     // MARK: internals
@@ -590,13 +603,14 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         case BCLink.syncUUID:
             if let r = BCLink.decodeSyncRide(d) {
                 syncedRides += 1; onBoardRide?(r, boardId)
-                if let crc = BoardRideQueueStore.summaryCrc(ofSyncRide: d) { onBoardRideSummaryCrc?(UInt32(r.id), crc) }
+                onSyncData?(d, boardId)
             }
             else if let e = BCLink.decodeSyncEnd(d) {
                 syncInFlight = false
-                onSyncEnd?()
+                let targeted = targetedSync; targetedSync = false
                 syncStatus = "\(e.total) rides on the board · \(syncedRides) received"
-                if e.more { startSync() }
+                onSyncData?(d, boardId)
+                if e.more, !targeted { startSync() }
             } else { noteParseError("SYNC", d) }
         case BCLink.eventsUUID:
             if let sd = BCLink.decodeSensorDiag(d) {

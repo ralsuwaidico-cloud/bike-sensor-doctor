@@ -35,8 +35,14 @@ final class RideQueueTransfer {
     var deliver: (BoardQueueRideMeta, Data) -> Delivery = { _, _ in .failed("not connected to the history") }
     /// CRC-32 the phone computed over the summary it received for this ride (SYNC_RIDE fields), nil = none received.
     var summaryCrc: (UInt32) -> UInt32? = { _ in nil }
-    /// Asks the board for ride summaries (Link 1.1 SYNC) when one is missing; the center calls `summariesArrived` after.
-    var requestSummaries: () -> Void = {}
+    /// Writes ONE Link 1.1 SYNC_REQ on the Sync characteristic (QA RC3-01): the summary of a held ride is asked for BY ID,
+    /// `after_ride_id = id − 1, max 1`, never "after the highest id in the history" (a ride already in the history — live
+    /// mirror or queue import — would never be sent, so it could never be verified and ACKed).
+    var sendSync: (Data) -> Bool = { _ in false }
+    /// The connect-time history sync is running on the Sync characteristic: wait for its SYNC_END first.
+    var syncBusy: () -> Bool = { false }
+    var summaryTimeout: TimeInterval = 6
+    var maxSummaryAttempts = 2
     var boardRecording: () -> Bool = { false }
     var linkPayload: () -> Int? = { nil }
     var onChange: (() -> Void)?
@@ -57,26 +63,59 @@ final class RideQueueTransfer {
     private var timeouts = 0, readErrors = 0
     private var crcFailures: [UInt32: Int] = [:]
     private var relist = false
-    private var summariesRequested = false
+    /// Rides whose summary is being asked for by id, one SYNC_REQ at a time (RC3-01).
+    private(set) var summaryQueue: [UInt32] = []
+    private var summaryOutstanding: (id: UInt32, at: Date)?
+    private var summaryAttempts: [UInt32: Int] = [:]
     private var seq: UInt16 = 0
 
     init(boardId: String, store: BoardRideQueueStore, config: Config = Config(), send: @escaping (Data) -> Bool) {
         self.boardId = boardId; self.store = store; self.config = config; self.send = send
     }
-    var isBusy: Bool { phase != .idle }
+    var isBusy: Bool { phase != .idle || summaryOutstanding != nil || !summaryQueue.isEmpty }
     var chunkLen: UInt16? { guard let p = linkPayload() else { return UInt16(BCLink.diagChunkDataMax) }; return BCLink.diagRequestMaxLen(linkPayload: p) }
 
     // MARK: triggers
     func start(now: Date) { if phase == .idle { lastError = nil; requestList(now: now) } else { relist = true } }
     func ridesPending(_ r: BCLink.RidesPending, now: Date) { if r.unsynced > 0 { start(now: now) } }
-    /// SYNC_END arrived after `requestSummaries`: rides held for a missing summary are checked again.
-    func summariesArrived(now: Date) {
-        guard phase == .idle else { return }
-        if holds.values.contains(.summaryNotVerified) { holds = holds.filter { $0.value != .summaryNotVerified }; requestList(now: now) }
+    /// A SYNC_RIDE arrived (its CRC is already stored by BoardSummaryIngest): ACK the held ride if it now verifies.
+    func summaryArrived(rideId: UInt32, now: Date) {
+        if summaryOutstanding?.id == rideId { summaryOutstanding = nil }
+        summaryQueue.removeAll { $0 == rideId }
+        if let i = boardList.first(where: { $0.rideId == rideId }), i.needsImport, let m = store.meta(boardId, rideId), m.historyRideId != nil {
+            ackIfVerified(normalized(i), m, now: now)
+        }
+        pumpSummaries(now: now)
+    }
+    /// SYNC_END: a by-id request that brought no matching SYNC_RIDE leaves the ride held (kept on the board, said so).
+    func syncEnded(now: Date) {
+        if let o = summaryOutstanding { summaryOutstanding = nil; if holds[o.id] == nil || holds[o.id] == .summaryNotVerified { holds[o.id] = .summaryNotVerified } }
+        pumpSummaries(now: now)
+    }
+    private func wantSummary(_ id: UInt32, now: Date) {
+        holds[id] = .summaryNotVerified
+        guard (summaryAttempts[id] ?? 0) < maxSummaryAttempts, summaryOutstanding?.id != id, !summaryQueue.contains(id) else { return }
+        summaryQueue.append(id)
+        pumpSummaries(now: now)
+    }
+    private func pumpSummaries(now: Date) {
+        guard summaryOutstanding == nil, !syncBusy(), let id = summaryQueue.first else { return }
+        summaryQueue.removeFirst()
+        guard let d = BCLink.encodeSyncRequest(afterRideId: UInt16(clamping: max(0, Int(id) - 1)), maxCount: 1, seq: nextSeq(), tMs: 0) else { return }
+        summaryAttempts[id, default: 0] += 1
+        if sendSync(d) { summaryOutstanding = (id, now) } else { summaryQueue.insert(id, at: 0) }
+        onChange?()
+    }
+    /// v1.1: a summary-only / RAM-only ride has no samples and its samples_crc32 is ignored by the board.
+    private func normalized(_ i0: BCLink.RideQueueInfo) -> BCLink.RideQueueInfo {
+        var i = i0
+        if i.summaryOnly || i.ramOnly { i.samplesSize = 0; i.samplesCrc32 = CRC32.ieee(Data()) }
+        return i
     }
     func linkDown() {
         phase = .idle; progress = nil; current = nil; queue = []; listed = []
-        outstanding = nil; scheduled = nil; relist = false; timeouts = 0; readErrors = 0; summariesRequested = false
+        outstanding = nil; scheduled = nil; relist = false; timeouts = 0; readErrors = 0
+        summaryQueue = []; summaryOutstanding = nil; summaryAttempts = [:]; lastListEnd = nil; boardList = []
     }
 
     // MARK: input
@@ -101,6 +140,8 @@ final class RideQueueTransfer {
             issue(list: o.list, now: now); return
         }
         if let s = scheduled, now >= s.at { scheduled = nil; issue(list: s.list, now: now) }
+        if let o = summaryOutstanding, now.timeIntervalSince(o.at) >= summaryTimeout { summaryOutstanding = nil; if (summaryAttempts[o.id] ?? 0) < maxSummaryAttempts { summaryQueue.append(o.id) } }
+        pumpSummaries(now: now)
     }
 
     // MARK: listing
@@ -118,16 +159,14 @@ final class RideQueueTransfer {
         outstanding = nil; timeouts = 0; queue = []
         // RAM-only rides first (lost if the board powers off), then oldest first
         for i0 in listed.sorted(by: { ($0.ramOnly ? 0 : 1, $0.rideId) < ($1.ramOnly ? 0 : 1, $1.rideId) }) {
-            var i = i0
-            // a summary-only / RAM-only ride has no samples; its samples_crc32 is ignored by the board (v1.1 §6)
-            if i.summaryOnly || i.ramOnly { i.samplesSize = 0; i.samplesCrc32 = CRC32.ieee(Data()) }
+            let i = normalized(i0)
             if i.state == .recording { holds[i.rideId] = .recording; continue }
             guard i.needsImport else { holds[i.rideId] = nil; continue }
             if i.demo { holds[i.rideId] = .demo; continue }               /* demo rides are not training history: never imported, never ACKed */
             if let m = store.meta(boardId, i.rideId) {
                 // same number, other data (or another start time: ids can repeat on a board with no persistent memory, v1.2): keep both, ACK nothing
                 if m.samplesCrc32 != i.samplesCrc32 || m.samplesSize != i.samplesSize || (m.startEpochS != 0 && i.startEpochS != 0 && m.startEpochS != i.startEpochS) { holds[i.rideId] = .conflict; continue }
-                if m.historyRideId == nil { retryDelivery(m) } else { ackIfVerified(i, m) }
+                if m.historyRideId == nil { retryDelivery(m, now: now) } else { ackIfVerified(i, m, now: now) }
             } else if (crcFailures[i.rideId] ?? 0) <= config.maxCrcRetries {
                 queue.append(i)
             }
@@ -168,29 +207,26 @@ final class RideQueueTransfer {
         let data = store.partialData(boardId, i.rideId) ?? (i.samplesSize == 0 ? Data() : nil)
         guard let data, data.count == Int(i.samplesSize), CRC32.ieee(data) == i.samplesCrc32 else { restart(i, now: now, reason: "checksum mismatch"); return }
         guard let m = store.commit(boardId, i, receivedAt: now) else { lastError = "Could not save ride \(i.rideId) on this iPhone; it stays on the BikeComputer."; next(now: now); return }
-        retryDelivery(m)
+        retryDelivery(m, now: now)
         next(now: now)
     }
     /// Samples are on disk: put the ride in Cyclift's history, then ACK when the summary is verified too.
-    private func retryDelivery(_ m0: BoardQueueRideMeta) {
+    private func retryDelivery(_ m0: BoardQueueRideMeta, now: Date) {
         var m = m0
         guard let data = store.samples(m), data.count == Int(m.samplesSize), CRC32.ieee(data) == m.samplesCrc32 else { holds[m.rideId] = .failed("stored file unreadable"); return }
         switch deliver(m, data) {
         case .stored(let rid):
             m.historyRideId = rid
             guard store.save(m) else { holds[m.rideId] = .failed("could not save the ride record"); return }
-            if let i = boardList.first(where: { $0.rideId == m.rideId }) { ackIfVerified(i, m) }
+            if let i = boardList.first(where: { $0.rideId == m.rideId }) { ackIfVerified(normalized(i), m, now: now) }
         case .failed(let why): holds[m.rideId] = .failed(why); lastError = "Ride \(m.rideId) is kept on the BikeComputer: \(why)."
         }
     }
-    private func ackIfVerified(_ i: BCLink.RideQueueInfo, _ m0: BoardQueueRideMeta) {
+    private func ackIfVerified(_ i: BCLink.RideQueueInfo, _ m0: BoardQueueRideMeta, now: Date) {
         var m = m0
         guard m.historyRideId != nil else { return }
-        guard let s = summaryCrc(i.rideId), s == i.summaryCrc32 else {
-            holds[i.rideId] = .summaryNotVerified
-            if !summariesRequested { summariesRequested = true; requestSummaries() }
-            return
-        }
+        // verified only against the board's own summary of THIS ride (also for a ride Cyclift watched live)
+        guard let s = summaryCrc(i.rideId), s == i.summaryCrc32 else { wantSummary(i.rideId, now: now); return }
         holds[i.rideId] = nil
         if let d = BCLink.encodeRideQueueAck(rideId: i.rideId, samplesCrc32: m.samplesCrc32, summaryCrc32: s, deleteSamples: config.deleteSamplesOnAck, seq: nextSeq(), tMs: 0), send(d) {
             m.acked = true; store.save(m); onChange?()

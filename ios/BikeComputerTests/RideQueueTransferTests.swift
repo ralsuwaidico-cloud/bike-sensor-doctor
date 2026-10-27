@@ -120,19 +120,23 @@ final class RideQueueTransferTests: XCTestCase {
         let st = BoardRideQueueStore(root: dir)
         let e = RideQueueTransfer(boardId: Self.board, store: st) { d in b.handle(d); return true }
         e.summaryCrc = { sums[$0] }
-        var asked = 0
-        e.requestSummaries = { asked += 1 }
+        var asked: [Data] = []
+        e.sendSync = { asked.append($0); return true }
         e.deliver = { _, _ in .stored(UUID()) }
         e.start(now: Date(timeIntervalSince1970: 0)); pump(e, b)
-        XCTAssertTrue(b.acks.isEmpty); XCTAssertEqual(asked, 1); XCTAssertEqual(e.holds[5], .summaryNotVerified)
+        XCTAssertTrue(b.acks.isEmpty); XCTAssertEqual(e.holds[5], .summaryNotVerified)
+        // the summary is asked for BY ID (after_ride_id = 4, max 1), once more after a timeout, then the ride stays held
+        XCTAssertEqual(asked.count, 2)
+        XCTAssertEqual(asked.first, BCLink.encodeSyncRequest(afterRideId: 4, maxCount: 1, seq: BCLink.parse(asked[0])!.0.seq, tMs: 0))
         // a wrong summary is not accepted either
-        sums[5] = 0xDEAD; e.summariesArrived(now: Date(timeIntervalSince1970: 200)); pump(e, b, from: Date(timeIntervalSince1970: 200))
+        sums[5] = 0xDEAD; e.summaryArrived(rideId: 5, now: Date(timeIntervalSince1970: 200)); pump(e, b, from: Date(timeIntervalSince1970: 200))
         XCTAssertTrue(b.acks.isEmpty)
-        // the summary arrives (SYNC_RIDE) → ACK, without pulling the samples again
+        // the right summary arrives (SYNC_RIDE) → ACK at once, without pulling the samples again
         let pulls = b.chunkRequests
         sums[5] = b.rides[0].info.summaryCrc32
-        e.summariesArrived(now: Date(timeIntervalSince1970: 300)); pump(e, b, from: Date(timeIntervalSince1970: 300))
+        e.summaryArrived(rideId: 5, now: Date(timeIntervalSince1970: 300)); pump(e, b, from: Date(timeIntervalSince1970: 300))
         XCTAssertEqual(b.acks.map { $0.id }, [5]); XCTAssertEqual(b.chunkRequests, pulls)
+        e.linkDown(); XCTAssertTrue(e.boardList.isEmpty, "nothing from an old connection is shown as current (RC3-08)")
     }
 
     func testNeverAckedWhenTheHistorySaveFails() {

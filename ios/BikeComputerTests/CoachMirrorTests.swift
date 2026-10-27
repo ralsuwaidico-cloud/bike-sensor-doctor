@@ -189,3 +189,40 @@ final class CoachMirrorTests: XCTestCase {
         }
     }
 }
+
+// MARK: - QA RC3-03: seq strictly newer across app relaunches for the same workout
+extension CoachMirrorTests {
+    func testSeqStaysNewerAfterARelaunch() throws {
+        let seqs = MemoryCoachSeqStore()
+        let plan = BCLink.CoachPlan(workoutId: 9, name: "E", segments: [BCLink.CoachSegment(durationS: 600, type: .endurance, targetKind: .none, lo: 0, hi: 0, cadLo: 0, cadHi: 0)], t0ElapsedS: 0)
+        var s = BCLink.CoachState(); s.workoutId = 9; s.sessionState = .running
+        let t0 = Date(timeIntervalSince1970: 0)
+        let a = CoachMirror { _ in true }; a.seqStore = seqs
+        a.setPlan(plan, now: t0)
+        for k in 0..<5 { s.instruction = k % 2 == 0 ? .onTarget : .morePower; a.update(state: s, boardEcho: nil, now: t0.addingTimeInterval(Double(k))) }
+        let last = try XCTUnwrap(a.lastState?.seq)
+        XCTAssertEqual(last, 5)
+        // the app is killed and launched again: same workout, same workout_id
+        let b = CoachMirror { _ in true }; b.seqStore = seqs
+        b.setPlan(plan, now: t0)
+        b.update(state: s, boardEcho: nil, now: t0)
+        let next = try XCTUnwrap(b.lastState?.seq)
+        XCTAssertGreaterThan(Int16(bitPattern: next &- last), 0, "strictly newer in serial-number order — the board applies it")
+        // across the 16-bit wrap as well
+        seqs.save(9, 0xFFF0)
+        let c = CoachMirror { _ in true }; c.seqStore = seqs; c.setPlan(plan, now: t0); c.update(state: s, boardEcho: nil, now: t0)
+        XCTAssertGreaterThan(Int16(bitPattern: try XCTUnwrap(c.lastState?.seq) &- 0xFFF0), 0)
+        // a different workout starts from its own (new) sequence
+        let other = BCLink.CoachPlan(workoutId: 10, name: "E", segments: plan.segments, t0ElapsedS: 0)
+        c.setPlan(other, now: t0); var s2 = s; s2.workoutId = 10; c.update(state: s2, boardEcho: nil, now: t0)
+        XCTAssertEqual(c.lastState?.seq, 1)
+        // the app's store survives a relaunch (UserDefaults)
+        let suite = "cyclift.tests.\(UUID().uuidString)"
+        let d = try XCTUnwrap(UserDefaults(suiteName: suite)); defer { d.removePersistentDomain(forName: suite) }
+        DefaultsCoachSeqStore(defaults: d).save(9, 77)
+        XCTAssertEqual(DefaultsCoachSeqStore(defaults: d).lastSeq(9), 77)
+        for id in 100..<130 { DefaultsCoachSeqStore(defaults: d).save(UInt32(id), 1) }
+        XCTAssertNil(DefaultsCoachSeqStore(defaults: d).lastSeq(9), "bounded: at most 16 workouts remembered")
+        XCTAssertEqual(DefaultsCoachSeqStore(defaults: d).lastSeq(129), 1)
+    }
+}

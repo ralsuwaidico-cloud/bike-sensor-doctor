@@ -13,7 +13,7 @@ struct BoardStorageView: View {
     private var supported: Bool { link13.session.storage }
     private var cleanup: BoardStorageModel.Cleanup {
         BoardStorageModel.cleanup(status: s, linkEnabled: supported && device.state == .ready, boardRecording: link13.boardRecording,
-                                  unsentReports: s?.reportsUnsent ?? 0, unsyncedRides: link13.unsyncedOnBoard)
+                                  unsentReports: s?.reportsUnsent ?? 0, unsyncedRides: link13.unsyncedOnBoard ?? 0)
     }
 
     var body: some View {
@@ -167,7 +167,7 @@ struct Link13StatusSection: View {
                 LabeledContent("Link", value: link13.session.summary).accessibilityIdentifier("link13Summary")
                 if !link13.coachStatus.isEmpty { LabeledContent("Coach on the BikeComputer", value: link13.coachStatus) }
                 if link13.session.rideQueue {
-                    LabeledContent("Offline rides waiting", value: "\(link13.unsyncedOnBoard)")
+                    LabeledContent("Offline rides waiting", value: link13.unsyncedOnBoard.map { "\($0)" } ?? "not reported yet")
                     let atRisk = link13.boardRides.filter { $0.ramOnly && $0.needsImport }.count
                     if atRisk > 0 {
                         Label("\(atRisk) ride\(atRisk == 1 ? "" : "s") at risk. " + Link13Center.ramOnlyWarning, systemImage: "exclamationmark.triangle.fill")

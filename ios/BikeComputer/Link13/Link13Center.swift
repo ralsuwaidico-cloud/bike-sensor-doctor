@@ -37,6 +37,7 @@ final class Link13Center: ObservableObject {
         mirror = CoachMirror { _ in false }
         importedRides = rideStore.all()
         mirror.send = { [weak self] d in self?.device?.sendLink13(d) ?? false }
+        mirror.seqStore = DefaultsCoachSeqStore()      /* seq stays strictly newer across relaunches (QA RC3-03) */
     }
 
     func attach(device d: DeviceLink, store s: Store, recorder r: RideRecorder, diag dc: DiagReportCenter) {
@@ -44,8 +45,14 @@ final class Link13Center: ObservableObject {
         d.onLink13Ready = { [weak self] in self?.linkReady() }
         d.onLink13Down = { [weak self] in self?.linkDown() }
         d.onLink13Message = { [weak self] m in self?.receive(m) }
-        d.onBoardRideSummaryCrc = { [weak self, weak d] id, crc in guard let self, let d else { return }; self.rideStore.saveSummaryCrc(d.boardId, id, crc) }
-        d.onSyncEnd = { [weak self] in self?.rideEngine?.summariesArrived(now: Date()); self?.ensureTimer() }
+        // every SYNC_RIDE / SYNC_END, every board (also 0.7.3): history import + summary CRC + held-ride ACK (RC3-01)
+        d.onSyncData = { [weak self, weak s] data, boardId in
+            guard let self else { return }
+            let now = Date()
+            if let e = self.rideEngine, e.boardId == boardId { e.handleSync(data, history: s, now: now) }
+            else { BoardSummaryIngest.ingest(data, boardId: boardId, history: s, queueStore: self.rideStore) }
+            self.publish(); self.ensureTimer()
+        }
         dc.ackWithDelete = { [weak self] in self?.session.diagAuto ?? false }
     }
 
@@ -65,6 +72,7 @@ final class Link13Center: ObservableObject {
     private func linkDown() {
         session.linkDown(); mirror.linkDown(); rideEngine?.linkDown()
         cleanPending = false; coachMirroring = false
+        storage = nil; storageAt = nil      /* measured on a connection that is gone: never shown as current (RC3-08) */
         stopTimer(); publish()
     }
     private func sendHello() {
@@ -124,7 +132,8 @@ final class Link13Center: ObservableObject {
         e.linkPayload = { [weak self] in self?.device?.maxNotifyBytes }
         e.boardRecording = { [weak self] in guard let d = self?.device, d.liveIsFresh else { return false }; return d.live?.rideState == .running }
         e.summaryCrc = { [weak self] id in self?.rideStore.summaryCrc(boardId, id) }
-        e.requestSummaries = { [weak self] in self?.device?.startSync() }
+        e.sendSync = { [weak self] d in self?.device?.sendSyncRequest(d) ?? false }
+        e.syncBusy = { [weak self] in self?.device?.syncInFlight ?? true }
         e.deliver = { [weak self] m, data in
             guard let s = self?.store else { return .failed("the history is not available") }
             let r = s.importBoardQueueRide(m, samples: data)
@@ -195,7 +204,15 @@ final class Link13Center: ObservableObject {
     private func nextSeq() -> UInt16 { seq &+= 1; return seq }
 
     /// Rides the board reports as not yet saved in Cyclift (STORAGE_STATUS, else LIVE, else the queue list).
-    var unsyncedOnBoard: Int { storage?.ridesUnsynced ?? device?.live?.ridesUnsynced ?? boardRides.filter { $0.needsImport }.count }
+    /// Rides the board holds that are not yet saved in Cyclift, from THIS connection only (QA RC3-08): LIVE tag 14 when the
+    /// board sends it, else the ride list read on this connection (kept current by the board's replies to each ACK), else
+    /// this connection's STORAGE_STATUS. nil = unknown — an omitted LIVE tag is never read as 0 and no old list is reused.
+    var unsyncedOnBoard: Int? {
+        if let d = device, d.liveIsFresh, let n = d.live?.ridesUnsynced { return n }
+        if let e = rideEngine, e.lastListEnd != nil { return e.boardList.filter { $0.needsImport }.count }
+        if let s = storage { return s.ridesUnsynced }
+        return nil
+    }
 }
 
 private extension CoachMirror.PlanStatus { var isSending: Bool { if case .sending = self { return true }; return false } }

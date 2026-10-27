@@ -25,7 +25,7 @@ struct BikeComputerApp: App {
         let r = RideRecorder(); r.device = d; r.location = l; r.watch = w; r.phoneOnlyMode = s.settings.phoneOnlyMode
         d.autoConnect = s.settings.autoConnectBoard
         let ps = ProfileSync(store: s, device: d)
-        d.onBoardRide = { [weak s] summary, boardId in s?.importBoardRide(summary, boardId: boardId) }
+        // board ride summaries (SYNC_RIDE) reach the history through BoardSummaryIngest, wired by Link13Center below
         d.highestStoredRideId = { [weak s] boardId in s?.highestBoardRideId(for: boardId) ?? 0 }
         // Apple Watch: ride mirror out, wrist commands in — same one-owner rules as the phone buttons
         r.onTick = { [weak r, weak d, weak w, weak s] in
