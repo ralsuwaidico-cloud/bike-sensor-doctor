@@ -21,9 +21,25 @@
 #include <stdint.h>
 #include "plat.h"
 
-/* Starts NimBLE (host task + manager task) and the phone link. sensors = false: the sensor central stays off (no scan,
-   no sensor link) until ble_central_enable_sensors(true) — recovery mode "SEND LOGS" and the staged boot use that. */
-void ble_central_start(bool sensors);
+/* 0.7.4: two steps, neither aborts.
+   ble_central_stack_init(): BT controller + NimBLE port (HCI transport buffers from INTERNAL RAM). Called early in the start-up
+   (before touch, profile and screens take their internal RAM, as in 0.7.2). false = Bluetooth unavailable for this boot; the
+   reason and the heap figures are in ble_central_init_info() and in the serial log.
+   ble_central_start(sensors): the stack if not up yet, then the phone-link GATT service, host task and manager task. false =
+   Bluetooth unavailable (nothing else is affected). sensors = false: the sensor central stays off (no scan, no sensor link)
+   until ble_central_enable_sensors(true) — recovery mode "SEND LOGS" and the staged boot use that. */
+typedef struct {
+    bool attempted, stack_ok, host_started, failed;
+    int err;                                          /* esp_err_t of the failed step */
+    char reason[56];                                  /* "controller/HCI init failed (err 0xffffffff)" */
+    uint32_t pre_free, pre_largest, pre_dma;          /* internal heap just before nimble_port_init() */
+    uint32_t post_free, post_largest, post_dma;       /* after a successful init */
+    uint32_t fail_free, fail_largest, fail_dma;       /* after the failure (the controller has released its memory again) */
+} ble_central_init_t;
+bool ble_central_stack_init(void);
+bool ble_central_start(bool sensors);
+const ble_central_init_t *ble_central_init_info(void);
+bool ble_central_unavailable(void);       /* the stack or the host failed to start this boot */
 void ble_central_enable_sensors(bool on);
 /* configure the device to use for a kind (NULL = none). Safe to call from the UI task (applied on the host task). */
 void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t addr_type, const char *name);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Usage: python3 -I tools/storage_audit.py <full-16MB-backup.bin> <label>   (read-only; prints JSON; file names, sizes and dates only,
-# never file contents). Used for docs/FW_STORAGE_MEMORY_REPORT.md. Needs nothing but the Python standard library.
+# never file contents). Used for coord/reports/FW_STORAGE_MEMORY_REPORT.md. Needs nothing but the Python standard library.
 """Read-only audit of a BikeComputer full-flash backup: partition table, WL state, de-WL'd FAT12, directory tree,
 raw scan for directory-like sectors. Prints no personal data (file names only; no file contents)."""
 import struct, sys, zlib, hashlib, json

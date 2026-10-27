@@ -86,15 +86,19 @@ void plat_pair(plat_sens_kind_t k, const plat_found_t *d)
 bool plat_profile_load(char *buf, size_t cap) { long n = plat_file_read("profile.txt", buf, cap - 1); if (n <= 0) return false; buf[n] = 0; return true; }
 bool plat_profile_save(const char *txt) { g_sim.profile_saves++; return plat_file_write("profile.txt", txt, strlen(txt)); }
 
+/* 0.7.4: like the device, nothing is written to the ride FAT unless the storage was measured OK (profile.txt stands for NVS) */
+static bool sim_refuse(const char *path) { if (g_sim.storage_state == BC_STOR_OK || !strcmp(path, "profile.txt")) return false; g_sim.fat_writes_refused++; return true; }
 bool plat_file_append(const char *path, const char *data, size_t len, bool sync)
 {
     (void)sync; char p[512]; full(path, p, sizeof p);
+    if (sim_refuse(path)) return false;
     FILE *f = fopen(p, "ab"); if (!f) return false;
     size_t w = fwrite(data, 1, len, f); fclose(f); return w == len;
 }
 bool plat_file_write(const char *path, const char *data, size_t len)
 {
     char p[512], t[520]; full(path, p, sizeof p); snprintf(t, sizeof t, "%s.tmp", p);
+    if (sim_refuse(path)) return false;
     FILE *f = fopen(t, "wb"); if (!f) return false;
     size_t w = fwrite(data, 1, len, f); fclose(f);
     return w == len && rename(t, p) == 0;
@@ -108,10 +112,15 @@ long plat_file_read_at(const char *path, long off, char *buf, size_t cap)
 }
 bool plat_file_rename(const char *from, const char *to)
 {
-    char a[512], b[512]; full(from, a, sizeof a); full(to, b, sizeof b); return rename(a, b) == 0;
+    char a[512], b[512]; full(from, a, sizeof a); full(to, b, sizeof b); if (sim_refuse(to)) return false; return rename(a, b) == 0;
 }
-bool plat_file_remove(const char *path) { char p[512]; full(path, p, sizeof p); return unlink(p) == 0; }
-bool plat_storage_ok(void) { return true; }
+bool plat_file_remove(const char *path) { char p[512]; full(path, p, sizeof p); if (g_sim.storage_state != BC_STOR_OK && g_sim.storage_state != BC_STOR_FULL && sim_refuse(path)) return false; return unlink(p) == 0; }
+bool plat_storage_ok(void) { return g_sim.storage_state == BC_STOR_OK; }
+bc_stor_state_t plat_storage_state(void) { return (bc_stor_state_t)g_sim.storage_state; }
+void plat_storage_facts(bc_stor_facts_t *o) { memset(o, 0, sizeof *o); o->partition_found = o->mounted = g_sim.storage_state != BC_STOR_FS_UNAVAILABLE; o->probe_attempted = true; o->probe_ok = g_sim.storage_state == BC_STOR_OK; }
+bc_stor_state_t plat_storage_write_failure(void) { return g_sim.storage_state == BC_STOR_OK ? BC_STOR_WRITE_FAILED : (bc_stor_state_t)g_sim.storage_state; }
+bc_crashpart_t plat_crash_partition(uint32_t *b) { if (b) *b = g_sim.crashpart_bytes; return (bc_crashpart_t)g_sim.crashpart; }
+bool plat_bt_unavailable(char *reason, size_t cap) { if (g_sim.bt_unavailable && reason && cap) snprintf(reason, cap, "%s", g_sim.bt_reason); return g_sim.bt_unavailable; }
 long plat_file_size(const char *path) { char p[512]; full(path, p, sizeof p); struct stat st; return stat(p, &st) == 0 ? (long)st.st_size : -1; }
 void plat_health(plat_health_t *o)
 {
@@ -251,7 +260,7 @@ void plat_phone_status(plat_phone_status_t *o)
 {
     memset(o, 0, sizeof *o); o->phone_batt = o->watch_batt = 0xFF; o->last_rx_age_ms = UINT32_MAX;
     o->bonded = PH.bonded; o->rssi = PH.connected ? PH.rssi : 0; o->passkey = PH.pairing ? PH.passkey : 0;
-    o->state = !PH.enabled ? PLAT_PHONE_OFF : PH.enc_failed ? PLAT_PHONE_REPAIR : !PH.connected ? PLAT_PHONE_ADVERTISING : PH.pairing ? PLAT_PHONE_PAIRING : PH.bonded ? PLAT_PHONE_READY : PLAT_PHONE_CONNECTED;
+    o->state = g_sim.bt_unavailable ? PLAT_PHONE_UNAVAILABLE : !PH.enabled ? PLAT_PHONE_OFF : PH.enc_failed ? PLAT_PHONE_REPAIR : !PH.connected ? PLAT_PHONE_ADVERTISING : PH.pairing ? PLAT_PHONE_PAIRING : PH.bonded ? PLAT_PHONE_READY : PLAT_PHONE_CONNECTED;
     o->bonds = PH.bonded ? 1 : 0; o->enc_fails = (uint16_t)PH.enc_fails; o->id_gen = PH.id_gen ? PH.id_gen : 1;
     o->id_addr[5] = 0xC0 | o->id_gen; o->id_addr[0] = 0x42;
     o->last_disc_code = PH.last_disc_code; o->last_disc = PH.enc_failed ? PLAT_PHONE_DISC_KEY_MISSING : PH.last_disc_code == 0x13 ? PLAT_PHONE_DISC_PHONE_ENDED : PH.last_disc_code == 0x16 ? PLAT_PHONE_DISC_BOARD_ENDED : PH.last_disc_code == 0x08 ? PLAT_PHONE_DISC_TIMEOUT : PLAT_PHONE_DISC_NONE;
@@ -387,6 +396,7 @@ void plat_build_ids(char build[32], char sha[65]) { snprintf(build, 32, "Oct 26 
 bool plat_file_write_at(const char *path, long off, const void *data, size_t len)
 {
     char p[512]; full(path, p, sizeof p);
+    if (sim_refuse(path)) return false;
     FILE *f = fopen(p, "r+b"); if (!f) f = fopen(p, "w+b"); if (!f) return false;
     bool ok = fseek(f, off, SEEK_SET) == 0 && fwrite(data, 1, len, f) == len; fclose(f); return ok;
 }
@@ -401,3 +411,4 @@ void plat_selftest_text(char *b, size_t cap)
 }
 void plat_mem_text(char *b, size_t cap) { snprintf(b, cap, "heap 180K min 150K psram 1900K"); }
 void plat_log(const char *line) { if (g_sim.verbose) printf("  [log] %s\n", line); snprintf(g_sim.last_log, sizeof g_sim.last_log, "%s", line); }
+void *plat_alloc_ext(size_t n) { return calloc(1, n); }   /* 0.7.4 */

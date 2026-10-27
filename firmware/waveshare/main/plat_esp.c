@@ -61,20 +61,44 @@ bool plat_profile_save(const char *txt)
     return e == ESP_OK;
 }
 
-/* ---- files on the FAT partition */
-static void full(const char *rel, char *out, size_t cap)
+/* ---- files on the FAT partition
+   0.7.4: (1) the path helper no longer calls mkdir() for every path (0.7.3 did it even for reads and stat(): on the owner's
+   board, with an erased root directory, every call made FatFs allocate, write and free a directory cluster - about 300 such
+   clusters and ~1900 wear-levelling erases were measured in the backups); a directory is created only before a write.
+   (2) Nothing is written, created, renamed or removed unless the boot measured the storage as OK (or FULL, where removing
+   files is allowed): a damaged FAT stays exactly as found until an owner-approved repair. Reads work whenever it is mounted.
+   (3) The errno of the last failed write is kept so a failure is reported as "Storage full" (ENOSPC) or "Write failed". */
+static int s_last_errno;
+static bool fs_mounted(void) { bc_stor_facts_t f; hw_storage_facts(&f); return f.mounted; }
+static bool fs_may_write(void) { return hw_storage_state() == BC_STOR_OK; }
+static bool fs_may_remove(void) { bc_stor_state_t st = hw_storage_state(); return st == BC_STOR_OK || st == BC_STOR_FULL; }
+static void full(const char *rel, char *out, size_t cap) { snprintf(out, cap, ROOT "%s", rel); }
+static void ensure_dir(const char *p)
 {
-    snprintf(out, cap, ROOT "%s", rel);
-    char dir[96]; snprintf(dir, sizeof dir, "%s", out);
+    char dir[96]; snprintf(dir, sizeof dir, "%s", p);
     char *sl = strrchr(dir, '/');
-    if (sl && sl > dir + strlen(ROOT) - 1) { *sl = 0; mkdir(dir, 0775); }
+    if (sl && sl > dir + strlen(ROOT) - 1) {
+        *sl = 0;
+        struct stat st;
+        if (stat(dir, &st) != 0) mkdir(dir, 0775);
+    }
 }
+static bool refuse(const char *what, const char *p)
+{
+    s_storage_errors++;
+    static uint32_t n; if (n++ % 50 == 0) ESP_LOGW(TAG, "%s %s refused: storage %s (nothing is written to a damaged FAT)", what, p, bc_stor_name(hw_storage_state()));
+    return false;
+}
+static void failed(const char *what, const char *p) { s_storage_errors++; s_last_errno = errno; ESP_LOGE(TAG, "%s %s: errno %d", what, p, errno); }
 
 bool plat_file_append(const char *path, const char *data, size_t len, bool sync)
 {
     char p[96]; full(path, p, sizeof p);
-    FILE *f = fopen(p, "a"); if (!f) { s_storage_errors++; ESP_LOGE(TAG, "append %s: errno %d", p, errno); return false; }
+    if (!fs_may_write()) return refuse("append", p);
+    ensure_dir(p);
+    FILE *f = fopen(p, "a"); if (!f) { failed("append", p); return false; }
     size_t w = fwrite(data, 1, len, f);
+    if (w != len) s_last_errno = errno;
     if (sync) { fflush(f); fsync(fileno(f)); }
     fclose(f);
     if (w != len) s_storage_errors++;
@@ -84,20 +108,27 @@ bool plat_file_append(const char *path, const char *data, size_t len, bool sync)
 bool plat_file_write(const char *path, const char *data, size_t len)
 {
     char p[96], t[100]; full(path, p, sizeof p); snprintf(t, sizeof t, "%s.tmp", p);
-    FILE *f = fopen(t, "w"); if (!f) return false;
-    size_t w = fwrite(data, 1, len, f); fflush(f); fsync(fileno(f)); fclose(f);
-    if (w != len) { unlink(t); return false; }
+    if (!fs_may_write()) return refuse("write", p);
+    ensure_dir(p);
+    FILE *f = fopen(t, "w"); if (!f) { failed("write", t); return false; }
+    size_t w = fwrite(data, 1, len, f); if (w != len) s_last_errno = errno;
+    fflush(f); fsync(fileno(f)); fclose(f);
+    if (w != len) { s_storage_errors++; unlink(t); return false; }
     unlink(p);
-    return rename(t, p) == 0;
+    if (rename(t, p) != 0) { failed("rename", t); return false; }
+    return true;
 }
 
 /* 0.7.3: in-place write (event-log ring). r+b keeps the rest of the file; created when missing. Flushed to the medium. */
 bool plat_file_write_at(const char *path, long off, const void *data, size_t len)
 {
     char p[96]; full(path, p, sizeof p);
+    if (!fs_may_write()) return refuse("write_at", p);
+    ensure_dir(p);
     FILE *f = fopen(p, "r+b"); if (!f) f = fopen(p, "w+b");
-    if (!f) { s_storage_errors++; return false; }
+    if (!f) { failed("write_at", p); return false; }
     bool ok = fseek(f, off, SEEK_SET) == 0 && fwrite(data, 1, len, f) == len;
+    if (!ok) s_last_errno = errno;
     fflush(f); fsync(fileno(f)); fclose(f);
     if (!ok) s_storage_errors++;
     return ok;
@@ -106,15 +137,37 @@ bool plat_file_write_at(const char *path, long off, const void *data, size_t len
 long plat_file_read_at(const char *path, long off, char *buf, size_t cap)
 {
     char p[96]; full(path, p, sizeof p);
+    if (!fs_mounted()) return -1;
     FILE *f = fopen(p, "r"); if (!f) return -1;
     if (off && fseek(f, off, SEEK_SET) != 0) { fclose(f); return 0; }
     long n = (long)fread(buf, 1, cap, f); fclose(f); return n;
 }
 long plat_file_read(const char *path, char *buf, size_t cap) { return plat_file_read_at(path, 0, buf, cap); }
-bool plat_file_rename(const char *from, const char *to) { char a[96], b[96]; full(from, a, sizeof a); full(to, b, sizeof b); unlink(b); return rename(a, b) == 0; }
-bool plat_file_remove(const char *path) { char p[96]; full(path, p, sizeof p); return unlink(p) == 0; }
-long plat_file_size(const char *path) { char p[96]; full(path, p, sizeof p); struct stat st; return stat(p, &st) == 0 ? (long)st.st_size : -1; }
-bool plat_storage_ok(void) { return g_selftest.storage == HW_PASS; }
+bool plat_file_rename(const char *from, const char *to)
+{
+    char a[96], b[96]; full(from, a, sizeof a); full(to, b, sizeof b);
+    if (!fs_may_write()) return refuse("rename", a);
+    ensure_dir(b); unlink(b);
+    if (rename(a, b) != 0) { failed("rename", a); return false; }
+    return true;
+}
+bool plat_file_remove(const char *path)
+{
+    char p[96]; full(path, p, sizeof p);
+    if (!fs_may_remove()) return refuse("remove", p);
+    return unlink(p) == 0;
+}
+long plat_file_size(const char *path) { char p[96]; full(path, p, sizeof p); if (!fs_mounted()) return -1; struct stat st; return stat(p, &st) == 0 ? (long)st.st_size : -1; }
+bool plat_storage_ok(void) { return hw_storage_state() == BC_STOR_OK; }
+bc_stor_state_t plat_storage_state(void) { return hw_storage_state(); }
+void plat_storage_facts(bc_stor_facts_t *o) { hw_storage_facts(o); }
+/** 0.7.4: category of the last failed write ("Storage full" for ENOSPC, else "Write failed"); the boot state if writes are refused. */
+bc_stor_state_t plat_storage_write_failure(void)
+{
+    bc_stor_state_t st = hw_storage_state();
+    if (st != BC_STOR_OK) return st;
+    return s_last_errno == ENOSPC ? BC_STOR_FULL : BC_STOR_WRITE_FAILED;
+}
 
 /* ---- battery: averaged, read at most every 5 s */
 static int s_mv = -1; static uint32_t s_bat_t;
@@ -211,6 +264,12 @@ void plat_health(plat_health_t *o)
     { plat_phone_status_t ph; plat_phone_status(&ph); o->phone_state = ph.state; o->phone_bonded = ph.bonded; }
     o->display_ok = g_selftest.display == HW_PASS; o->touch_ok = g_selftest.touch == HW_PASS;
     o->imu_ok = g_selftest.imu == HW_PASS; o->storage_ok = g_selftest.storage == HW_PASS;
+}
+
+void *plat_alloc_ext(size_t n)
+{
+    void *p = heap_caps_calloc(1, n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    return p ? p : heap_caps_calloc(1, n, MALLOC_CAP_8BIT);
 }
 
 void plat_export_report(const char *text)

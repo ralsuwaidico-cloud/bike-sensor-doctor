@@ -23,6 +23,16 @@ typedef int esp_err_t;
 #define ESP_OK 0
 #define ESP_FAIL -1
 #define ESP_ERR_NVS_NOT_FOUND 0x1102
+#define ESP_ERR_NO_MEM 0x101
+/* 0.7.4 fault injection for the start-up: nimble_port_init() result, a task name whose creation fails, heap figures */
+extern esp_err_t g_fake_nimble_init_err;
+extern const char *g_fake_fail_task;
+extern uint32_t g_fake_heap_free, g_fake_heap_largest;
+#define MALLOC_CAP_INTERNAL (1 << 11)
+#define MALLOC_CAP_8BIT (1 << 2)
+#define MALLOC_CAP_DMA (1 << 3)
+size_t heap_caps_get_free_size(uint32_t caps);
+size_t heap_caps_get_largest_free_block(uint32_t caps);
 #define ESP_ERROR_CHECK(x) do { esp_err_t _e = (x); if (_e != ESP_OK) { fprintf(stderr, "ESP_ERROR_CHECK failed %d at %s:%d\n", _e, __FILE__, __LINE__); abort(); } } while (0)
 #define RTC_NOINIT_ATTR
 #define IRAM_ATTR

@@ -22,6 +22,8 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_heap_caps.h"
+#include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nimble/nimble_port.h"
@@ -287,7 +289,7 @@ static int on_mtu(uint16_t conn, const struct ble_gatt_error *err, uint16_t mtu,
 {
     ESP_LOGI(TAG, "MTU exchange: status %d, mtu %u", err->status, mtu);
     link_t *l = link_of(conn, arg);
-    if (l && s_mtu_link == l) esp_timer_stop(s_mtu_timer);
+    if (l && s_mtu_link == l && s_mtu_timer) esp_timer_stop(s_mtu_timer);
     start_discovery(l);                              /* discovery only after the MTU exchange (PORTING_SPEC §2) */
     return 0;
 }
@@ -431,7 +433,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         pipe_log(l);
         s_mtu_link = l; s_mtu_conn = l->conn;
         if (ble_gattc_exchange_mtu(l->conn, on_mtu, cb_arg(l)) != 0) start_discovery(l);
-        esp_timer_stop(s_mtu_timer); esp_timer_start_once(s_mtu_timer, 2000 * 1000);
+        if (s_mtu_timer) { esp_timer_stop(s_mtu_timer); esp_timer_start_once(s_mtu_timer, 2000 * 1000); }
         return 0;
     }
     case BLE_GAP_EVENT_NOTIFY_RX: {
@@ -464,7 +466,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         if (!l) return 0;
         l->conn = BLE_HS_CONN_HANDLE_NONE; l->busy = false; l->dgen++; l->disc_started = false;
         if (s_connecting == l) s_connecting = NULL;
-        if (s_mtu_link == l) { s_mtu_link = NULL; s_mtu_conn = BLE_HS_CONN_HANDLE_NONE; esp_timer_stop(s_mtu_timer); }
+        if (s_mtu_link == l) { s_mtu_link = NULL; s_mtu_conn = BLE_HS_CONN_HANDLE_NONE; if (s_mtu_timer) esp_timer_stop(s_mtu_timer); }
         LOCK(); l->reconnects++;
         if (l->pipe.stage != BC_STG_ERROR && !l->pipe.err[0]) snprintf(l->pipe.err, sizeof l->pipe.err, "link lost 0x%x", ev->disconnect.reason);
         l->valid_seen = false; UNLOCK();
@@ -590,12 +592,56 @@ static void mgr_task(void *p)
     for (int i = 0;; i++) { ble_npl_eventq_put(q, i % 5 == 0 ? &s_ev_tick : &s_ev_link); vTaskDelay(pdMS_TO_TICKS(100)); }
 }
 
-void ble_central_start(bool sensors)
+/* ---- 0.7.4 start-up: the Bluetooth stack (controller + NimBLE port memory) and the host/link start are separate steps and
+   neither aborts. 0.7.3 called ESP_ERROR_CHECK(nimble_port_init()) after the UI had been built: on the owner's board
+   "BLE_INIT: hci inits failed" -> abort() in the main task on every start (coord/reports/FW_STORAGE_MEMORY_REPORT.md). By the
+   ESP-IDF 5.5.1 source, esp_nimble_hci_init() can only fail there on an INTERNAL-RAM allocation (ble_buf_alloc /
+   semaphore) once the controller is enabled - so the free internal heap and its largest block are logged before the stack
+   starts and again when it fails, and the board carries on with "Bluetooth unavailable" and the reason. */
+static ble_central_init_t s_init;
+static void heap_now(uint32_t *fr, uint32_t *lg, uint32_t *dma)
+{
+    *fr = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    *lg = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    *dma = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_DMA);
+}
+static void init_fail(const char *what, int err)
+{
+    s_init.failed = true; s_init.err = err;
+    heap_now(&s_init.fail_free, &s_init.fail_largest, &s_init.fail_dma);
+    snprintf(s_init.reason, sizeof s_init.reason, "%s (err 0x%x)", what, (unsigned)err);
+    ESP_LOGE(TAG, "Bluetooth unavailable: %s - internal heap free %u B (largest block %u B, DMA %u B); before start: free %u, largest %u, DMA %u",
+             s_init.reason, (unsigned)s_init.fail_free, (unsigned)s_init.fail_largest, (unsigned)s_init.fail_dma,
+             (unsigned)s_init.pre_free, (unsigned)s_init.pre_largest, (unsigned)s_init.pre_dma);
+}
+
+bool ble_central_stack_init(void)
+{
+    if (s_init.stack_ok) return true;
+    if (s_init.failed) return false;                  /* one attempt per boot: a failed controller start is not retried blindly */
+    s_init.attempted = true;
+    heap_now(&s_init.pre_free, &s_init.pre_largest, &s_init.pre_dma);
+    ESP_LOGI(TAG, "Bluetooth stack starting: internal heap free %u B, largest block %u B, DMA-capable free %u B",
+             (unsigned)s_init.pre_free, (unsigned)s_init.pre_largest, (unsigned)s_init.pre_dma);
+    esp_err_t e = nimble_port_init();                 /* on failure it disables + deinits the controller itself (nimble_port.c) */
+    if (e != ESP_OK) { init_fail("controller/HCI init failed", e); return false; }
+    s_init.stack_ok = true;
+    heap_now(&s_init.post_free, &s_init.post_largest, &s_init.post_dma);
+    ESP_LOGI(TAG, "Bluetooth stack up: it took %d B of internal heap (now free %u B, largest %u B)",
+             (int)s_init.pre_free - (int)s_init.post_free, (unsigned)s_init.post_free, (unsigned)s_init.post_largest);
+    return true;
+}
+
+bool ble_central_start(bool sensors)
 {
     s_sensors_on = sensors;
-    esp_timer_create_args_t m = { .callback = mtu_fallback_timer, .name = "ble_mtu" };
-    ESP_ERROR_CHECK(esp_timer_create(&m, &s_mtu_timer));
-    ESP_ERROR_CHECK(nimble_port_init());
+    if (s_events_ready) return true;
+    if (!ble_central_stack_init()) return false;
+    if (!s_mtu_timer) {
+        esp_timer_create_args_t m = { .callback = mtu_fallback_timer, .name = "ble_mtu" };
+        esp_err_t e = esp_timer_create(&m, &s_mtu_timer);
+        if (e != ESP_OK) { s_mtu_timer = NULL; ESP_LOGW(TAG, "MTU fallback timer not created (0x%x): discovery waits for the MTU exchange only", (unsigned)e); }
+    }
     ble_npl_event_init(&s_ev_tick, tick_ev, NULL);
     ble_npl_event_init(&s_ev_link, link_ev, NULL);
     ble_npl_event_init(&s_ev_mtu, mtu_fallback_ev, NULL);
@@ -608,9 +654,16 @@ void ble_central_start(bool sensors)
     ble_link_register_gatt();                         /* phone-link service; GAP + GATT services too */
     ble_svc_gap_device_name_set("BikeComputer");
     ble_store_config_init();                          /* bonds persist in NVS (CONFIG_BT_NIMBLE_NVS_PERSIST) */
-    nimble_port_freertos_init(host_task);
-    xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 3072, NULL, 4, NULL, 0);
+    nimble_port_freertos_init(host_task);             /* ESP-IDF ignores a failed task creation: checked just below */
+    if (!xTaskGetHandle("nimble_host")) { init_fail("no memory for the Bluetooth host task", ESP_ERR_NO_MEM); s_init.stack_ok = false; return false; }
+    if (xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 3072, NULL, 4, NULL, 0) != pdPASS)
+        ESP_LOGE(TAG, "ble_mgr task not created: sensors and phone link are not paced (no reconnect ticks)");
+    s_init.host_started = true;
+    return true;
 }
+
+const ble_central_init_t *ble_central_init_info(void) { return &s_init; }
+bool ble_central_unavailable(void) { return s_init.failed; }
 
 void ble_central_enable_sensors(bool on) { s_sensors_on = on; if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req); }
 

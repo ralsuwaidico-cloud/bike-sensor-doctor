@@ -120,9 +120,13 @@ static void app_phone_fold(app_live_t *o, bool strap_ok, int strap_bpm)
 }
 
 /* ---- journal: header + one line per second ("p c h", "-" for a paused second), flushed every 10 s */
+/* 0.7.4: false when a leftover journal could not be moved aside; the ride then records without a journal (summary still
+   saved at the end) instead of appending to - and corrupting - the unsaved ride that is still in the file */
+static bool s_journal_on = true;
 static void jflush(bool sync)
 {
     if (!s_jlen) return;
+    if (!s_journal_on) { s_jlen = 0; s_since_flush = 0; return; }
     plat_file_append(JOURNAL, s_jbuf, s_jlen, sync);
     s_jlen = 0; s_since_flush = 0;
 }
@@ -235,7 +239,13 @@ void app_ride_start(void)
     bc_coach_init(&s_coach, &s_prof);
     memset(&s_cue, 0, sizeof s_cue);
     s_ftp_evidence = 0;
-    plat_file_remove(JOURNAL);
+    /* 0.7.4: a journal still here was never kept as a ride file (its save failed): move it aside, never delete it */
+    s_journal_on = true;
+    if (plat_file_size(JOURNAL) > 0) {
+        char keep[40]; snprintf(keep, sizeof keep, "rides/unsaved-%05lu-%u.jnl", (unsigned long)plat_boot_count(), (unsigned)id);
+        if (plat_file_rename(JOURNAL, keep)) { char l[80]; snprintf(l, sizeof l, "RIDE: unsaved journal kept as %s", keep); plat_log(l); }
+        else { s_journal_on = false; plat_log("RIDE: an unsaved journal could not be moved - kept as it is, this ride runs without a journal"); }
+    } else plat_file_remove(JOURNAL);
     char h[96]; snprintf(h, sizeof h, "J1 %u %d %d %d %d\n", id, s_demo, s_prof.ftp_w, s_prof.ftp_how, bc_ftp_established(&s_prof));
     s_jlen = 0; jput(h); jflush(true);
     s_next_ms = plat_ms() + 1000;
@@ -287,7 +297,9 @@ static void keep_samples(uint16_t id, bool demo)
     if (demo) { plat_file_remove(JOURNAL); return; }
     char path[32]; snprintf(path, sizeof path, "rides/r%04u.txt", id);
     plat_file_remove(path);
-    if (!plat_file_rename(JOURNAL, path)) plat_file_remove(JOURNAL);
+    /* 0.7.4: 0.7.3 deleted the journal when the rename failed - the per-second ride data was lost silently. Now it stays as
+       rides/active.jnl and the next ride start moves it aside (rides/unsaved-*.jnl). */
+    if (!plat_file_rename(JOURNAL, path)) { char l[112]; snprintf(l, sizeof l, "RIDE #%u: samples NOT moved to %s - journal kept", id, path); plat_log(l); }
 }
 
 bool app_ride_save(void)
@@ -363,7 +375,12 @@ static void recover(void)
     chunk[n] = 0;
     unsigned id = 0; int demo = 0, ftp = 0, how = 0, est = 0;
     char *nl = strchr(chunk, '\n');
-    if (!nl || sscanf(chunk, "J1 %u %d %d %d %d", &id, &demo, &ftp, &how, &est) != 5) { plat_file_remove(JOURNAL); return; }
+    if (!nl || sscanf(chunk, "J1 %u %d %d %d %d", &id, &demo, &ftp, &how, &est) != 5) {
+        /* 0.7.4: an unreadable journal is kept for analysis, never deleted */
+        char keep[40]; snprintf(keep, sizeof keep, "rides/unreadable-%05lu.jnl", (unsigned long)plat_boot_count());
+        if (!plat_file_rename(JOURNAL, keep)) plat_log("RECOVERY: unreadable ride journal left in place");
+        return;
+    }
     bc_profile_t p = s_prof; p.ftp_w = (uint16_t)ftp; p.ftp_how = (uint8_t)how;
     bc_ride_start(&r, (uint16_t)id, demo, ftp, (uint8_t)how, est);
     bc_coach_init(&c, &p);

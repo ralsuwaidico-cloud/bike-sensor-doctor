@@ -7,7 +7,7 @@
  *   - free / total bytes reported by FatFs;
  *   - a read-only scan of the FAT12/16 root directory (read through the wear-levelling layer, never written);
  *   - the result of the boot-time probe write + read-back of /data/selftest.txt.
- * Measured on the owner's board (27 Oct 2026, docs/FW_STORAGE_MEMORY_REPORT.md): mounted, 5096 KB free of 7964 KB, root
+ * Measured on the owner's board (27 Oct 2026, coord/reports/FW_STORAGE_MEMORY_REPORT.md): mounted, 5096 KB free of 7964 KB, root
  * directory 512 of 512 entries erased (0xFF) -> creating any file fails although the flash is not full. That case is
  * BC_STOR_DIR_CORRUPTED, not "storage full".
  * Nothing here writes, formats or repairs anything; a repair is a separate, owner-approved procedure.

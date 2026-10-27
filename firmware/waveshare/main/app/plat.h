@@ -14,6 +14,7 @@
 #include "bc_link.h"
 #include "bc_diag.h"
 #include "bc_boot.h"
+#include "bc_storage.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -85,6 +86,15 @@ bool plat_file_rename(const char *from, const char *to);
 bool plat_file_remove(const char *path);
 long plat_file_size(const char *path);                                  /* -1 if missing */
 bool plat_storage_ok(void);
+/* 0.7.4 storage health, measured once by the storage start-up stage (bc_storage.h). plat_storage_ok() == (state == OK).
+   When the state is not OK the FAT is not written at all (no mkdir, no file create): a damaged directory is left exactly as it
+   is until an owner-approved repair, so whatever is still recoverable stays recoverable. Reads remain possible if mounted. */
+bc_stor_state_t plat_storage_state(void);
+void plat_storage_facts(bc_stor_facts_t *out);
+/** Core-dump partition: missing / empty / holds a dump (size in *dump_bytes when not NULL). */
+bc_crashpart_t plat_crash_partition(uint32_t *dump_bytes);
+/** Category of the last failed file write: Storage full (ENOSPC) / Write failed, or the boot state when writes are refused. */
+bc_stor_state_t plat_storage_write_failure(void);
 
 /* device */
 int plat_battery_pct(void);            /* -1 unknown; an ESTIMATE from the cell voltage (bc_batt_pct_from_mv) */
@@ -138,7 +148,9 @@ int plat_wifi_scan_count(void);                      /* networks seen by the las
 typedef enum { PLAT_PHONE_OFF = 0, PLAT_PHONE_ADVERTISING, PLAT_PHONE_CONNECTED /* link up, not yet authenticated */,
                PLAT_PHONE_PAIRING /* passkey on screen */, PLAT_PHONE_READY /* encrypted with a remembered phone */,
                PLAT_PHONE_REPAIR /* 0.7.0: a phone tried its old keys and this board no longer has them (or the reverse):
-                                    encryption failed; the rider must REPAIR (forget + pair again) */ } plat_phone_state_t;
+                                    encryption failed; the rider must REPAIR (forget + pair again) */,
+               PLAT_PHONE_UNAVAILABLE /* 0.7.4: Bluetooth could not start this boot (plat_bt_unavailable() has the reason);
+                                         appended so every older value keeps its number in reports */ } plat_phone_state_t;
 /* 0.7.0 diagnostics: why the last connection ended (HCI reason, low byte) and how encryption went. */
 typedef enum { PLAT_PHONE_DISC_NONE = 0, PLAT_PHONE_DISC_PHONE_ENDED, PLAT_PHONE_DISC_BOARD_ENDED, PLAT_PHONE_DISC_TIMEOUT,
                PLAT_PHONE_DISC_KEY_MISSING, PLAT_PHONE_DISC_AUTH_FAILED, PLAT_PHONE_DISC_FAILED_TO_ESTABLISH, PLAT_PHONE_DISC_OTHER } plat_phone_disc_t;
@@ -163,6 +175,10 @@ typedef struct {
     uint32_t notify_fails;            /* notifications NimBLE refused (no mbuf / busy) since boot; retried, never dropped silently */
 } plat_phone_status_t;
 void plat_phone_set_enabled(bool on);
+/** 0.7.4: true when Bluetooth (controller, NimBLE stack or host task) could not start this boot - the board keeps running
+ *  without phone link and sensors. reason (may be NULL) gets a short text, e.g. "controller/HCI init failed (err 0xffffffff)"
+ *  or "disabled after 2 crashes". */
+bool plat_bt_unavailable(char *reason, size_t cap);
 void plat_phone_status(plat_phone_status_t *out);
 void plat_phone_forget(void);         /* forget every remembered phone, drop the connection AND take a new identity (0.7.0) */
 void plat_phone_repair(void);         /* 0.7.0: forget + new identity + advertise again (the PHONE screen's REPAIR action) */
@@ -218,6 +234,9 @@ void plat_health(plat_health_t *out);
 void plat_export_report(const char *text);
 /** One line for the serial log. */
 void plat_log(const char *line);
+/** 0.7.4: a zeroed block for long-lived app state, from PSRAM on the device (internal RAM is kept for the radio, DMA and
+ *  task stacks); NULL when out of memory. Never freed. */
+void *plat_alloc_ext(size_t n);
 
 /* ---- 0.7.3 crash evidence, boot modes, diagnostics (app_diag.c) */
 typedef struct {

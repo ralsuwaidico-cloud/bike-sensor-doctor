@@ -121,7 +121,7 @@ bool plat_crash_info(plat_crash_t *o)
 void plat_crash_consumed(uint32_t report_id)
 {
 #if CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH
-    size_t addr = 0, size = 0;
+    size_t addr = 0, size = 0; bool copied = false;
     if (esp_core_dump_image_get(&addr, &size) == ESP_OK && size > 0 && size <= 64 * 1024) {
         const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, NULL);
         uint8_t *buf = malloc(4096);
@@ -133,10 +133,14 @@ void plat_crash_consumed(uint32_t report_id)
                 ok = esp_partition_read(p, addr - p->address + off, buf, n) == ESP_OK && plat_file_write_at(path, (long)off, buf, n);
             }
             ESP_LOGI(TAG, "core dump (%u bytes) %s diag/core-%06lu.elf", (unsigned)size, ok ? "kept as" : "could NOT be copied to", (unsigned long)report_id);
+            copied = ok;
         }
         free(buf);
     }
-    esp_core_dump_image_erase();                     /* the next crash finds an empty partition; the report and the copy stay */
+    /* 0.7.4: the partition is freed ONLY when the raw dump is safely on the FAT (0.7.3 erased it even when the copy failed,
+       losing the only full crash evidence). Kept, it is still read by READ-BOARD-STATE and by the next boot's report. */
+    if (copied) esp_core_dump_image_erase();
+    else ESP_LOGW(TAG, "core dump kept in the 'coredump' partition (copy to the FAT failed or no dump size)");
 #else
     (void)report_id;
 #endif
@@ -183,12 +187,43 @@ void plat_build_ids(char build[32], char sha[65])
     for (int i = 0; i < 32; i++) snprintf(sha + 2 * i, 3, "%02x", d->app_elf_sha256[i]);
 }
 
+/* ---- 0.7.4 crash partition status (Device Health, reports, BLE storage status) */
+bc_crashpart_t plat_crash_partition(uint32_t *dump_bytes)
+{
+    if (dump_bytes) *dump_bytes = 0;
+    const esp_partition_t *p = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_COREDUMP, NULL);
+    if (!p) return BC_CRASHPART_MISSING;
+#if CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH
+    size_t addr = 0, size = 0;
+    if (esp_core_dump_image_get(&addr, &size) != ESP_OK || size == 0 || size > p->size) return BC_CRASHPART_EMPTY;
+    if (dump_bytes) *dump_bytes = (uint32_t)size;
+    return esp_core_dump_image_check() == ESP_OK ? BC_CRASHPART_DUMP : BC_CRASHPART_BAD;
+#else
+    return BC_CRASHPART_EMPTY;
+#endif
+}
+
 /* ---- phone link alone (recovery SEND LOGS) and per-sensor disable */
 static bool s_ble_started;
+static bool s_bt_disabled; static char s_bt_disabled_why[40];
 void diag_esp_ble_started(void) { s_ble_started = true; }
+void diag_esp_bt_disabled(const char *why) { s_bt_disabled = true; snprintf(s_bt_disabled_why, sizeof s_bt_disabled_why, "%s", why ? why : "disabled"); }
+bool plat_bt_unavailable(char *reason, size_t cap)
+{
+    const char *r = NULL;
+    if (s_bt_disabled) r = s_bt_disabled_why;
+    else if (ble_central_unavailable()) r = ble_central_init_info()->reason;
+    if (r && reason && cap) snprintf(reason, cap, "%s", r);
+    return r != NULL;
+}
 void plat_phone_only_start(void)
 {
-    if (!s_ble_started) { s_ble_started = true; ble_central_start(false); ESP_LOGI(TAG, "recovery: phone link started alone (no sensors, no Wi-Fi)"); }
+    if (!s_ble_started) {
+        s_ble_started = true;
+        if (!ble_central_start(false)) { ESP_LOGE(TAG, "recovery: phone link could not start - Bluetooth unavailable (%s)", ble_central_init_info()->reason); return; }
+        ESP_LOGI(TAG, "recovery: phone link started alone (no sensors, no Wi-Fi)");
+    }
+    if (plat_bt_unavailable(NULL, 0)) return;
     plat_phone_set_enabled(true);                    /* this boot only: the profile is not changed */
 }
 void plat_sensor_set_disabled(plat_sens_kind_t k, bool disabled) { ble_central_set_disabled(k, disabled); }

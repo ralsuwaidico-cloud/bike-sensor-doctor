@@ -31,7 +31,7 @@ bool bc_ev_decode(const uint8_t in[BC_EV_SIZE], bc_ev_t *e)
 }
 static const char *sens_name(unsigned s) { return s == 1 ? "power" : s == 2 ? "hr" : s == 3 ? "csc" : "?"; }
 static const char *phone_state(unsigned s)
-{ static const char *const N[] = { "off", "advertising", "connected", "pairing", "ready", "repair" }; return s < 6 ? N[s] : "?"; }
+{ static const char *const N[] = { "off", "advertising", "connected", "pairing", "ready", "repair", "bt_unavailable" }; return s < 7 ? N[s] : "?"; }
 static const char *wifi_state(unsigned s)
 { static const char *const N[] = { "off", "idle", "scanning", "connecting", "connected", "failed" }; return s < 6 ? N[s] : "?"; }
 size_t bc_ev_text(const bc_ev_t *e, char *b, size_t cap)

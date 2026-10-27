@@ -33,6 +33,7 @@ static void age_text(uint32_t age_ms, char *out, size_t cap)
 
 const char *ui_stage_word(const plat_link_info_t *l)
 {
+    if (l->stage != BC_STG_NOT_PAIRED && plat_bt_unavailable(NULL, 0)) return "NO BLUETOOTH";   /* 0.7.4 */
     if (l->disabled) return "DISABLED";              /* 0.7.3: disabled after a crash (staged boot) - RETRY */
     switch ((bc_stage_t)l->stage) {
     case BC_STG_NOT_PAIRED: return "NOT PAIRED";
@@ -50,6 +51,7 @@ const char *ui_stage_word(const plat_link_info_t *l)
 /* one line for Device Health / detail pages: "connected - no data", "reconnecting", "error: no CCCD", ... */
 static void stage_line(const plat_link_info_t *l, char *b, size_t cap)
 {
+    if (l->stage != BC_STG_NOT_PAIRED && plat_bt_unavailable(NULL, 0)) { snprintf(b, cap, "Bluetooth unavailable"); return; }   /* 0.7.4 */
     if (l->disabled) { snprintf(b, cap, "off after a crash"); return; }
     switch ((bc_stage_t)l->stage) {
     case BC_STG_NOT_PAIRED: snprintf(b, cap, "not paired"); break;
@@ -85,6 +87,10 @@ static const char *icon_for(lv_color_t c)
 /* a paired sensor's row from its pipeline stage; value only at VALID (set by the caller) */
 static void sensor_state(const plat_link_info_t *l, ui_row_status_t *o)
 {
+    if (plat_bt_unavailable(NULL, 0)) {                /* 0.7.4: no radio this boot - never "searching" */
+        snprintf(o->value, sizeof o->value, "NO BT"); snprintf(o->line, sizeof o->line, "Bluetooth unavailable");
+        o->color = C_RED; o->connected = false; o->alert = true; return;
+    }
     if (l->disabled) {
         snprintf(o->value, sizeof o->value, "DISABLED"); snprintf(o->line, sizeof o->line, "off after a crash");
         o->color = C_AMBER; o->connected = false; o->alert = true; return;
@@ -104,7 +110,8 @@ void ui_conn_row_status(int row, ui_row_status_t *o)
     memset(o, 0, sizeof *o); o->color = C_MUT;
     switch (row) {
     case UI_ROW_PHONE:
-        if (!p->phone_on) { snprintf(o->value, sizeof o->value, "OFF"); snprintf(o->line, sizeof o->line, "link off"); }
+        if (ps.state == PLAT_PHONE_UNAVAILABLE) { snprintf(o->value, sizeof o->value, "NO BT"); snprintf(o->line, sizeof o->line, "Bluetooth unavailable"); o->color = C_RED; o->alert = true; }
+        else if (!p->phone_on) { snprintf(o->value, sizeof o->value, "OFF"); snprintf(o->line, sizeof o->line, "link off"); }
         else if (ps.state == PLAT_PHONE_READY) { snprintf(o->value, sizeof o->value, "CONNECTED"); snprintf(o->line, sizeof o->line, "connected"); o->color = C_GREEN; o->connected = o->ok = true; }
         else if (ps.state == PLAT_PHONE_REPAIR) { snprintf(o->value, sizeof o->value, "REPAIR"); snprintf(o->line, sizeof o->line, "repair needed"); o->color = C_RED; o->alert = true; }
         else if (ps.state == PLAT_PHONE_PAIRING || ps.state == PLAT_PHONE_CONNECTED) { snprintf(o->value, sizeof o->value, "PAIRING"); snprintf(o->line, sizeof o->line, "pairing"); o->color = C_AMBER; }
@@ -278,6 +285,7 @@ static void retry(plat_sens_kind_t k)
 {
     bc_sensor_pair_t *sp = k == PLAT_SENS_POWER ? &app_profile()->power : k == PLAT_SENS_HR ? &app_profile()->hr : &app_profile()->csc;
     if (!sp->paired) return;
+    if (plat_bt_unavailable(NULL, 0)) { ui_toast("No Bluetooth this start - restart the board"); return; }   /* 0.7.4 */
     { plat_sensors_t sn; plat_sensors(&sn);
       if (sn.link[k].disabled) { app_diag_retry(k == PLAT_SENS_POWER ? BC_SS_POWER : k == PLAT_SENS_HR ? BC_SS_HR : BC_SS_CSC); ui_toast("starting again"); return; } }
     plat_found_t f; memcpy(f.mac, sp->mac, 6); f.addr_type = sp->addr_type; snprintf(f.name, sizeof f.name, "%s", sp->name); f.rssi = 0; f.svcs = 0;

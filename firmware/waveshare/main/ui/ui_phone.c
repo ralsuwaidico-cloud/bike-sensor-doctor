@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "app_psvc.h"
+#include "app_diag.h"
 
 /* ---------------- pairing-code pop-up (top layer, over whatever screen is showing) */
 static lv_obj_t *k_box, *k_code, *k_code2;
@@ -55,13 +56,14 @@ static const char *state_text(plat_phone_state_t s, bool link_on)
     case PLAT_PHONE_PAIRING: return "PAIRING";
     case PLAT_PHONE_READY: return "CONNECTED";
     case PLAT_PHONE_REPAIR: return "REPAIR NEEDED";
+    case PLAT_PHONE_UNAVAILABLE: return "NO BLUETOOTH";
     default: return "?";
     }
 }
 static lv_color_t state_color(plat_phone_state_t s, bool link_on)
 {
     if (!link_on) return C_MUT;
-    return s == PLAT_PHONE_READY ? C_GREEN : s == PLAT_PHONE_REPAIR ? C_RED : s == PLAT_PHONE_OFF ? C_MUT : C_AMBER;
+    return s == PLAT_PHONE_READY ? C_GREEN : s == PLAT_PHONE_REPAIR || s == PLAT_PHONE_UNAVAILABLE ? C_RED : s == PLAT_PHONE_OFF ? C_MUT : C_AMBER;
 }
 static const char *disc_text(plat_phone_disc_t d)
 {
@@ -96,12 +98,22 @@ static void sync_text(char *b, size_t cap, lv_color_t *c)
 }
 
 static void primary_cb(lv_event_t *e);
+/* 0.7.4: Bluetooth unavailable this start. Disabled by the boot plan after crashes -> RETRY (applies at the next start);
+   failed to start (e.g. no internal RAM for the controller) -> WHY? shows the reason. */
+static bool bt_disabled_by_crash(void) { return (app_diag_skip() & (BC_SS_BIT(BC_SS_BTSTACK) | BC_SS_BIT(BC_SS_PHONE))) != 0; }
+static void why_cb(lv_event_t *e)
+{
+    (void)e;
+    if (bt_disabled_by_crash()) { app_diag_retry(BC_SS_BTSTACK); app_diag_retry(BC_SS_PHONE); ui_toast("Bluetooth starts again at the next restart"); return; }
+    char r[56] = ""; plat_bt_unavailable(r, sizeof r); char t[72]; snprintf(t, sizeof t, "No Bluetooth: %s", r); ui_toast(t);
+}
 static void repair_cb(lv_event_t *e) { (void)e; plat_phone_repair(); bc_profile_t *p = app_profile(); if (!p->phone_on) { p->phone_on = true; app_profile_save(); } ui_toast("pairing reset: pair again from the app"); }
 static void rebuild_primary(plat_phone_state_t st, bool on)
 {
     if (ph_primary) { lv_obj_delete(ph_primary); ph_primary = NULL; }
     lv_obj_t *scr = lv_obj_get_parent(ph_status);
-    if (!on || st == PLAT_PHONE_OFF) ph_primary = ui_pill(scr, "CONNECT", C_CYAN, C_BG, 160, 36, primary_cb, NULL);
+    if (st == PLAT_PHONE_UNAVAILABLE) ph_primary = ui_pill(scr, bt_disabled_by_crash() ? "RETRY" : "WHY?", C_PANEL, C_RED, 160, 36, why_cb, NULL);   /* 0.7.4 */
+    else if (!on || st == PLAT_PHONE_OFF) ph_primary = ui_pill(scr, "CONNECT", C_CYAN, C_BG, 160, 36, primary_cb, NULL);
     else if (st == PLAT_PHONE_REPAIR) { ph_primary = ui_hold_btn(scr, "HOLD: REPAIR", C_RED, C_FG, 160, 36, 1500, repair_cb, NULL); lv_obj_set_style_text_font(ui_hold_label(ph_primary), &lv_font_montserrat_14, 0); }
     else if (st == PLAT_PHONE_ADVERTISING) ph_primary = ui_pill(scr, "TURN OFF", C_PANEL, C_FG, 160, 36, primary_cb, NULL);
     else ph_primary = ui_pill(scr, "DISCONNECT", C_PANEL, C_FG, 160, 36, primary_cb, NULL);
@@ -121,7 +133,7 @@ static void phone_update(void)
     if (ps.state != ph_shown_state || on != ph_shown_on) rebuild_primary(ps.state, on);
     lv_color_t c; sync_text(b, sizeof b, &c); ui_row_set_value(ph_sync_row, b, c);
     ui_row_set_value(ph_link_row, on ? "ON" : "OFF", on ? C_GREEN : C_MUT);
-    lv_label_set_text(ph_hint, ps.state == PLAT_PHONE_REPAIR ? "keys mismatch - details" : ps.bonded ? "tap for details" : "pair from the app - details");
+    lv_label_set_text(ph_hint, ps.state == PLAT_PHONE_UNAVAILABLE ? "Bluetooth off this start" : ps.state == PLAT_PHONE_REPAIR ? "keys mismatch - details" : ps.bonded ? "tap for details" : "pair from the app - details");
 }
 
 static void primary_cb(lv_event_t *e)

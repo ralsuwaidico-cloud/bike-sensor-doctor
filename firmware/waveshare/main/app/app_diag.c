@@ -7,8 +7,14 @@
 #include "app_power.h"
 #include "bc_pipe.h"
 
-static struct {
+/* 0.7.4: the whole diagnostic state and its work buffers are ONE allocation from PSRAM (plat_alloc_ext) made by
+   app_diag_init(). 0.7.3 kept ~9.6 KB of them as statics in internal DRAM (D 2800 B, flush/index/report buffers), part of
+   the 13.6 KB of internal DRAM 0.7.3 added over 0.7.2 - RAM the Bluetooth controller/HCI buffers needed
+   (coord/reports/FW_STORAGE_MEMORY_REPORT.md). Only tasks touch it (never an ISR, never with the flash cache disabled). Before init, or
+   if the allocation fails, every entry point is a no-op and the status says "Diagnostics unavailable". */
+typedef struct {
     bool init, storage_ok, recovery, crashed;
+    uint8_t storage_state, last_fail;   /* 0.7.4 bc_stor_state_t */
     bc_boot_plan_t plan;
     bc_evlog_t log; uint32_t written;
     bc_diag_index_t idx; bc_diag_srv_t srv;
@@ -22,23 +28,30 @@ static struct {
     /* Link 1.2.3 ride priority: chunk pacing + a reply the transport refused (sent again first, never lost) */
     uint32_t last_chunk_ms; bool chunk_sent; uint32_t chunks_held, chunks_paced;
     uint8_t held[BC_LINK_MAX]; size_t held_len; uint8_t held_chr;
-} D;
+    /* work buffers (0.7.3: function statics in internal DRAM) */
+    bc_ev_t flush_e[BC_EVLOG_PEND]; uint8_t flush_buf[BC_EVLOG_PEND * BC_EV_SIZE];
+    uint8_t idx_buf[16 + BC_DIAG_MAX_REPORTS * 76 + 4];
+    plat_crash_t cr_report, cr_init, probe; bc_diag_report_in_t rin; bc_diag_task_t tasks[12];
+} diag_t;
+static diag_t *s_d;
+#define D (*s_d)
+#define ON (s_d != NULL && s_d->init)
 
 static uint32_t now_ms(void) { return plat_ms(); }
 void app_diag_event(uint8_t type, uint8_t x, uint16_t a, uint32_t b, uint32_t c, uint32_t d)
 {
-    if (!D.init) return;
+    if (!ON) return;
     bc_evlog_add(&D.log, type, x, a, b, c, d, now_ms());
 }
 
 /* ---- storage of the event ring */
 void app_diag_flush(bool force)
 {
-    if (!D.init || !D.storage_ok || !bc_evlog_flush_due(&D.log, now_ms(), force)) return;
+    if (!ON || !D.storage_ok || !bc_evlog_flush_due(&D.log, now_ms(), force)) return;
     if (D.log.dropped) { uint32_t n = D.log.dropped; D.log.dropped = 0; bc_evlog_add(&D.log, BC_EV_NOTE, 0, 1, n, 0, 0, now_ms()); }
-    static bc_ev_t e[BC_EVLOG_PEND]; int n = bc_evlog_take(&D.log, e, BC_EVLOG_PEND, now_ms());   /* static: app task only, keeps stacks small */
+    bc_ev_t *e = D.flush_e; int n = bc_evlog_take(&D.log, e, BC_EVLOG_PEND, now_ms());   /* app task only, keeps stacks small */
     /* consecutive slots are written in one go (at most two runs: the ring wraps once) */
-    static uint8_t buf[BC_EVLOG_PEND * BC_EV_SIZE];
+    uint8_t *buf = D.flush_buf;
     int i = 0;
     while (i < n) {
         uint32_t slot0 = e[i].seq % APP_DIAG_EV_SLOTS; int k = 0;
@@ -62,7 +75,7 @@ static uint8_t *read_ring(void)
 /* ---- report store */
 static bool index_save(void)
 {
-    static uint8_t b[16 + BC_DIAG_MAX_REPORTS * 76 + 4]; size_t n = bc_diag_index_encode(&D.idx, b, sizeof b);
+    uint8_t *b = D.idx_buf; size_t n = bc_diag_index_encode(&D.idx, b, sizeof D.idx_buf);
     return n && plat_file_write(APP_DIAG_INDEX_FILE, (const char *)b, n);
 }
 static void report_path(uint32_t id, char *p, size_t cap) { snprintf(p, cap, "diag/r%06lu.txt", (unsigned long)id); }
@@ -117,14 +130,15 @@ static void fill_report(bc_diag_report_in_t *in, uint8_t kind, const plat_crash_
 
 uint32_t app_diag_store_report(uint8_t kind, const char *note)
 {
-    if (!D.init) return 0;
-    static plat_crash_t cr; bool have_cr = kind == BC_DIAG_KIND_CRASH && plat_crash_info(&cr);
-    if (!have_cr) memset(&cr, 0, sizeof cr);
+    if (!ON) return 0;
+    plat_crash_t *crp = &D.cr_report; bool have_cr = kind == BC_DIAG_KIND_CRASH && plat_crash_info(crp);
+    if (!have_cr) memset(crp, 0, sizeof *crp);
     char *tail = NULL;
-    static bc_diag_report_in_t in; fill_report(&in, kind, &cr, note);
-    if (kind == BC_DIAG_KIND_CRASH) { tail = malloc(2200); if (tail) { plat_log_tail(tail, 2200); in.log_tail = tail; } }
-    char sum[48]; bc_diag_summary(&in, sum, sizeof sum);
-    if (!D.storage_ok) { free(tail); snprintf(D.summary, sizeof D.summary, "%s", sum); return 0; }
+    bc_diag_report_in_t *inp = &D.rin; fill_report(inp, kind, crp, note);
+    if (kind == BC_DIAG_KIND_CRASH) { tail = malloc(2200); if (tail) { plat_log_tail(tail, 2200); inp->log_tail = tail; } }
+    char sum[48]; bc_diag_summary(inp, sum, sizeof sum);
+    if (!D.storage_ok) { free(tail); snprintf(D.summary, sizeof D.summary, "%s", sum); D.last_fail = D.storage_state; return 0; }
+    D.last_fail = BC_STOR_DIAG_UNAVAILABLE;              /* until it is stored (out of memory if nothing below changes it) */
     app_diag_flush(true);
     bc_ev_t *ev = malloc(sizeof(bc_ev_t) * 60); int nev = 0;
     uint8_t *raw = read_ring();
@@ -133,25 +147,27 @@ uint32_t app_diag_store_report(uint8_t kind, const char *note)
     char *txt = malloc(BC_DIAG_REPORT_MAX);
     uint32_t id = 0;
     if (txt) {
-        size_t n = bc_diag_report_build(&in, ev, nev, txt, BC_DIAG_REPORT_MAX);
+        size_t n = bc_diag_report_build(inp, ev, nev, txt, BC_DIAG_REPORT_MAX);
         int room;
         while ((room = bc_diag_index_make_room(&D.idx, (uint32_t)n)) >= 0) {   /* delete the oldest SENT report(s) */
             char p[32]; report_path(D.idx.r[room].id, p, sizeof p); plat_file_remove(p);
+            /* 0.7.4: its raw core dump copy goes with it (0.7.3 kept every diag/core-<id>.elf forever: ~14 KB per crash) */
+            snprintf(p, sizeof p, "diag/core-%06lu.elf", (unsigned long)D.idx.r[room].id); plat_file_remove(p);
             memmove(&D.idx.r[room], &D.idx.r[room + 1], sizeof D.idx.r[0] * (size_t)(D.idx.n - room - 1)); D.idx.n--;
         }
         if (room == -2) {                                   /* never delete an unsent report to make room */
-            D.idx.not_stored++; index_save();
+            D.idx.not_stored++; index_save(); D.last_fail = BC_STOR_DIAG_FULL;
             app_diag_event(BC_EV_REPORT, kind, 0, 2, 0, 0);
         } else {
-            char p[32]; report_path(in.id, p, sizeof p);
+            char p[32]; report_path(inp->id, p, sizeof p);
             if (plat_file_write(p, txt, n)) {
                 bc_diag_info_t *r = &D.idx.r[D.idx.n];
-                memset(r, 0, sizeof *r); r->id = in.id; r->size = (uint32_t)n; r->crc = bc_crc32(0, txt, n); r->epoch_s = in.epoch_s; r->kind = kind; r->state = 0;
-                snprintf(r->summary, sizeof r->summary, "%.40s", sum); snprintf(r->fw, sizeof r->fw, "%s", in.fw);
+                memset(r, 0, sizeof *r); r->id = inp->id; r->size = (uint32_t)n; r->crc = bc_crc32(0, txt, n); r->epoch_s = inp->epoch_s; r->kind = kind; r->state = 0;
+                snprintf(r->summary, sizeof r->summary, "%.40s", sum); snprintf(r->fw, sizeof r->fw, "%s", inp->fw);
                 D.idx.n++; D.idx.next_id++;
-                if (index_save()) { id = in.id; D.ready_due = true; app_diag_event(BC_EV_REPORT, kind, (uint16_t)id, 0, 0, 0); }
-                else { D.idx.n--; D.idx.next_id--; plat_file_remove(p); }
-            }
+                if (index_save()) { id = inp->id; D.ready_due = true; D.last_fail = BC_STOR_OK; app_diag_event(BC_EV_REPORT, kind, (uint16_t)id, 0, 0, 0); }
+                else { D.idx.n--; D.idx.next_id--; plat_file_remove(p); D.last_fail = (uint8_t)plat_storage_write_failure(); }
+            } else D.last_fail = (uint8_t)plat_storage_write_failure();
         }
     }
     free(txt); free(ev); free(tail);
@@ -161,11 +177,13 @@ uint32_t app_diag_store_report(uint8_t kind, const char *note)
 }
 
 /* ---- boot */
-static plat_crash_t s_probe;
 void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok)
 {
+    if (!s_d) s_d = plat_alloc_ext(sizeof *s_d);
+    if (!s_d) { plat_log("DIAG: no memory for the diagnostic state - diagnostics unavailable this boot"); return; }
     memset(&D, 0, sizeof D);
-    D.init = true; D.storage_ok = storage_ok; D.plan = *plan; D.recovery = plan->mode == BC_BOOT_RECOVERY; D.crashed = plan->crashed;
+    D.init = true; D.storage_ok = storage_ok; D.plan = *plan;
+    D.storage_state = (uint8_t)(storage_ok ? BC_STOR_OK : plat_storage_state()); D.recovery = plan->mode == BC_BOOT_RECOVERY; D.crashed = plan->crashed;
     bc_evlog_init(&D.log, APP_DIAG_EV_SLOTS, plat_boot_count());
     if (storage_ok) {
         long sz = plat_file_size(APP_DIAG_EVENTS_FILE);
@@ -174,7 +192,7 @@ void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok)
             for (uint32_t off = 0; off < APP_DIAG_EV_SLOTS * BC_EV_SIZE; off += sizeof ff) plat_file_write_at(APP_DIAG_EVENTS_FILE, (long)off, ff, sizeof ff);
             if (sz >= 0) bc_evlog_add(&D.log, BC_EV_NOTE, 0, 2, (uint32_t)sz, 0, 0, now_ms());
         } else { uint8_t *raw = read_ring(); if (raw) { bc_evlog_resume(&D.log, raw, APP_DIAG_EV_SLOTS); free(raw); } }
-        static uint8_t b[16 + BC_DIAG_MAX_REPORTS * 76 + 4]; long n = plat_file_read(APP_DIAG_INDEX_FILE, (char *)b, sizeof b);
+        uint8_t *b = D.idx_buf; long n = plat_file_read(APP_DIAG_INDEX_FILE, (char *)b, sizeof D.idx_buf);
         if (n <= 0 || !bc_diag_index_decode(b, (size_t)n, &D.idx)) { memset(&D.idx, 0, sizeof D.idx); D.idx.next_id = 1; }
     } else D.idx.next_id = 1;
     bc_diag_store_t st = { .ctx = NULL, .index = st_index, .read = st_read, .mark_sent = st_mark_sent };
@@ -183,12 +201,12 @@ void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok)
     app_diag_event(BC_EV_BOOT, 0, (uint16_t)plat_reset_kind(), r->crash_streak, plat_boot_count(), (uint32_t)plan->mode | ((uint32_t)plan->skip << 8));
     if (plan->newly_skipped) app_diag_event(BC_EV_RECOVERY, 4, plan->suspect, plan->skip, 0, 0);
     if (plan->crashed) {
-        static plat_crash_t cr; bool have = plat_crash_info(&cr);
+        plat_crash_t *cr = &D.cr_init; bool have = plat_crash_info(cr);
         uint32_t id = app_diag_store_report(BC_DIAG_KIND_CRASH, plan->newly_skipped ? "staged boot: the subsystem that was starting is disabled on this boot" : NULL);
         D.crash_report = id;
-        app_diag_event(BC_EV_CRASH, have ? 1 : 0, (uint16_t)id, have ? cr.pc : 0, have ? cr.exccause : 0, 0);
+        app_diag_event(BC_EV_CRASH, have ? 1 : 0, (uint16_t)id, have ? cr->pc : 0, have ? cr->exccause : 0, 0);
         if (have && id) plat_crash_consumed(id);            /* the raw dump moves to diag/core-<id>.elf; the partition is free again */
-    } else if (plat_crash_info(&s_probe)) {
+    } else if (plat_crash_info(&D.probe)) {
         /* a core dump without a crash reset (e.g. the board was power-cycled while the old dump was still there): report it once */
         uint32_t id = app_diag_store_report(BC_DIAG_KIND_CRASH, "core dump found after a normal start (earlier crash)");
         if (id) plat_crash_consumed(id);
@@ -197,7 +215,7 @@ void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok)
 }
 
 void app_diag_stage(bc_subsys_t s, int result) { app_diag_event(BC_EV_STAGE, (uint8_t)result, (uint16_t)s, 0, 0, 0); if (result >= 2) app_diag_flush(true); }
-void app_diag_note_live(void) { D.lives++; D.lives_min++; D.last_live_ms = now_ms(); }
+void app_diag_note_live(void) { if (!ON) return; D.lives++; D.lives_min++; D.last_live_ms = now_ms(); }
 
 /* ---- the continuous monitor */
 static void monitor(uint32_t now)
@@ -245,7 +263,7 @@ static void monitor(uint32_t now)
     if (!D.mon_init || now - D.t_health >= 60000) {
         D.t_health = now;
         uint32_t fr, mn, lg, ps_free; plat_heap(&fr, &mn, &lg, &ps_free);
-        static bc_diag_task_t t[12]; int nt = plat_tasks(t, 12);
+        bc_diag_task_t *t = D.tasks; int nt = plat_tasks(t, 12);
         uint32_t lvg = 0xFFFF, nim = 0xFFFF, mgr = 0xFFFF, tim = 0xFFFF, low = UINT32_MAX;
         for (int i = 0; i < nt; i++) {
             uint32_t v = t[i].stack_free > 0xFFFF ? 0xFFFF : t[i].stack_free;
@@ -263,7 +281,7 @@ static void monitor(uint32_t now)
 
 void app_diag_tick(uint32_t now)
 {
-    if (!D.init) return;
+    if (!ON) return;
     monitor(now);
     app_diag_flush(false);
 }
@@ -271,13 +289,13 @@ void app_diag_tick(uint32_t now)
 /* ---- phone transfer */
 bool app_diag_write(const uint8_t *msg, size_t n)
 {
-    if (!D.init || !msg || n < 1 || msg[0] < BC_MSG_DIAG_LIST_REQ || msg[0] > BC_MSG_DIAG_ERR) return false;
+    if (!ON || !msg || n < 1 || msg[0] < BC_MSG_DIAG_LIST_REQ || msg[0] > BC_MSG_DIAG_ERR) return false;
     bc_diag_srv_write(&D.srv, msg, n);
     return true;
 }
 size_t app_diag_next(uint8_t *chr, uint8_t *buf, size_t cap, uint32_t now)
 {
-    if (!D.init) return 0;
+    if (!ON) return 0;
     if (D.ready_due && D.phone_ready) {
         D.ready_due = false;
         bc_diag_ready_t r = { (uint8_t)bc_diag_index_pending(&D.idx), D.idx.n ? D.idx.r[D.idx.n - 1].id : 0 };
@@ -297,6 +315,7 @@ size_t app_diag_next(uint8_t *chr, uint8_t *buf, size_t cap, uint32_t now)
 }
 void app_diag_phone_ready(bool ready)
 {
+    if (!ON) return;
     if (ready && !D.phone_ready) D.ready_due = true;          /* on every (re)connection: what is waiting */
     if (!ready) { bc_diag_srv_reset(&D.srv); D.ready_due = false; D.held_len = 0; }
     D.phone_ready = ready;
@@ -304,6 +323,7 @@ void app_diag_phone_ready(bool ready)
 
 void app_diag_recovery_pump(uint32_t now)
 {
+    if (!ON) return;
     plat_phone_status_t ps; plat_phone_status(&ps);
     if (ps.svc_ready != D.phone_ready) { app_diag_phone_ready(ps.svc_ready); if (ps.svc_ready) app_diag_event(BC_EV_MODE, 3, 0, 0, 0, 0); }
     uint8_t chr, b[BC_LINK_MAX]; int n, guard = 0;
@@ -319,16 +339,18 @@ void app_diag_recovery_pump(uint32_t now)
 void app_diag_status(app_diag_status_t *o)
 {
     memset(o, 0, sizeof *o);
+    if (!ON) { o->storage_ok = plat_storage_ok(); o->storage_state = (uint8_t)plat_storage_state(); o->last_fail = BC_STOR_DIAG_UNAVAILABLE; return; }
     o->crashed = D.crashed; o->crash_report = D.crash_report; snprintf(o->summary, sizeof o->summary, "%s", D.summary);
     o->stored = D.idx.n; o->pending = bc_diag_index_pending(&D.idx); o->sent = D.sent; o->not_stored = D.idx.not_stored;
-    o->storage_ok = D.storage_ok; o->events_written = D.written; o->events_dropped = D.log.dropped; o->phone_ready = D.phone_ready;
+    o->storage_ok = D.storage_ok; o->storage_state = D.storage_state; o->last_fail = D.last_fail; o->events_written = D.written; o->events_dropped = D.log.dropped; o->phone_ready = D.phone_ready;
     o->chunks_sent = D.srv.chunks_sent; o->chunks_held = D.chunks_held; o->chunks_paced = D.chunks_paced; o->busy_ride = D.srv.busy_ride;
 }
 
-uint16_t app_diag_skip(void) { return D.plan.skip; }
-bc_boot_mode_t app_diag_mode(void) { return D.plan.mode; }
+uint16_t app_diag_skip(void) { return ON ? D.plan.skip : plat_boot_rtc()->skip; }
+bc_boot_mode_t app_diag_mode(void) { return ON ? D.plan.mode : (bc_boot_mode_t)plat_boot_rtc()->mode; }
 void app_diag_retry(bc_subsys_t s)
 {
+    if (!ON) { bc_boot_unskip(plat_boot_rtc(), s); plat_boot_skip_save((uint16_t)(plat_boot_skip_load() & ~BC_SS_BIT(s))); return; }
     bc_boot_unskip(plat_boot_rtc(), s);
     plat_boot_skip_save((uint16_t)(plat_boot_skip_load() & ~BC_SS_BIT(s)));
     D.plan.skip &= (uint16_t)~BC_SS_BIT(s);

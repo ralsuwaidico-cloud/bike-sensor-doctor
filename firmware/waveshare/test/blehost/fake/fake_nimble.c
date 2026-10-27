@@ -66,6 +66,7 @@ static void *task_main(void *p) { task_t *t = p; t_name = t->name; t->fn(t->arg)
 BaseType_t xTaskCreatePinnedToCore(void (*fn)(void *), const char *name, uint32_t stack, void *arg, UBaseType_t prio, TaskHandle_t *h, BaseType_t core)
 {
     (void)stack; (void)prio; (void)core;
+    if (g_fake_fail_task && !strcmp(g_fake_fail_task, name)) return 0;   /* 0.7.4: out of memory for this task */
     task_t *t = &s_tasks[s_ntasks++]; t->fn = fn; t->arg = arg; snprintf(t->name, sizeof t->name, "%s", name);
     pthread_create(&t->th, NULL, task_main, t); pthread_detach(t->th);
     if (h) *h = t;
@@ -573,7 +574,10 @@ void ble_npl_eventq_put(struct ble_npl_eventq *q, struct ble_npl_event *ev)
     if (__atomic_exchange_n(&ev->queued, true, __ATOMIC_SEQ_CST)) return;      /* already queued: like NimBLE's FreeRTOS port */
     q_push(0, NULL, NULL, ev);
 }
-esp_err_t nimble_port_init(void) { clock_gettime(CLOCK_MONOTONIC, &t0); return ESP_OK; }
+esp_err_t g_fake_nimble_init_err = ESP_OK; const char *g_fake_fail_task; uint32_t g_fake_heap_free = 60000, g_fake_heap_largest = 30000;
+size_t heap_caps_get_free_size(uint32_t caps) { return (caps & MALLOC_CAP_DMA) ? g_fake_heap_free / 2 : g_fake_heap_free; }
+size_t heap_caps_get_largest_free_block(uint32_t caps) { (void)caps; return g_fake_heap_largest; }
+esp_err_t nimble_port_init(void) { clock_gettime(CLOCK_MONOTONIC, &t0); return g_fake_nimble_init_err; }
 void nimble_port_run(void)
 {
     if (ble_hs_cfg.sync_cb) ble_hs_cfg.sync_cb();

@@ -57,6 +57,8 @@ typedef struct {
     int stored, pending, sent;     /* reports in the store / not yet acknowledged / acknowledged this boot */
     uint32_t not_stored;           /* reports that could not be stored (store full of unsent reports) */
     bool storage_ok;
+    uint8_t storage_state;         /* 0.7.4 bc_stor_state_t measured at boot (BC_STOR_OK when storage_ok) */
+    uint8_t last_fail;             /* 0.7.4 bc_stor_state_t: why the LAST report could not be stored (BC_STOR_OK = it was) */
     uint32_t events_written, events_dropped;
     bool phone_ready;
     /* Link 1.2.3 ride priority evidence: chunks sent, held back because the link had no room (LIVE first / mbufs / queue),

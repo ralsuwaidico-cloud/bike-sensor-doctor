@@ -25,6 +25,8 @@
 
 void app_psvc_on_disconnect(void) {}
 bool plat_device_id(uint8_t out[6]) { memset(out, 0xAB, 6); return true; }
+/* 0.7.4: device side lives in diag_esp.c; here Bluetooth is unavailable only when the stack failed to start */
+__attribute__((weak)) bool plat_bt_unavailable(char *reason, size_t cap) { (void)reason; (void)cap; return false; }
 void ble_store_config_init(void) {}
 __attribute__((weak)) void diag_event(int type, int a, int b, int c) { (void)type; (void)a; (void)b; (void)c; }
 

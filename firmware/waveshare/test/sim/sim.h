@@ -42,6 +42,8 @@ typedef struct {
     /* 0.7.3 crash evidence + boot modes (plat_host.c) */
     bc_reset_t reset_kind; plat_crash_t crash; char log_tail[1024]; uint16_t nvs_skip; uint32_t nvs_skip_fw, fw_id; uint32_t crash_total;
     bool phone_only_started; int crash_consumed; uint32_t heap_free, heap_min;
+    /* 0.7.4: storage category measured at boot (0 = BC_STOR_OK), Bluetooth unavailable (reason), crash partition state */
+    int storage_state; bool bt_unavailable; char bt_reason[56]; int crashpart; uint32_t crashpart_bytes; uint32_t fat_writes_refused;
     /* 0.7.2 fake GATT power meter (sim_gatt.c): a real attribute table driven through bc_gatt / bc_pipe / bc_xds */
     struct { bool on, legacy_pick, paired, in_range, streaming, stall, garbage; int variant, state; uint32_t t, retry_at, next_pkt; int backoff_s;
              int watts, rpm; uint16_t angle, val, last_cccd; uint16_t enabled[64];

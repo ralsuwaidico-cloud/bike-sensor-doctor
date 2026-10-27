@@ -19,6 +19,7 @@ typedef bool (*hw_touch_filter_t)(bool pressed, int x, int y, uint32_t now_ms);
 void hw_touch_set_filter(hw_touch_filter_t f);   /* veto presses before LVGL (wake gesture swallow + guard) */
 void hw_touch_diag_log(const char *when);        /* 0.6.1: chip id / fw / DisAutoSleep / INT level / indev mode to the serial log */
 void hw_touch_counters(uint32_t *reads, uint32_t *presses);   /* raw driver reads and reads with a finger down since boot */
+uint32_t hw_touch_read_errors(void);      /* 0.7.4: touch I2C read errors (each read as "released", no abort) */
 bool hw_boot_button_held(void);
 void hw_touch_poll(void);                        /* 0.6.1: read the controller now (event-mode indev reads only on interrupt) */
 void hw_touch_wake_check(void);                  /* 0.6.1: after a screen wake: is the controller answering? else TP_RST pulse */                  /* 0.6.1: BOOT (GPIO0) low at start-up -> SAFE MODE */
@@ -26,6 +27,10 @@ void hw_backlight_set(int percent);      /* 0..100 */
 void hw_selftest_run(void);              /* PSRAM, flash, NVS boot counter, FAT storage R/W, IMU WHO_AM_I, battery */
 void hw_selftest_nvs(void);              /* 0.7.3: PSRAM, flash, NVS + boot counter */
 bool hw_selftest_storage(void);          /* 0.7.3: FAT mount + R/W check, IMU, battery; true = storage usable */
+/* 0.7.4: the measured storage category and the facts behind it (bc_storage.h), set by hw_selftest_storage() */
+#include "bc_storage.h"
+bc_stor_state_t hw_storage_state(void);
+void hw_storage_facts(bc_stor_facts_t *out);
 float hw_battery_volts(void);            /* < 0 when unavailable */
 uint32_t hw_millis(void);
 /* power (0.5.0 / 0.6.0) — NOT hardware-verified until the device tests in pc-kit/TEST-v0.6.0.txt */

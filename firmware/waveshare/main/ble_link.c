@@ -1,4 +1,5 @@
 #include "ble_link.h"
+#include "ble_central.h"
 #include <string.h>
 #include "esp_log.h"
 #include "esp_random.h"   /* esp_random, esp_fill_random */
@@ -445,6 +446,7 @@ void plat_phone_status(plat_phone_status_t *o)
     if (!s_enabled) o->state = PLAT_PHONE_OFF;
     if (o->state == PLAT_PHONE_OFF || o->state == PLAT_PHONE_ADVERTISING) { o->bonds = (uint8_t)count_bonds(); o->bonded = o->bonds > 0; }
     if (s_repair_pending) o->state = PLAT_PHONE_REPAIR;
+    if (plat_bt_unavailable(NULL, 0)) o->state = PLAT_PHONE_UNAVAILABLE;   /* 0.7.4: never "searching" when there is no radio */
 }
 
 /* UI task: only a flag; the host task does the work (no Bluetooth call from the UI task) */

@@ -20,3 +20,4 @@ test/blehost/tsan.log
 test/host/gen_diag_fixture
 test/blehost/prio
 test/host/test_bc_storage
+test/blehost/initfail

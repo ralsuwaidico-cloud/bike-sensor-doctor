@@ -1,5 +1,5 @@
 /*
- * Bike Computer — Waveshare ESP32-S3-Touch-LCD-1.28-B firmware 0.7.3 (stability + diagnostics release).
+ * Bike Computer — Waveshare ESP32-S3-Touch-LCD-1.28-B firmware 0.7.4-dev (0.7.3 + crash fix: Bluetooth never aborts the start).
  * Standalone cycling computer: onboarding, home, ride (4 pages + controls), coach, results, history, settings, sensors,
  * DEMO MODE. App/UI code is shared with the PC test harness (test/sim); hardware lives in hw.c, ble_central.c, plat_esp.c.
  *
@@ -11,6 +11,14 @@
  *    central, power meter, HR strap, speed/cadence sensor;
  *  - after a crash the report (core dump summary + log tail + events) is stored before anything else runs;
  *  - health line every 60 s (now under the LVGL lock: the app state belongs to the UI task) + the event-log health monitor.
+ * 0.7.4 (coord/reports/FW_STORAGE_MEMORY_REPORT.md): the 0.7.3 board aborted in app_main on every start - ESP_ERROR_CHECK(nimble_port_init())
+ * after "BLE_INIT: hci inits failed" (decoded with the matching ELF fa0edc5ac). Now:
+ *  - the Bluetooth stack (controller + NimBLE port, internal-RAM buffers) is its own stage, started right after storage and
+ *    BEFORE touch, profile and screens take internal RAM (0.7.2 order, where it worked); heap figures are logged around it;
+ *  - a failure never aborts: "Bluetooth unavailable" + reason on Connections / Phone / Device Health, everything else runs;
+ *  - a subsystem that crashes twice in a row while starting is disabled on the next boot even in a NORMAL boot (bc_boot), and a
+ *    disabled phone link / Bluetooth stack is really not started (0.7.3 still called ble_central_start() when it was "skipped");
+ *  - storage reports its real category (bc_storage.h) and is never formatted or written when damaged.
  * Never pass %f to lv_*_fmt (LVGL printf has no float support) — test/host `make lint` enforces it.
  */
 #include <stdio.h>
@@ -155,6 +163,12 @@ void app_main(void)
 
     if (s_plan.mode == BC_BOOT_RECOVERY) { recovery_mode(disp); return; }
 
+    /* 0.7.4: Bluetooth stack first (its HCI buffers must come from internal RAM; see the header comment) */
+    bool bt_stack = false;
+    stage(BC_SS_BTSTACK, NULL);
+    if (skipped(BC_SS_BTSTACK)) { diag_esp_bt_disabled("disabled after 2 crashes while starting"); stage_done(BC_SS_BTSTACK, 2, 0); }
+    else { bt_stack = ble_central_stack_init(); stage_done(BC_SS_BTSTACK, bt_stack ? 1 : 3, 0); }
+
     /* 0.6.1 SAFE MODE (touch): BOOT held while RESET is pressed -> the wake gate is forced open and the display settings run on
        defaults for this boot only (nothing saved). Recovery path that does not depend on the touch gate or on saved settings. */
     bool touch_safe = hw_boot_button_held();
@@ -171,14 +185,18 @@ void app_main(void)
     if (touch_safe) { p->brightness = 80; p->scr_timeout_s = 300; p->wake_taps = 1; }   /* this boot only; app_profile_save() is not called here */
     ui_start();
     if (s_plan.mode == BC_BOOT_STAGED) ui_toast("Diagnosing: starting one part at a time");
+    if (!bt_stack) ui_toast("Bluetooth unavailable - see Connections");
+    else if (s_plan.newly_skipped) { char b[56]; snprintf(b, sizeof b, "%s disabled after a crash", bc_subsys_name((bc_subsys_t)s_plan.suspect)); ui_toast(b); }
     lvgl_port_unlock();
     ESP_LOGI(TAG, "STAGE app + screens OK");
 
-    /* phone link (NimBLE host + the BikeComputer Link service). The sensor central starts later, on its own stage. */
+    /* phone link (NimBLE host + the BikeComputer Link service). The sensor central starts later, on its own stage. The host
+       serves both, so a phone link disabled after crashes means no Bluetooth host this boot (sensors included). */
     stage(BC_SS_PHONE, "Starting the phone link");
-    ble_central_start(false); diag_esp_ble_started();
-    if (skipped(BC_SS_PHONE)) { lvgl_port_lock(0); plat_phone_set_enabled(false); lvgl_port_unlock(); stage_done(BC_SS_PHONE, 2, 0); }   /* this boot only */
-    else stage_done(BC_SS_PHONE, 1, 10000);
+    bool bt_up = false;
+    if (!bt_stack) stage_done(BC_SS_PHONE, skipped(BC_SS_BTSTACK) ? 2 : 3, 0);
+    else if (skipped(BC_SS_PHONE)) { diag_esp_bt_disabled("phone link disabled after 2 crashes"); stage_done(BC_SS_PHONE, 2, 0); }   /* this power cycle */
+    else { bt_up = ble_central_start(false); diag_esp_ble_started(); stage_done(BC_SS_PHONE, bt_up ? 1 : 3, 10000); }
 
     stage(BC_SS_WIFI, p->wifi_on ? "Starting Wi-Fi" : NULL);
     net_wifi_init();                      /* background manager; radio stays off unless the rider switched Wi-Fi on */
@@ -186,9 +204,9 @@ void app_main(void)
     if (skipped(BC_SS_WIFI)) stage_done(BC_SS_WIFI, 2, 0);
     else { if (p->wifi_on) plat_wifi_set_enabled(true); stage_done(BC_SS_WIFI, 1, p->wifi_on ? 8000 : 0); }
 
-    stage(BC_SS_CENTRAL, "Starting sensor Bluetooth");
-    bool central = !skipped(BC_SS_CENTRAL);
-    if (central) { ble_central_enable_sensors(true); stage_done(BC_SS_CENTRAL, 1, 3000); } else stage_done(BC_SS_CENTRAL, 2, 0);
+    stage(BC_SS_CENTRAL, bt_up ? "Starting sensor Bluetooth" : NULL);
+    bool central = bt_up && !skipped(BC_SS_CENTRAL);
+    if (central) { ble_central_enable_sensors(true); stage_done(BC_SS_CENTRAL, 1, 3000); } else stage_done(BC_SS_CENTRAL, bt_up ? 2 : 3, 0);
 
     static const struct { bc_subsys_t ss; plat_sens_kind_t k; const char *msg; uint32_t dwell; } SENS[3] = {
         { BC_SS_POWER, PLAT_SENS_POWER, "Connecting the power meter", 25000 },
@@ -197,7 +215,7 @@ void app_main(void)
     for (int i = 0; i < 3; i++) {
         const bc_sensor_pair_t *sp = SENS[i].k == PLAT_SENS_POWER ? &p->power : SENS[i].k == PLAT_SENS_HR ? &p->hr : &p->csc;
         if (!sp->paired) continue;
-        stage(SENS[i].ss, SENS[i].msg);
+        stage(SENS[i].ss, central ? SENS[i].msg : NULL);
         bool off = !central || skipped(SENS[i].ss);
         if (off) ble_central_set_disabled(SENS[i].k, true);
         ble_central_set_paired(SENS[i].k, sp->mac, sp->addr_type, sp->name);
@@ -216,7 +234,7 @@ void app_main(void)
     if (was_staged) {
         char note[160]; int n = snprintf(note, sizeof note, "staged boot completed without a crash");
         if (s_plan.skip && n > 0 && (size_t)n < sizeof note) {
-            snprintf(note + n, sizeof note - (size_t)n, "; disabled after a crash:%s%s%s%s%s%s", s_plan.skip & BC_SS_BIT(BC_SS_PHONE) ? " phone link" : "",
+            snprintf(note + n, sizeof note - (size_t)n, "; disabled after a crash:%s%s%s%s%s%s%s", s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK) ? " Bluetooth-stack" : "", s_plan.skip & BC_SS_BIT(BC_SS_PHONE) ? " phone link" : "",
                      s_plan.skip & BC_SS_BIT(BC_SS_WIFI) ? " Wi-Fi" : "", s_plan.skip & BC_SS_BIT(BC_SS_CENTRAL) ? " sensor-Bluetooth" : "",
                      s_plan.skip & BC_SS_BIT(BC_SS_POWER) ? " power-meter" : "", s_plan.skip & BC_SS_BIT(BC_SS_HR) ? " HR-strap" : "", s_plan.skip & BC_SS_BIT(BC_SS_CSC) ? " CSC" : "");
         }

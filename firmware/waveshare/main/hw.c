@@ -11,6 +11,11 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_vfs_fat.h"
+#include "esp_partition.h"
+#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include "bc_storage.h"
 #include "wear_levelling.h"
 #include "driver/spi_master.h"
 #include "driver/ledc.h"
@@ -113,12 +118,14 @@ static void i2c_init(void)
     if (s_i2c) return;
     i2c_master_bus_config_t b = { .i2c_port = I2C_NUM_0, .sda_io_num = BOARD_I2C_SDA, .scl_io_num = BOARD_I2C_SCL,
                                   .clk_source = I2C_CLK_SRC_DEFAULT, .glitch_ignore_cnt = 7, .flags.enable_internal_pullup = true };
-    ESP_ERROR_CHECK(i2c_new_master_bus(&b, &s_i2c));
+    esp_err_t e = i2c_new_master_bus(&b, &s_i2c);   /* 0.7.4: no abort - touch and IMU report "not found" instead */
+    if (e != ESP_OK) { s_i2c = NULL; ESP_LOGE(TAG, "I2C bus init failed: %s (touch and IMU unavailable)", esp_err_to_name(e)); }
 }
 
 static esp_err_t touch_create(bool reset)
 {
     i2c_init();
+    if (!s_i2c) return ESP_ERR_INVALID_STATE;
     esp_lcd_panel_io_handle_t tio = NULL;
     esp_lcd_panel_io_i2c_config_t tcfg = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
     tcfg.scl_speed_hz = 400000;
@@ -133,12 +140,27 @@ static esp_err_t touch_create(bool reset)
 /* rev 3: every touch poll goes through the application's gate before LVGL sees it (screen-off wake gesture swallowed,
    guard after the wake). The port's own read callback does the I2C work; we only veto the press state. */
 static lv_indev_read_cb_t s_port_read;
+static uint32_t s_touch_errs;                 /* 0.7.4: I2C read errors of the touch controller (no abort) */
+uint32_t hw_touch_read_errors(void) { return s_touch_errs; }
 static hw_touch_filter_t s_filter;
 static uint32_t s_reads, s_presses;
 void hw_touch_set_filter(hw_touch_filter_t f) { s_filter = f; }
 static void gated_read(lv_indev_t *indev, lv_indev_data_t *data)
 {
-    if (s_port_read) s_port_read(indev, data);
+    /* 0.7.4: our own read instead of the esp_lvgl_port callback, which wraps the I2C read in ESP_ERROR_CHECK(): any CST816S
+       I2C error (controller asleep, bus glitch) aborted the UI task. An error now reads as "not pressed" and is counted. */
+    (void)s_port_read;
+    uint8_t cnt = 0; esp_lcd_touch_point_data_t pt[CONFIG_ESP_LCD_TOUCH_MAX_POINTS];
+    memset(pt, 0, sizeof pt);
+    esp_err_t e = s_tp ? esp_lcd_touch_read_data(s_tp) : ESP_ERR_INVALID_STATE;
+    if (e == ESP_OK) e = esp_lcd_touch_get_data(s_tp, pt, &cnt, CONFIG_ESP_LCD_TOUCH_MAX_POINTS);
+    if (e != ESP_OK) {
+        s_touch_errs++;
+        if (s_touch_errs == 1 || s_touch_errs % 100 == 0) ESP_LOGW(TAG, "touch read error %s (%lu so far) - treated as released", esp_err_to_name(e), (unsigned long)s_touch_errs);
+        cnt = 0;
+    }
+    if (cnt > 0) { data->point.x = pt[0].x; data->point.y = pt[0].y; data->state = LV_INDEV_STATE_PRESSED; }
+    else data->state = LV_INDEV_STATE_RELEASED;
     bool pressed = data->state == LV_INDEV_STATE_PRESSED;
     if (s_filter && !s_filter(pressed, data->point.x, data->point.y, hw_millis())) data->state = LV_INDEV_STATE_RELEASED;
     s_reads++; if (pressed) s_presses++;
@@ -188,6 +210,7 @@ bool hw_touch_init(lv_display_t *disp)
 static void imu_check(void)
 {
     i2c_init();
+    if (!s_i2c) { SET(imu, HW_FAIL, "I2C bus unavailable"); return; }
     const uint8_t addrs[2] = { BOARD_IMU_ADDR_A, BOARD_IMU_ADDR_B };
     for (int i = 0; i < 2; i++) {
         i2c_master_dev_handle_t d;
@@ -346,20 +369,72 @@ void hw_selftest_nvs(void)
     } else SET(nvs, HW_FAIL, "%s", esp_err_to_name(e));
 }
 
+/* 0.7.4 storage stage. Measured on the owner's board (27 Oct): the FAT mounts, 5096 KB of 7964 KB are free, but all 512
+   root-directory entries are erased (0xFF), so no file can be created - 0.7.3 reported that as "storage" / "storage full".
+   Now: (1) never format automatically (format_if_mount_failed = false: a mount failure keeps every byte for recovery);
+   (2) read the root directory through the wear-levelling layer, READ-ONLY, and classify it (bc_storage.h); (3) only when the
+   directory is usable, probe a write + read-back in diag/probe.txt (a file inside diag/, so the boot probe no longer rewrites a
+   root-directory sector on every start as /data/selftest.txt did). The category is shown on the recovery screen, in Device
+   Health, in reports and (BLE_CONTRACT.md) to Cyclift. */
+static bc_stor_facts_t s_sf;
+static bc_stor_state_t s_ss = BC_STOR_NOT_CHECKED;
+static wl_handle_t s_wl = WL_INVALID_HANDLE;
+
+static void storage_root_scan(void)
+{
+    size_t ss = wl_sector_size(s_wl);
+    if (ss < 512 || ss > 4096) return;
+    uint8_t *boot = heap_caps_malloc(ss, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!boot) boot = malloc(ss);
+    if (!boot) return;
+    uint32_t off = 0, len = 0, bps = 0;
+    if (wl_read(s_wl, 0, boot, ss) == ESP_OK && bc_fat_root_location(boot, ss, &off, &len, &bps) && len <= 64 * 1024 && off + len <= wl_size(s_wl)) {
+        uint8_t *root = heap_caps_malloc(len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (root && wl_read(s_wl, off, root, len) == ESP_OK) { bc_fat_root_scan(root, len, &s_sf.root); s_sf.root_scanned = true; }
+        free(root);
+    }
+    free(boot);
+}
+
+static void storage_probe(void)
+{
+    s_sf.probe_attempted = true; s_sf.probe_errno = 0;
+    if (mkdir("/data/diag", 0775) != 0 && errno != EEXIST) { s_sf.probe_errno = errno; return; }
+    FILE *f = fopen("/data/diag/probe.txt", "w");
+    if (!f) { s_sf.probe_errno = errno; return; }
+    int w = fprintf(f, "boot %u\n", (unsigned)g_selftest.boot_count);
+    if (fflush(f) != 0 || fsync(fileno(f)) != 0) w = -1;
+    if (w <= 0 && !s_sf.probe_errno) s_sf.probe_errno = errno ? errno : EIO;
+    fclose(f);
+    if (w <= 0) return;
+    f = fopen("/data/diag/probe.txt", "r"); unsigned b = 0;
+    if (!f) { s_sf.probe_errno = errno; return; }
+    s_sf.probe_ok = fscanf(f, "boot %u", &b) == 1 && b == g_selftest.boot_count;
+    if (!s_sf.probe_ok) s_sf.probe_errno = EIO;
+    fclose(f);
+}
+
 bool hw_selftest_storage(void)
 {
     esp_err_t e;
-    /* the 'storage' FAT partition is new space created by this firmware's partition table (the factory app is backed up first) */
-    static wl_handle_t wl = WL_INVALID_HANDLE;
-    esp_vfs_fat_mount_config_t m = { .format_if_mount_failed = true, .max_files = 4, .allocation_unit_size = 4096 };
-    e = esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &m, &wl);
-    if (e == ESP_OK) {
-        FILE *f = fopen("/data/selftest.txt", "w"); bool ok = false;
-        if (f) { fprintf(f, "boot %u\n", (unsigned)g_selftest.boot_count); fclose(f);
-            f = fopen("/data/selftest.txt", "r"); unsigned b = 0; if (f) { ok = fscanf(f, "boot %u", &b) == 1 && b == g_selftest.boot_count; fclose(f); } }
-        uint64_t tot = 0, fre = 0; esp_vfs_fat_info("/data", &tot, &fre);
-        SET(storage, ok ? HW_PASS : HW_FAIL, "FAT %u KB free / %u KB", (unsigned)(fre / 1024), (unsigned)(tot / 1024));
-    } else SET(storage, HW_FAIL, "mount: %s", esp_err_to_name(e));
+    memset(&s_sf, 0, sizeof s_sf);
+    s_sf.partition_found = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "storage") != NULL;
+    esp_vfs_fat_mount_config_t m = { .format_if_mount_failed = false, .max_files = 4, .allocation_unit_size = 4096 };
+    e = s_sf.partition_found ? esp_vfs_fat_spiflash_mount_rw_wl("/data", "storage", &m, &s_wl) : ESP_ERR_NOT_FOUND;
+    s_sf.mount_err = (int)e; s_sf.mounted = e == ESP_OK;
+    if (s_sf.mounted) {
+        esp_vfs_fat_info("/data", &s_sf.total_bytes, &s_sf.free_bytes);
+        s_sf.cluster_bytes = 4096;
+        storage_root_scan();
+        bool corrupt_root = s_sf.root_scanned && s_sf.root.free_slots == 0 && (s_sf.root.erased + s_sf.root.garbage) * 2u >= s_sf.root.entries;
+        if (!corrupt_root) storage_probe();              /* never attempt a write into a damaged directory */
+    }
+    s_ss = bc_stor_classify(&s_sf);
+    char d[200]; bc_stor_describe(&s_sf, s_ss, d, sizeof d);
+    if (s_ss == BC_STOR_OK) SET(storage, HW_PASS, "FAT %u KB free / %u KB", (unsigned)(s_sf.free_bytes / 1024), (unsigned)(s_sf.total_bytes / 1024));
+    else SET(storage, HW_FAIL, "%s, %u KB free", bc_stor_name(s_ss), (unsigned)(s_sf.free_bytes / 1024));
+    if (s_ss != BC_STOR_OK) ESP_LOGE(TAG, "storage: %s", d);
+    else ESP_LOGI(TAG, "storage: %s", d);
 
     imu_check();
     float v = hw_battery_volts();
@@ -370,3 +445,5 @@ bool hw_selftest_storage(void)
 }
 
 void hw_selftest_run(void) { hw_selftest_nvs(); hw_selftest_storage(); }
+bc_stor_state_t hw_storage_state(void) { return s_ss; }
+void hw_storage_facts(bc_stor_facts_t *o) { *o = s_sf; }

@@ -167,22 +167,26 @@ static size_t health_text(char *b, size_t cap, bool markup)
     static const char *DISC[] = { "-", "phone ended", "board ended", "timeout", "KEYS MISSING", "AUTH FAILED", "not established", "other" };
     char link_line[96];
     snprintf(link_line, sizeof link_line, "%s, %u phone%s, id gen %u\n  last end %s (0x%x), enc fails %u, sync %s",
-             !p->phone_on ? "off" : ph.state == PLAT_PHONE_READY ? "connected" : ph.state == PLAT_PHONE_REPAIR ? "REPAIR NEEDED" : ph.state == PLAT_PHONE_ADVERTISING ? "searching" : "connecting",
+             ph.state == PLAT_PHONE_UNAVAILABLE ? "NO BLUETOOTH" : !p->phone_on ? "off" : ph.state == PLAT_PHONE_READY ? "connected" : ph.state == PLAT_PHONE_REPAIR ? "REPAIR NEEDED" : ph.state == PLAT_PHONE_ADVERTISING ? "searching" : "connecting",
              ph.bonds, ph.bonds == 1 ? "" : "s", ph.id_gen, DISC[ph.last_disc > 7 ? 7 : ph.last_disc], ph.last_disc_code, ph.enc_fails,
              (const char *[]){"device only", "synced", "pending", "FAILED"}[app_psvc_sync_state() & 3]);
+    /* 0.7.4: crash-dump partition state (Crash partition missing / empty / dump stored) */
+    char crash_line[48]; uint32_t cdb = 0; bc_crashpart_t cp = plat_crash_partition(&cdb);
+    if (cp == BC_CRASHPART_DUMP) snprintf(crash_line, sizeof crash_line, "%s (%lu B)", bc_crashpart_name(cp), (unsigned long)cdb);
+    else snprintf(crash_line, sizeof crash_line, "%s", bc_crashpart_name(cp));
     /* 0.7.2: the sensor lines first (automatic diagnosis, refreshed every 250 ms): "POWER  live 142 W" */
     char sens[320]; ui_conn_health_lines(sens, sizeof sens, markup);
     int n = snprintf(b, cap,
         "%s%sFirmware%s %s\n%sBuild%s %s\n%sUptime%s %s\n%sLast restart%s %s\n%sBoots%s %lu\n%sCrashes%s %lu total, %lu in a row\n"
         "%sSafe mode%s %lu times\n%sStorage errors%s %lu\n%sSettings save errors%s %lu\n"
-        "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage free%s %ldK of %ldK\n"
+        "%sRAM free%s %ldK (min %ldK)\n%sPSRAM free%s %ldK of %ldK\n%sFlash%s %ldK, app slot %ldK\n%sStorage%s %s, %ldK free of %ldK\n%sCrash record%s %s\n"
         "%sBattery%s %d mV, ~%d%% (estimate)%s\n%sPower source%s %s\n%sCharging%s not detectable (no STAT/VBUS line);\n  alerts unavailable, HW-1 open\n%sDrain%s idle %s, ride %s, ride dark %s mV/h\n%sHours left%s %s\n%sScreen%s %lu offs, %lu wakes, %lu auto\n%sTouch gate%s %s, %lu reports\n%sPower state%s %s, %lu standbys\n%sBluetooth%s %s%s, %lu seen\n%sPhone link%s %s\n%sPower meter%s %s %s\n%sHR strap%s %s %s\n%sSpeed/cad.%s %s %s\n%sWi-Fi%s %s\n"
         "%sMeter gaps / bad%s %lu / %lu\n%sDisplay%s %s\n%sTouch%s %s\n%sIMU%s %s\n%sDemo mode%s %s",
         sens, K, E, h.fw_version, K, E, h.build, K, E, up, K, E, h.reset_reason, K, E, (unsigned long)h.boot_count,
         K, E, (unsigned long)h.crash_total, (unsigned long)h.crash_consecutive, K, E, (unsigned long)h.safe_mode_entries,
         K, E, (unsigned long)h.storage_errors, K, E, (unsigned long)h.profile_save_errors,
         K, E, h.heap_free_k, h.heap_min_k, K, E, h.psram_free_k, h.psram_total_k, K, E, h.flash_total_k, h.app_slot_k,
-        K, E, h.storage_free_k, h.storage_total_k,
+        K, E, bc_stor_name(plat_storage_state()), h.storage_free_k, h.storage_total_k, K, E, crash_line,
         K, E, h.battery_mv, h.battery_pct, "", K, E, P->usb_likely ? "USB power likely (inferred)" : "battery", K, E,
         K, E, dr[0], dr[1], dr[2], K, E, hl, K, E, (unsigned long)P->screen_offs, (unsigned long)P->wakes, (unsigned long)P->auto_offs,
         K, E, app_power_gate_text(), (unsigned long)P->touch_reports,
@@ -232,7 +236,11 @@ static void export_cb(lv_event_t *e)
     plat_export_report(rep);
     /* 0.7.3: also a manual diagnostic report (kind 3) for Cyclift (Link 1.2.3); announced to a connected phone at once */
     uint32_t id = app_diag_store_report(BC_DIAG_KIND_MANUAL, "Device Health: SEND LOG");
-    lv_label_set_text(h_note, id ? "Sent to the PC log, saved,\nand ready for Cyclift." : "Sent to the PC log\nand saved on the device.");
+    /* 0.7.4: 0.7.3 said "saved on the device" even when nothing could be saved */
+    static char note[64]; app_diag_status_t ds; app_diag_status(&ds);
+    if (id) snprintf(note, sizeof note, "Sent to the PC log, saved,\nand ready for Cyclift.");
+    else snprintf(note, sizeof note, "Sent to the PC log.\nNot saved: %s", bc_stor_name((bc_stor_state_t)ds.last_fail));
+    lv_label_set_text(h_note, note);
 }
 
 static void back_diag(lv_event_t *e) { (void)e; ui_diag_menu_show(); }
@@ -266,7 +274,8 @@ static void m_save_report(lv_event_t *e)
     (void)e;
     uint32_t id = app_diag_store_report(BC_DIAG_KIND_MANUAL, "saved by the rider (Diagnostics > SAVE REPORT)");
     char t[48];
-    if (id) snprintf(t, sizeof t, "Report %lu saved", (unsigned long)id); else snprintf(t, sizeof t, "Not saved: storage full");
+    app_diag_status_t st; app_diag_status(&st);   /* 0.7.4: the real reason, never a guessed "storage full" */
+    if (id) snprintf(t, sizeof t, "Report %lu saved", (unsigned long)id); else snprintf(t, sizeof t, "Not saved: %s", bc_stor_name((bc_stor_state_t)st.last_fail));
     ui_toast(t);
 }
 

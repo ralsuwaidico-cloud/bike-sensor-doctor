@@ -20,6 +20,8 @@
 /* what ble_link.c needs from the app / platform */
 void app_psvc_on_disconnect(void) {}
 bool plat_device_id(uint8_t out[6]) { memset(out, 0xAB, 6); return true; }
+/* 0.7.4: device side lives in diag_esp.c; here Bluetooth is unavailable only when the stack failed to start */
+__attribute__((weak)) bool plat_bt_unavailable(char *reason, size_t cap) { (void)reason; (void)cap; return false; }
 void ble_store_config_init(void) {}
 int fake_mbufs_live(void);
 /* 0.7.3 hooks (weak so the 0.7.2 tree links too) */

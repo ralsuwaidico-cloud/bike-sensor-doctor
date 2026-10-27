@@ -1,5 +1,5 @@
 /* bc_storage (0.7.4): failure categories from measured facts. The geometry below is the one measured on the owner's board
-   (pre-0.7.3 backup, docs/FW_STORAGE_MEMORY_REPORT.md): FAT12, 4096-byte sectors, 1 reserved, 2 FATs of 1 sector, 512 root
+   (pre-0.7.3 backup, coord/reports/FW_STORAGE_MEMORY_REPORT.md): FAT12, 4096-byte sectors, 1 reserved, 2 FATs of 1 sector, 512 root
    entries (4 sectors), 1998 sectors, 1991 clusters. No personal data: synthetic directory contents only. */
 #include "bc_storage.h"
 #include <stdio.h>
