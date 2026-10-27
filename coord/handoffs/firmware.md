@@ -144,3 +144,17 @@ coach-mirror core + fixture), 6a2f57c (board logic + UI + sim 27), then the stre
 * Test rider: "Rider A" / "RiderA" / "Rae" in tests; SCAN_RESULT / PROFILE_SET vectors keep their length — the Swift copies
   of those two vectors (and ios/BikeComputerTests files that still use the real first name) are the iOS agent's to change.
   Old docs (docs/FIRMWARE_0.6.x.md, pc-kit TEST-v0.6/0.7.0/0.7.1, POWER docs) still mention the owner's first name.
+
+## Round 5 — 0.7.4-rc3 (QA rc2 findings QF-21..QF-29, on top of Link 1.3)
+* Commit 040e6cb (all nine fixes; they share the platform files), then the kit commit. Not run on hardware.
+* QF-21 honest texts without Bluetooth; QF-22 RAM slot freed after phone confirmation (1.2 SYNC_REQ after_ride_id /
+  1.3 RIDEQ_ACK); QF-23 RESTART / DEEP SLEEP confirmation page + auto-sleep block; QF-24 id floor from history + RAM,
+  samples never overwritten; QF-25 RECUI / RECMIN markers -> minimal text -> halt; QF-26 brownouts apart (power toast),
+  RTC run streak, NVS crash-run counter before storage, limiter ladder; QF-27 PSRAM history list + report buffer;
+  QF-28 read-only FAT consistency check before any clean-up; QF-29 short interrupted rides kept.
+* DIRAM free 44,673 B (rc2 34,201; rc1 34,645; 0.7.2 37,901).
+* BLE_CONTRACT.md v1.2 (behaviour only, no wire change). Residual documented there: with BOTH NVS and the FAT unusable
+  ride ids can repeat across power cycles (no persistent memory) - Cyclift should include start_epoch_s in its dedup.
+  Residual QF-26: RTC lost at every crash AND NVS failing - no counter survives (S4b with both stores gone).
+* Kit 0.7.4-rc3: /home/claude/coord/deliver/fw-v0.7.4/ (rc2 files in /home/claude/coord/deliver/fw-v0.7.4-rc2-superseded/).
+  App SHA-256 10c9a7a79085c47a304a52789223368b61d8479c6c13ca71626396941585f306 (1,875,840 B).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the 0.7.4-rc2 PC-kit scripts with the checksums of pc-kit/fw-v0.7.4-rc2/SHA256SUMS.txt (run after copying a new build).
+"""Generate the 0.7.4-rc3 PC-kit scripts with the checksums of pc-kit/fw-v0.7.4-rc3/SHA256SUMS.txt (run after copying a new build).
 INSTALL-v0.7.4.ps1 is derived from the proven INSTALL-v0.7.3.ps1 (same backup / verify / write / first-boot logic)."""
 import os, re, sys
 
@@ -11,11 +11,12 @@ def sums(d):
         out[f] = h
     return out
 
-VER = '0.7.4-rc2'
-FW = 'fw-v0.7.4-rc2'          # folder of the binaries in the kit
-PFX = 'BC074RC2'              # file prefix of the binaries
-NAME = 'v0.7.4-rc2'           # INSTALL-<NAME>.ps1 / .bat, first-boot-<NAME>-*.txt ...
+VER = '0.7.4-rc3'
+FW = 'fw-v0.7.4-rc3'          # folder of the binaries in the kit
+PFX = 'BC074RC3'              # file prefix of the binaries
+NAME = 'v0.7.4-rc3'           # INSTALL-<NAME>.ps1 / .bat, first-boot-<NAME>-*.txt ...
 APP_RC1 = '30f8f37c7bf67c3d30c2534a5666065fc15321ddbdf535fb7eaa5b509d6ba02e'   # 0.7.4-rc1: delivered, never installed
+APP_RC2 = 'a495bfde97986f2ba207d50ab92ea8bc1fa75fa45935a5513f23f73ed55ee9d9'   # 0.7.4-rc2: physical-test candidate before rc3
 S4, S3, S2 = sums(FW), sums('fw-v0.7.3'), sums('fw-v0.7.2')
 APP4, APP3, APP2 = S4[PFX + '-app.bin'], S3['BC073-app.bin'], S2['BC072-app.bin']
 
@@ -48,7 +49,7 @@ rep = [
     ("'fw-v0.7.3\\BC073-otadata.bin';  sha = '7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f'", f"'{FW}\\{PFX}-otadata.bin';  sha = '{S4[PFX + '-otadata.bin']}'"),
     ("'fw-v0.7.3\\BC073-partitions.bin'; sha = 'f08892b0911b15439bc0552bf1c6190067c3fe62378553cc55156b783caa7d37'", f"'{FW}\\{PFX}-partitions.bin'; sha = '{S4[PFX + '-partitions.bin']}'"),
     ("'fw-v0.7.3\\BC073-bootloader.bin'; sha = '6f379e6765dd7eb087415739b4e02a7dae4b44566074e91e12425054291562b9'", f"'{FW}\\{PFX}-bootloader.bin'; sha = '{S4[PFX + '-bootloader.bin']}'"),
-    ("$known = [ordered]@{\n", f"$known = [ordered]@{{\n  '{APP4}' = '{VER}';\n  '{APP_RC1}' = '0.7.4-rc1 (never installed)';\n"),
+    ("$known = [ordered]@{\n", f"$known = [ordered]@{{\n  '{APP4}' = '{VER}';\n  '{APP_RC2}' = '0.7.4-rc2';\n  '{APP_RC1}' = '0.7.4-rc1 (never installed)';\n"),
     # QA QF-13: no firmware run between the backup and the write, and the first start of the new firmware recorded
     ('function Stop-With($msg) { Write-Host ""; Write-Host "  STOPPED: $msg" -ForegroundColor Red; Write-Host "  Nothing was changed on the board."; Read-Host "  Press Enter to close"; exit 1 }',
      '$script:inDownload = $false\nfunction Show-Replug { if ($script:inDownload) { Write-Host "  The board waits in download mode (dark screen): unplug the USB cable and plug it in again to start it." -ForegroundColor Yellow } }\n'
