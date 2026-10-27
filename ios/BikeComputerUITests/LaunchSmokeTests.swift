@@ -261,10 +261,15 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(log.waitForExistence(timeout: 10))
         // The toolbar menu can still be animating at accessibility text sizes: open it again once if the sheet did not appear.
         var opened = false
-        for _ in 0..<2 where !opened {
-            log.tap()
+        // (run 72: "Quick log" existed but had no valid activation point yet — tap only once it is hittable)
+        for _ in 0..<3 where !opened {
+            if !app.buttons["Quick log"].firstMatch.exists { log.tap() }
             let quick = app.buttons["Quick log"].firstMatch
-            if quick.waitForExistence(timeout: 5) { quick.tap() }
+            if quick.waitForExistence(timeout: 5) {
+                let until = Date().addingTimeInterval(4)
+                while !quick.isHittable && Date() < until { usleep(250_000) }
+                if quick.isHittable { quick.tap() }
+            }
             opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
         }
         XCTAssertTrue(opened, "quick strength log must open")

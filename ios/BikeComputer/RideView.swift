@@ -109,8 +109,10 @@ struct RideTabView: View {
                 if recorder.isActive { Text(coach.phaseLabel).font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(coach.phase == .MAIN ? D7.green : D7.violet) }
                 Spacer()
                 Button { showSettings = true } label: { Image(systemName: "gearshape").font(.system(size: 15, weight: .semibold)).foregroundStyle(D7.cyan) }
+                    .buttonStyle(.minTap)
                     .accessibilityLabel(RideLabels.settings).accessibilityIdentifier("rideSettings")
                 Button { showDetails = true } label: { Text(RideLabels.details).font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(D7.cyan) }
+                    .buttonStyle(.minTap)
                     .accessibilityLabel("Ride details: map, sensors, tiles").accessibilityIdentifier("rideDetails")
             }
             HStack(spacing: 4) {
@@ -142,6 +144,7 @@ struct RideTabView: View {
         } primaryAction: {
             RideLayoutSwitch.select(layout.next, store: store)
         }
+        .menuStyle(.button).buttonStyle(.minTap)        // 44 pt hit area (the layout report measured 116 × 15 pt)
         .accessibilityLabel("\(RideLabels.layoutMenu): \(layout.title)")
         .accessibilityHint("Tap for the next layout, touch and hold to choose one")
         .accessibilityIdentifier("rideLayoutMenu")
