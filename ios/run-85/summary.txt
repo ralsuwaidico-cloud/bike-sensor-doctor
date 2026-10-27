@@ -1,0 +1,16 @@
+BikeComputer iOS CI — build 85 — 2026-10-27 16:48 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+RESULT tests: FAILED (exit 65)
+RESULT launch smoke (Release): FAILED (exit 65)
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max=iPhone 17 Pro Max (runtime iOS-26-5)
+  layout small (L,AX3): FAILED (exit 65)
+  layout standard (L,XXXL): FAILED (exit 65)
+  layout promax (L): FAILED (exit 65)
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 25697   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 26308   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 26684   screenshot ax3 ok large
+RESULT layout audit: FAILED (6 screenshots)
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: FAILED
+commit 1856310bfa45fdb0f36363e5c861224136d483f5  branch ios/coach  job failure
