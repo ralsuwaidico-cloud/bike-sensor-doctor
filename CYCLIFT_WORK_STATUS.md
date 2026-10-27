@@ -1,55 +1,31 @@
-# Cyclift / BikeComputer — work status (checkpoint)
+# Cyclift / BikeComputer — work status (project dashboard)
 
-Updated: 27 Oct 2026 09:35 (Dubai). Source of truth for resuming work — update at every stage.
+Updated: 28 Oct 2026 03:10 (Dubai). Maintained by the project lead. Team protocol: coord/TEAM.md; task board: coord/TASKBOARD.md.
 
 ## Standing rules
-- No App Store submission/release, no TestFlight upload, no firmware flashing, no board reboots without the owner's approval.
-- Never claim simulator/CI results as hardware verification. Preserve all user data (rides, profile, pairings, NVS).
-- Repo is public: no names, emails, team IDs or keys in commits/logs/screenshots.
-- Report after each stage; no long silent runs; cancel and re-run stuck CI (normal run ≈ 25–35 min).
+- No App Store submission/release, no TestFlight upload, no firmware flashing, no board reset/erase/repair without the owner's approval.
+- Simulator/CI/host results are never hardware verification. Preserve all user data and every flash backup.
+- Repo is public: no names, emails, team IDs, keys or device addresses in commits/logs (tests use 02:00:00:c1:f7:01, "Rider A").
 
-## Branches
-| Work | Branch / worktree | Head | State |
-|---|---|---|---|
-| Integration line | `ios/dev` — /home/claude/bike-sensor-doctor | cf43ac4 (+ this file) | firmware 0.7.3 final + iOS diag receiver (MTU-exact) merged |
-| Firmware 0.7.3 final | `fix/073` — /home/claude/ws-073 | 1cf8cf0 | DONE, delivered to PC, not flashed |
-| iOS diag receiver | `fix/iosdiag` → `ios/diag-receiver` — /home/claude/ws-iosdiag | 7ab3c92 | DONE, CI run 69 green (275 tests) |
-| Cyclift quality + coach fixes | `fix/quality` → `ios/quality` — /home/claude/ws-quality | 32a0676 | code complete; final CI run 73 (attempt 2) running |
-| Coach audit baseline | detached — /home/claude/ws-audit | 2b2c104 | frozen, read-only |
-| Coach remediation | `fix/coach` → `ios/coach` — /home/claude/ws-coach | from 32a0676 | stages 1–3 done (a726af5, 7127389, a84560c); CI run 74 running; harness re-run running |
+## Release candidates
+| Item | Commit | Tests | Independent QA | Waiting for |
+|---|---|---|---|---|
+| Cyclift RC2 (UI/quality release + diag receiver + corrected coach) | ios/dev ed0ceeb (app code = ios/coach 26b926e) | CI run 89 rerun (attempt 2) + ios/dev run; Linux engine 201/0; 48-athlete harness s16 44/48 + 21/22 (documented conflicts only) | Pass 5: GO once CI is fully green | CI green → owner approval for TestFlight upload |
+| Firmware 0.7.4-rc5 | fw/phonefirst 0d88933 (+32a35e7 housekeeping) | host suites 0 failed; simulator 339 screens/701 checks normal+ASan; blehost; idf build | RC5 review: GO for install + physical test; protocol v1.4 GO | Owner approval to install (kit on the PC, verified) |
+| Cyclift Link 1.3 side (coach mirror, offline rides, storage screen) | ios/phonefirst-dev 37cdca9 | CI run 90 green (362 tests); 34-vector fixture cross-check | Protocol GO (rc5 review) | Not in RC2; next RC after the physical firmware test |
 
-## Workstreams
-1. **Firmware 0.7.3** — DONE. App SHA-256 181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5 (1,830,352 B).
-   Delivered 27 Oct 01:5x to C:\Users\PC\Documents\BikeComputer, 18 files re-read from the PC and hash-verified:
-   INSTALL-v0.7.3.bat/.ps1, README-v0.7.3.txt, TEST-v0.7.3.txt, DIAG-TEST-v0.7.3.txt, RESTORE-CHOSEN-BACKUP.bat/.ps1,
-   ROLLBACK-TO-v071.bat/.ps1, CAPTURE-CRASH.bat/.ps1, fw-v0.7.3\ (app, bootloader, otadata, partitions, SHA256SUMS),
-   fw-v0.7.1\ (BC071-app.bin, BC071-otadata.bin). Partition change: 64 KB coredump carved from the never-used ota_1; data partitions unchanged.
-   Crash root cause of 0.7.2: NOT confirmed (no crash log). 4 confirmed defects fixed (D1–D4).
-2. **Diagnostic integration (Link 1.2.3)** — DONE (PC/CI only). Chunk data = min(phone max_len, 155, ATT_MTU−3−25).
-   Firmware cross-test fixture (7,301-byte real report, MTU 23/100/185/247/517) decoded by iOS. LIVE priority gating measured.
-   Safe report: board Settings › Diagnostics › HOLD: SAVE REPORT. Physical test: DIAG-TEST-v0.7.3.txt.
-3. **Coach audit (commit 2b2c104)** — DONE. Files in /home/claude/coach-audit (sent to owner as zip):
-   CYCLIFT_COACH_SCIENTIFIC_AUDIT.md, _RULES.csv (40 rules), _TEST_CASES.csv (34 athletes 27 pass / 7 fail; 20 rule checks 11/9),
-   _GAPS.md, EXECUTIVE_SUMMARY.md, harness/ (Linux Swift 5.10.1 at /opt/swiftx). Verdict: not ready for public release.
-4. **Cyclift quality release** — code complete on fix/quality (21 commits since b485265). Includes audit fixes G-01..G-09, G-11, G-21
-   (harness 38/54 → 51/54 on the new code). Run 72: 317 unit tests 0 failed, 74 layout screenshots ok, archive/sign ok;
-   1 UI smoke flake ("Quick log" not hittable yet) — fixed in 32a0676; run 73 stuck 1 h 24 min on GitHub → cancelled, re-run.
+## Firmware investigation (owner brief 27 Oct 12:15)
+- Crash: ESP_ERROR_CHECK(nimble_port_init) abort in app_main (confirmed from the board's own log + exact ELF rebuild).
+  Cause of the init failure: internal-RAM shortage at Bluetooth start — STRONGLY INDICATED, NOT CONFIRMED. Only the first rc boot log
+  (per-step return codes, heap, failed allocation) can confirm it; the read-only capture cannot.
+- Logs not saved: FAT root directory erased (all 512 entries), not a full flash; dated 24–25 Oct, before 0.7.3; layout unchanged since 0.4.0.
+- Reports: coord/reports/FW_STORAGE_MEMORY_REPORT.md; QA: /home/claude/qa-fw/FIRMWARE_REVIEW_RC{1,2,3,5}.md.
+- Kit on PC (C:\Users\PC\Documents\BikeComputer): INSTALL-v0.7.4-rc5.bat, README/TEST-v0.7.4-rc5.txt, fw-v0.7.4-rc5\, ROLLBACK-TO-v072/v073,
+  RESTORE-CHOSEN-BACKUP (old version kept as RESTORE-CHOSEN-BACKUP-v073-old.ps1), KIT-SHA256SUMS-v0.7.4-rc5.txt. All 17 files re-read and byte-verified.
 
-## Coach remediation (owner brief 27 Oct 08:27 — coach NOT approved for release)
-- Stage 1 M-01 health check (PAR-Q+-style), M-02 return after a break — done.
-- Stage 2 M-06 age/recovery, M-03 rest, M-04 starting loads, G-17 lift spacing — done.
-- Stage 3 M-05 cycling intensity + blocks, G-10, G-12, G-13, G-14, G-15, G-18, G-19, G-20 — done.
-- Linux engine tests (coach-harness/test.sh): 121 run, 0 failed. Harness: base 32a0676 50/54; after stage 1 52/54.
-- Stage 4 (running): all 54 audit checks unchanged + N01–N14 new scenarios; iOS CI run 74.
-- Stage 5: independent reviewer (separate agent, not shown the implementation reasoning) + before/after audit + GO/NO-GO.
-- Not addressed (documented): M-07 strength-experience onboarding question, M-08 HRV/sleep, M-09 HR drift analysis, M-10 per-muscle volume, M-11 bodyweight progressions.
-
-## Next stages
-- A. Run 73 green → merge fix/quality into ios/dev → full CI on ios/dev (no upload) = TestFlight release candidate, awaiting approval.
-- B. One physical test sheet for the owner's 8 checks (meter→board, board→phone, watch→phone, phone→board HR, diag transfer,
-  strength logging/edit/delete/swap, coach adjustment, data preservation/reconnect/crash recovery).
-- C. Owner approvals needed: install firmware 0.7.3; TestFlight upload of the release candidate.
-- Remaining audit gaps not yet fixed: see ios/QUALITY_RELEASE.md "Audit findings addressed".
+## Coach remediation
+- Owner brief 27 Oct 08:27. Five independent review passes (F-, N-, P3-, P4-, P5-). All P0/P1 fixed; known limitations in ios/ADAPTIVE_COACH.md
+  (F-22 no automatic VO2 session; P4-03/04/07; P5-03/04 err on the safe side).
 
 ## Hardware verification
-NOTHING of 0.7.3 or the quality release has been verified on the physical board, iPhone or Apple Watch.
+NOTHING of RC2, Link 1.3 or firmware 0.7.4 has been verified on the physical board, iPhone or Apple Watch.
