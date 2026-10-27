@@ -1672,14 +1672,22 @@ static bool device_boot(bc_reset_t reset)
     bc_boot_mark(R, BC_SS_DISPLAY); bc_boot_mark(R, BC_SS_STORAGE);
     bool sok = g_sim.storage_state == BC_STOR_OK;                       /* 0.7.4: the measured storage category */
     app_diag_init(&s_plan, sok); app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, sok ? 1 : 3);
+    /* 0.7.4 boot record (the device keeps this ring in NVS, independent of the FAT) */
+    if (!g_sim.ring_init) { bc_bootring_init(&g_sim.ring); g_sim.ring_init = true; }
+    bc_bootrec_t *rec = bc_bootring_push(&g_sim.ring, g_sim.boots);
+    rec->reset = (uint8_t)reset; rec->mode = (uint8_t)s_plan.mode; rec->suspect = s_plan.suspect; rec->skip = s_plan.skip; rec->storage = (uint8_t)g_sim.storage_state;
+    g_sim.bt_unavailable = false;
     if (s_plan.mode == BC_BOOT_RECOVERY) { ui_recovery_show(); run(400); return true; }
+    /* 0.7.4 (main.c): two boots in a row with a failed (non-crashing) Bluetooth start -> Bluetooth disabled until RETRY */
+    if (!(s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) && bc_bootring_bt_fail_streak(&g_sim.ring) >= 2) {
+        bc_boot_disable(R, BC_SS_BTSTACK); s_plan.skip |= BC_SS_BIT(BC_SS_BTSTACK); plat_boot_skip_save(s_plan.skip);
+    }
     /* 0.7.4: the Bluetooth stack stage comes before the screens (main.c); a disabled stack = no phone link, no sensors */
-    if (g_sim.bt_fail_on_init == 0) g_sim.bt_unavailable = false;
     bc_boot_mark(R, BC_SS_BTSTACK); app_diag_stage(BC_SS_BTSTACK, 0);
-    if (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "off after 2 crashes"); app_diag_stage(BC_SS_BTSTACK, 2); }
+    if (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "off after 2 failures"); app_diag_stage(BC_SS_BTSTACK, 2); rec->bt_result = BC_BT_SKIPPED; }
     else if (s_crash_at == BC_SS_BTSTACK) return false;
-    else if (g_sim.bt_fail_on_init) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "HCI init failed"); app_diag_stage(BC_SS_BTSTACK, 3); }
-    else app_diag_stage(BC_SS_BTSTACK, 1);
+    else if (g_sim.bt_fail_on_init) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "HCI init failed"); app_diag_stage(BC_SS_BTSTACK, 3); rec->bt_result = BC_BT_FAIL_HOST_INIT; rec->bt[BC_BT_STEP_HOST_INIT].rc = -1; }
+    else { app_diag_stage(BC_SS_BTSTACK, 1); rec->bt_result = BC_BT_OK; }
     app_init(); ui_start(); run(200);
     static const bc_subsys_t ORDER[] = { BC_SS_PHONE, BC_SS_WIFI, BC_SS_CENTRAL, BC_SS_POWER, BC_SS_HR, BC_SS_CSC };
     for (size_t i = 0; i < sizeof ORDER / sizeof *ORDER; i++) {
@@ -1697,7 +1705,7 @@ static bool device_boot(bc_reset_t reset)
         if (s_crash_at == ss) return false;                     /* the board resets here; RTC marker = ss */
         app_diag_stage(ss, 1); run(s_plan.mode == BC_BOOT_STAGED ? 1000 : 50);
     }
-    bc_boot_mark(R, BC_SS_RUNNING); run(300);
+    bc_boot_mark(R, BC_SS_RUNNING); rec->reached = BC_SS_RUNNING; run(300);
     return true;
 }
 static void device_stable(void) { run(1000); bc_boot_stable(plat_boot_rtc()); if (s_plan.mode == BC_BOOT_STAGED) app_diag_store_report(BC_DIAG_KIND_RECOVERY, "staged boot completed"); app_diag_stage(BC_SS_STABLE, 1); }
@@ -1898,6 +1906,59 @@ static void scenario_074(void)
     CHECK(device_boot(BC_RST_POWERON), "storage repaired (simulated): normal start, diagnostics written again"); device_stable();
 }
 
+/* ===================================================================================== 0.7.4 rc1: owner requirements 1, 6, 7 */
+static void recovery_combo(bool bt_ok, bool fs_ok)
+{
+    char tag[48]; snprintf(tag, sizeof tag, "BT %s, filesystem %s", bt_ok ? "ok" : "FAILS", fs_ok ? "ok" : "CORRUPTED");
+    g_sim.bt_fail_on_init = !bt_ok; g_sim.storage_state = fs_ok ? BC_STOR_OK : BC_STOR_DIR_CORRUPTED;
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); g_sim.nvs_skip = 0; sim_phone_disconnect();
+    device_boot(BC_RST_POWERON); device_stable();
+    s_crash_at = BC_SS_NONE;   /* three crashes after start-up in a row (works whether or not Bluetooth / the FAT are up) */
+    for (int k = 0; k < 3; k++) { script_crash("main", 0x42012BA0); device_boot(BC_RST_PANIC); }
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE"), "%s: RECOVERY MODE screen", tag);
+    CHECK(fs_ok ? on_screen("Logs saved") : on_screen("Not saved: dir corrupted"), "%s: status line '%s'", tag, fs_ok ? "Logs saved" : "Not saved: dir corrupted");
+    tap_text("SEND LOGS"); run(800);
+    if (bt_ok) CHECK(g_sim.phone_only_started && on_screen("Waiting for Cyclift"), "%s: SEND LOGS starts the phone link only", tag);
+    else CHECK(!g_sim.phone_only_started && on_screen("No BT - logs kept here"), "%s: SEND LOGS -> 'No BT - logs kept here', nothing restarts", tag);
+    if (bt_ok) {
+        sim_phone_connect(true); run(800);
+        g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(800);
+        CHECK(fs_ok ? g_sim.phone.ndinfo >= 3 : g_sim.phone.dlist_end.count == 0, "%s: Cyclift lists %d report(s)", tag, g_sim.phone.ndinfo);
+        sim_phone_disconnect(); run(300);
+    }
+    run_s(10);
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE") && !g_sim.restart_requested, "%s: stays in a STABLE recovery screen (10 s, no restart)", tag);
+    char nm[48]; snprintf(nm, sizeof nm, "25b_recovery_bt%d_fs%d", bt_ok, fs_ok); shot(nm);
+}
+
+static void scenario_074rc(void)
+{
+    printf("\n== 25. firmware 0.7.4-rc1: repeated Bluetooth start failures, recovery with BT and/or filesystem unavailable\n");
+    bc_profile_t *pr = app_profile();
+    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; app_profile_save();
+    g_sim.fw_id = 0x0742; s_crash_at = BC_SS_NONE; g_sim.nvs_skip = 0; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); bc_bootring_init(&g_sim.ring);
+    /* a) 12 starts in a row where the Bluetooth start fails (no crash): never a loop, never RECOVERY; disabled after 2 */
+    g_sim.bt_fail_on_init = 1; int loops = 0, recov = 0, skipped_from = -1;
+    for (int k = 0; k < 12; k++) {
+        bool up = device_boot(k % 3 ? BC_RST_SW : BC_RST_POWERON); if (!up) loops++; if (s_plan.mode == BC_BOOT_RECOVERY) recov++;
+        device_stable();
+        if (skipped_from < 0 && (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK))) skipped_from = k;
+    }
+    CHECK(loops == 0 && recov == 0, "12 starts with a failing Bluetooth start: %d crashes, %d RECOVERY", loops, recov);
+    CHECK(skipped_from == 2 && g_sim.bt_unavailable && (g_sim.nvs_skip & BC_SS_BIT(BC_SS_BTSTACK)), "after 2 failed starts Bluetooth is disabled (from start %d), saved in NVS", skipped_from + 1);
+    { char br[1400]; plat_bootrec_text(br, sizeof br); CHECK(strstr(br, "Bluetooth off (disabled)") != NULL, "boot records (NVS ring) say 'Bluetooth off (disabled)'"); }
+    ui_phone_show(); run(400); CHECK(on_screen("RETRY") && on_screen("NO BLUETOOTH"), "Phone screen: NO BLUETOOTH + RETRY");
+    g_sim.bt_fail_on_init = 0; tap_text("RETRY"); run(300);
+    CHECK(device_boot(BC_RST_SW) && !g_sim.bt_unavailable, "RETRY + a fixed condition: Bluetooth starts again"); device_stable();
+    ui_diag_menu_show(); run(300); tap_text("Device Health"); run(400); scroll_to("Boot records");
+    CHECK(on_screen("Boot records"), "Device Health lists the boot records"); shot("25a_health_boot_records");
+    /* b) recovery mode in all four combinations */
+    recovery_combo(true, true); recovery_combo(false, true); recovery_combo(true, false); recovery_combo(false, false);
+    g_sim.bt_fail_on_init = 0; g_sim.storage_state = BC_STOR_OK; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); g_sim.nvs_skip = 0;
+    CHECK(device_boot(BC_RST_POWERON), "back to normal"); device_stable();
+    pr->power.paired = false; app_profile_save();
+}
+
 /* ===================================================================================== 0.7.3 final: safe report + transfer contract */
 static int pull_paced(uint32_t id, uint32_t size, uint16_t maxl, uint32_t *got, uint32_t *max_msg, int *lives)
 {
@@ -2048,6 +2109,7 @@ int main(int argc, char **argv)
     scenario_073();
     scenario_073_transfer();
     scenario_074();
+    scenario_074rc();
     scenario_stress(getenv("SIM_STRESS") ? atoi(getenv("SIM_STRESS")) : 1000);
     lv_mem_monitor_t m; lv_mem_monitor(&m);
     printf("\nLVGL memory: %u%% used, max used %u bytes of %u, fragmentation %u%%\n", m.used_pct, (unsigned)m.max_used, (unsigned)m.total_size, m.frag_pct);

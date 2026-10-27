@@ -76,6 +76,9 @@ void bc_boot_mark(bc_boot_rtc_t *r, bc_subsys_t s);
 void bc_boot_stable(bc_boot_rtc_t *r);
 /** RESTART & DIAGNOSE: the next start is a staged boot. */
 void bc_boot_request_staged(bc_boot_rtc_t *r);
+/** 0.7.4: disable a skippable subsystem from now on (this power cycle; the caller saves NVS) - e.g. the Bluetooth stack after
+ *  two boots in a row whose Bluetooth start FAILED without crashing (bc_bootring_bt_fail_streak). */
+void bc_boot_disable(bc_boot_rtc_t *r, bc_subsys_t s);
 /** RETRY for a disabled subsystem: removed from skip (the caller clears NVS too). */
 void bc_boot_unskip(bc_boot_rtc_t *r, bc_subsys_t s);
 const char *bc_subsys_name(bc_subsys_t s);     /* "power meter", "phone link", ... */

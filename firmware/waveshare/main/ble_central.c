@@ -23,6 +23,8 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_heap_caps.h"
+#include "esp_bt.h"
+#include "bc_bootrec.h"
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -599,36 +601,70 @@ static void mgr_task(void *p)
    semaphore) once the controller is enabled - so the free internal heap and its largest block are logged before the stack
    starts and again when it fails, and the board carries on with "Bluetooth unavailable" and the reason. */
 static ble_central_init_t s_init;
-static void heap_now(uint32_t *fr, uint32_t *lg, uint32_t *dma)
+static void snap(bc_bt_snap_t *o, int rc)
 {
-    *fr = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    *lg = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    *dma = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_DMA);
+    o->free_int = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    o->largest_int = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    o->free_dma = (uint32_t)heap_caps_get_free_size(MALLOC_CAP_DMA);
+    o->largest_dma = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
+    o->rc = rc;
 }
-static void init_fail(const char *what, int err)
+/* 0.7.4: every failed heap allocation is counted; while the Bluetooth stack starts, the first one (size + caps) is kept.
+   Called by the heap allocator in the failing task's context: only plain stores here (no log, no lock). */
+static volatile bool s_in_bt_init;
+static void alloc_failed(size_t size, uint32_t caps, const char *fn)
 {
-    s_init.failed = true; s_init.err = err;
-    heap_now(&s_init.fail_free, &s_init.fail_largest, &s_init.fail_dma);
+    (void)fn;
+    s_init.alloc_fails_total++;
+    if (!s_in_bt_init) return;
+    if (!s_init.fail_allocs) { s_init.fail_alloc_size = (uint32_t)size; s_init.fail_alloc_caps = caps; }
+    s_init.fail_allocs++;
+}
+static void init_fail(bc_bt_result_t res, const char *what, int err)
+{
+    s_init.failed = true; s_init.err = err; s_init.result = (uint8_t)res;
     snprintf(s_init.reason, sizeof s_init.reason, "%s", what);   /* short: shown on the round screen; err code in the log */
-    ESP_LOGE(TAG, "Bluetooth unavailable: %s (err 0x%x) - internal heap free %u B (largest block %u B, DMA %u B); before start: free %u, largest %u, DMA %u",
-             s_init.reason, (unsigned)err, (unsigned)s_init.fail_free, (unsigned)s_init.fail_largest, (unsigned)s_init.fail_dma,
-             (unsigned)s_init.pre_free, (unsigned)s_init.pre_largest, (unsigned)s_init.pre_dma);
+    const bc_bt_snap_t *pre = &s_init.step[BC_BT_STEP_PRE];
+    ESP_LOGE(TAG, "Bluetooth unavailable: %s (err 0x%x) - before start: internal free %u largest %u, DMA free %u largest %u; "
+             "failed allocations during the start: %u (first %u B, caps 0x%x)", s_init.reason, (unsigned)err,
+             (unsigned)pre->free_int, (unsigned)pre->largest_int, (unsigned)pre->free_dma, (unsigned)pre->largest_dma,
+             (unsigned)s_init.fail_allocs, (unsigned)s_init.fail_alloc_size, (unsigned)s_init.fail_alloc_caps);
+}
+static void log_step(const char *name, int idx)
+{
+    const bc_bt_snap_t *x = &s_init.step[idx];
+    ESP_LOGI(TAG, "BT init step %d %-16s rc 0x%x  internal free %u largest %u  DMA free %u largest %u  failed allocs %u",
+             idx, name, (unsigned)x->rc, (unsigned)x->free_int, (unsigned)x->largest_int, (unsigned)x->free_dma, (unsigned)x->largest_dma, (unsigned)s_init.fail_allocs);
 }
 
+/* 0.7.4: the exact sequence of nimble_port_init() in ESP-IDF 5.5.1 for the ESP32-S3 (CONFIG_BT_CONTROLLER_ENABLED, HCI log
+   off): esp_bt_controller_init -> esp_bt_controller_enable(BLE) -> esp_nimble_init(), with the same clean-up on failure -
+   but each step's return code and the heap after it are recorded (and kept in the NVS boot record by the caller), and the
+   allocator's failure hook names the first allocation that failed. 0.7.3: ESP_ERROR_CHECK(nimble_port_init()) -> abort(). */
 bool ble_central_stack_init(void)
 {
     if (s_init.stack_ok) return true;
     if (s_init.failed) return false;                  /* one attempt per boot: a failed controller start is not retried blindly */
     s_init.attempted = true;
-    heap_now(&s_init.pre_free, &s_init.pre_largest, &s_init.pre_dma);
-    ESP_LOGI(TAG, "Bluetooth stack starting: internal heap free %u B, largest block %u B, DMA-capable free %u B",
-             (unsigned)s_init.pre_free, (unsigned)s_init.pre_largest, (unsigned)s_init.pre_dma);
-    esp_err_t e = nimble_port_init();                 /* on failure it disables + deinits the controller itself (nimble_port.c) */
-    if (e != ESP_OK) { init_fail("HCI init failed", e); return false; }
+    heap_caps_register_failed_alloc_callback(alloc_failed);
+    snap(&s_init.step[BC_BT_STEP_PRE], 0); log_step("before", BC_BT_STEP_PRE);
+    s_in_bt_init = true;
+    esp_bt_controller_config_t cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    esp_err_t e = esp_bt_controller_init(&cfg);
+    snap(&s_init.step[BC_BT_STEP_CTRL_INIT], e); log_step("controller init", BC_BT_STEP_CTRL_INIT);
+    if (e != ESP_OK) { s_in_bt_init = false; init_fail(BC_BT_FAIL_CTRL_INIT, "controller init failed", e); return false; }
+    e = esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    snap(&s_init.step[BC_BT_STEP_CTRL_ENABLE], e); log_step("controller enable", BC_BT_STEP_CTRL_ENABLE);
+    if (e != ESP_OK) { esp_bt_controller_deinit(); s_in_bt_init = false; init_fail(BC_BT_FAIL_CTRL_ENABLE, "controller enable failed", e); return false; }
+    e = esp_nimble_init();                            /* HCI transport buffers (ble_buf_alloc) + host; ESP_FAIL = "hci inits failed" */
+    snap(&s_init.step[BC_BT_STEP_HOST_INIT], e); log_step("HCI + host init", BC_BT_STEP_HOST_INIT);
+    if (e != ESP_OK) {
+        esp_bt_controller_disable(); esp_bt_controller_deinit();     /* as nimble_port_init does: give the controller memory back */
+        s_in_bt_init = false; init_fail(BC_BT_FAIL_HOST_INIT, "HCI init failed", e); return false;
+    }
+    s_in_bt_init = false;
     s_init.stack_ok = true;
-    heap_now(&s_init.post_free, &s_init.post_largest, &s_init.post_dma);
-    ESP_LOGI(TAG, "Bluetooth stack up: it took %d B of internal heap (now free %u B, largest %u B)",
-             (int)s_init.pre_free - (int)s_init.post_free, (unsigned)s_init.post_free, (unsigned)s_init.post_largest);
+    ESP_LOGI(TAG, "Bluetooth stack up: it took %d B of internal heap", (int)s_init.step[BC_BT_STEP_PRE].free_int - (int)s_init.step[BC_BT_STEP_HOST_INIT].free_int);
     return true;
 }
 
@@ -654,8 +690,12 @@ bool ble_central_start(bool sensors)
     ble_link_register_gatt();                         /* phone-link service; GAP + GATT services too */
     ble_svc_gap_device_name_set("BikeComputer");
     ble_store_config_init();                          /* bonds persist in NVS (CONFIG_BT_NIMBLE_NVS_PERSIST) */
+    s_in_bt_init = true;
     nimble_port_freertos_init(host_task);             /* ESP-IDF ignores a failed task creation: checked just below */
-    if (!xTaskGetHandle("nimble_host")) { init_fail("no RAM for host task", ESP_ERR_NO_MEM); s_init.stack_ok = false; return false; }
+    s_in_bt_init = false;
+    snap(&s_init.step[BC_BT_STEP_HOST_TASK], xTaskGetHandle("nimble_host") ? 0 : ESP_ERR_NO_MEM); log_step("host task", BC_BT_STEP_HOST_TASK);
+    if (!xTaskGetHandle("nimble_host")) { init_fail(BC_BT_FAIL_HOST_TASK, "no RAM for host task", ESP_ERR_NO_MEM); s_init.stack_ok = false; return false; }
+    s_init.result = BC_BT_OK;
     if (xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 3072, NULL, 4, NULL, 0) != pdPASS)
         ESP_LOGE(TAG, "ble_mgr task not created: sensors and phone link are not paced (no reconnect ticks)");
     s_init.host_started = true;

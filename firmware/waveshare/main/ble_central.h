@@ -28,13 +28,16 @@
    ble_central_start(sensors): the stack if not up yet, then the phone-link GATT service, host task and manager task. false =
    Bluetooth unavailable (nothing else is affected). sensors = false: the sensor central stays off (no scan, no sensor link)
    until ble_central_enable_sensors(true) — recovery mode "SEND LOGS" and the staged boot use that. */
+#include "bc_bootrec.h"
 typedef struct {
     bool attempted, stack_ok, host_started, failed;
     int err;                                          /* esp_err_t of the failed step */
+    uint8_t result;                                   /* bc_bt_result_t */
     char reason[56];                                  /* short, for the screen: "HCI init failed", "no RAM for host task" (err: field) */
-    uint32_t pre_free, pre_largest, pre_dma;          /* internal heap just before nimble_port_init() */
-    uint32_t post_free, post_largest, post_dma;       /* after a successful init */
-    uint32_t fail_free, fail_largest, fail_dma;       /* after the failure (the controller has released its memory again) */
+    bc_bt_snap_t step[BC_BT_STEPS];                   /* rc + INTERNAL|8BIT and DMA free / largest block after each step (PRE = before) */
+    uint32_t fail_alloc_size, fail_alloc_caps;        /* first heap allocation that failed during the Bluetooth start */
+    uint16_t fail_allocs;                             /* failed allocations during the Bluetooth start */
+    uint32_t alloc_fails_total;                       /* failed allocations since boot (any task) */
 } ble_central_init_t;
 bool ble_central_stack_init(void);
 bool ble_central_start(bool sensors);

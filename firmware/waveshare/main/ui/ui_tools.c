@@ -201,10 +201,20 @@ static size_t health_text(char *b, size_t cap, bool markup)
         K, E, (unsigned long)pw->gaps, (unsigned long)pw->rejected,
         K, E, h.display_ok ? "OK" : "FAIL", K, E, h.touch_ok ? "OK" : "FAIL", K, E, h.imu_ok ? "OK" : "not found",
         K, E, app_demo() ? "ON" : "off");
+    if (n > 0 && (size_t)n < cap) {      /* 0.7.4: boot records (NVS): Bluetooth start step by step, previous crash */
+        char br[700]; plat_bootrec_text(br, sizeof br);
+        if (br[0]) n += snprintf(b + n, cap - (size_t)n, "\n%sBoot records%s (newest first)\n%s", K, E, br);
+    }
     return n > 0 && (size_t)n < cap ? (size_t)n : cap - 1;
 }
 
-static void health_update(void) { static char b[2000]; health_text(b, sizeof b, true); lv_label_set_text(h_txt, b); }
+static void health_update(void)
+{
+    static char *b;                              /* 0.7.4: 3.4 KB from PSRAM once (was a 2 KB static in internal RAM) */
+    if (!b) b = plat_alloc_ext(3400);
+    if (!b) return;
+    health_text(b, 3400, true); lv_label_set_text(h_txt, b);
+}
 
 static void strip_markup(char *s)
 {

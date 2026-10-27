@@ -24,6 +24,7 @@
 #endif
 #include "ble_central.h"
 #include "diag_esp.h"
+#include "bc_bootrec.h"
 
 static const char *TAG = "diag";
 
@@ -185,6 +186,54 @@ void plat_build_ids(char build[32], char sha[65])
     const esp_app_desc_t *d = esp_app_get_description();
     snprintf(build, 32, "%.11s %.8s", d->date, d->time);
     for (int i = 0; i < 32; i++) snprintf(sha + 2 * i, 3, "%02x", d->app_elf_sha256[i]);
+}
+
+/* ---- 0.7.4 boot records: FAT-independent evidence in NVS ("bootrec"/"ring", one 576-byte blob, bc_bootrec.h). Written only
+   from app_main / the start-up path (never from a panic handler); read and printed at the next boot. */
+static bc_bootring_t *s_brec;
+static void ring_save(void)
+{
+    if (!s_brec) return;
+    bc_bootring_seal(s_brec);
+    nvs_handle_t h;
+    if (nvs_open("bootrec", NVS_READWRITE, &h) != ESP_OK) return;
+    if (nvs_set_blob(h, "ring", s_brec, sizeof *s_brec) == ESP_OK) nvs_commit(h);
+    nvs_close(h);
+}
+void diag_esp_bootrec_begin(const bc_boot_plan_t *plan, bc_stor_state_t storage)
+{
+    if (!s_brec) s_brec = plat_alloc_ext(sizeof *s_brec);
+    if (!s_brec) return;
+    size_t n = sizeof *s_brec; nvs_handle_t h; bool ok = false;
+    if (nvs_open("bootrec", NVS_READONLY, &h) == ESP_OK) { ok = nvs_get_blob(h, "ring", s_brec, &n) == ESP_OK && bc_bootring_valid(s_brec, n); nvs_close(h); }
+    if (!ok) { bc_bootring_init(s_brec); ESP_LOGI(TAG, "BOOTREC no previous boot records (first start of 0.7.4 or records unreadable)"); }
+    char line[400];
+    for (int i = s_brec->count - 1; i >= 0; i--) { bc_bootrec_describe(bc_bootring_get(s_brec, i), line, sizeof line); ESP_LOGW(TAG, "BOOTREC previous[-%d] %s", i + 1, line); }
+    bc_bootrec_t *r = bc_bootring_push(s_brec, plat_boot_count());
+    r->reset = (uint8_t)plat_reset_kind(); r->mode = (uint8_t)plan->mode; r->suspect = plan->suspect; r->skip = plan->skip; r->storage = (uint8_t)storage;
+    r->crashpart = (uint8_t)plat_crash_partition(NULL);
+    if (plan->crashed) { plat_crash_t *c = plat_alloc_ext(sizeof *c); if (c) { if (plat_crash_info(c)) { r->crash_pc = c->pc; snprintf(r->crash_task, sizeof r->crash_task, "%.11s", c->task); } free(c); } }
+    ring_save();
+}
+void diag_esp_bootrec_bt(const ble_central_init_t *bi, bool skipped)
+{
+    bc_bootrec_t *r = s_brec ? bc_bootring_newest(s_brec) : NULL;
+    if (!r) return;
+    r->bt_result = skipped ? BC_BT_SKIPPED : bi->failed ? bi->result : bi->stack_ok ? BC_BT_OK : BC_BT_NOT_TRIED;
+    memcpy(r->bt, bi->step, sizeof r->bt);
+    r->fail_alloc_size = bi->fail_alloc_size; r->fail_alloc_caps = bi->fail_alloc_caps; r->fail_allocs = bi->fail_allocs;
+    ring_save();
+}
+void diag_esp_bootrec_reached(uint8_t subsys) { bc_bootrec_t *r = s_brec ? bc_bootring_newest(s_brec) : NULL; if (!r) return; r->reached = subsys; ring_save(); }
+int diag_esp_bt_fail_streak(void) { return s_brec ? bc_bootring_bt_fail_streak(s_brec) : 0; }
+size_t plat_bootrec_text(char *buf, size_t cap)
+{
+    size_t n = 0; if (!cap) return 0; buf[0] = 0;
+    for (int i = 0; s_brec && i < s_brec->count && n + 2 < cap; i++) {
+        char line[400]; bc_bootrec_describe(bc_bootring_get(s_brec, i), line, sizeof line);
+        int k = snprintf(buf + n, cap - n, "%s%s", i ? "\n" : "", line); if (k < 0) break; n += (size_t)k; if (n >= cap) { n = cap - 1; break; }
+    }
+    return n;
 }
 
 /* ---- 0.7.4 crash partition status (Device Health, reports, BLE storage status) */

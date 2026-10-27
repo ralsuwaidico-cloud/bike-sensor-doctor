@@ -578,6 +578,14 @@ esp_err_t g_fake_nimble_init_err = ESP_OK; const char *g_fake_fail_task; uint32_
 size_t heap_caps_get_free_size(uint32_t caps) { return (caps & MALLOC_CAP_DMA) ? g_fake_heap_free / 2 : g_fake_heap_free; }
 size_t heap_caps_get_largest_free_block(uint32_t caps) { (void)caps; return g_fake_heap_largest; }
 esp_err_t nimble_port_init(void) { clock_gettime(CLOCK_MONOTONIC, &t0); return g_fake_nimble_init_err; }
+static esp_alloc_failed_hook_t s_alloc_hook; esp_err_t g_fake_ctrl_init_err = ESP_OK;
+esp_err_t heap_caps_register_failed_alloc_callback(esp_alloc_failed_hook_t cb) { s_alloc_hook = cb; return ESP_OK; }
+esp_err_t esp_bt_controller_init(esp_bt_controller_config_t *cfg) { (void)cfg; clock_gettime(CLOCK_MONOTONIC, &t0); return g_fake_ctrl_init_err; }
+esp_err_t esp_bt_controller_enable(esp_bt_mode_t mode) { (void)mode; return ESP_OK; }
+esp_err_t esp_bt_controller_disable(void) { return ESP_OK; }
+esp_err_t esp_bt_controller_deinit(void) { return ESP_OK; }
+/* like ble_buf_alloc on the board: the msys-2 pool (24 x 344 B = 8256 B, internal RAM) does not fit -> the hook fires */
+esp_err_t esp_nimble_init(void) { if (g_fake_nimble_init_err != ESP_OK && s_alloc_hook) s_alloc_hook(8256, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT, "heap_caps_calloc"); return g_fake_nimble_init_err; }
 void nimble_port_run(void)
 {
     if (ble_hs_cfg.sync_cb) ble_hs_cfg.sync_cb();

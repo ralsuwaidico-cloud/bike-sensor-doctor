@@ -24,18 +24,23 @@ static const uint8_t MAC[6] = { 1, 2, 3, 4, 5, 6 };
 int main(int argc, char **argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
-    int mode = argc > 1 ? atoi(argv[1]) : 0;   /* 0: HCI init fails, 1: host task cannot be created */
+    int mode = argc > 1 ? atoi(argv[1]) : 0;   /* 0: HCI init fails, 1: host task cannot be created, 2: controller init fails */
     if (mode == 0) { g_fake_nimble_init_err = ESP_FAIL; g_fake_heap_free = 21000; g_fake_heap_largest = 7400; }
-    else g_fake_fail_task = "nimble_host";
+    else if (mode == 1) g_fake_fail_task = "nimble_host";
+    else g_fake_ctrl_init_err = ESP_ERR_NO_MEM;
     bool stack = ble_central_stack_init();
     bool up = ble_central_start(false);
     const ble_central_init_t *in = ble_central_init_info();
     if (mode == 0) {
         CHECK(!stack && !up, "HCI init failure: no abort, start returns false");
-        CHECK(in->attempted && in->failed && !in->stack_ok && in->err == ESP_FAIL && strstr(in->reason, "HCI"), "reason recorded: %s (err %d)", in->reason, in->err);
-        CHECK(in->pre_free == 21000 && in->pre_largest == 7400 && in->fail_free == 21000, "heap figures recorded before / after (%u %u %u)", in->pre_free, in->pre_largest, in->fail_free);
+        CHECK(in->attempted && in->failed && !in->stack_ok && in->err == ESP_FAIL && strstr(in->reason, "HCI") && in->result == BC_BT_FAIL_HOST_INIT, "reason recorded: %s (err %d)", in->reason, in->err);
+        CHECK(in->step[BC_BT_STEP_PRE].free_int == 21000 && in->step[BC_BT_STEP_PRE].largest_int == 7400 && in->step[BC_BT_STEP_CTRL_INIT].rc == 0
+              && in->step[BC_BT_STEP_CTRL_ENABLE].rc == 0 && in->step[BC_BT_STEP_HOST_INIT].rc == ESP_FAIL, "per-step return codes + heap recorded");
+        CHECK(in->fail_allocs == 1 && in->fail_alloc_size == 8256 && in->fail_alloc_caps == (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT), "the failing allocation is named: %u B caps 0x%x", in->fail_alloc_size, in->fail_alloc_caps);
         CHECK(!ble_central_stack_init(), "no blind retry in the same boot");
         CHECK(!xTaskGetHandle("nimble_host") && !xTaskGetHandle("ble_mgr"), "no Bluetooth task was created");
+    } else if (mode == 2) {
+        CHECK(!stack && !up && in->result == BC_BT_FAIL_CTRL_INIT && in->step[BC_BT_STEP_CTRL_INIT].rc == ESP_ERR_NO_MEM && strstr(in->reason, "controller"), "controller init failure recorded at step 1 (%s)", in->reason);
     } else {
         CHECK(stack && !up, "host task cannot be created: start returns false");
         CHECK(in->failed && strstr(in->reason, "host task"), "reason recorded: %s", in->reason);

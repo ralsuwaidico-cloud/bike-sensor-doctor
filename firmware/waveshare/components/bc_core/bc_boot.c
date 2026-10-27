@@ -65,6 +65,7 @@ void bc_boot_stable(bc_boot_rtc_t *r)
 }
 
 void bc_boot_request_staged(bc_boot_rtc_t *r) { r->request = 1; seal(r); }
+void bc_boot_disable(bc_boot_rtc_t *r, bc_subsys_t s) { if (BC_SS_BIT(s) & BC_SS_SKIPPABLE) { r->skip |= BC_SS_BIT(s); seal(r); } }
 void bc_boot_unskip(bc_boot_rtc_t *r, bc_subsys_t s) { r->skip &= (uint16_t)~BC_SS_BIT(s); seal(r); }
 
 const char *bc_subsys_name(bc_subsys_t s)

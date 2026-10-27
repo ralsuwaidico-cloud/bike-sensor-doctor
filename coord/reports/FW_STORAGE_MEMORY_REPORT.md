@@ -200,3 +200,57 @@ symptom (every create fails) is a *consequence* of the corruption, not a flash w
    id counter (NVS), app and partition table are not written. No partition-table change is needed.
 
 The firmware never formats, repairs or writes a damaged FAT on its own (0.7.4-dev).
+
+---
+
+## 8. Round 2 (owner requirements 12:27) — additional measurements and changes
+
+### 8.1 Bluetooth start-up failure: what is measured now, and what is still inferred
+Firmware 0.7.4-rc1 no longer calls `nimble_port_init()`; it runs the identical ESP-IDF 5.5.1 sequence for the ESP32-S3
+(HCI log off) in `ble_central_stack_init()` — `esp_bt_controller_init` → `esp_bt_controller_enable(BLE)` → `esp_nimble_init()`
+(HCI transport buffers + host), same clean-up on failure — and records **after every step**: the return code, free and
+largest-block heap for INTERNAL|8BIT and for DMA, and (via `heap_caps_register_failed_alloc_callback`) the **size and caps of
+the first allocation that failed** during the start. The record is kept in NVS (`bootrec`, §8.3), printed at the next boot
+(`BOOTREC previous[-n] … BT: HCI init failed [0 rc 0 int F/L dma F/L] [1 …] [3 rc -1 …] failed alloc N B caps 0x…`) and shown
+in Device Health ("Boot records").
+
+| Item | Value | Level |
+|---|---|---|
+| Steps that succeeded on the board under 0.7.3 | controller init, controller enable (no "controller init/enable failed" line) | B |
+| Step that failed | `esp_nimble_init` → `esp_nimble_hci_init` ("hci inits failed") | B |
+| What can fail inside it | `ble_buf_alloc()` (msys + HCI pools, `bt_osi_mem_calloc` = INTERNAL\|8BIT with `CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_INTERNAL`), the VHCI callback registration (only if the controller is not enabled — it was), `xSemaphoreCreateBinary` | S |
+| Sizes requested by `ble_buf_alloc` with this sdkconfig | msys-1 12 × (256+24) = 3,360 B; **msys-2 24 × (320+24) = 8,256 B (largest)**; ACL 24 × 284 = 6,816 B; events 30 × 72 = 2,160 B + 8 × 72 = 576 B; command ≈ 264 B → **≈ 21.4 KB internal, largest single block ≈ 8.3 KB** | S + I (struct sizes of a 32-bit target) |
+| Internal heap free at that moment on 0.7.3 | **not measured** (0.7.3 printed only 111 KB at app_main entry) | — |
+| Controller's own internal allocations (closed `libbtdm_app`) | not measurable on the host; the per-step snapshots on the board will give them | — |
+| Host-side reproduction | static budget yes (`esp_idf_size` per build: 0.7.2 37,901 B, 0.7.3 23,989 B, 0.7.4-rc1 **34,645 B** free DIRAM); the dynamic pre-Bluetooth allocations no — QEMU cannot run this board's PSRAM (CRASH_0.7.2.md §6) | E |
+| Conclusion | internal-RAM shortage at Bluetooth start: **strongly inferred, not confirmed**. The first 0.7.4-rc1 boot record turns it into a measurement (or rules it out: then the failing step / rc says what else it is). | I |
+
+### 8.2 Requirement 1: no endless loop
+* A Bluetooth start that FAILS never aborts (0.7.4-dev); a start that CRASHES twice in a row while starting is disabled by the
+  boot plan; **new in rc1:** two boots in a row whose Bluetooth start failed without crashing (boot records) also disable it
+  (`bc_boot_disable` + NVS) until RETRY — the board then runs stably without Bluetooth. Simulated: 12 consecutive failing
+  starts → 0 crashes, 0 RECOVERY, disabled from start 3 (test/sim section 25).
+
+### 8.3 Requirement 4: crash evidence without the file system
+| Evidence | Where | Survives | Written |
+|---|---|---|---|
+| Core dump (ELF + CRC) | `coredump` partition (0x810000, 64 KB) | reset + power loss | by ESP-IDF's core-dump code at the panic (raw flash, no FS) |
+| Boot records ring, 4 × 140 B (+CRC) | NVS namespace `bootrec`, one 576-B blob | reset + power loss | app_main only: after the boot plan, after the Bluetooth stage, at RUNNING and at STABLE — never in a panic handler |
+| Last ~2 KB of log lines | RTC no-init RAM | reset (not power loss) | log hook, task context |
+| Boot / crash counters, disabled-subsystem mask | NVS `diag`, `boot` | reset + power loss | app_main |
+No partition-table change. The FAT is used only for the larger, optional items (reports, event ring).
+
+### 8.4 Requirement 3: filesystem — mismatch vs migration vs corruption
+| Check | Result | Level |
+|---|---|---|
+| `storage` offset/size in the pre-0.7.3 table | 0x820000 / 0x7E0000 in every backup since 24 Oct | K |
+| `storage` in the 0.7.3 table | 0x820000 / 0x7E0000 (board boot log); the 0.7.3 change only moved the end of `ota_1` (now 0x420000–0x80FFFF) and added `coredump` 0x810000–0x81FFFF | B, E |
+| WL configuration / state sectors (end of storage) | valid CRC and identical geometry in every backup | K |
+| Regions written by the installers (from their own esptool logs) | 0.1.x: 0x0–0x199FFF; 0.2.1/0.3.0/0.4.0: 0x0–0x5FFF, 0x8000, 0xF000–0x10FFF, 0x20000–≤0x1BFFFF; 0.7.2: 0xF000, 0x20000–0x1D4FFF; 0.7.3: 0x8000, 0xF000, 0x20000–0x1DEFFF. **Nothing at or above 0x820000.** (0.5.0/0.6.x/0.7.1 logs were not on the PC; their scripts write only 0xF000 + 0x20000) | K + S |
+| Firmware raw flash writers | only the core dump (0x810000–0x81FFFF, from 0.7.3 on) | S + B ("Erase flash 16384 bytes @ 0x810000") |
+| Timing | root directory lost between 24 Oct 20:18 and 25 Oct 13:52 — two days before the 0.7.3 table change | K |
+| Verdict | **not** a partition mismatch, **not** a failed migration; **file-system corruption** that happened under 0.4.0–0.6.0 during a period of 72 crash resets; exact erase mechanism still open | K + I |
+Every backup is preserved untouched (read-only copies were analysed); no erase or reformat was done or is automated.
+Real-image tests: `test/host/test_storage_fixture.c` uses the actual filesystem heads of the 24 Oct and 27 Oct backups
+(boot sector, both FATs, root directory; no file contents) — classified OK and "Directory corrupted", free space 5096 KB = the
+board's own log.

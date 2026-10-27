@@ -29,6 +29,7 @@ initfail: $(ISRC) fake/fake_nimble.h
 initfail-run: initfail
 	ASAN_OPTIONS=detect_leaks=0 ./initfail 0
 	ASAN_OPTIONS=detect_leaks=0 ./initfail 1
+	ASAN_OPTIONS=detect_leaks=0 ./initfail 2
 stress: $(SRC) fake/fake_nimble.h
 	$(CC) $(CFLAGS) -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer $(INC) -o $@ $(SRC) -lm
 stress_tsan: $(SRC) fake/fake_nimble.h

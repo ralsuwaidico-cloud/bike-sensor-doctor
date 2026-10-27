@@ -95,6 +95,8 @@ void plat_storage_facts(bc_stor_facts_t *out);
 bc_crashpart_t plat_crash_partition(uint32_t *dump_bytes);
 /** Category of the last failed file write: Storage full (ENOSPC) / Write failed, or the boot state when writes are refused. */
 bc_stor_state_t plat_storage_write_failure(void);
+/** 0.7.4: the last boot records (NVS, independent of the FAT; bc_bootrec.h), newest first, one line each. */
+size_t plat_bootrec_text(char *buf, size_t cap);
 
 /* device */
 int plat_battery_pct(void);            /* -1 unknown; an ESTIMATE from the cell voltage (bc_batt_pct_from_mv) */

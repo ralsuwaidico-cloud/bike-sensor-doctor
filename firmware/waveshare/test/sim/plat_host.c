@@ -400,7 +400,11 @@ bool plat_file_write_at(const char *path, long off, const void *data, size_t len
     FILE *f = fopen(p, "r+b"); if (!f) f = fopen(p, "w+b"); if (!f) return false;
     bool ok = fseek(f, off, SEEK_SET) == 0 && fwrite(data, 1, len, f) == len; fclose(f); return ok;
 }
-void plat_phone_only_start(void) { g_sim.phone_only_started = true; g_sim.phone.enabled = true; }
+void plat_phone_only_start(void)
+{
+    if (g_sim.bt_fail_on_init) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "HCI init failed"); return; }   /* 0.7.4 */
+    g_sim.phone_only_started = true; g_sim.phone.enabled = true;
+}
 void plat_sensor_set_disabled(plat_sens_kind_t k, bool disabled) { if (k < PLAT_SENS_KINDS) g_sim.link[k].disabled = disabled; }
 uint32_t plat_boot_count(void) { return g_sim.boots; }
 void plat_restart(void) { g_sim.restart_requested = true; }
@@ -412,3 +416,12 @@ void plat_selftest_text(char *b, size_t cap)
 void plat_mem_text(char *b, size_t cap) { snprintf(b, cap, "heap 180K min 150K psram 1900K"); }
 void plat_log(const char *line) { if (g_sim.verbose) printf("  [log] %s\n", line); snprintf(g_sim.last_log, sizeof g_sim.last_log, "%s", line); }
 void *plat_alloc_ext(size_t n) { return calloc(1, n); }   /* 0.7.4 */
+size_t plat_bootrec_text(char *buf, size_t cap)   /* 0.7.4: the simulated NVS boot-record ring (sim_main.c device_boot) */
+{
+    size_t n = 0; if (!cap) return 0; buf[0] = 0;
+    for (int i = 0; g_sim.ring_init && i < g_sim.ring.count && n + 2 < cap; i++) {
+        char line[400]; bc_bootrec_describe(bc_bootring_get(&g_sim.ring, i), line, sizeof line);
+        int k = snprintf(buf + n, cap - n, "%s%s", i ? "\n" : "", line); if (k < 0) break; n += (size_t)k; if (n >= cap) { n = cap - 1; break; }
+    }
+    return n;
+}

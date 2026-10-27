@@ -21,3 +21,5 @@ test/host/gen_diag_fixture
 test/blehost/prio
 test/host/test_bc_storage
 test/blehost/initfail
+test/host/test_bc_bootrec
+test/host/test_storage_fixture

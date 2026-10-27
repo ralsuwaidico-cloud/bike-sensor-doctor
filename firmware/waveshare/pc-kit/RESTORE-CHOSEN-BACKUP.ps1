@@ -1,10 +1,11 @@
-# Bike Computer - restore ONE backup that YOU choose (replaces the old "newest backup" restore scripts: the newest backup may
+﻿# Bike Computer - restore ONE backup that YOU choose (replaces the old "newest backup" restore scripts: the newest backup may
 # now hold the crashing 0.7.2). Lists every 16 MB backup in this folder with the firmware found inside it, you pick its number.
 # A backup is a complete image: firmware + partition table + settings + rides AS THEY WERE when it was taken.
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 function Stop-With($msg) { Write-Host ""; Write-Host "  STOPPED: $msg" -ForegroundColor Red; Write-Host "  Nothing was changed on the board."; Read-Host "  Press Enter to close"; exit 1 }
 $known = @{
+  '30f8f37c7bf67c3d30c2534a5666065fc15321ddbdf535fb7eaa5b509d6ba02e' = '0.7.4-rc1';
   '181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5' = '0.7.3';
   '735c2699009d5e723a8755975720a570240fed7375ed5a43c06727458d4d6560' = '0.7.3 draft (26 Oct, never released)';
   '33b425022eb12ed7d4b55f343cb76c94ad6677864379112b08352eb36c779a60' = '0.7.2 (the firmware that crash-looped)';
