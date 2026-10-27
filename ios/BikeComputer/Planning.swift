@@ -400,14 +400,25 @@ enum PlanEngine {
         let easyWeek = blockPos == every - 1
         var thresholdReps: Int? = nil
         if let pos = blockPos, !easyWeek { thresholdReps = 3 + min(pos, 2) }     // the target; the largest count that fits is used (F-07)
+        // M-05 intensity by goal and level: beginners tempo; performance goals (stronger, climbing, event) threshold;
+        // health / endurance / weight goals tempo; advanced performance riders with ≥ 4 rides add one VO2 session
+        let performanceGoal = p.goal == .stronger || p.goal == .climbing || p.goal == .event
+        let hard: WorkoutKind = p.level == .beginner ? .tempo : (performanceGoal ? .threshold : .tempo)
+        // review P3-14 (N-09 residual): days typed by older versions (or by the rider without fixing them) follow the goal
+        // too — a typed interval day harder than the goal and level allow is planned at the goal's intensity, with a note
+        // saying how to keep it (mark the day fixed). Fixed days are never changed. The availability itself is unchanged.
+        let maxTyped: WorkoutKind = (p.level == .advanced && performanceGoal) ? .vo2 : hard
+        var goalNote: [UUID: String] = [:]
+        for c in cyc where !c.a.fixed {
+            if let k = cycTypes[c.a.id], k.zone >= 3, k.zone > maxTyped.zone {
+                cycTypes[c.a.id] = maxTyped
+                goalNote[c.a.id] = "Your goal (\(p.goal.title.lowercased())) and level plan \(maxTyped.title.lowercased()) here rather than \(k.title.lowercased()). To keep \(k.title.lowercased()) on this day, mark it as fixed in your availability."
+            }
+        }
         // G-18: one long ride a week — an untyped ride only becomes "long" when the rider has not typed one
         let typedLong = cyc.contains { $0.a.cyclingType == .long }
         if let longest = untyped.max(by: { ($0.a.minutes, adjacentToLegs($0.day) ? 0 : 1) < ($1.a.minutes, adjacentToLegs($1.day) ? 0 : 1) }) {
             cycTypes[longest.a.id] = longest.a.minutes >= 90 && !typedLong ? .long : .endurance
-            // M-05 intensity by goal and level: beginners tempo; performance goals (stronger, climbing, event) threshold;
-            // health / endurance / weight goals tempo; advanced performance riders with ≥ 4 rides add one VO2 session
-            let performanceGoal = p.goal == .stronger || p.goal == .climbing || p.goal == .event
-            let hard: WorkoutKind = p.level == .beginner ? .tempo : (performanceGoal ? .threshold : .tempo)
             let alreadyHard = cyc.contains { $0.a.cyclingType?.isHard ?? false }
             if !alreadyHard, cyc.count >= 2, !easyWeek {
                 // not the day before the long ride, and (F-16) not the day after it unless the rider is advanced
@@ -445,7 +456,7 @@ enum PlanEngine {
                     var k = cycTypes[x.id] ?? (x.minutes < 40 ? .recovery : .endurance)
                     var minutes = max(20, x.minutes)
                     var safetyCap: SafetyOriginal? = nil          // F-08: generation-time caps are reversible too
-                    var note = x.cyclingType == .custom ? "custom ride" : ""
+                    var note = goalNote[x.id] ?? (x.cyclingType == .custom ? "custom ride" : "")
                     if !x.fixed, easyWeek, k.zone >= 3 { k = .endurance; note = "Easier week (week \(every) of your \(every)-week block): no interval session." }
                     if !x.fixed, easyWeek, k == .long { minutes = max(60, Int((Double(minutes) * 0.8 / 5).rounded()) * 5); note = "Easier week (week \(every) of your \(every)-week block): the long ride is 20 % shorter and there is no interval session." }
                     if x.fixed {

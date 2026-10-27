@@ -200,6 +200,9 @@ final class HybridV2Tests: XCTestCase {
 
     func testInterferenceProposalRespectsFixedAndEditedAndCanBeUndone() {
         var p = hybridProfile(); p.cyclingDaysPerWeek = 2; p.liftDaysPerWeek = 2
+        // review P3-14: a typed (flexible) threshold day now follows the goal, so this fixture uses a goal that plans
+        // threshold (the test is about the interference proposal, not the intensity choice)
+        p.goal = .stronger
         // Tue heavy legs (fixed), Wed threshold (flexible) → proposal to soften Wed; Fri threshold (fixed) after Thu legs → no proposal for Fri
         let av = WeeklyAvailability(days: [rest, day([lift(.lower, 45, fixed: true)]), day([ride(.threshold, 60)]), day([lift(.lower, 45)]), day([ride(.threshold, 60, fixed: true)]), rest, rest])
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
