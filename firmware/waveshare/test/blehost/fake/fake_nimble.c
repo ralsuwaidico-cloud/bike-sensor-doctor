@@ -470,6 +470,7 @@ int fake_server_read(int i, uint8_t *out, int cap)
     int n = rc == 0 && om->len <= cap ? om->len : -1; if (n > 0) memcpy(out, om->data, (size_t)n);
     fake_mbuf_free(om); return n;
 }
+__attribute__((weak)) size_t fake_link13_valid(uint8_t *b, size_t cap, uint32_t r) { (void)b; (void)cap; (void)r; return 0; }
 void fake_phone_write(uint16_t h, const uint8_t *b, uint16_t n) { pw_t *w = calloc(1, sizeof *w); w->h = h; w->n = n < 256 ? n : 256; memcpy(w->b, b, w->n); q_push(1, ev_phone_write, w, NULL); }
 static bool s_adv; static ble_gap_event_fn *s_adv_cb; static void *s_adv_arg;
 int ble_gap_adv_set_fields(const struct ble_hs_adv_fields *f) { (void)f; hs_lock(); hs_unlock(); return 0; }
@@ -532,8 +533,11 @@ static void ev_phone(void *pp)
         else {
             ctx.op = BLE_GATT_ACCESS_OP_WRITE_CHR;
             uint8_t b[200]; uint16_t n = (uint16_t)(rnd() % 200); for (int i = 0; i < n; i++) b[i] = (uint8_t)rnd();
-            static const uint8_t TYPES[] = { 0x20, 0x21, 0x22, 0x24, 0x30, 0x50, 0x60, 0x66, 0x70, 0x76, 0x80, 0x83, 0x85 };
-            if (n >= 8 && rnd() % 2) { b[0] = TYPES[rnd() % sizeof TYPES]; uint16_t p2 = 8; while (p2 + 2 < n) { uint8_t l = (uint8_t)(rnd() % 6); if (p2 + 2 + l > n) break; b[p2 + 1] = l; p2 += 2 + l; } n = p2; }
+            static const uint8_t TYPES[] = { 0x20, 0x21, 0x22, 0x24, 0x30, 0x50, 0x60, 0x66, 0x70, 0x76, 0x80, 0x83, 0x85,
+                                             0x08, 0x90, 0x93, 0x95, 0xA0, 0xA2, 0xB0, 0xB2, 0xB3 /* 0.7.5 Link 1.3 */ };
+            size_t v = rnd() % 3 == 0 ? fake_link13_valid(b, sizeof b, rnd()) : 0;   /* 0.7.5: a well-formed Link 1.3 message */
+            if (v) n = (uint16_t)v;
+            else if (n >= 8 && rnd() % 2) { b[0] = TYPES[rnd() % sizeof TYPES]; uint16_t p2 = 8; while (p2 + 2 < n) { uint8_t l = (uint8_t)(rnd() % 6); if (p2 + 2 + l > n) break; b[p2 + 1] = l; p2 += 2 + l; } n = p2; }
             os_mbuf_append(om, b, n);
         }
         s->cb(c, s->h, &ctx, s->arg);

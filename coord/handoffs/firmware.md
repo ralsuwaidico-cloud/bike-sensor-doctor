@@ -124,3 +124,23 @@ Nothing here is verified on hardware.
 * Privacy (pre-existing, not changed this round): test/sim/sim_main.c uses a first name as the test rider's profile name
   (also asserted at sim_main.c:1168); consider a synthetic name.
 * Next: FW-4 (Link 1.3) on a separate commit series — not started in this round's commits.
+
+## Round 4 — FW-4: Link 1.3 (firmware 0.7.5-dev; rc2 kit untouched, still the physical-test candidate)
+Commits on fw/phonefirst after 0139267 (QA reads 0139267; not rewritten): 8251e7b (made-up test rider), 3d721b6 (codec +
+coach-mirror core + fixture), 6a2f57c (board logic + UI + sim 27), then the stress/handoff commit. Nothing ran on hardware.
+* Contract: BLE_CONTRACT.md v1.1 implemented as written, no contract change. Not implemented: RIDEQ flag bit2 "samples
+  truncated (storage full)" + the "STORAGE FULL - SUMMARY ONLY" ride screen (flag always 0; samples simply stop when the
+  storage refuses writes, the summary path is QF-01's).
+* Behaviour: INFO caps + 0xF800; HELLO_ACK = INFO caps AND app caps; nothing new before HELLO (Cyclift RC1 sees 1.2.3,
+  sim 27a). Coach: plan in PSRAM (64 segments), CRC + 0xFFFF rule, seq strictly newer, 12 s without COACH_STATE = phone
+  lost; card on ride page 2 in designs A/B/C + instruction/target on page 1; offline: stored plan on the ride clock, else
+  last targets; watch HR gone -> "NO HR - RIDE BY FEEL". Queue: newest 50 real rides + RAM-only (bit4) + the recording
+  ride (state 0); samples CRC computed lazily and cached; verified ids in rides/synced.txt; delete only after a matching
+  ACK with delete_samples, never while recording; chunks paced like diag chunks (bulk room + 200 ms). Storage: status
+  after HELLO / request / every clean result; clean refused 2/3/4/5/7, busy while recording; clean bit2 = diag/report.txt,
+  diag/probe.txt, demo history. DIAG_AUTO: delete only after DIAG_INFO state 1, only when enabled by HELLO.
+* Memory: DIRAM free 36,585 B (rc2 34,201 B): the new state is in PSRAM and app_psvc's 2.7 KB state moved to PSRAM too.
+* Fixture: firmware/waveshare/test/host/fixtures/link13_fw_fixture.json + Link13FirmwareFixture.swift (make checks it is current).
+* Test rider: "Rider A" / "RiderA" / "Rae" in tests; SCAN_RESULT / PROFILE_SET vectors keep their length — the Swift copies
+  of those two vectors (and ios/BikeComputerTests files that still use the real first name) are the iOS agent's to change.
+  Old docs (docs/FIRMWARE_0.6.x.md, pc-kit TEST-v0.6/0.7.0/0.7.1, POWER docs) still mention the owner's first name.

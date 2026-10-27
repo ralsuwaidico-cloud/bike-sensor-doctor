@@ -235,7 +235,7 @@ bool app_link13_write(const uint8_t *msg, size_t n, uint32_t now)
     switch (t) {
     case BC_MSG_APP_HELLO: {
         bc_hello_t h; if (!bc_link_decode_hello(msg, n, &h)) return true;
-        s_enabled = BC_CAPS_BOARD & h.app_caps & BC_CAPS_LINK13; L->st.hellos++;
+        s_enabled = BC_CAPS_BOARD & h.app_caps; L->st.hellos++;   /* contract §4: enabled_caps = INFO caps AND app_caps */
         L->hello_ack_due = true;
         app_diag_set_auto_delete((s_enabled & BC_CAP_DIAG_AUTO) != 0);
         if (s_enabled & BC_CAP_STORAGE) L->status_due = true;
