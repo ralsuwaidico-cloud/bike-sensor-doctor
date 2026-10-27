@@ -52,6 +52,9 @@ struct HealthCheckView: View {
                     if d.supervisedOnly {
                         Text("Your doctor asked for supervised exercise, so Cyclift will not plan training for you. Train with your doctor's team; you can still record rides and lifts.")
                             .font(.footnote)
+                    } else if d.currentIllness && !d.stopAnswers {
+                        Text("Rest while you are ill. Cyclift plans no sessions until you answer again when you feel well — no doctor's note needed for a cold or similar.")
+                            .font(.footnote)
                     } else if d.stopAnswers {
                         Text("Chest pain, fainting or dizziness need a doctor's check before any training. Cyclift plans no sessions until you record that a doctor examined you and cleared you.")
                             .font(.footnote)
@@ -94,10 +97,14 @@ struct HealthCheckView: View {
             guard !loaded else { return }
             loaded = true
             age = store.profile.birthYear != nil ? store.profile.effectiveAge : 0
-            // a previous, still valid check is shown as answered; an expired one starts empty again
-            if let s = store.profile.healthScreen, s.status() != .notAnswered {
-                answers = HealthScreen.questions.map { s[keyPath: $0.key] }
-                clearanceConfirmed = s.clearedAt != nil; clearedOn = s.clearedAt
+            // a previous, still valid check is shown as answered; an expired or older one starts empty again so every
+            // question gets an explicit answer (F-13); its old answers still decode (N-12) and a "see a doctor" result
+            // stays in force until answered again (N-07)
+            if let s = store.profile.healthScreen {
+                let current = s.questionSet == HealthScreen.currentQuestionSet && s.status() != .notAnswered
+                answers = HealthScreen.questions.map { q in (!current && q.key == \HealthScreen.currentIllness) ? nil : s[keyPath: q.key] }
+                if !current { answers = answers.map { _ in nil } }
+                clearanceConfirmed = current && s.clearedAt != nil; clearedOn = current ? s.clearedAt : nil
             }
         }
     }
@@ -131,6 +138,7 @@ struct HealthCheckHomeCard: View {
         case .notAnswered: return "Answer the health check"
         case .needsClearance: return "Clearance needed for hard training"
         case .stop: return "See a doctor before training"
+        case .paused: return "Training paused while you are ill"
         case .clear, .cleared: return ""
         }
     }
@@ -139,6 +147,7 @@ struct HealthCheckHomeCard: View {
         case .notAnswered: return "9 quick questions. Until then, rides stay easy and lifts stay light."
         case .needsClearance: return "Easy-to-moderate training only, without weight increases, until you record a doctor's clearance."
         case .stop: return "Your answers mean a doctor should check you first. No sessions are planned until then."
+        case .paused: return "No sessions are planned. Answer the health check again when you feel well."
         case .clear, .cleared: return ""
         }
     }

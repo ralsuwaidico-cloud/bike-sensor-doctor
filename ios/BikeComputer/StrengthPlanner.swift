@@ -252,7 +252,7 @@ struct PlannerContext {
     /// Coach remediation M-02: the lifting return phase (from logged dates; nil = no recent break).
     var returning: ReturnPhase? = nil
     /// Coach remediation M-01: what may be prescribed (health check).
-    var readiness: CoachReadiness { profile.readiness }
+    var readiness: CoachReadiness { CoachReadiness(profile: profile, now: now) }
 
     var experience: StrengthPrefs.Experience {
         if let e = prefs.experience { return e }
@@ -746,6 +746,17 @@ enum StrengthPlanner {
             }
             let r0 = max(range.lowerBound, min(minReps, range.upperBound)) - (minReps > range.lowerBound ? 1 : 0)
             return Load(weight: nil, reps: max(range.lowerBound, r0), bodyweight: true, progressed: false, why: "\(lastText) — \(phase.weeksText) ago. After a break, reps restart at \(max(range.lowerBound, r0)) and build back up from your new logs.")
+        }
+        // review N-02: when the rep range is now higher than what was last done (e.g. >= 8 reps until the health check
+        // allows heavy work), the weight comes down so the set is not harder: about the load for the new reps with 3
+        // in reserve (estimated from the logged set, Epley; rounded down to the smallest step, never below the bar)
+        if let w0 = top, minReps < range.lowerBound, !ctx.readiness.vigorousAllowed || holdWhy != nil {
+            let dumbbellN = e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell")
+            let stepN = WeightFmt.step(dumbbell: dumbbellN, ctx.units)
+            let e1 = w0 * (1 + Double(minReps) / 30)
+            let target = e1 / (1 + Double(range.lowerBound + 3) / 30)
+            let next = max(barFloor(e, ctx: ctx) ?? stepN, min(w0, (target / stepN).rounded(.down) * stepN))
+            return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText). More reps per set are planned now (\(range.lowerBound)+), so the weight comes down to about \(WeightFmt.text(next, ctx.units)) — a set that leaves about 3 reps in reserve. \(holdWhy ?? "")")
         }
         if let hw = holdWhy {
             return Load(weight: top, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: top == nil && bw, progressed: false, why: "\(lastText)\(rpeText). \(hw)")

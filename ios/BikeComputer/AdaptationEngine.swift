@@ -394,7 +394,9 @@ enum TrainingAnalyzer {
             areas.append(area)
             if reviewDue { out.painReviewDue.append(area) }
             let repeated = exposures.filter { $0.pain == .concerning && ($0.area ?? .other) == area && $0.date >= daysAgo(14) }.count >= 2
-            if repeated || days > 14 { out.painPersistent.append(area) }
+            // review N-06: "persistent" = it came back within 14 days, or it is older than 14 days and the rider has had
+            // no two pain-free sessions of that activity since (still ongoing) — not merely an old report
+            if repeated || (days > 14 && !reviewDue) { out.painPersistent.append(area) }
         }
         out.painAreas = areas
         // non-specific discomfort: holds progression in that area until a LATER session of the same activity is rated
@@ -489,7 +491,7 @@ enum AdaptationExplainer {
     static func painAdvice(_ areas: [PainArea], persistent: [PainArea] = []) -> String? {
         guard !areas.isEmpty else { return nil }
         let names = areas.map { $0.title.lowercased() }.joined(separator: ", ")
-        var t = "You reported concerning pain (\(names)). Exercises that load that area are left out and nothing there is progressed until you confirm it is fine (Coach adjustments › “It's fine now”) — the coach never releases it on its own. After at least a week, if your last two sessions were pain-free, the coach will ask you. Stop whatever hurts. If the pain is sharp, swollen, keeps coming back or gets worse, see a doctor or physiotherapist — the app cannot tell what is causing it."
+        var t = "You reported concerning pain (\(names)). Coach-built sessions leave out exercises that load that area; in your own routines those exercises stay but are not progressed — swap or skip them if they hurt. Nothing there is progressed until you confirm it is fine (Coach adjustments › “It's fine now”) — the coach never releases it on its own. After at least a week, if your last two sessions were pain-free, the coach will ask you. Stop whatever hurts. If the pain is sharp, swollen, keeps coming back or gets worse, see a doctor or physiotherapist — the app cannot tell what is causing it."
         if !persistent.isEmpty { t += " It has lasted more than two weeks or come back (\(persistent.map { $0.title.lowercased() }.joined(separator: ", "))): have it assessed before loading it again." }
         return t
     }
@@ -625,7 +627,8 @@ enum AdaptationEngine {
         // ---------- progression: only without fatigue, without repeated misses, never where pain was reported
         if !a.anyFatigue && !a.adherenceBlock {
             var seen: Set<String> = []
-            for s in future where s.kind == .strength && s.date < progressEnd && auto(s) {
+            // review N-04: no load or rep progression of the rider's routines until the health check allows harder training
+            for s in future where s.kind == .strength && s.date < progressEnd && auto(s) && input.profile.readiness.vigorousAllowed {
                 for e in entries(s) where !seen.contains(e.exerciseId) {
                     seen.insert(e.exerciseId)                         // only the NEXT session with that exercise
                     if a.painBlocks(e.pattern) { continue }

@@ -38,7 +38,9 @@ struct CheckInFlow: View {
                     if pain.needsArea {
                         Picker("Where", selection: $area) { ForEach(PainArea.allCases, id: \.self) { Text($0.title).tag($0) } }
                         Text(pain == .concerning ? (AdaptationExplainer.painAdvice([area]) ?? "") : AdaptationExplainer.discomfortAdvice([area])).font(.footnote).foregroundStyle(pain == .concerning ? BC.warn : .secondary).fixedSize(horizontal: false, vertical: true)
-                    } else if pain == .soreness {
+                    }
+                    Text(painDefinition(pain)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if pain == .soreness {
                         Text("Normal muscle soreness does not change your plan.").font(.footnote).foregroundStyle(.secondary)
                     }
                 } header: { Text("Pain or unusual discomfort") }
@@ -336,5 +338,15 @@ struct SplitSlotRow: View {
             }
             Stepper("\(slot.perWeek) × a week", value: Binding(get: { slot.perWeek }, set: { v in var s = slot; s.perWeek = v; onChange(s) }), in: 1...4)
         }.padding(.vertical, 2)
+    }
+}
+
+/// Review N-15: short definitions so the rider can classify what they feel (coaching guidance, not a diagnosis).
+func painDefinition(_ p: PainLevel) -> String {
+    switch p {
+    case .noPain: return "Nothing unusual."
+    case .soreness: return "Soreness: a dull muscle ache 1–3 days after training that eases as you warm up."
+    case .discomfort: return "Discomfort: something feels off in one spot, but it is not sharp, not in a joint and does not change how you move."
+    case .concerning: return "Pain: sharp or stabbing, in or around a joint, with swelling, changes how you move, or still there the next day."
     }
 }

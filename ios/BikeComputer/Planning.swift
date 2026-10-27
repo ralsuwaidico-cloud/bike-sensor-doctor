@@ -446,6 +446,7 @@ enum PlanEngine {
                     var minutes = max(20, x.minutes)
                     var safetyCap: SafetyOriginal? = nil          // F-08: generation-time caps are reversible too
                     var note = x.cyclingType == .custom ? "custom ride" : ""
+                    if !x.fixed, easyWeek, k.zone >= 3 { k = .endurance; note = "Easier week (week \(every) of your \(every)-week block): no interval session." }
                     if !x.fixed, easyWeek, k == .long { minutes = max(60, Int((Double(minutes) * 0.8 / 5).rounded()) * 5); note = "Easier week (week \(every) of your \(every)-week block): the long ride is 20 % shorter and there is no interval session." }
                     if x.fixed {
                         if k.zone > readiness.maxRideZone, let r = readiness.restriction { note = "Caution: \(r). This fixed ride is kept as you set it — ride it easy until then." }
@@ -462,7 +463,10 @@ enum PlanEngine {
                     }
                     var w = Workout(date: date, kind: k, minutes: minutes, sequence: n)
                     w.fixed = x.fixed; w.assignmentId = x.id
-                    if let c = safetyCap, c.kind != k || c.minutes != minutes { w.safetyOriginal = c }
+                    if var c = safetyCap, c.kind != k || c.minutes != minutes {
+                        if c.kind == .threshold, let t = thresholdReps, let r = stride(from: t, through: 3, by: -1).first(where: { AdaptiveRules.intervalsFit(kind: .threshold, reps: $0, minutes: c.minutes) }), r != 3 { c.intervalReps = r }
+                        w.safetyOriginal = c
+                    }
                     if !x.fixed, k == .threshold, let target = thresholdReps, let r = stride(from: target, through: k.defaultIntervalReps ?? 3, by: -1).first(where: { AdaptiveRules.intervalsFit(kind: k, reps: $0, minutes: minutes) }), r != (k.defaultIntervalReps ?? r) {
                         w.intervalReps = r; note = "Week \((blockPos ?? 0) + 1) of your \(every)-week block: \(r) × \(k.intervalWorkMinutes) min."
                     }

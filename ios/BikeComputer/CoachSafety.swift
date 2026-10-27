@@ -42,22 +42,51 @@ struct HealthScreen: Codable, Equatable {
     var questionSet: Int? = HealthScreen.currentQuestionSet
     static let currentQuestionSet = 2
 
-    enum Status: String, Codable { case notAnswered, clear, needsClearance, cleared, stop }
+    enum Status: String, Codable { case notAnswered, clear, needsClearance, cleared, stop, paused }
+
+    init() {}
+    /// Tolerant decoding (review N-12): answers saved by earlier builds decode with their known questions; a missing
+    /// question stays false and the older question set counts as not answered, so the form asks again pre-filled.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        answeredAt = try? c.decodeIfPresent(Date.self, forKey: .answeredAt)
+        heartOrBloodPressure = (try? c.decodeIfPresent(Bool.self, forKey: .heartOrBloodPressure)) ?? false
+        chestPain = (try? c.decodeIfPresent(Bool.self, forKey: .chestPain)) ?? false
+        dizzinessOrFainting = (try? c.decodeIfPresent(Bool.self, forKey: .dizzinessOrFainting)) ?? false
+        otherChronicCondition = (try? c.decodeIfPresent(Bool.self, forKey: .otherChronicCondition)) ?? false
+        chronicMedication = (try? c.decodeIfPresent(Bool.self, forKey: .chronicMedication)) ?? false
+        boneJointProblem = (try? c.decodeIfPresent(Bool.self, forKey: .boneJointProblem)) ?? false
+        supervisedOnly = (try? c.decodeIfPresent(Bool.self, forKey: .supervisedOnly)) ?? false
+        pregnancy = (try? c.decodeIfPresent(Bool.self, forKey: .pregnancy)) ?? false
+        currentIllness = (try? c.decodeIfPresent(Bool.self, forKey: .currentIllness)) ?? false
+        clearedAt = try? c.decodeIfPresent(Date.self, forKey: .clearedAt)
+        questionSet = try? c.decodeIfPresent(Int.self, forKey: .questionSet)
+    }
 
     static let validityDays = 365
 
     /// Symptoms / supervision: no training is planned until cleared (supervised-only: never in the app).
     var stopAnswers: Bool { chestPain || dizzinessOrFainting || supervisedOnly }
     var anyYes: Bool { heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || supervisedOnly || pregnancy || currentIllness }
-    /// A clearance can be recorded in the app (not for "supervised only").
-    var clearable: Bool { anyYes && !supervisedOnly }
+    /// A doctor's clearance can be recorded in the app: not for "supervised only", and not needed for a temporary
+    /// illness (the rider answers again when recovered).
+    var clearable: Bool { (heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || pregnancy) && !supervisedOnly }
+    /// The recorded clearance counts only when it is recent relative to the answers (review N-08: within the 12 months
+    /// before them, or after them).
+    var clearanceValid: Bool { guard let c = clearedAt, let a = answeredAt else { return false }; return c >= a.addingTimeInterval(-Double(Self.validityDays) * 86_400) }
 
     func status(now: Date = Date()) -> Status {
-        guard let at = answeredAt, now.timeIntervalSince(at) < Double(Self.validityDays) * 86_400, questionSet == Self.currentQuestionSet else { return .notAnswered }
+        // review N-07: a "see a doctor" result never expires into "not answered" — it stays until answered again
+        let stopNow = supervisedOnly || (stopAnswers && !clearanceValid)
+        guard let at = answeredAt, now.timeIntervalSince(at) < Double(Self.validityDays) * 86_400, questionSet == Self.currentQuestionSet else {
+            return answeredAt != nil && stopNow ? .stop : .notAnswered
+        }
         if !anyYes { return .clear }
-        if supervisedOnly { return .stop }
-        if clearedAt != nil { return .cleared }
-        return stopAnswers ? .stop : .needsClearance
+        if stopNow { return .stop }
+        // review N-05 / PAR-Q+: a temporary illness delays training; no doctor needed — answer again when recovered
+        if currentIllness { return .paused }
+        if !clearable { return .clear }
+        return clearanceValid ? .cleared : .needsClearance
     }
     var status: Status { status() }
 
@@ -79,11 +108,11 @@ struct HealthScreen: Codable, Equatable {
 struct CoachReadiness: Equatable {
     var screen: HealthScreen.Status
     /// Any training may be planned (false: symptoms / supervised-only → "see a doctor", no sessions generated).
-    var trainingAllowed: Bool { screen != .stop }
+    var trainingAllowed: Bool { screen != .stop && screen != .paused }
     /// Vigorous prescriptions (tempo and harder rides, heavy lifting, load progression) are allowed.
     var vigorousAllowed: Bool { screen == .clear || screen == .cleared }
     /// Highest strength RPE the planner may prescribe (independent review F-02: lower while clearance is pending).
-    var maxStrengthRPE: Int { switch screen { case .clear, .cleared: return 10; case .notAnswered: return 7; case .needsClearance, .stop: return 6 } }
+    var maxStrengthRPE: Int { switch screen { case .clear, .cleared: return 10; case .notAnswered: return 7; case .needsClearance, .stop, .paused: return 6 } }
     /// Fewest reps per set while not cleared (no heavy 4–6 rep work).
     var minStrengthReps: Int? { vigorousAllowed ? nil : 8 }
     /// Highest ride zone the generator may plan.
@@ -98,6 +127,7 @@ struct CoachReadiness: Equatable {
         case .notAnswered: return "the health check in Profile has not been answered (or is more than a year old), so only easy-to-moderate training is planned"
         case .needsClearance: return "your health check answers mean a doctor should clear you before hard training, so only easy-to-moderate training is planned until you record that clearance in Profile"
         case .stop: return "your health check answers mean you should see a doctor before training, so Cyclift plans no sessions until then"
+        case .paused: return "you said you are ill or recovering, so Cyclift plans no sessions until you answer the health check again when you feel well"
         }
     }
 
@@ -315,6 +345,12 @@ extension Store {
             let isRideOrStopped = w.kind.isRide || (w.kind == .rest && w.safetyOriginal != nil) || (!readiness.trainingAllowed && w.kind == .strength)
             guard isRideOrStopped else { continue }
             let userOwned = w.fixed || w.edited
+            // review N-01: a session the rider edited is theirs — its safety original is dropped (never restored over
+            // the edit); only a "see a doctor" / illness answer still pauses it
+            if w.edited && readiness.trainingAllowed {
+                if w.safetyOriginal != nil, w.kind != .rest { var x = w; x.safetyOriginal = nil; p[i] = x; changed = true }
+                if w.kind != .rest { continue }
+            }
             if userOwned && readiness.trainingAllowed && w.safetyOriginal == nil { continue }
             // the base: what was generated (before any safety cap), with the adaptive coach's own change on top
             let o = w.safetyOriginal ?? SafetyOriginal(kind: w.kind, minutes: w.minutes, intervalReps: w.intervalReps, note: w.note)
@@ -365,9 +401,12 @@ extension Store {
     /// and the stored session are never rewritten.
     func returnAdjusted(_ entries: [ExerciseEntry], for w: Workout, now: Date = Date()) -> [ExerciseEntry] {
         let cal = Calendar.current
-        guard !w.done, w.completion == nil, cal.startOfDay(for: w.date) >= cal.startOfDay(for: now) else { return entries }
+        // review N-10: a session the rider edited keeps the weights they typed
+        guard !w.done, w.completion == nil, !w.edited, cal.startOfDay(for: w.date) >= cal.startOfDay(for: now) else { return entries }
         let logs = strength.filter { !$0.awaitingReview && !$0.inProgress && !$0.isImported && $0.date <= now }
         return entries.map { e in
+            // review N-03: entries already reduced (and saved back by an edit, swap or accepted insight) are not reduced again
+            if e.notes.contains("Back after") { return e }
             guard let top = e.sets.compactMap({ $0.bodyweight ? nil : $0.weightKg }).max(), top > 0,
                   let last = logs.filter({ s in (s.exercises ?? []).contains { $0.exerciseId == e.exerciseId && !$0.doneSets.isEmpty } }).map({ $0.date }).max() else { return e }
             let gap = cal.dateComponents([.day], from: cal.startOfDay(for: last), to: cal.startOfDay(for: now)).day ?? 0
