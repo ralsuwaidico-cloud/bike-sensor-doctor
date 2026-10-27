@@ -9,15 +9,14 @@ import Foundation
 /// it matches. Reports already saved here that the board still lists as pending are acknowledged again (never re-pulled).
 final class DiagTransfer {
     struct Config {
-        var chunkMax: UInt16 = 160              /* spec: "phone uses 160" */
-        var fallbackChunkMax: UInt16 = 128      /* after a chunk timeout, in case a 185-byte notify does not fit the link */
         var timeout: TimeInterval = 5           /* per request */
         var maxTimeoutRetries = 3               /* per request; then the session pauses until the next trigger */
         var maxCrcRetries = 3                   /* restarts from offset 0 after a crc mismatch / bad offset */
         var maxReadErrorRetries = 3             /* DIAG_ERR 3 */
         var readErrorDelay: TimeInterval = 2
         var busyDelay: TimeInterval = 10        /* DIAG_ERR 4 */
-        var rideInterval: TimeInterval = 1      /* at most one chunk per second while a ride is recording */
+        var rideInterval: TimeInterval = 1      /* at most one chunk per second while a ride is recording on the phone */
+        var boardRideRecheck: TimeInterval = 10 /* a ride RECORDING on the board: no chunk requests; look again this often */
     }
     enum Phase: Equatable { case idle, listing, pulling(UInt32) }
     struct Progress: Equatable { var reportId: UInt32; var received: UInt32; var size: UInt32; var kindRaw: UInt8 }
@@ -28,6 +27,11 @@ final class DiagTransfer {
     /// Writes one message on the Control characteristic; false when the link cannot take it now.
     var send: (Data) -> Bool
     var rideActive: () -> Bool = { false }
+    /// The board's LIVE says a ride is RECORDING there (firmware 0.7.3 answers chunk requests BUSY then): don't ask at all.
+    var boardRecording: () -> Bool = { false }
+    /// Largest single ATT packet on this link = ATT_MTU − 3 (`CBPeripheral.maximumWriteValueLength(for: .withoutResponse)`);
+    /// nil = not connected / unknown. The chunk size is computed from it — never learned from failures.
+    var linkPayload: () -> Int? = { nil }
     var onSaved: ((DiagReportMeta) -> Void)?
     var onChange: (() -> Void)?
 
@@ -46,7 +50,6 @@ final class DiagTransfer {
     private var timeouts = 0
     private var readErrors = 0
     private var crcFailures: [UInt32: Int] = [:]
-    private var useFallback = false
     private var relist = false
     private var seq: UInt16 = 0
     private enum Request: Equatable { case list, chunk }
@@ -56,7 +59,13 @@ final class DiagTransfer {
     }
 
     var isBusy: Bool { phase != .idle }
-    var chunkLen: UInt16 { useFallback ? config.fallbackChunkMax : config.chunkMax }
+    /// `max_len` of the next DIAG_CHUNK_REQ: min(155, (ATT_MTU − 3) − 25) — docs/LINK_V1_2_SPEC.md 1.2.3. While the link size is
+    /// unknown the protocol maximum 155 is asked for (the board clamps to the MTU it negotiated, so nothing can be oversized).
+    /// nil: the link is too small for even one data byte.
+    var chunkLen: UInt16? {
+        guard let p = linkPayload() else { return UInt16(BCLink.diagChunkDataMax) }
+        return BCLink.diagRequestMaxLen(linkPayload: p)
+    }
 
     // MARK: triggers
     /// Link ready with cap 0x400, or a diag_ready event: (re)list. While busy, a list follows the current session.
@@ -93,8 +102,7 @@ final class DiagTransfer {
                 pause()
                 return
             }
-            if o.kind == .chunk { useFallback = true }
-            issue(o.kind, now: now, throttle: false)
+            issue(o.kind, now: now, throttle: false)                  /* same offset, same size: sizing never depends on timeouts */
             return
         }
         if let s = scheduled, now >= s.at { scheduled = nil; issue(s.kind, now: now, throttle: false) }
@@ -205,8 +213,11 @@ final class DiagTransfer {
             next(now: now)
         case .badOffset:
             restart(i, now: now, reason: "bad offset")
-        case .busy:
+        case .busy:                              /* > 4 outstanding, or a ride is recording on the board */
             scheduled = (.chunk, now.addingTimeInterval(config.busyDelay))
+        case .linkTooSmall:
+            lastError = "The Bluetooth link to the BikeComputer is too small to transfer reports; they stay on the board."
+            pause()
         case .storageReadError, nil:
             readErrors += 1
             if readErrors > config.maxReadErrorRetries {
@@ -226,12 +237,21 @@ final class DiagTransfer {
             _ = send(BCLink.encodeDiagListRequest(seq: nextSeq(), tMs: 0) ?? Data())
         case .chunk:
             guard let i = current else { return }
+            if boardRecording() {                /* the board refuses chunks while it records a ride: wait, ask nothing */
+                scheduled = (.chunk, now.addingTimeInterval(config.boardRideRecheck))
+                return
+            }
             if throttle, rideActive(), let last = lastChunkRequestAt, now.timeIntervalSince(last) < config.rideInterval {
                 scheduled = (.chunk, last.addingTimeInterval(config.rideInterval))
                 return
             }
+            guard let maxLen = chunkLen else {
+                lastError = "The Bluetooth link to the BikeComputer is too small to transfer reports; they stay on the board."
+                pause()
+                return
+            }
             outstanding = (.chunk, now); lastChunkRequestAt = now
-            _ = send(BCLink.encodeDiagChunkRequest(reportId: i.reportId, offset: offset, maxLen: chunkLen, seq: nextSeq(), tMs: 0) ?? Data())
+            _ = send(BCLink.encodeDiagChunkRequest(reportId: i.reportId, offset: offset, maxLen: maxLen, seq: nextSeq(), tMs: 0) ?? Data())
             /* a refused write is handled like a lost answer: the timeout retries it */
         }
     }

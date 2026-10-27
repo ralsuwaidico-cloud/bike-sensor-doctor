@@ -8,6 +8,23 @@ extension BCLink {
     /// EVENT 0x40 `01 u8 event_id = 0x22 diag_ready` · `02 u8 pending count` · `03 u32 newest report_id`.
     static let diagReadyEventId = 0x22
 
+    // MARK: chunk size contract (docs/LINK_V1_2_SPEC.md 1.2.3, identical in the firmware's bc_diag_chunk_data_max)
+    /// Bytes of a DIAG_CHUNK that are not report data: header 8 + `01` report_id (tag 1 + len 1 + 4) + `02` offset (1 + 1 + 4)
+    /// + `03` data tag + len (2) + `04` last (1 + 1 + 1) = 25. Checked against the encoder in DiagFirmwareVectorTests.
+    static let diagChunkOverhead = headerSize + (2 + 4) + (2 + 4) + 2 + (2 + 1)
+    /// Data bytes that fit one Link message: 180 − 25 = 155.
+    static let diagChunkDataMax = maxMessage - diagChunkOverhead
+    /// ATT notification header (opcode 1 + handle 2): a notification carries at most ATT_MTU − 3 bytes.
+    static let attNotifyOverhead = 3
+    /// `max_len` for DIAG_CHUNK_REQ on a link whose largest single ATT packet is `linkPayload` bytes (= ATT_MTU − 3, from
+    /// `CBPeripheral.maximumWriteValueLength(for: .withoutResponse)`; notifications use the same negotiated MTU):
+    /// min(155, linkPayload − 25). nil when not even one data byte fits (ATT MTU < 29): the phone does not ask.
+    /// MTU 185 → 155 · 247 → 155 · 517 → 155 · 100 → 72 · 23 → nil.
+    static func diagRequestMaxLen(linkPayload: Int) -> UInt16? {
+        let room = min(linkPayload, maxMessage) - diagChunkOverhead
+        return room >= 1 ? UInt16(min(room, diagChunkDataMax)) : nil
+    }
+
     enum DiagKind: UInt8, Codable, CaseIterable {
         case crash = 1, recoverySession = 2, manual = 3, periodicHealth = 4
         var title: String {
@@ -33,10 +50,15 @@ extension BCLink {
     struct DiagErr: Equatable {
         var reportId: UInt32 = 0
         var code: UInt8 = 0
-        enum Code: UInt8 { case unknownId = 1, badOffset = 2, storageReadError = 3, busy = 4 }
+        /// 4 busy: more than 4 requests outstanding OR a ride is recording on the board (firmware 0.7.3 final).
+        /// 5 linkTooSmall: the negotiated ATT MTU leaves no room for one data byte — not retried.
+        enum Code: UInt8 { case unknownId = 1, badOffset = 2, storageReadError = 3, busy = 4, linkTooSmall = 5 }
         var known: Code? { Code(rawValue: code) }
         var text: String {
-            switch known { case .unknownId: return "the board no longer has this report"; case .badOffset: return "bad offset"; case .storageReadError: return "board storage read error"; case .busy: return "board busy"; case nil: return "error \(code)" }
+            switch known {
+            case .unknownId: return "the board no longer has this report"; case .badOffset: return "bad offset"; case .storageReadError: return "board storage read error"
+            case .busy: return "board busy"; case .linkTooSmall: return "the Bluetooth link is too small for report transfer"; case nil: return "error \(code)"
+            }
         }
     }
     struct DiagReady: Equatable { var pending = 0; var newestReportId: UInt32 = 0 }
@@ -119,7 +141,7 @@ extension BCLink {
     }
 
     // MARK: test helpers mirroring the board's encoders (same tag order as the spec table)
-    /// Builds header + TLVs without the 180-byte cap, so a full 160-byte DIAG_CHUNK (185 bytes) can be produced.
+    /// Builds header + TLVs without the 180-byte cap (a foreign/old board's oversize chunk can be produced for decoder tests).
     private static func raw(_ type: MsgType, seq: UInt16, tMs: UInt32, _ fields: [(UInt8, Data)]) -> Data {
         var d = Data([type.rawValue, 0]); d.append(le(seq)); d.append(le(tMs))
         for (t, v) in fields { d.append(t); d.append(UInt8(v.count)); d.append(v) }
