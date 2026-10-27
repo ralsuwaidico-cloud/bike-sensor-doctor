@@ -107,8 +107,8 @@ manager and wiped; they are never logged or echoed back.
 - **WIFI_STATUS_REQ 0x66**: no fields.
 
 Vectors (t_link2): STATUS_REQ seq 10 = `66 00 0A 00 00 00 00 00`; SCAN_REQ default = `60 00 01 00 00 00 00 00`; SCAN_REQ max 8 =
-`60 00 02 00 00 00 00 00 01 01 08`; SCAN_RESULT "Rashed’s iPhone" −62 dBm secured ch 6 not saved, seq 5 =
-`61 00 05 00 00 00 00 00 01 11 52 61 73 68 65 64 E2 80 99 73 20 69 50 68 6F 6E 65 02 01 C2 03 01 01 04 01 06 05 01 00`;
+`60 00 02 00 00 00 00 00 01 01 08`; SCAN_RESULT "RiderA’s iPhone" −62 dBm secured ch 6 not saved, seq 5 =
+`61 00 05 00 00 00 00 00 01 11 52 69 64 65 72 41 E2 80 99 73 20 69 50 68 6F 6E 65 02 01 C2 03 01 01 04 01 06 05 01 00`;
 SCAN_END(3, ok) seq 6 = `62 00 06 00 00 00 00 00 01 01 03 02 01 00`; SET("HomeNet", "Secret-123", 3) seq 7 =
 `63 00 07 00 00 00 00 00 01 07 48 6F 6D 65 4E 65 74 02 0A 53 65 63 72 65 74 2D 31 32 33 03 01 03`; FORGET("HomeNet") seq 8 =
 `64 00 08 00 00 00 00 00 01 07 48 6F 6D 65 4E 65 74`; STATUS(connected, HomeNet, −48, 2 saved, on) seq 9 =
@@ -129,9 +129,9 @@ a SET carries any subset of tags 02–0E; the board reports everything.
 - Never touched by a SET: ride history, journal, sensor pairings, phone bonds, Wi-Fi store, device settings.
 
 Vectors (t_link3): PROFILE_GET seq 1 = `70 00 01 00 00 00 00 00`; PROFILE_ACK(v1 applied, board v1) seq 2 =
-`73 00 02 00 00 00 00 00 01 04 01 00 00 00 02 01 00 03 04 01 00 00 00`; full PROFILE_SET v1 "Rashed" FTP 250 entered, 78.0 kg, born 1990,
+`73 00 02 00 00 00 00 00 01 04 01 00 00 00 02 01 00 03 04 01 00 00 00`; full PROFILE_SET v1 "RiderA" FTP 250 entered, 78.0 kg, born 1990,
 max 186, rest 52, metric, 6 h, experienced, endurance, LTHR 170, updated 1792850100, seq 2 =
-`71 00 02 00 00 00 00 00 01 04 01 00 00 00 02 04 B4 B8 DC 6A 03 06 52 61 73 68 65 64 04 02 FA 00 05 01 01 06 02 0C 03 07 02 C6 07 08 01 BA 09 01 34 0A 01 00 0B 01 06 0C 01 02 0D 01 01 0E 01 AA`.
+`71 00 02 00 00 00 00 00 01 04 01 00 00 00 02 04 B4 B8 DC 6A 03 06 52 69 64 65 72 41 04 02 FA 00 05 01 01 06 02 0C 03 07 02 C6 07 08 01 BA 09 01 34 0A 01 00 0B 01 06 0C 01 02 0D 01 01 0E 01 AA`.
 
 ## 1.2 Device settings (Control, cap 0x200) — firmware 0.6.0
 - **SETTINGS_GET 0x76**: no fields → SETTINGS.

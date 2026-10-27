@@ -110,7 +110,7 @@ static lv_obj_t *find_text_rec(lv_obj_t *o, const char *txt)
     if (lv_obj_check_type(o, &lv_label_class) && visible(o)) {
         const char *t = lv_label_get_text(o);
         if (strstr(t, txt)) return o;
-        /* 0.6.1: a row title shortened by LVGL's DOTS mode ("Rashed iPh...") still is that row for a rider who reads it */
+        /* 0.6.1: a row title shortened by LVGL's DOTS mode ("Rider A iP...") still is that row for a rider who reads it */
         size_t n = strlen(t);
         if (n > 3 && !strcmp(t + n - 3, "...") && strlen(txt) >= n - 3 && !strncmp(t, txt, n - 3)) return o;
     }
@@ -445,10 +445,10 @@ static void scenario(void)
     shot("01_welcome");
     tap_text("START");
     shot("02_name_ring");
-    /* type "Rashed": P-T group -> R, A-E -> A, P-T -> S, F-J -> H, A-E -> E, A-E -> D */
-    const char *seq[][2] = { { "P-T", "R" }, { "A-E", "A" }, { "P-T", "S" }, { "F-J", "H" }, { "A-E", "E" }, { "A-E", "D" } };
-    for (int i = 0; i < 6; i++) { tap_text(seq[i][0]); if (i == 0) shot("03_name_letters"); tap_text(seq[i][1]); }
-    CHECK(on_screen("Rashed_"), "name typed with the letter ring");
+    /* type "Rae" (a made-up test rider): P-T group -> R, A-E -> A, A-E -> E */
+    const char *seq[][2] = { { "P-T", "R" }, { "A-E", "A" }, { "A-E", "E" } };
+    for (int i = 0; i < 3; i++) { tap_text(seq[i][0]); if (i == 0) shot("03_name_letters"); tap_text(seq[i][1]); }
+    CHECK(on_screen("Rae_"), "name typed with the letter ring");
     shot("04_name_typed");
     tap_text("NEXT");
     CHECK(on_screen("AGE"), "age wheel");
@@ -490,7 +490,7 @@ static void scenario(void)
     int age = app_profile()->age, wdg = app_profile()->weight_dg;
     boot();
     CHECK(on_screen("START RIDE") && !on_screen("Hello!"), "restart goes straight to Home");
-    CHECK(app_profile()->age == age && app_profile()->weight_dg == wdg && !strcmp(app_profile()->name, "Rashed"), "profile restored after restart");
+    CHECK(app_profile()->age == age && app_profile()->weight_dg == wdg && !strcmp(app_profile()->name, "Rae"), "profile restored after restart");
     CHECK(app_profile()->power.paired, "pairing restored after restart");
 
     printf("== 3 real ride (scripted sensor values standing in for the meter)\n");
@@ -698,7 +698,7 @@ static void scenario(void)
     {
         g_sim.n_ap = 4;
         strcpy(g_sim.ap[0].ssid, "HomeNet"); g_sim.ap[0].rssi = -48; g_sim.ap[0].secured = true; strcpy(g_sim.ap[0].pass, "Secret-123"); g_sim.ap[0].present = true;
-        strcpy(g_sim.ap[1].ssid, "Rashed iPhone"); g_sim.ap[1].rssi = -62; g_sim.ap[1].secured = true; strcpy(g_sim.ap[1].pass, "bike ride!"); g_sim.ap[1].present = true;
+        strcpy(g_sim.ap[1].ssid, "Rider A iPhone"); g_sim.ap[1].rssi = -62; g_sim.ap[1].secured = true; strcpy(g_sim.ap[1].pass, "bike ride!"); g_sim.ap[1].present = true;
         strcpy(g_sim.ap[2].ssid, "CafeFree"); g_sim.ap[2].rssi = -75; g_sim.ap[2].secured = false; g_sim.ap[2].present = true;
         strcpy(g_sim.ap[3].ssid, "AVeryLongNetworkNameForTest123"); g_sim.ap[3].rssi = -84; g_sim.ap[3].secured = true; strcpy(g_sim.ap[3].pass, "12345678"); g_sim.ap[3].present = true;
         ui_settings_show(); run(300); scroll_to("Wi-Fi"); tap_text("Wi-Fi");
@@ -745,7 +745,7 @@ static void scenario(void)
         boot(); run_s(6);
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_CONNECTED && !strcmp(w.ssid, "HomeNet"), "auto-reconnect after restart (state %d)", w.state); }
         printf("   phone hotspot\n");
-        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); tap_text("Rashed iPhone"); kb_mode = 0;
+        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(2600); tap_text("Rider A iPhone"); kb_mode = 0;
         kb_type("bike ride!"); tap_text("JOIN"); run(3500);
         CHECK(on_screen("CONNECTED"), "joined the phone hotspot (password with space and !)");
         tap_text("DONE");
@@ -759,7 +759,7 @@ static void scenario(void)
         ui_wifi_show(); run(300); shot("b2_wifi_disconnected");
         printf("   forget\n");
         tap_text("SAVED"); shot("b3_saved");
-        tap_text("Rashed iPhone"); shot("b4_saved_detail");
+        tap_text("Rider A iPhone"); shot("b4_saved_detail");
         hold_text("HOLD: FORGET", 1800);
         { char sv[5][33]; CHECK(plat_wifi_saved(sv, 5) == 1 && !strcmp(sv[0], "HomeNet"), "hotspot forgotten"); }
         printf("   errors: timeout, not found, no address\n");
@@ -979,7 +979,7 @@ static void scenario(void)
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state == PLAT_WIFI_OFF && app_profile()->wifi_on && !g_sim.phone.enabled, "radios off, wifi setting kept"); }
         shot("c6_asleep");
         g_sim.woke_from_sleep = true; g_sim.asleep = false; boot(); run(400);
-        CHECK(on_screen("START RIDE") && app_power()->woke_from_sleep && app_power()->screen_on && !strcmp(app_profile()->name, "Rashed"), "wake: home, profile intact");
+        CHECK(on_screen("START RIDE") && app_power()->woke_from_sleep && app_power()->screen_on && !strcmp(app_profile()->name, "Rae"), "wake: home, profile intact");
         { plat_wifi_status_t w; plat_wifi_status(&w); CHECK(w.state != PLAT_WIFI_OFF, "wifi back on after the wake"); }
         g_sim.woke_from_sleep = false;
         /* automatic deep sleep after idle time on battery */
@@ -1098,21 +1098,21 @@ static void scenario(void)
         CHECK(g_sim.phone.statuses >= 2 && g_sim.phone.wifi_status.radio_on, "status pushed on change: radio on");
         /* the world: an iPhone with a typographic apostrophe in its name and a 5 GHz-only office network */
         g_sim.n_ap = 6;
-        snprintf(g_sim.ap[4].ssid, sizeof g_sim.ap[4].ssid, "Rashed\xE2\x80\x99s iPhone"); g_sim.ap[4].rssi = -58; g_sim.ap[4].secured = true; strcpy(g_sim.ap[4].pass, "bike ride!"); g_sim.ap[4].present = true; g_sim.ap[4].channel = 11;
+        snprintf(g_sim.ap[4].ssid, sizeof g_sim.ap[4].ssid, "Rider A\xE2\x80\x99s iPhone"); g_sim.ap[4].rssi = -58; g_sim.ap[4].secured = true; strcpy(g_sim.ap[4].pass, "bike ride!"); g_sim.ap[4].present = true; g_sim.ap[4].channel = 11;
         strcpy(g_sim.ap[5].ssid, "Office5G"); g_sim.ap[5].rssi = -40; g_sim.ap[5].secured = true; g_sim.ap[5].present = true; g_sim.ap[5].ghz5_only = true;
         g_sim.ap[0].present = g_sim.ap[1].present = g_sim.ap[2].present = g_sim.ap[3].present = true;
         g_sim.phone.n_scan = 0; g_sim.phone.scan_ends = 0;
         n = bc_link_encode_wifi_scan_req(&sq, b, sizeof b, 3, 0); CHECK(sim_phone_write(0, b, n), "scan request queued"); run(4000);
         CHECK(g_sim.phone.scan_ends == 1 && g_sim.phone.scan_end.err == BC_WIFI_SCAN_OK && g_sim.phone.scan_end.count == 5 && g_sim.phone.n_scan == 5, "scan: 5 results (the 5 GHz-only network cannot be seen), END ok (%d/%u)", g_sim.phone.n_scan, g_sim.phone.scan_end.count);
-        { int ip = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "Rashed\xE2\x80\x99s iPhone")) ip = i;
+        { int ip = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "Rider A\xE2\x80\x99s iPhone")) ip = i;
           CHECK(g_sim.phone.n_scan && !strcmp(g_sim.phone.scan[0].ssid, "HomeNet") && g_sim.phone.scan[0].saved, "strongest first; HomeNet marked saved");
           CHECK(ip >= 0 && g_sim.phone.scan[ip].secured && g_sim.phone.scan[ip].channel == 11 && g_sim.phone.scan[ip].rssi == -58, "the iPhone's UTF-8 name, channel and signal arrive intact (%d)", ip);
           int ic = -1; for (int i = 0; i < g_sim.phone.n_scan; i++) if (!strcmp(g_sim.phone.scan[i].ssid, "CafeFree")) ic = i; CHECK(ic >= 0 && !g_sim.phone.scan[ic].secured, "open network flagged"); }
         /* on-device list shows the name with a plain apostrophe (font) but joins with the real bytes */
-        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(3000); CHECK(scroll_to("Rashed's iPho"), "device list: typographic apostrophe shown as '"); shot("e0_networks_utf8");
+        ui_wifi_show(); run(300); tap_text("NETWORKS"); run(3000); CHECK(scroll_to("Rider A's iP"), "device list: typographic apostrophe shown as '"); shot("e0_networks_utf8");
         /* provisioning: wrong password, then the right one */
         g_sim.phone.statuses = 0;
-        bc_wifi_set_t st = { .flags = BC_WIFI_SET_CONNECT | BC_WIFI_SET_SAVE }; snprintf(st.ssid, sizeof st.ssid, "Rashed\xE2\x80\x99s iPhone"); snprintf(st.pass, sizeof st.pass, "wrong-pass");
+        bc_wifi_set_t st = { .flags = BC_WIFI_SET_CONNECT | BC_WIFI_SET_SAVE }; snprintf(st.ssid, sizeof st.ssid, "Rider A\xE2\x80\x99s iPhone"); snprintf(st.pass, sizeof st.pass, "wrong-pass");
         n = bc_link_encode_wifi_set(&st, b, sizeof b, 4, 0); CHECK(sim_phone_write(0, b, n), "WIFI_SET accepted"); run_s(5);
         CHECK(g_sim.phone.wifi_status.state == BC_WIFI_ST_DISCONNECTED && g_sim.phone.wifi_status.err == BC_WIFI_E_WRONG_PASSWORD && !strcmp(g_sim.phone.wifi_status.ssid, st.ssid), "status: wrong password (state %u err %u)", g_sim.phone.wifi_status.state, g_sim.phone.wifi_status.err);
         CHECK(!strstr(g_sim.last_log, "wrong-pass"), "the password never reaches the log");
@@ -1124,7 +1124,7 @@ static void scenario(void)
         g_sim.wifi_no_internet = true; snprintf(st.ssid, sizeof st.ssid, "CafeFree"); st.pass[0] = 0; n = bc_link_encode_wifi_set(&st, b, sizeof b, 6, 0); sim_phone_write(0, b, n); run_s(5);
         CHECK(g_sim.phone.wifi_status.state == BC_WIFI_ST_CONNECTED_NO_INTERNET, "open network without internet -> CONNECTED_NO_INTERNET (%u)", g_sim.phone.wifi_status.state); g_sim.wifi_no_internet = false;
         /* forget */
-        bc_wifi_forget_t fg; snprintf(fg.ssid, sizeof fg.ssid, "Rashed\xE2\x80\x99s iPhone"); n = bc_link_encode_wifi_forget(&fg, b, sizeof b, 7, 0); sim_phone_write(0, b, n); run_s(2);
+        bc_wifi_forget_t fg; snprintf(fg.ssid, sizeof fg.ssid, "Rider A\xE2\x80\x99s iPhone"); n = bc_link_encode_wifi_forget(&fg, b, sizeof b, 7, 0); sim_phone_write(0, b, n); run_s(2);
         { char sv[5][33]; int k = plat_wifi_saved(sv, 5); bool gone = true; for (int i = 0; i < k; i++) if (!strcmp(sv[i], fg.ssid)) gone = false; CHECK(gone && g_sim.phone.wifi_status.saved_count == (uint8_t)k, "forgotten; status reports %u saved", g_sim.phone.wifi_status.saved_count); }
         /* a scan during a ride is refused; the ride is untouched by every Wi-Fi message */
         sensors(true, 180, true, 88, false, 0); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; ui_home_show(); run(300); start_ride(); run_s(2);
@@ -1161,21 +1161,21 @@ static void scenario(void)
         n = bc_link_encode_profile_get(b, sizeof b, 14, 0); sim_phone_write(0, b, n); run(600);
         CHECK(g_sim.phone.profiles >= 1 && g_sim.phone.profile.version == 0 && g_sim.phone.profile.source == 0 && g_sim.phone.profile.ftp_w == ftp0 && !strcmp(g_sim.phone.profile.name, app_profile()->name), "PROFILE: device-only (version 0), FTP %u, name %s", ftp0, g_sim.phone.profile.name);
         bc_profile_msg_t pm = { .version = 1, .updated_epoch_s = 1792850100u, .ftp_w = 250, .ftp_how = 1, .weight_kg_x10 = 780, .birth_year = 1990, .max_hr = 186, .rest_hr = 52, .units = 0, .hours_per_week = 6, .level = 2, .goal = 1, .lthr = 170 };
-        snprintf(pm.name, sizeof pm.name, "Rashed"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
+        snprintf(pm.name, sizeof pm.name, "Rider A"); pm.has = 0; for (int t = 2; t <= 0x0E; t++) pm.has |= BC_PF_HAS(t);
         n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 15, 0); CHECK(n > 0 && sim_phone_write(0, b, n), "PROFILE_SET v1 accepted"); run(600);
         CHECK(g_sim.phone.profile_acks == 1 && g_sim.phone.profile_ack.status == BC_PF_APPLIED && g_sim.phone.profile_ack.version == 1 && g_sim.phone.profile_ack.board_version == 1, "ACK applied v1");
         { const bc_profile_t *p = app_profile();
-          CHECK(!strcmp(p->name, "Rashed") && p->ftp_w == 250 && p->ftp_how == BC_FTP_ENTERED && p->weight_dg == 780 && p->birth_year == 1990 && p->age == 36 && p->max_hr == 186 && p->rest_hr == 52 && p->hours_wk == 6 && p->exp == BC_EXP_ADVANCED && p->goal == BC_GOAL_ENDURANCE && p->lthr == 170 && p->prof_src == 1 && p->phone_prof_ver == 1,
+          CHECK(!strcmp(p->name, "Rider A") && p->ftp_w == 250 && p->ftp_how == BC_FTP_ENTERED && p->weight_dg == 780 && p->birth_year == 1990 && p->age == 36 && p->max_hr == 186 && p->rest_hr == 52 && p->hours_wk == 6 && p->exp == BC_EXP_ADVANCED && p->goal == BC_GOAL_ENDURANCE && p->lthr == 170 && p->prof_src == 1 && p->phone_prof_ver == 1,
                 "profile applied (name %s, FTP %u %s, age %u from birth year, level %u, goal %u)", p->name, p->ftp_w, bc_ftp_label(p), p->age, p->exp, p->goal);
           CHECK(count_lines("rides/history.txt") == hist_lines && p->power.paired == paired && g_sim.phone.bonded, "history, sensor pairing and phone bond untouched"); }
         n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 16, 0); sim_phone_write(0, b, n); run(600);
         CHECK(g_sim.phone.profile_acks == 2 && g_sim.phone.profile_ack.status == BC_PF_OLDER && g_sim.phone.profile_ack.board_version == 1, "the same version again -> rejected as older/equal");
         pm.version = 2; pm.has = BC_PF_HAS(0x04) | BC_PF_HAS(0x05); pm.ftp_w = 262; pm.ftp_how = 2;
         n = bc_link_encode_profile(BC_MSG_PROFILE_SET, &pm, b, sizeof b, 17, 0); sim_phone_write(0, b, n); run(600);
-        CHECK(g_sim.phone.profile_ack.status == BC_PF_APPLIED && app_profile()->ftp_w == 262 && app_profile()->ftp_how == BC_FTP_AUTO && !strcmp(app_profile()->name, "Rashed"), "partial SET v2: only the FTP changes (now %s)", bc_ftp_label(app_profile()));
+        CHECK(g_sim.phone.profile_ack.status == BC_PF_APPLIED && app_profile()->ftp_w == 262 && app_profile()->ftp_how == BC_FTP_AUTO && !strcmp(app_profile()->name, "Rider A"), "partial SET v2: only the FTP changes (now %s)", bc_ftp_label(app_profile()));
         n = bc_link_encode_profile_get(b, sizeof b, 18, 0); sim_phone_write(0, b, n); run(600);
         CHECK(g_sim.phone.profile.version == 2 && g_sim.phone.profile.source == 1 && g_sim.phone.profile.ftp_w == 262 && g_sim.phone.profile.ftp_how == 2 && g_sim.phone.profile.birth_year == 1990, "PROFILE now reports phone-synced v2");
-        ui_home_show(); run(300); CHECK(on_screen("Rashed") && on_screen("262"), "home shows the synced profile"); shot("e2_home_synced_profile");
+        ui_home_show(); run(300); CHECK(on_screen("Rider A") && on_screen("262"), "home shows the synced profile"); shot("e2_home_synced_profile");
         boot(); run(400); CHECK(app_profile()->phone_prof_ver == 2 && app_profile()->ftp_w == 262 && app_profile()->rest_hr == 52, "synced profile survives a restart (board works alone with it)");
         plat_phone_set_enabled(true); sim_phone_connect(true); run(500);
 
@@ -1758,7 +1758,7 @@ static void scenario_073(void)
 {
     printf("\n== 21. firmware 0.7.3: crash evidence, recovery mode, staged boot, report transfer\n");
     bc_profile_t *pr = app_profile();
-    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; snprintf(pr->name, sizeof pr->name, "Rashed"); app_profile_save();
+    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; snprintf(pr->name, sizeof pr->name, "Rider A"); app_profile_save();
     g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; g_sim.power_ok = true; g_sim.watts = 142;
     g_sim.fw_id = 0x073; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));           /* power-on: RTC memory blank */
     /* a) clean power-on: BOOT + STAGE events, no report */
@@ -1778,7 +1778,7 @@ static void scenario_073(void)
     { char p[64]; snprintf(p, sizeof p, "diag/r%06lu.txt", (unsigned long)st.crash_report); static char t[BC_DIAG_REPORT_MAX]; long n = plat_file_read(p, t, sizeof t - 1); if (n < 0) n = 0; t[n] = 0;
       CHECK(strstr(t, "[header]") && strstr(t, "[recovery]") && strstr(t, "task nimble_host") && strstr(t, "0x4200F4BC 0x4200E71C") && strstr(t, "marker 6") && strstr(t, "log_before_reset"),
             "crash report: sections, task, backtrace addresses, marker = power meter, log tail");
-      CHECK(!strstr(t, "Rashed") && !strstr(t, "C1:22:33") && !strstr(t, "192.168") && strstr(t, "..:..:..:..:55:66"), "crash report: no name, address cut to 2 bytes, IP masked"); }
+      CHECK(!strstr(t, "Rider A") && !strstr(t, "C1:22:33") && !strstr(t, "192.168") && strstr(t, "..:..:..:..:55:66"), "crash report: no name, address cut to 2 bytes, IP masked"); }
     /* c) SEND LOGS: only the phone link starts; Cyclift connects, lists, pulls (interrupted + resumed) and acknowledges */
     tap_text("SEND LOGS"); run(500);
     CHECK(g_sim.phone_only_started && on_screen("Waiting for Cyclift"), "SEND LOGS: phone link only, 'Waiting for Cyclift'");

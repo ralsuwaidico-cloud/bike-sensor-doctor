@@ -3,6 +3,6 @@
 # build never needs the internet.
 cmake_minimum_required(VERSION 3.16)
 set(ENV{IDF_COMPONENT_MANAGER} 0)
-set(PROJECT_VER "0.7.4-rc2")
+set(PROJECT_VER "0.7.5-dev")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(bike_computer)

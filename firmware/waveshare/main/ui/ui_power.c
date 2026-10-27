@@ -268,7 +268,7 @@ static void scr_gesture_cb(lv_event_t *e) { (void)e; ui_power_gesture(lv_indev_g
 /* rev 3 fix: LVGL creates a screen WITHOUT LV_OBJ_FLAG_PRESS_LOCK, so while a finger swiped down from the top zone the
    "pressed object" was re-searched on every read and jumped to whatever control the finger crossed (START RIDE...), which then
    received PRESSED + the gesture instead of the screen — a swipe that did not start exactly on the handle did nothing
-   (Rashed: "swiping down from the top is difficult"). With PRESS_LOCK the screen keeps the touch it received, the gesture reaches
+   (owner: "swiping down from the top is difficult"). With PRESS_LOCK the screen keeps the touch it received, the gesture reaches
    it, and no control underneath is pressed by a swipe. */
 void ui_power_attach_screen(lv_obj_t *scr, ui_scr_t kind)
 {

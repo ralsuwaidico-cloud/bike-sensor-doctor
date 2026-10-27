@@ -3,7 +3,7 @@
  * automatic screen timeout, deep sleep (no ride active), low-battery alerts, safe restart. Shared by the device and
  * the PC harness; the hardware side is behind plat.h (plat_backlight, plat_panel_sleep, plat_deep_sleep).
  *
- * Safety invariants (Rashed, 24 Oct 2026):
+ * Safety invariants (owner, 24 Oct 2026):
  *  - nothing here ever pauses or ends a ride by itself unless bc_profile.bat_protect == 1, which is OFF by default and
  *    labelled NOT VALIDATED in every menu; by default a low battery only alerts;
  *  - Sleep is refused while a ride is running or paused;
