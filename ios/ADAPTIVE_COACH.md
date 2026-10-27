@@ -191,7 +191,7 @@ Not changed: `BikeComputerApp.swift`, `project.yml` (new files are picked up by 
   sync of the new fields between two devices.
 
 ## Known limitations (independent review pass 4, 27 Oct 2026)
-- F-22 / P4-05: the planner never places a VO2max session on its own; hard rides are threshold or sweet-spot style. A rider can
+- F-22 / P4-05: the planner never places a VO2max session on its own; hard rides are tempo or threshold sessions. A rider can
   still choose a VO2 session by hand.
 - P4-03: a recorded doctor's clearance up to 12 months old also covers a non-symptom condition the rider adds later, if the
   rider re-confirms the clearance. Symptom answers (chest pain, fainting, dizziness) always need a clearance dated on or after
@@ -200,3 +200,6 @@ Not changed: `BikeComputerApp.swift`, `project.yml` (new files are picked up by 
   before answering has to be entered with the answer day (conservative by design).
 - P4-07: the number of hard rides a rider types in by hand is not capped; the coach only warns via the caution note while
   the rider is not cleared.
+- P5-03: accepting an old-style coach proposal that changes a capped ride's kind or minutes is reverted by the next safety
+  refresh while the rider is not cleared (errs on the safe side).
+- P5-04: swapping the days of a capped ride keeps it capped even after clearance (errs on the safe side); edit it to restore.
