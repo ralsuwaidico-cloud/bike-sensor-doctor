@@ -1,36 +1,45 @@
 # Cyclift / BikeComputer — work status (checkpoint)
 
-Updated: 27 Oct 2026 01:40 (Dubai). Keep this file current; it is the source of truth for resuming work.
+Updated: 27 Oct 2026 08:25 (Dubai). Source of truth for resuming work — update at every stage.
 
 ## Standing rules
 - No App Store submission/release, no TestFlight upload, no firmware flashing, no board reboots without the owner's approval.
 - Never claim simulator/CI results as hardware verification. Preserve all user data (rides, profile, pairings, NVS).
 - Repo is public: no names, emails, team IDs or keys in commits/logs/screenshots.
+- Report after each stage; no long silent runs; cancel and re-run stuck CI (normal run ≈ 25–35 min).
 
-## Branches and worktrees
+## Branches
 | Work | Branch / worktree | Head | State |
 |---|---|---|---|
-| Integration line | `ios/dev` — /home/claude/bike-sensor-doctor | b485265 | Contains firmware 0.7.3 + iOS diag receiver + firmware-vector tests. Not uploaded to TestFlight. |
-| Firmware 0.7.3 | `fix/073` — /home/claude/ws-073 | 092561b | Built, host+sim tests pass; not flashed. Kit in firmware/waveshare/pc-kit. |
-| iOS diag receiver (Link 1.2.3) | `fix/iosdiag` — /home/claude/ws-iosdiag | 52915c0 | Merged into ios/dev; CI run #68 green. |
-| Cyclift quality + coaching | `fix/quality` — /home/claude/ws-quality | 2b2c104 | In progress (WIP commits). CI compile checks on `ios-check/quality`. |
-| 0.7.2 exact rebuild (crash decoding) | detached — /home/claude/ws-fw | ec0aad9 | Read-only; ELF for addr2line. |
+| Integration line | `ios/dev` — /home/claude/bike-sensor-doctor | cf43ac4 (+ this file) | firmware 0.7.3 final + iOS diag receiver (MTU-exact) merged |
+| Firmware 0.7.3 final | `fix/073` — /home/claude/ws-073 | 1cf8cf0 | DONE, delivered to PC, not flashed |
+| iOS diag receiver | `fix/iosdiag` → `ios/diag-receiver` — /home/claude/ws-iosdiag | 7ab3c92 | DONE, CI run 69 green (275 tests) |
+| Cyclift quality + coach fixes | `fix/quality` → `ios/quality` — /home/claude/ws-quality | 32a0676 | code complete; final CI run 73 (attempt 2) running |
+| Coach audit baseline | detached — /home/claude/ws-audit | 2b2c104 | frozen, read-only |
 
-## Owner instructions and status
-1. **0.7.2 crash + firmware 0.7.3** (20:37, 20:55 briefs) — DONE (dev): 4 confirmed BLE defects fixed (D1–D4), defensive fixes D5–D9; crash root cause NOT confirmed (needs a crash log or a 0.7.3 crash report). Core-dump partition added (old data partitions unchanged; rollback to 0.7.1 kept).
-2. **Cyclift UI / workout integrity / personalised strength / swap / Health-style charts / FTP labels** (21:11 brief + 22:39 "charts scrollable and tappable like the Health app") — IN PROGRESS on fix/quality. Root causes documented in ios/QUALITY_RELEASE.md.
-3. **Diagnostic integration** (00:24 brief): MTU-based chunk size on both sides, cross-tests with firmware-generated vectors, verify 0.7.3 capabilities, ride-priority throttling, one physical test procedure — IN PROGRESS (firmware-generated vectors already decode in iOS: DiagFirmwareVectorTests). MTU fix NOT STARTED.
-4. **Deliver 0.7.3 package to the PC** (00:28 brief) — NOT DONE. Target: C:\Users\PC\Documents\BikeComputer (PC linked). Deliver after the MTU fix so the delivered binary is final; verify every file on the PC.
-5. **Coaching scientific audit** (00:28 attachment): CYCLIFT_COACH_SCIENTIFIC_AUDIT.md, _RULES.csv, _TEST_CASES.csv (≥20 profiles run through the real engine), _GAPS.md, executive summary — NOT STARTED. Audit baseline will be pinned to a fixed commit.
+## Workstreams
+1. **Firmware 0.7.3** — DONE. App SHA-256 181b2e5c751108679a2101bfb1c1942b0302fe537527ceaeba207c5256ea4da5 (1,830,352 B).
+   Delivered 27 Oct 01:5x to C:\Users\PC\Documents\BikeComputer, 18 files re-read from the PC and hash-verified:
+   INSTALL-v0.7.3.bat/.ps1, README-v0.7.3.txt, TEST-v0.7.3.txt, DIAG-TEST-v0.7.3.txt, RESTORE-CHOSEN-BACKUP.bat/.ps1,
+   ROLLBACK-TO-v071.bat/.ps1, CAPTURE-CRASH.bat/.ps1, fw-v0.7.3\ (app, bootloader, otadata, partitions, SHA256SUMS),
+   fw-v0.7.1\ (BC071-app.bin, BC071-otadata.bin). Partition change: 64 KB coredump carved from the never-used ota_1; data partitions unchanged.
+   Crash root cause of 0.7.2: NOT confirmed (no crash log). 4 confirmed defects fixed (D1–D4).
+2. **Diagnostic integration (Link 1.2.3)** — DONE (PC/CI only). Chunk data = min(phone max_len, 155, ATT_MTU−3−25).
+   Firmware cross-test fixture (7,301-byte real report, MTU 23/100/185/247/517) decoded by iOS. LIVE priority gating measured.
+   Safe report: board Settings › Diagnostics › HOLD: SAVE REPORT. Physical test: DIAG-TEST-v0.7.3.txt.
+3. **Coach audit (commit 2b2c104)** — DONE. Files in /home/claude/coach-audit (sent to owner as zip):
+   CYCLIFT_COACH_SCIENTIFIC_AUDIT.md, _RULES.csv (40 rules), _TEST_CASES.csv (34 athletes 27 pass / 7 fail; 20 rule checks 11/9),
+   _GAPS.md, EXECUTIVE_SUMMARY.md, harness/ (Linux Swift 5.10.1 at /opt/swiftx). Verdict: not ready for public release.
+4. **Cyclift quality release** — code complete on fix/quality (21 commits since b485265). Includes audit fixes G-01..G-09, G-11, G-21
+   (harness 38/54 → 51/54 on the new code). Run 72: 317 unit tests 0 failed, 74 layout screenshots ok, archive/sign ok;
+   1 UI smoke flake ("Quick log" not hittable yet) — fixed in 32a0676; run 73 stuck 1 h 24 min on GitHub → cancelled, re-run.
 
-## Next actions
-- Agent A (fix/quality): finish quality release, CI green, screenshots inspected.
-- Agent B (audit, read-only worktree at pinned commit): coaching audit package.
-- Agent C (fix/073 + fix/iosdiag): MTU-safe chunk sizing both sides, tests, rebuild 0.7.3, integrated physical test procedure.
-- Main session: integration into ios/dev, deliver PC package and verify, keep this file updated.
+## Next stages
+- A. Run 73 green → merge fix/quality into ios/dev → full CI on ios/dev (no upload) = TestFlight release candidate, awaiting approval.
+- B. One physical test sheet for the owner's 8 checks (meter→board, board→phone, watch→phone, phone→board HR, diag transfer,
+  strength logging/edit/delete/swap, coach adjustment, data preservation/reconnect/crash recovery).
+- C. Owner approvals needed: install firmware 0.7.3; TestFlight upload of the release candidate.
+- Remaining audit gaps not yet fixed: see ios/QUALITY_RELEASE.md "Audit findings addressed".
 
-## Test status
-- Firmware 0.7.3: host 2,403 checks 0 failed (ASan/UBSan); sim 289 screens 0 issues; BLE stress 1,000 phone cycles pass; idf.py build OK.
-- iOS diag receiver: CI #68 — 254 unit tests 0 failed, launch smoke pass.
-- Quality branch: CI compile checks iter 9 green, iter 10 running.
-- Hardware: NOTHING verified on the physical board or iPhone for 0.7.3 / quality release.
+## Hardware verification
+NOTHING of 0.7.3 or the quality release has been verified on the physical board, iPhone or Apple Watch.
