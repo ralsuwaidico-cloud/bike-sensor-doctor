@@ -63,8 +63,8 @@ Nothing here is verified on hardware.
 
 ## Open / next (FW-4)
 * Coach screen in every layout, BLE contract implementation (HELLO, COACH, RIDEQ, STORAGE), offline ride queue, retention.
-* Privacy note for the lead: `test/sim/plat_host.c` (pre-existing, not mine) contains a device id `8c:fd:49:9b:ef:40`, one byte
-  away from the board's real Bluetooth address seen in the serial log — consider replacing it with a neutral value.
+* Privacy note for the lead: `test/sim/plat_host.c` (pre-existing, not mine) contains a hard-coded device id that differs from the
+  board's real Bluetooth address (seen in the serial log) in only the last byte — consider replacing it with a neutral value.
 
 ## Contract summary for the iOS agent (`coord/interfaces/BLE_CONTRACT.md`, draft v1 = Link 1.3)
 * Phone = brain (profiles, plans, adaptive decisions, history, diagnostics storage); board = sensors, live display, ride clock,
