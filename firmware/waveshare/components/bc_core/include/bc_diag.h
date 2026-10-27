@@ -125,6 +125,7 @@ typedef struct {
     const bc_diag_index_t *(*index)(void *ctx);                        /* current list, oldest first */
     long (*read)(void *ctx, uint32_t id, uint32_t off, uint8_t *buf, size_t n);   /* bytes read, -1 storage error */
     bool (*mark_sent)(void *ctx, uint32_t id);                         /* persist state 1 */
+    bool (*remove)(void *ctx, uint32_t id);                            /* 1.3 DIAG_AUTO: delete an ACKed report (NULL = never) */
 } bc_diag_store_t;
 typedef struct {
     bc_diag_store_t st;
@@ -135,6 +136,9 @@ typedef struct {
     uint16_t att_mtu;                                /* negotiated ATT MTU of the phone connection (0 = not known = 23) */
     bool paused;                                     /* a ride is recording: CHUNK_REQs are answered BUSY (LIST / ACK still work) */
     uint32_t chunks_sent, acks_ok, acks_bad, reqs, busy_ride, mtu_errs;
+    /* Link 1.3 DIAG_AUTO (enabled by APP_HELLO on this connection): DIAG_ACK with 03 delete = 1 and a matching CRC ->
+       DIAG_INFO state 1 is sent first, then the report is deleted (store.remove) */
+    bool auto_delete; uint32_t delete_id; bool delete_due; uint32_t deleted;
 } bc_diag_srv_t;
 void bc_diag_srv_init(bc_diag_srv_t *s, const bc_diag_store_t *st);
 /** Link facts for the next replies: the phone connection's negotiated ATT MTU and whether a ride is recording. */

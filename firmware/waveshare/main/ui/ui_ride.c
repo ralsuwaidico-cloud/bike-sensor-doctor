@@ -6,6 +6,7 @@
  * Missing data is shown as "--" with NO DATA / NO STRAP — never a held or invented value.
  */
 #include "ui.h"
+#include "app_link13.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -14,7 +15,9 @@ static int r_style;
 /* page 1 */
 static lv_obj_t *w_arc, *w_band, *w_status, *w_watts, *w_unit, *w_cad, *w_hr, *w_cue, *w_cue_lbl, *w_ring, *w_head, *w_time1;
 /* page 2 */
-static lv_obj_t *c_head, *c_why, *c_target, *c_inband, *c_live;
+static lv_obj_t *c_head, *c_why, *c_target, *c_inband, *c_live, *c_title;
+/* 0.7.5: the Cyclift coach card (Link 1.3 COACH) on page 2 - shown instead of the board's coach while Cyclift coaches */
+static lv_obj_t *k_line[BC_CM_CARD_LINES];
 /* page 3 */
 static lv_obj_t *m_time, *m_state, *m_l1, *m_l2, *m_l3;
 /* page 4 */
@@ -153,7 +156,12 @@ static void build_pages(lv_obj_t *scr)
         ui_page_dots(t[i], 4, i, 222);
     }
     page_power(t[0]);
-    ui_title(t[1], "COACH");
+    c_title = ui_title(t[1], "COACH");
+    for (int i = 1; i < BC_CM_CARD_LINES; i++) {
+        k_line[i] = tile_label(t[1], i >= 7 ? &lv_font_montserrat_12 : &lv_font_montserrat_14, i == 6 ? C_GREEN : i == 8 ? C_MUT : C_FG, 52 + (i - 1) * 19);
+        lv_obj_add_flag(k_line[i], LV_OBJ_FLAG_HIDDEN);
+    }
+    k_line[0] = NULL;
     c_head = ui_label(t[1], &bc_bold22, C_FG, ""); lv_obj_set_width(c_head, 180); lv_label_set_long_mode(c_head, LV_LABEL_LONG_WRAP);
     lv_obj_align(c_head, LV_ALIGN_TOP_MID, 0, 58);
     c_why = tile_label(t[1], &lv_font_montserrat_14, C_FG, 116);
@@ -318,7 +326,24 @@ static void ride_update(void)
     if (w_head) { lv_label_set_text(w_head, paused ? "PAUSED" : (cue->head[0] ? cue->head : "READY")); lv_obj_set_style_text_color(w_head, cue->level == BC_LVL_INFO && !paused ? C_FG : cc, 0); }
     if (w_time1) lv_label_set_text(w_time1, tm);
 
-    /* page 2: coach */
+    /* page 2: the Cyclift coach card (any design), or the board's own coach */
+    bc_cm_view_t cv;
+    bool mir = app_link13_coach(&cv);
+    lv_obj_t *own[] = { c_head, c_why, c_target, c_inband, c_live };
+    for (size_t i = 0; i < sizeof own / sizeof *own; i++) { if (mir) lv_obj_add_flag(own[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(own[i], LV_OBJ_FLAG_HIDDEN); }
+    if (strcmp(lv_label_get_text(c_title), mir ? "CYCLIFT COACH" : "COACH")) lv_label_set_text(c_title, mir ? "CYCLIFT COACH" : "COACH");
+    if (mir) {
+        char L[BC_CM_CARD_LINES][BC_CM_LINE];
+        bc_cm_card(&cv, lv.power_ok ? lv.watts : -1, lv.cad_ok ? lv.rpm : -1, lv.hr_ok ? lv.bpm : -1, L);
+        if (cv.mode == BC_CM_FOLLOWING && !L[8][0]) snprintf(L[8], sizeof L[8], "CYCLIFT CONNECTED");
+        for (int i = 1; i < BC_CM_CARD_LINES; i++) {
+            if (strcmp(lv_label_get_text(k_line[i]), L[i])) lv_label_set_text(k_line[i], L[i]);
+            lv_obj_remove_flag(k_line[i], LV_OBJ_FLAG_HIDDEN);
+        }
+        lv_obj_set_style_text_color(k_line[6], ui_level_color((bc_cue_level_t)(cv.no_hr ? BC_LVL_WARN : bc_cm_instr_level(cv.instruction))), 0);
+        lv_obj_set_style_text_color(k_line[8], cv.mode == BC_CM_FOLLOWING ? C_MUT : C_AMBER, 0);
+    } else for (int i = 1; i < BC_CM_CARD_LINES; i++) lv_obj_add_flag(k_line[i], LV_OBJ_FLAG_HIDDEN);
+    if (!mir) {
     lv_label_set_text(c_head, paused ? "PAUSED" : (cue->head[0] ? cue->head : "READY"));
     lv_obj_set_style_text_color(c_head, cue->level == BC_LVL_INFO && !paused ? C_FG : cc, 0);
     lv_label_set_text(c_why, paused ? "resume from the controls" : cue->why);
@@ -334,6 +359,7 @@ static void ride_update(void)
     else snprintf(b, sizeof b, "power NO DATA");
     if (lv.power_ok && lv.cad_ok) snprintf(b, sizeof b, "%d W   %d rpm", lv.watts, lv.rpm);
     lv_label_set_text(c_live, b);
+    }
 
     /* page 3: metrics */
     lv_label_set_text(m_time, tm);

@@ -17,6 +17,8 @@
 #include <sys/stat.h>
 #include "lvgl.h"
 #include "sim.h"
+#include "app_link13.h"
+#include "bc_cmirror.h"
 #include "src/misc/lv_area_private.h"
 #include "app_psvc.h"   /* lv_area_intersect returns bool; without the prototype the implicit int return misreads it */
 #include "ui.h"
@@ -2058,6 +2060,168 @@ static void scenario_074rc2(void)
     CHECK(device_boot(BC_RST_POWERON), "back to normal"); device_stable();
 }
 
+/* ===================================================================================== 0.7.5: Link 1.3 (BLE_CONTRACT.md v1.1) */
+static uint16_t s13_seq;
+static void p13(const uint8_t *m, size_t n) { sim_phone_write(0, m, n); run(500); }
+static void hello13(uint32_t caps) { bc_hello_t h = { 1, 3, caps, "1.0 (sim)" }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_hello(&h, b, sizeof b, ++s13_seq, 0)); }
+static const bc_cseg_t PLAN3[3] = { { 120, BC_WT_WARMUP, BC_TK_POWER, 100, 140, 80, 90 }, { 600, BC_WT_ENDURANCE, BC_TK_POWER, 140, 155, 80, 90 },
+                                    { 180, BC_WT_RECOVERY, BC_TK_POWER, 100, 120, 0, 0 } };
+static void plan13(uint32_t id)
+{
+    bc_coach_plan_msg_t p; memset(&p, 0, sizeof p);
+    p.workout_id = id; p.part = 0; p.parts = 1; p.first_segment = 0; p.nseg = 3; memcpy(p.seg, PLAN3, sizeof PLAN3);
+    p.head = true; snprintf(p.name, sizeof p.name, "Endurance 15"); p.total_segments = 3; p.total_duration_s = 900; p.plan_crc32 = bc_cm_plan_crc(PLAN3, 3); p.t0_elapsed_s = BC_COACH_T0_RIDE_START;
+    uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_plan(&p, b, sizeof b, ++s13_seq, 0));
+}
+static uint16_t cs_seq;
+static void state13(uint32_t id, uint8_t kind, uint16_t lo, uint16_t hi, uint8_t instr, uint8_t hr_src)
+{
+    bc_coach_state_t s; memset(&s, 0, sizeof s);
+    s.workout_id = id; s.seq = ++cs_seq; s.type = BC_WT_ENDURANCE; s.kind = kind; s.lo = lo; s.hi = hi; s.cad_lo = 80; s.cad_hi = 90;
+    s.interval_index = 1; s.interval_count = 3; s.remaining_s = 300; s.interval_dur_s = 600;
+    s.next_type = BC_WT_RECOVERY; s.next_kind = BC_TK_POWER; s.next_lo = 100; s.next_hi = 120; s.next_dur_s = 180;
+    s.instruction = instr; s.session_state = BC_SESS_RUNNING; s.hr_src = hr_src; s.zone = 2; s.has = 0x7FFFFF & ~BC_CS_HAS(0x13);
+    uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_state(&s, b, sizeof b, ++s13_seq, 0));
+}
+static void rq_list13(void) { uint8_t b[BC_LINK_MAX]; g_sim.phone.n_rqinfo = 0; int e0 = g_sim.phone.rq_ends; size_t n = bc_link_encode_rideq_list_req(b, sizeof b, ++s13_seq, 0); sim_phone_write(0, b, n);
+                              for (int k = 0; k < 40 && g_sim.phone.rq_ends == e0; k++) run(250); }
+static const bc_rideq_info_t *rq_find13(uint32_t id) { for (int i = 0; i < g_sim.phone.n_rqinfo; i++) if (g_sim.phone.rqinfo[i].ride_id == id) return &g_sim.phone.rqinfo[i]; return NULL; }
+static void rq_ack13(uint32_t id, uint32_t scrc, uint32_t sumcrc, bool del) { bc_rideq_ack_t a = { id, scrc, sumcrc, del ? 1 : 0 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_rideq_ack(&a, b, sizeof b, ++s13_seq, 0)); }
+static void clean13(uint8_t what) { bc_storage_clean_req_t c = { what }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_storage_clean_req(&c, b, sizeof b, ++s13_seq, 0)); }
+static void ride_page(int page) { for (int i = 0; i < page; i++) { drag(200, 120, 40, 120); run(300); } }
+
+static void scenario_075(void)
+{
+    printf("\n== 27. firmware 0.7.5: Link 1.3 - HELLO gate, Cyclift coach on every ride design, phone drop, offline ride queue, storage clean-up, diag auto-delete\n");
+    bc_profile_t *pr = app_profile();
+    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; app_profile_save();
+    g_sim.storage_state = BC_STOR_OK; g_sim.bt_fail_on_init = 0; s_crash_at = BC_SS_NONE; g_sim.nvs_skip = 0; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    CHECK(device_boot(BC_RST_POWERON), "0.7.5 starts"); device_stable();
+    g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_CONNECTED; sensors(true, 145, true, 84, false, 0);
+    sim_phone_connect(true); run(1500);
+    /* a) Cyclift RC1 (no HELLO): exactly Link 1.2.3 */
+    int m0 = g_sim.phone.link13_msgs, u0 = g_sim.phone.unknown_notifies;
+    state13(500, BC_TK_POWER, 140, 155, BC_CI_ON_TARGET, 2); plan13(500);
+    CHECK(app_link13_enabled() == 0 && g_sim.phone.link13_msgs == m0 && g_sim.phone.hello_acks == 0 && g_sim.phone.unknown_notifies == u0, "no APP_HELLO: COACH_* ignored, nothing new sent");
+    CHECK(!g_sim.phone.last_live.has_coach && g_sim.phone.last_live.storage_state == 0 && g_sim.phone.last_live.rides_unsynced == 0, "LIVE without 1.3 tags (old LIVE bytes)");
+    { bc_cm_view_t v; CHECK(!app_link13_coach(&v), "no coach view from un-gated messages"); }
+    /* b) HELLO */
+    int s0 = g_sim.phone.sstats, rp0 = g_sim.phone.rpends;
+    hello13(BC_CAPS_LINK13 | 0x00010000u /* a future bit the board does not know */);
+    CHECK(g_sim.phone.hello_acks == 1 && g_sim.phone.hello_ack.enabled_caps == BC_CAPS_LINK13 && app_link13_enabled() == BC_CAPS_LINK13, "HELLO_ACK enabled = INFO caps AND app caps (0x%lx)", (unsigned long)g_sim.phone.hello_ack.enabled_caps);
+    CHECK(g_sim.phone.sstats == s0 + 1 && g_sim.phone.sstat.state == 0 && !strcmp(g_sim.phone.sstat.code, "ok") && g_sim.phone.sstat.app_slot_kb == 4032 && g_sim.phone.sstat.health == 0,
+          "STORAGE_STATUS pushed after HELLO (state %u %s)", g_sim.phone.sstat.state, g_sim.phone.sstat.code);
+    CHECK(g_sim.phone.rpends == rp0 + 1, "EVENT rides_pending after HELLO (%u unsynced)", g_sim.phone.rpend.unsynced);
+    /* c) coach mirror in every ride design */
+    plan13(501);
+    CHECK(g_sim.phone.plan_acks >= 1 && g_sim.phone.plan_ack.workout_id == 501 && g_sim.phone.plan_ack.status == BC_PLAN_COMPLETE, "COACH_PLAN stored (ACK status %u)", g_sim.phone.plan_ack.status);
+    for (int st = 0; st < ui_ride_design_count(); st++) {
+        ui_test_set_style(st); app_ride_start(); ui_ride_show(); run(400);
+        state13(501, BC_TK_POWER, 140, 155, BC_CI_ON_TARGET, 2); run_s(2);
+        char nm[48];
+        CHECK(on_screen("ON TARGET") && (st == 2 || on_screen("TARGET 140-155")), "design %c: Cyclift instruction + target on the power page", ui_ride_design(st)->letter);
+        snprintf(nm, sizeof nm, "27c_ride_%c_cyclift_coach", ui_ride_design(st)->letter); shot(nm);
+        ride_page(1); state13(501, BC_TK_POWER, 140, 155, BC_CI_ON_TARGET, 2); run(400);
+        CHECK(on_screen("CYCLIFT COACH") && on_screen("ENDURANCE 2/3") && on_screen("POWER 145 W") && on_screen("TARGET 140-155 W") && on_screen("CADENCE 84") && on_screen("TARGET 80-90")
+              && on_screen("COACH: ON TARGET") && on_screen("NEXT: RECOVERY - 3 MIN"), "design %c: coach card (owner's example)", ui_ride_design(st)->letter);
+        snprintf(nm, sizeof nm, "27c_card_%c", ui_ride_design(st)->letter); shot(nm);
+        CHECK(g_sim.phone.last_live.has_coach && g_sim.phone.last_live.coach_mode == BC_CM_FOLLOWING && g_sim.phone.last_live.coach_seq == cs_seq, "LIVE coach_seq %u / mode %u echoed", g_sim.phone.last_live.coach_seq, g_sim.phone.last_live.coach_mode);
+        app_ride_end(); app_ride_discard(); ui_home_show(); run(300);
+    }
+    ui_test_set_style(-1);
+    /* d) phone drop: the stored plan continues on the ride clock; reconnect; COACH_END; last target + watch HR honesty */
+    ui_test_set_style(0); app_ride_start(); ui_ride_show(); run(300); state13(501, BC_TK_POWER, 140, 155, BC_CI_MORE_POWER, 2); ride_page(1); run(400);
+    sim_phone_disconnect(); run_s(3);
+    CHECK(on_screen("CYCLIFT COACH") && on_screen("WARM-UP 1/3") && on_screen("TARGET 100-140 W") && on_screen("PHONE LOST") && on_screen("NEXT: ENDURANCE - 10 MIN"),
+          "phone lost: the board follows the stored plan (warm-up by its own ride clock)");
+    shot("27d_phone_lost_plan");
+    run_s(120);
+    CHECK(on_screen("ENDURANCE 2/3") && on_screen("TARGET 140-155 W"), "two minutes later: the next segment, from the plan");
+    sim_phone_connect(true); run(1500);
+    CHECK(g_sim.phone.last_live.has_coach && g_sim.phone.last_live.coach_mode == BC_CM_PLAN_OFFLINE && app_link13_enabled() == 0, "reconnected, before HELLO: LIVE says mode 2 (board follows the plan), 1.3 not enabled yet");
+    hello13(BC_CAPS_LINK13); state13(501, BC_TK_POWER, 150, 160, BC_CI_HOLD_STEADY, 2); run(1200);
+    CHECK(on_screen("COACH: HOLD STEADY") && on_screen("TARGET 150-160 W") && !on_screen("PHONE LOST") && g_sim.phone.last_live.coach_mode == BC_CM_FOLLOWING, "after HELLO + COACH_STATE: following Cyclift again");
+    { uint16_t keep = cs_seq; cs_seq -= 2; state13(501, BC_TK_POWER, 90, 95, BC_CI_EASY, 2); cs_seq = keep;
+      CHECK(on_screen("TARGET 150-160 W") && !on_screen("TARGET 90-95"), "an older COACH_STATE (seq) is ignored"); }
+    { bc_coach_end_t e = { 501, 0 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_end(&e, b, sizeof b, ++s13_seq, 0)); run(600); }
+    CHECK(!on_screen("CYCLIFT COACH") && on_screen("COACH"), "COACH_END: the board's own coach page again");
+    state13(502, BC_TK_HR, 120, 135, BC_CI_ON_TARGET, BC_SRC_APPLE_WATCH); run(600);
+    sim_phone_disconnect(); run_s(2);
+    CHECK(on_screen("NO HR - RIDE BY FEEL") && on_screen("NO PHONE - LAST TARGET") && on_screen("TARGET 120-135 BPM"), "no plan + phone lost + watch HR: last targets, 'NO HR - RIDE BY FEEL'");
+    shot("27d_last_target_no_hr");
+    sim_phone_connect(true); run(1200); hello13(BC_CAPS_LINK13);
+    { bc_coach_end_t e = { 502, 1 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_coach_end(&e, b, sizeof b, ++s13_seq, 0)); }
+    /* a real ride is saved -> rides_pending */
+    int rp1 = g_sim.phone.rpends; run_s(20); app_ride_end();
+    bc_ride_summary_t hist[4]; app_ride_totals(&hist[0]); uint32_t rid = hist[0].id;
+    app_save_result_t sr = app_ride_save_ex(); ui_home_show(); run(800);
+    { int nh = app_history(hist, 4, false); for (int i = 1; i < nh && hist[0].id != rid; i++) if (hist[i].id == rid) hist[0] = hist[i]; }
+    CHECK(sr == APP_SAVE_OK && g_sim.phone.rpends == rp1 + 1 && g_sim.phone.rpend.newest_id == rid && g_sim.phone.rpend.unsynced >= 1, "ride #%lu saved: EVENT rides_pending (%u unsynced)", (unsigned long)rid, g_sim.phone.rpend.unsynced);
+    /* e) offline queue: list, pull, verify, ack */
+    rq_list13();
+    const bc_rideq_info_t *qi = rq_find13(rid);
+    char sp[32]; snprintf(sp, sizeof sp, "rides/r%04u.txt", (unsigned)rid); long fsz = plat_file_size(sp);
+    CHECK(qi && qi->state == BC_RQ_UNSYNCED && fsz > 0 && qi->samples_size == (uint32_t)fsz && qi->summary_crc == bc_ride_summary_crc(&hist[0]) && g_sim.phone.rq_ends >= 1 && g_sim.phone.rq_end.unsynced >= 1,
+          "RIDEQ_INFO: ride #%lu unsynced, %ld B samples, summary CRC of its SYNC_RIDE", (unsigned long)rid, fsz);
+    for (int i = 0; i < g_sim.phone.n_rqinfo; i++) CHECK(!(g_sim.phone.rqinfo[i].flags & 1), "no demo ride in the queue");
+    bc_rideq_info_t q = *qi;
+    { /* pull while a ride records: BUSY */
+      app_ride_start(); run(300); int e0 = g_sim.phone.rq_errs;
+      bc_diag_chunk_req_t cq = { rid, 0, 155 }; uint8_t b[BC_LINK_MAX]; p13(b, bc_link_encode_rideq_chunk_req(&cq, b, sizeof b, ++s13_seq, 0));
+      CHECK(g_sim.phone.rq_errs == e0 + 1 && g_sim.phone.rq_err.code == BC_DIAG_ERR_BUSY, "chunk request while a ride records: BUSY (4)");
+      rq_ack13(rid, q.samples_crc, q.summary_crc, true);
+      CHECK(plat_file_size(sp) == fsz, "an ACK while recording never deletes samples");
+      app_ride_end(); app_ride_discard(); ui_home_show(); run(300); }
+    g_sim.phone.rqbuf_len = 0; uint32_t off = 0; int stall = 0;
+    while (off < q.samples_size && stall < 10) {
+        int c0 = g_sim.phone.rq_chunks; bc_diag_chunk_req_t cq = { rid, off, 155 }; uint8_t b[BC_LINK_MAX]; size_t n = bc_link_encode_rideq_chunk_req(&cq, b, sizeof b, ++s13_seq, 0);
+        sim_phone_write(0, b, n); for (int w = 0; w < 20 && g_sim.phone.rq_chunks == c0; w++) run(50);
+        if (g_sim.phone.rq_chunks == c0 || g_sim.phone.rq_chunk.offset != off) { stall++; continue; }
+        off += g_sim.phone.rq_chunk.len; if (g_sim.phone.rq_chunk.last) break;
+    }
+    CHECK(off == q.samples_size && bc_crc32(0, g_sim.phone.rqbuf, g_sim.phone.rqbuf_len) == q.samples_crc, "samples pulled in chunks (%lu B), CRC matches RIDEQ_INFO", (unsigned long)off);
+    CHECK(!memcmp(g_sim.phone.rqbuf, "J1 ", 3), "samples file starts with the J1 header (contract 6.1)");
+    { int e0 = g_sim.phone.rq_errs; rq_ack13(rid, q.samples_crc ^ 1, q.summary_crc, true);
+      CHECK(g_sim.phone.rq_errs == e0 + 1 && g_sim.phone.rq_err.code == BC_RQ_ERR_CRC && plat_file_size(sp) == fsz, "ACK with a wrong CRC: RIDEQ_ERR 6, nothing deleted"); }
+    int ni = g_sim.phone.n_rqinfo; rq_ack13(rid, q.samples_crc, q.summary_crc, true);
+    CHECK(g_sim.phone.n_rqinfo == ni + 1 && g_sim.phone.rqinfo[ni].ride_id == rid && g_sim.phone.rqinfo[ni].state == BC_RQ_SAMPLES_DELETED && plat_file_size(sp) < 0,
+          "verified ACK with delete: RIDEQ_INFO state 4, samples deleted");
+    rq_list13(); CHECK(rq_find13(rid) && rq_find13(rid)->state == BC_RQ_SAMPLES_DELETED, "the ride stays listed as state 4 (summary kept)");
+    /* RAM-only ride (QF-01) on a damaged board */
+    g_sim.storage_state = BC_STOR_DIR_CORRUPTED; run(1200);
+    CHECK(g_sim.phone.last_live.storage_state == BC_STOR_DIR_CORRUPTED, "LIVE tag 13: storage state 3");
+    app_ride_start(); run_s(15); app_ride_end(); CHECK(app_ride_save_ex() == APP_SAVE_RAM_ONLY, "a ride on the damaged board is kept in RAM"); ui_home_show(); run(600);
+    bc_ride_summary_t un[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(un, APP_UNSAVED_MAX); uint32_t ram_id = un[nu - 1].id;
+    rq_list13(); const bc_rideq_info_t *ri = rq_find13(ram_id);
+    CHECK(ri && ri->state == BC_RQ_UNSYNCED && (ri->flags & BC_RQF_RAM_ONLY) && ri->samples_size == 0, "RAM-only ride listed with flag bit4, no samples");
+    rq_ack13(ram_id, 0, ri ? ri->summary_crc : 0, true);
+    rq_list13(); CHECK(rq_find13(ram_id) && rq_find13(ram_id)->state == BC_RQ_VERIFIED, "RAM-only ride verified by the phone: state 3");
+    /* f) storage clean-up rules */
+    int sc0 = g_sim.phone.sstats; clean13(BC_CLEAN_REPORTS | BC_CLEAN_SAMPLES | BC_CLEAN_CACHES);
+    CHECK(g_sim.phone.clean.status == BC_CLEAN_REFUSED && g_sim.phone.sstats == sc0 + 1 && g_sim.phone.sstat.state == BC_STOR_DIR_CORRUPTED && !strcmp(g_sim.phone.sstat.code, "dir_corrupted") && g_sim.phone.sstat.health == 2,
+          "directory corrupted: CLEAN refused (2), STORAGE_STATUS follows (dir_corrupted, failed)");
+    g_sim.storage_state = BC_STOR_FULL; g_sim.full_clears_on_cleanup = true;
+    app_diag_store_report(BC_DIAG_KIND_MANUAL, "link13 clean test");
+    { g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+      for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].state == 0) { phone_req(BC_MSG_DIAG_ACK, g_sim.phone.dinfo[i].id, 0, 0, g_sim.phone.dinfo[i].crc); run(300); } }
+    sc0 = g_sim.phone.sstats; clean13(BC_CLEAN_REPORTS);
+    CHECK(g_sim.phone.clean.status == BC_CLEAN_DONE && g_sim.phone.clean.items >= 1 && g_sim.phone.sstats == sc0 + 1 && g_sim.storage_state == BC_STOR_OK,
+          "storage full: CLEAN allowed, %u sent report(s) removed, storage OK again", g_sim.phone.clean.items);
+    g_sim.full_clears_on_cleanup = false;
+    app_ride_start(); run(300); clean13(BC_CLEAN_SAMPLES); CHECK(g_sim.phone.clean.status == BC_CLEAN_BUSY, "CLEAN while recording: busy (3)");
+    app_ride_end(); app_ride_discard(); ui_home_show(); run(300);
+    /* g) DIAG_AUTO: ACK with delete */
+    uint32_t did = app_diag_store_report(BC_DIAG_KIND_MANUAL, "auto delete");
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+    bc_diag_info_t di; memset(&di, 0, sizeof di); for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].id == did) di = g_sim.phone.dinfo[i];
+    { bc_diag_ack_t a = { did, di.crc, 1 }; uint8_t b[BC_LINK_MAX]; int n0 = g_sim.phone.ndinfo; p13(b, bc_link_encode_diag_ack(&a, b, sizeof b, ++s13_seq, 0)); run(600);
+      CHECK(di.id == did && g_sim.phone.ndinfo == n0 + 1 && g_sim.phone.dinfo[n0].state == 1, "DIAG_ACK delete: DIAG_INFO state 1 first"); }
+    g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+    { bool gone = true; for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].id == did) gone = false; CHECK(gone, "then the report is gone from the board"); }
+    sim_phone_disconnect(); run(300);
+    pr->power.paired = false; app_profile_save(); sensors(false, 0, false, 0, false, 0);
+}
+
 /* ===================================================================================== 0.7.3 final: safe report + transfer contract */
 static int pull_paced(uint32_t id, uint32_t size, uint16_t maxl, uint32_t *got, uint32_t *max_msg, int *lives)
 {
@@ -2210,6 +2374,7 @@ int main(int argc, char **argv)
     scenario_074();
     scenario_074rc();
     scenario_074rc2();
+    scenario_075();
     scenario_stress(getenv("SIM_STRESS") ? atoi(getenv("SIM_STRESS")) : 1000);
     lv_mem_monitor_t m; lv_mem_monitor(&m);
     printf("\nLVGL memory: %u%% used, max used %u bytes of %u, fragmentation %u%%\n", m.used_pct, (unsigned)m.max_used, (unsigned)m.total_size, m.frag_pct);

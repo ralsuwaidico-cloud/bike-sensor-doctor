@@ -92,6 +92,44 @@ static bool st_mark_sent(void *ctx, uint32_t id)
     return false;
 }
 
+/* Link 1.3 DIAG_AUTO / STORAGE_CLEAN: delete one report (its text + raw core copy) and save the index */
+static void drop_files(uint32_t id)
+{
+    char p[32]; report_path(id, p, sizeof p); plat_file_remove(p);
+    snprintf(p, sizeof p, "diag/core-%06lu.elf", (unsigned long)id); plat_file_remove(p);
+}
+static bool st_remove(void *ctx, uint32_t id)
+{
+    (void)ctx;
+    for (int i = 0; i < D.idx.n; i++) if (D.idx.r[i].id == id) {
+        if (D.idx.r[i].state != 1) return false;                /* never an unsent report */
+        drop_files(id);
+        memmove(&D.idx.r[i], &D.idx.r[i + 1], sizeof D.idx.r[0] * (size_t)(D.idx.n - i - 1)); D.idx.n--;
+        index_save();
+        app_diag_event(BC_EV_REPORT, 0, (uint16_t)id, 3, 0, 0);
+        return true;
+    }
+    return false;
+}
+uint32_t app_diag_store_bytes(void) { if (!ON) return 0; uint32_t t = 0; for (int i = 0; i < D.idx.n; i++) t += D.idx.r[i].size; return t; }
+int app_diag_clean_sent(uint32_t *bytes)
+{
+    if (bytes) *bytes = 0;
+    if (!ON) return 0;
+    int items = 0;
+    for (int i = 0; i < D.idx.n; ) {
+        if (D.idx.r[i].state != 1) { i++; continue; }
+        char p[32]; snprintf(p, sizeof p, "diag/core-%06lu.elf", (unsigned long)D.idx.r[i].id);
+        long core = plat_file_size(p);
+        if (bytes) *bytes += D.idx.r[i].size + (core > 0 ? (uint32_t)core : 0);
+        drop_files(D.idx.r[i].id);
+        memmove(&D.idx.r[i], &D.idx.r[i + 1], sizeof D.idx.r[0] * (size_t)(D.idx.n - i - 1)); D.idx.n--; items++;
+    }
+    if (items) { index_save(); app_diag_event(BC_EV_REPORT, 0, 0, 4, (uint32_t)items, 0); }
+    return items;
+}
+void app_diag_set_auto_delete(bool on) { if (ON) D.srv.auto_delete = on; }
+
 static void fill_report(bc_diag_report_in_t *in, uint8_t kind, const plat_crash_t *cr, const char *note)
 {
     memset(in, 0, sizeof *in);
@@ -222,7 +260,7 @@ void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok)
         uint8_t *b = D.idx_buf; long n = plat_file_read(APP_DIAG_INDEX_FILE, (char *)b, sizeof D.idx_buf);
         if (n <= 0 || !bc_diag_index_decode(b, (size_t)n, &D.idx)) { memset(&D.idx, 0, sizeof D.idx); D.idx.next_id = 1; }
     } else D.idx.next_id = 1;
-    bc_diag_store_t st = { .ctx = NULL, .index = st_index, .read = st_read, .mark_sent = st_mark_sent };
+    bc_diag_store_t st = { .ctx = NULL, .index = st_index, .read = st_read, .mark_sent = st_mark_sent, .remove = st_remove };
     bc_diag_srv_init(&D.srv, &st);
     bc_boot_rtc_t *r = plat_boot_rtc();
     app_diag_event(BC_EV_BOOT, 0, (uint16_t)plat_reset_kind(), r->crash_streak, plat_boot_count(), (uint32_t)plan->mode | ((uint32_t)plan->skip << 8));

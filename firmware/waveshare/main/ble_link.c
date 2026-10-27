@@ -11,6 +11,7 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #include "bc_link.h"
+#include "bc_link13.h"
 #include "plat.h"
 #include "hw.h"
 #include "app_psvc.h"
@@ -173,8 +174,7 @@ static int chr_access(uint16_t conn, uint16_t attr, struct ble_gatt_access_ctxt 
     if (c->op == BLE_GATT_ACCESS_OP_READ_CHR) {
         if (attr == h_info) {
             bc_info_t i = { .ver_major = BC_LINK_VER_MAJOR, .ver_minor = BC_LINK_VER_MINOR,
-                            .caps = BC_CAP_LIVE | BC_CAP_GPS_IN | BC_CAP_HR_IN | BC_CAP_WEATHER_IN | BC_CAP_RIDE_CTRL | BC_CAP_TIME_SYNC |
-                                    BC_CAP_RIDE_SYNC | BC_CAP_WIFI_PROV | BC_CAP_PROFILE_SYNC | BC_CAP_SETTINGS | BC_CAP_DIAG_XFER,
+                            .caps = BC_CAPS_BOARD,   /* 0.7.5: + Link 1.3 caps 0xF800 (used only after the phone's APP_HELLO) */
                             .max_msg = BC_LINK_MAX };
             snprintf(i.fw, sizeof i.fw, "%.23s", esp_app_get_description()->version);
             snprintf(i.name, sizeof i.name, "%.23s", ble_svc_gap_device_name());

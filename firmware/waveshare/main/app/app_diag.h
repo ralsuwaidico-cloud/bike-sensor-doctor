@@ -22,6 +22,11 @@ extern "C" {
  *  crash, the crash report (core dump summary + log tail + events) before anything else can fail. */
 /** Host harness only: forget the diagnostic state, like a reset does on the device (a boot that does not start it). */
 void app_diag_off(void);
+/** Link 1.3: bytes of the stored reports; delete every report the phone already has (+ core copies) -> items (bytes freed);
+ *  DIAG_AUTO on this connection (DIAG_ACK 03 delete honoured). */
+uint32_t app_diag_store_bytes(void);
+int app_diag_clean_sent(uint32_t *bytes);
+void app_diag_set_auto_delete(bool on);
 void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok);
 /** Subsystem start-up markers for the event log: result 0 starting, 1 up, 2 skipped (disabled after a crash), 3 failed. */
 void app_diag_stage(bc_subsys_t s, int result);

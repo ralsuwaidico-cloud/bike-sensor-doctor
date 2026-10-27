@@ -104,7 +104,7 @@ static void state_tests(void)
     s.interval_index = 1; s.interval_count = 3; s.remaining_s = 1200; s.interval_dur_s = 2400;
     s.next_type = BC_WT_RECOVERY; s.next_kind = BC_TK_POWER; s.next_lo = 100; s.next_hi = 120; s.next_dur_s = 180;
     s.instruction = BC_CI_ON_TARGET; memcpy(s.text, "Smooth \xC3\xA9tape r\xC3\xA9guli\xC3\xA8r", 24); s.text[24] = 0;   /* 24 B, UTF-8 */
-    s.session_state = BC_SS_RUNNING; s.hr_src = 4; s.zone = 2; s.flags = BC_CSF_WATCH_HR;
+    s.session_state = BC_SESS_RUNNING; s.hr_src = 4; s.zone = 2; s.flags = BC_CSF_WATCH_HR;
     s.has = 0x7FFFFF;
     n = bc_link_encode_coach_state(&s, b, sizeof b, 9, 0);
     CHECK(n > 0 && n <= 120, "COACH_STATE with every field and a 24-byte text <= 120 B (%zu)", n);
@@ -141,7 +141,7 @@ static void state_tests(void)
     /* the phone drops, no plan stored -> last targets; HR from the watch -> no HR */
     s.kind = BC_TK_HR; s.lo = 120; s.hi = 135; s.hr_src = 4; s.seq = 13; bc_cm_state(&m, &s, 9000);
     bc_cm_view(&m, false, 9500, 60, &v); bc_cm_card(&v, 150, -1, -1, L);
-    CHECK(v.mode == BC_CM_LAST_TARGET && v.no_hr && !strcmp(L[6], "NO HR - RIDE BY FEEL") && !strcmp(L[8], "PHONE LOST - LAST TARGET") && !strcmp(L[4], "CADENCE --"),
+    CHECK(v.mode == BC_CM_LAST_TARGET && v.no_hr && !strcmp(L[6], "NO HR - RIDE BY FEEL") && !strcmp(L[8], "NO PHONE - LAST TARGET") && !strcmp(L[4], "CADENCE --"),
           "phone lost, watch HR: %s / %s", L[6], L[8]);
     /* phone connected but silent for 12 s = lost */
     bc_cm_view(&m, true, 9000 + BC_CM_STATE_STALE_MS + 1, 60, &v); CHECK(v.mode == BC_CM_LAST_TARGET, "connected but no state for 12 s: not 'following'");

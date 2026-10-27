@@ -173,6 +173,8 @@ static bc_diag_index_t S_IDX; static char S_TXT[2][5000]; static bool S_FAIL_REA
 static const bc_diag_index_t *s_index(void *c) { (void)c; return &S_IDX; }
 static long s_read(void *c, uint32_t id, uint32_t off, uint8_t *buf, size_t n)
 { (void)c; if (S_FAIL_READ) return -1; for (int i = 0; i < S_IDX.n; i++) if (S_IDX.r[i].id == id) { memcpy(buf, S_TXT[i] + off, n); return (long)n; } return -1; }
+static int S_REMOVED;
+static bool s_remove(void *c, uint32_t id) { (void)c; for (int i = 0; i < S_IDX.n; i++) if (S_IDX.r[i].id == id) { memmove(&S_IDX.r[i], &S_IDX.r[i + 1], sizeof S_IDX.r[0] * (size_t)(S_IDX.n - i - 1)); S_IDX.n--; S_REMOVED++; return true; } return false; }
 static bool s_mark(void *c, uint32_t id) { (void)c; for (int i = 0; i < S_IDX.n; i++) if (S_IDX.r[i].id == id) { S_IDX.r[i].state = 1; S_MARKS++; return true; } return false; }
 static size_t req(bc_diag_srv_t *s, uint8_t type, uint32_t id, uint32_t off, uint16_t maxl, uint32_t crc, uint8_t *out)
 {
@@ -190,7 +192,7 @@ static void test_server(void)
         size_t len = i ? 300 : 4321; for (size_t k = 0; k < len; k++) S_TXT[i][k] = (char)('a' + (k * 7 + i) % 26);
         bc_diag_info_t *r = &S_IDX.r[S_IDX.n++]; r->id = (uint32_t)(10 + i); r->size = (uint32_t)len; r->crc = bc_crc32(0, S_TXT[i], len); r->kind = (uint8_t)(i ? 3 : 1);
     }
-    bc_diag_store_t st = { NULL, s_index, s_read, s_mark }; bc_diag_srv_t s; bc_diag_srv_init(&s, &st);
+    bc_diag_store_t st = { NULL, s_index, s_read, s_mark, s_remove }; bc_diag_srv_t s; bc_diag_srv_init(&s, &st);
     bc_diag_srv_set_link(&s, 185, false);                 /* iOS negotiates ATT MTU 185 */
     uint8_t o[BC_LINK_MAX]; size_t n;
     uint8_t notdiag[8] = { BC_MSG_PROFILE_GET }; CHECK(!bc_diag_srv_write(&s, notdiag, 8), "other messages are left to app_psvc");
@@ -234,6 +236,22 @@ static void test_server(void)
         while ((n = bc_diag_srv_next(&s, o, sizeof o, 1, 0)) > 0) { replies++; if (n > BC_LINK_MAX) { CHECK(0, "oversized reply"); break; } }
     }
     CHECK(replies > 0, "fuzzed 20000 random DIAG messages (%d replies, all <= 180 bytes)", replies);
+    {   /* Link 1.3 DIAG_AUTO: ACK with 03 delete -> DIAG_INFO state 1 first, then deleted; not without DIAG_AUTO, not with a bad CRC */
+        S_REMOVED = 0; uint8_t m[BC_LINK_MAX], o2[BC_LINK_MAX]; size_t k; bc_diag_info_t di;
+        uint32_t id = S_IDX.r[0].id, crc = S_IDX.r[0].crc;
+        bc_diag_ack_t a = { id, crc, 1 }; k = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0);
+        bc_diag_srv_write(&s, m, k); k = bc_diag_srv_next(&s, o2, sizeof o2, 5, 0);
+        CHECK(k && bc_link_decode_diag_info(o2, k, &di) && di.state == 1 && S_REMOVED == 0, "delete flag without DIAG_AUTO enabled: ignored (1.2.3 behaviour)");
+        s.auto_delete = true;
+        bc_diag_ack_t bad = { id, crc ^ 1, 1 }; k = bc_link_encode_diag_ack(&bad, m, sizeof m, 1, 0);
+        bc_diag_srv_write(&s, m, k); bc_diag_srv_next(&s, o2, sizeof o2, 6, 0);
+        CHECK(S_REMOVED == 0, "bad CRC: never deleted");
+        k = bc_link_encode_diag_ack(&a, m, sizeof m, 1, 0); bc_diag_srv_write(&s, m, k); int n0 = S_IDX.n;
+        k = bc_diag_srv_next(&s, o2, sizeof o2, 7, 0);
+        CHECK(k && bc_link_decode_diag_info(o2, k, &di) && di.id == id && di.state == 1 && S_REMOVED == 1 && S_IDX.n == n0 - 1 && !bc_diag_index_find(&S_IDX, id),
+              "DIAG_AUTO: DIAG_INFO state 1 sent, then the report is deleted");
+        bc_diag_srv_reset(&s); CHECK(!s.auto_delete, "disconnect turns DIAG_AUTO off");
+    }
 }
 
 

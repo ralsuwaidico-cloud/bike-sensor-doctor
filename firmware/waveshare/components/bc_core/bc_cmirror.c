@@ -112,7 +112,7 @@ void bc_cm_view(const bc_cmirror_t *m, bool phone_live, uint32_t now_ms, uint32_
         if (s->has & BC_CS_HAS(0x0B)) {
             uint32_t gone = (now_ms - m->st_rx_ms) / 1000u;
             v->has_remaining = true; v->remaining_s = (uint16_t)(s->remaining_s > gone ? s->remaining_s - gone : 0);
-            if (s->session_state == BC_SS_PAUSED) v->remaining_s = s->remaining_s;   /* the phone's countdown is paused too */
+            if (s->session_state == BC_SESS_PAUSED) v->remaining_s = s->remaining_s;   /* the phone's countdown is paused too */
         }
         if (s->has & BC_CS_HAS(0x0D)) {
             v->has_next = true; v->next_type = s->next_type; v->next_kind = s->next_kind; v->next_lo = s->next_lo; v->next_hi = s->next_hi;
@@ -120,14 +120,14 @@ void bc_cm_view(const bc_cmirror_t *m, bool phone_live, uint32_t now_ms, uint32_
         }
         v->interval_index = s->interval_index; v->interval_count = s->interval_count;
         v->hr_src = s->hr_src; v->session_state = s->session_state; v->zone = s->zone; v->flags = s->flags;
-        if (s->session_state == BC_SS_FINISHED) { v->done = true; if (!v->instruction) v->instruction = BC_CI_DONE; }
+        if (s->session_state == BC_SESS_FINISHED) { v->done = true; if (!v->instruction) v->instruction = BC_CI_DONE; }
         return;
     }
     if (coach_live && m->plan_ok) { v->mode = BC_CM_FOLLOWING; plan_view(m, elapsed_s, v); return; }
     if (m->plan_ok) {
         v->mode = BC_CM_PLAN_OFFLINE; plan_view(m, elapsed_s, v);
         if (m->have_state) { v->hr_src = s->hr_src; v->seq = s->seq; }
-    } else if (m->have_state && s->session_state != BC_SS_FINISHED && s->session_state != BC_SS_ABANDONED) {
+    } else if (m->have_state && s->session_state != BC_SESS_FINISHED && s->session_state != BC_SESS_ABANDONED) {
         v->mode = BC_CM_LAST_TARGET;
         v->workout_id = s->workout_id; v->seq = s->seq;
         v->type = s->type; v->kind = s->kind; v->lo = s->lo; v->hi = s->hi; v->cad_lo = s->cad_lo; v->cad_hi = s->cad_hi;
@@ -198,6 +198,6 @@ int bc_cm_card(const bc_cm_view_t *v, int power_w, int cad_rpm, int hr_bpm, char
     char rem[16] = ""; if (v->has_remaining) snprintf(rem, sizeof rem, "%u:%02u", (unsigned)(v->remaining_s / 60) % 1000u, (unsigned)(v->remaining_s % 60));
     if (v->mode == BC_CM_FOLLOWING) { if (rem[0]) snprintf(L[8], BC_CM_LINE, "%.7s LEFT", rem); }
     else if (v->mode == BC_CM_PLAN_OFFLINE) { if (rem[0]) snprintf(L[8], BC_CM_LINE, "PHONE LOST - %.7s LEFT", rem); else snprintf(L[8], BC_CM_LINE, "PHONE LOST - PLAN"); }
-    else snprintf(L[8], BC_CM_LINE, "PHONE LOST - LAST TARGET");
+    else snprintf(L[8], BC_CM_LINE, "NO PHONE - LAST TARGET");   /* <= 22 chars: the bottom line of the round screen */
     return BC_CM_CARD_LINES;
 }

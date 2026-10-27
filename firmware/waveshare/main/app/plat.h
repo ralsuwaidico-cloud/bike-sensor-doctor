@@ -242,6 +242,8 @@ void plat_log(const char *line);
 /** 0.7.4: a zeroed block for long-lived app state, from PSRAM on the device (internal RAM is kept for the radio, DMA and
  *  task stacks); NULL when out of memory. Never freed. */
 void *plat_alloc_ext(size_t n);
+/** 0.7.5 (Link 1.3 STORAGE_STATUS): firmware slot size / used by the running image (KB), NVS entries used / free. */
+void plat_flash_usage(uint32_t *app_slot_kb, uint32_t *app_used_kb, uint16_t *nvs_used, uint16_t *nvs_free);
 
 /* ---- 0.7.3 crash evidence, boot modes, diagnostics (app_diag.c) */
 typedef struct {

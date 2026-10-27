@@ -254,7 +254,7 @@ void bc_diag_redact(char *s)
 
 /* ------------------------------------------------------------------ Link 1.2.3 server */
 void bc_diag_srv_init(bc_diag_srv_t *s, const bc_diag_store_t *st) { memset(s, 0, sizeof *s); s->st = *st; }
-void bc_diag_srv_reset(bc_diag_srv_t *s) { s->listing = false; s->nq = 0; s->info_due = s->err_due = false; s->att_mtu = 0; }
+void bc_diag_srv_reset(bc_diag_srv_t *s) { s->listing = false; s->nq = 0; s->info_due = s->err_due = false; s->att_mtu = 0; s->delete_due = false; s->auto_delete = false; }
 void bc_diag_srv_set_link(bc_diag_srv_t *s, uint16_t att_mtu, bool ride_recording) { s->att_mtu = att_mtu; s->paused = ride_recording; }
 bool bc_diag_srv_chunk_next(const bc_diag_srv_t *s)
 {
@@ -281,7 +281,11 @@ bool bc_diag_srv_write(bc_diag_srv_t *s, const uint8_t *msg, size_t n)
         s->reqs++;
         const bc_diag_info_t *r = bc_diag_index_find(s->st.index(s->st.ctx), a.id);
         if (!r) { err(s, a.id, BC_DIAG_ERR_UNKNOWN_ID); return true; }
-        if (a.crc == r->crc) { if (r->state != 1 && !s->st.mark_sent(s->st.ctx, a.id)) { err(s, a.id, BC_DIAG_ERR_STORAGE); return true; } s->acks_ok++; }
+        if (a.crc == r->crc) {
+            if (r->state != 1 && !s->st.mark_sent(s->st.ctx, a.id)) { err(s, a.id, BC_DIAG_ERR_STORAGE); return true; }
+            s->acks_ok++;
+            if (a.del && s->auto_delete && s->st.remove) { s->delete_due = true; s->delete_id = a.id; }   /* after the DIAG_INFO below */
+        }
         else s->acks_bad++;
         s->info_due = true; s->info_id = a.id;
         return true; }
@@ -295,7 +299,11 @@ size_t bc_diag_srv_next(bc_diag_srv_t *s, uint8_t *buf, size_t cap, uint16_t seq
     if (s->info_due) {
         s->info_due = false;
         const bc_diag_info_t *r = bc_diag_index_find(x, s->info_id);
-        if (r) return bc_link_encode_diag_info(r, buf, cap, seq, t_ms);
+        if (r) {
+            size_t n = bc_link_encode_diag_info(r, buf, cap, seq, t_ms);
+            if (s->delete_due && s->delete_id == s->info_id) { s->delete_due = false; if (s->st.remove(s->st.ctx, s->delete_id)) s->deleted++; }
+            return n;
+        }
     }
     if (s->nq) {
         bc_diag_chunk_req_t qq = s->q[0]; memmove(&s->q[0], &s->q[1], sizeof s->q[0] * (size_t)(s->nq - 1)); s->nq--;

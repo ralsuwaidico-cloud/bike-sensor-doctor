@@ -94,7 +94,7 @@ static void generate(void)
     cs.interval_index = 3; cs.interval_count = 12; cs.remaining_s = 161; cs.interval_dur_s = 480;
     cs.next_type = BC_WT_RECOVERY; cs.next_kind = BC_TK_POWER; cs.next_lo = 100; cs.next_hi = 130; cs.next_dur_s = 180;
     cs.instruction = BC_CI_ON_TARGET; snprintf(cs.text, sizeof cs.text, "Smooth and steady");
-    cs.session_state = BC_SS_RUNNING; cs.hr_src = 4; cs.zone = 2; cs.flags = BC_CSF_FTP_DERIVED | BC_CSF_WATCH_HR; cs.has = 0x7FFFFF;
+    cs.session_state = BC_SESS_RUNNING; cs.hr_src = 4; cs.zone = 2; cs.flags = BC_CSF_FTP_DERIVED | BC_CSF_WATCH_HR; cs.has = 0x7FFFFF;
     n = bc_link_encode_coach_state(&cs, b, sizeof b, 4, 0);
     vec("coach_state_full", "phone_to_board", b, n, "\"seq\": 4, \"workout_id\": %u, \"state_seq\": 41, \"workout_type\": 2, \"target_kind\": 1, \"target_lo\": 140, \"target_hi\": 155, "
         "\"cad_lo\": 80, \"cad_hi\": 90, \"interval_index\": 3, \"interval_count\": 12, \"remaining_s\": 161, \"interval_duration_s\": 480, \"next_type\": 1, \"next_target_kind\": 1, "

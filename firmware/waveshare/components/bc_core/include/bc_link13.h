@@ -72,7 +72,7 @@ typedef struct {
     uint8_t instruction; char text[25];                                  /* 12 13 */
     uint8_t session_state, hr_src, zone, flags;                          /* 14..17 */
 } bc_coach_state_t;
-typedef enum { BC_SS_NOT_STARTED = 0, BC_SS_RUNNING = 1, BC_SS_PAUSED = 2, BC_SS_FINISHED = 3, BC_SS_ABANDONED = 4 } bc_session_state_t;
+typedef enum { BC_SESS_NOT_STARTED = 0, BC_SESS_RUNNING = 1, BC_SESS_PAUSED = 2, BC_SESS_FINISHED = 3, BC_SESS_ABANDONED = 4 } bc_session_state_t;
 #define BC_CSF_ADAPTED 0x01
 #define BC_CSF_FTP_DERIVED 0x02
 #define BC_CSF_WATCH_HR 0x04

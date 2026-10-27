@@ -64,7 +64,7 @@ const char *bc_cm_type_name(uint8_t type);
 uint8_t bc_cm_instr_level(uint8_t instruction);
 /** The coach card for the round screen: up to 9 short lines (ASCII, <= 27 chars each), e.g.
  *  CYCLIFT COACH / ENDURANCE / POWER 145 W / TARGET 140-155 W / CADENCE 84 / TARGET 80-90 / COACH: ON TARGET /
- *  NEXT: RECOVERY - 3 MIN / status. Live values < 0 = no data ("--"). Returns the number of lines. */
+ *  NEXT: RECOVERY - 3 MIN / status ("PHONE LOST - 2:41 LEFT", "NO PHONE - LAST TARGET"). Live values < 0 = no data ("--"). Returns the number of lines. */
 #define BC_CM_CARD_LINES 9
 #define BC_CM_LINE 28
 int bc_cm_card(const bc_cm_view_t *v, int power_w, int cad_rpm, int hr_bpm, char lines[BC_CM_CARD_LINES][BC_CM_LINE]);

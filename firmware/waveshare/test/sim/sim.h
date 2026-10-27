@@ -4,6 +4,7 @@
 #include "plat.h"
 #include "bc_pipe.h"
 #include "bc_bootrec.h"
+#include "bc_link13.h"
 #include "bc_xds.h"
 
 typedef struct {
@@ -39,7 +40,13 @@ typedef struct {
              bc_diag_ready_t dready; int dreadys; bc_diag_chunk_t dchunk; int dchunks; uint8_t dbuf[16384]; uint32_t dbuf_len;
              uint16_t mtu;            /* negotiated ATT MTU the harness reports (0 = 185 like iOS) */
              bool congested;          /* test hook: plat_phone_bulk_room() false (LIVE / mbufs need the link) */
-             uint32_t last_chunk_ms; uint32_t min_chunk_gap_ms; } phone;
+             uint32_t last_chunk_ms; uint32_t min_chunk_gap_ms;
+             /* 0.7.5 Link 1.3: what the board answered (Cyclift's side) */
+             bc_hello_ack_t hello_ack; int hello_acks; bc_coach_plan_ack_t plan_ack; int plan_acks;
+             bc_rideq_info_t rqinfo[64]; int n_rqinfo; bc_rideq_list_end_t rq_end; int rq_ends; bc_diag_err_t rq_err; int rq_errs;
+             bc_diag_chunk_t rq_chunk; int rq_chunks; uint8_t rqbuf[16384]; uint32_t rqbuf_len;
+             bc_storage_status_t sstat; int sstats; bc_storage_clean_result_t clean; int cleans; bc_rides_pending_t rpend; int rpends;
+             int last13_type; int link13_msgs; } phone;
     /* 0.7.3 crash evidence + boot modes (plat_host.c) */
     bc_reset_t reset_kind; plat_crash_t crash; char log_tail[1024]; uint16_t nvs_skip; uint32_t nvs_skip_fw, fw_id; uint32_t crash_total;
     bool phone_only_started; int crash_consumed; uint32_t heap_free, heap_min;

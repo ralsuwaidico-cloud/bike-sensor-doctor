@@ -1,6 +1,7 @@
 #include "app.h"
 #include "bc_pipe.h"
 #include "app_diag.h"
+#include "app_link13.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -197,6 +198,7 @@ static void publish_live(const app_live_t *lv)
     L.cue_id = (uint8_t)s_cue.id; int bp = plat_battery_pct(); L.battery_pct = (uint8_t)(bp < 0 ? 0xFF : bp);
     L.meter_link = (uint8_t)lv->link[PLAT_SENS_POWER].link; L.meter_gaps = (uint16_t)lv->link[PLAT_SENS_POWER].gaps;
     L.demo = lv->demo;
+    app_link13_live(&L, plat_ms());                /* 0.7.5 Link 1.3 tags 11..15 (absent when there is nothing to say) */
     plat_phone_publish_live(&L);
     app_diag_note_live();                          /* 0.7.3 health monitor: LIVE forwarding */
 }
@@ -338,6 +340,7 @@ app_save_result_t app_ride_save_ex(void)
                           res == APP_SAVE_OK ? "OK" : res == APP_SAVE_RAM_ONLY ? "NOT ON STORAGE - kept in RAM for Cyclift until power-off" : "FAILED - not kept");
     plat_log(l);
     s_ride.state = BC_RIDE_IDLE;
+    if (!s_ride.s.demo && res != APP_SAVE_LOST) app_link13_ride_closed();   /* 0.7.5: rides_pending to a Link 1.3 phone */
     return res;
 }
 bool app_ride_save(void) { return app_ride_save_ex() == APP_SAVE_OK; }
@@ -354,8 +357,29 @@ void app_ride_totals(bc_ride_summary_t *out)
     if (s_ride.state == BC_RIDE_ENDED) *out = s_ride.s; else bc_ride_live_summary(&s_ride, out);
 }
 
-const bc_cue_t *app_cue(void) { return &s_cue; }
-void app_target(int *lo, int *hi, bool *rel) { bc_coach_target(&s_coach, lo, hi, rel); }
+/* 0.7.5: while Cyclift coaches (Link 1.3 COACH), its instruction and targets replace the board's own coach on every ride
+   screen design; the board's coach keeps running underneath (summary, recovery) and takes over again when there is none */
+static bc_cue_t s_mirror_cue;
+static bool mirror(bc_cm_view_t *v) { return (s_ride.state == BC_RIDE_RUNNING || s_ride.state == BC_RIDE_PAUSED) && app_link13_coach(v); }
+const bc_cue_t *app_cue(void)
+{
+    bc_cm_view_t v;
+    if (!mirror(&v)) return &s_cue;
+    memset(&s_mirror_cue, 0, sizeof s_mirror_cue);
+    s_mirror_cue.id = BC_CUE_PHONE;
+    s_mirror_cue.level = (bc_cue_level_t)bc_cm_instr_level(v.instruction);
+    const char *t = v.no_hr ? "NO HR - BY FEEL" : bc_cm_instr_text(v.instruction);
+    if (!t[0]) t = v.text[0] ? v.text : (v.mode == BC_CM_FOLLOWING ? "CYCLIFT COACH" : "LAST TARGET");
+    snprintf(s_mirror_cue.head, sizeof s_mirror_cue.head, "%.23s", t);
+    snprintf(s_mirror_cue.why, sizeof s_mirror_cue.why, "%s", v.mode == BC_CM_FOLLOWING ? "Cyclift coach" : "phone lost - board follows");
+    return &s_mirror_cue;
+}
+void app_target(int *lo, int *hi, bool *rel)
+{
+    bc_cm_view_t v;
+    if (mirror(&v)) { *rel = false; if (v.kind == BC_TK_POWER) { *lo = v.lo; *hi = v.hi; } else { *lo = *hi = 0; } return; }
+    bc_coach_target(&s_coach, lo, hi, rel);
+}
 
 /* ---- history */
 int app_history(bc_ride_summary_t *out, int max, bool demo)
@@ -446,6 +470,7 @@ static void recover(void)
     keep_samples(r.s.id, false);
     s_recovered = r.s; s_have_recovered = true;
     snprintf(l, sizeof l, "RECOVERY: ride #%u restored, %lus, saved to history", id, (unsigned long)r.s.duration_s); plat_log(l);
+    app_link13_ride_closed();
     memset(&s_ride, 0, sizeof s_ride);
 #undef r
 }
@@ -465,6 +490,7 @@ void app_init(void)
     memset(&s_ride, 0, sizeof s_ride);
     s_demo = false;
     app_psvc_init();
+    s_nunsaved = 0;                /* RAM-only rides do not survive a restart (a no-op on the board, which starts fresh; the PC harness restarts without power loss) */
     recover();
     plat_backlight(s_prof.brightness);
     plat_csc_wheel_mm(s_prof.wheel_mm);
