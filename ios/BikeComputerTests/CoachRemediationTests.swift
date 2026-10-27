@@ -194,4 +194,128 @@ final class CoachRemediationTests: XCTestCase {
             XCTAssertEqual(a.liftDays, lifts); XCTAssertEqual(a.cycleDays, rides)
         }
     }
+
+    // MARK: Stage 3 — cycling intensity and block progression (M-05, G-10, G-18, G-20), adaptation (G-12, G-13, G-14, G-15), choice (G-19)
+
+    private func splitWeek(_ p: RiderProfile, trainingWeeks: Int? = nil) -> [Workout] {
+        PlanEngine.week(starting: nextMonday, profile: p, availability: WeeklyAvailability.suggested(for: p), trainingWeeks: trainingWeeks)
+    }
+
+    func testIntensityFollowsGoalAndLevel() {
+        var adv = profile(level: .advanced); adv.goal = .event; adv.cyclingDaysPerWeek = 5; adv.hoursPerWeek = 9; adv.trainingMode = .cycling
+        var av = WeeklyAvailability(days: Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7))
+        for (d, m) in [(0, 60), (1, 75), (3, 75), (5, 180), (6, 60)] { av.days[d] = DayAvailability(activity: .cycle, minutes: m) }
+        adv.hoursPerWeek = 8
+        let a = PlanEngine.week(starting: nextMonday, profile: adv, availability: av)
+        XCTAssertTrue(a.contains { $0.kind == .threshold }, a.map { "\($0.kind)" }.joined(separator: ","))
+        XCTAssertTrue(a.contains { $0.kind == .vo2 }, "advanced event rider with 5 spaced rides gets a VO2 session: \(a.map { "\($0.kind)" })")
+        // five rides on consecutive days leave no room for a second hard day 48 h apart: none is forced
+        let packed = splitWeek(adv)
+        XCTAssertLessThanOrEqual(packed.filter { $0.kind.zone >= 4 }.count, 1)
+        var fit = profile(level: .intermediate); fit.goal = .fitness; fit.trainingMode = .cycling
+        XCTAssertFalse(splitWeek(fit).contains { $0.kind.zone >= 4 }, "a fitness goal gets tempo, not threshold")
+        var beg = profile(level: .beginner); beg.goal = .stronger; beg.trainingMode = .cycling
+        XCTAssertFalse(splitWeek(beg).contains { $0.kind.zone >= 4 })
+    }
+
+    func testQualityRideSurvivesASplitWhenEveryDayTouchesLegs() {
+        // audit P04: an advanced event rider with a split got five easy rides
+        var p = profile(level: .advanced); p.goal = .event; p.strengthSplit = .fullBody; p.cyclingDaysPerWeek = 5; p.liftDaysPerWeek = 2; p.hoursPerWeek = 9; p.priority = .cycling
+        let w = splitWeek(p)
+        XCTAssertTrue(w.contains { $0.kind.zone >= 3 }, w.map { "\($0.kind)" }.joined(separator: ","))
+        for l in w where l.kind == .strength && (l.strengthFocus?.loadsLegs ?? false) {
+            XCTAssertFalse(w.contains { $0.kind.isRide && $0.kind.zone >= 3 && cal.isDate($0.date, inSameDayAs: l.date) }, "never on the leg day itself")
+        }
+        // strength priority keeps legs first: no quality ride forced next to a leg day
+        var s = p; s.priority = .strength
+        let ws = splitWeek(s)
+        let legDays = ws.filter { $0.kind == .strength && ($0.strengthFocus?.loadsLegs ?? false) }.map { cal.startOfDay(for: $0.date) }
+        for r in ws where r.kind.isRide && r.kind.zone >= 3 {
+            let d = cal.startOfDay(for: r.date)
+            XCTAssertFalse(legDays.contains { abs($0.timeIntervalSince(d)) <= 86_400 }, "strength priority: quality ride never next to legs")
+        }
+    }
+
+    func testThresholdBuildsInsideABlockAndEveryFourthWeekIsEasier() {
+        var p = profile(level: .intermediate); p.goal = .stronger; p.trainingMode = .cycling; p.cyclingDaysPerWeek = 4; p.hoursPerWeek = 7
+        let reps = (0..<4).map { k in splitWeek(p, trainingWeeks: k).first { $0.kind == .threshold }?.effectiveIntervalReps }
+        XCTAssertEqual(reps[0], 3); XCTAssertNotNil(reps[1]); XCTAssertGreaterThanOrEqual(reps[1] ?? 0, reps[0] ?? 0)
+        XCTAssertNil(reps[3], "week 4: no interval session")
+        let long0 = splitWeek(p, trainingWeeks: 0).first { $0.kind == .long }?.minutes ?? 0, long3 = splitWeek(p, trainingWeeks: 3).first { $0.kind == .long }?.minutes ?? 0
+        XCTAssertLessThan(long3, long0)
+        // slower recovery → every 3rd week
+        p.recoveryCapacity = .low
+        XCTAssertNil(splitWeek(p, trainingWeeks: 2).first { $0.kind == .threshold })
+    }
+
+    func testOnlyOneLongRidePerWeek() {
+        var p = profile(); p.trainingMode = .cycling
+        var a = WeeklyAvailability(days: Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7))
+        a.days[5] = DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: .long, minutes: 180)])
+        a.days[2] = DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: 100)])
+        a.days[3] = DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: 60)])
+        p.hoursPerWeek = 6
+        let w = PlanEngine.week(starting: nextMonday, profile: p, availability: a)
+        XCTAssertEqual(w.filter { $0.kind == .long }.count, 1)
+    }
+
+    func testCyclingImprovingNeedsBetterThanUsual() {
+        func ride(_ d: Int, _ perf: Int, _ eff: Int) -> RideRecord { var r = RideRecord(start: day(d, hour: 7), durationS: 3600, distanceM: 25000, recorder: .phone, sources: []); r.checkIn = CheckIn(performance: perf, effort: eff, at: r.start); return r }
+        let usual = (3...20).filter { $0 % 3 == 0 }.map { ride(-$0, 7, 6) }
+        let p = profile()
+        let a1 = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [ride(-1, 7, 6), ride(-2, 7, 6)] + usual, strength: [], availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
+        XCTAssertFalse(a1.cyclingImproving, "7/6 is this rider's normal")
+        let a2 = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [ride(-1, 9, 4), ride(-2, 8, 5)] + usual, strength: [], availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
+        XCTAssertTrue(a2.cyclingImproving)
+    }
+
+    func testEarlierSameDayKeyRideLightensLegs() {
+        var ride = Workout(date: day(2, hour: 7), kind: .threshold, minutes: 70); ride.sequence = 0
+        var lift = Workout(date: day(2, hour: 7).addingTimeInterval(1), kind: .strength, minutes: 60, strengthFocus: .lower); lift.sequence = 1
+        var c = ctx(profile(), logs: []); c.plan = [ride, lift]
+        let wk = StrengthPlanner.weekContext(for: lift, ctx: c)
+        XCTAssertNotNil(wk.hardRideBefore); XCTAssertTrue(wk.hardRideBefore?.contains("earlier today") ?? false)
+    }
+
+    func testStrengthPriorityKeepsLegWorkNextToKeyRides() {
+        let ride = Workout(date: day(3, hour: 7), kind: .long, minutes: 150)
+        let lift = Workout(date: day(2, hour: 18), kind: .strength, minutes: 60, strengthFocus: .lower)
+        var bal = ctx(profile(), logs: []); bal.plan = [ride, lift]
+        var sp = profile(); sp.priority = .strength
+        var str = ctx(sp, logs: []); str.plan = [ride, lift]
+        let b = StrengthPlanner.build(for: lift, ctx: bal), s = StrengthPlanner.build(for: lift, ctx: str)
+        XCTAssertGreaterThan(s.entries.reduce(0) { $0 + $1.sets.count }, b.entries.reduce(0) { $0 + $1.sets.count })
+        XCTAssertTrue(s.rationale.notes.contains { $0.contains("Strength is your priority") }, s.rationale.notes.joined(separator: " | "))
+    }
+
+    func testExplicitHingeChoiceForCyclists() {
+        let conv = ex("r-conv", "Conventional deadlift", ["barbell"], .hinge, ["hamstrings", "glutes", "back"])
+        var p = profile(); p.priority = .cycling
+        var c = ctx(p, logs: []); c.catalogue = [conv] + catalogue
+        let m = ExerciseLibrary.meta(catalogue[1])
+        XCTAssertNotNil(StrengthPlanner.preferenceBonus(catalogue[1], m, spec: .init(slot: m.slot, role: .main), ctx: c).reason)
+        let pick = StrengthPlanner.pick(.init(slot: m.slot, role: .main), ctx: c, used: [])
+        XCTAssertEqual(pick?.id, "r-rdl")
+    }
+
+    func testCoachCutSetIsNotAnIncompleteSession() {
+        let bench = catalogue[2]
+        let t = WorkoutTemplate(name: "Push", focus: .push, entries: [ExerciseEntry(exercise: bench, sets: (0..<3).map { _ in SetEntry(reps: 8, weightKg: 60) })], updatedAt: Date(timeIntervalSince1970: 0))
+        var w = Workout(date: day(2, hour: 8), kind: .strength, minutes: 45, strengthFocus: .push); w.templateId = t.id
+        func logs(workoutMode: Bool, sets: Int) -> [StrengthSession] {
+            [3, 6].map { d in
+                var l = log(d, bench, reps: Array(repeating: 8, count: sets), kg: 60, rpe: 7); l.templateId = t.id
+                if workoutMode { l.startedAt = l.date.addingTimeInterval(-2700); l.finishedAt = l.date; l.workoutId = UUID() }
+                return l
+            }
+        }
+        func decide(_ ls: [StrengthSession]) -> PlanAdjustment? {
+            let p = profile()
+            let inp = AdaptationInput(profile: p, plan: [w], rides: [], strength: ls, availability: WeeklyAvailability.suggested(for: p), equipment: EquipmentProfile(owned: ["barbell", "bench"]), catalogue: catalogue, templates: [t], originalEntries: [w.id: t.prefilled(from: ls.first)], now: now, calendar: cal)
+            return AdaptationEngine.strengthDecision(t.prefilled(from: ls.first)[0], session: w, input: inp)
+        }
+        XCTAssertNotNil(decide(logs(workoutMode: true, sets: 2)), "2 of 2 planned sets done in workout mode (the coach had cut one) is complete")
+        XCTAssertNil(decide(logs(workoutMode: false, sets: 2)), "a quick log of 2 sets against a 3-set routine is not complete")
+        XCTAssertNotNil(decide(logs(workoutMode: false, sets: 3)))
+    }
 }

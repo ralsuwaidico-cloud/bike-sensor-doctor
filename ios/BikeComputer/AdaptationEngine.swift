@@ -385,11 +385,15 @@ enum TrainingAnalyzer {
             let l2 = Array(ratedRides.prefix(2))
             let ok = l2.allSatisfy { x in
                 let completed = x.plannedMinutes.map { pm in Double(x.minutes) >= 0.9 * Double(pm) } ?? true
-                return (x.performance ?? 0) >= 7 && (x.effort ?? 10) <= 6 && x.pain != .concerning && completed
+                // audit G-15: "better than usual", not "as usual" — against the rider's own 4-week baseline when it
+                // exists (performance ≥ baseline + 1 and effort ≤ baseline − 1), else a clearly good rating (8 / 5)
+                let pNeed = out.performanceBaseline.map { max(7.0, $0 + 1) } ?? 8, eMax = out.effortBaseline.map { min(6.0, $0 - 1) } ?? 5
+                return Double(x.performance ?? 0) >= pNeed && Double(x.effort ?? 10) <= eMax && x.pain != .concerning && completed
             }
             if ok {
                 out.cyclingImproving = true
-                out.cyclingImprovingText = "Your last two rides went well (performance \(nums(l2, { $0.performance }))) at a moderate effort (\(nums(l2, { $0.effort })) of 10) and were completed."
+                let ref = out.performanceBaseline != nil ? String(format: "better than your 4-week baseline (performance %.1f, effort %.1f)", out.performanceBaseline!, out.effortBaseline!) : "clearly good ratings (no 4-week baseline yet)"
+                out.cyclingImprovingText = "Your last two rides went well (performance \(nums(l2, { $0.performance }))) at a moderate effort (\(nums(l2, { $0.effort })) of 10), \(ref), and were completed."
             }
         }
 
@@ -650,14 +654,22 @@ enum AdaptationEngine {
         let target = template?.entries.first(where: { $0.exerciseId == e.exerciseId })?.sets ?? e.sets
         guard !target.isEmpty, !e.sets.isEmpty else { return nil }
         let plannedReps = target.map { $0.reps }
-        func complete(_ x: ExerciseEntry) -> Bool { let r = x.doneSets.map { $0.reps }; return r.count >= plannedReps.count && zip(r, plannedReps).allSatisfy { $0 >= $1 } }
+        // audit G-12: a session logged from workout mode carries the sets as planned FOR THAT SESSION (coach changes
+        // included, done or not); it is complete when every one of those is done at the routine's reps. A quick log
+        // without that record is judged against the routine itself.
+        func complete(_ ses: StrengthSession, _ x: ExerciseEntry) -> Bool {
+            let r = x.doneSets.map { $0.reps }
+            let fromWorkout = ses.startedAt != nil && ses.workoutId != nil && !x.sets.isEmpty
+            let need = fromWorkout ? min(plannedReps.count, x.sets.count) : plannedReps.count
+            return r.count >= need && x.doneSets.count == (fromWorkout ? x.sets.count : x.doneSets.count) && zip(r, plannedReps.prefix(need)).allSatisfy { $0 >= $1 }
+        }
         func rpe(_ ses: StrengthSession, _ x: ExerciseEntry) -> Int? { x.doneSets.compactMap { $0.rpe }.max() ?? ses.rpe ?? ses.checkIn?.effort }
         let rpes = last2.map { rpe($0.0, $0.1) }
         let dates = last2.map { AdaptationExplainer.day($0.0.date) }.reversed().joined(separator: " and ")
         let repsText = Set(plannedReps).count == 1 ? "\(plannedReps.count) × \(plannedReps[0])" : plannedReps.map(String.init).joined(separator: "/")
         let rpeText = rpes.compactMap { $0 }.map(String.init).reversed().joined(separator: " and ")
         let u = input.units
-        if last2.allSatisfy({ complete($0.1) }), rpes.allSatisfy({ ($0 ?? 99) <= AdaptiveRules.progressionMaxRPE }) {
+        if last2.allSatisfy({ complete($0.0, $0.1) }), rpes.allSatisfy({ ($0 ?? 99) <= AdaptiveRules.progressionMaxRPE }) {
             let evidence = "You completed every planned set of \(e.name) (\(repsText)) on \(dates) at RPE \(rpeText) — 8 or less both times."
             let currentTop = e.sets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
             let ownsIt = known.map { input.equipment.hasEquipment(for: $0) } ?? true
@@ -683,7 +695,7 @@ enum AdaptationEngine {
             return nil
         }
         // two sessions in a row short of the planned reps at RPE ≥ 9 → one rep fewer (never below 3)
-        if last2.allSatisfy({ !complete($0.1) }), rpes.allSatisfy({ ($0 ?? 0) >= 9 }), let minReps = e.sets.map({ $0.reps }).min(), minReps > 3 {
+        if last2.allSatisfy({ !complete($0.0, $0.1) }), rpes.allSatisfy({ ($0 ?? 0) >= 9 }), let minReps = e.sets.map({ $0.reps }).min(), minReps > 3 {
             let did = last2.reversed().map { $0.1.doneSets.map { String($0.reps) }.joined(separator: "/") }.joined(separator: " and ")
             return PlanAdjustment(workoutId: s.id, change: .reps(exerciseId: e.exerciseId, delta: -1), category: .reduction, summary: "\(e.name): one rep fewer per set", why: "On \(dates) you did \(did) reps of \(e.name) against \(repsText) planned, at RPE \(rpeText). Two sessions in a row short of the plan at a very hard effort, so \(AdaptationExplainer.day(s.date)) asks for one rep fewer per set at the same weight.", createdAt: input.now)
         }

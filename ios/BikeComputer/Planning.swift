@@ -169,7 +169,21 @@ struct WeeklyAvailability: Codable, Equatable {
     /// preferred weekend day); a "Both" day is used only when the rider wants more sessions than days. Never exceeds
     /// either budget: per-session minutes are the budget divided by the frequency.
     static func suggested(for p: RiderProfile) -> WeeklyAvailability {
-        guard p.trainingMode != .cycling else { return WeeklyAvailability.fit(suggested(hoursPerWeek: p.hoursPerWeek), profile: p).availability }
+        guard p.trainingMode != .cycling else {
+            // audit G-20: the requested number of rides (the 0.5.0 template is trimmed: shortest non-long rides go
+            // first), and no off-bike session the rider did not ask for
+            var t = suggested(hoursPerWeek: p.hoursPerWeek)
+            for i in t.days.indices where t.days[i].lifts && !t.days[i].cycles { t.days[i] = DayAvailability(activity: .rest, minutes: 0) }
+            let want = max(1, p.cyclingDaysPerWeek)
+            var rideDays = t.days.indices.filter { t.days[$0].cycles }
+            while rideDays.count > want, let drop = rideDays.filter({ $0 != 5 }).min(by: { t.days[$0].cycleMinutes < t.days[$1].cycleMinutes }) {
+                t.days[drop] = DayAvailability(activity: .rest, minutes: 0); rideDays.removeAll { $0 == drop }
+            }
+            for i in [3, 1, 4, 6, 0, 2] where rideDays.count < want && !t.days[i].cycles && !rideDays.contains(where: { abs($0 - i) == 0 }) {
+                t.days[i] = DayAvailability(activity: .cycle, minutes: 60); rideDays.append(i)
+            }
+            return WeeklyAvailability.fit(t, profile: p).availability
+        }
         var d = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
         var preferred = p.preferredDays.isEmpty ? [1, 3, 5, 6, 2, 4, 0] : p.preferredDays + [1, 3, 5, 6, 2, 4, 0].filter { !p.preferredDays.contains($0) }
         // adaptive coach: the rider's total training days (the preferred days first); the other days are rest days
@@ -338,7 +352,7 @@ enum PlanEngine {
     /// is fitted to both budgets first, so a generated week can never exceed either budget.
     /// Coach remediation: `returning` (M-02, from logged rides) and the health check (M-01, `p.readiness`) cap what a
     /// generated week may contain. Fixed rides the rider typed are never changed; they get a visible warning instead.
-    static func week(starting monday: Date, profile p: RiderProfile, availability raw: WeeklyAvailability, returning: ReturnPhase? = nil, calendar cal: Calendar = .current) -> [Workout] {
+    static func week(starting monday: Date, profile p: RiderProfile, availability raw: WeeklyAvailability, returning: ReturnPhase? = nil, trainingWeeks: Int? = nil, calendar cal: Calendar = .current) -> [Workout] {
         let a = WeeklyAvailability.fit(raw, profile: p).availability
         let readiness = p.readiness
         let d = { (i: Int) in cal.date(byAdding: .day, value: i, to: monday)! }
@@ -375,16 +389,39 @@ enum PlanEngine {
         /// With a split, a leg session may share a day with a ride: that ride is never the quality one.
         func legClash(_ i: Int) -> Bool { adjacentToLegs(i) || (split != nil && legDays.contains(i)) }
         // long ride: the longest untyped assignment (prefer not next to a leg day); quality: second longest ≥ 45 min
+        // M-05 block position: weeks of consecutive riding before this one (from logs). Every `deloadEvery`-th week is an
+        // easier week (no interval session, long ride 20 % shorter); otherwise threshold intervals build by one
+        // repetition per week of the block, within the session's minutes. 3:1 / 2:1 loading is common coaching
+        // practice, not an evidence-derived rule (ios/COACH_REMEDIATION.md).
+        let every = p.recovery.deloadEvery
+        let blockPos = trainingWeeks.map { $0 % every }
+        let easyWeek = blockPos == every - 1
+        var thresholdReps: Int? = nil
+        if let pos = blockPos, !easyWeek { thresholdReps = 3 + min(pos, 2) }
+        // G-18: one long ride a week — an untyped ride only becomes "long" when the rider has not typed one
+        let typedLong = cyc.contains { $0.a.cyclingType == .long }
         if let longest = untyped.max(by: { ($0.a.minutes, adjacentToLegs($0.day) ? 0 : 1) < ($1.a.minutes, adjacentToLegs($1.day) ? 0 : 1) }) {
-            cycTypes[longest.a.id] = longest.a.minutes >= 90 ? .long : .endurance
-            let hard: WorkoutKind = p.level == .beginner ? .tempo : (p.goal == .stronger || p.goal == .climbing ? .threshold : .tempo)
+            cycTypes[longest.a.id] = longest.a.minutes >= 90 && !typedLong ? .long : .endurance
+            // M-05 intensity by goal and level: beginners tempo; performance goals (stronger, climbing, event) threshold;
+            // health / endurance / weight goals tempo; advanced performance riders with ≥ 4 rides add one VO2 session
+            let performanceGoal = p.goal == .stronger || p.goal == .climbing || p.goal == .event
+            let hard: WorkoutKind = p.level == .beginner ? .tempo : (performanceGoal ? .threshold : .tempo)
             let alreadyHard = cyc.contains { $0.a.cyclingType?.isHard ?? false }
-            if !alreadyHard, cyc.count >= 2 {
+            if !alreadyHard, cyc.count >= 2, !easyWeek {
                 let eligible = untyped.filter { $0.a.id != longest.a.id && $0.a.minutes >= 45 && ($0.day + 1) % 7 != longest.day }
                 let preferred = eligible.filter { !legClash($0.day) }
-                if let q = (preferred.isEmpty ? (split != nil ? [] : eligible) : preferred).max(by: { $0.a.minutes < $1.a.minutes }) {
+                // G-10: when every candidate sits next to a leg day, cycling- and balanced-priority riders still get the
+                // least-conflicting one (the strength planner lightens that leg session); strength priority keeps legs first
+                let fallback = eligible.filter { !(split != nil && legDays.contains($0.day)) }
+                let pool = !preferred.isEmpty ? preferred : (p.priority == .strength ? [] : fallback)
+                if let q = pool.max(by: { $0.a.minutes < $1.a.minutes }) {
                     cycTypes[q.a.id] = hard
                     if let next = untyped.first(where: { $0.day == (q.day + 1) % 7 }), cycTypes[next.a.id] == nil { cycTypes[next.a.id] = .recovery }
+                    if p.level == .advanced, performanceGoal, cyc.count >= 4, !p.recovery.reduced {
+                        let busy = Set([q.day, longest.day])
+                        let second = eligible.filter { c in c.a.id != q.a.id && cycTypes[c.a.id] == nil && c.a.minutes >= 45 && !busy.contains(where: { b in let g = abs(b - c.day); return min(g, 7 - g) < 2 }) && !legClash(c.day) }
+                        if let v = second.max(by: { $0.a.minutes < $1.a.minutes }) { cycTypes[v.a.id] = .vo2 }
+                    }
                 }
             }
         }
@@ -405,6 +442,7 @@ enum PlanEngine {
                     var k = cycTypes[x.id] ?? (x.minutes < 40 ? .recovery : .endurance)
                     var minutes = max(20, x.minutes)
                     var note = x.cyclingType == .custom ? "custom ride" : ""
+                    if !x.fixed, easyWeek, x.cyclingType == nil, k == .long { minutes = max(60, Int((Double(minutes) * 0.8 / 5).rounded()) * 5); note = "Easier week (week \(every) of your \(every)-week block): the long ride is 20 % shorter and there is no interval session." }
                     if x.fixed {
                         if k.zone > readiness.maxRideZone, let r = readiness.restriction { note = "Caution: \(r). This fixed ride is kept as you set it — ride it easy until then." }
                     } else {
@@ -416,6 +454,9 @@ enum PlanEngine {
                     }
                     var w = Workout(date: date, kind: k, minutes: minutes, sequence: n)
                     w.fixed = x.fixed; w.assignmentId = x.id
+                    if !x.fixed, k == .threshold, let r = thresholdReps, r != (k.defaultIntervalReps ?? r), AdaptiveRules.intervalsFit(kind: k, reps: r, minutes: minutes) {
+                        w.intervalReps = r; note = "Week \((blockPos ?? 0) + 1) of your \(every)-week block: \(r) × \(k.intervalWorkMinutes) min."
+                    }
                     w.note = note
                     items.append(w)
                 } else {

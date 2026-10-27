@@ -790,7 +790,7 @@ final class Store: ObservableObject {
         var next = plan, added = false
         for k in 0..<2 {
             let m = cal.date(byAdding: .day, value: 7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
-            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a, returning: cyclingReturnPhase(now: now))); added = true }
+            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a, returning: cyclingReturnPhase(now: now), trainingWeeks: consecutiveTrainingWeeks(before: m))); added = true }
         }
         if added { plan = next.sorted { $0.date < $1.date } }
     }
@@ -954,7 +954,7 @@ final class Store: ObservableObject {
         let monday = cal.date(byAdding: .day, value: -wd, to: d0)!
         let sunday = cal.date(byAdding: .day, value: 7, to: monday)!
         let today = cal.startOfDay(for: Date())
-        let fresh = applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability, returning: cyclingReturnPhase()))
+        let fresh = applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability, returning: cyclingReturnPhase(), trainingWeeks: consecutiveTrainingWeeks(before: monday)))
         var next = plan.filter { !($0.date >= monday && $0.date < sunday) }
         let old = plan.filter { $0.date >= monday && $0.date < sunday }
         for day in 0..<7 {

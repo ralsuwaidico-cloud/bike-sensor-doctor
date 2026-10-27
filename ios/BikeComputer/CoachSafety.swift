@@ -232,3 +232,16 @@ enum StartingLoad {
         return "New exercise — find your working weight. \(first), do \(range.upperBound) easy reps, then add a small step each set (about 5–10 %) until \(range.lowerBound) reps feel like you could do \(stopAt) more. Use that weight for the working sets and log it; the coach progresses from your log. No weight is copied from another exercise."
     }
 }
+
+extension Store {
+    /// M-05: consecutive calendar weeks with logged training (rides or lifts) right before `monday`.
+    func consecutiveTrainingWeeks(before monday: Date, calendar cal: Calendar = .current) -> Int {
+        let days = Set((ridingDays() + liftingDays()).map { cal.startOfDay(for: $0) })
+        var n = 0
+        for k in 1...26 {
+            let m = cal.date(byAdding: .day, value: -7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
+            if days.contains(where: { $0 >= m && $0 < e }) { n += 1 } else { break }
+        }
+        return n
+    }
+}

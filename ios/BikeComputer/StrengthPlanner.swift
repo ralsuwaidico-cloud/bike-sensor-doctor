@@ -353,7 +353,23 @@ enum StrengthPlanner {
         }
         if let h = spec.hint, m.primary.contains(where: { $0.contains(h) || h.contains($0) }) { sc += 3 }
         if ctx.prefs.reviewFlags.contains(e.id) { sc -= 8 }
+        sc += preferenceBonus(e, m, spec: spec, ctx: ctx).bonus
         return sc
+    }
+
+    /// Audit G-19: explicit, explained preferences instead of alphabetical ties. Coaching heuristics:
+    /// - cycling-focused riders: a Romanian deadlift over a conventional deadlift as the hinge (similar hamstring and
+    ///   glute work with less fatigue for the legs and back that rides need);
+    /// - beginners: a goblet squat over barbell / machine squats (self-limiting load, easy to learn).
+    static func preferenceBonus(_ e: Exercise, _ m: ExerciseMeta, spec: SlotSpec, ctx: PlannerContext) -> (bonus: Double, reason: String?) {
+        let n = e.name.lowercased()
+        if m.slot == .hinge, ctx.goal == .enduranceSupport || ctx.priority == .cycling, n.contains("romanian") {
+            return (1.5, "Chosen over a conventional deadlift: similar hamstring and glute work with less fatigue for the legs you ride on.")
+        }
+        if m.slot == .squat, ctx.experience == .beginner, n.contains("goblet") {
+            return (1.5, "Chosen as a first squat: the weight held in front keeps you upright and is easy to learn.")
+        }
+        return (0, nil)
     }
 
     /// The best doable exercise for a slot (deterministic: score, then name). Honours "always prefer".
@@ -427,6 +443,10 @@ enum StrengthPlanner {
         var before: String? = nil
         if let p = ctx.plan.first(where: { isKeyRide($0) && cal.isDate($0.date, inSameDayAs: prev) }) { before = "\(p.kind.title.lowercased()) planned the day before (\(p.date.shortDay))" }
         if before == nil, let r = ctx.rides.first(where: { !$0.demo && cal.isDate($0.start, inSameDayAs: prev) && ($0.durationS >= 5400 || hardShare($0) >= 0.4) }) { before = "a \(Fmt.duration(seconds: r.durationS)) ride the day before" }
+        // audit G-13: a key ride EARLIER the same day counts like one the day before (≈ 6 h apart is the usual advice
+        // for same-day concurrent sessions; Robineau et al. 2016, JSCR 30(3):672–683)
+        if before == nil, let e = ctx.plan.first(where: { isKeyRide($0) && cal.isDate($0.date, inSameDayAs: day) && $0.sequence < w.sequence }) { before = "your \(e.kind.title.lowercased()) earlier today (leave about 6 hours between them if you can)" }
+        if before == nil, let r = ctx.rides.first(where: { !$0.demo && cal.isDate($0.start, inSameDayAs: day) && $0.start < w.date && ($0.durationS >= 5400 || hardShare($0) >= 0.4) }) { before = "a \(Fmt.duration(seconds: r.durationS)) ride earlier today" }
         // weekly cycling load
         let monday = TrainingLedger.monday(of: w.date, calendar: cal)
         let end = cal.date(byAdding: .day, value: 7, to: monday)!
@@ -526,11 +546,18 @@ enum StrengthPlanner {
         // a main lift always gets at least 3 working sets before deload / interference reductions
         for i in picked.indices where picked[i].0.role == .main { sets[i] = min(maxSets, max(3, sets[i])) }
         // interference: lower body light before a key ride / after a long or hard one
-        let legsKept = week.hardRideNext != nil || week.hardRideSameDayAfter != nil || week.hardRideBefore != nil
+        let nearKeyRide = week.hardRideNext != nil || week.hardRideSameDayAfter != nil || week.hardRideBefore != nil
+        // audit G-14: strength priority keeps the leg work as planned; the ride is the one to keep easy
+        let strengthFirst = ctx.priority == .strength
+        let legsKept = nearKeyRide && !strengthFirst
         var interferenceText: String? = nil
         if let n = week.hardRideNext { interferenceText = "\(n.kind.title) on \(n.date.shortDay) is a key ride: lower-body work today stays light (one set fewer, 3+ reps in reserve) so your legs are fresh for it." }
         else if let s = week.hardRideSameDayAfter { interferenceText = "Your \(s.kind.title.lowercased()) is later today: lift first only if you must; lower-body work stays light (one set fewer, 3+ reps in reserve)." }
         else if let b = week.hardRideBefore { interferenceText = "After \(b): lower-body work stays light (one set fewer, 3+ reps in reserve) while your legs recover." }
+        if strengthFirst, nearKeyRide {
+            let which = week.hardRideNext.map { "\($0.kind.title.lowercased()) on \($0.date.shortDay)" } ?? week.hardRideSameDayAfter.map { "\($0.kind.title.lowercased()) later today" } ?? week.hardRideBefore ?? "the ride next to it"
+            interferenceText = "Strength is your priority, so the leg work stays as planned. Keep the \(which) easy (conversational pace) so your legs recover for lifting."
+        }
         // dose, load and explanation per exercise
         var entries: [ExerciseEntry] = []
         var rats: [ExerciseRationale] = []
@@ -743,6 +770,7 @@ enum StrengthPlanner {
         let muscles = m.primary.joined(separator: ", ") + (m.secondary.isEmpty ? "" : " (also \(m.secondary.joined(separator: ", ")))")
         out.append(WhyLine(title: "Muscles and movement", text: "\(m.slot.title.capitalizingFirst) pattern\(muscles.isEmpty ? "" : " — \(muscles)")\(e.unilateral ? ", one side at a time" : "")."))
         out.append(WhyLine(title: "For your goal", text: goalLine(m, goal: ctx.goal)))
+        if let r = preferenceBonus(e, m, spec: SlotSpec(slot: m.slot, role: .main), ctx: ctx).reason { out.append(WhyLine(title: "Why this exercise", text: r)) }
         let week = weekContext(for: w, ctx: ctx)
         out.append(WhyLine(title: "Place in your week", text: placeLine(w, week: week, ctx: ctx)))
         if let r = w.rationale?.exercise(entry.exerciseId) {
