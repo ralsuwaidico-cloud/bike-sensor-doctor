@@ -145,8 +145,8 @@ struct BoardStorageView: View {
     @ViewBuilder private var phoneSection: some View {
         Section("On this iPhone") {
             let reports = diag.reports
-            LabeledContent("BikeComputer reports", value: "\(reports.count) · \(DiagFormat.bytes(UInt32(clamping: reports.reduce(0) { $0 + Int($1.size) })))")
-            LabeledContent("Offline rides imported", value: "\(link13.importedRides.count) · \(BoardStorageModel.bytes(UInt32(clamping: link13.importedRides.reduce(0) { $0 + Int($1.samplesSize) })))")
+            LabeledContent("BikeComputer reports", value: reports.isEmpty ? "none" : "\(reports.count) · \(DiagFormat.bytes(UInt32(clamping: reports.reduce(0) { $0 + Int($1.size) })))")
+            LabeledContent("Offline rides imported", value: link13.importedRides.isEmpty ? "none" : "\(link13.importedRides.count) · \(BoardStorageModel.bytes(UInt32(clamping: link13.importedRides.reduce(0) { $0 + Int($1.samplesSize) })))")
             Text("Kept with Cyclift's data on this iPhone (and in its backups). Nothing here is sent anywhere.").font(.footnote).foregroundStyle(.secondary)
         }
     }

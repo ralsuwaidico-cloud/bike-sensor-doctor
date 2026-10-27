@@ -122,6 +122,7 @@ final class LayoutAudit: XCTestCase {
     }
     /// Closes the TOPMOST sheet: its Done / Cancel is the last matching button in the hierarchy.
     private func close(_ app: XCUIApplication) {
+        sleep(1)      /* a sheet still animating in is not hittable yet: the Done BEHIND it would be tapped instead (run 83) */
         for name in ["Done", "Cancel", "Close"] {
             let q = app.buttons.matching(NSPredicate(format: "label == %@", name))
             for i in stride(from: q.count - 1, through: 0, by: -1) { let b = q.element(boundBy: i); if b.isHittable { b.tap(); sleep(1); return } }
@@ -179,10 +180,11 @@ final class LayoutAudit: XCTestCase {
             }
             // Settings › BikeComputer › Storage (Link 1.3): no board in the demo → the not-connected state, cleanup disabled
             let appSettings = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'App & device settings'")).firstMatch
-            if appSettings.exists || { scrollUp(app); return appSettings.exists }() {
+            for _ in 0..<3 where !(appSettings.exists && appSettings.isHittable) { scrollUp(app) }      /* AX3: further down the Profile list */
+            if appSettings.exists {
                 appSettings.tap(); sleep(2)
                 let storageLink = app.buttons["settingsBoardStorage"].firstMatch
-                for _ in 0..<4 where !storageLink.isHittable { scrollUp(app) }
+                for _ in 0..<4 where !(storageLink.exists && storageLink.isHittable) { scrollUp(app) }
                 if storageLink.exists {
                     storageLink.tap(); sleep(2)
                     shot("\(tag)-15b-board-storage"); checkTexts(app, screen: "\(size) board storage")
