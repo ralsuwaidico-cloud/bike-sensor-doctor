@@ -2,13 +2,17 @@ import Foundation
 
 // MARK: - Coach safety layer (coach remediation, ios/COACH_REMEDIATION.md)
 //
-// M-01  Health screening before vigorous prescriptions (threshold / VO2 / FTP-test rides, heavy lifting at RPE ≥ 8).
-//       Questions paraphrase the general section of the PAR-Q+ (Warburton et al. 2011, Health & Fitness Journal of
-//       Canada 4(2):3–23) plus pregnancy, following the ACSM pre-participation screening logic (Riebe et al. 2015,
-//       MSSE 47(11):2473–2479): symptoms or known disease → medical clearance before vigorous exercise.
-//       This is a COACHING GATE, not a medical assessment: the app never diagnoses and never stores more than yes/no.
-// M-02  Return to training after a break: loads and intensity restart below the last logged ones (detraining:
-//       Mujika & Padilla 2000, Sports Med 30(2):79–87 / 30(3):145–154). The exact percentages are coaching heuristics.
+// M-01  Health screening before training is planned. The questions paraphrase the general section of the PAR-Q+
+//       (Warburton et al. 2011, Health & Fitness Journal of Canada 4(2):3–17; www.eparmedx.com) plus pregnancy and a
+//       current-illness question, and follow the ACSM pre-participation screening logic (Riebe et al. 2015, MSSE
+//       47(11):2473–2479): signs or symptoms (chest pain, fainting / dizziness) → stop and get medical clearance before any
+//       exercise programme; known disease / medication → moderate exercise, medical clearance before vigorous work.
+//       Independent review F-01/F-13: symptoms and "supervised only" STOP plan generation; supervised-only can never be
+//       cleared in the app; clearance for symptoms needs an explicit statement with a date; every question needs an
+//       explicit answer (none pre-set); answers expire after 12 months. This is a COACHING GATE, not a medical
+//       assessment: the app never diagnoses and stores yes/no only.
+// M-02  Return to training after a break: loads and riding time restart below the last logged ones and ramp back
+//       (detraining: Mujika & Padilla 2000, Sports Med 30(2):79–87). The exact percentages are coaching heuristics.
 
 /// Pre-participation health check. Stored on the rider profile; nil = never answered.
 struct HealthScreen: Codable, Equatable {
@@ -17,66 +21,84 @@ struct HealthScreen: Codable, Equatable {
     var heartOrBloodPressure = false
     /// Chest pain at rest, in daily activities or during exercise.
     var chestPain = false
-    /// Lost balance through dizziness or lost consciousness in the last 12 months.
+    /// Lost balance through dizziness or lost consciousness in the last 12 months (not from over-breathing in hard exercise).
     var dizzinessOrFainting = false
     /// Another chronic medical condition has been diagnosed.
     var otherChronicCondition = false
     /// Currently taking prescribed medication for a chronic condition.
     var chronicMedication = false
-    /// A bone, joint or soft-tissue problem that more activity could make worse.
+    /// A bone, joint or soft-tissue problem that more activity could make worse (a past problem that no longer limits
+    /// you does not count).
     var boneJointProblem = false
     /// A doctor has said exercise should only be medically supervised.
     var supervisedOnly = false
     /// Currently pregnant or gave birth in the last 6 months.
     var pregnancy = false
-    /// The rider confirms a doctor or qualified health professional cleared them for vigorous training.
+    /// Currently ill (e.g. a fever or infection) or recovering from an illness or operation.
+    var currentIllness = false
+    /// The rider states that a doctor examined them and cleared them for unrestricted training, on this date.
     var clearedAt: Date? = nil
 
-    enum Status: String, Codable { case notAnswered, clear, needsClearance, cleared }
+    enum Status: String, Codable { case notAnswered, clear, needsClearance, cleared, stop }
 
-    var anyYes: Bool { heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || supervisedOnly || pregnancy }
+    static let validityDays = 365
 
-    var status: Status {
-        guard answeredAt != nil else { return .notAnswered }
+    /// Symptoms / supervision: no training is planned until cleared (supervised-only: never in the app).
+    var stopAnswers: Bool { chestPain || dizzinessOrFainting || supervisedOnly }
+    var anyYes: Bool { heartOrBloodPressure || chestPain || dizzinessOrFainting || otherChronicCondition || chronicMedication || boneJointProblem || supervisedOnly || pregnancy || currentIllness }
+    /// A clearance can be recorded in the app (not for "supervised only").
+    var clearable: Bool { anyYes && !supervisedOnly }
+
+    func status(now: Date = Date()) -> Status {
+        guard let at = answeredAt, now.timeIntervalSince(at) < Double(Self.validityDays) * 86_400 else { return .notAnswered }
         if !anyYes { return .clear }
-        // supervised-only and chest pain are never self-cleared for unsupervised vigorous work by an app button alone:
-        // the rider must state a clearance, which is recorded with its date
-        return clearedAt != nil ? .cleared : .needsClearance
+        if supervisedOnly { return .stop }
+        if clearedAt != nil { return .cleared }
+        return stopAnswers ? .stop : .needsClearance
     }
+    var status: Status { status() }
 
     static let questions: [(key: WritableKeyPath<HealthScreen, Bool>, text: String)] = [
         (\.heartOrBloodPressure, "Has a doctor ever said you have a heart condition or high blood pressure?"),
         (\.chestPain, "Do you get chest pain at rest, in daily activities or when you exercise?"),
-        (\.dizzinessOrFainting, "In the last 12 months, have you lost your balance through dizziness or lost consciousness?"),
+        (\.dizzinessOrFainting, "In the last 12 months, have you lost your balance through dizziness or lost consciousness? (Not light-headedness from breathing hard during intense exercise.)"),
         (\.otherChronicCondition, "Have you been diagnosed with another chronic medical condition?"),
         (\.chronicMedication, "Do you take prescribed medication for a chronic condition?"),
-        (\.boneJointProblem, "Do you have a bone, joint or soft-tissue problem that more activity could make worse?"),
+        (\.boneJointProblem, "Do you have a bone, joint or soft-tissue problem now that more activity could make worse?"),
         (\.supervisedOnly, "Has a doctor said you should only exercise under medical supervision?"),
         (\.pregnancy, "Are you pregnant, or did you give birth in the last 6 months?"),
+        (\.currentIllness, "Are you ill right now, or recovering from an illness or operation?"),
     ]
 }
 
-/// What the coach may prescribe, derived from the health check, the break state and age. One place, read by the
-/// cycling plan, the strength planner and the adaptive engine.
+/// What the coach may prescribe, derived from the health check. One place, read by the week builder, the strength
+/// planner, the ride safety refresh and the adaptive engine.
 struct CoachReadiness: Equatable {
     var screen: HealthScreen.Status
-    /// Vigorous prescriptions (threshold, VO2, FTP test; lifting at RPE ≥ 8) are allowed.
+    /// Any training may be planned (false: symptoms / supervised-only → "see a doctor", no sessions generated).
+    var trainingAllowed: Bool { screen != .stop }
+    /// Vigorous prescriptions (tempo and harder rides, heavy lifting, load progression) are allowed.
     var vigorousAllowed: Bool { screen == .clear || screen == .cleared }
-    /// Highest strength RPE the planner may prescribe.
-    var maxStrengthRPE: Int { vigorousAllowed ? 10 : 7 }
-    /// Highest ride zone the generator may plan (fixed rides the rider typed are kept and warned instead).
+    /// Highest strength RPE the planner may prescribe (independent review F-02: lower while clearance is pending).
+    var maxStrengthRPE: Int { switch screen { case .clear, .cleared: return 10; case .notAnswered: return 7; case .needsClearance, .stop: return 6 } }
+    /// Fewest reps per set while not cleared (no heavy 4–6 rep work).
+    var minStrengthReps: Int? { vigorousAllowed ? nil : 8 }
+    /// Highest ride zone the generator may plan.
     var maxRideZone: Int { vigorousAllowed ? 5 : 2 }
+    /// Longest generated ride while not cleared (F-14), minutes.
+    var maxRideMinutes: Int? { vigorousAllowed ? nil : 120 }
 
     /// Short reason for notes and Why? texts; nil when nothing is restricted.
     var restriction: String? {
         switch screen {
         case .clear, .cleared: return nil
-        case .notAnswered: return "the health check in Profile has not been answered yet, so hard intervals and near-maximal lifting are not planned"
-        case .needsClearance: return "your health check answers mean a doctor should clear you before hard training, so hard intervals and near-maximal lifting are not planned until you confirm that clearance in Profile"
+        case .notAnswered: return "the health check in Profile has not been answered (or is more than a year old), so only easy-to-moderate training is planned"
+        case .needsClearance: return "your health check answers mean a doctor should clear you before hard training, so only easy-to-moderate training is planned until you record that clearance in Profile"
+        case .stop: return "your health check answers mean you should see a doctor before training, so Cyclift plans no sessions until then"
         }
     }
 
-    init(profile p: RiderProfile) { screen = p.healthScreen?.status ?? .notAnswered }
+    init(profile p: RiderProfile, now: Date = Date()) { screen = p.healthScreen?.status(now: now) ?? .notAnswered }
     init(screen: HealthScreen.Status) { self.screen = screen }
 }
 
@@ -105,6 +127,12 @@ struct ReturnPhase: Equatable {
         case 56..<112: return 0.8
         default: return 0.7
         }
+    }
+    /// Riding time for the first rides back (F-08): shorter after longer breaks, ramping back to 100 % over the phase.
+    var rideFactor: Double {
+        let f: Double
+        switch breakDays { case ..<28: f = 0.85; case 28..<56: f = 0.75; case 56..<112: f = 0.65; default: f = 0.6 }
+        return min(1, f + (1 - f) * Double(sessionsSince) / Double(ReturnPhase.phaseSessions))
     }
     var weeksText: String { breakDays >= 14 ? "\(breakDays / 7) weeks" : "\(breakDays) days" }
 
@@ -163,8 +191,8 @@ extension Store {
 // the same muscles takes longer, so volume per week and the deload cadence are adjusted. The factors below (×0.8 volume,
 // deload every 3rd week, ≥ 72 h between sessions loading the same muscles) are COACHING HEURISTICS, not evidence-derived
 // thresholds. Rest between sets follows ACSM 2009 (Ratamess et al., MSSE 41(3):687–708): 2–3 min for heavy multi-joint
-// lifts, 1–2 min for lighter / assistance work; hypertrophy work benefits from rests above 60 s (Grgic et al. 2018,
-// Sports Med 48(1):137–151; Schoenfeld et al. 2016, JSCR 30(7):1805–1812).
+// lifts, 1–2 min for lighter / assistance work; hypertrophy work benefits from rests above 60 s (Grgic et al. 2017,
+// Eur J Sport Sci 17(8):983–993 — volume and pages not verified; Schoenfeld et al. 2016, JSCR 30(7):1805–1812).
 
 enum RecoveryCapacity: String, Codable, CaseIterable {
     case low, normal, high
@@ -233,48 +261,94 @@ enum StartingLoad {
     }
 }
 
-extension Store {
-    /// M-05: consecutive calendar weeks with logged training (rides or lifts) right before `monday`.
-    func consecutiveTrainingWeeks(before monday: Date, calendar cal: Calendar = .current) -> Int {
-        let days = Set((ridingDays() + liftingDays()).map { cal.startOfDay(for: $0) })
+/// M-05 / F-04 / F-09: one block clock for both sports. A week counts as a training week when something was logged in it
+/// (rides, lifts, sessions marked done) — or, for the current and later weeks, when sessions are planned in it (so a week
+/// generated on Monday morning, before anything is logged, still knows where it sits in the block).
+enum BlockClock {
+    static func weeks(before monday: Date, activity: Set<Date>, plannedMondays: Set<Date>, now: Date, calendar cal: Calendar = .current) -> Int {
+        let currentMonday = TrainingLedger.monday(of: now, calendar: cal)
         var n = 0
         for k in 1...26 {
             let m = cal.date(byAdding: .day, value: -7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
-            if days.contains(where: { $0 >= m && $0 < e }) { n += 1 } else { break }
+            let trained = activity.contains { $0 >= m && $0 < e }
+            let planned = m >= currentMonday && plannedMondays.contains(m)
+            if trained || planned { n += 1 } else { break }
         }
         return n
     }
 }
 
-struct SafetyOriginal: Codable, Equatable { var kind: WorkoutKind; var minutes: Int; var intervalReps: Int?; var note: String }
+extension Store {
+    var activityDays: Set<Date> { Set((ridingDays() + liftingDays()).map { Calendar.current.startOfDay(for: $0) }) }
+    var plannedMondays: Set<Date> { Set(plan.filter { $0.kind.isRide || $0.kind == .strength }.map { TrainingLedger.monday(of: $0.date) }) }
+    /// M-05: training weeks in a row right before `monday` (shared by the cycling easy week and the strength deload).
+    func consecutiveTrainingWeeks(before monday: Date, now: Date = Date(), calendar cal: Calendar = .current) -> Int {
+        BlockClock.weeks(before: monday, activity: activityDays, plannedMondays: plannedMondays, now: now, calendar: cal)
+    }
+}
+
+struct SafetyOriginal: Codable, Equatable {
+    var kind: WorkoutKind; var minutes: Int; var intervalReps: Int?; var note: String
+    /// The adaptive coach's original snapshot before the cap was applied to it (F-05), restored with the session.
+    var coachSnapshot: WorkoutPlanSnapshot? = nil
+}
 
 extension Store {
-    /// M-01 / M-02 for rides that were generated BEFORE the health check or the break was known (weeks are generated up to
-    /// two weeks ahead): future coach-generated rides (not fixed, not edited, not done or started) are capped here at
-    /// launch, day change and check-ins, like strength sessions are refreshed — and restored to what was generated once the
-    /// cap no longer applies (screen answered / cleared, return phase over). Never touches a fixed or hand-edited ride and
-    /// never makes a ride harder than it was generated.
+    /// M-01 / M-02 for sessions generated BEFORE the health check or a break was known (weeks are generated up to two
+    /// weeks ahead): at launch, day change and check-ins, future coach-generated sessions are capped like the week builder
+    /// would cap them now — and restored to what was generated once the cap no longer applies (screen answered or
+    /// cleared, return phase over). Rides the adaptive coach adjusted are capped on their original too (F-05), so a later
+    /// coach run cannot lift the cap. Fixed and hand-edited sessions are only stopped for a "see a doctor" answer; a
+    /// session is never made harder than it was generated.
     func refreshRideSafety(now: Date = Date()) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
-        let readiness = profile.readiness
+        let readiness = CoachReadiness(profile: profile, now: now)
         let back = cyclingReturnPhase(now: now)
         var p = plan, changed = false
         for i in p.indices {
             let w = p[i]
-            guard w.kind.isRide, !w.fixed, !w.edited, !w.done, !w.skipped, w.completion == nil, cal.startOfDay(for: w.date) >= today, w.coachOriginal == nil else { continue }
+            guard !w.done, !w.skipped, w.completion == nil, cal.startOfDay(for: w.date) >= today, activeSession?.workoutId != w.id else { continue }
+            let isRideOrStopped = w.kind.isRide || (w.kind == .rest && w.safetyOriginal != nil) || (!readiness.trainingAllowed && w.kind == .strength)
+            guard isRideOrStopped else { continue }
+            let userOwned = w.fixed || w.edited
+            if userOwned && readiness.trainingAllowed && w.safetyOriginal == nil { continue }
+            // the base: what was generated (before any safety cap), with the adaptive coach's own change on top
             let o = w.safetyOriginal ?? SafetyOriginal(kind: w.kind, minutes: w.minutes, intervalReps: w.intervalReps, note: w.note)
             var x = w
             x.kind = o.kind; x.minutes = o.minutes; x.intervalReps = o.intervalReps; x.note = o.note
-            if x.kind.zone > readiness.maxRideZone, let r = readiness.restriction { x.kind = .endurance; x.intervalReps = nil; x.note = "Planned easy because \(r)." }
-            if let b = back, b.active, x.kind.zone >= 3 || x.kind == .long {
-                x.kind = .endurance; x.intervalReps = nil
-                x.minutes = max(30, Int((Double(o.minutes) * 0.75 / 5).rounded()) * 5)
-                x.note = "Back after \(b.weeksText) off: steady endurance at about three quarters of the usual time; intensity returns after \(ReturnPhase.phaseSessions) rides."
+            if let so = w.safetyOriginal?.coachSnapshot { x.coachOriginal = so }
+            var origSnap = x.coachOriginal
+            func capRide(_ k: inout WorkoutKind, _ m: inout Int, _ r: inout Int?, base: Int) -> String? {
+                var why: String? = nil
+                if k.zone > readiness.maxRideZone, let t = readiness.restriction { k = .endurance; r = nil; why = "Planned easy because \(t)." }
+                if let cap = readiness.maxRideMinutes, m > cap, let t = readiness.restriction { m = cap; why = "Kept to \(Fmt.duration(minutes: cap)) because \(t)." }
+                if let b = back, b.active, k.zone >= 3 || k == .long || m > 60 {
+                    if k.zone >= 3 || k == .long { k = .endurance; r = nil }
+                    m = max(30, Int((Double(base) * b.rideFactor / 5).rounded()) * 5)
+                    why = "Back after \(b.weeksText) off: steady riding at about \(Int((b.rideFactor * 100).rounded())) % of the usual time, building back over \(ReturnPhase.phaseSessions) rides."
+                }
+                return why
+            }
+            if !readiness.trainingAllowed {
+                x.kind = .rest; x.minutes = 0; x.intervalReps = nil
+                x.note = "No training planned: \(readiness.restriction ?? "see a doctor first")."
+            } else if x.kind.isRide, !userOwned {
+                var k = x.kind, m = x.minutes, r = x.intervalReps
+                if let why = capRide(&k, &m, &r, base: o.minutes) { x.kind = k; x.minutes = m; x.intervalReps = r; x.note = why }
+                if var snap = origSnap {
+                    var sk = snap.kind, sm = snap.minutes, sr = snap.intervalReps
+                    _ = capRide(&sk, &sm, &sr, base: snap.minutes)
+                    snap.kind = sk; snap.minutes = sm; snap.intervalReps = sr
+                    origSnap = snap
+                }
             }
             let capped = x.kind != o.kind || x.minutes != o.minutes || x.intervalReps != o.intervalReps
-            x.safetyOriginal = capped ? o : nil
-            if !capped { x.note = o.note }
+            if capped {
+                var so = o; so.coachSnapshot = w.safetyOriginal?.coachSnapshot ?? w.coachOriginal
+                x.safetyOriginal = so
+                if origSnap != x.coachOriginal { x.coachOriginal = origSnap }
+            } else { x.safetyOriginal = nil; x.note = o.note }
             if x != w { p[i] = x; changed = true }
         }
         if changed { plan = p }

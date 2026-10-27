@@ -463,11 +463,10 @@ enum StrengthPlanner {
         if hardCount >= 2 { high = true; why = "\(hardCount) hard rides are planned this week" }
         else if avg > 0, plannedMin * 100 > avg * 130 { high = true; why = "this week's planned riding (\(Fmt.duration(minutes: plannedMin))) is well above your recent average (\(Fmt.duration(minutes: avg)))" }
         // deload: every 4th consecutive training week, or fatigue signals from check-ins
-        var streak = 0
-        for k in 1...12 {
-            let m = cal.date(byAdding: .day, value: -7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
-            if ctx.logs.contains(where: { $0.isDetailed && $0.date >= m && $0.date < e }) { streak += 1 } else { break }
-        }
+        // F-09: the same block clock as the cycling easy week (rides + lifts, quick logs included)
+        let activity = Set((ctx.logs.map { $0.date } + ctx.rides.filter { !$0.demo }.map { $0.start } + ctx.plan.filter { $0.completion == .marked }.map { $0.date }).map { cal.startOfDay(for: $0) })
+        let plannedMondays = Set(ctx.plan.filter { $0.kind.isRide || $0.kind == .strength }.map { TrainingLedger.monday(of: $0.date, calendar: cal) })
+        let streak = BlockClock.weeks(before: monday, activity: activity, plannedMondays: plannedMondays, now: ctx.now, calendar: cal)
         var deload = false, dWhy: String? = nil
         if ctx.fatigue { deload = true; dWhy = "your recent check-ins show fatigue" }
         else {
@@ -564,6 +563,8 @@ enum StrengthPlanner {
         for (i, (spec, e)) in picked.enumerated() {
             let m = ExerciseLibrary.meta(e)
             var d = dose(role: spec.role, goal: goal, experience: exp)
+            // F-02: no heavy low-rep work until the health check allows vigorous training
+            if let lo = ctx.readiness.minStrengthReps, d.reps.lowerBound < lo { d.reps = lo...max(lo + 4, d.reps.upperBound) }
             // bodyweight-only with the rider's equipment: higher reps (a load cannot be added)
             if bodyweightOnly(e, ctx: ctx), !isHold(e) { d.reps = max(10, d.reps.lowerBound)...max(15, d.reps.upperBound) }
             var n = sets[i]
@@ -638,6 +639,13 @@ enum StrengthPlanner {
         return Built(entries: entries, rationale: r)
     }
 
+    /// F-11: a barbell-only exercise is never prescribed below the empty bar (20 kg / 45 lb); below it, reps come down instead.
+    static func barFloor(_ e: Exercise, ctx: PlannerContext) -> Double? {
+        let eq = Set(e.equipment.map { $0.lowercased() })
+        guard eq.contains("barbell"), eq.subtracting(["barbell", "bench", "rack", "plates", "bodyweight"]).isEmpty else { return nil }
+        return ctx.units == .imperial ? 20.41 : 20
+    }
+
     static func bodyweightOnly(_ e: Exercise, ctx: PlannerContext) -> Bool {
         let loadOptions = Set(e.equipment.map(EquipmentProfile.normalised)).subtracting(ExerciseLibrary.accessories).subtracting(["bodyweight"])
         let owned = Set(ctx.equipment.owned.map(EquipmentProfile.normalised))
@@ -667,7 +675,8 @@ enum StrengthPlanner {
         let owned = Set(ctx.equipment.owned.map(EquipmentProfile.normalised))
         let loadable = !loadOptions.isEmpty && (!ctx.equipment.isSet || !loadOptions.isDisjoint(with: owned))
         let bw = !loadable && req.anyOf.isEmpty
-        let holdWhy: String? = painBlocked ? "Held — no progression while pain is reported or during a deload." : ctx.progressionHold.map { "Held — \($0)." }
+        let readinessHold: String? = ctx.readiness.vigorousAllowed ? nil : "Held — no load increases until the health check allows harder training."
+        let holdWhy: String? = painBlocked ? "Held — no progression while pain is reported or during a deload." : (ctx.progressionHold.map { "Held — \($0)." } ?? readinessHold)
         let hist = history(e.id, ctx: ctx)
         func effort(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Int? { x.entry.doneSets.compactMap { $0.rpe }.max() ?? x.session.rpe ?? x.session.checkIn?.effort }
         if isHold(e) {
@@ -704,7 +713,11 @@ enum StrengthPlanner {
                 let dumbbellR = e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell")
                 let stepR = WeightFmt.step(dumbbell: dumbbellR, ctx.units)
                 let target = w * phase.loadFactor
-                let next = max(stepR, min(w - stepR, (target / stepR).rounded(.down) * stepR))
+                let floorKg = barFloor(e, ctx: ctx)
+                let next = max(floorKg ?? stepR, min(w - stepR, (target / stepR).rounded(.down) * stepR))
+                if next >= w {
+                    return Load(weight: w, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText) — \(phase.weeksText) ago. The empty bar is the lightest load, so the weight stays and the reps restart at \(range.lowerBound); it builds back up from your new logs.")
+                }
                 let pct = Int(((1 - next / w) * 100).rounded())
                 return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText) — \(phase.weeksText) ago. After a break strength and work capacity drop, so the weight restarts about \(pct) % lower (\(WeightFmt.text(next, ctx.units))) at \(range.lowerBound) reps; it builds back up from your new logs.")
             }
@@ -749,8 +762,8 @@ enum StrengthPlanner {
         }
         if last2.count == 2, last2.allSatisfy(failed) {
             let down = max(step, ((w * 0.9) / step).rounded(.down) * step)
-            let next = min(w - step, down)
-            if next > 0 {
+            let next = max(barFloor(e, ctx: ctx) ?? 0, min(w - step, down))
+            if next > 0, next < w {
                 return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): two sessions in a row short of \(range.lowerBound) reps at a very hard effort. The weight comes down to \(WeightFmt.text(next, ctx.units)) (about 10 % less) so every set reaches \(range.lowerBound) clean reps; it builds back up from there.")
             }
         }

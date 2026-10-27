@@ -48,11 +48,19 @@ final class CoachRemediationTests: XCTestCase {
         XCTAssertEqual(s.status, .notAnswered)
         s.answeredAt = now
         XCTAssertEqual(s.status, .clear)
-        s.chestPain = true
+        s.heartOrBloodPressure = true
         XCTAssertEqual(s.status, .needsClearance)
         s.clearedAt = now
         XCTAssertEqual(s.status, .cleared)
-        XCTAssertEqual(HealthScreen.questions.count, 8)
+        XCTAssertEqual(HealthScreen.questions.count, 9)
+        // F-01: symptoms stop planning until a recorded clearance; supervised-only is never cleared in the app
+        var sym = HealthScreen(); sym.answeredAt = now; sym.chestPain = true
+        XCTAssertEqual(sym.status, .stop); sym.clearedAt = now; XCTAssertEqual(sym.status, .cleared)
+        var sup = HealthScreen(); sup.answeredAt = now; sup.supervisedOnly = true; sup.clearedAt = now
+        XCTAssertEqual(sup.status, .stop); XCTAssertFalse(sup.clearable)
+        // answers expire after a year
+        var old = HealthScreen(); old.answeredAt = now.addingTimeInterval(-400 * 86_400)
+        XCTAssertEqual(old.status(now: now), .notAnswered)
     }
 
     func testUnansweredOrYesScreenPlansNoHardRides() {
@@ -87,7 +95,9 @@ final class CoachRemediationTests: XCTestCase {
         XCTAssertFalse(CoachReadiness(screen: .notAnswered).vigorousAllowed)
         XCTAssertFalse(CoachReadiness(screen: .needsClearance).vigorousAllowed)
         XCTAssertTrue(CoachReadiness(screen: .cleared).vigorousAllowed)
-        XCTAssertEqual(CoachReadiness(screen: .needsClearance).maxStrengthRPE, 7)
+        XCTAssertEqual(CoachReadiness(screen: .needsClearance).maxStrengthRPE, 6)
+        XCTAssertEqual(CoachReadiness(screen: .notAnswered).maxStrengthRPE, 7)
+        XCTAssertFalse(CoachReadiness(screen: .stop).trainingAllowed)
     }
 
     func testOldProfileFilesDecodeWithoutTheScreen() throws {
@@ -351,5 +361,59 @@ final class CoachRemediationTests: XCTestCase {
         s.rides += [-1, -2, -3].map { RideRecord(start: day($0, hour: 7), durationS: 3600, distanceM: 25000, recorder: .phone, sources: []) }
         s.refreshRideSafety(now: now)
         XCTAssertEqual(s.plan.first { $0.id == long.id }?.kind, .long); XCTAssertEqual(s.plan.first { $0.id == long.id }?.minutes, 150)
+    }
+
+    // MARK: Independent review (F-series)
+
+    func testStopAnswersPlanNoTraining() {
+        var p = profile(); var sc = HealthScreen(); sc.answeredAt = now; sc.dizzinessOrFainting = true; p.healthScreen = sc
+        let w = week(p)
+        XCTAssertTrue(w.allSatisfy { $0.kind == .rest }, w.map { "\($0.kind)" }.joined(separator: ","))
+        XCTAssertTrue(w.contains { $0.note.contains("see a doctor") })
+        // fixed days come back unchanged once cleared (the original is kept on the rest day)
+        XCTAssertTrue(w.filter { $0.safetyOriginal != nil }.count >= 4)
+    }
+
+    func testPendingClearanceMeansNoLoadIncreasesAndNoHeavyLowReps() {
+        var p = profile(); var sc = HealthScreen(); sc.answeredAt = now; sc.chronicMedication = true; p.healthScreen = sc
+        let logs = [log(3, squat, reps: [10, 10, 10], kg: 100, rpe: 7), log(6, squat, reps: [10, 10, 10], kg: 100, rpe: 7)]
+        let l = StrengthPlanner.prescribeLoad(squat, meta: ExerciseLibrary.meta(squat), reps: 8...12, sets: 3, painBlocked: false, ctx: ctx(p, logs: logs))
+        XCTAssertEqual(l.weight, 100); XCTAssertFalse(l.progressed); XCTAssertTrue(l.why.contains("health check"), l.why)
+        var sp = StrengthPrefs(); sp.goal = .strength
+        var c = ctx(p, logs: []); c.prefs = sp
+        let b = StrengthPlanner.build(for: Workout(date: day(2), kind: .strength, minutes: 60, strengthFocus: .fullBody), ctx: c)
+        for e in b.entries where !e.notes.hasPrefix("Hold") { XCTAssertTrue(e.sets.allSatisfy { $0.reps >= 8 }, "\(e.name) \(e.sets.first?.reps ?? 0)") }
+        XCTAssertTrue(b.rationale.exercises.allSatisfy { ($0.targetRPE ?? 0) <= 6 })
+    }
+
+    func testBarbellNeverBelowTheEmptyBar() {
+        let l = StrengthPlanner.prescribeLoad(squat, meta: ExerciseLibrary.meta(squat), reps: 6...10, sets: 3, painBlocked: false, ctx: ctx(profile(), logs: [log(60, squat, reps: [8, 8, 8], kg: 20, rpe: 7)]))
+        XCTAssertGreaterThanOrEqual(l.weight ?? 0, 20, l.why)
+        let f = StrengthPlanner.prescribeLoad(squat, meta: ExerciseLibrary.meta(squat), reps: 6...10, sets: 3, painBlocked: false, ctx: ctx(profile(), logs: [log(3, squat, reps: [4, 4, 4], kg: 20, rpe: 10), log(6, squat, reps: [4, 4, 4], kg: 20, rpe: 10)]))
+        XCTAssertGreaterThanOrEqual(f.weight ?? 0, 20, f.why)
+    }
+
+    func testThresholdBlockNeverGoesBackwards() {
+        var p = profile(level: .intermediate); p.goal = .stronger; p.trainingMode = .cycling; p.cyclingDaysPerWeek = 4; p.hoursPerWeek = 7
+        let reps = (0..<3).compactMap { k in splitWeek(p, trainingWeeks: k).first { $0.kind == .threshold }?.effectiveIntervalReps }
+        XCTAssertEqual(reps.count, 3); XCTAssertEqual(reps, reps.sorted(), "\(reps)")
+    }
+
+    func testHybridWithoutSplitGetsGoalIntensityAndAnEasyWeek() {
+        var fit = profile(level: .intermediate); fit.goal = .fitness; fit.strengthSplit = nil
+        XCTAssertFalse(splitWeek(fit, trainingWeeks: 1).contains { $0.kind.zone >= 4 }, "general fitness: tempo, not threshold")
+        var str = profile(level: .intermediate); str.goal = .stronger; str.strengthSplit = nil; str.cyclingDaysPerWeek = 4; str.hoursPerWeek = 7
+        XCTAssertFalse(splitWeek(str, trainingWeeks: 3).contains { $0.kind.zone >= 4 }, "week 4 is easy")
+    }
+
+    func testMondayMorningWeekStillKnowsItsBlockPosition() {
+        // three past weeks logged, nothing logged yet this week, this week planned → next week is block week 5 = pos 0;
+        // two past weeks logged + this week planned → next week is week 4 = the easy week
+        let cal = Calendar.current
+        let thisMonday = TrainingLedger.monday(of: now)
+        let past2 = Set((1...2).map { cal.date(byAdding: .day, value: -7 * $0 + 1, to: thisMonday)! })
+        let nextMonday = cal.date(byAdding: .day, value: 7, to: thisMonday)!
+        XCTAssertEqual(BlockClock.weeks(before: nextMonday, activity: past2, plannedMondays: [thisMonday], now: now), 3)
+        XCTAssertEqual(BlockClock.weeks(before: nextMonday, activity: past2, plannedMondays: [], now: now), 0, "without the planned week the streak breaks")
     }
 }

@@ -794,7 +794,7 @@ final class Store: ObservableObject {
         var next = plan, added = false
         for k in 0..<2 {
             let m = cal.date(byAdding: .day, value: 7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
-            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a, returning: cyclingReturnPhase(now: now), trainingWeeks: consecutiveTrainingWeeks(before: m))); added = true }
+            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a, returning: cyclingReturnPhase(now: now), trainingWeeks: BlockClock.weeks(before: m, activity: activityDays, plannedMondays: plannedMondays.union(next.filter { $0.kind.isRide || $0.kind == .strength }.map { TrainingLedger.monday(of: $0.date) }), now: now))); added = true }
         }
         if added { plan = next.sorted { $0.date < $1.date } }
     }
