@@ -14,7 +14,32 @@ static lv_obj_t *line(lv_obj_t *list, const lv_font_t *f, lv_color_t c, const ch
     return l;
 }
 
-static void save_cb(lv_event_t *e) { (void)e; app_ride_save(); ui_history_show(s_sum.demo); }
+static void notice_ok(lv_event_t *e) { (void)e; ui_history_show(s_sum.demo); }
+/* 0.7.4 (QA QF-01): the outcome of SAVE is always on screen - never a silent loss */
+static void save_notice(app_save_result_t r)
+{
+    lv_obj_t *scr = ui_screen_new(UI_SCR_RESULTS, NULL);
+    lv_obj_t *t = ui_title(scr, r == APP_SAVE_RAM_ONLY ? "NOT SAVED ON BOARD" : "RIDE NOT SAVED");
+    lv_obj_set_style_text_color(t, C_RED, 0);
+    lv_obj_t *list = ui_scroll_area(scr, 66, 164);     /* the title takes two lines on the round screen */
+    char b[160];
+    if (r == APP_SAVE_RAM_ONLY)
+        snprintf(b, sizeof b, "Storage: %s.\nRide #%u is kept until\npower-off. Open Cyclift\nnow to copy it.", bc_stor_short(plat_storage_state()), s_sum.id);
+    else
+        snprintf(b, sizeof b, "Storage: %s and\n%d unsynced rides already\nwait in memory. Open\nCyclift to copy them.", bc_stor_short(plat_storage_state()), APP_UNSAVED_MAX);
+    lv_obj_t *l = ui_label(list, &lv_font_montserrat_14, C_FG, b);
+    lv_obj_set_width(l, lv_pct(100)); lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP); lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_t *ok = ui_pill(scr, "OK", C_PANEL, C_FG, 96, 44, notice_ok, NULL);
+    lv_obj_align(ok, LV_ALIGN_TOP_MID, 0, 170);
+    ui_screen_show(scr);
+}
+static void save_cb(lv_event_t *e)
+{
+    (void)e;
+    app_save_result_t r = app_ride_save_ex();
+    if (r == APP_SAVE_OK || r == APP_SAVE_NOTHING || s_sum.demo) ui_history_show(s_sum.demo);
+    else save_notice(r);
+}
 static void discard_cb(lv_event_t *e) { (void)e; app_ride_discard(); ui_home_show(); }
 static void back_hist(lv_event_t *e) { (void)e; ui_history_show(s_from_hist_demo); }
 
@@ -64,6 +89,8 @@ void ui_results_show(const bc_ride_summary_t *s, bool fresh)
         line(list, &bc_bold16, C_GREEN, b);
     }
     if (fresh) {
+        if (!plat_storage_ok() && !s->demo)          /* 0.7.4: say it BEFORE the rider taps SAVE */
+            line(list, &lv_font_montserrat_12, C_RED, "Board storage damaged:\nthis ride is kept in memory\nuntil power-off only.\nOpen Cyclift to copy it.");
         line(list, &lv_font_montserrat_12, C_MUT, "SAVE keeps this ride.\nHold the bin 1.5 s to discard.");
         lv_obj_t *del = ui_hold_btn(scr, LV_SYMBOL_TRASH, C_PANEL, C_RED, 44, 44, 1500, discard_cb, NULL);
         lv_obj_set_style_text_font(ui_hold_label(del), &lv_font_montserrat_20, 0);

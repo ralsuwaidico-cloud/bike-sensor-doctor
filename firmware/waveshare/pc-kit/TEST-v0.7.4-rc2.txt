@@ -1,0 +1,48 @@
+BikeComputer 0.7.4-rc2 - PHYSICAL TEST (after INSTALL-v0.7.4-rc2.bat)                         date ____  done by ____
+Write PASS / FAIL and what you saw. Send this sheet + first-boot-v0.7.4-rc2-*.txt + install-v0.7.4-rc2-*.txt to Claude.
+Battery unplugged, board on USB to the PC unless a step says otherwise. Power meter nearby; iPhone with Cyclift.
+On this board rides are NOT saved on the board until the file area is repaired (the screen says so) - expected, not a fail.
+
+0. FIRST START (right after the installer, before pressing anything)
+01 The installer's RESULT line: ______________________________________________ (BOOTED OK / RECOVERY / CRASHED ...)
+02 The installer says "Bluetooth start figures: N step lines recorded" (N = ____) - or "NOT in the log": tell Claude.  ____
+03 Settings > Diagnostics > Device Health > scroll to "Boot records": copy the "last BT start" line
+   (boot #, BT: ..., [0 rc .. int ../..]):
+   ________________________________________________________________________________________________
+
+A. START WITHOUT CRASH LOOP
+A1 Press RESET 3 times, waiting until the Home screen each time. Home appears every time, never "RECOVERY MODE".   ____
+A2 Unplug USB 10 s, plug in again. Home appears within ~5 s.                                                         ____
+A3 Device Health: "Last restart" is not "crash"; "Crashes ... 0 in a row".                                           ____
+
+B. BLUETOOTH START (the 0.7.3 crash)
+B1 Settings > Phone: either the normal phone page (Bluetooth started) or "NO BLUETOOTH".                              ____
+   First failed start(s): WHY? -> write the text: ______________________ (the board must keep running - go on).
+   From the third start after two failed ones: RETRY instead of WHY? (Bluetooth switched off - expected, no loop).
+B2 Device Health > "Boot records": the "last BT start" line is still the one from step 03 (or a newer real attempt),
+   not "Bluetooth off (disabled)".                                                                                    ____
+B3 Connections: phone and power meter rows show a real state (CONNECTED / SEARCHING ... or "NO BT"), never blank.    ____
+
+C. STORAGE / RECOVERY SCREEN CATEGORIES
+C1 Device Health: "Storage" line - expected on this board: "Directory corrupted" (NOT "storage full").                ____
+C2 Settings > Diagnostics > HOLD: SAVE REPORT (hold 1 s): toast "Not saved: dir corrupted" (expected) or "Report N saved". ____
+C3 Recovery screen (only if it ever appears): the bottom line names the category ("Not saved: dir corrupted"); the screen
+   stays on (no restart) for at least 1 minute; SEND LOGS -> "Waiting for Cyclift" or "No BT - logs kept here".      ____
+
+D. POWER METER -> BOARD -> PHONE (only if B1 showed Bluetooth started)
+D1 Pedal: the board shows power and cadence that change with effort within ~2 s.                                     ____
+D2 Open Cyclift: it connects (code only if asked); its live screen shows the same power/cadence as the board (+-2 s). ____
+D3 Stop pedalling 15 s: both show no/0 power, no stale value. Pedal again: values come back on both.                  ____
+D4 Start a short ride on the board (hold START), 2 minutes, stop. The result screen shows the red line "Board storage
+   damaged: this ride is kept in memory ...". Tap SAVE: "NOT SAVED ON BOARD" with "dir corrupted"; tap OK: History lists
+   the ride. The board does not restart. (Expected on this board: the ride is NOT on the board after power-off.)      ____
+
+E. CRASH EVIDENCE CAPTURE (no crash is expected - this checks the evidence path)
+E1 Device Health "Crash record": write it: ______________ ("Crash partition empty" or "Crash dump stored (... B)").
+E2 Run CAPTURE-CRASH.bat (one restart, 4 minutes, nothing written to the board) while pedalling with Cyclift open.
+   Result line: ______________________ . Send crash-log-*.txt.                                                       ____
+E3 Only if Claude asks: READ-BOARD-STATE.bat (read-only; never restarts the board).                                   ____
+
+Going back: RESTORE-CHOSEN-BACKUP.bat with the newest backup-before-v074-*.bin. Do NOT use ROLLBACK-TO-v073 (0.7.3 stops
+at every start on this board) unless Claude asks.
+Anything unexpected (restart, frozen screen, RECOVERY MODE): do not press anything, run CAPTURE-CRASH.bat, tell Claude.

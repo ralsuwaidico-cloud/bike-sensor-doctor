@@ -447,6 +447,12 @@ static void t_link2(void)
     CHECK(!bc_link_decode_sync_ride(b, n - 1, &d));                                                                                               /* truncated rejected */
     /* a ride with a 120-byte coach text and no zones still fits */
     r.zones_valid = false; memset(r.coach, 'x', 119); r.coach[119] = 0; n = bc_link_encode_sync_ride(&r, b, sizeof b, 1, 1); CHECK(n > 0 && n <= 180 && bc_link_decode_sync_ride(b, n, &d) && strlen(d.coach) == 60);
+    /* 0.7.4-rc2: zones + a long coaching text used to exceed 180 B -> encoder returned 0 -> the ride was never synced */
+    { bc_ride_summary_t z = r; z.zones_valid = true; for (int i = 0; i < 7; i++) z.zone_s[i] = 100u * (uint32_t)i;
+      memset(z.coach, 'y', 119); z.coach[119] = 0; z.coach[40] = (char)0xC3; z.coach[41] = (char)0xA9;   /* a 2-byte UTF-8 char near the cut */
+      uint8_t bb[400]; size_t m = bc_link_encode_sync_ride(&z, bb, sizeof bb, 1, 1); bc_ride_summary_t dz;
+      CHECK(m > 0 && m <= BC_LINK_MAX && bc_link_decode_sync_ride(bb, m, &dz) && dz.zones_valid && strlen(dz.coach) > 0 && strlen(dz.coach) < 60);
+      size_t m2 = bc_link_encode_sync_ride(&z, b, BC_LINK_MAX, 1, 1); CHECK(m2 == m && !memcmp(b, bb, m)); }
     /* SYNC_END: Swift testSyncEnd */
     bc_sync_end_t e = { .count = 50, .total = 123, .more = true }; n = bc_link_encode_sync_end(&e, b, sizeof b, 1, 0);
     const uint8_t want_end[] = { 0x52, 0, 1, 0, 0, 0, 0, 0, 0x01, 0x02, 0x32, 0x00, 0x02, 0x02, 0x7B, 0x00, 0x03, 0x01, 0x01 };

@@ -111,20 +111,23 @@ void bc_fat_root_scan(const uint8_t *root, size_t len, bc_fat_root_t *o)
     }
 }
 
+bool bc_stor_root_damaged(const bc_stor_facts_t *f)
+{
+    return f && f->root_scanned && (f->root.erased > 0 || f->root.garbage > 0);
+}
+
 bc_stor_state_t bc_stor_classify(const bc_stor_facts_t *f)
 {
     if (!f) return BC_STOR_NOT_CHECKED;
     if (!f->partition_found || !f->mounted) return BC_STOR_FS_UNAVAILABLE;
+    /* 0.7.4 (QA QF-12): FatFs never writes an erased (0xFF) or malformed directory entry, so ANY such entry in the root means
+       the directory is damaged - even if some slots are still free and a probe would succeed. Nothing is written then. */
+    if (bc_stor_root_damaged(f)) return BC_STOR_DIR_CORRUPTED;
     if (f->probe_attempted && f->probe_ok) return BC_STOR_OK;
     bool known_space = f->total_bytes > 0;
     uint64_t one = f->cluster_bytes ? f->cluster_bytes : 4096;
     bool no_space = known_space && f->free_bytes < one;
-    if (f->root_scanned && f->root.entries > 0 && f->root.free_slots == 0) {
-        uint16_t bad = (uint16_t)(f->root.erased + f->root.garbage);
-        /* no slot to create a file: either the directory is full of real entries (full) or it is not a directory any more */
-        if (bad * 2u >= f->root.entries) return BC_STOR_DIR_CORRUPTED;
-        return BC_STOR_FULL;
-    }
+    if (f->root_scanned && f->root.entries > 0 && f->root.free_slots == 0) return BC_STOR_FULL;   /* full of valid entries */
     if (no_space) return BC_STOR_FULL;
     if (!f->probe_attempted) return BC_STOR_NOT_CHECKED;
     return BC_STOR_WRITE_FAILED;

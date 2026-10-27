@@ -177,6 +177,30 @@ uint32_t app_diag_store_report(uint8_t kind, const char *note)
 }
 
 /* ---- boot */
+void app_diag_off(void) { if (s_d) s_d->init = false; }
+/* rc2 (QA QF-18, brief s6 "recovery if the diagnostic filesystem is full"): when the boot found the storage FULL, the
+   reports the phone has already received (state SENT) and their core-dump copies are deleted - removing files is allowed
+   on a FULL storage, writing is not - then the storage is re-checked. Unsent reports and rides are never deleted here;
+   rides leave the board only through the phone's confirmed clean-up. Returns true when the storage is usable again. */
+static bool full_cleanup(void)
+{
+    uint8_t *b = D.idx_buf; long n = plat_file_read(APP_DIAG_INDEX_FILE, (char *)b, sizeof D.idx_buf);
+    bc_diag_index_t *x = &D.idx;
+    if (n <= 0 || !bc_diag_index_decode(b, (size_t)n, x)) { plat_log("DIAG: storage full; no readable report index - nothing removed"); return false; }
+    int removed = 0;
+    for (int i = 0; i < x->n; ) {
+        if (x->r[i].state != 1) { i++; continue; }
+        char p[32]; report_path(x->r[i].id, p, sizeof p); plat_file_remove(p);
+        snprintf(p, sizeof p, "diag/core-%06lu.elf", (unsigned long)x->r[i].id); plat_file_remove(p);
+        memmove(&x->r[i], &x->r[i + 1], sizeof x->r[0] * (size_t)(x->n - i - 1)); x->n--; removed++;
+    }
+    bool ok = removed > 0 && plat_storage_recheck();
+    char m[96]; snprintf(m, sizeof m, "DIAG: storage full - %d sent report(s) removed; storage %s", removed, ok ? "usable again" : "still not usable");
+    plat_log(m);
+    if (ok && !index_save()) ok = false;
+    if (!ok) memset(x, 0, sizeof *x);
+    return ok;
+}
 void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok)
 {
     if (!s_d) s_d = plat_alloc_ext(sizeof *s_d);
@@ -185,6 +209,9 @@ void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok)
     D.init = true; D.storage_ok = storage_ok; D.plan = *plan;
     D.storage_state = (uint8_t)(storage_ok ? BC_STOR_OK : plat_storage_state()); D.recovery = plan->mode == BC_BOOT_RECOVERY; D.crashed = plan->crashed;
     bc_evlog_init(&D.log, APP_DIAG_EV_SLOTS, plat_boot_count());
+    if (!storage_ok && plat_storage_state() == BC_STOR_FULL && full_cleanup()) {   /* rc2 (QA QF-18) */
+        storage_ok = true; D.storage_ok = true; D.storage_state = BC_STOR_OK;
+    }
     if (storage_ok) {
         long sz = plat_file_size(APP_DIAG_EVENTS_FILE);
         if (sz != (long)(APP_DIAG_EV_SLOTS * BC_EV_SIZE)) {   /* first start (or a damaged file): a fresh, erased ring */
@@ -339,7 +366,10 @@ void app_diag_recovery_pump(uint32_t now)
 void app_diag_status(app_diag_status_t *o)
 {
     memset(o, 0, sizeof *o);
-    if (!ON) { o->storage_ok = plat_storage_ok(); o->storage_state = (uint8_t)plat_storage_state(); o->last_fail = BC_STOR_DIAG_UNAVAILABLE; return; }
+    if (!ON) {   /* diagnostics not started (recovery after a crash in that stage, or no memory): nothing is stored this boot */
+        o->storage_ok = false; o->storage_state = (uint8_t)(plat_storage_ok() ? BC_STOR_DIAG_UNAVAILABLE : plat_storage_state());
+        o->last_fail = BC_STOR_DIAG_UNAVAILABLE; return;
+    }
     o->crashed = D.crashed; o->crash_report = D.crash_report; snprintf(o->summary, sizeof o->summary, "%s", D.summary);
     o->stored = D.idx.n; o->pending = bc_diag_index_pending(&D.idx); o->sent = D.sent; o->not_stored = D.idx.not_stored;
     o->storage_ok = D.storage_ok; o->storage_state = D.storage_state; o->last_fail = D.last_fail; o->events_written = D.written; o->events_dropped = D.log.dropped; o->phone_ready = D.phone_ready;

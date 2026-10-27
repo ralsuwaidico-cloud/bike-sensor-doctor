@@ -1,5 +1,6 @@
 /* bc_bootrec (0.7.4): boot-record ring kept in NVS, independent of the FAT. Host test. */
 #include "bc_bootrec.h"
+#include "bc_diag.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -10,8 +11,9 @@ int main(void)
 {
     bc_bootring_t g; bc_bootring_init(&g); bc_bootring_seal(&g);
     CHECK(bc_bootring_valid(&g, sizeof g) && g.count == 0 && !bc_bootring_get(&g, 0), "empty ring valid");
-    CHECK(sizeof g <= 600, "ring blob %zu bytes (bounded)", sizeof g);
-    /* the 27 Oct board: three boots, each failing at the HCI/host step, as measured in the instrumented sequence */
+    CHECK(sizeof g <= 800, "ring blob %zu bytes (bounded: 4 records + the pinned last Bluetooth attempt)", sizeof g);
+    /* SYNTHETIC records (QA QF-14: these figures are made up for the test, not measured on any board): three boots, each
+       failing at the HCI/host step */
     for (uint32_t b = 339; b < 342; b++) {
         bc_bootrec_t *r = bc_bootring_push(&g, b);
         r->reset = b == 339 ? 1 : 3; r->bt_result = BC_BT_FAIL_HOST_INIT; r->bt[0].free_int = 30000; r->bt[0].largest_int = 7000;
@@ -30,6 +32,27 @@ int main(void)
     bc_bootring_seal(&g); CHECK(!bc_bootring_valid(&g, sizeof g - 4), "wrong blob length -> invalid");
     g.head = 9; bc_bootring_seal(&g); CHECK(!bc_bootring_valid(&g, sizeof g), "head out of range -> invalid");
     memset(&g, 0xFF, sizeof g); CHECK(!bc_bootring_valid(&g, sizeof g), "erased blob invalid");
+    /* rc2 (QF-06): the pinned last Bluetooth attempt survives any number of skipped boots */
+    bc_bootring_init(&g);
+    bc_bootrec_t *a = bc_bootring_push(&g, 500); a->bt_result = BC_BT_FAIL_HOST_INIT; a->bt[0].free_int = 12345; bc_bootring_note_bt(&g);
+    CHECK(g.last_bt_try.boot == 500 && g.last_bt_try.bt[0].free_int == 12345, "failed attempt pinned");
+    for (uint32_t b = 501; b < 520; b++) { bc_bootrec_t *x = bc_bootring_push(&g, b); x->bt_result = BC_BT_SKIPPED; bc_bootring_note_bt(&g); }
+    bc_bootring_push(&g, 520); bc_bootring_note_bt(&g);   /* NOT_TRIED */
+    bc_bootring_seal(&g);
+    CHECK(bc_bootring_valid(&g, sizeof g) && g.last_bt_try.boot == 500 && g.last_bt_try.bt[0].free_int == 12345 && bc_bootring_get(&g, 3)->boot == 517,
+          "20 skipped / not-tried boots later the attempt of boot 500 is still there");
+    a = bc_bootring_push(&g, 521); a->bt_result = BC_BT_OK; bc_bootring_note_bt(&g);
+    CHECK(g.last_bt_try.boot == 521 && g.last_bt_try.bt_result == BC_BT_OK, "a newer real attempt replaces it");
+    /* rc2 (QF-09): crash streak from the NVS ring, independent of RTC memory and of the 20 s stable mark */
+    bc_bootring_init(&g);
+    CHECK(bc_bootring_crash_streak(&g) == 0, "empty ring: streak 0");
+    bc_bootring_push(&g, 1)->reset = BC_RST_POWERON;
+    for (uint32_t b = 2; b < 5; b++) bc_bootring_push(&g, b)->reset = b == 3 ? BC_RST_WDT : BC_RST_PANIC;
+    CHECK(bc_bootring_crash_streak(&g) == 3, "power-on then 3 crash resets -> 3 (got %d)", bc_bootring_crash_streak(&g));
+    bc_bootring_push(&g, 5)->reset = BC_RST_BROWNOUT;
+    CHECK(bc_bootring_crash_streak(&g) == 4, "ring full of crash resets -> 4");
+    bc_bootring_push(&g, 6)->reset = BC_RST_SW;
+    CHECK(bc_bootring_crash_streak(&g) == 0, "a software restart (RETRY / install) ends it");
     char small[10]; CHECK(bc_bootrec_describe(bc_bootring_get(&g, 0), small, sizeof small) <= 9, "describe truncates");
     printf("test_bc_bootrec: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;

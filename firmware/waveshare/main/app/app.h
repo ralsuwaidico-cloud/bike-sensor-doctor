@@ -47,6 +47,13 @@ void app_ride_pause(void);
 void app_ride_resume(void);
 void app_ride_end(void);                         /* → ENDED, summary ready, waiting for save / discard */
 bool app_ride_save(void);                        /* writes history, applies FTP evidence (real rides only) */
+/* 0.7.4: what happened to the ride at SAVE. On damaged storage a real ride is never lost silently: its summary is kept in RAM
+   (up to APP_UNSAVED_MAX, until power-off), shown in History and sent to Cyclift by the normal ride sync (SYNC_RIDE); the
+   ride id advances only when the ride is kept somewhere (file or RAM). */
+typedef enum { APP_SAVE_OK = 0, APP_SAVE_RAM_ONLY = 1, APP_SAVE_LOST = 2, APP_SAVE_NOTHING = 3 } app_save_result_t;
+#define APP_UNSAVED_MAX 4
+app_save_result_t app_ride_save_ex(void);
+int app_unsaved_rides(bc_ride_summary_t *out, int max);   /* RAM-only rides, oldest first */
 void app_ride_discard(void);
 void app_ride_totals(bc_ride_summary_t *out);    /* live totals while riding; final summary after end */
 int app_ride_ftp_evidence(void);                 /* FTP estimate from the ended ride, 0 = none */

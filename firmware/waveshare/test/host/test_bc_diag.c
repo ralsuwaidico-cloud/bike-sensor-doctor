@@ -416,6 +416,30 @@ static void test_boot_same_suspect(void)
     bc_boot_mark(&r, BC_SS_PHONE); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
     CHECK(!p.newly_skipped && r.crash_streak == 1, "same subsystem, but a stable start in between: first crash of a new streak");
 
+    /* rc2 (QA QF-03): a deterministic crash in the storage or diagnostics stage (they run before anything else that can be
+       skipped) must not loop: RECOVERY then starts WITHOUT that stage, and the board reaches a stable start */
+    for (int which = 0; which < 2; which++) {
+        bc_subsys_t bad = which ? BC_SS_DIAG : BC_SS_STORAGE;
+        memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+        int crashes = 0, stable_at = -1; bool storage_ran_in_recovery = false, diag_ran_in_recovery = false;
+        for (int boot = 0; boot < 12 && stable_at < 0; boot++) {
+            bc_boot_mark(&r, BC_SS_DISPLAY);
+            bc_boot_mark(&r, BC_SS_STORAGE);
+            if (!p.no_storage) { if (p.mode == BC_BOOT_RECOVERY) storage_ran_in_recovery = true; if (bad == BC_SS_STORAGE) { crashes++; bc_boot_plan(&r, BC_RST_PANIC, 0, &p); continue; } }
+            bc_boot_mark(&r, BC_SS_DIAG);
+            if (!p.no_diag) { if (p.mode == BC_BOOT_RECOVERY) diag_ran_in_recovery = true; if (bad == BC_SS_DIAG) { crashes++; bc_boot_plan(&r, BC_RST_PANIC, 0, &p); continue; } }
+            bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r); stable_at = boot;
+        }
+        CHECK(stable_at >= 0 && crashes == 3 && p.mode == BC_BOOT_RECOVERY && !storage_ran_in_recovery == (bad == BC_SS_STORAGE) && !diag_ran_in_recovery,
+              "crash in %s at every start: %d crashes, then RECOVERY without it -> stable at boot %d", bc_subsys_name(bad), crashes, stable_at);
+    }
+    CHECK(!strcmp(bc_subsys_name(BC_SS_DIAG), "diagnostics"), "DIAG name");
+    /* rc2 (QA QF-09): the NVS crash streak forces RECOVERY when RTC memory did not keep count */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_NORMAL, "RTC lost: looks like a first crash");
+    bc_boot_force_recovery(&r, &p);
+    CHECK(p.mode == BC_BOOT_RECOVERY && bc_boot_rtc_valid(&r) && r.mode == BC_BOOT_RECOVERY, "force_recovery: plan + RTC say RECOVERY (sealed)");
+
     /* the boot that has just disabled the subsystem is not sent to RECOVERY even when it is the 3rd crash in a row */
     memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
     bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);

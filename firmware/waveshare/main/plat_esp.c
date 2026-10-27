@@ -159,8 +159,10 @@ bool plat_file_remove(const char *path)
 }
 long plat_file_size(const char *path) { char p[96]; full(path, p, sizeof p); if (!fs_mounted()) return -1; struct stat st; return stat(p, &st) == 0 ? (long)st.st_size : -1; }
 bool plat_storage_ok(void) { return hw_storage_state() == BC_STOR_OK; }
+bool plat_settings_ok(void) { return hw_settings_ok(); }
 bc_stor_state_t plat_storage_state(void) { return hw_storage_state(); }
 void plat_storage_facts(bc_stor_facts_t *o) { hw_storage_facts(o); }
+bool plat_storage_recheck(void) { return hw_storage_recheck(); }
 /** 0.7.4: category of the last failed write ("Storage full" for ENOSPC, else "Write failed"); the boot state if writes are refused. */
 bc_stor_state_t plat_storage_write_failure(void)
 {

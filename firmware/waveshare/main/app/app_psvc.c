@@ -22,7 +22,7 @@ static struct {
     /* profile / settings replies due */
     bool profile_due, profile_ack_due, settings_due; bc_profile_ack_t ack; uint8_t settings_status;
     /* sync */
-    bool sync_active; uint16_t after_id; uint8_t max_count; uint16_t sent, total; long off; bool eof;
+    bool sync_active; int ram_i; uint16_t after_id; uint8_t max_count; uint16_t sent, total; long off; bool eof;
     char line[320]; int line_len; char chunk[512]; int chunk_pos, chunk_len;
     uint8_t last_end[32]; size_t last_end_len;
     uint8_t held[BC_LINK_MAX]; size_t held_len; uint8_t held_chr;   /* a notification the transport could not take yet */
@@ -232,6 +232,7 @@ static void sync_start(const bc_sync_req_t *q)
     sync_rewind(); bc_ride_summary_t s;
     while (sync_next_line()) if (S.line_len && bc_summary_from_line(&s, S.line)) S.total++;
     sync_rewind();
+    S.ram_i = 0; { bc_ride_summary_t u[APP_UNSAVED_MAX]; S.total += app_unsaved_rides(u, APP_UNSAVED_MAX); }   /* 0.7.4: RAM-only rides */
     S.st.sync_reqs++;
 }
 
@@ -382,8 +383,21 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
             *chr = APP_PSVC_SYNC;
             return n;
         }
+        /* 0.7.4: then the rides kept only in RAM (storage damaged), oldest first - the shipped Cyclift imports them like any ride */
+        { bc_ride_summary_t u[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(u, APP_UNSAVED_MAX);
+          while (S.sent < S.max_count && S.ram_i < nu) {
+              bc_ride_summary_t *r = &u[S.ram_i++];
+              if (r->id <= S.after_id) continue;
+              size_t n = bc_link_encode_sync_ride(r, buf, cap, ++S.seq, now);
+              if (!n) continue;
+              S.sent++; S.after_id = r->id; S.st.rides_sent++;
+              *chr = APP_PSVC_SYNC;
+              return n;
+          } }
         /* batch complete (max reached or end of file): is there more? peek ahead, then restore the reader completely */
         bool more = false;
+        { bc_ride_summary_t u[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(u, APP_UNSAVED_MAX);
+          for (int i = S.ram_i; i < nu; i++) if (u[i].id > S.after_id) more = true; }
         if (S.sent >= S.max_count) {
             long off = S.off; bool eof = S.eof; int cp = S.chunk_pos, cl = S.chunk_len; char chunk[512]; memcpy(chunk, S.chunk, sizeof chunk);
             while (sync_next_line()) if (S.line_len && bc_summary_from_line(&s, S.line) && s.id > S.after_id) { more = true; break; }

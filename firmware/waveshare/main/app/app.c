@@ -302,18 +302,45 @@ static void keep_samples(uint16_t id, bool demo)
     if (!plat_file_rename(JOURNAL, path)) { char l[112]; snprintf(l, sizeof l, "RIDE #%u: samples NOT moved to %s - journal kept", id, path); plat_log(l); }
 }
 
-bool app_ride_save(void)
+/* allocated on first use, in PSRAM on the board (plat_alloc_ext): internal RAM is what the Bluetooth start lacks */
+static bc_ride_summary_t *s_unsaved; static int s_nunsaved;
+int app_unsaved_rides(bc_ride_summary_t *out, int max)
 {
-    if (s_ride.state != BC_RIDE_ENDED) return false;
+    int n = s_nunsaved < max ? s_nunsaved : max;
+    for (int i = 0; i < n; i++) out[i] = s_unsaved[i];
+    return n;
+}
+/* a real ride whose summary could not be written: keep it in RAM (QA QF-01: never lose it silently) */
+static bool keep_in_ram(const bc_ride_summary_t *s)
+{
+    if (s_nunsaved >= APP_UNSAVED_MAX) return false;
+    if (!s_unsaved) s_unsaved = plat_alloc_ext(sizeof *s_unsaved * APP_UNSAVED_MAX);
+    if (!s_unsaved) return false;
+    /* stored exactly as the history file would hold it (line round trip), so the phone receives the same bytes either way */
+    bc_ride_summary_t *d = &s_unsaved[s_nunsaved]; char line[400];
+    size_t n = bc_summary_to_line(s, line, sizeof line - 1);
+    if (!n) *d = *s; else { line[n] = 0; if (!bc_summary_from_line(d, line)) *d = *s; }
+    s_nunsaved++;
+    return true;
+}
+
+app_save_result_t app_ride_save_ex(void)
+{
+    if (s_ride.state != BC_RIDE_ENDED) return APP_SAVE_NOTHING;
     if (!s_ride.s.demo) bc_ride_apply_ftp(&s_ride, &s_prof);
     bool ok = append_history(&s_ride.s);
-    if (s_ride.s.demo) s_prof.next_demo_id++; else s_prof.next_ride_id++;
+    app_save_result_t res = ok ? APP_SAVE_OK : s_ride.s.demo ? APP_SAVE_LOST : keep_in_ram(&s_ride.s) ? APP_SAVE_RAM_ONLY : APP_SAVE_LOST;
+    if (s_ride.s.demo) s_prof.next_demo_id++;
+    else if (res != APP_SAVE_LOST) s_prof.next_ride_id++;          /* the id is used only by a ride that exists somewhere */
     app_profile_save();
-    keep_samples(s_ride.s.id, s_ride.s.demo);
-    char l[64]; snprintf(l, sizeof l, "RIDE SAVED #%u%s %s", s_ride.s.id, s_ride.s.demo ? " (DEMO)" : "", ok ? "OK" : "FAILED"); plat_log(l);
+    if (ok) keep_samples(s_ride.s.id, s_ride.s.demo);
+    char l[112]; snprintf(l, sizeof l, "RIDE SAVED #%u%s %s", s_ride.s.id, s_ride.s.demo ? " (DEMO)" : "",
+                          res == APP_SAVE_OK ? "OK" : res == APP_SAVE_RAM_ONLY ? "NOT ON STORAGE - kept in RAM for Cyclift until power-off" : "FAILED - not kept");
+    plat_log(l);
     s_ride.state = BC_RIDE_IDLE;
-    return ok;
+    return res;
 }
+bool app_ride_save(void) { return app_ride_save_ex() == APP_SAVE_OK; }
 
 void app_ride_discard(void)
 {
@@ -351,6 +378,8 @@ int app_history(bc_ride_summary_t *out, int max, bool demo)
         if (used == 0) break;
         off += used;
     }
+    /* 0.7.4: rides kept only in RAM (storage damaged) are the newest: added to the ring like file lines */
+    if (!demo) for (int i = 0; i < s_nunsaved; i++) out[total++ % max] = s_unsaved[i];
     int k = total < max ? total : max;
     /* out[] holds the newest k entries in ring order (oldest at total % max once wrapped): rotate, then reverse in place */
     if (total > max) {
@@ -412,7 +441,7 @@ static void recover(void)
     }
     if (id >= s_prof.next_ride_id) s_prof.next_ride_id = (uint16_t)(id + 1);
     bc_ride_apply_ftp(&r, &s_prof);
-    append_history(&r.s);
+    if (!append_history(&r.s)) keep_in_ram(&r.s);
     app_profile_save();
     keep_samples(r.s.id, false);
     s_recovered = r.s; s_have_recovered = true;
@@ -432,6 +461,7 @@ void app_init(void)
     static char buf[1024];
     bc_profile_defaults(&s_prof);
     if (plat_profile_load(buf, sizeof buf)) bc_profile_from_text(&s_prof, buf);
+    else if (!plat_settings_ok()) s_prof.onboarded = true;   /* NVS needs repair: ride on defaults, no onboarding (nothing could be saved) */
     memset(&s_ride, 0, sizeof s_ride);
     s_demo = false;
     app_psvc_init();

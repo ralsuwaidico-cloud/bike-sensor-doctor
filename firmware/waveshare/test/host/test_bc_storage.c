@@ -73,9 +73,12 @@ static void test_classify(void)
     CHECK(bc_stor_classify(&f) == BC_STOR_DIR_CORRUPTED, "measured board state -> Directory corrupted, NOT storage full");
     char line[200]; bc_stor_describe(&f, bc_stor_classify(&f), line, sizeof line);
     CHECK(strstr(line, "Directory corrupted") && strstr(line, "5096/7964 KB free") && strstr(line, "erased 512") && strstr(line, "errno 13"), "description: %s", line);
-    /* the probe still passes (some free slot somewhere): OK, even with erased entries */
-    f.root.free_slots = 3; f.root.erased = 509; f.probe_ok = true;
-    CHECK(bc_stor_classify(&f) == BC_STOR_OK, "probe OK -> OK");
+    /* 0.7.4 (QA QF-12): partial damage - one WL sector of the root erased (128 entries), 384 free slots, probe would pass */
+    f.root.free_slots = 384; f.root.erased = 128; f.probe_ok = true;
+    CHECK(bc_stor_classify(&f) == BC_STOR_DIR_CORRUPTED && bc_stor_root_damaged(&f), "partial damage (128 erased, 384 free) -> Directory corrupted, not written");
+    f.root.erased = 0; f.root.garbage = 1; CHECK(bc_stor_classify(&f) == BC_STOR_DIR_CORRUPTED, "a single malformed entry -> Directory corrupted");
+    f.root.garbage = 0; f.root.used = 10; f.root.free_slots = 502;
+    CHECK(bc_stor_classify(&f) == BC_STOR_OK, "clean directory + probe OK -> OK");
     /* full of real entries */
     f.probe_ok = false; f.root.free_slots = 0; f.root.erased = 0; f.root.used = 512;
     CHECK(bc_stor_classify(&f) == BC_STOR_FULL, "root full of valid entries -> full");

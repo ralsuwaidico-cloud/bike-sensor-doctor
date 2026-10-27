@@ -44,7 +44,11 @@ static bool s_standby, s_sync_sub, s_events_sub;
 static uint8_t s_id_addr[6]; static uint8_t s_id_gen; static bool s_id_random;
 static bool s_repair_pending;        /* forget/repair asked from the UI task: done on the host task in ble_link_tick */
 /* 0.7.3: every other UI request is a flag too; ble_link_tick (host task) applies it — no NimBLE call from the UI task */
-static volatile bool s_req_apply_enabled, s_req_disconnect, s_req_standby_changed;
+/* rc2 (QA QF-15): UI-task -> host-task requests and s_enabled use __atomic_* (test-and-clear with exchange) */
+#define AL(x) __atomic_load_n(&(x), __ATOMIC_ACQUIRE)
+#define AS(x, v) __atomic_store_n(&(x), (v), __ATOMIC_RELEASE)
+#define TAKE(x) __atomic_exchange_n(&(x), false, __ATOMIC_ACQ_REL)
+static bool s_req_apply_enabled, s_req_disconnect, s_req_standby_changed;
 static uint8_t s_enc_fail_streak;   /* s_events_sub: 0.6.0 Events characteristic (chr 2 in plat_phone_notify_svc) */
 /* 0.6.0 phone services: writes from the phone wait here for the app task (app_psvc_pump); replies wait here for the BLE task */
 typedef struct { uint8_t chr, len, tries, b[BC_LINK_MAX]; } svc_msg_t;
@@ -121,7 +125,7 @@ static plat_phone_disc_t disc_map(uint16_t code)
 static int gap_cb(struct ble_gap_event *ev, void *arg);
 static void adv_start(void)
 {
-    if (s_adv || !s_enabled || !s_synced || s_busy || s_repair_pending || s_conn != BLE_HS_CONN_HANDLE_NONE) return;
+    if (s_adv || !AL(s_enabled) || !s_synced || s_busy || AL(s_repair_pending) || s_conn != BLE_HS_CONN_HANDLE_NONE) return;
     struct ble_hs_adv_fields f = { 0 }, sr = { 0 };
     f.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     f.uuids128 = (ble_uuid128_t *)&UUID_SVC; f.num_uuids128 = 1; f.uuids128_is_complete = 1;
@@ -247,9 +251,9 @@ void ble_link_configure_security(void)
 
 static void on_disconnect(uint16_t reason)
 {
-    bool was_repair = s_st.state == PLAT_PHONE_REPAIR;
     int bonds = count_bonds();                        /* 0.7.3: NimBLE's host lock is never taken inside our spinlock */
     LOCK();
+    bool was_repair = s_st.state == PLAT_PHONE_REPAIR;   /* rc2 (QF-15): read under the lock - the UI task writes it in set_state */
     s_conn = BLE_HS_CONN_HANDLE_NONE; s_encrypted = s_live_sub = s_ctrl_sub = s_sync_sub = s_events_sub = false; s_st.passkey = 0; s_st.rssi = 0;
     s_live_new = s_resp_new = false; s_svc_in_n = 0; s_svc_out_n = 0; s_st.svc_ready = false; s_mtu = 0; s_st.att_mtu = 0; s_notify_failed = false;
     s_st.last_disc_code = reason; s_st.last_disc = disc_map(reason); s_st.bonds = (uint8_t)bonds; s_st.bonded = bonds > 0;
@@ -257,7 +261,7 @@ static void on_disconnect(uint16_t reason)
     app_psvc_on_disconnect();
     /* a failed encryption keeps the REPAIR state visible after the phone drops the link; it clears on the next good connection */
     set_state(was_repair || s_st.last_disc == PLAT_PHONE_DISC_KEY_MISSING || s_st.last_disc == PLAT_PHONE_DISC_AUTH_FAILED ? PLAT_PHONE_REPAIR
-              : s_enabled ? PLAT_PHONE_ADVERTISING : PLAT_PHONE_OFF);
+              : AL(s_enabled) ? PLAT_PHONE_ADVERTISING : PLAT_PHONE_OFF);
     s_adv = false;
     adv_start();
 }
@@ -360,9 +364,9 @@ static void do_repair(void)
     if (s_conn != BLE_HS_CONN_HANDLE_NONE) { ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); return; }   /* finish after the disconnect event */
     ble_store_clear();
     s_own = id_apply(true);
-    s_repair_pending = false; s_enc_fail_streak = 0;
+    AS(s_repair_pending, false); s_enc_fail_streak = 0;
     LOCK(); s_st.bonds = 0; s_st.bonded = false; s_st.enc_fails = 0; UNLOCK();
-    set_state(s_enabled ? PLAT_PHONE_ADVERTISING : PLAT_PHONE_OFF);
+    set_state(AL(s_enabled) ? PLAT_PHONE_ADVERTISING : PLAT_PHONE_OFF);
     ESP_LOGI(TAG, "repair: bonds wiped, new identity gen %u, advertising again", s_id_gen);
     adv_start();
 }
@@ -376,13 +380,12 @@ void ble_link_central_busy(bool busy)
 void ble_link_tick(void)
 {
     if (!s_synced) return;
-    if (s_req_apply_enabled) {
-        s_req_apply_enabled = false;
-        if (!s_enabled) { adv_stop(); if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); }
+    if (TAKE(s_req_apply_enabled)) {
+        if (!AL(s_enabled)) { adv_stop(); if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); }
     }
-    if (s_req_disconnect) { s_req_disconnect = false; if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); }
-    if (s_req_standby_changed) { s_req_standby_changed = false; if (s_adv) { adv_stop(); adv_start(); } }
-    if (s_repair_pending) { do_repair(); if (s_repair_pending) return; }
+    if (TAKE(s_req_disconnect)) { if (s_conn != BLE_HS_CONN_HANDLE_NONE) ble_gap_terminate(s_conn, BLE_ERR_REM_USER_CONN_TERM); }
+    if (TAKE(s_req_standby_changed)) { if (s_adv) { adv_stop(); adv_start(); } }
+    if (AL(s_repair_pending)) { do_repair(); if (AL(s_repair_pending)) return; }
     if (s_conn == BLE_HS_CONN_HANDLE_NONE) { adv_start(); return; }
     uint8_t buf[BC_LINK_MAX]; size_t n = 0; bool live = false, resp = false;
     LOCK();
@@ -431,8 +434,8 @@ void ble_link_tick(void)
 /* ---- plat API (UI task) */
 void plat_phone_set_enabled(bool on)
 {
-    s_enabled = on;
-    s_req_apply_enabled = true;                       /* advertising stop / disconnect happen on the host task (ble_link_tick) */
+    AS(s_enabled, on);
+    AS(s_req_apply_enabled, true);                       /* advertising stop / disconnect happen on the host task (ble_link_tick) */
     if (!on) set_state(PLAT_PHONE_OFF);
     else if (s_conn == BLE_HS_CONN_HANDLE_NONE) set_state(PLAT_PHONE_ADVERTISING);   /* the host task starts advertising */
 }
@@ -443,17 +446,17 @@ void plat_phone_status(plat_phone_status_t *o)
     *o = s_st;
     o->last_rx_age_ms = s_last_rx_ms ? hw_millis() - s_last_rx_ms : UINT32_MAX;
     UNLOCK();
-    if (!s_enabled) o->state = PLAT_PHONE_OFF;
+    if (!AL(s_enabled)) o->state = PLAT_PHONE_OFF;
     if (o->state == PLAT_PHONE_OFF || o->state == PLAT_PHONE_ADVERTISING) { o->bonds = (uint8_t)count_bonds(); o->bonded = o->bonds > 0; }
-    if (s_repair_pending) o->state = PLAT_PHONE_REPAIR;
+    if (AL(s_repair_pending)) o->state = PLAT_PHONE_REPAIR;
     if (plat_bt_unavailable(NULL, 0)) o->state = PLAT_PHONE_UNAVAILABLE;   /* 0.7.4: never "searching" when there is no radio */
 }
 
 /* UI task: only a flag; the host task does the work (no Bluetooth call from the UI task) */
-void plat_phone_forget(void) { s_repair_pending = true; ESP_LOGI(TAG, "forget requested: wiping remembered phones and taking a new identity"); }
-void plat_phone_repair(void) { s_enabled = true; s_repair_pending = true; ESP_LOGI(TAG, "repair requested"); }
+void plat_phone_forget(void) { AS(s_repair_pending, true); ESP_LOGI(TAG, "forget requested: wiping remembered phones and taking a new identity"); }
+void plat_phone_repair(void) { AS(s_enabled, true); AS(s_repair_pending, true); ESP_LOGI(TAG, "repair requested"); }
 
-void plat_phone_disconnect(void) { s_req_disconnect = true; }   /* host task: ble_link_tick */
+void plat_phone_disconnect(void) { AS(s_req_disconnect, true); }   /* host task: ble_link_tick */
 
 void plat_phone_inputs(plat_phone_in_t *o) { LOCK(); *o = s_in; UNLOCK(); }
 
@@ -508,7 +511,7 @@ void plat_phone_set_standby(bool standby)
     if (s_standby == standby) return;
     s_standby = standby;
     /* restart advertising with the new interval when nobody is connected (connections are untouched) — on the host task */
-    s_req_standby_changed = true;
+    AS(s_req_standby_changed, true);
 }
 
 void plat_phone_publish_live(const bc_live_t *l)

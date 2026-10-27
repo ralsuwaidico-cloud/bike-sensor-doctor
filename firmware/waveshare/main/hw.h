@@ -31,6 +31,9 @@ bool hw_selftest_storage(void);          /* 0.7.3: FAT mount + R/W check, IMU, b
 #include "bc_storage.h"
 bc_stor_state_t hw_storage_state(void);
 void hw_storage_facts(bc_stor_facts_t *out);
+bool hw_storage_recheck(void);          /* rc2 (QF-18): after a FULL storage was cleaned up - re-scan + probe; true = OK now */
+void hw_storage_skip(void);              /* 0.7.4: recovery after a crash in the storage stage - storage not started */
+bool hw_settings_ok(void);               /* 0.7.4: NVS usable (false = needs repair; it is never erased automatically) */
 float hw_battery_volts(void);            /* < 0 when unavailable */
 uint32_t hw_millis(void);
 /* power (0.5.0 / 0.6.0) — NOT hardware-verified until the device tests in pc-kit/TEST-v0.6.0.txt */

@@ -437,6 +437,12 @@ size_t bc_link_encode_sync_ride(const bc_ride_summary_t *s, uint8_t *buf, size_t
     bc_lw_u32(&w, 0x15, s->distance_m); bc_lw_u8(&w, 0x16, s->dist_src); bc_lw_u32(&w, 0x17, s->start_epoch_s);
     if (s->coach[0]) {
         size_t n = strlen(s->coach); if (n > 60) n = 60;
+        /* 0.7.4-rc2: the text is cut to the room left in the message. Before, a ride with time-in-zones (28 B) and a coaching
+           text longer than ~43 characters made the message exceed 180 B: the encoder returned 0 and that ride was skipped
+           by the sync - never transferred. Rides that fitted before are encoded byte-identically. */
+        size_t lim = (w.cap < BC_LINK_MAX ? w.cap : BC_LINK_MAX);
+        size_t room = w.ok && w.len + 2 < lim ? lim - w.len - 2 : 0;
+        if (n > room) n = room;
         while (n > 0 && (s->coach[n] & 0xC0) == 0x80) n--;             /* cut at a UTF-8 character boundary */
         if (n) bc_lw_bytes(&w, 0x18, s->coach, n);
     }

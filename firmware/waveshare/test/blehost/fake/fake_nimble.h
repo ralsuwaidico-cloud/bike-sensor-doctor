@@ -83,6 +83,7 @@ void fake_crit_exit(portMUX_TYPE *m);
 void vTaskDelay(TickType_t t);
 BaseType_t xTaskCreatePinnedToCore(void (*fn)(void *), const char *name, uint32_t stack, void *arg, UBaseType_t prio, TaskHandle_t *h, BaseType_t core);
 TaskHandle_t xTaskGetHandle(const char *name);
+TaskHandle_t xTaskGetCurrentTaskHandle(void);
 UBaseType_t uxTaskGetStackHighWaterMark(TaskHandle_t t);
 
 /* ---- NVS */

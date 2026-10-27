@@ -116,7 +116,9 @@ bool plat_file_rename(const char *from, const char *to)
 }
 bool plat_file_remove(const char *path) { char p[512]; full(path, p, sizeof p); if (g_sim.storage_state != BC_STOR_OK && g_sim.storage_state != BC_STOR_FULL && sim_refuse(path)) return false; return unlink(p) == 0; }
 bool plat_storage_ok(void) { return g_sim.storage_state == BC_STOR_OK; }
+bool plat_settings_ok(void) { return true; }
 bc_stor_state_t plat_storage_state(void) { return (bc_stor_state_t)g_sim.storage_state; }
+bool plat_storage_recheck(void) { if (g_sim.storage_state == BC_STOR_FULL && g_sim.full_clears_on_cleanup) g_sim.storage_state = BC_STOR_OK; return g_sim.storage_state == BC_STOR_OK; }
 void plat_storage_facts(bc_stor_facts_t *o) { memset(o, 0, sizeof *o); o->partition_found = o->mounted = g_sim.storage_state != BC_STOR_FS_UNAVAILABLE; o->probe_attempted = true; o->probe_ok = g_sim.storage_state == BC_STOR_OK; }
 bc_stor_state_t plat_storage_write_failure(void) { return g_sim.storage_state == BC_STOR_OK ? BC_STOR_WRITE_FAILED : (bc_stor_state_t)g_sim.storage_state; }
 bc_crashpart_t plat_crash_partition(uint32_t *b) { if (b) *b = g_sim.crashpart_bytes; return (bc_crashpart_t)g_sim.crashpart; }
@@ -419,6 +421,10 @@ void *plat_alloc_ext(size_t n) { return calloc(1, n); }   /* 0.7.4 */
 size_t plat_bootrec_text(char *buf, size_t cap)   /* 0.7.4: the simulated NVS boot-record ring (sim_main.c device_boot) */
 {
     size_t n = 0; if (!cap) return 0; buf[0] = 0;
+    if (g_sim.ring_init && g_sim.ring.last_bt_try.boot) {   /* as diag_esp.c: the pinned last Bluetooth attempt first */
+        char line[400]; bc_bootrec_describe(&g_sim.ring.last_bt_try, line, sizeof line);
+        int k = snprintf(buf, cap, "last BT start: %s\n", line); if (k > 0) n = (size_t)k < cap ? (size_t)k : cap - 1;
+    }
     for (int i = 0; g_sim.ring_init && i < g_sim.ring.count && n + 2 < cap; i++) {
         char line[400]; bc_bootrec_describe(bc_bootring_get(&g_sim.ring, i), line, sizeof line);
         int k = snprintf(buf + n, cap - n, "%s%s", i ? "\n" : "", line); if (k < 0) break; n += (size_t)k; if (n >= cap) { n = cap - 1; break; }

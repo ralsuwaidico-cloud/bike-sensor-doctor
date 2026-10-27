@@ -10,7 +10,7 @@ static void seal(bc_boot_rtc_t *r) { r->crc = crc_of(r); }
 bool bc_boot_rtc_valid(const bc_boot_rtc_t *r) { return r->magic == BOOT_MAGIC && r->crc == crc_of(r) && r->mode <= BC_BOOT_RECOVERY; }
 
 static bool is_crash(bc_reset_t t) { return t == BC_RST_PANIC || t == BC_RST_WDT || t == BC_RST_BROWNOUT; }
-static bool subsys_known(uint8_t m) { return m >= BC_SS_DISPLAY && m <= BC_SS_BTSTACK; }
+static bool subsys_known(uint8_t m) { return m >= BC_SS_DISPLAY && m <= BC_SS_DIAG; }
 
 void bc_boot_plan(bc_boot_rtc_t *r, bc_reset_t reset, uint16_t nvs_skip, bc_boot_plan_t *o)
 {
@@ -51,6 +51,7 @@ void bc_boot_plan(bc_boot_rtc_t *r, bc_reset_t reset, uint16_t nvs_skip, bc_boot
     }
     r->marker = BC_SS_NONE;
     o->mode = (bc_boot_mode_t)r->mode;
+    if (o->mode == BC_BOOT_RECOVERY && o->crashed) { o->no_storage = o->suspect == BC_SS_STORAGE; o->no_diag = o->suspect == BC_SS_DIAG || o->no_storage; }
     o->skip = (uint16_t)((r->skip | nvs_skip) & BC_SS_SKIPPABLE);
     seal(r);
 }
@@ -66,6 +67,7 @@ void bc_boot_stable(bc_boot_rtc_t *r)
 
 void bc_boot_request_staged(bc_boot_rtc_t *r) { r->request = 1; seal(r); }
 void bc_boot_disable(bc_boot_rtc_t *r, bc_subsys_t s) { if (BC_SS_BIT(s) & BC_SS_SKIPPABLE) { r->skip |= BC_SS_BIT(s); seal(r); } }
+void bc_boot_force_recovery(bc_boot_rtc_t *r, bc_boot_plan_t *p) { r->mode = BC_BOOT_RECOVERY; seal(r); p->mode = BC_BOOT_RECOVERY; }
 void bc_boot_unskip(bc_boot_rtc_t *r, bc_subsys_t s) { r->skip &= (uint16_t)~BC_SS_BIT(s); seal(r); }
 
 const char *bc_subsys_name(bc_subsys_t s)
@@ -73,7 +75,7 @@ const char *bc_subsys_name(bc_subsys_t s)
     switch (s) {
     case BC_SS_DISPLAY: return "display"; case BC_SS_STORAGE: return "storage"; case BC_SS_PHONE: return "phone link";
     case BC_SS_WIFI: return "Wi-Fi"; case BC_SS_CENTRAL: return "sensor Bluetooth"; case BC_SS_POWER: return "power meter";
-    case BC_SS_HR: return "HR strap"; case BC_SS_CSC: return "speed/cadence sensor"; case BC_SS_BTSTACK: return "Bluetooth stack";
+    case BC_SS_HR: return "HR strap"; case BC_SS_CSC: return "speed/cadence sensor"; case BC_SS_BTSTACK: return "Bluetooth stack"; case BC_SS_DIAG: return "diagnostics";
     case BC_SS_RUNNING: return "running";
     case BC_SS_STABLE: return "stable"; default: return "none";
     }

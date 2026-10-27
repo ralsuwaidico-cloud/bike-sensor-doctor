@@ -4,7 +4,7 @@
 #include <string.h>
 #include "bc_diag.h"   /* bc_crc32 */
 
-#define VER 1
+#define VER 2
 
 void bc_bootring_init(bc_bootring_t *g) { memset(g, 0, sizeof *g); g->magic = BC_BOOTREC_MAGIC; g->version = VER; g->head = BC_BOOTREC_N - 1; }
 
@@ -39,6 +39,22 @@ int bc_bootring_bt_fail_streak(const bc_bootring_t *g)
     for (int i = 1; i < g->count; i++) {
         const bc_bootrec_t *r = bc_bootring_get(g, i);
         if (!r || !failed(r->bt_result)) break;
+        n++;
+    }
+    return n;
+}
+
+void bc_bootring_note_bt(bc_bootring_t *g)
+{
+    bc_bootrec_t *r = bc_bootring_newest(g);
+    if (r && r->bt_result != BC_BT_NOT_TRIED && r->bt_result != BC_BT_SKIPPED) g->last_bt_try = *r;
+}
+int bc_bootring_crash_streak(const bc_bootring_t *g)
+{
+    int n = 0;
+    for (int i = 0; i < g->count; i++) {
+        const bc_bootrec_t *r = bc_bootring_get(g, i);
+        if (!r || !(r->reset == BC_RST_PANIC || r->reset == BC_RST_WDT || r->reset == BC_RST_BROWNOUT)) break;
         n++;
     }
     return n;

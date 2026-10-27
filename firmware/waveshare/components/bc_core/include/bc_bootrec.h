@@ -2,7 +2,7 @@
  * bc_core — BOOT RECORDS (firmware 0.7.4). Pure C, host-tested (test/host/test_bc_bootrec.c).
  *
  * Crash / start-up evidence that does NOT depend on the FAT filesystem: a ring of the last BC_BOOTREC_N boot records, one
- * fixed-size blob (576 B) in a reserved NVS namespace ("bootrec"), CRC-protected. Written only from normal task context
+ * fixed-size blob (720 B) in a reserved NVS namespace ("bootrec"), CRC-protected. Written only from normal task context
  * (after the boot plan, after the Bluetooth stage, when the start-up is complete / stable) - never from a panic handler.
  * Each record says how that boot went: reset reason, boot mode, which subsystem crashed before it, the storage category, the
  * Bluetooth start-up result step by step (return codes + internal-heap figures before/after each step + the failed
@@ -57,6 +57,9 @@ typedef struct {
     uint16_t version, count;             /* count = records filled (<= N) */
     uint16_t head, pad;                  /* index of the NEWEST record */
     bc_bootrec_t r[BC_BOOTREC_N];
+    bc_bootrec_t last_bt_try;            /* 0.7.4 (QA QF-06): copy of the newest record that really TRIED to start Bluetooth (OK
+                                            or failed) - SKIPPED / NOT_TRIED boots never overwrite it, so the first failing
+                                            start's per-step heap figures survive any number of later boots */
     uint32_t crc;
 } bc_bootring_t;
 
@@ -72,6 +75,10 @@ bool bc_bootring_valid(const bc_bootring_t *g, size_t blob_len);
 /** Consecutive most recent records (excluding the newest one, i.e. previous boots) whose Bluetooth start FAILED.
  *  A record with SKIPPED, OK or NOT_TRIED ends the streak (so RETRY after a skip starts counting again). */
 int bc_bootring_bt_fail_streak(const bc_bootring_t *g);
+/** Copy the newest record to last_bt_try if it attempted Bluetooth (call after its bt_result is set). */
+void bc_bootring_note_bt(bc_bootring_t *g);
+/** Consecutive newest records (INCLUDING the newest = this boot) whose start was a crash reset (panic / watchdog / brownout). */
+int bc_bootring_crash_streak(const bc_bootring_t *g);
 const char *bc_bt_result_name(bc_bt_result_t r);   /* "HCI/host init failed" ... (<= 24 chars) */
 /** One line for the serial log / Device Health / reports. */
 size_t bc_bootrec_describe(const bc_bootrec_t *r, char *out, size_t cap);

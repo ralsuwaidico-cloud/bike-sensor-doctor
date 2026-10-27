@@ -153,30 +153,42 @@ void app_main(void)
     bc_boot_mark(R, BC_SS_DISPLAY);
     lv_display_t *disp = hw_display_init();
     ESP_LOGI(TAG, "STAGE display OK");
+    /* 0.7.4 (QA QF-03): a RECOVERY boot does not start again the stage the last crash happened in (storage, or the boot
+       record + diagnostics init), so a crash there cannot loop even in RECOVERY. */
     bc_boot_mark(R, BC_SS_STORAGE);
-    bool storage_ok = hw_selftest_storage();
+    bool storage_ok = false;
+    if (s_plan.no_storage) { hw_storage_skip(); ESP_LOGW(TAG, "STAGE storage NOT started: the last crash happened while it started (recovery)"); }
+    else storage_ok = hw_selftest_storage();
     ESP_LOGI(TAG, "STAGE storage %s", storage_ok ? "OK" : "FAILED (logs stay in RAM)");
-    lvgl_port_lock(0);
-    app_diag_init(&s_plan, storage_ok);                      /* BOOT event; after a crash the report is stored now */
-    app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, storage_ok ? 1 : 3);
-    lvgl_port_unlock();
-
-    diag_esp_bootrec_begin(&s_plan, hw_storage_state());   /* 0.7.4: FAT-independent boot record (NVS); prints the previous ones */
+    bc_boot_mark(R, BC_SS_DIAG);
+    if (!s_plan.no_diag) {
+        /* boot record FIRST: it reads the core-dump summary before app_diag copies + erases the dump (QA QF-04) */
+        diag_esp_bootrec_begin(&s_plan, hw_storage_state());
+        /* QA QF-09: the NVS records show 4 crash resets in a row that the RTC state missed (RTC lost, or each crash came
+           more than 20 s after the start) -> RECOVERY */
+        if (s_plan.mode == BC_BOOT_NORMAL && diag_esp_crash_streak() >= 4) {
+            bc_boot_force_recovery(R, &s_plan);
+            ESP_LOGW(TAG, "boot records: %d crash resets in a row -> RECOVERY", diag_esp_crash_streak());
+        }
+        /* two boots in a row whose Bluetooth start FAILED (no crash, e.g. no internal RAM) -> Bluetooth disabled until RETRY.
+           Decided BEFORE app_diag_init, so the Phone screen offers RETRY on this very boot (QA QF-07). */
+        if (s_plan.mode != BC_BOOT_RECOVERY && !skipped(BC_SS_BTSTACK) && diag_esp_bt_fail_streak() >= 2) {
+            bc_boot_disable(R, BC_SS_BTSTACK); s_plan.skip |= BC_SS_BIT(BC_SS_BTSTACK); plat_boot_skip_save(s_plan.skip);
+            ESP_LOGW(TAG, "Bluetooth start failed on %d boots in a row: disabled until RETRY (Phone screen)", diag_esp_bt_fail_streak());
+        }
+        lvgl_port_lock(0);
+        app_diag_init(&s_plan, storage_ok);                  /* BOOT event; after a crash the report is stored now */
+        app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, s_plan.no_storage ? 2 : storage_ok ? 1 : 3);
+        lvgl_port_unlock();
+    } else ESP_LOGW(TAG, "STAGE diagnostics NOT started: the last crash happened there (recovery; the core dump stays in its partition)");
     if (s_plan.mode == BC_BOOT_RECOVERY) { recovery_mode(disp); return; }
-
-    /* 0.7.4: two boots in a row whose Bluetooth start FAILED (no crash, e.g. no internal RAM) -> Bluetooth is disabled until
-       RETRY, so a board that cannot start Bluetooth does not keep trying at every start; it runs stably without it */
-    if (!skipped(BC_SS_BTSTACK) && diag_esp_bt_fail_streak() >= 2) {
-        bc_boot_disable(R, BC_SS_BTSTACK); s_plan.skip |= BC_SS_BIT(BC_SS_BTSTACK); plat_boot_skip_save(s_plan.skip);
-        ESP_LOGW(TAG, "Bluetooth start failed on %d boots in a row: disabled until RETRY (Phone screen)", diag_esp_bt_fail_streak());
-    }
 
     /* 0.7.4: Bluetooth stack first (its HCI buffers must come from internal RAM; see the header comment) */
     bool bt_stack = false;
     stage(BC_SS_BTSTACK, NULL);
     if (skipped(BC_SS_BTSTACK)) { diag_esp_bt_disabled("off after 2 failures"); stage_done(BC_SS_BTSTACK, 2, 0); }
     else { bt_stack = ble_central_stack_init(); stage_done(BC_SS_BTSTACK, bt_stack ? 1 : 3, 0); }
-    diag_esp_bootrec_bt(ble_central_init_info(), skipped(BC_SS_BTSTACK));
+    diag_esp_bootrec_bt(ble_central_init_info(), skipped(BC_SS_BTSTACK), s_plan.skip);
 
     /* 0.6.1 SAFE MODE (touch): BOOT held while RESET is pressed -> the wake gate is forced open and the display settings run on
        defaults for this boot only (nothing saved). Recovery path that does not depend on the touch gate or on saved settings. */
@@ -194,7 +206,8 @@ void app_main(void)
     if (touch_safe) { p->brightness = 80; p->scr_timeout_s = 300; p->wake_taps = 1; }   /* this boot only; app_profile_save() is not called here */
     ui_start();
     if (s_plan.mode == BC_BOOT_STAGED) ui_toast("Diagnosing: starting one part at a time");
-    if (!bt_stack) ui_toast("Bluetooth unavailable - see Connections");
+    if (!hw_settings_ok()) ui_toast("Settings memory needs repair");   /* QA QF-02: NVS not erased, nothing saved this boot */
+    else if (!bt_stack) ui_toast("Bluetooth unavailable - see Connections");
     else if (s_plan.newly_skipped && s_plan.suspect != BC_SS_POWER && s_plan.suspect != BC_SS_HR && s_plan.suspect != BC_SS_CSC) { char b[56];   /* sensors: own toast below */ snprintf(b, sizeof b, "%s disabled after a crash", bc_subsys_name((bc_subsys_t)s_plan.suspect)); ui_toast(b); }
     lvgl_port_unlock();
     ESP_LOGI(TAG, "STAGE app + screens OK");
@@ -205,7 +218,7 @@ void app_main(void)
     bool bt_up = false;
     if (!bt_stack) stage_done(BC_SS_PHONE, skipped(BC_SS_BTSTACK) ? 2 : 3, 0);
     else if (skipped(BC_SS_PHONE)) { diag_esp_bt_disabled("phone link off: crashes"); stage_done(BC_SS_PHONE, 2, 0); }   /* this power cycle */
-    else { bt_up = ble_central_start(false); diag_esp_ble_started(); diag_esp_bootrec_bt(ble_central_init_info(), false); stage_done(BC_SS_PHONE, bt_up ? 1 : 3, 10000); }
+    else { bt_up = ble_central_start(false); diag_esp_ble_started(); diag_esp_bootrec_bt(ble_central_init_info(), false, s_plan.skip); stage_done(BC_SS_PHONE, bt_up ? 1 : 3, 10000); }
 
     stage(BC_SS_WIFI, p->wifi_on ? "Starting Wi-Fi" : NULL);
     net_wifi_init();                      /* background manager; radio stays off unless the rider switched Wi-Fi on */
@@ -231,7 +244,7 @@ void app_main(void)
         stage_done(SENS[i].ss, off ? 2 : 1, SENS[i].dwell);
         if (off && skipped(SENS[i].ss)) { lvgl_port_lock(0); char b[48]; snprintf(b, sizeof b, "%s disabled after a crash - RETRY", SENS[i].ss == BC_SS_POWER ? "Power meter" : SENS[i].ss == BC_SS_HR ? "HR strap" : "Sensor"); ui_toast(b); lvgl_port_unlock(); }
     }
-    bc_boot_mark(R, BC_SS_RUNNING); diag_esp_bootrec_reached(BC_SS_RUNNING);
+    bc_boot_mark(R, BC_SS_RUNNING);   /* (QA QF-20: no NVS write here - the record is written at start, after Bluetooth, at STABLE) */
     ESP_LOGI(TAG, "STAGE all subsystems started (power meter %s, HR %s)", p->power.paired ? "paired" : "not paired", p->hr.paired ? "paired" : "not paired");
 
     /* stable: 20 s after everything is up (a staged boot also stores a "recovery session" report with what happened) */

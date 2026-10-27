@@ -20,6 +20,8 @@ extern "C" {
 
 /** At boot, after storage is mounted (storage_ok false: everything stays in RAM). Writes the BOOT event and, after a
  *  crash, the crash report (core dump summary + log tail + events) before anything else can fail. */
+/** Host harness only: forget the diagnostic state, like a reset does on the device (a boot that does not start it). */
+void app_diag_off(void);
 void app_diag_init(const bc_boot_plan_t *plan, bool storage_ok);
 /** Subsystem start-up markers for the event log: result 0 starting, 1 up, 2 skipped (disabled after a crash), 3 failed. */
 void app_diag_stage(bc_subsys_t s, int result);

@@ -74,6 +74,14 @@ BaseType_t xTaskCreatePinnedToCore(void (*fn)(void *), const char *name, uint32_
 }
 TaskHandle_t xTaskGetHandle(const char *name) { for (int i = 0; i < s_ntasks; i++) if (!strcmp(s_tasks[i].name, name)) return &s_tasks[i]; return NULL; }
 UBaseType_t uxTaskGetStackHighWaterMark(TaskHandle_t t) { (void)t; return 1000; }
+static __thread int t_self;                              /* any thread: a distinct handle per thread */
+TaskHandle_t xTaskGetCurrentTaskHandle(void) { return &t_self; }
+#include "esp_task_wdt.h"
+int g_fake_wdt_subscribed; uint32_t g_fake_wdt_timeout_ms = 5000; bool g_fake_wdt_panic;
+esp_err_t esp_task_wdt_reconfigure(const esp_task_wdt_config_t *c) { g_fake_wdt_timeout_ms = c->timeout_ms; g_fake_wdt_panic = c->trigger_panic; return ESP_OK; }
+int g_fake_wdt_guard_seen;
+esp_err_t esp_task_wdt_add(TaskHandle_t t) { (void)t; g_fake_wdt_subscribed++; if (g_fake_wdt_timeout_ms == 15000 && g_fake_wdt_panic) g_fake_wdt_guard_seen = 1; return ESP_OK; }
+esp_err_t esp_task_wdt_delete(TaskHandle_t t) { (void)t; g_fake_wdt_subscribed--; return ESP_OK; }
 
 /* ------------------------------------------------------------------ NVS (in memory) */
 typedef struct { char ns[16], key[16]; uint8_t v[64]; size_t n; } nvs_item_t;
@@ -584,8 +592,18 @@ esp_err_t esp_bt_controller_init(esp_bt_controller_config_t *cfg) { (void)cfg; c
 esp_err_t esp_bt_controller_enable(esp_bt_mode_t mode) { (void)mode; return ESP_OK; }
 esp_err_t esp_bt_controller_disable(void) { return ESP_OK; }
 esp_err_t esp_bt_controller_deinit(void) { return ESP_OK; }
-/* like ble_buf_alloc on the board: the msys-2 pool (24 x 344 B = 8256 B, internal RAM) does not fit -> the hook fires */
-esp_err_t esp_nimble_init(void) { if (g_fake_nimble_init_err != ESP_OK && s_alloc_hook) s_alloc_hook(8256, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT, "heap_caps_calloc"); return g_fake_nimble_init_err; }
+/* INJECTED by this fake, NOT a measurement (QA QF-14): when a failure is requested, the hook is fired with the size of the
+   msys-2 pool (24 x 344 B = 8256 B from the 5.5.1 sdkconfig) because that is the largest single internal allocation of
+   ble_buf_alloc - the board has not shown which allocation fails; the rc2 instrumentation is there to measure it. */
+static void *other_task_alloc(void *p) { (void)p; s_alloc_hook(100, MALLOC_CAP_INTERNAL, "lvgl"); return NULL; }
+esp_err_t esp_nimble_init(void)
+{
+    if (g_fake_nimble_init_err != ESP_OK && s_alloc_hook) {
+        pthread_t th; pthread_create(&th, NULL, other_task_alloc, NULL); pthread_join(th, NULL);   /* another task fails first */
+        s_alloc_hook(8256, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT, "heap_caps_calloc");
+    }
+    return g_fake_nimble_init_err;
+}
 void nimble_port_run(void)
 {
     if (ble_hs_cfg.sync_cb) ble_hs_cfg.sync_cb();

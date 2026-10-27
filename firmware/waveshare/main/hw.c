@@ -360,13 +360,17 @@ void hw_selftest_nvs(void)
     SET(flash, fsz == 16 * 1024 * 1024 ? HW_PASS : HW_FAIL, "%u MB flash", (unsigned)(fsz / (1024 * 1024)));
 
     esp_err_t e = nvs_flash_init();
-    if (e == ESP_ERR_NVS_NO_FREE_PAGES || e == ESP_ERR_NVS_NEW_VERSION_FOUND) { nvs_flash_erase(); e = nvs_flash_init(); }
+    /* 0.7.4 (QA QF-02): NEVER erase NVS automatically (settings, sensor pairings, phone bonds, ride-id counter, boot records).
+       0.7.3 called nvs_flash_erase() here. Now the board runs without saved settings (defaults, nothing written), says so on
+       screen and in Device Health, and the NVS area is left exactly as it is for an owner-approved repair from a backup. */
+    if (e == ESP_ERR_NVS_NO_FREE_PAGES || e == ESP_ERR_NVS_NEW_VERSION_FOUND)
+        ESP_LOGE(TAG, "NVS needs repair (%s) - NOT erased; running without saved settings", esp_err_to_name(e));
     nvs_handle_t h;
     if (e == ESP_OK && nvs_open("diag", NVS_READWRITE, &h) == ESP_OK) {
         uint32_t boots = 0; nvs_get_u32(h, "boots", &boots); boots++; nvs_set_u32(h, "boots", boots); nvs_commit(h); nvs_close(h);
         g_selftest.boot_count = boots;
         SET(nvs, HW_PASS, "boot #%u remembered", (unsigned)boots);
-    } else SET(nvs, HW_FAIL, "%s", esp_err_to_name(e));
+    } else SET(nvs, HW_FAIL, "needs repair: %.30s", esp_err_to_name(e));
 }
 
 /* 0.7.4 storage stage. Measured on the owner's board (27 Oct): the FAT mounts, 5096 KB of 7964 KB are free, but all 512
@@ -426,8 +430,7 @@ bool hw_selftest_storage(void)
         esp_vfs_fat_info("/data", &s_sf.total_bytes, &s_sf.free_bytes);
         s_sf.cluster_bytes = 4096;
         storage_root_scan();
-        bool corrupt_root = s_sf.root_scanned && s_sf.root.free_slots == 0 && (s_sf.root.erased + s_sf.root.garbage) * 2u >= s_sf.root.entries;
-        if (!corrupt_root) storage_probe();              /* never attempt a write into a damaged directory */
+        if (!bc_stor_root_damaged(&s_sf)) storage_probe();   /* never attempt a write into a damaged directory (any erased/garbage entry) */
     }
     s_ss = bc_stor_classify(&s_sf);
     char d[200]; bc_stor_describe(&s_sf, s_ss, d, sizeof d);
@@ -446,4 +449,26 @@ bool hw_selftest_storage(void)
 
 void hw_selftest_run(void) { hw_selftest_nvs(); hw_selftest_storage(); }
 bc_stor_state_t hw_storage_state(void) { return s_ss; }
+bool hw_storage_recheck(void)
+{
+    if (s_ss != BC_STOR_FULL || !s_sf.mounted) return s_ss == BC_STOR_OK;   /* only FULL is re-checked: damage never "heals" */
+    esp_vfs_fat_info("/data", &s_sf.total_bytes, &s_sf.free_bytes);
+    s_sf.probe_attempted = s_sf.probe_ok = false; s_sf.probe_errno = 0;
+    storage_root_scan();
+    if (!bc_stor_root_damaged(&s_sf)) storage_probe();
+    s_ss = bc_stor_classify(&s_sf);
+    char d[200]; bc_stor_describe(&s_sf, s_ss, d, sizeof d);
+    ESP_LOGW(TAG, "storage re-checked after clean-up: %s", d);
+    if (s_ss == BC_STOR_OK) SET(storage, HW_PASS, "FAT %u KB free / %u KB", (unsigned)(s_sf.free_bytes / 1024), (unsigned)(s_sf.total_bytes / 1024));
+    return s_ss == BC_STOR_OK;
+}
+bool hw_settings_ok(void) { return g_selftest.nvs == HW_PASS; }
+void hw_storage_skip(void)   /* recovery after a crash in the storage stage: not mounted, IMU/battery checks still run */
+{
+    memset(&s_sf, 0, sizeof s_sf); s_ss = BC_STOR_NOT_CHECKED;   /* not mounted, nothing read or written */
+    SET(storage, HW_FAIL, "not started after a crash");
+    imu_check();
+    float v = hw_battery_volts();
+    if (v < 0) SET(battery, HW_FAIL, "ADC unavailable"); else SET(battery, HW_INFO, "%.2f V", v);
+}
 void hw_storage_facts(bc_stor_facts_t *o) { *o = s_sf; }

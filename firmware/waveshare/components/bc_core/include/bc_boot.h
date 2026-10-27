@@ -33,7 +33,10 @@ extern "C" {
    phone link and the sensor central (both need it); skipping it means no Bluetooth at all this boot. Value 9 is new: older
    Cyclift builds show it as a number in the text report, nothing else depends on it. */
 typedef enum { BC_SS_NONE = 0, BC_SS_DISPLAY = 1, BC_SS_STORAGE = 2, BC_SS_PHONE = 3, BC_SS_WIFI = 4, BC_SS_CENTRAL = 5,
-               BC_SS_POWER = 6, BC_SS_HR = 7, BC_SS_CSC = 8, BC_SS_BTSTACK = 9, BC_SS_RUNNING = 14, BC_SS_STABLE = 15 } bc_subsys_t;
+               BC_SS_POWER = 6, BC_SS_HR = 7, BC_SS_CSC = 8, BC_SS_BTSTACK = 9, BC_SS_DIAG = 10, BC_SS_RUNNING = 14, BC_SS_STABLE = 15 } bc_subsys_t;
+/* 0.7.4 (QA QF-03): BC_SS_DIAG = boot record + diagnostics init (crash report, core-dump copy). STORAGE and DIAG are never
+   skipped in a normal boot (no recovery screen without them), but a RECOVERY boot whose last crash happened while one of
+   them started does NOT start it again: bc_boot_plan sets no_storage / no_diag, so a crash there cannot loop. */
 #define BC_SS_BIT(s) ((uint16_t)(1u << (s)))
 #define BC_SS_SKIPPABLE (BC_SS_BIT(BC_SS_PHONE) | BC_SS_BIT(BC_SS_WIFI) | BC_SS_BIT(BC_SS_CENTRAL) | BC_SS_BIT(BC_SS_POWER) | BC_SS_BIT(BC_SS_HR) | BC_SS_BIT(BC_SS_CSC) | BC_SS_BIT(BC_SS_BTSTACK))
 /* 0.7.4: in a NORMAL boot, this many crash resets in a row while the SAME skippable subsystem was starting disable it (0.7.3
@@ -65,6 +68,7 @@ typedef struct {
     uint8_t suspect;           /* bc_subsys_t that was starting when it crashed (NONE if unknown) */
     bool newly_skipped;        /* suspect was added to skip on this boot */
     bool rtc_was_valid;
+    bool no_storage, no_diag;  /* 0.7.4: RECOVERY after a crash in that stage: do not start it */
 } bc_boot_plan_t;
 
 bool bc_boot_rtc_valid(const bc_boot_rtc_t *r);
@@ -79,6 +83,9 @@ void bc_boot_request_staged(bc_boot_rtc_t *r);
 /** 0.7.4: disable a skippable subsystem from now on (this power cycle; the caller saves NVS) - e.g. the Bluetooth stack after
  *  two boots in a row whose Bluetooth start FAILED without crashing (bc_bootring_bt_fail_streak). */
 void bc_boot_disable(bc_boot_rtc_t *r, bc_subsys_t s);
+/** 0.7.4 (QA QF-09): the NVS boot records show a crash loop the RTC state missed (RTC lost, or crashes later than 20 s after
+ *  every start): this boot becomes RECOVERY (stays RECOVERY until a non-crash reset). */
+void bc_boot_force_recovery(bc_boot_rtc_t *r, bc_boot_plan_t *p);
 /** RETRY for a disabled subsystem: removed from skip (the caller clears NVS too). */
 void bc_boot_unskip(bc_boot_rtc_t *r, bc_subsys_t s);
 const char *bc_subsys_name(bc_subsys_t s);     /* "power meter", "phone link", ... */

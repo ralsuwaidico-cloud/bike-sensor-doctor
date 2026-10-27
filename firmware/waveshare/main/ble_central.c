@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_task_wdt.h"
+#include "esp_attr.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
@@ -85,15 +87,18 @@ static volatile uint16_t s_wheel_mm = 2096;
 static plat_found_t s_any[NANY]; static int s_nany; static uint32_t s_any_ms[NANY];
 static uint8_t s_own;
 static volatile bool s_synced, s_scanning;
-static volatile int s_pair_kind = -1;
-static volatile bool s_sensors_on = true;
+/* rc2 (QA QF-15): flags written by the UI task and read by the host task go through __atomic_* (no data race; TSan clean) */
+#define AL(x) __atomic_load_n(&(x), __ATOMIC_ACQUIRE)
+#define AS(x, v) __atomic_store_n(&(x), (v), __ATOMIC_RELEASE)
+static int s_pair_kind = -1;
+static bool s_sensors_on = true;
 static link_t *s_connecting;
 static plat_found_t s_found[NL][8]; static int s_nfound[NL]; static uint32_t s_found_ms[NL][8];
 static uint8_t s_seen[48][6]; static int s_seen_n; static uint32_t s_seen_total;
 static esp_timer_handle_t s_mtu_timer;
 /* 0.7.3: work handed to the host task */
 static struct ble_npl_event s_ev_tick, s_ev_link, s_ev_mtu, s_ev_req;
-static volatile bool s_events_ready;
+static bool s_events_ready;
 typedef struct { bool pending; bool paired; uint8_t mac[6], addr_type; char name[20]; bool set_disabled, disabled; } pair_req_t;
 static pair_req_t s_req[NL];                         /* guarded by LOCK; applied on the host task */
 
@@ -296,7 +301,7 @@ static int on_mtu(uint16_t conn, const struct ble_gatt_error *err, uint16_t mtu,
     return 0;
 }
 /* esp_timer task: only hands the fallback to the host task */
-static void mtu_fallback_timer(void *arg) { (void)arg; if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_mtu); }
+static void mtu_fallback_timer(void *arg) { (void)arg; if (AL(s_events_ready)) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_mtu); }
 static void mtu_fallback_ev(struct ble_npl_event *ev)
 {
     (void)ev;
@@ -345,7 +350,7 @@ static void note_any(const ble_addr_t *a, const struct ble_hs_adv_fields *f, int
     UNLOCK();
 }
 
-static volatile bool s_standby;   /* 0.6.0 connected standby */
+static bool s_standby;   /* 0.6.0 connected standby */
 static int gap_event(struct ble_gap_event *ev, void *arg);
 
 static void scan_start(void)
@@ -382,7 +387,7 @@ static void note_found(int kind, const ble_addr_t *a, const struct ble_hs_adv_fi
     UNLOCK();
 }
 
-static bool link_wanted(const link_t *l) { return l->paired && !l->disabled && s_sensors_on; }
+static bool link_wanted(const link_t *l) { return l->paired && !l->disabled && AL(s_sensors_on); }
 
 static int gap_event(struct ble_gap_event *ev, void *arg)
 {
@@ -394,7 +399,7 @@ static int gap_event(struct ble_gap_event *ev, void *arg)
         struct ble_hs_adv_fields f;
         if (ble_hs_adv_parse_fields(&f, ev->disc.data, ev->disc.length_data) != 0) return 0;
         uint16_t svcs = svcs_of(&f);
-        if (s_pair_kind == (int)PLAT_SENS_ANY) note_any(a, &f, ev->disc.rssi, svcs);
+        if (AL(s_pair_kind) == (int)PLAT_SENS_ANY) note_any(a, &f, ev->disc.rssi, svcs);
         int k = slot_of_svcs(svcs);   /* k = link SLOT */
         if (k < 0) {   /* a scan response often carries only the name: attach it to a device already listed */
             LOCK();
@@ -556,14 +561,15 @@ static void tick(void)
         s_rssi_t = now;
         for (int i = 0; i < NL; i++) { int8_t r; if (L[i].conn != BLE_HS_CONN_HANDLE_NONE && ble_gap_conn_rssi(L[i].conn, &r) == 0) { LOCK(); L[i].rssi = r; UNLOCK(); } }
     }
-    bool need = s_pair_kind >= 0;
-    for (int i = 0; i < NL && !s_standby; i++) {   /* connected standby (0.6.0): no scanning for paired sensors; live connections are kept */
+    int pk = AL(s_pair_kind);
+    bool need = pk >= 0;
+    for (int i = 0; i < NL && !AL(s_standby); i++) {   /* connected standby (0.6.0): no scanning for paired sensors; live connections are kept */
         link_t *l = &L[i];
         if (!link_wanted(l)) continue;
         if (l->state == PLAT_LINK_RETRY && (int32_t)(now - l->retry_at) >= 0) set_state(l, PLAT_LINK_SEARCHING);
         if (l->state == PLAT_LINK_SEARCHING) need = true;
     }
-    if (!s_sensors_on && s_pair_kind < 0) need = false;
+    if (!AL(s_sensors_on) && pk < 0) need = false;
     /* drop pairing-list entries not heard for 20 s */
     LOCK();
     for (int k = 0; k < NL; k++) for (int i = 0; i < s_nfound[k]; i++) if (now - s_found_ms[k][i] > 20000) {
@@ -609,16 +615,65 @@ static void snap(bc_bt_snap_t *o, int rc)
     o->largest_dma = (uint32_t)heap_caps_get_largest_free_block(MALLOC_CAP_DMA);
     o->rc = rc;
 }
-/* 0.7.4: every failed heap allocation is counted; while the Bluetooth stack starts, the first one (size + caps) is kept.
-   Called by the heap allocator in the failing task's context: only plain stores here (no log, no lock). */
-static volatile bool s_in_bt_init;
-static void alloc_failed(size_t size, uint32_t caps, const char *fn)
+/* 0.7.4: every failed heap allocation is counted; while the Bluetooth stack starts, the first one (size + caps) made BY THE
+   TASK THAT STARTS THE STACK is kept (rc2, QA QF-11: other tasks - LVGL, esp_timer - already run then and their failures
+   must not be blamed on the Bluetooth start). The heap allocator calls this from IRAM code in the failing task's context,
+   possibly with the flash cache off: IRAM_ATTR, plain atomic stores, no log, no lock. ESP-IDF 5.5.1 cannot unregister the
+   hook (NULL is rejected), so it stays installed; outside the start it only counts. */
+static bool s_in_bt_init;                 /* accessed with __atomic_* */
+static TaskHandle_t s_bt_init_task;
+static IRAM_ATTR void alloc_failed(size_t size, uint32_t caps, const char *fn)
 {
     (void)fn;
-    s_init.alloc_fails_total++;
-    if (!s_in_bt_init) return;
+    __atomic_add_fetch(&s_init.alloc_fails_total, 1, __ATOMIC_RELAXED);
+    if (!__atomic_load_n(&s_in_bt_init, __ATOMIC_ACQUIRE)) return;
+    if (xTaskGetCurrentTaskHandle() != s_bt_init_task) return;
     if (!s_init.fail_allocs) { s_init.fail_alloc_size = (uint32_t)size; s_init.fail_alloc_caps = caps; }
     s_init.fail_allocs++;
+}
+static void bt_init_window(bool open)
+{
+    if (open) s_bt_init_task = xTaskGetCurrentTaskHandle();
+    __atomic_store_n(&s_in_bt_init, open, __ATOMIC_RELEASE);
+}
+/* rc2 (QA QF-10): a HANG inside the controller / NimBLE start would leave a blank screen forever - the task watchdog is
+   on but does not panic (CONFIG_ESP_TASK_WDT_PANIC unset) and the main task is not subscribed. For the start only, the
+   main task subscribes with a 15 s timeout and panic on expiry: the panic is a crash reset with the BTSTACK stage marker
+   set, so the boot plan skips the Bluetooth stack after two such boots and the board reaches its screens. Normal
+   settings are restored right after (the start takes milliseconds when it works). */
+#define BT_INIT_WDT_MS 15000
+static bool s_wdt_guard;
+static void bt_init_wdt(bool on)
+{
+#if defined(CONFIG_ESP_TASK_WDT_EN) && CONFIG_ESP_TASK_WDT_EN
+    esp_task_wdt_config_t c = {
+        .timeout_ms = on ? BT_INIT_WDT_MS : CONFIG_ESP_TASK_WDT_TIMEOUT_S * 1000,
+        .idle_core_mask = 0
+#if CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0
+            | 1
+#endif
+#if CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1
+            | 2
+#endif
+        ,
+#if defined(CONFIG_ESP_TASK_WDT_PANIC) && CONFIG_ESP_TASK_WDT_PANIC
+        .trigger_panic = true,
+#else
+        .trigger_panic = on,
+#endif
+    };
+    if (on) {
+        if (esp_task_wdt_reconfigure(&c) != ESP_OK) { ESP_LOGW(TAG, "BT start: watchdog guard not set"); return; }
+        s_wdt_guard = esp_task_wdt_add(NULL) == ESP_OK;
+        if (!s_wdt_guard) { c.timeout_ms = CONFIG_ESP_TASK_WDT_TIMEOUT_S * 1000; c.trigger_panic = false; esp_task_wdt_reconfigure(&c); }
+    } else if (s_wdt_guard) {
+        esp_task_wdt_delete(NULL);
+        esp_task_wdt_reconfigure(&c);
+        s_wdt_guard = false;
+    }
+#else
+    (void)on;
+#endif
 }
 static void init_fail(bc_bt_result_t res, const char *what, int err)
 {
@@ -641,6 +696,7 @@ static void log_step(const char *name, int idx)
    off): esp_bt_controller_init -> esp_bt_controller_enable(BLE) -> esp_nimble_init(), with the same clean-up on failure -
    but each step's return code and the heap after it are recorded (and kept in the NVS boot record by the caller), and the
    allocator's failure hook names the first allocation that failed. 0.7.3: ESP_ERROR_CHECK(nimble_port_init()) -> abort(). */
+static esp_err_t stack_steps(void);
 bool ble_central_stack_init(void)
 {
     if (s_init.stack_ok) return true;
@@ -648,30 +704,38 @@ bool ble_central_stack_init(void)
     s_init.attempted = true;
     heap_caps_register_failed_alloc_callback(alloc_failed);
     snap(&s_init.step[BC_BT_STEP_PRE], 0); log_step("before", BC_BT_STEP_PRE);
-    s_in_bt_init = true;
-    esp_bt_controller_config_t cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    esp_err_t e = esp_bt_controller_init(&cfg);
-    snap(&s_init.step[BC_BT_STEP_CTRL_INIT], e); log_step("controller init", BC_BT_STEP_CTRL_INIT);
-    if (e != ESP_OK) { s_in_bt_init = false; init_fail(BC_BT_FAIL_CTRL_INIT, "controller init failed", e); return false; }
-    e = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    snap(&s_init.step[BC_BT_STEP_CTRL_ENABLE], e); log_step("controller enable", BC_BT_STEP_CTRL_ENABLE);
-    if (e != ESP_OK) { esp_bt_controller_deinit(); s_in_bt_init = false; init_fail(BC_BT_FAIL_CTRL_ENABLE, "controller enable failed", e); return false; }
-    e = esp_nimble_init();                            /* HCI transport buffers (ble_buf_alloc) + host; ESP_FAIL = "hci inits failed" */
-    snap(&s_init.step[BC_BT_STEP_HOST_INIT], e); log_step("HCI + host init", BC_BT_STEP_HOST_INIT);
-    if (e != ESP_OK) {
-        esp_bt_controller_disable(); esp_bt_controller_deinit();     /* as nimble_port_init does: give the controller memory back */
-        s_in_bt_init = false; init_fail(BC_BT_FAIL_HOST_INIT, "HCI init failed", e); return false;
-    }
-    s_in_bt_init = false;
+    bt_init_wdt(true);
+    bt_init_window(true);
+    esp_err_t e = stack_steps();
+    bt_init_window(false);
+    bt_init_wdt(false);
+    if (e != ESP_OK) return false;
     s_init.stack_ok = true;
     ESP_LOGI(TAG, "Bluetooth stack up: it took %d B of internal heap", (int)s_init.step[BC_BT_STEP_PRE].free_int - (int)s_init.step[BC_BT_STEP_HOST_INIT].free_int);
     return true;
 }
+static esp_err_t stack_steps(void)
+{
+    esp_bt_controller_config_t cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    esp_err_t e = esp_bt_controller_init(&cfg);
+    snap(&s_init.step[BC_BT_STEP_CTRL_INIT], e); log_step("controller init", BC_BT_STEP_CTRL_INIT);
+    if (e != ESP_OK) { init_fail(BC_BT_FAIL_CTRL_INIT, "controller init failed", e); return e; }
+    e = esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    snap(&s_init.step[BC_BT_STEP_CTRL_ENABLE], e); log_step("controller enable", BC_BT_STEP_CTRL_ENABLE);
+    if (e != ESP_OK) { esp_bt_controller_deinit(); init_fail(BC_BT_FAIL_CTRL_ENABLE, "controller enable failed", e); return e; }
+    e = esp_nimble_init();                            /* HCI transport buffers (ble_buf_alloc) + host; ESP_FAIL = "hci inits failed" */
+    snap(&s_init.step[BC_BT_STEP_HOST_INIT], e); log_step("HCI + host init", BC_BT_STEP_HOST_INIT);
+    if (e != ESP_OK) {
+        esp_bt_controller_disable(); esp_bt_controller_deinit();     /* as nimble_port_init does: give the controller memory back */
+        init_fail(BC_BT_FAIL_HOST_INIT, "HCI init failed", e); return e;
+    }
+    return ESP_OK;
+}
 
 bool ble_central_start(bool sensors)
 {
-    s_sensors_on = sensors;
-    if (s_events_ready) return true;
+    AS(s_sensors_on, sensors);
+    if (AL(s_events_ready)) return true;
     if (!ble_central_stack_init()) return false;
     if (!s_mtu_timer) {
         esp_timer_create_args_t m = { .callback = mtu_fallback_timer, .name = "ble_mtu" };
@@ -682,7 +746,7 @@ bool ble_central_start(bool sensors)
     ble_npl_event_init(&s_ev_link, link_ev, NULL);
     ble_npl_event_init(&s_ev_mtu, mtu_fallback_ev, NULL);
     ble_npl_event_init(&s_ev_req, req_ev, NULL);
-    s_events_ready = true;
+    AS(s_events_ready, true);
     ble_hs_cfg.sync_cb = on_sync;
     ble_hs_cfg.reset_cb = on_reset;
     ble_att_set_preferred_mtu(247);
@@ -690,11 +754,15 @@ bool ble_central_start(bool sensors)
     ble_link_register_gatt();                         /* phone-link service; GAP + GATT services too */
     ble_svc_gap_device_name_set("BikeComputer");
     ble_store_config_init();                          /* bonds persist in NVS (CONFIG_BT_NIMBLE_NVS_PERSIST) */
-    s_in_bt_init = true;
+    bt_init_window(true);
     nimble_port_freertos_init(host_task);             /* ESP-IDF ignores a failed task creation: checked just below */
-    s_in_bt_init = false;
+    bt_init_window(false);
     snap(&s_init.step[BC_BT_STEP_HOST_TASK], xTaskGetHandle("nimble_host") ? 0 : ESP_ERR_NO_MEM); log_step("host task", BC_BT_STEP_HOST_TASK);
-    if (!xTaskGetHandle("nimble_host")) { init_fail(BC_BT_FAIL_HOST_TASK, "no RAM for host task", ESP_ERR_NO_MEM); s_init.stack_ok = false; return false; }
+    if (!xTaskGetHandle("nimble_host")) {
+        init_fail(BC_BT_FAIL_HOST_TASK, "no RAM for host task", ESP_ERR_NO_MEM); s_init.stack_ok = false;
+        AS(s_events_ready, false);   /* rc2 (QF-19): a later call must not report a running host */
+        return false;
+    }
     s_init.result = BC_BT_OK;
     if (xTaskCreatePinnedToCore(mgr_task, "ble_mgr", 3072, NULL, 4, NULL, 0) != pdPASS)
         ESP_LOGE(TAG, "ble_mgr task not created: sensors and phone link are not paced (no reconnect ticks)");
@@ -705,7 +773,7 @@ bool ble_central_start(bool sensors)
 const ble_central_init_t *ble_central_init_info(void) { return &s_init; }
 bool ble_central_unavailable(void) { return s_init.failed; }
 
-void ble_central_enable_sensors(bool on) { s_sensors_on = on; if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req); }
+void ble_central_enable_sensors(bool on) { AS(s_sensors_on, on); if (AL(s_events_ready)) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req); }
 
 void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t addr_type, const char *name)
 {
@@ -715,20 +783,20 @@ void ble_central_set_paired(plat_sens_kind_t kind, const uint8_t mac[6], uint8_t
     r->pending = true; r->paired = mac != NULL;
     if (mac) { memcpy(r->mac, mac, 6); r->addr_type = addr_type; snprintf(r->name, sizeof r->name, "%s", name ? name : ""); }
     UNLOCK();                                         /* the link itself changes on the host task (apply_requests) */
-    if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req);
+    if (AL(s_events_ready)) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req);
 }
 
 void ble_central_set_disabled(plat_sens_kind_t kind, bool disabled)
 {
     int si = slot_of(kind); if (si < 0) return;
     LOCK(); s_req[si].set_disabled = true; s_req[si].disabled = disabled; UNLOCK();
-    if (s_events_ready) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req);
+    if (AL(s_events_ready)) ble_npl_eventq_put(nimble_port_get_dflt_eventq(), &s_ev_req);
 }
 
-void ble_central_set_standby(bool standby) { s_standby = standby; }
+void ble_central_set_standby(bool standby) { AS(s_standby, standby); }
 void ble_central_scan_for(int kind)
 {
-    s_pair_kind = kind;
+    AS(s_pair_kind, kind);
     int si = slot_of(kind);
     LOCK(); if (si >= 0) s_nfound[si] = 0; if (kind == (int)PLAT_SENS_ANY) s_nany = 0; UNLOCK();
 }
@@ -788,7 +856,7 @@ void ble_central_snapshot(plat_sensors_t *o)
         li->gaps = L[i].gaps;
         li->rejected = i == 0 ? L[0].xds.rejected + L[0].xds.short_packets : i == 1 ? L[1].hr.rejected : L[2].csc.rejected;
         if (pp->stage >= BC_STG_SUBSCRIBED && pp->stage != BC_STG_ERROR) { li->packets = pp->packets; li->rejected = pp->rejected; }
-        li->disabled = L[i].paired && (L[i].disabled || !s_sensors_on);
+        li->disabled = L[i].paired && (L[i].disabled || !AL(s_sensors_on));
     }
     UNLOCK();
     o->link[PLAT_SENS_SPEED].link = PLAT_LINK_UNSUPPORTED;

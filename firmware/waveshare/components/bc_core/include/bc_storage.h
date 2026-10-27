@@ -70,6 +70,8 @@ typedef struct {
     int probe_errno;         /* errno of the failed fopen/fwrite (0 if none) */
 } bc_stor_facts_t;
 
+/** 0.7.4: any erased or malformed root entry (partial damage included): never write into such a directory. */
+bool bc_stor_root_damaged(const bc_stor_facts_t *f);
 /** Decide the category from the facts (pure; the same input always gives the same answer). */
 bc_stor_state_t bc_stor_classify(const bc_stor_facts_t *f);
 /** One line for the serial log / Device Health / reports, e.g.
