@@ -743,7 +743,18 @@ enum AdaptationEngine {
         let repsText = Set(plannedReps).count == 1 ? "\(plannedReps.count) × \(plannedReps[0])" : plannedReps.map(String.init).joined(separator: "/")
         let rpeText = rpes.compactMap { $0 }.map(String.init).reversed().joined(separator: " and ")
         let u = input.units
-        if last2.allSatisfy({ complete($0.0, $0.1) }), rpes.allSatisfy({ ($0 ?? 99) <= AdaptiveRules.progressionMaxRPE }) {
+        // harness P30 (run s10): the evidence must be at the CURRENT prescription — both sessions lifted at least the weight
+        // and the reps now planned — as in the planner (audit G-02: "two sessions in a row at that weight"). Without it a
+        // routine went up one step after every session (goblet squat 12 → 19 kg in three weeks, one session at each weight).
+        let nowTop = e.sets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
+        let nowReps = e.sets.map { $0.reps }.min() ?? 0
+        func atCurrent(_ x: ExerciseEntry) -> Bool {
+            if let c = nowTop, c > 0 {
+                guard let w = x.doneSets.compactMap({ $0.bodyweight ? nil : $0.weightKg }).max(), w + 0.01 >= c else { return false }
+            }
+            return (x.doneSets.map { $0.reps }.min() ?? 0) >= nowReps
+        }
+        if last2.allSatisfy({ complete($0.0, $0.1) && atCurrent($0.1) }), rpes.allSatisfy({ ($0 ?? 99) <= AdaptiveRules.progressionMaxRPE }) {
             let evidence = "You completed every planned set of \(e.name) (\(repsText)) on \(dates) at RPE \(rpeText) — 8 or less both times."
             let currentTop = e.sets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
             let ownsIt = known.map { input.equipment.hasEquipment(for: $0) } ?? true

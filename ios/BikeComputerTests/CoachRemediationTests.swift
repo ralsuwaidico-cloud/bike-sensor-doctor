@@ -329,6 +329,24 @@ final class CoachRemediationTests: XCTestCase {
         XCTAssertNotNil(decide(logs(workoutMode: false, sets: 3)))
     }
 
+    /// Harness P30 / X21 (run s10): a routine's load (or reps) goes up only after two sessions at the CURRENT prescription,
+    /// as in the planner (G-02) — never after every session (goblet squat went 12 → 19 kg in three weeks).
+    func testRoutineProgressesOnlyAfterTwoSessionsAtTheCurrentWeight() {
+        let bench = catalogue[2]
+        let t = WorkoutTemplate(name: "Push", focus: .push, entries: [ExerciseEntry(exercise: bench, sets: (0..<3).map { _ in SetEntry(reps: 8, weightKg: 60) })], updatedAt: Date(timeIntervalSince1970: 0))
+        var w = Workout(date: day(2, hour: 8), kind: .strength, minutes: 45, strengthFocus: .push); w.templateId = t.id
+        func decide(_ kgs: [Double], reps: [Int] = [8, 8]) -> PlanAdjustment? {
+            let ls = zip(zip([3, 6], kgs), reps).map { (dk, r) -> StrengthSession in var l = log(dk.0, bench, reps: [r, r, r], kg: dk.1, rpe: 7); l.templateId = t.id; return l }
+            let p = profile()
+            let inp = AdaptationInput(profile: p, plan: [w], rides: [], strength: ls, availability: WeeklyAvailability.suggested(for: p), equipment: EquipmentProfile(owned: ["barbell", "bench"]), catalogue: catalogue, templates: [t], originalEntries: [w.id: t.prefilled(from: ls.first)], now: now, calendar: cal)
+            return AdaptationEngine.strengthDecision(t.prefilled(from: ls.first)[0], session: w, input: inp)
+        }
+        XCTAssertNil(decide([62.5, 60]), "one session at the new weight is not yet evidence")
+        XCTAssertEqual(decide([62.5, 62.5])?.category, .progression)
+        XCTAssertNil(decide([60, 60], reps: [9, 8]), "one session at the new rep count is not yet evidence")
+        XCTAssertEqual(decide([62.5, 65])?.category, .progression, "a heavier earlier session still counts")
+    }
+
     func testRidesGeneratedBeforeABreakOrTheScreenAreCappedAtRefresh() {
         let d = FileManager.default.temporaryDirectory.appendingPathComponent("remediation-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
