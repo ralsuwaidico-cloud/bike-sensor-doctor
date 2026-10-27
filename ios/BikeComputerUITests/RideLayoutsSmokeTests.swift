@@ -11,7 +11,7 @@ final class RideLayoutsSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.rideDayStore()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "seeded rider lands on Home")
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5), "seeded rider lands on Home")
 
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
@@ -65,7 +65,7 @@ final class RideLayoutsSmokeTests: XCTestCase {
         let set = "{\"id\":\"\(UUID().uuidString)\",\"reps\":10,\"weightKg\":20,\"bodyweight\":false,\"unilateral\":false,\"done\":true}"
         return """
         {"schema":1,
-         "profile":{"name":"Rashed","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
+         "profile":{"name":"Rider A","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
                     "sports":["roadCycling","strength"],"version":14,"updatedAt":"2026-10-25T20:00:00Z","wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR",
                     "trainingMode":"hybrid","priority":"balanced","cyclingDaysPerWeek":3,"liftDaysPerWeek":3,"liftingHoursPerWeek":2,"preferredDays":[1,3,5,6]},
          "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"],"appearance":"system","backgroundNotice":true,"coachTalk":"normal","coachEnabled":true,"appleHealthImportWorkouts":false},

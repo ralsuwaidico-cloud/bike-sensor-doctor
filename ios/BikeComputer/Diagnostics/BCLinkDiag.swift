@@ -52,12 +52,14 @@ extension BCLink {
         var code: UInt8 = 0
         /// 4 busy: more than 4 requests outstanding OR a ride is recording on the board (firmware 0.7.3 final).
         /// 5 linkTooSmall: the negotiated ATT MTU leaves no room for one data byte — not retried.
-        enum Code: UInt8 { case unknownId = 1, badOffset = 2, storageReadError = 3, busy = 4, linkTooSmall = 5 }
+        /// 6 crcMismatch: Link 1.3 RIDEQ_ERR only — the board's CRCs differ from the RIDEQ_ACK's (BLE_CONTRACT.md v1.1 §6).
+        enum Code: UInt8 { case unknownId = 1, badOffset = 2, storageReadError = 3, busy = 4, linkTooSmall = 5, crcMismatch = 6 }
         var known: Code? { Code(rawValue: code) }
         var text: String {
             switch known {
             case .unknownId: return "the board no longer has this report"; case .badOffset: return "bad offset"; case .storageReadError: return "board storage read error"
-            case .busy: return "board busy"; case .linkTooSmall: return "the Bluetooth link is too small for report transfer"; case nil: return "error \(code)"
+            case .busy: return "board busy"; case .linkTooSmall: return "the Bluetooth link is too small for report transfer"
+            case .crcMismatch: return "the board's checksum does not match"; case nil: return "error \(code)"
             }
         }
     }

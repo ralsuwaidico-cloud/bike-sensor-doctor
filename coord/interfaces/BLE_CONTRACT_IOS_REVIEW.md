@@ -66,3 +66,20 @@ firmware yet, so every iOS vector is a **contract vector** built by hand from th
 - STORAGE_CLEAN_REQ carries only bits 0–2 and is sent only after the rider confirms a dialog that lists what stays.
 - COACH_PLAN is resent on every new connection (the board keeps it in RAM only); a new `workout_id` is used whenever the
   segments change; COACH_END once per workout.
+
+## 5. Round 2 — contract v1.1/v1.2 and the firmware fixture (27 Oct 2026)
+
+All 14 answers adopted in Cyclift (`ios/phonefirst-dev`): summary CRC over SYNC_RIDE bytes 8…end, 0xFFFF open-ended last
+segment, RIDEQ_ERR 6 (ACK not confirmed → ride kept, shown), cleanup allowed for 0/1/6 only, samples grammar (`J1` header
+skipped, `-1` = no data, `-` = paused second, cumulative distance, torn last line ignored), RAM-only rides (bit4) imported
+first and shown as at risk, duplicate check also on `start_epoch_s` (v1.2 residual). Lead decision: when the phone coach
+coaches on heart rate (power unverified) the board gets the same heart-rate targets.
+
+Firmware fixture `link13_fw_fixture.json` (30 entries) cross-checked in `Link13FirmwareFixtureTests`: every board → phone
+vector decodes and re-encodes byte-identically, every phone → board vector is produced byte-identically by Cyclift, the
+SYNC_RIDE of ride 23 re-encodes byte-identically and its CRC equals `summary_crc32`, and the ride-queue engine fed the
+firmware's bytes sends exactly the firmware's RIDEQ_ACK. Notes for the firmware agent:
+- `coach_state_keepalive` (id + seq only): `bc_cm_state` replaces the whole stored state, so applying it would blank the
+  board's targets. Cyclift never sends that form; its keepalive is the full state with a newer seq. Suggest the contract
+  says so (or the board merges only the tags present).
+- LIVE `15 bt_flags` is left out when 0 — fine ("absent = none"), noted only because §4 lists it as always sent.

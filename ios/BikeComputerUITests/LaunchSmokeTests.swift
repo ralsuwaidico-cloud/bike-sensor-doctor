@@ -20,7 +20,7 @@ final class LaunchSmokeTests: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build24Store()
         app.launch()
         // Home: the navigation title carries the rider's name from the seeded profile
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5),
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5),
                       "an existing rider must land on Home, not crash or see onboarding")
         Self.tapAllTabs(app)
     }
@@ -31,7 +31,7 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build30Store()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5))
         Self.tapAllTabs(app)
     }
 
@@ -57,7 +57,7 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build36Store()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5))
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         XCTAssertTrue(centre.label.contains("Train now"), "a strength day must say Train now, got \(centre.label)")
@@ -79,7 +79,7 @@ final class LaunchSmokeTests: XCTestCase {
         let seededDay = Calendar.current.startOfDay(for: Date())     // the seed puts the routine on TODAY
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build40Store()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5))
         // The app draws its own tab bar (raised centre button), so there is no system TabBar to index into.
         let profileTab = app.buttons["Profile"].firstMatch
         XCTAssertTrue(profileTab.waitForExistence(timeout: 10), "Profile tab missing")
@@ -119,7 +119,7 @@ final class LaunchSmokeTests: XCTestCase {
 
         // data preserved: still onboarded, same rider, today's routine still scheduled
         app.buttons["Home"].firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 10), "Cancel must keep the profile")
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 10), "Cancel must keep the profile")
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         // run 71 crossed midnight during this test: the next day of the seeded week is a ride day ("Ride now")
@@ -173,7 +173,7 @@ final class LaunchSmokeTests: XCTestCase {
         let set = "{\"id\":\"\(UUID().uuidString)\",\"reps\":10,\"weightKg\":20,\"bodyweight\":false,\"unilateral\":false,\"done\":true}"
         return """
         {"schema":1,
-         "profile":{"name":"Rashed","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
+         "profile":{"name":"Rider A","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
                     "sports":["roadCycling","strength"],"version":14,"updatedAt":"2026-10-25T20:00:00Z","wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR",
                     "trainingMode":"hybrid","priority":"balanced","cyclingDaysPerWeek":3,"liftDaysPerWeek":3,"liftingHoursPerWeek":2,"preferredDays":[1,3,5,6]},
          "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"],"appearance":"system","backgroundNotice":true,"coachTalk":"normal","coachEnabled":true,"appleHealthImportWorkouts":false},
@@ -199,7 +199,7 @@ final class LaunchSmokeTests: XCTestCase {
         }
         return """
         {"schema":1,
-         "profile":{"name":"Rashed","goal":"endurance","hoursPerWeek":6,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
+         "profile":{"name":"Rider A","goal":"endurance","hoursPerWeek":6,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
                     "sports":["roadCycling","strength"],"version":9,"updatedAt":"2026-10-25T08:00:00Z","gender":null,"wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR"},
          "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"],"appearance":"system","backgroundNotice":true,"coachTalk":"normal","coachEnabled":true},
          "plan":[\(plan.joined(separator: ","))],
@@ -227,7 +227,7 @@ final class LaunchSmokeTests: XCTestCase {
         for t in 0..<120 { samples.append("{\"t\":\(t),\"w\":\(150 + (t % 20)),\"cad\":\(85 + (t % 5)),\"hr\":\(130 + (t % 10)),\"speedCms\":\(700 + (t % 30))}") }
         return """
         {"schema":1,
-         "profile":{"name":"Rashed","goal":"endurance","hoursPerWeek":6,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered",
+         "profile":{"name":"Rider A","goal":"endurance","hoursPerWeek":6,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered",
                     "hrPrefWatchFirst":true,"birthYear":1988,"sports":["roadCycling"],"version":4,"updatedAt":"2026-10-24T20:00:00Z"},
          "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"]},
          "plan":[\(plan.joined(separator: ","))],
@@ -247,7 +247,7 @@ final class LaunchSmokeTests: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build33Store()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.state, .runningForeground)
         // Plan → Days editor (per-day assignments) opens and closes
         app.buttons["Plan"].firstMatch.tap()
@@ -300,7 +300,7 @@ final class LaunchSmokeTests: XCTestCase {
         let logDate = cal.date(byAdding: .day, value: -3, to: today)!.addingTimeInterval(18 * 3600)
         return """
         {"schema":1,
-         "profile":{"name":"Rashed","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
+         "profile":{"name":"Rider A","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,
                     "sports":["roadCycling","strength"],"version":12,"updatedAt":"2026-10-25T10:00:00Z","wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR",
                     "trainingMode":"hybrid","priority":"balanced","cyclingDaysPerWeek":3,"liftDaysPerWeek":3,"liftingHoursPerWeek":2,"preferredDays":[1,3,5,6]},
          "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"],"appearance":"system","backgroundNotice":true,"coachTalk":"normal","coachEnabled":true,"appleHealthImportWorkouts":false},

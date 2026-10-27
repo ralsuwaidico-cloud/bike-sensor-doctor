@@ -205,7 +205,7 @@ final class RoutinesTests: XCTestCase {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let tid = UUID().uuidString, wid = UUID().uuidString
         let json = """
-        {"schema":1,"profile":{"name":"Rashed","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,"version":12,"updatedAt":"2026-10-25T10:00:00Z","trainingMode":"hybrid","priority":"balanced","cyclingDaysPerWeek":3,"liftDaysPerWeek":3,"liftingHoursPerWeek":2},
+        {"schema":1,"profile":{"name":"Rider A","goal":"fitness","hoursPerWeek":5,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","birthYear":1988,"version":12,"updatedAt":"2026-10-25T10:00:00Z","trainingMode":"hybrid","priority":"balanced","cyclingDaysPerWeek":3,"liftDaysPerWeek":3,"liftingHoursPerWeek":2},
          "settings":{"units":"metric","phoneOnlyMode":false,"hrPref":"watch","keepScreenOn":true,"autoConnectBoard":true,"enabledConnections":["board","watch"]},
          "plan":[{"id":"\(wid)","date":"2026-10-27T07:00:00Z","kind":"strength","minutes":45,"done":false,"skipped":false,"note":"","edited":true,"strengthFocus":"lower","sequence":0,"fixed":true}],
          "rides":[],"tiles":["power","cadence","hr","speed","time","dist"],"onboarded":true,"guest":true,"createdAt":"2026-10-24T10:00:00Z","boardSync":[{"boardId":"02:00:00:c1:f7:01","ackedVersion":9,"ackedAt":"2026-10-25T09:00:00Z","confirmed":true,"boardFirmware":"0.6.0","settingsVersion":2}],

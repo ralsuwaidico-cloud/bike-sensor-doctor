@@ -116,12 +116,17 @@ final class RideQueueTransfer {
     private func gotListEnd(now: Date) {
         guard phase == .listing else { return }
         outstanding = nil; timeouts = 0; queue = []
-        for i in listed.sorted(by: { $0.rideId < $1.rideId }) {
+        // RAM-only rides first (lost if the board powers off), then oldest first
+        for i0 in listed.sorted(by: { ($0.ramOnly ? 0 : 1, $0.rideId) < ($1.ramOnly ? 0 : 1, $1.rideId) }) {
+            var i = i0
+            // a summary-only / RAM-only ride has no samples; its samples_crc32 is ignored by the board (v1.1 §6)
+            if i.summaryOnly || i.ramOnly { i.samplesSize = 0; i.samplesCrc32 = CRC32.ieee(Data()) }
             if i.state == .recording { holds[i.rideId] = .recording; continue }
             guard i.needsImport else { holds[i.rideId] = nil; continue }
             if i.demo { holds[i.rideId] = .demo; continue }               /* demo rides are not training history: never imported, never ACKed */
             if let m = store.meta(boardId, i.rideId) {
-                if m.samplesCrc32 != i.samplesCrc32 || m.samplesSize != i.samplesSize { holds[i.rideId] = .conflict; continue }   /* same number, other data: keep both, ACK nothing */
+                // same number, other data (or another start time: ids can repeat on a board with no persistent memory, v1.2): keep both, ACK nothing
+                if m.samplesCrc32 != i.samplesCrc32 || m.samplesSize != i.samplesSize || (m.startEpochS != 0 && i.startEpochS != 0 && m.startEpochS != i.startEpochS) { holds[i.rideId] = .conflict; continue }
                 if m.historyRideId == nil { retryDelivery(m) } else { ackIfVerified(i, m) }
             } else if (crcFailures[i.rideId] ?? 0) <= config.maxCrcRetries {
                 queue.append(i)
@@ -200,6 +205,13 @@ final class RideQueueTransfer {
         issue(list: false, now: now)
     }
     private func gotErr(_ e: BCLink.RideQueueErr, now: Date) {
+        // v1.1: RIDEQ_ERR 6 answers a RIDEQ_ACK whose CRCs differ from the board's; the board keeps the ride unsynced
+        if e.known == .crcMismatch {
+            if var m = store.meta(boardId, e.reportId), m.acked { m.acked = false; store.save(m) }
+            holds[e.reportId] = .failed("the board's checksum does not match the ride saved in Cyclift")
+            lastError = "Ride \(e.reportId): the BikeComputer did not confirm it (checksum differs); it stays on the board."
+            onChange?(); return
+        }
         if phase == .listing {
             outstanding = nil
             if e.known != .busy { readErrors += 1; if readErrors > config.maxReadErrorRetries { lastError = "The BikeComputer could not list its rides (\(e.text))."; pause(); return } }
@@ -212,7 +224,7 @@ final class RideQueueTransfer {
         case .badOffset: restart(i, now: now, reason: "bad offset")
         case .busy: scheduled = (false, now.addingTimeInterval(config.busyDelay))       /* a ride is recording on the board */
         case .linkTooSmall: lastError = "The Bluetooth link is too small to transfer rides; they stay on the BikeComputer."; pause()
-        case .storageReadError, nil:
+        case .storageReadError, .crcMismatch, nil:
             readErrors += 1
             if readErrors > config.maxReadErrorRetries { lastError = "The BikeComputer could not read ride \(id) (\(e.text)); it is kept there."; holds[id] = .failed(e.text); next(now: now) }
             else { scheduled = (false, now.addingTimeInterval(config.readErrorDelay)) }

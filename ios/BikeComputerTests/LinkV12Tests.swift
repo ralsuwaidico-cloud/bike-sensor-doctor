@@ -21,9 +21,9 @@ final class LinkV12Tests: XCTestCase {
     }
 
     func testWiFiScanResultWithCurlyApostrophe() {
-        let d = Data(bytes("61 00 05 00 00 00 00 00 01 11 52 61 73 68 65 64 E2 80 99 73 20 69 50 68 6F 6E 65 02 01 C2 03 01 01 04 01 06 05 01 00"))
+        let d = Data(bytes("61 00 05 00 00 00 00 00 01 11 52 69 64 65 72 41 E2 80 99 73 20 69 50 68 6F 6E 65 02 01 C2 03 01 01 04 01 06 05 01 00"))
         let n = BCLink.decodeWiFiScanResult(d)
-        XCTAssertEqual(n?.ssid, "Rashed’s iPhone")          // U+2019, matched byte-exact, never replaced by '
+        XCTAssertEqual(n?.ssid, "RiderA’s iPhone")          // U+2019, matched byte-exact, never replaced by '
         XCTAssertEqual(n?.rssi, -62); XCTAssertEqual(n?.secured, true); XCTAssertEqual(n?.channel, 6); XCTAssertEqual(n?.saved, false)
         let e = BCLink.decodeWiFiScanEnd(Data(bytes("62 00 06 00 00 00 00 00 01 01 03 02 01 00")))
         XCTAssertEqual(e?.count, 3); XCTAssertEqual(e?.err, 0); XCTAssertNil(e?.errorText)
@@ -43,13 +43,13 @@ final class LinkV12Tests: XCTestCase {
     func testProfileVectors() {
         XCTAssertEqual([UInt8](BCLink.encodeProfileGet(seq: 1, tMs: 0)!), bytes("70 00 01 00 00 00 00 00"))
         var p = BCLink.ProfileMessage()
-        p.version = 1; p.updatedEpochS = 1792850100; p.name = "Rashed"; p.ftpW = 250; p.ftpHow = 1; p.weightKgX10 = 780; p.birthYear = 1990
+        p.version = 1; p.updatedEpochS = 1792850100; p.name = "RiderA"; p.ftpW = 250; p.ftpHow = 1; p.weightKgX10 = 780; p.birthYear = 1990
         p.maxHR = 186; p.restHR = 52; p.units = 0; p.hoursPerWeek = 6; p.level = 2; p.goal = 1; p.lthr = 170
-        let expected = bytes("71 00 02 00 00 00 00 00 01 04 01 00 00 00 02 04 B4 B8 DC 6A 03 06 52 61 73 68 65 64 04 02 FA 00 05 01 01 06 02 0C 03 07 02 C6 07 08 01 BA 09 01 34 0A 01 00 0B 01 06 0C 01 02 0D 01 01 0E 01 AA")
+        let expected = bytes("71 00 02 00 00 00 00 00 01 04 01 00 00 00 02 04 B4 B8 DC 6A 03 06 52 69 64 65 72 41 04 02 FA 00 05 01 01 06 02 0C 03 07 02 C6 07 08 01 BA 09 01 34 0A 01 00 0B 01 06 0C 01 02 0D 01 01 0E 01 AA")
         XCTAssertEqual([UInt8](BCLink.encodeProfileSet(p, seq: 2, tMs: 0)!), expected)
         // the same bytes decode back (0 values for birth/max/rest/lthr become nil)
         let back = BCLink.decodeProfile(Data(expected))
-        XCTAssertEqual(back?.name, "Rashed"); XCTAssertEqual(back?.ftpW, 250); XCTAssertEqual(back?.weightKgX10, 780); XCTAssertEqual(back?.birthYear, 1990)
+        XCTAssertEqual(back?.name, "RiderA"); XCTAssertEqual(back?.ftpW, 250); XCTAssertEqual(back?.weightKgX10, 780); XCTAssertEqual(back?.birthYear, 1990)
         XCTAssertEqual(back?.lthr, 170); XCTAssertEqual(back?.level, 2); XCTAssertEqual(back?.goal, 1)
         var zero = p; zero.birthYear = 0; zero.maxHR = 0
         let z = BCLink.decodeProfile(BCLink.encodeProfileSet(zero, seq: 1, tMs: 0)!)
@@ -61,7 +61,7 @@ final class LinkV12Tests: XCTestCase {
     }
 
     func testRiderProfileMapsToLinkMessageAndBack() {
-        var r = RiderProfile(); r.name = "Rashed"; r.ftpW = 250; r.ftpHow = .entered; r.weightKg = 78; r.birthYear = 1990; r.maxHR = 186; r.restHR = 52
+        var r = RiderProfile(); r.name = "RiderA"; r.ftpW = 250; r.ftpHow = .entered; r.weightKg = 78; r.birthYear = 1990; r.maxHR = 186; r.restHR = 52
         r.hoursPerWeek = 6; r.level = .advanced; r.goal = .endurance; r.lthr = 170; r.version = 1; r.updatedAt = Date(timeIntervalSince1970: 1792850100)
         let m = r.linkMessage(units: .metric)
         XCTAssertEqual(m.version, 1); XCTAssertEqual(m.weightKgX10, 780); XCTAssertEqual(m.level, 2); XCTAssertEqual(m.goal, 1); XCTAssertEqual(m.ftpHow, 1)
@@ -70,7 +70,7 @@ final class LinkV12Tests: XCTestCase {
         r.goal = .stronger; XCTAssertEqual(r.linkMessage(units: .imperial).goal, 0); XCTAssertEqual(r.linkMessage(units: .imperial).units, 1)
         XCTAssertEqual(RiderProfile.Goal.from(linkCode: 3), .event); XCTAssertEqual(RiderProfile.Level.from(linkCode: 9), .advanced)
         // differences: only fields the board reports; identical → none
-        var b = m; b.ftpW = 230; b.name = "Rashed"
+        var b = m; b.ftpW = 230; b.name = "RiderA"
         let diffs = r.differences(from: b, units: .metric)
         XCTAssertEqual(diffs.map { $0.field }, ["FTP", "Goal"])   // goal: phone .stronger shows as fitness vs board endurance
         r.goal = .endurance

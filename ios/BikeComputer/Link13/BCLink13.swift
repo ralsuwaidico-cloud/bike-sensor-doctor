@@ -288,13 +288,17 @@ extension BCLink {
         var samplesCrc32: UInt32 = 0
         var startEpochS: UInt32 = 0          /* 0 = unknown */
         var durationS: UInt32 = 0
-        var flags: UInt8 = 0                 /* bit0 demo, bit1 recovered after a crash, bit2 samples truncated, bit3 summary only */
+        /// bit0 reserved (v1.1: demo rides are never listed), bit1 recovered after a crash, bit2 samples truncated, bit3 summary
+        /// only, bit4 RAM only (board storage damaged: the summary is held in RAM until power-off, no samples)
+        var flags: UInt8 = 0
         var summaryCrc32: UInt32 = 0
         var state: RideQueueState? { RideQueueState(rawValue: stateRaw) }
         var demo: Bool { flags & 0x01 != 0 }
         var recovered: Bool { flags & 0x02 != 0 }
         var truncated: Bool { flags & 0x04 != 0 }
         var summaryOnly: Bool { flags & 0x08 != 0 }
+        /// At risk: lost if the BikeComputer powers off before Cyclift saves it.
+        var ramOnly: Bool { flags & 0x10 != 0 }
         /// The board still holds it as unsynced (closed or mid-transfer): Cyclift must import it.
         var needsImport: Bool { state == .closedUnsynced || state == .transferring }
     }

@@ -137,7 +137,7 @@ final class ModelTests: XCTestCase {
     func testStoreRoundTripSurvivesRelaunch() {
         let dir = tempDir()
         let s1 = Store(directory: dir, generatePlan: true)
-        s1.profile.name = "Rashed"; s1.profile.ftpW = 231; s1.profile.ftpHow = .entered
+        s1.profile.name = "Rider A"; s1.profile.ftpW = 231; s1.profile.ftpHow = .entered
         s1.settings.units = .imperial; s1.settings.phoneOnlyMode = true
         s1.onboarded = true; s1.guest = false; s1.appleUserId = "001.abc"
         var r = RideRecord(start: Date(timeIntervalSince1970: 1_761_300_000), durationS: 3600, distanceM: 25000, avgPower: 200, recorder: .board, sources: ["BikeComputer", "XDS"])
@@ -146,7 +146,7 @@ final class ModelTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: dir.appendingPathComponent("store.json").path))
 
         let s2 = Store(directory: dir, generatePlan: false)
-        XCTAssertEqual(s2.profile.name, "Rashed"); XCTAssertEqual(s2.profile.ftpW, 231); XCTAssertEqual(s2.profile.ftpHow, .entered)
+        XCTAssertEqual(s2.profile.name, "Rider A"); XCTAssertEqual(s2.profile.ftpW, 231); XCTAssertEqual(s2.profile.ftpHow, .entered)
         XCTAssertEqual(s2.settings.units, .imperial); XCTAssertTrue(s2.settings.phoneOnlyMode)
         XCTAssertTrue(s2.onboarded); XCTAssertFalse(s2.guest); XCTAssertEqual(s2.appleUserId, "001.abc")
         XCTAssertEqual(s2.rides.count, 1); XCTAssertEqual(s2.rides[0].samples.first?.lat, 25.2); XCTAssertEqual(s2.rides[0].boardRideId, 12)

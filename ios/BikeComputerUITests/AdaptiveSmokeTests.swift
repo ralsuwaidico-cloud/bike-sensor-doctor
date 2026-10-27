@@ -11,7 +11,7 @@ final class AdaptiveSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = LaunchSmokeTests.build40Store()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "seeded rider lands on Home")
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5), "seeded rider lands on Home")
 
         // Home › Log strength (the hybrid coach card) → quick log for today's session
         let log = app.buttons["Log strength"].firstMatch
@@ -36,7 +36,7 @@ final class AdaptiveSmokeTests: XCTestCase {
         let done = app.buttons["adjustmentsDone"].firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         done.tap()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 10) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "back on Home")
+        XCTAssertTrue(app.navigationBars["Hi Rider A"].waitForExistence(timeout: 10) || app.staticTexts["Hi Rider A"].waitForExistence(timeout: 5), "back on Home")
         XCTAssertEqual(app.state, .runningForeground)
     }
 }

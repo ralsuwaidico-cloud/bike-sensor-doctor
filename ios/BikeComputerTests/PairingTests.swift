@@ -48,14 +48,14 @@ final class PairingTests: XCTestCase {
     }
 
     func testProfileValidationMirrorsTheBoardRanges() {
-        var p = RiderProfile(); p.name = "Rashed"; p.ftpW = 210; p.weightKg = 82; p.birthYear = 1988; p.maxHR = 185; p.restHR = 52; p.lthr = 165; p.hoursPerWeek = 6
+        var p = RiderProfile(); p.name = "Rider A"; p.ftpW = 210; p.weightKg = 82; p.birthYear = 1988; p.maxHR = 185; p.restHR = 52; p.lthr = 165; p.hoursPerWeek = 6
         XCTAssertTrue(p.linkValidationIssues().isEmpty)
         p.ftpW = 999; XCTAssertEqual(p.linkValidationIssues(), ["FTP must be 50–600 W"])
         p.ftpW = 210; p.restHR = 190; XCTAssertTrue(p.linkValidationIssues().contains("Resting heart rate must be below max heart rate"))
         p.restHR = 52; p.weightKg = 20; XCTAssertEqual(p.linkValidationIssues().first, "Weight must be 30–200 kg")
         p.weightKg = 82; p.name = ""; XCTAssertEqual(p.linkValidationIssues().first, "Name must be 1–24 characters")
         p.name = String(repeating: "x", count: 25); XCTAssertEqual(p.linkValidationIssues().count, 1)
-        p.name = "Rashed"; p.hoursPerWeek = 41; XCTAssertEqual(p.linkValidationIssues(), ["Hours per week must be 40 or fewer"])
+        p.name = "Rider A"; p.hoursPerWeek = 41; XCTAssertEqual(p.linkValidationIssues(), ["Hours per week must be 40 or fewer"])
     }
 
     func testSyncRecordPersistsLastSuccessfulSync() {

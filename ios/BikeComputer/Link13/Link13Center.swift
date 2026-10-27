@@ -29,6 +29,8 @@ final class Link13Center: ObservableObject {
     private var timer: Timer?
     private var seq: UInt16 = 0
     var onLog: ((String) -> Void)?
+    /// RIDEQ_INFO flags bit4 (v1.1): the board's storage is damaged and the ride exists only in its memory.
+    static let ramOnlyWarning = "Only in the BikeComputer's memory: lost if the board powers off before Cyclift saves it. Keep the board on and connected."
 
     init(rideStore: BoardRideQueueStore = BoardRideQueueStore(root: BoardRideQueueStore.defaultRoot())) {
         self.rideStore = rideStore
@@ -213,13 +215,13 @@ enum CoachMirrorAdapter {
         }
     }
     /// nil when the phone coach is off (nothing to mirror). Same inputs RideCoach.configure uses.
-    static func input(workout: Workout?, profile p: RiderProfile, settings s: AppSettings) -> CoachPlanInput? {
+    static func input(workout: Workout?, profile p: RiderProfile, settings s: AppSettings, powerTrusted: Bool) -> CoachPlanInput? {
         guard s.coachEnabled else { return nil }
         let ride = workout.flatMap { $0.kind.isRide ? $0 : nil }
         let maxHR = max(100, p.estimatedMaxHR)
         let zones = p.hrZones.map { z -> ClosedRange<Int> in let lo = z.lo == 0 ? Int(Double(maxHR) * 0.5) : z.lo; let hi = max(lo, z.hi ?? maxHR); return lo...hi }
         return CoachPlanInput(sessionKey: ride?.id.uuidString, name: ride?.kind.title ?? "Free ride", type: type(ride?.kind), zone: min(5, max(1, ride?.kind.zone ?? 2)),
-                              plannedSec: ride.map { $0.minutes * 60 }, intervals: RideCoach.intervalPlan(for: ride), ftpW: p.ftpW, ftpKnown: p.ftpHow != .assumed,
+                              plannedSec: ride.map { $0.minutes * 60 }, intervals: RideCoach.intervalPlan(for: ride), ftpW: p.ftpW, ftpKnown: p.ftpHow != .assumed, powerTrusted: powerTrusted,
                               hrZones: zones, cadLo: p.cadenceLow, cadHi: p.cadenceHigh)
     }
     /// The HR source the phone coach is using right now, as bc_src_t. Board HR keeps the board's own source byte (a

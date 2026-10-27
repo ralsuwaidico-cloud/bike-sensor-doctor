@@ -3,7 +3,7 @@ import Network
 import HealthKit
 import Combine
 
-/// Status colours for the Connections dashboard. Rules (Rashed, 24 Oct):
+/// Status colours for the Connections dashboard. Rules (owner, 24 Oct):
 ///  green  = connected and working · red "!" = disconnected / missing / needs attention, ONLY for connections the rider
 ///  enabled or the chosen ride configuration requires · amber = connecting / stale / limited · gray = optional, not set up
 ///  or deliberately off. Pure functions so the rules are unit-tested.

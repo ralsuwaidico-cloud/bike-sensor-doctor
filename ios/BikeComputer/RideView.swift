@@ -70,7 +70,7 @@ struct RideTabView: View {
         let hr = CoachMirrorAdapter.hrSource(hub: hub, boardLive: boardLive)
         let live = CoachLiveInput(elapsedS: recorder.elapsedS, session: CoachMirrorAdapter.session(recorder), cue: coach.cue.type, cueAction: coach.cue.action,
                                   cueActive: coach.cueActive && recorder.state == .running, cueShort: coach.cue.short, hrSource: hr.src, hrLive: hr.live)
-        link13.coachTick(plan: CoachMirrorAdapter.input(workout: store.today, profile: store.profile, settings: store.settings), live: live,
+        link13.coachTick(plan: CoachMirrorAdapter.input(workout: store.today, profile: store.profile, settings: store.settings, powerTrusted: powerTrusted), live: live,
                          boardOwnsRide: recorder.owner == .board && (recorder.isActive || recorder.state == .ended), phoneOwnsRide: recorder.owner == .phone && (recorder.isActive || recorder.state == .ended))
     }
     private func panelModel(_ l: RideLive) -> CoachPanelModel {

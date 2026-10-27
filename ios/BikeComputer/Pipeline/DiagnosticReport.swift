@@ -125,7 +125,7 @@ struct DiagnosticReport: Codable {
         let all = NSRange(t.startIndex..., in: t)
         t = email.stringByReplacingMatches(in: t, range: all, withTemplate: "<e-mail removed>")
         t = mac.stringByReplacingMatches(in: t, range: NSRange(t.startIndex..., in: t), withTemplate: "<address removed>")
-        // longest first so "Rashed’s HRM" goes before "Rashed"
+        // longest first so "RiderA’s HRM" goes before "RiderA"
         for p in personal.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }).filter({ $0.count >= 2 }).sorted(by: { $0.count > $1.count }) {
             t = t.replacingOccurrences(of: p, with: "<removed>", options: [.caseInsensitive])
             // the same string as JSON escapes it

@@ -104,7 +104,12 @@ struct BoardStorageView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Ride \(r.rideId)" + (r.startEpochS > 0 ? " · \(Date(timeIntervalSince1970: TimeInterval(r.startEpochS)).formatted(date: .abbreviated, time: .shortened))" : "")).font(.subheadline)
                     Text(holdText(r)).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if r.ramOnly && r.needsImport {
+                        Label(Link13Center.ramOnlyWarning, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption2).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
+                .accessibilityElement(children: .combine)
             }
             if let e = link13.rideError { Text(e).font(.caption2).foregroundStyle(BC.stale) }
         } header: { Text("Offline rides") } footer: { Text("Rides recorded without the phone are copied to Cyclift, checked, and only then released on the board. A ride that is not in Cyclift is never deleted.") }
@@ -163,6 +168,12 @@ struct Link13StatusSection: View {
                 if !link13.coachStatus.isEmpty { LabeledContent("Coach on the BikeComputer", value: link13.coachStatus) }
                 if link13.session.rideQueue {
                     LabeledContent("Offline rides waiting", value: "\(link13.unsyncedOnBoard)")
+                    let atRisk = link13.boardRides.filter { $0.ramOnly && $0.needsImport }.count
+                    if atRisk > 0 {
+                        Label("\(atRisk) ride\(atRisk == 1 ? "" : "s") at risk. " + Link13Center.ramOnlyWarning, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("link13RidesAtRisk")
+                    }
                 }
                 NavigationLink { BoardStorageView() } label: { Label("Storage", systemImage: "internaldrive") }.accessibilityIdentifier("boardStorageLink")
             } header: { Text("Phone-first link") } footer: {

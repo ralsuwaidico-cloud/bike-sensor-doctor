@@ -130,20 +130,33 @@ final class BoardRideQueueStore {
     private static let decoder: JSONDecoder = { let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601; return d }()
 }
 
-/// The board's per-second samples file (`rides/r####.txt`, BLE_CONTRACT.md §6): one text line per ride second,
-/// `power cadence hr distance_m`, a line "-" = a paused second. Parsed tolerantly: "-" for a single field = no value,
-/// "\r" ignored, blank lines and lines starting with "#" skipped. Nothing is invented: a missing value stays nil.
+/// The board's per-second samples file (`rides/r####.txt`, BLE_CONTRACT.md v1.1 §6.1): a header line `J1 <ride_id> <demo>
+/// <ftp_w> <ftp_how> <ftp_established>`, then one line per second of the ride clock, paused seconds included:
+/// `power cadence hr distance_m` (decimal, `-1` = no data that second, distance cumulative) or `-` = a paused second.
+/// A torn last line (no `\n`: crash / power loss) is ignored. Tolerant beyond that: unknown lines are skipped, `-` as a
+/// single field = no value, `\r` ignored, out-of-range values dropped (never clamped). Nothing is invented.
 enum BoardRideSamples {
     struct Second: Equatable { var paused: Bool; var power: Int?; var cadence: Int?; var hr: Int?; var distanceM: Int? }
+    struct Header: Equatable { var rideId: Int; var demo: Bool; var ftpW: Int?; var ftpHow: Int?; var ftpEstablished: Bool }
+    static func header(_ d: Data) -> Header? {
+        guard let first = String(decoding: d.prefix(200), as: UTF8.self).components(separatedBy: "\n").first else { return nil }
+        let t = first.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: " ").map(String.init)
+        guard t.count >= 3, t[0] == "J1", let id = Int(t[1]) else { return nil }
+        func v(_ k: Int) -> Int? { k < t.count ? Int(t[k]) : nil }
+        return Header(rideId: id, demo: v(2) == 1, ftpW: v(3), ftpHow: v(4), ftpEstablished: v(5) == 1)
+    }
     static func parse(_ d: Data) -> [Second] {
         var out: [Second] = []
         // "\r\n" is ONE Character in Swift: drop "\r" first, then split on "\n"
-        for raw in String(decoding: d, as: UTF8.self).replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n") {
-            let line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var lines = String(decoding: d, as: UTF8.self).replacingOccurrences(of: "\r", with: "").components(separatedBy: "\n")
+        if let last = d.last, last != 0x0A, !lines.isEmpty { lines.removeLast() }       /* torn last line */
+        for raw in lines {
+            let line = raw.trimmingCharacters(in: .whitespaces)
             if line.isEmpty || line.hasPrefix("#") { continue }
             if line == "-" { out.append(Second(paused: true, power: nil, cadence: nil, hr: nil, distanceM: nil)); continue }
             let t = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
-            func v(_ k: Int) -> Int? { k < t.count ? Int(t[k]) : nil }
+            guard let f = t.first, f == "-" || Int(f) != nil else { continue }               /* header `J1 …` and unknown lines */
+            func v(_ k: Int) -> Int? { k < t.count ? Int(t[k]) : nil }                       /* "-" and "-1" → nil below */
             out.append(Second(paused: false, power: v(0).flatMap { $0 >= 0 && $0 <= 3000 ? $0 : nil }, cadence: v(1).flatMap { $0 >= 0 && $0 <= 250 ? $0 : nil },
                               hr: v(2).flatMap { $0 >= 25 && $0 <= 250 ? $0 : nil }, distanceM: v(3).flatMap { $0 >= 0 ? $0 : nil }))
         }

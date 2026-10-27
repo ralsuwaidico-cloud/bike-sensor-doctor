@@ -190,7 +190,7 @@ final class PipelineHealthTests: XCTestCase {
         XCTAssertEqual(PipelineRules.direct(d, now: now).health, .recovering)
         d.radioOn = false
         XCTAssertEqual(PipelineRules.direct(d, now: now).health, .failed)
-        XCTAssertFalse(PipelineRules.direct(d, now: now).title.contains("Rashed"))
+        XCTAssertFalse(PipelineRules.direct(d, now: now).title.contains("RiderA"))
     }
 
     private func watch(_ f: (inout WatchInputs) -> Void) -> PipelineReport {
@@ -313,12 +313,12 @@ final class WatchPipelineTests: XCTestCase {
 }
 
 final class DiagnosticReportPrivacyTests: XCTestCase {
-    /// The seeded rider name (LaunchSmokeTests seeds 24/30/33/36/40 use "Rashed"), a sensor's advertised name, an e-mail
+    /// The seeded rider name (LaunchSmokeTests seeds 24/30/33/36/40 use "RiderA"), a sensor's advertised name, an e-mail
     /// address and a board hardware address must never appear in the exported report.
     func testReportContainsNoPersonalData() {
         let now = Date()
-        let events = [DiagEvent(at: now, kind: "sensor", text: "Rashed’s HRM connected"),
-                      DiagEvent(at: now, kind: "board", text: "Note: a different board (aa:bb:cc:dd:ee:ff); support rashed@example.com"),
+        let events = [DiagEvent(at: now, kind: "sensor", text: "RiderA’s HRM connected"),
+                      DiagEvent(at: now, kind: "board", text: "Note: a different board (aa:bb:cc:dd:ee:ff); support ridera@example.com"),
                       DiagEvent(at: now, kind: "health", text: "Power meter → BikeComputer → iPhone: live → no data")]
         let report = DiagnosticReport(
             generatedAt: now, app: "1.0.0 (65)", system: "iOS 26.0", watchApp: "1.0.0 (63)", watchVersionCheck: "watch app is OLDER — update it",
@@ -332,9 +332,9 @@ final class DiagnosticReportPrivacyTests: XCTestCase {
                                           workoutAuthOnWatch: "allowed", hrAcceptedMirror: 30, hrAcceptedConnectivity: 2, hrDuplicates: 12, hrDropped: 0,
                                           lastDeliveryAgeS: 0.8, hrSentToBoard: 32),
             directSensors: [DiagnosticReport.Direct(index: 1, kind: "heartRate", link: "connected", subscribed: true, services: ["180D"], characteristics: ["2A37"], packets: 99, rejected: 0, lastPacketAgeS: 0.5, lastValidAgeS: 0.5)],
-            recentEvents: events, sensorDiagHistory: [], boardStageLog: ["2026-10-26T10:00:00Z Found Rashed board (1A2B3C4D)"])
-        let json = String(data: report.json(personal: ["Rashed", "Rashed’s HRM"]), encoding: .utf8)!
-        XCTAssertFalse(json.localizedCaseInsensitiveContains("rashed"), json)
+            recentEvents: events, sensorDiagHistory: [], boardStageLog: ["2026-10-26T10:00:00Z Found RiderA board (1A2B3C4D)"])
+        let json = String(data: report.json(personal: ["RiderA", "RiderA’s HRM"]), encoding: .utf8)!
+        XCTAssertFalse(json.localizedCaseInsensitiveContains("ridera"), json)
         XCTAssertFalse(json.contains("@"), "no e-mail address")
         XCTAssertFalse(json.lowercased().contains("aa:bb:cc:dd:ee:ff"), "no hardware address")
         XCTAssertTrue(json.contains("cyclift-diagnostics/1"))
@@ -348,12 +348,12 @@ final class DiagnosticReportPrivacyTests: XCTestCase {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let store = Store(directory: dir, generatePlan: false)
-        store.profile.name = "Rashed"
+        store.profile.name = "RiderA"
         let m = PipelineMonitor(autoTick: false)
         m.store = store
-        m.log("sensor", "Rashed’s strap paired")
+        m.log("sensor", "RiderA’s strap paired")
         let json = String(data: m.reportJSON(), encoding: .utf8)!
-        XCTAssertFalse(json.contains("Rashed"), json)
+        XCTAssertFalse(json.contains("RiderA"), json)
         XCTAssertTrue(json.contains("cyclift-diagnostics/1"))
         UserDefaults.standard.removeObject(forKey: PipelineMonitor.eventsKey)
     }

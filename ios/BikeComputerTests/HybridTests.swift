@@ -204,7 +204,7 @@ final class HybridTests: XCTestCase {
     // MARK: store compatibility
     func testBuild30StoreLoadsWithHybridDefaults() throws {
         let json = """
-        {"schema":1,"profile":{"name":"Rashed","goal":"endurance","hoursPerWeek":6,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","version":9,"updatedAt":"2026-10-25T08:00:00Z","gender":null,"wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR"},
+        {"schema":1,"profile":{"name":"Rider A","goal":"endurance","hoursPerWeek":6,"level":"intermediate","weightKg":82,"age":35,"ftpW":210,"ftpHow":"entered","version":9,"updatedAt":"2026-10-25T08:00:00Z","gender":null,"wheelMm":2096,"cadenceLow":85,"cadenceHigh":95,"hrZoneMethod":"maxHR"},
          "settings":{"units":"metric","appearance":"system","coachTalk":"normal"},
          "plan":[{"id":"\(UUID().uuidString)","date":"2026-10-20T07:00:00Z","kind":"strength","minutes":30,"done":false,"skipped":false,"note":"","edited":true}],
          "rides":[],"tiles":["power","cadence","hr","speed","time","dist"],"onboarded":true,"guest":true,"createdAt":"2026-10-24T10:00:00Z",

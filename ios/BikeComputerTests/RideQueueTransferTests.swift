@@ -55,11 +55,12 @@ final class RideQueueTransferTests: XCTestCase {
     }
     override func tearDownWithError() throws { try? FileManager.default.removeItem(at: dir) }
 
+    /// The firmware's grammar (BLE_CONTRACT.md v1.1 §6.1): header `J1 …`, `-1` = no data, `-` line = paused second.
     static func samplesText(seconds: Int, pausedAt: Int? = nil) -> Data {
-        var s = ""
+        var s = "J1 0 0 250 1 1\n"
         for t in 0..<seconds {
             if t == pausedAt { s += "-\n"; continue }
-            s += "\(150 + t % 20) \(85 + t % 5) \(t % 7 == 0 ? "-" : String(120 + t % 10)) \(t * 8)\n"
+            s += "\(150 + t % 20) \(85 + t % 5) \(t % 7 == 0 ? -1 : 120 + t % 10) \(t * 8)\n"
         }
         return Data(s.utf8)
     }

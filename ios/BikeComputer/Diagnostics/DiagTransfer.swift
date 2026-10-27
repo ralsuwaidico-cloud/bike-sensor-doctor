@@ -221,7 +221,7 @@ final class DiagTransfer {
         case .linkTooSmall:
             lastError = "The Bluetooth link to the BikeComputer is too small to transfer reports; they stay on the board."
             pause()
-        case .storageReadError, nil:
+        case .storageReadError, .crcMismatch, nil:
             readErrors += 1
             if readErrors > config.maxReadErrorRetries {
                 lastError = "The BikeComputer could not read report \(id) (\(e.text)); it is kept there and retried on the next connection."

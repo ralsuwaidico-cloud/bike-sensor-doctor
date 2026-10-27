@@ -21,6 +21,9 @@ struct CoachPlanInput {
     var ftpW: Int
     /// The FTP is the rider's (entered / tested / from rides), not the onboarding assumption: watts may be the target.
     var ftpKnown: Bool
+    /// The power reading is verified (hub quality .good, `PowerTrust`). When it is not, the phone coach coaches on heart
+    /// rate, so the board gets the same heart-rate targets (lead decision 27 Oct: one authoritative definition).
+    var powerTrusted: Bool
     /// The rider's heart-rate zone ranges in bpm (5 zones, zone 1 first); empty = unknown.
     var hrZones: [ClosedRange<Int>]
     var cadLo: Int, cadHi: Int
@@ -73,8 +76,9 @@ enum CoachPlanBuilder {
 
     struct Targets: Equatable { var kind: BCLink.CoachTargetKind; var lo: Int; var hi: Int; var zone: Int; var ftpDerived: Bool }
     /// Targets of a phase: the same bands WorkoutTargets.forPhase gives RideCoach (warm-up = ramp envelope, rest and
-    /// cool-down = recovery band, main/work = the session zone). Watts only when the FTP is the rider's; otherwise the
-    /// rider's HR zone in bpm; nothing (ride by feel) when neither is known.
+    /// cool-down = recovery band, main/work = the session zone). Watts only when the phone coach coaches on watts (the FTP
+    /// is the rider's AND the power reading is verified); otherwise the rider's HR zone in bpm, as the phone coach uses;
+    /// nothing (ride by feel) when neither is known.
     static func targets(_ i: CoachPlanInput, phase: Phase) -> Targets {
         let z = min(5, max(1, i.zone))
         let pw = PowerZones.range(z, ftp: max(1, i.ftpW))
@@ -89,7 +93,7 @@ enum CoachPlanBuilder {
         case .cooldown: a = WorkoutTargets.forPhase(plan, phase: .RECOVERY, elapsedSec: 0, cooldownStartSec: nil); zone = 1
         case .main, .work: a = WorkoutTargets.forPhase(plan, phase: .MAIN, elapsedSec: 0, cooldownStartSec: nil); zone = z
         }
-        if i.ftpKnown, i.ftpW > 0, let lo = a.pwLo, let hi = a.pwHi, hi >= lo { return Targets(kind: .powerW, lo: lo, hi: hi, zone: zone, ftpDerived: true) }
+        if i.ftpKnown, i.powerTrusted, i.ftpW > 0, let lo = a.pwLo, let hi = a.pwHi, hi >= lo { return Targets(kind: .powerW, lo: lo, hi: hi, zone: zone, ftpDerived: true) }
         if hr != nil, a.hrHi > 0, a.hrHi >= a.hrLo { return Targets(kind: .heartRateBpm, lo: max(0, a.hrLo), hi: a.hrHi, zone: zone, ftpDerived: false) }
         return Targets(kind: .none, lo: 0, hi: 0, zone: 0, ftpDerived: false)
     }

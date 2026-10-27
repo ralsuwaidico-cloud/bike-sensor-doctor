@@ -5,8 +5,8 @@ import XCTest
 /// follows the ACK / CRC / keepalive rules, and heart-rate claims are explicit.
 final class CoachMirrorTests: XCTestCase {
     private let hrZones: [ClosedRange<Int>] = [95...113, 114...132, 133...151, 152...170, 171...190]
-    private func input(type: BCLink.CoachWorkoutType = .endurance, zone: Int = 2, planned: Int? = 3600, intervals: IntervalPlan? = nil, ftpKnown: Bool = true) -> CoachPlanInput {
-        CoachPlanInput(sessionKey: "session-1", name: "Endurance", type: type, zone: zone, plannedSec: planned, intervals: intervals, ftpW: 220, ftpKnown: ftpKnown,
+    private func input(type: BCLink.CoachWorkoutType = .endurance, zone: Int = 2, planned: Int? = 3600, intervals: IntervalPlan? = nil, ftpKnown: Bool = true, powerTrusted: Bool = true) -> CoachPlanInput {
+        CoachPlanInput(sessionKey: "session-1", name: "Endurance", type: type, zone: zone, plannedSec: planned, intervals: intervals, ftpW: 220, ftpKnown: ftpKnown, powerTrusted: powerTrusted,
                        hrZones: hrZones, cadLo: 85, cadHi: 95)
     }
 
@@ -58,6 +58,10 @@ final class CoachMirrorTests: XCTestCase {
         // the onboarding FTP is an assumption → heart-rate zone targets, never invented watts
         let hr = try XCTUnwrap(CoachPlanBuilder.plan(input(ftpKnown: false), t0ElapsedS: 0))
         XCTAssertEqual(hr.segments[1].targetKind, .heartRateBpm); XCTAssertEqual(hr.segments[1].lo, 114); XCTAssertEqual(hr.segments[1].hi, 132)
+        // the phone coach coaches on heart rate while the power reading is unverified → the board gets the same HR targets
+        let unverified = try XCTUnwrap(CoachPlanBuilder.plan(input(powerTrusted: false), t0ElapsedS: 0))
+        XCTAssertEqual(unverified.segments[1].targetKind, .heartRateBpm); XCTAssertEqual(unverified.segments[1].lo, 114)
+        XCTAssertEqual(CoachStateBuilder.state(plan: unverified, input: input(powerTrusted: false), live: CoachLiveInput(elapsedS: 600, session: .running, cue: .NONE, cueActive: false, hrSource: 2, hrLive: true)).targetKind, .heartRateBpm)
         var none = input(ftpKnown: false); none.hrZones = []
         XCTAssertEqual(try XCTUnwrap(CoachPlanBuilder.plan(none, t0ElapsedS: 0)).segments[1].targetKind, .none, "nothing known: ride by feel")
         // id: stable for the same plan, new when the plan changes (FTP update) — t0 excluded
@@ -174,7 +178,7 @@ final class CoachMirrorTests: XCTestCase {
         var w = Workout(date: Date(), kind: .threshold, minutes: 60)
         w.intervalReps = 3
         coach.configure(profile: RiderProfile(), settings: AppSettings(), workout: w, powerTrusted: false)
-        let i = CoachPlanInput(sessionKey: "x", name: "T", type: .threshold, zone: 4, plannedSec: 3600, intervals: w.liveIntervalPlan, ftpW: 220, ftpKnown: true, hrZones: [], cadLo: 85, cadHi: 95)
+        let i = CoachPlanInput(sessionKey: "x", name: "T", type: .threshold, zone: 4, plannedSec: 3600, intervals: w.liveIntervalPlan, ftpW: 220, ftpKnown: true, powerTrusted: true, hrZones: [], cadLo: 85, cadHi: 95)
         let tl = CoachPlanBuilder.timeline(i)
         for t in 0..<4000 {
             coach.tick(elapsedS: t, cadence: 90, hr: nil, power: 200, speedKmh: 30)

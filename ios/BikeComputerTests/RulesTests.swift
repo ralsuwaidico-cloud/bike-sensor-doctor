@@ -71,9 +71,9 @@ final class RulesTests: XCTestCase {
         let dir = tempDir()
         let s = Store(directory: dir, generatePlan: false)
         let v0 = s.profile.version
-        s.profile.name = "Rashed"
+        s.profile.name = "Rider A"
         XCTAssertEqual(s.profile.version, v0 + 1)
-        s.profile.name = "Rashed"                     // same value: SwiftUI bindings re-set; no bump
+        s.profile.name = "Rider A"                     // same value: SwiftUI bindings re-set; no bump
         XCTAssertEqual(s.profile.version, v0 + 1)
         s.updateProfile { $0.ftpW = 260; $0.ftpHow = .tested }
         XCTAssertEqual(s.profile.version, v0 + 2)
