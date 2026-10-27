@@ -32,8 +32,8 @@ Everything below is **simulator / CI-tested only**. Nothing has been tried on a 
 Plan → Perform → Log → **Rate** (check-in) → **Analyze** → **Adapt** → Repeat.
 
 - After every saved ride (`RideResultSheet`) and every saved strength session (quick log, detailed log, finished
-  workout) the same sheet turns into the check-in: performance 1–10, effort 1–10, pain (none / normal soreness /
-  concerning pain + where), optional note. Skip is always available.
+  workout) the same sheet turns into the check-in: performance 1–10, effort 1–10, pain (none / soreness /
+  discomfort / pain + where), optional note. Skip is always available.
 - Save → `Store.recordCheckIn` writes **only** the check-in field of that record → `Store.runAdaptation()` → the
   Adjustments view ("Coach adjustments") shows what changed and why.
 - The engine also runs after every plan rebuild (day editor save, Plan › Rebuild, Fix plan, Hybrid plan › Rebuild).
@@ -111,11 +111,24 @@ Progression (only without fatigue flags and with < 2 missed sessions in 7 days; 
   10 min cool-down), else next endurance / long ride +10 % if it fits the weekly cycling budget **and** that day's
   minutes in the rider's days; otherwise an approval proposal. Unverified power is never used; HR or ratings may be.
 
-Pain: a concerning-pain report stops progression in that area for 14 days unless the next 2 check-ins report no pain
-(shoulders/arms → push, pull, carry; back/core → hinge, core, squat, carry; hips/legs → squat, hinge, single-leg;
-knees → squat, single-leg; elsewhere / not sure → everything). Legs, knees, back and unknown also stop cycling
-progression. The rider sees plain advice: ease off, consider a doctor or physiotherapist if sharp, recurring or
-worsening; "the app cannot tell what is causing it". No diagnosis, ever. Normal soreness changes nothing.
+Pain (updated for the coach remediation; owner decision 27 Oct 2026, independent reviews F-12, N-06, P3-04, P3-10 to P3-13):
+the check-in has three levels, each with a short definition in the sheet.
+- **Soreness** (a dull ache in the trained muscles, not in a joint, 1–3 days after training) changes nothing.
+- **Discomfort** (something feels off in one spot, not sharp, not in a joint) holds progression in that area until a later
+  session of the same activity is rated without it (at most 14 days); nothing is left out.
+- **Concerning pain** (sharp, in or around a joint, swelling, changes how you move, or joint pain still there the next
+  day) holds the area **until the rider confirms it is gone** (Coach adjustments › "It's fine now", with a confirmation
+  step; for pain that lasted or came back the rider is asked to have it assessed first). It is **never released
+  automatically**. After at least 7 days with the last 2 sessions of the same activity rated pain-free, the coach only
+  asks. The 7-day / 2-session prompt is an owner-chosen **coaching heuristic**, not a rule from the literature. A
+  confirmation releases only reports made before it (the check-in time counts, not the session start).
+  Coach-built sessions leave out the area's exercises (shoulders/arms → push, pull, carry; back/core → hinge, core,
+  squat, carry; hips/legs → squat, hinge, single-leg; knees → squat, single-leg; elsewhere / not sure → everything);
+  the rider's own routines keep them but do not progress them. Legs, knees, back and unknown areas also stop cycling
+  progression, ease the next hard ride by one zone and make the long ride and steady rides of 90 min or more 10 %
+  shorter. "Lasted more than two weeks or came back" is said only when the pain recurred within 14 days or a later
+  session still reported it. The rider sees plain advice: stop what hurts; see a doctor or physiotherapist if it is
+  sharp, swollen, recurring or worsening; "the app cannot tell what is causing it". No diagnosis, ever.
 
 Low confidence: fewer than 2 usable sessions (a rating, a logged RPE, HR or verified power) in 14 days → the plan is
 kept as it is (changes already in force stay), and the coach asks for check-ins, naming rides without HR, rating or

@@ -58,8 +58,11 @@ enum AdaptiveRules {
     static let majorLoadFraction = 0.10         // > 10 % more planned weekly load → approval
     static let baselineDays = 28                // personal baselines: rolling 4 weeks
     static let painHoldDays = 14                // (kept for reference; since the audit fix pain no longer expires by date)
-    static let painMinHoldDays = 7              // a concerning-pain report holds its area at least 7 days …
-    static let painClearCheckIns = 2            // … and then until 2 pain-free sessions that loaded that area the same way
+    // Concerning pain is released only by the rider (owner decision). After at least 7 days, when the last 2 sessions of
+    // the same activity were pain-free, the coach ASKS the rider. Both numbers are an owner-chosen coaching heuristic,
+    // not a rule from the literature (review P3-16).
+    static let painMinHoldDays = 7              // the coach asks no earlier than 7 days after the report …
+    static let painClearCheckIns = 2            // … and only after 2 pain-free sessions of the same activity
     static let fatigueHorizonDays = 7           // fatigue responses touch the next 7 days only
     static let progressionHorizonDays = 14      // progressions: the next session of each exercise within 14 days
     static let minUsableSessions = 2            // fewer usable sessions in 14 days → low confidence, plan kept
@@ -363,23 +366,27 @@ enum TrainingAnalyzer {
         out.missed = lastWeek.missed.sorted { $0.date < $1.date }
         out.repeatedMisses = lastWeek.planned >= 2 && weekBefore.planned >= 2 && lastWeek.missed.count * 2 >= lastWeek.planned && weekBefore.missed.count * 2 >= weekBefore.planned
 
-        // --- pain (audit G-06): a concerning report holds progression in its area until the rider confirms it is gone,
-        // or until at least 7 days have passed AND the next 2 sessions that loaded the same area the same way (the same
-        // activity: a ride for a riding report, a lift with that movement for a lifting report) were rated pain-free.
-        // Pain-free check-ins of other activities (two rides after knee pain from squats) clear nothing.
-        struct Exposure { var sport: SessionSignal.Sport; var date: Date; var pain: PainLevel; var area: PainArea?; var patterns: Set<MovementPattern> }
+        // --- pain (audit G-06, owner decision 27 Oct): a concerning report holds its area until the RIDER confirms it is
+        // gone (Coach adjustments › "It's fine now"); it is never released automatically. After at least 7 days, when the
+        // last 2 sessions of the same activity (a ride for a riding report, a lift for a lifting report) were rated
+        // pain-free, the coach only ASKS the rider (painReviewDue). The 7-day / 2-session prompt is an owner-chosen
+        // COACHING HEURISTIC, not a rule from the literature (review P3-16). Pain-free check-ins of other activities
+        // (two rides after knee pain from squats) count for nothing.
+        struct Exposure { var sport: SessionSignal.Sport; var date: Date; var reportedAt: Date; var pain: PainLevel; var area: PainArea?; var patterns: Set<MovementPattern> }
         var exposures: [Exposure] = []
-        for r in input.rides where !r.demo && r.start <= now { if let c = r.checkIn { exposures.append(Exposure(sport: .cycling, date: r.start, pain: c.pain, area: c.painArea, patterns: [])) } }
+        // review P3-04: a report counts from when it was made (the check-in time), not from when its session started
+        for r in input.rides where !r.demo && r.start <= now { if let c = r.checkIn { exposures.append(Exposure(sport: .cycling, date: r.start, reportedAt: max(r.start, c.at), pain: c.pain, area: c.painArea, patterns: [])) } }
         for x in input.strength where !x.inProgress && x.date <= now {
             guard let c = x.checkIn else { continue }
-            exposures.append(Exposure(sport: .strength, date: x.date, pain: c.pain, area: c.painArea, patterns: Self.loadedPatterns(x)))
+            exposures.append(Exposure(sport: .strength, date: x.date, reportedAt: max(x.date, c.at), pain: c.pain, area: c.painArea, patterns: Self.loadedPatterns(x)))
         }
         exposures.sort { $0.date > $1.date }
         var areas: [PainArea] = []
         for (i, s) in exposures.enumerated() where s.pain == .concerning {
             let area = s.area ?? .other
             guard !areas.contains(area) else { continue }
-            if input.painClearances.contains(where: { $0.area == area && $0.at > s.date }) { continue }
+            // review P3-04: a confirmation releases only reports that existed when the rider confirmed (made before it)
+            if input.painClearances.contains(where: { $0.area == area && $0.at > s.reportedAt }) { continue }
             let same = exposures.prefix(i).reversed().filter { x in      // newer ones, oldest first
                 // same activity only (pain-free rides never clear lifting pain, G-06). Independent review F-12: the
                 // exercises that load the area are left out while it is held, so any pain-free LIFTING session after the
@@ -394,9 +401,11 @@ enum TrainingAnalyzer {
             areas.append(area)
             if reviewDue { out.painReviewDue.append(area) }
             let repeated = exposures.filter { $0.pain == .concerning && ($0.area ?? .other) == area && $0.date >= daysAgo(14) }.count >= 2
-            // review N-06: "persistent" = it came back within 14 days, or it is older than 14 days and the rider has had
-            // no two pain-free sessions of that activity since (still ongoing) — not merely an old report
-            if repeated || (days > 14 && !reviewDue) { out.painPersistent.append(area) }
+            // review N-06 / P3-10: "persistent" = it came back within 14 days, or it is older than 14 days and a later
+            // session of the same activity still reported discomfort or pain there (ongoing) — not merely an old report
+            // with nothing logged since (that one is simply not yet confirmed resolved)
+            let ongoing = same.contains { ($0.pain == .discomfort || $0.pain == .concerning) && ($0.area ?? .other) == area }
+            if repeated || (days > 14 && ongoing) { out.painPersistent.append(area) }
         }
         out.painAreas = areas
         // non-specific discomfort: holds progression in that area until a LATER session of the same activity is rated
@@ -624,11 +633,23 @@ enum AdaptationEngine {
             }
         }
 
+        // ---------- review P3-13: concerning pain that riding loads (knees, legs, hips, back…) also trims riding volume —
+        // the long ride and steady rides of 90 min or more within 7 days are 10 % shorter (bounded change), and the rider is
+        // told to stop a ride that hurts. Fixed and edited rides are not touched.
+        if a.painBlocksCycling {
+            let names = a.painAreas.filter { $0.affectsCycling }.map { $0.title.lowercased() }.joined(separator: ", ")
+            for r in future where (r.kind == .long || (r.kind == .endurance && r.minutes >= 90)) && r.date < fatigueEnd && auto(r) && !autoAdj.contains(where: { $0.workoutId == r.id }) {
+                let d = AdaptiveRules.roundTo5(Double(r.minutes) * AdaptiveRules.durationFraction)
+                guard d >= 5, r.minutes - d >= 30 else { continue }
+                autoAdj.append(make(r, .minutes(delta: -d), .reduction, "\(r.kind.title): \(Fmt.duration(minutes: r.minutes)) → \(Fmt.duration(minutes: r.minutes - d)) (pain reported)", "You reported concerning pain (\(names)) that riding also loads. So \(AdaptationExplainer.day(r.date))'s \(r.kind.title.lowercased()) is 10 % shorter (\(d) min less) until the area is pain-free again. If riding makes it hurt, stop the ride and rest; if the pain persists or is sharp, get it checked."))
+            }
+        }
+
         // ---------- progression: only without fatigue, without repeated misses, never where pain was reported
         if !a.anyFatigue && !a.adherenceBlock {
             var seen: Set<String> = []
             // review N-04: no load or rep progression of the rider's routines until the health check allows harder training
-            for s in future where s.kind == .strength && s.date < progressEnd && auto(s) && input.profile.readiness.vigorousAllowed {
+            for s in future where s.kind == .strength && s.date < progressEnd && auto(s) && CoachReadiness(profile: input.profile, now: input.now).vigorousAllowed {
                 for e in entries(s) where !seen.contains(e.exerciseId) {
                     seen.insert(e.exerciseId)                         // only the NEXT session with that exercise
                     if a.painBlocks(e.pattern) { continue }
@@ -641,7 +662,7 @@ enum AdaptationEngine {
             if a.cyclingImproving, !a.painBlocksCycling, let text = a.cyclingImprovingText {
                 // M-01 / M-02: no added intervals without a cleared health check or while returning from a break
                 let rideReturn = ReturnPhase.detect(dates: input.rides.filter { !$0.demo }.map { $0.start }, now: now, calendar: cal)
-                let intensityOK = input.profile.readiness.vigorousAllowed && !(rideReturn?.active ?? false)
+                let intensityOK = CoachReadiness(profile: input.profile, now: input.now).vigorousAllowed && !(rideReturn?.active ?? false)
                 if intensityOK, let r = future.first(where: { ($0.kind == .threshold || $0.kind == .vo2) && $0.date < progressEnd && auto($0) }),
                    let reps = r.effectiveIntervalReps, AdaptiveRules.intervalsFit(kind: r.kind, reps: reps + 1, minutes: r.minutes) {
                     progressions.append(make(r, .intervalReps(delta: 1), .progression, "\(r.kind.title): \(reps) → \(reps + 1) × \(r.kind.intervalWorkMinutes) min", "\(text) So \(AdaptationExplainer.day(r.date))'s \(r.kind.title.lowercased()) gets one more interval (\(reps) → \(reps + 1) × \(r.kind.intervalWorkMinutes) min) inside the same \(r.minutes) min. Judged from your effort and performance ratings\(unverifiedNote)."))
