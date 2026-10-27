@@ -12,7 +12,7 @@ struct StrengthTypeGrid: View {
                 Button { focus = f } label: {
                     VStack(spacing: 4) {
                         Image(systemName: f.icon).font(.system(size: 18, weight: .semibold))
-                        Text(f.short).font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                        Text(f.short).font(.footnote.weight(.semibold)).lineLimit(2).multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity, minHeight: 52).padding(.vertical, 6)
                     .background(focus == f ? BC.accent.opacity(0.18) : Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
@@ -55,7 +55,7 @@ struct QuickStrengthLogSheet: View {
                     DatePicker("When", selection: $when, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
                 }
                 Section("Duration") {
-                    HStack { Text(Fmt.duration(minutes: minutes)).font(BC.numFont).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6); Spacer() }
+                    HStack { Text(Fmt.duration(minutes: minutes)).font(BC.numFont).monospacedDigit(); Spacer() }
                     Slider(value: Binding(get: { Double(minutes) }, set: { minutes = Int($0) }), in: 10...180, step: 5).tint(BC.accent)
                 }
                 Section {
@@ -173,7 +173,7 @@ struct DetailedStrengthLogSheet: View {
             Text("Supersets").font(.caption.weight(.heavy)).foregroundStyle(.secondary)
             ForEach($entries) { $e in
                 HStack {
-                    Text(e.name).font(.footnote).lineLimit(1); Spacer()
+                    Text(e.name).font(.footnote).clampLines(1); Spacer()
                     Picker("", selection: Binding(get: { e.superset ?? "" }, set: { e.superset = $0.isEmpty ? nil : $0 })) { Text("—").tag(""); ForEach(["A", "B", "C", "D"], id: \.self) { Text($0).tag($0) } }.pickerStyle(.segmented).frame(maxWidth: 190)
                 }
             }
@@ -216,16 +216,16 @@ struct ExerciseEntryRow: View {
             Button { expanded.toggle() } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     if let s = entry.superset { Text(s).font(.caption.weight(.heavy)).padding(5).background(BC.accent.opacity(0.18), in: Circle()) }
-                    VStack(alignment: .leading, spacing: 2) { Text(entry.name).font(.body.weight(.semibold)).foregroundStyle(.primary).lineLimit(2); Text("\(entry.pattern.title) · \(entry.summary(units: units))").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                    VStack(alignment: .leading, spacing: 2) { Text(entry.name).font(.body.weight(.semibold)).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true); Text("\(entry.pattern.title) · \(entry.summary(units: units))").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     Spacer(); Image(systemName: expanded ? "chevron.up" : "chevron.down").foregroundStyle(.secondary).font(.caption)
                 }.frame(minHeight: 44)
             }.buttonStyle(.plain)
             if expanded {
                 ForEach($entry.sets) { $s in SetRow(set: $s, onDelete: { entry.sets.removeAll { $0.id == s.id } }, units: units) }
                 HStack {
-                    Button { var n = entry.sets.last ?? SetEntry(); n.id = UUID(); n.done = true; entry.sets.append(n) } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small)
+                    Button { var n = entry.sets.last ?? SetEntry(); n.id = UUID(); n.done = true; entry.sets.append(n) } label: { Label("Add set", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.large)
                     Spacer()
-                    Button(role: .destructive) { onDelete() } label: { Label("Remove", systemImage: "trash") }.buttonStyle(.bordered).controlSize(.small)
+                    Button(role: .destructive) { onDelete() } label: { Label("Remove", systemImage: "trash") }.buttonStyle(.bordered).controlSize(.large)
                 }
                 TextField("Notes for this exercise", text: $entry.notes).font(.footnote)
             }
@@ -260,12 +260,12 @@ struct SetRow: View {
     }
     private var flags: some View {
         HStack(spacing: 6) {
-            Toggle("BW", isOn: $set.bodyweight).toggleStyle(.button).controlSize(.small).tint(BC.accent).accessibilityLabel("Bodyweight")
-            Toggle("1-side", isOn: $set.unilateral).toggleStyle(.button).controlSize(.small).tint(BC.accent).accessibilityLabel("One side at a time")
-            Menu { Button("—") { set.rpe = nil }; ForEach(5...10, id: \.self) { r in Button("RPE \(r)") { set.rpe = r } } } label: { Text(set.rpe.map { "@\($0)" } ?? "RPE").font(.caption).padding(.horizontal, 6).frame(minHeight: 28) }.buttonStyle(.bordered).controlSize(.small)
+            Toggle("BW", isOn: $set.bodyweight).toggleStyle(.button).controlSize(.large).tint(BC.accent).accessibilityLabel("Bodyweight")
+            Toggle("1-side", isOn: $set.unilateral).toggleStyle(.button).controlSize(.large).tint(BC.accent).accessibilityLabel("One side at a time")
+            Menu { Button("—") { set.rpe = nil }; ForEach(5...10, id: \.self) { r in Button("RPE \(r)") { set.rpe = r } } } label: { Text(set.rpe.map { "@\($0)" } ?? "RPE").font(.caption).padding(.horizontal, 6).frame(minHeight: 28) }.buttonStyle(.bordered).controlSize(.large)
         }
     }
-    private var deleteButton: some View { Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).foregroundStyle(.secondary).frame(minWidth: 32, minHeight: 32) }
+    private var deleteButton: some View { Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle").frame(minWidth: DS.minTap, minHeight: DS.minTap).contentShape(Rectangle()) }.buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Delete set") }
 }
 
 // MARK: - Exercise search (name, equipment, movement, muscle) + create your own
@@ -302,7 +302,7 @@ struct ExerciseSearchSheet: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 6) { Text(e.name).foregroundStyle(.primary); if e.custom { Pill(text: "yours", color: BC.accent) } }
-                                    Text("\(e.pattern.title) · \(e.equipmentText)" + (e.muscles.isEmpty ? "" : " · \(e.muscles.joined(separator: ", "))")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                    Text("\(e.pattern.title) · \(e.equipmentText)" + (e.muscles.isEmpty ? "" : " · \(e.muscles.joined(separator: ", "))")).font(.caption).foregroundStyle(.secondary).clampLines(2)
                                 }
                                 Spacer(); Image(systemName: "plus.circle").foregroundStyle(BC.accent)
                             }.frame(minHeight: 44)
@@ -318,12 +318,15 @@ struct ExerciseSearchSheet: View {
         }
     }
     private func chip(_ t: String, _ on: Bool, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(t).font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(minHeight: 34).background(on ? BC.accent.opacity(0.2) : Color(.tertiarySystemGroupedBackground), in: Capsule()).foregroundStyle(on ? BC.accent : .primary) }.buttonStyle(.plain)
+        Button(action: action) { Text(t).font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(minHeight: DS.minTap).background(on ? BC.accent.opacity(0.2) : Color(.tertiarySystemGroupedBackground), in: Capsule()).contentShape(Capsule()).foregroundStyle(on ? BC.accent : .primary) }.buttonStyle(.plain)
     }
 }
 
 struct CreateExerciseSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: Store
+    /// The catalogue vocabulary plus the rider's own equipment items (Profile › Equipment).
+    private var equipmentChoices: [String] { ExerciseCatalogue.equipmentOptions + store.equipment.owned.filter { !ExerciseCatalogue.equipmentOptions.contains(EquipmentProfile.normalised($0)) }.sorted() }
     var initialName: String
     var onCreate: (Exercise) -> Void
     @State private var name = ""
@@ -336,7 +339,7 @@ struct CreateExerciseSheet: View {
             Form {
                 Section("Name") { TextField("Exercise name", text: $name) }
                 Section { Picker("Movement", selection: $pattern) { ForEach(MovementPattern.allCases, id: \.self) { Text($0.title).tag($0) } }; Toggle("One side at a time", isOn: $unilateral).tint(BC.accent) } footer: { Text("The movement pattern is what the coach uses for coverage (squat, hinge, single-leg, core, push, pull). Choose the closest one.") }
-                Section("Equipment") { ForEach(ExerciseCatalogue.equipmentOptions, id: \.self) { e in Toggle(e.capitalized, isOn: Binding(get: { equipment.contains(e) }, set: { if $0 { equipment.insert(e) } else { equipment.remove(e) } })).tint(BC.accent) } }
+                Section("Equipment") { ForEach(equipmentChoices, id: \.self) { e in Toggle(e.capitalized, isOn: Binding(get: { equipment.contains(e) }, set: { if $0 { equipment.insert(e) } else { equipment.remove(e) } })).tint(BC.accent) } }
                 Section("Main muscles (optional, comma-separated)") { TextField("e.g. glutes, hamstrings", text: $muscles) }
             }
             .navigationTitle("New exercise").navigationBarTitleDisplayMode(.inline)
@@ -370,10 +373,10 @@ struct TemplatesView: View {
                 ForEach(store.templates) { t in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack { Text(t.name).font(.body.weight(.semibold)); Spacer(); Pill(text: t.focus.title); Text("≈ \(Fmt.duration(minutes: t.estimatedMinutes))").font(.caption).foregroundStyle(.secondary) }
-                        Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                        Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).clampLines(2)
                         let days = store.weekdayRoutines.filter { $0.value == t.id }.keys.sorted().map { WeeklyAvailability.dayNames[$0] }
                         Text((t.lastUsed.map { "last used \($0.dayAndDate)" } ?? "never used") + (days.isEmpty ? "" : " · default on \(days.joined(separator: ", "))")).font(.caption2).foregroundStyle(.secondary)
-                        HStack { Button("Edit") { edit = t }.buttonStyle(.bordered).controlSize(.small); Button("Start now") { startNow = t }.buttonStyle(.bordered).controlSize(.small).disabled(store.activeSession != nil); Spacer() }
+                        HStack { Button("Edit") { edit = t }.buttonStyle(.bordered).controlSize(.large); Button("Start now") { startNow = t }.buttonStyle(.bordered).controlSize(.large).disabled(store.activeSession != nil); Spacer() }
                     }.padding(.vertical, 4)
                 }
                 .onDelete { idx in for i in idx { store.deleteTemplateEverywhere(store.templates[i]) } }
@@ -421,7 +424,7 @@ struct HybridCoachCard: View {
     var body: some View {
         let a = self.a
         Card(accent: true) {
-            HStack { Eyebrow(t: "\(store.profile.trainingMode.title) coach (rules) · \(Date().shortDay)"); Spacer(); Pill(text: a.combined, color: pillColor(a.combined)) }
+            HeaderRow(title: "\(store.profile.trainingMode.title) coach (rules) · \(Date().shortDay)") { Pill(text: a.combined, color: pillColor(a.combined)) }
             Text(a.recommendation).font(.title3.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 8) { if let c = a.cycling { progress("Cycling", c, color: BC.accent) }; if let s = a.strength { progress("Strength", s, color: BC.zone(5)) } }
@@ -438,13 +441,13 @@ struct HybridCoachCard: View {
                         }
                     }
                     if let c = a.coverage, c.known { coverageStrip(c) }
+                    Text("Start opens the Ride screen; recording begins only when you hold Start ride there. Strength is logged, never recorded automatically.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(.top, 4)
-            } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent) }
+            } label: { Text("Why?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
             if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
-            actions(a)
-            Text("Start opens the Ride screen; recording begins only when you hold Start ride there. Strength is logged, never recorded automatically.").font(.caption2).foregroundStyle(.secondary)
+            ActionRow(actions: actionSpecs(a))
         }
-        if let w = nextStrength { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
+        if let w = nextStrength, !w.plannerBuilt { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
         if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
     }
 
@@ -461,7 +464,7 @@ struct HybridCoachCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(p.text).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                     Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    HStack { Button("Accept") { if store.apply(p) { lastApplied = p.text } }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small); Spacer() }
+                    HStack { Button("Accept") { if store.apply(p) { lastApplied = p.text } }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large); Spacer() }
                 }.padding(8).background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
             }
             if let last = store.appliedProposals.last {
@@ -481,10 +484,10 @@ struct HybridCoachCard: View {
     }
     private func reviewCard(_ r: WeeklyReview) -> some View {
         Card {
-            HStack { Eyebrow(t: "Last week · \(r.completionPct) % completed"); Spacer(); Button(showReview ? "Hide" : "Review ›") { showReview.toggle() }.font(.caption.bold()) }
+            HeaderRow(title: r.ridesPlanned + r.liftsPlanned > 0 ? "Last week · \(r.completionPct) % of plan done" : "Last week · nothing planned") { Button(showReview ? "Hide" : "Review ›") { showReview.toggle() }.font(.footnote.bold()).buttonStyle(.tapTarget) }
             HStack(spacing: 10) {
-                if store.profile.trainingMode.includesCycling { stat("Rides", "\(r.ridesDone)/\(r.ridesPlanned)", Fmt.duration(minutes: r.rideMinutesDone)) }
-                if store.profile.trainingMode.includesLifting { stat("Lifts", "\(r.liftsDone)/\(r.liftsPlanned)", Fmt.duration(minutes: r.liftMinutesDone)) }
+                if store.profile.trainingMode.includesCycling { stat("Rides", r.ridesPlanned > 0 ? "\(r.ridesDone)/\(r.ridesPlanned)" : "—", Fmt.duration(minutes: r.rideMinutesDone)) }
+                if store.profile.trainingMode.includesLifting { stat("Lifts", r.liftsPlanned > 0 ? "\(r.liftsDone)/\(r.liftsPlanned)" : "—", Fmt.duration(minutes: r.liftMinutesDone)) }
                 stat("Missed", "\(r.missedWorkouts.count)", "")
             }
             if showReview {
@@ -494,23 +497,21 @@ struct HybridCoachCard: View {
             }
         }
     }
-    private func stat(_ t: String, _ v: String, _ sub: String) -> some View { VStack(alignment: .leading, spacing: 1) { Eyebrow(t: t); Text(v).font(.system(size: 18, weight: .bold, design: .rounded)).monospacedDigit(); if !sub.isEmpty { Text(sub).font(.caption2).foregroundStyle(.secondary) } }.frame(maxWidth: .infinity, alignment: .leading) }
+    private func stat(_ t: String, _ v: String, _ sub: String) -> some View { VStack(alignment: .leading, spacing: 1) { Eyebrow(t: t); Text(v).font(.headline).monospacedDigit(); if !sub.isEmpty { Text(sub).font(.caption).foregroundStyle(.secondary) } }.frame(maxWidth: .infinity, alignment: .leading) }
 
-    @ViewBuilder private func actions(_ a: HybridAssessment) -> some View {
+    /// Short labels that never wrap or hyphenate (the full action is the VoiceOver label): Start · Log · Adjust · Swap.
+    private func actionSpecs(_ a: HybridAssessment) -> [ActionSpec] {
         let next = a.next
         let rideNext = next?.kind.isRide == true && !recorder.isActive
         let liftNext = next?.kind == .strength
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) { if rideNext { startButton }; logButton(prominent: liftNext); if store.today != nil { adjustButton; alternativeButton } }
-            VStack(spacing: 8) { HStack(spacing: 8) { if rideNext { startButton }; logButton(prominent: liftNext) }; if store.today != nil { HStack(spacing: 8) { adjustButton; alternativeButton } } }
+        var out: [ActionSpec] = []
+        if rideNext { out.append(ActionSpec(label: "Start", a11y: "Start: opens the Ride screen", icon: "play.fill", prominent: true, tint: BC.live, identifier: "coachStart") { tab = 2 }) }
+        out.append(ActionSpec(label: "Log", a11y: "Log strength", icon: liftNext ? "dumbbell" : nil, prominent: liftNext, tint: liftNext ? BC.live : nil, identifier: "coachLog") { showStrengthLog = true })
+        if store.today != nil {
+            out.append(ActionSpec(label: "Adjust", a11y: "Adjust today's session", identifier: "coachAdjust") { showWorkout = true })
+            out.append(ActionSpec(label: "Swap", a11y: "Swap today's session for an alternative", identifier: "coachSwap") { showAlternatives = true })
         }
-    }
-    private var startButton: some View { Button { tab = 2 } label: { Label("Start", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live) }
-    private var adjustButton: some View { Button { showWorkout = true } label: { Text("Adjust").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
-    private var alternativeButton: some View { Button { showAlternatives = true } label: { Text("Alternative").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
-    @ViewBuilder private func logButton(prominent: Bool) -> some View {
-        if prominent { Button { showStrengthLog = true } label: { Label("Log strength", systemImage: "dumbbell").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)) }
-        else { Button { showStrengthLog = true } label: { Text("Log strength").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+        return out
     }
     private func progress(_ title: String, _ p: SportProgress, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -522,7 +523,7 @@ struct HybridCoachCard: View {
                     Capsule().fill(color).frame(width: g.size.width * min(1, p.minutesTarget > 0 ? p.ratio : (p.minutesDone > 0 ? 1 : 0)))
                 }
             }.frame(height: 7)
-            Text(p.minutesTarget > 0 ? "\(Fmt.duration(minutes: p.minutesDone)) of \(Fmt.duration(minutes: p.minutesTarget))" : "\(Fmt.duration(minutes: p.minutesDone)) · no budget set").font(.caption2).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+            Text(p.minutesTarget > 0 ? "\(Fmt.duration(minutes: p.minutesDone)) of \(Fmt.duration(minutes: p.minutesTarget))" : "\(Fmt.duration(minutes: p.minutesDone)) · no budget set").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }.frame(maxWidth: .infinity).padding(8).background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
         .accessibilityLabel("\(title): \(p.note)")
     }
@@ -532,7 +533,11 @@ struct HybridCoachCard: View {
         return t.kind.subtitle
     }
     private func pillColor(_ c: String) -> Color { c == "on track" ? BC.live : c.contains("check") ? BC.stale : BC.warn }
-    private func status(_ t: Workout) -> String { t.done ? "done" : t.skipped ? "skipped" : recorder.isActive ? "in progress" : t.fixed ? "planned · fixed day" : "planned" }
+    private func status(_ t: Workout) -> String {
+        let st = store.status(t)
+        if st == .planned { return recorder.isActive && t.kind.isRide ? "in progress" : t.fixed ? "planned · fixed day" : "planned" }
+        return st.title.lowercased()
+    }
     private func table(_ t: Workout) -> some View {
         VStack(spacing: 0) {
             row("Workout", t.displayTitle(routine: store.routine(for: t)))
@@ -542,13 +547,8 @@ struct HybridCoachCard: View {
             row("Status", status(t), last: true)
         }.background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
     }
-    private func row(_ k: String, _ v: String, last: Bool = false) -> some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) { Text(k).font(.footnote).foregroundStyle(.secondary).frame(width: 84, alignment: .leading); Text(v).font(.footnote.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true) }.padding(.horizontal, 10).padding(.vertical, 6)
-            if !last { Divider().padding(.leading, 10) }
-        }
-    }
-    private func zoneWatts(_ z: Int) -> String { let p = store.profile.powerZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
+    private func row(_ k: String, _ v: String, last: Bool = false) -> some View { KeyValueRow(key: k, value: v, last: last) }
+    private func zoneWatts(_ z: Int) -> String { let p = store.profile.prescriptionZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
 }
 
 // MARK: - Strength session detail (timeline tap): exercises, sets, per-exercise progression, edit / delete
@@ -564,8 +564,18 @@ struct StrengthSessionDetail: View {
         let prog = StrengthAnalysis.progression(store.strength)
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text(s.title).font(.system(size: 26, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7); Spacer(); Pill(text: s.isImported ? "imported" : "completed", color: s.isImported ? BC.zone(1) : BC.live) }
-                Text("\(s.date.dayAndDate) · \(Fmt.duration(minutes: s.minutes)) · \(s.effortLabel) · \(s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") : s.source)").font(.footnote).foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) { Text(s.title).font(DS.screenTitle).fixedSize(horizontal: false, vertical: true); Spacer(minLength: DS.s); Pill(text: s.awaitingReview ? "needs review" : s.isImported ? "imported" : s.isDetailed ? "logged" : "quick log", color: s.awaitingReview ? BC.warn : s.isImported ? BC.zone(1) : BC.live) }
+                Text("\(s.date.dayAndDate) · \(s.minutes > 0 ? Fmt.duration(minutes: s.minutes) : "duration not recorded") · \(s.effortLabel) · \(s.source == "manual" ? (s.isDetailed ? "detailed log" : "quick log") : s.source)").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if s.awaitingReview {
+                    Card {
+                        Eyebrow(t: "Needs your review")
+                        Text(s.migrationNote ?? "This record was saved without any completed set.").font(.footnote).fixedSize(horizontal: false, vertical: true)
+                        ActionRow(actions: [
+                            ActionSpec(label: "Keep it", a11y: "Keep it: it counts as a session", identifier: "confirmReviewed") { store.confirmReviewed(s.id) },
+                            ActionSpec(label: "Delete", a11y: "Delete this record (Undo available)", tint: BC.warn, identifier: "deleteReviewed") { store.deleteStrength(s); dismiss() }
+                        ])
+                    }
+                } else if let n = s.migrationNote { Text(n).font(.caption).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
                 if let ex = s.exercises, !ex.isEmpty {
                     Card {
                         Eyebrow(t: "Exercises")
@@ -590,13 +600,16 @@ struct StrengthSessionDetail: View {
                     Card { Text(s.isImported ? "Imported from \(s.source): duration only. Add exercises to make it count for coverage and progression." : "Quick log: type, duration and effort. No exercises were recorded, so this session says nothing about movement coverage.").font(.footnote).foregroundStyle(.secondary) }
                 }
                 if !s.notes.isEmpty { Card { Eyebrow(t: "Notes"); Text(s.notes) } }
-                HStack { Button { edit = true } label: { Label(s.isDetailed ? "Edit" : "Add exercises", systemImage: "pencil").frame(maxWidth: .infinity) }.buttonStyle(.bordered); Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+                ActionRow(actions: [
+                    ActionSpec(label: s.isDetailed ? "Edit" : "Add exercises", a11y: s.isDetailed ? "Edit exercises and sets" : "Add exercises to this session", icon: "pencil", identifier: "editLog") { edit = true },
+                    ActionSpec(label: "Delete", a11y: "Delete this session (Undo available)", icon: "trash", tint: BC.warn, identifier: "deleteLog") { confirmDelete = true }
+                ])
             }.padding()
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Strength").navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $edit) { DetailedStrengthLogSheet(date: s.date, presetFocus: s.focus, editing: s) }
-        .alert("Delete this session?", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { store.deleteStrength(s); dismiss() }; Button("Cancel", role: .cancel) {} }
+        .alert("Delete this session?", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { store.deleteStrength(s); dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("You can undo this for a few seconds; the planned session it completed goes back to planned.") }
     }
     private func trendText(_ p: ExerciseProgression) -> String {
         switch p.trend { case .up: return "Progressing (load × reps rising over \(p.points.count) sessions)"; case .down: return "Load × reps fell over the last sessions"; case .flat: return "Steady over \(p.points.count) sessions"; case .insufficient: return "\(p.points.count) session\(p.points.count == 1 ? "" : "s") logged · progression needs 4 with weights" }

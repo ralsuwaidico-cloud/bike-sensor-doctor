@@ -98,11 +98,13 @@ struct EquipmentProfile: Codable, Equatable {
     }
     /// Equipment only (exclusions not considered): every piece the exercise needs is owned. Names are compared in the
     /// catalogue vocabulary, so "Dumbbells" or "dumbbells " written by an older build still means "dumbbell".
+    /// Quality release: the catalogue lists ALTERNATIVES ("dumbbell, kettlebell" = either one) plus accessories that
+    /// are needed in addition ("barbell, bench" = a barbell AND a bench). "bodyweight" in the list = no load needed.
     func hasEquipment(for e: Exercise) -> Bool {
         guard isSet else { return true }
         let have = Set(owned.map(EquipmentProfile.normalised))
-        let need = e.equipment.map(EquipmentProfile.normalised).filter { $0 != "bodyweight" }
-        return need.allSatisfy { have.contains($0) }
+        let req = ExerciseLibrary.requirement(e)
+        return req.all.isSubset(of: have) && (req.anyOf.isEmpty || !req.anyOf.isDisjoint(with: have))
     }
     static func normalised(_ s: String) -> String {
         let t = s.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -444,8 +446,9 @@ extension Store {
     /// strength session) would duplicate. nil = nothing logged yet / a genuinely extra session.
     func existingLog(forWorkout id: UUID?, on date: Date, calendar cal: Calendar = .current) -> StrengthSession? {
         if let id {
-            if let s = strength.first(where: { $0.workoutId == id }) { return s }
-            if let w = plan.first(where: { $0.id == id }), w.done { return strength.first { cal.isDate($0.date, inSameDayAs: w.date) } }
+            if let s = strength.first(where: { $0.workoutId == id && !$0.awaitingReview }) { return s }
+            // quality release: the one query layer decides which log completed the session (never an unrelated one)
+            if let w = plan.first(where: { $0.id == id }) { return ledger.log(for: w) }
             return nil
         }
         // no planned workout given: only when every strength session planned that day is already done

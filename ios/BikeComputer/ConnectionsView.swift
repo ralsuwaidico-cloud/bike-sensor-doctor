@@ -302,7 +302,7 @@ struct ConnRow: View {
             Image(systemName: icon).font(.title3).foregroundStyle(.secondary).frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body.weight(.semibold))
-                Text(subtitle).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                Text(subtitle).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             StatusBadge(status: status)
@@ -503,7 +503,7 @@ struct RepairSheet: View {
     private func step(_ n: Int, _ t: String, action: (String, () -> Void)? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 10) { Text("\(n)").font(.caption.bold()).frame(width: 22, height: 22).background(BC.accent.opacity(0.18), in: Circle()); Text(t).font(.footnote) }
-            if let a = action { Button(a.0) { a.1() }.buttonStyle(.bordered).controlSize(.small).padding(.leading, 32).disabled(a.0 == "Searching…") }
+            if let a = action { Button(a.0) { a.1() }.buttonStyle(.bordered).controlSize(.large).padding(.leading, 32).disabled(a.0 == "Searching…") }
         }
     }
 }

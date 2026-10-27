@@ -56,14 +56,14 @@ struct PlanView: View {
     // MARK: header + calendar
     private var weekHeader: some View {
         HStack {
-            Button { weekOffset -= 1 } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }.accessibilityLabel("Previous week")
+            Button { weekOffset -= 1 } label: { Image(systemName: "chevron.left").frame(width: DS.minTap, height: DS.minTap).contentShape(Rectangle()) }.accessibilityLabel("Previous week")
             Spacer()
             VStack(spacing: 2) {
                 Text(weekOffset == 0 ? "This week" : weekOffset == 1 ? "Next week" : weekOffset == -1 ? "Last week" : weekTitle).font(.headline)
                 Text(weekRange).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { weekOffset += 1 } label: { Image(systemName: "chevron.right").frame(width: 36, height: 36) }.disabled(weekOffset >= 1).accessibilityLabel("Next week")
+            Button { weekOffset += 1 } label: { Image(systemName: "chevron.right").frame(width: DS.minTap, height: DS.minTap).contentShape(Rectangle()) }.disabled(weekOffset >= 1).accessibilityLabel("Next week")
         }
     }
     private var weekTitle: String { let f = DateFormatter(); f.dateFormat = "d MMM"; return "Week of \(f.string(from: days.first?.date ?? weekDate))" }
@@ -80,15 +80,15 @@ struct PlanView: View {
                     VStack(spacing: 4) {
                         Text(day.date.shortDay).font(.caption2.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(day.date) ? BC.accent : .secondary)
                         Image(systemName: icon(day)).font(.system(size: 15, weight: .semibold)).foregroundStyle(color(day)).frame(height: 18)
-                        Text(day.items.first.map { Fmt.compact(minutes: $0.minutes) } ?? "—").font(.system(size: 13, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
+                        Text(day.items.first.map { Fmt.compact(minutes: $0.minutes) } ?? "—").font(.caption.weight(.bold)).monospacedDigit().lineLimit(1)
                         HStack(spacing: 2) { ForEach(day.items.prefix(3)) { w in RoundedRectangle(cornerRadius: 2).fill(w.kind.zone > 0 ? BC.zone(w.kind.zone) : Color.secondary.opacity(0.35)).frame(height: 4) } }
-                        if day.items.count > 1 { Text("+\(day.items.count - 1)").font(.system(size: 9, weight: .heavy)).padding(.horizontal, 4).background(BC.accent.opacity(0.18), in: Capsule()) }
+                        if day.items.count > 1 { Text("+\(day.items.count - 1)").font(.caption2.weight(.heavy)).padding(.horizontal, 4).background(BC.accent.opacity(0.18), in: Capsule()) }
                     }
                     .padding(.vertical, 8).padding(.horizontal, 2).frame(maxWidth: .infinity, minHeight: 78)
-                    .background(day.items.contains { $0.done } ? BC.live.opacity(0.14) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .background(day.items.contains { store.status($0).isCompleted } ? BC.live.opacity(0.14) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Calendar.current.isDateInToday(day.date) ? BC.accent : Color.clear, lineWidth: 1.5))
                 }.buttonStyle(.plain)
-                .accessibilityLabel("\(day.date.dayAndDate): \(day.items.isEmpty ? "free" : day.items.map { "\($0.kind.title) \(Fmt.duration(minutes: $0.minutes))" }.joined(separator: ", "))")
+                .accessibilityLabel("\(day.date.dayAndDate): \(day.items.isEmpty ? "free" : day.items.map { "\($0.kind.title) \(Fmt.duration(minutes: $0.minutes)), \(store.status($0).title.lowercased())" }.joined(separator: ", "))")
             }
         }
     }
@@ -106,10 +106,13 @@ struct PlanView: View {
     @State private var showFix = false
     private var summary: some View {
         let planned = PlanEngine.rideMinutes(week), lifting = PlanEngine.liftMinutes(week)
-        let ridesPlanned = week.filter { $0.kind.isRide && !$0.skipped }.count, ridesDone = week.filter { $0.kind.isRide && $0.done }.count
-        let liftsPlanned = week.filter { $0.kind == .strength && !$0.skipped }.count, liftsDone = week.filter { $0.kind == .strength && $0.done }.count
-        let done = week.filter { $0.done && $0.kind.isRide }.reduce(0) { $0 + $1.minutes }
-        let liftDone = week.filter { $0.done && $0.kind == .strength }.reduce(0) { $0 + $1.minutes }
+        // quality release: done counts and minutes from the one query layer (the same numbers as Home and Progress)
+        let ledger = store.ledger, monday = TrainingLedger.monday(of: weekDate)
+        let rw = ledger.riding(weekOf: monday), lw = ledger.lifting(weekOf: monday)
+        let ridesPlanned = rw.planned, ridesDone = rw.completed
+        let liftsPlanned = lw.planned, liftsDone = lw.completed
+        let done = rw.minutes
+        let liftDone = lw.minutes
         let limit = store.profile.hoursPerWeek * 60, liftLimit = store.profile.liftingHoursPerWeek * 60
         let fit = store.fitReport
         let overEdits = !PlanEngine.suggestions(for: week, hoursPerWeek: store.profile.hoursPerWeek).isEmpty || !PlanEngine.liftSuggestions(for: week, liftingHours: store.profile.liftingHoursPerWeek).isEmpty
@@ -117,7 +120,7 @@ struct PlanView: View {
         let action: String = {
             if !fit.conflicts.isEmpty { return "Your days exceed a budget; the coach trimmed flexible activities — tap Fix plan." }
             if overEdits { return "Your edits put this week over a budget — tap Fix plan." }
-            if let next = week.first(where: { !$0.done && !$0.skipped && $0.kind != .rest && Calendar.current.startOfDay(for: $0.date) >= Calendar.current.startOfDay(for: Date()) }) { return "Next: \(next.date.shortDay) \(next.displayTitle.lowercased()), \(Fmt.duration(minutes: next.minutes))." }
+            if let next = week.first(where: { !ledger.status($0).isCompleted && !$0.skipped && $0.kind != .rest && Calendar.current.startOfDay(for: $0.date) >= Calendar.current.startOfDay(for: Date()) }) { return "Next: \(next.date.shortDay) \(next.displayTitle.lowercased()), \(Fmt.duration(minutes: next.minutes))." }
             return "Everything planned for this week is done."
         }()
         return Card {
@@ -145,7 +148,7 @@ struct PlanView: View {
         }
     }
     private func stat(_ t: String, _ v: String, warn: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 2) { Eyebrow(t: t); Text(v).font(.system(size: 17, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.7).foregroundStyle(warn ? BC.warn : .primary) }.frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 2) { Eyebrow(t: t); Text(v).font(.headline).monospacedDigit().foregroundStyle(warn ? BC.warn : .primary).fixedSize(horizontal: false, vertical: true) }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: day cards (workouts and recovery days as separate cards)
@@ -156,7 +159,7 @@ struct PlanView: View {
                     Button { addOn = day.date } label: { HStack { Text(day.date.dayAndDate).font(.subheadline.weight(.semibold)); Spacer(); Text("free · add").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
                 } else {
                     ForEach(day.items) { w in
-                        Button { selected = w } label: { WorkoutCard(workout: w, routine: store.routine(for: w), routineRemoved: store.isRoutineRemoved(w)) }.buttonStyle(.plain)
+                        Button { selected = w } label: { WorkoutCard(workout: w, routine: store.routine(for: w), routineRemoved: store.isRoutineRemoved(w), status: store.status(w)) }.buttonStyle(.plain)
                     }
                 }
             }
@@ -170,7 +173,7 @@ struct PlanView: View {
             HStack(spacing: 4) {
                 ForEach(0..<7, id: \.self) { i in
                     VStack(spacing: 3) {
-                        Text(WeeklyAvailability.dayNames[i]).font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary)
+                        Text(WeeklyAvailability.dayNames[i]).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).lineLimit(1)
                         Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].isRest ? (a.days[i].flexible ? BC.stale : .secondary) : BC.accent)
                         Text(a.days[i].isRest ? (a.days[i].flexible ? "flex" : "—") : a.days[i].activity == .both ? "\(Fmt.compact(minutes: a.days[i].cycleMinutes))+\(Fmt.compact(minutes: a.days[i].liftingMinutes))" : Fmt.compact(minutes: a.days[i].totalMinutes)).font(.system(size: 10, weight: .bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                     }.frame(maxWidth: .infinity)
@@ -189,7 +192,7 @@ struct PlanView: View {
             List {
                 ForEach(day.items) { w in
                     Button { dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selected = w } } label: {
-                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.displayTitle(routine: store.routine(for: w))).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); if w.done { Pill(text: "done", color: BC.live) } else if w.skipped { Pill(text: "skipped") } }
+                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.displayTitle(routine: store.routine(for: w))).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); WorkoutStatusPill(status: store.status(w)) }
                     }
                 }
                 Button("Add another activity") { let d = day.date; dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { addOn = d } }
@@ -208,6 +211,8 @@ struct WorkoutCard: View {
     var routine: WorkoutTemplate? = nil
     /// The assigned routine was deleted: the card says so instead of falling back to a generic session.
     var routineRemoved = false
+    /// From the one query layer; nil = derived from the stored flags (previews / tests).
+    var status: WorkoutStatus? = nil
     @Environment(\.dynamicTypeSize) private var dts
     var body: some View {
         let quiet = workout.kind == .rest || workout.kind == .recoveryDay
@@ -217,25 +222,26 @@ struct WorkoutCard: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(workout.date.dayAndDate).font(.caption.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(workout.date) ? BC.accent : .secondary)
                     Spacer()
-                    if workout.done { Pill(text: "done", color: BC.live) } else if workout.skipped { Pill(text: "skipped") } else if workout.edited { Pill(text: "edited", color: BC.accent) } else if workout.coachAdjusted { Pill(text: "coach-adjusted", color: BC.accent) } else if workout.fixed { Pill(text: "fixed", color: BC.stale) }
+                    let st = status ?? (workout.done ? .completedManual : workout.skipped ? .skipped : .planned)
+                    if st != .planned { WorkoutStatusPill(status: st) } else if workout.edited { Pill(text: "edited", color: BC.accent) } else if workout.coachAdjusted { Pill(text: "coach-adjusted", color: BC.accent) } else if workout.fixed { Pill(text: "fixed", color: BC.stale) }
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline) { titleBlock; Spacer(); durationBlock }
                     VStack(alignment: .leading, spacing: 4) { titleBlock; durationBlock }
                 }
-                if let r = routine { Text("\(r.entries.count) exercises · \(r.setCount) sets · " + r.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                else if workout.kind == .strength, routineRemoved, !workout.done { Text("routine removed — tap to choose another").font(.caption).foregroundStyle(BC.warn).lineLimit(2) }
-                else if workout.kind == .strength, !workout.done, let e = workout.plannedEntries, !e.isEmpty { Text("\(e.count) exercises · " + e.map { $0.name }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                else if workout.kind == .strength { Text(workout.done ? "logged without a routine" : "no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).lineLimit(2) }
-                else if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                if let r = routine { Text("\(r.entries.count) exercises · \(r.setCount) sets · " + r.exerciseNames).font(.caption).foregroundStyle(.secondary).clampLines(2) }
+                else if workout.kind == .strength, routineRemoved, !workout.done { Text("routine removed — tap to choose another").font(.caption).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
+                else if workout.kind == .strength, !workout.done, let e = workout.plannedEntries, !e.isEmpty { Text("\(e.count) exercises · " + e.map { $0.name }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).clampLines(2) }
+                else if workout.kind == .strength { Text(workout.done ? "logged without a routine" : "no routine assigned · tap to choose one").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                else if !quiet { Text(workout.structureText + " · " + workout.benefit).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .background(quiet ? Color(.secondarySystemGroupedBackground).opacity(0.6) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .combine)
     }
-    private var titleBlock: some View { HStack(spacing: 6) { Text(workout.displayTitle(routine: routine)).font(.body.weight(.bold)).lineLimit(1).minimumScaleFactor(0.8); ZonePill(z: workout.kind.zone) } }
-    private var durationBlock: some View { Text(workout.minutes > 0 ? Fmt.duration(minutes: workout.minutes) : "—").font(.system(size: 17, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1) }
+    private var titleBlock: some View { HStack(spacing: 6) { Text(workout.displayTitle(routine: routine)).font(.body.weight(.bold)).fixedSize(horizontal: false, vertical: true); ZonePill(z: workout.kind.zone) } }
+    private var durationBlock: some View { Text(workout.minutes > 0 ? Fmt.duration(minutes: workout.minutes) : "—").font(.headline).monospacedDigit().lineLimit(1) }
 }
 
 /// Add a session on a given day (type + duration); counted as hand-edited.
@@ -251,7 +257,7 @@ struct AddWorkoutSheet: View {
             Form {
                 Section("Type") {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) {
-                        ForEach(WorkoutKind.allCases.filter { $0 != .rest }, id: \.self) { k in Button(k.title) { kind = k; if k.minutes0 { minutes = 0 } else if minutes == 0 { minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(kind == k ? BC.accent : .secondary).controlSize(.small) }
+                        ForEach(WorkoutKind.allCases.filter { $0 != .rest }, id: \.self) { k in Button(k.title) { kind = k; if k.minutes0 { minutes = 0 } else if minutes == 0 { minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(kind == k ? BC.accent : .secondary).controlSize(.large) }
                     }
                 }
                 if kind == .strength { Section("Body region") { Picker("Region", selection: $focus) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { Text($0.title).tag($0) } } } }
@@ -282,10 +288,11 @@ struct WorkoutDetail: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack { Text(workout.displayTitle).font(.system(size: 28, weight: .bold, design: .rounded)).lineLimit(2).minimumScaleFactor(0.7); Spacer(); ZonePill(z: workout.kind.zone) }
+                    HStack(alignment: .firstTextBaseline) { Text(workout.displayTitle).font(DS.screenTitle).fixedSize(horizontal: false, vertical: true); Spacer(); ZonePill(z: workout.kind.zone) }
                     Text("\(workout.date.dayAndDate) · \(workout.minutes > 0 ? "\(Fmt.duration(minutes: workout.minutes)) · " : "")\(workout.kind.subtitle)").foregroundStyle(.secondary)
                     if workout.edited { Pill(text: "edited by you — kept when the week is rebuilt", color: BC.accent) }
                     if workout.fixed { Pill(text: "fixed day — the coach never moves or changes it", color: BC.stale) }
+                    if mode == 0, workout.kind != .rest { WorkoutStatusCard(workout: store.plan.first { $0.id == workout.id } ?? workout) { _ in showDetailed = true } }
                     if mode == 0 { detail } else if mode == 1 { move } else if mode == 2 { edit } else { replace }
                 }.padding()
             }
@@ -295,30 +302,32 @@ struct WorkoutDetail: View {
             .sheet(isPresented: $showLog, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { QuickStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus, workoutId: workout.id) }
             .sheet(isPresented: $showDetailed, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { DetailedStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus ?? .custom, workoutId: workout.id) }
         }
+        .undoSnackbar()
     }
 
     @ViewBuilder private var detail: some View {
         Card { Eyebrow(t: "Why this session"); Text(workout.why) }
-        let steps = workout.steps(ftp: store.profile.ftpW)
-        if !steps.isEmpty { Card { ForEach(steps, id: \.name) { s in HStack { VStack(alignment: .leading) { Text(s.name).bold(); Text(s.target).font(.caption).foregroundStyle(.secondary) }; Spacer(); Text(s.duration).font(.system(size: 18, weight: .bold, design: .rounded)).lineLimit(1).minimumScaleFactor(0.7) }.padding(.vertical, 4); if s != steps.last { Divider() } } } }
+        let steps = workout.steps(ftp: store.profile.prescriptionFTP)
+        if !steps.isEmpty { Card { ForEach(steps, id: \.name) { s in HStack(alignment: .firstTextBaseline) { VStack(alignment: .leading) { Text(s.name).bold(); Text(s.target).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }; Spacer(); Text(s.duration).font(.headline).monospacedDigit() }.padding(.vertical, 4); if s != steps.last { Divider() } } } }
         if workout.kind.zone > 0 {
             Card { Eyebrow(t: "Target zone"); ZoneBar(current: workout.kind.zone)
-                let z = store.profile.powerZones[workout.kind.zone - 1]
-                Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
+                let z = store.profile.prescriptionZones[workout.kind.zone - 1]
+                if let c = store.profile.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
+                Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpConfidence.short)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
         }
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 90))], spacing: 8) {
-            Button("Move") { mode = 1 }.buttonStyle(.bordered)
-            Button("Edit") { mode = 2 }.buttonStyle(.bordered)
-            Button("Replace") { mode = 3 }.buttonStyle(.bordered)
-            Button(workout.skipped ? "Unskip" : "Skip") { workout.skipped.toggle(); store.edit(workout) }.buttonStyle(.bordered)
-            Button("Remove", role: .destructive) { confirmDelete = true }.buttonStyle(.bordered)
-        }
-        if workout.kind == .strength, workout.date <= Date().addingTimeInterval(86_400), !workout.done {
+        ActionRow(actions: [
+            ActionSpec(label: "Move", a11y: "Move to another day", identifier: "detailMove") { mode = 1 },
+            ActionSpec(label: "Edit", a11y: "Edit type and duration", identifier: "detailEdit") { mode = 2 },
+            ActionSpec(label: "Swap", a11y: "Swap for another session type", identifier: "detailSwap") { mode = 3 },
+            ActionSpec(label: "Remove", a11y: "Remove this session (Undo available)", tint: BC.warn, identifier: "detailRemove") { confirmDelete = true }
+        ])
+        // quality release: never for a later day (the old "today + 24 h" window let tomorrow's session be completed)
+        if workout.kind == .strength, !store.isFuture(workout), !store.status(workout).isCompleted {
             HStack(spacing: 8) {
                 Button { showLog = true } label: { Label("Quick log", systemImage: "bolt").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5))
                 Button { showDetailed = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle").frame(maxWidth: .infinity) }.buttonStyle(.bordered).tint(BC.zone(5))
             }.controlSize(.large)
-            Text("Either marks this session done and counts toward your lifting hours. Logging exercises lets the coach check coverage and progression.").font(.footnote).foregroundStyle(.secondary)
+            Text("Logging exercises lets the coach check coverage and progression.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
             Button { if recorder.startMode(locationAuthorized: true) == .board { device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
@@ -333,8 +342,8 @@ struct WorkoutDetail: View {
         Button("Cancel") { mode = 0 }
     }
     @ViewBuilder private var edit: some View {
-        Card { Eyebrow(t: "Type"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(WorkoutKind.allCases, id: \.self) { k in Button(k.title) { workout.kind = k; if k.minutes0 { workout.minutes = 0 } else if workout.minutes == 0 { workout.minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(workout.kind == k ? BC.accent : .secondary).controlSize(.small) } } }
-        if workout.kind == .strength { Card { Eyebrow(t: "Body region"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { f in Button(f.short) { workout.strengthFocus = f }.buttonStyle(.bordered).tint(workout.strengthFocus == f ? BC.accent : .secondary).controlSize(.small) } } } }
+        Card { Eyebrow(t: "Type"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(WorkoutKind.allCases, id: \.self) { k in Button(k.title) { workout.kind = k; if k.minutes0 { workout.minutes = 0 } else if workout.minutes == 0 { workout.minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(workout.kind == k ? BC.accent : .secondary).controlSize(.large) } } }
+        if workout.kind == .strength { Card { Eyebrow(t: "Body region"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { f in Button(f.short) { workout.strengthFocus = f }.buttonStyle(.bordered).tint(workout.strengthFocus == f ? BC.accent : .secondary).controlSize(.large) } } } }
         if !workout.kind.minutes0 { Card { Eyebrow(t: "Duration"); Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...240, step: 5).tint(BC.accent) } }
         Button { store.edit(workout); mode = 0 } label: { Text("Save").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
         Button("Cancel") { mode = 0 }
@@ -392,7 +401,7 @@ struct TimelineSection: View {
                         NavigationLink { StrengthSessionDetail(session: st) } label: { TimelineRow(entry: e, units: store.settings.units) }.buttonStyle(.plain)
                     } else { TimelineRow(entry: e, units: store.settings.units) }
                 }
-                if all.count > 12 { Button(showAll ? "Show less" : "Show all \(all.count)") { showAll.toggle() }.font(.footnote.bold()) }
+                if all.count > 12 { Button(showAll ? "Show less" : "Show all \(all.count)") { showAll.toggle() }.font(.footnote.bold()).buttonStyle(.tapTarget) }
             }
         }
     }
@@ -413,10 +422,10 @@ struct Spark: View {
     let title: String; let values: [Int]; let unit: String; let color: Color
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title.uppercased()).font(.system(size: 8, weight: .heavy)).foregroundStyle(.secondary)
+            Text(title.uppercased()).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Chart(Array(values.enumerated()), id: \.offset) { i, v in LineMark(x: .value("i", i), y: .value("v", v)).foregroundStyle(color).interpolationMethod(.catmullRom) }
                 .chartXAxis(.hidden).chartYAxis(.hidden).frame(height: 28)
-            Text("\(values.last ?? 0) \(unit)").font(.system(size: 11, weight: .bold, design: .rounded)).monospacedDigit()
+            Text("\(values.last ?? 0) \(unit)").font(.caption.weight(.bold)).monospacedDigit()
         }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
     }
 }
@@ -430,20 +439,19 @@ struct TimelineRow: View {
                 Circle().fill(statusColor).frame(width: 6, height: 6)
             }.frame(width: 24)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline) {
+                FlowRow(spacing: DS.s) {
                     Text(entry.date.dayAndDate).font(.caption.weight(.heavy)).foregroundStyle(.secondary)
-                    Text(entry.title).font(.subheadline.weight(.bold)).lineLimit(1)
-                    Spacer()
+                    Text(entry.title).font(.subheadline.weight(.bold))
                     Pill(text: entry.status.rawValue, color: statusColor)
                 }
-                HStack(spacing: 10) {
-                    metric(Fmt.duration(minutes: entry.minutes), "")
+                FlowRow(spacing: 10) {
+                    metric(entry.minutes > 0 ? Fmt.duration(minutes: entry.minutes) : "no duration", "")
                     if let d = entry.distanceM { metric(Fmt.km(d, imperial: units == .imperial), "") }
                     if let p = entry.avgPower { metric("\(p)", "W" + (entry.normalizedPower.map { " · NP \($0)" } ?? "")) }
                     if let h = entry.avgHR { metric("\(h)", "bpm" + (entry.maxHR.map { " · max \($0)" } ?? "")) }
                     if let c = entry.cadence { metric("\(c)", "rpm") }
                     if let t = entry.tss { metric("\(t)", "TSS") }
-                }.font(.caption).lineLimit(1).minimumScaleFactor(0.7)
+                }.font(.caption)
                 if entry.zoneSeconds.reduce(0, +) > 0 { ZoneStrip(seconds: entry.zoneSeconds) }
                 if let d = entry.detail { Text(d).font(.caption2).foregroundStyle(.secondary) }
                 if let r = entry.recorder { Text(entry.isStrength ? r : "recorded by \(r)").font(.caption2).foregroundStyle(.secondary) }
@@ -454,7 +462,7 @@ struct TimelineRow: View {
         .opacity(entry.status == .completed || entry.status == .imported ? 1 : 0.75)
     }
     private func metric(_ v: String, _ u: String) -> some View { HStack(spacing: 2) { Text(v).bold().monospacedDigit(); if !u.isEmpty { Text(u).foregroundStyle(.secondary) } } }
-    private var statusColor: Color { switch entry.status { case .completed: return BC.live; case .planned: return BC.accent; case .skipped: return .secondary; case .missed: return BC.stale; case .imported: return BC.zone(1) } }
+    private var statusColor: Color { switch entry.status { case .completed: return BC.live; case .planned: return BC.accent; case .skipped: return .secondary; case .missed: return BC.stale; case .imported: return BC.zone(1); case .review: return BC.warn } }
 }
 
 /// Time-in-zone as proportional segments (no numbers to read while scanning).

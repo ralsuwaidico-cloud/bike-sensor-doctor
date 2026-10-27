@@ -8,13 +8,16 @@ import MapKit
 struct ProgressTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
-    @State private var range = 8
+    @State private var rideRange: ChartRange = .w8
+    @State private var liftRange: ChartRange = .w8
+    /// Two years of weeks to scroll through (cheap: one ledger pass per week).
+    private let historyWeeks = 104
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 12) {
-                    weekly
+                VStack(spacing: DS.m) {
+                    if store.profile.trainingMode.includesCycling || !store.rides.isEmpty { weekly }
                     if store.profile.trainingMode.includesLifting || !store.strength.isEmpty { lifting }
                     ftpCard
                     history
@@ -26,62 +29,72 @@ struct ProgressTabView: View {
     }
 
     private var weekly: some View {
-        let totals = store.weekTotals(weeks: range)
-        return Card {
-            HStack { Eyebrow(t: "Weekly riding time"); Spacer(); Picker("", selection: $range) { Text("8 wk").tag(8); Text("16 wk").tag(16) }.pickerStyle(.segmented).frame(width: 130) }
-            if store.rides.isEmpty {
-                Text("no data yet").font(.footnote).foregroundStyle(BC.stale)
-                Text("Your first saved ride appears here. Weekly hours, distance and the FTP history build up from real rides only.").font(.footnote).foregroundStyle(.secondary)
+        Card {
+            if store.rides.isEmpty && store.ledger.riding(weekOf: TrainingLedger.monday(of: Date())).completed == 0 {
+                Eyebrow(t: "Weekly riding time")
+                Text("No rides yet").font(.headline).foregroundStyle(BC.stale)
+                Text("Your saved rides appear here, week by week. Nothing is estimated.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
-                Chart(totals) { w in
-                    BarMark(x: .value("Week", w.monday, unit: .weekOfYear), y: .value("Minutes", w.minutes)).foregroundStyle(BC.accent)
-                    RuleMark(y: .value("Target", store.profile.hoursPerWeek * 60)).foregroundStyle(BC.stale).lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
-                }
-                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let m = v.as(Int.self) { Text(Fmt.compact(minutes: m)) } } } }
-                .chartXAxis { AxisMarks(values: .stride(by: .weekOfYear)) { _ in AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: true) } }
-                .frame(height: 160)
-                Text(weekText(totals.last)).font(.footnote).foregroundStyle(.secondary)
+                WeeklyTrendChart(title: "Weekly riding time", buckets: TrendChartMath.buckets(store.ledger, riding: true, weeks: historyWeeks, now: Date()), color: BC.accent,
+                                 singular: "ride", plural: "rides", target: store.profile.hoursPerWeek * 60, targetLabel: "Target", identifier: "ridingChart", range: $rideRange)
+                definitions(riding: true)
             }
         }
     }
 
     private var lifting: some View {
-        let totals = store.strengthWeekTotals(weeks: range)
+        let l = store.ledger
+        let any = !l.logs.isEmpty || l.plan.contains { $0.kind == .strength && $0.completion == .marked }
         return Card {
-            HStack { Eyebrow(t: "Weekly lifting time"); Spacer(); Text("separate from riding").font(.caption2).foregroundStyle(.secondary) }
-            if store.strength.isEmpty {
-                Text("no sessions logged yet").font(.footnote).foregroundStyle(BC.stale)
-                Text("Log a session from Home or Plan (Log strength), or import strength workouts from Apple Health in Connections.").font(.footnote).foregroundStyle(.secondary)
+            if !any {
+                Eyebrow(t: "Weekly lifting time")
+                Text("No sessions logged yet").font(.headline).foregroundStyle(BC.stale)
+                Text("Log a session from Home or Plan (Log), mark one done, or import from Apple Health in Connections.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
-                Chart(totals) { w in
-                    BarMark(x: .value("Week", w.monday, unit: .weekOfYear), y: .value("Minutes", w.minutes)).foregroundStyle(BC.zone(5))
-                    if store.profile.liftingHoursPerWeek > 0 { RuleMark(y: .value("Budget", store.profile.liftingHoursPerWeek * 60)).foregroundStyle(BC.stale).lineStyle(StrokeStyle(lineWidth: 1, dash: [4])) }
-                }
-                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let m = v.as(Int.self) { Text(Fmt.compact(minutes: m)) } } } }
-                .chartXAxis { AxisMarks(values: .stride(by: .weekOfYear)) { _ in AxisValueLabel(format: .dateTime.day().month(.abbreviated), centered: true) } }
-                .frame(height: 120)
-                if let last = totals.last { Text("This week: \(Fmt.duration(minutes: last.minutes)) in \(last.sessions) session\(last.sessions == 1 ? "" : "s")" + (store.profile.liftingHoursPerWeek > 0 ? ". Dashed line = your \(store.profile.liftingHoursPerWeek) h lifting budget." : ".")).font(.footnote).foregroundStyle(.secondary) }
+                WeeklyTrendChart(title: "Weekly lifting time", buckets: TrendChartMath.buckets(l, riding: false, weeks: historyWeeks, now: Date()), color: BC.zone(5),
+                                 singular: "session", plural: "sessions", target: store.profile.liftingHoursPerWeek > 0 ? store.profile.liftingHoursPerWeek * 60 : nil, targetLabel: "Budget", identifier: "liftingChart", range: $liftRange)
+                definitions(riding: false)
             }
         }
     }
 
-    private func weekText(_ w: Store.WeekTotal?) -> String {
-        guard let last = w else { return "" }
-        let rides = last.rides == 1 ? "1 ride" : "\(last.rides) rides"
-        return "This week: \(Fmt.duration(minutes: last.minutes)) · \(String(format: "%.1f", last.km)) km · \(rides). Dashed line = your \(store.profile.hoursPerWeek) h limit."
+    static func weekLine(_ w: TrainingLedger.SportWeek) -> String {
+        var parts: [String] = []
+        if w.logged > 0 { parts.append("\(w.logged) logged") }
+        if w.manual > 0 { parts.append("\(w.manual) marked or quick") }
+        if w.imported > 0 { parts.append("\(w.imported) imported") }
+        return "This week: \(w.completed) done of \(w.planned) planned" + (parts.isEmpty ? "." : " (" + parts.joined(separator: ", ") + ").")
     }
+    /// One definition for every screen (Home, Plan, History, Progress).
+    private func definitions(riding: Bool) -> some View {
+        let w = riding ? store.ledger.riding(weekOf: TrainingLedger.monday(of: Date())) : store.ledger.lifting(weekOf: TrainingLedger.monday(of: Date()))
+        return HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
+            Text(Self.weekLine(w))
+                .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier(riding ? "ridingWeekCounts" : "liftingWeekCounts")
+            Spacer(minLength: 0)
+            InfoButton(title: "How sessions are counted", text: riding
+                ? "Done = rides recorded in Cyclift or imported from Apple Health, plus planned rides you marked done. Time adds only recorded rides and durations you typed. Planned rides that are not done are never counted. The dashed line is your weekly cycling target."
+                : "Done = detailed logs (exercises and sets), quick logs and sessions marked done, and Apple Health imports. Time adds only measured or typed durations — a session without a duration counts as a session with no minutes. Planned sessions are never counted until done. The dashed line is your lifting budget.")
+        }
+    }
+
     private var ftpCard: some View {
-        Card {
-            HStack { Eyebrow(t: "FTP"); Spacer(); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
-            HStack(alignment: .firstTextBaseline) { Text("\(store.profile.ftpW)").font(BC.bigNum); Text("W · \(String(format: "%.1f", Double(store.profile.ftpW) / store.profile.weightKg)) W/kg").foregroundStyle(.secondary) }
-            Text(store.profile.ftpHow == .assumed
-                 ? "Starting assumption: \(String(format: "%.0f", store.profile.weightKg)) kg × \(String(format: "%.2f", store.profile.level.wkg)) W/kg for \(store.profile.level.title.lowercased()) riders. It becomes a measurement after a steady 20-minute effort recorded with the BikeComputer, or when you enter a tested value in Profile."
-                 : store.profile.ftpHow == .entered ? "Entered by you in Profile." : "Estimated as 95 % of the best 20-minute power of a recorded ride.").font(.footnote).foregroundStyle(.secondary)
+        let p = store.profile
+        return Card {
+            HStack(alignment: .firstTextBaseline) { Eyebrow(t: "FTP"); Spacer(minLength: DS.s); FTPConfidencePill(profile: p) }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: DS.s) { Text("\(p.ftpW)").font(DS.number).monospacedDigit(); Text("W · \(String(format: "%.1f", Double(p.ftpW) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
+                VStack(alignment: .leading) { Text("\(p.ftpW) W").font(DS.number).monospacedDigit(); Text("\(String(format: "%.1f", Double(p.ftpW) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
+            }
+            Text(p.ftpConfidence.title).font(.subheadline.weight(.semibold)).accessibilityIdentifier("ftpConfidenceTitle")
+            Text(p.ftpSourceText).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("ftpSource")
+            if let c = p.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             if store.ftpSuggestion != nil { FTPSuggestionCard() }
             Divider()
             Eyebrow(t: "Fitness and form")
             Text("Not enough data yet").font(.subheadline.weight(.semibold)).foregroundStyle(BC.stale)
-            Text("Training load and form need about six weeks of rides with power. Nothing is shown before that.").font(.footnote).foregroundStyle(.secondary)
+            Text("Training load and form need about six weeks of rides with power. Nothing is shown before that.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -95,7 +108,7 @@ struct ProgressTabView: View {
         Card {
             HStack { Eyebrow(t: "Rides"); Spacer(); Text("\(store.rides.count)").font(.caption.bold()).foregroundStyle(.secondary) }
             if store.rides.isEmpty { Text("no data yet").font(.footnote).foregroundStyle(BC.stale) }
-            ForEach(store.rides) { r in
+            ForEach(store.rides.sorted { $0.start > $1.start }) { r in
                 NavigationLink { RideDetailView(ride: r) } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
@@ -103,9 +116,9 @@ struct ProgressTabView: View {
                             Text(rowText(r)).font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }.padding(.vertical, 4)
+                    }.padding(.vertical, 4).frame(minHeight: DS.minTap).contentShape(Rectangle())
                 }.buttonStyle(.plain)
-                if r.id != store.rides.last?.id { Divider() }
+                if r.id != store.rides.min(by: { $0.start < $1.start })?.id { Divider() }
             }
             Divider()
             Text("Board history: \(device.syncStatus). Rides recorded on the BikeComputer while the phone was away stay on the board until its firmware serves them (see SYNC_PROPOSAL); nothing is invented here.").font(.caption2).foregroundStyle(.secondary)
@@ -146,7 +159,7 @@ struct RideDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text(ride.start.dayAndDate).font(.system(size: 26, weight: .bold, design: .rounded)); Spacer(); Pill(text: "recorded by \(ride.recordedBy)", color: BC.accent) }
+                FlowRow(spacing: DS.s) { Text(ride.start.dayAndDate).font(DS.screenTitle); Pill(text: "recorded by \(ride.recordedBy)", color: BC.accent) }
                 RideSummaryTiles(ride: ride, units: store.settings.units)
                 graph
                 zones
@@ -189,7 +202,7 @@ struct RideDetailView: View {
         Card {
             HStack { Eyebrow(t: "Graph"); Spacer()
                 ForEach([("power", hasW), ("hr", hasHR), ("cadence", hasCad), ("speed", hasSpd)], id: \.0) { k, ok in
-                    Button(k.capitalized) { if series.contains(k) { series.remove(k) } else { series.insert(k) } }.font(.caption2.bold()).buttonStyle(.bordered).controlSize(.mini).tint(series.contains(k) ? color(k) : .secondary).disabled(!ok)
+                    Button(k.capitalized) { if series.contains(k) { series.remove(k) } else { series.insert(k) } }.font(.caption2.bold()).buttonStyle(.bordered).controlSize(.large).tint(series.contains(k) ? color(k) : .secondary).disabled(!ok)
                 }
             }
             let shown = series.filter { k in (k == "power" && hasW) || (k == "hr" && hasHR) || (k == "cadence" && hasCad) || (k == "speed" && hasSpd) }

@@ -57,7 +57,7 @@ struct OnboardingView: View {
     // MARK: Stage A
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(size: 36, weight: .bold, design: .rounded)) }
+            HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(.largeTitle, design: .rounded).weight(.bold)) }
             Text("Cycling and strength training in one plan, with one coach. Works with your iPhone alone, standard Bluetooth sensors, Apple Watch and Apple Health — and with the optional BikeComputer device.").foregroundStyle(.secondary)
             Card {
                 Eyebrow(t: "Get started")
@@ -70,7 +70,7 @@ struct OnboardingView: View {
 
     // MARK: Stage B
     private func title(_ t: String, _ sub: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) { Text(t).font(.system(size: 30, weight: .bold, design: .rounded)); Text(sub).foregroundStyle(.secondary) }
+        VStack(alignment: .leading, spacing: 6) { Text(t).font(.system(.title, design: .rounded).weight(.bold)).fixedSize(horizontal: false, vertical: true); Text(sub).foregroundStyle(.secondary) }
     }
     private func next(_ label: String = "Next") -> some View {
         Button { step += 1 } label: { Text(label).frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
@@ -106,7 +106,7 @@ struct OnboardingView: View {
                     ForEach(RiderProfile.Sport.allCases, id: \.self) { s in
                         let on = store.profile.sports.contains(s)
                         Button(s.title) { if on { store.profile.sports.removeAll { $0 == s } } else { store.profile.sports.append(s) } }
-                            .buttonStyle(.bordered).tint(on ? BC.accent : .secondary).controlSize(.small)
+                            .buttonStyle(.bordered).tint(on ? BC.accent : .secondary).controlSize(.large)
                     }
                 }
             }
@@ -226,11 +226,11 @@ struct OnboardingView: View {
             Card {
                 Eyebrow(t: "FTP (watts)")
                 TextField("tested FTP, if you have one", text: $ftpText).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
-                    .onChange(of: ftpText) { _, v in if let n = Int(v), n >= 50, n <= 600 { store.profile.ftpW = n; store.profile.ftpHow = .tested } else if v.isEmpty, store.profile.ftpHow == .tested { store.profile.ftpHow = .assumed; store.profile.refreshAssumption() } }
+                    .onChange(of: ftpText) { _, v in if let n = Int(v), n >= 50, n <= 600 { store.profile.ftpW = n; store.profile.ftpHow = .entered } else if v.isEmpty, store.profile.ftpHow == .entered || store.profile.ftpHow == .tested { store.profile.ftpHow = .assumed; store.profile.refreshAssumption() } }
                 if store.profile.ftpHow == .assumed {
                     Text("Estimate for me: \(store.profile.ftpW) W from \(String(format: "%.0f", store.profile.weightKg)) kg × \(String(format: "%.2f", store.profile.level.wkg)) W/kg. Marked provisional until a real 20-minute effort or a tested value replaces it.").font(.footnote).foregroundStyle(.secondary)
                 } else {
-                    HStack { Text("\(store.profile.ftpW) W").bold(); Pill(text: store.profile.ftpLabel, color: BC.live) }
+                    HStack { Text("\(store.profile.ftpW) W").bold(); FTPConfidencePill(profile: store.profile) }
                 }
             }
             next()

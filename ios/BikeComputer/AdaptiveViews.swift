@@ -103,10 +103,25 @@ struct AdjustmentsView: View {
                 }
                 if let s = store.lastAdaptation, let p = s.painAdvice {
                     Label { Text(p).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "cross.case").foregroundStyle(BC.warn) }
+                    // audit G-06: only the rider (or pain-free sessions that load the same area) clears a report
+                    ForEach(store.activePainAreas(), id: \.self) { area in
+                        Button { store.confirmPainGone(area) } label: {
+                            Label("\(area.title): it's fine now", systemImage: "checkmark.circle").frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
+                        }
+                        .accessibilityIdentifier("painGone-\(area.rawValue)")
+                        .accessibilityHint("Releases the hold on \(area.title.lowercased()) so the coach can progress that area again")
+                    }
                 }
                 if let s = store.lastAdaptation, let f = s.feedbackRequest {
                     Label { Text(f).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "text.bubble").foregroundStyle(BC.stale) }
                 }
+            }
+            if afterCheckIn, let rb = store.checkInRebuild {
+                Section {
+                    ForEach(Array(rb.lines.enumerated()), id: \.offset) { _, l in Text(l).font(.footnote).fixedSize(horizontal: false, vertical: true) }
+                    Button { store.undoCheckInRebuild() } label: { Label("Undo these changes", systemImage: "arrow.uturn.backward").frame(minHeight: DS.minTap) }
+                        .accessibilityIdentifier("undoCheckInRebuild")
+                } header: { Text("Changed after this check-in") } footer: { Text("Undo puts these sessions back exactly as they were and keeps them that way. Progression never comes from sessions marked done without details.") }
             }
             if !sessions.isEmpty {
                 Section {
@@ -136,6 +151,7 @@ struct AdjustmentsView: View {
     }
 
     private func headline(_ n: Int) -> String {
+        if afterCheckIn, let rb = store.checkInRebuild, rb.before.count > n { return "Check-in saved. The coach updated \(rb.before.count) upcoming session\(rb.before.count == 1 ? "" : "s")." }
         if afterCheckIn { return n == 0 ? "Check-in saved. No change to your plan this time." : "Check-in saved. The coach adjusted \(n) upcoming session\(n == 1 ? "" : "s")." }
         return n == 0 ? "No automatic changes in force." : "\(n) upcoming session\(n == 1 ? "" : "s") adjusted automatically."
     }
@@ -144,7 +160,7 @@ struct AdjustmentsView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(w.date.dayAndDate).font(.caption.weight(.heavy)).foregroundStyle(.secondary)
-                Text(w.displayTitle(routine: store.routine(for: w))).font(.subheadline.weight(.semibold)).lineLimit(2)
+                Text(w.displayTitle(routine: store.routine(for: w))).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
             ForEach(list) { a in
@@ -153,7 +169,7 @@ struct AdjustmentsView: View {
                         Image(systemName: icon(a.category)).foregroundStyle(color(a.category)).font(.footnote)
                         Text(a.summary).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 4)
-                        Button("Undo") { store.undoAdaptation(a.key) }.font(.caption.bold()).buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("undoAdjustment")
+                        Button("Undo") { store.undoAdaptation(a.key) }.font(.caption.bold()).buttonStyle(.bordered).controlSize(.large).accessibilityIdentifier("undoAdjustment")
                     }
                     DisclosureGroup(isExpanded: Binding(get: { openWhy.contains(a.key) }, set: { if $0 { openWhy.insert(a.key) } else { openWhy.remove(a.key) } })) {
                         Text(a.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -170,8 +186,8 @@ struct AdjustmentsView: View {
             Text(p.text).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
             Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
-                if !p.adjustments.isEmpty { Button("Accept") { _ = store.acceptAdaptiveProposal(p) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.small) }
-                Button(p.adjustments.isEmpty ? "OK" : "Not now") { store.dismissAdaptiveProposal(p) }.buttonStyle(.bordered).controlSize(.small)
+                if !p.adjustments.isEmpty { Button("Accept") { _ = store.acceptAdaptiveProposal(p) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large) }
+                Button(p.adjustments.isEmpty ? "OK" : "Not now") { store.dismissAdaptiveProposal(p) }.buttonStyle(.bordered).controlSize(.large)
                 Spacer()
             }
         }.padding(.vertical, 4)
@@ -263,7 +279,7 @@ struct HybridPlanEditor: View {
                     ForEach(StrengthSplit.allCases, id: \.self) { Text($0.title).tag(StrengthSplit?.some($0)) }
                 }
                 if let s = p.strengthSplit {
-                    Text("This week: " + StrengthSplit.sessions(split: s, slots: p.customSplit, count: max(1, p.liftDaysPerWeek)).map { $0.title }.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary)
+                    Text("This week: " + StrengthSplit.sessions(split: s, slots: p.customSplit, count: max(1, p.liftDaysPerWeek), offset: StrengthSplit.weekIndex(of: TrainingLedger.monday(of: Date())) * max(1, p.liftDaysPerWeek)).map { $0.title }.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary)
                 }
                 if p.strengthSplit == .custom {
                     ForEach(p.customSplit) { slot in
@@ -311,7 +327,7 @@ struct SplitSlotRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Picker("Type", selection: Binding(get: { slot.focus }, set: { v in var s = slot; s.focus = v; onChange(s) })) { ForEach(StrengthFocus.allCases, id: \.self) { Text($0.title).tag($0) } }
-                Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).foregroundStyle(.secondary).frame(minWidth: 32, minHeight: 32)
+                Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle").frame(minWidth: DS.minTap, minHeight: DS.minTap).contentShape(Rectangle()) }.buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Remove")
             }
             if slot.focus == .custom { TextField("Name, e.g. Core / joints", text: Binding(get: { slot.label }, set: { v in var s = slot; s.label = v; onChange(s) })) }
             Picker("Routine", selection: Binding(get: { slot.templateId }, set: { v in var s = slot; s.templateId = v; onChange(s) })) {

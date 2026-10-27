@@ -13,23 +13,33 @@ struct WatchContentView: View {
     @EnvironmentObject private var phone: PhoneLink
     @EnvironmentObject private var workout: WorkoutManager
     @State private var now = Date()
+    // quality release: numerals follow the wearer's text size (Dynamic Type) instead of a fixed point size
+    @ScaledMetric(relativeTo: .largeTitle) private var hrSize: CGFloat = 46
+    @ScaledMetric(relativeTo: .body) private var tileSize: CGFloat = 18
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private var hrValue: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 2) {
+            Text(workout.hrIsFresh ? "\(workout.hrBpm ?? 0)" : "--")
+                .font(.system(size: hrSize, weight: .bold, design: .rounded)).monospacedDigit()
+                .lineLimit(1).minimumScaleFactor(0.7)
+                .foregroundStyle(workout.hrIsFresh ? .red : .secondary)
+            Text("bpm").font(.caption).foregroundStyle(.secondary)
+        }.accessibilityElement(children: .combine)
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 4) {
-                    Text("CYCLIFT").font(.system(size: 13, weight: .heavy, design: .rounded)).tracking(1.5).foregroundStyle(CycliftWatch.accent)
+                    Text("CYCLIFT").font(.system(.footnote, design: .rounded).weight(.heavy)).tracking(1.5).foregroundStyle(CycliftWatch.accent)
                     Spacer()
                     Text(workoutStateText).font(.caption2.weight(.semibold)).foregroundStyle(workout.phase == .running ? CycliftWatch.live : .secondary)
                 }
-                HStack(alignment: .firstTextBaseline) {
-                    Text(workout.hrIsFresh ? "\(workout.hrBpm ?? 0)" : "--")
-                        .font(.system(size: 46, weight: .bold, design: .rounded)).monospacedDigit()
-                        .foregroundStyle(workout.hrIsFresh ? .red : .secondary)
-                    Text("bpm").font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Text(elapsed).font(.title3).monospacedDigit()
+                // quality release: the elapsed time moves under the heart rate when both do not fit (large text, 41 mm)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline) { hrValue; Spacer(minLength: 2); Text(elapsed).font(.title3).monospacedDigit() }
+                    VStack(alignment: .leading, spacing: 0) { hrValue; Text(elapsed).font(.title3).monospacedDigit() }
                 }
                 Text(hrLine).font(.caption2).foregroundStyle(.secondary)
 
@@ -48,13 +58,13 @@ struct WatchContentView: View {
                         .tint(CycliftWatch.live).disabled(!workout.available)
                 case .running:
                     HStack {
-                        Button { workout.pause() } label: { Image(systemName: "pause.fill").frame(maxWidth: .infinity) }
-                        Button { workout.end() } label: { Image(systemName: "stop.fill").frame(maxWidth: .infinity) }.tint(.red)
+                        Button { workout.pause() } label: { Image(systemName: "pause.fill").frame(maxWidth: .infinity) }.accessibilityLabel("Pause")
+                        Button { workout.end() } label: { Image(systemName: "stop.fill").frame(maxWidth: .infinity) }.tint(.red).accessibilityLabel("End")
                     }
                 case .paused:
                     HStack {
-                        Button { workout.resume() } label: { Image(systemName: "play.fill").frame(maxWidth: .infinity) }.tint(CycliftWatch.live)
-                        Button { workout.end() } label: { Image(systemName: "stop.fill").frame(maxWidth: .infinity) }.tint(.red)
+                        Button { workout.resume() } label: { Image(systemName: "play.fill").frame(maxWidth: .infinity) }.tint(CycliftWatch.live).accessibilityLabel("Resume")
+                        Button { workout.end() } label: { Image(systemName: "stop.fill").frame(maxWidth: .infinity) }.tint(.red).accessibilityLabel("End")
                     }
                 case .ended:
                     Text("Save this workout to Apple Health?").font(.footnote)
@@ -149,8 +159,8 @@ struct WatchContentView: View {
     }
     private func tile(_ unit: String, _ v: String?, _ sub: String?) -> some View {
         VStack(spacing: 0) {
-            Text(v ?? "--").font(.system(size: 18, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(v == nil ? .secondary : .primary)
-            Text(sub ?? unit).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
+            Text(v ?? "--").font(.system(size: tileSize, weight: .bold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6).foregroundStyle(v == nil ? .secondary : .primary)
+            Text(sub ?? unit).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
         }.frame(maxWidth: .infinity)
     }
     private func fmt(_ s: Int) -> String { s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60) : String(format: "%d:%02d", s / 60, s % 60) }

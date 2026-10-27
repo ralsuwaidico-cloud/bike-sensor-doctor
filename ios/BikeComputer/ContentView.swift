@@ -23,7 +23,7 @@ struct RootView: View {
         Group {
             if store.onboarded { tabs } else { OnboardingView() }
         }
-        .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: false); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice
+        .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: PowerTrust.meterVerified); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice
             let d = Calendar.current.startOfDay(for: Date()); if d != day { day = d; store.ensurePlan() } }
         // The Ride screen is always dark: show it with a dark window so the status bar (clock, battery) stays readable.
         .preferredColorScheme(store.onboarded && tab == 2 ? .dark : (store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil))
@@ -45,6 +45,9 @@ struct RootView: View {
                 ProfileTabView().tabPage(4, tab)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // the raised centre button overlaps the content by ~20 pt: scrollable content ends above it
+            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 22).allowsHitTesting(false) }
+            .undoSnackbar()
             RideTabBar(selected: $tab, recording: recorder.isActive, action: store.todayAction(now: max(Date(), day)), onCentre: centreTapped)
         }
         .ignoresSafeArea(.keyboard)
@@ -105,19 +108,23 @@ struct RideTabBar: View {
         .padding(.top, 6)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
+        // like the system tab bar: labels stop growing at xxLarge; long-press shows the large content viewer
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
 
     private func item(_ i: Int, _ title: String, _ icon: String) -> some View {
         Button { selected = i } label: {
             VStack(spacing: 3) {
                 Image(systemName: icon).font(.system(size: 20, weight: .medium))
-                Text(title).font(.caption2).lineLimit(1).minimumScaleFactor(0.7)
+                Text(title).font(.caption2).lineLimit(1)
             }
-            .frame(maxWidth: .infinity).padding(.vertical, 6)
+            .frame(maxWidth: .infinity, minHeight: 48).padding(.vertical, 2)
+            .contentShape(Rectangle())
             .foregroundStyle(selected == i ? BC.accent : Color.secondary)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title).accessibilityAddTraits(selected == i ? [.isSelected, .isButton] : .isButton)
+        .accessibilityShowsLargeContentViewer { Label(title, systemImage: icon) }
     }
 
     private var rideButton: some View {

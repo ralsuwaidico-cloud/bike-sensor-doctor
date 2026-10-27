@@ -16,9 +16,23 @@ extension Store {
         let today = Calendar.current.startOfDay(for: now)
         var entries: [UUID: [ExerciseEntry]] = [:]
         for w in plan where w.kind == .strength && !w.done && w.date >= today { entries[w.id] = originalEntries(for: w) }
-        return AdaptationInput(profile: profile, plan: plan, rides: rides, strength: strength, availability: effectiveAvailability, equipment: equipment,
+        // records waiting for the rider's review (migration) are not evidence of anything until confirmed
+        return AdaptationInput(profile: profile, plan: plan, rides: rides, strength: strength.filter { !$0.awaitingReview }, availability: effectiveAvailability, equipment: equipment,
                                catalogue: allExercises, templates: templates, originalEntries: entries, dismissed: Set(dismissedAdaptations),
-                               approved: Set(approvedAdaptations), active: adaptations, units: settings.units, now: now, calendar: .current)
+                               approved: Set(approvedAdaptations), active: adaptations, units: settings.units, now: now, calendar: .current,
+                               painClearances: painClearances)
+    }
+
+    /// Pain areas currently holding progression (the same analysis the coach and the planner use).
+    func activePainAreas(now: Date = Date()) -> [PainArea] { TrainingAnalyzer.analyze(adaptationInput(now: now)).painAreas }
+
+    /// The rider confirms a reported pain has gone: that area is released at once (audit G-06), the coach-built
+    /// sessions are rebuilt and the coach runs again. Later reports hold the area again.
+    func confirmPainGone(_ area: PainArea, now: Date = Date()) {
+        painClearances.append(PainClearance(area: area, at: now))
+        if painClearances.count > 50 { painClearances.removeFirst(painClearances.count - 50) }
+        refreshGeneratedSessions(now: now)
+        _ = runAdaptation(now: now)
     }
 
     /// Analyze → Adapt: runs the engine and applies its result to the open future sessions.
@@ -27,6 +41,15 @@ extension Store {
         let r = AdaptationEngine.run(adaptationInput(now: now))
         applyAdaptation(r, now: now)
         return r
+    }
+
+    /// Same planned session apart from generated entry / set ids (and the stored original's ids).
+    static func sameContent(_ a: Workout, _ b: Workout) -> Bool {
+        func key(_ e: [ExerciseEntry]?) -> [String] { (e ?? []).map { x in "\(x.exerciseId)|\(x.name)|\(x.superset ?? "")|\(x.notes)|" + x.sets.map { "\($0.reps),\($0.weightKg ?? -1),\($0.bodyweight),\($0.unilateral),\($0.rpe ?? -1),\($0.done)" }.joined(separator: ";") } }
+        func snap(_ s: WorkoutPlanSnapshot?) -> String { s.map { "\($0.kind)|\($0.minutes)|\($0.intervalReps ?? -1)|\($0.generatedEntries)|" + key($0.plannedEntries).joined(separator: "#") } ?? "-" }
+        var a0 = a, b0 = b
+        a0.plannedEntries = nil; b0.plannedEntries = nil; a0.coachOriginal = nil; b0.coachOriginal = nil
+        return a0 == b0 && key(a.plannedEntries) == key(b.plannedEntries) && snap(a.coachOriginal) == snap(b.coachOriginal)
     }
 
     /// Applies an engine result: each open future session is recomputed from its ORIGINAL values with exactly the
@@ -55,7 +78,9 @@ extension Store {
             }
             var x = AdaptiveRules.apply(desired, to: base, entries: originalEntries(for: base))
             x.coachOriginal = base.planSnapshot
-            p[i] = x
+            // re-running the coach with the same inputs must not change the plan: a routine's entries are prefilled
+            // afresh (new ids) on every run, so the same content keeps the ids already in the plan
+            if !Self.sameContent(x, w) { p[i] = x }
             for d in desired {
                 if let old = adaptations.first(where: { $0.key == d.key && $0.change == d.change }) { active.append(old) } else { active.append(d) }
             }
@@ -71,14 +96,55 @@ extension Store {
     @discardableResult
     func recordCheckIn(_ c: CheckIn, rideId: UUID, now: Date = Date()) -> AdaptationResult? {
         guard let i = rides.firstIndex(where: { $0.id == rideId }) else { return nil }
+        let before = plan
         rides[i].checkIn = c
-        return runAdaptation(now: now)
+        refreshGeneratedSessions(now: now)      // planner: fatigue / pain from the check-in shape coach-built sessions
+        let r = runAdaptation(now: now)
+        noteCheckInRebuild(before: before, now: now)
+        return r
     }
     @discardableResult
     func recordCheckIn(_ c: CheckIn, strengthId: UUID, now: Date = Date()) -> AdaptationResult? {
         guard let i = strength.firstIndex(where: { $0.id == strengthId }) else { return nil }
+        let before = plan
         strength[i].checkIn = c
-        return runAdaptation(now: now)
+        refreshGeneratedSessions(now: now)
+        let r = runAdaptation(now: now)
+        noteCheckInRebuild(before: before, now: now)
+        return r
+    }
+
+    /// Remembers which open sessions this check-in changed (planner rebuild and/or adaptive changes), as they were, with
+    /// a one-line explanation each, so the result screen can offer one Undo for all of them.
+    func noteCheckInRebuild(before: [Workout], now: Date = Date()) {
+        var changed: [Workout] = [], lines: [String] = []
+        for b in before where b.kind == .strength && !b.done {
+            guard let a = plan.first(where: { $0.id == b.id }), a.plannedEntries != b.plannedEntries else { continue }
+            changed.append(b)
+            let sb = (b.plannedEntries ?? []).reduce(0) { $0 + $1.sets.count }, sa = (a.plannedEntries ?? []).reduce(0) { $0 + $1.sets.count }
+            let removed = Set((b.plannedEntries ?? []).map { $0.name }).subtracting((a.plannedEntries ?? []).map { $0.name }).sorted()
+            var t = "\(a.date.dayAndDate) · \(a.displayTitle): \(sb == sa ? "\(sa) sets" : "\(sb) → \(sa) sets")"
+            if !removed.isEmpty { t += ", left out: \(removed.joined(separator: ", "))" }
+            if let why = a.rationale?.notes.first(where: { $0.hasPrefix("Deload") || $0.lowercased().contains("pain") }) { t += ". \(why)" }
+            else if let adj = adaptations.first(where: { $0.workoutId == a.id }) { t += ". \(adj.summary)" }
+            lines.append(t)
+        }
+        checkInRebuild = changed.isEmpty ? nil : CheckInRebuild(before: changed, lines: lines, at: now)
+    }
+
+    /// Undo everything the latest check-in changed: those sessions go back exactly as they were and are kept that way
+    /// (marked as the rider's own, so neither the planner nor the adaptive coach rebuilds them on its own again).
+    func undoCheckInRebuild() {
+        guard let r = checkInRebuild else { return }
+        var p = plan, d = dismissedAdaptations
+        let ids = Set(r.before.map { $0.id })
+        for b in r.before { if let i = p.firstIndex(where: { $0.id == b.id }), !p[i].done { var x = b; x.edited = true; p[i] = x } }
+        for a in adaptations where ids.contains(a.workoutId) && !d.contains(a.key) { d.append(a.key) }
+        adaptations.removeAll { ids.contains($0.workoutId) }
+        dismissedAdaptations = d
+        plan = p
+        checkInRebuild = nil
+        trimAdaptationKeys()
     }
 
     // MARK: visible and reversible (brief E)
@@ -145,13 +211,14 @@ extension Store {
         if approvedAdaptations.count > 300 { approvedAdaptations.removeFirst(approvedAdaptations.count - 300) }
     }
 
-    // MARK: B — sessions built from the rider's own exercises (only once a split was chosen)
-    func programmedSession(_ w: Workout) -> Workout {
-        guard profile.trainingMode.includesLifting, profile.strengthSplit != nil, w.kind == .strength, w.templateId == nil, w.plannedEntries == nil else { return w }
-        let e = StrengthProgrammer.entries(focus: w.strengthFocus ?? .fullBody, label: w.note, templates: templates, preserved: profile.preservedTemplateIds,
-                                           custom: customExercises, catalogue: ExerciseCatalogue.builtIn, equipment: equipment)
-        guard !e.isEmpty else { return w }
-        var x = w; x.plannedEntries = e; x.generatedEntries = true
+    // MARK: B — coach-built sessions (with or without a chosen split; "Coach decides" included — audit G-04)
+    /// Quality release: built by the personalised planner (StrengthPlanner) — goal, priority, experience, equipment,
+    /// preferences, logged performance and the rides around the session — with its reasons stored for "Why?".
+    func programmedSession(_ w: Workout, ctx: PlannerContext? = nil) -> Workout {
+        guard profile.trainingMode.includesLifting, w.kind == .strength, w.templateId == nil, w.plannedEntries == nil else { return w }
+        let b = StrengthPlanner.build(for: w, ctx: ctx ?? plannerContext())
+        guard !b.entries.isEmpty else { return w }
+        var x = w; x.plannedEntries = b.entries; x.generatedEntries = true; x.rationale = b.rationale
         return x
     }
 
@@ -163,4 +230,11 @@ extension Store {
         _ = regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: now)!, replaceEdited: false)
         _ = runAdaptation(now: now)
     }
+}
+
+/// What the latest check-in changed in the open plan (for the result screen's Undo).
+struct CheckInRebuild: Equatable {
+    var before: [Workout]
+    var lines: [String]
+    var at: Date
 }

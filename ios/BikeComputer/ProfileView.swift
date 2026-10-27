@@ -16,10 +16,10 @@ struct ProfileTabView: View {
             List {
                 Section {
                     HStack(spacing: 14) {
-                        ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(BC.accent) }
+                        ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(.title2, design: .rounded).weight(.bold)).foregroundStyle(BC.accent) }
                         VStack(alignment: .leading, spacing: 3) {
                             Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
-                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             if device.state == .ready { Pill(text: "board connected", color: BC.live) }
                         }
                         Spacer()
@@ -41,7 +41,7 @@ struct ProfileTabView: View {
                     NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
                     NavigationLink("Terms of use") { LegalView(kind: .terms) }
                     if let mail = SupportInfo.mailURL, let address = SupportInfo.email {
-                        Link(destination: mail) { HStack { Text("Contact support"); Spacer(); Text(address).font(.footnote).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.7) } }
+                        Link(destination: mail) { HStack { Text("Contact support"); Spacer(); Text(address).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) } }
                     }
                     Link(destination: SupportInfo.supportPage) { HStack { Text("Support page"); Spacer(); Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary) } }
                     LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1.2")
@@ -63,7 +63,7 @@ struct ProfileTabView: View {
         NavigationLink { d() } label: {
             HStack(spacing: 12) {
                 Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(BC.accent).frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) { Text(title).font(.body.weight(.semibold)); Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                VStack(alignment: .leading, spacing: 2) { Text(title).font(.body.weight(.semibold)); Text(subtitle).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             }.padding(.vertical, 2)
         }
     }
@@ -137,7 +137,7 @@ struct TrainingProfilePage: View {
                 Text(store.profile.trainingMode.hint).font(.footnote).foregroundStyle(.secondary)
                 if store.profile.trainingMode == .hybrid {
                     Picker("Main priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }
-                    NavigationLink { HybridPlanEditor() } label: { HStack { Text("Hybrid plan"); Spacer(); Text(hybridSummary).font(.caption).foregroundStyle(.secondary).lineLimit(1) } }.accessibilityIdentifier("hybridPlanLink")
+                    NavigationLink { HybridPlanEditor() } label: { HStack { Text("Hybrid plan"); Spacer(); Text(hybridSummary).font(.caption).foregroundStyle(.secondary).clampLines(1) } }.accessibilityIdentifier("hybridPlanLink")
                 }
                 NavigationLink { AdjustmentsView() } label: { HStack { Text("Coach adjustments"); Spacer(); Text(store.activeAdaptations.isEmpty ? (store.settings.autoAdapt ? "none in force" : "automatic off") : "\(store.activeAdaptations.count) in force").font(.caption).foregroundStyle(.secondary) } }
             } header: { Text("Training mode") } footer: { Text("Hybrid Athlete: one coach for cycling and lifting, with separate hour budgets. Changing the mode rebuilds the coming weeks around your days (hand-edited sessions are kept).") }
@@ -157,6 +157,7 @@ struct TrainingProfilePage: View {
                     NavigationLink { TemplatesView() } label: { HStack { Text("Routines (templates)"); Spacer(); Text("\(store.templates.count)").foregroundStyle(.secondary) } }
                     NavigationLink { WeekdayRoutinesPage() } label: { HStack { Text("Routine per weekday"); Spacer(); Text("\(store.weekdayRoutines.count) set").foregroundStyle(.secondary) } }
                     NavigationLink { EquipmentPage() } label: { HStack { Text("Equipment I own"); Spacer(); Text(store.equipment.isSet ? "\(store.equipment.owned.count) items" : "not set").foregroundStyle(.secondary) } }
+                    NavigationLink { StrengthPrefsPage() } label: { HStack { Text("Strength programming"); Spacer(); Text(store.plannerContext().goal.title).font(.footnote).foregroundStyle(.secondary) } }.accessibilityIdentifier("strengthProgramming")
                     NavigationLink { MyExercisesView() } label: { HStack { Text("My exercises"); Spacer(); Text("\(store.customExercises.count) custom · \(ExerciseCatalogue.builtIn.count) built in").font(.caption).foregroundStyle(.secondary) } }
                 }
             }
@@ -171,7 +172,7 @@ struct TrainingProfilePage: View {
                 }
                 Button { showAvailability = true } label: { HStack { Text("Training days and durations"); Spacer(); Text(availabilityText).font(.caption).foregroundStyle(.secondary) } }
                 let a = store.effectiveAvailability
-                HStack(spacing: 4) { ForEach(0..<7, id: \.self) { i in VStack(spacing: 2) { Text(WeeklyAvailability.dayNames[i]).font(.system(size: 9, weight: .heavy)).foregroundStyle(.secondary); Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent) }.frame(maxWidth: .infinity) } }
+                HStack(spacing: 4) { ForEach(0..<7, id: \.self) { i in VStack(spacing: 2) { Text(WeeklyAvailability.dayNames[i]).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).lineLimit(1); Image(systemName: a.days[i].activity.icon).font(.caption).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent) }.frame(maxWidth: .infinity) } }
             } header: { Text("Weekly availability") } footer: { Text("The plan is built around the days you choose. Cycling hours and lifting hours are separate budgets; the coach schedules up to each and suggests changes instead of exceeding them.") }
             Section("Training history") {
                 let rides = store.rides
@@ -239,10 +240,14 @@ struct PowerCyclingPage: View {
     var body: some View {
         Form {
             Section {
-                HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit(); Pill(text: store.profile.ftpLabel, color: store.profile.ftpHow == .assumed ? BC.stale : BC.live) }
+                ViewThatFits(in: .horizontal) {
+                    HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit(); FTPConfidencePill(profile: store.profile) }
+                    VStack(alignment: .leading) { HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit() }; FTPConfidencePill(profile: store.profile) }
+                }
                 HStack {
-                    TextField("Tested FTP in watts", text: $ftpText).keyboardType(.numberPad)
-                    Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.updateProfile { $0.ftpW = v; $0.ftpHow = .tested }; ftpText = "" } }.disabled(Int(ftpText) == nil)
+                    TextField("FTP in watts", text: $ftpText).keyboardType(.numberPad)
+                    // quality release: a typed value is "entered" (Unverified) — only a recorded FTP test ride with verified power is a verified test
+                    Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.updateProfile { $0.ftpW = v; $0.ftpHow = .entered; $0.ftpVerifiedTest = nil; $0.ftpPowerVerified = nil }; ftpText = "" } }.disabled(Int(ftpText) == nil).frame(minHeight: DS.minTap)
                 }
                 if store.profile.ftpHow != .assumed { Button("Back to the assumption from weight and level") { store.updateProfile { $0.ftpHow = .assumed; $0.refreshAssumption() } }.font(.footnote) }
                 if let s = store.ftpSuggestion { Text("Suggested from your \(s.rideDate.dayAndDate) ride: \(s.watts) W (best 20 min \(s.best20) W). Accept it on Home or Progress.").font(.footnote).foregroundStyle(BC.accent) }
@@ -271,6 +276,10 @@ struct PowerCyclingPage: View {
         .navigationTitle("Power & cycling").navigationBarTitleDisplayMode(.inline)
     }
     private var ftpMethod: String {
+        let p = store.profile
+        return p.ftpSourceText + (p.ftpCaution.map { " " + $0 } ?? "")
+    }
+    private var ftpMethodOld: String {
         switch store.profile.ftpHow {
         case .assumed: return "Estimation method: weight × level (\(String(format: "%.2f", store.profile.level.wkg)) W/kg) — a starting assumption, replaced by a real 20-minute effort (0.95 × best 20 min) that you accept, or by a value you enter."
         case .fromRides: return "Estimated from a ride: 0.95 × your best 20-minute power. A tested or entered value always wins."

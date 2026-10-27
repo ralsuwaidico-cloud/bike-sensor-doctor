@@ -73,6 +73,11 @@ struct RiderProfile: Codable, Equatable {
     var strengthSessionMinutes: Int? = nil
     /// Saved routines the rider wants kept as they are; the coach builds sessions around them first.
     var preservedTemplateIds: [UUID] = []
+    /// Quality release: FTP evidence. `ftpVerifiedTest` is true only when the FTP came from a completed structured FTP
+    /// test ride with verified power; `ftpPowerVerified` records whether the ride an estimate came from had verified
+    /// power. Both nil on older files → the FTP is treated as unverified unless it is the provisional assumption.
+    var ftpVerifiedTest: Bool? = nil
+    var ftpPowerVerified: Bool? = nil
     /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
     var hrZones: [(lo: Int, hi: Int?)] {
         if hrZoneMethod == .lthr, let l = lthr, l > 0 {
@@ -87,11 +92,9 @@ struct RiderProfile: Codable, Equatable {
     var effectiveAge: Int { if let y = birthYear, y > 1900 { return max(10, Calendar.current.component(.year, from: Date()) - y) }; return age }
     var maxHRLabel: String { maxHR != nil ? "measured / entered" : "estimated from age" }
 
-    /// "provisional" / "entered" / "estimated from 24 Oct ride"
-    var ftpLabel: String {
-        if ftpHow == .fromRides, let d = ftpFromDate { return "estimated from \(d.dayAndDate) ride" }
-        return ftpHow.label
-    }
+    /// The honest confidence label of the FTP ("Verified test", "Estimated from verified power data", "Provisional
+    /// estimate", "Unverified"). The 95 %-of-20-minutes estimate is never called a test.
+    var ftpLabel: String { ftpConfidence.title }
 
     var estimatedMaxHR: Int { maxHR ?? Int((208.0 - 0.7 * Double(effectiveAge)).rounded()) }
     mutating func refreshAssumption() { if ftpHow == .assumed { ftpW = Int((weightKg * level.wkg).rounded()) } }
@@ -144,6 +147,8 @@ struct RiderProfile: Codable, Equatable {
         cyclingSessionMinutes = try? c.decodeIfPresent(Int.self, forKey: .cyclingSessionMinutes)
         strengthSessionMinutes = try? c.decodeIfPresent(Int.self, forKey: .strengthSessionMinutes)
         preservedTemplateIds = (try? c.decodeIfPresent([UUID].self, forKey: .preservedTemplateIds)) ?? []
+        ftpVerifiedTest = try? c.decodeIfPresent(Bool.self, forKey: .ftpVerifiedTest)
+        ftpPowerVerified = try? c.decodeIfPresent(Bool.self, forKey: .ftpPowerVerified)
     }
 
     // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)
@@ -240,6 +245,17 @@ struct Workout: Codable, Identifiable, Equatable {
     /// Stored only when true, so sessions of older builds encode exactly as before (no sync churn).
     var entriesByCoach: Bool? = nil
     var generatedEntries: Bool { get { entriesByCoach ?? false } set { entriesByCoach = newValue ? true : nil } }
+    /// Quality release (schema 2, ios/QUALITY_RELEASE.md): HOW the session was completed. nil = not completed. `.recorded`
+    /// = a log or a recorded ride backs it; `.marked` = the rider marked it done without detail (WorkoutStatus.completedManual).
+    /// `done` stays the persisted "closed" flag and is always written together with this field by the Store.
+    var completion: WorkoutCompletion? = nil
+    var completedAt: Date? = nil
+    /// Duration the rider typed for a manual completion (nil = not stated; never filled in by the app).
+    var manualMinutes: Int? = nil
+    /// What a data migration changed on this record, with the original values (never silently rewritten).
+    var migrationNote: String? = nil
+    /// The strength planner's decision factors for a session it generated (Why? per exercise).
+    var rationale: SessionRationale? = nil
 
     init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false, templateId: UUID? = nil) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
@@ -265,6 +281,11 @@ struct Workout: Codable, Identifiable, Equatable {
         intervalReps = try? c.decodeIfPresent(Int.self, forKey: .intervalReps)
         entriesByCoach = (try? c.decodeIfPresent(Bool.self, forKey: .entriesByCoach)) == true ? true : nil
         coachOriginal = try? c.decodeIfPresent(WorkoutPlanSnapshot.self, forKey: .coachOriginal)
+        completion = try? c.decodeIfPresent(WorkoutCompletion.self, forKey: .completion)
+        completedAt = try? c.decodeIfPresent(Date.self, forKey: .completedAt)
+        manualMinutes = try? c.decodeIfPresent(Int.self, forKey: .manualMinutes)
+        migrationNote = try? c.decodeIfPresent(String.self, forKey: .migrationNote)
+        rationale = try? c.decodeIfPresent(SessionRationale.self, forKey: .rationale)
     }
     /// "Strength · Lower body" when a region is planned.
     var displayTitle: String {
@@ -276,6 +297,12 @@ struct Workout: Codable, Identifiable, Equatable {
     }
     /// Interval repetitions in force (threshold 3 × 8 min, VO2 5 × 3 min unless the coach changed them).
     var effectiveIntervalReps: Int? { kind.defaultIntervalReps.map { intervalReps ?? $0 } }
+    /// The interval structure the live ride coach runs — the SAME one the plan, Home and the steps show (audit G-11:
+    /// the ride screen used to run threshold as 4 × 8 min / 4 min while the plan said 3 × 8 min / 3 min easy).
+    var liveIntervalPlan: IntervalPlan? {
+        guard let r = effectiveIntervalReps, kind.intervalWorkMinutes > 0 else { return nil }
+        return IntervalPlan(workSec: kind.intervalWorkMinutes * 60, restSec: kind.intervalRestMinutes * 60, repeats: max(1, r))
+    }
     /// Title with the assigned routine's name when one is assigned (the calendar shows the rider's own workout name).
     func displayTitle(routine: WorkoutTemplate?) -> String { if kind == .strength, let r = routine { return r.name }; return displayTitle }
 
@@ -346,6 +373,15 @@ struct Workout: Codable, Identifiable, Equatable {
 }
 
 // MARK: - Rides
+/// The ONE answer to "may watts drive coaching?" (audit G-05). The pipeline marks power readings `.good` only when
+/// this is true (`SensorHub.refresh(powerVerified:)`), rides store it in `RideRecord.powerVerified`, the adaptive coach
+/// uses verified power only, and the live ride coach falls back to heart rate / the rider's own steady output when it
+/// is false. No power meter can pass a verification check in this build (the 60-second check of the Android
+/// prototype is not ported), so it is false: power is shown and recorded, labelled "unverified", and advisory only.
+enum PowerTrust {
+    static let meterVerified = false
+}
+
 struct RideRecord: Codable, Identifiable, Equatable {
     enum Recorder: String, Codable { case board, phone, health }
     var id = UUID()
@@ -482,7 +518,8 @@ extension UUID: @retroactive Identifiable { public var id: UUID { self } }
 /// One file `store.json` in Application Support. `schema` lets a future build migrate instead of dropping data; build 15
 /// writes schema 1 and still imports the build-14 per-file layout (profile.json / plan.json / rides.json / tiles.json).
 struct StoreFile: Codable, Equatable {
-    static let currentSchema = 1
+    /// 2 = quality release: explicit workout completion states, soft-delete trash, strength preferences (migrateV2).
+    static let currentSchema = 2
     var schema = StoreFile.currentSchema
     var profile = RiderProfile()
     var settings = AppSettings()
@@ -518,12 +555,19 @@ struct StoreFile: Codable, Equatable {
     var approvedAdaptations: [String] = []
     var adaptiveProposals: [AdaptiveProposal] = []
     var lastAdaptation: AdaptationSummary? = nil
+    var painClearances: [PainClearance] = []
+    /// Quality release: the rider's strength-programming preferences (swaps, favourites, discomfort, temporary
+    /// unavailability), deleted records kept for Undo, and the human-readable log of data corrections a migration made.
+    var strengthPrefs = StrengthPrefs()
+    var trash: [TrashItem] = []
+    var migrationLog: [String] = []
 
     /// Explicit because both init(from:) and encode(to:) are hand-written (the compiler then synthesises no keys).
     enum CodingKeys: String, CodingKey {
         case schema, profile, settings, plan, rides, tiles, onboarded, guest, appleUserId, createdAt, ftpSuggestion, boardSync, onboardingStage, availability
         case strength, templates, customExercises, appliedProposals, weekdayRoutines, equipment, activeSession, ignoredInsights
-        case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation
+        case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation, painClearances
+        case strengthPrefs, trash, migrationLog
     }
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
@@ -566,6 +610,10 @@ struct StoreFile: Codable, Equatable {
         approvedAdaptations = (try? c.decodeIfPresent([String].self, forKey: .approvedAdaptations)) ?? []
         adaptiveProposals = (try? c.decodeIfPresent([AdaptiveProposal].self, forKey: .adaptiveProposals)) ?? []
         lastAdaptation = try? c.decodeIfPresent(AdaptationSummary.self, forKey: .lastAdaptation)
+        painClearances = (try? c.decodeIfPresent([PainClearance].self, forKey: .painClearances)) ?? []
+        strengthPrefs = (try? c.decodeIfPresent(StrengthPrefs.self, forKey: .strengthPrefs)) ?? StrengthPrefs()
+        trash = (try? c.decodeIfPresent([TrashItem].self, forKey: .trash)) ?? []
+        migrationLog = (try? c.decodeIfPresent([String].self, forKey: .migrationLog)) ?? []
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -577,15 +625,17 @@ struct StoreFile: Codable, Equatable {
         try c.encode(Dictionary(uniqueKeysWithValues: weekdayRoutines.map { (String($0.key), $0.value.uuidString) }), forKey: .weekdayRoutines)
         try c.encode(equipment, forKey: .equipment); try c.encodeIfPresent(activeSession, forKey: .activeSession); try c.encode(ignoredInsights, forKey: .ignoredInsights)
         try c.encode(adaptations, forKey: .adaptations); try c.encode(dismissedAdaptations, forKey: .dismissedAdaptations); try c.encode(approvedAdaptations, forKey: .approvedAdaptations)
-        try c.encode(adaptiveProposals, forKey: .adaptiveProposals); try c.encodeIfPresent(lastAdaptation, forKey: .lastAdaptation)
+        try c.encode(adaptiveProposals, forKey: .adaptiveProposals); try c.encodeIfPresent(lastAdaptation, forKey: .lastAdaptation); try c.encode(painClearances, forKey: .painClearances)
+        try c.encode(strengthPrefs, forKey: .strengthPrefs); try c.encode(trash, forKey: .trash); try c.encode(migrationLog, forKey: .migrationLog)
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
-    static func migrate(_ f: StoreFile) -> StoreFile {
+    static func migrate(_ f: StoreFile, now: Date = Date(), calendar: Calendar = .current) -> StoreFile {
         var f = f
         if f.schema < 1 { f.schema = 1 }          /* schema 0 never shipped; placeholder for the pattern */
         if f.tiles.isEmpty { f.tiles = Store.defaultTiles }
         if f.rides.contains(where: { $0.zoneSeconds.count != 7 }) { for i in f.rides.indices where f.rides[i].zoneSeconds.count != 7 { f.rides[i].zoneSeconds = Array(repeating: 0, count: 7) } }
+        if f.schema < 2 { f = StoreMigration.v2(f, now: now, calendar: calendar) }
         return f
     }
 }
@@ -599,6 +649,10 @@ struct FTPSuggestion: Codable, Equatable {
     var rideId: UUID
     var rideDate: Date
     var previousFTP: Int
+    /// Quality release: whether the ride's power was verified, and whether the ride was a planned FTP test (structured
+    /// protocol). Only both together make an accepted value a "Verified test". nil on older files = no.
+    var powerVerified: Bool? = nil
+    var testProtocol: Bool? = nil
 }
 
 /// A coach proposal the rider accepted, with the workout as it was before — so it can be undone.
@@ -637,6 +691,15 @@ final class Store: ObservableObject {
     @Published var approvedAdaptations: [String] = [] { didSet { persist() } }
     @Published var adaptiveProposals: [AdaptiveProposal] = [] { didSet { persist() } }
     @Published var lastAdaptation: AdaptationSummary? = nil { didSet { persist() } }
+    /// The rider's "this pain is gone" confirmations (audit G-06).
+    @Published var painClearances: [PainClearance] = [] { didSet { persist() } }
+    @Published var strengthPrefs = StrengthPrefs() { didSet { persist() } }
+    @Published var trash: [TrashItem] = [] { didSet { persist() } }
+    @Published var migrationLog: [String] = [] { didSet { persist() } }
+    /// The last deletion that can still be undone from the snackbar (not persisted; the record itself is in `trash`).
+    @Published var undoToast: UndoToast? = nil
+    /// Sessions the planner / adaptive coach rebuilt after the latest check-in, as they were before (one-tap Undo).
+    @Published var checkInRebuild: CheckInRebuild? = nil
     @Published private(set) var lastSaveError: String?
 
     let dir: URL
@@ -653,10 +716,14 @@ final class Store: ObservableObject {
         dir = directory
         UITestSupport.prepareStoreDirectory(dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { apply(StoreFile.migrate(f)) }
-        else if let legacy = legacyImport() { apply(legacy) }
+        var migrated = false
+        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { let m = StoreFile.migrate(f); migrated = f.schema < 2; apply(m) }
+        else if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
         loading = false
+        purgeTrash()
         if generatePlan { ensurePlan() }
+        // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalised planner (never edited ones)
+        if migrated { refreshGeneratedSessions(); persist() }
         if !FileManager.default.fileExists(atPath: dir.appendingPathComponent("store.json").path) { persist() }
     }
 
@@ -667,7 +734,8 @@ final class Store: ObservableObject {
         templates = f.templates; customExercises = f.customExercises; appliedProposals = f.appliedProposals
         weekdayRoutines = f.weekdayRoutines; equipment = f.equipment; activeSession = f.activeSession; ignoredInsights = f.ignoredInsights
         adaptations = f.adaptations; dismissedAdaptations = f.dismissedAdaptations; approvedAdaptations = f.approvedAdaptations
-        adaptiveProposals = f.adaptiveProposals; lastAdaptation = f.lastAdaptation
+        adaptiveProposals = f.adaptiveProposals; lastAdaptation = f.lastAdaptation; painClearances = f.painClearances
+        strengthPrefs = f.strengthPrefs; trash = f.trash; migrationLog = f.migrationLog
     }
 
     var snapshot: StoreFile {
@@ -676,7 +744,8 @@ final class Store: ObservableObject {
         f.templates = templates; f.customExercises = customExercises; f.appliedProposals = appliedProposals
         f.weekdayRoutines = weekdayRoutines; f.equipment = equipment; f.activeSession = activeSession; f.ignoredInsights = ignoredInsights
         f.adaptations = adaptations; f.dismissedAdaptations = dismissedAdaptations; f.approvedAdaptations = approvedAdaptations
-        f.adaptiveProposals = adaptiveProposals; f.lastAdaptation = lastAdaptation
+        f.adaptiveProposals = adaptiveProposals; f.lastAdaptation = lastAdaptation; f.painClearances = painClearances
+        f.strengthPrefs = strengthPrefs; f.trash = trash; f.migrationLog = migrationLog
         return f
     }
 
@@ -725,11 +794,19 @@ final class Store: ObservableObject {
     static func weekdayIndex(_ d: Date, calendar cal: Calendar = .current) -> Int { (cal.component(.weekday, from: d) + 5) % 7 }
     /// Fills freshly generated strength sessions with the weekday's default routine (if one is set and still exists).
     func applyWeekdayRoutines(_ ws: [Workout]) -> [Workout] {
-        ws.map { w in
+        // the planner sees the NEW week (its rides for interference, its lifts for the session index and the weekly
+        // volume share), not the week being replaced
+        var ctx: PlannerContext? = nil
+        if profile.trainingMode.includesLifting, ws.contains(where: { $0.kind == .strength && $0.templateId == nil }), let lo = ws.map({ $0.date }).min(), let hi = ws.map({ $0.date }).max() {
+            let cal = Calendar.current
+            let m = TrainingLedger.monday(of: lo, calendar: cal), e = cal.date(byAdding: .day, value: 7, to: TrainingLedger.monday(of: hi, calendar: cal))!
+            var c = plannerContext(); c.plan = plan.filter { $0.date < m || $0.date >= e } + ws; ctx = c
+        }
+        return ws.map { w in
             guard w.kind == .strength, w.templateId == nil else { return w }
             if let t = weekdayRoutines[Store.weekdayIndex(w.date)], templates.contains(where: { $0.id == t }) { var x = w; x.templateId = t; return x }
-            // adaptive coach (split chosen): a session without a routine is built from the rider's own exercises
-            return programmedSession(w)
+            // adaptive coach (with or without a chosen split): a session without a routine is built by the planner
+            return programmedSession(w, ctx: ctx)
         }
     }
     func template(_ id: UUID?) -> WorkoutTemplate? { id.flatMap { i in templates.first { $0.id == i } } }
@@ -789,6 +866,8 @@ final class Store: ObservableObject {
     func startStrengthSession(for w: Workout?, template t: WorkoutTemplate?, entries: [ExerciseEntry], name: String? = nil, now: Date = Date()) -> Bool {
         guard activeSession == nil else { return false }
         if let id = w?.id, plan.first(where: { $0.id == id })?.done == true { return false }   // already completed: no second log
+        // quality release: a session planned for a later day cannot be started (move it to today first)
+        if let w, Calendar.current.startOfDay(for: w.date) > Calendar.current.startOfDay(for: now) { return false }
         var s = StrengthSession(date: now, minutes: 0, focus: t?.focus ?? w?.strengthFocus ?? .custom, customName: name ?? t?.name ?? "", workoutId: w?.id)
         s.templateId = t?.id
         s.exercises = entries.map { e in var x = e; x.sets = x.sets.map { st in var y = st; y.done = false; return y }; return x }
@@ -799,14 +878,17 @@ final class Store: ObservableObject {
     func updateActiveSession(_ change: (inout StrengthSession) -> Void) { guard var s = activeSession else { return }; change(&s); activeSession = s }
     func pauseActiveSession(now: Date = Date()) { updateActiveSession { if $0.pausedAt == nil { $0.pausedAt = now } } }
     func resumeActiveSession(now: Date = Date()) { updateActiveSession { if let p = $0.pausedAt { $0.pausedSeconds += Int(now.timeIntervalSince(p)); $0.pausedAt = nil } } }
-    /// Finishes the active session: only completed sets are kept; duration = elapsed working time. Adds it to history
-    /// (marking the planned session done) and clears the active one. Returns the stored session.
+    /// Finishes the active session: only completed sets are kept; duration = measured working time (rounded, never a
+    /// made-up minimum). Adds it to history (marking the planned session done) and clears the active one. Returns the
+    /// stored session. Quality release: a session that had planned exercises but NO set ticked as done is NOT saved
+    /// (returns nil, the session stays active) — the UI offers "Mark done without details" or Discard instead.
     @discardableResult
     func finishActiveSession(rpe: Int?, notes: String, now: Date = Date()) -> StrengthSession? {
         guard var s = activeSession else { return nil }
+        if Store.finishWouldSaveNothing(s) { return nil }
         if s.pausedAt != nil { s.pausedSeconds += Int(now.timeIntervalSince(s.pausedAt!)); s.pausedAt = nil }
         s.finishedAt = now
-        s.minutes = max(1, (s.elapsedSeconds(now: now) + 30) / 60)
+        s.minutes = max(0, (s.elapsedSeconds(now: now) + 30) / 60)
         s.rpe = rpe; s.notes = notes
         s.exercises = s.exercises?.map { e in var x = e; x.sets = x.sets.filter { $0.done }; return x }.filter { !$0.sets.isEmpty }
         if (s.exercises ?? []).isEmpty { s.exercises = nil }
@@ -898,7 +980,8 @@ final class Store: ObservableObject {
     func update(_ w: Workout) { if let i = plan.firstIndex(where: { $0.id == w.id }) { plan[i] = w } }
     /// A change the rider made by hand: saved and flagged so regeneration asks first.
     func edit(_ w: Workout) { var x = w; x.edited = true; update(x) }
-    func remove(_ w: Workout) { plan.removeAll { $0.id == w.id } }
+    /// Removes a planned session (soft: kept in `trash` with Undo; logs that completed it are kept as extra sessions).
+    func remove(_ w: Workout) { deleteWorkout(w) }
     func add(_ w: Workout) { var x = w; x.edited = true; plan.append(x); plan.sort { $0.date < $1.date } }
     func swapDays(_ a: Workout, _ b: Workout) {
         guard let i = plan.firstIndex(where: { $0.id == a.id }), let j = plan.firstIndex(where: { $0.id == b.id }) else { return }
@@ -914,7 +997,7 @@ final class Store: ObservableObject {
         if let b = r.boardRideId, rides.contains(where: { $0.boardRideId == b && $0.recorder == .board }) { return false }
         if rides.contains(where: { $0.id == r.id }) { return false }
         rides.insert(r, at: 0)
-        if let t = today, t.kind.isRide, !t.done { var w = t; w.done = true; update(w) }
+        if let t = today, t.kind.isRide, !t.done, Calendar.current.isDate(r.start, inSameDayAs: t.date) { var w = t; w.done = true; w.completion = .recorded; w.completedAt = Date(); update(w) }
         considerFTP(from: r)
         return true
     }
@@ -933,17 +1016,26 @@ final class Store: ObservableObject {
             if s.isDetailed && !strength[j].isDetailed { strength.remove(at: j) } else if !s.isDetailed { return false }
         }
         if strength.contains(where: { StrengthSession.sameSession($0, s) }) { return false }
+        var s = s
+        let cal = Calendar.current
+        // quality release: the link to a planned session is explicit and stored on the log. A log never completes a
+        // session planned for a later day; without a link, the open strength session of the log's own day is the one
+        // it represents (unless the rider saved it as an extra session).
+        if let wid = s.workoutId, let w = plan.first(where: { $0.id == wid }), cal.startOfDay(for: w.date) > cal.startOfDay(for: s.date) { s.workoutId = nil }
+        if s.workoutId == nil, s.unplanned != true, let w = plan.filter({ $0.kind == .strength && !$0.done && !$0.skipped && cal.isDate($0.date, inSameDayAs: s.date) }).min(by: { $0.sequence < $1.sequence }) { s.workoutId = w.id }
         strength.insert(s, at: 0)
         strength.sort { $0.date > $1.date }
-        let cal = Calendar.current
-        if let wid = s.workoutId, let i = plan.firstIndex(where: { $0.id == wid }) { plan[i].done = true }
-        else if let i = plan.firstIndex(where: { $0.kind == .strength && !$0.done && cal.isDate($0.date, inSameDayAs: s.date) }) { plan[i].done = true }
+        if let wid = s.workoutId, let i = plan.firstIndex(where: { $0.id == wid }) { plan[i].done = true; plan[i].completion = .recorded; plan[i].completedAt = s.date; plan[i].manualMinutes = nil }
+        consumeTemporaryBlocks()
         // 0.8.0: a completed session never rewrites its template (exercise order, sets and notes stay as the rider saved
         // them); the next use is prefilled from this session via lastSession(template:).
         if let t = s.templateId, let i = templates.firstIndex(where: { $0.id == t }) { templates[i].lastUsed = s.date }
+        // loads of coach-built future sessions follow the newest logged performance
+        if s.isDetailed { refreshGeneratedSessions() }
         return true
     }
-    func deleteStrength(_ s: StrengthSession) { strength.removeAll { $0.id == s.id } }
+    /// Deletes a log (soft: kept in `trash` with Undo); the planned session it completed goes back to planned.
+    func deleteStrength(_ s: StrengthSession) { deleteStrengthLog(s) }
     func updateStrength(_ s: StrengthSession) { if let i = strength.firstIndex(where: { $0.id == s.id }) { strength[i] = s } }
 
     // MARK: exercises and templates (0.7.0)
@@ -1009,7 +1101,10 @@ final class Store: ObservableObject {
         let w = Self.proposedFTP(best20: b20)
         guard abs(w - profile.ftpW) * 50 >= profile.ftpW else { return }       /* < 2 % change: nothing to propose */
         if let s = ftpSuggestion, s.rideDate > r.start { return }               /* keep the newer suggestion */
-        ftpSuggestion = FTPSuggestion(watts: w, best20: b20, best60: r.best60, rideId: r.id, rideDate: r.start, previousFTP: profile.ftpW)
+        var sug = FTPSuggestion(watts: w, best20: b20, best60: r.best60, rideId: r.id, rideDate: r.start, previousFTP: profile.ftpW)
+        sug.powerVerified = r.powerVerified == true
+        sug.testProtocol = plan.contains { $0.kind == .ftpTest && Calendar.current.isDate($0.date, inSameDayAs: r.start) }
+        ftpSuggestion = sug
     }
     /// Same rule for a board summary that carries best20 but no samples.
     func considerFTP(boardBest20 b20: Int, ride r: RideRecord) {
@@ -1018,9 +1113,13 @@ final class Store: ObservableObject {
         if let s = ftpSuggestion, s.rideDate > r.start { return }
         ftpSuggestion = FTPSuggestion(watts: w, best20: b20, best60: nil, rideId: r.id, rideDate: r.start, previousFTP: profile.ftpW)
     }
+    /// Accepting a suggestion: a planned FTP test ride with verified power becomes a verified test; any other ride an
+    /// estimate whose confidence follows the ride's power verification (ios/QUALITY_RELEASE.md, FTP confidence).
     func acceptFTPSuggestion() {
         guard let s = ftpSuggestion else { return }
-        updateProfile { $0.ftpW = s.watts; $0.ftpHow = .fromRides; $0.ftpFromDate = s.rideDate }
+        let verified = s.powerVerified == true
+        let test = verified && s.testProtocol == true
+        updateProfile { $0.ftpW = s.watts; $0.ftpHow = test ? .tested : .fromRides; $0.ftpFromDate = s.rideDate; $0.ftpPowerVerified = verified; $0.ftpVerifiedTest = test }
         ftpSuggestion = nil
     }
     func dismissFTPSuggestion() { ftpSuggestion = nil }
@@ -1041,6 +1140,7 @@ final class Store: ObservableObject {
         }
         // 3. new ride the phone never saw
         var r = RideRecord(start: start, durationS: b.durationS, distanceM: b.distanceM, recorder: .board, sources: ["BikeComputer"])
+        r.powerVerified = PowerTrust.meterVerified
         r = Self.merge(r, with: b, boardId: boardId, start: start)
         let at = rides.firstIndex { $0.start < r.start } ?? rides.count
         rides.insert(r, at: at)
@@ -1079,18 +1179,19 @@ final class Store: ObservableObject {
         }
     }
 
-    /// Weekly lifting totals (0.6.0), kept apart from riding.
-    struct StrengthWeekTotal: Identifiable { var id: Date { monday }; let monday: Date; let minutes: Int; let sessions: Int }
-    func strengthWeekTotals(weeks: Int = 8) -> [StrengthWeekTotal] {
+    /// Weekly lifting totals (0.6.0), kept apart from riding. Quality release: from the one query layer
+    /// (TrainingLedger), so Home, Plan, Progress and History count the same sessions.
+    struct StrengthWeekTotal: Identifiable { var id: Date { monday }; let monday: Date; let minutes: Int; let sessions: Int; var week: TrainingLedger.SportWeek? = nil }
+    func strengthWeekTotals(weeks: Int = 8, now: Date = Date()) -> [StrengthWeekTotal] {
         let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
+        let today = cal.startOfDay(for: now)
         let wd = (cal.component(.weekday, from: today) + 5) % 7
         let thisMonday = cal.date(byAdding: .day, value: -wd, to: today)!
+        let l = ledger
         return (0..<weeks).reversed().map { k in
             let m = cal.date(byAdding: .day, value: -7 * k, to: thisMonday)!
-            let e = cal.date(byAdding: .day, value: 7, to: m)!
-            let ss = strength.filter { $0.date >= m && $0.date < e }
-            return StrengthWeekTotal(monday: m, minutes: ss.reduce(0) { $0 + $1.minutes }, sessions: ss.count)
+            let w = l.lifting(weekOf: m)
+            return StrengthWeekTotal(monday: m, minutes: w.minutes, sessions: w.completed, week: w)
         }
     }
 
@@ -1101,7 +1202,8 @@ final class Store: ObservableObject {
         tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0; availability = nil; strength = []
         templates = []; customExercises = []; appliedProposals = []
         weekdayRoutines = [:]; equipment = EquipmentProfile(); activeSession = nil; ignoredInsights = []
-        adaptations = []; dismissedAdaptations = []; approvedAdaptations = []; adaptiveProposals = []; lastAdaptation = nil
+        adaptations = []; dismissedAdaptations = []; approvedAdaptations = []; adaptiveProposals = []; lastAdaptation = nil; painClearances = []
+        strengthPrefs = StrengthPrefs(); trash = []; migrationLog = []; undoToast = nil
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
         for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }

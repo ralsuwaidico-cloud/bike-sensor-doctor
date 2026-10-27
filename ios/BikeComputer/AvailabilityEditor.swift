@@ -82,11 +82,11 @@ struct DayEditorSection: View {
             HStack { Text(WeeklyAvailability.longDayNames[index]).font(.headline); Spacer(); Pill(text: day.mark, color: day.isRest ? .secondary : BC.accent) }
             ForEach($day.assignments) { $a in AssignmentRow(assignment: $a, onDelete: { day.assignments.removeAll { $0.id == a.id }; day.syncLegacy() }) }
             HStack(spacing: 8) {
-                if mode.includesCycling, !day.assignments.contains(where: { $0.sport == .cycling }) { Button { day.assignments.append(DayAssignment(sport: .cycling, cyclingType: nil, minutes: 60)); day.syncLegacy() } label: { Label("Ride", systemImage: "bicycle") }.buttonStyle(.bordered).controlSize(.small) }
-                if mode.includesLifting, !day.assignments.contains(where: { $0.sport == .strength }) { Button { day.assignments.append(DayAssignment(sport: .strength, strengthType: nil, minutes: 40)); day.syncLegacy() } label: { Label("Lift", systemImage: "dumbbell") }.buttonStyle(.bordered).controlSize(.small) }
-                if day.assignments.count < 4, !day.assignments.isEmpty { Button { day.assignments.append(DayAssignment(sport: day.assignments.last?.sport == .cycling ? .strength : .cycling, cyclingType: .recovery, strengthType: .custom, minutes: 30)); day.syncLegacy() } label: { Label("Another", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.small) }
+                if mode.includesCycling, !day.assignments.contains(where: { $0.sport == .cycling }) { Button { day.assignments.append(DayAssignment(sport: .cycling, cyclingType: nil, minutes: 60)); day.syncLegacy() } label: { Label("Ride", systemImage: "bicycle") }.buttonStyle(.bordered).controlSize(.large) }
+                if mode.includesLifting, !day.assignments.contains(where: { $0.sport == .strength }) { Button { day.assignments.append(DayAssignment(sport: .strength, strengthType: nil, minutes: 40)); day.syncLegacy() } label: { Label("Lift", systemImage: "dumbbell") }.buttonStyle(.bordered).controlSize(.large) }
+                if day.assignments.count < 4, !day.assignments.isEmpty { Button { day.assignments.append(DayAssignment(sport: day.assignments.last?.sport == .cycling ? .strength : .cycling, cyclingType: .recovery, strengthType: .custom, minutes: 30)); day.syncLegacy() } label: { Label("Another", systemImage: "plus") }.buttonStyle(.bordered).controlSize(.large) }
                 Spacer()
-                if day.isRest { Toggle("Flexible", isOn: $day.flexible).toggleStyle(.button).controlSize(.small).tint(BC.accent) }
+                if day.isRest { Toggle("Flexible", isOn: $day.flexible).toggleStyle(.button).controlSize(.large).tint(BC.accent) }
             }
             if day.isRest { Text(day.flexible ? "Flexible day: the coach may place a session here when another day is missed." : "Rest day: nothing is ever planned here.").font(.caption).foregroundStyle(.secondary) }
         }
@@ -106,7 +106,7 @@ struct AssignmentRow: View {
                     Picker("Type", selection: Binding(get: { assignment.strengthType }, set: { assignment.strengthType = $0 })) { Text("Coach decides").tag(StrengthFocus?.none); ForEach(StrengthFocus.allCases, id: \.self) { Text($0.title).tag(StrengthFocus?.some($0)) } }.labelsHidden()
                 }
                 Spacer()
-                Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle") }.buttonStyle(.plain).foregroundStyle(.secondary).frame(minWidth: 32, minHeight: 32)
+                Button(role: .destructive) { onDelete() } label: { Image(systemName: "minus.circle").frame(minWidth: DS.minTap, minHeight: DS.minTap).contentShape(Rectangle()) }.buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Remove")
             }
             HStack {
                 Text(Fmt.duration(minutes: assignment.minutes)).monospacedDigit().font(.subheadline.weight(.semibold)).frame(minWidth: 72, alignment: .leading)
@@ -138,7 +138,7 @@ struct WeekPreviewSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Your week").font(.system(size: 26, weight: .bold, design: .rounded))
+                    Text("Your week").font(DS.screenTitle)
                     ForEach(0..<7, id: \.self) { i in PreviewDayRow(index: i, day: draft.days[i]) }
                     Card {
                         LabeledContent("Cycling", value: "\(draft.cycleDays) days · \(Fmt.duration(minutes: draft.cycleMinutes)) of \(store.profile.hoursPerWeek) h")
@@ -193,7 +193,7 @@ struct PreviewDayRow: View {
     private func assignmentLine(_ a: DayAssignment) -> some View {
         HStack(spacing: 6) {
             Image(systemName: a.sport == .cycling ? "bicycle" : "dumbbell").font(.caption).foregroundStyle(BC.accent)
-            Text(a.sport == .cycling ? (a.cyclingType?.title ?? "Ride · coach decides") : (a.strengthType?.title ?? "Strength · coach decides")).font(.subheadline).lineLimit(1).minimumScaleFactor(0.8)
+            Text(a.sport == .cycling ? (a.cyclingType?.title ?? "Ride · coach decides") : (a.strengthType?.title ?? "Strength · coach decides")).font(.subheadline).fixedSize(horizontal: false, vertical: true)
             Spacer()
             Text(Fmt.duration(minutes: a.minutes)).font(.subheadline.weight(.semibold)).monospacedDigit()
             if a.fixed { Pill(text: "fixed", color: BC.stale) }

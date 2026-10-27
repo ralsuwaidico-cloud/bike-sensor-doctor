@@ -64,6 +64,13 @@ struct StrengthSession: Codable, Identifiable, Equatable {
     var pausedAt: Date? = nil
     /// Adaptive coach: the rider's post-session check-in (performance, effort, pain, note). nil = not given.
     var checkIn: CheckIn? = nil
+    /// Quality release: true = the rider saved this as an extra session (never linked to a planned one); a record a
+    /// migration could not vouch for waits for the rider's review (not counted until confirmed); what the migration
+    /// changed, with the original values. All stored only when set, so older logs encode as before.
+    var unplanned: Bool? = nil
+    var needsReview: Bool? = nil
+    var migrationNote: String? = nil
+    var awaitingReview: Bool { needsReview == true }
 
     init(id: UUID = UUID(), date: Date, minutes: Int, focus: StrengthFocus, customName: String = "", rpe: Int? = nil, notes: String = "", source: String = "manual", healthUUID: String? = nil, exercises: [ExerciseEntry]? = nil, templateId: UUID? = nil, workoutId: UUID? = nil) {
         self.id = id; self.date = date; self.minutes = minutes; self.focus = focus; self.customName = customName; self.rpe = rpe; self.notes = notes; self.source = source; self.healthUUID = healthUUID
@@ -95,6 +102,9 @@ struct StrengthSession: Codable, Identifiable, Equatable {
         pausedSeconds = (try? c.decodeIfPresent(Int.self, forKey: .pausedSeconds)) ?? 0
         pausedAt = try? c.decodeIfPresent(Date.self, forKey: .pausedAt)
         checkIn = try? c.decodeIfPresent(CheckIn.self, forKey: .checkIn)
+        unplanned = try? c.decodeIfPresent(Bool.self, forKey: .unplanned)
+        needsReview = try? c.decodeIfPresent(Bool.self, forKey: .needsReview)
+        migrationNote = try? c.decodeIfPresent(String.self, forKey: .migrationNote)
     }
 
     var isDetailed: Bool { !(exercises ?? []).isEmpty }
@@ -192,7 +202,9 @@ enum HybridCoach {
         let nextMonday = cal.date(byAdding: .day, value: 7, to: monday)!
         let week = plan.filter { $0.date >= monday && $0.date < nextMonday }
         let weekRides = rides.filter { $0.start >= monday && $0.start < nextMonday && !$0.demo }
-        let weekLifts = strength.filter { $0.date >= monday && $0.date < nextMonday }
+        // quality release: counts come from the one query layer (the same numbers as Plan, Progress and History)
+        let ledger = TrainingLedger(plan: plan, strength: strength, rides: rides, calendar: cal)
+        let rideWeek = ledger.riding(weekOf: monday), liftWeek = ledger.lifting(weekOf: monday)
         var findings: [CoachFinding] = []
         var why: [String] = []
         var proposals: [CoachProposal] = []
@@ -200,11 +212,11 @@ enum HybridCoach {
         // --- cycling (completed rides only)
         var cyc: SportProgress? = nil
         if p.trainingMode.includesCycling {
-            let done = weekRides.reduce(0) { $0 + $1.durationS } / 60
+            let done = rideWeek.minutes
             let planned = week.filter { $0.kind.isRide && !$0.skipped }.reduce(0) { $0 + $1.minutes }
             let target = p.hoursPerWeek * 60
             let ridesTarget = max(p.cyclingDaysPerWeek, a.cycleDays)
-            var note = "\(weekRides.count) of \(ridesTarget) rides · \(Fmt.duration(minutes: done)) of \(Fmt.duration(minutes: target))"
+            var note = "\(rideWeek.completed) of \(ridesTarget) rides · \(Fmt.duration(minutes: done)) of \(Fmt.duration(minutes: target))"
             let zs = weekRides.map { $0.zoneSeconds }.filter { $0.count == 7 && $0.reduce(0, +) > 0 }
             if !zs.isEmpty {
                 let tot = zs.reduce(0) { $0 + $1.reduce(0, +) }
@@ -215,11 +227,11 @@ enum HybridCoach {
             } else if !weekRides.isEmpty { note += " · intensity unknown (no power zones recorded)"; findings.append(.init(id: "cyc-zones", severity: .info, text: "Intensity distribution: not known — no power or heart-rate zones were recorded this week.", evidence: "insufficient evidence")) }
             let hrRides = weekRides.filter { $0.avgHR != nil }.count, pwRides = weekRides.filter { $0.avgPower != nil }.count
             if !weekRides.isEmpty { note += " · power on \(pwRides), HR on \(hrRides) ride\(weekRides.count == 1 ? "" : "s")" }
-            cyc = SportProgress(sessionsDone: weekRides.count, sessionsTarget: ridesTarget, minutesDone: done, minutesTarget: target, minutesPlanned: planned, note: note)
-            let remainingPlanned = week.filter { $0.kind.isRide && !$0.skipped && !$0.done && cal.startOfDay(for: $0.date) >= today }.count
-            if weekRides.count + remainingPlanned < ridesTarget {
-                findings.append(.init(id: "cyc-freq", severity: .gap, text: "Cycling: \(weekRides.count) ride\(weekRides.count == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(ridesTarget) per week — one ride is missing."))
-            } else if weekRides.count >= ridesTarget { findings.append(.init(id: "cyc-ok", severity: .ok, text: "Cycling: \(weekRides.count) rides this week — frequency on target.")) }
+            cyc = SportProgress(sessionsDone: rideWeek.completed, sessionsTarget: ridesTarget, minutesDone: done, minutesTarget: target, minutesPlanned: planned, note: note)
+            let remainingPlanned = week.filter { $0.kind.isRide && !$0.skipped && !ledger.status($0).isCompleted && cal.startOfDay(for: $0.date) >= today }.count
+            if rideWeek.completed + remainingPlanned < ridesTarget {
+                findings.append(.init(id: "cyc-freq", severity: .gap, text: "Cycling: \(rideWeek.completed) ride\(rideWeek.completed == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(ridesTarget) per week — one ride is missing."))
+            } else if rideWeek.completed >= ridesTarget { findings.append(.init(id: "cyc-ok", severity: .ok, text: "Cycling: \(rideWeek.completed) rides this week — frequency on target.")) }
             if planned > target { findings.append(.init(id: "cyc-over", severity: .conflict, text: "Planned riding (\(Fmt.duration(minutes: planned))) is over your \(p.hoursPerWeek) h cycling budget; see Fix plan.")) }
         }
 
@@ -227,15 +239,16 @@ enum HybridCoach {
         var str: SportProgress? = nil
         var coverage: CoverageReport? = nil
         if p.trainingMode.includesLifting {
-            let done = weekLifts.reduce(0) { $0 + $1.minutes }
+            let done = liftWeek.minutes
             let planned = week.filter { $0.kind == .strength && !$0.skipped }.reduce(0) { $0 + $1.minutes }
             let target = p.liftingHoursPerWeek * 60
             let liftsTarget = max(p.liftDaysPerWeek, a.liftDays)
-            var note = "\(weekLifts.count) of \(liftsTarget) sessions · \(Fmt.duration(minutes: done))" + (target > 0 ? " of \(Fmt.duration(minutes: target))" : "")
-            let remainingPlanned = week.filter { $0.kind == .strength && !$0.skipped && !$0.done && cal.startOfDay(for: $0.date) >= today }.count
-            if weekLifts.count + remainingPlanned < liftsTarget {
-                findings.append(.init(id: "str-freq", severity: .gap, text: "Strength: \(weekLifts.count) session\(weekLifts.count == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(liftsTarget) per week — a lift is missing."))
-            } else if liftsTarget > 0, weekLifts.count >= liftsTarget { findings.append(.init(id: "str-ok", severity: .ok, text: "Strength: \(weekLifts.count) sessions this week — frequency on target.")) }
+            var note = "\(liftWeek.completed) of \(liftsTarget) sessions · \(Fmt.duration(minutes: done))" + (target > 0 ? " of \(Fmt.duration(minutes: target))" : "")
+            if liftWeek.unknownDuration > 0 { note += " (\(liftWeek.unknownDuration) without a recorded duration)" }
+            let remainingPlanned = week.filter { $0.kind == .strength && !$0.skipped && !ledger.status($0).isCompleted && cal.startOfDay(for: $0.date) >= today }.count
+            if liftWeek.completed + remainingPlanned < liftsTarget {
+                findings.append(.init(id: "str-freq", severity: .gap, text: "Strength: \(liftWeek.completed) session\(liftWeek.completed == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(liftsTarget) per week — a lift is missing."))
+            } else if liftsTarget > 0, liftWeek.completed >= liftsTarget { findings.append(.init(id: "str-ok", severity: .ok, text: "Strength: \(liftWeek.completed) sessions this week — frequency on target.")) }
             if target > 0, planned > target { findings.append(.init(id: "str-over", severity: .conflict, text: "Planned lifting (\(Fmt.duration(minutes: planned))) is over your \(p.liftingHoursPerWeek) h lifting budget.")) }
             // region balance — only from Push / Pull labelled logs of the last 28 days
             let since = cal.date(byAdding: .day, value: -28, to: today)!
@@ -270,7 +283,7 @@ enum HybridCoach {
             } else {
                 findings.append(.init(id: "str-coverage", severity: .info, text: "Squat / hinge / single-leg / core coverage and exercise progression: not known from quick logs — log exercises in a detailed session and the coach checks them.", evidence: "insufficient evidence"))
             }
-            str = SportProgress(sessionsDone: weekLifts.count, sessionsTarget: liftsTarget, minutesDone: done, minutesTarget: target, minutesPlanned: planned, note: note)
+            str = SportProgress(sessionsDone: liftWeek.completed, sessionsTarget: liftsTarget, minutesDone: done, minutesTarget: target, minutesPlanned: planned, note: note)
         }
 
         // --- interference: a heavy leg session (logged, from evidence) right before a demanding planned ride, or two
@@ -353,9 +366,12 @@ enum HybridCoach {
         let last = cal.date(byAdding: .day, value: -7, to: thisMonday)!
         let s = stats(last)
         guard !s.plannedR.isEmpty || !s.plannedL.isEmpty || !s.rides.isEmpty || !s.lifts.isEmpty else { return nil }
-        // a planned session counts as missed when no ride / log exists on its day
-        let missed = (s.plannedR.filter { w in !s.rides.contains { cal.isDate($0.start, inSameDayAs: w.date) } } + s.plannedL.filter { w in !s.lifts.contains { cal.isDate($0.date, inSameDayAs: w.date) } }).sorted { $0.date < $1.date }
-        let ridesDone = min(s.plannedR.count, s.rides.count), liftsDone = min(s.plannedL.count, s.lifts.count)
+        // a planned session counts as missed when the one query layer does not see it completed (no ride / log on its
+        // day, not marked done) — the same definition as Home, Plan, Progress and History
+        let ledger = TrainingLedger(plan: plan, strength: strength, rides: rides, calendar: cal)
+        let missed = (s.plannedR + s.plannedL).filter { !ledger.status($0).isCompleted }.sorted { $0.date < $1.date }
+        let rw = ledger.riding(weekOf: last), lw = ledger.lifting(weekOf: last)
+        let ridesDone = min(s.plannedR.count, rw.completed), liftsDone = min(s.plannedL.count, lw.completed)
         var suggestion: String
         let totalPlanned = s.plannedR.count + s.plannedL.count
         let pct = totalPlanned > 0 ? (totalPlanned - missed.count) * 100 / totalPlanned : 100
@@ -370,11 +386,11 @@ enum HybridCoach {
             let st = stats(m)
             let planned = st.plannedR.count + st.plannedL.count
             guard planned > 0 else { continue }
-            let miss = st.plannedR.filter { w in !st.rides.contains { cal.isDate($0.start, inSameDayAs: w.date) } }.count + st.plannedL.filter { w in !st.lifts.contains { cal.isDate($0.date, inSameDayAs: w.date) } }.count
+            let miss = (st.plannedR + st.plannedL).filter { !ledger.status($0).isCompleted }.count
             if miss * 2 >= planned { badWeeks += 1 }
         }
-        return WeeklyReview(monday: last, ridesPlanned: s.plannedR.count, ridesDone: ridesDone, rideMinutesPlanned: s.plannedR.reduce(0) { $0 + $1.minutes }, rideMinutesDone: s.rides.reduce(0) { $0 + $1.durationS } / 60,
-                            liftsPlanned: s.plannedL.count, liftsDone: liftsDone, liftMinutesPlanned: s.plannedL.reduce(0) { $0 + $1.minutes }, liftMinutesDone: s.lifts.reduce(0) { $0 + $1.minutes },
+        return WeeklyReview(monday: last, ridesPlanned: s.plannedR.count, ridesDone: ridesDone, rideMinutesPlanned: s.plannedR.reduce(0) { $0 + $1.minutes }, rideMinutesDone: rw.minutes,
+                            liftsPlanned: s.plannedL.count, liftsDone: liftsDone, liftMinutesPlanned: s.plannedL.reduce(0) { $0 + $1.minutes }, liftMinutesDone: lw.minutes,
                             missedWorkouts: missed, suggestion: suggestion, offerRevise: badWeeks >= 2)
     }
 }
