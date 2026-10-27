@@ -91,6 +91,8 @@ struct AdjustmentsView: View {
     var afterCheckIn = false
     @State private var confirmRestore = false
     @State private var openWhy: Set<String> = []
+    /// Review P3-11: "It's fine now" asks once more before releasing a concerning-pain hold.
+    @State private var confirmPainArea: PainArea? = nil
 
     var body: some View {
         let active = store.activeAdaptations
@@ -107,7 +109,7 @@ struct AdjustmentsView: View {
                     Label { Text(p).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "cross.case").foregroundStyle(BC.warn) }
                     // only the rider clears a concerning-pain report; after a week with two pain-free sessions the coach asks
                     ForEach(store.activePainAreas(), id: \.self) { area in
-                        Button { store.confirmPainGone(area) } label: {
+                        Button { confirmPainArea = area } label: {
                             Label(store.painReviewDue().contains(area) ? "\(area.title): pain-free in your last 2 sessions — it's fine now" : "\(area.title): it's fine now", systemImage: "checkmark.circle").frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
                         }
                         .accessibilityIdentifier("painGone-\(area.rawValue)")
@@ -146,6 +148,19 @@ struct AdjustmentsView: View {
         .accessibilityIdentifier("adjustmentsView")
         .navigationTitle("Coach adjustments").navigationBarTitleDisplayMode(.inline)
         .onChange(of: store.settings.autoAdapt) { _, _ in _ = store.runAdaptation() }
+        .confirmationDialog(confirmPainArea.map { painReleaseTitle($0) } ?? "", isPresented: Binding(get: { confirmPainArea != nil }, set: { if !$0 { confirmPainArea = nil } }), titleVisibility: .visible) {
+            if let area = confirmPainArea {
+                Button(store.painPersistent().contains(area) ? "It was assessed and it no longer hurts" : "Yes, it no longer hurts") { store.confirmPainGone(area); confirmPainArea = nil }
+                    .accessibilityIdentifier("painGoneConfirm")
+                Button("Not yet", role: .cancel) { confirmPainArea = nil }
+            }
+        } message: {
+            if let area = confirmPainArea {
+                Text(store.painPersistent().contains(area)
+                     ? "This pain has lasted or come back. Release it only after a doctor or physiotherapist has assessed it and it no longer hurts in daily life or when you train. The coach then progresses exercises that load this area again."
+                     : "Release it only if it no longer hurts in daily life or when you train. The coach then progresses exercises that load this area again; report it again in a check-in if it comes back.")
+            }
+        }
         .alert("Restore the original plan?", isPresented: $confirmRestore) {
             Button("Restore", role: .destructive) { store.restoreOriginalPlan() }
             Button("Cancel", role: .cancel) {}
@@ -194,6 +209,7 @@ struct AdjustmentsView: View {
             }
         }.padding(.vertical, 4)
     }
+    private func painReleaseTitle(_ a: PainArea) -> String { "Is the \(a.title.lowercased()) pain really gone?" }
     private func icon(_ c: PlanAdjustment.Category) -> String { switch c { case .progression: return "arrow.up.circle.fill"; case .reduction: return "arrow.down.circle.fill"; case .recovery: return "leaf.fill"; case .substitution: return "arrow.left.arrow.right.circle.fill" } }
     private func color(_ c: PlanAdjustment.Category) -> Color { switch c { case .progression: return BC.live; case .reduction: return BC.stale; case .recovery: return BC.accent; case .substitution: return BC.accent } }
 }
@@ -341,12 +357,3 @@ struct SplitSlotRow: View {
     }
 }
 
-/// Review N-15: short definitions so the rider can classify what they feel (coaching guidance, not a diagnosis).
-func painDefinition(_ p: PainLevel) -> String {
-    switch p {
-    case .noPain: return "Nothing unusual."
-    case .soreness: return "Soreness: a dull muscle ache 1–3 days after training that eases as you warm up."
-    case .discomfort: return "Discomfort: something feels off in one spot, but it is not sharp, not in a joint and does not change how you move."
-    case .concerning: return "Pain: sharp or stabbing, in or around a joint, with swelling, changes how you move, or still there the next day."
-    }
-}

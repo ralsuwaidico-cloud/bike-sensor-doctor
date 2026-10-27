@@ -260,3 +260,13 @@ struct AdaptationSummary: Codable, Equatable {
         label = (try? c.decodeIfPresent(String.self, forKey: .label)) ?? AdaptationExplainer.label
     }
 }
+
+/// Review N-15 / P3-12: short definitions so the rider can classify what they feel (coaching guidance, not a diagnosis).
+func painDefinition(_ p: PainLevel) -> String {
+    switch p {
+    case .noPain: return "Nothing unusual."
+    case .soreness: return "Soreness: a dull ache in the muscles you trained (not in a joint), 1–3 days after training, that eases as you warm up."
+    case .discomfort: return "Discomfort: something feels off in one spot, but it is not sharp, not in a joint and does not change how you move."
+    case .concerning: return "Pain: sharp or stabbing; in or around a joint; with swelling; changes how you move; or joint pain still there the next day."
+    }
+}
