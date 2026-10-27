@@ -84,7 +84,7 @@ struct HomeView: View {
                 if let t = store.today {
                     Section("Instead of \(t.kind.title)") {
                         ForEach(Array(Coach.alternatives(for: t).enumerated()), id: \.offset) { _, a in
-                            Button { var w = t; w.kind = a.kind; w.minutes = a.minutes; store.update(w); showAlternatives = false } label: {
+                            Button { var w = t; w.kind = a.kind; w.minutes = a.minutes; store.edit(w); showAlternatives = false   // P4-02: the rider's pick } label: {
                                 HStack { VStack(alignment: .leading) { Text(a.kind.title).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: a.minutes)) · \(a.kind.subtitle) · \(a.benefit)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); ZonePill(z: a.kind.zone) }
                             }
                         }

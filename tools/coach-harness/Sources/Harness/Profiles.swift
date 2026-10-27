@@ -359,7 +359,7 @@ func allCases() -> [Case] {
                    // P30-b added in the remediation re-run (original P30-a kept and reported unchanged): the independent
                    // review (F-17) found the 5 % cap unsupported (ACSM 2009: 2–10 % increments); criterion = one smallest
                    // step at a time, never more than 2.5 kg, a caution above 10 %
-                   E("P30-b", "Light loads progress by ONE smallest step (≤ 2.5 kg, a caution above 10 %) only after two qualifying sessions (remediation criterion; P30-a kept)", kind: "remediation") { rep, s, r in
+                   E("P30-b", "Light loads go up by at most ONE smallest step (≤ 2.5 kg, a caution above 10 %) per increase; the two-session rule itself is checked by probe X21 (remediation criterion; P30-a kept)", kind: "remediation") { rep, s, r in
                        var bad: [String] = []
                        for a in r.adjustments { if case .weight(_, let d) = a.change { if d > 2.5 { bad.append(a.summary) }; if let w = Double(a.summary.split(separator: " ").first(where: { Double($0) != nil }) ?? ""), d / w > 0.1, !a.why.contains("big jump") { bad.append("no caution: \(a.summary)") } } }
                        // also every load step in force during the 4 simulated weeks ("a kg → b kg" in the events)
@@ -386,7 +386,7 @@ func allCases() -> [Case] {
                    // P32-b added in the remediation re-run (original P32-a kept and reported unchanged): the independent
                    // review (F-15; Impellizzeri et al. 2020) found ACWR unfit as an automatic trigger; criterion = the rider
                    // is offered an easier next hard ride (approval), no automatic cut on the ratio alone
-                   E("P32-b", "Load jump → an easier next hard ride is OFFERED (approval), never applied on the ratio alone (remediation criterion; P32-a kept)", kind: "remediation") { rep, s, r in
+                   E("P32-b", "Load jump → no hard ride is changed on the ratio alone; an easier hard ride is offered for approval when the week has one (passes trivially when it has none) (remediation criterion; P32-a kept)", kind: "remediation") { rep, s, r in
                        let offered = r.proposals.contains { $0.id.hasPrefix("loadjump|") }
                        let hard = s.plan.contains { $0.kind.isRide && $0.kind.zone >= 3 && !$0.done && $0.date >= today && $0.date < cal.date(byAdding: .day, value: 7, to: today)! }
                        return ((offered || !hard) && !r.adjustments.contains { $0.summary.contains("load jump") }, "ACWR \(r.analysis.acwr.map { String(format: "%.2f", $0) } ?? "-"); offered \(offered); hard ride within 7 days \(hard)")

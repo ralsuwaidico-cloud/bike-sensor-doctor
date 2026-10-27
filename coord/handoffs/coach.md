@@ -47,3 +47,12 @@ probes X18-b and X21 (new). Originals unchanged. Runs: out-s8, out-s9/s10/s11 (t
 ## Open
 - QA to re-check 4d82b13 and f725cc4.
 - Harness probe X06 compares `Workout.liveIntervalPlan` (SwiftUI ride coach is not compiled on Linux), as before.
+
+## Lead round (27 Oct 20:50) — QA pass 4 on 0d9fc24
+- P4-01 (P1) fixed: `Workout.markRiderEdited(before:)` judges "health-check pause" on the session as stored before the edit;
+  `Store.edit` passes it. Editing a capped ride to Rest drops the safety original (the rider's own rest stays).
+- P4-02 fixed: Home "Instead of" alternative now goes through `store.edit` (marked edited, never replaced by a refresh).
+- P4-06: P30-b / P32-b titles now state exactly what they check (logic unchanged).
+- P4-03, P4-04, P4-05 (F-22), P4-07: documented as known limitations in ios/ADAPTIVE_COACH.md.
+- QA pass-4 probes adopted as IndependentReviewPass4ProbeTests (U2 calls store.edit like HomeView now does; noted in header).
+- Linux engine tests: 201 run, 0 failed.

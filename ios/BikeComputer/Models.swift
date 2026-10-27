@@ -268,7 +268,15 @@ struct Workout: Codable, Identifiable, Equatable {
     /// Review P3-01: a change the rider made by hand. The session is theirs from now on: a safety original captured
     /// before the edit is dropped (it would otherwise be restored over the edit, uncapped). A session paused by the health
     /// check (rest + original) keeps its original, which is what comes back.
-    mutating func markRiderEdited() { edited = true; if kind != .rest { safetyOriginal = nil } }
+    /// Review P4-01: whether it was a pause is judged on the session as it was BEFORE the edit (`before`); an edit that turns
+    /// a capped ride into Rest is the rider's own rest and drops the original. Callers that change the session in place
+    /// (same kind) may omit `before`.
+    mutating func markRiderEdited(before: Workout? = nil) {
+        edited = true
+        let b = before ?? self
+        let wasHealthPause = b.kind == .rest && b.safetyOriginal != nil
+        if !(wasHealthPause && kind == .rest) { safetyOriginal = nil }
+    }
 
     init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false, templateId: UUID? = nil) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
@@ -993,7 +1001,7 @@ final class Store: ObservableObject {
     }
     func update(_ w: Workout) { if let i = plan.firstIndex(where: { $0.id == w.id }) { plan[i] = w } }
     /// A change the rider made by hand: saved and flagged so regeneration asks first.
-    func edit(_ w: Workout) { var x = w; x.markRiderEdited(); update(x) }
+    func edit(_ w: Workout) { var x = w; x.markRiderEdited(before: plan.first(where: { $0.id == w.id })); update(x) }
     /// Removes a planned session (soft: kept in `trash` with Undo; logs that completed it are kept as extra sessions).
     func remove(_ w: Workout) { deleteWorkout(w) }
     func add(_ w: Workout) { var x = w; x.markRiderEdited(); plan.append(x); plan.sort { $0.date < $1.date } }

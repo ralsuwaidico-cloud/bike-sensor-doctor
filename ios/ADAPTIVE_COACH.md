@@ -189,3 +189,14 @@ Not changed: `BikeComputerApp.swift`, `project.yml` (new files are picked up by 
 - Real device: the check-in sheet after a real ride (board and phone recorder), the sheet transitions after Finish
   workout, slider use with gloves / sweat, Dynamic Type sizes in the Hybrid plan form, the Home line after midnight,
   sync of the new fields between two devices.
+
+## Known limitations (independent review pass 4, 27 Oct 2026)
+- F-22 / P4-05: the planner never places a VO2max session on its own; hard rides are threshold or sweet-spot style. A rider can
+  still choose a VO2 session by hand.
+- P4-03: a recorded doctor's clearance up to 12 months old also covers a non-symptom condition the rider adds later, if the
+  rider re-confirms the clearance. Symptom answers (chest pain, fainting, dizziness) always need a clearance dated on or after
+  the answers.
+- P4-04: for symptom answers the clearance date must be on or after the day of answering, so a clearance given a few days
+  before answering has to be entered with the answer day (conservative by design).
+- P4-07: the number of hard rides a rider types in by hand is not capped; the coach only warns via the caution note while
+  the rider is not cleared.
