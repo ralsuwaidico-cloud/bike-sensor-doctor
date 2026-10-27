@@ -118,3 +118,4 @@ Release launch smoke ok; layout audit ok on all three iPhones (82 screenshots); 
   live_link13_zero, sync_req_only_ride); RideQueueEndToEndTests 7 tests incl. tag 03, an older board ignoring tag 03
   (all five rides still ACKed / freed) and "only_ride_id never verifies another ride".
 - Open: Q-iOS-15 (no way to clear "next interval" under merge) in BLE_CONTRACT_IOS_REVIEW.md §6.
+- **CI run 90 (commit dd227cb): green** — 362 tests, 0 failures (fixture cross-check 8/8, end-to-end 7/7); Release launch smoke, layout audit (82 screenshots), archive / sign / verify ok; upload skipped.
