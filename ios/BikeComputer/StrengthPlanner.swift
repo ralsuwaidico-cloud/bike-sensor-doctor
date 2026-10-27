@@ -737,7 +737,15 @@ enum StrengthPlanner {
                 let stepR = WeightFmt.step(dumbbell: dumbbellR, ctx.units)
                 let target = w * phase.loadFactor
                 let floorKg = barFloor(e, ctx: ctx)
-                let next = max(floorKg ?? stepR, min(w - stepR, (target / stepR).rounded(.down) * stepR))
+                var next = max(floorKg ?? stepR, min(w - stepR, (target / stepR).rounded(.down) * stepR))
+                // review P3-03: when more reps per set are planned now than were last done (e.g. >= 8 until the health
+                // check allows heavy work), the break restart must not be heavier than the N-02 rep-floor load (about the
+                // load for the new reps with 3 in reserve, Epley) — take the lighter of the two
+                if minReps < range.lowerBound {
+                    let e1 = w * (1 + Double(minReps) / 30)
+                    let repFloor = max(floorKg ?? stepR, ((e1 / (1 + Double(range.lowerBound + 3) / 30)) / stepR).rounded(.down) * stepR)
+                    next = min(next, repFloor)
+                }
                 if next >= w {
                     return Load(weight: w, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText) — \(phase.weeksText) ago. The empty bar is the lightest load, so the weight stays and the reps restart at \(range.lowerBound); it builds back up from your new logs.")
                 }
