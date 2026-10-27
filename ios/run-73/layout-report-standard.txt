@@ -24,7 +24,7 @@ XXXL home: no text outside the window
 XXXL home: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32
 XXXL home lower: no text outside the window
 XXXL home lower: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32
-XXXL home lower: coachLog outside the checked zone (56–118 of 874)
+XXXL home lower: coachLog outside the checked zone (66–128 of 874)
 XXXL home lower: key controls coachLog 120×62, coachAdjust 103×62, coachSwap 102×62
 XXXL strength: no text outside the window
 XXXL strength: buttons under 44 pt: moreMenu 36×36, Done 74×36
@@ -33,7 +33,7 @@ XXXL plan: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32, Log s
 XXXL progress: no text outside the window
 XXXL progress: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32
 XXXL progress lower: no text outside the window
-XXXL progress lower: every on-screen button ≥ 44 pt tall
+XXXL progress lower: buttons under 44 pt: 8 wk 114×32, 16 wk 114×32, 1 yr 114×32
 XXXL profile: no text outside the window
 XXXL profile: every on-screen button ≥ 44 pt tall
 XXXL tab bar: Home outside the checked zone (788–840 of 874)
