@@ -1,0 +1,93 @@
+name: iOS compile check
+on:
+  push:
+    branches: ["ios-check/**"]
+permissions:
+  contents: write
+concurrency:
+  group: ioscheck-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: macos-26
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and unit tests
+        run: |
+          set +e -uo pipefail
+          cd ios
+          mkdir -p build/logs
+          exec > >(tee build/logs/check-run.txt) 2>&1
+          echo "start $(date)"
+          command -v xcodegen >/dev/null || brew install xcodegen >/dev/null 2>&1
+          xcodegen generate --spec project.yml > build/logs/xcodegen.txt 2>&1 || { tail -40 build/logs/xcodegen.txt; exit 1; }
+          SIM=$(xcrun simctl list devices available -j | python3 -c '
+          import json,sys
+          d=json.load(sys.stdin)["devices"]; best=None
+          for rt,devs in d.items():
+              if ".iOS-" not in rt: continue
+              ver=tuple(int(x) for x in rt.split(".iOS-")[1].split("-"))
+              for x in devs:
+                  if x["name"].startswith("iPhone") and (best is None or ver>best[0]): best=(ver,x["udid"],x["name"])
+          print(best[1] if best else "")')
+          xcodebuild build-for-testing -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Debug -destination "id=$SIM" CODE_SIGNING_ALLOWED=NO > build/build.log 2>&1
+          B=$?
+          { echo "build exit $B"; grep -E "error:" build/build.log | sort -u | head -150; grep -E "warning:.*(never|unused|deprecated)" build/build.log | sort -u | head -40; } > build/logs/check-build.txt
+          if [ $B -eq 0 ] && [ "${{ contains(github.event.head_commit.message, '[units]') }}" = "true" ]; then
+            xcodebuild test-without-building -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Debug -destination "id=$SIM" -only-testing:BikeComputerTests CODE_SIGNING_ALLOWED=NO > build/test.log 2>&1
+            { echo "test exit $?"; grep -E "error:|failed|Executed [0-9]+ test" build/test.log | head -200; } > build/logs/check-test.txt
+          fi
+          if [ $B -eq 0 ] && [ "${{ contains(github.event.head_commit.message, '[layout]') }}" = "true" ]; then
+            mkdir -p build/layout
+            SMALL=""
+            RT=$(xcrun simctl list runtimes -j | python3 -c '
+          import json,sys
+          r=[x for x in json.load(sys.stdin)["runtimes"] if x.get("isAvailable") and ".iOS-" in x["identifier"]]
+          r.sort(key=lambda x: [int(p) for p in x["version"].split(".")])
+          print(r[-1]["identifier"] if r else "")')
+            for T in iPhone-SE-3rd-generation iPhone-13-mini; do U=$(xcrun simctl create "Audit small" "com.apple.CoreSimulator.SimDeviceType.$T" "$RT" 2>/dev/null) && { SMALL=$U; break; }; done
+            MAX=$(xcrun simctl list devices available -j | python3 -c '
+          import json,sys
+          d=json.load(sys.stdin)["devices"]; best=None
+          for rt,devs in d.items():
+              if ".iOS-" not in rt: continue
+              for x in devs:
+                  if "Pro Max" in x["name"]: best=x["udid"]
+          print(best or "")')
+            echo "small=$SMALL max=$MAX std=$SIM" >> build/logs/check-layout.txt
+            for spec in "small|$SMALL|${{ contains(github.event.head_commit.message, '[layout-ax]') && 'AX3' || 'L,AX3' }}" "standard|$SIM|L" "promax|$MAX|XXXL"; do
+              IFS='|' read -r LN LID LS <<< "$spec"; [ -n "$LID" ] || continue
+              LX=0; [ "$LN" = "standard" ] && LX=1
+              TEST_RUNNER_LAYOUT_DIR="$PWD/build/layout" TEST_RUNNER_LAYOUT_DEVICE="$LN" TEST_RUNNER_LAYOUT_SIZES="$LS" TEST_RUNNER_LAYOUT_EXTRAS="$LX" xcodebuild test-without-building -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Debug -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit CODE_SIGNING_ALLOWED=NO > build/layout-$LN.log 2>&1
+              { echo "== $LN exit $?"; grep -E "error:|failed|Executed [0-9]+ test" build/layout-$LN.log | head -60; } >> build/logs/check-layout.txt
+            done
+            for f in build/layout/*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done
+            cp build/layout/*.txt build/logs/ 2>/dev/null || true
+          fi
+          if [ $B -eq 0 ] && [ "${{ contains(github.event.head_commit.message, '[smoke]') }}" = "true" ]; then
+            xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release -destination "id=$SIM" -only-testing:BikeComputerUITests/LaunchSmokeTests CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > build/smoke.log 2>&1
+            { echo "smoke exit $?"; grep -E "error:|failed|Executed [0-9]+ test" build/smoke.log | head -80; } > build/logs/check-smoke.txt
+          fi
+          if [ $B -eq 0 ] && [ "${{ contains(github.event.head_commit.message, '[watch]') }}" = "true" ]; then
+            mkdir -p build/layout
+            bash ci/watch-shots.sh "$PWD/build/layout" || true
+          fi
+          cat build/logs/check-build.txt
+          exit $B
+      - name: Publish
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.run_number }}
+        run: |
+          W=$(mktemp -d); cd "$W"
+          git init -q && git config user.name "ios-ci" && git config user.email "ios-ci@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
+          mkdir -p "ios/check-$N"
+          cp "$GITHUB_WORKSPACE"/ios/build/logs/*.txt "ios/check-$N/" 2>/dev/null || echo "none" > "ios/check-$N/check-build.txt"
+          echo "commit $GITHUB_SHA" >> "ios/check-$N/check-build.txt"
+          if ls "$GITHUB_WORKSPACE"/ios/build/layout/*.png >/dev/null 2>&1; then mkdir -p "ios/check-$N/layout" && cp "$GITHUB_WORKSPACE"/ios/build/layout/*.png "ios/check-$N/layout/"; fi
+          git add -A && git commit -q -m "iOS compile check $N"
+          for i in 1 2 3; do git push -q origin HEAD:ci-logs && break; git fetch -q --depth 1 origin ci-logs && git rebase -q FETCH_HEAD || true; sleep 3; done
