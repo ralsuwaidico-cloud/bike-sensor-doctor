@@ -318,4 +318,30 @@ final class CoachRemediationTests: XCTestCase {
         XCTAssertNil(decide(logs(workoutMode: false, sets: 2)), "a quick log of 2 sets against a 3-set routine is not complete")
         XCTAssertNotNil(decide(logs(workoutMode: false, sets: 3)))
     }
+
+    func testRidesGeneratedBeforeABreakOrTheScreenAreCappedAtRefresh() {
+        let d = FileManager.default.temporaryDirectory.appendingPathComponent("remediation-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        let s = Store(directory: d, generatePlan: false)
+        s.profile = profile()
+        // riding history that stopped 6 weeks ago
+        s.rides = [-42, -45, -49, -52].map { RideRecord(start: day($0, hour: 7), durationS: 3600, distanceM: 25000, recorder: .phone, sources: []) }
+        var hard = Workout(date: day(2, hour: 7), kind: .threshold, minutes: 70)
+        var fixed = Workout(date: day(3, hour: 7), kind: .vo2, minutes: 60); fixed.fixed = true
+        var long = Workout(date: day(4, hour: 7), kind: .long, minutes: 150)
+        hard.note = ""; long.note = ""
+        s.plan = [hard, fixed, long]
+        s.refreshRideSafety(now: now)
+        XCTAssertEqual(s.plan.first { $0.id == hard.id }?.kind, .endurance)
+        XCTAssertEqual(s.plan.first { $0.id == long.id }?.kind, .endurance)
+        XCTAssertLessThan(s.plan.first { $0.id == long.id }?.minutes ?? 999, 150)
+        XCTAssertEqual(s.plan.first { $0.id == fixed.id }?.kind, .vo2, "a fixed ride is never changed")
+        // unscreened rider, no break: hard rides capped too
+        let t = Store(directory: d.appendingPathComponent("b"), generatePlan: false)
+        t.profile = profile(screened: false)
+        t.plan = [Workout(date: day(2, hour: 7), kind: .threshold, minutes: 70)]
+        t.refreshRideSafety(now: now)
+        XCTAssertEqual(t.plan.first?.kind, .endurance)
+        XCTAssertTrue(t.plan.first?.note.contains("health check") ?? false)
+    }
 }

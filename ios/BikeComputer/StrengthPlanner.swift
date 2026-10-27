@@ -569,6 +569,7 @@ enum StrengthPlanner {
             var n = sets[i]
             var cyclingNote: String? = nil
             if m.slot.isLower && legsKept { n = max(2, n - 1); d.rpe = min(d.rpe, 6); cyclingNote = interferenceText }
+            else if m.slot.isLower && strengthFirst && nearKeyRide { cyclingNote = interferenceText }      // G-14: flagged, not lightened
             else if m.slot.isLower && week.highCyclingLoad { cyclingNote = "Lower-body volume is reduced this week because \(week.highLoadReason ?? "your cycling load is high")." }
             if week.deload { n = max(2, n - 1); d.rpe = min(d.rpe, 6) }
             else if let r = ctx.returning, r.active { n = max(2, n - 1); d.rpe = min(d.rpe, 7) }
@@ -875,6 +876,7 @@ extension Store {
     /// current preferences, equipment and logged performance. A session the adaptive coach adjusted keeps its
     /// adjustment on top of the new base (it is recomputed on the next check-in).
     func refreshGeneratedSessions(now: Date = Date()) {
+        refreshRideSafety(now: now)
         // audit G-04: "Coach decides" (no split chosen) gets real exercises too — the week builder already gives each
         // lift a focus (lower / upper / full body), so the planner fills it like any other coach-built session
         guard profile.trainingMode.includesLifting else { return }

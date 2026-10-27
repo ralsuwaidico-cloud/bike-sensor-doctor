@@ -540,9 +540,13 @@ enum AdaptationEngine {
             }
             // strength: the next session within 7 days — one set fewer (all exercises when lifting or combined fatigue,
             // leg exercises when the fatigue comes from cycling)
-            if let s = future.first(where: { $0.kind == .strength && $0.date < fatigueEnd && auto($0) }) {
-                let all = a.strengthFatigue || a.combinedFatigue
-                let es = entries(s).filter { $0.sets.count >= 3 && (all || AdaptiveRules.legPatterns.contains($0.pattern)) }
+            // the next session within 7 days where a set can still come off (a session the planner already lightened
+            // for a key ride may have nothing left to cut; then the following one carries the reduction)
+            let all = a.strengthFatigue || a.combinedFatigue
+            func cuttable(_ w: Workout) -> [ExerciseEntry] { entries(w).filter { $0.sets.count >= 3 && (all || AdaptiveRules.legPatterns.contains($0.pattern)) } }
+            let candidates = future.filter { $0.kind == .strength && $0.date < fatigueEnd && auto($0) }
+            if let s = candidates.first(where: { !cuttable($0).isEmpty }) ?? candidates.first {
+                let es = cuttable(s)
                 let cause = all ? "" : " Your legs carry the cycling fatigue, so the leg exercises lose a set; upper-body work stays as planned."
                 for e in es.prefix(4) {
                     autoAdj.append(make(s, .sets(exerciseId: e.exerciseId, delta: -1), .reduction, "\(e.name): \(e.sets.count) → \(e.sets.count - 1) sets", "\(flags)\(cause) One set fewer of \(e.name) on \(AdaptationExplainer.day(s.date)) (\(e.sets.count) → \(e.sets.count - 1)); weights and reps stay. No progression until the signals ease."))

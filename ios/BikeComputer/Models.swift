@@ -727,7 +727,7 @@ final class Store: ObservableObject {
         else if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
         loading = false
         purgeTrash()
-        if generatePlan { ensurePlan() }
+        if generatePlan { ensurePlan(); refreshRideSafety() }
         // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalised planner (never edited ones)
         if migrated { refreshGeneratedSessions(); persist() }
         if !FileManager.default.fileExists(atPath: dir.appendingPathComponent("store.json").path) { persist() }

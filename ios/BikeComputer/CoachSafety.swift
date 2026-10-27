@@ -245,3 +245,29 @@ extension Store {
         return n
     }
 }
+
+extension Store {
+    /// M-01 / M-02 for rides that were generated BEFORE the health check or the break was known (weeks are generated up to
+    /// two weeks ahead): future coach-generated rides (not fixed, not edited, not done or started) are capped here at
+    /// launch, like strength sessions are refreshed. Never touches a fixed or hand-edited ride; never makes a ride harder.
+    func refreshRideSafety(now: Date = Date()) {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        let readiness = profile.readiness
+        let back = cyclingReturnPhase(now: now)
+        var p = plan, changed = false
+        for i in p.indices {
+            let w = p[i]
+            guard w.kind.isRide, !w.fixed, !w.edited, !w.done, !w.skipped, w.completion == nil, cal.startOfDay(for: w.date) >= today, w.coachOriginal == nil else { continue }
+            var x = w
+            if w.kind.zone > readiness.maxRideZone, let r = readiness.restriction { x.kind = .endurance; x.intervalReps = nil; x.note = "Planned easy because \(r)." }
+            if let b = back, b.active, x.kind.zone >= 3 || x.kind == .long, !x.note.hasPrefix("Back after") {
+                x.kind = .endurance; x.intervalReps = nil
+                x.minutes = max(30, Int((Double(w.minutes) * 0.75 / 5).rounded()) * 5)
+                x.note = "Back after \(b.weeksText) off: steady endurance at about three quarters of the usual time; intensity returns after \(ReturnPhase.phaseSessions) rides."
+            }
+            if x != w { p[i] = x; changed = true }
+        }
+        if changed { plan = p }
+    }
+}
