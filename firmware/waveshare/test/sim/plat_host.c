@@ -256,6 +256,7 @@ void plat_phone_status(plat_phone_status_t *o)
     o->id_addr[5] = 0xC0 | o->id_gen; o->id_addr[0] = 0x42;
     o->last_disc_code = PH.last_disc_code; o->last_disc = PH.enc_failed ? PLAT_PHONE_DISC_KEY_MISSING : PH.last_disc_code == 0x13 ? PLAT_PHONE_DISC_PHONE_ENDED : PH.last_disc_code == 0x16 ? PLAT_PHONE_DISC_BOARD_ENDED : PH.last_disc_code == 0x08 ? PLAT_PHONE_DISC_TIMEOUT : PLAT_PHONE_DISC_NONE;
     o->svc_ready = PH.connected && PH.bonded && !PH.pairing;
+    o->att_mtu = PH.connected ? (PH.mtu ? PH.mtu : 185) : 0;
     uint32_t last = 0; if (PH.in.gps.rx_ms > last) last = PH.in.gps.rx_ms; if (PH.in.hr.rx_ms > last) last = PH.in.hr.rx_ms; if (PH.in.time.rx_ms > last) last = PH.in.time.rx_ms;
     if (last) o->last_rx_age_ms = g_sim.now_ms - last;
 }
@@ -349,7 +350,10 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
     case BC_MSG_DIAG_LIST_END: bc_link_decode_diag_list_end(b, n, &PH.dlist_end); PH.dlist_ends++; break;
     case BC_MSG_DIAG_ERR: bc_link_decode_diag_err(b, n, &PH.derr); PH.derrs++; break;
     case BC_MSG_DIAG_CHUNK:
+        if (n + 3 > (size_t)(PH.mtu ? PH.mtu : 185)) PH.unknown_notifies += 1000;   /* would not fit one notification: flagged */
         if (bc_link_decode_diag_chunk(b, n, &PH.dchunk)) {
+            if (PH.dchunks && g_sim.now_ms - PH.last_chunk_ms < PH.min_chunk_gap_ms) PH.min_chunk_gap_ms = g_sim.now_ms - PH.last_chunk_ms;
+            PH.last_chunk_ms = g_sim.now_ms;
             PH.dchunks++;
             if (PH.dchunk.offset + PH.dchunk.len <= sizeof PH.dbuf) { memcpy(PH.dbuf + PH.dchunk.offset, PH.dchunk.data, PH.dchunk.len); if (PH.dchunk.offset + PH.dchunk.len > PH.dbuf_len) PH.dbuf_len = PH.dchunk.offset + PH.dchunk.len; }
         }
@@ -359,6 +363,7 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *b, size_t n)
     return true;
 }
 void plat_phone_set_standby(bool standby) { PH.standby = standby; if (standby) PH.standbys++; }
+bool plat_phone_bulk_room(void) { return ph_ok() && !PH.notify_full && !PH.congested; }
 #undef PH
 const char *plat_reset_reason(void) { return bc_reset_name(g_sim.reset_kind); }
 

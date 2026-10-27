@@ -258,11 +258,17 @@ typedef struct {
     int speed;                       /* virtual ms per real ms */
     bool meter_in_range, meter_streams;
     int phone_cycles_target;
+    /* 0.7.3 Link 1.2.3 */
+    int phone_mtu;                   /* ATT MTU the phone negotiates right after connecting (0 = none: stays 23) */
+    bool strict_mtu;                 /* a notification longer than MTU-3 is a violation */
+    bool radio; int radio_itvl_ms, radio_per_event;   /* msys pool (12) + the radio draining it per connection event */
+    void (*on_phone_rx)(uint16_t handle, const uint8_t *b, uint16_t n, uint32_t t_ms);
 } fake_cfg_t;
 extern fake_cfg_t g_fake;
 typedef struct {
     uint64_t connects, disconnects, procs, proc_enomem, notifies_rx, bad_packets, phone_connects, phone_disconnects, phone_notifies,
-             cccd_writes, mtu_timeouts, npl_events, crit_lock_violations, foreign_gatt_ops, phone_killed_by_sensor, bad_writes, stale_conn_ops;
+             cccd_writes, mtu_timeouts, npl_events, crit_lock_violations, foreign_gatt_ops, phone_killed_by_sensor, bad_writes, stale_conn_ops,
+             oversize_notifies, notify_enomem;
     char first_violation[200];
 } fake_stats_t;
 extern fake_stats_t g_fstats;
@@ -270,5 +276,10 @@ void fake_start_world(void);
 void fake_stop_world(void);
 void fake_phone_cycle(bool enc_ok, int hold_ms, int writes);   /* one phone connect -> encrypt -> subscribe -> writes -> disconnect */
 void fake_violation(const char *fmt, ...);
+uint16_t ble_att_mtu(uint16_t conn);
+int os_msys_num_free(void);
+uint16_t fake_server_handle(int index);          /* the board's GATT server: 0 INFO, 1 LIVE, 2 INPUT, 3 CTRL, 4 SYNC, 5 EVENTS */
+void fake_phone_write(uint16_t handle, const uint8_t *b, uint16_t n);
+int fake_server_read(int index, uint8_t *out, int cap);   /* bytes, -1 on error */
 uint32_t fake_now(void);
 void fake_sleep_v(uint32_t vms);

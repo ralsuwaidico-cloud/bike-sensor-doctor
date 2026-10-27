@@ -19,6 +19,9 @@ static struct {
     int wifi_state; uint32_t t_reading, t_health, t_live; uint32_t lives, lives_min, last_live_ms;
     bool heap_alerted, heapmin_alerted, stack_alerted;
     bool ready_due; uint16_t seq;
+    /* Link 1.2.3 ride priority: chunk pacing + a reply the transport refused (sent again first, never lost) */
+    uint32_t last_chunk_ms; bool chunk_sent; uint32_t chunks_held, chunks_paced;
+    uint8_t held[BC_LINK_MAX]; size_t held_len; uint8_t held_chr;
 } D;
 
 static uint32_t now_ms(void) { return plat_ms(); }
@@ -280,15 +283,22 @@ size_t app_diag_next(uint8_t *chr, uint8_t *buf, size_t cap, uint32_t now)
         bc_diag_ready_t r = { (uint8_t)bc_diag_index_pending(&D.idx), D.idx.n ? D.idx.r[D.idx.n - 1].id : 0 };
         *chr = 2; return bc_link_encode_diag_ready(&r, buf, cap, ++D.seq, now);
     }
+    /* link facts for the server: chunk size from the NEGOTIATED ATT MTU, chunks refused (BUSY) while a ride records */
+    if (D.srv.nq) { plat_phone_status_t ps; plat_phone_status(&ps); bc_diag_srv_set_link(&D.srv, ps.att_mtu, !D.recovery && app_ride_state() == BC_RIDE_RUNNING); }
+    /* ride priority: a data chunk only when the link has room (LIVE first) and at most one per BC_DIAG_CHUNK_GAP_MS */
+    if (bc_diag_srv_chunk_next(&D.srv)) {
+        bool room = plat_phone_bulk_room();
+        if (!bc_diag_pace_ok(now, D.last_chunk_ms, D.chunk_sent, room)) { if (room) D.chunks_paced++; else D.chunks_held++; return 0; }
+    }
     size_t m = bc_diag_srv_next(&D.srv, buf, cap, ++D.seq, now);
-    if (m) { *chr = 0; return m; }
+    if (m) { *chr = 0; if (buf[0] == BC_MSG_DIAG_CHUNK) { D.last_chunk_ms = now; D.chunk_sent = true; } return m; }
     D.seq--;
     return 0;
 }
 void app_diag_phone_ready(bool ready)
 {
     if (ready && !D.phone_ready) D.ready_due = true;          /* on every (re)connection: what is waiting */
-    if (!ready) { bc_diag_srv_reset(&D.srv); D.ready_due = false; }
+    if (!ready) { bc_diag_srv_reset(&D.srv); D.ready_due = false; D.held_len = 0; }
     D.phone_ready = ready;
 }
 
@@ -298,10 +308,11 @@ void app_diag_recovery_pump(uint32_t now)
     if (ps.svc_ready != D.phone_ready) { app_diag_phone_ready(ps.svc_ready); if (ps.svc_ready) app_diag_event(BC_EV_MODE, 3, 0, 0, 0, 0); }
     uint8_t chr, b[BC_LINK_MAX]; int n, guard = 0;
     while ((n = plat_phone_take_svc(&chr, b, sizeof b)) > 0 && guard++ < 16) if (chr == 0) app_diag_write(b, (size_t)n);
+    if (D.held_len) { if (!plat_phone_notify_svc(D.held_chr, D.held, D.held_len)) return; D.held_len = 0; }
     for (int i = 0; i < 8; i++) {
         uint8_t c; size_t m = app_diag_next(&c, b, sizeof b, now);
         if (!m) break;
-        if (!plat_phone_notify_svc(c, b, m)) break;           /* queue full: the phone asks again (pull protocol) */
+        if (!plat_phone_notify_svc(c, b, m)) { memcpy(D.held, b, m); D.held_len = m; D.held_chr = c; break; }   /* queue full: sent next pump */
     }
 }
 
@@ -311,6 +322,7 @@ void app_diag_status(app_diag_status_t *o)
     o->crashed = D.crashed; o->crash_report = D.crash_report; snprintf(o->summary, sizeof o->summary, "%s", D.summary);
     o->stored = D.idx.n; o->pending = bc_diag_index_pending(&D.idx); o->sent = D.sent; o->not_stored = D.idx.not_stored;
     o->storage_ok = D.storage_ok; o->events_written = D.written; o->events_dropped = D.log.dropped; o->phone_ready = D.phone_ready;
+    o->chunks_sent = D.srv.chunks_sent; o->chunks_held = D.chunks_held; o->chunks_paced = D.chunks_paced; o->busy_ride = D.srv.busy_ride;
 }
 
 uint16_t app_diag_skip(void) { return D.plan.skip; }

@@ -46,12 +46,18 @@ static bool s_repair_pending;        /* forget/repair asked from the UI task: do
 static volatile bool s_req_apply_enabled, s_req_disconnect, s_req_standby_changed;
 static uint8_t s_enc_fail_streak;   /* s_events_sub: 0.6.0 Events characteristic (chr 2 in plat_phone_notify_svc) */
 /* 0.6.0 phone services: writes from the phone wait here for the app task (app_psvc_pump); replies wait here for the BLE task */
-typedef struct { uint8_t chr, len, b[BC_LINK_MAX]; } svc_msg_t;
+typedef struct { uint8_t chr, len, tries, b[BC_LINK_MAX]; } svc_msg_t;
 #define SVC_Q 12
 static svc_msg_t s_svc_in[SVC_Q]; static int s_svc_in_n;
 static svc_msg_t s_svc_out[SVC_Q]; static int s_svc_out_n;
 static uint32_t s_svc_dropped;
 static uint8_t s_sync_end[32]; static size_t s_sync_end_len;
+/* 0.7.3 Link 1.2.3: the negotiated ATT MTU of the phone connection (chunk sizing) and notify back-pressure (ride priority) */
+static uint16_t s_mtu;
+static uint32_t s_notify_fail_ms; static bool s_notify_failed;
+#define BULK_MIN_FREE_MBUFS 4        /* of CONFIG_BT_NIMBLE_MSYS_1_BLOCK_COUNT 12: diag chunks never take the last ones */
+#define BULK_FAIL_QUIET_MS 500u      /* no bulk traffic for 0.5 s after NimBLE refused a notification */
+#define SVC_MAX_TRIES 30             /* a refused service notification is retried for ~3 s (100 ms ticks), then dropped */
 
 static void set_state(plat_phone_state_t st) { LOCK(); s_st.state = st; UNLOCK(); }
 
@@ -244,7 +250,7 @@ static void on_disconnect(uint16_t reason)
     int bonds = count_bonds();                        /* 0.7.3: NimBLE's host lock is never taken inside our spinlock */
     LOCK();
     s_conn = BLE_HS_CONN_HANDLE_NONE; s_encrypted = s_live_sub = s_ctrl_sub = s_sync_sub = s_events_sub = false; s_st.passkey = 0; s_st.rssi = 0;
-    s_live_new = s_resp_new = false; s_svc_in_n = 0; s_svc_out_n = 0; s_st.svc_ready = false;
+    s_live_new = s_resp_new = false; s_svc_in_n = 0; s_svc_out_n = 0; s_st.svc_ready = false; s_mtu = 0; s_st.att_mtu = 0; s_notify_failed = false;
     s_st.last_disc_code = reason; s_st.last_disc = disc_map(reason); s_st.bonds = (uint8_t)bonds; s_st.bonded = bonds > 0;
     UNLOCK();
     app_psvc_on_disconnect();
@@ -262,7 +268,8 @@ static int gap_cb(struct ble_gap_event *ev, void *arg)
         s_adv = false;
         if (ev->connect.status != 0) { adv_start(); return 0; }
         { int bonds = count_bonds();                  /* 0.7.3: outside the spinlock (0.7.0-0.7.2 called it inside: NimBLE host lock under portENTER_CRITICAL) */
-          LOCK(); s_conn = ev->connect.conn_handle; s_st.connects++; s_st.bonds = (uint8_t)bonds; UNLOCK(); }
+          uint16_t mtu = ble_att_mtu(ev->connect.conn_handle);   /* 23 until the phone's MTU exchange */
+          LOCK(); s_conn = ev->connect.conn_handle; s_st.connects++; s_st.bonds = (uint8_t)bonds; s_mtu = mtu; s_st.att_mtu = mtu; UNLOCK(); }
         set_state(PLAT_PHONE_CONNECTED);
         { struct ble_gap_conn_desc d; if (ble_gap_conn_find(ev->connect.conn_handle, &d) == 0)
             ESP_LOGI(TAG, "phone connected: peer %s ..:%02X:%02X, bonds %d, itvl %u, our identity gen %u", d.peer_id_addr.type ? "random" : "public",
@@ -329,6 +336,7 @@ static int gap_cb(struct ble_gap_event *ev, void *arg)
         return 0;
     case BLE_GAP_EVENT_MTU:
         ESP_LOGI(TAG, "phone MTU %u", ev->mtu.value);
+        if (ev->mtu.conn_handle == s_conn) { LOCK(); s_mtu = ev->mtu.value; s_st.att_mtu = ev->mtu.value; UNLOCK(); }   /* diag chunk sizing */
         return 0;
     default:
         return 0;
@@ -379,11 +387,21 @@ void ble_link_tick(void)
     LOCK();
     if (s_encrypted && s_live_sub && s_live_new) { n = s_live_len; memcpy(buf, s_live_buf, n); s_live_new = false; live = true; }
     UNLOCK();
-    if (live && n) { struct os_mbuf *om = ble_hs_mbuf_from_flat(buf, (uint16_t)n); if (om && ble_gatts_notify_custom(s_conn, h_live, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); } }
+    uint32_t now = hw_millis();
+    { uint16_t m = ble_att_mtu(s_conn); if (m && m != s_mtu) { LOCK(); s_mtu = m; s_st.att_mtu = m; UNLOCK(); } }   /* never miss the exchange */
+    if (live && n) {
+        struct os_mbuf *om = ble_hs_mbuf_from_flat(buf, (uint16_t)n);
+        if (om && ble_gatts_notify_custom(s_conn, h_live, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); }
+        else { LOCK(); if (!s_live_new) s_live_new = true; s_st.notify_fails++; s_notify_failed = true; s_notify_fail_ms = now; UNLOCK(); }   /* 0.7.3: retried next tick */
+    }
     LOCK();
     if (s_encrypted && s_ctrl_sub && s_resp_new) { n = s_resp_len; memcpy(buf, s_resp_buf, n); s_resp_new = false; resp = true; }
     UNLOCK();
-    if (resp && n) { struct os_mbuf *om = ble_hs_mbuf_from_flat(buf, (uint16_t)n); if (om && ble_gatts_notify_custom(s_conn, h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); } }
+    if (resp && n) {
+        struct os_mbuf *om = ble_hs_mbuf_from_flat(buf, (uint16_t)n);
+        if (om && ble_gatts_notify_custom(s_conn, h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); }
+        else { LOCK(); if (!s_resp_new) s_resp_new = true; s_st.notify_fails++; s_notify_failed = true; s_notify_fail_ms = now; UNLOCK(); }
+    }
     /* phone-service replies: all that are queued, each on its characteristic (subscribed or not: a read of Sync returns the last END) */
     for (int guard = 0; guard < SVC_Q; guard++) {
         svc_msg_t m; bool have = false;
@@ -395,9 +413,17 @@ void ble_link_tick(void)
         bool sub = m.chr == 2 ? s_events_sub : m.chr ? s_sync_sub : s_ctrl_sub;
         if (!sub) continue;
         struct os_mbuf *om = ble_hs_mbuf_from_flat(m.b, m.len);
-        if (om && ble_gatts_notify_custom(s_conn, m.chr == 2 ? h_events : m.chr ? h_sync : h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); }
+        if (om && ble_gatts_notify_custom(s_conn, m.chr == 2 ? h_events : m.chr ? h_sync : h_ctrl, om) == 0) { LOCK(); s_st.tx_msgs++; UNLOCK(); continue; }
+        /* 0.7.3: NimBLE refused it (no mbuf / controller queue full; it freed `om`): put it back at the head and stop for
+           this tick — 0.6.0-0.7.2 dropped it, so a pulled report chunk could vanish under load */
+        LOCK();
+        s_notify_failed = true; s_notify_fail_ms = now; s_st.notify_fails++;
+        if (++m.tries < SVC_MAX_TRIES && s_svc_out_n < SVC_Q) { memmove(&s_svc_out[1], &s_svc_out[0], sizeof m * (size_t)s_svc_out_n); s_svc_out[0] = m; s_svc_out_n++; }
+        else s_svc_dropped++;
+        UNLOCK();
+        break;
     }
-    static uint32_t t; uint32_t now = hw_millis();
+    static uint32_t t;
     if (now - t > 2000) { t = now; int8_t r; if (ble_gap_conn_rssi(s_conn, &r) == 0) { LOCK(); s_st.rssi = r; UNLOCK(); } }
 }
 
@@ -459,10 +485,20 @@ bool plat_phone_notify_svc(uint8_t chr, const uint8_t *buf, size_t n)
     LOCK();
     if (chr == 1 && buf[0] == BC_MSG_SYNC_END && n <= sizeof s_sync_end) { memcpy(s_sync_end, buf, n); s_sync_end_len = n; }
     if (s_conn == BLE_HS_CONN_HANDLE_NONE || !s_encrypted) ok = true;  /* nobody to notify: dropped, like the radio would */
-    else if (s_svc_out_n < SVC_Q) { svc_msg_t *m = &s_svc_out[s_svc_out_n++]; m->chr = chr; m->len = (uint8_t)n; memcpy(m->b, buf, n); ok = true; }
+    else if (s_svc_out_n < SVC_Q) { svc_msg_t *m = &s_svc_out[s_svc_out_n++]; m->chr = chr; m->len = (uint8_t)n; m->tries = 0; memcpy(m->b, buf, n); ok = true; }
     else ok = false;
     UNLOCK();
     return ok;
+}
+
+bool plat_phone_bulk_room(void)
+{
+    uint32_t now = hw_millis();
+    LOCK();
+    bool ok = s_conn != BLE_HS_CONN_HANDLE_NONE && s_encrypted && s_ctrl_sub && !s_live_new && !s_resp_new && s_svc_out_n == 0 &&
+              !(s_notify_failed && now - s_notify_fail_ms < BULK_FAIL_QUIET_MS);
+    UNLOCK();
+    return ok && os_msys_num_free() >= BULK_MIN_FREE_MBUFS;     /* a plain counter read: no host lock */
 }
 
 void plat_phone_set_standby(bool standby)

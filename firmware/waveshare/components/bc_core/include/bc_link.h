@@ -232,11 +232,25 @@ bool bc_link_decode_settings(const uint8_t *buf, size_t len, bc_settings_msg_t *
  * of the CHUNK it received); ACK(id, crc32) -> DIAG_INFO with state 1 when the crc matches (state 0 when it does not);
  * errors -> DIAG_ERR. EVENT 0x40 event_id 0x22 diag_ready (Events characteristic) on connect and when a report is stored. */
 #define BC_EVT_DIAG_READY 0x22
-#define BC_DIAG_CHUNK_MAX 155      /* 180 - header 8 - id 6 - offset 6 - data tag 2 - last 3 */
+/* Chunk size contract (1.2.3, both sides compute it the same way; message format unchanged):
+ *   DIAG_CHUNK on the wire = BC_DIAG_CHUNK_OVERHEAD + data bytes, where the overhead is
+ *   header 8 + 01 report_id (tag 1 + len 1 + 4) + 02 offset (1 + 1 + 4) + 03 data (tag 1 + len 1) + 04 last (1 + 1 + 1) = 25.
+ *   A notification carries at most ATT_MTU - 3 bytes, a Link message at most BC_LINK_MAX (180), so
+ *   data = min(max_len from the phone, BC_LINK_MAX - 25 = 155, (ATT_MTU - 3) - 25)        (max_len 0 / absent = no limit)
+ *   with ATT_MTU the value NEGOTIATED on the phone connection (23 until the exchange: no chunk fits -> DIAG_ERR 5).
+ *   ATT_MTU 23 -> 0 (ERR 5) · 100 -> 72 · 185 -> 155 · 247 -> 155 · 517 -> 155. */
+#define BC_DIAG_CHUNK_OVERHEAD 25
+#define BC_DIAG_CHUNK_MAX (BC_LINK_MAX - BC_DIAG_CHUNK_OVERHEAD)   /* 155 */
+#define BC_ATT_MTU_DEFAULT 23
+#define BC_ATT_NOTIFY_OVERHEAD 3                                    /* ATT opcode 1 + handle 2 */
+/** Data bytes of one DIAG_CHUNK for this request on this link (0 = none fits: the board answers DIAG_ERR 5). */
+uint16_t bc_diag_chunk_data_max(uint16_t max_len, uint16_t att_mtu);
 #define BC_DIAG_SUMMARY_MAX 40
 #define BC_DIAG_FW_MAX 16
 typedef enum { BC_DIAG_KIND_CRASH = 1, BC_DIAG_KIND_RECOVERY = 2, BC_DIAG_KIND_MANUAL = 3, BC_DIAG_KIND_HEALTH = 4 } bc_diag_kind_t;
-typedef enum { BC_DIAG_ERR_UNKNOWN_ID = 1, BC_DIAG_ERR_BAD_OFFSET = 2, BC_DIAG_ERR_STORAGE = 3, BC_DIAG_ERR_BUSY = 4 } bc_diag_err_code_t;
+/* 4 busy: more than 4 requests outstanding, OR a ride is recording on the board (chunks wait until it ends; retry later).
+ * 5 (0.7.3 final): the negotiated ATT MTU leaves no room for a single data byte (MTU < 29) — the phone must not retry. */
+typedef enum { BC_DIAG_ERR_UNKNOWN_ID = 1, BC_DIAG_ERR_BAD_OFFSET = 2, BC_DIAG_ERR_STORAGE = 3, BC_DIAG_ERR_BUSY = 4, BC_DIAG_ERR_MTU = 5 } bc_diag_err_code_t;
 typedef struct { uint32_t id, size, crc, epoch_s; uint8_t kind, state; char summary[BC_DIAG_SUMMARY_MAX + 1]; char fw[BC_DIAG_FW_MAX + 1]; } bc_diag_info_t;
 typedef struct { uint8_t count, pending; } bc_diag_list_end_t;
 typedef struct { uint32_t id, offset; uint16_t max_len; } bc_diag_chunk_req_t;

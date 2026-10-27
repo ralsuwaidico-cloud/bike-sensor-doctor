@@ -81,11 +81,28 @@ never deletes an unsent report to make room (it stops recording new low-priority
 | DIAG_LIST_REQ 0x80 | phone→board | — |
 | DIAG_INFO 0x81 | board→phone, one per stored report, then DIAG_LIST_END | 01 u32 report_id (monotonic, never reused) · 02 u32 size bytes · 03 u32 crc32 (IEEE, of the whole report) · 04 u32 created_epoch_s (0 = unknown) · 05 u8 kind (1 crash, 2 recovery session, 3 manual "send logs", 4 periodic health) · 06 u8 state (0 pending, 1 sent/acknowledged) · 07 utf8 ≤ 40 summary ("panic in nimble_host", …) · 08 utf8 ≤ 16 firmware version |
 | DIAG_LIST_END 0x82 | board→phone | 01 u8 count · 02 u8 pending |
-| DIAG_CHUNK_REQ 0x83 | phone→board | 01 u32 report_id · 02 u32 offset · 03 u16 max_len (≤ 180 − overhead; phone uses 160) |
-| DIAG_CHUNK 0x84 | board→phone | 01 u32 report_id · 02 u32 offset · 03 bytes data (≤ 160) · 04 u8 last (1 when offset+len == size) |
+| DIAG_CHUNK_REQ 0x83 | phone→board | 01 u32 report_id · 02 u32 offset · 03 u16 max_len (see "Chunk size"; absent or 0 = no limit) |
+| DIAG_CHUNK 0x84 | board→phone | 01 u32 report_id · 02 u32 offset · 03 bytes data (≤ 155, see "Chunk size") · 04 u8 last (1 when offset+len == size) |
 | DIAG_ACK 0x85 | phone→board | 01 u32 report_id · 02 u32 crc32 the phone computed — board marks the report sent only if it matches; replies DIAG_INFO with state 1 |
-| DIAG_ERR 0x86 | board→phone | 01 u32 report_id · 02 u8 code (1 unknown id, 2 bad offset, 3 storage read error, 4 busy) |
+| DIAG_ERR 0x86 | board→phone | 01 u32 report_id · 02 u8 code (1 unknown id, 2 bad offset, 3 storage read error, 4 busy = more than 4 requests outstanding or a ride is recording on the board — retry after 10 s, 5 link too small = the negotiated ATT MTU leaves no room for one data byte — do not retry) |
 | EVENT 0x40 event_id 0x22 diag_ready | board→phone, on connect and when a new report is stored | 02 u8 pending count · 03 u32 newest report_id |
+**Chunk size (exact; both sides compute it, the message format is unchanged).** A DIAG_CHUNK is `25 + data` bytes:
+header 8 + `01` report_id (1 + 1 + 4) + `02` offset (1 + 1 + 4) + `03` data tag + length (2) + `04` last (1 + 1 + 1) = 25.
+One notification carries `ATT_MTU − 3` bytes (opcode 1 + handle 2), one Link message at most 180 bytes. Therefore
+- phone: `max_len = min(180 − 25, (ATT_MTU − 3) − 25) = min(155, ATT_MTU − 28)` with `ATT_MTU − 3 =
+  CBPeripheral.maximumWriteValueLength(for: .withoutResponse)` (notifications use the same negotiated MTU); when that is
+  below 1 (ATT_MTU < 29) the phone does not ask. MTU 185 (iOS) → 155 · 247 → 155 · 517 → 155 · 100 → 72 · 23 → none.
+- board: `data = min(max_len, 155, (ATT_MTU − 3) − 25, bytes left)` with ATT_MTU = the value negotiated on THIS phone
+  connection (`BLE_GAP_EVENT_MTU`, re-read with `ble_att_mtu(conn)`; 23 before the exchange). 0 → DIAG_ERR 5.
+  The board never relies on a refused notification to find the size; a 160-byte request (first draft) is clamped to 155.
+- The phone continues at `offset + len` of the chunk it received; `offset == size` returns an empty chunk with `last = 1`.
+
+**Ride priority.** LIVE is never delayed by a transfer: the board hands a DIAG_CHUNK to the radio only when the LIVE frame of
+that second has gone, its notification queue is empty, at least 4 NimBLE mbufs are free and no notification was refused in
+the last 500 ms, and at most one chunk per 200 ms; a refused notification is retried, never dropped. While a ride is
+RECORDING on the board, chunk requests are answered BUSY (LIST and ACK still work); the phone does not ask while the board's
+LIVE says RUNNING and sends at most one request per second while the phone itself records.
+
 Report content (board side): UTF-8 text, sections `[header] [reset] [panic] [backtrace] [tasks] [heap] [events] [sensors] [phone] [wifi] [recovery]`,
 no names, no e-mail, no Wi-Fi passwords, no locations; BLE addresses truncated to the last 2 bytes.
 Phone side: stores reports in Application Support/Diagnostics/<board-id>/<report_id>.txt, verifies crc32 before ACK, dedupes by

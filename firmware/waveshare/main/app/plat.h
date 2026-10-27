@@ -158,6 +158,9 @@ typedef struct {
     uint8_t id_gen;                   /* identity generation: +1 on every forget/repair (the phone sees a new device) */
     uint8_t id_addr[6];               /* the Bluetooth identity address the phone sees (random static); all 0 = public */
     bool svc_ready;                   /* encrypted AND the phone listens on Control: phone services can notify */
+    /* 0.7.3 (Link 1.2.3 transfer) */
+    uint16_t att_mtu;                 /* ATT MTU negotiated on the phone connection (BLE_GAP_EVENT_MTU / ble_att_mtu); 0 = none */
+    uint32_t notify_fails;            /* notifications NimBLE refused (no mbuf / busy) since boot; retried, never dropped silently */
 } plat_phone_status_t;
 void plat_phone_set_enabled(bool on);
 void plat_phone_status(plat_phone_status_t *out);
@@ -180,6 +183,9 @@ void plat_phone_publish_live(const bc_live_t *live);         /* once per second 
  * and the app's replies go back as notifications on the same characteristic. chr: 0 = Control, 1 = Sync, 2 = Events (notify only). */
 int plat_phone_take_svc(uint8_t *chr, uint8_t *buf, size_t cap);   /* bytes copied, 0 = nothing pending */
 bool plat_phone_notify_svc(uint8_t chr, const uint8_t *buf, size_t n);   /* false = transport queue full, try again next tick */
+/** 0.7.3: room for LOW-PRIORITY bulk traffic (diagnostic report chunks): encrypted + Control subscribed, no LIVE frame waiting,
+ *  the service queue empty, enough free NimBLE mbufs and no refused notification in the last 500 ms. LIVE always goes first. */
+bool plat_phone_bulk_room(void);
 /** Connected standby (screen off, no ride): keep the link, advertise slowly (~1 s) when no phone is connected. */
 void plat_phone_set_standby(bool standby);
 /** Connected standby for the sensor side: no scanning for paired sensors; existing connections are kept. */

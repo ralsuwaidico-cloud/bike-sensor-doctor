@@ -259,6 +259,16 @@ void ui_health_show(void)
 static void m_health(lv_event_t *e) { (void)e; ui_health_show(); }
 static void m_sensor(lv_event_t *e) { (void)e; ui_sensor_test_show(true); }
 static void m_self(lv_event_t *e) { (void)e; ui_diag_show(); }
+/* 0.7.3: a SAFE way to create a diagnostic report for Cyclift (kind 3 "manual") without a crash — the recovery screen's
+   SEND LOGS only appears after crashes. Held 1 s so a stray touch never makes one. */
+static void m_save_report(lv_event_t *e)
+{
+    (void)e;
+    uint32_t id = app_diag_store_report(BC_DIAG_KIND_MANUAL, "saved by the rider (Diagnostics > SAVE REPORT)");
+    char t[48];
+    if (id) snprintf(t, sizeof t, "Report %lu saved", (unsigned long)id); else snprintf(t, sizeof t, "Not saved: storage full");
+    ui_toast(t);
+}
 
 void ui_diag_menu_show(void)
 {
@@ -268,6 +278,9 @@ void ui_diag_menu_show(void)
     ui_row_btn(l, "Device Health", LV_SYMBOL_RIGHT, C_CYAN, m_health, NULL);
     ui_row_btn(l, "Sensor Test", LV_SYMBOL_RIGHT, C_CYAN, m_sensor, NULL);
     ui_row_btn(l, "Self-test", LV_SYMBOL_RIGHT, C_CYAN, m_self, NULL);
+    ui_hold_btn(l, "HOLD: SAVE REPORT", C_PANEL, C_CYAN, lv_pct(100), 40, 1000, m_save_report, NULL);
+    lv_obj_t *n = ui_label(l, &lv_font_montserrat_12, C_MUT, "For Cyclift: it fetches the report by itself.");
+    lv_obj_set_width(n, lv_pct(100)); lv_label_set_long_mode(n, LV_LABEL_LONG_WRAP);
     lv_obj_t *bk = ui_round_btn(scr, LV_SYMBOL_LEFT, C_PANEL, C_FG, 44, back_settings, NULL);
     lv_obj_align(bk, LV_ALIGN_TOP_MID, 0, 188);
     lv_obj_set_size(bk, 36, 36);

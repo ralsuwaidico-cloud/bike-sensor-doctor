@@ -35,7 +35,10 @@ typedef struct {
              bc_sensor_diag_t diag[16]; int ndiag; int diags;
              /* 0.7.3 Link 1.2.3: what the board answered to the phone's DIAG_* requests */
              bc_diag_info_t dinfo[32]; int ndinfo; bc_diag_list_end_t dlist_end; int dlist_ends; bc_diag_err_t derr; int derrs;
-             bc_diag_ready_t dready; int dreadys; bc_diag_chunk_t dchunk; int dchunks; uint8_t dbuf[16384]; uint32_t dbuf_len; } phone;
+             bc_diag_ready_t dready; int dreadys; bc_diag_chunk_t dchunk; int dchunks; uint8_t dbuf[16384]; uint32_t dbuf_len;
+             uint16_t mtu;            /* negotiated ATT MTU the harness reports (0 = 185 like iOS) */
+             bool congested;          /* test hook: plat_phone_bulk_room() false (LIVE / mbufs need the link) */
+             uint32_t last_chunk_ms; uint32_t min_chunk_gap_ms; } phone;
     /* 0.7.3 crash evidence + boot modes (plat_host.c) */
     bc_reset_t reset_kind; plat_crash_t crash; char log_tail[1024]; uint16_t nvs_skip; uint32_t nvs_skip_fw, fw_id; uint32_t crash_total;
     bool phone_only_started; int crash_consumed; uint32_t heap_free, heap_min;

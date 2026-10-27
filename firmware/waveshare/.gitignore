@@ -17,3 +17,5 @@ test/sim/out_asan/
 test/blehost/stress
 test/blehost/stress_tsan
 test/blehost/tsan.log
+test/host/gen_diag_fixture
+test/blehost/prio

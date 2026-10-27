@@ -1,0 +1,25 @@
+BikeComputer 0.7.3 + Cyclift - diagnostic report test (one session, about 15 minutes, no crash needed)
+=====================================================================================================
+You need: the board with 0.7.3, the power meter on the bike, your Apple Watch, the iPhone with the Cyclift build that has
+"BikeComputer diagnostic reports" (Claude tells you the build number). Do NOT start a ride on the board during steps 2-7.
+Write PASS or FAIL after each step.
+
+1  Cyclift open, board connected (board: Settings > Phone shows "connected"). Pedal: Cyclift shows watts and cadence
+   from the power meter and heart rate from the watch.                                                      PASS/FAIL
+2  On the board: Settings > Diagnostics, scroll down, press and HOLD "HOLD: SAVE REPORT" for 1 second.
+   The board shows "Report N saved". Do it 3 times (3 reports), a few seconds apart.                       PASS/FAIL
+3  In Cyclift: Connections > BikeComputer. Within a few seconds, without pressing anything, it shows
+   "Diagnostic report ready" with a progress bar ("... of ... KB").                                         PASS/FAIL
+4  When the first report shows "Report saved" and the bar of the next one is moving: iPhone Settings > Bluetooth OFF.
+   Note the "... of ... KB" number. Wait 10 seconds.                                                       DONE
+5  Bluetooth ON again. Do not touch the board. Within about 30 seconds Cyclift reconnects by itself and the bar goes on
+   from the number you noted (not from 0).                                                                 PASS/FAIL
+6  All three arrive: "Report saved". Tap "BikeComputer reports": open the newest. The text starts with [header], shows
+   "kind 3 manual", and the line under it says "checksum ........ verified" and "confirmed by the board".   PASS/FAIL
+7  Tap Share and save it to Files (or mail it to yourself). The .txt file opens.                          PASS/FAIL
+8  During steps 3-6 keep pedalling now and then: watts, cadence and heart rate kept updating every second in Cyclift
+   and on the board; no "stale", no restart of the board.                                                   PASS/FAIL
+9  (optional) Hold SAVE REPORT once more, then START a ride on the board: the report waits ("Diagnostic report ready",
+   bar not moving) while the ride records; END the ride: it arrives within about 20 seconds.               PASS/FAIL/SKIPPED
+
+If anything fails: run CAPTURE-CRASH.bat only if the board restarted; otherwise just tell Claude the step number.

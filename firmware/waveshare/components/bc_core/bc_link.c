@@ -734,6 +734,15 @@ static void get_str_cut(char *dst, size_t cap, const uint8_t *x, uint8_t n)
     while (k > 0 && k < n && ((uint8_t)x[k] & 0xC0) == 0x80) k--;
     memcpy(dst, x, k); dst[k] = 0;
 }
+uint16_t bc_diag_chunk_data_max(uint16_t max_len, uint16_t att_mtu)
+{
+    uint32_t n = BC_DIAG_CHUNK_MAX;
+    if (max_len && max_len < n) n = max_len;
+    uint32_t mtu = att_mtu ? att_mtu : BC_ATT_MTU_DEFAULT;
+    uint32_t room = mtu > BC_ATT_NOTIFY_OVERHEAD + BC_DIAG_CHUNK_OVERHEAD ? mtu - BC_ATT_NOTIFY_OVERHEAD - BC_DIAG_CHUNK_OVERHEAD : 0;
+    if (room < n) n = room;
+    return (uint16_t)n;
+}
 size_t bc_link_encode_diag_list_req(uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms)
 { bc_lw_t w; bc_lw_begin(&w, buf, cap, BC_MSG_DIAG_LIST_REQ, seq, t_ms); return bc_lw_end(&w); }
 bool bc_link_decode_diag_list_req(const uint8_t *buf, size_t len) { bc_lr_t r; bc_link_hdr_t h; return bc_lr_begin(&r, buf, len, &h) && h.type == BC_MSG_DIAG_LIST_REQ; }
