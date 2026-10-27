@@ -275,7 +275,7 @@ static void m_save_report(lv_event_t *e)
     uint32_t id = app_diag_store_report(BC_DIAG_KIND_MANUAL, "saved by the rider (Diagnostics > SAVE REPORT)");
     char t[48];
     app_diag_status_t st; app_diag_status(&st);   /* 0.7.4: the real reason, never a guessed "storage full" */
-    if (id) snprintf(t, sizeof t, "Report %lu saved", (unsigned long)id); else snprintf(t, sizeof t, "Not saved: %s", bc_stor_name((bc_stor_state_t)st.last_fail));
+    if (id) snprintf(t, sizeof t, "Report %lu saved", (unsigned long)id); else snprintf(t, sizeof t, "Not saved: %s", bc_stor_short((bc_stor_state_t)st.last_fail));
     ui_toast(t);
 }
 

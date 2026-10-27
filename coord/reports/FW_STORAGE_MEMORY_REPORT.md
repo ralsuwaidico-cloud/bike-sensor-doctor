@@ -140,7 +140,7 @@ only ~8 KB of real data.
 |---|---|---|
 | Flash size detected | 16 MB (bootloader + `selftest flash PASS 16 MB`) | B |
 | Partition table | §1; 0.7.4-dev table byte-identical to 0.7.3 (`cmp`) | B, E |
-| App size vs partition | 0.7.2 1,787,840 B; 0.7.3 1,830,352 B (43.6 % of 4 MB `ota_0`); 0.7.4-dev 1,838,288 B; `ota_1` empty in every backup | E, K |
+| App size vs partition | 0.7.2 1,787,840 B; 0.7.3 1,830,352 B (43.6 % of 4 MB `ota_0`); 0.7.4-dev 1,838,656 B; `ota_1` empty in every backup | E, K |
 | App content (flash) | own fonts 105 KB, layout thumbnails 90 KB, other const data 78 KB (DROM) | E |
 | NVS | 6 pages × 4 KB: 4 full, 1 active (4 empty entries), 1 empty (GC reserve); 23 written / 115 erased (reclaimable) / 142 empty entries; integrity OK. Data: PHY calibration 1904 B, rider profile string 706 B, link identity 6 B, local IRK 23 B, counters. **Not full.** No phone bond (only `local_irk_1`) in the pre-0.7.3 backup. | K (+B: `nvs PASS boot #339`) |
 | Filesystem size / free | 7964 KB total, 5096 KB reported free (2852 KB phantom-allocated, §3) | B, K |

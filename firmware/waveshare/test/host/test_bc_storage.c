@@ -91,6 +91,7 @@ static void test_classify(void)
     /* every name fits the round screen; codes are distinct */
     for (int s = 0; s <= BC_STOR_NOT_CHECKED; s++) {
         CHECK(strlen(bc_stor_name((bc_stor_state_t)s)) <= 24, "name %d fits 24 chars: %s", s, bc_stor_name((bc_stor_state_t)s));
+        CHECK(strlen(bc_stor_short((bc_stor_state_t)s)) <= 13, "short name %d fits 13 chars: %s", s, bc_stor_short((bc_stor_state_t)s));
         for (int t = 0; t < s; t++) CHECK(strcmp(bc_stor_code((bc_stor_state_t)s), bc_stor_code((bc_stor_state_t)t)), "codes %d/%d distinct", s, t);
     }
     CHECK(!strcmp(bc_crashpart_name(BC_CRASHPART_MISSING), "Crash partition missing") && strlen(bc_crashpart_name(BC_CRASHPART_BAD)) <= 24, "crash partition names");

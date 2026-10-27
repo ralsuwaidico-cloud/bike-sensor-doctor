@@ -176,8 +176,7 @@ typedef struct {
 } plat_phone_status_t;
 void plat_phone_set_enabled(bool on);
 /** 0.7.4: true when Bluetooth (controller, NimBLE stack or host task) could not start this boot - the board keeps running
- *  without phone link and sensors. reason (may be NULL) gets a short text, e.g. "controller/HCI init failed (err 0xffffffff)"
- *  or "disabled after 2 crashes". */
+ *  without phone link and sensors. reason (may be NULL) gets a short text (<= 24 chars for the round screen), e.g. "HCI init failed" or "off after 2 crashes". */
 bool plat_bt_unavailable(char *reason, size_t cap);
 void plat_phone_status(plat_phone_status_t *out);
 void plat_phone_forget(void);         /* forget every remembered phone, drop the connection AND take a new identity (0.7.0) */

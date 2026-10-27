@@ -218,6 +218,9 @@ bool plat_bt_unavailable(char *reason, size_t cap)
 }
 void plat_phone_only_start(void)
 {
+    /* 0.7.4: never restart what crashed - the Bluetooth stack / phone link disabled after crashes stays off for SEND LOGS too */
+    uint16_t sk = (uint16_t)(plat_boot_rtc()->skip | plat_boot_skip_load());
+    if (!s_ble_started && (sk & (BC_SS_BIT(BC_SS_BTSTACK) | BC_SS_BIT(BC_SS_PHONE)))) { diag_esp_bt_disabled("off after crashes"); ESP_LOGW(TAG, "recovery: SEND LOGS - Bluetooth stays off (disabled after crashes)"); return; }
     if (!s_ble_started) {
         s_ble_started = true;
         if (!ble_central_start(false)) { ESP_LOGE(TAG, "recovery: phone link could not start - Bluetooth unavailable (%s)", ble_central_init_info()->reason); return; }

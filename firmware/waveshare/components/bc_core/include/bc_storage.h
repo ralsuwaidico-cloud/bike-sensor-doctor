@@ -34,6 +34,8 @@ typedef enum {
 
 /** Short text for the 240x240 round screen (<= 24 characters), e.g. "Directory corrupted". */
 const char *bc_stor_name(bc_stor_state_t s);
+/** Shorter form (<= 13 characters) for the narrow bottom lines of the round screen, e.g. "dir corrupted". */
+const char *bc_stor_short(bc_stor_state_t s);
 /** Stable machine code for reports and the BLE storage status (BLE_CONTRACT.md), e.g. "dir_corrupted". */
 const char *bc_stor_code(bc_stor_state_t s);
 

@@ -17,6 +17,20 @@ const char *bc_stor_name(bc_stor_state_t s)
     }
 }
 
+const char *bc_stor_short(bc_stor_state_t s)
+{
+    switch (s) {
+    case BC_STOR_OK: return "storage ok";
+    case BC_STOR_FULL: return "storage full";
+    case BC_STOR_FS_UNAVAILABLE: return "no filesystem";
+    case BC_STOR_DIR_CORRUPTED: return "dir corrupted";
+    case BC_STOR_WRITE_FAILED: return "write failed";
+    case BC_STOR_DIAG_UNAVAILABLE: return "diag off";
+    case BC_STOR_DIAG_FULL: return "reports full";
+    case BC_STOR_NOT_CHECKED: default: return "not checked";
+    }
+}
+
 const char *bc_stor_code(bc_stor_state_t s)
 {
     switch (s) {

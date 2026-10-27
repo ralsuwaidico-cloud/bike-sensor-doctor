@@ -8,8 +8,8 @@
  *                           disabled instead of looping; bc_boot.h)
  *   [ SEND LOGS ]           stores a manual report and starts ONLY the phone link so Cyclift can pull the reports
  *   status line             "Logs saved" / "Waiting for Cyclift" / "Sent to Cyclift"
- *                           0.7.4: "Not saved: Directory corrupted" (the measured category, bc_storage.h) instead of
- *                           "Logs NOT saved (storage)"; "No Bluetooth - logs stay here" when SEND LOGS cannot start the link
+ *                           0.7.4: "Not saved: dir corrupted" (the measured category, bc_storage.h; <= 24 characters at
+ *                           this height of the round screen) instead of "Logs NOT saved (storage)"; "No BT - logs kept here"
  * Never erases rides, profile, bonds or logs. Not built with ui_screen_new (that timer runs the app and the power manager,
  * which do not run in recovery mode); this screen has its own 100 ms timer.
  */
@@ -54,10 +54,10 @@ static void recovery_tick(lv_timer_t *t)
     app_diag_tick(now);
     app_diag_status_t st; app_diag_status(&st);
     const char *txt; lv_color_t c; static char why[40];
-    if (r_send_pressed && plat_bt_unavailable(NULL, 0)) { txt = "No Bluetooth - logs stay here"; c = C_RED; }
+    if (r_send_pressed && plat_bt_unavailable(NULL, 0)) { txt = "No BT - logs kept here"; c = C_RED; }
     else if (r_send_pressed && (uint32_t)st.sent > r_sent_at_press) { txt = "Sent to Cyclift"; c = C_GREEN; }
     else if (r_send_pressed) { txt = st.phone_ready ? "Sending to Cyclift..." : "Waiting for Cyclift"; c = C_AMBER; }
-    else if (!st.storage_ok) { snprintf(why, sizeof why, "Not saved: %s", bc_stor_name((bc_stor_state_t)st.storage_state)); txt = why; c = C_RED; }
+    else if (!st.storage_ok) { snprintf(why, sizeof why, "Not saved: %s", bc_stor_short((bc_stor_state_t)st.storage_state)); txt = why; c = C_RED; }
     else if (st.crash_report || st.stored) { txt = "Logs saved"; c = C_GREEN; }
     else { txt = "No crash log stored"; c = C_MUT; }
     if (strcmp(lv_label_get_text(r_status), txt)) lv_label_set_text(r_status, txt);

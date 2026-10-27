@@ -166,7 +166,7 @@ void app_main(void)
     /* 0.7.4: Bluetooth stack first (its HCI buffers must come from internal RAM; see the header comment) */
     bool bt_stack = false;
     stage(BC_SS_BTSTACK, NULL);
-    if (skipped(BC_SS_BTSTACK)) { diag_esp_bt_disabled("disabled after 2 crashes while starting"); stage_done(BC_SS_BTSTACK, 2, 0); }
+    if (skipped(BC_SS_BTSTACK)) { diag_esp_bt_disabled("off after 2 crashes"); stage_done(BC_SS_BTSTACK, 2, 0); }
     else { bt_stack = ble_central_stack_init(); stage_done(BC_SS_BTSTACK, bt_stack ? 1 : 3, 0); }
 
     /* 0.6.1 SAFE MODE (touch): BOOT held while RESET is pressed -> the wake gate is forced open and the display settings run on
@@ -186,7 +186,7 @@ void app_main(void)
     ui_start();
     if (s_plan.mode == BC_BOOT_STAGED) ui_toast("Diagnosing: starting one part at a time");
     if (!bt_stack) ui_toast("Bluetooth unavailable - see Connections");
-    else if (s_plan.newly_skipped) { char b[56]; snprintf(b, sizeof b, "%s disabled after a crash", bc_subsys_name((bc_subsys_t)s_plan.suspect)); ui_toast(b); }
+    else if (s_plan.newly_skipped && s_plan.suspect != BC_SS_POWER && s_plan.suspect != BC_SS_HR && s_plan.suspect != BC_SS_CSC) { char b[56];   /* sensors: own toast below */ snprintf(b, sizeof b, "%s disabled after a crash", bc_subsys_name((bc_subsys_t)s_plan.suspect)); ui_toast(b); }
     lvgl_port_unlock();
     ESP_LOGI(TAG, "STAGE app + screens OK");
 
@@ -195,7 +195,7 @@ void app_main(void)
     stage(BC_SS_PHONE, "Starting the phone link");
     bool bt_up = false;
     if (!bt_stack) stage_done(BC_SS_PHONE, skipped(BC_SS_BTSTACK) ? 2 : 3, 0);
-    else if (skipped(BC_SS_PHONE)) { diag_esp_bt_disabled("phone link disabled after 2 crashes"); stage_done(BC_SS_PHONE, 2, 0); }   /* this power cycle */
+    else if (skipped(BC_SS_PHONE)) { diag_esp_bt_disabled("phone link off: crashes"); stage_done(BC_SS_PHONE, 2, 0); }   /* this power cycle */
     else { bt_up = ble_central_start(false); diag_esp_ble_started(); stage_done(BC_SS_PHONE, bt_up ? 1 : 3, 10000); }
 
     stage(BC_SS_WIFI, p->wifi_on ? "Starting Wi-Fi" : NULL);

@@ -1670,8 +1670,16 @@ static bool device_boot(bc_reset_t reset)
     bc_boot_plan(R, reset, plat_boot_skip_load(), &s_plan);
     if (s_plan.newly_skipped) plat_boot_skip_save(s_plan.skip);
     bc_boot_mark(R, BC_SS_DISPLAY); bc_boot_mark(R, BC_SS_STORAGE);
-    app_diag_init(&s_plan, true); app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, 1);
+    bool sok = g_sim.storage_state == BC_STOR_OK;                       /* 0.7.4: the measured storage category */
+    app_diag_init(&s_plan, sok); app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, sok ? 1 : 3);
     if (s_plan.mode == BC_BOOT_RECOVERY) { ui_recovery_show(); run(400); return true; }
+    /* 0.7.4: the Bluetooth stack stage comes before the screens (main.c); a disabled stack = no phone link, no sensors */
+    if (g_sim.bt_fail_on_init == 0) g_sim.bt_unavailable = false;
+    bc_boot_mark(R, BC_SS_BTSTACK); app_diag_stage(BC_SS_BTSTACK, 0);
+    if (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "off after 2 crashes"); app_diag_stage(BC_SS_BTSTACK, 2); }
+    else if (s_crash_at == BC_SS_BTSTACK) return false;
+    else if (g_sim.bt_fail_on_init) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "HCI init failed"); app_diag_stage(BC_SS_BTSTACK, 3); }
+    else app_diag_stage(BC_SS_BTSTACK, 1);
     app_init(); ui_start(); run(200);
     static const bc_subsys_t ORDER[] = { BC_SS_PHONE, BC_SS_WIFI, BC_SS_CENTRAL, BC_SS_POWER, BC_SS_HR, BC_SS_CSC };
     for (size_t i = 0; i < sizeof ORDER / sizeof *ORDER; i++) {
@@ -1679,7 +1687,8 @@ static bool device_boot(bc_reset_t reset)
         plat_sens_kind_t k = ss == BC_SS_POWER ? PLAT_SENS_POWER : ss == BC_SS_HR ? PLAT_SENS_HR : PLAT_SENS_CSC;
         if (ss >= BC_SS_POWER && !(ss == BC_SS_POWER ? app_profile()->power.paired : ss == BC_SS_HR ? app_profile()->hr.paired : app_profile()->csc.paired)) continue;
         bc_boot_mark(R, ss); app_diag_stage(ss, 0);
-        bool skip = (s_plan.skip & BC_SS_BIT(ss)) || (ss >= BC_SS_POWER && (s_plan.skip & BC_SS_BIT(BC_SS_CENTRAL)));
+        bool skip = (s_plan.skip & BC_SS_BIT(ss)) || (ss >= BC_SS_POWER && (s_plan.skip & BC_SS_BIT(BC_SS_CENTRAL)))
+                    || (ss != BC_SS_WIFI && g_sim.bt_unavailable);         /* 0.7.4: no Bluetooth -> no phone link, no sensors */
         if (skip) {
             if (ss >= BC_SS_POWER) plat_sensor_set_disabled(k, true);
             if (ss == BC_SS_PHONE) plat_phone_set_enabled(false);
@@ -1735,9 +1744,10 @@ static void scenario_073(void)
     device_stable(); app_diag_flush(true);
     app_diag_status_t st; app_diag_status(&st);
     CHECK(!st.crashed && st.stored == 0 && events_of(BC_EV_BOOT) == 1 && events_of(BC_EV_STAGE) >= 8, "clean start: BOOT + STAGE events written, no report (%d stage events)", events_of(BC_EV_STAGE));
-    /* b) three crashes in a row (the power meter link crashes nimble_host each time) -> RECOVERY MODE */
+    /* b) three crashes in a row (nimble_host each time: sensor Bluetooth, then the power meter) -> RECOVERY MODE.
+       0.7.4: the first crash is at another subsystem - the same subsystem crashing twice in a row is disabled instead (section 24) */
+    for (int k = 0; k < 3; k++) { s_crash_at = k == 0 ? BC_SS_CENTRAL : BC_SS_POWER; script_crash("nimble_host", 0x4200F4BC); bool up = device_boot(BC_RST_PANIC); if (k < 2) CHECK(!up && s_plan.mode == BC_BOOT_NORMAL, "crash %d: normal start again (streak %lu)", k + 1, (unsigned long)plat_boot_rtc()->crash_streak); }
     s_crash_at = BC_SS_POWER;
-    for (int k = 0; k < 3; k++) { script_crash("nimble_host", 0x4200F4BC); bool up = device_boot(BC_RST_PANIC); if (k < 2) CHECK(!up && s_plan.mode == BC_BOOT_NORMAL, "crash %d: normal start again (streak %lu)", k + 1, (unsigned long)plat_boot_rtc()->crash_streak); }
     CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE") && on_screen("Crash detected") && on_screen("panic - nimble_host"), "3 crashes in a row: RECOVERY MODE screen, 'panic - nimble_host'");
     CHECK(btn_visible_at_top("RESTART & DIAGNOSE") && btn_visible_at_top("SEND LOGS") && on_screen("Logs saved"), "both buttons fully visible at scroll 0, 'Logs saved'");
     shot("21b_recovery_mode");
@@ -1818,6 +1828,75 @@ static void scenario_073(void)
     pr->power.paired = false; app_profile_save(); g_sim.link[PLAT_SENS_POWER].link = PLAT_LINK_NOT_PAIRED; g_sim.power_ok = false;
 }
 
+
+/* ===================================================================================== 0.7.4: crash fix behaviour */
+/* The 27 Oct board: every start aborted while Bluetooth started (marker = phone link), "disabled 0x000", RECOVERY; the FAT root
+   directory is erased so nothing can be saved ("Logs NOT saved (storage)"). Here: the same situations on the 0.7.4 code. */
+static void scenario_074(void)
+{
+    printf("\n== 24. firmware 0.7.4: Bluetooth never aborts the start, crash loop disables the subsystem, real storage categories\n");
+    bc_profile_t *pr = app_profile();
+    pr->power.paired = true; snprintf(pr->power.name, sizeof pr->power.name, "XDS-A001"); pr->phone_on = true; app_profile_save();
+    g_sim.fw_id = 0x0741; s_crash_at = BC_SS_NONE; g_sim.nvs_skip = 0; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    /* a) the Bluetooth stack fails to start (no internal RAM): no crash, the board runs, every screen says so */
+    g_sim.bt_fail_on_init = 1;
+    CHECK(device_boot(BC_RST_POWERON) && s_plan.mode == BC_BOOT_NORMAL && g_sim.bt_unavailable, "HCI init failure: the start completes (no abort), Bluetooth unavailable");
+    device_stable();
+    ui_connections_show(); run(400);
+    CHECK(on_screen("NO BT"), "Connections: phone and power meter rows say NO BT (never 'searching')"); shot("24a_conn_no_bt");
+    ui_phone_show(); run(400);
+    CHECK(on_screen("NO BLUETOOTH") && on_screen("WHY?") && on_screen("Bluetooth off this start"), "Phone screen: NO BLUETOOTH + WHY?"); shot("24a_phone_no_bt");
+    tap_text("WHY?"); run(300); CHECK(on_screen("No BT: HCI init failed"), "WHY? shows the reason");
+    plat_phone_status_t ps; plat_phone_status(&ps); CHECK(ps.state == PLAT_PHONE_UNAVAILABLE, "phone status UNAVAILABLE");
+    g_sim.bt_fail_on_init = 0;
+    /* b) a deterministic crash while the Bluetooth stack starts: crash 1 normal, crash 2 at the same subsystem -> disabled */
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    s_crash_at = BC_SS_BTSTACK;
+    bool up = device_boot(BC_RST_POWERON);                                 /* like the board: the power-on start aborts at Bluetooth */
+    CHECK(!up, "power-on start crashes while the Bluetooth stack starts (crash 1)");
+    script_crash("main", 0x42012BA0); up = device_boot(BC_RST_PANIC);
+    CHECK(!up && s_plan.mode == BC_BOOT_NORMAL && s_plan.suspect == BC_SS_BTSTACK && !s_plan.skip, "after crash 1: 'crashed subsystem Bluetooth stack', normal start, nothing disabled yet -> crash 2");
+    script_crash("main", 0x42012BA0); up = device_boot(BC_RST_PANIC);
+    CHECK(s_plan.newly_skipped && (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) && (g_sim.nvs_skip & BC_SS_BIT(BC_SS_BTSTACK)), "after crash 2 at the same subsystem: Bluetooth stack disabled (skip 0x%03X, saved in NVS)", s_plan.skip);
+    CHECK(up && s_plan.mode == BC_BOOT_NORMAL && g_sim.bt_unavailable && !on_screen("RECOVERY MODE"), "the board starts without Bluetooth and stays usable (0.7.3: 'disabled 0x000' and RECOVERY)");
+    device_stable();
+    ui_phone_show(); run(400);
+    CHECK(on_screen("NO BLUETOOTH") && on_screen("RETRY"), "Phone screen: NO BLUETOOTH + RETRY"); shot("24b_phone_bt_disabled_retry");
+    app_diag_status_t st; app_diag_status(&st); CHECK(st.crash_report != 0, "the crash report was stored (%lu)", (unsigned long)st.crash_report);
+    s_crash_at = BC_SS_NONE;
+    tap_text("RETRY"); run(400);
+    CHECK(!(g_sim.nvs_skip & BC_SS_BIT(BC_SS_BTSTACK)) && !(plat_boot_rtc()->skip & BC_SS_BIT(BC_SS_BTSTACK)), "RETRY: Bluetooth enabled again for the next start (RTC + NVS)");
+    CHECK(device_boot(BC_RST_SW) && !g_sim.bt_unavailable, "next start: Bluetooth runs");
+    device_stable();
+    /* c) storage: the measured 27 Oct state (root directory erased) - the real category everywhere, nothing written */
+    static char ev0[APP_DIAG_EV_SLOTS * BC_EV_SIZE], ev1[APP_DIAG_EV_SLOTS * BC_EV_SIZE], ix0[2048], ix1[2048];
+    app_diag_flush(true);
+    long nev0 = plat_file_read(APP_DIAG_EVENTS_FILE, ev0, sizeof ev0), nix0 = plat_file_read(APP_DIAG_INDEX_FILE, ix0, sizeof ix0);
+    g_sim.storage_state = BC_STOR_DIR_CORRUPTED;
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    s_crash_at = BC_SS_PHONE;
+    for (int k = 0; k < 3; k++) { s_crash_at = k == 1 ? BC_SS_WIFI : BC_SS_PHONE; script_crash("main", 0x42012BA0); device_boot(BC_RST_PANIC); }
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE"), "three different crashes in a row: RECOVERY MODE");
+    CHECK(on_screen("Not saved: dir corrupted") && !on_screen("Logs NOT saved (storage)"), "recovery screen: 'Not saved: dir corrupted' instead of 'Logs NOT saved (storage)'");
+    shot("24c_recovery_dir_corrupted");
+    { long nev1 = plat_file_read(APP_DIAG_EVENTS_FILE, ev1, sizeof ev1), nix1 = plat_file_read(APP_DIAG_INDEX_FILE, ix1, sizeof ix1);
+      CHECK(nev1 == nev0 && nix1 == nix0 && !memcmp(ev0, ev1, (size_t)(nev0 > 0 ? nev0 : 0)) && !memcmp(ix0, ix1, (size_t)(nix0 > 0 ? nix0 : 0)),
+            "damaged storage: the event log and report index are byte-identical afterwards (nothing written)"); }
+    s_crash_at = BC_SS_NONE; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t));
+    CHECK(device_boot(BC_RST_POWERON), "power-on with damaged storage: the board starts"); device_stable();
+    ui_diag_menu_show(); run(300); scroll_to("HOLD: SAVE REPORT"); hold_text("HOLD: SAVE REPORT", 1300); run(200);
+    CHECK(on_screen("Not saved: dir corrupted"), "Diagnostics > SAVE REPORT: 'Not saved: dir corrupted' (0.7.3: 'Not saved: storage full')");
+    shot("24c_save_report_dir_corrupted");
+    ui_diag_menu_show(); run(300); tap_text("Device Health"); run(400);
+    CHECK(on_screen("Directory corrupted"), "Device Health storage line names the category");
+    /* d) a ride started on damaged storage: no journal is written, deleted or moved (refused), the ride still runs */
+    uint32_t refused0 = g_sim.fat_writes_refused;
+    app_ride_start(); run_s(3); app_ride_end(); app_ride_save();
+    CHECK(g_sim.fat_writes_refused > refused0 && plat_file_size("rides/active.jnl") < 0, "ride on damaged storage: journal writes refused, nothing created (%lu refused)", (unsigned long)(g_sim.fat_writes_refused - refused0));
+    g_sim.storage_state = BC_STOR_OK; pr->power.paired = false; app_profile_save();
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); s_crash_at = BC_SS_NONE;
+    CHECK(device_boot(BC_RST_POWERON), "storage repaired (simulated): normal start, diagnostics written again"); device_stable();
+}
 
 /* ===================================================================================== 0.7.3 final: safe report + transfer contract */
 static int pull_paced(uint32_t id, uint32_t size, uint16_t maxl, uint32_t *got, uint32_t *max_msg, int *lives)
@@ -1964,9 +2043,11 @@ int main(int argc, char **argv)
     indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, read_cb);
+    g_sim.crashpart = BC_CRASHPART_EMPTY;
     scenario();
     scenario_073();
     scenario_073_transfer();
+    scenario_074();
     scenario_stress(getenv("SIM_STRESS") ? atoi(getenv("SIM_STRESS")) : 1000);
     lv_mem_monitor_t m; lv_mem_monitor(&m);
     printf("\nLVGL memory: %u%% used, max used %u bytes of %u, fragmentation %u%%\n", m.used_pct, (unsigned)m.max_used, (unsigned)m.total_size, m.frag_pct);

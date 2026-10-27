@@ -31,7 +31,7 @@
 typedef struct {
     bool attempted, stack_ok, host_started, failed;
     int err;                                          /* esp_err_t of the failed step */
-    char reason[56];                                  /* "controller/HCI init failed (err 0xffffffff)" */
+    char reason[56];                                  /* short, for the screen: "HCI init failed", "no RAM for host task" (err: field) */
     uint32_t pre_free, pre_largest, pre_dma;          /* internal heap just before nimble_port_init() */
     uint32_t post_free, post_largest, post_dma;       /* after a successful init */
     uint32_t fail_free, fail_largest, fail_dma;       /* after the failure (the controller has released its memory again) */

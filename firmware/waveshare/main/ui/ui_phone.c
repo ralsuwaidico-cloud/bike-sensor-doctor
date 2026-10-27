@@ -105,7 +105,7 @@ static void why_cb(lv_event_t *e)
 {
     (void)e;
     if (bt_disabled_by_crash()) { app_diag_retry(BC_SS_BTSTACK); app_diag_retry(BC_SS_PHONE); ui_toast("Bluetooth starts again at the next restart"); return; }
-    char r[56] = ""; plat_bt_unavailable(r, sizeof r); char t[72]; snprintf(t, sizeof t, "No Bluetooth: %s", r); ui_toast(t);
+    char r[56] = ""; plat_bt_unavailable(r, sizeof r); char t[72]; snprintf(t, sizeof t, "No BT: %.24s", r); ui_toast(t);
 }
 static void repair_cb(lv_event_t *e) { (void)e; plat_phone_repair(); bc_profile_t *p = app_profile(); if (!p->phone_on) { p->phone_on = true; app_profile_save(); } ui_toast("pairing reset: pair again from the app"); }
 static void rebuild_primary(plat_phone_state_t st, bool on)
