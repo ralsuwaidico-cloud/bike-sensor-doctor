@@ -1,12 +1,17 @@
 # Cyclift ↔ BikeComputer — phone-first architecture and BLE data contract
 
-**Version: contract v1.3 = BikeComputer Link 1.3** (firmware ≥ 0.7.4-rc4). Author: firmware agent, 28 Oct 2026. Review: iOS agent (v1 review:
+**Version: contract v1.4 = BikeComputer Link 1.3** (firmware ≥ 0.7.4-rc5). Author: firmware agent, 28 Oct 2026. Review: iOS agent (v1 review:
 `ios/phonefirst-dev` @ 994f3e7, `coord/interfaces/BLE_CONTRACT_IOS_REVIEW.md`), QA.
 Status: **implemented** in firmware 0.7.4-rc3 (Link 1.3 per v1.2) and 0.7.4-rc4 (v1.3 additions below), host/simulator
 tested; nothing in sections 4–8 has been verified on hardware yet. Cyclift's `ios/BikeComputer/Link13/` implements the phone side from this document.
 Sections 2–3 describe what is shipped today (Link 1.2.3, firmware 0.7.3 / Cyclift RC1) and must keep working unchanged.
 
 ### Change log
+
+**v1.4 (28 Oct 2026, firmware 0.7.4-rc5) — iOS review Q-iOS-15.** ⚠ = Cyclift's Link13 code must follow.
+| # | Change | Section |
+|---|---|---|
+| Q-iOS-15 ⚠ | COACH_STATE `0D next_type = 0xFF` = **no next interval**. Because of the v1.3 merge an omitted "next" keeps its old value, so Cyclift clears it by sending `0D = 0xFF` (with `0E`/`0F`/`10`/`11` = 0). The board hides the NEXT line (coach card, every ride design) until a COACH_STATE carries a real `next_type` again; keepalives keep it hidden. Firmware 0.7.4-rc4 showed "NEXT: WORKOUT" for 0xFF. | §5.3 |
 
 **v1.3 (28 Oct 2026, firmware 0.7.4-rc4) — QA rc3 findings RC3-01/03/04/06/08.** ⚠ = Cyclift's Link13 code must follow.
 Link minor stays 3 and the INFO/HELLO caps are unchanged; every addition is optional and older boards ignore it.
@@ -179,7 +184,8 @@ persists its seq per workout so a relaunched app continues upward) · `03 u8 wor
 · `05 u16 target_lo` · `06 u16 target_hi` · `07 u8 cad_lo` · `08 u8 cad_hi` · `09 u16 interval_index` (= the plan's segment index, warm-up = 0) · `0A u16 interval_count` (= plan segments)
 · `0B u16 remaining_s` (seconds left in the interval at the moment the board **receives** the message; the board does not map
 the phone's ms clock) · `0C u16 interval_duration_s` · `0D u8 next_type` · `0E u8 next_target_kind` ·
-`0F u16 next_lo` · `10 u16 next_hi` · `11 u16 next_duration_s` · `12 u8 instruction` · `13 str text (≤ 24 B UTF-8, optional,
+`0F u16 next_lo` · `10 u16 next_hi` · `11 u16 next_duration_s` (v1.4: `0D next_type = 0xFF` = no next interval; send
+0E–11 as 0 with it) · `12 u8 instruction` · `13 str text (≤ 24 B UTF-8, optional,
 cut at a character boundary)` · `14 u8 session_state` (0 not started, 1 running, 2 paused, 3 finished, 4 abandoned) ·
 `15 u8 hr_src` · `16 u8 zone` (1–7 power / 1–5 HR, 0 none) · `17 u8 flags` (bit0 targets changed by adaptation now,
 bit1 targets are %FTP-derived from the board profile FTP, bit2 Apple Watch HR live on the phone).
