@@ -1,7 +1,7 @@
 # Hardware test log — firmware 0.4.0 + iPhone build 14 (started 24 Oct 2026, 20:17 Dubai)
 
 Real-hardware results only. Simulator results live in test/sim (`make run`: 114 screens, 125 checks) and are NOT repeated here.
-Equipment: Waveshare ESP32-S3-Touch-LCD-1.28-B (MAC 8c:fd:49:9b:ef:40, 16 MB flash, COM3), XDS power meter, iPhone + TestFlight, Apple Watch, Windows PC.
+Equipment: Waveshare ESP32-S3-Touch-LCD-1.28-B (16 MB flash, COM3), XDS power meter, iPhone + TestFlight, Apple Watch, Windows PC.
 
 | # | Step | Result | Notes |
 |---|---|---|---|

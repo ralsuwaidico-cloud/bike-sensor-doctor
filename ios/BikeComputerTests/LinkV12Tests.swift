@@ -100,8 +100,8 @@ final class LinkV12Tests: XCTestCase {
         i.caps = 0x3FF
         XCTAssertTrue(i.hasRideSync && i.hasWiFi && i.hasProfileSync && i.hasSettings)
         // INFO with device id (tag 07) from a 0.6.0 board
-        let d: [UInt8] = [0x01, 0, 1, 0, 0, 0, 0, 0, 0x01, 1, 1, 0x02, 1, 2, 0x03, 5, 0x30, 0x2E, 0x36, 0x2E, 0x30, 0x05, 4, 0xFF, 0x03, 0, 0, 0x07, 6, 0x8C, 0xFD, 0x49, 0x9B, 0xEF, 0x40]
+        let d: [UInt8] = [0x01, 0, 1, 0, 0, 0, 0, 0, 0x01, 1, 1, 0x02, 1, 2, 0x03, 5, 0x30, 0x2E, 0x36, 0x2E, 0x30, 0x05, 4, 0xFF, 0x03, 0, 0, 0x07, 6, 0x02, 0x00, 0x00, 0xC1, 0xF7, 0x01]
         let info = BCLink.decodeInfo(Data(d))
-        XCTAssertEqual(info?.fw, "0.6.0"); XCTAssertEqual(info?.deviceId, "8c:fd:49:9b:ef:40"); XCTAssertEqual(info?.verMinor, 2)
+        XCTAssertEqual(info?.fw, "0.6.0"); XCTAssertEqual(info?.deviceId, "02:00:00:c1:f7:01"); XCTAssertEqual(info?.verMinor, 2)
     }
 }

@@ -421,8 +421,8 @@ static void t_link2(void)
 {
     uint8_t b[BC_LINK_MAX]; size_t n;
     /* INFO with device id (tag 07) + new caps; old decoders skip the tag */
-    bc_info_t i = { .ver_major = 1, .ver_minor = 2, .fw = "0.6.0", .name = "BikeComputer", .caps = 0xFF, .max_msg = 180, .has_device_id = true, .device_id = { 0x8c, 0xfd, 0x49, 0x9b, 0xef, 0x40 } };
-    n = bc_link_encode_info(&i, b, sizeof b); bc_info_t j; CHECK(n && bc_link_decode_info(b, n, &j) && j.has_device_id && j.device_id[5] == 0x40 && (j.caps & BC_CAP_WIFI_PROV) && (j.caps & BC_CAP_RIDE_SYNC));
+    bc_info_t i = { .ver_major = 1, .ver_minor = 2, .fw = "0.6.0", .name = "BikeComputer", .caps = 0xFF, .max_msg = 180, .has_device_id = true, .device_id = { 0x02, 0x00, 0x00, 0xc1, 0xf7, 0x01 } };
+    n = bc_link_encode_info(&i, b, sizeof b); bc_info_t j; CHECK(n && bc_link_decode_info(b, n, &j) && j.has_device_id && j.device_id[5] == 0x01 && (j.caps & BC_CAP_WIFI_PROV) && (j.caps & BC_CAP_RIDE_SYNC));
     /* SYNC_REQ: bytes identical to the Swift vector (BCLinkTests.testSyncRequestBytes) */
     bc_sync_req_t q = { .after_ride_id = 7, .max_count = 50 };
     n = bc_link_encode_sync_req(&q, b, sizeof b, 3, 1000);

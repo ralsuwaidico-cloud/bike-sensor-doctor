@@ -145,7 +145,7 @@ void plat_backlight(int pct) { g_sim.backlight = pct; }
 void plat_panel_sleep(bool sleep) { g_sim.panel_asleep = sleep; }
 void plat_touch_poll(void) { g_sim.touch_polls++; g_sim.touch_poll_request = true; }
 void plat_touch_screen_off(bool off) { g_sim.touch_fast_poll = off; if (off) g_sim.touch_screen_offs++; }
-bool plat_device_id(uint8_t out[6]) { static const uint8_t id[6] = { 0x8c, 0xfd, 0x49, 0x9b, 0xef, 0x40 }; memcpy(out, id, 6); return true; }
+bool plat_device_id(uint8_t out[6]) { static const uint8_t id[6] = { 0x02, 0x00, 0x00, 0xc1, 0xf7, 0x01 }; memcpy(out, id, 6); return true; }
 void plat_deep_sleep(int wake_taps) { g_sim.deep_sleeps++; g_sim.asleep = true; g_sim.sleep_wake_taps = wake_taps; }
 void plat_sensors_set_standby(bool standby) { g_sim.sensor_standby = standby; if (standby) g_sim.sensor_standbys++; }
 bool plat_woke_from_sleep(void) { return g_sim.woke_from_sleep; }

@@ -61,9 +61,9 @@ final class PairingTests: XCTestCase {
     func testSyncRecordPersistsLastSuccessfulSync() {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let s1 = Store(directory: dir, generatePlan: false)
-        var r = s1.syncRecord(for: "8c:fd:49:9b:ef:40"); r.confirmed = true; r.ackedVersion = 7; r.ackedAt = Date(timeIntervalSince1970: 1_793_000_000); s1.setSyncRecord(r)
+        var r = s1.syncRecord(for: "02:00:00:c1:f7:01"); r.confirmed = true; r.ackedVersion = 7; r.ackedAt = Date(timeIntervalSince1970: 1_793_000_000); s1.setSyncRecord(r)
         let s2 = Store(directory: dir, generatePlan: false)
-        let back = s2.syncRecord(for: "8c:fd:49:9b:ef:40")
+        let back = s2.syncRecord(for: "02:00:00:c1:f7:01")
         XCTAssertTrue(back.confirmed); XCTAssertEqual(back.ackedVersion, 7); XCTAssertEqual(back.ackedAt, Date(timeIntervalSince1970: 1_793_000_000))
         XCTAssertFalse(s2.syncRecord(for: "other").confirmed, "a different board (new id) starts unconfirmed")
         try? FileManager.default.removeItem(at: dir)

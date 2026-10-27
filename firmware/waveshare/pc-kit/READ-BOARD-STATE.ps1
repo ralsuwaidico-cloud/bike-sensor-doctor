@@ -6,14 +6,12 @@
 #      reads, in this order: the flash chip ID/size, the partition table, the settings area (NVS), the boot selector (otadata),
 #      the crash-record area (coredump, if the table has one) and then a COMPLETE 16 MB backup;
 #   3. checks that every small read is byte-identical to the same region inside the 16 MB backup (proves the reads are reliable);
-#   4. ONLY IF you type YES a second time: restarts the board normally and records what it prints for 90 seconds. The firmware
-#      then runs as it does every time you switch it on (it may restart up to 3 times and end on the RECOVERY screen - that is
-#      what it already does; this tool still writes nothing, but the firmware itself updates its own counters and crash record);
+#   4. leaves the board in download mode - it never restarts the firmware (no boot-log step in this version);
 #   5. writes SHA256SUMS-state-<time>.txt and tells you which files to send to Claude.
 # Why the order matters: the crash record in the 'coredump' area is replaced by the firmware at its next crash, so it is read
 # BEFORE the firmware is allowed to run.
 # Files (all in this folder): state-<time>-flashid.txt, -pt.bin, -nvs.bin, -otadata.bin, -coredump.bin, -full16MB.bin,
-# -bootlog.txt (step 4 only), read-board-state-<time>.txt (this tool's own log).
+# read-board-state-<time>.txt (this tool's own log).
 # NOTE: needs the owner's approval before it is run (it resets the board into download mode).
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
@@ -108,26 +106,11 @@ Get-ChildItem "$base-*" | ForEach-Object { "{0}  {1}" -f (FileSha $_.FullName), 
 Write-Host ""
 Write-Host "  READ DONE. The board's memory is saved; nothing was written to it." -ForegroundColor Green
 
-# 6. optional: let the firmware start and record what it prints
+# 6. the board is left in download mode on purpose: this tool never restarts the firmware (owner, 27 Oct: no reset approved
+#    beyond the read itself). The firmware starts again only when YOU unplug and replug the board.
 Write-Host ""
-Write-Host "  Optional step: restart the board normally and record its start-up messages for 90 seconds."
-Write-Host "  The firmware will run as it does whenever you switch it on (it may restart up to 3 times and end on RECOVERY MODE)."
-$ok2 = Read-Host "  Type YES to record the start-up, or just press Enter to finish without it"
-if ($ok2 -eq 'YES') {
-  $bl = "$base-bootlog.txt"
-  $sp = New-Object System.IO.Ports.SerialPort $port, 115200, 'None', 8, 'One'
-  $sp.ReadTimeout = 300; $sp.DtrEnable = $false; $sp.RtsEnable = $false
-  try { $sp.Open() } catch { Write-Host "  Could not open $port for the start-up log. Unplug and replug the board to start it." -ForegroundColor Yellow; Read-Host "  Press Enter to close"; exit 0 }
-  "Boot log after read-board-state, $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') on $port" | Out-File $bl -Encoding utf8
-  $sp.RtsEnable = $true; Start-Sleep -Milliseconds 150; $sp.RtsEnable = $false   # EN pulse with IO0 high = normal start
-  $end = (Get-Date).AddSeconds(90); $n = 0
-  try { while ((Get-Date) -lt $end) { try { $line = $sp.ReadLine() } catch [System.TimeoutException] { continue }; $n++; ((Get-Date -Format 'HH:mm:ss.fff') + ' ' + $line.TrimEnd("`r")) | Out-File $bl -Append -Encoding utf8 } }
-  finally { $sp.Close() }
-  Write-Host "  Start-up recorded: $n lines in $bl" -ForegroundColor Green
-  "{0}  {1}" -f (FileSha $bl), $bl | Out-File $sums -Append -Encoding ascii
-} else {
-  Write-Host "  Finished without starting the firmware. Unplug and replug the board (or press RESET) when you want it to run again."
-}
+Write-Host "  The board stays in download mode (screen dark or frozen). This tool does not restart it."
+Write-Host "  Leave it like this until Claude has the files, then unplug and replug it when you choose."
 Write-Host ""
 Write-Host "  Send these files to Claude: $base-*.bin/.txt, $sums and $log" -ForegroundColor Cyan
 Write-Host "  (the 16 MB backup also contains your settings and pairings: keep it private)" -ForegroundColor Yellow
