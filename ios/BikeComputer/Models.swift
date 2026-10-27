@@ -80,6 +80,8 @@ struct RiderProfile: Codable, Equatable {
     var ftpPowerVerified: Bool? = nil
     /// Coach remediation M-01: the pre-participation health check (nil = never answered → no vigorous prescriptions).
     var healthScreen: HealthScreen? = nil
+    /// Coach remediation M-06: how quickly the rider recovers in their own words (nil = not answered = normal).
+    var recoveryCapacity: RecoveryCapacity? = nil
     /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
     var hrZones: [(lo: Int, hi: Int?)] {
         if hrZoneMethod == .lthr, let l = lthr, l > 0 {
@@ -152,6 +154,7 @@ struct RiderProfile: Codable, Equatable {
         ftpVerifiedTest = try? c.decodeIfPresent(Bool.self, forKey: .ftpVerifiedTest)
         ftpPowerVerified = try? c.decodeIfPresent(Bool.self, forKey: .ftpPowerVerified)
         healthScreen = try? c.decodeIfPresent(HealthScreen.self, forKey: .healthScreen)
+        recoveryCapacity = try? c.decodeIfPresent(RecoveryCapacity.self, forKey: .recoveryCapacity)
     }
 
     // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)

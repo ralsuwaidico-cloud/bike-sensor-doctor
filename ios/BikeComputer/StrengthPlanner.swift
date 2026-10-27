@@ -450,7 +450,10 @@ enum StrengthPlanner {
         }
         var deload = false, dWhy: String? = nil
         if ctx.fatigue { deload = true; dWhy = "your recent check-ins show fatigue" }
-        else if streak >= 3 && streak % 4 == 3 { deload = true; dWhy = "this is week \(streak + 1) of consecutive training — a lighter week lets the work sink in" }
+        else {
+            let every = ctx.profile.recovery.deloadEvery
+            if streak >= every - 1 && streak % every == every - 1 { deload = true; dWhy = "this is week \(streak + 1) of consecutive training — a lighter week lets the work sink in\(every < 4 ? " (every \(every)rd week because \(ctx.profile.recovery.reason ?? "of your recovery"))" : "")" }
+        }
         // which sessions of the week train which region, and this session's index among its type
         let lifts = ctx.plan.filter { $0.kind == .strength && !$0.skipped && $0.date >= monday && $0.date < end }.sorted { $0.date < $1.date }
         var hit: [String: Int] = [:]
@@ -491,6 +494,8 @@ enum StrengthPlanner {
         if ctx.goal == .hypertrophy { base *= 1.1 }
         if lower && week.highCyclingLoad { base *= 0.75 }
         if week.deload { base *= 0.6 }
+        // M-06: age / stated recovery capacity
+        base *= ctx.profile.recovery.volumeFactor
         return base
     }
 
@@ -545,14 +550,18 @@ enum StrengthPlanner {
             let load = prescribeLoad(e, meta: m, reps: d.reps, sets: n, painBlocked: painBlocked || week.deload, ctx: ctx)
             var entry = ExerciseEntry(exercise: e, sets: (0..<n).map { _ in SetEntry(reps: load.reps, weightKg: load.weight, bodyweight: load.bodyweight, unilateral: e.unilateral) })
             if spec.slot == .core, isHold(e) { entry.notes = "Hold \(load.reps) s per set" }
+            let rest = RestPrescription.seconds(role: spec.role, goal: goal, reduced: ctx.profile.recovery.reduced)
+            entry.restSeconds = rest
             entries.append(entry)
             let repsText = isHold(e) ? "\(n) × \(load.reps) s holds" : "\(n) × \(d.reps.lowerBound)–\(d.reps.upperBound)\(e.unilateral ? " per side" : "")"
             var doseText = "\(repsText) at about RPE \(d.rpe) (\(10 - d.rpe) reps in reserve). As your \(spec.role.rawValue) for \(m.slot.title), it gets \(n) set\(n == 1 ? "" : "s") — \(setsReason(region(m.slot), ctx: ctx, week: week))"
+            doseText += " Rest about \(RestPrescription.text(rest)) between sets\(spec.role == .main || spec.role == .secondary ? " so the next set keeps its quality" : "")."
             if week.deload { doseText += " Deload: \(week.deloadReason ?? "lighter week")." }
             rats.append(ExerciseRationale(exerciseId: e.id, role: spec.role.rawValue, slot: m.slot.title, dose: doseText, load: load.why, cycling: cyclingNote, progressed: load.progressed, targetRPE: d.rpe))
         }
         // time fit: drop the least important exercises, then sets, until the session fits its minutes
-        func estimate() -> Double { 6 + zip(entries, rats).reduce(0.0) { $0 + Double($1.0.sets.count) * ($1.1.role == Role.main.rawValue ? 3.0 : $1.1.role == Role.secondary.rawValue ? 2.5 : 2.0) } }
+        // minutes per set = about 45 s of work + the prescribed rest (M-03)
+        func estimate() -> Double { 6 + entries.reduce(0.0) { $0 + Double($1.sets.count) * (0.75 + Double($1.restSeconds ?? 90) / 60) } }
         // keep movement coverage: first take sets off (least important exercise first, never below 2; main lifts keep
         // 3), only then leave whole exercises out from the end
         var trimmed: [String] = []
@@ -593,6 +602,7 @@ enum StrengthPlanner {
         if !ctx.equipment.isSet { notes.append("Your equipment is not set, so exercises that need only dumbbells or bodyweight are preferred. Set it in Profile › Training profile › Equipment.") }
         if let h = ctx.progressionHold { notes.append("Loads and reps are held: \(h).") }
         if let r = ctx.returning, r.active { notes.append("Back after \(r.weeksText) off: one set fewer per exercise, efforts at RPE 7 or less, and loads restart below your last logged ones for your first \(ReturnPhase.phaseSessions) sessions.") }
+        if let r = ctx.profile.recovery.reason, ctx.profile.recovery.volumeFactor != 1 { notes.append("Weekly volume is \(ctx.profile.recovery.volumeFactor < 1 ? "lower" : "a little higher") (×\(String(format: "%.1f", ctx.profile.recovery.volumeFactor))) because \(r)\(ctx.profile.recovery.reduced ? ", with longer rests and a lighter week every \(ctx.profile.recovery.deloadEvery)rd week" : "").") }
         if let r = ctx.readiness.restriction { notes.append("Efforts are capped at RPE \(ctx.readiness.maxStrengthRPE) because \(r).") }
         if !ctx.painAreas.isEmpty { notes.append("You reported pain (\(ctx.painAreas.map { $0.title.lowercased() }.joined(separator: ", "))): exercises that load that area this way are left out and not progressed.") }
         if w.fixed { notes.append("Fixed day: the day and session type are yours; only the exercises were filled in.") }
@@ -647,7 +657,7 @@ enum StrengthPlanner {
         let df = DateFormatter(); df.dateFormat = "d MMM"
         guard let last = hist.first else {
             if bw { return Load(weight: nil, reps: range.lowerBound, bodyweight: true, progressed: false, why: "Bodyweight. Aim for \(range.lowerBound)–\(range.upperBound) controlled reps; when every set reaches \(range.upperBound), the next session adds reps or a harder variation.") }
-            return Load(weight: nil, reps: range.lowerBound, bodyweight: false, progressed: false, why: "New exercise — find your working weight: start light and add load set by set until \(range.lowerBound) reps feel like you could do 2–3 more. No weight is copied from another exercise, even a similar one.")
+            return Load(weight: nil, reps: range.lowerBound, bodyweight: false, progressed: false, why: StartingLoad.guidance(e, reps: range, beginner: ctx.experience == .beginner))
         }
         func topWeight(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Double? { x.entry.doneSets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max() }
         let done = last.entry.doneSets

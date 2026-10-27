@@ -161,7 +161,7 @@ struct StrengthWorkoutScreen: View {
                             Text(plannedText(e)).font(.subheadline.weight(.semibold)).monospacedDigit()
                         }
                     }
-                    Text(e.pattern.title + " · " + (previous(e).map { "last: \($0)" } ?? "no logged sets yet")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(e.pattern.title + (e.restSeconds.map { " · rest \(RestPrescription.text($0))" } ?? "") + " · " + (previous(e).map { "last: \($0)" } ?? "no logged sets yet")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     if !e.notes.isEmpty { Text(e.notes).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     HStack(spacing: DS.s) {
                         Button { whyFor = e } label: { Label("Why?", systemImage: "questionmark.circle").font(.footnote.weight(.semibold)).frame(minHeight: DS.minTap) }

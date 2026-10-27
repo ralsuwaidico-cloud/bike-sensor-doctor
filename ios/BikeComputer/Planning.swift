@@ -203,6 +203,34 @@ struct WeeklyAvailability: Codable, Equatable {
             } else { d[day] = DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: nil, minutes: liftMin)]); liftsLeft -= 1 }
             if ridesLeft > 0, liftsLeft > 0 { takeRide.toggle() }
         }
+        // audit G-17 / M-06: the single-sport days chosen above keep their sports' counts, but the lifts move to the
+        // combination of those days with the most rest between them (≥ 48 h, ≥ 72 h for older riders or slow
+        // recovery, when the days allow), so two lifts never sit on back-to-back days when another layout exists
+        let used = (0..<7).filter { i in d[i].assignments.count == 1 && (d[i].assignments[0].sport == .strength || (d[i].assignments[0].sport == .cycling && order.contains(i))) }
+        let liftDays0 = used.filter { d[$0].assignments[0].sport == .strength }
+        if liftDays0.count >= 2 {
+            func gap(_ a: Int, _ b: Int) -> Int { let x = abs(a - b); return min(x, 7 - x) }
+            func minGap(_ ds: [Int]) -> Int { var m = 7; for i in ds.indices { for j in ds.indices where j > i { m = min(m, gap(ds[i], ds[j])) } }; return m }
+            func combos(_ xs: [Int], _ k: Int) -> [[Int]] { if k == 0 { return [[]] }; if xs.count < k { return [] }; let h = xs[0], t = Array(xs.dropFirst()); return combos(t, k - 1).map { [h] + $0 } + combos(t, k) }
+            let want = p.recovery.reduced ? 3 : 2
+            let rank: (Int) -> Int = { order.firstIndex(of: $0) ?? 9 }
+            let best = combos(used, liftDays0.count).max { a, b in
+                let ga = min(minGap(a), want), gb = min(minGap(b), want)
+                if ga != gb { return ga < gb }
+                // tie: stay as close as possible to the rider's own day order (fewer moved lifts first)
+                let ma = a.filter { !liftDays0.contains($0) }.count, mb = b.filter { !liftDays0.contains($0) }.count
+                if ma != mb { return ma > mb }
+                return a.map(rank).reduce(0, +) > b.map(rank).reduce(0, +)
+            } ?? liftDays0
+            if Set(best) != Set(liftDays0), min(minGap(best), want) > min(minGap(liftDays0), want) {
+                let liftA = liftDays0.map { d[$0].assignments[0] }
+                let rideDays0 = used.filter { d[$0].assignments[0].sport == .cycling }
+                let rideA = rideDays0.sorted { rank($0) < rank($1) }.map { d[$0].assignments[0] }
+                let newRideDays = used.filter { !best.contains($0) }.sorted { rank($0) < rank($1) }
+                for (k, day) in best.sorted().enumerated() { d[day] = DayAvailability(assignments: [liftA[k]]) }
+                for (k, day) in newRideDays.enumerated() where k < rideA.count { d[day] = DayAvailability(assignments: [rideA[k]]) }
+            }
+        }
         // more sessions than days: pair the remaining lifts with rides (upper body, so legs are not loaded twice) and
         // the remaining rides with lifts — never an extra day
         var i = 0

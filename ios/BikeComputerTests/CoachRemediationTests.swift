@@ -146,4 +146,52 @@ final class CoachRemediationTests: XCTestCase {
         XCTAssertLessThan(PlanEngine.rideMinutes(back), PlanEngine.rideMinutes(normal))
         XCTAssertTrue(back.contains { $0.note.contains("Back after") })
     }
+
+    // MARK: Stage 2 — age / recovery (M-06), rest (M-03), starting loads (M-04), lift spacing (G-17)
+
+    func testOlderOrSlowRecoveringRidersGetLessWeeklyVolumeAndAMoreFrequentDeload() {
+        var young = profile(); young.age = 30
+        var old = profile(); old.age = 62
+        var slow = profile(); slow.age = 30; slow.recoveryCapacity = .low
+        XCTAssertEqual(young.recovery.volumeFactor, 1.0); XCTAssertEqual(old.recovery.volumeFactor, 0.8); XCTAssertEqual(slow.recovery.volumeFactor, 0.8)
+        old.recoveryCapacity = .low; XCTAssertEqual(old.recovery.volumeFactor, 0.7)
+        XCTAssertEqual(slow.recovery.deloadEvery, 3); XCTAssertEqual(young.recovery.deloadEvery, 4)
+        let w = Workout(date: day(2), kind: .strength, minutes: 75, strengthFocus: .fullBody)
+        let by = StrengthPlanner.build(for: w, ctx: ctx(young, logs: [])), bo = StrengthPlanner.build(for: w, ctx: ctx(old, logs: []))
+        XCTAssertLessThan(bo.entries.reduce(0) { $0 + $1.sets.count }, by.entries.reduce(0) { $0 + $1.sets.count })
+        XCTAssertTrue(bo.rationale.notes.contains { $0.contains("you are 62") }, bo.rationale.notes.joined(separator: " | "))
+    }
+
+    func testRestBetweenSetsIsPrescribedAndExplained() {
+        let w = Workout(date: day(2), kind: .strength, minutes: 75, strengthFocus: .fullBody)
+        let b = StrengthPlanner.build(for: w, ctx: ctx(profile(), logs: []))
+        XCTAssertTrue(b.entries.allSatisfy { $0.restSeconds != nil })
+        let mainRest = b.entries.first.flatMap { $0.restSeconds } ?? 0
+        XCTAssertGreaterThanOrEqual(mainRest, 120, "heavy multi-joint lifts: 2–3 min (ACSM 2009)")
+        XCTAssertTrue(b.rationale.exercises.allSatisfy { $0.dose.contains("Rest about") })
+        XCTAssertEqual(RestPrescription.seconds(role: .core, goal: .general, reduced: false), 60)
+        XCTAssertGreaterThan(RestPrescription.seconds(role: .main, goal: .general, reduced: true), RestPrescription.seconds(role: .main, goal: .general, reduced: false))
+        // old files without the field still decode
+        let e = ExerciseEntry(exercise: squat)
+        var json = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(e)) as! [String: Any]; json.removeValue(forKey: "restSeconds")
+        XCTAssertNil(try JSONDecoder().decode(ExerciseEntry.self, from: JSONSerialization.data(withJSONObject: json)).restSeconds)
+    }
+
+    func testNewExerciseGetsConcreteStartingGuidanceNotACopiedWeight() {
+        let l = StrengthPlanner.prescribeLoad(squat, meta: ExerciseLibrary.meta(squat), reps: 6...10, sets: 3, painBlocked: false, ctx: ctx(profile(), logs: []))
+        XCTAssertNil(l.weight)
+        XCTAssertTrue(l.why.contains("empty bar"), l.why)
+        XCTAssertTrue(l.why.contains("No weight is copied"), l.why)
+    }
+
+    func testDefaultWeekSpacesLiftsApart() {
+        for (lifts, rides) in [(2, 3), (3, 3), (2, 2), (3, 2)] {
+            var p = profile(); p.liftDaysPerWeek = lifts; p.cyclingDaysPerWeek = rides; p.strengthSplit = .fullBody; p.liftingHoursPerWeek = lifts; p.hoursPerWeek = rides * 2
+            let a = WeeklyAvailability.suggested(for: p)
+            let liftDays = a.days.indices.filter { a.days[$0].lifts }
+            let adjacent = liftDays.contains { d in liftDays.contains((d + 1) % 7) }
+            XCTAssertFalse(adjacent, "\(lifts) lifts / \(rides) rides → lift days \(liftDays)")
+            XCTAssertEqual(a.liftDays, lifts); XCTAssertEqual(a.cycleDays, rides)
+        }
+    }
 }

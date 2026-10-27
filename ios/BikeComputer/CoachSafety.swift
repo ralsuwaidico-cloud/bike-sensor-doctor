@@ -155,3 +155,80 @@ extension Store {
         return ReturnPhase.detect(dates: d, now: now)
     }
 }
+
+// MARK: - Age, recovery capacity (M-06), rest intervals (M-03), starting loads (M-04)
+//
+// Older adults: resistance training stays effective and is recommended 2–3 days a week with progressive loading
+// (Fragala et al. 2019, NSCA position statement, J Strength Cond Res 33(8):2019–2052); recovery between sessions for
+// the same muscles takes longer, so volume per week and the deload cadence are adjusted. The factors below (×0.8 volume,
+// deload every 3rd week, ≥ 72 h between sessions loading the same muscles) are COACHING HEURISTICS, not evidence-derived
+// thresholds. Rest between sets follows ACSM 2009 (Ratamess et al., MSSE 41(3):687–708): 2–3 min for heavy multi-joint
+// lifts, 1–2 min for lighter / assistance work; hypertrophy work benefits from rests above 60 s (Grgic et al. 2018,
+// Sports Med 48(1):137–151; Schoenfeld et al. 2016, JSCR 30(7):1805–1812).
+
+enum RecoveryCapacity: String, Codable, CaseIterable {
+    case low, normal, high
+    var title: String { switch self { case .low: return "Slower than most"; case .normal: return "About average"; case .high: return "Faster than most" } }
+    var hint: String { switch self { case .low: return "often still tired or sore two days after a hard session"; case .normal: return "fresh again within a day or two"; case .high: return "rarely sore, recovers overnight" } }
+}
+
+/// Programming adjustments from age and stated recovery capacity. One place, read by the planner and the week builder.
+struct RecoveryProfile: Equatable {
+    var age: Int
+    var capacity: RecoveryCapacity
+    var older: Bool { age >= 60 }
+    var reduced: Bool { older || capacity == .low }
+    /// Weekly working sets multiplier.
+    var volumeFactor: Double { (older && capacity == .low) ? 0.7 : reduced ? 0.8 : (capacity == .high ? 1.1 : 1.0) }
+    /// A lighter week every N weeks of consecutive training.
+    var deloadEvery: Int { reduced ? 3 : 4 }
+    /// Minimum hours between two sessions loading the same muscles.
+    var minHoursSameMuscles: Int { reduced ? 72 : 48 }
+    var reason: String? {
+        switch (older, capacity) {
+        case (true, .low): return "you are \(age) and said you recover slower than most"
+        case (true, _): return "you are \(age); recovery between sessions takes longer with age"
+        case (false, .low): return "you said you recover slower than most"
+        case (false, .high): return "you said you recover faster than most"
+        default: return nil
+        }
+    }
+    init(profile p: RiderProfile) { age = p.effectiveAge; capacity = p.recoveryCapacity ?? .normal }
+}
+
+extension RiderProfile { var recovery: RecoveryProfile { RecoveryProfile(profile: self) } }
+
+enum RestPrescription {
+    /// Seconds between sets for a role and goal.
+    static func seconds(role: StrengthPlanner.Role, goal: StrengthPrefs.Goal, reduced: Bool) -> Int {
+        var s: Int
+        switch (role, goal) {
+        case (.main, .strength): s = 180
+        case (.main, _): s = 150
+        case (.secondary, .strength): s = 150
+        case (.secondary, _): s = 105
+        case (.accessory, _): s = 75
+        case (.core, _): s = 60
+        }
+        if reduced, role == .main || role == .secondary { s += 30 }
+        return s
+    }
+    static func text(_ s: Int) -> String {
+        if s >= 120 { let m = Double(s) / 60; return m == m.rounded() ? "\(Int(m)) min" : String(format: "%.1f min", m).replacingOccurrences(of: ".5", with: "½") }
+        return "\(s) s"
+    }
+}
+
+enum StartingLoad {
+    /// How to find a first working weight without guessing a number for the rider (no bodyweight formula is reliable).
+    static func guidance(_ e: Exercise, reps range: ClosedRange<Int>, beginner: Bool) -> String {
+        let eq = Set(e.equipment.map { $0.lowercased() })
+        var first: String
+        if eq.contains("barbell") { first = "Start with the empty bar (usually 20 kg, 15 kg for a women's bar)" }
+        else if eq.contains("dumbbell") || eq.contains("kettlebell") { first = "Start with a weight you could lift 15 or more times" }
+        else if eq.contains("machine") || eq.contains("cable") { first = "Start near the lightest setting" }
+        else { first = "Start light" }
+        let stopAt = beginner ? 4 : 3
+        return "New exercise — find your working weight. \(first), do \(range.upperBound) easy reps, then add a small step each set (about 5–10 %) until \(range.lowerBound) reps feel like you could do \(stopAt) more. Use that weight for the working sets and log it; the coach progresses from your log. No weight is copied from another exercise."
+    }
+}
