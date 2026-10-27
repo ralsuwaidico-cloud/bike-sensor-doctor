@@ -308,8 +308,11 @@ enum PlanEngine {
     /// assignment that has no type; one quality session is picked for untyped rides; a leg-loading lift is not placed
     /// next to a hard ride when a choice exists; fixed assignments keep their exact type and minutes. The availability
     /// is fitted to both budgets first, so a generated week can never exceed either budget.
-    static func week(starting monday: Date, profile p: RiderProfile, availability raw: WeeklyAvailability, calendar cal: Calendar = .current) -> [Workout] {
+    /// Coach remediation: `returning` (M-02, from logged rides) and the health check (M-01, `p.readiness`) cap what a
+    /// generated week may contain. Fixed rides the rider typed are never changed; they get a visible warning instead.
+    static func week(starting monday: Date, profile p: RiderProfile, availability raw: WeeklyAvailability, returning: ReturnPhase? = nil, calendar cal: Calendar = .current) -> [Workout] {
         let a = WeeklyAvailability.fit(raw, profile: p).availability
+        let readiness = p.readiness
         let d = { (i: Int) in cal.date(byAdding: .day, value: i, to: monday)! }
         // --- cycling types for untyped (nil/custom-less) assignments
         var cycTypes: [UUID: WorkoutKind] = [:]
@@ -371,10 +374,21 @@ enum PlanEngine {
             for (n, x) in ordered.enumerated() {
                 let date = d(i).addingTimeInterval(TimeInterval(n))
                 if x.sport == .cycling {
-                    let k = cycTypes[x.id] ?? (x.minutes < 40 ? .recovery : .endurance)
-                    var w = Workout(date: date, kind: k, minutes: max(20, x.minutes), sequence: n)
+                    var k = cycTypes[x.id] ?? (x.minutes < 40 ? .recovery : .endurance)
+                    var minutes = max(20, x.minutes)
+                    var note = x.cyclingType == .custom ? "custom ride" : ""
+                    if x.fixed {
+                        if k.zone > readiness.maxRideZone, let r = readiness.restriction { note = "Caution: \(r). This fixed ride is kept as you set it — ride it easy until then." }
+                    } else {
+                        if k.zone > readiness.maxRideZone { k = .endurance; note = "Planned easy because \(readiness.restriction ?? "of your health check")." }
+                        if let r = returning, r.active, k.zone >= 3 || k == .long {
+                            k = .endurance; minutes = max(30, Int((Double(minutes) * 0.75 / 5).rounded()) * 5)
+                            note = "Back after \(r.weeksText) off: steady endurance at about three quarters of the usual time; intensity returns after \(ReturnPhase.phaseSessions) rides."
+                        }
+                    }
+                    var w = Workout(date: date, kind: k, minutes: minutes, sequence: n)
                     w.fixed = x.fixed; w.assignmentId = x.id
-                    if x.cyclingType == .custom { w.note = "custom ride" }
+                    w.note = note
                     items.append(w)
                 } else {
                     var w = Workout(date: date, kind: .strength, minutes: max(15, x.minutes), strengthFocus: focus[x.id] ?? .fullBody, sequence: n)

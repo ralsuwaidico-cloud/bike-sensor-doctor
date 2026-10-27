@@ -78,6 +78,8 @@ struct RiderProfile: Codable, Equatable {
     /// power. Both nil on older files → the FTP is treated as unverified unless it is the provisional assumption.
     var ftpVerifiedTest: Bool? = nil
     var ftpPowerVerified: Bool? = nil
+    /// Coach remediation M-01: the pre-participation health check (nil = never answered → no vigorous prescriptions).
+    var healthScreen: HealthScreen? = nil
     /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
     var hrZones: [(lo: Int, hi: Int?)] {
         if hrZoneMethod == .lthr, let l = lthr, l > 0 {
@@ -149,6 +151,7 @@ struct RiderProfile: Codable, Equatable {
         preservedTemplateIds = (try? c.decodeIfPresent([UUID].self, forKey: .preservedTemplateIds)) ?? []
         ftpVerifiedTest = try? c.decodeIfPresent(Bool.self, forKey: .ftpVerifiedTest)
         ftpPowerVerified = try? c.decodeIfPresent(Bool.self, forKey: .ftpPowerVerified)
+        healthScreen = try? c.decodeIfPresent(HealthScreen.self, forKey: .healthScreen)
     }
 
     // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)
@@ -784,7 +787,7 @@ final class Store: ObservableObject {
         var next = plan, added = false
         for k in 0..<2 {
             let m = cal.date(byAdding: .day, value: 7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
-            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a)); added = true }
+            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a, returning: cyclingReturnPhase(now: now))); added = true }
         }
         if added { plan = next.sorted { $0.date < $1.date } }
     }
@@ -948,7 +951,7 @@ final class Store: ObservableObject {
         let monday = cal.date(byAdding: .day, value: -wd, to: d0)!
         let sunday = cal.date(byAdding: .day, value: 7, to: monday)!
         let today = cal.startOfDay(for: Date())
-        let fresh = applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability))
+        let fresh = applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability, returning: cyclingReturnPhase()))
         var next = plan.filter { !($0.date >= monday && $0.date < sunday) }
         let old = plan.filter { $0.date >= monday && $0.date < sunday }
         for day in 0..<7 {

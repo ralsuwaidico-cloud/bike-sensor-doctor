@@ -7,7 +7,7 @@ final class HybridV2Tests: XCTestCase {
     private let cal = Calendar.current
     private var monday: Date { cal.date(from: DateComponents(year: 2026, month: 10, day: 19))! }
     private func hybridProfile(cycH: Int = 5, liftH: Int = 2) -> RiderProfile {
-        var p = RiderProfile(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = cycH; p.liftingHoursPerWeek = liftH
+        var p = RiderProfile.screened(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = cycH; p.liftingHoursPerWeek = liftH
         p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 3; p.level = .intermediate; p.goal = .fitness
         return p
     }

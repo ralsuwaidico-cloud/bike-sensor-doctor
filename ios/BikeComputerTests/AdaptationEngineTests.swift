@@ -15,7 +15,7 @@ final class AdaptationEngineTests: XCTestCase {
 
     // MARK: fixtures
     private func hybrid(cycH: Int = 6, liftH: Int = 3) -> RiderProfile {
-        var p = RiderProfile(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = cycH; p.liftingHoursPerWeek = liftH
+        var p = RiderProfile.screened(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = cycH; p.liftingHoursPerWeek = liftH
         p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 3; p.level = .intermediate; p.goal = .fitness
         return p
     }

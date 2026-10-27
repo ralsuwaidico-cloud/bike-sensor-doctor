@@ -14,7 +14,7 @@ final class StrengthAuditTests: XCTestCase {
     private func store() -> Store {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let s = Store(directory: dir, generatePlan: false)
-        var p = RiderProfile(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2; p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 3
+        var p = RiderProfile.screened(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2; p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 3
         s.profile = p
         s.availability = WeeklyAvailability(days: [DayAvailability(activity: .rest, minutes: 0), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .fullBody, minutes: 30)]),
                                                    DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: nil, minutes: 60)]), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .upper, minutes: 40)]),

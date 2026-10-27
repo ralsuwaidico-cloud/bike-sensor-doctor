@@ -564,7 +564,10 @@ enum AdaptationEngine {
             }
             let unverifiedNote = input.rides.contains(where: { $0.powerVerified != true && $0.avgPower != nil }) ? "; unverified power is not used" : ""
             if a.cyclingImproving, !a.painBlocksCycling, let text = a.cyclingImprovingText {
-                if let r = future.first(where: { ($0.kind == .threshold || $0.kind == .vo2) && $0.date < progressEnd && auto($0) }),
+                // M-01 / M-02: no added intervals without a cleared health check or while returning from a break
+                let rideReturn = ReturnPhase.detect(dates: input.rides.filter { !$0.demo }.map { $0.start }, now: now, calendar: cal)
+                let intensityOK = input.profile.readiness.vigorousAllowed && !(rideReturn?.active ?? false)
+                if intensityOK, let r = future.first(where: { ($0.kind == .threshold || $0.kind == .vo2) && $0.date < progressEnd && auto($0) }),
                    let reps = r.effectiveIntervalReps, AdaptiveRules.intervalsFit(kind: r.kind, reps: reps + 1, minutes: r.minutes) {
                     progressions.append(make(r, .intervalReps(delta: 1), .progression, "\(r.kind.title): \(reps) → \(reps + 1) × \(r.kind.intervalWorkMinutes) min", "\(text) So \(AdaptationExplainer.day(r.date))'s \(r.kind.title.lowercased()) gets one more interval (\(reps) → \(reps + 1) × \(r.kind.intervalWorkMinutes) min) inside the same \(r.minutes) min. Judged from your effort and performance ratings\(unverifiedNote)."))
                 } else if let e = future.first(where: { ($0.kind == .endurance || $0.kind == .long) && $0.date < progressEnd && auto($0) }) {

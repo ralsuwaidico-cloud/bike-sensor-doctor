@@ -17,7 +17,7 @@ final class QualityReleaseTests: XCTestCase {
         return u
     }
     private func hybridProfile() -> RiderProfile {
-        var p = RiderProfile(); p.name = "Test"; p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
+        var p = RiderProfile.screened(); p.name = "Test"; p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
         p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 3
         return p
     }

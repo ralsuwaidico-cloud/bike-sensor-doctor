@@ -10,7 +10,7 @@ final class ModelTests: XCTestCase {
 
     // MARK: PlanEngine
     func testWeekIsBuiltAroundAvailability() {
-        var p = RiderProfile(); p.hoursPerWeek = 5; p.level = .intermediate; p.goal = .endurance
+        var p = RiderProfile.screened(); p.hoursPerWeek = 5; p.level = .intermediate; p.goal = .endurance
         let monday = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 19))!
         let a = WeeklyAvailability.suggested(hoursPerWeek: 5)
         let w = PlanEngine.week(starting: monday, profile: p, availability: a)
@@ -40,7 +40,7 @@ final class ModelTests: XCTestCase {
     /// 0.7.0: the engine never generates over a budget; the over-hours is reported as a conflict with options and the
     /// flexible days are trimmed (shown, not silent). Suggestions still appear when the rider's own edits push a week over.
     func testOverHoursSuggestsAdjustmentsInsteadOfCutting() {
-        var p = RiderProfile(); p.hoursPerWeek = 3
+        var p = RiderProfile.screened(); p.hoursPerWeek = 3
         let monday = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 19))!
         var d = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
         for i in [1, 3, 5] { d[i] = DayAvailability(activity: .cycle, minutes: 90) }

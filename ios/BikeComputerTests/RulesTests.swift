@@ -53,7 +53,7 @@ final class RulesTests: XCTestCase {
     func testPlanDayGroupsMultipleActivities() {
         let cal = Calendar.current
         let monday = cal.date(from: DateComponents(year: 2026, month: 10, day: 19))!
-        var p = RiderProfile(); p.hoursPerWeek = 6
+        var p = RiderProfile.screened(); p.hoursPerWeek = 6
         var week = PlanEngine.week(starting: monday, profile: p, availability: WeeklyAvailability.suggested(hoursPerWeek: 6))
         week.append(Workout(date: cal.date(byAdding: .day, value: 1, to: monday)!, kind: .mobility, minutes: 30))
         week.append(Workout(date: cal.date(byAdding: .hour, value: 30, to: monday)!, kind: .strength, minutes: 20))   // Tuesday 06:00

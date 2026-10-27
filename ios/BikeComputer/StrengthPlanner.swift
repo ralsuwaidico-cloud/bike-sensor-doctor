@@ -247,6 +247,10 @@ struct PlannerContext {
     var units: AppSettings.Units = .metric
     var now = Date()
     var calendar: Calendar = .current
+    /// Coach remediation M-02: the lifting return phase (from logged dates; nil = no recent break).
+    var returning: ReturnPhase? = nil
+    /// Coach remediation M-01: what may be prescribed (health check).
+    var readiness: CoachReadiness { profile.readiness }
 
     var experience: StrengthPrefs.Experience {
         if let e = prefs.experience { return e }
@@ -535,6 +539,8 @@ enum StrengthPlanner {
             if m.slot.isLower && legsKept { n = max(2, n - 1); d.rpe = min(d.rpe, 6); cyclingNote = interferenceText }
             else if m.slot.isLower && week.highCyclingLoad { cyclingNote = "Lower-body volume is reduced this week because \(week.highLoadReason ?? "your cycling load is high")." }
             if week.deload { n = max(2, n - 1); d.rpe = min(d.rpe, 6) }
+            else if let r = ctx.returning, r.active { n = max(2, n - 1); d.rpe = min(d.rpe, 7) }
+            d.rpe = min(d.rpe, ctx.readiness.maxStrengthRPE)
             let painBlocked = ctx.painAreas.contains { $0.patterns.contains(m.slot.family) }
             let load = prescribeLoad(e, meta: m, reps: d.reps, sets: n, painBlocked: painBlocked || week.deload, ctx: ctx)
             var entry = ExerciseEntry(exercise: e, sets: (0..<n).map { _ in SetEntry(reps: load.reps, weightKg: load.weight, bodyweight: load.bodyweight, unilateral: e.unilateral) })
@@ -586,6 +592,8 @@ enum StrengthPlanner {
         if !trimmed.isEmpty { notes.append("To fit \(Fmt.duration(minutes: w.minutes)), these were left out: \(trimmed.joined(separator: ", ")).") }
         if !ctx.equipment.isSet { notes.append("Your equipment is not set, so exercises that need only dumbbells or bodyweight are preferred. Set it in Profile › Training profile › Equipment.") }
         if let h = ctx.progressionHold { notes.append("Loads and reps are held: \(h).") }
+        if let r = ctx.returning, r.active { notes.append("Back after \(r.weeksText) off: one set fewer per exercise, efforts at RPE 7 or less, and loads restart below your last logged ones for your first \(ReturnPhase.phaseSessions) sessions.") }
+        if let r = ctx.readiness.restriction { notes.append("Efforts are capped at RPE \(ctx.readiness.maxStrengthRPE) because \(r).") }
         if !ctx.painAreas.isEmpty { notes.append("You reported pain (\(ctx.painAreas.map { $0.title.lowercased() }.joined(separator: ", "))): exercises that load that area this way are left out and not progressed.") }
         if w.fixed { notes.append("Fixed day: the day and session type are yours; only the exercises were filled in.") }
         let r = SessionRationale(generatedAt: ctx.now, goal: goal.title, notes: notes, exercises: rats, deload: week.deload)
@@ -650,6 +658,21 @@ enum StrengthPlanner {
         let lastText = "Last logged \(when): \(done.count) × \(reps.map(String.init).joined(separator: "/"))" + (top.map { " @ \(WeightFmt.text($0, ctx.units))" } ?? (done.first?.bodyweight == true ? " bodyweight" : ""))
         let rpeText = rpe.map { " at RPE \($0)" } ?? ""
         let minReps = reps.min() ?? range.lowerBound
+        // M-02: this exercise was last logged three or more weeks ago → restart below that load, no progression
+        let gapDays = ctx.calendar.dateComponents([.day], from: ctx.calendar.startOfDay(for: last.session.date), to: ctx.calendar.startOfDay(for: ctx.now)).day ?? 0
+        if gapDays >= ReturnPhase.breakThresholdDays {
+            let phase = ReturnPhase(breakDays: gapDays, sessionsSince: 0, ongoing: true)
+            if let w = top {
+                let dumbbellR = e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell")
+                let stepR = WeightFmt.step(dumbbell: dumbbellR, ctx.units)
+                let target = w * phase.loadFactor
+                let next = max(stepR, min(w - stepR, (target / stepR).rounded(.down) * stepR))
+                let pct = Int(((1 - next / w) * 100).rounded())
+                return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText) — \(phase.weeksText) ago. After a break strength and work capacity drop, so the weight restarts about \(pct) % lower (\(WeightFmt.text(next, ctx.units))) at \(range.lowerBound) reps; it builds back up from your new logs.")
+            }
+            let r0 = max(range.lowerBound, min(minReps, range.upperBound)) - (minReps > range.lowerBound ? 1 : 0)
+            return Load(weight: nil, reps: max(range.lowerBound, r0), bodyweight: true, progressed: false, why: "\(lastText) — \(phase.weeksText) ago. After a break, reps restart at \(max(range.lowerBound, r0)) and build back up from your new logs.")
+        }
         if let hw = holdWhy {
             return Load(weight: top, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: top == nil && bw, progressed: false, why: "\(lastText)\(rpeText). \(hw)")
         }
@@ -806,7 +829,8 @@ extension Store {
         let hold: String? = analysis.adherenceBlock ? "\(analysis.missed.count) planned sessions were missed in the last 7 days, so nothing is increased until you are back on track" : nil
         return PlannerContext(profile: profile, prefs: strengthPrefs, equipment: equipment, catalogue: allExercises, templates: templates,
                               logs: strength.filter { !$0.awaitingReview && !$0.inProgress }, rides: rides, plan: plan,
-                              painAreas: analysis.painAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now)
+                              painAreas: analysis.painAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now,
+                              returning: liftingReturnPhase(now: now))
     }
 
     /// Coach-built future sessions (never ones the rider edited, completed, skipped or started) are rebuilt from the
