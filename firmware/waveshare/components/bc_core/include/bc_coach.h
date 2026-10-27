@@ -35,6 +35,7 @@ typedef struct {
     bc_cue_level_t level;
     char head[24];      /* glanceable instruction, e.g. "EASE OFF" */
     char why[40];       /* reason with the live number, e.g. "212 W > 165 W" */
+    char word[12];      /* rc4 (QA RC3-02): optional short form for the page-1 pill / word (<= 11 chars); empty = use head */
 } bc_cue_t;
 
 typedef struct {

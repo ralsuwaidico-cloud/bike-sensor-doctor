@@ -38,6 +38,9 @@ typedef struct {
     /* rc3 (QA QF-22): RAM-only rides already streamed as SYNC_RIDE; a later SYNC_REQ whose after_ride_id covers one = the
        phone has it (Cyclift asks "after the newest ride I hold") -> its memory slot is freed */
     uint16_t ram_sent[APP_UNSAVED_MAX]; int n_ram_sent;
+    /* rc4 (QA RC3-01): the request as the phone sent it - RAM-only rides are filtered by the REQUESTED after_ride_id (the
+       file loop advances after_id, which skipped a RAM ride older than a file ride); only = contract v1.3 SYNC_REQ tag 03 */
+    uint16_t req_after, only;
 } psvc_t;
 static psvc_t *s_ps;
 #define S (*s_ps)
@@ -240,7 +243,8 @@ static void sync_rewind(void) { S.off = 0; S.eof = false; S.chunk_pos = S.chunk_
 
 static void sync_start(const bc_sync_req_t *q)
 {
-    for (int i = 0; i < S.n_ram_sent; ) {
+    S.req_after = q->after_ride_id; S.only = q->only_ride_id;
+    for (int i = 0; i < S.n_ram_sent && !q->only_ride_id; ) {   /* a by-id request confirms nothing */
         if (q->after_ride_id && S.ram_sent[i] <= q->after_ride_id) { app_unsaved_release(S.ram_sent[i]); S.ram_sent[i] = S.ram_sent[--S.n_ram_sent]; }
         else i++;
     }
@@ -397,7 +401,8 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
     if (S.sync_active) {
         bc_ride_summary_t s;
         while (S.sent < S.max_count && sync_next_line()) {
-            if (!S.line_len || !bc_summary_from_line(&s, S.line) || s.id <= S.after_id) continue;
+            if (!S.line_len || !bc_summary_from_line(&s, S.line)) continue;
+            if (S.only ? s.id != S.only : s.id <= S.after_id) continue;
             size_t n = bc_link_encode_sync_ride(&s, buf, cap, ++S.seq, now);
             if (!n) continue;                                 /* cannot happen with BC_LINK_MAX; skip rather than stall */
             S.sent++; S.after_id = s.id; S.st.rides_sent++;
@@ -408,7 +413,7 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
         { bc_ride_summary_t u[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(u, APP_UNSAVED_MAX);
           while (S.sent < S.max_count && S.ram_i < nu) {
               bc_ride_summary_t *r = &u[S.ram_i++];
-              if (r->id <= S.after_id) continue;
+              if (S.only ? r->id != S.only : r->id <= S.req_after) continue;
               size_t n = bc_link_encode_sync_ride(r, buf, cap, ++S.seq, now);
               if (!n) continue;
               S.sent++; S.after_id = r->id; S.st.rides_sent++;
@@ -420,8 +425,8 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
         /* batch complete (max reached or end of file): is there more? peek ahead, then restore the reader completely */
         bool more = false;
         { bc_ride_summary_t u[APP_UNSAVED_MAX]; int nu = app_unsaved_rides(u, APP_UNSAVED_MAX);
-          for (int i = S.ram_i; i < nu; i++) if (u[i].id > S.after_id) more = true; }
-        if (S.sent >= S.max_count) {
+          for (int i = S.ram_i; i < nu && !S.only; i++) if (u[i].id > S.req_after) more = true; }
+        if (S.sent >= S.max_count && !S.only) {
             long off = S.off; bool eof = S.eof; int cp = S.chunk_pos, cl = S.chunk_len; char chunk[512]; memcpy(chunk, S.chunk, sizeof chunk);
             while (sync_next_line()) if (S.line_len && bc_summary_from_line(&s, S.line) && s.id > S.after_id) { more = true; break; }
             S.off = off; S.eof = eof; S.chunk_pos = cp; S.chunk_len = cl; memcpy(S.chunk, chunk, sizeof chunk);

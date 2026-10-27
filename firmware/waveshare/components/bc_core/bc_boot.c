@@ -15,8 +15,8 @@ static bool subsys_known(uint8_t m) { return m >= BC_SS_DISPLAY && m <= BC_SS_RE
 uint8_t bc_boot_next_run(uint8_t prev, bc_reset_t reset)
 {
     if (is_crash(reset)) return prev < 250 ? (uint8_t)(prev + 1) : prev;
-    if (reset == BC_RST_BROWNOUT || reset == BC_RST_DEEPSLEEP) return prev;
-    return 0;
+    if (reset == BC_RST_BROWNOUT) return prev;
+    return 0;                                                  /* power-on, software restart, deep-sleep wake (rc4, RC3-05) */
 }
 
 void bc_boot_plan(bc_boot_rtc_t *r, bc_reset_t reset, uint16_t nvs_skip, bc_boot_plan_t *o)
@@ -81,6 +81,7 @@ void bc_boot_plan(bc_boot_rtc_t *r, bc_reset_t reset, uint16_t nvs_skip, bc_boot
 }
 
 void bc_boot_mark(bc_boot_rtc_t *r, bc_subsys_t s) { r->marker = (uint8_t)s; seal(r); }
+void bc_boot_long_stable(bc_boot_rtc_t *r) { r->run_streak = 0; seal(r); }
 
 void bc_boot_limit(bc_boot_rtc_t *r, bc_boot_plan_t *p, uint8_t nvs_run)
 {

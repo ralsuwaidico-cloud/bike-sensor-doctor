@@ -248,6 +248,7 @@ void *plat_alloc_ext(size_t n);
 /** 0.7.5 (Link 1.3 STORAGE_STATUS): firmware slot size / used by the running image (KB), NVS entries used / free. */
 /** rc3 (QA QF-26): the NVS crash-run counter for this start (bc_boot_next_run), written before storage starts; 0 if NVS fails. */
 uint8_t plat_crash_run_update(bc_reset_t reset);
+void plat_crash_run_clear(void);       /* rc4 (RC3-05): 10 min of normal running - the NVS counter back to 0 (written only if not 0) */
 void plat_flash_usage(uint32_t *app_slot_kb, uint32_t *app_used_kb, uint16_t *nvs_used, uint16_t *nvs_free);
 
 /* ---- 0.7.3 crash evidence, boot modes, diagnostics (app_diag.c) */

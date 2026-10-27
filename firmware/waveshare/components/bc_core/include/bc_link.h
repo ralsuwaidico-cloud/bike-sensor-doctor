@@ -89,6 +89,10 @@ typedef struct {
        not OK (storage_state != 0), 14 rides_unsynced when > 0, 15 bt_flags when != 0 */
     bool has_coach; uint16_t coach_seq; uint8_t coach_mode;
     uint8_t storage_state, rides_unsynced, bt_flags;
+    /* contract v1.3 (QA RC3-08): firmware >= 0.7.4-rc4 sets has_l13 -> tags 13, 14 and 15 are ALWAYS sent (0 included), so
+       an absent tag means "older board / unknown", never "0". 11/12 stay absent while no Cyclift workout is shown (= mode 0).
+       Decoding: has_l13 is set when any of 13..15 is present. */
+    bool has_l13;
 } bc_live_t;
 size_t bc_link_encode_live(const bc_live_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_live(const uint8_t *buf, size_t len, bc_live_t *v);
@@ -140,7 +144,11 @@ size_t bc_link_encode_info(const bc_info_t *v, uint8_t *buf, size_t cap);
 bool bc_link_decode_info(const uint8_t *buf, size_t len, bc_info_t *v);
 
 /* ---- 1.1 ride-history sync: one finished ride per SYNC_RIDE (<= BC_LINK_MAX bytes). Decoding needs bc_ride.h's summary. */
-typedef struct { uint16_t after_ride_id; uint8_t max_count; } bc_sync_req_t;
+typedef struct { uint16_t after_ride_id; uint8_t max_count;
+                 uint16_t only_ride_id;   /* contract v1.3 (QA RC3-01): optional tag 03 - send exactly this ride's SYNC_RIDE (file or
+                                             RAM-only) + SYNC_END; 0 = absent. Boards before rc4 ignore it: send after_ride_id = id - 1
+                                             and max_count = 1 with it, which those boards answer with the same ride in normal cases */
+               } bc_sync_req_t;
 typedef struct { uint16_t count, total; bool more; } bc_sync_end_t;
 size_t bc_link_encode_sync_req(const bc_sync_req_t *v, uint8_t *buf, size_t cap, uint16_t seq, uint32_t t_ms);
 bool bc_link_decode_sync_req(const uint8_t *buf, size_t len, bc_sync_req_t *v);

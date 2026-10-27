@@ -481,7 +481,18 @@ static void test_boot_same_suspect(void)
           stable = true;
       }
       CHECK(stable && boots == 7 && p.no_storage && p.no_diag && !p.minimal, "... a crash in diagnostics too: without diagnostics at boot %d", boots); }
-    CHECK(bc_boot_next_run(3, BC_RST_BROWNOUT) == 3 && bc_boot_next_run(3, BC_RST_SW) == 0 && bc_boot_next_run(3, BC_RST_WDT) == 4 && bc_boot_next_run(3, BC_RST_DEEPSLEEP) == 3, "NVS crash-run counter rules");
+    CHECK(bc_boot_next_run(3, BC_RST_BROWNOUT) == 3 && bc_boot_next_run(3, BC_RST_SW) == 0 && bc_boot_next_run(3, BC_RST_WDT) == 4 && bc_boot_next_run(3, BC_RST_DEEPSLEEP) == 0, "NVS crash-run counter rules (rc4: a deep-sleep wake clears it)");
+    /* rc4 (QA RC3-05): 4 sporadic crashes days apart (deep sleep or 10+ min of normal running between them): never RECOVERY */
+    { uint8_t run = 0; memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p); bool rec = false;
+      for (int k = 0; k < 6; k++) {
+          bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r);
+          if (k % 2) { bc_boot_long_stable(&r); run = 0; }                                     /* rode 10+ minutes: cleared */
+          else { run = bc_boot_next_run(run, BC_RST_DEEPSLEEP); bc_boot_plan(&r, BC_RST_DEEPSLEEP, 0, &p); bc_boot_limit(&r, &p, run); }   /* night in deep sleep */
+          bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r);
+          run = bc_boot_next_run(run, BC_RST_PANIC); bc_boot_plan(&r, BC_RST_PANIC, 0, &p); bc_boot_limit(&r, &p, run);   /* the sporadic crash */
+          if (p.mode == BC_BOOT_RECOVERY) rec = true;
+      }
+      CHECK(!rec && p.run_streak == 1, "6 sporadic crashes with deep sleep / long rides between them: never RECOVERY (run %u)", p.run_streak); }
     /* rc3 (QA QF-25): a crash inside the recovery screen -> minimal text (with boot record + report), then halt */
     memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
     for (int k = 0; k < 3; k++) { bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_PANIC, 0, &p); }
