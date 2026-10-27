@@ -28,7 +28,7 @@ final class AuditFixTests: XCTestCase {
          ex("a-carry", "Farmer carry", ["dumbbell"], .carry, ["grip", "core"])]
     }
     private func profile() -> RiderProfile {
-        var p = RiderProfile(); p.name = "Test"; p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
+        var p = RiderProfile.screened(); p.name = "Test"; p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
         p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 2
         return p
     }
@@ -103,6 +103,25 @@ final class AuditFixTests: XCTestCase {
         XCTAssertNotNil(s.plannerContext(now: now).progressionHold, "the planner holds when the coach says nothing is increased")
     }
 
+    /// Harness P25 (run s8): with ride fatigue the coach says "no progression until the signals ease"; coach-built lifting
+    /// sessions must not add load (legs carry the cycling fatigue). No fatigue → no hold.
+    func testRideFatigueHoldsThePlannerLikeTheCoach() {
+        let s = Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bc-audit-\(UUID().uuidString)", isDirectory: true), generatePlan: false)
+        s.profile = profile()
+        s.plan = []
+        XCTAssertNil(s.plannerContext(now: now).progressionHold, "no fatigue, no missed sessions → nothing held")
+        s.rides = [1, 3].map { n in
+            var r = RideRecord(start: day(-n, hour: 7), durationS: 3600, distanceM: 27000, recorder: .phone, sources: [])
+            r.checkIn = CheckIn(performance: 3, effort: 9, at: r.start); return r
+        }
+        let a = TrainingAnalyzer.analyze(s.adaptationInput(now: now))
+        XCTAssertTrue(a.cyclingFatigue)
+        XCTAssertFalse(a.strengthFatigue || a.combinedFatigue)
+        let hold = s.plannerContext(now: now).progressionHold
+        XCTAssertNotNil(hold, "ride fatigue holds the planner's progression too")
+        XCTAssertTrue(hold?.contains("rides show fatigue") ?? false)
+    }
+
     // MARK: G-04 — "Coach decides" split
 
     func testCoachDecidesSplitGetsRealExercises() {
@@ -140,8 +159,10 @@ final class AuditFixTests: XCTestCase {
         // two pain-free squat sessions but within a week of the report: still held
         let soon = lift(-5, squat, pain: .concerning, area: .knees)
         XCTAssertEqual(TrainingAnalyzer.analyze(painInput(strength: [soon, lift(-3, squat), lift(-1, squat)], rides: [])).painAreas, [.knees])
-        // a week later and two pain-free squat sessions: released
-        XCTAssertEqual(TrainingAnalyzer.analyze(painInput(strength: [early, lift(-3, squat), lift(-1, squat)], rides: [])).painAreas, [])
+        // a week later and two pain-free squat sessions: still held (owner, 27 Oct: concerning pain is never released
+        // automatically) but the rider is now asked to confirm
+        let a = TrainingAnalyzer.analyze(painInput(strength: [early, lift(-3, squat), lift(-1, squat)], rides: []))
+        XCTAssertEqual(a.painAreas, [.knees]); XCTAssertEqual(a.painReviewDue, [.knees])
         // no date expiry: an old report with no exposure stays until confirmed
         let old = lift(-20, squat, pain: .concerning, area: .knees)
         XCTAssertEqual(TrainingAnalyzer.analyze(painInput(strength: [old], rides: [ride(-2), ride(-1)])).painAreas, [.knees])

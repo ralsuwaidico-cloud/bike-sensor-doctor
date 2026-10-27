@@ -20,11 +20,12 @@ RECORD RIDES WITH WHAT YOU HAVE
 • Optional: pair the BikeComputer, a handlebar accessory with its own display. It is not needed to use the app.
 
 A RULES-BASED COACH
-• The coach looks at the sessions you completed — never planned ones — and offers one suggestion at a time, such as adding a repetition when your last sessions support it.
+• The coach looks at the sessions you completed — never planned ones — and makes small, explained changes to your next sessions, such as adding a repetition when your last sessions support it.
 • During a ride it adapts its cues to the sensors you actually have, and every cue has a "Why?".
-• After a session, a short check-in (how it felt, any soreness) lets the plan adjust your next sessions.
+• After a session, a short check-in (how it felt, and any soreness, discomfort or pain) lets the plan adjust your next sessions.
 • Unverified power and a provisional FTP are labelled as such, and the coach says so when there is not enough history yet.
-• You accept, ignore or undo every adjustment; fixed days and your own edits are never changed without your approval.
+• Small changes are applied automatically and can be undone; larger ones need your approval. Fixed days and your own edits are never changed without your approval, except that no training is planned while the health check says to see a doctor or that you are ill.
+• Before it plans hard training, Cyclift asks a short health check based on the PAR-Q+ questionnaire. Cyclift is a training app, not a medical service.
 
 HISTORY AND PROGRESS
 • Timeline of rides and strength sessions with duration, distance, heart rate, power, zones and completion status.

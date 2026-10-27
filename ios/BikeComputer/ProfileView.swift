@@ -139,6 +139,9 @@ struct TrainingProfilePage: View {
                     Picker("Main priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }
                     NavigationLink { HybridPlanEditor() } label: { HStack { Text("Hybrid plan"); Spacer(); Text(hybridSummary).font(.caption).foregroundStyle(.secondary).clampLines(1) } }.accessibilityIdentifier("hybridPlanLink")
                 }
+                Picker("Recovery", selection: Binding(get: { store.profile.recoveryCapacity ?? .normal }, set: { v in store.updateProfile { $0.recoveryCapacity = v }; store.rebuildFromHybridAnswers(newDays: false) })) { ForEach(RecoveryCapacity.allCases, id: \.self) { Text($0.title).tag($0) } }
+                    .accessibilityIdentifier("recoveryCapacity")
+                NavigationLink { HealthCheckView() } label: { HStack { Text("Health check"); Spacer(); Text({ switch store.profile.readiness.screen { case .notAnswered: return "not answered"; case .clear: return "done"; case .needsClearance: return "clearance needed"; case .cleared: return "cleared"; case .stop: return "see a doctor"; case .paused: return "paused (ill)" } }()).font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("healthCheckLink")
                 NavigationLink { AdjustmentsView() } label: { HStack { Text("Coach adjustments"); Spacer(); Text(store.activeAdaptations.isEmpty ? (store.settings.autoAdapt ? "none in force" : "automatic off") : "\(store.activeAdaptations.count) in force").font(.caption).foregroundStyle(.secondary) } }
             } header: { Text("Training mode") } footer: { Text("Hybrid Athlete: one coach for cycling and lifting, with separate hour budgets. Changing the mode rebuilds the coming weeks around your days (hand-edited sessions are kept).") }
             Section("Goal") {

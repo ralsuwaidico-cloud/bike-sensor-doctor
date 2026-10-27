@@ -18,7 +18,7 @@ final class HybridTests: XCTestCase {
         return WeeklyAvailability(days: d)
     }
     private func hybridProfile() -> RiderProfile {
-        var p = RiderProfile(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
+        var p = RiderProfile.screened(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
         p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 3; p.level = .intermediate; p.goal = .fitness
         return p
     }
@@ -74,9 +74,12 @@ final class HybridTests: XCTestCase {
         var q = hybridProfile(); q.preferredDays = [1, 3, 5]; q.cyclingDaysPerWeek = 3; q.liftDaysPerWeek = 3
         let b = WeeklyAvailability.suggested(for: q)
         XCTAssertEqual(b.cycleDays, 3); XCTAssertEqual(b.liftDays, 3)
-        // cycling mode keeps the 0.5.0 suggestion
-        var c = RiderProfile(); c.trainingMode = .cycling; c.hoursPerWeek = 5
-        XCTAssertEqual(WeeklyAvailability.suggested(for: c), WeeklyAvailability.suggested(hoursPerWeek: 5))
+        // cycling mode (audit G-20): the 0.5.0 days, trimmed to the requested number of rides, no unrequested lift
+        var c = RiderProfile.screened(); c.trainingMode = .cycling; c.hoursPerWeek = 5; c.cyclingDaysPerWeek = 3
+        let ca = WeeklyAvailability.suggested(for: c)
+        XCTAssertEqual(ca.cycleDays, 3); XCTAssertEqual(ca.liftDays, 0); XCTAssertTrue(ca.days[5].cycles, "Saturday long ride kept")
+        c.cyclingDaysPerWeek = 4
+        XCTAssertEqual(WeeklyAvailability.suggested(for: c).cycleDays, 4)
         // strength-only mode has no rides
         var s = hybridProfile(); s.trainingMode = .strength; s.liftDaysPerWeek = 3
         XCTAssertEqual(WeeklyAvailability.suggested(for: s).cycleDays, 0); XCTAssertEqual(WeeklyAvailability.suggested(for: s).liftDays, 3)

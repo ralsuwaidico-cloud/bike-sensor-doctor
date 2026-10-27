@@ -78,6 +78,10 @@ struct RiderProfile: Codable, Equatable {
     /// power. Both nil on older files → the FTP is treated as unverified unless it is the provisional assumption.
     var ftpVerifiedTest: Bool? = nil
     var ftpPowerVerified: Bool? = nil
+    /// Coach remediation M-01: the pre-participation health check (nil = never answered → no vigorous prescriptions).
+    var healthScreen: HealthScreen? = nil
+    /// Coach remediation M-06: how quickly the rider recovers in their own words (nil = not answered = normal).
+    var recoveryCapacity: RecoveryCapacity? = nil
     /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
     var hrZones: [(lo: Int, hi: Int?)] {
         if hrZoneMethod == .lthr, let l = lthr, l > 0 {
@@ -149,6 +153,8 @@ struct RiderProfile: Codable, Equatable {
         preservedTemplateIds = (try? c.decodeIfPresent([UUID].self, forKey: .preservedTemplateIds)) ?? []
         ftpVerifiedTest = try? c.decodeIfPresent(Bool.self, forKey: .ftpVerifiedTest)
         ftpPowerVerified = try? c.decodeIfPresent(Bool.self, forKey: .ftpPowerVerified)
+        healthScreen = try? c.decodeIfPresent(HealthScreen.self, forKey: .healthScreen)
+        recoveryCapacity = try? c.decodeIfPresent(RecoveryCapacity.self, forKey: .recoveryCapacity)
     }
 
     // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)
@@ -256,6 +262,21 @@ struct Workout: Codable, Identifiable, Equatable {
     var migrationNote: String? = nil
     /// The strength planner's decision factors for a session it generated (Why? per exercise).
     var rationale: SessionRationale? = nil
+    /// Coach remediation: the ride as generated before a safety cap (health check / return after a break) changed it, so
+    /// the cap can be lifted again when it no longer applies (nil = not capped).
+    var safetyOriginal: SafetyOriginal? = nil
+    /// Review P3-01: a change the rider made by hand. The session is theirs from now on: a safety original captured
+    /// before the edit is dropped (it would otherwise be restored over the edit, uncapped). A session paused by the health
+    /// check (rest + original) keeps its original, which is what comes back.
+    /// Review P4-01: whether it was a pause is judged on the session as it was BEFORE the edit (`before`); an edit that turns
+    /// a capped ride into Rest is the rider's own rest and drops the original. Callers that change the session in place
+    /// (same kind) may omit `before`.
+    mutating func markRiderEdited(before: Workout? = nil) {
+        edited = true
+        let b = before ?? self
+        let wasHealthPause = b.kind == .rest && b.safetyOriginal != nil
+        if !(wasHealthPause && kind == .rest) { safetyOriginal = nil }
+    }
 
     init(id: UUID = UUID(), date: Date, kind: WorkoutKind, minutes: Int, done: Bool = false, skipped: Bool = false, note: String = "", edited: Bool = false, strengthFocus: StrengthFocus? = nil, sequence: Int = 0, fixed: Bool = false, templateId: UUID? = nil) {
         self.id = id; self.date = date; self.kind = kind; self.minutes = minutes; self.done = done; self.skipped = skipped; self.note = note; self.edited = edited
@@ -286,6 +307,7 @@ struct Workout: Codable, Identifiable, Equatable {
         manualMinutes = try? c.decodeIfPresent(Int.self, forKey: .manualMinutes)
         migrationNote = try? c.decodeIfPresent(String.self, forKey: .migrationNote)
         rationale = try? c.decodeIfPresent(SessionRationale.self, forKey: .rationale)
+        safetyOriginal = try? c.decodeIfPresent(SafetyOriginal.self, forKey: .safetyOriginal)
     }
     /// "Strength · Lower body" when a region is planned.
     var displayTitle: String {
@@ -721,7 +743,7 @@ final class Store: ObservableObject {
         else if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
         loading = false
         purgeTrash()
-        if generatePlan { ensurePlan() }
+        if generatePlan { ensurePlan(); refreshRideSafety() }
         // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalised planner (never edited ones)
         if migrated { refreshGeneratedSessions(); persist() }
         if !FileManager.default.fileExists(atPath: dir.appendingPathComponent("store.json").path) { persist() }
@@ -784,7 +806,7 @@ final class Store: ObservableObject {
         var next = plan, added = false
         for k in 0..<2 {
             let m = cal.date(byAdding: .day, value: 7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
-            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a)); added = true }
+            if !next.contains(where: { $0.date >= m && $0.date < e }) { next += applyWeekdayRoutines(PlanEngine.week(starting: m, profile: profile, availability: a, returning: cyclingReturnPhase(now: now), trainingWeeks: BlockClock.weeks(before: m, activity: activityDays, plannedMondays: plannedMondays.union(next.filter { $0.kind.isRide || $0.kind == .strength }.map { TrainingLedger.monday(of: $0.date) }), now: now))); added = true }
         }
         if added { plan = next.sorted { $0.date < $1.date } }
     }
@@ -814,9 +836,9 @@ final class Store: ObservableObject {
     /// Planned entries for a session: the session's own (edited / accepted insight), else the template prefilled from
     /// the last completed use of that template.
     func plannedEntries(for w: Workout) -> [ExerciseEntry] {
-        if let e = w.plannedEntries, !e.isEmpty { return e }
+        if let e = w.plannedEntries, !e.isEmpty { return w.generatedEntries ? e : returnAdjusted(e, for: w) }
         guard let t = routine(for: w) else { return [] }
-        return t.prefilled(from: lastSession(template: t))
+        return returnAdjusted(t.prefilled(from: lastSession(template: t)), for: w)
     }
     /// Assigns a routine to one session. `nil` removes the assignment (the template is untouched). Returns the budget
     /// warning text when the routine's estimated duration would push the week over the lifting budget (assignment still
@@ -948,7 +970,7 @@ final class Store: ObservableObject {
         let monday = cal.date(byAdding: .day, value: -wd, to: d0)!
         let sunday = cal.date(byAdding: .day, value: 7, to: monday)!
         let today = cal.startOfDay(for: Date())
-        let fresh = applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability))
+        let fresh = applyWeekdayRoutines(PlanEngine.week(starting: monday, profile: profile, availability: effectiveAvailability, returning: cyclingReturnPhase(), trainingWeeks: consecutiveTrainingWeeks(before: monday)))
         var next = plan.filter { !($0.date >= monday && $0.date < sunday) }
         let old = plan.filter { $0.date >= monday && $0.date < sunday }
         for day in 0..<7 {
@@ -979,14 +1001,14 @@ final class Store: ObservableObject {
     }
     func update(_ w: Workout) { if let i = plan.firstIndex(where: { $0.id == w.id }) { plan[i] = w } }
     /// A change the rider made by hand: saved and flagged so regeneration asks first.
-    func edit(_ w: Workout) { var x = w; x.edited = true; update(x) }
+    func edit(_ w: Workout) { var x = w; x.markRiderEdited(before: plan.first(where: { $0.id == w.id })); update(x) }
     /// Removes a planned session (soft: kept in `trash` with Undo; logs that completed it are kept as extra sessions).
     func remove(_ w: Workout) { deleteWorkout(w) }
-    func add(_ w: Workout) { var x = w; x.edited = true; plan.append(x); plan.sort { $0.date < $1.date } }
+    func add(_ w: Workout) { var x = w; x.markRiderEdited(); plan.append(x); plan.sort { $0.date < $1.date } }
     func swapDays(_ a: Workout, _ b: Workout) {
         guard let i = plan.firstIndex(where: { $0.id == a.id }), let j = plan.firstIndex(where: { $0.id == b.id }) else { return }
         let da = plan[i].date; plan[i].date = plan[j].date; plan[j].date = da
-        plan[i].edited = true; plan[j].edited = true
+        plan[i].markRiderEdited(); plan[j].markRiderEdited()
     }
 
     /// Adds a finished ride. Demo rides never enter history; a board ride already imported (same board ride id) is

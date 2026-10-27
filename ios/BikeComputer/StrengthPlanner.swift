@@ -240,6 +240,8 @@ struct PlannerContext {
     var rides: [RideRecord] = []
     var plan: [Workout] = []
     var painAreas: [PainArea] = []
+    /// Non-specific discomfort: progression held in these areas, nothing left out.
+    var discomfortAreas: [PainArea] = []
     var fatigue = false
     /// Shared hold (audit G-03): when the adaptive coach says "nothing is increased" (≥ 2 missed sessions in the last
     /// 7 days), the planner holds every load, rep and hold time too. The text completes "Held — …".
@@ -247,6 +249,10 @@ struct PlannerContext {
     var units: AppSettings.Units = .metric
     var now = Date()
     var calendar: Calendar = .current
+    /// Coach remediation M-02: the lifting return phase (from logged dates; nil = no recent break).
+    var returning: ReturnPhase? = nil
+    /// Coach remediation M-01: what may be prescribed (health check).
+    var readiness: CoachReadiness { CoachReadiness(profile: profile, now: now) }
 
     var experience: StrengthPrefs.Experience {
         if let e = prefs.experience { return e }
@@ -349,7 +355,23 @@ enum StrengthPlanner {
         }
         if let h = spec.hint, m.primary.contains(where: { $0.contains(h) || h.contains($0) }) { sc += 3 }
         if ctx.prefs.reviewFlags.contains(e.id) { sc -= 8 }
+        sc += preferenceBonus(e, m, spec: spec, ctx: ctx).bonus
         return sc
+    }
+
+    /// Audit G-19: explicit, explained preferences instead of alphabetical ties. Coaching heuristics:
+    /// - cycling-focused riders: a Romanian deadlift over a conventional deadlift as the hinge (similar hamstring and
+    ///   glute work with less fatigue for the legs and back that rides need);
+    /// - beginners: a goblet squat over barbell / machine squats (self-limiting load, easy to learn).
+    static func preferenceBonus(_ e: Exercise, _ m: ExerciseMeta, spec: SlotSpec, ctx: PlannerContext) -> (bonus: Double, reason: String?) {
+        let n = e.name.lowercased()
+        if m.slot == .hinge, ctx.goal == .enduranceSupport || ctx.priority == .cycling, n.contains("romanian") {
+            return (1.5, "Chosen over a conventional deadlift: similar hamstring and glute work with less fatigue for the legs you ride on.")
+        }
+        if m.slot == .squat, ctx.experience == .beginner, n.contains("goblet") {
+            return (1.5, "Chosen as a first squat: the weight held in front keeps you upright and is easy to learn.")
+        }
+        return (0, nil)
     }
 
     /// The best doable exercise for a slot (deterministic: score, then name). Honours "always prefer".
@@ -423,6 +445,10 @@ enum StrengthPlanner {
         var before: String? = nil
         if let p = ctx.plan.first(where: { isKeyRide($0) && cal.isDate($0.date, inSameDayAs: prev) }) { before = "\(p.kind.title.lowercased()) planned the day before (\(p.date.shortDay))" }
         if before == nil, let r = ctx.rides.first(where: { !$0.demo && cal.isDate($0.start, inSameDayAs: prev) && ($0.durationS >= 5400 || hardShare($0) >= 0.4) }) { before = "a \(Fmt.duration(seconds: r.durationS)) ride the day before" }
+        // audit G-13: a key ride EARLIER the same day counts like one the day before (≈ 6 h apart is the usual advice
+        // for same-day concurrent sessions; Robineau et al. 2016, JSCR 30(3):672–683)
+        if before == nil, let e = ctx.plan.first(where: { isKeyRide($0) && cal.isDate($0.date, inSameDayAs: day) && $0.sequence < w.sequence }) { before = "your \(e.kind.title.lowercased()) earlier today (leave about 6 hours between them if you can)" }
+        if before == nil, let r = ctx.rides.first(where: { !$0.demo && cal.isDate($0.start, inSameDayAs: day) && $0.start < w.date && ($0.durationS >= 5400 || hardShare($0) >= 0.4) }) { before = "a \(Fmt.duration(seconds: r.durationS)) ride earlier today" }
         // weekly cycling load
         let monday = TrainingLedger.monday(of: w.date, calendar: cal)
         let end = cal.date(byAdding: .day, value: 7, to: monday)!
@@ -439,14 +465,16 @@ enum StrengthPlanner {
         if hardCount >= 2 { high = true; why = "\(hardCount) hard rides are planned this week" }
         else if avg > 0, plannedMin * 100 > avg * 130 { high = true; why = "this week's planned riding (\(Fmt.duration(minutes: plannedMin))) is well above your recent average (\(Fmt.duration(minutes: avg)))" }
         // deload: every 4th consecutive training week, or fatigue signals from check-ins
-        var streak = 0
-        for k in 1...12 {
-            let m = cal.date(byAdding: .day, value: -7 * k, to: monday)!, e = cal.date(byAdding: .day, value: 7, to: m)!
-            if ctx.logs.contains(where: { $0.isDetailed && $0.date >= m && $0.date < e }) { streak += 1 } else { break }
-        }
+        // F-09: the same block clock as the cycling easy week (rides + lifts, quick logs included)
+        let activity = Set((ctx.logs.map { $0.date } + ctx.rides.filter { !$0.demo }.map { $0.start } + ctx.plan.filter { $0.completion == .marked }.map { $0.date }).map { cal.startOfDay(for: $0) })
+        let plannedMondays = Set(ctx.plan.filter { $0.kind.isRide || $0.kind == .strength }.map { TrainingLedger.monday(of: $0.date, calendar: cal) })
+        let streak = BlockClock.weeks(before: monday, activity: activity, plannedMondays: plannedMondays, now: ctx.now, calendar: cal)
         var deload = false, dWhy: String? = nil
         if ctx.fatigue { deload = true; dWhy = "your recent check-ins show fatigue" }
-        else if streak >= 3 && streak % 4 == 3 { deload = true; dWhy = "this is week \(streak + 1) of consecutive training — a lighter week lets the work sink in" }
+        else {
+            let every = ctx.profile.recovery.deloadEvery
+            if streak >= every - 1 && streak % every == every - 1 { deload = true; dWhy = "this is week \(streak + 1) of consecutive training — a lighter week lets the work sink in\(every < 4 ? " (every \(every)rd week because \(ctx.profile.recovery.reason ?? "of your recovery"))" : "")" }
+        }
         // which sessions of the week train which region, and this session's index among its type
         let lifts = ctx.plan.filter { $0.kind == .strength && !$0.skipped && $0.date >= monday && $0.date < end }.sorted { $0.date < $1.date }
         var hit: [String: Int] = [:]
@@ -487,6 +515,8 @@ enum StrengthPlanner {
         if ctx.goal == .hypertrophy { base *= 1.1 }
         if lower && week.highCyclingLoad { base *= 0.75 }
         if week.deload { base *= 0.6 }
+        // M-06: age / stated recovery capacity
+        base *= ctx.profile.recovery.volumeFactor
         return base
     }
 
@@ -517,36 +547,73 @@ enum StrengthPlanner {
         // a main lift always gets at least 3 working sets before deload / interference reductions
         for i in picked.indices where picked[i].0.role == .main { sets[i] = min(maxSets, max(3, sets[i])) }
         // interference: lower body light before a key ride / after a long or hard one
-        let legsKept = week.hardRideNext != nil || week.hardRideSameDayAfter != nil || week.hardRideBefore != nil
+        let nearKeyRide = week.hardRideNext != nil || week.hardRideSameDayAfter != nil || week.hardRideBefore != nil
+        // audit G-14: strength priority keeps the leg work as planned; the ride is the one to keep easy
+        let strengthFirst = ctx.priority == .strength
+        let legsKept = nearKeyRide && !strengthFirst
         var interferenceText: String? = nil
         if let n = week.hardRideNext { interferenceText = "\(n.kind.title) on \(n.date.shortDay) is a key ride: lower-body work today stays light (one set fewer, 3+ reps in reserve) so your legs are fresh for it." }
         else if let s = week.hardRideSameDayAfter { interferenceText = "Your \(s.kind.title.lowercased()) is later today: lift first only if you must; lower-body work stays light (one set fewer, 3+ reps in reserve)." }
         else if let b = week.hardRideBefore { interferenceText = "After \(b): lower-body work stays light (one set fewer, 3+ reps in reserve) while your legs recover." }
+        if strengthFirst, nearKeyRide {
+            // independent review F-20: no advice that contradicts the plan — a hard ride next to the leg session is one the
+            // rider fixed (the week builder never puts one there for strength priority), so suggest moving it instead
+            let hardOne = [week.hardRideNext, week.hardRideSameDayAfter].compactMap { $0 }.first { $0.kind.zone >= 3 }
+            if let h = hardOne { interferenceText = "Strength is your priority, so the leg work stays as planned. Your \(h.kind.title.lowercased()) on \(h.date.shortDay) is next to it — if your legs feel heavy, move that ride by a day." }
+            else {
+                let which = week.hardRideNext.map { "\($0.kind.title.lowercased()) on \($0.date.shortDay)" } ?? week.hardRideSameDayAfter.map { "\($0.kind.title.lowercased()) later today" } ?? week.hardRideBefore ?? "the ride next to it"
+                interferenceText = "Strength is your priority, so the leg work stays as planned. The \(which) is a steady ride; keep it conversational."
+            }
+        }
+        // independent review F-23: cycling-focused riders still get one heavy lower-body dose a week (heavy strength work
+        // helps cycling economy and performance: Rønnestad & Mujika 2014, Scand J Med Sci Sports 24(4):603–612) — when
+        // every lower session of the week sits next to a key ride, the first one keeps its main lifts heavy
+        var protectHeavyLegs = false
+        if legsKept, ctx.priority == .cycling || goal == .enduranceSupport {
+            let cal = ctx.calendar
+            let monday = TrainingLedger.monday(of: w.date, calendar: cal), end = cal.date(byAdding: .day, value: 7, to: monday)!
+            let lowerLifts = ctx.plan.filter { $0.kind == .strength && !$0.skipped && $0.date >= monday && $0.date < end && ($0.strengthFocus ?? .fullBody).loadsLegs }.sorted { $0.date < $1.date }
+            let free = lowerLifts.contains { l in let c = weekContext(for: l, ctx: ctx); return c.hardRideNext == nil && c.hardRideSameDayAfter == nil && c.hardRideBefore == nil }
+            if !free, lowerLifts.first?.id == w.id || lowerLifts.isEmpty { protectHeavyLegs = true }
+        }
         // dose, load and explanation per exercise
         var entries: [ExerciseEntry] = []
         var rats: [ExerciseRationale] = []
         for (i, (spec, e)) in picked.enumerated() {
             let m = ExerciseLibrary.meta(e)
             var d = dose(role: spec.role, goal: goal, experience: exp)
+            // F-02: no heavy low-rep work until the health check allows vigorous training
+            if let lo = ctx.readiness.minStrengthReps, d.reps.lowerBound < lo { d.reps = lo...max(lo + 4, d.reps.upperBound) }
             // bodyweight-only with the rider's equipment: higher reps (a load cannot be added)
             if bodyweightOnly(e, ctx: ctx), !isHold(e) { d.reps = max(10, d.reps.lowerBound)...max(15, d.reps.upperBound) }
             var n = sets[i]
             var cyclingNote: String? = nil
-            if m.slot.isLower && legsKept { n = max(2, n - 1); d.rpe = min(d.rpe, 6); cyclingNote = interferenceText }
+            if m.slot.isLower && legsKept && protectHeavyLegs && spec.role == .main {
+                n = max(3, n); d.rpe = min(d.rpe, 7)
+                cyclingNote = "Every leg session this week sits next to a key ride, so this one keeps its main lift heavy (\(n) sets, RPE 7) — once a week is enough to keep the strength that helps your riding; the other leg work stays light."
+            }
+            else if m.slot.isLower && legsKept { n = max(2, n - 1); d.rpe = min(d.rpe, 6); cyclingNote = interferenceText }
+            else if m.slot.isLower && strengthFirst && nearKeyRide { cyclingNote = interferenceText }      // G-14: flagged, not lightened
             else if m.slot.isLower && week.highCyclingLoad { cyclingNote = "Lower-body volume is reduced this week because \(week.highLoadReason ?? "your cycling load is high")." }
             if week.deload { n = max(2, n - 1); d.rpe = min(d.rpe, 6) }
-            let painBlocked = ctx.painAreas.contains { $0.patterns.contains(m.slot.family) }
+            else if let r = ctx.returning, r.active { n = max(2, n - 1); d.rpe = min(d.rpe, 7) }
+            d.rpe = min(d.rpe, ctx.readiness.maxStrengthRPE)
+            let painBlocked = (ctx.painAreas + ctx.discomfortAreas).contains { $0.patterns.contains(m.slot.family) }
             let load = prescribeLoad(e, meta: m, reps: d.reps, sets: n, painBlocked: painBlocked || week.deload, ctx: ctx)
             var entry = ExerciseEntry(exercise: e, sets: (0..<n).map { _ in SetEntry(reps: load.reps, weightKg: load.weight, bodyweight: load.bodyweight, unilateral: e.unilateral) })
             if spec.slot == .core, isHold(e) { entry.notes = "Hold \(load.reps) s per set" }
+            let rest = RestPrescription.seconds(role: spec.role, goal: goal, reduced: ctx.profile.recovery.reduced)
+            entry.restSeconds = rest
             entries.append(entry)
             let repsText = isHold(e) ? "\(n) × \(load.reps) s holds" : "\(n) × \(d.reps.lowerBound)–\(d.reps.upperBound)\(e.unilateral ? " per side" : "")"
             var doseText = "\(repsText) at about RPE \(d.rpe) (\(10 - d.rpe) reps in reserve). As your \(spec.role.rawValue) for \(m.slot.title), it gets \(n) set\(n == 1 ? "" : "s") — \(setsReason(region(m.slot), ctx: ctx, week: week))"
+            doseText += " Rest about \(RestPrescription.text(rest)) between sets\(spec.role == .main || spec.role == .secondary ? " so the next set keeps its quality" : "")."
             if week.deload { doseText += " Deload: \(week.deloadReason ?? "lighter week")." }
             rats.append(ExerciseRationale(exerciseId: e.id, role: spec.role.rawValue, slot: m.slot.title, dose: doseText, load: load.why, cycling: cyclingNote, progressed: load.progressed, targetRPE: d.rpe))
         }
         // time fit: drop the least important exercises, then sets, until the session fits its minutes
-        func estimate() -> Double { 6 + zip(entries, rats).reduce(0.0) { $0 + Double($1.0.sets.count) * ($1.1.role == Role.main.rawValue ? 3.0 : $1.1.role == Role.secondary.rawValue ? 2.5 : 2.0) } }
+        // minutes per set = about 45 s of work + the prescribed rest (M-03)
+        func estimate() -> Double { 6 + entries.reduce(0.0) { $0 + Double($1.sets.count) * (0.75 + Double($1.restSeconds ?? 90) / 60) } }
         // keep movement coverage: first take sets off (least important exercise first, never below 2; main lifts keep
         // 3), only then leave whole exercises out from the end
         var trimmed: [String] = []
@@ -586,10 +653,20 @@ enum StrengthPlanner {
         if !trimmed.isEmpty { notes.append("To fit \(Fmt.duration(minutes: w.minutes)), these were left out: \(trimmed.joined(separator: ", ")).") }
         if !ctx.equipment.isSet { notes.append("Your equipment is not set, so exercises that need only dumbbells or bodyweight are preferred. Set it in Profile › Training profile › Equipment.") }
         if let h = ctx.progressionHold { notes.append("Loads and reps are held: \(h).") }
+        if let r = ctx.returning, r.active { notes.append("Back after \(r.weeksText) off: one set fewer per exercise, efforts at RPE 7 or less, and loads restart below your last logged ones for your first \(ReturnPhase.phaseSessions) sessions.") }
+        if let r = ctx.profile.recovery.reason, ctx.profile.recovery.volumeFactor != 1 { notes.append("Weekly volume is \(ctx.profile.recovery.volumeFactor < 1 ? "lower" : "a little higher") (×\(String(format: "%.1f", ctx.profile.recovery.volumeFactor))) because \(r)\(ctx.profile.recovery.reduced ? ", with longer rests and a lighter week every \(ctx.profile.recovery.deloadEvery)rd week" : "").") }
+        if let r = ctx.readiness.restriction { notes.append("Efforts are capped at RPE \(ctx.readiness.maxStrengthRPE) because \(r).") }
         if !ctx.painAreas.isEmpty { notes.append("You reported pain (\(ctx.painAreas.map { $0.title.lowercased() }.joined(separator: ", "))): exercises that load that area this way are left out and not progressed.") }
         if w.fixed { notes.append("Fixed day: the day and session type are yours; only the exercises were filled in.") }
         let r = SessionRationale(generatedAt: ctx.now, goal: goal.title, notes: notes, exercises: rats, deload: week.deload)
         return Built(entries: entries, rationale: r)
+    }
+
+    /// F-11: a barbell-only exercise is never prescribed below the empty bar (20 kg / 45 lb); below it, reps come down instead.
+    static func barFloor(_ e: Exercise, ctx: PlannerContext) -> Double? {
+        let eq = Set(e.equipment.map { $0.lowercased() })
+        guard eq.contains("barbell"), eq.subtracting(["barbell", "bench", "rack", "plates", "bodyweight"]).isEmpty else { return nil }
+        return ctx.units == .imperial ? 20.41 : 20
     }
 
     static func bodyweightOnly(_ e: Exercise, ctx: PlannerContext) -> Bool {
@@ -621,7 +698,8 @@ enum StrengthPlanner {
         let owned = Set(ctx.equipment.owned.map(EquipmentProfile.normalised))
         let loadable = !loadOptions.isEmpty && (!ctx.equipment.isSet || !loadOptions.isDisjoint(with: owned))
         let bw = !loadable && req.anyOf.isEmpty
-        let holdWhy: String? = painBlocked ? "Held — no progression while pain is reported or during a deload." : ctx.progressionHold.map { "Held — \($0)." }
+        let readinessHold: String? = ctx.readiness.vigorousAllowed ? nil : "Held — no load increases until the health check allows harder training."
+        let holdWhy: String? = painBlocked ? "Held — no progression while pain is reported or during a deload." : (ctx.progressionHold.map { "Held — \($0)." } ?? readinessHold)
         let hist = history(e.id, ctx: ctx)
         func effort(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Int? { x.entry.doneSets.compactMap { $0.rpe }.max() ?? x.session.rpe ?? x.session.checkIn?.effort }
         if isHold(e) {
@@ -639,7 +717,7 @@ enum StrengthPlanner {
         let df = DateFormatter(); df.dateFormat = "d MMM"
         guard let last = hist.first else {
             if bw { return Load(weight: nil, reps: range.lowerBound, bodyweight: true, progressed: false, why: "Bodyweight. Aim for \(range.lowerBound)–\(range.upperBound) controlled reps; when every set reaches \(range.upperBound), the next session adds reps or a harder variation.") }
-            return Load(weight: nil, reps: range.lowerBound, bodyweight: false, progressed: false, why: "New exercise — find your working weight: start light and add load set by set until \(range.lowerBound) reps feel like you could do 2–3 more. No weight is copied from another exercise, even a similar one.")
+            return Load(weight: nil, reps: range.lowerBound, bodyweight: false, progressed: false, why: StartingLoad.guidance(e, reps: range, beginner: ctx.experience == .beginner))
         }
         func topWeight(_ x: (session: StrengthSession, entry: ExerciseEntry)) -> Double? { x.entry.doneSets.compactMap { $0.bodyweight ? nil : $0.weightKg }.max() }
         let done = last.entry.doneSets
@@ -650,6 +728,44 @@ enum StrengthPlanner {
         let lastText = "Last logged \(when): \(done.count) × \(reps.map(String.init).joined(separator: "/"))" + (top.map { " @ \(WeightFmt.text($0, ctx.units))" } ?? (done.first?.bodyweight == true ? " bodyweight" : ""))
         let rpeText = rpe.map { " at RPE \($0)" } ?? ""
         let minReps = reps.min() ?? range.lowerBound
+        // M-02: this exercise was last logged three or more weeks ago → restart below that load, no progression
+        let gapDays = ctx.calendar.dateComponents([.day], from: ctx.calendar.startOfDay(for: last.session.date), to: ctx.calendar.startOfDay(for: ctx.now)).day ?? 0
+        if gapDays >= ReturnPhase.breakThresholdDays {
+            let phase = ReturnPhase(breakDays: gapDays, sessionsSince: 0, ongoing: true)
+            if let w = top {
+                let dumbbellR = e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell")
+                let stepR = WeightFmt.step(dumbbell: dumbbellR, ctx.units)
+                let target = w * phase.loadFactor
+                let floorKg = barFloor(e, ctx: ctx)
+                var next = max(floorKg ?? stepR, min(w - stepR, (target / stepR).rounded(.down) * stepR))
+                // review P3-03: when more reps per set are planned now than were last done (e.g. >= 8 until the health
+                // check allows heavy work), the break restart must not be heavier than the N-02 rep-floor load (about the
+                // load for the new reps with 3 in reserve, Epley) — take the lighter of the two
+                if minReps < range.lowerBound {
+                    let e1 = w * (1 + Double(minReps) / 30)
+                    let repFloor = max(floorKg ?? stepR, ((e1 / (1 + Double(range.lowerBound + 3) / 30)) / stepR).rounded(.down) * stepR)
+                    next = min(next, repFloor)
+                }
+                if next >= w {
+                    return Load(weight: w, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText) — \(phase.weeksText) ago. The empty bar is the lightest load, so the weight stays and the reps restart at \(range.lowerBound); it builds back up from your new logs.")
+                }
+                let pct = Int(((1 - next / w) * 100).rounded())
+                return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText) — \(phase.weeksText) ago. After a break strength and work capacity drop, so the weight restarts about \(pct) % lower (\(WeightFmt.text(next, ctx.units))) at \(range.lowerBound) reps; it builds back up from your new logs.")
+            }
+            let r0 = max(range.lowerBound, min(minReps, range.upperBound)) - (minReps > range.lowerBound ? 1 : 0)
+            return Load(weight: nil, reps: max(range.lowerBound, r0), bodyweight: true, progressed: false, why: "\(lastText) — \(phase.weeksText) ago. After a break, reps restart at \(max(range.lowerBound, r0)) and build back up from your new logs.")
+        }
+        // review N-02: when the rep range is now higher than what was last done (e.g. >= 8 reps until the health check
+        // allows heavy work), the weight comes down so the set is not harder: about the load for the new reps with 3
+        // in reserve (estimated from the logged set, Epley; rounded down to the smallest step, never below the bar)
+        if let w0 = top, minReps < range.lowerBound, !ctx.readiness.vigorousAllowed || holdWhy != nil {
+            let dumbbellN = e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell")
+            let stepN = WeightFmt.step(dumbbell: dumbbellN, ctx.units)
+            let e1 = w0 * (1 + Double(minReps) / 30)
+            let target = e1 / (1 + Double(range.lowerBound + 3) / 30)
+            let next = max(barFloor(e, ctx: ctx) ?? stepN, min(w0, (target / stepN).rounded(.down) * stepN))
+            return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText). More reps per set are planned now (\(range.lowerBound)+), so the weight comes down to about \(WeightFmt.text(next, ctx.units)) — a set that leaves about 3 reps in reserve. \(holdWhy ?? "")")
+        }
         if let hw = holdWhy {
             return Load(weight: top, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: top == nil && bw, progressed: false, why: "\(lastText)\(rpeText). \(hw)")
         }
@@ -688,8 +804,8 @@ enum StrengthPlanner {
         }
         if last2.count == 2, last2.allSatisfy(failed) {
             let down = max(step, ((w * 0.9) / step).rounded(.down) * step)
-            let next = min(w - step, down)
-            if next > 0 {
+            let next = max(barFloor(e, ctx: ctx) ?? 0, min(w - step, down))
+            if next > 0, next < w {
                 return Load(weight: (next * 100).rounded() / 100, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): two sessions in a row short of \(range.lowerBound) reps at a very hard effort. The weight comes down to \(WeightFmt.text(next, ctx.units)) (about 10 % less) so every set reaches \(range.lowerBound) clean reps; it builds back up from there.")
             }
         }
@@ -710,6 +826,7 @@ enum StrengthPlanner {
         let muscles = m.primary.joined(separator: ", ") + (m.secondary.isEmpty ? "" : " (also \(m.secondary.joined(separator: ", ")))")
         out.append(WhyLine(title: "Muscles and movement", text: "\(m.slot.title.capitalizingFirst) pattern\(muscles.isEmpty ? "" : " — \(muscles)")\(e.unilateral ? ", one side at a time" : "")."))
         out.append(WhyLine(title: "For your goal", text: goalLine(m, goal: ctx.goal)))
+        if let r = preferenceBonus(e, m, spec: SlotSpec(slot: m.slot, role: .main), ctx: ctx).reason { out.append(WhyLine(title: "Why this exercise", text: r)) }
         let week = weekContext(for: w, ctx: ctx)
         out.append(WhyLine(title: "Place in your week", text: placeLine(w, week: week, ctx: ctx)))
         if let r = w.rationale?.exercise(entry.exerciseId) {
@@ -803,16 +920,25 @@ extension String { var capitalizingFirst: String { prefix(1).uppercased() + drop
 extension Store {
     func plannerContext(now: Date = Date()) -> PlannerContext {
         let analysis = TrainingAnalyzer.analyze(adaptationInput(now: now))
-        let hold: String? = analysis.adherenceBlock ? "\(analysis.missed.count) planned sessions were missed in the last 7 days, so nothing is increased until you are back on track" : nil
+        var hold: String? = analysis.adherenceBlock ? "\(analysis.missed.count) planned sessions were missed in the last 7 days, so nothing is increased until you are back on track" : nil
+        // harness P25 (s8): the adaptive coach answers ride fatigue with "no progression until the signals ease" (it
+        // never progresses a routine while any fatigue flag is set); coach-built sessions follow the same shared hold, so
+        // a rider whose rides are declining is not given heavier squats and deadlifts that week. Lifting or combined
+        // fatigue already turns the session into a deload (ctx.fatigue), which holds progression on its own.
+        if hold == nil, analysis.cyclingFatigue, !(analysis.strengthFatigue || analysis.combinedFatigue) {
+            hold = "your last rides show fatigue, so nothing is increased until the signals ease"
+        }
         return PlannerContext(profile: profile, prefs: strengthPrefs, equipment: equipment, catalogue: allExercises, templates: templates,
                               logs: strength.filter { !$0.awaitingReview && !$0.inProgress }, rides: rides, plan: plan,
-                              painAreas: analysis.painAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now)
+                              painAreas: analysis.painAreas, discomfortAreas: analysis.discomfortAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now,
+                              returning: liftingReturnPhase(now: now))
     }
 
     /// Coach-built future sessions (never ones the rider edited, completed, skipped or started) are rebuilt from the
     /// current preferences, equipment and logged performance. A session the adaptive coach adjusted keeps its
     /// adjustment on top of the new base (it is recomputed on the next check-in).
     func refreshGeneratedSessions(now: Date = Date()) {
+        refreshRideSafety(now: now)
         // audit G-04: "Coach decides" (no split chosen) gets real exercises too — the week builder already gives each
         // lift a focus (lower / upper / full body), so the planner fills it like any other coach-built session
         guard profile.trainingMode.includesLifting else { return }
@@ -857,7 +983,7 @@ extension Store {
         let ctx = plannerContext(now: now)
         entries[k] = StrengthPlanner.swappedEntry(old: old, to: new, ctx: ctx)
         plan[i].plannedEntries = entries
-        plan[i].edited = true                      // the rider's choice for this session; the coach does not override it
+        plan[i].markRiderEdited()                  // the rider's choice for this session; the coach does not override it
         plan[i].generatedEntries = false
         var p = strengthPrefs
         let msg: String

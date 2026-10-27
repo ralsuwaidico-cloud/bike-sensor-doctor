@@ -19,6 +19,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     DiagCrashBanner()
+                    HealthCheckHomeCard()
                     if store.profile.trainingMode == .cycling { coach } else { HybridCoachCard(tab: $tab, showWorkout: $showWorkout, showAlternatives: $showAlternatives, showStrengthLog: $showStrengthLog) }
                     AdjustmentHomeLine()
                     if store.ftpSuggestion != nil { Card(accent: true) { FTPSuggestionCard() } }
@@ -83,7 +84,7 @@ struct HomeView: View {
                 if let t = store.today {
                     Section("Instead of \(t.kind.title)") {
                         ForEach(Array(Coach.alternatives(for: t).enumerated()), id: \.offset) { _, a in
-                            Button { var w = t; w.kind = a.kind; w.minutes = a.minutes; store.update(w); showAlternatives = false } label: {
+                            Button { var w = t; w.kind = a.kind; w.minutes = a.minutes; store.edit(w); showAlternatives = false } label: {   // P4-02: the rider's pick is a rider edit
                                 HStack { VStack(alignment: .leading) { Text(a.kind.title).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: a.minutes)) · \(a.kind.subtitle) · \(a.benefit)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); ZonePill(z: a.kind.zone) }
                             }
                         }

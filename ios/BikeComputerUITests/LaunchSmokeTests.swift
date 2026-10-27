@@ -268,7 +268,8 @@ final class LaunchSmokeTests: XCTestCase {
             if quick.waitForExistence(timeout: 5) {
                 let until = Date().addingTimeInterval(4)
                 while !quick.isHittable && Date() < until { usleep(250_000) }
-                if quick.isHittable { quick.tap() }
+                // (run 87: hittable, then "failed to compute hit point" while the menu was still settling — tap by coordinate)
+                if quick.isHittable { quick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
             }
             opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
         }

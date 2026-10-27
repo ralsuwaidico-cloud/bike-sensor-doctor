@@ -8,9 +8,14 @@ import Foundation
 
 enum PainLevel: String, Codable, CaseIterable {
     /// Raw value "none" (named noPain so it never collides with Optional.none).
-    case noPain = "none", soreness, concerning
-    var title: String { switch self { case .noPain: return "None"; case .soreness: return "Normal soreness"; case .concerning: return "Concerning pain" } }
-    var short: String { switch self { case .noPain: return "None"; case .soreness: return "Soreness"; case .concerning: return "Pain" } }
+    /// Coach remediation (owner, 27 Oct): three levels. Soreness = normal post-exercise muscle soreness (no change).
+    /// Discomfort = non-specific discomfort in one area (that area is not progressed until a later session of the same
+    /// activity is rated without it; nothing is left out). Concerning = pain that may indicate injury (the area's loading
+    /// patterns are left out and only the rider can release it — the coach never clears it on its own).
+    case noPain = "none", soreness, discomfort, concerning
+    var title: String { switch self { case .noPain: return "None"; case .soreness: return "Normal soreness"; case .discomfort: return "Unusual discomfort"; case .concerning: return "Concerning pain" } }
+    var short: String { switch self { case .noPain: return "None"; case .soreness: return "Soreness"; case .discomfort: return "Discomfort"; case .concerning: return "Pain" } }
+    var needsArea: Bool { self == .discomfort || self == .concerning }
 }
 
 /// Where a concerning pain was felt — only used to stop progressing that area. Never a diagnosis.
@@ -44,7 +49,7 @@ struct CheckIn: Codable, Equatable {
 
     init(performance: Int, effort: Int, pain: PainLevel = .noPain, painArea: PainArea? = nil, note: String = "", at: Date = Date()) {
         self.performance = min(10, max(1, performance)); self.effort = min(10, max(1, effort))
-        self.pain = pain; self.painArea = pain == .concerning ? (painArea ?? .other) : nil; self.note = note; self.at = at
+        self.pain = pain; self.painArea = pain.needsArea ? (painArea ?? .other) : nil; self.note = note; self.at = at
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -253,5 +258,15 @@ struct AdaptationSummary: Codable, Equatable {
         acuteLoad = try? c.decodeIfPresent(Int.self, forKey: .acuteLoad)
         chronicLoad = try? c.decodeIfPresent(Int.self, forKey: .chronicLoad)
         label = (try? c.decodeIfPresent(String.self, forKey: .label)) ?? AdaptationExplainer.label
+    }
+}
+
+/// Review N-15 / P3-12: short definitions so the rider can classify what they feel (coaching guidance, not a diagnosis).
+func painDefinition(_ p: PainLevel) -> String {
+    switch p {
+    case .noPain: return "Nothing unusual."
+    case .soreness: return "Soreness: a dull ache in the muscles you trained (not in a joint), 1–3 days after training, that eases as you warm up."
+    case .discomfort: return "Discomfort: something feels off in one spot, but it is not sharp, not in a joint and does not change how you move."
+    case .concerning: return "Pain: sharp or stabbing; in or around a joint; with swelling; changes how you move; or joint pain still there the next day."
     }
 }

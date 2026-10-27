@@ -17,7 +17,7 @@ final class QualityReleaseTests: XCTestCase {
         return u
     }
     private func hybridProfile() -> RiderProfile {
-        var p = RiderProfile(); p.name = "Test"; p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
+        var p = RiderProfile.screened(); p.name = "Test"; p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 5; p.liftingHoursPerWeek = 2
         p.cyclingDaysPerWeek = 3; p.liftDaysPerWeek = 3
         return p
     }
@@ -542,9 +542,10 @@ final class QualityReleaseTests: XCTestCase {
                                                       exercises: [ExerciseEntry(exercise: goblet, sets: sets([10, 10, 10], kg: 20))]) }
         let wk = StrengthPlanner.weekContext(for: w, ctx: ctx(plan: [w], logs: logs))
         XCTAssertTrue(wk.deload); XCTAssertTrue(wk.deloadReason?.contains("week 4") == true)
-        // quick logs (no sets) do not count as training weeks for the deload rhythm either
+        // coach remediation F-09: one block clock for both sports — quick logs (and rides) count as training weeks too,
+        // so the strength deload and the cycling easy week fall in the same week
         let quick = (1...3).map { k in StrengthSession(date: cal.date(byAdding: .day, value: -7 * k + 1, to: monday)!.addingTimeInterval(18 * 3600), minutes: 40, focus: .fullBody) }
-        XCTAssertFalse(StrengthPlanner.weekContext(for: w, ctx: ctx(plan: [w], logs: quick)).deload)
+        XCTAssertTrue(StrengthPlanner.weekContext(for: w, ctx: ctx(plan: [w], logs: quick)).deload)
     }
 
     func testSessionsCoverMovementPatternsAndFitTheirMinutes() {

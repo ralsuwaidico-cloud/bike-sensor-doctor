@@ -85,7 +85,7 @@ struct OnboardingView: View {
                 TextField("e.g. 1990", text: $birthText).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
                     .onAppear { if let y = store.profile.birthYear { birthText = "\(y)" } }
                     .onChange(of: birthText) { _, v in let y = Int(v); store.profile.birthYear = (y ?? 0) >= 1900 && (y ?? 0) <= Calendar.current.component(.year, from: Date()) ? y : nil }
-                Text(store.profile.birthYear == nil ? "Not set: max heart rate stays an age-free estimate until you enter it." : "Age \(store.profile.effectiveAge) → estimated max HR \(store.profile.estimatedMaxHR) bpm (estimate)").font(.footnote).foregroundStyle(.secondary)
+                Text(store.profile.birthYear == nil ? "Not set: max heart rate is estimated for age 35 until you enter your birth year, and no age adjustments are made." : "Age \(store.profile.effectiveAge) → estimated max HR \(store.profile.estimatedMaxHR) bpm (estimate)").font(.footnote).foregroundStyle(.secondary)
             }
             Card {
                 HStack { Eyebrow(t: "Weight"); Spacer(); Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented).frame(width: 150) }

@@ -35,10 +35,12 @@ struct CheckInFlow: View {
                 Section {
                     Picker("Pain or unusual discomfort", selection: $pain) { ForEach(PainLevel.allCases, id: \.self) { Text($0.short).tag($0) } }
                         .pickerStyle(.segmented).accessibilityIdentifier("checkInPain")
-                    if pain == .concerning {
+                    if pain.needsArea {
                         Picker("Where", selection: $area) { ForEach(PainArea.allCases, id: \.self) { Text($0.title).tag($0) } }
-                        Text(AdaptationExplainer.painAdvice([area]) ?? "").font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true)
-                    } else if pain == .soreness {
+                        Text(pain == .concerning ? (AdaptationExplainer.painAdvice([area]) ?? "") : AdaptationExplainer.discomfortAdvice([area])).font(.footnote).foregroundStyle(pain == .concerning ? BC.warn : .secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text(painDefinition(pain)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if pain == .soreness {
                         Text("Normal muscle soreness does not change your plan.").font(.footnote).foregroundStyle(.secondary)
                     }
                 } header: { Text("Pain or unusual discomfort") }
@@ -73,7 +75,7 @@ struct CheckInFlow: View {
 
     private func submit() {
         guard !showResult else { return }
-        let c = CheckIn(performance: performance, effort: effort, pain: pain, painArea: pain == .concerning ? area : nil, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
+        let c = CheckIn(performance: performance, effort: effort, pain: pain, painArea: pain.needsArea ? area : nil, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
         switch target {
         case .ride(let id): _ = store.recordCheckIn(c, rideId: id)
         case .strength(let id): _ = store.recordCheckIn(c, strengthId: id)
@@ -89,6 +91,8 @@ struct AdjustmentsView: View {
     var afterCheckIn = false
     @State private var confirmRestore = false
     @State private var openWhy: Set<String> = []
+    /// Review P3-11: "It's fine now" asks once more before releasing a concerning-pain hold.
+    @State private var confirmPainArea: PainArea? = nil
 
     var body: some View {
         let active = store.activeAdaptations
@@ -103,10 +107,10 @@ struct AdjustmentsView: View {
                 }
                 if let s = store.lastAdaptation, let p = s.painAdvice {
                     Label { Text(p).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "cross.case").foregroundStyle(BC.warn) }
-                    // audit G-06: only the rider (or pain-free sessions that load the same area) clears a report
+                    // only the rider clears a concerning-pain report; after a week with two pain-free sessions the coach asks
                     ForEach(store.activePainAreas(), id: \.self) { area in
-                        Button { store.confirmPainGone(area) } label: {
-                            Label("\(area.title): it's fine now", systemImage: "checkmark.circle").frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
+                        Button { confirmPainArea = area } label: {
+                            Label(store.painReviewDue().contains(area) ? "\(area.title): pain-free in your last 2 sessions — it's fine now" : "\(area.title): it's fine now", systemImage: "checkmark.circle").frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
                         }
                         .accessibilityIdentifier("painGone-\(area.rawValue)")
                         .accessibilityHint("Releases the hold on \(area.title.lowercased()) so the coach can progress that area again")
@@ -144,6 +148,19 @@ struct AdjustmentsView: View {
         .accessibilityIdentifier("adjustmentsView")
         .navigationTitle("Coach adjustments").navigationBarTitleDisplayMode(.inline)
         .onChange(of: store.settings.autoAdapt) { _, _ in _ = store.runAdaptation() }
+        .confirmationDialog(confirmPainArea.map { painReleaseTitle($0) } ?? "", isPresented: Binding(get: { confirmPainArea != nil }, set: { if !$0 { confirmPainArea = nil } }), titleVisibility: .visible) {
+            if let area = confirmPainArea {
+                Button(store.painPersistent().contains(area) ? "It was assessed and it no longer hurts" : "Yes, it no longer hurts") { store.confirmPainGone(area); confirmPainArea = nil }
+                    .accessibilityIdentifier("painGoneConfirm")
+                Button("Not yet", role: .cancel) { confirmPainArea = nil }
+            }
+        } message: {
+            if let area = confirmPainArea {
+                Text(store.painPersistent().contains(area)
+                     ? "This pain has lasted or come back. Release it only after a doctor or physiotherapist has assessed it and it no longer hurts in daily life or when you train. The coach then progresses exercises that load this area again."
+                     : "Release it only if it no longer hurts in daily life or when you train. The coach then progresses exercises that load this area again; report it again in a check-in if it comes back.")
+            }
+        }
         .alert("Restore the original plan?", isPresented: $confirmRestore) {
             Button("Restore", role: .destructive) { store.restoreOriginalPlan() }
             Button("Cancel", role: .cancel) {}
@@ -192,6 +209,7 @@ struct AdjustmentsView: View {
             }
         }.padding(.vertical, 4)
     }
+    private func painReleaseTitle(_ a: PainArea) -> String { "Is the \(a.title.lowercased()) pain really gone?" }
     private func icon(_ c: PlanAdjustment.Category) -> String { switch c { case .progression: return "arrow.up.circle.fill"; case .reduction: return "arrow.down.circle.fill"; case .recovery: return "leaf.fill"; case .substitution: return "arrow.left.arrow.right.circle.fill" } }
     private func color(_ c: PlanAdjustment.Category) -> Color { switch c { case .progression: return BC.live; case .reduction: return BC.stale; case .recovery: return BC.accent; case .substitution: return BC.accent } }
 }
@@ -338,3 +356,4 @@ struct SplitSlotRow: View {
         }.padding(.vertical, 2)
     }
 }
+
