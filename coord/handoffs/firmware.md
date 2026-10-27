@@ -180,3 +180,13 @@ coach-mirror core + fixture), 6a2f57c (board logic + UI + sim 27), then the stre
 * Kit 0.7.4-rc4: /home/claude/coord/deliver/fw-v0.7.4/ (rc3 in fw-v0.7.4-rc3-superseded/). App SHA-256
   2530042f9f44e9fa57fa804f640c36c6d2759d143a3438552734b72be3fa11e6 (1,877,632 B). Partition table, bootloader, otadata
   unchanged. README explains the 4 RAM places plainly; TEST D4 rewritten (sync only at connection), F1 fit check, F5.
+
+## Round 7 — 0.7.4-rc5 (Q-iOS-15)
+* Commits b18baa5 (firmware + tests + fixture vector coach_state_no_next), 2591a22 (BLE_CONTRACT v1.4 [skip ci]), kit commit.
+* COACH_STATE `0D next_type = 0xFF` (BC_COACH_NO_NEXT) = no next interval: bc_cm_view leaves has_next false, bc_cm_card
+  never prints NEXT for 0xFF; merge keeps it hidden across keepalives until a real next_type arrives.
+* Tests: host link13 147 checks (all host suites green), blehost PASS (+tsan RESULT PASS, 8 fake-harness reports), sim 339
+  screens / 701 checks 0 failed (29b: designs A/B/C card without NEXT), sim_asan clean. DIRAM free 44,625 B.
+* Kit 0.7.4-rc5: /home/claude/coord/deliver/fw-v0.7.4/ (rc4 in fw-v0.7.4-rc4-superseded/). App SHA-256
+  8ccc4d898b907aebf26b96e58249f4d9d7ef6e74c58977dc2c142ca5a7cedae4 (1,877,632 B). README/TEST: version/hashes only
+  (+ one line saying what rc5 changes). Bootloader / partition table / otadata unchanged. Not run.

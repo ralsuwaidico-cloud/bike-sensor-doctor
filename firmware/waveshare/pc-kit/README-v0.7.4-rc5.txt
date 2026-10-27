@@ -1,6 +1,7 @@
-BikeComputer firmware 0.7.4-rc4 - READ ME FIRST (28 Oct 2026)
+BikeComputer firmware 0.7.4-rc5 - READ ME FIRST (28 Oct 2026)
 ==============================================================
-What it is: the fix for the 0.7.3 start-up crash, fourth release candidate. rc4 = rc3 (QA: GO for installation, with
+What it is: the fix for the 0.7.3 start-up crash, fifth release candidate. rc5 = rc4 with one correction for the next Cyclift
+(no "NEXT: WORKOUT" line when a workout has no next interval). rc4 = rc3 (QA: GO for installation, with
 conditions) plus QA's rc3 corrections:
 - the first ride page (designs A and B) always fits inside the round screen, also for long coach instructions and
   4-digit targets (short words such as "HR HIGH"; anything longer is made smaller or shortened with "..");
@@ -15,7 +16,7 @@ Unchanged from rc3:
   after 2 such starts in a row Bluetooth is switched off until you tap RETRY (Settings > Phone), so there is no loop;
 - leaves more working memory free for the Bluetooth start than 0.7.2/0.7.3 (44.6 KB; 0.7.2 had 37.9 KB);
 - records, step by step, what the Bluetooth start needed and got (memory figures) in the settings area (NVS). The
-  installer also records the very first start of the new firmware on the PC (first-boot-v0.7.4-rc4-*.txt) - that file is
+  installer also records the very first start of the new firmware on the PC (first-boot-v0.7.4-rc5-*.txt) - that file is
   the main evidence for the cause; please send it;
 - shows the REAL storage problem: on your board the file area's directory is damaged ("dir corrupted"), it is not full.
   The firmware never formats, erases or writes into the damaged file area, never deletes anything on a file area whose
@@ -24,8 +25,8 @@ Unchanged from rc3:
   following the workout when the phone drops, rides recorded offline go to Cyclift and are deleted on the board only
   after Cyclift confirmed them, and Cyclift can show the board's storage. With the current Cyclift everything works as
   in rc2/rc3 (the new link is only used when the app asks for it).
-App checksum (SHA-256): 2530042f9f44e9fa57fa804f640c36c6d2759d143a3438552734b72be3fa11e6 (1877632 bytes).
-Nothing here has run on your board yet: it is tested on the PC only (simulator + unit tests) until you do TEST-v0.7.4-rc4.txt.
+App checksum (SHA-256): 8ccc4d898b907aebf26b96e58249f4d9d7ef6e74c58977dc2c142ca5a7cedae4 (1877632 bytes).
+Nothing here has run on your board yet: it is tested on the PC only (simulator + unit tests) until you do TEST-v0.7.4-rc5.txt.
 It is NOT claimed to be fixed until your board shows it.
 
 IMPORTANT ON YOUR BOARD (until the file area is repaired)
@@ -56,16 +57,16 @@ IMPORTANT ON YOUR BOARD (until the file area is repaired)
 
 INSTALL (about 6 minutes)
 1  Board on USB, battery unplugged. Close any other program that uses the board's port.
-2  Double-click INSTALL-v0.7.4-rc4.bat. It checks every file, finds the board, reads a COMPLETE backup (16 MB, ~3 minutes)
+2  Double-click INSTALL-v0.7.4-rc5.bat. It checks every file, finds the board, reads a COMPLETE backup (16 MB, ~3 minutes)
    to backup-before-v074-<date-time>.bin and checks that backup before anything is written. From the backup until the end
    the board is held in download mode (dark screen): the old firmware does not run again.
 3  Type YES. Only the firmware (0x20000) and the start selector (0xf000) are written. Settings, sensor pairings, phone
    pairing and the file area are NOT written or erased. The partition table is NOT changed.
-4  The window then starts the board itself and records its first 90 seconds (first-boot-v0.7.4-rc4-<date-time>.txt),
+4  The window then starts the board itself and records its first 90 seconds (first-boot-v0.7.4-rc5-<date-time>.txt),
    and prints RESULT (BOOTED OK + Bluetooth started / unavailable + whether the Bluetooth start figures were recorded).
    If you type anything other than YES, or the script stops after the backup, unplug and replug the USB cable to start
    the board again (it waits in download mode).
-5  Then TEST-v0.7.4-rc4.txt. Send first-boot-*.txt and install-*.txt to Claude in any case.
+5  Then TEST-v0.7.4-rc5.txt. Send first-boot-*.txt and install-*.txt to Claude in any case.
 
 GOING BACK
 - RESTORE-CHOSEN-BACKUP.bat: puts back the whole board exactly as in a backup you pick (the newest backup-before-v074 =
@@ -76,8 +77,8 @@ GOING BACK
   appear, hold BOOT while plugging the USB cable in. The board's start-up code is never written.
 
 FILES (keep together in your BikeComputer folder; esptool.exe and factory_backup_16MB.bin are already there)
-INSTALL-v0.7.4-rc4.bat/.ps1, fw-v0.7.4-rc4\ (4 .bin + SHA256SUMS.txt), RESTORE-CHOSEN-BACKUP.bat/.ps1,
+INSTALL-v0.7.4-rc5.bat/.ps1, fw-v0.7.4-rc5\ (4 .bin + SHA256SUMS.txt), RESTORE-CHOSEN-BACKUP.bat/.ps1,
 ROLLBACK-TO-v073.bat/.ps1 + fw-v0.7.3\, ROLLBACK-TO-v072.bat/.ps1 + fw-v0.7.2\, READ-BOARD-STATE.bat/.ps1 (read-only
-evidence capture, never restarts the board - only when Claude asks), CAPTURE-CRASH.bat/.ps1, TEST-v0.7.4-rc4.txt,
-this README, KIT-SHA256SUMS.txt. The rc3 files (INSTALL-v0.7.4-rc3, fw-v0.7.4-rc3\) are replaced by these; if you already
-installed rc3, install rc4 over it the same way (the backup step and RESTORE-CHOSEN-BACKUP work the same).
+evidence capture, never restarts the board - only when Claude asks), CAPTURE-CRASH.bat/.ps1, TEST-v0.7.4-rc5.txt,
+this README, KIT-SHA256SUMS.txt. The rc3/rc4 files (INSTALL-v0.7.4-rc3/rc4, fw-v0.7.4-rc3\ / rc4\) are replaced by these; if you already
+installed rc3 or rc4, install rc5 over it the same way (the backup step and RESTORE-CHOSEN-BACKUP work the same).
