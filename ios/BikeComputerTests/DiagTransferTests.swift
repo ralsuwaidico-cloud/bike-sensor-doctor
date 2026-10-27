@@ -576,3 +576,29 @@ final class DiagTransferTests: XCTestCase {
         XCTAssertEqual(DiagStore.folderName(""), "unknown")
     }
 }
+
+// MARK: - Link 1.3 DIAG_AUTO (BLE_CONTRACT.md §8): verify-then-ack, `03 delete = 1` only when the board enabled it
+extension DiagTransferTests {
+    func testAckCarriesDeleteOnlyWithDiagAuto() {
+        fake.add(id: 4, size: 400)
+        start()
+        XCTAssertEqual(sent.filter { $0.first == 0x85 }.count, 1)
+        XCTAssertNil(fields(sent.last { $0.first == 0x85 }!)[0x03], "without DIAG_AUTO: the 1.2.3 ACK exactly (no delete tag)")
+        // a board that enabled DIAG_AUTO: the verified, saved report is ACKed with delete = 1
+        setUp()
+        engine.ackWithDelete = { true }
+        fake.add(id: 5, size: 400)
+        start()
+        assertSaved(5)
+        let ack = fields(sent.last { $0.first == 0x85 }!)
+        XCTAssertEqual(ack[0x03], Data([1])); XCTAssertEqual(UInt32(BCLink.uint(ack[0x02]!)), fake.reports[0].info.crc32)
+        // a corrupted transfer is never ACKed at all, with or without delete
+        setUp()
+        engine.ackWithDelete = { true }
+        fake.add(id: 6, size: 400); fake.corruptPasses[6] = 99
+        start()
+        for _ in 0..<10 { advance(6) }
+        XCTAssertTrue(sent.filter { $0.first == 0x85 }.isEmpty)
+        XCTAssertNil(store.meta(Self.board, 6))
+    }
+}

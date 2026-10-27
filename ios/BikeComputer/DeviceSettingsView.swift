@@ -83,7 +83,10 @@ struct DeviceSettingsView: View {
                 }
             }
             if device.info?.hasWiFi == true { Section { NavigationLink("Wi-Fi setup") { WiFiSetupView() } } }
-            Section { NavigationLink("Profile sync status") { SyncStatusView() } }
+            Section {
+                NavigationLink("Profile sync status") { SyncStatusView() }
+                NavigationLink("Storage") { BoardStorageView() }
+            }
         }
         .navigationTitle("Device settings")
         .onAppear { load() }

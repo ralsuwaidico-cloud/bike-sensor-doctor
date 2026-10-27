@@ -100,6 +100,14 @@ final class DeviceLink: NSObject, ObservableObject {
     /// Called when the link drops, so the report transfer stops cleanly (received bytes stay on disk).
     var onLinkDown: (() -> Void)?
     var onBoardRide: ((BCLink.RideSummary, String) -> Void)?
+    /// Link 1.3 (BikeComputer/Link13): link ready / down, the board's Link 1.3 replies (HELLO_ACK, RIDEQ_*, STORAGE_*,
+    /// COACH_PLAN_ACK, rides_pending), the CRC of each SYNC_RIDE's fields (ride id, crc) and the end of a SYNC session.
+    /// Nothing calls them for a board without cap 0x0800 except onBoardRideSummaryCrc / onSyncEnd (harmless bookkeeping).
+    var onLink13Ready: (() -> Void)?
+    var onLink13Down: (() -> Void)?
+    var onLink13Message: ((Data) -> Void)?
+    var onBoardRideSummaryCrc: ((UInt32, UInt32) -> Void)?
+    var onSyncEnd: (() -> Void)?
     var onEvent: ((BCLink.Event) -> Void)?
     /// Highest board ride id already stored for a given board id — the Store provides it so paging resumes where it left off.
     var highestStoredRideId: ((String) -> Int)?
@@ -410,6 +418,11 @@ final class DeviceLink: NSObject, ObservableObject {
     @discardableResult
     func sendDiag(_ d: Data) -> Bool { guard DiagReportCenter.transferAllowed(info) else { return false }; return writeControl(d) }
 
+    /// Link 1.3 message on Control. Second gate (the first is Link13Session): never to firmware without cap 0x0800, so
+    /// a 0.7.3 board never receives a Link 1.3 byte whatever the caller does.
+    @discardableResult
+    func sendLink13(_ d: Data) -> Bool { guard info?.hasHello == true else { return false }; return writeControl(d) }
+
     private func writeControl(_ d: Data) -> Bool {
         guard let c = controlChr, let p = peripheral, state == .ready else { return false }
         p.writeValue(d, for: c, type: .withResponse)
@@ -496,6 +509,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         inputChr = nil; controlChr = nil; liveChr = nil; syncChr = nil; eventsChr = nil; syncInFlight = false
         wifiScanning = false; wifiStatus = nil; boardSettings = nil
         onLinkDown?()
+        onLink13Down?()
         let wasPairing = stage == .pairing || stage == .authenticating
         if let e = error {
             let d = DeviceLink.describe(e)
@@ -568,14 +582,19 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in guard let self else { return }; if self.boardProfileAt == nil || (self.lastConnectedAt.map { self.boardProfileAt! < $0 } ?? true) { self.profileGet() } }
             } else { setStage(.ready) }
             onReady?()
+            onLink13Ready?()
         case BCLink.liveUUID:
             if let l = BCLink.decodeLive(d) { live = l; liveReceivedAt = Date(); stats.liveMsgs += 1; if firstLiveAt == nil { firstLiveAt = liveReceivedAt; note("First live data from the board") } } else { noteParseError("LIVE", d) }
         case BCLink.controlUUID:
             handleControl(d)
         case BCLink.syncUUID:
-            if let r = BCLink.decodeSyncRide(d) { syncedRides += 1; onBoardRide?(r, boardId) }
+            if let r = BCLink.decodeSyncRide(d) {
+                syncedRides += 1; onBoardRide?(r, boardId)
+                if let crc = BoardRideQueueStore.summaryCrc(ofSyncRide: d) { onBoardRideSummaryCrc?(UInt32(r.id), crc) }
+            }
             else if let e = BCLink.decodeSyncEnd(d) {
                 syncInFlight = false
+                onSyncEnd?()
                 syncStatus = "\(e.total) rides on the board · \(syncedRides) received"
                 if e.more { startSync() }
             } else { noteParseError("SYNC", d) }
@@ -589,6 +608,7 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
                 return
             }
             if BCLink.decodeDiagReady(d) != nil { stats.events += 1; note("Board: diagnostic report ready"); onDiagMessage?(d); return }
+            if let rp = BCLink.decodeRidesPending(d) { stats.events += 1; note("Board: \(rp.unsynced) ride(s) waiting for Cyclift"); onLink13Message?(d); return }
             guard let ev = BCLink.decodeEvent(d) else { noteParseError("EVENT", d); return }
             stats.events += 1
             if let diag = BCLink.linkDiag(from: ev) { linkDiag = diag; linkDiagAt = Date(); note("Board: previous link ended by \(diag.reasonText); \(diag.bonds) phone(s) remembered; profile \(diag.syncText)") }
@@ -619,7 +639,11 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
         case .diagInfo, .diagListEnd, .diagChunk, .diagErr:
             if BCLink.parse(d) != nil { onDiagMessage?(d) } else { noteParseError("DIAG", d) }
         case .event:
-            if BCLink.decodeDiagReady(d) != nil { stats.events += 1; onDiagMessage?(d) } else { stats.rejected += 1 }
+            if BCLink.decodeDiagReady(d) != nil { stats.events += 1; onDiagMessage?(d) }
+            else if BCLink.decodeRidesPending(d) != nil { stats.events += 1; onLink13Message?(d) }
+            else { stats.rejected += 1 }
+        case .helloAck, .rideqInfo, .rideqListEnd, .rideqChunk, .rideqErr, .storageStatus, .storageCleanResult, .coachPlanAck:
+            if BCLink.parse(d) != nil { onLink13Message?(d) } else { noteParseError("LINK 1.3", d) }
         default: stats.rejected += 1
         }
     }

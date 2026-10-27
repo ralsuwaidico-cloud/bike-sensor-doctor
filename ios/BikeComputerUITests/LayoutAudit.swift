@@ -177,6 +177,20 @@ final class LayoutAudit: XCTestCase {
                 let tp = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Training profile'")).firstMatch
                 if tp.exists { tp.tap(); sleep(2); shot("\(tag)-16-training-profile"); scrollUp(app); shot("\(tag)-17-training-profile-lower"); app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
             }
+            // Settings › BikeComputer › Storage (Link 1.3): no board in the demo → the not-connected state, cleanup disabled
+            let appSettings = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'App & device settings'")).firstMatch
+            if appSettings.exists || { scrollUp(app); return appSettings.exists }() {
+                appSettings.tap(); sleep(2)
+                let storageLink = app.buttons["settingsBoardStorage"].firstMatch
+                for _ in 0..<4 where !storageLink.isHittable { scrollUp(app) }
+                if storageLink.exists {
+                    storageLink.tap(); sleep(2)
+                    shot("\(tag)-15b-board-storage"); checkTexts(app, screen: "\(size) board storage")
+                    scrollUp(app); shot("\(tag)-15c-board-storage-lower")
+                    app.navigationBars.buttons.firstMatch.tap(); sleep(1)
+                } else { note("\(size): BikeComputer storage link not found") }
+                app.navigationBars.buttons.firstMatch.tap(); sleep(1)
+            } else { note("\(size): App & device settings not found") }
             // tab bar items never overlap the raised centre button
             checkKey(app, ids: ["Home", "Plan", "centreButton", "Progress", "Profile"], screen: "\(size) tab bar", minHeight: 30)
             tab(app, "Home")

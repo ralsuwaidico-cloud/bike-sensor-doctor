@@ -14,6 +14,7 @@ struct RideTabView: View {
     @EnvironmentObject private var recorder: RideRecorder
     @EnvironmentObject private var hub: SensorHub
     @EnvironmentObject private var monitor: PipelineMonitor
+    @EnvironmentObject private var link13: Link13Center
     @StateObject private var coach = RideCoach()
     @State private var confirmEnd = false
     @State private var showDetails = false
@@ -36,7 +37,7 @@ struct RideTabView: View {
             }
                 .background(D7.bg.ignoresSafeArea())
                 .toolbar(.hidden, for: .navigationBar)
-                .onReceive(timer) { now in tick = now; coachTick() }
+                .onReceive(timer) { now in tick = now; coachTick(); mirrorTick() }
                 .onChange(of: recorder.state) { _, s in if s == .running, recorder.elapsedS <= 1 { coach.reset(); lastTickedSecond = -1 }; if s == .idle { lastTickedSecond = -1 } }
                 .onAppear { configureCoach() }
                 .onChange(of: store.profile) { _, _ in configureCoach() }
@@ -61,6 +62,16 @@ struct RideTabView: View {
         lastTickedSecond = recorder.elapsedS
         let l = live
         coach.tick(elapsedS: recorder.elapsedS, cadence: l.cadence.value, hr: l.hr.value, power: l.power.value, speedKmh: l.speedKmh)
+    }
+    /// Link 1.3 coach mirroring: the board gets the plan this screen's coach runs and, every second, what it shows.
+    /// Does nothing unless the connected board's HELLO_ACK enabled the coach feature (Link13Center).
+    private func mirrorTick() {
+        guard link13.session.coach else { return }
+        let hr = CoachMirrorAdapter.hrSource(hub: hub, boardLive: boardLive)
+        let live = CoachLiveInput(elapsedS: recorder.elapsedS, session: CoachMirrorAdapter.session(recorder), cue: coach.cue.type, cueAction: coach.cue.action,
+                                  cueActive: coach.cueActive && recorder.state == .running, cueShort: coach.cue.short, hrSource: hr.src, hrLive: hr.live)
+        link13.coachTick(plan: CoachMirrorAdapter.input(workout: store.today, profile: store.profile, settings: store.settings), live: live,
+                         boardOwnsRide: recorder.owner == .board && (recorder.isActive || recorder.state == .ended), phoneOwnsRide: recorder.owner == .phone && (recorder.isActive || recorder.state == .ended))
     }
     private func panelModel(_ l: RideLive) -> CoachPanelModel {
         var i = CoachPanelModel.Inputs()

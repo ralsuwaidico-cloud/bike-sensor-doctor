@@ -15,6 +15,7 @@ struct BikeComputerApp: App {
     @StateObject private var hub: SensorHub
     @StateObject private var monitor: PipelineMonitor
     @StateObject private var diag: DiagReportCenter
+    @StateObject private var link13: Link13Center
 
     init() {
         let s = Store()
@@ -72,6 +73,11 @@ struct BikeComputerApp: App {
         dc.onLog = { [weak m] t in m?.log("board", t) }
         m.diagCenter = dc
         _diag = StateObject(wrappedValue: dc)
+        // Link 1.3 (BLE_CONTRACT.md v1): coach mirroring, offline ride import, storage status — only with a board that
+        // advertises cap 0x0800 and confirms each feature in its HELLO_ACK; nothing changes with 0.7.3 boards
+        let l13 = Link13Center(); l13.attach(device: d, store: s, recorder: r, diag: dc)
+        l13.onLog = { [weak m] t in m?.log("board", t) }
+        _link13 = StateObject(wrappedValue: l13)
         let acc = AccountService()
         _account = StateObject(wrappedValue: acc)
         _cloud = StateObject(wrappedValue: SyncEngine(store: s, account: acc))
@@ -93,6 +99,7 @@ struct BikeComputerApp: App {
                 .environmentObject(hub)
                 .environmentObject(monitor)
                 .environmentObject(diag)
+                .environmentObject(link13)
                 .onOpenURL { url in if ReleaseFlags.accountsEnabled { _ = account.handle(url: url) } }
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {

@@ -334,6 +334,7 @@ struct AppSettingsPage: View {
             }
             Section("Device settings") {
                 NavigationLink { DeviceSettingsView() } label: { Label("BikeComputer settings and Wi-Fi", systemImage: "slider.horizontal.3") }
+                NavigationLink { BoardStorageView() } label: { Label("BikeComputer storage", systemImage: "internaldrive") }.accessibilityIdentifier("settingsBoardStorage")
                 if let i = device.info, !(i.hasSettings && i.hasProfileSync && i.hasWiFi) { Text("Board firmware \(i.fw): device settings, Wi-Fi setup and profile sync from the phone need firmware 0.6.0.").font(.footnote).foregroundStyle(BC.stale) }
             }
         }

@@ -363,6 +363,7 @@ struct BoardConnectionDetail: View {
                 if device.info?.hasSettings == true || device.info?.hasWiFi == true { NavigationLink("Device settings and Wi-Fi") { DeviceSettingsView() } }
                 else if device.state == .ready { Text("Device settings, Wi-Fi setup and profile sync from the phone need firmware 0.6.0 or newer (board has \(device.info?.fw ?? "?")).").font(.footnote).foregroundStyle(.secondary) }
             }
+            Link13StatusSection()
             BoardDiagReportSection()
             Section("Pairing steps") {
                 step(1, "Switch the BikeComputer on and keep it within a metre. Its Phone screen (Connections › Phone) shows SEARCHING.")
