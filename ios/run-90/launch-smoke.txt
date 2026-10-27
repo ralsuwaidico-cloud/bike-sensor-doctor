@@ -1,0 +1,169 @@
+=== launch-smoke: errors / failures ===
+GatherProvisioningInputs
+Test Case '-[BikeComputerUITests.AdaptiveSmokeTests testQuickStrengthLogShowsCheckInThenAdjustments]' passed (50.075 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 50.075 (50.079) seconds
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (8.557 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (38.095 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (25.151 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (89.854 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (47.786 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40YourDataExportAndDeleteCancelKeepsData]' passed (79.415 seconds).
+	 Executed 6 tests, with 0 failures (0 unexpected) in 288.857 (288.864) seconds
+	 Executed 1 test, with 1 test skipped and 0 failures (0 unexpected) in 1.846 (1.847) seconds
+Test Case '-[BikeComputerUITests.RideLayoutsSmokeTests testSwitchThroughAllRideLayouts]' passed (50.955 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 50.955 (50.956) seconds
+	 Executed 2 tests, with 2 tests skipped and 0 failures (0 unexpected) in 0.184 (0.186) seconds
+	 Executed 11 tests, with 3 tests skipped and 0 failures (0 unexpected) in 391.918 (391.934) seconds
+	 Executed 11 tests, with 3 tests skipped and 0 failures (0 unexpected) in 391.918 (391.936) seconds
+** TEST SUCCEEDED **
+=== launch-smoke: last 150 lines ===
+    t =    18.18s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayoutMenu" Button`
+    t =    18.18s         Checking existence of `"rideLayoutMenu" Button`
+    t =    18.26s Tap "rideLayoutMenu" Button
+    t =    18.26s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    18.26s     Find the "rideLayoutMenu" Button
+    t =    18.34s     Check for interrupting elements affecting "rideLayoutMenu" Button
+    t =    18.54s     Synthesize event
+    t =    18.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    19.05s Waiting 10.0s for "rideLayout.gauges" Other to exist
+    t =    20.10s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayout.gauges" Other`
+    t =    20.10s         Checking existence of `"rideLayout.gauges" Other`
+    t =    20.27s Checking existence of `"coachPanel" Other`
+    t =    20.44s Waiting 5.0s for "rideLayoutMenu" Button to exist
+    t =    21.51s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayoutMenu" Button`
+    t =    21.51s         Checking existence of `"rideLayoutMenu" Button`
+    t =    21.64s Tap "rideLayoutMenu" Button
+    t =    21.64s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    21.64s     Find the "rideLayoutMenu" Button
+    t =    21.78s     Check for interrupting elements affecting "rideLayoutMenu" Button
+    t =    22.14s     Synthesize event
+    t =    22.48s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    24.55s Waiting 10.0s for "rideLayout.classic" Other to exist
+    t =    25.60s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayout.classic" Other`
+    t =    25.60s         Checking existence of `"rideLayout.classic" Other`
+    t =    26.03s Checking existence of `"coachPanel" Other`
+    t =    26.41s Waiting 5.0s for "rideLayoutMenu" Button to exist
+    t =    27.45s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayoutMenu" Button`
+    t =    27.45s         Checking existence of `"rideLayoutMenu" Button`
+    t =    27.54s Tap "rideLayoutMenu" Button
+    t =    27.54s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    27.54s     Find the "rideLayoutMenu" Button
+    t =    27.62s     Check for interrupting elements affecting "rideLayoutMenu" Button
+    t =    27.76s     Synthesize event
+    t =    28.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    29.40s Waiting 10.0s for "rideLayout.rings" Other to exist
+    t =    30.43s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayout.rings" Other`
+    t =    30.44s         Checking existence of `"rideLayout.rings" Other`
+    t =    30.65s Checking existence of `"coachPanel" Other`
+    t =    30.81s Waiting 5.0s for "rideLayoutMenu" Button to exist
+    t =    31.83s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayoutMenu" Button`
+    t =    31.84s         Checking existence of `"rideLayoutMenu" Button`
+    t =    31.92s Tap "rideLayoutMenu" Button
+    t =    31.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    31.92s     Find the "rideLayoutMenu" Button
+    t =    31.98s     Check for interrupting elements affecting "rideLayoutMenu" Button
+    t =    32.15s     Synthesize event
+    t =    32.46s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    32.51s Waiting 10.0s for "rideLayout.analytics" Other to exist
+    t =    33.53s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayout.analytics" Other`
+    t =    33.53s         Checking existence of `"rideLayout.analytics" Other`
+    t =    33.65s Checking existence of `"coachPanel" Other`
+    t =    33.86s Waiting 5.0s for "rideLayoutMenu" Button to exist
+    t =    34.92s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayoutMenu" Button`
+    t =    34.92s         Checking existence of `"rideLayoutMenu" Button`
+    t =    35.00s Tap "rideLayoutMenu" Button
+    t =    35.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    35.01s     Find the "rideLayoutMenu" Button
+    t =    35.08s     Check for interrupting elements affecting "rideLayoutMenu" Button
+    t =    35.22s     Synthesize event
+    t =    35.53s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    35.53s Waiting 10.0s for "rideLayout.coach" Other to exist
+    t =    36.59s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayout.coach" Other`
+    t =    36.59s         Checking existence of `"rideLayout.coach" Other`
+    t =    36.74s Checking existence of `"coachPanel" Other`
+    t =    36.90s Checking existence of `"coachWhy" Button`
+    t =    37.13s Find the "coachWhy" Button
+    t =    37.41s Tap "coachWhy" Button
+    t =    37.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    37.41s     Find the "coachWhy" Button
+    t =    37.53s     Check for interrupting elements affecting "coachWhy" Button
+    t =    37.70s     Synthesize event
+    t =    38.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.01s Tap "coachWhy" Button
+    t =    39.01s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.01s     Find the "coachWhy" Button
+    t =    39.24s     Check for interrupting elements affecting "coachWhy" Button
+    t =    39.39s     Synthesize event
+    t =    39.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.69s Tap "rideSettings" Button
+    t =    39.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.70s     Find the "rideSettings" Button
+    t =    39.78s     Check for interrupting elements affecting "rideSettings" Button
+    t =    40.08s     Synthesize event
+    t =    40.38s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    40.90s Waiting 10.0s for "rideLayoutOption.rings" Button to exist
+    t =    41.94s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayoutOption.rings" Button`
+    t =    41.94s         Checking existence of `"rideLayoutOption.rings" Button`
+    t =    42.70s Tap "rideLayoutOption.rings" Button
+    t =    42.70s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    42.70s     Find the "rideLayoutOption.rings" Button
+    t =    43.31s     Check for interrupting elements affecting "rideLayoutOption.rings" Button
+    t =    43.61s     Synthesize event
+    t =    43.91s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    44.24s Tap "Done" Button
+    t =    44.24s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    44.25s     Find the "Done" Button
+    t =    44.41s     Check for interrupting elements affecting "Done" Button
+    t =    44.60s     Synthesize event
+    t =    44.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    45.69s Waiting 10.0s for "rideLayout.rings" Other to exist
+    t =    46.73s     Checking `Expect predicate `existsNoRetry == 1` for object "rideLayout.rings" Other`
+    t =    46.73s         Checking existence of `"rideLayout.rings" Other`
+    t =    47.07s Tap "rideDetails" Button
+    t =    47.07s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    47.13s     Find the "rideDetails" Button
+    t =    47.24s     Check for interrupting elements affecting "rideDetails" Button
+    t =    47.38s     Synthesize event
+    t =    47.68s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    47.88s Waiting 10.0s for "Ride details" NavigationBar to exist
+    t =    48.91s     Checking `Expect predicate `existsNoRetry == 1` for object "Ride details" NavigationBar`
+    t =    48.91s         Checking existence of `"Ride details" NavigationBar`
+    t =    49.22s Tap "Done" Button
+    t =    49.22s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    49.22s     Find the "Done" Button
+    t =    49.43s     Check for interrupting elements affecting "Done" Button
+    t =    49.64s     Synthesize event
+    t =    50.04s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    50.70s Tear Down
+Test Case '-[BikeComputerUITests.RideLayoutsSmokeTests testSwitchThroughAllRideLayouts]' passed (50.955 seconds).
+Test Suite 'RideLayoutsSmokeTests' passed at 2026-10-27 21:46:26.049.
+	 Executed 1 test, with 0 failures (0 unexpected) in 50.955 (50.956) seconds
+Test Suite 'StoreScreenshots' started at 2026-10-27 21:46:26.049.
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' started.
+    t =     0.00s Start Test at 2026-10-27 21:46:26.050
+    t =     0.03s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift:43: -[BikeComputerUITests.StoreScreenshots test1StrengthDay] : Test skipped - SCREENSHOT_DIR not set — store screenshots are only taken by the asc-listing workflow
+    t =     0.03s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' skipped (0.094 seconds).
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' started.
+    t =     0.00s Start Test at 2026-10-27 21:46:26.144
+    t =     0.03s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift:60: -[BikeComputerUITests.StoreScreenshots test2RideDay] : Test skipped - SCREENSHOT_DIR not set — store screenshots are only taken by the asc-listing workflow
+    t =     0.03s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' skipped (0.090 seconds).
+Test Suite 'StoreScreenshots' passed at 2026-10-27 21:46:26.235.
+	 Executed 2 tests, with 2 tests skipped and 0 failures (0 unexpected) in 0.184 (0.186) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-10-27 21:46:26.235.
+	 Executed 11 tests, with 3 tests skipped and 0 failures (0 unexpected) in 391.918 (391.934) seconds
+Test Suite 'All tests' passed at 2026-10-27 21:46:26.236.
+	 Executed 11 tests, with 3 tests skipped and 0 failures (0 unexpected) in 391.918 (391.936) seconds
+2026-10-27 21:46:27.729 xcodebuild[8814:33921] [MT] IDETestOperationsObserverDebug: 528.930 elapsed -- Testing started completed.
+2026-10-27 21:46:27.730 xcodebuild[8814:33921] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-27 21:46:27.730 xcodebuild[8814:33921] [MT] IDETestOperationsObserverDebug: 528.930 sec, +528.930 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/uitests.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
