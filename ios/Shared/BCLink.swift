@@ -36,6 +36,12 @@ enum BCLink {
         case settingsSet = 0x74, settings = 0x75, settingsGet = 0x76
         /* 1.2.3 diagnostic report transfer (firmware 0.7.3, cap 0x400) — Control characteristic, phone-driven pull */
         case diagListReq = 0x80, diagInfo = 0x81, diagListEnd = 0x82, diagChunkReq = 0x83, diagChunk = 0x84, diagAck = 0x85, diagErr = 0x86
+        /* Link 1.3 (coord/interfaces/BLE_CONTRACT.md v1) — Control characteristic, each gated on its INFO cap AND the
+           board's HELLO_ACK on the current connection (BikeComputer/Link13/BCLink13.swift) */
+        case appHello = 0x08, helloAck = 0x09
+        case rideqListReq = 0x90, rideqInfo = 0x91, rideqListEnd = 0x92, rideqChunkReq = 0x93, rideqChunk = 0x94, rideqAck = 0x95, rideqErr = 0x96
+        case storageStatusReq = 0xA0, storageStatus = 0xA1, storageCleanReq = 0xA2, storageCleanResult = 0xA3
+        case coachPlan = 0xB0, coachPlanAck = 0xB1, coachState = 0xB2, coachEnd = 0xB3
     }
 
     enum Source: UInt8 {
@@ -124,7 +130,10 @@ enum BCLink {
         static let capLive: UInt32 = 0x01, capGPS: UInt32 = 0x02, capHR: UInt32 = 0x04, capWeather: UInt32 = 0x08, capCtrl: UInt32 = 0x10, capTime: UInt32 = 0x20, capRideSync: UInt32 = 0x40
         static let capWiFi: UInt32 = 0x80, capProfileSync: UInt32 = 0x100, capSettings: UInt32 = 0x200
         static let capDiagXfer: UInt32 = 0x400
+        /// Link 1.3 caps (BLE_CONTRACT.md §4). Advertised by the board; each is used only after HELLO_ACK enables it.
+        static let capHello: UInt32 = 0x0800, capCoach: UInt32 = 0x1000, capRideQueue: UInt32 = 0x2000, capStorage: UInt32 = 0x4000, capDiagAuto: UInt32 = 0x8000
         var hasDiagXfer: Bool { caps & Info.capDiagXfer != 0 }
+        var hasHello: Bool { caps & Info.capHello != 0 }
         var hasRideSync: Bool { caps & Info.capRideSync != 0 }
         var hasWiFi: Bool { caps & Info.capWiFi != 0 }
         var hasProfileSync: Bool { caps & Info.capProfileSync != 0 }
@@ -250,6 +259,10 @@ enum BCLink {
         var rideState: RideState = .idle; var rideId: Int = 0; var elapsedS: Int = 0; var distanceM: Int = 0
         var cueId: Int = 0; var batteryPct: Int?; var meterLink: Int = 0; var meterGaps: Int = 0
         var demo = false
+        /// Link 1.3 LIVE tags 11–15 (absent on older boards = nil): last applied COACH_STATE seq, coach mode (0 none,
+        /// 1 following the phone, 2 phone lost → stored plan, 3 phone lost → last targets), storage state when not OK,
+        /// rides not yet synced, bt flags (bit0 sensors disabled after a crash, bit1 phone link degraded).
+        var coachSeq: UInt16? = nil; var coachMode: Int? = nil; var storageState: Int? = nil; var ridesUnsynced: Int? = nil; var btFlags: Int? = nil
         var seq: UInt16 = 0; var boardTimeMs: UInt32 = 0
     }
 
@@ -275,6 +288,11 @@ enum BCLink {
             case (0x0E, 1): l.meterLink = Int(v[v.startIndex])
             case (0x0F, 2): l.meterGaps = Int(uint(v))
             case (0x10, 1): l.demo = v[v.startIndex] != 0
+            case (0x11, 2): l.coachSeq = UInt16(uint(v))
+            case (0x12, 1): l.coachMode = Int(v[v.startIndex])
+            case (0x13, 1): l.storageState = Int(v[v.startIndex])
+            case (0x14, 1): l.ridesUnsynced = Int(v[v.startIndex])
+            case (0x15, 1): l.btFlags = Int(v[v.startIndex])
             default: break
             }
         }

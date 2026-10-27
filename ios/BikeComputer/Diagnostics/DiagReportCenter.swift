@@ -20,6 +20,8 @@ final class DiagReportCenter: ObservableObject {
     private var timer: Timer?
     /// Diagnostics event log (PipelineMonitor) — one line per saved report.
     var onLog: ((String) -> Void)?
+    /// Link 1.3 DIAG_AUTO enabled by the board's HELLO_ACK (set by Link13Center): verified reports are ACKed with delete = 1.
+    var ackWithDelete: () -> Bool = { false }
 
     init(store: DiagStore = DiagStore(root: DiagStore.defaultRoot())) {
         self.store = store
@@ -41,6 +43,11 @@ final class DiagReportCenter: ObservableObject {
     /// Version compatibility (1.2.3): only a board whose INFO carries cap 0x400 DIAG_XFER (firmware 0.7.3+) is ever asked;
     /// older firmware never sees a DIAG_* byte. (A board with the cap and an older app simply keeps its reports.)
     static func transferAllowed(_ info: BCLink.Info?) -> Bool { info?.hasDiagXfer == true }
+    /// Link 1.3: HELLO_ACK enabled DIAG_AUTO — pull now (the 1.2.3 start 3 s after ready already covers it when idle).
+    func helloEnabledAutoTransfer() {
+        guard let e = engine, device?.state == .ready, !e.isBusy else { return }
+        e.start(now: Date()); ensureTimer()
+    }
     private func linkReady() {
         guard let d = device, Self.transferAllowed(d.info) else { boardSupports = false; engine?.linkDown(); engine = nil; publish(); return }
         boardSupports = true
@@ -64,6 +71,7 @@ final class DiagReportCenter: ObservableObject {
         e.boardRecording = { [weak self] in guard let d = self?.device, d.liveIsFresh else { return false }; return d.live?.rideState == .running }
         // chunk size from the NEGOTIATED link (ATT MTU − 3), never from failures — docs/LINK_V1_2_SPEC.md 1.2.3
         e.linkPayload = { [weak self] in self?.device?.maxNotifyBytes }
+        e.ackWithDelete = { [weak self] in self?.ackWithDelete() ?? false }
         e.onSaved = { [weak self] m in
             guard let self else { return }
             self.savedThisSession.append(m)

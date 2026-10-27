@@ -32,6 +32,9 @@ final class DiagTransfer {
     /// Largest single ATT packet on this link = ATT_MTU − 3 (`CBPeripheral.maximumWriteValueLength(for: .withoutResponse)`);
     /// nil = not connected / unknown. The chunk size is computed from it — never learned from failures.
     var linkPayload: () -> Int? = { nil }
+    /// Link 1.3 DIAG_AUTO enabled on this connection (HELLO_ACK): the ACK of a report verified AND saved here carries
+    /// `03 delete = 1`, so the board may free it now. false = the exact 1.2.3 ACK bytes (0.7.3 boards, older links).
+    var ackWithDelete: () -> Bool = { false }
     var onSaved: ((DiagReportMeta) -> Void)?
     var onChange: (() -> Void)?
 
@@ -256,7 +259,9 @@ final class DiagTransfer {
         }
     }
     private func sendAck(_ id: UInt32, _ crc: UInt32) {
-        if let d = BCLink.encodeDiagAck(reportId: id, crc32: crc, seq: nextSeq(), tMs: 0) { _ = send(d) }
+        let d = ackWithDelete() ? BCLink.encodeDiagAck(reportId: id, crc32: crc, delete: true, seq: nextSeq(), tMs: 0)
+                                : BCLink.encodeDiagAck(reportId: id, crc32: crc, seq: nextSeq(), tMs: 0)
+        if let d { _ = send(d) }
     }
     /// Stop for now; the partial stays on disk and the next trigger resumes it.
     private func pause() {

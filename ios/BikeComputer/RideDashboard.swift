@@ -182,7 +182,9 @@ final class RideCoach: ObservableObject {
         let input = CoachInput(nowMs: ms, phase: ph, cadence: cadence.map { Signal(value: $0) } ?? .none, hr: hr.map { Signal(value: $0) } ?? .none, power: power.map { Signal(value: $0) } ?? .none, targets: nil, speedKmh: speedKmh)
         // the label follows the engine's own interval clock (work → recovery → … → cool-down)
         if ph == .MAIN, let iv = intervals {
-            if mainStartSec == nil { mainStartSec = elapsedS }
+            // the main part starts at the end of the warm-up on the ride clock (also when the phone joins mid-ride), so the
+            // interval clock is the same one the BikeComputer follows from the mirrored plan (Link13/CoachMirror.swift)
+            if mainStartSec == nil { mainStartSec = plan.warmupSec }
             let t = elapsedS - (mainStartSec ?? elapsedS), cycle = iv.workSec + iv.restSec
             if cycle > 0, iv.repeats > 0 { ph = t >= cycle * iv.repeats ? .COOLDOWN : (t % cycle) >= iv.workSec ? .RECOVERY : .MAIN }
         }
