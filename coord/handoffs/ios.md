@@ -101,3 +101,4 @@ Release launch smoke ok; layout audit ok on all three iPhones (82 screenshots); 
 - **RC3-08:** "offline rides waiting" comes only from this connection: LIVE tag 14 when present, else this connection's
   ride list (kept current by the board's replies), else this connection's STORAGE_STATUS; otherwise "not reported yet".
   An omitted tag is never 0 and nothing from an earlier connection is reused (list and storage status cleared on link down).
+- **CI run 88 (commit 0b51813): green** — 360 tests, 0 failures (incl. the 5 end-to-end tests and the seq test); Release launch smoke, layout audit (82 screenshots), archive / sign / verify ok; upload skipped.
