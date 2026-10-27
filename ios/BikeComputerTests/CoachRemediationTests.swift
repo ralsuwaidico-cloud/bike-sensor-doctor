@@ -438,10 +438,32 @@ final class CoachRemediationTests: XCTestCase {
         var l2 = log(2, press, reps: [8, 8, 8], kg: 40, rpe: 7); l2.checkIn = CheckIn(performance: 7, effort: 6, at: l2.date)
         let p = profile()
         let a = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [], strength: [l0, l1, l2], availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
-        XCTAssertTrue(a.painAreas.isEmpty, "\(a.painAreas)")
-        // but only one pain-free lift → still held
+        XCTAssertEqual(a.painAreas, [.knees], "never released automatically"); XCTAssertEqual(a.painReviewDue, [.knees], "the rider is asked")
+        // only one pain-free lift → not asked yet
         let b = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [], strength: [l0, l2], availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
-        XCTAssertEqual(b.painAreas, [.knees])
+        XCTAssertEqual(b.painAreas, [.knees]); XCTAssertTrue(b.painReviewDue.isEmpty)
+    }
+
+    func testThreePainLevels() {
+        let p = profile()
+        func an(_ pain: PainLevel, _ later: PainLevel? = nil) -> TrainingAnalysis {
+            var l0 = log(4, squat, reps: [8, 8, 8], kg: 60, rpe: 7); l0.checkIn = CheckIn(performance: 6, effort: 6, pain: pain, painArea: .knees, at: l0.date)
+            var ls = [l0]
+            if let lp = later { var l1 = log(1, squat, reps: [8, 8, 8], kg: 60, rpe: 7); l1.checkIn = CheckIn(performance: 7, effort: 6, pain: lp, painArea: .knees, at: l1.date); ls.append(l1) }
+            return TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [], strength: ls, availability: WeeklyAvailability.suggested(for: p), now: now, calendar: cal))
+        }
+        // soreness: nothing changes
+        XCTAssertTrue(an(.soreness).painAreas.isEmpty); XCTAssertTrue(an(.soreness).discomfortAreas.isEmpty)
+        // discomfort: progression held (nothing excluded), released by the next session without it
+        XCTAssertEqual(an(.discomfort).discomfortAreas, [.knees]); XCTAssertTrue(an(.discomfort).painAreas.isEmpty)
+        XCTAssertTrue(an(.discomfort).painBlocks(.squat))
+        XCTAssertTrue(an(.discomfort, .noPain).discomfortAreas.isEmpty)
+        // concerning: excluded and held
+        XCTAssertEqual(an(.concerning).painAreas, [.knees])
+        // concerning twice within 14 days → persistent → stronger advice
+        let x = an(.concerning, .concerning)
+        XCTAssertEqual(x.painPersistent, [.knees])
+        XCTAssertTrue(AdaptationExplainer.painAdvice(x.painAreas, persistent: x.painPersistent)?.contains("assessed") ?? false)
     }
 
     func testRoutineAfterABreakRestartsLighterWithoutChangingTheRoutine() {

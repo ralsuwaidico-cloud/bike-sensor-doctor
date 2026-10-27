@@ -35,9 +35,9 @@ struct CheckInFlow: View {
                 Section {
                     Picker("Pain or unusual discomfort", selection: $pain) { ForEach(PainLevel.allCases, id: \.self) { Text($0.short).tag($0) } }
                         .pickerStyle(.segmented).accessibilityIdentifier("checkInPain")
-                    if pain == .concerning {
+                    if pain.needsArea {
                         Picker("Where", selection: $area) { ForEach(PainArea.allCases, id: \.self) { Text($0.title).tag($0) } }
-                        Text(AdaptationExplainer.painAdvice([area]) ?? "").font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true)
+                        Text(pain == .concerning ? (AdaptationExplainer.painAdvice([area]) ?? "") : AdaptationExplainer.discomfortAdvice([area])).font(.footnote).foregroundStyle(pain == .concerning ? BC.warn : .secondary).fixedSize(horizontal: false, vertical: true)
                     } else if pain == .soreness {
                         Text("Normal muscle soreness does not change your plan.").font(.footnote).foregroundStyle(.secondary)
                     }
@@ -73,7 +73,7 @@ struct CheckInFlow: View {
 
     private func submit() {
         guard !showResult else { return }
-        let c = CheckIn(performance: performance, effort: effort, pain: pain, painArea: pain == .concerning ? area : nil, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
+        let c = CheckIn(performance: performance, effort: effort, pain: pain, painArea: pain.needsArea ? area : nil, note: note.trimmingCharacters(in: .whitespacesAndNewlines))
         switch target {
         case .ride(let id): _ = store.recordCheckIn(c, rideId: id)
         case .strength(let id): _ = store.recordCheckIn(c, strengthId: id)
@@ -103,10 +103,10 @@ struct AdjustmentsView: View {
                 }
                 if let s = store.lastAdaptation, let p = s.painAdvice {
                     Label { Text(p).font(.footnote).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "cross.case").foregroundStyle(BC.warn) }
-                    // audit G-06: only the rider (or pain-free sessions that load the same area) clears a report
+                    // only the rider clears a concerning-pain report; after a week with two pain-free sessions the coach asks
                     ForEach(store.activePainAreas(), id: \.self) { area in
                         Button { store.confirmPainGone(area) } label: {
-                            Label("\(area.title): it's fine now", systemImage: "checkmark.circle").frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
+                            Label(store.painReviewDue().contains(area) ? "\(area.title): pain-free in your last 2 sessions — it's fine now" : "\(area.title): it's fine now", systemImage: "checkmark.circle").frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading)
                         }
                         .accessibilityIdentifier("painGone-\(area.rawValue)")
                         .accessibilityHint("Releases the hold on \(area.title.lowercased()) so the coach can progress that area again")

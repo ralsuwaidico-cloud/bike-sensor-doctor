@@ -240,6 +240,8 @@ struct PlannerContext {
     var rides: [RideRecord] = []
     var plan: [Workout] = []
     var painAreas: [PainArea] = []
+    /// Non-specific discomfort: progression held in these areas, nothing left out.
+    var discomfortAreas: [PainArea] = []
     var fatigue = false
     /// Shared hold (audit G-03): when the adaptive coach says "nothing is increased" (≥ 2 missed sessions in the last
     /// 7 days), the planner holds every load, rep and hold time too. The text completes "Held — …".
@@ -596,7 +598,7 @@ enum StrengthPlanner {
             if week.deload { n = max(2, n - 1); d.rpe = min(d.rpe, 6) }
             else if let r = ctx.returning, r.active { n = max(2, n - 1); d.rpe = min(d.rpe, 7) }
             d.rpe = min(d.rpe, ctx.readiness.maxStrengthRPE)
-            let painBlocked = ctx.painAreas.contains { $0.patterns.contains(m.slot.family) }
+            let painBlocked = (ctx.painAreas + ctx.discomfortAreas).contains { $0.patterns.contains(m.slot.family) }
             let load = prescribeLoad(e, meta: m, reps: d.reps, sets: n, painBlocked: painBlocked || week.deload, ctx: ctx)
             var entry = ExerciseEntry(exercise: e, sets: (0..<n).map { _ in SetEntry(reps: load.reps, weightKg: load.weight, bodyweight: load.bodyweight, unilateral: e.unilateral) })
             if spec.slot == .core, isHold(e) { entry.notes = "Hold \(load.reps) s per set" }
@@ -902,7 +904,7 @@ extension Store {
         let hold: String? = analysis.adherenceBlock ? "\(analysis.missed.count) planned sessions were missed in the last 7 days, so nothing is increased until you are back on track" : nil
         return PlannerContext(profile: profile, prefs: strengthPrefs, equipment: equipment, catalogue: allExercises, templates: templates,
                               logs: strength.filter { !$0.awaitingReview && !$0.inProgress }, rides: rides, plan: plan,
-                              painAreas: analysis.painAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now,
+                              painAreas: analysis.painAreas, discomfortAreas: analysis.discomfortAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now,
                               returning: liftingReturnPhase(now: now))
     }
 

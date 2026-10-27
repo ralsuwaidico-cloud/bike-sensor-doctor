@@ -38,6 +38,9 @@ struct HealthScreen: Codable, Equatable {
     var currentIllness = false
     /// The rider states that a doctor examined them and cleared them for unrestricted training, on this date.
     var clearedAt: Date? = nil
+    /// The question set these answers belong to; answers to an older set count as not answered (asked again).
+    var questionSet: Int? = HealthScreen.currentQuestionSet
+    static let currentQuestionSet = 2
 
     enum Status: String, Codable { case notAnswered, clear, needsClearance, cleared, stop }
 
@@ -50,7 +53,7 @@ struct HealthScreen: Codable, Equatable {
     var clearable: Bool { anyYes && !supervisedOnly }
 
     func status(now: Date = Date()) -> Status {
-        guard let at = answeredAt, now.timeIntervalSince(at) < Double(Self.validityDays) * 86_400 else { return .notAnswered }
+        guard let at = answeredAt, now.timeIntervalSince(at) < Double(Self.validityDays) * 86_400, questionSet == Self.currentQuestionSet else { return .notAnswered }
         if !anyYes { return .clear }
         if supervisedOnly { return .stop }
         if clearedAt != nil { return .cleared }

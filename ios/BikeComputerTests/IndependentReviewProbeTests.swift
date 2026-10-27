@@ -107,7 +107,10 @@ final class ReviewProbeTests: XCTestCase {
         let logs = [lg(30, [sq, rdl], pain: .concerning, area: .knees)] + [25, 20, 15, 10, 5].map { lg($0, [rdl, bench], pain: .noPain) }
         let an = TrainingAnalyzer.analyze(AdaptationInput(profile: p, plan: [], rides: [], strength: logs, availability: WeeklyAvailability.suggested(for: p), now: Date(), calendar: cal))
         print("R8 pain areas after 5 pain-free lower sessions without squats over 25 days:", an.painAreas)
-        XCTAssertTrue(an.painAreas.isEmpty, "R8: knee hold never clears automatically once knee exercises are excluded")
+        // CHANGED after the review (owner instruction 27 Oct 11:35): concerning pain is never released automatically.
+        // The reviewer's deadlock (R8) is resolved by ASKING the rider once the hold conditions are met.
+        XCTAssertEqual(an.painAreas, [.knees], "concerning pain stays held until the rider confirms")
+        XCTAssertEqual(an.painReviewDue, [.knees], "R8: after the hold and pain-free sessions the rider is asked")
     }
     // R9: strength deload week vs cycling easy week computed from different streaks
     func testR9_DeloadMisalignment() {

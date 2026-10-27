@@ -191,6 +191,14 @@ struct TrainingAnalysis: Equatable {
     var missed: [Workout] = []
     var repeatedMisses = false
     var painAreas: [PainArea] = []
+    /// Concerning-pain areas whose hold could end (≥ 7 days, the last 2 sessions of that activity pain-free): the rider
+    /// is asked; the coach never releases them on its own.
+    var painReviewDue: [PainArea] = []
+    /// Concerning pain reported again within 14 days, or held for more than 14 days: stronger advice.
+    var painPersistent: [PainArea] = []
+    /// Non-specific discomfort: no progression in that area until a later session of the same activity is rated
+    /// without discomfort or pain; nothing is left out.
+    var discomfortAreas: [PainArea] = []
     var cyclingImproving = false
     var cyclingImprovingText: String? = nil
     var findings: [String] = []
@@ -201,8 +209,9 @@ struct TrainingAnalysis: Equatable {
     var anyFatigue: Bool { !fatigue.isEmpty }
     var severeFatigue: Bool { fatigue.count >= 2 }
     var adherenceBlock: Bool { missed.count >= 2 }
-    func painBlocks(_ p: MovementPattern) -> Bool { painAreas.contains { $0.patterns.contains(p) } }
+    func painBlocks(_ p: MovementPattern) -> Bool { (painAreas + discomfortAreas).contains { $0.patterns.contains(p) } }
     var painBlocksCycling: Bool { painAreas.contains { $0.affectsCycling } }
+    var discomfortBlocksCycling: Bool { discomfortAreas.contains { $0.affectsCycling } }
 }
 
 enum TrainingAnalyzer {
@@ -377,11 +386,27 @@ enum TrainingAnalyzer {
                 // minimum hold counts (rated for that area) — otherwise the hold could never clear on its own
                 return x.sport == s.sport
             }
-            let held = (cal.dateComponents([.day], from: cal.startOfDay(for: s.date), to: today).day ?? 0) < AdaptiveRules.painMinHoldDays
-            let cleared = !held && same.count >= AdaptiveRules.painClearCheckIns && same.prefix(AdaptiveRules.painClearCheckIns).allSatisfy { $0.pain == .noPain }
-            if !cleared { areas.append(area) }
+            // owner (27 Oct): concerning pain may indicate injury, so it is NEVER released automatically. After the minimum
+            // hold, two pain-free sessions of the same activity only make the coach ASK the rider (Coach adjustments).
+            let days = cal.dateComponents([.day], from: cal.startOfDay(for: s.date), to: today).day ?? 0
+            let held = days < AdaptiveRules.painMinHoldDays
+            let reviewDue = !held && same.count >= AdaptiveRules.painClearCheckIns && same.suffix(AdaptiveRules.painClearCheckIns).allSatisfy { $0.pain == .noPain || $0.pain == .soreness }
+            areas.append(area)
+            if reviewDue { out.painReviewDue.append(area) }
+            let repeated = exposures.filter { $0.pain == .concerning && ($0.area ?? .other) == area && $0.date >= daysAgo(14) }.count >= 2
+            if repeated || days > 14 { out.painPersistent.append(area) }
         }
         out.painAreas = areas
+        // non-specific discomfort: holds progression in that area until a LATER session of the same activity is rated
+        // without discomfort or pain (one session); never leaves exercises out
+        var disc: [PainArea] = []
+        for (i, s) in exposures.enumerated() where s.pain == .discomfort {
+            let area = s.area ?? .other
+            guard !disc.contains(area), !areas.contains(area), s.date >= daysAgo(14) else { continue }
+            let later = exposures.prefix(i).filter { $0.sport == s.sport }
+            if !later.contains(where: { $0.pain == .noPain || $0.pain == .soreness }) { disc.append(area) }
+        }
+        out.discomfortAreas = disc
 
         // --- cycling improving: the last two rated rides went well at a moderate effort and were completed
         let cycBase = Array(cyc.filter { $0.hasCheckIn }.dropFirst(2)).filter { $0.date >= daysAgo(AdaptiveRules.baselineDays + 7) }
@@ -461,10 +486,16 @@ enum AdaptationExplainer {
     static let disclaimer = "Rules-based coach: deterministic rules on your logged sessions and check-ins; no AI model is used. Effort and performance scores alone cannot diagnose recovery, overtraining or injury."
     static func day(_ d: Date) -> String { let f = DateFormatter(); f.dateFormat = "EEE d MMM"; return f.string(from: d) }
     static func kg(_ v: Double, _ u: AppSettings.Units) -> String { WeightFmt.text(v, u) }
-    static func painAdvice(_ areas: [PainArea]) -> String? {
+    static func painAdvice(_ areas: [PainArea], persistent: [PainArea] = []) -> String? {
         guard !areas.isEmpty else { return nil }
         let names = areas.map { $0.title.lowercased() }.joined(separator: ", ")
-        return "You reported concerning pain (\(names)). The coach stops progressing that area: no extra weight, reps, sets or intensity there for at least a week and until two sessions that load that area the same way are rated pain-free, or until you confirm it is gone (Coach adjustments › “It's fine now”). Ease off or stop whatever hurts. If the pain is sharp, keeps coming back or gets worse, consider seeing a doctor or physiotherapist — the app cannot tell what is causing it."
+        var t = "You reported concerning pain (\(names)). Exercises that load that area are left out and nothing there is progressed until you confirm it is fine (Coach adjustments › “It's fine now”) — the coach never releases it on its own. After at least a week, if your last two sessions were pain-free, the coach will ask you. Stop whatever hurts. If the pain is sharp, swollen, keeps coming back or gets worse, see a doctor or physiotherapist — the app cannot tell what is causing it."
+        if !persistent.isEmpty { t += " It has lasted more than two weeks or come back (\(persistent.map { $0.title.lowercased() }.joined(separator: ", "))): have it assessed before loading it again." }
+        return t
+    }
+    static func discomfortAdvice(_ areas: [PainArea]) -> String {
+        let names = areas.map { $0.title.lowercased() }.joined(separator: ", ")
+        return "Unusual discomfort (\(names)): nothing is left out, but that area is not progressed until a later session is rated without it. If it turns into pain, report it as pain."
     }
     static func lowConfidenceRequest(_ a: TrainingAnalysis) -> String {
         if a.unusableRides > 0 { return "Not enough reliable data to change your plan: \(a.unusableRides) recent ride\(a.unusableRides == 1 ? "" : "s") had no check-in, no heart rate and no verified power. Rate each session after you finish (performance, effort, pain — 10 seconds) so the coach can adapt. Your plan stays as it is." }
@@ -560,11 +591,23 @@ enum AdaptationEngine {
                 for e in es.prefix(4) {
                     autoAdj.append(make(s, .sets(exerciseId: e.exerciseId, delta: -1), .reduction, "\(e.name): \(e.sets.count) → \(e.sets.count - 1) sets", "\(flags)\(cause) One set fewer of \(e.name) on \(AdaptationExplainer.day(s.date)) (\(e.sets.count) → \(e.sets.count - 1)); weights and reps stay. No progression until the signals ease."))
                 }
+                if es.isEmpty, !entries(s).isEmpty {
+                    feedback = "\(flags) Your next strength sessions are already at their minimum (2 sets at RPE 6 or less for the legs), so no further sets come off — the easier ride carries the change."
+                }
                 if es.isEmpty, entries(s).isEmpty, (all || (s.strengthFocus?.loadsLegs ?? false)), s.minutes >= 30 {
                     let d = AdaptiveRules.roundTo5(Double(s.minutes) * AdaptiveRules.durationFraction)
                     autoAdj.append(make(s, .minutes(delta: -d), .reduction, "\(s.displayTitle): \(Fmt.duration(minutes: s.minutes)) → \(Fmt.duration(minutes: s.minutes - d))", "\(flags)\(cause) This session has no exercise list, so it is 10 % shorter instead (\(d) min less)."))
                 }
             }
+        }
+
+        // ---------- F-15: a large jump in load is never an automatic trigger (the ratio is contested), but the rider is
+        // offered an easier next hard ride — their decision
+        if let ratio = a.acwr, ratio > 1.5, a.chronicWeeklyLoad != nil, let r = future.first(where: { $0.kind.isRide && $0.kind.zone >= 3 && $0.date < fatigueEnd }), !autoAdj.contains(where: { $0.workoutId == r.id }) {
+            let to: WorkoutKind = AdaptiveRules.stepDown(r.kind) ?? .endurance
+            let why = String(format: "This week's combined load is %.1f × your recent weekly average. A sudden jump in load is a common reason to ease off, but this number alone is not reliable evidence of fatigue, so the coach only offers the change.", ratio)
+            let adj = make(r, .kind(to: to), .reduction, "\(r.kind.title) → \(to.title) (load jump)", why)
+            proposals.append(AdaptiveProposal(id: "loadjump|\(adj.key)", reason: .majorLoad, text: "Ease \(AdaptationExplainer.day(r.date))'s \(r.kind.title.lowercased()) to \(to.title.lowercased()) after this week's jump in load?", why: why, adjustments: [adj]))
         }
 
         // ---------- independent review F-26: concerning pain reported on a ride → the next hard ride within 7 days is eased
@@ -659,7 +702,7 @@ enum AdaptationEngine {
         // one change per key (the first decision wins)
         var seen: Set<String> = []
         out = out.filter { seen.insert($0.key).inserted }
-        let s = AdaptationSummary(at: input.now, confidence: confidence, findings: a.findings, feedbackRequest: feedback, painAdvice: AdaptationExplainer.painAdvice(a.painAreas), acuteLoad: a.acuteLoad.map { Int($0) }, chronicLoad: a.chronicWeeklyLoad.map { Int($0) })
+        let s = AdaptationSummary(at: input.now, confidence: confidence, findings: a.findings, feedbackRequest: feedback, painAdvice: AdaptationExplainer.painAdvice(a.painAreas, persistent: a.painPersistent), acuteLoad: a.acuteLoad.map { Int($0) }, chronicLoad: a.chronicWeeklyLoad.map { Int($0) })
         return AdaptationResult(adjustments: out, proposals: pending, summary: s, analysis: a)
     }
 

@@ -25,6 +25,7 @@ extension Store {
 
     /// Pain areas currently holding progression (the same analysis the coach and the planner use).
     func activePainAreas(now: Date = Date()) -> [PainArea] { TrainingAnalyzer.analyze(adaptationInput(now: now)).painAreas }
+    func painReviewDue(now: Date = Date()) -> [PainArea] { TrainingAnalyzer.analyze(adaptationInput(now: now)).painReviewDue }
 
     /// The rider confirms a reported pain has gone: that area is released at once (audit G-06), the coach-built
     /// sessions are rebuilt and the coach runs again. Later reports hold the area again.

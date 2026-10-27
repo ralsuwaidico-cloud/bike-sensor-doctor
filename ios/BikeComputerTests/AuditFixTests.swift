@@ -140,8 +140,10 @@ final class AuditFixTests: XCTestCase {
         // two pain-free squat sessions but within a week of the report: still held
         let soon = lift(-5, squat, pain: .concerning, area: .knees)
         XCTAssertEqual(TrainingAnalyzer.analyze(painInput(strength: [soon, lift(-3, squat), lift(-1, squat)], rides: [])).painAreas, [.knees])
-        // a week later and two pain-free squat sessions: released
-        XCTAssertEqual(TrainingAnalyzer.analyze(painInput(strength: [early, lift(-3, squat), lift(-1, squat)], rides: [])).painAreas, [])
+        // a week later and two pain-free squat sessions: still held (owner, 27 Oct: concerning pain is never released
+        // automatically) but the rider is now asked to confirm
+        let a = TrainingAnalyzer.analyze(painInput(strength: [early, lift(-3, squat), lift(-1, squat)], rides: []))
+        XCTAssertEqual(a.painAreas, [.knees]); XCTAssertEqual(a.painReviewDue, [.knees])
         // no date expiry: an old report with no exposure stays until confirmed
         let old = lift(-20, squat, pain: .concerning, area: .knees)
         XCTAssertEqual(TrainingAnalyzer.analyze(painInput(strength: [old], rides: [ride(-2), ride(-1)])).painAreas, [.knees])
