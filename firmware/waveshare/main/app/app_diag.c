@@ -225,6 +225,9 @@ static bool full_cleanup(void)
     uint8_t *b = D.idx_buf; long n = plat_file_read(APP_DIAG_INDEX_FILE, (char *)b, sizeof D.idx_buf);
     bc_diag_index_t *x = &D.idx;
     if (n <= 0 || !bc_diag_index_decode(b, (size_t)n, x)) { plat_log("DIAG: storage full; no readable report index - nothing removed"); return false; }
+    /* rc3 (QA QF-28): a FULL state can itself come from a damaged allocation table: unlink on a damaged chain could free
+       another file's clusters (rides). Nothing is deleted unless the FAT is consistent. */
+    { char why[48]; if (!plat_storage_fat_consistent(why, sizeof why)) { char m[128]; snprintf(m, sizeof m, "DIAG: storage full but the FAT is not consistent (%.47s) - nothing removed", why); plat_log(m); memset(x, 0, sizeof *x); return false; } }
     int removed = 0;
     for (int i = 0; i < x->n; ) {
         if (x->r[i].state != 1) { i++; continue; }

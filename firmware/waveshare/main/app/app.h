@@ -53,7 +53,11 @@ bool app_ride_save(void);                        /* writes history, applies FTP 
 typedef enum { APP_SAVE_OK = 0, APP_SAVE_RAM_ONLY = 1, APP_SAVE_LOST = 2, APP_SAVE_NOTHING = 3 } app_save_result_t;
 #define APP_UNSAVED_MAX 4
 app_save_result_t app_ride_save_ex(void);
-int app_unsaved_rides(bc_ride_summary_t *out, int max);   /* RAM-only rides, oldest first */
+int app_unsaved_rides(bc_ride_summary_t *out, int max);
+int app_unsaved_count(void);                      /* rc3: rides that exist only in RAM (lost at power-off / sleep / restart) */
+/** rc3 (QA QF-22): the phone confirmed it has this RAM-only ride (Link 1.2 SYNC_REQ after it was sent, or a verified Link 1.3
+ *  RIDEQ_ACK): its memory slot is freed. True if it was one. */
+bool app_unsaved_release(uint16_t id);   /* RAM-only rides, oldest first */
 void app_ride_discard(void);
 void app_ride_totals(bc_ride_summary_t *out);    /* live totals while riding; final summary after end */
 int app_ride_ftp_evidence(void);                 /* FTP estimate from the ended ride, 0 = none */

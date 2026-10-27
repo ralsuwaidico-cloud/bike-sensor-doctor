@@ -1,12 +1,21 @@
 # Cyclift ↔ BikeComputer — phone-first architecture and BLE data contract
 
-**Version: contract v1.1 = BikeComputer Link 1.3.** Author: firmware agent, 27 Oct 2026. Review: iOS agent (v1 review:
+**Version: contract v1.2 = BikeComputer Link 1.3.** Author: firmware agent, 27 Oct 2026. Review: iOS agent (v1 review:
 `ios/phonefirst-dev` @ 994f3e7, `coord/interfaces/BLE_CONTRACT_IOS_REVIEW.md`), QA.
 Status: **agreed design; nothing in sections 4–8 is implemented in the firmware yet** (firmware FW-4; firmware 0.7.4-rc2 is
 still wire-identical to Link 1.2.3). Cyclift's `ios/BikeComputer/Link13/` implements the phone side from this document.
 Sections 2–3 describe what is shipped today (Link 1.2.3, firmware 0.7.3 / Cyclift RC1) and must keep working unchanged.
 
 ### Change log
+
+**v1.2 (27 Oct 2026, firmware 0.7.4-rc3) — behaviour only, no wire change** (QA QF-22 / QF-28 / QF-29).
+| Change | Section |
+|---|---|
+| A RAM-only ride (flag bit4) is **removed from the board** after a verified RIDEQ_ACK (its reply RIDEQ_INFO still says state 3); it is not listed again. | §6 |
+| Link 1.2.3 apps: a RAM-only ride already sent as SYNC_RIDE is released when a later SYNC_REQ has `after_ride_id` >= its id (the phone holds it). | §6 |
+| STORAGE_CLEAN is also refused (status 2) when the FAT itself is not consistent (chains, cross-links, lost clusters checked before any delete). | §7 |
+| An interrupted real ride is kept however short (was: dropped under 10 s); only demo rides are dropped. | §6 |
+| Ride ids continue above every id in the board's history / RAM queue even when the settings memory is unusable; an existing `rides/r####.txt` is never overwritten. Residual: with BOTH the settings memory and the file area unusable the board has no persistent memory, so ids can repeat across power cycles — Cyclift should keep `start_epoch_s` in its duplicate check. | §6 |
 
 **v1.1 (27 Oct 2026) — answers to the iOS review Q-iOS-1..14.** Wire changes are marked ⚠ (Cyclift's Link13 code must follow).
 | # | Change | Section |
@@ -198,6 +207,7 @@ history and are cleared by the board's own retention or STORAGE_CLEAN bit2).
   min(max_len, 155, (ATT_MTU − 3) − 25)); ≤ 4 outstanding; LIVE has priority; **BUSY (err 4) while a ride is recording**.
 * **RIDEQ_ACK 0x95** (P→B): `01 u32 ride_id` `02 u32 samples_crc32` `03 u32 summary_crc32` `04 u8 delete_samples (0/1)`.
   The board marks state 3 only if both CRCs match its own; it deletes the samples only then and only if `delete_samples = 1`.
+  v1.2: a RAM-only ride (bit4) is released from the board's memory after its verified ACK (not listed again).
   Reply: RIDEQ_INFO with the new state; a CRC that does not match is answered with **RIDEQ_ERR 6** and the state stays as
   it was. No answer = not confirmed: Cyclift asks again on the next list. (`samples_crc32` is ignored for a bit3/bit4 ride.)
 * **RIDEQ_ERR 0x96**: codes as DIAG_ERR (1 unknown id, 2 bad offset, 3 storage read error, 4 busy, 5 MTU too small) +
@@ -242,7 +252,8 @@ J1 <ride_id> <demo 0|1> <ftp_w> <ftp_how> <ftp_established 0|1>      header (onc
   free space (`04`), health (`13` + `01/02`).
 * **STORAGE_CLEAN_REQ 0xA2** (P→B): `01 u8 what` (bit0 ACKed reports + their core copies, bit1 samples of verified rides,
   bit2 caches/duplicates such as `diag/report.txt`). **STORAGE_CLEAN_RESULT 0xA3**: `01 u8 status` (0 done, 1 nothing to do,
-  2 refused: storage damaged or not checked — state 2, 3, 4, 5 or 7, 3 busy: ride recording) `02 u32 bytes_freed`
+  2 refused: storage damaged or not checked — state 2, 3, 4, 5 or 7, or (v1.2) the FAT check found an inconsistent
+  allocation table, 3 busy: ride recording) `02 u32 bytes_freed`
   `03 u16 items`. Allowed for state 0 OK, 1 storage full, 6 reports full: exactly when cleanup is needed. After the clean-up
   the board re-checks the storage (firmware ≥ 0.7.4-rc2 does this at start for a full storage: sent reports removed,
   storage re-classified) and **always sends STORAGE_STATUS right after STORAGE_CLEAN_RESULT**. Bit2 also clears the

@@ -50,7 +50,11 @@ int main(void)
     for (uint32_t b = 2; b < 5; b++) bc_bootring_push(&g, b)->reset = b == 3 ? BC_RST_WDT : BC_RST_PANIC;
     CHECK(bc_bootring_crash_streak(&g) == 3, "power-on then 3 crash resets -> 3 (got %d)", bc_bootring_crash_streak(&g));
     bc_bootring_push(&g, 5)->reset = BC_RST_BROWNOUT;
-    CHECK(bc_bootring_crash_streak(&g) == 4, "ring full of crash resets -> 4");
+    CHECK(bc_bootring_crash_streak(&g) == 3, "rc3 (QF-26): a brownout neither counts nor ends the streak (3)");
+    bc_bootring_push(&g, 7)->reset = BC_RST_PANIC;
+    CHECK(bc_bootring_crash_streak(&g) == 3, "ring 3,4,brownout,7: 3 crash resets");
+    { bc_bootring_t h; bc_bootring_init(&h); for (uint32_t b = 1; b <= 4; b++) bc_bootring_push(&h, b)->reset = BC_RST_BROWNOUT;
+      CHECK(bc_bootring_crash_streak(&h) == 0, "4 brownouts in a row on a healthy board: crash streak 0 (no RECOVERY)"); }
     bc_bootring_push(&g, 6)->reset = BC_RST_SW;
     CHECK(bc_bootring_crash_streak(&g) == 0, "a software restart (RETRY / install) ends it");
     char small[10]; CHECK(bc_bootrec_describe(bc_bootring_get(&g, 0), small, sizeof small) <= 9, "describe truncates");

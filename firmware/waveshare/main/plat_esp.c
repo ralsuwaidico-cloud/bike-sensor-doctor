@@ -164,6 +164,7 @@ bool plat_settings_ok(void) { return hw_settings_ok(); }
 bc_stor_state_t plat_storage_state(void) { return hw_storage_state(); }
 void plat_storage_facts(bc_stor_facts_t *o) { hw_storage_facts(o); }
 bool plat_storage_recheck(void) { return hw_storage_recheck(); }
+bool plat_storage_fat_consistent(char *why, size_t cap) { return hw_storage_fat_consistent(why, cap); }
 /** 0.7.4: category of the last failed write ("Storage full" for ENOSPC, else "Write failed"); the boot state if writes are refused. */
 bc_stor_state_t plat_storage_write_failure(void)
 {
@@ -269,6 +270,16 @@ void plat_health(plat_health_t *o)
     o->imu_ok = g_selftest.imu == HW_PASS; o->storage_ok = g_selftest.storage == HW_PASS;
 }
 
+uint8_t plat_crash_run_update(bc_reset_t reset)
+{
+    nvs_handle_t h; uint8_t v = 0;
+    if (nvs_open("bootrec", NVS_READWRITE, &h) != ESP_OK) return 0;
+    nvs_get_u8(h, "crashrun", &v);
+    uint8_t n = bc_boot_next_run(v, reset);
+    if (n != v) { if (nvs_set_u8(h, "crashrun", n) != ESP_OK || nvs_commit(h) != ESP_OK) n = 0; }   /* one write only when it changes */
+    nvs_close(h);
+    return n;
+}
 void plat_flash_usage(uint32_t *slot_kb, uint32_t *used_kb, uint16_t *nvs_used, uint16_t *nvs_free)
 {
     *slot_kb = *used_kb = 0; *nvs_used = *nvs_free = 0;

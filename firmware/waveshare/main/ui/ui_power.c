@@ -22,7 +22,8 @@ static bool s_qs_closing, s_handle_blocked;   /* blocked: the current screen own
 static uint32_t s_qs_opened_ms, s_toast_until_ms;
 static lv_point_t s_press;
 static bool s_inited;
-static int s_qs_page;      /* 0 list, 1 power options */
+static int s_qs_page;      /* 0 list, 1 power options, 2 rc3: confirm losing RAM-only rides */
+static int s_confirm;      /* 1 restart, 2 deep sleep */
 static bool s_qs_dirty;    /* rebuild requested from inside an event (never delete widgets while their event runs) */
 
 /* ---------------- touch bookkeeping: press start point (for the top-edge swipe) and last-touch time */
@@ -139,8 +140,21 @@ static void sensors_cb(lv_event_t *e) { (void)e; ui_qs_close(); ui_connections_s
 static void lock_cb(lv_event_t *e) { (void)e; ui_qs_close(); app_power_lock(); }
 static void off_cb(lv_event_t *e) { (void)e; ui_qs_close(); app_power_screen_off(); }
 static void sleep_page_cb(lv_event_t *e) { (void)e; s_qs_page = 1; s_qs_dirty = true; }
-static void sleep_go_cb(lv_event_t *e) { (void)e; if (app_power_can_sleep()) { ui_qs_close(); app_power_sleep(); } else toast("Sleep needs the ride ended first"); }
-static void restart_cb(lv_event_t *e) { (void)e; ui_qs_close(); app_power_restart(); }
+/* rc3 (QA QF-23): rides kept only in memory (damaged storage) are lost by a restart or deep sleep: a second, explicit
+   confirmation first */
+static void sleep_go_cb(lv_event_t *e)
+{
+    (void)e;
+    if (!app_power_can_sleep()) { toast("Sleep needs the ride ended first"); return; }
+    if (app_unsaved_count() && s_qs_page != 2) { s_confirm = 2; s_qs_page = 2; s_qs_dirty = true; return; }
+    ui_qs_close(); app_power_sleep();
+}
+static void restart_cb(lv_event_t *e)
+{
+    (void)e;
+    if (app_unsaved_count() && s_qs_page != 2) { s_confirm = 1; s_qs_page = 2; s_qs_dirty = true; return; }
+    ui_qs_close(); app_power_restart();
+}
 static void back_list_cb(lv_event_t *e) { (void)e; s_qs_page = 0; s_qs_dirty = true; }
 static void power_settings_cb(lv_event_t *e) { (void)e; ui_qs_close(); ui_power_settings_show(); }
 
@@ -198,6 +212,19 @@ static void qs_fill_list(void)
     ui_row_btn(q_list, "Power settings", LV_SYMBOL_RIGHT, C_CYAN, power_settings_cb, NULL);
 }
 
+static void qs_fill_confirm_page(void)
+{
+    char tx[220]; int n = app_unsaved_count(); bool no_bt = plat_bt_unavailable(NULL, 0);
+    snprintf(tx, sizeof tx, "%d ride%s exist%s ONLY in this\nboard's memory (storage\ndamaged). %s loses\n%s.\n%s", n, n == 1 ? "" : "s", n == 1 ? "s" : "",
+             s_confirm == 1 ? "RESTART" : "DEEP SLEEP", n == 1 ? "it" : "them",
+             no_bt ? "Bluetooth is off: they cannot\nbe copied to Cyclift now." : "Open Cyclift first to copy\nthem, then try again.");
+    lv_obj_t *t = ui_label(q_list, &lv_font_montserrat_12, C_AMBER, tx);
+    lv_obj_set_width(t, lv_pct(100)); lv_label_set_long_mode(t, LV_LABEL_LONG_WRAP);
+    lv_obj_t *b = ui_hold_btn(q_list, s_confirm == 1 ? "HOLD 3 s: LOSE + RESTART" : "HOLD 3 s: LOSE + SLEEP", C_RED, C_INK, lv_pct(100), 40, 3000, s_confirm == 1 ? restart_cb : sleep_go_cb, NULL);
+    lv_obj_set_style_text_font(ui_hold_label(b), &lv_font_montserrat_12, 0);
+    ui_pill(q_list, "BACK", C_PANEL, C_FG, 100, 34, back_list_cb, NULL);
+}
+
 static void qs_fill_power_page(void)
 {
     char tx[440]; int taps = app_power_wake_taps_now();
@@ -225,9 +252,9 @@ static void qs_build(void)
         lv_obj_add_event_cb(s_qs, qs_gesture, LV_EVENT_GESTURE, NULL);
     }
     lv_obj_clean(s_qs);
-    { lv_obj_t *t = ui_label(s_qs, &lv_font_montserrat_14, C_CYAN, s_qs_page ? "DEEP SLEEP" : "QUICK SETTINGS"); lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 31); }
+    { lv_obj_t *t = ui_label(s_qs, &lv_font_montserrat_14, C_CYAN, s_qs_page == 2 ? "RIDES IN MEMORY" : s_qs_page ? "DEEP SLEEP" : "QUICK SETTINGS"); lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 31); }
     q_list = ui_scroll_area(s_qs, 50, 176);
-    if (s_qs_page) qs_fill_power_page(); else qs_fill_list();
+    if (s_qs_page == 2) qs_fill_confirm_page(); else if (s_qs_page) qs_fill_power_page(); else qs_fill_list();
     lv_obj_t *x = ui_round_btn(s_qs, LV_SYMBOL_UP, C_PANEL, C_FG, 40, qs_close_cb, NULL);   /* "X": swipe-up symbol, closes */
     lv_obj_align(x, LV_ALIGN_TOP_MID, 0, 182);
     lv_obj_move_foreground(s_qs);

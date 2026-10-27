@@ -449,6 +449,26 @@ bool hw_selftest_storage(void)
 
 void hw_selftest_run(void) { hw_selftest_nvs(); hw_selftest_storage(); }
 bc_stor_state_t hw_storage_state(void) { return s_ss; }
+/* rc3 (QA QF-28): full consistency check of the FAT (chains, cross-links, lost clusters) through the wear-levelling layer,
+   read-only. Required before any clean-up deletes a file. */
+static bool wl_rd(void *ctx, uint32_t off, void *buf, uint32_t n) { (void)ctx; return wl_read(s_wl, off, buf, n) == ESP_OK; }
+bool hw_storage_fat_consistent(char *why, size_t cap)
+{
+    if (why && cap) why[0] = 0;
+    if (!s_sf.mounted || s_wl == WL_INVALID_HANDLE) { if (why && cap) snprintf(why, cap, "not mounted"); return false; }
+    uint8_t boot[512];
+    if (wl_read(s_wl, 0, boot, sizeof boot) != ESP_OK) { if (why && cap) snprintf(why, cap, "boot sector read error"); return false; }
+    size_t need = bc_fat_check_work(boot, sizeof boot);
+    if (!need) { if (why && cap) snprintf(why, cap, "not FAT12/16"); return false; }
+    void *work = heap_caps_malloc(need, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!work) { if (why && cap) snprintf(why, cap, "no memory"); return false; }
+    bc_fat_check_t c; bool ok = bc_fat_check(wl_rd, NULL, (uint32_t)wl_size(s_wl), work, need, &c);
+    free(work);
+    ESP_LOGI(TAG, "FAT check: %s - %lu clusters, %lu used, %lu reachable, %lu lost, %u files, %u dirs%s%s", ok ? "consistent" : "NOT consistent",
+             (unsigned long)c.clusters, (unsigned long)c.used, (unsigned long)c.reachable, (unsigned long)c.lost, c.files, c.dirs, c.why[0] ? ": " : "", c.why);
+    if (why && cap) snprintf(why, cap, "%s", c.why);
+    return ok;
+}
 bool hw_storage_recheck(void)
 {
     if (s_ss != BC_STOR_FULL || !s_sf.mounted) return s_ss == BC_STOR_OK;   /* only FULL is re-checked: damage never "heals" */

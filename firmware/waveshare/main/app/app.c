@@ -298,7 +298,13 @@ static void keep_samples(uint16_t id, bool demo)
     /* the per-second file is kept for real rides (future export to the phone apps); demo samples are dropped */
     if (demo) { plat_file_remove(JOURNAL); return; }
     char path[32]; snprintf(path, sizeof path, "rides/r%04u.txt", id);
-    plat_file_remove(path);
+    /* rc3 (QA QF-24): an existing samples file is never overwritten - it belongs to another ride (ids repeat only if the
+       ride counter was lost): it is moved aside first, and if that fails the new samples stay in the journal */
+    if (plat_file_size(path) >= 0) {
+        char aside[40]; snprintf(aside, sizeof aside, "rides/r%04u-old%05lu.txt", id, (unsigned long)(plat_boot_count() % 100000u));
+        if (!plat_file_rename(path, aside)) { char l[160]; snprintf(l, sizeof l, "RIDE #%u: %.31s exists and could not be moved aside - samples kept in the journal", id, path); plat_log(l); return; }
+        char l[160]; snprintf(l, sizeof l, "RIDE #%u: an older %.31s was moved to %.39s (never overwritten)", id, path, aside); plat_log(l);
+    }
     /* 0.7.4: 0.7.3 deleted the journal when the rename failed - the per-second ride data was lost silently. Now it stays as
        rides/active.jnl and the next ride start moves it aside (rides/unsaved-*.jnl). */
     if (!plat_file_rename(JOURNAL, path)) { char l[112]; snprintf(l, sizeof l, "RIDE #%u: samples NOT moved to %s - journal kept", id, path); plat_log(l); }
@@ -311,6 +317,16 @@ int app_unsaved_rides(bc_ride_summary_t *out, int max)
     int n = s_nunsaved < max ? s_nunsaved : max;
     for (int i = 0; i < n; i++) out[i] = s_unsaved[i];
     return n;
+}
+int app_unsaved_count(void) { return s_nunsaved; }
+bool app_unsaved_release(uint16_t id)
+{
+    for (int i = 0; i < s_nunsaved; i++) if (s_unsaved[i].id == id) {
+        memmove(&s_unsaved[i], &s_unsaved[i + 1], sizeof s_unsaved[0] * (size_t)(s_nunsaved - i - 1)); s_nunsaved--;
+        char l[80]; snprintf(l, sizeof l, "RIDE #%u: the phone confirmed it - memory slot freed (%d left)", id, s_nunsaved); plat_log(l);
+        return true;
+    }
+    return false;
 }
 /* a real ride whose summary could not be written: keep it in RAM (QA QF-01: never lose it silently) */
 static bool keep_in_ram(const bc_ride_summary_t *s)
@@ -459,8 +475,10 @@ static void recover(void)
     finish(&r, &c);
     r.s.recovered = true;
     char l[96];
-    if (demo || r.s.duration_s < 10) {
-        snprintf(l, sizeof l, "RECOVERY: interrupted %s ride #%u (%lus) not kept", demo ? "DEMO" : "very short", id, (unsigned long)r.s.duration_s);
+    /* rc3 (QA QF-29): a real interrupted ride is kept however short (0.7.4 dropped < 10 s with a log line only); it gets the
+       RECOVERED notice and goes to the history / the RAM queue like any ride. Only DEMO rides are dropped (simulated data). */
+    if (demo) {
+        snprintf(l, sizeof l, "RECOVERY: interrupted DEMO ride #%u (%lus) not kept (simulated data)", id, (unsigned long)r.s.duration_s);
         plat_log(l); plat_file_remove(JOURNAL); memset(&s_ride, 0, sizeof s_ride); return;
     }
     if (id >= s_prof.next_ride_id) s_prof.next_ride_id = (uint16_t)(id + 1);
@@ -481,6 +499,27 @@ bool app_take_recovered(bc_ride_summary_t *out)
     *out = s_recovered; s_have_recovered = false; return true;
 }
 
+/* rc3 (QA QF-24): ride ids are never reused, even when the settings memory (NVS, which holds the counter) is unusable and the
+   profile starts from defaults every boot: the next id is above every id in the ride history and the RAM queue. */
+static void ride_id_floor(void)
+{
+    uint16_t max = 0; long off = 0; char *chunk = s_io; bc_ride_summary_t s;
+    for (;;) {
+        long n = plat_file_read_at(HIST_REAL, off, chunk, 4096);
+        if (n <= 0) break;
+        chunk[n] = 0; char *p = chunk, *e; long used = 0;
+        while ((e = strchr(p, '\n')) != NULL) { *e = 0; if (bc_summary_from_line(&s, p) && s.id > max) max = s.id; used = (e - chunk) + 1; p = e + 1; }
+        if (!used) break;
+        off += used;
+    }
+    for (int i = 0; i < s_nunsaved; i++) if (s_unsaved[i].id > max) max = s_unsaved[i].id;
+    if (max && s_prof.next_ride_id <= max) {
+        char l[96]; snprintf(l, sizeof l, "RIDE ids: counter %u is not above the newest ride #%u - continuing at %u", s_prof.next_ride_id, max, max + 1); plat_log(l);
+        s_prof.next_ride_id = (uint16_t)(max + 1);
+        app_profile_save();
+    }
+}
+
 void app_init(void)
 {
     static char buf[1024];
@@ -492,6 +531,7 @@ void app_init(void)
     app_psvc_init();
     s_nunsaved = 0;                /* RAM-only rides do not survive a restart (a no-op on the board, which starts fresh; the PC harness restarts without power loss) */
     recover();
+    ride_id_floor();               /* rc3 (QA QF-24) */
     plat_backlight(s_prof.brightness);
     plat_csc_wheel_mm(s_prof.wheel_mm);
     /* 0.6.0 fix: the phone link's advertising was only ever switched on by the Settings/Quick Settings toggle, never at

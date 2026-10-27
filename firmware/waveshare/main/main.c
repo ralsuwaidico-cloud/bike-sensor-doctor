@@ -115,10 +115,23 @@ static void stage_done(bc_subsys_t s, int result, uint32_t staged_dwell_ms)
 }
 static bool skipped(bc_subsys_t s) { return (s_plan.skip & BC_SS_BIT(s)) != 0; }
 
+/* rc3 (QA QF-25): the recovery screen crashed last time - a static text, nothing else. Its own marker (RECMIN): if even this
+   crashes, the next start halts (bc_boot_plan). */
+static void minimal_mode(void)
+{
+    ESP_LOGW(TAG, "RECOVERY (MINIMAL): the recovery screen crashed on the previous start - static text only (no touch, no Bluetooth)");
+    bc_boot_mark(R, BC_SS_RECMIN);
+    lvgl_port_lock(0);
+    hw_backlight_set(80);
+    ui_recovery_minimal_show();
+    lvgl_port_unlock();
+    for (;;) { vTaskDelay(pdMS_TO_TICKS(60000)); ESP_LOGW(TAG, "recovery (minimal): waiting - unplug to restart"); }
+}
 static void recovery_mode(lv_display_t *disp)
 {
     ESP_LOGW(TAG, "RECOVERY MODE: %u crash resets in a row / %u crashed staged boots - display, touch and storage only", (unsigned)R->crash_streak, (unsigned)R->staged_fails);
     bump("safemode");
+    bc_boot_mark(R, BC_SS_RECUI);                            /* rc3 (QF-25): a crash from here on is the recovery screen's */
     hw_touch_init(disp);                                     /* no wake gesture filter: the screen stays on */
     lvgl_port_lock(0);
     hw_backlight_set(80);
@@ -143,8 +156,19 @@ void app_main(void)
 
     hw_selftest_nvs();                                       /* NVS before the plan (disabled subsystems live there) */
     R = plat_boot_rtc();
+    /* rc3 (QA QF-26): the crash-run counter in NVS is updated BEFORE storage starts (so a crash in storage with RTC memory lost
+       is still counted), then the limiter combines it with the RTC run streak */
+    uint8_t nvs_run = plat_crash_run_update(plat_reset_kind());
     bc_boot_plan(R, plat_reset_kind(), plat_boot_skip_load(), &s_plan);
+    bc_boot_limit(R, &s_plan, nvs_run);
     if (s_plan.newly_skipped) plat_boot_skip_save(s_plan.skip);
+    if (s_plan.halt) {   /* rc3 (QF-25): even the minimal recovery text crashed: start nothing, never loop */
+        ESP_LOGE(TAG, "HALT: the minimal recovery screen crashed on the previous start. Nothing is started. Unplug the board and tell Claude (READ-BOARD-STATE).");
+        for (;;) { vTaskDelay(pdMS_TO_TICKS(60000)); ESP_LOGE(TAG, "halted after repeated recovery crashes - unplug to restart"); }
+    }
+    if (s_plan.brownout) ESP_LOGW(TAG, "brownout reset (%u in a row): power dip - not counted as a crash", (unsigned)s_plan.brown_streak);
+    if (s_plan.limited) ESP_LOGW(TAG, "crash-loop limiter: %u crash resets in a row (NVS %u) -> RECOVERY%s%s%s", (unsigned)s_plan.run_streak, (unsigned)nvs_run,
+                                 s_plan.no_storage ? ", no storage" : "", s_plan.no_diag ? ", no diagnostics" : "", s_plan.minimal ? ", minimal" : "");
     g_crash_consecutive = R->crash_streak;
     if (s_plan.crashed) bump("crashes");
     ESP_LOGI(TAG, "reset reason: %s, consecutive crash resets: %u, boot mode %s, crashed subsystem %s, disabled 0x%03X",
@@ -181,7 +205,7 @@ void app_main(void)
         app_diag_stage(BC_SS_DISPLAY, 1); app_diag_stage(BC_SS_STORAGE, s_plan.no_storage ? 2 : storage_ok ? 1 : 3);
         lvgl_port_unlock();
     } else ESP_LOGW(TAG, "STAGE diagnostics NOT started: the last crash happened there (recovery; the core dump stays in its partition)");
-    if (s_plan.mode == BC_BOOT_RECOVERY) { recovery_mode(disp); return; }
+    if (s_plan.mode == BC_BOOT_RECOVERY) { if (s_plan.minimal) minimal_mode(); else recovery_mode(disp); return; }
 
     /* 0.7.4: Bluetooth stack first (its HCI buffers must come from internal RAM; see the header comment) */
     bool bt_stack = false;
@@ -207,6 +231,7 @@ void app_main(void)
     ui_start();
     if (s_plan.mode == BC_BOOT_STAGED) ui_toast("Diagnosing: starting one part at a time");
     if (!hw_settings_ok()) ui_toast("Settings memory needs repair");   /* QA QF-02: NVS not erased, nothing saved this boot */
+    else if (s_plan.brown_streak >= 2) { char b[56]; snprintf(b, sizeof b, "Power dips: %u restarts - check battery", (unsigned)s_plan.brown_streak); ui_toast(b); }   /* rc3 QF-26 */
     else if (!bt_stack) ui_toast("Bluetooth unavailable - see Connections");
     else if (s_plan.newly_skipped && s_plan.suspect != BC_SS_POWER && s_plan.suspect != BC_SS_HR && s_plan.suspect != BC_SS_CSC) { char b[56];   /* sensors: own toast below */ snprintf(b, sizeof b, "%s disabled after a crash", bc_subsys_name((bc_subsys_t)s_plan.suspect)); ui_toast(b); }
     lvgl_port_unlock();

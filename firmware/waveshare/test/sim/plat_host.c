@@ -118,6 +118,7 @@ bool plat_file_remove(const char *path) { char p[512]; full(path, p, sizeof p); 
 bool plat_storage_ok(void) { return g_sim.storage_state == BC_STOR_OK; }
 bool plat_settings_ok(void) { return true; }
 bc_stor_state_t plat_storage_state(void) { return (bc_stor_state_t)g_sim.storage_state; }
+bool plat_storage_fat_consistent(char *why, size_t cap) { if (why && cap) snprintf(why, cap, "%s", g_sim.fat_inconsistent ? "clusters marked used but in no file (lost)" : ""); return g_sim.storage_state != BC_STOR_FS_UNAVAILABLE && !g_sim.fat_inconsistent; }
 bool plat_storage_recheck(void) { if (g_sim.storage_state == BC_STOR_FULL && g_sim.full_clears_on_cleanup) g_sim.storage_state = BC_STOR_OK; return g_sim.storage_state == BC_STOR_OK; }
 void plat_storage_facts(bc_stor_facts_t *o) { memset(o, 0, sizeof *o); o->partition_found = o->mounted = g_sim.storage_state != BC_STOR_FS_UNAVAILABLE; o->probe_attempted = true; o->probe_ok = g_sim.storage_state == BC_STOR_OK; }
 bc_stor_state_t plat_storage_write_failure(void) { return g_sim.storage_state == BC_STOR_OK ? BC_STOR_WRITE_FAILED : (bc_stor_state_t)g_sim.storage_state; }
@@ -436,6 +437,7 @@ void plat_selftest_text(char *b, size_t cap)
 void plat_mem_text(char *b, size_t cap) { snprintf(b, cap, "heap 180K min 150K psram 1900K"); }
 void plat_log(const char *line) { if (g_sim.verbose) printf("  [log] %s\n", line); snprintf(g_sim.last_log, sizeof g_sim.last_log, "%s", line); }
 void *plat_alloc_ext(size_t n) { return calloc(1, n); }   /* 0.7.4 */
+uint8_t plat_crash_run_update(bc_reset_t reset) { g_sim.nvs_crash_run = bc_boot_next_run(g_sim.nvs_crash_run, reset); return g_sim.nvs_crash_run; }
 void plat_flash_usage(uint32_t *slot_kb, uint32_t *used_kb, uint16_t *nvs_used, uint16_t *nvs_free) { *slot_kb = 4032; *used_kb = 1804; *nvs_used = 310; *nvs_free = 320; }
 size_t plat_bootrec_text(char *buf, size_t cap)   /* 0.7.4: the simulated NVS boot-record ring (sim_main.c device_boot) */
 {

@@ -33,7 +33,9 @@ extern "C" {
    phone link and the sensor central (both need it); skipping it means no Bluetooth at all this boot. Value 9 is new: older
    Cyclift builds show it as a number in the text report, nothing else depends on it. */
 typedef enum { BC_SS_NONE = 0, BC_SS_DISPLAY = 1, BC_SS_STORAGE = 2, BC_SS_PHONE = 3, BC_SS_WIFI = 4, BC_SS_CENTRAL = 5,
-               BC_SS_POWER = 6, BC_SS_HR = 7, BC_SS_CSC = 8, BC_SS_BTSTACK = 9, BC_SS_DIAG = 10, BC_SS_RUNNING = 14, BC_SS_STABLE = 15 } bc_subsys_t;
+               BC_SS_POWER = 6, BC_SS_HR = 7, BC_SS_CSC = 8, BC_SS_BTSTACK = 9, BC_SS_DIAG = 10,
+               BC_SS_RECUI = 11 /* rc3: the recovery screen (touch + UI) */, BC_SS_RECMIN = 12 /* rc3: the minimal recovery text */,
+               BC_SS_RUNNING = 14, BC_SS_STABLE = 15 } bc_subsys_t;
 /* 0.7.4 (QA QF-03): BC_SS_DIAG = boot record + diagnostics init (crash report, core-dump copy). STORAGE and DIAG are never
    skipped in a normal boot (no recovery screen without them), but a RECOVERY boot whose last crash happened while one of
    them started does NOT start it again: bc_boot_plan sets no_storage / no_diag, so a crash there cannot loop. */
@@ -58,6 +60,11 @@ typedef struct {
     uint8_t request;           /* 1 = the rider asked for a staged boot (applied on the next start) */
     uint8_t crashed_last;      /* this boot follows a crash */
     uint32_t boots;            /* starts since the RTC state was created */
+    /* rc3 (QA QF-26) */
+    uint8_t run_streak;        /* crash resets (panic / watchdog) in a row, NOT cleared at the 20 s stable mark: late crash loops */
+    uint8_t brown_streak;      /* brownout resets in a row: a power problem, never a reason for RECOVERY */
+    uint8_t last_brown;        /* bc_subsys_t that was starting at the previous brownout */
+    uint8_t pad;
     uint32_t crc;
 } bc_boot_rtc_t;
 
@@ -69,7 +76,22 @@ typedef struct {
     bool newly_skipped;        /* suspect was added to skip on this boot */
     bool rtc_was_valid;
     bool no_storage, no_diag;  /* 0.7.4: RECOVERY after a crash in that stage: do not start it */
+    /* rc3 (QA QF-25 / QF-26) */
+    bool minimal;              /* the recovery screen itself crashed: a static text only (no touch, no Bluetooth) */
+    bool halt;                 /* the minimal text crashed too: nothing is started, the board idles (serial log only) */
+    bool brownout;             /* this start follows a brownout (power dip): not counted as a crash */
+    uint8_t brown_streak;      /* brownouts in a row (>= 2: the screens show a power warning) */
+    uint8_t run_streak;        /* crash resets in a row this power cycle (RTC), stable mark ignored */
+    bool limited;              /* bc_boot_limit forced RECOVERY */
 } bc_boot_plan_t;
+/* rc3 (QA QF-26): crash-loop limiter beyond the RTC streak. run = max(RTC run_streak, the NVS crash-run counter written
+ * before storage starts); from BC_BOOT_LIMIT_RUN on, RECOVERY; when the crash site is unknown (RTC lost / no marker) the
+ * recovery sheds stages step by step so it cannot loop: >= 4 no storage, >= 6 also no diagnostics, >= 8 minimal text. */
+#define BC_BOOT_LIMIT_RUN 4
+void bc_boot_limit(bc_boot_rtc_t *r, bc_boot_plan_t *p, uint8_t nvs_run);
+/** The NVS crash-run counter for this start: +1 after a panic / watchdog reset, unchanged after a brownout or deep-sleep
+ *  wake, 0 after power-on / software restart. */
+uint8_t bc_boot_next_run(uint8_t prev, bc_reset_t reset);
 
 bool bc_boot_rtc_valid(const bc_boot_rtc_t *r);
 /** Decide this boot. reset = bc_reset_t of esp_reset_reason(); nvs_skip = subsystems disabled in NVS for this firmware. */

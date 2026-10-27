@@ -230,17 +230,20 @@ static void strip_markup(char *s)
 static void export_cb(lv_event_t *e)
 {
     (void)e;
-    static char rep[3400];
+    /* rc3 (QA QF-27): the report buffer lives in PSRAM (was 3.4 KB of internal RAM for the whole run) */
+    static char *rep; enum { REP_CAP = 3400 };
+    if (!rep) rep = plat_alloc_ext(REP_CAP);
+    if (!rep) { ui_toast("No memory for the report"); return; }
     size_t n = health_text(rep, 1900, false);
     char st[520]; plat_selftest_text(st, sizeof st); strip_markup(st);
     app_live_t lv; app_live(&lv);
     bc_ride_summary_t r[3]; int nr = app_history(r, 3, false);
-    n += (size_t)snprintf(rep + n, sizeof rep - n, "\n--- self-test\n%s\n--- live\npower %s %d W, cadence %s %d rpm, hr %s\nsource %s\n--- rides: %d shown (newest first)\n",
+    n += (size_t)snprintf(rep + n, REP_CAP - n, "\n--- self-test\n%s\n--- live\npower %s %d W, cadence %s %d rpm, hr %s\nsource %s\n--- rides: %d shown (newest first)\n",
                           st, lv.power_ok ? "ok" : "NO DATA", lv.power_ok ? lv.watts : 0, lv.cad_ok ? "ok" : "NO DATA", lv.cad_ok ? lv.rpm : 0,
                           lv.hr_ok ? "ok" : "none", lv.demo ? "SIMULATED (demo)" : "real sensors", nr);
-    for (int i = 0; i < nr && n < sizeof rep - 80; i++) {
+    for (int i = 0; i < nr && n < REP_CAP - 80; i++) {
         char d[16]; bc_fmt_duration(r[i].duration_s, d, sizeof d);
-        n += (size_t)snprintf(rep + n, sizeof rep - n, "ride #%u %s avg %d W max %d W cad %d%s\n", r[i].id, d, r[i].avg_power, r[i].max_power,
+        n += (size_t)snprintf(rep + n, REP_CAP - n, "ride #%u %s avg %d W max %d W cad %d%s\n", r[i].id, d, r[i].avg_power, r[i].max_power,
                               r[i].avg_cad, r[i].recovered ? " (recovered)" : "");
     }
     plat_export_report(rep);

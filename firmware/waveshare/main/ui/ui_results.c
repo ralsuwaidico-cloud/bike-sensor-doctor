@@ -22,9 +22,14 @@ static void save_notice(app_save_result_t r)
     lv_obj_t *t = ui_title(scr, r == APP_SAVE_RAM_ONLY ? "NOT SAVED ON BOARD" : "RIDE NOT SAVED");
     lv_obj_set_style_text_color(t, C_RED, 0);
     lv_obj_t *list = ui_scroll_area(scr, 66, 164);     /* the title takes two lines on the round screen */
-    char b[160];
-    if (r == APP_SAVE_RAM_ONLY)
+    char b[180];
+    bool no_bt = plat_bt_unavailable(NULL, 0);    /* rc3 (QA QF-21): without Bluetooth the phone cannot copy it - never say so */
+    if (r == APP_SAVE_RAM_ONLY && no_bt)
+        snprintf(b, sizeof b, "Storage: %s.\nRide #%u stays in memory\nonly until power-off or\nsleep. Bluetooth is off:\nnote what you need now.", bc_stor_short(plat_storage_state()), s_sum.id);
+    else if (r == APP_SAVE_RAM_ONLY)
         snprintf(b, sizeof b, "Storage: %s.\nRide #%u is kept until\npower-off. Open Cyclift\nnow to copy it.", bc_stor_short(plat_storage_state()), s_sum.id);
+    else if (no_bt)
+        snprintf(b, sizeof b, "Storage: %s and\n%d rides already wait\nin memory. Bluetooth is\noff: this one is lost.", bc_stor_short(plat_storage_state()), APP_UNSAVED_MAX);
     else
         snprintf(b, sizeof b, "Storage: %s and\n%d unsynced rides already\nwait in memory. Open\nCyclift to copy them.", bc_stor_short(plat_storage_state()), APP_UNSAVED_MAX);
     lv_obj_t *l = ui_label(list, &lv_font_montserrat_14, C_FG, b);
@@ -90,7 +95,9 @@ void ui_results_show(const bc_ride_summary_t *s, bool fresh)
     }
     if (fresh) {
         if (!plat_storage_ok() && !s->demo)          /* 0.7.4: say it BEFORE the rider taps SAVE */
-            line(list, &lv_font_montserrat_12, C_RED, "Board storage damaged:\nthis ride is kept in memory\nuntil power-off only.\nOpen Cyclift to copy it.");
+            line(list, &lv_font_montserrat_12, C_RED, plat_bt_unavailable(NULL, 0)
+                 ? "Board storage damaged:\nthis ride is kept in memory\nuntil power-off only.\nBluetooth is off: it cannot\nreach Cyclift this start."
+                 : "Board storage damaged:\nthis ride is kept in memory\nuntil power-off only.\nOpen Cyclift to copy it.");
         line(list, &lv_font_montserrat_12, C_MUT, "SAVE keeps this ride.\nHold the bin 1.5 s to discard.");
         lv_obj_t *del = ui_hold_btn(scr, LV_SYMBOL_TRASH, C_PANEL, C_RED, 44, 44, 1500, discard_cb, NULL);
         lv_obj_set_style_text_font(ui_hold_label(del), &lv_font_montserrat_20, 0);
@@ -105,7 +112,8 @@ void ui_results_show(const bc_ride_summary_t *s, bool fresh)
 }
 
 /* ---------------- History */
-static bc_ride_summary_t h_rides[20]; static int h_n; static bool h_demo;
+/* rc3 (QA QF-27): the history list buffer (20 summaries, ~4.7 KB) lives in PSRAM, allocated when History is first opened */
+static bc_ride_summary_t *h_rides; static int h_n; static bool h_demo;
 
 static void open_ride(lv_event_t *e) { int i = (int)(intptr_t)lv_event_get_user_data(e); ui_results_show(&h_rides[i], false); }
 static void go_home(lv_event_t *e) { (void)e; ui_home_show(); }
@@ -114,7 +122,8 @@ static void toggle(lv_event_t *e) { (void)e; ui_history_show(!h_demo); }
 void ui_history_show(bool demo)
 {
     h_demo = demo;
-    h_n = app_history(h_rides, 20, demo);
+    if (!h_rides) h_rides = plat_alloc_ext(sizeof *h_rides * 20);
+    h_n = h_rides ? app_history(h_rides, 20, demo) : 0;
     lv_obj_t *scr = ui_screen_new(UI_SCR_HISTORY, NULL);
     lv_obj_t *t = ui_title(scr, demo ? "DEMO RIDES" : "HISTORY");
     if (demo) lv_obj_set_style_text_color(t, C_DEMO, 0);

@@ -54,7 +54,9 @@ int bc_bootring_crash_streak(const bc_bootring_t *g)
     int n = 0;
     for (int i = 0; i < g->count; i++) {
         const bc_bootrec_t *r = bc_bootring_get(g, i);
-        if (!r || !(r->reset == BC_RST_PANIC || r->reset == BC_RST_WDT || r->reset == BC_RST_BROWNOUT)) break;
+        if (!r) break;
+        if (r->reset == BC_RST_BROWNOUT) continue;          /* rc3 (QF-26): a power dip neither counts nor ends the streak */
+        if (!(r->reset == BC_RST_PANIC || r->reset == BC_RST_WDT)) break;
         n++;
     }
     return n;

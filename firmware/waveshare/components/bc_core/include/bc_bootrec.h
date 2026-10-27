@@ -77,7 +77,7 @@ bool bc_bootring_valid(const bc_bootring_t *g, size_t blob_len);
 int bc_bootring_bt_fail_streak(const bc_bootring_t *g);
 /** Copy the newest record to last_bt_try if it attempted Bluetooth (call after its bt_result is set). */
 void bc_bootring_note_bt(bc_bootring_t *g);
-/** Consecutive newest records (INCLUDING the newest = this boot) whose start was a crash reset (panic / watchdog / brownout). */
+/** Consecutive newest records (INCLUDING the newest = this boot) whose start was a crash reset (panic / watchdog); rc3: brownout records are skipped (neither counted nor ending it). */
 int bc_bootring_crash_streak(const bc_bootring_t *g);
 const char *bc_bt_result_name(bc_bt_result_t r);   /* "HCI/host init failed" ... (<= 24 chars) */
 /** One line for the serial log / Device Health / reports. */

@@ -452,6 +452,46 @@ static void test_boot_same_suspect(void)
               "crash in %s at every start: %d crashes, then RECOVERY without it -> stable at boot %d", bc_subsys_name(bad), crashes, stable_at);
     }
     CHECK(!strcmp(bc_subsys_name(BC_SS_DIAG), "diagnostics"), "DIAG name");
+    /* rc3 (QA QF-26): brownouts are a power problem: no RECOVERY however many; the same subsystem at two in a row is skipped */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    for (int k = 0; k < 6; k++) { bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_BROWNOUT, 0, &p); }
+    CHECK(p.mode == BC_BOOT_NORMAL && p.brownout && p.brown_streak == 6 && !p.crashed && r.crash_streak == 0 && p.run_streak == 0, "6 brownouts in a row: NORMAL, brown streak 6, no crash streak");
+    bc_boot_plan(&r, BC_RST_POWERON, 0, &p); CHECK(p.brown_streak == 0 && !p.brownout, "a normal start clears the brownout streak");
+    bc_boot_mark(&r, BC_SS_BTSTACK); bc_boot_plan(&r, BC_RST_BROWNOUT, 0, &p);
+    bc_boot_mark(&r, BC_SS_BTSTACK); bc_boot_plan(&r, BC_RST_BROWNOUT, 0, &p);
+    CHECK(p.newly_skipped && (p.skip & BC_SS_BIT(BC_SS_BTSTACK)) && p.mode == BC_BOOT_NORMAL, "brownout twice while the Bluetooth stack starts: it is skipped (radio current on a weak battery cannot loop)");
+    /* rc3 (QF-26): late crash loop (each > 20 s after start): the RTC run streak is not cleared by 'stable' */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    for (int k = 0; k < 4; k++) { bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_stable(&r); bc_boot_plan(&r, BC_RST_PANIC, 0, &p); bc_boot_limit(&r, &p, 0); }
+    CHECK(p.mode == BC_BOOT_RECOVERY && p.limited && p.run_streak == 4 && !p.no_storage, "4 late crashes (NVS ring unusable): RECOVERY from the RTC run streak, storage kept");
+    /* rc3 (QF-26): RTC lost at every crash + crash in the storage stage: only the NVS crash-run counter sees it -> ladder */
+    { uint8_t run = 0; int boots = 0; bool stable = false;
+      for (int k = 0; k < 12 && !stable; k++) {
+          memset(&r, 0xA5, sizeof r);                                /* RTC lost */
+          run = bc_boot_next_run(run, k ? BC_RST_PANIC : BC_RST_POWERON); bc_boot_plan(&r, k ? BC_RST_PANIC : BC_RST_POWERON, 0, &p); bc_boot_limit(&r, &p, run); boots++;
+          if (!p.no_storage) continue;                               /* storage starts -> crash */
+          stable = true;
+      }
+      CHECK(stable && boots == 5 && p.mode == BC_BOOT_RECOVERY && p.no_storage && !p.no_diag, "RTC lost + crash in storage: NVS counter -> RECOVERY without storage at boot %d", boots); }
+    { uint8_t run = 0; int boots = 0; bool stable = false;   /* ... and when the diagnostics stage crashes too */
+      for (int k = 0; k < 14 && !stable; k++) {
+          memset(&r, 0xA5, sizeof r); run = bc_boot_next_run(run, k ? BC_RST_PANIC : BC_RST_POWERON);
+          bc_boot_plan(&r, k ? BC_RST_PANIC : BC_RST_POWERON, 0, &p); bc_boot_limit(&r, &p, run); boots++;
+          if (!p.no_diag) continue;
+          stable = true;
+      }
+      CHECK(stable && boots == 7 && p.no_storage && p.no_diag && !p.minimal, "... a crash in diagnostics too: without diagnostics at boot %d", boots); }
+    CHECK(bc_boot_next_run(3, BC_RST_BROWNOUT) == 3 && bc_boot_next_run(3, BC_RST_SW) == 0 && bc_boot_next_run(3, BC_RST_WDT) == 4 && bc_boot_next_run(3, BC_RST_DEEPSLEEP) == 3, "NVS crash-run counter rules");
+    /* rc3 (QA QF-25): a crash inside the recovery screen -> minimal text (with boot record + report), then halt */
+    memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_POWERON, 0, &p);
+    for (int k = 0; k < 3; k++) { bc_boot_mark(&r, BC_SS_RUNNING); bc_boot_plan(&r, BC_RST_PANIC, 0, &p); }
+    CHECK(p.mode == BC_BOOT_RECOVERY, "RECOVERY");
+    bc_boot_mark(&r, BC_SS_RECUI); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.mode == BC_BOOT_RECOVERY && p.minimal && !p.halt && !p.no_diag && p.suspect == BC_SS_RECUI && !strcmp(bc_subsys_name(BC_SS_RECUI), "recovery screen"), "recovery screen crashed: minimal text next, report attributed to the recovery screen");
+    bc_boot_mark(&r, BC_SS_RECMIN); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
+    CHECK(p.minimal && p.halt, "minimal text crashed too: halt (no loop)");
+    bc_boot_plan(&r, BC_RST_POWERON, 0, &p); CHECK(p.mode == BC_BOOT_NORMAL && !p.minimal && !p.halt, "power-on: normal again");
+
     /* rc2 (QA QF-09): the NVS crash streak forces RECOVERY when RTC memory did not keep count */
     memset(&r, 0, sizeof r); bc_boot_plan(&r, BC_RST_PANIC, 0, &p);
     CHECK(p.mode == BC_BOOT_NORMAL, "RTC lost: looks like a first crash");

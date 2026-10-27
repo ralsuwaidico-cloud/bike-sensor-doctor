@@ -73,6 +73,23 @@ static void scr_deleted(lv_event_t *e)
     r_status = r_send = NULL;
 }
 
+/* rc3 (QA QF-25): the recovery screen itself crashed on the previous start - a static text only: no touch, no timer, no
+   Bluetooth, nothing that can crash the same way again. The boot record and crash report were already written. */
+void ui_recovery_minimal_show(void)
+{
+    lv_obj_t *scr = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(scr, C_BG, 0); lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+    lv_obj_remove_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_t *t = ui_label(scr, &bc_bold16, C_AMBER, "RECOVERY (MINIMAL)");
+    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_t *m = ui_label(scr, &lv_font_montserrat_14, C_FG, "The recovery screen\ncrashed. Settings and\nrides are untouched.\nUnplug, then tell Claude:\nrun READ-BOARD-STATE.");
+    lv_obj_set_style_text_align(m, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(m, LV_ALIGN_TOP_MID, 0, 80);
+    lv_obj_t *old = lv_screen_active();
+    lv_screen_load(scr);
+    if (old && old != scr) lv_obj_delete_async(old);
+}
+
 void ui_recovery_show(void)
 {
     lv_obj_t *scr = lv_obj_create(NULL);

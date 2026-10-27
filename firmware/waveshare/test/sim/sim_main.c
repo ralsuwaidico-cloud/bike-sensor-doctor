@@ -1669,8 +1669,11 @@ static bool device_boot(bc_reset_t reset)
     g_sim.boots++; sim_wifi_reboot(); g_sim.restart_requested = false; g_sim.phone_only_started = false;
     for (int k = 0; k < PLAT_SENS_KINDS; k++) g_sim.link[k].disabled = false;
     bc_boot_rtc_t *R = plat_boot_rtc();
+    uint8_t nrun = plat_crash_run_update(reset);                       /* rc3: as main.c, before storage */
     bc_boot_plan(R, reset, plat_boot_skip_load(), &s_plan);
+    bc_boot_limit(R, &s_plan, nrun);
     if (s_plan.newly_skipped) plat_boot_skip_save(s_plan.skip);
+    g_sim.halted = s_plan.halt; if (s_plan.halt) return true;          /* rc3 (QF-25): nothing started, no loop */
     /* rc2: the same order as main.c - storage stage, then the DIAG stage (boot record, NVS crash streak, the Bluetooth rule,
        then app_diag_init); a RECOVERY boot skips the stage the last crash happened in (QA QF-03) */
     bc_boot_mark(R, BC_SS_DISPLAY); bc_boot_mark(R, BC_SS_STORAGE);
@@ -1696,7 +1699,11 @@ static bool device_boot(bc_reset_t reset)
     } else { memset(&dummy, 0, sizeof dummy); rec = &dummy; app_diag_off(); }
     /* a boot that did not start storage sees it as unavailable; the medium itself is unchanged (restored next boot) */
     if (s_plan.no_storage) s_medium = saved_state + 1;
-    if (s_plan.mode == BC_BOOT_RECOVERY) { ui_recovery_show(); run(400); return true; }
+    if (s_plan.mode == BC_BOOT_RECOVERY) {
+        if (s_plan.minimal) { bc_boot_mark(R, BC_SS_RECMIN); if (s_crash_at == BC_SS_RECMIN) return false; ui_recovery_minimal_show(); }
+        else { bc_boot_mark(R, BC_SS_RECUI); if (s_crash_at == BC_SS_RECUI) return false; ui_recovery_show(); }
+        run(400); return true;
+    }
     /* 0.7.4: the Bluetooth stack stage comes before the screens (main.c); a disabled stack = no phone link, no sensors */
     bc_boot_mark(R, BC_SS_BTSTACK); app_diag_stage(BC_SS_BTSTACK, 0);
     if (s_plan.skip & BC_SS_BIT(BC_SS_BTSTACK)) { g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "off after 2 failures"); app_diag_stage(BC_SS_BTSTACK, 2); rec->bt_result = BC_BT_SKIPPED; }
@@ -2195,7 +2202,9 @@ static void scenario_075(void)
     rq_list13(); const bc_rideq_info_t *ri = rq_find13(ram_id);
     CHECK(ri && ri->state == BC_RQ_UNSYNCED && (ri->flags & BC_RQF_RAM_ONLY) && ri->samples_size == 0, "RAM-only ride listed with flag bit4, no samples");
     rq_ack13(ram_id, 0, ri ? ri->summary_crc : 0, true);
-    rq_list13(); CHECK(rq_find13(ram_id) && rq_find13(ram_id)->state == BC_RQ_VERIFIED, "RAM-only ride verified by the phone: state 3");
+    CHECK(g_sim.phone.n_rqinfo > 0 && g_sim.phone.rqinfo[g_sim.phone.n_rqinfo - 1].ride_id == ram_id && g_sim.phone.rqinfo[g_sim.phone.n_rqinfo - 1].state == BC_RQ_VERIFIED,
+          "RAM-only ride verified by the phone: RIDEQ_INFO state 3");
+    rq_list13(); CHECK(!rq_find13(ram_id) && app_unsaved_count() == nu - 1, "rc3 (QF-22): its memory slot is freed (%d RAM rides left)", app_unsaved_count());
     /* f) storage clean-up rules */
     int sc0 = g_sim.phone.sstats; clean13(BC_CLEAN_REPORTS | BC_CLEAN_SAMPLES | BC_CLEAN_CACHES);
     CHECK(g_sim.phone.clean.status == BC_CLEAN_REFUSED && g_sim.phone.sstats == sc0 + 1 && g_sim.phone.sstat.state == BC_STOR_DIR_CORRUPTED && !strcmp(g_sim.phone.sstat.code, "dir_corrupted") && g_sim.phone.sstat.health == 2,
@@ -2220,6 +2229,95 @@ static void scenario_075(void)
     { bool gone = true; for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].id == did) gone = false; CHECK(gone, "then the report is gone from the board"); }
     sim_phone_disconnect(); run(300);
     pr->power.paired = false; app_profile_save(); sensors(false, 0, false, 0, false, 0);
+}
+
+/* ===================================================================================== 0.7.4-rc3: QA findings QF-21..QF-29 */
+static void scenario_074rc3(void)
+{
+    printf("\n== 28. firmware 0.7.4-rc3: honest ride messages without Bluetooth, RAM slots freed, confirmations, ride ids, recovery-screen crash, brownouts, FAT check, short interrupted rides\n");
+    bc_profile_t *pr = app_profile();
+    g_sim.storage_state = BC_STOR_OK; g_sim.bt_fail_on_init = 0; s_crash_at = BC_SS_NONE; g_sim.nvs_skip = 0; memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); g_sim.fat_inconsistent = false;
+    pr->phone_on = true; pr->onboarded = true; app_profile_save();
+    CHECK(device_boot(BC_RST_POWERON), "starts"); device_stable();
+    sensors(true, 160, true, 85, false, 0);
+    /* a) QF-21: damaged storage + Bluetooth unavailable: the screens never say "Open Cyclift" */
+    g_sim.storage_state = BC_STOR_DIR_CORRUPTED; g_sim.bt_unavailable = true; snprintf(g_sim.bt_reason, sizeof g_sim.bt_reason, "HCI init failed");
+    app_ride_start(); run_s(12); app_ride_end();
+    { bc_ride_summary_t fin; app_ride_totals(&fin); ui_results_show(&fin, true); run(300);
+      CHECK(scroll_to("Bluetooth is off") && !on_screen("Open Cyclift"), "results: 'Bluetooth is off: it cannot reach Cyclift' instead of 'Open Cyclift'"); shot("28a_results_no_bt");
+      scroll_to("SAVE"); tap_text("SAVE"); run(300);
+      CHECK(on_screen("NOT SAVED ON BOARD") && on_screen("Bluetooth is off") && !on_screen("Open Cyclift"), "notice: kept until power-off or sleep, Bluetooth off"); shot("28a_notice_no_bt");
+      tap_text("OK"); run(300); }
+    /* b) QF-23: rides only in memory -> RESTART needs a second, explicit confirmation */
+    CHECK(app_unsaved_count() == 1, "one ride only in memory");
+    ui_home_show(); run(300); ui_qs_open(); run(500); scroll_to("HOLD: RESTART"); hold_text("HOLD: RESTART", 1700); run(300);
+    CHECK(!g_sim.restart_requested && on_screen("RIDES IN MEMORY") && on_screen("LOSE + RESTART") && on_screen("cannot"), "RESTART with a RAM-only ride: confirmation page, no restart yet");
+    shot("28b_confirm_restart");
+    scroll_to("BACK"); tap_text("BACK"); run(300); CHECK(!g_sim.restart_requested, "BACK: no restart");
+    scroll_to("HOLD: RESTART"); hold_text("HOLD: RESTART", 1700); run(300); scroll_to("LOSE + RESTART"); hold_text("LOSE + RESTART", 3300); run(300);
+    CHECK(g_sim.restart_requested, "held 3 s on the confirmation: restart");
+    g_sim.restart_requested = false; ui_qs_close(); run(300);
+    { int d0 = g_sim.deep_sleeps; uint16_t as = pr->auto_sleep_min; pr->auto_sleep_min = 1; bool ob = pr->onboarded; pr->onboarded = true; sim_phone_disconnect();
+      g_sim.usb = false; run_s(80);
+      CHECK(g_sim.deep_sleeps == d0 && !strcmp(app_power()->sleep_block, "rides only in memory"), "auto deep sleep is blocked while rides exist only in memory (%s)", app_power()->sleep_block);
+      pr->auto_sleep_min = as; pr->onboarded = ob; }
+    /* c) QF-22: Link 1.2 ride sync: a RAM ride the phone already has frees its slot */
+    g_sim.bt_unavailable = false; sim_phone_connect(true); run(1200);
+    { uint8_t b[64]; bc_sync_req_t rq = { .after_ride_id = 0, .max_count = 50 }; g_sim.phone.n_rides = 0;
+      sim_phone_write(1, b, bc_link_encode_sync_req(&rq, b, sizeof b, 41, 0)); run(4000);
+      uint16_t top = 0; for (int i = 0; i < g_sim.phone.n_rides; i++) if (g_sim.phone.rides[i].id > top) top = g_sim.phone.rides[i].id;
+      CHECK(app_unsaved_count() == 1, "sent but not yet confirmed: still in memory");
+      rq.after_ride_id = top; sim_phone_write(1, b, bc_link_encode_sync_req(&rq, b, sizeof b, 42, 0)); run(2000);
+      CHECK(app_unsaved_count() == 0, "next SYNC_REQ after the newest ride the phone holds: memory slot freed"); }
+    sim_phone_disconnect(); run(300);
+    /* d) QF-29: an interrupted ride of 5 s is kept (RECOVERED), never just a log line */
+    g_sim.storage_state = BC_STOR_OK;
+    { uint16_t id = pr->next_ride_id; app_ride_start(); run_s(5); app_journal_flush(); boot();
+      bool shown = on_screen("RECOVERED");
+      bc_ride_summary_t h[3]; int nh = app_history(h, 3, false);
+      CHECK(shown && nh > 0 && h[0].id == id && h[0].recovered && h[0].duration_s <= 6, "a 5-second interrupted ride is kept and shown as RECOVERED (#%u want %u, %lu s, shown %d rec %d)", h[0].id, id, (unsigned long)h[0].duration_s, shown, h[0].recovered);
+      shot("28d_short_ride_recovered"); }
+    /* e) QF-24: ride counter lost (settings memory unusable -> defaults): ids continue above the history; an existing
+          samples file is never overwritten */
+    { bc_ride_summary_t h[1]; app_history(h, 1, false); uint16_t top = h[0].id;
+      char sp[32]; snprintf(sp, sizeof sp, "rides/r%04u.txt", (unsigned)(top + 1)); plat_file_write(sp, "J1 old\n", 7);
+      pr->next_ride_id = 1; app_profile_save(); boot(); run(300);
+      CHECK(app_profile()->next_ride_id == top + 1, "counter reset to 1 -> continues at %u (newest ride #%u)", app_profile()->next_ride_id, top);
+      app_ride_start(); run_s(3); app_ride_end(); app_ride_save_ex(); ui_home_show(); run(300);
+      char old[80]; long osz = -1; for (int b = 0; b < 400 && osz < 0; b++) { snprintf(old, sizeof old, "rides/r%04u-old%05lu.txt", (unsigned)(top + 1), (unsigned long)b); osz = plat_file_size(old); }
+      CHECK(osz == 7 && plat_file_size(sp) > 7, "the older r%04u.txt was moved aside (%s), the new ride's samples are in place", (unsigned)(top + 1), old); }
+    /* f) QF-26: brownouts are a power warning, not RECOVERY */
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON); device_stable();
+    for (int k = 0; k < 4; k++) device_boot(BC_RST_BROWNOUT);
+    CHECK(s_plan.mode == BC_BOOT_NORMAL && s_plan.brown_streak == 4 && !on_screen("RECOVERY MODE"), "4 brownouts in a row: NORMAL start (brown streak %u)", s_plan.brown_streak);
+    device_boot(BC_RST_POWERON); device_stable();
+    /* g) QF-25: a crash inside the recovery screen -> minimal text (with the crash report), then halt */
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON); device_stable();
+    for (int k = 0; k < 3; k++) { script_crash("main", 0x42012BA0); device_boot(BC_RST_PANIC); }
+    CHECK(s_plan.mode == BC_BOOT_RECOVERY && on_screen("RECOVERY MODE"), "RECOVERY");
+    script_crash("main", 0x42013000); bool up = device_boot(BC_RST_PANIC);   /* the recovery screen (marker RECUI) crashed */
+    { app_diag_status_t st; app_diag_status(&st);
+      CHECK(up && s_plan.minimal && on_screen("RECOVERY (MINIMAL)") && !s_plan.no_diag && st.crash_report, "recovery screen crashed: minimal text; boot record + crash report still written (report %lu)", (unsigned long)st.crash_report); }
+    shot("28g_recovery_minimal");
+    script_crash("main", 0x42013100); device_boot(BC_RST_PANIC);              /* the minimal text (marker RECMIN) crashed too */
+    CHECK(g_sim.halted, "the minimal text crashed too: halt (no loop)");
+    g_sim.halted = false; memset(&g_sim.crash, 0, sizeof g_sim.crash);
+    device_boot(BC_RST_POWERON); device_stable();
+    /* h) QF-28: storage FULL whose FAT is not consistent: nothing deleted at start, phone clean-up refused */
+    app_diag_store_report(BC_DIAG_KIND_MANUAL, "fat check");
+    sim_phone_connect(true); run(800); hello13(BC_CAPS_LINK13);
+    { g_sim.phone.ndinfo = 0; phone_req(BC_MSG_DIAG_LIST_REQ, 0, 0, 0, 0); run(1500);
+      for (int i = 0; i < g_sim.phone.ndinfo; i++) if (g_sim.phone.dinfo[i].state == 0) { phone_req(BC_MSG_DIAG_ACK, g_sim.phone.dinfo[i].id, 0, 0, g_sim.phone.dinfo[i].crc); run(300); } }
+    app_diag_status_t s0; app_diag_status(&s0);
+    g_sim.storage_state = BC_STOR_FULL; g_sim.full_clears_on_cleanup = true; g_sim.fat_inconsistent = true;
+    clean13(BC_CLEAN_REPORTS);
+    CHECK(g_sim.phone.clean.status == BC_CLEAN_REFUSED && g_sim.storage_state == BC_STOR_FULL, "phone clean-up on a FULL storage with an inconsistent FAT: refused (2)");
+    sim_phone_disconnect(); run(300);
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON);
+    CHECK(g_sim.storage_state == BC_STOR_FULL && plat_file_size(APP_DIAG_INDEX_FILE) > 0, "start with FULL + inconsistent FAT: nothing removed, stays FULL");
+    g_sim.fat_inconsistent = false; g_sim.full_clears_on_cleanup = false; g_sim.storage_state = BC_STOR_OK;
+    memset(plat_boot_rtc(), 0, sizeof(bc_boot_rtc_t)); device_boot(BC_RST_POWERON); device_stable();
+    sensors(false, 0, false, 0, false, 0);
 }
 
 /* ===================================================================================== 0.7.3 final: safe report + transfer contract */
@@ -2375,6 +2473,7 @@ int main(int argc, char **argv)
     scenario_074rc();
     scenario_074rc2();
     scenario_075();
+    scenario_074rc3();
     scenario_stress(getenv("SIM_STRESS") ? atoi(getenv("SIM_STRESS")) : 1000);
     lv_mem_monitor_t m; lv_mem_monitor(&m);
     printf("\nLVGL memory: %u%% used, max used %u bytes of %u, fragmentation %u%%\n", m.used_pct, (unsigned)m.max_used, (unsigned)m.total_size, m.frag_pct);

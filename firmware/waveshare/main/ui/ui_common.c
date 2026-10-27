@@ -30,9 +30,11 @@ static void refresh_cb(lv_timer_t *t)
     ui_passkey_refresh();
 }
 
+static lv_obj_t *s_cur_scr;
 static void scr_deleted(lv_event_t *e)
 {
     lv_obj_t *scr = lv_event_get_target(e);
+    if (scr == s_cur_scr) { s_cur_scr = NULL; s_update = NULL; s_kind = UI_SCR_OTHER; }   /* rc3: never refresh a deleted screen */
     for (int i = 0; i < 6; i++) if (s_tab[i].scr == scr) s_tab[i].scr = NULL;
 }
 
@@ -56,7 +58,7 @@ ui_scr_t ui_current(void) { return s_kind; }
 void ui_screen_show(lv_obj_t *scr)
 {
     if (!s_timer) s_timer = lv_timer_create(refresh_cb, 250, NULL);
-    s_kind = UI_SCR_OTHER; s_update = NULL;
+    s_kind = UI_SCR_OTHER; s_update = NULL; s_cur_scr = scr;
     for (int i = 0; i < 6; i++) if (s_tab[i].scr == scr) { s_kind = s_tab[i].kind; s_update = s_tab[i].update; }
     lv_obj_t *old = lv_screen_active();
     ui_qs_handle_allow(true);

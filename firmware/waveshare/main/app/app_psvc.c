@@ -35,6 +35,9 @@ typedef struct {
     bool was_ready, hello_due, diag_due; uint8_t last_set_status; bool set_seen; uint16_t last_disc_code; uint8_t last_disc;
     /* 0.7.2 SENSOR_DIAG (Link 1.2.2): per sensor (0 power, 1 HR strap, 2 CSC) the last stage seen and what is due */
     uint8_t sd_stage[3]; bool sd_known[3]; uint8_t sd_due; uint32_t sd_period_ms;
+    /* rc3 (QA QF-22): RAM-only rides already streamed as SYNC_RIDE; a later SYNC_REQ whose after_ride_id covers one = the
+       phone has it (Cyclift asks "after the newest ride I hold") -> its memory slot is freed */
+    uint16_t ram_sent[APP_UNSAVED_MAX]; int n_ram_sent;
 } psvc_t;
 static psvc_t *s_ps;
 #define S (*s_ps)
@@ -237,6 +240,10 @@ static void sync_rewind(void) { S.off = 0; S.eof = false; S.chunk_pos = S.chunk_
 
 static void sync_start(const bc_sync_req_t *q)
 {
+    for (int i = 0; i < S.n_ram_sent; ) {
+        if (q->after_ride_id && S.ram_sent[i] <= q->after_ride_id) { app_unsaved_release(S.ram_sent[i]); S.ram_sent[i] = S.ram_sent[--S.n_ram_sent]; }
+        else i++;
+    }
     S.sync_active = true; S.after_id = q->after_ride_id; S.max_count = q->max_count; S.sent = 0; S.total = 0;
     /* counting pass: how many rides the board holds */
     sync_rewind(); bc_ride_summary_t s;
@@ -405,6 +412,8 @@ size_t app_psvc_next(app_psvc_chr_t *chr, uint8_t *buf, size_t cap, uint32_t now
               size_t n = bc_link_encode_sync_ride(r, buf, cap, ++S.seq, now);
               if (!n) continue;
               S.sent++; S.after_id = r->id; S.st.rides_sent++;
+              { bool have = false; for (int k = 0; k < S.n_ram_sent; k++) if (S.ram_sent[k] == r->id) have = true;
+                if (!have && S.n_ram_sent < APP_UNSAVED_MAX) S.ram_sent[S.n_ram_sent++] = r->id; }
               *chr = APP_PSVC_SYNC;
               return n;
           } }

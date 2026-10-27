@@ -29,7 +29,7 @@ typedef struct {
     uint32_t synced[SYNCED_MAX]; int nsynced;     /* ids verified on the phone (file + RAM-only rides) */
     int list_i; bool listing, list_end_due;
     bc_diag_chunk_req_t cq[4]; int ncq; uint32_t last_chunk_ms; bool chunk_sent;
-    bool rinfo_due; uint32_t rinfo_id; bool rerr_due; bc_diag_err_t rerr;
+    bool rinfo_due; uint32_t rinfo_id; rq_ent_t rinfo_ent; bool rinfo_has_ent; bool rerr_due; bc_diag_err_t rerr;
     /* replies due */
     bool hello_ack_due; bool plan_ack_due; bc_coach_plan_ack_t plan_ack;
     bool status_due; bool clean_due; bc_storage_clean_result_t clean;
@@ -164,7 +164,8 @@ static void rq_ack(const bc_rideq_ack_t *a)
         if (plat_file_size(p) >= 0 && plat_file_remove(p)) L->st.rq_deleted++;
     }
     e->xfer = false; ent_state(e);
-    L->rinfo_due = true; L->rinfo_id = e->id;
+    L->rinfo_due = true; L->rinfo_id = e->id; L->rinfo_ent = *e; L->rinfo_has_ent = true;   /* the reply describes the ride as verified */
+    if (e->ram) app_unsaved_release((uint16_t)e->id);        /* rc3 (QA QF-22 / QF-29): the phone has it - free the memory slot */
     build_list();                                              /* counters for LIVE / STORAGE_STATUS */
 }
 
@@ -198,6 +199,9 @@ static void storage_clean(uint8_t what)
     uint8_t s = stor_state();
     if (recording()) r->status = BC_CLEAN_BUSY;
     else if (!bc_storage_clean_allowed(s)) { r->status = BC_CLEAN_REFUSED; L->st.clean_refused++; }
+    else if (!plat_storage_fat_consistent(NULL, 0)) {          /* rc3 (QA QF-28): never delete on a damaged allocation table */
+        r->status = BC_CLEAN_REFUSED; L->st.clean_refused++; plat_log("LINK13: storage clean-up refused - the FAT is not consistent");
+    }
     else {
         uint32_t freed = 0; int items = 0;
         if (what & BC_CLEAN_REPORTS) { uint32_t b = 0; items += app_diag_clean_sent(&b); freed += b; }
@@ -297,7 +301,8 @@ size_t app_link13_next(uint8_t *chr, uint8_t *buf, size_t cap, uint32_t now)
     if (L->status_due) { L->status_due = false; bc_storage_status_t s; storage_status(&s); return bc_link_encode_storage_status(&s, buf, cap, ++L->seq, now); }
     if (L->rerr_due) { L->rerr_due = false; return bc_link_encode_rideq_err(&L->rerr, buf, cap, ++L->seq, now); }
     if (L->rinfo_due) {
-        L->rinfo_due = false; rq_ent_t *e = find(L->rinfo_id);
+        L->rinfo_due = false; rq_ent_t *e = L->rinfo_has_ent && L->rinfo_ent.id == L->rinfo_id ? &L->rinfo_ent : find(L->rinfo_id);
+        L->rinfo_has_ent = false;
         if (e) { bc_rideq_info_t i; rq_info(e, &i); return bc_link_encode_rideq_info(&i, buf, cap, ++L->seq, now); }
     }
     if (L->pending_due && (s_enabled & BC_CAP_RIDE_QUEUE)) {
