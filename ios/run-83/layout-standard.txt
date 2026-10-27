@@ -1,0 +1,163 @@
+=== layout-standard: errors / failures ===
+GatherProvisioningInputs
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:163: error: -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to not hittable: Button, {{123.0, 208.0}, {49.3, 78.0}}, label: 'Wed 28 Oct: Strength 40 min, planned'
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' failed (222.924 seconds).
+Test Suite 'LayoutAudit' failed at 2026-10-27 13:26:02.317.
+	 Executed 1 test, with 1 failure (0 unexpected) in 222.924 (222.925) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-27 13:26:02.318.
+	 Executed 1 test, with 1 failure (0 unexpected) in 222.924 (222.926) seconds
+Test Suite 'Selected tests' failed at 2026-10-27 13:26:02.319.
+	 Executed 1 test, with 1 failure (0 unexpected) in 222.924 (222.927) seconds
+Failing tests:
+** TEST FAILED **
+=== layout-standard: last 150 lines ===
+    t =    45.34s Find the Window (First Match)
+    t =    46.25s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    49.13s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    51.08s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    51.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    51.08s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    51.96s     Check for interrupting elements affecting "Cyclift" Application
+    t =    52.89s     Synthesize event
+    t =    53.44s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    56.15s Find the Window (First Match)
+    t =    56.18s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    58.14s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    60.24s Checking existence of `"coachLog" Button`
+    t =    61.17s Checking existence of `"coachAdjust" Button`
+    t =    63.00s Checking existence of `"coachSwap" Button`
+    t =    63.78s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    66.15s Find the Window (First Match)
+    t =    66.17s Checking existence of `"coachLog" Button`
+    t =    66.77s Find the "coachLog" Button
+    t =    67.87s Find the "coachLog" Button
+    t =    69.02s Find the "coachLog" Button
+    t =    70.23s Waiting 5.0s for "centreButton" Button to exist
+    t =    71.25s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    71.25s         Checking existence of `"centreButton" Button`
+    t =    72.08s Tap "centreButton" Button
+    t =    72.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    72.08s     Find the "centreButton" Button
+    t =    72.12s     Check for interrupting elements affecting "centreButton" Button
+    t =    73.53s     Synthesize event
+    t =    74.86s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    87.99s Find the Window (First Match)
+    t =    88.72s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    93.08s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    97.49s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    97.49s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    97.85s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    98.96s     Check for interrupting elements affecting "Cyclift" Application
+    t =   100.24s     Synthesize event
+    t =   101.61s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   105.77s Find the Window (First Match)
+    t =   107.15s Get number of matches for: Elements matching predicate 'identifier BEGINSWITH "why-"'
+    t =   110.56s Find the Button (Element at index 0)
+    t =   113.10s Find the Button (Element at index 1)
+    t =   119.28s Find the Button (Element at index 2)
+    t =   124.24s Find the "why-ex-059" Button
+    t =   128.39s Find the "why-ex-059" Button
+    t =   132.12s Tap "why-ex-059" Button
+    t =   132.12s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   132.13s     Find the "why-ex-059" Button
+    t =   135.07s     Check for interrupting elements affecting "why-ex-059" Button
+    t =   138.97s     Synthesize event
+    t =   140.13s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   145.13s Get number of matches for: Elements matching predicate 'label == "Done"'
+    t =   150.85s Find the Button (Element at index 1)
+    t =   159.22s Tap "Done" Button
+    t =   159.22s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   159.23s     Find the "Done" Button
+    t =   161.22s     Check for interrupting elements affecting "Done" Button
+    t =   162.81s     Synthesize event
+    t =   163.20s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   165.10s Find the Window (First Match)
+    t =   165.12s Get number of matches for: Elements matching predicate 'identifier BEGINSWITH "swap-"'
+    t =   165.57s Find the Button (Element at index 0)
+    t =   167.21s Find the Button (Element at index 1)
+    t =   168.11s Find the Button (Element at index 2)
+    t =   170.02s Find the "swap-ex-059" Button
+    t =   171.32s Find the Button (Element at index 3)
+    t =   173.01s Find the "swap-ex-088" Button
+    t =   174.50s Find the Button (Element at index 4)
+    t =   177.09s Find the "swap-ex-130" Button
+    t =   179.85s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   179.85s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   180.10s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   181.99s     Check for interrupting elements affecting "Cyclift" Application
+    t =   183.19s     Synthesize event
+    t =   183.65s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   188.21s Get number of matches for: Elements matching predicate 'label == "Done"'
+    t =   189.46s Find the Button (Element at index 1)
+    t =   190.95s Tap "Done" Button
+    t =   190.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   190.96s     Find the "Done" Button
+    t =   191.96s     Check for interrupting elements affecting "Done" Button
+    t =   193.01s     Synthesize event
+    t =   193.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   195.64s Waiting 5.0s for "Plan" Button to exist
+    t =   196.66s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   196.67s         Checking existence of `"Plan" Button`
+    t =   196.85s Tap "Plan" Button
+    t =   196.86s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   196.86s     Find the "Plan" Button
+    t =   196.89s     Check for interrupting elements affecting "Plan" Button
+    t =   198.00s     Synthesize event
+    t =   198.22s         Scroll element to visible
+    t =   198.34s         Find the "Plan" Button
+    t =   198.60s         Computed hit point {-1, -1} after scrolling to visible
+    t =   198.89s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   201.23s Find the Window (First Match)
+    t =   201.85s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   202.86s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   203.31s Checking existence of `Button (First Match)`
+    t =   204.14s Tap Button (First Match)
+    t =   204.14s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   204.15s     Find the Button (First Match)
+    t =   205.01s     Check for interrupting elements affecting "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   206.25s     Synthesize event
+    t =   206.58s         Scroll element to visible
+    t =   206.94s         Find the "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   207.76s         Computed hit point {-1, -1} after scrolling to visible
+    t =   207.77s         Failed: Not hittable: Button, {{123.0, 208.0}, {49.3, 78.0}}, label: 'Wed 28 Oct: Strength 40 min, planned'
+    t =   208.77s     Retrying `Tap Button (First Match)` (attempt #2)
+    t =   208.77s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   208.92s         Find the "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   209.83s         Check for interrupting elements affecting "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   210.81s         Synthesize event
+    t =   210.84s             Scroll element to visible
+    t =   210.85s             Find the "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   211.58s             Computed hit point {-1, -1} after scrolling to visible
+    t =   211.59s             Failed: Not hittable: Button, {{123.0, 208.0}, {49.3, 78.0}}, label: 'Wed 28 Oct: Strength 40 min, planned'
+    t =   212.59s     Retrying `Tap Button (First Match)` (attempt #3)
+    t =   212.59s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   212.92s         Find the "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   215.13s         Check for interrupting elements affecting "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   216.31s         Synthesize event
+    t =   216.61s             Scroll element to visible
+    t =   216.98s             Find the "Wed 28 Oct: Strength 40 min, planned" Button
+    t =   218.42s             Computed hit point {-1, -1} after scrolling to visible
+    t =   218.42s             Failed: Not hittable: Button, {{123.0, 208.0}, {49.3, 78.0}}, label: 'Wed 28 Oct: Strength 40 min, planned'
+    t =   218.43s Requesting snapshot of accessibility hierarchy for app with pid 65023
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:163: error: -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to not hittable: Button, {{123.0, 208.0}, {49.3, 78.0}}, label: 'Wed 28 Oct: Strength 40 min, planned'
+    t =   221.64s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' failed (222.924 seconds).
+Test Suite 'LayoutAudit' failed at 2026-10-27 13:26:02.317.
+	 Executed 1 test, with 1 failure (0 unexpected) in 222.924 (222.925) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-27 13:26:02.318.
+	 Executed 1 test, with 1 failure (0 unexpected) in 222.924 (222.926) seconds
+Test Suite 'Selected tests' failed at 2026-10-27 13:26:02.319.
+	 Executed 1 test, with 1 failure (0 unexpected) in 222.924 (222.927) seconds
+2026-10-27 13:26:48.837 xcodebuild[61341:173064] [MT] IDETestOperationsObserverDebug: 463.350 elapsed -- Testing started completed.
+2026-10-27 13:26:48.848 xcodebuild[61341:173064] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-27 13:26:48.848 xcodebuild[61341:173064] [MT] IDETestOperationsObserverDebug: 463.350 sec, +463.350 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Logs/Test/Test-BikeComputer-2026.10.27_13-18-32-+0000.xcresult
+
+Failing tests:
+	LayoutAudit.testKeyScreensAtTextSizes()
+
+** TEST FAILED **
+
+Testing started

@@ -1,0 +1,20 @@
+L home: key controls coachLog 121×62, coachAdjust 121×62, coachSwap 121×62
+L home: no text outside the window
+L home: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32, 8 wk 126×32, 16 wk 127×32, 1 yr 127×32
+L home lower: no text outside the window
+L home lower: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32, 8 wk 126×32, 16 wk 127×32, 1 yr 127×32
+L home lower: key controls coachLog 121×62, coachAdjust 121×62, coachSwap 121×62
+L strength: no text outside the window
+L strength: buttons under 44 pt: moreMenu 36×36, Done 65×36
+L plan: no text outside the window
+L plan: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32, 8 wk 126×32, 16 wk 127×32, 1 yr 127×32, Log strength 46×36, Days 41×36
+L progress: no text outside the window
+L progress: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32, 8 wk 126×32, 16 wk 127×32, 1 yr 127×32
+L progress lower: no text outside the window
+L progress lower: buttons under 44 pt: 8 wk 126×32, 16 wk 127×32, 1 yr 127×32
+L profile: no text outside the window
+L profile: every on-screen button ≥ 44 pt tall
+L board storage: no text outside the window
+L board storage: every on-screen button ≥ 44 pt tall
+L tab bar: Home outside the checked zone (870–922 of 956)
+L tab bar: key controls Home 85×52, Plan 85×52, centreButton 58×76, Progress 85×52, Profile 85×52
