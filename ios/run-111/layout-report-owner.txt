@@ -1,0 +1,182 @@
+L home planned: nothing wider than the screen
+L home planned: 11 texts, none overlapping
+L home planned: primary 'Start workout' at 252–302 of 852
+L home planned: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home planned: week 'This week: 0 of 5 sessions done. Rides 0 of 2 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+L home planned move: nothing wider than the screen
+L home planned move: 7 texts, none overlapping
+L home ride: nothing wider than the screen
+L home ride: 11 texts, none overlapping
+L home ride: primary 'Start ride' at 252–302 of 852
+L home ride: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home ride: week 'This week: 0 of 5 sessions done. Rides 0 of 3 · Lifts 0 of 2. Up next Fri · Strength · Full body 40 min.'
+L home completed: nothing wider than the screen
+L home completed: 12 texts, none overlapping
+L home completed: primary 'View results' at 255–305 of 852
+L home completed: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home completed: week 'This week: 1 of 5 sessions done. Rides 0 of 2 · Lifts 1 of 3. Up next Fri · Strength · Full body 40 min.'
+L home rest: nothing wider than the screen
+L home rest: 14 texts, none overlapping
+L home rest: primary 'Move to today' at 287–331 of 852
+L home rest: key controls homeMissedMove 96×44, homeCoachAction 87×44
+L home rest: week 'This week: 0 of 4 sessions done. Rides 0 of 2 · Lifts 0 of 2. Up next Fri · Strength · Full body 40 min.'
+L home rest primary sheet: nothing wider than the screen
+L home rest primary sheet: 1 texts, none overlapping
+L home multi: nothing wider than the screen
+L home multi: 13 texts, none overlapping
+L home multi: primary 'View results' at 243–287 of 852
+L home multi: key controls homeWhy 175×44, homeRow-0 85×43, homeRowMore-0 44×43, homeRow-1 67×44, homeRowMore-1 44×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home multi: week 'This week: 1 of 6 sessions done. Rides 1 of 3 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+L home multi move: nothing wider than the screen
+L home multi move: 7 texts, none overlapping
+L home missed: nothing wider than the screen
+L home missed: 13 texts, none overlapping
+L home missed: primary 'Start workout' at 252–302 of 852
+L home missed: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home missed: week 'This week: 0 of 5 sessions done. Rides 0 of 3 · Lifts 0 of 2. Up next Fri · Strength · Full body 40 min.'
+L home missed move: nothing wider than the screen
+L home missed move: 7 texts, none overlapping
+L home skipped: nothing wider than the screen
+L home skipped: 12 texts, none overlapping
+L home skipped: primary 'Move to another day' at 255–305 of 852
+L home skipped: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home skipped: week 'This week: 0 of 4 sessions done · 1 skipped. Rides 0 of 2 · Lifts 0 of 2. Up next Fri · Strength · Full body 40 min.'
+L home skipped move: nothing wider than the screen
+L home skipped move: 7 texts, none overlapping
+L home pending: nothing wider than the screen
+L home pending: 12 texts, none overlapping
+L home pending: primary 'Start workout' at 352–402 of 852
+L home pending: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×43, homeCoachAction 87×44, homeCaution 361×87
+L home pending: week 'This week: 0 of 5 sessions done. Rides 0 of 2 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+L home clearance: nothing wider than the screen
+L home clearance: 12 texts, none overlapping
+L home clearance: primary 'Start workout' at 332–382 of 852
+L home clearance: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×43, homeCoachAction 87×44, homeCaution 361×67
+L home clearance: week 'This week: 0 of 5 sessions done. Rides 0 of 2 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+L home stop: nothing wider than the screen
+L home stop: 6 texts, none overlapping
+L home stop: primary 'Review health check' at 285–335 of 852
+L home stop: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home stop: week 'No sessions scheduled while training is paused'
+L home stop primary sheet: nothing wider than the screen
+L home stop primary sheet: 7 texts, none overlapping
+L home ill: nothing wider than the screen
+L home ill: 6 texts, none overlapping
+L home ill: primary 'I feel well again' at 257–307 of 852
+L home ill: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home ill: week 'No sessions scheduled while training is paused'
+L home first: nothing wider than the screen
+L home first: 4 texts, none overlapping
+L home first: primary 'Create my plan' at 282–332 of 852
+L home first: key controls homePrimary 329×50
+L home cyclingonly: nothing wider than the screen
+L home cyclingonly: 11 texts, none overlapping
+L home cyclingonly: primary 'Start ride' at 252–302 of 852
+L home cyclingonly: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home cyclingonly: week 'This week: 0 of 4 sessions done. Up next Fri · Endurance 1 h.'
+L home strengthonly: nothing wider than the screen
+L home strengthonly: 13 texts, none overlapping
+L home strengthonly: primary 'Start workout' at 252–302 of 852
+L home strengthonly: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home strengthonly: week 'This week: 0 of 3 sessions done. Up next Fri · Strength · Full body 40 min.'
+XXXL home planned: nothing wider than the screen
+XXXL home planned: 8 texts, none overlapping
+XXXL home planned: primary 'Start workout' at 323–373 of 852
+XXXL home planned: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×43, homeCoachAction 116×44
+XXXL home planned: week 'This week: 0 of 5 sessions done. Rides 0 of 2 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+XXXL home multi: nothing wider than the screen
+XXXL home multi: 10 texts, none overlapping
+XXXL home multi: primary 'View results' at 346–390 of 852
+XXXL home multi: key controls homeWhy 234×44, homeRow-0 103×44, homeRowMore-0 44×44, homeRow-1 79×43, homeRowMore-1 44×43, homeMissedMove 84×44, homeCoachAction 116×44
+XXXL home multi: week 'This week: 1 of 6 sessions done. Rides 1 of 3 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+XXXL home missed: nothing wider than the screen
+XXXL home missed: 8 texts, none overlapping
+XXXL home missed: primary 'Start workout' at 323–373 of 852
+XXXL home missed: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×43, homeCoachAction 116×44
+XXXL home missed: week 'This week: 0 of 5 sessions done. Rides 0 of 3 · Lifts 0 of 2. Up next Fri · Strength · Full body 40 min.'
+XXXL home stop: nothing wider than the screen
+XXXL home stop: 6 texts, none overlapping
+XXXL home stop: primary 'Review health check' at 327–377 of 852
+XXXL home stop: key controls homePrimary 329×50, homeHoldInfo 193×44
+XXXL home stop: week 'No sessions scheduled while training is paused'
+L progress glance: nothing wider than the screen
+L progress glance: 20 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 39 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 17 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 38 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 17 texts, none overlapping
+L riding 12 wk: 6 date labels, smallest gap 12 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 19 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 18 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 18 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 39 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 17 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 19 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 40 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 17 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 18 texts, none overlapping
+L progress ftp: nothing wider than the screen
+L progress ftp: 29 texts, none overlapping
+L plan: nothing wider than the screen
+L plan: 38 texts, none overlapping
+L plan: done '1 of 3 rides done · +1 extra' · planned '1 h 33 min done · 4 h planned · 1 h spare of 5 h'
+L fix plan: nothing wider than the screen
+L fix plan: 2 texts, none overlapping
+L fix plan applied: nothing wider than the screen
+L fix plan applied: 2 texts, none overlapping
+L: Fix plan action 'Shorten Wed strength · full body from 40 min to 20 min' applied
+L plan lower: nothing wider than the screen
+L plan lower: 44 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 48 texts, none overlapping
+L connections: nothing wider than the screen
+L connections: 16 texts, none overlapping
+L BikeComputer page: nothing wider than the screen
+L BikeComputer page: 10 texts, none overlapping
+XXXL progress glance: nothing wider than the screen
+XXXL progress glance: 17 texts, none overlapping
+XXXL riding 4 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 4 wk: nothing wider than the screen
+XXXL riding 4 wk: 11 texts, none overlapping
+XXXL riding 8 wk: 4 date labels, smallest gap 25 pt
+XXXL riding 8 wk: nothing wider than the screen
+XXXL riding 8 wk: 11 texts, none overlapping
+XXXL riding 12 wk: 4 date labels, smallest gap 25 pt
+XXXL riding 12 wk: nothing wider than the screen
+XXXL riding 12 wk: 11 texts, none overlapping
+XXXL riding 16 wk: 4 date labels, smallest gap 25 pt
+XXXL riding 16 wk: nothing wider than the screen
+XXXL riding 16 wk: 11 texts, none overlapping
+XXXL riding 1 yr: 4 date labels, smallest gap 27 pt
+XXXL riding 1 yr: nothing wider than the screen
+XXXL riding 1 yr: 11 texts, none overlapping
+XXXL riding selected: nothing wider than the screen
+XXXL riding selected: 12 texts, none overlapping
+XXXL strength 8 wk: 4 date labels, smallest gap 29 pt
+XXXL strength 8 wk: nothing wider than the screen
+XXXL strength 8 wk: 11 texts, none overlapping
+XXXL strength selected: nothing wider than the screen
+XXXL strength selected: 10 texts, none overlapping
+XXXL progress ftp: nothing wider than the screen
+XXXL progress ftp: 14 texts, none overlapping
+XXXL plan: nothing wider than the screen
+XXXL plan: 31 texts, none overlapping
+XXXL plan: done '1 of 3 rides done · +1 extra' · planned '1 h 33 min done · 4 h planned · 1 h spare of 5 h'
+XXXL fix plan: nothing wider than the screen
+XXXL fix plan: 2 texts, none overlapping
+XXXL fix plan applied: nothing wider than the screen
+XXXL fix plan applied: 2 texts, none overlapping
+XXXL: Fix plan action 'Shorten Wed strength · full body from 40 min to 20 min' applied
+XXXL plan lower: nothing wider than the screen
+XXXL plan lower: 24 texts, none overlapping
+XXXL plan lower 2: nothing wider than the screen
+XXXL plan lower 2: 31 texts, none overlapping
+XXXL: Connections link not found
