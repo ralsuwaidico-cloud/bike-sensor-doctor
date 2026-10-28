@@ -1,0 +1,61 @@
+L home: coachLog outside the checked zone (649–711 of 667)
+L home: key controls coachLog 102×62, coachAdjust 98×62, coachSwap 98×62
+L home: no text outside the window
+L home: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+L home lower: no text outside the window
+L home lower: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+L home lower: key controls coachLog 102×62, coachAdjust 98×62, coachSwap 98×62
+L strength: no text outside the window
+L strength: buttons under 44 pt: moreMenu 36×36, Done 66×35
+L plan: no text outside the window
+L plan: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+L progress: no text outside the window
+L progress: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+L progress lower: no text outside the window
+L progress lower: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+L profile: no text outside the window
+L profile: every on-screen button ≥ 44 pt tall
+L tab bar: Home outside the checked zone (615–667 of 667)
+L tab bar: key controls Home 72×52, Plan 72×52, centreButton 58×76, Progress 72×52, Profile 72×52
+AX3 home: coachLog outside the checked zone (1908–1986 of 667)
+AX3 home: key controls coachLog 315×78, coachAdjust 315×78, coachSwap 315×78
+AX3 home: no text outside the window
+AX3 home: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+AX3 home lower: no text outside the window
+AX3 home lower: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+AX3 home lower: coachLog outside the checked zone (1276–1354 of 667)
+AX3 home lower: key controls coachLog 315×78, coachAdjust 315×78, coachSwap 315×78
+AX3 strength: no text outside the window
+AX3 strength: buttons under 44 pt: moreMenu 36×36, Done 74×35
+AX3 plan: no text outside the window
+AX3 plan: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+AX3 progress: no text outside the window
+AX3 progress: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+AX3 progress lower: no text outside the window
+AX3 progress lower: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32, Edit › 77×38
+AX3 profile: no text outside the window
+AX3 profile: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+AX3 tab bar: Home outside the checked zone (615–667 of 667)
+AX3 tab bar: key controls Home 72×52, Plan 72×52, centreButton 71×81, Progress 72×52, Profile 72×52
+L riding 8 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+L riding 16 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+L lifting 16 wk: no liftingChart date labels exposed (a build before RC2 fix: check the screenshot)
+L rc2 progress: no text outside the window
+L rc2 progress: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+L plan: nothing wider than the screen
+L: plan day buttons with identifiers: 0 of 7 (a build before the RC2 fix)
+L: no 'Done this week' / 'Planned this week' figures (a build before the RC2 fix)
+L plan lower: WIDER THAN THE SCREEN: AdditionalDimmingOverlay -120…495
+L rc2 connections: no text outside the window
+L rc2 connections: buttons under 44 pt: Edit › 32×14, 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+AX3 riding 8 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+AX3 riding 16 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+AX3 lifting 16 wk: no liftingChart date labels exposed (a build before RC2 fix: check the screenshot)
+AX3 rc2 progress: no text outside the window
+AX3 rc2 progress: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32
+AX3 plan: nothing wider than the screen
+AX3: plan day buttons with identifiers: 0 of 7 (a build before the RC2 fix)
+AX3: no 'Done this week' / 'Planned this week' figures (a build before the RC2 fix)
+AX3 plan lower: WIDER THAN THE SCREEN: AdditionalDimmingOverlay -120…495
+AX3 rc2 connections: no text outside the window
+AX3 rc2 connections: buttons under 44 pt: 8 wk 105×32, 16 wk 105×32, 1 yr 105×32

@@ -1,0 +1,22 @@
+L riding 8 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+L riding 16 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+L lifting 16 wk: no liftingChart date labels exposed (a build before RC2 fix: check the screenshot)
+L rc2 progress: no text outside the window
+L rc2 progress: buttons under 44 pt: 8 wk 111×32, 16 wk 111×32, 1 yr 111×32
+L plan: nothing wider than the screen
+L: plan day buttons with identifiers: 0 of 7 (a build before the RC2 fix)
+L: no 'Done this week' / 'Planned this week' figures (a build before the RC2 fix)
+L plan lower: WIDER THAN THE SCREEN: AdditionalDimmingOverlay -120…513
+L rc2 connections: no text outside the window
+L rc2 connections: buttons under 44 pt: Edit › 31×14, Rebuild this week from m 333×34, 8 wk 111×32, 16 wk 111×32, 1 yr 111×32
+XXXL riding 8 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+XXXL riding 16 wk: no ridingChart date labels exposed (a build before RC2 fix: check the screenshot)
+XXXL lifting 16 wk: no liftingChart date labels exposed (a build before RC2 fix: check the screenshot)
+XXXL rc2 progress: no text outside the window
+XXXL rc2 progress: buttons under 44 pt: 8 wk 111×32, 16 wk 111×32, 1 yr 111×32
+XXXL plan: nothing wider than the screen
+XXXL: plan day buttons with identifiers: 0 of 7 (a build before the RC2 fix)
+XXXL: no 'Done this week' / 'Planned this week' figures (a build before the RC2 fix)
+XXXL plan lower: WIDER THAN THE SCREEN: AdditionalDimmingOverlay -120…513
+XXXL rc2 connections: no text outside the window
+XXXL rc2 connections: buttons under 44 pt: 8 wk 111×32, 16 wk 111×32, 1 yr 111×32
