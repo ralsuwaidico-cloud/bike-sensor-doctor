@@ -1,0 +1,123 @@
+L home: coachLog outside the checked zone (649–711 of 667)
+L home: key controls coachLog 102×62, coachAdjust 98×62, coachSwap 98×62
+L home: no text outside the window
+L home: every on-screen button ≥ 44 pt tall
+L home lower: no text outside the window
+L home lower: every on-screen button ≥ 44 pt tall
+L home lower: key controls coachLog 102×62, coachAdjust 98×62, coachSwap 98×62
+L strength: no text outside the window
+L strength: buttons under 44 pt: moreMenu 36×36, Done 66×35
+L plan: no text outside the window
+L plan: every on-screen button ≥ 44 pt tall
+L progress: no text outside the window
+L progress: every on-screen button ≥ 44 pt tall
+L progress lower: no text outside the window
+L progress lower: every on-screen button ≥ 44 pt tall
+L profile: no text outside the window
+L profile: every on-screen button ≥ 44 pt tall
+L tab bar: Home outside the checked zone (615–667 of 667)
+L tab bar: key controls Home 72×52, Plan 72×52, centreButton 58×76, Progress 72×52, Profile 72×52
+AX3 home: coachLog outside the checked zone (1908–1986 of 667)
+AX3 home: key controls coachLog 315×78, coachAdjust 315×78, coachSwap 315×78
+AX3 home: no text outside the window
+AX3 home: every on-screen button ≥ 44 pt tall
+AX3 home lower: no text outside the window
+AX3 home lower: every on-screen button ≥ 44 pt tall
+AX3 home lower: coachLog outside the checked zone (1228–1306 of 667)
+AX3 home lower: key controls coachLog 315×78, coachAdjust 315×78, coachSwap 315×78
+AX3 strength: no text outside the window
+AX3 strength: buttons under 44 pt: moreMenu 36×36, Done 74×35
+AX3 plan: no text outside the window
+AX3 plan: every on-screen button ≥ 44 pt tall
+AX3 progress: no text outside the window
+AX3 progress: every on-screen button ≥ 44 pt tall
+AX3 progress lower: no text outside the window
+AX3 progress lower: every on-screen button ≥ 44 pt tall
+AX3 profile: no text outside the window
+AX3 profile: buttons under 44 pt: Riding 157×32, Strength 158×32, 4 wk 63×32, 8 wk 63×32, 12 wk 63×32, 16 wk 63×32, 1 yr 63×32
+AX3 tab bar: Home outside the checked zone (615–667 of 667)
+AX3 tab bar: key controls Home 72×52, Plan 72×52, centreButton 71×81, Progress 72×52, Profile 72×52
+L progress glance: nothing wider than the screen
+L progress glance: 16 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 34 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 5 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 33 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 5 texts, none overlapping
+L riding 12 wk: 4 date labels, smallest gap 33 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 5 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 15 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 5 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 34 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 5 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 6 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 36 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 5 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 6 texts, none overlapping
+L progress ftp: nothing wider than the screen
+L progress ftp: 24 texts, none overlapping
+L plan: nothing wider than the screen
+L plan: 33 texts, none overlapping
+L plan: done '1 h 33 min · 2 rides of 3 planned' · planned '4 h · 3 rides'
+L fix plan: nothing wider than the screen
+L fix plan: 1 texts, none overlapping
+L fix plan applied: nothing wider than the screen
+L fix plan applied: 2 texts, none overlapping
+L: Fix plan action 'Shorten Wed strength · full body from 40 min to 20 min' applied
+L plan lower: nothing wider than the screen
+L plan lower: 30 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 27 texts, none overlapping
+L connections: nothing wider than the screen
+L connections: 11 texts, none overlapping
+L BikeComputer page: nothing wider than the screen
+L BikeComputer page: 7 texts, OVERLAPPING: "Profile sync" × "Profile sync, no BikeCom" (88×20 pt)
+AX3 progress glance: nothing wider than the screen
+AX3 progress glance: 6 texts, none overlapping
+AX3 riding 4 wk: 4 date labels, smallest gap 23 pt
+AX3 riding 4 wk: nothing wider than the screen
+AX3 riding 4 wk: 9 texts, none overlapping
+AX3 riding 8 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 8 wk: nothing wider than the screen
+AX3 riding 8 wk: 9 texts, none overlapping
+AX3 riding 12 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 12 wk: nothing wider than the screen
+AX3 riding 12 wk: 9 texts, none overlapping
+AX3 riding 16 wk: 4 date labels, smallest gap 20 pt
+AX3 riding 16 wk: nothing wider than the screen
+AX3 riding 16 wk: 9 texts, none overlapping
+AX3 riding 1 yr: 4 date labels, smallest gap 22 pt
+AX3 riding 1 yr: nothing wider than the screen
+AX3 riding 1 yr: 7 texts, none overlapping
+AX3 riding selected: nothing wider than the screen
+AX3 riding selected: 9 texts, none overlapping
+AX3 strength 8 wk: 4 date labels, smallest gap 24 pt
+AX3 strength 8 wk: nothing wider than the screen
+AX3 strength 8 wk: 7 texts, none overlapping
+AX3 strength selected: nothing wider than the screen
+AX3 strength selected: 7 texts, none overlapping
+AX3 progress ftp: nothing wider than the screen
+AX3 progress ftp: 7 texts, none overlapping
+AX3 plan: nothing wider than the screen
+AX3 plan: 22 texts, none overlapping
+AX3 plan: done '1 h 33 min · 2 rides of 3 planned' · planned '4 h · 3 rides'
+AX3 fix plan: nothing wider than the screen
+AX3 fix plan: 0 texts, none overlapping
+AX3 fix plan applied: nothing wider than the screen
+AX3 fix plan applied: 1 texts, none overlapping
+AX3: Fix plan action 'Shorten Wed strength · full body from 40 min to 20 min' applied
+AX3 plan lower: nothing wider than the screen
+AX3 plan lower: 6 texts, none overlapping
+AX3 plan lower 2: nothing wider than the screen
+AX3 plan lower 2: 8 texts, none overlapping
+AX3 connections: nothing wider than the screen
+AX3 connections: 2 texts, none overlapping
+AX3 BikeComputer page: nothing wider than the screen
+AX3 BikeComputer page: 4 texts, none overlapping
