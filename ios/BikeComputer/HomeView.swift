@@ -450,8 +450,11 @@ struct HomeMissedRow: View {
     let todayFree: Bool
     var perform: (HomeAction) -> Void
     var openPlan: () -> Void
+    @Environment(\.dynamicTypeSize) private var dts
     var body: some View {
-        HStack(alignment: .center, spacing: DS.m) {
+        // from XX-large text the Move button goes under the text, so the session name wraps by words (run 111, XXXL)
+        let layout = dts >= .xxLarge ? AnyLayout(VStackLayout(alignment: .leading, spacing: DS.s)) : AnyLayout(HStackLayout(alignment: .center, spacing: DS.m))
+        layout {
             Button(action: openPlan) {
                 HStack(alignment: .center, spacing: DS.m) {
                     Image(systemName: "clock.badge.exclamationmark").font(.body.weight(.semibold)).foregroundStyle(BC.stale).accessibilityHidden(true)
