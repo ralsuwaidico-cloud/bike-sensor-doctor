@@ -1,0 +1,159 @@
+=== test: errors / failures ===
+GatherProvisioningInputs
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/TrendCharts.swift:146:16: error: no exact matches in call to initializer 
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/TrendCharts.swift:153:16: error: no exact matches in call to initializer 
+Testing failed:
+	Testing cancelled because the build failed.
+** TEST FAILED **
+The following build commands failed:
+=== test: last 150 lines ===
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Pipeline/DiagnosticReport.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/HealthCheckView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/HealthImport.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/HomeView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Hybrid.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/LocationService.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Models.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/OnboardingView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Pipeline/PipelineHealth.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Pipeline/PipelineMonitor.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Pipeline/PipelineViews.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/PlanView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Planning.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileSync.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProfileView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProgressMetrics.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ProgressView.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Sources/Providers.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/ReleaseFlags.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideDashboard.swift (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftMergeGeneratedHeaders /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/BikeComputer-Swift.h /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-Swift.h (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-swiftHeaderTool -arch arm64 /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer-Swift.h -o /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/BikeComputer-Swift.h
+
+SwiftDriverJobDiscovery normal arm64 Compiling AccountService.swift, AccountViews.swift, AdaptationEngine.swift, AdaptiveModels.swift, AdaptiveStore.swift, AdaptiveViews.swift, AppInfo.swift, AvailabilityEditor.swift, BCLink.swift, BCLinkDiag.swift, BLEDecoders.swift, BLESensors.swift, BikeComputerApp.swift, CloudConfig.swift, CoachCore.swift, CoachPanel.swift, CoachSafety.swift, Connections.swift, ConnectionsView.swift, ContentView.swift, DesignSystem.swift, DeviceLink.swift, DeviceSettingsView.swift, DiagReportCenter.swift (in target 'BikeComputer' from project 'BikeComputer')
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/arm64-apple-ios-simulator.swiftmodule /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftmodule (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftmodule /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/arm64-apple-ios-simulator.swiftdoc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftdoc (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftdoc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/arm64-apple-ios-simulator.abi.json /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.abi.json (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.abi.json /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+Copy /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftsourceinfo (in target 'BikeComputer' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/Objects-normal/arm64/BikeComputer.swiftsourceinfo /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/BikeComputer.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+SwiftDriver BikeComputerUITests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-SwiftDriver -- /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name BikeComputerUITests -Onone @/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests.SwiftFileList -DDEBUG -module-alias Testing\=_Testing_Unavailable -plugin-path /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -F /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-688ef53f1462e2c8f657fdc38a81448ff45c64a1807a658693f2a61704f17a36.sdkstatcache -output-file-map /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-generated-files.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-own-target-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer-907fdb710e6d9fb517e2e2f76c8ef9d8-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-project-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/DerivedSources/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests-Swift.h -working-directory /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios -experimental-emit-module-separately -disable-cmo
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-2Q0KJO8O76O5DE5HMPKXRQBJK.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-546GFAU01HYA06GLXTKGYY7MH.pcm
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-2TUM0WBQTTAIR.swiftmodule
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-F33PB5YQNUU3.swiftmodule
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ BikeComputerUITests (in target 'BikeComputerUITests' from project 'BikeComputer')
+
+EmitSwiftModule normal arm64 (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftCompile normal arm64 Compiling\ StoreScreenshots.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift (in target 'BikeComputerUITests' from project 'BikeComputer')
+
+SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for BikeComputerUITests (in target 'BikeComputerUITests' from project 'BikeComputer')
+
+SwiftDriver\ Compilation\ Requirements BikeComputerUITests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'BikeComputerUITests' from project 'BikeComputer')
+    cd /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name BikeComputerUITests -Onone @/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests.SwiftFileList -DDEBUG -module-alias Testing\=_Testing_Unavailable -plugin-path /Applications/Xcode_26.6.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator -F /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode_26.6.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk/Developer/Library/Frameworks -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F81a-688ef53f1462e2c8f657fdc38a81448ff45c64a1807a658693f2a61704f17a36.sdkstatcache -output-file-map /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-generated-files.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-own-target-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer-907fdb710e6d9fb517e2e2f76c8ef9d8-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/BikeComputerUITests-project-headers.hmap -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/DerivedSources/arm64 -Xcc -I/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputerUITests.build/Objects-normal/arm64/BikeComputerUITests-Swift.h -working-directory /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios -experimental-emit-module-separately -disable-cmo
+
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/tests.xcresult
+
+Testing failed:
+	No exact matches in call to initializer 
+	No exact matches in call to initializer 
+	Testing cancelled because the build failed.
+
+** TEST FAILED **
+
+
+The following build commands failed:
+	SwiftCompile normal arm64 /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/TrendCharts.swift (in target 'BikeComputer' from project 'BikeComputer')
+	SwiftCompile normal arm64 Compiling\ RideLayout.swift,\ RideLayouts.swift,\ RideLive.swift,\ RideRecorder.swift,\ RideSettingsSheet.swift,\ RideView.swift,\ SensorHub.swift,\ Strength.swift,\ StrengthCoachViews.swift,\ StrengthLog.swift,\ StrengthPlanner.swift,\ StrengthWorkout.swift,\ SupportInfo.swift,\ SyncEngine.swift,\ Theme.swift,\ TrendCharts.swift,\ UITestSupport.swift,\ WatchHRIngest.swift,\ WatchLink.swift,\ WatchWorkoutMirror.swift,\ WeekTotals.swift,\ WorkoutState.swift,\ GeneratedAssetSymbols.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Ride/RideLayout.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Ride/RideLayouts.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Ride/RideLive.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideRecorder.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Ride/RideSettingsSheet.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/RideView.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Sources/SensorHub.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Strength.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthCoachViews.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthLog.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthPlanner.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/StrengthWorkout.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Cloud/SupportInfo.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Cloud/SyncEngine.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Theme.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/TrendCharts.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/UITestSupport.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/Pipeline/WatchHRIngest.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WatchLink.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WatchWorkoutMirror.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WeekTotals.swift /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputer/WorkoutState.swift /Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Build/Intermediates.noindex/BikeComputer.build/Debug-iphonesimulator/BikeComputer.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'BikeComputer' from project 'BikeComputer')
+	Testing project BikeComputer with scheme BikeComputer
+(3 failures)
