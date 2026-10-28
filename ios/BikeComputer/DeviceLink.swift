@@ -134,6 +134,28 @@ final class DeviceLink: NSObject, ObservableObject {
         central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionRestoreIdentifierKey: "bikecomputer.central"])
     }
 
+    /// One short, truthful line for the link everywhere it is summarised (Home, Ride, Onboarding). RC2: the coarse `state`
+    /// stays `.connecting` while iOS keeps a pending connect alive for a board that never advertises (off, out of range, or
+    /// firmware 0.7.3 crash-looping at Bluetooth start), so "Connecting…" / "Searching…" used to show forever. After the
+    /// 20 s stage watchdog the line says what is known instead.
+    var statusText: String { Self.statusText(state: state, stage: stage, remembered: remembered, foundCount: found.count) }
+    static func statusText(state: State, stage: Stage, remembered: Bool, foundCount: Int) -> String {
+        switch (state, stage) {
+        case (.ready, _): return "Connected"
+        case (.off, _): return "Bluetooth is off"
+        case (.unauthorized, _): return "Bluetooth permission needed"
+        case (_, .waiting): return "No BikeComputer found — it may be off, out of range or not advertising. Still looking."
+        case (_, .failed): return foundCount == 0 && !remembered ? "No BikeComputer found — it may be off or not advertising." : "Connection failed — see Connections."
+        case (_, .searching): return "Searching… (up to 20 s)"
+        case (_, .found): return "BikeComputer found"
+        case (_, .connecting): return "Connecting…"
+        case (_, .pairing): return "Pairing — type the code shown on the BikeComputer"
+        case (_, .authenticating), (_, .connected), (_, .syncingProfile): return "Connecting…"
+        case (.idle, _): return remembered ? "Not in range" : "Not paired"
+        default: return state.rawValue
+        }
+    }
+
     /// Live values are considered current only while the board keeps sending (1 Hz). Older than 3 s = stale.
     var liveIsFresh: Bool { guard let t = liveReceivedAt else { return false }; return Date().timeIntervalSince(t) < 3 }
     var isConnected: Bool { peripheral?.state == .connected && (stage == .ready || stage == .syncingProfile || stage == .connected || stage == .pairing || stage == .authenticating) }

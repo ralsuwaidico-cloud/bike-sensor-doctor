@@ -246,8 +246,8 @@ struct OnboardingView: View {
                 else {
                     Text("Switch it on, tap Connect, type the 6-digit code from its round screen once.").font(.footnote).foregroundStyle(.secondary)
                     if device.state == .scanning, !device.found.isEmpty { ForEach(device.found, id: \.id) { f in Button("Connect to \(f.name) (\(f.rssi) dBm)") { device.connect(to: f.id) } } }
-                    Text(device.state.rawValue).font(.caption2).foregroundStyle(.secondary)
-                    Button { device.connect() } label: { Text(device.state == .scanning || device.state == .connecting ? "Searching…" : "Connect").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent)
+                    Text(device.statusText).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Button { device.connect() } label: { Text(device.stage.isAttempt && device.stage != .waiting ? "Searching…" : "Connect").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent)
                 }
             }
             Card {

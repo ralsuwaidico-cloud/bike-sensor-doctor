@@ -289,7 +289,7 @@ struct RideDetailsSheet: View {
         }
     }
     private var boardDetail: String {
-        guard device.state == .ready else { return device.state.rawValue }
+        guard device.state == .ready else { return device.statusText }
         var d = device.liveIsFresh ? "connected · live data" : "connected — no live data"; if let r = device.rssi { d += " · \(r) dBm" }; if let b = live?.batteryPct { d += " · battery ≈\(b)%" }
         return d
     }

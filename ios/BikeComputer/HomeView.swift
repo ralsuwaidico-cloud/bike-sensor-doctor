@@ -118,7 +118,7 @@ struct HomeView: View {
     private var boardStatus: ConnStatus { ConnectionRules.board(linkState: device.state, liveFresh: device.liveIsFresh, remembered: device.remembered, autoConnect: store.settings.autoConnectBoard, phoneOnlyMode: store.settings.phoneOnlyMode) }
     private var boardText: String {
         if !store.settings.autoConnectBoard { return "link off" }
-        switch device.state { case .ready: return "connected" + (device.info.map { " · \($0.fw)" } ?? "") + (store.settings.phoneOnlyMode ? " · phone records" : ""); case .idle: return device.remembered ? "not in range" : "not paired"; default: return device.state.rawValue }
+        switch device.state { case .ready: return "connected" + (device.info.map { " · \($0.fw)" } ?? "") + (store.settings.phoneOnlyMode ? " · phone records" : ""); case .idle: return device.remembered ? "not in range" : "not paired"; default: return device.statusText }
     }
     private var meterText: String { guard let l = liveNow else { return device.remembered ? "via board" : "pairs on the board" }; return l.meterLink == 4 ? "connected" : l.meterLink == 1 ? "not paired" : "searching" }
     private var watchStatus: ConnStatus { ConnectionRules.watch(paired: watch.paired, appInstalled: watch.appInstalled, hrFresh: watch.hrIsFresh, workoutRunning: watch.workoutState == "running", enabled: store.settings.enabledConnections.contains("watch")) }

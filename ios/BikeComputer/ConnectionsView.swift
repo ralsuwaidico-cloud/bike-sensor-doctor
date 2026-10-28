@@ -485,7 +485,7 @@ struct RepairSheet: View {
                 Section("Steps") {
                     step(1, "On the board: Connections › Phone › hold REPAIR. The board forgets this phone and takes a new Bluetooth identity (firmware 0.7.0+). On 0.6.x use FORGET PHONE instead.")
                     step(2, "On the iPhone: Settings › Bluetooth › \"BikeComputer Link\" › Forget This Device — the one step the app cannot do.", action: ("Open Settings", { DeviceLink.openSettings() }))
-                    step(3, "Back here: tap Start repair. The app forgets the old identity, searches for the board and pairs again with the 6-digit code.", action: (started ? "Searching…" : "Start repair", { device.repair(); started = true }))
+                    step(3, "Back here: tap Start repair. The app forgets the old identity, searches for the board and pairs again with the 6-digit code.", action: (started && device.stage.isAttempt && device.stage != .waiting ? "Searching…" : started ? "Search again" : "Start repair", { device.repair(); started = true }))
                 }
                 if started {
                     Section("Progress") {
