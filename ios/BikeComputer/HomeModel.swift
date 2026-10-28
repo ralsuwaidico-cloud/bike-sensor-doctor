@@ -186,7 +186,7 @@ enum HomeIntensity {
         if w.minutes > 0 { parts.append(Fmt.duration(minutes: w.minutes)) }
         if w.kind.isRide {
             let z = min(w.kind.zone, readiness.maxRideZone)
-            parts.append(ride(zone: z)); parts.append("Zone \(z)")
+            if z > 0 { parts.append(ride(zone: z)); parts.append("Zone \(z)") }     // a ride without a zone shows no zone (never "Zone 0")
         } else if w.kind == .strength {
             parts.append(strength(rpe: strengthRPE(w, readiness: readiness)))
         } else if w.kind == .mobility { parts.append("Easy") }
