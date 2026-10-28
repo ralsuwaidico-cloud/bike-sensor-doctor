@@ -18,7 +18,7 @@ struct RiderProfile: Codable, Equatable {
         var linkCode: Int { switch self { case .beginner: return 0; case .intermediate: return 1; case .advanced: return 2 } }
         static func from(linkCode c: Int) -> Level { c <= 0 ? .beginner : c == 1 ? .intermediate : .advanced } }
     enum FTPHow: String, Codable { case assumed, fromRides, entered, tested
-        var label: String { switch self { case .assumed: return "provisional"; case .fromRides: return "estimated"; case .entered: return "entered"; case .tested: return "tested" } }
+        var label: String { switch self { case .assumed: return "provisional"; case .fromRides: return "estimated"; case .entered: return "entered"; case .tested: return "test result, not verified" } }
         var linkCode: Int { switch self { case .assumed: return 0; case .entered: return 1; case .fromRides: return 2; case .tested: return 3 } }
         static func from(linkCode c: Int) -> FTPHow { switch c { case 1: return .entered; case 2: return .fromRides; case 3: return .tested; default: return .assumed } } }
     enum Sport: String, Codable, CaseIterable { case roadCycling, indoorCycling, mountainBike, commuting, running, swimming, strength, other
@@ -97,8 +97,24 @@ struct RiderProfile: Codable, Equatable {
     var maxHRLabel: String { maxHR != nil ? "measured / entered" : "estimated from age" }
 
     /// The honest confidence label of the FTP ("Verified test", "Estimated from verified power data", "Provisional
-    /// estimate", "Unverified"). The 95 %-of-20-minutes estimate is never called a test.
-    var ftpLabel: String { ftpConfidence.title }
+    /// estimate", "Estimated · unverified", "Entered · unverified"). The 95 %-of-20-minutes estimate is never called a test.
+    var ftpLabel: String {
+        switch ftpConfidence {
+        case .unverified: return ftpHow == .fromRides ? "Estimated · unverified" : "Entered · unverified"
+        default: return ftpConfidence.title
+        }
+    }
+    /// The one FTP badge used on every screen (RC2-UX, owner §5): "tested" only with a recorded, verified test ride;
+    /// "entered" for a value the rider typed or a test result without a recorded test; "estimated" (verified power) or
+    /// "estimated · unverified" for the 95 %-of-20-minutes estimate and the starting assumption.
+    var ftpBadge: String {
+        switch ftpConfidence {
+        case .verifiedTest: return "tested"
+        case .estimatedVerified: return "estimated"
+        case .provisional: return "estimated · unverified"
+        case .unverified: return ftpHow == .fromRides ? "estimated · unverified" : "entered"
+        }
+    }
 
     var estimatedMaxHR: Int { maxHR ?? Int((208.0 - 0.7 * Double(effectiveAge)).rounded()) }
     mutating func refreshAssumption() { if ftpHow == .assumed { ftpW = Int((weightKg * level.wkg).rounded()) } }

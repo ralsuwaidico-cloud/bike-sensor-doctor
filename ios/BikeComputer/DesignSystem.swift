@@ -125,8 +125,8 @@ extension View { func undoSnackbar() -> some View { modifier(UndoSnackbar()) } }
 struct FTPConfidencePill: View {
     let profile: RiderProfile
     var body: some View {
-        Pill(text: profile.ftpConfidence.short, color: profile.ftpConfidence.isConfident ? BC.live : BC.stale)
-            .accessibilityLabel("FTP confidence: \(profile.ftpConfidence.title)")
+        Pill(text: profile.ftpBadge, color: profile.ftpConfidence == .verifiedTest ? BC.live : profile.ftpConfidence.isConfident ? BC.accent : BC.stale)
+            .accessibilityLabel("FTP \(profile.ftpBadge): \(profile.ftpLabel)")
             .accessibilityIdentifier("ftpConfidence")
     }
 }
@@ -188,7 +188,7 @@ extension RiderProfile {
     /// Power zones for prescriptions (targets): conservative when the FTP is not verified.
     var prescriptionZones: [(lo: Int, hi: Int?)] { var p = self; p.ftpW = prescriptionFTP; return p.powerZones }
     var ftpCaution: String? {
-        ftpConfidence.isConfident ? nil : "FTP \(ftpConfidence.short): power targets are set 5 % lower and the ride coach does not claim zones from power. Ride by feel and heart rate; a verified FTP test replaces it."
+        ftpConfidence.isConfident ? nil : "FTP \(ftpBadge): power targets are set 5 % lower and the ride coach does not claim zones from power. Ride by feel and heart rate; a verified FTP test replaces it."
     }
 }
 
