@@ -133,12 +133,20 @@ done
 [ -n "$SMALL" ] || SMALL=$(simpick "iPhone 16e" "16e")
 STD=$(simpick "iPhone 17" "iPhone 16"); [ -n "$STD" ] || STD="$SIM|default"
 MAX=$(simpick "iPhone 17 Pro Max" "Pro Max")
-note "Layout audit simulators: small=${SMALL#*|} standard=${STD#*|} max=${MAX#*|} (runtime ${RT##*.})"
+# RC2: the owner's screen (1179 × 2556 px = 393 × 852 pt: iPhone 16 / 15 / 14 Pro). Created on the newest runtime when the
+# device type exists there, else an existing iPhone 16 / 15, else the standard device (said so in the summary).
+OWNER=""
+for T in iPhone-16 iPhone-15 iPhone-15-Pro iPhone-14-Pro; do
+  U=$(xcrun simctl create "Audit owner" "com.apple.CoreSimulator.SimDeviceType.$T" "$RT" 2>/dev/null) && { OWNER="$U|$T"; break; }
+done
+[ -n "$OWNER" ] || OWNER=$(simpick "iPhone 16" "iPhone 15")
+[ -n "$OWNER" ] || OWNER="${STD%%|*}|${STD#*|} (no 393-pt device on this runtime)"
+note "Layout audit simulators: small=${SMALL#*|} standard=${STD#*|} max=${MAX#*|} owner=${OWNER#*|} (runtime ${RT##*.})"
 LAYOUT_OK=1
-for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L"; do
+for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L" "owner|${OWNER%%|*}|L,XXXL"; do
   IFS='|' read -r LNAME LID LSIZES <<< "$spec"
   [ -n "$LID" ] || { note "  layout $LNAME: no simulator"; continue; }
-  LEXTRAS=0; [ "$LNAME" = "standard" ] && LEXTRAS=1
+  LEXTRAS=0; [ "$LNAME" = "standard" ] || [ "$LNAME" = "owner" ] && LEXTRAS=1
   TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
   xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
     -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit \
