@@ -1,0 +1,552 @@
+=== test: errors / failures ===
+GatherProvisioningInputs
+2026-10-28 10:46:38.703507+0000 BikeComputer[10252:38067] [workouts] [mirroring] Failed to set remote session observer with XPC error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-28 10:46:40.729024+0000 BikeComputer[10252:38066] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-28 10:46:40.729497+0000 BikeComputer[10252:38119] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+Test Case '-[BikeComputerTests.AdaptationEngineTests testAdaptationNeverMutatesCompletedLogsOrRideHistory]' passed (0.281 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testConcerningPainStopsProgressionInThatAreaWithAdviceAndNoDiagnosis]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testCustomSplitTwoFullBodyAndOneCoreJointsSession]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testCyclingFatigueHoldsLiftingProgressionAndTrimsLegWork]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testFiveTrainingDaysWithTwoRidesAndThreeLifts]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testFixedDaysAndTimeBudgetsArePreserved]' passed (0.021 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testImprovingStrengthPerformanceProgressesLoadConservatively]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testLimitedEquipmentNeverPrescribedAndNeverSilentlyReplaced]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testMissedWorkoutsKeepThePlanAndNeverCramSessions]' passed (0.030 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testMissingSensorsMeansLowConfidenceKeepPlanAndAskForFeedback]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testOldStoreFilesDecodeWithoutAdaptiveKeys]' passed (0.068 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testRepeatedHighEffortSessionsEaseTheComingDays]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testSixDayPushPullLegsWithCyclingOverlap]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testStrengthFatigueEasesTheNextHardRideButNeverAFixedOne]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.AdaptationEngineTests testUndoAndRestoreOriginalPlanRevertAutomaticChanges]' passed (0.124 seconds).
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.565 (38.563) seconds
+Test Case '-[BikeComputerTests.AuditFixTests testCoachDecidesSplitGetsRealExercises]' passed (0.127 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testConfirmPainGoneIsStoredAndReleasesTheArea]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testConstantLoadReadsAboutOneAndNewRidersHaveNoRatio]' passed (1.293 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testHoldStopsEveryKindOfProgression]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testKneePainClearsAfterAWeekAndTwoPainFreeKneeLoadingLifts]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testKneePainFromALiftIsNotClearedByRides]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testLightBarbellAndDumbbellLoadsProgressWithTheSmallestStep]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testLiveIntervalsMatchThePlan]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testMissedSessionsHoldThePlannerLikeTheCoach]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testOneGoodSessionDoesNotRaiseTheLoad]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testPushPullLegsTwiceAWeekReachesLegs]' passed (0.508 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testRideFatigueHoldsThePlannerLikeTheCoach]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testThirtyMinuteSessionsKeepPulling]' passed (0.042 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testTwoFailedSessionsBringTheLoadDown]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testUnknownEffortIsNotEvidence]' passed (1.462 seconds).
+Test Case '-[BikeComputerTests.AuditFixTests testUnverifiedPowerFallsBackToRelativeCoaching]' passed (0.008 seconds).
+	 Executed 16 tests, with 0 failures (0 unexpected) in 3.479 (8.496) seconds
+Test Case '-[BikeComputerTests.BCLinkTests testControlRoundTrip]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testGPSEncodingMatchesFirmwareLayout]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testInfo]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testLiveDecodeFromFirmwareBytes]' passed (0.029 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSignedHelper]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncEnd]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRequestBytes]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testSyncRideRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.BCLinkTests testTimeAndHREncoding]' passed (0.001 seconds).
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.048 (0.710) seconds
+Test Case '-[BikeComputerTests.CoachCoreTests testAllCoachVectorsPass]' passed (0.299 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testFallbackBandsComeFromZones]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGaugeScaleAndFractions]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGaugeTextNeverDressesUpMissingData]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryDegenerateSizesReturnImmediatelyAndFinite]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryIPhoneSizesNeverOverlap]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryLargeFontShrinksButNeverOverlaps]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testGeometryNormalFontGivesALargePowerRing]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testHRAndCadenceStatus]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testNormalisationIsPerSignalAgainstItsOwnBand]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testPowerStatusAgainstZone2]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testRideCoachTicksOnlyRealSignalsAndKeepsAWindow]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testSessionPhasesAndWorkoutRamps]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testStatusKeepsZeroAsAValue]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testZonePercentAndShapes]' passed (0.145 seconds).
+Test Case '-[BikeComputerTests.CoachCoreTests testZoneRanges]' passed (0.001 seconds).
+	 Executed 16 tests, with 0 failures (0 unexpected) in 0.473 (3.230) seconds
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testClearanceDoesNotCarryOverToNewAnswers]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testConcerningLegPainTrimsTheLongRide]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testEditDropsSafetyOriginalAndPauseRestoresTheEdit]' passed (0.045 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testEditedHardRideGetsCautionAndLosesItWhenCleared]' passed (0.012 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testFutureClearanceIsNotAccepted]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testLegacyTypedDaysFollowTheGoal]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testOperationNeedsClearanceAndIllnessPauseDoesNotExpire]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testPainDefinitionsDoNotOverlap]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testPersistentOnlyWhenOngoingOrRecurring]' passed (0.001 seconds).
+2026-10-28 10:4Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testReturnMarkerInsteadOfNoteText]' passed (0.024 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationPass3Tests testStopPausesEverySessionKindAndRestores]' passed (0.017 seconds).
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.110 (2.294) seconds
+Test Case '-[BikeComputerTests.CoachRemediationTests testBarbellNeverBelowTheEmptyBar]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testCoachCutSetIsNotAnIncompleteSession]' passed (0.791 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testCyclingImprovingNeedsBetterThanUsual]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testDefaultWeekSpacesLiftsApart]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testEarlierSameDayKeyRideLightensLegs]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testExplicitHingeChoiceForCyclists]' passed (0.270 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testFirstRideWeekBackIsEasyAndShorter]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testFixedHardRideIsKeptButWarned]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testHybridWithoutSplitGetsGoalIntensityAndAnEasyWeek]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testIntensityFollowsGoalAndLevel]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testKneePainClearsAfterAWeekAndTwoPainFreeLiftsEvenWithoutKneeExercises]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testLoadRatioIsInformationOnly]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testLoadsRestartBelowTheLastOnesAfterABreak]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testMondayMorningWeekStillKnowsItsBlockPosition]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testNewExerciseGetsConcreteStartingGuidanceNotACopiedWeight]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testNoIntervalProgressionWithoutClearance]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testOlderOrSlowRecoveringRidersGetLessWeeklyVolumeAndAMoreFrequentDeload]' passed (0.393 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testOldProfileFilesDecodeWithoutTheScreen]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testOnlyOneLongRidePerWeek]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testPendingClearanceMeansNoLoadIncreasesAndNoHeavyLowReps]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testQualityRideSurvivesASplitWhenEveryDayTouchesLegs]' passed (0.576 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testRestBetweenSetsIsPrescribedAndExplained]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testReturnPhaseDetection]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testReturnPhaseLightensTheSessionAndExplainsIt]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testRidesGeneratedBeforeABreakOrTheScreenAreCappedAtRefresh]' passed (0.034 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testRoutineAfterABreakRestartsLighterWithoutChangingTheRoutine]' passed (0.029 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testRoutineProgressesOnlyAfterTwoSessionsAtTheCurrentWeight]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testScreenStatus]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testStopAnswersPlanNoTraining]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testStrengthEffortCappedUntilCleared]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testStrengthPriorityKeepsLegWorkNextToKeyRides]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testThreePainLevels]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testThresholdBlockNeverGoesBackwards]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testThresholdBuildsInsideABlockAndEveryFourthWeekIsEasier]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.CoachRemediationTests testUnansweredOrYesScreenPlansNoHardRides]' passed (0.001 seconds).
+	 Executed 35 tests, with 0 failures (0 unexpected) in 2.178 (3.560) seconds
+Test Case '-[BikeComputerTests.CycliftBrandTests testHomeScreenNameIsCyclift]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.CycliftBrandTests testLegalPagesAreCycliftWithSupportAddressAndNoAccounts]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.CycliftBrandTests testSupportAddressCleaning]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CycliftBrandTests testSupportContactRendersUnchangedWithAddress]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.CycliftBrandTests testSupportContactWithConfiguredAddress]' passed (0.003 seconds).
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.015 (0.119) seconds
+Test Case '-[BikeComputerTests.DiagCodecTests testCapAndCrc]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.DiagCodecTests testDiagInfoVector]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.DiagCodecTests testDiagReadyEvent]' passed (0.223 seconds).
+Test Case '-[BikeComputerTests.DiagCodecTests testFullSizeChunkIsLongerThan180AndStillDecodes]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.DiagCodecTests testListEndChunkErrVectors]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.DiagCodecTests testPhoneToBoardVectors]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.DiagCodecTests testUnknownTagsSkippedTruncatedRejected]' passed (0.001 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.239 (0.529) seconds
+Test Case '-[BikeComputerTests.DiagFirmwareEngineTests testDisconnectHalfwayResumesAtTheOffsetWithTheFirmwaresChunks]' passed (0.043 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareEngineTests testDuplicateChunkFromTheFirmwareIsIgnored]' passed (0.023 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareEngineTests testFirmwareBusyDuringARideBacksOffAndResumes]' passed (0.273 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareEngineTests testFullPullAtEachMTUVerifiesCrcAndAcknowledges]' passed (0.158 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareEngineTests testLinkTooSmallFromTheFirmwareStopsCleanly]' passed (0.025 seconds).
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.521 (0.526) seconds
+Test Case '-[BikeComputerTests.DiagFirmwareFixtureTests testAckRepliesAndErrorCodesFromTheFirmware]' passed (0.439 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareFixtureTests testCapabilityNegotiationAndOlderSides]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareFixtureTests testChunkOverheadIsExactAndMatchesTheFirmware]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareFixtureTests testCycliftEncoderProducesTheBytesTheFirmwareParses]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareFixtureTests testFirmwareChunksAtEveryMTUReassembleToTheReport]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareFixtureTests testFixtureCopiesAgree]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareFixtureTests testListAndMetadataFromTheFirmware]' passed (0.006 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.482 (0.702) seconds
+Test Case '-[BikeComputerTests.DiagFirmwareVectorTests testFirmwareInfo]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareVectorTests testFirmwareListEndChunkErrReady]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.DiagFirmwareVectorTests testPhoneRequestsMatchFirmwareParser]' passed (0.002 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.006 (0.192) seconds
+Test Case '-[BikeComputerTests.DiagTransferTests testAckIsNeverSentForABadChecksum]' passed (0.019 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testAppRestartResumesFromPersistedPartial]' passed (0.020 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testAtMostOneChunkPerSecondWhileRideIsActive]' passed (0.021 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testBoardFolderNameIsFileSystemSafe]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testBusyFromABoardRideIsRetriedEveryTenSeconds]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testChunkSizeComesFromTheLinkMTU]' passed (0.211 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testChunkTimeoutRetriesSameOffsetSameSize]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testCrcMismatchDeletesPartialAndRetriesFromZero]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testDeletedByRiderIsNeverPulledAgain]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testDiagReadyEventStartsAListAndRelistsWhenBusy]' passed (0.018 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testEmptyBoardDoesNothing]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testErrBadOffsetRestartsFromZero]' passed (0.012 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testErrBusyBacksOffTenSeconds]' passed (0.390 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testErrLinkTooSmallFromTheBoardPausesWithoutRetry]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testErrStorageReadGivesUpAfterThreeRetriesKeepingPartial]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testErrStorageReadRetriesSameOffsetAfterDelay]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testErrUnknownIdSkipsToNextReport]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testExportListsReportsWithoutTheirText]' passed (0.012 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testFullTransferSavesVerifiesAndAcks]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testInterruptionAtChunkKResumesFromOffset]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testLinkTooSmallAsksNothingAndKeepsTheReportOnTheBoard]' passed (0.071 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testListTimeoutRetries]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testNoChunkRequestsWhileTheBoardRecordsARide]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testOnlyPendingReportsArePulledOldestFirst]' passed (0.019 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testPartialOfADifferentReportIsDiscarded]' passed (0.106 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testPhoneRideNeverMoreThanOneChunkRequestPerSecond]' passed (0.084 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testRepeatedTimeoutsPauseUntilNextTrigger]' passed (0.019 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testSavedReportIsNotPulledAgainOnlyReacknowledged]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.DiagTransferTests testUploadHookIsOffInThisBuild]' passed (0.007 seconds).
+	 Executed 29 tests, with 0 failures (0 unexpected) in 1.139 (1.894) seconds
+Test Case '-[BikeComputerTests.DiagnosticReportPrivacyTests testEventRingKeepsTheLastFifty]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.DiagnosticReportPrivacyTests testMonitorReportScrubsTheStoredRiderName]' passed (0.029 seconds).
+Test Case '-[BikeComputerTests.DiagnosticReportPrivacyTests testReportContainsNoPersonalData]' passed (0.111 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.144 (0.147) seconds
+Test Case '-[BikeComputerTests.HomeBTests testCoachSlotPriority]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.HomeBTests testFirstMultiMissedAndFree]' passed (0.050 seconds).
+Test Case '-[BikeComputerTests.HomeBTests testHealthHoldsTakePrecedence]' passed (0.054 seconds).
+Test Case '-[BikeComputerTests.HomeBTests testOneRideCompletesOnePlannedRide]' passed (0.031 seconds).
+Test Case '-[BikeComputerTests.HomeBTests testPrimaryActionFollowsTheSessionState]' passed (0.017 seconds).
+Test Case '-[BikeComputerTests.HomeBTests testRescheduleToAFreeDayWithUndo]' passed (0.034 seconds).
+Test Case '-[BikeComputerTests.HomeBTests testRideStatesNeverStartRecording]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.HomeBTests testWeekCountsAgreeOnHomePlanAndProgress]' passed (0.023 seconds).
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.223 (0.508) seconds
+Test Case '-[BikeComputerTests.HybridTests testBuild30StoreLoadsWithHybridDefaults]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachBalancedWeek]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachFindsUnderLifting]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachFindsUnderRiding]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCoachPushPullImbalanceOnlyFromLabels]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.HybridTests testCyclingModeIgnoresStrength]' passed (0.014 seconds).
+Test Case '-[BikeComputerTests.HybridTests testHealthImportDedupesRidesAndStrength]' passed (0.014 seconds).
+Test Case '-[BikeComputerTests.HybridTests testHybridWeekFollowsAvailabilityWithSeparateHours]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridTests testQuickLogMarksPlannedStrengthDoneAndTimelineShowsIt]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.HybridTests testStrengthPriorityPutsLiftFirstOnSharedDay]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.HybridTests testSuggestedAvailabilityFromProfile]' passed (0.001 seconds).
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.065 (0.247) seconds
+Test Case '-[BikeComputerTests.HybridV2Tests testCatalogueLoadsAndSearchWorks]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testCoverageIsUnknownFromQuickLogsAndKnownFromDetailedOnes]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testCyclingTimeIsNeverLiftingVolume]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testDayMarksAndFlexibleDays]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testFitTrimsFlexibleBeforeFixedAndKeepsTypes]' passed (0.046 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testFormatterAndShortLabels]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testInterferenceProposalRespectsFixedAndEditedAndCanBeUndone]' passed (0.041 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testLegacyAvailabilityMigratesWithoutLoss]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testPlannedSessionsAreNeverCountedAsCompleted]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testPlanNeverExceedsEitherBudgetByAMinute]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testProgressionTrendNeedsFourLoadedSessions]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testSetEntryTonnageAndText]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testStableSourceIdsAndImportedStatus]' passed (0.264 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testStoreRoundTripKeepsTemplatesExercisesAndDetailedLogs]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testSuggestedAvailabilityIsInsideBothBudgets]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testTemplatePrefillsFromLastSession]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.HybridV2Tests testWeeklyReviewComparesPlannedWithCompletedAndOffersRevision]' passed (0.036 seconds).
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.438 (0.506) seconds
+Test Case '-[BikeComputerTests.LinkV12Tests testCapsGateEverything]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testProfileVectors]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testRiderProfileMapsToLinkMessageAndBack]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testSettingsVectors]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiRequestsMatchFirmwareVectors]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiScanResultWithCurlyApostrophe]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.LinkV12Tests testWiFiStatusVector]' passed (0.001 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.022 (0.027) seconds
+Test Case '-[BikeComputerTests.ModelTests testBestMeanPowerOnSyntheticSeries]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDistanceRuleMatchesBoard]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ModelTests testDurationFormatter]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testEditedWorkoutsSurviveRegeneration]' passed (0.015 seconds).
+Test Case '-[BikeComputerTests.ModelTests testFTPIsProposedNeverAutoApplied]' passed (0.048 seconds).
+Test Case '-[BikeComputerTests.ModelTests testImportBoardRideMergesMirrorAndDedupes]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.ModelTests testNoDuplicateRidesAndSingleOwner]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ModelTests testOverHoursSuggestsAdjustmentsInsteadOfCutting]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed]' passed (0.018 seconds).
+Test Case '-[BikeComputerTests.ModelTests testPowerZonesAndFTPAssumption]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.ModelTests testResetRemovesEverything]' passed (0.018 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreFileDecodesV1JSONWithoutNewKeys]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreImportsBuild14Layout]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.ModelTests testStoreRoundTripSurvivesRelaunch]' passed (0.107 seconds).
+Test Case '-[BikeComputerTests.ModelTests testSuspensionBecomesGapNotInterpolation]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testTimelineDedupesAndComputesTSS]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekIsBuiltAroundAvailability]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWeekTotalsCountOnlyStoredRides]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.ModelTests testWorkoutStepsUseFTP]' passed (0.001 seconds).
+	 Executed 19 tests, with 0 failures (0 unexpected) in 0.264 (1.709) seconds
+Test Case '-[BikeComputerTests.PairingTests testBoardRowIsRedWhenPairingIsLost]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.PairingTests testLinkDiagVectorFromFirmware]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.PairingTests testProfileSyncStateWords]' passed (0.098 seconds).
+Test Case '-[BikeComputerTests.PairingTests testProfileValidationMirrorsTheBoardRanges]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.PairingTests testStagesAreOrderedAsTheBriefLists]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.PairingTests testStaleKeysMapToRepair]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.PairingTests testSyncRecordPersistsLastSuccessfulSync]' passed (0.011 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.130 (0.380) seconds
+Test Case '-[BikeComputerTests.Pass2Probe2Tests testQ11_ReturnReductionCompounds]' passed (0.039 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.039 (0.040) seconds
+Test Case '-[BikeComputerTests.Pass2Probe3Tests testQ12_StopExpiresIntoTraining]' passed (0.012 seconds).
+Test Case '-[BikeComputerTests.Pass2Probe3Tests testQ13_OldAnswersDecode]' passed (0.002 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.014 (0.091) seconds
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ10_UnansweredWeek]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ1_RepFloorMakesHeldLoadHarder]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ2_EditedCappedRideIsOverwritten]' passed (0.017 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ3_CurrentIllness]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ4_StaleClearanceDate]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ5_OldPainReportsReheld]' passed (0.020 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ6_RoutineProgressionWhileNotCleared]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ7_LegacyTypedAvailability]' passed (0.160 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ8_StopAndRestore]' passed (0.034 seconds).
+Test Case '-[BikeComputerTests.Pass2ProbeTests testQ9_ReturnRamp]' passed (0.109 seconds).
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.354 (0.831) seconds
+Test Case '-[BikeComputerTests.Pass3Probe2Tests testR1_IntensityByGoalAndBlockInfo]' passed (0.099 seconds).
+Test Case '-[BikeComputerTests.Pass3Probe2Tests testR2_LegacyTypedNormalWeekInfo]' passed (0.001 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.100 (0.103) seconds
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS10_OldStopAnswersDecode]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS11_EditedHardRideNotCautionedInfo]' passed (0.016 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS12_ReturnCapKeepsBlockRepsInfo]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS13_ThreeLevels]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS1_PriorClearanceCoversNewChestPain]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS1b_ClearanceWindowInfo]' passed (0.015 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS2_StaleSafetyOriginalRestoredOverEditViaPause]' passed (0.026 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS3_BreakPathRepFloorHarderThanNoBreak]' passed (0.069 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS4_ClearanceSwallowsLaterReportOfEarlierStartedSession]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS5_OtherSessionsStayPlannedDuringStop]' passed (0.014 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS6_IllnessPause]' passed (0.014 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS7_ExpiryTableInfo]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS8_RiderNoteDisablesBreakReduction]' passed (0.058 seconds).
+Test Case '-[BikeComputerTests.Pass3ProbeTests testS9_EngineReadinessUsesDeviceClock]' passed (0.001 seconds).
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.223 (0.418) seconds
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU10_RoutineAtCurrentInfo]' passed (0.173 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU1_EditCappedRideToRestIsOverwritten]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU2_HomeAlternativeOnCappedRide]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU3_ClearanceSequences]' passed (0.024 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU4_PauseEverySessionKindAndRestore]' passed (0.157 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU5_PainReleaseTiming]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU6_ReturnVsNotCleared]' passed (0.095 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU7_LegacyDecode]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU8_EditedRideCaution]' passed (0.061 seconds).
+Test Case '-[BikeComputerTests.Pass4ProbeTests testU9_TypedDaysFollowGoalInfo]' passed (0.002 seconds).
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.534 (0.539) seconds
+Test Case '-[BikeComputerTests.PipelineHealthTests testBoardLinkStates]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testConnectedButNoDataIsNeverOK]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testDirectSensorConnectedNoData]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testLiveOnlyWhenValidForwardedAndDisplayed]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testMessageSelection]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testOldFirmwareFallsBackToLiveAges]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testStaleAfterThreeAndSixSeconds]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testStaleAndReceivingWithoutValid]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.PipelineHealthTests testWatchPath]' passed (0.001 seconds).
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.024 (0.099) seconds
+Test Case '-[BikeComputerTests.ProgressMetricsTests testAxisLabelsNeverOverlapOrLeaveThePlot]' passed (0.360 seconds).
+Test Case '-[BikeComputerTests.ProgressMetricsTests testBudgetFixActuallyFixes]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.ProgressMetricsTests testGlanceCards]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.ProgressMetricsTests testNoDurationSessionsAreNamedTheSameOnPlanAndProgress]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ProgressMetricsTests testRangesSelectionAndPartialWeeks]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ProgressMetricsTests testSessionStates]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.ProgressMetricsTests testTicksAndAxisText]' passed (0.001 seconds).
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.384 (0.387) seconds
+Test Case '-[BikeComputerTests.QualityReleaseTests testAcceptingASuggestionIsOnlyVerifiedFromAVerifiedTestRide]' passed (0.025 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testAlwaysPreferChangesThePlannerPick]' passed (0.025 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testChartBucketsVisibleRangeAndSelection]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testChartLabelsNeverCrowd]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testCheckInChangesAreExplainedAndUndoable]' passed (0.249 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testDeleteLogReopensSessionAndUndoRestoresBoth]' passed (0.026 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testDeleteWorkoutUndoAndRevertToPlanned]' passed (0.064 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testDeloadOnFatigueAndEveryFourthTrainingWeek]' passed (0.023 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testDifferentProfilesGetDifferentPrograms]' passed (0.032 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testEquipmentIsRespectedIncludingCustomItems]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testFinishWithNoTickedSetSavesNothingAndKeepsSessionOpen]' passed (0.051 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testFixedDaysSessionTypesAndOwnRoutinesAreKept]' passed (0.149 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testFTPConfidenceLabels]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testHardLoggedEffortHoldsTheLoad]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testInterferenceKeyRideNextDayAndHighCyclingLoad]' passed (0.031 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testManualCompletionConvertsToDetailedLogWithoutDuplicate]' passed (0.026 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testManualCompletionsNeverDriveProgression]' passed (0.017 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testMigratedOwnerStoreCountsTheSameOnEveryScreen]' passed (0.114 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testMigrationV2FixesOwnerDataAndKeepsOriginals]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testOwnerScenarioFinishingTomorrowsSessionWithNoSetsCompletesNothing]' passed (0.017 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testPainRestrictionsExcludeLoadingPatterns]' passed (0.010 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testProgressionOnlyFromLoggedSetsOfTheSameExercise]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testSessionsCoverMovementPatternsAndFitTheirMinutes]' passed (0.037 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testStatesManualLoggedImportedSkippedAndNoDateDrivenCompletion]' passed (0.029 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testSwapAlternativesUseAvailableEquipmentOnly]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testSwapReasonsPersistAndShapeFuturePlans]' passed (0.107 seconds).
+Test Case '-[BikeComputerTests.QualityReleaseTests testWhyLinesComeFromThePlannerDecision]' passed (0.006 seconds).
+	 Executed 27 tests, with 0 failures (0 unexpected) in 1.074 (1.143) seconds
+Test Case '-[BikeComputerTests.RC2UXTests testDrawnStrideKeepsLabelsApart]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RC2UXTests testLinkStatusTextIsTruthful]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RC2UXTests testPlanAndProgressAgreeForTheSameData]' passed (0.015 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.017 (0.018) seconds
+Test Case '-[BikeComputerTests.Release10Tests testAccountsAreSwitchedOff]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.Release10Tests testAccountServiceStaysInert]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.Release10Tests testInfoPlistIsReleaseReady]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.Release10Tests testPlannedProvidersAreHidden]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.Release10Tests testPrivacyManifestIsBundledAndDeclaresNoTracking]' passed (0.048 seconds).
+Test Case '-[BikeComputerTests.Release10Tests testReleaseSwitchWinsOverAccountValues]' passed (0.009 seconds).
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.066 (0.088) seconds
+Test Case '-[BikeComputerTests.ReviewProbe2Tests testR13_RoutineAfterBreak]' passed (0.036 seconds).
+Test Case '-[BikeComputerTests.ReviewProbe2Tests testR14_DurationProgressionDuringReturn]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.ReviewProbe2Tests testR15_ACWRDaily]' passed (0.007 seconds).
+Test Case '-[BikeComputerTests.ReviewProbe2Tests testR16_FrequencyExtremes]' passed (0.061 seconds).
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.108 (0.111) seconds
+Test Case '-[BikeComputerTests.ReviewProbe3Tests testR17_GenerationCapNotReversible]' passed (0.017 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.017 (0.018) seconds
+Test Case '-[BikeComputerTests.ReviewProbeTests testR10_UnscreenedCaps]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR11_ACWRSteady]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR12_AdvancedWeek]' passed (0.008 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR1_EasyWeekWithTypedAvailability]' passed (0.014 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR2_GoalIntensityWithTypedAvailability]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR3_ThresholdBlockRegression]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR4_BlockPositionDecidedAtGeneration]' passed (0.022 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR5_EngineAdjustedRideEscapesCap]' passed (0.013 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR6_ChestPainStillTrains]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR7_ReturnScaling]' passed (0.069 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR8_PainHoldDeadlock]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.ReviewProbeTests testR9_DeloadMisalignment]' passed (0.011 seconds).
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.159 (0.529) seconds
+Test Case '-[BikeComputerTests.RideLayoutTests testCoachPanelCadenceOnly]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testCoachPanelHeartRateOnly]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testCoachPanelSpeedOnly]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testCoachPanelWithNoSensorsGuidesByFeel]' passed (0.029 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testCueGateHoldsEachCueFifteenSeconds]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testCueGateLetsNecessaryCuesThrough]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testLayoutIsRememberedBetweenLaunches]' passed (0.011 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testLayoutRoundTripsAndDefaultsToCoach]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testLayoutSizingFitsAndIsBounded]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testMissingMetricsSayNoSourceAndSourcesComeFromTheHub]' passed (0.024 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testNoBrandInAnyLabelConstant]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testPanelStatesBeforeAndOutsideTheRide]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testRawValuesMatchTheContract]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testRideCoachShowsAtMostOneCueChangePerFifteenSeconds]' passed (0.080 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testSwitchingLayoutDoesNotTouchRecorderOrHub]' passed (0.015 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testUnverifiedPowerAdviceIsProvisional]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.RideLayoutTests testWordingCoversTheBriefInstructions]' passed (0.002 seconds).
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.184 (0.214) seconds
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptanceJourney]' passed (1.188 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testAcceptEditsOnlyThatSessionAndUndoRestores]' passed (0.487 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testBothRestMissedAndDoneDays]' passed (0.450 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testEquipmentAndExclusionsFilterSuggestionsButNeverEditRoutines]' passed (0.398 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testInsufficientHistoryIsSaidNotInvented]' passed (0.449 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testLiftingBudgetWarningOnAssignment]' passed (0.504 seconds).
+Test Case '-[BikeComputerTests.RoutinesTests testMigrationFromBuild36StoreKeepsEverything]' passed (0.016 seconds).
+=== test: last 150 lines ===
+Test Case '-[BikeComputerTests.SensorDiagTests testUnknownTagsAndWrongLengthsAreSkipped]' started.
+Test Case '-[BikeComputerTests.SensorDiagTests testUnknownTagsAndWrongLengthsAreSkipped]' passed (0.001 seconds).
+Test Suite 'SensorDiagTests' passed at 2026-10-28 10:48:04.433.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.021 (0.135) seconds
+Test Suite 'SourcesTests' started at 2026-10-28 10:48:04.433.
+Test Case '-[BikeComputerTests.SourcesTests testBoardHeartRateEchoIsNotASecondSource]' started.
+Test Case '-[BikeComputerTests.SourcesTests testBoardHeartRateEchoIsNotASecondSource]' passed (0.005 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testCadenceDropsToZeroAfterThreeSeconds]' started.
+Test Case '-[BikeComputerTests.SourcesTests testCadenceDropsToZeroAfterThreeSeconds]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testCadenceFromCrankDeltas]' started.
+Test Case '-[BikeComputerTests.SourcesTests testCadenceFromCrankDeltas]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testCrankWrapAround]' started.
+Test Case '-[BikeComputerTests.SourcesTests testCrankWrapAround]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testCSC]' started.
+Test Case '-[BikeComputerTests.SourcesTests testCSC]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testCyclingPowerBasic]' started.
+Test Case '-[BikeComputerTests.SourcesTests testCyclingPowerBasic]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testCyclingPowerCrankData]' started.
+Test Case '-[BikeComputerTests.SourcesTests testCyclingPowerCrankData]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testCyclingPowerOptionalFieldOffsets]' started.
+Test Case '-[BikeComputerTests.SourcesTests testCyclingPowerOptionalFieldOffsets]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testFirstTurnAfterStopIsNotASlowRevolution]' started.
+Test Case '-[BikeComputerTests.SourcesTests testFirstTurnAfterStopIsNotASlowRevolution]' passed (0.046 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testHeartRate8And16Bit]' started.
+Test Case '-[BikeComputerTests.SourcesTests testHeartRate8And16Bit]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testHeartRateContact]' started.
+Test Case '-[BikeComputerTests.SourcesTests testHeartRateContact]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testHeartRateRRAndEnergyIgnored]' started.
+Test Case '-[BikeComputerTests.SourcesTests testHeartRateRRAndEnergyIgnored]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testMissingTextsAreGeneric]' started.
+Test Case '-[BikeComputerTests.SourcesTests testMissingTextsAreGeneric]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testPairedSensorsSettingIsAdditive]' started.
+Test Case '-[BikeComputerTests.SourcesTests testPairedSensorsSettingIsAdditive]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testPlannedProvidersAreNeverConnectedOrLive]' started.
+Test Case '-[BikeComputerTests.SourcesTests testPlannedProvidersAreNeverConnectedOrLive]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testSensorKindsAndGenericNames]' started.
+Test Case '-[BikeComputerTests.SourcesTests testSensorKindsAndGenericNames]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testSourceColours]' started.
+Test Case '-[BikeComputerTests.SourcesTests testSourceColours]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testSourceStates]' started.
+Test Case '-[BikeComputerTests.SourcesTests testSourceStates]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testSpeedWheelSensorBeatsGPSAndPowerBoardFirst]' started.
+Test Case '-[BikeComputerTests.SourcesTests testSpeedWheelSensorBeatsGPSAndPowerBoardFirst]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testStaleReadingIsNotShownAndIsPruned]' started.
+Test Case '-[BikeComputerTests.SourcesTests testStaleReadingIsNotShownAndIsPruned]' passed (0.073 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testTwoHeartRateSourcesGiveOneValue]' started.
+Test Case '-[BikeComputerTests.SourcesTests testTwoHeartRateSourcesGiveOneValue]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testWatchFirstPreference]' started.
+Test Case '-[BikeComputerTests.SourcesTests testWatchFirstPreference]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.SourcesTests testWheelWrapAndSpeed]' started.
+Test Case '-[BikeComputerTests.SourcesTests testWheelWrapAndSpeed]' passed (0.002 seconds).
+Test Suite 'SourcesTests' passed at 2026-10-28 10:48:04.666.
+	 Executed 23 tests, with 0 failures (0 unexpected) in 0.158 (0.233) seconds
+Test Suite 'StrengthAuditTests' started at 2026-10-28 10:48:04.667.
+Test Case '-[BikeComputerTests.StrengthAuditTests testCentreButtonAcrossMidnight]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testCentreButtonAcrossMidnight]' passed (0.471 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testCoverageSuggestionRespectsEquipmentAndExclusions]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testCoverageSuggestionRespectsEquipmentAndExclusions]' passed (0.003 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testDeletedTemplateLeavesRoutineRemovedState]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testDeletedTemplateLeavesRoutineRemovedState]' passed (0.835 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testDuplicateLogsArePrevented]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testDuplicateLogsArePrevented]' passed (1.173 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testEditingTemplateUpdatesFutureSessionsOnly]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testEditingTemplateUpdatesFutureSessionsOnly]' passed (0.773 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testEnsurePlanNeverRebuildsAnExistingWeek]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testEnsurePlanNeverRebuildsAnExistingWeek]' passed (0.723 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testInsightAcceptUndoAndIgnoreUndo]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testInsightAcceptUndoAndIgnoreUndo]' passed (0.486 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testProgressionLoadRespectsEquipmentAndUnits]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testProgressionLoadRespectsEquipmentAndUnits]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testProgressionNeedsTwoCompletedSessionsOfTheSameExercise]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testProgressionNeedsTwoCompletedSessionsOfTheSameExercise]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testWeekdayDefaultSurvivesRebuildAndTrainingModeChange]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testWeekdayDefaultSurvivesRebuildAndTrainingModeChange]' passed (0.778 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testWeekdayDefaultWarnsOverBudgetAndKeepsHandEdits]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testWeekdayDefaultWarnsOverBudgetAndKeepsHandEdits]' passed (0.610 seconds).
+Test Case '-[BikeComputerTests.StrengthAuditTests testWeightUnitsDisplayOnlyStorageMetric]' started.
+Test Case '-[BikeComputerTests.StrengthAuditTests testWeightUnitsDisplayOnlyStorageMetric]' passed (0.514 seconds).
+Test Suite 'StrengthAuditTests' passed at 2026-10-28 10:48:11.044.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 6.368 (6.377) seconds
+Test Suite 'SyncMergeTests' started at 2026-10-28 10:48:11.044.
+Test Case '-[BikeComputerTests.SyncMergeTests testBothMovedNewerClientWins]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testBothMovedNewerClientWins]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testCloudConfigAbsentMeansGuestOnly]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testCloudConfigAbsentMeansGuestOnly]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testIsoDatesFromPostgres]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testIsoDatesFromPostgres]' passed (0.009 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testOnlyServerMovedTakesRemote]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testOnlyServerMovedTakesRemote]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testPayloadRoundTripKeepsJSON]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testPayloadRoundTripKeepsJSON]' passed (0.025 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testRemoteDeletionHonouredUnlessEditedAfter]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testRemoteDeletionHonouredUnlessEditedAfter]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testRideDedupeBySourceIdAndByTime]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testRideDedupeBySourceIdAndByTime]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testSameHashNeedsNothing]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testSameHashNeedsNothing]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testSecondPhoneTakesTheAccountProfileInsteadOfItsDefaults]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testSecondPhoneTakesTheAccountProfileInsteadOfItsDefaults]' passed (0.000 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testStrengthDedupe]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testStrengthDedupe]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testTombstonesOnlyForRecordsThisPhoneSyncedAndNoLongerHas]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testTombstonesOnlyForRecordsThisPhoneSyncedAndNoLongerHas]' passed (0.004 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testUnconfirmedLocalEditCountsAsLocalChange]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testUnconfirmedLocalEditCountsAsLocalChange]' passed (0.002 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testUnknownLocallyTakesRemote]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testUnknownLocallyTakesRemote]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.SyncMergeTests testUpsertsAreBatched]' started.
+Test Case '-[BikeComputerTests.SyncMergeTests testUpsertsAreBatched]' passed (0.005 seconds).
+Test Suite 'SyncMergeTests' passed at 2026-10-28 10:48:11.411.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.055 (0.367) seconds
+Test Suite 'WatchMessageTests' started at 2026-10-28 10:48:11.414.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testPingPongRoundTrip]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testRejectsInvalidReplies]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' started.
+Test Case '-[BikeComputerTests.WatchMessageTests testVersionLabelIsReadFromBundle]' passed (0.136 seconds).
+Test Suite 'WatchMessageTests' passed at 2026-10-28 10:48:11.554.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.138 (0.139) seconds
+Test Suite 'WatchPipelineTests' started at 2026-10-28 10:48:11.554.
+Test Case '-[BikeComputerTests.WatchPipelineTests testDedupeAcrossChannels]' started.
+Test Case '-[BikeComputerTests.WatchPipelineTests testDedupeAcrossChannels]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchPipelineTests testPayloadRoundTrip]' started.
+Test Case '-[BikeComputerTests.WatchPipelineTests testPayloadRoundTrip]' passed (0.006 seconds).
+Test Case '-[BikeComputerTests.WatchPipelineTests testVersionHandshake]' started.
+Test Case '-[BikeComputerTests.WatchPipelineTests testVersionHandshake]' passed (0.001 seconds).
+Test Case '-[BikeComputerTests.WatchPipelineTests testWatchLinkCountsASampleOnceFromBothChannels]' started.
+2026-10-28 10:48:11.607044+0000 BikeComputer[10252:39927] [workouts] [mirroring] Failed to set remote session observer with XPC error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+Test Case '-[BikeComputerTests.WatchPipelineTests testWatchLinkCountsASampleOnceFromBothChannels]' passed (0.002 seconds).
+Test Suite 'WatchPipelineTests' passed at 2026-10-28 10:48:11.608.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.011 (0.054) seconds
+Test Suite 'BikeComputerTests.xctest' passed at 2026-10-28 10:48:11.608.
+	 Executed 438 tests, with 0 failures (0 unexpected) in 24.179 (80.219) seconds
+Test Suite 'All tests' passed at 2026-10-28 10:48:11.608.
+	 Executed 438 tests, with 0 failures (0 unexpected) in 24.179 (80.220) seconds
+2026-10-28 10:48:11.855137+0000 BikeComputer[10252:36223] [WC] WCSession is not paired
+2026-10-28 10:48:11.867330+0000 BikeComputer[10252:36223] [WC] -[WCSession updateApplicationContext:error:]_block_invoke failed due to WCErrorCodeDeviceNotPaired
+2026-10-28 10:48:12.015967+0000 BikeComputer[10252:39927] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-28 10:48:12.015978+0000 BikeComputer[10252:39928] [default] connection error: Error Domain=com.apple.healthkit Code=4 "Missing com.apple.developer.healthkit entitlement." UserInfo={NSLocalizedDescription=Missing com.apple.developer.healthkit entitlement.}
+2026-10-28 10:48:14.691 xcodebuild[3719:15873] [MT] IDETestOperationsObserverDebug: 287.798 elapsed -- Testing started completed.
+2026-10-28 10:48:14.691 xcodebuild[3719:15873] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-28 10:48:14.691 xcodebuild[3719:15873] [MT] IDETestOperationsObserverDebug: 287.798 sec, +287.798 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/tests.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
