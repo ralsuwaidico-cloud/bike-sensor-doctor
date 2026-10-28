@@ -62,7 +62,7 @@ final class RC2UXTests: XCTestCase {
         rec.powerVerified = false
         s.rides = [rec, health, demo, lastWeek]
         // lifting: a detailed log linked to l1, a Health import
-        let ex = ExerciseEntry(exercise: ExerciseLibrary.all.first!, sets: [SetEntry(reps: 8, weightKg: 20, done: true)])
+        let ex = ExerciseEntry(exercise: Exercise(id: "rc2-sq", name: "Goblet squat", equipment: ["dumbbell"], pattern: .squat, unilateral: false, custom: true), sets: [SetEntry(reps: 8, weightKg: 20, done: true)])
         s.strength = [StrengthSession(date: at(1, 18, from: monday), minutes: 45, focus: .fullBody, rpe: 7, exercises: [ex], workoutId: l1.id),
                       StrengthSession(date: at(5, 17, from: monday), minutes: 30, focus: .fullBody, source: "Apple Health", healthUUID: "H-2")]
 
