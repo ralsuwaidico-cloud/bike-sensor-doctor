@@ -22,18 +22,26 @@ jobs:
       - name: Tools
         run: command -v python3 >/dev/null || (apt-get update -qq && apt-get install -y -qq python3 >/dev/null)
       - name: Engine, Home and Progress logic tests (Linux Swift)
+        shell: bash
         run: |
-          set -o pipefail
           start=$(date +%s)
-          if bash tools/coach-harness/test.sh "$GITHUB_WORKSPACE" | tee logic.txt; then R=ok; else R=FAILED; fi
+          bash tools/coach-harness/test.sh "$GITHUB_WORKSPACE" > logic.txt 2>&1; X=$?
           dur=$(( $(date +%s) - start ))
+          R=ok; [ $X -eq 0 ] || R="FAILED (exit $X)"
+          W=tools/coach-harness/testws
           {
             echo "### Fast logic tests: $R"
             echo ""
             echo "Commit \`${GITHUB_SHA::7}\` on \`$GITHUB_REF_NAME\` · ${dur}s"
             echo ""
             echo '```'
-            grep -E "error:|failed \(|Executed [0-9]+ tests" logic.txt | tail -25
+            grep -E "error:|failed \(|Executed [0-9]+ tests" logic.txt | tail -25 || true
+            [ $X -eq 0 ] || tail -40 logic.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          [ "$R" = ok ]
+          # annotations are readable through the API even where raw logs are not (the owner's tools read them)
+          echo "::notice title=Fast logic tests::$R in ${dur}s — $(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' logic.txt | tail -1)"
+          if [ $X -ne 0 ]; then
+            { grep -E "error:|failed \(" logic.txt; grep -E "error:" $W/build.log 2>/dev/null; tail -15 logic.txt; } | head -30 | while IFS= read -r l; do echo "::error title=logic::${l//%/%25}"; done
+          fi
+          exit $X
