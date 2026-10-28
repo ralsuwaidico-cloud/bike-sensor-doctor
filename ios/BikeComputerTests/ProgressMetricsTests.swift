@@ -87,6 +87,10 @@ final class ProgressMetricsTests: XCTestCase {
         let ss = TrendChartMath.rangeSummary(v, metric: .strength)
         XCTAssertEqual(ss.value, "1 session"); XCTAssertTrue(ss.line.contains("lifted in 2 of 3 full weeks"), ss.line)
         XCTAssertEqual(TrendChartMath.rangeSummary(weeks(1), metric: .riding).title, "This week so far")
+        // weeks before the first week with data are left out of the average (1 yr view of a 16-week history)
+        let late = weeks(6) { i, d in WeekBucket(start: d, minutes: i < 3 ? 0 : 120, sessions: i < 3 ? 0 : 2) }
+        let ls = TrendChartMath.rangeSummary(late, metric: .riding)
+        XCTAssertEqual(ls.value, "2 h"); XCTAssertTrue(ls.line.contains("average of 2 full weeks"), ls.line)
     }
 
     // MARK: at a glance

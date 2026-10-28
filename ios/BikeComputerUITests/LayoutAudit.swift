@@ -72,6 +72,7 @@ final class LayoutAudit: XCTestCase {
         }
         return walk(root)
     }
+    private func hasTextDescendant(_ s: XCUIElementSnapshot) -> Bool { s.children.contains { $0.elementType == .staticText || hasTextDescendant($0) } }
     /// System views that are not app content (iOS 26 toolbar glass dimming overlay reports a frame wider than the screen).
     private func isSystem(_ e: XCUIElementSnapshot) -> Bool { ["AdditionalDimmingOverlay"].contains(e.identifier) }
 
@@ -239,8 +240,10 @@ final class LayoutAudit: XCTestCase {
     /// failure: the previous audit passed with overlapping date labels because it never compared texts with each other.
     private func checkNoTextOverlap(_ app: XCUIApplication, screen: String, tab: Int?) {
         let win = app.windows.firstMatch.frame
-        let texts = visibleElements(app, tab: tab).filter { $0.elementType == .staticText && $0.frame.width > 1 && $0.frame.height > 1
-            && $0.frame.minY > win.minY + 100 && $0.frame.maxY < win.maxY - 90 }
+        // leaf texts only: an element combined for VoiceOver (".combine") reports its own frame AND its children's, so the
+        // group "AVERAGE PER WEEK, 2 h 43 min, …" always "overlapped" its own parts (run 101: 20 false failures)
+        let texts = visibleElements(app, tab: tab).filter { e in e.elementType == .staticText && e.frame.width > 1 && e.frame.height > 1
+            && e.frame.minY > win.minY + 100 && e.frame.maxY < win.maxY - 90 && !hasTextDescendant(e) }
         var bad: [String] = []
         for (i, a) in texts.enumerated() { for b in texts.dropFirst(i + 1) {
             let r = a.frame.intersection(b.frame)
@@ -264,9 +267,27 @@ final class LayoutAudit: XCTestCase {
         return false
     }
     /// Scrolls until the element is fully on screen between the bars (at most `tries` swipes).
-    private func reveal(_ app: XCUIApplication, _ e: XCUIElement, tries: Int = 4) {
+    /// Scrolls (short drags, no fling) until the element's TOP is on screen below the navigation bar and at least 200 pt
+    /// above the bottom. Run 101: "fully on screen" can never hold for a chart taller than the screen (AX3 on the small
+    /// iPhone), so four swipes flung it off the top and the tap landed on the ride list.
+    private func reveal(_ app: XCUIApplication, _ e: XCUIElement, tries: Int = 8) {
         let win = app.windows.firstMatch.frame
-        for _ in 0..<tries where !(e.exists && e.frame.minY > win.minY + 100 && e.frame.maxY < win.maxY - 100) { app.swipeUp(); sleep(1) }
+        for _ in 0..<tries {
+            guard e.exists else { drag(app, up: true); continue }
+            let f = e.frame
+            if f.minY > win.minY + 90 && f.minY < win.maxY - 200 { return }
+            drag(app, up: f.minY >= win.maxY - 200)
+        }
+    }
+    private func drag(_ app: XCUIApplication, up: Bool) {
+        let a = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.7 : 0.35)), b = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.35 : 0.7))
+        a.press(forDuration: 0.05, thenDragTo: b); sleep(1)
+    }
+    /// Taps the chart at a fraction of its width, at a height that is on screen (the chart may be taller than the screen).
+    private func tapChart(_ app: XCUIApplication, _ chart: XCUIElement, dx: CGFloat) {
+        let f = chart.frame, win = app.windows.firstMatch.frame
+        let y = max(f.minY + 10, min(f.minY + f.height * 0.6, win.maxY - 140))
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: f.minX + f.width * dx, dy: y)).tap(); sleep(1)
     }
 
     func testRC2OwnerScreens() throws {
@@ -294,19 +315,19 @@ final class LayoutAudit: XCTestCase {
             }
             _ = pickRange(app, "16 wk"); reveal(app, chart)
             if chart.exists {
-                chart.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.6)).tap(); sleep(1)
+                tapChart(app, chart, dx: 0.75)
                 let header = app.descendants(matching: .any).matching(identifier: "trendChart-header").firstMatch
                 XCTAssertTrue(header.exists && (header.label.contains("Week of") || header.label.contains("This week")), "\(size): a tapped bar shows its week (\(header.label))")
                 XCTAssertTrue(header.label.contains("Done:") && header.label.contains("Planned:"), "\(size): the selection shows done and planned (\(header.label))")
                 shot("\(tag)-progress-riding-16wk-selected"); checkScreen(app, "\(size) riding selected", tab: 3)
-                chart.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.6)).tap(); sleep(1)
+                tapChart(app, chart, dx: 0.75)
             }
             let strength = app.segmentedControls["trendChart-metric"].buttons["Strength"]
             if strength.exists {
                 strength.tap(); sleep(1); _ = pickRange(app, "8 wk"); reveal(app, chart)
                 shot("\(tag)-progress-strength-8wk"); checkChartLabels(app, "trendChart", screen: "\(size) strength 8 wk"); checkScreen(app, "\(size) strength 8 wk", tab: 3)
-                chart.coordinate(withNormalizedOffset: CGVector(dx: 0.80, dy: 0.6)).tap(); sleep(1)
-                shot("\(tag)-progress-strength-thisweek"); checkScreen(app, "\(size) strength this week", tab: 3)
+                tapChart(app, chart, dx: 0.80)
+                shot("\(tag)-progress-strength-selected"); checkScreen(app, "\(size) strength selected", tab: 3)
             } else { note("\(size): no Strength metric") }
             // FTP: the badge never says "tested" without a recorded test (the demo FTP is a test result without one)
             let ftp = app.descendants(matching: .any).matching(identifier: "ftpConfidence").firstMatch

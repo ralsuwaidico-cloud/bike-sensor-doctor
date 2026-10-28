@@ -255,7 +255,10 @@ enum TrendChartMath {
     static func rangeSummary(_ v: [WeekBucket], metric: TrendMetric, now: Date = Date(), calendar cal: Calendar = .current) -> RangeSummary {
         guard let first = v.first, let last = v.last else { return RangeSummary(title: "No weeks", value: "—", line: "") }
         let thisMonday = TrainingLedger.monday(of: now, calendar: cal)
-        let full = v.filter { $0.start < thisMonday }
+        // M1 review (run 101, 1 yr): weeks before the first week with any data are not "weeks without training" — a rider with
+        // 16 weeks of history got "55 min average of 51 full weeks". The average starts at the first week with data.
+        let firstData = v.firstIndex { $0.sessions > 0 || $0.minutes > 0 || $0.plannedSessions > 0 } ?? 0
+        let full = v[firstData...].filter { $0.start < thisMonday }
         let range = rangeText(first.start, cal.date(byAdding: .day, value: 6, to: last.start)!, now: now, calendar: cal)
         let sessions = v.reduce(0) { $0 + $1.sessions }, minutes = v.reduce(0) { $0 + $1.minutes }
         let k = full.count
