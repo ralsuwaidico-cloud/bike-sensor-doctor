@@ -427,7 +427,7 @@ final class LayoutAudit: XCTestCase {
                     if more.exists {
                         more.tap(); sleep(1); shot("home-\(size.lowercased())-\(state)-more")
                         let move = app.buttons["Move to another day"].firstMatch
-                        if move.waitForExistence(timeout: 3) { let until = Date().addingTimeInterval(4); while !move.isHittable && Date() < until { usleep(250_000) }; move.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap(); sleep(2); shot("home-\(size.lowercased())-\(state)-move"); checkScreen(app, "\(screen) move", tab: nil); close(app) }
+                        if move.waitForExistence(timeout: 3) { sleep(2) /* menu items: isHittable itself throws while the menu animates (run 108) — wait, then tap by coordinate */; move.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap(); sleep(2); shot("home-\(size.lowercased())-\(state)-move"); checkScreen(app, "\(screen) move", tab: nil); close(app) }
                         else { app.tap(); note("\(screen): More has no Move (state)") }
                     }
                 }
