@@ -1,0 +1,182 @@
+=== layout-owner: errors / failures ===
+GatherProvisioningInputs
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L riding 4 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 43" × "AVERAGE PER WEEK" (120×14 pt); "AVERAGE PER WEEK, 2 h 43" × "2 h 43 min" (137×33 pt); "AVERAGE PER WEEK, 2 h 43" × "5 Oct – 1 Nov · total 9 " (283×37 pt); "done, planned, Tap a bar" × "done" (28×14 pt); "done, planned, Tap a bar" × "planned" (45×14 pt); "done, planned, Tap a bar" × "Tap a bar for its week." (124×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L riding 8 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 49" × "AVERAGE PER WEEK" (120×14 pt); "AVERAGE PER WEEK, 2 h 49" × "2 h 49 min" (137×33 pt); "AVERAGE PER WEEK, 2 h 49" × "7 Sep – 1 Nov · total 21" (295×37 pt); "done, planned, Tap a bar" × "done" (28×14 pt); "done, planned, Tap a bar" × "planned" (45×14 pt); "done, planned, Tap a bar" × "Tap a bar for its week." (124×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L riding 12 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 51" × "AVERAGE PER WEEK" (120×14 pt); "AVERAGE PER WEEK, 2 h 51" × "2 h 51 min" (137×33 pt); "AVERAGE PER WEEK, 2 h 51" × "10 Aug – 1 Nov · total 3" (309×37 pt); "done, planned, Tap a bar" × "done" (28×14 pt); "done, planned, Tap a bar" × "planned" (45×14 pt); "done, planned, Tap a bar" × "Tap a bar for its week." (124×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L riding 16 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 52" × "AVERAGE PER WEEK" (120×14 pt); "AVERAGE PER WEEK, 2 h 52" × "2 h 52 min" (137×33 pt); "AVERAGE PER WEEK, 2 h 52" × "13 Jul – 1 Nov · total 4" (303×37 pt); "done, planned, Tap a bar" × "done" (28×14 pt); "done, planned, Tap a bar" × "planned" (45×14 pt); "done, planned, Tap a bar" × "Tap a bar for its week." (124×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L riding 1 yr: overlapping texts: "AVERAGE PER WEEK, 55 min" × "AVERAGE PER WEEK" (121×14 pt); "AVERAGE PER WEEK, 55 min" × "55 min" (91×33 pt); "AVERAGE PER WEEK, 55 min" × "3 Nov 2025 – 1 Nov 2026 " (333×37 pt); "done, planned, Tap a bar" × "done" (28×14 pt); "done, planned, Tap a bar" × "planned" (45×14 pt); "done, planned, Tap a bar" × "Tap a bar for its week." (124×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L riding selected: overlapping texts: "Week of 5–11 Oct, 2 h 30" × "Week of 5–11 Oct" (102×14 pt); "Week of 5–11 Oct, 2 h 30" × "2 h 30 min" (137×33 pt); "Week of 5–11 Oct, 2 h 30" × "Done: 2 h 30 min · 2 rid" (242×18 pt); "Week of 5–11 Oct, 2 h 30" × "Planned: nothing" (115×17 pt); "done, planned, Tap the b" × "done" (28×14 pt); "done, planned, Tap the b" × "planned" (45×14 pt); "done, planned, Tap the b" × "Tap the bar again to cle" (146×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L strength 8 wk: overlapping texts: "AVERAGE PER WEEK, 2 sess" × "AVERAGE PER WEEK" (120×14 pt); "AVERAGE PER WEEK, 2 sess" × "2 sessions" (139×33 pt); "AVERAGE PER WEEK, 2 sess" × "7 Sep – 1 Nov · 14 sessi" (293×37 pt); "done, planned, Tap a bar" × "done" (28×14 pt); "done, planned, Tap a bar" × "planned" (45×14 pt); "done, planned, Tap a bar" × "Tap a bar for its week." (124×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L strength this week: overlapping texts: "Week of 19–25 Oct, 2 ses" × "Week of 19–25 Oct" (111×14 pt); "Week of 19–25 Oct, 2 ses" × "2 sessions" (139×33 pt); "Week of 19–25 Oct, 2 ses" × "Done: 2 sessions · 1 h 2" (264×18 pt); "Week of 19–25 Oct, 2 ses" × "Planned: nothing" (115×17 pt); "done, planned, Tap the b" × "done" (28×14 pt); "done, planned, Tap the b" × "planned" (45×14 pt); "done, planned, Tap the b" × "Tap the bar again to cle" (146×14 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L connections: overlapping texts: "Power, No power source" × "Power" (44×18 pt); "Power, No power source" × "No power source" (116×18 pt); "Heart rate, No heart-rat" × "Heart rate" (72×18 pt); "Heart rate, No heart-rat" × "No heart-rate source" (143×18 pt); "Cadence, No cadence sour" × "Cadence" (63×18 pt); "Cadence, No cadence sour" × "No cadence source" (132×18 pt); "Speed, No speed source" × "Speed" (45×18 pt); "Speed, No speed source" × "No speed source" (116×18 pt); "BikeComputer, not set up" × "BikeComputer" (113×20 pt); "BikeComputer, not set up" × "optional · not set up" (120×15 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L BikeComputer page: overlapping texts: "Profile sync" × "Profile sync, no BikeCom" (88×20 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL riding 4 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 43" × "AVERAGE PER WEEK" (174×21 pt); "AVERAGE PER WEEK, 2 h 43" × "2 h 43 min" (167×40 pt); "AVERAGE PER WEEK, 2 h 43" × "5 Oct – 1 Nov · total 9 " (314×51 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL riding 8 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 43" × "AVERAGE PER WEEK" (174×21 pt); "AVERAGE PER WEEK, 2 h 43" × "2 h 43 min" (167×40 pt); "AVERAGE PER WEEK, 2 h 43" × "5 Oct – 1 Nov · total 9 " (314×51 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL riding 12 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 51" × "AVERAGE PER WEEK" (174×21 pt); "AVERAGE PER WEEK, 2 h 51" × "2 h 51 min" (167×40 pt); "AVERAGE PER WEEK, 2 h 51" × "10 Aug – 1 Nov · total 3" (320×51 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL riding 16 wk: overlapping texts: "AVERAGE PER WEEK, 2 h 52" × "AVERAGE PER WEEK" (174×21 pt); "AVERAGE PER WEEK, 2 h 52" × "2 h 52 min" (167×40 pt); "AVERAGE PER WEEK, 2 h 52" × "13 Jul – 1 Nov · total 4" (311×51 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL riding 1 yr: overlapping texts: "AVERAGE PER WEEK, 55 min" × "AVERAGE PER WEEK" (174×21 pt); "AVERAGE PER WEEK, 55 min" × "55 min" (110×40 pt); "AVERAGE PER WEEK, 55 min" × "3 Nov 2025 – 1 Nov 2026 " (324×77 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL riding selected: overlapping texts: "Week of 12–18 Oct, 3 h 3" × "Week of 12–18 Oct" (157×21 pt); "Week of 12–18 Oct, 3 h 3" × "3 h 35 min" (167×40 pt); "Week of 12–18 Oct, 3 h 3" × "Done: 3 h 35 min · 3 rid" (329×25 pt); "Week of 12–18 Oct, 3 h 3" × "Planned: nothing" (153×25 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL strength 8 wk: overlapping texts: "AVERAGE PER WEEK, 2 sess" × "AVERAGE PER WEEK" (174×21 pt); "AVERAGE PER WEEK, 2 sess" × "2 sessions" (168×40 pt); "AVERAGE PER WEEK, 2 sess" × "7 Sep – 1 Nov · 14 sessi" (332×51 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL strength this week: overlapping texts: "Week of 19–25 Oct, 2 ses" × "Week of 19–25 Oct" (159×21 pt); "Week of 19–25 Oct, 2 ses" × "2 sessions" (168×40 pt); "Week of 19–25 Oct, 2 ses" × "Done: 2 sessions · 1 h 2" (230×51 pt); "Week of 19–25 Oct, 2 ses" × "Planned: nothing" (153×25 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL connections: overlapping texts: "Power, No power source" × "Power" (60×25 pt); "Power, No power source" × "No power source" (155×25 pt); "Heart rate, No heart-rat" × "Heart rate" (58×51 pt); "Heart rate, No heart-rat" × "No heart-rate source" (190×25 pt); "Cadence, No cadence sour" × "Cadence" (85×25 pt); "Cadence, No cadence sour" × "No cadence source" (177×25 pt); "Speed, No speed source" × "Speed" (61×25 pt); "Speed, No speed source" × "No speed source" (155×25 pt)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL BikeComputer page: overlapping texts: "Profile sync" × "Profile sync, no BikeCom" (114×27 pt)
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (1086.479 seconds).
+Test Suite 'LayoutAudit' failed at 2026-10-28 10:02:07.745.
+	 Executed 2 tests, with 1 test skipped and 20 failures (0 unexpected) in 1090.011 (1090.024) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-28 10:02:07.747.
+	 Executed 2 tests, with 1 test skipped and 20 failures (0 unexpected) in 1090.011 (1090.027) seconds
+Test Suite 'Selected tests' failed at 2026-10-28 10:02:07.748.
+	 Executed 2 tests, with 1 test skipped and 20 failures (0 unexpected) in 1090.011 (1090.035) seconds
+Failing tests:
+** TEST FAILED **
+=== layout-owner: last 150 lines ===
+    t =   995.90s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   996.49s Find the Window (First Match)
+    t =   996.51s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   996.88s Checking existence of `Button (First Match)`
+    t =   999.26s Checking existence of `Button (First Match)`
+    t =  1001.64s Find the Button (First Match)
+    t =  1004.51s Tap "fixPlan-shorten-lift" Button
+    t =  1004.51s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1004.51s     Find the "fixPlan-shorten-lift" Button
+    t =  1007.41s     Check for interrupting elements affecting "fixPlan-shorten-lift" Button
+    t =  1007.77s     Synthesize event
+    t =  1008.14s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1010.41s Waiting 3.0s for "fixPlanUndo" Button to exist
+    t =  1011.43s     Checking `Expect predicate `existsNoRetry == 1` for object "fixPlanUndo" Button`
+    t =  1011.44s         Checking existence of `"fixPlanUndo" Button`
+    t =  1012.53s Find the Window (First Match)
+    t =  1012.57s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1013.11s Find the Window (First Match)
+    t =  1013.13s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1013.46s Checking existence of `"fixPlanUndo" Button`
+    t =  1013.88s Tap "fixPlanUndo" Button
+    t =  1013.88s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1013.88s     Find the "fixPlanUndo" Button
+    t =  1014.48s     Check for interrupting elements affecting "fixPlanUndo" Button
+    t =  1014.84s     Synthesize event
+    t =  1015.17s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1017.57s Get number of matches for: Elements matching predicate 'label == "Done"'
+    t =  1018.26s Find the Button (Element at index 0)
+    t =  1018.88s Tap "Done" Button
+    t =  1018.88s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1018.90s     Find the "Done" Button
+    t =  1019.65s     Check for interrupting elements affecting "Done" Button
+    t =  1020.26s     Synthesize event
+    t =  1020.60s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1022.48s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1022.48s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1022.48s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1022.80s     Check for interrupting elements affecting "Cyclift" Application
+    t =  1023.20s     Synthesize event
+    t =  1023.74s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1027.49s Find the Window (First Match)
+    t =  1027.52s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1028.60s Find the Window (First Match)
+    t =  1028.63s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1029.71s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1029.71s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1029.72s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1030.27s     Check for interrupting elements affecting "Cyclift" Application
+    t =  1030.68s     Synthesize event
+    t =  1031.12s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1034.63s Find the Window (First Match)
+    t =  1034.68s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1035.97s Find the Window (First Match)
+    t =  1036.19s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1037.01s Waiting 5.0s for "Home" Button to exist
+    t =  1038.01s     Checking `Expect predicate `existsNoRetry == 1` for object "Home" Button`
+    t =  1038.02s         Checking existence of `"Home" Button`
+    t =  1038.14s Tap "Home" Button
+    t =  1038.14s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1038.14s     Find the "Home" Button
+    t =  1038.18s     Check for interrupting elements affecting "Home" Button
+    t =  1038.51s     Synthesize event
+    t =  1038.83s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1040.83s Waiting 3.0s for Button (First Match) to exist
+    t =  1041.88s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =  1041.88s         Checking existence of `Button (First Match)`
+    t =  1042.60s Tap Button (First Match)
+    t =  1042.60s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1042.78s     Find the Button (First Match)
+    t =  1043.82s     Check for interrupting elements affecting "CONNECTIONS, Manage ›, BikeComputer, link off, Power meter, pairs on the board, Apple Watch, no watch, Phone GPS, permission needed" Button
+    t =  1044.35s     Synthesize event
+    t =  1044.38s         Scroll element to visible
+    t =  1044.41s         Find the "CONNECTIONS, Manage ›, BikeComputer, link off, Power meter, pairs on the board, Apple Watch, no watch, Phone GPS, permission needed" Button
+    t =  1045.74s         Computed hit point {196.5, 466.83338928222656} after scrolling to visible
+    t =  1046.05s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1050.21s Find the Window (First Match)
+    t =  1050.41s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1051.53s Find the Window (First Match)
+    t =  1051.55s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL connections: overlapping texts: "Power, No power source" × "Power" (60×25 pt); "Power, No power source" × "No power source" (155×25 pt); "Heart rate, No heart-rat" × "Heart rate" (58×51 pt); "Heart rate, No heart-rat" × "No heart-rate source" (190×25 pt); "Cadence, No cadence sour" × "Cadence" (85×25 pt); "Cadence, No cadence sour" × "No cadence source" (177×25 pt); "Speed, No speed source" × "Speed" (61×25 pt); "Speed, No speed source" × "No speed source" (155×25 pt)
+    t =  1052.56s Find the Window (First Match)
+    t =  1052.60s Checking existence of `Button (First Match)`
+    t =  1054.31s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1054.31s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1054.44s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1054.73s     Check for interrupting elements affecting "Cyclift" Application
+    t =  1055.09s     Synthesize event
+    t =  1055.64s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1058.88s Checking existence of `Button (First Match)`
+    t =  1060.36s Find the Button (First Match)
+    t =  1061.93s Find the "BikeComputer, not set up, optional · not set up" Button
+    t =  1063.48s Checking existence of `"BikeComputer, not set up, optional · not set up" Button`
+    t =  1064.53s Find the "BikeComputer, not set up, optional · not set up" Button
+    t =  1066.15s Find the "BikeComputer, not set up, optional · not set up" Button
+    t =  1067.78s Checking existence of `"BikeComputer, not set up, optional · not set up" Button`
+    t =  1069.31s Find the "BikeComputer, not set up, optional · not set up" Button
+    t =  1071.47s Find the "BikeComputer, not set up, optional · not set up" Button
+    t =  1073.11s Checking existence of `"BikeComputer, not set up, optional · not set up" Button`
+    t =  1074.43s Tap "BikeComputer, not set up, optional · not set up" Button
+    t =  1074.43s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1074.58s     Find the "BikeComputer, not set up, optional · not set up" Button
+    t =  1076.12s     Check for interrupting elements affecting "BikeComputer, not set up, optional · not set up" Button
+    t =  1076.76s     Synthesize event
+    t =  1077.07s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =  1080.50s Find the Window (First Match)
+    t =  1080.53s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =  1081.62s Find the Window (First Match)
+    t =  1081.64s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:249: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL BikeComputer page: overlapping texts: "Profile sync" × "Profile sync, no BikeCom" (114×27 pt)
+    t =  1083.29s Terminate com.ralsuwaidico.bikecomputer:59270
+    t =  1084.49s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (1086.479 seconds).
+Test Suite 'LayoutAudit' failed at 2026-10-28 10:02:07.745.
+	 Executed 2 tests, with 1 test skipped and 20 failures (0 unexpected) in 1090.011 (1090.024) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-10-28 10:02:07.747.
+	 Executed 2 tests, with 1 test skipped and 20 failures (0 unexpected) in 1090.011 (1090.027) seconds
+Test Suite 'Selected tests' failed at 2026-10-28 10:02:07.748.
+	 Executed 2 tests, with 1 test skipped and 20 failures (0 unexpected) in 1090.011 (1090.035) seconds
+2026-10-28 10:02:52.239 xcodebuild[34030:362126] [MT] IDETestOperationsObserverDebug: 1423.962 elapsed -- Testing started completed.
+2026-10-28 10:02:52.240 xcodebuild[34030:362126] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-10-28 10:02:52.240 xcodebuild[34030:362126] [MT] IDETestOperationsObserverDebug: 1423.962 sec, +1423.962 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Logs/Test/Test-BikeComputer-2026.10.28_09-38-23-+0000.xcresult
+
+Failing tests:
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+
+** TEST FAILED **
+
+Testing started
