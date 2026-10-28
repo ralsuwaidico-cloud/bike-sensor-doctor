@@ -251,18 +251,27 @@ struct HomeSessionTitle: View {
         if session.isRide { return "bicycle" }
         switch session.workout.kind { case .strength: return "dumbbell.fill"; case .mobility: return "figure.yoga"; default: return "figure.mixed.cardio" }
     }
+    @Environment(\.dynamicTypeSize) private var dts
     var body: some View {
         HStack(alignment: .top, spacing: DS.m) {
-            Image(systemName: icon).font((large ? Font.title3 : .body).weight(.semibold)).foregroundStyle(BC.accent)
-                .frame(width: large ? 40 : 32, height: large ? 40 : 32)
-                .background(BC.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
-                .accessibilityHidden(true)
+            // largest text: no icon tile (it crowded the title on small iPhones and only repeats the title)
+            if !dts.isAccessibilitySize {
+                Image(systemName: icon).font((large ? Font.title3 : .body).weight(.semibold)).foregroundStyle(BC.accent)
+                    .frame(width: large ? 40 : 32, height: large ? 40 : 32)
+                    .background(BC.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.title).font(large ? .title2.weight(.bold) : .headline).foregroundStyle(.primary)
                     .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: DS.s) {
-                    if !session.subtitle.isEmpty { Text(session.subtitle).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
-                    if let c = session.status.chip { HomeChip(text: c, color: chipColor(session.status)) }
+                let subtitle = session.subtitle.isEmpty ? nil : Text(session.subtitle).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                let chip = session.status.chip.map { HomeChip(text: $0, color: chipColor(session.status)) }
+                // rows next to buttons (and large text): status chip on its own line so the subtitle wraps by words, not letters
+                if large && dts <= .large {
+                    HStack(spacing: DS.s) { subtitle; chip }
+                } else {
+                    subtitle
+                    chip
                 }
             }
             Spacer(minLength: 0)
@@ -504,7 +513,8 @@ struct HomeMultiCard: View {
             HomePrimaryButton(action: s.action, isRide: s.isRide, elapsed: elapsed, identifier: "homeRow-\(index)", kind: .compact, perform: perform)
             HomeMoreMenu(session: s, perform: perform, edit: { open(s.workout) }, swap: { swap(s.workout) }, identifier: "homeRowMore-\(index)", iconOnly: true)
         }
-        if dts.isAccessibilitySize {
+        // from XX-large text the buttons go under the session text so the title and details keep the full width
+        if dts >= .xxLarge {
             VStack(alignment: .leading, spacing: DS.s) { title; actions }
         } else {
             HStack(alignment: .center, spacing: DS.s) { title; actions }
@@ -537,14 +547,20 @@ struct HomeRestCard: View {
 struct HomeHoldCard: View {
     let hold: HomeHold
     var perform: (HomeAction) -> Void
+    @Environment(\.dynamicTypeSize) private var dts
     var body: some View {
         HomeCardFrame {
-            HStack(alignment: .top, spacing: DS.m) {
-                Image(systemName: "cross.case.fill").font(.title3.weight(.semibold)).foregroundStyle(BC.warn)
-                    .frame(width: 40, height: 40).background(BC.warn.opacity(0.14), in: RoundedRectangle(cornerRadius: 10)).accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(hold.title).font(.title2.weight(.bold)).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
-                    HomeChip(text: "Training paused", color: BC.warn)
+            if dts.isAccessibilitySize {
+                // largest text: the title alone (the icon and the chip only repeat it) so Review health check stays on screen
+                Text(hold.title).font(.title2.weight(.bold)).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
+            } else {
+                HStack(alignment: .top, spacing: DS.m) {
+                    Image(systemName: "cross.case.fill").font(.title3.weight(.semibold)).foregroundStyle(BC.warn)
+                        .frame(width: 40, height: 40).background(BC.warn.opacity(0.14), in: RoundedRectangle(cornerRadius: 10)).accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(hold.title).font(.title2.weight(.bold)).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
+                        HomeChip(text: "Training paused", color: BC.warn)
+                    }
                 }
             }
             Button { perform(.reviewHealth) } label: {
