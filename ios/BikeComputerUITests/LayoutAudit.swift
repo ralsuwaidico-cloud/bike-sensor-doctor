@@ -122,6 +122,7 @@ final class LayoutAudit: XCTestCase {
     }
     /// Closes the TOPMOST sheet: its Done / Cancel is the last matching button in the hierarchy.
     private func close(_ app: XCUIApplication) {
+        sleep(1)      /* a sheet still animating in is not hittable yet: the Done BEHIND it would be tapped instead */
         for name in ["Done", "Cancel", "Close"] {
             let q = app.buttons.matching(NSPredicate(format: "label == %@", name))
             for i in stride(from: q.count - 1, through: 0, by: -1) { let b = q.element(boundBy: i); if b.isHittable { b.tap(); sleep(1); return } }
@@ -130,6 +131,7 @@ final class LayoutAudit: XCTestCase {
 
     func testKeyScreensAtTextSizes() throws {
         guard outDir != nil else { throw XCTSkip("LAYOUT_DIR not set — the layout audit runs only in the CI layout stage") }
+        guard device != "owner" else { throw XCTSkip("the owner-size device runs testRC2OwnerScreens only (CI time)") }
         for size in sizes {
             let app = launch(size)
             let tag = size.lowercased()
@@ -189,6 +191,85 @@ final class LayoutAudit: XCTestCase {
         }
     }
 
+    // MARK: RC2 owner report (28 Oct): Progress chart labels, Plan width, Done vs Planned, Connections — at the owner's
+    // screen size too (CI device "owner" = iPhone 16, 393 × 852 pt). Screenshots: <device>-rc2-<size>-*.png.
+    /// Frames of the date labels under a weekly chart (TrendCharts draws them as plain Text with "<chart>-xlabel").
+    private func xLabelFrames(_ app: XCUIApplication, _ chart: String) -> [CGRect] {
+        elements(app).filter { $0.identifier == "\(chart)-xlabel" && $0.frame.width > 0 }.map { $0.frame }
+    }
+    private func checkChartLabels(_ app: XCUIApplication, _ chart: String, screen: String) {
+        let f = xLabelFrames(app, chart), win = app.windows.firstMatch.frame
+        guard !f.isEmpty else { note("\(screen): no \(chart) date labels exposed (a build before RC2 fix: check the screenshot)"); return }
+        XCTAssertGreaterThanOrEqual(f.count, 2, "\(screen): at least two date labels")
+        for (i, a) in f.enumerated() {
+            XCTAssertGreaterThanOrEqual(a.minX, win.minX - 1, "\(screen): label clipped left \(a)"); XCTAssertLessThanOrEqual(a.maxX, win.maxX + 1, "\(screen): label clipped right \(a)")
+            for b in f.dropFirst(i + 1) { XCTAssertTrue(a.intersection(b).isNull || a.intersection(b).width < 1, "\(screen): date labels overlap \(a) / \(b)") }
+        }
+        let gaps = zip(f.sorted { $0.minX < $1.minX }, f.sorted { $0.minX < $1.minX }.dropFirst()).map { $1.minX - $0.maxX }
+        note("\(screen): \(f.count) date labels, smallest gap \(Int(gaps.min() ?? 0)) pt")
+    }
+    /// Nothing on the Plan screen is wider than the window or sticks out sideways (no horizontal scrolling content).
+    private func checkNoHorizontalOverflow(_ app: XCUIApplication, screen: String) {
+        let win = app.windows.firstMatch.frame
+        var bad: [String] = []
+        for e in elements(app) where [.staticText, .button, .image].contains(e.elementType) {
+            let f = e.frame
+            guard f.width > 0, f.maxY > win.minY + 40, f.minY < win.maxY - 90 else { continue }
+            if f.minX < win.minX - 1 || f.maxX > win.maxX + 1 { bad.append("\(e.identifier.isEmpty ? String(e.label.prefix(30)) : e.identifier) \(Int(f.minX))…\(Int(f.maxX))") }
+        }
+        XCTAssertTrue(bad.isEmpty, "\(screen): content wider than the screen: \(bad.joined(separator: "; "))")
+        note("\(screen): " + (bad.isEmpty ? "nothing wider than the screen" : "WIDER THAN THE SCREEN: " + bad.joined(separator: "; ")))
+    }
+
+    func testRC2OwnerScreens() throws {
+        guard outDir != nil else { throw XCTSkip("LAYOUT_DIR not set — the layout audit runs only in the CI layout stage") }
+        guard ["owner", "small"].contains(device) else { throw XCTSkip("RC2 screens: the owner's iPhone size and the small iPhone only (CI time)") }
+        for size in sizes {
+            let app = launch(size)
+            let tag = "rc2-\(size.lowercased())"
+            // Progress: riding chart at 8 and 16 weeks, a selected week, the lifting chart at 16 weeks
+            tab(app, "Progress")
+            shot("\(tag)-progress-8wk"); checkChartLabels(app, "ridingChart", screen: "\(size) riding 8 wk")
+            let ride16 = app.segmentedControls["ridingChart-range"].buttons["16 wk"]
+            if ride16.waitForExistence(timeout: 5) { ride16.tap(); sleep(2) } else { note("\(size): riding 16 wk segment not found") }
+            shot("\(tag)-progress-16wk"); checkChartLabels(app, "ridingChart", screen: "\(size) riding 16 wk")
+            let chart = app.descendants(matching: .any).matching(identifier: "ridingChart").firstMatch
+            if chart.exists {
+                chart.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.7)).tap(); sleep(1)
+                shot("\(tag)-progress-16wk-selected")
+                let header = app.descendants(matching: .any).matching(identifier: "ridingChart-header").firstMatch
+                if header.exists { XCTAssertTrue(header.label.contains("WEEK") || header.label.contains("Week"), "\(size): a tapped bar shows its week (\(header.label))") }
+                chart.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.7)).tap(); sleep(1)
+            }
+            scrollUp(app)
+            let lift16 = app.segmentedControls["liftingChart-range"].buttons["16 wk"]
+            if lift16.waitForExistence(timeout: 3) { lift16.tap(); sleep(2) }
+            shot("\(tag)-progress-lifting-16wk"); checkChartLabels(app, "liftingChart", screen: "\(size) lifting 16 wk")
+            checkTexts(app, screen: "\(size) rc2 progress")
+            // Plan: the seven days fit, nothing scrolls sideways, Done and Planned are named
+            tab(app, "Plan")
+            shot("\(tag)-plan"); checkNoHorizontalOverflow(app, screen: "\(size) plan")
+            let days = (1...7).map { app.buttons["planDay-\($0)"] }
+            let found = days.filter { $0.exists }
+            if found.count == 7 {
+                let win = app.windows.firstMatch.frame
+                for d in found { XCTAssertTrue(d.frame.minX >= win.minX - 1 && d.frame.maxX <= win.maxX + 1, "\(size): day \(d.identifier) outside the screen \(d.frame)") }
+                let before = found.map { $0.frame.minX }
+                app.otherElements["planDayStrip"].firstMatch.swipeLeft(); sleep(1)
+                XCTAssertEqual(found.map { $0.frame.minX }, before, "\(size): the day strip moved sideways (horizontal scrolling)")
+            } else { note("\(size): plan day buttons with identifiers: \(found.count) of 7 (a build before the RC2 fix)") }
+            let done = app.staticTexts["planDoneRiding"], planned = app.staticTexts["planPlannedRiding"]
+            if done.exists { note("\(size) plan: done '\(done.label)' · planned '\(planned.label)'") } else { note("\(size): no 'Done this week' / 'Planned this week' figures (a build before the RC2 fix)") }
+            scrollUp(app); shot("\(tag)-plan-lower"); checkNoHorizontalOverflow(app, screen: "\(size) plan lower")
+            // Connections (no board in the demo: what the link line says)
+            tab(app, "Home")
+            let conn = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Manage'")).firstMatch
+            if conn.waitForExistence(timeout: 3) { conn.tap(); sleep(2); shot("\(tag)-connections"); checkTexts(app, screen: "\(size) rc2 connections") } else { note("\(size): Connections link not found") }
+            XCTAssertEqual(app.state, .runningForeground)
+            app.terminate()
+        }
+    }
+
     // MARK: demo data — labelled "Demo", no real person. Reproduces the owner's report: a Full body session planned for
     // TOMORROW stored as done with a 1-minute, zero-set log (schema 1), plus 16 weeks of rides and 6 weeks of lifts.
     static func demoStore() -> String {
@@ -223,12 +304,17 @@ final class LayoutAudit: XCTestCase {
                               "zoneSeconds": [len * 6, len * 42, len * 12, 0, 0, 0, 0], "recorder": "phone", "sources": ["Phone GPS"], "demo": false, "samples": [] as [Any]])
             }
         }
+        // this week: one recorded ride (Monday) and one Apple Health ride, so "Done this week" ≠ "Planned this week"
+        rides.append(["id": UUID().uuidString, "start": d(monday, 6.5), "durationS": 3780, "distanceM": 31_000, "avgHR": 138, "maxHR": 162,
+                      "zoneSeconds": [300, 3000, 480, 0, 0, 0, 0], "recorder": "phone", "sources": ["Phone GPS"], "demo": false, "samples": [] as [Any]])
+        rides.append(["id": UUID().uuidString, "start": d(monday, 18), "durationS": 1800, "distanceM": 12_000, "zoneSeconds": [0, 1800, 0, 0, 0, 0, 0],
+                      "recorder": "health", "healthUUID": "AUDIT-H1", "sources": ["Apple Health"], "demo": false, "samples": [] as [Any]])
         func set(_ reps: Int, _ kg: Double) -> [String: Any] { ["id": UUID().uuidString, "reps": reps, "weightKg": kg, "bodyweight": false, "unilateral": false, "done": true] }
         func entry(_ id: String, _ name: String, _ pat: String, _ reps: Int, _ kg: Double) -> [String: Any] {
             ["id": UUID().uuidString, "exerciseId": id, "name": name, "pattern": pat, "sets": [set(reps, kg), set(reps, kg), set(reps, kg)], "notes": ""]
         }
         var strength: [[String: Any]] = []
-        for k in 1...6 {
+        for k in 1...16 {      /* RC2 audit: a realistic 16-week lifting history, like the riding one */
             for day in [1, 4] {
                 let date = cal.date(byAdding: .day, value: -7 * k + day, to: monday)!
                 strength.append(["id": UUID().uuidString, "date": d(date, 18), "minutes": 40 + k, "focus": "fullBody", "customName": "", "rpe": 7, "notes": "", "source": "manual",
