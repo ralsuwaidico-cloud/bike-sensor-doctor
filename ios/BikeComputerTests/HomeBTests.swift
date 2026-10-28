@@ -133,6 +133,15 @@ final class HomeBTests: XCTestCase {
         XCTAssertEqual(home(g).layout, .freeSession); XCTAssertEqual(home(g).centre, .perform(.resumeStrength(nil)))
     }
 
+    // MARK: coach frequency wording uses the week card's terms: done, still to come, target (owner 28 Oct; wording only)
+    func testCoachFrequencyGapWording() {
+        XCTAssertEqual(HybridCoach.frequencyGapText(sport: "Rides", done: 0, toCome: 1, target: 3, unit: ("ride", "rides")),
+                       "Rides this week: 0 done and 1 still to come, 2 short of your target of 3 rides a week.")
+        XCTAssertEqual(HybridCoach.frequencyGapText(sport: "Lifts", done: 1, toCome: 0, target: 2, unit: ("lift", "lifts")),
+                       "Lifts this week: 1 done and 0 still to come, 1 short of your target of 2 lifts a week.")
+        XCTAssertFalse(HybridCoach.frequencyGapText(sport: "Rides", done: 0, toCome: 1, target: 3, unit: ("ride", "rides")).dropLast().contains("."), "one sentence: Home shows it whole")
+    }
+
     // MARK: Skip / Unskip from More are hand edits with Undo (lead review)
     func testSkipFromMoreHasUndoAndIsARiderEdit() {
         let s = store()

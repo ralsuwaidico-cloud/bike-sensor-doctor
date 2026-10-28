@@ -193,6 +193,14 @@ struct WeeklyReview: Equatable {
 }
 
 enum HybridCoach {
+    /// Wording of the weekly frequency gap (owner 28 Oct: wording only, the same condition and numbers as before). The
+    /// three terms Home's week card uses too: done (completed this week), still to come (scheduled from today on), target
+    /// (sessions per week from the profile). One sentence, so Home's coach card shows it whole.
+    static func frequencyGapText(sport: String, done: Int, toCome: Int, target: Int, unit: (String, String)) -> String {
+        let short = max(1, target - done - toCome)
+        return "\(sport) this week: \(done) done and \(toCome) still to come, \(short) short of your target of \(target) \(target == 1 ? unit.0 : unit.1) a week."
+    }
+
     /// Evaluates the current week from real data only: rides, strength logs, the plan and the rider's stated targets.
     /// Planned sessions are NEVER counted as done. `now` and `calendar` are injectable for tests.
     static func assess(profile p: RiderProfile, plan: [Workout], rides: [RideRecord], strength: [StrengthSession], availability a: WeeklyAvailability, now: Date = Date(), calendar cal: Calendar = .current) -> HybridAssessment {
@@ -230,7 +238,7 @@ enum HybridCoach {
             cyc = SportProgress(sessionsDone: rideWeek.completed, sessionsTarget: ridesTarget, minutesDone: done, minutesTarget: target, minutesPlanned: planned, note: note)
             let remainingPlanned = week.filter { $0.kind.isRide && !$0.skipped && !ledger.status($0).isCompleted && cal.startOfDay(for: $0.date) >= today }.count
             if rideWeek.completed + remainingPlanned < ridesTarget {
-                findings.append(.init(id: "cyc-freq", severity: .gap, text: "Cycling: \(rideWeek.completed) ride\(rideWeek.completed == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(ridesTarget) per week — one ride is missing."))
+                findings.append(.init(id: "cyc-freq", severity: .gap, text: HybridCoach.frequencyGapText(sport: "Rides", done: rideWeek.completed, toCome: remainingPlanned, target: ridesTarget, unit: ("ride", "rides"))))
             } else if rideWeek.completed >= ridesTarget { findings.append(.init(id: "cyc-ok", severity: .ok, text: "Cycling: \(rideWeek.completed) rides this week — frequency on target.")) }
             if planned > target { findings.append(.init(id: "cyc-over", severity: .conflict, text: "Planned riding (\(Fmt.duration(minutes: planned))) is over your \(p.hoursPerWeek) h cycling budget; see Fix plan.")) }
         }
@@ -247,7 +255,7 @@ enum HybridCoach {
             if liftWeek.unknownDuration > 0 { note += " (\(liftWeek.unknownDuration) without a recorded duration)" }
             let remainingPlanned = week.filter { $0.kind == .strength && !$0.skipped && !ledger.status($0).isCompleted && cal.startOfDay(for: $0.date) >= today }.count
             if liftWeek.completed + remainingPlanned < liftsTarget {
-                findings.append(.init(id: "str-freq", severity: .gap, text: "Strength: \(liftWeek.completed) session\(liftWeek.completed == 1 ? "" : "s") done and \(remainingPlanned) still planned against \(liftsTarget) per week — a lift is missing."))
+                findings.append(.init(id: "str-freq", severity: .gap, text: HybridCoach.frequencyGapText(sport: "Lifts", done: liftWeek.completed, toCome: remainingPlanned, target: liftsTarget, unit: ("lift", "lifts"))))
             } else if liftsTarget > 0, liftWeek.completed >= liftsTarget { findings.append(.init(id: "str-ok", severity: .ok, text: "Strength: \(liftWeek.completed) sessions this week — frequency on target.")) }
             if target > 0, planned > target { findings.append(.init(id: "str-over", severity: .conflict, text: "Planned lifting (\(Fmt.duration(minutes: planned))) is over your \(p.liftingHoursPerWeek) h lifting budget.")) }
             // region balance — only from Push / Pull labelled logs of the last 28 days
