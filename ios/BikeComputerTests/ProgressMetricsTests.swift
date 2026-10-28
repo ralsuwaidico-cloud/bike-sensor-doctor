@@ -95,13 +95,13 @@ final class ProgressMetricsTests: XCTestCase {
 
     // MARK: at a glance
     func testGlanceCards() {
-        let riding = weeks(16) { i, d in WeekBucket(start: d, minutes: i == 15 ? 63 : (i % 2 == 0 ? 320 : 200), sessions: i == 15 ? 3 : 3, plannedSessions: 3, plannedMinutes: 240) }
-        let lifting = weeks(16) { i, d in WeekBucket(start: d, minutes: i == 15 ? 1 : 40, sessions: i == 15 ? 1 : (i == 12 ? 0 : 2), plannedSessions: i == 15 ? 5 : 2, plannedMinutes: 120) }
+        let riding = weeks(16) { i, d in WeekBucket(start: d, minutes: i == 15 ? 63 : (i % 2 == 0 ? 320 : 200), sessions: i == 15 ? 3 : 3, plannedSessions: 3, plannedMinutes: 240, plannedDone: i == 15 ? 2 : 3, extra: i == 15 ? 1 : 0) }
+        let lifting = weeks(16) { i, d in WeekBucket(start: d, minutes: i == 15 ? 1 : 40, sessions: i == 15 ? 1 : (i == 12 ? 0 : 2), plannedSessions: i == 15 ? 5 : 2, plannedMinutes: 120, plannedDone: i == 15 ? 1 : (i == 12 ? 0 : 2)) }
         let g = ProgressGlance.make(.init(riding: riding, lifting: lifting, showRiding: true, showLifting: true, setsThisWeek: 0, ridingTargetMinutes: 300,
                                           ftpW: 235, ftpBadge: "entered", best20Recent: 240, best20Before: 232))
         XCTAssertEqual(g.cards.map { $0.id }, ["glanceRiding", "glanceStrength", "glanceFrequency", "glanceGoal", "glanceFTP"])
-        XCTAssertEqual(g.cards[0].value, "1 h 3 min"); XCTAssertEqual(g.cards[0].detail, "of 4 h planned · 3 rides · 4-wk avg 4 h 20 min")
-        XCTAssertEqual(g.cards[1].value, "1 of 5"); XCTAssertEqual(g.cards[1].detail, "sessions done of planned · 1 min recorded · lifted in 7 of the last 8 weeks")
+        XCTAssertEqual(g.cards[0].value, "1 h 3 min"); XCTAssertEqual(g.cards[0].detail, "of 4 h planned · 2 of 3 rides done · +1 extra · 4-wk avg 4 h 20 min")
+        XCTAssertEqual(g.cards[1].value, "1 of 5"); XCTAssertEqual(g.cards[1].detail, "sessions done · 1 min recorded · lifted in 7 of the last 8 weeks")
         XCTAssertEqual(g.cards[2].value, "4"); XCTAssertEqual(g.cards[2].detail, "3 rides + 1 lift · 4.5 a week over the last 4 weeks")
         XCTAssertEqual(g.cards[3].value, "2 of 4")
         XCTAssertEqual(g.cards[4].detail, "entered · best 20 min 240 W in the last 8 weeks, +8 W on the 8 weeks before")
@@ -132,13 +132,13 @@ final class ProgressMetricsTests: XCTestCase {
 
     func testNoDurationSessionsAreNamedTheSameOnPlanAndProgress() {
         var w = TrainingLedger.SportWeek(monday: monday)
-        w.planned = 5; w.plannedMinutes = 210; w.completed = 2; w.manual = 2; w.minutes = 0; w.unknownDuration = 2
-        XCTAssertEqual(WeekTotals.done(w, singular: "session", plural: "sessions"), "0 min · 2 sessions of 5 planned (2 without duration)")
-        let b = WeekBucket(start: monday, minutes: 0, sessions: 2, unknownDuration: 2, plannedSessions: 5, plannedMinutes: 210)
+        w.planned = 5; w.plannedMinutes = 210; w.completed = 2; w.manual = 2; w.minutes = 0; w.unknownDuration = 2; w.plannedDone = 2
+        XCTAssertEqual(WeekTotals.done(w, singular: "session", plural: "sessions"), "0 min · 2 of 5 sessions done (2 without duration)")
+        let b = WeekBucket(start: monday, minutes: 0, sessions: 2, unknownDuration: 2, plannedSessions: 5, plannedMinutes: 210, plannedDone: 2)
         let g = ProgressGlance.make(.init(riding: [], lifting: [b], showRiding: false, showLifting: true, setsThisWeek: 0, ridingTargetMinutes: 0,
                                           ftpW: 200, ftpBadge: "entered", best20Recent: nil, best20Before: nil))
         XCTAssertEqual(g.cards.first?.value, "2 of 5")
-        XCTAssertEqual(g.cards.first?.detail, "sessions done of planned · no time recorded · 2 without duration")
+        XCTAssertEqual(g.cards.first?.detail, "sessions done · no time recorded · 2 without duration")
         XCTAssertEqual(TrendChartMath.detail(b, metric: .strength).note, "2 marked done without a duration: counted as sessions, adds no time.")
     }
 

@@ -57,6 +57,11 @@ struct TrainingLedger {
     /// Planned strength session id → the log that completed it (explicit link first, then an unlinked log of that day).
     private(set) var logFor: [UUID: StrengthSession] = [:]
     private let rideDays: [Date: [RideRecord]]
+    /// Planned ride id → the recorded ride that completed it. Home B (spec v2.1): ONE recorded ride completes at most ONE
+    /// planned ride — the rides of a day go to that day's planned rides in order (not skipped first, by sequence; rides by
+    /// start time). Before, `ride(for:)` gave the day's first ride to every planned ride of the day, so one recording
+    /// completed both rides of a two-ride day.
+    private var rideFor: [UUID: RideRecord] = [:]
 
     init(plan: [Workout], strength: [StrengthSession], rides: [RideRecord], active: StrengthSession? = nil, calendar: Calendar = .current) {
         self.plan = plan
@@ -82,10 +87,18 @@ struct TrainingLedger {
             if let w = strengthPlan.filter({ map[$0.id] == nil && !$0.skipped && calendar.isDate($0.date, inSameDayAs: s.date) }).min(by: { $0.sequence < $1.sequence }) { map[w.id] = s }
         }
         logFor = map
+        var rmap: [UUID: RideRecord] = [:]
+        let planRides = Dictionary(grouping: plan.filter { $0.kind.isRide }) { calendar.startOfDay(for: $0.date) }
+        for (day, ws) in planRides {
+            let ordered = ws.sorted { ($0.skipped ? 1 : 0, $0.sequence, $0.date) < ($1.skipped ? 1 : 0, $1.sequence, $1.date) }
+            let rs = (days[day] ?? []).sorted { $0.start < $1.start }
+            for (w, r) in zip(ordered, rs) { rmap[w.id] = r }
+        }
+        rideFor = rmap
     }
 
     func log(for w: Workout) -> StrengthSession? { logFor[w.id] }
-    func ride(for w: Workout) -> RideRecord? { w.kind.isRide ? rideDays[cal.startOfDay(for: w.date)]?.first : nil }
+    func ride(for w: Workout) -> RideRecord? { w.kind.isRide ? rideFor[w.id] : nil }
 
     /// The explicit state of a planned session.
     func status(_ w: Workout) -> WorkoutStatus {
@@ -112,6 +125,11 @@ struct TrainingLedger {
         var minutes = 0
         var unknownDuration = 0
         var loggedMinutes = 0, manualMinutes = 0, importedMinutes = 0
+        /// Home B / N1: planned (not skipped) sessions of the week that are completed; skipped planned sessions; and the
+        /// completed sessions that no planned session of the week accounts for ("+1 extra"). `completed` stays the count of
+        /// everything done (minutes and charts); "<plannedDone> of <planned> done · +<extra> extra" is the session wording.
+        var plannedDone = 0, skipped = 0
+        var extra: Int { max(0, completed - plannedDone) }
     }
 
     private func week(_ monday: Date) -> (start: Date, end: Date) { (monday, cal.date(byAdding: .day, value: 7, to: monday)!) }
@@ -121,6 +139,8 @@ struct TrainingLedger {
         var w = SportWeek(monday: m)
         let planned = plan.filter { $0.kind == .strength && !$0.skipped && $0.date >= m && $0.date < e }
         w.planned = planned.count; w.plannedMinutes = planned.reduce(0) { $0 + $1.minutes }
+        w.skipped = plan.filter { $0.kind == .strength && $0.skipped && $0.date >= m && $0.date < e }.count
+        w.plannedDone = planned.filter { status($0).isCompleted }.count
         for s in logs where s.date >= m && s.date < e {
             w.completed += 1; w.minutes += s.minutes
             if s.minutes <= 0 { w.unknownDuration += 1 }
@@ -140,6 +160,8 @@ struct TrainingLedger {
         var w = SportWeek(monday: m)
         let planned = plan.filter { $0.kind.isRide && !$0.skipped && $0.date >= m && $0.date < e }
         w.planned = planned.count; w.plannedMinutes = planned.reduce(0) { $0 + $1.minutes }
+        w.skipped = plan.filter { $0.kind.isRide && $0.skipped && $0.date >= m && $0.date < e }.count
+        w.plannedDone = planned.filter { status($0).isCompleted }.count
         let rs = rides.filter { $0.start >= m && $0.start < e }
         w.completed = rs.count
         let secs = rs.reduce(0) { $0 + $1.durationS }

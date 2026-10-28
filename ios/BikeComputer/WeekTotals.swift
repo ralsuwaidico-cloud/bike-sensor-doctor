@@ -20,10 +20,31 @@ struct WeekTotals: Equatable {
     static let doneTitle = "Done this week"
     static let plannedTitle = "Planned this week"
 
-    /// "1 h 03 min · 1 ride of 3 planned" (extra, unplanned sessions count too: "3 sessions of 2 planned"); sessions marked
-    /// done without a duration are counted and named: "45 min · 2 sessions of 3 planned (1 without duration)"
+    /// Home B / N1 — the ONE session wording on Home, Plan and Progress: "1 of 3 rides done · +1 extra · 1 skipped".
+    /// Done = planned (not skipped) sessions that are completed; an unplanned session is "+1 extra", never folded into the
+    /// fraction; skipped sessions are not planned any more and are named apart. Nothing planned: "2 rides done · none planned".
+    static func sessions(_ w: TrainingLedger.SportWeek, singular: String, plural: String) -> String {
+        if w.planned == 0 {
+            let base = w.completed > 0 ? "\(w.completed) \(w.completed == 1 ? singular : plural) done · none planned" : "none planned"
+            return base + (w.skipped > 0 ? " · \(w.skipped) skipped" : "")
+        }
+        return "\(w.plannedDone) of \(w.planned) \(w.planned == 1 ? singular : plural) done"
+            + (w.extra > 0 ? " · +\(w.extra) extra" : "") + (w.skipped > 0 ? " · \(w.skipped) skipped" : "")
+    }
+    /// Sum of several sports' weeks (Home's total line): counts and minutes add up; the parts stay available.
+    static func total(_ parts: [TrainingLedger.SportWeek]) -> TrainingLedger.SportWeek {
+        var t = TrainingLedger.SportWeek(monday: parts.first?.monday ?? Date())
+        for p in parts {
+            t.planned += p.planned; t.plannedMinutes += p.plannedMinutes; t.completed += p.completed; t.logged += p.logged; t.manual += p.manual
+            t.imported += p.imported; t.minutes += p.minutes; t.unknownDuration += p.unknownDuration; t.plannedDone += p.plannedDone; t.skipped += p.skipped
+            t.loggedMinutes += p.loggedMinutes; t.manualMinutes += p.manualMinutes; t.importedMinutes += p.importedMinutes
+        }
+        return t
+    }
+    /// "1 h 03 min · 1 of 3 rides done · +1 extra"; sessions marked done without a duration are counted and named:
+    /// "45 min · 2 of 3 sessions done (1 without duration)"
     static func done(_ w: TrainingLedger.SportWeek, singular: String, plural: String) -> String {
-        "\(Fmt.duration(minutes: w.minutes)) · \(w.completed) \(w.completed == 1 ? singular : plural) of \(w.planned) planned"
+        "\(Fmt.duration(minutes: w.minutes)) · \(sessions(w, singular: singular, plural: plural))"
             + (w.unknownDuration > 0 ? " (\(w.unknownDuration) without duration)" : "")
     }
     /// "4 h · 3 rides"

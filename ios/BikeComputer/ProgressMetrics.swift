@@ -16,6 +16,17 @@ struct WeekBucket: Identifiable, Equatable {
     /// Planned (not skipped) sessions of the week and their planned minutes; 0 when nothing was planned.
     var plannedSessions: Int = 0
     var plannedMinutes: Int = 0
+    /// Home B / N1: planned sessions completed, completed sessions no plan accounts for, skipped planned sessions.
+    var plannedDone: Int = 0
+    var extra: Int = 0
+    var skipped: Int = 0
+    /// The same counts as the ledger's week, for the shared wording (WeekTotals.sessions).
+    var sportWeek: TrainingLedger.SportWeek {
+        var w = TrainingLedger.SportWeek(monday: start)
+        w.planned = plannedSessions; w.plannedMinutes = plannedMinutes; w.completed = sessions; w.minutes = minutes
+        w.unknownDuration = unknownDuration; w.plannedDone = plannedDone; w.skipped = skipped
+        return w
+    }
 }
 
 enum ChartRange: String, CaseIterable, Identifiable {
@@ -73,7 +84,7 @@ enum TrendChartMath {
                 km = Double(ledger.rides.filter { $0.start >= m && $0.start < e }.reduce(0) { $0 + $1.distanceM }) / 1000
             }
             return WeekBucket(start: m, minutes: w.minutes, sessions: w.completed, km: km, unknownDuration: w.unknownDuration,
-                              plannedSessions: w.planned, plannedMinutes: w.plannedMinutes)
+                              plannedSessions: w.planned, plannedMinutes: w.plannedMinutes, plannedDone: w.plannedDone, extra: w.extra, skipped: w.skipped)
         }
     }
 
@@ -331,9 +342,11 @@ struct ProgressGlance: Equatable {
         if i.showRiding, let r {
             let last4 = TrendChartMath.fullWeeks(i.riding, weeks: 4, firstActivity: first, now: i.now, calendar: cal)
             let avg = last4.isEmpty ? nil : Int((Double(last4.reduce(0) { $0 + $1.minutes }) / Double(last4.count)).rounded())
-            let plannedPart = r.plannedSessions > 0 ? "of \(Fmt.duration(minutes: r.plannedMinutes)) planned" : "nothing planned"
+            // N1: the session counts in the one wording Home and Plan use ("1 of 3 rides done · +1 extra")
+            let plannedPart = r.plannedSessions > 0 ? "of \(Fmt.duration(minutes: r.plannedMinutes)) planned · \(WeekTotals.sessions(r.sportWeek, singular: "ride", plural: "rides"))"
+                : "nothing planned · \(r.sessions) \(r.sessions == 1 ? "ride" : "rides")"
             cards.append(Card(id: "glanceRiding", title: "Riding this week", value: Fmt.duration(minutes: r.minutes),
-                              detail: "\(plannedPart) · \(r.sessions) \(r.sessions == 1 ? "ride" : "rides")" + (r.unknownDuration > 0 ? " (\(r.unknownDuration) without duration)" : "") + (avg.map { " · \(last4.count)-wk avg \(Fmt.duration(minutes: $0))" } ?? ""),
+                              detail: plannedPart + (r.unknownDuration > 0 ? " (\(r.unknownDuration) without duration)" : "") + (avg.map { " · \(last4.count)-wk avg \(Fmt.duration(minutes: $0))" } ?? ""),
                               opens: .riding))
         }
         if i.showLifting, let l {
@@ -344,8 +357,11 @@ struct ProgressGlance: Equatable {
             if l.unknownDuration > 0 { parts.append("\(l.unknownDuration) without duration") }
             if i.setsThisWeek > 0 { parts.append("\(i.setsThisWeek) sets") }
             if !last8.isEmpty { parts.append("lifted in \(active) of the last \(last8.count) \(last8.count == 1 ? "week" : "weeks")") }
-            cards.append(Card(id: "glanceStrength", title: "Strength this week", value: l.plannedSessions > 0 ? "\(l.sessions) of \(l.plannedSessions)" : "\(l.sessions)",
-                              detail: (l.plannedSessions > 0 ? "sessions done of planned · " : "sessions · ") + parts.joined(separator: " · "), opens: .strength))
+            // N1: "<plannedDone> of <planned> sessions done · +<extra> extra · <n> skipped", value and detail together
+            let head = l.plannedSessions > 0 ? "sessions done" + (l.extra > 0 ? " · +\(l.extra) extra" : "") + (l.skipped > 0 ? " · \(l.skipped) skipped" : "") + " · "
+                : "sessions · none planned · "
+            cards.append(Card(id: "glanceStrength", title: "Strength this week", value: l.plannedSessions > 0 ? "\(l.plannedDone) of \(l.plannedSessions)" : "\(l.sessions)",
+                              detail: head + parts.joined(separator: " · "), opens: .strength))
         }
         if i.showRiding || i.showLifting {
             let rs = i.showRiding ? (r?.sessions ?? 0) : 0, ls = i.showLifting ? (l?.sessions ?? 0) : 0

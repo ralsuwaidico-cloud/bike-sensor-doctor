@@ -954,9 +954,12 @@ final class Store: ObservableObject {
     /// What the centre tab button means today (local calendar date, actual scheduled activities, completion).
     enum TodayAction: Equatable, Identifiable {
         case ride(Workout), train(Workout), choose([Workout]), rest, doneToday(next: Workout?), inProgress
-        var id: String { switch self { case .ride(let w): return "ride-\(w.id)"; case .train(let w): return "train-\(w.id)"; case .choose(let ws): return "choose-\(ws.map { $0.id.uuidString }.joined())"; case .rest: return "rest"; case .doneToday: return "done"; case .inProgress: return "inprogress" } }
+        /// Home B (P0-2): the health check pauses training (stop, supervised only, ill) — the centre button opens the hold sheet.
+        case healthHold
+        var id: String { switch self { case .ride(let w): return "ride-\(w.id)"; case .train(let w): return "train-\(w.id)"; case .choose(let ws): return "choose-\(ws.map { $0.id.uuidString }.joined())"; case .rest: return "rest"; case .doneToday: return "done"; case .inProgress: return "inprogress"; case .healthHold: return "hold" } }
     }
     func todayAction(now: Date = Date(), calendar cal: Calendar = .current) -> TodayAction {
+        if !profile.readiness.trainingAllowed { return .healthHold }
         if activeSession != nil { return .inProgress }
         let items = plan.filter { cal.isDate($0.date, inSameDayAs: now) && $0.kind != .rest && $0.kind != .recoveryDay && !$0.skipped }.sorted { $0.sequence < $1.sequence }
         let open = items.filter { !$0.done }
@@ -1035,7 +1038,9 @@ final class Store: ObservableObject {
         if let b = r.boardRideId, rides.contains(where: { $0.boardRideId == b && $0.recorder == .board }) { return false }
         if rides.contains(where: { $0.id == r.id }) { return false }
         rides.insert(r, at: 0)
-        if let t = today, t.kind.isRide, !t.done, Calendar.current.isDate(r.start, inSameDayAs: t.date) { var w = t; w.done = true; w.completion = .recorded; w.completedAt = Date(); update(w) }
+        // Home B: the ride closes the FIRST open planned ride of its own day (one ride completes one planned ride; before,
+        // only `today` — the day's first session, possibly a lift — was looked at)
+        if let t = plan.filter({ $0.kind.isRide && !$0.done && !$0.skipped && Calendar.current.isDate($0.date, inSameDayAs: r.start) && Calendar.current.isDateInToday($0.date) }).min(by: { $0.sequence < $1.sequence }) { var w = t; w.done = true; w.completion = .recorded; w.completedAt = Date(); update(w) }
         considerFTP(from: r)
         return true
     }
