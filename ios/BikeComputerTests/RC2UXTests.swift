@@ -28,14 +28,6 @@ final class RC2UXTests: XCTestCase {
         XCTAssertEqual(TrendChartMath.drawnStride(base: 2, plotWidth: 290, weeks: 8, minSpacing: 54), 2)
     }
 
-    func testBarLabelAndSelectionShareTheWeekCentre() {
-        let m = TrainingLedger.monday(of: Date())
-        XCTAssertEqual(TrendChartMath.barMid(m).timeIntervalSince(m), 3.5 * 86_400)
-        XCTAssertEqual(TrendChartMath.barMid(m).timeIntervalSince(TrendChartMath.barStart(m)), TrendChartMath.barEnd(m).timeIntervalSince(TrendChartMath.barMid(m)), accuracy: 0.001)
-        XCTAssertEqual(TrainingLedger.monday(of: TrendChartMath.barMid(m)), m, "a tap on the bar selects its own week")
-        XCTAssertEqual(TrendChartMath.axisLabel(m).count <= 6, true, "\"28 Sep\": short labels")
-    }
-
     // MARK: 3. Plan and Progress show the same weekly numbers
     private func store() -> Store { Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("rc2-\(UUID().uuidString)"), generatePlan: false) }
     private func at(_ dayOffset: Int, _ hour: Int, from monday: Date) -> Date { cal.date(byAdding: .hour, value: hour, to: cal.date(byAdding: .day, value: dayOffset, to: monday)!)! }

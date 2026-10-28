@@ -2,77 +2,102 @@ import SwiftUI
 import Charts
 import MapKit
 
-/// Progress tab: weekly totals, FTP with its label, ride history, ride detail with interactive graphs.
-/// Only rides this phone recorded or mirrored are listed; the BikeComputer's own history stays on the board until the
-/// sync characteristic is implemented in the app (shown as a note, never fabricated).
+/// Progress tab (RC2-UX milestone 1, owner §5), three levels:
+/// 1. At a glance: this week's riding, strength, sessions, the riding target and FTP — each card opens its detail.
+/// 2. Trends: one detailed chart (riding / strength; 4–16 weeks, 1 year with older data), tappable weeks, done vs planned.
+/// 3. FTP with its honest badge, and the ride history with each ride's analysis.
+/// Every figure comes from the one query layer (TrainingLedger via ProgressMetrics), the same numbers as Plan and Home.
+/// Only rides this phone recorded, mirrored or imported are listed; the BikeComputer's own history stays on the board until
+/// its firmware serves it (shown as a note, never fabricated).
 struct ProgressTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
-    @State private var rideRange: ChartRange = .w8
-    @State private var liftRange: ChartRange = .w8
-    /// Two years of weeks to scroll through (cheap: one ledger pass per week).
+    @State private var metric: TrendMetric = .riding
+    @State private var range: ChartRange = .w8
+    @State private var positioned = false
+    @Environment(\.dynamicTypeSize) private var dts
+    /// Two years of weeks (cheap: one ledger pass per week).
     private let historyWeeks = 104
 
+    private var showRiding: Bool { store.profile.trainingMode.includesCycling || !store.rides.isEmpty }
+    private var showLifting: Bool {
+        let l = store.ledger
+        return store.profile.trainingMode.includesLifting || !l.logs.isEmpty || l.plan.contains { $0.kind == .strength && $0.completion == .marked }
+    }
+    private var metrics: [TrendMetric] { (showRiding ? [TrendMetric.riding] : []) + (showLifting ? [.strength] : []) }
+
     var body: some View {
+        let ledger = store.ledger
+        let riding = TrendChartMath.buckets(ledger, riding: true, weeks: historyWeeks, now: Date())
+        let lifting = TrendChartMath.buckets(ledger, riding: false, weeks: historyWeeks, now: Date())
         NavigationStack {
-            ScrollView {
-                VStack(spacing: DS.m) {
-                    if store.profile.trainingMode.includesCycling || !store.rides.isEmpty { weekly }
-                    if store.profile.trainingMode.includesLifting || !store.strength.isEmpty { lifting }
-                    ftpCard
-                    history
-                }.padding()
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: DS.m) {
+                        if !metrics.isEmpty { glance(riding: riding, lifting: lifting, proxy: proxy) }
+                        if !metrics.isEmpty {
+                            Card { WeeklyTrendChart(riding: riding, lifting: lifting, metrics: metrics, metric: $metric, range: $range) }
+                                .id("trends")
+                        }
+                        ftpCard.id("ftp")
+                        history
+                    }.padding()
+                }
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Progress")
+            .onAppear { if !positioned { positioned = true; if !showRiding && showLifting { metric = .strength } } }
         }
     }
 
-    private var weekly: some View {
-        Card {
-            if store.rides.isEmpty && store.ledger.riding(weekOf: TrainingLedger.monday(of: Date())).completed == 0 {
-                Eyebrow(t: "Weekly riding time")
-                Text("No rides yet").font(.headline).foregroundStyle(BC.stale)
-                Text("Your saved rides appear here, week by week. Nothing is estimated.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            } else {
-                WeeklyTrendChart(title: "Weekly riding time · done", buckets: TrendChartMath.buckets(store.ledger, riding: true, weeks: historyWeeks, now: Date()), color: BC.accent,
-                                 singular: "ride", plural: "rides", target: store.profile.hoursPerWeek * 60, targetLabel: "Target", identifier: "ridingChart", range: $rideRange)
-                definitions(riding: true)
+    // MARK: level 1 — at a glance
+    private func glance(riding: [WeekBucket], lifting: [WeekBucket], proxy: ScrollViewProxy) -> some View {
+        let p = store.profile
+        let monday = TrainingLedger.monday(of: Date())
+        let sets = store.ledger.logs.filter { $0.date >= monday }.reduce(0) { $0 + $1.setCount }
+        let trend = ProgressGlance.best20Trend(store.rides)
+        let g = ProgressGlance.make(.init(riding: riding, lifting: lifting, showRiding: showRiding, showLifting: showLifting, setsThisWeek: sets,
+                                          ridingTargetMinutes: p.hoursPerWeek * 60, ftpW: p.ftpW, ftpBadge: p.ftpBadge,
+                                          best20Recent: trend.recent, best20Before: trend.before))
+        return VStack(alignment: .leading, spacing: DS.s) {
+            Eyebrow(t: "At a glance")
+            // two equal-height cards per row (one per row at accessibility sizes); an odd last card spans the row
+            let cols = dts.isAccessibilitySize ? 1 : 2
+            Grid(horizontalSpacing: DS.s, verticalSpacing: DS.s) {
+                ForEach(Array(Swift.stride(from: 0, to: g.cards.count, by: cols)), id: \.self) { start in
+                    let row = Array(g.cards[start..<min(start + cols, g.cards.count)])
+                    GridRow {
+                        ForEach(row) { c in glanceButton(c, proxy: proxy).gridCellColumns(row.count < cols ? cols : 1) }
+                    }
+                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
-
-    private var lifting: some View {
-        let l = store.ledger
-        let any = !l.logs.isEmpty || l.plan.contains { $0.kind == .strength && $0.completion == .marked }
-        return Card {
-            if !any {
-                Eyebrow(t: "Weekly lifting time")
-                Text("No sessions logged yet").font(.headline).foregroundStyle(BC.stale)
-                Text("Log a session from Home or Plan (Log), mark one done, or import from Apple Health in Connections.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            } else {
-                WeeklyTrendChart(title: "Weekly lifting time · done", buckets: TrendChartMath.buckets(l, riding: false, weeks: historyWeeks, now: Date()), color: BC.zone(5),
-                                 singular: "session", plural: "sessions", target: store.profile.liftingHoursPerWeek > 0 ? store.profile.liftingHoursPerWeek * 60 : nil, targetLabel: "Budget", identifier: "liftingChart", range: $liftRange)
-                definitions(riding: false)
-            }
-        }
+    private func glanceButton(_ c: ProgressGlance.Card, proxy: ScrollViewProxy) -> some View {
+        Button {
+            if let m = c.opens { metric = m }
+            withAnimation { proxy.scrollTo(c.opens == nil ? "ftp" : "trends", anchor: .top) }
+        } label: { glanceCard(c) }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(c.id)
+        .accessibilityHint(c.opens.map { "Shows the \($0.rawValue.lowercased()) chart" } ?? "Shows the FTP details")
     }
-
-    /// One definition for every screen (Home, Plan, History, Progress).
-    private func definitions(riding: Bool) -> some View {
-        let t = WeekTotals(store.ledger, weekOf: Date())     /* the same figures Plan shows (RC2) */
-        let w = riding ? t.riding : t.lifting
-        return HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
-            Text(WeekTotals.sentence(w, singular: riding ? "ride" : "session", plural: riding ? "rides" : "sessions"))
-                .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier(riding ? "ridingWeekCounts" : "liftingWeekCounts")
+    private func glanceCard(_ c: ProgressGlance.Card) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(c.title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Text(c.value).font(.title2.weight(.bold)).monospacedDigit().fixedSize(horizontal: false, vertical: true)
+            Text(c.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
-            InfoButton(title: "How sessions are counted", text: riding
-                ? "Done = rides recorded in Cyclift or imported from Apple Health, plus planned rides you marked done. Time adds only recorded rides and durations you typed. Planned rides that are not done are never counted. The dashed line is your weekly cycling target."
-                : "Done = detailed logs (exercises and sets), quick logs and sessions marked done, and Apple Health imports. Time adds only measured or typed durations — a session without a duration counts as a session with no minutes. Planned sessions are never counted until done. The dashed line is your lifting budget.")
         }
+        .padding(DS.m)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: DS.corner))
+        .contentShape(RoundedRectangle(cornerRadius: DS.corner))
+        .accessibilityElement(children: .combine)
     }
 
+    // MARK: level 2/3 — FTP with its badge (tested / entered / estimated)
     private var ftpCard: some View {
         let p = store.profile
         return Card {
@@ -81,14 +106,11 @@ struct ProgressTabView: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.s) { Text("\(p.ftpW)").font(DS.number).monospacedDigit(); Text("W · \(String(format: "%.1f", Double(p.ftpW) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
                 VStack(alignment: .leading) { Text("\(p.ftpW) W").font(DS.number).monospacedDigit(); Text("\(String(format: "%.1f", Double(p.ftpW) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
             }
-            Text(p.ftpConfidence.title).font(.subheadline.weight(.semibold)).accessibilityIdentifier("ftpConfidenceTitle")
+            Text(p.ftpLabel).font(.subheadline.weight(.semibold)).accessibilityIdentifier("ftpConfidenceTitle")
             Text(p.ftpSourceText).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("ftpSource")
             if let c = p.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             if store.ftpSuggestion != nil { FTPSuggestionCard() }
-            Divider()
-            Eyebrow(t: "Fitness and form")
-            Text("Not enough data yet").font(.subheadline.weight(.semibold)).foregroundStyle(BC.stale)
-            Text("Training load and form need about six weeks of rides with power. Nothing is shown before that.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Text("Training load and form appear after about six weeks of rides with power; nothing is shown before that.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -101,13 +123,13 @@ struct ProgressTabView: View {
     private var history: some View {
         Card {
             HStack { Eyebrow(t: "Rides"); Spacer(); Text("\(store.rides.count)").font(.caption.bold()).foregroundStyle(.secondary) }
-            if store.rides.isEmpty { Text("no data yet").font(.footnote).foregroundStyle(BC.stale) }
+            if store.rides.isEmpty { Text("No rides yet. Recorded and imported rides appear here, newest first.").font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             ForEach(store.rides.sorted { $0.start > $1.start }) { r in
                 NavigationLink { RideDetailView(ride: r) } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) { Text(r.start.dayAndDate).font(.subheadline.weight(.bold)); Pill(text: r.recorder == .board ? "BikeComputer" : "phone only", color: r.recorder == .board ? BC.accent : .secondary) }
-                            Text(rowText(r)).font(.caption).foregroundStyle(.secondary)
+                            FlowRow(spacing: 6) { Text(r.start.dayAndDate).font(.subheadline.weight(.bold)); Pill(text: r.recorder == .board ? "BikeComputer" : r.recorder == .health ? "Apple Health" : "phone only", color: r.recorder == .board ? BC.accent : .secondary) }
+                            Text(rowText(r)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
                     }.padding(.vertical, 4).frame(minHeight: DS.minTap).contentShape(Rectangle())
@@ -115,7 +137,7 @@ struct ProgressTabView: View {
                 if r.id != store.rides.min(by: { $0.start < $1.start })?.id { Divider() }
             }
             Divider()
-            Text("Board history: \(device.syncStatus). Rides recorded on the BikeComputer while the phone was away stay on the board until its firmware serves them (see SYNC_PROPOSAL); nothing is invented here.").font(.caption2).foregroundStyle(.secondary)
+            Text("Board history: \(device.syncStatus). Rides recorded on the BikeComputer while the phone was away stay on the board until its firmware serves them; nothing is invented here.").font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 }

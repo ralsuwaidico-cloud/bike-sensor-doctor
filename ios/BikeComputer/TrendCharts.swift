@@ -2,313 +2,251 @@ import SwiftUI
 import Charts
 import Accessibility
 
-// MARK: - Health-style weekly charts (quality release): scrollable, tappable, readable.
-// The maths (buckets, visible-range aggregate, labels, callout text) is pure and unit-tested (TrendChartMathTests);
-// the view only draws it. Weekly values come from the one query layer (TrainingLedger), so they match Home and Plan.
+// MARK: - Progress detailed chart (RC2-UX milestone 1, owner §5)
+// One chart, one convention: solid bars = done, pale bars behind them = planned, the current (unfinished) week on the
+// right, a ring at zero = sessions done without a recorded duration. Ranges 4 / 8 / 12 / 16 weeks (1 year when older
+// data exists); the chart never scrolls sideways (no gesture fights the page's vertical scroll). Tap a bar: its week,
+// exact value with unit, done vs planned and sessions appear in the header. Date labels are MEASURED and placed by
+// TrendChartMath.axisLabels, so they cannot overlap at any width, range or text size. All maths: ProgressMetrics.swift.
 
-struct WeekBucket: Identifiable, Equatable {
-    var id: Date { start }
-    /// Monday 00:00 of the week.
-    let start: Date
-    var minutes: Int
-    var sessions: Int
-    var km: Double = 0
-    /// Completed sessions without a recorded duration (counted as sessions, add no minutes).
-    var unknownDuration: Int = 0
-}
-
-enum ChartRange: String, CaseIterable, Identifiable {
-    case w8 = "8 wk", w16 = "16 wk", y1 = "1 yr"
-    var id: String { rawValue }
-    var weeks: Int { switch self { case .w8: return 8; case .w16: return 16; case .y1: return 52 } }
-    /// Label every n-th week so labels never overlap (doubled at accessibility text sizes).
-    func labelStride(accessibility: Bool) -> Int {
-        let base: Int
-        switch self { case .w8: base = 2; case .w16: base = 4; case .y1: base = 13 }
-        return accessibility ? base * 2 : base
-    }
-}
-
-enum TrendChartMath {
-    static let weekSeconds: TimeInterval = 7 * 86_400
-
-    /// Mondays of the last `count` weeks ending with the week of `now`, oldest first.
-    static func mondays(endingAt now: Date, count: Int, calendar cal: Calendar = .current) -> [Date] {
-        let m = TrainingLedger.monday(of: now, calendar: cal)
-        return (0..<max(1, count)).reversed().map { cal.date(byAdding: .day, value: -7 * $0, to: m)! }
-    }
-
-    /// Weekly buckets from the ledger. `riding` = rides (+ rides marked done); otherwise lifting sessions.
-    static func buckets(_ ledger: TrainingLedger, riding: Bool, weeks: Int, now: Date, calendar cal: Calendar = .current) -> [WeekBucket] {
-        mondays(endingAt: now, count: weeks, calendar: cal).map { m in
-            let w = riding ? ledger.riding(weekOf: m) : ledger.lifting(weekOf: m)
-            var km = 0.0
-            if riding {
-                let e = cal.date(byAdding: .day, value: 7, to: m)!
-                km = Double(ledger.rides.filter { $0.start >= m && $0.start < e }.reduce(0) { $0 + $1.distanceM }) / 1000
-            }
-            return WeekBucket(start: m, minutes: w.minutes, sessions: w.completed, km: km, unknownDuration: w.unknownDuration)
-        }
-    }
-
-    /// The buckets inside the visible window that starts at `scrollStart` and spans `weeks` weeks.
-    static func visible(_ b: [WeekBucket], scrollStart: Date, weeks: Int, calendar cal: Calendar = .current) -> [WeekBucket] {
-        let s = TrainingLedger.monday(of: scrollStart.addingTimeInterval(3 * 86_400), calendar: cal)   // nearest Monday
-        let e = cal.date(byAdding: .day, value: 7 * weeks, to: s)!
-        return b.filter { $0.start >= s && $0.start < e }
-    }
-
-    struct Summary: Equatable { var averageMinutes: Int; var totalMinutes: Int; var sessions: Int; var weeks: Int; var rangeText: String }
-    static func summary(_ v: [WeekBucket], calendar cal: Calendar = .current) -> Summary {
-        guard let first = v.first, let last = v.last else { return Summary(averageMinutes: 0, totalMinutes: 0, sessions: 0, weeks: 0, rangeText: "") }
-        let total = v.reduce(0) { $0 + $1.minutes }
-        let end = cal.date(byAdding: .day, value: 6, to: last.start)!
-        return Summary(averageMinutes: Int((Double(total) / Double(v.count)).rounded()), totalMinutes: total, sessions: v.reduce(0) { $0 + $1.sessions }, weeks: v.count, rangeText: rangeText(first.start, end, calendar: cal))
-    }
-
-    /// "12–18 Oct", "28 Sep – 4 Oct", "29 Dec 2025 – 4 Jan 2026" (year only when the range crosses a year or is not this year).
-    static func rangeText(_ a: Date, _ b: Date, now: Date = Date(), calendar cal: Calendar = .current) -> String {
-        let df = DateFormatter(); df.locale = Locale(identifier: "en_GB"); df.calendar = cal; df.timeZone = cal.timeZone
-        let ya = cal.component(.year, from: a), yb = cal.component(.year, from: b), yn = cal.component(.year, from: now)
-        let sameMonth = cal.component(.month, from: a) == cal.component(.month, from: b) && ya == yb
-        if ya != yb {
-            df.dateFormat = "d MMM yyyy"; return "\(df.string(from: a)) – \(df.string(from: b))"
-        }
-        let year = ya != yn ? " \(ya)" : ""
-        if sameMonth {
-            df.dateFormat = "d"; let d1 = df.string(from: a); df.dateFormat = "d MMM"
-            return "\(d1)–\(df.string(from: b))\(year)"
-        }
-        df.dateFormat = "d MMM"
-        return "\(df.string(from: a)) – \(df.string(from: b))\(year)"
-    }
-
-    /// "12–18 Oct · 2 h 05 min · 3 rides"
-    static func callout(_ b: WeekBucket, singular: String, plural: String, calendar cal: Calendar = .current, now: Date = Date()) -> String {
-        let end = cal.date(byAdding: .day, value: 6, to: b.start)!
-        var t = "\(rangeText(b.start, end, now: now, calendar: cal)) · \(clock(b.minutes)) · \(b.sessions) \(b.sessions == 1 ? singular : plural)"
-        if b.unknownDuration > 0 { t += " (\(b.unknownDuration) without duration)" }
-        return t
-    }
-
-    /// "2 h 05 min", "45 min", "0 min".
-    static func clock(_ m: Int) -> String { m >= 60 ? String(format: "%d h %02d min", m / 60, m % 60) : "\(m) min" }
-
-    /// The bucket whose week contains `d`.
-    static func bucket(at d: Date?, in b: [WeekBucket], calendar cal: Calendar = .current) -> WeekBucket? {
-        guard let d else { return nil }
-        let m = TrainingLedger.monday(of: d, calendar: cal)
-        return b.first { $0.start == m }
-    }
-
-    /// Where the chart opens: the window that ends with the most recent week.
-    static func initialScrollStart(_ b: [WeekBucket], weeks: Int, calendar cal: Calendar = .current) -> Date {
-        guard let last = b.last?.start else { return Date() }
-        let s = cal.date(byAdding: .day, value: -7 * (weeks - 1), to: last)!
-        return max(s, b.first?.start ?? s)
-    }
-
-    /// Axis label weeks: every n-th week, phased so that the OLDEST week of the window the chart opens on is labelled.
-    /// The next label to the left is then a full stride away and never shows as a clipped fragment at the edge.
-    static func labelDates(_ b: [WeekBucket], stride n: Int, visibleWeeks w: Int) -> [Date] {
-        let starts = b.map { $0.start }
-        guard !starts.isEmpty, n > 0 else { return [] }
-        let phase = max(0, w - 1) % n
-        return starts.enumerated().filter { (starts.count - 1 - $0.offset) % n == phase }.map { $0.element }
-    }
-    /// Labels sit under the middle of their bar (Thursday noon of the week).
-    static let labelOffset: TimeInterval = 3.5 * 86_400
-    /// Y grid in whole hours: about four lines whatever the range.
-    static func yTicks(maxMinutes: Int) -> [Double] {
-        let hours = max(1.0, Double(maxMinutes) / 60)
-        let step = max(1, Int((hours / 4).rounded(.up)))
-        return stride(from: 0, through: Double(Int(hours.rounded(.up)) + step), by: Double(step)).map { $0 * 60 }
-    }
-    /// The label stride actually drawn: the range's own stride, widened until two neighbouring labels are at least
-    /// `minSpacing` points apart on a plot `plotWidth` points wide showing `weeks` weeks (RC2 owner report: overlapping
-    /// dates). Pure, so every phone width and text size is unit-tested.
-    static func drawnStride(base: Int, plotWidth: Double, weeks: Int, minSpacing: Double) -> Int {
-        guard plotWidth > 0, weeks > 0 else { return max(1, base) }
-        let perWeek = plotWidth / Double(weeks)
-        var n = max(1, base)
-        while Double(n) * perWeek < minSpacing && n < weeks { n += max(1, base) }
-        return n
-    }
-    /// Bars cover the middle 70 % of their week; label, selection line and bar share the same centre (Thursday noon).
-    static func barStart(_ monday: Date) -> Date { monday.addingTimeInterval(0.15 * weekSeconds) }
-    static func barEnd(_ monday: Date) -> Date { monday.addingTimeInterval(0.85 * weekSeconds) }
-    static func barMid(_ monday: Date) -> Date { monday.addingTimeInterval(0.5 * weekSeconds) }
-
-    static func axisLabel(_ d: Date, calendar cal: Calendar = .current) -> String {
-        let df = DateFormatter(); df.locale = Locale(identifier: "en_GB"); df.calendar = cal; df.timeZone = cal.timeZone; df.dateFormat = "d MMM"
-        return df.string(from: d)
-    }
-}
-
-/// One weekly bar chart: range picker, AVERAGE header for the visible weeks (updates while scrolling), touch-and-hold
-/// selection with a callout (exact value, week, sessions), readable axis, VoiceOver audio graph.
 struct WeeklyTrendChart: View {
-    let title: String
-    let buckets: [WeekBucket]
-    let color: Color
-    let singular: String
-    let plural: String
-    /// Weekly target in minutes (dashed line), nil = none.
-    var target: Int? = nil
-    var targetLabel: String = "budget"
-    var identifier: String = "trendChart"
+    /// Full history (oldest first, the current week last), per metric.
+    let riding: [WeekBucket]
+    let lifting: [WeekBucket]
+    /// The metrics this rider trains (one = no metric picker).
+    let metrics: [TrendMetric]
+    @Binding var metric: TrendMetric
     @Binding var range: ChartRange
-    @State private var scrollStart: Date = Date()
-    @State private var selected: Date? = nil
-    @State private var positioned = false
+    var identifier = "trendChart"
+    @State private var selected: Int? = nil
+    @State private var geom = AxisGeometry()
     @Environment(\.dynamicTypeSize) private var dts
 
+    private var all: [WeekBucket] { metric == .riding ? riding : lifting }
+    private var window: [WeekBucket] { TrendChartMath.window(all, weeks: range.weeks) }
+    private var color: Color { metric == .riding ? BC.accent : BC.zone(5) }
+    private var ranges: [ChartRange] { ChartRange.available(all) }
+
     var body: some View {
-        let vis = TrendChartMath.visible(buckets, scrollStart: scrollStart, weeks: range.weeks)
-        let sum = TrendChartMath.summary(vis)
-        let sel = TrendChartMath.bucket(at: selected, in: buckets)
+        let v = window
         VStack(alignment: .leading, spacing: DS.s) {
             HStack(alignment: .firstTextBaseline) {
-                Eyebrow(t: title)
+                Eyebrow(t: "Trends")
                 Spacer(minLength: DS.s)
+                InfoButton(title: "How sessions are counted", text: Self.countingHelp)
             }
-            Picker("Range", selection: $range) { ForEach(ChartRange.allCases) { Text($0.rawValue).tag($0) } }
-                .pickerStyle(.segmented).accessibilityIdentifier("\(identifier)-range")
-            header(sum: sum, sel: sel)
-            VStack(spacing: 2) { chart(sel: sel); labelRow }
-            Text("Tap a bar for its week; swipe to see earlier weeks.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if metrics.count > 1 { metricPicker }
+            rangePicker
+            Text(metric.question).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if TrendChartMath.isEmpty(v) {
+                emptyState
+            } else {
+                header(v)
+                VStack(spacing: 2) { chart(v); labelRow(v) }
+                legend(v)
+            }
         }
-        .onAppear { if !positioned { positioned = true; scrollStart = TrendChartMath.initialScrollStart(buckets, weeks: range.weeks) } }
-        .onChange(of: range) { _, r in selected = nil; scrollStart = TrendChartMath.initialScrollStart(buckets, weeks: r.weeks) }
+        .onChange(of: range) { _, _ in selected = nil }
+        .onChange(of: metric) { _, _ in selected = nil; if !ranges.contains(range) { range = .w8 } }
     }
 
-    @ViewBuilder private func header(sum: TrendChartMath.Summary, sel: WeekBucket?) -> some View {
+    // MARK: pickers: segmented, their text capped at xxLarge (five segments stay readable on a 320-pt-wide card; the
+    // header and detail text below carry the large sizes, like the Health app)
+    private var metricPicker: some View {
+        Picker("Show", selection: $metric) { ForEach(metrics) { Text($0.rawValue).tag($0) } }
+            .pickerStyle(.segmented)
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+            .accessibilityIdentifier("\(identifier)-metric")
+    }
+    private var rangePicker: some View {
+        Picker("Range", selection: $range) { ForEach(ranges) { Text($0.rawValue).tag($0) } }
+            .pickerStyle(.segmented)
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+            .accessibilityIdentifier("\(identifier)-range")
+    }
+
+    // MARK: header: the selected week, or the range summary
+    @ViewBuilder private func header(_ v: [WeekBucket]) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            if let b = sel {
-                Text("WEEK").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text(TrendChartMath.clock(b.minutes)).font(DS.number).monospacedDigit()
-                Text(TrendChartMath.callout(b, singular: singular, plural: plural)).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if let i = selected, v.indices.contains(i) {
+                let d = TrendChartMath.detail(v[i], metric: metric)
+                Text(d.title).font(.caption.weight(.semibold)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(d.value).font(DS.number).monospacedDigit()
+                Text(d.done).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                Text(d.planned).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if let n = d.note { Text(n).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             } else {
-                Text("AVERAGE PER WEEK").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text(TrendChartMath.clock(sum.averageMinutes)).font(DS.number).monospacedDigit()
-                Text("\(sum.rangeText) · total \(TrendChartMath.clock(sum.totalMinutes)) · \(sum.sessions) \(sum.sessions == 1 ? singular : plural)").font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                let s = TrendChartMath.rangeSummary(v, metric: metric)
+                Text(s.title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text(s.value).font(DS.number).monospacedDigit()
+                Text(s.line).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("\(identifier)-header")
     }
 
-    struct XLabel: Equatable { var text: String; var x: Double }
-    struct XLabelKey: PreferenceKey {
-        static var defaultValue: [XLabel] = []
-        static func reduce(value: inout [XLabel], nextValue: () -> [XLabel]) { value += nextValue() }
-    }
-    @State private var labels: [XLabel] = []
-    /// Labels inside the visible plot, every n-th week (n widened until they cannot touch), at their bars' centres.
-    private func xLabels(proxy: ChartProxy, geo: GeometryProxy) -> [XLabel] {
-        guard let pf = proxy.plotFrame else { return [] }
-        let plot = geo[pf]
-        let n = TrendChartMath.drawnStride(base: range.labelStride(accessibility: dts.isAccessibilitySize), plotWidth: plot.width, weeks: range.weeks, minSpacing: minLabelSpacing)
-        return TrendChartMath.labelDates(buckets, stride: n, visibleWeeks: range.weeks).compactMap { m in
-            guard let x = proxy.position(forX: TrendChartMath.barMid(m)), x >= 0, x <= plot.width else { return nil }
-            return XLabel(text: TrendChartMath.axisLabel(m), x: plot.minX + x)
-        }
-    }
-    /// The date row under the plot: plain Text views (readable by VoiceOver users of the list below and by the layout audit).
-    private var labelRow: some View {
-        ZStack(alignment: .topLeading) {
-            Color.clear
-            ForEach(labels, id: \.text) { l in
-                Text(l.text).font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
-                    .accessibilityIdentifier("\(identifier)-xlabel")
-                    .position(x: l.x, y: 9)
-            }
-        }
-        .frame(height: 18)
-        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-        .accessibilityElement(children: .contain)
+    // MARK: the plot
+    struct AxisGeometry: Equatable { var plotMinX: Double = 0; var plotWidth: Double = 0; var totalWidth: Double = 0 }
+    struct AxisKey: PreferenceKey {
+        static var defaultValue = AxisGeometry()
+        static func reduce(value: inout AxisGeometry, nextValue: () -> AxisGeometry) { let n = nextValue(); if n.plotWidth > 0 { value = n } }
     }
 
-    /// Minimum distance between two date labels (points): a "28 Sep" label plus air, larger for large text.
-    private var minLabelSpacing: Double { dts >= .xLarge ? 66 : 54 }
-
-    private func chart(sel: WeekBucket?) -> some View {
-        let maxY = max(buckets.map { $0.minutes }.max() ?? 0, target ?? 0, 60)
-        let ticks = TrendChartMath.yTicks(maxMinutes: maxY)
+    private func chart(_ v: [WeekBucket]) -> some View {
+        let maxV = max(v.map { metric.value($0) }.max() ?? 0, v.map { metric.planned($0) }.max() ?? 0)
+        let ticks = metric.ticks(max: maxV)
         return Chart {
-            ForEach(buckets) { b in
-                // explicit week span (no calendar "weekOfYear" unit, whose week start depends on the locale): bar,
-                // label and selection share one centre
-                BarMark(xStart: .value("Week", TrendChartMath.barStart(b.start)), xEnd: .value("Week end", TrendChartMath.barEnd(b.start)), y: .value("Minutes", Double(b.minutes)))
-                    .foregroundStyle(sel == nil || sel?.start == b.start ? color : color.opacity(0.35))
-                    .cornerRadius(3)
-                    .accessibilityLabel("Week of \(TrendChartMath.axisLabel(b.start))")
-                    .accessibilityValue("\(TrendChartMath.clock(b.minutes)), \(b.sessions) \(b.sessions == 1 ? singular : plural)")
+            ForEach(Array(v.enumerated()), id: \.offset) { i, b in
+                weekMarks(i, b)
             }
-            if let t = target, t > 0 {
-                RuleMark(y: .value(targetLabel, Double(t))).foregroundStyle(.secondary).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-            }
-            if let b = sel {
-                RuleMark(x: .value("Selected", TrendChartMath.barMid(b.start)))
-                    .foregroundStyle(Color.secondary.opacity(0.6))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
+            if let s = selected {
+                RuleMark(x: .value("Selected", Double(s))).foregroundStyle(Color.secondary.opacity(0.6)).lineStyle(StrokeStyle(lineWidth: 1))
             }
         }
-        .chartYScale(domain: 0...max(Double(maxY) * 1.15, ticks.last ?? 60))
-        // the date labels are drawn below the plot by the overlay (positions from the chart itself, spacing checked);
-        // the built-in x axis only reserves no space
+        .chartXScale(domain: -0.5...(Double(v.count) - 0.5))
+        .chartYScale(domain: 0...(ticks.last ?? 1))
         .chartXAxis(.hidden)
         .chartYAxis {
-            AxisMarks(position: .trailing, values: ticks) { v in
+            AxisMarks(position: .trailing, values: ticks) { value in
                 AxisGridLine()
-                AxisValueLabel { if let m = v.as(Double.self) { Text(m == 0 ? "0" : "\(Int(m / 60)) h").font(.caption) } }
+                AxisValueLabel { if let d = value.as(Double.self) { Text(metric.axisText(d)).font(.caption) } }
             }
         }
-        .chartScrollableAxes(.horizontal)
-        .chartXVisibleDomain(length: TrendChartMath.weekSeconds * Double(range.weeks))
-        .chartScrollPosition(x: $scrollStart)
-        .chartXSelection(value: $selected)
         .chartOverlay { proxy in
             GeometryReader { geo in
                 ZStack(alignment: .topLeading) {
-                    // a tap selects a week too (a second tap on it clears the selection), like the Health app
                     Rectangle().fill(.clear).contentShape(Rectangle())
-                        .onTapGesture { loc in
-                            guard let pf = proxy.plotFrame else { return }
-                            let x = loc.x - geo[pf].origin.x
-                            guard let d: Date = proxy.value(atX: x) else { return }
-                            let m = TrainingLedger.monday(of: d)
-                            selected = selected.map { TrainingLedger.monday(of: $0) } == m ? nil : TrendChartMath.barMid(m)
-                        }
-                    // where each date label goes (centre of its bar, in this view's coordinates) → the label row below
-                    Color.clear.preference(key: XLabelKey.self, value: xLabels(proxy: proxy, geo: geo))
+                        .onTapGesture { loc in select(at: loc, proxy: proxy, geo: geo, count: v.count) }
+                    Color.clear.preference(key: AxisKey.self, value: axisGeometry(proxy: proxy, geo: geo))
                 }
             }
         }
-        .onPreferenceChange(XLabelKey.self) { labels = $0 }
-        .frame(height: dts.isAccessibilitySize ? 260 : 200)
-        // axis labels stop growing at xxLarge (like the Health app); the header above carries the large text
+        .onPreferenceChange(AxisKey.self) { geom = $0 }
+        .frame(height: dts.isAccessibilitySize ? 240 : 190)
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-        .accessibilityChartDescriptor(TrendChartDescriptor(title: title, buckets: buckets, singular: singular, plural: plural))
+        .accessibilityChartDescriptor(TrendChartDescriptor(metric: metric, buckets: v))
         .accessibilityIdentifier(identifier)
     }
+
+    @ChartContentBuilder private func weekMarks(_ i: Int, _ b: WeekBucket) -> some ChartContent {
+        let x0 = Double(i) - 0.34, x1 = Double(i) + 0.34
+        let planned = metric.planned(b), done = metric.value(b)
+        let dim = selected != nil && selected != i
+        BarMark(xStart: .value("Week", x0), xEnd: .value("Week end", x1), yStart: .value("Zero", 0.0), yEnd: .value("Planned", planned))
+            .foregroundStyle(color.opacity(dim ? 0.10 : 0.22))
+            .cornerRadius(3)
+        BarMark(xStart: .value("Week", x0), xEnd: .value("Week end", x1), yStart: .value("Zero", 0.0), yEnd: .value("Done", done))
+            .foregroundStyle(dim ? color.opacity(0.4) : color)
+            .cornerRadius(3)
+            .accessibilityLabel("Week of \(TrendChartMath.axisLabel(b.start))")
+            .accessibilityValue("done \(metric == .riding ? Fmt.duration(minutes: b.minutes) : "\(b.sessions) sessions"), planned \(metric == .riding ? Fmt.duration(minutes: b.plannedMinutes) : "\(b.plannedSessions) sessions")")
+        if metric == .riding && b.unknownDuration > 0 && b.minutes == 0 {
+            PointMark(x: .value("Week", Double(i)), y: .value("Zero", 0.0))
+                .symbol { Circle().strokeBorder(color, lineWidth: 1.5).frame(width: 9, height: 9) }
+        }
+    }
+
+    private func axisGeometry(proxy: ChartProxy, geo: GeometryProxy) -> AxisGeometry {
+        guard let pf = proxy.plotFrame else { return AxisGeometry() }
+        let plot = geo[pf]
+        return AxisGeometry(plotMinX: plot.minX, plotWidth: plot.width, totalWidth: geo.size.width)
+    }
+
+    /// A tap selects the week under the finger; a second tap on it clears the selection.
+    private func select(at loc: CGPoint, proxy: ChartProxy, geo: GeometryProxy, count: Int) {
+        guard let pf = proxy.plotFrame, count > 0 else { return }
+        let plot = geo[pf]
+        let x = loc.x - plot.minX
+        guard x >= 0, x <= plot.width else { return }
+        let i = min(count - 1, max(0, Int(x / (plot.width / CGFloat(count)))))
+        selected = selected == i ? nil : i
+    }
+
+    // MARK: date labels (plain Text, measured, never overlapping)
+    private func labelRow(_ v: [WeekBucket]) -> some View {
+        let labels = TrendChartMath.axisLabels(v.map { $0.start }, plotWidth: geom.plotWidth, gap: 8, leftRoom: geom.plotMinX,
+                                               rightRoom: max(0, geom.totalWidth - geom.plotMinX - geom.plotWidth), width: measure)
+        return ZStack(alignment: .topLeading) {
+            Color.clear
+            ForEach(labels, id: \.index) { l in
+                Text(l.text).font(.caption).foregroundStyle(.secondary).lineLimit(1).fixedSize()
+                    .accessibilityIdentifier("\(identifier)-xlabel")
+                    .position(x: geom.plotMinX + l.centre, y: labelHeight / 2)
+            }
+        }
+        .frame(height: labelHeight)
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .accessibilityElement(children: .contain)
+    }
+    private var labelSize: DynamicTypeSize { min(dts, .xxLarge) }
+    private var labelFont: UIFont {
+        let cat: UIContentSizeCategory
+        switch labelSize {
+        case .xSmall: cat = .extraSmall
+        case .small: cat = .small
+        case .medium: cat = .medium
+        case .large: cat = .large
+        case .xLarge: cat = .extraLarge
+        default: cat = .extraExtraLarge
+        }
+        return UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: UITraitCollection(preferredContentSizeCategory: cat))
+    }
+    private var labelHeight: CGFloat { ceil(labelFont.lineHeight) + 2 }
+    /// The label's real width in the font it is drawn with (plus a point of rounding).
+    private func measure(_ s: String) -> Double { Double(ceil((s as NSString).size(withAttributes: [.font: labelFont]).width)) + 1 }
+
+    // MARK: legend, empty state
+    private func legend(_ v: [WeekBucket]) -> some View {
+        FlowRow(spacing: DS.m) {
+            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 12, height: 12); Text("done").font(.caption) }
+            HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(color.opacity(0.22)).frame(width: 12, height: 12); Text("planned").font(.caption) }
+            if metric == .riding && v.contains(where: { $0.unknownDuration > 0 && $0.minutes == 0 }) {
+                HStack(spacing: 4) { Circle().strokeBorder(color, lineWidth: 1.5).frame(width: 10, height: 10); Text("done, no duration").font(.caption) }
+            }
+            Text(selected == nil ? "Tap a bar for its week." : "Tap the bar again to clear.").font(.caption).foregroundStyle(.secondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: DS.xs) {
+            Text(metric == .riding ? "No riding in the last \(range.weeks) weeks" : "No strength sessions in the last \(range.weeks) weeks")
+                .font(.headline).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true)
+            Text(metric == .riding
+                 ? "Nothing was planned or recorded in this period. Record a ride, import one from Apple Health, or choose a longer range. The chart only shows real sessions."
+                 : "Nothing was planned or logged in this period. Log a session from Home or Plan, or choose a longer range. The chart only shows real sessions.")
+                .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("\(identifier)-empty")
+    }
+
+    static let countingHelp = """
+    Done (solid bars): rides recorded in Cyclift or imported from Apple Health, planned rides you marked done; strength logs, quick logs, sessions marked done and Apple Health imports.
+
+    Time adds only measured or typed durations. A session marked done without a duration counts as a session and adds no time (a ring at zero on the riding chart).
+
+    Planned (pale bars): the week's planned sessions that were not skipped — the same figures as "Planned this week" on Plan.
+
+    Weeks run Monday to Sunday. The current week is still running, so averages use full weeks only.
+    """
 }
 
-/// VoiceOver audio graph / chart summary for a weekly chart.
+/// VoiceOver audio graph / chart summary for the detailed chart.
 struct TrendChartDescriptor: AXChartDescriptorRepresentable {
-    let title: String
+    let metric: TrendMetric
     let buckets: [WeekBucket]
-    let singular: String
-    let plural: String
     func makeChartDescriptor() -> AXChartDescriptor {
         let labels = buckets.map { TrendChartMath.axisLabel($0.start) }
-        let maxV = Double(max(60, buckets.map { $0.minutes }.max() ?? 0))
+        let maxV = max(1, buckets.map { max(metric.value($0), metric.planned($0)) }.max() ?? 1)
         let x = AXCategoricalDataAxisDescriptor(title: "Week starting", categoryOrder: labels)
-        let y = AXNumericDataAxisDescriptor(title: "Time", range: 0...maxV, gridlinePositions: []) { TrendChartMath.clock(Int($0)) }
-        let series = AXDataSeriesDescriptor(name: title, isContinuous: false, dataPoints: buckets.map { b in
-            AXDataPoint(x: TrendChartMath.axisLabel(b.start), y: Double(b.minutes), additionalValues: [], label: "\(b.sessions) \(b.sessions == 1 ? singular : plural)")
-        })
-        let s = TrendChartMath.summary(buckets)
-        return AXChartDescriptor(title: title, summary: "Average \(TrendChartMath.clock(s.averageMinutes)) per week over \(s.weeks) weeks, \(s.rangeText).", xAxis: x, yAxis: y, additionalAxes: [], series: [series])
+        let y = AXNumericDataAxisDescriptor(title: metric.unitName, range: 0...maxV, gridlinePositions: []) { metric.axisText($0) }
+        let done = AXDataSeriesDescriptor(name: "Done", isContinuous: false, dataPoints: buckets.map { AXDataPoint(x: TrendChartMath.axisLabel($0.start), y: metric.value($0), additionalValues: [], label: nil) })
+        let planned = AXDataSeriesDescriptor(name: "Planned", isContinuous: false, dataPoints: buckets.map { AXDataPoint(x: TrendChartMath.axisLabel($0.start), y: metric.planned($0), additionalValues: [], label: nil) })
+        let s = TrendChartMath.rangeSummary(buckets, metric: metric)
+        return AXChartDescriptor(title: metric.question, summary: "\(s.title): \(s.value). \(s.line)", xAxis: x, yAxis: y, additionalAxes: [], series: [done, planned])
     }
 }
