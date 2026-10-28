@@ -24,7 +24,7 @@ struct WeeklyTrendChart: View {
 
     private var all: [WeekBucket] { metric == .riding ? riding : lifting }
     private var window: [WeekBucket] { TrendChartMath.window(all, weeks: range.weeks) }
-    private var color: Color { metric == .riding ? BC.accent : BC.zone(5) }
+    private var color: Color { metric == .riding ? BC.accent : BC.strength }
     private var ranges: [ChartRange] { ChartRange.available(all) }
 
     var body: some View {

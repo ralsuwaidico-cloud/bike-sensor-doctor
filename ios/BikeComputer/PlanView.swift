@@ -139,7 +139,7 @@ struct PlanView: View {
                 if lifts { totalsColumn("Lifting", lw, singular: "lift", plural: "lifts", warn: liftLimit > 0 && lifting > liftLimit, id: "Lifting") }
             }
             budgetBar("Cycling budget", planned: planned, done: done, limit: limit, color: BC.accent)
-            if lifts { budgetBar("Lifting budget", planned: lifting, done: liftDone, limit: liftLimit, color: BC.zone(5)) }
+            if lifts { budgetBar("Lifting budget", planned: lifting, done: liftDone, limit: liftLimit, color: BC.strength) }
             Text(action).font(.footnote).foregroundStyle(fit.conflicts.isEmpty && !overEdits ? .primary : BC.warn).fixedSize(horizontal: false, vertical: true)
         }
         .sheet(isPresented: $showFix) { FixPlanSheet(weekOf: weekDate) }

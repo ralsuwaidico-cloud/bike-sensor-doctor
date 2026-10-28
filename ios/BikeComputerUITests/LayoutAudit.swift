@@ -348,7 +348,13 @@ final class LayoutAudit: XCTestCase {
             // Connections (no board in the demo: what the link line says)
             tab(app, "Home")
             let conn = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Manage'")).firstMatch
-            if conn.waitForExistence(timeout: 3) { conn.tap(); sleep(2); shot("\(tag)-connections"); checkScreen(app, "\(size) connections", tab: 0) } else { note("\(size): Connections link not found") }
+            if conn.waitForExistence(timeout: 3) {
+                conn.tap(); sleep(2); shot("\(tag)-connections"); checkScreen(app, "\(size) connections", tab: 0)
+                // the BikeComputer page (the owner's "stuck on Searching" screen): no board in the demo
+                let bc = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'BikeComputer'")).firstMatch
+                reveal(app, bc)
+                if bc.exists { bc.tap(); sleep(3); shot("\(tag)-connections-bikecomputer"); checkScreen(app, "\(size) BikeComputer page", tab: 0) } else { note("\(size): BikeComputer row not found") }
+            } else { note("\(size): Connections link not found") }
             XCTAssertEqual(app.state, .runningForeground)
             app.terminate()
         }

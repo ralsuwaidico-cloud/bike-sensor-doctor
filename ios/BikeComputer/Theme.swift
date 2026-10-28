@@ -9,6 +9,9 @@ enum BC {
     static let warn = Color(light: Color(red: 0.84, green: 0.24, blue: 0.24), dark: Color(red: 1, green: 0.353, blue: 0.353))
     static let sim = Color(light: Color(red: 0.88, green: 0.478, blue: 0.1), dark: Color(red: 1, green: 0.54, blue: 0.12))
     static let zones: [Color] = [Color(red: 0.5, green: 0.655, blue: 0.72), Color(red: 0.243, green: 0.659, blue: 0.42), Color(red: 0.85, green: 0.71, blue: 0.17), Color(red: 0.91, green: 0.51, blue: 0.165), Color(red: 0.82, green: 0.27, blue: 0.27), Color(red: 0.557, green: 0.267, blue: 0.678), Color.primary]
+    /// Strength in charts and budget bars (RC2-UX: the zone-5 red read as "over budget / error" on the lifting chart and the
+    /// lifting budget bar even when everything was fine; red stays for warnings only).
+    static let strength = Color(light: Color(red: 0.44, green: 0.33, blue: 0.80), dark: Color(red: 0.66, green: 0.58, blue: 1.0))
     static func zone(_ z: Int) -> Color { z >= 1 && z <= 7 ? zones[z - 1] : .secondary }
     /// Follows Dynamic Type (title size at the default setting) — quality release: no fixed point sizes for text.
     static let numFont = Font.system(.title, design: .rounded).weight(.bold)
