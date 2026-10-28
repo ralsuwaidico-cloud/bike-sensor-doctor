@@ -198,7 +198,14 @@ struct StrengthWorkoutScreen: View {
         return nil
     }
 
-    private func startButton(_ w: Workout, _ entries: [ExerciseEntry]) -> some View {
+    @ViewBuilder private func startButton(_ w: Workout, _ entries: [ExerciseEntry]) -> some View {
+        if !store.profile.readiness.trainingAllowed && store.activeSession?.workoutId != w.id {
+            HealthHoldNotice()          /* Home B P0-2: no Start while the health check pauses training */
+        } else {
+            startControls(w, entries)
+        }
+    }
+    private func startControls(_ w: Workout, _ entries: [ExerciseEntry]) -> some View {
         VStack(spacing: 6) {
             Button {
                 if store.activeSession == nil { _ = store.startStrengthSession(for: w, template: store.routine(for: w), entries: entries) }

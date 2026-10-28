@@ -189,6 +189,10 @@ struct RideTabView: View {
             if recorder.state == .running, coach.phase != .COOLDOWN, store.settings.coachEnabled {
                 Button { coach.requestCooldown(elapsedS: recorder.elapsedS) } label: { Text("Start cool-down (no more 'push' cues)").font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.violet) }
             }
+            if !recorder.isActive && !store.profile.readiness.trainingAllowed {
+                // Home B P0-2: the health check pauses training — no Start here either (defence in depth)
+                HealthHoldNotice(dark: true)
+            } else {
             HStack(spacing: 8) {
                 if !recorder.isActive {
                     switch mode {
@@ -206,6 +210,7 @@ struct RideTabView: View {
                     BigButton(text: "LAP", color: D7.violet) { recorder.lap() }
                     BigButton(text: "END", color: D7.red) { confirmEnd = true }
                 }
+            }
             }
         }
     }

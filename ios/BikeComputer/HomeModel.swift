@@ -86,6 +86,8 @@ enum HomeAction: Equatable, Identifiable {
     case recoveryGuidance
     case reviewHealth
     case createPlan
+    /// Quick strength log (first-time "Log a lift").
+    case quickLog
     /// The hold sheet ("What this means" + Review health check).
     case holdInfo
 
@@ -104,6 +106,7 @@ enum HomeAction: Equatable, Identifiable {
         case .recoveryGuidance: return "recovery"
         case .reviewHealth: return "health"
         case .createPlan: return "createPlan"
+        case .quickLog: return "quickLog"
         case .holdInfo: return "hold"
         }
     }
@@ -123,6 +126,7 @@ enum HomeAction: Equatable, Identifiable {
         case .recoveryGuidance: return "Recovery guidance"
         case .reviewHealth: return "Review health check"
         case .createPlan: return "Create my plan"
+        case .quickLog: return "Log a lift"
         case .holdInfo: return "What this means"
         }
     }
@@ -142,6 +146,7 @@ enum HomeAction: Equatable, Identifiable {
         case .recoveryGuidance: return "Opens recovery guidance for a rest day"
         case .reviewHealth: return "Opens the health check"
         case .createPlan: return "Opens the plan set-up"
+        case .quickLog: return "Opens the quick strength log"
         case .holdInfo: return "Explains the health restriction"
         }
     }

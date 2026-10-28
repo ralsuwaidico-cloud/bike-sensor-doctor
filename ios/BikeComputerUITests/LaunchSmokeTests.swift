@@ -119,7 +119,7 @@ final class LaunchSmokeTests: XCTestCase {
 
         // data preserved: still onboarded, same rider, today's routine still scheduled
         app.buttons["Home"].firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 10), "Cancel must keep the profile")
+        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 10) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "Cancel must keep the profile")
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         // run 71 crossed midnight during this test: the next day of the seeded week is a ride day ("Ride now")

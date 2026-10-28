@@ -14,6 +14,9 @@ struct RootView: View {
     @State private var trainSheet: Store.TodayAction? = nil
     @State private var strengthWorkout: UUID? = nil
     @State private var resumeSession = false
+    /// Home B: destinations opened by Home's buttons and the centre button (one router for both, spec P2-20).
+    @State private var homeSheet: HomeAction? = nil
+    @State private var holdSheet = false
     /// A5: the local calendar day; when it changes (midnight, or back from the background) the centre button is
     /// re-evaluated and missing plan weeks are generated.
     @State private var day = Calendar.current.startOfDay(for: Date())
@@ -38,7 +41,7 @@ struct RootView: View {
         VStack(spacing: 0) {
             // all five stay alive (like TabView) so navigation and scroll positions survive switching
             ZStack {
-                HomeView(tab: $tab).tabPage(0, tab)
+                HomeView(tab: $tab, perform: perform).tabPage(0, tab)
                 PlanView().tabPage(1, tab)
                 RideTabView().tabPage(2, tab)
                 ProgressTabView().tabPage(3, tab)
@@ -55,17 +58,62 @@ struct RootView: View {
         .sheet(item: $trainSheet) { a in TrainNowSheet(action: a, openRide: { tab = 2 }, openStrength: { strengthWorkout = $0.id }) }
         .sheet(item: $strengthWorkout) { id in StrengthWorkoutScreen(workoutId: id) }
         .fullScreenCover(isPresented: $resumeSession) { StrengthSessionView() }
+        .sheet(item: $homeSheet) { a in homeSheetView(a) }
+        .sheet(isPresented: $holdSheet) { HealthHoldSheet() }
+    }
+
+    /// Performs a Home action: the card's buttons and the centre button share it, so both reach the same destination.
+    private func perform(_ a: HomeAction) {
+        switch a {
+        case .startStrength(let id): strengthWorkout = id
+        case .openRideScreen, .openLiveRide: tab = 2
+        case .resumeStrength(let id):
+            if let id { strengthWorkout = id } else { resumeSession = true }
+        case .moveToToday(let id): _ = store.reschedule(id, to: Date())
+        case .holdInfo: holdSheet = true
+        default: homeSheet = a
+        }
+    }
+
+    @ViewBuilder private func homeSheetView(_ a: HomeAction) -> some View {
+        switch a {
+        case .rideResults(let id):
+            if let r = store.rides.first(where: { $0.id == id }) { HomeSheetWrap(title: "Ride") { RideDetailView(ride: r) } }
+        case .strengthResults(let id):
+            if let s = store.strength.first(where: { $0.id == id }) { HomeSheetWrap(title: "Strength") { StrengthSessionDetail(session: s) } }
+        case .addDetails(let id):
+            if let w = store.plan.first(where: { $0.id == id }) {
+                if w.kind.isRide { RideDurationSheet(workoutId: id) }
+                else { DetailedStrengthLogSheet(date: w.date, presetFocus: w.strengthFocus ?? .custom, workoutId: w.id) }
+            }
+        case .reschedule(let id): RescheduleSheet(workoutId: id)
+        case .openDetails(let id):
+            if let w = store.plan.first(where: { $0.id == id }) { WorkoutDetail(workout: w) }
+        case .recoveryGuidance: RecoveryGuidanceSheet()
+        case .reviewHealth: HealthCheckSheet()
+        case .createPlan: HybridPlanEditor(asSheet: true)
+        case .quickLog: QuickStrengthLogSheet()
+        default: EmptyView()
+        }
     }
 
     /// The centre button adapts to today: a ride opens the cycling dashboard; a strength day opens the scheduled
     /// workout with its routine; both → a choice; rest / done → an optional-session sheet. It never starts recording.
     private func centreTapped() {
-        let a = store.todayAction()
-        switch a {
-        case .ride: tab = 2
-        case .train(let w): strengthWorkout = w.id
-        case .inProgress: resumeSession = true
-        case .choose, .rest, .doneToday: trainSheet = a
+        // Home B: the centre button reads the same model as Home's card (HomeToday.centre) — a health hold opens the hold
+        // sheet, one obvious next step goes where the card's button goes, otherwise the optional-session sheet.
+        switch store.homeToday(recorderActive: recorder.isActive).centre {
+        case .hold: holdSheet = true
+        case .perform(let a): perform(a)
+        case .sheet:
+            let a = store.todayAction()
+            switch a {
+            case .ride: tab = 2
+            case .train(let w): strengthWorkout = w.id
+            case .inProgress: if let id = store.activeSession?.workoutId { strengthWorkout = id } else { resumeSession = true }
+            case .healthHold: holdSheet = true
+            case .choose, .rest, .doneToday: trainSheet = a
+            }
         }
     }
 
@@ -93,6 +141,8 @@ struct RideTabBar: View {
         case .inProgress: return ("dumbbell.fill", "In progress", "Strength workout in progress, resume it")
         case .doneToday: return ("checkmark", "Done today", "Today's training is done, see the next step")
         case .rest: return ("dumbbell.fill", "Train now", "Rest day, optional session")
+        // N8: the button keeps its look; it opens the hold sheet
+        case .healthHold: return ("dumbbell.fill", "Train now", "Training is paused by your health check, opens what this means")
         }
     }
 

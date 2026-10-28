@@ -366,19 +366,172 @@ final class LayoutAudit: XCTestCase {
             } else { note("\(size): no Fix plan button (week within budget)") }
             scrollUp(app); shot("\(tag)-plan-lower"); checkScreen(app, "\(size) plan lower", tab: 1)
             scrollUp(app); shot("\(tag)-plan-lower2"); checkScreen(app, "\(size) plan lower 2", tab: 1)
-            // Connections (no board in the demo: what the link line says)
-            tab(app, "Home")
-            let conn = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Manage'")).firstMatch
+            // Connections (no board in the demo: what the link line says) — Home B moved the card to Profile › Connections
+            tab(app, "Profile")
+            let conn = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Connections'")).firstMatch
             if conn.waitForExistence(timeout: 3) {
-                conn.tap(); sleep(2); shot("\(tag)-connections"); checkScreen(app, "\(size) connections", tab: 0)
+                conn.tap(); sleep(2); shot("\(tag)-connections"); checkScreen(app, "\(size) connections", tab: 4)
                 // the BikeComputer page (the owner's "stuck on Searching" screen): no board in the demo
                 let bc = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'BikeComputer'")).firstMatch
                 reveal(app, bc)
-                if bc.exists { bc.tap(); sleep(3); shot("\(tag)-connections-bikecomputer"); checkScreen(app, "\(size) BikeComputer page", tab: 0) } else { note("\(size): BikeComputer row not found") }
+                if bc.exists { bc.tap(); sleep(3); shot("\(tag)-connections-bikecomputer"); checkScreen(app, "\(size) BikeComputer page", tab: 4) } else { note("\(size): BikeComputer row not found") }
             } else { note("\(size): Connections link not found") }
             XCTAssertEqual(app.state, .runningForeground)
             app.terminate()
         }
+    }
+
+    // MARK: Home B (coord/specs/HOME_B_SPEC.md v2.1) — every seedable state at the owner's size (393 × 852): screenshot,
+    // no overlapping texts, nothing wider than the screen, the primary button above the fold and every Home button ≥ 44 pt.
+    static let homeStatesAll = ["planned", "ride", "completed", "rest", "multi", "missed", "skipped", "pending", "clearance", "stop", "ill", "first", "cyclingonly", "strengthonly"]
+    func testHomeStates() throws {
+        guard outDir != nil else { throw XCTSkip("LAYOUT_DIR not set — the layout audit runs only in the CI layout stage") }
+        guard ["owner", "small"].contains(device) else { throw XCTSkip("Home states: the owner's iPhone size and the small iPhone only (CI time)") }
+        for size in sizes {
+            let states = device == "owner" && size == sizes.first ? Self.homeStatesAll : ["planned", "multi", "missed", "stop"]
+            for state in states {
+                let app = XCUIApplication()
+                app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.homeStore(state)
+                app.launchArguments += ["-UIPreferredContentSizeCategoryName", category(size)]
+                app.launch()
+                XCTAssertTrue(app.staticTexts["Hi Demo"].waitForExistence(timeout: 30), "\(state): Home did not appear")
+                sleep(2)
+                let screen = "\(size) home \(state)"
+                shot("home-\(size.lowercased())-\(state)")
+                checkScreen(app, screen, tab: 0)
+                let win = app.windows.firstMatch.frame
+                // the one primary action (a multi-session day: the first row's) is fully above the tab bar without scrolling
+                let primary = app.buttons["homePrimary"].firstMatch.exists ? app.buttons["homePrimary"].firstMatch : app.buttons["homeRow-0"].firstMatch
+                XCTAssertTrue(primary.exists, "\(screen): no primary action")
+                if primary.exists {
+                    let f = primary.frame
+                    XCTAssertLessThanOrEqual(f.maxY, win.maxY - 105, "\(screen): primary button below the fold \(f)")
+                    XCTAssertGreaterThanOrEqual(f.height, 43.5, "\(screen): primary button \(f.height) pt")
+                    XCTAssertTrue(primary.isHittable, "\(screen): primary button not hittable")
+                    note("\(screen): primary '\(primary.label)' at \(Int(f.minY))–\(Int(f.maxY)) of \(Int(win.height))")
+                }
+                let ids = ["homePrimary", "homeWhy", "homeMore", "homeRow-0", "homeRowMore-0", "homeRow-1", "homeRowMore-1", "homeMissedMove", "homeHoldInfo", "homeCoachAction", "homeCaution", "homeAdjusted", "homeSensorLine"]
+                checkKey(app, ids: ids.filter { app.buttons[$0].exists }, screen: screen)
+                // the week card agrees with Plan (one wording, N1): its line is shown on Home
+                let week = app.buttons["homeWeek"].firstMatch
+                if week.exists { note("\(screen): week '\(week.label)'") }
+                if size == sizes.first && device == "owner" && ["planned", "multi", "missed", "skipped"].contains(state) {
+                    // More ⋯ opens its menu (Edit, Swap, Move, Skip) — then Move to another day opens the free-day picker
+                    let more = app.buttons[state == "multi" ? "homeRowMore-1" : "homeMore"].firstMatch
+                    if more.exists {
+                        more.tap(); sleep(1); shot("home-\(size.lowercased())-\(state)-more")
+                        let move = app.buttons["Move to another day"].firstMatch
+                        if move.waitForExistence(timeout: 3) { move.tap(); sleep(2); shot("home-\(size.lowercased())-\(state)-move"); checkScreen(app, "\(screen) move", tab: nil); close(app) }
+                        else { app.tap(); note("\(screen): More has no Move (state)") }
+                    }
+                }
+                if size == sizes.first && device == "owner" && ["rest", "stop"].contains(state) {
+                    primary.tap(); sleep(2); shot("home-\(size.lowercased())-\(state)-primary"); checkScreen(app, "\(screen) primary sheet", tab: nil); close(app)
+                }
+                if size == sizes.first && device == "owner" && state == "stop" {
+                    // Train now during a health stop opens the hold sheet, never the Ride screen or a workout
+                    app.buttons["centreButton"].firstMatch.tap(); sleep(2)
+                    XCTAssertTrue(app.buttons["holdReviewHealth"].waitForExistence(timeout: 5), "\(screen): Train now must open the hold sheet")
+                    shot("home-\(size.lowercased())-stop-trainnow"); close(app)
+                }
+                XCTAssertEqual(app.state, .runningForeground)
+                app.terminate()
+            }
+        }
+    }
+
+    /// Home B seeds: a demo rider ("Demo") with 8 weeks of history and this week's plan, today set to the state's session.
+    static func homeStore(_ state: String) -> String {
+        let iso = ISO8601DateFormatter()
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: today) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: today)!
+        func d(_ day: Date, _ h: Double) -> String { iso.string(from: day.addingTimeInterval(h * 3600)) }
+        func w(_ day: Date, _ kind: String, _ mins: Int, seq: Int = 0, skipped: Bool = false, focus: String? = nil) -> [String: Any] {
+            var x: [String: Any] = ["id": UUID().uuidString, "date": d(day, 7 + Double(seq) * 10), "kind": kind, "minutes": mins, "done": false, "skipped": skipped, "note": "", "edited": false, "sequence": seq]
+            if kind == "strength" { x["strengthFocus"] = focus ?? "fullBody" }
+            return x
+        }
+        let first = state == "first"
+        let mode = state == "cyclingonly" ? "cycling" : (state == "strengthonly" || state == "first") ? "strength" : "hybrid"
+        var plan: [[String: Any]] = []
+        // the week around today (two weeks so the app does not generate a random next week)
+        for i in 0..<14 {
+            let day = cal.date(byAdding: .day, value: i, to: monday)!
+            if cal.isDate(day, inSameDayAs: today) { continue }
+            if first { plan.append(w(day, "rest", 0)); continue }
+            let pattern: [String]
+            switch mode {
+            case "cycling": pattern = ["endurance", "rest", "tempo", "rest", "endurance", "long", "rest"]
+            case "strength": pattern = ["strength", "rest", "strength", "rest", "strength", "rest", "rest"]
+            default: pattern = ["endurance", "strength", "tempo", "rest", "strength", "long", "rest"]
+            }
+            let k = pattern[i % 7]
+            let missedDay = state == "missed" && cal.isDate(day, inSameDayAs: cal.date(byAdding: .day, value: -1, to: today)!)
+            plan.append(w(day, missedDay ? "endurance" : k, k == "rest" && !missedDay ? 0 : k == "long" ? 120 : k == "strength" ? 40 : 60))
+        }
+        var todayIds: [String] = []
+        switch state {
+        case "ride", "cyclingonly": let x = w(today, "endurance", 60); todayIds.append(x["id"] as! String); plan.append(x)
+        case "rest": plan.append(w(today, "rest", 0))
+        case "first": plan.append(w(today, "rest", 0))
+        case "multi":
+            let a = w(today, "recovery", 30, seq: 0), b = w(today, "strength", 35, seq: 1, focus: "upper")
+            todayIds += [a["id"] as! String, b["id"] as! String]; plan += [a, b]
+        case "skipped": let x = w(today, "strength", 40, skipped: true); todayIds.append(x["id"] as! String); plan.append(x)
+        default: let x = w(today, "strength", 40); todayIds.append(x["id"] as! String); plan.append(x)
+        }
+        // history: 8 weeks of rides (cycling / hybrid) and lifts (strength / hybrid) — none for a first-time rider
+        var rides: [[String: Any]] = [], strength: [[String: Any]] = []
+        func set(_ reps: Int, _ kg: Double) -> [String: Any] { ["id": UUID().uuidString, "reps": reps, "weightKg": kg, "bodyweight": false, "unilateral": false, "done": true] }
+        func entry(_ id: String, _ name: String, _ pat: String, _ reps: Int, _ kg: Double) -> [String: Any] {
+            ["id": UUID().uuidString, "exerciseId": id, "name": name, "pattern": pat, "sets": [set(reps, kg), set(reps, kg), set(reps, kg)], "notes": ""]
+        }
+        if !first {
+            for k in 1...8 {
+                let m = cal.date(byAdding: .day, value: -7 * k, to: monday)!
+                if mode != "strength" {
+                    for (j, len) in [60, 75, 110].enumerated() {
+                        rides.append(["id": UUID().uuidString, "start": d(cal.date(byAdding: .day, value: j * 2, to: m)!, 6.5), "durationS": len * 60, "distanceM": len * 470, "avgHR": 136,
+                                      "zoneSeconds": [len * 6, len * 42, len * 12, 0, 0, 0, 0], "recorder": "phone", "sources": ["Phone GPS"], "demo": false, "samples": [] as [Any]])
+                    }
+                }
+                if mode != "cycling" {
+                    for day in [1, 4] {
+                        strength.append(["id": UUID().uuidString, "date": d(cal.date(byAdding: .day, value: day, to: m)!, 18), "minutes": 40, "focus": "fullBody", "customName": "", "rpe": 7, "notes": "", "source": "manual",
+                                         "exercises": [entry("ex-003", "Goblet squat", "squat", 10, 20), entry("ex-088", "Dumbbell row", "pull", 10, 16), entry("ex-059", "Dumbbell bench press", "push", 8, 18)]])
+                    }
+                }
+            }
+        }
+        if state == "completed", let id = todayIds.first {
+            strength.append(["id": UUID().uuidString, "date": d(today, 6), "minutes": 42, "focus": "fullBody", "customName": "", "rpe": 7, "notes": "", "source": "manual", "workoutId": id,
+                             "exercises": [entry("ex-003", "Goblet squat", "squat", 10, 20), entry("ex-088", "Dumbbell row", "pull", 10, 16)]])
+        }
+        if state == "multi" {
+            rides.append(["id": UUID().uuidString, "start": d(today, 6), "durationS": 1800, "distanceM": 9_000, "avgHR": 120, "zoneSeconds": [600, 1200, 0, 0, 0, 0, 0],
+                          "recorder": "phone", "sources": ["Phone GPS"], "demo": false, "samples": [] as [Any]])
+        }
+        var health: [String: Any] = ["answeredAt": iso.string(from: Date().addingTimeInterval(-86_400)), "questionSet": 3]
+        switch state {
+        case "stop": health["chestPain"] = true
+        case "ill": health["currentIllness"] = true
+        case "clearance": health["heartOrBloodPressure"] = true
+        default: break
+        }
+        var profile: [String: Any] = ["name": "Demo", "goal": "fitness", "hoursPerWeek": 5, "level": "intermediate", "weightKg": 75, "age": 40, "ftpW": 225, "ftpHow": "entered", "birthYear": 1986,
+                                      "sports": mode == "strength" ? ["strength"] : mode == "cycling" ? ["roadCycling"] : ["roadCycling", "strength"], "version": 3, "updatedAt": "2026-10-25T20:00:00Z",
+                                      "wheelMm": 2096, "cadenceLow": 85, "cadenceHigh": 95, "hrZoneMethod": "maxHR", "trainingMode": mode, "priority": "balanced", "cyclingDaysPerWeek": 3,
+                                      "liftDaysPerWeek": 3, "liftingHoursPerWeek": 3, "preferredDays": [0, 2, 4, 5], "hybridGoal": "balanced", "strengthSplit": "fullBody"]
+        if state != "pending" { profile["healthScreen"] = health }
+        let settings: [String: Any] = ["units": "metric", "phoneOnlyMode": true, "hrPref": "watch", "keepScreenOn": true, "autoConnectBoard": false, "enabledConnections": ["watch"], "appearance": "dark",
+                                       "backgroundNotice": true, "coachTalk": "normal", "coachEnabled": true, "appleHealthImportWorkouts": false]
+        let file: [String: Any] = ["schema": 2, "profile": profile, "settings": settings, "plan": plan.sorted { ($0["date"] as! String) < ($1["date"] as! String) }, "rides": rides, "tiles": ["power", "cadence", "hr", "speed", "time", "dist"],
+                                   "onboarded": true, "guest": true, "createdAt": "2026-06-01T10:00:00Z", "boardSync": [] as [Any], "onboardingStage": 0, "templates": [] as [Any], "customExercises": [] as [Any],
+                                   "appliedProposals": [] as [Any], "equipment": ["owned": ["dumbbell", "bench", "kettlebell"], "excluded": [] as [Any]], "ignoredInsights": [] as [Any], "strength": strength]
+        let data = try! JSONSerialization.data(withJSONObject: file)
+        return String(data: data, encoding: .utf8)!
     }
 
     // MARK: demo data — labelled "Demo", no real person. Reproduces the owner's report: a Full body session planned for
