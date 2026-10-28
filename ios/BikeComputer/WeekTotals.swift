@@ -20,9 +20,11 @@ struct WeekTotals: Equatable {
     static let doneTitle = "Done this week"
     static let plannedTitle = "Planned this week"
 
-    /// "1 h 03 min · 1 ride of 3 planned" (extra, unplanned sessions count too: "3 sessions of 2 planned")
+    /// "1 h 03 min · 1 ride of 3 planned" (extra, unplanned sessions count too: "3 sessions of 2 planned"); sessions marked
+    /// done without a duration are counted and named: "45 min · 2 sessions of 3 planned (1 without duration)"
     static func done(_ w: TrainingLedger.SportWeek, singular: String, plural: String) -> String {
         "\(Fmt.duration(minutes: w.minutes)) · \(w.completed) \(w.completed == 1 ? singular : plural) of \(w.planned) planned"
+            + (w.unknownDuration > 0 ? " (\(w.unknownDuration) without duration)" : "")
     }
     /// "4 h · 3 rides"
     static func planned(_ w: TrainingLedger.SportWeek, singular: String, plural: String) -> String {
@@ -34,7 +36,6 @@ struct WeekTotals: Equatable {
         if w.logged > 0 { parts.append("\(w.logged) logged") }
         if w.manual > 0 { parts.append("\(w.manual) marked or quick") }
         if w.imported > 0 { parts.append("\(w.imported) imported") }
-        if w.unknownDuration > 0 { parts.append("\(w.unknownDuration) without duration") }
         return "\(doneTitle): \(done(w, singular: singular, plural: plural))" + (parts.isEmpty ? "" : " (" + parts.joined(separator: ", ") + ")")
             + ". \(plannedTitle): \(planned(w, singular: singular, plural: plural))."
     }

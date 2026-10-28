@@ -126,6 +126,18 @@ final class ProgressMetricsTests: XCTestCase {
         XCTAssertEqual(SessionState.of(Workout(date: at(0), kind: .strength, minutes: 40), status: .completedLogged).pill, "logged")
     }
 
+    func testNoDurationSessionsAreNamedTheSameOnPlanAndProgress() {
+        var w = TrainingLedger.SportWeek(monday: monday)
+        w.planned = 5; w.plannedMinutes = 210; w.completed = 2; w.manual = 2; w.minutes = 0; w.unknownDuration = 2
+        XCTAssertEqual(WeekTotals.done(w, singular: "session", plural: "sessions"), "0 min · 2 sessions of 5 planned (2 without duration)")
+        let b = WeekBucket(start: monday, minutes: 0, sessions: 2, unknownDuration: 2, plannedSessions: 5, plannedMinutes: 210)
+        let g = ProgressGlance.make(.init(riding: [], lifting: [b], showRiding: false, showLifting: true, setsThisWeek: 0, ridingTargetMinutes: 0,
+                                          ftpW: 200, ftpBadge: "entered", best20Recent: nil, best20Before: nil))
+        XCTAssertEqual(g.cards.first?.value, "2 of 5")
+        XCTAssertEqual(g.cards.first?.detail, "sessions done of planned · no time recorded · 2 without duration")
+        XCTAssertEqual(TrendChartMath.detail(b, metric: .strength).note, "2 marked done without a duration: counted as sessions, adds no time.")
+    }
+
     func testBudgetFixActuallyFixes() {
         // the owner's lifting week: 5 sessions, 3 h 30 planned against a 2 h budget; two are already done
         let done1 = Workout(date: at(-1), kind: .strength, minutes: 45), done2 = Workout(date: at(-1), kind: .strength, minutes: 45)

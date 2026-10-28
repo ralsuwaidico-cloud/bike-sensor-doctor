@@ -330,7 +330,7 @@ struct ProgressGlance: Equatable {
             let avg = last4.isEmpty ? nil : Int((Double(last4.reduce(0) { $0 + $1.minutes }) / Double(last4.count)).rounded())
             let plannedPart = r.plannedSessions > 0 ? "of \(Fmt.duration(minutes: r.plannedMinutes)) planned" : "nothing planned"
             cards.append(Card(id: "glanceRiding", title: "Riding this week", value: Fmt.duration(minutes: r.minutes),
-                              detail: "\(plannedPart) · \(r.sessions) \(r.sessions == 1 ? "ride" : "rides")" + (avg.map { " · \(last4.count)-wk avg \(Fmt.duration(minutes: $0))" } ?? ""),
+                              detail: "\(plannedPart) · \(r.sessions) \(r.sessions == 1 ? "ride" : "rides")" + (r.unknownDuration > 0 ? " (\(r.unknownDuration) without duration)" : "") + (avg.map { " · \(last4.count)-wk avg \(Fmt.duration(minutes: $0))" } ?? ""),
                               opens: .riding))
         }
         if i.showLifting, let l {
@@ -338,6 +338,7 @@ struct ProgressGlance: Equatable {
             let active = last8.filter { $0.sessions > 0 }.count
             var parts: [String] = []
             parts.append(l.minutes > 0 ? "\(Fmt.duration(minutes: l.minutes)) recorded" : "no time recorded")
+            if l.unknownDuration > 0 { parts.append("\(l.unknownDuration) without duration") }
             if i.setsThisWeek > 0 { parts.append("\(i.setsThisWeek) sets") }
             if !last8.isEmpty { parts.append("lifted in \(active) of the last \(last8.count) \(last8.count == 1 ? "week" : "weeks")") }
             cards.append(Card(id: "glanceStrength", title: "Strength this week", value: l.plannedSessions > 0 ? "\(l.sessions) of \(l.plannedSessions)" : "\(l.sessions)",
