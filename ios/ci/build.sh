@@ -153,7 +153,7 @@ for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MA
     CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
   L=$?
   # one retry ONLY when the simulator failed to launch the app (infrastructure, run 71) — never for a failed check
-  if [ $L -ne 0 ] && grep -q "Timed out while launching application\|Simulator device failed to launch" "$OUT/layout-$LNAME.log"; then
+  if [ $L -ne 0 ] && grep -q "Timed out while launching application\|Simulator device failed to launch\|Timed out while loading Accessibility\|failed to initialize for UI testing" "$OUT/layout-$LNAME.log"; then
     note "  layout $LNAME: simulator could not launch the app — rebooting it and retrying once"
     mv "$OUT/layout-$LNAME.log" "$OUT/layout-$LNAME-launchfail.log"
     xcrun simctl shutdown "$LID" >/dev/null 2>&1; xcrun simctl boot "$LID" >/dev/null 2>&1; sleep 20
