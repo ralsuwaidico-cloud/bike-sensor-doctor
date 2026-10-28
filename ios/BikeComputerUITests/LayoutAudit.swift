@@ -247,7 +247,12 @@ final class LayoutAudit: XCTestCase {
         var bad: [String] = []
         for (i, a) in texts.enumerated() { for b in texts.dropFirst(i + 1) {
             let r = a.frame.intersection(b.frame)
-            if !r.isNull && r.width >= 1 && r.height >= 1 && a.frame != b.frame { bad.append("\"\(a.label.prefix(24))\" × \"\(b.label.prefix(24))\" (\(Int(r.width))×\(Int(r.height)) pt)") }
+            // a LabeledContent row reports a leaf "Profile sync" AND a combined leaf "Profile sync, no BikeComputer connected"
+            // whose frame contains it (run 102; checked on the screenshot: the two lines are stacked, not overlapping).
+            // Skipped only when one frame contains the other AND the larger label starts with the smaller one + ", ".
+            let (big, small) = a.frame.width * a.frame.height >= b.frame.width * b.frame.height ? (a, b) : (b, a)
+            let summaryOfItself = big.frame.insetBy(dx: -1, dy: -1).contains(small.frame) && !small.label.isEmpty && big.label.hasPrefix(small.label + ", ")
+            if !summaryOfItself && !r.isNull && r.width >= 1 && r.height >= 1 && a.frame != b.frame { bad.append("\"\(a.label.prefix(24))\" × \"\(b.label.prefix(24))\" (\(Int(r.width))×\(Int(r.height)) pt)") }
         } }
         XCTAssertTrue(bad.isEmpty, "\(screen): overlapping texts: \(bad.joined(separator: "; "))")
         note("\(screen): \(texts.count) texts, " + (bad.isEmpty ? "none overlapping" : "OVERLAPPING: " + bad.joined(separator: "; ")))
