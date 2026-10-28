@@ -1,0 +1,19 @@
+BikeComputer iOS CI — build 109 — 2026-10-28 16:11 UTC
+Scope: ui (layout devices: small,owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: skipped (scope ui)
+RESULT launch smoke (Release): skipped (scope ui)
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max=iPhone 17 Pro Max owner=iPhone-16 (runtime iOS-26-5)
+  layout small (L,AX3): FAILED (exit 65) · 35m52s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertLessThanOrEqual failed: ("584.0") is greater than ("562.0") - AX3 home stop: primary button below the fold (32.0, 488.0, 311.0, 96.0) 
+  layout standard: skipped (not in LAYOUT_DEVICES)
+  layout promax: skipped (not in LAYOUT_DEVICES)
+  layout owner (L,XXXL): ok · 31m22s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 46116   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 46403   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 46944   screenshot ax3 ok large
+RESULT layout audit: FAILED (129 screenshots)
+RESULT archive: skipped (scope ui)
+RESULT upload: skipped (scope ui never uploads)
+Total: 78m16s
+commit ec9a1f98d819fa671e7858d7c472bf73c6f993b5  branch ios/home-polish  job failure
