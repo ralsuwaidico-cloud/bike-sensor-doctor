@@ -343,7 +343,7 @@ struct HomeMissedRow: View {
             HStack(alignment: .center, spacing: DS.s) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Missed \(HomeText.weekday(missed.workout.date)) · \(missed.title)").font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-                    Text(missed.subtitle).font(.footnote).foregroundStyle(.secondary)
+                    Text(missed.subtitle).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: DS.s)
                 HomePrimaryButton(action: todayFree ? .moveToToday(missed.id) : .reschedule(missed.id), identifier: "homeMissedMove", compact: true, perform: perform)
@@ -428,12 +428,12 @@ struct HomeHoldCard: View {
     var body: some View {
         HomeCardFrame(eyebrow: "Today's training", chip: "Paused", chipColor: BC.warn) {
             Text(hold.title).font(.title3.weight(.bold)).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
+            Text(hold.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button { perform(.reviewHealth) } label: {
                 Text(hold.button).font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap)
             }
             .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black)
             .accessibilityHint("Opens the health check").accessibilityIdentifier("homePrimary")
-            Text(hold.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button { perform(.holdInfo) } label: { Text("What this means").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
                 .buttonStyle(.plain).accessibilityIdentifier("homeHoldInfo")
         }
@@ -490,7 +490,7 @@ struct HomeCoachCard: View {
     var body: some View {
         HomeCardFrame(eyebrow: "Coach") {
             Text(item.title).font(.headline).fixedSize(horizontal: false, vertical: true)
-            if let e = item.evidence { Text(e).font(.footnote).foregroundStyle(.secondary).lineLimit(3).fixedSize(horizontal: false, vertical: true) }
+            if let e = item.evidence { Text(e).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             if let l = item.actionLabel {
                 Button(action: action) {
                     HStack(spacing: 4) { Text(l); Image(systemName: "chevron.right").font(.caption.weight(.bold)) }
