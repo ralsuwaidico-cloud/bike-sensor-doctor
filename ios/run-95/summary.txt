@@ -1,0 +1,7 @@
+BikeComputer iOS CI — build 95 — 2026-10-28 06:38 UTC
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: E839A11B-51B4-4AD3-ACF4-A53B95B7C957
+RESULT tests: ok (Executed 424 tests, with 0 failures)
+commit 3f4f30a49a82af4232f2bf2c3b5bb87598c264dd  branch ios/rc2-ux  job cancelled
