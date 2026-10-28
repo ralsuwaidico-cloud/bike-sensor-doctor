@@ -99,27 +99,10 @@ struct WeeklyTrendChart: View {
         let ticks = metric.ticks(max: maxV)
         let marks = weekMarks(v)
         return Chart {
-            ForEach(marks) { m in
-                BarMark(xStart: .value("Week", m.x0), xEnd: .value("Week end", m.x1), yStart: .value("Zero", 0.0), yEnd: .value("Planned", m.planned))
-                    .foregroundStyle(m.dim ? color.opacity(0.10) : color.opacity(0.22))
-                    .cornerRadius(3)
-            }
-            ForEach(marks) { m in
-                BarMark(xStart: .value("Week", m.x0), xEnd: .value("Week end", m.x1), yStart: .value("Zero", 0.0), yEnd: .value("Done", m.done))
-                    .foregroundStyle(m.dim ? color.opacity(0.4) : color)
-                    .cornerRadius(3)
-                    .accessibilityLabel(Text(m.label))
-                    .accessibilityValue(Text(m.value))
-            }
-            ForEach(marks.filter { $0.noDuration }) { m in
-                PointMark(x: .value("Week", Double(m.id)), y: .value("Zero", 0.0))
-                    .symbol(.circle)
-                    .symbolSize(36)
-                    .foregroundStyle(color)
-            }
-            if let s = selected {
-                RuleMark(x: .value("Selected", Double(s))).foregroundStyle(Color.secondary.opacity(0.6)).lineStyle(StrokeStyle(lineWidth: 1))
-            }
+            ForEach(marks) { m in plannedBar(m) }
+            ForEach(marks) { m in doneBar(m) }
+            ForEach(marks.filter { $0.noDuration }) { m in noDurationDot(m) }
+            if let s = selected { selectionRule(s) }
         }
         .chartXScale(domain: -0.5...(Double(v.count) - 0.5))
         .chartYScale(domain: 0...(ticks.last ?? 1))
@@ -154,6 +137,30 @@ struct WeeklyTrendChart: View {
         let dim: Bool
         let label: String, value: String
         let noDuration: Bool
+    }
+    // one small function per mark type, every value explicitly typed (run 96/97: the type checker gave up on inline marks)
+    private func plannedBar(_ m: WeekMark) -> some ChartContent {
+        let x0: PlottableValue<Double> = .value("Week", m.x0), x1: PlottableValue<Double> = .value("Week end", m.x1)
+        let y0: PlottableValue<Double> = .value("Zero", 0), y1: PlottableValue<Double> = .value("Planned", m.planned)
+        let fill: Color = color.opacity(m.dim ? 0.10 : 0.22)
+        return BarMark(xStart: x0, xEnd: x1, yStart: y0, yEnd: y1).foregroundStyle(fill).cornerRadius(3)
+    }
+    private func doneBar(_ m: WeekMark) -> some ChartContent {
+        let x0: PlottableValue<Double> = .value("Week", m.x0), x1: PlottableValue<Double> = .value("Week end", m.x1)
+        let y0: PlottableValue<Double> = .value("Zero", 0), y1: PlottableValue<Double> = .value("Done", m.done)
+        let fill: Color = m.dim ? color.opacity(0.4) : color
+        let label: Text = Text(m.label), value: Text = Text(m.value)
+        return BarMark(xStart: x0, xEnd: x1, yStart: y0, yEnd: y1).foregroundStyle(fill).cornerRadius(3).accessibilityLabel(label).accessibilityValue(value)
+    }
+    private func selectionRule(_ i: Int) -> some ChartContent {
+        let x: PlottableValue<Double> = .value("Selected", Double(i))
+        let line: Color = Color.secondary.opacity(0.6)
+        return RuleMark(x: x).foregroundStyle(line).lineStyle(StrokeStyle(lineWidth: 1))
+    }
+    private func noDurationDot(_ m: WeekMark) -> some ChartContent {
+        let x: PlottableValue<Double> = .value("Week", Double(m.id)), y: PlottableValue<Double> = .value("Zero", 0)
+        let fill: Color = color
+        return PointMark(x: x, y: y).symbol(.circle).symbolSize(36).foregroundStyle(fill)
     }
     private func weekMarks(_ v: [WeekBucket]) -> [WeekMark] {
         var out: [WeekMark] = []
