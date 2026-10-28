@@ -138,19 +138,20 @@ struct WeeklyTrendChart: View {
         let label: String, value: String
         let noDuration: Bool
     }
-    // one small function per mark type, every value explicitly typed (run 96/97: the type checker gave up on inline marks)
+    // one small function per mark type, every value explicitly typed (run 96/97: the type checker gave up on inline marks);
+    // bars are RectangleMarks (explicit x and y ranges: never stacked, and BarMark has no xStart/xEnd/yStart/yEnd form)
     private func plannedBar(_ m: WeekMark) -> some ChartContent {
         let x0: PlottableValue<Double> = .value("Week", m.x0), x1: PlottableValue<Double> = .value("Week end", m.x1)
         let y0: PlottableValue<Double> = .value("Zero", 0), y1: PlottableValue<Double> = .value("Planned", m.planned)
         let fill: Color = color.opacity(m.dim ? 0.10 : 0.22)
-        return BarMark(xStart: x0, xEnd: x1, yStart: y0, yEnd: y1).foregroundStyle(fill).cornerRadius(3)
+        return RectangleMark(xStart: x0, xEnd: x1, yStart: y0, yEnd: y1).foregroundStyle(fill).cornerRadius(3)
     }
     private func doneBar(_ m: WeekMark) -> some ChartContent {
         let x0: PlottableValue<Double> = .value("Week", m.x0), x1: PlottableValue<Double> = .value("Week end", m.x1)
         let y0: PlottableValue<Double> = .value("Zero", 0), y1: PlottableValue<Double> = .value("Done", m.done)
         let fill: Color = m.dim ? color.opacity(0.4) : color
         let label: Text = Text(m.label), value: Text = Text(m.value)
-        return BarMark(xStart: x0, xEnd: x1, yStart: y0, yEnd: y1).foregroundStyle(fill).cornerRadius(3).accessibilityLabel(label).accessibilityValue(value)
+        return RectangleMark(xStart: x0, xEnd: x1, yStart: y0, yEnd: y1).foregroundStyle(fill).cornerRadius(3).accessibilityLabel(label).accessibilityValue(value)
     }
     private func selectionRule(_ i: Int) -> some ChartContent {
         let x: PlottableValue<Double> = .value("Selected", Double(i))
