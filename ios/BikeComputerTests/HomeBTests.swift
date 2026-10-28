@@ -133,6 +133,22 @@ final class HomeBTests: XCTestCase {
         XCTAssertEqual(home(g).layout, .freeSession); XCTAssertEqual(home(g).centre, .perform(.resumeStrength(nil)))
     }
 
+    // MARK: Skip / Unskip from More are hand edits with Undo (lead review)
+    func testSkipFromMoreHasUndoAndIsARiderEdit() {
+        let s = store()
+        let w = Workout(date: at(0, 18), kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        s.plan = [w]
+        XCTAssertTrue(s.setSkipped(w.id, true))
+        XCTAssertTrue(s.plan[0].skipped); XCTAssertTrue(s.plan[0].edited, "a skip is the rider's own change")
+        XCTAssertEqual(s.undoToast?.text.hasSuffix("skipped"), true)
+        XCTAssertFalse(s.setSkipped(w.id, true), "skipping twice changes nothing")
+        if let t = s.undoToast { XCTAssertTrue(s.undoDelete(t.id)) }
+        XCTAssertFalse(s.plan[0].skipped, "Undo restores the session exactly")
+        XCTAssertFalse(s.plan[0].edited)
+        XCTAssertTrue(s.setSkipped(w.id, true)); XCTAssertTrue(s.setSkipped(w.id, false))
+        XCTAssertFalse(s.plan[0].skipped)
+    }
+
     // MARK: one recorded ride completes ONE planned ride
     func testOneRideCompletesOnePlannedRide() {
         let s = store(mode: .cycling)

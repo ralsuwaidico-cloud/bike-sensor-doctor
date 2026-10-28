@@ -591,6 +591,22 @@ extension Store {
         return true
     }
 
+    /// Skip or unskip a session from Home's More menu: a hand edit with Undo (spec "Skip has Undo"). Refused for a completed
+    /// session. Uses the same "plan as it was" trash record as Move, so Undo restores the session exactly.
+    @discardableResult
+    func setSkipped(_ id: UUID, _ skipped: Bool, now: Date = Date()) -> Bool {
+        guard let i = plan.firstIndex(where: { $0.id == id }), plan[i].skipped != skipped, !ledger.status(plan[i]).isCompleted else { return false }
+        let before = plan[i]
+        var x = before
+        x.skipped = skipped
+        x.markRiderEdited(before: before)
+        plan[i] = x
+        let item = TrashItem(deletedAt: now, label: "\(skipped ? "Skipped" : "Unskipped") \(before.displayTitle)", planBefore: [before])
+        trash.append(item)
+        undoToast = UndoToast(id: item.id, text: "\(before.displayTitle) \(skipped ? "skipped" : "back in the plan")")
+        return true
+    }
+
     /// A typed duration for a ride marked done without one ("Add duration", QA #23). The rider's own figure; nothing else changes.
     @discardableResult
     func setManualMinutes(_ id: UUID, minutes: Int) -> Bool {

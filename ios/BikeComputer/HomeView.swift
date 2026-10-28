@@ -309,14 +309,14 @@ struct HomeMoreMenu: View {
     var body: some View {
         Menu {
             if session.status == .skipped {
-                Button { var w = session.workout; w.skipped = false; store.update(w) } label: { Label("Unskip", systemImage: "arrow.uturn.backward") }
+                Button { store.setSkipped(session.id, false) } label: { Label("Unskip", systemImage: "arrow.uturn.backward") }
             }
             Button(action: edit) { Label("Details and edit", systemImage: "pencil") }
             if session.canChange {
                 if session.status != .skipped { Button(action: swap) { Label("Swap", systemImage: "arrow.triangle.2.circlepath") } }
                 Button { perform(.reschedule(session.id)) } label: { Label("Move to another day", systemImage: "calendar") }
                 if session.status != .skipped {
-                    Button(role: .destructive) { var w = session.workout; w.skipped = true; store.update(w) } label: { Label("Skip", systemImage: "forward.end") }
+                    Button(role: .destructive) { store.setSkipped(session.id, true) } label: { Label("Skip", systemImage: "forward.end") }
                 }
             }
         } label: {
