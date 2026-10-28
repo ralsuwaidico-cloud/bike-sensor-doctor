@@ -134,43 +134,46 @@ struct PlanView: View {
         }()
         return Card {
             HStack { Eyebrow(t: "Weekly summary"); Spacer(); if !fit.conflicts.isEmpty || overEdits || !fit.trimmed.isEmpty { Button { showFix = true } label: { Label("Fix plan", systemImage: "wrench.and.screwdriver").font(.caption.bold()).frame(minHeight: DS.minTap).contentShape(Rectangle()) }.accessibilityIdentifier("fixPlan") } }
-            HStack(alignment: .top, spacing: 12) {
-                totalsColumn("Riding", rw, singular: "ride", plural: "rides", warn: planned > limit, id: "Riding")
-                if lifts { totalsColumn("Lifting", lw, singular: "lift", plural: "lifts", warn: liftLimit > 0 && lifting > liftLimit, id: "Lifting") }
-            }
-            budgetBar("Cycling budget", planned: planned, done: done, limit: limit, color: BC.accent)
-            if lifts { budgetBar("Lifting budget", planned: lifting, done: liftDone, limit: liftLimit, color: BC.strength) }
+            // owner UX review 28 Oct: one compact row per sport — sessions done of planned, then done / planned time against
+            // the budget, with the budget bar under it (was two columns + two separate budget blocks: too dense on 393 pt)
+            sportRow("Riding", rw, singular: "ride", plural: "rides", done: done, planned: planned, limit: limit, color: BC.accent, id: "Riding")
+            if lifts { sportRow("Lifting", lw, singular: "lift", plural: "lifts", done: liftDone, planned: lifting, limit: liftLimit, color: BC.strength, id: "Lifting") }
             Text(action).font(.footnote).foregroundStyle(fit.conflicts.isEmpty && !overEdits ? .primary : BC.warn).fixedSize(horizontal: false, vertical: true)
         }
         .sheet(isPresented: $showFix) { FixPlanSheet(weekOf: weekDate) }
     }
-    private func budgetBar(_ title: String, planned: Int, done: Int, limit: Int, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack { Text(title).font(.caption2.weight(.heavy)).foregroundStyle(.secondary); Spacer(); Text(limit == 0 ? "no budget set" : planned > limit ? "\(Fmt.duration(minutes: planned - limit)) over \(Fmt.duration(minutes: limit))" : "\(Fmt.duration(minutes: limit - planned)) spare of \(Fmt.duration(minutes: limit))").font(.caption2.weight(.heavy)).foregroundStyle(planned > limit && limit > 0 ? BC.warn : .secondary) }
+    /// One sport in one block: "1 of 3 rides done · +1 extra" on the title line; "1 h 33 min done · 4 h planned · 1 h spare of
+    /// 5 h" under it; then the budget bar (planned fill, done fill). Same figures and wording source as Home and Progress.
+    private func sportRow(_ title: String, _ w: TrainingLedger.SportWeek, singular: String, plural: String, done: Int, planned: Int, limit: Int, color: Color, id: String) -> some View {
+        let over = limit > 0 && planned > limit
+        let budget = limit == 0 ? "no budget set" : over ? "\(Fmt.duration(minutes: planned - limit)) over \(Fmt.duration(minutes: limit))" : "\(Fmt.duration(minutes: limit - planned)) spare of \(Fmt.duration(minutes: limit))"
+        return VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(title).font(.subheadline.weight(.bold))
+                    Spacer(minLength: DS.s)
+                    Text(WeekTotals.sessions(w, singular: singular, plural: plural)).font(.subheadline).monospacedDigit().accessibilityIdentifier("planDone\(id)")
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.subheadline.weight(.bold))
+                    Text(WeekTotals.sessions(w, singular: singular, plural: plural)).font(.subheadline).monospacedDigit().fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("planDone\(id)")
+                }
+            }
+            (Text("\(Fmt.duration(minutes: w.minutes)) done").font(.footnote).foregroundStyle(.secondary).monospacedDigit()
+                + Text(" · \(Fmt.duration(minutes: w.plannedMinutes)) planned").font(.footnote).foregroundStyle(over ? BC.warn : .secondary).monospacedDigit()
+                + Text(" · \(budget)").font(.footnote).foregroundStyle(over ? BC.warn : .secondary))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("planPlanned\(id)")
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.secondary.opacity(0.18))
-                    Capsule().fill(planned > limit && limit > 0 ? BC.warn : color).frame(width: g.size.width * min(1, limit > 0 ? Double(planned) / Double(limit) : (planned > 0 ? 1 : 0)))
+                    Capsule().fill(over ? BC.warn : color).frame(width: g.size.width * min(1, limit > 0 ? Double(planned) / Double(limit) : (planned > 0 ? 1 : 0)))
                     Capsule().fill(BC.live).frame(width: g.size.width * min(1, limit > 0 ? Double(done) / Double(limit) : 0))
                 }
-            }.frame(height: 8)
+            }.frame(height: 6).accessibilityHidden(true)
         }
-    }
-    /// One sport: "Done this week" and "Planned this week", each with its minutes and session count.
-    private func totalsColumn(_ title: String, _ w: TrainingLedger.SportWeek, singular: String, plural: String, warn: Bool, id: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Eyebrow(t: title)
-            Text(WeekTotals.doneTitle).font(.caption2).foregroundStyle(.secondary)
-            Text(WeekTotals.done(w, singular: singular, plural: plural)).font(.subheadline.weight(.semibold)).monospacedDigit().fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("planDone\(id)")
-            Text(WeekTotals.plannedTitle).font(.caption2).foregroundStyle(.secondary)
-            Text(WeekTotals.planned(w, singular: singular, plural: plural)).font(.subheadline).monospacedDigit().foregroundStyle(warn ? BC.warn : .primary).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("planPlanned\(id)")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
     }
-
     // MARK: day cards (workouts and recovery days as separate cards)
     private var dayCards: some View {
         VStack(spacing: 8) {
