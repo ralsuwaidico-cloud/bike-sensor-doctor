@@ -346,15 +346,18 @@ struct HomeSupportRow: View {
     let whyLabel: String
     var why: () -> Void
     let more: HomeMoreMenu
+    @Environment(\.dynamicTypeSize) private var dts
     var body: some View {
-        HStack(spacing: DS.s) {
-            Button(action: why) {
-                Label(whyLabel, systemImage: "questionmark.circle").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent)
-                    .frame(minHeight: DS.minTap).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain).accessibilityIdentifier("homeWhy")
-            Spacer(minLength: DS.s)
-            more
+        let whyButton = Button(action: why) {
+            Label(whyLabel, systemImage: "questionmark.circle").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent)
+                .frame(minHeight: DS.minTap).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).accessibilityIdentifier("homeWhy")
+        // largest text: one link per line (side by side squeezed "Why this workout?" into a 4-line column; independent QA, run 111)
+        if dts.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 0) { whyButton; more }
+        } else {
+            HStack(spacing: DS.s) { whyButton; Spacer(minLength: DS.s); more }
         }
     }
 }
@@ -664,6 +667,7 @@ struct HomeWeekCard: View {
     private var a11y: String {
         var parts: [String] = ["This week: " + week.line + "."]
         if let s = week.split { parts.append(s + ".") }
+        if let t = week.targetLine { parts.append(t + ".") }
         if let n = week.upNext { parts.append("Up next " + n + ".") } else { parts.append("Nothing else scheduled this week.") }
         return parts.joined(separator: " ")
     }
@@ -689,6 +693,13 @@ struct HomeWeekCard: View {
                         if let l = week.lifting, week.riding != nil { sport("dumbbell.fill", "Lifts", l) }
                         if !extras.isEmpty { Text(extras.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary) }
                     }
+                }
+                if let t = week.targetLine {
+                    HStack(spacing: DS.s) {
+                        Image(systemName: "target").font(.footnote).foregroundStyle(.secondary).accessibilityHidden(true)
+                        Text(t).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityIdentifier("homeWeekTarget")
                 }
                 HStack(spacing: DS.s) {
                     Image(systemName: "calendar").font(.footnote).foregroundStyle(.secondary).accessibilityHidden(true)

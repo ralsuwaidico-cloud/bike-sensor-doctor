@@ -267,4 +267,13 @@ final class HomeBTests: XCTestCase {
         s.rides = [RideRecord(start: at(0, 8), durationS: 600, distanceM: 1, recorder: .phone, sources: [])]
         XCTAssertFalse(s.reschedule(m.id, to: sunday, now: at(0, 10)), "a completed session is not moved")
     }
+
+    func testWeekTargetLineShowsRiderTargets() {
+        var w = HomeWeek(total: .init(monday: Date()), riding: nil, lifting: nil, upNext: nil)
+        XCTAssertNil(w.targetLine)
+        w.ridesTarget = 3; w.liftsTarget = 1
+        XCTAssertEqual(w.targetLine, "Weekly target: 3 rides · 1 lift")
+        w.liftsTarget = 0
+        XCTAssertEqual(w.targetLine, "Weekly target: 3 rides")
+    }
 }

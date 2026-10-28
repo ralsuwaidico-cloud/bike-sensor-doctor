@@ -14,6 +14,7 @@ struct HomeSheetWrap<Content: View>: View {
                 .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() }.accessibilityIdentifier("homeSheetClose") } }
         }
+        .tint(BC.accent)   // the app accent, not system blue (independent QA, run 111)
     }
 }
 

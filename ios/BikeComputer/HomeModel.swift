@@ -231,6 +231,16 @@ struct HomeWeek: Equatable {
         guard let r = riding, let l = lifting else { return nil }
         return "Rides \(r.plannedDone) of \(r.planned) · Lifts \(l.plannedDone) of \(l.planned)"
     }
+    /// The rider's weekly targets (sessions per week from the profile and availability — the same numbers the coach's
+    /// frequency sentence uses); nil when unknown. Shown so the card separates target, scheduled and done.
+    var ridesTarget: Int? = nil
+    var liftsTarget: Int? = nil
+    /// "Weekly target: 3 rides · 2 lifts"
+    var targetLine: String? {
+        let parts = [ridesTarget.flatMap { $0 > 0 ? "\($0) \($0 == 1 ? "ride" : "rides")" : nil },
+                     liftsTarget.flatMap { $0 > 0 ? "\($0) \($0 == 1 ? "lift" : "lifts")" : nil }].compactMap { $0 }
+        return parts.isEmpty ? nil : "Weekly target: " + parts.joined(separator: " · ")
+    }
     /// Segments of the bar: one per planned session (max 7; nil above that = a plain bar).
     var segments: Int? { total.planned > 0 && total.planned <= 7 ? total.planned : nil }
 
@@ -486,7 +496,11 @@ extension Store {
     }
 
     func homeWeek(now: Date = Date()) -> HomeWeek {
-        HomeWeek.make(ledger, mode: profile.trainingMode, plan: plan, routine: { [weak self] w in self?.routine(for: w) }, now: now)
+        var w = HomeWeek.make(ledger, mode: profile.trainingMode, plan: plan, routine: { [weak self] w in self?.routine(for: w) }, now: now)
+        let a = HybridCoach.assess(profile: profile, plan: plan, rides: rides, strength: strength, availability: effectiveAvailability, now: now)
+        w.ridesTarget = a.cycling?.sessionsTarget
+        w.liftsTarget = a.strength?.sessionsTarget
+        return w
     }
 
     /// The coach slot from the engine outputs that already exist (no new coaching).
