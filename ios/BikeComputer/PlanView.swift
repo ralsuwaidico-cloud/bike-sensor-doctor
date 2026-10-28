@@ -122,16 +122,18 @@ struct PlanView: View {
         let liftDone = lw.minutes
         let limit = store.profile.hoursPerWeek * 60, liftLimit = store.profile.liftingHoursPerWeek * 60
         let fit = store.fitReport
-        let overEdits = !PlanEngine.suggestions(for: week, hoursPerWeek: store.profile.hoursPerWeek).isEmpty || !PlanEngine.liftSuggestions(for: week, liftingHours: store.profile.liftingHoursPerWeek).isEmpty
+        // the week's planned sessions over a budget: the same reports Fix plan acts on (never a warning without a fix)
+        let budgetReports = FixPlanSheet.reports(store, weekOf: weekDate)
+        let overEdits = !budgetReports.isEmpty
         let lifts = store.profile.trainingMode.includesLifting || lifting > 0
         let action: String = {
             if !fit.conflicts.isEmpty { return "Your days exceed a budget; the coach trimmed flexible activities — tap Fix plan." }
-            if overEdits { return "Your edits put this week over a budget — tap Fix plan." }
+            if let r = budgetReports.first { return "Planned \(r.riding ? "riding" : "lifting") is \(Fmt.duration(minutes: r.overMinutes)) over your \(Fmt.duration(minutes: r.limitMinutes)) \(r.riding ? "cycling" : "lifting") budget this week — tap Fix plan to shorten, skip or raise it." }
             if let next = week.first(where: { !ledger.status($0).isCompleted && !$0.skipped && $0.kind != .rest && Calendar.current.startOfDay(for: $0.date) >= Calendar.current.startOfDay(for: Date()) }) { return "Next: \(next.date.shortDay) \(next.displayTitle.lowercased()), \(Fmt.duration(minutes: next.minutes))." }
             return "Everything planned for this week is done."
         }()
         return Card {
-            HStack { Eyebrow(t: "Weekly summary"); Spacer(); if !fit.conflicts.isEmpty || overEdits || !fit.trimmed.isEmpty { Button { showFix = true } label: { Label("Fix plan", systemImage: "wrench.and.screwdriver").font(.caption.bold()) } } }
+            HStack { Eyebrow(t: "Weekly summary"); Spacer(); if !fit.conflicts.isEmpty || overEdits || !fit.trimmed.isEmpty { Button { showFix = true } label: { Label("Fix plan", systemImage: "wrench.and.screwdriver").font(.caption.bold()).frame(minHeight: DS.minTap).contentShape(Rectangle()) }.accessibilityIdentifier("fixPlan") } }
             HStack(alignment: .top, spacing: 12) {
                 totalsColumn("Riding", rw, singular: "ride", plural: "rides", warn: planned > limit, id: "Riding")
                 if lifts { totalsColumn("Lifting", lw, singular: "lift", plural: "lifts", warn: liftLimit > 0 && lifting > liftLimit, id: "Lifting") }
@@ -140,7 +142,7 @@ struct PlanView: View {
             if lifts { budgetBar("Lifting budget", planned: lifting, done: liftDone, limit: liftLimit, color: BC.zone(5)) }
             Text(action).font(.footnote).foregroundStyle(fit.conflicts.isEmpty && !overEdits ? .primary : BC.warn).fixedSize(horizontal: false, vertical: true)
         }
-        .sheet(isPresented: $showFix) { FixPlanSheet() }
+        .sheet(isPresented: $showFix) { FixPlanSheet(weekOf: weekDate) }
     }
     private func budgetBar(_ title: String, planned: Int, done: Int, limit: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -210,7 +212,7 @@ struct PlanView: View {
             List {
                 ForEach(day.items) { w in
                     Button { dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { selected = w } } label: {
-                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.displayTitle(routine: store.routine(for: w))).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); WorkoutStatusPill(status: store.status(w)) }
+                        HStack { ZonePill(z: w.kind.zone); VStack(alignment: .leading) { Text(w.displayTitle(routine: store.routine(for: w))).bold().foregroundStyle(.primary); Text("\(Fmt.duration(minutes: w.minutes)) · \(w.kind.subtitle)").font(.footnote).foregroundStyle(.secondary) }; Spacer(); SessionPill(state: SessionState.of(w, status: store.status(w)), coachAdjusted: w.coachAdjusted) }
                     }
                 }
                 Button("Add another activity") { let d = day.date; dayList = nil; DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { addOn = d } }
@@ -222,6 +224,23 @@ struct PlanView: View {
 }
 
 extension Date: Identifiable { public var id: TimeInterval { timeIntervalSince1970 } }
+
+/// One pill per session state, the same on every Plan surface: planned / modified / in progress / logged · done ·
+/// imported / skipped / missed (RC2-UX M1, owner §4).
+struct SessionPill: View {
+    let state: SessionState
+    var coachAdjusted = false
+    var body: some View {
+        switch state {
+        case .scheduled: Pill(text: coachAdjusted ? "planned · coach-adjusted" : "planned", color: .secondary)
+        case .modified: Pill(text: "modified", color: BC.accent)
+        case .inProgress: Pill(text: "in progress", color: BC.accent)
+        case .completed(let t): Pill(text: t, color: BC.live)
+        case .skipped: Pill(text: "skipped", color: .secondary)
+        case .missed: Pill(text: "missed", color: BC.warn)
+        }
+    }
+}
 
 /// One session as a card: rides and off-bike sessions look different, recovery/rest days are quiet.
 struct WorkoutCard: View {
@@ -241,7 +260,8 @@ struct WorkoutCard: View {
                     Text(workout.date.dayAndDate).font(.caption.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(workout.date) ? BC.accent : .secondary)
                     Spacer()
                     let st = status ?? (workout.done ? .completedManual : workout.skipped ? .skipped : .planned)
-                    if st != .planned { WorkoutStatusPill(status: st) } else if workout.edited { Pill(text: "edited", color: BC.accent) } else if workout.coachAdjusted { Pill(text: "coach-adjusted", color: BC.accent) } else if workout.fixed { Pill(text: "fixed", color: BC.stale) }
+                    let state = SessionState.of(workout, status: st)
+                    if !(quiet && state == .scheduled) { SessionPill(state: state, coachAdjusted: workout.coachAdjusted) }
                 }
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .firstTextBaseline) { titleBlock; Spacer(); durationBlock }
@@ -331,7 +351,7 @@ struct WorkoutDetail: View {
             Card { Eyebrow(t: "Target zone"); ZoneBar(current: workout.kind.zone)
                 let z = store.profile.prescriptionZones[workout.kind.zone - 1]
                 if let c = store.profile.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
-                Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpConfidence.short)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
+                Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpBadge)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
         }
         ActionRow(actions: [
             ActionSpec(label: "Move", a11y: "Move to another day", identifier: "detailMove") { mode = 1 },

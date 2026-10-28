@@ -201,33 +201,84 @@ struct PreviewDayRow: View {
     }
 }
 
-/// "Fix plan": the budget conflicts and trims for the week in force, with the same options (from the Plan summary).
+/// "Fix plan" (from the Plan summary's budget warning). Two kinds of problem, each with actions that really change
+/// something (RC2-UX M1: the edited-week case used to list sentences with no action — a dead end):
+/// 1. the rider's DAYS exceed a budget (the coach trims flexible activities): raise the budget / edit the days / keep;
+/// 2. THIS WEEK's planned sessions exceed a budget (after edits): shorten or skip a remaining session, or raise the
+///    budget — applied at once, with Undo, and the sheet shows the new state.
 struct FixPlanSheet: View {
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
+    /// Any date in the week shown on Plan.
+    var weekOf: Date = Date()
     @State private var showEditor = false
+    /// The last change made here, for Undo: the sessions and budgets exactly as they were.
+    @State private var undo: (text: String, before: [Workout], hours: Int, liftHours: Int)? = nil
+
+    static func reports(_ store: Store, weekOf: Date) -> [BudgetFix.Report] {
+        let week = store.workouts(weekOf: weekOf), ledger = store.ledger
+        return [BudgetFix.report(week: week, riding: true, budgetHours: store.profile.hoursPerWeek, isCompleted: { ledger.status($0).isCompleted }),
+                BudgetFix.report(week: week, riding: false, budgetHours: store.profile.liftingHoursPerWeek, isCompleted: { ledger.status($0).isCompleted })].compactMap { $0 }
+    }
+
     var body: some View {
         let fit = store.fitReport
+        let reports = Self.reports(store, weekOf: weekOf)
         NavigationStack {
             List {
-                if fit.conflicts.isEmpty && fit.trimmed.isEmpty { Text("Your days fit both budgets. Nothing to fix.").foregroundStyle(.secondary) }
+                if let u = undo {
+                    Section {
+                        HStack(alignment: .firstTextBaseline) {
+                            Label(u.text, systemImage: "checkmark.circle.fill").foregroundStyle(BC.live).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: DS.s)
+                            Button("Undo") { revert(u) }.font(.subheadline.bold()).accessibilityIdentifier("fixPlanUndo")
+                        }
+                    }
+                }
+                if fit.conflicts.isEmpty && fit.trimmed.isEmpty && reports.isEmpty {
+                    Section { Text("This week fits both budgets. Nothing to fix.").foregroundStyle(.secondary).accessibilityIdentifier("fixPlanNothing") }
+                }
+                ForEach(reports, id: \.riding) { r in
+                    Section(r.riding ? "This week · cycling budget" : "This week · lifting budget") {
+                        Text(r.explanation).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                        ForEach(r.fixes) { f in
+                            Button { apply(f, riding: r.riding) } label: { Text(f.text).frame(maxWidth: .infinity, minHeight: DS.minTap, alignment: .leading) }
+                                .accessibilityIdentifier("fixPlan-\(f.id.hasPrefix("raise") ? "raise" : f.id.hasPrefix("skip") ? "skip" : "shorten")-\(r.riding ? "ride" : "lift")")
+                        }
+                    }
+                }
                 ForEach(fit.conflicts) { c in
-                    Section(c.sport == .cycling ? "Cycling budget" : "Lifting budget") {
-                        Text(c.text).font(.footnote)
-                        if !fit.trimmed.isEmpty { Text("Currently the coach shortens: " + fit.trimmed.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }
+                    Section(c.sport == .cycling ? "Your days · cycling budget" : "Your days · lifting budget") {
+                        Text(c.text).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                        if !fit.trimmed.isEmpty { Text("Currently the coach shortens: " + fit.trimmed.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                         Button("Raise the budget to \(Fmt.duration(minutes: ((c.plannedMinutes + 59) / 60) * 60))") { if c.sport == .cycling { store.updateProfile { $0.hoursPerWeek = (c.plannedMinutes + 59) / 60 } } else { store.updateProfile { $0.liftingHoursPerWeek = (c.plannedMinutes + 59) / 60 } }; rebuild() }
                         Button("Edit my training days") { showEditor = true }
                         Button("Keep the trimmed version") { dismiss() }
                     }
                 }
-                let week = store.workouts(weekOf: Date())
-                let s = PlanEngine.suggestions(for: week, hoursPerWeek: store.profile.hoursPerWeek) + PlanEngine.liftSuggestions(for: week, liftingHours: store.profile.liftingHoursPerWeek)
-                if !s.isEmpty { Section("This week after your edits") { ForEach(s, id: \.self) { Text($0).font(.footnote) } } }
             }
             .navigationTitle("Fix plan").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .sheet(isPresented: $showEditor) { AvailabilityEditor() }
         }
+    }
+
+    private func apply(_ f: BudgetFix, riding: Bool) {
+        let before = store.workouts(weekOf: weekOf)
+        let hours = store.profile.hoursPerWeek, lift = store.profile.liftingHoursPerWeek
+        switch f.action {
+        case .shorten(let id, let to): if var w = before.first(where: { $0.id == id }) { w.minutes = to; store.edit(w) }
+        case .skip(let id): if var w = before.first(where: { $0.id == id }) { w.skipped = true; store.edit(w) }
+        case .raiseBudget(let h): if riding { store.updateProfile { $0.hoursPerWeek = h } } else { store.updateProfile { $0.liftingHoursPerWeek = h } }
+        }
+        withAnimation { undo = (text: "Done: " + f.text.prefix(1).lowercased() + String(f.text.dropFirst()), before: before, hours: hours, liftHours: lift) }
+    }
+    private func revert(_ u: (text: String, before: [Workout], hours: Int, liftHours: Int)) {
+        for w in u.before where store.plan.first(where: { $0.id == w.id }) != w { store.update(w) }
+        if store.profile.hoursPerWeek != u.hours || store.profile.liftingHoursPerWeek != u.liftHours {
+            store.updateProfile { $0.hoursPerWeek = u.hours; $0.liftingHoursPerWeek = u.liftHours }
+        }
+        withAnimation { undo = nil }
     }
     private func rebuild() { _ = store.regenerate(weekOf: Date(), replaceEdited: false); _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false); _ = store.runAdaptation(); dismiss() }
 }
