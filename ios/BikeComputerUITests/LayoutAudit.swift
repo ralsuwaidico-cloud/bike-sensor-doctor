@@ -406,7 +406,8 @@ final class LayoutAudit: XCTestCase {
                 checkScreen(app, screen, tab: 0)
                 let win = app.windows.firstMatch.frame
                 // the one primary action (a multi-session day: the first row's) is fully above the tab bar without scrolling
-                let primary = app.buttons["homePrimary"].firstMatch.exists ? app.buttons["homePrimary"].firstMatch : app.buttons["homeRow-0"].firstMatch
+                // rest or free day with a missed session: the one action is "Move to today" on the missed row (spec v2.1, P1-7)
+                let primary = ["homePrimary", "homeRow-0", "homeMissedMove"].map { app.buttons[$0].firstMatch }.first { $0.exists } ?? app.buttons["homePrimary"].firstMatch
                 XCTAssertTrue(primary.exists, "\(screen): no primary action")
                 if primary.exists {
                     let f = primary.frame

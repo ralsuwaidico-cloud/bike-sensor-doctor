@@ -51,7 +51,13 @@ digest() {
   } | scrub > "$LOGS/$name.txt"
 }
 
+# SCOPE=full (default, everything incl. archive/sign/upload) or ui (layout audit only, on LAYOUT_DEVICES; no unit
+# tests, no launch smoke, no archive, never an upload) — a fast re-check of UI fixes (CI improvement 1, 28 Oct).
+SCOPE="${SCOPE:-full}"; [ "$SCOPE" = "ui" ] || SCOPE=full
+LAYOUT_DEVICES="${LAYOUT_DEVICES:-small,standard,promax,owner}"
+T0=$SECONDS; since() { echo "$(( (SECONDS - $1) / 60 ))m$(( (SECONDS - $1) % 60 ))s"; }
 note "BikeComputer iOS CI — build ${BUILD_NUMBER:-?} — $(date -u '+%Y-%m-%d %H:%M UTC')"
+note "Scope: $SCOPE$([ "$SCOPE" = ui ] && echo " (layout devices: $LAYOUT_DEVICES)")"
 note "$(sw_vers -productName) $(sw_vers -productVersion), $(xcodebuild -version | tr '\n' ' ')"
 
 # ---------------------------------------------------------------- project generation
@@ -74,24 +80,27 @@ for rt,devs in d.items():
         if x["name"].startswith("iPhone") and (best is None or ver>best[0]): best=(ver,x["udid"],x["name"])
 print(best[1] if best else "")')
 note "Test simulator: ${SIM:-none found}"
+if [ "$SCOPE" = full ]; then
+TS=$SECONDS
 xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Debug \
   -destination "id=$SIM" -resultBundlePath "$OUT/tests.xcresult" -only-testing:BikeComputerTests \
   CODE_SIGNING_ALLOWED=NO > "$OUT/test.log" 2>&1
 T=$?
 digest "$OUT/test.log" test
-if [ $T -eq 0 ]; then note "RESULT tests: ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/test.log" | tail -1))"
+if [ $T -eq 0 ]; then note "RESULT tests: ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/test.log" | tail -1)) · $(since $TS)"
 else note "RESULT tests: FAILED (exit $T)"; STATUS=1; fi
 
 # ---------------------------------------------------------------- launch smoke tests, RELEASE build on the simulator
 # The shipped app is a Release build: build 27 crashed at launch on devices updated from build 24 while every Debug
 # unit test passed. These tests launch the Release app fresh and with a build-24-shaped store and open all five tabs.
 # Any crash fails the run before archiving, and the simulator's crash report is kept with the logs.
+TS=$SECONDS
 xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
   -destination "id=$SIM" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests \
   CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/uitest.log" 2>&1
 U=$?
 digest "$OUT/uitest.log" launch-smoke
-if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1))"
+if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
 else
   note "RESULT launch smoke (Release): FAILED (exit $U)"; STATUS=1
   # crash reports of the app from the simulator run, scrubbed, as text
@@ -100,6 +109,9 @@ else
   done
   xcrun simctl spawn "$SIM" log show --last 15m --predicate 'process == "BikeComputer" OR (eventMessage CONTAINS "BikeComputer" AND messageType == error)' 2>/dev/null \
     | grep -v "^Filtering" | tail -400 | scrub > "$LOGS/sim-app-log.txt"
+fi
+else
+  note "RESULT tests: skipped (scope ui)"; note "RESULT launch smoke (Release): skipped (scope ui)"
 fi
 
 # ---------------------------------------------------------------- layout audit (quality release)
@@ -146,6 +158,8 @@ LAYOUT_OK=1
 for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L" "owner|${OWNER%%|*}|L,XXXL"; do
   IFS='|' read -r LNAME LID LSIZES <<< "$spec"
   [ -n "$LID" ] || { note "  layout $LNAME: no simulator"; continue; }
+  case ",$LAYOUT_DEVICES," in *",$LNAME,"*) ;; *) note "  layout $LNAME: skipped (not in LAYOUT_DEVICES)"; continue;; esac
+  LT=$SECONDS
   LEXTRAS=0; [ "$LNAME" = "standard" ] || [ "$LNAME" = "owner" ] && LEXTRAS=1
   TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
   xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
@@ -164,7 +178,7 @@ for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MA
     L=$?
   fi
   digest "$OUT/layout-$LNAME.log" "layout-$LNAME"
-  if [ $L -eq 0 ]; then note "  layout $LNAME ($LSIZES): ok"; else note "  layout $LNAME ($LSIZES): FAILED (exit $L)"; LAYOUT_OK=0; fi
+  if [ $L -eq 0 ]; then note "  layout $LNAME ($LSIZES): ok · $(since $LT)"; else note "  layout $LNAME ($LSIZES): FAILED (exit $L) · $(since $LT) — $(grep -E ' error: ' "$OUT/layout-$LNAME.log" | sed -E 's/.*error: //' | sort -u | head -3 | tr '\n' ' ' | cut -c1-400 | scrub)"; LAYOUT_OK=0; fi
 done
 # Apple Watch screenshots at L / XXXL / AX3 (soft: reported, never fails the run)
 bash ci/watch-shots.sh "$LAYOUT" || true
@@ -173,6 +187,12 @@ N_PNG=$(ls "$LAYOUT"/*.png 2>/dev/null | wc -l | tr -d ' ')
 for f in "$LAYOUT"/*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done
 cp "$LAYOUT"/*.txt "$LOGS/" 2>/dev/null || true
 if [ $LAYOUT_OK -eq 1 ]; then note "RESULT layout audit: ok ($N_PNG screenshots)"; else note "RESULT layout audit: FAILED ($N_PNG screenshots)"; STATUS=1; fi
+
+if [ "$SCOPE" = ui ]; then
+  note "RESULT archive: skipped (scope ui)"; note "RESULT upload: skipped (scope ui never uploads)"
+  note "Total: $(since $T0)"
+  exit $STATUS
+fi
 
 # ---------------------------------------------------------------- archive (device build)
 # The archive is ad-hoc signed ("-"): no certificate, no registered device. The entitlements (HealthKit) are embedded

@@ -428,12 +428,12 @@ struct HomeHoldCard: View {
     var body: some View {
         HomeCardFrame(eyebrow: "Today's training", chip: "Paused", chipColor: BC.warn) {
             Text(hold.title).font(.title3.weight(.bold)).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
-            Text(hold.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button { perform(.reviewHealth) } label: {
                 Text(hold.button).font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap)
             }
             .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black)
             .accessibilityHint("Opens the health check").accessibilityIdentifier("homePrimary")
+            Text(hold.detail).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Button { perform(.holdInfo) } label: { Text("What this means").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap).contentShape(Rectangle()) }
                 .buttonStyle(.plain).accessibilityIdentifier("homeHoldInfo")
         }

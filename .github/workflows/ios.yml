@@ -20,6 +20,15 @@ on:
         description: "Upload to TestFlight (internal testers only)"
         type: boolean
         default: false
+      scope:
+        description: "full = tests + layout + archive (default); ui = layout audit only (fast UI re-check, never uploads)"
+        type: choice
+        options: [full, ui]
+        default: full
+      devices:
+        description: "Layout audit devices (comma list of small,standard,promax,owner)"
+        type: string
+        default: "small,standard,promax,owner"
 permissions:
   contents: write
 concurrency:
@@ -75,6 +84,8 @@ jobs:
       - name: Build, test, sign, upload
         env:
           BUILD_NUMBER: ${{ github.run_number }}
+          SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'full' }}
+          LAYOUT_DEVICES: ${{ github.event_name == 'workflow_dispatch' && inputs.devices || 'small,standard,promax,owner' }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
