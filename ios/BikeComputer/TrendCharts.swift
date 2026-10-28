@@ -4,7 +4,7 @@ import Accessibility
 
 // MARK: - Progress detailed chart (RC2-UX milestone 1, owner §5)
 // One chart, one convention: solid bars = done, pale bars behind them = planned, the current (unfinished) week on the
-// right, a ring at zero = sessions done without a recorded duration. Ranges 4 / 8 / 12 / 16 weeks (1 year when older
+// right, a dot at zero = sessions done without a recorded duration. Ranges 4 / 8 / 12 / 16 weeks (1 year when older
 // data exists); the chart never scrolls sideways (no gesture fights the page's vertical scroll). Tap a bar: its week,
 // exact value with unit, done vs planned and sessions appear in the header. Date labels are MEASURED and placed by
 // TrendChartMath.axisLabels, so they cannot overlap at any width, range or text size. All maths: ProgressMetrics.swift.
@@ -97,9 +97,25 @@ struct WeeklyTrendChart: View {
     private func chart(_ v: [WeekBucket]) -> some View {
         let maxV = max(v.map { metric.value($0) }.max() ?? 0, v.map { metric.planned($0) }.max() ?? 0)
         let ticks = metric.ticks(max: maxV)
+        let marks = weekMarks(v)
         return Chart {
-            ForEach(Array(v.enumerated()), id: \.offset) { i, b in
-                weekMarks(i, b)
+            ForEach(marks) { m in
+                BarMark(xStart: .value("Week", m.x0), xEnd: .value("Week end", m.x1), yStart: .value("Zero", 0.0), yEnd: .value("Planned", m.planned))
+                    .foregroundStyle(m.dim ? color.opacity(0.10) : color.opacity(0.22))
+                    .cornerRadius(3)
+            }
+            ForEach(marks) { m in
+                BarMark(xStart: .value("Week", m.x0), xEnd: .value("Week end", m.x1), yStart: .value("Zero", 0.0), yEnd: .value("Done", m.done))
+                    .foregroundStyle(m.dim ? color.opacity(0.4) : color)
+                    .cornerRadius(3)
+                    .accessibilityLabel(Text(m.label))
+                    .accessibilityValue(Text(m.value))
+            }
+            ForEach(marks.filter { $0.noDuration }) { m in
+                PointMark(x: .value("Week", Double(m.id)), y: .value("Zero", 0.0))
+                    .symbol(.circle)
+                    .symbolSize(36)
+                    .foregroundStyle(color)
             }
             if let s = selected {
                 RuleMark(x: .value("Selected", Double(s))).foregroundStyle(Color.secondary.opacity(0.6)).lineStyle(StrokeStyle(lineWidth: 1))
@@ -130,22 +146,26 @@ struct WeeklyTrendChart: View {
         .accessibilityIdentifier(identifier)
     }
 
-    @ChartContentBuilder private func weekMarks(_ i: Int, _ b: WeekBucket) -> some ChartContent {
-        let x0 = Double(i) - 0.34, x1 = Double(i) + 0.34
-        let planned = metric.planned(b), done = metric.value(b)
-        let dim = selected != nil && selected != i
-        BarMark(xStart: .value("Week", x0), xEnd: .value("Week end", x1), yStart: .value("Zero", 0.0), yEnd: .value("Planned", planned))
-            .foregroundStyle(color.opacity(dim ? 0.10 : 0.22))
-            .cornerRadius(3)
-        BarMark(xStart: .value("Week", x0), xEnd: .value("Week end", x1), yStart: .value("Zero", 0.0), yEnd: .value("Done", done))
-            .foregroundStyle(dim ? color.opacity(0.4) : color)
-            .cornerRadius(3)
-            .accessibilityLabel("Week of \(TrendChartMath.axisLabel(b.start))")
-            .accessibilityValue("done \(metric == .riding ? Fmt.duration(minutes: b.minutes) : "\(b.sessions) sessions"), planned \(metric == .riding ? Fmt.duration(minutes: b.plannedMinutes) : "\(b.plannedSessions) sessions")")
-        if metric == .riding && b.unknownDuration > 0 && b.minutes == 0 {
-            PointMark(x: .value("Week", Double(i)), y: .value("Zero", 0.0))
-                .symbol { Circle().strokeBorder(color, lineWidth: 1.5).frame(width: 9, height: 9) }
+    /// One week's marks, precomputed (plain values keep the chart builder simple for the compiler).
+    struct WeekMark: Identifiable {
+        let id: Int
+        let x0: Double, x1: Double
+        let planned: Double, done: Double
+        let dim: Bool
+        let label: String, value: String
+        let noDuration: Bool
+    }
+    private func weekMarks(_ v: [WeekBucket]) -> [WeekMark] {
+        var out: [WeekMark] = []
+        for (i, b) in v.enumerated() {
+            let doneText: String = metric == .riding ? Fmt.duration(minutes: b.minutes) : "\(b.sessions) sessions"
+            let plannedText: String = metric == .riding ? Fmt.duration(minutes: b.plannedMinutes) : "\(b.plannedSessions) sessions"
+            let dim: Bool = selected != nil && selected != i
+            out.append(WeekMark(id: i, x0: Double(i) - 0.34, x1: Double(i) + 0.34, planned: metric.planned(b), done: metric.value(b), dim: dim,
+                                label: "Week of " + TrendChartMath.axisLabel(b.start), value: "done " + doneText + ", planned " + plannedText,
+                                noDuration: metric == .riding && b.unknownDuration > 0 && b.minutes == 0))
         }
+        return out
     }
 
     private func axisGeometry(proxy: ChartProxy, geo: GeometryProxy) -> AxisGeometry {
@@ -203,7 +223,7 @@ struct WeeklyTrendChart: View {
             HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 12, height: 12); Text("done").font(.caption) }
             HStack(spacing: 4) { RoundedRectangle(cornerRadius: 2).fill(color.opacity(0.22)).frame(width: 12, height: 12); Text("planned").font(.caption) }
             if metric == .riding && v.contains(where: { $0.unknownDuration > 0 && $0.minutes == 0 }) {
-                HStack(spacing: 4) { Circle().strokeBorder(color, lineWidth: 1.5).frame(width: 10, height: 10); Text("done, no duration").font(.caption) }
+                HStack(spacing: 4) { Circle().fill(color).frame(width: 8, height: 8); Text("done, no duration").font(.caption) }
             }
             Text(selected == nil ? "Tap a bar for its week." : "Tap the bar again to clear.").font(.caption).foregroundStyle(.secondary)
         }
@@ -227,7 +247,7 @@ struct WeeklyTrendChart: View {
     static let countingHelp = """
     Done (solid bars): rides recorded in Cyclift or imported from Apple Health, planned rides you marked done; strength logs, quick logs, sessions marked done and Apple Health imports.
 
-    Time adds only measured or typed durations. A session marked done without a duration counts as a session and adds no time (a ring at zero on the riding chart).
+    Time adds only measured or typed durations. A session marked done without a duration counts as a session and adds no time (a dot at zero on the riding chart).
 
     Planned (pale bars): the week's planned sessions that were not skipped — the same figures as "Planned this week" on Plan.
 
