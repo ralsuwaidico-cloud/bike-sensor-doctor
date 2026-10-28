@@ -1,0 +1,39 @@
+# Fast checks (CI improvement 3, 28 Oct 2026): the coaching engine, weekly totals, Home model and Progress maths, on Linux in
+# about 3 minutes, on every push that touches the app's logic. Runs next to (not instead of) the macOS iOS workflow, so a
+# logic error shows up in minutes instead of after the 100-minute iOS run. Nothing is built for a device, nothing uploaded.
+name: Fast logic tests
+on:
+  push:
+    branches: ["ios/**", "fix/**", "fw/**"]
+    paths: ["ios/BikeComputer/**", "ios/BikeComputerTests/**", "ios/Shared/**", "tools/coach-harness/**", ".github/workflows/logic.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: logic-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: swift:5.10-jammy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: command -v python3 >/dev/null || (apt-get update -qq && apt-get install -y -qq python3 >/dev/null)
+      - name: Engine, Home and Progress logic tests (Linux Swift)
+        run: |
+          set -o pipefail
+          start=$(date +%s)
+          if bash tools/coach-harness/test.sh "$GITHUB_WORKSPACE" | tee logic.txt; then R=ok; else R=FAILED; fi
+          dur=$(( $(date +%s) - start ))
+          {
+            echo "### Fast logic tests: $R"
+            echo ""
+            echo "Commit \`${GITHUB_SHA::7}\` on \`$GITHUB_REF_NAME\` · ${dur}s"
+            echo ""
+            echo '```'
+            grep -E "error:|failed \(|Executed [0-9]+ tests" logic.txt | tail -25
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$R" = ok ]
