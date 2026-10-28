@@ -35,7 +35,7 @@ struct ProgressTabView: View {
                 Text("No rides yet").font(.headline).foregroundStyle(BC.stale)
                 Text("Your saved rides appear here, week by week. Nothing is estimated.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
-                WeeklyTrendChart(title: "Weekly riding time", buckets: TrendChartMath.buckets(store.ledger, riding: true, weeks: historyWeeks, now: Date()), color: BC.accent,
+                WeeklyTrendChart(title: "Weekly riding time · done", buckets: TrendChartMath.buckets(store.ledger, riding: true, weeks: historyWeeks, now: Date()), color: BC.accent,
                                  singular: "ride", plural: "rides", target: store.profile.hoursPerWeek * 60, targetLabel: "Target", identifier: "ridingChart", range: $rideRange)
                 definitions(riding: true)
             }
@@ -51,25 +51,19 @@ struct ProgressTabView: View {
                 Text("No sessions logged yet").font(.headline).foregroundStyle(BC.stale)
                 Text("Log a session from Home or Plan (Log), mark one done, or import from Apple Health in Connections.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
-                WeeklyTrendChart(title: "Weekly lifting time", buckets: TrendChartMath.buckets(l, riding: false, weeks: historyWeeks, now: Date()), color: BC.zone(5),
+                WeeklyTrendChart(title: "Weekly lifting time · done", buckets: TrendChartMath.buckets(l, riding: false, weeks: historyWeeks, now: Date()), color: BC.zone(5),
                                  singular: "session", plural: "sessions", target: store.profile.liftingHoursPerWeek > 0 ? store.profile.liftingHoursPerWeek * 60 : nil, targetLabel: "Budget", identifier: "liftingChart", range: $liftRange)
                 definitions(riding: false)
             }
         }
     }
 
-    static func weekLine(_ w: TrainingLedger.SportWeek) -> String {
-        var parts: [String] = []
-        if w.logged > 0 { parts.append("\(w.logged) logged") }
-        if w.manual > 0 { parts.append("\(w.manual) marked or quick") }
-        if w.imported > 0 { parts.append("\(w.imported) imported") }
-        return "This week: \(w.completed) done of \(w.planned) planned" + (parts.isEmpty ? "." : " (" + parts.joined(separator: ", ") + ").")
-    }
     /// One definition for every screen (Home, Plan, History, Progress).
     private func definitions(riding: Bool) -> some View {
-        let w = riding ? store.ledger.riding(weekOf: TrainingLedger.monday(of: Date())) : store.ledger.lifting(weekOf: TrainingLedger.monday(of: Date()))
+        let t = WeekTotals(store.ledger, weekOf: Date())     /* the same figures Plan shows (RC2) */
+        let w = riding ? t.riding : t.lifting
         return HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
-            Text(Self.weekLine(w))
+            Text(WeekTotals.sentence(w, singular: riding ? "ride" : "session", plural: riding ? "rides" : "sessions"))
                 .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier(riding ? "ridingWeekCounts" : "liftingWeekCounts")
             Spacer(minLength: 0)

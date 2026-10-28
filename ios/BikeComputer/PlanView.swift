@@ -23,7 +23,7 @@ struct PlanView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 12) {
                     weekHeader
                     calendar
                     summary
@@ -73,24 +73,31 @@ struct PlanView: View {
         return "\(f.string(from: a)) – \(f.string(from: b))"
     }
 
+    /// Seven days, always all visible: equal widths, text that shrinks instead of widening the row, type capped at
+    /// xxLarge for this strip only (the day list below carries the large text). No horizontal scrolling anywhere.
     private var calendar: some View {
-        HStack(alignment: .top, spacing: 4) {
+        HStack(alignment: .top, spacing: 3) {
             ForEach(days, id: \.date) { day in
                 Button { if day.items.count > 1 { dayList = day } else if let w = day.items.first { selected = w } else { addOn = day.date } } label: {
                     VStack(spacing: 4) {
-                        Text(day.date.shortDay).font(.caption2.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(day.date) ? BC.accent : .secondary)
+                        Text(day.date.shortDay).font(.caption2.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(day.date) ? BC.accent : .secondary).lineLimit(1).minimumScaleFactor(0.6)
                         Image(systemName: icon(day)).font(.system(size: 15, weight: .semibold)).foregroundStyle(color(day)).frame(height: 18)
-                        Text(day.items.first.map { Fmt.compact(minutes: $0.minutes) } ?? "—").font(.caption.weight(.bold)).monospacedDigit().lineLimit(1)
+                        Text(day.items.first.map { Fmt.compact(minutes: $0.minutes) } ?? "—").font(.caption.weight(.bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                         HStack(spacing: 2) { ForEach(day.items.prefix(3)) { w in RoundedRectangle(cornerRadius: 2).fill(w.kind.zone > 0 ? BC.zone(w.kind.zone) : Color.secondary.opacity(0.35)).frame(height: 4) } }
                         if day.items.count > 1 { Text("+\(day.items.count - 1)").font(.caption2.weight(.heavy)).padding(.horizontal, 4).background(BC.accent.opacity(0.18), in: Capsule()) }
                     }
-                    .padding(.vertical, 8).padding(.horizontal, 2).frame(maxWidth: .infinity, minHeight: 78)
+                    .padding(.vertical, 7).padding(.horizontal, 1).frame(minWidth: 0, maxWidth: .infinity, minHeight: 72)
                     .background(day.items.contains { store.status($0).isCompleted } ? BC.live.opacity(0.14) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Calendar.current.isDateInToday(day.date) ? BC.accent : Color.clear, lineWidth: 1.5))
                 }.buttonStyle(.plain)
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .accessibilityIdentifier("planDay-\(Calendar.current.component(.weekday, from: day.date))")
                 .accessibilityLabel("\(day.date.dayAndDate): \(day.items.isEmpty ? "free" : day.items.map { "\($0.kind.title) \(Fmt.duration(minutes: $0.minutes)), \(store.status($0).title.lowercased())" }.joined(separator: ", "))")
             }
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("planDayStrip")
     }
     private func icon(_ d: PlanDay) -> String {
         guard let w = d.items.first else { return "plus" }
@@ -105,12 +112,12 @@ struct PlanView: View {
     // MARK: summary (compact: counts, two budgets, ONE prioritised action; details behind Fix plan)
     @State private var showFix = false
     private var summary: some View {
-        let planned = PlanEngine.rideMinutes(week), lifting = PlanEngine.liftMinutes(week)
-        // quality release: done counts and minutes from the one query layer (the same numbers as Home and Progress)
-        let ledger = store.ledger, monday = TrainingLedger.monday(of: weekDate)
-        let rw = ledger.riding(weekOf: monday), lw = ledger.lifting(weekOf: monday)
-        let ridesPlanned = rw.planned, ridesDone = rw.completed
-        let liftsPlanned = lw.planned, liftsDone = lw.completed
+        // RC2: every figure from the one query layer (WeekTotals → TrainingLedger), the same numbers as Progress and Home,
+        // and named "Done this week" / "Planned this week" (it used to show planned minutes under a bare "Riding")
+        let ledger = store.ledger
+        let totals = WeekTotals(ledger, weekOf: weekDate)
+        let rw = totals.riding, lw = totals.lifting
+        let planned = rw.plannedMinutes, lifting = lw.plannedMinutes
         let done = rw.minutes
         let liftDone = lw.minutes
         let limit = store.profile.hoursPerWeek * 60, liftLimit = store.profile.liftingHoursPerWeek * 60
@@ -125,9 +132,9 @@ struct PlanView: View {
         }()
         return Card {
             HStack { Eyebrow(t: "Weekly summary"); Spacer(); if !fit.conflicts.isEmpty || overEdits || !fit.trimmed.isEmpty { Button { showFix = true } label: { Label("Fix plan", systemImage: "wrench.and.screwdriver").font(.caption.bold()) } } }
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top) { stat("Rides", "\(ridesDone)/\(ridesPlanned)"); if lifts { stat("Lifts", "\(liftsDone)/\(liftsPlanned)") }; stat("Riding", Fmt.duration(minutes: planned), warn: planned > limit); if lifts { stat("Lifting", Fmt.duration(minutes: lifting), warn: liftLimit > 0 && lifting > liftLimit) } }
-                VStack(spacing: 8) { HStack { stat("Rides", "\(ridesDone)/\(ridesPlanned)"); if lifts { stat("Lifts", "\(liftsDone)/\(liftsPlanned)") } }; HStack { stat("Riding", Fmt.duration(minutes: planned), warn: planned > limit); if lifts { stat("Lifting", Fmt.duration(minutes: lifting), warn: liftLimit > 0 && lifting > liftLimit) } } }
+            HStack(alignment: .top, spacing: 12) {
+                totalsColumn("Riding", rw, singular: "ride", plural: "rides", warn: planned > limit, id: "Riding")
+                if lifts { totalsColumn("Lifting", lw, singular: "lift", plural: "lifts", warn: liftLimit > 0 && lifting > liftLimit, id: "Lifting") }
             }
             budgetBar("Cycling budget", planned: planned, done: done, limit: limit, color: BC.accent)
             if lifts { budgetBar("Lifting budget", planned: lifting, done: liftDone, limit: liftLimit, color: BC.zone(5)) }
@@ -147,8 +154,19 @@ struct PlanView: View {
             }.frame(height: 8)
         }
     }
-    private func stat(_ t: String, _ v: String, warn: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 2) { Eyebrow(t: t); Text(v).font(.headline).monospacedDigit().foregroundStyle(warn ? BC.warn : .primary).fixedSize(horizontal: false, vertical: true) }.frame(maxWidth: .infinity, alignment: .leading)
+    /// One sport: "Done this week" and "Planned this week", each with its minutes and session count.
+    private func totalsColumn(_ title: String, _ w: TrainingLedger.SportWeek, singular: String, plural: String, warn: Bool, id: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Eyebrow(t: title)
+            Text(WeekTotals.doneTitle).font(.caption2).foregroundStyle(.secondary)
+            Text(WeekTotals.done(w, singular: singular, plural: plural)).font(.subheadline.weight(.semibold)).monospacedDigit().fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("planDone\(id)")
+            Text(WeekTotals.plannedTitle).font(.caption2).foregroundStyle(.secondary)
+            Text(WeekTotals.planned(w, singular: singular, plural: plural)).font(.subheadline).monospacedDigit().foregroundStyle(warn ? BC.warn : .primary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("planPlanned\(id)")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: day cards (workouts and recovery days as separate cards)
