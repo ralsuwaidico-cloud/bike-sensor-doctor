@@ -148,7 +148,9 @@ struct RideTabBar: View {
 }
 
 private extension View {
-    func tabPage(_ i: Int, _ selected: Int) -> some View { opacity(i == selected ? 1 : 0).allowsHitTesting(i == selected).accessibilityHidden(i != selected).zIndex(i == selected ? 1 : 0) }
+    /// One tab's page. The container identifier "tabPage-<i>" lets the layout audit look at the visible page only (the hidden
+    /// pages stay alive and, in XCUITest snapshots, still report their frames — run 93 counted Plan's buttons on Connections).
+    func tabPage(_ i: Int, _ selected: Int) -> some View { opacity(i == selected ? 1 : 0).allowsHitTesting(i == selected).accessibilityElement(children: .contain).accessibilityIdentifier("tabPage-\(i)").accessibilityHidden(i != selected).zIndex(i == selected ? 1 : 0) }
 }
 
 struct StatusRow: View {

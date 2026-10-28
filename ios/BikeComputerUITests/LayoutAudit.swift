@@ -62,6 +62,18 @@ final class LayoutAudit: XCTestCase {
     // MARK: frame checks — one accessibility snapshot per screen (querying elements one by one is far too slow)
     private func flatten(_ s: XCUIElementSnapshot) -> [XCUIElementSnapshot] { [s] + s.children.flatMap { flatten($0) } }
     private func elements(_ app: XCUIApplication) -> [XCUIElementSnapshot] { (try? app.snapshot()).map { flatten($0) } ?? [] }
+    /// The elements of what is on screen: the visible tab page (`tab`), or with `tab == nil` everything outside the tab
+    /// pages (a sheet, the tab bar). Hidden pages stay alive and still report frames, so they are left out.
+    private func visibleElements(_ app: XCUIApplication, tab: Int?) -> [XCUIElementSnapshot] {
+        guard let root = try? app.snapshot() else { return [] }
+        func walk(_ s: XCUIElementSnapshot) -> [XCUIElementSnapshot] {
+            if s.identifier.hasPrefix("tabPage-") { return tab.map { s.identifier == "tabPage-\($0)" } == true ? flatten(s) : [] }
+            return [s] + s.children.flatMap { walk($0) }
+        }
+        return walk(root)
+    }
+    /// System views that are not app content (iOS 26 toolbar glass dimming overlay reports a frame wider than the screen).
+    private func isSystem(_ e: XCUIElementSnapshot) -> Bool { ["AdditionalDimmingOverlay"].contains(e.identifier) }
 
     private func checkKey(_ app: XCUIApplication, ids: [String], screen: String, minHeight: CGFloat = 44) {
         let all = elements(app)
@@ -211,10 +223,10 @@ final class LayoutAudit: XCTestCase {
         note("\(screen): \(f.count) date labels, smallest gap \(Int(gaps.min() ?? 0)) pt")
     }
     /// Nothing on the Plan screen is wider than the window or sticks out sideways (no horizontal scrolling content).
-    private func checkNoHorizontalOverflow(_ app: XCUIApplication, screen: String) {
+    private func checkNoHorizontalOverflow(_ app: XCUIApplication, screen: String, tab: Int? = nil, scoped: Bool = false) {
         let win = app.windows.firstMatch.frame
         var bad: [String] = []
-        for e in elements(app) where [.staticText, .button, .image].contains(e.elementType) {
+        for e in (scoped ? visibleElements(app, tab: tab) : elements(app)) where [.staticText, .button, .image].contains(e.elementType) && !isSystem(e) {
             let f = e.frame
             guard f.width > 0, f.maxY > win.minY + 40, f.minY < win.maxY - 90 else { continue }
             if f.minX < win.minX - 1 || f.maxX > win.maxX + 1 { bad.append("\(e.identifier.isEmpty ? String(e.label.prefix(30)) : e.identifier) \(Int(f.minX))…\(Int(f.maxX))") }
@@ -225,9 +237,9 @@ final class LayoutAudit: XCTestCase {
 
     /// Static texts that overlap each other (any two, on screen, below the navigation bar and above the tab bar). HARD
     /// failure: the previous audit passed with overlapping date labels because it never compared texts with each other.
-    private func checkNoTextOverlap(_ app: XCUIApplication, screen: String) {
+    private func checkNoTextOverlap(_ app: XCUIApplication, screen: String, tab: Int?) {
         let win = app.windows.firstMatch.frame
-        let texts = elements(app).filter { $0.elementType == .staticText && $0.frame.width > 1 && $0.frame.height > 1
+        let texts = visibleElements(app, tab: tab).filter { $0.elementType == .staticText && $0.frame.width > 1 && $0.frame.height > 1
             && $0.frame.minY > win.minY + 100 && $0.frame.maxY < win.maxY - 90 }
         var bad: [String] = []
         for (i, a) in texts.enumerated() { for b in texts.dropFirst(i + 1) {
@@ -238,9 +250,10 @@ final class LayoutAudit: XCTestCase {
         note("\(screen): \(texts.count) texts, " + (bad.isEmpty ? "none overlapping" : "OVERLAPPING: " + bad.joined(separator: "; ")))
     }
     /// The three hard layout checks every RC2 screen gets.
-    private func checkScreen(_ app: XCUIApplication, _ screen: String) {
-        checkNoHorizontalOverflow(app, screen: screen)
-        checkNoTextOverlap(app, screen: screen)
+    /// `tab`: the visible tab page (0 Home … 4 Profile); nil = a sheet over the tabs.
+    private func checkScreen(_ app: XCUIApplication, _ screen: String, tab: Int?) {
+        checkNoHorizontalOverflow(app, screen: screen, tab: tab, scoped: true)
+        checkNoTextOverlap(app, screen: screen, tab: tab)
     }
     /// Picks a range of the Progress chart: a segmented control normally, a menu at accessibility sizes.
     private func pickRange(_ app: XCUIApplication, _ r: String) -> Bool {
@@ -264,7 +277,7 @@ final class LayoutAudit: XCTestCase {
             let tag = "rc2-\(size.lowercased())"
             // Progress level 1: the at-a-glance cards
             tab(app, "Progress")
-            shot("\(tag)-progress-glance"); checkScreen(app, "\(size) progress glance")
+            shot("\(tag)-progress-glance"); checkScreen(app, "\(size) progress glance", tab: 3)
             for id in ["glanceRiding", "glanceStrength", "glanceFrequency"] { XCTAssertTrue(app.buttons[id].exists, "\(size): at-a-glance card \(id)") }
             // Progress level 2: the chart at every range, labels measured and checked, one selected week
             let glance = app.buttons["glanceRiding"].firstMatch
@@ -277,7 +290,7 @@ final class LayoutAudit: XCTestCase {
                 reveal(app, chart)
                 let name = r.replacingOccurrences(of: " ", with: "")
                 shot("\(tag)-progress-riding-\(name)")
-                checkChartLabels(app, "trendChart", screen: "\(size) riding \(r)"); checkScreen(app, "\(size) riding \(r)")
+                checkChartLabels(app, "trendChart", screen: "\(size) riding \(r)"); checkScreen(app, "\(size) riding \(r)", tab: 3)
             }
             _ = pickRange(app, "16 wk"); reveal(app, chart)
             if chart.exists {
@@ -285,23 +298,23 @@ final class LayoutAudit: XCTestCase {
                 let header = app.descendants(matching: .any).matching(identifier: "trendChart-header").firstMatch
                 XCTAssertTrue(header.exists && (header.label.contains("Week of") || header.label.contains("This week")), "\(size): a tapped bar shows its week (\(header.label))")
                 XCTAssertTrue(header.label.contains("Done:") && header.label.contains("Planned:"), "\(size): the selection shows done and planned (\(header.label))")
-                shot("\(tag)-progress-riding-16wk-selected"); checkScreen(app, "\(size) riding selected")
+                shot("\(tag)-progress-riding-16wk-selected"); checkScreen(app, "\(size) riding selected", tab: 3)
                 chart.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.6)).tap(); sleep(1)
             }
             let strength = app.segmentedControls["trendChart-metric"].buttons["Strength"]
             if strength.exists {
                 strength.tap(); sleep(1); _ = pickRange(app, "8 wk"); reveal(app, chart)
-                shot("\(tag)-progress-strength-8wk"); checkChartLabels(app, "trendChart", screen: "\(size) strength 8 wk"); checkScreen(app, "\(size) strength 8 wk")
+                shot("\(tag)-progress-strength-8wk"); checkChartLabels(app, "trendChart", screen: "\(size) strength 8 wk"); checkScreen(app, "\(size) strength 8 wk", tab: 3)
                 chart.coordinate(withNormalizedOffset: CGVector(dx: 0.80, dy: 0.6)).tap(); sleep(1)
-                shot("\(tag)-progress-strength-thisweek"); checkScreen(app, "\(size) strength this week")
+                shot("\(tag)-progress-strength-thisweek"); checkScreen(app, "\(size) strength this week", tab: 3)
             } else { note("\(size): no Strength metric") }
             // FTP: the badge never says "tested" without a recorded test (the demo FTP is a test result without one)
             let ftp = app.descendants(matching: .any).matching(identifier: "ftpConfidence").firstMatch
             reveal(app, ftp, tries: 6)
-            if ftp.exists { XCTAssertFalse(ftp.label.lowercased().contains("tested"), "\(size): FTP badge '\(ftp.label)'"); shot("\(tag)-progress-ftp"); checkScreen(app, "\(size) progress ftp") } else { note("\(size): FTP badge not found") }
+            if ftp.exists { XCTAssertFalse(ftp.label.lowercased().contains("tested"), "\(size): FTP badge '\(ftp.label)'"); shot("\(tag)-progress-ftp"); checkScreen(app, "\(size) progress ftp", tab: 3) } else { note("\(size): FTP badge not found") }
             // Plan: the seven days fit, nothing scrolls sideways, Done and Planned are named, statuses, Fix plan works
             tab(app, "Plan")
-            shot("\(tag)-plan"); checkScreen(app, "\(size) plan")
+            shot("\(tag)-plan"); checkScreen(app, "\(size) plan", tab: 1)
             let days = (1...7).map { app.buttons["planDay-\($0)"] }
             let found = days.filter { $0.exists }
             XCTAssertEqual(found.count, 7, "\(size): seven day buttons")
@@ -317,25 +330,25 @@ final class LayoutAudit: XCTestCase {
             if done.exists { note("\(size) plan: done '\(done.label)' · planned '\(planned.label)'") }
             let fix = app.buttons["fixPlan"].firstMatch
             if fix.exists {
-                fix.tap(); sleep(2); shot("\(tag)-plan-fix"); checkScreen(app, "\(size) fix plan")
+                fix.tap(); sleep(2); shot("\(tag)-plan-fix"); checkScreen(app, "\(size) fix plan", tab: nil)
                 let action = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'fixPlan-'")).firstMatch
                 XCTAssertTrue(action.exists, "\(size): Fix plan offers an action")
                 if action.exists {
                     let label = action.label
                     action.tap(); sleep(2)
                     XCTAssertTrue(app.buttons["fixPlanUndo"].waitForExistence(timeout: 3), "\(size): '\(label)' did something (Undo offered)")
-                    shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan applied")
+                    shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan applied", tab: nil)
                     note("\(size): Fix plan action '\(label)' applied")
                     if app.buttons["fixPlanUndo"].exists { app.buttons["fixPlanUndo"].tap(); sleep(1) }
                 }
                 close(app)
             } else { note("\(size): no Fix plan button (week within budget)") }
-            scrollUp(app); shot("\(tag)-plan-lower"); checkScreen(app, "\(size) plan lower")
-            scrollUp(app); shot("\(tag)-plan-lower2"); checkScreen(app, "\(size) plan lower 2")
+            scrollUp(app); shot("\(tag)-plan-lower"); checkScreen(app, "\(size) plan lower", tab: 1)
+            scrollUp(app); shot("\(tag)-plan-lower2"); checkScreen(app, "\(size) plan lower 2", tab: 1)
             // Connections (no board in the demo: what the link line says)
             tab(app, "Home")
             let conn = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Manage'")).firstMatch
-            if conn.waitForExistence(timeout: 3) { conn.tap(); sleep(2); shot("\(tag)-connections"); checkScreen(app, "\(size) connections") } else { note("\(size): Connections link not found") }
+            if conn.waitForExistence(timeout: 3) { conn.tap(); sleep(2); shot("\(tag)-connections"); checkScreen(app, "\(size) connections", tab: 0) } else { note("\(size): Connections link not found") }
             XCTAssertEqual(app.state, .runningForeground)
             app.terminate()
         }
