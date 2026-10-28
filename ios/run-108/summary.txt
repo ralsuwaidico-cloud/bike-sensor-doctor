@@ -1,0 +1,29 @@
+BikeComputer iOS CI — build 108 — 2026-10-28 15:41 UTC
+Scope: full
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: ok (Executed 439 tests, with 0 failures) · 7m3s
+RESULT launch smoke (Release): ok (Executed 1 test, with 0 failures) · 21m45s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max=iPhone 17 Pro Max owner=iPhone-16 (runtime iOS-26-5)
+  layout small (L,AX3): ok · 27m30s
+  layout standard (L,XXXL): ok · 11m39s
+  layout promax (L): ok · 8m51s
+  layout owner (L,XXXL): FAILED (exit 65) · 18m37s — -[BikeComputerUITests.LayoutAudit testHomeStates] : Failed to determine hittability of "calendar" Button: Activation point invalid and no suggested hit points based on element frame 
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 74621   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 75091   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 75562   screenshot ax3 ok large
+RESULT layout audit: FAILED (145 screenshots)
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 1.0.0 (108) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (108) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 9068781 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: skipped (not requested for this run)
+commit 2beca4d3d876642ad5f04f7836b04f5726c21c9a  branch ios/home-b  job failure

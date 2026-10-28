@@ -1,0 +1,155 @@
+L home planned: nothing wider than the screen
+L home planned: 8 texts, none overlapping
+L home planned: primary 'Start workout' at 172–230 of 667
+L home planned: key controls homePrimary 311×58, homeWhy 132×44, homeMore 58×44, homeMissedMove 135×58, homeCoachAction 87×44
+L home planned: week 'This week: 0 of 5 sessions done. Rides 0 of 2 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+L home multi: nothing wider than the screen
+L home multi: 10 texts, none overlapping
+L home multi: primary 'View results' at 122–180 of 667
+L home multi: key controls homeWhy 149×44, homeRow-0 99×58, homeRowMore-0 58×44, homeRow-1 108×58, homeRowMore-1 58×44, homeMissedMove 135×58, homeCoachAction 87×44
+L home multi: week 'This week: 1 of 6 sessions done. Rides 1 of 3 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+L home missed: nothing wider than the screen
+L home missed: 8 texts, none overlapping
+L home missed: primary 'Start workout' at 172–230 of 667
+L home missed: key controls homePrimary 311×58, homeWhy 132×44, homeMore 58×44, homeMissedMove 135×58, homeCoachAction 87×44
+L home missed: week 'This week: 0 of 5 sessions done. Rides 0 of 3 · Lifts 0 of 2. Up next Fri · Strength · Full body 40 min.'
+L home stop: nothing wider than the screen
+L home stop: 6 texts, none overlapping
+L home stop: primary 'Review health check' at 158–216 of 667
+L home stop: key controls homePrimary 311×58, homeHoldInfo 119×44
+L home stop: week 'THIS WEEK, No sessions planned while paused'
+AX3 home planned: nothing wider than the screen
+AX3 home planned: 5 texts, none overlapping
+AX3 home planned: primary 'Start workout' at 430–492 of 667
+AX3 home planned: key controls homePrimary 311×62, homeWhy 151×86, homeMore 127×44, homeMissedMove 139×83, homeCoachAction 196×44
+AX3 home planned: week 'This week: 0 of 5 sessions done. Rides 0 of 2 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+AX3 home multi: nothing wider than the screen
+AX3 home multi: 4 texts, none overlapping
+AX3 home multi: primary 'View results' at 472–555 of 667
+AX3 home multi: homeWhy outside the checked zone (1200–1286 of 667)
+AX3 home multi: key controls homeWhy 181×86, homeRow-0 96×83, homeRowMore-0 95×86, homeRow-1 96×83, homeRowMore-1 95×86, homeMissedMove 139×83, homeCoachAction 196×44
+AX3 home multi: week 'This week: 1 of 6 sessions done. Rides 1 of 3 · Lifts 0 of 3. Up next Fri · Strength · Full body 40 min.'
+AX3 home missed: nothing wider than the screen
+AX3 home missed: 5 texts, none overlapping
+AX3 home missed: primary 'Start workout' at 430–492 of 667
+AX3 home missed: key controls homePrimary 311×62, homeWhy 151×86, homeMore 127×44, homeMissedMove 139×83, homeCoachAction 196×44
+AX3 home missed: week 'This week: 0 of 5 sessions done. Rides 0 of 3 · Lifts 0 of 2. Up next Fri · Strength · Full body 40 min.'
+AX3 home stop: nothing wider than the screen
+AX3 home stop: 4 texts, none overlapping
+AX3 home stop: primary 'Review health check' at 380–490 of 667
+AX3 home stop: key controls homePrimary 311×110, homeHoldInfo 271×44
+AX3 home stop: week 'THIS WEEK, No sessions planned while paused'
+L home: key controls 
+L home: no text outside the window
+L home: every on-screen button ≥ 44 pt tall
+L home lower: no text outside the window
+L home lower: every on-screen button ≥ 44 pt tall
+L home lower: key controls 
+L strength: no text outside the window
+L strength: buttons under 44 pt: moreMenu 36×36, Done 66×35
+L plan: no text outside the window
+L plan: every on-screen button ≥ 44 pt tall
+L progress: no text outside the window
+L progress: every on-screen button ≥ 44 pt tall
+L progress lower: no text outside the window
+L progress lower: every on-screen button ≥ 44 pt tall
+L profile: no text outside the window
+L profile: every on-screen button ≥ 44 pt tall
+L tab bar: Home outside the checked zone (615–667 of 667)
+L tab bar: key controls Home 72×52, Plan 72×52, centreButton 58×76, Progress 72×52, Profile 72×52
+AX3 home: key controls 
+AX3 home: no text outside the window
+AX3 home: every on-screen button ≥ 44 pt tall
+AX3 home lower: no text outside the window
+AX3 home lower: every on-screen button ≥ 44 pt tall
+AX3 home lower: key controls 
+AX3 strength: no text outside the window
+AX3 strength: buttons under 44 pt: moreMenu 36×36, Done 74×35
+AX3 plan: no text outside the window
+AX3 plan: every on-screen button ≥ 44 pt tall
+AX3 progress: no text outside the window
+AX3 progress: every on-screen button ≥ 44 pt tall
+AX3 progress lower: no text outside the window
+AX3 progress lower: every on-screen button ≥ 44 pt tall
+AX3 profile: no text outside the window
+AX3 profile: buttons under 44 pt: Riding 157×32, Strength 158×32, 4 wk 63×32, 8 wk 63×32, 12 wk 63×32, 16 wk 63×32, 1 yr 63×32
+AX3 tab bar: Home outside the checked zone (615–667 of 667)
+AX3 tab bar: key controls Home 72×52, Plan 72×52, centreButton 71×81, Progress 72×52, Profile 72×52
+L progress glance: nothing wider than the screen
+L progress glance: 17 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 34 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 5 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 33 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 5 texts, none overlapping
+L riding 12 wk: 4 date labels, smallest gap 33 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 5 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 15 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 5 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 34 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 5 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 6 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 36 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 5 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 6 texts, none overlapping
+L progress ftp: nothing wider than the screen
+L progress ftp: 19 texts, none overlapping
+L plan: nothing wider than the screen
+L plan: 30 texts, none overlapping
+L plan: done '1 of 3 rides done · +1 extra' · planned '1 h 33 min done · 4 h planned · 1 h spare of 5 h'
+L fix plan: nothing wider than the screen
+L fix plan: 1 texts, none overlapping
+L fix plan applied: nothing wider than the screen
+L fix plan applied: 2 texts, none overlapping
+L: Fix plan action 'Shorten Wed strength · full body from 40 min to 20 min' applied
+L plan lower: nothing wider than the screen
+L plan lower: 37 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 26 texts, none overlapping
+L: Connections link not found
+AX3 progress glance: nothing wider than the screen
+AX3 progress glance: 6 texts, none overlapping
+AX3 riding 4 wk: 4 date labels, smallest gap 23 pt
+AX3 riding 4 wk: nothing wider than the screen
+AX3 riding 4 wk: 9 texts, none overlapping
+AX3 riding 8 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 8 wk: nothing wider than the screen
+AX3 riding 8 wk: 3 texts, none overlapping
+AX3 riding 12 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 12 wk: nothing wider than the screen
+AX3 riding 12 wk: 9 texts, none overlapping
+AX3 riding 16 wk: 4 date labels, smallest gap 20 pt
+AX3 riding 16 wk: nothing wider than the screen
+AX3 riding 16 wk: 9 texts, none overlapping
+AX3 riding 1 yr: 4 date labels, smallest gap 22 pt
+AX3 riding 1 yr: nothing wider than the screen
+AX3 riding 1 yr: 9 texts, none overlapping
+AX3 riding selected: nothing wider than the screen
+AX3 riding selected: 9 texts, none overlapping
+AX3 strength 8 wk: 4 date labels, smallest gap 24 pt
+AX3 strength 8 wk: nothing wider than the screen
+AX3 strength 8 wk: 7 texts, none overlapping
+AX3 strength selected: nothing wider than the screen
+AX3 strength selected: 7 texts, none overlapping
+AX3 progress ftp: nothing wider than the screen
+AX3 progress ftp: 5 texts, none overlapping
+AX3 plan: nothing wider than the screen
+AX3 plan: 19 texts, none overlapping
+AX3 plan: done '1 of 3 rides done · +1 extra' · planned '1 h 33 min done · 4 h planned · 1 h spare of 5 h'
+AX3 fix plan: nothing wider than the screen
+AX3 fix plan: 0 texts, none overlapping
+AX3 fix plan applied: nothing wider than the screen
+AX3 fix plan applied: 1 texts, none overlapping
+AX3: Fix plan action 'Shorten Wed strength · full body from 40 min to 20 min' applied
+AX3 plan lower: nothing wider than the screen
+AX3 plan lower: 2 texts, none overlapping
+AX3 plan lower 2: nothing wider than the screen
+AX3 plan lower 2: 9 texts, none overlapping
+AX3: Connections link not found
