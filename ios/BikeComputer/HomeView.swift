@@ -286,7 +286,7 @@ struct HomeSingleCard: View {
             }
             HomePrimaryButton(action: session.action, isRide: session.isRide, elapsed: elapsed, perform: perform)
             HStack(spacing: DS.s) {
-                Button(action: why) { Text("Why this workout?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
+                Button(action: why) { Text("Why this workout?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap).contentShape(Rectangle()) }
                     .buttonStyle(.plain).accessibilityIdentifier("homeWhy")
                 Spacer(minLength: DS.s)
                 HomeMoreMenu(session: session, perform: perform, edit: open, swap: swap)
@@ -349,7 +349,7 @@ struct HomeMissedRow: View {
                 HomePrimaryButton(action: todayFree ? .moveToToday(missed.id) : .reschedule(missed.id), identifier: "homeMissedMove", compact: true, perform: perform)
             }
             if more > 0 {
-                Button(action: openPlan) { Text("+\(more) more in Plan").font(.footnote.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
+                Button(action: openPlan) { Text("+\(more) more in Plan").font(.footnote.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap).contentShape(Rectangle()) }
                     .buttonStyle(.plain).accessibilityIdentifier("homeMissedMore")
             }
         }
@@ -374,7 +374,7 @@ struct HomeMultiCard: View {
                 row(pair.element, index: pair.offset)
             }
             if let firstOpen = rows.first(where: { $0.status == .planned || $0.status == .inProgress }) ?? rows.first {
-                Button { why(firstOpen.workout) } label: { Text("Why these sessions?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
+                Button { why(firstOpen.workout) } label: { Text("Why these sessions?").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap).contentShape(Rectangle()) }
                     .buttonStyle(.plain).accessibilityIdentifier("homeWhy")
             }
             if let m = missed { HomeMissedRow(missed: m, more: moreMissed, todayFree: false, perform: perform, openPlan: openPlan) }
@@ -434,7 +434,7 @@ struct HomeHoldCard: View {
             }
             .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black)
             .accessibilityHint("Opens the health check").accessibilityIdentifier("homePrimary")
-            Button { perform(.holdInfo) } label: { Text("What this means").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }
+            Button { perform(.holdInfo) } label: { Text("What this means").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap).contentShape(Rectangle()) }
                 .buttonStyle(.plain).accessibilityIdentifier("homeHoldInfo")
         }
         .accessibilityElement(children: .contain)
@@ -465,10 +465,10 @@ struct HomeFirstCard: View {
         .accessibilityIdentifier("homeTodayCard")
     }
     private var ride: some View {
-        Button { perform(.openRideScreen) } label: { Text("Just record a ride").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }.buttonStyle(.plain).accessibilityIdentifier("homeFirstRide")
+        Button { perform(.openRideScreen) } label: { Text("Just record a ride").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap).contentShape(Rectangle()) }.buttonStyle(.plain).accessibilityIdentifier("homeFirstRide")
     }
     private var lift: some View {
-        Button { perform(.quickLog) } label: { Text("Log a lift").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap) }.buttonStyle(.plain).accessibilityIdentifier("homeFirstLift")
+        Button { perform(.quickLog) } label: { Text("Log a lift").font(.subheadline.weight(.semibold)).foregroundStyle(BC.accent).frame(minHeight: DS.minTap).contentShape(Rectangle()) }.buttonStyle(.plain).accessibilityIdentifier("homeFirstLift")
     }
 }
 
