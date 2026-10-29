@@ -1,0 +1,37 @@
+L home: key controls 
+L home: no text outside the window
+L home: buttons under 44 pt: Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+L home lower: no text outside the window
+L home lower: buttons under 44 pt: Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+L home lower: key controls 
+L strength: no text outside the window
+L strength: buttons under 44 pt: Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+L: no Why? button on screen
+L plan: no text outside the window
+L plan: buttons under 44 pt: Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32, Log strength 46×36, Days 41×36
+L progress: no text outside the window
+L progress: buttons under 44 pt: Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+L progress lower: no text outside the window
+L progress lower: every on-screen button ≥ 44 pt tall
+L profile: no text outside the window
+L profile: every on-screen button ≥ 44 pt tall
+L tab bar: Home outside the checked zone (788–840 of 874)
+L tab bar: key controls Home 78×52, Plan 78×52, centreButton 58×76, Progress 78×52, Profile 78×52
+XXXL home: key controls 
+XXXL home: no text outside the window
+XXXL home: every on-screen button ≥ 44 pt tall
+XXXL home lower: no text outside the window
+XXXL home lower: every on-screen button ≥ 44 pt tall
+XXXL home lower: key controls 
+XXXL strength: no text outside the window
+XXXL strength: buttons under 44 pt: moreMenu 36×36, Done 74×36
+XXXL plan: no text outside the window
+XXXL plan: buttons under 44 pt: Log strength 54×36, Days 49×36
+XXXL progress: no text outside the window
+XXXL progress: every on-screen button ≥ 44 pt tall
+XXXL progress lower: no text outside the window
+XXXL progress lower: buttons under 44 pt: Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+XXXL profile: no text outside the window
+XXXL profile: every on-screen button ≥ 44 pt tall
+XXXL tab bar: Home outside the checked zone (788–840 of 874)
+XXXL tab bar: key controls Home 78×52, Plan 78×52, centreButton 71×81, Progress 78×52, Profile 78×52
