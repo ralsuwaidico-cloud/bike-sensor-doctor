@@ -1,0 +1,29 @@
+BikeComputer iOS CI — build 117 — 2026-10-29 03:42 UTC
+Scope: full
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: ok (Executed 441 tests, with 0 failures) · 6m34s
+RESULT launch smoke (Release): FAILED (exit 65)
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max=iPhone 17 Pro Max owner=iPhone-16 (runtime iOS-26-5)
+  layout small (L,AX3): ok · 21m23s
+  layout standard (L,XXXL): FAILED (exit 65) · 7m39s — -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to not hittable: Button, {{16.0, 485.0}, {370.0, 102.7}}, label: 'Fri 30 Oct, planned, Strength · Full body, off bike, 40 min, 6 exercises · Goblet squat · Romanian deadlift · Dumbbell bench press · Dumbbell row · Back extension hold · Arnold press' 
+  layout promax (L): ok · 6m40s
+  layout owner (L,XXXL): ok · 28m4s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 99502   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 99560   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 226   screenshot ax3 ok large: 
+RESULT layout audit: FAILED (149 screenshots)
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 1.0.0 (117) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (117) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 9112960 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: skipped (not requested for this run)
+commit f931ff76a57353cd48a9ea3ab238ebc8f4120c4f  branch ios/home-polish  job failure
