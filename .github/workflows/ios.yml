@@ -78,10 +78,13 @@ jobs:
   build:
     needs: apple
     runs-on: macos-26
-    timeout-minutes: 150
+    # run 116 (29 Oct): the full pipeline hit the old 150-min job limit on slow runners and the job was killed before it
+    # could publish its log. The build step now has its own limit below the job's, so the log is always published.
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - name: Build, test, sign, upload
+        timeout-minutes: 215
         env:
           BUILD_NUMBER: ${{ github.run_number }}
           SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'full' }}
