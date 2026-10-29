@@ -266,10 +266,8 @@ final class LaunchSmokeTests: XCTestCase {
             if !app.buttons["Quick log"].firstMatch.exists { log.tap() }
             let quick = app.buttons["Quick log"].firstMatch
             if quick.waitForExistence(timeout: 5) {
-                let until = Date().addingTimeInterval(4)
-                while !quick.isHittable && Date() < until { usleep(250_000) }
-                // (run 87: hittable, then "failed to compute hit point" while the menu was still settling — tap by coordinate)
-                if quick.isHittable { quick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+                sleep(2)   // run 117: isHittable itself throws ("Failed to determine hittability") while the menu animates — wait, then tap by coordinate
+                quick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
             }
             opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
         }

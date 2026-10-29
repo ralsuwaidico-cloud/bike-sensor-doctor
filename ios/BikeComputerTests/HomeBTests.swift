@@ -287,4 +287,14 @@ final class HomeBTests: XCTestCase {
         XCTAssertFalse(c?.title.contains("short of your target") ?? false, c?.title ?? "")
         XCTAssertFalse(c?.title.contains("this week:") ?? false, c?.title ?? "")
     }
+
+    // owner 29 Oct: an engine finding that carries its own advice from the evidence still fills the slot
+    func testCoachSlotKeepsActionableBalanceFinding() {
+        var i = HomeCoachItem.Input()
+        i.gapFinding = CoachFinding(id: "str-pushpull", severity: .gap, text: "Push/pull: 4 push vs 1 pull sessions in 4 weeks — add a pull session.")
+        XCTAssertEqual(HomeCoachItem.select(i)?.source, .gap)
+        XCTAssertEqual(HomeCoachItem.select(i)?.title, "Push/pull: 4 push vs 1 pull sessions in 4 weeks — add a pull session.")
+        XCTAssertTrue(HomeCoachItem.progressOnlyFindings.contains("cyc-freq") && HomeCoachItem.progressOnlyFindings.contains("str-freq"))
+        XCTAssertNil(HomeCoachItem.select(HomeCoachItem.Input()), "nothing actionable: no card")
+    }
 }

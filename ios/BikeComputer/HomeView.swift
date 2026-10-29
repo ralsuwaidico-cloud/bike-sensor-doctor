@@ -116,7 +116,7 @@ struct HomeView: View {
         case .hybridProposal(let id): coachSheet = .hybrid(id)
         case .adjustment: showAdjustments = true
         case .ftp: coachSheet = .ftp
-        case .revise: tab = 1
+        case .gap, .revise: tab = 1
         case .insight(let w): perform(.startStrength(w))
         case .rate(let t): coachSheet = .rate(t)
         }

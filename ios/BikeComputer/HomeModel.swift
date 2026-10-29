@@ -263,6 +263,8 @@ struct HomeWeek: Equatable {
 
 /// The COACH slot (P0-3, N2, N5, N6, N13): the first existing engine output in a fixed priority order, or nothing.
 struct HomeCoachItem: Equatable {
+    /// Engine findings that only restate this week's counts (done / still to come / target): shown on the week card, not as advice.
+    static let progressOnlyFindings: Set<String> = ["cyc-freq", "str-freq"]
     enum Source: Equatable {
         /// AdaptationEngine proposal awaiting approval (id) — Accept / Not now.
         case adaptiveProposal(String)
@@ -272,6 +274,8 @@ struct HomeCoachItem: Equatable {
         case adjustment(UUID)
         /// FTP suggestion — Review.
         case ftp
+        /// HybridCoach balance / coverage finding with its own advice ("add a pull session") — Open Plan.
+        case gap
         /// HybridCoach weekly review "revise my days" — Open Plan.
         case revise
         /// Strength insight for the next strength session (workout id) — Details.
@@ -303,6 +307,8 @@ struct HomeCoachItem: Equatable {
         var nextSessionTitle: String? = nil
         var ftp: FTPSuggestion? = nil
         var currentFTP: Int = 0
+        /// An actionable engine finding (balance / coverage). The weekly-frequency findings are never passed here.
+        var gapFinding: CoachFinding? = nil
         var offerRevise: Bool = false
         var reviseText: String? = nil
         var insight: WorkoutInsight? = nil
@@ -326,6 +332,9 @@ struct HomeCoachItem: Equatable {
         }
         if let f = i.ftp {
             return HomeCoachItem(source: .ftp, title: "Update FTP to \(f.watts) W?", evidence: "From your best 20 minutes (\(f.best20) W) on a recent ride; your FTP is \(i.currentFTP) W now.", actionLabel: "Review")
+        }
+        if let g = i.gapFinding {
+            return HomeCoachItem(source: .gap, title: firstSentence(g.text), evidence: g.evidence, actionLabel: "Open Plan")
         }
         if i.offerRevise {
             return HomeCoachItem(source: .revise, title: "Revise your training days?", evidence: i.reviseText.map(firstSentence), actionLabel: "Revise my training days")
@@ -519,7 +528,9 @@ extension Store {
             i.hybridProposals = a.proposals
             // owner 29 Oct: a weekly-progress finding ("0 done and 1 still to come, 2 short of your target") is not a
             // recommendation — it is not shown in the coach slot (the week card shows done / scheduled / target); the
-            // finding itself is unchanged (HybridCoach); the same numbers stay visible on the week card
+            // finding itself is unchanged (HybridCoach); the same numbers stay visible on the week card. Findings that carry
+            // their own advice from the evidence (push/pull balance, lower body, movement coverage) still fill the slot.
+            i.gapFinding = a.findings.first { $0.severity == .gap && !HomeCoachItem.progressOnlyFindings.contains($0.id) }
             if let r = HybridCoach.weeklyReview(profile: profile, plan: plan, rides: rides, strength: strength, now: now), r.offerRevise { i.offerRevise = true; i.reviseText = r.suggestion }
             if let w = plan.filter({ $0.kind == .strength && !$0.done && !$0.skipped && $0.date >= today }).min(by: { $0.date < $1.date }), !w.plannerBuilt {
                 let ins = insight(for: w, entries: plannedEntries(for: w), now: now)

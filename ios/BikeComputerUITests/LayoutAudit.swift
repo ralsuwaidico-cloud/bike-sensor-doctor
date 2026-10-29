@@ -175,7 +175,7 @@ final class LayoutAudit: XCTestCase {
                 let f = DateFormatter(); f.dateFormat = "EEE d MMM"
                 let tomorrow = f.string(from: Calendar.current.date(byAdding: .day, value: 1, to: Date())!)
                 let day = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", tomorrow)).firstMatch
-                if day.exists { day.tap(); sleep(2); shot("\(tag)-08b-tomorrow"); scrollUp(app); shot("\(tag)-08c-tomorrow-lower"); close(app) } else { note("tomorrow's day button not found") }
+                if day.exists { day.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap(); sleep(2);  /* run 117 standard: XCUI "Failed to not hittable" on a fully visible card — tap by coordinate */ shot("\(tag)-08b-tomorrow"); scrollUp(app); shot("\(tag)-08c-tomorrow-lower"); close(app) } else { note("tomorrow's day button not found") }
             }
             scrollUp(app); shot("\(tag)-09-plan-lower")
             scrollUp(app); scrollUp(app); shot("\(tag)-10-history")
