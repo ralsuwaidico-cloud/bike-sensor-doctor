@@ -20,6 +20,14 @@ on:
         description: "Upload to TestFlight (internal testers only)"
         type: boolean
         default: false
+      layout_test:
+        description: "ui scope: which screenshot test runs on the layout devices (LayoutAudit, or OnboardingScreens for the onboarding audit)"
+        type: string
+        default: "LayoutAudit"
+      sizes:
+        description: "ui scope: text sizes for every layout device (empty = each device's usual sizes), e.g. L,AX3"
+        type: string
+        default: ""
       scope:
         description: "full = tests + layout + archive (default); ui = layout audit only (fast UI re-check, never uploads)"
         type: choice
@@ -88,6 +96,8 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
           SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'full' }}
+          LAYOUT_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.layout_test || 'LayoutAudit' }}
+          LAYOUT_SIZES_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && inputs.sizes || '' }}
           LAYOUT_DEVICES: ${{ github.event_name == 'workflow_dispatch' && inputs.devices || 'small,standard,promax,owner' }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

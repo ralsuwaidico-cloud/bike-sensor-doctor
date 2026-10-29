@@ -157,13 +157,14 @@ note "Layout audit simulators: small=${SMALL#*|} standard=${STD#*|} max=${MAX#*|
 LAYOUT_OK=1
 for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L" "owner|${OWNER%%|*}|L,XXXL"; do
   IFS='|' read -r LNAME LID LSIZES <<< "$spec"
+  [ -n "${LAYOUT_SIZES_OVERRIDE:-}" ] && LSIZES="$LAYOUT_SIZES_OVERRIDE"   # e.g. L,AX3 for the onboarding screenshots
   [ -n "$LID" ] || { note "  layout $LNAME: no simulator"; continue; }
   case ",$LAYOUT_DEVICES," in *",$LNAME,"*) ;; *) note "  layout $LNAME: skipped (not in LAYOUT_DEVICES)"; continue;; esac
   LT=$SECONDS
   LEXTRAS=0; [ "$LNAME" = "standard" ] || [ "$LNAME" = "owner" ] && LEXTRAS=1
   TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
   xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
-    -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit \
+    -destination "id=$LID" -only-testing:BikeComputerUITests/${LAYOUT_TEST:-LayoutAudit} \
     CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
   L=$?
   # one retry ONLY when the simulator failed to launch the app (infrastructure, run 71) — never for a failed check
@@ -173,7 +174,7 @@ for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MA
     xcrun simctl shutdown "$LID" >/dev/null 2>&1; xcrun simctl boot "$LID" >/dev/null 2>&1; sleep 20
     TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
     xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
-      -destination "id=$LID" -only-testing:BikeComputerUITests/LayoutAudit \
+      -destination "id=$LID" -only-testing:BikeComputerUITests/${LAYOUT_TEST:-LayoutAudit} \
       CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
     L=$?
   fi
