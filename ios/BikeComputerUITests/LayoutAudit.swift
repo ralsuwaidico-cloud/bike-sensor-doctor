@@ -393,7 +393,7 @@ final class LayoutAudit: XCTestCase {
         guard outDir != nil else { throw XCTSkip("LAYOUT_DIR not set — the layout audit runs only in the CI layout stage") }
         guard ["owner", "small"].contains(device) else { throw XCTSkip("Home states: the owner's iPhone size and the small iPhone only (CI time)") }
         for size in sizes {
-            let states = device == "owner" && size == sizes.first ? Self.homeStatesAll : ["planned", "multi", "missed", "stop"]
+            let states = device == "owner" && size == sizes.first ? Self.homeStatesAll : ["planned", "multi", "missed", "stop", "pending", "clearance", "ill"]   // every health hold at the large sizes (owner 29 Oct)
             for state in states {
                 let app = XCUIApplication()
                 app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.homeStore(state)
@@ -409,7 +409,15 @@ final class LayoutAudit: XCTestCase {
                 // rest or free day with a missed session: the one action is "Move to today" on the missed row (spec v2.1, P1-7)
                 let primary = ["homePrimary", "homeRow-0", "homeMissedMove"].map { app.buttons[$0].firstMatch }.first { $0.exists } ?? app.buttons["homePrimary"].firstMatch
                 XCTAssertTrue(primary.exists, "\(screen): no primary action")
-                if primary.exists {
+                // health check pending / clearance needed: the action that resolves the hold is the health line at the top; it must be
+                // on screen without scrolling. Today's (easy) session under it may need a normal scroll at the largest text (owner 29 Oct).
+                let caution = app.buttons["homeCaution"].firstMatch
+                let holdLine = ["pending", "clearance"].contains(state)
+                if holdLine {
+                    XCTAssertTrue(caution.exists, "\(screen): no health line")
+                    if caution.exists { XCTAssertLessThanOrEqual(caution.frame.minY + 44, win.maxY - 105, "\(screen): health line below the fold \(caution.frame)"); note("\(screen): health line at \(Int(caution.frame.minY))–\(Int(caution.frame.maxY))") }
+                }
+                if primary.exists, !holdLine {
                     let f = primary.frame
                     XCTAssertLessThanOrEqual(f.maxY, win.maxY - 105, "\(screen): primary button below the fold \(f)")
                     XCTAssertGreaterThanOrEqual(f.height, 43.5, "\(screen): primary button \(f.height) pt")
@@ -439,6 +447,13 @@ final class LayoutAudit: XCTestCase {
                     app.buttons["centreButton"].firstMatch.tap(); sleep(2)
                     XCTAssertTrue(app.buttons["holdReviewHealth"].waitForExistence(timeout: 5), "\(screen): Train now must open the hold sheet")
                     shot("home-\(size.lowercased())-stop-trainnow"); close(app)
+                }
+                if state == "multi" && size.hasPrefix("AX") {
+                    // the second session is reached by a normal scroll (readability first, owner 29 Oct)
+                    let second = app.buttons["homeRow-1"].firstMatch
+                    for _ in 0..<3 where !(second.exists && second.isHittable && second.frame.maxY <= win.maxY - 105) { app.swipeUp(); sleep(1) }
+                    XCTAssertTrue(second.exists && second.isHittable, "\(screen): second session not reachable by scrolling")
+                    shot("home-\(size.lowercased())-multi-scrolled")
                 }
                 XCTAssertEqual(app.state, .runningForeground)
                 app.terminate()

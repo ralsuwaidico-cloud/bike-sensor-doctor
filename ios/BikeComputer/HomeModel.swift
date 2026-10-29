@@ -272,8 +272,7 @@ struct HomeCoachItem: Equatable {
         case adjustment(UUID)
         /// FTP suggestion — Review.
         case ftp
-        /// HybridCoach gap finding / weekly review "revise my days" — Open Plan.
-        case gap
+        /// HybridCoach weekly review "revise my days" — Open Plan.
         case revise
         /// Strength insight for the next strength session (workout id) — Details.
         case insight(UUID)
@@ -304,7 +303,6 @@ struct HomeCoachItem: Equatable {
         var nextSessionTitle: String? = nil
         var ftp: FTPSuggestion? = nil
         var currentFTP: Int = 0
-        var gapFinding: CoachFinding? = nil
         var offerRevise: Bool = false
         var reviseText: String? = nil
         var insight: WorkoutInsight? = nil
@@ -328,9 +326,6 @@ struct HomeCoachItem: Equatable {
         }
         if let f = i.ftp {
             return HomeCoachItem(source: .ftp, title: "Update FTP to \(f.watts) W?", evidence: "From your best 20 minutes (\(f.best20) W) on a recent ride; your FTP is \(i.currentFTP) W now.", actionLabel: "Review")
-        }
-        if let g = i.gapFinding {
-            return HomeCoachItem(source: .gap, title: firstSentence(g.text), evidence: g.evidence, actionLabel: "Open Plan")
         }
         if i.offerRevise {
             return HomeCoachItem(source: .revise, title: "Revise your training days?", evidence: i.reviseText.map(firstSentence), actionLabel: "Revise my training days")
@@ -522,7 +517,9 @@ extension Store {
         if profile.trainingMode != .cycling {
             let a = HybridCoach.assess(profile: profile, plan: plan, rides: rides, strength: strength, availability: effectiveAvailability, now: now)
             i.hybridProposals = a.proposals
-            i.gapFinding = a.findings.first { $0.severity == .gap }
+            // owner 29 Oct: a weekly-progress finding ("0 done and 1 still to come, 2 short of your target") is not a
+            // recommendation — it is not shown in the coach slot (the week card shows done / scheduled / target); the
+            // finding itself is unchanged (HybridCoach); the same numbers stay visible on the week card
             if let r = HybridCoach.weeklyReview(profile: profile, plan: plan, rides: rides, strength: strength, now: now), r.offerRevise { i.offerRevise = true; i.reviseText = r.suggestion }
             if let w = plan.filter({ $0.kind == .strength && !$0.done && !$0.skipped && $0.date >= today }).min(by: { $0.date < $1.date }), !w.plannerBuilt {
                 let ins = insight(for: w, entries: plannedEntries(for: w), now: now)

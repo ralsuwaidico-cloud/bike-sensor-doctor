@@ -50,7 +50,7 @@ struct RootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // the raised centre button overlaps the content by ~20 pt: scrollable content ends above it
             .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 22).allowsHitTesting(false) }
-            .undoSnackbar()
+            .undoSnackbar(hidden: tab == 0)     // Home shows it inline, under Today (never over a heading)
             RideTabBar(selected: $tab, recording: recorder.isActive, action: store.todayAction(now: max(Date(), day)), onCentre: centreTapped)
         }
         .ignoresSafeArea(.keyboard)
@@ -141,8 +141,9 @@ struct RideTabBar: View {
         case .inProgress: return ("dumbbell.fill", "In progress", "Strength workout in progress, resume it")
         case .doneToday: return ("checkmark", "Done today", "Today's training is done, see the next step")
         case .rest: return ("dumbbell.fill", "Train now", "Rest day, optional session")
-        // N8: the button keeps its look; it opens the hold sheet
-        case .healthHold: return ("dumbbell.fill", "Train now", "Training is paused by your health check, opens what this means")
+        // owner 29 Oct: while training is paused the button looks paused (neutral, health icon, "Paused") and still only
+        // opens the hold sheet (health guidance) — it never starts training
+        case .healthHold: return ("cross.case.fill", "Paused", "Training paused by your health check, opens what this means")
         }
     }
 
@@ -177,13 +178,16 @@ struct RideTabBar: View {
         .accessibilityShowsLargeContentViewer { Label(title, systemImage: icon) }
     }
 
+    private var paused: Bool { !recording && action == .healthHold }
+
     private var rideButton: some View {
         let c = centre
         return Button { if let onCentre, !recording { onCentre() } else { selected = 2 } } label: {
             VStack(spacing: 3) {
                 ZStack {
-                    Circle().fill(recording ? BC.live : BC.accent).frame(width: 58, height: 58).shadow(color: .black.opacity(0.18), radius: 6, y: 3)
-                    Image(systemName: c.icon).font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
+                    Circle().fill(paused ? Color(.systemGray5) : recording ? BC.live : BC.accent).frame(width: 58, height: 58).shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+                        .overlay(Circle().stroke(paused ? BC.warn.opacity(0.6) : Color.clear, lineWidth: 1.5))
+                    Image(systemName: c.icon).font(.system(size: paused ? 22 : 26, weight: .bold)).foregroundStyle(paused ? BC.warn : .white)
                 }
                 .overlay(Circle().stroke(selected == 2 ? Color.primary.opacity(0.35) : Color.clear, lineWidth: 2))
                 .offset(y: -14)

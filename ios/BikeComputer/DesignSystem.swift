@@ -93,33 +93,43 @@ struct TitleValue<Title: View, Value: View>: View {
     }
 }
 
-/// "Deleted · Undo" snackbar for the soft-delete window.
+/// "Deleted · Undo" snackbar for the soft-delete window. `inline: true` = the bar is placed in the page's own layout
+/// (Home, owner 29 Oct: a floating bar covered the "This week" heading); the overlay is then not drawn.
+struct UndoToastBar: View {
+    @EnvironmentObject private var store: Store
+    let toast: UndoToast
+    var body: some View {
+        HStack(spacing: DS.m) {
+            Text(toast.text).font(.subheadline).foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: DS.s)
+            Button("Undo") { store.undoDelete(toast.id) }
+                .font(.subheadline.bold()).foregroundStyle(BC.accent).frame(minWidth: DS.minTap, minHeight: DS.minTap)
+                .accessibilityIdentifier("undoDelete")
+        }
+        .padding(.horizontal, DS.l).padding(.vertical, DS.xs)
+        .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: DS.corner))
+        .task(id: toast.id) {
+            try? await Task.sleep(nanoseconds: 8_000_000_000)
+            if store.undoToast?.id == toast.id { withAnimation { store.undoToast = nil } }
+        }
+    }
+}
+
 struct UndoSnackbar: ViewModifier {
     @EnvironmentObject private var store: Store
+    var hidden = false
     func body(content: Content) -> some View {
         content.overlay(alignment: .bottom) {
-            if let t = store.undoToast {
-                HStack(spacing: DS.m) {
-                    Text(t.text).font(.subheadline).foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: DS.s)
-                    Button("Undo") { store.undoDelete(t.id) }
-                        .font(.subheadline.bold()).foregroundStyle(BC.accent).frame(minWidth: DS.minTap, minHeight: DS.minTap)
-                        .accessibilityIdentifier("undoDelete")
-                }
-                .padding(.horizontal, DS.l).padding(.vertical, DS.xs)
-                .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: DS.corner))
-                .padding(.horizontal, DS.l).padding(.bottom, DS.s)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .task(id: t.id) {
-                    try? await Task.sleep(nanoseconds: 8_000_000_000)
-                    if store.undoToast?.id == t.id { withAnimation { store.undoToast = nil } }
-                }
+            if !hidden, let t = store.undoToast {
+                UndoToastBar(toast: t)
+                    .padding(.horizontal, DS.l).padding(.bottom, DS.s)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeOut(duration: 0.2), value: store.undoToast)
     }
 }
-extension View { func undoSnackbar() -> some View { modifier(UndoSnackbar()) } }
+extension View { func undoSnackbar(hidden: Bool = false) -> some View { modifier(UndoSnackbar(hidden: hidden)) } }
 
 /// The FTP's confidence as a pill with an honest label.
 struct FTPConfidencePill: View {

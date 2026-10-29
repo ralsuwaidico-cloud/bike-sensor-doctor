@@ -37,6 +37,10 @@ struct HomeView: View {
                         HomeMissedRow(missed: m, more: h.moreMissed, todayFree: h.isRestOrFree, perform: perform, openPlan: { tab = 1 })
                             .padding(.top, DS.s)
                     }
+                    // the Undo bar for a Move / Skip / Do today sits in the page, under the card it changed
+                    if let t = store.undoToast {
+                        UndoToastBar(toast: t).padding(.top, DS.s).transition(.opacity)
+                    }
                     if h.showCoach, !recorder.isActive, let item = store.homeCoach() {
                         HomeSectionTitle(text: "Coach")
                         HomeCoachCard(item: item) { coachTapped(item) }
@@ -47,7 +51,8 @@ struct HomeView: View {
                     }
                 }
                 .padding(.horizontal, DS.l)
-                .padding(.bottom, 120)      // the tab bar and its raised centre button never cover the last card
+                .padding(.bottom, 120)
+                .animation(.easeOut(duration: 0.2), value: store.undoToast)      // the tab bar and its raised centre button never cover the last card
             }
             .background(Color(.systemGroupedBackground))
             .toolbar(.hidden, for: .navigationBar)
@@ -111,7 +116,7 @@ struct HomeView: View {
         case .hybridProposal(let id): coachSheet = .hybrid(id)
         case .adjustment: showAdjustments = true
         case .ftp: coachSheet = .ftp
-        case .gap, .revise: tab = 1
+        case .revise: tab = 1
         case .insight(let w): perform(.startStrength(w))
         case .rate(let t): coachSheet = .rate(t)
         }

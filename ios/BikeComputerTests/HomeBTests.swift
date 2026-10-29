@@ -220,8 +220,6 @@ final class HomeBTests: XCTestCase {
         XCTAssertEqual(HomeCoachItem.select(i)?.actionLabel, "Rate last session"); XCTAssertEqual(HomeCoachItem.select(i)?.evidence, "Only 1 rated session in the last 14 days.")
         i.offerRevise = true; i.reviseText = "Two weeks missed half. Change the days."
         XCTAssertEqual(HomeCoachItem.select(i)?.source, .revise)
-        i.gapFinding = CoachFinding(id: "g", severity: .gap, text: "A lift is missing this week. Thursday is free.")
-        XCTAssertEqual(HomeCoachItem.select(i)?.source, .gap); XCTAssertEqual(HomeCoachItem.select(i)?.title, "A lift is missing this week.")
         i.ftp = FTPSuggestion(watts: 240, best20: 253, best60: nil, rideId: UUID(), rideDate: Date(), previousFTP: 225); i.currentFTP = 225
         XCTAssertEqual(HomeCoachItem.select(i)?.source, .ftp); XCTAssertEqual(HomeCoachItem.select(i)?.title, "Update FTP to 240 W?")
         // an applied change: on the card when it is today's (N6), in the slot when it is the next session's
@@ -275,5 +273,18 @@ final class HomeBTests: XCTestCase {
         XCTAssertEqual(w.targetLine, "Weekly target: 3 rides · 1 lift")
         w.liftsTarget = 0
         XCTAssertEqual(w.targetLine, "Weekly target: 3 rides")
+    }
+
+    // owner 29 Oct: weekly progress numbers are not a recommendation — the engine's frequency finding is unchanged, but
+    // Home's coach slot does not show it (no card when the engine has nothing actionable)
+    func testCoachSlotDoesNotRepeatWeeklyProgress() {
+        let s = store()
+        let tomorrow = cal.date(byAdding: .hour, value: 31, to: cal.startOfDay(for: Date()))!
+        s.plan = [Workout(date: tomorrow, kind: .endurance, minutes: 60)]
+        let a = HybridCoach.assess(profile: s.profile, plan: s.plan, rides: s.rides, strength: s.strength, availability: s.effectiveAvailability)
+        XCTAssertTrue(a.findings.contains { $0.id == "cyc-freq" }, "the engine finding itself is unchanged")
+        let c = s.homeCoach()
+        XCTAssertFalse(c?.title.contains("short of your target") ?? false, c?.title ?? "")
+        XCTAssertFalse(c?.title.contains("this week:") ?? false, c?.title ?? "")
     }
 }
