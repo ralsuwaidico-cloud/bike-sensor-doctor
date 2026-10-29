@@ -1,0 +1,29 @@
+BikeComputer iOS CI — build 121 — 2026-10-29 08:17 UTC
+Scope: full
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: ok (Executed 443 tests, with 0 failures) · 8m4s
+RESULT launch smoke (Release): ok (Executed 1 test, with 0 failures) · 21m30s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max=iPhone 17 Pro Max owner=iPhone-16 (runtime iOS-26-5)
+  layout small (L,AX3): ok · 28m48s
+  layout standard (L,XXXL): ok · 11m40s
+  layout promax (L): ok · 9m19s
+  layout owner (L,XXXL): ok · 31m52s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 21059   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 21573   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 22084   screenshot ax3 ok large
+RESULT layout audit: ok (182 screenshots)
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 1.0.0 (121) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (121) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 9117550 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: ok — build 121 sent to App Store Connect; TestFlight processing takes about 5-30 minutes
+commit b75a295d9fbbe9d58008b635485b5913b1360096  branch release/tf-b75a295  job success
