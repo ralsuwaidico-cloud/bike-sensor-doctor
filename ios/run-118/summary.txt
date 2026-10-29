@@ -1,0 +1,19 @@
+BikeComputer iOS CI — build 118 — 2026-10-29 03:47 UTC
+Scope: ui (layout devices: small,owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: skipped (scope ui)
+RESULT launch smoke (Release): skipped (scope ui)
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max=iPhone 17 Pro Max owner=iPhone-16 (runtime iOS-26-5)
+  layout small (L,AX3): ok · 34m33s
+  layout standard: skipped (not in LAYOUT_DEVICES)
+  layout promax: skipped (not in LAYOUT_DEVICES)
+  layout owner (L,XXXL): ok · 28m2s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 62163   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 62318   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 62648   screenshot ax3 ok large
+RESULT layout audit: ok (139 screenshots)
+RESULT archive: skipped (scope ui)
+RESULT upload: skipped (scope ui never uploads)
+Total: 73m16s
+commit 7ff72dd592b3f8574c6296d57c4768f647553912  branch wip/home-refine  job success
