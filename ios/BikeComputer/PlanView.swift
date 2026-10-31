@@ -324,6 +324,21 @@ struct WorkoutDetail: View {
     @State private var confirmDelete = false
     @State private var showLog = false
     @State private var showDetailed = false
+    /// Phase 1 rebuild fix: the before/after preview of a significant change; `editNotice` explains a refused change.
+    @State private var preview: PreviewRef? = nil
+    @State private var editNotice: String? = nil
+    @State private var supersets = false
+
+    /// The session as saved (screens never show an unsaved edit as if it were the plan).
+    private func reloadFromStore() { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }
+    private func submit(_ w: Workout, supersets s: Bool? = nil) {
+        editNotice = nil
+        switch store.requestEdit(w, prefersSupersets: s) {
+        case .saved: mode = 0
+        case .preview(let id): preview = PreviewRef(id: id)
+        case .refused(let t): editNotice = t; reloadFromStore()
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -342,6 +357,7 @@ struct WorkoutDetail: View {
             .alert("Remove this session?", isPresented: $confirmDelete) { Button("Remove", role: .destructive) { store.remove(workout); dismiss() }; Button("Cancel", role: .cancel) {} }
             .sheet(isPresented: $showLog, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { QuickStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus, workoutId: workout.id) }
             .sheet(isPresented: $showDetailed, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { DetailedStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus ?? .custom, workoutId: workout.id) }
+            .sheet(item: $preview, onDismiss: reloadFromStore) { r in SessionChangeSheet(proposalId: r.id) { mode = 0 } }
         }
         .undoSnackbar()
     }
@@ -358,7 +374,7 @@ struct WorkoutDetail: View {
         }
         ActionRow(actions: [
             ActionSpec(label: "Move", a11y: "Move to another day", identifier: "detailMove") { mode = 1 },
-            ActionSpec(label: "Edit", a11y: "Edit type and duration", identifier: "detailEdit") { mode = 2 },
+            ActionSpec(label: "Edit", a11y: "Edit type and duration", identifier: "detailEdit") { supersets = workout.riderChoice?.prefersSupersets ?? false; mode = 2 },
             ActionSpec(label: "Swap", a11y: "Swap for another session type", identifier: "detailSwap") { mode = 3 },
             ActionSpec(label: "Remove", a11y: "Remove this session (Undo available)", tint: BC.warn, identifier: "detailRemove") { confirmDelete = true }
         ])
@@ -385,14 +401,17 @@ struct WorkoutDetail: View {
     @ViewBuilder private var edit: some View {
         Card { Eyebrow(t: "Type"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(WorkoutKind.allCases, id: \.self) { k in Button(k.title) { workout.kind = k; if k.minutes0 { workout.minutes = 0 } else if workout.minutes == 0 { workout.minutes = k.defaultMinutes } }.buttonStyle(.bordered).tint(workout.kind == k ? BC.accent : .secondary).controlSize(.large) } } }
         if workout.kind == .strength { Card { Eyebrow(t: "Body region"); LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 6) { ForEach(StrengthFocus.allCases.filter { $0 != .custom }, id: \.self) { f in Button(f.short) { workout.strengthFocus = f }.buttonStyle(.bordered).tint(workout.strengthFocus == f ? BC.accent : .secondary).controlSize(.large) } } } }
-        if !workout.kind.minutes0 { Card { Eyebrow(t: "Duration"); Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...240, step: 5).tint(BC.accent) } }
-        Button { store.edit(workout); mode = 0 } label: { Text("Save").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
-        Button("Cancel") { mode = 0 }
+        if !workout.kind.minutes0 { Card { Eyebrow(t: "Duration"); Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...240, step: 5).tint(BC.accent).accessibilityIdentifier("editDuration") } }
+        if workout.kind == .strength { Toggle("Use supersets to save time", isOn: $supersets).tint(BC.accent).accessibilityIdentifier("editSupersets") }
+        if let t = editNotice { Text(t).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
+        if workout.kind == .strength { Text("A new type or time rebuilds the exercises. You'll see the before and after before anything is saved.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+        Button { submit(workout, supersets: workout.kind == .strength && supersets != (store.plan.first { $0.id == workout.id }?.riderChoice?.prefersSupersets ?? false) ? supersets : nil) } label: { Text(workout.kind == .strength ? "Review change" : "Save").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier("editSave")
+        Button("Cancel") { reloadFromStore(); editNotice = nil; mode = 0 }
     }
     @ViewBuilder private var replace: some View {
         Eyebrow(t: "Replace with")
         ForEach(Coach.alternatives(for: workout), id: \.kind) { alt in
-            Button { var w = workout; w.kind = alt.kind; w.minutes = alt.minutes; workout = w; store.edit(w); mode = 0 } label: {
+            Button { var w = workout; w.kind = alt.kind; w.minutes = alt.minutes; submit(w) } label: {
                 HStack { ZonePill(z: alt.kind.zone); VStack(alignment: .leading) { Text(alt.kind.title).bold().foregroundStyle(.primary); Text(alt.minutes > 0 ? Fmt.duration(minutes: alt.minutes) : "").font(.caption).foregroundStyle(.secondary) }; Spacer() }
                     .padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
             }.buttonStyle(.plain)

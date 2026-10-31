@@ -131,13 +131,19 @@ extension Store {
             else if let adj = adaptations.first(where: { $0.workoutId == a.id }) { t += ". \(adj.summary)" }
             lines.append(t)
         }
-        checkInRebuild = changed.isEmpty ? nil : CheckInRebuild(before: changed, lines: lines, at: now)
+        checkInRebuild = changed.isEmpty ? nil : CheckInRebuild(before: changed, lines: lines, at: now, after: plan.filter { p in changed.contains { $0.id == p.id } })
     }
 
     /// Undo everything the latest check-in changed: those sessions go back exactly as they were and are kept that way
     /// (marked as the rider's own, so neither the planner nor the adaptive coach rebuilds them on its own again).
-    func undoCheckInRebuild() {
-        guard let r = checkInRebuild else { return }
+    @discardableResult
+    func undoCheckInRebuild() -> Bool {
+        guard let r = checkInRebuild else { return false }
+        // Rebuild fix (review C R6): refused when any of these sessions changed after the rebuild
+        for a in r.after { if let cur = plan.first(where: { $0.id == a.id }), cur != a {
+            lastUndoRefusal = "\(cur.displayTitle) changed after the check-in, so Undo would overwrite your later change."
+            return false
+        } }
         var p = plan, d = dismissedAdaptations
         let ids = Set(r.before.map { $0.id })
         for b in r.before { if let i = p.firstIndex(where: { $0.id == b.id }), !p[i].done { var x = b; x.markRiderEdited(); p[i] = x } }
@@ -147,6 +153,7 @@ extension Store {
         plan = p
         checkInRebuild = nil
         trimAdaptationKeys()
+        return true
     }
 
     // MARK: visible and reversible (brief E)
@@ -239,4 +246,6 @@ struct CheckInRebuild: Equatable {
     var before: [Workout]
     var lines: [String]
     var at: Date
+    /// Rebuild fix (review C R6): the sessions as the rebuild left them (compare-and-swap on Undo).
+    var after: [Workout] = []
 }

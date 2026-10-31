@@ -47,6 +47,9 @@ struct HomeSwapSheet: View {
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
     let workout: Workout
+    /// Phase 1 rebuild fix: a swap INTO strength is previewed before it is saved.
+    @State private var preview: PreviewRef? = nil
+    @State private var notice: String? = nil
     var body: some View {
         HomeSheetWrap(title: "Swap \(workout.kind.title.lowercased())") {
             List {
@@ -54,7 +57,11 @@ struct HomeSwapSheet: View {
                     ForEach(Array(Coach.alternatives(for: workout).enumerated()), id: \.offset) { pair in
                         Button {
                             var w = workout; w.kind = pair.element.kind; w.minutes = pair.element.minutes
-                            store.edit(w); dismiss()
+                            switch store.requestEdit(w) {
+                            case .saved: dismiss()
+                            case .preview(let id): preview = PreviewRef(id: id)
+                            case .refused(let t): notice = t
+                            }
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(pair.element.kind.title).bold().foregroundStyle(.primary)
@@ -63,8 +70,10 @@ struct HomeSwapSheet: View {
                             .frame(minHeight: DS.minTap, alignment: .leading)
                         }
                     }
+                    if let n = notice { Text(n).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
                 }
             }
+            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id) { dismiss() } }
         }
     }
 }

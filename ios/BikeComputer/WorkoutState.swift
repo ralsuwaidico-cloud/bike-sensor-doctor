@@ -192,6 +192,11 @@ struct TrashItem: Codable, Identifiable, Equatable {
     var strength: [StrengthSession] = []
     var workout: Workout? = nil
     var planBefore: [Workout] = []
+    /// Rebuild fix (review C R6): the sessions as this action left them; Undo restores only while they still match.
+    var planAfter: [Workout]? = nil
+    /// Rebuild fix (Phase 1): this item undoes a session change (type / duration rebuild). Undo then also reconciles an
+    /// in-progress session: every set already done is kept, only the not-started part goes back to the old prescription.
+    var sessionRebuild: Bool? = nil
     static let keepDays = 30
 }
 
@@ -276,6 +281,12 @@ extension Store {
     @discardableResult
     func undoDelete(_ trashId: UUID) -> Bool {
         guard let item = trash.first(where: { $0.id == trashId }) else { return false }
+        if let after = item.planAfter {
+            for a in after { if let cur = plan.first(where: { $0.id == a.id }), cur != a {
+                lastUndoRefusal = "\(cur.displayTitle) changed after this, so Undo would overwrite your later change."
+                return false
+            } }
+        }
         var logs = strength
         for s in item.strength where !logs.contains(where: { $0.id == s.id }) { logs.append(s) }
         if let w = item.workout { for j in logs.indices where logs[j].workoutId == w.id { logs[j].unplanned = nil } }
@@ -284,6 +295,15 @@ extension Store {
         if let w = item.workout, !p.contains(where: { $0.id == w.id }) { p.append(w) }
         for b in item.planBefore { if let i = p.firstIndex(where: { $0.id == b.id }) { p[i] = b } else { p.append(b) } }
         p.sort { $0.date < $1.date }
+        // Rebuild fix (owner item 8): undoing a session change never erases sets logged after it
+        if item.sessionRebuild == true, var a = activeSession, let b = item.planBefore.first(where: { $0.id == a.workoutId }) {
+            let keep = (a.exercises ?? []).filter { !$0.doneSets.isEmpty }
+            let old = (b.plannedEntries ?? []).filter { e in !keep.contains { $0.exerciseId == e.exerciseId } }
+                .map { e -> ExerciseEntry in var x = e; x.sets = x.sets.map { var s = $0; s.done = false; return s }; return x }
+            a.exercises = keep + old
+            a.focus = b.strengthFocus ?? a.focus
+            activeSession = a
+        }
         strength = logs
         plan = p
         trash.removeAll { $0.id == trashId }

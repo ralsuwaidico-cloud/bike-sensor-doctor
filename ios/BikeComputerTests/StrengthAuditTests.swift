@@ -264,7 +264,10 @@ final class StrengthAuditTests: XCTestCase {
         let s = store()
         let small = routine(press); s.saveTemplate(small)                      // ≈ 15 min
         let nt = strengthOn(s, nextTuesday)!
-        var edited = nt; edited.minutes = 25; s.edit(edited)
+        // PROTOTYPE contract change (review C R4 / review A EQUIP-002): a duration change is a previewed, confirmed rebuild
+        // and needs known equipment; before the fix this edit was a label-only change saved without a preview
+        s.equipment.owned = ["dumbbell", "bench"]
+        var edited = nt; edited.minutes = 25; XCTAssertEqual(s.edit(edited, confirmed: true), .applied)
         let note = s.setWeekdayRoutine(small, weekday: 1)
         let after = s.plan.first { $0.id == nt.id }!
         XCTAssertEqual(after.templateId, small.id); XCTAssertEqual(after.minutes, 25, "a hand-set duration is kept")

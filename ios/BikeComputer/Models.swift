@@ -281,6 +281,12 @@ struct Workout: Codable, Identifiable, Equatable {
     /// Coach remediation: the ride as generated before a safety cap (health check / return after a break) changed it, so
     /// the cap can be lifted again when it no longer applies (nil = not capped).
     var safetyOriginal: SafetyOriginal? = nil
+    /// Rebuild fix (Phase 1): the athlete's explicit choice for this session (type / duration) — respected by
+    /// regeneration, which may rebuild the exercises but never changes the choice. nil = no choice recorded.
+    var riderChoice: RiderChoice? = nil
+    /// Rebuild fix (Phase 1): the athlete hand-edited the exercise list (swap, sets editor). Never replaced without asking.
+    /// Today's single `edited` flag conflates this with "chose the type/duration"; the prototype separates them.
+    var entriesHandEdited: Bool? = nil
     /// Review P3-01: a change the rider made by hand. The session is theirs from now on: a safety original captured
     /// before the edit is dropped (it would otherwise be restored over the edit, uncapped). A session paused by the health
     /// check (rest + original) keeps its original, which is what comes back.
@@ -324,6 +330,8 @@ struct Workout: Codable, Identifiable, Equatable {
         migrationNote = try? c.decodeIfPresent(String.self, forKey: .migrationNote)
         rationale = try? c.decodeIfPresent(SessionRationale.self, forKey: .rationale)
         safetyOriginal = try? c.decodeIfPresent(SafetyOriginal.self, forKey: .safetyOriginal)
+        riderChoice = try? c.decodeIfPresent(RiderChoice.self, forKey: .riderChoice)
+        entriesHandEdited = (try? c.decodeIfPresent(Bool.self, forKey: .entriesHandEdited)) == true ? true : nil
     }
     /// "Strength · Lower body" when a region is planned.
     var displayTitle: String {
@@ -699,6 +707,8 @@ struct AppliedProposal: Codable, Equatable, Identifiable {
     var text: String
     var before: Workout
     var appliedAt: Date
+    /// Rebuild fix (review C R6/A1): the session as the proposal left it; Undo restores only while the session still equals it.
+    var after: Workout? = nil
 }
 
 final class Store: ObservableObject {
@@ -739,6 +749,22 @@ final class Store: ObservableObject {
     /// Sessions the planner / adaptive coach rebuilt after the latest check-in, as they were before (one-tap Undo).
     @Published var checkInRebuild: CheckInRebuild? = nil
     @Published private(set) var lastSaveError: String?
+    /// Rebuild fix (review C A7): engine-held proposals; the UI / AI commit by id, a proposal object never crosses a boundary.
+    var pendingProposals: [UUID: SessionChangeProposal] = [:]
+    /// Rebuild fix: the last proposal `edit` made (for the preview sheet).
+    var lastProposalId: UUID? = nil
+    /// Rebuild fix: the proposal a commit refused as stale, kept so the preview can rebuild it from the same request.
+    var lastStale: [UUID: SessionChangeProposal] = [:]
+    /// Rebuild fix (review C R6): why the last Undo was refused (shown to the athlete).
+    var lastUndoRefusal: String? = nil
+    /// Rebuild fix (review C A4): writes are batched inside `transaction { }`; `persistCount` counts real file writes (tests).
+    private var txDepth = 0
+    private var txDirty = false
+    private(set) var persistCount = 0
+    func transaction(_ body: () -> Void) {
+        txDepth += 1; body(); txDepth -= 1
+        if txDepth == 0, txDirty { txDirty = false; persist() }
+    }
 
     let dir: URL
     private var loading = true
@@ -863,6 +889,7 @@ final class Store: ObservableObject {
     func assign(template t: WorkoutTemplate?, to w: Workout) -> String? {
         guard let i = plan.firstIndex(where: { $0.id == w.id }), !plan[i].done else { return nil }
         plan[i].templateId = t?.id; plan[i].plannedEntries = nil; plan[i].routineManual = t != nil
+        plan[i].riderChoice = nil          // Rebuild fix (review C R2): a newer explicit choice (the routine) replaces the old one
         if let t { plan[i].minutes = t.estimatedMinutes; if t.focus != .custom { plan[i].strengthFocus = t.focus } }
         return liftingBudgetWarning(weekOf: plan[i].date)
     }
@@ -875,6 +902,7 @@ final class Store: ObservableObject {
         var touched: [Date] = []
         for i in plan.indices where plan[i].kind == .strength && !plan[i].done && !plan[i].routineManual && plan[i].date >= today && Store.weekdayIndex(plan[i].date) == weekday {
             plan[i].templateId = t?.id; plan[i].plannedEntries = nil
+            plan[i].riderChoice = nil      // Rebuild fix (review C R2): the weekday routine is the newer explicit decision; a kept hand-set duration stays via `edited`
             if let t { if !plan[i].edited { plan[i].minutes = t.estimatedMinutes }; if t.focus != .custom { plan[i].strengthFocus = t.focus } }
             touched.append(plan[i].date)
         }
@@ -1019,8 +1047,37 @@ final class Store: ObservableObject {
         return plan.filter { $0.date >= monday && $0.date < sunday }.sorted { $0.date < $1.date }
     }
     func update(_ w: Workout) { if let i = plan.firstIndex(where: { $0.id == w.id }) { plan[i] = w } }
-    /// A change the rider made by hand: saved and flagged so regeneration asks first.
-    func edit(_ w: Workout) { var x = w; x.markRiderEdited(before: plan.first(where: { $0.id == w.id })); update(x) }
+    /// The rebuild request for a significant change of a planned session (a strength session's type or duration, or a
+    /// session turned INTO strength), or nil when the change is not significant (skip, note, a ride's own edits …).
+    static func significantChange(from old: Workout, to w: Workout, prefersSupersets: Bool? = nil) -> SessionChangeRequest? {
+        let intoStrength = old.kind != .strength && w.kind == .strength
+        let strengthChange = old.kind == .strength && w.kind == .strength && (old.strengthFocus != w.strengthFocus || old.minutes != w.minutes)
+        let structureChange = old.kind == .strength && w.kind == .strength && prefersSupersets != nil && prefersSupersets != old.riderChoice?.prefersSupersets
+        guard intoStrength || strengthChange || structureChange else { return nil }
+        var req = SessionChangeRequest(focus: (intoStrength || w.strengthFocus != old.strengthFocus) ? (w.strengthFocus ?? .fullBody) : nil,
+                                       minutes: (intoStrength || w.minutes != old.minutes) ? w.minutes : nil,
+                                       prefersSupersets: prefersSupersets)
+        if intoStrength { req.kind = .strength }
+        if old.templateId != nil, req.focus != nil { req.detachRoutine = true }
+        return req
+    }
+    /// A change the rider made by hand.
+    /// Rebuild fix (Phase 1, RC1): a significant change (see `significantChange`) is NEVER saved directly and never as a
+    /// label-only change. It is proposed: the prescription is rebuilt, validated and kept in `pendingProposals`
+    /// (`lastProposalId`) for the before/after preview. Without `confirmed` the result is `.needsConfirmation` (or
+    /// `.blocked` with the rule ids); the session is unchanged until the athlete taps Apply in the preview, which calls
+    /// `commit(proposalId:confirmed: true)`. `confirmed: true` here is for callers that have already shown that preview
+    /// (and for tests). Other edits (skip, unskip, rides) are saved as before and return `.applied`.
+    func edit(_ w: Workout, confirmed: Bool = false, prefersSupersets: Bool? = nil) -> CommitResult {
+        if let old = plan.first(where: { $0.id == w.id }), let req = Store.significantChange(from: old, to: w, prefersSupersets: prefersSupersets) {
+            guard let p = proposeSessionChange(workoutId: w.id, request: req) else { return .blocked(["NOT-FOUND"]) }
+            lastProposalId = p.id
+            if p.report.outcome == .block { return .blocked(p.report.issues.filter { $0.outcome == .block }.map(\.ruleId)) }
+            guard confirmed else { return .needsConfirmation }
+            return commit(p, confirmed: true)
+        }
+        var x = w; x.markRiderEdited(before: plan.first(where: { $0.id == w.id })); update(x); return .applied
+    }
     /// Removes a planned session (soft: kept in `trash` with Undo; logs that completed it are kept as extra sessions).
     func remove(_ w: Workout) { deleteWorkout(w) }
     func add(_ w: Workout) { var x = w; x.markRiderEdited(); plan.append(x); plan.sort { $0.date < $1.date } }
@@ -1093,33 +1150,57 @@ final class Store: ObservableObject {
     @discardableResult
     func apply(_ p: CoachProposal, allowFixed: Bool = false) -> Bool {
         func target(_ id: UUID) -> Int? { plan.firstIndex { $0.id == id && (allowFixed || !$0.fixed) && !$0.edited && !$0.done } }
+        /// Rebuild fix (Phase 1, review C R1/R3): a coach proposal that changes a strength session's type or length, or
+        /// turns a session INTO strength, is never applied here. It becomes a rebuilt, validated proposal
+        /// (`lastProposalId`) that the athlete reviews in the before/after preview; Apply there calls `commitCoachChange`.
+        /// Callers should ask `coachChangePreview` first; this path returns false and saves nothing.
+        func viaRebuild(_ i: Int, _ req: SessionChangeRequest) -> Bool {
+            var r = req; r.origin = .coach
+            if let prop = proposeSessionChange(workoutId: plan[i].id, request: r) { lastProposalId = prop.id }
+            return false
+        }
         switch p.change {
         case .move(let id, let to):
             guard let i = target(id) else { return false }
             let before = plan[i]; plan[i].date = to
-            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date(), after: plan[i]))
         case .kind(let id, let k):
             guard let i = target(id) else { return false }
-            let before = plan[i]; plan[i].kind = k
-            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+            if k == .strength, plan[i].kind != .strength {
+                guard viaRebuild(i, SessionChangeRequest(focus: plan[i].strengthFocus ?? .fullBody, minutes: plan[i].minutes, kind: .strength)) else { return false }
+            } else {
+                let before = plan[i]; plan[i].kind = k
+                appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date(), after: plan[i]))
+            }
         case .minutes(let id, let m):
             guard let i = target(id) else { return false }
-            let before = plan[i]; plan[i].minutes = m
-            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+            if plan[i].kind == .strength { guard viaRebuild(i, SessionChangeRequest(minutes: m)) else { return false } }
+            else {
+                let before = plan[i]; plan[i].minutes = m
+                appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date(), after: plan[i]))
+            }
         case .focus(let id, let f):
             guard let i = target(id) else { return false }
-            let before = plan[i]; plan[i].strengthFocus = f
-            appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date()))
+            if plan[i].kind == .strength { guard viaRebuild(i, SessionChangeRequest(focus: f)) else { return false } }
+            else {
+                let before = plan[i]; plan[i].strengthFocus = f
+                appliedProposals.append(AppliedProposal(id: p.id, text: p.text, before: before, appliedAt: Date(), after: plan[i]))
+            }
         }
         if appliedProposals.count > 20 { appliedProposals.removeFirst(appliedProposals.count - 20) }
         return true
     }
     /// Restores the workout as it was before the most recent accepted proposal (if it still exists and is not done).
+    /// Rebuild fix (review C R6): compare-and-swap — refused when the session changed after the proposal was applied.
     @discardableResult
     func undoLastProposal() -> Bool {
         guard let last = appliedProposals.last else { return false }
         appliedProposals.removeLast()
         guard let i = plan.firstIndex(where: { $0.id == last.before.id }), !plan[i].done else { return false }
+        if let a = last.after, plan[i] != a {
+            lastUndoRefusal = "This session changed after the coach's suggestion, so Undo would overwrite your later change. Edit it directly instead."
+            return false
+        }
         plan[i] = last.before
         return true
     }
@@ -1256,6 +1337,8 @@ final class Store: ObservableObject {
     // MARK: persistence
     private func persist() {
         guard !loading else { return }
+        if txDepth > 0 { txDirty = true; return }
+        persistCount += 1
         do {
             let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
             let d = try enc.encode(snapshot)

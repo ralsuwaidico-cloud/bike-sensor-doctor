@@ -948,10 +948,19 @@ extension Store {
         var changed = false
         for i in p.indices {
             let w = p[i]
-            guard w.kind == .strength, w.templateId == nil, !w.done, !w.skipped, !w.edited, w.date >= today, activeSession?.workoutId != w.id else { continue }
+            // Rebuild fix (Phase 1): a session with a recorded athlete CHOICE (type / duration) is rebuilt within that choice;
+            // a hand-edited exercise list, or a legacy edit without a recorded choice, is never replaced silently
+            let legacyEdit = w.edited && w.riderChoice == nil
+            guard w.kind == .strength, w.templateId == nil, !w.done, !w.skipped, w.entriesHandEdited != true, !legacyEdit, w.date >= today, activeSession?.workoutId != w.id else { continue }
             guard w.generatedEntries || w.plannedEntries == nil else { continue }
             var c = ctx; c.plan = p
-            let b = StrengthPlanner.build(for: w, ctx: c)
+            var b = StrengthPlanner.build(for: w, ctx: c)
+            // a session with a recorded choice is rebuilt through the same validated path as a change
+            if let choice = w.riderChoice {
+                let v = rebuiltPrescription(for: w, prefersSupersets: choice.prefersSupersets, ctx: c)
+                if v.report.outcome == .block { continue }
+                b = StrengthPlanner.Built(entries: v.entries, rationale: v.rationale)
+            }
             guard !b.entries.isEmpty else { continue }
             var x = w
             if var o = x.coachOriginal { if o.plannedEntries?.map({ $0.exerciseId }) != b.entries.map({ $0.exerciseId }) || o.plannedEntries?.map({ $0.sets.map { $0.reps } }) != b.entries.map({ $0.sets.map { $0.reps } }) { o.plannedEntries = b.entries; x.coachOriginal = o } }
@@ -985,6 +994,7 @@ extension Store {
         plan[i].plannedEntries = entries
         plan[i].markRiderEdited()                  // the rider's choice for this session; the coach does not override it
         plan[i].generatedEntries = false
+        plan[i].entriesHandEdited = true           // a swap is a hand edit of the list (never replaced without asking)
         var p = strengthPrefs
         let msg: String
         switch reason {

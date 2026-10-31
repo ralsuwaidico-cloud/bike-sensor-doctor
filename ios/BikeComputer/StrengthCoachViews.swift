@@ -67,9 +67,9 @@ struct WorkoutStatusCard: View {
         case .planned:
             if future { a.append(ActionSpec(label: "Move to today", a11y: "Move this session to today", icon: "arrow.uturn.left", identifier: "moveToToday") { store.moveToToday(id) }) }
             else if workout.kind != .rest { a.append(ActionSpec(label: "Mark done", a11y: "Mark done without details", icon: "checkmark", identifier: "markDone") { markDone = true }) }
-            a.append(ActionSpec(label: "Skip", a11y: "Skip this session", identifier: "skipSession") { var x = workout; x.skipped = true; store.edit(x) })
+            a.append(ActionSpec(label: "Skip", a11y: "Skip this session", identifier: "skipSession") { var x = workout; x.skipped = true; _ = store.edit(x) })
         case .skipped:
-            a.append(ActionSpec(label: "Unskip", a11y: "Unskip this session", identifier: "unskipSession") { var x = workout; x.skipped = false; store.edit(x) })
+            a.append(ActionSpec(label: "Unskip", a11y: "Unskip this session", identifier: "unskipSession") { var x = workout; x.skipped = false; _ = store.edit(x) })
         case .completedManual:
             if workout.kind == .strength { a.append(ActionSpec(label: "Add details", a11y: "Add exercises to this session", icon: "list.bullet", identifier: "addDetails") { onAddDetails(log) }) }
             a.append(ActionSpec(label: "Reopen", a11y: "Reopen: set back to planned", icon: "arrow.uturn.backward", identifier: "reopenSession") { confirmReopen = true })

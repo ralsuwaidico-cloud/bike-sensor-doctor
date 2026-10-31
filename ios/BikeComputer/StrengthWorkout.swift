@@ -229,7 +229,7 @@ struct StrengthWorkoutScreen: View {
             Divider()
             Button { showEdit = true } label: { Label("Edit type / duration", systemImage: "pencil") }
             Button { showMove = true } label: { Label("Move to another day", systemImage: "arrow.left.arrow.right") }
-            Button { var x = w; x.skipped.toggle(); store.edit(x) } label: { Label(w.skipped ? "Unskip" : "Skip", systemImage: "forward") }
+            Button { var x = w; x.skipped.toggle(); _ = store.edit(x) } label: { Label(w.skipped ? "Unskip" : "Skip", systemImage: "forward") }
             if !store.isFuture(w) { Button { quickLog = true } label: { Label("Quick log instead", systemImage: "bolt") } }
             Button(role: .destructive) { confirmRemove = true } label: { Label("Remove session", systemImage: "trash") }
         } label: { Label("More", systemImage: "ellipsis.circle") }.accessibilityIdentifier("moreMenu")
@@ -449,17 +449,40 @@ struct EditWorkoutSheet: View {
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
     @State var workout: Workout
+    /// Phase 1 rebuild fix: a new type or duration opens the before/after preview; nothing is saved until Apply there.
+    @State private var preview: PreviewRef? = nil
+    @State private var notice: String? = nil
+    @State private var supersets = false
+    @State private var loaded = false
     var body: some View {
         NavigationStack {
             Form {
                 Section("Body region") { StrengthTypeGrid(focus: Binding(get: { workout.strengthFocus ?? .fullBody }, set: { workout.strengthFocus = $0 }), choices: StrengthFocus.allCases.filter { $0 != .custom }) }
-                Section("Duration") { Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...180, step: 5).tint(BC.accent) }
+                Section("Duration") { Text(Fmt.duration(minutes: workout.minutes)).font(BC.numFont).monospacedDigit(); Slider(value: Binding(get: { Double(workout.minutes) }, set: { workout.minutes = Int($0) }), in: 15...180, step: 5).tint(BC.accent).accessibilityIdentifier("editDuration") }
+                Section {
+                    Toggle("Use supersets to save time", isOn: $supersets).tint(BC.accent).accessibilityIdentifier("editSupersets")
+                } footer: {
+                    Text("A new type or time rebuilds the exercises. You'll see the before and after before anything is saved.")
+                }
+                if let n = notice { Section { Text(n).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) } }
             }
             .navigationTitle("Edit session").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { store.edit(workout); dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Review") { submit() }.accessibilityIdentifier("editSave") }
             }
+            .onAppear { if !loaded { supersets = workout.riderChoice?.prefersSupersets ?? false; loaded = true } }
+            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id) { dismiss() } }
+        }
+    }
+    private func submit() {
+        notice = nil
+        let saved = store.plan.first { $0.id == workout.id }
+        let s: Bool? = supersets != (saved?.riderChoice?.prefersSupersets ?? false) ? supersets : nil
+        switch store.requestEdit(workout, prefersSupersets: s) {
+        case .saved: dismiss()
+        case .preview(let id): preview = PreviewRef(id: id)
+        case .refused(let t): notice = t
         }
     }
 }

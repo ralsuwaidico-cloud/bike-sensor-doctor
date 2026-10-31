@@ -606,7 +606,7 @@ extension Store {
         plan[i] = x
         plan.sort { $0.date < $1.date }
         // Undo uses the trash's "plan as it was" record (no log or session is deleted by a move)
-        let item = TrashItem(deletedAt: now, label: "Moved \(before.displayTitle)", planBefore: [before])
+        let item = TrashItem(deletedAt: now, label: "Moved \(before.displayTitle)", planBefore: [before], planAfter: plan.filter { $0.id == x.id })
         trash.append(item)
         let f = DateFormatter(); f.dateFormat = "EEEE"
         undoToast = UndoToast(id: item.id, text: "\(before.displayTitle) moved to \(cal.isDate(d0, inSameDayAs: today) ? "today" : f.string(from: d0))")
@@ -623,7 +623,7 @@ extension Store {
         x.skipped = skipped
         x.markRiderEdited(before: before)
         plan[i] = x
-        let item = TrashItem(deletedAt: now, label: "\(skipped ? "Skipped" : "Unskipped") \(before.displayTitle)", planBefore: [before])
+        let item = TrashItem(deletedAt: now, label: "\(skipped ? "Skipped" : "Unskipped") \(before.displayTitle)", planBefore: [before], planAfter: [x])
         trash.append(item)
         undoToast = UndoToast(id: item.id, text: "\(before.displayTitle) \(skipped ? "skipped" : "back in the plan")")
         return true
