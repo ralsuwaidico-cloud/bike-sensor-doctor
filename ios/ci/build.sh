@@ -262,7 +262,7 @@ case "$STAGE" in
   quick)
     run_unit
     # QUICK_UI: LayoutAudit / OnboardingScreens test methods for the screens being changed (default: main screens).
-    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingR7FiveScreens}"
+    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates LayoutAudit/testRC2OwnerScreens OnboardingScreens/testOnboardingR7FiveScreens LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText}"
     LAYOUT_DEVICES="small,standard"; layout_sims
     if release_products; then
       layout_one small "${SMALL%%|*}" AX3 "$QUICK_UI"
