@@ -68,8 +68,9 @@ struct CoachPanelModel: Equatable {
                 why += " Power is not verified yet, so this advice is provisional."
             }
             if powerBased, i.ftpProvisional, c.reason.hasPrefix("PW") || c.reason.hasPrefix("RECOVERY_PW") {
-                tags.append(RideLabels.ftpProvisional)
-                why += " Power zones come from a provisional FTP of \(i.ftp) W."
+                // RC3 / ENG-E1: an Unknown FTP never produces a watt zone — say so instead of quoting an assumed value
+                tags.append(RideLabels.ftpUnknown)
+                why += " Your FTP is unknown, so no power zone is claimed."
             }
             let shape = Targets.coachShape(c.type)
             let tone: Tone = shape == .up ? .up : shape == .down ? .down : shape == .check ? .check : .info
@@ -81,7 +82,7 @@ struct CoachPanelModel: Equatable {
     /// No current cue: say what the coach is doing with the sensors that are live, or how to ride by feel.
     private static func guidance(_ i: Inputs, _ z: Int) -> CoachPanelModel {
         var tags: [String] = []
-        if i.ftpProvisional, i.power != nil { tags.append(RideLabels.ftpProvisional) }
+        if i.ftpProvisional, i.power != nil { tags.append(RideLabels.ftpUnknown) }
         if i.phase == .WARMUP { return CoachPanelModel(headline: "Warm up — easy spinning", detail: "Effort coaching starts after the warm-up · Zone \(z) \(i.workoutTitle.lowercased())", why: "The first 5 minutes are a warm-up, so the coach gives no 'push' cues yet. " + sensorPlan(i, z), tags: tags, tone: .info) }
         if i.phase == .RECOVERY { return CoachPanelModel(headline: "Recover for the next interval", detail: "Easy spin until the next work block", why: "This is a recovery block of the \(i.workoutTitle) workout. " + sensorPlan(i, z), tags: tags, tone: .info) }
         if i.phase == .COOLDOWN { return CoachPanelModel(headline: "Cool down", detail: "Easy spinning to finish", why: "Cool-down: no more 'push' cues. " + sensorPlan(i, z), tags: tags, tone: .info) }
@@ -124,7 +125,7 @@ struct CoachPanelModel: Equatable {
         if let b = i.powerBand, let p = i.power {
             let hi: String = b.1.map { String($0) } ?? "+"
             let flag: String = i.powerUnverified ? ", unverified" : ""
-            let ftpNote: String = i.ftpProvisional ? " from a provisional FTP of \(i.ftp) W." : "."
+            let ftpNote: String = "."
             parts.append("Power \(b.0)–\(hi) W (now \(p)\(flag))" + ftpNote)
         }
         if let c = i.cadence { parts.append("Cadence \(i.cadLo)–\(i.cadHi) rpm (now \(c)).") }

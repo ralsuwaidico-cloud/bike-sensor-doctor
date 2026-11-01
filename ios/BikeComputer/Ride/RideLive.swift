@@ -37,6 +37,8 @@ struct RideLive {
     var hrZoneRanges: [(lo: Int, hi: Int?)]
     var imperial: Bool
     var ftpProvisional: Bool
+    /// RC3 / ENG-E1: false when the FTP is Unknown — then no power zone, band or watt target is drawn anywhere.
+    var ftpKnown: Bool
 
     init(power: MetricReading?, hr: MetricReading?, cadence: MetricReading?, speed: MetricReading?, profile: RiderProfile, imperial: Bool, targetZone: Int, targetHrZone: Int? = nil, missing: [MetricKind: String] = [:]) {
         self.power = RideMetric(kind: .power, reading: power, missing: missing[.power]); self.hr = RideMetric(kind: .heartRate, reading: hr, missing: missing[.heartRate])
@@ -45,6 +47,7 @@ struct RideLive {
         self.targetZone = targetZone; self.targetHrZone = targetHrZone ?? targetZone
         hrZoneRanges = profile.hrZones; self.imperial = imperial
         ftpProvisional = profile.ftpHow == .assumed
+        ftpKnown = profile.ftpKnown
     }
     static func from(hub: SensorHub, profile: RiderProfile, settings: AppSettings, coach: RideCoach) -> RideLive {
         RideLive(power: hub.reading(.power), hr: hub.reading(.heartRate), cadence: hub.reading(.cadence), speed: hub.reading(.speed),
@@ -52,9 +55,9 @@ struct RideLive {
     }
 
     // MARK: derived (CoachCore rules; the UI only draws)
-    var powerZone: Int { PowerZones.zone(power.value, ftp: ftp) }
+    var powerZone: Int { ftpKnown ? PowerZones.zone(power.value, ftp: ftp) : 0 }
     var hrZone: Int { HrZones.zone(hr.value, maxHr: maxHr) }
-    var powerStatus: TargetStatus { Targets.power(power.value, ftp: ftp, targetZone: targetZone) }
+    var powerStatus: TargetStatus { ftpKnown ? Targets.power(power.value, ftp: ftp, targetZone: targetZone) : .unknown }
     var hrStatus: TargetStatus { Targets.hr(hr.value, maxHr: maxHr, targetZone: targetHrZone) }
     var cadStatus: TargetStatus { Targets.cadence(cadence.value, low: cadLo, high: cadHi) }
     var speedKmh: Double? { speed.usable ? speed.reading?.value : nil }
@@ -64,7 +67,7 @@ struct RideLive {
     func statusText(_ m: RideMetric) -> String {
         guard m.usable else { return m.missingText.uppercased() }
         switch m.kind {
-        case .power: return GaugeText.status(powerStatus, kind: "pow")
+        case .power: return ftpKnown ? GaugeText.status(powerStatus, kind: "pow") : RideLabels.ftpUnknown
         case .cadence: return GaugeText.status(cadStatus, kind: "cad")
         case .heartRate: return GaugeText.status(hrStatus, kind: "hr")
         case .speed: return speedText
@@ -85,9 +88,9 @@ struct RideLive {
 /// The three gauges, built once here and reused by every layout (Ride Coach, Large gauges, Rings).
 enum RideGauges {
     static func power(_ l: RideLive, big: Bool, showTgtLabel: Bool = true) -> TargetGauge {
-        TargetGauge(value: l.power.value, maxValue: Targets.powerGaugeMaxW(ftp: l.ftp), color: l.powerZone > 0 ? D7.powerZone(l.powerZone) : D7.grey,
-                    targetFraction: Targets.powerTargetFraction(targetZone: l.targetZone, ftp: l.ftp), zoneTicks: Targets.powerZoneTicks(ftp: l.ftp),
-                    band: l.powerBand, sub: l.powerZone > 0 ? "Z\(l.powerZone) · \(Targets.powerZonePercent(l.power.value, ftp: l.ftp) ?? 0)%" : nil,
+        TargetGauge(value: l.power.value, maxValue: Targets.powerGaugeMaxW(ftp: l.ftpKnown ? l.ftp : 0), color: l.powerZone > 0 ? D7.powerZone(l.powerZone) : D7.grey,
+                    targetFraction: l.ftpKnown ? Targets.powerTargetFraction(targetZone: l.targetZone, ftp: l.ftp) : nil, zoneTicks: l.ftpKnown ? Targets.powerZoneTicks(ftp: l.ftp) : [],
+                    band: l.ftpKnown ? l.powerBand : nil, sub: l.powerZone > 0 ? "Z\(l.powerZone) · \(Targets.powerZonePercent(l.power.value, ftp: l.ftp) ?? 0)%" : nil,
                     unit: RideLabels.power, big: big, status: l.power.usable ? l.powerStatus : .unknown, statusText: l.statusText(l.power), showTgtLabel: showTgtLabel,
                     source: l.power.sourceLine ?? " ", sourceWarning: l.power.warning)
     }
@@ -120,7 +123,10 @@ enum RideTiles {
         case "time": return MetricTile(title: "Time", value: active ? recorder.elapsedS.asDuration : nil, unit: "", source: recorder.owner.label, big: big, missing: "starts with the ride")
         case "dist": return MetricTile(title: "Distance", value: active ? String(format: "%.2f", l.imperial ? Double(recorder.distanceM) / 1609.34 : Double(recorder.distanceM) / 1000) : nil, unit: l.imperial ? "mi" : "km", source: recorder.owner == .board ? "BikeComputer (GPS)" : "Phone GPS", big: big, missing: "starts with the ride")
         case "lap": return MetricTile(title: "Lap \(recorder.lapCount)", value: recorder.isActive ? (recorder.elapsedS - recorder.lapStartS).asDuration : nil, unit: "", source: recorder.owner.label, big: big, missing: "starts with the ride")
-        case "zone": return MetricTile(title: "Zone", value: l.power.value.map { "Z\(profile.zone(forWatts: $0))" }, unit: "", source: "from FTP \(profile.ftpW) W (\(profile.ftpLabel))", big: big, missing: MetricKind.power.missingText)
+        case "zone":
+            // RC3 / ENG-E1: no power zone from an Unknown FTP
+            guard l.ftpKnown else { return MetricTile(title: "Zone", value: nil, unit: "", source: "FTP unknown", big: big, missing: "FTP unknown") }
+            return MetricTile(title: "Zone", value: l.power.value.map { "Z\(profile.zone(forWatts: $0))" }, unit: "", source: "from FTP \(profile.ftpW) W (\(profile.ftpLabel))", big: big, missing: MetricKind.power.missingText)
         case "np": return MetricTile(title: "Normalized", value: RideRecorder.normalized(recorder.samples.compactMap { $0.w }).map { "\($0)" }, unit: "W", source: "from this ride's power", big: big, missing: "needs power")
         case "battery": return MetricTile(title: "Board battery", value: boardBattery.map { "≈\($0)" }, unit: "%", source: "estimate from voltage", big: big, missing: "no BikeComputer")
         default: return MetricTile(title: key, value: nil, unit: "", source: "", big: big)

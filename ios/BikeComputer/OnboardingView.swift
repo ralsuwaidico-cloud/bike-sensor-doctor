@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// Two-stage first run.
-/// Stage A — "Get started": first name only. Cyclift 1.0 has no accounts (ReleaseFlags.accountsEnabled), so there is no
-/// sign-in of any kind here; everything stays on the phone.
-/// Stage B — progressive fitness & device profile, one question per screen, every screen skippable. Nothing unknown is
-/// invented: skipped values stay empty (nil) and the app says "not set" instead of showing a number.
+/// First run — onboarding revision 7 (owner-approved design, 1 Nov 2026): an uncounted Welcome, then five screens.
+///  1 About you + training · 2 Goals · 3 Your week · 4 Connections · 5 Your plan.
+/// Every answer is written straight to the same data Profile › Training edits (ios/ENGINE_API_RC3.md): one source of truth.
+/// No height and no health questionnaire (owner decision, rc3). Nothing unknown is invented: an FTP the athlete doesn't
+/// know stays Unknown, equipment not set stays "Not sure" (provisional bodyweight plan).
 struct OnboardingView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
@@ -12,308 +12,497 @@ struct OnboardingView: View {
     @EnvironmentObject private var health: HealthAccess
     @State private var step = 0
     @State private var guestName = ""
-    @State private var birthText = ""
+    @State private var showDOB = false
     @State private var ftpText = ""
-    @State private var maxHRText = ""
-    @State private var restHRText = ""
     @State private var healthResult: String?
-    @State private var showDays = false
-    @State private var daysDraft: WeeklyAvailability? = nil
-    @State private var showHybrid = false
-    private let lastStep = 9
+    @State private var twoADay = false
+    @State private var resumed = false
+    static let screens = 5
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if step > 0 { ProgressView(value: Double(step), total: Double(lastStep)).tint(BC.accent).padding(.horizontal).padding(.top, 6) }
+                if step > 0 {
+                    HStack(spacing: DS.s) {
+                        ProgressView(value: Double(step), total: Double(Self.screens)).tint(BC.accent)
+                        Text("\(step) of \(Self.screens)").font(.caption.weight(.semibold)).foregroundStyle(.secondary).accessibilityIdentifier("onboardingProgress")
+                    }.padding(.horizontal).padding(.top, 6)
+                }
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: DS.m) {
                         switch step {
                         case 0: welcome
-                        case 1: modeStep
-                        case 2: weekStep
-                        case 3: daysStep
-                        case 4: aboutYou
-                        case 5: sportsAndGoal
-                        case 6: heartAndFTP
-                        case 7: devices
-                        case 8: appleHealth
-                        default: ready
+                        case 1: aboutYou
+                        case 2: goals
+                        case 3: week
+                        case 4: connections
+                        default: yourPlan
                         }
-                    }.padding(20)
+                    }.padding(DS.l)
                 }
             }
             .background(Color(.systemGroupedBackground))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if step > 0 { ToolbarItem(placement: .navigationBarLeading) { Button("Back") { step -= 1 } } }
-                if step > 0, step < lastStep { ToolbarItem(placement: .navigationBarTrailing) { Button("Skip") { step += 1 } } }
+                if step > 1 { ToolbarItem(placement: .navigationBarLeading) { Button("Back") { step -= 1 }.accessibilityIdentifier("onboardingBack") } }
+                if step == 4 { ToolbarItem(placement: .navigationBarTrailing) { Button("Skip") { step = 5 }.accessibilityIdentifier("onboardingSkip") } }
             }
-            .onAppear { if store.onboardingStage > 0 { step = min(store.onboardingStage, lastStep) } }
-            .onChange(of: step) { _, s in store.onboardingStage = s }
+            .onAppear(perform: resume)
+            .onChange(of: step) { _, s in store.onboardingStage = s == 0 ? 0 : 100 + s }
         }
     }
 
-    // MARK: Stage A
+    /// Resume where the athlete left off. r7 stages are stored as 101…105; build-121 stages (1…9) map to the r7 screen
+    /// that now holds that question (REDESIGN_SPEC.md "Persistence and resume").
+    private func resume() {
+        guard !resumed else { return }
+        resumed = true
+        let s = store.onboardingStage
+        if s >= 101 { step = min(Self.screens, s - 100) }
+        else {
+            switch s {
+            case 1, 4: step = 1
+            case 5: step = 2
+            case 2, 3: step = 3
+            case 6, 7, 8: step = 4
+            case 9: step = 5
+            default: step = 0
+            }
+        }
+        if !store.profile.name.isEmpty { guestName = store.profile.name }
+        twoADay = (store.availability?.days.contains { $0.cycles && $0.lifts }) ?? false
+    }
+
+    // MARK: Welcome (not counted)
     private var welcome: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: DS.l) {
             HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(.largeTitle, design: .rounded).weight(.bold)) }
-            Text("Cycling and strength training in one plan, with one coach. Works with your iPhone alone, standard Bluetooth sensors, Apple Watch and Apple Health — and with the optional BikeComputer device.").foregroundStyle(.secondary)
-            Card {
-                Eyebrow(t: "Get started")
-                TextField("Your first name", text: $guestName).textFieldStyle(.roundedBorder).textContentType(.givenName).accessibilityIdentifier("onboardingName")
-                Button { store.guest = true; store.profile.name = guestName.trimmingCharacters(in: .whitespaces); step = 1 } label: { Text("Continue").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier("onboardingContinue")
-                Text("Everything you enter stays on this iPhone. The first name is only used so the app (and a paired BikeComputer) can greet you.").font(.footnote).foregroundStyle(.secondary)
-            }
+            Text("Cycling and strength in one plan.").font(.title3).foregroundStyle(.secondary)
+            TextField("First name", text: $guestName).textFieldStyle(.roundedBorder).textContentType(.givenName).accessibilityIdentifier("onboardingName")
+            Button {
+                store.guest = true
+                let n = guestName.trimmingCharacters(in: .whitespaces)
+                if !n.isEmpty { store.updateProfile { $0.name = n } }
+                step = 1
+            } label: { Text("Start").frame(maxWidth: .infinity) }
+                .buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier("onboardingContinue")
+            Text("Everything stays on this iPhone.").font(.footnote).foregroundStyle(.secondary)
         }
     }
 
-    // MARK: Stage B
-    private func title(_ t: String, _ sub: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) { Text(t).font(.system(.title, design: .rounded).weight(.bold)).fixedSize(horizontal: false, vertical: true); Text(sub).foregroundStyle(.secondary) }
+    // MARK: shared pieces
+    private func header(_ t: String) -> some View {
+        Text(t).font(.system(.title, design: .rounded).weight(.bold)).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
     }
-    private func next(_ label: String = "Next") -> some View {
-        Button { step += 1 } label: { Text(label).frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large)
+    private func continueButton(_ label: String = "Continue", id: String = "onboardingNext", action: (() -> Void)? = nil) -> some View {
+        Button { action?(); step += 1 } label: { Text(label).frame(maxWidth: .infinity) }
+            .buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier(id)
+    }
+    private func row<V: View>(_ title: String, @ViewBuilder value: () -> V) -> some View {
+        HStack(spacing: DS.s) { Text(title).foregroundStyle(.secondary); Spacer(minLength: DS.s); value() }.frame(minHeight: DS.minTap)
     }
 
+    // MARK: 1 About you + training
     private var aboutYou: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("About you", "Used for heart-rate zones and W/kg. Leave anything you don't know empty.")
-            Card { Eyebrow(t: "Name"); TextField("First name", text: $store.profile.name).textFieldStyle(.roundedBorder) }
+        VStack(alignment: .leading, spacing: DS.m) {
+            header("About you")
             Card {
-                Eyebrow(t: "Birth year")
-                TextField("e.g. 1990", text: $birthText).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
-                    .onAppear { if let y = store.profile.birthYear { birthText = "\(y)" } }
-                    .onChange(of: birthText) { _, v in let y = Int(v); store.profile.birthYear = (y ?? 0) >= 1900 && (y ?? 0) <= Calendar.current.component(.year, from: Date()) ? y : nil }
-                Text(store.profile.birthYear == nil ? "Not set: max heart rate is estimated for age 35 until you enter your birth year, and no age adjustments are made." : "Age \(store.profile.effectiveAge) → estimated max HR \(store.profile.estimatedMaxHR) bpm (estimate)").font(.footnote).foregroundStyle(.secondary)
+                row("Name") {
+                    TextField("First name", text: Binding(get: { store.profile.name }, set: { v in store.updateProfile { $0.name = v } }))
+                        .multilineTextAlignment(.trailing).textContentType(.givenName).accessibilityIdentifier("onbName")
+                }
+                Divider()
+                Button { withAnimation { showDOB.toggle() } } label: {
+                    row("Date of birth") { Text(store.profile.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "Add").foregroundStyle(store.profile.dateOfBirth == nil ? BC.accent : .primary) }
+                }.buttonStyle(.plain).accessibilityIdentifier("onbDOB")
+                if showDOB {
+                    DatePicker("Date of birth", selection: Binding(get: { store.profile.dateOfBirth ?? Self.defaultDOB }, set: setDOB),
+                               in: Self.dobRange, displayedComponents: .date)
+                        .datePickerStyle(.wheel).labelsHidden()
+                    Button("Done") { if store.profile.dateOfBirth == nil { setDOB(Self.defaultDOB) }; withAnimation { showDOB = false } }
+                        .frame(maxWidth: .infinity, minHeight: DS.minTap).accessibilityIdentifier("onbDOBDone")
+                }
+                Divider()
+                row("Weight") {
+                    Stepper(value: Binding(get: { store.profile.weightKg }, set: { v in store.updateProfile { $0.weightKg = v; $0.refreshAssumption() } }),
+                            in: 35...200, step: store.settings.units == .imperial ? 0.45359 : 0.5) {
+                        Text(weightText).font(.body.monospacedDigit()).frame(maxWidth: .infinity, alignment: .trailing)
+                    }.accessibilityIdentifier("onbWeight")
+                }
+                Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0 == .imperial ? "lb" : "kg").tag($0) } }
+                    .pickerStyle(.segmented).accessibilityIdentifier("onbUnits")
             }
             Card {
-                HStack { Eyebrow(t: "Weight"); Spacer(); Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented).frame(width: 150) }
-                HStack(alignment: .firstTextBaseline) { Text(weightText).font(BC.numFont); Text(store.settings.units == .imperial ? "lb" : "kg").foregroundStyle(.secondary) }
-                Slider(value: $store.profile.weightKg, in: 40...150, step: 0.5).tint(BC.accent).onChange(of: store.profile.weightKg) { _, _ in store.profile.refreshAssumption() }
+                CompactChoiceRow(title: "Training", options: TrainingMode.allCases, label: { $0 == .hybrid ? "Hybrid" : $0.title },
+                                 selection: Binding(get: { store.profile.trainingMode }, set: setMode), identifier: "onbMode")
+                if store.profile.trainingMode.includesCycling {
+                    CompactChoiceRow(title: "Cycling level", options: RiderProfile.Level.allCases, label: Self.levelTitle,
+                                     selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v; $0.refreshAssumption() } }), identifier: "onbCyclingLevel")
+                        .padding(.leading, DS.s)
+                }
+                if store.profile.trainingMode.includesLifting {
+                    CompactChoiceRow(title: "Strength level", options: StrengthPrefs.Experience.allCases, label: Self.strengthTitle,
+                                     selection: Binding(get: { store.strengthPrefs.experience ?? .beginner }, set: { v in store.strengthPrefs.experience = v; store.updateProfile { $0.confirmStrengthLevel = nil } }), identifier: "onbStrengthLevel")
+                        .padding(.leading, DS.s)
+                }
+                if store.profile.trainingMode == .hybrid {
+                    CompactChoiceRow(title: "Priority", options: [TrainingPriority.cycling, .balanced, .strength], label: { $0.title },
+                                     selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } }), identifier: "onbPriority")
+                        .padding(.leading, DS.s)
+                }
             }
-            next()
+            continueButton(action: {
+                // a strength level shown on screen is an answer (Beginner was visible as the default)
+                if store.profile.trainingMode.includesLifting, store.strengthPrefs.experience == nil { store.strengthPrefs.experience = .beginner }
+            })
         }
     }
-    private var weightText: String { store.settings.units == .imperial ? String(format: "%.0f", store.profile.weightKg * 2.20462) : String(format: "%.1f", store.profile.weightKg) }
+    static let defaultDOB = Calendar.current.date(byAdding: .year, value: -35, to: Date()) ?? Date()
+    static let dobRange: ClosedRange<Date> = (Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date())...(Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date())
+    private func setDOB(_ d: Date) {
+        store.updateProfile { $0.dateOfBirth = d; $0.birthYear = Calendar.current.component(.year, from: d) }
+    }
+    private var weightText: String {
+        store.settings.units == .imperial ? String(format: "%.0f lb", store.profile.weightKg * 2.20462) : String(format: "%.1f kg", store.profile.weightKg)
+    }
+    static func levelTitle(_ l: RiderProfile.Level) -> String { switch l { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
+    static func strengthTitle(_ e: StrengthPrefs.Experience) -> String { switch e { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
+    private func setMode(_ m: TrainingMode) {
+        store.updateProfile { p in
+            p.trainingMode = m
+            if m == .strength { p.priority = .strength } else if m == .cycling { p.priority = .cycling } else if p.priority != .balanced { p.priority = .balanced }
+        }
+    }
 
-    private var sportsAndGoal: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("What do you do, and why?", "Pick everything that applies; the plan counts other sports as training load.")
-            Card {
-                Eyebrow(t: "Sports and activities")
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 130))], spacing: 8) {
-                    ForEach(RiderProfile.Sport.allCases, id: \.self) { s in
-                        let on = store.profile.sports.contains(s)
-                        Button(s.title) { if on { store.profile.sports.removeAll { $0 == s } } else { store.profile.sports.append(s) } }
-                            .buttonStyle(.bordered).tint(on ? BC.accent : .secondary).controlSize(.large)
+    // MARK: 2 Goals
+    private struct GoalGroup: Identifiable { let id: String; let goals: [GoalID] }
+    private var goalChoices: [GoalGroup] {
+        var out: [GoalGroup] = []
+        if store.profile.trainingMode.includesCycling { out.append(GoalGroup(id: "Cycling", goals: [.endurance, .power, .climbing, .sprint, .event])) }
+        if store.profile.trainingMode.includesLifting { out.append(GoalGroup(id: "Strength", goals: [.strength, .muscle, .stamina, .maintain])) }
+        out.append(GoalGroup(id: "General", goals: [.fitness]))
+        return out
+    }
+    private var goals: some View {
+        VStack(alignment: .leading, spacing: DS.m) {
+            header("Goals")
+            Text("Pick any. Star the main one.").font(.subheadline).foregroundStyle(.secondary)
+            ForEach(goalChoices) { group in
+                Card {
+                    Eyebrow(t: group.id)
+                    FlowRow {
+                        ForEach(group.goals) { g in goalChip(g) }
                     }
                 }
             }
-            Eyebrow(t: "Main goal")
-            ForEach(RiderProfile.Goal.onboardingChoices, id: \.self) { g in choice(g.title, g.hint, selected: store.profile.goal == g) { store.profile.goal = g } }
-            next()
+            continueButton(action: {
+                if store.profile.goals.isEmpty { applyGoals(store.profile.effectiveGoals, primary: store.profile.effectivePrimaryGoal) }
+            })
         }
     }
-
-    // MARK: 0.6.0 — training mode, then the week (frequencies, priority, time, days). Short and skippable.
-    private var modeStep: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("How do you train?", "One coach for everything you pick. You can change this any time in Profile › Training profile.")
-            ForEach(TrainingMode.allCases, id: \.self) { m in choice(m.title, m.hint, selected: store.profile.trainingMode == m) { store.updateProfile { p in p.trainingMode = m; if m == .cycling { p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0 } else if p.liftDaysPerWeek == 0 { p.liftDaysPerWeek = 2; p.liftingHoursPerWeek = 2 }; if m == .strength { p.priority = .strength } else if m == .cycling { p.priority = .cycling } } } }
-            if store.profile.trainingMode == .hybrid {
-                Card {
-                    Eyebrow(t: "Main priority")
-                    Picker("Priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                    Text("Decides which session comes first on a shared day and which sport the coach protects when time is short.").font(.footnote).foregroundStyle(.secondary)
+    private func goalChip(_ g: GoalID) -> some View {
+        let on = store.profile.goals.contains(g)
+        let primary = on && store.profile.primaryGoal == g
+        return HStack(spacing: 0) {
+            Button { toggleGoal(g) } label: {
+                HStack(spacing: 4) { if on { Image(systemName: "checkmark") }; Text(g.title) }
+                    .padding(.horizontal, 12).frame(minHeight: DS.minTap)
+            }
+            .buttonStyle(.plain).accessibilityLabel(g.title).accessibilityAddTraits(on ? .isSelected : []).accessibilityIdentifier("goal-\(g.rawValue)")
+            if on {
+                Button { applyGoals(store.profile.goals, primary: g) } label: {
+                    Image(systemName: primary ? "star.fill" : "star").frame(minWidth: DS.minTap, minHeight: DS.minTap)
                 }
+                .buttonStyle(.plain).accessibilityLabel(primary ? "\(g.title) is the main goal" : "Make \(g.title) the main goal").accessibilityIdentifier("goalStar-\(g.rawValue)")
             }
-            Card {
-                Eyebrow(t: "Experience")
-                Picker("Level", selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v; $0.refreshAssumption() } })) { ForEach(RiderProfile.Level.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                Text(store.profile.level.hint).font(.footnote).foregroundStyle(.secondary)
-            }
-            next()
         }
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(on ? BC.accent : .primary)
+        .background(on ? BC.accent.opacity(0.14) : Color(.tertiarySystemGroupedBackground), in: Capsule())
+    }
+    private func toggleGoal(_ g: GoalID) {
+        var list = store.profile.goals
+        if list.contains(g) { list.removeAll { $0 == g } } else { list.append(g) }
+        let primary = store.profile.primaryGoal.flatMap { list.contains($0) ? $0 : nil } ?? list.first
+        applyGoals(list, primary: primary)
+    }
+    private func applyGoals(_ list: [GoalID], primary: GoalID?) {
+        let x = store.setGoals(list, primary: primary)
+        store.updateProfile { $0 = x.profile }
+        if store.strengthPrefs != x.strengthPrefs { store.strengthPrefs = x.strengthPrefs }
     }
 
-    private var weekStep: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("Your week", "Frequency, time and the days you prefer. The plan is built around these and never schedules more.")
-            if store.profile.trainingMode.includesCycling {
-                Card {
-                    Eyebrow(t: "Cycling")
-                    Stepper("\(store.profile.cyclingDaysPerWeek) ride\(store.profile.cyclingDaysPerWeek == 1 ? "" : "s") a week", value: Binding(get: { store.profile.cyclingDaysPerWeek }, set: { v in store.updateProfile { $0.cyclingDaysPerWeek = v } }), in: 1...6)
-                    Stepper("\(store.profile.hoursPerWeek) h riding a week", value: Binding(get: { store.profile.hoursPerWeek }, set: { v in store.updateProfile { $0.hoursPerWeek = v } }), in: 1...20)
-                }
-            }
-            if store.profile.trainingMode.includesLifting {
-                Card {
-                    Eyebrow(t: "Strength")
-                    Stepper("\(store.profile.liftDaysPerWeek) lift\(store.profile.liftDaysPerWeek == 1 ? "" : "s") a week", value: Binding(get: { store.profile.liftDaysPerWeek }, set: { v in store.updateProfile { $0.liftDaysPerWeek = v } }), in: 1...6)
-                    Stepper("\(store.profile.liftingHoursPerWeek) h lifting a week", value: Binding(get: { store.profile.liftingHoursPerWeek }, set: { v in store.updateProfile { $0.liftingHoursPerWeek = v } }), in: 1...12)
-                    Text("Cycling hours and lifting hours are tracked separately everywhere.").font(.footnote).foregroundStyle(.secondary)
-                }
-            }
+    // MARK: 3 Your week
+    private var mode: TrainingMode { store.profile.trainingMode }
+    /// The week being edited: the saved one, else the engine's suggestion for these answers. Days are normalised to the
+    /// training type (a ride day in Strength mode becomes a lift day, and so on) so switching type never loses a day.
+    private var weekKinds: [DayKind] {
+        let a = store.availability ?? WeeklyAvailability.suggested(for: store.profile)
+        return a.days.map { d in normalise(d.cycles && d.lifts ? .both : d.cycles ? .ride : d.lifts ? .lift : .rest) }
+    }
+    private func normalise(_ k: DayKind) -> DayKind {
+        switch (mode, k) {
+        case (.cycling, .lift), (.cycling, .both): return .ride
+        case (.strength, .ride), (.strength, .both): return .lift
+        case (.hybrid, .both): return twoADay ? .both : .ride
+        default: return k
+        }
+    }
+    private var cycle: [DayKind] {
+        switch mode {
+        case .cycling: return [.ride, .rest]
+        case .strength: return [.lift, .rest]
+        case .hybrid: return twoADay ? [.ride, .lift, .both, .rest] : [.ride, .lift, .rest]
+        }
+    }
+    private var rideMinutes: Int { store.profile.cyclingSessionMinutes ?? 60 }
+    private var liftMinutes: Int { store.profile.strengthSessionMinutes ?? 45 }
+
+    private var week: some View {
+        let kinds = weekKinds
+        let rides = kinds.filter { $0 == .ride || $0 == .both }.count
+        let lifts = kinds.filter { $0 == .lift || $0 == .both }.count
+        return VStack(alignment: .leading, spacing: DS.m) {
+            header("Your week")
             Card {
-                Eyebrow(t: "Preferred days (optional)")
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
+                HStack(spacing: 4) {
                     ForEach(0..<7, id: \.self) { i in
-                        let on = store.profile.preferredDays.contains(i)
-                        Button { store.updateProfile { p in if on { p.preferredDays.removeAll { $0 == i } } else { p.preferredDays.append(i); p.preferredDays.sort() } } } label: {
-                            Text(WeeklyAvailability.dayNames[i]).font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: .infinity, minHeight: 44)
-                                .background(on ? BC.accent.opacity(0.2) : Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10)).foregroundStyle(on ? BC.accent : .primary)
-                        }.buttonStyle(.plain).accessibilityLabel(WeeklyAvailability.longDayNames[i]).accessibilityAddTraits(on ? .isSelected : [])
+                        DayIconCell(dayName: WeeklyAvailability.dayNames[i], longDayName: WeeklyAvailability.longDayNames[i], kind: kinds[i]) { tapDay(i, kinds) }
+                            .accessibilityIdentifier("onbDay\(i)")
                     }
                 }
-                Text(store.profile.preferredDays.isEmpty ? "None picked: a sensible week is suggested; refine days and durations later in Plan › Days." : "Sessions go on these days first; the long ride takes the first weekend day you picked.").font(.footnote).foregroundStyle(.secondary)
+                HStack {
+                    if mode.includesCycling { Label("\(rides)", systemImage: "bicycle").accessibilityLabel("\(rides) rides") }
+                    if mode.includesLifting { Label("\(lifts)", systemImage: "dumbbell").accessibilityLabel("\(lifts) strength sessions") }
+                    Spacer()
+                    Text("Tap a day to change it").font(.caption).foregroundStyle(.secondary)
+                }.font(.subheadline.weight(.semibold)).accessibilityIdentifier("onbWeekCounts")
+                if let m = weekMismatch(rides: rides, lifts: lifts) {
+                    Text(m).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("onbWeekMismatch")
+                }
+                if mode == .hybrid {
+                    Toggle("Two a day", isOn: Binding(get: { twoADay }, set: { v in twoADay = v; saveWeek(weekKinds) })).tint(BC.accent).frame(minHeight: DS.minTap)
+                }
             }
-            if store.profile.trainingMode == .hybrid {
-                // adaptive coach: the hybrid answers (all optional, skippable; editable later in Profile › Training profile)
+            Card {
+                if mode.includesCycling {
+                    row("Ride length") {
+                        Stepper(value: Binding(get: { rideMinutes }, set: { v in store.updateProfile { $0.cyclingSessionMinutes = v }; saveWeek(weekKinds) }), in: 20...300, step: 10) {
+                            Text("\(rideMinutes) min").monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
+                        }.accessibilityIdentifier("onbRideMinutes")
+                    }
+                }
+                if mode.includesLifting {
+                    row("Strength length") {
+                        Stepper(value: Binding(get: { liftMinutes }, set: { v in store.updateProfile { $0.strengthSessionMinutes = v; $0.confirmSessionLength = nil }; saveWeek(weekKinds) }), in: 15...120, step: 5) {
+                            Text("\(liftMinutes) min").monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
+                        }.accessibilityIdentifier("onbLiftMinutes")
+                    }
+                    CompactChoiceRow(title: "Equipment", options: EquipmentPreset.allCases, label: { $0.title },
+                                     selection: Binding(get: { EquipmentPreset.of(store.equipment) }, set: { store.equipment = $0.apply(to: store.equipment) }), identifier: "onbEquipment")
+                    Toggle("Supersets", isOn: Binding(get: { store.strengthPrefs.prefersSupersets ?? false }, set: { store.strengthPrefs.prefersSupersets = $0 }))
+                        .tint(BC.accent).frame(minHeight: DS.minTap).accessibilityIdentifier("onbSupersets")
+                }
+            }
+            continueButton(action: { saveWeek(weekKinds) })
+        }
+    }
+    private func weekMismatch(rides: Int, lifts: Int) -> String? {
+        if rides + lifts == 0 { return "Pick at least one training day." }
+        if mode == .hybrid && rides == 0 { return "Hybrid needs at least one ride day." }
+        if mode == .hybrid && lifts == 0 { return "Hybrid needs at least one strength day." }
+        if rides + lifts == 7 && !kindsHaveRest { return "No rest day this week. You can still continue." }
+        return nil
+    }
+    private var kindsHaveRest: Bool { weekKinds.contains(.rest) }
+    private func tapDay(_ i: Int, _ kinds: [DayKind]) {
+        var k = kinds
+        let order = cycle
+        let at = order.firstIndex(of: k[i]) ?? (order.count - 1)
+        k[i] = order[(at + 1) % order.count]
+        saveWeek(k)
+    }
+    /// Writes the week exactly as shown: one assignment per session at the session length, firm minutes (weekIsExplicit),
+    /// the training days as preferred days, and the frequencies / weekly budgets the planner reads kept in step.
+    private func saveWeek(_ kinds: [DayKind]) {
+        let r = rideMinutes, l = liftMinutes
+        let days: [DayAvailability] = kinds.map { k in
+            switch k {
+            case .ride: return DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: r)])
+            case .lift: return DayAvailability(assignments: [DayAssignment(sport: .strength, minutes: l)])
+            case .both: return DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: r), DayAssignment(sport: .strength, minutes: l)])
+            case .rest: return DayAvailability(activity: .rest, minutes: 0)
+            }
+        }
+        let a = WeeklyAvailability(days: days)
+        if store.availability != a { store.availability = a }
+        let rides = kinds.filter { $0 == .ride || $0 == .both }.count
+        let lifts = kinds.filter { $0 == .lift || $0 == .both }.count
+        store.updateProfile { p in
+            p.weekIsExplicit = true
+            p.preferredDays = kinds.indices.filter { kinds[$0] != .rest }
+            if p.trainingMode.includesCycling, rides > 0 {
+                p.cyclingDaysPerWeek = rides
+                p.cyclingSessionMinutes = r
+                p.hoursPerWeek = max(1, Int((Double(rides * r) / 60).rounded(.up)))
+            }
+            if p.trainingMode.includesLifting {
+                p.liftDaysPerWeek = lifts
+                p.strengthSessionMinutes = l
+                p.liftingHoursPerWeek = lifts == 0 ? 0 : max(1, Int((Double(lifts * l) / 60).rounded(.up)))
+            } else {
+                p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0
+            }
+        }
+    }
+
+    // MARK: 4 Connections
+    private var connections: some View {
+        VStack(alignment: .leading, spacing: DS.m) {
+            header("Connections")
+            Card {
+                row("Apple Health") {
+                    if !health.available { Text("Not available").foregroundStyle(.secondary) }
+                    else if health.workoutWriteAuthorized { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(BC.live) }
+                    else {
+                        Button("Connect") {
+                            store.settings.appleHealthWanted = true
+                            health.request { ok in healthResult = ok ? nil : "Not allowed. Change it in iOS Settings › Health." }
+                        }.buttonStyle(.bordered).accessibilityIdentifier("onbHealth")
+                    }
+                }
+                if let r = healthResult { Text(r).font(.caption).foregroundStyle(BC.stale) }
+                Divider()
+                Toggle(isOn: connectionBinding("watch")) {
+                    VStack(alignment: .leading, spacing: 2) { Text("Apple Watch"); Text(watch.paired ? "Paired" : "Not paired").font(.caption).foregroundStyle(.secondary) }
+                }.tint(BC.accent).accessibilityIdentifier("onbWatch")
+                Divider()
+                row("BikeComputer") {
+                    if device.state == .ready { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(BC.live) }
+                    else {
+                        Button(device.stage.isAttempt && device.stage != .waiting ? "Searching…" : "Connect") { device.connect() }
+                            .buttonStyle(.bordered).accessibilityIdentifier("onbBoard")
+                    }
+                }
+                if device.state == .scanning, !device.found.isEmpty {
+                    ForEach(device.found, id: \.id) { f in Button("Connect to \(f.name)") { device.connect(to: f.id) }.frame(minHeight: DS.minTap) }
+                }
+                if mode.includesCycling {
+                    Divider()
+                    Toggle("Heart-rate strap", isOn: connectionBinding("strap")).tint(BC.accent).frame(minHeight: DS.minTap).accessibilityIdentifier("onbStrap")
+                    Toggle("Power meter", isOn: connectionBinding("meter")).tint(BC.accent).frame(minHeight: DS.minTap).accessibilityIdentifier("onbMeter")
+                }
+            }
+            if mode.includesCycling {
                 Card {
-                    Eyebrow(t: "Hybrid plan (optional)")
-                    Text(hybridSummary).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    Button { showHybrid = true } label: { Label("Goal, training days, split, equipment", systemImage: "slider.horizontal.3").frame(maxWidth: .infinity) }.buttonStyle(.bordered).accessibilityIdentifier("onboardingHybridPlan")
+                    CompactChoiceRow(title: "FTP", options: [FTPSource.unknown, .entered, .tested], label: { $0 == .unknown ? "Don't know" : $0.title },
+                                     selection: Binding(get: { ftpChoice }, set: setFTPChoice), identifier: "onbFTP")
+                    if store.profile.ftpKnown {
+                        row("Watts") {
+                            TextField("W", text: $ftpText).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(maxWidth: 90)
+                                .onChange(of: ftpText) { _, v in if let n = Int(v), (50...600).contains(n) { store.updateProfile { $0.setFTP(n, source: ftpChoice == .tested ? .tested : .entered) } } }
+                                .accessibilityIdentifier("onbFTPWatts")
+                        }
+                    } else {
+                        Text("Rides use heart rate and effort until you know it.").font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
-            next()
+            continueButton()
         }
-        .sheet(isPresented: $showHybrid) { HybridPlanEditor(asSheet: true) }
+        .onAppear { if store.profile.ftpKnown { ftpText = "\(store.profile.ftpW)" } }
     }
-
-    private var hybridSummary: String {
-        let p = store.profile
-        var parts: [String] = []
-        if let g = p.hybridGoal { parts.append("Goal: \(g.title.lowercased())") }
-        if let d = p.trainingDaysPerWeek { parts.append("\(d) training days") }
-        if let s = p.strengthSplit { parts.append("split: \(s.title)") }
-        return parts.isEmpty ? "Primary goal, total training days, session length, strength split (or your own), equipment and the routines to keep. Skip it and the coach decides." : parts.joined(separator: " · ")
+    private var ftpChoice: FTPSource {
+        switch store.profile.ftpSource { case .unknown: return .unknown; case .tested: return .tested; default: return .entered }
     }
-
-    // MARK: 0.7.0 — what exactly happens each day (type, duration, fixed/flexible), with a readable preview
-    private var daysStep: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("Your days", "Say what happens Monday to Sunday — ride, lift, both, rest or flexible — with the type and the time for each. The coach plans around it and never adds a day.")
-            let a = daysDraft ?? WeeklyAvailability.suggested(for: store.profile)
-            Card {
-                HStack { Eyebrow(t: daysDraft == nil ? "Suggested from your answers" : "Your days"); Spacer(); Text("\(a.cycleDays) ride · \(a.liftDays) lift").font(.caption).foregroundStyle(.secondary) }
-                ForEach(0..<7, id: \.self) { i in PreviewDayRow(index: i, day: a.days[i]) }
-                let issues = a.consistency(profile: store.profile)
-                ForEach(issues, id: \.self) { Text($0).font(.caption).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
-                if issues.isEmpty { Text("Frequency, durations and both budgets agree.").font(.caption).foregroundStyle(BC.live) }
-                Button { showDays = true } label: { Label("Edit my days", systemImage: "calendar.badge.clock").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
-            }
-            Text("Cycling hours and lifting hours stay separate budgets; nothing above \(store.profile.hoursPerWeek) h riding\(store.profile.trainingMode.includesLifting ? " or \(store.profile.liftingHoursPerWeek) h lifting" : "") is ever generated.").font(.footnote).foregroundStyle(.secondary)
-            next()
+    private func setFTPChoice(_ s: FTPSource) {
+        switch s {
+        case .unknown:
+            store.updateProfile { $0.setFTP(nil, source: .unknown) }
+            ftpText = ""
+        default:
+            let w = Int(ftpText).flatMap { (50...600).contains($0) ? $0 : nil } ?? (store.profile.ftpW > 0 ? store.profile.ftpW : 200)
+            ftpText = "\(w)"
+            store.updateProfile { $0.setFTP(w, source: s) }
         }
-        .sheet(isPresented: $showDays) { AvailabilityEditor(onSave: { daysDraft = $0 }) }
+    }
+    private func connectionBinding(_ key: String) -> Binding<Bool> {
+        Binding(get: { store.settings.enabledConnections.contains(key) },
+                set: { if $0 { store.settings.enabledConnections.insert(key) } else { store.settings.enabledConnections.remove(key) } })
     }
 
-    private var heartAndFTP: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("Heart rate and FTP", "Enter what you know. Anything left empty is estimated and labelled as an estimate.")
+    // MARK: 5 Your plan
+    private var yourPlan: some View {
+        let kinds = weekKinds
+        return VStack(alignment: .leading, spacing: DS.m) {
+            header("Your plan")
             Card {
-                Eyebrow(t: "Max heart rate (bpm)")
-                TextField("if you know it", text: $maxHRText).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
-                    .onAppear { if let v = store.profile.maxHR { maxHRText = "\(v)" } }
-                    .onChange(of: maxHRText) { _, v in let n = Int(v); store.profile.maxHR = (n ?? 0) >= 100 && (n ?? 0) <= 230 ? n : nil }
-                Text(store.profile.maxHR == nil ? "Estimated \(store.profile.estimatedMaxHR) bpm from age until you enter a measured value." : "Entered. Zones use this value.").font(.footnote).foregroundStyle(.secondary)
-                Eyebrow(t: "Resting heart rate (bpm, optional)")
-                TextField("optional", text: $restHRText).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
-                    .onAppear { if let v = store.profile.restHR { restHRText = "\(v)" } }
-                    .onChange(of: restHRText) { _, v in let n = Int(v); store.profile.restHR = (n ?? 0) >= 25 && (n ?? 0) <= 120 ? n : nil }
-            }
-            Card {
-                Eyebrow(t: "FTP (watts)")
-                TextField("tested FTP, if you have one", text: $ftpText).keyboardType(.numberPad).textFieldStyle(.roundedBorder)
-                    .onChange(of: ftpText) { _, v in if let n = Int(v), n >= 50, n <= 600 { store.profile.ftpW = n; store.profile.ftpHow = .entered } else if v.isEmpty, store.profile.ftpHow == .entered || store.profile.ftpHow == .tested { store.profile.ftpHow = .assumed; store.profile.refreshAssumption() } }
-                if store.profile.ftpHow == .assumed {
-                    Text("Estimate for me: \(store.profile.ftpW) W from \(String(format: "%.0f", store.profile.weightKg)) kg × \(String(format: "%.2f", store.profile.level.wkg)) W/kg. Marked provisional until a real 20-minute effort or a tested value replaces it.").font(.footnote).foregroundStyle(.secondary)
-                } else {
-                    HStack { Text("\(store.profile.ftpW) W").bold(); FTPConfidencePill(profile: store.profile) }
+                HStack(spacing: 4) {
+                    ForEach(0..<7, id: \.self) { i in DayIconCell(dayName: WeeklyAvailability.dayNames[i], longDayName: WeeklyAvailability.longDayNames[i], kind: kinds[i]) }
                 }
+                summaryRow("Training", mode == .hybrid ? "Hybrid · \(store.profile.priority.title)" : mode.title)
+                summaryRow("Goal", store.profile.effectivePrimaryGoal.title)
+                if mode.includesCycling { summaryRow("Rides", "\(rideMinutes) min · FTP \(store.profile.ftpDisplay)") }
+                if mode.includesLifting { summaryRow("Strength", "\(liftMinutes) min · \(EquipmentPreset.of(store.equipment).title)") }
             }
-            next()
-        }
-    }
-
-    private var devices: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("Devices and sensors", "Tell the app what you own so it only warns about those. Everything can change later in Connections.")
             Card {
-                HStack { Eyebrow(t: "BikeComputer (optional)"); Spacer(); if device.state == .ready { Pill(text: "connected", color: BC.live) } }
-                if device.state == .ready { if let i = device.info { Text("Firmware \(i.fw)").font(.footnote).foregroundStyle(.secondary) } }
-                else {
-                    Text("Switch it on, tap Connect, type the 6-digit code from its round screen once.").font(.footnote).foregroundStyle(.secondary)
-                    if device.state == .scanning, !device.found.isEmpty { ForEach(device.found, id: \.id) { f in Button("Connect to \(f.name) (\(f.rssi) dBm)") { device.connect(to: f.id) } } }
-                    Text(device.statusText).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    Button { device.connect() } label: { Text(device.stage.isAttempt && device.stage != .waiting ? "Searching…" : "Connect").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent)
+                Eyebrow(t: "Why this plan")
+                ForEach(whyPoints, id: \.self) { p in
+                    Label { Text(p).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "checkmark.circle").foregroundStyle(BC.accent) }
+                        .font(.subheadline)
                 }
-            }
-            Card {
-                Eyebrow(t: "I also use")
-                toggleRow("Apple Watch", "watch", detail: watch.paired ? "watch paired" : "no watch paired with this iPhone")
-                toggleRow("Heart-rate strap (on the phone or the BikeComputer)", "strap", detail: nil)
-                toggleRow("Power meter (Bluetooth, on the phone or the BikeComputer)", "meter", detail: nil)
-            }
-            Text("No BikeComputer? Ride with the phone alone: GPS speed, distance, map and watch heart rate. When a board is connected later it becomes the recorder.").font(.footnote).foregroundStyle(.secondary)
-            next(device.state == .ready ? "Next" : "Continue with phone only")
+            }.accessibilityIdentifier("onbWhy")
+            Button(action: createPlan) { Text("Create plan").frame(maxWidth: .infinity) }
+                .buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large).accessibilityIdentifier("onbCreatePlan")
         }
     }
-    private func toggleRow(_ title: String, _ key: String, detail: String?) -> some View {
-        Toggle(isOn: Binding(get: { store.settings.enabledConnections.contains(key) }, set: { if $0 { store.settings.enabledConnections.insert(key) } else { store.settings.enabledConnections.remove(key) } })) {
-            VStack(alignment: .leading) { Text(title); if let d = detail { Text(d).font(.caption2).foregroundStyle(.secondary) } }
-        }.tint(BC.accent)
+    private func summaryRow(_ k: String, _ v: String) -> some View {
+        HStack { Text(k).foregroundStyle(.secondary); Spacer(); Text(v).multilineTextAlignment(.trailing) }.font(.subheadline).frame(minHeight: 32)
     }
+    /// At most three reasons, each true for this athlete's answers (engine rules ENG-D1, E1/E3, H1, C2, hybrid spacing).
+    private var whyPoints: [String] {
+        var out: [String] = []
+        let kinds = weekKinds
+        let lifts = kinds.filter { $0 == .lift || $0 == .both }.count
+        let rides = kinds.filter { $0 == .ride || $0 == .both }.count
+        if mode.includesLifting, lifts >= 1, lifts <= 3 { out.append("\(lifts) full-body strength session\(lifts == 1 ? "" : "s"), \(liftMinutes) min each.") }
+        if mode == .hybrid, lifts > 0, rides > 0 { out.append("Hard rides are kept away from leg-heavy lifts.") }
+        if mode.includesCycling, !store.profile.ftpKnown { out.append("Rides use heart rate and effort until your FTP is known.") }
+        if mode.includesLifting, store.equipment.isProvisional { out.append("Bodyweight strength until you set your equipment.") }
+        if mode.includesCycling, rides > 0, out.count < 3 { out.append("\(rides) ride\(rides == 1 ? "" : "s") a week, never longer than \(rideMinutes) min.") }
+        if out.isEmpty { out.append("Built from the days and times you chose.") }
+        return Array(out.prefix(3))
+    }
+    private func createPlan() {
+        saveWeek(weekKinds)
+        if store.profile.goals.isEmpty { applyGoals(store.profile.effectiveGoals, primary: store.profile.effectivePrimaryGoal) }
+        store.onboardingStage = 0
+        _ = store.regenerate(weekOf: Date(), replaceEdited: true)
+        if let next = Calendar.current.date(byAdding: .day, value: 7, to: Date()) { _ = store.regenerate(weekOf: next, replaceEdited: true) }
+        store.onboarded = true
+    }
+}
 
-    private var appleHealth: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("Apple Health (optional)", "Allow what you want. Shown as connected only after iOS confirms.")
-            Card { Eyebrow(t: "Save workouts"); Text("Cycling workouts you record with the Cyclift Apple Watch app are saved to Health and Fitness when you choose Save at the end.").font(.footnote) }
-            Card { Eyebrow(t: "Import workouts"); Text("Cycling and strength workouts from other apps or your Apple Watch appear in Plan › History as rides and strength sessions (marked Apple Health, never duplicated).").font(.footnote); Toggle("Import my workouts", isOn: $store.settings.appleHealthImportWorkouts).tint(BC.accent) }
-            Card { Eyebrow(t: "Heart rate"); Text("Live heart rate during a ride comes from the Cyclift Apple Watch workout or a Bluetooth heart-rate sensor, not from Health.").font(.footnote) }
-            if health.available {
-                Button { store.settings.appleHealthWanted = true; health.request { ok in healthResult = ok ? "Permission granted: Apple Health is connected." : "Not granted. You can allow it later in iOS Settings › Health › Cyclift." } } label: { Text(health.workoutWriteAuthorized ? "Connected ✓" : "Connect Apple Health").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).disabled(health.workoutWriteAuthorized)
-                if let r = healthResult { Text(r).font(.footnote).foregroundStyle(health.workoutWriteAuthorized ? BC.live : BC.stale) }
-            } else { Text("Health is not available on this device.").font(.footnote).foregroundStyle(.secondary) }
-            Button("Not now") { step += 1 }.frame(maxWidth: .infinity)
-            if health.workoutWriteAuthorized { next() }
+/// Onboarding r7 equipment presets mapped onto the one equipment record the planner reads (`EquipmentProfile`).
+/// "Not sure" = not set → provisional bodyweight plan; a full gym is never assumed.
+enum EquipmentPreset: String, CaseIterable, Hashable {
+    case gym, home, bodyweight, notSure
+    var title: String { switch self { case .gym: return "Gym"; case .home: return "Home"; case .bodyweight: return "Bodyweight"; case .notSure: return "Not sure" } }
+    static let homeKit: Set<String> = ["dumbbell", "bench", "band", "pull-up bar", "kettlebell"]
+    static var gymKit: Set<String> { Set(ExerciseCatalogue.equipmentOptions.filter { $0 != "bodyweight" }) }
+    static func of(_ e: EquipmentProfile) -> EquipmentPreset {
+        if !e.isSet { return .notSure }
+        if e.owned.isEmpty { return .bodyweight }
+        if e.owned.isSuperset(of: gymKit) { return .gym }
+        return .home
+    }
+    /// Keeps the athlete's exclusions; replaces only what is owned.
+    func apply(to e: EquipmentProfile) -> EquipmentProfile {
+        switch self {
+        case .gym: return EquipmentProfile(owned: Self.gymKit, excluded: e.excluded, confirmed: true)
+        case .home: return EquipmentProfile(owned: Self.homeKit, excluded: e.excluded, confirmed: true)
+        case .bodyweight: return EquipmentProfile(owned: [], excluded: e.excluded, confirmed: true)
+        case .notSure: return EquipmentProfile(owned: [], excluded: e.excluded, confirmed: nil)
         }
-    }
-
-    private var ready: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            title("Ready", "Here is what the app will use. Anything marked estimate or not set can be completed later in Profile.")
-            Card {
-                row("Name", store.profile.name.isEmpty ? "not set" : store.profile.name)
-                row("Data", "on this iPhone")
-                row("Birth year", store.profile.birthYear.map(String.init) ?? "not set")
-                row("Weight", String(format: "%.1f kg", store.profile.weightKg))
-                row("Mode", store.profile.trainingMode.title + (store.profile.trainingMode == .hybrid ? " · \(store.profile.priority.title.lowercased()) priority" : ""))
-                row("Goal", store.profile.goal.title); row("Experience", store.profile.level.title)
-                row("Cycling", store.profile.trainingMode.includesCycling ? "\(store.profile.cyclingDaysPerWeek) rides · \(store.profile.hoursPerWeek) h/week" : "—")
-                if store.profile.trainingMode.includesLifting { row("Strength", "\(store.profile.liftDaysPerWeek) lifts · \(store.profile.liftingHoursPerWeek) h/week") }
-                row("Days", daysDraft == nil ? "suggested from your answers" : "\(daysDraft!.cycleDays) ride · \(daysDraft!.liftDays) lift · \(daysDraft!.fixedAssignments) fixed")
-                row("Max HR", store.profile.maxHR.map { "\($0) bpm" } ?? "\(store.profile.estimatedMaxHR) bpm (estimate)")
-                row("FTP", "\(store.profile.ftpW) W (\(store.profile.ftpLabel))")
-                row("BikeComputer", device.state == .ready ? "connected" : "phone-only for now")
-                row("Apple Health", health.workoutWriteAuthorized ? "connected" : "not connected")
-            }
-            if device.state == .ready, device.info?.hasProfileSync == true { Text("The board will be asked for its profile; if it differs you decide which one wins (Connections › BikeComputer › Sync status).").font(.footnote).foregroundStyle(.secondary) }
-            Button { store.onboardingStage = 0; store.availability = daysDraft; _ = store.regenerate(weekOf: Date(), replaceEdited: true); _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: true); store.onboarded = true } label: { Text("Start").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
-        }
-    }
-    private func row(_ k: String, _ v: String) -> some View { HStack { Text(k).foregroundStyle(.secondary); Spacer(); Text(v).multilineTextAlignment(.trailing) }.font(.footnote) }
-
-    private func choice(_ title: String, _ hint: String, selected: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) { Text(title).font(.body.weight(.bold)); Text(hint).font(.caption).foregroundStyle(.secondary) }
-                Spacer(); if selected { Image(systemName: "checkmark.circle.fill").foregroundStyle(BC.accent) }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(13)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(selected ? BC.accent : Color.clear, lineWidth: 2))
-        }.buttonStyle(.plain)
     }
 }
