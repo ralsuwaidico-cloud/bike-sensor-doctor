@@ -265,14 +265,18 @@ final class LaunchSmokeTests: XCTestCase {
         var opened = false
         // (run 72: "Quick log" existed but had no valid activation point yet — tap only once it is hittable)
         for _ in 0..<3 where !opened {
-            if !app.buttons["Quick log"].firstMatch.exists { log.tap() }
-            let quick = app.buttons["Quick log"].firstMatch
+            // run 123: the plan now also has an in-page "Quick log" button (today's strength session), so the menu item is
+            // found by its own identifier, and only tapped once it has a real on-screen frame.
+            let quick = app.buttons["planMenuQuickLog"].firstMatch
+            if !quick.exists { log.tap() }
             if quick.waitForExistence(timeout: 5) {
                 sleep(2)   // run 117: isHittable itself throws ("Failed to determine hittability") while the menu animates — wait, then tap by coordinate
-                quick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                let f = quick.frame
+                if f.width > 0, f.height > 0, f.minX.isFinite, f.minY.isFinite { quick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
             }
             opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
         }
+        if !opened { print("RUN123-DIAG quick log did not open; hierarchy:\n\(app.debugDescription)") }
         XCTAssertTrue(opened, "quick strength log must open")
         XCTAssertTrue(app.buttons["Full body"].firstMatch.waitForExistence(timeout: 5) || app.staticTexts["Full Body"].firstMatch.waitForExistence(timeout: 2), "type grid visible")
         app.buttons["Cancel"].firstMatch.tap()

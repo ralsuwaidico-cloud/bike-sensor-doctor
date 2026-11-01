@@ -33,7 +33,7 @@ struct PlanView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Plan")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }; Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle") }; Button { showTemplates = true } label: { Label("Routines", systemImage: "doc.on.doc") } } label: { Label("Log strength", systemImage: "dumbbell") } }
+                ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }.accessibilityIdentifier("planMenuQuickLog"); Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle") }; Button { showTemplates = true } label: { Label("Routines", systemImage: "doc.on.doc") } } label: { Label("Log strength", systemImage: "dumbbell") } }
                 ToolbarItem(placement: .topBarTrailing) { NavigationLink { PlanVersionsView() } label: { Label("Plan changes", systemImage: "clock.arrow.circlepath") }.accessibilityIdentifier("planChanges") }
             }
             .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet() }

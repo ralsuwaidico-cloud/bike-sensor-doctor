@@ -695,6 +695,9 @@ struct HomeWeekStrip: View {
 
     var body: some View {
         HStack(spacing: 2) { ForEach(days) { d in cell(d) } }
+            // run 123: at accessibility sizes seven cells pushed Home wider than an iPhone SE; the strip stops growing at
+            // XL (every cell keeps a full VoiceOver label with the day, sessions and status).
+            .dynamicTypeSize(...DynamicTypeSize.xLarge)
             .padding(DS.xs)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
             .accessibilityElement(children: .contain)
