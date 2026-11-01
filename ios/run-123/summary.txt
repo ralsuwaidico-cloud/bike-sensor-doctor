@@ -1,0 +1,29 @@
+BikeComputer iOS CI — build 123 — 2026-11-01 12:25 UTC
+Scope: full
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT tests: FAILED (exit 65)
+RESULT launch smoke (Release): FAILED (exit 65)
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max=iPhone 17 Pro Max owner=iPhone-16 (runtime iOS-26-5)
+  layout small (L,AX3): FAILED (exit 65) · 23m24s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home clearance homeMissedMove clipped left (-16.0, 961.5, 121.0, 44.0) -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home clearance homeMore clipped left (-16.0, 710.0, 127.5, 44.0) -[BikeComput
+  layout standard (L,XXXL): ok · 9m28s
+  layout promax (L): ok · 6m52s
+  layout owner (L,XXXL): ok · 26m40s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 15490   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 15978   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 16007   screenshot ax3 ok large
+RESULT layout audit: FAILED (167 screenshots)
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc)
+  contains BikeComputer.app 1.0.0 (123) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (123) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 9735087 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: skipped (tests failed)
+commit f222b33394fb969b4dc1b1b45f677cdacab75bd7  branch ios/rc3  job failure

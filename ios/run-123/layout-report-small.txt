@@ -1,0 +1,185 @@
+L home planned: nothing wider than the screen
+L home planned: 10 texts, none overlapping
+L home planned: primary 'Start workout' at 214–264 of 667
+L home planned: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home multi: nothing wider than the screen
+L home multi: 11 texts, none overlapping
+L home multi: primary 'View results' at 216–260 of 667
+L home multi: key controls homeWhy 176×44, homeRow-0 85×44, homeRowMore-0 44×44, homeRow-1 68×44, homeRowMore-1 44×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home missed: nothing wider than the screen
+L home missed: 10 texts, none overlapping
+L home missed: primary 'Start workout' at 214–264 of 667
+L home missed: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home stop: nothing wider than the screen
+L home stop: 6 texts, none overlapping
+L home stop: primary 'Review health check' at 246–296 of 667
+L home stop: key controls homePrimary 311×50, homeHoldInfo 146×44
+L home stop: week 'No sessions scheduled while training is paused'
+L home pending: nothing wider than the screen
+L home pending: 10 texts, none overlapping
+L home pending: primary 'Start workout' at 214–264 of 667
+L home pending: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44, homeCoachAction 87×44
+L home clearance: nothing wider than the screen
+L home clearance: 10 texts, none overlapping
+L home clearance: health line at 95–183
+L home clearance: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44, homeCoachAction 87×44, homeCaution 343×88
+L home ill: nothing wider than the screen
+L home ill: 6 texts, none overlapping
+L home ill: primary 'I feel well again' at 218–268 of 667
+L home ill: key controls homePrimary 311×50, homeHoldInfo 146×44
+L home ill: week 'No sessions scheduled while training is paused'
+AX3 home planned: WIDER THAN THE SCREEN: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Moderate -16…264; chevron.right 371…389; homePrimary -16…391; homeWhy -16…336; questionmark.circle -13…24; Why this workout? -16…336; homeMore -16…111;  -16…111; More -16…67; homeMissedMore -16…391
+AX3 home planned: 5 texts, none overlapping
+AX3 home planned: primary 'Start workout' at 392–442 of 667
+AX3 home planned: key controls homePrimary 407×50, homeWhy 352×44, homeMore 127×44, homeMissedMove 121×44, homeCoachAction 196×44
+AX3 home multi: WIDER THAN THE SCREEN: SUNDAY, 1 NOVEMBER -57…286; Hi Demo -57…130; Today -57…62; 2 sessions today -41…230; Recovery spin, 30 min · Very e -41…416; Recovery spin -41…211; 30 min · Very easy · Zone 1 -41…367; Done -33…43; homeRow-0 -41…111; Strength · Upper body, 35 min  -41…416; Strength · Upper body -41…353; 35 min · Moderate -41…237
+AX3 home multi: 6 texts, none overlapping
+AX3 home multi: primary 'View results' at 433–477 of 667
+AX3 home multi: homeWhy outside the checked zone (659–703 of 667)
+AX3 home multi: key controls homeWhy 393×44, homeRow-0 153×44, homeRowMore-0 44×44, homeRow-1 112×44, homeRowMore-1 44×44, homeMissedMove 121×44, homeCoachAction 196×44
+AX3 home missed: WIDER THAN THE SCREEN: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Moderate -16…264; chevron.right 371…389; homePrimary -16…391; homeWhy -16…336; questionmark.circle -13…24; Why this workout? -16…336; homeMore -16…111;  -16…111; More -16…67; homeMissedMore -16…391
+AX3 home missed: 5 texts, none overlapping
+AX3 home missed: primary 'Start workout' at 392–442 of 667
+AX3 home missed: key controls homePrimary 407×50, homeWhy 352×44, homeMore 127×44, homeMissedMove 121×44, homeCoachAction 196×44
+AX3 home stop: nothing wider than the screen
+AX3 home stop: 3 texts, none overlapping
+AX3 home stop: primary 'Review health check' at 387–483 of 667
+AX3 home stop: key controls homePrimary 311×96, homeHoldInfo 214×86
+AX3 home stop: week 'No sessions scheduled while training is paused'
+AX3 home pending: WIDER THAN THE SCREEN: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Moderate -16…264; chevron.right 371…389; homePrimary -16…391; homeWhy -16…336; questionmark.circle -13…24; Why this workout? -16…336; homeMore -16…111;  -16…111; More -16…67; homeMissedMore -16…391
+AX3 home pending: 5 texts, none overlapping
+AX3 home pending: primary 'Start workout' at 392–442 of 667
+AX3 home pending: key controls homePrimary 407×50, homeWhy 352×44, homeMore 127×44, homeMissedMove 121×44, homeCoachAction 196×44
+AX3 home clearance: WIDER THAN THE SCREEN: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; homeCaution -32…407; heart.text.square.fill -10…28; chevron.right 372…389; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Light -16…194; chevron.right 371…389
+AX3 home clearance: 4 texts, none overlapping
+AX3 home clearance: health line at 143–342
+AX3 home clearance: homePrimary outside the checked zone (604–654 of 667)
+AX3 home clearance: key controls homePrimary 407×50, homeWhy 352×44, homeMore 127×44, homeMissedMove 121×44, homeCoachAction 196×44, homeCaution 439×199
+AX3 home ill: nothing wider than the screen
+AX3 home ill: 3 texts, none overlapping
+AX3 home ill: primary 'I feel well again' at 387–437 of 667
+AX3 home ill: key controls homePrimary 311×50, homeHoldInfo 214×86
+AX3 home ill: week 'No sessions scheduled while training is paused'
+L home: key controls 
+L home: no text outside the window
+L home: buttons under 44 pt: Date Picker 110×34, profileWeight-Decrement 47×32, profileWeight-Increment 47×32, Cycling 103×32, Strength 104×32, Hybrid 104×32
+L home lower: no text outside the window
+L home lower: buttons under 44 pt: Date Picker 110×34, profileWeight-Decrement 47×32, profileWeight-Increment 47×32, Cycling 103×32, Strength 104×32, Hybrid 104×32
+L home lower: key controls 
+L strength: no text outside the window
+L strength: buttons under 44 pt: moreMenu 36×36, Done 66×35
+L plan: no text outside the window
+L plan: buttons under 44 pt: Date Picker 110×34, profileWeight-Decrement 47×32, profileWeight-Increment 47×32, Cycling 103×32, Strength 104×32, Hybrid 104×32
+L progress: no text outside the window
+L progress: buttons under 44 pt: Date Picker 110×34, profileWeight-Decrement 47×32, profileWeight-Increment 47×32, Cycling 103×32, Strength 104×32, Hybrid 104×32
+L progress lower: no text outside the window
+L progress lower: buttons under 44 pt: Date Picker 110×34, profileWeight-Decrement 47×32, profileWeight-Increment 47×32, Cycling 103×32, Strength 104×32, Hybrid 104×32
+L profile: no text outside the window
+L profile: buttons under 44 pt: Date Picker 110×34, profileWeight-Decrement 47×32, profileWeight-Increment 47×32, Cycling 103×32, Strength 104×32, Hybrid 104×32
+L tab bar: Home outside the checked zone (615–667 of 667)
+L tab bar: key controls Home 72×52, Plan 72×52, centreButton 58×76, Progress 72×52, Profile 72×52
+AX3 home: key controls 
+AX3 home: text out of window -29…314 of 375: "SUNDAY, 1 NOVEMBER"
+AX3 home: text out of window -29…158 of 375: "Hi Demo"
+AX3 home: text out of window -29…90 of 375: "Today"
+AX3 home: text out of window -13…194 of 375: "Strength · Full body"
+AX3 home: text out of window -13…267 of 375: "40 min · Moderate"
+AX3 home: text out of window -13…338 of 375: "Why this workout?"
+AX3 home: text out of window -13…70 of 375: "More"
+AX3 home: every on-screen button ≥ 44 pt tall
+AX3 home lower: text out of window -29…100 of 375: "Coach"
+AX3 home lower: text out of window -29…82 of 375: "Week"
+AX3 home lower: text out of window -20…38 of 375: "Mon"
+AX3 home lower: text out of window 348…396 of 375: "Sun"
+AX3 home lower: every on-screen button ≥ 44 pt tall
+AX3 home lower: key controls 
+AX3 strength: no text outside the window
+AX3 strength: buttons under 44 pt: moreMenu 36×36, Done 74×35
+AX3 plan: text out of window -29…100 of 375: "Coach"
+AX3 plan: text out of window -29…82 of 375: "Week"
+AX3 plan: text out of window -20…38 of 375: "Mon"
+AX3 plan: text out of window 348…396 of 375: "Sun"
+AX3 plan: every on-screen button ≥ 44 pt tall
+AX3 progress: text out of window -29…100 of 375: "Coach"
+AX3 progress: text out of window -29…82 of 375: "Week"
+AX3 progress: text out of window -20…38 of 375: "Mon"
+AX3 progress: text out of window 348…396 of 375: "Sun"
+AX3 progress: every on-screen button ≥ 44 pt tall
+AX3 progress lower: text out of window -29…100 of 375: "Coach"
+AX3 progress lower: text out of window -29…82 of 375: "Week"
+AX3 progress lower: text out of window -20…38 of 375: "Mon"
+AX3 progress lower: text out of window 348…396 of 375: "Sun"
+AX3 progress lower: every on-screen button ≥ 44 pt tall
+AX3 profile: text out of window -29…100 of 375: "Coach"
+AX3 profile: text out of window -29…82 of 375: "Week"
+AX3 profile: text out of window -20…38 of 375: "Mon"
+AX3 profile: text out of window 348…396 of 375: "Sun"
+AX3 profile: buttons under 44 pt: Riding 157×32, Strength 158×32, 4 wk 63×32, 8 wk 63×32, 12 wk 63×32, 16 wk 63×32, 1 yr 63×32
+AX3 tab bar: Home outside the checked zone (615–667 of 667)
+AX3 tab bar: key controls Home 72×52, Plan 72×52, centreButton 71×81, Progress 72×52, Profile 72×52
+L progress glance: nothing wider than the screen
+L progress glance: 17 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 34 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 5 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 33 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 5 texts, none overlapping
+L riding 12 wk: 4 date labels, smallest gap 33 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 5 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 15 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 5 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 34 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 5 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 6 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 36 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 5 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 6 texts, none overlapping
+L: FTP badge not found
+L plan: nothing wider than the screen
+L plan: 33 texts, none overlapping
+L: no Fix plan button (week within budget)
+L plan lower: nothing wider than the screen
+L plan lower: 24 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 24 texts, none overlapping
+L: Devices & Connections rows not found
+AX3 progress glance: nothing wider than the screen
+AX3 progress glance: 6 texts, none overlapping
+AX3 riding 4 wk: 4 date labels, smallest gap 23 pt
+AX3 riding 4 wk: nothing wider than the screen
+AX3 riding 4 wk: 3 texts, none overlapping
+AX3 riding 8 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 8 wk: nothing wider than the screen
+AX3 riding 8 wk: 8 texts, none overlapping
+AX3 riding 12 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 12 wk: nothing wider than the screen
+AX3 riding 12 wk: 8 texts, none overlapping
+AX3 riding 16 wk: 4 date labels, smallest gap 20 pt
+AX3 riding 16 wk: nothing wider than the screen
+AX3 riding 16 wk: 8 texts, none overlapping
+AX3 riding 1 yr: 4 date labels, smallest gap 22 pt
+AX3 riding 1 yr: nothing wider than the screen
+AX3 riding 1 yr: 7 texts, none overlapping
+AX3 riding selected: nothing wider than the screen
+AX3 riding selected: 8 texts, none overlapping
+AX3 strength 8 wk: 4 date labels, smallest gap 24 pt
+AX3 strength 8 wk: nothing wider than the screen
+AX3 strength 8 wk: 8 texts, none overlapping
+AX3 strength selected: nothing wider than the screen
+AX3 strength selected: 7 texts, none overlapping
+AX3: FTP badge not found
+AX3 plan: nothing wider than the screen
+AX3 plan: 21 texts, none overlapping
+AX3: no Fix plan button (week within budget)
+AX3 plan lower: nothing wider than the screen
+AX3 plan lower: 12 texts, none overlapping
+AX3 plan lower 2: nothing wider than the screen
+AX3 plan lower 2: 5 texts, none overlapping
+AX3: Devices & Connections rows not found

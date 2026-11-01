@@ -1,0 +1,196 @@
+=== layout-small: errors / failures ===
+GatherProvisioningInputs
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:238: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - AX3 home planned: content wider than the screen: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Moderate -16…264; chevron.right 371…389; homePrimary -16…391; homeWhy -16…336; questionmark.circle -13…24; Why this workout? -16…336; homeMore -16…111;  -16…111; More -16…67; homeMissedMore -16…391
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home planned homePrimary clipped left (-16.0, 392.5, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:88: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertLessThanOrEqual failed: ("391.5") is greater than ("376.0") - AX3 home planned homePrimary clipped right (-16.0, 392.5, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home planned homeWhy clipped left (-16.0, 454.5, 352.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home planned homeMore clipped left (-16.0, 498.5, 127.5, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home planned homeMissedMove clipped left (-16.0, 750.0, 121.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:238: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - AX3 home multi: content wider than the screen: SUNDAY, 1 NOVEMBER -57…286; Hi Demo -57…130; Today -57…62; 2 sessions today -41…230; Recovery spin, 30 min · Very e -41…416; Recovery spin -41…211; 30 min · Very easy · Zone 1 -41…367; Done -33…43; homeRow-0 -41…111; Strength · Upper body, 35 min  -41…416; Strength · Upper body -41…353; 35 min · Moderate -41…237
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-41.5") is less than ("-1.0") - AX3 home multi homeWhy clipped left (-41.5, 659.0, 393.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-41.5") is less than ("-1.0") - AX3 home multi homeRow-0 clipped left (-41.5, 433.0, 153.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-41.5") is less than ("-1.0") - AX3 home multi homeRow-1 clipped left (-41.5, 603.0, 112.5, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-41.5") is less than ("-1.0") - AX3 home multi homeMissedMove clipped left (-41.5, 867.5, 121.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-5.5") is less than ("-1.0") - AX3 home multi homeCoachAction clipped left (-5.5, 1167.0, 196.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:238: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - AX3 home missed: content wider than the screen: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Moderate -16…264; chevron.right 371…389; homePrimary -16…391; homeWhy -16…336; questionmark.circle -13…24; Why this workout? -16…336; homeMore -16…111;  -16…111; More -16…67; homeMissedMore -16…391
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home missed homePrimary clipped left (-16.0, 392.5, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:88: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertLessThanOrEqual failed: ("391.5") is greater than ("376.0") - AX3 home missed homePrimary clipped right (-16.0, 392.5, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home missed homeWhy clipped left (-16.0, 454.5, 352.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home missed homeMore clipped left (-16.0, 498.5, 127.5, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home missed homeMissedMove clipped left (-16.0, 750.0, 121.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:238: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - AX3 home pending: content wider than the screen: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Moderate -16…264; chevron.right 371…389; homePrimary -16…391; homeWhy -16…336; questionmark.circle -13…24; Why this workout? -16…336; homeMore -16…111;  -16…111; More -16…67; homeMissedMore -16…391
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home pending homePrimary clipped left (-16.0, 392.5, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:88: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertLessThanOrEqual failed: ("391.5") is greater than ("376.0") - AX3 home pending homePrimary clipped right (-16.0, 392.5, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home pending homeWhy clipped left (-16.0, 454.5, 352.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home pending homeMore clipped left (-16.0, 498.5, 127.5, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home pending homeMissedMove clipped left (-16.0, 750.0, 121.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:238: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - AX3 home clearance: content wider than the screen: SUNDAY, 1 NOVEMBER -32…311; Hi Demo -32…156; homeCaution -32…407; heart.text.square.fill -10…28; chevron.right 372…389; Today -32…88; homeTodayTitle -16…391; Strength · Full body -16…192; 40 min · Light -16…194; chevron.right 371…389
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home clearance homePrimary clipped left (-16.0, 604.0, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:88: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertLessThanOrEqual failed: ("391.5") is greater than ("376.0") - AX3 home clearance homePrimary clipped right (-16.0, 604.0, 407.5, 50.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home clearance homeWhy clipped left (-16.0, 666.0, 352.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home clearance homeMore clipped left (-16.0, 710.0, 127.5, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-16.0") is less than ("-1.0") - AX3 home clearance homeMissedMove clipped left (-16.0, 961.5, 121.0, 44.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:87: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("-32.0") is less than ("-1.0") - AX3 home clearance homeCaution clipped left (-32.0, 143.0, 439.5, 199.5)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:88: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertLessThanOrEqual failed: ("407.5") is greater than ("376.0") - AX3 home clearance homeCaution clipped right (-32.0, 143.0, 439.5, 199.5)
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' failed (492.876 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (233.414 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' passed (467.910 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-01 13:23:14.344.
+	 Executed 3 tests, with 32 failures (0 unexpected) in 1194.200 (1194.208) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-01 13:23:14.347.
+	 Executed 3 tests, with 32 failures (0 unexpected) in 1194.200 (1194.211) seconds
+Test Suite 'Selected tests' failed at 2026-11-01 13:23:14.347.
+	 Executed 3 tests, with 32 failures (0 unexpected) in 1194.200 (1194.212) seconds
+Failing tests:
+** TEST FAILED **
+=== layout-small: last 150 lines ===
+    t =   413.68s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   414.75s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   417.39s Checking existence of `"ftpConfidence" Any`
+    t =   419.53s Waiting 5.0s for "Plan" Button to exist
+    t =   420.56s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   420.57s         Checking existence of `"Plan" Button`
+    t =   420.59s Tap "Plan" Button
+    t =   420.59s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   420.59s     Find the "Plan" Button
+    t =   420.63s     Check for interrupting elements affecting "Plan" Button
+    t =   420.91s     Synthesize event
+    t =   421.22s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   423.30s Find the Window (First Match)
+    t =   423.32s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   423.95s Find the Window (First Match)
+    t =   424.06s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   424.48s Checking existence of `"planDay-1" Button`
+    t =   424.78s Checking existence of `"planDay-2" Button`
+    t =   425.15s Checking existence of `"planDay-3" Button`
+    t =   425.36s Checking existence of `"planDay-4" Button`
+    t =   425.57s Checking existence of `"planDay-5" Button`
+    t =   425.82s Checking existence of `"planDay-6" Button`
+    t =   426.13s Checking existence of `"planDay-7" Button`
+    t =   426.40s Find the Window (First Match)
+    t =   426.41s Find the "planDay-1" Button
+    t =   426.61s Find the "planDay-1" Button
+    t =   426.88s Find the "planDay-2" Button
+    t =   427.09s Find the "planDay-2" Button
+    t =   427.31s Find the "planDay-3" Button
+    t =   427.52s Find the "planDay-3" Button
+    t =   428.19s Find the "planDay-4" Button
+    t =   428.49s Find the "planDay-4" Button
+    t =   428.84s Find the "planDay-5" Button
+    t =   429.11s Find the "planDay-5" Button
+    t =   429.35s Find the "planDay-6" Button
+    t =   429.64s Find the "planDay-6" Button
+    t =   430.06s Find the "planDay-7" Button
+    t =   430.66s Find the "planDay-7" Button
+    t =   431.14s Find the "planDay-1" Button
+    t =   431.44s Find the "planDay-2" Button
+    t =   431.88s Find the "planDay-3" Button
+    t =   432.28s Find the "planDay-4" Button
+    t =   432.56s Find the "planDay-5" Button
+    t =   432.97s Find the "planDay-6" Button
+    t =   433.22s Find the "planDay-7" Button
+    t =   433.58s Swipe left "planDayStrip" Other
+    t =   433.58s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   433.59s     Find the "planDayStrip" Other
+    t =   434.24s     Check for interrupting elements affecting "planDayStrip" Other
+    t =   434.64s     Synthesize event
+    t =   435.35s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   436.37s Find the "planDay-1" Button
+    t =   436.95s Find the "planDay-2" Button
+    t =   437.22s Find the "planDay-3" Button
+    t =   437.45s Find the "planDay-4" Button
+    t =   437.68s Find the "planDay-5" Button
+    t =   437.99s Find the "planDay-6" Button
+    t =   438.39s Find the "planDay-7" Button
+    t =   438.68s Checking existence of `"planDoneRiding" StaticText`
+    t =   439.06s Checking existence of `"planChanges" Button`
+    t =   439.12s Checking existence of `"fixPlan" Button`
+    t =   439.97s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   439.97s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   440.10s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   440.30s     Check for interrupting elements affecting "Cyclift" Application
+    t =   440.52s     Synthesize event
+    t =   440.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   444.94s Find the Window (First Match)
+    t =   444.97s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   445.41s Find the Window (First Match)
+    t =   445.42s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   446.02s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   446.02s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   446.10s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   446.30s     Check for interrupting elements affecting "Cyclift" Application
+    t =   446.53s     Synthesize event
+    t =   447.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   450.31s Find the Window (First Match)
+    t =   450.33s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   450.93s Find the Window (First Match)
+    t =   450.96s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   451.40s Waiting 5.0s for "Profile" Button to exist
+    t =   452.45s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =   452.45s         Checking existence of `"Profile" Button`
+    t =   454.31s Tap "Profile" Button
+    t =   454.31s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   454.32s     Find the "Profile" Button
+    t =   454.61s     Check for interrupting elements affecting "Profile" Button
+    t =   455.39s     Synthesize event
+    t =   455.84s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   457.88s Waiting 3.0s for "deviceBoard" Button to exist
+    t =   458.90s     Checking `Expect predicate `existsNoRetry == 1` for object "deviceBoard" Button`
+    t =   458.90s         Checking existence of `"deviceBoard" Button`
+    t =   461.19s         Capturing element debug description
+    t =   461.19s     Checking existence of `"deviceBoard" Button`
+    t =   466.08s Collecting debug information to assist test failure triage
+    t =   466.09s     Requesting snapshot of accessibility hierarchy for app with pid 16591
+    t =   466.51s Terminate com.ralsuwaidico.bikecomputer:16591
+    t =   467.54s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' passed (467.910 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-01 13:23:14.344.
+	 Executed 3 tests, with 32 failures (0 unexpected) in 1194.200 (1194.208) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-01 13:23:14.347.
+	 Executed 3 tests, with 32 failures (0 unexpected) in 1194.200 (1194.211) seconds
+Test Suite 'Selected tests' failed at 2026-11-01 13:23:14.347.
+	 Executed 3 tests, with 32 failures (0 unexpected) in 1194.200 (1194.212) seconds
+2026-11-01 13:23:40.980 xcodebuild[74917:200156] [MT] IDETestOperationsObserverDebug: 1358.547 elapsed -- Testing started completed.
+2026-11-01 13:23:40.982 xcodebuild[74917:200156] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-01 13:23:40.982 xcodebuild[74917:200156] [MT] IDETestOperationsObserverDebug: 1358.547 sec, +1358.547 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-hgwgrtdvhibylpbyhvnmyfgbkknb/Logs/Test/Test-BikeComputer-2026.11.01_13-00-37-+0000.xcresult
+
+Failing tests:
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+
+** TEST FAILED **
+
+Testing started
