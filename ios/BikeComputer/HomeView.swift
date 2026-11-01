@@ -29,10 +29,9 @@ struct HomeView: View {
                     HomeHeader(name: store.profile.name)
                     VStack(alignment: .leading, spacing: DS.s) {
                         banner
-                        // rc3 (owner 1 Nov): no health questionnaire for new riders — the "answer the health check" line is gone;
-                        // a restriction an existing rider already saved (clearance needed) still shows and opens the review.
-                        // TODO(rc3-engine): HomeModel still emits .pending for "not answered"; drop it there and this filter goes.
-                        if let c = h.caution, c == .clearance { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
+                        // rc3 (owner 1 Nov): no health questionnaire for new riders (HomeModel no longer emits "answer the
+                        // health check"); a restriction an existing rider already saved still shows and opens the review.
+                        if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
                     }
                     HomeSectionTitle(text: "Today")
                     todayCard(h)

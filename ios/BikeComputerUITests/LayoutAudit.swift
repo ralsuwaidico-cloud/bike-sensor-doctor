@@ -354,9 +354,9 @@ final class LayoutAudit: XCTestCase {
                 app.otherElements["planDayStrip"].firstMatch.swipeLeft(); sleep(1)
                 XCTAssertEqual(found.map { $0.frame.minX }, before, "\(size): the day strip moved sideways (horizontal scrolling)")
             }
-            let done = app.staticTexts["planDoneRiding"], planned = app.staticTexts["planPlannedRiding"]
-            XCTAssertTrue(done.exists && planned.exists, "\(size): Done this week / Planned this week figures")
-            if done.exists { note("\(size) plan: done '\(done.label)' · planned '\(planned.label)'") }
+            // RC3 (owner 1 Nov): the weekly totals live only in Progress; Plan has the week settings row and Plan changes
+            XCTAssertFalse(app.staticTexts["planDoneRiding"].exists, "\(size): weekly totals are not repeated on Plan")
+            XCTAssertTrue(app.buttons["planChanges"].firstMatch.exists, "\(size): Plan changes in the toolbar")
             let fix = app.buttons["fixPlan"].firstMatch
             if fix.exists {
                 fix.tap(); sleep(2); shot("\(tag)-plan-fix"); checkScreen(app, "\(size) fix plan", tab: nil)

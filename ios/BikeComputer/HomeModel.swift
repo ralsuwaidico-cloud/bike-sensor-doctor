@@ -335,7 +335,7 @@ struct HomeCoachItem: Equatable {
             return HomeCoachItem(source: .adjustment(next), title: t, evidence: firstSentence(a.why), actionLabel: "See change")
         }
         if let f = i.ftp {
-            return HomeCoachItem(source: .ftp, title: "Update FTP to \(f.watts) W?", evidence: "From your best 20 minutes (\(f.best20) W) on a recent ride; your FTP is \(i.currentFTP) W now.", actionLabel: "Review")
+            return HomeCoachItem(source: .ftp, title: "Update FTP to \(f.watts) W?", evidence: "From your best 20 minutes (\(f.best20) W) on a recent ride; \(i.currentFTP > 0 ? "your FTP is \(i.currentFTP) W now" : "your FTP is unknown now").", actionLabel: "Review")
         }
         if let g = i.gapFinding {
             return HomeCoachItem(source: .gap, title: firstSentence(g.text), evidence: g.evidence, actionLabel: "Open Plan")
@@ -528,7 +528,7 @@ extension Store {
         i.nextSessionId = next?.id
         i.nextSessionTitle = next.map { "\(HomeText.weekday($0.date)) \(HomeText.title($0, routine: routine(for: $0)).lowercased())" }
         i.ftp = ftpSuggestion
-        i.currentFTP = profile.ftpW
+        i.currentFTP = profile.ftpValue ?? 0     // RC3: 0 = unknown (never the weight × level assumption)
         if profile.trainingMode != .cycling {
             let a = HybridCoach.assess(profile: profile, plan: plan, rides: rides, strength: strength, availability: effectiveAvailability, now: now)
             i.hybridProposals = a.proposals

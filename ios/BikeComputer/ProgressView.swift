@@ -2,13 +2,13 @@ import SwiftUI
 import Charts
 import MapKit
 
-/// Progress tab (RC2-UX milestone 1, owner §5), three levels:
-/// 1. At a glance: this week's riding, strength, sessions, the riding target and FTP — each card opens its detail.
-/// 2. Trends: one detailed chart (riding / strength; 4–16 weeks, 1 year with older data), tappable weeks, done vs planned.
-/// 3. FTP with its honest badge, and the ride history with each ride's analysis.
-/// Every figure comes from the one query layer (TrainingLedger via ProgressMetrics), the same numbers as Plan and Home.
-/// Only rides this phone recorded, mirrored or imported are listed; the BikeComputer's own history stays on the board until
-/// its firmware serves it (shown as a note, never fabricated).
+/// Progress tab: "Am I improving?" (RC3, owner decisions 1 Nov)
+/// 1. Consistency first: this week and done vs planned per week (the only place with the full weekly figures).
+/// 2. Cycling: FTP with its source (Unknown / Entered / Estimated / Tested); performance only from valid data.
+/// 3. Strength: the top working set per main lift (logged); "Est. 1RM" is secondary and only where reliable.
+/// 4. Checkpoints at 4 / 8 / 12 weeks from the first completed session, with what evidence is still missing.
+/// 5. Sessions: the history (moved here from Plan), each ride with its analysis.
+/// Every figure comes from the one query layer (TrainingLedger / Store progress inputs), the same data as Plan and Home.
 struct ProgressTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
@@ -39,8 +39,10 @@ struct ProgressTabView: View {
                             Card { WeeklyTrendChart(riding: riding, lifting: lifting, metrics: metrics, metric: $metric, range: $range) }
                                 .id("trends")
                         }
-                        ftpCard.id("ftp")
-                        history
+                        if showRiding { ftpCard.id("ftp") }
+                        if showLifting { StrengthProgressCard() }
+                        CheckpointsCard(showRiding: showRiding, showLifting: showLifting)
+                        sessions
                     }.padding()
                 }
             }
@@ -50,17 +52,17 @@ struct ProgressTabView: View {
         }
     }
 
-    // MARK: level 1 — at a glance
+    // MARK: consistency — this week at a glance
     private func glance(riding: [WeekBucket], lifting: [WeekBucket], proxy: ScrollViewProxy) -> some View {
         let p = store.profile
         let monday = TrainingLedger.monday(of: Date())
         let sets = store.ledger.logs.filter { $0.date >= monday }.reduce(0) { $0 + $1.setCount }
         let trend = ProgressGlance.best20Trend(store.rides)
         let g = ProgressGlance.make(.init(riding: riding, lifting: lifting, showRiding: showRiding, showLifting: showLifting, setsThisWeek: sets,
-                                          ridingTargetMinutes: p.hoursPerWeek * 60, ftpW: p.ftpW, ftpBadge: p.ftpBadge,
+                                          ridingTargetMinutes: p.hoursPerWeek * 60, ftpW: p.ftpValue ?? 0, ftpBadge: p.ftpBadge,
                                           best20Recent: trend.recent, best20Before: trend.before))
         return VStack(alignment: .leading, spacing: DS.s) {
-            Eyebrow(t: "At a glance")
+            Eyebrow(t: "This week")
             // two equal-height cards per row (one per row at accessibility sizes); an odd last card spans the row
             let cols = dts.isAccessibilitySize ? 1 : 2
             Grid(horizontalSpacing: DS.s, verticalSpacing: DS.s) {
@@ -97,47 +99,126 @@ struct ProgressTabView: View {
         .accessibilityElement(children: .combine)
     }
 
-    // MARK: level 2/3 — FTP with its badge (tested / entered / estimated)
+    // MARK: cycling — FTP with its source; no number when unknown
     private var ftpCard: some View {
         let p = store.profile
         return Card {
-            HStack(alignment: .firstTextBaseline) { Eyebrow(t: "FTP"); Spacer(minLength: DS.s); FTPConfidencePill(profile: p) }
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: DS.s) { Text("\(p.ftpW)").font(DS.number).monospacedDigit(); Text("W · \(String(format: "%.1f", Double(p.ftpW) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
-                VStack(alignment: .leading) { Text("\(p.ftpW) W").font(DS.number).monospacedDigit(); Text("\(String(format: "%.1f", Double(p.ftpW) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
+            HStack(alignment: .firstTextBaseline) { Eyebrow(t: "Cycling · FTP"); Spacer(minLength: DS.s); Pill(text: p.ftpSource.title, color: p.ftpSource == .tested ? BC.live : p.ftpSource == .unknown ? .secondary : BC.accent) }
+            if let w = p.ftpValue {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: DS.s) { Text("\(w)").font(DS.number).monospacedDigit(); Text("W · \(String(format: "%.1f", Double(w) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
+                    VStack(alignment: .leading) { Text("\(w) W").font(DS.number).monospacedDigit(); Text("\(String(format: "%.1f", Double(w) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
+                }
+                Text(p.ftpSourceText).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("ftpSource")
+            } else {
+                Text("Unknown").font(DS.number).accessibilityIdentifier("ftpConfidenceTitle")
+                Text("Not enough data yet: do an FTP test with a power meter, or enter your FTP in Profile. Rides use heart rate and effort until then.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("ftpSource")
             }
-            Text(p.ftpLabel).font(.subheadline.weight(.semibold)).accessibilityIdentifier("ftpConfidenceTitle")
-            Text(p.ftpSourceText).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("ftpSource")
-            if let c = p.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             if store.ftpSuggestion != nil { FTPSuggestionCard() }
-            Text("Training load and form appear after about six weeks of rides with power; nothing is shown before that.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private func rowText(_ r: RideRecord) -> String {
-        var t = "\(r.durationS.asDuration) · \(String(format: "%.1f", Double(r.distanceM) / 1000)) km"
-        if let p = r.avgPower { t += " · \(p) W" }
-        if let h = r.avgHR { t += " · \(h) bpm" }
-        return t
-    }
-    private var history: some View {
-        Card {
-            HStack { Eyebrow(t: "Rides"); Spacer(); Text("\(store.rides.count)").font(.caption.bold()).foregroundStyle(.secondary) }
-            if store.rides.isEmpty { Text("No rides yet. Recorded and imported rides appear here, newest first.").font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
-            ForEach(store.rides.sorted { $0.start > $1.start }) { r in
-                NavigationLink { RideDetailView(ride: r) } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            FlowRow(spacing: 6) { Text(r.start.dayAndDate).font(.subheadline.weight(.bold)); Pill(text: r.recorder == .board ? "BikeComputer" : r.recorder == .health ? "Apple Health" : "phone only", color: r.recorder == .board ? BC.accent : .secondary) }
-                            Text(rowText(r)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }.padding(.vertical, 4).frame(minHeight: DS.minTap).contentShape(Rectangle())
-                }.buttonStyle(.plain)
-                if r.id != store.rides.min(by: { $0.start < $1.start })?.id { Divider() }
-            }
-            Divider()
+    // MARK: sessions — history (moved here from Plan)
+    private var sessions: some View {
+        VStack(alignment: .leading, spacing: DS.s) {
+            TimelineSection()
             Text("Board history: \(device.syncStatus). Rides recorded on the BikeComputer while the phone was away stay on the board until its firmware serves them; nothing is invented here.").font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .id("sessions")
+    }
+}
+
+/// Strength: the top working set per main lift from logged sets (primary). "Est. 1RM" is an optional second line, shown
+/// only for sets that qualify (RPE ≥ 8, effective reps 1–10; ENG-D6) and always labelled as an estimate.
+struct StrengthProgressCard: View {
+    @EnvironmentObject private var store: Store
+    @State private var showEstimate = false
+    var body: some View {
+        let lifts = store.liftSummaries().filter { $0.latest != nil }.sorted { $0.topSets.count > $1.topSets.count }.prefix(6)
+        let units = store.settings.units
+        Card {
+            HStack { Eyebrow(t: "Strength · top set"); Spacer()
+                if lifts.contains(where: { $0.latest?.e1RM != nil }) {
+                    Toggle("Est. 1RM", isOn: $showEstimate).toggleStyle(.button).font(.caption.bold()).controlSize(.small).accessibilityIdentifier("progressE1RM")
+                }
+            }
+            if lifts.isEmpty {
+                Text("Not enough data yet: log the weight and reps of your lifts to see progress here.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(Array(lifts)) { l in
+                if let last = l.latest {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(l.name).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: DS.s)
+                            Text("\(WeightFmt.text(last.weightKg, units)) × \(last.reps)").font(.subheadline).monospacedDigit()
+                        }
+                        HStack(spacing: DS.s) {
+                            Text(change(l, units: units)).font(.caption).foregroundStyle(.secondary)
+                            if showEstimate, let e = last.e1RM {
+                                Text("Est. 1RM \(WeightFmt.text(e, units))").font(.caption.weight(.semibold)).foregroundStyle(BC.accent)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            if showEstimate {
+                Text("Est. = estimated from a hard logged set, not a measured max.").font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityIdentifier("progressStrength")
+    }
+    /// "Logged · 4 sessions · +5 kg since 12 Oct" (first vs latest top set).
+    private func change(_ l: LiftSummary, units: AppSettings.Units) -> String {
+        let n = l.topSets.count
+        guard let first = l.topSets.first, let last = l.latest, n >= 2 else { return "Logged · 1 session" }
+        let d = last.weightKg - first.weightKg
+        let sign = d > 0 ? "+" : d < 0 ? "−" : "±"
+        return "Logged · \(n) sessions · \(sign)\(WeightFmt.text(abs(d), units)) since \(first.date.formatted(.dateTime.day().month(.abbreviated)))"
+    }
+}
+
+/// Checkpoints at 4 / 8 / 12 weeks, counted from the first completed session of each sport. A checkpoint needs both the
+/// weeks and the sessions; otherwise it says what is still missing. Reviews, not promises.
+struct CheckpointsCard: View {
+    @EnvironmentObject private var store: Store
+    let showRiding: Bool
+    let showLifting: Bool
+    var body: some View {
+        Card {
+            Eyebrow(t: "Checkpoints")
+            if showRiding { sport("Cycling", store.checkpoints(.cycling)) }
+            if showLifting { sport("Strength", store.checkpoints(.strength)) }
+            Text("Reviews at 4, 8 and 12 weeks — not promises.").font(.caption2).foregroundStyle(.secondary)
+        }
+        .accessibilityIdentifier("progressCheckpoints")
+    }
+    @ViewBuilder private func sport(_ title: String, _ cps: [Checkpoint]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.subheadline.weight(.semibold))
+            if cps.isEmpty {
+                Text("Starts with your first completed session.").font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach(cps, id: \.weeks) { c in
+                HStack(alignment: .firstTextBaseline, spacing: DS.s) {
+                    Image(systemName: c.reached ? "checkmark.circle.fill" : "circle").foregroundStyle(c.reached ? BC.live : .secondary).accessibilityHidden(true)
+                    Text("Week \(c.weeks)").font(.footnote.weight(.semibold)).monospacedDigit()
+                    Text(line(c)).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+    }
+    private func line(_ c: Checkpoint) -> String {
+        if !c.reached { return "Not enough evidence yet" + (c.missing.map { ": \($0)" } ?? "") }
+        switch c.performance {
+        case .improved: return "\(c.sessions) sessions · improving"
+        case .flat: return "\(c.sessions) sessions · holding steady"
+        case .declined: return "\(c.sessions) sessions · lower than before"
+        case .notEnoughData: return "\(c.sessions) sessions · consistent; performance needs more data"
         }
     }
 }
@@ -150,7 +231,7 @@ struct FTPSuggestionCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 Divider()
                 HStack { Eyebrow(t: "Suggested FTP"); Spacer(); Pill(text: "from \(s.rideDate.dayAndDate) ride", color: BC.accent) }
-                HStack(alignment: .firstTextBaseline) { Text("\(s.watts)").font(BC.numFont); Text("W · was \(s.previousFTP) W").foregroundStyle(.secondary) }
+                HStack(alignment: .firstTextBaseline) { Text("\(s.watts)").font(BC.numFont); Text(store.profile.ftpKnown ? "W · was \(s.previousFTP) W" : "W · FTP unknown until now").foregroundStyle(.secondary) }
                 Text("95 % of the best 20-minute power (\(s.best20) W)" + (s.best60.map { " · best 60 min \($0) W" } ?? "") + (store.profile.ftpHow == .entered ? ". Your entered FTP is kept unless you accept." : ".")).font(.footnote).foregroundStyle(.secondary)
                 HStack { Button("Accept \(s.watts) W") { store.acceptFTPSuggestion() }.buttonStyle(.borderedProminent).tint(BC.live); Button("Not now") { store.dismissFTPSuggestion() }.buttonStyle(.bordered) }
             }
@@ -251,7 +332,7 @@ struct RideDetailView: View {
             Eyebrow(t: "Time in zones")
             let secs = zoneSeconds
             let total = secs.reduce(0, +)
-            if total == 0 { Text("no data yet · needs power").font(.footnote).foregroundStyle(BC.stale) }
+            if total == 0 || !store.profile.ftpKnown { Text(store.profile.ftpKnown ? "no data yet · needs power" : "power zones need a known FTP").font(.footnote).foregroundStyle(BC.stale) }
             else {
                 HStack(spacing: 2) { ForEach(0..<7, id: \.self) { z in if secs[z] > 0 { RoundedRectangle(cornerRadius: 3).fill(BC.zone(z + 1)).frame(width: max(4, CGFloat(secs[z]) / CGFloat(total) * 300), height: 14) } } }
                 Text(zoneText(secs)).font(.caption2).foregroundStyle(.secondary)
@@ -262,7 +343,7 @@ struct RideDetailView: View {
     private func zoneText(_ secs: [Int]) -> String {
         var parts: [String] = []
         for z in 0..<7 where secs[z] > 0 { parts.append("Z\(z + 1) \(secs[z] / 60) min") }
-        return parts.joined(separator: " · ") + " · FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel))"
+        return parts.joined(separator: " · ") + (store.profile.ftpKnown ? " · FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel))" : "")
     }
     private var zoneSeconds: [Int] { var secs = Array(repeating: 0, count: 7); for w in ride.samples.compactMap({ $0.w }) { secs[store.profile.zone(forWatts: w) - 1] += 1 }; return secs }
 

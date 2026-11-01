@@ -1,18 +1,17 @@
 import SwiftUI
 import Charts
 
-/// Plan tab (0.5.0): a clean weekly calendar built around the rider's own availability, a weekly summary with the
-/// time budget, and the historical timeline below. Tap a day to view / edit / move / skip / replace / add.
+/// Plan tab: "What does my week look like?" — the week strip (bicycle / dumbbell / moon), the sessions, the week the plan
+/// is built from, and Plan changes (versions, read-only, with Undo). RC3 (owner 1 Nov): the weekly totals live only in
+/// Progress, and History moved to Progress › Sessions. Tap a day to view / edit / move / skip / replace / add.
 struct PlanView: View {
     @EnvironmentObject private var store: Store
     @State private var weekOffset = 0
     @State private var selected: Workout?
     @State private var dayList: PlanDay?
     @State private var showAvailability = false
-    @State private var confirmRegenerate = false
     @State private var addOn: Date?
     @State private var showStrengthLog = false
-    @State private var lastChanges: [String] = []
     @State private var showDetailedLog = false
     @State private var showTemplates = false
 
@@ -26,17 +25,16 @@ struct PlanView: View {
                 VStack(spacing: 12) {
                     weekHeader
                     calendar
-                    summary
+                    fixRow
                     dayCards
-                    availabilityCard
-                    TimelineSection()
+                    weekRow
                 }.padding()
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Plan")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }; Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle") }; Button { showTemplates = true } label: { Label("Routines", systemImage: "doc.on.doc") } } label: { Label("Log strength", systemImage: "dumbbell") } }
-                ToolbarItem(placement: .topBarTrailing) { Button { showAvailability = true } label: { Label("Days", systemImage: "calendar.badge.clock") } }
+                ToolbarItem(placement: .topBarTrailing) { NavigationLink { PlanVersionsView() } label: { Label("Plan changes", systemImage: "clock.arrow.circlepath") }.accessibilityIdentifier("planChanges") }
             }
             .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet() }
             .sheet(isPresented: $showDetailedLog) { DetailedStrengthLogSheet() }
@@ -45,11 +43,6 @@ struct PlanView: View {
             .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
             .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
             .sheet(item: $dayList) { day in dayListSheet(day) }
-            .alert("Replace your edited sessions?", isPresented: $confirmRegenerate) {
-                Button("Replace", role: .destructive) { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: true); _ = store.runAdaptation() }
-                Button("Keep my edits") { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: false); _ = store.runAdaptation() }
-                Button("Cancel", role: .cancel) {}
-            } message: { Text("\(store.editedCount(weekOf: weekDate)) session(s) this week were changed by hand. Completed sessions and past days are never touched.") }
         }
     }
 
@@ -100,8 +93,9 @@ struct PlanView: View {
         .accessibilityIdentifier("planDayStrip")
     }
     private func icon(_ d: PlanDay) -> String {
-        guard let w = d.items.first else { return "plus" }
-        switch w.kind { case .rest: return "moon.zzz"; case .recoveryDay: return "leaf"; case .strength: return "dumbbell"; case .mobility: return "figure.yoga"; case .other: return "figure.run"; case .ftpTest: return "stopwatch"; default: return "bicycle" }
+        // the same icons as Home and onboarding: bicycle = ride, dumbbell = strength, crescent moon = rest / recovery
+        guard let w = d.items.first else { return "moon.fill" }
+        switch w.kind { case .rest, .recoveryDay: return "moon.fill"; case .strength: return "dumbbell.fill"; case .mobility: return "figure.yoga"; case .other: return "figure.mixed.cardio"; default: return "bicycle" }
     }
     private func color(_ d: PlanDay) -> Color {
         guard let w = d.items.first else { return .secondary }
@@ -109,71 +103,28 @@ struct PlanView: View {
         return w.kind.zone > 0 ? BC.zone(w.kind.zone) : w.kind == .rest ? .secondary : BC.accent
     }
 
-    // MARK: summary (compact: counts, two budgets, ONE prioritised action; details behind Fix plan)
+    // MARK: Fix plan (only when the week's planned sessions don't fit a budget — never a warning without a fix)
     @State private var showFix = false
-    private var summary: some View {
-        // RC2: every figure from the one query layer (WeekTotals → TrainingLedger), the same numbers as Progress and Home,
-        // and named "Done this week" / "Planned this week" (it used to show planned minutes under a bare "Riding")
-        let ledger = store.ledger
-        let totals = WeekTotals(ledger, weekOf: weekDate)
-        let rw = totals.riding, lw = totals.lifting
-        let planned = rw.plannedMinutes, lifting = lw.plannedMinutes
-        let done = rw.minutes
-        let liftDone = lw.minutes
-        let limit = store.profile.hoursPerWeek * 60, liftLimit = store.profile.liftingHoursPerWeek * 60
+    @ViewBuilder private var fixRow: some View {
         let fit = store.fitReport
-        // the week's planned sessions over a budget: the same reports Fix plan acts on (never a warning without a fix)
-        let budgetReports = FixPlanSheet.reports(store, weekOf: weekDate)
-        let overEdits = !budgetReports.isEmpty
-        let lifts = store.profile.trainingMode.includesLifting || lifting > 0
-        let action: String = {
-            if !fit.conflicts.isEmpty { return "Your days exceed a budget; the coach trimmed flexible activities — tap Fix plan." }
-            if let r = budgetReports.first { return "Planned \(r.riding ? "riding" : "lifting") is \(Fmt.duration(minutes: r.overMinutes)) over your \(Fmt.duration(minutes: r.limitMinutes)) \(r.riding ? "cycling" : "lifting") budget this week — tap Fix plan to shorten, skip or raise it." }
-            if let next = week.first(where: { !ledger.status($0).isCompleted && !$0.skipped && $0.kind != .rest && Calendar.current.startOfDay(for: $0.date) >= Calendar.current.startOfDay(for: Date()) }) { return "Next: \(next.date.shortDay) \(next.displayTitle.lowercased()), \(Fmt.duration(minutes: next.minutes))." }
-            return "Everything planned for this week is done."
-        }()
-        return Card {
-            HStack { Eyebrow(t: "Weekly summary"); Spacer(); if !fit.conflicts.isEmpty || overEdits || !fit.trimmed.isEmpty { Button { showFix = true } label: { Label("Fix plan", systemImage: "wrench.and.screwdriver").font(.caption.bold()).frame(minHeight: DS.minTap).contentShape(Rectangle()) }.accessibilityIdentifier("fixPlan") } }
-            // owner UX review 28 Oct: one compact row per sport — sessions done of planned, then done / planned time against
-            // the budget, with the budget bar under it (was two columns + two separate budget blocks: too dense on 393 pt)
-            sportRow("Riding", rw, singular: "ride", plural: "rides", done: done, planned: planned, limit: limit, color: BC.accent, id: "Riding")
-            if lifts { sportRow("Lifting", lw, singular: "lift", plural: "lifts", done: liftDone, planned: lifting, limit: liftLimit, color: BC.strength, id: "Lifting") }
-            Text(action).font(.footnote).foregroundStyle(fit.conflicts.isEmpty && !overEdits ? .primary : BC.warn).fixedSize(horizontal: false, vertical: true)
-        }
-        .sheet(isPresented: $showFix) { FixPlanSheet(weekOf: weekDate) }
-    }
-    /// One sport in one block: "1 of 3 rides done · +1 extra" on the title line; "1 h 33 min done · 4 h planned · 1 h spare of
-    /// 5 h" under it; then the budget bar (planned fill, done fill). Same figures and wording source as Home and Progress.
-    private func sportRow(_ title: String, _ w: TrainingLedger.SportWeek, singular: String, plural: String, done: Int, planned: Int, limit: Int, color: Color, id: String) -> some View {
-        let over = limit > 0 && planned > limit
-        let budget = limit == 0 ? "no budget set" : over ? "\(Fmt.duration(minutes: planned - limit)) over \(Fmt.duration(minutes: limit))" : "\(Fmt.duration(minutes: limit - planned)) spare of \(Fmt.duration(minutes: limit))"
-        return VStack(alignment: .leading, spacing: 4) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(title).font(.subheadline.weight(.bold))
-                    Spacer(minLength: DS.s)
-                    Text(WeekTotals.sessions(w, singular: singular, plural: plural)).font(.subheadline).monospacedDigit().accessibilityIdentifier("planDone\(id)")
+        let reports = FixPlanSheet.reports(store, weekOf: weekDate)
+        if !fit.conflicts.isEmpty || !reports.isEmpty {
+            Button { showFix = true } label: {
+                HStack(spacing: DS.s) {
+                    Image(systemName: "exclamationmark.circle.fill").foregroundStyle(BC.warn)
+                    Text(reports.first.map { "\($0.riding ? "Riding" : "Lifting") is \(Fmt.duration(minutes: $0.overMinutes)) over" } ?? "Your days don't fit").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                    Spacer()
+                    Text("Fix plan").font(.subheadline.bold()).foregroundStyle(BC.accent)
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.subheadline.weight(.bold))
-                    Text(WeekTotals.sessions(w, singular: singular, plural: plural)).font(.subheadline).monospacedDigit().fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("planDone\(id)")
-                }
+                .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
             }
-            (Text("\(Fmt.duration(minutes: w.minutes)) done").font(.footnote).foregroundStyle(.secondary).monospacedDigit()
-                + Text(" · \(Fmt.duration(minutes: w.plannedMinutes)) planned").font(.footnote).foregroundStyle(over ? BC.warn : .secondary).monospacedDigit()
-                + Text(" · \(budget)").font(.footnote).foregroundStyle(over ? BC.warn : .secondary))
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("planPlanned\(id)")
-            GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.secondary.opacity(0.18))
-                    Capsule().fill(over ? BC.warn : color).frame(width: g.size.width * min(1, limit > 0 ? Double(planned) / Double(limit) : (planned > 0 ? 1 : 0)))
-                    Capsule().fill(BC.live).frame(width: g.size.width * min(1, limit > 0 ? Double(done) / Double(limit) : 0))
-                }
-            }.frame(height: 6).accessibilityHidden(true)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("fixPlan")
+            .sheet(isPresented: $showFix) { FixPlanSheet(weekOf: weekDate) }
         }
-        .accessibilityElement(children: .contain)
     }
+
     // MARK: day cards (workouts and recovery days as separate cards)
     private var dayCards: some View {
         VStack(spacing: 8) {
@@ -189,25 +140,20 @@ struct PlanView: View {
         }
     }
 
-    private var availabilityCard: some View {
-        Card {
-            HStack { Eyebrow(t: "Your training days"); Spacer(); Button("Edit ›") { showAvailability = true }.font(.caption.bold()) }
-            let a = store.effectiveAvailability
-            HStack(spacing: 4) {
-                ForEach(0..<7, id: \.self) { i in
-                    VStack(spacing: 3) {
-                        Text(WeeklyAvailability.dayNames[i]).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).lineLimit(1)
-                        Image(systemName: a.days[i].activity.icon).font(.system(size: 12)).foregroundStyle(a.days[i].isRest ? (a.days[i].flexible ? BC.stale : .secondary) : BC.accent)
-                        Text(a.days[i].isRest ? (a.days[i].flexible ? "flex" : "—") : a.days[i].activity == .both ? "\(Fmt.compact(minutes: a.days[i].cycleMinutes))+\(Fmt.compact(minutes: a.days[i].liftingMinutes))" : Fmt.compact(minutes: a.days[i].totalMinutes)).font(.system(size: 10, weight: .bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                    }.frame(maxWidth: .infinity)
-                }
+    /// The week the plan is built from (the same days onboarding step 3 sets). Edit → change preview before anything moves.
+    private var weekRow: some View {
+        Button { showAvailability = true } label: {
+            HStack {
+                Text("Your week").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                Spacer()
+                AvailabilityIcons(availability: store.effectiveAvailability)
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
-            Text(store.availability == nil ? "Suggested from your profile (\(store.profile.trainingMode.title.lowercased())). Set what happens each day and the plan is built around it." : "\(a.cycleDays) cycling days · \(Fmt.duration(minutes: a.cycleMinutes)) riding" + (a.liftDays > 0 ? " · \(a.liftDays) lift days · \(Fmt.duration(minutes: a.liftMinutes)) lifting" : "") + (a.fixedAssignments > 0 ? " · \(a.fixedAssignments) fixed" : "")).font(.footnote).foregroundStyle(.secondary)
-            if !lastChanges.isEmpty { Text("Changed: " + lastChanges.joined(separator: "; ")).font(.caption).foregroundStyle(BC.accent).fixedSize(horizontal: false, vertical: true) }
-            Button {
-                if store.editedCount(weekOf: weekDate) > 0 { confirmRegenerate = true } else { lastChanges = store.regenerate(weekOf: weekDate, replaceEdited: false); _ = store.runAdaptation() }
-            } label: { Text("Rebuild this week from my days").frame(maxWidth: .infinity) }.buttonStyle(.bordered).disabled(weekOffset < 0)
+            .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
         }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("planWeekSettings")
     }
 
     private func dayListSheet(_ day: PlanDay) -> some View {
@@ -447,7 +393,7 @@ struct PlanDay: Identifiable, Equatable {
 struct TimelineSection: View {
     @EnvironmentObject private var store: Store
     @State private var showAll = false
-    private var entries: [TimelineEntry] { Timeline.build(rides: store.rides, plan: store.plan, ftp: store.profile.ftpW, strength: store.strength) }
+    private var entries: [TimelineEntry] { Timeline.build(rides: store.rides, plan: store.plan, ftp: store.profile.ftpValue ?? 0, strength: store.strength) }   // RC3: no load (TSS) from an unknown FTP
 
     var body: some View {
         let all = entries

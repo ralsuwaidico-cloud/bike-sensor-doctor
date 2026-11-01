@@ -13,7 +13,12 @@ struct AvailabilityEditor: View {
     @State private var loaded = false
     @State private var showPreview = false
     @State private var resolveConflicts = false
+    /// The proposal is shown after the week preview has closed (one sheet at a time).
+    @State private var pendingProposal = false
+    @State private var queued: PreviewRef? = nil
     @State private var changes: [String] = []
+    /// RC3 / ENG-J2: the new week reaches the planned sessions only through the change preview.
+    @State private var planPreview: PreviewRef? = nil
 
     var body: some View {
         if embedded { content } else {
@@ -45,7 +50,8 @@ struct AvailabilityEditor: View {
             } header: { Text("Totals") }
         }
         .onAppear { if !loaded { draft = store.effectiveAvailability; loaded = true } }
-        .sheet(isPresented: $showPreview) { WeekPreviewSheet(draft: draft, onConfirm: { save() }, onRelax: { option in relax(option) }) }
+        .sheet(isPresented: $showPreview, onDismiss: { if pendingProposal { pendingProposal = false; planPreview = queued; queued = nil } }) { WeekPreviewSheet(draft: draft, onConfirm: { save() }, onRelax: { option in relax(option) }) }
+        .sheet(item: $planPreview) { r in PlanChangeSheet(proposalId: r.id) { dismiss() } }
     }
 
     /// Applies one of the conflict options the rider chose (budget raise or trimming); the editor stays open to show it.
@@ -63,12 +69,15 @@ struct AvailabilityEditor: View {
     private func save() {
         for i in 0..<7 { draft.days[i].assignments = draft.days[i].assignments.filter { $0.minutes > 0 }; draft.days[i].syncLegacy() }
         if let onSave { onSave(draft); dismiss(); return }
-        store.availability = draft
-        let c1 = store.regenerate(weekOf: Date(), replaceEdited: false)
-        _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false)
-        _ = store.runAdaptation()          // plan rebuilt → the adaptive coach re-checks the coming sessions
-        changes = c1
-        dismiss()
+        // RC3: one proposal for the current unfinished and future sessions; nothing changes until Apply. Done, started
+        // and hand-edited days are kept as they are; history is never touched.
+        let week = draft
+        if let r = store.changeTraining(cause: .days, { x in x.availability = week; x.profile.weekIsExplicit = true }) {
+            queued = r; pendingProposal = true      // WeekPreviewSheet is still closing; its onDismiss shows the change
+        } else {
+            _ = store.runAdaptation()
+            dismiss()
+        }
     }
 }
 

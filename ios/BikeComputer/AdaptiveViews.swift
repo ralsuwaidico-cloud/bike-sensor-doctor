@@ -244,6 +244,8 @@ struct HybridPlanEditor: View {
     var asSheet = false
     @State private var showDays = false
     @State private var applied: String? = nil
+    /// RC3: Profile › Preferences › Strength split reviews the plan change before anything is rebuilt.
+    @State private var planPreview: PreviewRef? = nil
 
     var body: some View {
         if asSheet {
@@ -256,6 +258,10 @@ struct HybridPlanEditor: View {
 
     private var form: some View {
         Form {
+            // RC3 (owner 1 Nov, one source of truth): opened from Profile this page shows only the split and routines —
+            // goals, week, session length and equipment have one home each in Profile › Training. The full form stays for
+            // the plan set-up sheet.
+            if asSheet {
             Section {
                 Picker("Primary goal", selection: Binding(get: { p.hybridGoal ?? .balanced }, set: { g in update { $0.hybridGoal = g; $0.priority = g.priority } })) {
                     ForEach(HybridGoal.allCases, id: \.self) { Text($0.title).tag($0) }
@@ -284,6 +290,7 @@ struct HybridPlanEditor: View {
                 Stepper("Strength session: \(Fmt.duration(minutes: liftMinutes))", value: Binding(get: { liftMinutes }, set: { v in update { $0.strengthSessionMinutes = v } }), in: 15...150, step: 5)
                 Stepper("Lifting budget: \(p.liftingHoursPerWeek) h a week", value: Binding(get: { p.liftingHoursPerWeek }, set: { v in update { $0.liftingHoursPerWeek = v } }), in: 1...12)
             } header: { Text("Session length and weekly time") } footer: { Text("Budgets are never exceeded on their own: the long ride and sessions are fitted inside them.") }
+            }
 
             Section {
                 Picker("Split", selection: Binding(get: { p.strengthSplit }, set: { s in update { pr in
@@ -310,7 +317,7 @@ struct HybridPlanEditor: View {
             } header: { Text("Strength split") } footer: { Text("No split needs a fixed number of days: the rotation simply continues over the sessions you want. Custom: your own list, e.g. 2 × Full body + 1 × Core / joints, or one of your routines per slot.") }
 
             Section {
-                NavigationLink { EquipmentPage() } label: { HStack { Text("Equipment I own"); Spacer(); Text(store.equipment.isSet ? "\(store.equipment.owned.count) items" : "not set").foregroundStyle(.secondary) } }
+                if asSheet { NavigationLink { EquipmentPage() } label: { HStack { Text("Equipment I own"); Spacer(); Text(store.equipment.isSet ? "\(store.equipment.owned.count) items" : "not set").foregroundStyle(.secondary) } } }
                 ForEach(store.templates) { t in
                     Toggle(isOn: Binding(get: { p.preservedTemplateIds.contains(t.id) }, set: { on in update { pr in if on { if !pr.preservedTemplateIds.contains(t.id) { pr.preservedTemplateIds.append(t.id) } } else { pr.preservedTemplateIds.removeAll { $0 == t.id } } } })) {
                         VStack(alignment: .leading, spacing: 2) { Text("Keep “\(t.name)”"); Text(t.exerciseNames).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
@@ -322,14 +329,16 @@ struct HybridPlanEditor: View {
 
             if !asSheet {
                 Section {
-                    Button("Suggest new days from these answers") { store.rebuildFromHybridAnswers(newDays: true); applied = "New days suggested; this week and next were rebuilt (completed sessions, past days and your edits kept)." }
-                    Button("Rebuild the coming weeks with my current days") { store.rebuildFromHybridAnswers(newDays: false); applied = "This week and next were rebuilt (completed sessions, past days and your edits kept)." }
+                    // RC3 / ENG-J2: one previewed proposal for the current unfinished and future sessions (never a silent rebuild)
+                    Button("Review my plan with this split") { planPreview = PreviewRef(id: store.proposePlanChange(cause: .split, inputs: store.planInputs)) }
+                        .accessibilityIdentifier("splitReview")
                     if let a = applied { Text(a).font(.footnote).foregroundStyle(BC.live) }
-                } footer: { Text("Your answers are saved as you change them; the calendar changes only when you rebuild.") }
+                } footer: { Text("Nothing in your plan changes until you apply the preview.") }
             }
         }
-        .navigationTitle("Hybrid plan").navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(asSheet ? "Hybrid plan" : "Strength split").navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showDays) { AvailabilityEditor() }
+        .sheet(item: $planPreview) { r in PlanChangeSheet(proposalId: r.id) { applied = "Your plan was updated." } }
     }
     private var rideMinutes: Int { p.cyclingSessionMinutes ?? min(240, max(20, (p.hoursPerWeek * 60) / max(1, p.cyclingDaysPerWeek) / 5 * 5)) }
     private var liftMinutes: Int { p.strengthSessionMinutes ?? min(150, max(15, (max(1, p.liftingHoursPerWeek) * 60) / max(1, p.liftDaysPerWeek) / 5 * 5)) }

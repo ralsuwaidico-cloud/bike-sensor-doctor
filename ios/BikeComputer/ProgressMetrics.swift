@@ -393,7 +393,8 @@ struct ProgressGlance: Equatable {
             case let (a?, nil): trend = "best 20 min \(a) W in the last 8 weeks"
             default: trend = "no ride with power in the last 16 weeks"
             }
-            cards.append(Card(id: "glanceFTP", title: "FTP", value: "\(i.ftpW) W", detail: "\(i.ftpBadge) · \(trend)", opens: nil))
+            // RC3 / ENG-E1: an unknown FTP (ftpW ≤ 0) shows "Unknown", never a number from weight × level
+            cards.append(Card(id: "glanceFTP", title: "FTP", value: i.ftpW > 0 ? "\(i.ftpW) W" : "Unknown", detail: i.ftpW > 0 ? "\(i.ftpBadge) · \(trend)" : trend, opens: nil))
         }
         return ProgressGlance(cards: cards)
     }

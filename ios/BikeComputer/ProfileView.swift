@@ -11,8 +11,10 @@ struct ProfileTabView: View {
     @EnvironmentObject private var cloud: SyncEngine
     @State private var exportURL: URL?
     @State private var confirmDelete = false
-    @State private var birth = ""
     @State private var showAvailability = false
+    /// RC3: the before/after preview of a training change made here (nothing is saved until Apply).
+    @State private var planPreview: PreviewRef? = nil
+    @State private var equipmentAtOpen: EquipmentProfile? = nil
 
     var body: some View {
         NavigationStack {
@@ -32,14 +34,9 @@ struct ProfileTabView: View {
             .navigationTitle("Profile")
             .sheet(item: $exportURL) { url in ShareSheet(items: [url]) }
             .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
-            // the same rebuild the old Training profile page did when the mode changes without a saved week
-            // TODO(rc3-engine): profile changes that affect planning → propose change + before/after preview (GR-07/08)
-            .onChange(of: store.profile.trainingMode) { _, _ in
-                if store.availability == nil {
-                    _ = store.regenerate(weekOf: Date(), replaceEdited: false)
-                    _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false)
-                }
-            }
+            // RC3 / ENG-J2: every training change made here goes through one before/after preview (current unfinished
+            // and future sessions only; completed workouts are never changed)
+            .sheet(item: $planPreview) { r in PlanChangeSheet(proposalId: r.id) }
             .alert("Delete everything on this phone?", isPresented: $confirmDelete) {
                 Button("Delete", role: .destructive) { cloud.reset(); device.forget(); store.resetAll(); store.guest = true }
                 Button("Cancel", role: .cancel) {}
@@ -57,9 +54,9 @@ struct ProfileTabView: View {
                 Spacer()
                 TextField("Your name", text: $store.profile.name).textContentType(.givenName).multilineTextAlignment(.trailing)
             }
-            // TODO(rc3-engine): date of birth (onboarding r7) when the profile stores it; birth year until then
-            NumberRow(title: "Birth year", placeholder: "not set", text: $birth, range: 1900...Calendar.current.component(.year, from: Date())) { v in store.updateProfile { $0.birthYear = v } }
-                .onAppear { birth = store.profile.birthYear.map(String.init) ?? "" }
+            // RC3: date of birth (the same field onboarding r7 writes); the board still receives the birth year
+            DatePicker("Date of birth", selection: Binding(get: { dateOfBirth }, set: { d in store.updateProfile { $0.dateOfBirth = d; $0.birthYear = Calendar.current.component(.year, from: d) } }), in: ProfileTabView.birthRange, displayedComponents: .date)
+                .accessibilityIdentifier("profileBirth")
             Stepper(value: Binding(get: { store.profile.weightKg }, set: { v in store.updateProfile { $0.weightKg = v; $0.refreshAssumption() } }), in: 40...150, step: 0.5) {
                 HStack { Text("Weight"); Spacer(); Text(weightText).foregroundStyle(.secondary).monospacedDigit() }
             }
@@ -67,32 +64,45 @@ struct ProfileTabView: View {
         }
     }
 
-    // MARK: Training (replaces the old Training profile page)
+    // MARK: Training (replaces the old Training profile page; the same fields onboarding r7 writes)
     private var training: some View {
         Section("Training") {
             ProfileSegmentRow(title: "Type") {
-                Picker("Type", selection: Binding(get: { store.profile.trainingMode }, set: { m in store.updateProfile { p in p.trainingMode = m; if m == .cycling { p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0 } else if p.liftDaysPerWeek == 0 { p.liftDaysPerWeek = 2; p.liftingHoursPerWeek = 2 } } })) {
+                Picker("Type", selection: Binding(get: { store.profile.trainingMode }, set: { m in
+                    change(.profile) { x in
+                        x.profile.trainingMode = m
+                        if m == .cycling { x.profile.liftDaysPerWeek = 0; x.profile.liftingHoursPerWeek = 0 } else if x.profile.liftDaysPerWeek == 0 { x.profile.liftDaysPerWeek = 2; x.profile.liftingHoursPerWeek = 2 }
+                    }
+                })) {
                     ForEach(TrainingMode.allCases, id: \.self) { Text(ProfileText.mode($0)).tag($0) }
                 }
             }
             .accessibilityIdentifier("profileType")
             if store.profile.trainingMode == .hybrid {
                 ProfileSegmentRow(title: "Priority") {
-                    Picker("Priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) {
+                    Picker("Priority", selection: Binding(get: { store.profile.priority }, set: { v in change(.priority) { $0.profile.priority = v } })) {
                         ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
                 }
             }
-            ProfileSegmentRow(title: store.profile.trainingMode == .strength ? "Strength level" : "Cycling level") {
-                Picker("Level", selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v; $0.refreshAssumption() } })) {
-                    ForEach(RiderProfile.Level.allCases, id: \.self) { Text(ProfileText.level($0)).tag($0) }
+            if store.profile.trainingMode.includesCycling {
+                ProfileSegmentRow(title: "Cycling level") {
+                    Picker("Cycling level", selection: Binding(get: { store.profile.level }, set: { v in change(.profile) { $0.profile.level = v; $0.profile.refreshAssumption() } })) {
+                        ForEach(RiderProfile.Level.allCases, id: \.self) { Text(ProfileText.level($0)).tag($0) }
+                    }
                 }
+                .accessibilityIdentifier("profileCyclingLevel")
             }
-            if store.profile.trainingMode == .hybrid {
-                // TODO(rc3-engine): separate strength experience (onboarding r7, GR-04/05); one level is stored today
-                LabeledContent("Strength level", value: "Same as cycling")
+            if store.profile.trainingMode.includesLifting {
+                // RC3 / ENG-A1: lifting experience is its own answer (never copied from the cycling level)
+                ProfileSegmentRow(title: "Strength level") {
+                    Picker("Strength level", selection: Binding(get: { store.strengthPrefs.experience ?? .beginner }, set: { v in change(.strengthLevel) { $0.strengthPrefs.experience = v; $0.profile.confirmStrengthLevel = nil } })) {
+                        ForEach(StrengthPrefs.Experience.allCases, id: \.self) { Text(ProfileText.strengthLevel($0)).tag($0) }
+                    }
+                }
+                .accessibilityIdentifier("profileStrengthLevel")
             }
-            NavigationLink { GoalPage() } label: { LabeledContent("Goal", value: store.profile.goal.title) }
+            NavigationLink { GoalPage() } label: { LabeledContent("Goals", value: ProfileText.goals(store.profile)) }
                 .accessibilityIdentifier("profileGoal")
             Button { showAvailability = true } label: {
                 HStack {
@@ -103,21 +113,44 @@ struct ProfileTabView: View {
                 }
             }
             .accessibilityIdentifier("profileWeek")
-            NavigationLink { WeeklyTimePage() } label: { LabeledContent("Time", value: timeText) }
+            NavigationLink { WeeklyTimePage() } label: { LabeledContent("Session length", value: timeText) }
                 .accessibilityIdentifier("profileTime")
             if store.profile.trainingMode.includesLifting {
-                NavigationLink { EquipmentPage() } label: { LabeledContent("Equipment", value: store.equipment.isSet ? "\(store.equipment.owned.count) items" : "Not set") }
+                NavigationLink {
+                    // Equipment edits are proposed as one change when the page closes (preview before anything changes)
+                    EquipmentPage()
+                        .onAppear { if equipmentAtOpen == nil { equipmentAtOpen = store.equipment } }
+                        .onDisappear { proposeEquipment() }
+                } label: { LabeledContent("Equipment", value: equipmentText) }
                     .accessibilityIdentifier("profileEquipment")
             }
             if store.profile.trainingMode.includesCycling {
-                // TODO(rc3-engine): FTP source Unknown / Entered / Estimated / Tested — an unknown FTP shows "Unknown", never watts
-                NavigationLink { PowerCyclingPage() } label: { LabeledContent("FTP", value: "\(store.profile.ftpW) W · \(store.profile.ftpLabel)") }
+                NavigationLink { PowerCyclingPage() } label: { LabeledContent("FTP", value: "\(store.profile.ftpDisplay) · \(store.profile.ftpSource.title)") }
                     .accessibilityIdentifier("profileFTP")
             }
             NavigationLink { HeartRatePage() } label: { LabeledContent("Heart rate", value: "max \(store.profile.estimatedMaxHR)") }
             NavigationLink { TrainingPreferencesPage() } label: { Text("Preferences") }
                 .accessibilityIdentifier("profilePreferences")
         }
+    }
+
+    private var equipmentText: String {
+        let e = store.equipment
+        if e.isProvisional { return "Not sure yet" }
+        if e.owned.isEmpty { return "Bodyweight only" }
+        return "\(e.owned.count) items"
+    }
+    /// The Equipment page edits the store directly; on close the edit is turned back into one proposal (old values are
+    /// restored first so the preview compares before/after and Cancel keeps the old equipment).
+    private func proposeEquipment() {
+        guard let old = equipmentAtOpen else { return }
+        equipmentAtOpen = nil
+        var new = store.equipment
+        guard new != old else { return }
+        if new.owned.isEmpty && !old.isProvisional { new.confirmed = true }
+        if !new.owned.isEmpty { new.confirmed = true }
+        store.equipment = old
+        change(.equipment) { $0.equipment = new }
     }
 
     // MARK: Settings (one home for each app setting)
@@ -153,6 +186,20 @@ struct ProfileTabView: View {
         } header: { Text("About") }
     }
 
+    /// Shown date: the saved date of birth, else 1 January of the saved birth year (nothing is written until it is changed).
+    private var dateOfBirth: Date {
+        if let d = store.profile.dateOfBirth { return d }
+        let y = store.profile.birthYear ?? (Calendar.current.component(.year, from: Date()) - 35)
+        return Calendar.current.date(from: DateComponents(year: y, month: 1, day: 1)) ?? Date()
+    }
+    static var birthRange: ClosedRange<Date> {
+        let cal = Calendar.current
+        let lo = cal.date(from: DateComponents(year: 1920, month: 1, day: 1)) ?? Date.distantPast
+        let hi = cal.date(byAdding: .year, value: -13, to: Date()) ?? Date()
+        return lo...hi
+    }
+    private func change(_ cause: PlanChangeCause, _ edit: (inout PlanInputs) -> Void) { planPreview = store.changeTraining(cause: cause, edit) }
+
     private var headerLine: String {
         let p = store.profile
         return ProfileText.mode(p.trainingMode) + " · " + ProfileText.level(p.level)
@@ -161,8 +208,8 @@ struct ProfileTabView: View {
     private var timeText: String {
         let p = store.profile
         var parts: [String] = []
-        if p.trainingMode.includesCycling { parts.append("\(p.cyclingDaysPerWeek) rides · \(p.hoursPerWeek) h") }
-        if p.trainingMode.includesLifting { parts.append("\(p.liftDaysPerWeek) lifts · \(p.liftingHoursPerWeek) h") }
+        if p.trainingMode.includesCycling { parts.append("Ride \(p.cyclingSessionMinutes.map { "\($0) min" } ?? "–")") }
+        if p.trainingMode.includesLifting { parts.append("Lift \(p.strengthSessionMinutes.map { "\($0) min" } ?? "–")") }
         return parts.joined(separator: " · ")
     }
 }
@@ -223,25 +270,30 @@ struct PowerCyclingPage: View {
     @EnvironmentObject private var device: DeviceLink
     @State private var ftpText = ""
     @State private var wheel = ""
+    @State private var preview: PreviewRef? = nil
     var body: some View {
         Form {
             Section {
-                ViewThatFits(in: .horizontal) {
-                    HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit(); FTPConfidencePill(profile: store.profile) }
-                    VStack(alignment: .leading) { HStack { Text("FTP"); Spacer(); Text("\(store.profile.ftpW) W").bold().monospacedDigit() }; FTPConfidencePill(profile: store.profile) }
-                }
+                // RC3 / ENG-E1: an unknown FTP stays "Unknown" — never a number from weight × level
+                LabeledContent("FTP", value: "\(store.profile.ftpDisplay) · \(store.profile.ftpSource.title)")
+                    .accessibilityIdentifier("ftpValue")
                 HStack {
                     TextField("FTP in watts", text: $ftpText).keyboardType(.numberPad)
-                    // quality release: a typed value is "entered" (Unverified) — only a recorded FTP test ride with verified power is a verified test
-                    Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { store.updateProfile { $0.ftpW = v; $0.ftpHow = .entered; $0.ftpVerifiedTest = nil; $0.ftpPowerVerified = nil }; ftpText = "" } }.disabled(Int(ftpText) == nil).frame(minHeight: DS.minTap)
+                    // a typed value is "Entered" — only a recorded FTP test ride with verified power is "Tested"
+                    Button("Set") { if let v = Int(ftpText), v >= 50, v <= 600 { preview = store.changeTraining(cause: .ftp) { $0.profile.setFTP(v, source: .entered) }; ftpText = "" } }
+                        .disabled(Int(ftpText).map { $0 < 50 || $0 > 600 } ?? true).frame(minHeight: DS.minTap)
                 }
-                if store.profile.ftpHow != .assumed { Button("Back to the assumption from weight and level") { store.updateProfile { $0.ftpHow = .assumed; $0.refreshAssumption() } }.font(.footnote) }
-                if let s = store.ftpSuggestion { Text("Suggested from your \(s.rideDate.dayAndDate) ride: \(s.watts) W (best 20 min \(s.best20) W). Accept it on Home or Progress.").font(.footnote).foregroundStyle(BC.accent) }
-            } header: { Text("FTP") } footer: { Text(ftpMethod) }
-            Section("Power zones") {
-                ZoneBar()
-                ForEach(Array(store.profile.powerZones.enumerated()), id: \.offset) { i, z in
-                    HStack { ZonePill(z: i + 1); Text(PowerZones.names[i].dropFirst(3)).font(.footnote); Spacer(); Text("\(z.lo)–\(z.hi.map(String.init) ?? "∞") W").font(.footnote).monospacedDigit() }
+                if store.profile.ftpKnown {
+                    Button("I don't know my FTP") { preview = store.changeTraining(cause: .ftp) { $0.profile.setFTP(nil, source: .unknown) } }.font(.footnote)
+                }
+                if let s = store.ftpSuggestion { Text("Suggested from your \(s.rideDate.dayAndDate) ride: \(s.watts) W. Accept it on Home or Progress.").font(.footnote).foregroundStyle(BC.accent) }
+            } header: { Text("FTP") } footer: { Text(store.profile.ftpKnown ? ftpMethod : "Rides use heart rate and effort until you enter an FTP or do an FTP test.") }
+            if store.profile.ftpKnown {
+                Section("Power zones") {
+                    ZoneBar()
+                    ForEach(Array(store.profile.powerZones.enumerated()), id: \.offset) { i, z in
+                        HStack { ZonePill(z: i + 1); Text(PowerZones.names[i].dropFirst(3)).font(.footnote); Spacer(); Text("\(z.lo)–\(z.hi.map(String.init) ?? "∞") W").font(.footnote).monospacedDigit() }
+                    }
                 }
             }
             Section {
@@ -260,18 +312,11 @@ struct PowerCyclingPage: View {
             } header: { Text("Bike") }
         }
         .navigationTitle("Power & cycling").navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $preview) { r in PlanChangeSheet(proposalId: r.id) }
     }
     private var ftpMethod: String {
         let p = store.profile
         return p.ftpSourceText + (p.ftpCaution.map { " " + $0 } ?? "")
-    }
-    private var ftpMethodOld: String {
-        switch store.profile.ftpHow {
-        case .assumed: return "Estimation method: weight × level (\(String(format: "%.2f", store.profile.level.wkg)) W/kg) — a starting assumption, replaced by a real 20-minute effort (0.95 × best 20 min) that you accept, or by a value you enter."
-        case .fromRides: return "Estimated from a ride: 0.95 × your best 20-minute power. A tested or entered value always wins."
-        case .entered: return "Entered by you."
-        case .tested: return "From a test you entered. Never replaced automatically."
-        }
     }
     private var meterText: String {
         guard device.state == .ready, let l = device.live else { return device.remembered ? "via the BikeComputer (not connected)" : "pairs on the board" }

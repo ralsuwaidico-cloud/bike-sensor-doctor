@@ -352,4 +352,32 @@ final class Rc3EngineTests: XCTestCase {
         let lower = s.plannedEntries(for: after).compactMap { e in s.allExercises.first { $0.id == e.exerciseId } }.filter { ExerciseLibrary.meta($0).slot.isLower && ExerciseLibrary.meta($0).compound }
         XCTAssertTrue(lower.isEmpty, "an upper-body session has no compound lower-body lift")
     }
+
+    // MARK: RC3 screens contract (Profile / Plan / Progress use these)
+    func testProposeOrApply_NonPlanningChangeSavesDirectly() {
+        let s = store(); hybridPersona(s)
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        let id = s.proposeOrApplyPlanChange(cause: .profile, now: nextMonday.addingTimeInterval(-86_400)) { $0.profile.name = "Rider B" }
+        XCTAssertNil(id, "a name is not a planning input: saved directly, no preview")
+        XCTAssertEqual(s.profile.name, "Rider B")
+        XCTAssertTrue(s.planVersions.isEmpty)
+    }
+    func testProposeOrApply_SessionChangeNeedsPreview() {
+        let s = store(); hybridPersona(s)
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        let before = s.plan
+        let id = s.proposeOrApplyPlanChange(cause: .days, now: nextMonday.addingTimeInterval(-86_400)) { x in
+            x.availability!.days[1] = DayAvailability(activity: .rest, minutes: 0)
+            x.availability!.days[3] = DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: 60)])
+        }
+        XCTAssertNotNil(id, "sessions change → preview first")
+        XCTAssertEqual(s.plan, before, "nothing changes until Apply")
+    }
+    func testGlanceShowsUnknownFTP() {
+        let g = ProgressGlance.make(.init(riding: [], lifting: [], showRiding: true, showLifting: false, setsThisWeek: 0, ridingTargetMinutes: 120,
+                                          ftpW: 0, ftpBadge: "assumed", best20Recent: nil, best20Before: nil))
+        let c = g.cards.first { $0.id == "glanceFTP" }
+        XCTAssertEqual(c?.value, "Unknown")
+        XCTAssertFalse(c?.detail.contains("assumed") ?? true)
+    }
 }

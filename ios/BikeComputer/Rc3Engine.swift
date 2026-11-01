@@ -522,6 +522,15 @@ extension Store {
         return proposePlanChange(cause: cause, inputs: x, now: now)
     }
 
+    /// The one way a screen changes training inputs: the proposal id to preview, or nil when it was saved straight away —
+    /// nothing that affects planning changed, or no planned session changes (then the inputs are applied with a plan
+    /// version and no extra screen). Completed workouts are never in scope.
+    func proposeOrApplyPlanChange(cause: PlanChangeCause, now: Date = Date(), _ change: (inout PlanInputs) -> Void) -> UUID? {
+        guard let id = proposePlanChange(cause: cause, now: now, change) else { return nil }
+        if let p = pendingPlanChanges[id], !p.changesSessions, applyPlanChange(id, now: now) { return nil }
+        return id
+    }
+
     // MARK: training pause
     func pauseTraining(reason: TrainingPause.Reason, now: Date = Date()) {
         updateProfile { $0.trainingPause = TrainingPause(since: now, reason: reason) }

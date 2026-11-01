@@ -249,10 +249,12 @@ final class LaunchSmokeTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.state, .runningForeground)
-        // Plan → Days editor (per-day assignments) opens and closes
+        // Plan → Your week (per-day assignments) opens and closes (RC3: the row under the sessions, was the "Days" toolbar button)
         app.buttons["Plan"].firstMatch.tap()
-        let days = app.buttons["Days"].firstMatch
-        XCTAssertTrue(days.waitForExistence(timeout: 10)); days.tap()
+        let days = app.buttons["planWeekSettings"].firstMatch
+        XCTAssertTrue(days.waitForExistence(timeout: 10))
+        for _ in 0..<8 where days.frame.maxY > app.windows.firstMatch.frame.maxY - 90 { app.swipeUp(); sleep(1) }
+        days.tap()
         XCTAssertTrue(app.navigationBars["Training days"].waitForExistence(timeout: 10), "availability editor must open")
         XCTAssertEqual(app.state, .runningForeground)
         app.buttons["Cancel"].firstMatch.tap()

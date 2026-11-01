@@ -116,8 +116,12 @@ final class ModelTests: XCTestCase {
     func testWorkoutStepsUseFTP() {
         let w = Workout(date: Date(), kind: .threshold, minutes: 70)
         let steps = w.steps(ftp: 200)
-        XCTAssertEqual(steps.count, 3)
-        XCTAssertTrue(steps[1].target.contains("186–204 W"))
+        // RC3 (ENG-E5): steps are fitted to the session, so the rows now include the fill before the cool-down;
+        // every step's minutes add up to the session length
+        XCTAssertGreaterThanOrEqual(steps.count, 3)
+        XCTAssertTrue(steps.contains { $0.target.contains("186–204 W") })
+        XCTAssertEqual(w.rideSteps.reduce(0) { $0 + $1.minutes }, 70)
+        XCTAssertFalse(w.steps(ftp: 0).contains { $0.target.contains(" W") })   // unknown FTP: no watts
         XCTAssertTrue(Workout(date: Date(), kind: .rest, minutes: 0).steps(ftp: 200).isEmpty)
     }
 
