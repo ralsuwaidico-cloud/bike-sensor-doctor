@@ -9,6 +9,12 @@ What it does, idempotently:
   2. Checks that the App Store Connect app record exists (Apple does not allow creating it through the API).
   3. Creates a private internal TestFlight group that gets every build automatically and adds the
      account holder / admins to it (internal testers only: no Apple review, nothing public).
+  4. Keeps a second internal group "Internal QA" (every build, no testers added automatically — the owner adds them)
+     for evaluating internal test builds separately from approved releases.
+
+`asc.py testflight` (run after an upload, env BUILD_NUMBER and COMMIT): waits for Apple's processing of that build
+(up to ~40 min), reports its state, and sets the TestFlight "What to Test" text to
+"INTERNAL TEST BUILD <n> — not an approved release …" (plus ios/TESTFLIGHT_NOTES.txt when present).
 
 The repository is public, so this script never prints e-mail addresses, names, team IDs or key material.
 Writes `app_ready=true|false` to $GITHUB_OUTPUT.
@@ -30,6 +36,7 @@ BUNDLES = [
     (APP_BUNDLE + ".watchkitapp", "BikeComputer Watch"),
 ]
 GROUP_NAME = "Rashed devices"
+QA_GROUP_NAME = "Internal QA"
 
 
 def log(msg):
@@ -189,6 +196,79 @@ def ensure_group(app_id):
     log(f"  internal testers: {len(have)} already in the group, {added} added now")
 
 
+def ensure_qa_group(app_id):
+    """Internal QA group: internal, gets every build, no testers added by CI (existing membership untouched)."""
+    st, res = call("GET", f"/v1/apps/{app_id}/betaGroups", query={"limit": 50})
+    if st != 200:
+        log(f"::warning::Could not read TestFlight groups (HTTP {st}): {errors_text(res)}")
+        return
+    if any(g["attributes"].get("isInternalGroup") and g["attributes"].get("name") == QA_GROUP_NAME for g in res.get("data", [])):
+        log(f"  TestFlight internal group '{QA_GROUP_NAME}': already exists")
+        return
+    st, res = call("POST", "/v1/betaGroups", {
+        "data": {
+            "type": "betaGroups",
+            "attributes": {"name": QA_GROUP_NAME, "isInternalGroup": True, "hasAccessToAllBuilds": True},
+            "relationships": {"app": {"data": {"type": "apps", "id": app_id}}},
+        }
+    })
+    if st in (200, 201):
+        log(f"  TestFlight internal group '{QA_GROUP_NAME}': created (no testers added automatically)")
+    else:
+        log(f"::warning::Could not create the '{QA_GROUP_NAME}' group (HTTP {st}): {errors_text(res)}. "
+            "It can be created by hand in App Store Connect > TestFlight > Internal Testing.")
+
+
+def testflight_report(app_id):
+    """After an upload: wait for processing, report readiness, set the What to Test text."""
+    n = os.environ.get("BUILD_NUMBER", "").strip()
+    commit = os.environ.get("COMMIT", "").strip()[:7]
+    if not n:
+        log("No BUILD_NUMBER given."); return 1
+    build = None
+    deadline = time.time() + 40 * 60
+    while time.time() < deadline:
+        st, res = call("GET", "/v1/builds", query={"filter[app]": app_id, "filter[version]": n, "limit": 5})
+        if st == 200 and res.get("data"):
+            build = res["data"][0]
+            state = build["attributes"].get("processingState")
+            if state in ("VALID", "FAILED", "INVALID"):
+                break
+            log(f"  build {n}: processing ({state})")
+        else:
+            log(f"  build {n}: not visible in App Store Connect yet")
+        time.sleep(60)
+    if build is None:
+        log(f"RESULT testflight: build {n} did not appear in App Store Connect within 40 min (check again later)")
+        return 0
+    state = build["attributes"].get("processingState")
+    if state != "VALID":
+        log(f"RESULT testflight: build {n} processing state {state} — not installable yet")
+        return 0
+    text = f"INTERNAL TEST BUILD {n} — not an approved release. Commit {commit}."
+    notes = os.path.join(os.path.dirname(__file__), "..", "TESTFLIGHT_NOTES.txt")
+    if os.path.exists(notes):
+        with open(notes, encoding="utf-8") as fh:
+            text += "\n\n" + fh.read().strip()
+    text = text[:3900]
+    st, res = call("GET", f"/v1/builds/{build['id']}/betaBuildLocalizations", query={"limit": 20})
+    locs = res.get("data", []) if st == 200 else []
+    loc = next((l for l in locs if l["attributes"].get("locale", "").startswith("en")), locs[0] if locs else None)
+    if loc:
+        st, res = call("PATCH", f"/v1/betaBuildLocalizations/{loc['id']}", {
+            "data": {"type": "betaBuildLocalizations", "id": loc["id"], "attributes": {"whatsNew": text}}})
+    else:
+        st, res = call("POST", "/v1/betaBuildLocalizations", {
+            "data": {"type": "betaBuildLocalizations", "attributes": {"locale": "en-US", "whatsNew": text},
+                     "relationships": {"build": {"data": {"type": "builds", "id": build["id"]}}}}})
+    notes_ok = st in (200, 201)
+    if not notes_ok:
+        log(f"::warning::Could not set What to Test (HTTP {st}): {errors_text(res)}")
+    log(f"RESULT testflight: build {n} processed (VALID) — installable by internal testers in TestFlight; "
+        f"What to Test {'set' if notes_ok else 'NOT set'}")
+    return 0
+
+
 def main():
     global TOKEN
     missing = [k for k in ("ASC_KEY_ID", "ASC_ISSUER_ID", "ASC_PRIVATE_KEY") if not os.environ.get(k, "").strip()]
@@ -211,7 +291,10 @@ def main():
         gh_output("app_ready", "false")
         return 0
     log("App Store Connect app record: found")
+    if len(sys.argv) > 1 and sys.argv[1] == "testflight":
+        return testflight_report(app_id)
     ensure_group(app_id)
+    ensure_qa_group(app_id)
     gh_output("app_ready", "true")
     return 0
 

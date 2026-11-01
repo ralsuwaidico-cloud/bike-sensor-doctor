@@ -23,8 +23,7 @@ final class AdaptiveSmokeTests: XCTestCase {
             if !app.buttons["Quick log"].firstMatch.exists { log.tap() }
             let quick = app.buttons["Quick log"].firstMatch
             if quick.waitForExistence(timeout: 5) {
-                sleep(2)   // run 117: isHittable itself throws ("Failed to determine hittability") while the menu animates — wait, then tap by coordinate
-                quick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                quick.tapWhenSettled()   // run 117: isHittable throws while the menu animates — wait for a settled frame (UITestWaits)
             }
             opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
         }

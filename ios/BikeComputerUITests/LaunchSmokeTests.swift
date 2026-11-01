@@ -42,7 +42,7 @@ final class LaunchSmokeTests: XCTestCase {
             let b = app.buttons[label].firstMatch
             XCTAssertTrue(b.waitForExistence(timeout: 10), "tab \(label) missing")
             b.tap()
-            sleep(1)
+            _ = b.waitUntilSettled(timeout: 2)
             XCTAssertEqual(app.state, .runningForeground, "app died after opening \(label)")
             if label == "centreButton" {
                 // a sheet (Train now / strength workout) may be up: close it so the next tab is reachable
@@ -145,8 +145,8 @@ final class LaunchSmokeTests: XCTestCase {
     }
     static func closeShareSheet(_ app: XCUIApplication) {
         for name in ["Close", "Cancel"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
-        sleep(1)
-        if !app.buttons["exportData"].firstMatch.isHittable { app.swipeDown(velocity: .fast); sleep(1) }
+        let export = app.buttons["exportData"].firstMatch
+        if !export.waitUntilSettled(timeout: 3) || !export.isHittable { app.swipeDown(velocity: .fast); _ = export.waitUntilSettled(timeout: 3) }
     }
 
     static func build40Store() -> String {
@@ -253,7 +253,7 @@ final class LaunchSmokeTests: XCTestCase {
         app.buttons["Plan"].firstMatch.tap()
         let days = app.buttons["planWeekSettings"].firstMatch
         XCTAssertTrue(days.waitForExistence(timeout: 10))
-        for _ in 0..<8 where days.frame.maxY > app.windows.firstMatch.frame.maxY - 90 { app.swipeUp(); sleep(1) }
+        for _ in 0..<8 where days.frame.maxY > app.windows.firstMatch.frame.maxY - 90 { app.swipeUp(); _ = days.waitUntilSettled(timeout: 2) }
         days.tap()
         XCTAssertTrue(app.navigationBars["Training days"].waitForExistence(timeout: 10), "availability editor must open")
         XCTAssertEqual(app.state, .runningForeground)
@@ -270,9 +270,7 @@ final class LaunchSmokeTests: XCTestCase {
             let quick = app.buttons["planMenuQuickLog"].firstMatch
             if !quick.exists { log.tap() }
             if quick.waitForExistence(timeout: 5) {
-                sleep(2)   // run 117: isHittable itself throws ("Failed to determine hittability") while the menu animates — wait, then tap by coordinate
-                let f = quick.frame
-                if f.width > 0, f.height > 0, f.minX.isFinite, f.minY.isFinite { quick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+                quick.tapWhenSettled()   // runs 117/123: tap only once the menu item has a real, settled frame (UITestWaits)
             }
             opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
         }
@@ -284,11 +282,11 @@ final class LaunchSmokeTests: XCTestCase {
         app.buttons["Profile"].firstMatch.tap()
         let goal = app.buttons["profileGoal"].firstMatch
         XCTAssertTrue(goal.waitForExistence(timeout: 10), "Profile › Training › Goal row missing")
-        if !goal.isHittable { app.swipeUp(); sleep(1) }
+        if !goal.isHittable { app.swipeUp(); _ = goal.waitUntilSettled(timeout: 3) }
         goal.tap()
-        sleep(1)
+        _ = app.navigationBars.firstMatch.waitForExistence(timeout: 3)
         XCTAssertEqual(app.state, .runningForeground, "app died opening Profile › Goal at large text")
-        app.navigationBars.buttons.firstMatch.tap(); sleep(1)
+        app.navigationBars.buttons.firstMatch.tap(); _ = app.buttons["Home"].firstMatch.waitUntilSettled(timeout: 3)
         app.buttons["Home"].firstMatch.tap()
         XCTAssertEqual(app.state, .runningForeground)
     }

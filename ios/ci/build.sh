@@ -51,24 +51,52 @@ digest() {
   } | scrub > "$LOGS/$name.txt"
 }
 
-# SCOPE=full (default, everything incl. archive/sign/upload) or ui (layout audit only, on LAYOUT_DEVICES; no unit
-# tests, no launch smoke, no archive, never an upload) — a fast re-check of UI fixes (CI improvement 1, 28 Oct).
-SCOPE="${SCOPE:-full}"; [ "$SCOPE" = "ui" ] || SCOPE=full
+# STAGE selects what this invocation does (CI speed-up, 1 Nov 2026; ios/CI_PIPELINE.md). Each GitHub job runs one stage
+# on its own macOS runner, so independent stages run in parallel; release runs only after every test stage passed.
+#   all      everything in one job, one after another (the pre-1-Nov pipeline; kept as a fallback)
+#   quick    compile + unit tests + layout checks of the main screens on iPhone SE at AX3 and a standard iPhone at L.
+#            Never archives or uploads. NOT release evidence.
+#   unit     Debug build-for-testing once, then the unit tests (BikeComputerTests)
+#   smoke    Release build-for-testing once, then the launch / smoke UI tests (BikeComputerUITests)
+#   layout   Release build-for-testing once, then the LayoutAudit on LAYOUT_DEVICES (one device per job in CI)
+#   watch    Apple Watch screenshots (soft: never fails)
+#   release  archive, App Store signing, verification and (when requested and every test job passed) the upload
+# SCOPE (older input) still works: SCOPE=ui → STAGE=layout on LAYOUT_DEVICES.
+SCOPE="${SCOPE:-full}"
+STAGE="${STAGE:-}"
+if [ -z "$STAGE" ]; then if [ "$SCOPE" = ui ]; then STAGE=layout; else STAGE=all; fi; fi
+case "$STAGE" in all|quick|unit|smoke|layout|watch|release) ;; *) echo "unknown STAGE $STAGE"; exit 2;; esac
 LAYOUT_DEVICES="${LAYOUT_DEVICES:-small,standard,promax,owner}"
 T0=$SECONDS; since() { echo "$(( (SECONDS - $1) / 60 ))m$(( (SECONDS - $1) % 60 ))s"; }
 note "BikeComputer iOS CI — build ${BUILD_NUMBER:-?} — $(date -u '+%Y-%m-%d %H:%M UTC')"
-note "Scope: $SCOPE$([ "$SCOPE" = ui ] && echo " (layout devices: $LAYOUT_DEVICES)")"
+note "Stage: $STAGE$([ "$STAGE" = layout ] && echo " (layout devices: $LAYOUT_DEVICES)")"
+[ "$STAGE" = quick ] && note "QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)"
 note "$(sw_vers -productName) $(sw_vers -productVersion), $(xcodebuild -version | tr '\n' ' ')"
 
+# Swift packages are cloned into build/spm, which the workflow caches (keyed on project.yml). No signing material is
+# ever written there.
+SPM=(-clonedSourcePackagesDirPath "$OUT/spm")
+
 # ---------------------------------------------------------------- project generation
+TG=$SECONDS
 if ! command -v xcodegen >/dev/null; then brew install xcodegen >/dev/null 2>&1; fi
 note "XcodeGen $(xcodegen --version 2>/dev/null)"
 if ! xcodegen generate --spec project.yml > "$LOGS/xcodegen.txt" 2>&1; then
   note "RESULT generate: FAILED"; cat "$LOGS/xcodegen.txt" | scrub >> "$SUMMARY"; exit 1
 fi
-note "RESULT generate: ok"
+note "RESULT generate: ok · $(since $TG)"
 
-# ---------------------------------------------------------------- unit tests on the iOS simulator
+if [ "$STAGE" = watch ]; then
+  TW=$SECONDS
+  LAYOUT="$OUT/layout"; mkdir -p "$LAYOUT"
+  bash ci/watch-shots.sh "$LAYOUT" || true
+  for f in "$LAYOUT"/*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done
+  note "  watch screenshots: $(ls "$LAYOUT"/watch-*.png 2>/dev/null | wc -l | tr -d ' ') — $(tr '\n' ' ' < "$LOGS/watch-shots.txt" 2>/dev/null | head -c 400) · $(since $TW)"
+  note "Total: $(since $T0)"
+  exit 0
+fi
+
+# ---------------------------------------------------------------- simulators
 SIM=$(xcrun simctl list devices available -j | python3 -c '
 import json,sys
 d=json.load(sys.stdin)["devices"]
@@ -79,40 +107,66 @@ for rt,devs in d.items():
     for x in devs:
         if x["name"].startswith("iPhone") and (best is None or ver>best[0]): best=(ver,x["udid"],x["name"])
 print(best[1] if best else "")')
-note "Test simulator: ${SIM:-none found}"
-if [ "$SCOPE" = full ]; then
-TS=$SECONDS
-xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Debug \
-  -destination "id=$SIM" -resultBundlePath "$OUT/tests.xcresult" -only-testing:BikeComputerTests \
-  CODE_SIGNING_ALLOWED=NO > "$OUT/test.log" 2>&1
-T=$?
-digest "$OUT/test.log" test
-if [ $T -eq 0 ]; then note "RESULT tests: ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/test.log" | tail -1)) · $(since $TS)"
-else note "RESULT tests: FAILED (exit $T)"; STATUS=1; fi
+[ "$STAGE" = release ] || note "Test simulator: ${SIM:-none found}"
+
+# build-for-testing once per configuration, then test-without-building against the .xctestrun it writes (the same
+# binaries are used for every test in this job — they are not rebuilt per simulator).
+# $1 = Debug | Release, rest = extra build settings. Prints the .xctestrun path (empty on failure).
+bft() {
+  local cfg=$1; shift
+  local dd="$OUT/dd-$cfg" tb=$SECONDS
+  xcodebuild build-for-testing -project BikeComputer.xcodeproj -scheme BikeComputer -configuration "$cfg" \
+    -destination 'generic/platform=iOS Simulator' -derivedDataPath "$dd" "${SPM[@]}" \
+    CODE_SIGNING_ALLOWED=NO "$@" > "$OUT/build-$cfg.log" 2>&1
+  local r=$?
+  digest "$OUT/build-$cfg.log" "build-$cfg"
+  if [ $r -ne 0 ]; then note "RESULT build ($cfg, for testing): FAILED (exit $r) · $(since $tb) — $(grep -E ' error: ' "$OUT/build-$cfg.log" | sed -E 's/.*error: //' | sort -u | head -3 | tr '\n' ' ' | cut -c1-400 | scrub)" >&2; return 1; fi
+  note "RESULT build ($cfg, for testing): ok · $(since $tb)" >&2
+  ls "$dd"/Build/Products/*.xctestrun 2>/dev/null | head -1
+}
+# $1 = xctestrun, $2 = simulator id, $3 = log file, rest = -only-testing / -skip-testing arguments
+twb() {
+  local xr=$1 id=$2 log=$3; shift 3
+  xcodebuild test-without-building -xctestrun "$xr" -destination "id=$id" "$@" > "$log" 2>&1
+}
+
+run_unit() {
+  TS=$SECONDS
+  local xr; xr=$(bft Debug) || { note "RESULT tests: FAILED (build)"; STATUS=1; return; }
+  twb "$xr" "$SIM" "$OUT/test.log" -resultBundlePath "$OUT/tests.xcresult" -only-testing:BikeComputerTests
+  T=$?
+  digest "$OUT/test.log" test
+  if [ $T -eq 0 ]; then note "RESULT tests: ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/test.log" | tail -1)) · $(since $TS)"
+  else note "RESULT tests: FAILED (exit $T) · $(since $TS) — $(grep -A3 'Failing tests:' "$OUT/test.log" | tail -3 | tr '\n' ' ' | cut -c1-300 | scrub)"; STATUS=1; fi
+}
+
+RELEASE_XR=""
+release_products() {  # Release build for the UI tests (the shipped configuration), built once per job
+  [ -n "$RELEASE_XR" ] && return 0
+  RELEASE_XR=$(bft Release ENABLE_TESTABILITY=YES) && [ -n "$RELEASE_XR" ]
+}
 
 # ---------------------------------------------------------------- launch smoke tests, RELEASE build on the simulator
 # The shipped app is a Release build: build 27 crashed at launch on devices updated from build 24 while every Debug
 # unit test passed. These tests launch the Release app fresh and with a build-24-shaped store and open all five tabs.
 # Any crash fails the run before archiving, and the simulator's crash report is kept with the logs.
-TS=$SECONDS
-xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
-  -destination "id=$SIM" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests \
-  CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/uitest.log" 2>&1
-U=$?
-digest "$OUT/uitest.log" launch-smoke
-if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
-else
-  note "RESULT launch smoke (Release): FAILED (exit $U)"; STATUS=1
-  # crash reports of the app from the simulator run, scrubbed, as text
-  find "$HOME/Library/Logs/DiagnosticReports" -name 'BikeComputer*' -newer "$OUT/test.log" 2>/dev/null | head -5 | while read -r f; do
-    { echo "=== $(basename "$f") ==="; head -c 60000 "$f"; } | scrub >> "$LOGS/crash-reports.txt"
-  done
-  xcrun simctl spawn "$SIM" log show --last 15m --predicate 'process == "BikeComputer" OR (eventMessage CONTAINS "BikeComputer" AND messageType == error)' 2>/dev/null \
-    | grep -v "^Filtering" | tail -400 | scrub > "$LOGS/sim-app-log.txt"
-fi
-else
-  note "RESULT tests: skipped (scope ui)"; note "RESULT launch smoke (Release): skipped (scope ui)"
-fi
+run_smoke() {
+  TS=$SECONDS
+  release_products || { note "RESULT launch smoke (Release): FAILED (build)"; STATUS=1; return; }
+  twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests
+  U=$?
+  digest "$OUT/uitest.log" launch-smoke
+  if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
+  else
+    note "RESULT launch smoke (Release): FAILED (exit $U) · $(since $TS)"; STATUS=1
+    # crash reports of the app from the simulator run, scrubbed, as text
+    find "$HOME/Library/Logs/DiagnosticReports" -name 'BikeComputer*' -mmin -120 2>/dev/null | head -5 | while read -r f; do
+      { echo "=== $(basename "$f") ==="; head -c 60000 "$f"; } | scrub >> "$LOGS/crash-reports.txt"
+    done
+    xcrun simctl spawn "$SIM" log show --last 15m --predicate 'process == "BikeComputer" OR (eventMessage CONTAINS "BikeComputer" AND messageType == error)' 2>/dev/null \
+      | grep -v "^Filtering" | tail -400 | scrub > "$LOGS/sim-app-log.txt"
+  fi
+}
 
 # ---------------------------------------------------------------- layout audit (quality release)
 # The LayoutAudit UI test (skipped unless LAYOUT_DIR is set) on a small iPhone, a standard iPhone and a Pro Max at
@@ -133,39 +187,43 @@ for rt,devs in d.items():
         rank=(ver, n==exact)
         if best is None or rank>best[0]: best=(rank,x["udid"],n)
 print((best[1]+"|"+best[2]) if best else "")' "$1" "$2"; }
-RT=$(xcrun simctl list runtimes -j | python3 -c '
+layout_sims() {  # creates/picks only the simulators this job needs (LAYOUT_DEVICES)
+  RT=$(xcrun simctl list runtimes -j | python3 -c '
 import json,sys
 r=[x for x in json.load(sys.stdin)["runtimes"] if x.get("isAvailable") and ".iOS-" in x["identifier"]]
 r.sort(key=lambda x: [int(p) for p in x["version"].split(".")])
 print(r[-1]["identifier"] if r else "")')
-SMALL=""
-for T in iPhone-SE-3rd-generation iPhone-SE-2nd-generation iPhone-13-mini iPhone-12-mini; do
-  U=$(xcrun simctl create "Audit small" "com.apple.CoreSimulator.SimDeviceType.$T" "$RT" 2>/dev/null) && { SMALL="$U|$T"; break; }
-done
-[ -n "$SMALL" ] || SMALL=$(simpick "iPhone 16e" "16e")
-STD=$(simpick "iPhone 17" "iPhone 16"); [ -n "$STD" ] || STD="$SIM|default"
-MAX=$(simpick "iPhone 17 Pro Max" "Pro Max")
-# RC2: the owner's screen (1179 × 2556 px = 393 × 852 pt: iPhone 16 / 15 / 14 Pro). Created on the newest runtime when the
-# device type exists there, else an existing iPhone 16 / 15, else the standard device (said so in the summary).
-OWNER=""
-for T in iPhone-16 iPhone-15 iPhone-15-Pro iPhone-14-Pro; do
-  U=$(xcrun simctl create "Audit owner" "com.apple.CoreSimulator.SimDeviceType.$T" "$RT" 2>/dev/null) && { OWNER="$U|$T"; break; }
-done
-[ -n "$OWNER" ] || OWNER=$(simpick "iPhone 16" "iPhone 15")
-[ -n "$OWNER" ] || OWNER="${STD%%|*}|${STD#*|} (no 393-pt device on this runtime)"
-note "Layout audit simulators: small=${SMALL#*|} standard=${STD#*|} max=${MAX#*|} owner=${OWNER#*|} (runtime ${RT##*.})"
+  SMALL=""; STD=""; MAX=""; OWNER=""
+  if [[ ",$LAYOUT_DEVICES," == *",small,"* ]]; then
+    for T in iPhone-SE-3rd-generation iPhone-SE-2nd-generation iPhone-13-mini iPhone-12-mini; do
+      U=$(xcrun simctl create "Audit small" "com.apple.CoreSimulator.SimDeviceType.$T" "$RT" 2>/dev/null) && { SMALL="$U|$T"; break; }
+    done
+    [ -n "$SMALL" ] || SMALL=$(simpick "iPhone 16e" "16e")
+  fi
+  STD=$(simpick "iPhone 17" "iPhone 16"); [ -n "$STD" ] || STD="$SIM|default"
+  [[ ",$LAYOUT_DEVICES," == *",promax,"* ]] && MAX=$(simpick "iPhone 17 Pro Max" "Pro Max")
+  # RC2: the owner's screen (393 × 852 pt: iPhone 16 / 15 / 14 Pro). Created on the newest runtime when the device type
+  # exists there, else an existing iPhone 16 / 15, else the standard device (said so in the summary).
+  if [[ ",$LAYOUT_DEVICES," == *",owner,"* ]]; then
+    for T in iPhone-16 iPhone-15 iPhone-15-Pro iPhone-14-Pro; do
+      U=$(xcrun simctl create "Audit owner" "com.apple.CoreSimulator.SimDeviceType.$T" "$RT" 2>/dev/null) && { OWNER="$U|$T"; break; }
+    done
+    [ -n "$OWNER" ] || OWNER=$(simpick "iPhone 16" "iPhone 15")
+    [ -n "$OWNER" ] || OWNER="${STD%%|*}|${STD#*|} (no 393-pt device on this runtime)"
+  fi
+  note "Layout audit simulators: small=${SMALL#*|} standard=${STD#*|} max=${MAX#*|} owner=${OWNER#*|} (runtime ${RT##*.})"
+}
 LAYOUT_OK=1
-for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L" "owner|${OWNER%%|*}|L,XXXL"; do
-  IFS='|' read -r LNAME LID LSIZES <<< "$spec"
+# $1 = name, $2 = simulator id, $3 = sizes, $4 = tests (space separated, e.g. "LayoutAudit" or "LayoutAudit/testHomeStates")
+layout_one() {
+  local LNAME=$1 LID=$2 LSIZES=$3 TESTS=$4 LT=$SECONDS L a
   [ -n "${LAYOUT_SIZES_OVERRIDE:-}" ] && LSIZES="$LAYOUT_SIZES_OVERRIDE"   # e.g. L,AX3 for the onboarding screenshots
-  [ -n "$LID" ] || { note "  layout $LNAME: no simulator"; continue; }
-  case ",$LAYOUT_DEVICES," in *",$LNAME,"*) ;; *) note "  layout $LNAME: skipped (not in LAYOUT_DEVICES)"; continue;; esac
-  LT=$SECONDS
-  LEXTRAS=0; [ "$LNAME" = "standard" ] || [ "$LNAME" = "owner" ] && LEXTRAS=1
+  [ -n "$LID" ] || { note "  layout $LNAME: no simulator"; return; }
+  local ONLY=(); for a in $TESTS; do ONLY+=("-only-testing:BikeComputerUITests/$a"); done
+  local LEXTRAS=0; { [ "$LNAME" = "standard" ] || [ "$LNAME" = "owner" ]; } && LEXTRAS=1
+  [ "$STAGE" = quick ] && LEXTRAS=0
   TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
-  xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
-    -destination "id=$LID" -only-testing:BikeComputerUITests/${LAYOUT_TEST:-LayoutAudit} \
-    CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
+    twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" "${ONLY[@]}"
   L=$?
   # one retry ONLY when the simulator failed to launch the app (infrastructure, run 71) — never for a failed check
   if [ $L -ne 0 ] && grep -q "Timed out while launching application\|Simulator device failed to launch\|Timed out while loading Accessibility\|failed to initialize for UI testing" "$OUT/layout-$LNAME.log"; then
@@ -173,27 +231,62 @@ for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MA
     mv "$OUT/layout-$LNAME.log" "$OUT/layout-$LNAME-launchfail.log"
     xcrun simctl shutdown "$LID" >/dev/null 2>&1; xcrun simctl boot "$LID" >/dev/null 2>&1; sleep 20
     TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
-    xcodebuild test -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
-      -destination "id=$LID" -only-testing:BikeComputerUITests/${LAYOUT_TEST:-LayoutAudit} \
-      CODE_SIGNING_ALLOWED=NO ENABLE_TESTABILITY=YES > "$OUT/layout-$LNAME.log" 2>&1
+      twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" "${ONLY[@]}"
     L=$?
   fi
   digest "$OUT/layout-$LNAME.log" "layout-$LNAME"
   if [ $L -eq 0 ]; then note "  layout $LNAME ($LSIZES): ok · $(since $LT)"; else note "  layout $LNAME ($LSIZES): FAILED (exit $L) · $(since $LT) — $(grep -E ' error: ' "$OUT/layout-$LNAME.log" | sed -E 's/.*error: //' | sort -u | head -3 | tr '\n' ' ' | cut -c1-400 | scrub)"; LAYOUT_OK=0; fi
-done
-# Apple Watch screenshots at L / XXXL / AX3 (soft: reported, never fails the run)
-bash ci/watch-shots.sh "$LAYOUT" || true
-note "  watch screenshots: $(ls "$LAYOUT"/watch-*.png 2>/dev/null | wc -l | tr -d ' ') — $(tr '\n' ' ' < "$LOGS/watch-shots.txt" 2>/dev/null | head -c 400)"
-N_PNG=$(ls "$LAYOUT"/*.png 2>/dev/null | wc -l | tr -d ' ')
-for f in "$LAYOUT"/*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done
-cp "$LAYOUT"/*.txt "$LOGS/" 2>/dev/null || true
-if [ $LAYOUT_OK -eq 1 ]; then note "RESULT layout audit: ok ($N_PNG screenshots)"; else note "RESULT layout audit: FAILED ($N_PNG screenshots)"; STATUS=1; fi
+}
+layout_finish() {
+  N_PNG=$(ls "$LAYOUT"/*.png 2>/dev/null | wc -l | tr -d ' ')
+  for f in "$LAYOUT"/*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done
+  cp "$LAYOUT"/*.txt "$LOGS/" 2>/dev/null || true
+  if [ $LAYOUT_OK -eq 1 ]; then note "RESULT layout audit: ok ($N_PNG screenshots)"; else note "RESULT layout audit: FAILED ($N_PNG screenshots)"; STATUS=1; fi
+}
+run_layout() {  # the full layout audit on LAYOUT_DEVICES
+  layout_sims
+  release_products || { note "RESULT layout audit: FAILED (build)"; STATUS=1; return; }
+  local spec LNAME LID LSIZES
+  for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L" "owner|${OWNER%%|*}|L,XXXL"; do
+    IFS='|' read -r LNAME LID LSIZES <<< "$spec"
+    case ",$LAYOUT_DEVICES," in *",$LNAME,"*) ;; *) continue;; esac
+    layout_one "$LNAME" "$LID" "$LSIZES" "${LAYOUT_TEST:-LayoutAudit}"
+  done
+  layout_finish
+}
 
+case "$STAGE" in
+  unit)  run_unit ;;
+  smoke) run_smoke ;;
+  layout) run_layout ;;
+  quick)
+    run_unit
+    # QUICK_UI: LayoutAudit / OnboardingScreens test methods for the screens being changed (default: main screens).
+    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingR7FiveScreens}"
+    LAYOUT_DEVICES="small,standard"; layout_sims
+    if release_products; then
+      layout_one small "${SMALL%%|*}" AX3 "$QUICK_UI"
+      layout_one standard "${STD%%|*}" L "$QUICK_UI"
+      layout_finish
+    else note "RESULT layout audit: FAILED (build)"; STATUS=1; fi
+    note "RESULT archive: skipped (quick check)"; note "RESULT upload: skipped (quick check never uploads)"
+    note "Total: $(since $T0)"; exit $STATUS ;;
+  all)
+    run_unit; run_smoke; run_layout
+    bash ci/watch-shots.sh "$LAYOUT" || true
+    note "  watch screenshots: $(ls "$LAYOUT"/watch-*.png 2>/dev/null | wc -l | tr -d ' ') — $(tr '\n' ' ' < "$LOGS/watch-shots.txt" 2>/dev/null | head -c 400)"
+    for f in "$LAYOUT"/watch-*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done ;;
+esac
+if [ "$STAGE" != all ] && [ "$STAGE" != release ]; then note "Total: $(since $T0)"; exit $STATUS; fi
 if [ "$SCOPE" = ui ]; then
   note "RESULT archive: skipped (scope ui)"; note "RESULT upload: skipped (scope ui never uploads)"
   note "Total: $(since $T0)"
   exit $STATUS
 fi
+# release stage in CI: the workflow starts it only when every test job succeeded and passes TESTS_OK=success; the
+# upload below refuses anything else (belt and braces: the gate is the same as before, only split across jobs).
+if [ "$STAGE" = release ] && [ "${TESTS_OK:-}" != "success" ]; then STATUS=1; note "Test jobs: ${TESTS_OK:-unknown} — this build will not be uploaded"; fi
+TA=$SECONDS
 
 # ---------------------------------------------------------------- archive (device build)
 # The archive is ad-hoc signed ("-"): no certificate, no registered device. The entitlements (HealthKit) are embedded
@@ -209,7 +302,7 @@ archive() {
   local mode=$1; shift
   rm -rf "$ARCHIVE"
   xcodebuild archive -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Release \
-    -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
+    -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" "${SPM[@]}" \
     CURRENT_PROJECT_VERSION="${BUILD_NUMBER:-1}" "${CLOUD_ARGS[@]}" ${TEAM_ARGS[@]+"${TEAM_ARGS[@]}"} "$@" > "$OUT/archive-$mode.log" 2>&1
   local r=$?
   digest "$OUT/archive-$mode.log" "archive-$mode"
@@ -223,7 +316,7 @@ elif archive unsigned CODE_SIGNING_ALLOWED=NO; then
   ARCH_MODE=unsigned
 fi
 if [ -z "$ARCH_MODE" ]; then note "RESULT archive: FAILED"; exit 1; fi
-note "RESULT archive: ok ($ARCH_MODE)"
+note "RESULT archive: ok ($ARCH_MODE) · $(since $TA)"
 for app in "$ARCHIVE/Products/Applications/BikeComputer.app" "$ARCHIVE/Products/Applications/BikeComputer.app/Watch/BikeComputerWatch.app"; do
   if [ -d "$app" ]; then
     DN=$(/usr/libexec/PlistBuddy -c 'Print CFBundleDisplayName' "$app/Info.plist" 2>/dev/null)
@@ -312,5 +405,6 @@ xcrun altool --upload-app -f "$IPA" -t ios --apiKey "$ASC_KEY_ID" --apiIssuer "$
 U=$?
 scrub < "$OUT/upload.log" | tail -60 > "$LOGS/upload.txt"
 if [ $U -ne 0 ] || grep -qiE "ERROR ITMS|Failed to upload|UPLOAD FAILED" "$OUT/upload.log"; then note "RESULT upload: FAILED (exit $U)"; exit 1; fi
-note "RESULT upload: ok — build ${BUILD_NUMBER} sent to App Store Connect; TestFlight processing takes about 5-30 minutes"
+note "RESULT upload: ok — build ${BUILD_NUMBER} sent to App Store Connect; TestFlight processing takes about 5-30 minutes (the testflight job reports when it is ready)"
+note "Total: $(since $T0)"
 exit $STATUS
