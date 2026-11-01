@@ -453,6 +453,7 @@ final class AdaptationEngineTests: XCTestCase {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let s = Store(directory: dir, generatePlan: false)
         s.profile = hybrid()
+        s.rc3FullGym()
         return s
     }
 }

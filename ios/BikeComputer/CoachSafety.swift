@@ -2,6 +2,10 @@ import Foundation
 
 // MARK: - Coach safety layer (coach remediation, ios/COACH_REMEDIATION.md)
 //
+// RC3 (owner decision 1 Nov 2026, ios/SAFETY_CHANGES_RC3.md): the questionnaire below is no longer asked in onboarding or
+//       shown in ordinary navigation, and an UNANSWERED check no longer limits the plan. Answers an athlete already saved
+//       keep working exactly as before (stop / needs clearance / illness pause), and stay reviewable from Profile › Settings.
+//       An explicit "pause training" (TrainingPause) replaces the illness question as the everyday way to stop the plan.
 // M-01  Health screening before training is planned. The questions paraphrase the general section of the PAR-Q+
 //       (Warburton et al. 2011, Health & Fitness Journal of Canada 4(2):3–17; www.eparmedx.com) plus pregnancy and a
 //       current-illness question, and follow the ACSM pre-participation screening logic (Riebe et al. 2015, MSSE
@@ -140,12 +144,15 @@ struct HealthScreen: Codable, Equatable {
 /// planner, the ride safety refresh and the adaptive engine.
 struct CoachReadiness: Equatable {
     var screen: HealthScreen.Status
+    /// RC3: the athlete paused training themselves (TrainingPause). Plans no sessions, like the illness pause.
+    var userPaused = false
     /// Any training may be planned (false: symptoms / supervised-only → "see a doctor", no sessions generated).
-    var trainingAllowed: Bool { screen != .stop && screen != .paused }
+    var trainingAllowed: Bool { screen != .stop && screen != .paused && !userPaused }
     /// Vigorous prescriptions (tempo and harder rides, heavy lifting, load progression) are allowed.
-    var vigorousAllowed: Bool { screen == .clear || screen == .cleared }
+    /// RC3: an unanswered (or expired) check no longer restricts the plan — the questionnaire is not asked any more.
+    var vigorousAllowed: Bool { screen == .clear || screen == .cleared || screen == .notAnswered }
     /// Highest strength RPE the planner may prescribe (independent review F-02: lower while clearance is pending).
-    var maxStrengthRPE: Int { switch screen { case .clear, .cleared: return 10; case .notAnswered: return 7; case .needsClearance, .stop, .paused: return 6 } }
+    var maxStrengthRPE: Int { switch screen { case .clear, .cleared, .notAnswered: return 10; case .needsClearance, .stop, .paused: return 6 } }
     /// Fewest reps per set while not cleared (no heavy 4–6 rep work).
     var minStrengthReps: Int? { vigorousAllowed ? nil : 8 }
     /// Highest ride zone the generator may plan.
@@ -155,17 +162,17 @@ struct CoachReadiness: Equatable {
 
     /// Short reason for notes and Why? texts; nil when nothing is restricted.
     var restriction: String? {
+        if userPaused, screen != .stop { return "you paused training, so Cyclift plans no sessions until you resume" }
         switch screen {
-        case .clear, .cleared: return nil
-        case .notAnswered: return "the health check in Profile has not been answered (or is more than a year old), so only easy-to-moderate training is planned"
+        case .clear, .cleared, .notAnswered: return nil
         case .needsClearance: return "your health check answers mean a doctor should clear you before hard training, so only easy-to-moderate training is planned until you record that clearance in Profile"
         case .stop: return "your health check answers mean you should see a doctor before training, so Cyclift plans no sessions until then"
         case .paused: return "you said you are ill or recovering, so Cyclift plans no sessions until you answer the health check again when you feel well"
         }
     }
 
-    init(profile p: RiderProfile, now: Date = Date()) { screen = p.healthScreen?.status(now: now) ?? .notAnswered }
-    init(screen: HealthScreen.Status) { self.screen = screen }
+    init(profile p: RiderProfile, now: Date = Date()) { screen = p.healthScreen?.status(now: now) ?? .notAnswered; userPaused = p.trainingPause != nil }
+    init(screen: HealthScreen.Status, userPaused: Bool = false) { self.screen = screen; self.userPaused = userPaused }
 }
 
 // MARK: - Return to training (M-02)

@@ -164,7 +164,9 @@ final class Pass3ProbeTests: XCTestCase {
         for i in logs.indices { logs[i].templateId = t.id; logs[i].checkIn = CheckIn(performance: 7, effort: 6, at: logs[i].date) }
         let r = AdaptationEngine.run(AdaptationInput(profile: p, plan: [w], rides: [], strength: logs, availability: WeeklyAvailability.suggested(for: p), equipment: EquipmentProfile(owned: ["barbell"]), catalogue: [squat], templates: [t], originalEntries: [w.id: t.prefilled(from: logs.first)], now: later, calendar: cal))
         print("S9 status at input.now:", CoachReadiness(profile: p, now: later).screen, "adjustments:", r.adjustments.map { $0.summary })
-        XCTAssertFalse(r.adjustments.contains { $0.category == .progression }, "S9: engine progresses although the health check has expired at input.now")
+        // RC3 (owner decision 1 Nov): an expired check is "not answered", which no longer restricts progression
+        XCTAssertEqual(CoachReadiness(profile: p, now: later).screen, .notAnswered); XCTAssertTrue(CoachReadiness(profile: p, now: later).vigorousAllowed)
+        _ = r
     }
 
     // S10: answers saved by 02d8795 with a stop answer decode and stay 'stop'

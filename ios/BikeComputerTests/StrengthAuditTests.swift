@@ -19,6 +19,7 @@ final class StrengthAuditTests: XCTestCase {
         s.availability = WeeklyAvailability(days: [DayAvailability(activity: .rest, minutes: 0), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .fullBody, minutes: 30)]),
                                                    DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: nil, minutes: 60)]), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .upper, minutes: 40)]),
                                                    DayAvailability(activity: .rest, minutes: 0), DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: .long, minutes: 120)]), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .lower, minutes: 40)])])
+        s.rc3FullGym()
         s.ensurePlan()
         return s
     }
@@ -267,10 +268,11 @@ final class StrengthAuditTests: XCTestCase {
         // PROTOTYPE contract change (review C R4 / review A EQUIP-002): a duration change is a previewed, confirmed rebuild
         // and needs known equipment; before the fix this edit was a label-only change saved without a preview
         s.equipment.owned = ["dumbbell", "bench"]
-        var edited = nt; edited.minutes = 25; XCTAssertEqual(s.edit(edited, confirmed: true), .applied)
+        // RC3: 25 min cannot hold the four main patterns with real rests (TIME-001 blocks it honestly), so the hand-set length is 30
+        var edited = nt; edited.minutes = 30; XCTAssertEqual(s.edit(edited, confirmed: true), .applied)
         let note = s.setWeekdayRoutine(small, weekday: 1)
         let after = s.plan.first { $0.id == nt.id }!
-        XCTAssertEqual(after.templateId, small.id); XCTAssertEqual(after.minutes, 25, "a hand-set duration is kept")
+        XCTAssertEqual(after.templateId, small.id); XCTAssertEqual(after.minutes, 30, "a hand-set duration is kept")
         XCTAssertNil(note, "15–30 + 40 + 40 min fits the 2 h budget")
         var t2 = routine(press); t2.minutesEstimate = 110; t2.name = "Long"; s.saveTemplate(t2)
         XCTAssertNotNil(s.setWeekdayRoutine(t2, weekday: 3), "Thursday 110 min pushes the week over the lifting budget")

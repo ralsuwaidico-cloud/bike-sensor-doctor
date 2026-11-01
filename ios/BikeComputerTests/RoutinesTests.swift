@@ -16,6 +16,7 @@ final class RoutinesTests: XCTestCase {
         s.availability = WeeklyAvailability(days: [DayAvailability(activity: .rest, minutes: 0), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .fullBody, minutes: 30)]),
                                                    DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: nil, minutes: 60)]), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .upper, minutes: 40)]),
                                                    DayAvailability(activity: .rest, minutes: 0), DayAvailability(assignments: [DayAssignment(sport: .cycling, cyclingType: .long, minutes: 120)]), DayAvailability(assignments: [DayAssignment(sport: .strength, strengthType: .lower, minutes: 40)])])
+        s.rc3FullGym()
         s.ensurePlan()
         return s
     }

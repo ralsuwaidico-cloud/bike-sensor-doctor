@@ -44,7 +44,7 @@ extension ExerciseLibrary {
         "ex-104": ["pull-up bar"],                 // assisted pull-up hangs from a bar
     ]
     static func apparatusOK(_ e: Exercise, equipment eq: EquipmentProfile) -> Bool {
-        guard eq.isSet else { return true }
+        guard eq.isSet else { return apparatus[e.id] == nil }       // RC3 / ENG-H1: unset equipment owns no apparatus
         let have = Set(eq.owned.map(EquipmentProfile.normalised))
         if let need = apparatus[e.id], need.isDisjoint(with: have) { return false }
         return true
@@ -204,17 +204,9 @@ enum WorkoutValidator {
 
     /// Ride steps' total minutes as the app builds them today (Models.swift `steps(ftp:)`), rests included.
     static func rideStepsMinutes(_ w: Workout) -> Int? {
-        let m = w.minutes
-        switch w.kind {
-        case .endurance: return 10 + max(5, m - 15) + 5
-        case .tempo: return 15 + 15 + 10 + 15 + 10
-        case .threshold: let r = w.effectiveIntervalReps ?? 3; return 15 + r * 8 + max(0, r - 1) * 3 + 10
-        case .vo2: let r = w.effectiveIntervalReps ?? 5; return 15 + r * 3 + max(0, r - 1) * 3 + 10
-        case .recovery: return m
-        case .long: return 15 + max(10, m - 25) + 10
-        case .ftpTest: return 50
-        default: return nil
-        }
+        // RC3 / ENG-E5: the fitted steps (Rc3Engine RideSteps) — their sum equals the session minutes by construction
+        guard w.kind.isRide else { return nil }
+        return w.rideSteps.reduce(0) { $0 + $1.minutes }
     }
 
     /// Validates one workout and its prescription. Pure: reads the context, changes nothing.
@@ -262,7 +254,7 @@ enum WorkoutValidator {
             // EQUIP-001: every exercise possible with the stated equipment and apparatus
             for e in es {
                 guard let ex = c.catalogue.first(where: { $0.id == e.exerciseId }) else { continue }
-                if !c.equipment.canDo(ex) || !ExerciseLibrary.apparatusOK(ex, equipment: c.equipment) {
+                if !(w.generatedEntries ? c.equipment.plannable(ex) : c.equipment.canDo(ex)) || !ExerciseLibrary.apparatusOK(ex, equipment: c.equipment) {   // RC3 / ENG-H1
                     add("EQUIP-001", .error, .adjust, "\(e.name) needs equipment you have not listed.", "Swap for a same-pattern exercise you can do", auto: true, confirm: false)
                 }
             }
@@ -609,8 +601,9 @@ extension Store {
         if !equipment.isSet {
             // athlete / AI edits: asked first (BLOCK until equipment is set); a coach proposal shows the same question on its
             // Accept card, so Accept is an informed confirmation (no silent assumption either way)
-            let coach = request.origin == .coach && !request.legacy
-            report.issues.append(ValidationIssue(ruleId: "EQUIP-002", severity: coach ? .warning : .error, outcome: coach ? .pass : .block, workoutId: w.id, explanation: "Your equipment isn't set yet, so Cyclift can't be sure these exercises are possible for you.", remedy: "Tell us your equipment (Profile › Equipment), then rebuild", autoRepairAllowed: false, needsConfirmation: true))
+            // RC3 / ENG-H1: with equipment not set the planner uses bodyweight exercises only (a full gym is never assumed),
+            // so the change can go ahead as a provisional session; the athlete is told and can set equipment from here
+            report.issues.append(ValidationIssue(ruleId: "EQUIP-002", severity: .warning, outcome: .pass, workoutId: w.id, explanation: "Your equipment isn't set yet, so this session uses bodyweight exercises only (provisional).", remedy: "Set your equipment (Profile › Training) for exercises that use it", autoRepairAllowed: false, needsConfirmation: true))
         }
         // LEGACY-001 (review C A8): engine-raised proposals for legacy sessions always need the athlete's answer
         if request.legacy {

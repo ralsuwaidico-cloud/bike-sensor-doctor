@@ -12,7 +12,8 @@ final class CoachRemediationPass3Tests: XCTestCase {
 
     // P3-01: an edit drops the safety original; the stop path stores the edit, and the edit comes back
     func testEditDropsSafetyOriginalAndPauseRestoresTheEdit() {
-        let s = store(); var p = RiderProfile(); p.trainingMode = .cycling; s.profile = p
+        // RC3: the cap now comes from saved answers that need clearance (an unanswered check no longer caps)
+        let s = store(); var p = RiderProfile(); p.trainingMode = .cycling; p.healthScreen = screen { $0.heartOrBloodPressure = true }; s.profile = p
         s.plan = [Workout(date: at(2), kind: .threshold, minutes: 70)]
         s.refreshRideSafety()
         XCTAssertNotNil(s.plan[0].safetyOriginal)

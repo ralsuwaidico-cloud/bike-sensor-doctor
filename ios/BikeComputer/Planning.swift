@@ -169,6 +169,14 @@ struct WeeklyAvailability: Codable, Equatable {
     /// preferred weekend day); a "Both" day is used only when the rider wants more sessions than days. Never exceeds
     /// either budget: per-session minutes are the budget divided by the frequency.
     static func suggested(for p: RiderProfile) -> WeeklyAvailability {
+        if p.trainingMode == .cycling, !p.preferredDays.isEmpty {
+            // RC3 / ENG-C1: cycling-only uses the days the athlete marked (no template days)
+            var d = Array(repeating: DayAvailability(activity: .rest, minutes: 0), count: 7)
+            let days = Array(p.preferredDays.filter { (0..<7).contains($0) }.prefix(max(1, p.cyclingDaysPerWeek)))
+            let per = p.cyclingSessionMinutes ?? max(30, (p.hoursPerWeek * 60) / max(1, days.count))
+            for i in days { d[i] = DayAvailability(activity: .cycle, minutes: per) }
+            return WeeklyAvailability.fit(WeeklyAvailability(days: d), profile: p).availability
+        }
         guard p.trainingMode != .cycling else {
             // audit G-20: the requested number of rides (the 0.5.0 template is trimmed: shortest non-long rides go
             // first), and no off-bike session the rider did not ask for
@@ -283,6 +291,7 @@ struct WeeklyAvailability: Codable, Equatable {
     /// Budget check without changing anything: one conflict per sport that is over.
     func conflicts(profile p: RiderProfile) -> [PlanConflict] {
         var out: [PlanConflict] = []
+        if p.weekIsExplicit == true { return out }          // RC3 / ENG-C2: the athlete's per-session minutes are the plan
         let cb = p.hoursPerWeek * 60, lb = p.liftingHoursPerWeek * 60
         if p.trainingMode.includesCycling, cycleMinutes > cb {
             let longest = days.enumerated().flatMap { i, d in d.assignments.filter { $0.sport == .cycling }.map { (i, $0) } }.max { $0.1.minutes < $1.1.minutes }
@@ -306,6 +315,7 @@ struct WeeklyAvailability: Codable, Equatable {
     /// UI can show it and ask; the plan generated from the result can never exceed a budget by a minute.
     static func fit(_ a: WeeklyAvailability, profile p: RiderProfile) -> (availability: WeeklyAvailability, conflicts: [PlanConflict], trimmed: [String]) {
         var w = a
+        if p.weekIsExplicit == true { return (a, [], []) }   // RC3 / ENG-C2: no division of weekly hours, nothing trimmed
         let conflicts = a.conflicts(profile: p)
         var trimmed: [String] = []
         func trim(sport: DayAssignment.Sport, budget: Int, floor: Int) {
@@ -366,7 +376,9 @@ enum PlanEngine {
         // --- strength focus per lift assignment (typed ones keep theirs)
         let lifts: [(day: Int, a: DayAssignment)] = a.days.enumerated().flatMap { i, dd in dd.assignments.filter { $0.sport == .strength }.map { (i, $0) } }
         let untypedLifts = lifts.filter { $0.a.strengthType == nil }
-        let focusCycle: [StrengthFocus] = lifts.count <= 1 ? [.fullBody] : lifts.count == 2 ? [.lower, .upper] : [.lower, .push, .pull, .upper, .fullBody, .lower]
+        // RC3 / ENG-D1: 1–3 sessions → full body each (A/B/C emphasis comes from the planner's session index); 4 or more
+        // sessions of ≥ 45 min → upper / lower alternating; any session of 35 min or less → full body
+        let focusCycle: [StrengthFocus] = lifts.count <= 3 ? [.fullBody] : [.upper, .lower]
         // a neighbouring hard-typed ride weighs 2, any neighbouring ride 1 (its type may still become hard), a same-day ride 2
         func load(_ i: Int) -> Int { a.days[i].assignments.contains { $0.sport == .cycling && ($0.cyclingType?.isHard ?? false) } ? 2 : (a.days[i].cycles ? 1 : 0) }
         func adjHard(_ i: Int) -> Int { load((i + 1) % 7) + load((i + 6) % 7) + (a.days[i].cycles ? 2 : 0) }
@@ -379,9 +391,9 @@ enum PlanEngine {
             let seq = StrengthSplit.sessions(split: split, slots: p.customSplit, count: untypedLifts.count, offset: StrengthSplit.weekIndex(of: monday, calendar: cal) * untypedLifts.count)
             for (n, l) in untypedLifts.enumerated() where n < seq.count { focus[l.a.id] = seq[n].focus; slotFor[l.a.id] = seq[n] }
         } else {
-            let liftOrder = untypedLifts.sorted { (adjHard($0.day), $0.day) < (adjHard($1.day), $1.day) }
+            let liftOrder = lifts.count <= 3 ? untypedLifts.sorted { (adjHard($0.day), $0.day) < (adjHard($1.day), $1.day) } : untypedLifts.sorted { $0.day < $1.day }
             for (n, l) in liftOrder.enumerated() {
-                var f = focusCycle[n % focusCycle.count]
+                var f = l.a.minutes <= 35 ? .fullBody : focusCycle[n % focusCycle.count]
                 if a.days[l.day].cycles, f.loadsLegs { f = .upper }        // same-day ride: do not load the legs twice
                 focus[l.a.id] = f
             }

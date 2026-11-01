@@ -58,7 +58,8 @@ final class ReviewProbeTests: XCTestCase {
     }
     // R5: an engine-adjusted ride (coachOriginal set) escapes the health-check cap
     func testR5_EngineAdjustedRideEscapesCap() {
-        let s = store(); var p = RiderProfile(); p.trainingMode = .cycling; s.profile = p   // not screened
+        // RC3: the cap comes from saved answers needing clearance (an unanswered check no longer caps)
+        let s = store(); var p = RiderProfile(); p.trainingMode = .cycling; var hs = HealthScreen(); hs.answeredAt = Date(); hs.heartOrBloodPressure = true; p.healthScreen = hs; s.profile = p
         var w = Workout(date: at(today, 2), kind: .threshold, minutes: 70); w.intervalReps = 4; w.coachOriginal = WorkoutPlanSnapshot(kind: .threshold, minutes: 70, plannedEntries: nil, intervalReps: nil, generatedEntries: false)
         s.plan = [w]; s.refreshRideSafety()
         print("R5 after refresh:", desc(s.plan))

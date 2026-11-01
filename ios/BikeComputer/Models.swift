@@ -82,6 +82,25 @@ struct RiderProfile: Codable, Equatable {
     var healthScreen: HealthScreen? = nil
     /// Coach remediation M-06: how quickly the rider recovers in their own words (nil = not answered = normal).
     var recoveryCapacity: RecoveryCapacity? = nil
+    /// RC3 (onboarding r7, ios/ENGINE_API_RC3.md). All optional so build-121 files load unchanged.
+    /// Full date of birth (nil = not given; `birthYear` stays in step with it and remains what the board receives).
+    var dateOfBirth: Date? = nil
+    /// Goals across both sports with one primary (r7 S2). Empty = not answered (the legacy `goal` is used).
+    var goals: [GoalID] = []
+    var primaryGoal: GoalID? = nil
+    /// The value a migration replaced, kept so nothing is lost (e.g. "aerobicFitness" merged into Endurance).
+    var legacyGoal: String? = nil
+    /// The week was set day by day with minutes per session (r7 "Your week"): those minutes are firm maxima and are never
+    /// trimmed to a weekly-hours budget (ENG-C2). nil/false = build-121 behaviour (budgets from weekly hours).
+    var weekIsExplicit: Bool? = nil
+    /// ENG-C2 / AT-C2-3: a migrated profile whose session length was derived (hours ÷ sessions) is asked to confirm it once.
+    var confirmSessionLength: Bool? = nil
+    /// ENG-A1 / AT-A1-2: a migrated hybrid profile with no strength experience is asked once (Beginner until then).
+    var confirmStrengthLevel: Bool? = nil
+    /// Explicit "pause training" (unwell, travelling, injured). nil = not paused. Plans no sessions while set.
+    var trainingPause: TrainingPause? = nil
+    /// Finished pauses (for checkpoints: paused weeks are not counted, ENG-K1). Health-check pauses are not recorded here.
+    var pauseHistory: [DateInterval] = []
     /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
     var hrZones: [(lo: Int, hi: Int?)] {
         if hrZoneMethod == .lthr, let l = lthr, l > 0 {
@@ -99,6 +118,7 @@ struct RiderProfile: Codable, Equatable {
     /// The honest confidence label of the FTP ("Verified test", "Estimated from verified power data", "Provisional
     /// estimate", "Estimated · unverified", "Entered · unverified"). The 95 %-of-20-minutes estimate is never called a test.
     var ftpLabel: String {
+        if ftpHow == .assumed { return "Unknown" }          // RC3 / ENG-E1: the W/kg starting assumption is never shown as an FTP
         switch ftpConfidence {
         case .unverified: return ftpHow == .fromRides ? "Estimated · unverified" : "Entered · unverified"
         default: return ftpConfidence.title
@@ -108,6 +128,7 @@ struct RiderProfile: Codable, Equatable {
     /// "entered" for a value the rider typed or a test result without a recorded test; "estimated" (verified power) or
     /// "estimated · unverified" for the 95 %-of-20-minutes estimate and the starting assumption.
     var ftpBadge: String {
+        if ftpHow == .assumed { return "unknown" }
         switch ftpConfidence {
         case .verifiedTest: return "tested"
         case .estimatedVerified: return "estimated"
@@ -171,6 +192,17 @@ struct RiderProfile: Codable, Equatable {
         ftpPowerVerified = try? c.decodeIfPresent(Bool.self, forKey: .ftpPowerVerified)
         healthScreen = try? c.decodeIfPresent(HealthScreen.self, forKey: .healthScreen)
         recoveryCapacity = try? c.decodeIfPresent(RecoveryCapacity.self, forKey: .recoveryCapacity)
+        dateOfBirth = try? c.decodeIfPresent(Date.self, forKey: .dateOfBirth)
+        goals = ((try? c.decodeIfPresent([String].self, forKey: .goals)) ?? nil)?.compactMap { GoalID(legacy: $0) } ?? []
+        primaryGoal = ((try? c.decodeIfPresent(String.self, forKey: .primaryGoal)) ?? nil).flatMap { GoalID(legacy: $0) }
+        legacyGoal = try? c.decodeIfPresent(String.self, forKey: .legacyGoal)
+        weekIsExplicit = try? c.decodeIfPresent(Bool.self, forKey: .weekIsExplicit)
+        confirmSessionLength = try? c.decodeIfPresent(Bool.self, forKey: .confirmSessionLength)
+        confirmStrengthLevel = try? c.decodeIfPresent(Bool.self, forKey: .confirmStrengthLevel)
+        trainingPause = try? c.decodeIfPresent(TrainingPause.self, forKey: .trainingPause)
+        pauseHistory = (try? c.decodeIfPresent([DateInterval].self, forKey: .pauseHistory)) ?? []
+        // a goal saved under a merged name keeps its original value (r7: "Aerobic fitness" → Endurance)
+        if legacyGoal == nil, let raw = ((try? c.decodeIfPresent([String].self, forKey: .goals)) ?? nil)?.first(where: { GoalID(rawValue: $0) == nil && GoalID(legacy: $0) != nil }) { legacyGoal = raw }
     }
 
     // MARK: Link v1.2 mapping (docs/LINK_V1_2_SPEC.md)
@@ -178,7 +210,7 @@ struct RiderProfile: Codable, Equatable {
     func linkMessage(units: AppSettings.Units) -> BCLink.ProfileMessage {
         var m = BCLink.ProfileMessage()
         m.version = version; m.updatedEpochS = UInt32(clamping: Int(updatedAt.timeIntervalSince1970))
-        m.name = name; m.ftpW = ftpW; m.ftpHow = ftpHow.linkCode; m.weightKgX10 = Int((weightKg * 10).rounded())
+        m.name = name; m.ftpW = ftpKnown ? ftpW : 0; m.ftpHow = ftpHow.linkCode;   /* RC3 / ENG-E1: unknown FTP is sent as 0 (never an invented value) */ m.weightKgX10 = Int((weightKg * 10).rounded())
         m.birthYear = birthYear ?? 0; m.maxHR = maxHR ?? 0; m.restHR = restHR ?? 0; m.units = units == .imperial ? 1 : 0
         m.hoursPerWeek = hoursPerWeek; m.level = level.linkCode; m.goal = goal.linkCode; m.lthr = lthr ?? 0
         return m
@@ -203,7 +235,7 @@ struct RiderProfile: Codable, Equatable {
         var out: [ProfileDifference] = []
         func add(_ f: String, _ phone: String, _ board: String) { if phone != board { out.append(ProfileDifference(field: f, phone: phone, board: board)) } }
         if let n = b.name { add("Name", name, n) }
-        if let v = b.ftpW { add("FTP", "\(ftpW) W (\(ftpHow.label))", "\(v) W (\(FTPHow.from(linkCode: b.ftpHow ?? 0).label))") }
+        if let v = b.ftpW, ftpKnown { add("FTP", "\(ftpW) W (\(ftpHow.label))", "\(v) W (\(FTPHow.from(linkCode: b.ftpHow ?? 0).label))") }   // RC3: an unknown phone FTP is not a difference (the board keeps its own starting value, CR-04)
         if let v = b.weightKgX10 { add("Weight", String(format: "%.1f kg", weightKg), String(format: "%.1f kg", Double(v) / 10)) }
         if let v = b.birthYear { add("Birth year", birthYear.map(String.init) ?? "not set", "\(v)") } else if birthYear != nil { add("Birth year", "\(birthYear!)", "not set") }
         if let v = b.maxHR { add("Max heart rate", maxHR.map { "\($0) bpm" } ?? "estimated", "\(v) bpm") } else if let m = maxHR { add("Max heart rate", "\(m) bpm", "estimated") }
@@ -346,28 +378,42 @@ struct Workout: Codable, Identifiable, Equatable {
     /// The interval structure the live ride coach runs — the SAME one the plan, Home and the steps show (audit G-11:
     /// the ride screen used to run threshold as 4 × 8 min / 4 min while the plan said 3 × 8 min / 3 min easy).
     var liveIntervalPlan: IntervalPlan? {
-        guard let r = effectiveIntervalReps, kind.intervalWorkMinutes > 0 else { return nil }
+        guard let r = fittedIntervalReps, r > 0, kind.intervalWorkMinutes > 0 else { return nil }   // RC3 / ENG-E5: the reps that fit
         return IntervalPlan(workSec: kind.intervalWorkMinutes * 60, restSec: kind.intervalRestMinutes * 60, repeats: max(1, r))
     }
     /// Title with the assigned routine's name when one is assigned (the calendar shows the rider's own workout name).
     func displayTitle(routine: WorkoutTemplate?) -> String { if kind == .strength, let r = routine { return r.name }; return displayTitle }
 
     struct Step: Equatable { let name: String; let duration: String; let target: String }
-    /// Steps with power targets from the rider's FTP; HR targets appear only when the rider has an HR source (the caller decides).
-    func steps(ftp: Int) -> [Step] {
-        let z = { (lo: Double, hi: Double) in "\(Int(Double(ftp) * lo))–\(Int(Double(ftp) * hi)) W" }
+    /// Ride steps for display. RC3 (ENG-E1 / E3 / E5): the durations add up to the session's minutes exactly; `ftp` is
+    /// the FTP for watt targets (`profile.targetFTP ?? 0`) — 0 or less = Unknown FTP: effort (RPE) targets, no watts.
+    /// Pass `hrZones` (the athlete's zones) when a heart-rate source is available.
+    func steps(ftp: Int, hrZones: [(lo: Int, hi: Int?)]? = nil) -> [Step] {
+        if kind.isRide {
+            let f: Int? = ftp > 0 ? ftp : nil
+            var out: [Step] = []
+            let rs = rideSteps
+            var i = 0
+            while i < rs.count {
+                let st = rs[i]
+                if st.role == .work, kind.intervalWorkMinutes > 0 {
+                    // intervals shown as one row: "3 × 8 min" with the easy minutes between
+                    var n = 0, total = 0, j = i
+                    while j < rs.count, rs[j].role == .work || rs[j].role == .recover { if rs[j].role == .work { n += 1 }; total += rs[j].minutes; j += 1 }
+                    out.append(Step(name: "\(n) × \(kind.intervalWorkMinutes) min", duration: "\(total) min", target: st.targetText(ftp: f, hrZones: hrZones) + " · \(kind.intervalRestMinutes) min easy between"))
+                    i = j; continue
+                }
+                out.append(Step(name: st.name, duration: "\(st.minutes) min", target: st.targetText(ftp: f, hrZones: hrZones)))
+                i += 1
+            }
+            return out
+        }
         switch kind {
-        case .endurance: return [.init(name: "Warm-up", duration: "10 min", target: "\(z(0.45, 0.6)) · 85–95 rpm"), .init(name: "Main", duration: "\(max(5, minutes - 15)) min", target: "\(z(0.65, 0.75)) (Z2) · 85–95 rpm"), .init(name: "Cool-down", duration: "5 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
-        case .tempo: return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "Block 1", duration: "15 min", target: "\(z(0.84, 0.9)) (Z3) · 85–90 rpm"), .init(name: "Easy", duration: "10 min", target: "\(Int(Double(ftp) * 0.55)) W"), .init(name: "Block 2", duration: "15 min", target: "\(z(0.84, 0.9)) (Z3)"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
-        case .threshold: let r = effectiveIntervalReps ?? 3; return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "\(r) × 8 min", duration: "\(r * 8) min", target: "\(z(0.93, 1.02)) (Z4) · 3 min easy between"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
-        case .vo2: let r = effectiveIntervalReps ?? 5; return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "\(r) × 3 min", duration: "\(r * 3) min", target: "\(z(1.06, 1.18)) (Z5) · 3 min easy between"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
-        case .recovery: return [.init(name: "Easy spin", duration: "\(minutes) min", target: "under \(Int(Double(ftp) * 0.58)) W · 90+ rpm")]
-        case .long: return [.init(name: "Warm-up", duration: "15 min", target: z(0.5, 0.65)), .init(name: "Main", duration: "\(max(10, minutes - 25)) min", target: "\(z(0.65, 0.75)) (Z2) · eat every 30 min"), .init(name: "Cool-down", duration: "10 min", target: "under \(Int(Double(ftp) * 0.5)) W")]
-        case .ftpTest: return [.init(name: "Warm-up", duration: "20 min", target: "with 3 × 1 min fast"), .init(name: "Test", duration: "20 min", target: "as hard as you can hold steady"), .init(name: "Cool-down", duration: "10 min", target: "easy")]
         case .strength: return [.init(name: "Circuit", duration: "3 × 10 min", target: "squats, lunges, plank · bodyweight")]
         case .mobility: return [.init(name: "Flow", duration: "\(minutes) min", target: "hips, back, calves")]
         case .other: return [.init(name: "Activity", duration: "\(minutes) min", target: "counted as training load, not as a ride")]
         case .recoveryDay, .rest: return []
+        default: return []
         }
     }
     /// Expected training benefit, in plain words (for the Home table).
@@ -387,9 +433,9 @@ struct Workout: Codable, Identifiable, Equatable {
     var structureText: String {
         switch kind {
         case .endurance: return "steady Z2"
-        case .tempo: return "2 × 15 min Z3"
-        case .threshold: return "\(effectiveIntervalReps ?? 3) × 8 min Z4"
-        case .vo2: return "\(effectiveIntervalReps ?? 5) × 3 min Z5"
+        case .tempo: return "\(max(1, rideSteps.filter { $0.role == .work }.count)) × 15 min Z3"
+        case .threshold: return "\(fittedIntervalReps ?? effectiveIntervalReps ?? 3) × 8 min Z4"
+        case .vo2: return "\(fittedIntervalReps ?? effectiveIntervalReps ?? 5) × 3 min Z5"
         case .recovery: return "easy Z1"
         case .long: return "steady Z2, fuel every 30 min"
         case .ftpTest: return "20-min test"
@@ -565,7 +611,8 @@ extension UUID: @retroactive Identifiable { public var id: UUID { self } }
 /// writes schema 1 and still imports the build-14 per-file layout (profile.json / plan.json / rides.json / tiles.json).
 struct StoreFile: Codable, Equatable {
     /// 2 = quality release: explicit workout completion states, soft-delete trash, strength preferences (migrateV2).
-    static let currentSchema = 2
+    /// 3 = RC3: FTP source (assumed → Unknown), goals with a primary, strength level / session length flags, plan versions.
+    static let currentSchema = 3
     var schema = StoreFile.currentSchema
     var profile = RiderProfile()
     var settings = AppSettings()
@@ -607,13 +654,15 @@ struct StoreFile: Codable, Equatable {
     var strengthPrefs = StrengthPrefs()
     var trash: [TrashItem] = []
     var migrationLog: [String] = []
+    /// RC3 / ENG-J3: append-only log of applied plan changes (read-only history; workout records are never touched).
+    var planVersions: [PlanVersion] = []
 
     /// Explicit because both init(from:) and encode(to:) are hand-written (the compiler then synthesises no keys).
     enum CodingKeys: String, CodingKey {
         case schema, profile, settings, plan, rides, tiles, onboarded, guest, appleUserId, createdAt, ftpSuggestion, boardSync, onboardingStage, availability
         case strength, templates, customExercises, appliedProposals, weekdayRoutines, equipment, activeSession, ignoredInsights
         case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation, painClearances
-        case strengthPrefs, trash, migrationLog
+        case strengthPrefs, trash, migrationLog, planVersions
     }
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
@@ -660,6 +709,7 @@ struct StoreFile: Codable, Equatable {
         strengthPrefs = (try? c.decodeIfPresent(StrengthPrefs.self, forKey: .strengthPrefs)) ?? StrengthPrefs()
         trash = (try? c.decodeIfPresent([TrashItem].self, forKey: .trash)) ?? []
         migrationLog = (try? c.decodeIfPresent([String].self, forKey: .migrationLog)) ?? []
+        planVersions = (try? c.decodeIfPresent([PlanVersion].self, forKey: .planVersions)) ?? []
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -673,6 +723,7 @@ struct StoreFile: Codable, Equatable {
         try c.encode(adaptations, forKey: .adaptations); try c.encode(dismissedAdaptations, forKey: .dismissedAdaptations); try c.encode(approvedAdaptations, forKey: .approvedAdaptations)
         try c.encode(adaptiveProposals, forKey: .adaptiveProposals); try c.encodeIfPresent(lastAdaptation, forKey: .lastAdaptation); try c.encode(painClearances, forKey: .painClearances)
         try c.encode(strengthPrefs, forKey: .strengthPrefs); try c.encode(trash, forKey: .trash); try c.encode(migrationLog, forKey: .migrationLog)
+        try c.encode(planVersions, forKey: .planVersions)
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -682,6 +733,7 @@ struct StoreFile: Codable, Equatable {
         if f.tiles.isEmpty { f.tiles = Store.defaultTiles }
         if f.rides.contains(where: { $0.zoneSeconds.count != 7 }) { for i in f.rides.indices where f.rides[i].zoneSeconds.count != 7 { f.rides[i].zoneSeconds = Array(repeating: 0, count: 7) } }
         if f.schema < 2 { f = StoreMigration.v2(f, now: now, calendar: calendar) }
+        if f.schema < 3 { f = StoreMigration.v3(f, now: now, calendar: calendar) }
         return f
     }
 }
@@ -744,6 +796,10 @@ final class Store: ObservableObject {
     @Published var strengthPrefs = StrengthPrefs() { didSet { persist() } }
     @Published var trash: [TrashItem] = [] { didSet { persist() } }
     @Published var migrationLog: [String] = [] { didSet { persist() } }
+    /// RC3 / ENG-J3: applied plan changes, newest last (append-only).
+    @Published var planVersions: [PlanVersion] = [] { didSet { persist() } }
+    /// RC3 / ENG-J2: week-level change proposals waiting for Apply (not persisted; nothing is saved before Apply).
+    var pendingPlanChanges: [UUID: PlanChangeProposal] = [:]
     /// The last deletion that can still be undone from the snackbar (not persisted; the record itself is in `trash`).
     @Published var undoToast: UndoToast? = nil
     /// Sessions the planner / adaptive coach rebuilt after the latest check-in, as they were before (one-tap Undo).
@@ -780,14 +836,16 @@ final class Store: ObservableObject {
         dir = directory
         UITestSupport.prepareStoreDirectory(dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        var migrated = false
-        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { let m = StoreFile.migrate(f); migrated = f.schema < 2; apply(m) }
+        var migrated = false, rc3Migrated = false
+        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { let m = StoreFile.migrate(f); migrated = f.schema < 2; rc3Migrated = f.schema < 3; apply(m) }
         else if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
         loading = false
         purgeTrash()
         if generatePlan { ensurePlan(); refreshRideSafety() }
         // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalised planner (never edited ones)
         if migrated { refreshGeneratedSessions(); persist() }
+        // RC3 (schema 3): profile fields only — no session is changed without a before/after preview (rc3 MIG rules)
+        if rc3Migrated, !migrated { persist() }
         if !FileManager.default.fileExists(atPath: dir.appendingPathComponent("store.json").path) { persist() }
     }
 
@@ -799,7 +857,7 @@ final class Store: ObservableObject {
         weekdayRoutines = f.weekdayRoutines; equipment = f.equipment; activeSession = f.activeSession; ignoredInsights = f.ignoredInsights
         adaptations = f.adaptations; dismissedAdaptations = f.dismissedAdaptations; approvedAdaptations = f.approvedAdaptations
         adaptiveProposals = f.adaptiveProposals; lastAdaptation = f.lastAdaptation; painClearances = f.painClearances
-        strengthPrefs = f.strengthPrefs; trash = f.trash; migrationLog = f.migrationLog
+        strengthPrefs = f.strengthPrefs; trash = f.trash; migrationLog = f.migrationLog; planVersions = f.planVersions
     }
 
     var snapshot: StoreFile {
@@ -809,7 +867,7 @@ final class Store: ObservableObject {
         f.weekdayRoutines = weekdayRoutines; f.equipment = equipment; f.activeSession = activeSession; f.ignoredInsights = ignoredInsights
         f.adaptations = adaptations; f.dismissedAdaptations = dismissedAdaptations; f.approvedAdaptations = approvedAdaptations
         f.adaptiveProposals = adaptiveProposals; f.lastAdaptation = lastAdaptation; f.painClearances = painClearances
-        f.strengthPrefs = strengthPrefs; f.trash = trash; f.migrationLog = migrationLog
+        f.strengthPrefs = strengthPrefs; f.trash = trash; f.migrationLog = migrationLog; f.planVersions = planVersions
         return f
     }
 
@@ -1328,6 +1386,7 @@ final class Store: ObservableObject {
         weekdayRoutines = [:]; equipment = EquipmentProfile(); activeSession = nil; ignoredInsights = []
         adaptations = []; dismissedAdaptations = []; approvedAdaptations = []; adaptiveProposals = []; lastAdaptation = nil; painClearances = []
         strengthPrefs = StrengthPrefs(); trash = []; migrationLog = []; undoToast = nil
+        planVersions = []; pendingPlanChanges = [:]
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
         for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }

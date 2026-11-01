@@ -19,7 +19,8 @@ final class Pass2ProbeTests: XCTestCase {
     // Q1: an existing strength-goal lifter whose check is unanswered/expired: is the held load re-prescribed at MORE reps?
     func testQ1_RepFloorMakesHeldLoadHarder() {
         var p = RiderProfile(); p.trainingMode = .strength; p.level = .intermediate
-        p.healthScreen = screen(answered: cal.date(byAdding: .day, value: -400, to: Date())!)   // expired
+        // RC3: an expired / unanswered check no longer restricts; the cap that remains is saved answers needing clearance
+        p.healthScreen = screen(answered: Date()); p.healthScreen?.heartOrBloodPressure = true
         var prefs = StrengthPrefs(); prefs.goal = .strength
         let c = PlannerContext(profile: p, prefs: prefs, equipment: EquipmentProfile(owned: ["barbell"]), catalogue: [squat], logs: [log(-3, kg: 100, reps: 5), log(-6, kg: 100, reps: 5)], now: Date(), calendar: cal)
         let d = StrengthPlanner.dose(role: .main, goal: .strength, experience: .intermediate)

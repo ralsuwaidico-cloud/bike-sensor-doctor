@@ -9,3 +9,14 @@ extension RiderProfile {
         return p
     }
 }
+
+/// RC3 fixtures. Build 121 treated "equipment not set" as owning everything and copied the cycling level into lifting
+/// experience; RC3 does neither (ENG-H1 / ENG-A1). Tests written for loaded progression state that equipment explicitly.
+extension Store {
+    func rc3FullGym(experience: StrengthPrefs.Experience? = nil) {
+        equipment = EquipmentProfile(owned: Set(EquipmentProfile.allOptions))
+        if strengthPrefs.experience == nil {
+            strengthPrefs.experience = experience ?? { switch profile.level { case .beginner: return .beginner; case .intermediate: return .intermediate; case .advanced: return .advanced } }()
+        }
+    }
+}

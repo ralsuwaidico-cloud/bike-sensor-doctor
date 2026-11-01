@@ -191,6 +191,9 @@ struct StrengthPrefs: Codable, Equatable {
     var reviewFlags: [String] = []
     var temporary: [TemporaryBlock] = []
     var swapHistory: [SwapRecord] = []
+    /// RC3: the athlete prefers supersets in coach-built sessions (nil = not said; the coach still pairs exercises when a
+    /// session would not fit its minutes otherwise).
+    var prefersSupersets: Bool? = nil
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -203,6 +206,7 @@ struct StrengthPrefs: Codable, Equatable {
         reviewFlags = (try? c.decodeIfPresent([String].self, forKey: .reviewFlags)) ?? []
         temporary = (try? c.decodeIfPresent([TemporaryBlock].self, forKey: .temporary)) ?? []
         swapHistory = (try? c.decodeIfPresent([SwapRecord].self, forKey: .swapHistory)) ?? []
+        prefersSupersets = try? c.decodeIfPresent(Bool.self, forKey: .prefersSupersets)
     }
     func avoids(_ id: String) -> Bool { avoid.contains { $0.exerciseId == id } }
     func blocked(_ id: String, now: Date) -> Bool { temporary.contains { $0.exerciseId == id && $0.active(now: now) } }
@@ -256,7 +260,9 @@ struct PlannerContext {
 
     var experience: StrengthPrefs.Experience {
         if let e = prefs.experience { return e }
-        switch profile.level { case .beginner: return .beginner; case .intermediate: return .intermediate; case .advanced: return .advanced }
+        // RC3 / ENG-A1: lifting experience is its own answer; it is never copied from the cycling level. Not answered →
+        // Beginner for dose and exercise choice (conservative) until the athlete says otherwise.
+        return .beginner
     }
     var goal: StrengthPrefs.Goal {
         if let g = prefs.goal { return g }
@@ -316,7 +322,7 @@ enum StrengthPlanner {
     /// no loading that a recent pain report restricts.
     static func available(_ e: Exercise, ctx: PlannerContext) -> Bool {
         if ctx.equipment.excluded.contains(e.id) || ctx.prefs.avoids(e.id) || ctx.prefs.blocked(e.id, now: ctx.now) { return false }
-        if !ctx.equipment.canDo(e) { return false }
+        if !ctx.equipment.plannable(e) { return false }      // RC3 / ENG-H1: equipment not set → bodyweight only
         if !ExerciseLibrary.meta(e).tags.isDisjoint(with: ctx.painTags) { return false }
         return true
     }
@@ -651,7 +657,7 @@ enum StrengthPlanner {
         if week.highCyclingLoad, let r = week.highLoadReason { notes.append("Lower-body volume is reduced by a quarter this week because \(r).") }
         if week.deload, let r = week.deloadReason { notes.append("Deload week: fewer sets and lighter efforts because \(r).") }
         if !trimmed.isEmpty { notes.append("To fit \(Fmt.duration(minutes: w.minutes)), these were left out: \(trimmed.joined(separator: ", ")).") }
-        if !ctx.equipment.isSet { notes.append("Your equipment is not set, so exercises that need only dumbbells or bodyweight are preferred. Set it in Profile › Training profile › Equipment.") }
+        if !ctx.equipment.isSet { notes.append("Provisional: your equipment isn't set yet, so this session uses bodyweight exercises only. Set your equipment in Profile › Training.") }
         if let h = ctx.progressionHold { notes.append("Loads and reps are held: \(h).") }
         if let r = ctx.returning, r.active { notes.append("Back after \(r.weeksText) off: one set fewer per exercise, efforts at RPE 7 or less, and loads restart below your last logged ones for your first \(ReturnPhase.phaseSessions) sessions.") }
         if let r = ctx.profile.recovery.reason, ctx.profile.recovery.volumeFactor != 1 { notes.append("Weekly volume is \(ctx.profile.recovery.volumeFactor < 1 ? "lower" : "a little higher") (×\(String(format: "%.1f", ctx.profile.recovery.volumeFactor))) because \(r)\(ctx.profile.recovery.reduced ? ", with longer rests and a lighter week every \(ctx.profile.recovery.deloadEvery)rd week" : "").") }
@@ -960,6 +966,11 @@ extension Store {
                 let v = rebuiltPrescription(for: w, prefersSupersets: choice.prefersSupersets, ctx: c)
                 if v.report.outcome == .block { continue }
                 b = StrengthPlanner.Built(entries: v.entries, rationale: v.rationale)
+            } else {
+                // RC3 / ENG-C2: every coach-built session is fitted with the same duration model as the validator
+                // (TIME-001: estimate ≤ minutes − 1), with supersets when the athlete prefers them
+                let v = rebuiltPrescription(for: w, prefersSupersets: strengthPrefs.prefersSupersets, ctx: c, origin: .coach)
+                if v.report.outcome != .block, !v.entries.isEmpty { b = StrengthPlanner.Built(entries: v.entries, rationale: v.rationale) }
             }
             guard !b.entries.isEmpty else { continue }
             var x = w

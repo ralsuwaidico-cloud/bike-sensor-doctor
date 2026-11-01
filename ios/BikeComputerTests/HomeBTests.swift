@@ -99,8 +99,14 @@ final class HomeBTests: XCTestCase {
         let p = store(health: .notAnswered)
         p.plan = [Workout(date: at(0), kind: .strength, minutes: 40)]
         let h = home(p)
-        XCTAssertEqual(h.caution, .pending(questions: HealthScreen.questions.count)); XCTAssertEqual(single(h)?.subtitle, "40 min · Moderate")
-        XCTAssertTrue(h.caution!.title.contains("\(HealthScreen.questions.count) questions"))
+        // RC3 (owner decision 1 Nov): an unanswered health check is not asked any more and shows no caution or cap
+        XCTAssertNil(h.caution); XCTAssertNotEqual(single(h)?.subtitle, "40 min · Light")
+        // RC3: an explicit pause holds training with its own card; Resume ends it
+        let up = store(); up.plan = [Workout(date: at(0), kind: .strength, minutes: 40)]
+        up.pauseTraining(reason: .unwell)
+        XCTAssertEqual(home(up).layout, .hold(.paused)); XCTAssertEqual(HomeHold.paused.button, "Resume training")
+        up.resumeTraining()
+        XCTAssertNotEqual(home(up).layout, .hold(.paused)); XCTAssertEqual(up.profile.pauseHistory.count, 1)
         let c = store(health: .needsClearance)
         c.plan = [Workout(date: at(0), kind: .strength, minutes: 40)]
         XCTAssertEqual(home(c).caution, .clearance); XCTAssertEqual(single(home(c))?.subtitle, "40 min · Light", "RPE capped at 6 until clearance")

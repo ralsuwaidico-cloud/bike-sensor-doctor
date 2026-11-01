@@ -26,10 +26,15 @@ final class CoachRemediationTests: XCTestCase {
         var p = RiderProfile(); p.trainingMode = .hybrid; p.priority = .balanced; p.hoursPerWeek = 8; p.liftingHoursPerWeek = 2
         p.cyclingDaysPerWeek = 4; p.liftDaysPerWeek = 2; p.level = level; p.goal = .stronger
         if screened { Self.cleared(&p) }
+        // RC3: an unanswered check no longer restricts the plan; "not screened" in these tests now means saved answers that
+        // still need a doctor's clearance (the rule that remains), so every restriction test keeps its coverage
+        else { var s = HealthScreen(); s.answeredAt = now; s.heartOrBloodPressure = true; p.healthScreen = s }
         return p
     }
     private func ctx(_ p: RiderProfile, logs: [StrengthSession], returning: ReturnPhase? = nil) -> PlannerContext {
-        PlannerContext(profile: p, equipment: EquipmentProfile(owned: ["barbell", "bench"]), catalogue: catalogue, logs: logs, now: now, calendar: cal, returning: returning)
+        // RC3 / ENG-A1: lifting experience is its own answer (stated here as the cycling level the tests were written for)
+        var prefs = StrengthPrefs(); prefs.experience = p.level == .beginner ? .beginner : p.level == .intermediate ? .intermediate : .advanced
+        return PlannerContext(profile: p, prefs: prefs, equipment: EquipmentProfile(owned: ["barbell", "bench"]), catalogue: catalogue, logs: logs, now: now, calendar: cal, returning: returning)
     }
     private func log(_ daysAgo: Int, _ e: Exercise, reps: [Int], kg: Double?, rpe: Int?) -> StrengthSession {
         StrengthSession(date: day(-daysAgo), minutes: 45, focus: .fullBody, rpe: rpe, exercises: [ExerciseEntry(exercise: e, sets: reps.map { SetEntry(reps: $0, weightKg: kg, bodyweight: kg == nil, rpe: rpe, done: true) })])
@@ -92,11 +97,13 @@ final class CoachRemediationTests: XCTestCase {
 
     func testNoIntervalProgressionWithoutClearance() {
         // the engine's "+1 interval" path is gated by readiness (unit check of the gate)
-        XCTAssertFalse(CoachReadiness(screen: .notAnswered).vigorousAllowed)
+        // RC3 (owner decision 1 Nov): an unanswered check no longer restricts; saved answers needing clearance still do
+        XCTAssertTrue(CoachReadiness(screen: .notAnswered).vigorousAllowed)
         XCTAssertFalse(CoachReadiness(screen: .needsClearance).vigorousAllowed)
         XCTAssertTrue(CoachReadiness(screen: .cleared).vigorousAllowed)
         XCTAssertEqual(CoachReadiness(screen: .needsClearance).maxStrengthRPE, 6)
-        XCTAssertEqual(CoachReadiness(screen: .notAnswered).maxStrengthRPE, 7)
+        XCTAssertEqual(CoachReadiness(screen: .notAnswered).maxStrengthRPE, 10)
+        XCTAssertFalse(CoachReadiness(screen: .clear, userPaused: true).trainingAllowed, "an explicit pause plans no sessions")
         XCTAssertFalse(CoachReadiness(screen: .stop).trainingAllowed)
     }
 

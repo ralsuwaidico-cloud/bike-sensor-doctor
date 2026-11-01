@@ -244,7 +244,7 @@ enum TrainingAnalyzer {
             s.hasVerifiedPower = r.powerVerified == true && r.avgPower != nil
             s.hasUnverifiedPower = r.powerVerified != true && r.avgPower != nil
             if let e = r.checkIn?.effort { s.load = Double(e * minutes); s.loadSource = "check-in effort × minutes" }
-            else if s.hasVerifiedPower, p.ftpW > 0, let np = r.normalizedPower ?? r.avgPower { s.load = effort(intensityFactor: Double(np) / Double(p.ftpW)) * Double(minutes); s.loadSource = "verified power (estimate)" }
+            else if s.hasVerifiedPower, p.ftpKnown, let np = r.normalizedPower ?? r.avgPower { s.load = effort(intensityFactor: Double(np) / Double(p.ftpW)) * Double(minutes); s.loadSource = "verified power (estimate)" }
             else if let hr = r.avgHR { s.load = hrZoneEffort[hrZone(hr, profile: p) - 1] * Double(minutes); s.loadSource = "average heart rate (estimate)" }
             sessions.append(s)
         }

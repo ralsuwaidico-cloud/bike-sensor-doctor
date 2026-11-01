@@ -24,6 +24,7 @@ final class QualityReleaseTests: XCTestCase {
     private func store(_ d: URL? = nil) -> Store {
         let s = Store(directory: d ?? dir(), generatePlan: false)
         s.profile = hybridProfile()
+        s.rc3FullGym()
         return s
     }
     private func strengthWorkout(_ day: Date, minutes: Int = 40, focus: StrengthFocus = .fullBody) -> Workout {
@@ -51,7 +52,7 @@ final class QualityReleaseTests: XCTestCase {
          ex("q-plank", "Plank", ["bodyweight"], .core, ["core"]),
          ex("q-carry", "Farmer carry", ["dumbbell", "kettlebell"], .carry, ["grip", "core"])]
     }
-    private func ctx(profile: RiderProfile? = nil, prefs: StrengthPrefs = StrengthPrefs(), owned: Set<String> = [], plan: [Workout] = [], logs: [StrengthSession] = [], pain: [PainArea] = []) -> PlannerContext {
+    private func ctx(profile: RiderProfile? = nil, prefs: StrengthPrefs = StrengthPrefs(), owned: Set<String> = Set(EquipmentProfile.allOptions),   /* RC3 / ENG-H1: equipment stated (unset = bodyweight only) */ plan: [Workout] = [], logs: [StrengthSession] = [], pain: [PainArea] = []) -> PlannerContext {
         PlannerContext(profile: profile ?? hybridProfile(), prefs: prefs, equipment: EquipmentProfile(owned: owned), catalogue: catalogue, templates: [], logs: logs, rides: [], plan: plan, painAreas: pain, fatigue: false, units: .metric, now: now, calendar: cal)
     }
     private func sets(_ reps: [Int], kg: Double?, rpe: Int? = nil) -> [SetEntry] { reps.map { SetEntry(reps: $0, weightKg: kg, bodyweight: kg == nil, rpe: rpe, done: true) } }
@@ -217,7 +218,7 @@ final class QualityReleaseTests: XCTestCase {
     func testMigrationV2FixesOwnerDataAndKeepsOriginals() {
         let f0 = ownerFixture()
         let f = StoreFile.migrate(f0, now: now, calendar: cal)
-        XCTAssertEqual(f.schema, 2)
+        XCTAssertEqual(f.schema, StoreFile.currentSchema, "v2 rules run, then RC3's v3 (profile fields only)")
         let tue = f.plan.first { cal.isDate($0.date, inSameDayAs: tomorrow) }!
         XCTAssertFalse(tue.done, "M1: completed for a future date → planned")
         XCTAssertTrue(tue.migrationNote?.contains("original: done = true") == true)
@@ -437,7 +438,7 @@ final class QualityReleaseTests: XCTestCase {
 
     func testFTPConfidenceLabels() {
         var p = RiderProfile()
-        XCTAssertEqual(p.ftpConfidence, .provisional); XCTAssertEqual(p.ftpLabel, "Provisional estimate")
+        XCTAssertEqual(p.ftpConfidence, .provisional); XCTAssertEqual(p.ftpLabel, "Unknown", "RC3 / ENG-E1: the starting assumption is never shown as an FTP"); XCTAssertNil(p.targetFTP)
         p.ftpHow = .tested
         XCTAssertEqual(p.ftpConfidence, .unverified, "'tested' without a recorded structured test is not verified")
         p.ftpVerifiedTest = true

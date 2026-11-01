@@ -153,7 +153,7 @@ struct HealthHoldSheet: View {
     @EnvironmentObject private var store: Store
     var body: some View {
         let r = store.profile.readiness
-        let hold: HomeHold = r.screen == .paused ? .ill : ((store.profile.healthScreen?.supervisedOnly ?? false) ? .supervised : .stop)
+        let hold: HomeHold = r.screen == .stop ? ((store.profile.healthScreen?.supervisedOnly ?? false) ? .supervised : .stop) : r.screen == .paused ? .ill : .paused
         HomeSheetWrap(title: "Training paused") {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.m) {
@@ -161,11 +161,19 @@ struct HealthHoldSheet: View {
                     Text(hold.detail).fixedSize(horizontal: false, vertical: true)
                     if let why = r.restriction { Text("Cyclift's rule: \(why).").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                     Text("Train now, the Ride screen and the strength logger stay paused until then.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    NavigationLink { HealthCheckView() } label: {
-                        Text(hold.button).font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap)
+                    if hold == .paused {
+                        Button { store.resumeTraining() } label: {
+                            Text(hold.button).font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap)
+                        }
+                        .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black)
+                        .accessibilityIdentifier("holdResume")
+                    } else {
+                        NavigationLink { HealthCheckView() } label: {
+                            Text(hold.button).font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap)
+                        }
+                        .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black)
+                        .accessibilityIdentifier("holdReviewHealth")
                     }
-                    .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black)
-                    .accessibilityIdentifier("holdReviewHealth")
                 }
                 .padding()
             }
@@ -177,7 +185,15 @@ struct HealthHoldSheet: View {
 
 /// The health check as a sheet (from Home's buttons).
 struct HealthCheckSheet: View {
-    var body: some View { HomeSheetWrap(title: "Health check") { HealthCheckView() } }
+    @EnvironmentObject private var store: Store
+    // RC3: Home's hold button sends "review health"; when the athlete paused training themselves it means "resume"
+    var body: some View {
+        if store.profile.trainingPause != nil && store.profile.healthScreen.map({ $0.status() == .clear || $0.status() == .cleared || $0.status() == .notAnswered || $0.status() == .needsClearance }) ?? true {
+            HomeSheetWrap(title: "Training paused") { TrainingPauseView() }
+        } else {
+            HomeSheetWrap(title: "Health check") { HealthCheckView() }
+        }
+    }
 }
 
 /// Shown instead of a Start button while the health check pauses training (Ride screen, strength logger: P0-2, defence in depth).
@@ -268,5 +284,33 @@ struct HomeFTPSheet: View {
             ScrollView { FTPSuggestionCard().padding() }.background(Color(.systemGroupedBackground))
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - RC3: explicit training pause (replaces the illness question as the everyday way to stop the plan)
+/// Pause / resume in one place. Used by Home's hold sheet and available to Profile › Settings (`TrainingPauseView()`).
+struct TrainingPauseView: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    @State private var reason: TrainingPause.Reason = .unwell
+    var body: some View {
+        Form {
+            if let p = store.profile.trainingPause {
+                Section {
+                    Text("Paused since \(p.since.formatted(date: .abbreviated, time: .omitted)) · \(p.reason.title)").fixedSize(horizontal: false, vertical: true)
+                    Button("Resume training") { store.resumeTraining(); dismiss() }
+                        .bold().frame(minHeight: DS.minTap).accessibilityIdentifier("resumeTraining")
+                } footer: { Text("No sessions are planned while paused. Your history is kept.") }
+            } else {
+                Section {
+                    Picker("Reason", selection: $reason) {
+                        ForEach(TrainingPause.Reason.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    Button("Pause training") { store.pauseTraining(reason: reason); dismiss() }
+                        .bold().frame(minHeight: DS.minTap).accessibilityIdentifier("pauseTraining")
+                } footer: { Text("Unwell or injured? Pause and resume when you feel ready. If symptoms are severe or don't go away, see a doctor.") }
+            }
+        }
     }
 }

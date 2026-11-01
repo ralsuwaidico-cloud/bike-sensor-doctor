@@ -11,8 +11,11 @@ import Foundation
 /// A health result that pauses all training (Home's TODAY card becomes the hold card; Train now opens the hold sheet).
 enum HomeHold: String, Equatable {
     case stop, supervised, ill
+    /// RC3: the athlete paused training themselves (Profile › Pause training, or the hold card).
+    case paused
     var title: String {
         switch self {
+        case .paused: return "Training paused"
         case .stop: return "See a doctor before training"
         case .supervised: return "Train with your doctor's team"
         case .ill: return "Rest while you are ill"
@@ -23,9 +26,10 @@ enum HomeHold: String, Equatable {
         case .stop: return "Your health check answers mean a doctor should see you first. No sessions are planned until you record a clearance."
         case .supervised: return "A doctor said you should exercise only under medical supervision, so Cyclift plans no sessions."
         case .ill: return "You said you are ill or recovering. No sessions are planned until you answer the health check again."
+        case .paused: return "No sessions are planned while training is paused. Resume when you're ready."
         }
     }
-    var button: String { self == .ill ? "I feel well again" : "Review health check" }
+    var button: String { self == .ill ? "I feel well again" : self == .paused ? "Resume training" : "Review health check" }
 }
 
 /// A health result that caps intensity (compact line above the TODAY card; the card shows the capped intensity).
@@ -456,10 +460,12 @@ extension HomeToday {
         let today = cal.startOfDay(for: i.now)
         // health holds win over everything (P0-1)
         if !i.readiness.trainingAllowed {
-            let hold: HomeHold = i.readiness.screen == .paused ? .ill : (i.supervisedOnly ? .supervised : .stop)
+            let hold: HomeHold = i.readiness.screen == .stop ? (i.supervisedOnly ? .supervised : .stop) : i.readiness.screen == .paused ? .ill : .paused
             return HomeToday(layout: .hold(hold), caution: nil, missed: nil, showCoach: false, showWeek: true)
         }
-        let caution: HomeCaution? = i.readiness.screen == .notAnswered ? .pending(questions: i.questions) : i.readiness.screen == .needsClearance ? .clearance : nil
+        // RC3: an unanswered health check is no longer a caution (the questionnaire is not asked); saved answers that need
+        // a doctor's clearance still show it
+        let caution: HomeCaution? = i.readiness.screen == .needsClearance ? .clearance : nil
         // first-time: no training planned this week or next and no history
         let monday = TrainingLedger.monday(of: i.now, calendar: cal)
         let twoWeeks = cal.date(byAdding: .day, value: 14, to: monday)!

@@ -72,22 +72,36 @@ struct ExerciseCatalogue {
 // MARK: - Equipment the rider owns and exercises they cannot do (0.8.0)
 /// Everything the coach suggests is filtered by this; a saved exercise is never swapped silently.
 struct EquipmentProfile: Codable, Equatable {
-    /// Owned equipment (catalogue vocabulary). Empty = not set yet → nothing is filtered out.
+    /// Owned equipment (catalogue vocabulary). Empty and not confirmed = not set yet ("Not sure yet").
     var owned: Set<String> = []
     /// Exercise ids the rider cannot or does not want to perform.
     var excluded: Set<String> = []
-    var isSet: Bool { !owned.isEmpty }
-    enum CodingKeys: String, CodingKey { case owned, excluded }
+    /// RC3 / ENG-H1: the athlete confirmed the list (true also for "bodyweight only", where `owned` stays empty).
+    var confirmed: Bool? = nil
+    var isSet: Bool { !owned.isEmpty || confirmed == true }
+    /// RC3 / ENG-H1: equipment not set → a provisional bodyweight plan; a full gym is never assumed.
+    var isProvisional: Bool { !isSet }
+    enum CodingKeys: String, CodingKey { case owned, excluded, confirmed }
 
-    init(owned: Set<String> = [], excluded: Set<String> = []) { self.owned = owned; self.excluded = excluded }
+    init(owned: Set<String> = [], excluded: Set<String> = [], confirmed: Bool? = nil) { self.owned = owned; self.excluded = excluded; self.confirmed = confirmed }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         owned = Set((try? c.decodeIfPresent([String].self, forKey: .owned)) ?? [])
         excluded = Set((try? c.decodeIfPresent([String].self, forKey: .excluded)) ?? [])
+        confirmed = try? c.decodeIfPresent(Bool.self, forKey: .confirmed)
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(owned.sorted(), forKey: .owned); try c.encode(excluded.sorted(), forKey: .excluded)
+        try c.encodeIfPresent(confirmed, forKey: .confirmed)
+    }
+    /// RC3 / ENG-H1: what the coach may PLAN — with equipment not set, bodyweight exercises only (a full gym is never
+    /// assumed). Exercises the athlete already logs with a load keep progressing (`hasEquipment` is unchanged).
+    func plannable(_ e: Exercise) -> Bool { isSet ? canDo(e) : (!excluded.contains(e.id) && EquipmentProfile.needsNothing(e)) }
+    /// An exercise that needs no equipment at all (bodyweight). The only kind planned while equipment is not set.
+    static func needsNothing(_ e: Exercise) -> Bool {
+        let r = ExerciseLibrary.requirement(e)
+        return r.all.isEmpty && r.anyOf.isEmpty
     }
     /// An exercise is doable when it is not excluded and (when equipment is set) every piece it needs is owned.
     /// Bodyweight exercises need nothing; "bench" is treated as owned when a dumbbell or barbell is owned and the
