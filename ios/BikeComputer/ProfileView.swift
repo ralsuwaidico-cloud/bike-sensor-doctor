@@ -1,56 +1,45 @@
 import SwiftUI
 
-/// Profile tab (0.5.0): a category menu instead of one long page. Each category is its own page and saves straight
-/// into the Store (so nothing typed is lost); shared athlete fields keep syncing to the BikeComputer, where the phone
-/// is authoritative after pairing.
+/// Profile (rc3, owner 1 Nov): ONE screen, four sections — Personal, Training, Devices & Connections, Settings — then
+/// Your data and About. It replaces the old category menu, the "Training profile" page and the duplicated "Connections &
+/// devices" / "App & device settings" pages: every setting has one home. Training reads and writes the same profile the
+/// onboarding writes (one source of truth). Gender and height are no longer shown (no feature uses them; the stored
+/// values are kept and still exported).
 struct ProfileTabView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
-    @EnvironmentObject private var sync: ProfileSync
     @EnvironmentObject private var cloud: SyncEngine
     @State private var exportURL: URL?
     @State private var confirmDelete = false
+    @State private var birth = ""
+    @State private var showAvailability = false
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    HStack(spacing: 14) {
-                        ZStack { Circle().fill(BC.accent.opacity(0.18)).frame(width: 56, height: 56); Text(initials).font(.system(.title2, design: .rounded).weight(.bold)).foregroundStyle(BC.accent) }
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(store.profile.name.isEmpty ? "Rider" : store.profile.name).font(.title3.weight(.bold)).lineLimit(1)
-                            Text("FTP \(store.profile.ftpW) W · \(store.profile.ftpLabel) · \(store.profile.hoursPerWeek) h cycling" + (store.profile.trainingMode.includesLifting ? " · \(store.profile.liftingHoursPerWeek) h lifting" : "")).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            if device.state == .ready { Pill(text: "board connected", color: BC.live) }
-                        }
-                        Spacer()
-                    }.padding(.vertical, 4)
+                    ProfileHeaderRow(name: store.profile.name, line: headerLine, boardConnected: device.state == .ready)
                 }
-                Section("Profile") {
-                    link("Rider information", "person.text.rectangle", "name, birth year, weight, height, units") { RiderInfoPage() }
-                    link("Training profile", "target", "\(store.profile.trainingMode.title.lowercased()) mode · goals, level, availability") { TrainingProfilePage() }
-                    link("Heart rate", "heart", hrSummary) { HeartRatePage() }
-                    link("Power & cycling", "bolt", "FTP \(store.profile.ftpW) W · zones · meter · bike") { PowerCyclingPage() }
-                }
-                Section("Devices") {
-                    link("Connections & devices", "dot.radiowaves.left.and.right", deviceSummary) { ConnectionsView() }
-                    link("App & device settings", "gearshape", "display, notifications, privacy, sync, firmware") { AppSettingsPage() }
-                }
-                YourDataSection(exportURL: $exportURL, confirmDelete: $confirmDelete, snapshot: { store.snapshot })
+                personal
+                training
                 Section {
-                    LabeledContent("Version", value: "Cyclift \(AppInfo.label)")
-                    NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
-                    NavigationLink("Terms of use") { LegalView(kind: .terms) }
-                    if let mail = SupportInfo.mailURL, let address = SupportInfo.email {
-                        Link(destination: mail) { HStack { Text("Contact support"); Spacer(); Text(address).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) } }
-                    }
-                    Link(destination: SupportInfo.supportPage) { HStack { Text("Support page"); Spacer(); Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary) } }
-                    LabeledContent("Protocol", value: device.info.map { "v\($0.verMajor).\($0.verMinor) · board \($0.fw)" } ?? "BikeComputer Link v1.2")
-                    Text("Works offline. No account, no server, no analytics, no advertising: your data stays on this iPhone.").font(.footnote).foregroundStyle(.secondary)
-                    if let e = store.lastSaveError { Text("Save problem: \(e)").font(.footnote).foregroundStyle(BC.warn) }
-                } header: { Text("About") }
+                    DevicesConnectionsRows()
+                } header: { Text("Devices & Connections") }
+                settings
+                YourDataSection(exportURL: $exportURL, confirmDelete: $confirmDelete, snapshot: { store.snapshot })
+                about
             }
             .navigationTitle("Profile")
             .sheet(item: $exportURL) { url in ShareSheet(items: [url]) }
+            .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
+            // the same rebuild the old Training profile page did when the mode changes without a saved week
+            // TODO(rc3-engine): profile changes that affect planning → propose change + before/after preview (GR-07/08)
+            .onChange(of: store.profile.trainingMode) { _, _ in
+                if store.availability == nil {
+                    _ = store.regenerate(weekOf: Date(), replaceEdited: false)
+                    _ = store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false)
+                }
+            }
             .alert("Delete everything on this phone?", isPresented: $confirmDelete) {
                 Button("Delete", role: .destructive) { cloud.reset(); device.forget(); store.resetAll(); store.guest = true }
                 Button("Cancel", role: .cancel) {}
@@ -59,53 +48,123 @@ struct ProfileTabView: View {
             }
         }
     }
-    private func link<D: View>(_ title: String, _ icon: String, _ subtitle: String, @ViewBuilder _ d: @escaping () -> D) -> some View {
-        NavigationLink { d() } label: {
-            HStack(spacing: 12) {
-                Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(BC.accent).frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) { Text(title).font(.body.weight(.semibold)); Text(subtitle).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
-            }.padding(.vertical, 2)
-        }
-    }
-    private var initials: String { let p = store.profile.name.split(separator: " "); return p.isEmpty ? "R" : p.prefix(2).map { String($0.prefix(1)).uppercased() }.joined() }
-    private var hrSummary: String { "max \(store.profile.estimatedMaxHR) bpm (\(store.profile.maxHRLabel))" + (store.profile.restHR.map { " · rest \($0)" } ?? "") }
-    private var deviceSummary: String {
-        var parts: [String] = []
-        parts.append(device.state == .ready ? "BikeComputer connected" : device.remembered ? "BikeComputer remembered" : "no BikeComputer")
-        parts.append(sync.state.label)
-        return parts.joined(separator: " · ")
-    }
-}
 
-// MARK: - Rider information
-struct RiderInfoPage: View {
-    @EnvironmentObject private var store: Store
-    @State private var birth = ""
-    @State private var height = ""
-    private let genders = ["Prefer not to say", "Female", "Male", "Other"]
-    var body: some View {
-        Form {
-            Section("Name") { TextField("Your name", text: $store.profile.name).textContentType(.givenName) }
-            Section {
-                NumberRow(title: "Birth year", placeholder: "not set", text: $birth, range: 1900...Calendar.current.component(.year, from: Date())) { v in store.updateProfile { $0.birthYear = v } }
-                    .onAppear { birth = store.profile.birthYear.map(String.init) ?? "" }
-                Picker("Gender", selection: Binding(get: { store.profile.gender ?? genders[0] }, set: { g in store.updateProfile { $0.gender = g == genders[0] ? nil : g } })) { ForEach(genders, id: \.self) { Text($0).tag($0) } }
-            } footer: { Text("Birth year sets the estimated max heart rate until you enter a measured one. Gender is optional and only stored on this phone.") }
-            Section("Body") {
+    // MARK: Personal
+    private var personal: some View {
+        Section("Personal") {
+            HStack {
+                Text("Name")
+                Spacer()
+                TextField("Your name", text: $store.profile.name).textContentType(.givenName).multilineTextAlignment(.trailing)
+            }
+            // TODO(rc3-engine): date of birth (onboarding r7) when the profile stores it; birth year until then
+            NumberRow(title: "Birth year", placeholder: "not set", text: $birth, range: 1900...Calendar.current.component(.year, from: Date())) { v in store.updateProfile { $0.birthYear = v } }
+                .onAppear { birth = store.profile.birthYear.map(String.init) ?? "" }
+            Stepper(value: Binding(get: { store.profile.weightKg }, set: { v in store.updateProfile { $0.weightKg = v; $0.refreshAssumption() } }), in: 40...150, step: 0.5) {
                 HStack { Text("Weight"); Spacer(); Text(weightText).foregroundStyle(.secondary).monospacedDigit() }
-                Slider(value: $store.profile.weightKg, in: 40...150, step: 0.5).onChange(of: store.profile.weightKg) { _, _ in store.profile.refreshAssumption() }
-                NumberRow(title: "Height (cm)", placeholder: "not set", text: $height, range: 120...230) { v in store.updateProfile { $0.heightCm = v } }
-                    .onAppear { height = store.profile.heightCm.map(String.init) ?? "" }
             }
-            Section("Units") {
-                Picker("Distance and speed", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                Text("Weight stays in kilograms; the board receives the same unit setting.").font(.footnote).foregroundStyle(.secondary)
-            }
-            Section { Text("Profile version \(store.profile.version). Name, weight, birth year and units are shared with the BikeComputer; the phone is the authority once paired.").font(.caption2).foregroundStyle(.secondary) }
+            .accessibilityIdentifier("profileWeight")
         }
-        .navigationTitle("Rider information").navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: Training (replaces the old Training profile page)
+    private var training: some View {
+        Section("Training") {
+            ProfileSegmentRow(title: "Type") {
+                Picker("Type", selection: Binding(get: { store.profile.trainingMode }, set: { m in store.updateProfile { p in p.trainingMode = m; if m == .cycling { p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0 } else if p.liftDaysPerWeek == 0 { p.liftDaysPerWeek = 2; p.liftingHoursPerWeek = 2 } } })) {
+                    ForEach(TrainingMode.allCases, id: \.self) { Text(ProfileText.mode($0)).tag($0) }
+                }
+            }
+            .accessibilityIdentifier("profileType")
+            if store.profile.trainingMode == .hybrid {
+                ProfileSegmentRow(title: "Priority") {
+                    Picker("Priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) {
+                        ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                }
+            }
+            ProfileSegmentRow(title: store.profile.trainingMode == .strength ? "Strength level" : "Cycling level") {
+                Picker("Level", selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v; $0.refreshAssumption() } })) {
+                    ForEach(RiderProfile.Level.allCases, id: \.self) { Text(ProfileText.level($0)).tag($0) }
+                }
+            }
+            if store.profile.trainingMode == .hybrid {
+                // TODO(rc3-engine): separate strength experience (onboarding r7, GR-04/05); one level is stored today
+                LabeledContent("Strength level", value: "Same as cycling")
+            }
+            NavigationLink { GoalPage() } label: { LabeledContent("Goal", value: store.profile.goal.title) }
+                .accessibilityIdentifier("profileGoal")
+            Button { showAvailability = true } label: {
+                HStack {
+                    Text("Week").foregroundStyle(.primary)
+                    Spacer()
+                    AvailabilityIcons(availability: store.effectiveAvailability)
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+            }
+            .accessibilityIdentifier("profileWeek")
+            NavigationLink { WeeklyTimePage() } label: { LabeledContent("Time", value: timeText) }
+                .accessibilityIdentifier("profileTime")
+            if store.profile.trainingMode.includesLifting {
+                NavigationLink { EquipmentPage() } label: { LabeledContent("Equipment", value: store.equipment.isSet ? "\(store.equipment.owned.count) items" : "Not set") }
+                    .accessibilityIdentifier("profileEquipment")
+            }
+            if store.profile.trainingMode.includesCycling {
+                // TODO(rc3-engine): FTP source Unknown / Entered / Estimated / Tested — an unknown FTP shows "Unknown", never watts
+                NavigationLink { PowerCyclingPage() } label: { LabeledContent("FTP", value: "\(store.profile.ftpW) W · \(store.profile.ftpLabel)") }
+                    .accessibilityIdentifier("profileFTP")
+            }
+            NavigationLink { HeartRatePage() } label: { LabeledContent("Heart rate", value: "max \(store.profile.estimatedMaxHR)") }
+            NavigationLink { TrainingPreferencesPage() } label: { Text("Preferences") }
+                .accessibilityIdentifier("profilePreferences")
+        }
+    }
+
+    // MARK: Settings (one home for each app setting)
+    private var settings: some View {
+        Section("Settings") {
+            ProfileSegmentRow(title: "Units") {
+                Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0 == .metric ? "Metric" : "Imperial").tag($0) } }
+            }
+            ProfileSegmentRow(title: "Appearance") {
+                Picker("Appearance", selection: $store.settings.appearance) { ForEach(AppSettings.Appearance.allCases, id: \.self) { Text($0.title).tag($0) } }
+            }
+            Toggle("Ride notifications", isOn: $store.settings.backgroundNotice)
+                .accessibilityIdentifier("settingsNotifications")
+            NavigationLink { RideCoachSettingsPage() } label: { Text("Ride & coach") }
+                .accessibilityIdentifier("settingsRide")
+            NavigationLink { HealthSafetyPage() } label: { LabeledContent("Health & safety", value: HealthSafetyPage.summary(store.profile)) }
+                .accessibilityIdentifier("settingsHealthSafety")
+            NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
+            // Accounts are off in this version (ReleaseFlags.accountsEnabled): nothing to sign in to
+            LabeledContent("Account", value: "Not needed")
+        }
+    }
+
+    private var about: some View {
+        Section {
+            LabeledContent("Version", value: "Cyclift \(AppInfo.label)")
+            NavigationLink("Terms of use") { LegalView(kind: .terms) }
+            if let mail = SupportInfo.mailURL {
+                Link(destination: mail) { HStack { Text("Contact support"); Spacer(); Image(systemName: "envelope").foregroundStyle(.secondary) } }
+            }
+            Link(destination: SupportInfo.supportPage) { HStack { Text("Support page"); Spacer(); Image(systemName: "arrow.up.right.square").foregroundStyle(.secondary) } }
+            if let e = store.lastSaveError { Text("Save problem: \(e)").font(.footnote).foregroundStyle(BC.warn) }
+        } header: { Text("About") }
+    }
+
+    private var headerLine: String {
+        let p = store.profile
+        return ProfileText.mode(p.trainingMode) + " · " + ProfileText.level(p.level)
     }
     private var weightText: String { store.settings.units == .imperial ? String(format: "%.1f kg (%.0f lb)", store.profile.weightKg, store.profile.weightKg * 2.20462) : String(format: "%.1f kg", store.profile.weightKg) }
+    private var timeText: String {
+        let p = store.profile
+        var parts: [String] = []
+        if p.trainingMode.includesCycling { parts.append("\(p.cyclingDaysPerWeek) rides · \(p.hoursPerWeek) h") }
+        if p.trainingMode.includesLifting { parts.append("\(p.liftDaysPerWeek) lifts · \(p.liftingHoursPerWeek) h") }
+        return parts.joined(separator: " · ")
+    }
 }
 
 /// A numeric field that only writes a valid value (or nil when cleared) — never a half-typed number.
@@ -124,82 +183,6 @@ struct NumberRow: View {
                 }
         }
     }
-}
-
-// MARK: - Training profile
-struct TrainingProfilePage: View {
-    @EnvironmentObject private var store: Store
-    @State private var showAvailability = false
-    var body: some View {
-        Form {
-            Section {
-                Picker("Training mode", selection: Binding(get: { store.profile.trainingMode }, set: { m in store.updateProfile { p in p.trainingMode = m; if m == .cycling { p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0 } else if p.liftDaysPerWeek == 0 { p.liftDaysPerWeek = 2; p.liftingHoursPerWeek = 2 } } })) { ForEach(TrainingMode.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                Text(store.profile.trainingMode.hint).font(.footnote).foregroundStyle(.secondary)
-                if store.profile.trainingMode == .hybrid {
-                    Picker("Main priority", selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } })) { ForEach(TrainingPriority.allCases, id: \.self) { Text($0.title).tag($0) } }
-                    NavigationLink { HybridPlanEditor() } label: { HStack { Text("Hybrid plan"); Spacer(); Text(hybridSummary).font(.caption).foregroundStyle(.secondary).clampLines(1) } }.accessibilityIdentifier("hybridPlanLink")
-                }
-                Picker("Recovery", selection: Binding(get: { store.profile.recoveryCapacity ?? .normal }, set: { v in store.updateProfile { $0.recoveryCapacity = v }; store.rebuildFromHybridAnswers(newDays: false) })) { ForEach(RecoveryCapacity.allCases, id: \.self) { Text($0.title).tag($0) } }
-                    .accessibilityIdentifier("recoveryCapacity")
-                NavigationLink { HealthCheckView() } label: { HStack { Text("Health check"); Spacer(); Text({ switch store.profile.readiness.screen { case .notAnswered: return "not answered"; case .clear: return "done"; case .needsClearance: return "clearance needed"; case .cleared: return "cleared"; case .stop: return "see a doctor"; case .paused: return "paused (ill)" } }()).font(.caption).foregroundStyle(.secondary) } }.accessibilityIdentifier("healthCheckLink")
-                NavigationLink { AdjustmentsView() } label: { HStack { Text("Coach adjustments"); Spacer(); Text(store.activeAdaptations.isEmpty ? (store.settings.autoAdapt ? "none in force" : "automatic off") : "\(store.activeAdaptations.count) in force").font(.caption).foregroundStyle(.secondary) } }
-            } header: { Text("Training mode") } footer: { Text("Hybrid Athlete: one coach for cycling and lifting, with separate hour budgets. Changing the mode rebuilds the coming weeks around your days (hand-edited sessions are kept).") }
-            Section("Goal") {
-                ForEach(RiderProfile.Goal.onboardingChoices, id: \.self) { g in
-                    Button { store.updateProfile { $0.goal = g } } label: { HStack { VStack(alignment: .leading) { Text(g.title).foregroundStyle(.primary); Text(g.hint).font(.caption).foregroundStyle(.secondary) }; Spacer(); if store.profile.goal == g { Image(systemName: "checkmark").foregroundStyle(BC.accent) } } }
-                }
-            }
-            Section("Experience level") {
-                Picker("Level", selection: $store.profile.level) { ForEach(RiderProfile.Level.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                    .onChange(of: store.profile.level) { _, _ in store.profile.refreshAssumption() }
-                Text(store.profile.level.hint).font(.footnote).foregroundStyle(.secondary)
-            }
-            Section("Sports and activities") { NavigationLink("Sports (\(store.profile.sports.count) selected)") { SportsPicker() } }
-            if store.profile.trainingMode.includesLifting {
-                Section("Strength") {
-                    NavigationLink { TemplatesView() } label: { HStack { Text("Routines (templates)"); Spacer(); Text("\(store.templates.count)").foregroundStyle(.secondary) } }
-                    NavigationLink { WeekdayRoutinesPage() } label: { HStack { Text("Routine per weekday"); Spacer(); Text("\(store.weekdayRoutines.count) set").foregroundStyle(.secondary) } }
-                    NavigationLink { EquipmentPage() } label: { HStack { Text("Equipment I own"); Spacer(); Text(store.equipment.isSet ? "\(store.equipment.owned.count) items" : "not set").foregroundStyle(.secondary) } }
-                    NavigationLink { StrengthPrefsPage() } label: { HStack { Text("Strength programming"); Spacer(); Text(store.plannerContext().goal.title).font(.footnote).foregroundStyle(.secondary) } }.accessibilityIdentifier("strengthProgramming")
-                    NavigationLink { MyExercisesView() } label: { HStack { Text("My exercises"); Spacer(); Text("\(store.customExercises.count) custom · \(ExerciseCatalogue.builtIn.count) built in").font(.caption).foregroundStyle(.secondary) } }
-                }
-            }
-            Section {
-                if store.profile.trainingMode.includesCycling {
-                    Stepper("Cycling: \(store.profile.cyclingDaysPerWeek) rides a week", value: Binding(get: { store.profile.cyclingDaysPerWeek }, set: { v in store.updateProfile { $0.cyclingDaysPerWeek = v } }), in: 1...6)
-                    Stepper("Cycling budget: \(store.profile.hoursPerWeek) h", value: $store.profile.hoursPerWeek, in: 1...25)
-                }
-                if store.profile.trainingMode.includesLifting {
-                    Stepper("Strength: \(store.profile.liftDaysPerWeek) lifts a week", value: Binding(get: { store.profile.liftDaysPerWeek }, set: { v in store.updateProfile { $0.liftDaysPerWeek = v } }), in: 1...6)
-                    Stepper("Lifting budget: \(store.profile.liftingHoursPerWeek) h", value: Binding(get: { store.profile.liftingHoursPerWeek }, set: { v in store.updateProfile { $0.liftingHoursPerWeek = v } }), in: 1...12)
-                }
-                Button { showAvailability = true } label: { HStack { Text("Training days and durations"); Spacer(); Text(availabilityText).font(.caption).foregroundStyle(.secondary) } }
-                let a = store.effectiveAvailability
-                HStack(spacing: 4) { ForEach(0..<7, id: \.self) { i in VStack(spacing: 2) { Text(WeeklyAvailability.dayNames[i]).font(.caption2.weight(.heavy)).foregroundStyle(.secondary).lineLimit(1); Image(systemName: a.days[i].activity.icon).font(.caption).foregroundStyle(a.days[i].activity == .rest ? .secondary : BC.accent) }.frame(maxWidth: .infinity) } }
-            } header: { Text("Weekly availability") } footer: { Text("The plan is built around the days you choose. Cycling hours and lifting hours are separate budgets; the coach schedules up to each and suggests changes instead of exceeding them.") }
-            Section("Training history") {
-                let rides = store.rides
-                LabeledContent("Rides recorded", value: "\(rides.count)")
-                LabeledContent("Total riding", value: Fmt.duration(seconds: rides.reduce(0) { $0 + $1.durationS }))
-                LabeledContent("Sessions completed", value: "\(store.plan.filter { $0.done }.count)")
-                LabeledContent("Strength sessions logged", value: "\(store.strength.count)")
-                LabeledContent("Total lifting", value: Fmt.duration(minutes: store.strength.reduce(0) { $0 + $1.minutes }))
-                if let first = rides.last { LabeledContent("First ride", value: first.start.dayAndDate) }
-            }
-        }
-        .navigationTitle("Training profile").navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
-        .onChange(of: store.profile.trainingMode) { _, _ in if store.availability == nil { store.regenerate(weekOf: Date(), replaceEdited: false); store.regenerate(weekOf: Calendar.current.date(byAdding: .day, value: 7, to: Date())!, replaceEdited: false) } }
-    }
-    private var hybridSummary: String {
-        let p = store.profile
-        var parts: [String] = []
-        if let g = p.hybridGoal { parts.append(g.title.lowercased()) }
-        if let d = p.trainingDaysPerWeek { parts.append("\(d) days") }
-        if let s = p.strengthSplit { parts.append(s.short) }
-        return parts.isEmpty ? "goal, split, equipment" : parts.joined(separator: " · ")
-    }
-    private var availabilityText: String { let a = store.effectiveAvailability; return "\(a.cycleDays) ride · \(a.liftDays) lift days" + (a.fixedAssignments > 0 ? " · \(a.fixedAssignments) fixed" : "") + (store.availability == nil ? " (suggested)" : "") }
 }
 
 // MARK: - Heart rate
@@ -293,54 +276,6 @@ struct PowerCyclingPage: View {
     private var meterText: String {
         guard device.state == .ready, let l = device.live else { return device.remembered ? "via the BikeComputer (not connected)" : "pairs on the board" }
         switch l.meterLink { case 4: return "connected (direct on the board)"; case 1: return "not paired"; case 2: return "searching"; case 3: return "connecting"; case 5: return "reconnecting"; default: return "off" }
-    }
-}
-
-// MARK: - App & device settings
-struct AppSettingsPage: View {
-    @EnvironmentObject private var store: Store
-    @EnvironmentObject private var device: DeviceLink
-    @EnvironmentObject private var sync: ProfileSync
-    var body: some View {
-        Form {
-            Section("Display and theme") {
-                Picker("Appearance", selection: $store.settings.appearance) { ForEach(AppSettings.Appearance.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                Toggle("Keep the screen on during a ride", isOn: $store.settings.keepScreenOn)
-                NavigationLink("Ride tiles (classic layout)") { TilePicker() }
-            }
-            Section("Coach") {
-                Toggle("Coach instructions during rides", isOn: $store.settings.coachEnabled)
-                Picker("How much it talks", selection: $store.settings.coachTalk) { ForEach(AppSettings.CoachTalk.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-            }
-            Section {
-                Toggle("Show \"recording in the background\" notice", isOn: $store.settings.backgroundNotice)
-                Text("A local notification while a phone-only ride records with the screen locked. No push notifications are used.").font(.footnote).foregroundStyle(.secondary)
-            } header: { Text("Notifications") }
-            Section {
-                Text("Everything stays on this iPhone: Cyclift has no account and no server. No analytics, no advertising. Apple Health is used only when you connect it in Connections.").font(.footnote).foregroundStyle(.secondary)
-                NavigationLink("Privacy policy") { LegalView(kind: .privacy) }
-                Text("Export or delete your data: Profile › Your data.").font(.footnote).foregroundStyle(.secondary)
-            } header: { Text("Privacy") }
-            Section("Recording") {
-                Toggle("Phone-only mode", isOn: $store.settings.phoneOnlyMode)
-                Text("On: this phone records every ride even with a BikeComputer connected (its values are shown, not merged). Off: a connected BikeComputer is the recorder.").font(.footnote).foregroundStyle(.secondary)
-                Toggle("Connect to the BikeComputer automatically", isOn: Binding(get: { store.settings.autoConnectBoard }, set: { store.settings.autoConnectBoard = $0; device.autoConnect = $0 }))
-            }
-            Section("BikeComputer sync") {
-                NavigationLink { SyncStatusView() } label: { HStack { Text("Sync status"); Spacer(); Text(sync.state.label).font(.footnote).foregroundStyle(.secondary).lineLimit(1) } }
-                Text("Profile sync with the BikeComputer works over Bluetooth with firmware 0.6.0 or newer.").font(.footnote).foregroundStyle(.secondary)
-            }
-            Section("Firmware") {
-                LabeledContent("Board firmware", value: device.info?.fw ?? (device.remembered ? "connect to read" : "no board"))
-                LabeledContent("Needed for sync / Wi-Fi / settings", value: "0.6.0")
-                Text("BikeComputer firmware is installed from a computer with the BikeComputer installer; the app does not update the device.").font(.footnote).foregroundStyle(.secondary)
-            }
-            Section("Device settings") {
-                NavigationLink { DeviceSettingsView() } label: { Label("BikeComputer settings and Wi-Fi", systemImage: "slider.horizontal.3") }
-                if let i = device.info, !(i.hasSettings && i.hasProfileSync && i.hasWiFi) { Text("Board firmware \(i.fw): device settings, Wi-Fi setup and profile sync from the phone need firmware 0.6.0.").font(.footnote).foregroundStyle(BC.stale) }
-            }
-        }
-        .navigationTitle("App & device settings").navigationBarTitleDisplayMode(.inline)
     }
 }
 

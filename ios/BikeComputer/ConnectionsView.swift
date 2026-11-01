@@ -1,64 +1,61 @@
 import SwiftUI
 
-/// Connections dashboard, built on the hub's source model (docs/INTEGRATIONS.md). Every live source — the optional
-/// BikeComputer, Bluetooth sensors paired directly with this phone, the Apple Watch, phone GPS — and every imported
-/// source (Apple Health; the planned cloud providers only when ReleaseFlags allows — never in 1.0) with one status colour, tappable for details. Red only
-/// for what the rider set up or the ride configuration requires (ConnectionRules). Nothing here is required: the app
-/// rides with the phone alone.
+/// Devices & Connections (rc3, owner 1 Nov). The rows live in ONE place — `DevicesConnectionsRows` — shown inline in
+/// Profile › Devices & Connections. This page (opened from Ride › Manage) is the same rows plus what is in use right
+/// now and the pipeline check; it is not a second settings page. Nothing here is required: the app rides with the phone
+/// alone. Red only for what the rider set up (ConnectionRules).
 struct ConnectionsView: View {
+    @EnvironmentObject private var hub: SensorHub
+    @EnvironmentObject private var monitor: PipelineMonitor
+
+    var body: some View {
+        List {
+            Section { PipelineBanner(monitor: monitor) }
+            Section { InUseNowRows(hub: hub) } header: { Text("In use now") }
+            Section { DevicesConnectionsRows() } header: { Text("Devices") }
+        }
+        .navigationTitle("Devices")
+    }
+}
+
+/// One row per device or source, each with its status and one way to connect, disconnect or manage it (the detail
+/// page behind the row holds the actions). Used by Profile and by ConnectionsView.
+struct DevicesConnectionsRows: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var device: DeviceLink
     @EnvironmentObject private var watch: WatchLink
     @EnvironmentObject private var location: LocationService
-    @EnvironmentObject private var reach: Reachability
     @EnvironmentObject private var health: HealthAccess
-    @EnvironmentObject private var sync: ProfileSync
     @EnvironmentObject private var hub: SensorHub
     @EnvironmentObject private var monitor: PipelineMonitor
     @State private var tick = Date()
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        List {
-            Section {
-                PipelineBanner(monitor: monitor)
-                NavigationLink { PipelineDiagnosticsView() } label: { Label("Diagnostics", systemImage: "stethoscope") }
-                    .accessibilityIdentifier("connectionsDiagnostics")
-            } footer: { Text("Checked every second; reconnects and restarts happen automatically. Export a technical report from Diagnostics.") }
-            Section {
-                InUseNowRows(hub: hub)
-            } header: { Text("In use now") } footer: {
-                Text("One value per metric. When two sources give the same metric, the first available wins: heart rate — strap on the BikeComputer, strap paired here, Apple Watch (or the watch first if you chose it in Profile); speed — wheel sensor, then phone GPS; power and cadence — power meter via the BikeComputer, then a sensor paired here.")
-            }
-            Section {
-                NavigationLink { BoardConnectionDetail() } label: { ConnRow(status: boardStatus, title: "BikeComputer", subtitle: boardSubtitle, icon: "circle.hexagongrid.circle") }
-                BLESensorRows(ble: hub.ble, hub: hub)
-                NavigationLink { WatchConnectionDetail() } label: { ConnRow(status: watchStatus, title: "Apple Watch", subtitle: watchSubtitle, icon: "applewatch") }
-                NavigationLink { PhoneConnectionDetail(kind: .gps) } label: { ConnRow(status: gpsStatus, title: "Phone GPS", subtitle: gpsSubtitle, icon: "location") }
-            } header: { Text("Live sources") } footer: {
-                Text("Ride with any combination: the phone alone (GPS), Bluetooth sensors paired here, an Apple Watch, or the optional BikeComputer.")
-            }
+        Group {
+            NavigationLink { WatchConnectionDetail() } label: { ConnRow(status: watchStatus, title: "Apple Watch", subtitle: watchSubtitle, icon: "applewatch") }
+                .accessibilityIdentifier("deviceWatch")
+            NavigationLink { BoardConnectionDetail() } label: { ConnRow(status: boardStatus, title: "BikeComputer", subtitle: boardSubtitle, icon: "circle.hexagongrid.circle") }
+                .accessibilityIdentifier("deviceBoard")
             if device.remembered || liveNow != nil {
-                Section {
-                    NavigationLink { SensorConnectionDetail(kind: .meter) } label: { ConnRow(status: meterStatus, title: "Power meter via BikeComputer", subtitle: meterSubtitle, icon: "bolt") }
-                    NavigationLink { SensorConnectionDetail(kind: .strap) } label: { ConnRow(status: strapStatus, title: "Heart-rate strap via BikeComputer", subtitle: strapSubtitle, icon: "heart") }
-                    NavigationLink { SensorConnectionDetail(kind: .speed) } label: { ConnRow(status: .gray, title: "Speed / cadence via BikeComputer", subtitle: (device.info?.fw ?? "") >= "0.6.0" ? "pair on the board: Connections › Cadence / Speed" : "pair it with this phone instead (Bluetooth sensors)", icon: "gauge.with.dots.needle.33percent") }
-                } header: { Text("Sensors paired on the BikeComputer") } footer: { Text("These pair on the board (its Connections menu). The phone shows what the board reports.") }
+                NavigationLink { SensorConnectionDetail(kind: .meter) } label: { ConnRow(status: meterStatus, title: "Power meter (board)", subtitle: meterSubtitle, icon: "bolt") }
+                NavigationLink { SensorConnectionDetail(kind: .strap) } label: { ConnRow(status: strapStatus, title: "Heart-rate strap (board)", subtitle: strapSubtitle, icon: "heart") }
             }
-            Section("Phone") {
+            BLESensorRows(ble: hub.ble, hub: hub)
+            NavigationLink { HealthConnectionDetail() } label: { ConnRow(status: healthStatus, title: "Apple Health", subtitle: healthSubtitle, icon: "heart.text.square") }
+                .accessibilityIdentifier("deviceHealth")
+            NavigationLink { PhoneConnectionDetail(kind: .gps) } label: { ConnRow(status: gpsStatus, title: "Phone GPS", subtitle: gpsSubtitle, icon: "location") }
+            if bluetoothStatus != .green {
                 NavigationLink { PhoneConnectionDetail(kind: .bluetooth) } label: { ConnRow(status: bluetoothStatus, title: "Bluetooth", subtitle: bluetoothSubtitle, icon: "antenna.radiowaves.left.and.right") }
-                NavigationLink { PhoneConnectionDetail(kind: .internet) } label: { ConnRow(status: ConnectionRules.internet(online: reach.online), title: "Internet", subtitle: reach.online ? "online via \(reach.kind)" : "offline · the app keeps working", icon: "network") }
             }
-            Section {
-                NavigationLink { HealthConnectionDetail() } label: { ConnRow(status: healthStatus, title: "Apple Health", subtitle: healthSubtitle, icon: "heart.text.square") }
-                if ReleaseFlags.plannedProvidersVisible {
-                    ForEach(ProviderCatalog.planned) { p in
-                        NavigationLink { PlannedProviderDetail(provider: p) } label: { ConnRow(status: ConnectionRules.source(p.status), title: p.name, subtitle: "Planned — not available yet", icon: p.icon) }
-                    }
+            if ReleaseFlags.plannedProvidersVisible {
+                ForEach(ProviderCatalog.planned) { p in
+                    NavigationLink { PlannedProviderDetail(provider: p) } label: { ConnRow(status: ConnectionRules.source(p.status), title: p.name, subtitle: "Planned — not available yet", icon: p.icon) }
                 }
-            } header: { Text("Imported (after the activity)") } footer: { Text("Imported workouts add to your history after the activity — never live values.") }
+            }
+            NavigationLink { PipelineDiagnosticsView() } label: { Label("Diagnostics", systemImage: "stethoscope") }
+                .accessibilityIdentifier("connectionsDiagnostics")
         }
-        .navigationTitle("Connections")
         .onReceive(timer) { tick = $0; health.refresh() }
     }
 
@@ -347,8 +344,7 @@ struct BoardConnectionDetail: View {
                 if let l = device.live, device.liveIsFresh { LabeledContent("Board battery", value: l.batteryPct.map { "≈\($0) % (estimate from voltage)" } ?? "unknown") }
                 if let t = device.lastConnectedAt, device.state == .ready { LabeledContent("Connected since", value: t.formatted(date: .omitted, time: .shortened)) }
                 if let t = device.lastDisconnectedAt, device.state != .ready { LabeledContent("Last seen", value: t.formatted(date: .abbreviated, time: .shortened)) }
-                LabeledContent("Profile sync", value: sync.statusLine)
-                if sync.state == .needsConfirmation { NavigationLink("Review the differences") { SyncStatusView() } }
+                NavigationLink { SyncStatusView() } label: { LabeledContent("Profile sync", value: sync.statusLine) }
             }
             Section {
                 Toggle("Connect automatically", isOn: Binding(get: { store.settings.autoConnectBoard }, set: { store.settings.autoConnectBoard = $0; device.autoConnect = $0 }))

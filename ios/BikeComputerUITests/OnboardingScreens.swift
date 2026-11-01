@@ -63,16 +63,12 @@ final class OnboardingScreens: XCTestCase {
                     sleep(2)
                 }
             }
-            // finish (Start) and open the health check from Home
+            // finish (Start): Home first — rc3 (owner 1 Nov): no health questionnaire follows onboarding
             app.swipeUp(); app.swipeUp(); sleep(1)
             let start = app.buttons["Start"].firstMatch
             if start.waitForExistence(timeout: 5) { start.tap(); sleep(3) }
             shot("\(tag)-10-home-first")
-            let caution = app.buttons["homeCaution"].firstMatch
-            if caution.waitForExistence(timeout: 5) {
-                caution.tap(); sleep(2)
-                shotScrolling(app, "\(tag)-11-healthcheck")
-            }
+            XCTAssertFalse(app.buttons["homeCaution"].firstMatch.waitForExistence(timeout: 3), "\(tag): the health check must not be asked after onboarding")
             app.terminate()
         }
     }
