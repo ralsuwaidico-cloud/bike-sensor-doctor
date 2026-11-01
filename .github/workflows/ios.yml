@@ -55,9 +55,6 @@ concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  SPM_CACHE_KEY: spm-v1-${{ hashFiles('ios/project.yml') }}
-
 jobs:
   apple:
     runs-on: ubuntu-latest
@@ -119,7 +116,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ios/build/spm
-          key: ${{ env.SPM_CACHE_KEY }}
+          key: spm-v1-${{ hashFiles('ios/project.yml') }}
       - name: Quick check (compile, unit tests, main screens on SE + standard)
         timeout-minutes: 65
         env:
@@ -175,7 +172,7 @@ jobs:
         if: steps.skip.outputs.run == 'true'
         with:
           path: ios/build/spm
-          key: ${{ env.SPM_CACHE_KEY }}
+          key: spm-v1-${{ hashFiles('ios/project.yml') }}
       - name: Stage ${{ matrix.job }}
         if: steps.skip.outputs.run == 'true'
         timeout-minutes: ${{ matrix.minutes }}
@@ -208,7 +205,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ios/build/spm
-          key: ${{ env.SPM_CACHE_KEY }}
+          key: spm-v1-${{ hashFiles('ios/project.yml') }}
       - name: Archive, sign, verify, upload
         id: r
         timeout-minutes: 65
