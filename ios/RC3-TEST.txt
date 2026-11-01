@@ -1,0 +1,12 @@
+Cyclift RC3 test build (iPhone)
+
+New in this build
+- Onboarding: five screens (About you + training, Goals, Your week, Connections, Your plan). No health questionnaire.
+- Home: week strip (bicycle = ride, dumbbell = strength, moon = rest); tap a day to open it.
+- Plan: edits change the real workout and show a before/after preview; Plan changes keeps every version with Undo.
+- Progress: consistency first; FTP with its source; strength top set (Est. 1RM optional); 4/8/12-week checkpoints.
+- Ride: an Unknown FTP stays Unknown - targets use heart rate or effort (RPE), never invented watts.
+- Strength: next-set card with one-tap logging and rest timer.
+- Profile: Personal, Training, Devices & Connections, Settings (Health & safety has Pause training).
+
+Needs real hardware (not verified): Apple Watch, BikeComputer, heart-rate strap, power meter, Apple Health import.
