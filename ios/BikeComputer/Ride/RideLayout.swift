@@ -58,6 +58,8 @@ enum RideLabels {
     static let cadence = "RPM"
     static let powerUnverified = "POWER UNVERIFIED"
     static let ftpProvisional = "FTP PROVISIONAL"
+    /// RC3 / ENG-E1: the FTP is Unknown — watts are shown, no power zone or target is claimed.
+    static let ftpUnknown = "FTP UNKNOWN"
     static let provisional = "PROVISIONAL"
     static let coach = "COACH"
     static let details = "DETAILS ›"
@@ -69,7 +71,7 @@ enum RideLabels {
     static let tileTitles = ["Power", "Cadence", "Heart rate", "Speed", "Time", "Distance", "Lap", "Zone", "Normalized", "Board battery"]
 
     static var all: [String] {
-        [power, heartRate, cadence, powerUnverified, ftpProvisional, provisional, coach, details, layoutMenu, settings, demo, unverifiedSuffix, estimatedSuffix]
+        [power, heartRate, cadence, powerUnverified, ftpProvisional, ftpUnknown, provisional, coach, details, layoutMenu, settings, demo, unverifiedSuffix, estimatedSuffix]
             + tileTitles + RideLayout.allCases.flatMap { [$0.title, $0.blurb] } + MetricKind.allCases.map(\.missingText)
     }
 }

@@ -1,8 +1,7 @@
 import XCTest
 
-/// Onboarding audit (owner brief 29 Oct): screenshots of the CURRENT first-run flow and the health check, for the
-/// before/after review. No checks beyond "the step appeared"; nothing in the app is changed. Runs only when the runner
-/// has LAYOUT_DIR (ios/ci/build.sh with LAYOUT_TEST=OnboardingScreens); otherwise it is skipped.
+/// Onboarding r7 (rc3): the five-screen first run, checked step by step; screenshots only when the runner has
+/// LAYOUT_DIR (ios/ci/build.sh with LAYOUT_TEST=OnboardingScreens). Sizes from LAYOUT_SIZES (default L and AX3).
 final class OnboardingScreens: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = true }
 
@@ -27,6 +26,7 @@ final class OnboardingScreens: XCTestCase {
     }
     /// The screen, then (when it scrolls) up to three more screens of it, so the whole step is on record.
     private func shotScrolling(_ app: XCUIApplication, _ name: String) {
+        guard outDir != nil else { return }
         shot("\(name)-a")
         for part in ["b", "c", "d"] {
             let before = XCUIScreen.main.screenshot().pngRepresentation
@@ -36,9 +36,12 @@ final class OnboardingScreens: XCTestCase {
         }
     }
 
-    func testCurrentOnboardingAndHealthCheck() throws {
-        guard outDir != nil else { throw XCTSkip("screenshots only in CI (LAYOUT_DIR)") }
-        for size in sizes {
+    /// Onboarding r7 (rc3): Welcome, then five screens "1 of 5" … "5 of 5"; no height, no health questionnaire.
+    /// Screenshots in CI (LAYOUT_DIR) plus real checks: the step counter, the Hybrid-only rows, the week counts and that
+    /// Create plan lands on Home without a health prompt.
+    func testOnboardingR7FiveScreens() throws {
+        // outside the layout run (plain UI test pass) one text size keeps it quick; the layout run does both
+        for size in (outDir == nil ? ["L"] : sizes) {
             let tag = size.lowercased()
             let app = XCUIApplication()
             app.launchEnvironment["BC_UITEST_RESET"] = "1"
@@ -46,28 +49,35 @@ final class OnboardingScreens: XCTestCase {
             app.launch()
             let name = app.textFields["onboardingName"].firstMatch
             XCTAssertTrue(name.waitForExistence(timeout: 30), "welcome")
-            sleep(1); shotScrolling(app, "\(tag)-00-welcome")
-            app.swipeDown(); app.swipeDown(); sleep(1)
+            shot("\(tag)-00-welcome")
             name.tap(); name.typeText("Demo")
             app.buttons["onboardingContinue"].firstMatch.tap(); sleep(2)
-            // step 1: pick Hybrid so the hybrid-only parts of later steps are on record too
-            let hybrid = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Hybrid Athlete")).firstMatch
+            // 1 About you + training
+            XCTAssertTrue(app.staticTexts["1 of 5"].waitForExistence(timeout: 10), "\(tag): step counter on screen 1")
+            XCTAssertFalse(app.staticTexts["Height"].exists, "\(tag): height is not asked in onboarding (r7)")
+            let hybrid = app.buttons["Hybrid"].firstMatch
             if hybrid.waitForExistence(timeout: 5) { hybrid.tap(); sleep(1) }
-            let titles = ["01-mode", "02-week", "03-days", "04-about", "05-goal", "06-hr-ftp", "07-devices", "08-health", "09-ready"]
+            XCTAssertTrue(app.staticTexts["Strength level"].waitForExistence(timeout: 5), "\(tag): Hybrid shows the strength level row")
+            XCTAssertTrue(app.staticTexts["Priority"].exists, "\(tag): Hybrid shows the priority row")
+            shotScrolling(app, "\(tag)-01-about")
+            let titles = ["02-goals", "03-week", "04-connections", "05-plan"]
             for (i, t) in titles.enumerated() {
+                app.swipeUp(); app.swipeUp(); sleep(1)
+                let next = app.buttons["onboardingNext"].firstMatch
+                XCTAssertTrue(next.waitForExistence(timeout: 5), "\(tag): Continue before \(t)")
+                next.tap(); sleep(2)
+                XCTAssertTrue(app.staticTexts["\(i + 2) of 5"].waitForExistence(timeout: 5), "\(tag): step counter on \(t)")
+                if t == "04-connections" { XCTAssertTrue(app.buttons["onboardingSkip"].firstMatch.waitForExistence(timeout: 5), "\(tag): Skip on Connections") }
+                if t == "03-week" { XCTAssertTrue(app.otherElements["onbWeekCounts"].exists || app.staticTexts["Tap a day to change it"].exists, "\(tag): week counts") }
                 app.swipeDown(); app.swipeDown(); sleep(1)
                 shotScrolling(app, "\(tag)-\(t)")
-                if i < titles.count - 1 {
-                    let skip = app.navigationBars.buttons["Skip"].firstMatch
-                    if skip.waitForExistence(timeout: 5) { skip.tap() } else { XCTFail("no Skip on \(t)"); break }
-                    sleep(2)
-                }
             }
-            // finish (Start): Home first — rc3 (owner 1 Nov): no health questionnaire follows onboarding
+            XCTAssertTrue(app.otherElements["onbWhy"].exists || app.staticTexts["WHY THIS PLAN"].exists, "\(tag): Why this plan")
             app.swipeUp(); app.swipeUp(); sleep(1)
-            let start = app.buttons["Start"].firstMatch
-            if start.waitForExistence(timeout: 5) { start.tap(); sleep(3) }
-            shot("\(tag)-10-home-first")
+            let create = app.buttons["onbCreatePlan"].firstMatch
+            XCTAssertTrue(create.waitForExistence(timeout: 5), "\(tag): Create plan")
+            create.tap(); sleep(3)
+            shot("\(tag)-06-home-first")
             XCTAssertFalse(app.buttons["homeCaution"].firstMatch.waitForExistence(timeout: 3), "\(tag): the health check must not be asked after onboarding")
             app.terminate()
         }

@@ -91,7 +91,7 @@ struct RideLayoutContent: View {
                 RideGauges.heartRate(live, big: false).frame(width: f.ring)
                 RideGauges.cadence(live, big: false).frame(width: f.ring)
             }
-            if f.powerBand { ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"], colors: D7.powerZoneColors, currentFraction: live.power.value.map { Targets.gaugeFraction($0, max: Targets.powerGaugeMaxW(ftp: live.ftp)) }, targetFraction: Targets.powerTargetFraction(targetZone: live.targetZone, ftp: live.ftp)) }
+            if f.powerBand && live.ftpKnown { ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"], colors: D7.powerZoneColors, currentFraction: live.power.value.map { Targets.gaugeFraction($0, max: Targets.powerGaugeMaxW(ftp: live.ftp)) }, targetFraction: Targets.powerTargetFraction(targetZone: live.targetZone, ftp: live.ftp)) }
             if f.hrBand { ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5"], colors: D7.hrZoneColors, currentFraction: live.hr.value.map { Targets.gaugeFraction($0, max: live.maxHr) }, targetFraction: Targets.hrTargetFraction(targetZone: live.targetHrZone)) }
             LiveGraphView(samples: coach.samples, seconds: RideCoach.keepSeconds).frame(height: f.graph)
             RideStatsRow(live: live, recorder: recorder)
@@ -109,7 +109,12 @@ struct RideLayoutContent: View {
                 AnalyticsNumber(metric: live.cadence, label: RideLabels.cadence, color: D7.violet)
             }.frame(height: 50)
             LiveGraphView(samples: coach.samples, seconds: RideCoach.keepSeconds).frame(height: graphH)
-            ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"], colors: D7.powerZoneColors, currentFraction: live.power.value.map { Targets.gaugeFraction($0, max: Targets.powerGaugeMaxW(ftp: live.ftp)) }, targetFraction: Targets.powerTargetFraction(targetZone: live.targetZone, ftp: live.ftp))
+            if live.ftpKnown {
+                ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"], colors: D7.powerZoneColors, currentFraction: live.power.value.map { Targets.gaugeFraction($0, max: Targets.powerGaugeMaxW(ftp: live.ftp)) }, targetFraction: Targets.powerTargetFraction(targetZone: live.targetZone, ftp: live.ftp))
+            } else {
+                // RC3 / ENG-E1: FTP unknown → the heart-rate zones are the reference (no power zones claimed)
+                ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5"], colors: D7.hrZoneColors, currentFraction: live.hr.value.map { Targets.gaugeFraction($0, max: live.maxHr) }, targetFraction: Targets.hrTargetFraction(targetZone: live.targetHrZone))
+            }
             RideStatsRow(live: live, recorder: recorder)
         }
     }

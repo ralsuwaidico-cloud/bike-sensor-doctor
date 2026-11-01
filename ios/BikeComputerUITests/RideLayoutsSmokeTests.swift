@@ -21,6 +21,10 @@ final class RideLayoutsSmokeTests: XCTestCase {
 
         let menu = app.buttons["rideLayoutMenu"].firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 15), "ride layout quick switch on the live screen")
+        // rc3: today's planned ride shows its current step with a target (entered FTP 210 W → watts allowed)
+        let strip = app.descendants(matching: .any)["rideStepStrip"].firstMatch
+        XCTAssertTrue(strip.waitForExistence(timeout: 10), "current ride step shown")
+        XCTAssertTrue(strip.label.contains("RPE"), "step target names the effort: \(strip.label)")
         XCTAssertTrue(app.otherElements["rideLayout.coach"].firstMatch.waitForExistence(timeout: 10), "default layout is Ride Coach")
         XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel embedded")
 
@@ -45,6 +49,23 @@ final class RideLayoutsSmokeTests: XCTestCase {
         app.buttons["rideDetails"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Ride details"].waitForExistence(timeout: 10))
         app.buttons["Done"].firstMatch.tap()
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
+    /// rc3 / ENG-E1: with an Unknown FTP (the build-121 starting assumption) the ride shows effort targets and no watts.
+    func testUnknownFTPRideShowsNoWatts() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.rideDayStore().replacingOccurrences(of: "\"ftpHow\":\"entered\"", with: "\"ftpHow\":\"assumed\"")
+        app.launch()
+        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "seeded rider lands on Home")
+        let centre = app.buttons["centreButton"].firstMatch
+        XCTAssertTrue(centre.waitForExistence(timeout: 10))
+        centre.tap()
+        for name in ["Done", "Cancel", "Close"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
+        let strip = app.descendants(matching: .any)["rideStepStrip"].firstMatch
+        XCTAssertTrue(strip.waitForExistence(timeout: 15), "current ride step shown")
+        XCTAssertTrue(strip.label.contains("RPE"), strip.label)
+        XCTAssertFalse(strip.label.contains(" W ·") || strip.label.contains(" W,"), "no watt target from an unknown FTP: \(strip.label)")
         XCTAssertEqual(app.state, .runningForeground)
     }
 

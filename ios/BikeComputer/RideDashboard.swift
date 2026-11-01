@@ -169,7 +169,8 @@ final class RideCoach: ObservableObject {
         workoutTitle = ride?.kind.title ?? "Free ride"
         plannedSec = ride.map { $0.minutes * 60 }
         self.powerTrusted = powerTrusted
-        bands = GraphBands.resolve(targets: nil, ftpW: p.ftpW, powerTrusted: powerTrusted, maxHr: p.estimatedMaxHR, targetZone: z, cadLo: p.cadenceLow, cadHi: p.cadenceHigh)
+        // RC3 / ENG-E1: an Unknown FTP draws no power band (reference only); the coach already treats it as assumed above
+        bands = GraphBands.resolve(targets: nil, ftpW: p.ftpKnown ? p.ftpW : 0, powerTrusted: powerTrusted, maxHr: p.estimatedMaxHR, targetZone: z, cadLo: p.cadenceLow, cadHi: p.cadenceHigh)
     }
     func reset() { engine.reset(); gate.reset(); cue = .none; cueAt = nil; samples = []; cooldownRequestedAtMs = nil; mainStartSec = nil; phase = .WARMUP }
     func requestCooldown(elapsedS: Int) { cooldownRequestedAtMs = Int64(elapsedS) * 1000 }

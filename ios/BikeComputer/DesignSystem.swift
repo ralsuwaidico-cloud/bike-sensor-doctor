@@ -308,3 +308,85 @@ struct MinTapStyle: ButtonStyle {
     }
 }
 extension ButtonStyle where Self == MinTapStyle { static var minTap: MinTapStyle { MinTapStyle() } }
+
+// MARK: - RC3 compact controls (onboarding r7 language, shared by onboarding, Ride and Strength)
+
+/// One labelled choice row: a segmented control at normal text sizes, a vertical list with checkmarks at accessibility
+/// sizes (never shrunk or clipped). Every option keeps a 44 pt hit area.
+struct CompactChoiceRow<T: Hashable>: View {
+    let title: String
+    let options: [T]
+    let label: (T) -> String
+    @Binding var selection: T
+    var identifier: String? = nil
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.xs) {
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            if typeSize.isAccessibilitySize {
+                VStack(spacing: 0) {
+                    ForEach(options, id: \.self) { o in
+                        Button { selection = o } label: {
+                            HStack {
+                                Text(label(o)).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: DS.s)
+                                if o == selection { Image(systemName: "checkmark").foregroundStyle(BC.accent) }
+                            }.frame(minHeight: DS.minTap).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(o == selection ? .isSelected : [])
+                    }
+                }
+            } else {
+                Picker(title, selection: $selection) { ForEach(options, id: \.self) { Text(label($0)).tag($0) } }
+                    .pickerStyle(.segmented)
+                    .frame(minHeight: DS.minTap)
+            }
+        }
+        .accessibilityIdentifier(identifier ?? title)
+    }
+}
+
+/// The weekly day kinds drawn with the owner's icons: bicycle = cycling, dumbbell = strength, moon = rest.
+enum DayKind: String, CaseIterable {
+    case ride, lift, both, rest
+    var icon: String { switch self { case .ride: return "bicycle"; case .lift: return "dumbbell"; case .both: return "figure.mixed.cardio"; case .rest: return "moon" } }
+    var title: String { switch self { case .ride: return "Cycling"; case .lift: return "Strength"; case .both: return "Cycling and strength"; case .rest: return "Rest" } }
+}
+
+/// One day of a week strip: short day name over its icon. `onTap` nil = display only.
+struct DayIconCell: View {
+    let dayName: String
+    let longDayName: String
+    let kind: DayKind
+    var highlighted = false
+    var onTap: (() -> Void)? = nil
+
+    var body: some View {
+        let content = VStack(spacing: 4) {
+            Text(dayName).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
+            Group {
+                if kind == .both {
+                    HStack(spacing: 1) { Image(systemName: DayKind.ride.icon); Image(systemName: DayKind.lift.icon) }.font(.caption2)
+                } else {
+                    Image(systemName: kind.icon).font(.body)
+                }
+            }
+            .frame(height: 22)
+        }
+        .frame(maxWidth: .infinity, minHeight: DS.minTap + 8)
+        .foregroundStyle(kind == .rest ? Color.secondary : (highlighted ? Color.white : BC.accent))
+        .background(highlighted ? BC.accent : (kind == .rest ? Color(.tertiarySystemGroupedBackground) : BC.accent.opacity(0.14)), in: RoundedRectangle(cornerRadius: 10))
+        return Group {
+            if let tap = onTap {
+                Button(action: tap) { content }.buttonStyle(.plain)
+            } else {
+                content
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(longDayName): \(kind.title)")
+        .accessibilityAddTraits(onTap == nil ? [] : .isButton)
+    }
+}

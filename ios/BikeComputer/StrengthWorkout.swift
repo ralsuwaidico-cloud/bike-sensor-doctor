@@ -114,6 +114,8 @@ struct StrengthWorkoutScreen: View {
                 if let r { Pill(text: r.focus.title); Text("\(r.entries.count) exercises · \(r.setCount) sets").font(.footnote).foregroundStyle(.secondary) }
                 if w.edited { Pill(text: "edited", color: BC.accent) }
                 if w.routineManual { Pill(text: "your choice", color: BC.zone(5)) }
+                // RC3 / ENG-H1: equipment not set → bodyweight session, labelled provisional
+                if r == nil, w.generatedEntries, store.equipment.isProvisional { Pill(text: "bodyweight · equipment not set", color: BC.stale).accessibilityIdentifier("provisionalEquipment") }
             }
             if let r, !w.done, r.estimatedMinutes != w.minutes {
                 Text("Routine ≈ \(Fmt.duration(minutes: r.estimatedMinutes)); \(Fmt.duration(minutes: w.minutes)) counts toward your lifting budget.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -500,6 +502,9 @@ struct StrengthSessionView: View {
     @State private var now = Date()
     /// Adaptive coach: the finished session waiting for its check-in (the finish sheet turns into the check-in).
     @State private var checkInFor: UUID? = nil
+    /// RC3: rest timer — when the last set was logged from the next-set card, and that exercise's prescribed rest.
+    @State private var lastLoggedAt: Date? = nil
+    @State private var lastRest: Int? = nil
 
     var body: some View {
         NavigationStack {
@@ -525,19 +530,19 @@ struct StrengthSessionView: View {
         let done = s.exercises?.reduce(0) { $0 + $1.doneSets.count } ?? 0, total = s.exercises?.reduce(0) { $0 + $1.sets.count } ?? 0
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Card {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 2) { Eyebrow(t: s.pausedAt != nil ? "Paused" : "Working time"); Text(clock(s.elapsedSeconds(now: now))).font(DS.number).monospacedDigit() }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 2) { Eyebrow(t: "Sets"); Text("\(done) / \(total)").font(.title2.weight(.bold)).monospacedDigit() }
-                    }
-                    HStack(spacing: 8) {
-                        if s.pausedAt == nil { Button { store.pauseActiveSession() } label: { Label("Pause", systemImage: "pause.fill").frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
-                        else { Button { store.resumeActiveSession() } label: { Label("Resume", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)) }
-                        Button(role: .destructive) { confirmDiscard = true } label: { Text("Discard").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
-                    }
-                    Text("Saved as you go — close Cyclift and come back later if you need to.").font(.caption2).foregroundStyle(.secondary)
+                // RC3: "What's my next set?" first — one card, one Log button
+                NextSetCard(session: s, now: now, lastLoggedAt: lastLoggedAt, lastRest: lastRest,
+                            limitMinutes: s.workoutId.flatMap { id in store.plan.first { $0.id == id }?.minutes },
+                            onLogged: { rest in lastLoggedAt = Date(); lastRest = rest },
+                            onFinish: { showFinish = true })
+                HStack(spacing: 8) {
+                    Text("\(done)/\(total) sets").font(.subheadline.weight(.semibold)).monospacedDigit().foregroundStyle(.secondary)
+                    Spacer()
+                    if s.pausedAt == nil { Button { store.pauseActiveSession() } label: { Label("Pause", systemImage: "pause.fill") }.buttonStyle(.bordered) }
+                    else { Button { store.resumeActiveSession() } label: { Label("Resume", systemImage: "play.fill") }.buttonStyle(.borderedProminent).tint(BC.zone(5)) }
+                    Button(role: .destructive) { confirmDiscard = true } label: { Text("Discard") }.buttonStyle(.bordered)
                 }
+                .controlSize(.large)
                 ForEach(Array((s.exercises ?? []).enumerated()), id: \.element.id) { idx, e in exerciseCard(e, index: idx) }
                 Button { showFinish = true } label: { Label("Finish workout", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
             }.padding()
@@ -583,6 +588,13 @@ struct StrengthSessionView: View {
                         Button(role: .destructive) { store.discardActiveSession(); showFinish = false; dismiss() } label: { Text("Discard — nothing is saved") }
                     } footer: { Text("Mark done records the session as done with no sets, weights or duration.") }
                 } else {
+                    if let es = store.activeSession?.exercises, es.contains(where: { NextSet.topSet($0) != nil }) {
+                        Section("Top sets") {
+                            ForEach(es.filter { NextSet.topSet($0) != nil }) { e in
+                                LabeledContent(e.name, value: NextSet.setText(NextSet.topSet(e)!, store.settings.units))
+                            }
+                        }
+                    }
                     Section("How did it feel?") {
                         Picker("Effort", selection: Binding(get: { rpe ?? 0 }, set: { rpe = $0 == 0 ? nil : $0 })) { Text("—").tag(0); ForEach(1...10, id: \.self) { Text("RPE \($0)").tag($0) } }
                         TextField("Notes (optional)", text: $notes, axis: .vertical).lineLimit(2...4)

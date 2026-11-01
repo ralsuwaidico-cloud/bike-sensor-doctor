@@ -149,7 +149,8 @@ final class RideLayoutTests: XCTestCase {
                            action: .REDUCE_PRESSURE, sources: "power", live: "190 W", short: "Ease off — power above target", why: "190 W vs zone 2")
         let m = riding { $0.power = 190; $0.powerUnverified = true; $0.ftpProvisional = true; $0.cue = cue; $0.cueActive = true }
         XCTAssertEqual(m.headline, "Reduce intensity to return to Zone 2")
-        XCTAssertTrue(m.tags.contains(RideLabels.provisional)); XCTAssertTrue(m.tags.contains(RideLabels.ftpProvisional))
+        XCTAssertTrue(m.tags.contains(RideLabels.provisional)); XCTAssertTrue(m.tags.contains(RideLabels.ftpUnknown))   // rc3: an Unknown FTP is labelled, never quoted as watts
+        XCTAssertFalse(m.why.contains("200 W"), m.why)
         XCTAssertTrue(m.detail.hasPrefix("Provisional"))
         XCTAssertTrue(m.why.contains("190 W") && m.why.contains("provisional"), m.why)
         // verified power + entered FTP → no provisional marks

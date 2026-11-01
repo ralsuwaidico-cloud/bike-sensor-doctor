@@ -73,7 +73,7 @@ struct RideTabView: View {
         i.hr = l.hr.value; i.cadence = l.cadence.value
         i.speedKmh = l.speedKmh; i.speedSource = l.speed.reading?.sourceLabel; i.imperial = l.imperial
         i.ftp = l.ftp; i.ftpProvisional = l.ftpProvisional
-        i.targetZone = coach.targetZone; i.hrBand = l.hrBandBpm; i.powerBand = l.powerBandW
+        i.targetZone = coach.targetZone; i.hrBand = l.hrBandBpm; i.powerBand = l.ftpKnown ? l.powerBandW : nil
         i.cadLo = l.cadLo; i.cadHi = l.cadHi; i.workoutTitle = coach.workoutTitle
         return CoachPanelModel.make(i)
     }
@@ -84,6 +84,10 @@ struct RideTabView: View {
         let panelH: CGFloat = size.height < 560 ? 92 : 104
         return VStack(spacing: 8) {
             header(l)
+            if let w = store.today, w.kind.isRide, !w.rideSteps.isEmpty {
+                RideStepStrip(steps: w.rideSteps, elapsedS: recorder.isActive || recorder.state == .ended ? recorder.elapsedS : 0,
+                              ftp: store.profile.targetFTP, hrZones: l.hr.usable ? store.profile.hrZones : nil)
+            }
             GeometryReader { g in
                 if g.size.width >= 200, g.size.height >= 120 {
                     RideLayoutContent(layout: layout, live: l, size: g.size, coach: coach, recorder: recorder, tiles: store.tiles, profile: store.profile, boardBattery: boardLive?.batteryPct)
@@ -120,7 +124,7 @@ struct RideTabView: View {
                 Spacer(minLength: 2)
                 if boardLive?.demo == true { DashTag(text: RideLabels.demo, color: D7.amber) }
                 if l.power.unverified { DashTag(text: RideLabels.powerUnverified, color: D7.amber) }
-                if l.power.usable || l.ftpProvisional { DashTag(text: l.ftpProvisional ? RideLabels.ftpProvisional : "FTP \(l.ftp) W", color: D7.mut) }
+                if l.power.usable || !l.ftpKnown { DashTag(text: l.ftpKnown ? "FTP \(l.ftp) W" : RideLabels.ftpUnknown, color: D7.mut) }
             }
             PipelineBanner(monitor: monitor, dark: true)
             ZStack(alignment: .leading) { D7.line.frame(height: 3); (coach.cueActive && recorder.state == .running ? D7.cyan : D7.line).frame(height: 3) }.clipShape(Capsule())
