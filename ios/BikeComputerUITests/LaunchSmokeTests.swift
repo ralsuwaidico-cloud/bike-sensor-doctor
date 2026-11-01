@@ -87,7 +87,7 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 10))
         let export = app.buttons["exportData"].firstMatch
         var tries = 0
-        while !(export.exists && export.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }   // the section is below the fold
+        while !(export.exists && export.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }   // the section is below the fold (rc3: after Settings)
         XCTAssertTrue(export.waitForExistence(timeout: 10), "Profile › Your data › Export my data")
         // no sign-in surface anywhere in 1.0
         XCTAssertFalse(app.buttons["profileCreateAccount"].exists, "no Create account row")
@@ -104,7 +104,7 @@ final class LaunchSmokeTests: XCTestCase {
         // Delete all data → confirmation; Cancel keeps everything
         let delete = app.buttons["deleteAllData"].firstMatch
         tries = 0
-        while !(delete.exists && delete.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }
+        while !(delete.exists && delete.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }
         XCTAssertTrue(delete.waitForExistence(timeout: 10))
         delete.tap()
         let alert = app.alerts["Delete everything on this phone?"].firstMatch
@@ -274,12 +274,15 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(opened, "quick strength log must open")
         XCTAssertTrue(app.buttons["Full body"].firstMatch.waitForExistence(timeout: 5) || app.staticTexts["Full Body"].firstMatch.waitForExistence(timeout: 2), "type grid visible")
         app.buttons["Cancel"].firstMatch.tap()
-        // Profile → Training profile page
+        // Profile (rc3: one screen) → Training › Goal page
         app.buttons["Profile"].firstMatch.tap()
-        let tp = app.buttons["Training profile"].firstMatch.exists ? app.buttons["Training profile"].firstMatch : app.staticTexts["Training profile"].firstMatch
-        XCTAssertTrue(tp.waitForExistence(timeout: 10)); tp.tap()
+        let goal = app.buttons["profileGoal"].firstMatch
+        XCTAssertTrue(goal.waitForExistence(timeout: 10), "Profile › Training › Goal row missing")
+        if !goal.isHittable { app.swipeUp(); sleep(1) }
+        goal.tap()
         sleep(1)
-        XCTAssertEqual(app.state, .runningForeground, "app died opening Training profile at large text")
+        XCTAssertEqual(app.state, .runningForeground, "app died opening Profile › Goal at large text")
+        app.navigationBars.buttons.firstMatch.tap(); sleep(1)
         app.buttons["Home"].firstMatch.tap()
         XCTAssertEqual(app.state, .runningForeground)
     }

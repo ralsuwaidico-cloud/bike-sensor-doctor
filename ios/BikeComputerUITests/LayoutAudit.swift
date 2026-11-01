@@ -189,8 +189,11 @@ final class LayoutAudit: XCTestCase {
             scrollUp(app); shot("\(tag)-14-progress-ftp")
             tab(app, "Profile"); shot("\(tag)-15-profile"); checkTexts(app, screen: "\(size) profile")
             if size == sizes.first && extras {
-                let tp = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Training profile'")).firstMatch
-                if tp.exists { tp.tap(); sleep(2); shot("\(tag)-16-training-profile"); scrollUp(app); shot("\(tag)-17-training-profile-lower"); app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+                // rc3: one Profile screen (Personal, Training, Devices & Connections, Settings) — its lower parts
+                scrollUp(app); shot("\(tag)-16-profile-training"); checkTexts(app, screen: "\(size) profile training")
+                scrollUp(app); shot("\(tag)-17-profile-devices-settings"); checkTexts(app, screen: "\(size) profile devices settings")
+                scrollUp(app); shot("\(tag)-17b-profile-data")
+                app.swipeDown(); app.swipeDown(); app.swipeDown(); app.swipeDown(); sleep(1)
             }
             // tab bar items never overlap the raised centre button
             checkKey(app, ids: ["Home", "Plan", "centreButton", "Progress", "Profile"], screen: "\(size) tab bar", minHeight: 30)
@@ -371,16 +374,15 @@ final class LayoutAudit: XCTestCase {
             } else { note("\(size): no Fix plan button (week within budget)") }
             scrollUp(app); shot("\(tag)-plan-lower"); checkScreen(app, "\(size) plan lower", tab: 1)
             scrollUp(app); shot("\(tag)-plan-lower2"); checkScreen(app, "\(size) plan lower 2", tab: 1)
-            // Connections (no board in the demo: what the link line says) — Home B moved the card to Profile › Connections
+            // Devices & Connections (rc3: rows inline in Profile; no board in the demo: what the link line says)
             tab(app, "Profile")
-            let conn = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Connections'")).firstMatch
-            if conn.waitForExistence(timeout: 3) {
-                conn.tap(); sleep(2); shot("\(tag)-connections"); checkScreen(app, "\(size) connections", tab: 4)
-                // the BikeComputer page (the owner's "stuck on Searching" screen): no board in the demo
-                let bc = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'BikeComputer'")).firstMatch
+            let bc = app.buttons["deviceBoard"].firstMatch
+            if bc.waitForExistence(timeout: 3) {
                 reveal(app, bc)
+                shot("\(tag)-connections"); checkScreen(app, "\(size) connections", tab: 4)
+                // the BikeComputer page (the owner's "stuck on Searching" screen)
                 if bc.exists { bc.tap(); sleep(3); shot("\(tag)-connections-bikecomputer"); checkScreen(app, "\(size) BikeComputer page", tab: 4) } else { note("\(size): BikeComputer row not found") }
-            } else { note("\(size): Connections link not found") }
+            } else { note("\(size): Devices & Connections rows not found") }
             XCTAssertEqual(app.state, .runningForeground)
             app.terminate()
         }
@@ -412,7 +414,9 @@ final class LayoutAudit: XCTestCase {
                 // health check pending / clearance needed: the action that resolves the hold is the health line at the top; it must be
                 // on screen without scrolling. Today's (easy) session under it may need a normal scroll at the largest text (owner 29 Oct).
                 let caution = app.buttons["homeCaution"].firstMatch
-                let holdLine = ["pending", "clearance"].contains(state)
+                // rc3 (owner 1 Nov): no health questionnaire — "pending" shows NO health line; a saved clearance restriction still does
+                if state == "pending" { XCTAssertFalse(caution.exists, "\(screen): the removed health-check line is still shown") }
+                let holdLine = state == "clearance"
                 if holdLine {
                     XCTAssertTrue(caution.exists, "\(screen): no health line")
                     if caution.exists { XCTAssertLessThanOrEqual(caution.frame.minY + 44, win.maxY - 105, "\(screen): health line below the fold \(caution.frame)"); note("\(screen): health line at \(Int(caution.frame.minY))–\(Int(caution.frame.maxY))") }

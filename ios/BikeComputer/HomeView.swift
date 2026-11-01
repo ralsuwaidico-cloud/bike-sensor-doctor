@@ -29,7 +29,10 @@ struct HomeView: View {
                     HomeHeader(name: store.profile.name)
                     VStack(alignment: .leading, spacing: DS.s) {
                         banner
-                        if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
+                        // rc3 (owner 1 Nov): no health questionnaire for new riders — the "answer the health check" line is gone;
+                        // a restriction an existing rider already saved (clearance needed) still shows and opens the review.
+                        // TODO(rc3-engine): HomeModel still emits .pending for "not answered"; drop it there and this filter goes.
+                        if let c = h.caution, c == .clearance { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
                     }
                     HomeSectionTitle(text: "Today")
                     todayCard(h)
@@ -46,7 +49,7 @@ struct HomeView: View {
                         HomeCoachCard(item: item) { coachTapped(item) }
                     }
                     if h.showWeek {
-                        HomeSectionTitle(text: "This week")
+                        HomeSectionTitle(text: "Week")
                         weekCard(h)
                     }
                 }
@@ -105,7 +108,7 @@ struct HomeView: View {
         if case .hold = h.layout {
             HomeWeekPausedCard { tab = 1 }
         } else {
-            HomeWeekCard(week: store.homeWeek()) { tab = 1 }
+            HomeWeekStrip(plan: store.plan, open: { detail = $0 }, openPlan: { tab = 1 })
         }
     }
 
@@ -665,85 +668,81 @@ struct HomeCoachCard: View {
     }
 }
 
-/// This week: the number first (Apple Fitness "Move 228/380"), the segmented bar, the per-sport split, then Up next.
-struct HomeWeekCard: View {
-    let week: HomeWeek
+/// Owner decision 1 Nov (rc3): the week at a glance — seven days, one icon per session (bicycle = ride, dumbbell =
+/// strength, crescent moon = rest / recovery), today highlighted. Tapping a day opens that day's session; a day without
+/// a session opens Plan. The weekly numbers (done / planned, per-sport split) live only in Progress — not repeated here.
+struct HomeWeekStrip: View {
+    let plan: [Workout]
+    var now: Date = Date()
+    var open: (Workout) -> Void
     var openPlan: () -> Void
-    private var a11y: String {
-        var parts: [String] = ["This week: " + week.line + "."]
-        if let s = week.split { parts.append(s + ".") }
-        if let t = week.targetLine { parts.append(t + ".") }
-        if let n = week.upNext { parts.append("Up next " + n + ".") } else { parts.append("Nothing else scheduled this week.") }
-        return parts.joined(separator: " ")
+
+    private struct Day: Identifiable { let id: Int; let date: Date; let sessions: [Workout] }
+
+    private var days: [Day] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: now)
+        let wd = (cal.component(.weekday, from: today) + 5) % 7      // Monday first, like Plan
+        let monday = cal.date(byAdding: .day, value: -wd, to: today) ?? today
+        return (0..<7).map { i in
+            let d = cal.date(byAdding: .day, value: i, to: monday) ?? monday
+            let s = plan.filter { cal.isDate($0.date, inSameDayAs: d) && Self.isTraining($0.kind) }.sorted { $0.sequence < $1.sequence }
+            return Day(id: i, date: d, sessions: s)
+        }
     }
+    /// Sessions that get their own icon; rest, recovery day and mobility show the moon.
+    static func isTraining(_ k: WorkoutKind) -> Bool { k.isRide || k == .strength || k == .other }
+    static func icon(_ k: WorkoutKind) -> String { k.isRide ? "bicycle" : k == .strength ? "dumbbell.fill" : k == .other ? "figure.mixed.cardio" : "moon.fill" }
+
     var body: some View {
-        Button(action: openPlan) {
-            HomeCardFrame {
-                HStack(alignment: .firstTextBaseline, spacing: DS.s) {
-                    if week.total.planned > 0 {
-                        Text("\(week.total.plannedDone)").font(DS.number).foregroundStyle(BC.accent).monospacedDigit()
-                        Text("of \(week.total.planned) scheduled \(week.total.planned == 1 ? "session" : "sessions") done").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 2) { ForEach(days) { d in cell(d) } }
+            .padding(DS.xs)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("homeWeek")
+    }
+
+    private func cell(_ d: Day) -> some View {
+        let isToday = Calendar.current.isDate(d.date, inSameDayAs: now)
+        var icons: [String] = []
+        for w in d.sessions { let i = Self.icon(w.kind); if !icons.contains(i) { icons.append(i) } }
+        let active = d.sessions.filter { !$0.skipped }
+        let allDone = !active.isEmpty && active.allSatisfy { $0.done }
+        let name = WeeklyAvailability.dayNames[d.id]
+        return Button {
+            if let w = active.first(where: { !$0.done }) ?? active.first ?? d.sessions.first { self.open(w) } else { openPlan() }
+        } label: {
+            VStack(spacing: 4) {
+                Text(name).font(.caption2.weight(isToday ? .heavy : .semibold)).foregroundStyle(isToday ? BC.accent : .secondary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                HStack(spacing: 1) {
+                    if icons.isEmpty {
+                        Image(systemName: "moon.fill").font(.subheadline).foregroundStyle(.tertiary)
                     } else {
-                        Text(week.line).font(.headline).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: DS.s)
-                    Image(systemName: "chevron.right").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
-                }
-                HomeWeekBar(week: week).accessibilityHidden(true)
-                let extras = [week.total.extra > 0 ? "+\(week.total.extra) extra" : nil, week.total.skipped > 0 ? "\(week.total.skipped) skipped" : nil].compactMap { $0 }
-                if week.split != nil || !extras.isEmpty {
-                    HStack(spacing: DS.l) {
-                        if let r = week.riding, week.lifting != nil { sport("bicycle", "Rides", r) }
-                        if let l = week.lifting, week.riding != nil { sport("dumbbell.fill", "Lifts", l) }
-                        if !extras.isEmpty { Text(extras.joined(separator: " · ")).font(.footnote).foregroundStyle(.secondary) }
+                        ForEach(Array(icons.prefix(2)), id: \.self) { i in
+                            Image(systemName: i).font(icons.count > 1 ? Font.caption : Font.subheadline.weight(.semibold))
+                                .foregroundStyle(allDone ? Color.secondary : BC.accent)
+                        }
                     }
                 }
-                if let t = week.targetLine {
-                    HStack(spacing: DS.s) {
-                        Image(systemName: "target").font(.footnote).foregroundStyle(.secondary).accessibilityHidden(true)
-                        Text(t).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    }
-                    .accessibilityIdentifier("homeWeekTarget")
-                }
-                HStack(spacing: DS.s) {
-                    Image(systemName: "calendar").font(.footnote).foregroundStyle(.secondary).accessibilityHidden(true)
-                    Text(week.upNext.map { "Up next: \($0)" } ?? "Nothing else scheduled this week").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }
+                .frame(height: 20)
+                Image(systemName: "checkmark").font(.caption2.weight(.bold)).foregroundStyle(BC.live).opacity(allDone ? 1 : 0)
             }
+            .frame(maxWidth: .infinity, minHeight: 60)
+            .background(isToday ? BC.accent.opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 14))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(a11y)
-        .accessibilityHint("Opens Plan")
-        .accessibilityAddTraits(.isButton)
-        .accessibilityIdentifier("homeWeek")
+        .accessibilityLabel(a11y(d, isToday: isToday, allDone: allDone))
+        .accessibilityHint(d.sessions.isEmpty ? "Opens Plan" : "Opens the session")
+        .accessibilityIdentifier("homeWeekDay-\(d.id)")
     }
-    private func sport(_ icon: String, _ name: String, _ w: TrainingLedger.SportWeek) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon).font(.footnote).foregroundStyle(.secondary)
-            Text("\(name) \(w.plannedDone)/\(w.planned)").font(.footnote.weight(.semibold)).foregroundStyle(.primary).monospacedDigit()
-        }
-    }
-}
 
-/// One segment per scheduled session: done (accent), open (grey); a plain bar above 7.
-struct HomeWeekBar: View {
-    let week: HomeWeek
-    var body: some View {
-        let done = week.total.plannedDone, planned = week.total.planned
-        if let n = week.segments {
-            HStack(spacing: 4) {
-                ForEach(0..<n, id: \.self) { i in Capsule().fill(i < done ? BC.accent : Color.secondary.opacity(0.25)).frame(height: 8) }
-            }
-        } else if planned > 0 {
-            GeometryReader { g in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.secondary.opacity(0.25))
-                    Capsule().fill(BC.accent).frame(width: g.size.width * CGFloat(min(done, planned)) / CGFloat(planned))
-                }
-            }.frame(height: 8)
-        }
+    private func a11y(_ d: Day, isToday: Bool, allDone: Bool) -> String {
+        let day = d.date.formatted(.dateTime.weekday(.wide))
+        let what = d.sessions.isEmpty ? "rest" : d.sessions.map { $0.kind == .strength ? "strength" : $0.kind.isRide ? "ride" : $0.kind.title.lowercased() }.joined(separator: " and ")
+        return [isToday ? "Today, \(day)" : day, what, allDone ? "done" : nil].compactMap { $0 }.joined(separator: ", ")
     }
 }
 

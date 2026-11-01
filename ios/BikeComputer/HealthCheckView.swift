@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// Coach remediation M-01 (independent review F-01 / F-13 / F-18): the health check (Profile › Health check, and the Home
-/// card while it is missing, expired or pending). Every question needs an explicit Yes or No; nothing is pre-set.
+/// Coach remediation M-01 (independent review F-01 / F-13 / F-18): the health check. rc3 (owner 1 Nov): no longer part of
+/// onboarding or ordinary navigation — reachable only from Profile › Settings › Health & safety for riders who saved
+/// answers in an earlier version (and from the hold sheet while such a restriction pauses training). Every question needs
+/// an explicit Yes or No; nothing is pre-set.
 /// Yes/no only; nothing is diagnosed and nothing leaves the phone.
 struct HealthCheckView: View {
     @EnvironmentObject private var store: Store
@@ -27,7 +29,7 @@ struct HealthCheckView: View {
     var body: some View {
         Form {
             Section {
-                Text("Ten yes/no questions before the coach plans your training. Your answers stay on this phone and are asked again after a year.")
+                Text("Optional yes/no questions. Your answers stay on this phone.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section("Your age") {
@@ -135,49 +137,6 @@ struct HealthCheckView: View {
         // to be confirmed again for the new answers
         .onChange(of: answers) { _, _ in
             if let prev = previous, clearanceConfirmed, !clearanceTouched, draft.conditionKeys != prev.conditionKeys { clearanceConfirmed = false; clearedOn = nil }
-        }
-    }
-}
-
-/// Home card while the health check is missing, expired, pending clearance or says "see a doctor".
-struct HealthCheckHomeCard: View {
-    @EnvironmentObject private var store: Store
-    var body: some View {
-        let r = store.profile.readiness
-        if !r.vigorousAllowed {
-            NavigationLink { HealthCheckView() } label: {
-                Card(accent: true) {
-                    HStack(alignment: .top, spacing: DS.s) {
-                        Image(systemName: r.trainingAllowed ? "heart.text.square" : "cross.case").foregroundStyle(BC.warn).imageScale(.large)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(title(r.screen)).bold()
-                            Text(detail(r.screen)).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right").foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("healthCheckCard")
-        }
-    }
-    private func title(_ s: HealthScreen.Status) -> String {
-        switch s {
-        case .notAnswered: return "Answer the health check"
-        case .needsClearance: return "Clearance needed for hard training"
-        case .stop: return "See a doctor before training"
-        case .paused: return "Training paused while you are ill"
-        case .clear, .cleared: return ""
-        }
-    }
-    private func detail(_ s: HealthScreen.Status) -> String {
-        switch s {
-        case .notAnswered: return "10 quick questions. Until then, rides stay easy and lifts stay light."
-        case .needsClearance: return "Easy-to-moderate training only, without weight increases, until you record a doctor's clearance."
-        case .stop: return "Your answers mean a doctor should check you first. No sessions are planned until then."
-        case .paused: return "No sessions are planned. Answer the health check again when you feel well."
-        case .clear, .cleared: return ""
         }
     }
 }
