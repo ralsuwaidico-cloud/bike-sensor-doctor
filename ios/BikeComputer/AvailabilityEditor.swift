@@ -214,6 +214,9 @@ struct FixPlanSheet: View {
     @State private var showEditor = false
     /// The last change made here, for Undo: the sessions and budgets exactly as they were.
     @State private var undo: (text: String, before: [Workout], hours: Int, liftHours: Int)? = nil
+    /// Rebuild fix (Phase 1): shortening a strength session rebuilds it — reviewed in the before/after preview first.
+    @State private var preview: PreviewRef? = nil
+    @State private var refusal: String? = nil
 
     static func reports(_ store: Store, weekOf: Date) -> [BudgetFix.Report] {
         let week = store.workouts(weekOf: weekOf), ledger = store.ledger
@@ -235,6 +238,7 @@ struct FixPlanSheet: View {
                         }
                     }
                 }
+                if let r = refusal { Section { Text(r).font(.footnote).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("fixPlanRefused") } }
                 if fit.conflicts.isEmpty && fit.trimmed.isEmpty && reports.isEmpty {
                     Section { Text("This week fits both budgets. Nothing to fix.").foregroundStyle(.secondary).accessibilityIdentifier("fixPlanNothing") }
                 }
@@ -260,6 +264,7 @@ struct FixPlanSheet: View {
             .navigationTitle("Fix plan").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .sheet(isPresented: $showEditor) { AvailabilityEditor() }
+            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id) }
         }
     }
 
@@ -267,7 +272,15 @@ struct FixPlanSheet: View {
         let before = store.workouts(weekOf: weekOf)
         let hours = store.profile.hoursPerWeek, lift = store.profile.liftingHoursPerWeek
         switch f.action {
-        case .shorten(let id, let to): if var w = before.first(where: { $0.id == id }) { w.minutes = to; store.edit(w) }
+        case .shorten(let id, let to):
+            guard var w = before.first(where: { $0.id == id }) else { return }
+            w.minutes = to
+            // a shorter strength session is rebuilt (never a relabel): preview first, nothing saved until Apply there
+            switch store.requestEdit(w) {
+            case .saved: break
+            case .preview(let pid): refusal = nil; preview = PreviewRef(id: pid); return
+            case .refused(let why): refusal = why; return
+            }
         case .skip(let id): if var w = before.first(where: { $0.id == id }) { w.skipped = true; store.edit(w) }
         case .raiseBudget(let h): if riding { store.updateProfile { $0.hoursPerWeek = h } } else { store.updateProfile { $0.liftingHoursPerWeek = h } }
         }

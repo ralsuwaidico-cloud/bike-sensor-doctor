@@ -116,7 +116,11 @@ final class ProfileSync: ObservableObject {
         if let v = b.restHR { p.restHR = v }
         if let v = b.hoursPerWeek, v > 0 { p.hoursPerWeek = v }
         if let v = b.level { p.level = RiderProfile.Level.from(linkCode: v) }
-        if let v = b.goal { p.goal = RiderProfile.Goal.from(linkCode: v) }
+        if let v = b.goal {
+            p.goal = RiderProfile.Goal.from(linkCode: v)
+            // RC3: keep the r7 goal list in step (the board carries only the cycling goal)
+            if let i = p.goals.firstIndex(where: { $0.sport == .cycling }) { p.goals[i] = GoalID.from(cyclingGoal: p.goal); if p.primaryGoal?.sport == .cycling { p.primaryGoal = p.goals[i] } }
+        }
         if let v = b.lthr { p.lthr = v }
         if let u = b.units { s.settings.units = u == 1 ? .imperial : .metric }
         s.profile = p          /* didSet bumps the version → pushIfConfirmed */

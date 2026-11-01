@@ -242,6 +242,9 @@ struct HomeProposalSheet: View {
     let hybridId: String?
     /// The hybrid proposal just accepted (its Undo used to live on the old Home coach card).
     @State private var applied: String? = nil
+    /// Rebuild fix (Phase 1): a suggestion that rebuilds a strength session opens the before/after preview first.
+    @State private var coachPreview: PreviewRef? = nil
+    @State private var coachProposal: CoachProposal? = nil
     var body: some View {
         let a = adaptiveId.flatMap { id in store.adaptiveProposals.first { $0.id == id } }
         let h = hybridId.flatMap { id in HybridCoach.assess(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength, availability: store.effectiveAvailability).proposals.first { $0.id == id } }
@@ -263,7 +266,10 @@ struct HomeProposalSheet: View {
                     } else if let h {
                         Text(h.text).font(.title3.weight(.bold)).fixedSize(horizontal: false, vertical: true)
                         Text(h.why).fixedSize(horizontal: false, vertical: true)
-                        Button { if store.apply(h) { applied = h.text } } label: { Text("Accept").font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap) }
+                        Button {
+                            if let pid = store.coachChangePreview(h) { coachProposal = h; coachPreview = PreviewRef(id: pid) }
+                            else if store.apply(h) { applied = h.text }
+                        } label: { Text("Accept").font(.headline).frame(maxWidth: .infinity, minHeight: DS.minTap) }
                             .buttonStyle(.borderedProminent).tint(BC.accent).foregroundStyle(Color.black).accessibilityIdentifier("proposalAccept")
                     } else {
                         Text("This suggestion no longer applies.").foregroundStyle(.secondary)
@@ -274,6 +280,7 @@ struct HomeProposalSheet: View {
             .background(Color(.systemGroupedBackground))
         }
         .presentationDetents([.medium, .large])
+        .sheet(item: $coachPreview) { r in SessionChangeSheet(proposalId: r.id, coach: coachProposal) { applied = coachProposal?.text } }
     }
 }
 

@@ -364,13 +364,17 @@ struct WorkoutDetail: View {
 
     @ViewBuilder private var detail: some View {
         Card { Eyebrow(t: "Why this session"); Text(workout.why) }
-        let steps = workout.steps(ftp: store.profile.prescriptionFTP)
+        let steps = workout.steps(ftp: store.profile.targetFTP ?? 0, hrZones: watch.appInstalled ? store.profile.hrZones : nil)   // RC3: no watts from an unknown FTP
         if !steps.isEmpty { Card { ForEach(steps, id: \.name) { s in HStack(alignment: .firstTextBaseline) { VStack(alignment: .leading) { Text(s.name).bold(); Text(s.target).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }; Spacer(); Text(s.duration).font(.headline).monospacedDigit() }.padding(.vertical, 4); if s != steps.last { Divider() } } } }
         if workout.kind.zone > 0 {
             Card { Eyebrow(t: "Target zone"); ZoneBar(current: workout.kind.zone)
-                let z = store.profile.prescriptionZones[workout.kind.zone - 1]
-                if let c = store.profile.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
-                Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpBadge)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary) }
+                if store.profile.ftpKnown {
+                    let z = store.profile.prescriptionZones[workout.kind.zone - 1]
+                    if let c = store.profile.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
+                    Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpBadge)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    Text("FTP unknown: ride by effort\(watch.appInstalled ? " and heart rate (Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone)))" : ". \(RideSteps.pairHRHint).")").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                } }
         }
         ActionRow(actions: [
             ActionSpec(label: "Move", a11y: "Move to another day", identifier: "detailMove") { mode = 1 },

@@ -206,3 +206,129 @@ extension Store {
         }
     }
 }
+
+// MARK: - RC3 / ENG-J2: week-level change preview (profile, equipment, days, minutes, goals → planned sessions)
+/// Shows `store.pendingPlanChanges[proposalId]`. Nothing is saved until Apply; Cancel discards it. Completed workouts and
+/// history are never in scope.
+struct PlanChangeSheet: View {
+    @EnvironmentObject private var store: Store
+    @Environment(\.dismiss) private var dismiss
+    let proposalId: UUID
+    /// Called after a successful Apply.
+    var onApplied: () -> Void = {}
+    @State private var stale = false
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let p = store.pendingPlanChanges[proposalId] {
+                    PlanChangeContent(p: p, stale: stale)
+                } else {
+                    VStack(spacing: DS.m) {
+                        Text("This change is no longer available. Nothing was saved.").font(.body).multilineTextAlignment(.center)
+                        Button("Close") { dismiss() }.buttonStyle(.bordered).controlSize(.large)
+                    }.padding()
+                }
+            }
+            .navigationTitle("Review the change").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { store.discardPlanChange(proposalId); dismiss() }.accessibilityIdentifier("planChangeCancel")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Apply") {
+                        if store.applyPlanChange(proposalId) { onApplied(); dismiss() } else { stale = true }
+                    }
+                    .bold().disabled(store.pendingPlanChanges[proposalId] == nil).accessibilityIdentifier("planChangeApply")
+                }
+            }
+        }
+        .interactiveDismissDisabled()
+    }
+}
+
+/// The preview body (separate so tests and screenshots can render it without a store sheet).
+struct PlanChangeContent: View {
+    let p: PlanChangeProposal
+    var stale = false
+    var body: some View {
+        List {
+            if stale {
+                Section { Text("Your plan changed while you were looking, so nothing was saved. Close and try again.").font(.footnote).fixedSize(horizontal: false, vertical: true) }
+            }
+            if !p.changesSessions {
+                Section { Text("No planned sessions change. Apply saves your settings.").font(.body).fixedSize(horizontal: false, vertical: true) }
+            }
+            if !p.summary.isEmpty {
+                Section("What changes") { ForEach(p.summary, id: \.self) { Text($0).font(.footnote).fixedSize(horizontal: false, vertical: true) } }
+            }
+            if !p.after.isEmpty {
+                Section("After") { ForEach(p.after.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
+            }
+            if !p.before.isEmpty {
+                Section("Before") { ForEach(p.before.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
+            }
+            if !p.kept.isEmpty {
+                Section {
+                    ForEach(p.kept.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) }
+                } header: { Text("Kept as they are") } footer: { Text("Sessions you changed by hand, fixed or started stay as they are.") }
+            }
+            Section { Text("Completed workouts and your history are never changed.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+        }
+        .accessibilityIdentifier("planChangePreview")
+    }
+}
+
+struct PlanChangeRow: View {
+    let w: Workout
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DS.s) {
+            Text(w.date.formatted(.dateTime.weekday(.abbreviated).day())).font(.footnote.weight(.semibold)).monospacedDigit().frame(minWidth: 52, alignment: .leading)
+            Text(w.displayTitle).font(.body).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: DS.s)
+            if w.kind != .rest { Text("\(w.minutes) min").font(.footnote).foregroundStyle(.secondary).monospacedDigit() }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - RC3 / ENG-J3: plan versions (read-only history) with Undo as a new, previewed change
+struct PlanVersionsView: View {
+    @EnvironmentObject private var store: Store
+    @State private var preview: PreviewRef? = nil
+    var body: some View {
+        List {
+            if store.planVersions.isEmpty {
+                Text("No plan changes yet.").foregroundStyle(.secondary)
+            }
+            ForEach(Array(store.planVersions.reversed())) { v in
+                NavigationLink {
+                    PlanVersionDetail(v: v) { if let id = store.proposeUndo(version: v.id) { preview = PreviewRef(id: id) } }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(v.cause.title).font(.body.weight(.semibold))
+                        Text("\(v.createdAt.formatted(date: .abbreviated, time: .shortened)) · from \(v.effectiveDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))").font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("planVersionRow")
+            }
+        }
+        .navigationTitle("Plan changes")
+        .sheet(item: $preview) { r in PlanChangeSheet(proposalId: r.id) }
+    }
+}
+
+struct PlanVersionDetail: View {
+    let v: PlanVersion
+    var undo: () -> Void
+    var body: some View {
+        List {
+            if !v.summary.isEmpty { Section("What changed") { ForEach(v.summary, id: \.self) { Text($0).font(.footnote).fixedSize(horizontal: false, vertical: true) } } }
+            Section("After") { ForEach(v.after.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
+            Section("Before") { ForEach(v.before.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
+            Section {
+                Button("Undo this change") { undo() }.frame(minHeight: DS.minTap).accessibilityIdentifier("planVersionUndo")
+            } footer: { Text("Undo shows a preview first. Sessions already done stay as they are.") }
+        }
+        .navigationTitle(v.cause.title).navigationBarTitleDisplayMode(.inline)
+    }
+}

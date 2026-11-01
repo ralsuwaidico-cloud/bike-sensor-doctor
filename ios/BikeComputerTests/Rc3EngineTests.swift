@@ -329,4 +329,27 @@ final class Rc3EngineTests: XCTestCase {
         XCTAssertEqual(x.profile.primaryGoal, .muscle); XCTAssertEqual(x.strengthPrefs.goal, .hypertrophy); XCTAssertEqual(x.profile.goal, .endurance)
         XCTAssertEqual(GoalID(legacy: "Aerobic fitness"), .endurance)
     }
+
+    // MARK: WP1 — editing changes the real workout; Cancel leaves it identical
+    func testPhase1EditRebuildsTheSessionAndCancelLeavesItIdentical() {
+        let s = store(); hybridPersona(s)
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        s.refreshGeneratedSessions(now: nextMonday.addingTimeInterval(-86_400))
+        let mon = s.plan.first { $0.kind == .strength && Store.weekdayIndex($0.date) == 0 }!
+        let snap = s.snapshot
+        var e = mon; e.strengthFocus = .upper
+        XCTAssertEqual(s.edit(e), .needsConfirmation, "a focus change is previewed (requestEdit → .preview)")
+        guard let pid = s.lastProposalId else { return XCTFail("no proposal") }
+        XCTAssertEqual(s.snapshot, snap, "nothing saved before Apply")
+        s.discardProposal(pid)
+        XCTAssertEqual(s.snapshot, snap, "Cancel leaves the session identical")
+        XCTAssertEqual(s.edit(e), .needsConfirmation)
+        guard let pid2 = s.lastProposalId else { return XCTFail("no proposal") }
+        XCTAssertEqual(s.commit(proposalId: pid2, confirmed: true), .applied)
+        let after = s.plan.first { $0.id == mon.id }!
+        XCTAssertEqual(after.strengthFocus, .upper)
+        XCTAssertNotEqual(s.plannedEntries(for: after).map(\.exerciseId), s.plannedEntries(for: mon).map(\.exerciseId), "the exercises change, not only the label")
+        let lower = s.plannedEntries(for: after).compactMap { e in s.allExercises.first { $0.id == e.exerciseId } }.filter { ExerciseLibrary.meta($0).slot.isLower && ExerciseLibrary.meta($0).compound }
+        XCTAssertTrue(lower.isEmpty, "an upper-body session has no compound lower-body lift")
+    }
 }

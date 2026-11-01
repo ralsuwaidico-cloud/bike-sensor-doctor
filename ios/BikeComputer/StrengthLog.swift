@@ -418,6 +418,9 @@ struct HybridCoachCard: View {
     @State private var showWhy = false
     @State private var showReview = false
     @State private var lastApplied: String? = nil
+    /// Rebuild fix (Phase 1): suggestions that rebuild a strength session are previewed before anything is saved.
+    @State private var coachPreview: PreviewRef? = nil
+    @State private var coachProposal: CoachProposal? = nil
 
     private var a: HybridAssessment { HybridCoach.assess(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength, availability: store.effectiveAvailability) }
 
@@ -447,6 +450,7 @@ struct HybridCoachCard: View {
             if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
             ActionRow(actions: actionSpecs(a))
         }
+        .sheet(item: $coachPreview) { r in SessionChangeSheet(proposalId: r.id, coach: coachProposal) { lastApplied = coachProposal?.text } }
         if let w = nextStrength, !w.plannerBuilt { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
         if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
     }
@@ -464,7 +468,12 @@ struct HybridCoachCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(p.text).font(.footnote.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
                     Text(p.why).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    HStack { Button("Accept") { if store.apply(p) { lastApplied = p.text } }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large); Spacer() }
+                    HStack {
+                        Button("Accept") {
+                            if let pid = store.coachChangePreview(p) { coachProposal = p; coachPreview = PreviewRef(id: pid) }
+                            else if store.apply(p) { lastApplied = p.text }
+                        }.buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large); Spacer()
+                    }
                 }.padding(8).background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
             }
             if let last = store.appliedProposals.last {
@@ -548,7 +557,10 @@ struct HybridCoachCard: View {
         }.background(Color(.systemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
     }
     private func row(_ k: String, _ v: String, last: Bool = false) -> some View { KeyValueRow(key: k, value: v, last: last) }
-    private func zoneWatts(_ z: Int) -> String { let p = store.profile.prescriptionZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W" }
+    private func zoneWatts(_ z: Int) -> String {
+        guard store.profile.ftpKnown else { return "by effort" }      // RC3 / ENG-E1: no watts from an unknown FTP
+        let p = store.profile.prescriptionZones[max(0, min(6, z - 1))]; return "\(p.lo)–\(p.hi.map(String.init) ?? "∞") W"
+    }
 }
 
 // MARK: - Strength session detail (timeline tap): exercises, sets, per-exercise progression, edit / delete
