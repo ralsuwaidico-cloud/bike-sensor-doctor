@@ -283,6 +283,9 @@ final class LaunchSmokeTests: XCTestCase {
         // Profile (rc3: one screen) → Training › Goal page
         app.buttons["Profile"].firstMatch.tap()
         let goal = app.buttons["profileGoal"].firstMatch
+        // run 124: at accessibility text the Goals row sits below the screen and the list only creates rows it shows —
+        // scroll down to it (it is in the Training section for every rider) before checking.
+        for _ in 0..<10 where !goal.exists { app.swipeUp(); sleep(1) }
         XCTAssertTrue(goal.waitForExistence(timeout: 10), "Profile › Training › Goal row missing")
         if !goal.isHittable { app.swipeUp(); sleep(1) }
         goal.tap()

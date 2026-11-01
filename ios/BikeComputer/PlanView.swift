@@ -28,13 +28,13 @@ struct PlanView: View {
                     fixRow
                     dayCards
                     weekRow
+                    changesRow
                 }.padding()
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Plan")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }.accessibilityIdentifier("planMenuQuickLog"); Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle") }; Button { showTemplates = true } label: { Label("Routines", systemImage: "doc.on.doc") } } label: { Label("Log strength", systemImage: "dumbbell") } }
-                ToolbarItem(placement: .topBarTrailing) { NavigationLink { PlanVersionsView() } label: { Label("Plan changes", systemImage: "clock.arrow.circlepath") }.accessibilityIdentifier("planChanges") }
             }
             .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet() }
             .sheet(isPresented: $showDetailedLog) { DetailedStrengthLogSheet() }
@@ -138,6 +138,22 @@ struct PlanView: View {
                 }
             }
         }
+    }
+
+    /// Plan changes: every applied change as a read-only version with Undo. Run 124: as a second toolbar button it was
+    /// pushed off the bar at accessibility text on an iPhone SE, so it sits under "Your week" instead.
+    private var changesRow: some View {
+        NavigationLink { PlanVersionsView() } label: {
+            HStack {
+                Label("Plan changes", systemImage: "clock.arrow.circlepath").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("planChanges")
     }
 
     /// The week the plan is built from (the same days onboarding step 3 sets). Edit → change preview before anything moves.

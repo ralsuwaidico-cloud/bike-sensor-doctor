@@ -356,7 +356,7 @@ final class LayoutAudit: XCTestCase {
             }
             // RC3 (owner 1 Nov): the weekly totals live only in Progress; Plan has the week settings row and Plan changes
             XCTAssertFalse(app.staticTexts["planDoneRiding"].exists, "\(size): weekly totals are not repeated on Plan")
-            XCTAssertTrue(app.buttons["planChanges"].firstMatch.exists, "\(size): Plan changes in the toolbar")
+            XCTAssertTrue(app.buttons["planChanges"].firstMatch.exists, "\(size): Plan changes row under Your week")
             let fix = app.buttons["fixPlan"].firstMatch
             if fix.exists {
                 fix.tap(); sleep(2); shot("\(tag)-plan-fix"); checkScreen(app, "\(size) fix plan", tab: nil)
