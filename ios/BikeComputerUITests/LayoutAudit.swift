@@ -116,7 +116,7 @@ final class LayoutAudit: XCTestCase {
         }
         note("\(screen): " + (small.isEmpty ? "every on-screen button ≥ 44 pt tall" : "buttons under 44 pt: " + small.joined(separator: ", ")))
     }
-    private func scrollUp(_ app: XCUIApplication) { app.swipeUp(); sleep(1) }
+    private func scrollUp(_ app: XCUIApplication) { app.swipeUp(); app.settleForScreenshot() }   // scrolling momentum before the next screenshot
     /// A button of the given identifier prefix that is fully on screen (below the bars), if any.
     private func visibleButton(_ app: XCUIApplication, prefix: String) -> XCUIElement? {
         let win = app.windows.firstMatch.frame
@@ -131,7 +131,7 @@ final class LayoutAudit: XCTestCase {
 
     private func tab(_ app: XCUIApplication, _ name: String) {
         let b = app.buttons[name].firstMatch
-        if b.waitForExistence(timeout: 5) { b.tap(); sleep(2) } else { note("tab \(name) missing") }
+        if b.waitForExistence(timeout: 5) { b.tap(); _ = b.waitUntilSettled(timeout: 2); app.settleForScreenshot() } else { note("tab \(name) missing") }
     }
     /// Closes the TOPMOST sheet: its Done / Cancel is the last matching button in the hierarchy.
     private func close(_ app: XCUIApplication) {
@@ -439,7 +439,7 @@ final class LayoutAudit: XCTestCase {
                     if more.exists {
                         more.tap(); sleep(1); shot("home-\(size.lowercased())-\(state)-more")
                         let move = app.buttons["Move to another day"].firstMatch
-                        if move.waitForExistence(timeout: 3) { sleep(2) /* menu items: isHittable itself throws while the menu animates (run 108) — wait, then tap by coordinate */; move.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap(); sleep(2); shot("home-\(size.lowercased())-\(state)-move"); checkScreen(app, "\(screen) move", tab: nil); close(app) }
+                        if move.waitForExistence(timeout: 3) { move.tapWhenSettled() /* menu items: isHittable throws while the menu animates (run 108) — tap once the frame has settled (UITestWaits) */; app.settleForScreenshot(2); shot("home-\(size.lowercased())-\(state)-move"); checkScreen(app, "\(screen) move", tab: nil); close(app) }
                         else { app.tap(); note("\(screen): More has no Move (state)") }
                     }
                 }

@@ -1,11 +1,19 @@
 # BikeComputer iPhone + Apple Watch apps: compiled, tested, signed and delivered to TestFlight on GitHub's macOS
-# servers. Nobody needs a Mac or Xcode. See ios/SETUP.md.
+# servers. Nobody needs a Mac or Xcode. See ios/SETUP.md and ios/CI_PIPELINE.md.
 #
-#  job apple : (Linux) registers bundle IDs + HealthKit, checks the App Store Connect app record, keeps the private
-#              internal TestFlight group ready. Skipped quietly until the secrets exist.
-#  job build : (macOS 26 / Xcode 26) generates the project, runs unit tests on the iOS simulator, archives, signs for
-#              App Store with Apple's cloud-managed certificate, verifies signatures + entitlements, uploads to TestFlight
-#              when the commit message contains [testflight] or the run is started with upload = true.
+#  job apple    : (Linux) registers bundle IDs + HealthKit, checks the App Store Connect app record, keeps the private
+#                 internal TestFlight groups ready. Skipped quietly until the secrets exist.
+#  job mode     : (Linux) decides the scope: quick ("[ci quick]" in the head commit message, or scope=quick), ui
+#                 (scope=ui: layout audit only) or full (default).
+#  job quick    : (macOS) compile + unit tests + layout checks of the main screens on iPhone SE (AX3) and a standard
+#                 iPhone (L). Never archives, never uploads. Not release evidence.
+#  job test     : (macOS, full/ui) one parallel job per stage: unit, smoke, layout on each of 4 iPhones, watch shots.
+#                 Each job builds once (build-for-testing) and runs its tests without rebuilding.
+#  job release  : (macOS, full only) runs ONLY when every test job succeeded: archive, App Store signing, verification,
+#                 upload when the commit message contains [testflight] or the run is started with upload = true.
+#  job testflight: (Linux) after an upload, waits for Apple's processing, reports whether the build is ready to
+#                 install and sets the What to Test text ("INTERNAL TEST BUILD n — not an approved release").
+#  job publish  : (Linux, always) one combined scrubbed summary + logs + screenshots → branch ci-logs ios/run-N/.
 #
 # Security: all credentials come from repository secrets; logs leaving the runner are scrubbed (this repo is public).
 # Only internal TestFlight testers ever receive builds. External testing / App Store release is never done here.
@@ -29,19 +37,26 @@ on:
         type: string
         default: ""
       scope:
-        description: "full = tests + layout + archive (default); ui = layout audit only (fast UI re-check, never uploads)"
+        description: "full = all tests + archive (default); quick = compile + unit + main-screen layout on SE/standard (never uploads); ui = layout audit only (never uploads)"
         type: choice
-        options: [full, ui]
+        options: [full, quick, ui]
         default: full
       devices:
         description: "Layout audit devices (comma list of small,standard,promax,owner)"
         type: string
         default: "small,standard,promax,owner"
+      quick_ui:
+        description: "quick scope: UI test methods to run (space separated; empty = main screens)"
+        type: string
+        default: ""
 permissions:
   contents: write
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: false
+
+env:
+  SPM_CACHE_KEY: spm-v1-${{ hashFiles('ios/project.yml') }}
 
 jobs:
   apple:
@@ -66,39 +81,141 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: apple-setup
+          name: logs-apple
           path: asc.txt
           if-no-files-found: ignore
-      - name: Publish the setup report to branch ci-logs
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          N: ${{ github.run_number }}
-        run: |
-          W=$(mktemp -d); cd "$W"
-          git init -q && git config user.name "ios-ci" && git config user.email "ios-ci@users.noreply.github.com"
-          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
-          mkdir -p "ios/run-$N" && cp "$GITHUB_WORKSPACE/asc.txt" "ios/run-$N/apple-setup.txt"
-          git add -A && git commit -q -m "iOS CI apple setup run $N" || exit 0
-          for i in 1 2 3; do git push -q origin HEAD:ci-logs && break; git fetch -q --depth 1 origin ci-logs && git rebase -q FETCH_HEAD || true; sleep 3; done
 
-  build:
-    needs: apple
+  mode:
+    runs-on: ubuntu-latest
+    outputs:
+      scope: ${{ steps.m.outputs.scope }}
+      upload: ${{ steps.m.outputs.upload }}
+    steps:
+      - id: m
+        env:
+          EVENT: ${{ github.event_name }}
+          IN_SCOPE: ${{ inputs.scope }}
+          IN_UPLOAD: ${{ inputs.upload }}
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          scope=full
+          if [ "$EVENT" = workflow_dispatch ]; then scope="${IN_SCOPE:-full}"
+          elif printf '%s' "$MSG" | grep -qF '[ci quick]'; then scope=quick; fi
+          upload=false
+          if [ "$scope" = full ]; then
+            if [ "$EVENT" = workflow_dispatch ]; then [ "$IN_UPLOAD" = true ] && upload=true
+            else printf '%s' "$MSG" | grep -qF '[testflight]' && upload=true; fi
+          fi
+          echo "scope=$scope" >> "$GITHUB_OUTPUT"; echo "upload=$upload" >> "$GITHUB_OUTPUT"
+          echo "scope=$scope upload=$upload"
+
+  quick:
+    needs: [apple, mode]
+    if: needs.mode.outputs.scope == 'quick'
     runs-on: macos-26
-    # run 116 (29 Oct): the full pipeline hit the old 150-min job limit on slow runners and the job was killed before it
-    # could publish its log. The build step now has its own limit below the job's, so the log is always published.
-    timeout-minutes: 240
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
-      - name: Build, test, sign, upload
-        timeout-minutes: 215
+      - uses: actions/cache@v4
+        with:
+          path: ios/build/spm
+          key: ${{ env.SPM_CACHE_KEY }}
+      - name: Quick check (compile, unit tests, main screens on SE + standard)
+        timeout-minutes: 65
         env:
+          STAGE: quick
           BUILD_NUMBER: ${{ github.run_number }}
-          SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || 'full' }}
+          QUICK_UI: ${{ inputs.quick_ui }}
+        run: ios/ci/build.sh
+      - name: Keep logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-quick
+          path: |
+            ios/build/logs/*.txt
+            ios/build/layout/*.png
+          if-no-files-found: ignore
+
+  test:
+    needs: [apple, mode]
+    if: needs.mode.outputs.scope == 'full' || needs.mode.outputs.scope == 'ui'
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { job: unit,            stage: unit,   devices: "",         minutes: 60 }
+          - { job: smoke,           stage: smoke,  devices: "",         minutes: 75 }
+          - { job: layout-small,    stage: layout, devices: "small",    minutes: 75 }
+          - { job: layout-standard, stage: layout, devices: "standard", minutes: 60 }
+          - { job: layout-promax,   stage: layout, devices: "promax",   minutes: 60 }
+          - { job: layout-owner,    stage: layout, devices: "owner",    minutes: 75 }
+          - { job: watch,           stage: watch,  devices: "",         minutes: 45 }
+    name: test (${{ matrix.job }})
+    timeout-minutes: ${{ matrix.minutes }}
+    steps:
+      - name: Skip what the ui scope does not run
+        id: skip
+        env:
+          SCOPE: ${{ needs.mode.outputs.scope }}
+          DEVS: ${{ inputs.devices }}
+        run: |
+          run=true
+          if [ "$SCOPE" = ui ]; then
+            case "${{ matrix.stage }}" in
+              layout) case ",${DEVS:-small,standard,promax,owner}," in *",${{ matrix.devices }},"*) ;; *) run=false;; esac ;;
+              *) run=false ;;
+            esac
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.skip.outputs.run == 'true'
+      - uses: actions/cache@v4
+        if: steps.skip.outputs.run == 'true'
+        with:
+          path: ios/build/spm
+          key: ${{ env.SPM_CACHE_KEY }}
+      - name: Stage ${{ matrix.job }}
+        if: steps.skip.outputs.run == 'true'
+        timeout-minutes: ${{ matrix.minutes }}
+        env:
+          STAGE: ${{ matrix.stage }}
+          LAYOUT_DEVICES: ${{ matrix.devices }}
+          BUILD_NUMBER: ${{ github.run_number }}
           LAYOUT_TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.layout_test || 'LayoutAudit' }}
           LAYOUT_SIZES_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && inputs.sizes || '' }}
-          LAYOUT_DEVICES: ${{ github.event_name == 'workflow_dispatch' && inputs.devices || 'small,standard,promax,owner' }}
+        run: ios/ci/build.sh
+      - name: Keep logs
+        if: always() && steps.skip.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.job }}
+          path: |
+            ios/build/logs/*.txt
+            ios/build/layout/*.png
+          if-no-files-found: ignore
+
+  release:
+    needs: [apple, mode, test]
+    if: needs.mode.outputs.scope == 'full' && needs.test.result == 'success'
+    runs-on: macos-26
+    timeout-minutes: 75
+    outputs:
+      uploaded: ${{ steps.r.outputs.uploaded }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ios/build/spm
+          key: ${{ env.SPM_CACHE_KEY }}
+      - name: Archive, sign, verify, upload
+        id: r
+        timeout-minutes: 65
+        env:
+          STAGE: release
+          TESTS_OK: ${{ needs.test.result }}
+          BUILD_NUMBER: ${{ github.run_number }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -109,35 +226,95 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
-          UPLOAD: ${{ (github.event_name == 'workflow_dispatch' && inputs.upload) || contains(github.event.head_commit.message, '[testflight]') }}
-        run: ios/ci/build.sh
-      - name: Fetch the Apple setup report
+          UPLOAD: ${{ needs.mode.outputs.upload }}
+        run: |
+          ios/ci/build.sh; r=$?
+          grep -q "RESULT upload: ok" ios/build/logs/summary.txt && echo "uploaded=true" >> "$GITHUB_OUTPUT" || echo "uploaded=false" >> "$GITHUB_OUTPUT"
+          exit $r
+      - name: Keep logs
         if: always()
-        uses: actions/download-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
-          name: apple-setup
-          path: ios/build/logs
+          name: logs-release
+          path: ios/build/logs/*.txt
+          if-no-files-found: ignore
+
+  testflight:
+    needs: [release]
+    if: needs.release.outputs.uploaded == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet pyjwt cryptography
+      - name: Wait for TestFlight processing, set What to Test
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          mkdir -p tf
+          python3 ios/ci/asc.py testflight 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<e-mail hidden>/g' > tf/testflight.txt || true
+          cat tf/testflight.txt
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-testflight
+          path: tf/testflight.txt
+          if-no-files-found: ignore
+
+  publish:
+    needs: [apple, mode, quick, test, release, testflight]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: logs-*
+          path: logs
         continue-on-error: true
-      - name: Summary
-        if: always()
-        run: cat ios/build/logs/summary.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
-      - name: Publish the scrubbed CI log to branch ci-logs
-        if: always()
+      - name: Combined summary + publish to branch ci-logs
         env:
           GH_TOKEN: ${{ github.token }}
           N: ${{ github.run_number }}
+          SCOPE: ${{ needs.mode.outputs.scope }}
+          R_QUICK: ${{ needs.quick.result }}
+          R_TEST: ${{ needs.test.result }}
+          R_RELEASE: ${{ needs.release.result }}
+          R_TF: ${{ needs.testflight.result }}
         run: |
           set -u
+          S="$PWD/summary.txt"; : > "$S"
+          echo "BikeComputer iOS CI — run $N — scope $SCOPE — jobs: quick=$R_QUICK test=$R_TEST release=$R_RELEASE testflight=$R_TF" >> "$S"
+          for j in quick unit smoke layout-small layout-standard layout-promax layout-owner watch release; do
+            f="logs/logs-$j/logs/summary.txt"; [ -f "$f" ] || f="logs/logs-$j/summary.txt"
+            [ -f "$f" ] || continue
+            echo "" >> "$S"; echo "## $j" >> "$S"; cat "$f" >> "$S"
+          done
+          if [ "$SCOPE" = full ] && [ "$R_TEST" != success ]; then echo "" >> "$S"; echo "RESULT upload: skipped (tests failed — the release job did not run)" >> "$S"; fi
+          [ -f logs/logs-testflight/testflight.txt ] && { echo ""; echo "## testflight"; cat logs/logs-testflight/testflight.txt; } >> "$S"
+          OK=success
+          if [ "$SCOPE" = quick ]; then [ "$R_QUICK" = success ] || OK=failure
+          else [ "$R_TEST" = success ] || OK=failure; [ "$SCOPE" = full ] && [ "$R_RELEASE" != success ] && OK=failure; fi
+          echo "commit $GITHUB_SHA  branch $GITHUB_REF_NAME  job $OK" >> "$S"
+          cat "$S" >> "$GITHUB_STEP_SUMMARY"
           W=$(mktemp -d); cd "$W"
           git init -q && git config user.name "ios-ci" && git config user.email "ios-ci@users.noreply.github.com"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
-          mkdir -p "ios/run-$N"
-          mv "$GITHUB_WORKSPACE"/ios/build/logs/asc.txt "$GITHUB_WORKSPACE"/ios/build/logs/apple-setup.txt 2>/dev/null || true
-          cp "$GITHUB_WORKSPACE"/ios/build/logs/*.txt "ios/run-$N/" 2>/dev/null || echo "no logs produced" > "ios/run-$N/summary.txt"
-          # layout audit screenshots (demo data only, downscaled by ios/ci/build.sh)
-          if ls "$GITHUB_WORKSPACE"/ios/build/layout/*.png >/dev/null 2>&1; then mkdir -p "ios/run-$N/layout" && cp "$GITHUB_WORKSPACE"/ios/build/layout/*.png "ios/run-$N/layout/"; fi
-          echo "commit $GITHUB_SHA  branch $GITHUB_REF_NAME  job ${{ job.status }}" >> "ios/run-$N/summary.txt"
+          D="ios/run-$N"; mkdir -p "$D/layout"
+          for a in "$GITHUB_WORKSPACE"/logs/logs-*; do
+            [ -d "$a" ] || continue; j=$(basename "$a"); j=${j#logs-}
+            find "$a" -name '*.txt' ! -name summary.txt | while read -r f; do b=$(basename "$f"); [ -f "$D/$b" ] && b="$j-$b"; cp "$f" "$D/$b"; done
+            [ -f "$a/asc.txt" ] && cp "$a/asc.txt" "$D/apple-setup.txt"
+            find "$a" -name 'summary.txt' | head -1 | while read -r f; do cp "$f" "$D/summary-$j.txt"; done
+            find "$a" -name '*.png' -exec cp {} "$D/layout/" \;
+          done
+          rmdir "$D/layout" 2>/dev/null || true
+          cp "$S" "$D/summary.txt"
           git add -A && git commit -q -m "iOS CI log run $N"
           for i in 1 2 3; do
             git push -q origin HEAD:ci-logs && break
