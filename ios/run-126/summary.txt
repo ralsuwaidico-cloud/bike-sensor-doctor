@@ -1,0 +1,21 @@
+BikeComputer iOS CI — run 126 — scope quick — jobs: quick=success test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 126 — 2026-11-01 17:27 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m7s
+RESULT tests: ok (Executed 472 tests, with 0 failures) · 9m16s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 7m51s
+  layout small (AX3): ok · 21m41s
+  layout standard (L): ok · 10m59s
+RESULT layout audit: ok (70 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 50m50s
+commit b3470fd3b4de6e292cb6e984fc2e20345ab05d80  branch ios/rc3  job success
