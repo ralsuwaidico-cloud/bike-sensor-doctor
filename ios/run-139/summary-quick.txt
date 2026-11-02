@@ -1,0 +1,17 @@
+BikeComputer iOS CI — build 139 — 2026-11-02 19:00 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m27s
+RESULT tests: ok (Executed 509 tests, with 0 failures) · 8m34s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m23s
+  layout small (AX3): FAILED (exit 65) · 28m21s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: a tapped bar shows its week (AVERAGE PER WEEK, 2 h 54 min, 10 Nov 2025 – 8 Nov 2026 · total 47 h 53 min · 42 rides · average of 16 full weeks) -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: the selection shows done and planned (AVERAGE PER WEEK, 2 h 54 min, 10 Nov 2025 – 8 Nov
+  layout standard (L): ok · 10m28s
+RESULT layout audit: FAILED (83 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 58m18s
