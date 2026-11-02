@@ -1,0 +1,6 @@
+L-light page 0: 12 controls checked, 0 texts outside the window
+L-light page 1: 17 controls checked, 0 texts outside the window
+L-light: 2 pages
+L-dark page 0: 12 controls checked, 0 texts outside the window
+L-dark page 1: 13 controls checked, 0 texts outside the window
+L-dark: 2 pages

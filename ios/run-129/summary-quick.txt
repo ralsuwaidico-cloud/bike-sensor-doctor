@@ -1,0 +1,17 @@
+BikeComputer iOS CI — build 129 — 2026-11-02 07:07 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 3m30s
+RESULT tests: ok (Executed 503 tests, with 0 failures) · 6m58s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m18s
+  layout small (AX3): ok · 17m21s
+  layout standard (L): FAILED (exit 65) · 12m51s — -[BikeComputerUITests.DesignSystemAudit testGalleryLightAndDark] : XCTAssertFalse failed - L-dark page 1: a control has no accessible name at (311.0, 553.6666666666665, 63.0, 28.0) -[BikeComputerUITests.DesignSystemAudit testGalleryLightAndDark] : XCTAssertFalse failed - L-light page 1: a control has no accessible name at (311.0, 760.3333333333333, 63.0, 28.0) -[BikeComputerUITests.DesignSystemAud
+RESULT layout audit: FAILED (65 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 46m53s
