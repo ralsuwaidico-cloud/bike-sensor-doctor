@@ -406,6 +406,23 @@ final class LayoutAudit: XCTestCase {
                                 // Undo is itself previewed (a new plan change); Apply restores the previous version
                                 if app.buttons["planChangeApply"].waitForExistence(timeout: 5) { app.buttons["planChangeApply"].tap(); sleep(2) }
                                 else if app.buttons["changeApply"].waitForExistence(timeout: 2) { app.buttons["changeApply"].tap(); sleep(2) }
+                                // Undo safety (owner 2 Nov): the original edit is now followed by the Undo version on the same day,
+                                // so undoing the original again would overwrite it — it must be disabled, with the reason shown.
+                                if !app.buttons.matching(NSPredicate(format: "identifier == 'planVersionRow' AND label CONTAINS 'Session edit'")).firstMatch.exists {
+                                    for _ in 0..<2 where !app.buttons["planVersionRow"].firstMatch.exists && app.navigationBars.buttons.firstMatch.exists { app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+                                }
+                                let original = app.buttons.matching(NSPredicate(format: "identifier == 'planVersionRow' AND label CONTAINS 'Session edit'")).firstMatch
+                                XCTAssertTrue(original.waitForExistence(timeout: 5), "\(size): the original edit is still listed after its Undo")
+                                if original.exists {
+                                    reveal(app, original); original.tap(); sleep(2)
+                                    let again = app.buttons["planVersionUndo"].firstMatch
+                                    XCTAssertTrue(again.waitForExistence(timeout: 5), "\(size): Undo shown for the original edit")
+                                    XCTAssertFalse(again.isEnabled, "\(size): Undo of an edit followed by a later change is disabled")
+                                    let reason = app.staticTexts["planVersionUndoBlocked"].firstMatch
+                                    for _ in 0..<6 where !reason.exists { app.swipeUp(); sleep(1) }
+                                    XCTAssertTrue(reason.exists && reason.label.contains("Undo that change first"), "\(size): the reason is shown: '\(reason.label)'")
+                                    shot("\(tag)-plan-undo-blocked")
+                                }
                             }
                             for _ in 0..<2 where app.navigationBars.buttons.firstMatch.exists { app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
                         }
