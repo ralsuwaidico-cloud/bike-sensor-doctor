@@ -1,0 +1,12 @@
+BikeComputer iOS CI — build 138 — 2026-11-02 17:47 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m56s
+RESULT tests: ok (Executed 508 tests, with 0 failures) · 11m44s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m28s
+  layout small (AX3): ok · 31m2s
