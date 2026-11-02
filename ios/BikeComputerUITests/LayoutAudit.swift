@@ -385,11 +385,31 @@ final class LayoutAudit: XCTestCase {
                         // The toast lives 8 s (run 134: at AX3 the screenshots took longer than that) — check it first, shoot after.
                         // Known deviation (BEHAVIOUR_CONTRACT W3): single-session rebuilds are not yet listed under Plan changes.
                         close(app)
-                        let undo = app.buttons["undoDelete"].firstMatch
-                        XCTAssertTrue(undo.waitForExistence(timeout: 5), "\(size): Undo offered on Plan after Apply")
+                        // Undo: the quick toast (8 s, may expire at large text) AND the durable route — the change is a plan
+                        // version under Plan › Plan changes with "Undo this change" (owner 2 Nov: Undo restores the previous
+                        // approved version). The durable route is the release-blocking check.
+                        let toast = app.buttons["undoDelete"].firstMatch.waitForExistence(timeout: 3)
+                        note("\(size): Undo toast \(toast ? "seen" : "already expired")")
+                        let changes = app.buttons["planChanges"].firstMatch
+                        reveal(app, changes)
+                        XCTAssertTrue(changes.waitForExistence(timeout: 5), "\(size): Plan changes reachable after Apply")
+                        changes.tap(); sleep(2)
+                        let row = app.buttons["planVersionRow"].firstMatch
+                        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(size): the applied change is listed under Plan changes")
                         shot("\(tag)-plan-fix-undo")
-                        note("\(size): Fix plan '\(label)' previewed, cancelled, applied, Undo offered")
-                        if undo.exists { undo.tap(); sleep(2) }   // Undo restores the plan so the rest of the audit sees the seeded week
+                        if row.exists {
+                            row.tap(); sleep(2)
+                            let undoVersion = app.buttons["planVersionUndo"].firstMatch
+                            XCTAssertTrue(undoVersion.waitForExistence(timeout: 5), "\(size): Undo this change offered for the version")
+                            if undoVersion.exists {
+                                undoVersion.tap(); sleep(2)
+                                // Undo is itself previewed (a new plan change); Apply restores the previous version
+                                if app.buttons["planChangeApply"].waitForExistence(timeout: 5) { app.buttons["planChangeApply"].tap(); sleep(2) }
+                                else if app.buttons["changeApply"].waitForExistence(timeout: 2) { app.buttons["changeApply"].tap(); sleep(2) }
+                            }
+                            for _ in 0..<2 where app.navigationBars.buttons.firstMatch.exists { app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+                        }
+                        note("\(size): Fix plan '\(label)' previewed, cancelled, applied, listed as a plan version, undone")
                         checkScreen(app, "\(size) plan after fix and undo", tab: 1)
                         if fix.waitForExistence(timeout: 5) { reveal(app, fix); fix.tap(); sleep(2); shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan after undo", tab: nil) }
                     } else {

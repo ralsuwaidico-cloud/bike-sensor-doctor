@@ -121,6 +121,26 @@ final class Rc3EngineTests: XCTestCase {
         XCTAssertEqual(s.lastProposalId, pid)
         XCTAssertEqual(s.pendingProposals.count, 1, "dry runs register nothing")
     }
+    /// Owner 2 Nov (steps 4–5): an applied single-session change is saved as a plan version; Undo of that version
+    /// restores the previous approved session (run 136: the 8-second toast alone is not a reliable Undo at large text).
+    func testAppliedSessionChangeIsAVersionAndUndoRestoresIt() {
+        let s = store(); hybridPersona(s)
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        s.refreshGeneratedSessions(now: nextMonday.addingTimeInterval(-86_400))
+        let now = nextMonday.addingTimeInterval(-3_600)
+        guard let lift = s.plan.first(where: { $0.kind == .strength }) else { return XCTFail() }
+        var req = SessionChangeRequest(); req.minutes = 45
+        guard let p = s.proposeSessionChange(workoutId: lift.id, request: req, now: now) else { return XCTFail("proposal") }
+        XCTAssertEqual(s.commit(proposalId: p.id, confirmed: true), .applied)
+        XCTAssertEqual(s.planVersions.count, 1, "one version recorded")
+        let v = s.planVersions[0]
+        XCTAssertEqual(v.cause, .edit); XCTAssertEqual(v.before.first?.id, lift.id); XCTAssertEqual(v.before.first?.minutes, lift.minutes)
+        XCTAssertEqual(s.plan.first { $0.id == lift.id }?.minutes, 45)
+        guard let u = s.proposeUndo(version: v.id, now: now) else { return XCTFail("undo proposal") }
+        XCTAssertTrue(s.applyPlanChange(u, now: now))
+        XCTAssertEqual(s.plan.first { $0.id == lift.id }?.minutes, lift.minutes, "Undo restores the previous approved session")
+        XCTAssertEqual(s.planVersions.count, 2, "the Undo is itself a version (the log only grows)")
+    }
     func testAT_D1_1_C2_1_ThreeShortLiftsAreFullBodyAndFit() {
         let s = store(); hybridPersona(s)
         let w = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
