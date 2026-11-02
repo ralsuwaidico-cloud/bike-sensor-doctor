@@ -326,9 +326,11 @@ struct PlanVersionDetail: View {
             Section("After") { ForEach(v.after.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
             Section("Before") { ForEach(v.before.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
             Section {
-                Button("Undo this change") { undo() }.frame(minHeight: DS.minTap).accessibilityIdentifier("planVersionUndo")
+                Button("Undo this change") { undo() }.frame(minHeight: DS.minTap).accessibilityIdentifier("planVersionUndoBottom")
             } footer: { Text("Undo shows a preview first. Sessions already done stay as they are.") }
         }
         .navigationTitle(v.cause.title).navigationBarTitleDisplayMode(.inline)
+        // run 137: at large text the Undo row sat below a long before/after list — the main action is always in the bar
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Undo") { undo() }.accessibilityLabel("Undo this change").accessibilityIdentifier("planVersionUndo") } }
     }
 }
