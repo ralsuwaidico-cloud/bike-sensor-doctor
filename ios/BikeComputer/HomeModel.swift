@@ -469,7 +469,10 @@ extension HomeToday {
         // first-time: no training planned this week or next and no history
         let monday = TrainingLedger.monday(of: i.now, calendar: cal)
         let twoWeeks = cal.date(byAdding: .day, value: 14, to: monday)!
-        let anyPlanned = i.plan.contains { isTraining($0) && $0.date >= monday && $0.date < twoWeeks }
+        // S2-0 (GR-54): a session missed in the last 7 days still counts as a plan — on a Monday the old rule hid last
+        // week's missed sessions behind "create a plan" (HomeBTests.testFirstMultiMissedAndFree failed on Mondays).
+        let recent = cal.date(byAdding: .day, value: -7, to: cal.startOfDay(for: i.now))!
+        let anyPlanned = i.plan.contains { isTraining($0) && $0.date >= recent && $0.date < twoWeeks }
         if !anyPlanned && !i.hasHistory && i.activeSession == nil {
             return HomeToday(layout: .first(liftFirst: i.mode == .strength), caution: caution, missed: nil, showCoach: false, showWeek: false)
         }
