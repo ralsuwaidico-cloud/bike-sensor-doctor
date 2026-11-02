@@ -364,11 +364,37 @@ final class LayoutAudit: XCTestCase {
                 XCTAssertTrue(action.exists, "\(size): Fix plan offers an action")
                 if action.exists {
                     let label = action.label
+                    let isShorten = action.identifier.hasPrefix("fixPlan-shorten")
                     action.tap(); sleep(2)
-                    XCTAssertTrue(app.buttons["fixPlanUndo"].waitForExistence(timeout: 3), "\(size): '\(label)' did something (Undo offered)")
-                    shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan applied", tab: nil)
-                    note("\(size): Fix plan action '\(label)' applied")
-                    if app.buttons["fixPlanUndo"].exists { app.buttons["fixPlanUndo"].tap(); sleep(1) }
+                    if isShorten {
+                        // Behaviour contract W4 (run 131): a shorter session is REBUILT, never relabelled — the before/after
+                        // preview opens first; Cancel leaves the plan as it was; Apply records a plan version with Undo.
+                        let preview = app.otherElements["changePreview"].firstMatch.exists ? app.otherElements["changePreview"].firstMatch : app.tables["changePreview"].firstMatch
+                        XCTAssertTrue(preview.waitForExistence(timeout: 10) || app.buttons["changeApply"].waitForExistence(timeout: 5), "\(size): '\(label)' opens the before/after preview")
+                        shot("\(tag)-plan-fix-preview"); checkScreen(app, "\(size) fix plan preview", tab: nil)
+                        // Cancel: nothing saved — the same action is still offered
+                        app.buttons["changeCancel"].firstMatch.tap(); sleep(1)
+                        XCTAssertTrue(app.buttons[action.identifier].firstMatch.waitForExistence(timeout: 5), "\(size): Cancel leaves the session as planned (action still offered)")
+                        // Apply: the preview closes and the change is recorded as a plan version with Undo
+                        app.buttons[action.identifier].firstMatch.tap(); sleep(2)
+                        XCTAssertTrue(app.buttons["changeApply"].waitForExistence(timeout: 10), "\(size): preview opens again")
+                        app.buttons["changeApply"].firstMatch.tap(); sleep(2)
+                        XCTAssertFalse(app.buttons["changeApply"].exists, "\(size): Apply closes the preview")
+                        XCTAssertFalse(app.buttons[action.identifier].firstMatch.exists, "\(size): the applied shorten is no longer offered")
+                        shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan applied", tab: nil)
+                        // Phase 1 (approved 30 Oct): a rebuilt session gets an Undo toast on Plan (compare-and-swap, logs untouched).
+                        // Known deviation (BEHAVIOUR_CONTRACT W3): single-session rebuilds are not yet listed under Plan changes.
+                        close(app)
+                        XCTAssertTrue(app.buttons["undoDelete"].firstMatch.waitForExistence(timeout: 5), "\(size): Undo offered on Plan after Apply")
+                        shot("\(tag)-plan-fix-undo"); checkScreen(app, "\(size) plan after fix", tab: 1)
+                        note("\(size): Fix plan '\(label)' previewed, cancelled, applied, Undo offered")
+                        fix.tap(); sleep(2)   // back into Fix plan so the rest of the audit continues as before
+                    } else {
+                        XCTAssertTrue(app.buttons["fixPlanUndo"].waitForExistence(timeout: 3), "\(size): '\(label)' did something (Undo offered)")
+                        shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan applied", tab: nil)
+                        note("\(size): Fix plan action '\(label)' applied")
+                        if app.buttons["fixPlanUndo"].exists { app.buttons["fixPlanUndo"].tap(); sleep(1) }
+                    }
                 }
                 close(app)
             } else { note("\(size): no Fix plan button (week within budget)") }
