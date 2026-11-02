@@ -1,0 +1,184 @@
+L home planned: nothing wider than the screen
+L home planned: 17 texts, none overlapping
+L home planned: primary 'Start workout' at 252–302 of 852
+L home planned: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeCoachAction 64×44
+L home planned move: nothing wider than the screen
+L home planned move: 7 texts, none overlapping
+L home ride: nothing wider than the screen
+L home ride: 17 texts, none overlapping
+L home ride: primary 'Start ride' at 252–302 of 852
+L home ride: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeCoachAction 64×44
+L home completed: nothing wider than the screen
+L home completed: 18 texts, none overlapping
+L home completed: primary 'View results' at 255–305 of 852
+L home completed: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeCoachAction 64×44
+L home rest: nothing wider than the screen
+L home rest: 15 texts, none overlapping
+L home rest: primary 'Recovery guidance' at 252–302 of 852
+L home rest: key controls homePrimary 329×49, homeCoachAction 64×44
+L home rest primary sheet: nothing wider than the screen
+L home rest primary sheet: 7 texts, none overlapping
+L home multi: nothing wider than the screen
+L home multi: 20 texts, none overlapping
+L home multi: primary 'View results' at 243–287 of 852
+L home multi: key controls homeWhy 175×44, homeRow-0 85×43, homeRowMore-0 44×43, homeRow-1 67×44, homeRowMore-1 44×44, homeCoachAction 64×44
+L home multi move: nothing wider than the screen
+L home multi move: 7 texts, none overlapping
+L home missed: nothing wider than the screen
+L home missed: 17 texts, none overlapping
+L home missed: primary 'Start workout' at 252–302 of 852
+L home missed: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeCoachAction 64×44
+L home missed move: nothing wider than the screen
+L home missed move: 0 texts, none overlapping
+L home skipped: nothing wider than the screen
+L home skipped: 18 texts, none overlapping
+L home skipped: primary 'Move to another day' at 255–305 of 852
+L home skipped: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeCoachAction 64×44
+L home skipped move: nothing wider than the screen
+L home skipped move: 7 texts, none overlapping
+L home pending: nothing wider than the screen
+L home pending: 17 texts, none overlapping
+L home pending: primary 'Start workout' at 252–302 of 852
+L home pending: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeCoachAction 64×44
+L home clearance: nothing wider than the screen
+L home clearance: 18 texts, none overlapping
+L home clearance: health line at 134–202
+L home clearance: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeCoachAction 87×44, homeCaution 361×67
+L home stop: nothing wider than the screen
+L home stop: 6 texts, none overlapping
+L home stop: primary 'Review health check' at 285–335 of 852
+L home stop: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home stop: week 'No sessions scheduled while training is paused'
+L home stop primary sheet: nothing wider than the screen
+L home stop primary sheet: 7 texts, none overlapping
+L home ill: nothing wider than the screen
+L home ill: 6 texts, none overlapping
+L home ill: primary 'I feel well again' at 257–307 of 852
+L home ill: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home ill: week 'No sessions scheduled while training is paused'
+L home first: nothing wider than the screen
+L home first: 4 texts, none overlapping
+L home first: primary 'Create my plan' at 282–332 of 852
+L home first: key controls homePrimary 329×50
+L home cyclingonly: nothing wider than the screen
+L home cyclingonly: 13 texts, none overlapping
+L home cyclingonly: primary 'Start ride' at 252–302 of 852
+L home cyclingonly: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44
+L home strengthonly: nothing wider than the screen
+L home strengthonly: 16 texts, none overlapping
+L home strengthonly: primary 'Start workout' at 252–302 of 852
+L home strengthonly: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeCoachAction 87×44
+XXXL home planned: nothing wider than the screen
+XXXL home planned: 9 texts, none overlapping
+XXXL home planned: primary 'Start workout' at 323–373 of 852
+XXXL home planned: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeCoachAction 86×44
+XXXL home multi: nothing wider than the screen
+XXXL home multi: 10 texts, none overlapping
+XXXL home multi: primary 'View results' at 346–390 of 852
+XXXL home multi: key controls homeWhy 234×44, homeRow-0 103×44, homeRowMore-0 44×44, homeRow-1 79×43, homeRowMore-1 44×43, homeCoachAction 86×44
+XXXL home missed: nothing wider than the screen
+XXXL home missed: 9 texts, none overlapping
+XXXL home missed: primary 'Start workout' at 323–373 of 852
+XXXL home missed: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeCoachAction 86×44
+XXXL home stop: nothing wider than the screen
+XXXL home stop: 6 texts, none overlapping
+XXXL home stop: primary 'Review health check' at 327–377 of 852
+XXXL home stop: key controls homePrimary 329×50, homeHoldInfo 193×44
+XXXL home stop: week 'No sessions scheduled while training is paused'
+XXXL home pending: nothing wider than the screen
+XXXL home pending: 9 texts, none overlapping
+XXXL home pending: primary 'Start workout' at 323–373 of 852
+XXXL home pending: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeCoachAction 86×44
+XXXL home clearance: nothing wider than the screen
+XXXL home clearance: 9 texts, none overlapping
+XXXL home clearance: health line at 148–281
+XXXL home clearance: key controls homePrimary 329×49, homeWhy 210×44, homeMore 76×44, homeCoachAction 116×44, homeCaution 361×132
+XXXL home ill: nothing wider than the screen
+XXXL home ill: 6 texts, none overlapping
+XXXL home ill: primary 'I feel well again' at 293–343 of 852
+XXXL home ill: key controls homePrimary 329×50, homeHoldInfo 193×44
+XXXL home ill: week 'No sessions scheduled while training is paused'
+L progress glance: nothing wider than the screen
+L progress glance: 20 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 39 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 17 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 42 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 17 texts, none overlapping
+L riding 12 wk: 6 date labels, smallest gap 15 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 19 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 19 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 18 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 43 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 17 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 19 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 45 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 17 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 18 texts, none overlapping
+L: FTP badge not found
+L plan: nothing wider than the screen
+L plan: 41 texts, none overlapping
+L fix plan: nothing wider than the screen
+L fix plan: 2 texts, none overlapping
+L fix plan preview: nothing wider than the screen
+L fix plan preview: 14 texts, none overlapping
+L: Undo toast already expired
+L: Fix plan 'Shorten Mon strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+L plan after fix and undo: nothing wider than the screen
+L plan after fix and undo: 32 texts, none overlapping
+L fix plan after undo: nothing wider than the screen
+L fix plan after undo: 2 texts, none overlapping
+L plan lower: nothing wider than the screen
+L plan lower: 32 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 32 texts, none overlapping
+L: Devices & Connections rows not found
+XXXL progress glance: nothing wider than the screen
+XXXL progress glance: 17 texts, none overlapping
+XXXL riding 4 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 4 wk: nothing wider than the screen
+XXXL riding 4 wk: 11 texts, none overlapping
+XXXL riding 8 wk: 4 date labels, smallest gap 31 pt
+XXXL riding 8 wk: nothing wider than the screen
+XXXL riding 8 wk: 11 texts, none overlapping
+XXXL riding 12 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 12 wk: nothing wider than the screen
+XXXL riding 12 wk: 11 texts, none overlapping
+XXXL riding 16 wk: 4 date labels, smallest gap 30 pt
+XXXL riding 16 wk: nothing wider than the screen
+XXXL riding 16 wk: 11 texts, none overlapping
+XXXL riding 1 yr: 4 date labels, smallest gap 32 pt
+XXXL riding 1 yr: nothing wider than the screen
+XXXL riding 1 yr: 11 texts, none overlapping
+XXXL riding selected: nothing wider than the screen
+XXXL riding selected: 12 texts, none overlapping
+XXXL strength 8 wk: 4 date labels, smallest gap 34 pt
+XXXL strength 8 wk: nothing wider than the screen
+XXXL strength 8 wk: 11 texts, none overlapping
+XXXL strength selected: nothing wider than the screen
+XXXL strength selected: 10 texts, none overlapping
+XXXL: FTP badge not found
+XXXL plan: nothing wider than the screen
+XXXL plan: 30 texts, none overlapping
+XXXL fix plan: nothing wider than the screen
+XXXL fix plan: 2 texts, none overlapping
+XXXL fix plan preview: nothing wider than the screen
+XXXL fix plan preview: 12 texts, none overlapping
+XXXL: Undo toast already expired
+XXXL: Fix plan 'Shorten Mon strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+XXXL plan after fix and undo: nothing wider than the screen
+XXXL plan after fix and undo: 26 texts, none overlapping
+XXXL fix plan after undo: nothing wider than the screen
+XXXL fix plan after undo: 2 texts, none overlapping
+XXXL plan lower: nothing wider than the screen
+XXXL plan lower: 28 texts, none overlapping
+XXXL plan lower 2: nothing wider than the screen
+XXXL plan lower 2: 26 texts, none overlapping
+XXXL: Devices & Connections rows not found
