@@ -1,0 +1,171 @@
+=== layout-small: errors / failures ===
+Test Case '-[BikeComputerUITests.DesignSystemAudit testGalleryLightAndDark]' passed (120.736 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 120.736 (120.740) seconds
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' passed (259.123 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (125.735 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 384.858 (384.862) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:87: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: stage C counter
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:88: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: week strip
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:89: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: the coach proposed the week
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:90: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: feasibility line
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:93: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : Failed to application com.ralsuwaidico.bikecomputer is not running
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages]' failed (117.778 seconds).
+Test Suite 'OnboardingScreens' failed at 2026-11-02 21:09:24.221.
+	 Executed 1 test, with 5 failures (0 unexpected) in 117.778 (117.783) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-02 21:09:24.228.
+	 Executed 4 tests, with 5 failures (0 unexpected) in 623.372 (623.393) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 21:09:24.229.
+	 Executed 4 tests, with 5 failures (0 unexpected) in 623.372 (623.395) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: last 150 lines ===
+    t =    44.91s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    44.91s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    44.95s     Check for interrupting elements affecting "Cyclift" Application
+    t =    44.99s     Synthesize event
+    t =    45.43s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    48.71s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    48.71s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    48.82s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    48.93s     Check for interrupting elements affecting "Cyclift" Application
+    t =    49.00s     Synthesize event
+    t =    49.43s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    52.19s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    52.19s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    52.25s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    52.32s     Check for interrupting elements affecting "Cyclift" Application
+    t =    52.37s     Synthesize event
+    t =    52.81s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    54.40s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    54.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    54.56s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    54.62s     Check for interrupting elements affecting "Cyclift" Application
+    t =    54.66s     Synthesize event
+    t =    55.12s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    57.21s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    57.21s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    57.21s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    57.26s     Check for interrupting elements affecting "Cyclift" Application
+    t =    57.30s     Synthesize event
+    t =    57.74s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    60.44s Tap "onboardingNext" Button
+    t =    60.44s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    60.68s     Find the "onboardingNext" Button
+    t =    60.76s     Check for interrupting elements affecting "onboardingNext" Button
+    t =    60.83s     Synthesize event
+    t =    61.18s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    61.18s Unable to monitor event loop
+    t =    61.18s Unable to monitor animations
+    t =    63.19s Waiting 10.0s for "Your week · 3 of 5" StaticText to exist
+    t =    64.24s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    64.24s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    64.24s         Capturing element debug description
+    t =    65.19s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    65.19s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    65.20s         Capturing element debug description
+    t =    66.25s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    66.26s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    66.26s         Capturing element debug description
+    t =    67.21s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    67.21s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    67.21s         Capturing element debug description
+    t =    68.26s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    68.26s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    68.26s         Capturing element debug description
+    t =    69.21s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    69.21s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    69.21s         Capturing element debug description
+    t =    70.24s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    70.24s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    70.24s         Capturing element debug description
+    t =    71.27s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    71.28s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    71.28s         Capturing element debug description
+    t =    72.21s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    72.21s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    72.21s         Capturing element debug description
+    t =    73.19s     Checking `Expect predicate `existsNoRetry == 1` for object "Your week · 3 of 5" StaticText`
+    t =    73.19s         Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    73.19s         Capturing element debug description
+    t =    73.20s     Checking existence of `"Your week · 3 of 5" StaticText`
+    t =    74.21s     Checking existence of `"Your week · 3 of 5" StaticText` (retry 1)
+    t =    75.21s     Checking existence of `"Your week · 3 of 5" StaticText` (retry 2)
+    t =    75.21s Collecting debug information to assist test failure triage
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:87: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: stage C counter
+    t =    75.74s Waiting 5.0s for "onbWeek" Other to exist
+    t =    76.77s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeek" Other`
+    t =    76.77s         Checking existence of `"onbWeek" Other`
+    t =    76.77s         Capturing element debug description
+    t =    77.75s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeek" Other`
+    t =    77.76s         Checking existence of `"onbWeek" Other`
+    t =    77.76s         Capturing element debug description
+    t =    78.81s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeek" Other`
+    t =    78.81s         Checking existence of `"onbWeek" Other`
+    t =    78.81s         Capturing element debug description
+    t =    79.74s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeek" Other`
+    t =    79.74s         Checking existence of `"onbWeek" Other`
+    t =    79.74s         Capturing element debug description
+    t =    80.74s     Checking `Expect predicate `existsNoRetry == 1` for object "onbWeek" Other`
+    t =    80.74s         Checking existence of `"onbWeek" Other`
+    t =    80.74s         Capturing element debug description
+    t =    80.74s     Checking existence of `"onbWeek" Other`
+    t =    81.76s     Checking existence of `"onbWeek" Other` (retry 1)
+    t =    82.77s     Checking existence of `"onbWeek" Other` (retry 2)
+    t =    82.77s Collecting debug information to assist test failure triage
+    t =    82.77s Checking existence of `"cyWeekStrip" Other`
+    t =    83.78s Checking existence of `"cyWeekStrip" Other` (retry 1)
+    t =    84.79s Checking existence of `"cyWeekStrip" Other` (retry 2)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:88: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: week strip
+    t =    84.80s Checking existence of `"onbWeekCounts" Other`
+    t =    85.81s Checking existence of `"onbWeekCounts" Other` (retry 1)
+    t =    86.82s Checking existence of `"onbWeekCounts" Other` (retry 2)
+    t =    86.82s Checking existence of `"Coach's proposal" StaticText`
+    t =    87.83s Checking existence of `"Coach's proposal" StaticText` (retry 1)
+    t =    88.84s Checking existence of `"Coach's proposal" StaticText` (retry 2)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:89: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: the coach proposed the week
+    t =    88.85s Checking existence of `"onbFeasibility" Other`
+    t =    89.85s Checking existence of `"onbFeasibility" Other` (retry 1)
+    t =    90.86s Checking existence of `"onbFeasibility" Other` (retry 2)
+    t =    90.86s Checking existence of `StaticText (First Match)`
+    t =    91.86s Checking existence of `StaticText (First Match)` (retry 1)
+    t =    92.88s Checking existence of `StaticText (First Match)` (retry 2)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:90: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: feasibility line
+    t =    92.90s Checking existence of `"onbPlanPreview" Other`
+    t =    93.91s Checking existence of `"onbPlanPreview" Other` (retry 1)
+    t =    94.92s Checking existence of `"onbPlanPreview" Other` (retry 2)
+    t =    94.95s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    94.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    94.95s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    95.97s     Retrying `Swipe up Target Application 'com.ralsuwaidico.bikecomputer'` (attempt #2)
+    t =    95.98s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    95.98s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    96.99s     Retrying `Swipe up Target Application 'com.ralsuwaidico.bikecomputer'` (attempt #3)
+    t =    96.99s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    96.99s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:93: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : Failed to application com.ralsuwaidico.bikecomputer is not running
+    t =    97.06s Tear Down
+    t =    97.74s Checking for crash reports corresponding to unexpected termination of com.ralsuwaidico.bikecomputer
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages]' failed (117.778 seconds).
+Test Suite 'OnboardingScreens' failed at 2026-11-02 21:09:24.221.
+	 Executed 1 test, with 5 failures (0 unexpected) in 117.778 (117.783) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-02 21:09:24.228.
+	 Executed 4 tests, with 5 failures (0 unexpected) in 623.372 (623.393) seconds
+Test Suite 'Selected tests' failed at 2026-11-02 21:09:24.229.
+	 Executed 4 tests, with 5 failures (0 unexpected) in 623.372 (623.395) seconds
+2026-11-02 21:10:26.856 xcodebuild[37494:104430] [MT] IDETestOperationsObserverDebug: 983.909 elapsed -- Testing started completed.
+2026-11-02 21:10:26.857 xcodebuild[37494:104430] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-02 21:10:26.857 xcodebuild[37494:104430] [MT] IDETestOperationsObserverDebug: 983.909 sec, +983.909 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-dtlbgvivlouhgtcmphxghlmntdxe/Logs/Test/Test-BikeComputer-2026.11.02_20-53-58-+0000.xcresult
+
+Failing tests:
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+
+** TEST EXECUTE FAILED **
+
+Testing started
