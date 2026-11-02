@@ -269,7 +269,17 @@ final class LayoutAudit: XCTestCase {
     /// Picks a range of the Progress chart: a segmented control normally, a menu at accessibility sizes.
     private func pickRange(_ app: XCUIApplication, _ r: String) -> Bool {
         let seg = app.segmentedControls["trendChart-range"].buttons[r]
-        if seg.waitForExistence(timeout: 2) { seg.tap(); sleep(1); return true }
+        if seg.waitForExistence(timeout: 2) {
+            // Run 139 (SE at AX3): after the long "1 yr" screen the range control sat under the translucent navigation
+            // bar, the tap landed on the bar and "1 yr" stayed selected. Bring the control below the bar, tap, and
+            // confirm the range really changed before going on.
+            for _ in 0..<3 {
+                if seg.frame.minY < app.navigationBars.firstMatch.frame.maxY + 4 { drag(app, up: false) }
+                seg.tap(); sleep(1)
+                if seg.isSelected { return true }
+            }
+            return seg.isSelected
+        }
         let menu = app.buttons["trendChart-range"].firstMatch
         if menu.exists { menu.tap(); sleep(1); let item = app.buttons[r].firstMatch; if item.waitForExistence(timeout: 2) { item.tap(); sleep(1); return true }; app.tap() }
         return false
@@ -321,7 +331,7 @@ final class LayoutAudit: XCTestCase {
                 shot("\(tag)-progress-riding-\(name)")
                 checkChartLabels(app, "trendChart", screen: "\(size) riding \(r)"); checkScreen(app, "\(size) riding \(r)", tab: 3)
             }
-            _ = pickRange(app, "16 wk"); reveal(app, chart)
+            XCTAssertTrue(pickRange(app, "16 wk"), "\(size): the 16 wk range can be selected"); reveal(app, chart)
             if chart.exists {
                 tapChart(app, chart, dx: 0.75)
                 let header = app.descendants(matching: .any).matching(identifier: "trendChart-header").firstMatch
