@@ -381,16 +381,17 @@ final class LayoutAudit: XCTestCase {
                         app.buttons["changeApply"].firstMatch.tap(); sleep(2)
                         XCTAssertFalse(app.buttons["changeApply"].exists, "\(size): Apply closes the preview")
                         XCTAssertFalse(app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch.exists, "\(size): the applied shorten is no longer offered")
-                        shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan applied", tab: nil)
                         // Phase 1 (approved 30 Oct): a rebuilt session gets an Undo toast on Plan (compare-and-swap, logs untouched).
+                        // The toast lives 8 s (run 134: at AX3 the screenshots took longer than that) — check it first, shoot after.
                         // Known deviation (BEHAVIOUR_CONTRACT W3): single-session rebuilds are not yet listed under Plan changes.
                         close(app)
                         let undo = app.buttons["undoDelete"].firstMatch
                         XCTAssertTrue(undo.waitForExistence(timeout: 5), "\(size): Undo offered on Plan after Apply")
-                        shot("\(tag)-plan-fix-undo"); checkScreen(app, "\(size) plan after fix", tab: 1)
+                        shot("\(tag)-plan-fix-undo")
                         note("\(size): Fix plan '\(label)' previewed, cancelled, applied, Undo offered")
                         if undo.exists { undo.tap(); sleep(2) }   // Undo restores the plan so the rest of the audit sees the seeded week
-                        if fix.waitForExistence(timeout: 5) { reveal(app, fix); fix.tap(); sleep(2) }
+                        checkScreen(app, "\(size) plan after fix and undo", tab: 1)
+                        if fix.waitForExistence(timeout: 5) { reveal(app, fix); fix.tap(); sleep(2); shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan after undo", tab: nil) }
                     } else {
                         XCTAssertTrue(app.buttons["fixPlanUndo"].waitForExistence(timeout: 3), "\(size): '\(label)' did something (Undo offered)")
                         shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan applied", tab: nil)
