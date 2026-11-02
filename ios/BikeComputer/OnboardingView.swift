@@ -272,7 +272,7 @@ struct OnboardingView: View {
 
     // MARK: E — Your training system (the first real dashboard; Approve → Home shows the same plan)
     private var stageE: some View {
-        let kinds = a.week ?? OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
+        let kinds = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
         let ride = a.rideMinutes ?? OnboardingWeek.defaultRideMinutes, lift = a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes
         let plan = dryRun(kinds, ride, lift)
         let first = OnboardingApproach.firstWorkout(in: plan, from: Date())

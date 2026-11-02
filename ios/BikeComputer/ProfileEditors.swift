@@ -323,7 +323,14 @@ struct WeekBuilder: View {
     @State private var twoADay = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var kinds: [DayKind] { a.week ?? proposed }
+    /// Always seven days. Run 141: on the first render (before onAppear) both `a.week` and `proposed` were empty and the
+    /// day strip read day 1 of an empty week — the app crashed on entering this stage.
+    private var kinds: [DayKind] {
+        if let w = a.week, w.count == 7 { return w }
+        if proposed.count == 7 { return proposed }
+        if let b = baseline, b.count == 7 { return b }
+        return OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
+    }
     private var ride: Int { a.rideMinutes ?? OnboardingWeek.defaultRideMinutes }
     private var lift: Int { a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes }
     private var touched: Bool { a.week != nil && a.week != proposed }
@@ -414,12 +421,13 @@ struct WeekBuilder: View {
 
     private func days(_ k: [DayKind]) -> [CyDay] {
         (0..<7).map { i in
-            let s: CyDaySport = { switch k[i] { case .ride: return .cycling; case .lift: return .strength; case .both: return .both; case .rest: return .rest } }()
+            let s: CyDaySport = { switch (i < k.count ? k[i] : .rest) { case .ride: return .cycling; case .lift: return .strength; case .both: return .both; case .rest: return .rest } }()
             return CyDay(id: i, shortName: WeeklyAvailability.dayNames[i], longName: WeeklyAvailability.longDayNames[i], sport: s, status: s == .rest ? .none : .planned)
         }
     }
     private func tap(_ i: Int) {
         var k = kinds
+        guard k.indices.contains(i) else { return }
         k[i] = OnboardingWeek.next(k[i], mode: mode, twoADay: twoADay)
         withAnimation(CyMotion.animation(CyTheme.motionPop, reduce: reduceMotion)) { a.week = k }
     }
