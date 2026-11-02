@@ -1,0 +1,21 @@
+BikeComputer iOS CI — run 130 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 130 — 2026-11-02 08:15 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m22s
+RESULT tests: FAILED (exit 65) · 9m31s — 	ProvenanceMigrationTests.testMigrationLeavesPlanAndLogsUntouched()  ** TEST EXECUTE FAILED ** 
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 7m45s
+  layout small (AX3): ok · 13m44s
+  layout standard (L): ok · 11m42s
+RESULT layout audit: ok (66 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 43m3s
+commit bb285d25c019f3bda279ca1119efafcca479e456  branch ios/s2  job failure
