@@ -40,7 +40,7 @@ struct PlanView: View {
             .sheet(isPresented: $showDetailedLog) { DetailedStrengthLogSheet() }
             .sheet(isPresented: $showTemplates) { NavigationStack { TemplatesView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showTemplates = false } } } } }
             .sheet(item: $selected) { w in if w.kind == .strength { StrengthWorkoutScreen(workoutId: w.id) } else { WorkoutDetail(workout: w) } }
-            .sheet(isPresented: $showAvailability) { AvailabilityEditor() }
+            .sheet(isPresented: $showAvailability) { WeekPage(asSheet: true) }   // V1: the one week editor (onboarding Stage C, Profile › Your week)
             .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
             .sheet(item: $dayList) { day in dayListSheet(day) }
         }

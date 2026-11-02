@@ -337,7 +337,7 @@ struct HybridPlanEditor: View {
             }
         }
         .navigationTitle(asSheet ? "Hybrid plan" : "Strength split").navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showDays) { AvailabilityEditor() }
+        .sheet(isPresented: $showDays) { WeekPage(asSheet: true) }
         .sheet(item: $planPreview) { r in PlanChangeSheet(proposalId: r.id) { applied = "Your plan was updated." } }
     }
     private var rideMinutes: Int { p.cyclingSessionMinutes ?? min(240, max(20, (p.hoursPerWeek * 60) / max(1, p.cyclingDaysPerWeek) / 5 * 5)) }
