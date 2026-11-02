@@ -1,0 +1,11 @@
+BikeComputer iOS CI — run 133 — scope quick — jobs: quick=cancelled test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 133 — 2026-11-02 11:30 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+commit be0fe9178c3687086a2d1bee7e7e76c81cd2f100  branch ios/s2  job failure
