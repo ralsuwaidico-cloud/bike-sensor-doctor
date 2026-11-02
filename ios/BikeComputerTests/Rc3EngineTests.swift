@@ -81,6 +81,46 @@ final class Rc3EngineTests: XCTestCase {
     }
 
     // MARK: ENG-D1 / C2 / C1 / A1 / H1 — the week
+    /// Run 132 (S2-0): Fix plan offered "shorten to 20 min" that the rebuild could not meet, so the preview was blocked
+    /// and Apply disabled. Fix plan now offers only a shortening the exercises can honour, and says when it is still over.
+    func testFixPlanOffersOnlyAFeasibleShortening() {
+        let s = store(); hybridPersona(s)
+        s.profile.liftingHoursPerWeek = 1          // 3 × 30 min planned → 30 min over
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        s.refreshGeneratedSessions(now: nextMonday.addingTimeInterval(-86_400))
+        let now = nextMonday.addingTimeInterval(-3_600)
+        guard let r = BudgetFix.report(week: s.workouts(weekOf: nextMonday), riding: false, budgetHours: 1, isCompleted: { _ in false }, now: now,
+                                       feasibleMinutes: { w, t in s.shortestFeasibleMinutes(for: w, target: t, now: now) }) else { return XCTFail("over budget") }
+        let shorten = r.fixes.first { if case .shorten = $0.action { return true }; return false }
+        if let f = shorten, case .shorten(let id, let to) = f.action, let w = s.plan.first(where: { $0.id == id }) {
+            // the offered target must be applicable: a dry run at `to` is not blocked for time
+            var req = SessionChangeRequest(); req.minutes = to
+            let p = s.proposeSessionChange(workoutId: w.id, request: req, now: now)
+            XCTAssertNotNil(p); XCTAssertFalse(p?.report.has("TIME-001") == true && p?.report.outcome == .block, "offered shortening \(to) min is feasible")
+            XCTAssertLessThan(to, w.minutes)
+            if to > w.minutes - r.overMinutes { XCTAssertTrue(f.text.contains("shortest its exercises allow"), "says why the target is not the full saving: \(f.text)") }
+        } else {
+            // no shortening offered at all is also honest (minimum 20 min) — but then skip / raise must be present
+            XCTAssertTrue(r.fixes.contains { if case .raiseBudget = $0.action { return true }; return false })
+        }
+    }
+    /// Run 135: the Fix-plan dry run must never evict or replace the athlete's pending preview.
+    func testFeasibleMinutesDryRunLeavesPendingProposalsAlone() {
+        let s = store(); hybridPersona(s)
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        s.refreshGeneratedSessions(now: nextMonday.addingTimeInterval(-86_400))
+        let now = nextMonday.addingTimeInterval(-3_600)
+        guard let lift = s.plan.first(where: { $0.kind == .strength }) else { return XCTFail() }
+        var w = lift; w.minutes = 25
+        let r = s.edit(w)   // edit() registers the same preview proposal the screens use
+        XCTAssertTrue(r == .needsConfirmation || { if case .blocked = r { return true }; return false }(), "a shorter lift is previewed, not applied: \(r)")
+        guard let pid = s.lastProposalId else { return XCTFail("preview registered") }
+        XCTAssertNotNil(s.pendingProposals[pid])
+        for t in [20, 22, 25, 28] { for _ in 0..<8 { _ = s.shortestFeasibleMinutes(for: lift, target: t, now: now) } }   // > 20 body re-evaluations
+        XCTAssertNotNil(s.pendingProposals[pid], "the athlete's preview survives repeated dry runs")
+        XCTAssertEqual(s.lastProposalId, pid)
+        XCTAssertEqual(s.pendingProposals.count, 1, "dry runs register nothing")
+    }
     func testAT_D1_1_C2_1_ThreeShortLiftsAreFullBodyAndFit() {
         let s = store(); hybridPersona(s)
         let w = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)

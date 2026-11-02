@@ -230,7 +230,8 @@ struct FixPlanSheet: View {
     static func reports(_ store: Store, weekOf: Date) -> [BudgetFix.Report] {
         let week = store.workouts(weekOf: weekOf), ledger = store.ledger
         return [BudgetFix.report(week: week, riding: true, budgetHours: store.profile.hoursPerWeek, isCompleted: { ledger.status($0).isCompleted }),
-                BudgetFix.report(week: week, riding: false, budgetHours: store.profile.liftingHoursPerWeek, isCompleted: { ledger.status($0).isCompleted })].compactMap { $0 }
+                BudgetFix.report(week: week, riding: false, budgetHours: store.profile.liftingHoursPerWeek, isCompleted: { ledger.status($0).isCompleted },
+                                 feasibleMinutes: { w, target in store.shortestFeasibleMinutes(for: w, target: target) })].compactMap { $0 }
     }
 
     var body: some View {
