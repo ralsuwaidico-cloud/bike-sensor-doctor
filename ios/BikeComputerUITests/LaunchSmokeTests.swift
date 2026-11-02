@@ -84,11 +84,17 @@ final class LaunchSmokeTests: XCTestCase {
         let profileTab = app.buttons["Profile"].firstMatch
         XCTAssertTrue(profileTab.waitForExistence(timeout: 10), "Profile tab missing")
         profileTab.tap()
-        XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 10))
-        let export = app.buttons["exportData"].firstMatch
+        XCTAssertTrue(app.staticTexts["Profile"].firstMatch.waitForExistence(timeout: 10))
+        // V1: Your data lives in Profile › Settings (one home per setting)
+        let settingsRow = app.buttons["profileSettings"].firstMatch
         var tries = 0
-        while !(export.exists && export.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }   // the section is below the fold (rc3: after Settings)
-        XCTAssertTrue(export.waitForExistence(timeout: 10), "Profile › Your data › Export my data")
+        while !(settingsRow.exists && settingsRow.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10), "Profile › Settings row")
+        settingsRow.tap()
+        let export = app.buttons["exportData"].firstMatch
+        tries = 0
+        while !(export.exists && export.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(export.waitForExistence(timeout: 10), "Profile › Settings › Your data › Export my data")
         // no sign-in surface anywhere in 1.0
         XCTAssertFalse(app.buttons["profileCreateAccount"].exists, "no Create account row")
         let signIn = NSPredicate(format: "label CONTAINS[c] 'sign in' OR label CONTAINS[c] 'create account' OR label CONTAINS[c] 'not configured'")

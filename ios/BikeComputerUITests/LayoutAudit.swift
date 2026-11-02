@@ -129,6 +129,21 @@ final class LayoutAudit: XCTestCase {
         return nil
     }
 
+    /// V1 Profile: opens a row (by identifier) after scrolling it into view; false when it is not on this screen.
+    private func openRow(_ app: XCUIApplication, _ id: String) -> Bool {
+        let e = app.buttons[id].firstMatch
+        guard e.waitForExistence(timeout: 3) else { note("row \(id) missing"); return false }
+        reveal(app, e)
+        guard e.isHittable else { note("row \(id) not hittable"); return false }
+        e.tap(); sleep(2); app.settleForScreenshot()
+        return true
+    }
+    /// Pops the pushed page (the system back button is the first navigation-bar button).
+    private func back(_ app: XCUIApplication) {
+        let b = app.navigationBars.buttons.firstMatch
+        if b.waitForExistence(timeout: 3) { b.tap(); sleep(1) }
+    }
+
     private func tab(_ app: XCUIApplication, _ name: String) {
         let b = app.buttons[name].firstMatch
         if b.waitForExistence(timeout: 5) { b.tap(); _ = b.waitUntilSettled(timeout: 2); app.settleForScreenshot() } else { note("tab \(name) missing") }
@@ -189,11 +204,12 @@ final class LayoutAudit: XCTestCase {
             scrollUp(app); shot("\(tag)-14-progress-ftp")
             tab(app, "Profile"); shot("\(tag)-15-profile"); checkTexts(app, screen: "\(size) profile")
             if size == sizes.first && extras {
-                // rc3: one Profile screen (Personal, Training, Devices & Connections, Settings) — its lower parts
-                scrollUp(app); shot("\(tag)-16-profile-training"); checkTexts(app, screen: "\(size) profile training")
-                scrollUp(app); shot("\(tag)-17-profile-devices-settings"); checkTexts(app, screen: "\(size) profile devices settings")
-                scrollUp(app); shot("\(tag)-17b-profile-data")
-                app.swipeDown(); app.swipeDown(); app.swipeDown(); app.swipeDown(); sleep(1)
+                // V1: one compact Profile; its focused editors (Type & experience, Your week) and Devices & sensors
+                scrollUp(app); shot("\(tag)-16-profile-lower"); checkTexts(app, screen: "\(size) profile lower")
+                app.swipeDown(); app.swipeDown(); sleep(1)
+                if openRow(app, "profileType") { shot("\(tag)-17-profile-type"); checkTexts(app, screen: "\(size) profile type"); back(app) }
+                if openRow(app, "profileWeek") { shot("\(tag)-17b-profile-week"); checkTexts(app, screen: "\(size) profile week"); back(app) }
+                if openRow(app, "profileDevices") { shot("\(tag)-17c-profile-devices"); checkTexts(app, screen: "\(size) profile devices"); back(app) }
             }
             // tab bar items never overlap the raised centre button
             checkKey(app, ids: ["Home", "Plan", "centreButton", "Progress", "Profile"], screen: "\(size) tab bar", minHeight: 30)
@@ -376,6 +392,9 @@ final class LayoutAudit: XCTestCase {
             scrollUp(app); shot("\(tag)-plan-lower2"); checkScreen(app, "\(size) plan lower 2", tab: 1)
             // Devices & Connections (rc3: rows inline in Profile; no board in the demo: what the link line says)
             tab(app, "Profile")
+            // V1: the device cards are on Profile › Devices & sensors
+            let devicesRow = app.buttons["profileDevices"].firstMatch
+            if devicesRow.waitForExistence(timeout: 3) { reveal(app, devicesRow); devicesRow.tap(); sleep(2) }
             let bc = app.buttons["deviceBoard"].firstMatch
             if bc.waitForExistence(timeout: 3) {
                 reveal(app, bc)
