@@ -888,6 +888,8 @@ final class Store: ObservableObject {
     var pendingProposals: [UUID: SessionChangeProposal] = [:]
     /// Rebuild fix: the last proposal `edit` made (for the preview sheet).
     var lastProposalId: UUID? = nil
+    /// Dry-run answers for Fix plan (not persisted; keyed by session, target and change fingerprint).
+    var feasibleMinutesCache: [String: Int] = [:]
     /// Rebuild fix: the proposal a commit refused as stale, kept so the preview can rebuild it from the same request.
     var lastStale: [UUID: SessionChangeProposal] = [:]
     /// Rebuild fix (review C R6): why the last Undo was refused (shown to the athlete).

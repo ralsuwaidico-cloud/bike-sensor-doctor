@@ -662,10 +662,20 @@ extension Store {
     /// Nothing is registered or saved. Non-strength sessions and sessions that cannot be rebuilt return `target`.
     func shortestFeasibleMinutes(for w: Workout, target: Int, now: Date = Date()) -> Int {
         guard w.kind == .strength, !w.done, !w.skipped else { return target }
+        // run 135: `proposeSessionChange` registers what it builds (bounded to 20) — a dry run from a view body evicted the
+        // athlete's own pending preview ("This change is no longer available"). The dry run is discarded at once and the
+        // answer cached per session state, so the body never registers anything.
+        let key = "\(w.id.uuidString)|\(target)|\(changeFingerprint(w.id))"
+        if let c = feasibleMinutesCache[key] { return c }
+        let keepLast = lastProposalId, keepPending = pendingProposals
         var req = SessionChangeRequest(); req.minutes = target
         guard let p = proposeSessionChange(workoutId: w.id, request: req, now: now) else { return target }
-        if p.report.outcome == .block, p.report.has("TIME-001"), let e = p.report.estimatedMinutes { return max(target, Int(e.rounded(.up)) + 1) }
-        return target
+        pendingProposals = keepPending      // the register step (bounded, expiring) must leave the athlete's proposals untouched
+        lastProposalId = keepLast
+        var out = target
+        if p.report.outcome == .block, p.report.has("TIME-001"), let e = p.report.estimatedMinutes { out = max(target, Int(e.rounded(.up)) + 1) }
+        feasibleMinutesCache[key] = out
+        return out
     }
     /// Builds a fresh proposal from an earlier one's request (after a stale refusal, or with one field changed by an
     /// alternative such as "Allow 32 min" or "Detach the routine"). Returns the new id, nil when the session is gone.

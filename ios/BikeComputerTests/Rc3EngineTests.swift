@@ -104,6 +104,23 @@ final class Rc3EngineTests: XCTestCase {
             XCTAssertTrue(r.fixes.contains { if case .raiseBudget = $0.action { return true }; return false })
         }
     }
+    /// Run 135: the Fix-plan dry run must never evict or replace the athlete's pending preview.
+    func testFeasibleMinutesDryRunLeavesPendingProposalsAlone() {
+        let s = store(); hybridPersona(s)
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        s.refreshGeneratedSessions(now: nextMonday.addingTimeInterval(-86_400))
+        let now = nextMonday.addingTimeInterval(-3_600)
+        guard let lift = s.plan.first(where: { $0.kind == .strength }) else { return XCTFail() }
+        var w = lift; w.minutes = 25
+        let r = s.edit(w)   // edit() registers the same preview proposal the screens use
+        XCTAssertTrue(r == .needsConfirmation || { if case .blocked = r { return true }; return false }(), "a shorter lift is previewed, not applied: \(r)")
+        guard let pid = s.lastProposalId else { return XCTFail("preview registered") }
+        XCTAssertNotNil(s.pendingProposals[pid])
+        for t in [20, 22, 25, 28] { for _ in 0..<8 { _ = s.shortestFeasibleMinutes(for: lift, target: t, now: now) } }   // > 20 body re-evaluations
+        XCTAssertNotNil(s.pendingProposals[pid], "the athlete's preview survives repeated dry runs")
+        XCTAssertEqual(s.lastProposalId, pid)
+        XCTAssertEqual(s.pendingProposals.count, 1, "dry runs register nothing")
+    }
     func testAT_D1_1_C2_1_ThreeShortLiftsAreFullBodyAndFit() {
         let s = store(); hybridPersona(s)
         let w = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
