@@ -12,6 +12,7 @@ for f in WeekTotals ProgressMetrics HomeModel SessionRebuild Rc3Engine; do
 done
 cp "$SRC/ios/Shared/BCLink.swift" "$SRC/ios/Shared/AppInfo.swift" "$SRC/ios/Shared/CoachCore.swift" "$W/Sources/BikeComputer/"
 cp "$HERE/Sources/BikeComputer-shims/"*.swift "$W/Sources/BikeComputer/"
+[ -f "$SRC/ios/BikeComputer/DesignSystem/PureDesign.swift" ] && cp "$SRC/ios/BikeComputer/DesignSystem/PureDesign.swift" "$W/Sources/BikeComputer/"   # design-system pure logic (Foundation only)
 for t in ${TESTS:-TestScreenSupport IndependentReviewPass2ProbeTests IndependentReviewPass2Probe2Tests IndependentReviewPass2Probe3Tests IndependentReviewPass3ProbeTests IndependentReviewPass3Probe2Tests IndependentReviewPass4ProbeTests CoachRemediationPass3Tests IndependentReviewProbeTests IndependentReviewProbe2Tests IndependentReviewProbe3Tests AdaptationEngineTests HybridV2Tests HybridTests RoutinesTests StrengthAuditTests AuditFixTests QualityReleaseTests CoachRemediationTests HomeBTests ProgressMetricsTests Rc3EngineTests}; do
   [ -f "$SRC/ios/BikeComputerTests/$t.swift" ] && cp "$SRC/ios/BikeComputerTests/$t.swift" "$W/Tests/BikeComputerTests/" && python3 "$HERE/strip_ui_tests.py" "$W/Tests/BikeComputerTests/$t.swift"
 done
