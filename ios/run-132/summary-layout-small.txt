@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 132 — 2026-11-02 10:27 UTC
+Stage: layout (layout devices: small)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m25s
+  layout small (L,AX3): FAILED (exit 65) · 26m47s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 286.0}, {343.0, 44.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan' -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertFalse failed - L: Apply closes the preview -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertFalse failed - L: the applied shorten i
+RESULT layout audit: FAILED (53 screenshots)
+Total: 37m32s

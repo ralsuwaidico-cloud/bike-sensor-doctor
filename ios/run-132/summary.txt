@@ -1,0 +1,87 @@
+BikeComputer iOS CI — run 132 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 132 — 2026-11-02 10:47 UTC
+Stage: unit
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m42s
+RESULT tests: ok (Executed 505 tests, with 0 failures) · 8m51s
+Total: 9m3s
+
+## smoke
+BikeComputer iOS CI — build 132 — 2026-11-02 10:27 UTC
+Stage: smoke
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): ok · 10m36s
+RESULT launch smoke (Release): ok (Executed 2 tests, with 0 failures) · 29m21s
+Total: 29m33s
+
+## layout-small
+BikeComputer iOS CI — build 132 — 2026-11-02 10:27 UTC
+Stage: layout (layout devices: small)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m25s
+  layout small (L,AX3): FAILED (exit 65) · 26m47s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 286.0}, {343.0, 44.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan' -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertFalse failed - L: Apply closes the preview -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertFalse failed - L: the applied shorten i
+RESULT layout audit: FAILED (53 screenshots)
+Total: 37m32s
+
+## layout-standard
+BikeComputer iOS CI — build 132 — 2026-11-02 10:27 UTC
+Stage: layout (layout devices: standard)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m39s
+  layout standard (L,XXXL): ok · 9m43s
+RESULT layout audit: ok (32 screenshots)
+Total: 20m21s
+
+## layout-promax
+BikeComputer iOS CI — build 132 — 2026-11-02 10:27 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m27s
+  layout promax (L): ok · 8m30s
+RESULT layout audit: ok (12 screenshots)
+Total: 19m18s
+
+## layout-owner
+BikeComputer iOS CI — build 132 — 2026-11-02 10:39 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m11s
+  layout owner (L,XXXL): FAILED (exit 65) · 29m55s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 324.7}, {361.0, 44.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan' -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertFalse failed - L: Apply closes the preview -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertFalse failed - L: the applied shorten i
+RESULT layout audit: FAILED (45 screenshots)
+Total: 41m41s
+
+## watch
+BikeComputer iOS CI — build 132 — 2026-11-02 10:27 UTC
+Stage: watch
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12286   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12810   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13072   screenshot ax3 ok large · 11m29s
+Total: 11m35s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit bdc6db6cdb31e0f2a5517efc8bd577f2a9e57108  branch ios/s2  job failure
