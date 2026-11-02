@@ -116,7 +116,10 @@ struct BudgetFix: Equatable, Identifiable {
     }
 
     /// nil when the sport is within its budget (or has none).
-    static func report(week: [Workout], riding: Bool, budgetHours: Int, isCompleted: (Workout) -> Bool, now: Date = Date(), calendar cal: Calendar = .current) -> Report? {
+    /// `feasibleMinutes`: the shortest time limit the session's exercises can honour (S2-0 run 132: Fix plan offered
+    /// "shorten to 20 min" that the rebuild could not meet, so the preview was blocked). Pure callers pass the identity.
+    static func report(week: [Workout], riding: Bool, budgetHours: Int, isCompleted: (Workout) -> Bool, now: Date = Date(), calendar cal: Calendar = .current,
+                       feasibleMinutes: (Workout, Int) -> Int = { _, target in target }) -> Report? {
         guard budgetHours > 0 else { return nil }
         let mine = week.filter { (riding ? $0.kind.isRide : $0.kind == .strength) && !$0.skipped }
         let planned = mine.reduce(0) { $0 + $1.minutes }, limit = budgetHours * 60
@@ -129,7 +132,13 @@ struct BudgetFix: Equatable, Identifiable {
         let minimum = riding ? 30 : 20
         var fixes: [BudgetFix] = []
         if let l = changeable.first, l.minutes - over >= minimum {
-            fixes.append(BudgetFix(id: "shorten-\(l.id)", text: "Shorten \(l.date.shortDay) \(l.displayTitle.lowercased()) from \(Fmt.duration(minutes: l.minutes)) to \(Fmt.duration(minutes: l.minutes - over))", action: .shorten(l.id, to: l.minutes - over)))
+            let target = l.minutes - over
+            let to = min(l.minutes, max(target, feasibleMinutes(l, target)))
+            if to < l.minutes {
+                let remaining = over - (l.minutes - to)
+                let tail = to > target ? " (the shortest its exercises allow\(remaining > 0 ? " — still \(Fmt.duration(minutes: remaining)) over" : ""))" : ""
+                fixes.append(BudgetFix(id: "shorten-\(l.id)", text: "Shorten \(l.date.shortDay) \(l.displayTitle.lowercased()) from \(Fmt.duration(minutes: l.minutes)) to \(Fmt.duration(minutes: to))\(tail)", action: .shorten(l.id, to: to)))
+            }
         }
         if let s = changeable.filter({ $0.minutes >= over }).min(by: { $0.minutes < $1.minutes || ($0.minutes == $1.minutes && $0.date > $1.date) }) {
             fixes.append(BudgetFix(id: "skip-\(s.id)", text: "Skip \(s.date.shortDay) \(s.displayTitle.lowercased()) (\(Fmt.duration(minutes: s.minutes)))", action: .skip(s.id)))

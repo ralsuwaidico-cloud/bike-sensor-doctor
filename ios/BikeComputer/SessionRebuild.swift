@@ -656,6 +656,17 @@ extension Store {
     }
     /// The preview's Cancel: the proposal is discarded; the session was never changed.
     func discardProposal(_ id: UUID) { pendingProposals.removeValue(forKey: id) }
+
+    /// The shortest time limit a strength session can be rebuilt to without the validator blocking it (TIME-001): a dry
+    /// run of the rebuild at `target`; when blocked for time, the estimate at the top of the rep ranges, rounded up, +1.
+    /// Nothing is registered or saved. Non-strength sessions and sessions that cannot be rebuilt return `target`.
+    func shortestFeasibleMinutes(for w: Workout, target: Int, now: Date = Date()) -> Int {
+        guard w.kind == .strength, !w.done, !w.skipped else { return target }
+        var req = SessionChangeRequest(); req.minutes = target
+        guard let p = proposeSessionChange(workoutId: w.id, request: req, now: now) else { return target }
+        if p.report.outcome == .block, p.report.has("TIME-001"), let e = p.report.estimatedMinutes { return max(target, Int(e.rounded(.up)) + 1) }
+        return target
+    }
     /// Builds a fresh proposal from an earlier one's request (after a stale refusal, or with one field changed by an
     /// alternative such as "Allow 32 min" or "Detach the routine"). Returns the new id, nil when the session is gone.
     func repropose(_ id: UUID, now: Date = Date(), adjust: (inout SessionChangeRequest) -> Void = { _ in }) -> UUID? {
