@@ -262,7 +262,7 @@ case "$STAGE" in
   quick)
     run_unit
     # QUICK_UI: LayoutAudit / OnboardingScreens test methods for the screens being changed (default: main screens).
-    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingR7FiveScreens DesignSystemAudit/testGalleryLightAndDark}"   # run 126: adding the owner-screens audit and upgrade smoke made the quick check 51 min — add tests here only for the screens being changed
+    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates LayoutAudit/testRC2OwnerScreens OnboardingScreens/testOnboardingR7FiveScreens DesignSystemAudit/testGalleryLightAndDark}"   # run 126: adding the owner-screens audit and upgrade smoke made the quick check 51 min — add tests here only for the screens being changed
     LAYOUT_DEVICES="small,standard"; layout_sims
     if release_products; then
       layout_one small "${SMALL%%|*}" AX3 "$QUICK_UI"
