@@ -1,0 +1,162 @@
+=== layout-standard: errors / failures ===
+2026-11-02 17:00:48.558 xcodebuild[95830:249348]  iOSSimulator: 📱<DVTiPhoneSimulator (0x845ef0780), iPhone 17, unknown class, 26.5 (23F77), 062CFAA4-9ACF-40ED-A1E2-3625F5ED4DA9> unable to connect to "com.apple.instruments.deviceservice.lockdown" (Error Domain=DVTiPhoneSimulatorErrorDomain Code=-1 "DTServiceHubClient failed to bless service hub for simulator iPhone 17 (062CFAA4-9ACF-40ED-A1E2-3625F5ED4DA9)" UserInfo={NSLocalizedDescription=DTServiceHubClient failed to bless service hub for simulator iPhone 17 (062CFAA4-9ACF-40ED-A1E2-3625F5ED4DA9), NSUnderlyingError=0x8420ed230 {Error Domain=DTServiceHubClient Code=2 "Connection to Simulator service hub (97490) interrupted. Simulator service hub IS still alive." UserInfo={NSLocalizedDescription=Connection to Simulator service hub (97490) interrupted. Simulator service hub IS still alive.}}})
+Test Case '-[BikeComputerUITests.DesignSystemAudit testGalleryLightAndDark]' passed (226.716 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 226.716 (226.722) seconds
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (124.409 seconds).
+	 Executed 3 tests, with 2 tests skipped and 0 failures (0 unexpected) in 124.830 (124.837) seconds
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingR7FiveScreens]' passed (112.670 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 112.670 (112.671) seconds
+	 Executed 5 tests, with 2 tests skipped and 0 failures (0 unexpected) in 464.216 (464.232) seconds
+	 Executed 5 tests, with 2 tests skipped and 0 failures (0 unexpected) in 464.216 (464.234) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-standard: last 150 lines ===
+    t =    60.02s     Synthesize event
+    t =    60.48s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    60.99s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    60.99s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    61.01s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    61.12s     Check for interrupting elements affecting "Cyclift" Application
+    t =    61.18s     Synthesize event
+    t =    61.63s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    63.39s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    63.39s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    63.39s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    63.43s     Check for interrupting elements affecting "Cyclift" Application
+    t =    63.53s     Synthesize event
+    t =    63.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    65.61s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    65.61s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    65.62s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    65.68s     Check for interrupting elements affecting "Cyclift" Application
+    t =    65.76s     Synthesize event
+    t =    66.20s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    66.69s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    66.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    66.70s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    66.77s     Check for interrupting elements affecting "Cyclift" Application
+    t =    66.86s     Synthesize event
+    t =    67.35s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    68.85s Waiting 5.0s for "onboardingNext" Button to exist
+    t =    69.87s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingNext" Button`
+    t =    69.87s         Checking existence of `"onboardingNext" Button`
+    t =    70.04s Tap "onboardingNext" Button
+    t =    70.04s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    70.05s     Find the "onboardingNext" Button
+    t =    70.17s     Check for interrupting elements affecting "onboardingNext" Button
+    t =    70.24s     Synthesize event
+    t =    70.59s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    72.62s Waiting 5.0s for "4 of 5" StaticText to exist
+    t =    73.66s     Checking `Expect predicate `existsNoRetry == 1` for object "4 of 5" StaticText`
+    t =    73.66s         Checking existence of `"4 of 5" StaticText`
+    t =    73.76s Waiting 5.0s for "onboardingSkip" Button to exist
+    t =    74.82s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingSkip" Button`
+    t =    74.82s         Checking existence of `"onboardingSkip" Button`
+    t =    74.89s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    74.90s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    74.93s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    74.99s     Check for interrupting elements affecting "Cyclift" Application
+    t =    75.05s     Synthesize event
+    t =    75.50s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    75.99s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    75.99s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    76.00s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    76.06s     Check for interrupting elements affecting "Cyclift" Application
+    t =    76.12s     Synthesize event
+    t =    76.55s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    78.49s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    78.49s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    78.50s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    78.57s     Check for interrupting elements affecting "Cyclift" Application
+    t =    78.63s     Synthesize event
+    t =    79.07s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    80.72s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    80.72s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    80.72s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    80.82s     Check for interrupting elements affecting "Cyclift" Application
+    t =    80.94s     Synthesize event
+    t =    81.40s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    81.90s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    81.90s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    81.90s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    81.94s     Check for interrupting elements affecting "Cyclift" Application
+    t =    81.98s     Synthesize event
+    t =    82.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    83.94s Waiting 5.0s for "onboardingNext" Button to exist
+    t =    84.98s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingNext" Button`
+    t =    84.98s         Checking existence of `"onboardingNext" Button`
+    t =    85.09s Tap "onboardingNext" Button
+    t =    85.10s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    85.10s     Find the "onboardingNext" Button
+    t =    85.28s     Check for interrupting elements affecting "onboardingNext" Button
+    t =    85.32s     Synthesize event
+    t =    85.63s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    87.65s Waiting 5.0s for "5 of 5" StaticText to exist
+    t =    88.69s     Checking `Expect predicate `existsNoRetry == 1` for object "5 of 5" StaticText`
+    t =    88.69s         Checking existence of `"5 of 5" StaticText`
+    t =    88.80s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    88.80s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    88.81s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    88.91s     Check for interrupting elements affecting "Cyclift" Application
+    t =    88.98s     Synthesize event
+    t =    89.42s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    89.90s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    89.90s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    89.91s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    89.96s     Check for interrupting elements affecting "Cyclift" Application
+    t =    90.01s     Synthesize event
+    t =    90.47s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    92.30s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    92.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    92.30s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    92.35s     Check for interrupting elements affecting "Cyclift" Application
+    t =    92.40s     Synthesize event
+    t =    92.84s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    94.48s Checking existence of `"onbWhy" Other`
+    t =    94.53s Checking existence of `"WHY THIS PLAN" StaticText`
+    t =    94.57s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    94.57s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    94.58s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    94.63s     Check for interrupting elements affecting "Cyclift" Application
+    t =    94.67s     Synthesize event
+    t =    95.13s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    95.62s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    95.62s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    95.63s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    95.67s     Check for interrupting elements affecting "Cyclift" Application
+    t =    95.71s     Synthesize event
+    t =    96.13s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    97.63s Waiting 5.0s for "onbCreatePlan" Button to exist
+    t =    98.70s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCreatePlan" Button`
+    t =    98.70s         Checking existence of `"onbCreatePlan" Button`
+    t =    98.83s Tap "onbCreatePlan" Button
+    t =    98.83s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    98.83s     Find the "onbCreatePlan" Button
+    t =    99.07s     Check for interrupting elements affecting "onbCreatePlan" Button
+    t =    99.23s     Synthesize event
+    t =    99.59s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   105.10s Waiting 3.0s for "homeCaution" Button to exist
+    t =   106.11s     Checking `Expect predicate `existsNoRetry == 1` for object "homeCaution" Button`
+    t =   106.12s         Checking existence of `"homeCaution" Button`
+    t =   108.38s         Capturing element debug description
+    t =   108.39s     Checking existence of `"homeCaution" Button`
+    t =   110.92s Collecting debug information to assist test failure triage
+    t =   110.92s     Requesting snapshot of accessibility hierarchy for app with pid 9843
+    t =   111.49s Terminate com.ralsuwaidico.bikecomputer:9843
+    t =   112.57s Tear Down
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingR7FiveScreens]' passed (112.670 seconds).
+Test Suite 'OnboardingScreens' passed at 2026-11-02 17:08:56.270.
+	 Executed 1 test, with 0 failures (0 unexpected) in 112.670 (112.671) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-02 17:08:56.271.
+	 Executed 5 tests, with 2 tests skipped and 0 failures (0 unexpected) in 464.216 (464.232) seconds
+Test Suite 'Selected tests' passed at 2026-11-02 17:08:56.271.
+	 Executed 5 tests, with 2 tests skipped and 0 failures (0 unexpected) in 464.216 (464.234) seconds
+2026-11-02 17:08:58.525 xcodebuild[95830:248889] [MT] IDETestOperationsObserverDebug: 660.704 elapsed -- Testing started completed.
+2026-11-02 17:08:58.525 xcodebuild[95830:248889] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-02 17:08:58.525 xcodebuild[95830:248889] [MT] IDETestOperationsObserverDebug: 660.704 sec, +660.704 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-bdiufvegloywsncnvjskuikmryot/Logs/Test/Test-BikeComputer-2026.11.02_16-57-53-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
