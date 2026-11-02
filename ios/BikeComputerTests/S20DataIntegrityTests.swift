@@ -142,7 +142,7 @@ final class DeviceStateTests: XCTestCase {
         XCTAssertEqual(DeviceStateRules.board(linkState: .idle, remembered: true, lastLiveAt: nil, pairingLost: false, bluetoothOff: false, now: now), .paired)
         XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: nil, pairingLost: false, bluetoothOff: false, now: now), .connected)
         XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: now.addingTimeInterval(-3), pairingLost: false, bluetoothOff: false, now: now), .receivingData(lastSampleAt: now.addingTimeInterval(-3)))
-        XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: now.addingTimeInterval(-30), pairingLost: false, bluetoothOff: false, now: now), .connected, "stale samples are not 'receiving'")
+        XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: now.addingTimeInterval(-30), pairingLost: false, bluetoothOff: false, now: now), .stale(lastSampleAt: now.addingTimeInterval(-30)), "old samples are 'stale', never 'receiving'")
         if case .problem = DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: nil, pairingLost: true, bluetoothOff: false, now: now) {} else { XCTFail("pairing lost is a problem") }
         if case .problem = DeviceStateRules.board(linkState: .off, remembered: true, lastLiveAt: nil, pairingLost: false, bluetoothOff: true, now: now) {} else { XCTFail("bluetooth off with a paired board is a problem") }
     }
@@ -170,6 +170,22 @@ final class DeviceStateTests: XCTestCase {
         XCTAssertEqual(DeviceStateRules.health(available: true, authorized: true, wanted: true, lastSyncAt: nil, now: now), .connected)
         XCTAssertEqual(DeviceStateRules.health(available: false, authorized: false, wanted: true, lastSyncAt: nil, now: now), .notPaired)
         if case .problem = DeviceStateRules.health(available: true, authorized: false, wanted: true, lastSyncAt: nil, now: now) {} else { XCTFail("wanted but not authorized") }
+    }
+    func testStaleIsItsOwnState() {
+        let old = now.addingTimeInterval(-DeviceState.freshWindow - 1), fresh = now.addingTimeInterval(-DeviceState.freshWindow)
+        XCTAssertEqual(DeviceState.linked(lastSampleAt: nil, now: now), .connected)
+        XCTAssertEqual(DeviceState.linked(lastSampleAt: fresh, now: now), .receivingData(lastSampleAt: fresh))
+        XCTAssertEqual(DeviceState.linked(lastSampleAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.bleSensor(configured: true, link: .connected, radio: .on, lastSampleAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.boardSensor(boardReceiving: true, meterLink: 4, enabled: true, lastSampleAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.watch(paired: true, appInstalled: true, sessionRunning: true, lastHRAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.watch(paired: true, appInstalled: true, sessionRunning: false, lastHRAt: old, now: now), .paired, "no session: old samples do not make it stale")
+        XCTAssertTrue(DeviceState.stale(lastSampleAt: old).isStale); XCTAssertFalse(DeviceState.stale(lastSampleAt: old).isReceiving)
+        XCTAssertTrue(DeviceState.stale(lastSampleAt: old).isConnectedOrBetter)
+        XCTAssertEqual(DeviceState.stale(lastSampleAt: old).conn, .amber)
+        XCTAssertEqual(DeviceState.stale(lastSampleAt: old).title, "Connected · no recent data")
+        XCTAssertTrue(DeviceStateRules.detail(.stale(lastSampleAt: old), lastSyncedAt: nil, now: now).hasPrefix("connected · last data"))
+        XCTAssertTrue(CyDeviceState.allCases.contains(.stale))
     }
     func testColoursFollowTheConnectionsRule() {
         XCTAssertEqual(DeviceState.receivingData(lastSampleAt: now).conn, .green)

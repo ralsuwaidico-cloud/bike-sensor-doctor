@@ -358,6 +358,7 @@ struct CyDeviceStateBadge: View {
         let fg: Color = {
             switch state {
             case .receiving, .connected: return CyTheme.recovery.tint
+            case .stale: return CyTheme.goal.tint
             case .paired: return CyTheme.cycling.tint
             case .notPaired: return CyTheme.ink2
             case .problem: return CyTheme.bad
