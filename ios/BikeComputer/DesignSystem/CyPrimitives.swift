@@ -265,6 +265,13 @@ struct CySwitchRow: View {
         .tint(CyTheme.recovery.tint)
         .padding(.horizontal, 14).padding(.vertical, 8)
         .frame(minHeight: 56)
+        // run 128: the system switch exposes an inner 63×28 control with no name; the whole row is the one
+        // accessible switch (title + caption, 56 pt tall) so VoiceOver reads it and the audit measures the row.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(caption.map { "\(title). \($0)" } ?? title)
+        .accessibilityValue(isOn ? "On" : "Off")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("switch-\(title)")
     }
 }
 
