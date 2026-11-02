@@ -330,7 +330,10 @@ struct OnboardingView: View {
     private func stat(_ v: String, _ l: String) -> some View {
         VStack(spacing: 2) { Text(v).font(CyType.numeralSmall).foregroundStyle(CyTheme.ink).monospacedDigit(); Text(l).font(CyType.captionSmall).foregroundStyle(CyTheme.ink3) }
             .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(v) \(l)")
+            .accessibilityValue(v)
+            .accessibilityIdentifier("onbStat-\(l)")
     }
     private var connectedLine: String {
         let n = store.settings.enabledConnections.count + (health.workoutWriteAuthorized ? 1 : 0)

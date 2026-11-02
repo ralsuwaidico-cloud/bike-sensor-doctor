@@ -132,6 +132,7 @@ jobs:
           path: |
             ios/build/logs/*.txt
             ios/build/layout/*.png
+            ios/build/layout/*.mp4
           if-no-files-found: ignore
 
   test:
@@ -191,6 +192,7 @@ jobs:
           path: |
             ios/build/logs/*.txt
             ios/build/layout/*.png
+            ios/build/layout/*.mp4
           if-no-files-found: ignore
 
   release:
@@ -309,6 +311,7 @@ jobs:
             [ -f "$a/asc.txt" ] && cp "$a/asc.txt" "$D/apple-setup.txt"
             find "$a" -name 'summary.txt' | head -1 | while read -r f; do cp "$f" "$D/summary-$j.txt"; done
             find "$a" -name '*.png' -exec cp {} "$D/layout/" \;
+            find "$a" -name '*.mp4' -size -15000k -exec cp {} "$D/" \;   # V1 journey recordings (under 15 MB each)
           done
           rmdir "$D/layout" 2>/dev/null || true
           cp "$S" "$D/summary.txt"

@@ -51,6 +51,13 @@ struct HomeView: View {
                         HomeSectionTitle(text: "Week")
                         weekCard(h)
                     }
+                    // V1: the first week after Approve — the plan's counts, the selected goals and what to do next,
+                    // all from the store (no sample values); gone once anything is recorded.
+                    if h.showWeek, HomeFirstWeekSection.applies(store) {
+                        HomeFirstWeekSection(openPlan: { tab = 1 }, openDevices: { tab = 4 }, openProgress: { tab = 3 })
+                            .padding(.top, DS.s)
+                            .accessibilityIdentifier("homeFirstWeek")
+                    }
                 }
                 .padding(.horizontal, DS.l)
                 .padding(.bottom, 120)

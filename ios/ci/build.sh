@@ -130,6 +130,29 @@ twb() {
   xcodebuild test-without-building -xctestrun "$xr" -destination "id=$id" "$@" > "$log" 2>&1
 }
 
+# ---------------------------------------------------------------- V1 journey recording (owner 2 Nov: a screen recording,
+# not screenshots): the simulator records h264 while JourneyTests drives onboarding → Home → Profile → Plan → relaunch
+# for one persona. Published to ci-logs as ios/run-N/journey-<persona>.mp4 (downscaled with ffmpeg when the runner has it).
+record_journey() {
+  local persona=$1 LT=$SECONDS raw="$LAYOUT/journey-$persona-raw.mp4" out="$LAYOUT/journey-$persona.mp4"
+  xcrun simctl io "$SIM" recordVideo --codec h264 --force "$raw" > "$OUT/record-$persona.log" 2>&1 &
+  local rec=$!
+  sleep 3
+  TEST_RUNNER_BC_JOURNEY_PERSONA="$persona" TEST_RUNNER_LAYOUT_DIR="$LAYOUT" \
+    twb "$RELEASE_XR" "$SIM" "$OUT/journey-$persona.log" -only-testing:BikeComputerUITests/JourneyTests
+  local J=$?
+  kill -INT "$rec" 2>/dev/null; wait "$rec" 2>/dev/null; sleep 2
+  digest "$OUT/journey-$persona.log" "journey-$persona"
+  if [ -f "$raw" ]; then
+    if command -v ffmpeg >/dev/null 2>&1; then
+      ffmpeg -y -loglevel error -i "$raw" -vf "scale=-2:960" -r 20 -c:v libx264 -preset veryfast -crf 30 -an "$out" && rm -f "$raw" || mv "$raw" "$out"
+    else mv "$raw" "$out"; fi
+    note "  journey $persona: $([ $J -eq 0 ] && echo ok || echo "FAILED (exit $J)") · recording $(( $(stat -f%z "$out") / 1024 )) KB · $(since $LT)"
+  else note "  journey $persona: $([ $J -eq 0 ] && echo ok || echo "FAILED (exit $J)") · no recording produced · $(since $LT)"; fi
+  [ $J -eq 0 ] || STATUS=1
+  return $J
+}
+
 run_unit() {
   TS=$SECONDS
   local xr; xr=$(bft Debug) || { note "RESULT tests: FAILED (build)"; STATUS=1; return; }
@@ -153,9 +176,13 @@ release_products() {  # Release build for the UI tests (the shipped configuratio
 run_smoke() {
   TS=$SECONDS
   release_products || { note "RESULT launch smoke (Release): FAILED (build)"; STATUS=1; return; }
-  twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests
+  twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests -skip-testing:BikeComputerUITests/JourneyTests
   U=$?
   digest "$OUT/uitest.log" launch-smoke
+  # the V1 journeys run one persona at a time so each gets its own recording (three personas, all release-blocking)
+  mkdir -p "$LAYOUT"
+  for persona in hybrid cycling strength; do record_journey "$persona" || U=1; done
+  note "RESULT journey (recorded): $([ $U -eq 0 ] && echo ok || echo FAILED) — JourneyTests hybrid, cycling, strength"
   if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
   else
     note "RESULT launch smoke (Release): FAILED (exit $U) · $(since $TS)"; STATUS=1
@@ -267,6 +294,8 @@ case "$STAGE" in
     if release_products; then
       layout_one small "${SMALL%%|*}" AX3 "$QUICK_UI"
       layout_one standard "${STD%%|*}" L "$QUICK_UI"
+      # V1: the hybrid journey, recorded, on the test simulator (owner: a screen recording of onboarding → Home)
+      record_journey hybrid || true
       layout_finish
     else note "RESULT layout audit: FAILED (build)"; STATUS=1; fi
     note "RESULT archive: skipped (quick check)"; note "RESULT upload: skipped (quick check never uploads)"
