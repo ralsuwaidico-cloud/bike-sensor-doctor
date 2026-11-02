@@ -1,0 +1,87 @@
+BikeComputer iOS CI — run 131 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 131 — 2026-11-02 09:14 UTC
+Stage: unit
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 5m6s
+RESULT tests: ok (Executed 505 tests, with 0 failures) · 9m36s
+Total: 10m5s
+
+## smoke
+BikeComputer iOS CI — build 131 — 2026-11-02 09:14 UTC
+Stage: smoke
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): ok · 9m31s
+RESULT launch smoke (Release): FAILED (exit 65) · 29m56s
+Total: 30m9s
+
+## layout-small
+BikeComputer iOS CI — build 131 — 2026-11-02 09:24 UTC
+Stage: layout (layout devices: small)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m6s
+  layout small (L,AX3): FAILED (exit 65) · 34m48s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: 'Shorten Mon strength · full body from 40 min to 20 min' did something (Undo offered) -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L: 'Shorten Mon strength · full body from 40 min to 20 min' did something (Undo offered) 
+RESULT layout audit: FAILED (67 screenshots)
+Total: 46m24s
+
+## layout-standard
+BikeComputer iOS CI — build 131 — 2026-11-02 09:26 UTC
+Stage: layout (layout devices: standard)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 6m30s
+  layout standard (L,XXXL): ok · 8m29s
+RESULT layout audit: ok (32 screenshots)
+Total: 15m10s
+
+## layout-promax
+BikeComputer iOS CI — build 131 — 2026-11-02 09:14 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m52s
+  layout promax (L): ok · 7m44s
+RESULT layout audit: ok (12 screenshots)
+Total: 22m32s
+
+## layout-owner
+BikeComputer iOS CI — build 131 — 2026-11-02 09:14 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m0s
+  layout owner (L,XXXL): FAILED (exit 65) · 29m49s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L: 'Shorten Mon strength · full body from 40 min to 20 min' did something (Undo offered) -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL: 'Shorten Mon strength · full body from 40 min to 20 min' did something (Undo offered) 
+RESULT layout audit: FAILED (60 screenshots)
+Total: 42m43s
+
+## watch
+BikeComputer iOS CI — build 131 — 2026-11-02 09:14 UTC
+Stage: watch
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12883   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13227   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 14038   screenshot ax3 ok large · 11m27s
+Total: 11m36s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit 9bf5d55921006596db9749d39042329a72443446  branch ios/s2  job failure
