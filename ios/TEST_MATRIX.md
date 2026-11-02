@@ -18,3 +18,6 @@ Rules
 - A UI flow that has never executed in CI (e.g. a branch gated by demo data) is added to the targeted set the first time
   it becomes reachable — runs 131–137 were spent on one such flow.
 - Simulator results are never reported as real-device results.
+
+## Checkpoint record
+- IT-1 (S2-0): targeted run 140 green on SE at AX3 and standard iPhone at L (commit 46bcb63c); full validation + internal TestFlight upload started from the next commit.
