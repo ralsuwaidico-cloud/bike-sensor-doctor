@@ -132,7 +132,7 @@ final class ProvenanceMigrationTests: XCTestCase {
         let before = try enc.encode(base)
         let migrated = StoreFile.migrate(try dec.decode(StoreFile.self, from: before))
         XCTAssertEqual(migrated.plan, base.plan, "planned, hand-edited and completed sessions are identical after migration")
-        XCTAssertEqual(try enc.encode(migrated.strength), try enc.encode(base.strength), "logged sessions are identical")
+        XCTAssertEqual(migrated.strength, base.strength, "logged sessions are identical")   // run 130: value equality, not bytes (Apple's JSONEncoder orders keys non-deterministically)
         XCTAssertEqual(migrated.availability, base.availability)
         XCTAssertEqual(migrated.planVersions.count, base.planVersions.count, "migration records no plan version: nothing in the plan changed")
     }
