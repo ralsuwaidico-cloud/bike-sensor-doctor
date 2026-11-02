@@ -27,10 +27,11 @@ enum HealthWorkoutMapper {
     }
     /// Applies one workout to the store. Returns what was added.
     @discardableResult
-    static func apply(kind: Kind, start: Date, durationS: Int, distanceM: Int?, kj: Int?, uuid: String, to store: Store) -> (ride: Bool, strength: Bool) {
+    /// S2-0 (GR-45): `activeKcal` is Apple Health's active energy in kcal — an estimate, stored with its unit; never kJ "from power".
+    static func apply(kind: Kind, start: Date, durationS: Int, distanceM: Int?, activeKcal: Int?, uuid: String, to store: Store) -> (ride: Bool, strength: Bool) {
         guard durationS >= 60 else { return (false, false) }
         switch kind {
-        case .ride: return (store.importHealthRide(start: start, durationS: durationS, distanceM: distanceM, kj: kj, avgHR: nil, healthUUID: uuid), false)
+        case .ride: return (store.importHealthRide(start: start, durationS: durationS, distanceM: distanceM, activeKcal: activeKcal, avgHR: nil, healthUUID: uuid), false)
         case .strength:
             let s = StrengthSession(date: start, minutes: durationS / 60, focus: .custom, customName: "Strength training (Apple Health)", rpe: nil, notes: "", source: "Apple Health", healthUUID: uuid)
             return (false, store.addStrength(s))
@@ -57,8 +58,7 @@ extension HealthAccess {
                     r.seen += 1
                     let dist = w.statistics(for: HKQuantityType(.distanceCycling))?.sumQuantity()?.doubleValue(for: .meter()).rounded()
                     let kcal = w.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie())
-                    let kj = kcal.map { Int(($0 * 4.184).rounded()) }
-                    let added = HealthWorkoutMapper.apply(kind: k, start: w.startDate, durationS: Int(w.duration), distanceM: dist.map(Int.init), kj: kj, uuid: w.uuid.uuidString, to: store)
+                    let added = HealthWorkoutMapper.apply(kind: k, start: w.startDate, durationS: Int(w.duration), distanceM: dist.map(Int.init), activeKcal: kcal.map { Int($0.rounded()) }, uuid: w.uuid.uuidString, to: store)
                     if added.ride { r.ridesAdded += 1 }
                     if added.strength { r.strengthAdded += 1 }
                 }

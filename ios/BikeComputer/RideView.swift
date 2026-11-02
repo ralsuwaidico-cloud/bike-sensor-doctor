@@ -389,7 +389,8 @@ struct RideSummaryTiles: View {
             MetricTile(title: "Avg power", value: ride.avgPower.map { "\($0)" }, unit: "W", source: "power source", missing: MetricKind.power.missingText)
             MetricTile(title: "Normalized", value: ride.normalizedPower.map { "\($0)" }, unit: "W", source: "power source", missing: MetricKind.power.missingText)
             MetricTile(title: "Avg HR", value: ride.avgHR.map { "\($0)" }, unit: "bpm", source: ride.sources.contains("Apple Watch") ? "Apple Watch" : "HR source")
-            MetricTile(title: "Energy", value: ride.kj.map { "\($0)" }, unit: "kJ", source: "from power", missing: MetricKind.power.missingText)
+            // S2-0 (GR-45): the unit and source come from the record — kJ only for work from power, kcal for an Apple Health estimate
+            MetricTile(title: "Energy", value: ride.energyShown.map { "\($0.value)" }, unit: ride.energyShown?.unit ?? "kJ", source: ride.energyShown?.sourceText ?? "from power", missing: MetricKind.power.missingText)
         }
     }
 }
