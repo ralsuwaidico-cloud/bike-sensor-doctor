@@ -500,7 +500,30 @@ extension Store {
 
     /// ENG-J3 Undo: a NEW proposal that restores the version's inputs and its 'before' sessions that are still unstarted.
     /// Completed ones stay (listed as kept); the version log only grows.
+    /// Owner 2 Nov: Undo restores THIS version's previous state and never silently discards a later change. Undo is
+    /// refused (with the reason) when a later version touched the same days or later changed the plan inputs, or when the
+    /// open sessions of those days no longer match what this version left (changed since by any other action).
+    func undoBlockedReason(version vid: UUID, now: Date = Date()) -> String? {
+        guard let i = planVersions.firstIndex(where: { $0.id == vid }) else { return "This change is no longer in the history." }
+        let v = planVersions[i]
+        let cal = Calendar.current
+        let days = Set((v.before + v.after).map { cal.startOfDay(for: $0.date) })
+        for later in planVersions[(i + 1)...] {
+            let ld = Set((later.before + later.after).map { cal.startOfDay(for: $0.date) })
+            if !ld.isDisjoint(with: days) || (v.inputsBefore != nil && later.inputsBefore != nil) {
+                return "Changed again later (\(later.cause.title.lowercased()), \(later.createdAt.shortDay)). Undo that change first."
+            }
+        }
+        for d in days where d >= cal.startOfDay(for: now) {
+            let cur = plan.filter { cal.isDate($0.date, inSameDayAs: d) && !sessionLocked($0) }.sorted { $0.id.uuidString < $1.id.uuidString }
+            let left = v.after.filter { cal.isDate($0.date, inSameDayAs: d) }.filter { a in cur.contains { $0.id == a.id } || !plan.contains { $0.id == a.id && sessionLocked($0) } }.sorted { $0.id.uuidString < $1.id.uuidString }
+            if cur != left { return "The sessions of \(d.shortDay) were changed after this. Undo would overwrite that, so it is not offered." }
+        }
+        return nil
+    }
+
     func proposeUndo(version vid: UUID, now: Date = Date()) -> UUID? {
+        guard undoBlockedReason(version: vid, now: now) == nil else { return nil }
         guard let v = planVersions.first(where: { $0.id == vid }) else { return nil }
         var before: [Workout] = [], after: [Workout] = [], kept: [Workout] = []
         let cal = Calendar.current

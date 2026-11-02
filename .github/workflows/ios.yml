@@ -110,7 +110,8 @@ jobs:
     needs: [apple, mode]
     if: needs.mode.outputs.scope == 'quick'
     runs-on: macos-26
-    timeout-minutes: 75
+    # run 138: the targeted Fix-plan audit on SE at AX3 (31 min) + the standard iPhone pushed the step past 65 min
+    timeout-minutes: 115
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -118,7 +119,7 @@ jobs:
           path: ios/build/spm
           key: spm-v1-${{ hashFiles('ios/project.yml') }}
       - name: Quick check (compile, unit tests, main screens on SE + standard)
-        timeout-minutes: 65
+        timeout-minutes: 105
         env:
           STAGE: quick
           BUILD_NUMBER: ${{ github.run_number }}

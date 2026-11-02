@@ -826,6 +826,12 @@ extension Store {
                 trash.append(item)
                 undoToast = UndoToast(id: item.id, text: "\(p.after.displayTitle) rebuilt")
             }
+            // Owner (2 Nov): an applied change is saved as a plan version and Undo restores the previous approved version —
+            // durable under Plan › Plan changes, not only the 8-second toast (run 136: at AX3 the toast can expire before
+            // the athlete reaches it).
+            let changes = PlanEngine.changes(from: [p.before], to: [p.after])
+            planVersions.append(PlanVersion(createdAt: Date(), effectiveDate: p.before.date, cause: .edit, before: [p.before], after: [p.after],
+                                            inputsBefore: nil, summary: changes.isEmpty ? ["\(p.after.displayTitle) rebuilt"] : changes, proposalId: p.id))
         }
         pendingProposals.removeValue(forKey: p.id)
         return .applied

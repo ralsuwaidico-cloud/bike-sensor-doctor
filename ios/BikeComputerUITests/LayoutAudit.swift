@@ -285,7 +285,17 @@ final class LayoutAudit: XCTestCase {
     /// Picks a range of the Progress chart: a segmented control normally, a menu at accessibility sizes.
     private func pickRange(_ app: XCUIApplication, _ r: String) -> Bool {
         let seg = app.segmentedControls["trendChart-range"].buttons[r]
-        if seg.waitForExistence(timeout: 2) { seg.tap(); sleep(1); return true }
+        if seg.waitForExistence(timeout: 2) {
+            // Run 139 (SE at AX3): after the long "1 yr" screen the range control sat under the translucent navigation
+            // bar, the tap landed on the bar and "1 yr" stayed selected. Bring the control below the bar, tap, and
+            // confirm the range really changed before going on.
+            for _ in 0..<3 {
+                if seg.frame.minY < app.navigationBars.firstMatch.frame.maxY + 4 { drag(app, up: false) }
+                seg.tap(); sleep(1)
+                if seg.isSelected { return true }
+            }
+            return seg.isSelected
+        }
         let menu = app.buttons["trendChart-range"].firstMatch
         if menu.exists { menu.tap(); sleep(1); let item = app.buttons[r].firstMatch; if item.waitForExistence(timeout: 2) { item.tap(); sleep(1); return true }; app.tap() }
         return false
@@ -337,7 +347,7 @@ final class LayoutAudit: XCTestCase {
                 shot("\(tag)-progress-riding-\(name)")
                 checkChartLabels(app, "trendChart", screen: "\(size) riding \(r)"); checkScreen(app, "\(size) riding \(r)", tab: 3)
             }
-            _ = pickRange(app, "16 wk"); reveal(app, chart)
+            XCTAssertTrue(pickRange(app, "16 wk"), "\(size): the 16 wk range can be selected"); reveal(app, chart)
             if chart.exists {
                 tapChart(app, chart, dx: 0.75)
                 let header = app.descendants(matching: .any).matching(identifier: "trendChart-header").firstMatch
@@ -401,11 +411,48 @@ final class LayoutAudit: XCTestCase {
                         // The toast lives 8 s (run 134: at AX3 the screenshots took longer than that) — check it first, shoot after.
                         // Known deviation (BEHAVIOUR_CONTRACT W3): single-session rebuilds are not yet listed under Plan changes.
                         close(app)
-                        let undo = app.buttons["undoDelete"].firstMatch
-                        XCTAssertTrue(undo.waitForExistence(timeout: 5), "\(size): Undo offered on Plan after Apply")
+                        // Undo: the quick toast (8 s, may expire at large text) AND the durable route — the change is a plan
+                        // version under Plan › Plan changes with "Undo this change" (owner 2 Nov: Undo restores the previous
+                        // approved version). The durable route is the release-blocking check.
+                        let toast = app.buttons["undoDelete"].firstMatch.waitForExistence(timeout: 3)
+                        note("\(size): Undo toast \(toast ? "seen" : "already expired")")
+                        let changes = app.buttons["planChanges"].firstMatch
+                        reveal(app, changes)
+                        XCTAssertTrue(changes.waitForExistence(timeout: 5), "\(size): Plan changes reachable after Apply")
+                        changes.tap(); sleep(2)
+                        let row = app.buttons["planVersionRow"].firstMatch
+                        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(size): the applied change is listed under Plan changes")
                         shot("\(tag)-plan-fix-undo")
-                        note("\(size): Fix plan '\(label)' previewed, cancelled, applied, Undo offered")
-                        if undo.exists { undo.tap(); sleep(2) }   // Undo restores the plan so the rest of the audit sees the seeded week
+                        if row.exists {
+                            row.tap(); sleep(2)
+                            let undoVersion = app.buttons["planVersionUndo"].firstMatch
+                            XCTAssertTrue(undoVersion.waitForExistence(timeout: 5), "\(size): Undo this change offered for the version")
+                            if undoVersion.exists {
+                                undoVersion.tap(); sleep(2)
+                                // Undo is itself previewed (a new plan change); Apply restores the previous version
+                                if app.buttons["planChangeApply"].waitForExistence(timeout: 5) { app.buttons["planChangeApply"].tap(); sleep(2) }
+                                else if app.buttons["changeApply"].waitForExistence(timeout: 2) { app.buttons["changeApply"].tap(); sleep(2) }
+                                // Undo safety (owner 2 Nov): the original edit is now followed by the Undo version on the same day,
+                                // so undoing the original again would overwrite it — it must be disabled, with the reason shown.
+                                if !app.buttons.matching(NSPredicate(format: "identifier == 'planVersionRow' AND label CONTAINS 'Session edit'")).firstMatch.exists {
+                                    for _ in 0..<2 where !app.buttons["planVersionRow"].firstMatch.exists && app.navigationBars.buttons.firstMatch.exists { app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+                                }
+                                let original = app.buttons.matching(NSPredicate(format: "identifier == 'planVersionRow' AND label CONTAINS 'Session edit'")).firstMatch
+                                XCTAssertTrue(original.waitForExistence(timeout: 5), "\(size): the original edit is still listed after its Undo")
+                                if original.exists {
+                                    reveal(app, original); original.tap(); sleep(2)
+                                    let again = app.buttons["planVersionUndo"].firstMatch
+                                    XCTAssertTrue(again.waitForExistence(timeout: 5), "\(size): Undo shown for the original edit")
+                                    XCTAssertFalse(again.isEnabled, "\(size): Undo of an edit followed by a later change is disabled")
+                                    let reason = app.staticTexts["planVersionUndoBlocked"].firstMatch
+                                    for _ in 0..<6 where !reason.exists { app.swipeUp(); sleep(1) }
+                                    XCTAssertTrue(reason.exists && reason.label.contains("Undo that change first"), "\(size): the reason is shown: '\(reason.label)'")
+                                    shot("\(tag)-plan-undo-blocked")
+                                }
+                            }
+                            for _ in 0..<2 where app.navigationBars.buttons.firstMatch.exists { app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+                        }
+                        note("\(size): Fix plan '\(label)' previewed, cancelled, applied, listed as a plan version, undone")
                         checkScreen(app, "\(size) plan after fix and undo", tab: 1)
                         if fix.waitForExistence(timeout: 5) { reveal(app, fix); fix.tap(); sleep(2); shot("\(tag)-plan-fix-applied"); checkScreen(app, "\(size) fix plan after undo", tab: nil) }
                     } else {
