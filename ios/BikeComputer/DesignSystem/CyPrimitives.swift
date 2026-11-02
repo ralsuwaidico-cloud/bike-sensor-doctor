@@ -255,22 +255,32 @@ struct CySwitchRow: View {
     let title: String
     var caption: String? = nil
     @Binding var isOn: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Runs 128/129: the system Toggle exposes an inner 63×28 control with no name, whatever the row does. The row is
+    /// one 56 pt button with a drawn switch, so VoiceOver reads "title, caption, On/Off" and the audit measures the row.
     var body: some View {
-        Toggle(isOn: $isOn) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(CyType.body).foregroundStyle(CyTheme.ink)
-                if let c = caption { Text(c).font(CyType.secondary).foregroundStyle(CyTheme.ink2) }
+        Button {
+            if reduceMotion { isOn.toggle() } else { withAnimation(.easeInOut(duration: 0.18)) { isOn.toggle() } }
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(CyType.body).foregroundStyle(CyTheme.ink)
+                    if let c = caption { Text(c).font(CyType.secondary).foregroundStyle(CyTheme.ink2) }
+                }
+                Spacer(minLength: 8)
+                ZStack(alignment: isOn ? .trailing : .leading) {
+                    Capsule().fill(isOn ? CyTheme.recovery.tint : CyTheme.ink3.opacity(0.35)).frame(width: 51, height: 31)
+                    Circle().fill(.white).frame(width: 27, height: 27).padding(2).shadow(color: .black.opacity(0.15), radius: 1, y: 1)
+                }
             }
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .contentShape(Rectangle())
         }
-        .tint(CyTheme.recovery.tint)
-        .padding(.horizontal, 14).padding(.vertical, 8)
-        .frame(minHeight: 56)
-        // run 128: the system switch exposes an inner 63×28 control with no name; the whole row is the one
-        // accessible switch (title + caption, 56 pt tall) so VoiceOver reads it and the audit measures the row.
-        .accessibilityElement(children: .combine)
+        .buttonStyle(.plain)
         .accessibilityLabel(caption.map { "\(title). \($0)" } ?? title)
         .accessibilityValue(isOn ? "On" : "Off")
-        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Double-tap to switch")
         .accessibilityIdentifier("switch-\(title)")
     }
 }

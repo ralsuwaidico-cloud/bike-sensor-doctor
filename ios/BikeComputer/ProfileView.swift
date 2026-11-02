@@ -60,12 +60,8 @@ struct ProfileTabView: View {
                 DatePicker("Date of birth", selection: Binding(get: { d }, set: { v in store.updateProfile { $0.setDateOfBirth(v) } }), in: ProfileTabView.birthRange, displayedComponents: .date)
                     .accessibilityIdentifier("profileBirth")
                 if store.profile.provenance(.dateOfBirth).needsConfirmation { Text("From an earlier version — please check it.").font(.footnote).foregroundStyle(BC.warn) }
-            } else if let y = store.profile.birthYear {
-                Button { store.updateProfile { $0.setDateOfBirth(Calendar.current.date(from: DateComponents(year: y, month: 7, day: 1))) } } label: { LabeledContent("Date of birth", value: "Birth year \(y) · set the date") }
-                    .accessibilityIdentifier("profileBirth")
             } else {
-                Button { store.updateProfile { $0.setDateOfBirth(ProfileTabView.birthRange.upperBound) } } label: { LabeledContent("Date of birth", value: "Not set") }
-                    .accessibilityIdentifier("profileBirth")
+                DateOfBirthEntryRow(range: ProfileTabView.birthRange)
                 Text("Needed for heart-rate zones (max heart rate from age). Until then rides use effort targets.").font(.footnote).foregroundStyle(.secondary)
             }
             if let w = store.profile.weightKg {
@@ -75,8 +71,7 @@ struct ProfileTabView: View {
                 .accessibilityIdentifier("profileWeight")
                 Text(weightSourceText).font(.footnote).foregroundStyle(store.profile.provenance(.weight).needsConfirmation ? BC.warn : .secondary)
             } else {
-                Button { store.updateProfile { $0.setWeight(70) } } label: { LabeledContent("Weight", value: "Not set") }
-                    .accessibilityIdentifier("profileWeight")
+                WeightEntryRow()
                 Text("Needed for W/kg and lifting loads. Enter it, or turn on Apple Health weight in Settings.").font(.footnote).foregroundStyle(.secondary)
             }
         }

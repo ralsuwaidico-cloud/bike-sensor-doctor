@@ -119,10 +119,10 @@ struct OnboardingView: View {
                 if showDOB {
                     // S2-0 (GR-20): the wheel starts on the picker's upper bound and NOTHING is saved until the athlete moves
                     // it or taps Done; Done without a date keeps "Not set" (never today − 35 years).
-                    DatePicker("Date of birth", selection: Binding(get: { store.profile.dateOfBirth ?? Self.dobRange.upperBound }, set: setDOB),
+                    DatePicker("Date of birth", selection: Binding(get: { dobDraft ?? store.profile.dateOfBirth ?? Self.dobNeutral }, set: { dobDraft = $0 }),
                                in: Self.dobRange, displayedComponents: .date)
                         .datePickerStyle(.wheel).labelsHidden()
-                    Button("Done") { withAnimation { showDOB = false } }
+                    Button("Done") { if let d = dobDraft { setDOB(d) }; dobDraft = nil; withAnimation { showDOB = false } }
                         .frame(maxWidth: .infinity, minHeight: DS.minTap).accessibilityIdentifier("onbDOBDone")
                     if store.profile.dateOfBirth == nil { Text("Used for heart-rate zones. Skip it and rides use effort targets.").font(.footnote).foregroundStyle(.secondary) }
                 }
@@ -135,7 +135,7 @@ struct OnboardingView: View {
                             Text(weightText).font(.body.monospacedDigit()).frame(maxWidth: .infinity, alignment: .trailing)
                         }.accessibilityIdentifier("onbWeight")
                     } else {
-                        Button("Add") { store.updateProfile { $0.setWeight(70) } }.foregroundStyle(BC.accent).frame(maxWidth: .infinity, alignment: .trailing).accessibilityIdentifier("onbWeight")
+                        WeightEntryRow(identifier: "onbWeight")
                     }
                 }
                 Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0 == .imperial ? "lb" : "kg").tag($0) } }
@@ -166,6 +166,9 @@ struct OnboardingView: View {
             })
         }
     }
+    @State private var dobDraft: Date? = nil
+    /// Where the wheel starts when nothing is saved: the middle of the range, never written unless the athlete moves it.
+    static var dobNeutral: Date { Date(timeIntervalSince1970: (dobRange.lowerBound.timeIntervalSince1970 + dobRange.upperBound.timeIntervalSince1970) / 2) }
     static let dobRange: ClosedRange<Date> = (Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date())...(Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date())
     private func setDOB(_ d: Date) { store.updateProfile { $0.setDateOfBirth(d) } }
     private var weightText: String {

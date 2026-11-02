@@ -110,6 +110,32 @@ final class ProvenanceMigrationTests: XCTestCase {
         XCTAssertEqual(f2.profile.provenance.mapValues(\.source), f1.profile.provenance.mapValues(\.source)); XCTAssertEqual(f2.rides[0].energy, f1.rides[0].energy); XCTAssertEqual(f2.schema, 4)
         XCTAssertEqual(f2.migrationLog.count, f1.migrationLog.count, "a second migration adds nothing")
     }
+    /// Owner (2 Nov): migration must never silently change an approved plan or a logged workout. A build-127 file with a
+    /// planned week, a hand-edited session and a logged strength session comes out byte-for-byte the same in those parts.
+    func testMigrationLeavesPlanAndLogsUntouched() throws {
+        let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+        let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+        var base = try dec.decode(StoreFile.self, from: Data(build127.utf8))
+        let d0 = Calendar.current.startOfDay(for: Date())
+        var ride = Workout(date: d0, kind: .tempo, minutes: 60)
+        var lift = Workout(date: Calendar.current.date(byAdding: .day, value: 1, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        lift.entriesHandEdited = true
+        var done = Workout(date: Calendar.current.date(byAdding: .day, value: -2, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        done.completion = .marked
+        base.plan = [done, ride, lift]
+        let log = StrengthSession(date: done.date, minutes: 38, focus: .fullBody, rpe: 7, exercises: [])
+        base.strength = [log]
+        base.availability = WeeklyAvailability(days: (0..<7).map { i in
+            i == 1 || i == 5 ? DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: 60)])
+            : i % 2 == 0 && i < 5 ? DayAvailability(assignments: [DayAssignment(sport: .strength, minutes: 30)])
+            : DayAvailability(activity: .rest, minutes: 0) })
+        let before = try enc.encode(base)
+        let migrated = StoreFile.migrate(try dec.decode(StoreFile.self, from: before))
+        XCTAssertEqual(migrated.plan, base.plan, "planned, hand-edited and completed sessions are identical after migration")
+        XCTAssertEqual(try enc.encode(migrated.strength), try enc.encode(base.strength), "logged sessions are identical")
+        XCTAssertEqual(migrated.availability, base.availability)
+        XCTAssertEqual(migrated.planVersions.count, base.planVersions.count, "migration records no plan version: nothing in the plan changed")
+    }
     func testAgeMovedOnTheOldSliderIsKept() throws {
         let json = build121.replacingOccurrences(of: "\"age\":35", with: "\"age\":48")
         let f = StoreFile.migrate(try decode(json))
