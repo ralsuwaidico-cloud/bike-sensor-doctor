@@ -1,0 +1,17 @@
+BikeComputer iOS CI — build 136 — 2026-11-02 14:19 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m1s
+RESULT tests: ok (Executed 507 tests, with 0 failures) · 8m0s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m41s
+  layout small (AX3): FAILED (exit 65) · 22m42s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: Undo offered on Plan after Apply 
+  layout standard (L): ok · 9m44s
+RESULT layout audit: FAILED (82 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 51m1s
