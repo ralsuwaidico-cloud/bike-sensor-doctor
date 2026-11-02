@@ -133,9 +133,9 @@ struct CyMonthDay: Identifiable, Equatable {
 }
 
 /// Connection state of a device. "Connected" is paired and reachable; "receiving" means measurements are arriving now.
-/// Paired-but-silent is never shown as receiving (owner rule).
+/// Paired-but-silent is never shown as receiving (owner rule); "stale" is connected with data older than the fresh window.
 enum CyDeviceState: String, Codable, CaseIterable, Equatable {
-    case notPaired, paired, connected, receiving, problem
+    case notPaired, paired, connected, receiving, stale, problem
 
     var label: String {
         switch self {
@@ -143,6 +143,7 @@ enum CyDeviceState: String, Codable, CaseIterable, Equatable {
         case .paired: return "Paired"
         case .connected: return "Connected"
         case .receiving: return "Receiving live data"
+        case .stale: return "Connected · no recent data"
         case .problem: return "Connection problem"
         }
     }
@@ -152,6 +153,7 @@ enum CyDeviceState: String, Codable, CaseIterable, Equatable {
         case .paired: return "link"
         case .connected: return "checkmark.circle"
         case .receiving: return "dot.radiowaves.left.and.right"
+        case .stale: return "clock.badge.exclamationmark"
         case .problem: return "exclamationmark.triangle"
         }
     }

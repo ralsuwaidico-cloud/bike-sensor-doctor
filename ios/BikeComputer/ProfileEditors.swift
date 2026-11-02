@@ -149,7 +149,7 @@ struct AthleteTypeEditor: View {
             .accessibilityLabel("Date of birth, \(a.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "not set")")
             if showDOB {
                 // Nothing is saved until the wheel is moved or Done is tapped on a moved wheel (never today − 35 years).
-                DatePicker("Date of birth", selection: Binding(get: { dobDraft ?? a.dateOfBirth ?? Self.dobRange.upperBound }, set: { dobDraft = $0 }),
+                DatePicker("Date of birth", selection: Binding(get: { dobDraft ?? a.dateOfBirth ?? Self.dobNeutral }, set: { dobDraft = $0 }),
                            in: Self.dobRange, displayedComponents: .date)
                     .datePickerStyle(.wheel).labelsHidden().frame(maxWidth: .infinity)
                 HStack {
@@ -192,6 +192,8 @@ struct AthleteTypeEditor: View {
             }
         }
     }
+    /// Where the wheel starts with nothing saved: the middle of the range — never written unless the athlete moves it.
+    static var dobNeutral: Date { Date(timeIntervalSince1970: (dobRange.lowerBound.timeIntervalSince1970 + dobRange.upperBound.timeIntervalSince1970) / 2) }
     static let dobRange: ClosedRange<Date> = (Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date())...(Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date())
     static func age(_ d: Date) -> Int? { Calendar.current.dateComponents([.year], from: d, to: Date()).year }
     static func weightString(_ kg: Double, _ u: AppSettings.Units) -> String { u == .imperial ? String(format: "%.0f", kg * 2.20462) : (kg == kg.rounded() ? String(Int(kg)) : String(format: "%.1f", kg)) }

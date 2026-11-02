@@ -110,6 +110,32 @@ final class ProvenanceMigrationTests: XCTestCase {
         XCTAssertEqual(f2.profile.provenance.mapValues(\.source), f1.profile.provenance.mapValues(\.source)); XCTAssertEqual(f2.rides[0].energy, f1.rides[0].energy); XCTAssertEqual(f2.schema, 4)
         XCTAssertEqual(f2.migrationLog.count, f1.migrationLog.count, "a second migration adds nothing")
     }
+    /// Owner (2 Nov): migration must never silently change an approved plan or a logged workout. A build-127 file with a
+    /// planned week, a hand-edited session and a logged strength session comes out byte-for-byte the same in those parts.
+    func testMigrationLeavesPlanAndLogsUntouched() throws {
+        let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
+        let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
+        var base = try dec.decode(StoreFile.self, from: Data(build127.utf8))
+        let d0 = Calendar.current.startOfDay(for: Date())
+        var ride = Workout(date: d0, kind: .tempo, minutes: 60)
+        var lift = Workout(date: Calendar.current.date(byAdding: .day, value: 1, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        lift.entriesHandEdited = true
+        var done = Workout(date: Calendar.current.date(byAdding: .day, value: -2, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        done.completion = .marked
+        base.plan = [done, ride, lift]
+        let log = StrengthSession(date: done.date, minutes: 38, focus: .fullBody, rpe: 7, exercises: [])
+        base.strength = [log]
+        base.availability = WeeklyAvailability(days: (0..<7).map { i in
+            i == 1 || i == 5 ? DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: 60)])
+            : i % 2 == 0 && i < 5 ? DayAvailability(assignments: [DayAssignment(sport: .strength, minutes: 30)])
+            : DayAvailability(activity: .rest, minutes: 0) })
+        let before = try enc.encode(base)
+        let migrated = StoreFile.migrate(try dec.decode(StoreFile.self, from: before))
+        XCTAssertEqual(migrated.plan, base.plan, "planned, hand-edited and completed sessions are identical after migration")
+        XCTAssertEqual(migrated.strength, base.strength, "logged sessions are identical")   // run 130: value equality, not bytes (Apple's JSONEncoder orders keys non-deterministically)
+        XCTAssertEqual(migrated.availability, base.availability)
+        XCTAssertEqual(migrated.planVersions.count, base.planVersions.count, "migration records no plan version: nothing in the plan changed")
+    }
     func testAgeMovedOnTheOldSliderIsKept() throws {
         let json = build121.replacingOccurrences(of: "\"age\":35", with: "\"age\":48")
         let f = StoreFile.migrate(try decode(json))
@@ -142,7 +168,7 @@ final class DeviceStateTests: XCTestCase {
         XCTAssertEqual(DeviceStateRules.board(linkState: .idle, remembered: true, lastLiveAt: nil, pairingLost: false, bluetoothOff: false, now: now), .paired)
         XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: nil, pairingLost: false, bluetoothOff: false, now: now), .connected)
         XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: now.addingTimeInterval(-3), pairingLost: false, bluetoothOff: false, now: now), .receivingData(lastSampleAt: now.addingTimeInterval(-3)))
-        XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: now.addingTimeInterval(-30), pairingLost: false, bluetoothOff: false, now: now), .connected, "stale samples are not 'receiving'")
+        XCTAssertEqual(DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: now.addingTimeInterval(-30), pairingLost: false, bluetoothOff: false, now: now), .stale(lastSampleAt: now.addingTimeInterval(-30)), "old samples are 'stale', never 'receiving'")
         if case .problem = DeviceStateRules.board(linkState: .ready, remembered: true, lastLiveAt: nil, pairingLost: true, bluetoothOff: false, now: now) {} else { XCTFail("pairing lost is a problem") }
         if case .problem = DeviceStateRules.board(linkState: .off, remembered: true, lastLiveAt: nil, pairingLost: false, bluetoothOff: true, now: now) {} else { XCTFail("bluetooth off with a paired board is a problem") }
     }
@@ -170,6 +196,22 @@ final class DeviceStateTests: XCTestCase {
         XCTAssertEqual(DeviceStateRules.health(available: true, authorized: true, wanted: true, lastSyncAt: nil, now: now), .connected)
         XCTAssertEqual(DeviceStateRules.health(available: false, authorized: false, wanted: true, lastSyncAt: nil, now: now), .notPaired)
         if case .problem = DeviceStateRules.health(available: true, authorized: false, wanted: true, lastSyncAt: nil, now: now) {} else { XCTFail("wanted but not authorized") }
+    }
+    func testStaleIsItsOwnState() {
+        let old = now.addingTimeInterval(-DeviceState.freshWindow - 1), fresh = now.addingTimeInterval(-DeviceState.freshWindow)
+        XCTAssertEqual(DeviceState.linked(lastSampleAt: nil, now: now), .connected)
+        XCTAssertEqual(DeviceState.linked(lastSampleAt: fresh, now: now), .receivingData(lastSampleAt: fresh))
+        XCTAssertEqual(DeviceState.linked(lastSampleAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.bleSensor(configured: true, link: .connected, radio: .on, lastSampleAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.boardSensor(boardReceiving: true, meterLink: 4, enabled: true, lastSampleAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.watch(paired: true, appInstalled: true, sessionRunning: true, lastHRAt: old, now: now), .stale(lastSampleAt: old))
+        XCTAssertEqual(DeviceStateRules.watch(paired: true, appInstalled: true, sessionRunning: false, lastHRAt: old, now: now), .paired, "no session: old samples do not make it stale")
+        XCTAssertTrue(DeviceState.stale(lastSampleAt: old).isStale); XCTAssertFalse(DeviceState.stale(lastSampleAt: old).isReceiving)
+        XCTAssertTrue(DeviceState.stale(lastSampleAt: old).isConnectedOrBetter)
+        XCTAssertEqual(DeviceState.stale(lastSampleAt: old).conn, .amber)
+        XCTAssertEqual(DeviceState.stale(lastSampleAt: old).title, "Connected · no recent data")
+        XCTAssertTrue(DeviceStateRules.detail(.stale(lastSampleAt: old), lastSyncedAt: nil, now: now).hasPrefix("connected · last data"))
+        XCTAssertTrue(CyDeviceState.allCases.contains(.stale))
     }
     func testColoursFollowTheConnectionsRule() {
         XCTAssertEqual(DeviceState.receivingData(lastSampleAt: now).conn, .green)

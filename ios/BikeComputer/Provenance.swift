@@ -148,15 +148,23 @@ struct EnergyValue: Codable, Equatable {
 // MARK: - Device state (GR-42 / GR-47): paired ≠ connected ≠ receiving data
 
 /// One state model for every device and sensor, derived from the real link signals (never from a switch the athlete
-/// flipped). `receivingData` means a sample arrived within `DeviceState.freshWindow` seconds.
+/// flipped). `receivingData` means a sample arrived within `DeviceState.freshWindow` seconds; `stale` means the link is
+/// up and samples did arrive, but none for longer than that window (owner point 4: stale is its own state).
 enum DeviceState: Equatable {
     case notPaired
     case paired
     case connected
     case receivingData(lastSampleAt: Date)
+    case stale(lastSampleAt: Date)
     case problem(reason: String)
 
     static let freshWindow: TimeInterval = 10
+
+    /// The link is up: fresh samples → receiving, old samples → stale, none ever → connected.
+    static func linked(lastSampleAt: Date?, now: Date) -> DeviceState {
+        guard let t = lastSampleAt else { return .connected }
+        return now.timeIntervalSince(t) <= freshWindow ? .receivingData(lastSampleAt: t) : .stale(lastSampleAt: t)
+    }
 
     var title: String {
         switch self {
@@ -164,16 +172,18 @@ enum DeviceState: Equatable {
         case .paired: return "Paired"
         case .connected: return "Connected"
         case .receivingData: return "Receiving live data"
+        case .stale: return "Connected · no recent data"
         case .problem: return "Connection problem"
         }
     }
     var isReceiving: Bool { if case .receivingData = self { return true }; return false }
-    var isConnectedOrBetter: Bool { switch self { case .connected, .receivingData: return true; default: return false } }
+    var isStale: Bool { if case .stale = self { return true }; return false }
+    var isConnectedOrBetter: Bool { switch self { case .connected, .receivingData, .stale: return true; default: return false } }
     /// Dashboard colour (reuses the Connections rules: green only while data flows).
     var conn: ConnStatus {
         switch self {
         case .receivingData: return .green
-        case .connected, .paired: return .amber
+        case .stale, .connected, .paired: return .amber
         case .problem: return .red
         case .notPaired: return .gray
         }
@@ -199,9 +209,7 @@ enum DeviceStateRules {
         if pairingLost { return .problem(reason: "Pairing keys were lost on one side. Re-pair from the BikeComputer page.") }
         if bluetoothOff { return remembered ? .problem(reason: "Bluetooth is off") : .notPaired }
         switch linkState {
-        case .ready:
-            if let t = lastLiveAt, now.timeIntervalSince(t) <= DeviceState.freshWindow { return .receivingData(lastSampleAt: t) }
-            return .connected
+        case .ready: return DeviceState.linked(lastSampleAt: lastLiveAt, now: now)
         case .connecting, .scanning, .pairing: return remembered ? .paired : .notPaired
         case .unauthorized: return .problem(reason: "Bluetooth permission needed")
         case .off: return remembered ? .problem(reason: "Bluetooth is off") : .notPaired
@@ -213,7 +221,7 @@ enum DeviceStateRules {
         if let t = lastHRAt, now.timeIntervalSince(t) <= DeviceState.freshWindow { return .receivingData(lastSampleAt: t) }
         if !paired { return .notPaired }
         if !appInstalled { return .problem(reason: "Cyclift is not installed on the Watch") }
-        return sessionRunning ? .connected : .paired
+        return sessionRunning ? DeviceState.linked(lastSampleAt: lastHRAt, now: now) : .paired
     }
     /// A direct Bluetooth sensor (strap, power meter, cadence/speed): `configured` = the athlete paired it in the app.
     static func bleSensor(configured: Bool, link: BLESensors.Link, radio: BLESensors.Radio, lastSampleAt: Date?, now: Date) -> DeviceState {
@@ -225,9 +233,7 @@ enum DeviceStateRules {
         }
         guard configured else { return .notPaired }
         switch link {
-        case .connected:
-            if let t = lastSampleAt, now.timeIntervalSince(t) <= DeviceState.freshWindow { return .receivingData(lastSampleAt: t) }
-            return .connected
+        case .connected: return DeviceState.linked(lastSampleAt: lastSampleAt, now: now)
         case .connecting: return .paired
         case .disconnected: return .paired
         }
@@ -237,9 +243,7 @@ enum DeviceStateRules {
         guard enabled else { return .notPaired }
         guard boardReceiving, let m = meterLink else { return .paired }
         switch m {
-        case 4:
-            if let t = lastSampleAt, now.timeIntervalSince(t) <= DeviceState.freshWindow { return .receivingData(lastSampleAt: t) }
-            return .connected
+        case 4: return DeviceState.linked(lastSampleAt: lastSampleAt, now: now)
         case 2, 3, 5: return .paired
         case 1: return .problem(reason: "The BikeComputer lost the sensor")
         default: return .paired
@@ -255,6 +259,7 @@ enum DeviceStateRules {
     static func detail(_ s: DeviceState, lastSyncedAt: Date?, now: Date) -> String {
         switch s {
         case .receivingData(let t): let a = Int(now.timeIntervalSince(t)); return a <= 1 ? "live" : "last data \(a) s ago"
+        case .stale(let t): return "connected · last data \(Self.ago(t, now: now))"
         case .problem(let r): return r
         case .connected: return "connected · no data yet"
         case .paired: return lastSyncedAt.map { "paired · last sync \(Self.ago($0, now: now))" } ?? "paired · not connected now"
