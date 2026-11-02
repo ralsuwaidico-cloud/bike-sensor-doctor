@@ -282,14 +282,44 @@ run_layout() {  # the full layout audit on LAYOUT_DEVICES
   layout_finish
 }
 
+# ---------------------------------------------------------------- quick-before-full (ios/CI_PROCESS.md)
+# The ci-logs branch keeps two markers written by the workflow's publish job: ios/ci/last-green.txt (the commit of the last
+# full run that passed every test job and the release job) and ios/ci/quick-green/<tree-hash> (one file per source tree
+# that passed a quick run). Keyed on the TREE hash, so a commit that only changes the message (e.g. adding [testflight])
+# still counts as checked, while any source change needs its own quick run.
+CILOGS=""
+cilogs() {   # checks out ci-logs (shallow) once; prints its path or nothing
+  [ -n "$CILOGS" ] && { echo "$CILOGS"; return; }
+  local d; d=$(mktemp -d)
+  if git -C "$ROOT" remote get-url origin >/dev/null 2>&1 && git clone -q --depth 1 --branch ci-logs "$(git -C "$ROOT" remote get-url origin)" "$d" 2>/dev/null; then CILOGS="$d"; echo "$d"; fi
+}
+quick_targets() {   # QUICK_UI for the files changed since the last green full run; the default set when that is unknown
+  local base="" d; d=$(cilogs)
+  [ -n "$d" ] && [ -f "$d/ios/ci/last-green.txt" ] && base=$(tr -d '[:space:]' < "$d/ios/ci/last-green.txt")
+  if [ -n "$base" ] && { git -C "$ROOT" cat-file -e "$base" 2>/dev/null || git -C "$ROOT" fetch -q --depth 1 origin "$base" 2>/dev/null; }; then
+    git -C "$ROOT" diff --name-only "$base" HEAD | python3 "$ROOT/../tools/ci-targets.py" --quick-ui
+    note "  targets from the files changed since the last green full run ${base:0:7}" >&2
+  else
+    python3 "$ROOT/../tools/ci-targets.py" --quick-ui </dev/null
+    note "  no last-green commit known — default quick set" >&2
+  fi
+}
+quick_green_for_head() {   # 0 when a quick run passed for HEAD's source tree
+  local d t; d=$(cilogs); t=$(git -C "$ROOT" rev-parse 'HEAD^{tree}')
+  [ -n "$d" ] && [ -f "$d/ios/ci/quick-green/$t" ]
+}
+
 case "$STAGE" in
   unit)  run_unit ;;
   smoke) run_smoke ;;
   layout) run_layout ;;
   quick)
     run_unit
-    # QUICK_UI: LayoutAudit / OnboardingScreens test methods for the screens being changed (default: main screens).
-    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages DesignSystemAudit/testGalleryLightAndDark}"   # run 126: adding the owner-screens audit and upgrade smoke made the quick check 51 min — add tests here only for the screens being changed
+    # QUICK_UI: the UI tests for the screens being changed. Given explicitly (workflow input) it is used as is; otherwise
+    # it is computed by tools/ci-targets.py from the files changed since the last green full run (ios/CI_PROCESS.md).
+    # Run 126: adding the owner-screens audit and the upgrade smoke to every quick run made it 51 min — targets only.
+    if [ -z "${QUICK_UI:-}" ]; then QUICK_UI=$(quick_targets); fi
+    note "Quick UI targets: $QUICK_UI"
     LAYOUT_DEVICES="small,standard"; layout_sims
     if release_products; then
       layout_one small "${SMALL%%|*}" AX3 "$QUICK_UI"
@@ -315,6 +345,16 @@ fi
 # release stage in CI: the workflow starts it only when every test job succeeded and passes TESTS_OK=success; the
 # upload below refuses anything else (belt and braces: the gate is the same as before, only split across jobs).
 if [ "$STAGE" = release ] && [ "${TESTS_OK:-}" != "success" ]; then STATUS=1; note "Test jobs: ${TESTS_OK:-unknown} — this build will not be uploaded"; fi
+# quick-before-full: a full run is only accepted for a source tree that already passed a quick run, or with
+# "[full-override: <reason>]" in the commit message (the reason is printed). Never weakens the test gates above.
+if [ "$STAGE" = release ] || [ "$STAGE" = all ]; then
+  if quick_green_for_head; then note "Quick check: passed for this source tree"
+  elif reason=$(printf '%s' "${HEAD_MSG:-}" | grep -oE '\[full-override:[^]]*\]'); then note "Quick check: none for this tree — override accepted $reason"
+  else
+    note "RESULT archive: refused — no green quick run for this source tree (push with [ci quick] first, or add [full-override: <reason>] to the commit message)"
+    note "Total: $(since $T0)"; exit 1
+  fi
+fi
 TA=$SECONDS
 
 # ---------------------------------------------------------------- archive (device build)

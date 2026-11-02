@@ -123,6 +123,7 @@ jobs:
           STAGE: quick
           BUILD_NUMBER: ${{ github.run_number }}
           QUICK_UI: ${{ inputs.quick_ui }}
+          HEAD_MSG: ${{ github.event.head_commit.message }}
         run: ios/ci/build.sh
       - name: Keep logs
         if: always()
@@ -226,6 +227,7 @@ jobs:
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           GOOGLE_IOS_CLIENT_ID: ${{ secrets.GOOGLE_IOS_CLIENT_ID }}
           UPLOAD: ${{ needs.mode.outputs.upload }}
+          HEAD_MSG: ${{ github.event.head_commit.message }}
         run: |
           ios/ci/build.sh; r=$?
           grep -q "RESULT upload: ok" ios/build/logs/summary.txt && echo "uploaded=true" >> "$GITHUB_OUTPUT" || echo "uploaded=false" >> "$GITHUB_OUTPUT"
@@ -270,6 +272,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4   # for the source-tree hash of the quick-green marker (ios/CI_PROCESS.md)
       - uses: actions/download-artifact@v4
         with:
           pattern: logs-*
@@ -315,6 +318,11 @@ jobs:
           done
           rmdir "$D/layout" 2>/dev/null || true
           cp "$S" "$D/summary.txt"
+          # quick-before-full markers (ios/CI_PROCESS.md): a green quick run marks this source TREE; a green full run
+          # (every test job + release) becomes the base the next quick run diffs against.
+          TREE=$(git -C "$GITHUB_WORKSPACE" rev-parse 'HEAD^{tree}' 2>/dev/null || true)
+          if [ "$SCOPE" = quick ] && [ "$OK" = success ] && [ -n "$TREE" ]; then mkdir -p ios/ci/quick-green; echo "$GITHUB_SHA run $N" > "ios/ci/quick-green/$TREE"; fi
+          if [ "$SCOPE" = full ] && [ "$OK" = success ]; then mkdir -p ios/ci; echo "$GITHUB_SHA" > ios/ci/last-green.txt; fi
           git add -A && git commit -q -m "iOS CI log run $N"
           for i in 1 2 3; do
             git push -q origin HEAD:ci-logs && break

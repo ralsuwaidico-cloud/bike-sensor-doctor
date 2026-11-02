@@ -50,3 +50,5 @@ Fixed waits that remain, and why:
 1. Linux engine harness: `tools/coach-harness/test.sh <checkout>` (training engine, ~1 min).
 2. `swiftc -parse` on every changed Swift file (syntax only).
 3. Then push with `[ci quick]` for compile + unit + main-screen layout; push without it for full validation.
+
+> **2 Nov 2026:** the developer loop (precommit → `[ci quick]` targeted run → `[testflight]`), the targeted-test mapping and the quick-before-full gate are described in `ios/CI_PROCESS.md`; the approved behaviour per workflow and the tests that verify it are in `ios/BEHAVIOUR_CONTRACT.md`.
