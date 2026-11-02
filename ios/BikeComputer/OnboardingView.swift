@@ -1,65 +1,58 @@
 import SwiftUI
 
-/// First run — onboarding revision 7 (owner-approved design, 1 Nov 2026): an uncounted Welcome, then five screens.
-///  1 About you + training · 2 Goals · 3 Your week · 4 Connections · 5 Your plan.
-/// Every answer is written straight to the same data Profile › Training edits (ios/ENGINE_API_RC3.md): one source of truth.
-/// No height and no health questionnaire (owner decision, rc3). Nothing unknown is invented: an FTP the athlete doesn't
-/// know stays Unknown, equipment not set stays "Not sure" (provisional bodyweight plan).
+/// First run — onboarding v3 (Stage 2 / V1, owner approval 2 Nov 2026): Welcome, then five stages
+///  A Who you are · B What you want to achieve · C Build your training week · D Connect your ecosystem · E Your training system.
+/// One identity entry (the name is asked once, on A). Every answer is written through `OnboardingAnswers.apply` into the
+/// single authoritative profile / availability / equipment / strength preferences — the same fields Profile edits — so
+/// resume is safe and nothing is copied. The week preview is a dry run of the real planner on those inputs; Approve
+/// generates the plan from the same inputs and Home shows it immediately (one plan state). Nothing unknown is invented.
 struct OnboardingView: View {
     @EnvironmentObject private var store: Store
-    @EnvironmentObject private var device: DeviceLink
-    @EnvironmentObject private var watch: WatchLink
     @EnvironmentObject private var health: HealthAccess
     @State private var step = 0
-    @State private var guestName = ""
-    @State private var showDOB = false
+    @State private var a = OnboardingAnswers()
+    @State private var ftpKnown = false
     @State private var ftpText = ""
-    @State private var ftpMode: FTPSource = .unknown     // S2-0: the FTP mode chosen on screen before any watts exist
-    @State private var healthResult: String?
-    @State private var twoADay = false
     @State private var resumed = false
-    static let screens = 5
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    static let stages = 5
+    private static let titles = ["", "Who you are", "Your goals", "Your week", "Your ecosystem", "Your training system"]
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if step > 0 {
-                    HStack(spacing: DS.s) {
-                        ProgressView(value: Double(step), total: Double(Self.screens)).tint(BC.accent)
-                        Text("\(step) of \(Self.screens)").font(.caption.weight(.semibold)).foregroundStyle(.secondary).accessibilityIdentifier("onboardingProgress")
-                    }.padding(.horizontal).padding(.top, 6)
-                }
+                if step > 0 { topBar }
                 ScrollView {
-                    VStack(alignment: .leading, spacing: DS.m) {
+                    VStack(alignment: .leading, spacing: CyTheme.sp4) {
                         switch step {
                         case 0: welcome
-                        case 1: aboutYou
-                        case 2: goals
-                        case 3: week
-                        case 4: connections
-                        default: yourPlan
+                        case 1: stageA
+                        case 2: stageB
+                        case 3: stageC
+                        case 4: stageD
+                        default: stageE
                         }
-                    }.padding(DS.l)
+                    }
+                    .padding(.horizontal, CyTheme.margin).padding(.top, 8).padding(.bottom, 24)
+                    .frame(maxWidth: CyTheme.maxContentWidth)
+                    .frame(maxWidth: .infinity)
                 }
+                if step > 0 { bottomBar }
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if step > 1 { ToolbarItem(placement: .navigationBarLeading) { Button("Back") { step -= 1 }.accessibilityIdentifier("onboardingBack") } }
-                if step == 4 { ToolbarItem(placement: .navigationBarTrailing) { Button("Skip") { step = 5 }.accessibilityIdentifier("onboardingSkip") } }
-            }
+            .background(CyTheme.canvas.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear(perform: resume)
+            .onChange(of: a) { _, _ in commit() }
             .onChange(of: step) { _, s in store.onboardingStage = s == 0 ? 0 : 100 + s }
         }
     }
 
-    /// Resume where the athlete left off. r7 stages are stored as 101…105; build-121 stages (1…9) map to the r7 screen
-    /// that now holds that question (REDESIGN_SPEC.md "Persistence and resume").
+    // MARK: resume (stages are stored as 101…105; build-121 stages 1…9 map to the stage that holds that question)
     private func resume() {
         guard !resumed else { return }
         resumed = true
         let s = store.onboardingStage
-        if s >= 101 { step = min(Self.screens, s - 100) }
+        if s >= 101 { step = min(Self.stages, s - 100) }
         else {
             switch s {
             case 1, 4: step = 1
@@ -70,448 +63,291 @@ struct OnboardingView: View {
             default: step = 0
             }
         }
-        if !store.profile.name.isEmpty { guestName = store.profile.name }
-        twoADay = (store.availability?.days.contains { $0.cycles && $0.lifts }) ?? false
+        let p = store.profile
+        var x = OnboardingAnswers()
+        if !p.name.isEmpty { x.name = p.name }
+        if step >= 1, s != 0 {
+            // the athlete has been past Stage A: what is stored is what they chose
+            x.mode = p.trainingMode
+            x.cyclingLevel = p.level
+            x.strengthLevel = store.strengthPrefs.experience
+            x.priority = p.trainingMode == .hybrid ? p.priority : nil
+        }
+        x.dateOfBirth = p.dateOfBirth
+        x.weightKg = p.provenance(.weight).source == .unknown ? nil : p.weightKg
+        if !p.goals.isEmpty { x.goals = p.goals; x.primaryGoal = p.primaryGoal }
+        let mode = x.mode ?? p.trainingMode
+        if let k = OnboardingWeek.kinds(of: store.availability, mode: mode, twoADay: true), p.weekIsExplicit == true { x.week = k }
+        x.rideMinutes = p.cyclingSessionMinutes
+        x.liftMinutes = p.strengthSessionMinutes
+        if store.equipment.isSet { x.equipment = EquipmentPreset.of(store.equipment) }
+        x.supersets = store.strengthPrefs.prefersSupersets
+        if p.ftpKnown { x.ftpWatts = p.ftpValue; x.ftpSource = p.ftpSource == .tested ? .tested : .entered; ftpKnown = true; ftpText = p.ftpValue.map(String.init) ?? "" }
+        a = x
     }
 
-    // MARK: Welcome (not counted)
-    private var welcome: some View {
-        VStack(alignment: .leading, spacing: DS.l) {
-            HStack(spacing: 10) { CycliftMark(size: 44); Text("Cyclift").font(.system(.largeTitle, design: .rounded).weight(.bold)) }
-            Text("Cycling and strength in one plan.").font(.title3).foregroundStyle(.secondary)
-            TextField("First name", text: $guestName).textFieldStyle(.roundedBorder).textContentType(.givenName).accessibilityIdentifier("onboardingName")
-            Button {
-                store.guest = true
-                let n = guestName.trimmingCharacters(in: .whitespaces)
-                if !n.isEmpty { store.updateProfile { $0.name = n } }
-                step = 1
-            } label: { Text("Start").frame(maxWidth: .infinity) }
-                .buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier("onboardingContinue")
-            Text("Everything stays on this iPhone.").font(.footnote).foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: shared pieces
-    private func header(_ t: String) -> some View {
-        Text(t).font(.system(.title, design: .rounded).weight(.bold)).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
-    }
-    private func continueButton(_ label: String = "Continue", id: String = "onboardingNext", action: (() -> Void)? = nil) -> some View {
-        Button { action?(); step += 1 } label: { Text(label).frame(maxWidth: .infinity) }
-            .buttonStyle(.borderedProminent).tint(BC.accent).controlSize(.large).accessibilityIdentifier(id)
-    }
-    private func row<V: View>(_ title: String, @ViewBuilder value: () -> V) -> some View {
-        HStack(spacing: DS.s) { Text(title).foregroundStyle(.secondary); Spacer(minLength: DS.s); value() }.frame(minHeight: DS.minTap)
-    }
-
-    // MARK: 1 About you + training
-    private var aboutYou: some View {
-        VStack(alignment: .leading, spacing: DS.m) {
-            header("About you")
-            Card {
-                row("Name") {
-                    TextField("First name", text: Binding(get: { store.profile.name }, set: { v in store.updateProfile { $0.name = v } }))
-                        .multilineTextAlignment(.trailing).textContentType(.givenName).accessibilityIdentifier("onbName")
-                }
-                Divider()
-                Button { withAnimation { showDOB.toggle() } } label: {
-                    row("Date of birth") { Text(store.profile.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "Add").foregroundStyle(store.profile.dateOfBirth == nil ? BC.accent : .primary) }
-                }.buttonStyle(.plain).accessibilityIdentifier("onbDOB")
-                if showDOB {
-                    // S2-0 (GR-20): the wheel starts on the picker's upper bound and NOTHING is saved until the athlete moves
-                    // it or taps Done; Done without a date keeps "Not set" (never today − 35 years).
-                    DatePicker("Date of birth", selection: Binding(get: { store.profile.dateOfBirth ?? Self.dobRange.upperBound }, set: setDOB),
-                               in: Self.dobRange, displayedComponents: .date)
-                        .datePickerStyle(.wheel).labelsHidden()
-                    Button("Done") { withAnimation { showDOB = false } }
-                        .frame(maxWidth: .infinity, minHeight: DS.minTap).accessibilityIdentifier("onbDOBDone")
-                    if store.profile.dateOfBirth == nil { Text("Used for heart-rate zones. Skip it and rides use effort targets.").font(.footnote).foregroundStyle(.secondary) }
-                }
-                Divider()
-                row("Weight") {
-                    // S2-0 (GR-21): no sample weight — "Add" until the athlete sets it; then a stepper
-                    if let w = store.profile.weightKg {
-                        Stepper(value: Binding(get: { w }, set: { v in store.updateProfile { $0.setWeight(v) } }),
-                                in: 30...200, step: store.settings.units == .imperial ? 0.45359 : 0.5) {
-                            Text(weightText).font(.body.monospacedDigit()).frame(maxWidth: .infinity, alignment: .trailing)
-                        }.accessibilityIdentifier("onbWeight")
-                    } else {
-                        Button("Add") { store.updateProfile { $0.setWeight(70) } }.foregroundStyle(BC.accent).frame(maxWidth: .infinity, alignment: .trailing).accessibilityIdentifier("onbWeight")
-                    }
-                }
-                Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0 == .imperial ? "lb" : "kg").tag($0) } }
-                    .pickerStyle(.segmented).accessibilityIdentifier("onbUnits")
-            }
-            Card {
-                CompactChoiceRow(title: "Training", options: TrainingMode.allCases, label: { $0 == .hybrid ? "Hybrid" : $0.title },
-                                 selection: Binding(get: { store.profile.trainingMode }, set: setMode), identifier: "onbMode")
-                if store.profile.trainingMode.includesCycling {
-                    CompactChoiceRow(title: "Cycling level", options: RiderProfile.Level.allCases, label: Self.levelTitle,
-                                     selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v } }), identifier: "onbCyclingLevel")
-                        .padding(.leading, DS.s)
-                }
-                if store.profile.trainingMode.includesLifting {
-                    CompactChoiceRow(title: "Strength level", options: StrengthPrefs.Experience.allCases, label: Self.strengthTitle,
-                                     selection: Binding(get: { store.strengthPrefs.experience ?? .beginner }, set: { v in store.strengthPrefs.experience = v; store.updateProfile { $0.confirmStrengthLevel = nil } }), identifier: "onbStrengthLevel")
-                        .padding(.leading, DS.s)
-                }
-                if store.profile.trainingMode == .hybrid {
-                    CompactChoiceRow(title: "Priority", options: [TrainingPriority.cycling, .balanced, .strength], label: { $0.title },
-                                     selection: Binding(get: { store.profile.priority }, set: { v in store.updateProfile { $0.priority = v } }), identifier: "onbPriority")
-                        .padding(.leading, DS.s)
-                }
-            }
-            continueButton(action: {
-                // a strength level shown on screen is an answer (Beginner was visible as the default)
-                if store.profile.trainingMode.includesLifting, store.strengthPrefs.experience == nil { store.strengthPrefs.experience = .beginner }
-            })
-        }
-    }
-    static let dobRange: ClosedRange<Date> = (Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date())...(Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date())
-    private func setDOB(_ d: Date) { store.updateProfile { $0.setDateOfBirth(d) } }
-    private var weightText: String {
-        let w = store.profile.weightKg ?? 0
-        return store.settings.units == .imperial ? String(format: "%.0f lb", w * 2.20462) : String(format: "%.1f kg", w)
-    }
-    static func levelTitle(_ l: RiderProfile.Level) -> String { switch l { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
-    static func strengthTitle(_ e: StrengthPrefs.Experience) -> String { switch e { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
-    private func setMode(_ m: TrainingMode) {
-        store.updateProfile { p in
-            p.trainingMode = m
-            if m == .strength { p.priority = .strength } else if m == .cycling { p.priority = .cycling } else if p.priority != .balanced { p.priority = .balanced }
-        }
-    }
-
-    // MARK: 2 Goals
-    private struct GoalGroup: Identifiable { let id: String; let goals: [GoalID] }
-    private var goalChoices: [GoalGroup] {
-        var out: [GoalGroup] = []
-        if store.profile.trainingMode.includesCycling { out.append(GoalGroup(id: "Cycling", goals: [.endurance, .power, .climbing, .sprint, .event])) }
-        if store.profile.trainingMode.includesLifting { out.append(GoalGroup(id: "Strength", goals: [.strength, .muscle, .stamina, .maintain])) }
-        out.append(GoalGroup(id: "General", goals: [.fitness]))
-        return out
-    }
-    private var goals: some View {
-        VStack(alignment: .leading, spacing: DS.m) {
-            header("Goals")
-            Text("Pick any. Star the main one.").font(.subheadline).foregroundStyle(.secondary)
-            ForEach(goalChoices) { group in
-                Card {
-                    Eyebrow(t: group.id)
-                    FlowRow {
-                        ForEach(group.goals) { g in goalChip(g) }
-                    }
-                }
-            }
-            continueButton(action: {
-                if store.profile.goals.isEmpty { applyGoals(store.profile.effectiveGoals, primary: store.profile.effectivePrimaryGoal) }
-            })
-        }
-    }
-    private func goalChip(_ g: GoalID) -> some View {
-        let on = store.profile.goals.contains(g)
-        let primary = on && store.profile.primaryGoal == g
-        return HStack(spacing: 0) {
-            Button { toggleGoal(g) } label: {
-                HStack(spacing: 4) { if on { Image(systemName: "checkmark") }; Text(g.title) }
-                    .padding(.horizontal, 12).frame(minHeight: DS.minTap)
-            }
-            .buttonStyle(.plain).accessibilityLabel(g.title).accessibilityAddTraits(on ? .isSelected : []).accessibilityIdentifier("goal-\(g.rawValue)")
-            if on {
-                Button { applyGoals(store.profile.goals, primary: g) } label: {
-                    Image(systemName: primary ? "star.fill" : "star").frame(minWidth: DS.minTap, minHeight: DS.minTap)
-                }
-                .buttonStyle(.plain).accessibilityLabel(primary ? "\(g.title) is the main goal" : "Make \(g.title) the main goal").accessibilityIdentifier("goalStar-\(g.rawValue)")
-            }
-        }
-        .font(.subheadline.weight(.semibold))
-        .foregroundStyle(on ? BC.accent : .primary)
-        .background(on ? BC.accent.opacity(0.14) : Color(.tertiarySystemGroupedBackground), in: Capsule())
-    }
-    private func toggleGoal(_ g: GoalID) {
-        var list = store.profile.goals
-        if list.contains(g) { list.removeAll { $0 == g } } else { list.append(g) }
-        let primary = store.profile.primaryGoal.flatMap { list.contains($0) ? $0 : nil } ?? list.first
-        applyGoals(list, primary: primary)
-    }
-    private func applyGoals(_ list: [GoalID], primary: GoalID?) {
-        let x = store.setGoals(list, primary: primary)
+    /// Writes the answers into the one authoritative profile (no second copy). Called on every change.
+    private func commit() {
+        var x = store.planInputs
+        a.apply(to: &x)
         store.updateProfile { $0 = x.profile }
+        if store.availability != x.availability { store.availability = x.availability }
+        if store.equipment != x.equipment { store.equipment = x.equipment }
         if store.strengthPrefs != x.strengthPrefs { store.strengthPrefs = x.strengthPrefs }
     }
 
-    // MARK: 3 Your week
-    private var mode: TrainingMode { store.profile.trainingMode }
-    /// The week being edited: the saved one, else the engine's suggestion for these answers. Days are normalised to the
-    /// training type (a ride day in Strength mode becomes a lift day, and so on) so switching type never loses a day.
-    private var weekKinds: [DayKind] {
-        let a = store.availability ?? WeeklyAvailability.suggested(for: store.profile)
-        return a.days.map { d in normalise(d.cycles && d.lifts ? .both : d.cycles ? .ride : d.lifts ? .lift : .rest) }
-    }
-    private func normalise(_ k: DayKind) -> DayKind {
-        switch (mode, k) {
-        case (.cycling, .lift), (.cycling, .both): return .ride
-        case (.strength, .ride), (.strength, .both): return .lift
-        case (.hybrid, .both): return twoADay ? .both : .ride
-        default: return k
-        }
-    }
-    private var cycle: [DayKind] {
-        switch mode {
-        case .cycling: return [.ride, .rest]
-        case .strength: return [.lift, .rest]
-        case .hybrid: return twoADay ? [.ride, .lift, .both, .rest] : [.ride, .lift, .rest]
-        }
-    }
-    private var rideMinutes: Int { store.profile.cyclingSessionMinutes ?? 60 }
-    private var liftMinutes: Int { store.profile.strengthSessionMinutes ?? 45 }
+    private var mode: TrainingMode { a.mode ?? store.profile.trainingMode }
 
-    private var week: some View {
-        let kinds = weekKinds
-        let rides = kinds.filter { $0 == .ride || $0 == .both }.count
-        let lifts = kinds.filter { $0 == .lift || $0 == .both }.count
-        return VStack(alignment: .leading, spacing: DS.m) {
-            header("Your week")
-            Card {
-                HStack(spacing: 4) {
-                    ForEach(0..<7, id: \.self) { i in
-                        DayIconCell(dayName: WeeklyAvailability.dayNames[i], longDayName: WeeklyAvailability.longDayNames[i], kind: kinds[i]) { tapDay(i, kinds) }
-                            .accessibilityIdentifier("onbDay\(i)")
-                    }
+    // MARK: chrome
+    private var topBar: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button { withAnimation(CyMotion.animation(CyTheme.motionRise, reduce: reduceMotion)) { step -= 1 } } label: {
+                    Image(systemName: "chevron.left").font(.body.weight(.semibold)).foregroundStyle(CyTheme.ink).cyMinTap()
                 }
-                HStack {
-                    if mode.includesCycling { Label("\(rides)", systemImage: "bicycle").accessibilityLabel("\(rides) rides") }
-                    if mode.includesLifting { Label("\(lifts)", systemImage: "dumbbell").accessibilityLabel("\(lifts) strength sessions") }
-                    Spacer()
-                    Text("Tap a day to change it").font(.caption).foregroundStyle(.secondary)
-                }.font(.subheadline.weight(.semibold)).accessibilityIdentifier("onbWeekCounts")
-                if let m = weekMismatch(rides: rides, lifts: lifts) {
-                    Text(m).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("onbWeekMismatch")
-                }
-                if mode == .hybrid {
-                    Toggle("Two a day", isOn: Binding(get: { twoADay }, set: { v in twoADay = v; saveWeek(weekKinds) })).tint(BC.accent).frame(minHeight: DS.minTap)
+                .buttonStyle(.plain).accessibilityLabel("Back").accessibilityIdentifier("onboardingBack")
+                Spacer()
+                Text("\(Self.titles[step]) · \(step) of \(Self.stages)").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
+                    .accessibilityIdentifier("onboardingProgress")
+                Spacer()
+                if step == 4 {
+                    Button("Skip") { withAnimation(CyMotion.animation(CyTheme.motionRise, reduce: reduceMotion)) { step = 5 } }
+                        .font(CyType.secondary.weight(.semibold)).foregroundStyle(CyTheme.cycling.tint).cyMinTap()
+                        .accessibilityIdentifier("onboardingSkip")
+                } else {
+                    Color.clear.frame(width: CyTheme.minTap, height: CyTheme.minTap)
                 }
             }
-            Card {
-                if mode.includesCycling {
-                    row("Ride length") {
-                        Stepper(value: Binding(get: { rideMinutes }, set: { v in store.updateProfile { $0.cyclingSessionMinutes = v }; saveWeek(weekKinds) }), in: 20...300, step: 10) {
-                            Text("\(rideMinutes) min").monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
-                        }.accessibilityIdentifier("onbRideMinutes")
-                    }
-                }
-                if mode.includesLifting {
-                    row("Strength length") {
-                        Stepper(value: Binding(get: { liftMinutes }, set: { v in store.updateProfile { $0.strengthSessionMinutes = v; $0.confirmSessionLength = nil }; saveWeek(weekKinds) }), in: 15...120, step: 5) {
-                            Text("\(liftMinutes) min").monospacedDigit().frame(maxWidth: .infinity, alignment: .trailing)
-                        }.accessibilityIdentifier("onbLiftMinutes")
-                    }
-                    CompactChoiceRow(title: "Equipment", options: EquipmentPreset.allCases, label: { $0.title },
-                                     selection: Binding(get: { EquipmentPreset.of(store.equipment) }, set: { store.equipment = $0.apply(to: store.equipment) }), identifier: "onbEquipment")
-                    Toggle("Supersets", isOn: Binding(get: { store.strengthPrefs.prefersSupersets ?? false }, set: { store.strengthPrefs.prefersSupersets = $0 }))
-                        .tint(BC.accent).frame(minHeight: DS.minTap).accessibilityIdentifier("onbSupersets")
+            HStack(spacing: 4) {
+                ForEach(1...Self.stages, id: \.self) { i in
+                    Capsule().fill(i <= step ? CyTheme.ink : CyTheme.line).frame(height: 4)
                 }
             }
-            continueButton(action: { saveWeek(weekKinds) })
+            .accessibilityHidden(true)
         }
+        .padding(.horizontal, CyTheme.margin).padding(.top, 6)
     }
-    private func weekMismatch(rides: Int, lifts: Int) -> String? {
-        if rides + lifts == 0 { return "Pick at least one training day." }
-        if mode == .hybrid && rides == 0 { return "Hybrid needs at least one ride day." }
-        if mode == .hybrid && lifts == 0 { return "Hybrid needs at least one strength day." }
-        if rides + lifts == 7 && !kindsHaveRest { return "No rest day this week. You can still continue." }
-        return nil
-    }
-    private var kindsHaveRest: Bool { weekKinds.contains(.rest) }
-    private func tapDay(_ i: Int, _ kinds: [DayKind]) {
-        var k = kinds
-        let order = cycle
-        let at = order.firstIndex(of: k[i]) ?? (order.count - 1)
-        k[i] = order[(at + 1) % order.count]
-        saveWeek(k)
-    }
-    /// Writes the week exactly as shown: one assignment per session at the session length, firm minutes (weekIsExplicit),
-    /// the training days as preferred days, and the frequencies / weekly budgets the planner reads kept in step.
-    private func saveWeek(_ kinds: [DayKind]) {
-        let r = rideMinutes, l = liftMinutes
-        let days: [DayAvailability] = kinds.map { k in
-            switch k {
-            case .ride: return DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: r)])
-            case .lift: return DayAvailability(assignments: [DayAssignment(sport: .strength, minutes: l)])
-            case .both: return DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: r), DayAssignment(sport: .strength, minutes: l)])
-            case .rest: return DayAvailability(activity: .rest, minutes: 0)
+
+    private var bottomBar: some View {
+        VStack(spacing: 8) {
+            switch step {
+            case 4:
+                CyPrimaryButton(title: "Continue", action: next).accessibilityIdentifier("onboardingNext")
+                CyTertiaryLink(title: "Skip for now — connect later in Profile") { next() }.frame(maxWidth: .infinity)
+            case 5:
+                HStack(spacing: 10) {
+                    CySecondaryButton(title: "Edit week") { withAnimation(CyMotion.animation(CyTheme.motionRise, reduce: reduceMotion)) { step = 3 } }
+                        .accessibilityIdentifier("onbEditWeek")
+                    CyPrimaryButton(title: "Approve plan", systemImage: "checkmark", sport: .recovery, action: approve)
+                        .accessibilityIdentifier("onbCreatePlan")
+                }
+            default:
+                CyPrimaryButton(title: "Continue", isEnabled: canContinue, action: next).accessibilityIdentifier("onboardingNext")
             }
         }
-        let a = WeeklyAvailability(days: days)
-        if store.availability != a { store.availability = a }
-        let rides = kinds.filter { $0 == .ride || $0 == .both }.count
-        let lifts = kinds.filter { $0 == .lift || $0 == .both }.count
-        store.updateProfile { p in
-            p.weekIsExplicit = true
-            p.preferredDays = kinds.indices.filter { kinds[$0] != .rest }
-            if p.trainingMode.includesCycling, rides > 0 {
-                p.cyclingDaysPerWeek = rides
-                p.cyclingSessionMinutes = r
-                p.hoursPerWeek = max(1, Int((Double(rides * r) / 60).rounded(.up)))
-            }
-            if p.trainingMode.includesLifting {
-                p.liftDaysPerWeek = lifts
-                p.strengthSessionMinutes = l
-                p.liftingHoursPerWeek = lifts == 0 ? 0 : max(1, Int((Double(lifts * l) / 60).rounded(.up)))
-            } else {
-                p.liftDaysPerWeek = 0; p.liftingHoursPerWeek = 0
-            }
+        .padding(.horizontal, CyTheme.margin).padding(.vertical, 10)
+        .background(CyTheme.canvas)
+    }
+    private var canContinue: Bool {
+        switch step {
+        case 1: return !(a.name ?? "").trimmingCharacters(in: .whitespaces).isEmpty && a.mode != nil
+        case 2: return !(a.goals ?? []).isEmpty
+        case 3: return !OnboardingWeek.feasibility(a.week ?? [], mode: mode, ride: a.rideMinutes ?? 60, lift: a.liftMinutes ?? 30, strengthLevel: a.strengthLevel).blocking
+        default: return true
+        }
+    }
+    private func next() {
+        if step == 1 {
+            // what is shown on screen is the answer (the chips start on the stored level)
+            if a.cyclingLevel == nil, mode.includesCycling { a.cyclingLevel = store.profile.level }
+            if a.strengthLevel == nil, mode.includesLifting { a.strengthLevel = store.strengthPrefs.experience ?? .beginner }
+            if a.priority == nil, mode == .hybrid { a.priority = .balanced }
+        }
+        withAnimation(CyMotion.animation(CyTheme.motionRise, reduce: reduceMotion)) { step = min(Self.stages, step + 1) }
+    }
+    private func header(_ t: String, _ sub: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(t).font(CyType.largeTitle).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).accessibilityAddTraits(.isHeader)
+            Text(sub).font(CyType.secondary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    // MARK: 4 Connections
-    private var connections: some View {
-        VStack(alignment: .leading, spacing: DS.m) {
-            header("Connections")
-            Card {
-                row("Apple Health") {
-                    if !health.available { Text("Not available").foregroundStyle(.secondary) }
-                    else if health.workoutWriteAuthorized { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(BC.live) }
-                    else {
-                        Button("Connect") {
-                            store.settings.appleHealthWanted = true
-                            health.request { ok in healthResult = ok ? nil : "Not allowed. Change it in iOS Settings › Health." }
-                        }.buttonStyle(.bordered).accessibilityIdentifier("onbHealth")
-                    }
-                }
-                if let r = healthResult { Text(r).font(.caption).foregroundStyle(BC.stale) }
-                Divider()
-                Toggle(isOn: connectionBinding("watch")) {
-                    VStack(alignment: .leading, spacing: 2) { Text("Apple Watch"); Text(watch.paired ? "Paired" : "Not paired").font(.caption).foregroundStyle(.secondary) }
-                }.tint(BC.accent).accessibilityIdentifier("onbWatch")
-                Divider()
-                row("BikeComputer") {
-                    if device.state == .ready { Label("Connected", systemImage: "checkmark.circle.fill").foregroundStyle(BC.live) }
-                    else {
-                        Button(device.stage.isAttempt && device.stage != .waiting ? "Searching…" : "Connect") { device.connect() }
-                            .buttonStyle(.bordered).accessibilityIdentifier("onbBoard")
-                    }
-                }
-                if device.state == .scanning, !device.found.isEmpty {
-                    ForEach(device.found, id: \.id) { f in Button("Connect to \(f.name)") { device.connect(to: f.id) }.frame(minHeight: DS.minTap) }
-                }
-                if mode.includesCycling {
-                    Divider()
-                    Toggle("Heart-rate strap", isOn: connectionBinding("strap")).tint(BC.accent).frame(minHeight: DS.minTap).accessibilityIdentifier("onbStrap")
-                    Toggle("Power meter", isOn: connectionBinding("meter")).tint(BC.accent).frame(minHeight: DS.minTap).accessibilityIdentifier("onbMeter")
-                }
+    // MARK: Welcome (one tap, no input)
+    private var welcome: some View {
+        VStack(alignment: .leading, spacing: CyTheme.sp5) {
+            Spacer(minLength: 40)
+            HStack(spacing: 12) { CycliftMark(size: 52); Text("Cyclift").font(.system(.largeTitle, design: .rounded).weight(.bold)).foregroundStyle(CyTheme.ink) }
+            Text("Your cycling and strength coach — one plan, built from your week.").font(CyType.title).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                ZStack { Circle().fill(CyTheme.cycling.bg).frame(width: 40, height: 40); Image(systemName: "bicycle").foregroundStyle(CyTheme.cycling.tint) }
+                ZStack { Circle().fill(CyTheme.strength.bg).frame(width: 40, height: 40); Image(systemName: "dumbbell.fill").foregroundStyle(CyTheme.strength.tint) }
+                ZStack { Circle().fill(CyTheme.recovery.bg).frame(width: 40, height: 40); Image(systemName: "moon.fill").foregroundStyle(CyTheme.recovery.tint) }
             }
-            if mode.includesCycling {
-                Card {
-                    // S2-0 (GR-22): choosing Entered / Tested only opens the watts field — the FTP stays Unknown until a
-                    // number in 50–600 W is typed; nothing is ever carried over or filled in
-                    CompactChoiceRow(title: "FTP", options: [FTPSource.unknown, .entered, .tested], label: { $0 == .unknown ? "Don't know" : $0.title },
-                                     selection: Binding(get: { ftpChoice }, set: setFTPChoice), identifier: "onbFTP")
-                    if ftpChoice != .unknown {
-                        row("Watts") {
-                            TextField("W", text: $ftpText).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(maxWidth: 90)
-                                .onChange(of: ftpText) { _, v in
-                                    if let n = Int(v), (50...600).contains(n) { store.updateProfile { $0.setFTP(n, source: ftpChoice == .tested ? .tested : .entered) } }
-                                    else if store.profile.ftpKnown { store.updateProfile { $0.setFTP(nil, source: .unknown) } }
-                                }
-                                .accessibilityIdentifier("onbFTPWatts")
+            .accessibilityHidden(true)
+            Text("About a minute · connections optional · everything stays on this iPhone").font(CyType.secondary).foregroundStyle(CyTheme.ink3)
+            CyPrimaryButton(title: "Get started", systemImage: "arrow.right") { store.guest = true; withAnimation(CyMotion.animation(CyTheme.motionRise, reduce: reduceMotion)) { step = 1 } }
+                .accessibilityIdentifier("onboardingContinue")
+        }
+    }
+
+    // MARK: A — Who are you as an athlete?
+    private var stageA: some View {
+        VStack(alignment: .leading, spacing: CyTheme.sp4) {
+            header("Who are you as an athlete?", "Your name once, the training you do, and what the coach needs for zones and loads.")
+            AthleteTypeEditor(a: $a, healthWeight: healthWeightOffer, units: store.settings.units)
+        }
+    }
+    /// A weight already read from Apple Health (with permission) is offered, never applied silently.
+    private var healthWeightOffer: (kg: Double, date: Date)? {
+        let p = store.profile
+        guard p.provenance(.weight).source == .appleHealth, let w = p.weightKg, let d = p.provenance(.weight).recordedAt else { return nil }
+        return (w, d)
+    }
+
+    // MARK: B — What do you want to achieve?
+    private var stageB: some View {
+        VStack(alignment: .leading, spacing: CyTheme.sp4) {
+            header("What do you want to achieve?", "Pick any. The first is your main goal — tap ★ to change it.")
+            GoalCardsEditor(a: $a, mode: mode)
+        }
+    }
+
+    // MARK: C — Build your training week (coach proposes; live preview from the real planner)
+    private var stageC: some View {
+        VStack(alignment: .leading, spacing: CyTheme.sp4) {
+            header("Build your training week", "The coach proposed this from your answers — tap a day to change it.")
+            WeekBuilder(a: $a, mode: mode, preview: dryRun)
+        }
+    }
+    /// The planner on the inputs Approve will save, for this Monday — nothing persisted.
+    private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int) -> [Workout] {
+        var x = store.planInputs
+        var draft = a; draft.week = kinds; draft.rideMinutes = ride; draft.liftMinutes = lift
+        draft.apply(to: &x)
+        guard let av = x.availability else { return [] }
+        let cal = Calendar.current
+        let d0 = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: d0) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: d0) ?? d0
+        return PlanEngine.week(starting: monday, profile: x.profile, availability: av)
+    }
+
+    // MARK: D — Connect your ecosystem (optional; only actions that work today)
+    private var stageD: some View {
+        VStack(alignment: .leading, spacing: CyTheme.sp4) {
+            header("Connect your ecosystem", "All optional. Only actions that work today are shown; you can do this later in Profile.")
+            DeviceCardList()
+            if mode.includesCycling { ftpCard }
+        }
+    }
+    private var ftpCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack { CyCaption(text: "FTP"); Spacer(); CySourceTagBadge(tag: store.profile.ftpKnown ? .logged : .unknown) }
+            CySegmentedControl(options: [(false, "Don't know"), (true, "I know it")], selection: Binding(get: { ftpKnown }, set: { v in
+                ftpKnown = v
+                if !v { a.ftpSource = .unknown; a.ftpWatts = nil; ftpText = "" } else { a.ftpSource = nil }
+            }))
+            .accessibilityIdentifier("onbFTP")
+            if ftpKnown {
+                HStack(spacing: 10) {
+                    TextField("Watts", text: $ftpText).keyboardType(.numberPad).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink)
+                        .padding(.horizontal, 12).frame(minHeight: 48)
+                        .background(CyTheme.card2, in: RoundedRectangle(cornerRadius: CyTheme.rField, style: .continuous))
+                        .onChange(of: ftpText) { _, v in
+                            // GR-22: Entered only with a typed number in 50–600 W; otherwise the FTP stays Unknown
+                            if let n = Int(v), (50...600).contains(n) { a.ftpWatts = n; a.ftpSource = .entered }
+                            else { a.ftpWatts = nil; a.ftpSource = .unknown }
                         }
-                        if !store.profile.ftpKnown { Text("Type your FTP in watts (50–600). Until then it stays Unknown.").font(.caption).foregroundStyle(.secondary) }
-                    } else {
-                        Text("Rides use heart rate and effort until you know it.").font(.caption).foregroundStyle(.secondary)
+                        .accessibilityLabel("FTP in watts").accessibilityIdentifier("onbFTPWatts")
+                    Text("W").font(CyType.unit).foregroundStyle(CyTheme.ink3)
+                }
+                Text(store.profile.ftpKnown ? "Entered · power targets use it. An FTP test ride later makes it Tested." : "Type your FTP in watts (50–600). Until then it stays Unknown.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
+            } else {
+                Text("Rides use heart rate and effort until you know it. No watts are ever guessed.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
+            }
+        }
+        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+        .cyCard()
+    }
+
+    // MARK: E — Your training system (the first real dashboard; Approve → Home shows the same plan)
+    private var stageE: some View {
+        let kinds = a.week ?? OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
+        let ride = a.rideMinutes ?? OnboardingWeek.defaultRideMinutes, lift = a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes
+        let plan = dryRun(kinds, ride, lift)
+        let first = OnboardingApproach.firstWorkout(in: plan, from: Date())
+        let lines = OnboardingApproach.lines(primary: a.primaryGoal, mode: mode, kinds: kinds, liftMinutes: lift, ftpKnown: store.profile.ftpKnown, ftpWatts: store.profile.ftpValue, equipmentProvisional: store.equipment.isProvisional)
+        return VStack(alignment: .leading, spacing: CyTheme.sp4) {
+            header("Your training system", "\(a.name.map { "\($0), this" } ?? "This") is week 1. Approve it and it's on Home.")
+            VStack(alignment: .leading, spacing: 12) {
+                if let gs = a.goals, !gs.isEmpty {
+                    FlowRow(spacing: 6) {
+                        ForEach(gs) { g in
+                            let main = g == a.primaryGoal
+                            HStack(spacing: 4) { if main { Image(systemName: "star.fill").font(.caption2) }; Text(g.title) }
+                                .font(CyType.captionSmall).foregroundStyle(main ? CyTheme.goal.onTint : CyTheme.ink2)
+                                .padding(.horizontal, 10).frame(minHeight: 30)
+                                .background(main ? CyTheme.goal.tint : CyTheme.card2, in: Capsule())
+                                .accessibilityLabel(main ? "\(g.title), main goal" : g.title)
+                        }
+                    }
+                }
+                CyCalendarStrip(days: (0..<7).map { i in
+                    let s: CyDaySport = { switch kinds[i] { case .ride: return .cycling; case .lift: return .strength; case .both: return .both; case .rest: return .rest } }()
+                    return CyDay(id: i, shortName: WeeklyAvailability.dayNames[i], longName: WeeklyAvailability.longDayNames[i], sport: s, status: s == .rest ? .none : .planned)
+                })
+                HStack(spacing: 0) {
+                    if mode.includesCycling { stat("\(OnboardingWeek.rides(kinds))", "rides") }
+                    if mode.includesLifting { stat("\(OnboardingWeek.lifts(kinds))", "lifts") }
+                    stat(OnboardingWeek.durationText(OnboardingWeek.minutes(kinds, ride: ride, lift: lift)), "planned")
+                }
+            }
+            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .cyCard()
+            .accessibilityIdentifier("onbDash")
+            if let w = first {
+                CyCaption(text: "First workout · \(w.date.formatted(.dateTime.weekday(.wide)))")
+                CySessionCard(sport: w.kind.isRide ? .cycling : .strength, caption: w.date.formatted(.dateTime.weekday(.wide)), title: w.displayTitle,
+                              meta: "\(w.minutes) min" + (w.kind == .strength ? (store.equipment.isProvisional ? " · bodyweight" : "") : (store.profile.ftpKnown ? " · power targets" : " · effort targets")),
+                              detail: w.kind == .strength ? "Light, to find your weights — every set you log sets week 2." : (store.profile.ftpKnown ? "Zones from your FTP." : "Heart rate or effort guides the ride."))
+                    .accessibilityIdentifier("onbFirst")
+            }
+            CyCaption(text: "The approach")
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(lines.enumerated()), id: \.offset) { pair in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(pair.offset + 1)").font(CyType.captionSmall).foregroundStyle(CyTheme.goal.tint).frame(width: 22, height: 22).background(CyTheme.card, in: Circle())
+                        Text(pair.element).font(CyType.secondary).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            continueButton()
+            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .cyCard(tinted: CyTheme.goal.bg)
+            .accessibilityIdentifier("onbWhy")
+            Text(connectedLine).font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
         }
-        .onAppear { if store.profile.ftpKnown { ftpText = "\(store.profile.ftpW)"; ftpMode = store.profile.ftpSource == .tested ? .tested : .entered } }
     }
-    /// The chosen mode (screen state); the profile's own source once a number is saved.
-    private var ftpChoice: FTPSource {
-        if store.profile.ftpKnown { return store.profile.ftpSource == .tested ? .tested : .entered }
-        return ftpMode
+    private func stat(_ v: String, _ l: String) -> some View {
+        VStack(spacing: 2) { Text(v).font(CyType.numeralSmall).foregroundStyle(CyTheme.ink).monospacedDigit(); Text(l).font(CyType.captionSmall).foregroundStyle(CyTheme.ink3) }
+            .frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
     }
-    private func setFTPChoice(_ s: FTPSource) {
-        ftpMode = s
-        if s == .unknown { store.updateProfile { $0.setFTP(nil, source: .unknown) }; ftpText = "" }
-        else if let n = Int(ftpText), (50...600).contains(n) { store.updateProfile { $0.setFTP(n, source: s) } }
-    }
-    private func connectionBinding(_ key: String) -> Binding<Bool> {
-        Binding(get: { store.settings.enabledConnections.contains(key) },
-                set: { if $0 { store.settings.enabledConnections.insert(key) } else { store.settings.enabledConnections.remove(key) } })
+    private var connectedLine: String {
+        let n = store.settings.enabledConnections.count + (health.workoutWriteAuthorized ? 1 : 0)
+        return n == 0 ? "No devices yet — add them any time in Profile · what you log sets week 2." : "\(n) connection\(n == 1 ? "" : "s") set up · change them any time in Profile."
     }
 
-    // MARK: 5 Your plan
-    private var yourPlan: some View {
-        let kinds = weekKinds
-        return VStack(alignment: .leading, spacing: DS.m) {
-            header("Your plan")
-            Card {
-                HStack(spacing: 4) {
-                    ForEach(0..<7, id: \.self) { i in DayIconCell(dayName: WeeklyAvailability.dayNames[i], longDayName: WeeklyAvailability.longDayNames[i], kind: kinds[i]) }
-                }
-                summaryRow("Training", mode == .hybrid ? "Hybrid · \(store.profile.priority.title)" : mode.title)
-                summaryRow("Goal", store.profile.effectivePrimaryGoal.title)
-                if mode.includesCycling { summaryRow("Rides", "\(rideMinutes) min · FTP \(store.profile.ftpDisplay)") }
-                if mode.includesLifting { summaryRow("Strength", "\(liftMinutes) min · \(EquipmentPreset.of(store.equipment).title)") }
-            }
-            Card {
-                Eyebrow(t: "Why this plan")
-                ForEach(whyPoints, id: \.self) { p in
-                    Label { Text(p).fixedSize(horizontal: false, vertical: true) } icon: { Image(systemName: "checkmark.circle").foregroundStyle(BC.accent) }
-                        .font(.subheadline)
-                }
-            }.accessibilityIdentifier("onbWhy")
-            Button(action: createPlan) { Text("Create plan").frame(maxWidth: .infinity) }
-                .buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large).accessibilityIdentifier("onbCreatePlan")
-        }
-    }
-    private func summaryRow(_ k: String, _ v: String) -> some View {
-        HStack { Text(k).foregroundStyle(.secondary); Spacer(); Text(v).multilineTextAlignment(.trailing) }.font(.subheadline).frame(minHeight: 32)
-    }
-    /// At most three reasons, each true for this athlete's answers (engine rules ENG-D1, E1/E3, H1, C2, hybrid spacing).
-    private var whyPoints: [String] {
-        var out: [String] = []
-        let kinds = weekKinds
-        let lifts = kinds.filter { $0 == .lift || $0 == .both }.count
-        let rides = kinds.filter { $0 == .ride || $0 == .both }.count
-        if mode.includesLifting, lifts >= 1, lifts <= 3 { out.append("\(lifts) full-body strength session\(lifts == 1 ? "" : "s"), \(liftMinutes) min each.") }
-        if mode == .hybrid, lifts > 0, rides > 0 { out.append("Hard rides are kept away from leg-heavy lifts.") }
-        if mode.includesCycling, !store.profile.ftpKnown { out.append("Rides use heart rate and effort until your FTP is known.") }
-        if mode.includesLifting, store.equipment.isProvisional { out.append("Bodyweight strength until you set your equipment.") }
-        if mode.includesCycling, rides > 0, out.count < 3 { out.append("\(rides) ride\(rides == 1 ? "" : "s") a week, never longer than \(rideMinutes) min.") }
-        if out.isEmpty { out.append("Built from the days and times you chose.") }
-        return Array(out.prefix(3))
-    }
-    private func createPlan() {
-        saveWeek(weekKinds)
-        if store.profile.goals.isEmpty { applyGoals(store.profile.effectiveGoals, primary: store.profile.effectivePrimaryGoal) }
+    /// Plan version 1: the same inputs the preview used, generated for this week and next; Home and Plan read `plan`.
+    private func approve() {
+        commit()
+        if store.profile.goals.isEmpty, let g = a.goals { store.updateProfile { $0.goals = g; $0.primaryGoal = a.primaryGoal ?? g.first } }
         store.onboardingStage = 0
-        _ = store.regenerate(weekOf: Date(), replaceEdited: true)
-        if let next = Calendar.current.date(byAdding: .day, value: 7, to: Date()) { _ = store.regenerate(weekOf: next, replaceEdited: true) }
+        let now = Date()
+        _ = store.regenerate(weekOf: now, replaceEdited: true)
+        if let next = Calendar.current.date(byAdding: .day, value: 7, to: now) { _ = store.regenerate(weekOf: next, replaceEdited: true) }
+        let made = store.plan.filter { $0.date >= Calendar.current.startOfDay(for: now) }
+        store.planVersions.append(PlanVersion(createdAt: now, effectiveDate: made.first?.date ?? now, cause: .profile, before: [], after: made, inputsBefore: nil,
+                                              summary: ["Plan approved in onboarding: \(OnboardingWeek.rides(a.week ?? [])) rides · \(OnboardingWeek.lifts(a.week ?? [])) lifts a week"], proposalId: nil))
         store.onboarded = true
-    }
-}
-
-/// Onboarding r7 equipment presets mapped onto the one equipment record the planner reads (`EquipmentProfile`).
-/// "Not sure" = not set → provisional bodyweight plan; a full gym is never assumed.
-enum EquipmentPreset: String, CaseIterable, Hashable {
-    case gym, home, bodyweight, notSure
-    var title: String { switch self { case .gym: return "Gym"; case .home: return "Home"; case .bodyweight: return "Bodyweight"; case .notSure: return "Not sure" } }
-    static let homeKit: Set<String> = ["dumbbell", "bench", "band", "pull-up bar", "kettlebell"]
-    static var gymKit: Set<String> { Set(ExerciseCatalogue.equipmentOptions.filter { $0 != "bodyweight" }) }
-    static func of(_ e: EquipmentProfile) -> EquipmentPreset {
-        if !e.isSet { return .notSure }
-        if e.owned.isEmpty { return .bodyweight }
-        if e.owned.isSuperset(of: gymKit) { return .gym }
-        return .home
-    }
-    /// Keeps the athlete's exclusions; replaces only what is owned.
-    func apply(to e: EquipmentProfile) -> EquipmentProfile {
-        switch self {
-        case .gym: return EquipmentProfile(owned: Self.gymKit, excluded: e.excluded, confirmed: true)
-        case .home: return EquipmentProfile(owned: Self.homeKit, excluded: e.excluded, confirmed: true)
-        case .bodyweight: return EquipmentProfile(owned: [], excluded: e.excluded, confirmed: true)
-        case .notSure: return EquipmentProfile(owned: [], excluded: e.excluded, confirmed: nil)
-        }
     }
 }
