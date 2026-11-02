@@ -530,7 +530,19 @@ extension Store {
 
     /// Proposes a change of type and/or duration for a planned strength session: the prescription is rebuilt, validated
     /// and compared with the current one. Nothing is saved; `commit` applies it.
+    /// Builds, validates and REGISTERS a proposal (the preview sheet and AI gateway commit it by id). Everything that
+    /// only needs the answer — feasibility checks, "what would happen" — uses `evaluateSessionChange`, which never
+    /// touches stored state (owner 2 Nov: a feasibility check must not change the athlete's training state).
     func proposeSessionChange(workoutId: UUID, request: SessionChangeRequest, now: Date = Date()) -> SessionChangeProposal? {
+        guard let p = evaluateSessionChange(workoutId: workoutId, request: request, now: now) else { return nil }
+        register(p)
+        return p
+    }
+
+    /// Pure evaluation: the same proposal `proposeSessionChange` would register, without registering it. Reads the plan,
+    /// profile, equipment, routines, logs and active session; writes nothing (no `pendingProposals`, `lastProposalId`,
+    /// `plan`, `trash`, `undoToast`, `planVersions`, persistence). Safe from view bodies and background code.
+    func evaluateSessionChange(workoutId: UUID, request: SessionChangeRequest, now: Date = Date()) -> SessionChangeProposal? {
         guard let w = plan.first(where: { $0.id == workoutId }), w.kind == .strength || request.kind == .strength, !w.done, !w.skipped else { return nil }
         let fp = changeFingerprint(workoutId)
         var x = w
@@ -550,7 +562,6 @@ extension Store {
             p.createdAt = now
             p.engineValidated = true
             p.seal = Store.sealOf(p)
-            register(p)
             return p
         }
         // completed work: sets already logged in an in-progress session are kept; only the rest is rebuilt
@@ -638,16 +649,20 @@ extension Store {
         p.createdAt = now
         p.engineValidated = true
         p.seal = Store.sealOf(p)
-        register(p)
         return p
     }
 
     /// review C A7: the engine keeps proposals; anything outside commits by id. Bounded (20) and expiring (1 h).
     func register(_ p: SessionChangeProposal) {
         pendingProposals[p.id] = p
+        // Owner 2 Nov (engine side-effects audit): the athlete's own pending preview (`lastProposalId`) is never evicted
+        // by other proposals (coach, Home swap, background), neither by the hour limit nor by the size bound.
+        let keep = lastProposalId
         let cutoff = p.createdAt.addingTimeInterval(-3600)
-        for (k, v) in pendingProposals where v.createdAt < cutoff { pendingProposals.removeValue(forKey: k) }
-        if pendingProposals.count > 20, let oldest = pendingProposals.values.min(by: { $0.createdAt < $1.createdAt }) { pendingProposals.removeValue(forKey: oldest.id) }
+        for (k, v) in pendingProposals where v.createdAt < cutoff && k != keep { pendingProposals.removeValue(forKey: k) }
+        while pendingProposals.count > 20, let oldest = pendingProposals.values.filter({ $0.id != keep && $0.id != p.id }).min(by: { $0.createdAt < $1.createdAt }) {
+            pendingProposals.removeValue(forKey: oldest.id)
+        }
     }
     /// Commit by reference (UI preview sheet, AI gateway). Unknown or expired id → `.stale` (propose again).
     func commit(proposalId: UUID, confirmed: Bool) -> CommitResult {
@@ -662,16 +677,12 @@ extension Store {
     /// Nothing is registered or saved. Non-strength sessions and sessions that cannot be rebuilt return `target`.
     func shortestFeasibleMinutes(for w: Workout, target: Int, now: Date = Date()) -> Int {
         guard w.kind == .strength, !w.done, !w.skipped else { return target }
-        // run 135: `proposeSessionChange` registers what it builds (bounded to 20) — a dry run from a view body evicted the
-        // athlete's own pending preview ("This change is no longer available"). The dry run is discarded at once and the
-        // answer cached per session state, so the body never registers anything.
+        // run 135: a dry run through `proposeSessionChange` registered a proposal per view render (bounded table) and
+        // evicted the athlete's own preview. Evaluation is pure now; the answer is cached per session state.
         let key = "\(w.id.uuidString)|\(target)|\(changeFingerprint(w.id))"
         if let c = feasibleMinutesCache[key] { return c }
-        let keepLast = lastProposalId, keepPending = pendingProposals
         var req = SessionChangeRequest(); req.minutes = target
-        guard let p = proposeSessionChange(workoutId: w.id, request: req, now: now) else { return target }
-        pendingProposals = keepPending      // the register step (bounded, expiring) must leave the athlete's proposals untouched
-        lastProposalId = keepLast
+        guard let p = evaluateSessionChange(workoutId: w.id, request: req, now: now) else { return target }
         var out = target
         if p.report.outcome == .block, p.report.has("TIME-001"), let e = p.report.estimatedMinutes { out = max(target, Int(e.rounded(.up)) + 1) }
         feasibleMinutesCache[key] = out
@@ -821,7 +832,8 @@ extension Store {
     }
 
     /// Legacy sessions (edited before the fix: label changed, exercises kept) whose content contradicts their label get a
-    /// rebuild PROPOSAL — never an automatic change.
+    /// rebuild PROPOSAL — never an automatic change. Evaluated only (no caller registers these today); a screen that
+    /// shows one must `register` it before offering Apply.
     func legacyMismatchProposals(now: Date = Date()) -> [SessionChangeProposal] {
         let c = plannerContext(now: now)
         let v = ValidationContext(planner: c)
@@ -830,7 +842,7 @@ extension Store {
             .compactMap { w in
                 let r = WorkoutValidator.validate(w, entries: plannedEntries(for: w), rationale: w.rationale, context: v)
                 guard r.issues.contains(where: { $0.ruleId.hasPrefix("SPLIT") }) else { return nil }
-                return proposeSessionChange(workoutId: w.id, request: SessionChangeRequest(focus: w.strengthFocus, minutes: w.minutes, legacy: true, origin: .coach), now: now)
+                return evaluateSessionChange(workoutId: w.id, request: SessionChangeRequest(focus: w.strengthFocus, minutes: w.minutes, legacy: true, origin: .coach), now: now)
             }
     }
 }

@@ -32,6 +32,19 @@ properties (`profile`, `plan`, `rides`, `strength`, `availability`, `equipment`,
 | Verifying tests | Host: `OnboardingAnswersMappingTests` (`testNoAnswersChangeNothingAndInventNothing`, `testEveryAnswerLandsInItsField`, `testModeSetsPriorityAndNeverTouchesOtherSports`, `testFTPStaysUnknownWithoutAValidNumber`, `testEquipmentNotSureStaysProvisional`, `testSwitchingTypeKeepsTheDays`), `OnboardingWeekTests` (`testProposalIsRealisticForEachType`, `testTapCycleAndFeasibility`, `testPreviewIsTheSamePlannerRunApproveSaves`), `NoFabricatedDefaultsTests.testFreshProfileHasNoSampleValues`. UI-sim: `JourneyTests.testCyclingJourney/testStrengthJourney/testHybridJourney` (10 steps incl. relaunch), `OnboardingScreens.testOnboardingV3FiveStages`, `LaunchSmokeTests.testFreshInstallShowsWelcome`. Device: none. |
 | Known deviations today | `OnboardingView.approve()` (`OnboardingView.swift:344`) regenerates and appends the version itself instead of going through `proposePlanChange` — acceptable for the first plan (nothing to preview) but it is a second code path; onboarding writes the profile on every keystroke (not a draft) — an abandoned onboarding leaves partial answers, which the resume rule reads back (intended). |
 
+## W0 · Evaluation is pure (owner, 2 Nov — applies to every workflow below)
+
+- Any computation that only needs an answer (feasibility, "what would happen", a preview being built) goes through
+  `Store.evaluateSessionChange` / a pure report and writes **nothing**: no `pendingProposals`, `lastProposalId`, `plan`,
+  `trash`, `undoToast`, `planVersions`, no persistence. Only a user action registers a proposal (`proposeSessionChange`,
+  `proposePlanChange`), and only Apply changes the plan.
+- The athlete's own pending preview (`lastProposalId`) is never evicted by other proposals (coach, Home swap, background)
+  or by the hour limit; the table bound of 20 applies to the rest.
+- Cancel and a blocked validation leave `plan`, `planVersions` and `trash` equal; background refreshes never touch
+  hand-edited, completed or fixed sessions and never add a plan version; Health import is idempotent.
+- Verifying tests: `EngineSideEffectTests` (6), `testFeasibleMinutesDryRunLeavesPendingProposalsAlone`. Audit and deferred
+  items (D-SE-1…6): `ios/ENGINE_SIDE_EFFECTS_AUDIT.md`.
+
 ## W2 · Profile edits
 
 | | Contract |
