@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 135 — 2026-11-02 12:32 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m50s
+  layout owner (L,XXXL): FAILED (exit 65) · 31m50s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L: Undo offered on Plan after Apply -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL: Undo offered on Plan after Apply 
+RESULT layout audit: FAILED (64 screenshots)
+Total: 42m16s

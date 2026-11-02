@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 135 — 2026-11-02 12:32 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m56s
+  layout promax (L): ok · 6m17s
+RESULT layout audit: ok (12 screenshots)
+Total: 15m30s

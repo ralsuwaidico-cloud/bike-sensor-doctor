@@ -1,0 +1,87 @@
+BikeComputer iOS CI — run 135 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 135 — 2026-11-02 12:32 UTC
+Stage: unit
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: 77AA4492-C787-4EEE-A772-05D4B3E9ECCD
+RESULT build (Debug, for testing): ok · 5m7s
+RESULT tests: ok (Executed 506 tests, with 0 failures) · 11m13s
+Total: 11m27s
+
+## smoke
+BikeComputer iOS CI — build 135 — 2026-11-02 12:32 UTC
+Stage: smoke
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): ok · 8m21s
+RESULT launch smoke (Release): ok (Executed 2 tests, with 0 failures) · 28m44s
+Total: 28m53s
+
+## layout-small
+BikeComputer iOS CI — build 135 — 2026-11-02 12:32 UTC
+Stage: layout (layout devices: small)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m27s
+  layout small (L,AX3): FAILED (exit 65) · 33m21s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: Undo offered on Plan after Apply -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L: Undo offered on Plan after Apply 
+RESULT layout audit: FAILED (71 screenshots)
+Total: 43m9s
+
+## layout-standard
+BikeComputer iOS CI — build 135 — 2026-11-02 12:44 UTC
+Stage: layout (layout devices: standard)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m29s
+  layout standard (L,XXXL): ok · 12m24s
+RESULT layout audit: ok (32 screenshots)
+Total: 22m8s
+
+## layout-promax
+BikeComputer iOS CI — build 135 — 2026-11-02 12:32 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m56s
+  layout promax (L): ok · 6m17s
+RESULT layout audit: ok (12 screenshots)
+Total: 15m30s
+
+## layout-owner
+BikeComputer iOS CI — build 135 — 2026-11-02 12:32 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m50s
+  layout owner (L,XXXL): FAILED (exit 65) · 31m50s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - L: Undo offered on Plan after Apply -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - XXXL: Undo offered on Plan after Apply 
+RESULT layout audit: FAILED (64 screenshots)
+Total: 42m16s
+
+## watch
+BikeComputer iOS CI — build 135 — 2026-11-02 12:48 UTC
+Stage: watch
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11397   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11847   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12367   screenshot ax3 ok large · 11m8s
+Total: 11m14s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit 6b7ad24a21dc19f1f67ce043d15a340e28fa7ace  branch ios/s2  job failure
