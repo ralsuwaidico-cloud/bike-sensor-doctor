@@ -1,0 +1,21 @@
+BikeComputer iOS CI — run 134 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 134 — 2026-11-02 11:33 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m9s
+RESULT tests: ok (Executed 506 tests, with 0 failures) · 8m23s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m6s
+  layout small (AX3): FAILED (exit 65) · 23m32s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: Undo offered on Plan after Apply 
+  layout standard (L): ok · 9m56s
+RESULT layout audit: FAILED (81 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 52m27s
+commit 5f3e53690837e6f0d73039ea479b40dc2ba27a34  branch ios/s2  job failure
