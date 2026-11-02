@@ -141,6 +141,32 @@ final class Rc3EngineTests: XCTestCase {
         XCTAssertEqual(s.plan.first { $0.id == lift.id }?.minutes, lift.minutes, "Undo restores the previous approved session")
         XCTAssertEqual(s.planVersions.count, 2, "the Undo is itself a version (the log only grows)")
     }
+    /// Owner 2 Nov: Undo acts on the chosen version only and never silently discards a later change.
+    func testUndoNeverDiscardsALaterChange() {
+        let s = store(); hybridPersona(s)
+        s.plan = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)
+        s.refreshGeneratedSessions(now: nextMonday.addingTimeInterval(-86_400))
+        let now = nextMonday.addingTimeInterval(-3_600)
+        let lifts = s.plan.filter { $0.kind == .strength }
+        guard lifts.count >= 2 else { return XCTFail("two lifts") }
+        func change(_ id: UUID, _ m: Int) { var r = SessionChangeRequest(); r.minutes = m; let p = s.proposeSessionChange(workoutId: id, request: r, now: now)!; XCTAssertEqual(s.commit(proposalId: p.id, confirmed: true), .applied) }
+        change(lifts[0].id, 45)                      // v1: lift A
+        change(lifts[1].id, 45)                      // v2: lift B (another day) — unrelated
+        let v1 = s.planVersions[0].id, v2 = s.planVersions[1].id
+        XCTAssertNil(s.undoBlockedReason(version: v1, now: now), "an unrelated later change does not block")
+        XCTAssertNil(s.undoBlockedReason(version: v2, now: now))
+        change(lifts[0].id, 50)                      // v3: lift A again
+        XCTAssertNotNil(s.undoBlockedReason(version: v1, now: now), "v1 would overwrite v3: refused")
+        XCTAssertNil(s.proposeUndo(version: v1, now: now))
+        // undoing v2 touches only lift B; lift A keeps v3
+        guard let u = s.proposeUndo(version: v2, now: now) else { return XCTFail("v2 undo") }
+        XCTAssertTrue(s.applyPlanChange(u, now: now))
+        XCTAssertEqual(s.plan.first { $0.id == lifts[1].id }?.minutes, lifts[1].minutes, "lift B restored")
+        XCTAssertEqual(s.plan.first { $0.id == lifts[0].id }?.minutes, 50, "lift A's later change kept")
+        // an unrecorded later edit (e.g. a skip) on the same day also blocks the undo of v3
+        var a = s.plan.first { $0.id == lifts[0].id }!; a.minutes = 55; s.update(a)
+        XCTAssertNotNil(s.undoBlockedReason(version: s.planVersions[2].id, now: now), "a change since v3 is never silently overwritten")
+    }
     func testAT_D1_1_C2_1_ThreeShortLiftsAreFullBodyAndFit() {
         let s = store(); hybridPersona(s)
         let w = PlanEngine.week(starting: nextMonday, profile: s.profile, availability: s.availability!)

@@ -302,7 +302,7 @@ struct PlanVersionsView: View {
             }
             ForEach(Array(store.planVersions.reversed())) { v in
                 NavigationLink {
-                    PlanVersionDetail(v: v) { if let id = store.proposeUndo(version: v.id) { preview = PreviewRef(id: id) } }
+                    PlanVersionDetail(v: v, blocked: store.undoBlockedReason(version: v.id)) { if let id = store.proposeUndo(version: v.id) { preview = PreviewRef(id: id) } }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(v.cause.title).font(.body.weight(.semibold))
@@ -319,6 +319,8 @@ struct PlanVersionsView: View {
 
 struct PlanVersionDetail: View {
     let v: PlanVersion
+    /// Why Undo is not offered (a later change would be overwritten); nil = Undo available. Both Undo buttons share it.
+    var blocked: String? = nil
     var undo: () -> Void
     var body: some View {
         List {
@@ -326,11 +328,11 @@ struct PlanVersionDetail: View {
             Section("After") { ForEach(v.after.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
             Section("Before") { ForEach(v.before.sorted { $0.date < $1.date }) { w in PlanChangeRow(w: w) } }
             Section {
-                Button("Undo this change") { undo() }.frame(minHeight: DS.minTap).accessibilityIdentifier("planVersionUndoBottom")
-            } footer: { Text("Undo shows a preview first. Sessions already done stay as they are.") }
+                Button("Undo this change") { undo() }.frame(minHeight: DS.minTap).disabled(blocked != nil).accessibilityIdentifier("planVersionUndoBottom")
+            } footer: { Text(blocked ?? "Undo shows a preview first. Sessions already done stay as they are.").accessibilityIdentifier(blocked == nil ? "planVersionUndoNote" : "planVersionUndoBlocked") }
         }
         .navigationTitle(v.cause.title).navigationBarTitleDisplayMode(.inline)
         // run 137: at large text the Undo row sat below a long before/after list — the main action is always in the bar
-        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Undo") { undo() }.accessibilityLabel("Undo this change").accessibilityIdentifier("planVersionUndo") } }
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Undo") { undo() }.disabled(blocked != nil).accessibilityLabel("Undo this change").accessibilityHint(blocked ?? "Shows a preview first").accessibilityIdentifier("planVersionUndo") } }
     }
 }
