@@ -100,7 +100,7 @@ final class RulesTests: XCTestCase {
         let f = try dec.decode(StoreFile.self, from: Data(json.utf8))
         XCTAssertEqual(f.profile.name, "R"); XCTAssertEqual(f.profile.goal, .stronger); XCTAssertEqual(f.profile.ftpHow, .entered)
         XCTAssertNil(f.profile.birthYear); XCTAssertEqual(f.profile.sports, [.roadCycling]); XCTAssertEqual(f.profile.version, 1)
-        XCTAssertEqual(f.profile.effectiveAge, 40)                                  // age slider still honoured when no birth year
+        XCTAssertEqual(f.profile.effectiveAge, 40)                                  // an age the athlete set (≠ 35) still counts when no birth year
         XCTAssertTrue(f.settings.phoneOnlyMode); XCTAssertEqual(f.settings.hrPref, .watch)
         XCTAssertTrue(f.settings.autoConnectBoard); XCTAssertEqual(f.settings.enabledConnections, ["board", "watch"]); XCTAssertFalse(f.settings.appleHealthWanted)
         XCTAssertEqual(f.boardSync, []); XCTAssertEqual(f.onboardingStage, 0)
@@ -114,13 +114,15 @@ final class RulesTests: XCTestCase {
         var p = RiderProfile()
         XCTAssertNil(p.birthYear); XCTAssertNil(p.maxHR); XCTAssertNil(p.restHR); XCTAssertNil(p.lthr)
         XCTAssertEqual(p.ftpHow, .assumed); XCTAssertEqual(p.ftpLabel, "Unknown")   // RC3 ENG-E1: the starting assumption is never shown as an FTP
-        XCTAssertEqual(p.maxHRLabel, "estimated from age")
-        p.birthYear = 1990; XCTAssertEqual(p.effectiveAge, Calendar.current.component(.year, from: Date()) - 1990)
-        p.maxHR = 186; XCTAssertEqual(p.estimatedMaxHR, 186); XCTAssertEqual(p.maxHRLabel, "measured / entered")
-        // the Link message carries 0 for unknowns, so the board also shows "not set"
+        XCTAssertNil(p.weightKg); XCTAssertNil(p.age); XCTAssertEqual(p.ftpW, 0)          // S2-0: no sample values at all
+        XCTAssertEqual(p.maxHRLabel, "unknown"); XCTAssertNil(p.maxHRForZones); XCTAssertNil(p.hrZones)
+        p.birthYear = 1990; XCTAssertEqual(p.effectiveAge, Calendar.current.component(.year, from: Date()) - 1990); XCTAssertEqual(p.maxHRLabel, "estimated from age")
+        p.maxHR = 186; XCTAssertEqual(p.maxHRForZones, 186); XCTAssertEqual(p.maxHRLabel, "measured / entered")
+        // the Link message carries 0 for unknowns, so the board also shows "not set" (S2-0: weight and FTP too)
         var q = RiderProfile(); q.version = 3
         let m = q.linkMessage(units: .metric)
         XCTAssertEqual(m.birthYear, 0); XCTAssertEqual(m.maxHR, 0); XCTAssertEqual(m.lthr, 0); XCTAssertEqual(m.ftpHow, 0)
+        XCTAssertEqual(m.ftpW, 0); XCTAssertEqual(m.weightKgX10, 0)
     }
 
     // MARK: Coach — one line, honest reasoning

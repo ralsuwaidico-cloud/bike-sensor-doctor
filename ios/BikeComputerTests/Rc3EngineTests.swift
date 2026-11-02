@@ -74,7 +74,9 @@ final class Rc3EngineTests: XCTestCase {
         let work = w.rideSteps.filter { $0.role == .work }
         XCTAssertTrue(work.allSatisfy { $0.rpe == 5...6 && $0.hrZone == 3 })
         XCTAssertTrue(w.rideSteps.filter { $0.role == .warmUp || $0.role == .coolDown }.allSatisfy { $0.rpe == 2...3 })
-        XCTAssertTrue(work[0].targetText(ftp: nil, hrZones: p.hrZones).contains("HR Z3"))
+        var q = p; q.maxHR = 180   // S2-0: HR zones exist only with a max HR (or a known age)
+        XCTAssertNil(p.hrZones, "no max HR and no age → no HR zones")
+        XCTAssertTrue(work[0].targetText(ftp: nil, hrZones: q.hrZones).contains("HR Z3"))
         XCTAssertEqual(work[0].targetText(ftp: nil, hrZones: nil), "RPE 5–6", "no HR source → effort only (AT-E3-2)")
     }
 
@@ -308,8 +310,10 @@ final class Rc3EngineTests: XCTestCase {
         let f0 = try JSONDecoder().decode(StoreFile.self, from: Data(json.utf8))
         XCTAssertEqual(f0.profile.goals, [.endurance]); XCTAssertEqual(f0.profile.legacyGoal, "aerobicFitness", "the merged value is kept")
         let f = StoreFile.migrate(f0)
-        XCTAssertEqual(f.schema, 3)
-        XCTAssertEqual(f.profile.ftpSource, .unknown); XCTAssertNil(f.profile.ftpValue); XCTAssertEqual(f.profile.ftpW, 225, "value kept as history")
+        XCTAssertEqual(f.schema, 4)   // S2-0 adds schema 4 on top of the RC3 migration
+        XCTAssertEqual(f.profile.ftpSource, .unknown); XCTAssertNil(f.profile.ftpValue)
+        XCTAssertEqual(f.profile.ftpW, 0, "S2-0: the 225 W assumption is removed (the number stays in the migration log only)")
+        XCTAssertTrue(f.migrationLog.contains { $0.contains("225 W") })
         XCTAssertEqual(f.profile.strengthSessionMinutes, 40, "AT-C2-3: the length the athlete was getting"); XCTAssertEqual(f.profile.confirmSessionLength, true)
         XCTAssertEqual(f.profile.confirmStrengthLevel, true); XCTAssertNil(f.strengthPrefs.experience); XCTAssertEqual(f.profile.level, .advanced)
         XCTAssertTrue(f.equipment.isProvisional)

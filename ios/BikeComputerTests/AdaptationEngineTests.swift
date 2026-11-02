@@ -273,8 +273,12 @@ final class AdaptationEngineTests: XCTestCase {
         let pw = AdaptationEngine.run(input(plan: plan, rides: [ride(-1, power: 260), ride(-3, power: 255)]))
         XCTAssertEqual(pw.summary.confidence, .low); XCTAssertTrue(pw.adjustments.isEmpty)
         XCTAssertEqual(pw.analysis.unverifiedPowerOnly, 2)
-        // heart rate only: load is estimated (labelled), but intensity is not progressed without ratings
-        let hr = AdaptationEngine.run(input(plan: plan, rides: [ride(-1, hr: 140), ride(-3, hr: 138)]))
+        // heart rate only: load is estimated (labelled), but intensity is not progressed without ratings.
+        // S2-0: the estimate needs heart-rate zones, i.e. a max heart rate — without one nothing is estimated (tested below)
+        var hrProfile = hybrid(); hrProfile.setMaxHR(185)
+        let noZones = AdaptationEngine.run(input(plan: plan, rides: [ride(-1, hr: 140), ride(-3, hr: 138)]))
+        XCTAssertTrue(noZones.analysis.sessions.allSatisfy { $0.load == nil }, "S2-0: no HR zones (no max HR, no age) → no load estimate")
+        let hr = AdaptationEngine.run(input(plan: plan, rides: [ride(-1, hr: 140), ride(-3, hr: 138)], profile: hrProfile))
         XCTAssertNotEqual(hr.summary.confidence, .low)
         XCTAssertTrue(hr.analysis.sessions.allSatisfy { $0.loadSource == "average heart rate (estimate)" })
         XCTAssertFalse(hr.adjustments.contains { if case .intervalReps = $0.change { return true }; return false })

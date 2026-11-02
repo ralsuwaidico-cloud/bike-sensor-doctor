@@ -174,25 +174,25 @@ final class HybridTests: XCTestCase {
         // a phone ride already recorded
         XCTAssertTrue(s.addRide(RideRecord(start: start, durationS: 3600, distanceM: 25_000, recorder: .phone, sources: ["Phone GPS"])))
         // Health workout of the same ride, 90 s later and 3 % longer → skipped
-        let r1 = HealthWorkoutMapper.apply(kind: .ride, start: start.addingTimeInterval(90), durationS: 3700, distanceM: 25_200, kj: 800, uuid: "h1", to: s)
+        let r1 = HealthWorkoutMapper.apply(kind: .ride, start: start.addingTimeInterval(90), durationS: 3700, distanceM: 25_200, activeKcal: 191, uuid: "h1", to: s)
         XCTAssertFalse(r1.ride); XCTAssertEqual(s.rides.count, 1)
         // a different ride → added, labelled Apple Health, no power invented
-        let r2 = HealthWorkoutMapper.apply(kind: .ride, start: start.addingTimeInterval(86_400), durationS: 2400, distanceM: 15_000, kj: 500, uuid: "h2", to: s)
+        let r2 = HealthWorkoutMapper.apply(kind: .ride, start: start.addingTimeInterval(86_400), durationS: 2400, distanceM: 15_000, activeKcal: 120, uuid: "h2", to: s)
         XCTAssertTrue(r2.ride); XCTAssertEqual(s.rides.count, 2)
         let added = s.rides.first { $0.healthUUID == "h2" }!
         XCTAssertEqual(added.recorder, .health); XCTAssertNil(added.avgPower); XCTAssertEqual(added.sources, ["Apple Health"]); XCTAssertEqual(added.recordedBy, "Apple Health")
         // same UUID twice → skipped
-        XCTAssertFalse(HealthWorkoutMapper.apply(kind: .ride, start: start.addingTimeInterval(86_400), durationS: 2400, distanceM: 15_000, kj: 500, uuid: "h2", to: s).ride)
+        XCTAssertFalse(HealthWorkoutMapper.apply(kind: .ride, start: start.addingTimeInterval(86_400), durationS: 2400, distanceM: 15_000, activeKcal: 120, uuid: "h2", to: s).ride)
         // strength: quick log first, then the Health copy (+60 s, same duration) → skipped; a new one → added without region
         XCTAssertTrue(s.addStrength(StrengthSession(date: start.addingTimeInterval(36_000), minutes: 45, focus: .lower, rpe: 7)))
-        XCTAssertFalse(HealthWorkoutMapper.apply(kind: .strength, start: start.addingTimeInterval(36_060), durationS: 45 * 60, distanceM: nil, kj: 300, uuid: "s1", to: s).strength)
-        XCTAssertTrue(HealthWorkoutMapper.apply(kind: .strength, start: start.addingTimeInterval(200_000), durationS: 30 * 60, distanceM: nil, kj: nil, uuid: "s2", to: s).strength)
+        XCTAssertFalse(HealthWorkoutMapper.apply(kind: .strength, start: start.addingTimeInterval(36_060), durationS: 45 * 60, distanceM: nil, activeKcal: 72, uuid: "s1", to: s).strength)
+        XCTAssertTrue(HealthWorkoutMapper.apply(kind: .strength, start: start.addingTimeInterval(200_000), durationS: 30 * 60, distanceM: nil, activeKcal: nil, uuid: "s2", to: s).strength)
         XCTAssertEqual(s.strength.count, 2)
         XCTAssertEqual(s.strength.first { $0.healthUUID == "s2" }?.regionKnown, false)
         XCTAssertEqual(s.strength.first { $0.healthUUID == "s2" }?.source, "Apple Health")
         // ignored kinds and sub-minute workouts add nothing
-        XCTAssertEqual(HealthWorkoutMapper.apply(kind: .ignored, start: start, durationS: 600, distanceM: nil, kj: nil, uuid: "x", to: s).strength, false)
-        XCTAssertEqual(HealthWorkoutMapper.apply(kind: .strength, start: start.addingTimeInterval(400_000), durationS: 30, distanceM: nil, kj: nil, uuid: "y", to: s).strength, false)
+        XCTAssertEqual(HealthWorkoutMapper.apply(kind: .ignored, start: start, durationS: 600, distanceM: nil, activeKcal: nil, uuid: "x", to: s).strength, false)
+        XCTAssertEqual(HealthWorkoutMapper.apply(kind: .strength, start: start.addingTimeInterval(400_000), durationS: 30, distanceM: nil, activeKcal: nil, uuid: "y", to: s).strength, false)
         XCTAssertEqual(HealthWorkoutMapper.kind(for: .cycling), .ride); XCTAssertEqual(HealthWorkoutMapper.kind(for: .functionalStrengthTraining), .strength); XCTAssertEqual(HealthWorkoutMapper.kind(for: .running), .ignored)
     }
 

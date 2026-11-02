@@ -126,15 +126,18 @@ final class ModelTests: XCTestCase {
     }
 
     // MARK: zones
-    func testPowerZonesAndFTPAssumption() {
-        var p = RiderProfile(); p.weightKg = 80; p.level = .intermediate; p.ftpHow = .assumed; p.refreshAssumption()
-        XCTAssertEqual(p.ftpW, 240)
+    /// S2-0: there is no FTP assumption any more — zones exist only with a known FTP (was testPowerZonesAndFTPAssumption).
+    func testPowerZonesOnlyFromAKnownFTP() {
+        var p = RiderProfile(); p.weightKg = 80; p.level = .intermediate
+        XCTAssertEqual(p.ftpW, 0); XCTAssertFalse(p.ftpKnown); XCTAssertTrue(p.powerZones.isEmpty); XCTAssertEqual(p.zone(forWatts: 200), 0)
+        p.setFTP(240, source: .entered)
         XCTAssertEqual(p.zone(forWatts: 0), 1); XCTAssertEqual(p.zone(forWatts: 131), 1)
         XCTAssertEqual(p.zone(forWatts: 132), 2); XCTAssertEqual(p.zone(forWatts: 215), 3)
         XCTAssertEqual(p.zone(forWatts: 240), 4); XCTAssertEqual(p.zone(forWatts: 300), 6); XCTAssertEqual(p.zone(forWatts: 1000), 7)
-        p.ftpHow = .entered; p.ftpW = 300; p.weightKg = 60; p.refreshAssumption()
-        XCTAssertEqual(p.ftpW, 300, "an entered FTP is never overwritten by the assumption")
-        p.age = 40; XCTAssertEqual(p.estimatedMaxHR, 180); p.maxHR = 190; XCTAssertEqual(p.estimatedMaxHR, 190)
+        p.setFTP(300, source: .entered); p.weightKg = 60
+        XCTAssertEqual(p.ftpW, 300); XCTAssertEqual(p.wattsPerKg!, 5.0, accuracy: 0.001)
+        XCTAssertNil(p.maxHRForZones, "no age, no max HR → no estimate")
+        p.age = 40; XCTAssertEqual(p.maxHRForZones, 180); p.maxHR = 190; XCTAssertEqual(p.maxHRForZones, 190)
     }
 
     // MARK: Store persistence

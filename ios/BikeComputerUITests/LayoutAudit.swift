@@ -545,7 +545,7 @@ final class LayoutAudit: XCTestCase {
         case "clearance": health["heartOrBloodPressure"] = true
         default: break
         }
-        var profile: [String: Any] = ["name": "Demo", "goal": "fitness", "hoursPerWeek": 5, "level": "intermediate", "weightKg": 75, "age": 40, "ftpW": 225, "ftpHow": "entered", "birthYear": 1986,
+        var profile: [String: Any] = ["name": "Demo", "goal": "fitness", "hoursPerWeek": 5, "level": "intermediate", "weightKg": 75, "age": 40, "ftpW": 225, "ftpHow": "entered", "birthYear": 1986, "provenance": ["weight": ["source": "entered"], "ftp": ["source": "entered"]],   /* S2-0: deliberate demo values, not the old sample defaults */
                                       "sports": mode == "strength" ? ["strength"] : mode == "cycling" ? ["roadCycling"] : ["roadCycling", "strength"], "version": 3, "updatedAt": "2026-10-25T20:00:00Z",
                                       "wheelMm": 2096, "cadenceLow": 85, "cadenceHigh": 95, "hrZoneMethod": "maxHR", "trainingMode": mode, "priority": "balanced", "cyclingDaysPerWeek": 3,
                                       "liftDaysPerWeek": 3, "liftingHoursPerWeek": 3, "preferredDays": [0, 2, 4, 5], "hybridGoal": "balanced", "strengthSplit": "fullBody"]
@@ -613,7 +613,7 @@ final class LayoutAudit: XCTestCase {
         // the 1-minute record saved from workout mode with no set ticked, linked to tomorrow's session
         strength.append(["id": UUID().uuidString, "date": d(today, 9), "minutes": 1, "focus": "fullBody", "customName": "", "notes": "", "source": "manual",
                          "workoutId": tomorrowId, "startedAt": d(today, 8.98), "finishedAt": d(today, 9)])
-        let profile: [String: Any] = ["name": "Demo", "goal": "fitness", "hoursPerWeek": 5, "level": "intermediate", "weightKg": 75, "age": 40, "ftpW": 225, "ftpHow": "tested", "birthYear": 1986,
+        let profile: [String: Any] = ["name": "Demo", "goal": "fitness", "hoursPerWeek": 5, "level": "intermediate", "weightKg": 75, "age": 40, "ftpW": 225, "ftpHow": "tested", "birthYear": 1986, "provenance": ["weight": ["source": "entered"], "ftp": ["source": "legacyUnverified"]],   /* S2-0: deliberate demo values, not the old sample defaults */
                                       "sports": ["roadCycling", "strength"], "version": 3, "updatedAt": "2026-10-25T20:00:00Z", "wheelMm": 2096, "cadenceLow": 85, "cadenceHigh": 95, "hrZoneMethod": "maxHR",
                                       "trainingMode": "hybrid", "priority": "balanced", "cyclingDaysPerWeek": 3, "liftDaysPerWeek": 3, "liftingHoursPerWeek": 1, "preferredDays": [0, 2, 4, 5],
                                       "hybridGoal": "balanced", "strengthSplit": "fullBody"]
