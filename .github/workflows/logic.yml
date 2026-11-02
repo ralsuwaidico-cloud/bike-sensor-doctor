@@ -25,7 +25,10 @@ jobs:
         shell: bash
         run: |
           start=$(date +%s)
+          set +e   # run 129: with -e the step died on the failing test.sh before any of the reporting below ran
           bash tools/coach-harness/test.sh "$GITHUB_WORKSPACE" > logic.txt 2>&1; X=$?
+          set -e
+          [ $X -eq 0 ] || { echo "== test.sh failed (exit $X); last 60 lines:"; tail -60 logic.txt; echo "== build.log errors:"; grep -E "error:" tools/coach-harness/testws/build.log 2>/dev/null | head -20; }
           dur=$(( $(date +%s) - start ))
           R=ok; [ $X -eq 0 ] || R="FAILED (exit $X)"
           W=tools/coach-harness/testws
