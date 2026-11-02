@@ -116,25 +116,70 @@ final class ProvenanceMigrationTests: XCTestCase {
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
         let dec = JSONDecoder(); dec.dateDecodingStrategy = .iso8601
         var base = try dec.decode(StoreFile.self, from: Data(build127.utf8))
-        let d0 = Calendar.current.startOfDay(for: Date())
+        let cal = Calendar.current
+        let d0 = cal.startOfDay(for: Date())
+        let squat = Exercise(id: "t-squat", name: "Goblet squat", equipment: ["dumbbell"], pattern: .squat)
+        let press = Exercise(id: "t-press", name: "Dumbbell floor press", equipment: ["dumbbell"], pattern: .push)
+        // the plan: a completed lift (with its log), today's ride, a hand-edited future lift with coach entries and a rider choice
+        var done = Workout(date: cal.date(byAdding: .day, value: -2, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        done.completion = .marked; done.completedAt = done.date.addingTimeInterval(3000); done.note = "felt good"; done.sequence = 0
         var ride = Workout(date: d0, kind: .tempo, minutes: 60)
-        var lift = Workout(date: Calendar.current.date(byAdding: .day, value: 1, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .fullBody)
-        lift.entriesHandEdited = true
-        var done = Workout(date: Calendar.current.date(byAdding: .day, value: -2, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .fullBody)
-        done.completion = .marked
-        base.plan = [done, ride, lift]
-        let log = StrengthSession(date: done.date, minutes: 38, focus: .fullBody, rpe: 7, exercises: [])
+        ride.intervalReps = 2; ride.sequence = 0
+        var lift = Workout(date: cal.date(byAdding: .day, value: 1, to: d0)!, kind: .strength, minutes: 40, strengthFocus: .upper)
+        lift.entriesHandEdited = true; lift.edited = true; lift.sequence = 1
+        lift.plannedEntries = [ExerciseEntry(exercise: squat, sets: [SetEntry(reps: 10, weightKg: 24), SetEntry(reps: 10, weightKg: 24)], superset: "A1"),
+                               ExerciseEntry(exercise: press, sets: [SetEntry(reps: 8, weightKg: 18, rpe: 8)], superset: "A2")]
+        lift.entriesByCoach = true
+        lift.riderChoice = RiderChoice(focus: .upper, minutes: 40, prefersSupersets: true, at: d0, origin: "athlete", fromFocus: .fullBody)
+        var skipped = Workout(date: cal.date(byAdding: .day, value: 2, to: d0)!, kind: .endurance, minutes: 90)
+        skipped.skipped = true; skipped.fixed = true
+        base.plan = [done, ride, lift, skipped]
+        let log = StrengthSession(date: done.date, minutes: 38, focus: .fullBody, rpe: 7,
+                                  exercises: [ExerciseEntry(exercise: squat, sets: [SetEntry(reps: 10, weightKg: 22, rpe: 7, done: true), SetEntry(reps: 9, weightKg: 22, rpe: 8, done: true)])])
         base.strength = [log]
         base.availability = WeeklyAvailability(days: (0..<7).map { i in
             i == 1 || i == 5 ? DayAvailability(assignments: [DayAssignment(sport: .cycling, minutes: 60)])
             : i % 2 == 0 && i < 5 ? DayAvailability(assignments: [DayAssignment(sport: .strength, minutes: 30)])
             : DayAvailability(activity: .rest, minutes: 0) })
-        let before = try enc.encode(base)
-        let migrated = StoreFile.migrate(try dec.decode(StoreFile.self, from: before))
-        XCTAssertEqual(migrated.plan, base.plan, "planned, hand-edited and completed sessions are identical after migration")
-        XCTAssertEqual(migrated.strength, base.strength, "logged sessions are identical")   // run 130: value equality, not bytes (Apple's JSONEncoder orders keys non-deterministically)
-        XCTAssertEqual(migrated.availability, base.availability)
-        XCTAssertEqual(migrated.planVersions.count, base.planVersions.count, "migration records no plan version: nothing in the plan changed")
+        base.customExercises = [Exercise(id: "custom-1", name: "Landmine press", equipment: ["barbell"], pattern: .push, custom: true)]
+        base.planVersions = [PlanVersion(createdAt: d0.addingTimeInterval(-86400), effectiveDate: d0, cause: .days, before: [ride], after: [ride, lift], inputsBefore: nil, summary: ["test"], proposalId: nil)]
+        // profile answers that are not migration targets
+        base.profile.name = "R"; base.profile.trainingMode = .hybrid; base.profile.goals = [.endurance, .strength]; base.profile.primaryGoal = .endurance
+        base.profile.preferredDays = [0, 2, 4]; base.profile.cyclingSessionMinutes = 60; base.profile.strengthSessionMinutes = 30
+        base.strengthPrefs.experience = .intermediate; base.strengthPrefs.prefersSupersets = true
+        base.equipment = EquipmentProfile(owned: ["dumbbell", "bench"], confirmed: true)
+
+        let migrated = StoreFile.migrate(try dec.decode(StoreFile.self, from: try enc.encode(base)))
+
+        // every plan session, field by field (value equality — never encoded bytes, run 130)
+        XCTAssertEqual(migrated.plan.count, base.plan.count)
+        for (m, b) in zip(migrated.plan, base.plan) {
+            XCTAssertEqual(m.id, b.id); XCTAssertEqual(m.date, b.date); XCTAssertEqual(m.kind, b.kind); XCTAssertEqual(m.minutes, b.minutes)
+            XCTAssertEqual(m.strengthFocus, b.strengthFocus); XCTAssertEqual(m.sequence, b.sequence); XCTAssertEqual(m.skipped, b.skipped)
+            XCTAssertEqual(m.completion, b.completion); XCTAssertEqual(m.completedAt, b.completedAt); XCTAssertEqual(m.done, b.done)
+            XCTAssertEqual(m.entriesHandEdited, b.entriesHandEdited); XCTAssertEqual(m.edited, b.edited); XCTAssertEqual(m.fixed, b.fixed)
+            XCTAssertEqual(m.riderChoice, b.riderChoice); XCTAssertEqual(m.plannedEntries, b.plannedEntries); XCTAssertEqual(m.entriesByCoach, b.entriesByCoach)
+            XCTAssertEqual(m.intervalReps, b.intervalReps); XCTAssertEqual(m.note, b.note); XCTAssertEqual(m.templateId, b.templateId)
+            XCTAssertEqual(m.manualMinutes, b.manualMinutes); XCTAssertEqual(m.migrationNote, b.migrationNote)
+            XCTAssertEqual(m, b, "whole session equal")
+        }
+        // logged sessions: identity and every set
+        XCTAssertEqual(migrated.strength.map(\.id), base.strength.map(\.id))
+        XCTAssertEqual(migrated.strength.first?.exercises?.flatMap { $0.sets }, base.strength.first?.exercises?.flatMap { $0.sets })
+        XCTAssertEqual(migrated.strength, base.strength, "logged sessions are identical")
+        // rides keep their identity (energy is relabelled, never dropped)
+        XCTAssertEqual(migrated.rides.map(\.id), base.rides.map(\.id)); XCTAssertEqual(migrated.rides.map(\.durationS), base.rides.map(\.durationS))
+        // plan versions, availability, templates, custom exercises, applied proposals, settings
+        XCTAssertEqual(migrated.planVersions.map(\.id), base.planVersions.map(\.id)); XCTAssertEqual(migrated.planVersions, base.planVersions)
+        XCTAssertEqual(migrated.availability, base.availability); XCTAssertEqual(migrated.templates, base.templates)
+        XCTAssertEqual(migrated.customExercises, base.customExercises); XCTAssertEqual(migrated.appliedProposals, base.appliedProposals)
+        XCTAssertEqual(migrated.settings, base.settings)
+        // profile fields that migration must not touch
+        let p = migrated.profile, q = base.profile
+        XCTAssertEqual(p.name, q.name); XCTAssertEqual(p.trainingMode, q.trainingMode); XCTAssertEqual(p.goals, q.goals); XCTAssertEqual(p.primaryGoal, q.primaryGoal)
+        XCTAssertEqual(p.preferredDays, q.preferredDays); XCTAssertEqual(p.cyclingSessionMinutes, q.cyclingSessionMinutes); XCTAssertEqual(p.strengthSessionMinutes, q.strengthSessionMinutes)
+        XCTAssertEqual(migrated.strengthPrefs, base.strengthPrefs); XCTAssertEqual(migrated.equipment, base.equipment)
+        XCTAssertEqual(migrated.onboarded, base.onboarded); XCTAssertEqual(migrated.onboardingStage, base.onboardingStage)
     }
     func testAgeMovedOnTheOldSliderIsKept() throws {
         let json = build121.replacingOccurrences(of: "\"age\":35", with: "\"age\":48")
