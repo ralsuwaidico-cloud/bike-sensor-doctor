@@ -348,12 +348,8 @@ struct CompactChoiceRow<T: Hashable>: View {
     }
 }
 
-/// The weekly day kinds drawn with the owner's icons: bicycle = cycling, dumbbell = strength, moon = rest.
-enum DayKind: String, CaseIterable {
-    case ride, lift, both, rest
-    var icon: String { switch self { case .ride: return "bicycle"; case .lift: return "dumbbell"; case .both: return "figure.mixed.cardio"; case .rest: return "moon" } }
-    var title: String { switch self { case .ride: return "Cycling"; case .lift: return "Strength"; case .both: return "Cycling and strength"; case .rest: return "Rest" } }
-}
+// DayKind (bicycle = cycling, dumbbell = strength, moon = rest) lives in OnboardingDraft.swift (pure, Codable; shared by
+// onboarding, Profile and the harness tests).
 
 /// One day of a week strip: short day name over its icon. `onTap` nil = display only.
 struct DayIconCell: View {

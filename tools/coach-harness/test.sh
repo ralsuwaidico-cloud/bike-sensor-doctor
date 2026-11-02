@@ -7,13 +7,13 @@ for f in Models Strength WorkoutState Hybrid Planning StrengthPlanner Adaptation
   sed -e 's/^import Combine$//' -e 's/@retroactive //' "$SRC/ios/BikeComputer/$f.swift" > "$W/Sources/BikeComputer/$f.swift"
 done
 # Home / weekly totals / Progress maths (pure Foundation; present from the RC2 UX work on)
-for f in WeekTotals ProgressMetrics HomeModel SessionRebuild Rc3Engine Provenance HealthReads; do
+for f in WeekTotals ProgressMetrics HomeModel SessionRebuild Rc3Engine Provenance HealthReads OnboardingDraft; do
   [ -f "$SRC/ios/BikeComputer/$f.swift" ] && sed -e 's/^import Combine$//' -e 's/@retroactive //' "$SRC/ios/BikeComputer/$f.swift" > "$W/Sources/BikeComputer/$f.swift"
 done
 cp "$SRC/ios/Shared/BCLink.swift" "$SRC/ios/Shared/AppInfo.swift" "$SRC/ios/Shared/CoachCore.swift" "$W/Sources/BikeComputer/"
 cp "$HERE/Sources/BikeComputer-shims/"*.swift "$W/Sources/BikeComputer/"
 [ -f "$SRC/ios/BikeComputer/DesignSystem/PureDesign.swift" ] && cp "$SRC/ios/BikeComputer/DesignSystem/PureDesign.swift" "$W/Sources/BikeComputer/"   # design-system pure logic (Foundation only)
-for t in ${TESTS:-TestScreenSupport IndependentReviewPass2ProbeTests IndependentReviewPass2Probe2Tests IndependentReviewPass2Probe3Tests IndependentReviewPass3ProbeTests IndependentReviewPass3Probe2Tests IndependentReviewPass4ProbeTests CoachRemediationPass3Tests IndependentReviewProbeTests IndependentReviewProbe2Tests IndependentReviewProbe3Tests AdaptationEngineTests HybridV2Tests HybridTests RoutinesTests StrengthAuditTests AuditFixTests QualityReleaseTests CoachRemediationTests HomeBTests ProgressMetricsTests Rc3EngineTests S20DataIntegrityTests DesignSystemPureTests}; do
+for t in ${TESTS:-TestScreenSupport IndependentReviewPass2ProbeTests IndependentReviewPass2Probe2Tests IndependentReviewPass2Probe3Tests IndependentReviewPass3ProbeTests IndependentReviewPass3Probe2Tests IndependentReviewPass4ProbeTests CoachRemediationPass3Tests IndependentReviewProbeTests IndependentReviewProbe2Tests IndependentReviewProbe3Tests AdaptationEngineTests HybridV2Tests HybridTests RoutinesTests StrengthAuditTests AuditFixTests QualityReleaseTests CoachRemediationTests HomeBTests ProgressMetricsTests Rc3EngineTests S20DataIntegrityTests DesignSystemPureTests OnboardingDraftTests}; do
   [ -f "$SRC/ios/BikeComputerTests/$t.swift" ] && cp "$SRC/ios/BikeComputerTests/$t.swift" "$W/Tests/BikeComputerTests/" && python3 "$HERE/strip_ui_tests.py" "$W/Tests/BikeComputerTests/$t.swift"
 done
 if [ -n "${EXTRA:-}" ]; then cp $EXTRA "$W/Tests/BikeComputerTests/"; fi
