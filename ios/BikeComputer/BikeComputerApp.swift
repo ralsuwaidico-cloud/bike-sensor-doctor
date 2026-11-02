@@ -77,8 +77,21 @@ struct BikeComputerApp: App {
         _cloud = StateObject(wrappedValue: SyncEngine(store: s, account: acc))
     }
 
+    /// Simulator only (like UITestSupport): `-BC_DESIGN_GALLERY` shows the design-system gallery instead of the app, so
+    /// the layout audit can screenshot every component (ios/DESIGN_SYSTEM.md). Ignored on a real device.
+    private var showGallery: Bool {
+        #if targetEnvironment(simulator)
+        return ProcessInfo.processInfo.arguments.contains("-BC_DESIGN_GALLERY")
+        #else
+        return false
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
+            if showGallery {
+                DesignSystemGalleryRoot(dark: ProcessInfo.processInfo.arguments.contains("-BC_DESIGN_GALLERY_DARK"))
+            } else {
             RootView()
                 .environmentObject(store)
                 .environmentObject(device)
@@ -104,6 +117,7 @@ struct BikeComputerApp: App {
                         health.importWorkouts(days: 30, into: s) { _ in s.settings.lastHealthImport = Date() }
                     }
                 }
+            }
         }
     }
 }

@@ -250,7 +250,7 @@ run_layout() {  # the full layout audit on LAYOUT_DEVICES
   for spec in "small|${SMALL%%|*}|L,AX3" "standard|${STD%%|*}|L,XXXL" "promax|${MAX%%|*}|L" "owner|${OWNER%%|*}|L,XXXL"; do
     IFS='|' read -r LNAME LID LSIZES <<< "$spec"
     case ",$LAYOUT_DEVICES," in *",$LNAME,"*) ;; *) continue;; esac
-    layout_one "$LNAME" "$LID" "$LSIZES" "${LAYOUT_TEST:-LayoutAudit}"
+    layout_one "$LNAME" "$LID" "$LSIZES" "${LAYOUT_TEST:-LayoutAudit DesignSystemAudit}"   # DesignSystemAudit: the component gallery, light + dark (ios/DESIGN_SYSTEM.md)
   done
   layout_finish
 }
@@ -262,7 +262,7 @@ case "$STAGE" in
   quick)
     run_unit
     # QUICK_UI: LayoutAudit / OnboardingScreens test methods for the screens being changed (default: main screens).
-    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingR7FiveScreens}"   # run 126: adding the owner-screens audit and upgrade smoke made the quick check 51 min — add tests here only for the screens being changed
+    QUICK_UI="${QUICK_UI:-LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingR7FiveScreens DesignSystemAudit/testGalleryLightAndDark}"   # run 126: adding the owner-screens audit and upgrade smoke made the quick check 51 min — add tests here only for the screens being changed
     LAYOUT_DEVICES="small,standard"; layout_sims
     if release_products; then
       layout_one small "${SMALL%%|*}" AX3 "$QUICK_UI"
