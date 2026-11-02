@@ -145,6 +145,10 @@ final class SensorHub: ObservableObject {
     @Published private(set) var candidates: [MetricKind: [String: MetricReading]] = [:]
     /// Every known source with its state, rebuilt once per second by `refresh` (live, imported and planned).
     @Published private(set) var sources: [SourceStatus] = []
+    /// S2-0 (GR-47): one device-state model — paired ≠ connected ≠ receiving data — derived from the real link signals,
+    /// keyed by source id ("bikecomputer", "watch", "health", a BLE sensor's id, "board.meter", "board.strap").
+    @Published private(set) var deviceStates: [String: DeviceStatus] = [:]
+    func deviceState(_ id: String) -> DeviceState? { deviceStates[id]?.state }
     /// Per metric: why nothing is shown although a source is set up (set by the PipelineMonitor; empty = plain "No … source").
     @Published var missingReason: [MetricKind: String] = [:]
     var hrWatchFirst: () -> Bool = { false }
@@ -248,6 +252,35 @@ final class SensorHub: ObservableObject {
         }
         pruneStale()
         sources = buildSources(device: device, watch: watch, location: location, at: t)
+        deviceStates = buildDeviceStates(device: device, watch: watch, at: t)
+    }
+
+    /// S2-0: the explicit device states (pure rules in Provenance.swift; this only gathers the signals).
+    private func buildDeviceStates(device: DeviceLink, watch: WatchLink, at t: Date) -> [String: DeviceStatus] {
+        let settings = store?.settings ?? AppSettings()
+        var out: [String: DeviceStatus] = [:]
+        let boardLiveAt = device.state == .ready && device.liveIsFresh ? (device.liveReceivedAt ?? t) : nil
+        let bs = DeviceStateRules.board(linkState: device.state, remembered: device.remembered, lastLiveAt: boardLiveAt,
+                                        pairingLost: device.failure?.action == .repair, bluetoothOff: device.state == .off, now: t)
+        out[Self.bikeComputer.id] = DeviceStatus(id: Self.bikeComputer.id, name: "BikeComputer", state: bs, lastSyncedAt: device.lastConnectedAt,
+                                                 provides: "Power, cadence, heart rate via the board", detail: DeviceStateRules.detail(bs, lastSyncedAt: device.lastConnectedAt, now: t))
+        let ws = DeviceStateRules.watch(paired: watch.paired, appInstalled: watch.appInstalled, sessionRunning: watch.workoutState == "running", lastHRAt: watch.hrIsFresh ? (watch.hrAt ?? t) : nil, now: t)
+        out[Self.watch.id] = DeviceStatus(id: Self.watch.id, name: "Apple Watch", state: ws, lastSyncedAt: watch.hrAt, provides: "Heart rate", detail: DeviceStateRules.detail(ws, lastSyncedAt: watch.hrAt, now: t))
+        for s in ble.paired {
+            let st = DeviceStateRules.bleSensor(configured: true, link: ble.link(s.id), radio: ble.radio, lastSampleAt: lastSeen[s.sourceId] ?? ble.lastData[s.id], now: t)
+            out[s.sourceId] = DeviceStatus(id: s.sourceId, name: ble.descriptor(s).name, state: st, lastSyncedAt: ble.lastData[s.id],
+                                           provides: s.kinds.map(\.title).joined(separator: ", "), detail: DeviceStateRules.detail(st, lastSyncedAt: ble.lastData[s.id], now: t))
+        }
+        let live = device.state == .ready && device.liveIsFresh ? device.live : nil
+        let meterSampleAt = live?.powerW != nil ? (device.liveReceivedAt ?? t) : nil
+        let ms = DeviceStateRules.boardSensor(boardReceiving: live != nil, meterLink: live?.meterLink, enabled: settings.enabledConnections.contains("meter") || device.remembered, lastSampleAt: meterSampleAt, now: t)
+        out["board.meter"] = DeviceStatus(id: "board.meter", name: "Power meter (board)", state: ms, lastSyncedAt: meterSampleAt, provides: "Power, cadence", detail: DeviceStateRules.detail(ms, lastSyncedAt: meterSampleAt, now: t))
+        let strapSampleAt = (live?.hrSource == .bleStrap && live?.hrBpm != nil) ? (device.liveReceivedAt ?? t) : nil
+        let ss = DeviceStateRules.boardSensor(boardReceiving: live != nil, meterLink: strapSampleAt != nil ? 4 : (live != nil ? 2 : nil), enabled: settings.enabledConnections.contains("strap"), lastSampleAt: strapSampleAt, now: t)
+        out["board.strap"] = DeviceStatus(id: "board.strap", name: "Heart-rate strap (board)", state: ss, lastSyncedAt: strapSampleAt, provides: "Heart rate", detail: DeviceStateRules.detail(ss, lastSyncedAt: strapSampleAt, now: t))
+        let hs = DeviceStateRules.health(available: health?.available ?? false, authorized: health?.workoutWriteAuthorized ?? false, wanted: settings.appleHealthWanted, lastSyncAt: settings.lastHealthImport, now: t)
+        out[Self.appleHealth.id] = DeviceStatus(id: Self.appleHealth.id, name: "Apple Health", state: hs, lastSyncedAt: settings.lastHealthImport, provides: "Workouts, weight, resting HR, HRV, sleep (with permission)", detail: DeviceStateRules.detail(hs, lastSyncedAt: settings.lastHealthImport, now: t))
+        return out
     }
 
     private func buildSources(device: DeviceLink, watch: WatchLink, location: LocationService, at t: Date) -> [SourceStatus] {

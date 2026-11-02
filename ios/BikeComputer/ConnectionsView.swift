@@ -33,16 +33,16 @@ struct DevicesConnectionsRows: View {
 
     var body: some View {
         Group {
-            NavigationLink { WatchConnectionDetail() } label: { ConnRow(status: watchStatus, title: "Apple Watch", subtitle: watchSubtitle, icon: "applewatch") }
+            NavigationLink { WatchConnectionDetail() } label: { ConnRow(status: watchStatus, title: "Apple Watch", subtitle: stateWord(SensorHub.watch.id) + watchSubtitle, icon: "applewatch") }
                 .accessibilityIdentifier("deviceWatch")
-            NavigationLink { BoardConnectionDetail() } label: { ConnRow(status: boardStatus, title: "BikeComputer", subtitle: boardSubtitle, icon: "circle.hexagongrid.circle") }
+            NavigationLink { BoardConnectionDetail() } label: { ConnRow(status: boardStatus, title: "BikeComputer", subtitle: stateWord(SensorHub.bikeComputer.id) + boardSubtitle, icon: "circle.hexagongrid.circle") }
                 .accessibilityIdentifier("deviceBoard")
             if device.remembered || liveNow != nil {
-                NavigationLink { SensorConnectionDetail(kind: .meter) } label: { ConnRow(status: meterStatus, title: "Power meter (board)", subtitle: meterSubtitle, icon: "bolt") }
-                NavigationLink { SensorConnectionDetail(kind: .strap) } label: { ConnRow(status: strapStatus, title: "Heart-rate strap (board)", subtitle: strapSubtitle, icon: "heart") }
+                NavigationLink { SensorConnectionDetail(kind: .meter) } label: { ConnRow(status: meterStatus, title: "Power meter (board)", subtitle: stateWord("board.meter") + meterSubtitle, icon: "bolt") }
+                NavigationLink { SensorConnectionDetail(kind: .strap) } label: { ConnRow(status: strapStatus, title: "Heart-rate strap (board)", subtitle: stateWord("board.strap") + strapSubtitle, icon: "heart") }
             }
             BLESensorRows(ble: hub.ble, hub: hub)
-            NavigationLink { HealthConnectionDetail() } label: { ConnRow(status: healthStatus, title: "Apple Health", subtitle: healthSubtitle, icon: "heart.text.square") }
+            NavigationLink { HealthConnectionDetail() } label: { ConnRow(status: healthStatus, title: "Apple Health", subtitle: stateWord(SensorHub.appleHealth.id) + healthSubtitle, icon: "heart.text.square") }
                 .accessibilityIdentifier("deviceHealth")
             NavigationLink { PhoneConnectionDetail(kind: .gps) } label: { ConnRow(status: gpsStatus, title: "Phone GPS", subtitle: gpsSubtitle, icon: "location") }
             if bluetoothStatus != .green {
@@ -60,6 +60,8 @@ struct DevicesConnectionsRows: View {
     }
 
     // MARK: statuses
+    /// S2-0 (GR-47): the explicit state word in front of every device line — Not connected / Paired / Connected / Receiving live data / Connection problem.
+    private func stateWord(_ id: String) -> String { hub.deviceState(id).map { $0.title + " · " } ?? "" }
     private var boardWanted: Bool { store.settings.enabledConnections.contains("board") && device.remembered && store.settings.autoConnectBoard }
     private var liveNow: BCLink.Live? { device.state == .ready && device.liveIsFresh ? device.live : nil }
     private var boardStatus: ConnStatus { ConnectionRules.board(linkState: device.state, liveFresh: device.liveIsFresh, remembered: device.remembered, autoConnect: store.settings.autoConnectBoard, phoneOnlyMode: store.settings.phoneOnlyMode, pairingLost: device.failure?.action == .repair) }
@@ -654,6 +656,35 @@ struct HealthConnectionDetail: View {
     @EnvironmentObject private var health: HealthAccess
     @State private var importing = false
     @State private var importResult: String?
+    @State private var reading = false
+    @State private var readResult: String?
+    private let reader = HealthMetricsReader()
+    private func setRead(_ k: HealthSample.Kind, _ on: Bool) {
+        switch k { case .weight: store.settings.healthReads.weight = on; case .restingHR: store.settings.healthReads.restingHR = on; case .hrv: store.settings.healthReads.hrv = on; case .sleep: store.settings.healthReads.sleep = on }
+        if on { reader.requestRead([k]) { _ in readNow() } }
+    }
+    private func readNow() {
+        guard !reading else { return }
+        reading = true
+        store.refreshHealthReads(from: reader) { changed in
+            reading = false
+            readResult = changed.isEmpty ? "No newer values from Apple Health." : "Updated: " + changed.map(\.title).joined(separator: ", ")
+        }
+    }
+    private func healthValueText(_ k: HealthSample.Kind) -> String {
+        let p = store.profile
+        let prov = p.provenance(k.field)
+        let v: String?
+        switch k {
+        case .weight: v = p.weightKg.map { String(format: "%.1f kg", $0) }
+        case .restingHR: v = p.restHR.map { "\($0) bpm" }
+        case .hrv: v = p.hrvMs.map { String(format: "%.0f ms", $0) }
+        case .sleep: v = p.sleepHours.map { String(format: "%.1f h", $0) }
+        }
+        guard let v else { return "No data" }
+        let when = prov.recordedAt.map { " · " + $0.formatted(date: .abbreviated, time: .omitted) } ?? ""
+        return "\(v) · \(prov.source.title)\(when)"
+    }
     private func runImport() {
         guard !importing else { return }
         importing = true
@@ -675,6 +706,20 @@ struct HealthConnectionDetail: View {
                 if let r = importResult { Text(r).font(.footnote).foregroundStyle(.secondary) }
                 if let d = store.settings.lastHealthImport { LabeledContent("Last import", value: d.formatted(date: .abbreviated, time: .shortened)) }
             } header: { Text("Workout import") } footer: { Text("Cycling, traditional and functional strength workouts recorded by other apps or the Apple Watch become rides and strength sessions here, marked \"Apple Health\". Duplicates of what the phone or BikeComputer already recorded (same start within 2 minutes, similar duration) are skipped. Health workouts carry no body region, so they count as sessions but never as push / pull / lower evidence.") }
+            // S2-0 / §5: optional reads of weight, resting HR, HRV and sleep — each shown with its source and date; nothing is concluded from them
+            Section {
+                ForEach(HealthSample.Kind.allCases, id: \.self) { k in
+                    Toggle(k.title, isOn: Binding(get: { store.settings.healthReads.enabled(k) }, set: { v in setRead(k, v) }))
+                        .accessibilityIdentifier("healthRead-\(k.rawValue)")
+                }
+                if store.settings.healthReads.anyEnabled {
+                    Button { readNow() } label: { HStack { Text(reading ? "Reading…" : "Read now"); Spacer(); if reading { ProgressView() } } }.disabled(reading || !health.available)
+                    ForEach(HealthSample.Kind.allCases.filter { store.settings.healthReads.enabled($0) }, id: \.self) { k in
+                        LabeledContent(k.title, value: healthValueText(k))
+                    }
+                    if let r = readResult { Text(r).font(.footnote).foregroundStyle(.secondary) }
+                }
+            } header: { Text("Health data (optional)") } footer: { Text("Read only when you turn a value on; iOS asks for that permission once. The newer of your own entry and the Health sample is used and labelled with its source and date. Cyclift draws no readiness score or medical conclusion from these values.") }
             Section("What each permission does") {
                 Text("Workouts (write): save the cycling workout you record with the Cyclift Apple Watch app.\nWorkouts (read): import cycling and strength workouts recorded by other apps or the Apple Watch into your history.\nHeart rate and active energy (read): used by the watch app during your workout. iOS does not tell apps whether reading was allowed, so nothing is claimed about it.").font(.footnote)
                 Text("Live heart rate during a ride does not come from Health; it comes from the Apple Watch workout or a strap.").font(.footnote).foregroundStyle(.secondary)
