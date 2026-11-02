@@ -97,19 +97,25 @@ extension RiderProfile {
     }
     /// "250 W" or "Unknown".
     var ftpDisplay: String { ftpKnown ? "\(ftpW) W" : "Unknown" }
-    /// Sets the FTP from an athlete answer. `nil` / `.unknown` = "I don't know" (the old value is kept only as history).
-    mutating func setFTP(_ watts: Int?, source: FTPSource) {
+    /// Sets the FTP from an athlete answer. `nil` / `.unknown` = "I don't know". S2-0 (GR-22): choosing Entered /
+    /// Estimated / Tested WITHOUT a number never keeps or invents a value — the FTP stays Unknown until watts are typed.
+    mutating func setFTP(_ watts: Int?, source: FTPSource, at: Date = Date()) {
+        guard let w = watts, w > 0, source != .unknown else {
+            ftpW = 0; ftpHow = .assumed; ftpVerifiedTest = nil; ftpPowerVerified = nil; ftpFromDate = nil
+            setProvenance(.ftp, nil)
+            return
+        }
         switch source {
-        case .unknown: ftpHow = .assumed; ftpVerifiedTest = nil; ftpPowerVerified = nil
-        case .entered: if let w = watts { ftpW = w }; ftpHow = .entered; ftpVerifiedTest = nil; ftpPowerVerified = nil
-        case .estimated: if let w = watts { ftpW = w }; ftpHow = .fromRides
-        case .tested: if let w = watts { ftpW = w }; ftpHow = .tested
+        case .unknown: return
+        case .entered: ftpW = w; ftpHow = .entered; ftpVerifiedTest = nil; ftpPowerVerified = nil; setProvenance(.ftp, ValueProvenance(source: .entered, recordedAt: at))
+        case .estimated: ftpW = w; ftpHow = .fromRides; setProvenance(.ftp, ValueProvenance(source: .estimatedFromRides, recordedAt: at))
+        case .tested: ftpW = w; ftpHow = .tested; setProvenance(.ftp, ValueProvenance(source: ftpVerifiedTest == true ? .measuredTest : .entered, recordedAt: at))
         }
     }
     /// Goals in force: the r7 list, else the build-121 goal mapped (never empty).
     var effectiveGoals: [GoalID] { goals.isEmpty ? [GoalID.from(cyclingGoal: goal)] : goals }
     var effectivePrimaryGoal: GoalID { primaryGoal ?? effectiveGoals[0] }
-    /// Age from the date of birth, else the birth year, else the stored slider value.
+    /// Age from the full date of birth (nil without one).
     var ageFromBirth: Int? {
         guard let d = dateOfBirth else { return nil }
         return Calendar.current.dateComponents([.year], from: d, to: Date()).year
@@ -628,6 +634,65 @@ extension StoreMigration {
             log.append("Equipment: not set yet, so new coach-built sessions use bodyweight exercises until you set it.")
         }
         f.schema = 3
+        if !log.isEmpty { f.migrationLog += log }
+        return f
+    }
+}
+
+// MARK: Schema 4 migration — S2-0 data integrity (ios/S20_DATA_INTEGRITY.md). Idempotent; never deletes a workout, log or ride.
+extension StoreMigration {
+    /// Values of earlier builds: a value that equals the old fabricated default and shows no sign of athlete entry becomes
+    /// Unknown; every other value is kept but marked `.legacyUnverified` with `needsConfirmation` — it is never relabelled
+    /// as entered because its provenance cannot be established from the file.
+    static func v4(_ f0: StoreFile, now: Date = Date(), calendar cal: Calendar = .current) -> StoreFile {
+        var f = f0
+        guard f.schema < 4 else { return f }
+        var log: [String] = []
+        var p = f.profile
+        // Weight: build ≤ 127 wrote 75.0 for every athlete who never touched the stepper. Exactly 75.0 with no provenance
+        // cannot be told apart from a real 75.0 → Unknown, and the athlete is asked once (a real 75 kg takes two taps).
+        if let w = p.weightKg, p.provenance[ProfileField.weight.rawValue] == nil {
+            if w == 75.0 { p.weightKg = nil; log.append("Weight: the earlier build showed 75 kg as a sample value. It is now 'Not set' — enter your weight in Profile for W/kg and lifting loads.") }
+            else { p.setProvenance(.weight, .legacy(p.updatedAt)); log.append("Weight \(String(format: "%.1f", w)) kg: kept from the earlier build; please confirm it in Profile.") }
+        }
+        // Age: the 35-year default never came from the athlete. A date of birth or a birth year is the only real source.
+        if p.dateOfBirth == nil, p.birthYear == nil, let a = p.age {
+            // the slider's default was 35: exactly 35 is indistinguishable from "never touched" → Unknown; any other value
+            // was moved by the athlete and is kept as unverified
+            if a == 35 { p.age = nil; log.append("Age: the earlier build assumed 35. Heart-rate zones are unavailable until you enter your date of birth or max heart rate.") }
+            else { p.setProvenance(.dateOfBirth, .legacy(p.updatedAt)); log.append("Age \(a): kept from the earlier build; please enter your date of birth in Profile to confirm it.") }
+        }
+        if p.dateOfBirth != nil || p.birthYear != nil {
+            p.age = nil     // a birth date / year is the real source; the old slider value is redundant
+            if p.provenance[ProfileField.dateOfBirth.rawValue] == nil { p.setProvenance(.dateOfBirth, .legacy(p.updatedAt)) }
+        }
+        // FTP: the W/kg assumption (ftpHow == .assumed) is Unknown; any other value keeps its label but is flagged legacy.
+        if p.ftpHow == .assumed || p.ftpW <= 0 {
+            if p.ftpW > 0 { log.append("FTP: the starting assumption (\(p.ftpW) W) is removed. FTP is Unknown until you enter or test it; rides use effort and heart-rate targets.") }
+            p.ftpW = 0; p.ftpHow = .assumed; p.setProvenance(.ftp, nil)
+        } else if p.provenance[ProfileField.ftp.rawValue] == nil {
+            let src: ValueSource = p.ftpHow == .fromRides ? .estimatedFromRides : (p.ftpHow == .tested && p.ftpVerifiedTest == true) ? .measuredTest : .legacyUnverified
+            p.setProvenance(.ftp, ValueProvenance(source: src, recordedAt: p.ftpFromDate ?? p.updatedAt, needsConfirmation: src == .legacyUnverified))
+            if src == .legacyUnverified { log.append("FTP \(p.ftpW) W (\(p.ftpHow.label)): kept from the earlier build as unverified; please confirm it in Profile.") }
+        }
+        if let m = p.maxHR, m > 0, p.provenance[ProfileField.maxHR.rawValue] == nil { p.setProvenance(.maxHR, .legacy(p.updatedAt)) }
+        if let r = p.restHR, r > 0, p.provenance[ProfileField.restHR.rawValue] == nil { p.setProvenance(.restHR, .legacy(p.updatedAt)) }
+        f.profile = p
+        // Energy (GR-45): build ≤ 127 stored a Health-imported ride's active kcal × 4.184 in `kj` and showed it "from power".
+        // The conversion is exact and the source is unambiguous (recorder == .health), so it is converted back and labelled.
+        for i in f.rides.indices where f.rides[i].energy == nil {
+            if f.rides[i].recorder == .health, let k = f.rides[i].kj {
+                f.rides[i].energy = EnergyValue(kind: .activeKcalAppleHealth, value: Int((Double(k) / 4.184).rounded()))
+                f.rides[i].kj = nil
+            } else if let k = f.rides[i].kj, f.rides[i].avgPower != nil {
+                f.rides[i].energy = EnergyValue(kind: .workFromPowerKJ, value: k)
+            } else if let k = f.rides[i].kj {
+                f.rides[i].energy = EnergyValue(kind: .legacyUnverified, value: k)      /* a kJ figure without power: origin unknown */
+            }
+        }
+        let converted = f0.rides.filter { $0.recorder == .health && $0.kj != nil }.count
+        if converted > 0 { log.append("Apple Health rides: \(converted) energy figure(s) were stored in the wrong unit and shown as work from power. They are now shown as Apple Health active energy (kcal, an estimate).") }
+        f.schema = 4
         if !log.isEmpty { f.migrationLog += log }
         return f
     }

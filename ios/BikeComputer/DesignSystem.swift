@@ -189,7 +189,7 @@ extension RiderProfile {
         case (.tested, _): return "Entered as a test result, but no test ride was recorded in Cyclift, so it is unverified."
         case (.fromRides, .estimatedVerified): return "Estimated as 95 % of the best 20-minute power of a ride with verified power. An estimate, not a test."
         case (.fromRides, _): return "Estimated as 95 % of the best 20-minute power of a recorded ride whose power was never verified. An estimate, not a test."
-        case (.assumed, _): return "Starting assumption: \(String(format: "%.0f", weightKg)) kg × \(String(format: "%.2f", level.wkg)) W/kg for \(level.title.lowercased()) riders."
+        case (.assumed, _): return "Unknown. Enter your FTP or ride a steady 20-minute effort; until then rides use effort and heart-rate targets."   // S2-0: no starting assumption
         case (.entered, _): return "Entered by you, without a recorded test."
         }
     }

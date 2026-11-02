@@ -54,13 +54,31 @@ struct ProfileTabView: View {
                 Spacer()
                 TextField("Your name", text: $store.profile.name).textContentType(.givenName).multilineTextAlignment(.trailing)
             }
-            // RC3: date of birth (the same field onboarding r7 writes); the board still receives the birth year
-            DatePicker("Date of birth", selection: Binding(get: { dateOfBirth }, set: { d in store.updateProfile { $0.dateOfBirth = d; $0.birthYear = Calendar.current.component(.year, from: d) } }), in: ProfileTabView.birthRange, displayedComponents: .date)
-                .accessibilityIdentifier("profileBirth")
-            Stepper(value: Binding(get: { store.profile.weightKg }, set: { v in store.updateProfile { $0.weightKg = v; $0.refreshAssumption() } }), in: 40...150, step: 0.5) {
-                HStack { Text("Weight"); Spacer(); Text(weightText).foregroundStyle(.secondary).monospacedDigit() }
+            // RC3: date of birth (the same field onboarding r7 writes); the board still receives the birth year.
+            // S2-0: nothing is pre-filled — an unset date shows "Not set" and a picker appears only on request (GR-20).
+            if let d = store.profile.dateOfBirth {
+                DatePicker("Date of birth", selection: Binding(get: { d }, set: { v in store.updateProfile { $0.setDateOfBirth(v) } }), in: ProfileTabView.birthRange, displayedComponents: .date)
+                    .accessibilityIdentifier("profileBirth")
+                if store.profile.provenance(.dateOfBirth).needsConfirmation { Text("From an earlier version — please check it.").font(.footnote).foregroundStyle(BC.warn) }
+            } else if let y = store.profile.birthYear {
+                Button { store.updateProfile { $0.setDateOfBirth(Calendar.current.date(from: DateComponents(year: y, month: 7, day: 1))) } } label: { LabeledContent("Date of birth", value: "Birth year \(y) · set the date") }
+                    .accessibilityIdentifier("profileBirth")
+            } else {
+                Button { store.updateProfile { $0.setDateOfBirth(ProfileTabView.birthRange.upperBound) } } label: { LabeledContent("Date of birth", value: "Not set") }
+                    .accessibilityIdentifier("profileBirth")
+                Text("Needed for heart-rate zones (max heart rate from age). Until then rides use effort targets.").font(.footnote).foregroundStyle(.secondary)
             }
-            .accessibilityIdentifier("profileWeight")
+            if let w = store.profile.weightKg {
+                Stepper(value: Binding(get: { w }, set: { v in store.updateProfile { $0.setWeight(v) } }), in: 30...200, step: 0.5) {
+                    HStack { Text("Weight"); Spacer(); Text(weightText).foregroundStyle(.secondary).monospacedDigit() }
+                }
+                .accessibilityIdentifier("profileWeight")
+                Text(weightSourceText).font(.footnote).foregroundStyle(store.profile.provenance(.weight).needsConfirmation ? BC.warn : .secondary)
+            } else {
+                Button { store.updateProfile { $0.setWeight(70) } } label: { LabeledContent("Weight", value: "Not set") }
+                    .accessibilityIdentifier("profileWeight")
+                Text("Needed for W/kg and lifting loads. Enter it, or turn on Apple Health weight in Settings.").font(.footnote).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -87,7 +105,7 @@ struct ProfileTabView: View {
             }
             if store.profile.trainingMode.includesCycling {
                 ProfileSegmentRow(title: "Cycling level") {
-                    Picker("Cycling level", selection: Binding(get: { store.profile.level }, set: { v in change(.profile) { $0.profile.level = v; $0.profile.refreshAssumption() } })) {
+                    Picker("Cycling level", selection: Binding(get: { store.profile.level }, set: { v in change(.profile) { $0.profile.level = v } })) {
                         ForEach(RiderProfile.Level.allCases, id: \.self) { Text(ProfileText.level($0)).tag($0) }
                     }
                 }
@@ -128,7 +146,7 @@ struct ProfileTabView: View {
                 NavigationLink { PowerCyclingPage() } label: { LabeledContent("FTP", value: "\(store.profile.ftpDisplay) · \(store.profile.ftpSource.title)") }
                     .accessibilityIdentifier("profileFTP")
             }
-            NavigationLink { HeartRatePage() } label: { LabeledContent("Heart rate", value: "max \(store.profile.estimatedMaxHR)") }
+            NavigationLink { HeartRatePage() } label: { LabeledContent("Heart rate", value: store.profile.maxHRForZones.map { "max \($0)\(store.profile.maxHRIsEstimate ? " (est.)" : "")" } ?? "zones not set") }
             NavigationLink { TrainingPreferencesPage() } label: { Text("Preferences") }
                 .accessibilityIdentifier("profilePreferences")
         }
@@ -186,12 +204,6 @@ struct ProfileTabView: View {
         } header: { Text("About") }
     }
 
-    /// Shown date: the saved date of birth, else 1 January of the saved birth year (nothing is written until it is changed).
-    private var dateOfBirth: Date {
-        if let d = store.profile.dateOfBirth { return d }
-        let y = store.profile.birthYear ?? (Calendar.current.component(.year, from: Date()) - 35)
-        return Calendar.current.date(from: DateComponents(year: y, month: 1, day: 1)) ?? Date()
-    }
     static var birthRange: ClosedRange<Date> {
         let cal = Calendar.current
         let lo = cal.date(from: DateComponents(year: 1920, month: 1, day: 1)) ?? Date.distantPast
@@ -204,7 +216,18 @@ struct ProfileTabView: View {
         let p = store.profile
         return ProfileText.mode(p.trainingMode) + " · " + ProfileText.level(p.level)
     }
-    private var weightText: String { store.settings.units == .imperial ? String(format: "%.1f kg (%.0f lb)", store.profile.weightKg, store.profile.weightKg * 2.20462) : String(format: "%.1f kg", store.profile.weightKg) }
+    private var weightText: String { let w = store.profile.weightKg ?? 0; return store.settings.units == .imperial ? String(format: "%.1f kg (%.0f lb)", w, w * 2.20462) : String(format: "%.1f kg", w) }
+    /// S2-0: where the weight came from and when (Entered / Apple Health / Unverified).
+    private var weightSourceText: String {
+        let p = store.profile.provenance(.weight)
+        let when = p.recordedAt.map { " · \($0.formatted(date: .abbreviated, time: .omitted))" } ?? ""
+        switch p.source {
+        case .appleHealth: return "Apple Health\(when)"
+        case .legacyUnverified: return "From an earlier version — please confirm\(when)"
+        case .unknown: return "Not set"
+        default: return "Entered by you\(when)"
+        }
+    }
     private var timeText: String {
         let p = store.profile
         var parts: [String] = []
@@ -243,15 +266,19 @@ struct HeartRatePage: View {
     var body: some View {
         Form {
             Section {
-                NumberRow(title: "Resting HR", placeholder: "not set", text: $rest, range: 25...120) { v in store.updateProfile { $0.restHR = v } }.onAppear { rest = store.profile.restHR.map(String.init) ?? "" }
-                NumberRow(title: "Max HR", placeholder: "\(store.profile.estimatedMaxHR) estimated", text: $maxHR, range: 100...230) { v in store.updateProfile { $0.maxHR = v } }.onAppear { maxHR = store.profile.maxHR.map(String.init) ?? "" }
+                NumberRow(title: "Resting HR", placeholder: "not set", text: $rest, range: 25...120) { v in store.updateProfile { $0.setRestHR(v) } }.onAppear { rest = store.profile.restHR.map(String.init) ?? "" }
+                NumberRow(title: "Max HR", placeholder: store.profile.maxHRForZones.map { "\($0) estimated" } ?? "not set", text: $maxHR, range: 100...230) { v in store.updateProfile { $0.setMaxHR(v) } }.onAppear { maxHR = store.profile.maxHR.map(String.init) ?? "" }
                 NumberRow(title: "Threshold HR (LTHR)", placeholder: "not set", text: $lthr, range: 80...220) { v in store.updateProfile { $0.lthr = v } }.onAppear { lthr = store.profile.lthr.map(String.init) ?? "" }
-            } header: { Text("Values") } footer: { Text(store.profile.maxHR == nil ? "Max heart rate is estimated from age (208 − 0.7 × age) until you enter a measured value." : "Max heart rate entered by you.") }
+            } header: { Text("Values") } footer: { Text(store.profile.maxHR != nil ? "Max heart rate entered by you." : store.profile.maxHRForZones != nil ? "Max heart rate is estimated from your age (208 − 0.7 × age) until you enter a measured value." : "No max heart rate: enter one, or set your date of birth in Profile for an age-based estimate. Until then there are no heart-rate zones.") }
             Section {
                 Picker("Zone method", selection: $store.profile.hrZoneMethod) { ForEach(RiderProfile.HRZoneMethod.allCases, id: \.self) { Text($0.title).tag($0) } }
                 if store.profile.hrZoneMethod == .lthr, store.profile.lthr == nil { Text("Enter your LTHR above; until then zones use max heart rate.").font(.footnote).foregroundStyle(BC.stale) }
-                ForEach(Array(store.profile.hrZones.enumerated()), id: \.offset) { i, z in
-                    HStack { Text("Z\(i + 1)").font(.caption.weight(.heavy)).padding(.horizontal, 7).padding(.vertical, 3).background(BC.zone(i + 1), in: Capsule()).foregroundStyle(.white); Text(HrZones.names[i].dropFirst(3)).font(.footnote); Spacer(); Text("\(z.lo)–\(z.hi.map(String.init) ?? "∞") bpm").font(.footnote).monospacedDigit() }
+                if let zones = store.profile.hrZones {
+                    ForEach(Array(zones.enumerated()), id: \.offset) { i, z in
+                        HStack { Text("Z\(i + 1)").font(.caption.weight(.heavy)).padding(.horizontal, 7).padding(.vertical, 3).background(BC.zone(i + 1), in: Capsule()).foregroundStyle(.white); Text(HrZones.names[i].dropFirst(3)).font(.footnote); Spacer(); Text("\(z.lo)–\(z.hi.map(String.init) ?? "∞") bpm").font(.footnote).monospacedDigit() }
+                    }
+                } else {
+                    Text("Unknown — no max or threshold heart rate yet.").font(.footnote).foregroundStyle(.secondary)
                 }
             } header: { Text("Heart-rate zones") }
             Section {

@@ -326,16 +326,16 @@ struct WorkoutDetail: View {
 
     @ViewBuilder private var detail: some View {
         Card { Eyebrow(t: "Why this session"); Text(workout.why) }
-        let steps = workout.steps(ftp: store.profile.targetFTP ?? 0, hrZones: watch.appInstalled ? store.profile.hrZones : nil)   // RC3: no watts from an unknown FTP
+        let steps = workout.steps(ftp: store.profile.targetFTP ?? 0, hrZones: watch.appInstalled ? store.profile.hrZones : nil)   // RC3: no watts from an unknown FTP; S2-0: nil zones without a max HR
         if !steps.isEmpty { Card { ForEach(steps, id: \.name) { s in HStack(alignment: .firstTextBaseline) { VStack(alignment: .leading) { Text(s.name).bold(); Text(s.target).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }; Spacer(); Text(s.duration).font(.headline).monospacedDigit() }.padding(.vertical, 4); if s != steps.last { Divider() } } } }
         if workout.kind.zone > 0 {
             Card { Eyebrow(t: "Target zone"); ZoneBar(current: workout.kind.zone)
                 if store.profile.ftpKnown {
                     let z = store.profile.prescriptionZones[workout.kind.zone - 1]
                     if let c = store.profile.ftpCaution { Text(c).font(.footnote).foregroundStyle(BC.warn).fixedSize(horizontal: false, vertical: true) }
-                    Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpBadge)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone))" : ".")").font(.footnote).foregroundStyle(.secondary)
+                    Text("Z\(workout.kind.zone) = \(z.lo)–\(z.hi.map(String.init) ?? "∞") W from FTP \(store.profile.ftpW) W (\(store.profile.ftpBadge)). Heart-rate targets apply when a strap or watch is connected\(watch.appInstalled && hrRange(workout.kind.zone) != nil ? ": Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone)!)" : ".")").font(.footnote).foregroundStyle(.secondary)
                 } else {
-                    Text("FTP unknown: ride by effort\(watch.appInstalled ? " and heart rate (Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone)))" : ". \(RideSteps.pairHRHint).")").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text("FTP unknown: ride by effort\(watch.appInstalled && hrRange(workout.kind.zone) != nil ? " and heart rate (Z\(workout.kind.zone) ≈ \(hrRange(workout.kind.zone)!))" : store.profile.hrZonesKnown ? ". \(RideSteps.pairHRHint)." : ". Heart-rate zones need your date of birth or max heart rate (Profile).")").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 } }
         }
         ActionRow(actions: [
@@ -384,7 +384,8 @@ struct WorkoutDetail: View {
         }
         Button("Cancel") { mode = 0 }
     }
-    private func hrRange(_ z: Int) -> String { let m = Double(store.profile.estimatedMaxHR); let b: [(Double, Double)] = [(0.5, 0.6), (0.6, 0.75), (0.75, 0.85), (0.85, 0.9), (0.9, 1.0), (0.9, 1.0), (0.9, 1.0)]; return "\(Int(m * b[z - 1].0))–\(Int(m * b[z - 1].1)) bpm" }
+    /// nil when no max heart rate exists (S2-0: never predicted from an assumed age).
+    private func hrRange(_ z: Int) -> String? { guard let mh = store.profile.maxHRForZones else { return nil }; let m = Double(mh); let b: [(Double, Double)] = [(0.5, 0.6), (0.6, 0.75), (0.75, 0.85), (0.85, 0.9), (0.9, 1.0), (0.9, 1.0), (0.9, 1.0)]; return "\(Int(m * b[z - 1].0))–\(Int(m * b[z - 1].1)) bpm" }
 }
 extension WorkoutKind { var minutes0: Bool { self == .rest || self == .recoveryDay } }
 

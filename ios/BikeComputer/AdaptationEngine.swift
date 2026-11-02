@@ -245,7 +245,8 @@ enum TrainingAnalyzer {
             s.hasUnverifiedPower = r.powerVerified != true && r.avgPower != nil
             if let e = r.checkIn?.effort { s.load = Double(e * minutes); s.loadSource = "check-in effort × minutes" }
             else if s.hasVerifiedPower, p.ftpKnown, let np = r.normalizedPower ?? r.avgPower { s.load = effort(intensityFactor: Double(np) / Double(p.ftpW)) * Double(minutes); s.loadSource = "verified power (estimate)" }
-            else if let hr = r.avgHR { s.load = hrZoneEffort[hrZone(hr, profile: p) - 1] * Double(minutes); s.loadSource = "average heart rate (estimate)" }
+            else if let hr = r.avgHR, let z = hrZone(hr, profile: p) { s.load = hrZoneEffort[z - 1] * Double(minutes); s.loadSource = "average heart rate (estimate)" }
+            // S2-0: no heart-rate zones (no max HR / age) → no load estimate (nil = unknown, never a guess)
             sessions.append(s)
         }
         for x in input.strength where !x.inProgress && x.date >= horizon && x.date <= now {
@@ -473,9 +474,10 @@ enum TrainingAnalyzer {
         }
     }
 
-    /// 1…5 from the rider's heart-rate zones.
-    static func hrZone(_ hr: Int, profile p: RiderProfile) -> Int {
-        for (i, z) in p.hrZones.enumerated() where hr < (z.hi ?? Int.max) { return i + 1 }
+    /// 1…5 from the rider's heart-rate zones; nil when the zones are unknown (S2-0: no max HR and no known age).
+    static func hrZone(_ hr: Int, profile p: RiderProfile) -> Int? {
+        guard let zones = p.hrZones else { return nil }
+        for (i, z) in zones.enumerated() where hr < (z.hi ?? Int.max) { return i + 1 }
         return 5
     }
 }

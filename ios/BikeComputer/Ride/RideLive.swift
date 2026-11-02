@@ -39,13 +39,15 @@ struct RideLive {
     var ftpProvisional: Bool
     /// RC3 / ENG-E1: false when the FTP is Unknown — then no power zone, band or watt target is drawn anywhere.
     var ftpKnown: Bool
+    /// S2-0: false when no max heart rate exists (none entered, no known age) — then no HR zone, band or status is drawn.
+    var hrKnown: Bool
 
     init(power: MetricReading?, hr: MetricReading?, cadence: MetricReading?, speed: MetricReading?, profile: RiderProfile, imperial: Bool, targetZone: Int, targetHrZone: Int? = nil, missing: [MetricKind: String] = [:]) {
         self.power = RideMetric(kind: .power, reading: power, missing: missing[.power]); self.hr = RideMetric(kind: .heartRate, reading: hr, missing: missing[.heartRate])
         self.cadence = RideMetric(kind: .cadence, reading: cadence, missing: missing[.cadence]); self.speed = RideMetric(kind: .speed, reading: speed, missing: missing[.speed])
-        ftp = profile.ftpW; maxHr = profile.estimatedMaxHR; cadLo = profile.cadenceLow; cadHi = profile.cadenceHigh
+        ftp = profile.ftpW; maxHr = profile.maxHRForZones ?? 0; cadLo = profile.cadenceLow; cadHi = profile.cadenceHigh
         self.targetZone = targetZone; self.targetHrZone = targetHrZone ?? targetZone
-        hrZoneRanges = profile.hrZones; self.imperial = imperial
+        hrZoneRanges = profile.hrZones ?? []; hrKnown = profile.hrZonesKnown; self.imperial = imperial
         ftpProvisional = profile.ftpHow == .assumed
         ftpKnown = profile.ftpKnown
     }
@@ -56,9 +58,9 @@ struct RideLive {
 
     // MARK: derived (CoachCore rules; the UI only draws)
     var powerZone: Int { ftpKnown ? PowerZones.zone(power.value, ftp: ftp) : 0 }
-    var hrZone: Int { HrZones.zone(hr.value, maxHr: maxHr) }
+    var hrZone: Int { hrKnown ? HrZones.zone(hr.value, maxHr: maxHr) : 0 }
     var powerStatus: TargetStatus { ftpKnown ? Targets.power(power.value, ftp: ftp, targetZone: targetZone) : .unknown }
-    var hrStatus: TargetStatus { Targets.hr(hr.value, maxHr: maxHr, targetZone: targetHrZone) }
+    var hrStatus: TargetStatus { hrKnown ? Targets.hr(hr.value, maxHr: maxHr, targetZone: targetHrZone) : .unknown }
     var cadStatus: TargetStatus { Targets.cadence(cadence.value, low: cadLo, high: cadHi) }
     var speedKmh: Double? { speed.usable ? speed.reading?.value : nil }
     var speedText: String { speedKmh.map { String(format: imperial ? "%.1f mph" : "%.1f km/h", imperial ? $0 / 1.609 : $0) } ?? "—" }
@@ -69,7 +71,7 @@ struct RideLive {
         switch m.kind {
         case .power: return ftpKnown ? GaugeText.status(powerStatus, kind: "pow") : RideLabels.ftpUnknown
         case .cadence: return GaugeText.status(cadStatus, kind: "cad")
-        case .heartRate: return GaugeText.status(hrStatus, kind: "hr")
+        case .heartRate: return hrKnown ? GaugeText.status(hrStatus, kind: "hr") : "NO HR ZONES · SET AGE OR MAX HR"
         case .speed: return speedText
         }
     }
@@ -77,11 +79,12 @@ struct RideLive {
         let r = PowerZones.range(targetZone, ftp: ftp); let m = Double(Targets.powerGaugeMaxW(ftp: ftp))
         return (Double(r.lo) / m, Double(r.hi ?? Int(m)) / m)
     }
-    var hrBand: (Double, Double) {
-        let z = hrZoneRanges; let i = min(z.count - 1, max(0, targetHrZone - 1)); let m = Double(max(1, maxHr))
+    var hrBand: (Double, Double)? {
+        let z = hrZoneRanges; guard hrKnown, !z.isEmpty else { return nil }
+        let i = min(z.count - 1, max(0, targetHrZone - 1)); let m = Double(max(1, maxHr))
         return (Double(z[i].lo) / m, Double(z[i].hi ?? maxHr) / m)
     }
-    var hrBandBpm: (Int, Int) { let z = hrZoneRanges; let i = min(z.count - 1, max(0, targetHrZone - 1)); return (z[i].lo, z[i].hi ?? maxHr) }
+    var hrBandBpm: (Int, Int)? { let z = hrZoneRanges; guard hrKnown, !z.isEmpty else { return nil }; let i = min(z.count - 1, max(0, targetHrZone - 1)); return (z[i].lo, z[i].hi ?? maxHr) }
     var powerBandW: (Int, Int?) { let r = PowerZones.range(targetZone, ftp: ftp); return (r.lo, r.hi) }
 }
 
@@ -101,8 +104,9 @@ enum RideGauges {
                     statusText: l.statusText(l.cadence), showTgtLabel: false, source: l.cadence.sourceLine ?? " ", sourceWarning: l.cadence.warning)
     }
     static func heartRate(_ l: RideLive, big: Bool) -> TargetGauge {
-        TargetGauge(value: l.hr.value, maxValue: l.maxHr, color: l.hr.value != nil && l.hrZone > 0 ? D7.hrZone(l.hrZone) : D7.faint,
-                    targetFraction: Targets.hrTargetFraction(targetZone: l.targetHrZone), zoneTicks: Targets.hrZoneTicks, band: l.hrBand,
+        // S2-0: without a max HR the gauge is a plain 0–220 scale — no zone colour, ticks, target or band
+        TargetGauge(value: l.hr.value, maxValue: l.hrKnown ? l.maxHr : 220, color: l.hr.value != nil && l.hrZone > 0 ? D7.hrZone(l.hrZone) : D7.faint,
+                    targetFraction: l.hrKnown ? Targets.hrTargetFraction(targetZone: l.targetHrZone) : nil, zoneTicks: l.hrKnown ? Targets.hrZoneTicks : [], band: l.hrBand,
                     sub: l.hr.value != nil && l.hrZone > 0 ? "Z\(l.hrZone) · \(Targets.hrZonePercent(l.hr.value, maxHr: l.maxHr) ?? 0)%" : nil,
                     unit: RideLabels.heartRate, big: big, status: l.hr.usable ? l.hrStatus : .unknown, statusText: l.statusText(l.hr), showTgtLabel: false,
                     source: l.hr.sourceLine ?? " ", sourceWarning: l.hr.warning)

@@ -103,7 +103,8 @@ struct HealthCheckView: View {
                     }
                     store.updateProfile { p in
                         p.healthScreen = s
-                        if age > 0 { p.age = age; p.birthYear = Calendar.current.component(.year, from: Date()) - age }
+                        // S2-0: an age typed here is the athlete's statement (entered); never a default
+                        if age > 0, p.dateOfBirth == nil { p.age = age; p.birthYear = Calendar.current.component(.year, from: Date()) - age; p.setProvenance(.dateOfBirth, ValueProvenance(source: .entered, recordedAt: now)) }
                     }
                     store.rebuildFromHybridAnswers(newDays: false)
                     store.refreshRideSafety()
@@ -121,7 +122,7 @@ struct HealthCheckView: View {
         .onAppear {
             guard !loaded else { return }
             loaded = true
-            age = store.profile.birthYear != nil ? store.profile.effectiveAge : 0
+            age = store.profile.effectiveAge ?? 0
             // a previous, still valid check is shown as answered; an expired or older one starts empty again so every
             // question gets an explicit answer (F-13); its old answers still decode (N-12) and a "see a doctor" result
             // stays in force until answered again (N-07)

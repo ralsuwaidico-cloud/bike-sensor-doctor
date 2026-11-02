@@ -92,7 +92,7 @@ struct RideLayoutContent: View {
                 RideGauges.cadence(live, big: false).frame(width: f.ring)
             }
             if f.powerBand && live.ftpKnown { ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"], colors: D7.powerZoneColors, currentFraction: live.power.value.map { Targets.gaugeFraction($0, max: Targets.powerGaugeMaxW(ftp: live.ftp)) }, targetFraction: Targets.powerTargetFraction(targetZone: live.targetZone, ftp: live.ftp)) }
-            if f.hrBand { ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5"], colors: D7.hrZoneColors, currentFraction: live.hr.value.map { Targets.gaugeFraction($0, max: live.maxHr) }, targetFraction: Targets.hrTargetFraction(targetZone: live.targetHrZone)) }
+            if f.hrBand && live.hrKnown { ZoneBandView(labels: ["Z1", "Z2", "Z3", "Z4", "Z5"], colors: D7.hrZoneColors, currentFraction: live.hr.value.map { Targets.gaugeFraction($0, max: live.maxHr) }, targetFraction: Targets.hrTargetFraction(targetZone: live.targetHrZone)) }   // S2-0: no HR zones without a max HR
             LiveGraphView(samples: coach.samples, seconds: RideCoach.keepSeconds).frame(height: f.graph)
             RideStatsRow(live: live, recorder: recorder)
         }

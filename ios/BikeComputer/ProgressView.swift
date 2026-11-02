@@ -106,8 +106,9 @@ struct ProgressTabView: View {
             HStack(alignment: .firstTextBaseline) { Eyebrow(t: "Cycling · FTP"); Spacer(minLength: DS.s); Pill(text: p.ftpSource.title, color: p.ftpSource == .tested ? BC.live : p.ftpSource == .unknown ? .secondary : BC.accent) }
             if let w = p.ftpValue {
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .firstTextBaseline, spacing: DS.s) { Text("\(w)").font(DS.number).monospacedDigit(); Text("W · \(String(format: "%.1f", Double(w) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
-                    VStack(alignment: .leading) { Text("\(w) W").font(DS.number).monospacedDigit(); Text("\(String(format: "%.1f", Double(w) / max(1, p.weightKg))) W/kg").foregroundStyle(.secondary) }
+                    // S2-0: W/kg only with a real weight
+                    HStack(alignment: .firstTextBaseline, spacing: DS.s) { Text("\(w)").font(DS.number).monospacedDigit(); Text("W" + (p.wattsPerKg.map { " · \(String(format: "%.1f", $0)) W/kg" } ?? " · W/kg needs your weight")).foregroundStyle(.secondary) }
+                    VStack(alignment: .leading) { Text("\(w) W").font(DS.number).monospacedDigit(); Text(p.wattsPerKg.map { "\(String(format: "%.1f", $0)) W/kg" } ?? "W/kg needs your weight").foregroundStyle(.secondary) }
                 }
                 Text(p.ftpSourceText).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("ftpSource")
             } else {

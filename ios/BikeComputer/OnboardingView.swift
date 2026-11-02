@@ -14,6 +14,7 @@ struct OnboardingView: View {
     @State private var guestName = ""
     @State private var showDOB = false
     @State private var ftpText = ""
+    @State private var ftpMode: FTPSource = .unknown     // S2-0: the FTP mode chosen on screen before any watts exist
     @State private var healthResult: String?
     @State private var twoADay = false
     @State private var resumed = false
@@ -116,18 +117,26 @@ struct OnboardingView: View {
                     row("Date of birth") { Text(store.profile.dateOfBirth.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "Add").foregroundStyle(store.profile.dateOfBirth == nil ? BC.accent : .primary) }
                 }.buttonStyle(.plain).accessibilityIdentifier("onbDOB")
                 if showDOB {
-                    DatePicker("Date of birth", selection: Binding(get: { store.profile.dateOfBirth ?? Self.defaultDOB }, set: setDOB),
+                    // S2-0 (GR-20): the wheel starts on the picker's upper bound and NOTHING is saved until the athlete moves
+                    // it or taps Done; Done without a date keeps "Not set" (never today − 35 years).
+                    DatePicker("Date of birth", selection: Binding(get: { store.profile.dateOfBirth ?? Self.dobRange.upperBound }, set: setDOB),
                                in: Self.dobRange, displayedComponents: .date)
                         .datePickerStyle(.wheel).labelsHidden()
-                    Button("Done") { if store.profile.dateOfBirth == nil { setDOB(Self.defaultDOB) }; withAnimation { showDOB = false } }
+                    Button("Done") { withAnimation { showDOB = false } }
                         .frame(maxWidth: .infinity, minHeight: DS.minTap).accessibilityIdentifier("onbDOBDone")
+                    if store.profile.dateOfBirth == nil { Text("Used for heart-rate zones. Skip it and rides use effort targets.").font(.footnote).foregroundStyle(.secondary) }
                 }
                 Divider()
                 row("Weight") {
-                    Stepper(value: Binding(get: { store.profile.weightKg }, set: { v in store.updateProfile { $0.weightKg = v; $0.refreshAssumption() } }),
-                            in: 35...200, step: store.settings.units == .imperial ? 0.45359 : 0.5) {
-                        Text(weightText).font(.body.monospacedDigit()).frame(maxWidth: .infinity, alignment: .trailing)
-                    }.accessibilityIdentifier("onbWeight")
+                    // S2-0 (GR-21): no sample weight — "Add" until the athlete sets it; then a stepper
+                    if let w = store.profile.weightKg {
+                        Stepper(value: Binding(get: { w }, set: { v in store.updateProfile { $0.setWeight(v) } }),
+                                in: 30...200, step: store.settings.units == .imperial ? 0.45359 : 0.5) {
+                            Text(weightText).font(.body.monospacedDigit()).frame(maxWidth: .infinity, alignment: .trailing)
+                        }.accessibilityIdentifier("onbWeight")
+                    } else {
+                        Button("Add") { store.updateProfile { $0.setWeight(70) } }.foregroundStyle(BC.accent).frame(maxWidth: .infinity, alignment: .trailing).accessibilityIdentifier("onbWeight")
+                    }
                 }
                 Picker("Units", selection: $store.settings.units) { ForEach(AppSettings.Units.allCases, id: \.self) { Text($0 == .imperial ? "lb" : "kg").tag($0) } }
                     .pickerStyle(.segmented).accessibilityIdentifier("onbUnits")
@@ -137,7 +146,7 @@ struct OnboardingView: View {
                                  selection: Binding(get: { store.profile.trainingMode }, set: setMode), identifier: "onbMode")
                 if store.profile.trainingMode.includesCycling {
                     CompactChoiceRow(title: "Cycling level", options: RiderProfile.Level.allCases, label: Self.levelTitle,
-                                     selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v; $0.refreshAssumption() } }), identifier: "onbCyclingLevel")
+                                     selection: Binding(get: { store.profile.level }, set: { v in store.updateProfile { $0.level = v } }), identifier: "onbCyclingLevel")
                         .padding(.leading, DS.s)
                 }
                 if store.profile.trainingMode.includesLifting {
@@ -157,13 +166,11 @@ struct OnboardingView: View {
             })
         }
     }
-    static let defaultDOB = Calendar.current.date(byAdding: .year, value: -35, to: Date()) ?? Date()
     static let dobRange: ClosedRange<Date> = (Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date())...(Calendar.current.date(byAdding: .year, value: -13, to: Date()) ?? Date())
-    private func setDOB(_ d: Date) {
-        store.updateProfile { $0.dateOfBirth = d; $0.birthYear = Calendar.current.component(.year, from: d) }
-    }
+    private func setDOB(_ d: Date) { store.updateProfile { $0.setDateOfBirth(d) } }
     private var weightText: String {
-        store.settings.units == .imperial ? String(format: "%.0f lb", store.profile.weightKg * 2.20462) : String(format: "%.1f kg", store.profile.weightKg)
+        let w = store.profile.weightKg ?? 0
+        return store.settings.units == .imperial ? String(format: "%.0f lb", w * 2.20462) : String(format: "%.1f kg", w)
     }
     static func levelTitle(_ l: RiderProfile.Level) -> String { switch l { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
     static func strengthTitle(_ e: StrengthPrefs.Experience) -> String { switch e { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
@@ -395,14 +402,20 @@ struct OnboardingView: View {
             }
             if mode.includesCycling {
                 Card {
+                    // S2-0 (GR-22): choosing Entered / Tested only opens the watts field — the FTP stays Unknown until a
+                    // number in 50–600 W is typed; nothing is ever carried over or filled in
                     CompactChoiceRow(title: "FTP", options: [FTPSource.unknown, .entered, .tested], label: { $0 == .unknown ? "Don't know" : $0.title },
                                      selection: Binding(get: { ftpChoice }, set: setFTPChoice), identifier: "onbFTP")
-                    if store.profile.ftpKnown {
+                    if ftpChoice != .unknown {
                         row("Watts") {
                             TextField("W", text: $ftpText).keyboardType(.numberPad).multilineTextAlignment(.trailing).frame(maxWidth: 90)
-                                .onChange(of: ftpText) { _, v in if let n = Int(v), (50...600).contains(n) { store.updateProfile { $0.setFTP(n, source: ftpChoice == .tested ? .tested : .entered) } } }
+                                .onChange(of: ftpText) { _, v in
+                                    if let n = Int(v), (50...600).contains(n) { store.updateProfile { $0.setFTP(n, source: ftpChoice == .tested ? .tested : .entered) } }
+                                    else if store.profile.ftpKnown { store.updateProfile { $0.setFTP(nil, source: .unknown) } }
+                                }
                                 .accessibilityIdentifier("onbFTPWatts")
                         }
+                        if !store.profile.ftpKnown { Text("Type your FTP in watts (50–600). Until then it stays Unknown.").font(.caption).foregroundStyle(.secondary) }
                     } else {
                         Text("Rides use heart rate and effort until you know it.").font(.caption).foregroundStyle(.secondary)
                     }
@@ -410,21 +423,17 @@ struct OnboardingView: View {
             }
             continueButton()
         }
-        .onAppear { if store.profile.ftpKnown { ftpText = "\(store.profile.ftpW)" } }
+        .onAppear { if store.profile.ftpKnown { ftpText = "\(store.profile.ftpW)"; ftpMode = store.profile.ftpSource == .tested ? .tested : .entered } }
     }
+    /// The chosen mode (screen state); the profile's own source once a number is saved.
     private var ftpChoice: FTPSource {
-        switch store.profile.ftpSource { case .unknown: return .unknown; case .tested: return .tested; default: return .entered }
+        if store.profile.ftpKnown { return store.profile.ftpSource == .tested ? .tested : .entered }
+        return ftpMode
     }
     private func setFTPChoice(_ s: FTPSource) {
-        switch s {
-        case .unknown:
-            store.updateProfile { $0.setFTP(nil, source: .unknown) }
-            ftpText = ""
-        default:
-            let w = Int(ftpText).flatMap { (50...600).contains($0) ? $0 : nil } ?? (store.profile.ftpW > 0 ? store.profile.ftpW : 200)
-            ftpText = "\(w)"
-            store.updateProfile { $0.setFTP(w, source: s) }
-        }
+        ftpMode = s
+        if s == .unknown { store.updateProfile { $0.setFTP(nil, source: .unknown) }; ftpText = "" }
+        else if let n = Int(ftpText), (50...600).contains(n) { store.updateProfile { $0.setFTP(n, source: s) } }
     }
     private func connectionBinding(_ key: String) -> Binding<Bool> {
         Binding(get: { store.settings.enabledConnections.contains(key) },

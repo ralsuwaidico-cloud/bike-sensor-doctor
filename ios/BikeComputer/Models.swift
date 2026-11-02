@@ -13,8 +13,7 @@ struct RiderProfile: Codable, Equatable {
     enum Level: String, Codable, CaseIterable { case beginner, intermediate, advanced
         var title: String { switch self { case .beginner: return "New to training"; case .intermediate: return "Regular rider"; case .advanced: return "Experienced" } }
         var hint: String { switch self { case .beginner: return "new to training with power"; case .intermediate: return "ride regularly, some structure"; case .advanced: return "years of structured training" } }
-        /// Starting-assumption W/kg, same table as the board (bc_exp_wkg_x100): 1.75 / 3.0 / 4.0
-        var wkg: Double { switch self { case .beginner: return 1.75; case .intermediate: return 3.0; case .advanced: return 4.0 } }
+        // S2-0: the W/kg starting-assumption table (1.75 / 3.0 / 4.0) is removed — the phone never invents an FTP.
         var linkCode: Int { switch self { case .beginner: return 0; case .intermediate: return 1; case .advanced: return 2 } }
         static func from(linkCode c: Int) -> Level { c <= 0 ? .beginner : c == 1 ? .intermediate : .advanced } }
     enum FTPHow: String, Codable { case assumed, fromRides, entered, tested
@@ -28,11 +27,14 @@ struct RiderProfile: Codable, Equatable {
     var goal: Goal = .endurance
     var hoursPerWeek = 5
     var level: Level = .intermediate
-    var weightKg = 75.0
+    /// S2-0: nil = not given. Never filled in with a sample value (the old 75 kg default is gone, GR-21).
+    var weightKg: Double? = nil
     var heightCm: Int? = nil
     var maxHR: Int? = nil
-    var age = 35
-    var ftpW: Int = 225
+    /// S2-0: nil = not given (the old 35 default is gone, GR-20). `dateOfBirth` / `birthYear` are the real sources.
+    var age: Int? = nil
+    /// S2-0: 0 = no FTP. The W/kg starting assumption is gone (GR-22/GR-51); `ftpKnown` requires a value AND a source.
+    var ftpW: Int = 0
     var ftpHow: FTPHow = .assumed
     var hrPrefWatchFirst = false
     /// Date of the ride an estimated FTP came from (ftpHow == .fromRides); nil otherwise.
@@ -101,19 +103,31 @@ struct RiderProfile: Codable, Equatable {
     var trainingPause: TrainingPause? = nil
     /// Finished pauses (for checkpoints: paused weeks are not counted, ENG-K1). Health-check pauses are not recorded here.
     var pauseHistory: [DateInterval] = []
-    /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones.
-    var hrZones: [(lo: Int, hi: Int?)] {
+    /// S2-0 (ios/S20_DATA_INTEGRITY.md): where each athlete value came from and when. A field without an entry is Unknown.
+    var provenance: [String: ValueProvenance] = [:]
+    /// S2-0 / §5: optional Apple Health reads (stored with `.appleHealth` provenance; no conclusions are drawn from them).
+    var hrvMs: Double? = nil
+    var sleepHours: Double? = nil
+    /// Heart-rate zone bounds (bpm) from the chosen method: 5 zones. nil when neither a threshold HR nor a max HR
+    /// (entered, or from a known age) exists — then rides use effort (RPE) targets only (S2-0, GR-20/GR-51).
+    var hrZones: [(lo: Int, hi: Int?)]? {
         if hrZoneMethod == .lthr, let l = lthr, l > 0 {
             let b = [0.85, 0.89, 0.94, 1.0].map { Int((Double(l) * $0).rounded()) }
             return [(0, b[0]), (b[0], b[1]), (b[1], b[2]), (b[2], b[3]), (b[3], nil)]
         }
-        let m = Double(estimatedMaxHR); let b = [0.60, 0.70, 0.80, 0.90].map { Int((m * $0).rounded()) }
+        guard let mh = maxHRForZones else { return nil }
+        let m = Double(mh); let b = [0.60, 0.70, 0.80, 0.90].map { Int((m * $0).rounded()) }
         return [(0, b[0]), (b[0], b[1]), (b[1], b[2]), (b[2], b[3]), (b[3], nil)]
     }
+    var hrZonesKnown: Bool { hrZones != nil }
 
-    /// Age from the birth year when known, else the stored `age` slider value.
-    var effectiveAge: Int { if let y = birthYear, y > 1900 { return max(10, Calendar.current.component(.year, from: Date()) - y) }; return age }
-    var maxHRLabel: String { maxHR != nil ? "measured / entered" : "estimated from age" }
+    /// Age from the date of birth, else the birth year, else the age the athlete stated; nil = not known (never 35).
+    var effectiveAge: Int? {
+        if let a = ageFromBirth { return max(10, a) }
+        if let y = birthYear, y > 1900 { return max(10, Calendar.current.component(.year, from: Date()) - y) }
+        return age
+    }
+    var maxHRLabel: String { maxHR != nil ? "measured / entered" : effectiveAge != nil ? "estimated from age" : "unknown" }
 
     /// The honest confidence label of the FTP ("Verified test", "Estimated from verified power data", "Provisional
     /// estimate", "Estimated · unverified", "Entered · unverified"). The 95 %-of-20-minutes estimate is never called a test.
@@ -137,8 +151,49 @@ struct RiderProfile: Codable, Equatable {
         }
     }
 
-    var estimatedMaxHR: Int { maxHR ?? Int((208.0 - 0.7 * Double(effectiveAge)).rounded()) }
-    mutating func refreshAssumption() { if ftpHow == .assumed { ftpW = Int((weightKg * level.wkg).rounded()) } }
+    /// The max heart rate the zone model uses: entered, else predicted from a KNOWN age (Tanaka 208 − 0.7 × age),
+    /// else nil. No age → no prediction (S2-0). `estimatedMaxHR` of earlier builds (always a number) is gone.
+    var maxHRForZones: Int? {
+        if let m = maxHR, m > 0 { return m }
+        guard let a = effectiveAge else { return nil }
+        return Int((208.0 - 0.7 * Double(a)).rounded())
+    }
+    /// Max HR is an estimate unless the athlete entered it.
+    var maxHRIsEstimate: Bool { !(maxHR.map { $0 > 0 } ?? false) }
+    /// W/kg only when both numbers are real.
+    var wattsPerKg: Double? { guard let w = ftpValue, let kg = weightKg, kg > 0 else { return nil }; return Double(w) / kg }
+    /// Provenance of one field (Unknown when nothing was recorded).
+    func provenance(_ f: ProfileField) -> ValueProvenance { provenance[f.rawValue] ?? .unknown }
+    mutating func setProvenance(_ f: ProfileField, _ p: ValueProvenance?) { provenance[f.rawValue] = p }
+    /// Records a value the athlete typed (dated now).
+    mutating func setWeight(_ kg: Double?, source: ValueSource = .entered, at: Date = Date()) {
+        weightKg = kg.map { max(20, min(300, $0)) }
+        setProvenance(.weight, kg == nil ? nil : ValueProvenance(source: source, recordedAt: at))
+    }
+    mutating func setDateOfBirth(_ d: Date?, at: Date = Date()) {
+        dateOfBirth = d
+        birthYear = d.map { Calendar.current.component(.year, from: $0) }
+        age = nil
+        setProvenance(.dateOfBirth, d == nil ? nil : ValueProvenance(source: .entered, recordedAt: at))
+    }
+    mutating func setMaxHR(_ bpm: Int?, at: Date = Date()) { maxHR = bpm; setProvenance(.maxHR, bpm == nil ? nil : ValueProvenance(source: .entered, recordedAt: at)) }
+    mutating func setRestHR(_ bpm: Int?, source: ValueSource = .entered, at: Date = Date()) { restHR = bpm; setProvenance(.restHR, bpm == nil ? nil : ValueProvenance(source: source, recordedAt: at)) }
+    /// Applies an Apple Health sample under the precedence rule (newer wins; a dated manual entry is kept while it is newer).
+    /// Returns true when the sample was taken.
+    @discardableResult
+    mutating func apply(healthSample s: HealthSample) -> Bool {
+        let f = s.kind.field
+        guard HealthPrecedence.decide(current: provenance[f.rawValue], sample: s) == .useSample else { return false }
+        let p = ValueProvenance(source: .appleHealth, recordedAt: s.date)
+        switch s.kind {
+        case .weight: weightKg = s.value
+        case .restingHR: restHR = Int(s.value.rounded())
+        case .hrv: hrvMs = s.value
+        case .sleep: sleepHours = s.value
+        }
+        setProvenance(f, p)
+        return true
+    }
     /// Marks a rider-made change: bumps the sync version and the timestamp.
     mutating func touch(now: Date = Date()) { version &+= 1; if version == 0 { version = 1 }; updatedAt = now }
     static func differIgnoringVersion(_ a: RiderProfile, _ b: RiderProfile) -> Bool {
@@ -154,11 +209,11 @@ struct RiderProfile: Codable, Equatable {
         goal = (try? c.decodeIfPresent(Goal.self, forKey: .goal)) ?? .endurance
         hoursPerWeek = try c.decodeIfPresent(Int.self, forKey: .hoursPerWeek) ?? 5
         level = (try? c.decodeIfPresent(Level.self, forKey: .level)) ?? .intermediate
-        weightKg = try c.decodeIfPresent(Double.self, forKey: .weightKg) ?? 75
+        weightKg = try c.decodeIfPresent(Double.self, forKey: .weightKg)
         heightCm = try c.decodeIfPresent(Int.self, forKey: .heightCm)
         maxHR = try c.decodeIfPresent(Int.self, forKey: .maxHR)
-        age = try c.decodeIfPresent(Int.self, forKey: .age) ?? 35
-        ftpW = try c.decodeIfPresent(Int.self, forKey: .ftpW) ?? 225
+        age = try c.decodeIfPresent(Int.self, forKey: .age)
+        ftpW = try c.decodeIfPresent(Int.self, forKey: .ftpW) ?? 0
         ftpHow = (try? c.decodeIfPresent(FTPHow.self, forKey: .ftpHow)) ?? .assumed
         hrPrefWatchFirst = try c.decodeIfPresent(Bool.self, forKey: .hrPrefWatchFirst) ?? false
         ftpFromDate = try c.decodeIfPresent(Date.self, forKey: .ftpFromDate)
@@ -201,6 +256,9 @@ struct RiderProfile: Codable, Equatable {
         confirmStrengthLevel = try? c.decodeIfPresent(Bool.self, forKey: .confirmStrengthLevel)
         trainingPause = try? c.decodeIfPresent(TrainingPause.self, forKey: .trainingPause)
         pauseHistory = (try? c.decodeIfPresent([DateInterval].self, forKey: .pauseHistory)) ?? []
+        provenance = (try? c.decodeIfPresent([String: ValueProvenance].self, forKey: .provenance)) ?? [:]
+        hrvMs = try? c.decodeIfPresent(Double.self, forKey: .hrvMs)
+        sleepHours = try? c.decodeIfPresent(Double.self, forKey: .sleepHours)
         // a goal saved under a merged name keeps its original value (r7: "Aerobic fitness" → Endurance)
         if legacyGoal == nil, let raw = ((try? c.decodeIfPresent([String].self, forKey: .goals)) ?? nil)?.first(where: { GoalID(rawValue: $0) == nil && GoalID(legacy: $0) != nil }) { legacyGoal = raw }
     }
@@ -210,7 +268,10 @@ struct RiderProfile: Codable, Equatable {
     func linkMessage(units: AppSettings.Units) -> BCLink.ProfileMessage {
         var m = BCLink.ProfileMessage()
         m.version = version; m.updatedEpochS = UInt32(clamping: Int(updatedAt.timeIntervalSince1970))
-        m.name = name; m.ftpW = ftpKnown ? ftpW : 0; m.ftpHow = ftpHow.linkCode;   /* RC3 / ENG-E1: unknown FTP is sent as 0 (never an invented value) */ m.weightKgX10 = Int((weightKg * 10).rounded())
+        // S2-0: an unknown value is sent as the protocol's 0 ("not set"), never a derived or sample number. (The board of
+        // firmware ≤ 0.7.x then computes its OWN starting FTP from weight × experience — CR-04; a firmware correction is
+        // specified separately. With weight 0 it cannot even do that.)
+        m.name = name; m.ftpW = ftpKnown ? ftpW : 0; m.ftpHow = ftpKnown ? ftpHow.linkCode : 0; m.weightKgX10 = weightKg.map { Int(($0 * 10).rounded()) } ?? 0
         m.birthYear = birthYear ?? 0; m.maxHR = maxHR ?? 0; m.restHR = restHR ?? 0; m.units = units == .imperial ? 1 : 0
         m.hoursPerWeek = hoursPerWeek; m.level = level.linkCode; m.goal = goal.linkCode; m.lthr = lthr ?? 0
         return m
@@ -222,7 +283,7 @@ struct RiderProfile: Codable, Equatable {
         let n = name.trimmingCharacters(in: .whitespaces)
         if n.isEmpty || n.utf8.count > 24 { out.append("Name must be 1–24 characters") }
         if ftpW != 0, !(50...600).contains(ftpW) { out.append("FTP must be 50–600 W") }
-        if !(30...200).contains(weightKg) { out.append("Weight must be 30–200 kg") }
+        if let w = weightKg, !(30...200).contains(w) { out.append("Weight must be 30–200 kg") }
         if let b = birthYear, !(1900...2030).contains(b) { out.append("Birth year must be 1900–2030") }
         if let m = maxHR, !(100...230).contains(m) { out.append("Max heart rate must be 100–230 bpm") }
         if let r = restHR { if !(25...120).contains(r) { out.append("Resting heart rate must be 25–120 bpm") }; if let m = maxHR, r >= m { out.append("Resting heart rate must be below max heart rate") } }
@@ -236,21 +297,23 @@ struct RiderProfile: Codable, Equatable {
         func add(_ f: String, _ phone: String, _ board: String) { if phone != board { out.append(ProfileDifference(field: f, phone: phone, board: board)) } }
         if let n = b.name { add("Name", name, n) }
         if let v = b.ftpW, ftpKnown { add("FTP", "\(ftpW) W (\(ftpHow.label))", "\(v) W (\(FTPHow.from(linkCode: b.ftpHow ?? 0).label))") }   // RC3: an unknown phone FTP is not a difference (the board keeps its own starting value, CR-04)
-        if let v = b.weightKgX10 { add("Weight", String(format: "%.1f kg", weightKg), String(format: "%.1f kg", Double(v) / 10)) }
+        if let v = b.weightKgX10 { add("Weight", weightKg.map { String(format: "%.1f kg", $0) } ?? "not set", v > 0 ? String(format: "%.1f kg", Double(v) / 10) : "not set") }
         if let v = b.birthYear { add("Birth year", birthYear.map(String.init) ?? "not set", "\(v)") } else if birthYear != nil { add("Birth year", "\(birthYear!)", "not set") }
-        if let v = b.maxHR { add("Max heart rate", maxHR.map { "\($0) bpm" } ?? "estimated", "\(v) bpm") } else if let m = maxHR { add("Max heart rate", "\(m) bpm", "estimated") }
+        if let v = b.maxHR { add("Max heart rate", maxHR.map { "\($0) bpm" } ?? (maxHRForZones != nil ? "estimated" : "not set"), v > 0 ? "\(v) bpm" : "not set") } else if let m = maxHR { add("Max heart rate", "\(m) bpm", "not set") }
         if let v = b.hoursPerWeek { add("Hours per week", "\(hoursPerWeek) h", "\(v) h") }
         if let v = b.level { add("Experience", level.title, Level.from(linkCode: v).title) }
         if let v = b.goal { add("Goal", Goal.from(linkCode: goal.linkCode).title, Goal.from(linkCode: v).title) }
         if let v = b.units { add("Units", units == .imperial ? "mi, ft" : "km, m", v == 1 ? "mi, ft" : "km, m") }
         return out
     }
-    /// Coggan zones from FTP: 55/75/90/105/120/150 %
+    /// Coggan zones from FTP: 55/75/90/105/120/150 %. Empty when the FTP is Unknown (S2-0: no zones from no FTP).
     var powerZones: [(lo: Int, hi: Int?)] {
+        guard ftpKnown else { return [] }
         let f = Double(ftpW); let b = [0.55, 0.75, 0.90, 1.05, 1.20, 1.50].map { Int((f * $0).rounded()) }
         return [(0, b[0]), (b[0], b[1]), (b[1], b[2]), (b[2], b[3]), (b[3], b[4]), (b[4], b[5]), (b[5], nil)]
     }
-    func zone(forWatts w: Int) -> Int { for (i, z) in powerZones.enumerated() where w < (z.hi ?? Int.max) { return i + 1 }; return 7 }
+    /// 1–7 from a known FTP; 0 = no zone (FTP Unknown).
+    func zone(forWatts w: Int) -> Int { let z = powerZones; guard !z.isEmpty else { return 0 }; for (i, zz) in z.enumerated() where w < (zz.hi ?? Int.max) { return i + 1 }; return 7 }
 }
 
 // MARK: - Plan
@@ -490,7 +553,11 @@ struct RideRecord: Codable, Identifiable, Equatable {
     var avgPower: Int?; var maxPower: Int?; var normalizedPower: Int?
     var avgCadence: Int?
     var avgHR: Int?; var maxHR: Int?
+    /// Work from power in kJ (board / phone recordings). S2-0: NEVER holds Apple Health active energy (GR-45) — see `energy`.
     var kj: Int?
+    /// S2-0: the energy figure with its unit and source. nil on older files → derived: `kj` of a board/phone ride is work
+    /// from power; a Health-imported ride's `kj` was active kcal × 4.184 (build ≤ 127) and is converted back by migration v4.
+    var energy: EnergyValue? = nil
     var zoneSeconds: [Int] = Array(repeating: 0, count: 7)
     var recorder: Recorder
     var sources: [String]
@@ -531,6 +598,12 @@ struct RideRecord: Codable, Identifiable, Equatable {
     }
     var hasPower: Bool { avgPower != nil }
     var hasTrack: Bool { samples.contains { $0.lat != nil } }
+    /// The energy to show: explicit record, else work from power for a ride this app or the board recorded (never for an import).
+    var energyShown: EnergyValue? {
+        if let e = energy { return e }
+        guard recorder != .health, let k = kj else { return nil }
+        return EnergyValue(kind: .workFromPowerKJ, value: k)
+    }
 }
 
 // MARK: - Settings
@@ -560,6 +633,9 @@ struct AppSettings: Codable, Equatable {
     /// 0.6.0: import cycling + strength workouts from Apple Health when the rider asks (and on launch while on).
     var appleHealthImportWorkouts = false
     var lastHealthImport: Date? = nil
+    /// S2-0 / §5: optional Apple Health reads (weight, resting HR, HRV, sleep) the athlete turned on, and the last read.
+    var healthReads: HealthReadSettings = HealthReadSettings()
+    var lastHealthRead: Date? = nil
     /// Cyclift 1.0: Bluetooth sensors paired directly with this phone (heart rate, power, speed/cadence), by peripheral id.
     var bleSensors: [PairedSensor] = []
     /// Cyclift 1.0: the live ride layout (Ride › settings or the quick switch on the ride screen). Presentation only.
@@ -584,6 +660,8 @@ struct AppSettings: Codable, Equatable {
         coachEnabled = try c.decodeIfPresent(Bool.self, forKey: .coachEnabled) ?? true
         appleHealthImportWorkouts = try c.decodeIfPresent(Bool.self, forKey: .appleHealthImportWorkouts) ?? false
         lastHealthImport = try c.decodeIfPresent(Date.self, forKey: .lastHealthImport)
+        healthReads = (try? c.decodeIfPresent(HealthReadSettings.self, forKey: .healthReads)) ?? HealthReadSettings()
+        lastHealthRead = try? c.decodeIfPresent(Date.self, forKey: .lastHealthRead)
         bleSensors = (try? c.decodeIfPresent([PairedSensor].self, forKey: .bleSensors)) ?? []
         rideLayout = (try? c.decodeIfPresent(RideLayout.self, forKey: .rideLayout)) ?? .coach
         autoAdapt = (try? c.decodeIfPresent(Bool.self, forKey: .autoAdapt)) ?? true
@@ -612,7 +690,7 @@ extension UUID: @retroactive Identifiable { public var id: UUID { self } }
 struct StoreFile: Codable, Equatable {
     /// 2 = quality release: explicit workout completion states, soft-delete trash, strength preferences (migrateV2).
     /// 3 = RC3: FTP source (assumed → Unknown), goals with a primary, strength level / session length flags, plan versions.
-    static let currentSchema = 3
+    static let currentSchema = 4
     var schema = StoreFile.currentSchema
     var profile = RiderProfile()
     var settings = AppSettings()
@@ -734,6 +812,7 @@ struct StoreFile: Codable, Equatable {
         if f.rides.contains(where: { $0.zoneSeconds.count != 7 }) { for i in f.rides.indices where f.rides[i].zoneSeconds.count != 7 { f.rides[i].zoneSeconds = Array(repeating: 0, count: 7) } }
         if f.schema < 2 { f = StoreMigration.v2(f, now: now, calendar: calendar) }
         if f.schema < 3 { f = StoreMigration.v3(f, now: now, calendar: calendar) }
+        if f.schema < 4 { f = StoreMigration.v4(f, now: now, calendar: calendar) }
         return f
     }
 }
@@ -837,7 +916,7 @@ final class Store: ObservableObject {
         UITestSupport.prepareStoreDirectory(dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var migrated = false, rc3Migrated = false
-        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { let m = StoreFile.migrate(f); migrated = f.schema < 2; rc3Migrated = f.schema < 3; apply(m) }
+        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { let m = StoreFile.migrate(f); migrated = f.schema < 2; rc3Migrated = f.schema < 4; apply(m) }
         else if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
         loading = false
         purgeTrash()
@@ -1265,11 +1344,12 @@ final class Store: ObservableObject {
     /// Imports a ride that Apple Health knows about and the phone/board do not (start ±2 min, similar duration). Source
     /// "Apple Health"; no power, cadence or samples are invented.
     @discardableResult
-    func importHealthRide(start: Date, durationS: Int, distanceM: Int?, kj: Int?, avgHR: Int?, healthUUID: String) -> Bool {
+    func importHealthRide(start: Date, durationS: Int, distanceM: Int?, activeKcal: Int?, avgHR: Int?, healthUUID: String) -> Bool {
         if rides.contains(where: { $0.healthUUID == healthUUID }) { return false }
         if rides.contains(where: { abs($0.start.timeIntervalSince(start)) <= 120 && abs($0.durationS - durationS) <= max(60, durationS / 10) }) { return false }
         var r = RideRecord(start: start, durationS: durationS, distanceM: distanceM ?? 0, recorder: .health, sources: ["Apple Health"])
-        r.kj = kj; r.avgHR = avgHR; r.healthUUID = healthUUID
+        // S2-0 (GR-45): Apple Health's active energy stays kcal and is labelled an estimate; `kj` (work from power) stays nil
+        r.energy = activeKcal.map { EnergyValue(kind: .activeKcalAppleHealth, value: $0) }; r.avgHR = avgHR; r.healthUUID = healthUUID
         let at = rides.firstIndex { $0.start < r.start } ?? rides.count
         rides.insert(r, at: at)
         return true
@@ -1334,7 +1414,7 @@ final class Store: ObservableObject {
         r.boardRideId = b.id; r.boardId = boardId
         if b.startEpochS > 0 { r.start = start }
         r.durationS = b.durationS; r.distanceM = b.distanceM
-        r.avgPower = b.avgPower; r.maxPower = b.maxPower; r.avgCadence = b.avgCadence; r.avgHR = b.avgHR; r.maxHR = b.maxHR; r.kj = b.kj
+        r.avgPower = b.avgPower; r.maxPower = b.maxPower; r.avgCadence = b.avgCadence; r.avgHR = b.avgHR; r.maxHR = b.maxHR; r.kj = b.kj; r.energy = b.kj.map { EnergyValue(kind: .workFromPowerKJ, value: $0) }
         if b.zonesValid { r.zoneSeconds = b.zoneS }
         var src = ["BikeComputer"]
         if b.avgPower != nil { src.append("Power meter") }
@@ -1443,7 +1523,7 @@ enum Coach {
         } else { parts.append("No rides are recorded yet, so the plan starts from your goal, hours and level only.") }
         if !recent.isEmpty { parts.append("This week so far: \(Fmt.duration(seconds: recent.reduce(0) { $0 + $1.durationS })) in \(recent.count) ride\(recent.count == 1 ? "" : "s") of your \(s.profile.hoursPerWeek) h.") }
         parts.append("Goal: \(s.profile.goal.title.lowercased()); level: \(s.profile.level.title.lowercased()).")
-        if s.profile.ftpHow == .assumed { parts.append("Targets use a provisional FTP of \(s.profile.ftpW) W; they will tighten once a real 20-minute effort is recorded.") }
+        if !s.profile.ftpKnown { parts.append("FTP is unknown: targets use effort and heart rate. Enter your FTP or ride a steady 20-minute effort to get watt targets.") }
         parts.append("No sleep, HRV or recovery source is connected, so recovery is not part of this recommendation.")
         return parts.joined(separator: " ")
     }
@@ -1468,15 +1548,16 @@ enum Coach {
         case .recoveryDay: out += "Recovery day: light movement, early night."
         default: out += "Today: \(t.kind.title.lowercased()), \(Fmt.duration(minutes: t.minutes))."
         }
-        if s.profile.ftpHow == .assumed { out += " Your FTP is still an assumption; a steady 20-minute effort in a real ride will replace it." }
+        if !s.profile.ftpKnown { out += " Your FTP is unknown; a steady 20-minute effort in a real ride can estimate it." }
         return out
     }
     static func rideSummary(_ r: RideRecord, profile p: RiderProfile) -> String {
         guard let avg = r.avgPower else { return "Recorded on the phone without a power meter: distance and time are real, no power analysis is possible. Connect the BikeComputer for watts." }
-        let z = p.zone(forWatts: avg)
-        var s = "Average \(avg) W is Zone \(z) for your FTP of \(p.ftpW) W (\(p.ftpLabel))."
+        var s: String
+        if p.ftpKnown { s = "Average \(avg) W is Zone \(p.zone(forWatts: avg)) for your FTP of \(p.ftpW) W (\(p.ftpLabel))." }
+        else { s = "Average \(avg) W. No zone: your FTP is unknown." }
         if let hr = r.avgHR { s += String(format: " Efficiency %.2f W per beat.", Double(avg) / Double(hr)) }
-        if r.durationS >= 1200, p.ftpHow == .assumed { s += " No qualifying 20-minute effort yet (needs a steady block clearly harder than the rest)." }
+        if r.durationS >= 1200, !p.ftpKnown { s += " No qualifying 20-minute effort yet (needs a steady block clearly harder than the rest)." }
         return s
     }
 }

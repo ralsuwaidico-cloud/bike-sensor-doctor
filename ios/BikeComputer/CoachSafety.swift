@@ -275,9 +275,10 @@ enum RecoveryCapacity: String, Codable, CaseIterable {
 
 /// Programming adjustments from age and stated recovery capacity. One place, read by the planner and the week builder.
 struct RecoveryProfile: Equatable {
-    var age: Int
+    /// nil = age unknown (S2-0): no age-based reduction is applied, and no age is quoted.
+    var age: Int?
     var capacity: RecoveryCapacity
-    var older: Bool { age >= 60 }
+    var older: Bool { (age ?? 0) >= 60 }
     var reduced: Bool { older || capacity == .low }
     /// Weekly working sets multiplier.
     var volumeFactor: Double { (older && capacity == .low) ? 0.7 : reduced ? 0.8 : (capacity == .high ? 1.1 : 1.0) }
@@ -287,8 +288,8 @@ struct RecoveryProfile: Equatable {
     var minHoursSameMuscles: Int { reduced ? 72 : 48 }
     var reason: String? {
         switch (older, capacity) {
-        case (true, .low): return "you are \(age) and said you recover slower than most"
-        case (true, _): return "you are \(age); recovery between sessions takes longer with age"
+        case (true, .low): return "you are \(age ?? 0) and said you recover slower than most"
+        case (true, _): return "you are \(age ?? 0); recovery between sessions takes longer with age"
         case (false, .low): return "you said you recover slower than most"
         case (false, .high): return "you said you recover faster than most"
         default: return nil

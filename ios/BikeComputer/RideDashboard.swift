@@ -150,16 +150,18 @@ final class RideCoach: ObservableObject {
         c.mode = s.coachEnabled ? (iv != nil ? .INTERVAL : .ZONE2) : .FREE
         let z = min(5, max(1, ride?.kind.zone ?? 2))
         c.targetPowerZone = z; c.targetHrZone = z
-        c.ftpW = p.ftpW; c.maxHr = p.estimatedMaxHR
+        c.ftpW = p.ftpKnown ? p.ftpW : 0; c.maxHr = p.maxHRForZones ?? 0     // S2-0: 0 = unknown → CoachCore gives no zone / no cue from it
         c.cadenceLow = p.cadenceLow; c.cadenceHigh = p.cadenceHigh
         // audit G-05: watts drive zone cues only when the power reading is verified (hub quality .good, which follows
         // `PowerTrust.meterVerified`). Unverified power — every meter in this build — coaches like an assumed FTP:
         // heart rate when there is a strap, otherwise "hold your own steady output" without claiming a zone.
         c.ftpAssumed = p.ftpHow == .assumed || !powerTrusted
         // audit G-21: the rider's own HR zones (LTHR method included), as fractions of the max HR the engine uses
-        let maxHr = Double(max(1, p.estimatedMaxHR))
-        let bounds = p.hrZones.compactMap { $0.hi }.map { Double($0) / maxHr }
-        if bounds.count == 4 { c.hrZoneBounds = bounds }
+        if let mh = p.maxHRForZones, let zones = p.hrZones {
+            let maxHr = Double(max(1, mh))
+            let bounds = zones.compactMap { $0.hi }.map { Double($0) / maxHr }
+            if bounds.count == 4 { c.hrZoneBounds = bounds }
+        }
         c.powerCoaching = true
         c = c.withFrequency(s.coachTalk == .quiet ? .quiet : s.coachTalk == .frequent ? .frequent : .normal)
         engine.config = c
@@ -170,7 +172,7 @@ final class RideCoach: ObservableObject {
         plannedSec = ride.map { $0.minutes * 60 }
         self.powerTrusted = powerTrusted
         // RC3 / ENG-E1: an Unknown FTP draws no power band (reference only); the coach already treats it as assumed above
-        bands = GraphBands.resolve(targets: nil, ftpW: p.ftpKnown ? p.ftpW : 0, powerTrusted: powerTrusted, maxHr: p.estimatedMaxHR, targetZone: z, cadLo: p.cadenceLow, cadHi: p.cadenceHigh)
+        bands = GraphBands.resolve(targets: nil, ftpW: p.ftpKnown ? p.ftpW : 0, powerTrusted: powerTrusted, maxHr: p.maxHRForZones ?? 0, targetZone: z, cadLo: p.cadenceLow, cadHi: p.cadenceHigh)
     }
     func reset() { engine.reset(); gate.reset(); cue = .none; cueAt = nil; samples = []; cooldownRequestedAtMs = nil; mainStartSec = nil; phase = .WARMUP }
     func requestCooldown(elapsedS: Int) { cooldownRequestedAtMs = Int64(elapsedS) * 1000 }

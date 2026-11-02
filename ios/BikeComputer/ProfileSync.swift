@@ -109,11 +109,14 @@ final class ProfileSync: ObservableObject {
         guard let s = store, let b = device?.boardProfile else { return }
         var p = s.profile
         if let n = b.name, !n.isEmpty { p.name = n }
-        if let v = b.ftpW, v > 0 { p.ftpW = v; p.ftpHow = RiderProfile.FTPHow.from(linkCode: b.ftpHow ?? 1) }
-        if let v = b.weightKgX10 { p.weightKg = Double(v) / 10 }
-        if let v = b.birthYear { p.birthYear = v }
-        if let v = b.maxHR { p.maxHR = v }
-        if let v = b.restHR { p.restHR = v }
+        // S2-0: the board cannot say where its values came from (firmware ≤ 0.7.x invents a starting FTP) → every adopted
+        // value is kept as unverified legacy data to confirm, never relabelled as entered; 0 = not set on the board.
+        let at = Date()
+        if let v = b.ftpW, v > 0 { p.ftpW = v; p.ftpHow = RiderProfile.FTPHow.from(linkCode: b.ftpHow ?? 1); if p.ftpHow == .assumed { p.ftpHow = .entered }; p.setProvenance(.ftp, .legacy(at)) }
+        if let v = b.weightKgX10, v > 0 { p.weightKg = Double(v) / 10; p.setProvenance(.weight, .legacy(at)) }
+        if let v = b.birthYear, v > 1900 { p.birthYear = v; p.setProvenance(.dateOfBirth, .legacy(at)) }
+        if let v = b.maxHR, v > 0 { p.maxHR = v; p.setProvenance(.maxHR, .legacy(at)) }
+        if let v = b.restHR, v > 0 { p.restHR = v; p.setProvenance(.restHR, .legacy(at)) }
         if let v = b.hoursPerWeek, v > 0 { p.hoursPerWeek = v }
         if let v = b.level { p.level = RiderProfile.Level.from(linkCode: v) }
         if let v = b.goal {
