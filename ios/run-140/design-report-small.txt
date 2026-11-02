@@ -1,0 +1,6 @@
+AX3-light page 0: 0 controls checked, 0 texts outside the window
+AX3-light page 1: 12 controls checked, 0 texts outside the window
+AX3-light: 2 pages
+AX3-dark page 0: 0 controls checked, 0 texts outside the window
+AX3-dark page 1: 8 controls checked, 0 texts outside the window
+AX3-dark: 2 pages

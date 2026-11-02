@@ -1,2 +1,21 @@
-BikeComputer iOS CI — run 140 — scope quick — jobs: quick=abandoned test=skipped release=skipped testflight=skipped
-commit 46bcb63c2fd4a26790da1b9e4227e44073635483  branch ios/s2  job failure
+BikeComputer iOS CI — run 140 — scope quick — jobs: quick=success test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 140 — 2026-11-02 21:39 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 5m44s
+RESULT tests: ok (Executed 509 tests, with 0 failures) · 13m24s
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m34s
+  layout small (AX3): ok · 26m24s
+  layout standard (L): ok · 10m54s
+RESULT layout audit: ok (82 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 60m49s
+commit 46bcb63c2fd4a26790da1b9e4227e44073635483  branch ios/s2  job success
