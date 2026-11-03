@@ -274,7 +274,12 @@ final class JourneyTests: XCTestCase {
         let a = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.6 : 0.35)), b = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.35 : 0.6))
         a.press(forDuration: 0.05, thenDragTo: b); _ = app.waitUntilSettled(timeout: 2)
     }
-    private func tapVisible(_ app: XCUIApplication, _ e: XCUIElement) -> Bool { reveal(app, e); return e.tapWhenSettled() }
+    private func tapVisible(_ app: XCUIApplication, _ e: XCUIElement) -> Bool {
+        reveal(app, e)
+        // run 152: on the first (cold, slowest) journey the type card did not hold still for 5 s; the rest of that journey
+        // passed — allow 10 s, like the keyboard
+        return e.tapWhenSettled(timeout: 10)
+    }
     private func scrollToTop(_ app: XCUIApplication) { app.swipeDown(); app.swipeDown(); app.swipeDown() }
     private func shot(_ app: XCUIApplication, _ name: String) {
         guard let dir = outDir else { return }
