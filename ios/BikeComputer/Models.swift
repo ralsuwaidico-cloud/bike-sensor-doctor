@@ -1163,6 +1163,9 @@ final class Store: ObservableObject {
             let date = cal.date(byAdding: .day, value: day, to: monday)!
             let existing = old.filter { cal.isDate($0.date, inSameDayAs: date) }
             let keep = existing.filter { $0.done || cal.startOfDay(for: $0.date) < today || ($0.edited && !replaceEdited) }
+            // V1 run 147 (data integrity): a plan created mid-week never writes sessions or "Rest" into days that are
+            // already over — those days were not planned, so nothing is recorded for them.
+            if keep.isEmpty && date < today { continue }
             if keep.isEmpty {
                 // a hand-assigned routine on a replaced strength session carries over to the new session of that day
                 let manual = existing.first { $0.kind == .strength && $0.routineManual && $0.templateId != nil }

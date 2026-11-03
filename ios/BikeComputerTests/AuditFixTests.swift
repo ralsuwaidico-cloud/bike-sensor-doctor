@@ -257,4 +257,25 @@ final class AuditFixTests: XCTestCase {
             XCTAssertFalse(a.fatigue.contains { $0.id == "load-spike" })
         }
     }
+    /// V1 run 147: a plan created mid-week writes nothing — no session, no "Rest" — into days already over; from today on
+    /// the week follows the template, and past days that hold a record keep it.
+    func testRegenerateNeverWritesIntoPastDays() {
+        let store = Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bc-past-\(UUID().uuidString)", isDirectory: true), generatePlan: false)
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: today) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd, to: today)!
+        _ = store.regenerate(weekOf: Date(), replaceEdited: true)
+        let week = store.workouts(weekOf: Date())
+        XCTAssertTrue(week.allSatisfy { cal.startOfDay(for: $0.date) >= today }, "nothing recorded before today: \(week.filter { $0.date < today }.map { "\($0.date) \($0.kind)" })")
+        XCTAssertEqual(Set(week.map { cal.startOfDay(for: $0.date) }).count, 7 - wd, "every day from today to Sunday is planned")
+        // a record that already exists on a past day is kept
+        if wd > 0 {
+            var past = Workout(date: monday, kind: .endurance, minutes: 45); past.done = true
+            store.plan.append(past)
+            _ = store.regenerate(weekOf: Date(), replaceEdited: true)
+            XCTAssertNotNil(store.plan.first { $0.id == past.id }, "a done session on a past day is kept")
+        }
+    }
+
 }

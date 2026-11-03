@@ -74,6 +74,10 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(goal.label.contains("main goal"), "\(p.tag): the first goal is the main goal")
         XCTAssertTrue(app.descendants(matching: .any)["onbGoalEffect"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): the effect line explains the goal")
         sweep(app, stage: "B", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "goal-\(p.goal)", "goalStar-\(p.goal)"])
+        // run 147: the sweep can tap another goal's star and make it the main goal — the persona's main goal is set last
+        let star = app.buttons["goalStar-\(p.goal)"].firstMatch
+        if !goal.label.contains("main goal"), star.exists { XCTAssertTrue(tapVisible(app, star)) }
+        XCTAssertTrue(goal.label.contains("main goal"), "\(p.tag): the persona's main goal is set")
         shotScrolling(app, "\(p.tag)-03-goals")
         XCTAssertTrue(next.isEnabled); scrollToTop(app); XCTAssertTrue(next.tapWhenSettled())
 
@@ -116,7 +120,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertEqual(weekE.map(sport), week.map(sport), "\(p.tag): stage E shows the week built on C")
         let first = app.descendants(matching: .any)["onbFirst"].firstMatch
         XCTAssertTrue(first.waitForExistence(timeout: 5), "\(p.tag): first workout card")
-        let firstLabel = first.label
+        let firstLabel = ([first.label] + first.descendants(matching: .staticText).allElementsBoundByIndex.map(\.label)).joined(separator: " ")   // run 147: the card's texts are its children
         XCTAssertTrue(firstLabel.lowercased().contains("strength") || firstLabel.lowercased().contains("ride") || firstLabel.lowercased().contains("min"), "\(p.tag): first workout names a session")
         XCTAssertTrue(app.descendants(matching: .any)["onbWhy"].firstMatch.exists, "\(p.tag): the approach")
         shotScrolling(app, "\(p.tag)-06-system")
@@ -129,7 +133,8 @@ final class JourneyTests: XCTestCase {
         XCTAssertFalse(app.buttons["onboardingContinue"].exists, "\(p.tag): onboarding is over")
         XCTAssertFalse(app.buttons["homeCaution"].exists, "\(p.tag): no health questionnaire")
         let homeWeek = (0..<7).map { app.descendants(matching: .any)["homeWeekDay-\($0)"].firstMatch.label }
-        XCTAssertEqual(homeWeek.map(sport), weekE.map(sport), "\(p.tag): Home shows the approved week")
+        XCTAssertEqual(fromToday(homeWeek.map(sport)), fromToday(weekE.map(sport)), "\(p.tag): Home shows the approved week from today")
+        XCTAssertTrue(beforeToday(homeWeek.map(sport)).allSatisfy { $0 == "rest" }, "\(p.tag): no session invented for days already over")
         XCTAssertTrue(app.staticTexts["homeTodayTitle"].firstMatch.exists || app.descendants(matching: .any)["homeTodayCard"].firstMatch.exists, "\(p.tag): today's card")
         var seen = 0; while !app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists && seen < 5 { app.swipeUp(); seen += 1 }
         XCTAssertTrue(app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists, "\(p.tag): first-week block (plan counts, goals, next steps)")
@@ -162,7 +167,8 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(app.buttons["Plan"].firstMatch.tapWhenSettled())
         XCTAssertTrue(app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10), "\(p.tag): Plan")
         let planWeek = planSports(app)
-        XCTAssertEqual(planWeek, weekE.map(sport), "\(p.tag): Plan shows the approved week")
+        XCTAssertEqual(fromToday(planWeek), fromToday(weekE.map(sport)), "\(p.tag): Plan shows the approved week from today")
+        XCTAssertTrue(beforeToday(planWeek).allSatisfy { $0 == "rest" }, "\(p.tag): Plan invents nothing for days already over")
         shot(app, "\(p.tag)-09-plan")
 
         // 10 — relaunch: everything persists
@@ -170,14 +176,14 @@ final class JourneyTests: XCTestCase {
         let again = XCUIApplication(); again.launch()
         XCTAssertTrue(again.descendants(matching: .any)["homeWeek"].firstMatch.waitForExistence(timeout: 20), "\(p.tag): relaunch lands on Home")
         XCTAssertFalse(again.buttons["onboardingContinue"].exists, "\(p.tag): no onboarding after relaunch")
-        XCTAssertEqual((0..<7).map { again.descendants(matching: .any)["homeWeekDay-\($0)"].firstMatch.label }.map(sport), weekE.map(sport), "\(p.tag): the week persists")
+        XCTAssertEqual((0..<7).map { again.descendants(matching: .any)["homeWeekDay-\($0)"].firstMatch.label }.map(sport).dropFirst(todayIndex).map { $0 }, fromToday(weekE.map(sport)), "\(p.tag): the week persists")
         XCTAssertTrue(again.buttons["Profile"].firstMatch.tapWhenSettled())
         XCTAssertTrue(again.buttons["profileHeader"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertTrue(again.buttons["profileHeader"].firstMatch.label.contains(p.name), "\(p.tag): name persists")
         XCTAssertTrue(again.buttons["profileWeek"].firstMatch.label.contains("\(trainingDays) day"), "\(p.tag): week persists")
         XCTAssertTrue(again.buttons["Plan"].firstMatch.tapWhenSettled())
         XCTAssertTrue(again.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10))
-        XCTAssertEqual(planSports(again), weekE.map(sport), "\(p.tag): Plan persists")
+        XCTAssertEqual(fromToday(planSports(again)), fromToday(weekE.map(sport)), "\(p.tag): Plan persists")
         shot(again, "\(p.tag)-10-relaunch")
         again.terminate()
     }
@@ -207,6 +213,10 @@ final class JourneyTests: XCTestCase {
         let e = app.descendants(matching: .any)["onbStat-\(name)"].firstMatch
         return e.exists ? (e.value as? String ?? "") : ""
     }
+    /// Week 1 starts on the day the plan is approved (V1 run 147): days before today are compared separately.
+    private var todayIndex: Int { (Calendar.current.component(.weekday, from: Date()) + 5) % 7 }
+    private func fromToday(_ w: [String]) -> [String] { Array(w.dropFirst(todayIndex)) }
+    private func beforeToday(_ w: [String]) -> [String] { Array(w.prefix(todayIndex)) }
     private func goalTitle(_ raw: String) -> String {
         switch raw { case "endurance": return "Endurance"; case "strength": return "Strength"; case "muscle": return "Muscle"; default: return raw }
     }

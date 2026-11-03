@@ -106,7 +106,8 @@ final class OnboardingScreens: XCTestCase {
             XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'deviceState-'")).firstMatch.exists, "\(tag): a real state badge on every card, never a switch")
             shotScrolling(app, "\(tag)-04-ecosystem")
             app.swipeDown(); app.swipeDown(); sleep(1)
-            app.buttons["onboardingSkip"].firstMatch.tap(); sleep(2)
+            // run 147 (standard): a tap sent while the scroll was still settling did not register — wait for idle first
+            XCTAssertTrue(app.buttons["onboardingSkip"].firstMatch.tapWhenSettled()); sleep(2)
             // E — the first dashboard; remember the first workout, then Approve
             XCTAssertTrue(app.staticTexts["Your training system · 5 of 5"].waitForExistence(timeout: 10), "\(tag): stage E counter")
             XCTAssertTrue(app.otherElements["onbDash"].firstMatch.waitForExistence(timeout: 5), "\(tag): dashboard card")
