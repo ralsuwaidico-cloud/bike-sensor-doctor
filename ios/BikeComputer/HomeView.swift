@@ -56,6 +56,7 @@ struct HomeView: View {
                     if h.showWeek, HomeFirstWeekSection.applies(store) {
                         HomeFirstWeekSection(openPlan: { tab = 1 }, openDevices: { tab = 4 }, openProgress: { tab = 3 })
                             .padding(.top, DS.s)
+                            .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("homeFirstWeek")
                     }
                 }

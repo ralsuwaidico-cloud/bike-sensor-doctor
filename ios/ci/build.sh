@@ -318,7 +318,10 @@ case "$STAGE" in
     # QUICK_UI: the UI tests for the screens being changed. Given explicitly (workflow input) it is used as is; otherwise
     # it is computed by tools/ci-targets.py from the files changed since the last green full run (ios/CI_PROCESS.md).
     # Run 126: adding the owner-screens audit and the upgrade smoke to every quick run made it 51 min — targets only.
+    # "[ci ui: A/b C/d]" in the head commit message adds those UI tests to the quick set (a push cannot pass workflow inputs)
+    EXTRA_UI=$(git -C "$ROOT" log -1 --format=%B | sed -n 's/.*\[ci ui: *\([^]]*\)\].*/\1/p' | head -1)
     if [ -z "${QUICK_UI:-}" ]; then QUICK_UI=$(quick_targets); fi
+    [ -n "$EXTRA_UI" ] && QUICK_UI="$QUICK_UI $EXTRA_UI"
     note "Quick UI targets: $QUICK_UI"
     LAYOUT_DEVICES="small,standard"; layout_sims
     if release_products; then

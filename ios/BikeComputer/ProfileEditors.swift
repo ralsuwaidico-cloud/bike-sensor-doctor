@@ -351,6 +351,7 @@ struct WeekBuilder: View {
                     else { Text(proposalLabel).font(CyType.captionSmall).foregroundStyle(CyTheme.ink3) }
                 }
                 .font(CyType.secondary.weight(.semibold))
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("onbWeekCounts")
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: f.ok ? "checkmark.circle.fill" : "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(f.ok ? CyTheme.ok : CyTheme.warn)
@@ -409,6 +410,9 @@ struct WeekBuilder: View {
                 }
                 .padding(12).frame(maxWidth: .infinity, alignment: .leading)
                 .cyCard()
+                // Run 143: without a container the identifier went to the child rows and the preview could not be found
+                // as one element (VoiceOver read it as loose rows). Same pattern as onbEquipment.
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("onbPlanPreview")
             }
         }
