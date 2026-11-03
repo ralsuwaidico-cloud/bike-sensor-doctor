@@ -1,0 +1,10 @@
+Bundle IDs and capabilities:
+  bundle ID com.ralsuwaidico.bikecomputer: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer: already enabled
+  bundle ID com.ralsuwaidico.bikecomputer.watchkitapp: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer.watchkitapp: already enabled
+App Store Connect app record: found
+  build 153: not visible in App Store Connect yet
+  build 153: not visible in App Store Connect yet
+  build 153: not visible in App Store Connect yet
+RESULT testflight: build 153 processed (VALID) — installable by internal testers in TestFlight; What to Test set

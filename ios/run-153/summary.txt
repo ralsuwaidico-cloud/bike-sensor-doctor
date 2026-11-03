@@ -1,4 +1,4 @@
-BikeComputer iOS CI — run 153 — scope full — jobs: quick=skipped test=abandoned release=skipped testflight=skipped
+BikeComputer iOS CI — run 153 — scope full — jobs: quick=skipped test=success release=success testflight=success
 
 ## unit
 BikeComputer iOS CI — build 153 — 2026-11-03 14:02 UTC
@@ -76,6 +76,19 @@ RESULT build (Release, for testing): ok · 9m43s
 RESULT layout audit: ok (12 screenshots)
 Total: 21m2s
 
+## layout-owner
+BikeComputer iOS CI — build 153 — 2026-11-03 15:35 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m21s
+  layout owner (L,XXXL): ok · 35m20s
+RESULT layout audit: ok (66 screenshots)
+Total: 45m1s
+
 ## watch
 BikeComputer iOS CI — build 153 — 2026-11-03 14:20 UTC
 Stage: watch
@@ -85,5 +98,37 @@ RESULT generate: ok · 0m5s
   watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11623   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11999   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12535   screenshot ax3 ok large · 11m29s
 Total: 11m35s
 
-RESULT upload: skipped (tests failed — the release job did not run)
-commit 781a5b1f905821bca9dcfbd50328e911f14c1cfc  branch ios/v1  job failure
+## release
+BikeComputer iOS CI — build 153 — 2026-11-03 16:20 UTC
+Stage: release
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Quick check: none for this tree — override accepted [full-override: one-line timing change in the full-pipeline journeys test; app code identical to runs 148-152; upload still requires every job green]
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc) · 7m1s
+  contains BikeComputer.app 1.0.0 (153) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (153) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 10450065 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: ok — build 153 sent to App Store Connect; TestFlight processing takes about 5-30 minutes (the testflight job reports when it is ready)
+Total: 12m56s
+
+## testflight
+Bundle IDs and capabilities:
+  bundle ID com.ralsuwaidico.bikecomputer: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer: already enabled
+  bundle ID com.ralsuwaidico.bikecomputer.watchkitapp: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer.watchkitapp: already enabled
+App Store Connect app record: found
+  build 153: not visible in App Store Connect yet
+  build 153: not visible in App Store Connect yet
+  build 153: not visible in App Store Connect yet
+RESULT testflight: build 153 processed (VALID) — installable by internal testers in TestFlight; What to Test set
+commit 781a5b1f905821bca9dcfbd50328e911f14c1cfc  branch ios/v1  job success
