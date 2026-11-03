@@ -1,0 +1,125 @@
+=== journey-hybrid: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:48: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertTrue failed - hybrid: stage A
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:49: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"onboardingNext" IN identifiers'`, given input App element pid: 21083
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (138.173 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-03 11:03:27.000.
+	 Executed 3 tests, with 2 tests skipped and 2 failures (0 unexpected) in 148.304 (148.332) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-03 11:03:27.001.
+	 Executed 3 tests, with 2 tests skipped and 2 failures (0 unexpected) in 148.304 (148.334) seconds
+Test Suite 'Selected tests' failed at 2026-11-03 11:03:27.001.
+	 Executed 3 tests, with 2 tests skipped and 2 failures (0 unexpected) in 148.304 (148.342) seconds
+2026-11-03 11:05:01.798 xcodebuild[17883:76134] Logging connection interrupted: <OS_xpc_error: <dictionary: 0x1f240e028> { count = 1, transaction: 0, voucher = 0x0, contents =
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-hybrid: last 150 lines ===
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/BikeComputer_iphonesimulator26.5-arm64-x86_64.xctestrun -destination id=F0C70C77-E423-4478-B648-3D25045B311B "-only-testing:BikeComputerUITests/JourneyTests"
+
+2026-11-03 10:57:53.177 xcodebuild[17883:51089] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-03 10:57:53.197 xcodebuild[17883:51089] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:F0C70C77-E423-4478-B648-3D25045B311B, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:F0C70C77-E423-4478-B648-3D25045B311B, OS:26.5, name:iPhone 17 Pro }
+2026-11-03 10:57:56.473 xcodebuild[17883:51089] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-03 10:57:57.491 xcodebuild[17883:51089] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-03 10:57:58.703 xcodebuild[17883:51089] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-03 11:00:42.178960+0000 BikeComputerUITests-Runner[19781:58516] [Default] Running tests...
+objc[19781]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x108c28310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x108c5c398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+Test Suite 'Selected tests' started at 2026-11-03 11:00:58.660.
+Test Suite 'BikeComputerUITests.xctest' started at 2026-11-03 11:00:58.667.
+Test Suite 'JourneyTests' started at 2026-11-03 11:00:58.668.
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' started.
+    t =     0.00s Start Test at 2026-11-03 11:00:58.671
+    t =     0.47s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testCyclingJourney] : Test skipped - persona cycling not selected
+    t =     0.49s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' skipped (9.512 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' started.
+    t =     0.00s Start Test at 2026-11-03 11:01:08.184
+2026-11-03 11:01:14.150 xcodebuild[17883:51089] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-03 11:01:14.155 xcodebuild[17883:51089] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     0.04s Set Up
+    t =     0.06s Open com.ralsuwaidico.bikecomputer
+    t =     0.06s     Launch com.ralsuwaidico.bikecomputer
+    t =    29.30s         Setting up automation session
+    t =    52.75s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    55.84s Waiting 30.0s for "onboardingContinue" Button to exist
+    t =    56.88s     Checking `Expect predicate `existsNoRetry == 1` for object "onboardingContinue" Button`
+    t =    56.89s         Checking existence of `"onboardingContinue" Button`
+    t =    62.38s Get number of matches for: Descendants matching type TextField
+    t =    63.26s Checking existence of `"onboardingContinue" Button`
+    t =    65.09s Find the "onboardingContinue" Button
+    t =    65.41s Find the "onboardingContinue" Button
+    t =    65.77s Checking existence of `"onboardingContinue" Button`
+    t =    67.82s Find the "onboardingContinue" Button
+    t =    72.18s Find the "onboardingContinue" Button
+    t =    73.67s Find the "onboardingContinue" Button
+    t =    75.98s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (201.0, 413.0)
+    t =    75.99s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    76.03s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    81.77s     Check for interrupting elements affecting "Cyclift" Application
+    t =    93.24s     Synthesize event
+    t =    93.34s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =    97.31s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   103.01s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   104.88s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   104.90s Waiting 10.0s for "Who you are · 1 of 5" StaticText to exist
+    t =   105.90s     Checking `Expect predicate `existsNoRetry == 1` for object "Who you are · 1 of 5" StaticText`
+    t =   105.90s         Checking existence of `"Who you are · 1 of 5" StaticText`
+    t =   107.48s         Capturing element debug description
+    t =   107.91s     Checking `Expect predicate `existsNoRetry == 1` for object "Who you are · 1 of 5" StaticText`
+    t =   107.91s         Checking existence of `"Who you are · 1 of 5" StaticText`
+    t =   108.78s         Capturing element debug description
+    t =   108.90s     Checking `Expect predicate `existsNoRetry == 1` for object "Who you are · 1 of 5" StaticText`
+    t =   108.90s         Checking existence of `"Who you are · 1 of 5" StaticText`
+    t =   110.62s         Capturing element debug description
+    t =   110.95s     Checking `Expect predicate `existsNoRetry == 1` for object "Who you are · 1 of 5" StaticText`
+    t =   110.95s         Checking existence of `"Who you are · 1 of 5" StaticText`
+    t =   111.51s         Capturing element debug description
+    t =   111.97s     Checking `Expect predicate `existsNoRetry == 1` for object "Who you are · 1 of 5" StaticText`
+    t =   111.98s         Checking existence of `"Who you are · 1 of 5" StaticText`
+    t =   115.07s         Capturing element debug description
+    t =   115.08s     Checking existence of `"Who you are · 1 of 5" StaticText`
+    t =   119.63s Collecting debug information to assist test failure triage
+    t =   119.63s     Requesting snapshot of accessibility hierarchy for app with pid 21083
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:48: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertTrue failed - hybrid: stage A
+    t =   125.91s Find the "onboardingNext" Button
+    t =   134.20s     Find the "onboardingNext" Button (retry 1)
+    t =   137.24s     Find the "onboardingNext" Button (retry 2)
+    t =   137.52s     Collecting debug information to assist test failure triage
+    t =   137.52s         Requesting snapshot of accessibility hierarchy for app with pid 21083
+    t =   137.57s     Requesting snapshot of accessibility hierarchy for app with pid 21083
+    t =   137.59s     Requesting snapshot of accessibility hierarchy for app with pid 21083
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:49: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"onboardingNext" IN identifiers'`, given input App element pid: 21083
+    t =   137.63s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (138.173 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' started.
+    t =     0.00s Start Test at 2026-11-03 11:03:26.380
+    t =     0.15s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testStrengthJourney] : Test skipped - persona strength not selected
+    t =     0.25s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' skipped (0.620 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-03 11:03:27.000.
+	 Executed 3 tests, with 2 tests skipped and 2 failures (0 unexpected) in 148.304 (148.332) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-03 11:03:27.001.
+	 Executed 3 tests, with 2 tests skipped and 2 failures (0 unexpected) in 148.304 (148.334) seconds
+Test Suite 'Selected tests' failed at 2026-11-03 11:03:27.001.
+	 Executed 3 tests, with 2 tests skipped and 2 failures (0 unexpected) in 148.304 (148.342) seconds
+2026-11-03 11:04:55.607 xcodebuild[17883:51089] [MT] IDETestOperationsObserverDebug: 419.124 elapsed -- Testing started completed.
+2026-11-03 11:04:55.608 xcodebuild[17883:51089] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-03 11:04:55.608 xcodebuild[17883:51089] [MT] IDETestOperationsObserverDebug: 419.124 sec, +419.124 sec -- end
+2026-11-03 11:05:01.785 xcodebuild[17883:76421] CoreSimulatorService connection interrupted.  Resubscribing to notifications.
+2026-11-03 11:05:01.798 xcodebuild[17883:76134] Logging connection interrupted: <OS_xpc_error: <dictionary: 0x1f240e028> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1f240e190> { string cache = 0x0, length = 22, contents = "Connection interrupted" }
+}>
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-fvkktagcznniwaeliyrezpbintkr/Logs/Test/Test-BikeComputer-2026.11.03_10-57-53-+0000.xcresult
+
+Failing tests:
+	JourneyTests.testHybridJourney()
+	JourneyTests.testHybridJourney()
+
+** TEST EXECUTE FAILED **
+
+Testing started
