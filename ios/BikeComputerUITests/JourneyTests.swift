@@ -48,18 +48,21 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Who you are · 1 of 5"].waitForExistence(timeout: 10), "\(p.tag): stage A")
         XCTAssertFalse(next.isEnabled, "\(p.tag): Continue waits for name + type")
         let name = app.textFields["onbName"].firstMatch
-        XCTAssertTrue(name.waitForExistence(timeout: 5)); name.tap(); name.typeText(p.name)
+        XCTAssertTrue(name.waitForExistence(timeout: 5)); name.tap(); name.typeText(p.name + "\n")
         XCTAssertEqual(app.textFields.matching(NSPredicate(format: "identifier CONTAINS[c] 'name'")).count, 1, "\(p.tag): exactly one name field")
-        if app.keyboards.count > 0 { app.swipeDown() }
+        XCTAssertTrue(app.keyboards.firstMatch.waitUntilGone(timeout: 3), "\(p.tag): Return closes the keyboard")
         let mode = app.buttons["onbMode-\(p.mode)"].firstMatch
-        XCTAssertTrue(mode.waitForExistence(timeout: 5)); XCTAssertTrue(mode.tapWhenSettled())
+        XCTAssertTrue(mode.waitForExistence(timeout: 5)); XCTAssertTrue(tapVisible(app, mode))
         XCTAssertTrue(app.buttons["onbDOB"].firstMatch.label.lowercased().contains("not set"), "\(p.tag): date of birth is empty, never pre-filled")
         XCTAssertFalse(app.staticTexts["Height"].exists, "\(p.tag): height is not asked")
         // experience chips exist for the chosen sports; pick the second option where offered so Profile can prove it
+        // every button on the stage does something (this taps the other training types too) — then the persona's own
+        // choices are made last, so the answers carried to Profile are the persona's
+        sweep(app, stage: "A", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "onbName", "onbDOBDone"])
+        XCTAssertTrue(tapVisible(app, mode))
         if p.mode != "strength" { pickChip(app, group: "onbCyclingLevel", index: 1, tag: p.tag) }
         if p.mode != "cycling" { pickChip(app, group: "onbStrengthLevel", index: 1, tag: p.tag) }
         if p.mode == "hybrid" { XCTAssertTrue(app.otherElements["onbPriority"].firstMatch.exists, "\(p.tag): priority segment for hybrid") }
-        sweep(app, stage: "A", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "onbName", "onbDOBDone"])
         shotScrolling(app, "\(p.tag)-02-who")
         XCTAssertTrue(next.isEnabled, "\(p.tag): name + type → Continue")
         scrollToTop(app); XCTAssertTrue(next.tapWhenSettled())
@@ -67,7 +70,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Your goals · 2 of 5"].waitForExistence(timeout: 10), "\(p.tag): stage B")
         XCTAssertFalse(next.isEnabled, "\(p.tag): Continue waits for a goal")
         let goal = app.buttons["goal-\(p.goal)"].firstMatch
-        XCTAssertTrue(goal.waitForExistence(timeout: 5)); XCTAssertTrue(goal.tapWhenSettled())
+        XCTAssertTrue(goal.waitForExistence(timeout: 5)); XCTAssertTrue(tapVisible(app, goal))
         XCTAssertTrue(goal.label.contains("main goal"), "\(p.tag): the first goal is the main goal")
         XCTAssertTrue(app.otherElements["onbGoalEffect"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): the effect line explains the goal")
         sweep(app, stage: "B", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "goal-\(p.goal)"])
@@ -80,13 +83,13 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(app.otherElements["onbFeasibility"].firstMatch.exists, "\(p.tag): feasibility line")
         let day3 = app.buttons["cyDay-3"].firstMatch
         XCTAssertTrue(day3.waitForExistence(timeout: 5))
-        let before3 = day3.label; XCTAssertTrue(day3.tapWhenSettled()); XCTAssertNotEqual(day3.label, before3, "\(p.tag): tapping a day cycles its state")
+        let before3 = day3.label; XCTAssertTrue(tapVisible(app, day3)); XCTAssertNotEqual(day3.label, before3, "\(p.tag): tapping a day cycles its state")
         let week = (0..<7).map { app.buttons["cyDay-\($0)"].firstMatch.label }
         if p.expectsRides { bump(app, "onbRideMinutes", tag: p.tag) }
         if p.expectsLifts { bump(app, "onbLiftMinutes", tag: p.tag) }
         if p.expectsLifts, app.otherElements["onbEquipment"].firstMatch.exists {
             let home = app.otherElements["onbEquipment"].firstMatch.buttons["Home"].firstMatch   // the equipment chip (no tab bar in onboarding)
-            if home.exists { XCTAssertTrue(home.tapWhenSettled()); XCTAssertTrue(home.isSelected, "\(p.tag): equipment chip selected") }
+            if home.exists { XCTAssertTrue(tapVisible(app, home)); XCTAssertTrue(home.isSelected, "\(p.tag): equipment chip selected") }
         }
         let preview = app.otherElements["onbPlanPreview"].firstMatch
         var tries = 0; while !preview.exists && tries < 6 { app.swipeUp(); tries += 1 }
@@ -119,7 +122,7 @@ final class JourneyTests: XCTestCase {
         shotScrolling(app, "\(p.tag)-06-system")
         scrollToTop(app); app.swipeUp(); app.swipeUp()
         let approve = app.buttons["onbCreatePlan"].firstMatch
-        XCTAssertTrue(approve.waitForExistence(timeout: 5)); XCTAssertTrue(approve.tapWhenSettled())
+        XCTAssertTrue(approve.waitForExistence(timeout: 5)); XCTAssertTrue(tapVisible(app, approve))
 
         // 7 — Home: the same week, the first workout, the first-week block, no onboarding
         XCTAssertTrue(app.otherElements["homeWeek"].firstMatch.waitForExistence(timeout: 15), "\(p.tag): Home week strip")
@@ -148,7 +151,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(weekRow.label.contains("\(trainingDays) day"), "\(p.tag): week retained — \(trainingDays) training days (\(weekRow.label))")
         if p.expectsLifts { XCTAssertTrue(app.buttons["profileEquipment"].firstMatch.exists, "\(p.tag): equipment row") }
         if p.expectsRides { XCTAssertTrue(app.buttons["profileFTP"].firstMatch.label.contains("Unknown"), "\(p.tag): FTP stays Unknown — nothing invented") }
-        XCTAssertTrue(app.buttons["profileType"].firstMatch.tapWhenSettled())
+        XCTAssertTrue(tapVisible(app, app.buttons["profileType"].firstMatch))
         XCTAssertTrue(app.buttons["onbMode-\(p.mode)"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): type editor shows the stored type")
         XCTAssertTrue(app.buttons["onbMode-\(p.mode)"].firstMatch.isSelected || app.buttons["onbMode-\(p.mode)"].firstMatch.label.contains("selected"), "\(p.tag): the stored type is selected")
         XCTAssertEqual(app.textFields.matching(NSPredicate(format: "identifier CONTAINS[c] 'name'")).count, 0, "\(p.tag): the type editor never asks the name again")
@@ -207,22 +210,25 @@ final class JourneyTests: XCTestCase {
         guard g.waitForExistence(timeout: 5) else { return XCTFail("\(tag): \(group) chips") }
         let b = g.buttons.allElementsBoundByIndex
         guard b.count > index else { return XCTFail("\(tag): \(group) has \(b.count) options") }
-        XCTAssertTrue(b[index].tapWhenSettled()); XCTAssertTrue(b[index].isSelected || b[index].label.contains("selected"), "\(tag): \(group) option \(index) selected")
+        XCTAssertTrue(tapVisible(app, b[index])); XCTAssertTrue(b[index].isSelected || b[index].label.contains("selected"), "\(tag): \(group) option \(index) selected")
     }
     private func bump(_ app: XCUIApplication, _ id: String, tag: String) {
         let row = app.otherElements[id].firstMatch
         guard row.waitForExistence(timeout: 5) else { return XCTFail("\(tag): \(id)") }
         let plus = row.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'increase' OR label CONTAINS[c] 'plus' OR label == '+'")).firstMatch
         guard plus.exists else { return }
-        let before = row.label; XCTAssertTrue(plus.tapWhenSettled()); XCTAssertNotEqual(row.label, before, "\(tag): \(id) stepper changes the value")
+        // run 144: the row's label is its title ("Ride length"); the number is the stepper's accessibility value
+        let values = { row.descendants(matching: .any).allElementsBoundByIndex.compactMap { $0.value as? String }.joined(separator: "|") }
+        let before = values(); XCTAssertTrue(tapVisible(app, plus)); XCTAssertNotEqual(values(), before, "\(tag): \(id) stepper changes the value")
     }
     /// Every button on the stage does something: its own label changes, a selection appears, or the screen's text changes.
     private func sweep(_ app: XCUIApplication, stage: String, tag: String, skip: [String]) {
         let buttons = app.buttons.allElementsBoundByIndex.filter { b in
             let id = b.identifier
             return !id.isEmpty && !skip.contains(id) && (id.hasPrefix("onb") || id.hasPrefix("goal")) }
-        for b in buttons.prefix(12) where b.isHittable {
+        for b in buttons.prefix(12) where b.exists {
             let id = b.identifier
+            reveal(app, b)
             let before = snapshotText(app)
             b.tap()
             _ = app.waitUntilSettled(timeout: 2)
@@ -233,6 +239,23 @@ final class JourneyTests: XCTestCase {
     private func snapshotText(_ app: XCUIApplication) -> String {
         (app.staticTexts.allElementsBoundByIndex.map(\.label) + app.buttons.allElementsBoundByIndex.map { "\($0.label)|\($0.isSelected)" }).joined(separator: "\n")
     }
+    /// Run 144: taps land on the element's centre, so an element under the fixed Continue bar (or the tab bar) received
+    /// the bar's tap instead. Scroll in short drags until the element sits between the header and the bottom bar.
+    private func reveal(_ app: XCUIApplication, _ e: XCUIElement) {
+        let win = app.windows.firstMatch.frame
+        let bar = app.buttons["onboardingNext"].firstMatch
+        for _ in 0..<8 {
+            guard e.exists else { return }
+            let bottom = bar.exists && bar.frame.minY > win.midY ? bar.frame.minY - 8 : win.maxY - 100
+            let top = win.minY + 110
+            if e.frame.maxY > bottom { drag(app, up: true) } else if e.frame.minY < top { drag(app, up: false) } else { return }
+        }
+    }
+    private func drag(_ app: XCUIApplication, up: Bool) {
+        let a = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.6 : 0.35)), b = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: up ? 0.35 : 0.6))
+        a.press(forDuration: 0.05, thenDragTo: b); _ = app.waitUntilSettled(timeout: 2)
+    }
+    private func tapVisible(_ app: XCUIApplication, _ e: XCUIElement) -> Bool { reveal(app, e); return e.tapWhenSettled() }
     private func scrollToTop(_ app: XCUIApplication) { app.swipeDown(); app.swipeDown(); app.swipeDown() }
     private func shot(_ app: XCUIApplication, _ name: String) {
         guard let dir = outDir else { return }
