@@ -1,0 +1,88 @@
+L home planned: nothing wider than the screen
+L home planned: 19 texts, none overlapping
+L home planned: primary 'Start workout' at 252–302 of 852
+L home planned: key controls homePrimary 329×49, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44, homeCoachAction 64×44
+L progress glance: nothing wider than the screen
+L progress glance: 20 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 39 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 17 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 42 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 17 texts, none overlapping
+L riding 12 wk: 6 date labels, smallest gap 15 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 19 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 19 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 18 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 43 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 17 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 19 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 45 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 17 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 18 texts, none overlapping
+L: FTP badge not found
+L plan: nothing wider than the screen
+L plan: 41 texts, none overlapping
+L fix plan: nothing wider than the screen
+L fix plan: 2 texts, none overlapping
+L fix plan preview: nothing wider than the screen
+L fix plan preview: 14 texts, none overlapping
+L: Undo toast already expired
+L: Fix plan 'Shorten Tue strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+L plan after fix and undo: nothing wider than the screen
+L plan after fix and undo: 31 texts, none overlapping
+L fix plan after undo: nothing wider than the screen
+L fix plan after undo: 2 texts, none overlapping
+L plan lower: nothing wider than the screen
+L plan lower: 31 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 31 texts, none overlapping
+L: Devices & Connections rows not found
+XXXL progress glance: nothing wider than the screen
+XXXL progress glance: 17 texts, none overlapping
+XXXL riding 4 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 4 wk: nothing wider than the screen
+XXXL riding 4 wk: 11 texts, none overlapping
+XXXL riding 8 wk: 4 date labels, smallest gap 31 pt
+XXXL riding 8 wk: nothing wider than the screen
+XXXL riding 8 wk: 11 texts, none overlapping
+XXXL riding 12 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 12 wk: nothing wider than the screen
+XXXL riding 12 wk: 11 texts, none overlapping
+XXXL riding 16 wk: 4 date labels, smallest gap 30 pt
+XXXL riding 16 wk: nothing wider than the screen
+XXXL riding 16 wk: 11 texts, none overlapping
+XXXL riding 1 yr: 4 date labels, smallest gap 32 pt
+XXXL riding 1 yr: nothing wider than the screen
+XXXL riding 1 yr: 11 texts, none overlapping
+XXXL riding selected: nothing wider than the screen
+XXXL riding selected: 12 texts, none overlapping
+XXXL strength 8 wk: 4 date labels, smallest gap 34 pt
+XXXL strength 8 wk: nothing wider than the screen
+XXXL strength 8 wk: 11 texts, none overlapping
+XXXL strength selected: nothing wider than the screen
+XXXL strength selected: 10 texts, none overlapping
+XXXL: FTP badge not found
+XXXL plan: nothing wider than the screen
+XXXL plan: 33 texts, none overlapping
+XXXL fix plan: nothing wider than the screen
+XXXL fix plan: 2 texts, none overlapping
+XXXL fix plan preview: nothing wider than the screen
+XXXL fix plan preview: 12 texts, none overlapping
+XXXL: Undo toast already expired
+XXXL: Fix plan 'Shorten Tue strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+XXXL plan after fix and undo: nothing wider than the screen
+XXXL plan after fix and undo: 22 texts, none overlapping
+XXXL fix plan after undo: nothing wider than the screen
+XXXL fix plan after undo: 2 texts, none overlapping
+XXXL plan lower: nothing wider than the screen
+XXXL plan lower: 24 texts, none overlapping
+XXXL plan lower 2: nothing wider than the screen
+XXXL plan lower 2: 22 texts, none overlapping
+XXXL: Devices & Connections rows not found
