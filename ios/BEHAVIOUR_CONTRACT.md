@@ -167,6 +167,20 @@ properties (`profile`, `plan`, `rides`, `strength`, `availability`, `equipment`,
 
 ---
 
+## W12 · Days before a plan's effective start (approved by owner 3 Nov 10:27 Dubai — NOT yet implemented)
+
+| | Contract |
+|---|---|
+| User sees | Days of week 1 before the approved plan's effective start date show a neutral, muted dash — never the moon/rest icon unless a rest day was actually recorded. Accessible description: "Before this plan started." |
+| Interaction → result | Display only; nothing to tap. |
+| Data changed | None. `regenerate` already writes nothing into past days (run 147 fix); genuine historical workouts and recorded events on those days are kept and shown as they are. |
+| Counting | These days never count as scheduled rest, missed sessions, adherence or completed training. |
+| Screens / devices updated | Home week strip, Plan day strip and day list, Progress (weekly cards, adherence), training history — the same distinction everywhere. |
+| Verifying tests | To be written with the implementation: host test for the pre-start state and counting rules; layout/UI checks on Home, Plan, Progress and history (SE at AX3 + standard). |
+| Known deviations today | Home and Plan show the moon on pre-start days (presentation only; no data written). Scheduled for the next implementation checkpoint after the V1 installable build — not part of the V1 blocker set. |
+
+---
+
 ## Outdated-test candidates (expectations that contradict this contract — listed, NOT changed)
 
 | Test | Level | Contradiction | What the contract-conformant test would assert |
