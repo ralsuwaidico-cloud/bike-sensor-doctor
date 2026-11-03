@@ -58,7 +58,7 @@ final class JourneyTests: XCTestCase {
         // experience chips exist for the chosen sports; pick the second option where offered so Profile can prove it
         // every button on the stage does something (this taps the other training types too) — then the persona's own
         // choices are made last, so the answers carried to Profile are the persona's
-        sweep(app, stage: "A", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "onbName", "onbDOBDone"])
+        sweep(app, stage: "A", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "onbName", "onbDOBDone", "onbMode-\(p.mode)"])   // run 151: re-selecting the chosen type correctly changes nothing
         XCTAssertTrue(tapVisible(app, mode))
         if p.mode != "strength" { pickChip(app, group: "onbCyclingLevel", index: 1, tag: p.tag) }
         if p.mode != "cycling" { pickChip(app, group: "onbStrengthLevel", index: 1, tag: p.tag) }
@@ -252,7 +252,7 @@ final class JourneyTests: XCTestCase {
             b.tap()
             _ = app.waitUntilSettled(timeout: 2)
             let after = snapshotText(app)
-            XCTAssertNotEqual(before, after, "\(tag) stage \(stage): button \(id) did nothing")
+            XCTAssertTrue(before != after, "\(tag) stage \(stage): button \(id) did nothing")   // run 151: id first — the CI digest cut the long text comparison
         }
     }
     private func snapshotText(_ app: XCUIApplication) -> String {

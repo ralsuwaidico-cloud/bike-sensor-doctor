@@ -136,6 +136,9 @@ twb() {
 record_journey() {
   # run 148: macOS bash 3.2 expands every word of one `local` line before assigning any, so $persona was unbound here
   local persona="$1"; local LT=$SECONDS; local raw="$LAYOUT/journey-$persona-raw.mp4"; local out="$LAYOUT/journey-$persona.mp4"
+  # run 151: the first journey started while the simulator was still booting (Apple logo for > 1 min in the recording,
+  # the app's first screen came too late) — boot fully first, then record
+  xcrun simctl bootstatus "$SIM" -b > /dev/null 2>&1 || true
   xcrun simctl io "$SIM" recordVideo --codec h264 --force "$raw" > "$OUT/record-$persona.log" 2>&1 &
   local rec=$!
   sleep 3
