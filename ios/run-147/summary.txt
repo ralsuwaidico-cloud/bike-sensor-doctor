@@ -1,0 +1,19 @@
+BikeComputer iOS CI — run 147 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 147 — 2026-11-03 05:06 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m12s
+RESULT tests: ok (Executed 527 tests, with 0 failures) · 8m32s
+  no last-green commit known — default quick set
+Quick UI targets: LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages DesignSystemAudit/testGalleryLightAndDark JourneyTests/testHybridJourney
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 6m41s
+  layout small (AX3): FAILED (exit 65) · 19m21s — -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") is not equal to ("["strength", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") - hybrid: Home shows the approved week -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "stre
+  layout standard (L): FAILED (exit 65) · 19m24s — -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") is not equal to ("["strength", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") - hybrid: Home shows the approved week -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "stre
+commit 80d3b8cdbce76199db135123bcd2f8692f1a9192  branch ios/v1  job failure

@@ -1,0 +1,179 @@
+=== layout-standard: errors / failures ===
+Test Case '-[BikeComputerUITests.DesignSystemAudit testGalleryLightAndDark]' passed (234.087 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 234.087 (234.092) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:120: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertTrue failed - hybrid: first workout names a session
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:132: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") is not equal to ("["strength", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") - hybrid: Home shows the approved week
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:148: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertTrue failed - hybrid: main goal retained
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:165: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") is not equal to ("["strength", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") - hybrid: Plan shows the approved week
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:173: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") is not equal to ("["strength", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") - hybrid: the week persists
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:180: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertEqual failed: ("["rest", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") is not equal to ("["strength", "cycling", "strength", "cycling", "strength", "cycling", "rest"]") - hybrid: Plan persists
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (430.424 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-03 05:55:54.741.
+	 Executed 1 test, with 6 failures (0 unexpected) in 430.424 (430.430) seconds
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (140.964 seconds).
+	 Executed 2 tests, with 1 test skipped and 0 failures (0 unexpected) in 141.224 (141.227) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:111: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: stage E counter
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:112: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: dashboard card
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:117: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: the approach
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:121: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: Approve plan
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:121: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : Failed to tap "onbCreatePlan" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"onbCreatePlan" IN identifiers'`, given input App element pid: 8504
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages]' failed (154.639 seconds).
+Test Suite 'OnboardingScreens' failed at 2026-11-03 06:00:50.610.
+	 Executed 1 test, with 5 failures (0 unexpected) in 154.639 (154.641) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-03 06:00:50.611.
+	 Executed 5 tests, with 1 test skipped and 11 failures (0 unexpected) in 960.374 (960.393) seconds
+Test Suite 'Selected tests' failed at 2026-11-03 06:00:50.611.
+	 Executed 5 tests, with 1 test skipped and 11 failures (0 unexpected) in 960.374 (960.395) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-standard: last 150 lines ===
+    t =   115.20s         Capturing element debug description
+    t =   116.13s     Checking `Expect predicate `existsNoRetry == 1` for object "Your training system · 5 of 5" StaticText`
+    t =   116.13s         Checking existence of `"Your training system · 5 of 5" StaticText`
+    t =   116.22s         Capturing element debug description
+    t =   117.15s     Checking `Expect predicate `existsNoRetry == 1` for object "Your training system · 5 of 5" StaticText`
+    t =   117.15s         Checking existence of `"Your training system · 5 of 5" StaticText`
+    t =   117.25s         Capturing element debug description
+    t =   118.10s     Checking `Expect predicate `existsNoRetry == 1` for object "Your training system · 5 of 5" StaticText`
+    t =   118.10s         Checking existence of `"Your training system · 5 of 5" StaticText`
+    t =   118.33s         Capturing element debug description
+    t =   119.11s     Checking `Expect predicate `existsNoRetry == 1` for object "Your training system · 5 of 5" StaticText`
+    t =   119.12s         Checking existence of `"Your training system · 5 of 5" StaticText`
+    t =   119.39s         Capturing element debug description
+    t =   120.08s     Checking `Expect predicate `existsNoRetry == 1` for object "Your training system · 5 of 5" StaticText`
+    t =   120.08s         Checking existence of `"Your training system · 5 of 5" StaticText`
+    t =   120.18s         Capturing element debug description
+    t =   120.18s     Checking existence of `"Your training system · 5 of 5" StaticText`
+    t =   120.34s Collecting debug information to assist test failure triage
+    t =   120.34s     Requesting snapshot of accessibility hierarchy for app with pid 8504
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:111: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: stage E counter
+    t =   120.48s Waiting 5.0s for "onbDash" Other to exist
+    t =   121.53s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDash" Other`
+    t =   121.53s         Checking existence of `"onbDash" Other`
+    t =   121.80s         Capturing element debug description
+    t =   122.50s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDash" Other`
+    t =   122.50s         Checking existence of `"onbDash" Other`
+    t =   122.70s         Capturing element debug description
+    t =   123.53s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDash" Other`
+    t =   123.53s         Checking existence of `"onbDash" Other`
+    t =   123.84s         Capturing element debug description
+    t =   124.53s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDash" Other`
+    t =   124.53s         Checking existence of `"onbDash" Other`
+    t =   124.78s         Capturing element debug description
+    t =   125.49s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDash" Other`
+    t =   125.49s         Checking existence of `"onbDash" Other`
+    t =   125.80s         Capturing element debug description
+    t =   125.80s     Checking existence of `"onbDash" Other`
+    t =   126.30s Collecting debug information to assist test failure triage
+    t =   126.30s     Requesting snapshot of accessibility hierarchy for app with pid 8504
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:112: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: dashboard card
+    t =   126.43s Waiting 5.0s for "onbFirst" Other to exist
+    t =   127.46s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFirst" Other`
+    t =   127.47s         Checking existence of `"onbFirst" Other`
+    t =   127.86s         Capturing element debug description
+    t =   128.46s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFirst" Other`
+    t =   128.47s         Checking existence of `"onbFirst" Other`
+    t =   128.81s         Capturing element debug description
+    t =   129.44s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFirst" Other`
+    t =   129.44s         Checking existence of `"onbFirst" Other`
+    t =   129.93s         Capturing element debug description
+    t =   130.44s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFirst" Other`
+    t =   130.45s         Checking existence of `"onbFirst" Other`
+    t =   130.87s         Capturing element debug description
+    t =   131.44s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFirst" Other`
+    t =   131.44s         Checking existence of `"onbFirst" Other`
+    t =   131.75s         Capturing element debug description
+    t =   131.75s     Checking existence of `"onbFirst" Other`
+    t =   132.00s Collecting debug information to assist test failure triage
+    t =   132.01s     Requesting snapshot of accessibility hierarchy for app with pid 8504
+    t =   132.21s Checking existence of `"onbWhy" Other`
+    t =   132.25s Checking existence of `"THE APPROACH" StaticText`
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:117: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: the approach
+    t =   132.78s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   132.78s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   132.78s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   132.82s     Check for interrupting elements affecting "Cyclift" Application
+    t =   132.91s     Synthesize event
+    t =   133.35s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   135.93s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   135.93s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   135.93s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   135.99s     Check for interrupting elements affecting "Cyclift" Application
+    t =   136.06s     Synthesize event
+    t =   136.58s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   138.92s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   138.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   138.92s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   139.00s     Check for interrupting elements affecting "Cyclift" Application
+    t =   139.04s     Synthesize event
+    t =   139.47s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   141.59s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   141.59s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   141.60s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   141.70s     Check for interrupting elements affecting "Cyclift" Application
+    t =   141.83s     Synthesize event
+    t =   142.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   142.89s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   142.90s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   142.91s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   143.14s     Check for interrupting elements affecting "Cyclift" Application
+    t =   143.27s     Synthesize event
+    t =   143.72s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   145.25s Waiting 5.0s for "onbCreatePlan" Button to exist
+    t =   146.28s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCreatePlan" Button`
+    t =   146.29s         Checking existence of `"onbCreatePlan" Button`
+    t =   146.59s         Capturing element debug description
+    t =   147.29s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCreatePlan" Button`
+    t =   147.29s         Checking existence of `"onbCreatePlan" Button`
+    t =   147.58s         Capturing element debug description
+    t =   148.33s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCreatePlan" Button`
+    t =   148.33s         Checking existence of `"onbCreatePlan" Button`
+    t =   148.76s         Capturing element debug description
+    t =   149.29s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCreatePlan" Button`
+    t =   149.29s         Checking existence of `"onbCreatePlan" Button`
+    t =   149.65s         Capturing element debug description
+    t =   150.26s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCreatePlan" Button`
+    t =   150.27s         Checking existence of `"onbCreatePlan" Button`
+    t =   150.56s         Capturing element debug description
+    t =   150.56s     Checking existence of `"onbCreatePlan" Button`
+    t =   151.09s Collecting debug information to assist test failure triage
+    t =   151.09s     Requesting snapshot of accessibility hierarchy for app with pid 8504
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:121: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: Approve plan
+    t =   151.20s Tap "onbCreatePlan" Button
+    t =   151.20s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   151.20s     Find the "onbCreatePlan" Button
+    t =   152.42s         Find the "onbCreatePlan" Button (retry 1)
+    t =   153.71s         Find the "onbCreatePlan" Button (retry 2)
+    t =   153.93s Requesting snapshot of accessibility hierarchy for app with pid 8504
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/OnboardingScreens.swift:121: error: -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : Failed to tap "onbCreatePlan" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"onbCreatePlan" IN identifiers'`, given input App element pid: 8504
+    t =   154.10s Tear Down
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages]' failed (154.639 seconds).
+Test Suite 'OnboardingScreens' failed at 2026-11-03 06:00:50.610.
+	 Executed 1 test, with 5 failures (0 unexpected) in 154.639 (154.641) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-03 06:00:50.611.
+	 Executed 5 tests, with 1 test skipped and 11 failures (0 unexpected) in 960.374 (960.393) seconds
+Test Suite 'Selected tests' failed at 2026-11-03 06:00:50.611.
+	 Executed 5 tests, with 1 test skipped and 11 failures (0 unexpected) in 960.374 (960.395) seconds
+2026-11-03 06:01:32.803 xcodebuild[80450:210173] [MT] IDETestOperationsObserverDebug: 1143.684 elapsed -- Testing started completed.
+2026-11-03 06:01:32.803 xcodebuild[80450:210173] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-03 06:01:32.803 xcodebuild[80450:210173] [MT] IDETestOperationsObserverDebug: 1143.684 sec, +1143.684 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-abrwwmbzwiedfygbflrsantawyga/Logs/Test/Test-BikeComputer-2026.11.03_05-42-25-+0000.xcresult
+
+Failing tests:
+	JourneyTests.testHybridJourney()
+	JourneyTests.testHybridJourney()
+	JourneyTests.testHybridJourney()
+	JourneyTests.testHybridJourney()
+	JourneyTests.testHybridJourney()
+	JourneyTests.testHybridJourney()
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+	OnboardingScreens.testOnboardingV3FiveStages()
+
+** TEST EXECUTE FAILED **
+
+Testing started
