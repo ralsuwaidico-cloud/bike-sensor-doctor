@@ -1,0 +1,19 @@
+BikeComputer iOS CI — run 145 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 145 — 2026-11-03 02:41 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 3m53s
+RESULT tests: ok (Executed 527 tests, with 0 failures) · 8m2s
+  no last-green commit known — default quick set
+Quick UI targets: LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages DesignSystemAudit/testGalleryLightAndDark JourneyTests/testHybridJourney
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m13s
+  layout small (AX3): FAILED (exit 65) · 18m31s — -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Other` -> `Elements matching predicate '"onbStat-rides" IN identifiers'`, given input App element pid: 36879 -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertNotEqual failed: ("|||") is equal to ("|||") - hybrid: onbLif
+  layout standard (L): FAILED (exit 65) · 14m2s — -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Other` -> `Elements matching predicate '"onbStat-rides" IN identifiers'`, given input App element pid: 77157 -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertNotEqual failed: ("|||") is equal to ("|||") - hybrid: onbLif
+commit ac1078cf844439711b3e42301ebd626b661aa4c9  branch ios/v1  job failure
