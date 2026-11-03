@@ -304,6 +304,7 @@ struct OnboardingView: View {
             }
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             .cyCard()
+            .accessibilityElement(children: .contain)   // run 146: without it the card's identifier replaced the stats' own
             .accessibilityIdentifier("onbDash")
             if let w = first {
                 CyCaption(text: "First workout · \(w.date.formatted(.dateTime.weekday(.wide)))")
@@ -323,6 +324,7 @@ struct OnboardingView: View {
             }
             .padding(14).frame(maxWidth: .infinity, alignment: .leading)
             .cyCard(tinted: CyTheme.goal.bg)
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("onbWhy")
             Text(connectedLine).font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
         }

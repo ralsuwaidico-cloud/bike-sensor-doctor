@@ -112,7 +112,7 @@ final class JourneyTests: XCTestCase {
         let plannedE = stat(app, "planned")
         XCTAssertEqual(ridesE != nil, p.expectsRides, "\(p.tag): rides stat only for riders"); XCTAssertEqual(liftsE != nil, p.expectsLifts, "\(p.tag): lifts stat only for lifters")
         XCTAssertFalse(plannedE.isEmpty, "\(p.tag): total planned time")
-        let weekE = (0..<7).map { app.buttons["cyDay-\($0)"].firstMatch.label }
+        let weekE = (0..<7).map { app.descendants(matching: .any)["cyDay-\($0)"].firstMatch.label }   // stage E days are display-only (not buttons)
         XCTAssertEqual(weekE.map(sport), week.map(sport), "\(p.tag): stage E shows the week built on C")
         let first = app.descendants(matching: .any)["onbFirst"].firstMatch
         XCTAssertTrue(first.waitForExistence(timeout: 5), "\(p.tag): first workout card")
@@ -128,7 +128,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["homeWeek"].firstMatch.waitForExistence(timeout: 15), "\(p.tag): Home week strip")
         XCTAssertFalse(app.buttons["onboardingContinue"].exists, "\(p.tag): onboarding is over")
         XCTAssertFalse(app.buttons["homeCaution"].exists, "\(p.tag): no health questionnaire")
-        let homeWeek = (0..<7).map { app.buttons["homeWeekDay-\($0)"].firstMatch.label }
+        let homeWeek = (0..<7).map { app.descendants(matching: .any)["homeWeekDay-\($0)"].firstMatch.label }
         XCTAssertEqual(homeWeek.map(sport), weekE.map(sport), "\(p.tag): Home shows the approved week")
         XCTAssertTrue(app.staticTexts["homeTodayTitle"].firstMatch.exists || app.descendants(matching: .any)["homeTodayCard"].firstMatch.exists, "\(p.tag): today's card")
         var seen = 0; while !app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists && seen < 5 { app.swipeUp(); seen += 1 }
@@ -170,7 +170,7 @@ final class JourneyTests: XCTestCase {
         let again = XCUIApplication(); again.launch()
         XCTAssertTrue(again.descendants(matching: .any)["homeWeek"].firstMatch.waitForExistence(timeout: 20), "\(p.tag): relaunch lands on Home")
         XCTAssertFalse(again.buttons["onboardingContinue"].exists, "\(p.tag): no onboarding after relaunch")
-        XCTAssertEqual((0..<7).map { again.buttons["homeWeekDay-\($0)"].firstMatch.label }.map(sport), weekE.map(sport), "\(p.tag): the week persists")
+        XCTAssertEqual((0..<7).map { again.descendants(matching: .any)["homeWeekDay-\($0)"].firstMatch.label }.map(sport), weekE.map(sport), "\(p.tag): the week persists")
         XCTAssertTrue(again.buttons["Profile"].firstMatch.tapWhenSettled())
         XCTAssertTrue(again.buttons["profileHeader"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertTrue(again.buttons["profileHeader"].firstMatch.label.contains(p.name), "\(p.tag): name persists")
