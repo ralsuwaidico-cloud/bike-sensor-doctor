@@ -62,7 +62,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(tapVisible(app, mode))
         if p.mode != "strength" { pickChip(app, group: "onbCyclingLevel", index: 1, tag: p.tag) }
         if p.mode != "cycling" { pickChip(app, group: "onbStrengthLevel", index: 1, tag: p.tag) }
-        if p.mode == "hybrid" { XCTAssertTrue(app.otherElements["onbPriority"].firstMatch.exists, "\(p.tag): priority segment for hybrid") }
+        if p.mode == "hybrid" { XCTAssertTrue(app.descendants(matching: .any)["onbPriority"].firstMatch.exists, "\(p.tag): priority segment for hybrid") }
         shotScrolling(app, "\(p.tag)-02-who")
         XCTAssertTrue(next.isEnabled, "\(p.tag): name + type → Continue")
         scrollToTop(app); XCTAssertTrue(next.tapWhenSettled())
@@ -72,26 +72,26 @@ final class JourneyTests: XCTestCase {
         let goal = app.buttons["goal-\(p.goal)"].firstMatch
         XCTAssertTrue(goal.waitForExistence(timeout: 5)); XCTAssertTrue(tapVisible(app, goal))
         XCTAssertTrue(goal.label.contains("main goal"), "\(p.tag): the first goal is the main goal")
-        XCTAssertTrue(app.otherElements["onbGoalEffect"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): the effect line explains the goal")
-        sweep(app, stage: "B", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "goal-\(p.goal)"])
+        XCTAssertTrue(app.descendants(matching: .any)["onbGoalEffect"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): the effect line explains the goal")
+        sweep(app, stage: "B", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "goal-\(p.goal)", "goalStar-\(p.goal)"])
         shotScrolling(app, "\(p.tag)-03-goals")
         XCTAssertTrue(next.isEnabled); scrollToTop(app); XCTAssertTrue(next.tapWhenSettled())
 
         // 4 — availability and preferences: the coach proposes, the athlete adjusts, the preview follows
         XCTAssertTrue(app.staticTexts["Your week · 3 of 5"].waitForExistence(timeout: 10), "\(p.tag): stage C")
-        XCTAssertTrue(app.otherElements["onbWeekCounts"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): the coach proposed a week")
-        XCTAssertTrue(app.otherElements["onbFeasibility"].firstMatch.exists, "\(p.tag): feasibility line")
+        XCTAssertTrue(app.descendants(matching: .any)["onbWeekCounts"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): the coach proposed a week")
+        XCTAssertTrue(app.descendants(matching: .any)["onbFeasibility"].firstMatch.exists, "\(p.tag): feasibility line")
         let day3 = app.buttons["cyDay-3"].firstMatch
         XCTAssertTrue(day3.waitForExistence(timeout: 5))
         let before3 = day3.label; XCTAssertTrue(tapVisible(app, day3)); XCTAssertNotEqual(day3.label, before3, "\(p.tag): tapping a day cycles its state")
         let week = (0..<7).map { app.buttons["cyDay-\($0)"].firstMatch.label }
         if p.expectsRides { bump(app, "onbRideMinutes", tag: p.tag) }
         if p.expectsLifts { bump(app, "onbLiftMinutes", tag: p.tag) }
-        if p.expectsLifts, app.otherElements["onbEquipment"].firstMatch.exists {
-            let home = app.otherElements["onbEquipment"].firstMatch.buttons["Home"].firstMatch   // the equipment chip (no tab bar in onboarding)
+        if p.expectsLifts, app.descendants(matching: .any)["onbEquipment"].firstMatch.exists {
+            let home = app.descendants(matching: .any)["onbEquipment"].firstMatch.buttons["Home"].firstMatch   // the equipment chip (no tab bar in onboarding)
             if home.exists { XCTAssertTrue(tapVisible(app, home)); XCTAssertTrue(home.isSelected, "\(p.tag): equipment chip selected") }
         }
-        let preview = app.otherElements["onbPlanPreview"].firstMatch
+        let preview = app.descendants(matching: .any)["onbPlanPreview"].firstMatch
         var tries = 0; while !preview.exists && tries < 6 { app.swipeUp(); tries += 1 }
         XCTAssertTrue(preview.exists, "\(p.tag): live plan preview strip")
         shotScrolling(app, "\(p.tag)-04-week")
@@ -106,35 +106,35 @@ final class JourneyTests: XCTestCase {
 
         // 6 — the personalised plan: counts match the week built on C, a first workout of the right sport
         XCTAssertTrue(app.staticTexts["Your training system · 5 of 5"].waitForExistence(timeout: 10), "\(p.tag): stage E")
-        XCTAssertTrue(app.otherElements["onbDash"].firstMatch.waitForExistence(timeout: 5))
-        let ridesE = Int(app.otherElements["onbStat-rides"].firstMatch.value as? String ?? "")
-        let liftsE = Int(app.otherElements["onbStat-lifts"].firstMatch.value as? String ?? "")
-        let plannedE = app.otherElements["onbStat-planned"].firstMatch.value as? String ?? ""
+        XCTAssertTrue(app.descendants(matching: .any)["onbDash"].firstMatch.waitForExistence(timeout: 5))
+        let ridesE = Int(stat(app, "rides"))
+        let liftsE = Int(stat(app, "lifts"))
+        let plannedE = stat(app, "planned")
         XCTAssertEqual(ridesE != nil, p.expectsRides, "\(p.tag): rides stat only for riders"); XCTAssertEqual(liftsE != nil, p.expectsLifts, "\(p.tag): lifts stat only for lifters")
         XCTAssertFalse(plannedE.isEmpty, "\(p.tag): total planned time")
         let weekE = (0..<7).map { app.buttons["cyDay-\($0)"].firstMatch.label }
         XCTAssertEqual(weekE.map(sport), week.map(sport), "\(p.tag): stage E shows the week built on C")
-        let first = app.otherElements["onbFirst"].firstMatch
+        let first = app.descendants(matching: .any)["onbFirst"].firstMatch
         XCTAssertTrue(first.waitForExistence(timeout: 5), "\(p.tag): first workout card")
         let firstLabel = first.label
         XCTAssertTrue(firstLabel.lowercased().contains("strength") || firstLabel.lowercased().contains("ride") || firstLabel.lowercased().contains("min"), "\(p.tag): first workout names a session")
-        XCTAssertTrue(app.otherElements["onbWhy"].firstMatch.exists, "\(p.tag): the approach")
+        XCTAssertTrue(app.descendants(matching: .any)["onbWhy"].firstMatch.exists, "\(p.tag): the approach")
         shotScrolling(app, "\(p.tag)-06-system")
         scrollToTop(app); app.swipeUp(); app.swipeUp()
         let approve = app.buttons["onbCreatePlan"].firstMatch
         XCTAssertTrue(approve.waitForExistence(timeout: 5)); XCTAssertTrue(tapVisible(app, approve))
 
         // 7 — Home: the same week, the first workout, the first-week block, no onboarding
-        XCTAssertTrue(app.otherElements["homeWeek"].firstMatch.waitForExistence(timeout: 15), "\(p.tag): Home week strip")
+        XCTAssertTrue(app.descendants(matching: .any)["homeWeek"].firstMatch.waitForExistence(timeout: 15), "\(p.tag): Home week strip")
         XCTAssertFalse(app.buttons["onboardingContinue"].exists, "\(p.tag): onboarding is over")
         XCTAssertFalse(app.buttons["homeCaution"].exists, "\(p.tag): no health questionnaire")
         let homeWeek = (0..<7).map { app.buttons["homeWeekDay-\($0)"].firstMatch.label }
         XCTAssertEqual(homeWeek.map(sport), weekE.map(sport), "\(p.tag): Home shows the approved week")
-        XCTAssertTrue(app.staticTexts["homeTodayTitle"].firstMatch.exists || app.otherElements["homeTodayCard"].firstMatch.exists, "\(p.tag): today's card")
-        var seen = 0; while !app.otherElements["homeFirstWeek"].firstMatch.exists && seen < 5 { app.swipeUp(); seen += 1 }
-        XCTAssertTrue(app.otherElements["homeFirstWeek"].firstMatch.exists, "\(p.tag): first-week block (plan counts, goals, next steps)")
-        XCTAssertTrue(app.otherElements["cyHeroRing"].firstMatch.exists, "\(p.tag): this-week ring from the plan")
-        XCTAssertTrue(app.otherElements["homeGoal-\(p.goal)"].firstMatch.exists, "\(p.tag): the chosen main goal on Home")
+        XCTAssertTrue(app.staticTexts["homeTodayTitle"].firstMatch.exists || app.descendants(matching: .any)["homeTodayCard"].firstMatch.exists, "\(p.tag): today's card")
+        var seen = 0; while !app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists && seen < 5 { app.swipeUp(); seen += 1 }
+        XCTAssertTrue(app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists, "\(p.tag): first-week block (plan counts, goals, next steps)")
+        XCTAssertTrue(app.descendants(matching: .any)["cyHeroRing"].firstMatch.exists, "\(p.tag): this-week ring from the plan")
+        XCTAssertTrue(app.descendants(matching: .any)["homeGoal-\(p.goal)"].firstMatch.exists, "\(p.tag): the chosen main goal on Home")
         XCTAssertTrue(app.buttons["homeStartFirst"].firstMatch.exists, "\(p.tag): first-session next step")
         shot(app, "\(p.tag)-07-home")
         scrollToTop(app)
@@ -160,7 +160,7 @@ final class JourneyTests: XCTestCase {
 
         // 9 — Plan shows the same approved schedule
         XCTAssertTrue(app.buttons["Plan"].firstMatch.tapWhenSettled())
-        XCTAssertTrue(app.otherElements["planDayStrip"].firstMatch.waitForExistence(timeout: 10), "\(p.tag): Plan")
+        XCTAssertTrue(app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10), "\(p.tag): Plan")
         let planWeek = planSports(app)
         XCTAssertEqual(planWeek, weekE.map(sport), "\(p.tag): Plan shows the approved week")
         shot(app, "\(p.tag)-09-plan")
@@ -168,7 +168,7 @@ final class JourneyTests: XCTestCase {
         // 10 — relaunch: everything persists
         app.terminate()
         let again = XCUIApplication(); again.launch()
-        XCTAssertTrue(again.otherElements["homeWeek"].firstMatch.waitForExistence(timeout: 20), "\(p.tag): relaunch lands on Home")
+        XCTAssertTrue(again.descendants(matching: .any)["homeWeek"].firstMatch.waitForExistence(timeout: 20), "\(p.tag): relaunch lands on Home")
         XCTAssertFalse(again.buttons["onboardingContinue"].exists, "\(p.tag): no onboarding after relaunch")
         XCTAssertEqual((0..<7).map { again.buttons["homeWeekDay-\($0)"].firstMatch.label }.map(sport), weekE.map(sport), "\(p.tag): the week persists")
         XCTAssertTrue(again.buttons["Profile"].firstMatch.tapWhenSettled())
@@ -176,7 +176,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(again.buttons["profileHeader"].firstMatch.label.contains(p.name), "\(p.tag): name persists")
         XCTAssertTrue(again.buttons["profileWeek"].firstMatch.label.contains("\(trainingDays) day"), "\(p.tag): week persists")
         XCTAssertTrue(again.buttons["Plan"].firstMatch.tapWhenSettled())
-        XCTAssertTrue(again.otherElements["planDayStrip"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(again.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertEqual(planSports(again), weekE.map(sport), "\(p.tag): Plan persists")
         shot(again, "\(p.tag)-10-relaunch")
         again.terminate()
@@ -202,23 +202,29 @@ final class JourneyTests: XCTestCase {
         let order = [2, 3, 4, 5, 6, 7, 1]
         return order.map { app.buttons["planDay-\($0)"].firstMatch.label }.map(sport)
     }
+    /// A stage-E stat ("onbStat-rides" …): its value, whatever element type the combined stat is exposed as; "" when absent.
+    private func stat(_ app: XCUIApplication, _ name: String) -> String {
+        let e = app.descendants(matching: .any)["onbStat-\(name)"].firstMatch
+        return e.exists ? (e.value as? String ?? "") : ""
+    }
     private func goalTitle(_ raw: String) -> String {
         switch raw { case "endurance": return "Endurance"; case "strength": return "Strength"; case "muscle": return "Muscle"; default: return raw }
     }
     private func pickChip(_ app: XCUIApplication, group: String, index: Int, tag: String) {
-        let g = app.otherElements[group].firstMatch
+        let g = app.descendants(matching: .any)[group].firstMatch
         guard g.waitForExistence(timeout: 5) else { return XCTFail("\(tag): \(group) chips") }
         let b = g.buttons.allElementsBoundByIndex
         guard b.count > index else { return XCTFail("\(tag): \(group) has \(b.count) options") }
         XCTAssertTrue(tapVisible(app, b[index])); XCTAssertTrue(b[index].isSelected || b[index].label.contains("selected"), "\(tag): \(group) option \(index) selected")
     }
     private func bump(_ app: XCUIApplication, _ id: String, tag: String) {
-        let row = app.otherElements[id].firstMatch
+        let row = app.descendants(matching: .any)[id].firstMatch
         guard row.waitForExistence(timeout: 5) else { return XCTFail("\(tag): \(id)") }
         let plus = row.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'increase' OR label CONTAINS[c] 'plus' OR label == '+'")).firstMatch
         guard plus.exists else { return }
         // run 144: the row's label is its title ("Ride length"); the number is the stepper's accessibility value
-        let values = { row.descendants(matching: .any).allElementsBoundByIndex.compactMap { $0.value as? String }.joined(separator: "|") }
+        // run 145: the number is a text inside the stepper (its container exposes no value) — compare labels and values
+        let values = { row.descendants(matching: .any).allElementsBoundByIndex.map { "\($0.label)=\($0.value as? String ?? "")" }.joined(separator: "|") }
         let before = values(); XCTAssertTrue(tapVisible(app, plus)); XCTAssertNotEqual(values(), before, "\(tag): \(id) stepper changes the value")
     }
     /// Every button on the stage does something: its own label changes, a selection appears, or the screen's text changes.
