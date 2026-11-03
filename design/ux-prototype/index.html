@@ -1,0 +1,723 @@
+<title>Cyclift V1 Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a fixed phone frame (393×852, scaled to fit) with a control rail above it and the approval checklist below.
+   Tokens follow the app's CyTheme families: cycling blue, strength rose, recovery green, coaching lavender, overall mint/teal. */
+:root{
+  --bg:#f1efe9; --fg:#1b1d22; --mute:#6b6f78; --line:#e3e0d8;
+  --canvas:#f6f4ef; --card:#ffffff; --card2:#efede7; --ink:#15171c; --ink2:#4a4e57; --ink3:#8a8e97; --rule:#e6e3dc;
+  --teal:#15998c; --teal-bg:#dff3ef; --teal-ink:#0e6b62;
+  --cyc:#3d63c2; --cyc-bg:#e3eaf9; --str:#c74b6e; --str-bg:#f9e3ea; --rec:#2f9a5d; --rec-bg:#e0f3e7;
+  --coach:#7a5fc7; --coach-bg:#ebe5f8; --warn:#c9850f; --warn-bg:#fbefd6; --bad:#c23b3b; --bad-bg:#fae1e1;
+  --dock:rgba(255,255,255,.72); --dock-line:rgba(0,0,0,.08); --shadow:0 10px 30px rgba(20,24,40,.10);
+  --ride-bg:#0b1118; --ride-card:rgba(20,28,38,.72); --ride-ink:#eef3f7; --ride-ink2:#aab5c2;
+  --sample:#8b5e00; --sample-bg:#fff4d6;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#121417; --fg:#e8eaee; --mute:#9aa0aa; --line:#2a2e35;
+  --canvas:#15181c; --card:#1e2227; --card2:#272c33; --ink:#f2f4f7; --ink2:#c3c8d0; --ink3:#8a909a; --rule:#2c3138;
+  --teal:#3fd0bf; --teal-bg:#153a36; --teal-ink:#9fe9df; --cyc:#8fb0ff; --cyc-bg:#1e2a4a; --str:#ff8fab; --str-bg:#4a2030;
+  --rec:#6fd79a; --rec-bg:#1c3b2a; --coach:#b9a6f5; --coach-bg:#2e2650; --warn:#f0b64a; --warn-bg:#3d2f12; --bad:#ff7b7b; --bad-bg:#4a2222;
+  --dock:rgba(30,34,40,.74); --dock-line:rgba(255,255,255,.10); --shadow:0 10px 30px rgba(0,0,0,.45);
+  --sample:#f3c96b; --sample-bg:#3b3010; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#121417; --fg:#e8eaee; --mute:#9aa0aa; --line:#2a2e35;
+  --canvas:#15181c; --card:#1e2227; --card2:#272c33; --ink:#f2f4f7; --ink2:#c3c8d0; --ink3:#8a909a; --rule:#2c3138;
+  --teal:#3fd0bf; --teal-bg:#153a36; --teal-ink:#9fe9df; --cyc:#8fb0ff; --cyc-bg:#1e2a4a; --str:#ff8fab; --str-bg:#4a2030;
+  --rec:#6fd79a; --rec-bg:#1c3b2a; --coach:#b9a6f5; --coach-bg:#2e2650; --warn:#f0b64a; --warn-bg:#3d2f12; --bad:#ff7b7b; --bad-bg:#4a2222;
+  --dock:rgba(30,34,40,.74); --dock-line:rgba(255,255,255,.10); --shadow:0 10px 30px rgba(0,0,0,.45);
+  --sample:#f3c96b; --sample-bg:#3b3010; color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);padding-block:12px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+.rail{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .grow{flex:1}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:7px 12px;font:600 13px var(--font);cursor:pointer}
+.btn[aria-pressed="true"]{background:var(--teal);color:#fff;border-color:var(--teal)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.chips .btn{white-space:nowrap}
+.stage{display:grid;grid-template-columns:1fr;gap:18px;align-items:start}
+@media(min-width:900px){.stage{grid-template-columns:auto 1fr}}
+.phonewrap{display:flex;justify-content:center}
+.phone{width:393px;height:852px;border-radius:44px;background:var(--canvas);border:10px solid #0d0f12;box-shadow:var(--shadow);overflow:hidden;position:relative;transform-origin:top center}
+.status{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font:600 15px var(--font);color:var(--ink)}
+.status .pill{width:118px;height:34px;background:#0d0f12;border-radius:20px}
+.sample{position:absolute;left:0;right:0;top:44px;z-index:5;background:var(--sample-bg);color:var(--sample);font:700 10px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:5px 0}
+.screen{position:absolute;inset:66px 0 0 0;overflow-y:auto;overflow-x:hidden;padding:12px 16px 120px;display:none}
+.screen.on{display:block}
+.screen.ride{background:var(--ride-bg);color:var(--ride-ink)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.eyebrow{font:700 11px var(--font);letter-spacing:.09em;text-transform:uppercase;color:var(--ink3)}
+.h{font:800 22px/1.15 var(--font);letter-spacing:-.02em;color:var(--ink);margin:0}
+.sub{font:500 13px var(--font);color:var(--ink2)}
+.card{background:var(--card);border-radius:22px;padding:14px;box-shadow:0 1px 0 var(--rule), 0 6px 18px rgba(20,24,40,.06);border:1px solid transparent;color:var(--ink);text-align:left;width:100%;font-family:var(--font);display:block;position:relative}
+button.card{cursor:pointer}
+button.card:active{transform:scale(.99)}
+.card:focus-visible,.btn:focus-visible,.tab:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.row{display:flex;align-items:center;gap:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.num{font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.n1{font-size:30px;line-height:1}
+.n2{font-size:20px;line-height:1.1}
+.cap{font:600 11px var(--font);color:var(--ink3);letter-spacing:.04em;text-transform:uppercase}
+.src{display:inline-block;font:700 9px/1 var(--font);letter-spacing:.06em;text-transform:uppercase;padding:4px 6px;border-radius:6px;background:var(--card2);color:var(--ink3)}
+.src.m{background:var(--teal-bg);color:var(--teal-ink)}
+.src.e{background:var(--warn-bg);color:var(--warn)}
+.src.u{background:var(--card2);color:var(--ink3)}
+.chev{margin-left:auto;color:var(--ink3);font-size:18px}
+.tagc{color:var(--cyc)} .tags{color:var(--str)} .tagr{color:var(--rec)} .tagk{color:var(--coach)} .tagt{color:var(--teal)}
+.ring{display:grid;place-items:center;position:relative}
+.ring svg{display:block}
+.ring .in{position:absolute;text-align:center}
+.strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day{background:var(--card2);border-radius:14px;padding:8px 0 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;border:none;font-family:var(--font);color:var(--ink);cursor:pointer}
+.day .dn{font:600 10px var(--font);color:var(--ink3)}
+.day .ic{height:18px;font-size:15px;line-height:18px}
+.day .dot{width:6px;height:6px;border-radius:50%;background:transparent;border:1.5px solid var(--ink3)}
+.day.done .dot{background:var(--rec);border-color:var(--rec)}
+.day.today{background:var(--ink);color:var(--canvas)}
+.day.today .dn{color:var(--canvas);opacity:.8}
+.day.pre{opacity:.75}
+.day.pre .ic{color:var(--ink3);font-weight:700}
+.day.pre .dot{border-color:transparent}
+.day.missed .dot{background:var(--warn);border-color:var(--warn)}
+.day.resched .dot{border-style:dashed}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font:500 11px var(--font);color:var(--ink3)}
+.bar-h{height:8px;border-radius:999px;background:var(--card2);overflow:hidden}
+.bar-h i{display:block;height:100%;border-radius:999px}
+.mini{width:100%;height:46px;display:block}
+.primary{background:var(--ink);color:var(--canvas);border:none;border-radius:16px;padding:14px;font:700 16px var(--font);width:100%;cursor:pointer}
+.secondary{background:var(--card2);color:var(--ink);border:none;border-radius:16px;padding:12px;font:700 15px var(--font);width:100%;cursor:pointer}
+.ghost{background:transparent;color:var(--teal-ink);border:none;font:700 14px var(--font);padding:8px;cursor:pointer}
+.empty{border:1.5px dashed var(--rule);border-radius:18px;padding:14px;background:var(--card2)}
+.seg{display:flex;background:var(--card2);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1;border:none;background:transparent;border-radius:10px;padding:7px 6px;font:600 12px var(--font);color:var(--ink2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.back{background:var(--card2);border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;color:var(--ink)}
+.list .li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--rule);font:500 13px var(--font);color:var(--ink)}
+.list .li:first-child{border-top:none}
+/* Liquid dock */
+.dock{position:absolute;left:14px;right:14px;bottom:20px;height:64px;border-radius:32px;background:var(--dock);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--dock-line);box-shadow:0 12px 30px rgba(10,14,24,.18);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;z-index:6}
+.dock .ind{position:absolute;top:8px;height:48px;width:calc(20% - 8px);left:4px;border-radius:24px;background:var(--teal-bg);transition:transform .5s cubic-bezier(.22,1.4,.36,1),width .25s;z-index:0}
+.dock .ind.moving{transition:transform .5s cubic-bezier(.22,1.4,.36,1), width .22s ease-out; width:calc(20% + 18px)}
+.tab{position:relative;z-index:1;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font:600 10px var(--font);color:var(--ink3);cursor:pointer;height:64px;justify-content:center}
+.tab[aria-current="page"]{color:var(--teal-ink)}
+.tab .i{font-size:18px;line-height:1}
+.center{position:relative;z-index:2;display:flex;justify-content:center;align-items:center;height:64px}
+.cbtn{width:54px;height:54px;border-radius:50%;border:none;background:var(--teal);color:#fff;font-size:22px;cursor:pointer;display:grid;place-items:center;position:relative;transform:translateY(-10px);box-shadow:0 8px 20px rgba(21,153,140,.35)}
+.cbtn .badge{position:absolute;top:-2px;right:-2px;background:var(--ink);color:var(--canvas);font:800 10px var(--font);min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
+.cbtn::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--teal);opacity:0}
+.cbtn.pending::after{animation:breathe 3.2s ease-in-out infinite}
+.cbtn.active{background:var(--cyc);box-shadow:0 8px 20px rgba(61,99,194,.35)}
+.cbtn.done{background:var(--rec);box-shadow:0 8px 20px rgba(47,154,93,.3)}
+.cbtn.rest{background:var(--card2);color:var(--ink2);box-shadow:none}
+.cbtn.missed::before{content:"";position:absolute;left:50%;bottom:-11px;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:var(--warn)}
+@keyframes breathe{0%,100%{opacity:0;transform:scale(1)}50%{opacity:.7;transform:scale(1.18)}}
+:root.rm .cbtn.pending::after{animation:none;opacity:.55;transform:scale(1.1)}
+:root.rm .dock .ind,:root.rm .dock .ind.moving{transition:none;width:calc(20% - 8px)}
+:root.rm *{scroll-behavior:auto}
+@media(prefers-reduced-motion:reduce){.cbtn.pending::after{animation:none;opacity:.55}.dock .ind{transition:none}}
+/* Ride (Horizon) */
+.map{position:absolute;inset:0;background:#0f1a24}
+.map svg{width:100%;height:100%;display:block}
+.hud{position:relative;z-index:2;display:flex;flex-direction:column;gap:10px}
+.rcard{background:var(--ride-card);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:12px 14px;color:var(--ride-ink)}
+.rcap{font:700 10px var(--font);letter-spacing:.09em;text-transform:uppercase;color:var(--ride-ink2)}
+.rnum{font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:-.03em;color:var(--ride-ink)}
+.rgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rgrid .rcard{padding:10px 8px;text-align:center}
+.band{height:6px;border-radius:3px;background:linear-gradient(90deg,#3a7bd5 0 30%,#3fd0bf 30% 70%,#f0b64a 70% 100%);position:relative;margin-top:8px}
+.band i{position:absolute;top:-5px;width:3px;height:16px;background:#fff;border-radius:2px;transform:translateX(-50%)}
+.sens{display:flex;gap:6px;flex-wrap:wrap}
+.sens span{font:600 10px var(--font);padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);color:var(--ride-ink2);display:flex;align-items:center;gap:5px}
+.sens span::before{content:"";width:6px;height:6px;border-radius:50%;background:#59656f}
+.sens span.live::before{background:#3fd0bf}
+.sens span.stale::before{background:#f0b64a}
+.rctl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.rctl button{border:none;border-radius:16px;padding:14px 6px;font:700 14px var(--font);cursor:pointer;background:rgba(255,255,255,.1);color:var(--ride-ink)}
+.rctl .end{background:#4a1f1f;color:#ffb3b3}
+.modeseg{display:flex;background:rgba(255,255,255,.08);border-radius:12px;padding:3px}
+.modeseg button{flex:1;border:none;background:transparent;border-radius:10px;padding:7px;font:700 12px var(--font);color:var(--ride-ink2);cursor:pointer}
+.modeseg button[aria-pressed="true"]{background:rgba(255,255,255,.14);color:var(--ride-ink)}
+/* sheets */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:9;background:var(--card);border-radius:24px 24px 0 0;padding:14px 16px 24px;box-shadow:0 -10px 30px rgba(0,0,0,.25);max-height:78%;overflow-y:auto;display:none;color:var(--ink)}
+.sheet.on{display:block}
+.sheet h3{margin:0 0 8px;font-size:16px}
+.sheet .x{position:absolute;right:12px;top:10px}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:8;display:none}
+.scrim.on{display:block}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font:500 12px/1.4 var(--font)}
+.kv b{color:var(--ink3);font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.06em;padding-top:2px}
+.toast{position:absolute;left:16px;right:16px;bottom:96px;z-index:7;background:var(--ink);color:var(--canvas);border-radius:14px;padding:10px 14px;font:600 13px var(--font);display:none}
+.toast.on{display:block}
+/* checklist */
+.check{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.check details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.check summary{font-weight:700;cursor:pointer}
+.q{font-size:13px;margin:8px 0 4px;color:var(--fg)}
+.q ul{margin:4px 0 8px 18px;padding:0;color:var(--mute);font-size:12.5px;line-height:1.5}
+.ans{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
+textarea{width:100%;min-height:52px;border:1px solid var(--line);border-radius:10px;padding:8px;font:13px var(--font);background:var(--canvas);color:var(--fg)}
+.note{font-size:12.5px;color:var(--mute);line-height:1.5}
+.sr{position:absolute;left:-9999px}
+.anno{position:absolute;inset:66px 0 0 0;z-index:7;pointer-events:none;display:none}
+:root.annos .anno{display:block}
+.pin{position:absolute;width:20px;height:20px;border-radius:50%;background:var(--coach);color:#fff;font:800 11px/20px var(--font);text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.3);pointer-events:auto;cursor:pointer}
+</style>
+
+<div class="rail">
+  <div class="bar">
+    <h1>Cyclift V1 — clickable prototype (Checkpoint A)</h1>
+    <span class="grow"></span>
+    <button class="btn" id="tTheme" aria-pressed="false">Dark</button>
+    <button class="btn" id="tRM" aria-pressed="false">Reduce Motion</button>
+    <button class="btn" id="tAnno" aria-pressed="false">Behind this screen</button>
+  </div>
+  <div class="chips" id="picker"></div>
+  <p class="note">All numbers are example values, never from an account. Every control on the phone does something: it opens the screen it would open in production or shows the exact action it performs. "Behind this screen" lists, for the current screen, the real data function behind each number, where each tap goes and what the empty state says.</p>
+
+  <div class="stage">
+  <div class="phonewrap"><div class="phone" id="phone">
+    <div class="status"><span id="clock">9:41</span><span class="pill"></span><span>●●● ⌁</span></div>
+    <div class="sample">Example data · prototype</div>
+
+    <!-- HOME -->
+    <section class="screen" id="s-home">
+      <div class="top"><div><div class="eyebrow">Wednesday 4 Nov</div><h2 class="h">Good morning, Rashed</h2><div class="sub">Hybrid · week 1 · lift today</div></div><button class="back" data-act="Opens Profile (unchanged screen)" aria-label="Profile">R</button></div>
+      <div class="stack">
+        <button class="card" data-go="overview" aria-label="This week: 1 of 5 planned sessions done, 20 percent. Opens Training Overview">
+          <div class="row">
+            <div class="ring" aria-hidden="true"><svg width="92" height="92" viewBox="0 0 92 92"><circle cx="46" cy="46" r="38" fill="none" stroke="var(--card2)" stroke-width="10"/><circle cx="46" cy="46" r="38" fill="none" stroke="var(--teal)" stroke-width="10" stroke-linecap="round" stroke-dasharray="238.8" stroke-dashoffset="191" transform="rotate(-90 46 46)"/></svg><div class="in"><div class="num n2">20%</div><div class="cap">done</div></div></div>
+            <div class="stack" style="gap:4px;flex:1">
+              <div class="eyebrow tagt">This week</div>
+              <div class="num n2">1 of 5 sessions</div>
+              <div class="sub">4 remaining · Tue 3 – Sun 8 Nov</div>
+              <div class="sub" style="color:var(--ink3);font-size:12px">Counted from the day you approved the plan.</div>
+            </div><span class="chev">›</span>
+          </div>
+        </button>
+        <div class="grid2">
+          <button class="card" data-go="cycling" aria-label="Cycling this week: 1 hour 2 minutes of 3 hours planned. Opens Cycling Analytics">
+            <div class="eyebrow tagc">Cycling</div>
+            <div class="num n2" style="margin-top:4px">1 h 02</div><div class="sub">of 3 h planned · 1 ride · 28.4 km</div>
+            <svg class="mini" id="mini-cyc" aria-hidden="true"></svg>
+            <div class="row" style="justify-content:space-between"><span class="src m">measured</span><span class="chev">›</span></div>
+          </button>
+          <button class="card" data-go="strength" aria-label="Strength this week: 0 of 2 sessions done. Opens Strength Analytics">
+            <div class="eyebrow tags">Strength</div>
+            <div class="num n2" style="margin-top:4px">0 of 2</div><div class="sub">sessions · first lift today</div>
+            <svg class="mini" id="mini-str" aria-hidden="true"></svg>
+            <div class="row" style="justify-content:space-between"><span class="src u">no logs yet</span><span class="chev">›</span></div>
+          </button>
+        </div>
+        <div class="card">
+          <div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="eyebrow">Week · 2 – 8 Nov</span><button class="ghost" data-go="plan" style="padding:0">Plan ›</button></div>
+          <div class="strip" id="homeStrip"></div>
+          <div class="legend" style="margin-top:8px"><span>— before this plan started</span><span>● done</span><span>○ planned</span><span style="color:var(--warn)">● missed</span><span>◌ rescheduled</span></div>
+        </div>
+        <button class="card" data-go="reco" style="border-color:var(--coach-bg)" aria-label="Coach insight. Opens Recommendation details">
+          <div class="row"><span class="eyebrow tagk">Coach</span><span class="src e" style="margin-left:auto">suggestion</span></div>
+          <div class="sub" style="color:var(--ink);font-weight:600;margin-top:6px">Tuesday felt hard (effort 9/10). Thursday's threshold ride could become an endurance ride.</div>
+          <div class="sub" style="margin-top:4px">Nothing changes until you approve it. ›</div>
+        </button>
+        <div class="grid2">
+          <button class="card" data-go="recovery" aria-label="Recovery: no data yet. Opens Recovery details">
+            <div class="eyebrow tagr">Recovery</div>
+            <div class="sub" style="margin-top:6px;color:var(--ink);font-weight:600">No readings yet</div>
+            <div class="sub" style="font-size:12px">Connect Apple Health for sleep, resting HR and HRV ›</div>
+          </button>
+          <button class="card" data-go="goal" aria-label="Main goal Endurance. Opens Goal details">
+            <div class="eyebrow" style="color:var(--warn)">★ Goal · Endurance</div>
+            <div class="sub" style="margin-top:6px;color:var(--ink);font-weight:600">Tracking from your first 4 weeks</div>
+            <div class="sub" style="font-size:12px">1 ride recorded of 4 needed ›</div>
+          </button>
+        </div>
+        <button class="card" data-go="hub" style="background:var(--teal-bg);border-color:transparent" aria-label="Today: Strength full body 30 minutes. Opens Training Hub">
+          <div class="row"><div><div class="eyebrow tagt">Today</div><div class="num n2" style="font-size:17px">Strength · Full body · 30 min</div><div class="sub">Open the Training Hub to start</div></div><span class="chev">›</span></div>
+        </button>
+      </div>
+    </section>
+
+    <!-- TRAINING OVERVIEW -->
+    <section class="screen" id="s-overview">
+      <div class="top"><button class="back" data-go="home" aria-label="Back">‹</button><div class="eyebrow">Training overview</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="seg" role="group" aria-label="Range"><button aria-pressed="true" data-range="7 d">7 d</button><button data-range="4 wk">4 wk</button><button data-range="12 wk">12 wk</button><button data-range="1 yr">1 yr</button></div>
+        <div class="card"><div class="eyebrow">Tue 3 – Sun 8 Nov · 5 planned</div>
+          <div class="row" style="margin-top:8px;gap:16px"><div><div class="num n1">1</div><div class="cap">done</div></div><div><div class="num n1">4</div><div class="cap">remaining</div></div><div><div class="num n1">0</div><div class="cap">missed</div></div></div>
+          <div class="bar-h" style="margin-top:10px"><i style="width:20%;background:var(--teal)"></i></div>
+          <div class="sub" style="margin-top:6px">Adherence 20% = 1 done ÷ 5 planned since the plan started on Tue 3 Nov. Mon 2 Nov is not counted.</div></div>
+        <div class="card"><div class="eyebrow tagc">Rides</div><div class="sub">1 of 3 done · 1 h 02 of 3 h 00</div><div class="bar-h" style="margin-top:8px"><i style="width:34%;background:var(--cyc)"></i></div></div>
+        <div class="card"><div class="eyebrow tags">Lifts</div><div class="sub">0 of 2 done</div><div class="bar-h" style="margin-top:8px"><i style="width:0;background:var(--str)"></i></div></div>
+        <div class="card"><div class="eyebrow">Weekly sessions · last 8 weeks</div><svg class="mini" id="ov-bars" style="height:70px" aria-label="Bar chart, planned versus done sessions per week, example values"></svg><div class="sub">Grey = planned, teal = done. Weeks before the plan show no bar.</div></div>
+      </div>
+    </section>
+
+    <!-- PROGRESS -->
+    <section class="screen" id="s-progress">
+      <div class="top"><div><div class="eyebrow">Progress</div><h2 class="h">Am I improving?</h2></div><button class="back" data-go="reports" aria-label="Reports">≡</button></div>
+      <div class="stack">
+        <div class="seg" role="group" aria-label="Range"><button data-range="7 d">7 d</button><button aria-pressed="true" data-range="4 wk">4 wk</button><button data-range="12 wk">12 wk</button><button data-range="1 yr">1 yr</button></div>
+        <button class="card" data-go="cycling"><div class="row"><div style="flex:1"><div class="eyebrow tagc">Cycling</div><div class="num n2" style="margin-top:4px">4 h 10 <span class="sub">/ 4 wk</span></div><div class="sub">6 rides · 168 km · avg HR 138 <span class="src m">measured</span></div></div><svg class="mini" id="p-cyc" style="width:110px;height:44px" aria-hidden="true"></svg><span class="chev">›</span></div></button>
+        <button class="card" data-go="strength"><div class="row"><div style="flex:1"><div class="eyebrow tags">Strength</div><div class="num n2" style="margin-top:4px">3 <span class="sub">sessions / 4 wk</span></div><div class="sub">Squat top set 60 kg → 65 kg <span class="src m">logged</span></div></div><svg class="mini" id="p-str" style="width:110px;height:44px" aria-hidden="true"></svg><span class="chev">›</span></div></button>
+        <button class="card" data-go="recovery"><div class="row"><div style="flex:1"><div class="eyebrow tagr">Recovery</div><div class="num n2" style="margin-top:4px">— </div><div class="sub">No sleep, resting HR or HRV readings yet</div></div><span class="src u">unavailable</span><span class="chev">›</span></div></button>
+        <div class="grid2">
+          <button class="card" data-go="consistency"><div class="eyebrow">Consistency</div><div class="num n2" style="margin-top:4px">78%</div><div class="sub">7 of 9 planned · 4 wk</div></button>
+          <button class="card" data-go="body"><div class="eyebrow" style="color:var(--warn)">Body & discomfort</div><div class="sub" style="margin-top:4px;color:var(--ink);font-weight:600">Not set up</div><div class="sub">30-second daily check-in ›</div></button>
+        </div>
+        <button class="card" data-go="milestones"><div class="row"><div><div class="eyebrow">Milestones</div><div class="sub">4-week checkpoint in 24 days · 8 wk · 12 wk</div></div><span class="chev">›</span></div></button>
+        <button class="card" data-go="history"><div class="row"><div><div class="eyebrow">History</div><div class="sub">9 sessions in 4 weeks · filters: type, period, source</div></div><span class="chev">›</span></div></button>
+      </div>
+    </section>
+
+    <!-- CYCLING ANALYTICS -->
+    <section class="screen" id="s-cycling">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow tagc">Cycling analytics</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="seg" role="group" aria-label="Range"><button data-range="7 d">7 d</button><button aria-pressed="true" data-range="4 wk">4 wk</button><button data-range="12 wk">12 wk</button><button data-range="1 yr">1 yr</button></div>
+        <div class="card"><div class="eyebrow">Riding time per week · done vs planned</div><svg id="cyc-main" style="width:100%;height:120px;display:block" aria-label="Weekly riding time bars, example values"></svg><div class="sub">4 h 10 done of 5 h 00 planned · average 1 h 02 per week</div></div>
+        <div class="grid2">
+          <div class="card"><div class="cap">Distance</div><div class="num n2">168 km</div><span class="src m">GPS</span></div>
+          <div class="card"><div class="cap">Avg speed</div><div class="num n2">26.1 km/h</div><span class="src m">GPS</span></div>
+          <div class="card"><div class="cap">Avg heart rate</div><div class="num n2">138 bpm</div><span class="src m">Watch</span></div>
+          <div class="card"><div class="cap">Avg power</div><div class="num n2">—</div><span class="src u">no power meter</span></div>
+          <div class="card"><div class="cap">Cadence</div><div class="num n2">84 rpm</div><span class="src m">sensor · 2 rides</span></div>
+          <div class="card"><div class="cap">FTP</div><div class="num n2">Unknown</div><span class="src u">not established</span></div>
+        </div>
+        <div class="card"><div class="eyebrow">Time in heart-rate zones · 4 wk</div><div class="stack" style="gap:6px;margin-top:8px" id="zones"></div><div class="sub" style="margin-top:6px">Zones from your max HR (entered). Power zones appear when an FTP is established.</div></div>
+        <div class="card"><div class="eyebrow">FTP history</div><div class="empty" style="margin-top:8px"><div class="sub" style="color:var(--ink);font-weight:600">No verified FTP yet</div><div class="sub">Do a 20-minute test ride or enter a known value in Profile. Nothing is estimated from your weight.</div><button class="ghost" data-act="Opens Profile › FTP (existing editor)" style="padding:6px 0">Set FTP in Profile ›</button></div></div>
+        <div class="card list"><div class="eyebrow" style="margin-bottom:4px">Rides · 4 wk</div>
+          <button class="li card" style="box-shadow:none;padding:10px 0;border-radius:0" data-act="Opens the existing ride detail (RideDetailView: route map, power/HR/cadence/speed chart)"><span class="tagc">🚲</span><span style="flex:1">Tue 3 Nov · Endurance · 1 h 02 · 28.4 km</span><span class="src m">Phone + Watch</span><span class="chev">›</span></button>
+          <button class="li card" style="box-shadow:none;padding:10px 0;border-radius:0" data-act="Opens the existing ride detail"><span class="tagc">🚲</span><span style="flex:1">Sat 31 Oct · Long ride · 1 h 48 · 49.0 km</span><span class="src m">Board</span><span class="chev">›</span></button>
+          <button class="li card" style="box-shadow:none;padding:10px 0;border-radius:0" data-act="Opens the existing ride detail"><span class="tagc">🚲</span><span style="flex:1">Thu 29 Oct · Imported · 45 min · 20.2 km</span><span class="src e">Apple Health</span><span class="chev">›</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STRENGTH ANALYTICS -->
+    <section class="screen" id="s-strength">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow tags">Strength analytics</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="seg" role="group" aria-label="Range"><button data-range="7 d">7 d</button><button aria-pressed="true" data-range="4 wk">4 wk</button><button data-range="12 wk">12 wk</button><button data-range="1 yr">1 yr</button></div>
+        <div class="card"><div class="eyebrow">Sessions per week · done vs planned</div><svg id="str-main" style="width:100%;height:100px;display:block" aria-label="Weekly strength sessions, example values"></svg><div class="sub">3 done of 6 planned · 2 skipped, 1 missed</div></div>
+        <div class="card"><div class="row" style="justify-content:space-between"><div class="eyebrow">Exercise progression</div><div class="seg" style="width:190px"><button aria-pressed="true" data-ex="Squat">Squat</button><button data-ex="Bench">Bench</button><button data-ex="Row">Row</button></div></div>
+          <svg id="ex-line" style="width:100%;height:90px;display:block;margin-top:8px" aria-label="Top set weight over time, example values"></svg>
+          <div class="row" style="gap:16px;margin-top:6px"><div><div class="cap">Top set</div><div class="num n2">65 kg × 5</div></div><div><div class="cap">Est. 1RM</div><div class="num n2">73 kg</div><span class="src e">estimate</span></div><div><div class="cap">PR</div><div class="num n2">65 kg</div></div></div></div>
+        <div class="card"><div class="eyebrow">Volume · 4 wk</div><div class="row" style="gap:16px;margin-top:6px"><div><div class="num n2">11 240 kg</div><div class="cap">session volume</div></div><div><div class="num n2">42</div><div class="cap">sets</div></div><div><div class="num n2">318</div><div class="cap">reps</div></div></div><div class="sub" style="margin-top:4px">Bodyweight sets add reps, not kilograms.</div></div>
+        <div class="card"><div class="eyebrow">Muscle-group coverage · 4 wk</div><div class="stack" style="gap:6px;margin-top:8px" id="muscles"></div></div>
+        <div class="card list"><div class="eyebrow" style="margin-bottom:4px">Sessions</div>
+          <button class="li card" style="box-shadow:none;padding:10px 0;border-radius:0" data-act="Opens the existing StrengthSessionDetail"><span class="tags">🏋</span><span style="flex:1">Fri 30 Oct · Full body · 34 min · 9 sets</span><span class="src m">logged</span><span class="chev">›</span></button>
+          <button class="li card" style="box-shadow:none;padding:10px 0;border-radius:0" data-act="Opens the existing StrengthSessionDetail"><span class="tags">🏋</span><span style="flex:1">Wed 28 Oct · Full body · quick log</span><span class="src e">no sets</span><span class="chev">›</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RECOVERY -->
+    <section class="screen" id="s-recovery">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow tagr">Recovery</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="seg" role="group" aria-label="Prototype state"><button aria-pressed="true" data-rec="empty">No data (empty state)</button><button data-rec="data">With Health data</button></div>
+        <div id="rec-empty" class="stack">
+          <div class="card" style="background:var(--rec-bg);border-color:transparent">
+            <div class="eyebrow tagr">Nothing measured yet</div>
+            <div class="num n2" style="margin:6px 0">Let Cyclift read your recovery</div>
+            <div class="sub">Sleep, resting heart rate and HRV come from Apple Health, read only with your permission and shown with their source and date. Cyclift never turns them into a readiness score.</div>
+            <button class="primary" style="margin-top:10px" data-act="Opens Profile › Apple Health (existing permission flow). Nothing in this upgrade changes what is read.">Connect Apple Health</button>
+          </div>
+          <div class="card"><div class="eyebrow">What you'll see</div><div class="list" style="margin-top:4px"><div class="li">Sleep hours and consistency, last 7 nights</div><div class="li">Resting HR trend with its date</div><div class="li">HRV (SDNN) trend with its date</div><div class="li">How your sessions felt (from your check-ins)</div></div></div>
+        </div>
+        <div id="rec-data" class="stack" hidden>
+          <div class="card"><div class="row" style="justify-content:space-between"><div class="eyebrow tagr">Sleep · 7 nights</div><span class="src m">Health · today 06:40</span></div><svg id="sleep-bars" style="width:100%;height:80px;display:block;margin-top:6px" aria-label="Sleep hours per night, example values"></svg><div class="sub">Average 6 h 48 · range 5 h 10 – 7 h 55 · 2 nights under 6 h</div></div>
+          <div class="grid2">
+            <div class="card"><div class="cap">Resting HR</div><div class="num n2">52 bpm</div><div class="sub">7-day avg 54 · <span class="src m">Health · today</span></div><svg class="mini" id="rhr" aria-hidden="true"></svg></div>
+            <div class="card"><div class="cap">HRV (SDNN)</div><div class="num n2">48 ms</div><div class="sub">7-day avg 55 · <span class="src m">Health · today</span></div><svg class="mini" id="hrv" aria-hidden="true"></svg></div>
+          </div>
+          <div class="card"><div class="eyebrow">How sessions felt · 4 wk</div><div class="sub" style="margin-top:6px">Average effort 7.2/10 · soreness reported after 2 of 9 sessions <span class="src m">your check-ins</span></div></div>
+          <div class="card" style="border-color:var(--coach-bg)"><div class="eyebrow tagk">Coach note</div><div class="sub" style="margin-top:4px">HRV is below your 7-day average for 3 days and sleep was short twice. That is worth noticing, not a verdict on today's session. Your plan is unchanged.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HORIZON MAP -->
+    <section class="screen ride" id="s-map" style="padding:10px 12px 20px">
+      <div class="map" aria-hidden="true"><svg viewBox="0 0 393 790" preserveAspectRatio="xMidYMid slice"></svg></div>
+      <div class="hud">
+        <div class="row" style="justify-content:space-between"><div class="modeseg" style="width:150px"><button aria-pressed="true" data-go="map">Map</button><button data-go="focus">Focus</button></div><div class="rcard" style="padding:8px 12px"><span class="rcap">Endurance · Z2</span> <span class="rnum" style="font-size:15px">23:40</span> <span class="rcap">left</span></div></div>
+        <div class="rcard"><div class="row" style="justify-content:space-between"><span class="rcap">Heart rate · target 130–150</span><span class="rcap" style="color:#3fd0bf">on target</span></div>
+          <div class="row" style="align-items:baseline;gap:6px"><span class="rnum" style="font-size:56px">142</span><span class="rcap">bpm</span><span style="margin-left:auto" class="rcap">↗ steady 4 min</span></div>
+          <div class="band" aria-hidden="true"><i style="left:52%"></i></div></div>
+        <div class="rgrid">
+          <div class="rcard"><div class="rcap">Power</div><div class="rnum" style="font-size:18px;color:var(--ride-ink2)">—</div><div class="rcap" style="font-size:9px">no meter</div></div>
+          <div class="rcard"><div class="rcap">Cadence</div><div class="rnum" style="font-size:22px">88</div><div class="rcap" style="font-size:9px">rpm</div></div>
+          <div class="rcard"><div class="rcap">Speed</div><div class="rnum" style="font-size:22px">27.4</div><div class="rcap" style="font-size:9px">km/h</div></div>
+          <div class="rcard"><div class="rcap">Distance</div><div class="rnum" style="font-size:22px">12.3</div><div class="rcap" style="font-size:9px">km</div></div>
+        </div>
+        <div style="flex:1;min-height:200px"></div>
+        <div class="rcard" style="border-color:rgba(185,166,245,.35)"><div class="rcap" style="color:#b9a6f5">Coach</div><div style="font:600 15px var(--font)">Hold this effort. The next block starts in 3 min.</div></div>
+        <div class="sens"><span class="live">Watch HR</span><span class="live">GPS</span><span>Power · not paired</span><span class="live">Cadence</span><button class="ghost" style="color:#aab5c2;padding:2px 6px;font-size:11px" data-go="sensors">Details ›</button></div>
+        <div class="rcard" style="padding:8px 12px"><span class="rcap">Route</span> <span style="font:600 12px var(--font);color:var(--ride-ink2)">Recorded path shown · no planned route</span></div>
+        <div class="rctl"><button data-act="Calls the existing RideRecorder.pause() (or device.control(.pause) when the board owns the ride)">Pause</button><button data-act="Calls RideRecorder.lap()">Lap</button><button class="end" data-act="Hold 1.5 s → existing end flow → RideResultSheet (Save / Discard). A short tap does nothing (accidental-end protection).">Hold to end</button></div>
+      </div>
+    </section>
+
+    <!-- HORIZON FOCUS -->
+    <section class="screen ride" id="s-focus" style="padding:10px 12px 20px">
+      <div class="hud">
+        <div class="row" style="justify-content:space-between"><div class="modeseg" style="width:150px"><button data-go="map">Map</button><button aria-pressed="true" data-go="focus">Focus</button></div><span class="rcap">Endurance ride · 1 h · phase 2 of 3</span></div>
+        <div class="rcard" style="text-align:center;padding:18px 14px">
+          <div class="ring" style="margin:0 auto"><svg width="150" height="150" viewBox="0 0 150 150" aria-hidden="true"><circle cx="75" cy="75" r="64" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="9"/><circle cx="75" cy="75" r="64" fill="none" stroke="#3fd0bf" stroke-width="9" stroke-linecap="round" stroke-dasharray="402" stroke-dashoffset="160" transform="rotate(-90 75 75)"/></svg><div class="in"><div class="rnum" style="font-size:40px">23:40</div><div class="rcap">left in Z2</div></div></div>
+        </div>
+        <div class="rcard"><div class="row" style="justify-content:space-between"><span class="rcap">Heart rate · target 130–150</span><span class="rcap" style="color:#3fd0bf">on target</span></div><div class="row" style="align-items:baseline;gap:6px"><span class="rnum" style="font-size:64px">142</span><span class="rcap">bpm</span></div><div class="band"><i style="left:52%"></i></div><svg id="hr-trend" style="width:100%;height:40px;display:block;margin-top:8px" aria-label="Heart rate, last 5 minutes, example"></svg></div>
+        <div class="rgrid">
+          <div class="rcard"><div class="rcap">Power</div><div class="rnum" style="font-size:18px;color:var(--ride-ink2)">—</div></div>
+          <div class="rcard"><div class="rcap">Cadence</div><div class="rnum" style="font-size:24px">88</div></div>
+          <div class="rcard"><div class="rcap">Speed</div><div class="rnum" style="font-size:24px">27.4</div></div>
+          <div class="rcard"><div class="rcap">Time</div><div class="rnum" style="font-size:24px">36:20</div></div>
+        </div>
+        <div class="rcard" style="border-color:rgba(185,166,245,.35)"><div class="rcap" style="color:#b9a6f5">Coach</div><div style="font:600 15px var(--font)">Hold this effort. Next: 10 min tempo at 150–162.</div></div>
+        <div class="sens"><span class="live">Watch HR</span><span class="live">GPS</span><span class="stale">Cadence · 14 s ago</span><button class="ghost" style="color:#aab5c2;padding:2px 6px;font-size:11px" data-go="sensors">Details ›</button></div>
+        <div class="rctl"><button data-act="Existing pause">Pause</button><button data-act="Existing lap">Lap</button><button class="end" data-act="Hold 1.5 s → existing end flow">Hold to end</button></div>
+      </div>
+    </section>
+
+    <!-- SENSOR DETAILS -->
+    <section class="screen ride" id="s-sensors">
+      <div class="top"><button class="back" data-go="map" aria-label="Back" style="background:rgba(255,255,255,.1);color:#fff">‹</button><div class="rcap">Sensors</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="rcard"><div class="row"><span style="flex:1;font-weight:700">Apple Watch · heart rate</span><span class="sens"><span class="live">receiving</span></span></div><div class="rcap" style="margin-top:4px">last sample 1 s ago · 142 bpm</div></div>
+        <div class="rcard"><div class="row"><span style="flex:1;font-weight:700">Phone GPS</span><span class="sens"><span class="live">receiving</span></span></div><div class="rcap" style="margin-top:4px">accuracy ±5 m · background on</div></div>
+        <div class="rcard"><div class="row"><span style="flex:1;font-weight:700">Cadence sensor</span><span class="sens"><span class="stale">stale</span></span></div><div class="rcap" style="margin-top:4px">last sample 14 s ago · value greyed on the ride screen</div></div>
+        <div class="rcard"><div class="row"><span style="flex:1;font-weight:700">Power meter</span><span class="sens"><span>not paired</span></span></div><div class="rcap" style="margin-top:4px">Pair in Profile › Devices. Power metrics stay "—" until then.</div></div>
+        <div class="rcard"><div class="row"><span style="flex:1;font-weight:700">Cyclift BikeComputer</span><span class="sens"><span>not connected</span></span></div><div class="rcap" style="margin-top:4px">Phone is recording this ride. The board can take over only before a ride starts.</div></div>
+        <div class="rcard" style="font:500 12px var(--font);color:var(--ride-ink2)">States used: not configured · paired · connecting · connected · receiving · stale · disconnected · unsupported (existing DeviceState model).</div>
+      </div>
+    </section>
+
+    <!-- DOCK DEMO -->
+    <section class="screen" id="s-dock">
+      <div class="top"><div><div class="eyebrow">Liquid Dock</div><h2 class="h">Navigation</h2></div></div>
+      <div class="stack">
+        <div class="card"><div class="eyebrow">Try it</div><div class="sub" style="margin-top:4px">Tap the tabs in the dock below. The selection flows to the new tab with a short spring and a slight stretch, then settles. With Reduce Motion on (toolbar), it moves instantly.</div></div>
+        <div class="card"><div class="eyebrow">Centre button state</div><div class="sub" style="margin:4px 0 8px">The centre button always opens the Training Hub. Its look reflects today's state (from the existing <code>homeToday()</code>):</div>
+          <div class="seg" style="flex-wrap:wrap"><button aria-pressed="true" data-cstate="pending">Pending</button><button data-cstate="active">In progress</button><button data-cstate="done">Completed</button><button data-cstate="rest">Rest day</button><button data-cstate="multi">Multiple</button><button data-cstate="missed">Missed</button></div>
+          <div class="sub" style="margin-top:8px" id="cstate-text">Pending: training icon, soft teal glow with a slow breathing pulse (3.2 s). The pulse stops after the hub has been opened once today.</div></div>
+        <div class="card"><div class="eyebrow">Accessibility</div><div class="list" style="margin-top:4px">
+          <div class="li">VoiceOver: "Home, tab 1 of 5, selected" · centre: "Training hub, one workout pending"</div>
+          <div class="li">Touch targets 64 pt tall, ≥ 72 pt wide; centre 54 pt</div>
+          <div class="li">Dynamic Type: labels cap at XXL; icons stay</div>
+          <div class="li">Safe area: dock sits above the home indicator</div>
+          <div class="li">Haptic: one light selection tap on tab change; none while a ride is recording</div>
+          <div class="li">During a recorded ride the dock is hidden; ride controls take the space</div></div></div>
+        <div class="card"><div class="eyebrow">Compared with today</div><div class="sub" style="margin-top:4px">Today: fixed opaque bar, 58 pt raised centre, no motion, no haptics. Proposed: floating translucent capsule 14 pt from the edges, same five destinations in the same order.</div></div>
+      </div>
+    </section>
+
+    <!-- TRAINING HUB -->
+    <section class="screen" id="s-hub">
+      <div class="top"><button class="back" data-go="home" aria-label="Close">×</button><div><div class="eyebrow">Training hub</div><h2 class="h">Today · Wed 4 Nov</h2></div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="card" style="border-color:var(--str-bg)">
+          <div class="row"><span class="eyebrow tags">Strength · pending</span><span class="src" style="margin-left:auto">planned</span></div>
+          <div class="num n2" style="margin:6px 0 2px;font-size:22px">Full body · 30 min</div>
+          <div class="sub">Light to moderate · find your working weights · bodyweight until equipment is confirmed</div>
+          <div class="list" style="margin-top:8px">
+            <div class="li"><span class="tags">1</span><span style="flex:1">Cyclist squat · 3 × 8</span><span class="sub">rest 90 s</span></div>
+            <div class="li"><span class="tags">2</span><span style="flex:1">Dumbbell bench press · 3 × 10</span><span class="sub">rest 75 s</span></div>
+            <div class="li"><span class="tags">3</span><span style="flex:1">Chest-supported row · 3 × 10</span><span class="sub">rest 75 s</span></div>
+          </div>
+          <button class="primary" style="margin-top:10px" data-go="hubdone" data-act="Opens the existing StrengthWorkoutScreen (unchanged). In this prototype it jumps to the completed state.">Start workout</button>
+          <div class="grid2" style="margin-top:8px"><button class="secondary" data-act="Opens the existing Why sheet for this session (coach reasoning)">Why this workout?</button><button class="secondary" data-act="Opens the existing More menu: Edit, Swap, Move to another day, Skip (each with its preview where one exists)">More options</button></div>
+        </div>
+        <div class="card"><div class="eyebrow">Also today</div><div class="sub" style="margin-top:4px">Nothing else planned. Tomorrow: Thu · Endurance ride · 60 min.</div></div>
+        <div class="card"><div class="eyebrow">Optional</div><div class="row" style="margin-top:6px;gap:8px"><button class="secondary" data-act="Opens the Ride tab (free ride, existing)">Free ride</button><button class="secondary" data-act="Opens the existing TrainNowSheet chooser">Other session</button></div></div>
+      </div>
+    </section>
+
+    <!-- HUB COMPLETED -->
+    <section class="screen" id="s-hubdone">
+      <div class="top"><button class="back" data-go="home" aria-label="Close">×</button><div><div class="eyebrow">Training hub</div><h2 class="h">Today · Wed 4 Nov</h2></div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="card" style="background:var(--rec-bg);border-color:transparent">
+          <div class="row"><span class="eyebrow tagr">✓ Completed · 10:12</span><span class="src m" style="margin-left:auto">recorded</span></div>
+          <div class="num n2" style="margin:6px 0 2px;font-size:22px">Full body · 32 min</div>
+          <div class="row" style="gap:16px;margin-top:6px"><div><div class="num n2">9</div><div class="cap">sets</div></div><div><div class="num n2">84</div><div class="cap">reps</div></div><div><div class="num n2">1 240 kg</div><div class="cap">volume</div></div><div><div class="num n2">7/10</div><div class="cap">effort</div></div></div>
+          <div class="sub" style="margin-top:6px">Recorded values from your log, not the plan.</div>
+          <button class="primary" style="margin-top:10px" data-act="Opens the existing StrengthSessionDetail / results sheet">View results</button>
+        </div>
+        <div class="card"><div class="eyebrow">Remaining today</div><div class="sub" style="margin-top:4px;color:var(--ink);font-weight:600">Everything planned is done.</div><div class="sub">Next: Thu · Endurance ride · 60 min · heart-rate targets.</div></div>
+        <div class="card"><div class="eyebrow">Optional</div><div class="row" style="margin-top:6px;gap:8px"><button class="secondary" data-act="Opens the Ride tab (free ride)">Free ride</button><button class="secondary" data-act="Opens the existing TrainNowSheet chooser">Other session</button></div></div>
+        <div class="card"><div class="eyebrow">Updated</div><div class="sub" style="margin-top:4px">Home ring → 2 of 5 · Progress strength → 1 session · Plan Wed → done · History → new entry. One record, counted once.</div></div>
+      </div>
+    </section>
+
+    <!-- RECOMMENDATION DETAILS -->
+    <section class="screen" id="s-reco">
+      <div class="top"><button class="back" data-go="home" aria-label="Back">‹</button><div class="eyebrow tagk">Coach recommendation</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="card"><div class="eyebrow">Why</div><div class="sub" style="margin-top:4px;color:var(--ink)">Your Tuesday endurance ride was rated effort 9/10 (your check-in) and your average HR was 151, above the Z2 target. A second hard ride two days later is more than the plan intends for week 1.</div></div>
+        <div class="grid2">
+          <div class="card"><div class="cap">Original · Thu</div><div class="num n2" style="font-size:16px">Threshold</div><div class="sub">3 × 8 min at 150–162 bpm · 60 min</div></div>
+          <div class="card" style="border-color:var(--coach-bg)"><div class="cap tagk">Proposed · Thu</div><div class="num n2" style="font-size:16px">Endurance</div><div class="sub">steady 130–150 bpm · 60 min</div></div>
+        </div>
+        <div class="card"><div class="eyebrow">Difference</div><div class="sub" style="margin-top:4px">Same day, same duration. Lower intensity, no intervals. Weekly riding time unchanged (3 h). The threshold session is not dropped: the coach will propose it again next week.</div></div>
+        <div class="card"><div class="eyebrow">Schedule preview</div><div class="strip" style="margin-top:8px" id="recoStrip"></div><div class="sub" style="margin-top:6px">Only Thursday changes.</div></div>
+        <button class="primary" data-act="commitCoachChange (existing): saves a plan version; Undo available under Plan › Plan changes">Approve change</button>
+        <button class="secondary" data-go="home">Keep the plan as it is</button>
+        <div class="sub" style="font-size:12px">Nothing is saved until you approve. Undo restores the previous version.</div>
+      </div>
+    </section>
+
+    <!-- GOAL -->
+    <section class="screen" id="s-goal">
+      <div class="top"><button class="back" data-go="home" aria-label="Back">‹</button><div class="eyebrow" style="color:var(--warn)">Goal · Endurance</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="card"><div class="eyebrow">What this goal tracks</div><div class="sub" style="margin-top:4px">Weekly riding time, longest ride, and heart rate at a steady pace over time (aerobic efficiency). FTP is not required.</div></div>
+        <div class="card"><div class="eyebrow">Measured so far</div><div class="row" style="gap:16px;margin-top:6px"><div><div class="num n2">1 h 02</div><div class="cap">longest ride</div></div><div><div class="num n2">1</div><div class="cap">ride recorded</div></div></div><div class="sub" style="margin-top:6px">Trends appear after 4 recorded rides.</div></div>
+        <div class="card"><div class="eyebrow">Next step</div><div class="sub" style="margin-top:4px">Complete this week's three rides. Your Saturday ride is the long one.</div></div>
+      </div>
+    </section>
+
+    <!-- CONSISTENCY -->
+    <section class="screen" id="s-consistency">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow">Consistency</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="card"><div class="eyebrow">4 weeks · Mon 12 Oct – Sun 8 Nov</div><div class="num n1" style="margin-top:6px">78%</div><div class="sub">7 done of 9 planned · 1 missed · 1 rescheduled · 0 skipped</div><div class="bar-h" style="margin-top:8px"><i style="width:78%;background:var(--teal)"></i></div></div>
+        <div class="grid2"><div class="card"><div class="eyebrow tagc">Rides</div><div class="num n2">5 of 6</div></div><div class="card"><div class="eyebrow tags">Lifts</div><div class="num n2">2 of 3</div></div></div>
+        <div class="card"><div class="eyebrow">By week</div><svg id="cons-bars" style="width:100%;height:80px;display:block;margin-top:6px" aria-label="Adherence per week, example"></svg><div class="sub">The first week counts from the plan's start day only.</div></div>
+        <div class="card"><div class="eyebrow">Streak</div><div class="sub" style="margin-top:4px">Shown after 2 full weeks on the plan.</div></div>
+      </div>
+    </section>
+
+    <!-- BODY & DISCOMFORT -->
+    <section class="screen" id="s-body">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow" style="color:var(--warn)">Body & discomfort</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="card" style="background:var(--warn-bg);border-color:transparent"><div class="eyebrow" style="color:var(--warn)">Checkpoint E · design preview</div><div class="sub" style="margin-top:4px;color:var(--ink)">A 30-second daily check-in: sleep quality, fatigue, soreness, pain area and severity, whether it is improving, whether training is affected. Stored on your phone only, after you consent. Built only after its separate privacy review.</div></div>
+        <div class="card"><div class="eyebrow">Daily check-in (concept)</div><div class="sub" style="margin:6px 0">How sore are you today?</div><div class="seg"><button data-act="Records soreness 0 (concept only)">None</button><button aria-pressed="true" data-act="Records soreness 1 (concept)">Mild</button><button data-act="Records 2">Moderate</button><button data-act="Records 3">Severe</button></div>
+          <div class="sub" style="margin:10px 0 6px">Where?</div><div class="row" style="justify-content:center"><svg width="120" height="150" viewBox="0 0 120 150" aria-label="Body area selector concept"><circle cx="60" cy="18" r="12" fill="var(--card2)"/><rect x="40" y="34" width="40" height="52" rx="12" fill="var(--card2)"/><rect x="22" y="36" width="14" height="46" rx="7" fill="var(--card2)"/><rect x="84" y="36" width="14" height="46" rx="7" fill="var(--card2)"/><rect x="42" y="88" width="16" height="54" rx="8" fill="var(--warn)"/><rect x="62" y="88" width="16" height="54" rx="8" fill="var(--card2)"/></svg></div><div class="sub" style="text-align:center">Left thigh · mild · 2 days · improving</div></div>
+        <div class="card"><div class="eyebrow tagk">What the coach may do</div><div class="sub" style="margin-top:4px">Suggest lower intensity or a modified session, or suggest seeing a professional for persistent pain. It never diagnoses and never says training is safe.</div></div>
+      </div>
+    </section>
+
+    <!-- MILESTONES -->
+    <section class="screen" id="s-milestones">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow">Milestones</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <button class="card" data-act="Opens the checkpoint detail: what was measured, what is missing (existing store.checkpoints())"><div class="row"><div style="flex:1"><div class="eyebrow tagt">4 weeks · in 24 days</div><div class="sub">Needs 4 recorded rides and 2 logged lifts. So far: 1 and 0.</div></div><span class="chev">›</span></div></button>
+        <button class="card" data-act="Opens the 8-week detail"><div class="row"><div style="flex:1"><div class="eyebrow">8 weeks</div><div class="sub">Aerobic efficiency trend needs 6 steady rides with HR.</div></div><span class="chev">›</span></div></button>
+        <button class="card" data-act="Opens the 12-week detail"><div class="row"><div style="flex:1"><div class="eyebrow">12 weeks</div><div class="sub">Strength progression needs 8 logged sessions of the same lifts.</div></div><span class="chev">›</span></div></button>
+        <div class="sub" style="font-size:12px">Replaces the six explanatory blocks on today's Progress page with three compact milestones.</div>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="screen" id="s-history">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow">History</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="seg"><button aria-pressed="true" data-filt="All">All</button><button data-filt="Rides">Rides</button><button data-filt="Lifts">Lifts</button><button data-filt="Imported">Imported</button></div>
+        <div class="card list" id="histList"></div>
+        <div class="sub" style="font-size:12px">Each row opens the existing session detail. Imported workouts are listed once and never merged with recorded ones.</div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="screen" id="s-reports">
+      <div class="top"><button class="back" data-go="progress" aria-label="Back">‹</button><div class="eyebrow">Report · 4 weeks</div><span style="width:36px"></span></div>
+      <div class="stack">
+        <div class="card"><div class="eyebrow">Summary</div><div class="sub" style="margin-top:4px">9 sessions planned, 7 done. 4 h 10 riding, 3 strength sessions.</div></div>
+        <div class="card"><div class="eyebrow tagc">Cycling</div><div class="sub" style="margin-top:4px">Riding time rose 20% vs the previous 4 weeks. Aerobic efficiency: <b>insufficient evidence</b> (needs 6 steady rides with HR).</div></div>
+        <div class="card"><div class="eyebrow tags">Strength</div><div class="sub" style="margin-top:4px">Squat top set 60 → 65 kg. Bench and row: <b>insufficient evidence</b> (2 sessions).</div></div>
+        <div class="card"><div class="eyebrow tagr">Recovery</div><div class="sub" style="margin-top:4px">No Health readings. 2 of 9 sessions reported soreness.</div></div>
+        <div class="card"><div class="eyebrow">Data gaps · next steps</div><div class="sub" style="margin-top:4px">Connect Apple Health · log sets in strength sessions · establish FTP when ready.</div></div>
+      </div>
+    </section>
+
+    <!-- DAY -->
+    <section class="screen" id="s-day">
+      <div class="top"><button class="back" data-go="home" aria-label="Back">‹</button><div class="eyebrow" id="dayTitle">Day</div><span style="width:36px"></span></div>
+      <div class="stack" id="dayBody"></div>
+    </section>
+
+    <!-- PLAN / PROFILE stubs -->
+    <section class="screen" id="s-plan"><div class="top"><div><div class="eyebrow">Plan</div><h2 class="h">Unchanged screen</h2></div></div><div class="card"><div class="sub">Plan is not in this upgrade. Only its day strip adopts the shared day states (before plan started, rescheduled), so it agrees with Home.</div><div class="strip" style="margin-top:10px" id="planStrip"></div></div></section>
+    <section class="screen" id="s-profile"><div class="top"><div><div class="eyebrow">Profile</div><h2 class="h">Unchanged screen</h2></div></div><div class="card"><div class="sub">Profile, Devices and onboarding are protected and stay exactly as in build 153.</div></div></section>
+
+    <!-- DOCK -->
+    <nav class="dock" id="dock" aria-label="Main navigation">
+      <div class="ind" id="ind"></div>
+      <button class="tab" data-tab="home" aria-current="page"><span class="i">⌂</span>Home</button>
+      <button class="tab" data-tab="plan"><span class="i">▦</span>Plan</button>
+      <div class="center"><button class="cbtn pending" id="cbtn" data-go="hub" aria-label="Training hub, one workout pending"><span id="cicon">🏋</span></button></div>
+      <button class="tab" data-tab="progress"><span class="i">↗</span>Progress</button>
+      <button class="tab" data-tab="profile"><span class="i">◯</span>Profile</button>
+    </nav>
+
+    <div class="toast" id="toast" role="status"></div>
+    <div class="scrim" id="scrim"></div>
+    <div class="sheet" id="sheet"><button class="back x" id="sheetX" aria-label="Close">×</button><h3 id="sheetT"></h3><div id="sheetB"></div></div>
+    <div class="anno" id="anno"></div>
+  </div></div>
+
+  <!-- CHECKLIST -->
+  <div class="check" id="check">
+    <h1>Approval checklist · screen by screen</h1>
+    <p class="note">Answer each screen, then copy the answers and send them to me. "Approve" means Checkpoint B may build it as shown; "Changes" means I rework it before any production code. Your answers are kept in this browser only.</p>
+    <div id="checkItems"></div>
+    <div class="bar"><button class="btn" id="copyAns">Copy my answers</button><span class="note" id="copyMsg"></span></div>
+  </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const root=document.documentElement;
+// ---------- toolbar ----------
+const tTheme=$('#tTheme'),tRM=$('#tRM'),tAnno=$('#tAnno');
+function setTheme(d){root.setAttribute('data-theme',d?'dark':'light');tTheme.setAttribute('aria-pressed',String(d));tTheme.textContent=d?'Light':'Dark';}
+tTheme.onclick=()=>setTheme(tTheme.getAttribute('aria-pressed')!=='true');
+tRM.onclick=()=>{const on=tRM.getAttribute('aria-pressed')!=='true';tRM.setAttribute('aria-pressed',String(on));root.classList.toggle('rm',on);};
+tAnno.onclick=()=>{const on=tAnno.getAttribute('aria-pressed')!=='true';tAnno.setAttribute('aria-pressed',String(on));root.classList.toggle('annos',on);if(on)openBehind();else closeSheet();};
+// ---------- screens ----------
+const screens={home:'Home',progress:'Progress overview',cycling:'Cycling analytics',strength:'Strength analytics',recovery:'Recovery',map:'Horizon · Map',focus:'Horizon · Focus',dock:'Liquid Dock',hub:'Training Hub',hubdone:'Hub · completed'};
+const withDock={home:'home',plan:'plan',progress:'progress',profile:'profile',dock:'home',overview:'home',cycling:'progress',strength:'progress',recovery:'progress',goal:'home',reco:'home',consistency:'progress',body:'progress',milestones:'progress',history:'progress',reports:'progress',day:'home'};
+let cur='home';
+function show(id){const s=$('#s-'+id);if(!s)return;$$('.screen').forEach(x=>x.classList.remove('on'));s.classList.add('on');s.scrollTop=0;cur=id;
+  const dock=$('#dock');const tab=withDock[id];dock.style.display=tab?'grid':'none';if(tab)setTab(tab,true);
+  $$('#picker .btn').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===id)));closeSheet();
+  if(root.classList.contains('annos'))openBehind();
+  try{location.hash=id}catch(e){}}
+const picker=$('#picker');Object.entries(screens).forEach(([id,name])=>{const b=document.createElement('button');b.className='btn';b.dataset.s=id;b.textContent=name;b.onclick=()=>show(id);picker.appendChild(b);});
+// ---------- dock ----------
+const tabs=['home','plan','center','progress','profile'];
+function setTab(t,silent){$$('.tab').forEach(b=>{const on=b.dataset.tab===t;b.toggleAttribute('aria-current',on);if(on)b.setAttribute('aria-current','page');});
+  const i=tabs.indexOf(t);if(i<0)return;const ind=$('#ind');const w=$('#dock').clientWidth;const slot=w/5;const x=i*slot;
+  if(!silent&&!root.classList.contains('rm')){ind.classList.add('moving');setTimeout(()=>ind.classList.remove('moving'),230);}
+  ind.style.transform='translateX('+x+'px)';}
+$$('.tab').forEach(b=>b.onclick=()=>{setTab(b.dataset.tab,false);setTimeout(()=>show(b.dataset.tab),60);});
+const cstates={pending:['🏋','pending','Pending: training icon, soft teal glow with a slow breathing pulse (3.2 s). The pulse stops after the hub has been opened once today. VoiceOver: "Training hub, one workout pending".'],
+ active:['▶','active','In progress: blue active styling, no pulse. The hub opens on Resume. VoiceOver: "Training hub, workout in progress".'],
+ done:['✓','done','Completed: green tick. The hub opens on the recorded results and anything still scheduled.'],
+ rest:['☾','rest','Rest day: calm neutral button. The hub explains the rest and offers optional sessions.'],
+ multi:['🏋','pending','Multiple: a count badge shows pending sessions; the hub lists each one. The pulse runs until the first is started.'],
+ missed:['🏋','missed','Missed: a small amber dot under the button; the hub offers the existing Move to today / reschedule. No shaming language.']};
+function setC(s){const c=$('#cbtn');c.className='cbtn '+cstates[s][1];$('#cicon').textContent=cstates[s][0];c.querySelector('.badge')?.remove();if(s==='multi'){const b=document.createElement('span');b.className='badge';b.textContent='2';c.appendChild(b);}
+  $('#cstate-text').textContent=cstates[s][2];$$('[data-cstate]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cstate===s)));
+  c.setAttribute('aria-label',{pending:'Training hub, one workout pending',active:'Training hub, workout in progress',done:'Training hub, workout completed',rest:'Training hub, rest day',multi:'Training hub, 2 workouts pending',missed:'Training hub, one missed session'}[s]);}
+$$('[data-cstate]').forEach(b=>b.onclick=()=>setC(b.dataset.cstate));
+// ---------- generic actions ----------
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),2600);}
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g&&g.closest('#phone')){e.preventDefault();show(g.dataset.go);if(g.dataset.go==='hub')setC('pending');if(g.dataset.go==='hubdone')setC('done');return;}
+  const a=e.target.closest('[data-act]');if(a&&a.closest('#phone')){toast('In production: '+a.dataset.act);return;}
+  const r=e.target.closest('[data-range]');if(r){r.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===r)));toast('Range '+r.dataset.range+': the same calculation over '+r.dataset.range+' (TrendChartMath buckets). Example data does not change in the prototype.');return;}
+  const x=e.target.closest('[data-ex]');if(x){x.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===x)));drawEx(x.dataset.ex);return;}
+  const rc=e.target.closest('[data-rec]');if(rc){rc.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===rc)));$('#rec-empty').hidden=rc.dataset.rec!=='empty';$('#rec-data').hidden=rc.dataset.rec!=='data';return;}
+  const f=e.target.closest('[data-filt]');if(f){f.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b===f)));drawHist(f.dataset.filt);return;}
+  const d=e.target.closest('.day[data-day]');if(d){openDay(d.dataset.day);return;}
+});
+// ---------- sheets ----------
+function openSheet(t,html){$('#sheetT').textContent=t;$('#sheetB').innerHTML=html;$('#sheet').classList.add('on');$('#scrim').classList.add('on');}
+function closeSheet(){$('#sheet').classList.remove('on');$('#scrim').classList.remove('on');}
+$('#sheetX').onclick=closeSheet;$('#scrim').onclick=closeSheet;
+const behind={
+ home:[['Greeting','profile.name, today','Profile (unchanged)','—'],['Weekly ring','homeWeek(): planned, plannedDone per sport; window = plan effective start → Sunday','Training Overview','"No plan yet" with Create plan'],['Cycling card','ledger.riding(weekOf:) minutes/planned/rides; distance from RideRecord; sparkline = TrendChartMath 8 weekly buckets','Cycling Analytics','"No rides yet · first ride Thu"'],['Strength card','ledger.lifting(weekOf:) plannedDone/planned; bars = weekly buckets','Strength Analytics','"No logs yet"'],['Week strip','store.plan + ledger status per day; pre-start days from planEffectiveStart (W12)','Day details / Plan','—'],['Coach insight','homeCoach() → proposal; advisory until approved','Recommendation details','Card hidden when homeCoach() is nil'],['Recovery','settings.healthReads + latest HealthReads (source, date); check-ins','Recovery details','"No readings yet · Connect Apple Health"'],['Goal','profile.primaryGoal + goal-related ledger metrics','Goal details','"Tracking from your first 4 weeks"'],['Today reminder','homeToday().centre (one line)','Training Hub','Rest day: "Rest · optional session"']],
+ overview:[['Counts','ledger per week; adherence = plannedDone ÷ planned, planned only from the effective start (already true since the run-147 fix)','—','No plan: explain how to create one'],['Bars','TrendChartMath.buckets (sessions)','—','Weeks before the plan show no bar']],
+ progress:[['Cycling card','ledger.riding over the range; avg HR from RideRecord','Cycling Analytics','"No rides in this range"'],['Strength card','ledger.lifting; liftSummaries() top set','Strength Analytics','"No logged sets"'],['Recovery card','latest HealthReads per kind + date','Recovery','"No readings yet"'],['Consistency','ledger plannedDone/planned/skipped/missed over range','Consistency','—'],['Body & discomfort','Checkpoint E store (not built)','Body & discomfort','"Not set up"'],['Milestones','store.checkpoints()','Milestones','—'],['History','Timeline.build','History','"No sessions yet"']],
+ cycling:[['Riding time bars','TrendChartMath.buckets(riding) done vs planned','—','"No rides in this range"'],['Distance / speed','RideRecord distanceM, durationS (GPS)','—','"—" when no GPS ride'],['Avg HR / cadence','RideRecord avgHR / avgCadence (only rides with the sensor)','—','"—" + which sensor is missing'],['Avg power / NP','RideRecord avgPower / normalizedPower only from recorded power','—','"no power meter"'],['HR zones','zoneSeconds per ride (existing)','—','Power zones only when ftpSource ≠ unknown'],['FTP history','ftpEvidence() verified tests + entered values','Profile › FTP','"No verified FTP yet"'],['Ride rows','Timeline entries → RideDetailView (existing)','Ride detail','—']],
+ strength:[['Sessions bars','ledger.lifting per week','—','—'],['Exercise progression','strength logs: top set per exercise per session (liftSummaries)','—','"Log sets to see progression"'],['Est. 1RM','existing Progress formula (Brzycki, RPE ≥ 8), labelled estimate','—','hidden when no qualifying set'],['Volume','sum(weight × reps) per session; bodyweight counts reps','—','—'],['Muscle coverage','planner muscle regions of logged exercises','—','—'],['Session rows','StrengthSessionDetail (existing)','Session detail','—']],
+ recovery:[['Sleep','HealthReads sleep hours (last 7 nights needs a short read history — Checkpoint E; until then only the latest night is shown)','—','Empty state card'],['Resting HR / HRV','HealthReads latest value, source, date','—','"—"'],['How sessions felt','CheckIn effort / pain per session (existing)','—','"No check-ins yet"'],['Coach note','homeCoach() text only; no plan change','—','hidden']],
+ map:[['Map','MapKit Map + MapPolyline from RideRecorder samples (existing in RideDetailsSheet)','—','GPS denied: Focus mode + explanation'],['Primary metric','RideCoach target for the current step; HR from SensorHub candidates','—','Sensor missing: metric shows "—" and the reason'],['Secondary','SensorHub metrics; stale → greyed with age','Sensor details','—'],['Coach line','CoachPanelModel.make (existing rules), one instruction','—','—'],['Controls','RideRecorder pause/lap/end; hold-to-end 1.5 s','RideResultSheet','—']],
+ focus:[['Phase ring','RideStepStrip data: step remaining / total','—','Free ride: elapsed time instead'],['HR trend','last 5 min of recorder samples','—','—'],['Everything else','as Map mode; switching modes changes views only, recorder untouched','—','—']],
+ dock:[['Tabs','RootView tab binding (0–4 unchanged)','pages','—'],['Centre','homeToday().centre + TodayAction','Training Hub','—']],
+ hub:[['Workout card','homeToday() sessions (the existing Today card, moved)','StrengthWorkoutScreen / Ride tab','Rest: rest context + optional sessions'],['Why / More','existing Why sheet and More menu','—','—'],['Also today','homeToday() multi sessions','—','—']],
+ hubdone:[['Results','StrengthSession log: minutes, sets, reps, volume, check-in effort','StrengthSessionDetail','—'],['Remaining','homeToday() after the log','—','—']],
+ reco:[['Why','homeCoach() proposal reason + CheckIn + ride avgHR','—','—'],['Original / proposed','coachChangePreview (existing): before/after Workout','—','—'],['Approve','commitCoachChange → planVersions; Undo via proposeUndo','Plan › Plan changes','If no preview path exists for a proposal type: advisory only, no Approve button']],
+};
+function openBehind(){const rows=behind[cur]||behind[withDock[cur]]||[];if(!rows.length){openSheet('Behind this screen','<div class="sub">Supporting screen — data as on its parent.</div>');return;}
+  openSheet('Behind this screen · '+(screens[cur]||cur),rows.map(r=>'<div class="kv" style="padding:8px 0;border-top:1px solid var(--rule)"><b>'+r[0]+'</b><span><b style="display:inline">data</b> '+r[1]+'<br><b style="display:inline">tap</b> '+r[2]+'<br><b style="display:inline">empty</b> '+r[3]+'</span></div>').join(''));}
+// ---------- strips ----------
+const week=[{d:'Mon',n:2,k:'pre'},{d:'Tue',n:3,k:'ride',done:true},{d:'Wed',n:4,k:'lift',today:true},{d:'Thu',n:5,k:'ride'},{d:'Fri',n:6,k:'lift'},{d:'Sat',n:7,k:'ride'},{d:'Sun',n:8,k:'rest'}];
+const icon={pre:'—',ride:'🚲',lift:'🏋',rest:'☾',both:'🚲🏋'};
+function strip(el,days,opts){el.innerHTML='';days.forEach(x=>{const b=document.createElement('button');b.className='day '+(x.k==='pre'?'pre':'')+(x.done?' done':'')+(x.today?' today':'')+(x.missed?' missed':'')+(x.resched?' resched':'');b.dataset.day=x.d;
+  b.setAttribute('aria-label',x.d+' '+x.n+' Nov, '+(x.k==='pre'?'before this plan started':x.k==='rest'?'rest day':x.k+(x.done?', done':x.today?', today, planned':', planned')));
+  b.innerHTML='<span class="dn">'+x.d+'</span><span class="ic">'+icon[x.k]+'</span><span class="dot"></span>';el.appendChild(b);});}
+strip($('#homeStrip'),week);strip($('#planStrip'),week);
+const rweek=week.map(x=>({...x}));rweek[3]={d:'Thu',n:5,k:'ride',resched:true};strip($('#recoStrip'),rweek);
+function openDay(d){const x=week.find(w=>w.d===d);$('#dayTitle').textContent=x.d+' '+x.n+' Nov';
+  const body=$('#dayBody');if(x.k==='pre'){body.innerHTML='<div class="card"><div class="eyebrow">Before this plan started</div><div class="sub" style="margin-top:4px">You approved this plan on Tue 3 Nov. This day is not counted as rest, missed or done.</div></div><div class="card"><div class="eyebrow">Recorded that day</div><div class="sub" style="margin-top:4px">Nothing recorded. Any ride or workout logged on this day would still appear here.</div></div>';}
+  else if(x.k==='rest'){body.innerHTML='<div class="card"><div class="eyebrow tagr">Rest day</div><div class="sub" style="margin-top:4px">Planned recovery. Optional: mobility or an easy spin from the Training Hub.</div></div>';}
+  else{body.innerHTML='<div class="card"><div class="eyebrow '+(x.k==='ride'?'tagc':'tags')+'">'+(x.k==='ride'?'Ride':'Strength')+' · '+(x.done?'done':x.today?'today':'planned')+'</div><div class="num n2" style="margin:6px 0">'+(x.k==='ride'?'Endurance · 60 min':'Full body · 30 min')+'</div><div class="sub">Opens the existing WorkoutDetail: prescription, Why, Edit, Swap, Move, Skip (each through its preview).</div><button class="secondary" style="margin-top:8px" data-act="Opens the existing WorkoutDetail">Open session</button></div>';}
+  show('day');}
+// ---------- charts (example values) ----------
+function svgEl(n,a){const e=document.createElementNS('http://www.w3.org/2000/svg',n);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function spark(id,vals,color,fill){const s=$('#'+id);if(!s)return;const W=s.clientWidth||110,H=s.clientHeight||46;s.setAttribute('viewBox','0 0 '+W+' '+H);s.innerHTML='';const mx=Math.max(...vals)||1;const pts=vals.map((v,i)=>[6+i*(W-12)/(vals.length-1),H-6-(v/mx)*(H-14)]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  if(fill)s.appendChild(svgEl('path',{d:d+' L'+pts[pts.length-1][0]+' '+(H-4)+' L'+pts[0][0]+' '+(H-4)+' Z',fill:color,opacity:'.15'}));
+  s.appendChild(svgEl('path',{d,fill:'none',stroke:color,'stroke-width':'2','stroke-linejoin':'round'}));const l=pts[pts.length-1];s.appendChild(svgEl('circle',{cx:l[0],cy:l[1],r:'3',fill:color}));}
+function bars(id,planned,done,cP,cD,labels){const s=$('#'+id);if(!s)return;const W=s.clientWidth||300,H=s.clientHeight||80;s.setAttribute('viewBox','0 0 '+W+' '+H);s.innerHTML='';const n=planned.length;const mx=Math.max(...planned,...done)||1;const bw=(W-10)/n;
+  planned.forEach((p,i)=>{const x=5+i*bw+bw*.2,w=bw*.6;if(p>0)s.appendChild(svgEl('rect',{x,y:H-14-(p/mx)*(H-24),width:w,height:(p/mx)*(H-24),rx:'3',fill:cP}));
+    const d=done[i];if(d>0)s.appendChild(svgEl('rect',{x,y:H-14-(d/mx)*(H-24),width:w,height:(d/mx)*(H-24),rx:'3',fill:cD}));
+    if(labels){const t=svgEl('text',{x:x+w/2,y:H-3,'text-anchor':'middle','font-size':'9','fill':'var(--ink3)','font-family':'var(--font)'});t.textContent=labels[i];s.appendChild(t);}});}
+function draw(){const c=getComputedStyle(root);const cyc=c.getPropertyValue('--cyc').trim(),str=c.getPropertyValue('--str').trim(),teal=c.getPropertyValue('--teal').trim(),rec=c.getPropertyValue('--rec').trim(),g=c.getPropertyValue('--card2').trim();
+  spark('mini-cyc',[0,0,0,45,70,52,108,62],cyc,true);bars('mini-str',[0,0,0,2,2,2,2,2],[0,0,0,1,2,1,1,0],g,str);
+  spark('p-cyc',[40,55,48,70,62,80,66,62],cyc,true);bars('p-str',[2,2,2,2,2,2,2,2],[1,2,1,0,1,1,1,0],g,str);
+  bars('ov-bars',[0,0,0,0,3,3,3,5],[0,0,0,0,2,3,2,1],g,teal,['14','21','28','5','12','19','26','2']);
+  bars('cyc-main',[0,120,120,150,150,150,180],[0,96,108,74,110,62,62],g,cyc,['21','28','5','12','19','26','2']);
+  bars('str-main',[2,2,2,2,2,2,2],[1,1,0,1,1,0,0],g,str,['21','28','5','12','19','26','2']);
+  bars('cons-bars',[3,3,3,5],[2,3,2,1],g,teal,['12 Oct','19','26','2 Nov']);
+  bars('sleep-bars',[8,8,8,8,8,8,8],[7.2,5.2,7.9,6.8,5.9,7.4,7.2],g,rec,['W','T','F','S','S','M','T']);
+  spark('rhr',[55,54,53,55,52,53,52],rec,true);spark('hrv',[58,56,60,54,50,49,48],rec,true);spark('hr-trend',[128,133,138,140,141,143,142,144,142],'#3fd0bf',true);
+  drawEx($('[data-ex][aria-pressed="true"]')?.dataset.ex||'Squat');}
+const exd={Squat:[50,55,55,60,60,65],Bench:[30,32.5,32.5],Row:[35,40]};
+function drawEx(n){const v=exd[n];const c=getComputedStyle(root).getPropertyValue('--str').trim();spark('ex-line',v,c,true);}
+// zones + muscles
+const z=[['Z1',12],['Z2',58],['Z3',19],['Z4',9],['Z5',2]],zc=['#9fb3c8','#3fd0bf','#5ab0f0','#f0b64a','#ff7b7b'];
+$('#zones').innerHTML=z.map((r,i)=>'<div class="row"><span class="cap" style="width:26px">'+r[0]+'</span><div class="bar-h" style="flex:1"><i style="width:'+r[1]+'%;background:'+zc[i]+'"></i></div><span class="sub" style="width:34px;text-align:right">'+r[1]+'%</span></div>').join('');
+const m=[['Legs',14],['Push',10],['Pull',10],['Core',8]];
+$('#muscles').innerHTML=m.map(r=>'<div class="row"><span class="cap" style="width:40px">'+r[0]+'</span><div class="bar-h" style="flex:1"><i style="width:'+(r[1]*6)+'%;background:var(--str)"></i></div><span class="sub" style="width:44px;text-align:right">'+r[1]+' sets</span></div>').join('');
+// history
+const hist=[['Tue 3 Nov','Rides','Endurance · 1 h 02 · 28.4 km','Phone + Watch','m'],['Fri 30 Oct','Lifts','Full body · 34 min · 9 sets','logged','m'],['Sat 31 Oct','Rides','Long ride · 1 h 48 · 49 km','Board','m'],['Thu 29 Oct','Imported','Ride · 45 min · 20.2 km','Apple Health','e'],['Wed 28 Oct','Lifts','Full body · quick log','manual','e'],['Tue 27 Oct','Rides','Tempo · 55 min · missed','—','u']];
+function drawHist(f){$('#histList').innerHTML=hist.filter(h=>f==='All'||h[1]===f).map(h=>'<button class="li card" style="box-shadow:none;padding:10px 0;border-radius:0" data-act="Opens the existing session detail"><span>'+(h[1]==='Lifts'?'🏋':'🚲')+'</span><span style="flex:1"><b>'+h[0]+'</b> · '+h[2]+'</span><span class="src '+h[4]+'">'+h[3]+'</span><span class="chev">›</span></button>').join('')||'<div class="sub">No sessions match.</div>';}
+drawHist('All');
+// map illustration
+(function(){const s=$('#s-map .map svg');const g=svgEl('g',{});s.appendChild(g);
+  const roads=['M-20 120 L420 80','M-20 300 L420 260','M-20 520 L420 470','M-20 700 L420 660','M60 -20 L120 820','M230 -20 L250 820','M340 -20 L300 820','M-20 420 C100 380 200 460 420 400'];
+  roads.forEach(d=>g.appendChild(svgEl('path',{d,fill:'none',stroke:'#1d2b3a','stroke-width':'10','stroke-linecap':'round'})));
+  roads.forEach(d=>g.appendChild(svgEl('path',{d,fill:'none',stroke:'#263a4d','stroke-width':'3','stroke-dasharray':'14 10'})));
+  for(let i=0;i<24;i++){g.appendChild(svgEl('rect',{x:Math.random()*380,y:Math.random()*780,width:20+Math.random()*40,height:16+Math.random()*30,rx:'3',fill:'#152130'}));}
+  g.appendChild(svgEl('path',{d:'M70 760 C120 700 90 600 150 560 C210 520 190 440 240 420 C290 400 300 330 250 300',fill:'none',stroke:'#3fd0bf','stroke-width':'5','stroke-linecap':'round','stroke-linejoin':'round',opacity:'.95'}));
+  g.appendChild(svgEl('circle',{cx:'250',cy:'300',r:'14',fill:'#3fd0bf',opacity:'.25'}));g.appendChild(svgEl('circle',{cx:'250',cy:'300',r:'7',fill:'#fff',stroke:'#3fd0bf','stroke-width':'3'}));
+  g.appendChild(svgEl('path',{d:'M250 282 L258 296 L242 296 Z',fill:'#fff'}));
+  const t=svgEl('text',{x:'196',y:'776','font-size':'10',fill:'#6f8396','font-family':'var(--font)','text-anchor':'middle'});t.textContent='Map illustration · live Apple Maps in production';s.appendChild(t);})();
+// ---------- checklist ----------
+const cl=[['Home','home',['Composition and card density: can you read your week in 5 seconds?','Ring, cycling and strength cards: right prominence and mini charts?','Calendar day states (— before plan, done, planned, missed, rescheduled) clear?','Coach insight and recovery/goal cards: concise enough?','Compact Today reminder acceptable, or remove it?']],
+ ['Progress overview','progress',['Three primary categories then Consistency and Body & discomfort: right order?','Enough on the overview, or too little?','Milestones and History as rows at the end: fine?']],
+ ['Cycling analytics','cycling',['Metric tiles with source tags: right set and labels?','Unknown FTP and missing power shown honestly enough?','Chart style and range control?']],
+ ['Strength analytics','strength',['Exercise picker + progression chart: what you want?','Est. 1RM labelled "estimate": acceptable?','Volume and muscle coverage: useful or noise?']],
+ ['Recovery','recovery',['Empty state: attractive and clear next step?','With data: sleep bars, resting HR, HRV with source and date — right level?','Coach note wording (observation, not verdict)?']],
+ ['Horizon · Map','map',['Map as the base with overlays: readable outdoors?','Primary metric + target band + 4 secondary tiles: right hierarchy?','Sensor chips and "no planned route" line: honest and unobtrusive?','Hold-to-end control acceptable?']],
+ ['Horizon · Focus','focus',['Phase countdown ring + large primary metric: right for structured workouts?','Stale cadence shown greyed with age: clear?','Should Focus be the default for interval workouts?']],
+ ['Liquid Dock','dock',['Floating capsule look (blur, depth) acceptable?','Liquid selection movement: right amount of spring and stretch?','Centre button 54 pt and its six states: approve?','Reduce Motion behaviour (instant move, static glow) acceptable?']],
+ ['Training Hub','hub',['Full workout card here, with Start / Why / More: complete?','Also today / Optional sections: keep?','Close (×) back to the current tab: right behaviour?']],
+ ['Hub · completed','hubdone',['Recorded results (not plan values) + View results: right?','Remaining / next session wording?','Green completion state on the centre button: approve?']]];
+const items=$('#checkItems');let saved={};try{saved=JSON.parse(localStorage.getItem('cyclift-proto-answers')||'{}')}catch(e){}
+cl.forEach(([name,id,qs],i)=>{const d=document.createElement('details');d.innerHTML='<summary>'+(i+1)+'. '+name+' <button class="btn" style="margin-left:8px;padding:3px 10px" data-s="'+id+'">open</button></summary><div class="q">Check<ul>'+qs.map(q=>'<li>'+q+'</li>').join('')+'</ul></div><div class="ans"><label><input type="radio" name="a-'+id+'" value="Approve" id="a-'+id+'-1"> Approve</label><label><input type="radio" name="a-'+id+'" value="Changes" id="a-'+id+'-2"> Changes needed</label></div><textarea id="n-'+id+'" placeholder="Notes for '+name+'"></textarea>';items.appendChild(d);
+  d.querySelector('[data-s]').onclick=e=>{e.preventDefault();show(id);window.scrollTo({top:0});};
+  const sv=saved[id]||{};if(sv.a)d.querySelector('input[value="'+sv.a+'"]').checked=true;if(sv.n)d.querySelector('textarea').value=sv.n;
+  d.addEventListener('change',persist);d.addEventListener('input',persist);});
+function persist(){const o={};cl.forEach(([n,id])=>{o[id]={a:(document.querySelector('input[name="a-'+id+'"]:checked')||{}).value||'',n:$('#n-'+id).value};});try{localStorage.setItem('cyclift-proto-answers',JSON.stringify(o))}catch(e){}}
+$('#copyAns').onclick=()=>{const txt='Cyclift V1 prototype review\n'+cl.map(([n,id],i)=>{const a=(document.querySelector('input[name="a-'+id+'"]:checked')||{}).value||'(no answer)';const no=$('#n-'+id).value.trim();return (i+1)+'. '+n+': '+a+(no?' — '+no:'');}).join('\n');
+  const done=()=>{$('#copyMsg').textContent='Copied. Paste it into the chat.';};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done).catch(()=>{fallback(txt)});}else fallback(txt);
+  function fallback(t){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();$('#copyMsg').textContent='Select the text and copy it.';}};
+// ---------- scale phone to narrow screens ----------
+function fit(){const p=$('#phone'),w=p.parentElement.clientWidth;const s=Math.min(1,w/393);p.style.transform='scale('+s+')';p.parentElement.style.height=(852*s)+'px';}
+window.addEventListener('resize',()=>{fit();draw();setTab(withDock[cur]||'home',true);});
+// ---------- boot ----------
+fit();setC('pending');const h=(location.hash||'').replace('#','');show(screens[h]||h&&$('#s-'+h)?h:'home');requestAnimationFrame(()=>{draw();setTab('home',true);});
+window.addEventListener('hashchange',()=>{const id=(location.hash||'').replace('#','');if(id&&id!==cur&&$('#s-'+id))show(id);});
+})();
+</script>
