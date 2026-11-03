@@ -1,0 +1,19 @@
+BikeComputer iOS CI — run 144 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 144 — 2026-11-03 01:26 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m57s
+RESULT tests: ok (Executed 527 tests, with 0 failures) · 10m30s
+  no last-green commit known — default quick set
+Quick UI targets: LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages DesignSystemAudit/testGalleryLightAndDark JourneyTests/testHybridJourney
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m18s
+  layout small (AX3): FAILED (exit 65) · 22m40s — -[BikeComputerUITests.JourneyTests testHybridJourney] : failed - hybrid: onbCyclingLevel chips -[BikeComputerUITests.JourneyTests testHybridJourney] : failed - hybrid: onbStrengthLevel chips -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Other` -> `Elements matching predicate '"onb
+  layout standard (L): FAILED (exit 65) · 12m54s — -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Other` -> `Elements matching predicate '"onbCyclingLevel" IN identifiers'`, given input App element pid: 83683 
+commit 62eaa7d6ec53f06bc8c7f278177d662f0d6532bc  branch ios/v1  job failure
