@@ -38,7 +38,11 @@ extension XCUIElement {
     @discardableResult
     func tapWhenSettled(timeout: TimeInterval = 5) -> Bool {
         guard waitUntilSettled(timeout: timeout) else { return false }
-        coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // run 150 (owner size): a menu item settled, then re-resolved to an infinite frame when tapped through the
+        // element — tap the settled point through the app instead, so the frame is read once.
+        let f = frame
+        guard f.minX.isFinite, f.minY.isFinite, f.width > 0, f.height > 0 else { return false }
+        XCUIApplication().coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: f.midX, dy: f.midY)).tap()
         return true
     }
 

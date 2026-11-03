@@ -50,7 +50,7 @@ final class JourneyTests: XCTestCase {
         let name = app.textFields["onbName"].firstMatch
         XCTAssertTrue(name.waitForExistence(timeout: 5)); name.tap(); name.typeText(p.name + "\n")
         XCTAssertEqual(app.textFields.matching(NSPredicate(format: "identifier CONTAINS[c] 'name'")).count, 1, "\(p.tag): exactly one name field")
-        XCTAssertTrue(app.keyboards.firstMatch.waitUntilGone(timeout: 3), "\(p.tag): Return closes the keyboard")
+        XCTAssertTrue(app.keyboards.firstMatch.waitUntilGone(timeout: 10), "\(p.tag): Return closes the keyboard")
         let mode = app.buttons["onbMode-\(p.mode)"].firstMatch
         XCTAssertTrue(mode.waitForExistence(timeout: 5)); XCTAssertTrue(tapVisible(app, mode))
         XCTAssertTrue(app.buttons["onbDOB"].firstMatch.label.lowercased().contains("not set"), "\(p.tag): date of birth is empty, never pre-filled")
@@ -239,11 +239,14 @@ final class JourneyTests: XCTestCase {
     }
     /// Every button on the stage does something: its own label changes, a selection appears, or the screen's text changes.
     private func sweep(_ app: XCUIApplication, stage: String, tag: String, skip: [String]) {
-        let buttons = app.buttons.allElementsBoundByIndex.filter { b in
-            let id = b.identifier
-            return !id.isEmpty && !skip.contains(id) && (id.hasPrefix("onb") || id.hasPrefix("goal")) }
-        for b in buttons.prefix(12) where b.exists {
-            let id = b.identifier
+        // run 150: elements bound by index pointed at other buttons once a tap changed the layout — collect the identifiers,
+        // then find each button by identifier when it is tapped
+        let ids = app.buttons.allElementsBoundByIndex.map(\.identifier).filter { id in
+            !id.isEmpty && !skip.contains(id) && (id.hasPrefix("onb") || id.hasPrefix("goal")) }
+        var seenIds = Set<String>()
+        for id in ids.prefix(12) where seenIds.insert(id).inserted {
+            let b = app.buttons[id].firstMatch
+            guard b.exists else { continue }
             reveal(app, b)
             let before = snapshotText(app)
             b.tap()

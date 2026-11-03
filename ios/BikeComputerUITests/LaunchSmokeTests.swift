@@ -261,7 +261,9 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(days.waitForExistence(timeout: 10))
         for _ in 0..<8 where days.frame.maxY > app.windows.firstMatch.frame.maxY - 90 { app.swipeUp(); _ = days.waitUntilSettled(timeout: 2) }
         days.tap()
-        XCTAssertTrue(app.navigationBars["Training days"].waitForExistence(timeout: 10), "availability editor must open")
+        // V1 (runs 149-150): Plan's week settings open the one week editor ("Your week" — the same as onboarding stage 3
+        // and Profile › Your week); the old "Training days" editor is gone by design. Same check: it opens and closes.
+        XCTAssertTrue(app.navigationBars["Your week"].waitForExistence(timeout: 10), "week editor must open")
         XCTAssertEqual(app.state, .runningForeground)
         app.buttons["Cancel"].firstMatch.tap()
         // Plan → Log strength → Quick log sheet opens with the type grid, closes

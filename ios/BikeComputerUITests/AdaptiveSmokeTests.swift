@@ -16,6 +16,9 @@ final class AdaptiveSmokeTests: XCTestCase {
         // Plan › Log strength › Quick log for today's session (Home B: Home keeps one primary action; the quick log lives
         // in Plan's toolbar and in Train now)
         app.buttons["Plan"].firstMatch.tap()
+        // run 150: the tab tap during launch did not register (Home stayed) — confirm Plan, tap again once if needed
+        if !app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10) { _ = app.buttons["Plan"].firstMatch.tapWhenSettled() }
+        XCTAssertTrue(app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 15), "Plan opens")
         let log = app.buttons["Log strength"].firstMatch
         // run 131: the first test of a cold Release build (seed migrated at launch) took > 10 s to show Plan's toolbar; the
         // rest of this test then passed, so this is launch timing, not a missing control — wait like the other smoke tests.
