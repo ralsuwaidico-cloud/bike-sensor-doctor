@@ -134,7 +134,8 @@ twb() {
 # not screenshots): the simulator records h264 while JourneyTests drives onboarding → Home → Profile → Plan → relaunch
 # for one persona. Published to ci-logs as ios/run-N/journey-<persona>.mp4 (downscaled with ffmpeg when the runner has it).
 record_journey() {
-  local persona=$1 LT=$SECONDS raw="$LAYOUT/journey-$persona-raw.mp4" out="$LAYOUT/journey-$persona.mp4"
+  # run 148: macOS bash 3.2 expands every word of one `local` line before assigning any, so $persona was unbound here
+  local persona="$1"; local LT=$SECONDS; local raw="$LAYOUT/journey-$persona-raw.mp4"; local out="$LAYOUT/journey-$persona.mp4"
   xcrun simctl io "$SIM" recordVideo --codec h264 --force "$raw" > "$OUT/record-$persona.log" 2>&1 &
   local rec=$!
   sleep 3
