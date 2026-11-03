@@ -147,6 +147,7 @@ jobs:
         include:
           - { job: unit,            stage: unit,   devices: "",         minutes: 60 }
           - { job: smoke,           stage: smoke,  devices: "",         minutes: 75 }
+          - { job: journeys,        stage: journeys, devices: "",       minutes: 75 }
           - { job: layout-small,    stage: layout, devices: "small",    minutes: 75 }
           - { job: layout-standard, stage: layout, devices: "standard", minutes: 60 }
           - { job: layout-promax,   stage: layout, devices: "promax",   minutes: 60 }
@@ -292,7 +293,7 @@ jobs:
           set -u
           S="$PWD/summary.txt"; : > "$S"
           echo "BikeComputer iOS CI — run $N — scope $SCOPE — jobs: quick=$R_QUICK test=$R_TEST release=$R_RELEASE testflight=$R_TF" >> "$S"
-          for j in quick unit smoke layout-small layout-standard layout-promax layout-owner watch release; do
+          for j in quick unit smoke journeys layout-small layout-standard layout-promax layout-owner watch release; do
             f="logs/logs-$j/logs/summary.txt"; [ -f "$f" ] || f="logs/logs-$j/summary.txt"
             [ -f "$f" ] || continue
             echo "" >> "$S"; echo "## $j" >> "$S"; cat "$f" >> "$S"
@@ -315,7 +316,7 @@ jobs:
             [ -f "$a/asc.txt" ] && cp "$a/asc.txt" "$D/apple-setup.txt"
             find "$a" -name 'summary.txt' | head -1 | while read -r f; do cp "$f" "$D/summary-$j.txt"; done
             find "$a" -name '*.png' -exec cp {} "$D/layout/" \;
-            find "$a" -name '*.mp4' -size -15000k -exec cp {} "$D/" \;   # V1 journey recordings (under 15 MB each)
+            find "$a" -name '*.mp4' -size -45000k -exec cp {} "$D/" \;   # V1 journey recordings (compressed; under 45 MB each)
           done
           rmdir "$D/layout" 2>/dev/null || true
           cp "$S" "$D/summary.txt"

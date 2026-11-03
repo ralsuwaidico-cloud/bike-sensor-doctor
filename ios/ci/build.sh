@@ -65,7 +65,7 @@ digest() {
 SCOPE="${SCOPE:-full}"
 STAGE="${STAGE:-}"
 if [ -z "$STAGE" ]; then if [ "$SCOPE" = ui ]; then STAGE=layout; else STAGE=all; fi; fi
-case "$STAGE" in all|quick|unit|smoke|layout|watch|release) ;; *) echo "unknown STAGE $STAGE"; exit 2;; esac
+case "$STAGE" in all|quick|unit|smoke|journeys|layout|watch|release) ;; *) echo "unknown STAGE $STAGE"; exit 2;; esac
 LAYOUT_DEVICES="${LAYOUT_DEVICES:-small,standard,promax,owner}"
 T0=$SECONDS; since() { echo "$(( (SECONDS - $1) / 60 ))m$(( (SECONDS - $1) % 60 ))s"; }
 note "BikeComputer iOS CI — build ${BUILD_NUMBER:-?} — $(date -u '+%Y-%m-%d %H:%M UTC')"
@@ -154,6 +154,20 @@ record_journey() {
   return $J
 }
 
+# Run 149: the three recorded journeys (≈11 min each) plus smoke exceeded the smoke job's limit — they run in a job of
+# their own, in parallel with the others; all three stay release-blocking.
+run_journeys() {
+  TS=$SECONDS
+  release_products || { note "RESULT journey (recorded): FAILED (build)"; STATUS=1; return; }
+  mkdir -p "$LAYOUT"
+  # a compressor for the recordings (run 149: none on the runner, so the 78 MB hybrid recording was not published)
+  command -v ffmpeg >/dev/null 2>&1 || brew install --quiet ffmpeg >/dev/null 2>&1 || note "  ffmpeg unavailable — recordings published only if small enough"
+  local U=0
+  for persona in hybrid cycling strength; do record_journey "$persona" || U=1; done
+  note "RESULT journey (recorded): $([ $U -eq 0 ] && echo ok || echo FAILED) — JourneyTests hybrid, cycling, strength · $(since $TS)"
+  [ $U -eq 0 ] || STATUS=1
+}
+
 run_unit() {
   TS=$SECONDS
   local xr; xr=$(bft Debug) || { note "RESULT tests: FAILED (build)"; STATUS=1; return; }
@@ -180,10 +194,6 @@ run_smoke() {
   twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests -skip-testing:BikeComputerUITests/JourneyTests
   U=$?
   digest "$OUT/uitest.log" launch-smoke
-  # the V1 journeys run one persona at a time so each gets its own recording (three personas, all release-blocking)
-  mkdir -p "$LAYOUT"
-  for persona in hybrid cycling strength; do record_journey "$persona" || U=1; done
-  note "RESULT journey (recorded): $([ $U -eq 0 ] && echo ok || echo FAILED) — JourneyTests hybrid, cycling, strength"
   if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
   else
     note "RESULT launch smoke (Release): FAILED (exit $U) · $(since $TS)"; STATUS=1
@@ -313,6 +323,7 @@ quick_green_for_head() {   # 0 when a quick run passed for HEAD's source tree
 case "$STAGE" in
   unit)  run_unit ;;
   smoke) run_smoke ;;
+  journeys) run_journeys ;;
   layout) run_layout ;;
   quick)
     run_unit
@@ -335,7 +346,7 @@ case "$STAGE" in
     note "RESULT archive: skipped (quick check)"; note "RESULT upload: skipped (quick check never uploads)"
     note "Total: $(since $T0)"; exit $STATUS ;;
   all)
-    run_unit; run_smoke; run_layout
+    run_unit; run_smoke; run_journeys; run_layout
     bash ci/watch-shots.sh "$LAYOUT" || true
     note "  watch screenshots: $(ls "$LAYOUT"/watch-*.png 2>/dev/null | wc -l | tr -d ' ') — $(tr '\n' ' ' < "$LOGS/watch-shots.txt" 2>/dev/null | head -c 400)"
     for f in "$LAYOUT"/watch-*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done ;;
