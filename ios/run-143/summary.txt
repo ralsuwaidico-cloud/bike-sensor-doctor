@@ -1,0 +1,19 @@
+BikeComputer iOS CI — run 143 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 143 — 2026-11-03 00:12 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m21s
+RESULT tests: ok (Executed 527 tests, with 0 failures) · 9m32s
+  no last-green commit known — default quick set
+Quick UI targets: LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages DesignSystemAudit/testGalleryLightAndDark
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m7s
+  layout small (AX3): FAILED (exit 65) · 17m7s — -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - ax3: live plan preview strip 
+  layout standard (L): FAILED (exit 65) · 12m14s — -[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages] : XCTAssertTrue failed - l: live plan preview strip 
+commit 47635d6e8288846c51ff5d8c8ec20989e9458c35  branch ios/v1  job failure
