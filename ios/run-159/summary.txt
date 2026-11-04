@@ -1,0 +1,2 @@
+BikeComputer iOS CI — run 159 — scope quick — jobs: quick=abandoned test=skipped release=skipped testflight=skipped
+commit 1a1ce39189a34061d87ec865212473aeee7b1e83  branch ios/v1-ux  job failure
