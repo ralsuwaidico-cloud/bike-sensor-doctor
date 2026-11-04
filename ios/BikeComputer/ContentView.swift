@@ -52,6 +52,10 @@ struct RootView: View {
             // so scrollable content ends above it and scrolls under its translucent capsule; the destinations, the
             // centre button's routing and its labels are unchanged.
             .safeAreaInset(edge: .bottom, spacing: 0) { dock.padding(.bottom, 8) }
+            // Run 157: a page whose content lives in its own NavigationStack (Plan, Progress, Profile, Home) does not take
+            // the inset above for its scroll content, so Plan's last row ended under the dock. Scroll-content margins
+            // reach every scroll view in the subtree; Ride (no scroll view) is placed by the safe-area inset.
+            .contentMargins(.bottom, 80, for: .scrollContent)
             .undoSnackbar(hidden: tab == 0)     // Home shows it inline, under Today (never over a heading)
         }
         .ignoresSafeArea(.keyboard)
