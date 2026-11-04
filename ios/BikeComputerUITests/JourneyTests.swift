@@ -41,7 +41,7 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(start.waitForExistence(timeout: 30), "\(p.tag): welcome")
         XCTAssertEqual(app.textFields.count, 0, "\(p.tag): the welcome screen asks nothing")
         shot(app, "\(p.tag)-01-welcome")
-        XCTAssertTrue(start.tapWhenSettled())
+        XCTAssertTrue(start.tapWhenSettled(timeout: 15), "\(p.tag): welcome button settles (run 160: first launch on a freshly booted simulator took > 5 s)")
 
         // 2 + 3 — personal details once; athlete type, experience, goals
         let next = app.buttons["onboardingNext"].firstMatch
