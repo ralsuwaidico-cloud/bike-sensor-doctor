@@ -180,11 +180,11 @@ struct DesignSystemGallery: View {
                 section("Liquid Dock") {
                     // Checkpoint B: the dock the app uses, in every centre state, so the audit measures each one
                     VStack(spacing: 14) {
-                        CyLiquidDock(selection: $tab, state: .pending, centreIcon: "dumbbell.fill", centreLabel: "Train now", centreHint: "Train now, open today's strength workout") {}
+                        CyLiquidDock(selection: $tab, state: .pending, centreIcon: "dumbbell.fill", centreLabel: "Train now", centreHint: "Train now, open today's strength workout", animated: false) {}
                         CyLiquidDock(selection: .constant(3), state: .active, centreIcon: "dumbbell.fill", centreLabel: "In progress", centreHint: "Strength workout in progress, resume it") {}
                         CyLiquidDock(selection: .constant(0), state: .done, centreIcon: "checkmark", centreLabel: "Done today", centreHint: "Today's training is done, see the next step") {}
                         CyLiquidDock(selection: .constant(1), state: .rest, missed: true, centreIcon: "dumbbell.fill", centreLabel: "Train now", centreHint: "Rest day, optional session") {}
-                        CyLiquidDock(selection: .constant(4), state: .multiple(2), centreIcon: "figure.mixed.cardio", centreLabel: "Train now", centreHint: "Train now, choose between today's ride and strength session") {}
+                        CyLiquidDock(selection: .constant(4), state: .multiple(2), centreIcon: "figure.mixed.cardio", centreLabel: "Train now", centreHint: "Train now, choose between today's ride and strength session", animated: false) {}
                         CyLiquidDock(selection: .constant(0), state: .hold, centreIcon: "cross.case.fill", centreLabel: "Paused", centreHint: "Training paused by your health check, opens what this means") {}
                     }
                     .padding(.horizontal, -CyTheme.margin + 2)

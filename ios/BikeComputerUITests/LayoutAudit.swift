@@ -219,7 +219,7 @@ final class LayoutAudit: XCTestCase {
             if dock.exists {
                 let win = app.windows.firstMatch.frame, f = dock.frame
                 XCTAssertTrue(f.minX >= win.minX + 8 && f.maxX <= win.maxX - 8, "\(size): dock inset from the sides \(f)")
-                XCTAssertTrue(f.maxY <= win.maxY - 8 && f.maxY > win.maxY - 140, "\(size): dock sits just above the bottom edge \(f)")
+                XCTAssertTrue(f.maxY <= win.maxY - 4 && f.maxY > win.maxY - 140, "\(size): dock sits just above the bottom edge \(f)")   // SE (no home indicator): 8 pt padding minus rounding
                 for t in ["Home", "Plan", "Progress", "Profile"] { XCTAssertGreaterThanOrEqual(app.buttons[t].firstMatch.frame.height, 44, "\(size): tab \(t) target height") }
                 note("\(size) dock: \(Int(f.width))×\(Int(f.height)) at y \(Int(f.minY))–\(Int(f.maxY)) of \(Int(win.height))")
             }

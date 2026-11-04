@@ -274,7 +274,7 @@ final class JourneyTests: XCTestCase {
         let win = app.windows.firstMatch.frame
         let bar = app.buttons["onboardingNext"].firstMatch
         for _ in 0..<8 {
-            guard e.exists else { return }
+            guard e.waitForExistence(timeout: 2) else { return }   // run 154: a re-render between queries made `frame` throw
             let bottom = bar.exists && bar.frame.minY > win.midY ? bar.frame.minY - 8 : win.maxY - 100
             let top = win.minY + 110
             if e.frame.maxY > bottom { drag(app, up: true) } else if e.frame.minY < top { drag(app, up: false) } else { return }

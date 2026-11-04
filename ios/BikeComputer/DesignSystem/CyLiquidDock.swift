@@ -15,6 +15,8 @@ struct CyLiquidDock: View {
     let centreIcon: String
     let centreLabel: String
     let centreHint: String
+    /// Gallery / audits: no breathing animation (the states are drawn static).
+    var animated = true
     let onCentre: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -57,7 +59,7 @@ struct CyLiquidDock: View {
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("liquidDock")
-        .onAppear { pulse = true }
+        .onAppear { if animated && !reduceMotion { pulse = true } }
     }
 
     private func select(_ i: Int) {
@@ -107,11 +109,14 @@ struct CyLiquidDock: View {
             VStack(spacing: 2) {
                 ZStack {
                     if glowing {
+                        // Run 154: a never-ending animation keeps the app from ever being "idle" (UI tests wait for that) and
+                        // costs battery — the ring breathes three times after it appears, then rests as a soft static halo.
+                        let breathing = animated && !reduceMotion
                         Circle().stroke(CyTheme.cycling.tint, lineWidth: 2)
                             .frame(width: 54, height: 54)
-                            .scaleEffect(reduceMotion ? 1.12 : (pulse ? 1.22 : 1.0))
-                            .opacity(reduceMotion ? 0.5 : (pulse ? 0 : 0.7))
-                            .animation(reduceMotion ? nil : .easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: pulse)
+                            .scaleEffect(breathing ? (pulse ? 1.22 : 1.0) : 1.12)
+                            .opacity(breathing ? (pulse ? 0.05 : 0.7) : 0.5)
+                            .animation(breathing ? .easeInOut(duration: 1.6).repeatCount(5, autoreverses: true) : nil, value: pulse)
                             .accessibilityHidden(true)
                     }
                     Circle().fill(fill).frame(width: 54, height: 54)

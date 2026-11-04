@@ -348,6 +348,7 @@ struct OnboardingView: View {
         if store.profile.goals.isEmpty, let g = a.goals { store.updateProfile { $0.goals = g; $0.primaryGoal = a.primaryGoal ?? g.first } }
         store.onboardingStage = 0
         let now = Date()
+        store.dropUnapprovedSessions(before: now)        // W12: pre-approval placeholder sessions never become history
         _ = store.regenerate(weekOf: now, replaceEdited: true)
         if let next = Calendar.current.date(byAdding: .day, value: 7, to: now) { _ = store.regenerate(weekOf: next, replaceEdited: true) }
         let made = store.plan.filter { $0.date >= Calendar.current.startOfDay(for: now) }

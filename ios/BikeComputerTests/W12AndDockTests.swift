@@ -96,6 +96,32 @@ final class W12AndDockTests: XCTestCase {
         XCTAssertEqual(riding.extra, 1, "counted as an extra ride, never as a planned one")
     }
 
+    func testApprovalDropsGeneratedSessionsOnDaysAlreadyOver() throws {
+        try XCTSkipIf(weekdayIndex == 0, "on a Monday there is no earlier day this week")
+        // the app's launch path: a plan is generated from the default profile before onboarding (Store(generatePlan: true))
+        let s = Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bc-w12g-\(UUID().uuidString)", isDirectory: true), generatePlan: true)
+        let monday = TrainingLedger.monday(of: Date())
+        let before = s.plan.filter { $0.date >= monday && cal.startOfDay(for: $0.date) < today }
+        XCTAssertFalse(before.isEmpty, "the launch-time plan covers the days already over (the run-154 defect)")
+        // a ride the athlete actually recorded on one of those days, and a session marked done, must survive — but only
+        // when another day already over stays unrecorded, so there is something to remove
+        if weekdayIndex > 1 { s.rides.append(RideRecord(start: cal.date(bySettingHour: 8, minute: 0, second: 0, of: monday)!, durationS: 1800, distanceM: 10000, recorder: .phone, sources: [])) }
+        if weekdayIndex > 2, var marked = s.plan.first(where: { cal.isDate($0.date, inSameDayAs: cal.date(byAdding: .day, value: 1, to: monday)!) }) {
+            marked.completion = .marked; s.update(marked)
+        }
+        let expected = s.plan.filter { cal.startOfDay(for: $0.date) < today && !$0.done && $0.completion != .marked && !s.hasRecord(on: $0.date) }.count
+        XCTAssertGreaterThan(expected, 0, "at least one unrecorded day already over")
+        let removed = s.dropUnapprovedSessions(before: Date())
+        XCTAssertEqual(removed, expected)
+        let left = s.plan.filter { cal.startOfDay(for: $0.date) < today }
+        XCTAssertTrue(left.allSatisfy { $0.done || $0.completion == .marked || s.hasRecord(on: $0.date) }, "only recorded or done sessions stay: \(left.map { "\($0.date) \($0.kind)" })")
+        XCTAssertEqual(s.rides.count, weekdayIndex > 1 ? 1 : 0, "rides are never touched")
+        XCTAssertTrue(s.migrationLog.last?.hasPrefix("W12: removed") == true)
+        _ = s.regenerate(weekOf: Date(), replaceEdited: true)
+        XCTAssertNil(s.homeToday().missed, "nothing before the approval is ever 'missed'")
+        XCTAssertEqual(s.dropUnapprovedSessions(before: Date()), 0, "idempotent")
+    }
+
     // MARK: centre button state
 
     func testCentreStateFollowsTodayActionAndRecording() {

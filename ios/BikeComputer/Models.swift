@@ -1125,6 +1125,19 @@ final class Store: ObservableObject {
         case healthHold
         var id: String { switch self { case .ride(let w): return "ride-\(w.id)"; case .train(let w): return "train-\(w.id)"; case .choose(let ws): return "choose-\(ws.map { $0.id.uuidString }.joined())"; case .rest: return "rest"; case .doneToday: return "done"; case .inProgress: return "inprogress"; case .healthHold: return "hold" } }
     }
+    /// W12 (Checkpoint B, run 154): the first plan is generated at launch, before onboarding, from the default profile.
+    /// When the athlete approves a plan mid-week, the generated sessions on the days already over were never approved
+    /// and must not stay as planned/missed. Removes never-done, unrecorded plan entries dated before `start` and
+    /// returns how many. Done or marked sessions, and everything in `rides` / `strength`, are untouched.
+    @discardableResult
+    func dropUnapprovedSessions(before start: Date, calendar cal: Calendar = .current) -> Int {
+        let s = cal.startOfDay(for: start)
+        let gone = plan.filter { cal.startOfDay(for: $0.date) < s && !$0.done && $0.completion != .marked && !hasRecord(on: $0.date, calendar: cal) }
+        guard !gone.isEmpty else { return 0 }
+        plan.removeAll { w in gone.contains { $0.id == w.id } }
+        migrationLog.append("W12: removed \(gone.count) generated session(s) dated before the plan's approval on \(s.shortDay)")
+        return gone.count
+    }
     /// W12: the day the plan took effect (see CyPlanStart). Computed; nothing stored.
     var planEffectiveStart: Date? { CyPlanStart.effectiveStart(planVersions: planVersions, plan: plan) }
     /// W12: whether a ride or strength session was recorded on that day (imports included).
