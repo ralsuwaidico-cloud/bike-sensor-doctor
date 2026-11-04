@@ -212,4 +212,58 @@ final class W12AndDockTests: XCTestCase {
         _ = s.w12CleanupIfNeeded()
         XCTAssertNotNil(s.plan.first { $0.id == w.id })
     }
+
+    // MARK: interruption safety (owner 4 Nov): a crash between the cleanup's steps never loses or duplicates a session
+
+    func testCleanupResumesAfterACrashBetweenTrashAndPlan() throws {
+        let (s, start) = try build153Store()
+        let placeholders = s.plan.filter { s.isW12Placeholder($0, effectiveStart: start) }
+        try XCTSkipIf(placeholders.isEmpty, "no placeholder this week")
+        // step 1 done, crash before step 2: the trash copies exist, the plan still has the sessions, no log line
+        for w in placeholders { var i = TrashItem(deletedAt: Date(), label: "\(Store.w12CleanupTag): \(w.displayTitle) · \(w.date.shortDay)", workout: w); i.keep = true; s.trash.append(i) }
+        let planBefore = s.plan.count
+        let r = s.w12CleanupIfNeeded()
+        XCTAssertEqual(r?.removed, placeholders.count)
+        XCTAssertEqual(s.plan.count, planBefore - placeholders.count, "the plan is cleaned on the rerun")
+        XCTAssertEqual(s.w12TrashItems.count, placeholders.count, "no duplicate trash copies")
+        XCTAssertTrue(s.migrationLog.last?.contains("removed \(placeholders.count)") == true, s.migrationLog.last ?? "")
+        XCTAssertEqual(s.restoreW12Cleanup(), placeholders.count)
+        XCTAssertEqual(s.plan.count, planBefore)
+    }
+
+    func testCleanupResumesAfterACrashBetweenPlanAndLog() throws {
+        let (s, start) = try build153Store()
+        let placeholders = s.plan.filter { s.isW12Placeholder($0, effectiveStart: start) }
+        try XCTSkipIf(placeholders.isEmpty, "no placeholder this week")
+        let keptEarlier = s.plan.filter { cal.startOfDay(for: $0.date) < start }.count - placeholders.count
+        // steps 1 and 2 done, crash before step 3: trash copies exist, plan already cleaned, no log line
+        for w in placeholders { var i = TrashItem(deletedAt: Date(), label: "\(Store.w12CleanupTag): \(w.displayTitle) · \(w.date.shortDay)", workout: w); i.keep = true; s.trash.append(i) }
+        s.plan.removeAll { w in placeholders.contains { $0.id == w.id } }
+        let planBefore = s.plan.count
+        let r = s.w12CleanupIfNeeded()
+        XCTAssertEqual(r?.removed, placeholders.count, "the earlier pass is counted from the trash")
+        XCTAssertEqual(r?.before, placeholders.count + keptEarlier)
+        XCTAssertEqual(r?.kept, keptEarlier)
+        XCTAssertEqual(s.plan.count, planBefore, "nothing removed twice")
+        XCTAssertEqual(s.w12TrashItems.count, placeholders.count)
+        XCTAssertTrue(s.migrationLog.last?.contains("removed \(placeholders.count)") == true, s.migrationLog.last ?? "")
+        XCTAssertNil(s.w12CleanupIfNeeded(), "done marker written")
+    }
+
+    func testCleanupSurvivesRelaunchAndNeverPurgesTheSetAside() throws {
+        let (s, start) = try build153Store()
+        let placeholders = s.plan.filter { s.isW12Placeholder($0, effectiveStart: start) }
+        try XCTSkipIf(placeholders.isEmpty, "no placeholder this week")
+        _ = s.w12CleanupIfNeeded()
+        let logLine = s.migrationLog.last
+        // relaunch from disk: the done marker, the kept flag and the removed sessions all come back
+        let again = Store(directory: s.dir, generatePlan: false)
+        XCTAssertEqual(again.migrationLog.last, logLine, "the log line is persisted; the cleanup does not run again")
+        XCTAssertEqual(again.w12TrashItems.count, placeholders.count)
+        XCTAssertTrue(again.w12TrashItems.allSatisfy { $0.keep == true })
+        again.purgeTrash(now: Date().addingTimeInterval(400 * 86_400))
+        XCTAssertEqual(again.w12TrashItems.count, placeholders.count, "never purged, even after a year")
+        XCTAssertEqual(again.restoreW12Cleanup(), placeholders.count)
+        for w in placeholders { XCTAssertNotNil(again.plan.first { $0.id == w.id }) }
+    }
 }

@@ -70,6 +70,8 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          ASC_EXTERNAL_ENABLE: ${{ vars.ASC_EXTERNAL_ENABLE }}
+          ASC_EXTERNAL_TESTERS: ${{ secrets.ASC_EXTERNAL_TESTERS }}
         run: |
           python3 ios/ci/asc.py 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<e-mail hidden>/g' > asc.txt || echo "SETUP FAILED" >> asc.txt
           cat asc.txt
@@ -222,6 +224,8 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          ASC_EXTERNAL_ENABLE: ${{ vars.ASC_EXTERNAL_ENABLE }}
+          ASC_EXTERNAL_TESTERS: ${{ secrets.ASC_EXTERNAL_TESTERS }}
           APP_READY: ${{ needs.apple.outputs.app_ready }}
           # account service (optional until the owner creates the Supabase project; empty = accounts off in the app)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -255,6 +259,8 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          ASC_EXTERNAL_ENABLE: ${{ vars.ASC_EXTERNAL_ENABLE }}
+          ASC_EXTERNAL_TESTERS: ${{ secrets.ASC_EXTERNAL_TESTERS }}
           BUILD_NUMBER: ${{ github.run_number }}
           COMMIT: ${{ github.sha }}
         run: |

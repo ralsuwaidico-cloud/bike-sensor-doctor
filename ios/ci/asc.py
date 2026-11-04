@@ -219,6 +219,78 @@ def ensure_qa_group(app_id):
             "It can be created by hand in App Store Connect > TestFlight > Internal Testing.")
 
 
+EXTERNAL_GROUP_NAME = "External testers"
+
+
+def external_enabled():
+    """The external route runs only when the owner has confirmed it (CI variable ASC_EXTERNAL_ENABLE=1). Tester e-mails
+    come from the CI secret ASC_EXTERNAL_TESTERS (comma-separated) — never from the repository."""
+    return os.environ.get("ASC_EXTERNAL_ENABLE", "").strip() == "1"
+
+
+def external_testers():
+    return [e.strip() for e in os.environ.get("ASC_EXTERNAL_TESTERS", "").split(",") if e.strip()]
+
+
+def ensure_external_group(app_id):
+    """External TestFlight group (owner 4 Nov): testing access only, no App Store Connect team membership. Creates the
+    group and adds the listed testers. Builds reach external testers only after Apple's beta review, which
+    `external_distribute` requests per build. Does nothing unless enabled."""
+    if not external_enabled():
+        log("  TestFlight external group: prepared, not enabled (ASC_EXTERNAL_ENABLE is not 1) — nothing done")
+        return None
+    st, res = call("GET", "/v1/betaGroups", query={"filter[app]": app_id, "filter[name]": EXTERNAL_GROUP_NAME, "limit": 5})
+    group = next((g for g in res.get("data", []) if g["attributes"].get("name") == EXTERNAL_GROUP_NAME), None) if st == 200 else None
+    if group is None:
+        st, res = call("POST", "/v1/betaGroups", {
+            "data": {"type": "betaGroups",
+                     "attributes": {"name": EXTERNAL_GROUP_NAME, "isInternalGroup": False, "publicLinkEnabled": False, "hasAccessToAllBuilds": False},
+                     "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})
+        if st not in (200, 201):
+            log(f"::warning::Could not create the external TestFlight group (HTTP {st}): {errors_text(res)}")
+            return None
+        group = res["data"]
+        log(f"  TestFlight external group '{EXTERNAL_GROUP_NAME}': created (no public link)")
+    else:
+        log(f"  TestFlight external group '{EXTERNAL_GROUP_NAME}': already exists")
+    st2, current = call("GET", f"/v1/betaGroups/{group['id']}/betaTesters", query={"limit": 200})
+    have = {t["attributes"].get("email", "").lower() for t in current.get("data", [])} if st2 == 200 else set()
+    added = 0
+    for email in external_testers():
+        if email.lower() in have:
+            continue
+        st3, r3 = call("POST", "/v1/betaTesters", {
+            "data": {"type": "betaTesters", "attributes": {"email": email},
+                     "relationships": {"betaGroups": {"data": [{"type": "betaGroups", "id": group["id"]}]}}}})
+        if st3 in (200, 201):
+            added += 1
+        else:
+            log(f"::warning::Could not add an external tester (HTTP {st3}): {errors_text(r3)}")
+    log(f"  external testers: {len(have)} already in the group, {added} added now")
+    return group
+
+
+def external_distribute(app_id, build):
+    """Requests Apple's beta review for the build and attaches it to the external group (the attachment succeeds once the
+    review is approved; until then Apple answers with an error that is logged, and the next run tries again)."""
+    if not external_enabled():
+        return
+    group = ensure_external_group(app_id)
+    if group is None:
+        return
+    st, res = call("POST", "/v1/betaAppReviewSubmissions", {
+        "data": {"type": "betaAppReviewSubmissions", "relationships": {"build": {"data": {"type": "builds", "id": build["id"]}}}}})
+    if st in (200, 201):
+        log("  external: beta review requested for this build")
+    else:
+        log(f"  external: beta review not requested (HTTP {st}): {errors_text(res)}")
+    st, res = call("POST", f"/v1/betaGroups/{group['id']}/relationships/builds", {"data": [{"type": "builds", "id": build["id"]}]})
+    if st in (200, 201, 204):
+        log("  external: build attached to the external group (available once Apple's beta review approves it)")
+    else:
+        log(f"  external: build not attached yet (HTTP {st}): {errors_text(res)}")
+
+
 def testflight_report(app_id):
     """After an upload: wait for processing, report readiness, set the What to Test text."""
     n = os.environ.get("BUILD_NUMBER", "").strip()
@@ -266,6 +338,7 @@ def testflight_report(app_id):
         log(f"::warning::Could not set What to Test (HTTP {st}): {errors_text(res)}")
     log(f"RESULT testflight: build {n} processed (VALID) — installable by internal testers in TestFlight; "
         f"What to Test {'set' if notes_ok else 'NOT set'}")
+    external_distribute(app_id, build)
     return 0
 
 
@@ -295,6 +368,7 @@ def main():
         return testflight_report(app_id)
     ensure_group(app_id)
     ensure_qa_group(app_id)
+    ensure_external_group(app_id)
     gh_output("app_ready", "true")
     return 0
 

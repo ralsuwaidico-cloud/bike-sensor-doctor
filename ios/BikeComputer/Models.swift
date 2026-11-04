@@ -1171,26 +1171,44 @@ final class Store: ObservableObject {
     }
     /// Runs the cleanup once; returns (before, removed, kept) counts of sessions dated before the start, or nil when it
     /// did not run (already done, not onboarded, no verified start).
+    ///
+    /// Interruption safety: the store file is always written atomically, so a crash can only fall between the three
+    /// steps below, which are ordered so that nothing is ever lost and a rerun completes the work without duplicates:
+    ///   1. set the placeholders aside in the trash (skipping any already there from an interrupted attempt),
+    ///   2. remove them from the plan,
+    ///   3. write the log line, which is also the "done" marker.
+    /// A rerun after a crash between 1 and 2 finds the trash copies and does not add them twice; after 2 and before 3
+    /// it finds nothing left to remove and still writes the true counts (the earlier pass is counted from the trash).
     @discardableResult
     func w12CleanupIfNeeded(now: Date = Date(), calendar cal: Calendar = .current) -> (before: Int, removed: Int, kept: Int)? {
         guard onboarded, !migrationLog.contains(where: { $0.hasPrefix(Self.w12CleanupTag) }) else { return nil }
         guard let start = verifiedPlanStart else { migrationLog.append("\(Self.w12CleanupTag): skipped — no verified plan start in this store"); return nil }
+        let setAside = w12TrashItems.compactMap(\.workout)                       // from an interrupted earlier attempt, if any
         let earlier = plan.filter { cal.startOfDay(for: $0.date) < start }
         let gone = earlier.filter { isW12Placeholder($0, effectiveStart: start, calendar: cal) }
-        for w in gone {
+        // 1. trash first (never lose a session) — one copy per session
+        let newItems = gone.filter { w in !setAside.contains { $0.id == w.id } }.map { w -> TrashItem in
             var item = TrashItem(deletedAt: now, label: "\(Self.w12CleanupTag): \(w.displayTitle) · \(w.date.shortDay)", workout: w)
             item.keep = true
-            trash.append(item)
+            return item
         }
+        if !newItems.isEmpty { trash.append(contentsOf: newItems) }
+        // 2. then the plan
         if !gone.isEmpty { plan.removeAll { w in gone.contains { $0.id == w.id } } }
+        // 3. then the log line = the done marker, with the true totals
+        let alreadyRemoved = setAside.filter { w in !plan.contains { $0.id == w.id } && !gone.contains { $0.id == w.id } }.count
+        let removed = gone.count + alreadyRemoved
+        let before = earlier.count + alreadyRemoved
         let kept = earlier.count - gone.count
-        migrationLog.append("\(Self.w12CleanupTag): \(earlier.count) session(s) before the plan start \(start.shortDay); removed \(gone.count) generated placeholder(s) to the trash (kept there); kept \(kept) with a record or an athlete action")
-        return (earlier.count, gone.count, kept)
+        migrationLog.append("\(Self.w12CleanupTag): \(before) session(s) before the plan start \(start.shortDay); removed \(removed) generated placeholder(s) to the trash (kept there); kept \(kept) with a record or an athlete action")
+        return (before, removed, kept)
     }
+    /// The trash items the cleanup set aside (flagged to survive the purge).
+    var w12TrashItems: [TrashItem] { trash.filter { $0.keep == true && $0.label.hasPrefix(Self.w12CleanupTag) } }
     /// Puts every session the cleanup removed back into the plan (recoverable). Returns how many.
     @discardableResult
     func restoreW12Cleanup() -> Int {
-        let items = trash.filter { $0.keep == true && $0.label.hasPrefix(Self.w12CleanupTag) }
+        let items = w12TrashItems
         var n = 0
         for item in items {
             guard let w = item.workout, !plan.contains(where: { $0.id == w.id }) else { trash.removeAll { $0.id == item.id }; continue }
