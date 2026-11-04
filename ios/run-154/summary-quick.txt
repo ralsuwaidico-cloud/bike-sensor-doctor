@@ -1,0 +1,14 @@
+BikeComputer iOS CI — build 154 — 2026-11-04 00:04 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m7s
+RESULT tests: ok (Executed 537 tests, with 0 failures) · 8m48s
+  targets from the files changed since the last green full run 781a5b1
+Quick UI targets: DesignSystemAudit/testGalleryLightAndDark LayoutAudit/testHomeStates JourneyTests/testHybridJourney LaunchSmokeTests LayoutAudit/testRC2OwnerScreens LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText JourneyTests LayoutAudit LayoutAudit/testKeyScreensAtTextSizes OnboardingScreens/testOnboardingV3FiveStages LaunchSmokeTests RideLayoutsSmokeTests JourneyTests/testHybridJourney
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m6s
+  layout small (AX3): FAILED (exit 133) · 46m0s — -[BikeComputerUITests.DesignSystemAudit testGalleryLightAndDark] : XCTAssertTrue failed - gallery did not appear -[BikeComputerUITests.JourneyTests testCyclingJourney] : XCTAssertTrue failed - cycling: Home day 1 before the plan reads 'tuesday, ride' -[BikeComputerUITests.JourneyTests testCyclingJourney] : XCTAssertTrue failed - cycling: Plan day 0 before the plan reads 'mon 2 nov: rest 0 min, pla
