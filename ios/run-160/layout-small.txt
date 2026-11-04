@@ -1,0 +1,164 @@
+=== layout-small: errors / failures ===
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' passed (620.371 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 620.371 (620.381) seconds
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (10.729 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (56.868 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (58.425 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (96.867 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (63.949 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40YourDataExportAndDeleteCancelKeepsData]' passed (150.401 seconds).
+	 Executed 6 tests, with 0 failures (0 unexpected) in 437.237 (437.250) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1057.609 (1057.632) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1057.609 (1057.633) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-small: last 150 lines ===
+    t =   113.57s Collecting debug information to assist test failure triage
+    t =   113.58s     Requesting snapshot of accessibility hierarchy for app with pid 70643
+    t =   114.21s Tap "Home" Button
+    t =   114.21s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   114.38s     Find the "Home" Button
+    t =   114.60s     Check for interrupting elements affecting "Home" Button
+    t =   114.85s     Synthesize event
+    t =   115.25s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   115.32s Waiting 10.0s for "Hi Rashed" NavigationBar to exist
+    t =   116.35s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   116.35s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   116.66s         Capturing element debug description
+    t =   117.38s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   117.38s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   117.66s         Capturing element debug description
+    t =   118.38s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   118.38s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   118.66s         Capturing element debug description
+    t =   119.38s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   119.38s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   119.74s         Capturing element debug description
+    t =   120.35s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   120.36s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   120.61s         Capturing element debug description
+    t =   121.34s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   121.34s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   121.65s         Capturing element debug description
+    t =   122.39s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   122.39s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   122.70s         Capturing element debug description
+    t =   123.33s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   123.33s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   123.63s         Capturing element debug description
+    t =   124.35s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   124.35s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   124.70s         Capturing element debug description
+    t =   125.32s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =   125.32s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =   125.63s         Capturing element debug description
+    t =   125.63s     Checking existence of `"Hi Rashed" NavigationBar`
+    t =   125.95s Collecting debug information to assist test failure triage
+    t =   125.95s     Requesting snapshot of accessibility hierarchy for app with pid 70643
+    t =   126.68s Waiting 5.0s for "Hi Rashed" StaticText to exist
+    t =   127.73s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" StaticText`
+    t =   127.74s         Checking existence of `"Hi Rashed" StaticText`
+    t =   128.07s Waiting 10.0s for "centreButton" Button to exist
+    t =   129.10s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =   129.11s         Checking existence of `"centreButton" Button`
+    t =   129.17s Find the "centreButton" Button
+    t =   129.37s Waiting 10.0s for "Plan" Button to exist
+    t =   130.42s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   130.42s         Checking existence of `"Plan" Button`
+    t =   130.46s Tap "Plan" Button
+    t =   130.46s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   130.46s     Find the "Plan" Button
+    t =   130.50s     Check for interrupting elements affecting "Plan" Button
+    t =   130.80s     Synthesize event
+    t =   131.21s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   131.32s Checking existence of `"Plan" Button`
+    t =   131.40s Find the "Plan" Button
+    t =   131.52s Find the "Plan" Button
+    t =   131.82s Checking existence of `"Plan" Button`
+    t =   131.89s Find the "Plan" Button
+    t =   132.06s Find the "Plan" Button
+    t =   132.11s Waiting 10.0s for "centreButton" Button to exist
+    t =   133.16s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =   133.16s         Checking existence of `"centreButton" Button`
+    t =   133.30s Tap "centreButton" Button
+    t =   133.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   133.31s     Find the "centreButton" Button
+    t =   133.34s     Check for interrupting elements affecting "centreButton" Button
+    t =   133.61s     Synthesize event
+    t =   133.96s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   135.26s Checking existence of `"centreButton" Button`
+    t =   135.94s Find the "centreButton" Button
+    t =   136.32s Find the "centreButton" Button
+    t =   136.92s Checking existence of `"centreButton" Button`
+    t =   137.07s Find the "centreButton" Button
+    t =   137.25s Find the "centreButton" Button
+    t =   137.66s Checking existence of `"Done" Button`
+    t =   137.91s Find the "Done" Button
+    t =   138.40s Tap "Done" Button
+    t =   138.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   138.41s     Find the "Done" Button
+    t =   138.62s     Check for interrupting elements affecting "Done" Button
+    t =   139.08s     Synthesize event
+    t =   139.64s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   140.60s Waiting 10.0s for "Progress" Button to exist
+    t =   141.65s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =   141.65s         Checking existence of `"Progress" Button`
+    t =   142.30s Tap "Progress" Button
+    t =   142.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   142.35s     Find the "Progress" Button
+    t =   142.46s     Check for interrupting elements affecting "Progress" Button
+    t =   142.90s     Synthesize event
+    t =   143.29s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   143.40s Checking existence of `"Progress" Button`
+    t =   143.47s Find the "Progress" Button
+    t =   143.53s Find the "Progress" Button
+    t =   143.80s Checking existence of `"Progress" Button`
+    t =   143.88s Find the "Progress" Button
+    t =   143.96s Find the "Progress" Button
+    t =   144.06s Waiting 10.0s for "Profile" Button to exist
+    t =   145.08s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =   145.09s         Checking existence of `"Profile" Button`
+    t =   145.14s Tap "Profile" Button
+    t =   145.14s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   145.15s     Find the "Profile" Button
+    t =   145.48s     Check for interrupting elements affecting "Profile" Button
+    t =   145.73s     Synthesize event
+    t =   146.17s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   146.18s Checking existence of `"Profile" Button`
+    t =   146.40s Find the "Profile" Button
+    t =   146.47s Find the "Profile" Button
+    t =   146.88s Checking existence of `"Profile" Button`
+    t =   146.95s Find the "Profile" Button
+    t =   147.04s Find the "Profile" Button
+    t =   147.09s Waiting 10.0s for "Home" Button to exist
+    t =   148.15s     Checking `Expect predicate `existsNoRetry == 1` for object "Home" Button`
+    t =   148.15s         Checking existence of `"Home" Button`
+    t =   148.45s Tap "Home" Button
+    t =   148.45s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   148.47s     Find the "Home" Button
+    t =   148.55s     Check for interrupting elements affecting "Home" Button
+    t =   148.87s     Synthesize event
+    t =   149.26s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   149.30s Checking existence of `"Home" Button`
+    t =   149.33s Find the "Home" Button
+    t =   149.38s Find the "Home" Button
+    t =   149.62s Checking existence of `"Home" Button`
+    t =   149.69s Find the "Home" Button
+    t =   149.74s Find the "Home" Button
+    t =   149.81s Tear Down
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40YourDataExportAndDeleteCancelKeepsData]' passed (150.401 seconds).
+Test Suite 'LaunchSmokeTests' passed at 2026-11-04 17:42:56.664.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 437.237 (437.250) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-04 17:42:56.665.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1057.609 (1057.632) seconds
+Test Suite 'Selected tests' passed at 2026-11-04 17:42:56.665.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 1057.609 (1057.633) seconds
+2026-11-04 17:43:01.286 xcodebuild[38993:107394] [MT] IDETestOperationsObserverDebug: 1250.234 elapsed -- Testing started completed.
+2026-11-04 17:43:01.287 xcodebuild[38993:107394] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-04 17:43:01.287 xcodebuild[38993:107394] [MT] IDETestOperationsObserverDebug: 1250.234 sec, +1250.234 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-gybwqrtivoabwtfufwcqiaurcded/Logs/Test/Test-BikeComputer-2026.11.04_17-22-06-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

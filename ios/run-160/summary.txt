@@ -1,2 +1,24 @@
-BikeComputer iOS CI — run 160 — scope quick — jobs: quick=abandoned test=skipped release=skipped testflight=skipped
+BikeComputer iOS CI — run 160 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 160 — 2026-11-04 16:57 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 5m8s
+RESULT tests: ok (Executed 544 tests, with 0 failures) · 11m8s
+  targets from the files changed since the last green full run 62852ee
+Quick UI targets: LaunchSmokeTests JourneyTests/testHybridJourney LaunchSmokeTests JourneyTests/testHybridJourney
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m53s
+  layout small (AX3): ok · 21m9s
+  layout standard (L): FAILED (exit 65) · 13m28s — -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"onboardingNext" IN identifiers'`, given input App element pid: 79054 -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertTrue failed -[BikeComputerUITests.JourneyTests testHybridJo
+  journey hybrid: ok · recording 86515 KB · 11m38s
+RESULT layout audit: FAILED (14 screenshots)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 71m20s
 commit 54c8d1cf34b4e5db10f078ae6b8bdc6874038214  branch ios/v1-ux  job failure
