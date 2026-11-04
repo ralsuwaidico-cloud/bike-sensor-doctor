@@ -138,4 +138,78 @@ final class W12AndDockTests: XCTestCase {
         XCTAssertTrue(CyCentreState.pending.pulses); XCTAssertTrue(CyCentreState.multiple(2).pulses)
         for s in [CyCentreState.active, .done, .rest, .hold, .recording] { XCTAssertFalse(s.pulses, "\(s)") }
     }
+
+    // MARK: one-time cleanup of historical placeholders (owner-approved in principle, 4 Nov)
+
+    /// A store as build 153 left it: the launch-time plan, then an onboarding approval that kept the placeholders.
+    private func build153Store() throws -> (Store, Date) {
+        try XCTSkipIf(weekdayIndex == 0, "on a Monday there is no earlier day this week")
+        let s = Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bc-w12c-\(UUID().uuidString)", isDirectory: true), generatePlan: true)
+        let now = Date()
+        _ = s.regenerate(weekOf: now, replaceEdited: true)
+        let made = s.plan.filter { $0.date >= today }
+        s.planVersions.append(PlanVersion(createdAt: now, effectiveDate: made.first?.date ?? now, cause: .profile, before: [], after: made, inputsBefore: nil, summary: ["Plan approved in onboarding"], proposalId: nil))
+        s.onboarded = true
+        XCTAssertFalse(s.plan.filter { cal.startOfDay(for: $0.date) < today }.isEmpty, "the build-153 situation: placeholders before the approval day")
+        return (s, today)
+    }
+
+    func testCleanupRemovesOnlyPositivelyIdentifiedPlaceholders() throws {
+        let (s, start) = try build153Store()
+        let monday = TrainingLedger.monday(of: Date())
+        // make four earlier sessions "real" in different ways; the rest stay placeholders
+        var earlier = s.plan.filter { cal.startOfDay(for: $0.date) < start }
+        var protectedIds = Set<UUID>()
+        if earlier.count > 0 { earlier[0].edited = true; s.update(earlier[0]); protectedIds.insert(earlier[0].id) }              // hand-edited
+        if earlier.count > 1 { earlier[1].note = "felt good"; s.update(earlier[1]); protectedIds.insert(earlier[1].id) }          // a note
+        if earlier.count > 2 { earlier[2].completion = .marked; s.update(earlier[2]); protectedIds.insert(earlier[2].id) }       // marked done
+        if earlier.count > 3 { earlier[3].skipped = true; s.update(earlier[3]); protectedIds.insert(earlier[3].id) }             // skipped by the athlete
+        // a ride recorded on Monday protects Monday's sessions too
+        s.rides.append(RideRecord(start: cal.date(bySettingHour: 8, minute: 0, second: 0, of: monday)!, durationS: 1800, distanceM: 10000, recorder: .phone, sources: []))
+        for w in s.plan where cal.isDate(w.date, inSameDayAs: monday) { protectedIds.insert(w.id) }
+        let expected = s.plan.filter { cal.startOfDay(for: $0.date) < start && !protectedIds.contains($0.id) }
+        let onOrAfter = s.plan.filter { cal.startOfDay(for: $0.date) >= start }
+        let before = s.plan.count
+
+        let r = s.w12CleanupIfNeeded()
+        XCTAssertNotNil(r)
+        XCTAssertEqual(r?.removed, expected.count, "removes exactly the positively identified placeholders")
+        XCTAssertEqual(r?.before, expected.count + protectedIds.count)
+        XCTAssertEqual(s.plan.count, before - expected.count)
+        for id in protectedIds { XCTAssertNotNil(s.plan.first { $0.id == id }, "a session with an athlete action or a record is kept") }
+        for w in onOrAfter { XCTAssertNotNil(s.plan.first { $0.id == w.id }, "nothing on or after the start is touched") }
+        XCTAssertEqual(s.rides.count, 1); XCTAssertTrue(s.strength.isEmpty)
+        XCTAssertTrue(s.migrationLog.last?.contains("removed \(expected.count)") == true, s.migrationLog.last ?? "")
+        // recoverable: the removed sessions wait in the trash, flagged to survive the 30-day purge
+        let kept = s.trash.filter { $0.keep == true && $0.label.hasPrefix(Store.w12CleanupTag) }
+        XCTAssertEqual(kept.count, expected.count)
+        s.purgeTrash(now: Date().addingTimeInterval(60 * 86_400))
+        XCTAssertEqual(s.trash.filter { $0.keep == true }.count, expected.count, "never purged")
+        // idempotent: a second run does nothing
+        XCTAssertNil(s.w12CleanupIfNeeded())
+        XCTAssertEqual(s.plan.count, before - expected.count)
+        // restore puts every removed session back, once
+        XCTAssertEqual(s.restoreW12Cleanup(), expected.count)
+        XCTAssertEqual(s.plan.count, before)
+        XCTAssertEqual(s.restoreW12Cleanup(), 0)
+    }
+
+    func testCleanupDoesNothingWithoutAVerifiedPlanStart() {
+        let s = Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bc-w12n-\(UUID().uuidString)", isDirectory: true), generatePlan: true)
+        s.onboarded = true      // an older store: a plan, but no onboarding approval version
+        let before = s.plan
+        XCTAssertNil(s.w12CleanupIfNeeded())
+        XCTAssertEqual(s.plan, before, "no positive identification, nothing deleted")
+        XCTAssertTrue(s.migrationLog.last?.contains("skipped") == true)
+        XCTAssertNil(s.w12CleanupIfNeeded(), "and it does not keep retrying")
+    }
+
+    func testCleanupSkipsSessionsReferencedByAPlanVersion() throws {
+        let (s, start) = try build153Store()
+        guard let w = s.plan.first(where: { cal.startOfDay(for: $0.date) < start }) else { return XCTFail("no earlier session") }
+        s.planVersions.append(PlanVersion(createdAt: Date(), effectiveDate: w.date, cause: .edit, before: [w], after: [w], inputsBefore: nil, summary: ["edited"], proposalId: nil))
+        XCTAssertFalse(s.isW12Placeholder(w, effectiveStart: start), "a session the athlete previewed or changed is never a placeholder")
+        _ = s.w12CleanupIfNeeded()
+        XCTAssertNotNil(s.plan.first { $0.id == w.id })
+    }
 }

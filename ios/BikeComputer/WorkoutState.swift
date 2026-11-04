@@ -194,6 +194,9 @@ struct TrashItem: Codable, Identifiable, Equatable {
     var planBefore: [Workout] = []
     /// Rebuild fix (review C R6): the sessions as this action left them; Undo restores only while they still match.
     var planAfter: [Workout]? = nil
+    /// W12 cleanup (owner 4 Nov): items the one-time placeholder cleanup set aside are kept past the 30-day purge so they
+    /// stay recoverable. Optional so stores written before this field decode unchanged.
+    var keep: Bool? = nil
     /// Rebuild fix (Phase 1): this item undoes a session change (type / duration rebuild). Undo then also reconciles an
     /// in-progress session: every set already done is kept, only the not-started part goes back to the old prescription.
     var sessionRebuild: Bool? = nil
@@ -314,7 +317,7 @@ extension Store {
     /// Trash older than 30 days is removed for good (called at launch).
     func purgeTrash(now: Date = Date()) {
         let cutoff = now.addingTimeInterval(-Double(TrashItem.keepDays) * 86_400)
-        if trash.contains(where: { $0.deletedAt < cutoff }) { trash.removeAll { $0.deletedAt < cutoff } }
+        if trash.contains(where: { $0.deletedAt < cutoff && $0.keep != true }) { trash.removeAll { $0.deletedAt < cutoff && $0.keep != true } }
     }
 
     /// The rider confirms a record the migration flagged: it counts again (and completes its planned session).

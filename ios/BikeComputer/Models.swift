@@ -922,6 +922,7 @@ final class Store: ObservableObject {
         else if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
         loading = false
         purgeTrash()
+        w12CleanupIfNeeded()        // one-time, logged, recoverable (see above); a no-op once it has run
         if generatePlan { ensurePlan(); refreshRideSafety() }
         // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalised planner (never edited ones)
         if migrated { refreshGeneratedSessions(); persist() }
@@ -1138,6 +1139,68 @@ final class Store: ObservableObject {
         migrationLog.append("W12: removed \(gone.count) generated session(s) dated before the plan's approval on \(s.shortDay)")
         return gone.count
     }
+    // MARK: - W12 one-time cleanup of historical placeholders (owner-approved in principle, 4 Nov 2026)
+    //
+    // Before Checkpoint B, the plan generated at first launch (default profile, before onboarding) left its sessions on
+    // the days already over when the athlete approved a plan mid-week. Those placeholders are removed ONLY when every
+    // one of these holds (positive identification); otherwise nothing is touched:
+    //   • the store has a verified plan effective start — the onboarding approval version (cause `profile`, nothing
+    //     before, sessions after); stores without one are left alone entirely;
+    //   • the session is dated before that start;
+    //   • it was never part of any plan version (never approved, previewed or undone by the athlete);
+    //   • it was never completed, marked, skipped, edited, pinned, given a note, a manual duration, a manual routine,
+    //     a rider choice;
+    //   • nothing was recorded that day (no ride, no strength log, no marked session) and no log points at it.
+    // Removed sessions go to the trash with `keep = true` (never purged) and can be put back with
+    // `restoreW12Cleanup()`. The migration log records the before/after counts. Runs once per store.
+    static let w12CleanupTag = "W12 cleanup"
+
+    /// A session the cleanup may remove. Pure, so the rule is testable on its own.
+    func isW12Placeholder(_ w: Workout, effectiveStart: Date, calendar cal: Calendar = .current) -> Bool {
+        guard cal.startOfDay(for: w.date) < effectiveStart else { return false }
+        guard !w.done, w.completion == nil, !w.skipped, !w.edited, !w.fixed, w.note.isEmpty, w.manualMinutes == nil,
+              !w.routineManual, w.riderChoice == nil else { return false }
+        guard !planVersions.contains(where: { v in v.before.contains { $0.id == w.id } || v.after.contains { $0.id == w.id } }) else { return false }
+        guard !strength.contains(where: { $0.workoutId == w.id }), !hasRecord(on: w.date, calendar: cal) else { return false }
+        return true
+    }
+    /// The verified start the cleanup needs: only the onboarding approval version counts (no fallback here).
+    var verifiedPlanStart: Date? {
+        planVersions.filter { $0.cause == .profile && $0.before.isEmpty && !$0.after.isEmpty }.min { $0.createdAt < $1.createdAt }
+            .map { Calendar.current.startOfDay(for: $0.effectiveDate) }
+    }
+    /// Runs the cleanup once; returns (before, removed, kept) counts of sessions dated before the start, or nil when it
+    /// did not run (already done, not onboarded, no verified start).
+    @discardableResult
+    func w12CleanupIfNeeded(now: Date = Date(), calendar cal: Calendar = .current) -> (before: Int, removed: Int, kept: Int)? {
+        guard onboarded, !migrationLog.contains(where: { $0.hasPrefix(Self.w12CleanupTag) }) else { return nil }
+        guard let start = verifiedPlanStart else { migrationLog.append("\(Self.w12CleanupTag): skipped — no verified plan start in this store"); return nil }
+        let earlier = plan.filter { cal.startOfDay(for: $0.date) < start }
+        let gone = earlier.filter { isW12Placeholder($0, effectiveStart: start, calendar: cal) }
+        for w in gone {
+            var item = TrashItem(deletedAt: now, label: "\(Self.w12CleanupTag): \(w.displayTitle) · \(w.date.shortDay)", workout: w)
+            item.keep = true
+            trash.append(item)
+        }
+        if !gone.isEmpty { plan.removeAll { w in gone.contains { $0.id == w.id } } }
+        let kept = earlier.count - gone.count
+        migrationLog.append("\(Self.w12CleanupTag): \(earlier.count) session(s) before the plan start \(start.shortDay); removed \(gone.count) generated placeholder(s) to the trash (kept there); kept \(kept) with a record or an athlete action")
+        return (earlier.count, gone.count, kept)
+    }
+    /// Puts every session the cleanup removed back into the plan (recoverable). Returns how many.
+    @discardableResult
+    func restoreW12Cleanup() -> Int {
+        let items = trash.filter { $0.keep == true && $0.label.hasPrefix(Self.w12CleanupTag) }
+        var n = 0
+        for item in items {
+            guard let w = item.workout, !plan.contains(where: { $0.id == w.id }) else { trash.removeAll { $0.id == item.id }; continue }
+            plan.append(w); n += 1
+            trash.removeAll { $0.id == item.id }
+        }
+        if n > 0 { plan.sort { $0.date < $1.date }; migrationLog.append("\(Self.w12CleanupTag): restored \(n) session(s)") }
+        return n
+    }
+
     /// W12: the day the plan took effect (see CyPlanStart). Computed; nothing stored.
     var planEffectiveStart: Date? { CyPlanStart.effectiveStart(planVersions: planVersions, plan: plan) }
     /// W12: whether a ride or strength session was recorded on that day (imports included).
