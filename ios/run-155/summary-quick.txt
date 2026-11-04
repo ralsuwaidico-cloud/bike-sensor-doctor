@@ -1,0 +1,14 @@
+BikeComputer iOS CI — build 155 — 2026-11-04 02:14 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m10s
+RESULT tests: ok (Executed 538 tests, with 0 failures) · 10m11s
+  targets from the files changed since the last green full run 781a5b1
+Quick UI targets: DesignSystemAudit/testGalleryLightAndDark LayoutAudit/testHomeStates JourneyTests/testHybridJourney LaunchSmokeTests OnboardingScreens/testOnboardingV3FiveStages LayoutAudit/testRC2OwnerScreens LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText JourneyTests LayoutAudit LayoutAudit/testKeyScreensAtTextSizes LaunchSmokeTests RideLayoutsSmokeTests JourneyTests/testHybridJourney
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m51s
+  layout small (AX3): FAILED (exit 65) · 71m7s — -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"goal-endurance" IN identifiers'`, given input App element pid: 56749 -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get matching snapshot: No matches found for first query ma
