@@ -74,7 +74,11 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(goal.label.contains("main goal"), "\(p.tag): the first goal is the main goal")
         XCTAssertTrue(app.descendants(matching: .any)["onbGoalEffect"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): the effect line explains the goal")
         sweep(app, stage: "B", tag: p.tag, skip: ["onboardingNext", "onboardingBack", "goal-\(p.goal)", "goalStar-\(p.goal)"])
-        // run 147: the sweep can tap another goal's star and make it the main goal — the persona's main goal is set last
+        // run 147: the sweep can tap another goal's star and make it the main goal — the persona's main goal is set last.
+        // Runs 154-155 (hybrid only, 9 goal cards): the goals sit in a lazy grid, so after the sweep scrolled to the
+        // bottom the first card was no longer in the accessibility tree — scroll back up and wait for it before reading it.
+        scrollToTop(app)
+        XCTAssertTrue(goal.waitForExistence(timeout: 5), "\(p.tag): the persona's goal card is back on screen after the sweep")
         let star = app.buttons["goalStar-\(p.goal)"].firstMatch
         if !goal.label.contains("main goal"), star.exists { XCTAssertTrue(tapVisible(app, star)) }
         XCTAssertTrue(goal.label.contains("main goal"), "\(p.tag): the persona's main goal is set")
