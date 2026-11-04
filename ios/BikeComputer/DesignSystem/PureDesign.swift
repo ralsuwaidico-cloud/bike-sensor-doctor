@@ -92,6 +92,9 @@ enum CyDaySport: String, Codable, CaseIterable, Equatable {
 /// Status of a planned day.
 enum CyDayStatus: String, Codable, CaseIterable, Equatable {
     case planned, done, missed, none
+    /// W12 (owner 3 Nov): a day before the plan's effective start with nothing recorded. Shown as a muted dash, never as
+    /// rest; never counted as rest, missed, adherence or completed training.
+    case beforePlan
 
     var spoken: String? {
         switch self {
@@ -99,6 +102,7 @@ enum CyDayStatus: String, Codable, CaseIterable, Equatable {
         case .done: return "done"
         case .missed: return "missed"
         case .none: return nil
+        case .beforePlan: return "before this plan started"
         }
     }
 }
@@ -116,8 +120,8 @@ struct CyDay: Identifiable, Equatable {
     var accessibilityLabel: String {
         var parts: [String] = []
         parts.append(isToday ? "Today, \(longName)" : longName)
-        parts.append(sport.spoken)
-        if let s = status.spoken { parts.append(s) }
+        if status == .beforePlan { parts.append("Before this plan started") }      // W12: not "rest"
+        else { parts.append(sport.spoken); if let s = status.spoken { parts.append(s) } }
         return parts.joined(separator: ", ")
     }
 }
@@ -259,4 +263,48 @@ enum CyDesign {
         let f = clampFraction(intensity)
         return max(minHeight, f * maxHeight)
     }
+}
+
+// MARK: - W12: days before the plan's effective start (one rule for Home, Plan and Progress)
+enum CyPlanStart {
+    /// The plan's effective start: the day the first plan was approved. From the onboarding approval version (cause
+    /// `profile`, no `before` sessions); for stores without one (upgraded from older builds) the earliest planned
+    /// day, so nothing changes for them. Nil when there is no plan.
+    static func effectiveStart(planVersions: [PlanVersion], plan: [Workout], calendar cal: Calendar = .current) -> Date? {
+        if let v = planVersions.filter({ $0.cause == .profile && $0.before.isEmpty && !$0.after.isEmpty }).min(by: { $0.createdAt < $1.createdAt }) {
+            return cal.startOfDay(for: v.effectiveDate)
+        }
+        return plan.map(\.date).min().map { cal.startOfDay(for: $0) }
+    }
+    /// True when `day` is before the effective start and nothing was recorded on it. A recorded ride or strength log on
+    /// such a day keeps its real status (history is never relabelled).
+    static func isBeforePlan(_ day: Date, effectiveStart: Date?, hasRecord: Bool, calendar cal: Calendar = .current) -> Bool {
+        guard let s = effectiveStart, !hasRecord else { return false }
+        return cal.startOfDay(for: day) < s
+    }
+}
+
+// MARK: - Liquid Dock: the centre button's state (pure mapping from the existing TodayAction — nothing new is decided here)
+enum CyCentreState: Equatable {
+    case pending            // a session is scheduled and not started
+    case active             // a strength session is in progress
+    case done               // everything planned today is done
+    case rest               // nothing planned today
+    case multiple(Int)      // more than one open session today
+    case hold               // training paused by the health check (existing behaviour, unchanged)
+    case recording          // a ride is being recorded
+
+    static func from(action: Store.TodayAction, recording: Bool) -> CyCentreState {
+        if recording { return .recording }
+        switch action {
+        case .healthHold: return .hold
+        case .inProgress: return .active
+        case .doneToday: return .done
+        case .rest: return .rest
+        case .choose(let ws): return ws.count > 1 ? .multiple(ws.count) : .pending
+        case .ride, .train: return .pending
+        }
+    }
+    /// The glow pulses only while a session is pending (or several are) and the button has not been opened today.
+    var pulses: Bool { switch self { case .pending, .multiple: return true; default: return false } }
 }

@@ -213,6 +213,16 @@ final class LayoutAudit: XCTestCase {
             }
             // tab bar items never overlap the raised centre button
             checkKey(app, ids: ["Home", "Plan", "centreButton", "Progress", "Profile"], screen: "\(size) tab bar", minHeight: 30)
+            // Checkpoint B: the Liquid Dock floats inside the window, above the home indicator, and every tab is a full-height target
+            let dock = app.descendants(matching: .any)["liquidDock"].firstMatch
+            XCTAssertTrue(dock.exists, "\(size): Liquid Dock present")
+            if dock.exists {
+                let win = app.windows.firstMatch.frame, f = dock.frame
+                XCTAssertTrue(f.minX >= win.minX + 8 && f.maxX <= win.maxX - 8, "\(size): dock inset from the sides \(f)")
+                XCTAssertTrue(f.maxY <= win.maxY - 8 && f.maxY > win.maxY - 140, "\(size): dock sits just above the bottom edge \(f)")
+                for t in ["Home", "Plan", "Progress", "Profile"] { XCTAssertGreaterThanOrEqual(app.buttons[t].firstMatch.frame.height, 44, "\(size): tab \(t) target height") }
+                note("\(size) dock: \(Int(f.width))×\(Int(f.height)) at y \(Int(f.minY))–\(Int(f.maxY)) of \(Int(win.height))")
+            }
             tab(app, "Home")
             if size == sizes.first && extras {
                 let conn = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Manage'")).firstMatch

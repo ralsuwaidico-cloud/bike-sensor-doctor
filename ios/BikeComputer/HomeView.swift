@@ -115,7 +115,7 @@ struct HomeView: View {
         if case .hold = h.layout {
             HomeWeekPausedCard { tab = 1 }
         } else {
-            HomeWeekStrip(plan: store.plan, open: { detail = $0 }, openPlan: { tab = 1 })
+            HomeWeekStrip(plan: store.plan, effectiveStart: store.planEffectiveStart, hasRecord: { store.hasRecord(on: $0) }, open: { detail = $0 }, openPlan: { tab = 1 })
         }
     }
 
@@ -680,11 +680,14 @@ struct HomeCoachCard: View {
 /// a session opens Plan. The weekly numbers (done / planned, per-sport split) live only in Progress — not repeated here.
 struct HomeWeekStrip: View {
     let plan: [Workout]
+    /// W12: days before this date with nothing recorded show a muted dash ("Before this plan started"), never the rest moon.
+    var effectiveStart: Date? = nil
+    var hasRecord: (Date) -> Bool = { _ in false }
     var now: Date = Date()
     var open: (Workout) -> Void
     var openPlan: () -> Void
 
-    private struct Day: Identifiable { let id: Int; let date: Date; let sessions: [Workout] }
+    private struct Day: Identifiable { let id: Int; let date: Date; let sessions: [Workout]; let beforePlan: Bool }
 
     private var days: [Day] {
         let cal = Calendar.current
@@ -694,7 +697,8 @@ struct HomeWeekStrip: View {
         return (0..<7).map { i in
             let d = cal.date(byAdding: .day, value: i, to: monday) ?? monday
             let s = plan.filter { cal.isDate($0.date, inSameDayAs: d) && Self.isTraining($0.kind) }.sorted { $0.sequence < $1.sequence }
-            return Day(id: i, date: d, sessions: s)
+            let pre = s.isEmpty && CyPlanStart.isBeforePlan(d, effectiveStart: effectiveStart, hasRecord: hasRecord(d), calendar: cal)
+            return Day(id: i, date: d, sessions: s, beforePlan: pre)
         }
     }
     /// Sessions that get their own icon; rest, recovery day and mobility show the moon.
@@ -726,7 +730,9 @@ struct HomeWeekStrip: View {
                 Text(name).font(.caption2.weight(isToday ? .heavy : .semibold)).foregroundStyle(isToday ? BC.accent : .secondary)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 HStack(spacing: 1) {
-                    if icons.isEmpty {
+                    if d.beforePlan {
+                        Text("—").font(.subheadline.weight(.semibold)).foregroundStyle(.tertiary)
+                    } else if icons.isEmpty {
                         Image(systemName: "moon.fill").font(.subheadline).foregroundStyle(.tertiary)
                     } else {
                         ForEach(Array(icons.prefix(2)), id: \.self) { i in
@@ -751,7 +757,7 @@ struct HomeWeekStrip: View {
 
     private func a11y(_ d: Day, isToday: Bool, allDone: Bool) -> String {
         let day = d.date.formatted(.dateTime.weekday(.wide))
-        let what = d.sessions.isEmpty ? "rest" : d.sessions.map { $0.kind == .strength ? "strength" : $0.kind.isRide ? "ride" : $0.kind.title.lowercased() }.joined(separator: " and ")
+        let what = d.beforePlan ? "before this plan started" : d.sessions.isEmpty ? "rest" : d.sessions.map { $0.kind == .strength ? "strength" : $0.kind.isRide ? "ride" : $0.kind.title.lowercased() }.joined(separator: " and ")
         return [isToday ? "Today, \(day)" : day, what, allDone ? "done" : nil].compactMap { $0 }.joined(separator: ", ")
     }
 }

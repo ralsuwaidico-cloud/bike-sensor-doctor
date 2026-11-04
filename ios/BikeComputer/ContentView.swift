@@ -48,10 +48,11 @@ struct RootView: View {
                 ProfileTabView().tabPage(4, tab)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // the raised centre button overlaps the content by ~20 pt: scrollable content ends above it
-            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 22).allowsHitTesting(false) }
+            // Checkpoint B (owner 4 Nov): the floating Liquid Dock replaces the fixed bar. It is a bottom safe-area inset,
+            // so scrollable content ends above it and scrolls under its translucent capsule; the destinations, the
+            // centre button's routing and its labels are unchanged.
+            .safeAreaInset(edge: .bottom, spacing: 0) { dock.padding(.bottom, 8) }
             .undoSnackbar(hidden: tab == 0)     // Home shows it inline, under Today (never over a heading)
-            RideTabBar(selected: $tab, recording: recorder.isActive, action: store.todayAction(now: max(Date(), day)), onCentre: centreTapped)
         }
         .ignoresSafeArea(.keyboard)
         .tint(BC.accent)
@@ -97,6 +98,16 @@ struct RootView: View {
         }
     }
 
+    /// The dock reads today's action (the same `todayAction` the old bar used) and the missed-session flag from Home's
+    /// model; it never decides a destination — `centreTapped` does, exactly as before.
+    private var dock: some View {
+        let action = store.todayAction(now: max(Date(), day))
+        let copy = RideTabBar.centreCopy(recording: recorder.isActive, action: action)
+        let missed = store.homeToday(recorderActive: recorder.isActive).missed != nil
+        return CyLiquidDock(selection: $tab, state: CyCentreState.from(action: action, recording: recorder.isActive), missed: missed,
+                            centreIcon: copy.icon, centreLabel: copy.label, centreHint: copy.hint, onCentre: centreTapped)
+    }
+
     /// The centre button adapts to today: a ride opens the cycling dashboard; a strength day opens the scheduled
     /// workout with its routine; both → a choice; rest / done → an optional-session sheet. It never starts recording.
     private func centreTapped() {
@@ -123,7 +134,8 @@ struct RootView: View {
     }
 }
 
-/// Five tabs; the centre one is a raised circular "Ride now" button. Sized for Dynamic Type and the home indicator.
+/// The pre-Checkpoint-B fixed bar. No longer shown (RootView uses CyLiquidDock); kept for its centre copy and as the
+/// rollback reference for build 153.
 struct RideTabBar: View {
     @Binding var selected: Int
     let recording: Bool
@@ -132,7 +144,8 @@ struct RideTabBar: View {
     @Environment(\.dynamicTypeSize) private var dts
 
     /// Icon and label from today's scheduled activities (local calendar date). "Ride now" only on a cycling day.
-    private var centre: (icon: String, label: String, hint: String) {
+    private var centre: (icon: String, label: String, hint: String) { Self.centreCopy(recording: recording, action: action) }
+    static func centreCopy(recording: Bool, action: Store.TodayAction) -> (icon: String, label: String, hint: String) {
         if recording { return ("bicycle", "Riding", "Ride in progress, open Ride") }
         switch action {
         case .ride: return ("bicycle", "Ride now", "Ride now, open the Ride screen")

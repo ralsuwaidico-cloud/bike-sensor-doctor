@@ -1125,6 +1125,13 @@ final class Store: ObservableObject {
         case healthHold
         var id: String { switch self { case .ride(let w): return "ride-\(w.id)"; case .train(let w): return "train-\(w.id)"; case .choose(let ws): return "choose-\(ws.map { $0.id.uuidString }.joined())"; case .rest: return "rest"; case .doneToday: return "done"; case .inProgress: return "inprogress"; case .healthHold: return "hold" } }
     }
+    /// W12: the day the plan took effect (see CyPlanStart). Computed; nothing stored.
+    var planEffectiveStart: Date? { CyPlanStart.effectiveStart(planVersions: planVersions, plan: plan) }
+    /// W12: whether a ride or strength session was recorded on that day (imports included).
+    func hasRecord(on day: Date, calendar cal: Calendar = .current) -> Bool {
+        rides.contains { cal.isDate($0.start, inSameDayAs: day) } || strength.contains { cal.isDate($0.date, inSameDayAs: day) }
+            || plan.contains { cal.isDate($0.date, inSameDayAs: day) && $0.completion == .marked }
+    }
     func todayAction(now: Date = Date(), calendar cal: Calendar = .current) -> TodayAction {
         if !profile.readiness.trainingAllowed { return .healthHold }
         if activeSession != nil { return .inProgress }

@@ -74,7 +74,11 @@ struct PlanView: View {
                 Button { if day.items.count > 1 { dayList = day } else if let w = day.items.first { selected = w } else { addOn = day.date } } label: {
                     VStack(spacing: 4) {
                         Text(day.date.shortDay).font(.caption2.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(day.date) ? BC.accent : .secondary).lineLimit(1).minimumScaleFactor(0.6)
-                        Image(systemName: icon(day)).font(.system(size: 15, weight: .semibold)).foregroundStyle(color(day)).frame(height: 18)
+                        if beforePlan(day) {
+                            Text("—").font(.system(size: 15, weight: .semibold)).foregroundStyle(.tertiary).frame(height: 18)      // W12
+                        } else {
+                            Image(systemName: icon(day)).font(.system(size: 15, weight: .semibold)).foregroundStyle(color(day)).frame(height: 18)
+                        }
                         Text(day.items.first.map { Fmt.compact(minutes: $0.minutes) } ?? "—").font(.caption.weight(.bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                         HStack(spacing: 2) { ForEach(day.items.prefix(3)) { w in RoundedRectangle(cornerRadius: 2).fill(w.kind.zone > 0 ? BC.zone(w.kind.zone) : Color.secondary.opacity(0.35)).frame(height: 4) } }
                         if day.items.count > 1 { Text("+\(day.items.count - 1)").font(.caption2.weight(.heavy)).padding(.horizontal, 4).background(BC.accent.opacity(0.18), in: Capsule()) }
@@ -85,12 +89,16 @@ struct PlanView: View {
                 }.buttonStyle(.plain)
                 .frame(minWidth: 0, maxWidth: .infinity)
                 .accessibilityIdentifier("planDay-\(Calendar.current.component(.weekday, from: day.date))")
-                .accessibilityLabel("\(day.date.dayAndDate): \(day.items.isEmpty ? "free" : day.items.map { "\($0.kind.title) \(Fmt.duration(minutes: $0.minutes)), \(store.status($0).title.lowercased())" }.joined(separator: ", "))")
+                .accessibilityLabel("\(day.date.dayAndDate): \(beforePlan(day) ? "before this plan started" : day.items.isEmpty ? "free" : day.items.map { "\($0.kind.title) \(Fmt.duration(minutes: $0.minutes)), \(store.status($0).title.lowercased())" }.joined(separator: ", "))")
             }
         }
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("planDayStrip")
+    }
+    /// W12: a day before the plan's effective start with nothing planned or recorded.
+    private func beforePlan(_ d: PlanDay) -> Bool {
+        d.items.isEmpty && CyPlanStart.isBeforePlan(d.date, effectiveStart: store.planEffectiveStart, hasRecord: store.hasRecord(on: d.date))
     }
     private func icon(_ d: PlanDay) -> String {
         // the same icons as Home and onboarding: bicycle = ride, dumbbell = strength, crescent moon = rest / recovery

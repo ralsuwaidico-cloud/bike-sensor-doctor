@@ -177,8 +177,18 @@ struct DesignSystemGallery: View {
                 section("Rest timer") {
                     HStack { Spacer(); CyRestTimerRing(remaining: 48, total: 90); Spacer() }
                 }
-                section("Tab bar") {
-                    CyFloatingTabBar(items: [CyTabItem(id: 0, title: "Home", systemImage: "house"), CyTabItem(id: 1, title: "Plan", systemImage: "calendar"), CyTabItem(id: 2, title: "Progress", systemImage: "chart.xyaxis.line"), CyTabItem(id: 3, title: "Profile", systemImage: "person")], selection: $tab) {}
+                section("Liquid Dock") {
+                    // Checkpoint B: the dock the app uses, in every centre state, so the audit measures each one
+                    VStack(spacing: 14) {
+                        CyLiquidDock(selection: $tab, state: .pending, centreIcon: "dumbbell.fill", centreLabel: "Train now", centreHint: "Train now, open today's strength workout") {}
+                        CyLiquidDock(selection: .constant(3), state: .active, centreIcon: "dumbbell.fill", centreLabel: "In progress", centreHint: "Strength workout in progress, resume it") {}
+                        CyLiquidDock(selection: .constant(0), state: .done, centreIcon: "checkmark", centreLabel: "Done today", centreHint: "Today's training is done, see the next step") {}
+                        CyLiquidDock(selection: .constant(1), state: .rest, missed: true, centreIcon: "dumbbell.fill", centreLabel: "Train now", centreHint: "Rest day, optional session") {}
+                        CyLiquidDock(selection: .constant(4), state: .multiple(2), centreIcon: "figure.mixed.cardio", centreLabel: "Train now", centreHint: "Train now, choose between today's ride and strength session") {}
+                        CyLiquidDock(selection: .constant(0), state: .hold, centreIcon: "cross.case.fill", centreLabel: "Paused", centreHint: "Training paused by your health check, opens what this means") {}
+                    }
+                    .padding(.horizontal, -CyTheme.margin + 2)
+                    CyCalendarStrip(days: [CyDay(id: 0, shortName: "Mon", longName: "Monday", sport: .rest, status: .beforePlan), CyDay(id: 1, shortName: "Tue", longName: "Tuesday", sport: .cycling, status: .done), CyDay(id: 2, shortName: "Wed", longName: "Wednesday", sport: .strength, status: .planned, isToday: true), CyDay(id: 3, shortName: "Thu", longName: "Thursday", sport: .cycling, status: .planned), CyDay(id: 4, shortName: "Fri", longName: "Friday", sport: .strength, status: .planned), CyDay(id: 5, shortName: "Sat", longName: "Saturday", sport: .cycling, status: .planned), CyDay(id: 6, shortName: "Sun", longName: "Sunday", sport: .rest, status: .none)])
                 }
                 Color.clear.frame(height: 40)
             }

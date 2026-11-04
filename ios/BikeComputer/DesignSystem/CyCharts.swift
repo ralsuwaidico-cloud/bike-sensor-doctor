@@ -186,9 +186,14 @@ struct CyCalendarStrip: View {
         let content = VStack(spacing: 5) {
             Text(d.shortName).font(CyType.captionSmall).foregroundStyle(d.isToday ? CyTheme.canvas.opacity(0.8) : CyTheme.ink3)
             HStack(spacing: 1) {
-                ForEach(d.sport.icons, id: \.self) { i in
-                    Image(systemName: i).font(d.sport == .both ? .caption : .body.weight(.semibold))
-                        .foregroundStyle(iconColor(d, icon: i))
+                if d.status == .beforePlan {
+                    // W12: a muted dash, not the rest moon
+                    Text("—").font(.body.weight(.semibold)).foregroundStyle(CyTheme.ink3)
+                } else {
+                    ForEach(d.sport.icons, id: \.self) { i in
+                        Image(systemName: i).font(d.sport == .both ? .caption : .body.weight(.semibold))
+                            .foregroundStyle(iconColor(d, icon: i))
+                    }
                 }
             }
             .frame(height: 22)
@@ -224,7 +229,7 @@ struct CyCalendarStrip: View {
         switch d.status {
         case .done: return CyTheme.recovery.mid
         case .missed: return CyTheme.bad
-        case .planned, .none: return .clear
+        case .planned, .none, .beforePlan: return .clear
         }
     }
 }

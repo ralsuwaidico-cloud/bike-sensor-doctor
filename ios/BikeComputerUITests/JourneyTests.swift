@@ -134,7 +134,13 @@ final class JourneyTests: XCTestCase {
         XCTAssertFalse(app.buttons["homeCaution"].exists, "\(p.tag): no health questionnaire")
         let homeWeek = (0..<7).map { app.descendants(matching: .any)["homeWeekDay-\($0)"].firstMatch.label }
         XCTAssertEqual(fromToday(homeWeek.map(sport)), fromToday(weekE.map(sport)), "\(p.tag): Home shows the approved week from today")
-        XCTAssertTrue(beforeToday(homeWeek.map(sport)).allSatisfy { $0 == "rest" }, "\(p.tag): no session invented for days already over")
+        // W12 (Checkpoint B): days of week 1 before the approval day are "before this plan started" — never rest, never missed
+        for i in 0..<todayIndex {
+            let l = app.descendants(matching: .any)["homeWeekDay-\(i)"].firstMatch.label.lowercased()
+            XCTAssertTrue(l.contains("before this plan started"), "\(p.tag): Home day \(i) before the plan reads '\(l)'")
+            XCTAssertFalse(l.contains("rest") || l.contains("missed"), "\(p.tag): Home day \(i) must not be rest or missed: '\(l)'")
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["liquidDock"].firstMatch.exists, "\(p.tag): the Liquid Dock is the navigation")
         XCTAssertTrue(app.staticTexts["homeTodayTitle"].firstMatch.exists || app.descendants(matching: .any)["homeTodayCard"].firstMatch.exists, "\(p.tag): today's card")
         var seen = 0; while !app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists && seen < 5 { app.swipeUp(); seen += 1 }
         XCTAssertTrue(app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists, "\(p.tag): first-week block (plan counts, goals, next steps)")
@@ -168,7 +174,11 @@ final class JourneyTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10), "\(p.tag): Plan")
         let planWeek = planSports(app)
         XCTAssertEqual(fromToday(planWeek), fromToday(weekE.map(sport)), "\(p.tag): Plan shows the approved week from today")
-        XCTAssertTrue(beforeToday(planWeek).allSatisfy { $0 == "rest" }, "\(p.tag): Plan invents nothing for days already over")
+        for i in 0..<todayIndex {   // W12 on Plan: the same wording as Home
+            let wd = [2, 3, 4, 5, 6, 7, 1][i]
+            let l = app.buttons["planDay-\(wd)"].firstMatch.label.lowercased()
+            XCTAssertTrue(l.contains("before this plan started"), "\(p.tag): Plan day \(i) before the plan reads '\(l)'")
+        }
         shot(app, "\(p.tag)-09-plan")
 
         // 10 — relaunch: everything persists
