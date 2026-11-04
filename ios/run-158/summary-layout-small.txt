@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 158 — 2026-11-04 08:17 UTC
+Stage: layout (layout devices: small)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 6m21s
+  layout small (L,AX3): ok · 35m47s
+RESULT layout audit: ok (73 screenshots)
+Total: 43m7s
