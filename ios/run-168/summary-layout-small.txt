@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 168 — 2026-11-05 18:55 UTC
+Stage: layout (layout devices: small)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m24s
+  layout small (L,AX3): FAILED (exit 65) · 47m24s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - AX3 home multi: second session not reachable by scrolling 
+RESULT layout audit: FAILED (89 screenshots)
+Total: 60m13s

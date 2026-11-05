@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 168 — 2026-11-05 18:55 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m40s
+  layout owner (L,XXXL): FAILED (exit 65) · 40m58s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - L home multi: overlapping texts: "Not trained in 4 weeks o" × "2" (18×18 pt) 
+RESULT layout audit: FAILED (87 screenshots)
+Total: 52m58s
