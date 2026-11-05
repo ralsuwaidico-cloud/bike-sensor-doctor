@@ -17,6 +17,9 @@ struct RootView: View {
     /// Home B: destinations opened by Home's buttons and the centre button (one router for both, spec P2-20).
     @State private var homeSheet: HomeAction? = nil
     @State private var holdSheet = false
+    /// Checkpoint C: the Training Hub is a page over the current tab (closing returns to that tab with its scroll
+    /// position); the centre button always opens it, a tab tap or Close dismisses it.
+    @State private var showHub = false
     /// A5: the local calendar day; when it changes (midnight, or back from the background) the centre button is
     /// re-evaluated and missing plan weeks are generated.
     @State private var day = Calendar.current.startOfDay(for: Date())
@@ -41,12 +44,18 @@ struct RootView: View {
         VStack(spacing: 0) {
             // all five stay alive (like TabView) so navigation and scroll positions survive switching
             ZStack {
-                HomeView(tab: $tab, perform: perform).tabPage(0, tab)
+                HomeView(tab: $tab, perform: perform, openHub: { openHub() }).tabPage(0, tab)
                 PlanView().tabPage(1, tab)
                 RideTabView().tabPage(2, tab)
                 ProgressTabView().tabPage(3, tab)
                 ProfileTabView().tabPage(4, tab)
+                if showHub {
+                    TrainingHubView(perform: perform, openTab: { showHub = false; tab = $0 }, otherSession: { trainSheet = store.todayAction() }, close: { showHub = false })
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .zIndex(1)
+                }
             }
+            .onChange(of: tab) { _, _ in showHub = false }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // Checkpoint B (owner 4 Nov): the floating Liquid Dock replaces the fixed bar. It is a bottom safe-area inset,
             // so scrollable content ends above it and scrolls under its translucent capsule; the destinations, the
@@ -56,7 +65,7 @@ struct RootView: View {
             // the inset above for its scroll content, so Plan's last row ended under the dock. Scroll-content margins
             // reach every scroll view in the subtree; Ride (no scroll view) is placed by the safe-area inset.
             .contentMargins(.bottom, 80, for: .scrollContent)
-            .undoSnackbar(hidden: tab == 0)     // Home shows it inline, under Today (never over a heading)
+            .undoSnackbar(hidden: showHub)      // Checkpoint C: the hub shows the Undo bar inline under the card it changed
         }
         .ignoresSafeArea(.keyboard)
         .tint(BC.accent)
@@ -112,11 +121,19 @@ struct RootView: View {
                             centreIcon: copy.icon, centreLabel: copy.label, centreHint: copy.hint, onCentre: centreTapped)
     }
 
-    /// The centre button adapts to today: a ride opens the cycling dashboard; a strength day opens the scheduled
-    /// workout with its routine; both → a choice; rest / done → an optional-session sheet. It never starts recording.
+    /// Checkpoint C (owner-approved prototype §2.2): the centre button always opens the Training Hub, whose card carries
+    /// today's Start / Resume / Results / Why / More with the same routes as before. While a ride is being recorded the
+    /// button opens the Ride screen (the dock is the ride's own control then). Tapping it with the hub open closes it.
     private func centreTapped() {
-        // Home B: the centre button reads the same model as Home's card (HomeToday.centre) — a health hold opens the hold
-        // sheet, one obvious next step goes where the card's button goes, otherwise the optional-session sheet.
+        if recorder.isActive { tab = 2; return }
+        if showHub { showHub = false } else { openHub() }
+    }
+    private func openHub() {
+        withAnimation(.easeOut(duration: 0.22)) { showHub = true }
+    }
+
+    /// The pre-Checkpoint-C routing (build 161): kept as the reference for what each hub action reaches.
+    private func centreTappedDirect() {
         switch store.homeToday(recorderActive: recorder.isActive).centre {
         case .hold: holdSheet = true
         case .perform(let a): perform(a)

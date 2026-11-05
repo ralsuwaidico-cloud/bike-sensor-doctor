@@ -13,63 +13,40 @@ struct HomeView: View {
     @EnvironmentObject private var diag: DiagReportCenter
     @Binding var tab: Int
     var perform: (HomeAction) -> Void
-    @State private var why: Workout? = nil
+    /// Checkpoint C: the compact Today reminder opens the Training Hub (RootView owns it, like the dock's centre button).
+    var openHub: () -> Void = {}
     @State private var detail: Workout? = nil
-    @State private var swap: Workout? = nil
     @State private var coachSheet: HomeCoachSheet? = nil
     @State private var showAdjustments = false
 
     var body: some View {
+        // Checkpoint C (owner 5 Nov): the Premium Home Dashboard. Today's execution card and its actions live in the
+        // Training Hub; Home keeps the health lines, the banner and one compact reminder.
         let h = store.homeToday(recorderActive: recorder.isActive)
+        let dash = store.homeDashboard(recorderActive: recorder.isActive)
         NavigationStack {
             ScrollView {
-                // UI refinement 28 Oct: Apple-Fitness-style sections (title outside the card), one card per job, the missed
-                // session as its own quiet row under Today, and room under the last card for the tab bar's centre button
-                VStack(alignment: .leading, spacing: 0) {
-                    HomeHeader(name: store.profile.name)
-                    VStack(alignment: .leading, spacing: DS.s) {
-                        banner
-                        // rc3 (owner 1 Nov): no health questionnaire for new riders (HomeModel no longer emits "answer the
-                        // health check"); a restriction an existing rider already saved still shows and opens the review.
-                        if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
-                    }
-                    HomeSectionTitle(text: "Today")
-                    todayCard(h)
-                    if let m = h.missed, h.layoutShowsMissed {
-                        HomeMissedRow(missed: m, more: h.moreMissed, todayFree: h.isRestOrFree, perform: perform, openPlan: { tab = 1 })
-                            .padding(.top, DS.s)
-                    }
-                    // the Undo bar for a Move / Skip / Do today sits in the page, under the card it changed
-                    if let t = store.undoToast {
-                        UndoToastBar(toast: t).padding(.top, DS.s).transition(.opacity)
-                    }
-                    if h.showCoach, !recorder.isActive, let item = store.homeCoach() {
-                        HomeSectionTitle(text: "Coach")
-                        HomeCoachCard(item: item) { coachTapped(item) }
-                    }
-                    if h.showWeek {
-                        HomeSectionTitle(text: "Week")
-                        weekCard(h)
-                    }
-                    // V1: the first week after Approve — the plan's counts, the selected goals and what to do next,
-                    // all from the store (no sample values); gone once anything is recorded.
+                VStack(alignment: .leading, spacing: CyTheme.sp3) {
+                    banner
+                    if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) }.padding(.top, 0) }
+                    HomeDashboardScreen(dash: dash, today: h, coach: h.showCoach ? store.homeCoach() : nil,
+                                        openTab: { tab = $0 }, openHub: openHub, openWorkout: { detail = $0 }, coachTapped: coachTapped)
+                    // V1: the first week after Approve — getting-started rows with real device states; gone once anything is recorded.
                     if h.showWeek, HomeFirstWeekSection.applies(store) {
                         HomeFirstWeekSection(openPlan: { tab = 1 }, openDevices: { tab = 4 }, openProgress: { tab = 3 })
-                            .padding(.top, DS.s)
                             .accessibilityElement(children: .contain)
                             .accessibilityIdentifier("homeFirstWeek")
                     }
                 }
-                .padding(.horizontal, DS.l)
+                .padding(.horizontal, CyTheme.margin)
                 .padding(.bottom, 120)
-                .animation(.easeOut(duration: 0.2), value: store.undoToast)      // the tab bar and its raised centre button never cover the last card
+                .frame(maxWidth: CyTheme.maxContentWidth + 2 * CyTheme.margin)
+                .frame(maxWidth: .infinity)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.canvas)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showAdjustments) { AdjustmentsView() }
-            .sheet(item: $why) { w in HomeWhySheet(workout: w) }
             .sheet(item: $detail) { w in WorkoutDetail(workout: w) }
-            .sheet(item: $swap) { w in HomeSwapSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
         }
     }
@@ -84,38 +61,6 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("homeSyncBanner")
-        }
-    }
-
-    // MARK: TODAY
-    @ViewBuilder private func todayCard(_ h: HomeToday) -> some View {
-        switch h.layout {
-        case .first(let liftFirst): HomeFirstCard(liftFirst: liftFirst, mode: store.profile.trainingMode, perform: perform)
-        case .hold(let hold): HomeHoldCard(hold: hold, perform: perform)
-        case .freeSession: HomeFreeSessionCard(perform: perform)
-        case .rest(let w): HomeRestCard(rest: w, hasMissed: h.missed != nil, perform: perform)
-        case .single(let s):
-            HomeSingleCard(session: s, elapsed: recorder.elapsedS, sensorLine: sensorLine(s),
-                           perform: perform, open: { detail = s.workout }, why: { why = s.workout }, swap: { swap = s.workout },
-                           seeChange: { showAdjustments = true }, openConnections: { tab = 4 })
-        case .multi(let rows):
-            HomeMultiCard(rows: rows, elapsed: recorder.elapsedS, perform: perform,
-                          open: { w in detail = w }, why: { w in why = w }, swap: { w in swap = w })
-        }
-    }
-
-    /// Rides only, and only when the rider uses a BikeComputer that is not connected now (P1-9: never a power-meter claim).
-    private func sensorLine(_ s: HomeSession) -> String? {
-        guard s.isRide, s.status == .planned, device.remembered, store.settings.autoConnectBoard, !store.settings.phoneOnlyMode, device.state != .ready else { return nil }
-        return "BikeComputer not connected — the phone can record with GPS"
-    }
-
-    // MARK: THIS WEEK
-    @ViewBuilder private func weekCard(_ h: HomeToday) -> some View {
-        if case .hold = h.layout {
-            HomeWeekPausedCard { tab = 1 }
-        } else {
-            HomeWeekStrip(plan: store.plan, effectiveStart: store.planEffectiveStart, hasRecord: { store.hasRecord(on: $0) }, open: { detail = $0 }, openPlan: { tab = 1 })
         }
     }
 

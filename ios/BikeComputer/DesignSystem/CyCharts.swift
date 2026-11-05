@@ -173,6 +173,10 @@ struct CyBarChart: View {
 /// Caps at XL text so seven cells always fit an iPhone SE; VoiceOver labels carry the full day, sessions and status.
 struct CyCalendarStrip: View {
     let days: [CyDay]
+    /// Checkpoint C: Home keeps its own identifiers ("homeWeekDay-0" in "homeWeek") so its tests and the onboarding
+    /// week builder ("cyDay-0") never address the same cell.
+    var idPrefix = "cyDay"
+    var containerId = "cyWeekStrip"
     var onTap: ((CyDay) -> Void)? = nil
     var body: some View {
         HStack(spacing: 5) {
@@ -180,7 +184,7 @@ struct CyCalendarStrip: View {
         }
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("cyWeekStrip")
+        .accessibilityIdentifier(containerId)
     }
     private func cell(_ d: CyDay) -> some View {
         let content = VStack(spacing: 5) {
@@ -215,7 +219,7 @@ struct CyCalendarStrip: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(d.accessibilityLabel)
         .accessibilityAddTraits(onTap == nil ? [] : .isButton)
-        .accessibilityIdentifier("cyDay-\(d.id)")
+        .accessibilityIdentifier("\(idPrefix)-\(d.id)")
     }
     private func iconColor(_ d: CyDay, icon: String) -> Color {
         if d.isToday { return CyTheme.canvas }

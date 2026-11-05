@@ -54,7 +54,7 @@ final class LayoutAudit: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.demoStore()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", category(size)]
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Demo"].waitForExistence(timeout: 30) || app.staticTexts["Hi Demo"].waitForExistence(timeout: 5), "Home did not appear")
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "Home did not appear")
         sleep(2)
         return app
     }
@@ -172,7 +172,9 @@ final class LayoutAudit: XCTestCase {
             // today's strength session (centre button): status, exercises with Why? / Swap
             let centre = app.buttons["centreButton"].firstMatch
             if centre.waitForExistence(timeout: 5) {
-                centre.tap(); sleep(2)
+                centre.tap(); sleep(1)
+                shot("\(tag)-02b-hub"); checkTexts(app, screen: "\(size) training hub")
+                _ = app.openFromHub(); sleep(2)
                 shot("\(tag)-03-strength")
                 checkTexts(app, screen: "\(size) strength")
                 scrollUp(app); shot("\(tag)-04-strength-exercises")
@@ -506,11 +508,19 @@ final class LayoutAudit: XCTestCase {
                 app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.homeStore(state)
                 app.launchArguments += ["-UIPreferredContentSizeCategoryName", category(size)]
                 app.launch()
-                XCTAssertTrue(app.staticTexts["Hi Demo"].waitForExistence(timeout: 30), "\(state): Home did not appear")
+                XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "\(state): Home did not appear")
                 sleep(2)
                 let screen = "\(size) home \(state)"
                 shot("home-\(size.lowercased())-\(state)")
                 checkScreen(app, screen, tab: 0)
+                // Checkpoint C: the dashboard's own controls (ring, tiles, week, coach, recovery, goal, reminder) are ≥ 44 pt
+                checkKey(app, ids: ["cyHeroRing", "homeCycling", "homeStrength", "homeWeekPlan", "homeCoachAction", "homeRecovery", "homeTodayReminder", "homeAvatar"].filter { app.buttons[$0].exists }, screen: screen)
+                // Checkpoint C: today's card with its one primary action lives in the Training Hub (centre button)
+                app.buttons["centreButton"].firstMatch.tap()
+                XCTAssertTrue(app.descendants(matching: .any)["trainingHub"].firstMatch.waitForExistence(timeout: 10), "\(screen): the centre button opens the Training Hub")
+                sleep(1)
+                shot("hub-\(size.lowercased())-\(state)")
+                checkTexts(app, screen: "\(size) hub \(state)")
                 let win = app.windows.firstMatch.frame
                 // the one primary action (a multi-session day: the first row's) is fully above the tab bar without scrolling
                 // rest or free day with a missed session: the one action is "Move to today" on the missed row (spec v2.1, P1-7)
@@ -552,9 +562,12 @@ final class LayoutAudit: XCTestCase {
                     primary.tap(); sleep(2); shot("home-\(size.lowercased())-\(state)-primary"); checkScreen(app, "\(screen) primary sheet", tab: nil); close(app)
                 }
                 if size == sizes.first && device == "owner" && state == "stop" {
-                    // Train now during a health stop opens the hold sheet, never the Ride screen or a workout
-                    app.buttons["centreButton"].firstMatch.tap(); sleep(2)
-                    XCTAssertTrue(app.buttons["holdReviewHealth"].waitForExistence(timeout: 5), "\(screen): Train now must open the hold sheet")
+                    // Train now during a health stop shows the hold card (its info opens the hold sheet), never the Ride screen or a workout
+                    XCTAssertFalse(app.buttons["startWorkout"].exists, "\(screen): a workout must not open during a health stop")
+                    let info = app.buttons["homeHoldInfo"].firstMatch
+                    XCTAssertTrue(info.waitForExistence(timeout: 5), "\(screen): the hub shows the hold card")
+                    info.tap(); sleep(2)
+                    XCTAssertTrue(app.buttons["holdReviewHealth"].waitForExistence(timeout: 5), "\(screen): the hold card opens the hold sheet")
                     shot("home-\(size.lowercased())-stop-trainnow"); close(app)
                 }
                 if state == "multi" && size.hasPrefix("AX") {

@@ -66,4 +66,30 @@ extension XCUIApplication {
     func settleForScreenshot(_ seconds: TimeInterval = 1) {
         Thread.sleep(forTimeInterval: seconds)
     }
+
+    /// Checkpoint C: Home's greeting ("Good morning, Rashed") carries the rider's name; waits for it.
+    @discardableResult
+    func waitForHome(name: String, timeout: TimeInterval = 25) -> Bool {
+        let g = descendants(matching: .any)["homeGreeting"].firstMatch
+        guard g.waitForExistence(timeout: timeout) else { return false }
+        return g.label.contains(name)
+    }
+
+    /// Checkpoint C: the centre button opens the Training Hub; today's one action (Start / Resume / Results, or the
+    /// first row's) is on the hub card. Taps it when the hub is up, so the flows that used to open directly still do.
+    /// Returns false when no hub action exists (a rest day, a hold).
+    @discardableResult
+    func openFromHub(timeout: TimeInterval = 10) -> Bool {
+        guard descendants(matching: .any)["trainingHub"].firstMatch.waitForExistence(timeout: timeout) else { return false }
+        let primary = ["homePrimary", "homeRow-0"].map { buttons[$0].firstMatch }.first { $0.waitForExistence(timeout: 3) }
+        guard let p = primary, p.isHittable else { return false }
+        p.tap()
+        return true
+    }
+
+    /// Closes the Training Hub if it is showing.
+    func closeHub() {
+        let c = buttons["hubClose"].firstMatch
+        if c.exists && c.isHittable { c.tap() }
+    }
 }

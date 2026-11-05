@@ -20,7 +20,7 @@ final class LaunchSmokeTests: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build24Store()
         app.launch()
         // Home: the navigation title carries the rider's name from the seeded profile
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5),
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25),
                       "an existing rider must land on Home, not crash or see onboarding")
         Self.tapAllTabs(app)
     }
@@ -31,7 +31,7 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build30Store()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25))
         Self.tapAllTabs(app)
     }
 
@@ -45,7 +45,8 @@ final class LaunchSmokeTests: XCTestCase {
             _ = b.waitUntilSettled(timeout: 2)
             XCTAssertEqual(app.state, .runningForeground, "app died after opening \(label)")
             if label == "centreButton" {
-                // a sheet (Train now / strength workout) may be up: close it so the next tab is reachable
+                // Checkpoint C: the centre button opens the Training Hub (a page over the tab); close it so the next tab is reachable
+                app.closeHub()
                 for name in ["Done", "Cancel", "Close"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
             }
         }
@@ -57,11 +58,13 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build36Store()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25))
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         XCTAssertTrue(centre.label.contains("Train now"), "a strength day must say Train now, got \(centre.label)")
         centre.tap()
+        // Checkpoint C: the centre button opens the Training Hub; its card's Start reaches the same workout screen
+        XCTAssertTrue(app.openFromHub(), "the hub shows today's workout with its Start action")
         XCTAssertTrue(app.staticTexts["Short Full Body Workout"].firstMatch.waitForExistence(timeout: 10), "the assigned routine, not a generic circuit")
         XCTAssertTrue(app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 5), "Start workout visible")
         XCTAssertFalse(app.buttons["Replace"].exists, "secondary actions live under More")
@@ -79,7 +82,7 @@ final class LaunchSmokeTests: XCTestCase {
         let seededDay = Calendar.current.startOfDay(for: Date())     // the seed puts the routine on TODAY
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build40Store()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25))
         // The app draws its own tab bar (raised centre button), so there is no system TabBar to index into.
         let profileTab = app.buttons["Profile"].firstMatch
         XCTAssertTrue(profileTab.waitForExistence(timeout: 10), "Profile tab missing")
@@ -125,7 +128,7 @@ final class LaunchSmokeTests: XCTestCase {
 
         // data preserved: still onboarded, same rider, today's routine still scheduled
         app.buttons["Home"].firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 10) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "Cancel must keep the profile")
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 10), "Cancel must keep the profile")
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         // run 71 crossed midnight during this test: the next day of the seeded week is a ride day ("Ride now")
@@ -253,7 +256,7 @@ final class LaunchSmokeTests: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.build33Store()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25))
         XCTAssertEqual(app.state, .runningForeground)
         // Plan → Your week (per-day assignments) opens and closes (RC3: the row under the sessions, was the "Days" toolbar button)
         app.buttons["Plan"].firstMatch.tap()

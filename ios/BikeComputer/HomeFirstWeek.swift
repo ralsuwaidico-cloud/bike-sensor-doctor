@@ -17,39 +17,10 @@ struct HomeFirstWeekSection: View {
     }
 
     var body: some View {
-        let w = store.homeWeek()
-        let rides = w.riding, lifts = w.lifting
+        // Checkpoint C: the ring and the goal cards are part of the dashboard; this section keeps the getting-started rows.
         VStack(alignment: .leading, spacing: CyTheme.sp3) {
-            HomeSectionTitle(text: "This week")
-            CyHeroRingCard(caption: "WEEK 1", title: ringTitle(w),
-                           done: w.total.completed, planned: w.total.planned,
-                           ridesDone: rides?.completed, ridesPlanned: rides?.planned,
-                           liftsDone: lifts?.completed, liftsPlanned: lifts?.planned)
-                .onTapGesture(perform: openProgress)
-            if !store.profile.goals.isEmpty {
-                HomeSectionTitle(text: "Goals")
-                goals
-            }
-            HomeSectionTitle(text: "Getting started")
+            CyCaption(text: "Getting started", color: CyTheme.ink3).padding(.top, CyTheme.sp2)
             gettingStarted
-        }
-    }
-
-    private func ringTitle(_ w: HomeWeek) -> String {
-        if w.total.planned == 0 { return "Nothing planned yet" }
-        return w.total.completed == 0 ? "Your first week starts now" : "\(w.total.completed) of \(w.total.planned) done"
-    }
-
-    // MARK: goals — the selected goals, main goal first; progress appears only once something is logged
-    private var goals: some View {
-        let main = store.profile.primaryGoal
-        let ordered = store.profile.goals.sorted { a, b in (a == main) && (b != main) }
-        return VStack(spacing: CyTheme.sp2) {
-            ForEach(ordered.prefix(2)) { g in
-                CyGoalIndicatorCard(goal: g.title, isMain: g == main, indicator: GoalInfo.effect(g), value: nil,
-                                    sub: "Progress appears after your first logged \(g.sport == .strength ? "session" : "ride").", tag: .needsData)
-                    .accessibilityIdentifier("homeGoal-\(g.rawValue)")
-            }
         }
     }
 

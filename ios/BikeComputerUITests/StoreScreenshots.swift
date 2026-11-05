@@ -27,7 +27,7 @@ final class StoreScreenshots: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.alexStore(todayKind: todayKind)
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Alex"].waitForExistence(timeout: 25) || app.staticTexts["Hi Alex"].waitForExistence(timeout: 5), "Home did not appear")
+        XCTAssertTrue(app.waitForHome(name: "Alex", timeout: 25), "Home did not appear")
         return app
     }
 
@@ -46,7 +46,9 @@ final class StoreScreenshots: XCTestCase {
         let centre = app.buttons["centreButton"].firstMatch
         if centre.waitForExistence(timeout: 10) {
             centre.tap()
-            if app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 10) { shot(app, "02-strength-workout") }
+            if app.descendants(matching: .any)["trainingHub"].firstMatch.waitForExistence(timeout: 10) { shot(app, "02-training-hub") }
+            _ = app.openFromHub()
+            if app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 10) { shot(app, "02b-strength-workout") }
             dismissSheet(app)
         }
         app.buttons["Plan"].firstMatch.tap()
@@ -62,6 +64,7 @@ final class StoreScreenshots: XCTestCase {
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         centre.tap()
+        _ = app.openFromHub()
         sleep(2)
         shot(app, "05-ride")
     }

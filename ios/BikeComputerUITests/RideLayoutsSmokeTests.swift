@@ -11,13 +11,14 @@ final class RideLayoutsSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.rideDayStore()
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "seeded rider lands on Home")
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25), "seeded rider lands on Home")
 
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         centre.tap()
-        // a ride day opens the Ride screen directly; close a sheet if the plan offered a choice
-        for name in ["Done", "Cancel", "Close"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
+        // Checkpoint C: the hub's Start opens the Ride screen; close a sheet if the plan offered a choice
+        _ = app.openFromHub()
+        for name in ["Done", "Cancel"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
 
         let menu = app.buttons["rideLayoutMenu"].firstMatch
         XCTAssertTrue(menu.waitForExistence(timeout: 15), "ride layout quick switch on the live screen")
@@ -57,11 +58,12 @@ final class RideLayoutsSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.rideDayStore().replacingOccurrences(of: "\"ftpHow\":\"entered\"", with: "\"ftpHow\":\"assumed\"")
         app.launch()
-        XCTAssertTrue(app.navigationBars["Hi Rashed"].waitForExistence(timeout: 25) || app.staticTexts["Hi Rashed"].waitForExistence(timeout: 5), "seeded rider lands on Home")
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25), "seeded rider lands on Home")
         let centre = app.buttons["centreButton"].firstMatch
         XCTAssertTrue(centre.waitForExistence(timeout: 10))
         centre.tap()
-        for name in ["Done", "Cancel", "Close"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
+        _ = app.openFromHub()
+        for name in ["Done", "Cancel"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
         let strip = app.descendants(matching: .any)["rideStepStrip"].firstMatch
         XCTAssertTrue(strip.waitForExistence(timeout: 15), "current ride step shown")
         XCTAssertTrue(strip.label.contains("RPE"), strip.label)
