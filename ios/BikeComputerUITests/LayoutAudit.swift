@@ -68,6 +68,10 @@ final class LayoutAudit: XCTestCase {
         guard let root = try? app.snapshot() else { return [] }
         func walk(_ s: XCUIElementSnapshot) -> [XCUIElementSnapshot] {
             if s.identifier.hasPrefix("tabPage-") { return tab.map { s.identifier == "tabPage-\($0)" } == true ? flatten(s) : [] }
+            // Checkpoint C: the Liquid Dock floats over the page's scroll content (the page scrolls under it by design); its
+            // own texts and badge are audited by the dock geometry checks, not as page content (run 168: the "2" badge on
+            // the raised centre button "overlapped" a coach line scrolled beneath it)
+            if s.identifier == "liquidDock" { return [] }
             return [s] + s.children.flatMap { walk($0) }
         }
         return walk(root)
@@ -571,9 +575,11 @@ final class LayoutAudit: XCTestCase {
                     shot("home-\(size.lowercased())-stop-trainnow"); close(app)
                 }
                 if state == "multi" && size.hasPrefix("AX") {
-                    // the second session is reached by a normal scroll (readability first, owner 29 Oct)
+                    // the second session is reached by a normal scroll (readability first, owner 29 Oct); the hub page is
+                    // shorter than the old Home, so a full swipe can carry the row above the top — scroll back when it does
                     let second = app.buttons["homeRow-1"].firstMatch
                     for _ in 0..<3 where !(second.exists && second.isHittable && second.frame.maxY <= win.maxY - 105) { app.swipeUp(); sleep(1) }
+                    for _ in 0..<2 where second.exists && second.frame.minY < win.minY + 80 { app.swipeDown(); sleep(1) }
                     XCTAssertTrue(second.exists && second.isHittable, "\(screen): second session not reachable by scrolling")
                     shot("home-\(size.lowercased())-multi-scrolled")
                 }

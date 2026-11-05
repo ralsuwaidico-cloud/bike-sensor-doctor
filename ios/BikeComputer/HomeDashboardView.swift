@@ -466,7 +466,8 @@ struct TrainingHubView: View {
         if case .hold = h.layout {} else {
             VStack(alignment: .leading, spacing: 8) {
                 CyCaption(text: "Optional", color: CyTheme.ink3)
-                HStack(spacing: 8) {
+                let layout = dts.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+                layout {
                     if store.profile.trainingMode != .strength { CySecondaryButton(title: "Free ride", systemImage: "bicycle") { close(); openTab(2) }.accessibilityIdentifier("hubFreeRide") }
                     CySecondaryButton(title: "Other session", systemImage: "plus") { otherSession() }.accessibilityIdentifier("hubOtherSession")
                 }

@@ -208,7 +208,8 @@ extension Store {
             } else {
                 sub = r.planned > 0 ? "rides · \(Fmt.duration(minutes: r.plannedMinutes)) planned" : "nothing planned this week"
             }
-            let tag: SourceTag = r.completed == 0 ? .needsData : r.logged > 0 ? .measured : .logged   // recorded rides are measured; quick logs, marks and imports are logged values
+            // recorded rides are measured; quick logs, marks and imports are logged values; "needs data" only before any ride
+            let tag: SourceTag = r.completed > 0 ? (r.logged > 0 ? .measured : .logged) : (firstRide == nil ? .needsData : .logged)
             cycling = HomeDashboard.Tile(value: value, unit: nil, sub: sub, tag: tag, series: HomeDashboardModel.series(TrendChartMath.buckets(ledger, riding: true, weeks: 8, now: now, calendar: cal), firstActivity: firstRide, minutes: true, calendar: cal))
         }
         if mode != .cycling {
@@ -216,9 +217,10 @@ extension Store {
             let value: String? = l.planned > 0 ? "\(l.plannedDone) of \(l.planned)" : (l.completed > 0 ? "\(l.completed)" : nil)
             var sub = l.planned > 0 ? "sessions" : "nothing planned this week"
             if l.completed == 0, let next = plan.filter({ $0.kind == .strength && !$0.skipped && $0.date >= cal.startOfDay(for: now) && $0.date < cal.date(byAdding: .day, value: 7, to: monday)! }).min(by: { $0.date < $1.date }) {
-                sub += cal.isDate(next.date, inSameDayAs: now) ? " · first lift today" : " · next \(HomeText.weekday(next.date))"
+                let word = firstLift == nil ? "first lift" : "next lift"
+                sub += cal.isDate(next.date, inSameDayAs: now) ? " · \(word) today" : " · \(word) \(HomeText.weekday(next.date))"
             } else if l.minutes > 0 { sub += " · \(Fmt.duration(minutes: l.minutes))" }
-            let tag: SourceTag = l.completed == 0 ? .needsData : .logged
+            let tag: SourceTag = l.completed > 0 ? .logged : (firstLift == nil ? .needsData : .logged)   // "needs data" only before any logged session
             strengthTile = HomeDashboard.Tile(value: value, unit: nil, sub: sub, tag: tag, series: HomeDashboardModel.series(TrendChartMath.buckets(ledger, riding: false, weeks: 8, now: now, calendar: cal), firstActivity: firstLift, minutes: false, calendar: cal))
         }
 
