@@ -1,0 +1,18 @@
+BikeComputer iOS CI — run 167 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 167 — 2026-11-05 16:45 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 3m56s
+RESULT tests: ok (Executed 566 tests, with 0 failures) · 8m56s
+  targets from the files changed since the last green full run cd92d74
+Quick UI targets: DesignSystemAudit/testGalleryLightAndDark LayoutAudit/testHomeStates JourneyTests/testHybridJourney AdaptiveSmokeTests JourneyTests LaunchSmokeTests LayoutAudit RideLayoutsSmokeTests StoreScreenshots UITestWaits LayoutAudit/testKeyScreensAtTextSizes OnboardingScreens/testOnboardingV3FiveStages LayoutAudit/testHomeStates JourneyTests/testHybridJourney LaunchSmokeTests RideLayoutsSmokeTests
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m53s
+  layout small (AX3): FAILED (exit 65) · 68m50s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertLessThanOrEqual failed: ("587.5") is greater than ("562.0") - AX3 home multi: primary button below the fold (32.0, 543.5, 153.0, 44.0) 
+commit fa7c6a577c50e98fe6754f99ea1e1590991bfbd7  branch ios/v1-ux  job failure
