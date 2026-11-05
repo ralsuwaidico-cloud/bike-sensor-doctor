@@ -20,6 +20,7 @@ struct RootView: View {
     /// Checkpoint C: the Training Hub is a page over the current tab (closing returns to that tab with its scroll
     /// position); the centre button always opens it, a tab tap or Close dismisses it.
     @State private var showHub = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A5: the local calendar day; when it changes (midnight, or back from the background) the centre button is
     /// re-evaluated and missing plan weeks are generated.
     @State private var day = Calendar.current.startOfDay(for: Date())
@@ -129,7 +130,7 @@ struct RootView: View {
         if showHub { showHub = false } else { openHub() }
     }
     private func openHub() {
-        withAnimation(.easeOut(duration: 0.22)) { showHub = true }
+        withAnimation(CyMotion.animation(0.22, reduce: reduceMotion)) { showHub = true }
     }
 
     /// The pre-Checkpoint-C routing (build 161): kept as the reference for what each hub action reaches.
