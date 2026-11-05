@@ -156,19 +156,59 @@ final class SupersetPipelineTests: XCTestCase {
     }
 
     func testExecutorAlternatesUnequalSupersetSetsAndFinishesTheLongerOne() {
-        // NextSet lives beside the SwiftUI screen: simulator only
+        // The session is started through the real lifecycle
+        // (startStrengthSession resets every planned set to not done), each set is logged the way the Log button does,
+        // and the session is finished through finishActiveSession.
         let s = store(); owner(s, supersets: true)
-        let cat = s.allExercises
-        guard let sq = cat.first(where: { ExerciseLibrary.meta($0).slot == .squat }), let pr = cat.first(where: { ExerciseLibrary.meta($0).slot == .horizontalPush }), let row = cat.first(where: { ExerciseLibrary.meta($0).slot == .horizontalPull }) else { return XCTFail("catalogue") }
-        // planned sets default to done = true; a started session resets them (startStrengthSession) — build the live list the same way
-        var es = [ExerciseEntry(exercise: sq, sets: (0..<3).map { _ in SetEntry(reps: 6, done: false) }, superset: "A"), ExerciseEntry(exercise: pr, sets: (0..<2).map { _ in SetEntry(reps: 8, done: false) }, superset: "A"), ExerciseEntry(exercise: row, sets: (0..<2).map { _ in SetEntry(reps: 8, done: false) })]
-        var order: [String] = []
-        while let p = NextSet.pick(es) {
-            order.append("\(p.label ?? es[p.entry].name)#\(p.set + 1)")
-            es[p.entry].sets[p.set].done = true
+        let lifts = approve(s)
+        guard let planned = lifts.first(where: { l in
+            let g = groups(s.plannedEntries(for: l))
+            return g.values.contains { $0.count == 2 && $0[0].sets.count != $0[1].sets.count }
+        }) else { return XCTFail("a coach-built session with an unequal superset pair (e.g. A1 ×3 / A2 ×2)") }
+        var w = planned; w.date = Date(); s.update(w)
+        let entries = s.plannedEntries(for: w)
+        XCTAssertTrue(s.startStrengthSession(for: w, template: nil, entries: entries, now: Date()))
+        guard let live = s.activeSession?.exercises else { return XCTFail("active session") }
+        XCTAssertTrue(live.allSatisfy { $0.sets.allSatisfy { !$0.done } }, "a started session begins with no set done")
+        // the group with unequal sets
+        let letter = groups(live).first { $0.value[0].sets.count != $0.value[1].sets.count }!.key
+        let members = live.indices.filter { live[$0].superset == letter }
+        let longer = members.max { live[$0].sets.count < live[$1].sets.count }!, shorter = members.min { live[$0].sets.count < live[$1].sets.count }!
+        let nLong = live[longer].sets.count, nShort = live[shorter].sets.count
+        XCTAssertGreaterThan(nLong, nShort)
+        // walk the executor: pick → log (as the Log button does) → pick …
+        var order: [(entry: Int, label: String?)] = []
+        var guardCount = 0
+        while let p = NextSet.pick(s.activeSession!.exercises!), guardCount < 100 {
+            guardCount += 1
+            order.append((p.entry, p.label))
+            s.updateActiveSession { $0.exercises![p.entry].sets[p.set].done = true }
         }
-        XCTAssertEqual(order, ["A1#1", "A2#1", "A1#2", "A2#2", "A1#3", "\(row.name)#1", "\(row.name)#2"], "A1 → A2 alternate, the third A1 set runs alone, then the next exercise")
-        XCTAssertTrue(es.allSatisfy { $0.sets.allSatisfy(\.done) })
+        let total = live.reduce(0) { $0 + $1.sets.count }
+        XCTAssertEqual(order.count, total, "every planned set was picked exactly once")
+        // inside the group: alternate member by member while both have sets left, then the longer one runs its remaining sets alone
+        let groupPicks = order.filter { live[$0.entry].superset == letter }
+        XCTAssertEqual(groupPicks.count, nLong + nShort)
+        let first = members.min()!, second = members.max()!   // list order: A1 then A2
+        var expected: [Int] = []
+        for _ in 0..<nShort { expected += [first, second] }
+        expected += Array(repeating: longer, count: nLong - nShort)
+        XCTAssertEqual(groupPicks.map { $0.entry }, expected, "A1 → A2 … then the remaining A\(longer == first ? 1 : 2) sets alone")
+        XCTAssertEqual(groupPicks.first?.label, "\(letter)1"); XCTAssertEqual(groupPicks.dropFirst().first?.label, "\(letter)2")
+        // the group runs as one block: no other exercise is picked between its first and last set
+        let gi = order.indices.filter { live[order[$0].entry].superset == letter }
+        XCTAssertEqual(gi.last! - gi.first! + 1, gi.count, "the superset is executed back to back")
+        // unpaired exercises carry no label and come in list order
+        XCTAssertTrue(order.filter { live[$0.entry].superset == nil }.allSatisfy { $0.label == nil })
+        // completion: every set logged, the session saved with its grouping, the planned session marked done
+        XCTAssertTrue(s.activeSession!.exercises!.allSatisfy { $0.sets.allSatisfy(\.done) })
+        guard let saved = s.finishActiveSession(rpe: 7, notes: "", now: Date().addingTimeInterval(1500)) else { return XCTFail("finish") }
+        XCTAssertNil(s.activeSession)
+        XCTAssertEqual(saved.exercises?.reduce(0) { $0 + $1.sets.count }, total, "all logged sets are kept")
+        XCTAssertEqual(saved.exercises?.map(\.superset), live.map(\.superset), "the grouping is kept in history")
+        XCTAssertEqual(saved.minutes, 25, "duration is the measured time, not the plan")
+        XCTAssertTrue(s.plan.first { $0.id == w.id }?.done == true, "the planned session is marked done")
+        XCTAssertEqual(s.ledger.status(w), .completedLogged)
     }
 
     // MARK: fallback (W13 owner check: never silent)
