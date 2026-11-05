@@ -1,0 +1,172 @@
+=== launch-smoke: errors / failures ===
+Test Case '-[BikeComputerUITests.AdaptiveSmokeTests testQuickStrengthLogShowsCheckInThenAdjustments]' passed (161.844 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 161.844 (161.847) seconds
+	 Executed 1 test, with 1 test skipped and 0 failures (0 unexpected) in 8.483 (8.484) seconds
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (11.581 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (59.591 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (64.380 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (115.349 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (65.375 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40YourDataExportAndDeleteCancelKeepsData]' passed (145.906 seconds).
+	 Executed 6 tests, with 0 failures (0 unexpected) in 462.182 (462.192) seconds
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 0.485 (0.488) seconds
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages]' passed (102.479 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 102.479 (102.482) seconds
+Test Case '-[BikeComputerUITests.RideLayoutsSmokeTests testSwitchThroughAllRideLayouts]' passed (82.516 seconds).
+Test Case '-[BikeComputerUITests.RideLayoutsSmokeTests testUnknownFTPRideShowsNoWatts]' passed (44.470 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 126.986 (126.989) seconds
+	 Executed 2 tests, with 2 tests skipped and 0 failures (0 unexpected) in 0.220 (0.221) seconds
+	 Executed 16 tests, with 6 tests skipped and 0 failures (0 unexpected) in 862.678 (862.709) seconds
+	 Executed 16 tests, with 6 tests skipped and 0 failures (0 unexpected) in 862.678 (862.711) seconds
+** TEST EXECUTE SUCCEEDED **
+=== launch-smoke: last 150 lines ===
+    t =    79.63s     Checking `Expect predicate `existsNoRetry == 1` for object "Ride details" NavigationBar`
+    t =    79.63s         Checking existence of `"Ride details" NavigationBar`
+    t =    80.08s Tap "Done" Button
+    t =    80.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    80.09s     Find the "Done" Button
+    t =    80.29s     Check for interrupting elements affecting "Done" Button
+    t =    80.79s     Synthesize event
+    t =    81.17s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    81.95s Tear Down
+Test Case '-[BikeComputerUITests.RideLayoutsSmokeTests testSwitchThroughAllRideLayouts]' passed (82.516 seconds).
+Test Case '-[BikeComputerUITests.RideLayoutsSmokeTests testUnknownFTPRideShowsNoWatts]' started.
+    t =     0.00s Start Test at 2026-11-05 15:16:08.583
+    t =     0.12s Set Up
+    t =     0.12s Open com.ralsuwaidico.bikecomputer
+    t =     0.12s     Launch com.ralsuwaidico.bikecomputer
+    t =     0.12s         Terminate com.ralsuwaidico.bikecomputer:54701
+2026-11-05 15:16:09.946 xcodebuild[19870:54919] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-05 15:16:09.946 xcodebuild[19870:54919] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =     2.81s         Setting up automation session
+    t =     6.23s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    10.92s Waiting 25.0s for "Hi Rashed" NavigationBar to exist
+    t =    11.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    11.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    13.20s         Capturing element debug description
+    t =    13.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    13.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    14.15s         Capturing element debug description
+    t =    14.99s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    14.99s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    15.17s         Capturing element debug description
+    t =    15.98s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    15.98s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    16.21s         Capturing element debug description
+    t =    16.95s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    16.95s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    17.12s         Capturing element debug description
+    t =    17.95s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    17.95s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    18.10s         Capturing element debug description
+    t =    18.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    18.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    19.17s         Capturing element debug description
+    t =    19.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    19.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    20.07s         Capturing element debug description
+    t =    21.01s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    21.01s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    21.17s         Capturing element debug description
+    t =    22.00s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    22.00s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    22.34s         Capturing element debug description
+    t =    22.97s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    22.97s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    23.16s         Capturing element debug description
+    t =    23.99s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    23.99s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    24.17s         Capturing element debug description
+    t =    25.01s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    25.01s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    25.18s         Capturing element debug description
+    t =    26.01s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    26.01s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    26.19s         Capturing element debug description
+    t =    26.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    26.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    27.10s         Capturing element debug description
+    t =    27.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    27.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    28.11s         Capturing element debug description
+    t =    28.93s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    28.93s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    29.11s         Capturing element debug description
+    t =    29.93s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    29.93s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    30.24s         Capturing element debug description
+    t =    30.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    30.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    31.09s         Capturing element debug description
+    t =    31.93s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    31.93s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    32.09s         Capturing element debug description
+    t =    32.96s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    32.96s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    33.16s         Capturing element debug description
+    t =    33.95s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    33.95s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    34.15s         Capturing element debug description
+    t =    35.00s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    35.01s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    35.23s         Capturing element debug description
+    t =    35.92s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" NavigationBar`
+    t =    35.92s         Checking existence of `"Hi Rashed" NavigationBar`
+    t =    36.12s         Capturing element debug description
+    t =    36.13s     Checking existence of `"Hi Rashed" NavigationBar`
+    t =    36.33s Collecting debug information to assist test failure triage
+    t =    36.33s     Requesting snapshot of accessibility hierarchy for app with pid 58557
+    t =    36.70s Waiting 5.0s for "Hi Rashed" StaticText to exist
+    t =    37.75s     Checking `Expect predicate `existsNoRetry == 1` for object "Hi Rashed" StaticText`
+    t =    37.75s         Checking existence of `"Hi Rashed" StaticText`
+    t =    37.94s Waiting 10.0s for "centreButton" Button to exist
+    t =    39.00s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =    39.00s         Checking existence of `"centreButton" Button`
+    t =    39.02s Tap "centreButton" Button
+    t =    39.02s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.02s     Find the "centreButton" Button
+    t =    39.04s     Check for interrupting elements affecting "centreButton" Button
+    t =    39.20s     Synthesize event
+    t =    39.55s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    39.65s Checking existence of `"Done" Button`
+    t =    40.49s Checking existence of `"Cancel" Button`
+    t =    41.54s Checking existence of `"Close" Button`
+    t =    42.35s Waiting 15.0s for "rideStepStrip" Any to exist
+    t =    43.38s     Checking `Expect predicate `existsNoRetry == 1` for object "rideStepStrip" Any`
+    t =    43.38s         Checking existence of `"rideStepStrip" Any`
+    t =    43.66s Find the "rideStepStrip" Any
+    t =    43.89s Find the "rideStepStrip" StaticText
+    t =    44.05s Find the "rideStepStrip" StaticText
+    t =    44.23s Tear Down
+Test Case '-[BikeComputerUITests.RideLayoutsSmokeTests testUnknownFTPRideShowsNoWatts]' passed (44.470 seconds).
+Test Suite 'RideLayoutsSmokeTests' passed at 2026-11-05 15:16:53.052.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 126.986 (126.989) seconds
+Test Suite 'StoreScreenshots' started at 2026-11-05 15:16:53.053.
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' started.
+    t =     0.00s Start Test at 2026-11-05 15:16:53.053
+    t =     0.04s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift:43: -[BikeComputerUITests.StoreScreenshots test1StrengthDay] : Test skipped - SCREENSHOT_DIR not set — store screenshots are only taken by the asc-listing workflow
+    t =     0.05s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test1StrengthDay]' skipped (0.120 seconds).
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' started.
+    t =     0.00s Start Test at 2026-11-05 15:16:53.174
+    t =     0.03s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StoreScreenshots.swift:60: -[BikeComputerUITests.StoreScreenshots test2RideDay] : Test skipped - SCREENSHOT_DIR not set — store screenshots are only taken by the asc-listing workflow
+    t =     0.04s Tear Down
+Test Case '-[BikeComputerUITests.StoreScreenshots test2RideDay]' skipped (0.099 seconds).
+Test Suite 'StoreScreenshots' passed at 2026-11-05 15:16:53.273.
+	 Executed 2 tests, with 2 tests skipped and 0 failures (0 unexpected) in 0.220 (0.221) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-05 15:16:53.274.
+	 Executed 16 tests, with 6 tests skipped and 0 failures (0 unexpected) in 862.678 (862.709) seconds
+Test Suite 'Selected tests' passed at 2026-11-05 15:16:53.275.
+	 Executed 16 tests, with 6 tests skipped and 0 failures (0 unexpected) in 862.678 (862.711) seconds
+2026-11-05 15:16:55.377 xcodebuild[19870:54919] [MT] IDETestOperationsObserverDebug: 1150.904 elapsed -- Testing started completed.
+2026-11-05 15:16:55.377 xcodebuild[19870:54919] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-05 15:16:55.377 xcodebuild[19870:54919] [MT] IDETestOperationsObserverDebug: 1150.904 sec, +1150.904 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/uitests.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

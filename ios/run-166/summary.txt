@@ -1,0 +1,134 @@
+BikeComputer iOS CI — run 166 — scope full — jobs: quick=skipped test=success release=success testflight=success
+
+## unit
+BikeComputer iOS CI — build 166 — 2026-11-05 14:46 UTC
+Stage: unit
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 3m50s
+RESULT tests: ok (Executed 554 tests, with 0 failures) · 9m29s
+Total: 9m39s
+
+## smoke
+BikeComputer iOS CI — build 166 — 2026-11-05 14:46 UTC
+Stage: smoke
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): ok · 11m19s
+RESULT launch smoke (Release): ok (Executed 2 tests, with 0 failures) · 30m44s
+Total: 30m59s
+
+## journeys
+BikeComputer iOS CI — build 166 — 2026-11-05 15:21 UTC
+Stage: journeys
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): ok · 10m23s
+  journey hybrid: ok · recording 2173 KB · 14m10s
+  journey cycling: ok · recording 1351 KB · 5m49s
+  journey strength: ok · recording 1794 KB · 7m30s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 38m33s
+Total: 38m42s
+
+## layout-small
+BikeComputer iOS CI — build 166 — 2026-11-05 14:46 UTC
+Stage: layout (layout devices: small)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m41s
+  layout small (L,AX3): ok · 38m56s
+RESULT layout audit: ok (73 screenshots)
+Total: 50m28s
+
+## layout-standard
+BikeComputer iOS CI — build 166 — 2026-11-05 14:56 UTC
+Stage: layout (layout devices: standard)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m23s
+  layout standard (L,XXXL): ok · 11m35s
+RESULT layout audit: ok (33 screenshots)
+Total: 23m50s
+
+## layout-promax
+BikeComputer iOS CI — build 166 — 2026-11-05 14:57 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m51s
+  layout promax (L): ok · 8m33s
+RESULT layout audit: ok (12 screenshots)
+Total: 19m7s
+
+## layout-owner
+BikeComputer iOS CI — build 166 — 2026-11-05 14:45 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m43s
+  layout owner (L,XXXL): ok · 35m41s
+RESULT layout audit: ok (66 screenshots)
+Total: 46m47s
+
+## watch
+BikeComputer iOS CI — build 166 — 2026-11-05 14:46 UTC
+Stage: watch
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 10957   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11464   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11978   screenshot ax3 ok large · 10m36s
+Total: 10m43s
+
+## release
+BikeComputer iOS CI — build 166 — 2026-11-05 16:00 UTC
+Stage: release
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Quick check: none for this tree — override accepted [full-override: run 164 — all gates green but unit (this test's construction); 552 other unit tests passed; harness 10/10]
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc) · 6m6s
+  contains BikeComputer.app 1.0.0 (166) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (166) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 10492348 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: ok — build 166 sent to App Store Connect; TestFlight processing takes about 5-30 minutes (the testflight job reports when it is ready)
+Total: 11m11s
+
+## testflight
+Bundle IDs and capabilities:
+  bundle ID com.ralsuwaidico.bikecomputer: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer: already enabled
+  bundle ID com.ralsuwaidico.bikecomputer.watchkitapp: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer.watchkitapp: already enabled
+App Store Connect app record: found
+  build 166: not visible in App Store Connect yet
+  build 166: not visible in App Store Connect yet
+  build 166: not visible in App Store Connect yet
+  build 166: not visible in App Store Connect yet
+RESULT testflight: build 166 processed (VALID) — installable by internal testers in TestFlight; What to Test set
+commit cd92d7447d3d75c59d156d67190cff5e813c985e  branch ios/v1-ux  job success
