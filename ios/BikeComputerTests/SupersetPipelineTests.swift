@@ -160,7 +160,8 @@ final class SupersetPipelineTests: XCTestCase {
         let s = store(); owner(s, supersets: true)
         let cat = s.allExercises
         guard let sq = cat.first(where: { ExerciseLibrary.meta($0).slot == .squat }), let pr = cat.first(where: { ExerciseLibrary.meta($0).slot == .horizontalPush }), let row = cat.first(where: { ExerciseLibrary.meta($0).slot == .horizontalPull }) else { return XCTFail("catalogue") }
-        var es = [ExerciseEntry(exercise: sq, sets: (0..<3).map { _ in SetEntry(reps: 6) }, superset: "A"), ExerciseEntry(exercise: pr, sets: (0..<2).map { _ in SetEntry(reps: 8) }, superset: "A"), ExerciseEntry(exercise: row, sets: (0..<2).map { _ in SetEntry(reps: 8) })]
+        // planned sets default to done = true; a started session resets them (startStrengthSession) — build the live list the same way
+        var es = [ExerciseEntry(exercise: sq, sets: (0..<3).map { _ in SetEntry(reps: 6, done: false) }, superset: "A"), ExerciseEntry(exercise: pr, sets: (0..<2).map { _ in SetEntry(reps: 8, done: false) }, superset: "A"), ExerciseEntry(exercise: row, sets: (0..<2).map { _ in SetEntry(reps: 8, done: false) })]
         var order: [String] = []
         while let p = NextSet.pick(es) {
             order.append("\(p.label ?? es[p.entry].name)#\(p.set + 1)")
