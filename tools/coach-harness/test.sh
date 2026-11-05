@@ -7,7 +7,7 @@ for f in Models Strength WorkoutState Hybrid Planning StrengthPlanner Adaptation
   sed -e 's/^import Combine$//' -e 's/@retroactive //' "$SRC/ios/BikeComputer/$f.swift" > "$W/Sources/BikeComputer/$f.swift"
 done
 # Home / weekly totals / Progress maths (pure Foundation; present from the RC2 UX work on)
-for f in WeekTotals ProgressMetrics HomeModel SessionRebuild Rc3Engine Provenance HealthReads OnboardingDraft; do
+for f in WeekTotals ProgressMetrics HomeModel SessionRebuild Rc3Engine Provenance HealthReads OnboardingDraft NextSet; do
   [ -f "$SRC/ios/BikeComputer/$f.swift" ] && sed -e 's/^import Combine$//' -e 's/@retroactive //' "$SRC/ios/BikeComputer/$f.swift" > "$W/Sources/BikeComputer/$f.swift"
 done
 cp "$SRC/ios/Shared/BCLink.swift" "$SRC/ios/Shared/AppInfo.swift" "$SRC/ios/Shared/CoachCore.swift" "$W/Sources/BikeComputer/"
