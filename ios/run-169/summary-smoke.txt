@@ -1,9 +1,9 @@
-BikeComputer iOS CI — build 169 — 2026-11-05 20:37 UTC
+BikeComputer iOS CI — build 169 — 2026-11-05 21:40 UTC
 Stage: smoke
 macOS 26.7.2, Xcode 26.6 Build version 17F113 
 XcodeGen Version: 2.46.0
-RESULT generate: ok · 0m9s
+RESULT generate: ok · 0m8s
 Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
-RESULT build (Release, for testing): ok · 12m14s
-RESULT launch smoke (Release): FAILED (exit 65) · 33m5s
-Total: 33m47s
+RESULT build (Release, for testing): ok · 10m30s
+RESULT launch smoke (Release): ok (Executed 2 tests, with 0 failures) · 27m36s
+Total: 28m57s

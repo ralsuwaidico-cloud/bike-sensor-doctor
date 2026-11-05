@@ -1,0 +1,157 @@
+=== journey-cycling: errors / failures ===
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' passed (323.347 seconds).
+	 Executed 3 tests, with 2 tests skipped and 0 failures (0 unexpected) in 324.259 (324.272) seconds
+	 Executed 3 tests, with 2 tests skipped and 0 failures (0 unexpected) in 324.259 (324.273) seconds
+	 Executed 3 tests, with 2 tests skipped and 0 failures (0 unexpected) in 324.259 (324.275) seconds
+** TEST EXECUTE SUCCEEDED **
+=== journey-cycling: last 150 lines ===
+    t =   264.08s Find the "profileType" Button
+    t =   264.67s Checking existence of `"profileType" Button`
+    t =   265.06s Find the "profileType" Button
+    t =   265.45s Find the "profileType" Button
+    t =   265.92s Find the "profileType" Button
+    t =   266.29s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (201.0, 269.0)
+    t =   266.29s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   266.29s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   266.44s     Check for interrupting elements affecting "Cyclift" Application
+    t =   266.60s     Synthesize event
+    t =   266.61s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   266.77s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   266.92s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   267.39s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   267.95s Waiting 5.0s for "onbMode-cycling" Button to exist
+    t =   269.01s     Checking `Expect predicate `existsNoRetry == 1` for object "onbMode-cycling" Button`
+    t =   269.01s         Checking existence of `"onbMode-cycling" Button`
+    t =   269.58s Find the "onbMode-cycling" Button
+    t =   270.17s Get number of matches for: Elements matching predicate 'identifier CONTAINS[c] "name"'
+    t =   270.34s Tap Button (First Match)
+    t =   270.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   270.34s     Find the Button (First Match)
+    t =   270.41s     Check for interrupting elements affecting "BackButton" Button
+    t =   270.58s     Synthesize event
+    t =   270.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   272.04s Checking existence of `"Plan" Button`
+    t =   272.08s Find the "Plan" Button
+    t =   272.16s Find the "Plan" Button
+    t =   272.47s Checking existence of `"Plan" Button`
+    t =   272.58s Find the "Plan" Button
+    t =   272.69s Find the "Plan" Button
+    t =   272.77s Find the "Plan" Button
+    t =   272.89s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (126.2, 800.0)
+    t =   272.89s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   272.90s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   273.11s     Check for interrupting elements affecting "Cyclift" Application
+    t =   273.32s     Synthesize event
+    t =   273.36s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   273.51s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   273.68s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   274.17s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   274.17s Waiting 10.0s for "planDayStrip" Any to exist
+    t =   275.21s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   275.22s         Checking existence of `"planDayStrip" Any`
+    t =   276.17s Find the "planDay-2" Button
+    t =   276.92s Find the "planDay-3" Button
+    t =   277.74s Find the "planDay-4" Button
+    t =   278.60s Find the "planDay-5" Button
+    t =   279.23s Find the "planDay-6" Button
+    t =   279.97s Find the "planDay-7" Button
+    t =   280.69s Find the "planDay-1" Button
+    t =   281.47s Find the "planDay-2" Button
+    t =   282.18s Find the "planDay-3" Button
+    t =   283.11s Find the "planDay-4" Button
+    t =   285.18s Terminate com.ralsuwaidico.bikecomputer:50759
+    t =   286.28s Open com.ralsuwaidico.bikecomputer
+    t =   286.28s     Launch com.ralsuwaidico.bikecomputer
+2026-11-05 22:14:08.941 xcodebuild[49453:131456] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-05 22:14:08.942 xcodebuild[49453:131456] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =   289.32s         Setting up automation session
+    t =   292.27s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   297.26s Waiting 20.0s for "homeWeek" Any to exist
+    t =   298.30s     Checking `Expect predicate `existsNoRetry == 1` for object "homeWeek" Any`
+    t =   298.30s         Checking existence of `"homeWeek" Any`
+    t =   299.28s Checking existence of `"onboardingContinue" Button`
+    t =   300.00s Find the "homeWeekDay-0" Any
+    t =   301.03s Find the "homeWeekDay-1" Any
+    t =   302.06s Find the "homeWeekDay-2" Any
+    t =   303.22s Find the "homeWeekDay-3" Any
+    t =   304.35s Find the "homeWeekDay-4" Any
+    t =   305.65s Find the "homeWeekDay-5" Any
+    t =   307.09s Find the "homeWeekDay-6" Any
+    t =   308.54s Checking existence of `"Profile" Button`
+    t =   308.77s Find the "Profile" Button
+    t =   308.87s Find the "Profile" Button
+    t =   309.13s Checking existence of `"Profile" Button`
+    t =   309.22s Find the "Profile" Button
+    t =   309.29s Find the "Profile" Button
+    t =   309.37s Find the "Profile" Button
+    t =   309.44s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (350.7, 800.0)
+    t =   309.44s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   309.45s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   309.80s     Check for interrupting elements affecting "Cyclift" Application
+    t =   310.03s     Synthesize event
+    t =   310.04s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   310.19s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   310.34s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   310.77s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   310.78s Waiting 10.0s for "profileHeader" Button to exist
+    t =   311.81s     Checking `Expect predicate `existsNoRetry == 1` for object "profileHeader" Button`
+    t =   311.81s         Checking existence of `"profileHeader" Button`
+    t =   312.18s Find the "profileHeader" Button
+    t =   312.48s Find the "profileWeek" Button
+    t =   312.80s Checking existence of `"Plan" Button`
+    t =   313.02s Find the "Plan" Button
+    t =   313.09s Find the "Plan" Button
+    t =   313.35s Checking existence of `"Plan" Button`
+    t =   313.37s Find the "Plan" Button
+    t =   313.40s Find the "Plan" Button
+    t =   313.43s Find the "Plan" Button
+    t =   313.49s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (126.2, 800.0)
+    t =   313.49s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   313.50s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   313.80s     Check for interrupting elements affecting "Cyclift" Application
+    t =   313.99s     Synthesize event
+    t =   314.00s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   314.12s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   314.25s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   314.72s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   314.72s Waiting 10.0s for "planDayStrip" Any to exist
+    t =   315.73s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   315.73s         Checking existence of `"planDayStrip" Any`
+    t =   316.55s Find the "planDay-2" Button
+    t =   317.19s Find the "planDay-3" Button
+    t =   317.73s Find the "planDay-4" Button
+    t =   318.30s Find the "planDay-5" Button
+    t =   318.89s Find the "planDay-6" Button
+    t =   319.69s Find the "planDay-7" Button
+    t =   320.32s Find the "planDay-1" Button
+    t =   321.16s Terminate com.ralsuwaidico.bikecomputer:61604
+    t =   322.47s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' passed (323.347 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' started.
+    t =     0.00s Start Test at 2026-11-05 22:14:45.064
+    t =     0.14s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testHybridJourney] : Test skipped - persona hybrid not selected
+    t =     0.78s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' skipped (0.806 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' started.
+    t =     0.00s Start Test at 2026-11-05 22:14:45.868
+    t =     0.04s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testStrengthJourney] : Test skipped - persona strength not selected
+    t =     0.05s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' skipped (0.107 seconds).
+Test Suite 'JourneyTests' passed at 2026-11-05 22:14:45.975.
+	 Executed 3 tests, with 2 tests skipped and 0 failures (0 unexpected) in 324.259 (324.272) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-05 22:14:45.976.
+	 Executed 3 tests, with 2 tests skipped and 0 failures (0 unexpected) in 324.259 (324.273) seconds
+Test Suite 'Selected tests' passed at 2026-11-05 22:14:45.977.
+	 Executed 3 tests, with 2 tests skipped and 0 failures (0 unexpected) in 324.259 (324.275) seconds
+2026-11-05 22:14:46.957 xcodebuild[49453:131456] [MT] IDETestOperationsObserverDebug: 338.798 elapsed -- Testing started completed.
+2026-11-05 22:14:46.957 xcodebuild[49453:131456] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-05 22:14:46.957 xcodebuild[49453:131456] [MT] IDETestOperationsObserverDebug: 338.798 sec, +338.798 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-cnklwhvxsskjnkcyhwqpjqshhtpe/Logs/Test/Test-BikeComputer-2026.11.05_22-09-04-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
