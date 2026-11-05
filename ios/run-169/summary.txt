@@ -1,0 +1,101 @@
+BikeComputer iOS CI — run 169 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 169 — 2026-11-05 20:22 UTC
+Stage: unit
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 3m44s
+RESULT tests: ok (Executed 566 tests, with 0 failures) · 8m12s
+Total: 8m21s
+
+## smoke
+BikeComputer iOS CI — build 169 — 2026-11-05 20:37 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 12m14s
+RESULT launch smoke (Release): FAILED (exit 65) · 33m5s
+Total: 33m47s
+
+## journeys
+BikeComputer iOS CI — build 169 — 2026-11-05 20:12 UTC
+Stage: journeys
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): ok · 10m45s
+  journey hybrid: FAILED (exit 65) · recording 2708 KB · 17m57s
+  journey cycling: ok · recording 1723 KB · 6m23s
+  journey strength: ok · recording 1624 KB · 7m27s
+RESULT journey (recorded): FAILED — JourneyTests hybrid, cycling, strength · 43m19s
+Total: 43m28s
+
+## layout-small
+BikeComputer iOS CI — build 169 — 2026-11-05 20:12 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m18s
+  layout small (L,AX3): FAILED (exit 65) · 34m0s — -[BikeComputerUITests.LayoutAudit testHomeStates] : Failed to get matching snapshots: Lost connection to the application (pid 22876). (Underlying Error: Couldn’t communicate with a helper application. Try your operation again. If that fails, quit and relaunch the application and try again. The connection to service created from an endpoint was invalidated: Failed to check-in, peer may have been un
+RESULT layout audit: FAILED (68 screenshots)
+Total: 45m45s
+
+## layout-standard
+BikeComputer iOS CI — build 169 — 2026-11-05 20:17 UTC
+Stage: layout (layout devices: standard)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 7m47s
+  layout standard (L,XXXL): ok · 10m48s
+RESULT layout audit: ok (35 screenshots)
+Total: 19m1s
+
+## layout-promax
+BikeComputer iOS CI — build 169 — 2026-11-05 20:31 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m46s
+  layout promax (L): ok · 5m56s
+RESULT layout audit: ok (13 screenshots)
+Total: 14m54s
+
+## layout-owner
+BikeComputer iOS CI — build 169 — 2026-11-05 20:24 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m19s
+  layout owner (L,XXXL): ok · 45m6s
+RESULT layout audit: ok (87 screenshots)
+Total: 56m49s
+
+## watch
+BikeComputer iOS CI — build 169 — 2026-11-05 20:12 UTC
+Stage: watch
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12276   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12502   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12868   screenshot ax3 ok large · 11m20s
+Total: 11m26s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit eed22db371d01ac4839deab7952713177db54882  branch ios/v1-ux  job failure

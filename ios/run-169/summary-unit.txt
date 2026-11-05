@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 169 — 2026-11-05 20:22 UTC
+Stage: unit
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 3m44s
+RESULT tests: ok (Executed 566 tests, with 0 failures) · 8m12s
+Total: 8m21s
