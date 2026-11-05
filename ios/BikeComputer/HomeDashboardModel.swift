@@ -200,13 +200,13 @@ extension Store {
         if mode != .strength {
             let r = ledger.riding(weekOf: monday)
             let km = Double(rides.filter { !$0.demo && $0.start >= monday && $0.start < cal.date(byAdding: .day, value: 7, to: monday)! }.reduce(0) { $0 + $1.distanceM }) / 1000
-            let value: String? = r.completed > 0 ? (r.minutes > 0 ? Fmt.duration(minutes: r.minutes) : "\(r.completed) \(r.completed == 1 ? "ride" : "rides")") : nil
+            let value: String? = r.completed > 0 ? (r.minutes > 0 ? Fmt.duration(minutes: r.minutes) : "\(r.completed) \(r.completed == 1 ? "ride" : "rides")") : (r.planned > 0 ? "0 of \(r.planned)" : nil)
             var sub: String
             if r.completed > 0 {
                 sub = (r.planned > 0 ? "of \(Fmt.duration(minutes: r.plannedMinutes)) planned" : "nothing planned this week") + " · \(r.completed) \(r.completed == 1 ? "ride" : "rides")"
                 if km > 0 { sub += String(format: " · %.1f km", km) }
             } else {
-                sub = r.planned > 0 ? "0 of \(r.planned) \(r.planned == 1 ? "ride" : "rides") · \(Fmt.duration(minutes: r.plannedMinutes)) planned" : "nothing planned this week"
+                sub = r.planned > 0 ? "rides · \(Fmt.duration(minutes: r.plannedMinutes)) planned" : "nothing planned this week"
             }
             let tag: SourceTag = r.completed == 0 ? .needsData : r.logged > 0 ? .measured : .logged   // recorded rides are measured; quick logs, marks and imports are logged values
             cycling = HomeDashboard.Tile(value: value, unit: nil, sub: sub, tag: tag, series: HomeDashboardModel.series(TrendChartMath.buckets(ledger, riding: true, weeks: 8, now: now, calendar: cal), firstActivity: firstRide, minutes: true, calendar: cal))

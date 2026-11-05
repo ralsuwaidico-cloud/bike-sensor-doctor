@@ -369,6 +369,7 @@ struct TrainingHubView: View {
     @State private var detail: Workout? = nil
     @State private var swap: Workout? = nil
     @State private var showAdjustments = false
+    @Environment(\.dynamicTypeSize) private var dts
 
     var body: some View {
         let h = store.homeToday(recorderActive: recorder.isActive)
@@ -376,15 +377,18 @@ struct TrainingHubView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: CyTheme.sp3) {
+                    // run 167: at accessibility sizes on an iPhone SE the full header pushed the first session's button below
+                    // the fold — the large sizes get one short title line (the date is on Home) and the state line
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("TRAINING HUB").font(CyType.caption).foregroundStyle(CyTheme.ink3)
-                            Text("Today · \(dash.header.dateLine)").font(CyType.title).foregroundStyle(CyTheme.ink).accessibilityAddTraits(.isHeader)
-                            Text(stateLine(dash.hub)).font(CyType.secondary).foregroundStyle(CyTheme.ink2).accessibilityIdentifier("hubState")
+                            if !dts.isAccessibilitySize { Text("TRAINING HUB").font(CyType.caption).foregroundStyle(CyTheme.ink3) }
+                            Text(dts.isAccessibilitySize ? "Today" : "Today · \(dash.header.dateLine)").font(dts.isAccessibilitySize ? CyType.section : CyType.title).foregroundStyle(CyTheme.ink).accessibilityAddTraits(.isHeader)
+                                .accessibilityLabel("Training hub, today, \(dash.header.dateLine)")
+                            Text(stateLine(dash.hub)).font(dts.isAccessibilitySize ? CyType.captionSmall : CyType.secondary).foregroundStyle(CyTheme.ink2).accessibilityIdentifier("hubState")
                         }
                         Spacer()
                     }
-                    .padding(.top, CyTheme.sp2)
+                    .padding(.top, dts.isAccessibilitySize ? 0 : CyTheme.sp2)
                     if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
                     todayCard(h)
                     if let m = h.missed, h.layoutShowsMissed {

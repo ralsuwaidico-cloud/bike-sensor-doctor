@@ -108,8 +108,8 @@ final class HomeDashboardTests: XCTestCase {
         let s = store(); hybrid(s)
         _ = s.regenerate(weekOf: monday, replaceEdited: true)
         let before = s.homeDashboard(now: wed).cycling!
-        XCTAssertNil(before.value); XCTAssertEqual(before.tag, .needsData)
-        XCTAssertTrue(before.sub.hasPrefix("0 of 3 rides"), before.sub)
+        XCTAssertEqual(before.value, "0 of 3"); XCTAssertEqual(before.tag, .needsData)
+        XCTAssertTrue(before.sub.hasPrefix("rides · "), before.sub)
         let tue = s.plan.first { cal.component(.weekday, from: $0.date) == 3 && $0.kind.isRide }!
         _ = s.addRide(ride(on: tue.date, minutes: 62, km: 28.4))
         let after = s.homeDashboard(now: wed).cycling!
