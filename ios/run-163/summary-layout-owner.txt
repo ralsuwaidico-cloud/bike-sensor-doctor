@@ -1,0 +1,10 @@
+BikeComputer iOS CI — build 163 — 2026-11-05 13:07 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 8m49s — value of type 'XCUIApplication' has no member 'closeHub' 
+RESULT layout audit: FAILED (build)
+Total: 9m3s

@@ -1,0 +1,89 @@
+BikeComputer iOS CI — run 163 — scope full — jobs: quick=skipped test=failure release=cancelled testflight=cancelled
+
+## unit
+BikeComputer iOS CI — build 163 — 2026-11-05 13:16 UTC
+Stage: unit
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): FAILED (exit 65) · 2m47s — value of type 'XCUIApplication' has no member 'closeHub' 
+RESULT tests: FAILED (build)
+Total: 2m57s
+
+## smoke
+BikeComputer iOS CI — build 163 — 2026-11-05 13:16 UTC
+Stage: smoke
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+
+## journeys
+BikeComputer iOS CI — build 163 — 2026-11-05 13:07 UTC
+Stage: journeys
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): FAILED (exit 65) · 9m23s — value of type 'XCUIApplication' has no member 'closeHub' 
+RESULT journey (recorded): FAILED (build)
+Total: 9m36s
+
+## layout-small
+BikeComputer iOS CI — build 163 — 2026-11-05 13:07 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 8m20s — value of type 'XCUIApplication' has no member 'closeHub' 
+RESULT layout audit: FAILED (build)
+Total: 8m31s
+
+## layout-standard
+BikeComputer iOS CI — build 163 — 2026-11-05 13:07 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m3s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 6m43s — value of type 'XCUIApplication' has no member 'closeHub' 
+RESULT layout audit: FAILED (build)
+Total: 6m52s
+
+## layout-promax
+BikeComputer iOS CI — build 163 — 2026-11-05 13:07 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 8m25s — value of type 'XCUIApplication' has no member 'closeHub' 
+RESULT layout audit: FAILED (build)
+Total: 8m38s
+
+## layout-owner
+BikeComputer iOS CI — build 163 — 2026-11-05 13:07 UTC
+Stage: layout (layout devices: owner)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 8m49s — value of type 'XCUIApplication' has no member 'closeHub' 
+RESULT layout audit: FAILED (build)
+Total: 9m3s
+
+## watch
+BikeComputer iOS CI — build 163 — 2026-11-05 13:14 UTC
+Stage: watch
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit b229b7521721185f73f6205de273eac03daf4d96  branch ios/v1-ux  job failure
