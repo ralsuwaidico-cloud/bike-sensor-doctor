@@ -1,0 +1,12 @@
+BikeComputer iOS CI — build 164 — 2026-11-05 13:24 UTC
+Stage: journeys
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Release, for testing): ok · 10m58s
+  journey hybrid: ok · recording 2436 KB · 15m14s
+  journey cycling: ok · recording 1542 KB · 7m56s
+  journey strength: ok · recording 1744 KB · 8m3s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 42m51s
+Total: 43m4s
