@@ -1,0 +1,15 @@
+BikeComputer iOS CI — build 162 — 2026-11-05 11:11 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 4m1s
+RESULT tests: ok (Executed 551 tests, with 0 failures) · 7m55s
+  targets from the files changed since the last green full run 8995291
+Quick UI targets: LayoutAudit/testRC2OwnerScreens JourneyTests/testHybridJourney LaunchSmokeTests LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText JourneyTests JourneyTests/testHybridJourney JourneyTests/testStrengthJourney AdaptiveSmokeTests
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m32s
+  layout small (AX3): FAILED (exit 133) · 27m39s — -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertTrue failed - hybrid: the strength session opens from Plan -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: the strength session opens from Plan 
+  layout standard (L): FAILED (exit 65) · 57m20s — -[BikeComputerUITests.JourneyTests testHybridJourney] : XCTAssertTrue failed - hybrid: the strength session opens from Plan -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: the strength session opens from Plan 
