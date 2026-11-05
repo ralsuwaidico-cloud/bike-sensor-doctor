@@ -236,6 +236,12 @@ extension Store {
         if v.report.outcome != .block, !v.entries.isEmpty {
             b = StrengthPlanner.Built(entries: v.entries, rationale: v.rationale)
             if pref == true, v.report.has("PREF-001") { b.rationale.notes.append(PrescriptionRepair.supersetAbsenceReason(v.entries, catalogue: c.catalogue)) }
+        } else if !b.entries.isEmpty {
+            // W13: the fallback to the basic planner is never silent — the session says so, names the blocking rule(s),
+            // and states what it means for the preference and the time (the basic plan is not fitted or paired)
+            let ids = v.report.issues.filter { $0.outcome == .block }.map(\.ruleId)
+            let why = ids.isEmpty ? "the fitted plan came back empty" : "the fitted plan was blocked by \(ids.joined(separator: ", "))"
+            b.rationale.notes.append("Basic plan shown: \(why). It is not fitted to \(w.minutes) min and does not pair exercises\(pref == true ? " even though you prefer supersets" : ""). Open the session and review the duration.")
         }
         guard !b.entries.isEmpty else { return w }
         var x = w; x.plannedEntries = b.entries; x.generatedEntries = true; x.rationale = b.rationale

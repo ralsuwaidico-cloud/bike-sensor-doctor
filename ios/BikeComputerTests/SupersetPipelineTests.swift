@@ -135,6 +135,56 @@ final class SupersetPipelineTests: XCTestCase {
         XCTAssertEqual(after.first { $0.id == lifts[1].id }?.plannedEntries, lifts[1].plannedEntries, "the completed session survives regeneration")
     }
 
+    // MARK: execution (W13 owner check: unequal superset sets A1 ×3 / A2 ×2)
+
+    func testStartAndFinishKeepTheSupersetGrouping() {
+        let s = store(); owner(s, supersets: true)
+        let lifts = approve(s)
+        guard let l = lifts.first(where: { !groups(s.plannedEntries(for: $0)).isEmpty }) else { return XCTFail("a paired session") }
+        var w = l; w.date = Date(); s.update(w)    // a session planned for a later day cannot be started — bring it to today
+        let es = s.plannedEntries(for: w)
+        XCTAssertTrue(s.startStrengthSession(for: w, template: nil, entries: es))
+        guard let a = s.activeSession?.exercises else { return XCTFail("active session") }
+        XCTAssertEqual(a.map(\.superset), es.map(\.superset), "the live session carries the grouping")
+        XCTAssertTrue(a.allSatisfy { $0.sets.allSatisfy { !$0.done } })
+        // log every set of the paired exercises only, then finish: the grouping survives into history
+        s.updateActiveSession { ses in for i in ses.exercises!.indices where ses.exercises![i].superset != nil { for j in ses.exercises![i].sets.indices { ses.exercises![i].sets[j].done = true } } }
+        let saved = s.finishActiveSession(rpe: 7, notes: "")
+        XCTAssertNotNil(saved)
+        XCTAssertEqual(saved?.exercises?.compactMap(\.superset).count, groups(es).values.reduce(0) { $0 + $1.count })
+        XCTAssertTrue(s.plan.first { $0.id == w.id }?.done == true, "the planned session is marked done")
+    }
+
+    func testExecutorAlternatesUnequalSupersetSetsAndFinishesTheLongerOne() {
+        // NextSet lives beside the SwiftUI screen: simulator only
+        let s = store(); owner(s, supersets: true)
+        let cat = s.allExercises
+        guard let sq = cat.first(where: { ExerciseLibrary.meta($0).slot == .squat }), let pr = cat.first(where: { ExerciseLibrary.meta($0).slot == .horizontalPush }), let row = cat.first(where: { ExerciseLibrary.meta($0).slot == .horizontalPull }) else { return XCTFail("catalogue") }
+        var es = [ExerciseEntry(exercise: sq, sets: (0..<3).map { _ in SetEntry(reps: 6) }, superset: "A"), ExerciseEntry(exercise: pr, sets: (0..<2).map { _ in SetEntry(reps: 8) }, superset: "A"), ExerciseEntry(exercise: row, sets: (0..<2).map { _ in SetEntry(reps: 8) })]
+        var order: [String] = []
+        while let p = NextSet.pick(es) {
+            order.append("\(p.label ?? es[p.entry].name)#\(p.set + 1)")
+            es[p.entry].sets[p.set].done = true
+        }
+        XCTAssertEqual(order, ["A1#1", "A2#1", "A1#2", "A2#2", "A1#3", "\(row.name)#1", "\(row.name)#2"], "A1 → A2 alternate, the third A1 set runs alone, then the next exercise")
+        XCTAssertTrue(es.allSatisfy { $0.sets.allSatisfy(\.done) })
+    }
+
+    // MARK: fallback (W13 owner check: never silent)
+
+    func testFallbackToTheBasicPlannerIsNamedInTheExplanation() {
+        let s = store(); owner(s, supersets: true)
+        // the shortest session the planner allows (15 min): the fitted plan is blocked (SPLIT-001 — too few exercises for a
+        // full-body label) and the basic planner is shown — with a note naming the rule and what it means
+        s.availability = WeeklyAvailability(days: [day(.strength, 5), day(.cycling, 60), day(.strength, 5), day(nil), day(.strength, 5), day(.cycling, 60), day(nil)])
+        let lifts = approve(s)
+        XCTAssertFalse(lifts.isEmpty)
+        for l in lifts {
+            let notes = l.rationale?.notes ?? []
+            XCTAssertTrue(notes.contains { $0.hasPrefix("Basic plan shown:") && $0.contains("-001") && $0.contains("prefer supersets") && $0.contains("\(l.minutes) min") }, "the fallback is named with its rule: \(notes)")
+        }
+    }
+
     // MARK: explanations
 
     func testAbsenceReasonNamesTheActualRule() {
