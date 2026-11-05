@@ -225,7 +225,18 @@ extension Store {
     /// preferences, logged performance and the rides around the session — with its reasons stored for "Why?".
     func programmedSession(_ w: Workout, ctx: PlannerContext? = nil) -> Workout {
         guard profile.trainingMode.includesLifting, w.kind == .strength, w.templateId == nil, w.plannedEntries == nil else { return w }
-        let b = StrengthPlanner.build(for: w, ctx: ctx ?? plannerContext())
+        let c = ctx ?? plannerContext()
+        var b = StrengthPlanner.build(for: w, ctx: c)
+        // Repair (owner 5 Nov): the plan's own sessions — onboarding approval and missing-week generation — go through the
+        // same validated path as refreshGeneratedSessions: stored preferences (supersets, as a strong preference the
+        // existing pairing rule may decline), the validator's duration model (TIME-001, never a longer session or a
+        // shorter warm-up) and, when supersets were asked for but none fit, the actual reason in the explanation.
+        let pref = strengthPrefs.prefersSupersets
+        let v = rebuiltPrescription(for: w, prefersSupersets: pref, ctx: c, origin: .generated)
+        if v.report.outcome != .block, !v.entries.isEmpty {
+            b = StrengthPlanner.Built(entries: v.entries, rationale: v.rationale)
+            if pref == true, v.report.has("PREF-001") { b.rationale.notes.append(PrescriptionRepair.supersetAbsenceReason(v.entries, catalogue: c.catalogue)) }
+        }
         guard !b.entries.isEmpty else { return w }
         var x = w; x.plannedEntries = b.entries; x.generatedEntries = true; x.rationale = b.rationale
         return x

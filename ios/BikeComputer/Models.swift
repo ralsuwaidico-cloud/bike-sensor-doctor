@@ -1628,7 +1628,13 @@ enum Coach {
             if days >= 1, days <= 2, last.avgPower.map({ s.profile.zone(forWatts: $0) >= 3 }) == true, t.kind.zone <= 2 { parts.append("Yesterday's effort was hard, so today stays easy on purpose.") }
         } else { parts.append("No rides are recorded yet, so the plan starts from your goal, hours and level only.") }
         if !recent.isEmpty { parts.append("This week so far: \(Fmt.duration(seconds: recent.reduce(0) { $0 + $1.durationS })) in \(recent.count) ride\(recent.count == 1 ? "" : "s") of your \(s.profile.hoursPerWeek) h.") }
-        parts.append("Goal: \(s.profile.goal.title.lowercased()); level: \(s.profile.level.title.lowercased()).")
+        if t.kind == .strength {
+            // owner 5 Nov: a strength session is explained by the strength goal and lifting experience, not the cycling ones
+            let c = s.plannerContext()
+            parts.append("Strength goal: \(c.goal.title.lowercased()); lifting experience: \(c.experience.title.lowercased()).")
+        } else {
+            parts.append("Goal: \(s.profile.goal.title.lowercased()); level: \(s.profile.level.title.lowercased()).")
+        }
         if !s.profile.ftpKnown { parts.append("FTP is unknown: targets use effort and heart rate. Enter your FTP or ride a steady 20-minute effort to get watt targets.") }
         parts.append("No sleep, HRV or recovery source is connected, so recovery is not part of this recommendation.")
         return parts.joined(separator: " ")

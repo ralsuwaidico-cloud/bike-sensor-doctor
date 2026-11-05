@@ -329,6 +329,18 @@ enum PrescriptionRepair {
     }
     static func isLowerEx(_ e: ExerciseEntry, _ cat: [Exercise]) -> Bool { cat.first { $0.id == e.exerciseId }.map { ExerciseLibrary.meta($0).slot.isLower } ?? false }
 
+    /// Why no superset was applied to a prescription that asked for one — the same compatibility rule as `pairSupersets`,
+    /// read back as a sentence (owner 5 Nov: the Why text must give the validator's actual reason, never generic text).
+    static func supersetAbsenceReason(_ es: [ExerciseEntry], catalogue cat: [Exercise]) -> String {
+        guard es.count >= 2 else { return "You prefer supersets: a superset needs two exercises and this session has one." }
+        let meta = es.compactMap { e in cat.first { $0.id == e.exerciseId } }
+        let lower = meta.filter { ExerciseLibrary.meta($0).slot.isLower }, upper = meta.filter { !ExerciseLibrary.meta($0).slot.isLower }
+        if lower.isEmpty || upper.isEmpty { return "You prefer supersets: none applied — a superset pairs a lower-body with an upper-body exercise and this session has only \(lower.isEmpty ? "upper-body" : "lower-body") work." }
+        let gripPairsOnly = lower.allSatisfy { ExerciseLibrary.gripLimited($0) } && upper.allSatisfy { ExerciseLibrary.gripLimited($0) }
+        if gripPairsOnly { return "You prefer supersets: none applied — every possible pair would put two grip-limited lifts back to back." }
+        return "You prefer supersets: none applied — no two of these exercises pair safely (lower with upper, never two grip-limited lifts)."
+    }
+
     /// Pairs non-competing exercises (lower with upper; never two grip-limited ones).
     static func pairSupersets(_ es: inout [ExerciseEntry], rats: inout [ExerciseRationale], catalogue cat: [Exercise]) -> Bool {
         var used = Set<Int>(), pairs: [(Int, Int)] = []
@@ -411,7 +423,7 @@ extension Array { subscript(safe i: Int) -> Element? { indices.contains(i) ? sel
 
 // MARK: change proposals and commits
 struct SessionChangeRequest: Equatable, Codable {
-    enum Origin: String, Codable { case athlete, ai, coach }
+    enum Origin: String, Codable { case athlete, ai, coach, generated }   // generated = the plan's own coach-built session
     var focus: StrengthFocus? = nil
     var minutes: Int? = nil
     var prefersSupersets: Bool? = nil
@@ -518,7 +530,7 @@ extension Store {
         rat.notes = PrescriptionRepair.dropAbsentLowerNotes(rat.notes, es: es, cat: c.catalogue)
         if let f = x.strengthFocus {
             // the first reason names who decided (EXPL-001: only reasons that actually apply)
-            let who = origin == .coach ? "Coach suggestion you accepted:" : origin == .ai ? "Your request through the coach chat:" : "You chose"
+            let who = origin == .coach ? "Coach suggestion you accepted:" : origin == .ai ? "Your request through the coach chat:" : origin == .generated ? "Planned by the coach:" : "You chose"
             rat.notes.insert("\(who) \(f.title.lowercased()) for \(Fmt.duration(minutes: x.minutes)).", at: 0)
         }
         if !repairs.isEmpty { rat.notes.append("To fit \(Fmt.duration(minutes: limit)): \(repairs.joined(separator: "; ")).") }

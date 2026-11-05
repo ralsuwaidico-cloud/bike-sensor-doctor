@@ -181,6 +181,19 @@ properties (`profile`, `plan`, `rides`, `strength`, `availability`, `equipment`,
 
 ---
 
+## W13 · Superset preference in coach-built sessions (approved repair, 5 Nov 2026)
+
+| | Contract |
+|---|---|
+| User sees | A strength session the coach built itself — at onboarding approval and when a missing week is generated — honours the stored superset preference the same way a reviewed change does: paired exercises carry A1/A2 (B…) badges on the session screen and in the workout. When supersets are on but no pairing was applied, the Why / notes say the actual reason (fewer than two exercises; only upper- or only lower-body work; every candidate pair grip-limited; no safe pair). The Why text of a strength session names the strength goal and lifting experience, not the cycling goal and level. |
+| Interaction → result | None new. The preference is a strong preference, not an order: the existing pairing rule (`PrescriptionRepair.pairSupersets`) may decline a pairing (lower + upper only; never two grip-limited lifts). |
+| Data changed | `plannedEntries` / `rationale` of coach-built sessions only (`generatedEntries == true`, origin "Planned by the coach:"). Completed, started, skipped, hand-edited, routine-based and rider-choice sessions are never rewritten (`refreshGeneratedSessions` guards unchanged). |
+| Duration | Fitted with the validator's own duration model (TIME-001: estimate ≤ minutes − 1, warm-up 180 s); the athlete's minutes are never increased and the warm-up is never cut. |
+| Verifying tests | `SupersetPipelineTests` (harness + Xcode): on / off / not stated through the real approval path; missing-week generation; pair safety; TIME-001; preservation; absence reasons; Why text. `JourneyTests.testHybridJourney` / `testStrengthJourney`: switch on in onboarding, A-group badge on the approved session opened from Plan. |
+| Left as separate findings (not changed) | A session with a recorded rider choice whose `prefersSupersets` is nil is rebuilt without supersets even when the global preference is on; the Plan day card lists exercises without the group letters; a second pairing pass can label a pair "C" with no "B". |
+
+---
+
 ## Outdated-test candidates (expectations that contradict this contract — listed, NOT changed)
 
 | Test | Level | Contradiction | What the contract-conformant test would assert |

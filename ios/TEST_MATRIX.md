@@ -19,3 +19,4 @@ Rules
   it becomes reachable — runs 131–137 were spent on one such flow.
 - Simulator results are never reported as real-device results.
 - IT-3 (Checkpoint B, Liquid Dock + W12): quick runs 155 + 156 green on SE at AX3 (538 unit, launch/upgrade smoke, ride layouts, key screens, Home states, RC2 owner screens, gallery light/dark, cycling/strength/hybrid journeys with the W12 day labels); the standard stage did not fit the quick step's 105-min limit — covered by the full run's own jobs.
+- Superset repair (5 Nov): Linux harness 321 tests green incl. `SupersetPipelineTests` (7); quick run + full `[testflight]` run recorded below when complete.

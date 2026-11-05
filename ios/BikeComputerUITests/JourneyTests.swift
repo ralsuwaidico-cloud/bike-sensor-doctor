@@ -99,6 +99,13 @@ final class JourneyTests: XCTestCase {
             let home = app.descendants(matching: .any)["onbEquipment"].firstMatch.buttons["Home"].firstMatch   // the equipment chip (no tab bar in onboarding)
             if home.exists { XCTAssertTrue(tapVisible(app, home)); XCTAssertTrue(home.isSelected, "\(p.tag): equipment chip selected") }
         }
+        // 5 Nov superset repair: the preference stated here must reach the approved sessions (checked on Plan below)
+        if p.expectsLifts {
+            let sw = app.buttons["onbSupersets"].firstMatch
+            XCTAssertTrue(sw.waitForExistence(timeout: 5), "\(p.tag): the supersets switch is offered with the equipment")
+            if (sw.value as? String) != "On" { XCTAssertTrue(tapVisible(app, sw)) }
+            XCTAssertEqual(sw.value as? String, "On", "\(p.tag): supersets switched on")
+        }
         let preview = app.descendants(matching: .any)["onbPlanPreview"].firstMatch
         var tries = 0; while !preview.exists && tries < 6 { app.swipeUp(); tries += 1 }
         XCTAssertTrue(preview.exists, "\(p.tag): live plan preview strip")
@@ -184,6 +191,22 @@ final class JourneyTests: XCTestCase {
             XCTAssertTrue(l.contains("before this plan started"), "\(p.tag): Plan day \(i) before the plan reads '\(l)'")
         }
         shot(app, "\(p.tag)-09-plan")
+        // 5 Nov superset repair: a coach-built strength session of the approved week shows its superset grouping (A1/A2
+        // badges) in the hybrid journey — the same screen that runs the session
+        if p.expectsLifts {
+            let order = [2, 3, 4, 5, 6, 7, 1]
+            if let i = (todayIndex..<7).first(where: { planWeek[$0] == "strength" }) {
+                let dayCell = app.buttons["planDay-\(order[i])"].firstMatch
+                XCTAssertTrue(tapVisible(app, dayCell))
+                XCTAssertTrue(app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 10), "\(p.tag): the strength session opens from Plan")
+                let badge = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'superset '")).firstMatch
+                XCTAssertTrue(badge.waitForExistence(timeout: 5), "\(p.tag): the approved session shows a superset group")
+                shot(app, "\(p.tag)-09b-superset")
+                let done = app.buttons["Done"].firstMatch
+                if done.exists { done.tap() } else { app.swipeDown() }
+                XCTAssertTrue(app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10))
+            } else { XCTFail("\(p.tag): no strength day from today on Plan to open") }
+        }
 
         // 10 — relaunch: everything persists
         app.terminate()
