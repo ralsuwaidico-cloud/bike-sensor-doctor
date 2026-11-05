@@ -152,7 +152,13 @@ final class JourneyTests: XCTestCase {
             XCTAssertFalse(l.contains("rest") || l.contains("missed"), "\(p.tag): Home day \(i) must not be rest or missed: '\(l)'")
         }
         XCTAssertTrue(app.descendants(matching: .any)["liquidDock"].firstMatch.exists, "\(p.tag): the Liquid Dock is the navigation")
-        XCTAssertTrue(app.staticTexts["homeTodayTitle"].firstMatch.exists || app.descendants(matching: .any)["homeTodayCard"].firstMatch.exists, "\(p.tag): today's card")
+        // Checkpoint C: today's card lives in the Training Hub behind the centre button; Home keeps a compact reminder
+        XCTAssertTrue(app.buttons["centreButton"].firstMatch.tapWhenSettled())
+        XCTAssertTrue(app.descendants(matching: .any)["trainingHub"].firstMatch.waitForExistence(timeout: 10), "\(p.tag): the centre button opens the Training Hub")
+        XCTAssertTrue(app.staticTexts["homeTodayTitle"].firstMatch.exists || app.descendants(matching: .any)["homeTodayCard"].firstMatch.exists, "\(p.tag): today's card in the hub")
+        shot(app, "\(p.tag)-07b-hub")
+        app.closeHub()
+        XCTAssertTrue(app.descendants(matching: .any)["homeWeek"].firstMatch.waitForExistence(timeout: 5), "\(p.tag): back on Home")
         var seen = 0; while !app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists && seen < 5 { app.swipeUp(); seen += 1 }
         XCTAssertTrue(app.descendants(matching: .any)["homeFirstWeek"].firstMatch.exists, "\(p.tag): first-week block (plan counts, goals, next steps)")
         XCTAssertTrue(app.descendants(matching: .any)["cyHeroRing"].firstMatch.exists, "\(p.tag): this-week ring from the plan")
@@ -198,7 +204,8 @@ final class JourneyTests: XCTestCase {
             if let i = (todayIndex..<7).first(where: { planWeek[$0] == "strength" }) {
                 let dayCell = app.buttons["planDay-\(order[i])"].firstMatch
                 XCTAssertTrue(tapVisible(app, dayCell))
-                XCTAssertTrue(app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 10), "\(p.tag): the strength session opens from Plan")
+                // run 162: a session on a later day shows Move to today / Skip instead of Start — wait for the exercise list itself
+                XCTAssertTrue(app.buttons["adjustSets"].firstMatch.waitForExistence(timeout: 10) || app.buttons["startWorkout"].firstMatch.exists, "\(p.tag): the strength session opens from Plan")
                 let badge = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'superset '")).firstMatch
                 XCTAssertTrue(badge.waitForExistence(timeout: 5), "\(p.tag): the approved session shows a superset group")
                 shot(app, "\(p.tag)-09b-superset")
