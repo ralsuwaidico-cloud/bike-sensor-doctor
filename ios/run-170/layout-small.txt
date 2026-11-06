@@ -1,0 +1,159 @@
+=== layout-small: errors / failures ===
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' passed (896.084 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (189.588 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' passed (929.043 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 2014.715 (2014.725) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 2014.715 (2014.727) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 2014.715 (2014.729) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-small: last 150 lines ===
+    t =   864.88s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   865.79s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   868.67s Checking existence of `"fixPlan" Button`
+    t =   869.09s Find the "fixPlan" Button
+    t =   869.67s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   869.68s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   869.68s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   869.87s     Check for interrupting elements affecting "Cyclift" Application
+    t =   870.05s     Synthesize event
+    t =   870.05s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   870.19s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   870.46s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   870.61s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   870.76s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   871.71s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   874.59s Checking existence of `"fixPlan" Button`
+    t =   874.94s Find the "fixPlan" Button
+    t =   875.41s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   875.42s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   875.42s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   875.65s     Check for interrupting elements affecting "Cyclift" Application
+    t =   875.87s     Synthesize event
+    t =   875.87s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   876.04s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   876.20s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   876.38s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   876.71s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   877.67s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   880.64s Checking existence of `"fixPlan" Button`
+    t =   881.05s Find the "fixPlan" Button
+    t =   881.72s Tap "fixPlan" Button
+    t =   881.72s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   881.72s     Find the "fixPlan" Button
+    t =   882.12s     Check for interrupting elements affecting "fixPlan" Button
+    t =   882.46s     Synthesize event
+    t =   882.77s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   884.96s Find the Window (First Match)
+    t =   884.97s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   885.19s Find the Window (First Match)
+    t =   885.20s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   886.62s Get number of matches for: Elements matching predicate 'label == "Done"'
+    t =   886.98s Find the Button (Element at index 0)
+    t =   887.49s Tap "Done" Button
+    t =   887.49s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   887.49s     Find the "Done" Button
+    t =   887.83s     Check for interrupting elements affecting "Done" Button
+    t =   888.09s     Synthesize event
+    t =   888.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   890.19s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   890.19s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   890.20s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   890.58s     Check for interrupting elements affecting "Cyclift" Application
+    t =   890.83s     Synthesize event
+    t =   891.27s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   894.65s Find the Window (First Match)
+    t =   894.66s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   895.19s Find the Window (First Match)
+    t =   895.21s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   895.96s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   895.96s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   895.97s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   896.17s     Check for interrupting elements affecting "Cyclift" Application
+    t =   896.41s     Synthesize event
+    t =   897.05s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   900.22s Find the Window (First Match)
+    t =   900.23s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   900.79s Find the Window (First Match)
+    t =   900.81s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   901.23s Waiting 5.0s for "Profile" Button to exist
+    t =   902.28s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =   902.28s         Checking existence of `"Profile" Button`
+    t =   902.31s Tap "Profile" Button
+    t =   902.32s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   902.32s     Find the "Profile" Button
+    t =   902.37s     Check for interrupting elements affecting "Profile" Button
+    t =   902.69s     Synthesize event
+    t =   903.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   903.00s Checking existence of `"Profile" Button`
+    t =   903.03s Find the "Profile" Button
+    t =   903.10s Find the "Profile" Button
+    t =   903.34s Checking existence of `"Profile" Button`
+    t =   903.46s Find the "Profile" Button
+    t =   903.48s Find the "Profile" Button
+    t =   904.53s Waiting 3.0s for "profileDevices" Button to exist
+    t =   905.54s     Checking `Expect predicate `existsNoRetry == 1` for object "profileDevices" Button`
+    t =   905.54s         Checking existence of `"profileDevices" Button`
+    t =   905.89s Find the Window (First Match)
+    t =   905.90s Checking existence of `"profileDevices" Button`
+    t =   906.21s Find the "profileDevices" Button
+    t =   906.67s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   906.67s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   906.74s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   906.92s     Check for interrupting elements affecting "Cyclift" Application
+    t =   907.09s     Synthesize event
+    t =   907.09s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   907.38s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   907.57s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   907.71s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   907.85s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   908.77s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   911.47s Checking existence of `"profileDevices" Button`
+    t =   911.90s Find the "profileDevices" Button
+    t =   912.33s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   912.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   912.39s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   912.54s     Check for interrupting elements affecting "Cyclift" Application
+    t =   912.70s     Synthesize event
+    t =   912.70s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   912.87s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   913.01s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   913.12s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   913.40s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   914.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   916.94s Checking existence of `"profileDevices" Button`
+    t =   917.27s Find the "profileDevices" Button
+    t =   917.72s Tap "profileDevices" Button
+    t =   917.72s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   917.72s     Find the "profileDevices" Button
+    t =   918.08s     Check for interrupting elements affecting "profileDevices" Button
+    t =   918.24s     Synthesize event
+    t =   918.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   920.88s Waiting 3.0s for "deviceBoard" Button to exist
+    t =   921.91s     Checking `Expect predicate `existsNoRetry == 1` for object "deviceBoard" Button`
+    t =   921.91s         Checking existence of `"deviceBoard" Button`
+    t =   923.31s         Capturing element debug description
+    t =   923.89s     Checking `Expect predicate `existsNoRetry == 1` for object "deviceBoard" Button`
+    t =   923.89s         Checking existence of `"deviceBoard" Button`
+    t =   924.20s         Capturing element debug description
+    t =   924.20s     Checking existence of `"deviceBoard" Button`
+    t =   926.48s Collecting debug information to assist test failure triage
+    t =   926.48s     Requesting snapshot of accessibility hierarchy for app with pid 84383
+    t =   927.12s Terminate com.ralsuwaidico.bikecomputer:84383
+    t =   928.24s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' passed (929.043 seconds).
+Test Suite 'LayoutAudit' passed at 2026-11-06 01:10:09.095.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 2014.715 (2014.725) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-06 01:10:09.097.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 2014.715 (2014.727) seconds
+Test Suite 'Selected tests' passed at 2026-11-06 01:10:09.098.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 2014.715 (2014.729) seconds
+2026-11-06 01:10:14.077 xcodebuild[19028:53940] [MT] IDETestOperationsObserverDebug: 2197.251 elapsed -- Testing started completed.
+2026-11-06 01:10:14.077 xcodebuild[19028:53940] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-06 01:10:14.077 xcodebuild[19028:53940] [MT] IDETestOperationsObserverDebug: 2197.252 sec, +2197.251 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-bkvzhhtbsyqqstfihzpgklgkqmjc/Logs/Test/Test-BikeComputer-2026.11.06_00-33-33-+0000.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

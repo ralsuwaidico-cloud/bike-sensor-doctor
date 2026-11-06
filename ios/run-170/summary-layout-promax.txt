@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 170 — 2026-11-06 00:24 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 13m9s
+  layout promax (L): FAILED (exit 65) · 9m5s — -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to get matching snapshots: Timed out while evaluating UI query. 
+RESULT layout audit: FAILED (3 screenshots)
+Total: 23m3s

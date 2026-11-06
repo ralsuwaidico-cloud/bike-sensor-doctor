@@ -1,0 +1,127 @@
+=== layout-promax: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/UITestWaits.swift:84: error: -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to get matching snapshots: Timed out while evaluating UI query.
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' failed (265.531 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-06 00:46:09.417.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 268.893 (268.904) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-06 00:46:09.417.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 268.893 (268.905) seconds
+Test Suite 'Selected tests' failed at 2026-11-06 00:46:09.417.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 268.893 (268.910) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-promax: last 150 lines ===
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/BikeComputer_iphonesimulator26.5-arm64-x86_64.xctestrun -destination id=5277349A-B219-4ED4-853A-8AE666B9F5B1 "-only-testing:BikeComputerUITests/LayoutAudit"
+
+2026-11-06 00:38:25.446 xcodebuild[27329:72345] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-06 00:38:25.471 xcodebuild[27329:72345] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:5277349A-B219-4ED4-853A-8AE666B9F5B1, OS:26.5, name:iPhone 17 Pro Max }
+{ platform:iOS Simulator, arch:x86_64, id:5277349A-B219-4ED4-853A-8AE666B9F5B1, OS:26.5, name:iPhone 17 Pro Max }
+2026-11-06 00:38:29.078 xcodebuild[27329:72345] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-06 00:38:29.764 xcodebuild[27329:72345] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-06 00:38:31.733 xcodebuild[27329:72345] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-06 00:38:34.162 xcodebuild[27329:72345] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-06 00:41:30.544897+0000 BikeComputerUITests-Runner[28750:78015] [Default] Running tests...
+objc[28750]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10a3b4310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10a3e8398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-06 00:41:40.508.
+Test Suite 'BikeComputerUITests.xctest' started at 2026-11-06 00:41:40.512.
+Test Suite 'LayoutAudit' started at 2026-11-06 00:41:40.513.
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' started.
+    t =     0.01s Start Test at 2026-11-06 00:41:40.521
+    t =     1.49s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:507: -[BikeComputerUITests.LayoutAudit testHomeStates] : Test skipped - Home states: the owner's iPhone size and the small iPhone only (CI time)
+    t =     1.64s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' skipped (3.107 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' started.
+    t =     0.00s Start Test at 2026-11-06 00:41:43.630
+    t =     0.05s Set Up
+    t =     0.08s Open com.ralsuwaidico.bikecomputer
+    t =     0.08s     Launch com.ralsuwaidico.bikecomputer
+2026-11-06 00:41:48.473 xcodebuild[27329:72345] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-06 00:41:48.476 xcodebuild[27329:72345] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =    13.25s         Setting up automation session
+    t =    17.46s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    77.49s             App event loop idle notification not received, will attempt to continue.
+    t =    78.51s Waiting 30.0s for "homeGreeting" Any to exist
+    t =    79.52s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    79.52s         Checking existence of `"homeGreeting" Any`
+    t =    96.80s         Capturing element debug description
+    t =    97.65s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    97.81s         Checking existence of `"homeGreeting" Any`
+    t =   108.80s         Capturing element debug description
+    t =   108.80s     Checking existence of `"homeGreeting" Any`
+    t =   123.62s Find the "homeGreeting" Any
+    t =   128.80s Checking existence of `"coachLog" Button`
+    t =   129.34s Checking existence of `"coachAdjust" Button`
+    t =   130.12s Checking existence of `"coachSwap" Button`
+    t =   130.98s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   132.25s Find the Window (First Match)
+    t =   132.51s Find the Window (First Match)
+    t =   132.92s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   134.54s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   135.69s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   135.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   135.88s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   136.46s     Check for interrupting elements affecting "Cyclift" Application
+    t =   136.97s     Synthesize event
+    t =   139.18s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   142.06s Find the Window (First Match)
+    t =   142.11s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   142.92s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   143.49s Checking existence of `"coachLog" Button`
+    t =   143.94s Checking existence of `"coachAdjust" Button`
+    t =   144.41s Checking existence of `"coachSwap" Button`
+    t =   144.65s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   145.25s Find the Window (First Match)
+    t =   145.28s Waiting 5.0s for "centreButton" Button to exist
+    t =   146.33s     Checking `Expect predicate `existsNoRetry == 1` for object "centreButton" Button`
+    t =   146.33s         Checking existence of `"centreButton" Button`
+    t =   146.38s Tap "centreButton" Button
+    t =   146.38s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   146.38s     Find the "centreButton" Button
+    t =   146.41s     Check for interrupting elements affecting "centreButton" Button
+    t =   146.79s     Synthesize event
+    t =   147.49s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   148.92s Find the Window (First Match)
+    t =   148.94s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   149.54s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   150.51s Waiting 10.0s for "trainingHub" Any to exist
+    t =   151.53s     Checking `Expect predicate `existsNoRetry == 1` for object "trainingHub" Any`
+    t =   151.53s         Checking existence of `"trainingHub" Any`
+    t =   153.63s Waiting 3.0s for "homePrimary" Button to exist
+    t =   154.66s     Checking `Expect predicate `existsNoRetry == 1` for object "homePrimary" Button`
+    t =   154.67s         Checking existence of `"homePrimary" Button`
+    t =   156.90s         Capturing element debug description
+    t =   156.90s     Checking existence of `"homePrimary" Button`
+    t =   188.18s     Checking existence of `"homePrimary" Button` (retry 1)
+    t =   232.82s     Checking existence of `"homePrimary" Button` (retry 2)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/UITestWaits.swift:84: error: -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to get matching snapshots: Timed out while evaluating UI query.
+    t =   264.08s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' failed (265.531 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' started.
+    t =     0.00s Start Test at 2026-11-06 00:46:09.162
+    t =     0.08s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:345: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Test skipped - RC2 screens: the owner's iPhone size and the small iPhone only (CI time)
+    t =     0.11s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' skipped (0.255 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-06 00:46:09.417.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 268.893 (268.904) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-06 00:46:09.417.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 268.893 (268.905) seconds
+Test Suite 'Selected tests' failed at 2026-11-06 00:46:09.417.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 268.893 (268.910) seconds
+2026-11-06 00:47:20.097 xcodebuild[27329:72345] [MT] IDETestOperationsObserverDebug: 530.951 elapsed -- Testing started completed.
+2026-11-06 00:47:20.099 xcodebuild[27329:72345] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-06 00:47:20.100 xcodebuild[27329:72345] [MT] IDETestOperationsObserverDebug: 530.951 sec, +530.951 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-dckfprxxudxdvcaiyhxlyzqlwgeg/Logs/Test/Test-BikeComputer-2026.11.06_00-38-25-+0000.xcresult
+
+Failing tests:
+	LayoutAudit.testKeyScreensAtTextSizes()
+
+** TEST EXECUTE FAILED **
+
+Testing started

@@ -1,0 +1,8 @@
+L home: key controls 
+L home: no text outside the window
+L home: buttons under 44 pt: Riding 190×32, Strength 190×32, 4 wk 76×32, 8 wk 76×32, 12 wk 76×32, 16 wk 76×32, 1 yr 76×32
+L home lower: no text outside the window
+L home lower: buttons under 44 pt: Riding 190×32, Strength 190×32, 4 wk 76×32, 8 wk 76×32, 12 wk 76×32, 16 wk 76×32, 1 yr 76×32
+L home lower: key controls 
+L training hub: no text outside the window
+L training hub: buttons under 44 pt: Riding 190×32, Strength 190×32, 4 wk 76×32, 8 wk 76×32, 12 wk 76×32, 16 wk 76×32, 1 yr 76×32, hubClose 67×36
