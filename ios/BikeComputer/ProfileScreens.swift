@@ -150,12 +150,7 @@ struct ProfileTabView: View {
     private func proposeEquipment() {
         guard let old = equipmentAtOpen else { return }
         equipmentAtOpen = nil
-        var new = store.equipment
-        guard new != old else { return }
-        if new.owned.isEmpty && !old.isProvisional { new.confirmed = true }
-        if !new.owned.isEmpty { new.confirmed = true }
-        store.equipment = old
-        planPreview = store.changeTraining(cause: .equipment) { $0.equipment = new }
+        planPreview = store.proposeEquipmentEdit(from: old)     // shared with the Profile Quick Menu (6 Nov)
     }
 }
 
@@ -425,5 +420,18 @@ struct SettingsPage: View {
         } message: {
             Text("Profile, plan, ride history, strength logs, templates and the remembered BikeComputer are removed from this phone permanently. The BikeComputer keeps its own data; use Forget phone on the device too.")
         }
+    }
+}
+
+extension Store {
+    /// The Equipment editor edits the store directly; on close the edit becomes one plan-change proposal (the old value
+    /// is restored first so the preview compares before/after and Cancel keeps it). Shared by Profile and the menu.
+    func proposeEquipmentEdit(from old: EquipmentProfile) -> PreviewRef? {
+        var new = equipment
+        guard new != old else { return nil }
+        if new.owned.isEmpty && !old.isProvisional { new.confirmed = true }
+        if !new.owned.isEmpty { new.confirmed = true }
+        equipment = old
+        return changeTraining(cause: .equipment) { $0.equipment = new }
     }
 }

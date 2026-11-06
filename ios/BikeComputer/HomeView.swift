@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Home, Option B (coord/specs/HOME_B_SPEC.md v2.1). Three jobs: what am I doing today, what does the coach recommend,
 /// am I making progress this week. Everything is read from `HomeToday` / `HomeCoachItem` / `HomeWeek` (HomeModel.swift);
@@ -11,43 +12,120 @@ struct HomeView: View {
     @EnvironmentObject private var recorder: RideRecorder
     @EnvironmentObject private var sync: ProfileSync
     @EnvironmentObject private var diag: DiagReportCenter
+    @EnvironmentObject private var hub: SensorHub
     @Binding var tab: Int
     var perform: (HomeAction) -> Void
     /// Checkpoint C: the compact Today reminder opens the Training Hub (RootView owns it, like the dock's centre button).
     var openHub: () -> Void = {}
-    @State private var detail: Workout? = nil
+    /// Correction pass (6 Nov): Home's own pages are pushed on this path; back returns to the dashboard as it was.
+    @State private var path: [HomeRoute] = []
+    @State private var prescription: Workout? = nil
     @State private var coachSheet: HomeCoachSheet? = nil
     @State private var showAdjustments = false
+    /// Profile Quick Menu (6 Nov addendum): one Bool, so repeated taps can never stack menus.
+    @State private var showMenu = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         // Checkpoint C (owner 5 Nov): the Premium Home Dashboard. Today's execution card and its actions live in the
         // Training Hub; Home keeps the health lines, the banner and one compact reminder.
         let h = store.homeToday(recorderActive: recorder.isActive)
         let dash = store.homeDashboard(recorderActive: recorder.isActive)
-        NavigationStack {
+        let watchOK = hub.deviceState("watch")?.isConnectedOrBetter ?? false
+        let hrOK = watchOK || hub.deviceStates.values.contains { $0.provides.localizedCaseInsensitiveContains("heart") && $0.state.isConnectedOrBetter }
+        let setup = store.homeSetupItems(hrConnected: hrOK)
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: CyTheme.sp3) {
                     banner
-                    if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) }.padding(.top, 0) }
+                    if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
                     HomeDashboardScreen(dash: dash, today: h, coach: h.showCoach ? store.homeCoach() : nil,
-                                        openTab: { tab = $0 }, openHub: openHub, openWorkout: { detail = $0 }, coachTapped: coachTapped)
-                    // V1: the first week after Approve — getting-started rows with real device states; gone once anything is recorded.
-                    if h.showWeek, HomeFirstWeekSection.applies(store) {
-                        HomeFirstWeekSection(openPlan: { tab = 1 }, openDevices: { tab = 4 }, openProgress: { tab = 3 })
-                            .accessibilityElement(children: .contain)
-                            .accessibilityIdentifier("homeFirstWeek")
+                                        openTab: { tab = $0 }, openHub: openHub, open: { path.append($0) }, openPrescription: { prescription = $0 }, coachTapped: coachTapped)
+                    // A6 (6 Nov): a dynamic checklist — gone once the required steps are done
+                    if h.showWeek, !setup.isEmpty {
+                        HomeSetupChecklist(items: setup, openPlan: { tab = 1 }, openConnections: { tab = 4 })
                     }
                 }
                 .padding(.horizontal, CyTheme.margin)
-                .padding(.bottom, 120)
+                .padding(.top, CyTheme.sp2)
+                .padding(.bottom, CyTheme.dockClearance)
                 .frame(maxWidth: CyTheme.maxContentWidth + 2 * CyTheme.margin)
                 .frame(maxWidth: .infinity)
             }
             .background(CyTheme.canvas)
-            .toolbar(.hidden, for: .navigationBar)
+            .overlay {
+                if showMenu {
+                    ProfileQuickMenu(close: { setMenu(false) },
+                                     viewProfile: { setMenu(false); tab = 4 },
+                                     open: { d in setMenu(false); path.append(.menu(d)) })
+                        .transition(reduceMotion ? .opacity : .scale(scale: 0.94, anchor: .topTrailing).combined(with: .opacity))
+                        .zIndex(2)
+                }
+            }
+            // B1 (6 Nov): a visible, transparent bar keeps the content below the status bar on every device; it carries
+            // the date and the Profile avatar
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) { Text(dash.header.dateLine.uppercased()).font(CyType.caption).foregroundStyle(CyTheme.ink3).accessibilityIdentifier("homeDate") }
+                ToolbarItem(placement: .topBarTrailing) {
+                    let initial = String(store.profile.name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
+                    Button { setMenu(!showMenu) } label: {
+                        ZStack {
+                            Circle().fill(CyTheme.cta).frame(width: 32, height: 32)
+                            if initial.isEmpty { Image(systemName: "person.fill").font(.footnote).foregroundStyle(CyTheme.ctaInk) }
+                            else { Text(initial).font(CyType.secondary.weight(.bold)).foregroundStyle(CyTheme.ctaInk) }
+                        }
+                        .overlay(Circle().stroke(CyTheme.cta.opacity(showMenu ? 0.35 : 0), lineWidth: 6))
+                    }
+                    .accessibilityLabel("Profile menu")
+                    .accessibilityValue(showMenu ? "open" : "closed")
+                    .accessibilityHint(showMenu ? "Closes the menu" : "Opens profile, preferences, devices, settings and help")
+                    .accessibilityIdentifier("homeAvatar")
+                }
+            }
+            .navigationDestination(for: HomeRoute.self) { route in destination(route) }
+            .onChange(of: tab) { _, _ in showMenu = false }           // the menu never survives a tab change
+            .onChange(of: path) { _, _ in showMenu = false }
             .navigationDestination(isPresented: $showAdjustments) { AdjustmentsView() }
-            .sheet(item: $detail) { w in WorkoutDetail(workout: w) }
+            .sheet(item: $prescription) { w in HomePrescriptionSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
+        }
+    }
+
+    private func setMenu(_ open: Bool) {
+        guard open != showMenu else { return }
+        if open { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+        withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.32, dampingFraction: 0.86)) { showMenu = open }
+    }
+
+    @ViewBuilder private func destination(_ r: HomeRoute) -> some View {
+        switch r {
+        case .menu(.myProfile):
+            ProfileFactsPage(title: "My profile", identifier: "menuPageMyProfile",
+                             footnote: "Height is stored but has no editor in this version; a redesigned Profile is proposed for Checkpoint C2.",
+                             sections: { $0.profileMyFacts() })
+        case .menu(.preferences):
+            ProfileFactsPage(title: "Goals & preferences", identifier: "menuPagePreferences",
+                             footnote: "Opening this page changes nothing. A change that affects your plan shows a before / after preview first, and Plan › Plan changes can undo it.",
+                             sections: { $0.profilePreferenceFacts() })
+        case .menu(.connections): DevicesScreen().accessibilityIdentifier("menuPageConnections")
+        case .menu(.settings): SettingsPage().accessibilityIdentifier("menuPageSettings")
+        case .menu(.help): HelpSupportPage()
+        case .weekOverview(let d): HomeWeekOverviewView(weekOf: d, perform: perform, open: { path.append($0) })
+        case .cycling: HomeCyclingSummaryView(perform: perform, open: { path.append($0) })
+        case .strength: HomeStrengthSummaryView(perform: perform, open: { path.append($0) })
+        case .day(let d): HomeDayDetailView(date: d, perform: perform, open: { path.append($0) })
+        case .ride(let id):
+            if let ride = store.rides.first(where: { $0.id == id }) { RideDetailView(ride: ride).accessibilityIdentifier("homeRideDetail") }
+            else { CyEmptyState(systemImage: "bicycle", title: "Ride not found", line: "This ride is no longer on the phone.").padding(CyTheme.margin) }
+        case .log(let id):
+            if let s = store.strength.first(where: { $0.id == id }) { StrengthSessionDetail(session: s).accessibilityIdentifier("homeLogDetail") }
+            else { CyEmptyState(systemImage: "dumbbell.fill", title: "Workout not found", line: "This log is no longer on the phone.").padding(CyTheme.margin) }
+        case .recovery: HomeRecoveryView(recovery: store.homeDashboard().recovery, openConnections: { tab = 4 })
+        case .goal:
+            if let g = store.homeDashboard().goal { HomeGoalDetailView(goal: g) }
+            else { CyEmptyState(systemImage: "star", title: "No goal selected", line: "Choose a goal in Profile to see what is measured for it.").padding(CyTheme.margin) }
         }
     }
 

@@ -95,6 +95,9 @@ enum CyTheme {
 
     // ---- touch
     static let minTap: CGFloat = 44
+    /// Checkpoint C correction (owner 6 Nov, B2): bottom padding every scroll page keeps so its last card can be scrolled
+    /// fully above the floating Liquid Dock (dock 64 + 20 above the home indicator + the raised centre button + breathing room).
+    static let dockClearance: CGFloat = 128
 
     // ---- motion (seconds); every animation goes through `CyMotion.animation` so reduce-motion turns them all off
     static let motionRise = 0.32

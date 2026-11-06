@@ -15,18 +15,7 @@ extension Store {
 }
 
 /// Short labels for the segmented controls (the long titles stay in the model for other screens).
-enum ProfileText {
-    static func mode(_ m: TrainingMode) -> String { switch m { case .cycling: return "Cycling"; case .strength: return "Strength"; case .hybrid: return "Hybrid" } }
-    static func level(_ l: RiderProfile.Level) -> String { switch l { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
-    static func recovery(_ r: RecoveryCapacity) -> String { switch r { case .low: return "Slow"; case .normal: return "Average"; case .high: return "Fast" } }
-    static func strengthLevel(_ e: StrengthPrefs.Experience) -> String { switch e { case .beginner: return "Beginner"; case .intermediate: return "Intermediate"; case .advanced: return "Advanced" } }
-    /// "Endurance" or "Endurance +1" (primary goal first).
-    static func goals(_ p: RiderProfile) -> String {
-        let g = p.effectiveGoals
-        let first = p.effectivePrimaryGoal.title
-        return g.count > 1 ? "\(first) +\(g.count - 1)" : first
-    }
-}
+// `ProfileText` moved to ProfileMenuModel.swift (Foundation only) so the Linux harness compiles it (6 Nov).
 
 /// A small title above a full-width segmented control (onboarding r7 style).
 struct ProfileSegmentRow<Content: View>: View {

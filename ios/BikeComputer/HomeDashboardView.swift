@@ -14,7 +14,9 @@ struct HomeDashboardScreen: View {
     let coach: HomeCoachItem?
     var openTab: (Int) -> Void
     var openHub: () -> Void
-    var openWorkout: (Workout) -> Void
+    /// Correction pass (6 Nov): every card pushes its own page on Home's stack; prescriptions open as sheets.
+    var open: (HomeRoute) -> Void
+    var openPrescription: (Workout) -> Void
     var coachTapped: (HomeCoachItem) -> Void
     @Environment(\.dynamicTypeSize) private var dts
 
@@ -32,29 +34,19 @@ struct HomeDashboardScreen: View {
 
     // MARK: header — date, greeting, context; the avatar opens Profile
     private var header: some View {
-        HStack(alignment: .top, spacing: CyTheme.sp3) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(dash.header.dateLine.uppercased()).font(CyType.caption).foregroundStyle(CyTheme.ink3)
-                Text(dash.header.greeting).font(CyType.largeTitle).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader).accessibilityIdentifier("homeGreeting")
-                Text(dash.header.context).font(CyType.secondary).foregroundStyle(CyTheme.ink2).accessibilityIdentifier("homeContext")
-            }
-            Spacer(minLength: 4)
-            let initial = String(store.profile.name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
-            Button { openTab(4) } label: {
-                Text(initial.isEmpty ? "•" : initial)
-                    .font(CyType.section).foregroundStyle(CyTheme.ctaInk)
-                    .frame(width: 40, height: 40).background(CyTheme.cta, in: Circle())
-                    .cyMinTap()
-            }
-            .buttonStyle(.plain).accessibilityLabel("Profile").accessibilityIdentifier("homeAvatar")
+        // B1 (6 Nov): the date and the avatar live in the (transparent) navigation bar, so the content never sits under
+        // the status bar — the bar keeps the top safe area on every device and after every push/pop.
+        VStack(alignment: .leading, spacing: 2) {
+            Text(dash.header.greeting).font(CyType.largeTitle).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("homeGreeting")
+            Text(dash.header.context).font(CyType.secondary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("homeContext")
         }
-        .padding(.top, CyTheme.sp2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: weekly ring → Training overview (counts from the ledger, nothing more)
     private func ringCard(_ r: HomeDashboard.Ring) -> some View {
-        NavigationLink { HomeWeekOverviewView() } label: {
+        Button { open(.weekOverview(Date())) } label: {
             let id = CyTheme.recovery
             let ring = CyProgressRing(fraction: r.fraction, size: 84, lineWidth: 10, tint: id.tint, track: id.soft) {
                 CyRingLabel(fraction: r.fraction, caption: "\(r.done) of \(r.planned)", tint: id.tint)
@@ -75,7 +67,7 @@ struct HomeDashboardScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("This week: \(r.done) of \(r.planned) planned sessions done, \(CyDesign.percentText(r.fraction)). \(r.sub).\(r.countedNote.map { " \($0)" } ?? "") Opens Training overview")
+        .accessibilityLabel("This week: \(r.done) of \(r.planned) planned sessions done, \(CyDesign.percentText(r.fraction)). \(r.sub).\(r.countedNote.map { " \($0)" } ?? "") Opens the weekly overview")
         .accessibilityIdentifier("cyHeroRing")
     }
 
@@ -88,13 +80,13 @@ struct HomeDashboardScreen: View {
             let layout = dts.isAccessibilitySize || tiles.count == 1 ? AnyLayout(VStackLayout(spacing: CyTheme.sp3)) : AnyLayout(HStackLayout(alignment: .top, spacing: CyTheme.sp3))
             layout {
                 ForEach(tiles) { item in
-                    Button { openTab(3) } label: {
+                    Button { open(item.sport == .cycling ? .cycling : .strength) } label: {
                         CyMetricTile(title: item.sport == .cycling ? "Cycling" : "Strength", systemImage: "chevron.right", sport: item.sport, value: item.tile.value, unit: item.tile.unit, sub: item.tile.sub, tag: item.tile.tag) {
                             miniChart(item.sport, item.tile.series)
                         }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityHint("Opens Progress")
+                    .accessibilityHint(item.sport == .cycling ? "Opens the cycling summary" : "Opens the strength summary")
                     .accessibilityIdentifier(item.id)
                 }
             }
@@ -131,11 +123,18 @@ struct HomeDashboardScreen: View {
                     .buttonStyle(.plain).accessibilityLabel("Open Plan").accessibilityIdentifier("homeWeekPlan")
             }
             CyCalendarStrip(days: dash.days, idPrefix: "homeWeekDay", containerId: "homeWeek") { d in
+                // A4 (6 Nov): one planned session → its prescription; one recorded session → the recording; anything
+                // else (several sessions, rest, before the plan, nothing planned) → the day page with its explanation
                 let cal = Calendar.current
-                let monday = TrainingLedger.monday(of: Date(), calendar: cal)
-                let date = cal.date(byAdding: .day, value: d.id, to: monday) ?? monday
-                let sessions = store.plan.filter { cal.isDate($0.date, inSameDayAs: date) && HomeToday.isTraining($0) && !$0.skipped }.sorted { $0.sequence < $1.sequence }
-                if let w = sessions.first(where: { !$0.done }) ?? sessions.first { openWorkout(w) } else { openTab(1) }
+                let date = cal.date(byAdding: .day, value: d.id, to: TrainingLedger.monday(of: Date(), calendar: cal)) ?? Date()
+                let day = store.homeDayDetail(date)
+                if day.items.count == 1, let item = day.items.first {
+                    switch item.record {
+                    case .ride(let id): open(.ride(id))
+                    case .strength(let id): open(.log(id))
+                    case .none: if let w = item.session?.workout { openPrescription(w) } else { open(.day(date)) }
+                    }
+                } else { open(.day(date)) }
             }
             legend
         }
@@ -189,7 +188,7 @@ struct HomeDashboardScreen: View {
     }
     private var recoveryCard: some View {
         let id = CyTheme.recovery
-        return NavigationLink { HomeRecoveryView(recovery: dash.recovery, openConnections: { openTab(4) }) } label: {
+        return Button { open(.recovery) } label: {
             VStack(alignment: .leading, spacing: 6) {
                 CyCaption(text: "Recovery", color: id.tint.opacity(0.85))
                 if dash.recovery.hasData {
@@ -216,7 +215,7 @@ struct HomeDashboardScreen: View {
     }
     private func goalCard(_ g: HomeDashboard.Goal) -> some View {
         let id = CyTheme.goal
-        return NavigationLink { HomeGoalDetailView(goal: g) } label: {
+        return Button { open(.goal) } label: {
             VStack(alignment: .leading, spacing: 6) {
                 CyCaption(text: (g.isMain ? "★ Goal · " : "Goal · ") + g.title, color: id.tint)
                 Text(g.measured).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
@@ -255,56 +254,6 @@ struct HomeDashboardScreen: View {
     }
 }
 
-// MARK: - Training overview (the ring's destination): this week's counts and the sport split, from the ledger
-struct HomeWeekOverviewView: View {
-    @EnvironmentObject private var store: Store
-    var body: some View {
-        let w = store.homeWeek()
-        let d = store.homeDashboard()
-        ScrollView {
-            VStack(alignment: .leading, spacing: CyTheme.sp3) {
-                if let r = d.ring {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(r.sub.split(separator: "·").last.map { "\($0.trimmingCharacters(in: .whitespaces)) · \(r.planned) planned" } ?? "\(r.planned) planned").font(CyType.caption).foregroundStyle(CyTheme.ink3)
-                        HStack(spacing: 20) {
-                            stat(r.done, "done"); stat(r.remaining, "remaining"); stat(r.missed, "missed"); if r.skipped > 0 { stat(r.skipped, "skipped") }
-                        }
-                        bar(fraction: r.fraction, tint: CyTheme.recovery.tint, soft: CyTheme.recovery.soft)
-                        Text("Adherence \(CyDesign.percentText(r.fraction)) = \(r.done) done ÷ \(r.planned) planned\(r.countedNote != nil ? " since the plan started. Days before it are not counted." : ".")").font(CyType.secondary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(16).frame(maxWidth: .infinity, alignment: .leading).cyCard()
-                }
-                if let r = w.riding { sportRow("Rides", r, CyTheme.cycling, minutes: true) }
-                if let l = w.lifting { sportRow("Lifts", l, CyTheme.strength, minutes: false) }
-                if w.riding == nil && w.lifting == nil { sportRow(store.profile.trainingMode == .strength ? "Lifts" : "Rides", w.total, store.profile.trainingMode == .strength ? CyTheme.strength : CyTheme.cycling, minutes: store.profile.trainingMode != .strength) }
-                if let u = w.upNext { Text("Up next · \(u)").font(CyType.secondary).foregroundStyle(CyTheme.ink2).padding(16).frame(maxWidth: .infinity, alignment: .leading).cyCard() }
-                Text("Weekly trend charts arrive with Progress analytics (Checkpoint D).").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
-            }
-            .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3)
-        }
-        .background(CyTheme.canvas)
-        .navigationTitle("Training overview").navigationBarTitleDisplayMode(.inline)
-        .accessibilityIdentifier("homeWeekOverview")
-    }
-    private func stat(_ n: Int, _ cap: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) { Text("\(n)").font(CyType.numeral).monospacedDigit().foregroundStyle(CyTheme.ink); Text(cap).font(CyType.captionSmall).foregroundStyle(CyTheme.ink3) }
-            .accessibilityElement(children: .combine)
-    }
-    private func bar(fraction: Double, tint: Color, soft: Color) -> some View {
-        GeometryReader { geo in ZStack(alignment: .leading) { Capsule().fill(soft); Capsule().fill(tint).frame(width: geo.size.width * CGFloat(CyDesign.clampFraction(fraction))) } }
-            .frame(height: 8).accessibilityHidden(true)
-    }
-    private func sportRow(_ title: String, _ s: TrainingLedger.SportWeek, _ id: CyTheme.Identity, minutes: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            CyCaption(text: title, color: id.tint)
-            Text(WeekTotals.sessions(s, singular: title == "Rides" ? "ride" : "session", plural: title == "Rides" ? "rides" : "sessions") + (minutes && s.plannedMinutes > 0 ? " · \(Fmt.duration(minutes: s.minutes)) of \(Fmt.duration(minutes: s.plannedMinutes))" : "")).font(CyType.secondary).foregroundStyle(CyTheme.ink)
-            bar(fraction: CyDesign.ringFraction(done: s.plannedDone, planned: s.planned), tint: id.tint, soft: id.soft)
-        }
-        .padding(16).frame(maxWidth: .infinity, alignment: .leading).cyCard()
-        .accessibilityElement(children: .combine)
-    }
-}
-
 // MARK: - Recovery (latest readings with source and date, or the empty state; history pages are Checkpoint E)
 struct HomeRecoveryView: View {
     let recovery: HomeDashboard.Recovery
@@ -321,7 +270,7 @@ struct HomeRecoveryView: View {
                     CyEmptyState(systemImage: "heart.text.square", title: recovery.emptyTitle, line: "Cyclift shows the latest sleep, resting heart rate and HRV once Apple Health reads are turned on in Profile › Connections. Nothing is estimated in the meantime.", actionTitle: "Open Connections", action: openConnections)
                 }
             }
-            .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3)
+            .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3).padding(.bottom, CyTheme.dockClearance)
         }
         .background(CyTheme.canvas)
         .navigationTitle("Recovery").navigationBarTitleDisplayMode(.inline)
@@ -340,7 +289,7 @@ struct HomeGoalDetailView: View {
                 if let n = goal.next { section("Next step", n) }
                 Text("Goal progress pages with trends arrive with Progress analytics (Checkpoint D).").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
             }
-            .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3)
+            .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3).padding(.bottom, CyTheme.dockClearance)
         }
         .background(CyTheme.canvas)
         .navigationTitle((goal.isMain ? "★ " : "") + "Goal · \(goal.title)").navigationBarTitleDisplayMode(.inline)
@@ -399,7 +348,7 @@ struct TrainingHubView: View {
                     optional(h)
                 }
                 .padding(.horizontal, CyTheme.margin)
-                .padding(.bottom, 24)
+                .padding(.bottom, CyTheme.dockClearance)     // B2 (6 Nov): the Optional card scrolls fully above the dock
                 .animation(.easeOut(duration: 0.2), value: store.undoToast)
             }
             .background(CyTheme.canvas)

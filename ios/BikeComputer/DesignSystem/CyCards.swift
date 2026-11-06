@@ -19,7 +19,7 @@ struct CyMetricTile<Chart: View>: View {
         let fg = id?.tint ?? CyTheme.ink
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(title).font(CyType.secondary.weight(.semibold)).foregroundStyle(fg).lineLimit(1)
+                Text(title).font(CyType.secondary.weight(.semibold)).foregroundStyle(fg).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 4)
                 if let s = systemImage { Image(systemName: s).font(.body.weight(.semibold)).foregroundStyle(fg).accessibilityHidden(true) }
             }
@@ -27,7 +27,7 @@ struct CyMetricTile<Chart: View>: View {
                 Text(value ?? "—").font(CyType.numeral).monospacedDigit().foregroundStyle(value == nil ? fg.opacity(0.5) : fg).lineLimit(1).minimumScaleFactor(0.6)
                 if let u = unit, value != nil { Text(u).font(CyType.unit).foregroundStyle(fg.opacity(0.8)) }
             }
-            if let s = sub { Text(s).font(CyType.captionSmall).foregroundStyle(fg.opacity(0.85)).lineLimit(2).fixedSize(horizontal: false, vertical: true) }
+            if let s = sub { Text(s).font(CyType.captionSmall).foregroundStyle(fg.opacity(0.85)).lineLimit(4).fixedSize(horizontal: false, vertical: true) }   // B3 (6 Nov): wrap, never cut the explanation
             chart.frame(maxWidth: .infinity).padding(.top, 2)
             CySourceTagBadge(tag: tag)
         }
