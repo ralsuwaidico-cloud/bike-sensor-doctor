@@ -41,14 +41,19 @@ final class HomeNavigationTests: XCTestCase {
     /// layer can be tapped. The run-172/173 screenshots showed the menu visually closed while XCUI still listed an
     /// element named "profileMenu"; that residue is recorded (screenshot + tree excerpt) for the real-iPhone VoiceOver
     /// check instead of being read as "the menu is open".
-    private func menuClosed(_ app: XCUIApplication, _ timeout: TimeInterval = 5) -> Bool {
+    /// `navigated`: a menu row was chosen, so its page now covers Home and the avatar is legitimately not on screen (run 175:
+    /// reading the value of the absent avatar raised "no matches"). Then closed = no menu element reachable and either no
+    /// avatar on screen or the avatar saying "closed". For the other dismissals the avatar must exist and say "closed".
+    private func menuClosed(_ app: XCUIApplication, _ timeout: TimeInterval = 5, navigated: Bool = false) -> Bool {
         let avatar = app.buttons["homeAvatar"].firstMatch
         let end = Date().addingTimeInterval(timeout)
         var closed = false
         while Date() < end {
             let rowsReachable = ["menuMyProfile", "menuPreferences", "menuConnections", "menuSettings", "menuHelp", "profileMenuClose", "profileMenuScrim"]
                 .contains { let b = btn(app, $0); return b.exists && b.isHittable }
-            if (avatar.value as? String) == "closed" && !rowsReachable { closed = true; break }
+            let present = avatar.exists
+            let avatarSaysClosed = present && (avatar.value as? String) == "closed"
+            if !rowsReachable && (avatarSaysClosed || (navigated && !present)) { closed = true; break }
             Thread.sleep(forTimeInterval: 0.3)
         }
         if closed && el(app, "profileMenu").exists {
@@ -277,7 +282,7 @@ final class HomeNavigationTests: XCTestCase {
         avatar.tap(); check(el(app, "profileMenuClose").waitForExistence(timeout: 8), "profileMenuClose"); tap(app, "profileMenuClose")
         check(menuClosed(app), "menu-close-button", "Close closes the menu")
 
-        func openRow(_ id: String) { avatar.tap(); check(btn(app, id).waitForExistence(timeout: 5), "menu-\(id)", "menu row \(id)"); btn(app, id).tap(); check(menuClosed(app), "menu-nav-\(id)", "the menu closes as navigation begins") }
+        func openRow(_ id: String) { avatar.tap(); check(btn(app, id).waitForExistence(timeout: 5), "menu-\(id)", "menu row \(id)"); btn(app, id).tap(); check(menuClosed(app, navigated: true), "menu-nav-\(id)", "the menu closes as navigation begins") }
         openRow("menuMyProfile")
         check(el(app, "menuPageMyProfile").waitForExistence(timeout: 8), "menuPageMyProfile"); XCTAssertTrue(el(app, "fact-Name").label.contains("Demo"))
         XCTAssertTrue(el(app, "fact-Height").exists); shot("menu-02-my-profile"); back(app)
