@@ -578,8 +578,12 @@ final class LayoutAudit: XCTestCase {
                     // the second session is reached by a normal scroll (readability first, owner 29 Oct); the hub page is
                     // shorter than the old Home, so a full swipe can carry the row above the top — scroll back when it does
                     let second = app.buttons["homeRow-1"].firstMatch
-                    for _ in 0..<3 where !(second.exists && second.isHittable && second.frame.maxY <= win.maxY - 105) { app.swipeUp(); sleep(1) }
-                    for _ in 0..<2 where second.exists && second.frame.minY < win.minY + 80 { app.swipeDown(); sleep(1) }
+                    // run 172: small alternating steps (the hub now has dock clearance, so a full swipe overshoots)
+                    for _ in 0..<8 {
+                        if second.exists && second.isHittable && second.frame.maxY <= win.maxY - 105 && second.frame.minY >= win.minY + 80 { break }
+                        if second.exists && second.frame.minY < win.minY + 80 { app.swipeDown(velocity: .slow) } else { app.swipeUp(velocity: .slow) }
+                        sleep(1)
+                    }
                     XCTAssertTrue(second.exists && second.isHittable, "\(screen): second session not reachable by scrolling")
                     shot("home-\(size.lowercased())-multi-scrolled")
                 }

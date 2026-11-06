@@ -25,28 +25,29 @@ struct ProfileQuickMenu: View {
         GeometryReader { geo in
             ZStack(alignment: .topTrailing) {
                 // dim layer: tapping outside (including where the avatar is) closes the menu
-                Color.black.opacity(0.18)
-                    .ignoresSafeArea()
+                Color.black.opacity(0.22)
+                    .ignoresSafeArea(edges: .bottom)       // the header (date + avatar) stays undimmed and tappable
                     .contentShape(Rectangle())
                     .onTapGesture(perform: close)
                     .accessibilityHidden(true)
                     .accessibilityIdentifier("profileMenuScrim")
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        header(h)
-                        CyDivider().padding(.vertical, 6)
-                        row("My profile", lines.profile, icon: "person.crop.circle", sport: nil, id: "menuMyProfile") { open(.myProfile) }
-                        row("Goals & training preferences", lines.preferences, icon: "target", sport: .goal, id: "menuPreferences") { open(.preferences) }
-                        row("Devices & connections", lines.connections, icon: "sensor.tag.radiowaves.forward", sport: .cycling, id: "menuConnections") { open(.connections) }
-                        row("App settings", lines.settings, icon: "gearshape", sport: nil, id: "menuSettings") { open(.settings) }
-                        row("Help & support", "How Cyclift works · version \(AppInfo.label)", icon: "questionmark.circle", sport: .insight, id: "menuHelp") { open(.help) }
-                    }
-                    .padding(12)
+                // run 172: the panel hugs its rows; it scrolls only when the rows are taller than the space (large text)
+                let rows = VStack(alignment: .leading, spacing: 0) {
+                    header(h)
+                    CyDivider().padding(.vertical, 6)
+                    row("My profile", lines.profile, icon: "person.crop.circle", sport: nil, id: "menuMyProfile") { open(.myProfile) }
+                    row("Goals & training preferences", lines.preferences, icon: "target", sport: .goal, id: "menuPreferences") { open(.preferences) }
+                    row("Devices & connections", lines.connections, icon: "sensor.tag.radiowaves.forward", sport: .cycling, id: "menuConnections") { open(.connections) }
+                    row("App settings", lines.settings, icon: "gearshape", sport: nil, id: "menuSettings") { open(.settings) }
+                    row("Help & support", "How Cyclift works · version \(AppInfo.label)", icon: "questionmark.circle", sport: .insight, id: "menuHelp") { open(.help) }
                 }
-                .scrollBounceBehavior(.basedOnSize)
+                .padding(12)
+                let maxH = max(200, geo.size.height - 12)          // the space between the header and the dock
+                ViewThatFits(in: .vertical) {
+                    rows
+                    ScrollView { rows }.frame(height: maxH)
+                }
                 .frame(width: min(360, geo.size.width - 2 * CyTheme.margin))
-                .frame(maxHeight: geo.size.height - 16 - CyTheme.dockClearance + 40)
-                .fixedSize(horizontal: false, vertical: true)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: CyTheme.rCard, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: CyTheme.rCard, style: .continuous).stroke(CyTheme.line2, lineWidth: 1))
                 .shadow(color: .black.opacity(0.16), radius: 24, y: 10)

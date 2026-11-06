@@ -21,13 +21,14 @@ final class HomeNavigationTests: XCTestCase {
         return app
     }
     private func el(_ app: XCUIApplication, _ id: String) -> XCUIElement { app.descendants(matching: .any)[id].firstMatch }
-    /// Buttons by identifier (typed query: cheaper and steadier than `.any` with five tab pages alive).
-    private func btn(_ app: XCUIApplication, _ id: String) -> XCUIElement { app.buttons[id].firstMatch }
+    /// A control by identifier, any element type (run 172: combined cards such as the ring and Recovery are not
+    /// exposed as buttons). Tapped with XCUI's own tap, which scrolls it into view and fails if it cannot.
+    private func btn(_ app: XCUIApplication, _ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
     /// Waits for a button and taps it (XCUI's own tap: waits for idle and hittability).
     @discardableResult
     private func tap(_ app: XCUIApplication, _ id: String, _ why: String = "") -> Bool {
         let b = btn(app, id)
-        guard b.waitForExistence(timeout: 10) else { shot("FAIL-missing-\(id)"); XCTFail("button \(id) missing \(why)"); return false }
+        guard b.waitForExistence(timeout: 10) else { shot("FAIL-missing-\(id)"); XCTFail("control \(id) missing \(why)"); return false }
         b.tap(); return true
     }
     /// The tab pages stay alive in the background, so "exists" is not "showing": wait until it is hittable.
@@ -136,7 +137,12 @@ final class HomeNavigationTests: XCTestCase {
         let today = (Calendar.current.component(.weekday, from: Date()) + 5) % 7
         // today: one planned strength session → its prescription (the logger screen)
         tap(app, "homeWeekDay-\(today)")
-        XCTAssertTrue(app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 8) || app.navigationBars.matching(NSPredicate(format: "identifier CONTAINS 'Full'")).firstMatch.exists, "today's session opens its prescription")
+        // the workout sheet covers Home; its Start button is at the bottom (scroll to it)
+        sleep(2)
+        check(!showing(el(app, "homeGreeting"), 1), "day-sheet", "today's session opened over Home")
+        let start = app.buttons["startWorkout"].firstMatch
+        for _ in 0..<5 where !(start.exists && start.isHittable) { app.swipeUp(velocity: .slow) }
+        check(start.exists && start.isHittable, "day-start", "today's session opens its prescription with Start")
         shot("nav-07-day-prescription")
         app.swipeDown(velocity: .fast); sleep(1)
         if !el(app, "homeGreeting").isHittable { for n in ["Done", "Close", "Cancel"] { let b = app.buttons[n].firstMatch; if b.exists && b.isHittable { b.tap(); break } } }
@@ -172,7 +178,13 @@ final class HomeNavigationTests: XCTestCase {
         // run 171: navigationBars.firstMatch was another (kept-alive) tab's bar — measure against Home's own date label
         let date = app.staticTexts["homeDate"].firstMatch
         check(date.waitForExistence(timeout: 5), "home-date", "the date is in Home's top bar")
-        XCTAssertGreaterThanOrEqual(date.frame.minY, 20, "the top bar sits below the status bar")
+        let status = XCUIApplication(bundleIdentifier: "com.apple.springboard").statusBars.firstMatch
+        let statusBottom = status.exists ? status.frame.maxY : 20
+        XCTAssertGreaterThanOrEqual(date.frame.minY, statusBottom - 1, "the header starts below the system status area (\(statusBottom))")
+        let avatarFrame = btn(app, "homeAvatar").frame
+        XCTAssertGreaterThanOrEqual(avatarFrame.minY, statusBottom - 1, "the avatar's hit area is below the status bar")
+        XCTAssertGreaterThanOrEqual(avatarFrame.width, 44); XCTAssertGreaterThanOrEqual(avatarFrame.height, 44, "a real 44 × 44 pt hit area")
+        XCTAssertFalse(avatarFrame.intersects(date.frame), "the avatar's hit area does not cover the date")
         XCTAssertGreaterThanOrEqual(el(app, "homeGreeting").frame.minY, date.frame.maxY, "content starts below the top bar")
         shot("nav-00-home-top")
         let rec = btn(app, "homeRecovery")
@@ -213,19 +225,24 @@ final class HomeNavigationTests: XCTestCase {
         XCTAssertTrue(el(app, "homeGreeting").exists, "Home stays behind the menu (not the Profile tab)")
         XCTAssertFalse(showing(el(app, "profileHeader"), 1), "the Profile tab is not shown")
         shot("menu-01-open")
+        let last = btn(app, "menuHelp")
+        XCTAssertLessThanOrEqual(menu.frame.maxY - last.frame.maxY, 40, "the panel ends right after its last row")
         // avatar again closes
-        avatar.tap(); XCTAssertTrue(menu.waitUntilGone(timeout: 3), "the avatar closes the menu")
+        avatar.tap(); check(menu.waitUntilGone(timeout: 5), "menu-avatar-close", "the avatar closes the menu")
         // rapid taps never stack menus
         avatar.tap(); avatar.tap(); avatar.tap(); sleep(1)
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "profileMenu").count, 1, "one menu")
         // outside tap closes
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.7)).tap()
-        XCTAssertTrue(menu.waitUntilGone(timeout: 3), "a tap outside closes the menu")
+        // outside = just left of the panel, at its middle (never on the panel, the header or the dock)
+        let pf = menu.frame
+        XCTAssertGreaterThan(pf.minX, 8, "the panel leaves a margin at the left")
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: pf.minX / 2, dy: pf.midY)).tap()
+        check(menu.waitUntilGone(timeout: 5), "menu-outside-close", "a tap outside closes the menu")
         // Close button
         avatar.tap(); check(el(app, "profileMenuClose").waitForExistence(timeout: 8), "profileMenuClose"); tap(app, "profileMenuClose")
-        XCTAssertTrue(menu.waitUntilGone(timeout: 3))
+        check(menu.waitUntilGone(timeout: 5), "menu-close-button", "Close closes the menu")
 
-        func openRow(_ id: String) { avatar.tap(); check(btn(app, id).waitForExistence(timeout: 5), "menu-\(id)", "menu row \(id)"); btn(app, id).tap(); XCTAssertTrue(menu.waitUntilGone(timeout: 3), "the menu closes as navigation begins") }
+        func openRow(_ id: String) { avatar.tap(); check(btn(app, id).waitForExistence(timeout: 5), "menu-\(id)", "menu row \(id)"); btn(app, id).tap(); check(menu.waitUntilGone(timeout: 5), "menu-nav-\(id)", "the menu closes as navigation begins") }
         openRow("menuMyProfile")
         check(el(app, "menuPageMyProfile").waitForExistence(timeout: 8), "menuPageMyProfile"); XCTAssertTrue(el(app, "fact-Name").label.contains("Demo"))
         XCTAssertTrue(el(app, "fact-Height").exists); shot("menu-02-my-profile"); back(app)

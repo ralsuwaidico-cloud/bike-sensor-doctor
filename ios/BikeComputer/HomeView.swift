@@ -62,30 +62,10 @@ struct HomeView: View {
                         .zIndex(2)
                 }
             }
-            // B1 (6 Nov): a visible, transparent bar keeps the content below the status bar on every device; it carries
-            // the date and the Profile avatar
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .principal) { Text(dash.header.dateLine.uppercased()).font(CyType.caption).foregroundStyle(CyTheme.ink3).accessibilityIdentifier("homeDate") }
-                ToolbarItem(placement: .topBarTrailing) {
-                    let initial = String(store.profile.name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
-                    Button { setMenu(!showMenu) } label: {
-                        ZStack {
-                            Circle().fill(CyTheme.cta).frame(width: 32, height: 32)
-                            if initial.isEmpty { Image(systemName: "person.fill").font(.footnote).foregroundStyle(CyTheme.ctaInk) }
-                            else { Text(initial).font(CyType.secondary.weight(.bold)).foregroundStyle(CyTheme.ctaInk) }
-                        }
-                        .overlay(Circle().stroke(CyTheme.cta.opacity(showMenu ? 0.35 : 0), lineWidth: 6))
-                        .frame(width: CyTheme.minTap, height: CyTheme.minTap)       // run 171: 44 pt target at every text size
-                        .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Profile menu")
-                    .accessibilityValue(showMenu ? "open" : "closed")
-                    .accessibilityHint(showMenu ? "Closes the menu" : "Opens profile, preferences, devices, settings and help")
-                    .accessibilityIdentifier("homeAvatar")
-                }
-            }
+            // B1 (6 Nov; run 172): Home's own header, pinned inside the safe area (below the status bar on every
+            // device) — the date and a real 44 × 44 pt avatar button (the system bar reported 36 pt at large text)
+            .safeAreaInset(edge: .top, spacing: 0) { homeHeader(dash) }
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: HomeRoute.self) { route in destination(route) }
             .onChange(of: tab) { _, _ in showMenu = false }           // the menu never survives a tab change
             .onChange(of: path) { _, _ in showMenu = false }
@@ -93,6 +73,36 @@ struct HomeView: View {
             .sheet(item: $prescription) { w in HomePrescriptionSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
         }
+    }
+
+    private func homeHeader(_ dash: HomeDashboard) -> some View {
+        let initial = String(store.profile.name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
+        return ZStack {
+            Text(dash.header.dateLine.uppercased()).font(CyType.caption).foregroundStyle(CyTheme.ink3)
+                .lineLimit(1).minimumScaleFactor(0.7).padding(.horizontal, 56)
+                .accessibilityIdentifier("homeDate")
+            HStack {
+                Spacer()
+                Button { setMenu(!showMenu) } label: {
+                    ZStack {
+                        Circle().fill(CyTheme.cta).frame(width: 34, height: 34)
+                        if initial.isEmpty { Image(systemName: "person.fill").font(.footnote).foregroundStyle(CyTheme.ctaInk) }
+                        else { Text(initial).font(.system(size: 15, weight: .bold)).foregroundStyle(CyTheme.ctaInk) }
+                    }
+                    .overlay(Circle().stroke(CyTheme.cta.opacity(showMenu ? 0.35 : 0), lineWidth: 5))
+                    .frame(width: CyTheme.minTap, height: CyTheme.minTap)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Profile menu")
+                .accessibilityValue(showMenu ? "open" : "closed")
+                .accessibilityHint(showMenu ? "Closes the menu" : "Opens profile, preferences, devices, settings and help")
+                .accessibilityIdentifier("homeAvatar")
+            }
+        }
+        .padding(.horizontal, CyTheme.margin - 6)
+        .frame(minHeight: CyTheme.minTap + 4)
+        .background(CyTheme.canvas)
     }
 
     private func setMenu(_ open: Bool) {
