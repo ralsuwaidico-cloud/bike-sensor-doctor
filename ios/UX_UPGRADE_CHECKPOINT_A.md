@@ -230,3 +230,22 @@ Approval gate: you approve the direction screen by screen (or request changes); 
 ## 12. Findings register (52 items) — status at Checkpoint A
 
 All 52 are **Open — scheduled**. Checkpoint assignment: H-001…H-010 → C (H-007 also B for the shared day states; H-009 → C via existing preview path); P-001…P-012 → D (P-007, P-011 → E); R-001…R-012 → F; N-001…N-008 → B; T-001…T-010 → C. They are recorded in the APP tracker's new sheet "UX upgrade findings" at the next tracker sync, cross-referenced to WATCH-004 (session contract, Horizon) and BIKE-012/BIKE-013 (board states, FTP defect) where they span platforms. W12 keeps its own ID; APP-029 stays provisional.
+
+### Status at Checkpoint C (5–6 Nov 2026, build 169)
+
+| IDs | Status | Where | Evidence |
+|---|---|---|---|
+| H-001 Home matches the projected dashboard · H-002 light-first balance · H-010 unified premium system | Implemented · Simulator tested | `HomeDashboardView.swift`, `HomeView.swift`, `CyTheme` | journey-hybrid-07-home, LayoutAudit Home states ×4 sizes, DesignSystemAudit light/dark |
+| H-003 weekly completion ring | Implemented (planned ÷ done, remaining, missed, skipped, W12 window note) | `HomeDashboardModel.swift` | `HomeDashboardTests` ring tests |
+| H-004 cycling + strength summaries · H-005 compact charts | Implemented from recorded rides/logs; 8-week mini series (sparkline / bars) | `HomeDashboardModel.swift`, `HomeDashboardView.swift` | `HomeDashboardTests` tile tests |
+| H-006 metric cards drill down | Partial — ring → Training overview, tiles → Progress tab, recovery → Recovery page, goal → Goal details; the analytics pages themselves are Checkpoint D | `HomeDashboardView.swift` | LayoutAudit key controls |
+| H-007 calendar day states | Implemented (before plan · done · planned · missed · rest · both); rescheduled has no stored marker (deferred, no schema change) | `HomeDashboardModel.days`, `CyCalendarStrip` | `HomeDashboardTests` calendar tests, journeys W12 labels |
+| H-008 Today + Coach cards compact | Implemented — compact Today reminder, coach card with the engine's finding | `HomeDashboardView.swift` | journeys, Home states |
+| H-009 coach change explain/preview/confirm | Unchanged existing path (HomeProposalSheet → commitCoachChange → Undo) reached from the coach card | `HomeView.swift` | AdaptiveSmokeTests |
+| T-001 Today card off Home · T-002 consistent centre destination · T-005 dedicated hub · T-006 multiple · T-007 completed accessible · T-009 Home prioritises analytics | Implemented · Simulator tested | `TrainingHubView` (HomeDashboardView.swift), `ContentView.swift` | LayoutAudit Home states (hub shots for planned/pending/multi/missed/rest/stop/done), LaunchSmoke hub → Start, journeys |
+| T-003 pending animation · T-004 button reflects state | Implemented (Checkpoint B looks + hub) | `CyLiquidDock.swift` | DockCopyTests, W12AndDockTests |
+| T-008 accessible, efficient motion | Implemented — AX sizes compact header/stacked buttons, Reduce Motion transition | `HomeDashboardView.swift`, `ContentView.swift` | LayoutAudit AX3 |
+| T-010 state consistent across devices | Partial — the hub reads the same `homeToday` as the dock; Watch shows no hub state (unchanged) | — | — |
+| N-001…N-008 | Implemented at Checkpoint B (build 161) | — | — |
+| P-001…P-012, R-001…R-012 | Open — scheduled Checkpoints D/E/F | — | — |
+

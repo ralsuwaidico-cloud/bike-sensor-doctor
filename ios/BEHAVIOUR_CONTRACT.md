@@ -194,6 +194,20 @@ properties (`profile`, `plan`, `rides`, `strength`, `availability`, `equipment`,
 
 ---
 
+## W14 · Premium Home Dashboard and Training Hub (UX Checkpoint C, 5 Nov 2026)
+
+| | Contract |
+|---|---|
+| User sees | **Home** is a light-first dashboard read from one model (`Store.homeDashboard`): date, greeting and context ("Hybrid · week 2 · lift today"); the weekly ring (planned ÷ done from the ledger, "n remaining · window", and "Counted from the day you approved the plan." when the plan started after Monday); cycling and strength tiles (this week's recorded time / sessions against the plan, an 8-week mini series, a source tag — *Needs data* only before any recorded activity); the week strip with the shared day states (before plan · done · planned · missed · rest, both sports); the coach's own finding; Recovery (latest sleep / resting HR / HRV from enabled Apple Health reads with date, otherwise the empty state) and the main Goal (what it tracks, what is measured so far, the next step); one compact Today reminder. **Training Hub**: the dock's centre button opens a page over the current tab with today's card(s) — pending / in progress / completed / missed / rest / multiple / hold / first — the missed-session row, the Undo bar, "Also today / Remaining today" and Optional (Free ride, Other session). |
+| Interaction → result | Ring → Training overview (counts, sport split). Tiles → Progress. Week "Plan ›" → Plan; a day → its session (sheet) or Plan. Coach → the existing proposal / adjustment / FTP / check-in sheets (opening never changes the plan). Recovery → Recovery page (latest readings or "Open Connections"). Goal → Goal details. Avatar → Profile. Reminder and centre button → Training Hub; Start / Resume / Results / Why / More / Move to today / Skip keep their build-161 routes. A tab tap or Close closes the hub; the hub's centre tap while recording opens the Ride screen. |
+| Not shown / not invented | No FTP, readiness, recovery score, trend or completion is computed or estimated: missing data shows the empty state and names the next step; pages that arrive with a later checkpoint say so (Progress analytics → D, recovery history → E). |
+| Data changed | None. No engine, planner, storage, Health or Watch change; `CyCalendarStrip` gains identifier parameters (additive). |
+| Accessibility | Dynamic Type through AX5 (tiles and lower cards stack; the hub header and Optional buttons compact at accessibility sizes), VoiceOver labels on every card, Reduce Motion on the hub transition and the dock. |
+| Verifying tests | `HomeDashboardTests` (12, harness + Xcode): greeting/context, ring counts incl. missed/skipped/partial-week/W12, calendar states, tiles from records only, recovery only from enabled reads, goal from records, reminder and hub states. `LayoutAudit.testHomeStates` (Home + hub for every seeded state on SE/standard/Pro Max/owner), journeys through the hub, launch/upgrade smoke (hub → Start → workout). |
+| Known limits | A rescheduled day has no stored marker, so the strip shows it as planned on its new day (no schema change). Weekly trend charts and goal trend pages are Checkpoint D; recovery history Checkpoint E. |
+
+---
+
 ## Outdated-test candidates (expectations that contradict this contract — listed, NOT changed)
 
 | Test | Level | Contradiction | What the contract-conformant test would assert |
