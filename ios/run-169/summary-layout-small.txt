@@ -1,11 +1,11 @@
-BikeComputer iOS CI — build 169 — 2026-11-05 21:40 UTC
+BikeComputer iOS CI — build 169 — 2026-11-05 22:57 UTC
 Stage: layout (layout devices: small)
-macOS 26.6.2, Xcode 26.6 Build version 17F113 
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
 XcodeGen Version: 2.46.0
-RESULT generate: ok · 0m10s
-Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
 Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
-RESULT build (Release, for testing): ok · 14m12s
-  layout small (L,AX3): FAILED (exit 65) · 46m45s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 351.0}, {343.0, 116.0}}, identifier: 'profileDevices', label: 'Devices & sensors, none connected' 
-RESULT layout audit: FAILED (89 screenshots)
-Total: 62m3s
+RESULT build (Release, for testing): ok · 11m6s
+  layout small (L,AX3): ok · 49m6s
+RESULT layout audit: ok (89 screenshots)
+Total: 60m53s
