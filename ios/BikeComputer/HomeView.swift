@@ -77,6 +77,8 @@ struct HomeView: View {
                             else { Text(initial).font(CyType.secondary.weight(.bold)).foregroundStyle(CyTheme.ctaInk) }
                         }
                         .overlay(Circle().stroke(CyTheme.cta.opacity(showMenu ? 0.35 : 0), lineWidth: 6))
+                        .frame(width: CyTheme.minTap, height: CyTheme.minTap)       // run 171: 44 pt target at every text size
+                        .contentShape(Rectangle())
                     }
                     .accessibilityLabel("Profile menu")
                     .accessibilityValue(showMenu ? "open" : "closed")
