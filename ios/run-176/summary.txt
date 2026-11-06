@@ -1,4 +1,4 @@
-BikeComputer iOS CI — run 176 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+BikeComputer iOS CI — run 176 — scope full — jobs: quick=skipped test=success release=success testflight=success
 
 ## unit
 BikeComputer iOS CI — build 176 — 2026-11-06 18:37 UTC
@@ -76,17 +76,17 @@ RESULT layout audit: ok (13 screenshots)
 Total: 19m30s
 
 ## layout-owner
-BikeComputer iOS CI — build 176 — 2026-11-06 18:32 UTC
+BikeComputer iOS CI — build 176 — 2026-11-06 19:57 UTC
 Stage: layout (layout devices: owner)
-macOS 26.7.2, Xcode 26.6 Build version 17F113 
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
 XcodeGen Version: 2.46.0
-RESULT generate: ok · 0m7s
-Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT generate: ok · 0m8s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
 Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
-RESULT build (Release, for testing): ok · 11m20s
-  layout owner (L,XXXL): FAILED (exit 65) · 52m49s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - L home cyclingonly: no primary action -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - L home cyclingonly: the centre button opens the Training Hub 
-RESULT layout audit: FAILED (87 screenshots)
-Total: 65m1s
+RESULT build (Release, for testing): ok · 11m37s
+  layout owner (L,XXXL): ok · 53m28s
+RESULT layout audit: ok (87 screenshots)
+Total: 65m32s
 
 ## watch
 BikeComputer iOS CI — build 176 — 2026-11-06 18:32 UTC
@@ -97,5 +97,36 @@ RESULT generate: ok · 0m5s
   watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 10546   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11088   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11609   screenshot ax3 ok large · 9m44s
 Total: 9m49s
 
-RESULT upload: skipped (tests failed — the release job did not run)
-commit 23db8fa281d767b71632ad8df3450319a062a768  branch ios/v1-ux  job failure
+## release
+BikeComputer iOS CI — build 176 — 2026-11-06 21:03 UTC
+Stage: release
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Quick check: none for this tree — override accepted [full-override: run 175 smoke test-helper defect fixed; layout-standard runner not acquired]
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc) · 5m25s
+  contains BikeComputer.app 1.0.0 (176) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (176) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 11178448 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: ok — build 176 sent to App Store Connect; TestFlight processing takes about 5-30 minutes (the testflight job reports when it is ready)
+Total: 10m42s
+
+## testflight
+Bundle IDs and capabilities:
+  bundle ID com.ralsuwaidico.bikecomputer: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer: already enabled
+  bundle ID com.ralsuwaidico.bikecomputer.watchkitapp: already registered
+  HealthKit on com.ralsuwaidico.bikecomputer.watchkitapp: already enabled
+App Store Connect app record: found
+  build 176: not visible in App Store Connect yet
+  build 176: not visible in App Store Connect yet
+RESULT testflight: build 176 processed (VALID) — installable by internal testers in TestFlight; What to Test set
+commit 23db8fa281d767b71632ad8df3450319a062a768  branch ios/v1-ux  job success
