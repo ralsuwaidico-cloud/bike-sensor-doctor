@@ -1,0 +1,198 @@
+=== layout-small: errors / failures ===
+Test Case '-[BikeComputerUITests.DesignSystemAudit testGalleryLightAndDark]' passed (133.870 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 133.870 (133.872) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HomeNavigationTests.swift:178: error: -[BikeComputerUITests.HomeNavigationTests testAvatarOpensTheMenuAndEveryRowItsOwnPage] : XCTAssertFalse failed
+Test Case '-[BikeComputerUITests.HomeNavigationTests testAvatarOpensTheMenuAndEveryRowItsOwnPage]' failed (50.879 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HomeNavigationTests.swift:106: error: -[BikeComputerUITests.HomeNavigationTests testCalendarDaysOpenTheRightThing] : XCTAssertTrue failed
+Test Case '-[BikeComputerUITests.HomeNavigationTests testCalendarDaysOpenTheRightThing]' failed (137.901 seconds).
+Test Case '-[BikeComputerUITests.HomeNavigationTests testCyclingCardOpensTheSummaryAndARide]' passed (115.647 seconds).
+Test Case '-[BikeComputerUITests.HomeNavigationTests testMenuAndPagesAtLargestAccessibilityText]' passed (62.116 seconds).
+Test Case '-[BikeComputerUITests.HomeNavigationTests testMenuClosesOnTabChangeKeepsScrollAndChangesNothing]' passed (46.749 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HomeNavigationTests.swift:141: error: -[BikeComputerUITests.HomeNavigationTests testRecoveryGoalBackNavigationScrollAndLayout] : XCTAssertGreaterThanOrEqual failed: ("82.0") is less than ("125.0") - content below the status bar and the top bar
+Test Case '-[BikeComputerUITests.HomeNavigationTests testRecoveryGoalBackNavigationScrollAndLayout]' failed (17.195 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HomeNavigationTests.swift:41: error: -[BikeComputerUITests.HomeNavigationTests testRingOpensTheWeeklyOverviewAndItsSessions] : XCTAssertTrue failed
+Test Case '-[BikeComputerUITests.HomeNavigationTests testRingOpensTheWeeklyOverviewAndItsSessions]' failed (31.763 seconds).
+Test Case '-[BikeComputerUITests.HomeNavigationTests testStrengthCardOpensTheSummaryAndALog]' passed (81.875 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HomeNavigationTests.swift:127: error: -[BikeComputerUITests.HomeNavigationTests testTwoSessionsOnOneDayStayIndividuallyAccessible] : XCTAssertTrue failed
+Test Case '-[BikeComputerUITests.HomeNavigationTests testTwoSessionsOnOneDayStayIndividuallyAccessible]' failed (20.219 seconds).
+Test Suite 'HomeNavigationTests' failed at 2026-11-06 09:44:08.700.
+	 Executed 9 tests, with 5 failures (0 unexpected) in 564.344 (564.352) seconds
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' passed (434.528 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 434.528 (434.531) seconds
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testFreshInstallShowsWelcome]' passed (8.188 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild24StoreShowsHomeAndAllTabsOpen]' passed (37.944 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild30StoreShowsHomeAndAllTabsOpen]' passed (39.832 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText]' passed (96.014 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild36CentreButtonOpensStrengthWorkout]' passed (60.079 seconds).
+Test Case '-[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild40YourDataExportAndDeleteCancelKeepsData]' passed (141.614 seconds).
+	 Executed 6 tests, with 0 failures (0 unexpected) in 383.671 (383.680) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:93: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("36.0") is less than ("43.5") - AX3 home planned homeAvatar shorter than 44.0 pt: 36.0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:93: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("36.0") is less than ("43.5") - AX3 home multi homeAvatar shorter than 44.0 pt: 36.0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:93: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("36.0") is less than ("43.5") - AX3 home missed homeAvatar shorter than 44.0 pt: 36.0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:93: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("36.0") is less than ("43.5") - AX3 home stop homeAvatar shorter than 44.0 pt: 36.0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:93: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("36.0") is less than ("43.5") - AX3 home pending homeAvatar shorter than 44.0 pt: 36.0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:93: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("36.0") is less than ("43.5") - AX3 home clearance homeAvatar shorter than 44.0 pt: 36.0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:93: error: -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertGreaterThanOrEqual failed: ("36.0") is less than ("43.5") - AX3 home ill homeAvatar shorter than 44.0 pt: 36.0
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' failed (492.297 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (123.591 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-06 10:08:02.810.
+	 Executed 2 tests, with 7 failures (0 unexpected) in 615.888 (615.896) seconds
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages]' passed (151.674 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 151.674 (151.674) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-06 10:10:34.487.
+	 Executed 20 tests, with 12 failures (0 unexpected) in 2283.975 (2284.012) seconds
+Test Suite 'Selected tests' failed at 2026-11-06 10:10:34.488.
+	 Executed 20 tests, with 12 failures (0 unexpected) in 2283.975 (2284.014) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: last 150 lines ===
+    t =    97.51s     Check for interrupting elements affecting "Cyclift" Application
+    t =    97.58s     Synthesize event
+    t =    98.05s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   101.38s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   101.38s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   101.46s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   101.51s     Check for interrupting elements affecting "Cyclift" Application
+    t =   101.58s     Synthesize event
+    t =   102.02s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   103.94s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   103.94s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   103.96s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   104.03s     Check for interrupting elements affecting "Cyclift" Application
+    t =   104.09s     Synthesize event
+    t =   104.52s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   106.20s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   106.20s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   106.26s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   106.33s     Check for interrupting elements affecting "Cyclift" Application
+    t =   106.39s     Synthesize event
+    t =   106.82s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   108.94s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   108.94s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   108.95s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   108.99s     Check for interrupting elements affecting "Cyclift" Application
+    t =   109.12s     Synthesize event
+    t =   109.54s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   112.65s Checking existence of `"onboardingSkip" Button`
+    t =   112.72s Find the "onboardingSkip" Button
+    t =   112.77s Find the "onboardingSkip" Button
+    t =   113.08s Checking existence of `"onboardingSkip" Button`
+    t =   113.13s Find the "onboardingSkip" Button
+    t =   113.22s Find the "onboardingSkip" Button
+    t =   113.29s Find the "onboardingSkip" Button
+    t =   113.34s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (323.2, 78.5)
+    t =   113.34s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   113.34s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   113.39s     Check for interrupting elements affecting "Cyclift" Application
+    t =   113.43s     Synthesize event
+    t =   113.43s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   113.46s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   113.51s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   113.83s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   115.85s Waiting 10.0s for "Your training system · 5 of 5" StaticText to exist
+    t =   116.93s     Checking `Expect predicate `existsNoRetry == 1` for object "Your training system · 5 of 5" StaticText`
+    t =   116.93s         Checking existence of `"Your training system · 5 of 5" StaticText`
+    t =   117.04s Waiting 5.0s for "onbDash" Other to exist
+    t =   118.06s     Checking `Expect predicate `existsNoRetry == 1` for object "onbDash" Other`
+    t =   118.06s         Checking existence of `"onbDash" Other`
+    t =   118.17s Waiting 5.0s for "onbFirst" Other to exist
+    t =   119.18s     Checking `Expect predicate `existsNoRetry == 1` for object "onbFirst" Other`
+    t =   119.18s         Checking existence of `"onbFirst" Other`
+    t =   119.27s Get all elements bound by index for: Descendants matching type StaticText
+    t =   119.44s Find the StaticText (Element at index 0)
+    t =   119.53s Find the StaticText (Element at index 1)
+    t =   119.70s Find the StaticText (Element at index 2)
+    t =   119.79s Find the StaticText (Element at index 3)
+    t =   119.99s Checking existence of `"onbWhy" Other`
+    t =   120.23s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   120.23s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   120.24s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   120.27s     Check for interrupting elements affecting "Cyclift" Application
+    t =   120.33s     Synthesize event
+    t =   120.77s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   123.06s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   123.06s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   123.11s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   123.16s     Check for interrupting elements affecting "Cyclift" Application
+    t =   123.22s     Synthesize event
+    t =   123.65s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   125.30s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   125.30s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   125.37s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   125.40s     Check for interrupting elements affecting "Cyclift" Application
+    t =   125.44s     Synthesize event
+    t =   125.87s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   127.50s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   127.50s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   127.62s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   127.67s     Check for interrupting elements affecting "Cyclift" Application
+    t =   127.85s     Synthesize event
+    t =   128.29s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   128.81s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   128.81s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   128.81s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   128.86s     Check for interrupting elements affecting "Cyclift" Application
+    t =   128.90s     Synthesize event
+    t =   129.32s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   130.82s Waiting 5.0s for "onbCreatePlan" Button to exist
+    t =   131.85s     Checking `Expect predicate `existsNoRetry == 1` for object "onbCreatePlan" Button`
+    t =   131.85s         Checking existence of `"onbCreatePlan" Button`
+    t =   131.92s Tap "onbCreatePlan" Button
+    t =   131.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   131.93s     Find the "onbCreatePlan" Button
+    t =   132.03s     Check for interrupting elements affecting "onbCreatePlan" Button
+    t =   132.10s     Synthesize event
+    t =   132.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   137.49s Waiting 10.0s for "homeWeek" Other to exist
+    t =   138.54s     Checking `Expect predicate `existsNoRetry == 1` for object "homeWeek" Other`
+    t =   138.54s         Checking existence of `"homeWeek" Other`
+    t =   139.32s Waiting 2.0s for "homeCaution" Button to exist
+    t =   140.35s     Checking `Expect predicate `existsNoRetry == 1` for object "homeCaution" Button`
+    t =   140.35s         Checking existence of `"homeCaution" Button`
+    t =   141.60s         Capturing element debug description
+    t =   141.60s     Checking existence of `"homeCaution" Button`
+    t =   144.15s Collecting debug information to assist test failure triage
+    t =   144.15s     Requesting snapshot of accessibility hierarchy for app with pid 23696
+    t =   144.61s Checking existence of `"onboardingContinue" Button`
+    t =   144.99s Tap "Plan" Button
+    t =   145.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   145.00s     Find the "Plan" Button
+    t =   145.10s     Check for interrupting elements affecting "Plan" Button
+    t =   145.36s     Synthesize event
+    t =   145.72s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   148.33s Waiting 5.0s for StaticText (First Match) to exist
+    t =   149.37s     Checking `Expect predicate `existsNoRetry == 1` for object StaticText (First Match)`
+    t =   149.37s         Checking existence of `StaticText (First Match)`
+    t =   150.39s Terminate com.ralsuwaidico.bikecomputer:23696
+    t =   151.43s Tear Down
+Test Case '-[BikeComputerUITests.OnboardingScreens testOnboardingV3FiveStages]' passed (151.674 seconds).
+Test Suite 'OnboardingScreens' passed at 2026-11-06 10:10:34.485.
+	 Executed 1 test, with 0 failures (0 unexpected) in 151.674 (151.674) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-06 10:10:34.487.
+	 Executed 20 tests, with 12 failures (0 unexpected) in 2283.975 (2284.012) seconds
+Test Suite 'Selected tests' failed at 2026-11-06 10:10:34.488.
+	 Executed 20 tests, with 12 failures (0 unexpected) in 2283.975 (2284.014) seconds
+2026-11-06 10:11:23.164 xcodebuild[43742:117277] [MT] IDETestOperationsObserverDebug: 2522.303 elapsed -- Testing started completed.
+2026-11-06 10:11:23.165 xcodebuild[43742:117277] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-06 10:11:23.165 xcodebuild[43742:117277] [MT] IDETestOperationsObserverDebug: 2522.303 sec, +2522.303 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-ftsovdhmglohjqecndmendgfjtoa/Logs/Test/Test-BikeComputer-2026.11.06_09-29-17-+0000.xcresult
+
+Failing tests:
+	HomeNavigationTests.testAvatarOpensTheMenuAndEveryRowItsOwnPage()
+	HomeNavigationTests.testCalendarDaysOpenTheRightThing()
+	HomeNavigationTests.testRecoveryGoalBackNavigationScrollAndLayout()
+	HomeNavigationTests.testRingOpensTheWeeklyOverviewAndItsSessions()
+	HomeNavigationTests.testTwoSessionsOnOneDayStayIndividuallyAccessible()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+	LayoutAudit.testHomeStates()
+
+** TEST EXECUTE FAILED **
+
+Testing started

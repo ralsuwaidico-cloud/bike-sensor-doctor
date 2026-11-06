@@ -1,0 +1,15 @@
+BikeComputer iOS CI — build 171 — 2026-11-06 09:06 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 4m11s
+RESULT tests: ok (Executed 582 tests, with 0 failures) · 9m24s
+  targets from the files changed since the last green full run eed22db
+Quick UI targets: DesignSystemAudit/testGalleryLightAndDark LayoutAudit/testHomeStates JourneyTests/testHybridJourney LayoutAudit/testKeyScreensAtTextSizes HomeNavigationTests OnboardingScreens/testOnboardingV3FiveStages HomeNavigationTests LayoutAudit/testHomeStates JourneyTests/testHybridJourney LaunchSmokeTests
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m29s
+  layout small (AX3): FAILED (exit 65) · 42m30s — -[BikeComputerUITests.HomeNavigationTests testAvatarOpensTheMenuAndEveryRowItsOwnPage] : XCTAssertFalse failed -[BikeComputerUITests.HomeNavigationTests testCalendarDaysOpenTheRightThing] : XCTAssertTrue failed -[BikeComputerUITests.HomeNavigationTests testRecoveryGoalBackNavigationScrollAndLayout] : XCTAssertGreaterThanOrEqual failed: ("82.0") is less than ("125.0") - content below the status bar
+  layout standard (L): FAILED (exit 65) · 32m52s — -[BikeComputerUITests.HomeNavigationTests testAvatarOpensTheMenuAndEveryRowItsOwnPage] : XCTAssertFalse failed -[BikeComputerUITests.HomeNavigationTests testCalendarDaysOpenTheRightThing] : XCTAssertTrue failed -[BikeComputerUITests.HomeNavigationTests testMenuAndPagesAtLargestAccessibilityText] : XCTAssertTrue failed 
