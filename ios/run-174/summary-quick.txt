@@ -1,0 +1,14 @@
+BikeComputer iOS CI — build 174 — 2026-11-06 14:59 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+RESULT build (Debug, for testing): ok · 3m52s
+RESULT tests: ok (Executed 586 tests, with 0 failures) · 8m7s
+  targets from the files changed since the last green full run eed22db
+Quick UI targets: DesignSystemAudit/testGalleryLightAndDark LayoutAudit/testHomeStates JourneyTests/testHybridJourney LayoutAudit/testKeyScreensAtTextSizes HomeNavigationTests LaunchSmokeTests LayoutAudit OnboardingScreens/testOnboardingV3FiveStages HomeNavigationTests LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText LayoutAudit/testHomeStates
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m40s
+  layout small: simulator could not launch the app — rebooting it and retrying once
