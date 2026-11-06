@@ -147,7 +147,18 @@ extension Store {
             var rec: HomeDayItem.Record = .none
             if w.kind.isRide, let r = ledger.ride(for: w) { rec = .ride(r.id); usedRides.insert(r.id) }
             else if let l = ledger.log(for: w) { rec = .strength(l.id); usedLogs.insert(l.id) }
-            items.append(HomeDayItem(session: s, record: rec, title: s.title, subtitle: s.subtitle, statusText: HomeSummariesModel.statusText(s.status)))
+            // owner 6 Nov (1): a recorded session shows what was RECORDED, with the prescription named as such
+            var sub = s.subtitle
+            switch rec {
+            case .ride(let id): if let r = rides.first(where: { $0.id == id }) { sub = "Recorded " + HomeSummariesModel.rideLine(r, units: settings.units) + " · planned \(Fmt.duration(minutes: w.minutes))" }
+            case .strength(let id):
+                if let l = strength.first(where: { $0.id == id }) {
+                    let n = (l.exercises ?? []).filter { $0.sets.contains(where: \.done) }.count
+                    sub = "Recorded " + (l.minutes > 0 ? Fmt.duration(minutes: l.minutes) : "duration not recorded") + " · \(n) exercise\(n == 1 ? "" : "s") · planned \(Fmt.duration(minutes: w.minutes))"
+                }
+            case .none: if s.status == .marked || s.status == .imported { sub = HomeSummariesModel.statusText(s.status) + " · no recording on the phone · planned \(Fmt.duration(minutes: w.minutes))" } else { sub = "Planned " + s.subtitle }
+            }
+            items.append(HomeDayItem(session: s, record: rec, title: s.title, subtitle: sub, statusText: HomeSummariesModel.statusText(s.status)))
         }
         // unplanned records of the day (a free ride, a logged lift)
         for r in rides.filter({ !$0.demo && cal.isDate($0.start, inSameDayAs: day) && !usedRides.contains($0.id) }).sorted(by: { $0.start < $1.start }) {
@@ -158,7 +169,9 @@ extension Store {
         }
         let idx = (cal.component(.weekday, from: day) + 5) % 7
         let avail = effectiveAvailability.days[idx]
-        let availLine: String? = avail.activity == .rest ? "Your week: rest day" : "Your week: " + avail.assignments.map { "\($0.sport == .strength ? "strength" : $0.sport == .cycling ? "ride" : "session") · \(Fmt.duration(minutes: $0.minutes))" }.joined(separator: " + ")
+        // owner 6 Nov (2): "Your week" is today's setup — it describes today and later days only, never the past
+        let isPast = day < cal.startOfDay(for: now)
+        let availLine: String? = isPast ? nil : avail.activity == .rest ? "Your week: rest day" : "Your week: " + avail.assignments.map { "\($0.sport == .strength ? "strength" : $0.sport == .cycling ? "ride" : "session") · \(Fmt.duration(minutes: $0.minutes))" }.joined(separator: " + ")
         let kind: HomeDayDetail.Kind
         let explanation: String
         if items.isEmpty, CyPlanStart.isBeforePlan(day, effectiveStart: planEffectiveStart, hasRecord: hasRecord(on: day, calendar: cal), calendar: cal) {
@@ -169,7 +182,7 @@ extension Store {
             kind = .noPlan; explanation = "No plan yet. Approve a plan to see sessions here."
         } else if items.isEmpty {
             kind = .rest
-            explanation = avail.activity == .rest ? "Rest day — set as a rest day in Your week. Recovery is part of the plan; nothing is expected today." : "Nothing planned for this day. The coach left it free this week."
+            explanation = isPast ? "No session was planned for this day." : avail.activity == .rest ? "Rest day — set as a rest day in Your week. Recovery is part of the plan; nothing is expected today." : "Nothing planned for this day. The coach left it free this week."
         } else {
             kind = .training
             let open = items.filter { $0.session?.status == .planned }.count

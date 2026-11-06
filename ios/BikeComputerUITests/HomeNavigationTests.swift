@@ -60,7 +60,12 @@ final class HomeNavigationTests: XCTestCase {
 
     func testCyclingCardOpensTheSummaryAndARide() {
         let app = launch()
-        XCTAssertTrue(el(app, "homeCycling").tapWhenSettled())
+        // owner 6 Nov (6): scroll Home a little first; the position must survive summary → historical ride → back → back
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.62)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        sleep(1)
+        let card = el(app, "homeCycling")
+        let y = card.frame.minY
+        XCTAssertTrue(card.tapWhenSettled())
         XCTAssertTrue(el(app, "homeCyclingSummary").waitForExistence(timeout: 5), "the cycling card opens the cycling summary, not Progress")
         XCTAssertTrue(app.navigationBars["Cycling summary"].exists)
         for t in ["Rides", "Time", "Distance", "Avg-heart-rate"] { XCTAssertTrue(el(app, "cyclingTile-\(t)").exists, t) }
@@ -73,7 +78,8 @@ final class HomeNavigationTests: XCTestCase {
         XCTAssertTrue(el(app, "homeRideDetail").waitForExistence(timeout: 5)); XCTAssertTrue(app.navigationBars["Ride"].exists)
         shot("nav-04-ride-details")
         back(app); back(app)
-        XCTAssertTrue(el(app, "homeGreeting").waitForExistence(timeout: 5))
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertEqual(card.frame.minY, y, accuracy: 12, "Home's scroll position survives summary → ride → back")
     }
 
     // MARK: A3 · Strength card → Strength summary → recorded log (exercises with sets, reps, weights)

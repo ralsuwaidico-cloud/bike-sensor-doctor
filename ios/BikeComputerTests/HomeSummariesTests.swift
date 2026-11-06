@@ -224,4 +224,72 @@ final class HomeSummariesTests: XCTestCase {
         XCTAssertNil(s.homeStrengthSummary(.all, now: wed).next)
         XCTAssertTrue(s.homeStrengthSummary(.all, now: wed).nextEntries.isEmpty)
     }
+
+    // MARK: owner 6 Nov validation points — targeted regressions
+
+    /// (1) a recorded session shows the recorded values; an open session says "Planned".
+    func testOverviewShowsRecordedResultsNotThePrescription() {
+        let s = store(); hybrid(s)
+        _ = s.regenerate(weekOf: monday, replaceEdited: true)
+        let tue = s.plan.first { cal.isDate($0.date, inSameDayAs: d(1)) && $0.kind.isRide }!
+        _ = s.addRide(ride(on: tue.date, minutes: 62, km: 28.4, hr: 142))
+        let o = s.homeWeekOverview(weekOf: wed, now: wed)
+        let done = o.days[1].items[0]
+        XCTAssertTrue(done.subtitle.hasPrefix("Recorded \(Fmt.duration(minutes: 62)) · 28.4 km · 142 bpm"), done.subtitle)
+        XCTAssertTrue(done.subtitle.hasSuffix("planned \(Fmt.duration(minutes: tue.minutes))"), done.subtitle)
+        let open = o.days[2].items[0]
+        XCTAssertTrue(open.subtitle.hasPrefix("Planned "), open.subtitle)
+        XCTAssertEqual(open.record, .none)
+    }
+
+    /// (2) past days never use today's "Your week"; history comes from the stored plan and records.
+    func testPastDaysNeverUseTheCurrentWeekSetup() {
+        let s = store(); hybrid(s)
+        _ = s.regenerate(weekOf: monday, replaceEdited: true)
+        let nextWed = cal.date(byAdding: .day, value: 7, to: wed)!
+        // last week's Friday (a rest day) seen from next week, after the setup changed to train on Fridays
+        s.availability = WeeklyAvailability(days: [day(.strength, 30), day(.cycling, 60), day(.strength, 30), day(.cycling, 60), day(.cycling, 45), day(.cycling, 60), day(nil)])
+        let fri = s.homeDayDetail(d(4), now: nextWed)
+        XCTAssertEqual(fri.kind, .rest)
+        XCTAssertNil(fri.availabilityLine, "no current setup shown for a past day")
+        XCTAssertEqual(fri.explanation, "No session was planned for this day.")
+        // the past week's sessions are the stored ones, unchanged by the new setup
+        let past = s.homeWeekOverview(weekOf: wed, now: nextWed)
+        XCTAssertEqual(past.days[4].items.count, 0, "Friday was not planned then and is not shown as planned now")
+        XCTAssertEqual(past.planned, 5); XCTAssertFalse(past.isCurrentWeek)
+        // today and later still describe the current setup
+        XCTAssertEqual(s.homeDayDetail(cal.date(byAdding: .day, value: 2, to: nextWed)!, now: nextWed).availabilityLine, "Your week: ride · 45 min")
+    }
+
+    /// (3) the strength summary shows the stored superset letters with each exercise's own set count — never re-paired.
+    func testStrengthSummaryShowsStoredUnequalSupersetsAsLogged() {
+        let s = store(); hybrid(s)
+        let cat = s.allExercises
+        let sq = cat.first { ExerciseLibrary.meta($0).slot == .squat }!, pr = cat.first { ExerciseLibrary.meta($0).slot == .horizontalPush }!
+        let row = cat.first { ExerciseLibrary.meta($0).slot == .horizontalPull }!
+        func sets(_ n: Int, _ reps: Int, _ kg: Double) -> [SetEntry] { (0..<n).map { _ in var x = SetEntry(reps: reps, done: true); x.weightKg = kg; return x } }
+        var a = ExerciseEntry(exercise: sq, sets: sets(3, 6, 80), superset: "A")
+        let b = ExerciseEntry(exercise: pr, sets: sets(2, 8, 50), superset: "A")
+        let c = ExerciseEntry(exercise: row, sets: sets(2, 8, 40))           // stored without a group: must stay ungrouped
+        a.sets[2].done = false                                                 // only 2 of 3 squat sets logged
+        _ = s.addStrength(StrengthSession(date: wed, minutes: 28, focus: .fullBody, rpe: 7, exercises: [a, b, c]))
+        let r = s.homeStrengthSummary(.week, now: wed).recent[0]
+        XCTAssertEqual(r.supersets, 1)
+        XCTAssertEqual(r.exercises, ["A · \(sq.name) 2×6 @ 80 kg", "A · \(pr.name) 2×8 @ 50 kg", "\(row.name) 2×8 @ 40 kg"])
+        XCTAssertTrue(r.line.contains("1 superset"))
+    }
+
+    /// (7) reading every page while a workout is running leaves the active session untouched.
+    func testPagesNeverDisturbAnActiveWorkout() {
+        let s = store(); hybrid(s)
+        _ = s.regenerate(weekOf: monday, replaceEdited: true)
+        var w = s.plan.first { $0.kind == .strength }!; w.date = Date(); s.update(w)
+        XCTAssertTrue(s.startStrengthSession(for: w, template: nil, entries: s.plannedEntries(for: w)))
+        s.updateActiveSession { $0.exercises![0].sets[0].done = true }
+        let active = s.activeSession, plan = s.plan
+        _ = s.homeWeekOverview(); _ = s.homeCyclingSummary(.all); _ = s.homeStrengthSummary(.all)
+        _ = s.homeDayDetail(Date()); _ = s.homeSetupItems(hrConnected: true); _ = s.homeDashboard()
+        XCTAssertEqual(s.activeSession, active); XCTAssertEqual(s.plan, plan)
+        XCTAssertEqual(s.homeDayDetail(Date()).items.first { $0.session?.workout.id == w.id }?.statusText, "In progress")
+    }
 }
