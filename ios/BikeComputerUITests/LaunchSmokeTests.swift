@@ -263,6 +263,13 @@ final class LaunchSmokeTests: XCTestCase {
         let days = app.buttons["planWeekSettings"].firstMatch
         XCTAssertTrue(days.waitForExistence(timeout: 10))
         for _ in 0..<8 where days.frame.maxY > app.windows.firstMatch.frame.maxY - 90 { app.swipeUp(); _ = days.waitUntilSettled(timeout: 2) }
+        // run 173: on a slow runner the row existed but was not yet hittable when tapped (tab change still settling);
+        // wait for it to become hittable, keep a screenshot if it never does, then tap
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: days)
+        if XCTWaiter().wait(for: [hittable], timeout: 10) != .completed {
+            let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-b33-planWeekSettings"; a.lifetime = .keepAlways; add(a)
+            XCTFail("Your week row never became tappable on the Plan tab")
+        }
         days.tap()
         // V1 (runs 149-150): Plan's week settings open the one week editor ("Your week" — the same as onboarding stage 3
         // and Profile › Your week); the old "Training days" editor is gone by design. Same check: it opens and closes.
