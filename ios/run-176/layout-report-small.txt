@@ -1,0 +1,233 @@
+L home planned: nothing wider than the screen
+L home planned: 23 texts, none overlapping
+L home planned: key controls homeCycling 165×160, homeStrength 165×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub planned: no text outside the window
+L hub planned: every on-screen button ≥ 44 pt tall
+L home planned: primary 'Start workout' at 229–279 of 667
+L home planned: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44
+L home multi: nothing wider than the screen
+L home multi: 23 texts, none overlapping
+L home multi: key controls homeCycling 166×173, homeStrength 165×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub multi: no text outside the window
+L hub multi: every on-screen button ≥ 44 pt tall
+L home multi: primary 'View results' at 231–275 of 667
+L home multi: key controls homeWhy 176×44, homeRow-0 85×44, homeRowMore-0 44×44, homeRow-1 68×44, homeRowMore-1 44×44, homeMissedMove 70×44
+L home missed: nothing wider than the screen
+L home missed: 23 texts, none overlapping
+L home missed: key controls homeCycling 165×160, homeStrength 165×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub missed: no text outside the window
+L hub missed: every on-screen button ≥ 44 pt tall
+L home missed: primary 'Start workout' at 229–279 of 667
+L home missed: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44
+L home stop: nothing wider than the screen
+L home stop: 23 texts, none overlapping
+L home stop: key controls homeCycling 165×160, homeStrength 165×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub stop: no text outside the window
+L hub stop: every on-screen button ≥ 44 pt tall
+L home stop: primary 'Review health check' at 261–311 of 667
+L home stop: key controls homePrimary 311×50, homeHoldInfo 146×44
+L home pending: nothing wider than the screen
+L home pending: 23 texts, none overlapping
+L home pending: key controls homeCycling 165×160, homeStrength 165×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub pending: no text outside the window
+L hub pending: every on-screen button ≥ 44 pt tall
+L home pending: primary 'Start workout' at 229–279 of 667
+L home pending: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44
+L home clearance: nothing wider than the screen
+L home clearance: 17 texts, none overlapping
+L home clearance: key controls homeCycling 165×160, homeStrength 165×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub clearance: no text outside the window
+L hub clearance: every on-screen button ≥ 44 pt tall
+L home clearance: health line at 88–176
+L home clearance: key controls homePrimary 311×50, homeWhy 159×44, homeMore 58×44, homeMissedMove 70×44, homeCaution 343×88
+L home ill: nothing wider than the screen
+L home ill: 23 texts, none overlapping
+L home ill: key controls homeCycling 165×160, homeStrength 165×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub ill: no text outside the window
+L hub ill: every on-screen button ≥ 44 pt tall
+L home ill: primary 'I feel well again' at 233–283 of 667
+L home ill: key controls homePrimary 311×50, homeHoldInfo 146×44
+AX3 home planned: nothing wider than the screen
+AX3 home planned: 5 texts, none overlapping
+AX3 home planned: homeCycling outside the checked zone (615–867 of 667)
+AX3 home planned: key controls homeCycling 343×252, homeStrength 343×287, homeWeekPlan 95×44, homeAvatar 44×44
+AX3 hub planned: no text outside the window
+AX3 hub planned: every on-screen button ≥ 44 pt tall
+AX3 home planned: primary 'Start workout' at 392–442 of 667
+AX3 home planned: key controls homePrimary 311×50, homeWhy 202×86, homeMore 127×44, homeMissedMove 121×44
+AX3 home multi: nothing wider than the screen
+AX3 home multi: 5 texts, none overlapping
+AX3 home multi: homeCycling outside the checked zone (615–902 of 667)
+AX3 home multi: key controls homeCycling 343×287, homeStrength 343×287, homeWeekPlan 95×44, homeAvatar 44×44
+AX3 hub multi: no text outside the window
+AX3 hub multi: every on-screen button ≥ 44 pt tall
+AX3 home multi: primary 'View results' at 432–476 of 667
+AX3 home multi: homeWhy outside the checked zone (706–792 of 667)
+AX3 home multi: key controls homeWhy 232×86, homeRow-0 153×44, homeRowMore-0 44×44, homeRow-1 112×44, homeRowMore-1 44×44, homeMissedMove 121×44
+AX3 home missed: nothing wider than the screen
+AX3 home missed: 5 texts, none overlapping
+AX3 home missed: homeCycling outside the checked zone (615–867 of 667)
+AX3 home missed: key controls homeCycling 343×252, homeStrength 343×287, homeWeekPlan 95×44, homeAvatar 44×44
+AX3 hub missed: no text outside the window
+AX3 hub missed: every on-screen button ≥ 44 pt tall
+AX3 home missed: primary 'Start workout' at 392–442 of 667
+AX3 home missed: key controls homePrimary 311×50, homeWhy 202×86, homeMore 127×44, homeMissedMove 121×44
+AX3 home stop: nothing wider than the screen
+AX3 home stop: 5 texts, none overlapping
+AX3 home stop: homeCycling outside the checked zone (615–867 of 667)
+AX3 home stop: key controls homeCycling 343×252, homeStrength 343×252, homeWeekPlan 95×44, homeAvatar 44×44
+AX3 hub stop: no text outside the window
+AX3 hub stop: every on-screen button ≥ 44 pt tall
+AX3 home stop: primary 'Review health check' at 304–400 of 667
+AX3 home stop: key controls homePrimary 311×96, homeHoldInfo 214×86
+AX3 home pending: nothing wider than the screen
+AX3 home pending: 5 texts, none overlapping
+AX3 home pending: homeCycling outside the checked zone (615–867 of 667)
+AX3 home pending: key controls homeCycling 343×252, homeStrength 343×287, homeWeekPlan 95×44, homeAvatar 44×44
+AX3 hub pending: no text outside the window
+AX3 hub pending: every on-screen button ≥ 44 pt tall
+AX3 home pending: primary 'Start workout' at 392–442 of 667
+AX3 home pending: key controls homePrimary 311×50, homeWhy 202×86, homeMore 127×44, homeMissedMove 121×44
+AX3 home clearance: nothing wider than the screen
+AX3 home clearance: 2 texts, none overlapping
+AX3 home clearance: homeCycling outside the checked zone (1004–1257 of 667)
+AX3 home clearance: key controls homeCycling 343×252, homeStrength 343×287, homeWeekPlan 95×44, homeAvatar 44×44
+AX3 hub clearance: no text outside the window
+AX3 hub clearance: every on-screen button ≥ 44 pt tall
+AX3 home clearance: health line at 88–453
+AX3 home clearance: homePrimary outside the checked zone (738–788 of 667)
+AX3 home clearance: key controls homePrimary 311×50, homeWhy 202×86, homeMore 127×44, homeMissedMove 121×44, homeCaution 343×365
+AX3 home ill: nothing wider than the screen
+AX3 home ill: 5 texts, none overlapping
+AX3 home ill: homeCycling outside the checked zone (615–867 of 667)
+AX3 home ill: key controls homeCycling 343×252, homeStrength 343×252, homeWeekPlan 95×44, homeAvatar 44×44
+AX3 hub ill: no text outside the window
+AX3 hub ill: every on-screen button ≥ 44 pt tall
+AX3 home ill: primary 'I feel well again' at 304–354 of 667
+AX3 home ill: key controls homePrimary 311×50, homeHoldInfo 214×86
+L home: key controls 
+L home: no text outside the window
+L home: every on-screen button ≥ 44 pt tall
+L home lower: no text outside the window
+L home lower: every on-screen button ≥ 44 pt tall
+L home lower: key controls 
+L training hub: no text outside the window
+L training hub: every on-screen button ≥ 44 pt tall
+L strength: no text outside the window
+L strength: buttons under 44 pt: moreMenu 36×36, Done 66×35
+L plan: no text outside the window
+L plan: every on-screen button ≥ 44 pt tall
+L progress: no text outside the window
+L progress: every on-screen button ≥ 44 pt tall
+L progress lower: no text outside the window
+L progress lower: every on-screen button ≥ 44 pt tall
+L profile: no text outside the window
+L profile: every on-screen button ≥ 44 pt tall
+L tab bar: Home outside the checked zone (595–659 of 667)
+L tab bar: key controls Home 69×64, Plan 69×64, centreButton 69×64, Progress 69×64, Profile 69×64
+L dock: 348×65 at y 594–659 of 667
+AX3 home: key controls 
+AX3 home: no text outside the window
+AX3 home: every on-screen button ≥ 44 pt tall
+AX3 home lower: no text outside the window
+AX3 home lower: every on-screen button ≥ 44 pt tall
+AX3 home lower: key controls 
+AX3 training hub: no text outside the window
+AX3 training hub: every on-screen button ≥ 44 pt tall
+AX3 strength: no text outside the window
+AX3 strength: buttons under 44 pt: moreMenu 36×36, Done 74×35
+AX3 plan: no text outside the window
+AX3 plan: every on-screen button ≥ 44 pt tall
+AX3 progress: no text outside the window
+AX3 progress: every on-screen button ≥ 44 pt tall
+AX3 progress lower: no text outside the window
+AX3 progress lower: every on-screen button ≥ 44 pt tall
+AX3 profile: no text outside the window
+AX3 profile: buttons under 44 pt: Riding 157×32, Strength 158×32, 4 wk 63×32, 8 wk 63×32, 12 wk 63×32, 16 wk 63×32, 1 yr 63×32
+AX3 tab bar: Home outside the checked zone (595–659 of 667)
+AX3 tab bar: key controls Home 69×64, Plan 69×64, centreButton 69×64, Progress 69×64, Profile 69×64
+AX3 dock: 348×65 at y 594–659 of 667
+L progress glance: nothing wider than the screen
+L progress glance: 17 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 34 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 5 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 37 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 5 texts, none overlapping
+L riding 12 wk: 6 date labels, smallest gap 12 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 5 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 15 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 5 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 39 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 5 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 6 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 40 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 5 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 6 texts, none overlapping
+L: FTP badge not found
+L plan: nothing wider than the screen
+L plan: 33 texts, none overlapping
+L fix plan: nothing wider than the screen
+L fix plan: 1 texts, none overlapping
+L fix plan preview: nothing wider than the screen
+L fix plan preview: 11 texts, none overlapping
+L: Undo toast already expired
+L: Fix plan 'Shorten Fri strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+L plan after fix and undo: nothing wider than the screen
+L plan after fix and undo: 22 texts, none overlapping
+L fix plan after undo: nothing wider than the screen
+L fix plan after undo: 1 texts, none overlapping
+L plan lower: nothing wider than the screen
+L plan lower: 22 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 22 texts, none overlapping
+L: Devices & Connections rows not found
+AX3 progress glance: nothing wider than the screen
+AX3 progress glance: 6 texts, none overlapping
+AX3 riding 4 wk: 4 date labels, smallest gap 23 pt
+AX3 riding 4 wk: nothing wider than the screen
+AX3 riding 4 wk: 8 texts, none overlapping
+AX3 riding 8 wk: 4 date labels, smallest gap 26 pt
+AX3 riding 8 wk: nothing wider than the screen
+AX3 riding 8 wk: 9 texts, none overlapping
+AX3 riding 12 wk: 4 date labels, smallest gap 22 pt
+AX3 riding 12 wk: nothing wider than the screen
+AX3 riding 12 wk: 9 texts, none overlapping
+AX3 riding 16 wk: 4 date labels, smallest gap 26 pt
+AX3 riding 16 wk: nothing wider than the screen
+AX3 riding 16 wk: 9 texts, none overlapping
+AX3 riding 1 yr: 4 date labels, smallest gap 28 pt
+AX3 riding 1 yr: nothing wider than the screen
+AX3 riding 1 yr: 7 texts, none overlapping
+AX3 riding selected: nothing wider than the screen
+AX3 riding selected: 7 texts, none overlapping
+AX3 strength 8 wk: 4 date labels, smallest gap 30 pt
+AX3 strength 8 wk: nothing wider than the screen
+AX3 strength 8 wk: 7 texts, none overlapping
+AX3 strength selected: nothing wider than the screen
+AX3 strength selected: 7 texts, none overlapping
+AX3: FTP badge not found
+AX3 plan: nothing wider than the screen
+AX3 plan: 20 texts, none overlapping
+AX3 fix plan: nothing wider than the screen
+AX3 fix plan: 0 texts, none overlapping
+AX3 fix plan preview: nothing wider than the screen
+AX3 fix plan preview: 3 texts, none overlapping
+AX3: Undo toast already expired
+AX3: Fix plan 'Shorten Fri strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+AX3 plan after fix and undo: nothing wider than the screen
+AX3 plan after fix and undo: 6 texts, none overlapping
+AX3 fix plan after undo: nothing wider than the screen
+AX3 fix plan after undo: 0 texts, none overlapping
+AX3 plan lower: nothing wider than the screen
+AX3 plan lower: 12 texts, none overlapping
+AX3 plan lower 2: nothing wider than the screen
+AX3 plan lower 2: 5 texts, none overlapping
+AX3: Devices & Connections rows not found

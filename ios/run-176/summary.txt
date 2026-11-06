@@ -1,0 +1,101 @@
+BikeComputer iOS CI — run 176 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 176 — 2026-11-06 18:37 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 3m56s
+RESULT tests: ok (Executed 586 tests, with 0 failures) · 9m8s
+Total: 9m17s
+
+## smoke
+BikeComputer iOS CI — build 176 — 2026-11-06 18:43 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 12m8s
+RESULT launch smoke (Release): ok (Executed 2 tests, with 0 failures) · 44m41s
+Total: 45m23s
+
+## journeys
+BikeComputer iOS CI — build 176 — 2026-11-06 18:37 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 11m29s
+  journey hybrid: ok · recording 2197 KB · 13m12s
+  journey cycling: ok · recording 1543 KB · 7m56s
+  journey strength: ok · recording 1501 KB · 7m6s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 40m40s
+Total: 41m8s
+
+## layout-small
+BikeComputer iOS CI — build 176 — 2026-11-06 18:47 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m44s
+  layout small (L,AX3): ok · 40m17s
+RESULT layout audit: ok (89 screenshots)
+Total: 51m49s
+
+## layout-standard
+BikeComputer iOS CI — build 176 — 2026-11-06 18:32 UTC
+Stage: layout (layout devices: standard)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m33s
+  layout standard (L,XXXL): ok · 10m57s
+RESULT layout audit: ok (35 screenshots)
+Total: 22m50s
+
+## layout-promax
+BikeComputer iOS CI — build 176 — 2026-11-06 18:56 UTC
+Stage: layout (layout devices: promax)
+macOS 26.6.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: F0C70C77-E423-4478-B648-3D25045B311B
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m30s
+  layout promax (L): ok · 7m24s
+RESULT layout audit: ok (13 screenshots)
+Total: 19m30s
+
+## layout-owner
+BikeComputer iOS CI — build 176 — 2026-11-06 18:32 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m20s
+  layout owner (L,XXXL): FAILED (exit 65) · 52m49s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - L home cyclingonly: no primary action -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - L home cyclingonly: the centre button opens the Training Hub 
+RESULT layout audit: FAILED (87 screenshots)
+Total: 65m1s
+
+## watch
+BikeComputer iOS CI — build 176 — 2026-11-06 18:32 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 10546   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11088   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11609   screenshot ax3 ok large · 9m44s
+Total: 9m49s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit 23db8fa281d767b71632ad8df3450319a062a768  branch ios/v1-ux  job failure
