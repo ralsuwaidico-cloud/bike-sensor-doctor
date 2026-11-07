@@ -221,7 +221,8 @@ struct OnboardingView: View {
         }
     }
     /// The planner on the inputs Approve will save, for this Monday — nothing persisted.
-    private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int, weekOffset: Int = 0) -> [Workout] {
+    private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int) -> [Workout] { dryRun(kinds, ride, lift, weekOffset: 0) }
+    private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int, weekOffset: Int) -> [Workout] {
         var x = store.planInputs
         var draft = a; draft.week = kinds; draft.rideMinutes = ride; draft.liftMinutes = lift
         draft.apply(to: &x)
