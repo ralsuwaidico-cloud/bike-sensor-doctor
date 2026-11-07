@@ -17,7 +17,7 @@ struct RideSettingsSheet: View {
                 Section {
                     Picker("Display", selection: $store.settings.rideDisplay) { ForEach(AppSettings.RideDisplay.allCases, id: \.self) { Text($0.title).tag($0) } }
                         .pickerStyle(.segmented).accessibilityIdentifier("rideDisplayPicker")
-                    Text("Daylight is the high-contrast display for strong sunlight: dark numbers, instructions, targets and controls on a light background. Night is the dark cockpit. Auto follows the app appearance.")
+                    Text("Night is the dark cockpit (default). Daylight is the high-contrast display for strong sunlight: dark numbers, instructions, targets and controls on a light background. Auto follows the app appearance.")
                         .font(.footnote).foregroundStyle(.secondary)
                 } header: { Text("Display") }
                 Section("Coach") {

@@ -649,15 +649,15 @@ struct AppSettings: Codable, Equatable {
     var rideLayout: RideLayout = .coach
     /// Adaptive coach: small bounded changes to future sessions are applied automatically (always listed, undoable).
     var autoAdapt = true
-    /// Checkpoint F: the ride screen's appearance — Auto follows `appearance`; Daylight is the high-contrast outdoor
-    /// display; Night the dark cockpit. Presentation only.
-    enum RideDisplay: String, Codable, CaseIterable { case auto, daylight, night; var title: String { self == .auto ? "Auto" : self == .daylight ? "Daylight" : "Night" } }
-    var rideDisplay: RideDisplay = .auto
+    /// Checkpoint F: the ride screen's appearance — Night (default: the approved dark cockpit), Daylight (the high-contrast
+    /// outdoor display), Auto (follows `appearance`). Presentation only.
+    enum RideDisplay: String, Codable, CaseIterable { case night, daylight, auto; var title: String { self == .auto ? "Auto" : self == .daylight ? "Daylight" : "Night" } }
+    var rideDisplay: RideDisplay = .night
 
     init() {}
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        rideDisplay = (try? c.decodeIfPresent(RideDisplay.self, forKey: .rideDisplay)) ?? .auto
+        rideDisplay = (try? c.decodeIfPresent(RideDisplay.self, forKey: .rideDisplay)) ?? .night
         units = (try? c.decodeIfPresent(Units.self, forKey: .units)) ?? .metric
         phoneOnlyMode = try c.decodeIfPresent(Bool.self, forKey: .phoneOnlyMode) ?? false
         hrPref = (try? c.decodeIfPresent(HRPref.self, forKey: .hrPref)) ?? .strap

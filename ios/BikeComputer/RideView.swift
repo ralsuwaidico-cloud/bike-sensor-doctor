@@ -167,7 +167,7 @@ struct RideTabView: View {
         i.ftpKnown = l.ftpKnown; i.ftp = l.ftp
         i.hr = l.hr.value; i.hrLive = l.hr.usable; i.hrZonesKnown = l.hrKnown
         i.cadence = l.cadence.value; i.cadenceLive = l.cadence.usable; i.cadLo = l.cadLo; i.cadHi = l.cadHi
-        i.speedKmh = l.speedKmh; i.gpsLive = gpsState == .good
+        i.speedKmh = l.speedKmh; i.gpsLive = gpsState == .good; i.gpsLostText = gpsState == .lost ? "GPS lost" : gpsState == .searching ? "waiting for GPS" : "no GPS"
         i.distanceM = recorder.distanceM; i.elapsedS = rideClockS; i.imperial = l.imperial
         i.targetZone = coach.targetZone
         if l.ftpKnown { let b = l.powerBandW; i.powerBand = (lo: b.0, hi: b.1) }

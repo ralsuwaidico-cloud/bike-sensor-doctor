@@ -54,7 +54,7 @@ final class RideRegressionTests: XCTestCase {
             let s = try JSONDecoder().decode(AppSettings.self, from: json)
             XCTAssertEqual(s.units, .imperial, old); XCTAssertTrue(s.phoneOnlyMode); XCTAssertFalse(s.keepScreenOn); XCTAssertFalse(s.autoConnectBoard); XCTAssertFalse(s.coachEnabled)
             XCTAssertEqual(s.rideLayout.rawValue, old, "the old value is kept as data, not rewritten")
-            XCTAssertEqual(s.rideDisplay, .auto, "the new display setting defaults to Auto on old files")
+            XCTAssertEqual(s.rideDisplay, .night, "the new display setting defaults to Night (the approved cockpit) on old files")
             let again = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(s))
             XCTAssertEqual(again, s, "round trip keeps every field")
         }

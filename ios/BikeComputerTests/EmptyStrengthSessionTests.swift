@@ -99,12 +99,13 @@ final class EmptyStrengthSessionTests: XCTestCase {
     func testProposalWarningsAreSortedByDateAndOnlyForEmptySessions() {
         var prefs = StrengthPrefs(); prefs.avoid = catalogue.map { AvoidEntry(exerciseId: $0.id, reason: .discomfort, at: now) }
         let c = ctx(equipment: EquipmentProfile(owned: ["barbell", "bench", "dumbbell", "pull-up bar"], confirmed: true), prefs: prefs)
+        let today = session      // `session` builds a fresh Workout (new id) each time: keep one instance
         let later = Workout(date: now.addingTimeInterval(86400 * 3), kind: .strength, minutes: 45, strengthFocus: .upper)
         let ride = Workout(date: now.addingTimeInterval(86400), kind: .endurance, minutes: 60)
-        let w = EmptyStrengthCheck.warnings(for: [later, ride, session], ctx: c)
-        XCTAssertEqual(w.map { $0.workout.id }, [session.id, later.id])
+        let w = EmptyStrengthCheck.warnings(for: [later, ride, today], ctx: c)
+        XCTAssertEqual(w.map { $0.workout.id }, [today.id, later.id])
         XCTAssertTrue(w.allSatisfy { $0.finding.eligible == 0 })
         // the same proposal with the Avoided list cleared has nothing to warn about
-        XCTAssertTrue(EmptyStrengthCheck.warnings(for: [later, ride, session], ctx: ctx(equipment: EquipmentProfile(owned: ["barbell", "bench", "dumbbell", "pull-up bar"], confirmed: true))).isEmpty)
+        XCTAssertTrue(EmptyStrengthCheck.warnings(for: [later, ride, today], ctx: ctx(equipment: EquipmentProfile(owned: ["barbell", "bench", "dumbbell", "pull-up bar"], confirmed: true))).isEmpty)
     }
 }

@@ -217,12 +217,18 @@ struct PlanChangeSheet: View {
     /// Called after a successful Apply.
     var onApplied: () -> Void = {}
     @State private var stale = false
+    @State private var emptyStrength: [String] = []
+    private func recalc(_ p: PlanChangeProposal) {
+        emptyStrength = EmptyStrengthCheck.warnings(for: p.after, ctx: store.plannerContext()).map { "\($0.workout.date.dayAndDate): \($0.finding.text)" }
+    }
     var body: some View {
         NavigationStack {
             Group {
                 if let p = store.pendingPlanChanges[proposalId] {
-                    // APP-035: recalculated on the exact sessions Apply would save, every time the sheet renders
-                    PlanChangeContent(p: p, stale: stale, emptyStrength: EmptyStrengthCheck.warnings(for: p.after, ctx: store.plannerContext()).map { "\($0.workout.date.dayAndDate): \($0.finding.text)" })
+                    // APP-035: recalculated on the exact sessions Apply would save (on open and whenever the proposal changes)
+                    PlanChangeContent(p: p, stale: stale, emptyStrength: emptyStrength)
+                        .onAppear { recalc(p) }
+                        .onChange(of: p.after) { _, _ in recalc(p) }
                 } else {
                     VStack(spacing: DS.m) {
                         Text("This change is no longer available. Nothing was saved.").font(.body).multilineTextAlignment(.center)

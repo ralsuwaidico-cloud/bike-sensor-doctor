@@ -33,11 +33,13 @@ final class RideViewsSmokeTests: XCTestCase {
         XCTAssertTrue(strip.waitForExistence(timeout: 10), "current ride step shown")
         XCTAssertTrue(strip.label.contains("RPE"), "step target names the effort: \(strip.label)")
         XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel embedded")
-        XCTAssertTrue(app.buttons["rideMiniMap"].firstMatch.exists, "Cockpit carries the mini map")
+        // the mini map is part of the Cockpit when the height allows (iPhone SE gives way to the lead metric and tiles)
+        let miniMapShown = app.buttons["rideMiniMap"].firstMatch.exists
+        print("ride smoke: mini map shown = \(miniMapShown) (window \(Int(app.windows.firstMatch.frame.height)) pt)")
 
         // Cockpit → Map → Performance → Cockpit; the coach panel stays, the app stays alive (RA-15)
         shot("night-cockpit")
-        for (id, check) in [("rideView.map", "rideMapView"), ("rideView.performance", ""), ("rideView.cockpit", "rideMiniMap")] {
+        for (id, check) in [("rideView.map", "rideMapView"), ("rideView.performance", ""), ("rideView.cockpit", miniMapShown ? "rideMiniMap" : "rideStepStrip")] {
             let b = app.buttons[id].firstMatch
             XCTAssertTrue(b.waitForExistence(timeout: 5)); b.tap()
             if !check.isEmpty { XCTAssertTrue(app.descendants(matching: .any)[check].firstMatch.waitForExistence(timeout: 10), "\(id) shows \(check)") }
@@ -45,10 +47,16 @@ final class RideViewsSmokeTests: XCTestCase {
             XCTAssertEqual(app.state, .runningForeground, "app alive after switching to \(id)")
             shot("night-\(id.replacingOccurrences(of: "rideView.", with: ""))")
         }
+        // the controls never leave the screen (RA-08): Start is hittable on every supported size
+        let startBtn = app.buttons["START · PHONE"].firstMatch
+        XCTAssertTrue(startBtn.waitForExistence(timeout: 5) && startBtn.isHittable, "Start stays visible and tappable under the views")
         // the mini map opens the Map view
-        app.buttons["rideMiniMap"].firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["rideMapView"].firstMatch.waitForExistence(timeout: 10), "mini map expands to the Map view")
-        app.buttons["rideView.cockpit"].firstMatch.tap()
+        if miniMapShown {
+            let mm = app.buttons["rideMiniMap"].firstMatch
+            XCTAssertTrue(mm.isHittable, "mini map is not covered by the coach panel"); mm.tap()
+            XCTAssertTrue(app.descendants(matching: .any)["rideMapView"].firstMatch.waitForExistence(timeout: 10), "mini map expands to the Map view")
+            app.buttons["rideView.cockpit"].firstMatch.tap()
+        }
 
         // Why? opens the explanation in place; Ride settings and Details stay reachable
         let why = app.buttons["coachWhy"].firstMatch
@@ -59,7 +67,7 @@ final class RideViewsSmokeTests: XCTestCase {
         let daylight = app.segmentedControls["rideDisplayPicker"].buttons["Daylight"].firstMatch
         XCTAssertTrue(daylight.waitForExistence(timeout: 5), "Display picker offers Daylight"); daylight.tap()
         app.buttons["Done"].firstMatch.tap()
-        for (id, check) in [("rideView.map", "rideMapView"), ("rideView.performance", ""), ("rideView.cockpit", "rideMiniMap")] {
+        for (id, check) in [("rideView.map", "rideMapView"), ("rideView.performance", ""), ("rideView.cockpit", miniMapShown ? "rideMiniMap" : "rideStepStrip")] {
             app.buttons[id].firstMatch.tap()
             if !check.isEmpty { XCTAssertTrue(app.descendants(matching: .any)[check].firstMatch.waitForExistence(timeout: 10), "daylight \(id) shows \(check)") }
             XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "daylight: coach panel kept in \(id)")
@@ -114,7 +122,8 @@ final class RideViewsSmokeTests: XCTestCase {
         app.buttons["Done"].firstMatch.tap()
 
         let start = app.buttons["START · PHONE"].firstMatch
-        XCTAssertTrue(start.waitForExistence(timeout: 10), "phone start (no board in the simulator)"); start.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10), "phone start (no board in the simulator)")
+        XCTAssertTrue(start.isHittable, "Start is on screen and not covered (RA-08)"); start.tap()
         let pause = app.buttons["PAUSE"].firstMatch
         XCTAssertTrue(pause.waitForExistence(timeout: 10), "recording: Pause is offered")
         XCTAssertFalse(app.buttons["rideHistoryButton"].firstMatch.exists, "history is not offered during a ride")

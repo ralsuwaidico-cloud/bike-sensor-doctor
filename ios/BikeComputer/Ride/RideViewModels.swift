@@ -17,6 +17,8 @@ struct RideCockpitModel: Equatable {
         var hr: Int? = nil; var hrLive = false; var hrZonesKnown = false
         var cadence: Int? = nil; var cadenceLive = false; var cadLo = 85; var cadHi = 95
         var speedKmh: Double? = nil; var gpsLive = false
+        /// Wording for the GPS note when no fix is live: "GPS lost" only during a ride that had one; "no GPS" before a ride / when location is off.
+        var gpsLostText = "GPS lost"
         var distanceM = 0; var elapsedS = 0; var imperial = false
         var targetZone = 2; var powerBand: (lo: Int, hi: Int?)? = nil; var hrBand: (lo: Int, hi: Int)? = nil
         var rpe: ClosedRange<Int>? = nil
@@ -47,14 +49,14 @@ struct RideCockpitModel: Equatable {
             zones = true; rail = Self.rail(value: Double(p!), ftpOrMax: Double(i.ftp), kind: .power)
             if h != nil { tiles.append(Tile(key: "hr", label: "HEART RATE", value: "\(h!)", unit: "bpm", note: i.hrSource)) }
             tiles.append(Tile(key: "cad", label: "CADENCE", value: c.map(String.init) ?? "—", unit: "rpm", note: c == nil ? "no cadence" : cadNote))
-            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : "GPS lost"))
+            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : i.gpsLostText))
             if h == nil { tiles.append(Tile(key: "dist", label: "DISTANCE", value: distText, unit: distUnit, note: "GPS")) }
         } else if h != nil, i.hrZonesKnown, let band = i.hrBand {
             lead = Lead(kind: .heartRate, label: "HEART RATE", value: "\(h!)", unit: "bpm", target: "\(band.lo)–\(band.hi) bpm", targetKnown: true)
             zones = true; rail = Self.rail(value: Double(h!), ftpOrMax: Double(band.hi) / Self.hrZoneTop(i.targetZone), kind: .heartRate)
             if p != nil { tiles.append(Tile(key: "power", label: "POWER", value: "\(p!)", unit: "W", note: "no FTP: no watt target")) }
             tiles.append(Tile(key: "cad", label: "CADENCE", value: c.map(String.init) ?? "—", unit: "rpm", note: c == nil ? "no cadence" : cadNote))
-            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : "GPS lost"))
+            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : i.gpsLostText))
             if p == nil { tiles.append(Tile(key: "dist", label: "DISTANCE", value: distText, unit: distUnit, note: "GPS")) }
         } else if p != nil {
             // power meter but no FTP and no usable heart-rate zones: watts are shown, the target is by effort, no zones
@@ -62,18 +64,18 @@ struct RideCockpitModel: Equatable {
             note = "FTP not set: no watt target. Targets are by effort; nothing is estimated."
             if h != nil { tiles.append(Tile(key: "hr", label: "HEART RATE", value: "\(h!)", unit: "bpm", note: "no zones yet")) }
             tiles.append(Tile(key: "cad", label: "CADENCE", value: c.map(String.init) ?? "—", unit: "rpm", note: c == nil ? "no cadence" : cadNote))
-            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : "GPS lost"))
+            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : i.gpsLostText))
         } else if h != nil {
             lead = Lead(kind: .heartRate, label: "HEART RATE", value: "\(h!)", unit: "bpm", target: effort, targetKnown: false)
             note = "Heart-rate zones are not set yet: targets are by effort."
             tiles.append(Tile(key: "cad", label: "CADENCE", value: c.map(String.init) ?? "—", unit: "rpm", note: c == nil ? "no cadence" : cadNote))
-            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : "GPS lost"))
+            tiles.append(Tile(key: "speed", label: "SPEED", value: speedText, unit: speedUnit, note: i.gpsLive ? "GPS" : i.gpsLostText))
             tiles.append(Tile(key: "dist", label: "DISTANCE", value: distText, unit: distUnit, note: "GPS"))
         } else {
             lead = Lead(kind: .speed, label: "SPEED", value: speedText, unit: speedUnit, target: effort, targetKnown: false)
             note = "No heart-rate or power source live. Targets are by effort; nothing is estimated."
             tiles.append(Tile(key: "cad", label: "CADENCE", value: c.map(String.init) ?? "—", unit: "rpm", note: c == nil ? "no cadence" : cadNote))
-            tiles.append(Tile(key: "dist", label: "DISTANCE", value: distText, unit: distUnit, note: i.gpsLive ? "GPS" : "GPS lost"))
+            tiles.append(Tile(key: "dist", label: "DISTANCE", value: distText, unit: distUnit, note: i.gpsLive ? "GPS" : i.gpsLostText))
             tiles.append(Tile(key: "time", label: "TIME", value: Self.clock(i.elapsedS), unit: "", note: "moving"))
         }
         return RideCockpitModel(lead: lead, tiles: Array(tiles.prefix(3)), zonesShown: zones, zoneNote: note, railPosition: rail)

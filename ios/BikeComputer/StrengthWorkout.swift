@@ -19,6 +19,9 @@ struct StrengthWorkoutScreen: View {
     @State private var showAvoided = false
     @State private var equipmentAtOpen: EquipmentProfile? = nil
     @State private var planPreview: PreviewRef? = nil
+    /// APP-035: computed once per open (and after Equipment / Avoided edits), never inside `body` — the planner context
+    /// is expensive and the view re-renders often.
+    @State private var emptyFinding: EmptyStrengthCheck.Finding? = nil
     @State private var showDetails = false
     @State private var detailsFor: DetailTarget = .new
     @State private var whyFor: ExerciseEntry? = nil
@@ -55,7 +58,9 @@ struct StrengthWorkoutScreen: View {
             .sheet(item: $swapFor) { e in if let w = workout { SwapExerciseSheet(workout: w, entry: e) } }
             .fullScreenCover(isPresented: $showSession) { StrengthSessionView() }
             .alert("Remove this session?", isPresented: $confirmRemove) { Button("Remove", role: .destructive) { if let w = workout { store.remove(w) }; dismiss() }; Button("Cancel", role: .cancel) {} } message: { Text("The routine template itself is kept.") }
-            .onAppear { if store.activeSession != nil, store.activeSession?.workoutId == workoutId { showSession = true } }
+            .onAppear { if store.activeSession != nil, store.activeSession?.workoutId == workoutId { showSession = true }; refreshEmptyFinding() }
+            .onChange(of: store.equipment) { _, _ in refreshEmptyFinding() }
+            .onChange(of: store.strengthPrefs) { _, _ in refreshEmptyFinding() }
         }
         .undoSnackbar()
     }
@@ -160,8 +165,12 @@ struct StrengthWorkoutScreen: View {
         .sheet(isPresented: $showAvoided) { NavigationStack { StrengthPrefsPage().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showAvoided = false } } } } }
         .sheet(item: $planPreview) { r in PlanChangeSheet(proposalId: r.id) }
     }
+    private func refreshEmptyFinding() {
+        guard let w = workout, store.profile.trainingMode.includesLifting, w.templateId == nil, (w.plannedEntries ?? []).isEmpty, store.routine(for: w) == nil else { emptyFinding = nil; return }
+        emptyFinding = EmptyStrengthCheck.check(w, ctx: store.plannerContext())
+    }
     @ViewBuilder private func noRoutine(_ w: Workout) -> some View {
-        if let f = EmptyStrengthCheck.check(w, ctx: store.plannerContext()), store.profile.trainingMode.includesLifting { emptyCoachSession(w, f) } else { noRoutinePlain(w) }
+        if let f = emptyFinding { emptyCoachSession(w, f) } else { noRoutinePlain(w) }
     }
     private func noRoutinePlain(_ w: Workout) -> some View {
         Card {

@@ -221,7 +221,7 @@ struct OnboardingView: View {
         }
     }
     /// The planner on the inputs Approve will save, for this Monday — nothing persisted.
-    private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int) -> [Workout] {
+    private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int, weekOffset: Int = 0) -> [Workout] {
         var x = store.planInputs
         var draft = a; draft.week = kinds; draft.rideMinutes = ride; draft.liftMinutes = lift
         draft.apply(to: &x)
@@ -229,7 +229,7 @@ struct OnboardingView: View {
         let cal = Calendar.current
         let d0 = cal.startOfDay(for: Date())
         let wd = (cal.component(.weekday, from: d0) + 5) % 7
-        let monday = cal.date(byAdding: .day, value: -wd, to: d0) ?? d0
+        let monday = cal.date(byAdding: .day, value: -wd + 7 * weekOffset, to: d0) ?? d0
         return PlanEngine.week(starting: monday, profile: x.profile, availability: av)
     }
 
@@ -276,7 +276,8 @@ struct OnboardingView: View {
         let kinds = a.week.flatMap { $0.count == 7 ? $0 : nil } ?? OnboardingWeek.propose(mode: mode, cyclingLevel: a.cyclingLevel ?? .intermediate, strengthLevel: a.strengthLevel, priority: a.priority ?? .balanced)
         let ride = a.rideMinutes ?? OnboardingWeek.defaultRideMinutes, lift = a.liftMinutes ?? OnboardingWeek.defaultLiftMinutes
         let plan = dryRun(kinds, ride, lift)
-        let first = OnboardingApproach.firstWorkout(in: plan, from: Date())
+        // late in the week the remaining days may hold no session of this athlete's sports: the first workout is then next week's
+        let first = OnboardingApproach.firstWorkout(in: plan, from: Date()) ?? OnboardingApproach.firstWorkout(in: dryRun(kinds, ride, lift, weekOffset: 1), from: Date())
         let lines = OnboardingApproach.lines(primary: a.primaryGoal, mode: mode, kinds: kinds, liftMinutes: lift, ftpKnown: store.profile.ftpKnown, ftpWatts: store.profile.ftpValue, equipmentProvisional: store.equipment.isProvisional)
         return VStack(alignment: .leading, spacing: CyTheme.sp4) {
             header("Your training system", "\(a.name.map { "\($0), this" } ?? "This") is week 1. Approve it and it's on Home.")

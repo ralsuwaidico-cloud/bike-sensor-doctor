@@ -47,21 +47,32 @@ struct RideCockpitView: View {
     let paused: Bool
     var onExpandMap: () -> Void
 
+    /// The cockpit fits the height it is given (RA-07/RA-08, run 186 on the iPhone SE): the lead value shrinks first,
+    /// then the mini map gives way — the Map view is one tap away and the controls below never move or hide.
     var body: some View {
-        VStack(spacing: 8) {
-            if !steps.isEmpty { RideStepCard(steps: steps, elapsedS: elapsedS, ftp: stepFTP, hrZones: stepHRZones) }
-            lead
-            tiles
-            miniMap
+        GeometryReader { g in
+            let h = g.size.height
+            let stepH: CGFloat = steps.isEmpty ? 0 : 86
+            let compact = h - stepH < 300
+            let fixed = stepH + (compact ? 96 : 136) + 70 + 24
+            let showMap = h - fixed >= 80
+            VStack(spacing: 8) {
+                if !steps.isEmpty { RideStepCard(steps: steps, elapsedS: elapsedS, ftp: stepFTP, hrZones: stepHRZones) }
+                lead(compact: compact)
+                tiles
+                if showMap { miniMap } else { Spacer(minLength: 0) }
+            }
+            .frame(width: g.size.width, height: h, alignment: .top)
+            .clipped()
         }
     }
-    private var lead: some View {
+    private func lead(compact: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .lastTextBaseline) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(model.lead.label).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(0.8).foregroundStyle(D7.mut)
                     HStack(alignment: .lastTextBaseline, spacing: 6) {
-                        Text(model.lead.value).font(.system(size: 72, weight: .heavy, design: .rounded)).monospacedDigit().foregroundStyle(paused ? D7.mut : D7.fg)
+                        Text(model.lead.value).font(.system(size: compact ? 46 : 72, weight: .heavy, design: .rounded)).monospacedDigit().foregroundStyle(paused ? D7.mut : D7.fg)
                             .lineLimit(1).minimumScaleFactor(0.85)
                         Text(model.lead.unit).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(D7.mut)
                     }
@@ -76,7 +87,7 @@ struct RideCockpitView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(model.lead.label.capitalized) \(model.lead.value) \(model.lead.unit), target \(model.lead.target)")
             if model.zonesShown, let pos = model.railPosition { RideZoneRail(position: pos) }
-            if let n = model.zoneNote { Text(n).font(.system(size: 12)).foregroundStyle(D7.mut).fixedSize(horizontal: false, vertical: true) }
+            if let n = model.zoneNote { Text(n).font(.system(size: 12)).foregroundStyle(D7.mut).lineLimit(compact ? 1 : 3).minimumScaleFactor(0.85).fixedSize(horizontal: false, vertical: !compact) }
         }
     }
     private func noteColor(_ t: RideCockpitModel.Tile) -> Color { t.note.contains("lost") ? D7.amber : D7.mut }
