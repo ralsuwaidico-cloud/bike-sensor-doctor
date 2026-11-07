@@ -61,7 +61,9 @@ struct RootView: View {
             // Checkpoint B (owner 4 Nov): the floating Liquid Dock replaces the fixed bar. It is a bottom safe-area inset,
             // so scrollable content ends above it and scrolls under its translucent capsule; the destinations, the
             // centre button's routing and its labels are unchanged.
-            .safeAreaInset(edge: .bottom, spacing: 0) { dock.padding(.bottom, 8) }
+            // Checkpoint F (owner 7 Nov, RA-01): while a ride is being recorded or paused the Ride screen owns the bottom of
+            // the display — the dock is removed (not just hidden) so the coach card and the controls are never covered.
+            .safeAreaInset(edge: .bottom, spacing: 0) { if !rideOwnsBottom { dock.padding(.bottom, 8) } }
             // Run 157: a page whose content lives in its own NavigationStack (Plan, Progress, Profile, Home) does not take
             // the inset above for its scroll content, so Plan's last row ended under the dock. Scroll-content margins
             // reach every scroll view in the subtree; Ride (no scroll view) is placed by the safe-area inset.
@@ -114,6 +116,8 @@ struct RootView: View {
 
     /// The dock reads today's action (the same `todayAction` the old bar used) and the missed-session flag from Home's
     /// model; it never decides a destination — `centreTapped` does, exactly as before.
+    /// RA-01: the dock leaves while the Ride tab is showing a recorded or paused ride.
+    private var rideOwnsBottom: Bool { tab == 2 && recorder.isActive }
     private var dock: some View {
         let action = store.todayAction(now: max(Date(), day))
         let copy = RideTabBar.centreCopy(recording: recorder.isActive, action: action)

@@ -30,18 +30,18 @@ struct RideStepStrip: View {
             let next: RideStep? = p.index + 1 < steps.count ? steps[p.index + 1] : nil
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(s.name).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(D7.fg).lineLimit(1).minimumScaleFactor(0.6)
+                    Text(s.name).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(D7.fg).lineLimit(1).minimumScaleFactor(0.85)
                     Spacer(minLength: 4)
                     Text(p.left.asDuration).font(.system(size: 24, weight: .bold, design: .monospaced)).foregroundStyle(D7.cyan).lineLimit(1)
                         .accessibilityLabel("\(p.left / 60) minutes \(p.left % 60) seconds left in this step")
                 }
                 Text(s.targetText(ftp: ftp, hrZones: hrZones)).font(.system(size: 13, weight: .semibold, design: .monospaced)).foregroundStyle(D7.fg)
-                    .lineLimit(1).minimumScaleFactor(0.6)
+                    .lineLimit(1).minimumScaleFactor(0.85)
                     .accessibilityIdentifier("rideStepTarget")
                 HStack(spacing: 6) {
                     if let n = next { Text("Next: \(n.name) · \(n.minutes) min").foregroundStyle(D7.mut) } else { Text("Last step").foregroundStyle(D7.mut) }
                     Spacer(minLength: 4)
-                    if hrZones == nil { Text(RideSteps.pairHRHint).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.6) }
+                    if hrZones == nil { Text(RideSteps.pairHRHint).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.85) }
                 }
                 .font(D7.mono)
             }

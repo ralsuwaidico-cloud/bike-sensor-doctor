@@ -17,7 +17,7 @@ enum D7 {
     static func powerZone(_ z: Int) -> Color { (1...7).contains(z) ? powerZoneColors[z - 1] : grey }
     static func hrZone(_ z: Int) -> Color { (1...5).contains(z) ? hrZoneColors[z - 1] : faint }
     static func status(_ s: TargetStatus) -> Color { switch s { case .below: return cyan; case .on: return green; case .above: return amber; case .unknown: return faint } }
-    static let mono = Font.system(size: 10, weight: .regular, design: .monospaced)
+    static let mono = Font.system(size: 11, weight: .regular, design: .monospaced)   /* RA-07: nothing on the ride screen below 11 pt */
 }
 
 // MARK: - Power-Focus geometry (port of DashLayout.kt, pure arithmetic in points)
@@ -237,7 +237,7 @@ struct TargetGauge: View {
                         let bc = status == .unknown ? D7.fg.opacity(0.7) : D7.status(status)
                         ctx.stroke(arc(start + sweep * lo, start + sweep * hi, rb), with: .color(bc), style: StrokeStyle(lineWidth: 3, lineCap: .butt))
                         for f in [lo, hi] { let ang = start + sweep * f; var p = Path(); p.move(to: polar(rb - 4, ang)); p.addLine(to: polar(rb + 4, ang)); ctx.stroke(p, with: .color(bc), lineWidth: 2) }
-                        if showTgtLabel { let m = polar(rb + 11, start + sweep * (lo + hi) / 2); ctx.draw(Text("TGT").font(.system(size: 9, design: .monospaced)).foregroundColor(D7.mut), at: m) }
+                        if showTgtLabel { let m = polar(rb + 11, start + sweep * (lo + hi) / 2); ctx.draw(Text("TGT").font(.system(size: 11, design: .monospaced)).foregroundColor(D7.mut), at: m) }
                     }
                     if value != nil, frac > 0 {
                         let p = polar(r, start + sweep * frac)
@@ -248,18 +248,18 @@ struct TargetGauge: View {
                         let a = start + sweep * tf
                         var p = Path(); p.move(to: polar(r - sw / 2 - 4, a)); p.addLine(to: polar(r + sw / 2 + 4, a))
                         ctx.stroke(p, with: .color(D7.fg), lineWidth: 2.5)
-                        if showTgtLabel { ctx.draw(Text("TGT").font(.system(size: 9, design: .monospaced)).foregroundColor(D7.mut), at: polar(r + sw / 2 + 13, a)) }
+                        if showTgtLabel { ctx.draw(Text("TGT").font(.system(size: 11, design: .monospaced)).foregroundColor(D7.mut), at: polar(r + sw / 2 + 13, a)) }
                     }
                 }
                 VStack(spacing: 0) {
-                    Text((sub ?? " ").count > 8 && !big ? " " : (sub ?? " ")).font(.system(size: big ? 12 : 9, design: .monospaced)).foregroundStyle(color).lineLimit(1)
+                    Text((sub ?? " ").count > 8 && !big ? " " : (sub ?? " ")).font(.system(size: big ? 12 : 11, design: .monospaced)).foregroundStyle(color).lineLimit(1)
                     Text(value.map(String.init) ?? "—").font(.system(size: big ? 58 : 26, weight: .medium, design: .rounded)).monospacedDigit().foregroundStyle(value == nil ? D7.faint : D7.fg).lineLimit(1).minimumScaleFactor(0.5)
-                    Text(unit).font(.system(size: big ? 12 : 9, design: .monospaced)).tracking(1).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.6)
+                    Text(unit).font(.system(size: big ? 12 : 11, design: .monospaced)).tracking(1).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.6)
                 }.padding(.horizontal, big ? 30 : 22)
             }
             .aspectRatio(1, contentMode: .fit)
             StatusPill(status: status, text: statusText, big: big)
-            if let source { Text(source).font(.system(size: 8.5, design: .monospaced)).foregroundStyle(sourceWarning ? D7.amber : D7.mut).lineLimit(1).minimumScaleFactor(0.6).frame(height: 11) }
+            if let source { Text(source).font(.system(size: 11, design: .monospaced)).foregroundStyle(sourceWarning ? D7.amber : D7.mut).lineLimit(1).minimumScaleFactor(0.6).frame(height: 11) }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(unit) \(value.map(String.init) ?? "no data"), \(statusText.lowercased())\(source.map { ", \($0)" } ?? "")")
@@ -271,7 +271,7 @@ struct StatusPill: View {
     var body: some View {
         let c = D7.status(status)
         let glyph = status == .below ? "▲" : status == .on ? "●" : status == .above ? "▼" : "○"
-        Text("\(glyph) \(text)").font(.system(size: big ? 11 : 9, weight: .bold, design: .monospaced)).foregroundStyle(c).lineLimit(1).minimumScaleFactor(0.7)
+        Text("\(glyph) \(text)").font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(c).lineLimit(1).minimumScaleFactor(0.7)
             .padding(.horizontal, big ? 11 : 8).padding(.vertical, big ? 4 : 3)
             .background(c.opacity(0.16), in: Capsule()).overlay(Capsule().stroke(c, lineWidth: 1))
     }
@@ -303,7 +303,7 @@ struct CoachScale: View {
             ForEach(0..<3, id: \.self) { i in
                 let label = ["▼ EASE", "✓ ON TARGET", "▲ FASTER"][i], d = i - 1
                 let on = active && direction == d
-                Text(label).font(.system(size: 8.5, weight: .bold, design: .monospaced)).foregroundStyle(on ? lit : ink.opacity(0.75)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(label).font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(on ? lit : ink.opacity(0.75)).lineLimit(1).minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity).frame(height: 18)
                     .background(on ? ink : ink.opacity(0.12), in: Capsule())
                     .overlay(Capsule().stroke(ink.opacity(on ? 1 : 0.35), lineWidth: 1))
@@ -340,13 +340,13 @@ struct LiveGraphView: View {
                 draw({ ($0.powerW, $0.bands.pwLo, $0.bands.pwHi) }, color: D7.cyan, width: 2)
             }
             if samples.count < 2 { Text("live graph appears once the ride starts").font(D7.mono).foregroundStyle(D7.faint) }
-            VStack { HStack(spacing: 8) { legend("W", D7.cyan); legend("BPM", D7.red); legend("RPM", D7.violet); Spacer(); Text("TARGET BAND").font(.system(size: 8, design: .monospaced)).foregroundStyle(D7.green.opacity(0.7)) }.padding(6); Spacer() }
+            VStack { HStack(spacing: 8) { legend("W", D7.cyan); legend("BPM", D7.red); legend("RPM", D7.violet); Spacer(); Text("TARGET BAND").font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.green.opacity(0.7)) }.padding(6); Spacer() }
         }
         .background(D7.panel, in: RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(D7.line, lineWidth: 1))
         .accessibilityLabel("Live graph of power, heart rate and cadence against the target band")
     }
-    private func legend(_ t: String, _ c: Color) -> some View { HStack(spacing: 3) { Circle().fill(c).frame(width: 6, height: 6); Text(t).font(.system(size: 8, design: .monospaced)).foregroundStyle(D7.mut) } }
+    private func legend(_ t: String, _ c: Color) -> some View { HStack(spacing: 3) { Circle().fill(c).frame(width: 6, height: 6); Text(t).font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.mut) } }
 }
 
 struct ZoneBandView: View {
@@ -356,7 +356,7 @@ struct ZoneBandView: View {
             let top = 6.0, h = size.height - 10, w = size.width, sw = w / Double(labels.count)
             for (i, lab) in labels.enumerated() {
                 ctx.fill(Path(roundedRect: CGRect(x: Double(i) * sw, y: top, width: sw - 2, height: h), cornerRadius: 3), with: .color(colors[i].opacity(0.25 + 0.1 * Double(i))))
-                ctx.draw(Text(lab).font(.system(size: 9, design: .monospaced)).foregroundColor(D7.fg), at: CGPoint(x: Double(i) * sw + sw / 2, y: top + h / 2))
+                ctx.draw(Text(lab).font(.system(size: 11, design: .monospaced)).foregroundColor(D7.fg), at: CGPoint(x: Double(i) * sw + sw / 2, y: top + h / 2))
             }
             if let t = targetFraction { ctx.fill(Path(CGRect(x: t * w - 1, y: top - 3, width: 2, height: h + 6)), with: .color(D7.cyan)) }
             if let f = currentFraction { let mx = min(1, max(0, f)) * w; var p = Path(); p.move(to: CGPoint(x: mx - 5, y: top - 6)); p.addLine(to: CGPoint(x: mx + 5, y: top - 6)); p.addLine(to: CGPoint(x: mx, y: top + 1)); p.closeSubpath(); ctx.fill(p, with: .color(D7.fg)) }
@@ -369,14 +369,14 @@ struct DashStat: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(value).font(.system(size: 20, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.6)
-            Text(label).font(.system(size: 8, design: .monospaced)).tracking(1).foregroundStyle(D7.mut).lineLimit(1)
+            Text(label).font(.system(size: 11, design: .monospaced)).tracking(1).foregroundStyle(D7.mut).lineLimit(1)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 struct DashTag: View {
     let text: String; let color: Color
-    var body: some View { Text(text).font(.system(size: 8, weight: .bold, design: .monospaced)).foregroundStyle(color).padding(.horizontal, 5).padding(.vertical, 2).overlay(RoundedRectangle(cornerRadius: 4).stroke(color, lineWidth: 1)).lineLimit(1) }
+    var body: some View { Text(text).font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(color).padding(.horizontal, 5).padding(.vertical, 2).overlay(RoundedRectangle(cornerRadius: 4).stroke(color, lineWidth: 1)).lineLimit(1) }
 }
 
 struct BigButtonStyle: ButtonStyle {

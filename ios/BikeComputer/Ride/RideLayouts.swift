@@ -189,7 +189,7 @@ struct AnalyticsNumber: View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 4) { Circle().fill(color).frame(width: 6, height: 6); Text(label).font(.system(size: 8, design: .monospaced)).tracking(1).foregroundStyle(D7.mut).lineLimit(1) }
             Text(metric.value.map(String.init) ?? "—").font(.system(size: 24, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(metric.value == nil ? D7.faint : D7.fg).lineLimit(1).minimumScaleFactor(0.6)
-            Text(metric.sourceOrMissing).font(.system(size: 8, design: .monospaced)).foregroundStyle(metric.warning || !metric.usable ? D7.amber : D7.mut).lineLimit(1).minimumScaleFactor(0.6)
+            Text(metric.sourceOrMissing).font(.system(size: 11, design: .monospaced)).foregroundStyle(metric.warning || !metric.usable ? D7.amber : D7.mut).lineLimit(1).minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)

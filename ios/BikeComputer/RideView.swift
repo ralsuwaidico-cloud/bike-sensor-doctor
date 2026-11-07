@@ -104,29 +104,29 @@ struct RideTabView: View {
         VStack(spacing: 4) {
             HStack(spacing: 6) {
                 Circle().fill(linkColor).frame(width: 8, height: 8)
-                Text(linkText).font(D7.mono).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.7)
+                Text(linkText).font(D7.mono).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.85)
                 Spacer()
                 Text("T \(recorder.isActive || recorder.state == .ended ? recorder.elapsedS.asDuration : "0:00")").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(recorder.state == .running ? D7.fg : D7.mut)
             }
             HStack(spacing: 8) {
                 layoutMenu
-                if recorder.isActive { Text(coach.phaseLabel).font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(coach.phase == .MAIN ? D7.green : D7.violet) }
+                if recorder.isActive { Text(coach.phaseLabel).font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(coach.phase == .MAIN ? D7.green : D7.violet) }
                 Spacer()
                 Button { showSettings = true } label: { Image(systemName: "gearshape").font(.system(size: 15, weight: .semibold)).foregroundStyle(D7.cyan) }
                     .buttonStyle(.minTap)
                     .accessibilityLabel(RideLabels.settings).accessibilityIdentifier("rideSettings")
-                Button { showDetails = true } label: { Text(RideLabels.details).font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(D7.cyan) }
+                Button { showDetails = true } label: { Text(RideLabels.details).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(D7.cyan) }
                     .buttonStyle(.minTap)
                     .accessibilityLabel("Ride details: map, sensors, tiles").accessibilityIdentifier("rideDetails")
             }
             HStack(spacing: 4) {
-                Text(workoutName).font(.system(size: 9, design: .monospaced)).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.7)
+                Text(workoutName).font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.85)
                 Spacer(minLength: 2)
                 if boardLive?.demo == true { DashTag(text: RideLabels.demo, color: D7.amber) }
                 if l.power.unverified { DashTag(text: RideLabels.powerUnverified, color: D7.amber) }
                 if l.power.usable || !l.ftpKnown { DashTag(text: l.ftpKnown ? "FTP \(l.ftp) W" : RideLabels.ftpUnknown, color: D7.mut) }
             }
-            PipelineBanner(monitor: monitor, dark: true)
+            if !recorder.isActive { PipelineBanner(monitor: monitor, dark: true) }     /* RA-05: never on the live ride */
             ZStack(alignment: .leading) { D7.line.frame(height: 3); (coach.cueActive && recorder.state == .running ? D7.cyan : D7.line).frame(height: 3) }.clipShape(Capsule())
         }
     }
@@ -142,7 +142,7 @@ struct RideTabView: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(layout.title.uppercased()).font(.system(size: 13, design: .monospaced)).tracking(2).foregroundStyle(D7.cyan).lineLimit(1).minimumScaleFactor(0.7)
+                Text(layout.title.uppercased()).font(.system(size: 13, design: .monospaced)).tracking(2).foregroundStyle(D7.cyan).lineLimit(1).minimumScaleFactor(0.85)
                 Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(D7.cyan)
             }
         } primaryAction: {
@@ -205,14 +205,18 @@ struct RideTabView: View {
                     case .blockedNoGPSPermission: BigButton(text: "ALLOW LOCATION", color: D7.amber) { location.requestPermission() }
                     case .phone: BigButton(text: "START · PHONE", color: D7.green) { _ = recorder.start() }
                     }
-                } else if recorder.owner == .board {
-                    if recorder.state == .running { BigButton(text: "PAUSE", color: D7.amber) { device.control(.pause) } } else { BigButton(text: "RESUME", color: D7.green) { device.control(.resume) } }
-                    BigButton(text: "LAP", color: D7.violet) { recorder.lap() }
-                    BigButton(text: "END", color: recorder.boardLinkLost ? D7.grey : D7.red) { if !recorder.boardLinkLost { device.control(.stopRequest); confirmEnd = true } }
                 } else {
-                    if recorder.state == .running { BigButton(text: "PAUSE", color: D7.amber) { recorder.pause() } } else { BigButton(text: "RESUME", color: D7.green) { recorder.resume() } }
-                    BigButton(text: "LAP", color: D7.violet) { recorder.lap() }
-                    BigButton(text: "END", color: D7.red) { confirmEnd = true }
+                    // Checkpoint F (owner decision 2, RA-20): Pause → End → Review, from RideControlPlan (unit-tested).
+                    let plan = RideControlPlan.make(recording: recorder.isActive, paused: recorder.state == .paused, boardOwned: recorder.owner == .board, boardLinkLost: recorder.boardLinkLost)
+                    ForEach(Array(plan.buttons.enumerated()), id: \.offset) { _, b in
+                        switch b {
+                        case .lap: BigButton(text: "LAP", color: D7.violet) { recorder.lap() }
+                        case .pause: BigButton(text: "PAUSE", color: D7.amber) { if recorder.owner == .board { device.control(.pause) } else { recorder.pause() } }
+                        case .resume: BigButton(text: "RESUME", color: D7.green) { if recorder.owner == .board { device.control(.resume) } else { recorder.resume() } }
+                        case .end: BigButton(text: "END", color: D7.red) { if recorder.owner == .board { device.control(.stopRequest) }; confirmEnd = true }
+                        case .endDisabled: BigButton(text: "END", color: D7.grey) {}
+                        }
+                    }
                 }
             }
             }

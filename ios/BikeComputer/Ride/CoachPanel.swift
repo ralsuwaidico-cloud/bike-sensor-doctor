@@ -164,12 +164,12 @@ struct CoachPanel: View {
                 CoachBadge(shape: model.shape, badge: ink, glyph: active ? color : (model.tone == .info ? D7.violet : D7.faint))
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
-                        Text(RideLabels.coach).font(.system(size: 8, weight: .bold, design: .monospaced)).tracking(1.5).foregroundStyle(sub)
+                        Text(RideLabels.coach).font(.system(size: 11, weight: .bold, design: .monospaced)).tracking(1.5).foregroundStyle(sub)
                         ForEach(model.tags, id: \.self) { t in DashTag(text: t, color: active ? D7.ink : D7.amber) }
                     }
                     Text(model.headline).font(.system(size: model.headline.count >= 30 ? 15 : 18, weight: .heavy, design: .rounded)).foregroundStyle(ink)
-                        .lineLimit(2).minimumScaleFactor(0.6)
-                    Text(showWhy ? model.why : model.detail).font(.system(size: 11)).foregroundStyle(sub).lineLimit(showWhy ? 4 : 2).minimumScaleFactor(0.6)
+                        .lineLimit(2).minimumScaleFactor(0.85)
+                    Text(showWhy ? model.why : model.detail).font(.system(size: 12)).foregroundStyle(sub).lineLimit(showWhy ? 4 : 2).minimumScaleFactor(0.85)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Button { showWhy.toggle() } label: {
