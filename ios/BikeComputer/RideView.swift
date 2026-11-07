@@ -162,7 +162,9 @@ struct RideTabView: View {
         i.cadence = l.cadence.value; i.cadenceLive = l.cadence.usable; i.cadLo = l.cadLo; i.cadHi = l.cadHi
         i.speedKmh = l.speedKmh; i.gpsLive = gpsState == .good
         i.distanceM = recorder.distanceM; i.elapsedS = rideClockS; i.imperial = l.imperial
-        i.targetZone = coach.targetZone; i.powerBand = l.ftpKnown ? l.powerBandW : nil; i.hrBand = l.hrBandBpm
+        i.targetZone = coach.targetZone
+        if l.ftpKnown { let b = l.powerBandW; i.powerBand = (lo: b.0, hi: b.1) }
+        if let b = l.hrBandBpm { i.hrBand = (lo: b.0, hi: b.1) }
         if let p = RideStepStrip.position(rideSteps, at: rideClockS) { i.rpe = rideSteps[p.index].rpe }
         i.hrSource = l.hr.reading?.sourceLabel ?? "Heart rate"; i.powerSource = l.power.reading?.sourceLabel ?? "Power meter"; i.cadenceSource = l.cadence.reading?.sourceLabel ?? "Cadence"
         return i

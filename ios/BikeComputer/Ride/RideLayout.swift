@@ -23,7 +23,7 @@ enum RideLabels {
     static let provisional = "PROVISIONAL"
     static let coach = "COACH"
     static let details = "DETAILS ›"
-    static let layoutMenu = "Ride layout"
+    static let layoutMenu = "Ride view"
     static let settings = "Ride settings"
     static let demo = "DEMO — NOT SAVED"
     static let unverifiedSuffix = "unverified"
@@ -32,6 +32,6 @@ enum RideLabels {
 
     static var all: [String] {
         [power, heartRate, cadence, powerUnverified, ftpProvisional, ftpUnknown, provisional, coach, details, layoutMenu, settings, demo, unverifiedSuffix, estimatedSuffix]
-            + tileTitles + RideLayout.allCases.flatMap { [$0.title, $0.blurb] } + MetricKind.allCases.map(\.missingText)
+            + tileTitles + RideViewKind.allCases.map(\.title) + MetricKind.allCases.map(\.missingText)
     }
 }

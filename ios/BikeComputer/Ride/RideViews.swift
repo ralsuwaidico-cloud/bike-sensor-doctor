@@ -48,7 +48,7 @@ struct RideCockpitView: View {
     var onExpandMap: () -> Void
 
     var body: some View {
-        VStack(spacing: D7.gap + 2) {
+        VStack(spacing: 8) {
             if !steps.isEmpty { RideStepCard(steps: steps, elapsedS: elapsedS, ftp: stepFTP, hrZones: stepHRZones) }
             lead
             tiles
@@ -79,6 +79,7 @@ struct RideCockpitView: View {
             if let n = model.zoneNote { Text(n).font(.system(size: 12)).foregroundStyle(D7.mut).fixedSize(horizontal: false, vertical: true) }
         }
     }
+    private func noteColor(_ t: RideCockpitModel.Tile) -> Color { t.note.contains("lost") ? D7.amber : D7.mut }
     private var tiles: some View {
         HStack(spacing: 8) {
             ForEach(model.tiles, id: \.key) { t in
@@ -88,7 +89,7 @@ struct RideCockpitView: View {
                         Text(t.value).font(.system(size: 23, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(D7.fg).lineLimit(1).minimumScaleFactor(0.85)
                         if !t.unit.isEmpty { Text(t.unit).font(.system(size: 12, weight: .semibold)).foregroundStyle(D7.mut) }
                     }
-                    Text(t.note).font(.system(size: 11.5)).foregroundStyle(t.note.contains("lost") ? D7.amber : D7.mut).lineLimit(1).minimumScaleFactor(0.85)
+                    Text(t.note).font(.system(size: 11.5)).foregroundStyle(noteColor(t)).lineLimit(1).minimumScaleFactor(0.85)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 7).frame(maxWidth: .infinity, alignment: .leading)
                 .background(D7.panel, in: RoundedRectangle(cornerRadius: 14))
@@ -114,6 +115,16 @@ struct RideCockpitView: View {
 
 /// Compact step card: current step, time left, the step bar, the next step (RA-08).
 struct RideStepCard: View {
+    static func stepColor(_ st: RideStep, index i: Int, current: Int) -> Color {
+        let base = D7.hrZoneColors[min(4, max(0, (st.hrZone ?? 1) - 1))]
+        let o: Double = i < current ? 0.35 : (i == current ? 1 : 0.55)
+        return base.opacity(o)
+    }
+    static func stepWidth(_ st: RideStep, steps: [RideStep], total: CGFloat) -> CGFloat {
+        let minutes = steps.reduce(0) { $0 + $1.minutes }
+        let w = total * CGFloat(st.minutes) / CGFloat(max(1, minutes)) - 2
+        return max(2, w)
+    }
     let steps: [RideStep]; let elapsedS: Int
     /// For the step target line and its accessibility label: watts only with a known FTP (never from an assumed one).
     var ftp: Int? = nil
@@ -121,7 +132,10 @@ struct RideStepCard: View {
     var body: some View {
         if let p = RideStepStrip.position(steps, at: elapsedS) {
             let s = steps[p.index]
-            let next = p.index + 1 < steps.count ? steps[p.index + 1] : nil
+            let next: RideStep? = p.index + 1 < steps.count ? steps[p.index + 1] : nil
+            let target = s.targetText(ftp: ftp, hrZones: hrZones)
+            let nextText: String = next.map { ", next \($0.name)" } ?? ""
+            let a11y = "\(s.name): \(target), \(RideCockpitModel.clock(p.left)) left" + nextText
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(s.name).font(.system(size: 14.5, weight: .bold, design: .rounded)).foregroundStyle(D7.fg).lineLimit(1).minimumScaleFactor(0.85)
@@ -133,20 +147,19 @@ struct RideStepCard: View {
                 GeometryReader { g in
                     HStack(spacing: 2) {
                         ForEach(Array(steps.enumerated()), id: \.offset) { i, st in
-                            Capsule().fill(D7.hrZoneColors[min(4, max(0, (st.hrZone ?? 1) - 1))].opacity(i < p.index ? 0.35 : i == p.index ? 1 : 0.55))
-                                .frame(width: max(2, g.size.width * CGFloat(st.minutes) / CGFloat(max(1, steps.reduce(0) { $0 + $1.minutes })) - 2))
+                            Capsule().fill(Self.stepColor(st, index: i, current: p.index)).frame(width: Self.stepWidth(st, steps: steps, total: g.size.width))
                         }
                     }
                 }.frame(height: 5)
                 HStack(spacing: 6) {
-                    Text(s.targetText(ftp: ftp, hrZones: hrZones)).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(D7.fg).lineLimit(1).minimumScaleFactor(0.85).accessibilityIdentifier("rideStepTarget")
+                    Text(target).font(.system(size: 12.5, weight: .semibold)).foregroundStyle(D7.fg).lineLimit(1).minimumScaleFactor(0.85).accessibilityIdentifier("rideStepTarget")
                     Spacer(minLength: 4)
                     if let n = next { Text("Next: \(n.name) · \(n.minutes) min").font(.system(size: 12.5)).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.85) }
                 }
             }
             .padding(.horizontal, 12).padding(.vertical, 8).background(D7.panel, in: RoundedRectangle(cornerRadius: 16))
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(s.name): \(s.targetText(ftp: ftp, hrZones: hrZones)), \(RideCockpitModel.clock(p.left)) left" + (next.map { ", next \($0.name)" } ?? ""))
+            .accessibilityLabel(a11y)
             .accessibilityIdentifier("rideStepStrip")
         } else {
             Text("Workout complete — ride on or end when ready").font(.system(size: 13, weight: .semibold)).foregroundStyle(D7.mut)
@@ -158,12 +171,13 @@ struct RideStepCard: View {
 /// Z1…Z5 rail with the current position marker; the target zone is the bright segment.
 struct RideZoneRail: View {
     let position: Double
+    private func markerX(_ w: CGFloat) -> CGFloat { max(0, min(w - 4, w * position - 2)) }
     var body: some View {
         VStack(spacing: 2) {
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     HStack(spacing: 2) { ForEach(0..<5, id: \.self) { i in RoundedRectangle(cornerRadius: 3).fill(D7.hrZoneColors[i].opacity(0.55)).frame(maxWidth: .infinity) } }.frame(height: 6).padding(.vertical, 4)
-                    RoundedRectangle(cornerRadius: 2).fill(D7.fg).frame(width: 4, height: 14).offset(x: max(0, min(g.size.width - 4, g.size.width * position - 2)))
+                    RoundedRectangle(cornerRadius: 2).fill(D7.fg).frame(width: 4, height: 14).offset(x: markerX(g.size.width))
                 }
             }.frame(height: 14)
             HStack { ForEach(1...5, id: \.self) { z in Text("Z\(z)").font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.mut); if z < 5 { Spacer() } } }
@@ -186,7 +200,7 @@ struct RideRouteMap: View {
             if coords.count >= 2 { MapPolyline(coordinates: coords).stroke(D7.cyan, lineWidth: 5) }
             if let last = coords.last {
                 Annotation("", coordinate: last) {
-                    Circle().fill(gps == .lost ? Color.clear : D7.cyan).stroke(gps == .lost ? D7.amber : D7.bg, lineWidth: 3).frame(width: 16, height: 16)
+                    Circle().fill(gps == .lost ? Color.clear : D7.cyan).frame(width: 16, height: 16).overlay(Circle().stroke(gps == .lost ? D7.amber : D7.bg, lineWidth: 3))
                 }
             }
             if interactive { UserAnnotation() }
@@ -264,18 +278,21 @@ struct RidePerformanceView: View {
             }
         }
     }
+    private func zoneWidth(_ i: Int, total: Int, width: CGFloat) -> CGFloat { max(2, width * CGFloat(model.zoneSeconds[i]) / CGFloat(total) - 2) }
     private var zones: some View {
         let total = max(1, model.zoneSeconds.reduce(0, +))
         return VStack(alignment: .leading, spacing: 6) {
             HStack { Text("Time in zones").font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(D7.fg); Spacer(); Text(model.zoneBasis ?? "").font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.mut) }
             GeometryReader { g in
-                HStack(spacing: 2) { ForEach(0..<5, id: \.self) { i in RoundedRectangle(cornerRadius: 3).fill(D7.hrZoneColors[i]).frame(width: max(2, g.size.width * CGFloat(model.zoneSeconds[i]) / CGFloat(total) - 2)) } }
+                HStack(spacing: 2) { ForEach(0..<5, id: \.self) { i in RoundedRectangle(cornerRadius: 3).fill(D7.hrZoneColors[i]).frame(width: zoneWidth(i, total: total, width: g.size.width)) } }
             }.frame(height: 10)
             HStack { ForEach(0..<5, id: \.self) { i in Text("Z\(i + 1) \(model.zoneSeconds[i] / 60)m").font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.mut); if i < 4 { Spacer() } } }
         }
         .padding(12).background(D7.panel, in: RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .combine).accessibilityLabel("Time in zones: " + (0..<5).map { "zone \($0 + 1) \(model.zoneSeconds[$0] / 60) minutes" }.joined(separator: ", "))
     }
+    private func rowColor(_ i: Int) -> Color { let z = steps.indices.contains(i) ? (steps[i].hrZone ?? 1) : 1; return D7.hrZoneColors[min(4, max(0, z - 1))] }
+    private func rowValueColor(_ r: RidePerformanceModel.IntervalRow) -> Color { r.inBand == false ? D7.amber : (r.inBand == true ? D7.green : D7.fg) }
     private var intervals: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack { Text("Intervals · target vs actual").font(.system(size: 14, weight: .bold, design: .rounded)).foregroundStyle(D7.fg); Spacer() }
@@ -284,11 +301,11 @@ struct RidePerformanceView: View {
                 VStack(spacing: 2) {
                     ForEach(Array(model.intervals.enumerated()), id: \.offset) { i, r in
                         HStack(spacing: 8) {
-                            Circle().fill(D7.hrZoneColors[min(4, max(0, (steps.indices.contains(i) ? (steps[i].hrZone ?? 1) : 1) - 1))]).frame(width: 8, height: 8)
+                            Circle().fill(rowColor(i)).frame(width: 8, height: 8)
                             Text(r.name).font(.system(size: 13)).foregroundStyle(r.done ? D7.fg : D7.mut).lineLimit(1).minimumScaleFactor(0.85)
                             Spacer(minLength: 6)
                             Text(r.target).font(.system(size: 13, design: .monospaced)).foregroundStyle(D7.mut).lineLimit(1).minimumScaleFactor(0.85)
-                            Text(r.actual).font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(r.inBand == false ? D7.amber : r.inBand == true ? D7.green : D7.fg).frame(minWidth: 64, alignment: .trailing).lineLimit(1).minimumScaleFactor(0.85)
+                            Text(r.actual).font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundStyle(rowValueColor(r)).frame(minWidth: 64, alignment: .trailing).lineLimit(1).minimumScaleFactor(0.85)
                         }
                         .frame(minHeight: 24)
                         .accessibilityElement(children: .combine).accessibilityLabel("\(r.name), target \(r.target), actual \(r.actual)")
