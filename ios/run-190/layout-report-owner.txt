@@ -1,0 +1,243 @@
+L home planned: nothing wider than the screen
+L home planned: 26 texts, none overlapping
+L home planned: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub planned: no text outside the window
+L hub planned: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home planned: primary 'Start workout' at 267–317 of 852
+L home planned: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home planned move: nothing wider than the screen
+L home planned move: 5 texts, none overlapping
+L home ride: nothing wider than the screen
+L home ride: 26 texts, none overlapping
+L home ride: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub ride: no text outside the window
+L hub ride: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home ride: primary 'Start ride' at 267–317 of 852
+L home ride: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home completed: nothing wider than the screen
+L home completed: 26 texts, none overlapping
+L home completed: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub completed: no text outside the window
+L hub completed: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home completed: primary 'View results' at 270–320 of 852
+L home completed: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home rest: nothing wider than the screen
+L home rest: 26 texts, none overlapping
+L home rest: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub rest: no text outside the window
+L hub rest: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home rest: primary 'Move to today' at 306–350 of 852
+L home rest: key controls homeMissedMove 96×44
+L home rest primary sheet: nothing wider than the screen
+L home rest primary sheet: 16 texts, none overlapping
+L home multi: nothing wider than the screen
+L home multi: 26 texts, none overlapping
+L home multi: key controls homeCycling 174×173, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub multi: no text outside the window
+L hub multi: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home multi: primary 'View results' at 258–302 of 852
+L home multi: key controls homeWhy 175×44, homeRow-0 85×44, homeRowMore-0 44×44, homeRow-1 67×44, homeRowMore-1 44×44, homeMissedMove 70×44
+L home multi move: nothing wider than the screen
+L home multi move: 5 texts, none overlapping
+L home missed: nothing wider than the screen
+L home missed: 26 texts, none overlapping
+L home missed: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub missed: no text outside the window
+L hub missed: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home missed: primary 'Start workout' at 267–317 of 852
+L home missed: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home missed move: nothing wider than the screen
+L home missed move: 5 texts, none overlapping
+L home skipped: nothing wider than the screen
+L home skipped: 26 texts, none overlapping
+L home skipped: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub skipped: no text outside the window
+L hub skipped: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home skipped: primary 'Move to another day' at 270–320 of 852
+L home skipped: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home skipped move: nothing wider than the screen
+L home skipped move: 5 texts, none overlapping
+L home pending: nothing wider than the screen
+L home pending: 26 texts, none overlapping
+L home pending: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub pending: no text outside the window
+L hub pending: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home pending: primary 'Start workout' at 267–317 of 852
+L home pending: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home clearance: nothing wider than the screen
+L home clearance: 26 texts, none overlapping
+L home clearance: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub clearance: no text outside the window
+L hub clearance: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home clearance: health line at 127–194
+L home clearance: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×43, homeCaution 361×67
+L home stop: nothing wider than the screen
+L home stop: 28 texts, none overlapping
+L home stop: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub stop: no text outside the window
+L hub stop: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home stop: primary 'Review health check' at 300–350 of 852
+L home stop: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home stop primary sheet: nothing wider than the screen
+L home stop primary sheet: 7 texts, none overlapping
+L home ill: nothing wider than the screen
+L home ill: 28 texts, none overlapping
+L home ill: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub ill: no text outside the window
+L hub ill: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home ill: primary 'I feel well again' at 272–322 of 852
+L home ill: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home first: nothing wider than the screen
+L home first: 21 texts, none overlapping
+L home first: key controls homeStrength 361×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub first: no text outside the window
+L hub first: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home first: primary 'Create my plan' at 297–347 of 852
+L home first: key controls homePrimary 329×50
+L home cyclingonly: nothing wider than the screen
+L home cyclingonly: 24 texts, none overlapping
+L home cyclingonly: key controls homeCycling 361×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub cyclingonly: no text outside the window
+L hub cyclingonly: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home cyclingonly: primary 'Start ride' at 267–317 of 852
+L home cyclingonly: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home strengthonly: nothing wider than the screen
+L home strengthonly: 22 texts, none overlapping
+L home strengthonly: key controls homeStrength 361×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub strengthonly: no text outside the window
+L hub strengthonly: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home strengthonly: primary 'Start workout' at 267–317 of 852
+L home strengthonly: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+XXXL home planned: nothing wider than the screen
+XXXL home planned: 24 texts, none overlapping
+XXXL home planned: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub planned: no text outside the window
+XXXL hub planned: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home planned: primary 'Start workout' at 338–388 of 852
+XXXL home planned: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44
+XXXL home multi: nothing wider than the screen
+XXXL home multi: 24 texts, none overlapping
+XXXL home multi: key controls homeCycling 174×232, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub multi: no text outside the window
+XXXL hub multi: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home multi: primary 'View results' at 361–405 of 852
+XXXL home multi: key controls homeWhy 234×44, homeRow-0 103×44, homeRowMore-0 44×44, homeRow-1 79×44, homeRowMore-1 44×44, homeMissedMove 84×44
+XXXL home missed: nothing wider than the screen
+XXXL home missed: 24 texts, none overlapping
+XXXL home missed: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub missed: no text outside the window
+XXXL hub missed: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home missed: primary 'Start workout' at 338–388 of 852
+XXXL home missed: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44
+XXXL home stop: nothing wider than the screen
+XXXL home stop: 24 texts, none overlapping
+XXXL home stop: key controls homeCycling 174×210, homeStrength 174×188, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub stop: no text outside the window
+XXXL hub stop: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home stop: primary 'Review health check' at 342–392 of 852
+XXXL home stop: key controls homePrimary 329×50, homeHoldInfo 193×44
+XXXL home pending: nothing wider than the screen
+XXXL home pending: 24 texts, none overlapping
+XXXL home pending: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub pending: no text outside the window
+XXXL hub pending: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home pending: primary 'Start workout' at 338–388 of 852
+XXXL home pending: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44
+XXXL home clearance: nothing wider than the screen
+XXXL home clearance: 17 texts, none overlapping
+XXXL home clearance: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub clearance: no text outside the window
+XXXL hub clearance: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home clearance: health line at 127–259
+XXXL home clearance: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44, homeCaution 361×132
+XXXL home ill: nothing wider than the screen
+XXXL home ill: 24 texts, none overlapping
+XXXL home ill: key controls homeCycling 174×210, homeStrength 174×188, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub ill: no text outside the window
+XXXL hub ill: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home ill: primary 'I feel well again' at 308–358 of 852
+XXXL home ill: key controls homePrimary 329×50, homeHoldInfo 193×44
+L progress glance: nothing wider than the screen
+L progress glance: 20 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 39 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 17 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 42 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 17 texts, none overlapping
+L riding 12 wk: 6 date labels, smallest gap 15 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 19 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 19 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 18 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 43 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 17 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 19 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 45 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 17 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 18 texts, none overlapping
+L: FTP badge not found
+L plan: nothing wider than the screen
+L plan: 41 texts, none overlapping
+L fix plan: nothing wider than the screen
+L fix plan: 2 texts, none overlapping
+L fix plan preview: nothing wider than the screen
+L fix plan preview: 14 texts, none overlapping
+L: Undo toast already expired
+L: Fix plan 'Shorten Sat strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+L plan after fix and undo: nothing wider than the screen
+L plan after fix and undo: 30 texts, none overlapping
+L fix plan after undo: nothing wider than the screen
+L fix plan after undo: 2 texts, none overlapping
+L plan lower: nothing wider than the screen
+L plan lower: 30 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 30 texts, none overlapping
+L: Devices & Connections rows not found
+XXXL progress glance: nothing wider than the screen
+XXXL progress glance: 17 texts, none overlapping
+XXXL riding 4 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 4 wk: nothing wider than the screen
+XXXL riding 4 wk: 11 texts, none overlapping
+XXXL riding 8 wk: 4 date labels, smallest gap 31 pt
+XXXL riding 8 wk: nothing wider than the screen
+XXXL riding 8 wk: 11 texts, none overlapping
+XXXL riding 12 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 12 wk: nothing wider than the screen
+XXXL riding 12 wk: 11 texts, none overlapping
+XXXL riding 16 wk: 4 date labels, smallest gap 30 pt
+XXXL riding 16 wk: nothing wider than the screen
+XXXL riding 16 wk: 11 texts, none overlapping
+XXXL riding 1 yr: 4 date labels, smallest gap 32 pt
+XXXL riding 1 yr: nothing wider than the screen
+XXXL riding 1 yr: 11 texts, none overlapping
+XXXL riding selected: nothing wider than the screen
+XXXL riding selected: 12 texts, none overlapping
+XXXL strength 8 wk: 4 date labels, smallest gap 34 pt
+XXXL strength 8 wk: nothing wider than the screen
+XXXL strength 8 wk: 11 texts, none overlapping
+XXXL strength selected: nothing wider than the screen
+XXXL strength selected: 10 texts, none overlapping
+XXXL: FTP badge not found
+XXXL plan: nothing wider than the screen
+XXXL plan: 36 texts, none overlapping
+XXXL fix plan: nothing wider than the screen
+XXXL fix plan: 2 texts, none overlapping
+XXXL fix plan preview: nothing wider than the screen
+XXXL fix plan preview: 12 texts, none overlapping
+XXXL: Undo toast already expired
+XXXL: Fix plan 'Shorten Sat strength · full body from 40 min to 30 min (the shortest its exercises allow — still 10 min over)' previewed, cancelled, applied, listed as a plan version, undone
+XXXL plan after fix and undo: nothing wider than the screen
+XXXL plan after fix and undo: 20 texts, none overlapping
+XXXL fix plan after undo: nothing wider than the screen
+XXXL fix plan after undo: 2 texts, none overlapping
+XXXL plan lower: nothing wider than the screen
+XXXL plan lower: 20 texts, none overlapping
+XXXL plan lower 2: nothing wider than the screen
+XXXL plan lower 2: 20 texts, none overlapping
+XXXL: Devices & Connections rows not found

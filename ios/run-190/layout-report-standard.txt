@@ -1,0 +1,50 @@
+L home: key controls 
+L home: no text outside the window
+L home: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+L home lower: no text outside the window
+L home lower: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+L home lower: key controls 
+L training hub: no text outside the window
+L training hub: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32, hubClose 67×36
+L strength: no text outside the window
+L strength: buttons under 44 pt: moreMenu 36×36, Done 65×36
+L plan: no text outside the window
+L plan: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32, Log strength 36×36
+L progress: no text outside the window
+L progress: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 68×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+L progress lower: no text outside the window
+L progress lower: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+L profile: no text outside the window
+L profile: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+L profile lower: no text outside the window
+L profile lower: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+L profile type: no text outside the window
+L profile type: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+L profile week: no text outside the window
+L profile week: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+L profile devices: no text outside the window
+L profile devices: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+L tab bar: Home outside the checked zone (768–832 of 874)
+L tab bar: key controls Home 74×64, Plan 75×64, centreButton 74×64, Progress 75×64, Profile 74×64
+L dock: 375×65 at y 767–832 of 874
+XXXL home: key controls 
+XXXL home: no text outside the window
+XXXL home: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+XXXL home lower: no text outside the window
+XXXL home lower: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+XXXL home lower: key controls 
+XXXL training hub: no text outside the window
+XXXL training hub: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×36
+XXXL strength: no text outside the window
+XXXL strength: buttons under 44 pt: moreMenu 36×36, Done 74×36
+XXXL plan: no text outside the window
+XXXL plan: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Log strength 44×36
+XXXL progress: no text outside the window
+XXXL progress: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+XXXL progress lower: no text outside the window
+XXXL progress lower: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 171×32, Strength 171×32, 4 wk 68×32, 8 wk 69×32, 12 wk 68×32, 16 wk 68×32, 1 yr 69×32
+XXXL profile: no text outside the window
+XXXL profile: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15
+XXXL tab bar: Home outside the checked zone (768–832 of 874)
+XXXL tab bar: key controls Home 74×64, Plan 75×64, centreButton 74×64, Progress 75×64, Profile 74×64
+XXXL dock: 375×65 at y 767–832 of 874
