@@ -46,9 +46,11 @@ struct RideTabView: View {
                 .sheet(isPresented: $showSettings) { RideSettingsSheet() }
                 .sheet(item: $recorder.pendingResult) { r in RideResultSheet(ride: r) }
                 .alert(recorder.owner == .board ? "End the ride on the BikeComputer?" : "End this ride?", isPresented: $confirmEnd) {
-                    Button("End ride", role: .destructive) { if recorder.owner == .board { device.control(.stopConfirm) } else { recorder.end() } }
+                    Button("End ride", role: .destructive) {
+                        if recorder.owner == .board { if recorder.boardLinkLost { recorder.endWithoutBoard() } else { device.control(.stopConfirm) } } else { recorder.end() }
+                    }
                     Button("Keep riding", role: .cancel) {}
-                } message: { Text(recorder.owner == .board ? "The board shows its results screen; you save or discard there or here." : "You can save or discard it on the next screen.") }
+                } message: { Text(recorder.owner == .board ? (recorder.boardLinkLost ? "The BikeComputer cannot be reached. The phone's copy of this ride is ended and reviewed now; the board keeps its own record." : "The board shows its results screen; you save or discard there or here.") : "You can save or discard it on the next screen.") }
         }
     }
 
@@ -208,13 +210,13 @@ struct RideTabView: View {
                 } else {
                     // Checkpoint F (owner decision 2, RA-20): Pause → End → Review, from RideControlPlan (unit-tested).
                     let plan = RideControlPlan.make(recording: recorder.isActive, paused: recorder.state == .paused, boardOwned: recorder.owner == .board, boardLinkLost: recorder.boardLinkLost)
+                    if let n = plan.syncNotice { Text(n).font(.system(size: 11)).foregroundStyle(D7.amber).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("rideSyncNotice") }
                     ForEach(Array(plan.buttons.enumerated()), id: \.offset) { _, b in
                         switch b {
                         case .lap: BigButton(text: "LAP", color: D7.violet) { recorder.lap() }
-                        case .pause: BigButton(text: "PAUSE", color: D7.amber) { if recorder.owner == .board { device.control(.pause) } else { recorder.pause() } }
-                        case .resume: BigButton(text: "RESUME", color: D7.green) { if recorder.owner == .board { device.control(.resume) } else { recorder.resume() } }
-                        case .end: BigButton(text: "END", color: D7.red) { if recorder.owner == .board { device.control(.stopRequest) }; confirmEnd = true }
-                        case .endDisabled: BigButton(text: "END", color: D7.grey) {}
+                        case .pause: BigButton(text: "PAUSE", color: D7.amber) { if recorder.owner == .board, !recorder.boardLinkLost { device.control(.pause) } else { recorder.pause() } }
+                        case .resume: BigButton(text: "RESUME", color: D7.green) { if recorder.owner == .board, !recorder.boardLinkLost { device.control(.resume) } else { recorder.resume() } }
+                        case .end: BigButton(text: "END", color: D7.red) { if plan.endRoute == .board { device.control(.stopRequest) }; confirmEnd = true }
                         }
                     }
                 }

@@ -37,6 +37,11 @@ final class RideRecorder: ObservableObject {
     private var startDate = Date()
     private var lastBoardState: BCLink.RideState = .idle
     private var lastBoardRideId = -1
+    /// Last live frame from the board, kept so a board-owned ride can still be ended on the phone when the link is lost.
+    private var lastBoardLive: BCLink.Live?
+    /// Owner 7 Nov: a lost device must never trap the rider. True after the phone ended a board-owned ride by itself;
+    /// the board's own result (same ride id) is then merged or dropped by Store.addRide's board-ride-id rule.
+    @Published private(set) var endedWithoutBoard = false
     weak var device: DeviceLink?
     weak var location: LocationService?
     weak var watch: WatchLink?
@@ -97,6 +102,9 @@ final class RideRecorder: ObservableObject {
         let boardLive = device?.state == .ready && (device?.liveIsFresh ?? false)
         if let live = device?.live, boardLive {
             // the board's ride state is the truth for board-owned rides; it may also start a ride by itself (button on the board)
+            // — except after the phone ended the ride by itself (link lost): the phone copy is being reviewed, the board's
+            // later frames are ignored until the review is finished (its own result is deduplicated by ride id).
+            if endedWithoutBoard, state == .ended { return }
             if owner == .board || (owner == .none && (live.rideState == .running || live.rideState == .paused) && !phoneOnlyMode) {
                 if owner == .none { adopt(live) }
                 boardLinkLost = false
@@ -111,6 +119,10 @@ final class RideRecorder: ObservableObject {
         if owner == .phone, state == .running { phoneSecond() }
     }
 
+    /// Test hooks for the board-owned path (DeviceLink's live frame is private): adopt a live frame as the board's ride,
+    /// then mark the link lost.
+    func adoptBoardForTests(_ l: BCLink.Live) { if owner == .none { adopt(l) }; boardLinkLost = false; mirror(l) }
+    func markBoardLinkLostForTests() { if owner == .board, isActive { boardLinkLost = true } }
     /// Test hook: pretend `seconds` passed with no tick (the app was suspended).
     func simulateSuspension(seconds: Int) { if let t = lastPhoneTick { lastPhoneTick = t.addingTimeInterval(-Double(seconds)) } }
 
@@ -124,6 +136,7 @@ final class RideRecorder: ObservableObject {
     }
 
     private func mirror(_ l: BCLink.Live) {
+        lastBoardLive = l
         elapsedS = l.elapsedS; distanceM = l.distanceM
         let st: State = l.rideState == .running ? .running : l.rideState == .paused ? .paused : l.rideState == .ended ? .ended : .idle
         if st == .running, lastBoardState != .running, lastBoardState != .paused { startDate = Date().addingTimeInterval(-Double(l.elapsedS)); samples = []; hrSum = 0; hrN = 0; hrMax = 0; lastBoardRideId = l.rideId }
@@ -134,7 +147,7 @@ final class RideRecorder: ObservableObject {
             }
             if samples.last?.t != s.t { samples.append(s); if let hr = s.hr { hrSum += hr; hrN += 1; hrMax = max(hrMax, hr) } }
         }
-        if st == .ended, lastBoardState == .running || lastBoardState == .paused { pendingResult = boardRecord(l) }
+        if st == .ended, lastBoardState == .running || lastBoardState == .paused, !endedWithoutBoard { pendingResult = boardRecord(l) }
         if st == .idle, lastBoardState == .ended || lastBoardState == .idle, pendingResult == nil, owner == .board, state != .idle { owner = .none; note = nil }
         state = st; lastBoardState = l.rideState
     }
@@ -167,8 +180,25 @@ final class RideRecorder: ObservableObject {
         askNotifications()
         return true
     }
-    func pause() { if owner == .phone, state == .running { state = .paused } }
-    func resume() { if owner == .phone, state == .paused { state = .running; lastPhoneTick = Date() } }
+    func pause() {
+        if owner == .phone, state == .running { state = .paused }
+        else if owner == .board, boardLinkLost, state == .running { state = .paused }      /* link lost: the phone's mirror pauses; the board is asked when it returns */
+    }
+    func resume() {
+        if owner == .phone, state == .paused { state = .running; lastPhoneTick = Date() }
+        else if owner == .board, boardLinkLost, state == .paused { state = .running }
+    }
+    /// Owner 7 Nov (RA-20, RA-25): End is always available. For a board-owned ride whose link is lost the phone ends its
+    /// own copy from the last mirrored frame and marks it; the board keeps its full record, and when it reports the same
+    /// ride id later Store.addRide refuses the duplicate.
+    func endWithoutBoard() {
+        guard owner == .board, isActive, let l = lastBoardLive else { return }
+        state = .ended
+        var r = boardRecord(l)
+        r.sources.append("ended on the phone while the BikeComputer link was lost")
+        endedWithoutBoard = true
+        pendingResult = r
+    }
     func lap() { lapCount += 1; lapStartS = elapsedS }
     func end() {
         guard owner == .phone, isActive else { return }
@@ -178,8 +208,8 @@ final class RideRecorder: ObservableObject {
         r.samples = samples; r.gapSeconds = gapSeconds
         pendingResult = r
     }
-    func discard() { pendingResult = nil; state = .idle; owner = .none; note = nil; clearBackgroundNotice() }
-    func finish() { pendingResult = nil; state = .idle; owner = .none; note = nil; clearBackgroundNotice() }
+    func discard() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; clearBackgroundNotice() }
+    func finish() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; clearBackgroundNotice() }
 
     private func phoneSecond(now: Date = Date()) {
         // Gap handling: if more than one wall-clock second passed since the last recorded second (timer held back while
