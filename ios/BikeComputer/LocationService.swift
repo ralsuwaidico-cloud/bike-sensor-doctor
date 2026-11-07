@@ -61,5 +61,8 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
         status = String(format: "±%.0f m · %@", l.horizontalAccuracy, l.speed >= 0 ? String(format: "%.1f km/h", l.speed * 3.6) : "speed n/a")
     }
 
+    /// Test hook (Checkpoint F regression, owner item 2): feed a fix as if Core Location delivered it — no network, no manager.
+    func injectForTests(_ l: CLLocation) { last = l }
+
     func locationManager(_ m: CLLocationManager, didFailWithError error: Error) { status = "GPS error: \(error.localizedDescription)" }
 }
