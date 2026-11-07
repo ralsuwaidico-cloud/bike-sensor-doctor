@@ -1,0 +1,14 @@
+BikeComputer iOS CI — build 188 — 2026-11-07 18:15 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 3m48s
+RESULT tests: ok (Executed 613 tests, with 0 failures) · 8m37s
+  targets from the files changed since the last green full run 23db8fa
+Quick UI targets: LayoutAudit/testKeyScreensAtTextSizes JourneyTests/testHybridJourney LaunchSmokeTests/testUpgradeFromBuild36CentreButtonOpensStrengthWorkout AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments LaunchSmokeTests OnboardingScreens/testOnboardingV3FiveStages LayoutAudit/testRC2OwnerScreens RideViewsSmokeTests LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText JourneyTests OnboardingScreens RideLayoutsSmokeTests LayoutAudit/testHomeStates DesignSystemAudit/testGalleryLightAndDark
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m54s
+  layout small (AX3): FAILED (exit 65) · 69m34s — -[BikeComputerUITests.LaunchSmokeTests testUpgradeFromBuild33OpensHybridSheetsAtLargeText] : Failed to not hittable: Button, {{16.0, 403.5}, {343.0, 92.0}}, identifier: 'profileGoal', label: 'Goals, Fitness +1' -[BikeComputerUITests.RideViewsSmokeTests testPauseEndReviewSaveThenHistory] : XCTAssertTrue failed - Start is on screen and not covered (RA-08) -[BikeComputerUITests.RideViewsSmokeTests te
