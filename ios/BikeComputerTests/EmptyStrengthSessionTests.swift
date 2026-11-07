@@ -84,7 +84,7 @@ final class EmptyStrengthSessionTests: XCTestCase {
         let c = ctx(equipment: EquipmentProfile())
         var routine = session; routine.templateId = UUID()
         XCTAssertNil(EmptyStrengthCheck.check(routine, ctx: c), "a routine session is the rider's own, never 'empty'")
-        var ride = session; ride.kind = .ride
+        var ride = session; ride.kind = .endurance
         XCTAssertNil(EmptyStrengthCheck.check(ride, ctx: c))
         var hand = session; hand.plannedEntries = [ExerciseEntry(exercise: catalogue[4], sets: [SetEntry(reps: 10, weightKg: nil, bodyweight: true, rpe: nil, done: false)])]
         XCTAssertNil(EmptyStrengthCheck.check(hand, ctx: c), "hand-set exercises are kept")
@@ -100,7 +100,7 @@ final class EmptyStrengthSessionTests: XCTestCase {
         var prefs = StrengthPrefs(); prefs.avoid = catalogue.map { AvoidEntry(exerciseId: $0.id, reason: .discomfort, at: now) }
         let c = ctx(equipment: EquipmentProfile(owned: ["barbell", "bench", "dumbbell", "pull-up bar"], confirmed: true), prefs: prefs)
         let later = Workout(date: now.addingTimeInterval(86400 * 3), kind: .strength, minutes: 45, strengthFocus: .upper)
-        let ride = Workout(date: now.addingTimeInterval(86400), kind: .ride, minutes: 60)
+        let ride = Workout(date: now.addingTimeInterval(86400), kind: .endurance, minutes: 60)
         let w = EmptyStrengthCheck.warnings(for: [later, ride, session], ctx: c)
         XCTAssertEqual(w.map { $0.workout.id }, [session.id, later.id])
         XCTAssertTrue(w.allSatisfy { $0.finding.eligible == 0 })
