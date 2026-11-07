@@ -1,0 +1,18 @@
+BikeComputer iOS CI — run 186 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 186 — 2026-11-07 15:19 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 5m46s
+RESULT tests: FAILED (exit 65) · 13m1s — 	EmptyStrengthSessionTests.testProposalWarningsAreSortedByDateAndOnlyForEmptySessions()  ** TEST EXECUTE FAILED ** 
+  targets from the files changed since the last green full run 23db8fa
+Quick UI targets: LayoutAudit/testKeyScreensAtTextSizes JourneyTests/testHybridJourney LaunchSmokeTests/testUpgradeFromBuild36CentreButtonOpensStrengthWorkout AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments LaunchSmokeTests OnboardingScreens/testOnboardingV3FiveStages LayoutAudit/testRC2OwnerScreens RideViewsSmokeTests LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText JourneyTests OnboardingScreens RideLayoutsSmokeTests LayoutAudit/testHomeStates DesignSystemAudit/testGalleryLightAndDark
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m14s
+  layout small (AX3): FAILED (exit 65) · 72m2s — -[BikeComputerUITests.JourneyTests testStrengthJourney] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"onbFirst" IN identifiers'`, given input App element pid: 12301 -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: first workout card -[BikeComputerUITests
+commit bf45b230bb9909406f7ef7835f95830efd7dae62  branch ios/checkpoint-f-ride  job failure
