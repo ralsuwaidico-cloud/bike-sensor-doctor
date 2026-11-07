@@ -1,13 +1,13 @@
 import XCTest
 
-/// Ride layouts smoke test: a phone updated from build 40 with a RIDE scheduled today opens the Ride screen from the
-/// centre button and switches through all five layouts with the quick switch; every layout shows the coach panel and
-/// the app stays in the foreground. The seed follows LaunchSmokeTests.build40Store (copied here, not shared).
-final class RideLayoutsSmokeTests: XCTestCase {
+/// Ride views smoke test (Checkpoint F): a phone updated from build 40 with a RIDE scheduled today opens the Ride screen
+/// from the centre button and switches through the three adaptive views (Cockpit → Map → Performance → Cockpit); every
+/// view keeps the coach panel and the app stays in the foreground (RA-15). The seed follows LaunchSmokeTests.build40Store.
+final class RideViewsSmokeTests: XCTestCase {
 
     override func setUpWithError() throws { continueAfterFailure = false }
 
-    func testSwitchThroughAllRideLayouts() {
+    func testSwitchThroughTheThreeRideViews() {
         let app = XCUIApplication()
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.rideDayStore()
         app.launch()
@@ -20,33 +20,34 @@ final class RideLayoutsSmokeTests: XCTestCase {
         _ = app.openFromHub()
         for name in ["Done", "Cancel"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
 
-        let menu = app.buttons["rideLayoutMenu"].firstMatch
-        XCTAssertTrue(menu.waitForExistence(timeout: 15), "ride layout quick switch on the live screen")
+        let cockpit = app.buttons["rideView.cockpit"].firstMatch
+        XCTAssertTrue(cockpit.waitForExistence(timeout: 15), "view switcher on the live screen")
         // rc3: today's planned ride shows its current step with a target (entered FTP 210 W → watts allowed)
         let strip = app.descendants(matching: .any)["rideStepStrip"].firstMatch
         XCTAssertTrue(strip.waitForExistence(timeout: 10), "current ride step shown")
         XCTAssertTrue(strip.label.contains("RPE"), "step target names the effort: \(strip.label)")
-        XCTAssertTrue(app.otherElements["rideLayout.coach"].firstMatch.waitForExistence(timeout: 10), "default layout is Ride Coach")
         XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel embedded")
+        XCTAssertTrue(app.buttons["rideMiniMap"].firstMatch.exists, "Cockpit carries the mini map")
 
-        // one tap on the layout name = next layout (coach → gauges → classic → rings → analytics → coach)
-        let order: [(String, String)] = [("gauges", "Large gauges"), ("classic", "Classic"), ("rings", "Rings"), ("analytics", "Analytics"), ("coach", "Ride Coach")]
-        for (raw, title) in order {
-            XCTAssertTrue(menu.waitForExistence(timeout: 5))
-            menu.tap()
-            XCTAssertTrue(app.otherElements["rideLayout.\(raw)"].firstMatch.waitForExistence(timeout: 10), "\(title) layout shown")
-            XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel embedded in \(title)")
-            XCTAssertEqual(app.state, .runningForeground, "app alive after switching to \(title)")
+        // Cockpit → Map → Performance → Cockpit; the coach panel stays, the app stays alive (RA-15)
+        for (id, check) in [("rideView.map", "rideMapView"), ("rideView.performance", ""), ("rideView.cockpit", "rideMiniMap")] {
+            let b = app.buttons[id].firstMatch
+            XCTAssertTrue(b.waitForExistence(timeout: 5)); b.tap()
+            if !check.isEmpty { XCTAssertTrue(app.descendants(matching: .any)[check].firstMatch.waitForExistence(timeout: 10), "\(id) shows \(check)") }
+            XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel kept in \(id)")
+            XCTAssertEqual(app.state, .runningForeground, "app alive after switching to \(id)")
         }
+        // the mini map opens the Map view
+        app.buttons["rideMiniMap"].firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["rideMapView"].firstMatch.waitForExistence(timeout: 10), "mini map expands to the Map view")
+        app.buttons["rideView.cockpit"].firstMatch.tap()
 
         // Why? opens the explanation in place; Ride settings and Details stay reachable
         let why = app.buttons["coachWhy"].firstMatch
         if why.exists && why.isEnabled { why.tap(); sleep(1); why.tap() }
         app.buttons["rideSettings"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["rideLayoutOption.rings"].firstMatch.waitForExistence(timeout: 10), "Ride settings lists the layouts")
-        app.buttons["rideLayoutOption.rings"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Ride views"].firstMatch.waitForExistence(timeout: 10) || app.buttons["Done"].firstMatch.waitForExistence(timeout: 10), "Ride settings opens")
         app.buttons["Done"].firstMatch.tap()
-        XCTAssertTrue(app.otherElements["rideLayout.rings"].firstMatch.waitForExistence(timeout: 10), "choice from Ride settings applied")
         app.buttons["rideDetails"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Ride details"].waitForExistence(timeout: 10))
         app.buttons["Done"].firstMatch.tap()

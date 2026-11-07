@@ -58,3 +58,14 @@ has a real size and every fitting computation is bounded (`RideFit`, `PowerFocus
   sensors would help).
 - *Why?* shows the rule with the values the engine used. Rate limit (`CueGate`): a cue stays on screen ≥ 15 s; only a
   safety ease-off, a lost sensor or a phase change cuts in. No notifications or speech are added.
+
+## Checkpoint F (7 Nov 2026): the five manual layouts are retired
+
+Owner decision 3 (7 Nov 2026): the ride screen has three adaptive views — **Cockpit**, **Map**, **Performance**
+(`RideViewKind`, `Ride/RideViews.swift`). The lead metric follows the live sensors (`RideCockpitModel`, RA-14): power
+with a known FTP → power; power without FTP → heart rate leads and watts are shown without a watt target; heart rate
+only → heart rate; nothing → speed with an effort target. A missing meter is never drawn as 0 W; FTP is never estimated.
+
+Migration: `AppSettings.rideLayout` is still decoded from stored settings of builds ≤ 176 and then ignored (the enum
+`RideLayout` is kept for decoding only). No data is rewritten. `RideLayoutSwitch`, `RideLayoutContent` and the five
+layout views were removed; `RideLayoutsSmokeTests` became `RideViewsSmokeTests`.

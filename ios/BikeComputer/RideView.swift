@@ -1,11 +1,12 @@
 import SwiftUI
+import CoreLocation
 import MapKit
 import CoreLocation
 
 /// Ride tab (Cyclift 1.0): one live screen, five selectable layouts (Ride Coach · Large gauges · Classic · Rings ·
 /// Analytics — see ios/RIDE_LAYOUTS.md), each with the same CoachPanel, header and controls, on one screen without
 /// scrolling. Live metrics come ONLY from the SensorHub (contract in Sources/SensorHub.swift); the recorder (BikeComputer
-/// or this phone) is fixed when the ride starts. Switching layout writes AppSettings.rideLayout and nothing else.
+/// or this phone) is fixed when the ride starts. Checkpoint F: three adaptive views (Cockpit / Map / Performance) replace the layouts.
 /// The map, sensors and the tile picker live behind "Details".
 struct RideTabView: View {
     @EnvironmentObject private var store: Store
@@ -20,13 +21,14 @@ struct RideTabView: View {
     @State private var showSettings = false
     @State private var tick = Date()
     @State private var lastTickedSecond = -1
+    /// Checkpoint F: the three adaptive views (Cockpit / Map / Performance) replace the five manual layouts.
+    @State private var view: RideViewKind = .cockpit
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var boardRecording: Bool { recorder.owner == .board && recorder.isActive }
     private var phoneRecording: Bool { recorder.owner == .phone && recorder.isActive }
     /// Board link status (not a metric): demo flag and battery for the header.
     private var boardLive: BCLink.Live? { device.state == .ready && device.liveIsFresh ? device.live : nil }
-    private var layout: RideLayout { store.settings.rideLayout }
 
     var body: some View {
         NavigationStack {
@@ -80,19 +82,29 @@ struct RideTabView: View {
         return CoachPanelModel.make(i)
     }
 
-    // MARK: screen = header · layout content (fills what is left) · coach panel · controls — no scrolling
+    // MARK: screen = header · view switcher · the selected view (fills what is left) · coach panel · controls — no scrolling
     private func screen(_ size: CGSize) -> some View {
         let l = live
         let panelH: CGFloat = size.height < 560 ? 92 : 104
         return VStack(spacing: 8) {
             header(l)
-            if let w = store.today, w.kind.isRide, !w.rideSteps.isEmpty {
-                RideStepStrip(steps: w.rideSteps, elapsedS: recorder.isActive || recorder.state == .ended ? recorder.elapsedS : 0,
-                              ftp: store.profile.targetFTP, hrZones: l.hr.usable ? store.profile.hrZones : nil)
+            RideViewSwitcher(selection: $view).frame(maxWidth: .infinity, alignment: .leading)
+            if let b = gpsState.banner {
+                Text(b).font(.system(size: 12, weight: .semibold)).foregroundStyle(D7.amber).fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10).padding(.vertical, 6).background(D7.amber.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityIdentifier("rideGPSLost")
             }
             GeometryReader { g in
                 if g.size.width >= 200, g.size.height >= 120 {
-                    RideLayoutContent(layout: layout, live: l, size: g.size, coach: coach, recorder: recorder, tiles: store.tiles, profile: store.profile, boardBattery: boardLive?.batteryPct)
+                    switch view {
+                    case .cockpit:
+                        RideCockpitView(model: cockpitModel(l), steps: rideSteps, stepFTP: l.ftpKnown ? l.ftp : nil, stepHRZones: l.hrKnown ? l.hrZoneRanges : nil, elapsedS: rideClockS, coords: routeCoords, gps: gpsState, routeLine: routeLine,
+                                        paused: recorder.state == .paused, onExpandMap: { withAnimation(.easeInOut(duration: 0.15)) { view = .map } })
+                    case .map:
+                        RideMapView(coords: routeCoords, gps: gpsState, tiles: mapTiles(l))
+                    case .performance:
+                        RidePerformanceView(model: performanceModel(l), steps: rideSteps)
+                    }
                 } else { Color.clear }
             }
             CoachPanel(model: panelModel(l), height: panelH)
@@ -111,7 +123,6 @@ struct RideTabView: View {
                 Text("T \(recorder.isActive || recorder.state == .ended ? recorder.elapsedS.asDuration : "0:00")").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(recorder.state == .running ? D7.fg : D7.mut)
             }
             HStack(spacing: 8) {
-                layoutMenu
                 if recorder.isActive { Text(coach.phaseLabel).font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(coach.phase == .MAIN ? D7.green : D7.violet) }
                 Spacer()
                 Button { showSettings = true } label: { Image(systemName: "gearshape").font(.system(size: 15, weight: .semibold)).foregroundStyle(D7.cyan) }
@@ -132,28 +143,44 @@ struct RideTabView: View {
             ZStack(alignment: .leading) { D7.line.frame(height: 3); (coach.cueActive && recorder.state == .running ? D7.cyan : D7.line).frame(height: 3) }.clipShape(Capsule())
         }
     }
-    /// Quick switch, usable during a ride with one tap (next layout) or a long press (choose from the list).
-    /// Only writes AppSettings.rideLayout (RideLayoutSwitch) — recording and sensors carry on.
-    private var layoutMenu: some View {
-        Menu {
-            ForEach(RideLayout.allCases) { l in
-                Button { RideLayoutSwitch.select(l, store: store) } label: {
-                    if l == layout { Label(l.title, systemImage: "checkmark") } else { Label(l.title, systemImage: l.icon) }
-                }
-                .accessibilityIdentifier("rideLayoutOption.\(l.rawValue)")
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Text(layout.title.uppercased()).font(.system(size: 13, design: .monospaced)).tracking(2).foregroundStyle(D7.cyan).lineLimit(1).minimumScaleFactor(0.85)
-                Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(D7.cyan)
-            }
-        } primaryAction: {
-            RideLayoutSwitch.select(layout.next, store: store)
-        }
-        .menuStyle(.button).buttonStyle(.minTap)        // 44 pt hit area (the layout report measured 116 × 15 pt)
-        .accessibilityLabel("\(RideLabels.layoutMenu): \(layout.title)")
-        .accessibilityHint("Tap for the next layout, touch and hold to choose one")
-        .accessibilityIdentifier("rideLayoutMenu")
+    // MARK: Checkpoint F view models (pure, unit-tested in RideViewModelTests)
+    private var rideSteps: [RideStep] { if let w = store.today, w.kind.isRide { return w.rideSteps }; return [] }
+    private var rideClockS: Int { recorder.isActive || recorder.state == .ended ? recorder.elapsedS : 0 }
+    private var routeCoords: [CLLocationCoordinate2D] { recorder.samples.compactMap { s in if let la = s.lat, let lo = s.lon { return CLLocationCoordinate2D(latitude: la, longitude: lo) }; return nil } }
+    private var gpsState: RideGPSState {
+        RideGPSState.make(sharing: location.sharing, lastFixAgeS: location.last.map { Date().timeIntervalSince($0.timestamp) }, authorized: location.authorized)
+    }
+    private var routeLine: String {
+        let km = Double(recorder.distanceM) / 1000
+        return (gpsState == .lost ? "GPS lost · " : "") + (store.settings.units == .imperial ? String(format: "%.1f mi so far", km / 1.609) : String(format: "%.1f km so far", km))
+    }
+    private func cockpitInputs(_ l: RideLive) -> RideCockpitModel.Inputs {
+        var i = RideCockpitModel.Inputs()
+        i.power = l.power.value; i.powerLive = l.power.usable; i.powerUnverified = l.power.unverified
+        i.ftpKnown = l.ftpKnown; i.ftp = l.ftp
+        i.hr = l.hr.value; i.hrLive = l.hr.usable; i.hrZonesKnown = l.hrKnown
+        i.cadence = l.cadence.value; i.cadenceLive = l.cadence.usable; i.cadLo = l.cadLo; i.cadHi = l.cadHi
+        i.speedKmh = l.speedKmh; i.gpsLive = gpsState == .good
+        i.distanceM = recorder.distanceM; i.elapsedS = rideClockS; i.imperial = l.imperial
+        i.targetZone = coach.targetZone; i.powerBand = l.ftpKnown ? l.powerBandW : nil; i.hrBand = l.hrBandBpm
+        if let p = RideStepStrip.position(rideSteps, at: rideClockS) { i.rpe = rideSteps[p.index].rpe }
+        i.hrSource = l.hr.reading?.sourceLabel ?? "Heart rate"; i.powerSource = l.power.reading?.sourceLabel ?? "Power meter"; i.cadenceSource = l.cadence.reading?.sourceLabel ?? "Cadence"
+        return i
+    }
+    private func cockpitModel(_ l: RideLive) -> RideCockpitModel { RideCockpitModel.make(cockpitInputs(l)) }
+    private func mapTiles(_ l: RideLive) -> [RideCockpitModel.Tile] {
+        let m = cockpitModel(l)
+        var t: [RideCockpitModel.Tile] = [RideCockpitModel.Tile(key: "speed", label: "SPEED", value: l.speedKmh.map { String(format: "%.1f", l.imperial ? $0 / 1.609 : $0) } ?? "—", unit: l.imperial ? "mph" : "km/h", note: ""),
+                                          RideCockpitModel.Tile(key: "dist", label: "DISTANCE", value: String(format: "%.1f", l.imperial ? Double(recorder.distanceM) / 1609.34 : Double(recorder.distanceM) / 1000), unit: l.imperial ? "mi" : "km", note: "")]
+        if m.lead.kind != .speed { t.append(RideCockpitModel.Tile(key: "lead", label: m.lead.label, value: m.lead.value, unit: m.lead.unit, note: "")) }
+        else { t.append(RideCockpitModel.Tile(key: "time", label: "TIME", value: RideCockpitModel.clock(rideClockS), unit: "", note: "")) }
+        return t
+    }
+    private func performanceModel(_ l: RideLive) -> RidePerformanceModel {
+        let samples = recorder.samples.map { RidePerformanceModel.Sample(t: $0.t, w: $0.w, cad: $0.cad, hr: $0.hr, speedCms: $0.speedCms) }
+        let steps = rideSteps.map { (name: $0.name, minutes: $0.minutes, hrZone: $0.hrZone, rpe: $0.rpe) }
+        return RidePerformanceModel.make(samples: samples, elapsedS: rideClockS, lapStartS: recorder.lapStartS, ftpKnown: l.ftpKnown, ftp: l.ftp,
+                                         hrZones: l.hrKnown ? l.hrZoneRanges : nil, maxHr: l.maxHr, steps: steps)
     }
     private var workoutName: String {
         let z = coach.targetZone, cad = "\(store.profile.cadenceLow)–\(store.profile.cadenceHigh) RPM"
@@ -255,7 +282,7 @@ struct RideDetailsSheet: View {
             .sheet(isPresented: $showTiles) { TilePicker() }
         }
     }
-    /// Same hub readings and the same tile builder as the Classic layout.
+    /// Same hub readings and the same tile builder as the Details tiles.
     private var metrics: RideLive {
         RideLive(power: hub.reading(.power), hr: hub.reading(.heartRate), cadence: hub.reading(.cadence), speed: hub.reading(.speed),
                  profile: store.profile, imperial: store.settings.units == .imperial, targetZone: 2)

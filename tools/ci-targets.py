@@ -31,7 +31,7 @@ RULES = [
     (r"ios/BikeComputer/DesignSystem/|ios/BikeComputer/(DesignSystem|Theme)\.swift",
      ["DesignSystemAudit/testGalleryLightAndDark"], ["DesignSystemPureTests"], "design system"),
     (r"ios/BikeComputer/(Ride/|RideView|RideDashboard|RideRecorder)",
-     ["RideLayoutsSmokeTests"], ["ModelTests"], "ride"),
+     ["RideViewsSmokeTests"], ["ModelTests", "RideControlPlanTests", "RideViewModelTests", "RideRecorderDisconnectTests"], "ride"),
     (r"ios/BikeComputer/(StrengthWorkout|StrengthNextSet|StrengthLog|StrengthCoachViews)\.swift",
      ["LaunchSmokeTests/testUpgradeFromBuild36CentreButtonOpensStrengthWorkout",
       "AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments", "LayoutAudit/testKeyScreensAtTextSizes"],
@@ -46,7 +46,7 @@ RULES = [
      ["LayoutAudit/testRC2OwnerScreens"], ["ProgressMetricsTests", "Rc3EngineTests"], "progress"),
     (r"ios/BikeComputerUITests/(\w+)\.swift", None, [], "ui test file"),          # the changed test itself
     (r"ios/BikeComputerTests/(\w+)\.swift", [], None, "unit test file"),           # the changed suite itself
-    (r"ios/Shared/", ["RideLayoutsSmokeTests"], ["ALL"], "shared link code"),
+    (r"ios/Shared/", ["RideViewsSmokeTests"], ["ALL"], "shared link code"),
     (r"ios/BikeComputerWatch/", [], ["WatchMessageTests"], "watch app (watch job only)"),
     (r"ios/(project\.yml|ci/|.*\.md)|\.github/|tools/", [], [], "build / docs / tooling"),
 ]

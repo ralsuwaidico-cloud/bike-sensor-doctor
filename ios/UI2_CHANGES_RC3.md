@@ -37,5 +37,5 @@ Equipment presets map onto the one `EquipmentProfile` (Gym = every catalogue ite
 
 ## Tests
 - `OnboardingScreens.testOnboardingR7FiveScreens` now runs in every UI pass (one text size; both sizes in layout runs): step counter 1–5, no Height, Hybrid rows, week counts, Skip only on Connections, Why this plan, Create plan → Home without a health prompt.
-- `RideLayoutsSmokeTests`: step strip present with an RPE target; new `testUnknownFTPRideShowsNoWatts`.
+- `RideViewsSmokeTests` (was RideLayoutsSmokeTests until build 176): step card present with an RPE target; new `testUnknownFTPRideShowsNoWatts`.
 - `RideLayoutTests.testUnverifiedPowerAdviceIsProvisional`: expects the FTP UNKNOWN tag and no quoted assumed watts (was FTP PROVISIONAL).
