@@ -22,6 +22,9 @@ struct AthleteTypeEditor: View {
     @State private var weightText = ""
     @State private var showDOB = false
     @State private var dobDraft: Date? = nil
+    /// APP-038: the name field owns the keyboard; Done / return, choosing a type, or scrolling dismisses it so the
+    /// keyboard never sits over the athlete-type cards or the Continue button.
+    @FocusState private var nameFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -31,6 +34,8 @@ struct AthleteTypeEditor: View {
                     CyCaption(text: "Name")
                     TextField("Your first name", text: Binding(get: { a.name ?? "" }, set: { a.name = $0 }))
                         .textContentType(.givenName).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink)
+                        .focused($nameFocused).submitLabel(.done).onSubmit { nameFocused = false }
+                        .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { nameFocused = false }.accessibilityIdentifier("keyboardDone") } }
                         .padding(.horizontal, 14).frame(minHeight: 52)
                         .background(CyTheme.card, in: RoundedRectangle(cornerRadius: CyTheme.rField, style: .continuous))
                         .accessibilityIdentifier("onbName")
@@ -77,6 +82,7 @@ struct AthleteTypeEditor: View {
         let tint = sport.map { CyTheme.identity($0).tint } ?? CyTheme.insight.tint
         let bg = sport.map { CyTheme.identity($0).bg } ?? CyTheme.insight.bg
         return Button {
+            nameFocused = false
             withAnimation(CyMotion.animation(CyTheme.motionPop, reduce: reduceMotion)) {
                 a.mode = m
                 if m != .hybrid { a.priority = nil }

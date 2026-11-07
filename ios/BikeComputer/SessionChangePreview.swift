@@ -221,7 +221,8 @@ struct PlanChangeSheet: View {
         NavigationStack {
             Group {
                 if let p = store.pendingPlanChanges[proposalId] {
-                    PlanChangeContent(p: p, stale: stale)
+                    // APP-035: recalculated on the exact sessions Apply would save, every time the sheet renders
+                    PlanChangeContent(p: p, stale: stale, emptyStrength: EmptyStrengthCheck.warnings(for: p.after, ctx: store.plannerContext()).map { "\($0.workout.date.dayAndDate): \($0.finding.text)" })
                 } else {
                     VStack(spacing: DS.m) {
                         Text("This change is no longer available. Nothing was saved.").font(.body).multilineTextAlignment(.center)
@@ -250,10 +251,18 @@ struct PlanChangeSheet: View {
 struct PlanChangeContent: View {
     let p: PlanChangeProposal
     var stale = false
+    /// APP-035: strength sessions in `after` that the coach cannot fill, with the reason (empty = none).
+    var emptyStrength: [String] = []
     var body: some View {
         List {
             if stale {
                 Section { Text("Your plan changed while you were looking, so nothing was saved. Close and try again.").font(.footnote).fixedSize(horizontal: false, vertical: true) }
+            }
+            if !emptyStrength.isEmpty {
+                Section {
+                    ForEach(emptyStrength, id: \.self) { Text($0).font(.footnote).fixedSize(horizontal: false, vertical: true) }
+                } header: { Text("Strength sessions without exercises") } footer: { Text("You can still apply; these sessions count as planned strength time. Equipment and Avoided exercises are in Profile.") }
+                .accessibilityIdentifier("planChangeEmptyStrength")
             }
             if !p.changesSessions {
                 Section { Text("No planned sessions change. Apply saves your settings.").font(.body).fixedSize(horizontal: false, vertical: true) }

@@ -37,6 +37,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: CyTheme.maxContentWidth)
                     .frame(maxWidth: .infinity)
                 }
+                .scrollDismissesKeyboard(.interactively)      /* APP-038: dragging the page puts the keyboard away */
                 if step > 0 { bottomBar }
             }
             .background(CyTheme.canvas.ignoresSafeArea())

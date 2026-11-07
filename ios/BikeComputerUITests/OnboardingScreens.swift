@@ -64,6 +64,9 @@ final class OnboardingScreens: XCTestCase {
             XCTAssertFalse(next.isEnabled, "\(tag): still needs a type")
             let hybrid = app.buttons["onbMode-hybrid"].firstMatch
             XCTAssertTrue(hybrid.waitForExistence(timeout: 5)); hybrid.tap(); sleep(1)
+            // APP-038: choosing a type puts the keyboard away, so the cards and Continue are never covered
+            XCTAssertTrue(app.keyboards.firstMatch.waitUntilGone(timeout: 5), "\(tag): APP-038 keyboard dismissed by choosing a type")
+            XCTAssertTrue(next.isHittable, "\(tag): APP-038 Continue is reachable after the keyboard goes")
             XCTAssertTrue(app.staticTexts["STRENGTH EXPERIENCE"].waitForExistence(timeout: 5) || app.staticTexts["Strength experience"].exists, "\(tag): Hybrid shows the strength experience chips")
             XCTAssertTrue(app.otherElements["onbPriority"].exists || app.staticTexts["PRIORITY"].exists || app.staticTexts["Priority"].exists, "\(tag): Hybrid shows the priority segment")
             XCTAssertFalse(app.staticTexts["Height"].exists, "\(tag): height is not asked")

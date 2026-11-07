@@ -15,6 +15,10 @@ struct StrengthWorkoutScreen: View {
     @State private var showSession = false
     @State private var budgetNote: String? = nil
     @State private var quickLog = false
+    @State private var showEquipment = false
+    @State private var showAvoided = false
+    @State private var equipmentAtOpen: EquipmentProfile? = nil
+    @State private var planPreview: PreviewRef? = nil
     @State private var showDetails = false
     @State private var detailsFor: DetailTarget = .new
     @State private var whyFor: ExerciseEntry? = nil
@@ -135,7 +139,31 @@ struct StrengthWorkoutScreen: View {
         }
     }
 
-    private func noRoutine(_ w: Workout) -> some View {
+    /// APP-035: an approved-plan session the coach could not fill says why and links the two editors that change it.
+    private func emptyCoachSession(_ w: Workout, _ f: EmptyStrengthCheck.Finding) -> some View {
+        Card {
+            Eyebrow(t: "No exercise fits this session")
+            Text(f.text).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("emptyStrengthReason")
+            if !w.done {
+                HStack(spacing: 8) {
+                    Button { showEquipment = true } label: { Label("Equipment", systemImage: "dumbbell").frame(maxWidth: .infinity) }.buttonStyle(.bordered).accessibilityIdentifier("emptyStrengthEquipment")
+                    Button { showAvoided = true } label: { Label("Avoided exercises", systemImage: "hand.raised").frame(maxWidth: .infinity) }.buttonStyle(.bordered).accessibilityIdentifier("emptyStrengthAvoided")
+                }
+                Button { chooseRoutine = true } label: { Label(store.templates.isEmpty ? "Create a routine" : "Choose routine", systemImage: "doc.on.doc").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.zone(5)).controlSize(.large)
+                Button { quickLog = true } label: { Text("Quick log without exercises").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
+            }
+        }
+        .sheet(isPresented: $showEquipment, onDismiss: { if let old = equipmentAtOpen { equipmentAtOpen = nil; planPreview = store.proposeEquipmentEdit(from: old) } }) {
+            NavigationStack { EquipmentPage().onAppear { if equipmentAtOpen == nil { equipmentAtOpen = store.equipment } }.toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showEquipment = false } } } }
+        }
+        .sheet(isPresented: $showAvoided) { NavigationStack { StrengthPrefsPage().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showAvoided = false } } } } }
+        .sheet(item: $planPreview) { r in PlanChangeSheet(proposalId: r.id) }
+    }
+    @ViewBuilder private func noRoutine(_ w: Workout) -> some View {
+        if let f = EmptyStrengthCheck.check(w, ctx: store.plannerContext()), store.profile.trainingMode.includesLifting { emptyCoachSession(w, f) } else { noRoutinePlain(w) }
+    }
+    private func noRoutinePlain(_ w: Workout) -> some View {
         Card {
             Eyebrow(t: "No routine assigned")
             Text(store.templates.isEmpty ? "Create a routine with your exercises and equipment, then assign it here. Until then this is a \(w.strengthFocus?.title.lowercased() ?? "strength") session of \(Fmt.duration(minutes: w.minutes)) without exercise detail." : "Choose one of your saved routines for this session, or set a default for every \(WeeklyAvailability.longDayNames[Store.weekdayIndex(w.date)]).").font(.footnote).foregroundStyle(.secondary)
