@@ -14,7 +14,8 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     private let mgr = CLLocationManager()
     private weak var device: DeviceLink?
 
-    init(device: DeviceLink) {
+    /// `device` is nil in unit tests (no Bluetooth central is created there).
+    init(device: DeviceLink? = nil) {
         self.device = device
         super.init()
         mgr.delegate = self
