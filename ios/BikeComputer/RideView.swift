@@ -37,6 +37,10 @@ struct RideTabView: View {
                 // first layout pass (and the tab hidden behind Home) can report 0 × 0: draw nothing until there is a real size
                 if g.size.width >= 200, g.size.height >= 300 { screen(g.size) } else { Color.clear }
             }
+                // Run 188 (iPhone SE): the Liquid Dock is a safe-area inset of RootView that does not reach inside this
+                // NavigationStack, so the idle ride screen reserves the dock's height itself (RA-08: Start is never covered).
+                // While a ride is recording or paused the dock is removed (RA-01) and the whole height is ours.
+                .padding(.bottom, recorder.isActive ? 0 : 84)
                 .background(D7.bg.ignoresSafeArea())
                 .toolbar(.hidden, for: .navigationBar)
                 .onReceive(timer) { now in tick = now; coachTick() }
