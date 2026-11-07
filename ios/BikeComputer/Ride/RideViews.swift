@@ -108,19 +108,25 @@ struct RideCockpitView: View {
             }
         }
     }
+    /// Run 190: a Button wrapping a MapKit map did not receive taps on the standard simulator (the map swallowed them
+    /// even with hit-testing off). The map is now purely decorative and a transparent control sits on top of it.
     private var miniMap: some View {
-        Button(action: onExpandMap) {
-            ZStack(alignment: .topLeading) {
-                RideRouteMap(coords: coords, interactive: false, gps: gps).allowsHitTesting(false)
-                Text(routeLine).font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(D7.fg)
-                    .padding(.horizontal, 8).padding(.vertical, 3).background(D7.panel.opacity(0.85), in: RoundedRectangle(cornerRadius: 8)).padding(8)
-                VStack { Spacer(); HStack { Spacer(); Text("Expand").font(.system(size: 12, weight: .bold)).foregroundStyle(D7.cyan).padding(.horizontal, 8).padding(.vertical, 3).background(D7.panel.opacity(0.85), in: RoundedRectangle(cornerRadius: 8)) } }.padding(8)
-            }
-            .frame(maxWidth: .infinity, minHeight: 90).frame(maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+        ZStack(alignment: .topLeading) {
+            RideRouteMap(coords: coords, interactive: false, gps: gps).allowsHitTesting(false).accessibilityHidden(true)
+            Text(routeLine).font(.system(size: 11, weight: .bold, design: .monospaced)).foregroundStyle(D7.fg)
+                .padding(.horizontal, 8).padding(.vertical, 3).background(D7.panel.opacity(0.85), in: RoundedRectangle(cornerRadius: 8)).padding(8)
+                .accessibilityHidden(true)
+            VStack { Spacer(); HStack { Spacer(); Text("Expand").font(.system(size: 12, weight: .bold)).foregroundStyle(D7.cyan).padding(.horizontal, 8).padding(.vertical, 3).background(D7.panel.opacity(0.85), in: RoundedRectangle(cornerRadius: 8)) } }.padding(8)
+                .accessibilityHidden(true)
+            Color.clear.contentShape(Rectangle())
+                .onTapGesture { onExpandMap() }
+                .accessibilityElement()
+                .accessibilityAddTraits(.isButton)
+                .accessibilityLabel("Map: \(routeLine). Opens the Map view").accessibilityIdentifier("rideMiniMap")
+                .accessibilityAction { onExpandMap() }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Map: \(routeLine). Opens the Map view").accessibilityIdentifier("rideMiniMap")
+        .frame(maxWidth: .infinity, minHeight: 90).frame(maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
