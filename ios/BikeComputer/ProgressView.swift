@@ -258,13 +258,12 @@ struct RideDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 FlowRow(spacing: DS.s) { Text(ride.start.dayAndDate).font(DS.screenTitle); Pill(text: "recorded by \(ride.recordedBy)", color: BC.accent) }
-                RideSummaryTiles(ride: ride, units: store.settings.units)
+                // Checkpoint F slice 3: the same results page as right after the ride (route, headline, analysis, zones, plan vs ride, records, coach)
+                RideResultsContent(ride: ride, model: RideResultsModel.make(ride: ride, store: store), units: store.settings.units)
                 graph
-                zones
-                map
-                Card { Eyebrow(t: "Coach (rules)"); Text(Coach.rideSummary(ride, profile: store.profile)) }
                 if let b = ride.best20 { Text("Best 20 min \(b) W" + (ride.best60.map { " · best 60 min \($0) W" } ?? "")).font(.footnote).foregroundStyle(.secondary) }
                 Text("Sources: \(ride.sources.joined(separator: " · ")) · \(ride.samples.count) samples at 1 Hz").font(.footnote).foregroundStyle(.secondary)
+                if ride.healthExportUUID != nil { Text("Written to Apple Health by this phone (one workout).").font(.footnote).foregroundStyle(.secondary) }
                 if let g = ride.gapSeconds, g > 0 { Text("\(g) s not observed by the phone (app suspended in the background); those seconds count as time but hold no values.").font(.footnote).foregroundStyle(BC.stale) }
                 Button("Delete this ride", role: .destructive) { confirmDelete = true }.frame(maxWidth: .infinity)
             }.padding()
@@ -326,36 +325,6 @@ struct RideDetailView: View {
                     Spacer(); Text(selectedT.map { $0.asDuration } ?? "touch the graph").font(.caption2).foregroundStyle(.secondary)
                 }
             }
-        }
-    }
-    private var zones: some View {
-        Card {
-            Eyebrow(t: "Time in zones")
-            let secs = zoneSeconds
-            let total = secs.reduce(0, +)
-            if total == 0 || !store.profile.ftpKnown { Text(store.profile.ftpKnown ? "no data yet · needs power" : "power zones need a known FTP").font(.footnote).foregroundStyle(BC.stale) }
-            else {
-                HStack(spacing: 2) { ForEach(0..<7, id: \.self) { z in if secs[z] > 0 { RoundedRectangle(cornerRadius: 3).fill(BC.zone(z + 1)).frame(width: max(4, CGFloat(secs[z]) / CGFloat(total) * 300), height: 14) } } }
-                Text(zoneText(secs)).font(.caption2).foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private func zoneText(_ secs: [Int]) -> String {
-        var parts: [String] = []
-        for z in 0..<7 where secs[z] > 0 { parts.append("Z\(z + 1) \(secs[z] / 60) min") }
-        return parts.joined(separator: " · ") + (store.profile.ftpKnown ? " · FTP \(store.profile.ftpW) W (\(store.profile.ftpLabel))" : "")
-    }
-    private var zoneSeconds: [Int] { var secs = Array(repeating: 0, count: 7); for w in ride.samples.compactMap({ $0.w }) { secs[store.profile.zone(forWatts: w) - 1] += 1 }; return secs }
-
-    private var map: some View {
-        let coords = ride.samples.compactMap { s -> CLLocationCoordinate2D? in if let la = s.lat, let lo = s.lon { return CLLocationCoordinate2D(latitude: la, longitude: lo) }; return nil }
-        return Card {
-            Eyebrow(t: "Route")
-            if coords.count >= 2 {
-                Map { MapPolyline(coordinates: coords).stroke(BC.accent, lineWidth: 4) }.frame(height: 220).clipShape(RoundedRectangle(cornerRadius: 12)).allowsHitTesting(false)
-                Text("\(coords.count) GPS points from the phone").font(.caption2).foregroundStyle(.secondary)
-            } else { Text("no data yet · no GPS track for this ride").font(.footnote).foregroundStyle(BC.stale) }
         }
     }
 }

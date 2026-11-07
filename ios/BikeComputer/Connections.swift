@@ -101,7 +101,8 @@ final class HealthAccess: ObservableObject {
     /// Asks iOS for the permissions. The completion runs on the main queue with the refreshed status.
     func request(_ done: ((Bool) -> Void)? = nil) {
         guard available else { done?(false); return }
-        let share: Set<HKSampleType> = [HKObjectType.workoutType()]
+        var share: Set<HKSampleType> = [HKObjectType.workoutType()]
+        if let d = HKObjectType.quantityType(forIdentifier: .distanceCycling) { share.insert(d) }   /* RA-25: the phone's own ride export carries measured distance */
         var read: Set<HKObjectType> = [HKObjectType.workoutType()]
         if let hr = HKObjectType.quantityType(forIdentifier: .heartRate) { read.insert(hr) }
         if let e = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) { read.insert(e) }

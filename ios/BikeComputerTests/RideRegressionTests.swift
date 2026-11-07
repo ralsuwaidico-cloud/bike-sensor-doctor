@@ -61,4 +61,24 @@ final class RideRegressionTests: XCTestCase {
         let weird = try JSONDecoder().decode(AppSettings.self, from: #"{"units":"metric","rideLayout":"hologram"}"#.data(using: .utf8)!)
         XCTAssertEqual(weird.rideLayout, .coach); XCTAssertEqual(weird.units, .metric)
     }
+
+    // Slice 3 migration: a ride saved by build ≤ 176 has no planSteps / healthExportUUID; it decodes, round-trips, and the
+    // new fields stay nil. Export is recorded once; a Health import of the exported workout UUID is refused (item 5).
+    func testOldRideRecordDecodesAndHealthExportIsRecordedOnce() throws {
+        let json = """
+        {"id":"8E0E6C9A-5A7A-4F45-9C2F-1D1F0E3D2B10","start":"2026-11-05T08:00:00Z","durationS":1800,"distanceM":15000,"avgHR":140,"zoneSeconds":[0,0,0,0,0,0,0],"recorder":"phone","sources":["Phone GPS"],"demo":false,"samples":[]}
+        """.data(using: .utf8)!
+        let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601
+        let r = try d.decode(RideRecord.self, from: json)
+        XCTAssertNil(r.planSteps); XCTAssertNil(r.healthExportUUID)
+        let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601
+        XCTAssertEqual(try d.decode(RideRecord.self, from: e.encode(r)), r)
+
+        let store = Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bc-ride-\(UUID().uuidString)", isDirectory: true), generatePlan: false)
+        XCTAssertTrue(store.addRide(r))
+        store.markHealthExported(rideId: r.id, uuid: "HK-1"); store.markHealthExported(rideId: r.id, uuid: "HK-2")
+        XCTAssertEqual(store.rides.first?.healthExportUUID, "HK-1", "written once, never rewritten")
+        XCTAssertFalse(store.importHealthRide(start: r.start.addingTimeInterval(600), durationS: 2400, distanceM: 15000, activeKcal: 400, avgHR: 140, healthUUID: "HK-1"), "the workout this phone wrote is not imported back, even when Health reports different totals")
+        XCTAssertEqual(store.rides.count, 1)
+    }
 }

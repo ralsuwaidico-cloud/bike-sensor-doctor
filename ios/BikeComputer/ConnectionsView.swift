@@ -587,6 +587,10 @@ struct HealthConnectionDetail: View {
                 if store.settings.appleHealthWanted, !health.workoutWriteAuthorized, health.available { Button("Grant permission") { health.request { _ in } } }
             } footer: { Text("Shown as connected only after iOS confirms the permission. Cycling workouts recorded with the Cyclift Apple Watch app are saved to Health when you choose Save on the watch.") }
             Section {
+                Toggle("Save phone and BikeComputer rides to Apple Health", isOn: Binding(get: { store.settings.appleHealthExportRides }, set: { v in store.settings.appleHealthExportRides = v; if v { store.settings.appleHealthWanted = true; if !health.workoutWriteAuthorized { health.request { _ in } } } }))
+                    .accessibilityIdentifier("healthExportRides")
+            } header: { Text("Ride export") } footer: { Text("When you save a ride that the Apple Watch did not record, this phone writes one cycling workout (time and measured distance) to Health. A ride is written at most once, never when the watch already saved it, and never a demo ride. If the permission is denied the ride is still saved in Cyclift.") }
+            Section {
                 Toggle("Import workouts from Apple Health", isOn: Binding(get: { store.settings.appleHealthImportWorkouts }, set: { v in store.settings.appleHealthImportWorkouts = v; if v { store.settings.appleHealthWanted = true; if !health.workoutWriteAuthorized { health.request { _ in runImport() } } else { runImport() } } }))
                 Button { runImport() } label: { HStack { Text(importing ? "Importing…" : "Import now (last 90 days)"); Spacer(); if importing { ProgressView() } } }.disabled(importing || !health.available)
                 if let r = importResult { Text(r).font(.footnote).foregroundStyle(.secondary) }

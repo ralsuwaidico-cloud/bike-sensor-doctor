@@ -72,6 +72,60 @@ final class RideViewsSmokeTests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
     }
 
+    /// Checkpoint F slice 3 (RA-20…RA-24, owner regression item 3): START · PHONE → Pause → End → confirm → results page
+    /// (route, headline, analysis, zones, records, coach) → Save → the ride is in Ride history and reopens its results.
+    func testPauseEndReviewSaveThenHistory() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = Self.rideDayStore()
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 25), "seeded rider lands on Home")
+        let centre = app.buttons["centreButton"].firstMatch
+        XCTAssertTrue(centre.waitForExistence(timeout: 10)); centre.tap()
+        _ = app.openFromHub()
+        for name in ["Done", "Cancel"] { let c = app.buttons[name].firstMatch; if c.exists && c.isHittable { c.tap(); break } }
+        XCTAssertTrue(app.buttons["rideView.cockpit"].firstMatch.waitForExistence(timeout: 15), "ride screen")
+
+        // history is reachable before a ride and says there is nothing yet
+        let hist = app.buttons["rideHistoryButton"].firstMatch
+        XCTAssertTrue(hist.waitForExistence(timeout: 5), "history button on the idle ride screen"); hist.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["rideHistoryEmpty"].firstMatch.waitForExistence(timeout: 10), "empty history explains itself")
+        app.buttons["Done"].firstMatch.tap()
+
+        let start = app.buttons["START · PHONE"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 10), "phone start (no board in the simulator)"); start.tap()
+        let pause = app.buttons["PAUSE"].firstMatch
+        XCTAssertTrue(pause.waitForExistence(timeout: 10), "recording: Pause is offered")
+        XCTAssertFalse(app.buttons["rideHistoryButton"].firstMatch.exists, "history is not offered during a ride")
+        sleep(3)
+        // switching views never interrupts the recording (item 1)
+        app.buttons["rideView.performance"].firstMatch.tap(); app.buttons["rideView.map"].firstMatch.tap(); app.buttons["rideView.cockpit"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["PAUSE"].firstMatch.exists, "still recording after switching views")
+        pause.tap()
+        let end = app.buttons["END"].firstMatch
+        XCTAssertTrue(end.waitForExistence(timeout: 5), "paused: End is offered (never disabled)"); end.tap()
+        // the End confirmation
+        let confirm = app.alerts.buttons.allElementsBoundByIndex.first { $0.label.lowercased().hasPrefix("end") } ?? app.buttons["End ride"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "End asks for confirmation"); confirm.tap()
+
+        let headline = app.descendants(matching: .any)["rideResultHeadline"].firstMatch
+        XCTAssertTrue(headline.waitForExistence(timeout: 15), "results page opens for review")
+        for id in ["rideResultAnalysis", "rideResultZones", "rideResultRecords", "rideCoachSummary"] {
+            XCTAssertTrue(app.descendants(matching: .any)[id].firstMatch.exists || app.descendants(matching: .any)[id].firstMatch.waitForExistence(timeout: 3), "\(id) on the results page")
+        }
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'simulated'")).firstMatch.exists, "nothing simulated on a real recording")
+        let save = app.buttons["rideSave"].firstMatch
+        XCTAssertTrue(save.exists, "Save offered"); XCTAssertTrue(app.buttons["rideDiscard"].firstMatch.exists, "Discard offered")
+        save.tap()
+        // the post-ride check-in may follow; skip or close it whichever way it offers
+        for name in ["Skip", "Not now", "Done", "Close", "Save"] { let c = app.buttons[name].firstMatch; if c.waitForExistence(timeout: 3) && c.isHittable { c.tap(); break } }
+        XCTAssertTrue(app.buttons["rideHistoryButton"].firstMatch.waitForExistence(timeout: 15), "back on the idle ride screen")
+        app.buttons["rideHistoryButton"].firstMatch.tap()
+        let row = app.descendants(matching: .any)["rideHistoryRow"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "the saved ride is listed"); row.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["rideResultHeadline"].firstMatch.waitForExistence(timeout: 10), "the saved ride reopens its results page")
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
     /// Build-40 shaped store.json with an endurance ride scheduled TODAY (so the centre button reads "Ride now").
     static func rideDayStore() -> String {
         let iso = ISO8601DateFormatter()

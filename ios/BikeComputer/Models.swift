@@ -567,6 +567,13 @@ struct RideRecord: Codable, Identifiable, Equatable {
     /// treated as unverified: never used to progress intensity). Optional, so older files decode unchanged.
     var checkIn: CheckIn? = nil
     var powerVerified: Bool? = nil
+    /// Checkpoint F slice 3: the planned ride steps at save time (so the saved results page can show target vs actual
+    /// later); nil for free rides and for rides saved by earlier builds.
+    var planSteps: [PlanStep]? = nil
+    /// Checkpoint F slice 3 (RA-25): UUID of the HealthKit workout THIS PHONE wrote for the ride; nil = never written.
+    /// Set once, never rewritten — together with `healthUUID` (imports) it keeps one ride to at most one Health workout.
+    var healthExportUUID: String? = nil
+    struct PlanStep: Codable, Equatable { var name: String; var minutes: Int; var hrZone: Int?; var rpeLo: Int; var rpeHi: Int }
     struct Sample: Codable, Equatable { var t: Int; var w: Int?; var cad: Int?; var hr: Int?; var speedCms: Int?; var lat: Double?; var lon: Double?; var alt: Double?
         /// true = this second was not observed (phone suspended); shown as a gap, never filled in
         var gap: Bool? = nil }
@@ -1344,6 +1351,11 @@ final class Store: ObservableObject {
         considerFTP(from: r)
         return true
     }
+    /// RA-25: records the HealthKit workout written for a saved ride (once; a second call is ignored).
+    func markHealthExported(rideId: UUID, uuid: String) {
+        guard let i = rides.firstIndex(where: { $0.id == rideId }), rides[i].healthExportUUID == nil else { return }
+        rides[i].healthExportUUID = uuid
+    }
     func deleteRide(_ r: RideRecord) { rides.removeAll { $0.id == r.id }; if ftpSuggestion?.rideId == r.id { ftpSuggestion = nil } }
 
     // MARK: strength sessions (0.6.0) — quick logs and Apple Health imports; hours kept apart from riding
@@ -1451,7 +1463,7 @@ final class Store: ObservableObject {
     /// "Apple Health"; no power, cadence or samples are invented.
     @discardableResult
     func importHealthRide(start: Date, durationS: Int, distanceM: Int?, activeKcal: Int?, avgHR: Int?, healthUUID: String) -> Bool {
-        if rides.contains(where: { $0.healthUUID == healthUUID }) { return false }
+        if rides.contains(where: { $0.healthUUID == healthUUID || $0.healthExportUUID == healthUUID }) { return false }   /* RA-25: a workout this phone exported is never re-imported */
         if rides.contains(where: { abs($0.start.timeIntervalSince(start)) <= 120 && abs($0.durationS - durationS) <= max(60, durationS / 10) }) { return false }
         var r = RideRecord(start: start, durationS: durationS, distanceM: distanceM ?? 0, recorder: .health, sources: ["Apple Health"])
         // S2-0 (GR-45): Apple Health's active energy stays kcal and is labelled an estimate; `kj` (work from power) stays nil

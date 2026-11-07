@@ -18,6 +18,7 @@ struct RideTabView: View {
     @StateObject private var coach = RideCoach()
     @State private var confirmEnd = false
     @State private var showDetails = false
+    @State private var showHistory = false
     @State private var showSettings = false
     @State private var tick = Date()
     @State private var lastTickedSecond = -1
@@ -46,6 +47,7 @@ struct RideTabView: View {
                 .onChange(of: powerTrusted) { _, _ in configureCoach() }
                 .sheet(isPresented: $showDetails) { RideDetailsSheet() }
                 .sheet(isPresented: $showSettings) { RideSettingsSheet() }
+                .sheet(isPresented: $showHistory) { NavigationStack { RideHistoryView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showHistory = false } } } }.environmentObject(store) }
                 .sheet(item: $recorder.pendingResult) { r in RideResultSheet(ride: r) }
                 .alert(recorder.owner == .board ? "End the ride on the BikeComputer?" : "End this ride?", isPresented: $confirmEnd) {
                     Button("End ride", role: .destructive) {
@@ -128,6 +130,11 @@ struct RideTabView: View {
                 Button { showSettings = true } label: { Image(systemName: "gearshape").font(.system(size: 15, weight: .semibold)).foregroundStyle(D7.cyan) }
                     .buttonStyle(.minTap)
                     .accessibilityLabel(RideLabels.settings).accessibilityIdentifier("rideSettings")
+                if !recorder.isActive {
+                    Button { showHistory = true } label: { Image(systemName: "clock.arrow.circlepath").font(.system(size: 15, weight: .semibold)).foregroundStyle(D7.cyan) }
+                        .buttonStyle(.minTap)
+                        .accessibilityLabel("Ride history").accessibilityIdentifier("rideHistoryButton")
+                }
                 Button { showDetails = true } label: { Text(RideLabels.details).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundStyle(D7.cyan) }
                     .buttonStyle(.minTap)
                     .accessibilityLabel("Ride details: map, sensors, tiles").accessibilityIdentifier("rideDetails")
@@ -381,37 +388,64 @@ struct TilePicker: View {
     }
 }
 
-/// Save / discard after a ride. Board rides carry the board's totals; phone rides the phone's. Never both.
+/// Save / discard after a ride (Checkpoint F slice 3, RA-21…RA-25). Board rides carry the board's totals; phone rides the
+/// phone's. Never both. The page is the same results page the saved ride reopens later; Save also stores the planned
+/// steps and, when the rider asked for it and iOS allows it, writes ONE Apple Health workout for the ride.
 struct RideResultSheet: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var recorder: RideRecorder
+    @EnvironmentObject private var watchLink: WatchLink
     @Environment(\.dismiss) private var dismiss
     let ride: RideRecord
     @State private var confirmDiscard = false
     /// Adaptive coach: after Save the sheet turns into the post-ride check-in.
     @State private var checkIn = false
+    @State private var healthNote: String?
+    private let health = RideHealthExport()
+
     var body: some View {
         if checkIn { CheckInFlow(target: .ride(ride.id)) { recorder.finish(); dismiss() } }
         else { result }
     }
+    private var toSave: RideRecord {
+        var r = ride
+        if let w = store.today, w.kind.isRide, !w.rideSteps.isEmpty { r.planSteps = w.rideSteps.map { RideRecord.PlanStep(name: $0.name, minutes: $0.minutes, hrZone: $0.hrZone, rpeLo: $0.rpe.lowerBound, rpeHi: $0.rpe.upperBound) } }
+        return r
+    }
+    private var model: RideResultsModel { RideResultsModel.make(ride: toSave, store: store) }
     private var result: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack { Text(ride.title).font(.system(size: 26, weight: .bold, design: .rounded)); Spacer(); Pill(text: "recorded by \(ride.recordedBy)", color: BC.accent) }
                     if ride.demo { Text("Demo ride — cannot be saved").font(.caption.bold()).foregroundStyle(.black).padding(6).frame(maxWidth: .infinity).background(BC.sim, in: RoundedRectangle(cornerRadius: 8)) }
-                    RideSummaryTiles(ride: ride, units: store.settings.units)
-                    Card { Eyebrow(t: "Coach (rules)"); Text(Coach.rideSummary(ride, profile: store.profile)) }
+                    RideResultsContent(ride: toSave, model: model, units: store.settings.units)
                     Text("Sources: \(ride.sources.joined(separator: " · "))").font(.footnote).foregroundStyle(.secondary)
                     if ride.recorder == .board { Text("The BikeComputer keeps its own copy of this ride in its history; this is the phone's mirror with the GPS track.").font(.footnote).foregroundStyle(.secondary) }
-                    Button { if store.addRide(ride) { checkIn = true } else { recorder.finish(); dismiss() } } label: { Text(ride.demo ? "Close (demo, not saved)" : "Save ride").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
-                    Button("Discard", role: .destructive) { confirmDiscard = true }.frame(maxWidth: .infinity)
+                    if let n = healthNote { Text(n).font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("rideHealthNote") }
+                    Button { save() } label: { Text(ride.demo ? "Close (demo, not saved)" : "Save ride").frame(maxWidth: .infinity) }
+                        .buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large).accessibilityIdentifier("rideSave")
+                    Button("Discard", role: .destructive) { confirmDiscard = true }.frame(maxWidth: .infinity).accessibilityIdentifier("rideDiscard")
                 }.padding()
             }
             .background(Color(.systemGroupedBackground))
             .interactiveDismissDisabled()
             .alert("Discard this ride?", isPresented: $confirmDiscard) { Button("Discard", role: .destructive) { recorder.discard(); dismiss() }; Button("Keep", role: .cancel) {} }
         }
+    }
+    /// Save in Cyclift first — always, whatever Health says — then decide about the one Health workout.
+    private func save() {
+        let r = toSave
+        guard store.addRide(r) else { recorder.finish(); dismiss(); return }
+        exportToHealth(r)
+        checkIn = true
+    }
+    private func exportToHealth(_ r: RideRecord) {
+        guard store.settings.appleHealthExportRides else { return }
+        let watchHasWorkout = r.sources.contains("Apple Watch") || watchLink.mirror.sessionsReceived > 0
+        let decision = RideHealthWriter.decide(recorder: r.recorder.rawValue, watchWorkoutExists: watchHasWorkout, phoneAuthorized: health.workoutWriteAuthorized, alreadyWritten: r.healthExportUUID != nil, demo: r.demo)
+        guard decision == .phone else { return }    /* .watch: the Watch saved it · .none: no permission / demo / already written */
+        health.write(r) { uuid in if let u = uuid { store.markHealthExported(rideId: r.id, uuid: u) } }
     }
 }
 
