@@ -31,7 +31,7 @@ RULES = [
     (r"ios/BikeComputer/DesignSystem/|ios/BikeComputer/(DesignSystem|Theme)\.swift",
      ["DesignSystemAudit/testGalleryLightAndDark"], ["DesignSystemPureTests"], "design system"),
     (r"ios/BikeComputer/(Ride/|RideView|RideDashboard|RideRecorder)",
-     ["RideViewsSmokeTests"], ["ModelTests", "RideControlPlanTests", "RideViewModelTests", "RideRecorderDisconnectTests", "RideRegressionTests"], "ride"),
+     ["RideViewsSmokeTests"], ["ModelTests", "RideControlPlanTests", "RideViewModelTests", "RideRecorderDisconnectTests", "RideRegressionTests", "RideResultsModelTests"], "ride"),
     (r"ios/BikeComputer/(StrengthWorkout|StrengthNextSet|StrengthLog|StrengthCoachViews)\.swift",
      ["LaunchSmokeTests/testUpgradeFromBuild36CentreButtonOpensStrengthWorkout",
       "AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments", "LayoutAudit/testKeyScreensAtTextSizes"],
