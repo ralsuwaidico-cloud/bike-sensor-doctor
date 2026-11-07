@@ -6,6 +6,12 @@ import XCTest
 final class RideViewsSmokeTests: XCTestCase {
 
     override func setUpWithError() throws { continueAfterFailure = false }
+    /// Screenshots land next to the other CI evidence (ci-logs ios/run-N) when LAYOUT_DIR is set by the workflow (same folder as the layout audit).
+    private func shot(_ name: String) {
+        guard let dir = ProcessInfo.processInfo.environment["LAYOUT_DIR"], !dir.isEmpty else { return }
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        try? XCUIScreen.main.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: dir).appendingPathComponent("ride-\(name).png"))
+    }
 
     func testSwitchThroughTheThreeRideViews() {
         let app = XCUIApplication()
@@ -30,12 +36,14 @@ final class RideViewsSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["rideMiniMap"].firstMatch.exists, "Cockpit carries the mini map")
 
         // Cockpit → Map → Performance → Cockpit; the coach panel stays, the app stays alive (RA-15)
+        shot("night-cockpit")
         for (id, check) in [("rideView.map", "rideMapView"), ("rideView.performance", ""), ("rideView.cockpit", "rideMiniMap")] {
             let b = app.buttons[id].firstMatch
             XCTAssertTrue(b.waitForExistence(timeout: 5)); b.tap()
             if !check.isEmpty { XCTAssertTrue(app.descendants(matching: .any)[check].firstMatch.waitForExistence(timeout: 10), "\(id) shows \(check)") }
             XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "coach panel kept in \(id)")
             XCTAssertEqual(app.state, .runningForeground, "app alive after switching to \(id)")
+            shot("night-\(id.replacingOccurrences(of: "rideView.", with: ""))")
         }
         // the mini map opens the Map view
         app.buttons["rideMiniMap"].firstMatch.tap()
@@ -47,6 +55,20 @@ final class RideViewsSmokeTests: XCTestCase {
         if why.exists && why.isEnabled { why.tap(); sleep(1); why.tap() }
         app.buttons["rideSettings"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Ride views"].firstMatch.waitForExistence(timeout: 10) || app.buttons["Done"].firstMatch.waitForExistence(timeout: 10), "Ride settings opens")
+        // Checkpoint F acceptance: the Daylight display keeps every view, the coach panel and the controls on screen
+        let daylight = app.segmentedControls["rideDisplayPicker"].buttons["Daylight"].firstMatch
+        XCTAssertTrue(daylight.waitForExistence(timeout: 5), "Display picker offers Daylight"); daylight.tap()
+        app.buttons["Done"].firstMatch.tap()
+        for (id, check) in [("rideView.map", "rideMapView"), ("rideView.performance", ""), ("rideView.cockpit", "rideMiniMap")] {
+            app.buttons[id].firstMatch.tap()
+            if !check.isEmpty { XCTAssertTrue(app.descendants(matching: .any)[check].firstMatch.waitForExistence(timeout: 10), "daylight \(id) shows \(check)") }
+            XCTAssertTrue(app.otherElements["coachPanel"].firstMatch.exists, "daylight: coach panel kept in \(id)")
+            shot("daylight-\(id.replacingOccurrences(of: "rideView.", with: ""))")
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["rideStepStrip"].firstMatch.exists, "daylight: step target shown")
+        app.buttons["rideSettings"].firstMatch.tap()
+        let night = app.segmentedControls["rideDisplayPicker"].buttons["Night"].firstMatch
+        XCTAssertTrue(night.waitForExistence(timeout: 5)); night.tap()
         app.buttons["Done"].firstMatch.tap()
         app.buttons["rideDetails"].firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Ride details"].waitForExistence(timeout: 10))

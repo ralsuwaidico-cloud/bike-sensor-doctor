@@ -32,8 +32,8 @@ struct RootView: View {
         }
         .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: PowerTrust.meterVerified); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice
             let d = Calendar.current.startOfDay(for: Date()); if d != day { day = d; store.ensurePlan(); store.refreshRideSafety() } }
-        // The Ride screen is always dark: show it with a dark window so the status bar (clock, battery) stays readable.
-        .preferredColorScheme(store.onboarded && tab == 2 ? .dark : (store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil))
+        // Checkpoint F: the Ride screen follows Ride settings › Display (Daylight / Night / Auto = the app appearance).
+        .preferredColorScheme(store.onboarded && tab == 2 ? rideScheme : appScheme)
         .onChange(of: recorder.state) { old, s in
             idleTimer(s)
             if old != .running, old != .paused, s == .running, store.settings.enabledConnections.contains("watch") { watch.startWatchWorkout() }
@@ -117,6 +117,8 @@ struct RootView: View {
     /// The dock reads today's action (the same `todayAction` the old bar used) and the missed-session flag from Home's
     /// model; it never decides a destination — `centreTapped` does, exactly as before.
     /// RA-01: the dock leaves while the Ride tab is showing a recorded or paused ride.
+    private var appScheme: ColorScheme? { store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil }
+    private var rideScheme: ColorScheme? { store.settings.rideDisplay == .daylight ? .light : store.settings.rideDisplay == .night ? .dark : appScheme }
     private var rideOwnsBottom: Bool { tab == 2 && recorder.isActive }
     private var dock: some View {
         let action = store.todayAction(now: max(Date(), day))

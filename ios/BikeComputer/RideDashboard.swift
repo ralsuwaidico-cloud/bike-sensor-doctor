@@ -7,11 +7,27 @@ import SwiftUI
 
 // MARK: - Palette (identical to the Nokia mockup)
 enum D7 {
-    static let bg = Color(red: 0.024, green: 0.039, blue: 0.051), panel = Color(red: 0.031, green: 0.055, blue: 0.071), panel2 = Color(red: 0.039, green: 0.063, blue: 0.082)
-    static let track = Color(red: 0.086, green: 0.141, blue: 0.169), line = Color(red: 0.114, green: 0.165, blue: 0.2)
-    static let fg = Color(red: 0.933, green: 0.957, blue: 0.969), mut = Color(red: 0.514, green: 0.588, blue: 0.627), faint = Color(red: 0.353, green: 0.42, blue: 0.455), ink = Color(red: 0.02, green: 0.071, blue: 0.102)
-    static let cyan = Color(red: 0.204, green: 0.906, blue: 0.894), green = Color(red: 0.337, green: 0.878, blue: 0.549), lime = Color(red: 0.651, green: 0.886, blue: 0.18), amber = Color(red: 1, green: 0.714, blue: 0.302)
-    static let orange = Color(red: 1, green: 0.541, blue: 0.239), red = Color(red: 1, green: 0.353, blue: 0.353), violet = Color(red: 0.608, green: 0.549, blue: 1), grey = Color(red: 0.494, green: 0.549, blue: 0.576)
+    // Checkpoint F acceptance item (owner 7 Nov 19:04): a high-contrast DAYLIGHT appearance for outdoor sunlight next to
+    // the night cockpit. Every token is a light/dark pair resolved by the ride screen's colour scheme (Ride settings ›
+    // Display: Auto / Daylight / Night). Light values keep ≥ 4.5:1 on the white canvas; `ink` is the text on filled
+    // accent buttons and the active cue (dark on neon at night, white on the deep accents in daylight).
+    static let bg = Color(light: Color(red: 0.965, green: 0.973, blue: 0.980), dark: Color(red: 0.024, green: 0.039, blue: 0.051))
+    static let panel = Color(light: .white, dark: Color(red: 0.031, green: 0.055, blue: 0.071))
+    static let panel2 = Color(light: Color(red: 0.925, green: 0.941, blue: 0.953), dark: Color(red: 0.039, green: 0.063, blue: 0.082))
+    static let track = Color(light: Color(red: 0.80, green: 0.84, blue: 0.87), dark: Color(red: 0.086, green: 0.141, blue: 0.169))
+    static let line = Color(light: Color(red: 0.72, green: 0.78, blue: 0.82), dark: Color(red: 0.114, green: 0.165, blue: 0.2))
+    static let fg = Color(light: Color(red: 0.02, green: 0.065, blue: 0.10), dark: Color(red: 0.933, green: 0.957, blue: 0.969))
+    static let mut = Color(light: Color(red: 0.22, green: 0.29, blue: 0.33), dark: Color(red: 0.514, green: 0.588, blue: 0.627))
+    static let faint = Color(light: Color(red: 0.33, green: 0.41, blue: 0.45), dark: Color(red: 0.353, green: 0.42, blue: 0.455))
+    static let ink = Color(light: .white, dark: Color(red: 0.02, green: 0.071, blue: 0.102))
+    static let cyan = Color(light: Color(red: 0.0, green: 0.42, blue: 0.42), dark: Color(red: 0.204, green: 0.906, blue: 0.894))
+    static let green = Color(light: Color(red: 0.07, green: 0.45, blue: 0.22), dark: Color(red: 0.337, green: 0.878, blue: 0.549))
+    static let lime = Color(light: Color(red: 0.33, green: 0.45, blue: 0.0), dark: Color(red: 0.651, green: 0.886, blue: 0.18))
+    static let amber = Color(light: Color(red: 0.58, green: 0.33, blue: 0.0), dark: Color(red: 1, green: 0.714, blue: 0.302))
+    static let orange = Color(light: Color(red: 0.70, green: 0.27, blue: 0.03), dark: Color(red: 1, green: 0.541, blue: 0.239))
+    static let red = Color(light: Color(red: 0.72, green: 0.11, blue: 0.11), dark: Color(red: 1, green: 0.353, blue: 0.353))
+    static let violet = Color(light: Color(red: 0.33, green: 0.22, blue: 0.80), dark: Color(red: 0.608, green: 0.549, blue: 1))
+    static let grey = Color(light: Color(red: 0.36, green: 0.42, blue: 0.45), dark: Color(red: 0.494, green: 0.549, blue: 0.576))
     static let powerZoneColors = [grey, cyan, green, lime, amber, orange, red]
     static let hrZoneColors = [faint, cyan, green, amber, red]
     static func powerZone(_ z: Int) -> Color { (1...7).contains(z) ? powerZoneColors[z - 1] : grey }

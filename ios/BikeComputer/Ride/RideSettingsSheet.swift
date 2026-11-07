@@ -14,6 +14,12 @@ struct RideSettingsSheet: View {
                     Text("The ride screen has three views — Cockpit, Map and Performance — and adapts to the sensors that are live. Switch with the buttons at the top of the ride screen.")
                         .font(.footnote).foregroundStyle(.secondary)
                 } header: { Text("Ride views") }
+                Section {
+                    Picker("Display", selection: $store.settings.rideDisplay) { ForEach(AppSettings.RideDisplay.allCases, id: \.self) { Text($0.title).tag($0) } }
+                        .pickerStyle(.segmented).accessibilityIdentifier("rideDisplayPicker")
+                    Text("Daylight is the high-contrast display for strong sunlight: dark numbers, instructions, targets and controls on a light background. Night is the dark cockpit. Auto follows the app appearance.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                } header: { Text("Display") }
                 Section("Coach") {
                     Toggle("Coach instructions during rides", isOn: $store.settings.coachEnabled)
                     Picker("How much it talks", selection: $store.settings.coachTalk) { ForEach(AppSettings.CoachTalk.allCases, id: \.self) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
