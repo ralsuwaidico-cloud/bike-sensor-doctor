@@ -1,0 +1,21 @@
+BikeComputer iOS CI — run 180 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 180 — 2026-11-07 14:44 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): FAILED (exit 65) · 3m43s — missing argument for parameter 'device' in call 
+RESULT tests: FAILED (build)
+  targets from the files changed since the last green full run 23db8fa
+Quick UI targets: RideViewsSmokeTests JourneyTests LayoutAudit/testKeyScreensAtTextSizes LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages DesignSystemAudit/testGalleryLightAndDark
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 5m51s — missing argument for parameter 'device' in call 
+RESULT layout audit: FAILED (build)
+RESULT archive: skipped (quick check)
+RESULT upload: skipped (quick check never uploads)
+Total: 12m59s
+commit 6ef86bc845f3623a353bef0eef920d2e31f5e6f4  branch ios/checkpoint-f-ride  job failure
