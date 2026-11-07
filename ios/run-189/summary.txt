@@ -1,0 +1,18 @@
+BikeComputer iOS CI — run 189 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 189 — 2026-11-07 20:18 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 5m50s
+RESULT tests: ok (Executed 613 tests, with 0 failures) · 12m54s
+  targets from the files changed since the last green full run 23db8fa
+Quick UI targets: LayoutAudit/testKeyScreensAtTextSizes JourneyTests/testHybridJourney LaunchSmokeTests/testUpgradeFromBuild36CentreButtonOpensStrengthWorkout AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments LaunchSmokeTests OnboardingScreens/testOnboardingV3FiveStages LayoutAudit/testRC2OwnerScreens RideViewsSmokeTests LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText JourneyTests OnboardingScreens RideLayoutsSmokeTests LayoutAudit/testHomeStates DesignSystemAudit/testGalleryLightAndDark
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m44s
+  layout small (AX3): ok · 68m16s
+commit 0edf5bae46ab5e9246311f5f431d5c7cb24a4bca  branch ios/checkpoint-f-ride  job failure
