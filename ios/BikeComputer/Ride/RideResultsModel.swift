@@ -54,8 +54,8 @@ struct RideResultsModel: Equatable {
         var headline = [Stat(key: "dist", label: "DISTANCE", value: distText, unit: distUnit, source: "GPS"),
                         Stat(key: "time", label: "MOVING", value: RideCockpitModel.clock(r.durationS), unit: "", source: r.recorder),
                         Stat(key: "speed", label: "AVG SPEED", value: r.durationS > 0 && r.distanceM > 0 ? String(format: "%.1f", avgSpeed) : "—", unit: imperial ? "mph" : "km/h", source: "GPS")]
-        if let asc = ascentM(r.altitudes) { headline.append(Stat(key: "ascent", label: "ASCENT", value: imperial ? "\(Int((Double(asc) * 3.281).rounded()))" : "\(asc)", unit: imperial ? "ft" : "m", source: "GPS altitude")) }
-        else { headline.append(Stat(key: "ascent", label: "ASCENT", value: "—", unit: "", source: "no usable altitude")) }
+        if let asc = ascentM(r.altitudes) { headline.append(Stat(key: "ascent", label: "ASCENT (GPS)", value: imperial ? "\(Int((Double(asc) * 3.281).rounded()))" : "\(asc)", unit: imperial ? "ft" : "m", source: "GPS altitude")) }
+        else { headline.append(Stat(key: "ascent", label: "ASCENT (GPS)", value: "—", unit: "", source: "not available: too little GPS altitude")) }
 
         var analysis: [Stat] = []
         if let p = r.avgPower { analysis.append(Stat(key: "power", label: "AVG POWER", value: "\(p)", unit: "W", source: [r.powerSource ?? "Power meter", r.normalizedPower.map { "NP \($0) W" }, r.maxPower.map { "max \($0)" }].compactMap { $0 }.joined(separator: " · "))) }

@@ -34,7 +34,7 @@ final class RideResultsModelTests: XCTestCase {
         let m = RideResultsModel.make(ride: r, others: [], zones: z, plan: [], imperial: false)
         XCTAssertEqual(m.headline.map(\.key), ["dist", "time", "speed", "ascent"])
         XCTAssertEqual(m.headline[0].value, "15.0"); XCTAssertEqual(m.headline[1].value, "30:00"); XCTAssertEqual(m.headline[2].value, "30.0")
-        XCTAssertEqual(m.headline[3].value, "—"); XCTAssertEqual(m.headline[3].source, "no usable altitude")
+        XCTAssertEqual(m.headline[3].value, "—"); XCTAssertEqual(m.headline[3].label, "ASCENT (GPS)"); XCTAssertEqual(m.headline[3].source, "not available: too little GPS altitude")
         XCTAssertEqual(m.analysis.first { $0.key == "power" }?.value, "—", "no power meter → no number, a plain statement")
         XCTAssertEqual(m.analysis.first { $0.key == "hr" }?.value, "140")
         XCTAssertFalse(m.analysis.contains { $0.key == "energy" }, "no energy without a source")

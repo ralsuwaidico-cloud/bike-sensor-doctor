@@ -21,7 +21,7 @@ struct RideResultsContent: View {
             headline
             analysisCard
             zonesCard
-            if !model.steps.isEmpty { stepsCard }
+            if !model.steps.isEmpty { stepsCard } else { freeRideCard }
             recordsCard
             Card { Eyebrow(t: "Coach summary (rules)"); Text(model.coachSummary).font(.subheadline).fixedSize(horizontal: false, vertical: true) }
                 .accessibilityIdentifier("rideCoachSummary")
@@ -132,6 +132,15 @@ struct RideResultsContent: View {
             }
         }
         .accessibilityIdentifier("rideResultSteps")
+    }
+    /// Honest state for a ride with no stored plan steps: a free ride, or one saved by a build that kept no plan.
+    private var freeRideCard: some View {
+        Card {
+            Eyebrow(t: "Free ride")
+            Text(ride.planSteps == nil ? "No plan steps are stored for this ride — it was a free ride, or it was saved before Cyclift kept the plan with the ride. Nothing is compared against a target." : "This ride had no planned steps, so there is nothing to compare against a target.")
+                .font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityIdentifier("rideResultFreeRide")
     }
     private func markColor(_ m: String) -> Color { m == "✓" ? BC.live : m == "!" ? BC.stale : .secondary }
     private func markLabel(_ m: String) -> String { m == "✓" ? "completed in target" : m == "!" ? "outside the target band" : m == "–" ? "cut short" : "not reached" }
