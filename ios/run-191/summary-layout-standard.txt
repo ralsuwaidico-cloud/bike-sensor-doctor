@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 191 — 2026-11-07 23:34 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m10s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 14m57s
+  layout standard (L,XXXL): FAILED (exit 65) · 11m54s — -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Failed to get matching snapshots: Lost connection to the application (pid 30352). (Underlying Error: Couldn’t communicate with a helper application. Try your operation again. If that fails, quit and relaunch the application and try again. connection to service with pid 30352 created from an endpoint) 
+RESULT layout audit: FAILED (19 screenshots)
+Total: 27m18s
