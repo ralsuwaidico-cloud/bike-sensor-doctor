@@ -13,6 +13,8 @@
 #include "../../src/domain/layout_checks.hpp"
 #include "../../src/domain/ride_telemetry.hpp"
 #include "../../src/domain/ride_screens.hpp"
+#include "../../src/domain/payloads.hpp"
+#include "../../src/domain/app_model.hpp"
 #include <cstdio>
 #include <cmath>
 #include <random>
@@ -245,7 +247,7 @@ int main() {
         int scenes = 0, findings = 0;
         for (auto& [vn, content] : contentVariants()) for (auto& ap : appearances()) for (auto& sc : allScreens(m, content)) { scenes++; findings += int(check(sc, ap, vn).size()); }
         std::printf("   %d scenes, %d findings\n", scenes, findings);
-        CHECK(scenes == 1248 && findings == 0, "52 screens (faces, menus, 10 ride fixtures × cockpit/performance pages/navigation/controls/key previews, strength, panels) × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
+        CHECK(scenes == 1368 && findings == 0, "57 screens (faces, menus, 10 ride fixtures × cockpit/performance pages/navigation/controls/key previews, strength, panels) × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
         // grading colours are identical across the six appearances (per canvas), independent of the theme
         std::string d, l; for (auto& ap : appearances()) { std::string g1 = ap.resolve("grade.green"); if (ap.dark) { if (d.empty()) d = g1; CHECK(g1 == d, "dark grading green identical in " + ap.name); } else { if (l.empty()) l = g1; CHECK(g1 == l, "light grading green identical in " + ap.name); } }
         CHECK(appearances()[0].resolve("accent") != appearances()[2].resolve("accent"), "theme accents differ while grading colours do not");
@@ -332,7 +334,7 @@ int main() {
         CHECK(fired == 1, "bouncing edge + 100 ms hold → one short press (debounced)");
         // live screens always carry the touchscreen safety controls (Pause immediate; End while paused) — every fixture, every appearance
         bool allPause = true, pausedHaveEnd = true, overlayOk = true; cyw::ui::HostMeasurer hm;
-        for (auto& [vn, content] : cyw::ui::contentVariants()) for (auto& sc : cyw::ui::allScreens(hm, content)) if (sc.name.rfind("live:ride", 0) == 0) { bool pause = false, end = false, lap = false, paused = false; for (auto& e : sc.els) { if (e.id == "pause" || e.id == "resume") pause = true; if (e.id == "end") end = true; if (e.id == "lap") lap = true; if (e.text.rfind("PAUSED", 0) == 0) paused = true; } allPause = allPause && pause; if (paused) pausedHaveEnd = pausedHaveEnd && end; if (sc.name.rfind("live:ride-controls", 0) == 0) overlayOk = overlayOk && lap && end && pause; }
+        for (auto& [vn, content] : cyw::ui::contentVariants()) for (auto& sc : cyw::ui::allScreens(hm, content)) if (sc.name.rfind("live:ride", 0) == 0 && sc.name.find("confirm-end") == std::string::npos) { bool pause = false, end = false, lap = false, paused = false; for (auto& e : sc.els) { if (e.id == "pause" || e.id == "resume") pause = true; if (e.id == "end") end = true; if (e.id == "lap") lap = true; if (e.text.rfind("PAUSED", 0) == 0) paused = true; } allPause = allPause && pause; if (paused) pausedHaveEnd = pausedHaveEnd && end; if (sc.name.rfind("live:ride-controls", 0) == 0) overlayOk = overlayOk && lap && end && pause; }
         CHECK(allPause, "every ride view in every state keeps an immediate touchscreen Pause (or Resume)");
         CHECK(pausedHaveEnd, "every paused ride view shows End on the touchscreen");
         CHECK(overlayOk, "the ride controls overlay always offers Lap, Pause/Resume and End");
@@ -378,6 +380,89 @@ int main() {
         CHECK(a.preview && !a.execute && b2.execute && b2.action == cyw::Action::Lap, "disconnected phone: preview then confirm still works (Lap is recorded on the watch)");
         auto c1 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, false, 2000); CHECK(c1.preview && !c1.execute, "a single press never executes");
         CHECK(cyw::actionFor(cyw::Mode::Live_Ride, cyw::Key::Key1, cyw::Press::Short, false, false) == cyw::Action::TogglePause, "Pause stays on Key 1 while disconnected");
+    }
+
+    // ------------------------------------------------------------ wire payloads (protocol v1) round-trip
+    {
+        using namespace cyw::wire;
+        Live l; l.powerW = 214; l.powerAgeMs = 800; l.hrBpm = std::nullopt; l.cadenceRpm = 89; l.cadenceAgeMs = 500; l.speedKmh10 = 298; l.speedAgeMs = 1500; l.ftpKnown = true; l.ftpW = 240; l.powerBandW = std::make_pair(uint16_t(180), uint16_t(216)); l.stepName = "Interval 2"; l.stepRemainingS = 200; l.stepTotalS = 600; l.recording = true; l.elapsedS = 1458; l.distanceM = 11600;
+        auto d = Live::decode(l.encode()); CHECK(d && d->powerW == 214 && !d->hrBpm && d->cadenceRpm == 89 && d->speedKmh10 == 298 && d->ftpKnown && d->powerBandW && d->powerBandW->second == 216 && d->stepName == "Interval 2" && d->recording && !d->paused && d->distanceM == 11600, "Live round-trips; a missing HR stays missing (never zero)");
+        { auto enc = l.encode(); CHECK(!Live::decode(std::vector<uint8_t>(enc.begin(), enc.begin() + 10)), "a truncated Live payload is refused, not half-read"); }
+        Gps g; g.latE7 = 251972000; g.lonE7 = 552744000; g.speedKmh10 = 298; g.headingDeg = 86; g.phoneUnixS = 1762600000u; g.ageMs = 900; auto gd = Gps::decode(g.encode()); CHECK(gd && gd->latE7 == g.latE7 && gd->headingDeg == 86 && gd->ageMs == 900, "Gps round-trips");
+        Gps bad = g; bad.latE7 = 1000000000; CHECK(!Gps::decode(bad.encode()), "a latitude beyond ±90° is refused");
+        PlanToday p; p.kind = 2; p.workoutId = "w-42"; p.title = "Upper body"; p.startMin = 17 * 60 + 30; p.durationMin = 45; p.exercises = {{"bench", "Bench press", 3, 8, 600, 90, 'A'}, {"row", "Single-arm row", 3, 10, 225, 90, 'A'}};
+        auto pd = PlanToday::decode(p.encode()); CHECK(pd && pd->exercises.size() == 2 && pd->exercises[1].name == "Single-arm row" && pd->exercises[0].superset == 'A' && pd->startMin == 1050, "PlanToday round-trips with exercises");
+        Cached c; c.sleepMin = 462; c.sleepSource = "PHONE"; c.sleepUnixS = 1762581000u; c.hrvMs = 64; c.recoveryPct = 78; c.recoveryWord = "GOOD"; c.insight = "SLEEP SHORT · GO EASY"; c.loadPct = 65;
+        auto cd = Cached::decode(c.encode()); CHECK(cd && cd->sleepMin == 462 && cd->hrvMs == 64 && cd->recoveryPct == 78 && cd->insight == c.insight, "Cached round-trips"); Cached none; auto nd = Cached::decode(none.encode()); CHECK(nd && !nd->sleepMin && !nd->hrvMs && !nd->recoveryPct, "absent cached values decode as absent");
+        cyw::WatchEvent e; e.seq = 7; e.watchUnixS = 1762600100u; e.kind = 6; e.workoutId = "w-42"; e.a = 201; e.b = 8; e.c = 600; e.manual = true; auto ed = decodeEvent(encodeEvent(e, "wa:tc:h1")); CHECK(ed && ed->first == "wa:tc:h1" && ed->second.seq == 7 && ed->second.kind == 6 && ed->second.c == 600 && ed->second.manual, "Event round-trips with its device id");
+        CHECK(decodeAck(encodeAck(1234)) == 1234u, "Ack round-trips");
+        TimeSync t; t.unixS = 1762600000u; t.ms = 250; t.tzOffsetMin = 240; auto td = TimeSync::decode(t.encode()); CHECK(td && td->tzOffsetMin == 240 && td->ms == 250, "TimeSync round-trips with a positive tz offset");
+    }
+
+    // ------------------------------------------------------------ application model: a full ride and a full strength workout through touch + keys + BLE
+    {
+        using namespace cyw; using namespace cyw::app; cyw::ui::HostMeasurer hm;
+        auto tap = [&](AppModel& a, const std::string& id, uint32_t now) { auto s = a.render(hm, now); for (auto& e : s.els) if (e.kind == ui::Kind::Rect && e.role == ui::Role::Button && e.id == id) { hal::TouchEvent t{hal::TouchEvent::Tap, int16_t(e.r.cx()), int16_t(e.r.cy())}; return a.onTouch(t, now); } return false; };
+        auto has = [&](AppModel& a, const std::string& id, uint32_t now) { auto s = a.render(hm, now); for (auto& e : s.els) if (e.id == id) return true; return false; };
+        AppModel a; uint32_t now = 10000;
+        auto s0 = a.render(hm, now); CHECK(s0.name == "face:orbit", "boots to the Orbit face");
+        bool honest = false; for (auto& e : s0.els) if (e.text == "--:--" || e.text == "NOT SYNCED · —") honest = true; CHECK(honest, "before any time sync the face shows --:-- and NOT SYNCED, never an invented time");
+        { Frame f; f.type = MsgType::TimeSync; wire::TimeSync t; t.unixS = 1794130860u; t.tzOffsetMin = 240; f.payload = t.encode(); a.onConnected(true, now); a.onFrame(f, now); }
+        bool timeOk = false; for (auto& e : a.render(hm, now).els) if (e.text == "13:41") timeOk = true; CHECK(timeOk, "after TimeSync the face shows the phone's time in the phone's zone (09:41 UTC + 4 h = 13:41)");
+        // plan + cached recovery arrive
+        { wire::PlanToday p; p.kind = 1; p.workoutId = "ride-1"; p.title = "Endurance ride"; p.startMin = 1050; p.durationMin = 60; Frame f; f.type = MsgType::PlanToday; f.payload = p.encode(); a.onFrame(f, now); }
+        bool next = false; for (auto& e : a.render(hm, now).els) if (e.text.rfind("Endurance ride", 0) == 0) next = true; CHECK(next, "the face's next-session line comes from the synced plan");
+        // swipe up → activities, pick Outdoor cycling → prepare → Start
+        CHECK(a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now) && a.nav().current() == Screen::Activities, "swipe up opens the activity library");
+        CHECK(tap(a, "act0", now) && a.render(hm, now).name == "prepare:ride", "choosing Outdoor cycling opens the prepare screen");
+        CHECK(tap(a, "start", now) && a.nav().activityRunning() && a.nav().current() == Screen::RideCockpit && a.session() && a.session()->phase() == Phase::Active, "Start begins the session on the Cockpit");
+        auto out = a.takeOutbox(); CHECK(out.size() >= 1 && out.back().type == MsgType::Event, "a start Event is sent to the phone");
+        // live telemetry arrives → the cockpit shows it; a second later the series has a sample
+        { wire::Live l; l.powerW = 214; l.powerAgeMs = 500; l.hrBpm = 148; l.hrAgeMs = 900; l.cadenceRpm = 89; l.cadenceAgeMs = 500; l.ftpKnown = true; l.ftpW = 240; l.powerBandW = std::make_pair(uint16_t(180), uint16_t(216)); l.stepName = "Interval 1"; l.stepRemainingS = 300; l.stepTotalS = 600; l.distanceM = 1200; Frame f; f.type = MsgType::Live; f.payload = l.encode(); a.onFrame(f, now); }
+        bool lead = false, cmd = false; for (auto& e : a.render(hm, now).els) { if (e.id == "lead" && e.text == "214") lead = true; if (e.id == "command" && e.text == "HOLD 198 W") cmd = true; } CHECK(lead && cmd, "the cockpit shows the live 214 W and the HOLD 198 W command derived from the synced band");
+        now += 1000; a.tick(now); now += 1000; a.tick(now);
+        CHECK(a.onTouch({hal::TouchEvent::SwipeRight, 20, 120}, now) && a.nav().current() == Screen::RidePerformance, "swipe right → Performance");
+        CHECK(a.onTouch({hal::TouchEvent::SwipeLeft, 220, 120}, now) && a.perfPage() == ui::PerfPage::HeartRate, "swipe left on Performance changes the metric page (no screen change)");
+        a.onTouch({hal::TouchEvent::SwipeRight, 20, 120}, now); CHECK(a.perfPage() == ui::PerfPage::Power, "swipe right goes back a page");
+        a.onTouch({hal::TouchEvent::SwipeRight, 20, 120}, now); CHECK(a.nav().current() == Screen::RideNavigation, "past the first page a swipe right leaves to Navigation");
+        a.onTouch({hal::TouchEvent::SwipeRight, 20, 120}, now); CHECK(a.nav().current() == Screen::RideCockpit, "and once more back to the Cockpit");
+        // touch Pause is immediate; Resume too
+        CHECK(tap(a, "pause", now) && a.session()->phase() == Phase::Paused, "the compact Pause pill pauses in one tap");
+        CHECK(has(a, "resume", now) && has(a, "end", now), "paused: Resume and End are on the touchscreen");
+        CHECK(tap(a, "resume", now) && a.session()->phase() == Phase::Active, "Resume in one tap");
+        // Key 2 = Lap through the two-press rule
+        a.onKey(Key::Key2, true, now); a.onKey(Key::Key2, true, now + 40); a.onKey(Key::Key2, false, now + 120); a.onKey(Key::Key2, false, now + 160);
+        CHECK(!a.keyPreview().empty() && a.events().lastSeq() == 3, "first Key 2 press previews Lap and records nothing (start · pause · resume = 3 events so far)");
+        a.onKey(Key::Key2, true, now + 700); a.onKey(Key::Key2, true, now + 740); a.onKey(Key::Key2, false, now + 820); a.onKey(Key::Key2, false, now + 860);
+        CHECK(a.keyPreview().empty() && a.events().lastSeq() == 4, "second Key 2 press confirms: one lap Event");
+        // End: swipe up → controls → End → confirm screen → End → review → Save
+        now += 2000; CHECK(a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now) && a.overlay() == Overlay::RideControls, "swipe up opens the ride controls overlay");
+        CHECK(tap(a, "end", now) && a.overlay() == Overlay::ConfirmEnd && a.session()->phase() == Phase::Active, "End asks for confirmation; recording continues meanwhile");
+        CHECK(tap(a, "keep", now) && a.overlay() == Overlay::None && a.session()->phase() == Phase::Active, "Keep returns to the ride");
+        a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now); tap(a, "end", now); CHECK(tap(a, "endConfirm", now) && a.nav().current() == Screen::RideReview && a.session()->phase() == Phase::Review, "confirmed End → Review");
+        CHECK(tap(a, "save", now) && !a.session() && a.nav().current() == Screen::Face, "Save returns to the face and closes the session");
+        auto ev = a.events().pending(); CHECK(ev.size() == 6 && ev.front().kind == 1 && ev[3].kind == 5 && ev.back().kind == 9, "start · pause · resume · lap · end · save → the unacknowledged queue holds them in order");
+        { Frame f; f.type = MsgType::Ack; f.payload = wire::encodeAck(a.events().lastSeq()); a.onFrame(f, now); } CHECK(a.events().pending().empty(), "the phone's cumulative Ack clears the queue");
+        // phone lost mid-ride: no GPS points, recording continues, command says PHONE LOST
+        a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now); tap(a, "act0", now); tap(a, "start", now);
+        a.onConnected(false, now); bool lost = false; for (auto& e : a.render(hm, now).els) if (e.id == "command" && e.text == "PHONE LOST") lost = true; CHECK(lost && a.session()->phase() == Phase::Active, "phone disconnected → PHONE LOST command, recording continues");
+        CHECK(tap(a, "pause", now), "touch Pause still works while disconnected"); a.takeOutbox(); tap(a, "resume", now); CHECK(a.takeOutbox().empty() && a.events().pending().size() >= 2, "events queue offline and nothing is sent until the phone is back");
+        a.onConnected(true, now); CHECK(a.takeOutbox().size() == a.events().pending().size(), "on reconnect every pending event is resent");
+        a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now); tap(a, "end", now); tap(a, "endConfirm", now); tap(a, "discard", now); CHECK(!a.session(), "discard closes the session too");
+        // strength: plan with a superset → Log set → rest → next exercise; Correct → confirm
+        { wire::PlanToday p; p.kind = 2; p.workoutId = "lift-1"; p.title = "Upper body"; p.exercises = {{"bench", "Bench press", 2, 8, 600, 60, 'A'}, {"row", "Single-arm row", 2, 10, 225, 60, 'A'}}; Frame f; f.type = MsgType::PlanToday; f.payload = p.encode(); a.onFrame(f, now); }
+        a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now); tap(a, "act2", now); CHECK(a.render(hm, now).name == "prepare:lift", "Strength training opens the lift prepare screen");
+        tap(a, "start", now); CHECK(a.nav().current() == Screen::LiftExercise && a.lift() && a.lift()->current()->name == "Bench press", "Start → first exercise");
+        bool manual = false; for (auto& e : a.render(hm, now).els) if (e.text == "REPS · MANUAL") manual = true; CHECK(manual, "without detected reps the label says MANUAL, never a fake confidence");
+        CHECK(tap(a, "logSet", now) && a.lift()->completedSets() == 1 && a.nav().current() == Screen::LiftRest, "Log set records the target reps and opens the rest timer");
+        bool nextName = false; for (auto& e : a.render(hm, now).els) if (e.text == "Single-arm row") nextName = true; CHECK(nextName, "the rest screen names the superset partner as the next exercise");
+        now += 61000; a.tick(now); CHECK(a.nav().current() == Screen::LiftExercise && a.lift()->current()->name == "Single-arm row", "rest over → back to the exercise screen, on the superset partner");
+        tap(a, "correct", now); CHECK(a.overlay() == Overlay::RepConfirm, "Correct opens the detected-count confirmation");
+        tap(a, "confirm", now); CHECK(a.lift()->completedSets() == 2 && a.lift()->log().back().autoCounted == false, "Confirm logs the set (no detected reps → not auto-counted)");
+        a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now); CHECK(a.overlay() == Overlay::LiftControls, "swipe up → workout controls"); tap(a, "end", now); tap(a, "endConfirm", now); CHECK(a.nav().current() == Screen::LiftReview, "End workout → review");
+        tap(a, "save", now); CHECK(!a.lift() && a.nav().current() == Screen::Face, "saved");
+        // every rendered scene along the way passed the same round-display checks
+        int bad = 0; for (auto& ap : ui::appearances()) { auto s = a.render(hm, now); bad += int(ui::check(s, ap, "app").size()); } CHECK(bad == 0, "the model's rendered face passes the round-display checks in every appearance");
     }
 
     std::printf("\n%d checks, %d failures\n", checks, failures);

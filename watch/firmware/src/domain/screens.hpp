@@ -8,6 +8,7 @@
 #include "ride_screens.hpp"
 #include "buttons.hpp"
 #include <memory>
+#include <cstdio>
 
 namespace cyw::ui {
 
@@ -155,42 +156,109 @@ inline std::vector<std::shared_ptr<RideFixture>> rideFixtures(const Content& c) 
 }
 
 // ---------------------------------------------------------------- live: strength ("Which exercise, how many reps, and what comes next?")
-/// The detected rep count is the dominant element (60 px); the label above it says how it was counted (AUTO with its
-/// confidence, or MANUAL) so nobody mistakes a guess for a fact; the set line carries set / target / weight / superset slot.
-inline Scene liftExercise(const TextMeasurer& m, const Content& c) {
+/// Real strength state for the screens (filled from StrengthSession + the rep detector on the device; from Content in
+/// the gallery). Nothing here is a demonstration number once the app runs.
+struct LiftState {
+    std::string exercise = "Bench press", nextExercise = "Incline press";
+    int setIndex = 2, setTotal = 3, targetReps = 8;                  // 1-based set index
+    std::optional<float> weightKg = 60.f;                              // nullopt = bodyweight / unknown
+    char superset = 'A'; int supersetOrdinal = 1;                      // "A1"; 0 superset = straight sets
+    int reps = 6; std::optional<float> confidence = 0.9f; bool autoCount = true;   // detected count + its provenance
+    uint32_t restRemainingS = 72, restTotalS = 120;
+    int setsLogged = 3; uint32_t elapsedS = 2520; bool paused = false;
+    std::string setLine() const { std::string w = weightKg ? std::to_string(int(std::lround(*weightKg))) + " kg" : "bodyweight"; std::string ss = superset ? std::string(" · ") + superset + std::to_string(supersetOrdinal) : ""; return "SET " + std::to_string(setIndex) + "/" + std::to_string(setTotal) + " · " + std::to_string(targetReps) + " REPS · " + w + ss; }
+    std::string repsLabel() const { if (!autoCount) return "REPS · MANUAL"; char b[32]; std::snprintf(b, sizeof b, "REPS · AUTO %.1f", confidence.value_or(0.f)); return b; }
+    std::string nextLabel() const { return superset ? std::string("NEXT · ") + superset + std::to_string(supersetOrdinal + 1) : "NEXT"; }
+    static LiftState from(const Content& c) { LiftState l; l.exercise = c.exercise; l.nextExercise = c.nextExercise; if (!c.restS.empty()) { int m = 0, sec = 0; std::sscanf(c.restS.c_str(), "%d:%d", &m, &sec); l.restRemainingS = m * 60 + sec; } return l; }
+};
+inline Scene liftExercise(const TextMeasurer& m, const LiftState& l) {
     Scene s{"live:lift-exercise"}; Builder b(s, m);
-    b.moreText(c.exercise, 30, {15, 13, 2, false}, Role::Body, true, "text", 14, "exercise");
-    b.text("SET 2/3 · 8 REPS · 60 kg · A1", 68, {11, 11, 1, false}, Role::Label, true, "mut", 10, false, "setline");
-    b.metric("REPS · AUTO 0.9", "6", "", 84, 52, "text", "reps");
+    b.moreText(l.exercise, 30, {15, 13, 2, false}, Role::Body, true, "text", 14, "exercise");
+    b.text(l.setLine(), 68, {11, 11, 1, false}, Role::Label, true, "mut", 10, false, "setline");
+    b.metric(l.repsLabel(), std::to_string(l.reps), "", 84, 52, "text", "reps");
     b.button("Log set", CX - 39, CTRL_Y, 72, "accent", "onAccent", true, "logSet"); b.button("Correct", CX + 39, CTRL_Y, 72, "card2", "text", true, "correct");
     return s;
 }
+inline Scene liftExercise(const TextMeasurer& m, const Content& c) { return liftExercise(m, LiftState::from(c)); }
 /// Set finished: the watch proposes the detected count and asks for a confirmation — the athlete, not the sensor, has the last word.
-inline Scene repCounter(const TextMeasurer& m, const Content& c) {
+inline Scene repCounter(const TextMeasurer& m, const LiftState& l) {
     Scene s{"live:rep-counter"}; Builder b(s, m);
-    b.moreText(c.exercise, 30, {15, 13, 2, false}, Role::Body, true, "text", 14, "exercise");
-    b.text("SET 2 / 3 DONE · TARGET 8", 68, {11, 11, 1, false}, Role::Label, true, "mut", 10);
-    b.metric("DETECTED · CONFIDENCE 0.9", "7", "", 84, 52, "text", "autoReps");
+    b.moreText(l.exercise, 30, {15, 13, 2, false}, Role::Body, true, "text", 14, "exercise");
+    b.text("SET " + std::to_string(l.setIndex) + " / " + std::to_string(l.setTotal) + " DONE · TARGET " + std::to_string(l.targetReps), 68, {11, 11, 1, false}, Role::Label, true, "mut", 10);
+    { char lb[40]; std::snprintf(lb, sizeof lb, "DETECTED · CONFIDENCE %.1f", l.confidence.value_or(0.f)); b.metric(lb, std::to_string(l.reps), "", 84, 52, "text", "autoReps"); }
     b.button("Confirm", CX - 39, CTRL_Y, 72, "grade.green", "onAccent", true, "confirm"); b.button("Correct", CX + 39, CTRL_Y, 72, "card2", "text", true, "correct");
     return s;
 }
+inline Scene repCounter(const TextMeasurer& m, const Content& c) { LiftState l = LiftState::from(c); l.reps = 7; return repCounter(m, l); }
 /// Rest: the countdown leads; the next exercise and the superset step are the only other things on the screen.
-inline Scene restTimer(const TextMeasurer& m, const Content& c) {
+inline Scene restTimer(const TextMeasurer& m, const LiftState& l) {
     Scene s{"live:rest-timer"}; Builder b(s, m);
-    b.arc(-140, 140, 6, "line", RADIUS - EDGE_INSET - 3, "restTrack"); b.arc(-140, -140 + 280 * 0.6f, 6, "accent", RADIUS - EDGE_INSET - 3, "restArc");
-    b.metric("REST · SET 3 OF 3", c.restS, "", 36, 50, "text", "rest");
-    b.text("NEXT · A2", 118, {11, 11, 1, false}, Role::Label, true, "mut", 16);
-    b.moreText(c.nextExercise, 132, {14, 13, 1, false}, Role::Body, true, "text", 18, "next");
-    b.button("Skip rest", CX - 39, CTRL_Y, 72, "card2", "text", true, "skipRest"); b.button("Pause", CX + 39, CTRL_Y, 72, "accent", "onAccent", true, "pause");
+    float frac = l.restTotalS ? std::clamp(float(l.restRemainingS) / float(l.restTotalS), 0.f, 1.f) : 0.f;
+    b.arc(-140, 140, 6, "line", RADIUS - EDGE_INSET - 3, "restTrack"); if (frac > 0.01f) b.arc(-140, -140 + 280 * frac, 6, "accent", RADIUS - EDGE_INSET - 3, "restArc");
+    b.metric("REST · SET " + std::to_string(std::min(l.setIndex + 1, l.setTotal)) + " OF " + std::to_string(l.setTotal), mmss(l.restRemainingS), "", 36, 50, "text", "rest");
+    b.text(l.nextLabel(), 118, {11, 11, 1, false}, Role::Label, true, "mut", 16);
+    b.moreText(l.nextExercise, 132, {14, 13, 1, false}, Role::Body, true, "text", 18, "next");
+    b.button("Skip rest", CX - 39, CTRL_Y, 72, "card2", "text", true, "skipRest"); b.button(l.paused ? "Resume" : "Pause", CX + 39, CTRL_Y, 72, "accent", "onAccent", true, l.paused ? "resume" : "pause");
     return s;
 }
+inline Scene restTimer(const TextMeasurer& m, const Content& c) { return restTimer(m, LiftState::from(c)); }
 /// Workout controls overlay (Key 1 preview, swipe up): Pause / Resume · End workout (confirms) · Correct reps.
-inline Scene liftControls(const TextMeasurer& m, const Content& c) {
-    Scene s{"live:lift-controls"}; Builder b(s, m); (void)c;
+inline Scene liftControls(const TextMeasurer& m, const LiftState& l) {
+    Scene s{"live:lift-controls"}; Builder b(s, m);
     b.text("WORKOUT CONTROLS", 36, {11, 11, 1, false}, Role::Label, true, "mut", 14);
-    b.button("Correct", CX - 39, 58, 72, "card2", "text", false, "correct"); b.button("Pause", CX + 39, 58, 72, "accent", "onAccent", true, "pause");
+    b.button("Correct", CX - 39, 58, 72, "card2", "text", false, "correct"); b.button(l.paused ? "Resume" : "Pause", CX + 39, 58, 72, "accent", "onAccent", true, l.paused ? "resume" : "pause");
     b.button("End workout", CX, 108, 130, "grade.red", "onAccent", true, "end");
-    b.text("3 sets logged · 42 min · swipe down to return", 166, {11, 11, 2, false}, Role::Label, true, "mut", 16);
+    b.text(std::to_string(l.setsLogged) + " sets logged · " + std::to_string(l.elapsedS / 60) + " min · swipe down to return", 166, {11, 11, 2, false}, Role::Label, true, "mut", 16);
+    return s;
+}
+inline Scene liftControls(const TextMeasurer& m, const Content& c) { return liftControls(m, LiftState::from(c)); }
+
+// ---------------------------------------------------------------- lifecycle screens (prepare · confirm end · review) and the face picker
+struct PrepareState { std::string title = "Outdoor cycling"; std::string plan = "Endurance ride · 60 min"; std::string sensors = "iPhone linked · GPS via phone"; bool phoneLinked = true; bool cycling = true; };
+inline Scene prepare(const TextMeasurer& m, const PrepareState& p) {
+    Scene s{p.cycling ? "prepare:ride" : "prepare:lift"}; Builder b(s, m);
+    b.text(p.cycling ? "READY TO RIDE" : "READY TO LIFT", 34, {11, 11, 1, false}, Role::Label, true, "mut", 14);
+    b.moreText(p.title, 50, {17, 14, 2, false}, Role::Body, true, "text", 16, "title");
+    b.text(p.plan, 96, {13, 13, 2, false}, Role::Body, false, "mut", 18);
+    b.text(p.sensors, 128, {11, 11, 1, false}, Role::Label, true, p.phoneLinked ? "mut" : "grade.yellow", 14);
+    b.button("Start", CX, 160, 120, "grade.green", "onAccent", true, "start");
+    b.text("Key 1 · back", 208, {11, 11, 1, false}, Role::Label, true, "mut", 8);
+    return s;
+}
+inline Scene confirmEnd(const TextMeasurer& m, bool cycling, uint32_t elapsedS, uint32_t distanceM) {
+    Scene s{cycling ? "live:ride-confirm-end" : "live:lift-confirm-end"}; Builder b(s, m);
+    b.text(cycling ? "END THIS RIDE?" : "END THIS WORKOUT?", 44, {11, 11, 1, false}, Role::Label, true, "grade.yellow", 14);
+    b.text(mmss(elapsedS) + (cycling ? " · " + km(distanceM) : ""), 62, {22, 20, 1, false}, Role::Value, true, "text", 8);
+    b.text("Recording continues until you confirm.", 100, {13, 13, 2, false}, Role::Body, false, "mut", 20);
+    b.button("Keep", CX - 39, 150, 72, "accent", "onAccent", true, "keep"); b.button("End", CX + 39, 150, 72, "grade.red", "onAccent", true, "endConfirm");
+    return s;
+}
+struct ReviewState { bool cycling = true; uint32_t elapsedS = 3600; uint32_t distanceM = 28400; std::optional<int> avgPower, avgHr; int setsLogged = 0; int exercises = 0; bool phoneLinked = true; };
+inline Scene review(const TextMeasurer& m, const ReviewState& r) {
+    Scene s{r.cycling ? "review:ride" : "review:lift"}; Builder b(s, m);
+    b.text(r.cycling ? "RIDE DONE" : "WORKOUT DONE", 34, {11, 11, 1, false}, Role::Label, true, "mut", 14);
+    b.text(mmss(r.elapsedS), 50, {34, 24, 1, false}, Role::Value, true, "text", 20);
+    std::string line = r.cycling ? km(r.distanceM) + (r.avgPower ? " · " + std::to_string(*r.avgPower) + " W" : "") + (r.avgHr ? " · " + std::to_string(*r.avgHr) + " bpm" : "") : std::to_string(r.setsLogged) + " sets · " + std::to_string(r.exercises) + " exercises";
+    b.text(line, 96, {14, 13, 1, false}, Role::Comp, true, "text", 16);
+    b.text(r.phoneLinked ? "Saves to the iPhone now" : "Saved on the watch · syncs when the iPhone is back", 118, {12, 11, 2, false}, Role::Label, true, r.phoneLinked ? "mut" : "grade.yellow", 16);
+    b.button("Discard", CX - 39, 160, 72, "card2", "text", false, "discard"); b.button("Save", CX + 39, 160, 72, "grade.green", "onAccent", true, "save");
+    return s;
+}
+inline Scene facePicker(const TextMeasurer& m, int current) {
+    Scene s{"menu:faces"}; Builder b(s, m);
+    b.text("WATCH FACE", 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
+    const char* names[] = {"Orbit", "Chrono", "Pulse"}; float y = 46;
+    for (int i = 0; i < 3; i++) { b.row(names[i], i == current ? "✓" : "", y, 44, "face" + std::to_string(i)); y += 48; }
+    b.text("swipe down · back", 196, {11, 11, 1, false}, Role::Label, true, "mut", 6);
+    return s;
+}
+struct TodayState { std::string title = "Endurance ride"; std::string when = "17:30 · 60 min"; std::string detail = "Zone 2 · 180–216 W"; bool none = false; std::string syncAge = "synced 06:10"; };
+inline Scene today(const TextMeasurer& m, const TodayState& t) {
+    Scene s{"panel:today"}; Builder b(s, m);
+    b.textFirstFit({"TODAY · " + t.syncAge, "TODAY"}, 32, {11, 11, 1, false}, Role::Label, true, "mut", 6);
+    if (t.none) { b.text("No session planned", 70, {16, 13, 2, false}, Role::Body, true, "text", 16); b.text("Rest day — recovery matters as much as the work", 108, {13, 13, 2, false}, Role::Body, false, "mut", 18); }
+    else { b.moreText(t.title, 52, {18, 14, 2, false}, Role::Body, true, "text", 16, "title"); b.text(t.when, 100, {14, 13, 1, false}, Role::Comp, true, "text", 16); b.text(t.detail, 120, {13, 13, 2, false}, Role::Body, false, "mut", 18); }
+    b.button("Start", CX, 160, 110, "grade.green", "onAccent", false, "start");
     return s;
 }
 
@@ -264,7 +332,7 @@ inline std::vector<Scene> allScreens(const TextMeasurer& m, const Content& c) {
         if (fx->controls && !fx->live.paused) {
             v.push_back(withKeyPreview(rideCockpit(m, f), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::Lap), "-key2:" + fx->name, 148, {"command", "sec0", "sec1"}));
             v.push_back(withKeyPreview(rideCockpit(m, f), m, cyw::TwoPress::labelFor(cyw::Key::Key1, cyw::Press::Long, cyw::Action::EndRequest), "-key1hold:" + fx->name, 148, {"command", "sec0", "sec1"})); } }
-    for (auto& x : {liftExercise(m, c), withKeyPreview(liftExercise(m, c), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::LogSet), "-key2", 34, {"exercise", "more"}), repCounter(m, c), restTimer(m, c), liftControls(m, c), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c)}) v.push_back(x);
+    for (auto& x : {liftExercise(m, c), withKeyPreview(liftExercise(m, c), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::LogSet), "-key2", 34, {"exercise", "more"}), repCounter(m, c), restTimer(m, c), liftControls(m, c), prepare(m, PrepareState{c.activity, c.nextSession, "iPhone linked · GPS via phone", true, true}), confirmEnd(m, true, 1458, 11600), review(m, ReviewState{}), facePicker(m, 0), today(m, TodayState{c.nextSession, "17:30 · 60 min", "Zone 2 · " + c.target, false, "synced 06:10"}), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c)}) v.push_back(x);
     return v;
 }
 

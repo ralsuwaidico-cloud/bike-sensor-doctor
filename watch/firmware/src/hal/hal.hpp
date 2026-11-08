@@ -30,8 +30,8 @@ struct IImu {               // BMA423: raw 50/100 Hz samples for the rep detecto
     virtual ~IImu() = default;
 };
 struct IRtc {               // PCF8563: unix time, alarm interrupt on IO32 (V1.1) for wake-ups
-    virtual uint32_t unix() = 0;
-    virtual void set(uint32_t unix) = 0;
+    virtual uint32_t unixTime() = 0;
+    virtual void set(uint32_t unixS) = 0;
     virtual void alarmIn(uint32_t seconds) = 0;
     virtual ~IRtc() = default;
 };
