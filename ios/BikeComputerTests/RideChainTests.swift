@@ -12,8 +12,15 @@ final class RideChainTests: XCTestCase {
     /// 50 minutes of power: a 20-minute block at `block` W inside easier riding, 1 Hz samples.
     private func ride(start: Date, block: Int, verified: Bool? = true) -> RideRecord {
         var r = RideRecord(start: start, durationS: 3000, distanceM: 24_000, recorder: .phone, sources: ["Phone GPS", "Power meter"])
-        r.samples = (1...3000).map { t in RideRecord.Sample(t: t, w: (900..<2100).contains(t) ? block : 150, hr: 120 + (t % 30)) }
-        r.avgPower = r.samples.compactMap(\.w).reduce(0, +) / 3000; r.maxPower = block; r.avgHR = 135; r.maxHR = 149
+        var samples: [RideRecord.Sample] = []
+        for t in 1...3000 {
+            let w: Int = (t >= 900 && t < 2100) ? block : 150
+            let hr: Int = 120 + (t % 30)
+            samples.append(RideRecord.Sample(t: t, w: w, hr: hr))
+        }
+        r.samples = samples
+        let total: Int = samples.compactMap(\.w).reduce(0, +)
+        r.avgPower = total / 3000; r.maxPower = block; r.avgHR = 135; r.maxHR = 149
         r.powerVerified = verified
         return r
     }
@@ -56,7 +63,7 @@ final class RideChainTests: XCTestCase {
         XCTAssertTrue(s.addRide(ride(start: start.addingTimeInterval(86_400), block: 272)))
         XCTAssertNil(s.ftpSuggestion, "272 W → 258 W is under 2 % of 257 W: no proposal")
         var noPower = RideRecord(start: start.addingTimeInterval(2 * 86_400), durationS: 1800, distanceM: 9000, recorder: .phone, sources: ["Phone GPS"])
-        noPower.samples = (1...1800).map { RideRecord.Sample(t: $0, w: nil) }
+        noPower.samples = (1...1800).map { (t: Int) -> RideRecord.Sample in RideRecord.Sample(t: t, w: nil) }
         XCTAssertTrue(s.addRide(noPower)); XCTAssertNil(s.ftpSuggestion); XCTAssertNil(s.rides[0].best20)
 
         // 5. the check-in is stored on the ride and reaches the adaptive coach

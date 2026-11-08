@@ -15,7 +15,7 @@ final class DataIntegrityGapTests: XCTestCase {
         p.setFTP(252, source: .tested); s.profile = p
         s.availability = WeeklyAvailability(days: [day(.strength, 30), day(.cycling, 60), day(nil), day(.cycling, 60), day(nil), day(.cycling, 90), day(nil)])
         _ = s.regenerate(weekOf: monday, replaceEdited: true)
-        var r = RideRecord(start: Date(), durationS: 3600, distanceM: 30_000, recorder: .phone, sources: ["Phone GPS"]); r.avgPower = 190; r.samples = (1...60).map { RideRecord.Sample(t: $0, w: 180 + $0 % 7) }; _ = s.addRide(r)
+        var r = RideRecord(start: Date(), durationS: 3600, distanceM: 30_000, recorder: .phone, sources: ["Phone GPS"]); r.avgPower = 190; r.samples = (1...60).map { (t: Int) -> RideRecord.Sample in RideRecord.Sample(t: t, w: 180 + (t % 7)) }; _ = s.addRide(r)
         var st = StrengthSession(date: Date(), minutes: 35, focus: .fullBody); st.exercises = [ExerciseEntry(exercise: Exercise(id: "row", name: "Row", pattern: .pull), sets: [SetEntry(reps: 8, weightKg: 40)])]; _ = s.addStrength(st)
         s.settings.units = .imperial; s.settings.healthReads.sleep = true
         s.applyHealthSamples([HealthSample(kind: .sleep, value: 7.1, date: Date().addingTimeInterval(-3600), source: "Apple Watch")])
@@ -72,8 +72,12 @@ final class DataIntegrityGapTests: XCTestCase {
         let np = RidePerformanceModel.normalizedPower(v)!
         XCTAssertGreaterThan(np, 200); XCTAssertLessThan(np, 300)
         // reference value computed independently (rolling 30 s means, 4th-power mean, 4th root)
-        var means: [Double] = []; for i in 29..<v.count { means.append(Double(v[(i - 29)...i].reduce(0, +)) / 30) }
-        let ref = Int(pow(means.map { pow($0, 4) }.reduce(0, +) / Double(means.count), 0.25).rounded())
+        var means: [Double] = []
+        for i in 29..<v.count { let windowSum: Int = v[(i - 29)...i].reduce(0, +); means.append(Double(windowSum) / 30.0) }
+        var fourth: Double = 0
+        for m in means { fourth += m * m * m * m }
+        let meanFourth: Double = fourth / Double(means.count)
+        let ref: Int = Int(pow(meanFourth, 0.25).rounded())
         XCTAssertEqual(np, ref)
         XCTAssertEqual(RidePerformanceModel.normalizedPower([Int](repeating: 0, count: 40)), 0)
     }

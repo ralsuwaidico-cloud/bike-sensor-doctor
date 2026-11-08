@@ -67,7 +67,7 @@ final class RecoveryAnalysisTests: XCTestCase {
         let hrv = RecoveryAnalysis.metric(.hrv, log: log(sleep: [], hrv: [60, 58, 62, 61, 59, 60, 63, 40]), now: now)
         XCTAssertEqual(hrv.standing, .lower); XCTAssertTrue(hrv.flagged)
         // weight is never flagged
-        var wl = RecoveryLog(); wl.merge((0..<8).map { HealthSample(kind: .weight, value: $0 == 7 ? 90 : 75, date: morning(7 - $0), source: "Scale") }, now: now)
+        var wl = RecoveryLog(); wl.merge((0..<8).map { (i: Int) -> HealthSample in HealthSample(kind: .weight, value: i == 7 ? 90.0 : 75.0, date: morning(7 - i), source: "Scale") }, now: now)
         XCTAssertFalse(RecoveryAnalysis.metric(.weight, log: wl, now: now).flagged)
     }
 
@@ -96,7 +96,7 @@ final class RecoveryAnalysisTests: XCTestCase {
         let young = RecoveryAnalysis.advice(RecoveryAnalysis.metrics(log: log(sleep: [6.0, 5.0]), enabled: [.sleep], now: now), trainingAllowed: true, todayIsRest: false, now: now)
         XCTAssertEqual(young.kind, .trainAsPlanned); XCTAssertTrue(young.detail.contains("fewer than 7"), young.detail)
         // stale readings → no data; stale flags never advise
-        var stale = RecoveryLog(); stale.merge((0..<8).map { HealthSample(kind: .sleep, value: $0 == 7 ? 4.0 : 7.5, date: morning(12 - $0), source: "Apple Watch") }, now: now)
+        var stale = RecoveryLog(); stale.merge((0..<8).map { (i: Int) -> HealthSample in HealthSample(kind: .sleep, value: i == 7 ? 4.0 : 7.5, date: morning(12 - i), source: "Apple Watch") }, now: now)
         let nd = RecoveryAnalysis.advice(RecoveryAnalysis.metrics(log: stale, enabled: [.sleep], now: now), trainingAllowed: true, todayIsRest: false, now: now)
         XCTAssertEqual(nd.kind, .noData); XCTAssertTrue(nd.detail.hasPrefix("No reading from the last 24 hours."), nd.detail)
         XCTAssertEqual(RecoveryAnalysis.advice([], trainingAllowed: true, todayIsRest: false, now: now).detail.hasPrefix("No recovery reads are turned on."), true)
@@ -111,7 +111,7 @@ final class RecoveryAnalysisTests: XCTestCase {
         s.applyHealthSamples(latest, now: now)
         XCTAssertEqual(s.profile.sleepHours, 7.2)
         XCTAssertEqual(s.recoveryLog.entries.map(\.kind), [.sleep], "a read that is off is neither applied nor logged")
-        s.recordRecoveryHistory((1...10).map { HealthSample(kind: .sleep, value: 7.5, date: morning($0), source: "Apple Watch") }, now: now)
+        s.recordRecoveryHistory((1...10).map { (i: Int) -> HealthSample in HealthSample(kind: .sleep, value: 7.5, date: morning(i), source: "Apple Watch") }, now: now)
         XCTAssertEqual(s.recoveryLog.entries(.sleep).count, 11)
         XCTAssertEqual(s.profile.sleepHours, 7.2, "history never rewrites the latest value")
         let r = s.recoveryReport(now: now)
