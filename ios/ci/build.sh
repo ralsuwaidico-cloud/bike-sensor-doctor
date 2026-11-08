@@ -194,6 +194,17 @@ release_products() {  # Release build for the UI tests (the shipped configuratio
 run_smoke() {
   TS=$SECONDS
   release_products || { note "RESULT launch smoke (Release): FAILED (build)"; STATUS=1; return; }
+  # Runs 194–196 (8 Nov): the first smoke test launched the cold Release app on a simulator that had just booted —
+  # once the launch itself timed out, twice the first screens were far slower than usual. Boot fully (as the journeys
+  # do since run 151), then install + launch + terminate the app once so the first XCUITest launch is warm.
+  xcrun simctl bootstatus "$SIM" -b > /dev/null 2>&1 || true
+  local app; app=$(find "$(dirname "$RELEASE_XR")" -maxdepth 3 -name 'BikeComputer.app' -path '*Release-iphonesimulator*' 2>/dev/null | head -1)
+  if [ -n "$app" ]; then
+    xcrun simctl install "$SIM" "$app" > /dev/null 2>&1 || true
+    xcrun simctl launch "$SIM" com.ralsuwaidico.bikecomputer > /dev/null 2>&1 || true
+    sleep 10
+    xcrun simctl terminate "$SIM" com.ralsuwaidico.bikecomputer > /dev/null 2>&1 || true
+  fi
   twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests -skip-testing:BikeComputerUITests/JourneyTests
   U=$?
   digest "$OUT/uitest.log" launch-smoke
