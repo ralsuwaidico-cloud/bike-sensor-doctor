@@ -58,7 +58,7 @@ final class PlanSummariesTests: XCTestCase {
         XCTAssertEqual(s.planWeekSummary(weekOf: wed, now: wed, recorderActive: true).next?.button, .open)
         // looking at the week from Monday morning: Monday's lift is next
         let mon = cal.date(byAdding: .hour, value: 8, to: monday)!
-        XCTAssertEqual(s.planWeekSummary(weekOf: mon, now: mon).next.map { cal.isDate(s.plan.first { w in w.id == $0.workoutId }!.date, inSameDayAs: mon) }, true)
+        XCTAssertEqual(s.planWeekSummary(weekOf: mon, now: mon).next.map { n in cal.isDate(s.plan.first { w in w.id == n.workoutId }!.date, inSameDayAs: mon) }, true)
         // a week in the past has no next session
         let lastWeek = cal.date(byAdding: .day, value: -7, to: monday)!
         XCTAssertNil(s.planWeekSummary(weekOf: lastWeek, now: wed).next)

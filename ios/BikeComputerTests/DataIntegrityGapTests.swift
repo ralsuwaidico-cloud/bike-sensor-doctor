@@ -19,7 +19,9 @@ final class DataIntegrityGapTests: XCTestCase {
         var st = StrengthSession(date: Date(), minutes: 35, focus: .fullBody); st.exercises = [ExerciseEntry(exercise: Exercise(id: "row", name: "Row", pattern: .pull), sets: [SetEntry(reps: 8, weightKg: 40)])]; _ = s.addStrength(st)
         s.settings.units = .imperial; s.settings.healthReads.sleep = true
         s.applyHealthSamples([HealthSample(kind: .sleep, value: 7.1, date: Date().addingTimeInterval(-3600), source: "Apple Watch")])
-        let before = s.snapshot
+        // the store writes ISO-8601 seconds, so compare what was WRITTEN (one round trip) with what the relaunch holds
+        func roundTrip(_ f: StoreFile) -> StoreFile { let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601; let dd = JSONDecoder(); dd.dateDecodingStrategy = .iso8601; return try! dd.decode(StoreFile.self, from: try! e.encode(f)) }
+        let before = roundTrip(s.snapshot)
         let again = Store(directory: d, generatePlan: false)
         XCTAssertEqual(again.snapshot.plan, before.plan, "plan identical after relaunch")
         XCTAssertEqual(again.snapshot.rides, before.rides); XCTAssertEqual(again.snapshot.strength, before.strength)

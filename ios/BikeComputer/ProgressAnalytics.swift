@@ -156,7 +156,7 @@ enum ProgressAnalytics {
             let done = e.doneSets; guard !done.isEmpty else { continue }
             sets += done.count; reps += done.reduce(0) { $0 + $1.reps * ($1.unilateral ? 2 : 1) }
             let topW = done.compactMap { $0.bodyweight ? nil : $0.weightKg }.max()
-            for d in done where !d.bodyweight, let w = d.weightKg { tonnage += w * Double(d.reps); weightedSets += 1 }
+            for d in done where !d.bodyweight { guard let w = d.weightKg else { continue }; tonnage += w * Double(d.reps); weightedSets += 1 }
             var x = byEx[e.exerciseId] ?? (e.name, [], 0, nil, 0, s.date, [])
             x.sessions.insert(s.id); x.sets += done.count; x.top = [x.top, topW].compactMap { $0 }.max(); x.topReps = max(x.topReps, done.map(\.reps).max() ?? 0); x.last = max(x.last, s.date); x.history.append((s.date, topW))
             byEx[e.exerciseId] = x
@@ -172,7 +172,7 @@ enum ProgressAnalytics {
         // records from ALL detailed sessions: heaviest set per exercise (top 5 exercises by frequency)
         var recs: [PersonalRecord] = []
         var allByEx: [String: (name: String, w: Double, reps: Int, date: Date, id: UUID, count: Int)] = [:]
-        for s in all.filter(\.isDetailed) { for e in s.exercises ?? [] { for d in e.doneSets where !d.bodyweight, let w = d.weightKg { var cur = allByEx[e.exerciseId]; if cur == nil || w > cur!.w || (w == cur!.w && d.reps > cur!.reps) { cur = (e.name, w, d.reps, s.date, s.id, (cur?.count ?? 0) + 1) } else { cur!.count += 1 }; allByEx[e.exerciseId] = cur } } }
+        for s in all.filter(\.isDetailed) { for e in s.exercises ?? [] { for d in e.doneSets where !d.bodyweight { guard let w = d.weightKg else { continue }; var cur = allByEx[e.exerciseId]; if cur == nil || w > cur!.w || (w == cur!.w && d.reps > cur!.reps) { cur = (e.name, w, d.reps, s.date, s.id, (cur?.count ?? 0) + 1) } else { cur!.count += 1 }; allByEx[e.exerciseId] = cur } } }
         for (_, r) in allByEx.sorted(by: { $0.value.count > $1.value.count }).prefix(5) { recs.append(PersonalRecord(kind: "Heaviest \(r.name.lowercased())", value: String(format: "%.1f kg × %d", r.w, r.reps), date: r.date, recordId: r.id)) }
         return StrengthAnalytics(period: period, sessions: ss.count, detailedSessions: detailed.count, sets: sets, reps: reps, tonnageKg: weightedSets > 0 ? Measured(value: tonnage, records: weightedSets) : nil,
                                  exercises: lines, records: recs, consistency: (weeks.count, active), muscleCoverage: groups.sorted { $0.value > $1.value }.map { (group: $0.key, sets: $0.value) })
