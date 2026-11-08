@@ -526,8 +526,12 @@ final class LayoutAudit: XCTestCase {
                 // Checkpoint C: the dashboard's own controls (ring, tiles, week, coach, recovery, goal, reminder) are ≥ 44 pt
                 checkKey(app, ids: ["cyHeroRing", "homeCycling", "homeStrength", "homeWeekPlan", "homeCoachAction", "homeRecovery", "homeTodayReminder", "homeAvatar"].filter { app.buttons[$0].exists }, screen: screen)
                 // Checkpoint C: today's card with its one primary action lives in the Training Hub (centre button)
-                app.buttons["centreButton"].firstMatch.tap()
-                XCTAssertTrue(app.descendants(matching: .any)["trainingHub"].firstMatch.waitForExistence(timeout: 10), "\(screen): the centre button opens the Training Hub")
+                // run 176 attempt 1 and run 198 (SE): one centre tap in ~40 did not open the hub — tap the settled point and,
+                // if the hub has not appeared, tap once more; the assertion itself is unchanged (hub-tap reliability stays tracked)
+                _ = app.buttons["centreButton"].firstMatch.tapWhenSettled()
+                var hub = app.descendants(matching: .any)["trainingHub"].firstMatch.waitForExistence(timeout: 10)
+                if !hub { print("layout audit: centre tap missed once on \(screen) — retrying"); _ = app.buttons["centreButton"].firstMatch.tapWhenSettled(); hub = app.descendants(matching: .any)["trainingHub"].firstMatch.waitForExistence(timeout: 10) }
+                XCTAssertTrue(hub, "\(screen): the centre button opens the Training Hub")
                 sleep(1)
                 shot("hub-\(size.lowercased())-\(state)")
                 checkTexts(app, screen: "\(size) hub \(state)")
