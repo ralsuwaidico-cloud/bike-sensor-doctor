@@ -14,7 +14,7 @@ final class RideViewModelTests: XCTestCase {
         let m = RideCockpitModel.make(i)
         XCTAssertEqual(m.lead.kind, .power); XCTAssertEqual(m.lead.value, "214"); XCTAssertEqual(m.lead.target, "205–235 W"); XCTAssertTrue(m.lead.targetKnown)
         XCTAssertTrue(m.zonesShown); XCTAssertNil(m.zoneNote)
-        XCTAssertEqual(m.tiles.map(\.key), ["hr", "cad", "speed"])
+        XCTAssertEqual(m.tiles.map(\.key), ["hr", "cad"], "owner 8 Nov: at most two secondary metrics")
     }
 
     func testPowerWithoutFTPLetsHeartRateLeadAndShowsWattsWithoutTarget() {
@@ -38,14 +38,13 @@ final class RideViewModelTests: XCTestCase {
         let m = RideCockpitModel.make(i)
         XCTAssertEqual(m.lead.kind, .heartRate); XCTAssertTrue(m.zonesShown)
         XCTAssertFalse(m.tiles.contains { $0.key == "power" }, "a missing meter is never drawn, not even as 0 W")
-        XCTAssertEqual(m.tiles.map(\.key), ["cad", "speed", "dist"])
+        XCTAssertEqual(m.tiles.map(\.key), ["cad", "speed"])
     }
 
     func testNothingLiveLeadsWithSpeedAndEffort() {
         let m = RideCockpitModel.make(base())
         XCTAssertEqual(m.lead.kind, .speed); XCTAssertEqual(m.lead.value, "29.8"); XCTAssertEqual(m.lead.target, "effort 6–7 of 10")
-        XCTAssertFalse(m.zonesShown); XCTAssertEqual(m.tiles.map(\.key), ["cad", "dist", "time"])
-        XCTAssertEqual(m.tiles.last?.value, "24:18")
+        XCTAssertFalse(m.zonesShown); XCTAssertEqual(m.tiles.map(\.key), ["cad", "dist"])
     }
 
     func testStaleOrMissingPowerNeverLeads() {

@@ -126,12 +126,12 @@ struct RideTabView: View {
                 if g.size.width >= 200, g.size.height >= 120 {
                     switch view {
                     case .cockpit:
-                        RideCockpitView(model: cockpitModel(l), steps: rideSteps, stepFTP: l.ftpKnown ? l.ftp : nil, stepHRZones: l.hrKnown ? l.hrZoneRanges : nil, elapsedS: rideClockS, coords: routeCoords, gps: gpsState, routeLine: routeLine, live: l, samples: recorder.isActive ? coach.samples : [],
+                        RideCockpitView(model: cockpitModel(l), steps: rideSteps, stepFTP: l.ftpKnown ? l.ftp : nil, stepHRZones: l.hrKnown ? l.hrZoneRanges : nil, elapsedS: rideClockS, coords: routeCoords, gps: gpsState, routeLine: routeLine,
                                         paused: recorder.state == .paused, onExpandMap: { withAnimation(.easeInOut(duration: 0.15)) { view = .map } })
                     case .map:
                         RideMapView(coords: routeCoords, gps: gpsState, tiles: mapTiles(l), route: routeCoordsLoaded, nextTurn: nextTurnCoord, guidance: guidanceText, offRoute: guidance?.state.offRoute ?? false)
                     case .performance:
-                        RidePerformanceView(model: performanceModel(l), steps: rideSteps)
+                        RidePerformanceView(model: performanceModel(l), steps: rideSteps, live: l, samples: recorder.isActive ? coach.samples : [])
                     }
                 } else { Color.clear }
             }

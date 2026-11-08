@@ -78,6 +78,11 @@ struct RideCockpitModel: Equatable {
             tiles.append(Tile(key: "dist", label: "DISTANCE", value: distText, unit: distUnit, note: i.gpsLive ? "GPS" : i.gpsLostText))
             tiles.append(Tile(key: "time", label: "TIME", value: Self.clock(i.elapsedS), unit: "", note: "moving"))
         }
+        // Owner 8 Nov 19:04 — the Cockpit answers one question: the lead metric, at most TWO secondary metrics, the current
+        // interval, one coaching instruction and an optional compact map. A sensor that is not there is not a tile ("—");
+        // its absence is one line under the lead and in Details. Priority: heart rate / power → cadence → speed → distance → time.
+        tiles.removeAll { $0.key == "cad" && c == nil }
+        if tiles.count > 2 { tiles = Array(tiles.prefix(2)) }
         return RideCockpitModel(lead: lead, tiles: Array(tiles.prefix(3)), zonesShown: zones, zoneNote: note, railPosition: rail)
     }
     /// Position on a Z1…Z5 rail. Power: 0–120 % FTP maps to 0…1 (Coggan boundaries 55/75/90/105 %). HR: value / zone top.
