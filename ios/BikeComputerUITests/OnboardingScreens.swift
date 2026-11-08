@@ -132,7 +132,13 @@ final class OnboardingScreens: XCTestCase {
             app.buttons["Plan"].firstMatch.tap(); sleep(2)
             if !firstTitle.isEmpty {
                 let key = firstTitle.components(separatedBy: " · ").last ?? firstTitle
-                XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", key)).firstMatch.waitForExistence(timeout: 5), "\(tag): Plan shows the first workout from stage E (\(key))")
+                var shown = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", key)).firstMatch.waitForExistence(timeout: 5)
+                if !shown {
+                    // late in the week stage E shows NEXT week's first session (run 191, Sunday): it is on the Plan's next-week page
+                    let next = app.buttons["Next week"].firstMatch
+                    if next.exists && next.isEnabled { next.tap(); sleep(1); shown = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", key)).firstMatch.waitForExistence(timeout: 5) }
+                }
+                XCTAssertTrue(shown, "\(tag): Plan shows the first workout from stage E (\(key)) this week or next")
             }
             shot("\(tag)-07-plan-first")
             app.terminate()
