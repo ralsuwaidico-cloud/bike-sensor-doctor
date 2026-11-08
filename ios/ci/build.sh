@@ -45,6 +45,10 @@ digest() {
   local log=$1 name=$2
   {
     echo "=== $name: errors / failures ==="
+    # Run 204: the unit job's one assertion message was cut off by the 400-line cap because 659 "Test Case … passed" lines
+    # came first. Assertion / compiler errors and failing test names are listed first, uncapped by the passed lines.
+    grep -E "error:|Failing tests|Test Case .* failed|\*\* .* FAILED \*\*" "$log" | grep -v "healthkit entitlement\|WCErrorCodeDeviceNotPaired" | head -200
+    echo "=== $name: full filter ==="
     grep -E "error:|ERROR|FAILED|failed|Failing tests|Test Case .* (passed|failed)|Executed [0-9]+ test|\*\* .* (SUCCEEDED|FAILED) \*\*|Provisioning|provisioning|Signing|signing|No profiles|certificate" "$log" | head -400
     echo "=== $name: last 150 lines ==="
     tail -150 "$log"

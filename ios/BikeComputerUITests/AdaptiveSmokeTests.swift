@@ -19,7 +19,7 @@ final class AdaptiveSmokeTests: XCTestCase {
         // run 150: the tab tap during launch did not register (Home stayed) — confirm Plan, tap again once if needed
         if !app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 10) { _ = app.buttons["Plan"].firstMatch.tapWhenSettled() }
         XCTAssertTrue(app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 15), "Plan opens")
-        let log = app.buttons["Log strength"].firstMatch
+        let log = app.buttons["planMenu"].firstMatch   // C2 (run 204): Plan's toolbar menu is "More" (planMenu) with Quick log / Log exercises / Routines
         // run 131: the first test of a cold Release build (seed migrated at launch) took > 10 s to show Plan's toolbar; the
         // rest of this test then passed, so this is launch timing, not a missing control — wait like the other smoke tests.
         // run 157: first test on a cold Release build — the toolbar appeared after the 30 s wait; give it 60 s and one re-tap

@@ -36,7 +36,7 @@ final class PlanSummariesTests: XCTestCase {
         XCTAssertEqual(p.overview.done, 1); XCTAssertEqual(p.overview.planned, 4)
         XCTAssertEqual(p.recordedMinutes, 62, "feature A: recorded minutes come from the ride that was recorded")
         XCTAssertEqual(p.plannedMinutes, s.ledger.riding(weekOf: monday).plannedMinutes + s.ledger.lifting(weekOf: monday).plannedMinutes)
-        XCTAssertTrue(p.minutesLine.hasPrefix("1 h 02 recorded of"), p.minutesLine)
+        XCTAssertTrue(p.minutesLine.hasPrefix("1 h 2 min recorded of"), p.minutesLine)   // Fmt.duration's established format
         XCTAssertEqual(p.timeline.count, 7); XCTAssertEqual(p.timeline.first?.shortName.count, 3)
         XCTAssertEqual(p.timeline[1].chips.first?.mark, .done); XCTAssertEqual(p.timeline[1].chips.first?.sport, .ride)
         XCTAssertEqual(p.timeline[0].chips.first?.mark, .missed, "Monday's lift is missed by Wednesday")

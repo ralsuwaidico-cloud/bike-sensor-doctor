@@ -283,7 +283,7 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground)
         app.buttons["Cancel"].firstMatch.tap()
         // Plan → Log strength → Quick log sheet opens with the type grid, closes
-        let log = app.buttons["Log strength"].firstMatch
+        let log = app.buttons["planMenu"].firstMatch   // C2 (run 204): Plan's toolbar menu is "More" (planMenu) with Quick log / Log exercises / Routines
         XCTAssertTrue(log.waitForExistence(timeout: 10))
         // The toolbar menu can still be animating at accessibility text sizes: open it again once if the sheet did not appear.
         var opened = false

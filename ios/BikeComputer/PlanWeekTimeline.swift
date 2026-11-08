@@ -15,14 +15,20 @@ struct PlanWeekTimeline: View {
     var body: some View {
         VStack(spacing: 6) {
             ForEach(days) { d in
-                Button { onDay(d) } label: { row(d) }
-                    .buttonStyle(.plain)
+                // Run 204: a Button whose label holds the chip Buttons was not exposed as `planDay-<n>` to XCUITest / assistive
+                // tech (seven day buttons: 0 of 7 on every device). The row is a plain tappable view (the pattern used by
+                // rideMiniMap); the chips keep their own Buttons and win the tap over the row. One accessibility element per
+                // day: the row's label names every session; VoiceOver opens the Day page, where each session is reachable.
+                row(d)
+                    .onTapGesture { onDay(d) }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(d.accessibilityLabel)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityIdentifier("planDay-\(d.weekday)")
+                    .accessibilityAction { onDay(d) }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("planDayStrip")
     }
 

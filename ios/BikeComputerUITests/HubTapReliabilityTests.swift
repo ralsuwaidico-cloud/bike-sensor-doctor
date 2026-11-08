@@ -24,8 +24,17 @@ final class HubTapReliabilityTests: XCTestCase {
                 if !hub.exists { centre.tap(); _ = hub.waitForExistence(timeout: 6) }
             }
             let close = app.buttons["hubClose"].firstMatch
-            if close.waitForExistence(timeout: 5) { close.tap() } else { misses.append("\(state) cycle \(i): hub has no Close button") }
-            XCTAssertTrue(hub.waitUntilGone(timeout: 6), "\(state) cycle \(i): hub closes again")
+            // Run 204 (3 of 48 cycles, all "hub closes again"): every first tap opened the hub, but a Close tapped the instant
+            // the toolbar item existed — before the navigation bar of the freshly inserted hub had a settled frame — missed.
+            // The reset step taps Close once its frame has stopped changing (tapWhenSettled), the same rule the audits use
+            // for toolbar menu items; the assertion is unchanged: one tap on a settled Close must close the hub.
+            if close.waitForExistence(timeout: 5) {
+                if !close.tapWhenSettled(timeout: 5) { misses.append("\(state) cycle \(i): Close never had a settled frame \(close.frame)") }
+            } else { misses.append("\(state) cycle \(i): hub has no Close button") }
+            if !hub.waitUntilGone(timeout: 6) {
+                let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-hub-close-\(state)-\(i)"; a.lifetime = .keepAlways; add(a)
+                XCTFail("\(state) cycle \(i): hub closes again (Close frame \(close.frame), hittable \(close.isHittable))")
+            }
             _ = centre.waitUntilSettled(timeout: 3)
         }
         return misses
