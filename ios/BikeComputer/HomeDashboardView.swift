@@ -187,6 +187,22 @@ struct HomeDashboardScreen: View {
             if let g = dash.goal { goalCard(g) }
         }
     }
+    /// Built in steps (run 202/203: one long concatenation exceeded the type-checker's time limit).
+    private var recoveryCardLabel: String {
+        let r = dash.recovery
+        guard r.hasData else { return "Recovery: no readings yet. Opens Recovery" }
+        var parts: [String] = []
+        for x in r.readings { parts.append("\(x.title) \(x.value) \(x.unit)") }
+        var label = "Recovery: " + parts.joined(separator: ", ")
+        if let a = r.adviceTitle { label += ". " + a }
+        if !r.fresh { label += ". Readings older than a day" }
+        return label + ". Opens Recovery"
+    }
+    private var recoverySourceLine: String {
+        let newest: Date? = dash.recovery.readings.map(\.date).max()
+        let when: String = newest?.formatted(date: .abbreviated, time: .omitted) ?? ""
+        return "Apple Health · " + when + (dash.recovery.fresh ? "" : " · older than a day")
+    }
     private var recoveryCard: some View {
         let id = CyTheme.recovery
         return Button { open(.recovery) } label: {
@@ -200,7 +216,7 @@ struct HomeDashboardScreen: View {
                         }
                     }
                     if let a = dash.recovery.adviceTitle { Text(a).font(CyType.captionSmall).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true) }
-                    Text("Apple Health · \(dash.recovery.readings.map(\.date).max()?.formatted(date: .abbreviated, time: .omitted) ?? "")" + (dash.recovery.fresh ? "" : " · older than a day")).font(CyType.captionSmall).foregroundStyle(dash.recovery.fresh ? CyTheme.ink3 : CyTheme.warn)
+                    Text(recoverySourceLine).font(CyType.captionSmall).foregroundStyle(dash.recovery.fresh ? CyTheme.ink3 : CyTheme.warn)
                 } else {
                     Text(dash.recovery.emptyTitle).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink)
                     Text(dash.recovery.emptySub + " ›").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).fixedSize(horizontal: false, vertical: true)
@@ -212,7 +228,7 @@ struct HomeDashboardScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(dash.recovery.hasData ? "Recovery: " + dash.recovery.readings.map { "\($0.title) \($0.value) \($0.unit)" }.joined(separator: ", ") + (dash.recovery.adviceTitle.map { ". \($0)" } ?? "") + (dash.recovery.fresh ? "" : ". Readings older than a day") + ". Opens Recovery" : "Recovery: no readings yet. Opens Recovery")
+        .accessibilityLabel(recoveryCardLabel)
         .accessibilityIdentifier("homeRecovery")
     }
     private func goalCard(_ g: HomeDashboard.Goal) -> some View {
