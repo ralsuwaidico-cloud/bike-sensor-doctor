@@ -23,6 +23,12 @@ int main(int argc, char** argv) {
             }
         }
     }
+    // measured text sizes per screen (long variant): min / max font per role, in px and in mm on the 32.5 mm panel
+    { std::ofstream tx(out + "/TEXT_SIZES.md"); tx << "# Measured text sizes (long-text variant, host measurer)\n\nPanel 1.28\" = 32.5 mm across 240 px → 0.135 mm/px; a lower-case x-height is ≈ 0.52 × font.\n\n| screen | smallest label | smallest body | largest value | elements |\n|---|---|---|---|---|\n";
+      Content longC; for (auto& [vn, c] : contentVariants()) if (vn == "long") longC = c;
+      for (auto& sc : allScreens(m, longC)) { float minL = 1e9, minB = 1e9, maxV = 0; int n = 0; for (auto& e : sc.els) if (e.kind == Kind::Text) { n++; if (e.role == Role::Label || e.role == Role::Unit) minL = std::min(minL, e.font); if (e.role == Role::Body || e.role == Role::Comp || e.role == Role::Button) minB = std::min(minB, e.font); if (e.role == Role::Value) maxV = std::max(maxV, e.font); }
+        auto mm = [](float px) { char b[32]; std::snprintf(b, sizeof b, "%.0f px (%.1f mm)", px, px * 0.135f); return std::string(b); };
+        tx << "| " << sc.name << " | " << (minL < 1e8 ? mm(minL) : "—") << " | " << (minB < 1e8 ? mm(minB) : "—") << " | " << (maxV > 0 ? mm(maxV) : "—") << " | " << n << " |\n"; } }
     rep << scenes << " scenes checked (" << contentVariants().size() << " text variants × " << appearances().size() << " appearances × " << allScreens(m, Content{}).size() << " screens)\n\n";
     rep << (all.empty() ? "**All checks passed.**\n" : "## Findings\n\n| screen | appearance | variant | rule | detail |\n|---|---|---|---|---|\n");
     for (auto& f : all) rep << "| " << f.screen << " | " << f.theme << " | " << f.variant << " | " << f.rule << " | " << f.detail << " |\n";

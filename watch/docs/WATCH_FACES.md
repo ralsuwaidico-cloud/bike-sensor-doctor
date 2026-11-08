@@ -22,3 +22,11 @@ emphasis changes; the layout never moves, so the face stays calm.
 
 Micro-interactions (§3D): arc fill animates once on wake (≤ 400 ms), a haptic tick on gesture completion, no looping
 animation (battery; the iPhone learned this with run 154's dock glow).
+
+
+## v2 refinements (owner directive 8 Nov 16:07 §7)
+
+* **Orbit** — two arcs with tracks (load = accent, recovery = grade colour), 54 px clock, date + battery on one line, next activity in 14 px, ONE legend line naming the arcs (LOAD 65 % · RECOVERY GOOD). Status labels cut from four to one.
+* **Chrono** — real hour / minute hands (32 / 46 px) inside a 54 px hub; dials at radius 78 so the hands never cover them; tick ring with hour marks; digital time + date between the lower dials.
+* **Pulse** — one insight of ≤ 22 characters with a grade dot; the sentence lives behind a visible More.
+* Native-size and six-appearance renders: `docs/gallery-v2.html`, `docs/native/face-*.png`.

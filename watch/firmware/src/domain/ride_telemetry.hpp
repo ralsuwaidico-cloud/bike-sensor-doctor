@@ -102,6 +102,13 @@ public:
         for (auto& s : buf_) { if (s.first < tStart) continue; float x = float(s.first - tStart) / float(std::max<uint32_t>(1, windowS)); if (s.second) pts.push_back(std::make_pair(x, std::clamp((*s.second - lo) / std::max(1.f, hi - lo), 0.f, 1.f))); else pts.push_back(std::nullopt); }
         return pts;
     }
+    /// Min / max of the present samples in the last `windowS` seconds (nullopt when there is none).
+    std::optional<std::pair<float, float>> range(uint32_t windowS) const {
+        if (buf_.empty()) return std::nullopt;
+        uint32_t tEnd = buf_.back().first, tStart = tEnd >= windowS ? tEnd - windowS : 0; float lo = 1e9f, hi = -1e9f; bool any = false;
+        for (auto& s : buf_) if (s.first >= tStart && s.second) { lo = std::min(lo, *s.second); hi = std::max(hi, *s.second); any = true; }
+        return any ? std::optional<std::pair<float, float>>(std::make_pair(lo, hi)) : std::nullopt;
+    }
     /// Downsampled copy for a long window (one point per `bucketS`, average of present samples, gap if none): bounded memory for the ESP32.
     std::vector<std::optional<float>> buckets(uint32_t bucketS) const {
         std::vector<std::optional<float>> out; if (buf_.empty()) return out;
@@ -162,6 +169,7 @@ public:
     // Route guidance (when a route is loaded): progress along it, distance to the next turn, deviation.
     struct Route { std::vector<std::pair<double, double>> points; std::vector<size_t> turnIdx; };
     void setRoute(Route r) { route_ = std::move(r); }
+    const Route& route() const { return route_; }
     struct Guidance { bool available = false; float progress = 0; float toNextTurnM = 0; bool offRoute = false; float deviationM = 0; };
     Guidance guidance() const {
         Guidance g; if (!haveFix_ || route_.points.size() < 2) return g;
@@ -193,6 +201,88 @@ inline std::vector<std::optional<std::pair<float, float>>> projectTrail(const Gp
         float d = std::sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
         if (d > radiusPx) out.push_back(std::nullopt); else out.emplace_back(std::make_pair(px, py));
     }
+    return out;
+}
+
+
+// ---------------------------------------------------------------- status taxonomy (owner 8 Nov 16:07 §6) — never merged into one vague warning
+enum class LinkState : uint8_t { PhoneDisconnected, GpsUnavailable /* phone linked, no GPS source / no fix yet */, GpsStale /* last fix > 10 s */, GpsLive };
+enum class RouteState : uint8_t { NoRoute, OnRoute, RouteLost /* > 50 m off the line */ };
+inline LinkState linkState(const GpsMirror* g, uint32_t nowMs, bool phoneLinked) {
+    if (!phoneLinked) return LinkState::PhoneDisconnected;
+    if (!g) return LinkState::GpsUnavailable;
+    switch (g->state(nowMs)) { case GpsMirror::State::Live: return LinkState::GpsLive; case GpsMirror::State::Stale: return LinkState::GpsStale; case GpsMirror::State::PhoneLost: return LinkState::PhoneDisconnected; default: return LinkState::GpsUnavailable; }
+}
+inline RouteState routeState(const GpsMirror* g) { if (!g) return RouteState::NoRoute; auto gd = g->guidance(); if (!gd.available) return RouteState::NoRoute; return gd.offRoute ? RouteState::RouteLost : RouteState::OnRoute; }
+/// One short status word for the compact indicator. GPS age is shown only when live; stale shows its age in red-free yellow.
+inline std::string linkLabel(LinkState st, const GpsMirror* g, uint32_t nowMs) {
+    switch (st) { case LinkState::PhoneDisconnected: return "PHONE LOST"; case LinkState::GpsUnavailable: return "NO GPS"; case LinkState::GpsStale: return "GPS STALE " + std::to_string(g->ageS(nowMs)) + " s"; default: return "GPS " + std::to_string(g->ageS(nowMs)) + " s"; }
+}
+
+// ---------------------------------------------------------------- coaching commands (owner §2/§6): short, derived from the DISPLAYED target
+/// The cockpit never shows a paragraph. It shows one command of ≤ 16 characters whose meaning follows from the numbers
+/// on the same screen, so a reader can check it at a glance (214 W inside 180–216 W can only produce HOLD, never EASE
+/// OFF). Priority: safety (link / sensor lost) → power vs band → heart rate vs band → cadence vs range → interval
+/// countdown → free ride. `reason` is the sentence behind a tap, never on the live screen.
+struct Command { std::string text; std::string reason; std::optional<Grade> grade; bool safety = false; };
+inline Command command(const Live& l, LinkState link) {
+    auto band = [](float v, float lo, float hi) { return gradeAgainstBand(v, lo, hi); };
+    if (link == LinkState::PhoneDisconnected) return {"PHONE LOST", "The iPhone link dropped. Recording continues on the watch; GPS and new coaching resume when it reconnects.", Grade::Yellow, true};
+    if (l.power.fresh(3000) && l.powerBand) {
+        float v = *l.power.value, lo = float(l.powerBand->first), hi = float(l.powerBand->second); int mid = int(std::lround((lo + hi) / 2));
+        auto g = band(v, lo, hi);
+        if (v > hi) return {"EASE OFF", "Power " + std::to_string(int(std::lround(v))) + " W is above the step target " + std::to_string(int(lo)) + "–" + std::to_string(int(hi)) + " W.", g, false};
+        if (v < lo) return {"PUSH TO " + std::to_string(mid) + " W", "Power " + std::to_string(int(std::lround(v))) + " W is below the step target " + std::to_string(int(lo)) + "–" + std::to_string(int(hi)) + " W.", g, false};
+        if (l.cadence.fresh(3000) && l.cadenceRange) { int c = int(std::lround(*l.cadence.value)); if (c < l.cadenceRange->first) return {"CADENCE UP", "Cadence " + std::to_string(c) + " rpm is below the planned " + std::to_string(l.cadenceRange->first) + "–" + std::to_string(l.cadenceRange->second) + " rpm; power is on target.", Grade::Yellow, false}; if (c > l.cadenceRange->second) return {"CADENCE DOWN", "Cadence " + std::to_string(c) + " rpm is above the planned range; power is on target.", Grade::Yellow, false}; }
+        return {"HOLD " + std::to_string(mid) + " W", "Power is inside the step target " + std::to_string(int(lo)) + "–" + std::to_string(int(hi)) + " W. Keep it there.", g, false};
+    }
+    if (l.hr.fresh(5000) && l.hrBand) {
+        float v = *l.hr.value, lo = float(l.hrBand->first), hi = float(l.hrBand->second); auto g = band(v, lo, hi);
+        if (v > hi) return {"HR ABOVE TARGET", "Heart rate " + std::to_string(int(v)) + " bpm is above the step zone " + std::to_string(int(lo)) + "–" + std::to_string(int(hi)) + " bpm.", g, false};
+        if (v < lo) return {"HR BELOW TARGET", "Heart rate " + std::to_string(int(v)) + " bpm is below the step zone.", g, false};
+        return {"HOLD HR " + std::to_string(int(lo)) + "–" + std::to_string(int(hi)), "Heart rate is inside the step zone.", g, false};
+    }
+    if (l.stepTotalS) { uint32_t r = l.stepRemainingS; std::string t = (r / 60 < 10 ? "0" : "") + std::to_string(r / 60) + ":" + (r % 60 < 10 ? "0" : "") + std::to_string(r % 60); return {"INTERVAL " + t, "Time left in " + l.stepName + ". No sensor target applies to this step.", std::nullopt, false}; }
+    return {"", "", std::nullopt, false};
+}
+
+// ---------------------------------------------------------------- navigation projection with auto-scale (owner §5)
+struct MapFrame { float cx, cy, radiusPx; float scaleMPerPx; bool northUp; };
+/// Chooses the metres-per-pixel so the recent trail and the route ahead fit the dial (2…25 m/px), in 1-2-5 steps so the
+/// scale bar reads 50 m / 100 m / 200 m / 500 m.
+inline float autoScale(const GpsMirror& g, size_t recentPts, float radiusPx) {
+    auto last = g.lastFix(); if (!last) return 5.f;
+    float maxD = 0; auto& tr = g.trail(); size_t from = tr.size() > recentPts ? tr.size() - recentPts : 0;
+    for (size_t i = from; i < tr.size(); i++) maxD = std::max(maxD, GpsMirror::distLL(last->lat, last->lon, tr[i].lat, tr[i].lon));
+    auto gd = g.guidance(); if (gd.available) maxD = std::max(maxD, std::min(250.f, gd.toNextTurnM > 0 ? gd.toNextTurnM + 40.f : 250.f));   // keep the next turn in view
+    maxD = std::max(maxD, 120.f);                                   // never zoom in past 120 m of context
+    float want = maxD / (radiusPx * 0.9f);
+    for (float s : {2.f, 3.f, 4.f, 5.f, 6.f, 8.f, 10.f, 12.f, 15.f, 20.f, 25.f}) if (want <= s) return s;
+    return 25.f;
+}
+/// Scale-bar length in metres that draws between ~20 and ~55 px at `mPerPx`.
+inline float scaleBarM(float mPerPx) { for (float m : {50.f, 100.f, 200.f, 500.f, 1000.f}) if (m / mPerPx >= 20.f) return m; return 1000.f; }
+inline std::optional<std::pair<float, float>> projectLL(const Fix& origin, double lat, double lon, const MapFrame& mf, float headingDeg) {
+    double dx = (lon - origin.lon) * 111320.0 * std::cos(origin.lat * 3.14159265 / 180.0), dy = (lat - origin.lat) * 110540.0;
+    double h = mf.northUp ? 0.0 : headingDeg * 3.14159265 / 180.0;
+    double rx = dx * std::cos(h) - dy * std::sin(h), ry = dx * std::sin(h) + dy * std::cos(h);
+    float px = mf.cx + float(rx / mf.scaleMPerPx), py = mf.cy - float(ry / mf.scaleMPerPx);
+    float d = std::sqrt((px - mf.cx) * (px - mf.cx) + (py - mf.cy) * (py - mf.cy));
+    if (d > mf.radiusPx) return std::nullopt;
+    return std::make_pair(px, py);
+}
+inline std::vector<std::optional<std::pair<float, float>>> projectTrailScaled(const GpsMirror& g, const MapFrame& mf) {
+    std::vector<std::optional<std::pair<float, float>>> out; auto last = g.lastFix(); if (!last) return out;
+    for (auto& f : g.trail()) out.push_back(projectLL(*last, f.lat, f.lon, mf, last->headingDeg));
+    return out;
+}
+/// The route AHEAD of the nearest route point (what the rider still has to ride), projected like the trail.
+inline std::vector<std::optional<std::pair<float, float>>> projectRouteAhead(const GpsMirror& g, const MapFrame& mf, std::optional<std::pair<float, float>>* nextTurnPx = nullptr) {
+    std::vector<std::optional<std::pair<float, float>>> out; auto last = g.lastFix(); if (!last) return out;
+    auto& r = g.route(); if (r.points.size() < 2) return out;
+    size_t best = 0; float bd = 1e9f; for (size_t i = 0; i < r.points.size(); i++) { float d = GpsMirror::distLL(last->lat, last->lon, r.points[i].first, r.points[i].second); if (d < bd) { bd = d; best = i; } }
+    for (size_t i = best; i < r.points.size(); i++) out.push_back(projectLL(*last, r.points[i].first, r.points[i].second, mf, last->headingDeg));
+    if (nextTurnPx) { *nextTurnPx = std::nullopt; for (auto t : r.turnIdx) if (t > best && t < r.points.size()) { *nextTurnPx = projectLL(*last, r.points[t].first, r.points[t].second, mf, last->headingDeg); break; } }
     return out;
 }
 

@@ -6,6 +6,7 @@
 // y = 160…204; the usable chord is 154 px there).
 #include "round_layout.hpp"
 #include "ride_screens.hpp"
+#include "buttons.hpp"
 #include <memory>
 
 namespace cyw::ui {
@@ -16,52 +17,72 @@ struct Content {
     std::string sleep = "7 h 42", sleepSrc = "PHONE 06:10";
     std::string steps = "4 312", battery = "72 %";
     std::string coachShort = "Keep this effort.", coachLong = "Sleep was shorter than usual — keep today easy";
-    std::string activity = "Outdoor cycling", exercise = "Bench press";
+    std::string insight = "SLEEP SHORT · GO EASY";        // Pulse / Recovery: one short insight (≤ 22 chars), detail behind More
+    std::string activity = "Outdoor cycling", exercise = "Bench press", nextExercise = "Incline press";
     std::string target = "180–216 W", value = "214", unit = "W", hr = "148";
     std::string restS = "01:12";
     std::vector<std::string> activities = {"Outdoor cycling", "Indoor cycling", "Strength training", "Functional strength", "Hybrid workout", "Walking"};
     std::string recovery = "Good", hrv = "64", hrvUnit = "ms", sleepStages = "Deep 1 h 20 · REM 1 h 55";
     std::string notification = "Rashed, your Tempo ride is planned for 17:30 today";
     std::string gpsAge = "GPS 2 s";
+    int loadPct = 65; float recoveryFrac = 0.78f; std::string recoveryWord = "GOOD";
+    int hourHand = 9, minuteHand = 41;
 };
 
 constexpr float CTRL_Y = 160.f;
 /// The live cue obeys the coach protocol's wrist contract (CoachMessage::WRIST_CHARS = 44, word boundary).
 inline std::string wristCue(const std::string& t) { if (t.size() <= 44) return t; size_t cut = t.rfind(' ', 43); if (cut == std::string::npos || cut < 22) cut = 43; std::string o = t.substr(0, cut); while (!o.empty() && (o.back() == ' ' || o.back() == ',')) o.pop_back(); return o + "…"; }   // control row: y 160–204, chord 154 px → two 72-pt buttons + 6 px gap
 
-// ---------------------------------------------------------------- faces
+// ---------------------------------------------------------------- faces ("What time is it, and what matters next?")
+/// ORBIT — a strong central clock; two refined arcs with ONE legend line that names them; the next activity; nothing else.
+///   outer arc (accent)  = this week's planned training load completed (0…100 %), source: iPhone plan + logged sessions
+///   inner arc (graded)  = recovery (0…1, grade colour + word), source: iPhone recovery summary; hidden with no data
 inline Scene faceOrbit(const TextMeasurer& m, const Content& c) {
     Scene s{"face:orbit"}; Builder b(s, m);
-    b.arc(0, 235, 8, "accent", RADIUS - EDGE_INSET - 4, "loadArc"); b.arc(0, 300, 5, "grade.green", RADIUS - EDGE_INSET - 15, "recoveryArc");
-    Rect sl = b.text(c.sleep, 30, {14, 12, 1, false}, Role::Comp, true, "text", 22); b.text(c.sleepSrc, sl.bottom(), {11, 11, 1, false}, Role::Label, true, "mut", 22);
-    Rect t = b.text(c.time, 66, {50, 40, 1, false}, Role::Value, true, "text", 24);
-    b.text(c.date, t.bottom() + 1, {12, 11, 1, false}, Role::Label, true, "mut", 24);
-    b.text(c.nextSession, t.bottom() + 20, {13, 13, 2, false}, Role::Body, true, "text", 22);
-    Rect st = b.textFirstFit({"on target · " + c.battery + " · " + c.steps, "on target · " + c.battery, "on target"}, 184, {11, 11, 1, false}, Role::Label, true, "mut", 14);
-    b.dot(st.x - 8, st.cy(), 3, "grade.blue");
+    const float A0 = -140.f, A1 = 140.f;                                                     // 280° sweep, open at the bottom
+    b.arc(A0, A1, 6, "line", RADIUS - EDGE_INSET - 3, "loadTrack"); b.arc(A0, A0 + 280 * std::clamp(c.loadPct / 100.f, 0.f, 1.f), 6, "accent", RADIUS - EDGE_INSET - 3, "loadArc");
+    std::string recTok = c.recoveryFrac >= 0.75f ? "grade.green" : c.recoveryFrac >= 0.5f ? "grade.blue" : c.recoveryFrac >= 0.3f ? "grade.yellow" : "grade.red";
+    b.arc(A0, A1, 4, "line", RADIUS - EDGE_INSET - 11, "recoveryTrack"); b.arc(A0, A0 + 280 * std::clamp(c.recoveryFrac, 0.f, 1.f), 4, recTok, RADIUS - EDGE_INSET - 11, "recoveryArc");
+    Rect sl = b.text(c.sleep + " · " + c.sleepSrc, 44, {11, 11, 1, false}, Role::Label, true, "mut", 18);
+    Rect t = b.text(c.time, sl.bottom() + 4, {54, 40, 1, false}, Role::Value, true, "text", 14);
+    b.text(c.date + " · " + c.battery, t.bottom(), {12, 11, 1, false}, Role::Label, true, "mut", 14);
+    b.text(c.nextSession, t.bottom() + 18, {14, 13, 2, false}, Role::Body, true, "text", 22, false, "next");
+    // legend: what the two arcs mean, with their colours — one line, no competing status labels
+    Rect lg = b.textFirstFit({"LOAD " + std::to_string(c.loadPct) + " %  ·  RECOVERY " + c.recoveryWord, "LOAD " + std::to_string(c.loadPct) + " % · " + c.recoveryWord}, 186, {11, 11, 1, false}, Role::Label, true, "mut", 18);
+    b.dot(lg.x - 8, lg.cy(), 3, "accent"); b.dot(lg.right() + 8, lg.cy(), 3, recTok);
     return s;
 }
+/// CHRONO — real hands (drawn in the scene so the render shows them) kept SHORT (minute 50 px, hour 34 px) inside a
+/// 56 px hub circle; the three dials sit OUTSIDE the hand sweep at radius 86 and never get covered. Digital time + date
+/// sit at the bottom between the lower dials so the time is instantly readable even at a glance.
 inline Scene faceChrono(const TextMeasurer& m, const Content& c) {
     Scene s{"face:chrono"}; Builder b(s, m);
     b.arc(0, 360, 2, "line", RADIUS - EDGE_INSET - 1, "tickRing");
-    std::string nextShort = c.nextSession.substr(c.nextSession.rfind(' ') + 1);   // the time: the name lives on the Today panel
-    for (auto [cx, cy, lab, val] : std::vector<std::tuple<float, float, std::string, std::string>>{{CX, 62, "NEXT", nextShort}, {66, CY + 26, "LOAD", "65 %"}, {174, CY + 26, "RECOV", c.recovery}}) {
-        b.dot(cx, cy, 30, "card", Role::Decor);
-        b.textIn(lab, {cx - 26, cy - 16, 52, 14}, {11, 11, 1, false}, Role::Label, true, "mut");
-        b.textIn(val, {cx - 26, cy, 52, 15}, {12, 12, 1, true}, Role::Comp, true, "text");
+    for (int i = 0; i < 12; i++) { float a = i * 30.f; float t = (a - 90) * 3.14159265f / 180; float r0 = RADIUS - EDGE_INSET - 3, r1 = r0 - (i % 3 == 0 ? 8 : 4); b.polyline({std::make_pair(CX + r0 * std::cos(t), CY + r0 * std::sin(t)), std::make_pair(CX + r1 * std::cos(t), CY + r1 * std::sin(t))}, i % 3 == 0 ? "mut" : "line", 2, "tick" + std::to_string(i)); }
+    b.dot(CX, CY, 54, "card", Role::Decor);                                                  // the hand sweep area
+    std::string nextShort = c.nextSession.substr(c.nextSession.rfind(' ') + 1);              // the time: the name lives on the Today panel
+    const float DR = 78.f, dr = 23.f;
+    for (auto [ang, lab, val, col] : std::vector<std::tuple<float, std::string, std::string, std::string>>{{0.f, "NEXT", nextShort, "text"}, {230.f, "LOAD", std::to_string(c.loadPct) + " %", "text"}, {130.f, "RECOV", c.recoveryWord, "text"}}) {
+        float t = (ang - 90) * 3.14159265f / 180; float cx = CX + DR * std::cos(t), cy = CY + DR * std::sin(t);
+        b.dot(cx, cy, dr, "card2", Role::Decor);
+        b.textIn(lab, {cx - 22, cy - 15, 44, 14}, {11, 11, 1, false}, Role::Label, true, "mut");
+        b.textIn(val, {cx - 22, cy, 44, 15}, {12, 12, 1, false}, Role::Comp, true, lab == "RECOV" ? (c.recoveryFrac >= 0.75f ? "grade.green" : c.recoveryFrac >= 0.5f ? "grade.blue" : "grade.yellow") : col);
     }
-    Rect t = b.text(c.time, CY + 62, {16, 12, 1, false}, Role::Comp, true, "text", 30);
-    b.text(c.date, t.bottom(), {11, 11, 1, false}, Role::Label, true, "mut", 14);
+    { float ha = (c.hourHand % 12 + c.minuteHand / 60.f) * 30.f, ma = c.minuteHand * 6.f; auto tip = [&](float a, float len) { float t = (a - 90) * 3.14159265f / 180; return std::make_pair(CX + len * std::cos(t), CY + len * std::sin(t)); };
+      b.polyline({std::make_pair(CX, CY), tip(ha, 32)}, "text", 5, "hourHand"); b.polyline({std::make_pair(CX, CY), tip(ma, 46)}, "accent", 3, "minuteHand"); b.dot(CX, CY, 4, "text"); }
+    Rect t = b.text(c.time, 176, {16, 14, 1, false}, Role::Comp, true, "text", 36);
+    b.text(c.date, t.bottom(), {11, 11, 1, false}, Role::Label, true, "mut", 36);
     return s;
 }
+/// PULSE — minimal: status line, big time, ONE short insight (graded dot) and a clearly visible More.
 inline Scene facePulse(const TextMeasurer& m, const Content& c) {
     Scene s{"face:pulse"}; Builder b(s, m);
-    b.text(c.time, 56, {52, 40, 1, false}, Role::Value, true, "text", 10);
-    Rect card = bandAt(126, 46, 12); b.panel(card, "card");
-    b.dot(card.x + 14, card.y + 23, 4, "grade.yellow");
-    b.textIn(c.coachLong, {card.x + 26, card.y + 6, card.w - 34, 34}, {13, 13, 2, true}, Role::Body, false, "text", false, "coachLine");
-    b.button("More", CX, 176, 64, "card2", "text", false, "more");
-    b.textFirstFit({c.date + " · " + c.battery + " · " + c.steps, c.date + " · " + c.battery, c.date}, 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
+    b.textFirstFit({c.date + " · " + c.battery, c.date}, 34, {11, 11, 1, false}, Role::Label, true, "mut", 8);
+    b.text(c.time, 54, {58, 40, 1, false}, Role::Value, true, "text", 10);
+    Rect card = bandAt(126, 48, 14); b.panel(card, "card");
+    b.dot(card.x + 16, card.y + 24, 5, "grade.yellow");
+    b.textIn(c.insight, {card.x + 30, card.y + 6, card.w - 40, 36}, {14, 12, 2, false}, Role::Comp, true, "text", false, "insight");
+    b.button("More", CX, 178, 76, "card2", "text", false, "more");
     return s;
 }
 
@@ -83,59 +104,105 @@ inline Scene settings(const TextMeasurer& m, const Content& c) {
 }
 
 // ---------------------------------------------------------------- live: cycling (ride_screens.hpp, driven by telemetry fixtures)
-/// Telemetry scenarios for the gallery and the checks: full sensors with FTP · heart rate only · power without FTP ·
-/// phone lost mid-ride · no sensors at all. Each is an honest state the instrument must render well.
+/// Telemetry scenarios for the gallery and the checks. ALL coordinates are SIMULATED (a 1.5 km synthetic path near
+/// 25.197 N 55.274 E, waypoints in metres → degrees); the gallery labels them "SIM". Each fixture is an honest state the
+/// instrument must render well: full sensors on a route · HR only (no route) · power without FTP · off route · GPS stale
+/// · phone lost mid-ride · no sensors / no GPS · paused · north-up.
 struct RideFixture {
-    std::string name; ride::Live live; ride::Series power{300}, hr{300}, cad{300}; ride::ZoneTime zt; ride::GpsMirror gps; std::string cue, nextTurn; uint32_t lapAvg = 0; bool lapKnown = false; uint32_t windowS = 60;
-    RideFrame frame() const { RideFrame f; f.live = live; f.power = &power; f.hr = &hr; f.cadence = &cad; f.zoneTime = &zt; f.gps = &gps; f.nowMs = 2000000; f.coachCue = cue; f.windowS = windowS; f.lapAvgW = lapAvg; f.lapAvgKnown = lapKnown; f.nextTurn = nextTurn; return f; }
+    std::string name; ride::Live live; ride::Series power{300}, hr{300}, cad{300}; ride::ZoneTime zt; ride::GpsMirror gps; std::string cue, nextTurn; uint32_t lapAvg = 0; bool lapKnown = false; uint32_t windowS = 60; bool northUp = false; uint32_t nowMs = 2000000;
+    std::vector<PerfPage> perfPages{PerfPage::Power}; bool controls = false;
+    RideFrame frame() const { RideFrame f; f.live = live; f.power = &power; f.hr = &hr; f.cadence = &cad; f.zoneTime = &zt; f.gps = &gps; f.nowMs = nowMs; f.coachCue = cue; f.windowS = windowS; f.lapAvgW = lapAvg; f.lapAvgKnown = lapKnown; f.nextTurn = nextTurn; f.northUp = northUp; f.simulated = true; return f; }
 };
+/// Synthetic path: north 300 m, a right-hand bend, east 360 m, a left-hand bend, north-east 420 m. Returns (lat, lon)
+/// every `stepM` metres plus the indices of the two turns.
+inline std::pair<std::vector<std::pair<double, double>>, std::vector<size_t>> simPath(float stepM = 10.f) {
+    const double lat0 = 25.1972, lon0 = 55.2744, mPerLat = 110540.0, mPerLon = 111320.0 * std::cos(lat0 * 3.14159265 / 180.0);
+    std::vector<std::pair<float, float>> W = {{0, 0}, {0, 300}, {40, 340}, {400, 360}, {600, 500}, {900, 800}};
+    std::vector<std::pair<double, double>> pts; std::vector<size_t> turns; std::vector<size_t> vertexIdx;
+    for (size_t i = 0; i + 1 < W.size(); i++) { float dx = W[i + 1].first - W[i].first, dy = W[i + 1].second - W[i].second, len = std::sqrt(dx * dx + dy * dy); int n = std::max(1, int(len / stepM)); for (int k = 0; k < n; k++) { float t = float(k) / n; pts.emplace_back(lat0 + (W[i].second + dy * t) / mPerLat, lon0 + (W[i].first + dx * t) / mPerLon); } vertexIdx.push_back(pts.size()); }
+    pts.emplace_back(lat0 + W.back().second / mPerLat, lon0 + W.back().first / mPerLon);
+    turns = {vertexIdx[0], vertexIdx[2]};                      // the bend at the top of the first leg; the bend before the long diagonal
+    return {pts, turns};
+}
 inline std::vector<std::shared_ptr<RideFixture>> rideFixtures(const Content& c) {
     std::vector<std::shared_ptr<RideFixture>> out;
     auto zones = std::vector<std::pair<int, std::optional<int>>>{{0, 120}, {121, 140}, {141, 152}, {153, 165}, {166, std::nullopt}};
     auto mk = [&](const std::string& name) { auto f = std::make_shared<RideFixture>(); f->name = name; f->live.recording = true; f->live.elapsedS = 1458; f->live.distanceM = 11600; f->live.hrZones = zones; f->live.stepName = "Interval 2"; f->live.stepTotalS = 600; f->live.stepRemainingS = 200; f->cue = wristCue(c.coachShort); return f; };
-    auto feed = [](RideFixture& f, int n, bool power, bool hr, int gapFrom = -1, int gapTo = -1) {
-        for (int t = 1; t <= n; t++) { bool gap = t >= gapFrom && t <= gapTo; std::optional<float> p = power && !gap ? std::optional<float>(200 + 30 * std::sin(t / 9.f) + (t % 7)) : std::nullopt; std::optional<float> h = hr && !gap ? std::optional<float>(142 + 6 * std::sin(t / 23.f)) : std::nullopt; f.power.push(t, p); f.hr.push(t, h); f.cad.push(t, power && !gap ? std::optional<float>(88 + (t % 5)) : std::nullopt); f.zt.add(h, f.live.hrZones); }
+    // synthetic 1 Hz series; the LIVE readings are taken from the series' own 3 s averages so every screen shows the same numbers
+    auto feed = [](RideFixture& f, int n, bool power, bool hr, int gapFrom = -1, int gapTo = -1, float pOff = 0.f, float hOff = 0.f, float cOff = 0.f) {
+        for (int t = 1; t <= n; t++) { bool gap = t >= gapFrom && t <= gapTo; std::optional<float> p = power && !gap ? std::optional<float>(198 + pOff + 22 * std::sin(t / 11.f) + 3 * std::sin(t / 2.3f)) : std::nullopt; std::optional<float> h = hr && !gap ? std::optional<float>(146 + hOff + 5 * std::sin(t / 29.f)) : std::nullopt; f.power.push(t, p); f.hr.push(t, h); f.cad.push(t, power && !gap ? std::optional<float>(89 + cOff + 3 * std::sin(t / 13.f)) : std::nullopt); f.zt.add(h, f.live.hrZones); }
+        if (n) { if (power) { f.live.power = {f.power.average(3), 800}; f.live.cadence = {f.cad.average(3), 800}; } if (hr) f.live.hr = {f.hr.average(3), 1200}; }
     };
-    auto fixes = [](RideFixture& f, int n, bool lost) { for (int i = 0; i < n; i++) f.gps.onFix({25.1972 + i * 0.00009, 55.2744 + i * 0.00004 * std::sin(i / 5.0), 29.8f, 35.f + 20.f * std::sin(i / 7.f), 1762600000u + i, 2000000u - (n - i) * 1000u}); if (lost) f.gps.onPhoneLink(false, 1990000); };
-    { auto f = mk("full"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.cadence = {89.f, 800}; f->live.speedKmh = {29.8f, 1500}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.hrBand = std::make_pair(141, 152); feed(*f, 300, true, true, 120, 135); fixes(*f, 60, false); f->nextTurn = "Al Reem St"; f->gps.setRoute({{{25.1972, 55.2744}, {25.2000, 55.2755}, {25.2030, 55.2760}}, {1}}); f->lapAvg = 201; f->lapKnown = true; out.push_back(f); }
-    { auto f = mk("hr-only"); f->live.hr = {148.f, 900}; f->live.speedKmh = {27.2f, 1800}; f->live.hrBand = std::make_pair(141, 152); feed(*f, 300, false, true); fixes(*f, 60, false); out.push_back(f); }
-    { auto f = mk("power-no-ftp"); f->live.power = {214.f, 800}; f->live.cadence = {91.f, 800}; f->live.speedKmh = {31.4f, 1500}; f->live.ftpKnown = false; f->live.stepTotalS = 0; feed(*f, 300, true, false); fixes(*f, 60, false); out.push_back(f); }
-    { auto f = mk("phone-lost"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.phoneLinked = false; f->live.speedKmh = {29.8f, 60000}; feed(*f, 300, true, true); fixes(*f, 60, true); f->cue = "iPhone lost — recording continues"; out.push_back(f); }
+    // fixes along the simulated path: `n` fixes 10 m apart ending `endIdx` points in; `lostAtMs` marks the phone link down
+    auto fixes = [](RideFixture& f, int n, int endIdx, bool loadRoute, float offsetEastM = 0.f, uint32_t lastFixAgeMs = 1000) {
+        auto [pts, turns] = simPath(10.f); if (loadRoute) f.gps.setRoute({pts, turns});
+        int from = std::max(0, endIdx - n);
+        for (int i = from; i < endIdx; i++) { double lat = pts[i].first, lon = pts[i].second; if (i == endIdx - 1 && offsetEastM != 0.f) lon += offsetEastM / (111320.0 * std::cos(lat * 3.14159265 / 180.0));
+            double dlat = pts[i + 1].first - lat, dlon = (pts[i + 1].second - lon) * std::cos(lat * 3.14159265 / 180.0); float hd = float(std::atan2(dlon, dlat) * 180 / 3.14159265); if (hd < 0) hd += 360;
+            f.gps.onFix({lat, lon, 29.8f, hd, 1762600000u + i, f.nowMs - lastFixAgeMs - (endIdx - 1 - i) * 1000u}); }
+    };
+    { auto f = mk("full"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.cadence = {89.f, 800}; f->live.speedKmh = {29.8f, 1500}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.hrBand = std::make_pair(141, 152); feed(*f, 300, true, true, 120, 135); fixes(*f, 60, 62, true); f->nextTurn = "Al Reem St"; f->lapAvg = 201; f->lapKnown = true; f->perfPages = {PerfPage::Power, PerfPage::HeartRate, PerfPage::Cadence, PerfPage::Target}; f->controls = true; out.push_back(f); }
+    { auto f = mk("hr-only"); f->live.speedKmh = {27.2f, 1800}; f->live.hrBand = std::make_pair(141, 152); feed(*f, 300, false, true, -1, -1, 0, 12); fixes(*f, 60, 62, false); f->perfPages = {PerfPage::HeartRate}; out.push_back(f); }
+    { auto f = mk("power-no-ftp"); f->live.power = {214.f, 800}; f->live.cadence = {91.f, 800}; f->live.speedKmh = {31.4f, 1500}; f->live.ftpKnown = false; f->live.stepTotalS = 0; f->live.cadenceRange = std::nullopt; feed(*f, 300, true, false); fixes(*f, 60, 62, false); out.push_back(f); }
+    { auto f = mk("low-power"); f->live.power = {162.f, 800}; f->live.hr = {139.f, 1200}; f->live.cadence = {78.f, 800}; f->live.speedKmh = {24.1f, 1500}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.hrBand = std::make_pair(141, 152); feed(*f, 300, true, true, -1, -1, -38, -8, -11); fixes(*f, 60, 62, true); f->nextTurn = "Al Reem St"; out.push_back(f); }
+    { auto f = mk("off-route"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.cadence = {89.f, 800}; f->live.speedKmh = {29.8f, 1500}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); feed(*f, 300, true, true); fixes(*f, 60, 62, true, 85.f); f->nextTurn = "Al Reem St"; out.push_back(f); }
+    { auto f = mk("gps-stale"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.speedKmh = {29.8f, 14000}; feed(*f, 300, true, true); fixes(*f, 60, 62, true, 0.f, 14000); f->nextTurn = "Al Reem St"; out.push_back(f); }
+    { auto f = mk("phone-lost"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.phoneLinked = false; f->live.speedKmh = {29.8f, 60000}; feed(*f, 300, true, true, 260, 300); fixes(*f, 60, 62, true, 0.f, 41000); f->gps.onPhoneLink(false, f->nowMs - 40000); f->live.power.ageMs = f->live.hr.ageMs = f->live.cadence.ageMs = 41000; /* sensors ride through the phone: stale since the link dropped */ f->cue = "iPhone lost — recording continues"; out.push_back(f); }
     { auto f = mk("no-sensors"); f->live.stepTotalS = 0; f->cue = ""; feed(*f, 0, false, false); out.push_back(f); }
-    { auto f = mk("paused"); f->live.paused = true; f->live.power = {0.f, 900000}; f->live.hr = {131.f, 1000}; f->live.ftpKnown = true; f->live.ftp = 240; feed(*f, 300, true, true); fixes(*f, 60, false); out.push_back(f); }
+    { auto f = mk("north-up"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.cadence = {89.f, 800}; f->live.speedKmh = {29.8f, 1500}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); feed(*f, 300, true, true); fixes(*f, 60, 62, true); f->nextTurn = "Al Reem St"; f->northUp = true; out.push_back(f); }
+    { auto f = mk("paused"); f->live.paused = true; f->live.ftpKnown = true; f->live.ftp = 240; feed(*f, 300, true, true, -1, -1, 0, -15); fixes(*f, 60, 62, true); f->live.power.ageMs = 900000; f->live.cadence.ageMs = 900000; /* stopped pedalling: power stale, HR still live */ f->controls = true; out.push_back(f); }
     return out;
 }
 
-// ---------------------------------------------------------------- live: strength
+// ---------------------------------------------------------------- live: strength ("Which exercise, how many reps, and what comes next?")
+/// The detected rep count is the dominant element (60 px); the label above it says how it was counted (AUTO with its
+/// confidence, or MANUAL) so nobody mistakes a guess for a fact; the set line carries set / target / weight / superset slot.
 inline Scene liftExercise(const TextMeasurer& m, const Content& c) {
     Scene s{"live:lift-exercise"}; Builder b(s, m);
-    b.moreText(c.exercise, 22, {15, 13, 2, false}, Role::Body, true, "text", 16, "exercise");
-    b.text("Set 2/3 · 8 reps · 60 kg", 60, {11, 11, 1, false}, Role::Label, true, "mut", 12);
-    b.metric("REPS", "6", "", 76, 60, "text", "reps");
-    b.button("Log set", CX - 39, CTRL_Y, 72, "accent", "onAccent", true, "logSet"); b.button("Undo", CX + 39, CTRL_Y, 72, "card2", "text", false, "undo");
+    b.moreText(c.exercise, 30, {15, 13, 2, false}, Role::Body, true, "text", 14, "exercise");
+    b.text("SET 2/3 · 8 REPS · 60 kg · A1", 68, {11, 11, 1, false}, Role::Label, true, "mut", 10, false, "setline");
+    b.metric("REPS · AUTO 0.9", "6", "", 84, 52, "text", "reps");
+    b.button("Log set", CX - 39, CTRL_Y, 72, "accent", "onAccent", true, "logSet"); b.button("Correct", CX + 39, CTRL_Y, 72, "card2", "text", true, "correct");
     return s;
 }
+/// Set finished: the watch proposes the detected count and asks for a confirmation — the athlete, not the sensor, has the last word.
 inline Scene repCounter(const TextMeasurer& m, const Content& c) {
     Scene s{"live:rep-counter"}; Builder b(s, m);
-    b.moreText(c.exercise, 22, {14, 13, 2, false}, Role::Body, true, "text", 16, "exercise");
-    b.metric("AUTO · CONFIDENCE 0.9", "7", "", 62, 68, "text", "autoReps");
+    b.moreText(c.exercise, 30, {15, 13, 2, false}, Role::Body, true, "text", 14, "exercise");
+    b.text("SET 2 / 3 DONE · TARGET 8", 68, {11, 11, 1, false}, Role::Label, true, "mut", 10);
+    b.metric("DETECTED · CONFIDENCE 0.9", "7", "", 84, 52, "text", "autoReps");
     b.button("Confirm", CX - 39, CTRL_Y, 72, "grade.green", "onAccent", true, "confirm"); b.button("Correct", CX + 39, CTRL_Y, 72, "card2", "text", true, "correct");
     return s;
 }
+/// Rest: the countdown leads; the next exercise and the superset step are the only other things on the screen.
 inline Scene restTimer(const TextMeasurer& m, const Content& c) {
     Scene s{"live:rest-timer"}; Builder b(s, m);
-    b.arc(0, 250, 6, "accent", RADIUS - EDGE_INSET - 3, "restArc");
-    b.metric("REST", c.restS, "", 36, 52, "text", "rest");
-    b.moreText("Next · " + c.exercise + " set 3", 118, {13, 13, 2, false}, Role::Body, true, "text", 16, "next");
+    b.arc(-140, 140, 6, "line", RADIUS - EDGE_INSET - 3, "restTrack"); b.arc(-140, -140 + 280 * 0.6f, 6, "accent", RADIUS - EDGE_INSET - 3, "restArc");
+    b.metric("REST · SET 3 OF 3", c.restS, "", 36, 50, "text", "rest");
+    b.text("NEXT · A2", 118, {11, 11, 1, false}, Role::Label, true, "mut", 16);
+    b.moreText(c.nextExercise, 132, {14, 13, 1, false}, Role::Body, true, "text", 18, "next");
     b.button("Skip rest", CX - 39, CTRL_Y, 72, "card2", "text", true, "skipRest"); b.button("Pause", CX + 39, CTRL_Y, 72, "accent", "onAccent", true, "pause");
+    return s;
+}
+/// Workout controls overlay (Key 1 preview, swipe up): Pause / Resume · End workout (confirms) · Correct reps.
+inline Scene liftControls(const TextMeasurer& m, const Content& c) {
+    Scene s{"live:lift-controls"}; Builder b(s, m); (void)c;
+    b.text("WORKOUT CONTROLS", 36, {11, 11, 1, false}, Role::Label, true, "mut", 14);
+    b.button("Correct", CX - 39, 58, 72, "card2", "text", false, "correct"); b.button("Pause", CX + 39, 58, 72, "accent", "onAccent", true, "pause");
+    b.button("End workout", CX, 108, 130, "grade.red", "onAccent", true, "end");
+    b.text("3 sets logged · 42 min · swipe down to return", 166, {11, 11, 2, false}, Role::Label, true, "mut", 16);
     return s;
 }
 
 // ---------------------------------------------------------------- panels
+/// Recovery answers ONE question — "What should I do differently today?" — with one insight; the measurements that
+/// produced it sit under it with their source and time.
 inline Scene recovery(const TextMeasurer& m, const Content& c) {
     Scene s{"panel:recovery"}; Builder b(s, m);
-    b.text("RECOVERY", 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
-    b.metric("STATUS · PHONE 06:10", c.recovery, "", 46, 32, "grade.green", "recovery");
+    b.text("RECOVERY · 06:10", 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
+    std::string tok = c.recoveryFrac >= 0.75f ? "grade.green" : c.recoveryFrac >= 0.5f ? "grade.blue" : c.recoveryFrac >= 0.3f ? "grade.yellow" : "grade.red";
+    b.dot(CX, 52, 5, tok);
+    b.text(c.insight, 60, {16, 13, 2, false}, Role::Body, true, "text", 16, false, "insight");
     b.row("Sleep", c.sleep, 104, 44, "r1"); b.row("HRV", c.hrv + " " + c.hrvUnit, 152, 44, "r2");
     b.text("measured → advice", 200, {11, 11, 1, false}, Role::Label, true, "mut", 8);
     return s;
@@ -174,21 +241,40 @@ inline Scene notifications(const TextMeasurer& m, const Content& c) {
     return s;
 }
 
+
+// ---------------------------------------------------------------- physical-key preview (two-press system, first press)
+/// The chip that appears on a FIRST press: key name + the action it will perform + "press again". It sits in the top
+/// band over the status line (the status returns when the preview expires after 2.5 s) and never covers a control.
+inline Scene withKeyPreview(Scene base, const TextMeasurer& m, const std::string& label, const std::string& suffix, float y, const std::vector<std::string>& hideIds) {
+    std::vector<Element> keep; for (auto& e : base.els) if (std::find(hideIds.begin(), hideIds.end(), e.id) == hideIds.end()) keep.push_back(e);
+    base.els = keep; Builder b(base, m);
+    Rect chip = bandAt(y, 32, 16); b.panel(chip, "accent");
+    b.textIn(label, {chip.x + 8, chip.y + 2, chip.w - 16, 15}, {12, 12, 1, false}, Role::Comp, true, "onAccent", false, "keyPreview");
+    b.textIn("press again", {chip.x + 8, chip.y + 17, chip.w - 16, 14}, {11, 11, 1, false}, Role::Label, false, "onAccent", false, "keyPreviewHint");
+    base.name += suffix; return base;
+}
+
 /// Every primary screen (owner §4 list) for one content set.
 inline std::vector<Scene> allScreens(const TextMeasurer& m, const Content& c) {
     std::vector<Scene> v = {faceOrbit(m, c), faceChrono(m, c), facePulse(m, c), activities(m, c)};
-    for (auto& fx : rideFixtures(c)) { RideFrame f = fx->frame(); Scene a = rideCockpit(m, f); a.name += ":" + fx->name; v.push_back(a); Scene b2 = ridePerformance(m, f); b2.name += ":" + fx->name; v.push_back(b2); Scene n = rideNavigation(m, f); n.name += ":" + fx->name; v.push_back(n); }
-    for (auto& x : {liftExercise(m, c), repCounter(m, c), restTimer(m, c), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c)}) v.push_back(x);
+    for (auto& fx : rideFixtures(c)) { RideFrame f = fx->frame(); Scene a = rideCockpit(m, f); a.name += ":" + fx->name; v.push_back(a);
+        for (auto pg : fx->perfPages) { Scene b2 = ridePerformance(m, f, pg); b2.name += ":" + fx->name; v.push_back(b2); }
+        Scene n = rideNavigation(m, f); n.name += ":" + fx->name; v.push_back(n);
+        if (fx->controls) { Scene ctl = rideControls(m, f); ctl.name += ":" + fx->name; v.push_back(ctl); }
+        if (fx->controls && !fx->live.paused) {
+            v.push_back(withKeyPreview(rideCockpit(m, f), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::Lap), "-key2:" + fx->name, 148, {"command", "sec0", "sec1"}));
+            v.push_back(withKeyPreview(rideCockpit(m, f), m, cyw::TwoPress::labelFor(cyw::Key::Key1, cyw::Press::Long, cyw::Action::EndRequest), "-key1hold:" + fx->name, 148, {"command", "sec0", "sec1"})); } }
+    for (auto& x : {liftExercise(m, c), withKeyPreview(liftExercise(m, c), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::LogSet), "-key2", 34, {"exercise", "more"}), repCounter(m, c), restTimer(m, c), liftControls(m, c), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c)}) v.push_back(x);
     return v;
 }
 
 /// Text-length variants (owner §1/§4: long activity and exercise names, long coaching text, translated strings).
 inline std::vector<std::pair<std::string, Content>> contentVariants() {
     Content shortC; Content longC = shortC, extreme = shortC, de = shortC;
-    longC.exercise = "Single-arm dumbbell row"; longC.activity = "Functional strength training"; longC.coachShort = "Reduce power — above today's endurance target"; longC.coachLong = "Your sleep was shorter than usual and yesterday's load was high. Consider an easier session today."; longC.nextSession = "Endurance ride · 90 min · 17:30"; longC.value = "1024"; longC.notification = "Your coach moved tomorrow's strength session to Thursday because of the ride planned on Wednesday evening";
+    longC.exercise = "Single-arm dumbbell row"; longC.activity = "Functional strength training"; longC.coachShort = "Reduce power — above today's endurance target"; longC.coachLong = "Your sleep was shorter than usual and yesterday's load was high. Consider an easier session today."; longC.nextSession = "Endurance ride · 90 min · 17:30"; longC.value = "1024"; longC.insight = "HIGH LOAD · EASY DAY"; longC.nextExercise = "Seated cable row"; longC.notification = "Your coach moved tomorrow's strength session to Thursday because of the ride planned on Wednesday evening";
     longC.activities = {"Outdoor cycling", "Indoor cycling (trainer)", "Strength training", "Functional strength training", "Hybrid workout", "Walking", "Running", "Hiking", "Mobility and stretching", "Recovery session", "Custom activity"};
-    extreme.exercise = "Bulgarian split squat with dumbbells, rear foot elevated"; extreme.coachShort = "Your heart-rate sensor disconnected — recording continues"; extreme.coachLong = "Reduce power now. You have been above today's endurance target for more than two minutes and the session goal is steady aerobic work, not intensity."; extreme.time = "23:59"; extreme.value = "2048"; extreme.steps = "28 412"; extreme.sleep = "10 h 05"; extreme.restS = "12:00"; extreme.recovery = "Limited";
-    de.exercise = "Kreuzheben mit Kurzhanteln"; de.coachShort = "Leistung reduzieren — über dem Ziel"; de.coachLong = "Dein Schlaf war kürzer als üblich — halte die heutige Einheit locker."; de.nextSession = "Ausdauerfahrt · 60 Min · 17:30"; de.date = "SO 8 NOV"; de.activities = {"Radfahren draußen", "Radfahren drinnen", "Krafttraining", "Funktionelles Krafttraining", "Hybrid-Training", "Gehen"}; de.recovery = "Gut";
+    extreme.exercise = "Bulgarian split squat with dumbbells, rear foot elevated"; extreme.coachShort = "Your heart-rate sensor disconnected — recording continues"; extreme.coachLong = "Reduce power now. You have been above today's endurance target for more than two minutes and the session goal is steady aerobic work, not intensity."; extreme.time = "23:59"; extreme.value = "2048"; extreme.steps = "28 412"; extreme.sleep = "10 h 05"; extreme.restS = "12:00"; extreme.recovery = "Limited"; extreme.insight = "REDUCE INTENSITY TODAY"; extreme.nextExercise = "Romanian deadlift with dumbbells"; extreme.recoveryFrac = 0.32f; extreme.recoveryWord = "LOW"; extreme.loadPct = 100; extreme.hourHand = 23; extreme.minuteHand = 59;
+    de.exercise = "Kreuzheben mit Kurzhanteln"; de.coachShort = "Leistung reduzieren — über dem Ziel"; de.coachLong = "Dein Schlaf war kürzer als üblich — halte die heutige Einheit locker."; de.nextSession = "Ausdauerfahrt · 60 Min · 17:30"; de.date = "SO 8 NOV"; de.activities = {"Radfahren draußen", "Radfahren drinnen", "Krafttraining", "Funktionelles Krafttraining", "Hybrid-Training", "Gehen"}; de.recovery = "Gut"; de.insight = "WENIG SCHLAF · LOCKER"; de.nextExercise = "Schrägbankdrücken"; de.recoveryWord = "GUT";
     return {{"short", shortC}, {"long", longC}, {"extreme", extreme}, {"german", de}};
 }
 

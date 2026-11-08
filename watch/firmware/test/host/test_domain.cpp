@@ -245,7 +245,7 @@ int main() {
         int scenes = 0, findings = 0;
         for (auto& [vn, content] : contentVariants()) for (auto& ap : appearances()) for (auto& sc : allScreens(m, content)) { scenes++; findings += int(check(sc, ap, vn).size()); }
         std::printf("   %d scenes, %d findings\n", scenes, findings);
-        CHECK(scenes == 744 && findings == 0, "(17 screens + 3 ride views × 6 telemetry fixtures) × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
+        CHECK(scenes == 1248 && findings == 0, "52 screens (faces, menus, 10 ride fixtures × cockpit/performance pages/navigation/controls/key previews, strength, panels) × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
         // grading colours are identical across the six appearances (per canvas), independent of the theme
         std::string d, l; for (auto& ap : appearances()) { std::string g1 = ap.resolve("grade.green"); if (ap.dark) { if (d.empty()) d = g1; CHECK(g1 == d, "dark grading green identical in " + ap.name); } else { if (l.empty()) l = g1; CHECK(g1 == l, "light grading green identical in " + ap.name); } }
         CHECK(appearances()[0].resolve("accent") != appearances()[2].resolve("accent"), "theme accents differ while grading colours do not");
@@ -331,9 +331,53 @@ int main() {
         cyw::KeyDecoder kd; int fired = 0; for (uint32_t t = 0; t < 400; t++) { bool level = t >= 100 && t < 200 ? ((t - 100) < 12 ? (t % 2 == 0) : true) : false; if (kd.feed(level, t).fired) fired++; }
         CHECK(fired == 1, "bouncing edge + 100 ms hold → one short press (debounced)");
         // live screens always carry the touchscreen safety controls (Pause immediate; End while paused) — every fixture, every appearance
-        bool allControls = true; cyw::ui::HostMeasurer hm;
-        for (auto& [vn, content] : cyw::ui::contentVariants()) for (auto& sc : cyw::ui::allScreens(hm, content)) if (sc.name.rfind("live:ride", 0) == 0) { bool pause = false, endOrLap = false; for (auto& e : sc.els) { if (e.id == "pause" || e.id == "resume") pause = true; if (e.id == "end" || e.id == "lap") endOrLap = true; } allControls = allControls && pause && endOrLap; }
-        CHECK(allControls, "every ride view in every state keeps an immediate touchscreen Pause/Resume and a Lap/End control");
+        bool allPause = true, pausedHaveEnd = true, overlayOk = true; cyw::ui::HostMeasurer hm;
+        for (auto& [vn, content] : cyw::ui::contentVariants()) for (auto& sc : cyw::ui::allScreens(hm, content)) if (sc.name.rfind("live:ride", 0) == 0) { bool pause = false, end = false, lap = false, paused = false; for (auto& e : sc.els) { if (e.id == "pause" || e.id == "resume") pause = true; if (e.id == "end") end = true; if (e.id == "lap") lap = true; if (e.text.rfind("PAUSED", 0) == 0) paused = true; } allPause = allPause && pause; if (paused) pausedHaveEnd = pausedHaveEnd && end; if (sc.name.rfind("live:ride-controls", 0) == 0) overlayOk = overlayOk && lap && end && pause; }
+        CHECK(allPause, "every ride view in every state keeps an immediate touchscreen Pause (or Resume)");
+        CHECK(pausedHaveEnd, "every paused ride view shows End on the touchscreen");
+        CHECK(overlayOk, "the ride controls overlay always offers Lap, Pause/Resume and End");
+    }
+
+    // ------------------------------------------------------------ redesign directive (8 Nov 16:07): commands, states, scale, two-press edge cases
+    {
+        using namespace cyw::ride;
+        auto rd = [](float v, uint32_t age) { Reading r; r.value = v; r.ageMs = age; return r; };
+        Live l; l.recording = true; l.ftpKnown = true; l.ftp = 240; l.powerBand = std::make_pair(180, 216); l.stepName = "Interval 2"; l.stepTotalS = 300; l.stepRemainingS = 135; l.hrBand = std::make_pair(141, 152);
+        l.power = rd(214, 500); l.hr = rd(148, 800); l.cadence = rd(89, 500);
+        // §6 consistency: the command can never contradict the displayed target
+        CHECK(command(l, LinkState::GpsLive).text == "HOLD 198 W", "214 W inside 180–216 W → HOLD (mid-band), never 'reduce power'");
+        l.power.value = 230; CHECK(command(l, LinkState::GpsLive).text == "EASE OFF", "230 W above the band → EASE OFF");
+        l.power.value = 162; CHECK(command(l, LinkState::GpsLive).text == "PUSH TO 198 W", "162 W below the band → PUSH TO mid-band");
+        l.power.value = 200; l.cadence.value = 72; CHECK(command(l, LinkState::GpsLive).text == "CADENCE UP", "power on target, cadence under the range → CADENCE UP (not a power command)");
+        l.cadence.value = 89; l.power.ageMs = 9000; l.hr.value = 158; CHECK(command(l, LinkState::GpsLive).text == "HR ABOVE TARGET", "power stale → the HR band rules: 158 > 152 → HR ABOVE TARGET");
+        l.hr.value = 146; CHECK(command(l, LinkState::GpsLive).text == "HOLD HR 141–152", "HR inside its zone → HOLD HR");
+        l.hr.ageMs = 9000; CHECK(command(l, LinkState::GpsLive).text == "INTERVAL 02:15", "no fresh sensor with a target → interval countdown mm:ss");
+        l.stepTotalS = 0; CHECK(command(l, LinkState::GpsLive).text.empty(), "free ride without sensors → no command (never invented)");
+        CHECK(command(l, LinkState::PhoneDisconnected).text == "PHONE LOST" && command(l, LinkState::PhoneDisconnected).safety, "phone disconnected overrides everything (safety)");
+        for (auto& c : {command(l, LinkState::GpsLive), command(l, LinkState::PhoneDisconnected)}) CHECK(c.text.size() <= 16, "commands stay ≤ 16 characters: '" + c.text + "'");
+        // §6 distinct states
+        GpsMirror g; CHECK(linkState(&g, 0, true) == LinkState::GpsUnavailable, "linked phone, no fix → GPS unavailable (not 'phone lost')");
+        g.onFix({25.2, 55.27, 20, 0, 1, 0}); CHECK(linkState(&g, 5000, true) == LinkState::GpsLive && linkState(&g, 20000, true) == LinkState::GpsStale, "fix age decides Live vs Stale");
+        CHECK(linkState(&g, 5000, false) == LinkState::PhoneDisconnected, "phone flag down → PhoneDisconnected regardless of fix age");
+        CHECK(routeState(&g) == RouteState::NoRoute, "no route loaded → NoRoute, no deviation warning");
+        GpsMirror::Route r; for (int i = 0; i <= 5; i++) r.points.emplace_back(25.2 + i * 0.001, 55.27); r.turnIdx = {3}; g.setRoute(r);
+        CHECK(routeState(&g) == RouteState::OnRoute, "on the line → OnRoute"); g.onFix({25.2, 55.272, 20, 0, 2, 1000}); CHECK(routeState(&g) == RouteState::RouteLost, "200 m east of the line → RouteLost");
+        CHECK(linkLabel(LinkState::GpsStale, &g, 15000) == "GPS STALE 14 s" && linkLabel(LinkState::PhoneDisconnected, &g, 0) == "PHONE LOST" && linkLabel(LinkState::GpsUnavailable, nullptr, 0) == "NO GPS", "status words are distinct per state");
+        // §5 auto-scale + projection
+        GpsMirror t2; for (int i = 0; i < 40; i++) t2.onFix({25.2 + i * 0.0001, 55.27, 20, 0, 10u + i, 1000u * i});   // 430 m straight north
+        float sc = autoScale(t2, 30, 50); CHECK(sc >= 6.f && sc <= 10.f, "300 m of trail on a 50 px dial → 6–10 m/px");
+        MapFrame mf{120, 112, 50, sc, false}; auto pts = projectTrailScaled(t2, mf); size_t in = 0; for (auto& p : pts) if (p) in++;
+        CHECK(in >= 25 && in < pts.size(), "the recent trail fits the dial; the far tail becomes gaps, never rim points");
+        auto up = projectLL(*t2.lastFix(), 25.2 + 40 * 0.0001 + 0.0005, 55.27, mf, 0.f); CHECK(up && up->second < 112, "heading north, a point ahead projects above the position (heading-up)");
+        MapFrame nu{120, 112, 50, sc, true}; auto e = projectLL(*t2.lastFix(), 25.2 + 40 * 0.0001, 55.2705, nu, 270.f); CHECK(e && e->first > 120, "north-up: east stays to the right whatever the heading");
+        CHECK(scaleBarM(8.f) == 200.f && scaleBarM(2.f) == 50.f, "scale bar picks a bar between 20 and 55 px");
+        // §9 two-press edge cases: accidental double press, presses while disconnected
+        cyw::KeyDecoder kd; int ev = 0; for (uint32_t t = 0; t < 600; t++) { bool lvl = (t >= 100 && t < 180) || (t >= 260 && t < 340); if (kd.feed(lvl, t).fired) ev++; }
+        CHECK(ev == 1, "two presses 80 ms apart (an accidental double tap) → ONE event thanks to the 250 ms repeat guard");
+        cyw::TwoPress tp(2500); auto a = tp.press(cyw::Key::Key2, cyw::Press::Short, cyw::Mode::Live_Ride, false, false, 1000); auto b2 = tp.press(cyw::Key::Key2, cyw::Press::Short, cyw::Mode::Live_Ride, false, false, 1600);
+        CHECK(a.preview && !a.execute && b2.execute && b2.action == cyw::Action::Lap, "disconnected phone: preview then confirm still works (Lap is recorded on the watch)");
+        auto c1 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, false, 2000); CHECK(c1.preview && !c1.execute, "a single press never executes");
+        CHECK(cyw::actionFor(cyw::Mode::Live_Ride, cyw::Key::Key1, cyw::Press::Short, false, false) == cyw::Action::TogglePause, "Pause stays on Key 1 while disconnected");
     }
 
     std::printf("\n%d checks, %d failures\n", checks, failures);

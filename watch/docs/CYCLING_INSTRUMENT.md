@@ -1,4 +1,4 @@
-# Cycling instrument — Cockpit, Performance, Navigation (owner directive 8 Nov 15:31)
+# Cycling instrument — Cockpit, Performance, Navigation (design v2, owner directives 8 Nov 15:31 + 16:07)
 
 Host-rendered, round-display-checked redesign of the live cycling views. **Not hardware-tested**: nothing has been
 flashed; every screenshot here is the host renderer drawing the same scene the device will draw with LVGL.
@@ -9,68 +9,44 @@ gallery checks (744 scenes: 31 screens × 6 appearances × 4 text variants, 0 fi
 
 Screenshots: `ride-gallery-1.png` (three views × six appearances), `ride-gallery-2.png` (degraded states).
 
-## A · Cockpit
+## Design principle (v2): one screen, one question
 
-Progressive disclosure: one lead metric, three small tiles, one interval line, one coach cue, two controls. Nothing is
-decorative; every arc has a defined meaning and source.
-
-| Element | Meaning | Source | When absent |
+| Screen | Question | What is on it | What moved away |
 |---|---|---|---|
-| Outer segmented ring | zone ladder of the lead metric (7 power zones when FTP is known; the athlete's HR zones otherwise); the current zone is lit in the grade colour | power meter / HR + FTP or HR zones from the phone | no ring when FTP is unknown and no HR zones |
-| Inner arc | target band of the current step (power W) | planned ride step | no arc in a free ride or without a step target |
-| Needle | current value on the −120…120° dial | the lead sensor | hidden when the lead is Time |
-| Lower arc (150–210°) | share of the current interval completed | planned steps | hidden in a free ride |
-| Lead metric | power (fresh ≤ 3 s) → heart rate (≤ 5 s) → GPS speed (≤ 5 s) → elapsed time | — | a stale reading is never promoted |
-| Tiles | HR, cadence, speed, distance (whichever exist, max 3) | sensors / phone GPS mirror | a missing sensor leaves no tile |
-| Status line | REC/PAUSED dot, elapsed, GPS age or "no GPS / phone lost / GPS stale" | recorder + GPS mirror | — |
-| Cue | the one primary coach instruction (≤ 44 chars, 2 lines, 13 px) | phone coach (rule-based) or the watch's local rules, labelled | — |
-| Controls | Lap + **Pause** (immediate, one tap); paused → Resume + **End** | — | always present |
+| Cockpit | How am I performing right now? | status indicator · one dominant number + large unit · 270° orbital gauge (zone ladder, target band, position marker) · ≤ 2 secondary metrics · one command (≤ 16 chars) or interval countdown · one Pause pill | Lap / End → controls overlay + physical keys; coaching sentence → overlay "Why?"; distance/speed → secondary slot only when relevant |
+| Performance | How has my effort changed? | one large chart per page (power · HR · cadence · target vs actual), current value + 30 s trend, axis min/max, target band + mid-line, "now", page dots | time-in-zone bar and averages text (→ summary) |
+| Navigation | Where am I, and where do I go? | auto-scaled map dial, breadcrumb, route ahead, next-turn dot, N, scale bar, one state line | speed/heading/distance (shown only when no route is loaded) |
 
-Grading: fixed four-colour scheme (`theme_tokens.hpp`), identical across the six appearances; missing data and unknown
-FTP are **never graded** (the gauge says "FTP unknown: no target, no zones"). Target vs actual = needle against the target
-band; HR zone = position on the ladder.
+Controls overlay (tap the status line / swipe up / Key 2 preview): Lap · Pause/Resume · End ride (confirms) · the command's reason.
 
-## B · Performance (real-time graphs)
+## Coaching commands (`ride::command`)
 
-* Rolling power and heart-rate lines over a 1-min, 5-min or whole-ride window (`Series`, 1 Hz ring of 300 s; longer
-  windows are downsampled into buckets — bounded memory for the ESP32).
-* **Honest gaps:** a missing second is stored as a gap and breaks the line; averages use present samples only; a bucket
-  with no samples is a gap. Nothing is interpolated or invented.
-* Time-in-zone bar with the seconds "no reading" shown next to it; rolling 3 s / 30 s averages and the lap average
-  (target vs actual via the step line "Interval 2 · 180–216 W · 3:20").
-* No source → "no power / HR source" inside the panel, and the header names only the series that exist.
+Priority: PHONE LOST (safety) → power vs the step band (EASE OFF / HOLD mid W / PUSH TO mid W; cadence outside its range while power is on target → CADENCE UP / DOWN) → heart rate vs the step zone (HR ABOVE TARGET / HOLD HR lo–hi / HR BELOW TARGET) → INTERVAL mm:ss → nothing (free ride). The command is computed from the same target that is printed above the number, so it can never contradict it; the explanation is one tap away.
 
-## C · GPS tracking (phone mirror)
+## Status taxonomy (`ride::LinkState`, `ride::RouteState`)
 
-The watch has no GPS. `GpsMirror` receives timestamped fixes from the iPhone over BLE and shows: a heading-up breadcrumb
-of the last ~300 m around the position marker, speed/heading, GPS age, route progress, distance to the next turn and a
-deviation warning (> 50 m). States: Searching / Live / Stale (> 10 s) / PhoneLost / NoSource, each with its own honest
-text; the marker is hollow unless Live; animation is allowed only while Live. The trail is bounded (600 points, older
-half thinned) while distance stays exact. **A disconnected phone creates no GPS points**: `onFix` refuses fixes while the
-link is marked down and refuses a fix repeating the last phone timestamp; the last valid fix is kept with its time and
-the trail continues from it on reconnect. Breadcrumbs that leave the dial radius become gaps, never rim artefacts. No
-map tiles are drawn and the UI never claims the watch receives GPS itself.
+PHONE LOST (link down) · NO GPS (phone linked, no source / no fix) · GPS STALE n s (last fix > 10 s) · GPS n s (live) — and separately: no route · on route · OFF ROUTE n m (> 50 m). Never merged into one warning.
 
-## D · Visual language
+## Gauge definitions
 
-Round-screen rules enforced by the layout engine and checks (`ROUND_LAYOUT.md`): measured text, minimum fonts (value 20,
-body 13, label 11), max lines, More/paging instead of tiny text, 44 pt controls at y 160, 4.5:1 contrast, six appearances
-on centralised tokens with fixed grading colours. Swipe left/right moves Cockpit ⇄ Performance ⇄ Navigation.
+| Arc / element | Metric | Source | Min → max | Target | Current | Colour | Missing data | Update |
+|---|---|---|---|---|---|---|---|---|
+| Cockpit outer ring (270°) | zone ladder of the lead metric | power + FTP (7 zones) or HR + the athlete's HR zones | 0 → 1.5 × FTP; HR zone 1 low → zone 5 top | — | lit segment = current zone | lit segment in the grade colour, track = theme line | no FTP and no HR zones → plain track | 1 Hz |
+| Cockpit inner arc | step target band | planned step | ring scale | the band | — | fixed light blue | no band → hidden | on step change |
+| White dot | current lead value | lead sensor | ring scale | — | position | text colour | no fresh lead → hidden | 1 Hz |
+| Bottom arc (140–220°) | interval progress | planned steps | 0 → 100 % | — | filled share | accent | free ride → hidden | 1 Hz |
+| Number colour | grade of the lead vs band | grading.hpp | — | band ± 5 % | — | red / yellow / light blue / green; white with no target | never graded without a target | 1 Hz |
+| Performance chart | power · HR · cadence | 1 Hz ring 300 s; 60 s / 10 s buckets for longer windows | rounded data range incl. target | band + mid-line | last sample dot; header = 3 s average | accent / accent2, never a grade colour | gap breaks the trace | 1 Hz |
+| Navigation dial | position, trail, route ahead | phone GPS over BLE | auto 2–25 m/px | route line | marker (hollow when not live) | trail grey, route accent, off-route yellow | distinct states, no invented movement | per fix |
 
-## E · Two-press action system
+## Navigation states
 
-See `BUTTONS.md` → "Two-press action system".
+A tracking without a route · B following a loaded route (route ahead, next turn, distance, off-route) · C disconnected / unavailable (last fix kept and timed, hollow marker, "reconnecting…", NO GPS SOURCE). Heading-up (position at 60 % down) or north-up. Auto-scale in 1-2-5 steps with a 50 / 100 / 200 / 500 m bar. All gallery coordinates are SIMULATED (`simPath()`); the watch never claims its own GPS or map tiles.
 
-## F · Host tests (all passing, 143 checks)
+## Evidence
 
-Gauge ranges and clamping · missing sensors (no gauge, lead falls through) · unknown FTP (no grade, explained) · graph
-continuity (gaps stored, line breaks, averages ignore gaps, bounded ring, buckets) · time in zone · GPS freshness
-(Searching → Live → Stale) · offline route preservation (last fix kept, no points while disconnected, reconnect resumes)
-· duplicate-fix rejection · trail bound · route progress / next turn / deviation / end-of-route bounds · trail projection
-gaps · round layout of every view in every state across all appearances · two-press preview / confirm / timeout /
-replacement / wake / phone-lost · debouncing · every live view keeps an immediate Pause and a Lap/End control.
+Gallery v2: `docs/gallery-v2.html` (published as "Cyclift Watch Gallery"), native 240 × 240 PNGs in `docs/native/`, measured text sizes in `docs/TEXT_SIZES.md`. 1 248 scenes (52 screens × 6 appearances × 4 text lengths), 0 findings; 172 host checks. Hardware-tested: **pending** (nothing flashed).
 
-## Not yet done
+## Host tests
 
-Device rendering with LVGL fonts, real BLE telemetry, haptics and the physical keys are W1 device work and need a
-factory-firmware backup plus the owner's flashing approval first.
+Gauge ranges and clamping · missing sensors · unknown FTP · series gaps, averages, buckets, bound · time in zone · GPS freshness / offline preservation / reconnect / duplicate rejection / trail bound · route progress, next turn, deviation, end-of-route · trail projection gaps · auto-scale and heading-up / north-up projection · command consistency (HOLD / EASE OFF / PUSH TO / CADENCE UP / HR ABOVE / INTERVAL / none / PHONE LOST, ≤ 16 chars) · link and route states and their labels · two-press preview / confirm / expiry / replacement / wake / disconnected · accidental double press · every ride view keeps an immediate Pause, paused views keep End, the overlay keeps Lap + End.

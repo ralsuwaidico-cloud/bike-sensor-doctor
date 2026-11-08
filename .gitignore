@@ -9,3 +9,5 @@
 watch/firmware/test/host/test_domain
 watch/firmware/test/host/gallery
 watch/firmware/test/host/gallery-out/
+watch/firmware/test/host/before/
+watch/firmware/test/host/native/
