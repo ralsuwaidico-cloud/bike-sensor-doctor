@@ -25,7 +25,7 @@
 #define LV_USE_ARC 1
 #define LV_USE_LABEL 1
 #define LV_USE_BTN 0
-#define LV_USE_IMG 0
+#define LV_USE_IMG 1   /* required by lvgl extra widgets (animimg) even though no bitmaps are drawn */
 #define LV_USE_LINE 1
 #define LV_USE_METER 0
 #define LV_USE_THEME_DEFAULT 0

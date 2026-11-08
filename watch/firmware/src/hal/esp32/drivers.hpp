@@ -21,7 +21,7 @@ public:
     static constexpr int W = 240, H = 240, BUF_LINES = 120;        // half-screen buffer: 240 × 120 × 2 B = 57.6 KB in internal RAM
     void begin() {
         tft_.init(); tft_.setRotation(0); tft_.fillScreen(TFT_BLACK);
-        ledcSetup(0, 2000, 8); ledcAttachPin(pins::TFT_BL, 0); setBrightness(60);
+        ledcAttach(pins::LCD_BL, 2000, 8); setBrightness(60);   // Arduino-ESP32 core 3.x LEDC API (pin-based)
         lv_init();
         buf_ = static_cast<lv_color_t*>(heap_caps_malloc(W * BUF_LINES * sizeof(lv_color_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA));
         lv_disp_draw_buf_init(&draw_, buf_, nullptr, W * BUF_LINES);
@@ -29,8 +29,8 @@ public:
         drv_.flush_cb = [](lv_disp_drv_t* d, const lv_area_t* a, lv_color_t* px) { auto* self = static_cast<Display*>(d->user_data); self->flush(a->x1, a->y1, a->x2, a->y2, reinterpret_cast<const uint16_t*>(px)); lv_disp_flush_ready(d); };
         lv_disp_drv_register(&drv_);
     }
-    void setBrightness(uint8_t pct) override { ledcWrite(0, uint32_t(pct) * 255 / 100); }
-    void sleep(bool on) override { if (on) { tft_.writecommand(0x10); ledcWrite(0, 0); } else { tft_.writecommand(0x11); delay(120); setBrightness(60); } }
+    void setBrightness(uint8_t pct) override { ledcWrite(pins::LCD_BL, uint32_t(pct) * 255 / 100); }
+    void sleep(bool on) override { if (on) { tft_.writecommand(0x10); ledcWrite(pins::LCD_BL, 0); } else { tft_.writecommand(0x11); delay(120); setBrightness(60); } }
     void flush(int x1, int y1, int x2, int y2, const uint16_t* px) override { tft_.startWrite(); tft_.setAddrWindow(x1, y1, x2 - x1 + 1, y2 - y1 + 1); tft_.pushPixels(const_cast<uint16_t*>(px), (x2 - x1 + 1) * (y2 - y1 + 1)); tft_.endWrite(); }
 private:
     TFT_eSPI tft_; lv_disp_draw_buf_t draw_{}; lv_disp_drv_t drv_{}; lv_color_t* buf_ = nullptr;
@@ -122,8 +122,8 @@ public:
 class Storage : public IStorage {
 public:
     bool begin() { return LittleFS.begin(true); }
-    bool write(const std::string& path, const std::vector<uint8_t>& bytes) override { File f = LittleFS.open(path.c_str(), "w"); if (!f) return false; f.write(bytes.data(), bytes.size()); f.close(); return true; }
-    bool read(const std::string& path, std::vector<uint8_t>& out) override { File f = LittleFS.open(path.c_str(), "r"); if (!f) return false; out.resize(f.size()); f.read(out.data(), out.size()); f.close(); return true; }
+    bool write(const std::string& path, const std::vector<uint8_t>& bytes) override { fs::File f = LittleFS.open(path.c_str(), "w"); if (!f) return false; f.write(bytes.data(), bytes.size()); f.close(); return true; }
+    bool read(const std::string& path, std::vector<uint8_t>& out) override { fs::File f = LittleFS.open(path.c_str(), "r"); if (!f) return false; out.resize(f.size()); f.read(out.data(), out.size()); f.close(); return true; }
 };
 
 // ---------------------------------------------------------------- BLE (NimBLE peripheral: one service, TX notify / RX write)
@@ -141,7 +141,7 @@ public:
         svc->start(); NimBLEAdvertising* adv = NimBLEDevice::getAdvertising(); adv->addServiceUUID(SERVICE); adv->setScanResponse(true); adv->start();
     }
     bool connected() override { return connected_; }
-    bool send(const std::vector<uint8_t>& frame) override { if (!connected_ || !tx_) return false; tx_->setValue(frame.data(), frame.size()); return tx_->notify(); }
+    bool send(const std::vector<uint8_t>& frame) override { if (!connected_ || !tx_) return false; tx_->setValue(frame.data(), frame.size()); tx_->notify(); return true; }   // NimBLE 1.4 notify() returns void
     void onReceive(std::function<void(const std::vector<uint8_t>&)> cb) override { cb_ = std::move(cb); }
     bool takeLinkChange(bool& linked) { if (!changed_) return false; changed_ = false; linked = connected_; return true; }
 private:

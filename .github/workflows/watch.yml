@@ -28,6 +28,7 @@ jobs:
       - name: Build T-Watch-2021-V1_1 (application) and the M1 diagnostics image
         working-directory: watch/firmware
         run: |
+          set -o pipefail
           pio run -e T-Watch-2021-V1_1 2>&1 | tee build-app.log
           pio run -e T-Watch-2021-V1_1-diag 2>&1 | tee build-diag.log
           echo "## Firmware size (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
