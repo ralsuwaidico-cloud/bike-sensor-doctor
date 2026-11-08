@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 193 — 2026-11-08 02:25 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m52s
+  layout small (L,AX3): FAILED (exit 65) · 30m38s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 179.5}, {343.0, 244.0}}, identifier: 'glanceRiding', label: 'Riding this week, 1 h 33 min, of 5 h planned · 1 of 4 rides done · +1 extra · 4-wk avg 2 h 54 min' 
+RESULT layout audit: FAILED (68 screenshots)
+Total: 39m50s

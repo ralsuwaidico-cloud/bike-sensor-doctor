@@ -1,0 +1,164 @@
+=== layout-small: errors / failures ===
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' passed (1133.285 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (196.363 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:355: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 179.5}, {343.0, 244.0}}, identifier: 'glanceRiding', label: 'Riding this week, 1 h 33 min, of 5 h planned · 1 of 4 rides done · +1 extra · 4-wk avg 2 h 54 min'
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (257.324 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-08 03:04:16.974.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1586.972 (1586.987) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-08 03:04:16.977.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1586.972 (1586.990) seconds
+Test Suite 'Selected tests' failed at 2026-11-08 03:04:16.979.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1586.972 (1586.992) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: last 150 lines ===
+    t =   199.14s     Synthesize event
+    t =   199.57s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   201.76s Find the Window (First Match)
+    t =   201.99s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   202.45s Find the Window (First Match)
+    t =   202.47s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   203.06s Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   203.06s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   203.06s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   203.21s     Check for interrupting elements affecting "Cyclift" Application
+    t =   203.45s     Synthesize event
+    t =   203.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   206.27s Find the Window (First Match)
+    t =   206.29s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   206.75s Find the Window (First Match)
+    t =   206.80s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   207.37s Waiting 5.0s for "Profile" Button to exist
+    t =   208.41s     Checking `Expect predicate `existsNoRetry == 1` for object "Profile" Button`
+    t =   208.41s         Checking existence of `"Profile" Button`
+    t =   208.46s Tap "Profile" Button
+    t =   208.46s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   208.46s     Find the "Profile" Button
+    t =   208.51s     Check for interrupting elements affecting "Profile" Button
+    t =   208.90s     Synthesize event
+    t =   209.22s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   209.22s Checking existence of `"Profile" Button`
+    t =   209.27s Find the "Profile" Button
+    t =   209.32s Find the "Profile" Button
+    t =   209.57s Checking existence of `"Profile" Button`
+    t =   209.63s Find the "Profile" Button
+    t =   209.68s Find the "Profile" Button
+    t =   210.73s Waiting 3.0s for "profileDevices" Button to exist
+    t =   211.74s     Checking `Expect predicate `existsNoRetry == 1` for object "profileDevices" Button`
+    t =   211.74s         Checking existence of `"profileDevices" Button`
+    t =   212.12s Find the Window (First Match)
+    t =   212.13s Checking existence of `"profileDevices" Button`
+    t =   212.37s Find the "profileDevices" Button
+    t =   212.64s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   212.64s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   212.65s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   212.78s     Check for interrupting elements affecting "Cyclift" Application
+    t =   212.99s     Synthesize event
+    t =   213.00s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   213.14s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   213.29s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   213.42s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   213.58s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   214.48s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   217.11s Checking existence of `"profileDevices" Button`
+    t =   217.35s Find the "profileDevices" Button
+    t =   217.61s Tap "profileDevices" Button
+    t =   217.61s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   217.61s     Find the "profileDevices" Button
+    t =   217.83s     Check for interrupting elements affecting "profileDevices" Button
+    t =   218.10s     Synthesize event
+    t =   218.41s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   220.65s Waiting 3.0s for "deviceBoard" Button to exist
+    t =   221.67s     Checking `Expect predicate `existsNoRetry == 1` for object "deviceBoard" Button`
+    t =   221.68s         Checking existence of `"deviceBoard" Button`
+    t =   222.51s         Capturing element debug description
+    t =   222.72s     Checking `Expect predicate `existsNoRetry == 1` for object "deviceBoard" Button`
+    t =   222.72s         Checking existence of `"deviceBoard" Button`
+    t =   223.71s         Capturing element debug description
+    t =   223.72s     Checking existence of `"deviceBoard" Button`
+    t =   224.92s Collecting debug information to assist test failure triage
+    t =   224.92s     Requesting snapshot of accessibility hierarchy for app with pid 84930
+    t =   225.49s Terminate com.ralsuwaidico.bikecomputer:84930
+    t =   226.50s Open com.ralsuwaidico.bikecomputer
+    t =   226.50s     Launch com.ralsuwaidico.bikecomputer
+2026-11-08 03:03:46.250 xcodebuild[32738:84273] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-08 03:03:46.250 xcodebuild[32738:84273] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =   227.95s         Setting up automation session
+    t =   230.72s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   234.91s Waiting 30.0s for "homeGreeting" Any to exist
+    t =   235.95s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   235.95s         Checking existence of `"homeGreeting" Any`
+    t =   238.10s Find the "homeGreeting" Any
+    t =   241.86s Waiting 5.0s for "Progress" Button to exist
+    t =   242.88s     Checking `Expect predicate `existsNoRetry == 1` for object "Progress" Button`
+    t =   242.88s         Checking existence of `"Progress" Button`
+    t =   242.94s Tap "Progress" Button
+    t =   242.94s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   242.96s     Find the "Progress" Button
+    t =   243.00s     Check for interrupting elements affecting "Progress" Button
+    t =   243.23s     Synthesize event
+    t =   243.55s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   243.56s Checking existence of `"Progress" Button`
+    t =   243.83s Find the "Progress" Button
+    t =   244.14s Find the "Progress" Button
+    t =   244.73s Checking existence of `"Progress" Button`
+    t =   245.58s Find the "Progress" Button
+    t =   245.70s Find the "Progress" Button
+    t =   246.89s Find the Window (First Match)
+    t =   246.91s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   247.56s Find the Window (First Match)
+    t =   247.59s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   248.04s Checking existence of `"glanceRiding" Button`
+    t =   248.31s Checking existence of `"glanceStrength" Button`
+    t =   248.69s Checking existence of `"glanceFrequency" Button`
+    t =   248.92s Checking existence of `"glanceRiding" Button`
+    t =   249.22s Tap "glanceRiding" Button
+    t =   249.22s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   249.22s     Find the "glanceRiding" Button
+    t =   249.54s     Check for interrupting elements affecting "glanceRiding" Button
+    t =   249.99s     Synthesize event
+    t =   250.03s         Scroll element to visible
+    t =   250.04s         Find the "glanceRiding" Button
+    t =   250.58s         Computed hit point {-1, -1} after scrolling to visible
+    t =   250.58s         Failed: Not hittable: Button, {{16.0, 179.5}, {343.0, 244.0}}, identifier: 'glanceRiding', label: 'Riding this week, 1 h 33 min, of 5 h planned · 1 of 4 rides done · +1 extra · 4-wk avg 2 h 54 min'
+    t =   251.59s     Retrying `Tap "glanceRiding" Button` (attempt #2)
+    t =   251.59s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   251.60s         Find the "glanceRiding" Button
+    t =   251.94s         Check for interrupting elements affecting "glanceRiding" Button
+    t =   252.16s         Synthesize event
+    t =   252.20s             Scroll element to visible
+    t =   252.20s             Find the "glanceRiding" Button
+    t =   252.73s             Computed hit point {-1, -1} after scrolling to visible
+    t =   252.73s             Failed: Not hittable: Button, {{16.0, 179.5}, {343.0, 244.0}}, identifier: 'glanceRiding', label: 'Riding this week, 1 h 33 min, of 5 h planned · 1 of 4 rides done · +1 extra · 4-wk avg 2 h 54 min'
+    t =   253.75s     Retrying `Tap "glanceRiding" Button` (attempt #3)
+    t =   253.75s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   253.75s         Find the "glanceRiding" Button
+    t =   254.09s         Check for interrupting elements affecting "glanceRiding" Button
+    t =   254.52s         Synthesize event
+    t =   254.59s             Scroll element to visible
+    t =   254.59s             Find the "glanceRiding" Button
+    t =   255.12s             Computed hit point {-1, -1} after scrolling to visible
+    t =   255.12s             Failed: Not hittable: Button, {{16.0, 179.5}, {343.0, 244.0}}, identifier: 'glanceRiding', label: 'Riding this week, 1 h 33 min, of 5 h planned · 1 of 4 rides done · +1 extra · 4-wk avg 2 h 54 min'
+    t =   255.12s Requesting snapshot of accessibility hierarchy for app with pid 95319
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:355: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 179.5}, {343.0, 244.0}}, identifier: 'glanceRiding', label: 'Riding this week, 1 h 33 min, of 5 h planned · 1 of 4 rides done · +1 extra · 4-wk avg 2 h 54 min'
+    t =   256.80s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (257.324 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-08 03:04:16.974.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1586.972 (1586.987) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-08 03:04:16.977.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1586.972 (1586.990) seconds
+Test Suite 'Selected tests' failed at 2026-11-08 03:04:16.979.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1586.972 (1586.992) seconds
+2026-11-08 03:04:59.520 xcodebuild[32738:84273] [MT] IDETestOperationsObserverDebug: 1819.339 elapsed -- Testing started completed.
+2026-11-08 03:04:59.525 xcodebuild[32738:84273] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-08 03:04:59.525 xcodebuild[32738:84273] [MT] IDETestOperationsObserverDebug: 1819.339 sec, +1819.339 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-cnpyvgfjfnraifbxxadbdiohfiku/Logs/Test/Test-BikeComputer-2026.11.08_02-34-36-+0000.xcresult
+
+Failing tests:
+	LayoutAudit.testRC2OwnerScreens()
+
+** TEST EXECUTE FAILED **
+
+Testing started
