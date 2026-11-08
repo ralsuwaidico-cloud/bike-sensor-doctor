@@ -268,7 +268,7 @@ struct HomeGoalDetailView: View {
                 section("What this goal tracks", goal.detail)
                 section("Measured so far", goal.measured)
                 if let n = goal.next { section("Next step", n) }
-                Text("Goal progress pages with trends arrive with Progress analytics (Checkpoint D).").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
+                Text("Weekly goal progress and trends are in the Progress tab.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
             }
             .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3).padding(.bottom, CyTheme.dockClearance)
         }

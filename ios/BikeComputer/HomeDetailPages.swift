@@ -100,7 +100,7 @@ struct HomeWeekOverviewView: View {
                     .padding(16).frame(maxWidth: .infinity, alignment: .leading).cyCard()
                     .accessibilityIdentifier("weekOverviewExplanation")
                 ForEach(Array(o.days.enumerated()), id: \.offset) { i, d in dayCard(d, index: i) }
-                Text("Weekly trend charts arrive with Progress analytics (Checkpoint D).").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
+                Text("Weekly trends, records and goals are in the Progress tab.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
             }
             .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3).padding(.bottom, CyTheme.dockClearance)
         }
@@ -286,7 +286,7 @@ struct HomeCyclingSummaryView: View {
                     }
                     .padding(14).frame(maxWidth: .infinity, alignment: .leading).cyCard()
                 }
-                Text("FTP development, power zones, training load and trend charts arrive with Progress analytics (Checkpoint D). Nothing here is estimated.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
+                Text("Weekly power, heart-rate and cadence trends and time in zones are in the Progress tab. Nothing here is estimated.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
             }
             .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3).padding(.bottom, CyTheme.dockClearance)
         }
@@ -380,7 +380,7 @@ struct HomeStrengthSummaryView: View {
                     }
                     .padding(14).frame(maxWidth: .infinity, alignment: .leading).cyCard()
                 }
-                Text("Personal records, estimated 1RM trends and muscle-volume analysis arrive with Progress analytics (Checkpoint D). Only logged sets are shown.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
+                Text("Personal records, top-set trends and muscle-group coverage are in the Progress tab. Only logged sets are shown.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).padding(.horizontal, 4)
             }
             .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3).padding(.bottom, CyTheme.dockClearance)
         }
