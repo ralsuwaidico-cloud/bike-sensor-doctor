@@ -746,13 +746,15 @@ struct StoreFile: Codable, Equatable {
     var migrationLog: [String] = []
     /// RC3 / ENG-J3: append-only log of applied plan changes (read-only history; workout records are never touched).
     var planVersions: [PlanVersion] = []
+    /// Checkpoint E: per-day history of Apple Health recovery readings (source + sample time); no derived score.
+    var recoveryLog = RecoveryLog()
 
     /// Explicit because both init(from:) and encode(to:) are hand-written (the compiler then synthesises no keys).
     enum CodingKeys: String, CodingKey {
         case schema, profile, settings, plan, rides, tiles, onboarded, guest, appleUserId, createdAt, ftpSuggestion, boardSync, onboardingStage, availability
         case strength, templates, customExercises, appliedProposals, weekdayRoutines, equipment, activeSession, ignoredInsights
         case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation, painClearances
-        case strengthPrefs, trash, migrationLog, planVersions
+        case strengthPrefs, trash, migrationLog, planVersions, recoveryLog
     }
 
     init(schema: Int = StoreFile.currentSchema, profile: RiderProfile = RiderProfile(), settings: AppSettings = AppSettings(), plan: [Workout] = [], rides: [RideRecord] = [], tiles: [String] = Store.defaultTiles, onboarded: Bool = false, guest: Bool = true, appleUserId: String? = nil, createdAt: Date = Date()) {
@@ -800,6 +802,7 @@ struct StoreFile: Codable, Equatable {
         trash = (try? c.decodeIfPresent([TrashItem].self, forKey: .trash)) ?? []
         migrationLog = (try? c.decodeIfPresent([String].self, forKey: .migrationLog)) ?? []
         planVersions = (try? c.decodeIfPresent([PlanVersion].self, forKey: .planVersions)) ?? []
+        recoveryLog = (try? c.decodeIfPresent(RecoveryLog.self, forKey: .recoveryLog)) ?? RecoveryLog()
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -814,6 +817,7 @@ struct StoreFile: Codable, Equatable {
         try c.encode(adaptiveProposals, forKey: .adaptiveProposals); try c.encodeIfPresent(lastAdaptation, forKey: .lastAdaptation); try c.encode(painClearances, forKey: .painClearances)
         try c.encode(strengthPrefs, forKey: .strengthPrefs); try c.encode(trash, forKey: .trash); try c.encode(migrationLog, forKey: .migrationLog)
         try c.encode(planVersions, forKey: .planVersions)
+        try c.encode(recoveryLog, forKey: .recoveryLog)
     }
 
     /// Migration entry point. Unknown (newer) schemas are kept as they are; older ones are upgraded step by step.
@@ -889,6 +893,7 @@ final class Store: ObservableObject {
     @Published var migrationLog: [String] = [] { didSet { persist() } }
     /// RC3 / ENG-J3: applied plan changes, newest last (append-only).
     @Published var planVersions: [PlanVersion] = [] { didSet { persist() } }
+    @Published var recoveryLog = RecoveryLog() { didSet { persist() } }
     /// RC3 / ENG-J2: week-level change proposals waiting for Apply (not persisted; nothing is saved before Apply).
     var pendingPlanChanges: [UUID: PlanChangeProposal] = [:]
     /// The last deletion that can still be undone from the snackbar (not persisted; the record itself is in `trash`).
@@ -951,7 +956,7 @@ final class Store: ObservableObject {
         weekdayRoutines = f.weekdayRoutines; equipment = f.equipment; activeSession = f.activeSession; ignoredInsights = f.ignoredInsights
         adaptations = f.adaptations; dismissedAdaptations = f.dismissedAdaptations; approvedAdaptations = f.approvedAdaptations
         adaptiveProposals = f.adaptiveProposals; lastAdaptation = f.lastAdaptation; painClearances = f.painClearances
-        strengthPrefs = f.strengthPrefs; trash = f.trash; migrationLog = f.migrationLog; planVersions = f.planVersions
+        strengthPrefs = f.strengthPrefs; trash = f.trash; migrationLog = f.migrationLog; planVersions = f.planVersions; recoveryLog = f.recoveryLog
     }
 
     var snapshot: StoreFile {
@@ -961,7 +966,7 @@ final class Store: ObservableObject {
         f.weekdayRoutines = weekdayRoutines; f.equipment = equipment; f.activeSession = activeSession; f.ignoredInsights = ignoredInsights
         f.adaptations = adaptations; f.dismissedAdaptations = dismissedAdaptations; f.approvedAdaptations = approvedAdaptations
         f.adaptiveProposals = adaptiveProposals; f.lastAdaptation = lastAdaptation; f.painClearances = painClearances
-        f.strengthPrefs = strengthPrefs; f.trash = trash; f.migrationLog = migrationLog; f.planVersions = planVersions
+        f.strengthPrefs = strengthPrefs; f.trash = trash; f.migrationLog = migrationLog; f.planVersions = planVersions; f.recoveryLog = recoveryLog
         return f
     }
 

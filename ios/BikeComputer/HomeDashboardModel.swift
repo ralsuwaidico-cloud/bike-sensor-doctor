@@ -34,6 +34,10 @@ struct HomeDashboard: Equatable {
     struct Recovery: Equatable {
         struct Reading: Equatable { var title: String; var value: String; var unit: String; var date: Date }
         var readings: [Reading]
+        /// Checkpoint E: the one recommendation's title ("Train as planned", "Make today's session easier"); nil = no fresh readings.
+        var adviceTitle: String? = nil
+        /// Whether the newest reading is from the last 24 hours (stale readings are labelled on the card).
+        var fresh: Bool = true
         var hasData: Bool { !readings.isEmpty }
         /// Empty state: what is missing and the one next step.
         var emptyTitle: String { "No readings yet" }
@@ -237,7 +241,10 @@ extension Store {
         if let s = profile.sleepHours, let (_, d) = read(.sleep) { readings.append(.init(title: "Sleep", value: String(format: "%.1f", s), unit: "h", date: d)) }
         if let r = profile.restHR, let (_, d) = read(.restHR) { readings.append(.init(title: "Resting HR", value: "\(r)", unit: "bpm", date: d)) }
         if let v = profile.hrvMs, let (_, d) = read(.hrv) { readings.append(.init(title: "HRV", value: "\(Int(v.rounded()))", unit: "ms", date: d)) }
-        let recovery = HomeDashboard.Recovery(readings: readings)
+        var recovery = HomeDashboard.Recovery(readings: readings)
+        let report = recoveryReport(now: now)
+        if report.advice.kind != .noData, !readings.isEmpty { recovery.adviceTitle = report.advice.title }
+        recovery.fresh = readings.map(\.date).max().map { now.timeIntervalSince($0) < 24 * 3600 } ?? true
 
         // goal: the main goal, what it tracks, what is measured so far (checkpoints), the next step
         var goal: HomeDashboard.Goal? = nil

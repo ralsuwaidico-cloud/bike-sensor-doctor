@@ -199,7 +199,8 @@ struct HomeDashboardScreen: View {
                             Text(r.value).font(CyType.numeralSmall).monospacedDigit().foregroundStyle(id.tint); Text(r.unit).font(CyType.captionSmall).foregroundStyle(id.tint.opacity(0.8))
                         }
                     }
-                    Text("Apple Health · \(dash.recovery.readings.map(\.date).max()?.formatted(date: .abbreviated, time: .omitted) ?? "")").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
+                    if let a = dash.recovery.adviceTitle { Text(a).font(CyType.captionSmall).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true) }
+                    Text("Apple Health · \(dash.recovery.readings.map(\.date).max()?.formatted(date: .abbreviated, time: .omitted) ?? "")" + (dash.recovery.fresh ? "" : " · older than a day")).font(CyType.captionSmall).foregroundStyle(dash.recovery.fresh ? CyTheme.ink3 : CyTheme.warn)
                 } else {
                     Text(dash.recovery.emptyTitle).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink)
                     Text(dash.recovery.emptySub + " ›").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3).fixedSize(horizontal: false, vertical: true)
@@ -211,7 +212,7 @@ struct HomeDashboardScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(dash.recovery.hasData ? "Recovery: " + dash.recovery.readings.map { "\($0.title) \($0.value) \($0.unit)" }.joined(separator: ", ") + ". Opens Recovery" : "Recovery: no readings yet. Opens Recovery")
+        .accessibilityLabel(dash.recovery.hasData ? "Recovery: " + dash.recovery.readings.map { "\($0.title) \($0.value) \($0.unit)" }.joined(separator: ", ") + (dash.recovery.adviceTitle.map { ". \($0)" } ?? "") + (dash.recovery.fresh ? "" : ". Readings older than a day") + ". Opens Recovery" : "Recovery: no readings yet. Opens Recovery")
         .accessibilityIdentifier("homeRecovery")
     }
     private func goalCard(_ g: HomeDashboard.Goal) -> some View {
@@ -256,28 +257,7 @@ struct HomeDashboardScreen: View {
 }
 
 // MARK: - Recovery (latest readings with source and date, or the empty state; history pages are Checkpoint E)
-struct HomeRecoveryView: View {
-    let recovery: HomeDashboard.Recovery
-    var openConnections: () -> Void
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: CyTheme.sp3) {
-                if recovery.hasData {
-                    ForEach(recovery.readings, id: \.title) { r in
-                        CyMetricTile(title: r.title, sport: .recovery, value: r.value, unit: r.unit, sub: "Apple Health · \(r.date.formatted(date: .abbreviated, time: .shortened))", tag: .measured)
-                    }
-                    Text("No score is computed from these readings. Sleep history and trends arrive with Checkpoint E.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
-                } else {
-                    CyEmptyState(systemImage: "heart.text.square", title: recovery.emptyTitle, line: "Cyclift shows the latest sleep, resting heart rate and HRV once Apple Health reads are turned on in Profile › Connections. Nothing is estimated in the meantime.", actionTitle: "Open Connections", action: openConnections)
-                }
-            }
-            .padding(.horizontal, CyTheme.margin).padding(.vertical, CyTheme.sp3).padding(.bottom, CyTheme.dockClearance)
-        }
-        .background(CyTheme.canvas)
-        .navigationTitle("Recovery").navigationBarTitleDisplayMode(.inline)
-        .accessibilityIdentifier("homeRecoveryPage")
-    }
-}
+// HomeRecoveryView moved to RecoveryView.swift (Checkpoint E).
 
 // MARK: - Goal details: what the goal tracks, what is measured so far, the next step (no promised outcome)
 struct HomeGoalDetailView: View {

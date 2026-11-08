@@ -85,6 +85,8 @@ struct HealthSample: Codable, Equatable {
     var value: Double
     /// Sample end date (the measurement time, or the end of the night for sleep).
     var date: Date
+    /// Apple Health source name (Checkpoint E); nil when unknown. Optional so files written before it decode unchanged.
+    var source: String? = nil
 }
 
 /// Which Health reads the athlete turned on (each one asks iOS for permission the first time).
