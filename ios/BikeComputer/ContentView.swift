@@ -49,7 +49,7 @@ struct RootView: View {
             // all five stay alive (like TabView) so navigation and scroll positions survive switching
             ZStack {
                 HomeView(tab: $tab, perform: perform, openHub: { openHub() }).tabPage(0, tab)
-                PlanView().tabPage(1, tab)
+                PlanView(perform: perform).tabPage(1, tab)
                 RideTabView().tabPage(2, tab)
                 ProgressTabView().tabPage(3, tab)
                 ProfileTabView().tabPage(4, tab)

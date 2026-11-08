@@ -6,6 +6,11 @@ import Charts
 /// Progress, and History moved to Progress › Sessions. Tap a day to view / edit / move / skip / replace / add.
 struct PlanView: View {
     @EnvironmentObject private var store: Store
+    @EnvironmentObject private var recorder: RideRecorder
+    /// Checkpoint C2: Plan reuses Home's Day page and Weekly overview; `perform` is the Training Hub's own action router.
+    var perform: (HomeAction) -> Void = { _ in }
+    @State private var path: [HomeRoute] = []
+    @State private var proposalReview: PreviewRef? = nil
     @State private var weekOffset = 0
     @State private var selected: Workout?
     @State private var dayList: PlanDay?
@@ -19,22 +24,29 @@ struct PlanView: View {
     private var week: [Workout] { store.workouts(weekOf: weekDate) }
     private var days: [PlanDay] { PlanDay.group(week, weekOf: weekDate) }
 
+    private var summary: PlanWeekSummary { store.planWeekSummary(weekOf: weekDate, recorderActive: recorder.isActive) }
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
+                let sum = summary
                 VStack(spacing: 12) {
-                    weekHeader
-                    calendar
+                    weekHeader                                                        // A · week selector
+                    if sum.pendingProposals > 0 { proposalStrip(sum.pendingProposals) }   // requirement 14 · proposals only in their strip + sheet
                     fixRow
-                    dayCards
-                    weekRow
-                    changesRow
+                    Button { path.append(.weekOverview(weekDate)) } label: { PlanCompactRing(overview: sum.overview, minutesLine: sum.minutesLine) }.buttonStyle(.plain)   // B · ring (same ledger as Home)
+                    PlanWeekTimeline(days: sum.timeline, onDay: { d in if d.chips.isEmpty && !d.beforePlan { addOn = d.date } else { path.append(.day(d.date)) } },
+                                     onChip: { c in if let id = c.workoutId, let w = store.plan.first(where: { $0.id == id }) { selected = w } })   // C · timeline
+                    if let n = sum.next { nextSession(n) }                                 // D · next session
+                    dayCards                                                           // E · day cards (today expanded)
+                    managePlan                                                         // F · manage plan
                 }.padding()
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Plan")
+            .navigationDestination(for: HomeRoute.self) { r in planDestination(r) }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }.accessibilityIdentifier("planMenuQuickLog"); Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.rectangle") }; Button { showTemplates = true } label: { Label("Routines", systemImage: "doc.on.doc") } } label: { Label("Log strength", systemImage: "dumbbell") } }
+                ToolbarItem(placement: .topBarTrailing) { Menu { Button { showStrengthLog = true } label: { Label("Quick log", systemImage: "bolt") }.accessibilityIdentifier("planMenuQuickLog"); Button { showDetailedLog = true } label: { Label("Log exercises", systemImage: "list.bullet.clipboard") }; Button { showTemplates = true } label: { Label("Routines", systemImage: "square.stack") } } label: { Image(systemName: "ellipsis.circle").frame(width: DS.minTap, height: DS.minTap) }.accessibilityLabel("More").accessibilityIdentifier("planMenu") }
             }
             .sheet(isPresented: $showStrengthLog) { QuickStrengthLogSheet() }
             .sheet(isPresented: $showDetailedLog) { DetailedStrengthLogSheet() }
@@ -43,7 +55,74 @@ struct PlanView: View {
             .sheet(isPresented: $showAvailability) { WeekPage(asSheet: true) }   // V1: the one week editor (onboarding Stage C, Profile › Your week)
             .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
             .sheet(item: $dayList) { day in dayListSheet(day) }
+            .sheet(item: $proposalReview) { r in SessionChangeSheet(proposalId: r.id) }
         }
+    }
+
+    @ViewBuilder private func planDestination(_ r: HomeRoute) -> some View {
+        switch r {
+        case .weekOverview(let d): HomeWeekOverviewView(weekOf: d, perform: perform, open: { path.append($0) })
+        case .day(let d): HomeDayDetailView(date: d, perform: perform, open: { path.append($0) })
+        case .ride(let id): if let ride = store.rides.first(where: { $0.id == id }) { RideDetailView(ride: ride) }
+        case .log(let id): if let st = store.strength.first(where: { $0.id == id }) { StrengthSessionDetail(session: st) }
+        case .cycling: HomeCyclingSummaryView(perform: perform, open: { path.append($0) })
+        case .strength: HomeStrengthSummaryView(perform: perform, open: { path.append($0) })
+        default: EmptyView()
+        }
+    }
+
+    // MARK: band above B — pending proposal strip (never mixed into the week; opens the existing review sheet)
+    private func proposalStrip(_ n: Int) -> some View {
+        Button { if let p = store.pendingProposals.values.sorted(by: { $0.workoutId.uuidString < $1.workoutId.uuidString }).first { proposalReview = PreviewRef(id: p.id) } } label: {
+            HStack(spacing: DS.s) {
+                Image(systemName: "sparkles").foregroundStyle(CyTheme.cycling.tint)
+                Text(n == 1 ? "1 change waiting for your review" : "\(n) changes waiting for your review").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                Spacer()
+                Text("Review").font(.subheadline.bold()).foregroundStyle(BC.accent)
+            }
+            .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("planProposalStrip")
+    }
+
+    // MARK: band D — the next session, with the coach's stored reason (existing-data feature B)
+    private func nextSession(_ n: PlanNextSession) -> some View {
+        Button { if let w = store.plan.first(where: { $0.id == n.workoutId }) { selected = w } } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("NEXT SESSION").font(.caption2.weight(.heavy)).foregroundStyle(.secondary).tracking(0.5)
+                    Spacer()
+                    Text(n.button == .start ? "Start" : n.button == .resume ? "Resume" : "Open").font(.subheadline.bold()).foregroundStyle(n.button == .open ? BC.accent : .white)
+                        .padding(.horizontal, 12).padding(.vertical, 6).background(n.button == .open ? Color.clear : CyTheme.cycling.tint, in: Capsule())
+                }
+                Text(n.title).font(.body.weight(.bold)).foregroundStyle(.primary)
+                Text(n.subtitle).font(.footnote).foregroundStyle(.secondary)
+                if let why = n.why { Label(why, systemImage: "text.bubble").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("planNextWhy") }
+            }
+            .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Next session: \(n.title), \(n.subtitle). \(n.button == .start ? "Start" : n.button == .resume ? "Resume" : "Open")")
+        .accessibilityIdentifier("planNextSession")
+    }
+
+    // MARK: band F — manage plan
+    private var managePlan: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("MANAGE PLAN").font(.caption2.weight(.heavy)).foregroundStyle(.secondary).tracking(0.5).padding(.leading, 4)
+            weekRow
+            changesRow
+            Button { showTemplates = true } label: { manageRow("Routines", "square.stack") }.buttonStyle(.plain).accessibilityIdentifier("planRoutines")
+            Button { showStrengthLog = true } label: { manageRow("Quick log", "bolt") }.buttonStyle(.plain).accessibilityIdentifier("planQuickLog")
+        }
+    }
+    private func manageRow(_ title: String, _ icon: String) -> some View {
+        HStack { Label(title, systemImage: icon).font(.subheadline.weight(.semibold)).foregroundStyle(.primary); Spacer(); Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary) }
+            .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: header + calendar
@@ -68,35 +147,6 @@ struct PlanView: View {
 
     /// Seven days, always all visible: equal widths, text that shrinks instead of widening the row, type capped at
     /// xxLarge for this strip only (the day list below carries the large text). No horizontal scrolling anywhere.
-    private var calendar: some View {
-        HStack(alignment: .top, spacing: 3) {
-            ForEach(days, id: \.date) { day in
-                Button { if day.items.count > 1 { dayList = day } else if let w = day.items.first { selected = w } else { addOn = day.date } } label: {
-                    VStack(spacing: 4) {
-                        Text(day.date.shortDay).font(.caption2.weight(.heavy)).foregroundStyle(Calendar.current.isDateInToday(day.date) ? BC.accent : .secondary).lineLimit(1).minimumScaleFactor(0.6)
-                        if beforePlan(day) {
-                            Text("—").font(.system(size: 15, weight: .semibold)).foregroundStyle(.tertiary).frame(height: 18)      // W12
-                        } else {
-                            Image(systemName: icon(day)).font(.system(size: 15, weight: .semibold)).foregroundStyle(color(day)).frame(height: 18)
-                        }
-                        Text(day.items.first.map { Fmt.compact(minutes: $0.minutes) } ?? "—").font(.caption.weight(.bold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
-                        HStack(spacing: 2) { ForEach(day.items.prefix(3)) { w in RoundedRectangle(cornerRadius: 2).fill(w.kind.zone > 0 ? BC.zone(w.kind.zone) : Color.secondary.opacity(0.35)).frame(height: 4) } }
-                        if day.items.count > 1 { Text("+\(day.items.count - 1)").font(.caption2.weight(.heavy)).padding(.horizontal, 4).background(BC.accent.opacity(0.18), in: Capsule()) }
-                    }
-                    .padding(.vertical, 7).padding(.horizontal, 1).frame(minWidth: 0, maxWidth: .infinity, minHeight: 72)
-                    .background(day.items.contains { store.status($0).isCompleted } ? BC.live.opacity(0.14) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Calendar.current.isDateInToday(day.date) ? BC.accent : Color.clear, lineWidth: 1.5))
-                }.buttonStyle(.plain)
-                .frame(minWidth: 0, maxWidth: .infinity)
-                .accessibilityIdentifier("planDay-\(Calendar.current.component(.weekday, from: day.date))")
-                .accessibilityLabel("\(day.date.dayAndDate): \(beforePlan(day) ? "before this plan started" : day.items.isEmpty ? "free" : day.items.map { "\($0.kind.title) \(Fmt.duration(minutes: $0.minutes)), \(store.status($0).title.lowercased())" }.joined(separator: ", "))")
-            }
-        }
-        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("planDayStrip")
-    }
-    /// W12: a day before the plan's effective start with nothing planned or recorded.
     private func beforePlan(_ d: PlanDay) -> Bool {
         d.items.isEmpty && CyPlanStart.isBeforePlan(d.date, effectiveStart: store.planEffectiveStart, hasRecord: store.hasRecord(on: d.date))
     }
@@ -138,14 +188,36 @@ struct PlanView: View {
         VStack(spacing: 8) {
             ForEach(days, id: \.date) { day in
                 if day.items.isEmpty {
-                    Button { addOn = day.date } label: { HStack { Text(day.date.dayAndDate).font(.subheadline.weight(.semibold)); Spacer(); Text("free · add").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
-                } else {
+                    if !beforePlan(day) {
+                        Button { addOn = day.date } label: { HStack { Text(day.date.dayAndDate).font(.subheadline.weight(.semibold)); Spacer(); Text("free · add").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
+                    }
+                } else if Calendar.current.isDateInToday(day.date) {
                     ForEach(day.items) { w in
                         Button { selected = w } label: { WorkoutCard(workout: w, routine: store.routine(for: w), routineRemoved: store.isRoutineRemoved(w), status: store.status(w)) }.buttonStyle(.plain)
+                    }
+                } else {
+                    ForEach(day.items) { w in
+                        Button { selected = w } label: { compactCard(w) }.buttonStyle(.plain)
                     }
                 }
             }
         }
+    }
+    /// Compact card for days other than today (C2 band E): one line, same destination as the full card.
+    private func compactCard(_ w: Workout) -> some View {
+        let st = store.status(w)
+        return HStack(spacing: 10) {
+            Image(systemName: w.kind == .strength ? "dumbbell.fill" : (w.kind == .rest || w.kind == .recoveryDay) ? "moon.fill" : "bicycle").foregroundStyle(w.kind == .strength ? CyTheme.strength.tint : CyTheme.cycling.tint).frame(width: 22)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(w.displayTitle(routine: store.routine(for: w))).font(.subheadline.weight(.semibold)).foregroundStyle(w.skipped ? .secondary : .primary).lineLimit(1)
+                Text(w.date.dayAndDate + (w.minutes > 0 ? " · " + Fmt.duration(minutes: w.minutes) : "")).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(w.skipped ? "Skipped" : st.title).font(.caption.weight(.semibold)).foregroundStyle(st.isCompleted ? BC.live : .secondary)
+        }
+        .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
     }
 
     /// Plan changes: every applied change as a read-only version with Undo. Run 124: as a second toolbar button it was
