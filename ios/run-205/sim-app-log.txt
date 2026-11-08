@@ -1,0 +1,400 @@
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.547323+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853598848.564
+2026-11-08 18:04:47.547412+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.547481+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4853598848.564) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.547926+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853600192.565
+2026-11-08 18:04:47.548362+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.548473+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText (AX element pid: 18057, elementOrHash.elementID: 4853600192.565) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.548546+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853600640.566
+2026-11-08 18:04:47.548690+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.549155+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4853600640.566) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.549236+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853601984.567
+2026-11-08 18:04:47.549633+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.549728+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText (AX element pid: 18057, elementOrHash.elementID: 4853601984.567) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.549793+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853602432.568
+2026-11-08 18:04:47.550531+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.550621+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4853602432.568) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.550703+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853603776.569
+2026-11-08 18:04:47.551107+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.551186+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText (AX element pid: 18057, elementOrHash.elementID: 4853603776.569) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.551246+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853604224.570
+2026-11-08 18:04:47.551870+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.551963+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4853604224.570) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.552049+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853605568.571
+2026-11-08 18:04:47.552517+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.552613+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText (AX element pid: 18057, elementOrHash.elementID: 4853605568.571) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.552687+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853606016.572
+2026-11-08 18:04:47.552758+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.552823+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4853606016.572) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.552910+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853607360.573
+2026-11-08 18:04:47.553327+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.553437+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText (AX element pid: 18057, elementOrHash.elementID: 4853607360.573) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.553504+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853607808.574
+2026-11-08 18:04:47.553577+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.553639+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4853607808.574) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.553996+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853609152.575
+2026-11-08 18:04:47.554306+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.554391+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText (AX element pid: 18057, elementOrHash.elementID: 4853609152.575) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.554481+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4853609600.576
+2026-11-08 18:04:47.554644+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.554768+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4853609600.576) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.554863+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4857606400.635
+2026-11-08 18:04:47.555876+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.556029+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText (AX element pid: 18057, elementOrHash.elementID: 4857606400.635) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.556131+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4857606848.636
+2026-11-08 18:04:47.556220+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.556289+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4857606848.636) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.556599+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4681617408.577
+2026-11-08 18:04:47.556747+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.556849+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4681617408.577) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.556923+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4681617920.578
+2026-11-08 18:04:47.557029+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.557123+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4681617920.578) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.557543+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4681619968.579
+2026-11-08 18:04:47.557643+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.557716+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4681619968.579) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.557777+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4681620480.580
+2026-11-08 18:04:47.557856+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.558221+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4681620480.580) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.558322+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4681622528.581
+2026-11-08 18:04:47.558478+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.558595+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4681622528.581) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.558680+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 18057, elementOrHash.elementID: 4681623040.582
+2026-11-08 18:04:47.559347+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 18:04:47.559453+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Image (AX element pid: 18057, elementOrHash.elementID: 4681623040.582) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 18:04:47.559551+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Descendants matching type Button`
+2026-11-08 18:04:47.559617+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found and no further inputs/transformers to explore in the current sequence, returning nil
+2026-11-08 18:04:47.559713+0000 0x472af    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] unioned related elements {(
+)} from {(
+)}
+2026-11-08 18:04:47.575241+0000 0x472de    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Current tree:
+0x118b603c0 <App element pid: 18057>
+  Window, 0x1188357c0 <AX element pid: 18057, elementOrHash.elementID: 4432873472.4>
+    Other, 0x118837480 <AX element pid: 18057, elementOrHash.elementID: 4480852480.5>
+      Other, 0x1188343c0 <AX element pid: 18057, elementOrHash.elementID: 4482416640.6>
+        Other, 0x118836940 <AX element pid: 18057, elementOrHash.elementID: 4857041920.641>
+        Other, 0x1188348c0 <AX element pid: 18057, elementOrHash.elementID: 4432872448.7>
+          Other, 0x118834dc0 <AX element pid: 18057, elementOrHash.elementID: 4480456384.8>
+            Other, 0x118835a40 <AX element pid: 18057, elementOrHash.elementID: 4480442688.9>
+              Other, 0x1233dca00 <AX element pid: 18057, elementOrHash.elementID: 4479913024.15>
+                NavigationBar, 0x121d43840 <AX element pid: 18057, elementOrHash.elementID: 4432366592.26>
+                Other, 0x121d43980 <AX element pid: 18057, elementOrHash.elementID: 4479913472.27>
+                  Other, 0x11701b5c0 <AX element pid: 18057, elementOrHash.elementID: 4480262464.49>
+                    Other, 0x1183ffe80 <AX element pid: 18057, elementOrHash.elementID: 4432234240.63>
+                      Other, 0x11885d7c0 <AX element pid: 18057, elementOrHash.elementID: 4480606976.68>
+                        ScrollView, 0x117cb3700 <AX element pid: 18057, elementOrHash.elementID: 4432986112.73>
+                          Other, 0x121d3d900 <AX element pid: 18057, elementOrHash.elementID: 4482422400.96>
+                            StaticText, 0x11836b200 <AX element pid: 18057, elementOrHash.elementID: 4432235136.130>
+                          Other, 0x121d3ea80 <AX element pid: 18057, elementOrHash.elementID: 4695820800.97>
+                            Button, 0x11836b340, identifier: 'chevron.left', label: 'Previous week' <AX element pid: 18057, elementOrHash.elementID: 4480456832.131>
+                            StaticText, 0x118369b80 <AX element pid: 18057, elementOrHash.elementID: 4480457280.132>
+                            StaticText, 0x11836b700 <AX element pid: 18057, elementOrHash.elementID: 4480458176.133>
+                            Button, 0x11836a6c0, identifier: 'chevron.right', label: 'Next week' <AX element pid: 18057, elementOrHash.elementID: 4480458624.134>
+                            Button, 0x118369040, identifier: 'planRing', label: 'Week completion: 0 of 4 sessions done. 35 min recorded of 3 h planned. Opens the weekly overview' <AX element pid: 18057, elementOrHash.elementID: 4480461312.135>
+                              StaticText, 0x118382d00 <AX element pid: 18057, elementOrHash.elementID: 4480459072.255>
+                              StaticText, 0x118382940 <AX element pid: 18057, elementOrHash.elementID: 4480459520.256>
+                              StaticText, 0x118382440 <AX element pid: 18057, elementOrHash.elementID: 4480459968.257>
+                              StaticText, 0x118383340 <AX element pid: 18057, elementOrHash.elementID: 4480460416.258>
+                              Image, 0x1183835c0 <AX element pid: 18057, elementOrHash.elementID: 4480460864.259>
+                            Other, 0x118369900 <AX element pid: 18057, elementOrHash.elementID: 4480518784.136>
+                              Button, 0x118383200, identifier: 'planDay-2', label: 'Mon, rest day' <AX element pid: 18057, elementOrHash.elementID: 4480463104.260>
+                                StaticText, 0x1260117c0 <AX element pid: 18057, elementOrHash.elementID: 4480461760.481>
+                                StaticText, 0x126011900 <AX element pid: 18057, elementOrHash.elementID: 4480462208.482>
+                                StaticText, 0x126011a40 <AX element pid: 18057, elementOrHash.elementID: 4480462656.483>
+                              Button, 0x118383980, identifier: 'planDay-3', label: 'Tue, Endurance, 45 min, missed' <AX element pid: 18057, elementOrHash.elementID: 4480483328.261>
+                                StaticText, 0x126011cc0 <AX element pid: 18057, elementOrHash.elementID: 4480463552.484>
+                                StaticText, 0x126011e00 <AX element pid: 18057, elementOrHash.elementID: 4480464000.485>
+                                Button, 0x126011f40, identifier: 'planChip-912FA890-2598-46D9-BDE3-3D95563A500E', label: 'Endurance, 45 min, missed' <AX element pid: 18057, elementOrHash.elementID: 4480466240.486>
+                                  Image, 0x12605f340 <AX element pid: 18057, elementOrHash.elementID: 4480464448.541>
+                                  StaticText, 0x12605f480 <AX element pid: 18057, elementOrHash.elementID: 4480464896.542>
+                                  StaticText, 0x12605f5c0 <AX element pid: 18057, elementOrHash.elementID: 4480465344.543>
+                              Button, 0x1183803c0, identifier: 'planDay-4', label: 'Wed, Strength · Full body, no duration, done' <AX element pid: 18057, elementOrHash.elementID: 4480486912.262>
+                                StaticText, 0x126011b80 <AX element pid: 18057, elementOrHash.elementID: 4480483776.487>
+                                StaticText, 0x1260121c0 <AX element pid: 18057, elementOrHash.elementID: 4480484224.488>
+                                Button, 0x126012300, identifier: 'planChip-log-5FB9FCC8-0201-4F8C-99CE-3CB5E9D13230', label: 'Strength · Full body, no duration, done' <AX element pid: 18057, elementOrHash.elementID: 4480486464.489>
+                                  Image, 0x12605f700 <AX element pid: 18057, elementOrHash.elementID: 4480484672.544>
+                                  StaticText, 0x12605f840 <AX element pid: 18057, elementOrHash.elementID: 4480485120.545>
+                                  StaticText, 0x12605f980 <AX element pid: 18057, elementOrHash.elementID: 4480485568.546>
+                              Button, 0x118382800, identifier: 'planDay-5', label: 'Thu, Endurance, 45 min, missed' <AX element pid: 18057, elementOrHash.elementID: 4480491392.263>
+                                StaticText, 0x126012080 <AX element pid: 18057, elementOrHash.elementID: 4480487808.490>
+                                StaticText, 0x126012580 <AX element pid: 18057, elementOrHash.elementID: 4480488256.491>
+                                Button, 0x1260126c0, identifier: 'planChip-3EE696EF-5223-468A-9507-2CFCF71E182B', label: 'Endurance, 45 min, missed' <AX element pid: 18057, elementOrHash.elementID: 4480490944.492>
+                                  Image, 0x12605fac0 <AX element pid: 18057, elementOrHash.elementID: 4480489152.547>
+                                  StaticText, 0x12605fc00 <AX element pid: 18057, elementOrHash.elementID: 4480489600.548>
+                                  StaticText, 0x12605fd40 <AX element pid: 18057, elementOrHash.elementID: 4480490048.549>
+                              Button, 0x1183812c0, identifier: 'planDay-6', label: 'Fri, rest day' <AX element pid: 18057, elementOrHash.elementID: 4480494528.264>
+                                StaticText, 0x126012440 <AX element pid: 18057, elementOrHash.elementID: 4480492288.493>
+                                StaticText, 0x126012940 <AX element pid: 18057, elementOrHash.elementID: 4480492736.494>
+                                StaticText, 0x126012a80 <AX element pid: 18057, elementOrHash.elementID: 4480493632.495>
+                              Button, 0x118381040, identifier: 'planDay-7', label: 'Sat, Endurance, 45 min, missed' <AX element pid: 18057, elementOrHash.elementID: 4480499008.265>
+                                StaticText, 0x126012800 <AX element pid: 18057, elementOrHash.elementID: 4480494976.496>
+                                StaticText, 0x126012d00 <AX element pid: 18057, elementOrHash.elementID: 4480495424.497>
+                                Button, 0x126012e40, identifier: 'planChip-BF926EE5-DF50-45CF-B959-E9961EAE59E1', label: 'Endurance, 45 min, missed' <AX element pid: 18057, elementOrHash.elementID: 4480498112.498>
+                                  Image, 0x12605fe80 <AX element pid: 18057, elementOrHash.elementID: 4480496320.550>
+                                  StaticText, 0x1233ec000 <AX element pid: 18057, elementOrHash.elementID: 4480496768.551>
+                                  StaticText, 0x1233ec140 <AX element pid: 18057, elementOrHash.elementID: 4480497664.552>
+                              Button, 0x118380500, identifier: 'planDay-1', label: 'Sun, Short Full Body Workout, 45 min, in progress' <AX element pid: 18057, elementOrHash.elementID: 4480518336.266>
+                                StaticText, 0x126012bc0 <AX element pid: 18057, elementOrHash.elementID: 4480516096.499>
+                                StaticText, 0x1260130c0 <AX element pid: 18057, elementOrHash.elementID: 4480516544.500>
+                                Button, 0x126013200, identifier: 'planChip-507E90EB-7339-4D48-A0A6-F097714632C4', label: 'Short Full Body Workout, 45 min, in progress' <AX element pid: 18057, elementOrHash.elementID: 4480517888.501>
+                                  Image, 0x1233ec280 <AX element pid: 18057, elementOrHash.elementID: 4480516992.553>
+                                  StaticText, 0x1233ec3c0 <AX element pid: 18057, elementOrHash.elementID: 4480517440.554>
+                                  StaticText, 0x1233ec500 <AX element pid: 18057, elementOrHash.elementID: 4865245184.840>
+                            Button, 0x11836bc00, identifier: 'planNextSession', label: 'Next session: Short Full Body Workout, Today · 45 min. Resume' <AX element pid: 18057, elementOrHash.elementID: 4480521472.137>
+                              StaticText, 0x118381f40 <AX element pid: 18057, elementOrHash.elementID: 4480519232.267>
+                              StaticText, 0x118381680 <AX element pid: 18057, elementOrHash.elementID: 4480519680.268>
+                              StaticText, 0x118383480 <AX element pid: 18057, elementOrHash.elementID: 4480520576.269>
+                              StaticText, 0x118381400 <AX element pid: 18057, elementOrHash.elementID: 4480521024.270>
+                            Button, 0x118368500, label: 'Rest, Mon 2 Nov, Planned' <AX element pid: 18057, elementOrHash.elementID: 4480524160.138>
+                              Image, 0x118383c00 <AX element pid: 18057, elementOrHash.elementID: 4480521920.271>
+                              StaticText, 0x118380b40 <AX element pid: 18057, elementOrHash.elementID: 4480522368.272>
+                              StaticText, 0x1183821c0 <AX element pid: 18057, elementOrHash.elementID: 4480522816.273>
+                              StaticText, 0x118383ac0 <AX element pid: 18057, elementOrHash.elementID: 4480523264.274>
+                            Button, 0x11836b980, label: 'Endurance, Tue 3 Nov · 45 min, Planned' <AX element pid: 18057, elementOrHash.elementID: 4480526400.139>
+                              Image, 0x1183808c0 <AX element pid: 18057, elementOrHash.elementID: 4480524608.275>
+                              StaticText, 0x118383e80 <AX element pid: 18057, elementOrHash.elementID: 4480525056.276>
+                              StaticText, 0x118381a40 <AX element pid: 18057, elementOrHash.elementID: 4480525504.277>
+                              StaticText, 0x118381cc0 <AX element pid: 18057, elementOrHash.elementID: 4480525952.278>
+                            Button, 0x118369a40, label: 'Rest, Wed 4 Nov, Planned' <AX element pid: 18057, elementOrHash.elementID: 4480528640.140>
+                              Image, 0x1183817c0 <AX element pid: 18057, elementOrHash.elementID: 4480526848.279>
+                              StaticText, 0x118380640 <AX element pid: 18057, elementOrHash.elementID: 4480527296.280>
+                              StaticText, 0x118381180 <AX element pid: 18057, elementOrHash.elementID: 4480527744.281>
+                              StaticText, 0x118382e40 <AX element pid: 18057, elementOrHash.elementID: 4480528192.282>
+                            Button, 0x11836af80, label: 'Endurance, Thu 5 Nov · 45 min, Planned' <AX element pid: 18057, elementOrHash.elementID: 4480531328.141>
+                              Image, 0x118383700 <AX element pid: 18057, elementOrHash.elementID: 4480529088.283>
+                              StaticText, 0x118382f80 <AX element pid: 18057, elementOrHash.elementID: 4480529984.284>
+                              StaticText, 0x118383840 <AX element pid: 18057, elementOrHash.elementID: 4480530432.285>
+                              StaticText, 0x1183826c0 <AX element pid: 18057, elementOrHash.elementID: 4480530880.286>
+                            Button, 0x118368140, label: 'Rest, Fri 6 Nov, Planned' <AX element pid: 18057, elementOrHash.elementID: 4480583872.142>
+                              Image, 0x118380780 <AX element pid: 18057, elementOrHash.elementID: 4480531776.287>
+                              StaticText, 0x118382580 <AX element pid: 18057, elementOrHash.elementID: 4480582080.288>
+                              StaticText, 0x118381900 <AX element pid: 18057, elementOrHash.elementID: 4480582976.289>
+                              StaticText, 0x118383d40 <AX element pid: 18057, elementOrHash.elementID: 4480583424.290>
+                            Button, 0x1183683c0, label: 'Endurance, Sat 7 Nov · 45 min, Planned' <AX element pid: 18057, elementOrHash.elementID: 4480586112.143>
+                              Image, 0x118382300 <AX element pid: 18057, elementOrHash.elementID: 4480584320.291>
+                              StaticText, 0x118380c80 <AX element pid: 18057, elementOrHash.elementID: 4480584768.292>
+                              StaticText, 0x118380f00 <AX element pid: 18057, elementOrHash.elementID: 4480585216.293>
+                              StaticText, 0x118380280 <AX element pid: 18057, elementOrHash.elementID: 4480585664.294>
+                            Button, 0x118368000, label: 'Sun 8 Nov, in progress, Short Full Body Workout, off bike, 45 min, 2 exercises · 4 sets · Goblet squat · Dumbbell row' <AX element pid: 18057, elementOrHash.elementID: 4480591040.144>
+                              StaticText, 0x1183830c0 <AX element pid: 18057, elementOrHash.elementID: 4480587008.295>
+                              StaticText, 0x118381e00 <AX element pid: 18057, elementOrHash.elementID: 4865245632.823>
+                              StaticText, 0x118380140 <AX element pid: 18057, elementOrHash.elementID: 4480587904.297>
+                              StaticText, 0x118381540 <AX element pid: 18057, elementOrHash.elementID: 4480588800.298>
+                              StaticText, 0x118382a80 <AX element pid: 18057, elementOrHash.elementID: 4480589696.299>
+                              StaticText, 0x11886cb40 <AX element pid: 18057, elementOrHash.elementID: 4480590592.300>
+                            StaticText, 0x11836b840 <AX element pid: 18057, elementOrHash.elementID: 4480591936.145>
+                            Button, 0x11836b480, identifier: 'planWeekSettings', label: 'Your week, Monday rest, Tuesday cycling, Wednesday strength, Thursday cycling, Friday strength, Saturday cycling, Sunday strength' <AX element pid: 18057, elementOrHash.elementID: 4480598912.146>
+                              StaticText, 0x11886c280 <AX element pid: 18057, elementOrHash.elementID: 4480592832.301>
+                              Other, 0x11886c140 <AX element pid: 18057, elementOrHash.elementID: 4480598016.302>
+                                Image, 0x126013340 <AX element pid: 18057, elementOrHash.elementID: 4480593728.502>
+                                Image, 0x126012f80 <AX element pid: 18057, elementOrHash.elementID: 4480594176.503>
+                                Image, 0x126013480 <AX element pid: 18057, elementOrHash.elementID: 4480594624.504>
+                                Image, 0x1260135c0 <AX element pid: 18057, elementOrHash.elementID: 4480595072.505>
+                                Image, 0x126013700 <AX element pid: 18057, elementOrHash.elementID: 4480595968.506>
+                                Image, 0x126013840 <AX element pid: 18057, elementOrHash.elementID: 4480596416.507>
+                                Image, 0x126013980 <AX element pid: 18057, elementOrHash.elementID: 4480596864.508>
+                              Image, 0x11886f480 <AX element pid: 18057, elementOrHash.elementID: 4480598464.303>
+                            Button, 0x11836bac0, identifier: 'planChanges', label: 'Plan changes' <AX element pid: 18057, elementOrHash.elementID: 4480600704.147>
+                              Image, 0x11886d180 <AX element pid: 18057, elementOrHash.elementID: 4480599360.304>
+                              StaticText, 0x11886e580 <AX element pid: 18057, elementOrHash.elementID: 4480599808.305>
+                              Image, 0x11886fc00 <AX element pid: 18057, elementOrHash.elementID: 4480600256.306>
+                            Button, 0x1183692c0, identifier: 'planRoutines', label: 'Routines' <AX element pid: 18057, elementOrHash.elementID: 4480603392.148>
+                              Image, 0x11886f340 <AX element pid: 18057, elementOrHash.elementID: 4480601152.307>
+                              StaticText, 0x11886f980 <AX element pid: 18057, elementOrHash.elementID: 4480602048.308>
+                              Image, 0x11886c000 <AX element pid: 18057, elementOrHash.elementID: 4480602496.309>
+                            Button, 0x11836a580, identifier: 'planQuickLog', label: 'Quick log' <AX element pid: 18057, elementOrHash.elementID: 4480606080.149>
+                              Image, 0x11886e300 <AX element pid: 18057, elementOrHash.elementID: 4480603840.310>
+                              StaticText, 0x11886f0c0 <AX element pid: 18057, elementOrHash.elementID: 4480604736.311>
+                              Image, 0x11886ee40 <AX element pid: 18057, elementOrHash.elementID: 4480605632.312>
+                          Other, 0x121d3ca00 <AX element pid: 18057, elementOrHash.elementID: 4709166080.98>
+                          Other, 0x121d3c780 <AX element pid: 18057, elementOrHash.elementID: 4709166080.98>
+                Other, 0x121d421c0 <AX element pid: 18057, elementOrHash.elementID: 4673759744.28>
+                  Other, 0x1170183c0 <AX element pid: 18057, elementOrHash.elementID: 4479915264.50>
+                  Other, 0x11701b480 <AX element pid: 18057, elementOrHash.elementID: 4673761792.51>
+            Other, 0x118834a00 <AX element pid: 18057, elementOrHash.elementID: 4480444480.10>
+              Other, 0x1233df0c0 <AX element pid: 18057, elementOrHash.elementID: 4479918848.16>
+                Other, 0x121d40f00 <AX element pid: 18057, elementOrHash.elementID: 4479919296.29>
+                  Other, 0x117019900 <AX element pid: 18057, elementOrHash.elementID: 4480262016.52>
+                    Other, 0x1183ff340 <AX element pid: 18057, elementOrHash.elementID: 4432236032.64>
+                      Other, 0x11885c500 <AX element pid: 18057, elementOrHash.elementID: 4480643776.69>
+                        StaticText, 0x117cb3200 <AX element pid: 18057, elementOrHash.elementID: 4480607872.74>
+                        StaticText, 0x10b2d4140 <AX element pid: 18057, elementOrHash.elementID: 4480608768.75>
+                        Button, 0x10b2d5cc0, identifier: 'rideSettings', label: 'Ride settings' <AX element pid: 18057, elementOrHash.elementID: 4480609216.76>
+                        Button, 0x10b2d7e80, identifier: 'rideHistoryButton', label: 'Ride history' <AX element pid: 18057, elementOrHash.elementID: 4480609664.77>
+                        Button, 0x10b2d61c0, identifier: 'rideDetails', label: 'Ride details: map, sensors, tiles' <AX element pid: 18057, elementOrHash.elementID: 4480610560.78>
+                        StaticText, 0x10b2d66c0 <AX element pid: 18057, elementOrHash.elementID: 4480611008.79>
+                        Other, 0x10b2d70c0 <AX element pid: 18057, elementOrHash.elementID: 4480612800.80>
+                          Button, 0x121d3d400, identifier: 'rideView.cockpit', label: 'Cockpit' <AX element pid: 18057, elementOrHash.elementID: 4480611456.99>
+                          Button, 0x121d3f840, identifier: 'rideView.map', label: 'Map' <AX element pid: 18057, elementOrHash.elementID: 4480611904.100>
+                          Button, 0x121d3e440, identifier: 'rideView.performance', label: 'Performance' <AX element pid: 18057, elementOrHash.elementID: 4480612352.101>
+                        StaticText, 0x10b2d5f40 <AX element pid: 18057, elementOrHash.elementID: 4480632128.81>
+                          StaticText, 0x121d3e6c0 <AX element pid: 18057, elementOrHash.elementID: 4480613248.102>
+                          StaticText, 0x121d3cc80 <AX element pid: 18057, elementOrHash.elementID: 4480613696.103>
+                          StaticText, 0x121d3e940 <AX element pid: 18057, elementOrHash.elementID: 4480630784.104>
+                          StaticText, 0x121d3e580 <AX element pid: 18057, elementOrHash.elementID: 4480631232.105>
+                          StaticText, 0x121d3e1c0 <AX element pid: 18057, elementOrHash.elementID: 4480631680.106>
+                        StaticText, 0x10b2d6300 <AX element pid: 18057, elementOrHash.elementID: 4480632576.82>
+                        StaticText, 0x10b2d7340 <AX element pid: 18057, elementOrHash.elementID: 4480634816.83>
+                          StaticText, 0x121d3d540 <AX element pid: 18057, elementOrHash.elementID: 4480633024.107>
+                          StaticText, 0x121d3e800 <AX element pid: 18057, elementOrHash.elementID: 4480633472.108>
+                          StaticText, 0x121d3fd40 <AX element pid: 18057, elementOrHash.elementID: 4480633920.109>
+                          StaticText, 0x121d3c140 <AX element pid: 18057, elementOrHash.elementID: 4480634368.110>
+                        StaticText, 0x10b2d6440 <AX element pid: 18057, elementOrHash.elementID: 4480636608.84>
+                          StaticText, 0x121d3ed00 <AX element pid: 18057, elementOrHash.elementID: 4480635264.111>
+                          StaticText, 0x119e50b40 <AX element pid: 18057, elementOrHash.elementID: 4480635712.112>
+                          StaticText, 0x119e530c0 <AX element pid: 18057, elementOrHash.elementID: 4480636160.113>
+                        Other, 0x10b2d5e00 <AX element pid: 18057, elementOrHash.elementID: 4706737152.85>
+                          Other, 0x119e52800 <AX element pid: 18057, elementOrHash.elementID: 4709167616.114>
+                            Map, 0x11836a080 <AX element pid: 18057, elementOrHash.elementID: 4684672896.150>
+                              Other, 0x11886ca00 <AX element pid: 18057, elementOrHash.elementID: 4694751776.313>
+                              Other, 0x11886fe80 <AX element pid: 18057, elementOrHash.elementID: 4694751616.314>
+                            Other, 0x11836a440 <AX element pid: 18057, elementOrHash.elementID: 4706724352.151>
+                          Link, 0x119e52940 <AX element pid: 18057, elementOrHash.elementID: 4480312064.115>
+                        StaticText, 0x10b2d5a40 <AX element pid: 18057, elementOrHash.elementID: 4480637504.86>
+                        StaticText, 0x10b2d4500 <AX element pid: 18057, elementOrHash.elementID: 4480637952.87>
+                        Button, 0x10b2d6800, identifier: 'rideMiniMap', label: 'Map: 0.0 km so far. Opens the Map view' <AX element pid: 18057, elementOrHash.elementID: 4480638400.88>
+                        Other, 0x10b2d5b80 <AX element pid: 18057, elementOrHash.elementID: 4480642432.89>
+                          StaticText, 0x119e503c0 <AX element pid: 18057, elementOrHash.elementID: 4480638848.116>
+                          StaticText, 0x119e51400 <AX element pid: 18057, elementOrHash.elementID: 4480639296.117>
+                          StaticText, 0x119e52f80 <AX element pid: 18057, elementOrHash.elementID: 4480639744.118>
+                          Button, 0x119e52d00, identifier: 'coachWhy', label: 'Why? Explain this advice' <AX element pid: 18057, elementOrHash.elementID: 4480640192.119>
+                          StaticText, 0x119e53200 <AX element pid: 18057, elementOrHash.elementID: 4480640640.120>
+                          StaticText, 0x119e53d40 <AX element pid: 18057, elementOrHash.elementID: 4480641088.121>
+                          StaticText, 0x119e517c0 <AX element pid: 18057, elementOrHash.elementID: 4480641984.122>
+                        Button, 0x10b2d6580, label: 'START · PHONE' <AX element pid: 18057, elementOrHash.elementID: 4480643328.90>
+                Other, 0x121d41180 <AX element pid: 18057, elementOrHash.elementID: 4673763328.30>
+                  Other, 0x117018f00 <AX element pid: 18057, elementOrHash.elementID: 4479920640.53>
+                  Other, 0x117018b40 <AX element pid: 18057, elementOrHash.elementID: 4675141632.54>
+            Other, 0x118836f80 <AX element pid: 18057, elementOrHash.elementID: 4480445376.11>
+              Other, 0x1233dd040 <AX element pid: 18057, elementOrHash.elementID: 4479771392.17>
+                NavigationBar, 0x121d41540 <AX element pid: 18057, elementOrHash.elementID: 4432371200.31>
+                Other, 0x121d42e40 <AX element pid: 18057, elementOrHash.elementID: 4479774528.32>
+                  Other, 0x11701b980 <AX element pid: 18057, elementOrHash.elementID: 4480261568.55>
+                    Other, 0x1183fc000 <AX element pid: 18057, elementOrHash.elementID: 4432237824.65>
+                      Other, 0x11885e1c0 <AX element pid: 18057, elementOrHash.elementID: 4853407168.70>
+                        ScrollView, 0x10b2d7c00 <AX element pid: 18057, elementOrHash.elementID: 4432992256.91>
+                          Other, 0x119e50a00 <AX element pid: 18057, elementOrHash.elementID: 4482431360.123>
+                            StaticText, 0x118368780 <AX element pid: 18057, elementOrHash.elementID: 4432238720.152>
+                          Other, 0x119e52580 <AX element pid: 18057, elementOrHash.elementID: 4698519040.124>
+                            StaticText, 0x118368dc0 <AX element pid: 18057, elementOrHash.elementID: 4480644672.153>
+                            Button, 0x118369cc0, identifier: 'glanceRiding', label: 'Riding this week, 0 min, of 2 h 15 min planned · 0 of 3 rides done' <AX element pid: 18057, elementOrHash.elementID: 4480696320.154>
+                              StaticText, 0x11886fd40 <AX element pid: 18057, elementOrHash.elementID: 4480645568.315>
+                              StaticText, 0x11886e800 <AX element pid: 18057, elementOrHash.elementID: 4480646016.316>
+                              StaticText, 0x11886c3c0 <AX element pid: 18057, elementOrHash.elementID: 4480646464.317>
+                            Button, 0x118368c80, identifier: 'glanceStrength', label: 'Strength this week, 0 of 1, sessions done · +1 extra · 35 min recorded · 2 sets' <AX element pid: 18057, elementOrHash.elementID: 4480698112.155>
+                              StaticText, 0x11886d400 <AX element pid: 18057, elementOrHash.elementID: 4480696768.318>
+                              StaticText, 0x11886ebc0 <AX element pid: 18057, elementOrHash.elementID: 4480697216.319>
+                              StaticText, 0x11886ea80 <AX element pid: 18057, elementOrHash.elementID: 4480697664.320>
+                            Button, 0x118368b40, identifier: 'glanceFrequency', label: 'Sessions this week, 1, 0 rides + 1 lift · averages start after your first full week' <AX element pid: 18057, elementOrHash.elementID: 4480700800.156>
+                              StaticText, 0x11886e940 <AX element pid: 18057, elementOrHash.elementID: 4480699008.321>
+                              StaticText, 0x11886cdc0 <AX element pid: 18057, elementOrHash.elementID: 4480699456.322>
+                              StaticText, 0x11886cc80 <AX element pid: 18057, elementOrHash.elementID: 4480699904.323>
+                            Button, 0x118369180, identifier: 'glanceGoal', label: 'Weekly riding target, 5 h, measured after your first full week' <AX element pid: 18057, elementOrHash.elementID: 4480703488.157>
+                              StaticText, 0x11886fac0 <AX element pid: 18057, elementOrHash.elementID: 4480701696.324>
+                              StaticText, 0x11886f700 <AX element pid: 18057, elementOrHash.elementID: 4480702592.325>
+                              StaticText, 0x11886d040 <AX element pid: 18057, elementOrHash.elementID: 4480703040.326>
+                            Button, 0x118369680, identifier: 'glanceFTP', label: 'FTP, 210 W, entered · no ride with power in the last 16 weeks' <AX element pid: 18057, elementOrHash.elementID: 4480705280.158>
+                              StaticText, 0x11886f200 <AX element pid: 18057, elementOrHash.elementID: 4480703936.327>
+                              StaticText, 0x11886c8c0 <AX element pid: 18057, elementOrHash.elementID: 4480704384.328>
+                              StaticText, 0x11886ef80 <AX element pid: 18057, elementOrHash.elementID: 4480704832.329>
+                            StaticText, 0x11836a300 <AX element pid: 18057, elementOrHash.elementID: 4480705728.159>
+                            Button, 0x1183688c0, identifier: 'info.circle', label: 'About How sessions are counted' <AX element pid: 18057, elementOrHash.elementID: 4480706176.160>
+                            SegmentedControl, 0x11836b0c0 <AX element pid: 18057, elementOrHash.elementID: 4432372736.161>
+                              Button, 0x11886d2c0, label: 'Riding' <AX element pid: 18057, elementOrHash.elementID: 4432373504.330>
+                              Button, 0x11886cf00, label: 'Strength' <AX element pid: 18057, elementOrHash.elementID: 4432374272.331>
+                            SegmentedControl, 0x11836b5c0 <AX element pid: 18057, elementOrHash.elementID: 4432375808.162>
+                              Button, 0x118381b80, label: '4 wk' <AX element pid: 18057, elementOrHash.elementID: 4432376576.332>
+                              Button, 0x1188b4640, label: '8 wk' <AX element pid: 18057, elementOrHash.elementID: 4432377344.333>
+                              Button, 0x1188b7d40, label: '12 wk' <AX element pid: 18057, elementOrHash.elementID: 4432378112.334>
+                              Button, 0x1188b5b80, label: '16 wk' <AX element pid: 18057, elementOrHash.elementID: 4432378880.335>
+                            StaticText, 0x118368640 <AX element pid: 18057, elementOrHash.elementID: 4480707520.163>
+                            StaticText, 0x11836a940 <AX element pid: 18057, elementOrHash.elementID: 4480709312.164>
+                              StaticText, 0x1188b6300 <AX element pid: 18057, elementOrHash.elementID: 4480707968.336>
+                              StaticText, 0x1188b6580 <AX element pid: 18057, elementOrHash.elementID: 4480708416.337>
+                              StaticText, 0x1188b4280 <AX element pid: 18057, elementOrHash.elementID: 4480708864.338>
+                            Other, 0x118368a00 <AX element pid: 18057, elementOrHash.elementID: 4480750848.165>
+                              Other, 0x1188b4a00 <AX element pid: 18057, elementOrHash.elementID: 4480710656.339>
+                              Other, 0x1188b4000 <AX element pid: 18057, elementOrHash.elementID: 4480711104.340>
+                              Other, 0x1188b5900 <AX element pid: 18057, elementOrHash.elementID: 4480711552.341>
+                              Other, 0x1188b5cc0 <AX element pid: 18057, elementOrHash.elementID: 4480712000.342>
+                              Other, 0x1188b5540 <AX element pid: 18057, elementOrHash.elementID: 4480745472.343>
+                              Other, 0x1188b7480 <AX element pid: 18057, elementOrHash.elementID: 4480745920.344>
+                              Other, 0x1188b5400 <AX element pid: 18057, elementOrHash.elementID: 4480746368.345>
+                              Other, 0x1188b5180 <AX element pid: 18057, elementOrHash.elementID: 4480746816.346>
+                              Other, 0x1188b7c00 <AX element pid: 18057, elementOrHash.elementID: 4480747264.347>
+                              Other, 0x1188b5040 <AX element pid: 18057, elementOrHash.elementID: 4480747712.348>
+                              Other, 0x1188b61c0 <AX element pid: 18057, elementOrHash.elementID: 4480748160.349>
+                              Other, 0x1188b6d00 <AX element pid: 18057, elementOrHash.elementID: 4480748608.350>
+                              Other, 0x1188b52c0 <AX element pid: 18057, elementOrHash.elementID: 4480749056.351>
+                              Other, 0x1188b6080 <AX element pid: 18057, elementOrHash.elementID: 4480749504.352>
+                              Other, 0x1188b7840 <AX element pid: 18057, elementOrHash.elementID: 4480749952.353>
+2026-11-08 18:04:47.600699+0000 0x472de    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Query ↪︎ Descendants matching type Button
+    ↪︎ Elements matching predicate '"logSet" IN identifiers' (First Match) found matching snapshots: {(
+)} (error: (null))
+2026-11-08 18:04:47.610162+0000 0x472de    Default     0x0                  18057  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Replying to query ↪︎ Descendants matching type Button
+    ↪︎ Elements matching predicate '"logSet" IN identifiers' (First Match) with results: <XCTElementQueryResults: 0x118bbddd0> (error: (null))
