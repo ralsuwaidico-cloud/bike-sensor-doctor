@@ -1504,7 +1504,9 @@ final class Store: ObservableObject {
         guard let s = ftpSuggestion else { return }
         let verified = s.powerVerified == true
         let test = verified && s.testProtocol == true
-        updateProfile { $0.ftpW = s.watts; $0.ftpHow = test ? .tested : .fromRides; $0.ftpFromDate = s.rideDate; $0.ftpPowerVerified = verified; $0.ftpVerifiedTest = test }
+        // Checkpoint G (6.5): one FTP ownership model — the value, its source and its timestamp move together (setFTP writes
+        // the provenance); accepting is the athlete's explicit choice, so a tested FTP is never replaced silently.
+        updateProfile { $0.ftpFromDate = s.rideDate; $0.ftpPowerVerified = verified; $0.ftpVerifiedTest = test; $0.setFTP(s.watts, source: test ? .tested : .estimated, at: s.rideDate) }
         ftpSuggestion = nil
     }
     func dismissFTPSuggestion() { ftpSuggestion = nil }

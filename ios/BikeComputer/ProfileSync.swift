@@ -112,7 +112,9 @@ final class ProfileSync: ObservableObject {
         // S2-0: the board cannot say where its values came from (firmware ≤ 0.7.x invents a starting FTP) → every adopted
         // value is kept as unverified legacy data to confirm, never relabelled as entered; 0 = not set on the board.
         let at = Date()
-        if let v = b.ftpW, v > 0 { p.ftpW = v; p.ftpHow = RiderProfile.FTPHow.from(linkCode: b.ftpHow ?? 1); if p.ftpHow == .assumed { p.ftpHow = .entered }; p.setProvenance(.ftp, .legacy(at)) }
+        // Checkpoint G (6.5): the phone owns the FTP. Adopting the board's values is the rider's explicit choice, but a
+        // TESTED FTP is never replaced by the board's unverified legacy value (firmware ≤ 0.7.x invents a starting FTP).
+        if let v = b.ftpW, v > 0, p.ftpHow != .tested { p.ftpW = v; p.ftpHow = RiderProfile.FTPHow.from(linkCode: b.ftpHow ?? 1); if p.ftpHow == .assumed { p.ftpHow = .entered }; p.setProvenance(.ftp, .legacy(at)) }
         if let v = b.weightKgX10, v > 0 { p.weightKg = Double(v) / 10; p.setProvenance(.weight, .legacy(at)) }
         if let v = b.birthYear, v > 1900 { p.birthYear = v; p.setProvenance(.dateOfBirth, .legacy(at)) }
         if let v = b.maxHR, v > 0 { p.maxHR = v; p.setProvenance(.maxHR, .legacy(at)) }
