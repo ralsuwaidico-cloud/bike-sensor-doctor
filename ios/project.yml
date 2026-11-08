@@ -76,8 +76,8 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSBluetoothAlwaysUsageDescription: Cyclift uses Bluetooth to connect to the fitness sensors and the optional BikeComputer device you pair (heart rate, power, speed and cadence) and show their live data during rides.
         NSLocationWhenInUseUsageDescription: Cyclift uses your location while you record a ride, also with the screen locked, to measure speed, distance and your route, and to send your position to the optional BikeComputer device if you use one.
-        NSHealthShareUsageDescription: Cyclift reads your cycling and strength workouts from Apple Health, if you allow it, to show them in your training plan and history, and reads heart rate for the Cyclift Apple Watch workout.
-        NSHealthUpdateUsageDescription: Cyclift saves the cycling workouts you record with the Cyclift Apple Watch app to Apple Health when you choose Save.
+        NSHealthShareUsageDescription: "Cyclift reads, only if you allow each one: your cycling and strength workouts (to show them in your plan and history), heart rate for the Cyclift Apple Watch workout, and for the Recovery page your sleep, heart rate variability, resting heart rate, body weight and active energy. Each reading shows its source and time; nothing is diagnosed."
+        NSHealthUpdateUsageDescription: "Cyclift saves the cycling workouts you record to Apple Health when you choose Save — one workout per ride, written by the Apple Watch when it recorded the ride, otherwise by the iPhone if you turned that on."
     entitlements:
       path: BikeComputer/BikeComputer.entitlements
       properties:

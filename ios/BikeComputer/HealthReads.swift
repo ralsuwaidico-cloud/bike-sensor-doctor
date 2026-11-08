@@ -86,24 +86,53 @@ final class HealthMetricsReader: HealthMetricsProviding {
         group.notify(queue: .main) { done(out) }
     }
 
-    /// Total asleep time (all "asleep" categories) of the night ending today, in hours; nil when there is no sleep sample.
+    /// Last night's sleep in hours — from ONE source (APP-031). Apple Health often holds the same night from the Apple
+    /// Watch and a sleep app; summing every sample doubled the night. The source with the most asleep time wins, its
+    /// overlapping intervals are merged, and the result carries that source's name so the UI can show it.
     private func lastNightSleepHours(_ done: @escaping (Double?, Date?) -> Void) {
         guard let st = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { done(nil, nil); return }
         let now = Date()
         let from = Calendar.current.date(byAdding: .hour, value: -24, to: now) ?? now
         let pred = HKQuery.predicateForSamples(withStart: from, end: now, options: .strictEndDate)
         let q = HKSampleQuery(sampleType: st, predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
-            var total: TimeInterval = 0; var end: Date? = nil
+            var intervals: [SleepInterval] = []
             for s in (samples as? [HKCategorySample]) ?? [] {
                 let asleep: Bool
                 if #available(iOS 16.0, *) { asleep = HKCategoryValueSleepAnalysis.allAsleepValues.map(\.rawValue).contains(s.value) }
                 else { asleep = s.value == HKCategoryValueSleepAnalysis.asleep.rawValue }
                 guard asleep else { continue }
-                total += s.endDate.timeIntervalSince(s.startDate); end = max(end ?? s.endDate, s.endDate)
+                intervals.append(SleepInterval(source: s.sourceRevision.source.bundleIdentifier, start: s.startDate, end: s.endDate))
             }
-            done(total > 0 ? total / 3600 : nil, end)
+            let r = SleepAggregation.lastNight(intervals)
+            done(r.map { $0.hours }, r.map { $0.end })
         }
         store.execute(q)
     }
 }
 #endif
+
+// MARK: - APP-031 pure sleep aggregation (unit-tested; no HealthKit)
+struct SleepInterval: Equatable { var source: String; var start: Date; var end: Date }
+enum SleepAggregation {
+    struct Result: Equatable { var hours: Double; var end: Date; var source: String; var sourcesSeen: Int }
+    /// One night from one source: pick the source with the most merged asleep time; merge overlapping / touching
+    /// intervals inside it (a Watch that writes core + REM + deep as separate samples never double-counts a minute).
+    static func lastNight(_ xs: [SleepInterval]) -> Result? {
+        guard !xs.isEmpty else { return nil }
+        var best: Result? = nil
+        let bySource = Dictionary(grouping: xs, by: \.source)
+        for (src, list) in bySource {
+            let merged = merge(list)
+            let total = merged.reduce(0.0) { $0 + $1.end.timeIntervalSince($1.start) }
+            guard total > 0, let end = merged.map(\.end).max() else { continue }
+            let r = Result(hours: total / 3600, end: end, source: src, sourcesSeen: bySource.count)
+            if best == nil || r.hours > best!.hours || (r.hours == best!.hours && r.source < best!.source) { best = r }
+        }
+        return best
+    }
+    static func merge(_ xs: [SleepInterval]) -> [SleepInterval] {
+        let sorted = xs.sorted { $0.start < $1.start }; var out: [SleepInterval] = []
+        for i in sorted { if var l = out.last, i.start <= l.end { l.end = max(l.end, i.end); out[out.count - 1] = l } else { out.append(i) } }
+        return out
+    }
+}
