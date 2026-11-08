@@ -352,7 +352,13 @@ final class LayoutAudit: XCTestCase {
             for id in ["glanceRiding", "glanceStrength", "glanceFrequency"] { XCTAssertTrue(app.buttons[id].exists, "\(size): at-a-glance card \(id)") }
             // Progress level 2: the chart at every range, labels measured and checked, one selected week
             let glance = app.buttons["glanceRiding"].firstMatch
-            if glance.exists { glance.tap(); sleep(2) }        /* opens the riding chart */
+            // run 193 (SE): XCUITest once reported the fully visible card as not hittable right after the tab switch —
+            // wait for it to settle and fall back to a centre-coordinate tap; the chart assertion below is unchanged
+            if glance.exists {
+                _ = glance.waitUntilSettled(timeout: 3)
+                if glance.isHittable { glance.tap() } else { glance.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
+                sleep(2)
+            }        /* opens the riding chart */
             let chart = app.descendants(matching: .any).matching(identifier: "trendChart").firstMatch
             reveal(app, chart)
             XCTAssertTrue(chart.exists, "\(size): the Progress chart")
