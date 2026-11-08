@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Ride settings (gear icon on the ride screen): the ride layout, the coach and the classic tiles. Changing anything
 /// here only writes AppSettings / the tile list — it can be opened during a ride without touching the recording.
@@ -6,6 +7,9 @@ struct RideSettingsSheet: View {
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
     @State private var showTiles = false
+    @EnvironmentObject private var routes: RouteStore
+    @State private var importing = false
+    @State private var importError: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -26,6 +30,19 @@ struct RideSettingsSheet: View {
                     Text("Rule-based coach: it uses only the sensors that are live, keeps each instruction on screen for at least 15 seconds unless something important changes, and marks advice from unverified power as provisional.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
+                Section {
+                    if let r = routes.loaded {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(r.name).font(.body.weight(.semibold)).accessibilityIdentifier("routeName")
+                            Text("\(RouteGuidance.km(r.totalM)) · \(max(0, r.turns.count - 1)) turn cues · \(r.points.count) points").font(.footnote).foregroundStyle(.secondary)
+                        }
+                        Button("Remove route", role: .destructive) { routes.set(nil) }.accessibilityIdentifier("routeRemove")
+                    } else {
+                        Text("No route loaded. Import a GPX file to see the route, the next turn and off-route warnings on the Map view. Recording never depends on a route.").font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Button("Import GPX route…") { importError = nil; importing = true }.accessibilityIdentifier("routeImport")
+                    if let e = importError { Text(e).font(.footnote).foregroundStyle(.red) }
+                } header: { Text("Route") }
                 Section("Ride details tiles") {
                     Button("Choose the six tiles") { showTiles = true }
                 }
@@ -33,6 +50,12 @@ struct RideSettingsSheet: View {
             .navigationTitle(RideLabels.settings).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .sheet(isPresented: $showTiles) { TilePicker() }
+            .fileImporter(isPresented: $importing, allowedContentTypes: [UTType(filenameExtension: "gpx") ?? .xml, .xml, .data], allowsMultipleSelection: false) { res in
+                switch res {
+                case .success(let urls): guard let u = urls.first else { return }; do { _ = try routes.importGPX(at: u) } catch { importError = error.localizedDescription }
+                case .failure(let e): importError = e.localizedDescription
+                }
+            }
         }
     }
 }

@@ -16,6 +16,9 @@ struct RideTabView: View {
     @EnvironmentObject private var hub: SensorHub
     @EnvironmentObject private var monitor: PipelineMonitor
     @StateObject private var coach = RideCoach()
+    /// Checkpoint F2: the loaded GPX route (persisted) and its live guidance (pure, unit-tested in RouteGuidanceTests).
+    @StateObject private var routes = RouteStore()
+    @State private var guidance: RouteGuidance? = nil
     @State private var confirmEnd = false
     @State private var showDetails = false
     @State private var showHistory = false
@@ -43,14 +46,16 @@ struct RideTabView: View {
                 .padding(.bottom, recorder.isActive ? 0 : 84)
                 .background(D7.bg.ignoresSafeArea())
                 .toolbar(.hidden, for: .navigationBar)
-                .onReceive(timer) { now in tick = now; coachTick() }
+                .onReceive(timer) { now in tick = now; coachTick(); guidanceTick() }
+                .onChange(of: routes.loaded) { _, r in guidance = r.map { RouteGuidance(route: $0) } }
+                .onAppear { if guidance == nil, let r = routes.loaded { guidance = RouteGuidance(route: r) } }
                 .onChange(of: recorder.state) { _, s in if s == .running, recorder.elapsedS <= 1 { coach.reset(); lastTickedSecond = -1 }; if s == .idle { lastTickedSecond = -1 } }
                 .onAppear { configureCoach() }
                 .onChange(of: store.profile) { _, _ in configureCoach() }
                 .onChange(of: store.settings) { _, _ in configureCoach() }
                 .onChange(of: powerTrusted) { _, _ in configureCoach() }
                 .sheet(isPresented: $showDetails) { RideDetailsSheet() }
-                .sheet(isPresented: $showSettings) { RideSettingsSheet() }
+                .sheet(isPresented: $showSettings) { RideSettingsSheet().environmentObject(routes) }
                 .sheet(isPresented: $showHistory) { NavigationStack { RideHistoryView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showHistory = false } } } }.environmentObject(store) }
                 .sheet(item: $recorder.pendingResult) { r in RideResultSheet(ride: r) }
                 .alert(recorder.owner == .board ? "End the ride on the BikeComputer?" : "End this ride?", isPresented: $confirmEnd) {
@@ -71,6 +76,19 @@ struct RideTabView: View {
         lastTickedSecond = recorder.elapsedS
         let l = live
         coach.tick(elapsedS: recorder.elapsedS, cadence: l.cadence.value, hr: l.hr.value, power: l.power.value, speedKmh: l.speedKmh)
+    }
+    /// Route guidance advances ONLY on a fresh fix (≤ 10 s) while a ride is recording or paused; a lost GPS never moves it.
+    private func guidanceTick() {
+        guard guidance != nil, recorder.isActive, gpsState == .good, let l = location.last else { return }
+        guidance?.update(lat: l.coordinate.latitude, lon: l.coordinate.longitude)
+    }
+    private var routeCoordsLoaded: [CLLocationCoordinate2D] { routes.loaded?.points.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) } ?? [] }
+    private var nextTurnCoord: CLLocationCoordinate2D? { guard let g = guidance, let t = g.state.nextTurn, t.direction != .arrive else { return nil }; let p = g.route.points[t.index]; return CLLocationCoordinate2D(latitude: p.lat, longitude: p.lon) }
+    private var guidanceText: String? {
+        guard let g = guidance else { return nil }
+        if !recorder.isActive { return "Route · \(g.route.name) · \(RouteGuidance.km(g.route.totalM))" }
+        if gpsState != .good { return "Route · waiting for GPS" }
+        return g.state.text
     }
     private func panelModel(_ l: RideLive) -> CoachPanelModel {
         var i = CoachPanelModel.Inputs()
@@ -107,7 +125,7 @@ struct RideTabView: View {
                         RideCockpitView(model: cockpitModel(l), steps: rideSteps, stepFTP: l.ftpKnown ? l.ftp : nil, stepHRZones: l.hrKnown ? l.hrZoneRanges : nil, elapsedS: rideClockS, coords: routeCoords, gps: gpsState, routeLine: routeLine,
                                         paused: recorder.state == .paused, onExpandMap: { withAnimation(.easeInOut(duration: 0.15)) { view = .map } })
                     case .map:
-                        RideMapView(coords: routeCoords, gps: gpsState, tiles: mapTiles(l))
+                        RideMapView(coords: routeCoords, gps: gpsState, tiles: mapTiles(l), route: routeCoordsLoaded, nextTurn: nextTurnCoord, guidance: guidanceText, offRoute: guidance?.state.offRoute ?? false)
                     case .performance:
                         RidePerformanceView(model: performanceModel(l), steps: rideSteps)
                     }
@@ -163,6 +181,7 @@ struct RideTabView: View {
     }
     private var routeLine: String {
         let km = Double(recorder.distanceM) / 1000
+        if let g = guidance, recorder.isActive, gpsState == .good { return g.state.text }     // F2: the next turn leads while following a route
         return (gpsState == .lost ? "GPS lost · " : "") + (store.settings.units == .imperial ? String(format: "%.1f mi so far", km / 1.609) : String(format: "%.1f km so far", km))
     }
     private func cockpitInputs(_ l: RideLive) -> RideCockpitModel.Inputs {

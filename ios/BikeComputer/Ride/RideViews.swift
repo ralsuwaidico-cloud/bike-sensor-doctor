@@ -211,9 +211,15 @@ struct RideRouteMap: View {
     let coords: [CLLocationCoordinate2D]
     let interactive: Bool
     let gps: RideGPSState
+    /// Checkpoint F2: the loaded route (drawn dashed under the ridden line) and the next turn; nil when no route is loaded.
+    var route: [CLLocationCoordinate2D] = []
+    var nextTurn: CLLocationCoordinate2D? = nil
+    var offRoute: Bool = false
     @State private var camera: MapCameraPosition = .automatic
     var body: some View {
         Map(position: $camera, interactionModes: interactive ? .all : []) {
+            if route.count >= 2 { MapPolyline(coordinates: route).stroke(offRoute ? D7.amber : D7.violet, style: StrokeStyle(lineWidth: 4, dash: [8, 6])) }
+            if let t = nextTurn { Annotation("", coordinate: t) { Image(systemName: "arrow.triangle.turn.up.right.circle.fill").font(.system(size: 18)).foregroundStyle(D7.violet).background(Circle().fill(D7.bg)) } }
             if coords.count >= 2 { MapPolyline(coordinates: coords).stroke(D7.cyan, lineWidth: 5) }
             if let last = coords.last {
                 Annotation("", coordinate: last) {
@@ -225,8 +231,19 @@ struct RideRouteMap: View {
         .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
         .mapControlVisibility(.hidden)
         .onChange(of: coords.count) { _, _ in if !interactive, let last = coords.last { camera = .region(MKCoordinateRegion(center: last, latitudinalMeters: 1200, longitudinalMeters: 1200)) } }
-        .onAppear { if let last = coords.last { camera = .region(MKCoordinateRegion(center: last, latitudinalMeters: interactive ? 2500 : 1200, longitudinalMeters: interactive ? 2500 : 1200)) } }
+        .onAppear {
+            if let last = coords.last { camera = .region(MKCoordinateRegion(center: last, latitudinalMeters: interactive ? 2500 : 1200, longitudinalMeters: interactive ? 2500 : 1200)) }
+            else if route.count >= 2 { camera = .region(RideRouteMap.region(fitting: route)) }      // no fix yet: show the loaded route
+        }
         .accessibilityHidden(true)
+    }
+}
+
+extension RideRouteMap {
+    static func region(fitting pts: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
+        let lats = pts.map(\.latitude), lons = pts.map(\.longitude)
+        let c = CLLocationCoordinate2D(latitude: (lats.min()! + lats.max()!) / 2, longitude: (lons.min()! + lons.max()!) / 2)
+        return MKCoordinateRegion(center: c, span: MKCoordinateSpan(latitudeDelta: max(0.005, (lats.max()! - lats.min()!) * 1.3), longitudeDelta: max(0.005, (lons.max()! - lons.min()!) * 1.3)))
     }
 }
 
@@ -234,8 +251,18 @@ struct RideMapView: View {
     let coords: [CLLocationCoordinate2D]
     let gps: RideGPSState
     let tiles: [RideCockpitModel.Tile]
+    var route: [CLLocationCoordinate2D] = []
+    var nextTurn: CLLocationCoordinate2D? = nil
+    var guidance: String? = nil
+    var offRoute: Bool = false
     var body: some View {
         VStack(spacing: 8) {
+            if let g = guidance {
+                Text(g).font(.system(size: 14, weight: .bold)).foregroundStyle(offRoute ? D7.amber : D7.fg).lineLimit(1).minimumScaleFactor(0.8)
+                    .padding(.horizontal, 12).padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(D7.panel.opacity(0.9), in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("rideGuidance")
+            }
             Spacer(minLength: 0)
             HStack(spacing: 8) {
                 ForEach(tiles.prefix(3), id: \.key) { t in
@@ -253,7 +280,7 @@ struct RideMapView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(alignment: .center) { RideRouteMap(coords: coords, interactive: true, gps: gps).clipShape(RoundedRectangle(cornerRadius: 18)) }
+        .background(alignment: .center) { RideRouteMap(coords: coords, interactive: true, gps: gps, route: route, nextTurn: nextTurn, offRoute: offRoute).clipShape(RoundedRectangle(cornerRadius: 18)) }
         .accessibilityIdentifier("rideMapView")
     }
 }
