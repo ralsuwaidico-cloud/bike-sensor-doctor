@@ -1,0 +1,20 @@
+BikeComputer iOS CI — build 199 — 2026-11-08 11:28 UTC
+Stage: release
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Quick check: none for this tree — override accepted [full-override: quick job exceeded its 105-min limit on this tree (run 189, every executed test green); full matrix green in run 192]
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc) · 5m34s
+  contains BikeComputer.app 1.0.0 (199) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (199) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 11417842 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: ok — build 199 sent to App Store Connect; TestFlight processing takes about 5-30 minutes (the testflight job reports when it is ready)
+Total: 10m59s
