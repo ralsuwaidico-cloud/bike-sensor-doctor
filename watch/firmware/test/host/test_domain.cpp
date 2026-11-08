@@ -468,6 +468,10 @@ int main() {
         CHECK(tap(a, "s1", now) && a.brightnessPct() == 30 && tap(a, "s1", now) && a.brightnessPct() == 60, "… then 30 % and back to 60 %");
         CHECK(tap(a, "s4", now) && a.doNotDisturb(), "Do-not-disturb row toggles on");
         bool dndRow = false; for (auto& e : a.render(hm, now).els) if (e.text == "On") dndRow = true; CHECK(dndRow, "the row shows the real value, not a constant");
+        { a.takeHaptic(); wire::Coach c; c.id = 900; c.priority = 3; c.context = 0; c.requiresAction = true; c.expiresInS = 1; c.instruction = "Drink"; Frame f; f.type = MsgType::Coach; f.payload = c.encode(); a.onFrame(f, now);
+          CHECK(a.takeHaptic() == 0, "do-not-disturb: a coaching message outside an activity does not vibrate");
+          wire::Coach sc = c; sc.id = 901; sc.safety = true; f.payload = sc.encode(); a.onFrame(f, now); CHECK(a.takeHaptic() > 0, "… but a safety message always does");
+          now += 2000; a.tick(now); }   // both messages expire
         { uint8_t before = a.persist().appearance; CHECK(tap(a, "s3", now) && a.persist().appearance == (before + 1) % 6, "Appearance row cycles through the six appearances (family × dark/light)"); }
         bool nameRow = false; for (auto& e : a.render(hm, now).els) if (e.text == a.appearance().name) nameRow = true; CHECK(nameRow, "the Appearance row names the current appearance");
         { Persist p = a.persist(); p.brightness = 7; AppModel b; b.restore(p, {}); CHECK(b.brightnessPct() == 60, "restore sanitises an out-of-range brightness level"); }
