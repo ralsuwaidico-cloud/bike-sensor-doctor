@@ -39,3 +39,9 @@ Equipment presets map onto the one `EquipmentProfile` (Gym = every catalogue ite
 - `OnboardingScreens.testOnboardingR7FiveScreens` now runs in every UI pass (one text size; both sizes in layout runs): step counter 1–5, no Height, Hybrid rows, week counts, Skip only on Connections, Why this plan, Create plan → Home without a health prompt.
 - `RideViewsSmokeTests` (was RideLayoutsSmokeTests until build 176): step card present with an RPE target; new `testUnknownFTPRideShowsNoWatts`.
 - `RideLayoutTests.testUnverifiedPowerAdviceIsProvisional`: expects the FTP UNKNOWN tag and no quoted assumed watts (was FTP PROVISIONAL).
+
+## Checkpoint F — Ride milestone build (8 Nov 2026)
+Slices 2 + 3 (Cockpit / Map / Performance, results page, ride history, one Apple Health workout per ride), the Daylight
+ride display, APP-038 and APP-035. CI runs 190–194 on this tree: every test job green at least once each; the matrix
+failures were one mini-map tap (fixed, 26c39353), weekend date edges in two tests, and three one-off simulator/XCUITest
+flakes. Build 176 remains the accepted baseline until the owner approves this build after real-device testing.
