@@ -28,6 +28,9 @@ struct Content {
     std::string gpsAge = "GPS 2 s";
     int loadPct = 65; float recoveryFrac = 0.78f; std::string recoveryWord = "GOOD";
     int hourHand = 9, minuteHand = 41;
+    // quick settings + timers (real state from the model; the gallery uses these defaults)
+    std::string brightness = "60 %", appearanceName = "Cyclift · Midnight Blue", linkLine = "iPhone linked"; bool dnd = false;
+    bool timerRunning = false, timerRinging = false; uint32_t timerRemainingS = 0, timerTotalS = 0;
 };
 
 constexpr float CTRL_Y = 160.f;
@@ -99,8 +102,26 @@ inline Scene activities(const TextMeasurer& m, const Content& c, int page = 0) {
 inline Scene settings(const TextMeasurer& m, const Content& c) {
     Scene s{"menu:settings"}; Builder b(s, m);
     b.text("SETTINGS", 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
-    b.row("Brightness", "60 %", 46, 44, "s1"); b.row("Display", "Night", 94, 44, "s2"); b.row("Appearance", "Cyclift", 142, 44, "s3");
-    b.text(c.battery + " · iPhone linked", 192, {11, 11, 1, false}, Role::Label, true, "mut", 14);
+    b.row("Brightness", c.brightness, 46, 44, "s1"); b.row("Appearance", c.appearanceName, 94, 44, "s3"); b.row("Do not disturb", c.dnd ? "On" : "Off", 142, 44, "s4");
+    b.text(c.battery + " · " + c.linkLine, 196, {11, 11, 1, false}, Role::Label, true, "mut", 6);
+    return s;
+}
+
+/// Timers panel (Notifications band when no coach message is pending or a timer exists): presets, the countdown and Stop.
+inline Scene timers(const TextMeasurer& m, const Content& c) {
+    Scene s{"panel:timers"}; Builder b(s, m);
+    b.text("TIMER", 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
+    if (c.timerRunning || c.timerRinging) {
+        float frac = c.timerTotalS ? 1.f - float(c.timerRemainingS) / float(c.timerTotalS) : 1.f;
+        b.arc(-135, 135, 8, "line", 84, "timerTrack"); b.arc(-135, -135 + 270 * std::clamp(frac, 0.f, 1.f), 8, c.timerRinging ? "grade.green" : "accent", 84, "timerArc");
+        b.text(c.timerRinging ? "DONE" : mmss(c.timerRemainingS), 78, {44, 28, 1, false}, Role::Value, true, "text", 6, false, "timerValue");
+        b.text(c.timerRinging ? "timer finished" : "of " + mmss(c.timerTotalS), 134, {12, 11, 1, false}, Role::Label, true, "mut", 14);
+        b.button(c.timerRinging ? "OK" : "Stop", CX, CTRL_Y + 14, 96, "accent", "onAccent", false, "tstop");
+    } else {
+        b.text("Start a countdown", 60, {14, 12, 1, false}, Role::Body, true, "text", 14);
+        b.button("1 min", CX - 66, 112, 60, "card2", "text", false, "t1"); b.button("3 min", CX, 112, 60, "card2", "text", false, "t3"); b.button("5 min", CX + 66, 112, 60, "card2", "text", false, "t5");
+        b.text("Vibrates when it ends", 176, {11, 11, 1, false}, Role::Label, true, "mut", 14);
+    }
     return s;
 }
 
@@ -332,7 +353,9 @@ inline std::vector<Scene> allScreens(const TextMeasurer& m, const Content& c) {
         if (fx->controls && !fx->live.paused) {
             v.push_back(withKeyPreview(rideCockpit(m, f), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::Lap), "-key2:" + fx->name, 148, {"command", "sec0", "sec1"}));
             v.push_back(withKeyPreview(rideCockpit(m, f), m, cyw::TwoPress::labelFor(cyw::Key::Key1, cyw::Press::Long, cyw::Action::EndRequest), "-key1hold:" + fx->name, 148, {"command", "sec0", "sec1"})); } }
-    for (auto& x : {liftExercise(m, c), withKeyPreview(liftExercise(m, c), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::LogSet), "-key2", 34, {"exercise", "more"}), repCounter(m, c), restTimer(m, c), liftControls(m, c), prepare(m, PrepareState{c.activity, c.nextSession, "iPhone linked · GPS via phone", true, true}), confirmEnd(m, true, 1458, 11600), review(m, ReviewState{}), facePicker(m, 0), today(m, TodayState{c.nextSession, "17:30 · 60 min", "Zone 2 · " + c.target, false, "synced 06:10"}), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c)}) v.push_back(x);
+    for (auto& x : {liftExercise(m, c), withKeyPreview(liftExercise(m, c), m, cyw::TwoPress::labelFor(cyw::Key::Key2, cyw::Press::Short, cyw::Action::LogSet), "-key2", 34, {"exercise", "more"}), repCounter(m, c), restTimer(m, c), liftControls(m, c), prepare(m, PrepareState{c.activity, c.nextSession, "iPhone linked · GPS via phone", true, true}), confirmEnd(m, true, 1458, 11600), review(m, ReviewState{}), facePicker(m, 0), today(m, TodayState{c.nextSession, "17:30 · 60 min", "Zone 2 · " + c.target, false, "synced 06:10"}), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c), timers(m, c)}) v.push_back(x);
+    { Content t = c; t.timerRunning = true; t.timerRemainingS = 137; t.timerTotalS = 180; Scene r = timers(m, t); r.name += ":running"; v.push_back(r); t.timerRunning = false; t.timerRinging = true; t.timerRemainingS = 0; Scene d = timers(m, t); d.name += ":done"; v.push_back(d); }
+    { Content t = c; t.dnd = true; t.brightness = "100 %"; t.battery = "—"; t.linkLine = "not linked"; Scene q = settings(m, t); q.name += ":dnd"; v.push_back(q); }
     return v;
 }
 

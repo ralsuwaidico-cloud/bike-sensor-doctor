@@ -28,6 +28,21 @@ enum class Overlay : uint8_t { None, RideControls, LiftControls, ConfirmEnd, Fac
 
 struct Persist {                                   // what the shell writes to LittleFS when `dirty` flags are set
     uint8_t face = 0, appearance = 0; uint32_t eventSeq = 0, eventAcked = 0; bool dirty = false;
+    uint8_t brightness = 1;                        // 0 = 30 %, 1 = 60 %, 2 = 100 % (quick settings; applied by the shell)
+    bool dnd = false;                              // do not disturb: no coaching haptics outside an activity
+    // (the dark / light variant is part of `appearance`: the six appearances are family × variant, no separate display mode)
+    uint8_t brightnessPct() const { return brightness == 0 ? 30 : brightness == 2 ? 100 : 60; }
+};
+
+/// A simple countdown (Notifications panel: "notifications and timers"). Presets only; the end is a haptic + one line.
+struct CountdownTimer {
+    uint32_t endMs = 0, totalS = 0; bool ringing = false;
+    bool running(uint32_t nowMs) const { return endMs && nowMs < endMs; }
+    uint32_t remainingS(uint32_t nowMs) const { return running(nowMs) ? (endMs - nowMs + 999) / 1000 : 0; }
+    void start(uint32_t seconds, uint32_t nowMs) { totalS = seconds; endMs = nowMs + seconds * 1000; ringing = false; }
+    void stop() { endMs = 0; totalS = 0; ringing = false; }
+    /// Returns true once, at the moment the timer ends.
+    bool tick(uint32_t nowMs) { if (endMs && nowMs >= endMs && !ringing) { ringing = true; return true; } return false; }
 };
 
 class AppModel {
@@ -85,6 +100,8 @@ public:
     void tick(uint32_t nowMs) {
         if (nowMs - lastTickMs_ < 1000) return; lastTickMs_ = nowMs;
         coach_.purgeExpired(nowMs);
+        if (timer_.tick(nowMs)) { haptic_ = std::max<uint16_t>(haptic_, 120); screenOn(nowMs); dirty_ = true; }
+        if (timer_.running(nowMs) && nav_.current() == Screen::Notifications) dirty_ = true;      // the countdown moves
         if (twoPress_.tick(nowMs)) { keyPreview_.clear(); dirty_ = true; }
         if (!keyPreview_.empty() && nowMs >= keyPreviewUntil_) { keyPreview_.clear(); dirty_ = true; }
         if (session_ && session_->phase() == Phase::Active && cycling_) { uint32_t t = session_->activeMs(nowMs) / 1000; power_.push(t, live_.power.fresh(3000) ? live_.power.value : std::nullopt); hr_.push(t, live_.hr.fresh(5000) ? live_.hr.value : std::nullopt); cad_.push(t, live_.cadence.fresh(3000) ? live_.cadence.value : std::nullopt); zt_.add(live_.hr.fresh(5000) ? live_.hr.value : std::nullopt, live_.hrZones); }
@@ -101,9 +118,13 @@ public:
     uint16_t takeHaptic() { uint16_t h = haptic_; haptic_ = 0; return h; }
     std::vector<Frame> takeOutbox() { auto v = std::move(outbox_); outbox_.clear(); return v; }
     Persist& persist() { return persist_; }
+    const CountdownTimer& timer() const { return timer_; }
+    /// The shell applies this to the backlight (quick settings); 0 when the screen is off.
+    uint8_t brightnessPct() const { return persist_.brightnessPct(); }
+    bool doNotDisturb() const { return persist_.dnd; }
     bool screenIsOn() const { return screenOn_; }
     const ui::Appearance& appearance() const { return ui::appearances()[persist_.appearance % ui::appearances().size()]; }
-    void restore(const Persist& p, std::vector<WatchEvent> pending) { persist_ = p; persist_.dirty = false; events_.restore(p.eventSeq, p.eventAcked, std::move(pending)); }
+    void restore(const Persist& p, std::vector<WatchEvent> pending) { persist_ = p; persist_.dirty = false; persist_.brightness %= 3; events_.restore(p.eventSeq, p.eventAcked, std::move(pending)); }
     void setDeviceId(const std::string& id) { deviceId_ = id; }
 
     /// The current screen. Also remembered for touch hit-testing.
@@ -174,6 +195,12 @@ private:
         if (id.rfind("act", 0) == 0) { size_t i = std::stoul(id.substr(3)); if (i < activityRegistry().size()) { pendingType_ = &activityRegistry()[i]; nav_.handle(Gesture::Button1); navTo(pendingType_->strength && !pendingType_->outdoor ? Screen::LiftPrepare : Screen::RidePrepare); } return; }
         if (id.rfind("face", 0) == 0 && id.size() == 5) { persist_.face = uint8_t(id[4] - '0') % 3; persist_.dirty = true; overlay_ = Overlay::None; return; }
         if (id == "s3") { persist_.appearance = uint8_t((persist_.appearance + 1) % ui::appearances().size()); persist_.dirty = true; return; }
+        if (id == "s1") { persist_.brightness = uint8_t((persist_.brightness + 1) % 3); persist_.dirty = true; haptic_ = std::max<uint16_t>(haptic_, 20); return; }
+        if (id == "s4") { persist_.dnd = !persist_.dnd; persist_.dirty = true; return; }
+        if (id == "t1") { timer_.start(60, nowMs); return; }
+        if (id == "t3") { timer_.start(180, nowMs); return; }
+        if (id == "t5") { timer_.start(300, nowMs); return; }
+        if (id == "tstop") { timer_.stop(); return; }
     }
     void navTo(Screen s) { prepareScreen_ = s; }
     void startFromPrepare(uint32_t nowMs) {
@@ -254,8 +281,12 @@ private:
         c.exercise = lift_ && lift_->current() ? lift_->current()->name : "—";
         uint32_t u = unixS(nowMs); if (u) { uint32_t l = u + uint32_t(int32_t(tzOffsetMin_) * 60); c.hourHand = int((l / 3600) % 24); c.minuteHand = int((l / 60) % 60); }
         c.activities.clear(); for (auto& a : activityRegistry()) c.activities.push_back(a.title);
+        c.brightness = std::to_string(persist_.brightnessPct()) + " %";
+        c.appearanceName = appearance().name; c.dnd = persist_.dnd; c.linkLine = c.battery + (phoneLinked_ ? " · iPhone linked" : " · iPhone not linked");
+        c.timerRunning = timer_.running(nowMs); c.timerRinging = timer_.ringing; c.timerRemainingS = timer_.remainingS(nowMs); c.timerTotalS = timer_.totalS;
         return c;
     }
+
     static std::string minToHHMM(uint16_t m) { char b[8]; std::snprintf(b, sizeof b, "%02u:%02u", m / 60, m % 60); return b; }
     std::string ageLabel(uint32_t when, uint32_t nowMs) const { uint32_t now = unixS(nowMs); if (!now || !when || now < when) return ""; uint32_t a = now - when; if (a < 3600) return std::to_string(a / 60) + " min ago"; if (a < 86400) return std::to_string(a / 3600) + " h ago"; return "> 1 day"; }
     ui::LiftState liftState(uint32_t nowMs) const {
@@ -290,7 +321,7 @@ private:
             case Screen::Today: { ui::TodayState t; t.none = !(planKnown_ && plan_.kind); t.title = plan_.title; t.when = minToHHMM(plan_.startMin) + " · " + std::to_string(plan_.durationMin) + " min"; t.detail = plan_.kind == 2 ? std::to_string(plan_.exercises.size()) + " exercises" : "from the iPhone plan"; t.syncAge = planKnown_ ? "synced" : (phoneLinked_ ? "not synced yet" : "no iPhone"); return ui::today(m, t); }
             case Screen::Recovery: return ui::recovery(m, c);
             case Screen::Progress: return ui::sleep(m, c);
-            case Screen::Notifications: return ui::coach(m, c);
+            case Screen::Notifications: return (timer_.endMs || !coach_.primary(nowMs, Context::Any)) ? ui::timers(m, c) : ui::coach(m, c);
             case Screen::Activities: return ui::activities(m, c, 0);
             case Screen::QuickSettings: return ui::settings(m, c);
             case Screen::FaceDetail: return ui::hrv(m, c);
@@ -311,6 +342,7 @@ private:
     ride::Live live_; ride::Series power_{300}, hr_{300}, cad_{300}; ride::ZoneTime zt_; ride::GpsMirror gps_; ui::PerfPage perfPage_ = ui::PerfPage::Power; bool northUp_ = false;
     CoachInbox coach_; EventQueue events_; std::string deviceId_ = "watch";
     wire::PlanToday plan_; bool planKnown_ = false; wire::Cached cached_; bool cachedKnown_ = false;
+    CountdownTimer timer_;
     bool phoneLinked_ = false; uint32_t lastFrameMs_ = 0, lastLiveMs_ = 0, lastStatusMs_ = 0, lastTickMs_ = 0, lastInteractionMs_ = 0; uint16_t txSeq_ = 0;
     ClockSync clock_; bool timeKnown_ = false, rtcValid_ = false; uint32_t rtcUnixS_ = 0; int16_t tzOffsetMin_ = 0;
     uint8_t batteryPct_ = 0; bool charging_ = false, batteryKnown_ = false;

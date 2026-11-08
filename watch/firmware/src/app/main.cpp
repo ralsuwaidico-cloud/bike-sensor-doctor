@@ -21,7 +21,8 @@ static uint32_t g_lastLvMs = 0, g_lastKeyMs = 0, g_lastRtcMs = 0, g_lastPersistM
 // ---------------------------------------------------------------- persistence (LittleFS): face / appearance / event seq + pending events
 static void persistLoad() {
     std::vector<uint8_t> b; app::Persist p;
-    if (g_storage.read("/settings.bin", b) && b.size() >= 10) { p.face = b[0]; p.appearance = b[1]; p.eventSeq = uint32_t(b[2]) | uint32_t(b[3]) << 8 | uint32_t(b[4]) << 16 | uint32_t(b[5]) << 24; p.eventAcked = uint32_t(b[6]) | uint32_t(b[7]) << 8 | uint32_t(b[8]) << 16 | uint32_t(b[9]) << 24; }
+    if (g_storage.read("/settings.bin", b) && b.size() >= 10) { p.face = b[0]; p.appearance = b[1]; p.eventSeq = uint32_t(b[2]) | uint32_t(b[3]) << 8 | uint32_t(b[4]) << 16 | uint32_t(b[5]) << 24; p.eventAcked = uint32_t(b[6]) | uint32_t(b[7]) << 8 | uint32_t(b[8]) << 16 | uint32_t(b[9]) << 24;
+        if (b.size() >= 12) { p.brightness = b[10]; p.dnd = b[11] != 0; } }   // v2 of the file: quick settings (older files keep the defaults)
     std::vector<WatchEvent> pending; std::vector<uint8_t> q;
     if (g_storage.read("/events.bin", q)) { size_t i = 0; while (i + 2 <= q.size()) { uint16_t n = uint16_t(q[i]) | uint16_t(q[i + 1]) << 8; i += 2; if (i + n > q.size()) break; std::vector<uint8_t> one(q.begin() + i, q.begin() + i + n); i += n; if (auto e = wire::decodeEvent(one)) pending.push_back(e->second); } }
     g_app.restore(p, pending);
@@ -29,6 +30,7 @@ static void persistLoad() {
 static void persistSave() {
     auto& p = g_app.persist(); if (!p.dirty) return; p.dirty = false;
     std::vector<uint8_t> b{p.face, p.appearance}; for (int i = 0; i < 4; i++) b.push_back(uint8_t(p.eventSeq >> (8 * i))); for (int i = 0; i < 4; i++) b.push_back(uint8_t(p.eventAcked >> (8 * i)));
+    b.push_back(p.brightness); b.push_back(p.dnd ? 1 : 0);
     g_storage.write("/settings.bin", b);
     std::vector<uint8_t> q; for (auto& e : g_app.events().pending()) { auto one = wire::encodeEvent(e, ""); q.push_back(uint8_t(one.size())); q.push_back(uint8_t(one.size() >> 8)); q.insert(q.end(), one.begin(), one.end()); }
     g_storage.write("/events.bin", q);
@@ -95,7 +97,7 @@ void loop() {
     if (g_app.takeDirty()) {
         uint32_t t0 = micros();
         if (!g_app.screenIsOn()) { lv_obj_clean(g_root); g_display.setBrightness(0); }
-        else { g_display.setBrightness(60); g_renderer.render(g_root, g_app.render(g_measure, now), g_app.appearance()); }
+        else { g_display.setBrightness(g_app.brightnessPct()); g_renderer.render(g_root, g_app.render(g_measure, now), g_app.appearance()); }
         g_renderUs += micros() - t0; g_frames++;
     }
     if (now - g_lastPersistMs > 2000) { g_lastPersistMs = now; persistSave(); }

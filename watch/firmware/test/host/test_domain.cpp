@@ -247,7 +247,7 @@ int main() {
         int scenes = 0, findings = 0;
         for (auto& [vn, content] : contentVariants()) for (auto& ap : appearances()) for (auto& sc : allScreens(m, content)) { scenes++; findings += int(check(sc, ap, vn).size()); }
         std::printf("   %d scenes, %d findings\n", scenes, findings);
-        CHECK(scenes == 1368 && findings == 0, "57 screens (faces, menus, 10 ride fixtures × cockpit/performance pages/navigation/controls/key previews, strength, panels) × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
+        CHECK(scenes == 1464 && findings == 0, "61 screens (faces, menus, quick settings ×2, timers ×3, 10 ride fixtures × cockpit/performance pages/navigation/controls/key previews, strength, panels) × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
         // grading colours are identical across the six appearances (per canvas), independent of the theme
         std::string d, l; for (auto& ap : appearances()) { std::string g1 = ap.resolve("grade.green"); if (ap.dark) { if (d.empty()) d = g1; CHECK(g1 == d, "dark grading green identical in " + ap.name); } else { if (l.empty()) l = g1; CHECK(g1 == l, "light grading green identical in " + ap.name); } }
         CHECK(appearances()[0].resolve("accent") != appearances()[2].resolve("accent"), "theme accents differ while grading colours do not");
@@ -461,6 +461,26 @@ int main() {
         tap(a, "confirm", now); CHECK(a.lift()->completedSets() == 2 && a.lift()->log().back().autoCounted == false, "Confirm logs the set (no detected reps → not auto-counted)");
         a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now); CHECK(a.overlay() == Overlay::LiftControls, "swipe up → workout controls"); tap(a, "end", now); tap(a, "endConfirm", now); CHECK(a.nav().current() == Screen::LiftReview, "End workout → review");
         tap(a, "save", now); CHECK(!a.lift() && a.nav().current() == Screen::Face, "saved");
+        // quick settings are real state: each row cycles a persisted value; the countdown timer runs, rings once and persists nothing
+        CHECK(a.onTouch({hal::TouchEvent::SwipeDown, 120, 40}, now) && a.nav().current() == Screen::QuickSettings, "swipe down opens quick settings");
+        CHECK(a.brightnessPct() == 60 && !a.doNotDisturb(), "defaults: 60 % brightness, do-not-disturb off");
+        a.persist().dirty = false; CHECK(tap(a, "s1", now) && a.brightnessPct() == 100 && a.persist().dirty, "Brightness row cycles 60 → 100 % and marks the settings dirty");
+        CHECK(tap(a, "s1", now) && a.brightnessPct() == 30 && tap(a, "s1", now) && a.brightnessPct() == 60, "… then 30 % and back to 60 %");
+        CHECK(tap(a, "s4", now) && a.doNotDisturb(), "Do-not-disturb row toggles on");
+        bool dndRow = false; for (auto& e : a.render(hm, now).els) if (e.text == "On") dndRow = true; CHECK(dndRow, "the row shows the real value, not a constant");
+        { uint8_t before = a.persist().appearance; CHECK(tap(a, "s3", now) && a.persist().appearance == (before + 1) % 6, "Appearance row cycles through the six appearances (family × dark/light)"); }
+        bool nameRow = false; for (auto& e : a.render(hm, now).els) if (e.text == a.appearance().name) nameRow = true; CHECK(nameRow, "the Appearance row names the current appearance");
+        { Persist p = a.persist(); p.brightness = 7; AppModel b; b.restore(p, {}); CHECK(b.brightnessPct() == 60, "restore sanitises an out-of-range brightness level"); }
+        a.onTouch({hal::TouchEvent::SwipeUp, 120, 200}, now); CHECK(a.nav().current() == Screen::Face, "swipe up leaves quick settings");
+        a.onTouch({hal::TouchEvent::SwipeRight, 20, 120}, now); a.onTouch({hal::TouchEvent::SwipeRight, 20, 120}, now);
+        CHECK(a.nav().current() == Screen::Notifications && a.render(hm, now).name == "panel:timers", "two swipes right reach the timers panel when no coach message is pending");
+        CHECK(tap(a, "t3", now) && a.timer().running(now) && a.timer().remainingS(now) == 180, "3 min preset starts a 180 s countdown");
+        bool shown = false; for (auto& e : a.render(hm, now + 43000).els) if (e.id == "timerValue" && e.text == "2:17") shown = true; CHECK(shown, "the panel shows the remaining time (3:00 − 43 s = 2:17)");
+        a.takeHaptic(); for (uint32_t t = now; t <= now + 181000; t += 1000) a.tick(t);
+        CHECK(a.timer().ringing && a.takeHaptic() >= 120, "at zero the timer rings once with a long haptic");
+        bool done = false; for (auto& e : a.render(hm, now + 181000).els) if (e.text == "DONE") done = true; CHECK(done, "… and shows DONE until dismissed");
+        CHECK(tap(a, "tstop", now + 182000) && !a.timer().endMs && a.render(hm, now + 182000).name == "panel:timers", "OK clears the timer; the presets return");
+        a.onTouch({hal::TouchEvent::SwipeLeft, 220, 120}, now); a.onTouch({hal::TouchEvent::SwipeLeft, 220, 120}, now); CHECK(a.nav().current() == Screen::Face, "back to the face");
         // every rendered scene along the way passed the same round-display checks
         int bad = 0; for (auto& ap : ui::appearances()) { auto s = a.render(hm, now); bad += int(ui::check(s, ap, "app").size()); } CHECK(bad == 0, "the model's rendered face passes the round-display checks in every appearance");
     }
