@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 // MARK: - Checkpoint C (owner 5 Nov): the Premium Home Dashboard and the Training Hub
 // Home reads one `HomeDashboard` (HomeDashboardModel.swift) and shows it with the design-system cards; it no longer
@@ -361,6 +362,8 @@ struct TrainingHubView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("trainingHub")
+        .onAppear { Logger(subsystem: "com.ralsuwaidico.bikecomputer", category: "hub").notice("training hub appeared") }
+        .onDisappear { Logger(subsystem: "com.ralsuwaidico.bikecomputer", category: "hub").notice("training hub disappeared") }
     }
 
     private func stateLine(_ s: HomeDashboard.HubState) -> String {

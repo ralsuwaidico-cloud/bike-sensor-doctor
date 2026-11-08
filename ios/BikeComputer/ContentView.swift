@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 
 /// 0.4.0: first run shows the two-stage onboarding; afterwards Home / Plan / Ride / Progress / Profile with a custom
 /// tab bar whose middle "Ride now" button is larger and raised. Tapping it only opens the Ride screen — recording
@@ -20,6 +21,8 @@ struct RootView: View {
     /// Checkpoint C: the Training Hub is a page over the current tab (closing returns to that tab with its scroll
     /// position); the centre button always opens it, a tab tap or Close dismisses it.
     @State private var showHub = false
+    @State private var lastCentreTap = Date.distantPast
+    private let hubLog = Logger(subsystem: "com.ralsuwaidico.bikecomputer", category: "hub")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A5: the local calendar day; when it changes (midnight, or back from the background) the centre button is
     /// re-evaluated and missing plan weeks are generated.
@@ -131,9 +134,16 @@ struct RootView: View {
     /// Checkpoint C (owner-approved prototype §2.2): the centre button always opens the Training Hub, whose card carries
     /// today's Start / Resume / Results / Why / More with the same routes as before. While a ride is being recorded the
     /// button opens the Ride screen (the dock is the ride's own control then). Tapping it with the hub open closes it.
+    /// Hub-tap reliability (owner 8 Nov 14:32; misses in runs 176 and 198): every tap is logged with the state it found
+    /// (`log stream --predicate 'subsystem == "com.ralsuwaidico.bikecomputer"'`; CI keeps the app log of failed jobs), and
+    /// a second tap within 350 ms of the first is treated as the same gesture — a double-delivered press must never
+    /// toggle the hub straight back shut. The approved behaviour is unchanged: open when closed, close when open.
     private func centreTapped() {
-        if recorder.isActive { tab = 2; return }
-        if showHub { showHub = false } else { openHub() }
+        let now = Date()
+        if now.timeIntervalSince(lastCentreTap) < 0.35 { hubLog.notice("centre tap ignored: \(Int(now.timeIntervalSince(lastCentreTap) * 1000)) ms after the previous one (hub \(showHub ? "open" : "closed"))"); return }
+        lastCentreTap = now
+        if recorder.isActive { hubLog.notice("centre tap → Ride (recording)"); tab = 2; return }
+        if showHub { hubLog.notice("centre tap → close hub"); showHub = false } else { hubLog.notice("centre tap → open hub (tab \(tab))"); openHub() }
     }
     private func openHub() {
         withAnimation(CyMotion.animation(0.22, reduce: reduceMotion)) { showHub = true }
