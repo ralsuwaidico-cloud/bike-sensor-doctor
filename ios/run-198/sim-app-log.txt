@@ -1,0 +1,400 @@
+2026-11-08 09:43:28.918881+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4432162816.95
+2026-11-08 09:43:28.918942+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.919007+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4432162816.95 (AX element pid: 77936, elementOrHash.elementID: 4432162816.95) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.919059+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4432162816.95
+2026-11-08 09:43:28.919121+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.919234+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4432162816.95 (AX element pid: 77936, elementOrHash.elementID: 4432162816.95) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.919301+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4432162816.95
+2026-11-08 09:43:28.919380+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.919451+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4432162816.95 (AX element pid: 77936, elementOrHash.elementID: 4432162816.95) faulted in {
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.919502+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.919607+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeChildren for AX element pid: 77936, elementOrHash.elementID: 4480746816.69
+2026-11-08 09:43:28.919757+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.919917+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480746816.69 (AX element pid: 77936, elementOrHash.elementID: 4480746816.69) faulted in {
+    "XC_kAXXCAttributeChildren" =     (
+        "AX element pid: 77936, elementOrHash.elementID: 4480699456.74",
+        "AX element pid: 77936, elementOrHash.elementID: 4480699904.75",
+        "AX element pid: 77936, elementOrHash.elementID: 4480700352.76",
+        "AX element pid: 77936, elementOrHash.elementID: 4480700800.77",
+        "AX element pid: 77936, elementOrHash.elementID: 4480701248.78",
+        "AX element pid: 77936, elementOrHash.elementID: 4480702144.79",
+        "AX element pid: 77936, elementOrHash.elementID: 4480702592.80",
+        "AX element pid: 77936, elementOrHash.elementID: 4480705728.81",
+        "AX element pid: 77936, elementOrHash.elementID: 4480710208.82",
+        "AX element pid: 77936, elementOrHash.elementID: 4480714048.83",
+        "AX element pid: 77936, elementOrHash.elementID: 4480714496.84",
+        "AX element pid: 77936, elementOrHash.elementID: 4480717184.85",
+        "AX element pid: 77936, elementOrHash.elementID: 4480720768.86",
+        "AX element pid: 77936, elementOrHash.elementID: 4480723008.87",
+        "AX element pid: 77936, elementOrHash.elementID: 4693007360.88",
+        "AX element pid: 77936, elementOrHash.elementID: 4480724352.89",
+        "AX element pid: 77936, elementOrHash.elementID: 4480724800.90",
+        "AX element pid: 77936, elementOrHash.elementID: 4480725696.91",
+        "AX element pid: 77936, elementOrHash.elementID: 4480745920.92",
+        "AX element pid: 77936, elementOrHash.elementID: 4480746368.93"
+    );
+}: (no error) for children using XC_kAXXCAttributeChildren
+2026-11-08 09:43:28.920156+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480699456.74 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.920220+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480699456.74
+2026-11-08 09:43:28.920314+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.920380+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480699456.74 (AX element pid: 77936, elementOrHash.elementID: 4480699456.74) faulted in {
+    "XC_kAXXCAttributeLabel" = "PHONE ONLY";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.920445+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480699456.74
+2026-11-08 09:43:28.920597+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.920686+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'PHONE ONLY' (AX element pid: 77936, elementOrHash.elementID: 4480699456.74) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 48;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934656;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.920773+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType StaticText.
+2026-11-08 09:43:28.920830+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480699456.74
+2026-11-08 09:43:28.920904+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.920979+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'PHONE ONLY' (AX element pid: 77936, elementOrHash.elementID: 4480699456.74) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.921033+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480699456.74
+2026-11-08 09:43:28.921143+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.921211+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'PHONE ONLY' (AX element pid: 77936, elementOrHash.elementID: 4480699456.74) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.921272+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480699456.74
+2026-11-08 09:43:28.921336+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.921408+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'PHONE ONLY' (AX element pid: 77936, elementOrHash.elementID: 4480699456.74) faulted in {
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.921462+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.921519+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480699904.75 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.921583+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480699904.75
+2026-11-08 09:43:28.921787+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.921862+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480699904.75 (AX element pid: 77936, elementOrHash.elementID: 4480699904.75) faulted in {
+    "XC_kAXXCAttributeLabel" = "T 0:00";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.921922+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480699904.75
+2026-11-08 09:43:28.922022+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.922106+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'T 0:00' (AX element pid: 77936, elementOrHash.elementID: 4480699904.75) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 48;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934656;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.922161+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType StaticText.
+2026-11-08 09:43:28.922211+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480699904.75
+2026-11-08 09:43:28.922275+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.922350+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'T 0:00' (AX element pid: 77936, elementOrHash.elementID: 4480699904.75) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.922413+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480699904.75
+2026-11-08 09:43:28.922470+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.922537+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'T 0:00' (AX element pid: 77936, elementOrHash.elementID: 4480699904.75) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.922588+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480699904.75
+2026-11-08 09:43:28.922645+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.922704+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'T 0:00' (AX element pid: 77936, elementOrHash.elementID: 4480699904.75) faulted in {
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.922838+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.922896+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480700352.76 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.922957+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480700352.76
+2026-11-08 09:43:28.923051+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.923125+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480700352.76 (AX element pid: 77936, elementOrHash.elementID: 4480700352.76) faulted in {
+    "XC_kAXXCAttributeLabel" = "Ride settings";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.923219+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480700352.76
+2026-11-08 09:43:28.923334+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.923421+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'Ride settings' (AX element pid: 77936, elementOrHash.elementID: 4480700352.76) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 9;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934593;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.923481+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType Button.
+2026-11-08 09:43:28.923542+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480700352.76
+2026-11-08 09:43:28.923606+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.923671+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride settings' (AX element pid: 77936, elementOrHash.elementID: 4480700352.76) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.923723+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480700352.76
+2026-11-08 09:43:28.923779+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.923834+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride settings' (AX element pid: 77936, elementOrHash.elementID: 4480700352.76) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.923972+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480700352.76
+2026-11-08 09:43:28.924046+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.924112+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride settings' (AX element pid: 77936, elementOrHash.elementID: 4480700352.76) faulted in {
+    "XC_kAXXCAttributeIdentifier" = rideSettings;
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.924175+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.924231+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480700800.77 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.924383+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480700800.77
+2026-11-08 09:43:28.924468+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.924542+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480700800.77 (AX element pid: 77936, elementOrHash.elementID: 4480700800.77) faulted in {
+    "XC_kAXXCAttributeLabel" = "Ride history";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.924596+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480700800.77
+2026-11-08 09:43:28.924734+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.924822+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'Ride history' (AX element pid: 77936, elementOrHash.elementID: 4480700800.77) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 9;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934593;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.924878+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType Button.
+2026-11-08 09:43:28.924927+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480700800.77
+2026-11-08 09:43:28.924996+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.925064+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride history' (AX element pid: 77936, elementOrHash.elementID: 4480700800.77) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.925119+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480700800.77
+2026-11-08 09:43:28.925185+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.925252+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride history' (AX element pid: 77936, elementOrHash.elementID: 4480700800.77) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.925326+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480700800.77
+2026-11-08 09:43:28.925393+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.925466+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride history' (AX element pid: 77936, elementOrHash.elementID: 4480700800.77) faulted in {
+    "XC_kAXXCAttributeIdentifier" = rideHistoryButton;
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.925528+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.925587+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480701248.78 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.925674+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480701248.78
+2026-11-08 09:43:28.925767+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.925845+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480701248.78 (AX element pid: 77936, elementOrHash.elementID: 4480701248.78) faulted in {
+    "XC_kAXXCAttributeLabel" = "Ride details: map, sensors, tiles";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.925898+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480701248.78
+2026-11-08 09:43:28.926057+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.926150+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'Ride details: map, sensors, tiles' (AX element pid: 77936, elementOrHash.elementID: 4480701248.78) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 9;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934593;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.926205+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType Button.
+2026-11-08 09:43:28.926261+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480701248.78
+2026-11-08 09:43:28.926326+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.926393+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride details: map, sensors, tiles' (AX element pid: 77936, elementOrHash.elementID: 4480701248.78) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.926475+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480701248.78
+2026-11-08 09:43:28.926552+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.926610+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride details: map, sensors, tiles' (AX element pid: 77936, elementOrHash.elementID: 4480701248.78) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.926661+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480701248.78
+2026-11-08 09:43:28.926721+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.926815+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Button, label: 'Ride details: map, sensors, tiles' (AX element pid: 77936, elementOrHash.elementID: 4480701248.78) faulted in {
+    "XC_kAXXCAttributeIdentifier" = rideDetails;
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.926886+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.926944+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480702144.79 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.927001+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480702144.79
+2026-11-08 09:43:28.927092+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.927222+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480702144.79 (AX element pid: 77936, elementOrHash.elementID: 4480702144.79) faulted in {
+    "XC_kAXXCAttributeLabel" = "ENDURANCE \U00b7 Z2 TARGET \U00b7 85\U201395 RPM";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.927289+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480702144.79
+2026-11-08 09:43:28.927378+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.927458+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'ENDURANCE · Z2 TARGET · 85–95 RPM' (AX element pid: 77936, elementOrHash.elementID: 4480702144.79) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 48;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934656;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.927515+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType StaticText.
+2026-11-08 09:43:28.927565+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480702144.79
+2026-11-08 09:43:28.927630+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.927691+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'ENDURANCE · Z2 TARGET · 85–95 RPM' (AX element pid: 77936, elementOrHash.elementID: 4480702144.79) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.927774+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480702144.79
+2026-11-08 09:43:28.927832+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.927893+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'ENDURANCE · Z2 TARGET · 85–95 RPM' (AX element pid: 77936, elementOrHash.elementID: 4480702144.79) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.927943+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480702144.79
+2026-11-08 09:43:28.928000+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.928108+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'ENDURANCE · Z2 TARGET · 85–95 RPM' (AX element pid: 77936, elementOrHash.elementID: 4480702144.79) faulted in {
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.928165+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.928223+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480702592.80 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.928283+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480702592.80
+2026-11-08 09:43:28.928359+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.928466+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480702592.80 (AX element pid: 77936, elementOrHash.elementID: 4480702592.80) faulted in {
+    "XC_kAXXCAttributeLabel" = "FTP UNKNOWN";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.928530+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480702592.80
+2026-11-08 09:43:28.928632+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.928716+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'FTP UNKNOWN' (AX element pid: 77936, elementOrHash.elementID: 4480702592.80) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 48;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934656;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.928766+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType StaticText.
+2026-11-08 09:43:28.928817+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480702592.80
+2026-11-08 09:43:28.928891+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.929030+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'FTP UNKNOWN' (AX element pid: 77936, elementOrHash.elementID: 4480702592.80) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.929083+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480702592.80
+2026-11-08 09:43:28.929142+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.929206+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'FTP UNKNOWN' (AX element pid: 77936, elementOrHash.elementID: 4480702592.80) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.929268+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480702592.80
+2026-11-08 09:43:28.929370+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.929437+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'FTP UNKNOWN' (AX element pid: 77936, elementOrHash.elementID: 4480702592.80) faulted in {
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.929492+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.929550+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480705728.81 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.929613+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480705728.81
+2026-11-08 09:43:28.929708+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.929803+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480705728.81 (AX element pid: 77936, elementOrHash.elementID: 4480705728.81) faulted in {
+    "XC_kAXXCAttributeLabel" = "Ride view";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.929854+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480705728.81
+2026-11-08 09:43:28.929953+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.930037+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'Ride view' (AX element pid: 77936, elementOrHash.elementID: 4480705728.81) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 0;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934592;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.930085+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType Other.
+2026-11-08 09:43:28.930133+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480705728.81
+2026-11-08 09:43:28.930211+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.930284+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Other, label: 'Ride view' (AX element pid: 77936, elementOrHash.elementID: 4480705728.81) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.930335+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480705728.81
+2026-11-08 09:43:28.930398+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.930455+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Other, label: 'Ride view' (AX element pid: 77936, elementOrHash.elementID: 4480705728.81) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.930551+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480705728.81
+2026-11-08 09:43:28.930609+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.930663+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Other, label: 'Ride view' (AX element pid: 77936, elementOrHash.elementID: 4480705728.81) faulted in {
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.930725+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] no match found for transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.930783+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] iteration with input AX element pid: 77936, elementOrHash.elementID: 4480710208.82 and transformer `Elements matching predicate '"rideStepStrip" IN identifiers'`
+2026-11-08 09:43:28.930873+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeLabel for AX element pid: 77936, elementOrHash.elementID: 4480710208.82
+2026-11-08 09:43:28.930953+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.931020+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] AX element pid: 77936, elementOrHash.elementID: 4480710208.82 (AX element pid: 77936, elementOrHash.elementID: 4480710208.82) faulted in {
+    "XC_kAXXCAttributeLabel" = "Warm-up: RPE 2\U20133 \U00b7 HR Z1 0\U2013109 bpm, 15:00 left, next Steady";
+}: (no error) for label using XC_kAXXCAttributeLabel
+2026-11-08 09:43:28.931081+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType for AX element pid: 77936, elementOrHash.elementID: 4480710208.82
+2026-11-08 09:43:28.931172+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.931269+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] label: 'Warm-up: RPE 2–3 · HR Z1 0–109 bpm, 15:00 left, next Steady' (AX element pid: 77936, elementOrHash.elementID: 4480710208.82) faulted in {
+    "XC_kAXXCAttributeAutomationType" = 48;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934656;
+}: (no error) for elementType using XC_kAXXCAttributeElementType, XC_kAXXCAttributeElementBaseType, XC_kAXXCAttributeTraits, XC_kAXXCAttributeAutomationType
+2026-11-08 09:43:28.931321+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Computed elementType StaticText.
+2026-11-08 09:43:28.931369+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeValue for AX element pid: 77936, elementOrHash.elementID: 4480710208.82
+2026-11-08 09:43:28.931446+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.931512+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'Warm-up: RPE 2–3 · HR Z1 0–109 bpm, 15:00 left, next Steady' (AX element pid: 77936, elementOrHash.elementID: 4480710208.82) faulted in {
+}: (no error) for value using XC_kAXXCAttributeValue
+2026-11-08 09:43:28.931611+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributePlaceholderValue for AX element pid: 77936, elementOrHash.elementID: 4480710208.82
+2026-11-08 09:43:28.931679+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.931748+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'Warm-up: RPE 2–3 · HR Z1 0–109 bpm, 15:00 left, next Steady' (AX element pid: 77936, elementOrHash.elementID: 4480710208.82) faulted in {
+}: (no error) for placeholderValue using XC_kAXXCAttributePlaceholderValue
+2026-11-08 09:43:28.931810+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Fetching AX attributes XC_kAXXCAttributeIdentifier for AX element pid: 77936, elementOrHash.elementID: 4480710208.82
+2026-11-08 09:43:28.931927+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Got attributes, transferring to dictionary for return.
+2026-11-08 09:43:28.931999+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] StaticText, label: 'Warm-up: RPE 2–3 · HR Z1 0–109 bpm, 15:00 left, next Steady' (AX element pid: 77936, elementOrHash.elementID: 4480710208.82) faulted in {
+    "XC_kAXXCAttributeIdentifier" = rideStepStrip;
+}: (no error) for identifier using XC_kAXXCAttributeIdentifier
+2026-11-08 09:43:28.932072+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] match found and no more transformers in the current sequence - done, returning StaticText, identifier: 'rideStepStrip', label: 'Warm-up: RPE 2–3 · HR Z1 0–109 bpm, 15:00 left, next Steady'
+2026-11-08 09:43:28.932133+0000 0x3113f    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] [First Match] unioned related elements {(
+)} from {(
+)}
+2026-11-08 09:43:28.933745+0000 0x31188    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Current tree:
+0x117bad400 <App element pid: 77936>
+  0x117bacf00 <AX element pid: 77936, elementOrHash.elementID: 4432726016.4>
+    0x117baed00 <AX element pid: 77936, elementOrHash.elementID: 4480983552.5>
+      0x117baf200 <AX element pid: 77936, elementOrHash.elementID: 4482203648.6>
+        0x117baf840 <AX element pid: 77936, elementOrHash.elementID: 4432724992.7>
+          0x117baef80 <AX element pid: 77936, elementOrHash.elementID: 4480531776.8>
+            0x117bad7c0, identifier: 'tabPage-0' <AX element pid: 77936, elementOrHash.elementID: 4480555136.13>
+              0x117bacdc0 <AX element pid: 77936, elementOrHash.elementID: 4480998400.19>
+                0x117baea80 <AX element pid: 77936, elementOrHash.elementID: 4480999296.36>
+                  0x1182b4a00 <AX element pid: 77936, elementOrHash.elementID: 4480388160.61>
+                    0x117bae300 <AX element pid: 77936, elementOrHash.elementID: 4432297984.67>
+                      0x117b6c640 <AX element pid: 77936, elementOrHash.elementID: 4827112192.72>
+                        0x117b6d680 <AX element pid: 77936, elementOrHash.elementID: 4432156672.96>
+                        StaticText, 0x117b6ca00, identifier: 'homeDate', label: 'SUNDAY 8 NOV' <AX element pid: 77936, elementOrHash.elementID: 4827111296.97>
+                        Button, 0x117b6e1c0, identifier: 'homeAvatar', label: 'Profile menu', value: closed <AX element pid: 77936, elementOrHash.elementID: 4827111744.98>
+                0x117baf980 <AX element pid: 77936, elementOrHash.elementID: 4480985600.37>
+                  0x1182b6bc0 <AX element pid: 77936, elementOrHash.elementID: 4481001088.584>
+                  0x1182b7340 <AX element pid: 77936, elementOrHash.elementID: 4480988160.62>
+            0x117bac280, identifier: 'tabPage-1' <AX element pid: 77936, elementOrHash.elementID: 4480548864.9>
+              0x117bad540 <AX element pid: 77936, elementOrHash.elementID: 4479894848.15>
+                0x117baf5c0, identifier: 'Plan' <AX element pid: 77936, elementOrHash.elementID: 4432415744.26>
+                0x117bac8c0 <AX element pid: 77936, elementOrHash.elementID: 4479897088.27>
+                  0x1182b5400 <AX element pid: 77936, elementOrHash.elementID: 4480390400.49>
+                    0x1182b52c0 <AX element pid: 77936, elementOrHash.elementID: 4432299776.63>
+                      0x117b6cc80 <AX element pid: 77936, elementOrHash.elementID: 4480699008.68>
+                        0x117b6df40 <AX element pid: 77936, elementOrHash.elementID: 4432153600.73>
+                0x117bae800 <AX element pid: 77936, elementOrHash.elementID: 4675561984.28>
+                  0x1182b5040 <AX element pid: 77936, elementOrHash.elementID: 4479898880.50>
+                  0x1182b66c0 <AX element pid: 77936, elementOrHash.elementID: 4675564032.51>
+            0x117bad040, identifier: 'tabPage-3' <AX element pid: 77936, elementOrHash.elementID: 4480552896.11>
+              0x117baf340 <AX element pid: 77936, elementOrHash.elementID: 4433194816.17>
+                0x117bacc80, identifier: 'Progress' <AX element pid: 77936, elementOrHash.elementID: 4432420352.31>
+                0x117bacb40 <AX element pid: 77936, elementOrHash.elementID: 4433195712.32>
+                  0x1182b5a40 <AX element pid: 77936, elementOrHash.elementID: 4480389504.55>
+                    0x1182b7980 <AX element pid: 77936, elementOrHash.elementID: 4432303360.65>
+                      0x117b6cb40 <AX element pid: 77936, elementOrHash.elementID: 4480934208.70>
+                        0x117b6e800 <AX element pid: 77936, elementOrHash.elementID: 4432159744.94>
+                0x117bae080 <AX element pid: 77936, elementOrHash.elementID: 4682527744.33>
+                  0x1182b7ac0 <AX element pid: 77936, elementOrHash.elementID: 4479732800.56>
+                  0x1182b7840 <AX element pid: 77936, elementOrHash.elementID: 4682529792.57>
+            0x117bac780, identifier: 'tabPage-4' <AX element pid: 77936, elementOrHash.elementID: 4480554240.12>
+              0x117bac140 <AX element pid: 77936, elementOrHash.elementID: 4479829760.18>
+                0x117bac000 <AX element pid: 77936, elementOrHash.elementID: 4479831552.34>
+                  0x1182b57c0 <AX element pid: 77936, elementOrHash.elementID: 4480389056.58>
+                    0x117b6f200 <AX element pid: 77936, elementOrHash.elementID: 4432310528.66>
+                      0x117b6e6c0 <AX element pid: 77936, elementOrHash.elementID: 4826914240.71>
+                        0x117b6d400 <AX element pid: 77936, elementOrHash.elementID: 4432162816.95>
+                0x117bac500 <AX element pid: 77936, elementOrHash.elementID: 4683973120.35>
+                  0x1182b5180 <AX element pid: 77936, elementOrHash.elementID: 4479836480.59>
+                  0x1182b4640 <AX element pid: 77936, elementOrHash.elementID: 4683975168.60>
+            0x117baee40, identifier: 'tabPage-2' <AX element pid: 77936, elementOrHash.elementID: 4480551104.10>
+              0x117baf0c0 <AX element pid: 77936, elementOrHash.elementID: 4479902464.16>
+                0x117bafd40 <AX element pid: 77936, elementOrHash.elementID: 4479902912.29>
+                  0x1182b6940 <AX element pid: 77936, elementOrHash.elementID: 4480389952.52>
+                    0x117b6c780 <AX element pid: 77936, elementOrHash.elementID: 4432301568.64>
+                      0x117b6c8c0 <AX element pid: 77936, elementOrHash.elementID: 4480746816.69>
+                        StaticText, 0x117b6e440, label: 'PHONE ONLY' <AX element pid: 77936, elementOrHash.elementID: 4480699456.74>
+                        StaticText, 0x117b6e300, label: 'T 0:00' <AX element pid: 77936, elementOrHash.elementID: 4480699904.75>
+                        Button, 0x117a617c0, identifier: 'rideSettings', label: 'Ride settings' <AX element pid: 77936, elementOrHash.elementID: 4480700352.76>
+                        Button, 0x117a63c00, identifier: 'rideHistoryButton', label: 'Ride history' <AX element pid: 77936, elementOrHash.elementID: 4480700800.77>
+                        Button, 0x117a60500, identifier: 'rideDetails', label: 'Ride details: map, sensors, tiles' <AX element pid: 77936, elementOrHash.elementID: 4480701248.78>
+                        StaticText, 0x117a62d00, label: 'ENDURANCE · Z2 TARGET · 85–95 RPM' <AX element pid: 77936, elementOrHash.elementID: 4480702144.79>
+                        StaticText, 0x117a621c0, label: 'FTP UNKNOWN' <AX element pid: 77936, elementOrHash.elementID: 4480702592.80>
+                        Other, 0x117a61040, label: 'Ride view' <AX element pid: 77936, elementOrHash.elementID: 4480705728.81>
+                        StaticText, 0x117a60780, identifier: 'rideStepStrip', label: 'Warm-up: RPE 2–3 · HR Z1 0–109 bpm, 15:00 left, next Steady' <AX element pid: 77936, elementOrHash.elementID: 4480710208.82>
+                        0x117a62a80 <AX element pid: 77936, elementOrHash.elementID: 4480714048.83>
+                        0x117a60a00 <AX element pid: 77936, elementOrHash.elementID: 4480714496.84>
+                        0x117a62bc0 <AX element pid: 77936, elementOrHash.elementID: 4480717184.85>
+                        0x117a608c0 <AX element pid: 77936, elementOrHash.elementID: 4480720768.86>
+                        0x117a62580 <AX element pid: 77936, elementOrHash.elementID: 4480723008.87>
+                        0x117a61900 <AX element pid: 77936, elementOrHash.elementID: 4693007360.88>
+                        0x117a603c0 <AX element pid: 77936, elementOrHash.elementID: 4480724352.89>
+                        0x117a62940 <AX element pid: 77936, elementOrHash.elementID: 4480724800.90>
+                        0x117a61a40 <AX element pid: 77936, elementOrHash.elementID: 4480725696.91>
+                        0x117a630c0 <AX element pid: 77936, elementOrHash.elementID: 4480745920.92>
+                        0x117a62440 <AX element pid: 77936, elementOrHash.elementID: 4480746368.93>
+                0x117baf700 <AX element pid: 77936, elementOrHash.elementID: 4675565568.30>
+                  0x1182b5e00 <AX element pid: 77936, elementOrHash.elementID: 4675993600.54>
+            0x117baf480, identifier: 'liquidDock' <AX element pid: 77936, elementOrHash.elementID: 4480564544.14>
+              Button, 0x117baebc0, label: 'Home' <AX element pid: 77936, elementOrHash.elementID: 4480557824.21>
+                Image, 0x117bafac0, identifier: 'house.fill', label: 'Home' <AX element pid: 77936, elementOrHash.elementID: 4480556032.38>
+                StaticText, 0x117bae940, label: 'Home' <AX element pid: 77936, elementOrHash.elementID: 4480556928.39>
+              Button, 0x117badcc0, label: 'Plan' <AX element pid: 77936, elementOrHash.elementID: 4480559168.22>
+                Image, 0x117bac3c0, identifier: 'calendar', label: 'Calendar' <AX element pid: 77936, elementOrHash.elementID: 4480558272.40>
+                StaticText, 0x117bafc00, label: 'Plan' <AX element pid: 77936, elementOrHash.elementID: 4480558720.41>
+              Button, 0x117bae1c0, identifier: 'centreButton', label: 'Ride now, open the Ride screen' <AX element pid: 77936, elementOrHash.elementID: 4480560960.23>
+                Image, 0x117badf40, identifier: 'bicycle', label: 'bicycle' <AX element pid: 77936, elementOrHash.elementID: 4480559616.42>
+                0x117bae440 <AX element pid: 77936, elementOrHash.elementID: 4480560064.43>
+                StaticText, 0x117bad2c0, label: 'Ride now' <AX element pid: 77936, elementOrHash.elementID: 4480560512.44>
+              Button, 0x117bae580, label: 'Progress' <AX element pid: 77936, elementOrHash.elementID: 4480562304.24>
+                Image, 0x1182b4140, identifier: 'chart.xyaxis.line', label: 'chart.xyaxis.line' <AX element pid: 77936, elementOrHash.elementID: 4480561408.45>
+                StaticText, 0x1182b6580, label: 'Progress' <AX element pid: 77936, elementOrHash.elementID: 4480561856.46>
+              Button, 0x117bae6c0, label: 'Profile' <AX element pid: 77936, elementOrHash.elementID: 4480564096.25>
+                Image, 0x1182b5900, identifier: 'person.crop.circle', label: 'Account' <AX element pid: 77936, elementOrHash.elementID: 4480562752.47>
+                StaticText, 0x1182b5f40, label: 'Profile' <AX element pid: 77936, elementOrHash.elementID: 4480563200.48>
+2026-11-08 09:43:28.935606+0000 0x31188    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Query ↪︎ Descendants matching type Any
+    ↪︎ Elements matching predicate '"rideStepStrip" IN identifiers' (First Match) found matching snapshots: {(
+    StaticText, identifier: 'rideStepStrip', label: 'Warm-up: RPE 2–3 · HR Z1 0–109 bpm, 15:00 left, next Steady'
+)} (error: (null))
+2026-11-08 09:43:28.936000+0000 0x31188    Default     0x0                  77936  0    BikeComputer: (XCTAutomationSupport) [com.apple.dt.xctest:Default] Replying to query ↪︎ Descendants matching type Any
+    ↪︎ Elements matching predicate '"rideStepStrip" IN identifiers' (First Match) with results: <XCTElementQueryResults: 0x117529c50> (error: (null))

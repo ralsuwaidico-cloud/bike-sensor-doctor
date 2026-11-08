@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 198 — 2026-11-08 09:12 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m13s
+  layout small (L,AX3): FAILED (exit 65) · 29m41s — -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - L home multi: no primary action -[BikeComputerUITests.LayoutAudit testHomeStates] : XCTAssertTrue failed - L home multi: the centre button opens the Training Hub 
+RESULT layout audit: FAILED (79 screenshots)
+Total: 39m14s
