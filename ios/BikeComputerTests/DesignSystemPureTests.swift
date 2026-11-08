@@ -42,8 +42,8 @@ final class DesignSystemPureTests: XCTestCase {
 
     func testMinutesAndTimerText() {
         XCTAssertEqual(CyDesign.minutesText(58), "58 min")
-        XCTAssertEqual(CyDesign.minutesText(93), "1h 33m")
-        XCTAssertEqual(CyDesign.minutesText(120), "2h")
+        XCTAssertEqual(CyDesign.minutesText(93), "1 h 33 min")
+        XCTAssertEqual(CyDesign.minutesText(120), "2 h")
         XCTAssertEqual(CyDesign.minutesText(-5), "0 min")
         XCTAssertEqual(CyDesign.timerText(48), "0:48")
         XCTAssertEqual(CyDesign.timerText(125), "2:05")

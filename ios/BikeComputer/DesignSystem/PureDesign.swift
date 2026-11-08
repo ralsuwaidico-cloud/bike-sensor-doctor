@@ -211,12 +211,8 @@ enum CyDesign {
         "\(Int((clampFraction(fraction) * 100).rounded()))%"
     }
 
-    /// Minutes → "1h 33m" / "58 min" / "0 min".
-    static func minutesText(_ minutes: Int) -> String {
-        let m = max(0, minutes)
-        if m >= 60 { return m % 60 == 0 ? "\(m / 60)h" : "\(m / 60)h \(m % 60)m" }
-        return "\(m) min"
-    }
+    /// Minutes → the app's one duration format (Fmt.duration): "1 h 33 min" / "58 min" / "0 min". Owner 8 Nov: no second format.
+    static func minutesText(_ minutes: Int) -> String { Fmt.duration(minutes: max(0, minutes)) }
 
     /// Rest-timer ring: remaining ÷ total, clamped; a zero total is "done".
     static func timerFraction(remaining: Double, total: Double) -> Double {

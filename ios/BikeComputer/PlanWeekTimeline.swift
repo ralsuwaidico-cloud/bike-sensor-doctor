@@ -15,17 +15,24 @@ struct PlanWeekTimeline: View {
     var body: some View {
         VStack(spacing: 6) {
             ForEach(days) { d in
-                // Run 204: a Button whose label holds the chip Buttons was not exposed as `planDay-<n>` to XCUITest / assistive
-                // tech (seven day buttons: 0 of 7 on every device). The row is a plain tappable view (the pattern used by
-                // rideMiniMap); the chips keep their own Buttons and win the tap over the row. One accessibility element per
-                // day: the row's label names every session; VoiceOver opens the Day page, where each session is reachable.
-                row(d)
-                    .onTapGesture { onDay(d) }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(d.accessibilityLabel)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityIdentifier("planDay-\(d.weekday)")
-                    .accessibilityAction { onDay(d) }
+                // Run 204: a Button whose label held the chip Buttons was not exposed as `planDay-<n>` (0 of 7 found on every
+                // device). Owner 8 Nov 20:58: the day row AND each workout chip must be independently reachable by touch and
+                // VoiceOver. Structure: a full-row tap target underneath (the `planDay-<n>` button: opens the Day page, its
+                // label names the day and every session) and the chips on top, each its own Button (`planChip-<id>`: opens
+                // that session). VoiceOver order: day, then its sessions.
+                ZStack(alignment: .leading) {
+                    Color.clear.contentShape(Rectangle())
+                        .onTapGesture { onDay(d) }
+                        .accessibilityElement()
+                        .accessibilityLabel(d.accessibilityLabel)
+                        .accessibilityHint(d.chips.isEmpty && !d.beforePlan ? "Adds a session" : "Opens the day")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityIdentifier("planDay-\(d.weekday)")
+                        .accessibilityAction { onDay(d) }
+                    row(d)   // only the chips take touches; everything else falls through to the day button
+                }
+                .background(d.isToday ? CyTheme.cycling.bg.opacity(0.45) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityElement(children: .contain)
             }
         }
         .accessibilityElement(children: .contain)
@@ -39,6 +46,7 @@ struct PlanWeekTimeline: View {
                 Text(d.date, format: .dateTime.day()).font(.caption2).foregroundStyle(.tertiary)
             }
             .frame(width: 34, alignment: .leading)
+            .allowsHitTesting(false).accessibilityHidden(true)   // spoken by, and tapped through to, the day button underneath
             GeometryReader { g in
                 let stacked = dts.isAccessibilitySize
                 let content = Group {
@@ -53,8 +61,6 @@ struct PlanWeekTimeline: View {
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
         .frame(maxWidth: .infinity, minHeight: DS.minTap)
-        .background(d.isToday ? CyTheme.cycling.bg.opacity(0.45) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
-        .contentShape(Rectangle())
     }
 
     private func chipWidth(_ c: PlanChip, total: CGFloat, count: Int) -> CGFloat {
@@ -65,6 +71,7 @@ struct PlanWeekTimeline: View {
     }
     private func quiet(_ t: String) -> some View {
         Text(t).font(.caption).foregroundStyle(.tertiary).frame(maxWidth: .infinity, alignment: .leading)
+            .allowsHitTesting(false).accessibilityHidden(true)   // the day button underneath carries the tap and the label
     }
     private func chip(_ c: PlanChip, width: CGFloat) -> some View {
         let id = identity(c.sport)

@@ -57,7 +57,7 @@ final class RecoveryAnalysisTests: XCTestCase {
         // tonight 5.2 h → below
         let low = RecoveryAnalysis.metric(.sleep, log: log(sleep: [7.5, 7.6, 7.4, 7.8, 7.3, 7.5, 7.5, 5.2]), now: now)
         XCTAssertEqual(low.standing, .lower); XCTAssertTrue(low.flagged)
-        XCTAssertTrue(low.explanation.hasPrefix("5 h 12, below your usual"), low.explanation)
+        XCTAssertTrue(low.explanation.hasPrefix("5 h 12 min, below your usual"), low.explanation)
         XCTAssertTrue(low.explanation.contains("over 7 nights"), low.explanation)
         // resting HR: higher is the flagged direction; HRV: lower
         let rhr = RecoveryAnalysis.metric(.restingHR, log: log(sleep: [], rhr: [50, 51, 49, 50, 52, 50, 51, 61]), now: now)
@@ -80,7 +80,7 @@ final class RecoveryAnalysisTests: XCTestCase {
         // everything typical → train as planned, with the readings listed
         let plain = RecoveryAnalysis.advice(ms, trainingAllowed: true, todayIsRest: false, now: now)
         XCTAssertEqual(plain.kind, .trainAsPlanned); XCTAssertEqual(plain.title, "Train as planned"); XCTAssertEqual(plain.basis.count, 3)
-        XCTAssertTrue(plain.basis[0].hasPrefix("Sleep: 7 h 24, inside your usual"), plain.basis[0])
+        XCTAssertTrue(plain.basis[0].hasPrefix("Sleep: 7 h 24 min, inside your usual"), plain.basis[0])
         XCTAssertEqual(RecoveryAnalysis.advice(ms, trainingAllowed: true, todayIsRest: true, now: now).title, "Rest as planned")
         // one flag → watch
         let one = log(sleep: [7.5, 7.6, 7.4, 7.8, 7.3, 7.5, 7.5, 5.0], rhr: [50, 51, 49, 50, 52, 50, 51, 50], hrv: [60, 58, 62, 61, 59, 60, 63, 61])

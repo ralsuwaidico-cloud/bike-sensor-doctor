@@ -57,4 +57,32 @@ final class HubTapReliabilityTests: XCTestCase {
         print("hub reliability: \(48 - all.count)/48 first-attempt taps opened the hub")
         for m in all { XCTFail(m) }
     }
+
+    /// Owner 8 Nov 20:58: a test synchronisation fix is not proof that Close works at runtime. This loop does what a person
+    /// does — open the hub, look at it for half a second, tap Close once, plainly (no settle logic, no retry) — twelve
+    /// times on the state that missed in run 204. Every cycle must close the hub; a miss is a runtime defect, not timing.
+    func testCloseAtHumanPaceAlwaysClosesTheHub() {
+        let app = XCUIApplication()
+        app.launchEnvironment["BC_UITEST_SEED_JSON"] = LayoutAudit.homeStore("multi")
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        sleep(2)
+        let centre = app.buttons["centreButton"].firstMatch
+        let hub = app.descendants(matching: .any)["trainingHub"].firstMatch
+        let close = app.buttons["hubClose"].firstMatch
+        var closed = 0
+        for i in 1...12 {
+            if !hub.exists { _ = centre.waitUntilSettled(timeout: 5); centre.tap() }
+            XCTAssertTrue(hub.waitForExistence(timeout: 6), "cycle \(i): hub open")
+            Thread.sleep(forTimeInterval: 0.5)                // a person's glance, not a machine's zero-delay tap
+            XCTAssertTrue(close.exists, "cycle \(i): Close present")
+            close.tap()                                       // ONE plain tap
+            if hub.waitUntilGone(timeout: 4) { closed += 1 } else {
+                let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-hub-close-human-\(i)"; a.lifetime = .keepAlways; add(a)
+                XCTFail("cycle \(i): one plain Close tap after 0.5 s did not close the hub (Close frame \(close.frame))")
+            }
+            Thread.sleep(forTimeInterval: 0.4)
+        }
+        print("hub close at human pace: \(closed)/12")
+    }
 }

@@ -173,7 +173,7 @@ enum RecoveryAnalysis {
     }
     static func valueText(_ k: HealthSample.Kind, _ v: Double) -> String {
         switch k {
-        case .sleep: let h = Int(v), m = Int(((v - Double(h)) * 60).rounded()); return m == 60 ? "\(h + 1) h 00" : "\(h) h \(String(format: "%02d", m))"
+        case .sleep: return Fmt.duration(minutes: Int((v * 60).rounded()))   // one duration format app-wide (owner 8 Nov): "7 h 5 min", "8 h"
         case .restingHR: return "\(Int(v.rounded())) bpm"
         case .hrv: return "\(Int(v.rounded())) ms"
         case .weight: return String(format: "%.1f kg", v)

@@ -26,6 +26,24 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 10), "a day row opens the Day page")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(el(app, "planDayStrip").waitForExistence(timeout: 10), "back on Plan")
+        // Owner 8 Nov 20:58: the day rows and the workout chips are independent controls. The "multi" fixture has sessions
+        // this week, so chips exist as buttons of their own, each labelled with its session, duration and state, and a chip
+        // tap opens that session (a sheet with a navigation bar), not the Day page.
+        XCTAssertEqual((1...7).filter { app.buttons["planDay-\($0)"].exists }.count, 7, "seven day buttons")
+        let chips = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'planChip-'"))
+        XCTAssertGreaterThan(chips.count, 0, "workout chips are buttons of their own")
+        let chip = chips.element(boundBy: 0)
+        XCTAssertTrue(chip.label.contains(",") && chip.label.lowercased().rangeOfCharacter(from: .letters) != nil, "chip label names session, duration and state: '\(chip.label)'")
+        XCTAssertFalse(chip.label.contains("planChip"), "chip label is spoken text, not an identifier")
+        if chip.tapWhenSettled() {
+            let sheetBar = app.navigationBars.matching(NSPredicate(format: "identifier != 'Plan'")).firstMatch
+            XCTAssertTrue(sheetBar.waitForExistence(timeout: 10), "a chip opens its session sheet (Strength / session detail)")
+            XCTAssertFalse(el(app, "homeDayDetail").exists, "a chip opens the session, not the Day page")
+            // close the sheet: its Done / Close / back control, else swipe it down
+            let done = sheetBar.buttons["Done"].firstMatch
+            if done.waitForExistence(timeout: 3) { done.tapWhenSettled() } else { app.swipeDown(velocity: .fast) }
+            XCTAssertTrue(el(app, "planDayStrip").waitForExistence(timeout: 10), "back on Plan after the session sheet")
+        } else { XCTFail("chip never had a settled frame") }
         // the Why line under the next session is text, never a control that invents a reason
         XCTAssertTrue(el(app, "planNextWhy").exists || !el(app, "planNextWhy").exists)
         XCTAssertEqual(app.state, .runningForeground)
