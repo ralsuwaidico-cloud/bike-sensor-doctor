@@ -18,7 +18,9 @@ BikeComputer; "LILYGO" = the Cyclift Watch (ESP32).
 | Recovery data (sleep, HRV, resting HR, weight) | Apple Health is the source; Phone `HealthReads` copies the latest samples with source + timestamp | Home recovery card, Recovery page, LILYGO (Cached frame) | One source per night for sleep (APP-031); stale (> 24 h) flagged; absent ≠ zero | HealthReads.swift |
 | Apple Health export (workouts) | **Watch** when it recorded the workout (`WorkoutManager`); **Phone** only for phone-only rides, under the approved setting and permission | — | One workout per ride: `RideRecord.healthExportUUID` is set once; the phone never exports a ride the Watch recorded; a denied permission never blocks saving the Cyclift ride | Ride/RideHealthExport.swift, BikeComputerWatch/WorkoutManager.swift |
 | Sync status (Board) | Phone (`ProfileSync` record per board) | Devices screen | Phone authoritative after confirmation; the Board's shared settings are overwritten by the phone, never the reverse except by the rider's explicit "adopt" | ProfileSync.swift |
-| Sync status (LILYGO) | LILYGO `EventQueue` (unacknowledged events) + Phone `DedupFilter` | both status screens | Cumulative acks; resend after reconnect; bounded queue with explicit overflow warning | sync.hpp |
+| Sync status (LILYGO) | LILYGO `EventQueue` (unacknowledged events) + Phone `CyWatchSession.acked` (persisted per device) | Connections › Cyclift Watch, watch status screen | Cumulative acks; resend after reconnect; an event with seq ≤ acked is acknowledged again but never re-applied; bounded queue with explicit overflow warning | sync.hpp, Watch/CyWatchLink.swift |
+| LILYGO ride controls | Phone `RideRecorder` (or the Board through it) | — | Watch Start/Pause/Resume/Lap/End are commands under the same one-owner rules as the Apple Watch; the LILYGO never creates a ride record | Watch/CyWatchCoordinator.swift |
+| LILYGO logged sets | Phone `Store.activeSession` | Strength log | A set event (exercise×100+set, reps, weight×10) marks that set done in the phone's session for the planned workout; Save finishes the session, Discard drops it; an event for an unknown workout with no session open is ignored, never invented | Watch/CyWatchCoordinator.swift |
 
 ## Competing recorders — the three cases
 
@@ -29,4 +31,4 @@ BikeComputer; "LILYGO" = the Cyclift Watch (ESP32).
 ## What is not yet implemented (tracked)
 
 - Board ride-step / target protocol (R-020): specified separately, firmware change needs the owner's approval; not flashed.
-- LILYGO: the BLE transport exists in firmware (service `6E400001-…`); the iPhone companion module that speaks protocol v1 is W2 work.
+- LILYGO: firmware BLE transport (service `6E400001-…`) and the iPhone companion (`Watch/CyWatchWire.swift`, `CyWatchLink.swift`, `CyWatchCoordinator.swift`) both speak protocol v1; the codecs are cross-checked byte for byte against the firmware's encoder (CyWatchWireTests). The link is Simulator-untestable (CoreBluetooth) and remains **not hardware-tested** until a flashed watch exists; the pure session (reassembly, CRC drop, cumulative ack, duplicate suppression) and event application are unit-tested.

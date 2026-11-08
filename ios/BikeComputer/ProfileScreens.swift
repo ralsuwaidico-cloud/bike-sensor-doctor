@@ -355,6 +355,7 @@ struct DevicesScreen: View {
             VStack(alignment: .leading, spacing: CyTheme.sp4) {
                 legend
                 DeviceCardList()
+                CyWatchCard()
                 CyCaption(text: "In use now")
                 VStack(spacing: 0) { InUseNowRows(hub: hub) }.padding(.horizontal, 6).cyCard()
                 NavigationLink { PipelineDiagnosticsView() } label: {

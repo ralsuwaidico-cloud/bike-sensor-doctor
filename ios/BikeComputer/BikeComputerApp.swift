@@ -15,6 +15,7 @@ struct BikeComputerApp: App {
     @StateObject private var hub: SensorHub
     @StateObject private var monitor: PipelineMonitor
     @StateObject private var diag: DiagReportCenter
+    @StateObject private var cyWatch: CyWatchCoordinator
 
     init() {
         let s = Store()
@@ -72,6 +73,10 @@ struct BikeComputerApp: App {
         dc.onLog = { [weak m] t in m?.log("board", t) }
         m.diagCenter = dc
         _diag = StateObject(wrappedValue: dc)
+        // Cyclift Watch (LILYGO): protocol v1 companion — same one-owner rules; enabled from Connections
+        let cw = CyWatchCoordinator(); cw.attach(store: s, hub: h, recorder: r, device: d, location: l)
+        if s.settings.cyWatchEnabled { cw.link.start() }
+        _cyWatch = StateObject(wrappedValue: cw)
         let acc = AccountService()
         _account = StateObject(wrappedValue: acc)
         _cloud = StateObject(wrappedValue: SyncEngine(store: s, account: acc))
@@ -98,6 +103,7 @@ struct BikeComputerApp: App {
                 .environmentObject(watchLink)
                 .environmentObject(location)
                 .environmentObject(recorder)
+                .environmentObject(cyWatch)
                 .environmentObject(sync)
                 .environmentObject(reach)
                 .environmentObject(health)

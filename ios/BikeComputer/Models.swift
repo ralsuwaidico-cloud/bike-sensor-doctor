@@ -653,11 +653,14 @@ struct AppSettings: Codable, Equatable {
     /// outdoor display), Auto (follows `appearance`). Presentation only.
     enum RideDisplay: String, Codable, CaseIterable { case night, daylight, auto; var title: String { self == .auto ? "Auto" : self == .daylight ? "Daylight" : "Night" } }
     var rideDisplay: RideDisplay = .night
+    /// Cyclift Watch (LILYGO) companion link on this phone (Connections › Cyclift Watch). Off until the athlete turns it on.
+    var cyWatchEnabled = false
 
     init() {}
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         rideDisplay = (try? c.decodeIfPresent(RideDisplay.self, forKey: .rideDisplay)) ?? .night
+        cyWatchEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .cyWatchEnabled)) ?? false
         units = (try? c.decodeIfPresent(Units.self, forKey: .units)) ?? .metric
         phoneOnlyMode = try c.decodeIfPresent(Bool.self, forKey: .phoneOnlyMode) ?? false
         hrPref = (try? c.decodeIfPresent(HRPref.self, forKey: .hrPref)) ?? .strap
