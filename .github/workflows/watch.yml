@@ -1,0 +1,13 @@
+name: Cyclift Watch (host tests)
+on:
+  push:
+    branches: ['watch/**']
+    paths: ['watch/**', '.github/workflows/watch.yml']
+  workflow_dispatch:
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Domain tests on the host (no hardware, no flashing)
+        run: make -C watch/firmware/test/host
