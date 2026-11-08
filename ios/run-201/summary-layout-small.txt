@@ -1,0 +1,10 @@
+BikeComputer iOS CI — build 201 — 2026-11-08 14:09 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 2m21s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT layout audit: FAILED (build)
+Total: 2m40s

@@ -1,0 +1,94 @@
+BikeComputer iOS CI — run 201 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 201 — 2026-11-08 14:11 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): FAILED (exit 65) · 1m23s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT tests: FAILED (build)
+Total: 2m5s
+
+## smoke
+BikeComputer iOS CI — build 201 — 2026-11-08 14:09 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): FAILED (exit 65) · 2m57s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT launch smoke (Release): FAILED (build)
+Total: 4m7s
+
+## journeys
+BikeComputer iOS CI — build 201 — 2026-11-08 14:12 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): FAILED (exit 65) · 2m8s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT journey (recorded): FAILED (build)
+Total: 2m41s
+
+## layout-small
+BikeComputer iOS CI — build 201 — 2026-11-08 14:09 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 2m21s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT layout audit: FAILED (build)
+Total: 2m40s
+
+## layout-standard
+BikeComputer iOS CI — build 201 — 2026-11-08 14:09 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 2m22s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT layout audit: FAILED (build)
+Total: 2m36s
+
+## layout-promax
+BikeComputer iOS CI — build 201 — 2026-11-08 14:11 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 2m1s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT layout audit: FAILED (build)
+Total: 2m13s
+
+## layout-owner
+BikeComputer iOS CI — build 201 — 2026-11-08 14:08 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 2m42s — expected '{' to start the body of for-each loop Expected '{' to start the body of for-each loop 
+RESULT layout audit: FAILED (build)
+Total: 3m30s
+
+## watch
+BikeComputer iOS CI — build 201 — 2026-11-08 14:09 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11970   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12525   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12751   screenshot ax3 ok large · 11m39s
+Total: 11m47s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit ce9b4c26a4ff6c6e3f02f5b9038ba4b858abeebc  branch ios/checkpoint-f-ride  job failure
