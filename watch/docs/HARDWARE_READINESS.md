@@ -62,5 +62,12 @@ by the owner following the two commands — **either way it needs the owner's go
 
 - Revision and T-U2T presence unconfirmed (owner, 2 minutes).
 - Every on-device figure (frame rate, latency, RAM, battery, BLE) is **pending**; estimates in the gallery are labelled as such.
-- PlatformIO toolchain is not available in this cloud workspace; firmware compiles run in GitHub Actions (job added in the watch workflow) — the first compile result is the real flash-size figure.
+- PlatformIO toolchain is not available in this cloud workspace; firmware compiles run in GitHub Actions. **First real device build (8 Nov, run 42485131249, Arduino-ESP32 3.3.12, LVGL 8.3.11, NimBLE 1.4.3) — compiled, NOT flashed:**
+
+| Image | Static RAM (of 320 KB DRAM) | Flash (of the 3 MB OTA slot) |
+|---|---|---|
+| Application `T-Watch-2021-V1_1` | 111 856 B · 34.1 % | 2 190 064 B · 69.6 % |
+| Diagnostics `T-Watch-2021-V1_1-diag` (M1) | 105 848 B · 32.3 % | 1 545 559 B · 49.1 % |
+
+  These are linker figures (static .data/.bss and image size). Runtime heap, PSRAM use, frame rate and battery remain **pending on-device measurements**. Flash headroom in the OTA slot is ~0.9 MB; the five Montserrat sizes (12–48) are most of the difference between the two images.
 - Flashing of any kind waits for the owner's explicit approval of the exact M-step.
