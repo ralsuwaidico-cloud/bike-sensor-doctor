@@ -19,19 +19,23 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         el(app, "planRing").tap()
         XCTAssertTrue(el(app, "homeWeekOverview").waitForExistence(timeout: 10), "ring opens the weekly overview")
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        // a day row → that day's page
-        let today = Calendar.current.component(.weekday, from: Date())
-        let row = app.buttons["planDay-\(today)"].firstMatch
-        XCTAssertTrue(row.waitForExistence(timeout: 10), "today's row"); row.tap()
-        XCTAssertTrue(el(app, "homeDayDetail").waitForExistence(timeout: 10), "a day row opens the Day page")
+        // a day row → that day's page. Run 205: tapping the row's centre could land on a workout chip (its own control,
+        // opens the session) — a person opening the day taps the day name, so the test taps the leading edge of a row
+        // that has sessions (label "Mon, Endurance ride, …"); an empty day opens "add a session" instead, by design.
+        let withSessions = (1...7).map { app.buttons["planDay-\($0)"].firstMatch }.first { $0.exists && $0.label.contains(";") || ($0.exists && $0.label.contains(",") && !$0.label.contains("day") && !$0.label.contains("before")) }
+        let row = withSessions ?? app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch
+        expect(row.waitForExistence(timeout: 10), "a day row with sessions", tag: "dayrow")
+        _ = row.waitUntilSettled(timeout: 5)
+        row.coordinate(withNormalizedOffset: CGVector(dx: 0.06, dy: 0.5)).tap()
+        expect(el(app, "homeDayDetail").waitForExistence(timeout: 10), "a day row opens the Day page (label: \(row.label))", tag: "daypage")
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        XCTAssertTrue(el(app, "planDayStrip").waitForExistence(timeout: 10), "back on Plan")
+        expect(el(app, "planDayStrip").waitForExistence(timeout: 10), "back on Plan", tag: "backplan")
         // Owner 8 Nov 20:58: the day rows and the workout chips are independent controls. The "multi" fixture has sessions
         // this week, so chips exist as buttons of their own, each labelled with its session, duration and state, and a chip
         // tap opens that session (a sheet with a navigation bar), not the Day page.
-        XCTAssertEqual((1...7).filter { app.buttons["planDay-\($0)"].exists }.count, 7, "seven day buttons")
+        expect((1...7).filter { app.buttons["planDay-\($0)"].exists }.count == 7, "seven day buttons", tag: "sevendays")
         let chips = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'planChip-'"))
-        XCTAssertGreaterThan(chips.count, 0, "workout chips are buttons of their own")
+        expect(chips.count > 0, "workout chips are buttons of their own", tag: "chips")
         let chip = chips.element(boundBy: 0)
         XCTAssertTrue(chip.label.contains(",") && chip.label.lowercased().rangeOfCharacter(from: .letters) != nil, "chip label names session, duration and state: '\(chip.label)'")
         XCTAssertFalse(chip.label.contains("planChip"), "chip label is spoken text, not an identifier")
@@ -75,10 +79,12 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         app.launchEnvironment["BC_UITEST_SEED_JSON"] = LayoutAudit.homeStore("multi")
         app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
-        let card = app.buttons["homeRecovery"].firstMatch
-        for _ in 0..<4 where !card.isHittable { app.swipeUp(velocity: .slow) }
-        XCTAssertTrue(card.waitForExistence(timeout: 10), "recovery card"); card.tap()
-        XCTAssertTrue(el(app, "homeRecoveryPage").waitForExistence(timeout: 10), "Recovery page")
+        // run 205: the card (a Button with children ignored) is not returned by `app.buttons` — found by identifier on any
+        // element, the way HomeNavigationTests reaches it
+        let card = el(app, "homeRecovery")
+        for _ in 0..<6 where !(card.exists && card.isHittable) { app.swipeUp(velocity: .slow); sleep(1) }
+        expect(card.waitForExistence(timeout: 10), "recovery card", tag: "card"); card.tap()
+        expect(el(app, "homeRecoveryPage").waitForExistence(timeout: 10), "Recovery page", tag: "page")
         // no reads turned on in the seed → the empty state, the reason, one action; never a score or an invented reading
         XCTAssertTrue(app.staticTexts["No readings yet"].firstMatch.waitForExistence(timeout: 5) || el(app, "recoveryAdvice").exists)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'score'")).firstMatch.exists, "no recovery score anywhere")

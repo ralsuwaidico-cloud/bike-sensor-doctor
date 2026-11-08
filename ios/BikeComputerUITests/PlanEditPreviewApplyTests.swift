@@ -20,7 +20,9 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         let more = app.buttons["moreMenu"].firstMatch
         XCTAssertTrue(more.waitForExistence(timeout: 5)); more.tap()
         let edit = app.buttons["Edit type / duration"].firstMatch
-        XCTAssertTrue(edit.waitForExistence(timeout: 5), "More offers Edit"); edit.tap()
+        expect(edit.waitForExistence(timeout: 5), "More offers Edit", tag: "more-edit")
+        // run 205: "failed to compute hit point" — the menu was still animating; tap once the item has a settled frame
+        expect(edit.tapWhenSettled(timeout: 5), "Edit menu item settles", tag: "edit-settle")
         let slider = app.sliders["editDuration"].firstMatch
         XCTAssertTrue(slider.waitForExistence(timeout: 10), "duration slider")
         let before = slider.value as? String ?? ""
@@ -39,7 +41,7 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         if cancel.exists { cancel.tap(); XCTAssertTrue(preview.waitUntilGone(timeout: 5), "cancel closes the preview") }
         // the edit sheet is still there (or we are back on the session); redo the review and apply this time
         if !app.buttons["editSave"].firstMatch.exists {
-            more.tap(); app.buttons["Edit type / duration"].firstMatch.tap()
+            more.tap(); let e2 = app.buttons["Edit type / duration"].firstMatch; _ = e2.waitForExistence(timeout: 5); _ = e2.tapWhenSettled(timeout: 5)
             XCTAssertTrue(slider.waitForExistence(timeout: 10)); slider.adjust(toNormalizedSliderPosition: 0.15)
         }
         app.buttons["editSave"].firstMatch.tap()

@@ -33,7 +33,11 @@ final class HubTapReliabilityTests: XCTestCase {
             } else { misses.append("\(state) cycle \(i): hub has no Close button") }
             if !hub.waitUntilGone(timeout: 6) {
                 let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-hub-close-\(state)-\(i)"; a.lifetime = .keepAlways; add(a)
-                XCTFail("\(state) cycle \(i): hub closes again (Close frame \(close.frame), hittable \(close.isHittable))")
+                // run 205: the hub was still there but its Close was NOT (a query on it threw) — the screenshot above shows
+                // what covered or replaced it; the message says so instead of throwing
+                let closeState = close.exists ? "Close frame \(close.frame), hittable \(close.isHittable)" : "Close no longer present (sheet or pushed page over the hub?)"
+                let bars = app.navigationBars.allElementsBoundByIndex.map(\.identifier)
+                XCTFail("\(state) cycle \(i): hub closes again — \(closeState); navigation bars: \(bars); sheets: \(app.sheets.count)")
             }
             _ = centre.waitUntilSettled(timeout: 3)
         }

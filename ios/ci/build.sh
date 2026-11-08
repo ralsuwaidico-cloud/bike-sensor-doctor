@@ -270,7 +270,32 @@ run_smoke() {
     done
     xcrun simctl spawn "$SIM" log show --last 15m --predicate 'process == "BikeComputer" OR (eventMessage CONTAINS "BikeComputer" AND messageType == error)' 2>/dev/null \
       | grep -v "^Filtering" | tail -400 | scrub > "$LOGS/sim-app-log.txt"
+    export_fail_shots "$OUT/uitests.xcresult" smoke
   fi
+}
+
+# Run 205: the failure screenshots the UI tests attach (XCTAttachment named FAIL-…) stayed inside the xcresult, which the
+# owner's environment cannot download. Export them into $OUT/layout so the publish job copies them to ci-logs/…/layout.
+export_fail_shots() {   # <xcresult> <stage>
+  local xr="$1" tag="$2" d; [ -d "$xr" ] || return 0
+  d=$(mktemp -d)
+  xcrun xcresulttool export attachments --path "$xr" --output-path "$d" >/dev/null 2>&1 || return 0
+  mkdir -p "$OUT/layout"
+  python3 - "$d" "$OUT/layout" "$tag" <<'PY' 2>/dev/null || true
+import json, os, shutil, sys
+src, dst, tag = sys.argv[1:4]
+m = os.path.join(src, "manifest.json")
+if not os.path.exists(m): sys.exit(0)
+n = 0
+for t in json.load(open(m)):
+    for a in t.get("attachments", []):
+        name = a.get("suggestedHumanReadableName") or a.get("exportedFileName") or ""
+        if not name.startswith("FAIL-") or n >= 40: continue
+        f = os.path.join(src, a["exportedFileName"])
+        if os.path.exists(f):
+            shutil.copy(f, os.path.join(dst, f"{tag}-{name}".replace("/", "-") + ("" if name.endswith(".png") else ".png"))); n += 1
+print(f"exported {n} FAIL screenshots")
+PY
 }
 
 # ---------------------------------------------------------------- layout audit (quality release)

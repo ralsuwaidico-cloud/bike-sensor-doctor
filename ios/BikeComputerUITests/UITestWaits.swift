@@ -93,3 +93,21 @@ extension XCUIApplication {
         if c.exists && c.isHittable { c.tap() }
     }
 }
+
+extension XCTestCase {
+    /// Run 205: assertion text alone could not explain the smoke failures. `expect` is XCTAssertTrue plus, on failure, a
+    /// full-screen screenshot kept as an attachment named `FAIL-<test>-<tag>` — ios/ci/build.sh exports those into the
+    /// published ci-logs layout folder. Use it for every step whose failure needs to be seen, not just read.
+    @discardableResult
+    func expect(_ condition: @autoclosure () -> Bool, _ message: String, tag: String, file: StaticString = #filePath, line: UInt = #line) -> Bool {
+        let ok = condition()
+        if !ok {
+            let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            a.name = "FAIL-\(name.replacingOccurrences(of: "-[", with: "").replacingOccurrences(of: "]", with: "").replacingOccurrences(of: " ", with: "."))-\(tag)"
+            a.lifetime = .keepAlways
+            add(a)
+            XCTFail(message, file: file, line: line)
+        }
+        return ok
+    }
+}

@@ -19,11 +19,16 @@ final class StrengthSessionJourneyTests: XCTestCase {
 
         // the live session: a next-set card with a target and a Log set action
         let card = app.descendants(matching: .any)["nextSetCard"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 10), "live session shows the next set")
+        expect(card.waitForExistence(timeout: 10), "live session shows the next set", tag: "card")
         let target = app.descendants(matching: .any)["nextSetTarget"].firstMatch
-        XCTAssertTrue(target.exists && !target.label.isEmpty, "the next set names its target")
+        // run 205: the card existed but neither the target nor Log set did (model-level probe of the same seed finds two
+        // open sets per exercise) — wait for the target, and on failure keep a screenshot plus the card's hierarchy
+        if !target.waitForExistence(timeout: 5) {
+            print("RUN205-DIAG next-set card hierarchy:\n\(card.debugDescription)\nnavigation bars: \(app.navigationBars.allElementsBoundByIndex.map(\.identifier))")
+        }
+        expect(target.exists && !target.label.isEmpty, "the next set names its target (all-sets-done shown: \(app.buttons["nextSetFinish"].firstMatch.exists))", tag: "target")
         let log = app.buttons["logSet"].firstMatch
-        XCTAssertTrue(log.waitForExistence(timeout: 5) && log.isHittable, "Log set is reachable")
+        expect(log.waitForExistence(timeout: 5) && log.isHittable, "Log set is reachable", tag: "logset")
         log.tap()
         // a rest timer or the next card follows; either way a second set can be logged
         _ = app.descendants(matching: .any)["restTimer"].firstMatch.waitForExistence(timeout: 3)

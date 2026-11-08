@@ -20,18 +20,20 @@ struct PlanWeekTimeline: View {
                 // VoiceOver. Structure: a full-row tap target underneath (the `planDay-<n>` button: opens the Day page, its
                 // label names the day and every session) and the chips on top, each its own Button (`planChip-<id>`: opens
                 // that session). VoiceOver order: day, then its sessions.
-                ZStack(alignment: .leading) {
-                    Color.clear.contentShape(Rectangle())
-                        .onTapGesture { onDay(d) }
-                        .accessibilityElement()
-                        .accessibilityLabel(d.accessibilityLabel)
-                        .accessibilityHint(d.chips.isEmpty && !d.beforePlan ? "Adds a session" : "Opens the day")
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityIdentifier("planDay-\(d.weekday)")
-                        .accessibilityAction { onDay(d) }
-                    row(d)   // only the chips take touches; everything else falls through to the day button
-                }
-                .background(d.isToday ? CyTheme.cycling.bg.opacity(0.45) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                // (The tap layer is a background — not a ZStack sibling — so the flexible Color.clear cannot stretch the row
+                // inside the scroll view; a background takes the row's own size.)
+                row(d)   // only the chips take touches; everything else falls through to the day button behind
+                    .background {
+                        Color.clear.contentShape(Rectangle())
+                            .onTapGesture { onDay(d) }
+                            .accessibilityElement()
+                            .accessibilityLabel(d.accessibilityLabel)
+                            .accessibilityHint(d.chips.isEmpty && !d.beforePlan ? "Adds a session" : "Opens the day")
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityIdentifier("planDay-\(d.weekday)")
+                            .accessibilityAction { onDay(d) }
+                    }
+                    .background(d.isToday ? CyTheme.cycling.bg.opacity(0.45) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
                 .accessibilityElement(children: .contain)
             }
         }

@@ -27,15 +27,17 @@ final class AdaptiveSmokeTests: XCTestCase {
         XCTAssertTrue(log.waitForExistence(timeout: 30), "Log strength on Plan")
         var opened = false
         for _ in 0..<3 where !opened {
-            if !app.buttons["Quick log"].firstMatch.exists { log.tap() }
-            let quick = app.buttons["Quick log"].firstMatch
+            // run 205: the Plan page's own "Quick log" band row shares the label, existed off-screen, and was "tapped" there
+            // three times while the menu never opened — the menu item is found by its identifier (as LaunchSmokeTests does)
+            let quick = app.buttons["planMenuQuickLog"].firstMatch
+            if !quick.exists { log.tap() }
             if quick.waitForExistence(timeout: 5) {
                 quick.tapWhenSettled()   // run 117: isHittable throws while the menu animates — wait for a settled frame (UITestWaits)
             }
             opened = app.navigationBars["Log strength"].waitForExistence(timeout: 10)
         }
         let logBar = app.navigationBars["Log strength"]
-        XCTAssertTrue(logBar.waitForExistence(timeout: 10), "quick strength log opens")
+        expect(logBar.waitForExistence(timeout: 10), "quick strength log opens", tag: "quicklog")
         let save = logBar.buttons["Save"].firstMatch
         XCTAssertTrue(save.waitForExistence(timeout: 5))
         save.tap()
