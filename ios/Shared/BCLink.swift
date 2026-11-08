@@ -36,8 +36,9 @@ enum BCLink {
         case settingsSet = 0x74, settings = 0x75, settingsGet = 0x76
         /* 1.2.3 diagnostic report transfer (firmware 0.7.3, cap 0x400) — Control characteristic, phone-driven pull */
         case diagListReq = 0x80, diagInfo = 0x81, diagListEnd = 0x82, diagChunkReq = 0x83, diagChunk = 0x84, diagAck = 0x85, diagErr = 0x86
-        /* 1.3 ride steps and targets (R-020, docs/LINK_V1_2_SPEC.md §1.3, cap 0x800) — specified; no shipped firmware reports the cap yet */
-        case stepsBegin = 0x90, step = 0x91, stepsEnd = 0x92, stepsAck = 0x93, stepsClear = 0x94
+        /* 1.3 ride steps and targets (R-020, docs/LINK_V1_2_SPEC.md §1.3, cap 0x10000) — specified; no shipped firmware reports the cap yet.
+           Renumbered 8 Nov 2026 (handover A9): 0x90–0x94 / cap 0x0800 were already Link 1.3 RIDEQ_* / HELLO on fw/phonefirst. */
+        case stepsBegin = 0xC0, step = 0xC1, stepsEnd = 0xC2, stepsAck = 0xC3, stepsClear = 0xC4
     }
 
     enum Source: UInt8 {
@@ -126,7 +127,7 @@ enum BCLink {
         static let capLive: UInt32 = 0x01, capGPS: UInt32 = 0x02, capHR: UInt32 = 0x04, capWeather: UInt32 = 0x08, capCtrl: UInt32 = 0x10, capTime: UInt32 = 0x20, capRideSync: UInt32 = 0x40
         static let capWiFi: UInt32 = 0x80, capProfileSync: UInt32 = 0x100, capSettings: UInt32 = 0x200
         static let capDiagXfer: UInt32 = 0x400
-        static let capSteps: UInt32 = 0x800
+        static let capSteps: UInt32 = 0x10000   // R-020 ride steps (0x0800 is Link 1.3 HELLO)
         var hasDiagXfer: Bool { caps & Info.capDiagXfer != 0 }
         var hasSteps: Bool { caps & Info.capSteps != 0 }
         var hasRideSync: Bool { caps & Info.capRideSync != 0 }

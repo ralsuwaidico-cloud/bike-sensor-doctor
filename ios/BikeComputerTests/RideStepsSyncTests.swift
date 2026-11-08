@@ -55,7 +55,7 @@ final class RideStepsSyncTests: XCTestCase {
 
     func testCapabilityGateIsOffForEveryShippedFirmware() {
         var i = BCLink.Info(); i.caps = BCLink.Info.capLive | BCLink.Info.capCtrl | BCLink.Info.capDiagXfer
-        XCTAssertFalse(i.hasSteps, "no shipped board reports cap 0x800; the phone must not send steps")
+        XCTAssertFalse(i.hasSteps, "no shipped board reports cap 0x10000; the phone must not send steps")
         i.caps |= BCLink.Info.capSteps; XCTAssertTrue(i.hasSteps)
     }
 }

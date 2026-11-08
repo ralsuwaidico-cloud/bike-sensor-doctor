@@ -2,7 +2,7 @@ import Foundation
 
 // R-020 (master order §6.3): today's planned ride as Link 1.3 step messages. Targets are computed HERE from the phone's
 // FTP state (ios/OWNERSHIP.md: FTP has one owner); an unknown FTP sends NO watt bands and an unverified one is already
-// 5 % lower (profile.targetFTP, ENG-E1), so the board can never show a target the phone would not. Pure; DeviceLink sends the result only when the board reports cap 0x800.
+// 5 % lower (profile.targetFTP, ENG-E1), so the board can never show a target the phone would not. Pure; DeviceLink sends the result only when the board reports cap 0x10000.
 enum RideStepsSync {
     struct Bundle: Equatable { var header: BCLink.StepsHeader; var steps: [BCLink.StepMessage]; var version: UInt32 }
 

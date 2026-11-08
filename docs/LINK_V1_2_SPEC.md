@@ -109,21 +109,26 @@ Phone side: stores reports in Application Support/Diagnostics/<board-id>/<report
 (board id, report_id), shows "Diagnostic report ready" / "Report saved", shares via the system share sheet. No server upload
 without explicit owner authorization (a disabled-by-default upload hook only).
 
-## 1.3 — ride steps and targets (R-020; cap 0x800) — SPECIFIED 8 Nov 2026, firmware change NOT yet approved / NOT flashed
+## 1.3 — ride steps and targets (R-020; cap 0x10000) — SPECIFIED 8 Nov 2026, firmware change NOT yet approved / NOT flashed
 
 The phone owns the plan (ios/OWNERSHIP.md). Today's ride is sent to the board as a list of steps with their targets, so
 the board can show the current step, the target band and the time left exactly as the phone does — never a second
 plan. The board uses only the FTP / zones the phone sends inside the message; it never computes a target from its own
-legacy profile. Everything is on the Control characteristic, gated on INFO caps bit 0x800; a board without the bit
+legacy profile. Everything is on the Control characteristic, gated on INFO caps bit 0x10000; a board without the bit
 receives nothing and the phone shows "step targets on the phone only".
+
+**Numbering (8 Nov 2026, handover issue A9):** this section first used message types 0x90–0x94 and cap 0x0800, which the
+firmware branch `fw/phonefirst` (Link 1.3, `coord/interfaces/BLE_CONTRACT.md` §4/§9) already assigns to RIDEQ_* and
+APP_HELLO. The iPhone side was renumbered to **0xC0–0xC4 and cap 0x10000** before any firmware implements it; nothing
+shipped ever used the old numbers. Firmware design against this section must use the new numbers.
 
 | msg | dir | fields |
 |---|---|---|
-| STEPS_BEGIN 0x90 | phone→board | 01 u32 version (phone-owned, monotonic per workout) · 02 utf8 workout_id (≤ 24 B, the phone's UUID prefix) · 03 utf8 title (≤ 24 B) · 04 u8 step_count (≤ 32) · 05 u16 ftp_w — the phone's **target** FTP (already 5 % lower when known but unverified, ios ENG-E1); 0 = unknown → no watt targets; the board must NOT fall back to its own FTP · 06 u8 ftp_how (0 unknown, 1 entered, 2 estimated, 3 tested) · 07 bytes hr_zones (5 × u16 lower bounds, little-endian; absent = no HR targets) · 08 u8 flags (bit0 replaces any stored steps) |
-| STEP 0x91 | phone→board, one per step after BEGIN, in order | 01 u32 version · 02 u8 index (0-based) · 03 utf8 name (≤ 20 B) · 04 u16 seconds · 05 u8 role (0 warm-up, 1 steady, 2 work, 3 recover, 4 easy, 5 cool-down, 6 test) · 06 u8 rpe_lo · 07 u8 rpe_hi · 08 u8 hr_zone (0 = none) · 09 u16 power_lo_w · 0A u16 power_hi_w (both 0 = no power target; already computed by the phone from the FTP in BEGIN) |
-| STEPS_END 0x92 | phone→board | 01 u32 version · 02 u16 crc16 (CCITT-FALSE over the concatenated STEP payloads after the header, in index order) |
-| STEPS_ACK 0x93 | board→phone after END | 01 u32 version · 02 u8 status (0 stored, 1 rejected_older_version, 2 bad_count, 3 bad_crc, 4 busy_recording, 5 too_many_steps) · 03 u8 stored_count |
-| STEPS_CLEAR 0x94 | phone→board | 01 u32 version — removes the stored steps (the plan changed or the session was skipped); board answers STEPS_ACK status 0 with stored_count 0 |
+| STEPS_BEGIN 0xC0 | phone→board | 01 u32 version (phone-owned, monotonic per workout) · 02 utf8 workout_id (≤ 24 B, the phone's UUID prefix) · 03 utf8 title (≤ 24 B) · 04 u8 step_count (≤ 32) · 05 u16 ftp_w — the phone's **target** FTP (already 5 % lower when known but unverified, ios ENG-E1); 0 = unknown → no watt targets; the board must NOT fall back to its own FTP · 06 u8 ftp_how (0 unknown, 1 entered, 2 estimated, 3 tested) · 07 bytes hr_zones (5 × u16 lower bounds, little-endian; absent = no HR targets) · 08 u8 flags (bit0 replaces any stored steps) |
+| STEP 0xC1 | phone→board, one per step after BEGIN, in order | 01 u32 version · 02 u8 index (0-based) · 03 utf8 name (≤ 20 B) · 04 u16 seconds · 05 u8 role (0 warm-up, 1 steady, 2 work, 3 recover, 4 easy, 5 cool-down, 6 test) · 06 u8 rpe_lo · 07 u8 rpe_hi · 08 u8 hr_zone (0 = none) · 09 u16 power_lo_w · 0A u16 power_hi_w (both 0 = no power target; already computed by the phone from the FTP in BEGIN) |
+| STEPS_END 0xC2 | phone→board | 01 u32 version · 02 u16 crc16 (CCITT-FALSE over the concatenated STEP payloads after the header, in index order) |
+| STEPS_ACK 0xC3 | board→phone after END | 01 u32 version · 02 u8 status (0 stored, 1 rejected_older_version, 2 bad_count, 3 bad_crc, 4 busy_recording, 5 too_many_steps) · 03 u8 stored_count |
+| STEPS_CLEAR 0xC4 | phone→board | 01 u32 version — removes the stored steps (the plan changed or the session was skipped); board answers STEPS_ACK status 0 with stored_count 0 |
 
 Rules both sides follow:
 - The board shows a step ONLY while its own ride state is RUNNING / PAUSED and the stored steps' `workout_id` matches the

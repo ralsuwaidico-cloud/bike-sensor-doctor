@@ -433,7 +433,7 @@ final class DeviceLink: NSObject, ObservableObject {
     func sendDiag(_ d: Data) -> Bool { guard DiagReportCenter.transferAllowed(info) else { return false }; return writeControl(d) }
 
     /// R-020 (Link 1.3): today's ride steps and targets for the board, computed on the phone. Sent only when the board
-    /// reports cap 0x800 — no shipped firmware does yet, so this is inert on every current board. Returns the number of
+    /// reports cap 0x10000 — no shipped firmware does yet, so this is inert on every current board. Returns the number of
     /// messages written (0 = not supported / nothing to send); never a partial set.
     @Published private(set) var lastStepsAck: BCLink.StepsAck?
     @discardableResult
