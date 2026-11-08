@@ -29,26 +29,40 @@ final class StrengthSessionJourneyTests: XCTestCase {
         expect(target.exists && !target.label.isEmpty, "the next set names its target (all-sets-done shown: \(app.buttons["nextSetFinish"].firstMatch.exists))", tag: "target")
         let log = app.buttons["logSet"].firstMatch
         expect(log.waitForExistence(timeout: 5) && log.isHittable, "Log set is reachable", tag: "logset")
-        log.tap()
-        // a rest timer or the next card follows; either way a second set can be logged
-        _ = app.descendants(matching: .any)["restTimer"].firstMatch.waitForExistence(timeout: 3)
-        XCTAssertTrue(log.waitForExistence(timeout: 20), "Log set is available again for the next set")
-        if log.isHittable { log.tap() }
+
+        // Owner 8 Nov 22:59: log EVERY set and confirm the card advances each time — the seed's routine has two exercises
+        // of two sets (4 sets); the target text must change between consecutive sets (set number or exercise), and
+        // after the last set the card offers Finish instead of Log.
+        var logged = 0, lastTarget = ""
+        let setCounter = app.staticTexts.matching(NSPredicate(format: "label MATCHES 'Set [0-9]+ of [0-9]+'")).firstMatch
+        for n in 1...8 where log.exists {
+            let before = (setCounter.exists ? setCounter.label : "") + " " + target.label
+            expect(before != lastTarget, "set \(n): the card advanced to a new set (\(before))", tag: "advance-\(n)")
+            lastTarget = before
+            expect(log.isHittable, "set \(n): Log set hittable", tag: "loghit-\(n)")
+            log.tap(); logged += 1
+            _ = app.descendants(matching: .any)["restTimer"].firstMatch.waitForExistence(timeout: 2)   // rest timer may show between sets
+            if !log.waitForExistence(timeout: 8) { break }
+        }
+        expect(logged == 4, "all four planned sets were logged, got \(logged)", tag: "allsets")
+        let finishFromCard = app.buttons["nextSetFinish"].firstMatch
+        expect(finishFromCard.waitForExistence(timeout: 5), "after the last set the card offers Finish workout", tag: "cardfinish")
+        expect(app.staticTexts.matching(NSPredicate(format: "label == '4/4 sets'")).firstMatch.exists, "the counter reads 4/4 sets", tag: "counter")
 
         // Finish → Save (sets were ticked, so saving is allowed) → the check-in appears
         let finish = app.buttons["finishWorkout"].firstMatch
-        XCTAssertTrue(finish.waitForExistence(timeout: 5)); finish.tap()
+        expect(finish.waitForExistence(timeout: 5), "Finish in the toolbar", tag: "finish"); finish.tap()
         let save = app.buttons["saveWorkout"].firstMatch
-        XCTAssertTrue(save.waitForExistence(timeout: 10), "Finish sheet")
-        XCTAssertTrue(save.isEnabled, "two logged sets → Save is enabled (nothing-to-save state would disable it)")
+        expect(save.waitForExistence(timeout: 10), "Finish sheet", tag: "finishsheet")
+        expect(save.isEnabled, "logged sets → Save is enabled (nothing-to-save state would disable it)", tag: "saveenabled")
         save.tap()
         let checkIn = app.descendants(matching: .any)["checkInForm"].firstMatch
-        XCTAssertTrue(checkIn.waitForExistence(timeout: 10), "a saved session asks for its check-in")
+        expect(checkIn.waitForExistence(timeout: 10), "a saved session asks for its check-in", tag: "checkin")
         let submit = app.buttons["checkInSubmit"].firstMatch
         if submit.waitForExistence(timeout: 3), submit.isEnabled { submit.tap() } else { app.buttons["checkInSkip"].firstMatch.tap() }
 
         // back on Home: the planned session is done and the summary lists today's log with its sets
-        XCTAssertTrue(app.waitForHome(name: "Rashed", timeout: 20), "back on Home after the session")
+        expect(app.waitForHome(name: "Rashed", timeout: 20), "back on Home after the session", tag: "home")
         if app.buttons["hubClose"].firstMatch.exists { app.buttons["hubClose"].firstMatch.tap() }
         let strengthCard = app.buttons["homeStrength"].firstMatch
         XCTAssertTrue(strengthCard.waitForExistence(timeout: 10), "strength card"); strengthCard.tap()
@@ -57,8 +71,11 @@ final class StrengthSessionJourneyTests: XCTestCase {
         for _ in 0..<4 where !expand.isHittable { app.swipeUp(velocity: .slow) }
         XCTAssertTrue(expand.waitForExistence(timeout: 5), "today's log is the first row"); expand.tap()
         let exercises = app.descendants(matching: .any)["strengthLogExercises-0"].firstMatch
-        XCTAssertTrue(exercises.waitForExistence(timeout: 5), "the log lists its exercises")
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS '×'")).firstMatch.exists, "sets × reps as recorded")
+        expect(exercises.waitForExistence(timeout: 5), "the log lists its exercises", tag: "review")
+        expect(app.staticTexts.matching(NSPredicate(format: "label CONTAINS '×'")).firstMatch.exists, "sets × reps as recorded", tag: "reps")
+        // review: both exercises of the routine appear in the saved log with every set
+        expect(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Goblet squat'")).firstMatch.exists, "Goblet squat in the saved log", tag: "ex1")
+        expect(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Dumbbell row'")).firstMatch.exists, "Dumbbell row in the saved log", tag: "ex2")
         XCTAssertEqual(app.state, .runningForeground)
     }
 }

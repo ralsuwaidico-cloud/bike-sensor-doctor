@@ -75,18 +75,46 @@ final class HubTapReliabilityTests: XCTestCase {
         let hub = app.descendants(matching: .any)["trainingHub"].firstMatch
         let close = app.buttons["hubClose"].firstMatch
         var closed = 0
+        // Owner 8 Nov 22:59: Close must stay visible and functional through repeated normal use, including after nested
+        // screens were opened and dismissed. Cycles 1–4 plain; 5–8 open "Why this workout?" (a sheet) and close it first;
+        // 9–12 open the session details (More › Details and edit) and close them first — then one plain Close tap.
         for i in 1...12 {
             if !hub.exists { _ = centre.waitUntilSettled(timeout: 5); centre.tap() }
-            XCTAssertTrue(hub.waitForExistence(timeout: 6), "cycle \(i): hub open")
+            expect(hub.waitForExistence(timeout: 6), "cycle \(i): hub open", tag: "open-\(i)")
             Thread.sleep(forTimeInterval: 0.5)                // a person's glance, not a machine's zero-delay tap
-            XCTAssertTrue(close.exists, "cycle \(i): Close present")
+            if (5...8).contains(i) {
+                let why = app.buttons["homeWhy"].firstMatch
+                if why.waitForExistence(timeout: 3), why.isHittable {
+                    why.tap()
+                    let sheetClose = app.buttons["homeSheetClose"].firstMatch
+                    expect(sheetClose.waitForExistence(timeout: 6), "cycle \(i): Why sheet opened", tag: "why-\(i)")
+                    Thread.sleep(forTimeInterval: 0.5); sheetClose.tap()
+                    expect(sheetClose.waitUntilGone(timeout: 6), "cycle \(i): Why sheet closed", tag: "whyclose-\(i)")
+                    Thread.sleep(forTimeInterval: 0.5)
+                }
+            } else if (9...12).contains(i) {
+                let more = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'More actions for'")).firstMatch
+                if more.waitForExistence(timeout: 3), more.isHittable {
+                    more.tap()
+                    let details = app.buttons["Details and edit"].firstMatch
+                    if details.waitForExistence(timeout: 4), details.tapWhenSettled(timeout: 4) {
+                        let done = app.navigationBars.buttons["Done"].firstMatch
+                        expect(done.waitForExistence(timeout: 8), "cycle \(i): details opened", tag: "details-\(i)")
+                        Thread.sleep(forTimeInterval: 0.5); done.tap()
+                        expect(done.waitUntilGone(timeout: 6), "cycle \(i): details closed", tag: "detailsclose-\(i)")
+                        Thread.sleep(forTimeInterval: 0.5)
+                    } else { app.swipeDown(velocity: .fast) }   // menu did not offer it: dismiss the menu
+                }
+            }
+            expect(close.exists && close.isHittable, "cycle \(i): Close present and hittable after the nested screen", tag: "closepresent-\(i)")
             close.tap()                                       // ONE plain tap
             if hub.waitUntilGone(timeout: 4) { closed += 1 } else {
                 let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-hub-close-human-\(i)"; a.lifetime = .keepAlways; add(a)
-                XCTFail("cycle \(i): one plain Close tap after 0.5 s did not close the hub (Close frame \(close.frame))")
+                let closeState = close.exists ? "Close frame \(close.frame), hittable \(close.isHittable)" : "Close no longer present"
+                XCTFail("cycle \(i): one plain Close tap after 0.5 s did not close the hub — \(closeState); bars \(app.navigationBars.allElementsBoundByIndex.map(\.identifier)); sheets \(app.sheets.count)")
             }
             Thread.sleep(forTimeInterval: 0.4)
         }
-        print("hub close at human pace: \(closed)/12")
+        print("hub close at human pace (with nested screens): \(closed)/12")
     }
 }
