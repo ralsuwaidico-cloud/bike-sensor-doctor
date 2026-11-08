@@ -6,3 +6,6 @@
 *.iml
 /.kotlin
 /*.apk
+watch/firmware/test/host/test_domain
+watch/firmware/test/host/gallery
+watch/firmware/test/host/gallery-out/

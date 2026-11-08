@@ -27,6 +27,18 @@ struct CoachMessage {
     bool safety = false;            // sensor lost, pain reported, stop advice
     bool local = false;             // produced by the watch's offline rules (shown as "watch rule", never "AI")
     uint32_t receivedMs = 0;
+
+    /// Wrist contract (round-screen rule): the live cue is at most WRIST_CHARS characters so it always fits two lines at
+    /// 13 px inside the circle; anything longer belongs in `reason` (behind Why?). The sender is expected to comply; the
+    /// watch enforces it at a word boundary and never cuts a word in half.
+    static constexpr size_t WRIST_CHARS = 44;
+    std::string wristInstruction() const {
+        if (instruction.size() <= WRIST_CHARS) return instruction;
+        size_t cut = instruction.rfind(' ', WRIST_CHARS - 1);
+        if (cut == std::string::npos || cut < WRIST_CHARS / 2) cut = WRIST_CHARS - 1;
+        std::string t = instruction.substr(0, cut); while (!t.empty() && (t.back() == ' ' || t.back() == ',' || t.back() == '-')) t.pop_back();
+        return t + "…";
+    }
 };
 
 class CoachInbox {

@@ -7,13 +7,17 @@
 #include "../../src/domain/grading.hpp"
 #include "../../src/domain/strength.hpp"
 #include "../../src/domain/navigation.hpp"
+#include "../../src/domain/buttons.hpp"
+#include "../../src/domain/round_layout.hpp"
+#include "../../src/domain/screens.hpp"
+#include "../../src/domain/layout_checks.hpp"
 #include <cstdio>
 #include <cmath>
 #include <random>
 #include <map>
 
 static int failures = 0, checks = 0;
-#define CHECK(cond, msg) do { checks++; if (!(cond)) { failures++; std::printf("FAIL  %s  (%s:%d)\n", msg, __FILE__, __LINE__); } else std::printf("pass  %s\n", msg); } while (0)
+#define CHECK(cond, msg) do { checks++; std::string _m = (msg); if (!(cond)) { failures++; std::printf("FAIL  %s  (%s:%d)\n", _m.c_str(), __FILE__, __LINE__); } else std::printf("pass  %s\n", _m.c_str()); } while (0)
 
 using namespace cyw;
 
@@ -190,6 +194,59 @@ int main() {
         CHECK(!n.handle(Gesture::SwipeLeft), "Review is left only through Save / Discard, never by a swipe");
         n.finishReview(); CHECK(n.current() == Screen::Face, "after Save the watch face returns");
         n.startActivity(false, true); CHECK(n.current() == Screen::LiftExercise && n.handle(Gesture::SwipeLeft) && n.current() == Screen::LiftRest, "strength: Exercise ⇄ Rest");
+    }
+
+    std::printf("== physical buttons ==\n");
+    {
+        KeyDecoder k;                                   // 30 ms debounce, 700 ms long press, 250 ms repeat guard
+        bool fired = false; Press p = Press::Short;
+        auto f = [&](bool down, uint32_t t) { auto e = k.feed(down, t); if (e.fired) { fired = true; p = e.press; } };
+        // bouncing contact: 5 ms chatter is ignored
+        f(true, 0); f(false, 3); f(true, 6); f(false, 9); f(true, 12);
+        CHECK(!fired, "contact bounce produces no event");
+        f(true, 40); f(true, 100); f(false, 120); f(false, 160);
+        CHECK(fired && p == Press::Short, "a clean 120 ms press is one short press");
+        fired = false; f(true, 200); f(true, 240); f(false, 260); f(false, 300);
+        CHECK(!fired, "a second press 80 ms later is swallowed by the repeat guard (no double trigger)");
+        fired = false; f(true, 1000); f(true, 1040); f(true, 1500); f(true, 1750);
+        CHECK(fired && p == Press::Long, "held 700 ms → exactly one long press while still held");
+        fired = false; f(true, 1900); f(false, 1950); f(false, 2000);
+        CHECK(!fired, "releasing after a long press fires nothing more");
+        // context map
+        CHECK(actionFor(Mode::Face, Key::Key1, Press::Short, true, true) == Action::Wake, "with the screen off any key only wakes");
+        CHECK(actionFor(Mode::Face, Key::Key1, Press::Short, false, true) == Action::OpenActivities && actionFor(Mode::Panel, Key::Key1, Press::Short, false, true) == Action::Back, "Key1: activities from the face, Back elsewhere");
+        CHECK(actionFor(Mode::Live_Ride, Key::Key1, Press::Short, false, false) == Action::TogglePause && actionFor(Mode::Live_Ride, Key::Key2, Press::Short, false, false) == Action::Lap, "ride: Key1 pause/resume, Key2 lap — also with the phone gone");
+        CHECK(actionFor(Mode::Live_Ride, Key::Key1, Press::Long, false, true) == Action::EndRequest && actionFor(Mode::Live_Ride, Key::Key2, Press::Long, false, true) != Action::EndRequest, "End is only a LONG press of Key1 and only a request (UI confirms) — no accidental termination");
+        CHECK(actionFor(Mode::Live_Lift, Key::Key2, Press::Short, false, true) == Action::LogSet && actionFor(Mode::Live_Lift, Key::Key2, Press::Long, false, true) == Action::OpenCorrections, "strength: Key2 logs the set, long press opens corrections");
+        CHECK(actionFor(Mode::Live_Rest, Key::Key2, Press::Short, false, true) == Action::SkipRest, "rest: Key2 skips rest");
+        CHECK(actionFor(Mode::Live_Ride, Key::Boot, Press::Short, false, true) == Action::None && actionFor(Mode::Live_Lift, Key::Boot, Press::Long, false, true) == Action::None, "the Boot key does nothing during a workout (it is the recovery key)");
+        CHECK(actionFor(Mode::Review, Key::Key2, Press::Short, false, true) == Action::Save && actionFor(Mode::Review, Key::Key1, Press::Long, false, true) == Action::Discard, "review: Key2 saves, long Key1 asks to discard");
+        CHECK(hapticMs(Action::EndRequest) > hapticMs(Action::Back) && hapticMs(Action::Wake) == 0, "haptics scale with consequence; wake is silent");
+    }
+
+    std::printf("== round-screen layout engine ==\n");
+    {
+        using namespace cyw::ui;
+        CHECK(std::fabs(halfChord(CY) - (RADIUS - EDGE_INSET)) < 0.01f && halfChord(CY - 100) < 60 && halfChord(0) == 0, "chord: full width at the centre, narrow near the top, zero at the edge");
+        Rect band = bandAt(160, 44, 0); CHECK(band.w > 150 && band.w < 158 && insideCircle(band), "two 72-pt buttons fit side by side at y 160–204 (chord ≈ 154)");
+        CHECK(!insideCircle({10, 10, 40, 20}) && insideCircle({100, 100, 40, 20}), "insideCircle rejects a corner rectangle, accepts a central one");
+        HostMeasurer m;
+        Fitted f = fitText(m, "Bench press", {15, 13, 2, false}, true, 120, 40);
+        CHECK(f.fits && f.font >= 13 && f.lines.size() <= 2, "short text fits at ≥ 13 px");
+        Fitted g = fitText(m, "Bulgarian split squat with dumbbells, rear foot elevated", {15, 13, 2, false}, true, 150, 36);
+        CHECK(!g.fits, "a long name does NOT fit two lines at ≥ 13 px — the engine says so instead of shrinking");
+        Fitted h = fitText(m, "Bulgarian split squat with dumbbells, rear foot elevated", {15, 13, 2, true}, true, 150, 36);
+        CHECK(h.fits && h.truncated && h.lines.back().back() != ' ', "with ellipsis allowed it is marked truncated (never silent)");
+        Fitted w = fitText(m, "Supercalifragilisticexpialidocious", {15, 13, 2, false}, true, 100, 40);
+        CHECK(!w.fits, "a single word wider than the box never fits (no mid-word cut)");
+        // every primary screen, every appearance, every text variant passes the automated round-display checks
+        int scenes = 0, findings = 0;
+        for (auto& [vn, content] : contentVariants()) for (auto& ap : appearances()) for (auto& sc : allScreens(m, content)) { scenes++; findings += int(check(sc, ap, vn).size()); }
+        std::printf("   %d scenes, %d findings\n", scenes, findings);
+        CHECK(scenes == 408 && findings == 0, "17 screens × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
+        // grading colours are identical across the six appearances (per canvas), independent of the theme
+        std::string d, l; for (auto& ap : appearances()) { std::string g1 = ap.resolve("grade.green"); if (ap.dark) { if (d.empty()) d = g1; CHECK(g1 == d, "dark grading green identical in " + ap.name); } else { if (l.empty()) l = g1; CHECK(g1 == l, "light grading green identical in " + ap.name); } }
+        CHECK(appearances()[0].resolve("accent") != appearances()[2].resolve("accent"), "theme accents differ while grading colours do not");
     }
 
     std::printf("\n%d checks, %d failures\n", checks, failures);
