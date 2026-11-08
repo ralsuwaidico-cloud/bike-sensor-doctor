@@ -18,10 +18,11 @@ below has been exercised on real hardware since firmware 0.6.x (the last board�
 | Reconnect | board keeps advertising with a stable random‑static identity (renewed on Forget/repair, 0.7.0); advertising pauses while the board connects to the meter; app reconnects quietly, never starts a ride locally on loss; offline rides wait in the queue (1.3) | protocol doc rules 1–5; `DeviceLink.swift` |
 | External sensors (board as central) | power meter Cycling Power 0x1818 / XDS‑named 0x1828 (char 0x2A63; CCCD taken from the data characteristic's own range since 0.7.2); HR 0x180D/0x2A37; CSC 0x1816/0x2A5B; meter first, then strap/CSC; **control point 0x2A55 never written** | `main/ble_central.c`, `bc_xds/bc_hr/bc_csc`, `bc_pipe` (pipeline stages) |
 
-**⚠ Conflict found during this extraction (not fixed here, see 08_):** the iPhone branch `impl/checkpoint-f-ride`
-(8 Nov) added a draft "Link 1.3 ride steps" (R‑020) using message types **0x90–0x94 and cap 0x0800** — both already
-taken by Link 1.3 RIDEQ_* and HELLO on `fw/phonefirst`. That draft is cap‑gated and inert against every shipped board,
-but it must be renumbered before any board with Link 1.3 meets that app. The firmware side of R‑020 does not exist.
+**Conflict found during this extraction — resolved 8 Nov 2026 (see 08_ A9):** the iPhone branch's draft "Link 1.3 ride
+steps" (R‑020) first used message types 0x90–0x94 and cap 0x0800, already taken by Link 1.3 RIDEQ_* and HELLO on
+`fw/phonefirst`. The iPhone side now uses **STEPS_BEGIN 0xC0 · STEP 0xC1 · STEPS_END 0xC2 · STEPS_ACK 0xC3 · STEPS_CLEAR
+0xC4, cap 0x10000** (commit `1fcf7b42`, `docs/LINK_V1_2_SPEC.md` §1.3). It stays cap‑gated and inert against every shipped
+board; the firmware side of R‑020 does not exist and must be designed against the new numbers.
 
 ## 2. iPhone ↔ Cyclift Watch (LILYGO) — "Cyclift wearable protocol v1"
 

@@ -20,8 +20,8 @@ integration contract) → **only then** device development resumes. Until then t
 3. Storage repair (PC‑side, storage region only) if the FAT root is still erased.
 4. **First‑milestone proof**: XDS meter live on the board (power + cadence) — the project's original goal, still unproven.
 5. Decide the battery/charging question (A4) before unattended charging.
-6. Link 1.3 end to end: needs the iPhone Link 1.3 code (`ios/phonefirst-dev`) brought into the release line **after**
-   the R‑020 renumbering (A9) — or R‑020 folded into COACH_PLAN, which already carries steps and targets (design decision).
+6. Link 1.3 end to end: needs the iPhone Link 1.3 code (`ios/phonefirst-dev`) brought into the release line (the R‑020
+   renumbering A9 is done: 0xC0–0xC4 / cap 0x10000) — or R‑020 folded into COACH_PLAN, which already carries steps and targets (design decision).
 7. Coach audit items M‑07…M‑11; align board/phone auto‑FTP rules (A8).
 
 ## Phase 2 — Watch hardware (owner approvals per M‑step)

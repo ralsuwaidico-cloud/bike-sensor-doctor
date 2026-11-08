@@ -60,8 +60,8 @@ ride clock when they are the recorder (BikeComputer), and send back events.
 - Nothing on the LILYGO has run; all watch figures are host or linker results. Board revision unknown.
 - BikeComputer 0.7.4‑rc5 not installed; Bluetooth‑start crash cause unconfirmed; FAT repair not started; charging
   safety (1 A charger vs 500 mAh cell) open; sensor decoders never run on the board with the meter.
-- Protocol number collision: iPhone R‑020 draft (msg 0x90–0x94, cap 0x0800) vs Link 1.3 RIDEQ/HELLO — to be renumbered
-  on the iPhone side; do not design against the R‑020 numbers.
+- Protocol numbering: the iPhone R‑020 ride‑steps draft was renumbered on 8 Nov to msgs 0xC0–0xC4 / cap 0x10000 (it had
+  collided with Link 1.3 RIDEQ/HELLO). Design against the new numbers only; no firmware implements R‑020 yet.
 - Watch token hex values differ slightly from the iPhone's Checkpoint H palettes (same six names) — a design
   reconciliation to document, not a code change.
 
