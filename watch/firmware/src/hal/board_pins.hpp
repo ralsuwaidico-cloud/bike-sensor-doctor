@@ -3,6 +3,7 @@
 // repository (Xinyuan-LilyGO/T-Watch-2021: TWatch_2021_Library/src/board/*.h and image/T-WATCH2021-V1.1-en.jpg).
 // Never reuse the rectangular T-Watch 2020 or the ESP32-S3 T-Watch S3 maps: this board is different.
 // The revision is printed on the silkscreen; CYW_BOARD_* is set per PlatformIO environment.
+#include <cstdint>
 namespace cyw::pins {
 #if defined(CYW_BOARD_V2)
 constexpr int PWR_ON = 32, CHARGING = -1, BAT_ADC = 36;
@@ -33,5 +34,7 @@ constexpr bool HAS_GPS = false, HAS_SD = false, HAS_ENCODER = false, HAS_BME280 
 constexpr int SCREEN_W = 240, SCREEN_H = 240;        // GC9A01, round active area, 16-bit colour
 // I2C peripherals (7-bit addresses from the datasheets / library): CST816S touch 0x15 · BMA423 0x19 · PCF8563 RTC 0x51 ·
 // QMC5883L 0x0D (factory variant A) or QMC5883P 0x2C (variant B — the factory firmware ships one binary per variant)
+// Key aliases used by the firmware: KEY1 = upper-left user key, KEY2 = lower-left, BOOT = IO0 (strapping; shortcut only)
+constexpr int BTN_BOOT = BTN_1, BTN_KEY1 = BTN_2, BTN_KEY2 = BTN_3;
 constexpr uint8_t ADDR_TOUCH = 0x15, ADDR_BMA423 = 0x19, ADDR_RTC = 0x51, ADDR_QMC5883L = 0x0D, ADDR_QMC5883P = 0x2C;
 }

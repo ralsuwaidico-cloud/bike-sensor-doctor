@@ -11,3 +11,31 @@ jobs:
       - uses: actions/checkout@v4
       - name: Domain tests on the host (no hardware, no flashing)
         run: make -C watch/firmware/test/host
+  firmware-compile:
+    # Compile-only (PlatformIO, espressif32): proves the device build and reports the real flash / RAM figures. Nothing is flashed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            watch/firmware/.pio
+          key: pio-${{ runner.os }}-${{ hashFiles('watch/firmware/platformio.ini') }}
+      - run: pip install -q platformio
+      - name: Build T-Watch-2021-V1_1 (application) and the M1 diagnostics image
+        working-directory: watch/firmware
+        run: |
+          pio run -e T-Watch-2021-V1_1 2>&1 | tee build-app.log
+          pio run -e T-Watch-2021-V1_1-diag 2>&1 | tee build-diag.log
+          echo "## Firmware size (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "RAM:|Flash:" build-app.log build-diag.log >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: firmware-images-not-flashed
+          path: |
+            watch/firmware/.pio/build/*/firmware.bin
+            watch/firmware/build-*.log
