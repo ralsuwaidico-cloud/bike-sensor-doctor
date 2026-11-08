@@ -36,6 +36,8 @@ enum BCLink {
         case settingsSet = 0x74, settings = 0x75, settingsGet = 0x76
         /* 1.2.3 diagnostic report transfer (firmware 0.7.3, cap 0x400) — Control characteristic, phone-driven pull */
         case diagListReq = 0x80, diagInfo = 0x81, diagListEnd = 0x82, diagChunkReq = 0x83, diagChunk = 0x84, diagAck = 0x85, diagErr = 0x86
+        /* 1.3 ride steps and targets (R-020, docs/LINK_V1_2_SPEC.md §1.3, cap 0x800) — specified; no shipped firmware reports the cap yet */
+        case stepsBegin = 0x90, step = 0x91, stepsEnd = 0x92, stepsAck = 0x93, stepsClear = 0x94
     }
 
     enum Source: UInt8 {
@@ -124,7 +126,9 @@ enum BCLink {
         static let capLive: UInt32 = 0x01, capGPS: UInt32 = 0x02, capHR: UInt32 = 0x04, capWeather: UInt32 = 0x08, capCtrl: UInt32 = 0x10, capTime: UInt32 = 0x20, capRideSync: UInt32 = 0x40
         static let capWiFi: UInt32 = 0x80, capProfileSync: UInt32 = 0x100, capSettings: UInt32 = 0x200
         static let capDiagXfer: UInt32 = 0x400
+        static let capSteps: UInt32 = 0x800
         var hasDiagXfer: Bool { caps & Info.capDiagXfer != 0 }
+        var hasSteps: Bool { caps & Info.capSteps != 0 }
         var hasRideSync: Bool { caps & Info.capRideSync != 0 }
         var hasWiFi: Bool { caps & Info.capWiFi != 0 }
         var hasProfileSync: Bool { caps & Info.capProfileSync != 0 }
@@ -676,5 +680,71 @@ enum BCLink {
         w.u16(0x06, s.packetAgeDs ?? 0xFFFF); w.u16(0x07, s.validAgeDs ?? 0xFFFF)
         if let e = s.lastError { w.field(0x08, Data(e.utf8.prefix(20))) }
         return w.result
+    }
+
+    // MARK: 1.3 ride steps and targets (R-020) — phone encodes, board stores; targets are computed HERE from the phone's FTP
+    struct StepsHeader: Equatable {
+        var version: UInt32; var workoutId: String; var title: String; var stepCount: Int
+        /// 0 = unknown → no watt targets anywhere in the message
+        var ftpW: Int; var ftpHow: Int
+        /// Five lower bounds (bpm) or nil
+        var hrZones: [Int]?; var replace: Bool
+    }
+    struct StepMessage: Equatable {
+        var version: UInt32; var index: Int; var name: String; var seconds: Int; var role: Int; var rpeLo: Int; var rpeHi: Int; var hrZone: Int; var powerLoW: Int; var powerHiW: Int
+    }
+    struct StepsAck: Equatable { var version: UInt32; var status: Int; var storedCount: Int
+        var statusText: String { ["stored", "rejected: older version", "rejected: bad count", "rejected: bad CRC", "busy: ride recording", "rejected: too many steps"][min(status, 5)] }
+    }
+    static let maxSteps = 32
+
+    static func encodeStepsBegin(_ h: StepsHeader, seq: UInt16, tMs: UInt32) -> Data? {
+        guard h.version > 0, (1...maxSteps).contains(h.stepCount) else { return nil }
+        var w = Writer(type: .stepsBegin, seq: seq, tMs: tMs)
+        w.u32(0x01, h.version); w.field(0x02, Data(h.workoutId.utf8.prefix(24))); w.field(0x03, Data(h.title.utf8.prefix(24)))
+        w.u8(0x04, UInt8(h.stepCount)); w.u16(0x05, UInt16(clamping: h.ftpW)); w.u8(0x06, UInt8(clamping: h.ftpHow))
+        if let z = h.hrZones, z.count == 5 { var d = Data(); for b in z { d.append(le(UInt16(clamping: b))) }; w.field(0x07, d) }
+        w.u8(0x08, h.replace ? 1 : 0)
+        return w.result
+    }
+    /// The step's payload after the header (what STEPS_END's CRC covers).
+    static func stepFields(_ s: StepMessage) -> Data {
+        var w = Writer(type: .step, seq: 0, tMs: 0)
+        w.u32(0x01, s.version); w.u8(0x02, UInt8(clamping: s.index)); w.field(0x03, Data(s.name.utf8.prefix(20))); w.u16(0x04, UInt16(clamping: s.seconds))
+        w.u8(0x05, UInt8(clamping: s.role)); w.u8(0x06, UInt8(clamping: s.rpeLo)); w.u8(0x07, UInt8(clamping: s.rpeHi)); w.u8(0x08, UInt8(clamping: s.hrZone))
+        w.u16(0x09, UInt16(clamping: s.powerLoW)); w.u16(0x0A, UInt16(clamping: s.powerHiW))
+        return (w.result ?? Data()).dropFirst(headerSize)
+    }
+    static func encodeStep(_ s: StepMessage, seq: UInt16, tMs: UInt32) -> Data? {
+        guard s.version > 0, s.index < maxSteps, s.seconds > 0 else { return nil }
+        var w = Writer(type: .step, seq: seq, tMs: tMs)
+        w.u32(0x01, s.version); w.u8(0x02, UInt8(clamping: s.index)); w.field(0x03, Data(s.name.utf8.prefix(20))); w.u16(0x04, UInt16(clamping: s.seconds))
+        w.u8(0x05, UInt8(clamping: s.role)); w.u8(0x06, UInt8(clamping: s.rpeLo)); w.u8(0x07, UInt8(clamping: s.rpeHi)); w.u8(0x08, UInt8(clamping: s.hrZone))
+        w.u16(0x09, UInt16(clamping: s.powerLoW)); w.u16(0x0A, UInt16(clamping: s.powerHiW))
+        return w.result
+    }
+    /// CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF) over the concatenated step payloads in index order.
+    static func stepsCRC(_ steps: [StepMessage]) -> UInt16 {
+        var crc: UInt16 = 0xFFFF
+        for s in steps.sorted(by: { $0.index < $1.index }) {
+            for x in stepFields(s) { crc ^= UInt16(x) << 8; for _ in 0..<8 { crc = (crc & 0x8000) != 0 ? (crc << 1) ^ 0x1021 : crc << 1 } }
+        }
+        return crc
+    }
+    static func encodeStepsEnd(version: UInt32, steps: [StepMessage], seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .stepsEnd, seq: seq, tMs: tMs); w.u32(0x01, version); w.u16(0x02, stepsCRC(steps)); return w.result
+    }
+    static func encodeStepsClear(version: UInt32, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .stepsClear, seq: seq, tMs: tMs); w.u32(0x01, version); return w.result
+    }
+    static func decodeStepsAck(_ d: Data) -> StepsAck? {
+        guard let (h, f) = parse(d), h.type == MsgType.stepsAck.rawValue else { return nil }
+        var a = StepsAck(version: 0, status: 0, storedCount: 0); var sawVersion = false
+        for x in f { switch (x.tag, x.value.count) { case (0x01, 4): a.version = UInt32(uint(x.value)); sawVersion = true; case (0x02, 1): a.status = Int(uint(x.value)); case (0x03, 1): a.storedCount = Int(uint(x.value)); default: break } }
+        return sawVersion ? a : nil
+    }
+    /// Test helper mirroring the board's STEPS_ACK.
+    static func encodeStepsAck(_ a: StepsAck, seq: UInt16, tMs: UInt32) -> Data? {
+        var w = Writer(type: .stepsAck, seq: seq, tMs: tMs); w.u32(0x01, a.version); w.u8(0x02, UInt8(clamping: a.status)); w.u8(0x03, UInt8(clamping: a.storedCount)); return w.result
     }
 }

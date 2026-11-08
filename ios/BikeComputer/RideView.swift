@@ -262,7 +262,7 @@ struct RideTabView: View {
                 if !recorder.isActive {
                     switch mode {
                     case .blockedByBoardRide: Text("BikeComputer ride running — end it there or from Details").font(D7.mono).foregroundStyle(D7.mut).frame(maxWidth: .infinity)
-                    case .board: BigButton(text: "START ON BIKECOMPUTER", color: D7.green) { device.control(.start) }
+                    case .board: BigButton(text: "START ON BIKECOMPUTER", color: D7.green) { device.sendRideSteps(store.todayRideSteps()); device.control(.start) }
                     case .blockedNoGPSPermission: BigButton(text: "ALLOW LOCATION", color: D7.amber) { location.requestPermission() }
                     case .phone: BigButton(text: "START · PHONE", color: D7.green) { _ = recorder.start() }
                     }

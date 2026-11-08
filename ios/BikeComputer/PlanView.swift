@@ -433,7 +433,7 @@ struct WorkoutDetail: View {
             Text("Logging exercises lets the coach check coverage and progression.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
-            Button { if recorder.startMode(locationAuthorized: true) == .board { device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
+            Button { if recorder.startMode(locationAuthorized: true) == .board { device.sendRideSteps(store.todayRideSteps()); device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
             Text("The Ride screen coaches against this session's zone; targets reach the BikeComputer when it is connected.").font(.footnote).foregroundStyle(.secondary)
         }
     }

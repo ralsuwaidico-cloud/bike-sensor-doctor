@@ -47,7 +47,7 @@ struct BikeComputerApp: App {
             switch c {
             case WatchMessage.cmdStart:
                 guard !r.isActive else { return }
-                switch r.startMode(locationAuthorized: true) { case .board: d.control(.start); case .phone: _ = r.start(); default: break }
+                switch r.startMode(locationAuthorized: true) { case .board: d.sendRideSteps(s.todayRideSteps()); d.control(.start); case .phone: _ = r.start(); default: break }
             case WatchMessage.cmdPause: if r.owner == .board { d.control(.pause) } else { r.pause() }
             case WatchMessage.cmdResume: if r.owner == .board { d.control(.resume) } else { r.resume() }
             case WatchMessage.cmdEnd: if r.owner == .board { d.control(.stopRequest) }           /* the watch asks for confirmation first */

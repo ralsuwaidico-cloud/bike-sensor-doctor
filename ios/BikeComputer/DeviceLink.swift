@@ -432,6 +432,20 @@ final class DeviceLink: NSObject, ObservableObject {
     @discardableResult
     func sendDiag(_ d: Data) -> Bool { guard DiagReportCenter.transferAllowed(info) else { return false }; return writeControl(d) }
 
+    /// R-020 (Link 1.3): today's ride steps and targets for the board, computed on the phone. Sent only when the board
+    /// reports cap 0x800 — no shipped firmware does yet, so this is inert on every current board. Returns the number of
+    /// messages written (0 = not supported / nothing to send); never a partial set.
+    @Published private(set) var lastStepsAck: BCLink.StepsAck?
+    @discardableResult
+    func sendRideSteps(_ bundle: RideStepsSync.Bundle?) -> Int {
+        guard let b = bundle, info?.hasSteps == true, let c = controlChr, let p = peripheral, state == .ready else { return 0 }
+        guard let msgs = RideStepsSync.messages(b, seq: nextSeq(), tMs: nowMs()) else { return 0 }
+        for _ in 1..<msgs.count { _ = nextSeq() }
+        for m in msgs { p.writeValue(m, for: c, type: .withResponse) }
+        note("Ride steps v\(b.version) sent (\(b.steps.count) steps) — waiting for the board's ack")
+        return msgs.count
+    }
+
     private func writeControl(_ d: Data) -> Bool {
         guard let c = controlChr, let p = peripheral, state == .ready else { return false }
         p.writeValue(d, for: c, type: .withResponse)
@@ -640,6 +654,8 @@ extension DeviceLink: CBCentralManagerDelegate, CBPeripheralDelegate {
             if let s = BCLink.decodeSettings(d) { boardSettings = s; boardSettingsAt = Date(); lastSettingsReply = s; onSettingsReply?(s) } else { stats.rejected += 1 }
         case .diagInfo, .diagListEnd, .diagChunk, .diagErr:
             if BCLink.parse(d) != nil { onDiagMessage?(d) } else { noteParseError("DIAG", d) }
+        case .stepsAck:
+            if let a = BCLink.decodeStepsAck(d) { lastStepsAck = a; note("Ride steps v\(a.version): \(a.statusText) (\(a.storedCount) stored)") } else { stats.rejected += 1 }
         case .event:
             if BCLink.decodeDiagReady(d) != nil { stats.events += 1; onDiagMessage?(d) } else { stats.rejected += 1 }
         default: stats.rejected += 1
