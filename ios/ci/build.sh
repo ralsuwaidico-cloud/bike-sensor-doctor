@@ -145,6 +145,13 @@ record_journey() {
   TEST_RUNNER_BC_JOURNEY_PERSONA="$persona" TEST_RUNNER_LAYOUT_DIR="$LAYOUT" \
     twb "$RELEASE_XR" "$SIM" "$OUT/journey-$persona.log" -only-testing:BikeComputerUITests/JourneyTests
   local J=$?
+  if [ $J -ne 0 ] && [ -n "$(launch_failed_tests "$OUT/journey-$persona.log")" ]; then
+    kill -INT "$rec" 2>/dev/null; wait "$rec" 2>/dev/null; sleep 2
+    xcrun simctl io "$SIM" recordVideo --codec h264 --force "$raw" > "$OUT/record-$persona-attempt2.log" 2>&1 &
+    rec=$!; sleep 3
+    TEST_RUNNER_BC_JOURNEY_PERSONA="$persona" TEST_RUNNER_LAYOUT_DIR="$LAYOUT" retry_launch_failures "$RELEASE_XR" "$SIM" "journey-$persona" "$OUT/journey-$persona.log"
+    J=$?
+  fi
   kill -INT "$rec" 2>/dev/null; wait "$rec" 2>/dev/null; sleep 2
   digest "$OUT/journey-$persona.log" "journey-$persona"
   if [ -f "$raw" ]; then
@@ -207,6 +214,41 @@ warm_release_app() {
   xcrun simctl terminate "$sim" com.ralsuwaidico.bikecomputer > /dev/null 2>&1 || true
 }
 
+# Owner-approved (8 Nov 14:32) narrowly scoped retry for LAUNCH-INFRASTRUCTURE failures only — the same rule the layout
+# audit has used since run 71. $1 = log of the attempt, prints the test ids whose ONLY failure was that XCTest could not
+# launch the app (or lost it right after); prints nothing when any failure is a real check, so nothing else is retried.
+launch_failed_tests() {
+  local log=$1
+  # every failing test …
+  local failed; failed=$(grep -Eo "Test Case '-\[[A-Za-z0-9_.]+ [A-Za-z0-9_]+\]' failed" "$log" | sed -E "s/Test Case '-\[([^ ]+) ([^]]+)\]' failed/\1\/\2/" | sort -u)
+  [ -n "$failed" ] || return 0
+  # … must have failed on launch infrastructure and nothing else
+  local t; for t in $failed; do
+    local cls=${t%%/*}; cls=${cls##*.}; local m=${t##*/}
+    local errs; errs=$(grep -E "error: -\[[A-Za-z0-9_.]*${cls} ${m}\]" "$log")
+    [ -n "$errs" ] || return 0
+    if echo "$errs" | grep -vq "Timed out while launching application\|Timed out while requesting launch progress\|Failed to get background assertion for target app with pid 0\|Simulator device failed to launch\|Timed out while loading Accessibility\|failed to initialize for UI testing"; then return 0; fi
+  done
+  echo "$failed"
+}
+# $1 xctestrun · $2 sim · $3 label · $4 first-attempt log · rest = original -only/-skip arguments. Re-runs ONLY the tests that
+# failed on launch infrastructure, once, after a simulator reboot; both attempts are kept and summarised.
+retry_launch_failures() {
+  local xr=$1 sim=$2 label=$3 log=$4; shift 4
+  local tests; tests=$(launch_failed_tests "$log")
+  [ -n "$tests" ] || return 1
+  note "  $label: launch-infrastructure failure only ($(echo $tests | tr ' ' ',')) — attempt 1 kept as $label-launchfail; rebooting the simulator and retrying those tests once"
+  cp "$log" "${log%.log}-launchfail.log"; digest "${log%.log}-launchfail.log" "$label-launchfail"
+  xcrun simctl shutdown "$sim" >/dev/null 2>&1; xcrun simctl boot "$sim" >/dev/null 2>&1; sleep 20
+  warm_release_app "$sim"
+  local only=(); local t; for t in $tests; do only+=("-only-testing:BikeComputerUITests/${t#*.}"); done
+  twb "$xr" "$sim" "${log%.log}-attempt2.log" "${only[@]}"
+  local r=$?
+  digest "${log%.log}-attempt2.log" "$label-attempt2"
+  note "  $label: attempt 2 ($(echo $tests | tr ' ' ',')): $([ $r -eq 0 ] && echo passed || echo FAILED) — both attempts are in the logs"
+  return $r
+}
+
 run_smoke() {
   TS=$SECONDS
   release_products || { note "RESULT launch smoke (Release): FAILED (build)"; STATUS=1; return; }
@@ -214,6 +256,7 @@ run_smoke() {
   twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests -skip-testing:BikeComputerUITests/JourneyTests
   U=$?
   digest "$OUT/uitest.log" launch-smoke
+  if [ $U -ne 0 ]; then retry_launch_failures "$RELEASE_XR" "$SIM" launch-smoke "$OUT/uitest.log"; local R=$?; [ $R -eq 0 ] && U=0; fi
   if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
   else
     note "RESULT launch smoke (Release): FAILED (exit $U) · $(since $TS)"; STATUS=1
