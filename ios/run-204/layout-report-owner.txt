@@ -1,0 +1,225 @@
+L home planned: nothing wider than the screen
+L home planned: 26 texts, none overlapping
+L home planned: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub planned: no text outside the window
+L hub planned: buttons under 44 pt: planChip-4D8B5891-A42E-4 149×31, planChip-EB7CFE6E-F5E1-4 100×31, planChip-8F10BC7E-AFD0-4 149×31, planChip-1C425351-1E0F-4 100×31, planChip-EC6D68B1-E6A1-4 298×31, planChip-A414DA23-1233-4 99×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home planned: primary 'Start workout' at 267–317 of 852
+L home planned: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home planned move: nothing wider than the screen
+L home planned move: 3 texts, none overlapping
+L home ride: nothing wider than the screen
+L home ride: 26 texts, none overlapping
+L home ride: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub ride: no text outside the window
+L hub ride: buttons under 44 pt: planChip-F24FD1E6-5B74-4 149×31, planChip-963CF336-5A3F-4 100×31, planChip-B8E11819-EF10-4 149×31, planChip-B515959A-815B-4 100×31, planChip-5A529C59-CA85-4 298×31, planChip-C497A93B-2454-4 148×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home ride: primary 'Start ride' at 267–317 of 852
+L home ride: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home completed: nothing wider than the screen
+L home completed: 26 texts, none overlapping
+L home completed: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub completed: no text outside the window
+L hub completed: buttons under 44 pt: planChip-8AF23F78-3F1D-4 150×31, planChip-BDDAFFC4-7AD9-4 100×31, planChip-8421D91E-BA35-4 150×31, planChip-A150B395-7213-4 100×31, planChip-52647151-F277-4 298×31, planChip-DBD14DF8-225E-4 99×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home completed: primary 'View results' at 270–320 of 852
+L home completed: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home rest: nothing wider than the screen
+L home rest: 26 texts, none overlapping
+L home rest: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub rest: no text outside the window
+L hub rest: buttons under 44 pt: planChip-61C16D56-D2B7-4 150×31, planChip-E274DC83-D478-4 100×31, planChip-D027AB7E-1E92-4 150×31, planChip-B36D59B1-058F-4 100×31, planChip-1BA27557-69E8-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home rest: primary 'Move to today' at 296–340 of 852
+L home rest: key controls homeMissedMove 96×44
+L home rest primary sheet: nothing wider than the screen
+L home rest primary sheet: 16 texts, none overlapping
+L home multi: nothing wider than the screen
+L home multi: 26 texts, none overlapping
+L home multi: key controls homeCycling 174×173, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub multi: no text outside the window
+L hub multi: buttons under 44 pt: planChip-EA061C05-6DE7-4 149×31, planChip-AB1BB572-476B-4 100×31, planChip-8CD656AD-1F9F-4 149×31, planChip-436FF90E-7718-4 100×31, planChip-BBB30BF5-9981-4 298×31, planChip-905CF30B-50D9-4 73×30, planChip-DF5E4141-993D-4 85×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home multi: primary 'View results' at 258–302 of 852
+L home multi: key controls homeWhy 175×44, homeRow-0 85×44, homeRowMore-0 44×44, homeRow-1 67×44, homeRowMore-1 44×44, homeMissedMove 70×44
+L home multi move: nothing wider than the screen
+L home multi move: 3 texts, none overlapping
+L home missed: nothing wider than the screen
+L home missed: 26 texts, none overlapping
+L home missed: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub missed: no text outside the window
+L hub missed: buttons under 44 pt: planChip-A2398942-3C1A-4 149×31, planChip-B3C84125-A76E-4 100×31, planChip-1CE03344-504D-4 149×31, planChip-34684994-3B38-4 100×31, planChip-4A4D7B39-AD9A-4 298×31, planChip-11F0430A-28EF-4 99×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home missed: primary 'Start workout' at 267–317 of 852
+L home missed: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home missed move: nothing wider than the screen
+L home missed move: 3 texts, none overlapping
+L home skipped: nothing wider than the screen
+L home skipped: 26 texts, none overlapping
+L home skipped: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub skipped: no text outside the window
+L hub skipped: buttons under 44 pt: planChip-6516100C-9ACE-4 150×31, planChip-8AC5E158-B475-4 100×31, planChip-531241F4-112E-4 150×31, planChip-77C1FE63-2DDF-4 100×31, planChip-7F179DAA-F035-4 298×31, planChip-D86008B3-4AE5-4 99×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home skipped: primary 'Move to another day' at 270–320 of 852
+L home skipped: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home skipped move: nothing wider than the screen
+L home skipped move: 3 texts, none overlapping
+L home pending: nothing wider than the screen
+L home pending: 26 texts, none overlapping
+L home pending: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub pending: no text outside the window
+L hub pending: buttons under 44 pt: planChip-E7A3A327-0964-4 149×31, planChip-785A23F0-28BC-4 100×31, planChip-1969DE5D-5925-4 149×31, planChip-D99CD583-858F-4 100×31, planChip-852560C7-6385-4 298×31, planChip-74A0AB26-F274-4 99×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home pending: primary 'Start workout' at 267–317 of 852
+L home pending: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home clearance: nothing wider than the screen
+L home clearance: 26 texts, none overlapping
+L home clearance: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub clearance: no text outside the window
+L hub clearance: buttons under 44 pt: planChip-F02A0A57-4152-4 149×31, planChip-36E9E86D-E0F2-4 100×31, planChip-8ECFC6E9-22F8-4 149×31, planChip-F10C5D22-1F55-4 100×31, planChip-5AF78144-2D62-4 298×31, planChip-405F61A6-B251-4 99×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home clearance: health line at 127–194
+L home clearance: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×43, homeCaution 361×67
+L home stop: nothing wider than the screen
+L home stop: 28 texts, none overlapping
+L home stop: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub stop: no text outside the window
+L hub stop: buttons under 44 pt: planChip-4025332F-F9C4-4 150×31, planChip-A8C8CD02-C5F5-4 100×31, planChip-2C49C40F-42E1-4 150×31, planChip-5C89B53F-8199-4 100×31, planChip-C83924D0-D65C-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home stop: primary 'Review health check' at 300–350 of 852
+L home stop: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home stop primary sheet: nothing wider than the screen
+L home stop primary sheet: 7 texts, none overlapping
+L home ill: nothing wider than the screen
+L home ill: 28 texts, none overlapping
+L home ill: key controls homeCycling 174×160, homeStrength 174×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub ill: no text outside the window
+L hub ill: buttons under 44 pt: planChip-76E2FD90-4166-4 150×31, planChip-3525B860-F556-4 100×31, planChip-11E52C5E-2A1D-4 150×31, planChip-C1CB528F-D9E2-4 100×31, planChip-042F0250-DA35-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, Riding 166×32, Strength 168×32, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home ill: primary 'I feel well again' at 272–322 of 852
+L home ill: key controls homePrimary 329×50, homeHoldInfo 145×44
+L home first: nothing wider than the screen
+L home first: 21 texts, none overlapping
+L home first: key controls homeStrength 361×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub first: no text outside the window
+L hub first: buttons under 44 pt: rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, progressPeriod 89×34, hubClose 67×35
+L home first: primary 'Create my plan' at 297–347 of 852
+L home first: key controls homePrimary 329×50
+L home cyclingonly: nothing wider than the screen
+L home cyclingonly: 24 texts, none overlapping
+L home cyclingonly: key controls homeCycling 361×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub cyclingonly: no text outside the window
+L hub cyclingonly: buttons under 44 pt: planChip-5B24CB53-B510-4 149×31, planChip-859F4EFB-10B8-4 149×31, planChip-FFDDC3D4-C147-4 149×31, planChip-1F678CB9-64BA-4 298×31, planChip-31F3C9F1-E080-4 148×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home cyclingonly: primary 'Start ride' at 267–317 of 852
+L home cyclingonly: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+L home strengthonly: nothing wider than the screen
+L home strengthonly: 22 texts, none overlapping
+L home strengthonly: key controls homeStrength 361×160, homeWeekPlan 44×44, homeAvatar 44×44
+L hub strengthonly: no text outside the window
+L hub strengthonly: buttons under 44 pt: planChip-CA8DD1BF-7A1C-4 298×31, planChip-6B177F23-B9B9-4 298×31, planChip-A5A2ECC3-C47B-4 298×31, planChip-63E51EFD-1DB2-4 297×30, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, 4 wk 83×32, 8 wk 83×32, 12 wk 83×32, 16 wk 84×32, hubClose 67×35
+L home strengthonly: primary 'Start workout' at 267–317 of 852
+L home strengthonly: key controls homePrimary 329×50, homeWhy 158×44, homeMore 57×44, homeMissedMove 70×44
+XXXL home planned: nothing wider than the screen
+XXXL home planned: 24 texts, none overlapping
+XXXL home planned: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub planned: no text outside the window
+XXXL hub planned: buttons under 44 pt: planChip-E7B07804-275A-4 150×31, planChip-52E8399B-457C-4 100×31, planChip-C8F31F8A-C2E8-4 150×31, planChip-2B3D46E8-043E-4 100×31, planChip-41369EB8-5B61-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home planned: primary 'Start workout' at 338–388 of 852
+XXXL home planned: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44
+XXXL home multi: nothing wider than the screen
+XXXL home multi: 24 texts, none overlapping
+XXXL home multi: key controls homeCycling 174×232, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub multi: no text outside the window
+XXXL hub multi: buttons under 44 pt: planChip-EFDE2AC5-1D61-4 150×31, planChip-48E531F3-94A7-4 100×31, planChip-EFB5D0E0-39EE-4 150×31, planChip-46459271-080A-4 100×31, planChip-0DC110C8-3F9C-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home multi: primary 'View results' at 361–405 of 852
+XXXL home multi: key controls homeWhy 234×44, homeRow-0 103×44, homeRowMore-0 44×44, homeRow-1 79×44, homeRowMore-1 44×44, homeMissedMove 84×44
+XXXL home missed: nothing wider than the screen
+XXXL home missed: 24 texts, none overlapping
+XXXL home missed: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub missed: no text outside the window
+XXXL hub missed: buttons under 44 pt: planChip-5E7F863B-1287-4 150×31, planChip-9CF276D4-9CA5-4 100×31, planChip-F6B8510C-F1F9-4 150×31, planChip-34B7DF41-535D-4 100×31, planChip-958ACB48-C5FE-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home missed: primary 'Start workout' at 338–388 of 852
+XXXL home missed: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44
+XXXL home stop: nothing wider than the screen
+XXXL home stop: 24 texts, none overlapping
+XXXL home stop: key controls homeCycling 174×210, homeStrength 174×188, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub stop: no text outside the window
+XXXL hub stop: buttons under 44 pt: planChip-D8FE1D73-1EF8-4 150×31, planChip-D86D75F3-B4C6-4 100×31, planChip-D14F9936-6B6F-4 150×31, planChip-BB049E45-8048-4 100×31, planChip-7CCF5DAD-A1A0-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home stop: primary 'Review health check' at 342–392 of 852
+XXXL home stop: key controls homePrimary 329×50, homeHoldInfo 193×44
+XXXL home pending: nothing wider than the screen
+XXXL home pending: 24 texts, none overlapping
+XXXL home pending: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub pending: no text outside the window
+XXXL hub pending: buttons under 44 pt: planChip-201A8525-0B3B-4 150×31, planChip-4F081FDB-4590-4 100×31, planChip-47F5F5E5-8D72-4 150×31, planChip-24EBF89F-0B6F-4 100×31, planChip-C2D03D48-3FE1-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home pending: primary 'Start workout' at 338–388 of 852
+XXXL home pending: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44
+XXXL home clearance: nothing wider than the screen
+XXXL home clearance: 17 texts, none overlapping
+XXXL home clearance: key controls homeCycling 174×210, homeStrength 174×210, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub clearance: no text outside the window
+XXXL hub clearance: buttons under 44 pt: planChip-59E76A21-E930-4 150×31, planChip-E99A1079-A3E3-4 100×31, planChip-680C9057-D3A1-4 150×31, planChip-47BE742B-788F-4 100×31, planChip-51CF67DB-D61C-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home clearance: health line at 127–259
+XXXL home clearance: key controls homePrimary 329×50, homeWhy 210×44, homeMore 76×44, homeMissedMove 84×44, homeCaution 361×132
+XXXL home ill: nothing wider than the screen
+XXXL home ill: 24 texts, none overlapping
+XXXL home ill: key controls homeCycling 174×210, homeStrength 174×188, homeWeekPlan 57×44, homeAvatar 44×44
+XXXL hub ill: no text outside the window
+XXXL hub ill: buttons under 44 pt: planChip-446E02A6-D299-4 150×31, planChip-AA3B3401-C4EA-4 100×31, planChip-AFA80D13-B166-4 150×31, planChip-02796BF3-E342-4 100×31, planChip-7B64A0B1-193A-4 298×31, rideView.cockpit 78×36, rideView.map 27×15, rideView.performance 82×15, hubClose 76×35
+XXXL home ill: primary 'I feel well again' at 308–358 of 852
+XXXL home ill: key controls homePrimary 329×50, homeHoldInfo 193×44
+L progress glance: nothing wider than the screen
+L progress glance: 20 texts, none overlapping
+L riding 4 wk: 4 date labels, smallest gap 39 pt
+L riding 4 wk: nothing wider than the screen
+L riding 4 wk: 16 texts, none overlapping
+L riding 8 wk: 4 date labels, smallest gap 42 pt
+L riding 8 wk: nothing wider than the screen
+L riding 8 wk: 16 texts, none overlapping
+L riding 12 wk: 6 date labels, smallest gap 15 pt
+L riding 12 wk: nothing wider than the screen
+L riding 12 wk: 18 texts, none overlapping
+L riding 16 wk: 5 date labels, smallest gap 19 pt
+L riding 16 wk: nothing wider than the screen
+L riding 16 wk: 17 texts, none overlapping
+L riding 1 yr: 4 date labels, smallest gap 43 pt
+L riding 1 yr: nothing wider than the screen
+L riding 1 yr: 16 texts, none overlapping
+L riding selected: nothing wider than the screen
+L riding selected: 18 texts, none overlapping
+L strength 8 wk: 4 date labels, smallest gap 45 pt
+L strength 8 wk: nothing wider than the screen
+L strength 8 wk: 16 texts, none overlapping
+L strength selected: nothing wider than the screen
+L strength selected: 17 texts, none overlapping
+L: FTP badge not found
+L plan: nothing wider than the screen
+L plan: 38 texts, none overlapping
+L: no Fix plan button (week within budget)
+L plan lower: nothing wider than the screen
+L plan lower: 28 texts, none overlapping
+L plan lower 2: nothing wider than the screen
+L plan lower 2: 23 texts, none overlapping
+L: Devices & Connections rows not found
+XXXL progress glance: nothing wider than the screen
+XXXL progress glance: 17 texts, none overlapping
+XXXL riding 4 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 4 wk: nothing wider than the screen
+XXXL riding 4 wk: 11 texts, none overlapping
+XXXL riding 8 wk: 4 date labels, smallest gap 31 pt
+XXXL riding 8 wk: nothing wider than the screen
+XXXL riding 8 wk: 11 texts, none overlapping
+XXXL riding 12 wk: 4 date labels, smallest gap 27 pt
+XXXL riding 12 wk: nothing wider than the screen
+XXXL riding 12 wk: 11 texts, none overlapping
+XXXL riding 16 wk: 4 date labels, smallest gap 30 pt
+XXXL riding 16 wk: nothing wider than the screen
+XXXL riding 16 wk: 11 texts, none overlapping
+XXXL riding 1 yr: 4 date labels, smallest gap 32 pt
+XXXL riding 1 yr: nothing wider than the screen
+XXXL riding 1 yr: 11 texts, none overlapping
+XXXL riding selected: nothing wider than the screen
+XXXL riding selected: 12 texts, none overlapping
+XXXL strength 8 wk: 4 date labels, smallest gap 34 pt
+XXXL strength 8 wk: nothing wider than the screen
+XXXL strength 8 wk: 11 texts, none overlapping
+XXXL strength selected: nothing wider than the screen
+XXXL strength selected: 10 texts, none overlapping
+XXXL: FTP badge not found
+XXXL plan: nothing wider than the screen
+XXXL plan: 28 texts, none overlapping
+XXXL: no Fix plan button (week within budget)
+XXXL plan lower: nothing wider than the screen
+XXXL plan lower: 23 texts, none overlapping
+XXXL plan lower 2: nothing wider than the screen
+XXXL plan lower 2: 17 texts, none overlapping
+XXXL: Devices & Connections rows not found

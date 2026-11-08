@@ -1,0 +1,101 @@
+BikeComputer iOS CI — run 204 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 204 — 2026-11-08 15:13 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 6m0s
+RESULT tests: FAILED (exit 65) · 13m54s — 	PlanSummariesTests.testRingMinutesAndTimelineComeFromTheSameLedgerAsHome()  ** TEST EXECUTE FAILED ** 
+Total: 14m31s
+
+## smoke
+BikeComputer iOS CI — build 204 — 2026-11-08 15:13 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 12m36s
+RESULT launch smoke (Release): FAILED (exit 65) · 58m54s
+Total: 60m17s
+
+## journeys
+BikeComputer iOS CI — build 204 — 2026-11-08 15:40 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 10m22s
+  journey hybrid: FAILED (exit 65) · recording 1863 KB · 9m12s
+  journey cycling: FAILED (exit 65) · recording 1386 KB · 6m4s
+  journey strength: FAILED (exit 65) · recording 1289 KB · 6m7s
+RESULT journey (recorded): FAILED — JourneyTests hybrid, cycling, strength · 35m52s
+Total: 36m3s
+
+## layout-small
+BikeComputer iOS CI — build 204 — 2026-11-08 15:13 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m50s
+  layout small (L,AX3): FAILED (exit 65) · 30m41s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertEqual failed: ("0") is not equal to ("7") - AX3: seven day buttons -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertEqual failed: ("0") is not equal to ("7") - L: seven day buttons 
+RESULT layout audit: FAILED (79 screenshots)
+Total: 42m10s
+
+## layout-standard
+BikeComputer iOS CI — build 204 — 2026-11-08 15:13 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m10s
+  layout standard (L,XXXL): ok · 8m39s
+RESULT layout audit: ok (33 screenshots)
+Total: 17m4s
+
+## layout-promax
+BikeComputer iOS CI — build 204 — 2026-11-08 15:28 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m41s
+  layout promax (L): ok · 7m35s
+RESULT layout audit: ok (13 screenshots)
+Total: 20m34s
+
+## layout-owner
+BikeComputer iOS CI — build 204 — 2026-11-08 15:13 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m59s
+  layout owner (L,XXXL): FAILED (exit 65) · 47m30s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertEqual failed: ("0") is not equal to ("7") - L: seven day buttons -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertEqual failed: ("0") is not equal to ("7") - XXXL: seven day buttons 
+RESULT layout audit: FAILED (77 screenshots)
+Total: 57m48s
+
+## watch
+BikeComputer iOS CI — build 204 — 2026-11-08 15:30 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13277   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13850   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 14194   screenshot ax3 ok large · 9m25s
+Total: 9m32s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit 0e7fe3e9d71e1aa9242b60563f57cba13b4cd4e1  branch ios/checkpoint-f-ride  job failure

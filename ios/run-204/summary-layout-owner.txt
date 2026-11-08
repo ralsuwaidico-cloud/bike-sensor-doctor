@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 204 — 2026-11-08 15:13 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m59s
+  layout owner (L,XXXL): FAILED (exit 65) · 47m30s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertEqual failed: ("0") is not equal to ("7") - L: seven day buttons -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertEqual failed: ("0") is not equal to ("7") - XXXL: seven day buttons 
+RESULT layout audit: FAILED (77 screenshots)
+Total: 57m48s
