@@ -1,0 +1,101 @@
+BikeComputer iOS CI — run 196 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 196 — 2026-11-08 06:21 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 3m11s
+RESULT tests: ok (Executed 613 tests, with 0 failures) · 6m52s
+Total: 7m1s
+
+## smoke
+BikeComputer iOS CI — build 196 — 2026-11-08 06:21 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 12m38s
+RESULT launch smoke (Release): FAILED (exit 65) · 40m6s
+Total: 41m15s
+
+## journeys
+BikeComputer iOS CI — build 196 — 2026-11-08 06:37 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 7m3s
+  journey hybrid: ok · recording 1913 KB · 11m17s
+  journey cycling: ok · recording 1867 KB · 7m15s
+  journey strength: ok · recording 1452 KB · 7m8s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 33m5s
+Total: 33m28s
+
+## layout-small
+BikeComputer iOS CI — build 196 — 2026-11-08 06:21 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m20s
+  layout small (L,AX3): ok · 34m44s
+RESULT layout audit: ok (79 screenshots)
+Total: 47m46s
+
+## layout-standard
+BikeComputer iOS CI — build 196 — 2026-11-08 06:28 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m48s
+  layout standard (L,XXXL): ok · 11m40s
+RESULT layout audit: ok (33 screenshots)
+Total: 20m46s
+
+## layout-promax
+BikeComputer iOS CI — build 196 — 2026-11-08 06:21 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m56s
+  layout promax (L): ok · 6m50s
+RESULT layout audit: ok (13 screenshots)
+Total: 15m57s
+
+## layout-owner
+BikeComputer iOS CI — build 196 — 2026-11-08 06:21 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m38s
+  layout owner (L,XXXL): ok · 22m58s
+RESULT layout audit: ok (77 screenshots)
+Total: 32m55s
+
+## watch
+BikeComputer iOS CI — build 196 — 2026-11-08 06:49 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 10506   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11046   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11571   screenshot ax3 ok large · 10m12s
+Total: 10m17s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit 9f18dbf398556fbb75e1fe0d5182a9a6ba87e443  branch ios/checkpoint-f-ride  job failure

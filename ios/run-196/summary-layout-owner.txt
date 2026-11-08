@@ -1,0 +1,11 @@
+BikeComputer iOS CI — build 196 — 2026-11-08 06:21 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m38s
+  layout owner (L,XXXL): ok · 22m58s
+RESULT layout audit: ok (77 screenshots)
+Total: 32m55s
