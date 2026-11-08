@@ -121,7 +121,8 @@ jobs:
           path: ios/build/spm
           key: spm-v1-${{ hashFiles('ios/project.yml') }}
       - name: Quick check (compile, unit tests, main screens on SE + standard)
-        timeout-minutes: 105
+        # run 189 (7 Nov): a green quick pass now needs ~110 min (SE at AX3 alone takes 68 min) and was cut off at 105
+        timeout-minutes: 150
         env:
           STAGE: quick
           BUILD_NUMBER: ${{ github.run_number }}
