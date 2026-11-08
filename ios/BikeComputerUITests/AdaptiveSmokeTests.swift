@@ -48,7 +48,14 @@ final class AdaptiveSmokeTests: XCTestCase {
         submit.tap()
 
         // the coach runs and shows what changed (and why) in the Adjustments view
-        XCTAssertTrue(app.navigationBars["Coach adjustments"].waitForExistence(timeout: 10), "Adjustments view opens after the check-in")
+        // runs 194/195 (Sunday, cold Release build): the check-in's coach run + the pushed Adjustments view took > 10 s
+        // once and once left the snapshot timing out; give it 40 s and, on failure, say what is on screen instead
+        let adjustments = app.navigationBars["Coach adjustments"]
+        if !adjustments.waitForExistence(timeout: 40) {
+            let bars = app.navigationBars.allElementsBoundByIndex.map { $0.identifier }.joined(separator: " | ")
+            let sheets = app.sheets.count
+            XCTFail("Adjustments view did not open within 40 s after the check-in — navigation bars: [\(bars)], sheets: \(sheets), app state: \(app.state.rawValue)")
+        }
         XCTAssertEqual(app.state, .runningForeground)
         let done = app.buttons["adjustmentsDone"].firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 5))
