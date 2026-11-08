@@ -39,6 +39,7 @@ struct ProgressTabView: View {
                             Card { WeeklyTrendChart(riding: riding, lifting: lifting, metrics: metrics, metric: $metric, range: $range) }
                                 .id("trends")
                         }
+                        ProgressAnalyticsSection(showRiding: showRiding, showLifting: showLifting)   // Checkpoint D
                         if showRiding { ftpCard.id("ftp") }
                         if showLifting { StrengthProgressCard() }
                         CheckpointsCard(showRiding: showRiding, showLifting: showLifting)
