@@ -1600,9 +1600,13 @@ final class Store: ObservableObject {
         adaptations = []; dismissedAdaptations = []; approvedAdaptations = []; adaptiveProposals = []; lastAdaptation = nil; painClearances = []
         strengthPrefs = StrengthPrefs(); trash = []; migrationLog = []; undoToast = nil
         planVersions = []; pendingPlanChanges = [:]
+        recoveryLog = RecoveryLog()                                     // Checkpoint E: Health reading history is personal data too
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
-        for k in ["bc.onboarded", "bc.guest", "bc.appleUser"] { UserDefaults.standard.removeObject(forKey: k) }
+        // files other stores keep beside this one: the loaded GPX route and the Cyclift Watch acknowledgement table
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        if let support { try? FileManager.default.removeItem(at: support.appendingPathComponent("Cyclift", isDirectory: true).appendingPathComponent("loaded-route.json")) }
+        for k in ["bc.onboarded", "bc.guest", "bc.appleUser", "cyw.acked"] { UserDefaults.standard.removeObject(forKey: k) }
         ensurePlan()
     }
 
