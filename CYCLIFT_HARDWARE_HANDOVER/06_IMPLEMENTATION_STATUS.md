@@ -1,0 +1,84 @@
+# 06 — Implementation status, feature by feature
+
+Categories (owner's): **HV** Implemented and hardware‑verified · **HT** Implemented and simulator/host‑tested · **CO**
+Compiles but not runtime‑tested · **DI** Design approved, implementation incomplete · **PO** Proposed only · **BU**
+Blocked or unknown. "Tests" = automated evidence that exists; "HW" = tested on the real device (date / log), else **No**.
+
+## A. BikeComputer (firmware `fw/phonefirst` 0.7.4‑rc5 unless noted; board runs 0.7.3)
+
+| Feature | Purpose | Design ref | Implementation | Status | Tests | HW | Known defects / remaining |
+|---|---|---|---|---|---|---|---|
+| Display + touch + backlight | GC9A01 round UI, CST816S input | board.h, Phase A | `main/hw.c`, LVGL port | **HV** for 0.1–0.6 (owner used the device 23–25 Oct); 0.7.x **CO/HT** | simulator 339 screens | Yes (0.1.x–0.6.0 rev1; touch issues HW‑5/8 observed) | 0.6.1 touch‑wake fix and later never hardware‑verified |
+| Onboarding on device | profile without a phone | decisions 0, 2, 3, 5 | `main/ui/ui_onboard.c`, `bc_profile.c` | HT (0.2.0+, used on the real board 0.2–0.6) | sim | partly (0.2–0.6) | — |
+| Home / START RIDE / status line | — | decision 9 | `ui_home.c` | HT | sim | partly | — |
+| Ride dashboards A/B/C + switch during ride | live power/cadence/HR, coach word | decisions 4, 6 | `ui_ride.c` DESIGNS[] | HT | sim | partly (0.2–0.6) | coach card (1.3) never on hardware |
+| Ride controls (pull‑down, hold PAUSE/END) | safe control on the bars | decision 7 | `ui_common.c`, `bc_ride.c` | HT | sim + host | partly | hold‑to‑confirm (0.6.0 rev3) not hardware‑verified |
+| Results / history / SAVE‑discard | — | decision 8 | `ui_results.c`, `bc_ride.c`, FAT `rides/` | HT | host | partly | FAT root directory corrupted on the board → nothing can be saved until repaired (BU) |
+| Power‑meter decode (XDS / Cycling Power) | watts + cadence from the owner's meter | standing direction | `bc_xds.c`, `bc_cp.c`, `bc_gatt.c`, `ble_central.c` | HT (25 decoder vectors) | host | **No** — "never run on the board with the meter" (BIKE‑001); 0.7.2 fixed a real CCCD bug found on hardware | first milestone of the project still unproven |
+| HR strap / CSC sensor on board | — | — | `bc_hr.c`, `bc_csc.c` | HT | host | No (BIKE‑002/003) | — |
+| Sensor pipeline stages + auto‑recover | honest sensor states | 0.7.2 | `bc_pipe.c`, EVENT sensor_diag | HT | host + harness | No | — |
+| On‑board coach (target band, cues) | reason for every instruction | standing direction | `bc_coach.c` | HT | host | No | audit M‑07…M‑11 open: uses watts from FTP when the phone's FTP is unknown (BIKE‑005) |
+| Auto‑FTP (95 % of best 20 min) | — | carry‑over from Android | `bc_profile.c` | HT | host | No | board and phone rules differ (DEV‑GAP‑005) |
+| BikeComputer Link 1.0–1.2.3 (phone) | pairing, LIVE, inputs, control, sync, Wi‑Fi, profile, settings, diag transfer | protocol doc | `bc_link.c`, `ble_link.c`, `app_diag.c` | HT; **HV for 1.0/1.2 basics** (phone paired and rode with 0.4.0–0.6.0) | host vectors shared with iOS; blehost harness | Yes for 0.4–0.6 pairing/LIVE; pairing‑loss bug HW‑9 seen on hardware, fix (0.7.0) not verified | diag transfer 1.2.3 never on hardware |
+| Link 1.3 (HELLO, COACH mirror, RIDEQ, STORAGE, DIAG_AUTO) | phone‑first | `coord/interfaces/BLE_CONTRACT.md` | `app_link13.c`, `bc_link` 1.3 codec | HT (95 host tests, 34‑vector cross‑check with iOS `ios/phonefirst-dev`) | host + blehost stress | No | iPhone side not in the release branches |
+| Wi‑Fi manager + provisioning | — | 0.3.0 / 1.2 | `net_wifi.c`, `bc_wifi.c`, `ui_wifi.c` | HT; used on hardware 0.3–0.6 | sim | partly | — |
+| Power states (screen‑off, standby, deep sleep, touch lock, battery estimate) | — | POWER_0.5.0 | `bc_power.c`, `app_power.c`, `ui_power.c` | HT; 0.5.0 **HV with defects** (link lost, wake unreliable → fixed 0.6.x, unverified) | sim §13 invariants | Yes 0.5.0 (defects), later No | deep‑sleep current unmeasured (HW‑4); charge alerts infeasible (HW‑7) |
+| Pairing lifecycle (identity renewal, Repair‑needed) | — | 0.7.0 | `ble_link.c` | HT | host | No (bug seen on HW, fix unverified) | — |
+| Crash‑loop safe mode → RECOVERY MODE, staged boot, core dump, boot‑record ring | survive and explain crashes | CRASH_0.7.2, 0.7.3/0.7.4 | `bc_boot.c`, `diag_esp.c`, partitions | HT; **0.7.3's core dump was written and verified on the board (B)** | host (`test_bc_bootrec`, `test_partitions`) | partly (0.7.3 core dump) | the Bluetooth‑start abort itself: fixed in 0.7.4 (never aborts) — unverified |
+| Storage categories + `READ-BOARD-STATE` + repair plan | diagnose the erased FAT root | FW‑1/FW‑2 | `bc_storage`, `tools/storage_audit.py`, `pc-kit/READ-BOARD-STATE.*` | HT | host (`test_bc_storage`) | No — owner approval pending | repair not started |
+| Diagnostics (Device Health, Sensor Test, Self‑test, report transfer) | — | decision 11, 1.2.3 | `app_diag.c`, `bc_diag.c`, `ui_tools.c` | HT | host (`test_bc_diag`, fixtures shared with iOS) | report transfer No | — |
+| Installer kit (backup → verify → write → verify, rollback, restore) | owner‑run installs | pc‑kit | `pc-kit/INSTALL-*.bat/ps1`, `make_kit_074.py` | **HV** for 0.3.0 → 0.7.3 installs (logs on the PC) | — | Yes (0.4.0 24 Oct, 0.5.0, 0.6.0 revs, 0.7.0–0.7.3) | rc5 kit built, not run |
+| Health stop/pause to board, ANT+, GPS on board | — | — | — | **PO** (BIKE‑011/012) / not possible (GPS: phone) | — | — | — |
+
+## B. Cyclift Watch (LILYGO) — branch `watch/w0-foundation` @ ca2cadb6. **Nothing is hardware‑verified; nothing has been flashed.**
+
+Mapping from the LILYGO tracker (40 capabilities, `Cyclift_LilyGoWatch_Tracker_UPDATES.xlsx`, rows CW‑001…CW‑040):
+
+| ID | Area | Capability | Milestone | Status | Evidence / files | Notes |
+|---|---|---|---|---|---|---|
+| CW-001 | Hardware | Board identification (revision V1.0 / V1.1 / V2, compass variant, T-U2T present) | W0 | Blocked or unknown — Owner must read the silkscreen and confirm the T-U2T | docs/HARDWARE_AUDIT.md §1 | Blocks every hardware step |
+| CW-002 | Hardware | Capability matrix (Confirmed / Needs testing / Requires external sensor / Unsupported) | W0 | Proposed only | docs/HARDWARE_AUDIT.md §2 | From manufacturer files; nothing measured yet |
+| CW-003 | Hardware | Pin maps per revision in firmware | W0 | Implemented and simulator/host-tested | firmware/src/hal/board_pins.hpp | Transcribed from TWatch_2021_Library board headers |
+| CW-004 | Hardware | Factory firmware backup (read-only full-flash dump + SHA-256) | W0 | Blocked or unknown — Needs the T-U2T dongle | tools/backup_factory_firmware.sh | Run before any write; restore needs owner approval |
+| CW-005 | Hardware | Non-destructive diagnostics (chip, flash, PSRAM, I2C devices, battery ADC) | W0 | Blocked or unknown — Uploading it is a flash → owner authorisation | firmware/src/app/main.cpp |  |
+| CW-006 | Hardware | Power consumption measurements (idle, screen, BLE, workout, IMU, motor, sleep) | W0/W8 | Proposed only | docs/HARDWARE_AUDIT.md §8 | No battery figure promised before measuring |
+| CW-007 | OS | Boot, display (GC9A01), backlight, LVGL half-screen buffer | W1 | Design approved, implementation incomplete | docs/ARCHITECTURE.md §1–2, src/ui/lv_conf.h |  |
+| CW-008 | OS | Touch gestures (CST816S) + physical buttons (2 programmable keys + Boot shortcut; Reset/Boot recovery preserved) | W1 | Design approved, implementation incomplete (partial, host-tested) | docs/BUTTONS.md, domain/buttons.hpp (14 tests) | Four buttons exist; two are independently programmable — not claimed as four. End = long Key1 + confirmation |
+| CW-009 | OS | Clock: RTC (PCF8563), phone time sync, drift measurement, time-zone | W1/W2 | Design approved, implementation incomplete (partial, host-tested) | domain/sync.hpp ClockSync (tests) |  |
+| CW-010 | OS | Orbital navigation (face · panels · activities · quick settings · live rules) | W1 | Implemented and simulator/host-tested | domain/navigation.hpp (11 tests) |  |
+| CW-011 | OS | Theme system: Cyclift / Sport / Bloom × dark / light tokens; fixed grading colours | W1 | Design approved, implementation incomplete (partial, host-tested) | domain/grading.hpp (tests), docs/watch-faces.html | Shared token values with the iPhone |
+| CW-012 | OS | Watch faces Orbit / Chrono / Pulse (v2: Orbit arcs + one legend line; Chrono real hands in a hub, dials outside the sweep; Pulse one insight + More) with complication … | W1 | Design approved, implementation incomplete (partial, host-tested) | domain/screens.hpp faces; docs/gallery-v2.html; docs/WATCH_FACES.md | Owner (16:07) asked for refinements → v2 awaits review; LVGL rendering on device pending |
+| CW-013 | OS | Battery status, screen timeout, brightness, low-power clock, motion wake, safe shutdown | W1/W8 | Design approved, implementation incomplete | docs/ARCHITECTURE.md |  |
+| CW-014 | OS | Local persistence (LittleFS): settings, event queue, caches; OTA with rollback | W1 | Design approved, implementation incomplete | boards/partitions_8mb_ota.csv, hal/IStorage |  |
+| CW-015 | Connectivity | Versioned BLE protocol v1: frames + CRC, Hello/TimeSync/Status/Plan/Cached/Live/Gps/Coach/Event/Ack — binary codecs in firmware (payloads.hpp) AND the iPhone companion… | W2 | Implemented and simulator/host-tested | domain/sync.hpp (tests), docs/BLE_PROTOCOL.md | Transport (NimBLE) not written |
+| CW-016 | Connectivity | Offline event queue, idempotent dedup, duplicate prevention across devices and Health | W2 | Implemented and simulator/host-tested | domain/sync.hpp EventQueue/DedupFilter (tests) |  |
+| CW-017 | Connectivity | Pairing, reconnect, notifications, today's training, cached recovery data | W2 | Design approved, implementation incomplete | docs/ARCHITECTURE.md §4 |  |
+| CW-018 | Connectivity | ESP32 BLE central + peripheral at the same time (sensors + iPhone) | W2 | Proposed only | docs/HARDWARE_AUDIT.md §2 | Needs testing; default design keeps sensors on the phone |
+| CW-019 | Strength | Exercise display, order, supersets, sets/targets, weights, rest timer, undo/correct; v2 screens: dominant detected count with AUTO confidence / MANUAL label, set · tar… | W3 (screens pulled into W1) | Implemented and simulator/host-tested | domain/strength.hpp (9 tests); screens.hpp liftExercise/repCounter/restTimer/liftControls | Rep-count accuracy unclaimed until W4 real-exercise tests |
+| CW-020 | Strength | Log a set from the watch; sync without corrupting the approved plan | W3 | Design approved, implementation incomplete (partial, host-tested) | domain/sync.hpp WatchEvent |  |
+| CW-021 | Rep counting | Experimental wrist-motion rep detector with confidence; confirm / correct / undo | W4 | Implemented and simulator/host-tested | domain/rep_detector.hpp (8 synthetic tests) | Real accuracy unknown until the W4 dataset |
+| CW-022 | Rep counting | Validation dataset + per-exercise accuracy table; manual-only list | W4 | Proposed only | docs/REP_COUNTING.md |  |
+| CW-023 | Cycling | Cockpit v2 (one question: how am I performing now): one dominant number + large unit, 270° orbital gauge (zone ladder · target band · position marker · interval arc), … | W5 (pulled into W1 by owner 8 Nov 15:31 / 16:07) | Implemented and simulator/host-tested | domain/ride_telemetry.hpp command()/Gauge, ride_screens.hpp; docs/CYCLING_INSTRUMENT.md; docs/gallery-v2.html; 1 248 gallery scenes 0 findings | Owner rejected v1 as too text-heavy (16:07); v2 awaits owner design review. Host render only |
+| CW-024 | Cycling | Navigation v2: three states (A tracking · B route ahead + next turn + off-route · C disconnected: stale marker, last-fix time, reconnecting), auto-scale 2–25 m/px with… | W5 (pulled into W1) | Implemented and simulator/host-tested | ride_telemetry.hpp GpsMirror, autoScale, projectRouteAhead (tests); screens.hpp simPath; ride_screens.hpp rideNavigation | Domain + screen only; BLE delivery of fixes is W2 |
+| CW-025 | Cycling | One recorder per ride (board / phone / watch); End always available | W5 | Design approved, implementation incomplete (partial, host-tested) | domain/activity.hpp (End from Paused test) |  |
+| CW-026 | Activities | Activity registry (11 categories) + shared lifecycle with honest timers and metric-source rules | W1/W3 | Implemented and simulator/host-tested | domain/activity.hpp (14 tests) |  |
+| CW-027 | Coaching | Coaching message protocol; one primary instruction; Why?; haptics; offline local rules | W2/W6 | Implemented and simulator/host-tested | domain/coach.hpp (6 tests) | No LLM on the ESP32; rules never presented as AI |
+| CW-028 | Recovery | Sleep / HRV / recovery cards with source + age; stale warnings; no readiness score | W6 | Design approved, implementation incomplete | docs/ARCHITECTURE.md §6 |  |
+| CW-029 | Detachable | Mode identification (explicit, mount/charge detection, motion suggestion, phone context) | W7 | Proposed only | directive §11 | Never auto start/stop on motion alone |
+| CW-030 | Quality | Host CI (GitHub Actions) for the domain tests + round-display gallery | W0/W1 | Implemented and simulator/host-tested | .github/workflows/watch.yml; 172 host checks + 1 248 gallery scenes |  |
+| CW-031 | Quality | Firmware compile check in CI (PlatformIO ESP32, no flashing) — first real device build 8 Nov, run 42485131249: app image static RAM 111 856 B (34.1 % of 320 KB), flash… | W1 | Implemented and simulator/host-tested | .github/workflows/watch.yml firmware-compile; docs/HARDWARE_READINESS.md §5 | Linker figures only — runtime heap, PSRAM, frame rate, battery remain pending on-device measurements. A tee-masked failu |
+| CW-032 | Quality | Device test checklist for physical validation | W1→W8 | Proposed only | docs/HARDWARE_AUDIT.md §6, §8 | Owner performs; results recorded as given |
+| CW-033 | OS | Round-screen layout engine: chord-aware bands, measured text fitting, per-component minimum fonts / max lines, More / paging instead of shrinking | W1 | Implemented and simulator/host-tested | domain/round_layout.hpp, docs/ROUND_LAYOUT.md | Owner requirement 8 Nov 15:14 §1 |
+| CW-034 | Quality | Automated round-display checks on 52 screens (faces, menus, 10 ride fixtures × cockpit / performance pages / navigation / controls / key previews, strength, panels) × … | W1 | Implemented and simulator/host-tested | test/host/gallery → 408 scenes, 0 findings; docs/round-gallery-1.png / -2.png | Owner requirement §4; device pass with LVGL-measured fonts still required before any screen is 'complete' |
+| CW-035 | OS | Live cue wrist contract: coach instruction ≤ 44 chars at a word boundary; detail behind Why? | W1/W2 | Implemented and simulator/host-tested | domain/coach.hpp wristInstruction() |  |
+| CW-036 | OS | Button interaction quality: debounce, short/long, no double trigger, haptics, wake, identical when disconnected, tests per activity mode | W1 | Implemented and simulator/host-tested | domain/buttons.hpp KeyDecoder/actionFor (tests) | Owner requirement §3 |
+| CW-037 | Cycling | Performance v2: one large chart per page (power · HR · cadence · target vs actual), current value + 30 s trend, axis min/max, target band + mid-line, now marker, swipe… | W5 (pulled into W1) | Implemented and simulator/host-tested | ride_telemetry.hpp Series (range/buckets tests); ride_screens.hpp ridePerformance(page) | Owner: v1 graph too small → v2 uses the centre of the screen |
+| CW-038 | Cycling | Two-press physical-key system: first press previews key name + action, second press executes; 2.5 s expiry; different key replaces; haptics; cycling / strength / idle … | W1 | Implemented and simulator/host-tested | domain/buttons.hpp TwoPress (tests); docs/BUTTONS.md | Hardware feel (haptic timing, key travel) needs the device |
+| CW-039 | Cycling | Coaching command consistency + status taxonomy: HOLD / EASE OFF / PUSH TO / CADENCE UP / HR ABOVE TARGET / INTERVAL computed from the shown target; PHONE LOST · NO GPS… | W1 | Implemented and simulator/host-tested | ride_telemetry.hpp command(), LinkState, RouteState (tests) | Fixes the 214 W vs 'reduce power' contradiction the owner found in the v1 gallery |
+| CW-040 | Cycling | Ride controls overlay (Lap · Pause/Resume · End · Why?) and workout controls overlay (Correct · Pause · End workout) | W1 | Implemented and simulator/host-tested | ride_screens.hpp rideControls, screens.hpp liftControls | Touch Pause stays one tap on every live view; End never one tap |
+
+
+Summary: 0 hardware‑verified · the domain (faces, screens, cockpit/performance/navigation models, strength, rep detector,
+coach, sync, buttons, app model, payload codecs) is **host‑tested**; the ESP32 shell (drivers, LVGL renderer, main loop)
+**compiles** (CI run 42485131249) but has never run; hardware identification, factory backup, flashing, measurements,
+BLE on the radio and the device test checklist are **blocked on the owner's board check and approval**.

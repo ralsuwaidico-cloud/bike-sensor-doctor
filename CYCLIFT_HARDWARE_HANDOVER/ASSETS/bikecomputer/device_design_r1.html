@@ -1,0 +1,278 @@
+<title>Waveshare Design Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&family=Rajdhani:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: a review sheet — each decision is a row of real-size round screens (240 px = the 32 mm GC9A01) with a verdict line. */
+:root{
+  --bg:#EEF1F2; --panel:#FFFFFF; --ink:#12181C; --mut:#5B6870; --line:#D3DADE; --pick:#0E8F8C; --pickbg:#DDF3F2;
+  --dev-bg:#07090B; --dev-fg:#EAF2F4; --dev-mut:#7D8B93; --dev-faint:#3A454C; --dev-track:#1B2328;
+  --cyan:#34E7E4; --green:#56E08C; --violet:#9B8CFF; --amber:#FFB64D; --red:#FF5A5A;
+  --f-num:"Rajdhani","Arial Narrow",sans-serif; --f-lab:"IBM Plex Mono",ui-monospace,monospace; --f-cue:"Archivo","Arial Black",sans-serif; --f-body:"Source Sans 3",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0D1215; --panel:#141B1F; --ink:#E6EDF0; --mut:#93A2AA; --line:#25313A; --pick:#45D6D2; --pickbg:#123234; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#0D1215; --panel:#141B1F; --ink:#E6EDF0; --mut:#93A2AA; --line:#25313A; --pick:#45D6D2; --pickbg:#123234; color-scheme:dark }
+body{ background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.5; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px)); padding-block:20px 48px }
+.wrap{ max-width:1080px; margin:0 auto; display:grid; gap:28px }
+h1{ font-family:var(--f-cue); font-weight:800; font-size:clamp(24px,4vw,34px); line-height:1.1; margin:0; text-wrap:balance }
+h2{ font-family:var(--f-cue); font-weight:700; font-size:20px; margin:0; text-wrap:balance }
+.eyebrow{ font-family:var(--f-lab); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--pick) }
+p{ margin:0; max-width:68ch } .mut{ color:var(--mut) }
+.status{ display:flex; flex-wrap:wrap; gap:8px }
+.chip{ font-family:var(--f-lab); font-size:12px; padding:3px 10px; border-radius:999px; border:1px solid var(--line); background:var(--panel) }
+.chip.ok{ border-color:#3aa86b; color:#2c8a57 } .chip.wait{ border-color:#c98a1b; color:#a8700d }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .chip.ok{ color:#6fe0a1 } :root:not([data-theme="light"]) .chip.wait{ color:#ffc56b } }
+:root[data-theme="dark"] .chip.ok{ color:#6fe0a1 } :root[data-theme="dark"] .chip.wait{ color:#ffc56b }
+section{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px; display:grid; gap:16px; min-width:0 }
+.q{ font-family:var(--f-lab); font-size:12px; color:var(--mut) }
+.opts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px }
+.opt{ display:grid; gap:10px; justify-items:center; align-content:start; padding:14px 10px; border-radius:14px; border:1px solid transparent; min-width:0 }
+.opt.rec{ border-color:var(--pick); background:var(--pickbg) }
+.opt h3{ font-family:var(--f-cue); font-size:15px; font-weight:700; margin:0; text-align:center }
+.tag{ font-family:var(--f-lab); font-size:10px; letter-spacing:.1em; color:var(--pick) }
+.pros{ font-size:13.5px; color:var(--mut); max-width:34ch; text-align:left; display:grid; gap:2px }
+.pros b{ color:var(--ink); font-weight:600 }
+/* ---- the device ---- */
+.dev{ --s:1.15; width:calc(240px*var(--s)); height:calc(240px*var(--s)); position:relative; border-radius:50%;
+  background:radial-gradient(circle at 50% 40%, #2b3238 0, #15191c 70%); padding:calc(10px*var(--s)); box-shadow:0 2px 0 #3d464d inset, 0 10px 24px rgba(0,0,0,.35); flex:none }
+@media (max-width:420px){ .dev{ --s:1 } }
+.scr{ width:240px; height:240px; transform:scale(var(--s)); transform-origin:0 0; border-radius:50%; overflow:hidden; background:var(--dev-bg); color:var(--dev-fg); position:relative; font-family:var(--f-lab); user-select:none; -webkit-user-select:none; touch-action:none }
+.abs{ position:absolute; white-space:nowrap } .c{ left:50%; transform:translateX(-50%); text-align:center; white-space:nowrap }
+.num{ font-family:var(--f-num); font-weight:600; line-height:.9 }
+.lab{ font-size:9px; letter-spacing:.12em; color:var(--dev-mut) }
+.sim{ position:absolute; bottom:6px; left:50%; transform:translateX(-50%); font-size:7px; letter-spacing:.14em; color:var(--amber); opacity:.8 }
+.btn{ position:absolute; background:#1c262c; border:1px solid #2c3a42; color:var(--dev-fg); border-radius:999px; font-family:var(--f-lab); font-size:11px; display:grid; place-items:center; cursor:pointer }
+.btn.go{ background:var(--green); color:#062012; border:0; font-weight:600 }
+.btn:focus-visible,.key:focus-visible{ outline:2px solid var(--cyan); outline-offset:2px }
+.real{ font-family:var(--f-lab); font-size:11px; color:var(--mut) }
+/* roller */
+.roller{ position:absolute; left:60px; width:120px; top:40px; height:160px; overflow-y:scroll; scroll-snap-type:y mandatory; scrollbar-width:none; touch-action:pan-y; mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent) }
+.roller::-webkit-scrollbar{ display:none }
+.roller div{ height:48px; line-height:1; padding-bottom:5px; box-sizing:border-box; display:grid; place-items:center; scroll-snap-align:center; font-family:var(--f-num); font-size:24px; color:var(--dev-mut); transition:font-size .12s,color .12s }
+.roller div.on{ font-size:40px; color:var(--dev-fg); font-weight:700 }
+.roller .pad{ height:56px }
+.band{ position:absolute; left:58px; right:58px; top:96px; height:48px; border-top:1px solid var(--dev-faint); border-bottom:1px solid var(--dev-faint); pointer-events:none }
+/* keys */
+.key{ position:absolute; width:46px; height:46px; border-radius:50%; background:#18232a; border:1px solid #2a3a44; color:var(--dev-fg); display:grid; place-items:center; font-family:var(--f-num); font-weight:700; font-size:18px; cursor:pointer; padding:0 }
+.key.grp{ font-size:11px; letter-spacing:.02em; width:52px; height:52px }
+.key.act{ background:var(--cyan); color:#052020; border:0 }
+.flow{ display:flex; gap:14px; overflow-x:auto; padding-bottom:6px }
+.step{ flex:none; display:grid; gap:6px; justify-items:center; width:120px }
+.step .mini{ width:112px; height:112px; border-radius:50%; background:var(--dev-bg); color:var(--dev-fg); display:grid; place-items:center; text-align:center; padding:12px; font-family:var(--f-lab); font-size:10px; line-height:1.3; box-shadow:0 0 0 5px #20272c }
+.step .mini b{ font-family:var(--f-num); font-size:20px; display:block; color:var(--dev-fg) }
+.step .n{ font-family:var(--f-lab); font-size:11px; color:var(--mut) }
+.step.opt2 .mini{ box-shadow:0 0 0 5px #20272c, 0 0 0 7px var(--amber) }
+.legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--mut) }
+.legend span::before{ content:""; display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:-1px; background:#20272c }
+.legend .o::before{ box-shadow:0 0 0 2px var(--amber) }
+table{ border-collapse:collapse; font-size:13.5px; width:100% } td,th{ text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top } th{ font-family:var(--f-lab); font-size:11px; letter-spacing:.08em; color:var(--mut); font-weight:600 }
+.tbl{ overflow-x:auto }
+@media (prefers-reduced-motion: reduce){ *{ transition:none!important; animation:none!important } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <div class="eyebrow">Bike Computer · Waveshare ESP32-S3 1.28" · Design round 1</div>
+    <h1>Waveshare Design Review</h1>
+    <p class="mut">Every screen below is drawn at the device's true pixel size (240 × 240 px on a 32 mm round display), enlarged slightly for viewing. Try them: drag the wheels, tap the keys. Numbers on dashboard mockups are a <b>simulated preview</b>, never device data.</p>
+    <div class="status">
+      <span class="chip ok">Firmware toolchain ready (ESP-IDF 5.5.1, LVGL 9.3)</span>
+      <span class="chip ok">Diagnostic firmware built — not yet run on the device</span>
+      <span class="chip wait">Waveshare not yet visible on the PC (USB cable)</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="eyebrow">Proposal · onboarding flow</div>
+    <h2>First-time setup, entirely on the device</h2>
+    <p class="mut">About two minutes. Only what the coach needs is asked; everything has a sensible pre-filled value so a beginner can tap through. FTP and heart-rate zones are never asked: the starting FTP is estimated from weight and experience (the approved Android method) and the coach learns the rest from real rides.</p>
+    <div class="flow" id="flow"></div>
+    <div class="legend"><span>Asked</span><span class="o">Optional, can be skipped</span></div>
+    <div class="tbl"><table>
+      <tr><th>From the Android setup</th><th>On the Waveshare</th><th>Why</th></tr>
+      <tr><td>Name, age, weight, experience, main goal</td><td>Kept</td><td>Needed for the starting FTP, zones and the plan</td></tr>
+      <tr><td>Height</td><td>Optional (your call, question 5 below)</td><td>Not used by any calculation today</td></tr>
+      <tr><td>Rides per week, days available, typical ride length, other sports, rest days</td><td>Moved to “Plan my week” later</td><td>Only needed when a weekly plan is built</td></tr>
+      <tr><td>Voice coaching, coaching frequency, tone, explanations</td><td>Defaults; change in Settings</td><td>The device has no speaker; frequency defaults to Normal</td></tr>
+      <tr><td>Own FTP / HR numbers</td><td>Optional, in Settings → My numbers</td><td>Beginners never need them; tested values can be added any time</td></tr>
+      <tr><td>Units</td><td>Metric by default (km, kg)</td><td>Changeable in Settings</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Question 1 · navigation</div>
+    <h2>How do you move around the device?</h2>
+    <p class="q">Matters most while riding: big targets, no accidental taps, always one gesture back to the dashboard.</p>
+    <div class="opts">
+      <div class="opt rec"><div class="tag">RECOMMENDED</div><h3>A · Ride pages carousel</h3><div class="dev"><div class="scr" id="navA"></div></div>
+        <div class="pros"><div><b>+</b> Swipe left/right between Dashboard, Coach, Graph, Workout</div><div><b>+</b> Swipe down for sensors, brightness, battery</div><div><b>+</b> Pause/End need a 1-second hold, so a bump can't stop a ride</div><div><b>−</b> Pages are found by swiping, not seen all at once</div></div><div class="real">tap the dots or the screen edge</div></div>
+      <div class="opt"><h3>B · Circular hub menu</h3><div class="dev"><div class="scr" id="navB"></div></div>
+        <div class="pros"><div><b>+</b> Everything visible around the ring</div><div><b>+</b> Natural on a round screen</div><div><b>−</b> 6 small targets near the edge, harder with gloves</div><div><b>−</b> An extra tap to get back to riding</div></div></div>
+      <div class="opt"><h3>C · Watch-style list</h3><div class="dev"><div class="scr" id="navC"></div></div>
+        <div class="pros"><div><b>+</b> Familiar from smartwatches</div><div><b>+</b> Scales to many settings</div><div><b>−</b> Vertical scrolling while riding is fiddly</div><div><b>−</b> Little room per item on a 32 mm screen</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Question 2 · numbers (age, weight, height)</div>
+    <h2>How should numbers be picked?</h2>
+    <p class="q">Each starts pre-filled (age 35, weight 75.0 kg) so most people move it only a little. Weight steps in 0.5 kg.</p>
+    <div class="opts">
+      <div class="opt rec"><div class="tag">RECOMMENDED</div><h3>A · Spinning wheel</h3><div class="dev"><div class="scr" id="numA"></div></div>
+        <div class="pros"><div><b>+</b> Large centre number, flick to move fast</div><div><b>+</b> Works the same for age, weight and height</div><div><b>−</b> Needs a vertical swipe on a small screen</div></div><div class="real">drag or scroll the wheel</div></div>
+      <div class="opt"><h3>B · Edge dial</h3><div class="dev"><div class="scr" id="numB"></div></div>
+        <div class="pros"><div><b>+</b> Uses the round edge like a watch bezel</div><div><b>+</b> Whole range in one sweep</div><div><b>−</b> Precise 0.5 kg steps are hard with a finger alone (− / + added)</div></div><div class="real">drag around the ring</div></div>
+      <div class="opt"><h3>C · − / + buttons</h3><div class="dev"><div class="scr" id="numC"></div></div>
+        <div class="pros"><div><b>+</b> Biggest targets, very precise</div><div><b>+</b> Hold to repeat</div><div><b>−</b> Slow for large changes (e.g. 35 → 62)</div></div><div class="real">tap or hold − / +</div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Question 3 · rider name</div>
+    <h2>How should a name be typed on a round 32 mm screen?</h2>
+    <p class="q">A full 26-letter keyboard would give keys about 3 mm wide, too small for a fingertip (≈7 mm). These options keep every key at least 6 mm.</p>
+    <div class="opts">
+      <div class="opt rec"><div class="tag">RECOMMENDED</div><h3>A · Letter groups around the ring</h3><div class="dev"><div class="scr" id="nameA"></div></div>
+        <div class="pros"><div><b>+</b> Made for a round screen: tap a group, then the letter</div><div><b>+</b> Large keys; two taps per letter</div><div><b>−</b> Takes a few seconds to learn</div></div><div class="real">try typing your name</div></div>
+      <div class="opt"><h3>B · Paged keyboard</h3><div class="dev"><div class="scr" id="nameB"></div></div>
+        <div class="pros"><div><b>+</b> Looks like a normal keyboard</div><div><b>−</b> Nine letters per page; swipe pages to find the rest</div><div><b>−</b> Corner keys sit close to the round edge</div></div><div class="real">swipe ‹ › to change page</div></div>
+      <div class="opt"><h3>C · Type it on a phone (optional extra)</h3><div class="dev"><div class="scr" id="nameC"></div></div>
+        <div class="pros"><div><b>+</b> Fastest if a phone is nearby: the device shows a QR code and serves its own setup page</div><div><b>−</b> Needs a phone, so it can only be an extra, never the only way</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Question 4 · main riding dashboard</div>
+    <h2>What does the ride screen look like?</h2>
+    <p class="q">Power is the main number (as on the Nokia Power Focus). Works without a heart-rate strap: HR shows NO STRAP. Values below are a simulated preview.</p>
+    <div class="opts">
+      <div class="opt rec"><div class="tag">RECOMMENDED</div><h3>A · Power Focus</h3><div class="dev"><div class="scr" id="dashA"></div></div>
+        <div class="pros"><div><b>+</b> Watts as large as the screen allows (≈ 9 mm digits)</div><div><b>+</b> Outer ring shows power against the target band</div><div><b>+</b> One-line coach at the bottom</div><div><b>−</b> Cadence and HR are smaller</div></div></div>
+      <div class="opt"><h3>B · Three gauges</h3><div class="dev"><div class="scr" id="dashB"></div></div>
+        <div class="pros"><div><b>+</b> Power, cadence and HR equal, like Classic on the Nokia</div><div><b>−</b> Each number only ≈ 4 mm high: hard to read at speed</div></div></div>
+      <div class="opt"><h3>C · Minimal, swipe for more</h3><div class="dev"><div class="scr" id="dashC"></div></div>
+        <div class="pros"><div><b>+</b> Huge watts, nothing else to read</div><div><b>−</b> Cadence/HR need a swipe; coach shows only when it speaks</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">How we'll keep track</div>
+    <p class="mut">Each answer is written into <code>docs/DEVICE_DESIGN_DECISIONS.md</code> in the project with its date, so approved screens are never redesigned by accident. After your answers I build those screens in the real firmware and send you a screenshot rendered by the device's own drawing code before anything is flashed.</p>
+  </section>
+</div>
+
+<script>
+const $=(id)=>document.getElementById(id);
+const el=(tag,cls,html,style)=>{ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; if(style) e.style.cssText=style; return e; };
+const DEV={bg:"#07090B",fg:"#EAF2F4",mut:"#7D8B93",faint:"#3A454C",track:"#1B2328",cyan:"#34E7E4",green:"#56E08C",violet:"#9B8CFF",amber:"#FFB64D"};
+const svgNS="http://www.w3.org/2000/svg";
+function arcPath(cx,cy,r,a0,a1){ const p=(a)=>{ const t=(a-90)*Math.PI/180; return [cx+r*Math.cos(t), cy+r*Math.sin(t)]; }; const [x0,y0]=p(a0),[x1,y1]=p(a1); return `M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 ${a1-a0>180?1:0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; }
+function svg(parent){ const s=document.createElementNS(svgNS,"svg"); s.setAttribute("viewBox","0 0 240 240"); s.setAttribute("width","240"); s.setAttribute("height","240"); s.style.cssText="position:absolute;inset:0"; parent.appendChild(s); return s; }
+function path(s,d,stroke,w,extra){ const p=document.createElementNS(svgNS,"path"); p.setAttribute("d",d); p.setAttribute("fill","none"); p.setAttribute("stroke",stroke); p.setAttribute("stroke-width",w); p.setAttribute("stroke-linecap","round"); if(extra) for(const k in extra) p.setAttribute(k,extra[k]); s.appendChild(p); return p; }
+function text(scr,html,css){ const t=el("div","abs",html,css); scr.appendChild(t); return t; }
+
+/* ---------- onboarding flow strip ---------- */
+const STEPS=[["Welcome","<b>Hello</b>tap to set up"],["Name","<b>RASHED</b>letter ring"],["Age","<b>35</b>years"],["Weight","<b>75.0</b>kg"],["Height","<b>178</b>cm",1],["Experience","<b>Intermediate</b>swipe 5 levels"],["Main goal","<b>Endurance</b>pick one card"],["Power meter","<b>182 W</b>pair XDS, live check"],["HR strap","<b>Skip</b>pair later",1],["Wi-Fi","<b>Skip</b>for weather/sync",1],["Ready","<b>FTP 225 W</b>estimated from experience"]];
+STEPS.forEach(([n,h,o],i)=>{ const s=el("div","step"+(o?" opt2":""),`<div class="mini">${h}</div><div class="n">${i+1} · ${n}</div>`); $("flow").appendChild(s); });
+
+/* ---------- Q1 navigation ---------- */
+(function navA(){ const s=$("navA"); const pages=[["DASHBOARD","<div class='num' style='font-size:64px'>182</div><div class='lab'>WATTS</div>"],["COACH","<div style='font-family:var(--f-cue);font-weight:800;font-size:17px;white-space:normal;width:150px'>Hold this effort</div><div class='lab' style='margin-top:6px'>190–210 W · 2:40 left</div>"],["GRAPH","<svg width='150' height='60' viewBox='0 0 150 60'><path d='M0 40 L20 34 L40 36 L60 22 L80 26 L100 18 L120 24 L150 20' fill='none' stroke='#34E7E4' stroke-width='2'/><path d='M0 46 L30 44 L60 40 L90 38 L120 37 L150 36' fill='none' stroke='#9B8CFF' stroke-width='2'/></svg><div class='lab'>LAST 5 MIN</div>"],["WORKOUT","<div class='num' style='font-size:34px'>3 / 5</div><div class='lab'>INTERVAL · 4:12</div>"]];
+  let i=0; const title=text(s,"","top:30px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.14em;color:"+DEV.cyan);
+  const body=text(s,"","top:62px;left:20px;right:20px;height:120px;display:grid;place-items:center;align-content:center;text-align:center");
+  const dots=text(s,"","bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:7px");
+  const pull=text(s,"","top:6px;left:50%;transform:translateX(-50%);width:28px;height:4px;border-radius:2px;background:"+DEV.faint);
+  pages.forEach((_,k)=>{ const d=el("button","", "", "width:9px;height:9px;border-radius:50%;border:0;padding:0;cursor:pointer"); d.setAttribute("aria-label","page "+(k+1)); d.onclick=()=>{i=k;draw();}; dots.appendChild(d); });
+  function draw(){ title.textContent=pages[i][0]; body.innerHTML=pages[i][1]; [...dots.children].forEach((d,k)=>d.style.background=k===i?DEV.cyan:DEV.faint); }
+  s.addEventListener("click",(e)=>{ if(e.target.tagName==="BUTTON") return; const r=s.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width; if(x>.65) i=(i+1)%4; else if(x<.35) i=(i+3)%4; draw(); });
+  draw(); })();
+(function navB(){ const s=$("navB"); const items=[["RIDE",DEV.green],["WORKOUT",DEV.cyan],["HISTORY",DEV.violet],["RIDER",DEV.fg],["SENSORS",DEV.amber],["SETTINGS",DEV.mut]];
+  text(s,"<div class='num' style='font-size:30px'>START</div><div class='lab'>HOLD 1 S</div>","top:92px;left:50%;transform:translateX(-50%);text-align:center");
+  items.forEach(([n,c],k)=>{ const a=(k*60-90)*Math.PI/180; const x=120+86*Math.cos(a), y=120+86*Math.sin(a); const b=el("div","btn",n,`left:${x-26}px;top:${y-17}px;width:52px;height:34px;font-size:7.5px;color:${c}`); s.appendChild(b); }); })();
+(function navC(){ const s=$("navC"); const items=["Start ride","Workouts","Ride history","Riders","Sensors","Settings"];
+  const list=text(s,"","top:34px;left:44px;right:44px;bottom:34px;display:grid;gap:5px;align-content:center");
+  items.forEach((n,k)=>{ const b=el("div","",n,`padding:4px 12px;border-radius:12px;background:${k===0?"#123c2a":"#151d22"};color:${k===0?DEV.green:DEV.fg};font-family:var(--f-body);font-size:12px`); list.appendChild(b); }); })();
+
+/* ---------- Q2 numbers ---------- */
+function header(s,t){ text(s,t,"top:20px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;letter-spacing:.14em;color:"+DEV.cyan); }
+function nextBtn(s){ s.appendChild(el("div","btn go","NEXT ›","left:84px;top:204px;width:72px;height:24px")); }
+(function numA(){ const s=$("numA"); header(s,"WEIGHT · KG"); const r=el("div","roller"); r.tabIndex=0; r.setAttribute("aria-label","weight wheel"); r.appendChild(el("div","pad")); const vals=[]; for(let v=40;v<=140;v+=0.5) vals.push(v);
+  vals.forEach(v=>r.appendChild(el("div","",v.toFixed(1)))); r.appendChild(el("div","pad")); s.appendChild(el("div","band")); s.appendChild(r); nextBtn(s);
+  const items=[...r.children].slice(1,-1);
+  const mark=()=>{ const c=r.scrollTop+80; let best=0,bd=1e9; items.forEach((it,k)=>{ const d=Math.abs(it.offsetTop+24-c); if(d<bd){bd=d;best=k;} }); items.forEach((it,k)=>it.classList.toggle("on",k===best)); };
+  r.addEventListener("scroll",mark,{passive:true});
+  let dragY=null,st=0; r.addEventListener("pointerdown",e=>{dragY=e.clientY;st=r.scrollTop;r.setPointerCapture(e.pointerId);}); r.addEventListener("pointermove",e=>{ if(dragY!=null){ const sc=r.getBoundingClientRect().height/160; r.scrollTop=st-(e.clientY-dragY)/sc; } }); r.addEventListener("pointerup",()=>{dragY=null;});
+  requestAnimationFrame(()=>{ r.scrollTop=items[vals.indexOf(75)].offsetTop-56; mark(); }); })();
+(function numB(){ const s=$("numB"); text(s,"AGE · YEARS","top:58px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.14em;color:"+DEV.cyan); const g=svg(s); const lo=14,hi=90; let v=35; const a0=-135,a1=135;
+  path(g,arcPath(120,120,104,a0,a1),DEV.track,12); const prog=path(g,"",DEV.cyan,12); const knob=document.createElementNS(svgNS,"circle"); knob.setAttribute("r","11"); knob.setAttribute("fill",DEV.fg); g.appendChild(knob);
+  const big=text(s,"","top:84px;left:50%;transform:translateX(-50%);font-family:var(--f-num);font-weight:700;font-size:64px;line-height:1");
+  const m=el("div","btn","−","left:58px;top:162px;width:36px;height:30px;font-size:18px"), p=el("div","btn","+","left:146px;top:162px;width:36px;height:30px;font-size:18px"); s.appendChild(m); s.appendChild(p); nextBtn(s);
+  function draw(){ const a=a0+(v-lo)/(hi-lo)*(a1-a0); prog.setAttribute("d",arcPath(120,120,104,a0,Math.max(a0+.5,a))); const t=(a-90)*Math.PI/180; knob.setAttribute("cx",120+104*Math.cos(t)); knob.setAttribute("cy",120+104*Math.sin(t)); big.textContent=v; }
+  m.onclick=()=>{v=Math.max(lo,v-1);draw();}; p.onclick=()=>{v=Math.min(hi,v+1);draw();};
+  let drag=false; const pick=(e)=>{ const r=s.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*240-120, y=(e.clientY-r.top)/r.height*240-120; let a=Math.atan2(y,x)*180/Math.PI+90; if(a>180) a-=360; a=Math.max(a0,Math.min(a1,a)); v=Math.round(lo+(a-a0)/(a1-a0)*(hi-lo)); draw(); };
+  s.addEventListener("pointerdown",e=>{ const r=s.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*240-120, y=(e.clientY-r.top)/r.height*240-120; if(Math.hypot(x,y)>78){ drag=true; s.setPointerCapture(e.pointerId); pick(e);} });
+  s.addEventListener("pointermove",e=>{ if(drag) pick(e); }); s.addEventListener("pointerup",()=>drag=false); draw(); })();
+(function numC(){ const s=$("numC"); header(s,"WEIGHT · KG"); let v=75.0; const big=text(s,"","top:88px;left:50%;transform:translateX(-50%);font-family:var(--f-num);font-weight:700;font-size:48px;line-height:1");
+  text(s,"0.5 kg steps · hold to repeat","top:148px;left:50%;transform:translateX(-50%);font-size:8px;color:"+DEV.mut);
+  const m=el("div","btn","−","left:16px;top:86px;width:44px;height:56px;font-size:28px"), p=el("div","btn","+","left:180px;top:86px;width:44px;height:56px;font-size:28px"); s.appendChild(m); s.appendChild(p); nextBtn(s);
+  const draw=()=>big.textContent=v.toFixed(1); let t=null; const hold=(d)=>{ v=Math.min(160,Math.max(35,v+d)); draw(); t=setTimeout(()=>{ t=setInterval(()=>{ v=Math.min(160,Math.max(35,v+d)); draw(); },90); },450); };
+  const stop=()=>{ clearTimeout(t); clearInterval(t); t=null; };
+  m.addEventListener("pointerdown",()=>hold(-.5)); p.addEventListener("pointerdown",()=>hold(.5)); ["pointerup","pointerleave"].forEach(ev=>{ m.addEventListener(ev,stop); p.addEventListener(ev,stop); }); draw(); })();
+
+/* ---------- Q3 name ---------- */
+function nameBox(s){ const n=text(s,"","top:96px;left:50%;transform:translateX(-50%);font-family:var(--f-num);font-weight:700;font-size:26px;letter-spacing:.04em;min-width:20px"); return n; }
+(function nameA(){ const s=$("nameA"); const groups=["ABCDE","FGHIJ","KLMNO","PQRST","UVWXY","Z ⌫"]; let name="", open=null;
+  const box=nameBox(s); text(s,"YOUR NAME","top:76px;left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:.14em;color:"+DEV.cyan);
+  const keys=[]; const ok=el("div","btn go","DONE ✓","left:88px;top:134px;width:64px;height:24px;font-size:10px"); s.appendChild(ok);
+  function draw(){ keys.forEach(k=>k.remove()); keys.length=0; box.textContent=name||"_";
+    if(open==null){ groups.forEach((g,k)=>{ const a=(k*60-90)*Math.PI/180, x=120+90*Math.cos(a), y=120+90*Math.sin(a);
+        const b=el("button","key grp",g==="Z ⌫"?"Z · ⌫":g.split("").join(""),`left:${x-26}px;top:${y-26}px`); b.onclick=()=>{ open=k; draw(); }; s.appendChild(b); keys.push(b); }); }
+    else { const letters=groups[open]==="Z ⌫"?["Z","␣","⌫"]:groups[open].split(""); const n=letters.length;
+      letters.forEach((L,k)=>{ const a=((k-(n-1)/2)*44-90+ (open*60))*Math.PI/180, x=120+88*Math.cos(a), y=120+88*Math.sin(a);
+        const b=el("button","key act",L,`left:${x-23}px;top:${y-23}px`); b.onclick=()=>{ if(L==="⌫") name=name.slice(0,-1); else if(L==="␣") name+=" "; else name=(name+(name.length?L.toLowerCase():L)).slice(0,14); open=null; draw(); }; s.appendChild(b); keys.push(b); });
+      const back=el("button","key","‹",`left:97px;top:170px`); back.onclick=()=>{ open=null; draw(); }; s.appendChild(back); keys.push(back); } }
+  draw(); })();
+(function nameB(){ const s=$("nameB"); const pages=["ABCDEFGHI","JKLMNOPQR","STUVWXYZ⌫"]; let pg=0, name="";
+  const box=text(s,"","top:30px;left:50%;transform:translateX(-50%);font-family:var(--f-num);font-weight:700;font-size:20px"); const keys=[];
+  const prev=el("div","btn","‹","left:6px;top:100px;width:22px;height:40px;font-size:16px"), next=el("div","btn","›","left:212px;top:100px;width:22px;height:40px;font-size:16px"); s.appendChild(prev); s.appendChild(next);
+  prev.onclick=()=>{pg=(pg+2)%3;draw();}; next.onclick=()=>{pg=(pg+1)%3;draw();};
+  function draw(){ keys.forEach(k=>k.remove()); keys.length=0; box.textContent=name||"_"; pages[pg].split("").forEach((L,k)=>{ const x=52+(k%3)*46, y=62+Math.floor(k/3)*46;
+      const b=el("button","key",L,`left:${x}px;top:${y}px;width:42px;height:42px;border-radius:10px`); b.onclick=()=>{ name= L==="⌫"? name.slice(0,-1) : (name+(name.length?L.toLowerCase():L)).slice(0,14); draw(); }; s.appendChild(b); keys.push(b); });
+    const d=el("div","",`${pg+1} / 3`,"position:absolute;top:206px;left:50%;transform:translateX(-50%);font-size:9px;color:"+DEV.mut); s.appendChild(d); keys.push(d); }
+  draw(); })();
+(function nameC(){ const s=$("nameC"); text(s,"TYPE ON YOUR PHONE","top:24px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:9px;letter-spacing:.14em;color:"+DEV.cyan);
+  const q=el("div","", "", "position:absolute;left:70px;top:46px;width:100px;height:100px;background:#fff;border-radius:6px;padding:6px"); const c=el("canvas"); c.width=88; c.height=88; q.appendChild(c); s.appendChild(q);
+  const g=c.getContext("2d"); g.fillStyle="#000"; let seed=7; const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
+  for(let y=0;y<22;y++) for(let x=0;x<22;x++){ const f=(x<7&&y<7)||(x>14&&y<7)||(x<7&&y>14); const ring=f&&(((x%15===0||x%15===6)&&(y%15<=6))||((y%15===0||y%15===6)&&(x%15<=6))||((x%15>=2&&x%15<=4)&&(y%15>=2&&y%15<=4))); if(f? ring : rnd()>.52) g.fillRect(x*4,y*4,4,4); }
+  text(s,"Wi-Fi “BikeComputer-7F3A”<br>then open the page","top:154px;left:50%;transform:translateX(-50%);text-align:center;font-size:9px;line-height:1.4;color:"+DEV.mut);
+  s.appendChild(el("div","btn","Type here instead","left:62px;top:192px;width:116px;height:24px;font-size:9px")); })();
+
+/* ---------- Q4 dashboards (simulated preview) ---------- */
+const sim={w:182,cad:88,t:0}; const TG=[190,210]; const PMAX=320;
+function powerFocus(s){ const g=svg(s); const a0=-135,a1=135, f=(w)=>a0+Math.min(1,w/PMAX)*(a1-a0);
+  path(g,arcPath(120,120,108,a0,a1),DEV.track,10);
+  const prog=path(g,"",DEV.cyan,10);
+  path(g,arcPath(120,120,108,f(TG[0]),f(TG[1])),DEV.bg,5,{"stroke-linecap":"butt"}); path(g,arcPath(120,120,108,f(TG[0]),f(TG[1])),DEV.fg,3,{"stroke-linecap":"butt"});
+  const top=text(s,"","top:36px;left:50%;transform:translateX(-50%);display:flex;gap:9px;align-items:center;font-size:8px;color:"+DEV.mut);
+  const big=text(s,"","top:56px;left:50%;transform:translateX(-50%);font-family:var(--f-num);font-weight:700;font-size:82px;line-height:1;letter-spacing:-.02em");
+  text(s,"WATTS · TARGET 190–210","top:132px;left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:.1em;color:"+DEV.mut);
+  const row=text(s,"","top:146px;left:50%;transform:translateX(-50%);display:flex;gap:16px;font-family:var(--f-num);font-size:22px;font-weight:600;align-items:baseline;white-space:nowrap");
+  const cue=text(s,"","top:180px;left:50%;transform:translateX(-50%);padding:3px 12px;border-radius:999px;font-family:var(--f-cue);font-weight:800;font-size:11px;white-space:nowrap");
+  s.appendChild(el("div","sim","SIMULATED PREVIEW"));
+  return ()=>{ prog.setAttribute("d",arcPath(120,120,108,a0,f(sim.w))); big.textContent=sim.w;
+    top.innerHTML=`<span style="color:${DEV.green}">● XDS</span><span>○ HR</span><span>▮▮▮▯ 76%</span>`;
+    row.innerHTML=`<span style="color:${DEV.violet}">${sim.cad}<small style="font-size:9px;font-family:var(--f-lab)"> RPM</small></span><span style="color:${DEV.mut}">—<small style="font-size:9px;font-family:var(--f-lab)"> NO STRAP</small></span>`;
+    const lo=sim.w<TG[0], hi=sim.w>TG[1]; cue.textContent= lo?"▲ A LITTLE MORE": hi?"▼ EASE OFF":"✓ HOLD THIS"; cue.style.background= lo?DEV.cyan: hi?DEV.amber:DEV.green; cue.style.color="#06110f"; }; }
+function threeGauges(s){ const g=svg(s); const parts=[["W",DEV.cyan,62,92,PMAX],["RPM",DEV.violet,178,92,130],["BPM",DEV.green,120,166,200]]; const vals=[];
+  parts.forEach(([u,c,x,y,max])=>{ path(g,arcPath(x,y,40,-135,135),DEV.track,7); const p=path(g,"",c,7); const t=text(s,"",`top:${y-16}px;left:${x-40}px;width:80px;text-align:center;font-family:var(--f-num);font-weight:700;font-size:26px`);
+    text(s,u,`top:${y+14}px;left:${x-40}px;width:80px;text-align:center;font-size:7px;color:${DEV.mut}`); vals.push([p,t,x,y,max]); });
+  text(s,"<span style='color:#56E08C'>● XDS</span> ○ HR ▮▮▮▯","top:20px;left:50%;transform:translateX(-50%);font-size:8px;color:"+DEV.mut); s.appendChild(el("div","sim","SIMULATED PREVIEW"));
+  return ()=>{ [sim.w,sim.cad,null].forEach((v,k)=>{ const [p,t,x,y,max]=vals[k]; p.setAttribute("d", v==null?"":arcPath(x,y,40,-135,-135+Math.min(1,v/max)*270)); t.textContent= v==null?"—":v; t.style.color= v==null?DEV.mut:DEV.fg; }); }; }
+function minimal(s){ const big=text(s,"","top:56px;left:50%;transform:translateX(-50%);font-family:var(--f-num);font-weight:700;font-size:110px;line-height:1"); text(s,"WATTS","top:166px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.14em;color:"+DEV.mut);
+  const dots=text(s,"","bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:6px"); [1,0,0].forEach(on=>dots.appendChild(el("span","","",`width:7px;height:7px;border-radius:50%;background:${on?DEV.cyan:DEV.faint}`)));
+  text(s,"swipe › cadence · HR","top:186px;left:50%;transform:translateX(-50%);font-size:8px;color:"+DEV.faint); s.appendChild(el("div","sim","SIMULATED PREVIEW"));
+  return ()=>{ big.textContent=sim.w; }; }
+const renders=[powerFocus($("dashA")),threeGauges($("dashB")),minimal($("dashC"))];
+const reduce=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function step(){ sim.t++; sim.w=Math.round(200+28*Math.sin(sim.t/6)+8*Math.sin(sim.t/1.7)); sim.cad=Math.round(87+3*Math.sin(sim.t/4)); renders.forEach(r=>r()); }
+step(); if(!reduce) setInterval(step,1000);
+</script>
