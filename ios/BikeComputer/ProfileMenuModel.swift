@@ -114,9 +114,7 @@ extension Store {
         if p.trainingMode.includesLifting {
             structure.append(ProfileFact(title: "Supersets", value: ProfileMenuModel.supersetText(strengthPrefs.prefersSupersets), edit: .week))
             structure.append(ProfileFact(title: "Strength split", value: p.strengthSplit?.title ?? "Coach decides", edit: .preferences))
-            structure.append(ProfileFact(title: "Lifting experience", value: strengthPrefs.experience.map(ProfileText.strengthLevel) ?? "Not set", edit: .typeExperience))
         }
-        if p.trainingMode.includesCycling { structure.append(ProfileFact(title: "Riding level", value: ProfileText.level(p.level), edit: .typeExperience)) }
         structure.append(ProfileFact(title: "Recovery", value: ProfileText.recovery(p.recoveryCapacity ?? .normal), edit: .preferences))
         // equipment
         var equip: [ProfileFact] = []
@@ -133,6 +131,7 @@ extension Store {
             equip.append(ProfileFact(title: "Heart-rate zones", value: p.maxHRForZones.map { "max \($0)\(p.maxHRIsEstimate ? " (est.)" : "")" } ?? "not set", edit: .heartRate))
             equip.append(ProfileFact(title: "Cycling devices", value: "see Devices & Connections", note: "live states are shown there"))
         }
+        // Owner 8 Nov 18:33 — no duplication: riding level and lifting experience live under My profile › Athlete only
         return [ProfileFactSection(title: "Training goals", facts: goals), ProfileFactSection(title: "Training structure", facts: structure), ProfileFactSection(title: "Equipment", facts: equip)]
     }
 
