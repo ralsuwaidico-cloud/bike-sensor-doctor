@@ -1,0 +1,14 @@
+BikeComputer iOS CI — build 206 — 2026-11-08 18:56 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 4m15s
+RESULT tests: ok (Executed 659 tests, with 0 failures) · 8m42s
+  targets from the files changed since the last green full run 6da1532
+Quick UI targets: DesignSystemAudit/testGalleryLightAndDark LayoutAudit/testKeyScreensAtTextSizes JourneyTests/testHybridJourney LaunchSmokeTests LayoutAudit/testRC2OwnerScreens LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText RideViewsSmokeTests AdaptiveSmokeTests DeleteAllDataJourneyTests HubTapReliabilityTests PlanEditPreviewApplyTests PlanProgressRecoveryScreensTests StrengthSessionJourneyTests UITestWaits LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 8m44s
+  layout small (AX3): FAILED (exit 65) · 58m38s — -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"hubClose" IN identifiers'`, given input App element pid: 51881 -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L
