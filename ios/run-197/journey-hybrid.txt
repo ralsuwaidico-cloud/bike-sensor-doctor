@@ -1,0 +1,68 @@
+=== journey-hybrid: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:37: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get launch progress for <XCUIApplicationImpl: 0x1073c6740 com.ralsuwaidico.bikecomputer at /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator/BikeComputer.app>: Timed out while requesting launch progress.
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (119.978 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-08 08:17:33.247.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 122.070 (122.076) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-08 08:17:33.249.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 122.070 (122.078) seconds
+Test Suite 'Selected tests' failed at 2026-11-08 08:17:33.249.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 122.070 (122.079) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-hybrid: last 150 lines ===
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/BikeComputer_iphonesimulator26.5-arm64-x86_64.xctestrun -destination id=FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC "-only-testing:BikeComputerUITests/JourneyTests"
+
+2026-11-08 08:14:50.297 xcodebuild[27406:75487] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-08 08:14:50.335 xcodebuild[27406:75487] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-08 08:14:50.360 xcodebuild[27406:75487] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC, OS:26.5, name:iPhone 17 Pro }
+{ platform:iOS Simulator, arch:x86_64, id:FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC, OS:26.5, name:iPhone 17 Pro }
+2026-11-08 08:15:23.588572+0000 BikeComputerUITests-Runner[29639:81293] [Default] Running tests...
+objc[29639]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x10a484310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x10a50c398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-08 08:15:31.170.
+Test Suite 'BikeComputerUITests.xctest' started at 2026-11-08 08:15:31.171.
+Test Suite 'JourneyTests' started at 2026-11-08 08:15:31.171.
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' started.
+    t =     0.00s Start Test at 2026-11-08 08:15:31.174
+    t =     0.24s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testCyclingJourney] : Test skipped - persona cycling not selected
+    t =     0.33s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testCyclingJourney]' skipped (0.715 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' started.
+    t =     0.00s Start Test at 2026-11-08 08:15:31.892
+    t =     0.06s Set Up
+    t =     0.08s Open com.ralsuwaidico.bikecomputer
+    t =     0.08s     Launch com.ralsuwaidico.bikecomputer
+2026-11-08 08:15:33.604 xcodebuild[27406:75487] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-08 08:15:33.604 xcodebuild[27406:75487] [MT] IDELaunchParametersSnapshot: no debugger version
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:37: error: -[BikeComputerUITests.JourneyTests testHybridJourney] : Failed to get launch progress for <XCUIApplicationImpl: 0x1073c6740 com.ralsuwaidico.bikecomputer at /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/Release-iphonesimulator/BikeComputer.app>: Timed out while requesting launch progress.
+    t =   115.59s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testHybridJourney]' failed (119.978 seconds).
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' started.
+    t =     0.00s Start Test at 2026-11-08 08:17:31.871
+    t =     0.26s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:34: -[BikeComputerUITests.JourneyTests testStrengthJourney] : Test skipped - persona strength not selected
+    t =     0.32s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' skipped (1.376 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-08 08:17:33.247.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 122.070 (122.076) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-08 08:17:33.249.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 122.070 (122.078) seconds
+Test Suite 'Selected tests' failed at 2026-11-08 08:17:33.249.
+	 Executed 3 tests, with 2 tests skipped and 1 failure (0 unexpected) in 122.070 (122.079) seconds
+2026-11-08 08:18:54.865 xcodebuild[27406:75487] [MT] IDETestOperationsObserverDebug: 237.468 elapsed -- Testing started completed.
+2026-11-08 08:18:54.869 xcodebuild[27406:75487] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-08 08:18:54.869 xcodebuild[27406:75487] [MT] IDETestOperationsObserverDebug: 237.468 sec, +237.468 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-dumoxrbotzbroafugzmffgqvhyfq/Logs/Test/Test-BikeComputer-2026.11.08_08-14-50-+0000.xcresult
+
+Failing tests:
+	JourneyTests.testHybridJourney()
+
+** TEST EXECUTE FAILED **
+
+Testing started
