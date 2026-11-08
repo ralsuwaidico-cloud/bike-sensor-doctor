@@ -5,6 +5,8 @@
 // exercised. Critical controls are marked and placed where the chord is wide enough (two 72-pt buttons fit at
 // y = 160…204; the usable chord is 154 px there).
 #include "round_layout.hpp"
+#include "ride_screens.hpp"
+#include <memory>
 
 namespace cyw::ui {
 
@@ -80,37 +82,28 @@ inline Scene settings(const TextMeasurer& m, const Content& c) {
     return s;
 }
 
-// ---------------------------------------------------------------- live: cycling
-inline void rideControls(Builder& b, bool paused) {
-    if (paused) { b.button("Resume", CX - 39, CTRL_Y, 72, "accent", "onAccent", true, "resume"); b.button("End", CX + 39, CTRL_Y, 72, "grade.red", "onAccent", true, "end"); }
-    else { b.button("Lap", CX - 39, CTRL_Y, 72, "card2", "text", false, "lap"); b.button("Pause", CX + 39, CTRL_Y, 72, "accent", "onAccent", true, "pause"); }
-}
-inline Scene rideCockpit(const TextMeasurer& m, const Content& c, bool paused = false) {
-    Scene s{paused ? "live:ride-cockpit-paused" : "live:ride-cockpit"}; Builder b(s, m);
-    b.arc(-60, 60, 6, "grade.blue", RADIUS - EDGE_INSET - 3, "zoneArc");
-    b.text(c.gpsAge + " · HR " + c.hr, 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
-    b.metric("POWER · " + c.target, c.value, c.unit, 44, 48, "text", "lead");
-    b.text(wristCue(c.coachShort), 120, {13, 13, 2, false}, Role::Body, true, "text", 16, true, "coach");
-    rideControls(b, paused);
-    return s;
-}
-inline Scene rideNavigation(const TextMeasurer& m, const Content& c, bool paused = false) {
-    Scene s{"live:ride-navigation"}; Builder b(s, m);
-    b.text(c.gpsAge, 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
-    Rect map = bandAt(44, 68, 12); b.panel(map, "card2");                      // route breadcrumb area (LVGL polyline)
-    b.textIn("route · breadcrumb", {CX - 65, 72, 130, 14}, {11, 11, 1, false}, Role::Label, true, "mut");
-    b.text("↱ 300 m · Al Reem St", 118, {14, 13, 2, false}, Role::Body, true, "text", 16, true, "turn");
-    rideControls(b, paused);
-    return s;
-}
-inline Scene ridePerformance(const TextMeasurer& m, const Content& c, bool paused = false) {
-    Scene s{"live:ride-performance"}; Builder b(s, m); (void)c;
-    b.text("PERFORMANCE", 30, {11, 11, 1, false}, Role::Label, true, "mut", 8);
-    b.panel(bandAt(44, 38, 14), "card2"); b.textIn("power · 30 s trend", {CX - 62, 56, 124, 14}, {11, 11, 1, false}, Role::Label, true, "mut");
-    b.row("Interval 1", "on target", 86, 44, "perfInterval", false);
-    b.text("Z4 12:40 · Z3 8:10", 136, {12, 11, 1, false}, Role::Label, true, "mut", 16);
-    rideControls(b, paused);
-    return s;
+// ---------------------------------------------------------------- live: cycling (ride_screens.hpp, driven by telemetry fixtures)
+/// Telemetry scenarios for the gallery and the checks: full sensors with FTP · heart rate only · power without FTP ·
+/// phone lost mid-ride · no sensors at all. Each is an honest state the instrument must render well.
+struct RideFixture {
+    std::string name; ride::Live live; ride::Series power{300}, hr{300}, cad{300}; ride::ZoneTime zt; ride::GpsMirror gps; std::string cue, nextTurn; uint32_t lapAvg = 0; bool lapKnown = false; uint32_t windowS = 60;
+    RideFrame frame() const { RideFrame f; f.live = live; f.power = &power; f.hr = &hr; f.cadence = &cad; f.zoneTime = &zt; f.gps = &gps; f.nowMs = 2000000; f.coachCue = cue; f.windowS = windowS; f.lapAvgW = lapAvg; f.lapAvgKnown = lapKnown; f.nextTurn = nextTurn; return f; }
+};
+inline std::vector<std::shared_ptr<RideFixture>> rideFixtures(const Content& c) {
+    std::vector<std::shared_ptr<RideFixture>> out;
+    auto zones = std::vector<std::pair<int, std::optional<int>>>{{0, 120}, {121, 140}, {141, 152}, {153, 165}, {166, std::nullopt}};
+    auto mk = [&](const std::string& name) { auto f = std::make_shared<RideFixture>(); f->name = name; f->live.recording = true; f->live.elapsedS = 1458; f->live.distanceM = 11600; f->live.hrZones = zones; f->live.stepName = "Interval 2"; f->live.stepTotalS = 600; f->live.stepRemainingS = 200; f->cue = wristCue(c.coachShort); return f; };
+    auto feed = [](RideFixture& f, int n, bool power, bool hr, int gapFrom = -1, int gapTo = -1) {
+        for (int t = 1; t <= n; t++) { bool gap = t >= gapFrom && t <= gapTo; std::optional<float> p = power && !gap ? std::optional<float>(200 + 30 * std::sin(t / 9.f) + (t % 7)) : std::nullopt; std::optional<float> h = hr && !gap ? std::optional<float>(142 + 6 * std::sin(t / 23.f)) : std::nullopt; f.power.push(t, p); f.hr.push(t, h); f.cad.push(t, power && !gap ? std::optional<float>(88 + (t % 5)) : std::nullopt); f.zt.add(h, f.live.hrZones); }
+    };
+    auto fixes = [](RideFixture& f, int n, bool lost) { for (int i = 0; i < n; i++) f.gps.onFix({25.1972 + i * 0.00009, 55.2744 + i * 0.00004 * std::sin(i / 5.0), 29.8f, 35.f + 20.f * std::sin(i / 7.f), 1762600000u + i, 2000000u - (n - i) * 1000u}); if (lost) f.gps.onPhoneLink(false, 1990000); };
+    { auto f = mk("full"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.cadence = {89.f, 800}; f->live.speedKmh = {29.8f, 1500}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.hrBand = std::make_pair(141, 152); feed(*f, 300, true, true, 120, 135); fixes(*f, 60, false); f->nextTurn = "Al Reem St"; f->gps.setRoute({{{25.1972, 55.2744}, {25.2000, 55.2755}, {25.2030, 55.2760}}, {1}}); f->lapAvg = 201; f->lapKnown = true; out.push_back(f); }
+    { auto f = mk("hr-only"); f->live.hr = {148.f, 900}; f->live.speedKmh = {27.2f, 1800}; f->live.hrBand = std::make_pair(141, 152); feed(*f, 300, false, true); fixes(*f, 60, false); out.push_back(f); }
+    { auto f = mk("power-no-ftp"); f->live.power = {214.f, 800}; f->live.cadence = {91.f, 800}; f->live.speedKmh = {31.4f, 1500}; f->live.ftpKnown = false; f->live.stepTotalS = 0; feed(*f, 300, true, false); fixes(*f, 60, false); out.push_back(f); }
+    { auto f = mk("phone-lost"); f->live.power = {214.f, 800}; f->live.hr = {148.f, 1200}; f->live.ftpKnown = true; f->live.ftp = 240; f->live.powerBand = std::make_pair(180, 216); f->live.phoneLinked = false; f->live.speedKmh = {29.8f, 60000}; feed(*f, 300, true, true); fixes(*f, 60, true); f->cue = "iPhone lost — recording continues"; out.push_back(f); }
+    { auto f = mk("no-sensors"); f->live.stepTotalS = 0; f->cue = ""; feed(*f, 0, false, false); out.push_back(f); }
+    { auto f = mk("paused"); f->live.paused = true; f->live.power = {0.f, 900000}; f->live.hr = {131.f, 1000}; f->live.ftpKnown = true; f->live.ftp = 240; feed(*f, 300, true, true); fixes(*f, 60, false); out.push_back(f); }
+    return out;
 }
 
 // ---------------------------------------------------------------- live: strength
@@ -183,8 +176,10 @@ inline Scene notifications(const TextMeasurer& m, const Content& c) {
 
 /// Every primary screen (owner §4 list) for one content set.
 inline std::vector<Scene> allScreens(const TextMeasurer& m, const Content& c) {
-    return {faceOrbit(m, c), faceChrono(m, c), facePulse(m, c), activities(m, c), rideCockpit(m, c), rideCockpit(m, c, true), rideNavigation(m, c), ridePerformance(m, c),
-            liftExercise(m, c), repCounter(m, c), restTimer(m, c), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c)};
+    std::vector<Scene> v = {faceOrbit(m, c), faceChrono(m, c), facePulse(m, c), activities(m, c)};
+    for (auto& fx : rideFixtures(c)) { RideFrame f = fx->frame(); Scene a = rideCockpit(m, f); a.name += ":" + fx->name; v.push_back(a); Scene b2 = ridePerformance(m, f); b2.name += ":" + fx->name; v.push_back(b2); Scene n = rideNavigation(m, f); n.name += ":" + fx->name; v.push_back(n); }
+    for (auto& x : {liftExercise(m, c), repCounter(m, c), restTimer(m, c), recovery(m, c), sleep(m, c), hrv(m, c), coach(m, c), notifications(m, c), settings(m, c)}) v.push_back(x);
+    return v;
 }
 
 /// Text-length variants (owner §1/§4: long activity and exercise names, long coaching text, translated strings).

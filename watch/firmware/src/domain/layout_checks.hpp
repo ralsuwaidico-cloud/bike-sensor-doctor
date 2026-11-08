@@ -21,7 +21,8 @@ inline std::vector<Finding> check(const Scene& s, const Appearance& ap, const st
     std::vector<Finding> out;
     auto add = [&](const std::string& rule, const std::string& detail) { out.push_back({s.name, ap.name, variant, rule, detail}); };
     // 1. nothing leaves the usable circle
-    for (auto& e : s.els) if (e.kind != Kind::Arc && !insideCircle(e.r)) add("overflow", "'" + (e.text.empty() ? e.id : e.text) + "' crosses the circular boundary (" + std::to_string(int(e.r.x)) + "," + std::to_string(int(e.r.y)) + " " + std::to_string(int(e.r.w)) + "×" + std::to_string(int(e.r.h)) + ")");
+    for (auto& e : s.els) if (e.kind == Kind::Polyline) { float rr = (RADIUS - EDGE_INSET) * (RADIUS - EDGE_INSET); for (auto& p : e.pts) if (p && (p->first - CX) * (p->first - CX) + (p->second - CY) * (p->second - CY) > rr + 0.5f) { add("overflow", "polyline '" + e.id + "' has a point outside the circle"); break; } }
+    for (auto& e : s.els) if (e.kind != Kind::Arc && e.kind != Kind::Polyline && !insideCircle(e.r)) add("overflow", "'" + (e.text.empty() ? e.id : e.text) + "' crosses the circular boundary (" + std::to_string(int(e.r.x)) + "," + std::to_string(int(e.r.y)) + " " + std::to_string(int(e.r.w)) + "×" + std::to_string(int(e.r.h)) + ")");
     // 2. no text overlaps another text, icon or button label (buttons' own labels sit on their rect by design)
     for (size_t i = 0; i < s.els.size(); i++) for (size_t j = i + 1; j < s.els.size(); j++) {
         auto& a = s.els[i]; auto& b = s.els[j];

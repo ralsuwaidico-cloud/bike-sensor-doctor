@@ -86,7 +86,7 @@ struct LocalRules {
     /// Phone link lost: recording continues locally (§8, §12).
     static CoachMessage phoneLost(uint32_t nowMs) {
         CoachMessage m; m.id = 0xF0000002; m.local = true; m.safety = false; m.priority = Priority::Action; m.context = Context::Any;
-        m.instruction = "iPhone disconnected — the watch keeps recording."; m.reason = "GPS, routes and new coaching need the phone; your sets and times are kept here and synced later."; m.receivedMs = nowMs; return m;
+        m.instruction = "iPhone lost — recording continues."; m.reason = "GPS, routes and new coaching need the phone; your sets and times are kept here and synced later."; m.receivedMs = nowMs; return m;
     }
     /// Rest timer rule for strength (§7): fixed target rest, no inference.
     static CoachMessage restRemaining(uint32_t remainingS, uint32_t nowMs) {

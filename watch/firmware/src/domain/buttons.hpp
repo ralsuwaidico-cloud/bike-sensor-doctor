@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <optional>
 
 namespace cyw {
 
@@ -54,7 +55,7 @@ inline Action actionFor(Mode mode, Key key, Press press, bool screenOff, bool ph
     switch (mode) {
         case Mode::Face:
             if (key == Key::Key1) return press == Press::Short ? Action::OpenActivities : Action::OpenQuickSettings;
-            if (key == Key::Key2) return press == Press::Short ? Action::OpenActivities : Action::OpenQuickSettings;
+            if (key == Key::Key2) return press == Press::Short ? Action::OpenQuickSettings : Action::OpenActivities;
             if (key == Key::Boot) return press == Press::Long ? Action::OpenQuickSettings : Action::None;
             break;
         case Mode::Panel: case Mode::Menu:
@@ -86,5 +87,46 @@ inline Action actionFor(Mode mode, Key key, Press press, bool screenOff, bool ph
 inline uint16_t hapticMs(Action a) {
     switch (a) { case Action::None: return 0; case Action::Wake: return 0; case Action::EndRequest: case Action::Discard: return 60; case Action::LogSet: case Action::Lap: case Action::Save: return 40; default: return 15; }
 }
+
+} // namespace cyw
+
+// ---------------------------------------------------------------- two-press preview-and-confirm (owner 8 Nov 15:31, E)
+namespace cyw {
+
+/// First press of a key SHOWS the key's name and the action it would perform (haptic tick); the second press of the
+/// SAME key within the preview window EXECUTES it (haptic confirm). A different key replaces the preview with its own.
+/// The preview expires after `previewMs` (2.5 s). Nothing executes on a first press. Long presses go through the same
+/// preview (so End = long Key1 preview → long Key1 confirm → the UI's own End confirmation: three deliberate steps).
+///
+/// Safety exception (owner): the touchscreen Pause is immediate (one tap) and End stays available on the touchscreen
+/// regardless of any connection — this class governs the physical keys only.
+class TwoPress {
+public:
+    explicit TwoPress(uint32_t previewMs = 2500) : previewMs_(previewMs) {}
+    struct Result { bool preview; bool execute; Action action; std::string label; uint16_t hapticMs; };
+
+    Result press(Key key, Press p, Mode mode, bool screenOff, bool phoneLinked, uint32_t nowMs) {
+        Action a = actionFor(mode, key, p, screenOff, phoneLinked);
+        if (a == Action::Wake) { clear(); return {false, true, Action::Wake, "", 0}; }       // waking is not an action to confirm
+        if (a == Action::None) { clear(); return {false, false, Action::None, "", 0}; }
+        bool same = armed_ && key == armedKey_ && p == armedPress_ && a == armedAction_ && nowMs - armedAtMs_ <= previewMs_;
+        if (same) { clear(); return {false, true, a, labelFor(a), hapticMs(a)}; }
+        armed_ = true; armedKey_ = key; armedPress_ = p; armedAction_ = a; armedAtMs_ = nowMs;
+        return {true, false, a, labelFor(key, p, a), 15};
+    }
+    /// Call every UI tick; returns true when a preview just expired (the UI hides the label).
+    bool tick(uint32_t nowMs) { if (armed_ && nowMs - armedAtMs_ > previewMs_) { clear(); return true; } return false; }
+    bool previewing() const { return armed_; }
+    std::optional<Action> previewedAction() const { return armed_ ? std::optional<Action>(armedAction_) : std::nullopt; }
+
+    /// Short labels that fit the round screen (≤ 18 characters: "KEY 1 · Pause").
+    static std::string labelFor(Action a) {
+        switch (a) { case Action::Back: return "Back"; case Action::Home: return "Home"; case Action::OpenActivities: return "Activities"; case Action::OpenQuickSettings: return "Settings"; case Action::Confirm: return "Confirm"; case Action::LogSet: return "Log set"; case Action::Undo: return "Undo"; case Action::OpenCorrections: return "Correct reps"; case Action::Lap: return "Lap"; case Action::TogglePause: return "Pause / Resume"; case Action::EndRequest: return "End ride"; case Action::SkipRest: return "Skip rest"; case Action::Save: return "Save"; case Action::Discard: return "Discard"; default: return ""; }
+    }
+    static std::string labelFor(Key k, Press p, Action a) { return std::string(k == Key::Key1 ? "KEY 1" : k == Key::Key2 ? "KEY 2" : "BOOT") + (p == Press::Long ? " hold" : "") + " · " + labelFor(a); }
+private:
+    void clear() { armed_ = false; }
+    uint32_t previewMs_; bool armed_ = false; Key armedKey_ = Key::Key1; Press armedPress_ = Press::Short; Action armedAction_ = Action::None; uint32_t armedAtMs_ = 0;
+};
 
 } // namespace cyw

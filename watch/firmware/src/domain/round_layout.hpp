@@ -70,7 +70,7 @@ struct HostMeasurer : TextMeasurer {
 };
 
 // ---------------------------------------------------------------- scene elements
-enum class Kind : uint8_t { Rect, Text, Arc, Circle };
+enum class Kind : uint8_t { Rect, Text, Arc, Circle, Polyline, Marker };
 enum class Role : uint8_t { Decor, Label, Value, Comp, Unit, Body, Button, Icon, Indicator };
 struct Element {
     Kind kind; Role role; Rect r;
@@ -78,6 +78,8 @@ struct Element {
     int lines = 1; bool critical = false; bool truncated = false; std::string id;
     std::vector<std::string> fitLines;   // the exact lines the fitter chose (ellipsis included), drawn verbatim
     float a0 = 0, a1 = 0, stroke = 0;   // arcs
+    std::vector<std::optional<std::pair<float, float>>> pts;   // polylines (nullopt = gap → the line breaks)
+    float rot = 0;                       // marker heading in degrees
 };
 struct Scene { std::string name; std::vector<Element> els; bool needsMore = false; std::string moreReason; };
 
@@ -196,6 +198,33 @@ public:
     /// Progress / zone arc along the rim.
     void arc(float a0, float a1, float stroke, const std::string& color, float radius = RADIUS - EDGE_INSET - 4, const std::string& id = "") {
         Element e{Kind::Arc, Role::Decor, {CX - radius, CY - radius, 2 * radius, 2 * radius}}; e.a0 = a0; e.a1 = a1; e.stroke = stroke; e.color = color; e.id = id; s_.els.push_back(e);
+    }
+    /// Segmented ring: `n` equal segments between a0 and a1 (a 240° ladder for zones); segment `lit` is drawn in `litColor`.
+    void segments(float a0, float a1, int n, float stroke, const std::string& trackColor, int lit, const std::string& litColor, float radius, const std::string& id = "") {
+        float span = (a1 - a0) / n, gap = 3.f;
+        for (int i = 0; i < n; i++) arc(a0 + i * span + gap / 2, a0 + (i + 1) * span - gap / 2, stroke, i == lit ? litColor : trackColor, radius, id.empty() ? "" : id + "." + std::to_string(i));
+    }
+    /// Needle dot on a ring at angle a (degrees, 0 = top, clockwise).
+    void needle(float a, float radius, float r, const std::string& color, const std::string& id = "") {
+        float t = (a - 90) * 3.14159265f / 180; dot(CX + radius * std::cos(t), CY + radius * std::sin(t), r, color); if (!id.empty()) s_.els.back().id = id;
+    }
+    /// Sparkline inside a box: normalised points (x, y in 0…1), gaps break the line. Drawn as decor; the box is a panel.
+    void sparkline(const Rect& box, const std::vector<std::optional<std::pair<float, float>>>& pts, const std::string& color, float stroke = 2.f, const std::string& id = "") {
+        Element e{Kind::Polyline, Role::Decor, box}; e.color = color; e.stroke = stroke; e.id = id;
+        for (auto& p : pts) e.pts.push_back(p ? std::optional<std::pair<float, float>>(std::make_pair(box.x + p->first * box.w, box.bottom() - p->second * box.h)) : std::nullopt);
+        s_.els.push_back(e);
+    }
+    /// Absolute polyline (breadcrumb trail), already projected into the circle. A nullopt point breaks the line: a
+    /// breadcrumb that left the visible radius is a GAP, never a point dragged onto the rim (that would draw a false route).
+    void polyline(const std::vector<std::optional<std::pair<float, float>>>& pts, const std::string& color, float stroke, const std::string& id = "") {
+        bool any = false; float x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+        for (auto& p : pts) { if (!p) continue; if (!any) { x0 = x1 = p->first; y0 = y1 = p->second; any = true; } x0 = std::min(x0, p->first); y0 = std::min(y0, p->second); x1 = std::max(x1, p->first); y1 = std::max(y1, p->second); }
+        if (!any) return;
+        Element e{Kind::Polyline, Role::Decor, {x0, y0, x1 - x0, y1 - y0}}; e.color = color; e.stroke = stroke; e.id = id; e.pts = pts; s_.els.push_back(e);
+    }
+    /// Position marker: a triangle pointing along `headingDeg` (0 = up); hollow when the fix is not live.
+    void marker(float cx, float cy, float headingDeg, const std::string& color, bool hollow, const std::string& id = "") {
+        Element e{Kind::Marker, Role::Icon, {cx - 9, cy - 9, 18, 18}}; e.color = color; e.fill = hollow ? "" : color; e.rot = headingDeg; e.id = id; s_.els.push_back(e);
     }
     void dot(float cx, float cy, float r, const std::string& color, Role role = Role::Indicator) { Element e{Kind::Circle, role, {cx - r, cy - r, 2 * r, 2 * r}}; e.fill = color; s_.els.push_back(e); }
     void panel(const Rect& r, const std::string& fill) { Element e{Kind::Rect, Role::Decor, r}; e.fill = fill; s_.els.push_back(e); }

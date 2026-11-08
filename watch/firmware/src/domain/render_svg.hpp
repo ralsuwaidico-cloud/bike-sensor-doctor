@@ -23,6 +23,13 @@ inline std::string toSvg(const Scene& s, const Appearance& ap, const TextMeasure
                 if (e.a1 - e.a0 >= 359.9f) { o << "<circle cx='120' cy='120' r='" << r << "' fill='none' stroke='" << ap.resolve(e.color) << "' stroke-width='" << e.stroke << "'/>"; break; }
                 auto p0 = pt(e.a0), p1 = pt(e.a1); int large = (e.a1 - e.a0) > 180 ? 1 : 0;
                 o << "<path d='M" << p0.first << "," << p0.second << " A" << r << "," << r << " 0 " << large << " 1 " << p1.first << "," << p1.second << "' fill='none' stroke='" << ap.resolve(e.color) << "' stroke-width='" << e.stroke << "' stroke-linecap='round'/>"; break; }
+            case Kind::Polyline: {
+                std::string d; bool pen = false;
+                for (auto& p : e.pts) { if (!p) { pen = false; continue; } d += (pen ? "L" : "M") + std::to_string(p->first) + "," + std::to_string(p->second) + " "; pen = true; }
+                o << "<path d='" << d << "' fill='none' stroke='" << ap.resolve(e.color) << "' stroke-width='" << e.stroke << "' stroke-linejoin='round' stroke-linecap='round'/>"; break; }
+            case Kind::Marker: {
+                float cx = e.r.cx(), cy = e.r.cy();
+                o << "<g transform='rotate(" << e.rot << " " << cx << " " << cy << ")'><path d='M" << cx << "," << cy - 9 << " L" << cx + 7 << "," << cy + 7 << " L" << cx << "," << cy + 3 << " L" << cx - 7 << "," << cy + 7 << " Z' fill='" << (e.fill.empty() ? "none" : ap.resolve(e.fill)) << "' stroke='" << ap.resolve(e.color) << "' stroke-width='2' stroke-linejoin='round'/></g>"; break; }
             case Kind::Text: {
                 float lh = m.lineHeight(e.font); std::vector<std::string> lines = e.fitLines; if (lines.empty()) { wrap(m, e.text, e.font, e.bold, e.r.w + 0.5f, e.lines, lines); if (lines.empty()) lines = {e.text}; }
                 for (size_t i = 0; i < lines.size(); i++) {

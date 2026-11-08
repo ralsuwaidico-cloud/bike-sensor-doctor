@@ -11,6 +11,8 @@
 #include "../../src/domain/round_layout.hpp"
 #include "../../src/domain/screens.hpp"
 #include "../../src/domain/layout_checks.hpp"
+#include "../../src/domain/ride_telemetry.hpp"
+#include "../../src/domain/ride_screens.hpp"
 #include <cstdio>
 #include <cmath>
 #include <random>
@@ -243,10 +245,95 @@ int main() {
         int scenes = 0, findings = 0;
         for (auto& [vn, content] : contentVariants()) for (auto& ap : appearances()) for (auto& sc : allScreens(m, content)) { scenes++; findings += int(check(sc, ap, vn).size()); }
         std::printf("   %d scenes, %d findings\n", scenes, findings);
-        CHECK(scenes == 408 && findings == 0, "17 screens × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
+        CHECK(scenes == 744 && findings == 0, "(17 screens + 3 ride views × 6 telemetry fixtures) × 6 appearances × 4 text variants: 0 overflow / overlap / contrast / truncation / touch-size findings");
         // grading colours are identical across the six appearances (per canvas), independent of the theme
         std::string d, l; for (auto& ap : appearances()) { std::string g1 = ap.resolve("grade.green"); if (ap.dark) { if (d.empty()) d = g1; CHECK(g1 == d, "dark grading green identical in " + ap.name); } else { if (l.empty()) l = g1; CHECK(g1 == l, "light grading green identical in " + ap.name); } }
         CHECK(appearances()[0].resolve("accent") != appearances()[2].resolve("accent"), "theme accents differ while grading colours do not");
+    }
+
+
+    // ------------------------------------------------------------ cycling instrument (owner 8 Nov 15:31, A–F)
+    {
+        using namespace cyw::ride;
+        auto rd = [](float v, uint32_t age) { Reading r; r.value = v; r.ageMs = age; return r; };
+        Live l; l.recording = true; l.ftpKnown = true; l.ftp = 240; l.powerBand = std::make_pair(180, 216); l.stepName = "Interval 2"; l.stepTotalS = 300; l.stepRemainingS = 200;
+        l.hrZones = {{0, 110}, {111, 130}, {131, 150}, {151, 170}, {171, std::nullopt}};
+        l.power = rd(214, 500); l.hr = rd(148, 800); l.cadence = rd(89, 500); l.speedKmh = rd(29.8f, 1500);
+        // A: adaptive lead metric + gauges
+        CHECK(chooseLead(l) == Lead::Power, "power fresh → power leads");
+        l.power.ageMs = 4000; CHECK(chooseLead(l) == Lead::HeartRate, "power stale (> 3 s) → heart rate leads; a stale reading is never promoted");
+        l.hr.ageMs = 6000; CHECK(chooseLead(l) == Lead::Speed, "HR stale (> 5 s) → GPS speed leads");
+        l.speedKmh.ageMs = 9000; CHECK(chooseLead(l) == Lead::Time, "no fresh sensor → elapsed time leads (no invented metric)");
+        l.power.ageMs = 500; l.hr.ageMs = 800; l.speedKmh.ageMs = 1500;
+        Gauge pg = powerGauge(l); CHECK(pg.valid && pg.fraction > 0.f && pg.fraction <= 1.f && pg.grade && *pg.grade == cyw::Grade::LightBlue && !pg.meaning.empty() && !pg.source.empty(), "power gauge: in-range fraction, graded light blue (on target) inside the band, meaning + source defined");
+        l.power.value = 260; CHECK(*powerGauge(l).grade == cyw::Grade::Red, "well above the band → red"); l.power.value = 214;
+        l.power.value = 9000; CHECK(powerGauge(l).fraction == 1.f, "absurd power clamps the gauge at 100 % (never draws outside the arc)"); l.power.value = 214;
+        Live noFtp = l; noFtp.ftpKnown = false; noFtp.powerBand = std::nullopt; Gauge ng = powerGauge(noFtp);
+        CHECK(ng.valid && !ng.grade && ng.meaning.find("FTP unknown") != std::string::npos, "unknown FTP: power is shown but NOT graded and the gauge says why");
+        Live noPwr = l; noPwr.power = Reading{}; CHECK(!powerGauge(noPwr).valid && chooseLead(noPwr) == Lead::HeartRate, "missing power meter: no power gauge, HR leads");
+        Live noHr = noPwr; noHr.hr = Reading{}; noHr.speedKmh = Reading{}; noHr.cadence = Reading{};
+        CHECK(!hrGauge(noHr).valid && !cadenceGauge(noHr).valid && chooseLead(noHr) == Lead::Time, "no sensors at all: no gauges, time leads");
+        Gauge ig = intervalGauge(l); CHECK(ig.valid && std::fabs(ig.fraction - (1.f - 200.f / 300.f)) < 1e-4f, "interval gauge = share of the step completed");
+        Live freeRide = l; freeRide.stepTotalS = 0; CHECK(!intervalGauge(freeRide).valid, "free ride: no interval gauge is drawn");
+        Gauge hg = hrGauge(l); CHECK(hg.valid && hg.fraction > 0.f && hg.fraction < 1.f, "HR zone indicator positions 148 bpm inside the ladder");
+        // B: rolling series with honest gaps
+        Series ser(300); for (uint32_t t = 0; t < 30; t++) ser.push(t, 200.f + (t % 3)); ser.push(40, 210.f);      // 10 missing seconds
+        CHECK(ser.size() == 41 && ser.gaps() == 10, "ten missing seconds are stored as ten gaps, not interpolated");
+        auto sp = ser.sparkline(60, 150, 250); size_t gapPts = 0; for (auto& p : sp) if (!p) gapPts++;
+        CHECK(gapPts == 10, "sparkline breaks the line across the gap (no invented samples)");
+        CHECK(ser.average(5) && std::fabs(*ser.average(5) - 210.f) < 1e-3f, "rolling average over a window that is mostly gaps uses only the present sample");
+        Series empty; CHECK(!empty.average(30) && empty.sparkline(60, 0, 1).empty(), "empty series → no average, no points");
+        Series big(300); for (uint32_t t = 0; t < 2000; t++) big.push(t, 100.f); CHECK(big.size() == 300, "ring stays bounded (300 s) for a long ride");
+        auto bk = big.buckets(60); CHECK(bk.size() == 5 && bk[0] && std::fabs(*bk[0] - 100.f) < 1e-3f, "5-min window downsamples into 60 s buckets");
+        Series gappy(300); gappy.push(0, 1.f); gappy.push(120, 2.f); auto gb = gappy.buckets(60); CHECK(gb.size() == 3 && gb[0] && !gb[1] && gb[2], "a bucket with no samples is a gap");
+        ZoneTime zt; for (int i = 0; i < 10; i++) zt.add(148.f, l.hrZones); zt.add(std::nullopt, l.hrZones); zt.add(std::nullopt, l.hrZones);
+        CHECK(zt.seconds[2] == 10 && zt.unknownS == 2 && std::fabs(zt.shares()[2] - 1.f) < 1e-4f, "time in zone counts only present samples; missing seconds are reported separately");
+        // C: GPS mirror — freshness, offline preservation, bounded memory, no duplicates, no points while disconnected
+        GpsMirror g(50, 8.f);
+        CHECK(g.state(0) == GpsMirror::State::Searching && g.ageS(0) == UINT32_MAX && !g.lastFix(), "linked phone, no fix yet → Searching, age unknown");
+        for (int i = 0; i < 20; i++) g.onFix({25.1972 + i * 0.0002, 55.2744, 30.f, 0.f, 1000u + i, 1000u * i});
+        CHECK(g.state(19000) == GpsMirror::State::Live && g.ageS(19000) == 0 && g.trail().size() == 20 && g.distanceM() > 400.f, "fresh fixes → Live; trail + distance accumulate");
+        CHECK(g.state(19000 + 11000) == GpsMirror::State::Stale, "no fix for > 10 s → Stale (shown, never animated)"); CHECK(!g.mayAnimate(30000) && g.mayAnimate(19000), "animation only while Live");
+        CHECK(!g.onFix({25.2, 55.2744, 30.f, 0.f, 1019u, 19500u}), "a fix repeating the last phone timestamp is rejected (no duplicate record)");
+        g.onPhoneLink(false, 20000);
+        CHECK(g.state(20000) == GpsMirror::State::PhoneLost && g.lastFix() && g.lastFix()->phoneUnixS == 1019 && g.ageS(25000) == 6, "phone lost: last valid fix kept with its time; age keeps counting");
+        CHECK(!g.onFix({25.3, 55.3, 30.f, 0.f, 1030u, 21000u}) && g.trail().size() == 20, "while the phone is marked disconnected no GPS point is created silently");
+        float dBefore = g.distanceM(); g.onPhoneLink(true, 26000); CHECK(g.onFix({25.1972 + 20 * 0.0002, 55.2744, 30.f, 0.f, 1031u, 26000u}) && g.trail().size() == 21 && g.distanceM() > dBefore, "reconnect → fixes resume, trail continues from the preserved point");
+        for (int i = 0; i < 200; i++) g.onFix({25.1972 + (21 + i) * 0.0002, 55.2744, 30.f, 0.f, 1100u + i, 30000u + 1000u * i});
+        CHECK(g.trail().size() <= 50 && g.distanceM() > 4000.f, "trail is bounded (50 points here) while distance stays exact");
+        GpsMirror never; never.onPhoneLink(false, 0); CHECK(never.state(0) == GpsMirror::State::NoSource, "never had a fix and no phone → NoSource (no fake map, no invented position)");
+        // C: route guidance bounds
+        GpsMirror::Route route; for (int i = 0; i <= 10; i++) route.points.emplace_back(25.1972 + i * 0.001, 55.2744); route.turnIdx = {5, 10};
+        GpsMirror r; r.setRoute(route); CHECK(!r.guidance().available, "no fix → no guidance");
+        r.onFix({25.1972 + 0.002, 55.2744, 20.f, 0.f, 1u, 0u}); auto gd = r.guidance();
+        CHECK(gd.available && !gd.offRoute && std::fabs(gd.progress - 0.2f) < 1e-4f && gd.toNextTurnM > 300.f && gd.toNextTurnM < 340.f, "on route: progress 20 %, next turn ≈ 330 m");
+        r.onFix({25.1972 + 0.002, 55.2744 + 0.002, 20.f, 0.f, 2u, 1000u}); CHECK(r.guidance().offRoute && r.guidance().deviationM > 50.f, "200 m off the line → deviation warning");
+        r.onFix({25.1972 + 0.0105, 55.2744, 20.f, 0.f, 3u, 2000u}); CHECK(r.guidance().progress == 1.f && r.guidance().toNextTurnM == 0.f, "past the last turn: progress 100 %, no next turn (never indexes past the end)");
+        auto tr = projectTrail(g, 120, 98, 50, 6.f); size_t outside = 0, inside = 0; for (auto& p : tr) (p ? inside : outside)++;
+        CHECK(outside > 0 && inside > 0, "breadcrumbs beyond the dial radius become gaps, never rim artefacts");
+        // E: two-press preview → confirm
+        cyw::TwoPress tp(2500);
+        auto r1 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, true, 1000);
+        CHECK(r1.preview && !r1.execute && r1.action == cyw::Action::TogglePause && r1.label == "KEY 1 · Pause / Resume" && r1.hapticMs > 0, "first press previews: name + action, haptic tick, nothing executes");
+        auto r2 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, true, 2000);
+        CHECK(!r2.preview && r2.execute && r2.action == cyw::Action::TogglePause && !tp.previewing(), "second press of the same key within the window executes");
+        tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, true, 5000);
+        CHECK(!tp.tick(7400) && tp.previewing() && tp.tick(7600) && !tp.previewing(), "preview expires after 2.5 s and the UI is told to hide it");
+        auto r3 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, true, 8000); CHECK(r3.preview && !r3.execute, "after expiry a press is a fresh preview, not an execution");
+        auto r4 = tp.press(cyw::Key::Key2, cyw::Press::Short, cyw::Mode::Live_Ride, false, true, 8500);
+        CHECK(r4.preview && !r4.execute && r4.action == cyw::Action::Lap && *tp.previewedAction() == cyw::Action::Lap, "a different key replaces the preview with its own (no cross-confirmation)");
+        auto r5 = tp.press(cyw::Key::Key1, cyw::Press::Long, cyw::Mode::Live_Ride, false, true, 9000); CHECK(r5.preview && r5.action == cyw::Action::EndRequest && r5.label == "KEY 1 hold · End ride", "long Key1 previews End ride");
+        auto r6 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, true, 9300); CHECK(r6.preview && r6.action == cyw::Action::TogglePause, "a short press after a long preview is a new preview, not a confirmation of End");
+        auto r7 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, true, true, 9600); CHECK(r7.execute && r7.action == cyw::Action::Wake && !tp.previewing(), "screen off: a key wakes immediately and clears any preview");
+        auto r8 = tp.press(cyw::Key::Key1, cyw::Press::Short, cyw::Mode::Live_Ride, false, false, 9900); CHECK(r8.preview && r8.action == cyw::Action::TogglePause, "phone disconnected: keys keep working");
+        CHECK(cyw::actionFor(cyw::Mode::Live_Lift, cyw::Key::Key2, cyw::Press::Long, false, true) == cyw::Action::OpenCorrections && cyw::actionFor(cyw::Mode::Face, cyw::Key::Key1, cyw::Press::Short, false, true) == cyw::Action::OpenActivities && cyw::actionFor(cyw::Mode::Face, cyw::Key::Key2, cyw::Press::Short, false, true) == cyw::Action::OpenQuickSettings, "strength long Key2 = Correct reps; outside workouts Key1 = Activities, Key2 = Quick settings");
+        // E: debouncing with the two-press layer — a 5 ms bounce burst yields exactly one event
+        cyw::KeyDecoder kd; int fired = 0; for (uint32_t t = 0; t < 400; t++) { bool level = t >= 100 && t < 200 ? ((t - 100) < 12 ? (t % 2 == 0) : true) : false; if (kd.feed(level, t).fired) fired++; }
+        CHECK(fired == 1, "bouncing edge + 100 ms hold → one short press (debounced)");
+        // live screens always carry the touchscreen safety controls (Pause immediate; End while paused) — every fixture, every appearance
+        bool allControls = true; cyw::ui::HostMeasurer hm;
+        for (auto& [vn, content] : cyw::ui::contentVariants()) for (auto& sc : cyw::ui::allScreens(hm, content)) if (sc.name.rfind("live:ride", 0) == 0) { bool pause = false, endOrLap = false; for (auto& e : sc.els) { if (e.id == "pause" || e.id == "resume") pause = true; if (e.id == "end" || e.id == "lap") endOrLap = true; } allControls = allControls && pause && endOrLap; }
+        CHECK(allControls, "every ride view in every state keeps an immediate touchscreen Pause/Resume and a Lap/End control");
     }
 
     std::printf("\n%d checks, %d failures\n", checks, failures);
