@@ -54,8 +54,12 @@ struct RootView: View {
                 ProgressTabView().tabPage(3, tab)
                 ProfileTabView().tabPage(4, tab)
                 if showHub {
-                    TrainingHubView(perform: perform, openTab: { showHub = false; tab = $0 }, otherSession: { trainSheet = store.todayAction() }, close: { showHub = false })
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    // Run 200 (HubTapReliabilityTests, 4 of 48 cycles): the hub opened every time, but a Close tapped while the
+                    // panel was still sliding in landed on the stale frame and missed, so the hub stayed open. The hub now
+                    // fades in place — its controls have their final frames from the first frame — and closes without an
+                    // animation, so no tap can hit a moving control. Root cause, not a retry.
+                    TrainingHubView(perform: perform, openTab: { showHub = false; tab = $0 }, otherSession: { trainSheet = store.todayAction() }, close: { closeHub() })
+                        .transition(.opacity)
                         .zIndex(1)
                 }
             }
@@ -143,11 +147,12 @@ struct RootView: View {
         if now.timeIntervalSince(lastCentreTap) < 0.35 { hubLog.notice("centre tap ignored: \(Int(now.timeIntervalSince(lastCentreTap) * 1000)) ms after the previous one (hub \(showHub ? "open" : "closed"))"); return }
         lastCentreTap = now
         if recorder.isActive { hubLog.notice("centre tap → Ride (recording)"); tab = 2; return }
-        if showHub { hubLog.notice("centre tap → close hub"); showHub = false } else { hubLog.notice("centre tap → open hub (tab \(tab))"); openHub() }
+        if showHub { hubLog.notice("centre tap → close hub"); closeHub() } else { hubLog.notice("centre tap → open hub (tab \(tab))"); openHub() }
     }
     private func openHub() {
-        withAnimation(CyMotion.animation(0.22, reduce: reduceMotion)) { showHub = true }
+        withAnimation(CyMotion.animation(0.18, reduce: reduceMotion)) { showHub = true }
     }
+    private func closeHub() { hubLog.notice("hub Close"); var t = Transaction(); t.disablesAnimations = true; withTransaction(t) { showHub = false } }
 
     /// The pre-Checkpoint-C routing (build 161): kept as the reference for what each hub action reaches.
     private func centreTappedDirect() {
