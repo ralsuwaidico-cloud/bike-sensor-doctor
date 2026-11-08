@@ -46,6 +46,10 @@ struct RideTabView: View {
                 .padding(.bottom, recorder.isActive ? 0 : 84)
                 .background(D7.bg.ignoresSafeArea())
                 .toolbar(.hidden, for: .navigationBar)
+                // Owner 8 Nov 18:33 — full-screen active riding: while recording or paused the status bar and the home
+                // indicator step back too (the dock is already removed, RA-01); everything returns when the ride ends.
+                .statusBarHidden(recorder.isActive)
+                .persistentSystemOverlays(recorder.isActive ? .hidden : .automatic)
                 .onReceive(timer) { now in tick = now; coachTick(); guidanceTick() }
                 .onChange(of: routes.loaded) { _, r in guidance = r.map { RouteGuidance(route: $0) } }
                 .onAppear { if guidance == nil, let r = routes.loaded { guidance = RouteGuidance(route: r) } }
@@ -122,7 +126,7 @@ struct RideTabView: View {
                 if g.size.width >= 200, g.size.height >= 120 {
                     switch view {
                     case .cockpit:
-                        RideCockpitView(model: cockpitModel(l), steps: rideSteps, stepFTP: l.ftpKnown ? l.ftp : nil, stepHRZones: l.hrKnown ? l.hrZoneRanges : nil, elapsedS: rideClockS, coords: routeCoords, gps: gpsState, routeLine: routeLine,
+                        RideCockpitView(model: cockpitModel(l), steps: rideSteps, stepFTP: l.ftpKnown ? l.ftp : nil, stepHRZones: l.hrKnown ? l.hrZoneRanges : nil, elapsedS: rideClockS, coords: routeCoords, gps: gpsState, routeLine: routeLine, live: l, samples: recorder.isActive ? coach.samples : [],
                                         paused: recorder.state == .paused, onExpandMap: { withAnimation(.easeInOut(duration: 0.15)) { view = .map } })
                     case .map:
                         RideMapView(coords: routeCoords, gps: gpsState, tiles: mapTiles(l), route: routeCoordsLoaded, nextTurn: nextTurnCoord, guidance: guidanceText, offRoute: guidance?.state.offRoute ?? false)

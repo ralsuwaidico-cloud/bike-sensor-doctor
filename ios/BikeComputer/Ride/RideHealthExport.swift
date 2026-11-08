@@ -49,4 +49,21 @@ final class RideHealthExport {
             } else { finish() }
         }
     }
+
+    /// Delete all data (owner 8 Nov 18:33): removes the Apple Health workouts THIS app wrote (Health only lets an app
+    /// delete its own records — Apple Watch workouts and other apps' records stay, and the message says so).
+    /// `done` receives (deleted count, message). Runs on the main queue.
+    func deleteOwnWorkouts(done: @escaping (Int, String) -> Void) {
+        guard HKHealthStore.isHealthDataAvailable() else { done(0, "Apple Health is not available on this device"); return }
+        let pred = HKQuery.predicateForObjects(from: HKSource.default())
+        let q = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { [store] _, samples, err in
+            let own = samples ?? []
+            guard err == nil else { DispatchQueue.main.async { done(0, "Could not read Cyclift's Health workouts: \(err!.localizedDescription)") }; return }
+            guard !own.isEmpty else { DispatchQueue.main.async { done(0, "No workouts written by Cyclift were found in Apple Health") }; return }
+            store.delete(own) { ok, derr in
+                DispatchQueue.main.async { done(ok ? own.count : 0, ok ? "\(own.count) Cyclift workout\(own.count == 1 ? "" : "s") removed from Apple Health" : "Apple Health refused the deletion: \(derr?.localizedDescription ?? "unknown error")") }
+            }
+        }
+        store.execute(q)
+    }
 }

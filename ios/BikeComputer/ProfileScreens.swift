@@ -416,11 +416,19 @@ struct SettingsPage: View {
         .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
         .sheet(item: $exportURL) { url in ShareSheet(items: [url]) }
         .alert("Delete everything on this phone?", isPresented: $confirmDelete) {
-            Button("Delete", role: .destructive) { cloud.reset(); device.forget(); store.resetAll(); store.guest = true }
+            Button("Delete", role: .destructive) { deleteAll(health: false) }
+            Button("Delete, including Cyclift's Apple Health workouts", role: .destructive) { deleteAll(health: true) }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Profile, plan, ride history, strength logs, templates and the remembered BikeComputer are removed from this phone permanently. The BikeComputer keeps its own data; use Forget phone on the device too.")
+            Text("Profile, plan, ride history, strength logs, templates, Health reading history, the loaded route and the remembered BikeComputer and Cyclift Watch are removed from this phone permanently. Apple Health keeps what was written to it unless you choose the second option, which removes only the workouts Cyclift itself wrote — Apple Watch workouts and other apps' records stay in Health. The BikeComputer keeps its own data; use Forget phone on the device too.")
         }
+        .alert("Apple Health", isPresented: Binding(get: { healthDeleteMessage != nil }, set: { if !$0 { healthDeleteMessage = nil } })) { Button("OK") { healthDeleteMessage = nil } } message: { Text(healthDeleteMessage ?? "") }
+    }
+    @State private var healthDeleteMessage: String?
+    /// Owner 8 Nov 18:33 — one path for everything local; Health records are the athlete's explicit second choice.
+    private func deleteAll(health: Bool) {
+        cloud.reset(); device.forget(); store.resetAll(); store.guest = true
+        if health { RideHealthExport().deleteOwnWorkouts { _, msg in healthDeleteMessage = msg } }
     }
 }
 

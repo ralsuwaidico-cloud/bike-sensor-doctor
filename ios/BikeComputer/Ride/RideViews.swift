@@ -45,34 +45,68 @@ struct RideCockpitView: View {
     let gps: RideGPSState
     let routeLine: String
     let paused: Bool
+    /// Owner 8 Nov 18:33 — the cockpit shows the three gauges (power · heart rate · cadence) for the sensors that are
+    /// present and a compact live graph. `live` nil (previews / tests) keeps the text tiles.
+    var live: RideLive? = nil
+    var samples: [LiveSamplePoint] = []
     var onExpandMap: () -> Void
 
-    /// The cockpit fits the height it is given (RA-07/RA-08, run 186 on the iPhone SE): the lead value shrinks first,
-    /// then the mini map gives way — the Map view is one tap away and the controls below never move or hide.
+    /// Which gauges exist: only metrics with a source (RA-02 — the layout follows the sensor set; a missing meter is a
+    /// tile that says so, never a gauge at 0).
+    private var gauges: [TargetGauge] {
+        guard let l = live else { return [] }
+        var g: [TargetGauge] = []
+        if l.power.reading != nil || l.power.value != nil { var x = RideGauges.power(l, big: false, showTgtLabel: false); x.source = nil; g.append(x) }
+        if l.hr.reading != nil || l.hr.value != nil { var x = RideGauges.heartRate(l, big: false); x.source = nil; g.append(x) }
+        if l.cadence.reading != nil || l.cadence.value != nil { var x = RideGauges.cadence(l, big: false); x.source = nil; g.append(x) }
+        return g
+    }
+
+    /// Fits the height it is given (RA-07/RA-08). Priority when short: intervals · lead · gauges · graph · mini map —
+    /// the Map and Performance views are one tap away and the controls below never move or hide.
     var body: some View {
         GeometryReader { g in
-            let h = g.size.height
+            let h = g.size.height, w = g.size.width
+            let gs = gauges
             let stepH: CGFloat = steps.isEmpty ? 0 : 86
-            let compact = h - stepH < 300
-            let fixed = stepH + (compact ? 96 : 136) + 70 + 24
-            let showMap = h - fixed >= 80
+            let gaugeH: CGFloat = gs.isEmpty ? 0 : min(150, (w - 16) / 3 + RideGauges.chipHeight(big: false) - 8)
+            let leadH: CGFloat = gs.isEmpty ? (h - stepH < 300 ? 96 : 136) : 64
+            let fixed = stepH + leadH + (gs.isEmpty ? 70 : gaugeH) + 24
+            let hasGraph = !samples.isEmpty && !gs.isEmpty && h - fixed >= 56
+            let graphH: CGFloat = hasGraph ? min(96, max(56, (h - fixed) * 0.55)) : 0
+            let showMap = h - fixed - graphH - (hasGraph ? 8 : 0) >= 80
             VStack(spacing: 8) {
                 if !steps.isEmpty { RideStepCard(steps: steps, elapsedS: elapsedS, ftp: stepFTP, hrZones: stepHRZones) }
-                lead(compact: compact)
-                tiles
+                lead(compact: !gs.isEmpty || h - stepH < 300, tiny: !gs.isEmpty)
+                if gs.isEmpty { tiles } else { gaugeRow(gs, height: gaugeH) }
+                if hasGraph { graph(height: graphH) }
                 if showMap { miniMap } else { Spacer(minLength: 0) }
             }
-            .frame(width: g.size.width, height: h, alignment: .top)
+            .frame(width: w, height: h, alignment: .top)
             .clipped()
         }
     }
-    private func lead(compact: Bool) -> some View {
+    private func gaugeRow(_ gs: [TargetGauge], height: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 8) { ForEach(Array(gs.enumerated()), id: \.offset) { _, g in g.frame(maxWidth: .infinity) } }
+            .frame(height: height)
+            .accessibilityIdentifier("rideGauges")
+    }
+    private func graph(height: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            LiveGraphView(samples: samples, seconds: 120)
+            Text("LAST 2 MIN").font(.system(size: 10, weight: .bold, design: .monospaced)).tracking(0.6).foregroundStyle(D7.mut).padding(6)
+        }
+        .frame(height: height).background(D7.panel, in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .ignore).accessibilityLabel("Live graph of the last two minutes: power, heart rate and cadence against their targets")
+        .accessibilityIdentifier("rideCompactGraph")
+    }
+    private func lead(compact: Bool, tiny: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .lastTextBaseline) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(model.lead.label).font(.system(size: 11, weight: .semibold, design: .monospaced)).tracking(0.8).foregroundStyle(D7.mut)
                     HStack(alignment: .lastTextBaseline, spacing: 6) {
-                        Text(model.lead.value).font(.system(size: compact ? 46 : 72, weight: .heavy, design: .rounded)).monospacedDigit().foregroundStyle(paused ? D7.mut : D7.fg)
+                        Text(model.lead.value).font(.system(size: tiny ? 40 : compact ? 46 : 72, weight: .heavy, design: .rounded)).monospacedDigit().foregroundStyle(paused ? D7.mut : D7.fg)
                             .lineLimit(1).minimumScaleFactor(0.85)
                         Text(model.lead.unit).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(D7.mut)
                     }
@@ -86,8 +120,8 @@ struct RideCockpitView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(model.lead.label.capitalized) \(model.lead.value) \(model.lead.unit), target \(model.lead.target)")
-            if model.zonesShown, let pos = model.railPosition { RideZoneRail(position: pos) }
-            if let n = model.zoneNote { Text(n).font(.system(size: 12)).foregroundStyle(D7.mut).lineLimit(compact ? 1 : 3).minimumScaleFactor(0.85).fixedSize(horizontal: false, vertical: !compact) }
+            if model.zonesShown, let pos = model.railPosition, !tiny { RideZoneRail(position: pos) }
+            if let n = model.zoneNote, !tiny { Text(n).font(.system(size: 12)).foregroundStyle(D7.mut).lineLimit(compact ? 1 : 3).minimumScaleFactor(0.85).fixedSize(horizontal: false, vertical: !compact) }
         }
     }
     private func noteColor(_ t: RideCockpitModel.Tile) -> Color { t.note.contains("lost") ? D7.amber : D7.mut }
