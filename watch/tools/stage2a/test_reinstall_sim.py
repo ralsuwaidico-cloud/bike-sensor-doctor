@@ -30,6 +30,7 @@ shutil.copy(os.path.join(FW_TOOLS, 'check_image_header.py'), T)
 shutil.copy(os.path.join(HERE, 'pc_install_runner.py'), os.path.join(T, 'cy_install.py'))
 shutil.copy(os.path.join(HERE, 'pc_recovery_b_runner.py'), os.path.join(T, 'cy_recover_b.py'))
 shutil.copy(os.path.join(HERE, 'pc_reinstall_runner.py'), os.path.join(T, 'cy_reinstall.py'))
+shutil.copy(os.path.join(HERE, 'pc_update_s11_runner.py'), os.path.join(T, 'cy_update_s11.py'))
 
 backup = bytearray(tic.backup_like())
 bl = fp.image_len(backup, 0x1000); hdr = bytearray(backup[0x1000:0x1000 + bl]); hdr[2] = 2; hdr[3] = 0x20
@@ -37,6 +38,8 @@ hdr[-32:] = hashlib.sha256(bytes(hdr[:-32])).digest(); backup[0x1000:0x1000 + bl
 backup = bytes(backup)
 fw = tfp.esp_image(983360, mode=2, size_code=3, seed=4)
 fwpath = os.path.join(FWD, 'cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin')
+fw11 = tfp.esp_image(951296, mode=2, size_code=3, seed=11)          # Stage 1.1 stand-in, shorter than Stage 1 (tests the padding)
+fw11path = os.path.join(FWD, 'cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin'); open(fw11path, 'wb').write(fw11)
 open(os.path.join(D, 'flash_8MB_read1.bin'), 'wb').write(backup); open(fwpath, 'wb').write(fw)
 planned, _ = fp.apply_plan(backup, b'', True); man = []
 for s in ic.PLANNED:
@@ -82,6 +85,10 @@ def boot_text():
     sel = fp.selected_slot(img, len(apps)) or 0; a = apps[sel]
     nv = [p for p in pts if p['label'] == 'nvs'][0]['offset']
     if a['offset'] == 0x400000:
+        if bytes(FL[0x400000:0x400000 + len(fw11)]) == fw11:
+            return BANNER + 'Cyclift v3 proof of concept · Stage 1.1 (rendering optimisation) · first frame after 400 ms\r\n'
+        if bytes(FL[0x400000:0x400000 + len(fw)]) != fw:
+            return BANNER + 'E: invalid app image in ota_1, falling back\r\n'       # not reached in these tests
         return BANNER + 'Cyclift v3 proof of concept · first frame after 565 ms\r\n'
     _bct_bump(nv)
     return BANNER + 'include/osw_config.h: Accessing key id c1\r\n'
@@ -201,6 +208,7 @@ for p in ('precheck_re', 'p1', 'p2', 'p3', 'p4', 'post'):
 check(all(results.values()) and len(results) == 6, 'B1 re-install: precheck_re, p1-p4, post all pass (%s)' % results)
 check(STATE['mode'] == 'running' and FL[0xF000:0x10000] == planned[0xF000:0x10000], 'B1: watch left running Cyclift from app1 (not in download mode)')
 check(all(FL[lo:hi] == backup[lo:hi] for lo, hi in ((0x10000, 0x210000), (0x210000, 0x400000))), 'B1: factory app and factory files byte-identical to the backup')
+AFTER_B1 = bytes(FL)
 arch = os.path.join(D, 'first_install_20261109')
 check(os.path.isdir(arch) and open(os.path.join(arch, 'pre_install.bin'), 'rb').read() == first_pre, 'B1: first-install records archived (copied) before being replaced')
 log_txt = open(os.path.join(D, 'install_log.txt'), encoding='utf-8').read()
@@ -222,6 +230,25 @@ FL[0x400100] ^= 0xFF
 g = load('cy_reinstall.py'); patch(g)
 check(g['phase']('precheck_re') is False, 're-install pre-check refuses an upper-flash image that differs from the approved file')
 FL[0x400100] ^= 0xFF
+
+# 7. PROPOSED Stage 1.1 app-slot update on the B1 state, rollback to Stage 1, and a failure path ----------------------------------
+def load_s11():
+    g = load('cy_update_s11.py'); patch(g); g['FW11'] = fw11path; g['FW11_SHA'] = hashlib.sha256(fw11).hexdigest(); return g
+FL[:] = AFTER_B1
+g = load_s11()
+res = [g['phase'](p) for p in ('s11_pre', 's11_write', 's11_post')]
+check(res == [True, True, True], 'Stage 1.1 update: pre-check, app1 write + Stage 1.1 boot confirmed, post map (%s)' % res)
+check(bytes(FL[:0x400000]) == AFTER_B1[:0x400000], 'Stage 1.1 update: first 4 MB (factory app, files, settings, bootloader, table, OTA) untouched')
+span = (max(len(fw), len(fw11)) + 0xFFF) & ~0xFFF
+check(bytes(FL[0x400000:0x400000 + span]) == fw11 + b'\xff' * (span - len(fw11)), 'Stage 1.1 update: no remains of the longer Stage 1 image in app1')
+check(g['phase']('s11_rollback') is True and bytes(FL[0x400000:0x400000 + len(fw)]) == fw, 'rollback to the approved Stage 1: written, verified, Stage 1 boot confirmed')
+check(g['phase']('s11_pre') is True, 'after rollback the watch is again in the exact B1 state (pre-check passes)')
+STATE['verify_fault'] = 0x400000
+check(g['phase']('s11_write') is False and STATE['mode'] == 'running', 'Stage 1.1 update with a verify failure: phase fails, watch restarted')
+STATE['verify_fault'] = None
+g2 = load_s11(); g2['FW11_SHA'] = '0' * 64
+FL[:] = AFTER_B1
+check(g2['phase']('s11_pre') is False, 'Stage 1.1 pre-check refuses a file whose fingerprint is not the approved one')
 
 print('reinstall simulation: %d failures' % len(FAILS))
 sys.exit(1 if FAILS else 0)

@@ -95,3 +95,14 @@ the image (36 bytes). Fix: fixed `__DATE__`/`__TIME__` for all sources (`platfor
 * Rebuilds still recreate all objects (2–4 M instructions); keeping screens alive between visits would cut this further but
   costs memory and was not needed to keep the design unchanged.
 * The redrawn area per update is unchanged (the power number's label box is 146 × 76 px).
+
+## Candidate (CI run 42682987729, commit 8eaebe6) — NOT flashed
+| File | SHA-256 | Size |
+|---|---|---|
+| `cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin` (branch `firmware/stage1-candidates`) | `3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba` | 1,009,632 B |
+* Two clean CI builds and the published file are byte-identical (job `reproducible-build`). The start-up report now reads
+  `Jan 01 2026 00:00:00`. Header DIO / 40 MHz / 8 MB. Flash use 990,115 B of the 3 MB slot; static RAM 107,248 B.
+* Instruction RAM `.iram0.text` 122,511 B (LVGL drawing routines moved there): about 8 KB left — watch this before adding code.
+* Emulator (QEMU, display not emulated): starts once from app1 with the installed 8 MB bootloader and runs 40 s without a
+  restart, as Stage 1 did.
+* The approved Stage 1 file stays `faa2828f…` in `releases/stage1-approved/` (CI fingerprint check passed).
