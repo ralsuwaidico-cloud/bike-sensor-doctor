@@ -32,7 +32,7 @@ def regions():
     hits = sorted(glob.glob(os.path.expanduser('~/.platformio/packages/framework-arduinoespressif32*/**/esp32/ld/memory.ld'), recursive=True))
     if not hits:
         for root, dirs, files in os.walk(os.path.expanduser('~/.platformio')):
-            if 'memory.ld' in files and root.replace('\\', '/').endswith('/esp32/ld'):
+            if 'memory.ld' in files and (root.replace('\\', '/').endswith('/esp32/ld') or root.replace('\\', '/').endswith('-esp32-libs/ld')):
                 hits.append(os.path.join(root, 'memory.ld'))
         hits.sort()
     if not hits:
