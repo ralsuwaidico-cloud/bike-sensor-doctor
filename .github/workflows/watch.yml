@@ -75,6 +75,7 @@ jobs:
           set -o pipefail
           python3 tools/v3/check_image_header.py .pio/build/T-Watch-2021-V1_1 .pio/build/T-Watch-2021-V1_1-diag \
             .pio/build/T-Watch-2021-V1_1-v3poc .pio/build/T-Watch-2021-V1_0-v3poc .pio/build/T-Watch-2021-V2-v3poc | tee image-header-check.log
+          sha256sum .pio/build/*-v3poc/firmware.bin | tee -a image-header-check.log
           { echo '## Image header check'; echo '```'; cat image-header-check.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()

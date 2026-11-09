@@ -63,7 +63,7 @@ Method: Espressif's ESP32 emulator (QEMU, official release) boots 8 MB images sh
 bootloader whose code fingerprint is compared with the watch's (`factory_facts.json`), and three small test programs built with the
 pinned Cyclift toolchain (ESP-IDF 5.5 family). Scenarios S0–S7 in `tools/stage2a/boot_sim.py`; CI job `stage2a-boot-sim`.
 
-RESULTS: see §7 (filled from the CI run).
+See §7.
 
 ## 6. Rollback and USB recovery procedure (proposal — every write step needs separate approval)
 Preconditions: T-U2T on COM4; esptool 4.8.1; backup fingerprint re-verified; `plan_pieces` manifest re-verified.
@@ -83,3 +83,34 @@ Recovery levels:
 * **C — complete restore:** `write_flash 0x0` the 8 MB backup; read all 8 MB back; SHA-256 must be `77ad7105…3767693`.
 * **If nothing boots:** the ESP32 ROM loader is permanent and download mode is enabled (eFuses unchanged) → B or C over USB.
   Automatic reset via the T-U2T worked every time; fallback = hold BOOT while pressing RESET.
+
+## 7. Emulator results — CI run 42615619124 (commit dd2c6b7), job `stage2a-boot-sim`: 0 failures, 0 skipped
+Emulator: Espressif QEMU `esp_develop_9.2.2_20260417` (real ESP32 ROM code). Bootloader: Arduino-ESP32 **2.0.3-RC1** release binary;
+its code fingerprint equals the watch's (`185a610d…722ff5a2`; 2.0.3 final is identical, 2.0.2 and 2.0.4 differ). Header bytes set to
+the watch's values (DIO / 40 MHz / 4 MB), so its content matches the watch's bootloader; the watch's own bytes were not copied off the PC.
+
+| Scenario | Result |
+|---|---|
+| S0 original layout | factory stand-in starts from app0 ✔ |
+| S1 plan (bootloader header 8 MB, new table, OTA seq 2) | Cyclift probe starts from app1 @0x400000, settings at 0x700000; factory settings, OTA sector 0, factory app, factory files, bootloader and table unchanged after it ran ✔ |
+| S2 plan with the **unmodified** 4 MB bootloader | **boot loop** (64 restarts in 25 s), nothing starts |
+| C2x new table written but bootloader not yet patched (OTA still → app0) | **boot loop** (63 restarts) — the table must never be written before the bootloader patch |
+| C1 / C2 / C3 install checkpoints | factory stand-in still starts after each ✔ |
+| S3 app1 corrupted / S4 app1 empty | automatic fallback to app0 ✔ |
+| S5 app1 valid but crashes at start | **no fallback** — 6 restarts of the crashing program in 25 s; USB recovery R-A required |
+| S6 small rollback (4 sectors) | first 4 MB byte-identical to the original; factory stand-in starts ✔ |
+| S7 only OTA sector restored | factory stand-in starts, uses the Cyclift settings area; factory settings untouched ✔ |
+| S8 real Stage 1 firmware (v3poc) from app1, 8 MB header | loaded and started once, ran 40 s without restarting; its start-up banner was not reached (display/touch hardware is not emulated) |
+| S8 real Stage 1 firmware, unmodified bootloader | boot loop (102 restarts) |
+
+Other checks in the same run: proposed table byte-identical to ESP-IDF `gen_esp32part.py`; all five firmware builds pass; toolchain /
+framework / library versions exactly as pinned; every image header DIO / 40 MHz / 8 MB.
+
+What is simulated / not proven: the real factory app (stays in the private backup) was replaced by a stand-in program; display, touch,
+buttons, PSRAM size and real flash timing are not emulated (so DIO 40 MHz is checked for mode only, not speed); Stage 1 functionality
+beyond "starts and keeps running" is unproven until hardware.
+
+## 8. The 28 changed bytes in the factory settings — explained (no values read)
+Namespace `osw-config` (the factory firmware's own settings), key `bct`, type int32: the old record was marked erased (1 byte of the
+page's state bitmap) and a new record written in the next free slot (27 bytes) — a boot counter incremented when the factory firmware
+started after the esptool resets. No other settings changed. The value itself was not displayed.
