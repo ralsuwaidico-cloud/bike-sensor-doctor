@@ -195,10 +195,12 @@ def _p2():
 
 def _p3():
     ok, _ = verify([(0x400000, FW), (0x1000, piece('planned', 0x1000)), (0x5000, piece('planned', 0x5000))]); must(ok, 'pre-condition: Phases 1-2 in place')
+    # snapshot of the factory settings taken right before the write (the phase-end restart of Phase 2 lets the factory app
+    # run once more and advance its own counter, so the C2 file is not the right reference)
+    fac_before = read_region(0x9000, 0x5000, 'c3_nvs_fac_before.bin')
     pr = [(0x8000, piece('planned', 0x8000))]
     ok, out = write(pr); must(ok, 'Phase 3 write partition table 0x8000')
     ok, out = verify(pr); must(ok, 'Phase 3 verify_flash 0x8000')
-    fac_before = open(os.path.join(D, 'c2_nvs.bin'), 'rb').read()
     _checkpoint(True, 'C3')
     cyc = read_region(0x700000, 0x6000, 'c3_cyclift_nvs.bin')
     must(nvs_has_namespace(cyc, 'osw-config'), 'C3: factory app ran under the new table (its settings now in the Cyclift area)')
