@@ -158,6 +158,21 @@ def main():
     expect(r["default_nvs"] == ["0x700000"] and same(after7, ota_only, 0x9000, 0xE000),
            "S7 factory app under the new table uses the Cyclift nvs; original factory settings stay untouched")
 
+    # Install checkpoints: the watch must still boot the factory app after every intermediate step (switch is last).
+    step1 = bytearray(orig); step1[0x400000:0x400000 + len(app_b)] = app_b
+    step2 = bytearray(step1); bl_len = fp.image_len(orig, 0x1000)
+    step2[0x1000:0x1000 + bl_len] = planned[0x1000:0x1000 + bl_len]
+    step3 = bytearray(step2); step3[0x8000:0x8C00] = planned[0x8000:0x8C00]
+    no_bl = bytearray(step1); no_bl[0x8000:0x8C00] = planned[0x8000:0x8C00]
+    expect(bytes(step3[:0xF000]) == planned[:0xF000] and step3[0x10000:] == planned[0x10000:], "checkpoint images are consistent with the plan")
+    for nm, img, want in (("C1_after_app_write", step1, "FACTORY_STANDIN"), ("C2_after_bootloader_patch", step2, "FACTORY_STANDIN"),
+                          ("C3_after_table_write", step3, "FACTORY_STANDIN"), ("C2x_table_without_bootloader_patch", no_bl, None)):
+        r, _ = scenario(nm, bytes(img))
+        if want:
+            expect(r["roles"] == [want] and r["running"] == ["app0@0x010000"], "%s: factory app still starts" % nm)
+        else:
+            print("     %s (informational): roles=%s restarts=%d" % (nm, r["roles"], r["rom_boot_lines"]))
+
     if a.app_stage1:
         st1 = open(a.app_stage1, "rb").read()
         for tag, patch in (("8MB_header", True), ("original_bootloader", False)):

@@ -147,7 +147,7 @@ jobs:
           use=match or ('/tmp/bl/bl-2.0.3.bin')
           open('/tmp/bl/use','w').write(use); open('/tmp/bl/note','w').write(note); print(note)
           PY
-      - name: Boot the factory-preserving plan in QEMU (S0-S7)
+      - name: Boot the factory-preserving plan in QEMU (S0-S8, install checkpoints C1-C3)
         run: |
           set -o pipefail
           python3 watch/tools/stage2a/boot_sim.py --qemu "$(cat /tmp/qemu.path)" --bootloader "$(cat /tmp/bl/use)" --bootloader-note "$(cat /tmp/bl/note)" \
