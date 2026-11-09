@@ -1,0 +1,7 @@
+BikeComputer iOS CI — build 212 — 2026-11-09 16:48 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11374   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11767   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12302   screenshot ax3 ok large · 11m4s
+Total: 11m12s
