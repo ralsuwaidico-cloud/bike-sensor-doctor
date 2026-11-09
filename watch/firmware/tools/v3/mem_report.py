@@ -29,7 +29,7 @@ def ev(expr):
 
 
 def regions():
-    hits = glob.glob(os.path.expanduser('~/.platformio/packages/framework-arduinoespressif32-esp32-libs/esp32/ld/memory.ld'))
+    hits = sorted(glob.glob(os.path.expanduser('~/.platformio/packages/framework-arduinoespressif32*/**/esp32/ld/memory.ld'), recursive=True))
     if not hits: return None, {}
     txt = open(hits[0]).read()
     r = {}
@@ -63,7 +63,10 @@ def main():
     core = glob.glob(os.path.expanduser('~/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal-misc.c'))
     if core:
         t = open(core[0]).read()
-        print('\nArduino core (%s): releases the Bluetooth controller memory when Bluetooth is unused: %s' % (core[0], 'esp_bt_controller_mem_release' in t and 'btInUse' in t))
+        rel = ('btMemRelease' in t and 'bleInUse' in t) or ('esp_bt_controller_mem_release' in t and 'btInUse' in t)
+        print('\nArduino core (%s): releases the Bluetooth controller memory at start-up when no Bluetooth library is linked: %s' % (core[0], rel))
+        for line in t.splitlines():
+            if 'MemRelease' in line or 'mem_release' in line: print('    ' + line.strip())
 
 
 if __name__ == '__main__':

@@ -228,12 +228,14 @@ def s10(a, orig, old, new, results, expect):
     newp = new + b"\xff" * (span - len(new))
     def state(cut, rest):
         img = bytearray(base); A = 0x400000
-        sec_end = (cut + 0xFFF) & ~0xFFF
+        sec_end = min(span, (cut // 0x1000 + 1) * 0x1000)                   # the sector holding the cut point
         img[A:A + cut] = newp[:cut]
         img[A + cut:A + sec_end] = b"\xff" * (sec_end - cut)              # the sector being written was erased first
         if rest == "erased": img[A + sec_end:A + span] = b"\xff" * (span - sec_end)
         return bytes(img)
     cases = [("S10_baseline_stage1", base, "app1")]
+    # interrupted before esptool erased anything: app1 is still the complete, approved Stage 1 and keeps running
+    cases.append(("S10_stopped_before_first_erase", base, "app1"))
     for frac in (0.0, 0.002, 0.25, 0.5, 0.75, 0.99):
         cut = int(span * frac) if frac else 0
         for rest in ("old", "erased"):
