@@ -24,6 +24,10 @@ jobs:
           python3 watch/tools/stage2a/test_stage2a.py
       - name: Image-header checker self-test (no hardware)
         run: python3 watch/firmware/tools/v3/check_image_header.py --self-test
+      - name: Version-pin checker self-test and factory-preserving plan tests (no hardware)
+        run: |
+          python3 watch/firmware/tools/v3/check_versions.py --self-test
+          python3 watch/tools/stage2a/test_fp_plan.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -59,6 +63,12 @@ jobs:
           echo "## v3 Stage 1 proof of concept (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
           grep -E "RAM:|Flash:" build-*-v3poc.log >> "$GITHUB_STEP_SUMMARY" || true
           python3 tools/v3/elf_sizes.py .pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf | tee -a "$GITHUB_STEP_SUMMARY" || true
+      - name: Toolchain, framework and library versions are exactly the pinned ones
+        working-directory: watch/firmware
+        run: |
+          set -o pipefail
+          python3 tools/v3/check_versions.py T-Watch-2021-V1_1 T-Watch-2021-V1_1-v3poc | tee version-check.log
+          { echo '## Version pin check'; echo '```'; cat version-check.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Image headers match the identified watch (ESP32-PICO-V3-02, 8 MB, DIO 40 MHz) — offline check, nothing flashed
         working-directory: watch/firmware
         run: |
@@ -74,3 +84,85 @@ jobs:
             watch/firmware/.pio/build/*/firmware.bin
             watch/firmware/build-*.log
             watch/firmware/image-header-check.log
+            watch/firmware/version-check.log
+  stage2a-boot-sim:
+    # Factory-preserving plan booted in Espressif's ESP32 emulator (QEMU) with the factory-equivalent bootloader.
+    # Synthetic flash images only: the owner's backup never leaves his PC and nothing touches the watch.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            watch/firmware/.pio
+          key: pio-bootprobe-${{ runner.os }}-${{ hashFiles('watch/firmware/platformio.ini') }}
+      - run: pip install -q platformio esptool==4.8.1 "bitstring<4.3"
+      - name: Build the three boot-probe test programs (emulator only)
+        working-directory: watch/firmware
+        run: |
+          set -o pipefail
+          for e in stage2a-bootprobe-factory-standin stage2a-bootprobe-cyclift stage2a-bootprobe-crash; do pio run -e $e 2>&1 | tail -n 5; done
+          python3 tools/v3/check_versions.py stage2a-bootprobe-cyclift || true
+      - name: Proposed partition table equals ESP-IDF's own generator output
+        run: |
+          GEN=$(find ~/.platformio/packages/framework-arduinoespressif32* -name gen_esp32part.py | head -1)
+          python3 "$GEN" -q --flash-size 8MB watch/firmware/boards/partitions_factory_preserving.csv /tmp/pt_idf.bin
+          python3 - <<'PY'
+          import sys; sys.path.insert(0,'watch/tools/stage2a'); import fp_plan as fp
+          f=[fp.entry('nvs',1,2,0x9000,0x5000),fp.entry('otadata',1,0,0xe000,0x2000),fp.entry('app0',0,0x10,0x10000,0x200000),fp.entry('spiffs',1,0x82,0x210000,0x1f0000)]
+          ours=fp.proposed_pt(fp.build_pt(f)); idf=open('/tmp/pt_idf.bin','rb').read()
+          print('partition table identical to gen_esp32part:', ours[:len(idf)]==idf[:len(ours)] and ours.rstrip(b'\xff')==idf.rstrip(b'\xff'))
+          print('layout problems:', fp.check_layout(ours)); assert ours.rstrip(b'\xff')==idf.rstrip(b'\xff') and not fp.check_layout(ours)
+          PY
+      - name: Fetch Espressif QEMU (official release) and the Arduino-ESP32 2.0.x bootloaders
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          sudo apt-get -qq update && (sudo apt-get -qq install -y libsdl2-2.0-0 libslirp0 libpixman-1-0 libglib2.0-0t64 || sudo apt-get -qq install -y libsdl2-2.0-0 libslirp0 libpixman-1-0 libglib2.0-0) >/dev/null
+          curl -sfL -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/espressif/qemu/releases/latest -o /tmp/qemu.json
+          python3 -c "import json;d=json.load(open('/tmp/qemu.json'));a=[x for x in d['assets'] if 'qemu-xtensa-softmmu' in x['name'] and 'x86_64-linux-gnu' in x['name']][0];print(d['tag_name']);open('/tmp/qemu.url','w').write(a['browser_download_url'])"
+          mkdir -p ~/qemu && curl -sfL "$(cat /tmp/qemu.url)" | tar -xJ -C ~/qemu
+          find ~/qemu -name qemu-system-xtensa -type f | head -1 > /tmp/qemu.path && "$(cat /tmp/qemu.path)" --version | head -1
+          mkdir -p /tmp/bl && cd /tmp/bl
+          for v in 2.0.3 2.0.3-RC1 2.0.2 2.0.4 2.0.3-RC2; do
+            if curl -sfL -o esp32-$v.zip https://github.com/espressif/arduino-esp32/releases/download/$v/esp32-$v.zip; then
+              unzip -p esp32-$v.zip '*/tools/sdk/esp32/bin/bootloader_dio_40m.bin' > bl-$v.bin 2>/dev/null || rm -f bl-$v.bin
+              rm -f esp32-$v.zip
+            fi
+          done
+          ls -l /tmp/bl
+      - name: Identify the factory-equivalent bootloader (normalized fingerprint from the watch)
+        run: |
+          python3 - <<'PY'
+          import glob,json,sys; sys.path.insert(0,'watch/tools/stage2a'); import fp_plan as fp
+          want=json.load(open('watch/tools/stage2a/factory_facts.json'))['bootloader']['normalized_sha256']
+          match=None
+          for f in sorted(glob.glob('/tmp/bl/bl-*.bin')):
+              d=open(f,'rb').read(); h=fp.normalized_bootloader_sha(d[:fp.image_len(d,0)])
+              print(f, len(d), h, 'MATCH' if h==want else '')
+              if h==want and not match: match=f
+          note=('identical code to the watch bootloader: '+match) if match else 'NO byte-identical match found; using Arduino-ESP32 2.0.3 as closest (same ESP-IDF 4.4.1 family)'
+          use=match or ('/tmp/bl/bl-2.0.3.bin')
+          open('/tmp/bl/use','w').write(use); open('/tmp/bl/note','w').write(note); print(note)
+          PY
+      - name: Boot the factory-preserving plan in QEMU (S0-S7)
+        run: |
+          set -o pipefail
+          python3 watch/tools/stage2a/boot_sim.py --qemu "$(cat /tmp/qemu.path)" --bootloader "$(cat /tmp/bl/use)" --bootloader-note "$(cat /tmp/bl/note)" \
+            --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
+            --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
+            --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin --out boot-sim | tee boot-sim.log
+      - name: Summary
+        if: always()
+        run: |
+          { echo '## Stage 2a boot simulation (QEMU, synthetic images, nothing flashed)'; echo '```'; cat boot-sim.log 2>/dev/null | grep -v '^S[0-9]_' ; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage2a-boot-sim-logs
+          path: |
+            boot-sim/*.log
+            boot-sim/*.json
+            boot-sim.log

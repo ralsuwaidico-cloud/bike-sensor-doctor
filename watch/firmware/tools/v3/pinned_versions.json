@@ -1,0 +1,14 @@
+{
+  "_note": "Exact versions of the validated build (CI run 42604797422, 9 Nov 2026). check_versions.py fails if a build resolves to anything else.",
+  "platform": {"espressif32": "8.0.0"},
+  "packages": {
+    "framework-arduinoespressif32": "4.30312.261024",
+    "framework-arduinoespressif32-esp32-libs": "3.3.12",
+    "toolchain-xtensa-esp-elf": "14.2.0+20260121",
+    "tool-esptool": "2.50400.0"
+  },
+  "libraries": {
+    "T-Watch-2021-V1_1": {"TFT_eSPI": "2.5.43", "lvgl": "8.4.0", "NimBLE-Arduino": "1.4.3"},
+    "T-Watch-2021-V1_1-v3poc": {"TFT_eSPI": "2.5.43", "lvgl": "8.3.11", "NimBLE-Arduino": "1.4.3"}
+  }
+}
