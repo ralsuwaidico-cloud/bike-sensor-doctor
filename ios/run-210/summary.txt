@@ -1,0 +1,112 @@
+BikeComputer iOS CI — run 210 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 210 — 2026-11-09 08:48 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 3m14s
+RESULT tests: ok (Executed 4 tests, with 0 failures) · 9m7s
+Total: 9m31s
+
+## smoke
+BikeComputer iOS CI — build 210 — 2026-11-09 08:45 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 9m30s
+RESULT launch smoke (Release): ok (Executed 3 tests, with 0 failures) · 43m34s
+Total: 43m49s
+
+## flows
+BikeComputer iOS CI — build 210 — 2026-11-09 08:29 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 10m28s
+RESULT flows: FAILED (exit 65) · 45m24s — HubTapReliabilityTests.swift:109: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 7: Why sheet closed PlanEditPreviewApplyTests.swift:60: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - Apply closes the preview PlanEditPreviewApplyTests.swift:70: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to not hittable: Button, {{16.0, 594.0}, {370.0, 44.0}}, identifier: 'planChanges', label: 'Plan changes' PlanProgressRecoveryScreensTests.swift:35: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate 'identifier BEGINSWITH "planDay-" AND (label CONTAINS ";" OR (label CONTAINS "," AND (NOT label CONTAINS "before") AND (N StrengthSessionJourneyTests.swift:72: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min' 
+Total: 45m45s
+
+## journeys
+BikeComputer iOS CI — build 210 — 2026-11-09 08:44 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 11m49s
+  journey hybrid: ok · recording 1958 KB · 9m8s
+  journey cycling: ok · recording 1423 KB · 7m4s
+  journey strength: ok · recording 1523 KB · 7m59s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 41m35s
+Total: 41m48s
+
+## layout-small
+BikeComputer iOS CI — build 210 — 2026-11-09 08:29 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m57s
+  layout small (L,AX3): ok · 5m15s
+RESULT layout audit: ok (0 screenshots)
+Total: 18m26s
+
+## layout-standard
+BikeComputer iOS CI — build 210 — 2026-11-09 08:29 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m42s
+  layout standard (L,XXXL): ok · 3m43s
+RESULT layout audit: ok (0 screenshots)
+Total: 15m41s
+
+## layout-promax
+BikeComputer iOS CI — build 210 — 2026-11-09 08:40 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m28s
+  layout promax (L): ok · 3m6s
+RESULT layout audit: ok (0 screenshots)
+Total: 15m4s
+
+## layout-owner
+BikeComputer iOS CI — build 210 — 2026-11-09 08:29 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m26s
+  layout owner (L,XXXL): ok · 2m51s
+RESULT layout audit: ok (0 screenshots)
+Total: 14m34s
+
+## watch
+BikeComputer iOS CI — build 210 — 2026-11-09 08:29 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 10275   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 10530   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11063   screenshot ax3 ok large · 10m48s
+Total: 10m54s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit e1b6d7128f1757fb3a0e3b88f9e21e11d343788b  branch ios/checkpoint-f-ride  job failure

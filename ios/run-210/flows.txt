@@ -1,0 +1,192 @@
+=== flows: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:109: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 7: Why sheet closed
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' failed (398.910 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:60: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - Apply closes the preview
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:70: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to not hittable: Button, {{16.0, 594.0}, {370.0, 44.0}}, identifier: 'planChanges', label: 'Plan changes'
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (208.960 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:35: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate 'identifier BEGINSWITH "planDay-" AND (label CONTAINS ";" OR (label CONTAINS "," AND (NOT label CONTAINS "before") AND (NOT label CONTAINS "day")))'`, given input App element pid: 93341
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' failed (54.818 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:72: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min'
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (108.458 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: full filter ===
+Test Case '-[BikeComputerUITests.DeleteAllDataJourneyTests testDeleteAllDataReturnsToWelcomeAndStaysEmptyAfterRelaunch]' passed (73.743 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 73.743 (73.749) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:109: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 7: Why sheet closed
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' failed (398.910 seconds).
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' passed (783.950 seconds).
+Test Suite 'HubTapReliabilityTests' failed at 2026-11-09 09:06:17.816.
+	 Executed 2 tests, with 1 failure (0 unexpected) in 1182.860 (1182.867) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:60: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - Apply closes the preview
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:70: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to not hittable: Button, {{16.0, 594.0}, {370.0, 44.0}}, identifier: 'planChanges', label: 'Plan changes'
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (208.960 seconds).
+Test Suite 'PlanEditPreviewApplyTests' failed at 2026-11-09 09:09:46.778.
+	 Executed 1 test, with 2 failures (0 unexpected) in 208.960 (208.961) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:35: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate 'identifier BEGINSWITH "planDay-" AND (label CONTAINS ";" OR (label CONTAINS "," AND (NOT label CONTAINS "before") AND (NOT label CONTAINS "day")))'`, given input App element pid: 93341
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' failed (54.818 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' passed (59.879 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testRecoveryPageIsHonestWithoutHealthReads]' passed (40.312 seconds).
+Test Suite 'PlanProgressRecoveryScreensTests' failed at 2026-11-09 09:12:21.792.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 155.010 (155.013) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:72: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min'
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (108.458 seconds).
+Test Suite 'StrengthSessionJourneyTests' failed at 2026-11-09 09:14:10.251.
+	 Executed 1 test, with 1 failure (0 unexpected) in 108.458 (108.458) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 09:14:10.251.
+	 Executed 8 tests, with 5 failures (0 unexpected) in 1729.031 (1729.053) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 09:14:10.251.
+	 Executed 8 tests, with 5 failures (0 unexpected) in 1729.031 (1729.054) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: last 150 lines ===
+    t =    54.12s         Synthesize event
+    t =    54.46s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    54.60s     Waiting 2.0s for "restTimer" Any to exist
+    t =    55.62s         Checking `Expect predicate `existsNoRetry == 1` for object "restTimer" Any`
+    t =    55.63s             Checking existence of `"restTimer" Any`
+    t =    56.40s     Waiting 8.0s for "logSet" Button to exist
+    t =    57.43s         Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    57.43s             Checking existence of `"logSet" Button`
+    t =    57.83s     Checking existence of `"logSet" Button`
+    t =    58.55s     Checking existence of `"Set 1 of 2" StaticText`
+    t =    58.97s     Find the "Set 1 of 2" StaticText
+    t =    59.25s     Find the "nextSetTarget" StaticText
+    t =    60.05s     Find the "logSet" Button
+    t =    60.64s     Tap "logSet" Button
+    t =    60.64s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    60.87s         Find the "logSet" Button
+    t =    61.26s         Check for interrupting elements affecting "logSet" Button
+    t =    61.47s         Synthesize event
+    t =    61.77s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    61.97s     Waiting 2.0s for "restTimer" Any to exist
+    t =    63.00s         Checking `Expect predicate `existsNoRetry == 1` for object "restTimer" Any`
+    t =    63.00s             Checking existence of `"restTimer" Any`
+    t =    63.59s     Waiting 8.0s for "logSet" Button to exist
+    t =    64.61s         Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    64.61s             Checking existence of `"logSet" Button`
+    t =    66.01s             Capturing element debug description
+    t =    66.13s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    67.00s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    67.38s                 Find: Descendants matching type Button
+    t =    67.39s                 Find: Elements matching predicate '"logSet" IN identifiers'
+    t =    67.40s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    67.97s                 Find: Descendants matching type Button
+    t =    67.99s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    69.62s         Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    69.62s             Checking existence of `"logSet" Button`
+    t =    71.40s             Capturing element debug description
+    t =    71.41s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    71.85s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    71.85s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    71.85s                 Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    71.85s         Checking existence of `"logSet" Button`
+    t =    73.45s     Collecting debug information to assist test failure triage
+    t =    73.45s         Requesting snapshot of accessibility hierarchy for app with pid 99570
+    t =    75.88s     Waiting 5.0s for "nextSetFinish" Button to exist
+    t =    76.94s         Checking `Expect predicate `existsNoRetry == 1` for object "nextSetFinish" Button`
+    t =    76.94s             Checking existence of `"nextSetFinish" Button`
+    t =    77.24s     Checking existence of `StaticText (First Match)`
+    t =    77.41s     Waiting 5.0s for "finishWorkout" Button to exist
+    t =    78.45s         Checking `Expect predicate `existsNoRetry == 1` for object "finishWorkout" Button`
+    t =    78.45s             Checking existence of `"finishWorkout" Button`
+    t =    78.56s     Tap "finishWorkout" Button
+    t =    78.56s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    78.73s         Find the "finishWorkout" Button
+    t =    79.05s         Check for interrupting elements affecting "finishWorkout" Button
+    t =    79.30s         Synthesize event
+    t =    80.19s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    81.64s     Waiting 10.0s for "saveWorkout" Button to exist
+    t =    82.70s         Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =    82.70s             Checking existence of `"saveWorkout" Button`
+    t =    83.45s     Find the "saveWorkout" Button
+    t =    83.87s     Tap "saveWorkout" Button
+    t =    83.87s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    84.00s         Find the "saveWorkout" Button
+    t =    84.62s         Check for interrupting elements affecting "saveWorkout" Button
+    t =    85.36s         Synthesize event
+    t =    85.74s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    86.73s     Waiting 10.0s for "checkInForm" Any to exist
+    t =    87.78s         Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =    87.78s             Checking existence of `"checkInForm" Any`
+    t =    88.70s     Waiting 3.0s for "checkInSubmit" Button to exist
+    t =    89.72s         Checking `Expect predicate `existsNoRetry == 1` for object "checkInSubmit" Button`
+    t =    89.72s             Checking existence of `"checkInSubmit" Button`
+    t =    90.10s     Find the "checkInSubmit" Button
+    t =    90.42s     Tap "checkInSubmit" Button
+    t =    90.42s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    90.42s         Find the "checkInSubmit" Button
+    t =    91.22s         Check for interrupting elements affecting "checkInSubmit" Button
+    t =    91.87s         Synthesize event
+    t =    92.32s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    94.31s     Waiting 20.0s for "homeGreeting" Any to exist
+    t =    95.36s         Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    95.36s             Checking existence of `"homeGreeting" Any`
+    t =    96.04s     Find the "homeGreeting" Any
+    t =    96.81s     Checking existence of `"hubClose" Button`
+    t =    97.13s     Tap "hubClose" Button
+    t =    97.13s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    97.23s         Find the "hubClose" Button
+    t =    97.47s         Check for interrupting elements affecting "hubClose" Button
+    t =    97.85s         Synthesize event
+    t =    97.93s             Scroll element to visible
+    t =    97.94s             Find the "hubClose" Button
+    t =    98.16s             Computed hit point {-1, -1} after scrolling to visible
+    t =    98.46s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    98.46s     Waiting 10.0s for "homeStrength" Button to exist
+    t =    99.47s         Checking `Expect predicate `existsNoRetry == 1` for object "homeStrength" Button`
+    t =    99.47s             Checking existence of `"homeStrength" Button`
+    t =    99.98s     Tap "homeStrength" Button
+    t =    99.98s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   100.08s         Find the "homeStrength" Button
+    t =   100.55s         Check for interrupting elements affecting "homeStrength" Button
+    t =   100.96s         Synthesize event
+    t =   101.11s             Scroll element to visible
+    t =   101.12s             Find the "homeStrength" Button
+    t =   101.67s             Computed hit point {-1, -1} after scrolling to visible
+    t =   101.67s             Failed: Not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min'
+    t =   102.69s         Retrying `Tap "homeStrength" Button` (attempt #2)
+    t =   102.69s             Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   102.83s             Find the "homeStrength" Button
+    t =   103.48s             Check for interrupting elements affecting "homeStrength" Button
+    t =   104.00s             Synthesize event
+    t =   104.11s                 Scroll element to visible
+    t =   104.12s                 Find the "homeStrength" Button
+    t =   104.75s                 Computed hit point {-1, -1} after scrolling to visible
+    t =   104.75s                 Failed: Not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min'
+    t =   105.75s         Retrying `Tap "homeStrength" Button` (attempt #3)
+    t =   105.75s             Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   105.76s             Find the "homeStrength" Button
+    t =   106.24s             Check for interrupting elements affecting "homeStrength" Button
+    t =   106.84s             Synthesize event
+    t =   106.95s                 Scroll element to visible
+    t =   106.97s                 Find the "homeStrength" Button
+    t =   107.39s                 Computed hit point {-1, -1} after scrolling to visible
+    t =   107.39s                 Failed: Not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min'
+    t =   107.40s     Requesting snapshot of accessibility hierarchy for app with pid 99570
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:72: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min'
+    t =   108.21s Tear Down
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (108.458 seconds).
+Test Suite 'StrengthSessionJourneyTests' failed at 2026-11-09 09:14:10.251.
+	 Executed 1 test, with 1 failure (0 unexpected) in 108.458 (108.458) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 09:14:10.251.
+	 Executed 8 tests, with 5 failures (0 unexpected) in 1729.031 (1729.053) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 09:14:10.251.
+	 Executed 8 tests, with 5 failures (0 unexpected) in 1729.031 (1729.054) seconds
+2026-11-09 09:14:45.563 xcodebuild[29002:80234] [MT] IDETestOperationsObserverDebug: 1794.443 elapsed -- Testing started completed.
+2026-11-09 09:14:45.564 xcodebuild[29002:80234] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-09 09:14:45.564 xcodebuild[29002:80234] [MT] IDETestOperationsObserverDebug: 1794.443 sec, +1794.443 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/flows.xcresult
+
+Failing tests:
+	HubTapReliabilityTests.testCloseAtHumanPaceAlwaysClosesTheHub()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanProgressRecoveryScreensTests.testPlanBandsNavigate()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+
+** TEST EXECUTE FAILED **
+
+Testing started

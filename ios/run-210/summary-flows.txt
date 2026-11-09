@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 210 — 2026-11-09 08:29 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 10m28s
+RESULT flows: FAILED (exit 65) · 45m24s — HubTapReliabilityTests.swift:109: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 7: Why sheet closed PlanEditPreviewApplyTests.swift:60: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - Apply closes the preview PlanEditPreviewApplyTests.swift:70: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to not hittable: Button, {{16.0, 594.0}, {370.0, 44.0}}, identifier: 'planChanges', label: 'Plan changes' PlanProgressRecoveryScreensTests.swift:35: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate 'identifier BEGINSWITH "planDay-" AND (label CONTAINS ";" OR (label CONTAINS "," AND (NOT label CONTAINS "before") AND (N StrengthSessionJourneyTests.swift:72: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to not hittable: Button, {{207.0, 315.7}, {179.0, 160.3}}, identifier: 'homeStrength', label: 'Strength, 1 of 1 , logged, sessions · 1 min' 
+Total: 45m45s
