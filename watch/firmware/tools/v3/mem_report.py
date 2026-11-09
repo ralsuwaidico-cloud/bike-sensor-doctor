@@ -30,7 +30,17 @@ def ev(expr):
 
 def regions():
     hits = sorted(glob.glob(os.path.expanduser('~/.platformio/packages/framework-arduinoespressif32*/**/esp32/ld/memory.ld'), recursive=True))
-    if not hits: return None, {}
+    if not hits:
+        for root, dirs, files in os.walk(os.path.expanduser('~/.platformio')):
+            if 'memory.ld' in files and root.replace('\\', '/').endswith('/esp32/ld'):
+                hits.append(os.path.join(root, 'memory.ld'))
+        hits.sort()
+    if not hits:
+        found = []
+        for root, dirs, files in os.walk(os.path.expanduser('~/.platformio')):
+            found += [os.path.join(root, f) for f in files if f == 'memory.ld']
+        print('memory.ld candidates found: %s' % (found[:20] or 'none'))
+        return None, {}
     txt = open(hits[0]).read()
     r = {}
     for m in re.finditer(r'(\w+_seg)\s*\([^)]*\)\s*:\s*org\s*=\s*([^,]+),\s*len\s*=\s*([^\n]+)', txt):
