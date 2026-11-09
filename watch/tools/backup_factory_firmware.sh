@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Cyclift Watch — W0: NON-DESTRUCTIVE full-flash backup of the factory firmware (read only; nothing is written).
+# SUPERSEDED for Stage 2a by tools/stage2a/stage2a_readonly.py (guarded read-only commands, identification first,
+# two reads compared by SHA-256, partition and firmware report). Kept for reference; it is not part of the procedure.
 # Needs: the LILYGO T-U2T USB-to-serial dongle plugged into the watch's USB-C port, then into the computer (the watch
 # has no USB-serial chip of its own — the supplied cable alone only charges), and `pip install esptool`.
 # Usage: ./backup_factory_firmware.sh /dev/cu.usbserial-XXXX   (macOS)   or   COM5 (Windows, via python -m esptool)
