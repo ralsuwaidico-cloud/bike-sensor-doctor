@@ -72,3 +72,22 @@ its reset button) starts the firmware normally. Process fix: every session must 
 Separate open item: touch. The CST816S answered at least once (one swipe event at 19:42–19:43), but the owner saw no response to
 taps. Possible causes: taps landing where the current screen has no action, or unreliable reads from the touch controller. The
 diagnostic build should log raw touch reads before any conclusion.
+
+## Provisional closure — 9 Nov 2026, after the owner's USB reconnection
+**Observation (owner):** after disconnecting and reconnecting the USB cable, the original LILYGO watch face appeared normally.
+This confirms the cause recorded above: the chip had been left in its ROM download mode by the final `esptool` commands
+(`--after no_reset`), so no firmware ran and the backlight pin was not driven. A power cycle starts the firmware from flash.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Display hardware (GC9A01 panel) | **operational** | factory watch face shown after the USB reconnection |
+| Backlight (IO21) | **operational** | factory watch face visible |
+| Cyclift Stage 1 display output | **visually observed, not yet validated** | owner saw the Cyclift interface 19:41–19:43; no structured screen test done |
+| Touch (CST816S) | **open** | one "swipe U" event logged; owner saw no response to taps |
+| Board revision V1.0 vs V1.1 | open (affects only BMA/RTC interrupt routing) | not determined from photos |
+| Diagnostic display firmware | **not installed** (not needed for the backlight question) | built in CI only |
+
+Root cause: process defect in the PC scripts, not a hardware or Stage 1 display fault. Fix: `watch/tools/stage2a/device_session.py`
+(every phase and every recovery ends with a restart and a boot check), with regression tests `test_device_session.py` in CI.
+The black-screen question is closed provisionally; it is closed fully once a Stage 1 session ends with "BOOT CONFIRMED" and the
+owner sees the interface stay on (validation plan V2-1, `STAGE1_HARDWARE_VALIDATION_PLAN.md`).

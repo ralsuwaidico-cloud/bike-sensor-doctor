@@ -1,15 +1,13 @@
 # Cyclift — Recovery Level B (owner-approved 9 Nov 2026 19:52). Reviewed procedure only:
 # original sectors written back in reverse install order: 0xF000, 0x8000, then 0x1000 + 0x5000; keep flags; verify each.
 # Cyclift firmware in the upper flash is left in place (not erased). No other writes.
+# Revision 2: reuses the installer's DeviceSession — every phase ends with a restart + boot check (see device_session.py).
 import os, sys
-for m in ('fp_plan', 'install_check', 'check_image_header'):
+for m in ('fp_plan', 'install_check', 'check_image_header', 'device_session'):
     sys.modules.pop(m, None)
-exec(open(os.path.join(os.path.expanduser('~'), 'Documents', 'Cyclift_Stage2a', 'tools', 'cy_install.py'), encoding='utf-8').read())
-
-
-def log(*a):   # encoding-safe logger (fix from the installation session)
-    s = '%s %s' % (datetime.datetime.now().strftime('%H:%M:%S'), ' '.join(str(x) for x in a))
-    print(s.encode('ascii', 'replace').decode()); open(LOG, 'a', encoding='utf-8', errors='replace').write(s + '\n')
+_INST = os.environ.get('CY_INSTALLER') or os.path.join(os.path.expanduser('~'), 'Documents', 'Cyclift_Stage2a', 'tools', 'cy_install.py')
+exec(open(_INST, encoding='utf-8').read())
+AFTER.update({'rb_precheck': (CYCLIFT, None), 'rb_restore': (None, CYCLIFT), 'rb_confirm': (None, CYCLIFT)})
 
 
 ORDER = [[(0xF000, piece('original', 0xF000))], [(0x8000, piece('original', 0x8000))],
@@ -35,11 +33,10 @@ def _rb_restore():
 
 
 def _rb_confirm():
-    txt, boots = serial_watch(15)
+    txt, boots, r = serial_watch(15, forbid=CYCLIFT)
     for l in [l for l in txt.splitlines() if l.strip()][:14]:
         log('   | ' + l[:150])
-    must(boots == 1, 'factory start: exactly one start, no reset loop')
-    must('Cyclift v3' not in txt, 'Cyclift not running')
+    must(r.confirmed, 'factory start confirmed: one start, no reset loop, Cyclift not running (%s)' % r.reason)
     fac_before = open(os.path.join(D, 'c3_nvs_fac.bin'), 'rb').read()
     first = read_region(0, 0x400000, 'after_recovery_b_first4MB.bin')
     pre = open(os.path.join(D, 'pre_install.bin'), 'rb').read()

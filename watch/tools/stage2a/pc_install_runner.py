@@ -1,11 +1,16 @@
 # Cyclift Stage 1 — first installation runner (owner-approved 9 Nov 2026 19:25, conditional; FIRST_INSTALL_PROCEDURE.md).
 # One phase per call: phase('precheck'), phase('p1'), phase('p2'), phase('p3'), phase('p4'), phase('post'), phase('observe').
 # Recovery only on explicit call: recovery('RA'|'RB'|'RC'). Every write: keep flags, then verify_flash. No erase, no eFuse.
-import os, sys, time, hashlib, subprocess, datetime, struct
+# Revision 2 (9 Nov 2026, after the black-screen finding): all device access goes through device_session.DeviceSession.
+# Every phase and every recovery ends with a restart into the firmware and a boot check; "flash verified" and
+# "boot confirmed" are reported separately; serial monitoring without reset only runs once the firmware is confirmed running.
+import os, sys, time, hashlib, datetime, struct
 DOC = os.path.join(os.path.expanduser('~'), 'Documents')
-T = os.path.join(DOC, 'Cyclift_Stage2a', 'tools'); sys.path.insert(0, T)
+T = os.environ.get('CY_TOOLS_DIR', os.path.join(DOC, 'Cyclift_Stage2a', 'tools'))
+sys.path.insert(0, T); sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else T)
 import fp_plan as fp, install_check as ic
-D = os.path.join(os.environ['LOCALAPPDATA'], 'Cyclift_Private', 'watch_backup_20261109')
+import device_session as ds
+D = os.environ.get('CY_PRIVATE_DIR') or os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'Cyclift_Private', 'watch_backup_20261109')
 PD = os.path.join(D, 'plan_pieces')
 BACKUP = os.path.join(D, 'flash_8MB_read1.bin')
 FW = os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_firmware', 'cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin')
@@ -17,21 +22,24 @@ LOG = os.path.join(D, 'install_log.txt')
 piece = lambda tag, s: os.path.join(PD, '%s_0x%06x.bin' % (tag, s))
 
 
-def log(*a):
+def log(*a):   # encoding-safe (serial output may contain non-ASCII bytes)
     s = '%s %s' % (datetime.datetime.now().strftime('%H:%M:%S'), ' '.join(str(x) for x in a))
-    print(s); open(LOG, 'a').write(s + '\n')
+    print(s.encode('ascii', 'replace').decode())
+    with open(LOG, 'a', encoding='utf-8', errors='replace') as f:
+        f.write(s + '\n')
 
 
 class Stop(Exception):
     pass
 
 
-def esptool(args, after='no_reset', baud='921600', timeout=600):
-    cmd = [sys.executable, '-m', 'esptool', '--chip', 'esp32', '--port', PORT, '--baud', baud, '--before', 'default_reset', '--after', after] + args
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    out = r.stdout + r.stderr
-    out = '\n'.join(l for l in out.splitlines() if not l.startswith('MAC'))
-    return r.returncode, out
+S = ds.DeviceSession(ds.RealTransport(PORT), log=lambda m: log(m))
+CYCLIFT = 'Cyclift v3 proof of concept'      # Stage 1 boot banner on serial
+
+
+def esptool(args, **_ignored):
+    """Every esptool command leaves the chip in download mode; the phase wrapper restarts it afterwards."""
+    return S.esptool(args)
 
 
 def must(ok, msg):
@@ -45,46 +53,31 @@ def sha_file(p):
 
 
 def verify(pairs):
-    args = ['verify_flash']
-    for off, f in pairs:
-        args += [hex(off), f]
-    rc, out = esptool(args)
-    ok = rc == 0 and out.count('verify OK') >= len(pairs) and 'verify FAILED' not in out
-    return ok, out
+    return S.verify(pairs), ''
 
 
 def write(pairs):
-    args = ['write_flash'] + KEEP
-    for off, f in pairs:
-        args += [hex(off), f]
-    rc, out = esptool(args)
-    return rc == 0 and 'Hash of data verified' in out, out
+    return S.write(pairs), ''
 
 
-def serial_watch(seconds=12, send=None):
-    """Reset the watch into its normal program (EN pulse, IO0 high) and record its serial output. Read-only."""
-    import serial
-    s = serial.Serial(); s.port = PORT; s.baudrate = 115200; s.timeout = 0.2; s.dtr = False; s.rts = False
-    s.open(); s.dtr = False; s.rts = True; time.sleep(0.12); s.rts = False
-    buf = b''; t0 = time.time(); sent = False
-    while time.time() - t0 < seconds:
-        buf += s.read(4096)
-        if send and not sent and time.time() - t0 > seconds / 2:
-            s.write(send.encode()); sent = True
-    s.close()
-    txt = buf.decode('utf-8', 'replace')
-    boots = txt.count('rst:0x') - txt.count('rst:0x5 ')   # deep-sleep wake-ups are not resets
+def serial_watch(seconds=12, send=None, expect=None, forbid=None):
+    """Restart the watch into its normal program (EN pulse, IO0 high) and confirm the boot. Read-only.
+    Returns (text, starts, BootResult). `send` is written half-way through an extra listen window (no reset)."""
+    r = S.restart_and_confirm(expect=expect, forbid=forbid, window=min(seconds, 15))
+    txt = r.text
     if 'rst:0x5 ' in txt:
         log('note: %d deep-sleep wake-up(s) seen (normal power saving, not counted)' % txt.count('rst:0x5 '))
-    return txt, boots
+    if r.confirmed and seconds > 15:
+        txt += S.listen(seconds - 15, send=send)
+    return txt, r.starts, r
 
 
 def read_region(off, size, name):
     f = os.path.join(D, name)
-    rc, out = esptool(['read_flash', hex(off), hex(size), f], timeout=900)
-    if rc != 0:
-        raise Stop('read failed at 0x%x' % off)
-    return open(f, 'rb').read()
+    try:
+        return S.read(off, size, f)
+    except ds.CommError as e:
+        raise Stop('read failed at 0x%x (%s)' % (off, e))
 
 
 def nvs_has_namespace(blob, name):
@@ -116,15 +109,17 @@ def bct(blob):
     return val
 
 
+# Firmware expected after each phase's final restart (None = any firmware; only start/no-loop checked).
+AFTER = {'precheck': (None, CYCLIFT), 'p1': (None, CYCLIFT), 'p2': (None, CYCLIFT), 'p3': (None, CYCLIFT),
+         'p4': (CYCLIFT, None), 'post': (CYCLIFT, None), 'observe': (CYCLIFT, None)}
+
+
 def phase(name):
-    log('===== PHASE', name, '=====')
-    try:
-        globals()['_' + name]()
-        log('===== PHASE', name, 'PASSED =====')
-        return True
-    except Stop as e:
-        log('***** PHASE', name, 'STOPPED:', e, '— no further writes. Follow the reviewed recovery only if needed. *****')
-        return False
+    """Run one phase; ALWAYS ends with a restart attempt and a boot check. True only if the work passed AND the
+    firmware start was confirmed. Unexpected errors are re-raised after the cleanup has been logged."""
+    expect, forbid = AFTER.get(name, (None, None))
+    r = ds.run_phase(S, name, globals()['_' + name], expect=expect, forbid=forbid, stop_exc=(Stop,))
+    return r.ok
 
 
 def _precheck():
@@ -165,16 +160,14 @@ def _precheck():
         must(os.path.exists(f), 'recovery file present: ' + os.path.basename(f))
     res, bad = ic.recovery_validate(B, fwb, pieces)
     must(not bad, 'recovery package validated offline with the approved firmware')
-    txt, boots = serial_watch(10)
-    must(boots == 1, 'baseline: watch starts once, no reset loop (%d start)' % boots)
+    txt, boots, r = serial_watch(10, forbid=CYCLIFT)
+    must(r.confirmed, 'baseline: factory firmware start confirmed, no reset loop (%s)' % r.reason)
 
 
 def _checkpoint(expect_factory, label):
-    txt, boots = serial_watch(12)
-    log('%s: serial shows %d start(s); Cyclift banner present: %s' % (label, boots, 'Cyclift v3 proof of concept' in txt))
-    must(boots == 1, '%s: started exactly once (no reset loop)' % label)
-    if expect_factory:
-        must('Cyclift v3' not in txt, '%s: Cyclift not running (factory expected)' % label)
+    txt, boots, r = serial_watch(12, forbid=CYCLIFT if expect_factory else None)
+    log('%s: serial shows %d start(s); Cyclift banner present: %s' % (label, boots, CYCLIFT in txt))
+    must(r.confirmed, '%s: firmware start confirmed (%s)' % (label, r.reason))
 
 
 def _p1():
@@ -219,22 +212,23 @@ def _p4():
     pr = [(0xF000, piece('planned', 0xF000))]
     ok, out = write(pr); must(ok, 'Phase 4 write OTA record 0xF000 (the switch)')
     ok, out = verify(pr); must(ok, 'Phase 4 verify_flash 0xF000')
-    txt, boots = serial_watch(15)
+    txt, boots, r = serial_watch(15, expect=CYCLIFT)
     log('C4 serial (first lines):')
     for l in [l for l in txt.splitlines() if l.strip()][:14]:
         log('   | ' + l[:150])
-    must(boots == 1, 'C4: started exactly once (no reset loop)')
-    must('Cyclift v3 proof of concept' in txt, 'C4: Cyclift Stage 1 started (banner on serial)')
+    must(r.confirmed, 'C4: Cyclift Stage 1 start confirmed — one start, banner on serial (%s)' % r.reason)
 
 
 def _observe():
     """Read-only: 60 s serial observation with a performance report; counts resets; records key/touch log lines."""
-    txt, boots = serial_watch(60, send='u')
+    txt, boots, r = serial_watch(60, send='u', expect=CYCLIFT)
+    must(r.confirmed, 'Cyclift start confirmed before observing (%s)' % r.reason)
     lines = [l for l in txt.splitlines() if l.strip()]
     for l in lines[:40]:
         log('   | ' + l[:160])
-    log('observe: starts=%d (1 expected), perf line present=%s' % (boots, any(l.startswith('perf:') for l in lines)))
-    must(boots == 1, 'no unexpected reset during 60 s')
+    starts = txt.count('rst:0x') - txt.count('rst:0x5 ')
+    log('observe: starts=%d (1 expected), perf line present=%s' % (starts, any(l.startswith('perf:') for l in lines)))
+    must(starts == 1, 'no unexpected reset during 60 s')
 
 
 def _post():
@@ -250,21 +244,19 @@ def _post():
 
 
 def recovery(level):
-    """Reviewed recovery only (FIRST_INSTALL_PROCEDURE.md). Not run unless explicitly called."""
-    log('===== RECOVERY', level, '=====')
-    try:
-        seq = {'RA': [[(0xF000, piece('original', 0xF000))]],
-               'RB': [[(0xF000, piece('original', 0xF000))], [(0x8000, piece('original', 0x8000))],
-                      [(0x1000, piece('original', 0x1000)), (0x5000, piece('original', 0x5000))]],
-               'RC': [[(0x0, BACKUP)]]}[level]
+    """Reviewed recovery only (FIRST_INSTALL_PROCEDURE.md). Not run unless explicitly called.
+    Ends with a restart and a boot check like every phase."""
+    seq = {'RA': [[(0xF000, piece('original', 0xF000))]],
+           'RB': [[(0xF000, piece('original', 0xF000))], [(0x8000, piece('original', 0x8000))],
+                  [(0x1000, piece('original', 0x1000)), (0x5000, piece('original', 0x5000))]],
+           'RC': [[(0x0, BACKUP)]]}[level]
+
+    def _work():
         for pr in seq:
             ok, out = write(pr); must(ok, 'recovery write ' + ', '.join(hex(o) for o, _ in pr))
             ok, out = verify(pr); must(ok, 'recovery verify ' + ', '.join(hex(o) for o, _ in pr))
-        txt, boots = serial_watch(12)
-        log('after recovery: starts=%d' % boots)
-        return True
-    except Stop as e:
-        log('***** RECOVERY', level, 'STOPPED:', e, '*****')
-        return False
+    r = ds.run_phase(S, 'RECOVERY ' + level, _work, forbid=CYCLIFT, stop_exc=(Stop,))
+    return r.ok
+
 
 print('cy_install loaded. Run phase("precheck") first.')

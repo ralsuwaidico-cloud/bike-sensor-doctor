@@ -215,7 +215,7 @@ def cmd_inspect(a):
     return rep
 
 
-def main(argv=None):
+def main(argv=None, session_factory=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sp = p.add_subparsers(dest='cmd', required=True)
     i = sp.add_parser('identify'); i.add_argument('--port', required=True); i.add_argument('--out', default='cyclift-watch-stage2a')
@@ -223,13 +223,35 @@ def main(argv=None):
     b.add_argument('--confirm', default=''); b.add_argument('--out', default='cyclift-watch-stage2a')
     n = sp.add_parser('inspect'); n.add_argument('file'); n.add_argument('--flash-mb', type=int)
     a = p.parse_args(argv)
+    if a.cmd == 'inspect':
+        cmd_inspect(a); return 0
+    # Device commands: esptool ends with --after hard_reset, but that is not proof the firmware started. A final
+    # restart + boot check runs on every exit path; the original error (if any) is still raised/returned.
+    rc, err = 0, None
     try:
         if a.cmd == 'identify': cmd_identify(a)
-        elif a.cmd == 'backup': return 0 if cmd_backup(a)[1] else 2
-        else: cmd_inspect(a)
+        else: rc = 0 if cmd_backup(a)[1] else 2
     except Refused as e:
-        print('REFUSED:', e); return 3
-    return 0
+        print('REFUSED:', e); return 3                          # nothing was sent to the watch
+    except BaseException as e:
+        err = e
+    boot = confirm_boot(a.port, session_factory)
+    print('Watch restart:', 'BOOT CONFIRMED (firmware running)' if boot.confirmed else
+          'BOOT NOT CONFIRMED — ' + boot.reason + '. Disconnect and reconnect USB and report what the screen shows.')
+    if err is not None:
+        raise err
+    return rc if boot.confirmed else (rc or 4)
+
+
+def confirm_boot(port, session_factory=None):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import device_session as ds
+    sess = session_factory() if session_factory else ds.DeviceSession(ds.RealTransport(port), log=print)
+    sess.state = 'unknown'
+    try:
+        return sess.restart_and_confirm()
+    except Exception as e:
+        return ds.BootResult(False, 'restart attempt raised %s' % e)
 
 
 if __name__ == '__main__':
