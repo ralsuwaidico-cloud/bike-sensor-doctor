@@ -20,7 +20,7 @@ Offline structural check of the backup (run on the owner's PC; only summaries le
 | Region | Range | Finding |
 |---|---|---|
 | ROM-reserved gap | 0x0000–0x0FFF | erased (normal) |
-| Bootloader | 0x1000, 17 088 B (to ~0x5A40) | valid image, 3 segments, checksum OK, appended SHA-256 OK; header DIO / 4 MB / 40 MHz |
+| Bootloader | 0x1000, 17 088 B (to 0x52C0) | valid image, 3 segments, checksum OK, appended SHA-256 OK; header DIO / 4 MB / 40 MHz |
 | Partition table | 0x8000 | 4 entries, MD5 OK, identical to the earlier inspection read |
 | NVS | 0x9000–0xDFFF | 1 active page, 4 empty (contents deliberately not printed; may hold Wi-Fi/Bluetooth data) |
 | OTA data | 0xE000 / 0xF000 | sector 0 seq 1 (CRC OK), sector 1 seq 0 (CRC OK) → app0 selected |
@@ -55,7 +55,7 @@ partition table lists it **and** OTA data points to it.
 ### What would have to change on the watch (sector by sector)
 | Area | Change | Why |
 |---|---|---|
-| Bootloader 0x1000 (and the sector holding its SHA-256, ~0x5000) | factory bootloader re-written with flash-size field 4 MB → 8 MB (esptool updates the hash) | the factory bootloader limits flash access to the size in its header; with 4 MB it should refuse a slot at 0x400000 (to be confirmed on the watch; assume it blocks) |
+| Bootloader 0x1000 (and sector 0x5000, which holds its SHA-256) | factory bootloader re-written with flash-size field 4 MB → 8 MB (esptool updates the hash) | the factory bootloader limits flash access to the size in its header; with 4 MB it should refuse a slot at 0x400000 (to be confirmed on the watch; assume it blocks) |
 | Partition table 0x8000 | new table: factory `nvs` relabelled `nvs_fac` (same place, untouched), `otadata`, `app0`, `spiffs` unchanged; add `app1` (ota_1) 0x400000 3 MB, new `nvs` 0x700000 24 KB, `littlefs` 0x706000 to 0x800000 | makes the new slot visible; gives Cyclift its own settings area so the factory settings are never written to (Bluetooth bonding storage always uses the label `nvs`) |
 | OTA data sector 1 (0xF000) | seq 0 → seq 2 | (2 − 1) mod 2 = 1 → app1. Sector 0 (seq 1) stays as it is |
 | 0x400000–~0x4F0000 and 0x700000–0x7FFFFF | Cyclift firmware and its data | previously erased; nothing original lost |
@@ -64,8 +64,9 @@ Untouched: 0x0–0xFFF, NVS 0x9000–0xDFFF, OTA sector 0, factory app 0x10000�
 ### Does the factory bootloader support it?
 * Same partition-table offset (0x8000), standard OTA logic, two OTA slots and app slots anywhere 64 KB-aligned: yes (ESP-IDF v4.4.1).
 * Above 4 MB: only after its header says 8 MB (row 1). Must be confirmed on the watch.
-* Our app: PlatformIO `espressif32` currently resolves to Arduino-ESP32 2.0.x (ESP-IDF 4.4.x), the same family as the factory bootloader.
-  Recommendation (needs approval): pin the platform version so a future Arduino 3 / ESP-IDF 5 update cannot change that silently.
+* Our app: **correction (9 Nov, later the same day)** — the validated build actually uses espressif32 8.0.0 = Arduino-ESP32 3.3.12
+  (ESP-IDF 5.5 family), not 2.0.x as first stated. Compatibility of an ESP-IDF 5.5 app with the factory ESP-IDF 4.4.1 bootloader is
+  therefore tested explicitly in the emulator (PRE_INSTALL_VERIFICATION.md). Versions are now pinned.
 
 ### Could it stop the factory firmware from booting?
 | Failure | Effect | Recovery |
