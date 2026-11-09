@@ -91,6 +91,7 @@ def main():
     ap.add_argument("--bootloader-note", default="")
     ap.add_argument("--app-stage1", default="", help="real Stage 1 (v3poc) firmware.bin, booted from app1 as S8")
     ap.add_argument("--app-diag", default="", help="display diagnostic firmware.bin, booted from app1 as S9")
+    ap.add_argument("--app-approved", default="", help="approved Stage 1 image now in app1 (S10 interrupted-update scenarios)")
     ap.add_argument("--seconds", type=float, default=25)
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
@@ -204,6 +205,9 @@ def main():
         for l in lines[:30]:
             print("     | " + l[:170])
 
+    if a.app_approved and a.app_stage1:
+        s10(a, orig, open(a.app_approved, "rb").read(), open(a.app_stage1, "rb").read(), results, expect)
+
     summary = dict(bootloader=os.path.basename(a.bootloader), bootloader_note=a.bootloader_note,
                    bootloader_normalized_sha256=fp.normalized_bootloader_sha(bl[:fp.image_len(bl, 0)]),
                    plan_notes=notes, planned_changed_ranges=["0x%06x-0x%06x" % x for x in fp.ranges(secs)],
@@ -211,6 +215,48 @@ def main():
     json.dump(summary, open(os.path.join(a.out, "boot_sim_summary.json"), "w"), indent=1)
     print("boot simulation: %d failures" % len(fails))
     return 1 if fails else 0
+
+
+def s10(a, orig, old, new, results, expect):
+    """S10: Stage 1.1 replaces Stage 1 in app1 and the write is interrupted. The installed layout (8 MB bootloader header,
+    new table, OTA record -> app1) stays as on the watch after B1. Expectation to verify: an incomplete app1 image fails the
+    bootloader's image check (checksum + appended SHA-256) and the bootloader starts app0 (the factory stand-in here);
+    a complete image starts normally. Interruption points cover esptool's per-sector erase-then-write order: data written up
+    to a point, the rest of the current sector erased, later sectors either still the old image or already erased."""
+    base, _ = fp.apply_plan(orig, old, patch_bootloader=True)
+    span = (max(len(old), len(new)) + 0xFFF) & ~0xFFF
+    newp = new + b"\xff" * (span - len(new))
+    def state(cut, rest):
+        img = bytearray(base); A = 0x400000
+        sec_end = (cut + 0xFFF) & ~0xFFF
+        img[A:A + cut] = newp[:cut]
+        img[A + cut:A + sec_end] = b"\xff" * (sec_end - cut)              # the sector being written was erased first
+        if rest == "erased": img[A + sec_end:A + span] = b"\xff" * (span - sec_end)
+        return bytes(img)
+    cases = [("S10_baseline_stage1", base, "app1")]
+    for frac in (0.0, 0.002, 0.25, 0.5, 0.75, 0.99):
+        cut = int(span * frac) if frac else 0
+        for rest in ("old", "erased"):
+            cases.append(("S10_cut_%04.1fpct_%s" % (frac * 100, rest), state(cut, rest), "factory"))
+    cases.append(("S10_last_sector_missing", state(span - 0x1000 + 5, "old"), "factory"))
+    full = bytearray(base); full[0x400000:0x400000 + span] = newp
+    cases.append(("S10_complete_stage1_1", bytes(full), "app1"))
+    flip = bytearray(full); flip[0x400000 + len(new) // 2] ^= 0x01
+    cases.append(("S10_complete_one_bit_flipped", bytes(flip), "factory"))
+    hdr = bytearray(base); hdr[0x400000:0x401000] = b"\xff" * 0x1000
+    cases.append(("S10_header_sector_erased", bytes(hdr), "factory"))
+    for name, img, want in cases:
+        log, after, dt = run_qemu(a.qemu, img, 15, a.out, name)
+        r = probes(log)
+        factory = r["roles"] == ["FACTORY_STANDIN"]
+        r.update(seconds=round(dt, 1), expected=want, factory_started=factory,
+                 app0_bytes_unchanged=same(after, img, 0x10000, 0x400000), bootloader_table_ota_unchanged=same(after, img, 0x1000, 0x10000))
+        results[name] = r
+        if want == "factory":
+            expect(factory and r["rom_boot_lines"] >= 1, "%s: incomplete app1 -> bootloader starts the factory app0" % name)
+        else:
+            expect(not r["roles"] and r["rom_boot_lines"] == 1, "%s: app1 image accepted and started (one start, no fallback)" % name)
+        print("     %s: roles=%s rom_boots=%d" % (name, r["roles"], r["rom_boot_lines"]))
 
 
 if __name__ == "__main__":

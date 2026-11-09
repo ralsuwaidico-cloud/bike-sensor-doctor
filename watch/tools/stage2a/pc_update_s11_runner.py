@@ -8,9 +8,10 @@ import os, sys
 _INST = os.environ.get('CY_INSTALLER') or os.path.join(os.path.expanduser('~'), 'Documents', 'Cyclift_Stage2a', 'tools', 'cy_install.py')
 exec(open(_INST, encoding='utf-8').read())
 
-FWDIR = os.path.dirname(FW)
-FW11 = os.path.join(FWDIR, 'cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin')
-FW11_SHA = 'TO-BE-FILLED-FROM-CI'                  # set to the CI-published SHA-256 when the owner approves the file
+# Stage 1.1 lives in its own folder; the approved Stage 1 folder (FW) is never written to.
+FW11 = os.environ.get('CY_FW11') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_1_firmware', 'cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin')
+FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'   # CI runs 42682987729 / 42685750132, owner-named 9 Nov 23:53
+WRITE_ADDR, WRITE_LEN = 0x400000, 0xF7000           # app1 start; Stage 1.1 (1,009,632 B) padded to whole sectors: 0x400000-0x4F6FFF
 STAGE11 = 'Stage 1.1'                             # boot banner marker of the new firmware
 APP1, APP1_END = 0x400000, 0x700000
 
@@ -26,7 +27,8 @@ def padded(src, length, name):
 
 def _span():
     a, b = os.path.getsize(FW), os.path.getsize(FW11)
-    return (max(a, b) + 0xFFF) & ~0xFFF
+    span = (max(a, b) + 0xFFF) & ~0xFFF
+    return span
 
 
 def _s11_pre():
@@ -50,6 +52,7 @@ def _s11_pre():
         must(cur[lo:hi] == B[lo:hi], '%s byte-identical to the backup' % nm)
     must(fp.selected_slot(cur, 2) == 1, 'OTA record selects app1')
     span = _span()
+    must(span == WRITE_LEN and APP1 + span <= APP1_END, 'write plan: app1 only, 0x%06x-0x%06x (%d B = Stage 1.1 padded to whole sectors)' % (APP1, APP1 + span - 1, span))
     must(cur[APP1 + span:APP1_END] == b'\xff' * (APP1_END - APP1 - span), 'rest of app1 beyond the update span erased')
     padded(FW, span, 's11_rollback_stage1_padded.bin'); padded(FW11, span, 's11_stage11_padded.bin')
     txt, boots, r = serial_watch(12, expect=CYCLIFT, forbid=STAGE11)
@@ -58,7 +61,8 @@ def _s11_pre():
 
 def _s11_write():
     src = os.path.join(D, 's11_stage11_padded.bin')
-    must(os.path.exists(src) and open(src, 'rb').read().startswith(open(FW11, 'rb').read()), 'padded Stage 1.1 image prepared by s11_pre')
+    must(os.path.exists(src) and open(src, 'rb').read().startswith(open(FW11, 'rb').read()) and os.path.getsize(src) == WRITE_LEN and APP1 == WRITE_ADDR,
+         'padded Stage 1.1 image prepared by s11_pre (%d B for 0x%06x)' % (WRITE_LEN, WRITE_ADDR))
     ok, _ = write([(APP1, src)]); must(ok, 'write Stage 1.1 -> app1 0x400000 (%d B incl. erased padding)' % os.path.getsize(src))
     ok, _ = verify([(APP1, src)]); must(ok, 'verify_flash app1')
     txt, boots, r = serial_watch(15, expect=STAGE11)

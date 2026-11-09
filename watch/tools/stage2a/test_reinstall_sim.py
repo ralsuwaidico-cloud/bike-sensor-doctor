@@ -123,9 +123,13 @@ class FlashSerial:
 CLOCK = [0.0]
 
 
+CMDS = []                                 # every esptool command the runners issue (audit of what C1 would do)
+
+
 class FlashTransport:
     def esptool(self, args, timeout=900):
         STATE['mode'] = 'download'
+        CMDS.append(list(args))
         c = args[0]
         if c == 'flash_id':
             return 0, 'Chip is ESP32-PICO-V3-02 (revision v3.1)\nDetected flash size: 8MB\n'
@@ -157,11 +161,12 @@ class FlashTransport:
 
 
 def load(name):
-    os.environ.update(CY_PRIVATE_DIR=D, CY_TOOLS_DIR=T, CY_INSTALLER=os.path.join(T, 'cy_install.py'))
+    os.environ.update(CY_PRIVATE_DIR=D, CY_TOOLS_DIR=T, CY_INSTALLER=os.path.join(T, 'cy_install.py'), CY_FW11=fw11path)
     g = {'__file__': os.path.join(T, name), '__name__': name}
     src = open(os.path.join(T, name), encoding='utf-8').read()
     src = src.replace("FW_SHA = 'faa2828f8fd22d59877c4c9535eb09e1a15db3176f2b5cd1c438810aead5cba7'", 'FW_SHA = %r' % hashlib.sha256(fw).hexdigest())
     src = src.replace("BK_SHA = '77ad7105c68fb7de04e5717fca4e90b08bd9c32adeb5c098e3e00446d3767693'", 'BK_SHA = %r' % hashlib.sha256(backup).hexdigest())
+    src = src.replace("FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'", 'FW11_SHA = %r' % hashlib.sha256(fw11).hexdigest())
     exec(compile(src, name, 'exec'), g)
     return g
 
@@ -232,15 +237,33 @@ check(g['phase']('precheck_re') is False, 're-install pre-check refuses an upper
 FL[0x400100] ^= 0xFF
 
 # 7. PROPOSED Stage 1.1 app-slot update on the B1 state, rollback to Stage 1, and a failure path ----------------------------------
+SPAN = (max(len(fw), len(fw11)) + 0xFFF) & ~0xFFF
 def load_s11():
-    g = load('cy_update_s11.py'); patch(g); g['FW11'] = fw11path; g['FW11_SHA'] = hashlib.sha256(fw11).hexdigest(); return g
+    g = load('cy_update_s11.py'); patch(g); g['FW11'] = fw11path; g['WRITE_LEN'] = SPAN; return g
 FL[:] = AFTER_B1
 g = load_s11()
+CMDS.clear()
 res = [g['phase'](p) for p in ('s11_pre', 's11_write', 's11_post')]
 check(res == [True, True, True], 'Stage 1.1 update: pre-check, app1 write + Stage 1.1 boot confirmed, post map (%s)' % res)
+writes = [(c[0], [a for a in c[1:] if a.startswith('0x')]) for c in CMDS if c[0] not in ('flash_id', 'read_flash')]
+wr = [c for c in CMDS if c[0] == 'write_flash']
+check(len(wr) == 1 and [a for a in wr[0] if a.startswith('0x')] == ['0x400000'] and os.path.getsize(wr[0][-1]) == SPAN,
+      'Stage 1.1 update issues exactly ONE write: 0x400000, %d B (no bootloader, table, OTA, factory or erase command)' % SPAN)
+check(all(c[0] in ('flash_id', 'read_flash', 'write_flash', 'verify_flash') for c in CMDS) and all(a == '0x400000' for c in CMDS if c[0] == 'verify_flash' for a in c[1:] if a.startswith('0x')),
+      'Stage 1.1 update: only flash_id, read_flash, one write_flash and verify_flash at 0x400000 are used (%s)' % sorted(set(c[0] for c in CMDS)))
 check(bytes(FL[:0x400000]) == AFTER_B1[:0x400000], 'Stage 1.1 update: first 4 MB (factory app, files, settings, bootloader, table, OTA) untouched')
 span = (max(len(fw), len(fw11)) + 0xFFF) & ~0xFFF
 check(bytes(FL[0x400000:0x400000 + span]) == fw11 + b'\xff' * (span - len(fw11)), 'Stage 1.1 update: no remains of the longer Stage 1 image in app1')
+AFTER_S11 = bytes(FL)
+# existing recovery tools after a Stage 1.1 update: R-A (OTA record) and R-B (four sectors) must still work
+gi = load('cy_install.py'); patch(gi)
+check(gi['recovery']('RA') is True and fp.selected_slot(bytes(FL), 2) == 0, 'R-A after Stage 1.1: original OTA record written, factory app starts')
+FL[:] = AFTER_S11
+gb = load('cy_recover_b.py'); patch(gb)
+ok = all(gb['phase'](p) for p in ('rb_precheck', 'rb_restore', 'rb_confirm'))
+check(ok and bytes(FL[:0x400000])[0x10000:] == backup[0x10000:0x400000] and fp.parse_pt(bytes(FL[0x8000:0x8C00])) == fp.parse_pt(backup[0x8000:0x8C00]),
+      'R-B after Stage 1.1: accepts Stage 1.1 in app1, restores the factory layout, factory starts')
+FL[:] = AFTER_S11
 check(g['phase']('s11_rollback') is True and bytes(FL[0x400000:0x400000 + len(fw)]) == fw, 'rollback to the approved Stage 1: written, verified, Stage 1 boot confirmed')
 check(g['phase']('s11_pre') is True, 'after rollback the watch is again in the exact B1 state (pre-check passes)')
 STATE['verify_fault'] = 0x400000
@@ -249,6 +272,12 @@ STATE['verify_fault'] = None
 g2 = load_s11(); g2['FW11_SHA'] = '0' * 64
 FL[:] = AFTER_B1
 check(g2['phase']('s11_pre') is False, 'Stage 1.1 pre-check refuses a file whose fingerprint is not the approved one')
+
+# 8. the real C1 numbers: Stage 1 (983,360 B) and Stage 1.1 (1,009,632 B) -> one write 0x400000-0x4F6FFF
+real = (max(983360, 1009632) + 0xFFF) & ~0xFFF
+src = open(os.path.join(HERE, 'pc_update_s11_runner.py'), encoding='utf-8').read()
+check(real == 0xF7000 and 'WRITE_ADDR, WRITE_LEN = 0x400000, 0xF7000' in src,
+      'C1 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1 (0x400000-0x6FFFFF)' % (real, real, 0x400000 + real - 1))
 
 print('reinstall simulation: %d failures' % len(FAILS))
 sys.exit(1 if FAILS else 0)

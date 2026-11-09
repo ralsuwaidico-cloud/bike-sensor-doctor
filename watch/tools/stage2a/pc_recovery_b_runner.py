@@ -10,6 +10,20 @@ exec(open(_INST, encoding='utf-8').read())
 AFTER.update({'rb_precheck': (CYCLIFT, None), 'rb_restore': (None, CYCLIFT), 'rb_confirm': (None, CYCLIFT)})
 
 
+# Cyclift program in app1: the approved Stage 1, or — after a Stage 1.1 update — the approved Stage 1.1 (R-B never writes app1).
+FW11 = os.environ.get('CY_FW11') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_1_firmware', 'cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin')
+FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'
+
+
+def app1_program():
+    """Which approved program app1 holds (read-only verify_flash); None if neither matches."""
+    if verify([(0x400000, FW)])[0]:
+        return FW
+    if os.path.exists(FW11) and sha_file(FW11) == FW11_SHA and verify([(0x400000, FW11)])[0]:
+        return FW11
+    return None
+
+
 ORDER = [[(0xF000, piece('original', 0xF000))], [(0x8000, piece('original', 0x8000))],
          [(0x1000, piece('original', 0x1000)), (0x5000, piece('original', 0x5000))]]
 
@@ -21,8 +35,9 @@ def _rb_precheck():
     must(all(open(piece('original', s), 'rb').read() == B[s:s + 0x1000] for s in ic.PLANNED), 'original pieces equal the backup sectors')
     rc, out = esptool(['flash_id'])
     must(rc == 0 and 'ESP32-PICO-V3-02' in out and 'Detected flash size: 8MB' in out, 'COM4 exclusive; ESP32-PICO-V3-02, 8 MB')
-    ok, _ = verify([(0x400000, FW)] + [(s, piece('planned', s)) for s in ic.PLANNED])
-    must(ok, 'current flash = installed state (planned sectors + Cyclift firmware), read-only verify')
+    ok, _ = verify([(s, piece('planned', s)) for s in ic.PLANNED])
+    prog = app1_program()
+    must(ok and prog is not None, 'current flash = installed state (planned sectors + approved Cyclift program %s), read-only verify' % (os.path.basename(prog) if prog else '?'))
     log('recovery order:', ' -> '.join('+'.join(hex(o) for o, _ in step) for step in ORDER), '(reverse of install; matches FIRST_INSTALL_PROCEDURE R-B)')
 
 
@@ -47,7 +62,7 @@ def _rb_confirm():
     must(ns <= {'osw-config', '(page header)'}, 'factory settings: only the factory boot counter changed (%s)' % (sorted(ns) or 'none'))
     must(bct(first[0x9000:0xE000]) is not None and bct(first[0x9000:0xE000]) > bct(fac_before), 'factory app ran with its ORIGINAL settings (its boot counter advanced in 0x9000)')
     must(fp.selected_slot(first, 1) == 0 and fp.parse_pt(first[0x8000:0x8C00]) == fp.parse_pt(pre[0x8000:0x8C00]), 'factory partition table and factory selection restored')
-    ok, _ = verify([(0x400000, FW)]); must(ok, 'Cyclift firmware left in upper flash (not erased)')
+    must(app1_program() is not None, 'Cyclift firmware left in upper flash (not erased)')
 
 
 print('cy_recover_b loaded: phase("rb_precheck"), then phase("rb_restore"), then phase("rb_confirm")')

@@ -77,6 +77,15 @@ jobs:
           echo "## v3 Stage 1 proof of concept (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
           grep -E "RAM:|Flash:" build-*-v3poc.log >> "$GITHUB_STEP_SUMMARY" || true
           python3 tools/v3/elf_sizes.py .pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf | tee -a "$GITHUB_STEP_SUMMARY" || true
+      - name: Memory report — IRAM / DRAM against the linker regions; Stage 1.1 with and without LVGL in IRAM; Bluetooth app build
+        working-directory: watch/firmware
+        run: |
+          set -o pipefail
+          pio run -e T-Watch-2021-V1_1-v3poc-nofastmem 2>&1 | tail -n 4
+          python3 tools/v3/mem_report.py "Stage 1.1 candidate (LVGL in IRAM)=.pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf" \
+            "Stage 1.1 without LVGL in IRAM=.pio/build/T-Watch-2021-V1_1-v3poc-nofastmem/firmware.elf" \
+            "existing app with Bluetooth (NimBLE)=.pio/build/T-Watch-2021-V1_1/firmware.elf" | tee mem-report.log
+          { echo '## Memory report (static, compile time)'; cat mem-report.log; } >> "$GITHUB_STEP_SUMMARY"
       - name: Toolchain, framework and library versions are exactly the pinned ones
         working-directory: watch/firmware
         run: |
@@ -99,6 +108,8 @@ jobs:
           for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1.1-v3poc-T-Watch-2021-$r.bin; done
           cp .pio/build/T-Watch-2021-V1_1-display-diag/firmware.bin ../../stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin
           cd ../../stage1-candidates && sha256sum *.bin | tee SHA256SUMS && echo "commit ${GITHUB_SHA}" >> SHA256SUMS
+          # the owner named this exact file for C1 (9 Nov 23:53): any firmware change must make a NEW, renamed candidate
+          grep -q '^3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba  cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
           name: stage1-firmware-candidates-not-flashed
@@ -113,6 +124,7 @@ jobs:
             watch/firmware/.pio/build/*/firmware.bin
             watch/firmware/build-*.log
             watch/firmware/image-header-check.log
+            watch/firmware/mem-report.log
             watch/firmware/version-check.log
   stage2a-boot-sim:
     # Factory-preserving plan booted in Espressif's ESP32 emulator (QEMU) with the factory-equivalent bootloader.
@@ -188,7 +200,7 @@ jobs:
             --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
             --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
             --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin \
-            --app-stage1 stage1-candidates/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
+            --app-stage1 stage1-candidates/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin --app-approved watch/firmware/releases/stage1-approved/cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
       - name: Summary
         if: always()
         run: |
