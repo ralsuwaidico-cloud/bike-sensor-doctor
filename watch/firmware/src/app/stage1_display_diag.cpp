@@ -10,12 +10,16 @@
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <esp_system.h>
+#include <driver/gpio.h>
 #include "../hal/board_pins.hpp"
 
 namespace pins = cyw::pins;
 static TFT_eSPI tft;
 static SPIClass rawSpi(HSPI);
 static uint32_t cycleNo = 0;
+// Output pins with the input stage enabled, so the logged read-back shows the real pin level (plain OUTPUT reads back 0).
+static void outPin(int pin) { pinMode(pin, OUTPUT); gpio_set_direction(gpio_num_t(pin), GPIO_MODE_INPUT_OUTPUT); }
+static int level(int pin) { return gpio_get_level(gpio_num_t(pin)); }
 
 static void say(const char* fmt, ...) {
     char b[200]; va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
@@ -113,9 +117,9 @@ static void testTftEspi() {
 }
 
 static void testBacklightGpio() {
-    pinMode(pins::LCD_BL, OUTPUT);
-    digitalWrite(pins::LCD_BL, HIGH); say("T2 backlight IO%d plain HIGH for 5 s (WATCH: screen glows?) readback=%d", pins::LCD_BL, digitalRead(pins::LCD_BL)); delay(5000);
-    digitalWrite(pins::LCD_BL, LOW);  say("T2 backlight LOW for 2 s (WATCH: glow gone?) readback=%d", digitalRead(pins::LCD_BL)); delay(2000);
+    outPin(pins::LCD_BL);
+    digitalWrite(pins::LCD_BL, HIGH); say("T2 backlight IO%d plain HIGH for 5 s (WATCH: screen glows?) pin level=%d", pins::LCD_BL, level(pins::LCD_BL)); delay(5000);
+    digitalWrite(pins::LCD_BL, LOW);  say("T2 backlight LOW for 2 s (WATCH: glow gone?) pin level=%d", level(pins::LCD_BL)); delay(2000);
     digitalWrite(pins::LCD_BL, HIGH); say("T2 backlight HIGH again");
 }
 
@@ -124,7 +128,7 @@ static void testBacklightPwm() {
     say("T3 ledcAttach(IO%d, 12 kHz, 8 bit) returned %s", pins::LCD_BL, ok ? "true" : "FALSE");
     const uint8_t duty[] = {255, 128, 32, 255};
     for (uint8_t d : duty) { bool w = ledcWrite(pins::LCD_BL, d); say("T3 PWM duty %u/255 (ledcWrite %s) for 2 s (WATCH: brightness changes?)", d, w ? "ok" : "FAILED"); delay(2000); }
-    ledcDetach(pins::LCD_BL); pinMode(pins::LCD_BL, OUTPUT); digitalWrite(pins::LCD_BL, HIGH);
+    ledcDetach(pins::LCD_BL); outPin(pins::LCD_BL); digitalWrite(pins::LCD_BL, HIGH);
     say("T3 done; backlight back to plain HIGH");
 }
 
@@ -140,8 +144,8 @@ void setup() {
     say("Cyclift DISPLAY DIAGNOSTIC (V1.1 pins) - reset reason %d, chip rev %d, CPU %lu MHz, heap %lu, psram %lu, flash %lu MB",
         int(esp_reset_reason()), ESP.getChipRevision(), (unsigned long)getCpuFrequencyMhz(), (unsigned long)ESP.getFreeHeap(),
         (unsigned long)ESP.getPsramSize(), (unsigned long)(ESP.getFlashChipSize() >> 20));
-    pinMode(pins::PWR_ON, OUTPUT); digitalWrite(pins::PWR_ON, HIGH);
-    say("T1 power-hold IO%d set HIGH (readback %d)", pins::PWR_ON, digitalRead(pins::PWR_ON));
+    outPin(pins::PWR_ON); digitalWrite(pins::PWR_ON, HIGH);
+    say("T1 power-hold IO%d set HIGH (pin level %d)", pins::PWR_ON, level(pins::PWR_ON));
     pinMode(pins::BTN_KEY1, INPUT); pinMode(pins::BTN_KEY2, INPUT);
     cycle();
 }
