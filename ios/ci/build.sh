@@ -69,7 +69,7 @@ digest() {
 SCOPE="${SCOPE:-full}"
 STAGE="${STAGE:-}"
 if [ -z "$STAGE" ]; then if [ "$SCOPE" = ui ]; then STAGE=layout; else STAGE=all; fi; fi
-case "$STAGE" in all|quick|unit|smoke|journeys|layout|watch|release) ;; *) echo "unknown STAGE $STAGE"; exit 2;; esac
+case "$STAGE" in all|quick|unit|smoke|smoke2|journeys|layout|watch|release) ;; *) echo "unknown STAGE $STAGE"; exit 2;; esac
 LAYOUT_DEVICES="${LAYOUT_DEVICES:-small,standard,promax,owner}"
 T0=$SECONDS; since() { echo "$(( (SECONDS - $1) / 60 ))m$(( (SECONDS - $1) % 60 ))s"; }
 note "BikeComputer iOS CI — build ${BUILD_NUMBER:-?} — $(date -u '+%Y-%m-%d %H:%M UTC')"
