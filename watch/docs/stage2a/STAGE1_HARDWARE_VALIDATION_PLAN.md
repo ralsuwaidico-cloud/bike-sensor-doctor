@@ -71,3 +71,5 @@ Not requested: diagnostic display firmware, a rebuilt Stage 1 binary, Bluetooth,
 ## Status 9 Nov 2026 21:10 — Part A done (see A1_FACTORY_VALIDATION_RESULTS.md)
 A0 and A1 completed; all Part A tests pass except touch, which does not respond in the factory Touch tool either.
 B1–B3 not approved and not run.
+
+## Status 9 Nov 2026 22:46 — Part B: B1 done, B2 done (13/13 PASS, see B2_HARDWARE_VALIDATION_RESULTS.md). B3 not approved.
