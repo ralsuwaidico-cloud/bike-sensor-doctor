@@ -5,6 +5,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#ifndef CYW_HOST
+#include <esp_heap_caps.h>
+#endif
 
 extern "C" {
 extern const lv_img_dsc_t cyv3_ic_face_20, cyv3_ic_today_20, cyv3_ic_plan_20, cyv3_ic_heart_20, cyv3_ic_coach_20, cyv3_ic_hist_20,
@@ -60,22 +64,22 @@ void Ui::begin(lv_obj_t* root) {
     linkFonts();
     root_ = root;
     lv_obj_clear_flag(root_, LV_OBJ_FLAG_SCROLLABLE);
-    key_.clear();
+    keyValid_ = false;
 }
 
-std::string Ui::structureKey(const Model& m) const {
-    char b[160];
-    std::snprintf(b, sizeof b, "%d|%d%d%d%d|%d%d|%d%d%d|%d%d%d|%d%d%d%d|%d|%d|%d%d", int(m.screen), int(m.settings.theme), int(m.settings.density),
-        int(m.settings.text), int(m.settings.lang), int(m.wk), int(m.pending), int(m.phoneLinked), int(m.synced && m.clock.valid), int(m.charging),
-        int(m.m.power >= 0), int(m.m.hr >= 0), int(m.m.cadence >= 0), int(m.toast.kind), int(m.toast.text), int(m.toast.hasSub), int(m.toast.sub),
-        int(m.key2Armed && m.screen == Screen::Cockpit), m.menuScroll, m.movePct, m.loadPct);
-    return b;
+Ui::Key Ui::structureKey(const Model& m) const {
+    // same fields as the Stage 1 key string (screen, settings, workout, links, sensors present, overlays, scroll, rings);
+    // integers instead of snprintf: the key is built on every 10 ms frame (Stage 1.1)
+    return Key{int(m.screen), int(m.settings.theme), int(m.settings.density), int(m.settings.text), int(m.settings.lang), int(m.wk), int(m.pending),
+        int(m.phoneLinked), int(m.synced && m.clock.valid), int(m.charging), int(m.m.power >= 0), int(m.m.hr >= 0), int(m.m.cadence >= 0),
+        int(m.toast.kind), int(m.toast.text), int(m.toast.hasSub), int(m.toast.sub), int(m.key2Armed && m.screen == Screen::Cockpit), m.menuScroll,
+        m.movePct, m.loadPct};
 }
 
 bool Ui::render(const Model& m) {
     pal_ = &palette(m.settings.theme); large_ = m.large(); ar_ = m.rtl();
-    std::string k = structureKey(m);
-    if (k != key_) { key_ = k; build(m); rebuilds++; return true; }
+    Key k = structureKey(m);
+    if (!keyValid_ || k != key_) { key_ = k; keyValid_ = true; build(m); rebuilds++; return true; }
     update(m); updates++;
     return false;
 }
@@ -86,11 +90,69 @@ bool Ui::tap(Model& m, int x, int y, uint32_t now) {
     return false;
 }
 
+namespace {
+/// No watch object scrolls. LVGL still computes the scroll extent of every scrollable object each time it draws one
+/// (13 % of a 1 Hz cockpit update on the computer benchmark), so the flag is cleared on the whole tree.
+void noScroll(lv_obj_t* o) {
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE); lv_obj_set_scrollbar_mode(o, LV_SCROLLBAR_MODE_OFF);
+    for (uint32_t i = 0; i < lv_obj_get_child_cnt(o); i++) noScroll(lv_obj_get_child(o, int32_t(i)));
+}
+/// Ring arcs: skip the arc's own drawing when the area being redrawn lies wholly inside its inner edge (no arc pixels
+/// there). A PREPROCESS handler runs before the widget's handler and stops it (LVGL 8.3 event order).
+void ringSkipCb(lv_event_t* e) {
+    const lv_draw_ctx_t* dc = lv_event_get_draw_ctx(e);
+    lv_obj_t* o = lv_event_get_target(e); lv_area_t c; lv_obj_get_coords(o, &c);
+    float cx = (c.x1 + c.x2 + 1) / 2.f, cy = (c.y1 + c.y2 + 1) / 2.f, in = float(intptr_t(lv_event_get_user_data(e))) - 2.f;   // 2 px: anti-aliasing
+    const lv_area_t* a = dc->clip_area; float far2 = 0;
+    for (float x : {float(a->x1), float(a->x2) + 1.f}) for (float y : {float(a->y1), float(a->y2) + 1.f}) far2 = std::max(far2, (x - cx) * (x - cx) + (y - cy) * (y - cy));
+    if (far2 < in * in) lv_event_stop_processing(e);
+}
+/// Cover check for the opaque ring image, answered here: LVGL 8.3.11's lv_img cover check reads the event parameter as
+/// an area although it is an lv_cover_check_info_t (uninitialised bytes under memcheck).
+void ringCoverCb(lv_event_t* e) {
+    lv_cover_check_info_t* info = static_cast<lv_cover_check_info_t*>(lv_event_get_param(e));
+    lv_obj_t* o = lv_event_get_target(e);
+    if (info->res != LV_COVER_RES_MASKED) info->res = _lv_area_is_in(info->area, &o->coords, 0) ? LV_COVER_RES_COVER : LV_COVER_RES_NOT_COVER;
+    lv_event_stop_processing(e);
+}
+}  // namespace
+
+void Ui::ringSkip(lv_obj_t* a, int innerRadius) {
+    lv_obj_add_event_cb(a, ringSkipCb, lv_event_code_t(LV_EVENT_DRAW_MAIN | LV_EVENT_PREPROCESS), reinterpret_cast<void*>(intptr_t(innerRadius)));
+}
+
+namespace {
+bool hasArabic(const std::string& s) {     // U+0600–U+06FF are encoded with lead bytes 0xD8–0xDB in UTF-8
+    for (unsigned char c : s) if (c >= 0xD8 && c <= 0xDB) return true;
+    return false;
+}
+}  // namespace
+
+void Ui::putText(lv_obj_t* l, const std::string& s) {
+    std::string& keep = src_[l];
+    keep = s;
+    if (hasArabic(s)) lv_label_set_text(l, s.c_str());
+    else lv_label_set_text_static(l, keep.c_str());   // unordered_map nodes never move: the pointer stays valid
+}
+
+void Ui::dotMode(lv_obj_t* l) {
+    lv_label_set_text(l, src_[l].c_str());           // private copy (and shaping) before LVGL may write dots into it
+    lv_label_set_long_mode(l, LV_LABEL_LONG_DOT);
+}
+
+bool Ui::setText(lv_obj_t* l, const std::string& s) {
+    auto it = src_.find(l);
+    if (it != src_.end() && it->second == s) return false;
+    if (lv_label_get_long_mode(l) == LV_LABEL_LONG_DOT) { src_[l] = s; lv_label_set_text(l, s.c_str()); }
+    else putText(l, s);
+    return true;
+}
+
 void Ui::build(const Model& m) {
     lv_obj_clean(root_);
-    lines_.clear(); hits_.clear(); groups_.clear();
+    lines_.clear(); hits_.clear(); groups_.clear(); src_.clear();
     clock_ = date_ = interval_ = lead_ = hrTile_ = cadTile_ = Run{};
-    cmd_ = marker_ = ivArc_ = nullptr;
+    cmd_ = marker_ = ivArc_ = ringImg_ = nullptr;
     lv_obj_set_style_bg_color(root_, col(pal_->bg), 0); lv_obj_set_style_bg_opa(root_, LV_OPA_COVER, 0);
     switch (m.screen) {
         case Screen::Face: buildFace(m); break;
@@ -98,6 +160,7 @@ void Ui::build(const Model& m) {
         case Screen::Cockpit: buildCockpit(m); break;
     }
     buildOverlays(m);
+    noScroll(root_);
 }
 
 void Ui::update(const Model& m) {
@@ -113,7 +176,7 @@ lv_obj_t* Ui::label(lv_obj_t* parent, const std::string& s, const Font& f, uint3
     lv_obj_set_style_text_letter_space(l, (f.tracked && !ar_) ? 1 : 0, 0);
     lv_obj_set_style_base_dir(l, rtlText ? LV_BASE_DIR_RTL : LV_BASE_DIR_LTR, 0);
     lv_obj_clear_flag(l, LV_OBJ_FLAG_CLICKABLE);
-    lv_label_set_text(l, s.c_str());
+    putText(l, s);
     return l;
 }
 
@@ -170,6 +233,7 @@ lv_obj_t* Ui::arc(int r, int width, float a0, float a1, uint32_t color, lv_opa_t
     lv_obj_set_style_arc_width(a, width, LV_PART_INDICATOR); lv_obj_set_style_arc_color(a, col(color), LV_PART_INDICATOR);
     lv_obj_set_style_arc_rounded(a, true, LV_PART_INDICATOR); lv_obj_set_style_arc_opa(a, opa, LV_PART_INDICATOR);
     lv_obj_clear_flag(a, LV_OBJ_FLAG_CLICKABLE);
+    ringSkip(a, outer - width);
     return a;
 }
 
@@ -273,14 +337,14 @@ void Ui::updateFace(const Model& m) {
     const Palette& p = *pal_; Lang l = m.settings.lang;
     bool synced = m.synced && m.clock.valid, changed = false;
     char clk[8]; if (synced) std::snprintf(clk, sizeof clk, "%02d:%02d", m.clock.hh, m.clock.mm); else std::snprintf(clk, sizeof clk, "--:--");
-    if (std::string(lv_label_get_text(clock_.pieces[0].obj)) != clk) { lv_label_set_text(clock_.pieces[0].obj, clk); changed = true; }
+    if (setText(clock_.pieces[0].obj, clk)) changed = true;
     if (changed) layoutRun(clock_);
     char dt[64]; std::snprintf(dt, sizeof dt, "%s %d %s", weekday(m.clock.weekday, l), m.clock.day, month(m.clock.month, l));
     char bt[8]; std::snprintf(bt, sizeof bt, "%d%%", m.battery);
     uint32_t bc = m.battery <= 10 ? p.status_critical : m.battery <= 20 ? p.status_caution : p.ink_2;
     auto& dp = date_.pieces.front(); auto& bp = date_.pieces.back(); changed = false;
-    if (std::string(lv_label_get_text(dp.obj)) != dt) { lv_label_set_text(dp.obj, dt); changed = true; }
-    if (std::string(lv_label_get_text(bp.obj)) != bt) { lv_label_set_text(bp.obj, bt); lv_obj_set_style_text_color(bp.obj, col(bc), 0); changed = true; }
+    if (setText(dp.obj, dt)) changed = true;
+    if (setText(bp.obj, bt)) { lv_obj_set_style_text_color(bp.obj, col(bc), 0); changed = true; }
     if (date_.pieces.size() == 3 && lv_obj_get_style_img_recolor(date_.pieces[1].obj, 0).full != col(bc).full) lv_obj_set_style_img_recolor(date_.pieces[1].obj, col(bc), 0);
     if (changed) layoutRun(date_);
 }
@@ -322,7 +386,7 @@ void Ui::buildMenu(const Model& m) {
         if (tw > avail()) {
             two = true; int lh = large_ ? 17 : 15;                       // prototype two-line rule: 15 px lines (17 px in Large Text), at most 2
             lv_obj_set_style_text_line_space(t, lh - f.f->line_height, 0);
-            lv_obj_set_width(t, avail()); lv_obj_set_height(t, 2 * lh + 1); lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+            lv_obj_set_width(t, avail()); lv_obj_set_height(t, 2 * lh + 1); dotMode(t);
             lv_obj_set_style_text_align(t, ar_ ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_LEFT, 0);
         }
         int textW = two ? avail() : tw;
@@ -359,9 +423,8 @@ void Ui::buildMenu(const Model& m) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------- cycling cockpit
-void Ui::buildCockpit(const Model& m) {
-    const Palette& p = *pal_; Lang l = m.settings.lang;
-    bool focused = m.focused(), keyChip = m.key2Armed;
+void Ui::staticRing() {
+    const Palette& p = *pal_;
     arc(110, 6, -135, 135, p.line);
     arc(110, 6, gaugeAngle(Model::TARGET_LO), gaugeAngle(Model::TARGET_HI), p.grade_on, 140);
     for (int z : {100, 200, 300}) {
@@ -369,6 +432,46 @@ void Ui::buildCockpit(const Model& m) {
         line({{lv_coord_t(std::lround(x0)), lv_coord_t(std::lround(y0))}, {lv_coord_t(std::lround(x1)), lv_coord_t(std::lround(y1))}}, 2, p.ink_3);
     }
     arc(110, 4, 145, 215, p.line);
+}
+
+namespace {
+struct RingCache { const void* pal = nullptr; lv_img_dsc_t dsc{}; void* buf = nullptr; uint32_t size = 0; };
+RingCache g_ring;
+}  // namespace
+
+bool Ui::ringBackground() {
+    if (g_ring.pal != pal_ || !g_ring.buf) {
+        lv_obj_t* keep = root_;
+        lv_obj_t* scr = lv_obj_create(nullptr);            // detached screen: never shown, only rendered into the buffer
+        lv_obj_remove_style_all(scr); lv_obj_set_size(scr, 240, 240);
+        lv_obj_set_style_bg_color(scr, col(pal_->bg), 0); lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
+        root_ = scr; staticRing(); root_ = keep;
+        lv_obj_update_layout(scr);
+        uint32_t need = lv_snapshot_buf_size_needed(scr, LV_IMG_CF_TRUE_COLOR);
+        if (!g_ring.buf || g_ring.size < need) {
+            std::free(g_ring.buf); g_ring.buf = nullptr;
+#ifdef CYW_HOST
+            g_ring.buf = std::malloc(need);
+#else
+            g_ring.buf = heap_caps_malloc(need, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);   // 115 KB: external PSRAM
+#endif
+            g_ring.size = g_ring.buf ? need : 0;
+        }
+        bool ok = g_ring.buf && lv_snapshot_take_to_buf(scr, LV_IMG_CF_TRUE_COLOR, &g_ring.dsc, g_ring.buf, g_ring.size) == LV_RES_OK;
+        lv_obj_del(scr);
+        g_ring.pal = ok ? pal_ : nullptr;
+        if (!ok) return false;
+    }
+    ringImg_ = lv_img_create(root_); lv_img_set_src(ringImg_, &g_ring.dsc); lv_obj_set_pos(ringImg_, 0, 0);
+    lv_obj_clear_flag(ringImg_, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_user_data(ringImg_, (void*)"background");
+    lv_obj_add_event_cb(ringImg_, ringCoverCb, lv_event_code_t(LV_EVENT_COVER_CHECK | LV_EVENT_PREPROCESS), nullptr);
+    return true;
+}
+
+void Ui::buildCockpit(const Model& m) {
+    const Palette& p = *pal_; Lang l = m.settings.lang;
+    bool focused = m.focused(), keyChip = m.key2Armed;
+    if (!ringBackground()) staticRing();
     ivArc_ = nullptr;
     {   // interval progress arc: kept and updated in place
         ivArc_ = lv_arc_create(root_); lv_obj_remove_style_all(ivArc_);
@@ -376,6 +479,7 @@ void Ui::buildCockpit(const Model& m) {
         lv_arc_set_rotation(ivArc_, 270); lv_arc_set_angles(ivArc_, 145, 146);
         lv_obj_set_style_arc_width(ivArc_, 4, LV_PART_INDICATOR); lv_obj_set_style_arc_color(ivArc_, col(p.ink_2), LV_PART_INDICATOR);
         lv_obj_set_style_arc_rounded(ivArc_, true, LV_PART_INDICATOR); lv_obj_clear_flag(ivArc_, LV_OBJ_FLAG_CLICKABLE);
+        ringSkip(ivArc_, outer - 4);
     }
     if (m.m.power >= 0) {
         marker_ = lv_obj_create(root_); lv_obj_remove_style_all(marker_); lv_obj_set_size(marker_, 17, 17);
@@ -437,10 +541,9 @@ void Ui::setLead(const Model& m) {
     std::string text = fmtV(value);
     auto& vp = lead_.pieces[0]; auto& up = lead_.pieces[1];
     // tabular figures: same digit count = same width, so only the text changes (LVGL redraws just that label)
-    std::string before = lv_label_get_text(vp.obj);
-    bool unitChanged = std::string(lv_label_get_text(up.obj)) != unit;
-    if (before != text) lv_label_set_text(vp.obj, text.c_str());
-    if (unitChanged) lv_label_set_text(up.obj, unit);
+    std::string before = src_[vp.obj];
+    setText(vp.obj, text);
+    bool unitChanged = setText(up.obj, unit);
     if (lv_obj_get_style_text_color(vp.obj, 0).full != col(color).full) lv_obj_set_style_text_color(vp.obj, col(color), 0);
     if (leadPx_ && !unitChanged && before.size() == text.size()) return;
     // fit: the whole line box must sit inside the safe circle (prototype fitText, conservative rule)
@@ -458,8 +561,8 @@ void Ui::setLead(const Model& m) {
 void Ui::setTile(Run& r, int v, const char* unit) {
     std::string s = fmtV(v);
     bool changed = false;
-    if (std::string(lv_label_get_text(r.pieces[0].obj)) != s) { lv_label_set_text(r.pieces[0].obj, s.c_str()); changed = true; }
-    if (std::string(lv_label_get_text(r.pieces[1].obj)) != unit) { lv_label_set_text(r.pieces[1].obj, unit); changed = true; }
+    if (setText(r.pieces[0].obj, s)) changed = true;
+    if (setText(r.pieces[1].obj, unit)) changed = true;
     if (changed) layoutRun(r);
 }
 
@@ -468,8 +571,7 @@ void Ui::setCommand(const Model& m) {
     auto c = m.command();
     uint32_t color = c.color == Model::Command::On ? p.grade_on : c.color == Model::Command::Adjust ? p.grade_adjust
                    : c.color == Model::Command::Far ? p.grade_far : c.color == Model::Command::Crit ? p.status_critical : p.ink_2;
-    if (std::string(lv_label_get_text(cmd_)) != c.text) {
-        lv_label_set_text(cmd_, c.text.c_str());
+    if (setText(cmd_, c.text)) {
         lv_obj_update_layout(cmd_);
         Font f = font(Type::Small13, false);
         int lb = large_ ? 16 : 14;
@@ -491,8 +593,8 @@ void Ui::updateCockpit(const Model& m) {
         std::string t = fmtTime(m.remainS);
         char iv[48]; std::snprintf(iv, sizeof iv, "%s %d/%d \xC2\xB7", tr(S::Interval, m.settings.lang), m.interval, Model::INTERVALS);
         bool changed = false;
-        if (std::string(lv_label_get_text(interval_.pieces[1].obj)) != t) { lv_label_set_text(interval_.pieces[1].obj, t.c_str()); changed = true; }
-        if (std::string(lv_label_get_text(interval_.pieces[0].obj)) != iv) { lv_label_set_text(interval_.pieces[0].obj, iv); changed = true; }
+        if (setText(interval_.pieces[1].obj, t)) changed = true;
+        if (setText(interval_.pieces[0].obj, iv)) changed = true;
         if (changed) layoutRun(interval_);
     }
     if (ivArc_) {
@@ -514,7 +616,7 @@ void Ui::hideUnder(lv_obj_t* overlay, int margin) {
     lv_area_t o; lv_obj_get_coords(overlay, &o); o.x1 -= margin; o.y1 -= margin; o.x2 += margin; o.y2 += margin;
     for (uint32_t i = 0; i < lv_obj_get_child_cnt(root_); i++) {
         lv_obj_t* c = lv_obj_get_child(root_, int32_t(i));
-        if (c == overlay || !(lv_obj_check_type(c, &lv_label_class) || lv_obj_check_type(c, &lv_img_class))) continue;
+        if (c == overlay || c == ringImg_ || !(lv_obj_check_type(c, &lv_label_class) || lv_obj_check_type(c, &lv_img_class))) continue;
         lv_area_t a; lv_obj_get_coords(c, &a);
         if (std::min(a.x2, o.x2) >= std::max(a.x1, o.x1) && std::min(a.y2, o.y2) >= std::max(a.y1, o.y1)) lv_obj_add_flag(c, LV_OBJ_FLAG_HIDDEN);
     }
@@ -538,7 +640,7 @@ void Ui::buildOverlays(const Model& m) {
         Font t13 = font(Type::Small13, false), c11 = font(Type::Caption, false);
         lv_obj_t* t = label(b, tr(m.toast.text, l), t13, m.toast.kind == Toast::Crit ? p.status_critical : p.ink, ar_);
         lv_obj_t* s = label(b, tr(m.toast.sub, l), c11, p.ink_2, ar_);
-        for (lv_obj_t* o : {t, s}) { lv_label_set_long_mode(o, LV_LABEL_LONG_DOT); }
+        for (lv_obj_t* o : {t, s}) dotMode(o);
         lv_obj_update_layout(b);
         // approved width 166 px; widened only as far as the circle allows when the reason is longer (no cut-off text)
         lv_point_t ts, ss;   // full single-line widths (the labels are already in ellipsis mode)

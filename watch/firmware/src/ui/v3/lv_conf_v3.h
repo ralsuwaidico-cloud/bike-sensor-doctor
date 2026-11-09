@@ -18,6 +18,11 @@
 #define LV_TICK_CUSTOM 1
 #define LV_TICK_CUSTOM_INCLUDE "Arduino.h"
 #define LV_TICK_CUSTOM_SYS_TIME_EXPR (millis())
+/* Stage 1.1: LVGL's per-pixel drawing routines (blend, masks) run from internal instruction RAM instead of flash. The watch
+   reads flash in DIO 40 MHz mode (factory bootloader), so code fetched through the flash cache is slow. Device-only; the
+   effect is measured on the watch with the 'h' frame-time report, not on the computer. */
+#include "esp_attr.h"
+#define LV_ATTRIBUTE_FAST_MEM IRAM_ATTR
 #endif
 /* the font ladder used by ui/lvgl_renderer.hpp (sizes map to the largest font ≤ the layout engine's request) */
 #define LV_FONT_MONTSERRAT_12 0
@@ -77,7 +82,7 @@
 #define LV_USE_THEME_MONO 0
 #define LV_USE_FLEX 0
 #define LV_USE_GRID 0
-#define LV_USE_SNAPSHOT 0
+#define LV_USE_SNAPSHOT 1   /* cockpit ring background: drawn once per theme into an image (9 Nov optimisation) */
 #define LV_USE_MONKEY 0
 #define LV_USE_GRIDNAV 0
 #define LV_USE_FRAGMENT 0

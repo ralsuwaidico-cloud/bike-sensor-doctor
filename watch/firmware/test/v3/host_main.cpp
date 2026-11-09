@@ -62,6 +62,7 @@ static bool knownDefect(const std::string&, const std::string&) { return false; 
 static void fail(const std::string& st, const std::string& rule, const std::string& d) { g_findings.push_back({st, rule, d, knownDefect(rule, d)}); }
 
 struct Box { int x1, y1, x2, y2; lv_obj_t* obj; std::string what; bool overlay; };
+static bool isBackground(lv_obj_t* o) { void* u = lv_obj_get_user_data(o); return u && std::strcmp(static_cast<const char*>(u), "background") == 0; }
 static bool isOverlay(lv_obj_t* o) { for (; o; o = lv_obj_get_parent(o)) { void* u = lv_obj_get_user_data(o); if (u && std::strcmp(static_cast<const char*>(u), "overlay") == 0) return true; } return false; }
 static bool ancestor(lv_obj_t* a, lv_obj_t* b) { for (lv_obj_t* o = lv_obj_get_parent(b); o; o = lv_obj_get_parent(o)) if (o == a) return true; return false; }
 
@@ -88,7 +89,7 @@ static void checkState(const std::string& st, Ui& ui, const Model& m) {
     std::vector<lv_obj_t*> all; walk(ui.root(), all);
     std::vector<Box> boxes;
     for (lv_obj_t* o : all) {
-        if (o == ui.root()) continue;
+        if (o == ui.root() || isBackground(o)) continue;   // the cockpit ring background image (not a content element)
         lv_area_t a; lv_obj_get_coords(o, &a);
         if (lv_obj_check_type(o, &lv_label_class)) {
             const char* t = lv_label_get_text(o); if (!t || !*t || lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN)) continue;

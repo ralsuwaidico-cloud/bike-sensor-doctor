@@ -4,7 +4,9 @@
 // (screen, settings, workout state, connection, sensors present, overlays); live values are updated in place, so LVGL
 // redraws only the areas that changed.
 #include <lvgl.h>
+#include <array>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include "cyv3_model.hpp"
 #include "cyv3_fonts.hpp"
@@ -37,7 +39,9 @@ public:
 
 private:
     lv_obj_t* root_ = nullptr;
-    std::string key_;
+    /// Everything that changes the screen's structure (see structureKey); compared every frame, so plain integers.
+    using Key = std::array<int, 21>;
+    Key key_{}; bool keyValid_ = false;
     std::vector<HitArea> hits_;
     const Palette* pal_ = nullptr;
     bool large_ = false, ar_ = false;
@@ -47,13 +51,32 @@ private:
     int cmdTop_ = 0, leadPx_ = 0;
     std::vector<std::vector<lv_point_t>> lines_;   // point storage for lv_line objects (must outlive them)
     std::vector<std::vector<lv_obj_t*>> groups_;   // objects that are read together (a run, or a tile's number + caption): hidden together
+    /// The text each label was last given, as the UI wrote it. LVGL keeps a reshaped copy of Arabic text, so comparing a new
+    /// value with lv_label_get_text() never matches in Arabic and made every update rewrite (and redraw) the label (fix 9 Nov).
+    std::unordered_map<const lv_obj_t*, std::string> src_;
+    /// Sets the label's text only when it differs from what was last set; returns true when it changed.
+    bool setText(lv_obj_t* l, const std::string& s);
+    /// Gives the label `s`: text without Arabic letters is kept by reference in src_ (lv_label_set_text_static), so LVGL
+    /// skips its Arabic-shaping scan of every character; Arabic text is copied and shaped by LVGL as before.
+    void putText(lv_obj_t* l, const std::string& s);
+    /// LONG_DOT labels: LVGL writes the dots into the label's own text, so they always get a private copy.
+    void dotMode(lv_obj_t* l);
+    /// Ring arcs skip drawing an area that lies wholly inside their inner edge (they have no pixels there).
+    static void ringSkip(lv_obj_t* arc, int innerRadius);
 
-    std::string structureKey(const Model& m) const;
+    Key structureKey(const Model& m) const;
     void build(const Model& m);
     void update(const Model& m);
     void buildFace(const Model& m);
     void buildMenu(const Model& m);
     void buildCockpit(const Model& m);
+    /// The cockpit ring parts that never change during a ride (track, target band, zone ticks, interval track).
+    void staticRing();
+    /// Draws staticRing() once per theme into an opaque image (LVGL snapshot, pixel-identical) and places it as the
+    /// cockpit background, so 1 Hz updates copy ring pixels instead of re-drawing five anti-aliased arcs. Returns false
+    /// (and the arcs are created as objects, as before) if the image buffer cannot be allocated.
+    bool ringBackground();
+    lv_obj_t* ringImg_ = nullptr;
     void buildOverlays(const Model& m);
     void hideUnder(lv_obj_t* overlay, int margin);
     void updateFace(const Model& m);

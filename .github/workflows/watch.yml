@@ -18,6 +18,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Model, rendering and layout tests (computer only)
         run: make -C watch/firmware/test/v3 all sizes
+      - name: Approved Stage 1 firmware is unchanged (faa2828f…, installed on the watch; never rebuilt or replaced)
+        run: |
+          cd watch/firmware/releases/stage1-approved && sha256sum -c SHA256SUMS
+          grep -q '^faa2828f8fd22d59877c4c9535eb09e1a15db3176f2b5cd1c438810aead5cba7  cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
+      - name: Stage 1.1 rendering checks — visual identity, partial updates, redraw rate, work budgets (computer proxy, not watch timing)
+        run: |
+          sudo apt-get install -y -qq valgrind >/dev/null
+          make -C watch/firmware/test/v3 perf-link
+          cd watch/firmware/test/v3 && python3 perf_check.py --callgrind | tee perf-check.log
+          mkdir -p out/perf && .build/v3_perf out/perf/frames_wall.csv >/dev/null
+          { echo '## Stage 1.1 rendering checks (computer)'; echo '```'; cat perf-check.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Stage 2a read-only tool, tested against a simulated watch (no hardware)
         run: |
           pip install -q esptool==4.8.1 "bitstring<4.3"
@@ -84,7 +95,8 @@ jobs:
         working-directory: watch/firmware
         run: |
           mkdir -p ../../stage1-candidates
-          for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1-v3poc-T-Watch-2021-$r.bin; done
+          # Stage 1.1 candidates have their own names; the approved Stage 1 file (faa2828f…) lives only in releases/stage1-approved
+          for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1.1-v3poc-T-Watch-2021-$r.bin; done
           cp .pio/build/T-Watch-2021-V1_1-display-diag/firmware.bin ../../stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin
           cd ../../stage1-candidates && sha256sum *.bin | tee SHA256SUMS && echo "commit ${GITHUB_SHA}" >> SHA256SUMS
       - uses: actions/upload-artifact@v4
@@ -176,7 +188,7 @@ jobs:
             --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
             --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
             --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin \
-            --app-stage1 stage1-candidates/cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
+            --app-stage1 stage1-candidates/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
       - name: Summary
         if: always()
         run: |
@@ -189,6 +201,34 @@ jobs:
             boot-sim/*.log
             boot-sim/*.json
             boot-sim.log
+  reproducible-build:
+    # Two CLEAN builds of the Stage 1.1 V1_1 image with identical inputs must give the same SHA-256; also compared with the
+    # candidate published by firmware-compile (which may reuse cached objects). Nothing is flashed.
+    needs: firmware-compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-tools-${{ runner.os }}-${{ hashFiles('watch/firmware/platformio.ini') }}
+      - run: pip install -q platformio
+      - uses: actions/download-artifact@v4
+        with: { name: stage1-firmware-candidates-not-flashed, path: published }
+      - name: Clean build twice and compare
+        working-directory: watch/firmware
+        run: |
+          set -o pipefail
+          for n in 1 2; do rm -rf .pio/build/T-Watch-2021-V1_1-v3poc; pio run -e T-Watch-2021-V1_1-v3poc > build-repro-$n.log 2>&1 || { tail -40 build-repro-$n.log; exit 1; }
+            cp .pio/build/T-Watch-2021-V1_1-v3poc/firmware.bin /tmp/clean-$n.bin; done
+          sha256sum /tmp/clean-1.bin /tmp/clean-2.bin ../../published/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin | tee repro.log
+          python3 tools/v3/image_diff.py /tmp/clean-1.bin /tmp/clean-2.bin | tee -a repro.log
+          python3 tools/v3/image_diff.py /tmp/clean-1.bin ../../published/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin | tee -a repro.log
+          { echo '## Reproducible build (Stage 1.1 V1_1)'; echo '```'; cat repro.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cmp /tmp/clean-1.bin /tmp/clean-2.bin
+          cmp /tmp/clean-1.bin ../../published/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin
   publish-stage1-candidates:
     # Copies the CI-built Stage 1 images (with their SHA-256 list) to the separate branch firmware/stage1-candidates so they
     # can be fetched with plain git. Publishing only - nothing is flashed.

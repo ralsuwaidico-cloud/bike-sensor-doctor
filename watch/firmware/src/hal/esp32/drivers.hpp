@@ -31,7 +31,13 @@ public:
     }
     void setBrightness(uint8_t pct) override { ledcWrite(pins::LCD_BL, uint32_t(pct) * 255 / 100); }
     void sleep(bool on) override { if (on) { tft_.writecommand(0x10); ledcWrite(pins::LCD_BL, 0); } else { tft_.writecommand(0x11); delay(120); setBrightness(60); } }
-    void flush(int x1, int y1, int x2, int y2, const uint16_t* px) override { tft_.startWrite(); tft_.setAddrWindow(x1, y1, x2 - x1 + 1, y2 - y1 + 1); tft_.pushPixels(const_cast<uint16_t*>(px), (x2 - x1 + 1) * (y2 - y1 + 1)); tft_.endWrite(); }
+    void flush(int x1, int y1, int x2, int y2, const uint16_t* px) override {
+        uint32_t t0 = micros();
+        tft_.startWrite(); tft_.setAddrWindow(x1, y1, x2 - x1 + 1, y2 - y1 + 1); tft_.pushPixels(const_cast<uint16_t*>(px), (x2 - x1 + 1) * (y2 - y1 + 1)); tft_.endWrite();
+        flushUs += micros() - t0; flushPx += uint32_t(x2 - x1 + 1) * uint32_t(y2 - y1 + 1); flushes++;
+    }
+    /// Time spent sending pixels to the panel over SPI (blocking), pixels sent and transfers — read by the perf report.
+    uint32_t flushUs = 0, flushPx = 0, flushes = 0;
 private:
     TFT_eSPI tft_; lv_disp_draw_buf_t draw_{}; lv_disp_drv_t drv_{}; lv_color_t* buf_ = nullptr;
 };

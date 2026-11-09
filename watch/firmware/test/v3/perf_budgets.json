@@ -1,0 +1,14 @@
+{
+ "note": "Stage 1.1 computer budgets (9 Nov 2026). Instructions = callgrind Ir per frame on the computer (proxy, not ESP32 time). Before/after values: watch/docs/stage2a/STAGE1_1_RENDERING_OPTIMISATION.md",
+ "redraws_per_second_max": 1.1,
+ "update_px_max_cockpit_std": 23000,
+ "instructions": {
+  "cockpit/update": 2000000,
+  "cockpit/rebuild": 5500000,
+  "cockpit/idle": 20000,
+  "pause/update": 2000000,
+  "pause/rebuild": 5500000,
+  "nav/rebuild": 6000000,
+  "face/idle": 20000
+ }
+}

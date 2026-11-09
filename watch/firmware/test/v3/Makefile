@@ -43,6 +43,17 @@ $(BUILD)/v3_render: $(LVGL)/lvgl.h
 link: $(LV_OBJS) $(FONT_OBJS) $(BUILD)/icons.o $(BUILD)/ui.o $(BUILD)/host_main.o
 	@$(CXX) -o $(BUILD)/v3_render $^ -lm
 
+$(BUILD)/perf_main.o: perf_main.cpp $(SRC)/*.hpp
+	@mkdir -p $(dir $@); $(CXX) $(CXXFLAGS) -g -c $< -o $@
+
+perf-link: $(LV_OBJS) $(FONT_OBJS) $(BUILD)/icons.o $(BUILD)/ui.o $(BUILD)/perf_main.o
+	@$(CXX) -o $(BUILD)/v3_perf $^ -lm
+
+# rendering cost benchmark (computer proxy; see perf_main.cpp)
+perf: $(LVGL)/lvgl.h
+	@$(MAKE) --no-print-directory perf-link
+	@mkdir -p out/perf; $(BUILD)/v3_perf out/perf/frames_wall.csv
+
 render: $(LVGL)/lvgl.h
 	@$(MAKE) --no-print-directory link
 	$(BUILD)/v3_render out
@@ -53,4 +64,4 @@ sizes: $(LVGL)/lvgl.h
 
 clean:
 	rm -rf $(BUILD) out
-.PHONY: all model render link sizes clean
+.PHONY: all model render link sizes clean perf perf-link
