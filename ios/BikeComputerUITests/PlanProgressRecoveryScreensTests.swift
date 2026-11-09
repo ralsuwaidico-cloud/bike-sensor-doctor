@@ -28,11 +28,9 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         // run 210: the strip re-renders when Plan reappears; wait for the queried row to exist, then tap it once it is hittable
         let row = withSessions.waitForExistence(timeout: 10) ? withSessions : app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch
         expect(row.waitForExistence(timeout: 10), "a day row with sessions", tag: "dayrow")
+        let rowLabel = row.exists ? row.label : "?"   // run 211: read before the tap — once the Day page is up the row is off the tree
         expect(row.tapWhenHittable(timeout: 8), "day row tappable", tag: "dayrowtap")   // the day name column is a real Button (`planDay-<n>`)
-        if !el(app, "homeDayDetail").waitForExistence(timeout: 10) {
-            print("RUN206-DIAG day tap did not open the Day page; row: \(row.debugDescription)\nbars: \(app.navigationBars.allElementsBoundByIndex.map(\.identifier)) sheets: \(app.sheets.count)")
-        }
-        expect(el(app, "homeDayDetail").exists, "a day row opens the Day page (label: \(row.label))", tag: "daypage")
+        expect(el(app, "homeDayDetail").waitForExistence(timeout: 10), "a day row opens the Day page (row: \(rowLabel))", tag: "daypage")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         expect(el(app, "planDayStrip").waitForExistence(timeout: 10), "back on Plan", tag: "backplan")
         // Owner 8 Nov 20:58: the day rows and the workout chips are independent controls. The "multi" fixture has sessions
@@ -71,7 +69,12 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         let year = app.buttons["Year"].firstMatch
         if year.waitForExistence(timeout: 5) { year.tap() }
         let sport = el(app, "progressSport")
-        if sport.exists { sport.buttons["Strength"].firstMatch.tap(); XCTAssertTrue(sport.buttons["Strength"].firstMatch.isSelected, "sport switch") }
+        if sport.exists {
+            let strength = sport.buttons["Strength"].firstMatch
+            expect(strength.tapWhenHittable(timeout: 8), "sport segment tappable", tag: "sporttap")
+            let end = Date().addingTimeInterval(5); while Date() < end && !strength.isSelected { Thread.sleep(forTimeInterval: 0.2) }
+            expect(strength.isSelected, "sport switch", tag: "sport")
+        }
         XCTAssertTrue(el(app, "progressRecords").waitForExistence(timeout: 10) || el(app, "progressRecords").exists, "records card")
         // every analytics number says where it comes from — no bare numbers without a basis line
         let basis = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Measured from' OR label BEGINSWITH 'From ' OR label CONTAINS 'not estimates' OR label CONTAINS 'No rides saved' OR label CONTAINS 'No strength sessions'"))

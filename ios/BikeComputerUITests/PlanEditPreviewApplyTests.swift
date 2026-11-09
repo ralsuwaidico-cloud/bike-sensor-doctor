@@ -48,7 +48,7 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         XCTAssertTrue(apply.waitForExistence(timeout: 5), "Apply is offered")
         // Cancel first: the session is unchanged
         let cancel = app.buttons["changeCancel"].firstMatch
-        if cancel.exists { cancel.tap(); XCTAssertTrue(preview.waitUntilGone(timeout: 5), "cancel closes the preview") }
+        if cancel.exists { cancel.tap(); expect(preview.waitUntilDismissed(timeout: 8), "cancel closes the preview", tag: "cancelclose") }
         // the edit sheet is still there (or we are back on the session); redo the review and apply this time
         if !app.buttons["editSave"].firstMatch.exists {
             more.tap(); let e2 = app.buttons["moreEditType"].firstMatch; _ = e2.waitForExistence(timeout: 5); if !e2.tapWhenSettled(timeout: 4) { e2.tap() }

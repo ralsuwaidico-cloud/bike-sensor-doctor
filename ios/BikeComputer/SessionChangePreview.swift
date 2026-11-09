@@ -17,11 +17,19 @@ struct SessionChangeSheet: View {
     var onApplied: () -> Void = {}
     @State private var notice: String? = nil
     @State private var showEquipment = false
+    /// Run 211 (flows screenshot): Cancel/Apply mutated the store and called dismiss() in the same turn; the body flipped to
+    /// the "no longer available" branch while the sheet was being dismissed and the dismissal was lost — a review sheet
+    /// stayed on screen with Apply greyed out. The content shown is pinned to the proposal as it was when the sheet
+    /// appeared (it only changes when the sheet itself rebuilds the proposal), and store work that follows a dismissal
+    /// (discard, the caller's own dismiss) runs after the sheet has disappeared.
+    @State private var pinned: SessionChangeProposal? = nil
+    private enum AfterDismiss { case none, discard, applied }
+    @State private var afterDismiss: AfterDismiss = .none
 
     var body: some View {
         NavigationStack {
             Group {
-                if let p = store.pendingProposals[proposalId] {
+                if let p = pinned ?? store.pendingProposals[proposalId] {
                     SessionChangePreviewContent(p: p, units: store.settings.units, notice: notice) { action in handle(action, p) }
                 } else {
                     VStack(spacing: DS.m) {
@@ -33,11 +41,12 @@ struct SessionChangeSheet: View {
             .navigationTitle("Review the change").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { store.discardProposal(proposalId); dismiss() }.accessibilityIdentifier("changeCancel")
+                    Button("Cancel") { afterDismiss = .discard; dismiss() }.accessibilityIdentifier("changeCancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    let blocked = store.pendingProposals[proposalId]?.report.outcome == .block
-                    Button("Apply") { apply() }.bold().disabled(blocked || store.pendingProposals[proposalId] == nil).accessibilityIdentifier("changeApply")
+                    let current = pinned ?? store.pendingProposals[proposalId]
+                    let blocked = current?.report.outcome == .block
+                    Button("Apply") { apply() }.bold().disabled(blocked || current == nil || afterDismiss != .none).accessibilityIdentifier("changeApply")
                 }
             }
             .sheet(isPresented: $showEquipment, onDismiss: { rebuild(note: "Rebuilt with your equipment.") { _ in } }) {
@@ -45,12 +54,20 @@ struct SessionChangeSheet: View {
             }
         }
         .interactiveDismissDisabled()        // Cancel or Apply, never a half-decision by swiping
+        .onAppear { if pinned == nil { pinned = store.pendingProposals[proposalId] } }
+        .onDisappear {
+            switch afterDismiss {
+            case .discard: store.discardProposal(proposalId)
+            case .applied: onApplied()
+            case .none: break
+            }
+        }
     }
 
     private func apply() {
         let r: CommitResult = coach.map { store.commitCoachChange($0, proposalId: proposalId) } ?? store.commit(proposalId: proposalId, confirmed: true)
         switch r {
-        case .applied: onApplied(); dismiss()
+        case .applied: afterDismiss = .applied; dismiss()
         case .stale: rebuild(note: "Something this change depends on changed while you were looking (your plan, equipment or health status). Here is the updated version; nothing was saved.") { _ in }
         case .blocked(let ids): notice = ids.contains("SAFE-001") ? "Training is paused by your health check, so nothing was changed." : "This change can't be applied (\(ids.joined(separator: ", "))). Nothing was saved."
         case .needsConfirmation, .notValidated: notice = "Nothing was saved. Please review the change again."
@@ -58,7 +75,7 @@ struct SessionChangeSheet: View {
     }
 
     private func rebuild(note: String, _ adjust: @escaping (inout SessionChangeRequest) -> Void) {
-        if let id = store.repropose(proposalId, adjust: adjust) { proposalId = id; notice = note }
+        if let id = store.repropose(proposalId, adjust: adjust) { proposalId = id; pinned = store.pendingProposals[id]; notice = note }
         else { notice = "The session is no longer in your plan. Nothing was saved." }
     }
 

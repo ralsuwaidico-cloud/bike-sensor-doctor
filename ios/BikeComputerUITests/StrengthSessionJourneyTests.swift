@@ -65,6 +65,13 @@ final class StrengthSessionJourneyTests: XCTestCase {
         let submit = app.buttons["checkInSubmit"].firstMatch
         if submit.waitForExistence(timeout: 3), submit.isEnabled { submit.tap() } else { app.buttons["checkInSkip"].firstMatch.tap() }
 
+        // After the check-in the coach presents its analysis ("Coach adjustments", Done) — part of the product flow
+        // (run 211 screenshot); a rider reads it and taps Done.
+        let coachDone = app.navigationBars["Coach adjustments"].buttons["Done"].firstMatch
+        if coachDone.waitForExistence(timeout: 8) {
+            expect(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Check-in saved'")).firstMatch.exists, "the coach confirms the check-in was saved", tag: "coachsaved")
+            coachDone.tap(); _ = coachDone.waitUntilDismissed(timeout: 8)
+        }
         // back on Home: the planned session is done and the summary lists today's log with its sets
         expect(app.waitForHome(name: "Rashed", timeout: 20), "back on Home after the session", tag: "home")
         // run 210: the whole flow start → 4 sets → finish → save → check-in → Home passed; the Home card was tapped while
