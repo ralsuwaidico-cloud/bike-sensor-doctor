@@ -2,15 +2,13 @@
 // installation plan against the factory bootloader. Never flashed to the watch. It prints which partition it was booted
 // from, where the default settings partition ("nvs") is, and writes one setting and one file so the test can prove that
 // the factory regions are not touched.
+#if defined(BOOTPROBE_ROLE_ID)  // only in the stage2a-bootprobe-* emulator test environments
 #include <Arduino.h>
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
 
-#ifndef BOOTPROBE_ROLE_ID
-#define BOOTPROBE_ROLE_ID 0
-#endif
 static const char* role() {
     switch (BOOTPROBE_ROLE_ID) {
         case 1: return "FACTORY_STANDIN";
@@ -64,3 +62,4 @@ void setup() {
 }
 
 void loop() { delay(1000); }
+#endif  // BOOTPROBE_ROLE_ID

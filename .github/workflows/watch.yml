@@ -104,7 +104,7 @@ jobs:
         working-directory: watch/firmware
         run: |
           set -o pipefail
-          for e in stage2a-bootprobe-factory-standin stage2a-bootprobe-cyclift stage2a-bootprobe-crash; do pio run -e $e 2>&1 | tail -n 5; done
+          for e in stage2a-bootprobe-factory-standin stage2a-bootprobe-cyclift stage2a-bootprobe-crash T-Watch-2021-V1_1-v3poc; do pio run -e $e 2>&1 | tail -n 5; done
           python3 tools/v3/check_versions.py stage2a-bootprobe-cyclift || true
       - name: Proposed partition table equals ESP-IDF's own generator output
         run: |
@@ -153,7 +153,8 @@ jobs:
           python3 watch/tools/stage2a/boot_sim.py --qemu "$(cat /tmp/qemu.path)" --bootloader "$(cat /tmp/bl/use)" --bootloader-note "$(cat /tmp/bl/note)" \
             --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
             --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
-            --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin --out boot-sim | tee boot-sim.log
+            --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin \
+            --app-stage1 watch/firmware/.pio/build/T-Watch-2021-V1_1-v3poc/firmware.bin --out boot-sim | tee boot-sim.log
       - name: Summary
         if: always()
         run: |

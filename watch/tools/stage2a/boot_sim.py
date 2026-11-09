@@ -89,6 +89,7 @@ def main():
     for k in ("qemu", "bootloader", "app-a", "app-b", "app-crash", "out"):
         ap.add_argument("--" + k, required=True)
     ap.add_argument("--bootloader-note", default="")
+    ap.add_argument("--app-stage1", default="", help="real Stage 1 (v3poc) firmware.bin, booted from app1 as S8")
     ap.add_argument("--seconds", type=float, default=25)
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
@@ -156,6 +157,21 @@ def main():
     expect(r["roles"] == ["FACTORY_STANDIN"], "S7 restoring only the OTA-data sector switches back to the factory app")
     expect(r["default_nvs"] == ["0x700000"] and same(after7, ota_only, 0x9000, 0xE000),
            "S7 factory app under the new table uses the Cyclift nvs; original factory settings stay untouched")
+
+    if a.app_stage1:
+        st1 = open(a.app_stage1, "rb").read()
+        for tag, patch in (("8MB_header", True), ("original_bootloader", False)):
+            img, _ = fp.apply_plan(orig, st1, patch_bootloader=patch)
+            log, after, dt = run_qemu(a.qemu, img, max(a.seconds, 40), a.out, "S8_stage1_" + tag)
+            started = "Cyclift v3 proof of concept" in log
+            lines = [l for l in log.splitlines() if l.strip()][:25]
+            results["S8_stage1_" + tag] = dict(stage1_banner=started, rom_boot_lines=len(re.findall(r"rst:0x", log)),
+                                              factory_regions_unchanged=all(same(after, img, lo, hi) for lo, hi in
+                                                  ((0x9000, 0xE000), (0x10000, 0x210000), (0x210000, 0x400000))),
+                                              first_lines=lines, seconds=round(dt, 1))
+            print("S8 Stage 1 firmware from app1 (%s): banner printed=%s, rom boots=%d" % (tag, started, results["S8_stage1_" + tag]["rom_boot_lines"]))
+            for l in lines[:12]:
+                print("     | " + l[:160])
 
     summary = dict(bootloader=os.path.basename(a.bootloader), bootloader_note=a.bootloader_note,
                    bootloader_normalized_sha256=fp.normalized_bootloader_sha(bl[:fp.image_len(bl, 0)]),
