@@ -317,14 +317,15 @@ void Ui::buildMenu(const Model& m) {
         if (tw > avail()) chev = false;
         if (tw > avail()) { f = font(Type::RowShrink, large_); lv_obj_set_style_text_font(t, f.f, 0); lv_obj_update_layout(t); tw = lv_obj_get_width(t); }
         if (tw > avail()) {
-            two = true; lv_label_set_long_mode(t, LV_LABEL_LONG_DOT); lv_obj_set_width(t, avail());
-            lv_obj_set_style_text_line_space(t, 15 - f.f->line_height, 0); lv_obj_set_height(t, 30);
+            two = true; int lh = large_ ? 17 : 15;                       // prototype two-line rule: 15 px lines (17 px in Large Text), at most 2
+            lv_obj_set_style_text_line_space(t, lh - f.f->line_height, 0);
+            lv_obj_set_width(t, avail()); lv_obj_set_height(t, 2 * lh + 1); lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
             lv_obj_set_style_text_align(t, ar_ ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_LEFT, 0);
         }
         int textW = two ? avail() : tw;
         int startX = 14 + (icon ? 30 : 0);                        // logical start edge (left in LTR, right in RTL)
         int tx = ar_ ? w - startX - textW : startX;
-        int ty = two ? (h - 30) / 2 : labelYFor(baselineOf((h - f.lineBox) / 2, f.lineBox, f.css), f.f);
+        int ty = two ? (h - 2 * (large_ ? 17 : 15)) / 2 : labelYFor(baselineOf((h - f.lineBox) / 2, f.lineBox, f.css), f.f);
         lv_obj_set_pos(t, tx, ty);
         if (icon) {
             lv_obj_t* ic = lv_img_create(row); lv_img_set_src(ic, menuIcon(id));
@@ -357,7 +358,7 @@ void Ui::buildMenu(const Model& m) {
 // ---------------------------------------------------------------------------------------------------------------- cycling cockpit
 void Ui::buildCockpit(const Model& m) {
     const Palette& p = *pal_; Lang l = m.settings.lang;
-    bool focused = m.focused();
+    bool focused = m.focused(), keyChip = m.key2Armed;
     arc(110, 6, -135, 135, p.line);
     arc(110, 6, gaugeAngle(Model::TARGET_LO), gaugeAngle(Model::TARGET_HI), p.grade_on, 140);
     for (int z : {100, 200, 300}) {
@@ -402,6 +403,7 @@ void Ui::buildCockpit(const Model& m) {
             Piece n; n.text = "0"; n.font = font(Type::Metric24, false); n.color = p.ink; r.pieces.push_back(n);
             Piece un; un.text = "bpm"; un.font = font(Type::Unit, false); un.color = p.ink_2; un.gapBefore = 4; r.pieces.push_back(un);
             makeRun(r);
+            if (keyChip) return;                                         // the Key 2 chip covers this line (as in the prototype)
             Run c; c.top = 144; c.lineBox = cap.lineBox; c.mainCss = cap.css; c.centerX = cx;
             Piece t; t.text = tr(name, l); t.font = cap; t.color = p.ink_2; t.rtlText = ar_; c.pieces.push_back(t);
             makeRun(c);
@@ -411,6 +413,7 @@ void Ui::buildCockpit(const Model& m) {
     cmdTop_ = focused ? 130 : 160;
     Font f13 = font(Type::Small13, false); f13.tracked = true;
     cmd_ = label(root_, "", f13, p.ink_2, ar_);
+    if (keyChip && cmdTop_ + 14 > 150 - 6 && cmdTop_ < 150 + 22 + 6) lv_obj_add_flag(cmd_, LV_OBJ_FLAG_HIDDEN);   // under the Key 2 chip
     bool paused = m.wk == WkState::Paused;
     int btop = large_ ? 168 : (paused ? 180 : 182);
     if (paused) button(btop, tr(m.pending == Cmd::Resume ? S::Resuming : S::Resume, l), m.pending == Cmd::Resume ? 2 : 1, Action::Resume);
@@ -515,10 +518,14 @@ void Ui::buildOverlays(const Model& m) {
         for (lv_obj_t* o : {t, s}) { lv_label_set_long_mode(o, LV_LABEL_LONG_DOT); }
         lv_obj_update_layout(b);
         // approved width 166 px; widened only as far as the circle allows when the reason is longer (no cut-off text)
-        int need = std::max<int>(lv_obj_get_width(t), lv_obj_get_width(s)) + 24, maxW = int(chordAt(float(top), float(top + h))) - 8;
+        lv_point_t ts, ss;   // full single-line widths (the labels are already in ellipsis mode)
+        lv_txt_get_size(&ts, lv_label_get_text(t), t13.f, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        lv_txt_get_size(&ss, lv_label_get_text(s), c11.f, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        auto glass = [&](float y) { float d = std::fabs(y - C); return d >= 118.f ? 0.f : 2.f * std::sqrt(118.f * 118.f - d * d); };
+        int need = std::max<int>(ts.x, ss.x) + 24 + 2, maxW = int(std::min(glass(float(top)), glass(float(top + h)))) - 6;
         w = std::max(w, std::min(need, maxW));
         lv_obj_set_pos(b, C - w / 2, top); lv_obj_set_size(b, w, h);
-        int tw = std::min<int>(w - 24, lv_obj_get_width(t)), sw = std::min<int>(w - 24, lv_obj_get_width(s));
+        int tw = std::min<int>(w - 24, ts.x + 2), sw = std::min<int>(w - 24, ss.x + 2);
         lv_obj_set_width(t, tw); lv_obj_set_width(s, sw);
         lv_obj_set_pos(t, (w - tw) / 2, labelYFor(baselineOf(9, 16, 13), t13.f));
         lv_obj_set_pos(s, (w - sw) / 2, labelYFor(baselineOf(25, 14, 11), c11.f));

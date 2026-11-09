@@ -6,6 +6,7 @@
 //   simulated buttons · LVGL memory · redrawn area per 1 Hz update.
 // Writes PNG screenshots and report.json to the output folder. Computer measurements only: NOT watch performance.
 #include "../../src/ui/v3/cyv3_ui.hpp"
+#include "../../src/ui/v3/cyv3_fonts.hpp"
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -90,7 +91,7 @@ static void checkState(const std::string& st, Ui& ui, const Model& m) {
         if (o == ui.root()) continue;
         lv_area_t a; lv_obj_get_coords(o, &a);
         if (lv_obj_check_type(o, &lv_label_class)) {
-            const char* t = lv_label_get_text(o); if (!t || !*t) continue;
+            const char* t = lv_label_get_text(o); if (!t || !*t || lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN)) continue;
             Box b = inkBox(o); boxes.push_back(b);
             // 1 inside the round screen (2 px margin from the glass edge)
             for (auto [x, y] : {std::pair<int, int>{b.x1, b.y1}, {b.x2, b.y1}, {b.x1, b.y2}, {b.x2, b.y2}}) {
@@ -100,11 +101,9 @@ static void checkState(const std::string& st, Ui& ui, const Model& m) {
             // 2 nothing clipped or ellipsised
             g_checks++;
             if (lv_label_get_long_mode(o) == LV_LABEL_LONG_DOT) {
-                lv_point_t sz; const lv_font_t* f = lv_obj_get_style_text_font(o, 0);
-                lv_txt_get_size(&sz, t, f, lv_obj_get_style_text_letter_space(o, 0), lv_obj_get_style_text_line_space(o, 0), lv_obj_get_width(o), LV_TEXT_FLAG_NONE);
-                if (sz.y > lv_obj_get_height(o) + 1) fail(st, "clipped-text", std::string("\"") + t + "\" needs " + std::to_string(sz.y) + " px, has " + std::to_string(lv_obj_get_height(o)));
-                lv_point_t one; lv_txt_get_size(&one, t, f, lv_obj_get_style_text_letter_space(o, 0), 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
-                if (sz.y <= f->line_height + 1 && one.x > lv_obj_get_width(o) + 1) fail(st, "clipped-text", std::string("\"") + t + "\" is cut to " + std::to_string(lv_obj_get_width(o)) + " of " + std::to_string(one.x) + " px");
+                // LVGL's own decision: dot_end is set when it had to replace the end of the text with "..."
+                const lv_label_t* lb = reinterpret_cast<const lv_label_t*>(o);
+                if (lb->dot_end != 0xFFFFFFFFu   /* LV_LABEL_DOT_END_INV (private to lv_label.c) */) fail(st, "clipped-text", std::string("\"") + t + "\" is cut short with an ellipsis");
             }
             // 3 every glyph exists (the label stores Arabic already shaped into presentation forms)
             const lv_font_t* f = lv_obj_get_style_text_font(o, 0); uint32_t i = 0;
@@ -170,6 +169,23 @@ int main(int argc, char** argv) {
     static lv_disp_drv_t dd; lv_disp_drv_init(&dd); dd.hor_res = 240; dd.ver_res = 240; dd.flush_cb = flush; dd.draw_buf = &db; lv_disp_drv_register(&dd);
     g_screen = lv_scr_act();
     Ctx c; c.ui.begin(g_screen);
+
+    // ---------------------------------------------------------------- 0 the checker catches what it should (self-test)
+    {
+        auto cnt = [](const char* rule) { int n = 0; for (auto& f : g_findings) if (f.rule == rule) n++; return n; };
+        lv_obj_t* a = lv_label_create(g_screen); lv_obj_set_style_text_font(a, &cyv3_inter600_15, 0); lv_label_set_long_mode(a, LV_LABEL_LONG_DOT);
+        lv_label_set_text(a, "Workout changed on iPhone"); lv_obj_set_width(a, 60); lv_obj_set_pos(a, 90, 100);          // cut short
+        lv_obj_t* b = lv_label_create(g_screen); lv_obj_set_style_text_font(b, &cyv3_inter600_15, 0); lv_label_set_text(b, "Edge"); lv_obj_set_pos(b, 2, 2);   // off the glass
+        lv_obj_t* d = lv_label_create(g_screen); lv_obj_set_style_text_font(d, &cyv3_inter600_15, 0); lv_label_set_text(d, "Overlap"); lv_obj_set_pos(d, 95, 100); // on top of a
+        lv_obj_update_layout(g_screen);
+        size_t before = g_findings.size(); int checks = g_checks;
+        checkState("self-test", c.ui, c.m);
+        bool ok = cnt("clipped-text") == 1 && cnt("outside-circle") >= 1 && cnt("overlap") >= 1;
+        if (!ok) std::printf("  self-test: clipped %d, outside %d, overlap %d\n", cnt("clipped-text"), cnt("outside-circle"), cnt("overlap"));
+        g_findings.resize(before); g_checks = checks + 1;
+        if (!ok) fail("self-test", "checker", "layout checker did not detect a planted cut-off, off-screen or overlapping label");
+        lv_obj_clean(g_screen);
+    }
 
     // ---------------------------------------------------------------- 1 every state × density × text size × language
     const struct { const char* n; Density d; TextSize t; } modes[] = {{"std", Density::Standard, TextSize::Default}, {"foc", Density::Focused, TextSize::Default}, {"lt", Density::Standard, TextSize::Large}};

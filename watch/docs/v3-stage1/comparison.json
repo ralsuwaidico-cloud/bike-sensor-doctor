@@ -1,0 +1,98 @@
+{
+ "face--std-en": {
+  "prototype": "face--obsidian-en-normal",
+  "mean_abs_diff": 23.69
+ },
+ "face__phone-lost-battery-9--std-en": {
+  "prototype": "face__phone-lost-battery-9--obsidian-en-normal",
+  "mean_abs_diff": 24.26
+ },
+ "face__not-synced--std-en": {
+  "prototype": "face--obsidian-en-empty",
+  "mean_abs_diff": 10.5
+ },
+ "face__charging--std-en": {
+  "prototype": "face__charging--obsidian-en-normal",
+  "mean_abs_diff": 23.79
+ },
+ "menu--std-en": {
+  "prototype": "menu--obsidian-en-normal",
+  "mean_abs_diff": 4.83
+ },
+ "menu__during-workout--std-en": {
+  "prototype": "menu__during-workout--obsidian-en-normal",
+  "mean_abs_diff": 7.03
+ },
+ "cockpit--std-en": {
+  "prototype": "ride-cockpit--obsidian-en-normal",
+  "mean_abs_diff": 12.09
+ },
+ "cockpit--foc-en": {
+  "prototype": "ride-cockpit__focused--obsidian-en-normal",
+  "mean_abs_diff": 8.34
+ },
+ "cockpit__power-1999--std-en": {
+  "prototype": "ride-cockpit--obsidian-en-max",
+  "mean_abs_diff": 16.29
+ },
+ "cockpit__no-sensors--std-en": {
+  "prototype": "ride-cockpit--obsidian-en-unavail",
+  "mean_abs_diff": 12.21
+ },
+ "cockpit__phone-lost--std-en": {
+  "prototype": "ride-cockpit__phone-lost--obsidian-en-normal",
+  "mean_abs_diff": 11.16
+ },
+ "cockpit__pause-pending--std-en": {
+  "prototype": "ride-cockpit__pause-pending--obsidian-en-normal",
+  "mean_abs_diff": 12.09
+ },
+ "cockpit__no-answer--std-en": {
+  "prototype": "ride-cockpit__refused--obsidian-en-normal",
+  "mean_abs_diff": 11.96
+ },
+ "cockpit__key2-first-press--std-en": {
+  "prototype": "ride-cockpit__Key-2-first-press--obsidian-en-normal",
+  "mean_abs_diff": 11.1
+ },
+ "face--lt-en": {
+  "prototype": "LT__face--en",
+  "mean_abs_diff": 24.43
+ },
+ "menu--lt-en": {
+  "prototype": "LT__menu--en",
+  "mean_abs_diff": 4.98
+ },
+ "cockpit--lt-en": {
+  "prototype": "LT__ride-cockpit--en",
+  "mean_abs_diff": 8.62
+ },
+ "face--std-ar": {
+  "prototype": "face--obsidian-ar-normal",
+  "mean_abs_diff": 22.71
+ },
+ "menu--std-ar": {
+  "prototype": "menu--obsidian-ar-normal",
+  "mean_abs_diff": 3.37
+ },
+ "cockpit--std-ar": {
+  "prototype": "ride-cockpit--obsidian-ar-normal",
+  "mean_abs_diff": 11.07
+ },
+ "cockpit--foc-ar": {
+  "prototype": "ride-cockpit__focused--obsidian-ar-normal",
+  "mean_abs_diff": 7.67
+ },
+ "face--lt-ar": {
+  "prototype": "LT__face--ar",
+  "mean_abs_diff": 23.33
+ },
+ "menu--lt-ar": {
+  "prototype": "LT__menu--ar",
+  "mean_abs_diff": 4.16
+ },
+ "cockpit--lt-ar": {
+  "prototype": "LT__ride-cockpit--ar",
+  "mean_abs_diff": 8.02
+ }
+}

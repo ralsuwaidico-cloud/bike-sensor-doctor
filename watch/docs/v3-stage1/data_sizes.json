@@ -1,0 +1,141 @@
+{
+ "groups": {
+  "Inter digits (24/32/44/54/58 px, not compressed)": 22898,
+  "Inter text (11\u201320 px)": 44515,
+  "Noto Sans Arabic (11\u201317 px)": 83557,
+  "Icons (15, 8-bit alpha)": 5088,
+  "Total font + icon data": 156058
+ },
+ "per_file": {
+  "cyv3_digits_24": {
+   "data": 144,
+   "bss": 8,
+   "rodata": 1403
+  },
+  "cyv3_digits_32": {
+   "data": 144,
+   "bss": 8,
+   "rodata": 2430
+  },
+  "cyv3_digits_44": {
+   "data": 144,
+   "bss": 8,
+   "rodata": 4284
+  },
+  "cyv3_digits_54": {
+   "data": 144,
+   "bss": 8,
+   "rodata": 6655
+  },
+  "cyv3_digits_58": {
+   "data": 144,
+   "bss": 8,
+   "rodata": 7406
+  },
+  "cyv3_inter500_11": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 2875
+  },
+  "cyv3_inter500_12": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 3301
+  },
+  "cyv3_inter500_13": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 3413
+  },
+  "cyv3_inter500_15": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 4100
+  },
+  "cyv3_inter500_20": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 5710
+  },
+  "cyv3_inter600_11": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 2944
+  },
+  "cyv3_inter600_12": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 3398
+  },
+  "cyv3_inter600_13": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 3520
+  },
+  "cyv3_inter600_14": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 4041
+  },
+  "cyv3_inter600_15": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 4192
+  },
+  "cyv3_inter600_17": {
+   "data": 176,
+   "bss": 8,
+   "rodata": 5085
+  },
+  "cyv3_noto400_11": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 6578
+  },
+  "cyv3_noto400_12": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 7294
+  },
+  "cyv3_noto400_13": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 8365
+  },
+  "cyv3_noto600_11": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 7434
+  },
+  "cyv3_noto600_12": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 8361
+  },
+  "cyv3_noto600_13": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 9110
+  },
+  "cyv3_noto600_14": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 9977
+  },
+  "cyv3_noto600_15": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 10892
+  },
+  "cyv3_noto600_17": {
+   "data": 272,
+   "bss": 8,
+   "rodata": 13098
+  },
+  "cyv3_icons": {
+   "data": 240,
+   "bss": 0,
+   "rodata": 4848
+  }
+ }
+}
