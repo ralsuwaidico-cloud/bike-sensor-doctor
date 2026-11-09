@@ -102,9 +102,13 @@ jobs:
   stage2a-boot-sim:
     # Factory-preserving plan booted in Espressif's ESP32 emulator (QEMU) with the factory-equivalent bootloader.
     # Synthetic flash images only: the owner's backup never leaves his PC and nothing touches the watch.
+    # S8 boots the EXACT Stage 1 candidate file published by firmware-compile (builds are not bit-reproducible across caches).
+    needs: firmware-compile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: stage1-firmware-candidates-not-flashed, path: stage1-candidates }
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
       - uses: actions/cache@v4
@@ -118,8 +122,8 @@ jobs:
         working-directory: watch/firmware
         run: |
           set -o pipefail
-          for e in stage2a-bootprobe-factory-standin stage2a-bootprobe-cyclift stage2a-bootprobe-crash T-Watch-2021-V1_1-v3poc; do pio run -e $e 2>&1 | tail -n 5; done
-          sha256sum .pio/build/T-Watch-2021-V1_1-v3poc/firmware.bin
+          for e in stage2a-bootprobe-factory-standin stage2a-bootprobe-cyclift stage2a-bootprobe-crash; do pio run -e $e 2>&1 | tail -n 5; done
+          (cd ../../stage1-candidates && sha256sum -c <(grep -v '^commit' SHA256SUMS) && cat SHA256SUMS)
           python3 tools/v3/check_versions.py stage2a-bootprobe-cyclift || true
       - name: Proposed partition table equals ESP-IDF's own generator output
         run: |
@@ -169,7 +173,7 @@ jobs:
             --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
             --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
             --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin \
-            --app-stage1 watch/firmware/.pio/build/T-Watch-2021-V1_1-v3poc/firmware.bin --out boot-sim | tee boot-sim.log
+            --app-stage1 stage1-candidates/cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
       - name: Summary
         if: always()
         run: |
