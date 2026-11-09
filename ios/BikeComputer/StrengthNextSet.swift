@@ -41,15 +41,10 @@ struct NextSetCard: View {
                     Text("Set \(p.set + 1) of \(e.sets.count)").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).monospacedDigit()
                 }
                 Text(NextSet.setText(st, units)).font(DS.number).monospacedDigit().accessibilityIdentifier("nextSetTarget")
-                HStack(spacing: DS.s) {
-                    adjust("minus", "Fewer reps") { change(p) { $0.reps = max(1, $0.reps - 1) } }
-                    adjust("plus", "More reps") { change(p) { $0.reps = min(100, $0.reps + 1) } }
-                    if !(st.bodyweight || st.weightKg == nil) {
-                        adjust("arrow.down", "Less weight") { change(p) { $0.weightKg = max(0, ($0.weightKg ?? 0) - step) } }
-                        adjust("arrow.up", "More weight") { change(p) { $0.weightKg = ($0.weightKg ?? 0) + step } }
-                    }
-                    Button { log(p, rest: e.restSeconds) } label: { Label("Log set", systemImage: "checkmark").frame(maxWidth: .infinity, minHeight: DS.minTap) }
-                        .buttonStyle(.borderedProminent).tint(BC.live).accessibilityIdentifier("logSet")
+                // One row when it fits; at large text sizes the adjust buttons sit above a full-width Log set.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: DS.s) { adjusts(p, st); logButton(p, e) }
+                    VStack(spacing: DS.s) { HStack(spacing: DS.s) { adjusts(p, st); Spacer() }; logButton(p, e) }
                 }
             } else {
                 Text("All sets done").font(.title3.weight(.bold))
@@ -57,6 +52,10 @@ struct NextSetCard: View {
                     .buttonStyle(.borderedProminent).tint(BC.live).accessibilityIdentifier("nextSetFinish")
             }
         }
+        // Run 209 (flows): an identifier on the Card — a plain container — was propagated by SwiftUI onto every element
+        // inside it, so the clock text answered to "nextSetCard" and the target, Log set and Finish lost their own
+        // identifiers (invisible to the UI journey and to assistive tech). The card is an accessibility container of its own.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("nextSetCard")
     }
 
@@ -71,9 +70,29 @@ struct NextSetCard: View {
             }
         }
     }
+    @ViewBuilder private func adjusts(_ p: NextSet.Pick, _ st: SetEntry) -> some View {
+        adjust("minus", "Fewer reps") { change(p) { $0.reps = max(1, $0.reps - 1) } }
+        adjust("plus", "More reps") { change(p) { $0.reps = min(100, $0.reps + 1) } }
+        if !(st.bodyweight || st.weightKg == nil) {
+            adjust("arrow.down", "Less weight") { change(p) { $0.weightKg = max(0, ($0.weightKg ?? 0) - step) } }
+            adjust("arrow.up", "More weight") { change(p) { $0.weightKg = ($0.weightKg ?? 0) + step } }
+        }
+    }
+    private func logButton(_ p: NextSet.Pick, _ e: ExerciseEntry) -> some View {
+        Button { log(p, rest: e.restSeconds) } label: {
+            Label("Log set", systemImage: "checkmark").lineLimit(1).minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: DS.minTap)
+        }
+        .buttonStyle(.borderedProminent).tint(BC.live).layoutPriority(1).accessibilityIdentifier("logSet")
+    }
     private func adjust(_ icon: String, _ a11y: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: icon).frame(width: DS.minTap, height: DS.minTap) }
-            .buttonStyle(.bordered).accessibilityLabel(a11y)
+        // Run 209 screenshot (live Strength screen): four bordered 44-pt adjust buttons grew to ~118 × 100 pt each on a
+        // 402-pt phone and squeezed "Log set" into a tall, text-less pill. Fixed-size circular buttons (the 44-pt tap
+        // target is the button itself, not content inside extra padding) leave the width to the Log button.
+        Button(action: action) { Image(systemName: icon).font(.body.weight(.semibold)).frame(width: 22, height: 22) }
+            .buttonStyle(.bordered).buttonBorderShape(.circle).controlSize(.regular)
+            .frame(minWidth: DS.minTap, minHeight: DS.minTap).fixedSize()
+            .accessibilityLabel(a11y)
     }
     private func change(_ p: NextSet.Pick, _ f: @escaping (inout SetEntry) -> Void) {
         store.updateActiveSession { s in

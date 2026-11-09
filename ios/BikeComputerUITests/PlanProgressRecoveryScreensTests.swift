@@ -22,8 +22,10 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         // a day row → that day's page. Run 205: tapping the row's centre could land on a workout chip (its own control,
         // opens the session) — a person opening the day taps the day name, so the test taps the leading edge of a row
         // that has sessions (label "Mon, Endurance ride, …"); an empty day opens "add a session" instead, by design.
-        let withSessions = (1...7).map { app.buttons["planDay-\($0)"].firstMatch }.first { $0.exists && $0.label.contains(";") || ($0.exists && $0.label.contains(",") && !$0.label.contains("day") && !$0.label.contains("before")) }
-        let row = withSessions ?? app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch
+        // run 209: an exists-then-label pair raced a re-render of the strip (label threw "no matches") — one predicate query
+        _ = app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch.waitForExistence(timeout: 10)
+        let withSessions = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'planDay-' AND (label CONTAINS ';' OR (label CONTAINS ',' AND NOT label CONTAINS 'before' AND NOT label CONTAINS 'day'))")).firstMatch
+        let row = withSessions.exists ? withSessions : app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch
         expect(row.waitForExistence(timeout: 10), "a day row with sessions", tag: "dayrow")
         _ = row.waitUntilSettled(timeout: 5)
         row.tap()   // run 206+: the day name column is a real Button (`planDay-<n>`), tapped like any button

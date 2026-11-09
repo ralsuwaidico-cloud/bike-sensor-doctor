@@ -28,9 +28,17 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         let slider = app.sliders["editDuration"].firstMatch
         XCTAssertTrue(slider.waitForExistence(timeout: 10), "duration slider")
         let before = slider.value as? String ?? ""
-        slider.adjust(toNormalizedSliderPosition: 0.15)          // 15…180 min → ≈ 40 min, a real change from 45
-        let after = slider.value as? String ?? ""
-        XCTAssertNotEqual(before, after, "the duration changed (\(before) → \(after))")
+        // run 209: 45 → 45 — the slider's range is 15…180 min, so 0.15 ≈ 40 min sat a few points from the thumb and the
+        // step-5 slider did not move. A clearly different position (≈ 80 min); if the value still has not changed the thumb
+        // is dragged there explicitly.
+        slider.adjust(toNormalizedSliderPosition: 0.4)
+        var after = slider.value as? String ?? ""
+        if after == before {
+            let from = slider.coordinate(withNormalizedOffset: CGVector(dx: 0.18, dy: 0.5)), to = slider.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.5))
+            from.press(forDuration: 0.2, thenDragTo: to)
+            after = slider.value as? String ?? ""
+        }
+        expect(before != after, "the duration changed (\(before) → \(after))", tag: "slider")
 
         // Review → preview: nothing applied yet
         app.buttons["editSave"].firstMatch.tap()

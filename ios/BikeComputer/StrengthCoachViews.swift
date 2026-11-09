@@ -30,6 +30,7 @@ struct WorkoutStatusCard: View {
             if let n = workout.migrationNote { Text(n).font(.caption).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
             ActionRow(actions: actions(st, log: log, future: future))
         }
+        .accessibilityElement(children: .contain)   // a container id must not replace the children's own (run 209 finding)
         .accessibilityIdentifier(st.isCompleted ? "sessionCompleted" : "sessionOpen")
         .sheet(isPresented: $markDone) { MarkDoneSheet(workout: workout) }
         .confirmationDialog("Reopen this session?", isPresented: $confirmReopen, titleVisibility: .visible) {

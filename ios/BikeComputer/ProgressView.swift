@@ -170,6 +170,7 @@ struct StrengthProgressCard: View {
                 Text("Est. = estimated from a hard logged set, not a measured max.").font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
+        .accessibilityElement(children: .contain)   // a container id must not replace the children's own (run 209 finding)
         .accessibilityIdentifier("progressStrength")
     }
     /// "Logged · 4 sessions · +5 kg since 12 Oct" (first vs latest top set).

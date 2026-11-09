@@ -6,6 +6,21 @@ import XCTest
 /// attempt; the hub is then closed with its own Close button before the next cycle. Misses are reported one by one
 /// with the cycle number and what was on screen, so a failure here is evidence, not a retry.
 final class HubTapReliabilityTests: XCTestCase {
+    /// Run 209 (screenshots): every "hub did not close" failure showed Home fully visible with no hub — the hub HAD closed;
+    /// only the `trainingHub` container lingered in the test driver's element tree for a few seconds before vanishing
+    /// (the first-tap test then threw on it). What a rider sees is what counts: the hub's Close gone, no hub element that
+    /// can be hit, and Home's centre button back in reach. That is the closed state; a stale, un-hittable container is not.
+    func hubClosed(_ app: XCUIApplication, hub: XCUIElement, close: XCUIElement, centre: XCUIElement, timeout: TimeInterval = 6) -> Bool {
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            let closeGone = !close.exists
+            let hubGone = !hub.exists || !hub.isHittable
+            if closeGone && hubGone && centre.exists && centre.isHittable { return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        return false
+    }
+
     override func setUpWithError() throws { continueAfterFailure = true }
 
     private func cycles(_ app: XCUIApplication, state: String, n: Int) -> [String] {
@@ -16,7 +31,8 @@ final class HubTapReliabilityTests: XCTestCase {
             XCTAssertTrue(centre.waitForExistence(timeout: 10), "\(state) cycle \(i): centre button present")
             _ = centre.waitUntilSettled(timeout: 5)
             centre.tap()                                   // ONE tap, the plain XCUITest tap the audits use
-            let opened = hub.waitForExistence(timeout: 6)
+            // "open" = the hub's Close button is there (run 209: a stale `trainingHub` container can outlive the hub by seconds)
+            let opened = app.buttons["hubClose"].firstMatch.waitForExistence(timeout: 6) && hub.exists
             if !opened {
                 let bars = app.navigationBars.allElementsBoundByIndex.map { $0.identifier }.joined(separator: "|")
                 misses.append("\(state) cycle \(i): hub not open after one tap (navigation bars: \(bars), hub exists: \(hub.exists))")
@@ -31,14 +47,14 @@ final class HubTapReliabilityTests: XCTestCase {
             if close.waitForExistence(timeout: 5) {
                 if !close.tapWhenSettled(timeout: 5) { misses.append("\(state) cycle \(i): Close never had a settled frame \(close.frame)") }
             } else { misses.append("\(state) cycle \(i): hub has no Close button") }
-            if !hub.waitUntilGone(timeout: 6) {
+            if !hubClosed(app, hub: hub, close: close, centre: centre) {
                 let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-hub-close-\(state)-\(i)"; a.lifetime = .keepAlways; add(a)
                 // run 205: the hub was still there but its Close was NOT (a query on it threw) — the screenshot above shows
                 // what covered or replaced it; the message says so instead of throwing
                 let closeState = close.exists ? "Close frame \(close.frame), hittable \(close.isHittable)" : "Close no longer present (sheet or pushed page over the hub?)"
                 let bars = app.navigationBars.allElementsBoundByIndex.map(\.identifier)
-                let tree = hub.debugDescription.replacingOccurrences(of: "\n", with: " ⏎ ")
-                XCTFail("\(state) cycle \(i): hub closes again — \(closeState); navigation bars: \(bars); sheets: \(app.sheets.count); hub frame \(hub.frame); hub tree: \(tree.prefix(1200))")
+                let tree = hub.exists ? hub.debugDescription.replacingOccurrences(of: "\n", with: " ⏎ ") : "hub element gone"
+                XCTFail("\(state) cycle \(i): hub closes again — \(closeState); navigation bars: \(bars); sheets: \(app.sheets.count); centre hittable \(centre.exists && centre.isHittable); hub tree: \(tree.prefix(1200))")
             }
             _ = centre.waitUntilSettled(timeout: 3)
         }
@@ -80,8 +96,8 @@ final class HubTapReliabilityTests: XCTestCase {
         // screens were opened and dismissed. Cycles 1–4 plain; 5–8 open "Why this workout?" (a sheet) and close it first;
         // 9–12 open the session details (More › Details and edit) and close them first — then one plain Close tap.
         for i in 1...12 {
-            if !hub.exists { _ = centre.waitUntilSettled(timeout: 5); centre.tap() }
-            expect(hub.waitForExistence(timeout: 6), "cycle \(i): hub open", tag: "open-\(i)")
+            if !close.exists { _ = centre.waitUntilSettled(timeout: 5); centre.tap() }   // "open" = its Close is there, not a stale container
+            expect(close.waitForExistence(timeout: 6) && hub.exists, "cycle \(i): hub open", tag: "open-\(i)")
             Thread.sleep(forTimeInterval: 0.5)                // a person's glance, not a machine's zero-delay tap
             if (5...8).contains(i) {
                 let why = app.buttons["homeWhy"].firstMatch
@@ -109,7 +125,7 @@ final class HubTapReliabilityTests: XCTestCase {
             }
             expect(close.exists && close.isHittable, "cycle \(i): Close present and hittable after the nested screen", tag: "closepresent-\(i)")
             close.tap()                                       // ONE plain tap
-            if hub.waitUntilGone(timeout: 4) { closed += 1 } else {
+            if hubClosed(app, hub: hub, close: close, centre: centre, timeout: 4) { closed += 1 } else {
                 let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); a.name = "FAIL-hub-close-human-\(i)"; a.lifetime = .keepAlways; add(a)
                 let closeState = close.exists ? "Close frame \(close.frame), hittable \(close.isHittable)" : "Close no longer present"
                 XCTFail("cycle \(i): one plain Close tap after 0.5 s did not close the hub — \(closeState); bars \(app.navigationBars.allElementsBoundByIndex.map(\.identifier)); sheets \(app.sheets.count)")
