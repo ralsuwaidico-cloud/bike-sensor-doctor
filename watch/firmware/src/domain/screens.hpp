@@ -24,7 +24,7 @@ struct Content {
     std::string restS = "01:12";
     std::vector<std::string> activities = {"Outdoor cycling", "Indoor cycling", "Strength training", "Functional strength", "Hybrid workout", "Walking"};
     std::string recovery = "Good", hrv = "64", hrvUnit = "ms", sleepStages = "Deep 1 h 20 · REM 1 h 55";
-    std::string notification = "Rashed, your Tempo ride is planned for 17:30 today";
+    std::string notification = "Alex, your Tempo ride is planned for 17:30 today";   // neutral sample name (no personal data in the public repo)
     std::string gpsAge = "GPS 2 s";
     int loadPct = 65; float recoveryFrac = 0.78f; std::string recoveryWord = "GOOD";
     int hourHand = 9, minuteHand = 41;

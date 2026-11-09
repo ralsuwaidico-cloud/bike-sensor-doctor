@@ -11,3 +11,6 @@ watch/firmware/test/host/gallery
 watch/firmware/test/host/gallery-out/
 watch/firmware/test/host/before/
 watch/firmware/test/host/native/
+watch/firmware/test/v3/.deps/
+watch/firmware/test/v3/.build/
+watch/firmware/test/v3/out/
