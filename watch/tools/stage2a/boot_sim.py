@@ -90,6 +90,7 @@ def main():
         ap.add_argument("--" + k, required=True)
     ap.add_argument("--bootloader-note", default="")
     ap.add_argument("--app-stage1", default="", help="real Stage 1 (v3poc) firmware.bin, booted from app1 as S8")
+    ap.add_argument("--app-diag", default="", help="display diagnostic firmware.bin, booted from app1 as S9")
     ap.add_argument("--seconds", type=float, default=25)
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
@@ -187,6 +188,21 @@ def main():
             print("S8 Stage 1 firmware from app1 (%s): banner printed=%s, rom boots=%d" % (tag, started, results["S8_stage1_" + tag]["rom_boot_lines"]))
             for l in lines[:12]:
                 print("     | " + l[:160])
+
+    if a.app_diag:
+        dg = open(a.app_diag, "rb").read()
+        img, _ = fp.apply_plan(orig, dg, patch_bootloader=True)
+        log, after, dt = run_qemu(a.qemu, img, max(a.seconds, 60), a.out, "S9_display_diag")
+        lines = [l for l in log.splitlines() if "[" in l and "ms]" in l]
+        steps = sorted(set(m for m in re.findall(r"\b(T[1-5])\b", log)))
+        results["S9_display_diag"] = dict(banner="Cyclift DISPLAY DIAGNOSTIC" in log, steps_reached=steps, rom_boot_lines=len(re.findall(r"rst:0x", log)),
+                                          factory_regions_unchanged=all(same(after, img, lo, hi) for lo, hi in ((0x9000, 0xE000), (0x10000, 0x400000))),
+                                          lines=lines[:40], seconds=round(dt, 1))
+        expect("Cyclift DISPLAY DIAGNOSTIC" in log and len(re.findall(r"rst:0x", log)) == 1, "S9 display diagnostic boots from app1 and runs without restarting")
+        expect(results["S9_display_diag"]["factory_regions_unchanged"], "S9 display diagnostic does not write the factory regions")
+        print("S9 diagnostic steps reached in the emulator: %s" % steps)
+        for l in lines[:30]:
+            print("     | " + l[:170])
 
     summary = dict(bootloader=os.path.basename(a.bootloader), bootloader_note=a.bootloader_note,
                    bootloader_normalized_sha256=fp.normalized_bootloader_sha(bl[:fp.image_len(bl, 0)]),

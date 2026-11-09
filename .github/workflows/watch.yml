@@ -60,7 +60,7 @@ jobs:
         working-directory: watch/firmware
         run: |
           set -o pipefail
-          for e in T-Watch-2021-V1_1-v3poc T-Watch-2021-V1_0-v3poc T-Watch-2021-V2-v3poc; do pio run -e $e 2>&1 | tee build-$e.log; done
+          for e in T-Watch-2021-V1_1-v3poc T-Watch-2021-V1_0-v3poc T-Watch-2021-V2-v3poc T-Watch-2021-V1_1-display-diag; do pio run -e $e 2>&1 | tee build-$e.log; done
           echo "## v3 Stage 1 proof of concept (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
           grep -E "RAM:|Flash:" build-*-v3poc.log >> "$GITHUB_STEP_SUMMARY" || true
           python3 tools/v3/elf_sizes.py .pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf | tee -a "$GITHUB_STEP_SUMMARY" || true
@@ -74,7 +74,7 @@ jobs:
         working-directory: watch/firmware
         run: |
           set -o pipefail
-          python3 tools/v3/check_image_header.py .pio/build/T-Watch-2021-V1_1 .pio/build/T-Watch-2021-V1_1-diag \
+          python3 tools/v3/check_image_header.py .pio/build/T-Watch-2021-V1_1 .pio/build/T-Watch-2021-V1_1-diag .pio/build/T-Watch-2021-V1_1-display-diag \
             .pio/build/T-Watch-2021-V1_1-v3poc .pio/build/T-Watch-2021-V1_0-v3poc .pio/build/T-Watch-2021-V2-v3poc | tee image-header-check.log
           sha256sum .pio/build/*-v3poc/firmware.bin | tee -a image-header-check.log
           { echo '## Image header check'; echo '```'; cat image-header-check.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
@@ -83,6 +83,7 @@ jobs:
         run: |
           mkdir -p ../../stage1-candidates
           for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1-v3poc-T-Watch-2021-$r.bin; done
+          cp .pio/build/T-Watch-2021-V1_1-display-diag/firmware.bin ../../stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin
           cd ../../stage1-candidates && sha256sum *.bin | tee SHA256SUMS && echo "commit ${GITHUB_SHA}" >> SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
@@ -173,7 +174,7 @@ jobs:
             --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
             --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
             --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin \
-            --app-stage1 stage1-candidates/cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
+            --app-stage1 stage1-candidates/cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
       - name: Summary
         if: always()
         run: |

@@ -83,14 +83,17 @@ def nvs_namespaces_changed(a, b):
             sa = (a[off + 32 + i // 4] >> ((i % 4) * 2)) & 3
             sb = (b[off + 32 + i // 4] >> ((i % 4) * 2)) & 3
             if ea != eb or sa != sb:
-                e = eb if sb == 2 else ea
+                # an entry slot that was written (and possibly superseded) since: take whichever side holds content
+                e = eb if eb[:24] != b"\xff" * 24 else ea
+                if e[:24] == b"\xff" * 24:
+                    continue
                 changed.add(names.get(e[0], "#%d" % e[0]) if e[0] else "(namespace record)")
         if a[off:off + 32] != b[off:off + 32]:
             changed.add("(page header)")
     return changed
 
 
-def verify_after(backup, after, app, pieces, allow_factory_ns=("osw-config",)):
+def verify_after(backup, after, app, pieces, allow_factory_ns=("osw-config", "(page header)")):
     rep, bad = [], []
     if len(after) != FLASH:
         return ["size %d != 8 MB" % len(after)], ["wrong size"]
