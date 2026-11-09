@@ -22,16 +22,14 @@ struct PlanWeekTimeline: View {
                 // that session). VoiceOver order: day, then its sessions.
                 // (The tap layer is a background — not a ZStack sibling — so the flexible Color.clear cannot stretch the row
                 // inside the scroll view; a background takes the row's own size.)
-                row(d)   // only the chips take touches; everything else falls through to the day button behind
+                // Run 206 (SE, AX3): a tap on the row's left edge did not open the Day page. The day is now a real Button
+                // (the day-name column, full row height, no nested controls — so XCUITest and VoiceOver see a plain button),
+                // and the rest of the row's empty space still opens the day through the background tap layer.
+                row(d)
                     .background {
                         Color.clear.contentShape(Rectangle())
                             .onTapGesture { onDay(d) }
-                            .accessibilityElement()
-                            .accessibilityLabel(d.accessibilityLabel)
-                            .accessibilityHint(d.chips.isEmpty && !d.beforePlan ? "Adds a session" : "Opens the day")
-                            .accessibilityAddTraits(.isButton)
-                            .accessibilityIdentifier("planDay-\(d.weekday)")
-                            .accessibilityAction { onDay(d) }
+                            .accessibilityHidden(true)   // the day Button carries the accessibility role
                     }
                     .background(d.isToday ? CyTheme.cycling.bg.opacity(0.45) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
                 .accessibilityElement(children: .contain)
@@ -43,12 +41,19 @@ struct PlanWeekTimeline: View {
 
     private func row(_ d: PlanTimelineDay) -> some View {
         HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(d.shortName).font(.caption.weight(d.isToday ? .heavy : .semibold)).foregroundStyle(d.isToday ? CyTheme.cycling.tint : .secondary)
-                Text(d.date, format: .dateTime.day()).font(.caption2).foregroundStyle(.tertiary)
+            Button { onDay(d) } label: {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(d.shortName).font(.caption.weight(d.isToday ? .heavy : .semibold)).foregroundStyle(d.isToday ? CyTheme.cycling.tint : .secondary)
+                    Text(d.date, format: .dateTime.day()).font(.caption2).foregroundStyle(.tertiary)
+                }
+                .frame(width: 34, alignment: .leading)
+                .frame(maxHeight: .infinity)
+                .contentShape(Rectangle())
             }
-            .frame(width: 34, alignment: .leading)
-            .allowsHitTesting(false).accessibilityHidden(true)   // spoken by, and tapped through to, the day button underneath
+            .buttonStyle(.plain)
+            .accessibilityLabel(d.accessibilityLabel)
+            .accessibilityHint(d.chips.isEmpty && !d.beforePlan ? "Adds a session" : "Opens the day")
+            .accessibilityIdentifier("planDay-\(d.weekday)")
             GeometryReader { g in
                 let stacked = dts.isAccessibilitySize
                 let content = Group {

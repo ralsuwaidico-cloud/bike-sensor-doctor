@@ -26,8 +26,11 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         let row = withSessions ?? app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch
         expect(row.waitForExistence(timeout: 10), "a day row with sessions", tag: "dayrow")
         _ = row.waitUntilSettled(timeout: 5)
-        row.coordinate(withNormalizedOffset: CGVector(dx: 0.06, dy: 0.5)).tap()
-        expect(el(app, "homeDayDetail").waitForExistence(timeout: 10), "a day row opens the Day page (label: \(row.label))", tag: "daypage")
+        row.tap()   // run 206+: the day name column is a real Button (`planDay-<n>`), tapped like any button
+        if !el(app, "homeDayDetail").waitForExistence(timeout: 10) {
+            print("RUN206-DIAG day tap did not open the Day page; row: \(row.debugDescription)\nbars: \(app.navigationBars.allElementsBoundByIndex.map(\.identifier)) sheets: \(app.sheets.count)")
+        }
+        expect(el(app, "homeDayDetail").exists, "a day row opens the Day page (label: \(row.label))", tag: "daypage")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         expect(el(app, "planDayStrip").waitForExistence(timeout: 10), "back on Plan", tag: "backplan")
         // Owner 8 Nov 20:58: the day rows and the workout chips are independent controls. The "multi" fixture has sessions
@@ -87,7 +90,10 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         expect(el(app, "homeRecoveryPage").waitForExistence(timeout: 10), "Recovery page", tag: "page")
         // no reads turned on in the seed → the empty state, the reason, one action; never a score or an invented reading
         XCTAssertTrue(app.staticTexts["No readings yet"].firstMatch.waitForExistence(timeout: 5) || el(app, "recoveryAdvice").exists)
-        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'score'")).firstMatch.exists, "no recovery score anywhere")
+        // run 206: the page's honesty line "Cyclift computes no recovery score" is the one allowed mention — a score would be
+        // a number next to the word: no "score" text with a digit or percent in it
+        let scoreTexts = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'score' AND (label MATCHES '.*[0-9].*' OR label CONTAINS '%')"))
+        expect(scoreTexts.count == 0, "no recovery score number anywhere (found: \(scoreTexts.allElementsBoundByIndex.map(\.label)))", tag: "noscore")
         if app.buttons["Open Connections"].firstMatch.exists { app.buttons["Open Connections"].firstMatch.tap(); XCTAssertTrue(app.staticTexts["Devices & sensors"].firstMatch.waitForExistence(timeout: 10) || app.navigationBars["Devices & sensors"].waitForExistence(timeout: 10), "the one next step opens Connections") }
         XCTAssertEqual(app.state, .runningForeground)
     }

@@ -58,8 +58,13 @@ struct RootView: View {
                     // panel was still sliding in landed on the stale frame and missed, so the hub stayed open. The hub now
                     // fades in place — its controls have their final frames from the first frame — and closes without an
                     // animation, so no tap can hit a moving control. Root cause, not a retry.
+                    // Run 206 (quick, SE AX3) and run 204: in 3–4 of 48 cycles the hub's Close vanished while the `trainingHub`
+                    // element stayed — the signature of a view removed while its insertion transition was still running
+                    // (a Close tapped within ~0.2 s of opening). The hub is now inserted and removed with NO transition and
+                    // NO animation at all: its controls have final frames from the first frame and removal is immediate,
+                    // whatever the timing of the taps.
                     TrainingHubView(perform: perform, openTab: { showHub = false; tab = $0 }, otherSession: { trainSheet = store.todayAction() }, close: { closeHub() })
-                        .transition(.opacity)
+                        .transition(.identity)
                         .zIndex(1)
                 }
             }
@@ -150,7 +155,8 @@ struct RootView: View {
         if showHub { hubLog.notice("centre tap → close hub"); closeHub() } else { hubLog.notice("centre tap → open hub (tab \(tab))"); openHub() }
     }
     private func openHub() {
-        withAnimation(CyMotion.animation(0.18, reduce: reduceMotion)) { showHub = true }
+        var t = Transaction(); t.disablesAnimations = true
+        withTransaction(t) { showHub = true }
     }
     private func closeHub() { hubLog.notice("hub Close"); var t = Transaction(); t.disablesAnimations = true; withTransaction(t) { showHub = false } }
 

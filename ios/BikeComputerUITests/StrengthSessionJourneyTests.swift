@@ -24,7 +24,11 @@ final class StrengthSessionJourneyTests: XCTestCase {
         // run 205: the card existed but neither the target nor Log set did (model-level probe of the same seed finds two
         // open sets per exercise) — wait for the target, and on failure keep a screenshot plus the card's hierarchy
         if !target.waitForExistence(timeout: 5) {
-            print("RUN205-DIAG next-set card hierarchy:\n\(card.debugDescription)\nnavigation bars: \(app.navigationBars.allElementsBoundByIndex.map(\.identifier))")
+            // run 206: neither the target nor Log set nor "All sets done" was found although the card exists — the card's
+            // hierarchy goes into the failure message (the CI digest keeps error lines, not prints)
+            let tree = card.debugDescription.replacingOccurrences(of: "\n", with: " ⏎ ")
+            let texts = app.staticTexts.allElementsBoundByIndex.prefix(40).map(\.label).joined(separator: " | ")
+            XCTFail("next-set card without target — bars \(app.navigationBars.allElementsBoundByIndex.map(\.identifier)); texts: \(texts.prefix(900)); card: \(tree.prefix(1500))")
         }
         expect(target.exists && !target.label.isEmpty, "the next set names its target (all-sets-done shown: \(app.buttons["nextSetFinish"].firstMatch.exists))", tag: "target")
         let log = app.buttons["logSet"].firstMatch

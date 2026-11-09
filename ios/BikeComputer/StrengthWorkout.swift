@@ -266,7 +266,7 @@ struct StrengthWorkoutScreen: View {
                 Button(role: .destructive) { budgetNote = store.assign(template: nil, to: w) } label: { Label("Remove routine from this session", systemImage: "xmark.circle") }
             }
             Divider()
-            Button { showEdit = true } label: { Label("Edit type / duration", systemImage: "pencil") }
+            Button { showEdit = true } label: { Label("Edit type / duration", systemImage: "pencil") }.accessibilityIdentifier("moreEditType")
             Button { showMove = true } label: { Label("Move to another day", systemImage: "arrow.left.arrow.right") }
             Button { var x = w; x.skipped.toggle(); _ = store.edit(x) } label: { Label(w.skipped ? "Unskip" : "Skip", systemImage: "forward") }
             if !store.isFuture(w) { Button { quickLog = true } label: { Label("Quick log instead", systemImage: "bolt") } }

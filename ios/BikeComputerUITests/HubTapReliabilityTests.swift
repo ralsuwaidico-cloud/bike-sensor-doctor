@@ -37,7 +37,8 @@ final class HubTapReliabilityTests: XCTestCase {
                 // what covered or replaced it; the message says so instead of throwing
                 let closeState = close.exists ? "Close frame \(close.frame), hittable \(close.isHittable)" : "Close no longer present (sheet or pushed page over the hub?)"
                 let bars = app.navigationBars.allElementsBoundByIndex.map(\.identifier)
-                XCTFail("\(state) cycle \(i): hub closes again — \(closeState); navigation bars: \(bars); sheets: \(app.sheets.count)")
+                let tree = hub.debugDescription.replacingOccurrences(of: "\n", with: " ⏎ ")
+                XCTFail("\(state) cycle \(i): hub closes again — \(closeState); navigation bars: \(bars); sheets: \(app.sheets.count); hub frame \(hub.frame); hub tree: \(tree.prefix(1200))")
             }
             _ = centre.waitUntilSettled(timeout: 3)
         }

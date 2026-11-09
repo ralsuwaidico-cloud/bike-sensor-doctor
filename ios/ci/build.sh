@@ -353,7 +353,7 @@ layout_one() {
   local LEXTRAS=0; { [ "$LNAME" = "standard" ] || [ "$LNAME" = "owner" ]; } && LEXTRAS=1
   [ "$STAGE" = quick ] && LEXTRAS=0
   TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
-    twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" "${ONLY[@]}"
+    rm -rf "$OUT/layout-$LNAME.xcresult"; twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" -resultBundlePath "$OUT/layout-$LNAME.xcresult" "${ONLY[@]}"
   L=$?
   # one retry ONLY when the simulator failed to launch the app (infrastructure, run 71) — never for a failed check
   if [ $L -ne 0 ] && grep -q "Timed out while launching application\|Simulator device failed to launch\|Timed out while loading Accessibility\|failed to initialize for UI testing" "$OUT/layout-$LNAME.log"; then
@@ -361,10 +361,11 @@ layout_one() {
     mv "$OUT/layout-$LNAME.log" "$OUT/layout-$LNAME-launchfail.log"
     xcrun simctl shutdown "$LID" >/dev/null 2>&1; xcrun simctl boot "$LID" >/dev/null 2>&1; sleep 20
     TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
-      twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" "${ONLY[@]}"
+      rm -rf "$OUT/layout-$LNAME.xcresult"; twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" -resultBundlePath "$OUT/layout-$LNAME.xcresult" "${ONLY[@]}"
     L=$?
   fi
   digest "$OUT/layout-$LNAME.log" "layout-$LNAME"
+  [ $L -ne 0 ] && export_fail_shots "$OUT/layout-$LNAME.xcresult" "layout-$LNAME"
   if [ $L -eq 0 ]; then note "  layout $LNAME ($LSIZES): ok · $(since $LT)"; else note "  layout $LNAME ($LSIZES): FAILED (exit $L) · $(since $LT) — $(grep -E ' error: ' "$OUT/layout-$LNAME.log" | sed -E 's/.*error: //' | sort -u | head -3 | tr '\n' ' ' | cut -c1-400 | scrub)"; LAYOUT_OK=0; fi
 }
 layout_finish() {
