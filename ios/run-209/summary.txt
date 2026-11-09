@@ -1,0 +1,112 @@
+BikeComputer iOS CI — run 209 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 209 — 2026-11-09 06:58 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 3m3s
+RESULT tests: ok (Executed 4 tests, with 0 failures) · 8m21s
+Total: 8m49s
+
+## smoke
+BikeComputer iOS CI — build 209 — 2026-11-09 06:47 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 13m52s
+RESULT launch smoke (Release): ok (Executed 3 tests, with 0 failures) · 52m29s
+Total: 53m5s
+
+## flows
+BikeComputer iOS CI — build 209 — 2026-11-09 07:02 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 8m24s
+RESULT flows: FAILED (exit 65) · 31m41s — HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 1: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0 HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 5: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0 HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 6: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0 HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 9: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0 HubTapReliabilityTests.swift:41: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"trainingHub" IN identifiers'`, given input App element pid: 84414 PlanEditPreviewApplyTests.swift:33: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertNotEqual failed: ("45") is equal to ("45") - the duration changed (45 → 45) PlanEditPreviewApplyTests.swift:38: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - a duration change on a strength session shows the before/after preview PlanEditPreviewApplyTests.swift:40: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - Apply is offered 
+Total: 32m32s
+
+## journeys
+BikeComputer iOS CI — build 209 — 2026-11-09 07:04 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 7m48s
+  journey hybrid: ok · recording 2015 KB · 9m50s
+  journey cycling: ok · recording 1739 KB · 7m6s
+  journey strength: ok · recording 1811 KB · 6m36s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 34m37s
+Total: 34m50s
+
+## layout-small
+BikeComputer iOS CI — build 209 — 2026-11-09 07:00 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m1s
+  layout small (L,AX3): ok · 3m22s
+RESULT layout audit: ok (0 screenshots)
+Total: 14m37s
+
+## layout-standard
+BikeComputer iOS CI — build 209 — 2026-11-09 06:47 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m12s
+  layout standard (L,XXXL): ok · 4m47s
+RESULT layout audit: ok (0 screenshots)
+Total: 16m10s
+
+## layout-promax
+BikeComputer iOS CI — build 209 — 2026-11-09 06:47 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m55s
+  layout promax (L): ok · 2m37s
+RESULT layout audit: ok (0 screenshots)
+Total: 12m47s
+
+## layout-owner
+BikeComputer iOS CI — build 209 — 2026-11-09 06:47 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m26s
+  layout owner (L,XXXL): ok · 2m47s
+RESULT layout audit: ok (0 screenshots)
+Total: 14m26s
+
+## watch
+BikeComputer iOS CI — build 209 — 2026-11-09 06:47 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12271   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12820   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13082   screenshot ax3 ok large · 10m45s
+Total: 10m54s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit 9bdd68815f106aa48a95caff8af1a1c0c4bf3de2  branch ios/checkpoint-f-ride  job failure

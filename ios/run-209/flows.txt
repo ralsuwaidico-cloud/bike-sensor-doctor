@@ -1,0 +1,225 @@
+=== flows: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 1: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 5: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 6: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 9: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' failed (371.935 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:41: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"trainingHub" IN identifiers'`, given input App element pid: 84414
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' failed (184.403 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:33: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertNotEqual failed: ("45") is equal to ("45") - the duration changed (45 → 45)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:38: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - a duration change on a strength session shows the before/after preview
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:40: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - Apply is offered
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:50: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:51: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:51: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to tap "changeApply" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"changeApply" IN identifiers'`, given input App element pid: 92504
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (179.347 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:33: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"planDay-2" IN identifiers'`, given input App element pid: 439
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' failed (49.091 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:31: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - next-set card without target — bars ["Short Full Body Workout", "Plan", "Progress", "_TtGC7SwiftUI29PresentationHosting", "Strength"]; texts: Short Full Body Workout | Home | Plan | In progress | Progress | Profile | Strength | PHONE ONLY | T 0:00 | FREE RIDE · Z2 TARGET · 85–95 RPM | Speed — km/h, target by effort | No heart-rate or power source live. Targets are by effort; nothing is estimated. | Distance 0.0 km, no GPS | Time 0:00 , moving | 0.0 km so far | Expand | MONDAY 9 NOV | 0:49 | of 45 min | Goblet squat | Set 1 of 2 | 20 kg × 10 | 0/4 sets | Goblet squat | 0/2 | Previous: 10 × 20 kg · 10 × 20 kg | Set 1 | 10 | kg | Set 2 | 10 | kg | A | Dumbbell row | 0/2 | No previous log for this exercise | Set 1 | 10 | kg | Set 2; card: Attributes: StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Element subtree: ⏎  →StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Path to element: ⏎  →Application, 0x119584640, pid: 6960, label: 'Cyclift' ⏎   ↳Window (Main), 0x119584780, {{0.0, 0.0}, {402.0, 874.0}} ⏎    ↳Other, 0x1195e9180, {{0.0, 0.0}, {402.0, 874.0}} ⏎     ↳Other, 0x1195e92c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎      ↳Other, 0x1195e9400, {{0.0, 0.0}, {402.0, 874.0}} ⏎       ↳Other, 0x1195e9540, {{0.0, 0.0}, {402.0, 874.0}} ⏎        ↳Other, 0x1195ea080, {{0.0, 0.0}, {402.0, 874.0}} ⏎         ↳Other, 0x1195ea1c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎          ↳Other, 0x1195ea300, {{0.0, 0.0}, {402.0, 874.0}} ⏎           ↳Other, 0x1195ea440, {{0.0, 0.0}, {402.0, 874.0}} ⏎            ↳ScrollView, 0x1195ea580, {{-6.3, 0.0}, {414.7, 874.0}} ⏎             ↳Other, 0x1195eaa80, {{-6.3, 116.0}, {414.7, 914.7}} ⏎              ↳StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Query chain: ⏎  →Find: Target Application 'com.ralsuwaidico.bikecomputer' ⏎   Output: { ⏎     Application, 0x1197bb0c0, pid: 6960, label: 'Cyclift' ⏎   } ⏎   ↪︎Find: Descendants matching type Any ⏎     Output: { ⏎       Window (Main), 0x119717340, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119717480, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119786bc0, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119793
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:33: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - the next set names its target (all-sets-done shown: false)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:35: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - Log set is reachable
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:51: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - all four planned sets were logged, got 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:53: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - after the last set the card offers Finish workout
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:54: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - the counter reads 4/4 sets
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:61: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - logged sets → Save is enabled (nothing-to-save state would disable it)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:64: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - a saved session asks for its check-in
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:66: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to tap "checkInSkip" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"checkInSkip" IN identifiers'`, given input App element pid: 6960
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (197.531 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: full filter ===
+Test Case '-[BikeComputerUITests.DeleteAllDataJourneyTests testDeleteAllDataReturnsToWelcomeAndStaysEmptyAfterRelaunch]' passed (82.980 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 82.980 (82.982) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 1: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 5: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 6: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:115: error: -[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub] : failed - cycle 9: one plain Close tap after 0.5 s did not close the hub — Close no longer present; bars ["Plan", "Progress"]; sheets 0
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' failed (371.935 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:41: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"trainingHub" IN identifiers'`, given input App element pid: 84414
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' failed (184.403 seconds).
+Test Suite 'HubTapReliabilityTests' failed at 2026-11-09 07:25:09.169.
+	 Executed 2 tests, with 5 failures (0 unexpected) in 556.337 (556.340) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:33: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertNotEqual failed: ("45") is equal to ("45") - the duration changed (45 → 45)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:38: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - a duration change on a strength session shows the before/after preview
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:40: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - Apply is offered
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:50: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:51: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:51: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to tap "changeApply" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"changeApply" IN identifiers'`, given input App element pid: 92504
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (179.347 seconds).
+Test Suite 'PlanEditPreviewApplyTests' failed at 2026-11-09 07:28:08.519.
+	 Executed 1 test, with 6 failures (0 unexpected) in 179.347 (179.350) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:33: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"planDay-2" IN identifiers'`, given input App element pid: 439
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' failed (49.091 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' passed (34.715 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testRecoveryPageIsHonestWithoutHealthReads]' passed (49.044 seconds).
+Test Suite 'PlanProgressRecoveryScreensTests' failed at 2026-11-09 07:30:21.371.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 132.849 (132.852) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:31: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - next-set card without target — bars ["Short Full Body Workout", "Plan", "Progress", "_TtGC7SwiftUI29PresentationHosting", "Strength"]; texts: Short Full Body Workout | Home | Plan | In progress | Progress | Profile | Strength | PHONE ONLY | T 0:00 | FREE RIDE · Z2 TARGET · 85–95 RPM | Speed — km/h, target by effort | No heart-rate or power source live. Targets are by effort; nothing is estimated. | Distance 0.0 km, no GPS | Time 0:00 , moving | 0.0 km so far | Expand | MONDAY 9 NOV | 0:49 | of 45 min | Goblet squat | Set 1 of 2 | 20 kg × 10 | 0/4 sets | Goblet squat | 0/2 | Previous: 10 × 20 kg · 10 × 20 kg | Set 1 | 10 | kg | Set 2 | 10 | kg | A | Dumbbell row | 0/2 | No previous log for this exercise | Set 1 | 10 | kg | Set 2; card: Attributes: StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Element subtree: ⏎  →StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Path to element: ⏎  →Application, 0x119584640, pid: 6960, label: 'Cyclift' ⏎   ↳Window (Main), 0x119584780, {{0.0, 0.0}, {402.0, 874.0}} ⏎    ↳Other, 0x1195e9180, {{0.0, 0.0}, {402.0, 874.0}} ⏎     ↳Other, 0x1195e92c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎      ↳Other, 0x1195e9400, {{0.0, 0.0}, {402.0, 874.0}} ⏎       ↳Other, 0x1195e9540, {{0.0, 0.0}, {402.0, 874.0}} ⏎        ↳Other, 0x1195ea080, {{0.0, 0.0}, {402.0, 874.0}} ⏎         ↳Other, 0x1195ea1c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎          ↳Other, 0x1195ea300, {{0.0, 0.0}, {402.0, 874.0}} ⏎           ↳Other, 0x1195ea440, {{0.0, 0.0}, {402.0, 874.0}} ⏎            ↳ScrollView, 0x1195ea580, {{-6.3, 0.0}, {414.7, 874.0}} ⏎             ↳Other, 0x1195eaa80, {{-6.3, 116.0}, {414.7, 914.7}} ⏎              ↳StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Query chain: ⏎  →Find: Target Application 'com.ralsuwaidico.bikecomputer' ⏎   Output: { ⏎     Application, 0x1197bb0c0, pid: 6960, label: 'Cyclift' ⏎   } ⏎   ↪︎Find: Descendants matching type Any ⏎     Output: { ⏎       Window (Main), 0x119717340, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119717480, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119786bc0, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119793
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:33: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - the next set names its target (all-sets-done shown: false)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:35: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - Log set is reachable
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:51: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - all four planned sets were logged, got 0
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:53: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - after the last set the card offers Finish workout
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:54: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - the counter reads 4/4 sets
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:61: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - logged sets → Save is enabled (nothing-to-save state would disable it)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:64: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - a saved session asks for its check-in
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:66: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to tap "checkInSkip" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"checkInSkip" IN identifiers'`, given input App element pid: 6960
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (197.531 seconds).
+Test Suite 'StrengthSessionJourneyTests' failed at 2026-11-09 07:33:38.907.
+	 Executed 1 test, with 9 failures (0 unexpected) in 197.531 (197.535) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 07:33:38.913.
+	 Executed 8 tests, with 21 failures (0 unexpected) in 1149.045 (1149.067) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 07:33:38.914.
+	 Executed 8 tests, with 21 failures (0 unexpected) in 1149.045 (1149.069) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: last 150 lines ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:31: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - next-set card without target — bars ["Short Full Body Workout", "Plan", "Progress", "_TtGC7SwiftUI29PresentationHosting", "Strength"]; texts: Short Full Body Workout | Home | Plan | In progress | Progress | Profile | Strength | PHONE ONLY | T 0:00 | FREE RIDE · Z2 TARGET · 85–95 RPM | Speed — km/h, target by effort | No heart-rate or power source live. Targets are by effort; nothing is estimated. | Distance 0.0 km, no GPS | Time 0:00 , moving | 0.0 km so far | Expand | MONDAY 9 NOV | 0:49 | of 45 min | Goblet squat | Set 1 of 2 | 20 kg × 10 | 0/4 sets | Goblet squat | 0/2 | Previous: 10 × 20 kg · 10 × 20 kg | Set 1 | 10 | kg | Set 2 | 10 | kg | A | Dumbbell row | 0/2 | No previous log for this exercise | Set 1 | 10 | kg | Set 2; card: Attributes: StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Element subtree: ⏎  →StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Path to element: ⏎  →Application, 0x119584640, pid: 6960, label: 'Cyclift' ⏎   ↳Window (Main), 0x119584780, {{0.0, 0.0}, {402.0, 874.0}} ⏎    ↳Other, 0x1195e9180, {{0.0, 0.0}, {402.0, 874.0}} ⏎     ↳Other, 0x1195e92c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎      ↳Other, 0x1195e9400, {{0.0, 0.0}, {402.0, 874.0}} ⏎       ↳Other, 0x1195e9540, {{0.0, 0.0}, {402.0, 874.0}} ⏎        ↳Other, 0x1195ea080, {{0.0, 0.0}, {402.0, 874.0}} ⏎         ↳Other, 0x1195ea1c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎          ↳Other, 0x1195ea300, {{0.0, 0.0}, {402.0, 874.0}} ⏎           ↳Other, 0x1195ea440, {{0.0, 0.0}, {402.0, 874.0}} ⏎            ↳ScrollView, 0x1195ea580, {{-6.3, 0.0}, {414.7, 874.0}} ⏎             ↳Other, 0x1195eaa80, {{-6.3, 116.0}, {414.7, 914.7}} ⏎              ↳StaticText, 0x1195eabc0, {{23.7, 146.0}, {37.3, 20.3}}, identifier: 'nextSetCard', label: '0:15' ⏎ Query chain: ⏎  →Find: Target Application 'com.ralsuwaidico.bikecomputer' ⏎   Output: { ⏎     Application, 0x1197bb0c0, pid: 6960, label: 'Cyclift' ⏎   } ⏎   ↪︎Find: Descendants matching type Any ⏎     Output: { ⏎       Window (Main), 0x119717340, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119717480, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119786bc0, {{0.0, 0.0}, {402.0, 874.0}} ⏎       Other, 0x119793
+    t =    94.64s         Checking existence of `"nextSetFinish" Button`
+    t =    96.46s         Checking existence of `"nextSetTarget" Any`
+    t =   100.27s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-target'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:33: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - the next set names its target (all-sets-done shown: false)
+    t =   100.28s         Waiting 5.0s for "logSet" Button to exist
+    t =   101.35s             Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =   101.36s                 Checking existence of `"logSet" Button`
+    t =   102.75s                 Capturing element debug description
+    t =   103.37s             Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =   103.37s                 Checking existence of `"logSet" Button`
+    t =   104.72s                 Capturing element debug description
+    t =   105.28s             Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =   105.28s                 Checking existence of `"logSet" Button`
+    t =   105.58s                 Capturing element debug description
+    t =   105.58s             Checking existence of `"logSet" Button`
+    t =   108.02s         Collecting debug information to assist test failure triage
+    t =   108.02s             Requesting snapshot of accessibility hierarchy for app with pid 6960
+    t =   109.73s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-logset'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:35: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - Log set is reachable
+    t =   109.73s         Checking existence of `"logSet" Button`
+    t =   111.51s         Checking existence of `"logSet" Button`
+    t =   113.20s         Checking existence of `"logSet" Button`
+    t =   114.81s         Checking existence of `"logSet" Button`
+    t =   116.50s         Checking existence of `"logSet" Button`
+    t =   118.59s         Checking existence of `"logSet" Button`
+    t =   121.24s         Checking existence of `"logSet" Button`
+    t =   123.51s         Checking existence of `"logSet" Button`
+    t =   125.52s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-allsets'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:51: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - all four planned sets were logged, got 0
+    t =   125.52s         Waiting 5.0s for "nextSetFinish" Button to exist
+    t =   126.57s             Checking `Expect predicate `existsNoRetry == 1` for object "nextSetFinish" Button`
+    t =   126.57s                 Checking existence of `"nextSetFinish" Button`
+    t =   128.50s                 Capturing element debug description
+    t =   128.55s             Checking `Expect predicate `existsNoRetry == 1` for object "nextSetFinish" Button`
+    t =   128.55s                 Checking existence of `"nextSetFinish" Button`
+    t =   130.82s                 Capturing element debug description
+    t =   130.82s             Checking existence of `"nextSetFinish" Button`
+    t =   134.74s         Collecting debug information to assist test failure triage
+    t =   134.75s             Requesting snapshot of accessibility hierarchy for app with pid 6960
+    t =   137.46s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-cardfinish'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:53: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - after the last set the card offers Finish workout
+    t =   137.46s         Checking existence of `StaticText (First Match)`
+    t =   141.75s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-counter'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:54: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - the counter reads 4/4 sets
+    t =   141.76s         Waiting 5.0s for "finishWorkout" Button to exist
+    t =   142.82s             Checking `Expect predicate `existsNoRetry == 1` for object "finishWorkout" Button`
+    t =   142.82s                 Checking existence of `"finishWorkout" Button`
+    t =   143.71s         Tap "finishWorkout" Button
+    t =   143.71s             Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   143.72s             Find the "finishWorkout" Button
+    t =   144.03s             Check for interrupting elements affecting "finishWorkout" Button
+    t =   144.78s             Synthesize event
+    t =   145.55s             Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   146.83s         Waiting 10.0s for "saveWorkout" Button to exist
+    t =   147.90s             Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =   147.90s                 Checking existence of `"saveWorkout" Button`
+    t =   148.61s         Find the "saveWorkout" Button
+    t =   149.51s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-saveenabled'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:61: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - logged sets → Save is enabled (nothing-to-save state would disable it)
+    t =   149.52s         Tap "saveWorkout" Button
+    t =   149.52s             Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   149.61s             Find the "saveWorkout" Button
+    t =   150.06s             Check for interrupting elements affecting "saveWorkout" Button
+    t =   150.84s             Synthesize event
+    t =   151.57s             Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   152.46s         Waiting 10.0s for "checkInForm" Any to exist
+    t =   153.51s             Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =   153.51s                 Checking existence of `"checkInForm" Any`
+    t =   156.72s                 Capturing element debug description
+    t =   157.55s             Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =   157.55s                 Checking existence of `"checkInForm" Any`
+    t =   160.62s                 Capturing element debug description
+    t =   161.46s             Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =   161.46s                 Checking existence of `"checkInForm" Any`
+    t =   162.72s                 Capturing element debug description
+    t =   162.72s             Checking existence of `"checkInForm" Any`
+    t =   169.80s         Collecting debug information to assist test failure triage
+    t =   169.80s             Requesting snapshot of accessibility hierarchy for app with pid 6960
+    t =   171.69s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-checkin'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:64: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - a saved session asks for its check-in
+    t =   171.70s         Waiting 3.0s for "checkInSubmit" Button to exist
+    t =   172.75s             Checking `Expect predicate `existsNoRetry == 1` for object "checkInSubmit" Button`
+    t =   172.75s                 Checking existence of `"checkInSubmit" Button`
+    t =   174.97s                 Capturing element debug description
+    t =   174.97s             Checking existence of `"checkInSubmit" Button`
+    t =   179.13s         Collecting debug information to assist test failure triage
+    t =   179.13s             Requesting snapshot of accessibility hierarchy for app with pid 6960
+    t =   182.14s         Tap "checkInSkip" Button
+    t =   182.14s             Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   182.33s             Find the "checkInSkip" Button
+    t =   187.03s                 Find the "checkInSkip" Button (retry 1)
+    t =   191.35s                 Find the "checkInSkip" Button (retry 2)
+    t =   193.85s         Requesting snapshot of accessibility hierarchy for app with pid 6960
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:66: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to tap "checkInSkip" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"checkInSkip" IN identifiers'`, given input App element pid: 6960
+Possibly caused by runtime issues:
+Automation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {
+    "XC_kAXXCAttributeAutomationType" = 14;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 1108101562369;
+}
+Automation type mismatch: computed Button from legacy attributes vs DisclosureTriangle from modern attribute. Input attributes and values: {
+    "XC_kAXXCAttributeAutomationType" = 13;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 8589934593;
+}
+See test report attachments for more detail.
+    t =   196.32s Tear Down
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (197.531 seconds).
+Test Suite 'StrengthSessionJourneyTests' failed at 2026-11-09 07:33:38.907.
+	 Executed 1 test, with 9 failures (0 unexpected) in 197.531 (197.535) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 07:33:38.913.
+	 Executed 8 tests, with 21 failures (0 unexpected) in 1149.045 (1149.067) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 07:33:38.914.
+	 Executed 8 tests, with 21 failures (0 unexpected) in 1149.045 (1149.069) seconds
+2026-11-09 07:34:24.707 xcodebuild[64190:155738] [MT] IDETestOperationsObserverDebug: 1213.012 elapsed -- Testing started completed.
+2026-11-09 07:34:24.710 xcodebuild[64190:155738] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-09 07:34:24.710 xcodebuild[64190:155738] [MT] IDETestOperationsObserverDebug: 1213.012 sec, +1213.012 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/flows.xcresult
+
+Failing tests:
+	HubTapReliabilityTests.testCloseAtHumanPaceAlwaysClosesTheHub()
+	HubTapReliabilityTests.testCloseAtHumanPaceAlwaysClosesTheHub()
+	HubTapReliabilityTests.testCloseAtHumanPaceAlwaysClosesTheHub()
+	HubTapReliabilityTests.testCloseAtHumanPaceAlwaysClosesTheHub()
+	HubTapReliabilityTests.testEveryFirstCentreTapOpensTheHub()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanProgressRecoveryScreensTests.testPlanBandsNavigate()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+
+** TEST EXECUTE FAILED **
+
+Testing started
