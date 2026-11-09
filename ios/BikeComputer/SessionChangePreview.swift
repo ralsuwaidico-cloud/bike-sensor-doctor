@@ -15,6 +15,11 @@ struct SessionChangeSheet: View {
     var coach: CoachProposal? = nil
     /// Called after a successful Apply (the caller closes its own sheet).
     var onApplied: () -> Void = {}
+    /// Run 212 screenshot: after Apply the sheet stayed on screen with Apply greyed out — the environment `dismiss`
+    /// was bound to a presentation the parent had already rebuilt (applying the change re-renders the session view that
+    /// presents this sheet). The presenter passes `onClose` to clear its own `.sheet(item:)` binding, which always closes.
+    var onClose: () -> Void = {}
+    private func close() { dismiss(); onClose() }
     @State private var notice: String? = nil
     @State private var showEquipment = false
     /// Run 211 (flows screenshot): Cancel/Apply mutated the store and called dismiss() in the same turn; the body flipped to
@@ -34,14 +39,14 @@ struct SessionChangeSheet: View {
                 } else {
                     VStack(spacing: DS.m) {
                         Text("This change is no longer available. Nothing was saved.").font(.body).multilineTextAlignment(.center)
-                        Button("Close") { dismiss() }.buttonStyle(.bordered).controlSize(.large)
+                        Button("Close") { close() }.buttonStyle(.bordered).controlSize(.large)
                     }.padding()
                 }
             }
             .navigationTitle("Review the change").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { afterDismiss = .discard; dismiss() }.accessibilityIdentifier("changeCancel")
+                    Button("Cancel") { afterDismiss = .discard; close() }.accessibilityIdentifier("changeCancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     let current = pinned ?? store.pendingProposals[proposalId]
@@ -67,7 +72,7 @@ struct SessionChangeSheet: View {
     private func apply() {
         let r: CommitResult = coach.map { store.commitCoachChange($0, proposalId: proposalId) } ?? store.commit(proposalId: proposalId, confirmed: true)
         switch r {
-        case .applied: afterDismiss = .applied; dismiss()
+        case .applied: afterDismiss = .applied; close()
         case .stale: rebuild(note: "Something this change depends on changed while you were looking (your plan, equipment or health status). Here is the updated version; nothing was saved.") { _ in }
         case .blocked(let ids): notice = ids.contains("SAFE-001") ? "Training is paused by your health check, so nothing was changed." : "This change can't be applied (\(ids.joined(separator: ", "))). Nothing was saved."
         case .needsConfirmation, .notValidated: notice = "Nothing was saved. Please review the change again."
@@ -249,7 +254,7 @@ struct PlanChangeSheet: View {
                 } else {
                     VStack(spacing: DS.m) {
                         Text("This change is no longer available. Nothing was saved.").font(.body).multilineTextAlignment(.center)
-                        Button("Close") { dismiss() }.buttonStyle(.bordered).controlSize(.large)
+                        Button("Close") { close() }.buttonStyle(.bordered).controlSize(.large)
                     }.padding()
                 }
             }

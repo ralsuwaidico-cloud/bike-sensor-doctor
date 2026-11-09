@@ -511,7 +511,7 @@ struct EditWorkoutSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Review") { submit() }.accessibilityIdentifier("editSave") }
             }
             .onAppear { if !loaded { supersets = workout.riderChoice?.prefersSupersets ?? false; loaded = true } }
-            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id) { dismiss() } }
+            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onApplied: { dismiss() }, onClose: { preview = nil }) }
         }
     }
     private func submit() {

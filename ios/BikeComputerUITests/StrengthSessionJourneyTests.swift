@@ -72,6 +72,15 @@ final class StrengthSessionJourneyTests: XCTestCase {
             expect(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Check-in saved'")).firstMatch.exists, "the coach confirms the check-in was saved", tag: "coachsaved")
             coachDone.tap(); _ = coachDone.waitUntilDismissed(timeout: 8)
         }
+        // The workout sheet the hub opened is still up and now reviews the completed session (run 212 screenshot:
+        // "Logged · 2 exercises, 4 sets", Reopen, the exercises with their logged sets) — a rider reads it and taps Done.
+        let workoutBar = app.navigationBars["Strength"].firstMatch
+        if workoutBar.waitForExistence(timeout: 8) {
+            expect(app.staticTexts.matching(NSPredicate(format: "label CONTAINS '4 sets'")).firstMatch.exists, "the completed workout reviews its logged sets", tag: "reviewsets")
+            expect(app.buttons["Reopen"].firstMatch.exists || app.staticTexts["Logged"].firstMatch.exists, "the completed workout reads as logged", tag: "reviewlogged")
+            let done = workoutBar.buttons["Done"].firstMatch
+            if done.exists { done.tap(); _ = done.waitUntilDismissed(timeout: 8) }
+        }
         // back on Home: the planned session is done and the summary lists today's log with its sets
         expect(app.waitForHome(name: "Rashed", timeout: 20), "back on Home after the session", tag: "home")
         // run 210: the whole flow start → 4 sets → finish → save → check-in → Home passed; the Home card was tapped while

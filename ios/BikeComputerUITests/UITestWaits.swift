@@ -24,7 +24,9 @@ extension XCUIElement {
         while Date() < end {
             if hasUsableFrame {
                 let f = frame
-                if let l = last, l == f { return true }
+                // run 212: a frame reported as x = 19.999999999999996 on one poll and 20.0 on the next never "settled" under
+                // exact equality, so the Close was never tapped — frames within half a point are the same frame
+                if let l = last, abs(l.minX - f.minX) < 0.5, abs(l.minY - f.minY) < 0.5, abs(l.width - f.width) < 0.5, abs(l.height - f.height) < 0.5 { return true }
                 last = f
             } else {
                 last = nil

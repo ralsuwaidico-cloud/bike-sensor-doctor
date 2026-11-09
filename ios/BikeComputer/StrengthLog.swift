@@ -450,7 +450,7 @@ struct HybridCoachCard: View {
             if !a.proposals.isEmpty || !store.appliedProposals.isEmpty { proposals(a) }
             ActionRow(actions: actionSpecs(a))
         }
-        .sheet(item: $coachPreview) { r in SessionChangeSheet(proposalId: r.id, coach: coachProposal) { lastApplied = coachProposal?.text } }
+        .sheet(item: $coachPreview) { r in SessionChangeSheet(proposalId: r.id, coach: coachProposal, onApplied: { lastApplied = coachProposal?.text }, onClose: { coachPreview = nil }) }
         if let w = nextStrength, !w.plannerBuilt { InsightCard(workout: w, entries: store.plannedEntries(for: w)) }
         if let r = HybridCoach.weeklyReview(profile: store.profile, plan: store.plan, rides: store.rides, strength: store.strength) { reviewCard(r) }
     }
