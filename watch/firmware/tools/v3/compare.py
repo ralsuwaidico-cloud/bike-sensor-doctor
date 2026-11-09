@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Side-by-side comparison of the LVGL renders (test/v3/out) with the approved prototype v3.1 screenshots.
+"""Side-by-side comparison of the LVGL renders (test/v3/out) with the approved prototype screenshots (v3.3).
 Usage: compare.py <lvgl-out-dir> <prototype-shots-dir> <dest-dir>
 Writes one sheet per group (prototype left, LVGL right) and comparison.json with a pixel difference per pair
 (mean absolute difference of the 0–255 channels inside the round screen; 0 = identical). Needs Pillow."""
@@ -39,7 +39,7 @@ def main(out, shots, dest):
             score = sum(sum(p) for p in px) / (3 * len(px)); result[mine] = {'prototype': proto, 'mean_abs_diff': round(score, 2)}
             x, y = (i % cols) * 500, (i // cols) * 270
             sheet.paste(a, (x + 6, y + 6)); sheet.paste(b, (x + 252, y + 6))
-            d.text((x + 8, y + 250), f'prototype v3.1  |  LVGL  ·  {mine}  ·  diff {score:.1f}', fill=(40, 40, 40), font=font)
+            d.text((x + 8, y + 250), f'prototype v3.3  |  LVGL  ·  {mine}  ·  diff {score:.1f}', fill=(40, 40, 40), font=font)
         sheet.save(dest / f'{name}.png', optimize=True)
     (dest / 'comparison.json').write_text(json.dumps(result, indent=1))
     print('compared', len(result), 'pairs; mean difference', round(sum(v['mean_abs_diff'] for v in result.values()) / len(result), 2))

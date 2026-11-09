@@ -58,7 +58,7 @@ static std::vector<Finding> g_findings;
 static std::vector<std::string> g_infos;
 static int g_checks = 0;
 /// Findings recorded in the Stage 1 report as remaining defects that need a design decision; listed, never hidden.
-static bool knownDefect(const std::string& rule, const std::string& d) { return rule == "touch-target" && d.rfind("more hint", 0) == 0; }
+static bool knownDefect(const std::string&, const std::string&) { return false; }   // none since the 9 Nov menu fix
 static void fail(const std::string& st, const std::string& rule, const std::string& d) { g_findings.push_back({st, rule, d, knownDefect(rule, d)}); }
 
 struct Box { int x1, y1, x2, y2; lv_obj_t* obj; std::string what; bool overlay; };
@@ -133,10 +133,33 @@ static void checkState(const std::string& st, Ui& ui, const Model& m) {
         if (a.overlay != b.overlay) { g_infos.push_back(st + ": overlay covers " + (a.overlay ? b.what : a.what)); continue; }
         fail(st, "overlap", a.what + " overlaps " + b.what + " by " + std::to_string(ix) + "x" + std::to_string(iy) + " px");
     }
-    // 5 touch targets ≥ 44 × 44 on the glass
+    // 5 touch targets: each must hold a 44 × 44 px square that lies wholly on the round glass (radius 120)
     for (auto& h : ui.hits()) {
-        int w = h.area.x2 - h.area.x1 + 1, hh = std::min<int>(h.area.y2, 239) - h.area.y1 + 1;
-        g_checks++; if (w < TOUCH_MIN || hh < TOUCH_MIN) fail(st, "touch-target", std::string(h.name) + " is " + std::to_string(w) + "x" + std::to_string(hh) + " px");
+        g_checks++; bool fits = false;
+        for (int y = h.area.y1; y + TOUCH_MIN - 1 <= h.area.y2 && !fits; y++)
+            for (int x = h.area.x1; x + TOUCH_MIN - 1 <= h.area.x2 && !fits; x++) {
+                bool in = true;
+                for (auto [cx, cy] : {std::pair<int, int>{x, y}, {x + TOUCH_MIN - 1, y}, {x, y + TOUCH_MIN - 1}, {x + TOUCH_MIN - 1, y + TOUCH_MIN - 1}})
+                    if (std::hypot(cx - 119.5f, cy - 119.5f) > 120.f) in = false;
+                fits = in;
+            }
+        if (!fits) fail(st, "touch-target", std::string(h.name) + " has no 44x44 px area on the glass (" + std::to_string(h.area.x2 - h.area.x1 + 1) + "x" + std::to_string(h.area.y2 - h.area.y1 + 1) + " px box)");
+    }
+    // 6 a banner, toast or key chip never covers a control the rider may need to press
+    for (lv_obj_t* o : all) {
+        void* u = lv_obj_get_user_data(o); if (!u || std::strcmp(static_cast<const char*>(u), "overlay") != 0) continue;
+        lv_area_t a; lv_obj_get_coords(o, &a);
+        for (auto& h : ui.hits()) {
+            if (std::string(h.name) == "banner") continue; g_checks++;
+            if (std::min(a.x2, h.area.x2) >= std::max(a.x1, h.area.x1) && std::min(a.y2, h.area.y2) >= std::max(a.y1, h.area.y1))
+                fail(st, "overlay-covers-control", std::string("overlay covers the ") + h.name);
+        }
+    }
+    // 7 touch areas never overlap each other
+    for (size_t i = 0; i < ui.hits().size(); i++) for (size_t j = i + 1; j < ui.hits().size(); j++) {
+        const auto &a = ui.hits()[i].area, &b = ui.hits()[j].area; g_checks++;
+        if (std::min(a.x2, b.x2) >= std::max(a.x1, b.x1) && std::min(a.y2, b.y2) >= std::max(a.y1, b.y1))
+            fail(st, "touch-overlap", std::string(ui.hits()[i].name) + " overlaps " + ui.hits()[j].name);
     }
     (void)m;
 }

@@ -88,7 +88,7 @@ bool Ui::tap(Model& m, int x, int y, uint32_t now) {
 
 void Ui::build(const Model& m) {
     lv_obj_clean(root_);
-    lines_.clear(); hits_.clear();
+    lines_.clear(); hits_.clear(); groups_.clear();
     clock_ = date_ = interval_ = lead_ = hrTile_ = cadTile_ = Run{};
     cmd_ = marker_ = ivArc_ = nullptr;
     lv_obj_set_style_bg_color(root_, col(pal_->bg), 0); lv_obj_set_style_bg_opa(root_, LV_OPA_COVER, 0);
@@ -133,6 +133,7 @@ void Ui::makeRun(Run& r) {
                 lv_obj_clear_flag(p.obj, LV_OBJ_FLAG_CLICKABLE); break; }
         }
     }
+    std::vector<lv_obj_t*> g; for (auto& p : r.pieces) g.push_back(p.obj); groups_.push_back(g);
     layoutRun(r);
 }
 
@@ -205,7 +206,8 @@ lv_obj_t* Ui::chip(int top, const std::string& text, uint32_t color, int dot, ui
 lv_obj_t* Ui::button(int top, const std::string& text, int kind, Action a) {
     Font f = font(Type::Button, large_);
     int h = large_ ? 48 : BUTTON_H, minW = large_ ? 84 : 76;
-    uint32_t bg = kind == 1 ? pal_->accent : pal_->surface_2, fg = kind == 1 ? pal_->on_accent : kind == 2 ? pal_->ink_2 : pal_->ink;
+    // kind 2 = command pending: blue text (approved status colours: blue = pending)
+    uint32_t bg = kind == 1 ? pal_->accent : pal_->surface_2, fg = kind == 1 ? pal_->on_accent : kind == 2 ? pal_->status_info : pal_->ink;
     lv_obj_t* b = lv_obj_create(root_); lv_obj_remove_style_all(b);
     lv_obj_set_style_bg_color(b, col(bg), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0); lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
     lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
@@ -287,7 +289,8 @@ void Ui::updateFace(const Model& m) {
 void Ui::buildMenu(const Model& m) {
     const Palette& p = *pal_; Lang l = m.settings.lang;
     auto items = m.menuItems();
-    const int h = ROW_H + (large_ ? 8 : 0), gap = 6, minW = 132, yMax = 202, off = m.menuScroll;
+    // 5 px gaps (approved 9 Nov): the last row ends at y 194, leaving a 44 px touch area for the "more" hint below it
+    const int h = ROW_H + (large_ ? 8 : 0), gap = 5, minW = 132, yMax = 202, off = m.menuScroll;
     int y0 = 36;
     while (chordAt(float(y0), float(y0 + h)) - 6 < 156 && y0 + h / 2 < 120) y0++;   // first row starts where the circle is wide enough
     int y = y0 - off * (h + gap), shown = 0;
@@ -346,7 +349,7 @@ void Ui::buildMenu(const Model& m) {
         Piece t; t.text = trf(S::More, l, more); t.font = cap; t.color = p.ink_2; t.rtlText = ar_; r.pieces.push_back(t);
         Piece c; c.kind = Piece::Icon; c.icon = &cyv3_ic_down_11; c.gapBefore = 4; c.iconDrop = 1; c.color = p.ink_2; r.pieces.push_back(c);
         makeRun(r);
-        hit(C - 60, 203, 120, 37, Action::MenuMore, 0, "more hint");   // below the last row; swipe up scrolls too
+        hit(C - 60, 194, 120, 44, Action::MenuMore, 0, "more hint");   // 44 px, below the last row (ends at 193); swipe up scrolls too
     }
     if (n > shown) {                                                  // scroll position: short arc on the trailing edge
         float a0 = ar_ ? 235.f : 55.f, span = 70.f, f0 = float(std::min(off, n - shown)) / n, f1 = f0 + float(shown) / n;
@@ -407,13 +410,14 @@ void Ui::buildCockpit(const Model& m) {
             Run c; c.top = 144; c.lineBox = cap.lineBox; c.mainCss = cap.css; c.centerX = cx;
             Piece t; t.text = tr(name, l); t.font = cap; t.color = p.ink_2; t.rtlText = ar_; c.pieces.push_back(t);
             makeRun(c);
+            auto cg = groups_.back(); groups_.pop_back(); groups_.back().insert(groups_.back().end(), cg.begin(), cg.end());   // number, unit and caption: one tile
         };
         tile(hrTile_, C - 42, S::HeartRate); tile(cadTile_, C + 42, S::Cadence);
     }
     cmdTop_ = focused ? 130 : 160;
     Font f13 = font(Type::Small13, false); f13.tracked = true;
     cmd_ = label(root_, "", f13, p.ink_2, ar_);
-    if (keyChip && cmdTop_ + 14 > 150 - 6 && cmdTop_ < 150 + 22 + 6) lv_obj_add_flag(cmd_, LV_OBJ_FLAG_HIDDEN);   // under the Key 2 chip
+    if (keyChip && cmdTop_ + 16 > keyChipTop() - 6 && cmdTop_ < keyChipTop() + 22 + 6) lv_obj_add_flag(cmd_, LV_OBJ_FLAG_HIDDEN);   // under the Key 2 chip
     bool paused = m.wk == WkState::Paused;
     int btop = large_ ? 168 : (paused ? 180 : 182);
     if (paused) button(btop, tr(m.pending == Cmd::Resume ? S::Resuming : S::Resume, l), m.pending == Cmd::Resume ? 2 : 1, Action::Resume);
@@ -503,12 +507,31 @@ void Ui::updateCockpit(const Model& m) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------- overlays
+/// Hides text and icons that an overlay (banner, toast, Key 2 chip) would partly cover, so no half-covered numbers or
+/// letter fragments show around it. They reappear when the overlay goes (the screen is rebuilt then).
+void Ui::hideUnder(lv_obj_t* overlay, int margin) {
+    lv_obj_update_layout(root_);
+    lv_area_t o; lv_obj_get_coords(overlay, &o); o.x1 -= margin; o.y1 -= margin; o.x2 += margin; o.y2 += margin;
+    for (uint32_t i = 0; i < lv_obj_get_child_cnt(root_); i++) {
+        lv_obj_t* c = lv_obj_get_child(root_, int32_t(i));
+        if (c == overlay || !(lv_obj_check_type(c, &lv_label_class) || lv_obj_check_type(c, &lv_img_class))) continue;
+        lv_area_t a; lv_obj_get_coords(c, &a);
+        if (std::min(a.x2, o.x2) >= std::max(a.x1, o.x1) && std::min(a.y2, o.y2) >= std::max(a.y1, o.y1)) lv_obj_add_flag(c, LV_OBJ_FLAG_HIDDEN);
+    }
+    for (auto& g : groups_) {                      // never leave half a group behind (e.g. "rpm" without its number)
+        bool any = false; for (auto* o : g) any = any || lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN);
+        if (any) for (auto* o : g) lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 void Ui::buildOverlays(const Model& m) {
     const Palette& p = *pal_; Lang l = m.settings.lang;
-    if (m.key2Armed && m.screen == Screen::Cockpit) lv_obj_set_user_data(chip(150, tr(S::KeyLapPressAgain, l), p.status_info, 0, p.surface, 6), (void*)"overlay");
+    if (m.key2Armed && m.screen == Screen::Cockpit) { lv_obj_t* k = chip(keyChipTop(), tr(S::KeyLapPressAgain, l), p.status_info, 0, p.surface, 6); lv_obj_set_user_data(k, (void*)"overlay"); hideUnder(k, 6); }
     if (m.toast.kind == Toast::None) return;
     if (m.toast.hasSub) {                                             // banner: result + reason, tap to dismiss
-        int top = (large_ && m.screen == Screen::Cockpit) ? 112 : 142, w = 166, h = 48;
+        // on the cockpit the banner sits wholly above the Pause/Resume button, so both stay visible and tappable (9 Nov fix)
+        bool ck = m.screen == Screen::Cockpit;
+        int top = ck ? (large_ ? 112 : 130) : 142, w = 166, h = 48;
         lv_obj_t* b = lv_obj_create(root_); lv_obj_remove_style_all(b);
         lv_obj_set_style_bg_color(b, col(p.surface_2), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0); lv_obj_set_style_radius(b, RADIUS_M, 0);
         lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE); lv_obj_set_user_data(b, (void*)"overlay");
@@ -530,6 +553,7 @@ void Ui::buildOverlays(const Model& m) {
         lv_obj_set_pos(t, (w - tw) / 2, labelYFor(baselineOf(9, 16, 13), t13.f));
         lv_obj_set_pos(s, (w - sw) / 2, labelYFor(baselineOf(25, 14, 11), c11.f));
         hit(C - w / 2, top, w, h, Action::DismissToast, 0, "banner");
+        hideUnder(b, 2);
         return;
     }
     bool ok = m.toast.kind == Toast::Ok;                              // short result: pill with a check or a warning sign
@@ -542,9 +566,11 @@ void Ui::buildOverlays(const Model& m) {
     lv_obj_set_style_img_recolor(ic, col(ok ? p.status_ok : p.status_critical), 0); lv_obj_set_style_img_recolor_opa(ic, LV_OPA_COVER, 0);
     lv_obj_update_layout(box);
     int tw = lv_obj_get_width(t), w = 13 + 15 + 7 + tw + 13, h = 32;
-    lv_obj_set_size(box, w, h); lv_obj_set_pos(box, C - w / 2, 184);
+    int toastTop = m.screen == Screen::Cockpit ? (large_ ? 128 : 140) : 184;   // cockpit: above the button, never over it
+    lv_obj_set_size(box, w, h); lv_obj_set_pos(box, C - w / 2, toastTop);
     lv_obj_set_pos(ic, ar_ ? w - 13 - 15 : 13, (h - 15) / 2);
     lv_obj_set_pos(t, ar_ ? 13 : 13 + 15 + 7, labelYFor(baselineOf((h - 16) / 2, 16, 13), f.f));
+    hideUnder(box, 2);
 }
 
 } // namespace cyw::v3

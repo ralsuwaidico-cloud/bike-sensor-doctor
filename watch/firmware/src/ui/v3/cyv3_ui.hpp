@@ -46,6 +46,7 @@ private:
     lv_obj_t *cmd_ = nullptr, *marker_ = nullptr, *ivArc_ = nullptr;
     int cmdTop_ = 0, leadPx_ = 0;
     std::vector<std::vector<lv_point_t>> lines_;   // point storage for lv_line objects (must outlive them)
+    std::vector<std::vector<lv_obj_t*>> groups_;   // objects that are read together (a run, or a tile's number + caption): hidden together
 
     std::string structureKey(const Model& m) const;
     void build(const Model& m);
@@ -54,6 +55,7 @@ private:
     void buildMenu(const Model& m);
     void buildCockpit(const Model& m);
     void buildOverlays(const Model& m);
+    void hideUnder(lv_obj_t* overlay, int margin);
     void updateFace(const Model& m);
     void updateCockpit(const Model& m);
 
@@ -70,6 +72,8 @@ private:
     void setTile(Run& r, int v, const char* unit);
     void setCommand(const Model& m);
     void placeMarker(const Model& m);
+    /// Key 2 chip: the prototype's y 150; in Large Text 138 so it stays above the taller button (168).
+    int keyChipTop() const { return large_ ? 138 : 150; }
 };
 
 } // namespace cyw::v3
