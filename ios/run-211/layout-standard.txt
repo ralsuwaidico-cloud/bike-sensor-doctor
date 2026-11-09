@@ -1,0 +1,62 @@
+=== layout-standard: errors / failures ===
+=== layout-standard: full filter ===
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 13.173 (13.178) seconds
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 13.173 (13.179) seconds
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 13.173 (13.180) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-standard: last 150 lines ===
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/BikeComputer_iphonesimulator26.5-arm64-x86_64.xctestrun -destination id=23C8F95C-765D-46A9-AE82-0BEE2921C8D7 -resultBundlePath /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult "-only-testing:BikeComputerUITests/LayoutAudit"
+
+2026-11-09 12:43:31.350 xcodebuild[26294:70292] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult
+
+2026-11-09 12:43:31.373 xcodebuild[26294:70292] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:23C8F95C-765D-46A9-AE82-0BEE2921C8D7, OS:26.5, name:iPhone 17 }
+{ platform:iOS Simulator, arch:x86_64, id:23C8F95C-765D-46A9-AE82-0BEE2921C8D7, OS:26.5, name:iPhone 17 }
+2026-11-09 12:43:34.815 xcodebuild[26294:70292] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-09 12:43:35.522 xcodebuild[26294:70292] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-09 12:43:37.216 xcodebuild[26294:70292] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-09 12:43:38.279 xcodebuild[26294:70292] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-09 12:46:51.704233+0000 BikeComputerUITests-Runner[28173:77207] [Default] Running tests...
+objc[28173]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x108670310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1086a4398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-09 12:46:59.740.
+Test Suite 'BikeComputerUITests.xctest' started at 2026-11-09 12:46:59.741.
+Test Suite 'LayoutAudit' started at 2026-11-09 12:46:59.741.
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' started.
+    t =     0.00s Start Test at 2026-11-09 12:46:59.743
+    t =     1.74s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:512: -[BikeComputerUITests.LayoutAudit testHomeStates] : Test skipped - LAYOUT_DIR not set — the layout audit runs only in the CI layout stage
+    t =     1.80s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' skipped (9.843 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' started.
+    t =     0.00s Start Test at 2026-11-09 12:47:09.589
+    t =     0.08s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:165: -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Test skipped - LAYOUT_DIR not set — the layout audit runs only in the CI layout stage
+    t =     0.08s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' skipped (0.529 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' started.
+    t =     0.00s Start Test at 2026-11-09 12:47:10.118
+    t =     0.10s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:344: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Test skipped - LAYOUT_DIR not set — the layout audit runs only in the CI layout stage
+    t =     0.11s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' skipped (2.801 seconds).
+Test Suite 'LayoutAudit' passed at 2026-11-09 12:47:12.919.
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 13.173 (13.178) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-09 12:47:12.920.
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 13.173 (13.179) seconds
+Test Suite 'Selected tests' passed at 2026-11-09 12:47:12.920.
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 13.173 (13.180) seconds
+2026-11-09 12:47:13.610 xcodebuild[26294:70292] [MT] IDETestOperationsObserverDebug: 218.741 elapsed -- Testing started completed.
+2026-11-09 12:47:13.610 xcodebuild[26294:70292] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-09 12:47:13.610 xcodebuild[26294:70292] [MT] IDETestOperationsObserverDebug: 218.741 sec, +218.741 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started

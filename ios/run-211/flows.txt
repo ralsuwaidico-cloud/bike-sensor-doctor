@@ -1,0 +1,199 @@
+=== flows: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:51: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - cancel closes the preview
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:70: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:71: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (198.861 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:35: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate 'identifier BEGINSWITH "planDay-" AND (label CONTAINS ";" OR (label CONTAINS "," AND (NOT label CONTAINS "before") AND (NOT label CONTAINS "day")))'`, given input App element pid: 99560
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' failed (68.354 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:74: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource] : XCTAssertTrue failed - sport switch
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' failed (45.927 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:76: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - strength card tappable
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:77: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : XCTAssertTrue failed - strength summary
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:80: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : XCTAssertTrue failed - today's log is the first row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:80: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to tap "strengthLogExpand-0" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"strengthLogExpand-0" IN identifiers'`, given input App element pid: 6598
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (237.371 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: full filter ===
+Test Case '-[BikeComputerUITests.DeleteAllDataJourneyTests testDeleteAllDataReturnsToWelcomeAndStaysEmptyAfterRelaunch]' passed (137.889 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 137.889 (137.898) seconds
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' passed (415.965 seconds).
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' passed (1043.763 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1459.728 (1459.736) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:51: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - cancel closes the preview
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:70: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:71: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (198.861 seconds).
+Test Suite 'PlanEditPreviewApplyTests' failed at 2026-11-09 12:59:15.874.
+	 Executed 1 test, with 3 failures (0 unexpected) in 198.861 (198.864) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:35: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate 'identifier BEGINSWITH "planDay-" AND (label CONTAINS ";" OR (label CONTAINS "," AND (NOT label CONTAINS "before") AND (NOT label CONTAINS "day")))'`, given input App element pid: 99560
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' failed (68.354 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanProgressRecoveryScreensTests.swift:74: error: -[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource] : XCTAssertTrue failed - sport switch
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' failed (45.927 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testRecoveryPageIsHonestWithoutHealthReads]' passed (53.992 seconds).
+Test Suite 'PlanProgressRecoveryScreensTests' failed at 2026-11-09 13:02:04.148.
+	 Executed 3 tests, with 2 failures (0 unexpected) in 168.272 (168.274) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:76: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - strength card tappable
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:77: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : XCTAssertTrue failed - strength summary
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:80: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : XCTAssertTrue failed - today's log is the first row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:80: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to tap "strengthLogExpand-0" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"strengthLogExpand-0" IN identifiers'`, given input App element pid: 6598
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (237.371 seconds).
+Test Suite 'StrengthSessionJourneyTests' failed at 2026-11-09 13:06:01.521.
+	 Executed 1 test, with 4 failures (0 unexpected) in 237.371 (237.372) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 13:06:01.524.
+	 Executed 8 tests, with 9 failures (0 unexpected) in 2202.121 (2202.152) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 13:06:01.526.
+	 Executed 8 tests, with 9 failures (0 unexpected) in 2202.121 (2202.156) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: last 150 lines ===
+    t =    99.80s         Find the "finishWorkout" Button
+    t =    99.93s         Check for interrupting elements affecting "finishWorkout" Button
+    t =   100.46s         Synthesize event
+    t =   100.85s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   102.36s     Waiting 10.0s for "saveWorkout" Button to exist
+    t =   103.43s         Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =   103.43s             Checking existence of `"saveWorkout" Button`
+    t =   104.25s     Find the "saveWorkout" Button
+    t =   104.75s     Tap "saveWorkout" Button
+    t =   104.75s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   105.01s         Find the "saveWorkout" Button
+    t =   105.88s         Check for interrupting elements affecting "saveWorkout" Button
+    t =   107.70s         Synthesize event
+    t =   108.64s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   111.37s     Waiting 10.0s for "checkInForm" Any to exist
+    t =   112.41s         Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =   112.41s             Checking existence of `"checkInForm" Any`
+    t =   113.92s     Waiting 3.0s for "checkInSubmit" Button to exist
+    t =   114.97s         Checking `Expect predicate `existsNoRetry == 1` for object "checkInSubmit" Button`
+    t =   114.97s             Checking existence of `"checkInSubmit" Button`
+    t =   115.66s     Find the "checkInSubmit" Button
+    t =   116.15s     Tap "checkInSubmit" Button
+    t =   116.15s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   116.31s         Find the "checkInSubmit" Button
+    t =   116.90s         Check for interrupting elements affecting "checkInSubmit" Button
+    t =   117.69s         Synthesize event
+    t =   118.10s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   120.37s     Waiting 20.0s for "homeGreeting" Any to exist
+    t =   121.43s         Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   121.43s             Checking existence of `"homeGreeting" Any`
+    t =   122.53s     Find the "homeGreeting" Any
+    t =   123.83s     Checking existence of `"hubClose" Button`
+    t =   124.27s     Find the "hubClose" Button
+    t =   125.06s     Waiting 10.0s for "homeStrength" Button to exist
+    t =   126.08s         Checking `Expect predicate `existsNoRetry == 1` for object "homeStrength" Button`
+    t =   126.08s             Checking existence of `"homeStrength" Button`
+    t =   127.05s     Checking existence of `"homeStrength" Button`
+    t =   127.89s     Find the "homeStrength" Button
+    t =   129.24s     Checking existence of `"homeStrength" Button`
+    t =   129.95s     Find the "homeStrength" Button
+    t =   131.59s     Checking existence of `"homeStrength" Button`
+    t =   132.31s     Find the "homeStrength" Button
+    t =   133.77s     Checking existence of `"homeStrength" Button`
+    t =   134.33s     Find the "homeStrength" Button
+    t =   136.01s     Checking existence of `"homeStrength" Button`
+    t =   137.19s     Find the "homeStrength" Button
+    t =   139.01s Added attachment named 'FAIL-StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory-cardtap'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:76: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : failed - strength card tappable
+    t =   139.04s     Waiting 10.0s for "homeStrengthSummary" Any to exist
+    t =   140.08s         Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   140.08s             Checking existence of `"homeStrengthSummary" Any`
+    t =   144.72s             Capturing element debug description
+    t =   145.11s         Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   145.11s             Checking existence of `"homeStrengthSummary" Any`
+    t =   149.32s             Capturing element debug description
+    t =   149.33s         Checking existence of `"homeStrengthSummary" Any`
+    t =   156.07s     Collecting debug information to assist test failure triage
+    t =   156.07s         Requesting snapshot of accessibility hierarchy for app with pid 6598
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:77: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : XCTAssertTrue failed - strength summary
+    t =   158.05s     Find the "strengthLogExpand-0" Button
+    t =   161.32s         Find the "strengthLogExpand-0" Button (retry 1)
+    t =   165.27s         Find the "strengthLogExpand-0" Button (retry 2)
+    t =   168.05s     Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   168.05s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   168.36s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   169.36s         Check for interrupting elements affecting "Cyclift" Application
+    t =   169.96s         Synthesize event
+    t =   170.82s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   172.33s     Find the "strengthLogExpand-0" Button
+    t =   176.61s         Find the "strengthLogExpand-0" Button (retry 1)
+    t =   180.18s         Find the "strengthLogExpand-0" Button (retry 2)
+    t =   182.35s     Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   182.35s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   182.70s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   183.61s         Check for interrupting elements affecting "Cyclift" Application
+    t =   184.24s         Synthesize event
+    t =   185.20s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   186.54s     Find the "strengthLogExpand-0" Button
+    t =   190.72s         Find the "strengthLogExpand-0" Button (retry 1)
+    t =   194.98s         Find the "strengthLogExpand-0" Button (retry 2)
+    t =   200.15s     Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   200.16s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   200.30s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   201.44s         Check for interrupting elements affecting "Cyclift" Application
+    t =   201.94s         Synthesize event
+    t =   202.75s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   204.29s     Find the "strengthLogExpand-0" Button
+    t =   207.76s         Find the "strengthLogExpand-0" Button (retry 1)
+    t =   210.73s         Find the "strengthLogExpand-0" Button (retry 2)
+    t =   213.20s     Swipe up Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   213.20s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   213.35s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   214.62s         Check for interrupting elements affecting "Cyclift" Application
+    t =   215.43s         Synthesize event
+    t =   216.11s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   217.45s     Waiting 5.0s for "strengthLogExpand-0" Button to exist
+    t =   218.50s         Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExpand-0" Button`
+    t =   218.50s             Checking existence of `"strengthLogExpand-0" Button`
+    t =   220.93s             Capturing element debug description
+    t =   221.55s         Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExpand-0" Button`
+    t =   221.55s             Checking existence of `"strengthLogExpand-0" Button`
+    t =   222.71s             Capturing element debug description
+    t =   222.71s         Checking existence of `"strengthLogExpand-0" Button`
+    t =   225.52s     Collecting debug information to assist test failure triage
+    t =   225.52s         Requesting snapshot of accessibility hierarchy for app with pid 6598
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:80: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : XCTAssertTrue failed - today's log is the first row
+    t =   227.53s     Tap "strengthLogExpand-0" Button
+    t =   227.53s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   227.53s         Find the "strengthLogExpand-0" Button
+    t =   230.48s             Find the "strengthLogExpand-0" Button (retry 1)
+    t =   233.34s             Find the "strengthLogExpand-0" Button (retry 2)
+    t =   235.43s     Requesting snapshot of accessibility hierarchy for app with pid 6598
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/StrengthSessionJourneyTests.swift:80: error: -[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory] : Failed to tap "strengthLogExpand-0" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"strengthLogExpand-0" IN identifiers'`, given input App element pid: 6598
+Possibly caused by runtime issues:
+Automation type mismatch: computed Button from legacy attributes vs PopUpButton from modern attribute. Input attributes and values: {
+    "XC_kAXXCAttributeAutomationType" = 14;
+    "XC_kAXXCAttributeElementBaseType" = UIResponder;
+    "XC_kAXXCAttributeElementType" = "SwiftUI.AccessibilityNode";
+    "XC_kAXXCAttributeTraits" = 1108101562369;
+}
+See test report attachments for more detail.
+    t =   236.94s Tear Down
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' failed (237.371 seconds).
+Test Suite 'StrengthSessionJourneyTests' failed at 2026-11-09 13:06:01.521.
+	 Executed 1 test, with 4 failures (0 unexpected) in 237.371 (237.372) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 13:06:01.524.
+	 Executed 8 tests, with 9 failures (0 unexpected) in 2202.121 (2202.152) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 13:06:01.526.
+	 Executed 8 tests, with 9 failures (0 unexpected) in 2202.121 (2202.156) seconds
+2026-11-09 13:06:43.474 xcodebuild[23390:67033] [MT] IDETestOperationsObserverDebug: 2311.192 elapsed -- Testing started completed.
+2026-11-09 13:06:43.475 xcodebuild[23390:67033] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-09 13:06:43.475 xcodebuild[23390:67033] [MT] IDETestOperationsObserverDebug: 2311.192 sec, +2311.192 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/flows.xcresult
+
+Failing tests:
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanProgressRecoveryScreensTests.testPlanBandsNavigate()
+	PlanProgressRecoveryScreensTests.testProgressPickersSwitchAndNumbersNameTheirSource()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+	StrengthSessionJourneyTests.testStartLogFinishSaveCheckInThenHistory()
+
+** TEST EXECUTE FAILED **
+
+Testing started
