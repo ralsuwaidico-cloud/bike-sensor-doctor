@@ -253,11 +253,16 @@ retry_launch_failures() {
   return $r
 }
 
+# Run 207: the smoke job passed its 65-minute step limit once the hub reliability loops (60 open/close cycles at a human
+# pace) and the four new end-to-end journeys joined it, and was cancelled with no result. Those classes run in their own
+# matrix job ("flows", stage smoke2); the smoke job keeps the launch, layout-state and screen smokes.
+FLOW_CLASSES="HubTapReliabilityTests StrengthSessionJourneyTests PlanEditPreviewApplyTests PlanProgressRecoveryScreensTests DeleteAllDataJourneyTests"
 run_smoke() {
   TS=$SECONDS
   release_products || { note "RESULT launch smoke (Release): FAILED (build)"; STATUS=1; return; }
   warm_release_app
-  twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests -skip-testing:BikeComputerUITests/JourneyTests
+  local SKIP=(-skip-testing:BikeComputerUITests/JourneyTests); for c in $FLOW_CLASSES; do SKIP+=(-skip-testing:BikeComputerUITests/$c); done
+  twb "$RELEASE_XR" "$SIM" "$OUT/uitest.log" -resultBundlePath "$OUT/uitests.xcresult" -only-testing:BikeComputerUITests "${SKIP[@]}"
   U=$?
   digest "$OUT/uitest.log" launch-smoke
   if [ $U -ne 0 ]; then retry_launch_failures "$RELEASE_XR" "$SIM" launch-smoke "$OUT/uitest.log"; local R=$?; [ $R -eq 0 ] && U=0; fi
@@ -271,6 +276,20 @@ run_smoke() {
     xcrun simctl spawn "$SIM" log show --last 15m --predicate 'process == "BikeComputer" OR (eventMessage CONTAINS "BikeComputer" AND messageType == error)' 2>/dev/null \
       | grep -v "^Filtering" | tail -400 | scrub > "$LOGS/sim-app-log.txt"
     export_fail_shots "$OUT/uitests.xcresult" smoke
+  fi
+}
+
+run_smoke2() {   # "flows": hub reliability + the end-to-end UI journeys (strength live session, plan edit, screens, delete all)
+  TS=$SECONDS
+  release_products || { note "RESULT flows (Release): FAILED (build)"; STATUS=1; return; }
+  warm_release_app
+  local ONLY=(); for c in $FLOW_CLASSES; do ONLY+=(-only-testing:BikeComputerUITests/$c); done
+  twb "$RELEASE_XR" "$SIM" "$OUT/flows.log" -resultBundlePath "$OUT/flows.xcresult" "${ONLY[@]}"
+  U=$?
+  digest "$OUT/flows.log" flows
+  if [ $U -eq 0 ]; then note "RESULT flows (hub reliability + UI journeys): ok · $(since $TS)"; else
+    note "RESULT flows: FAILED (exit $U) · $(since $TS) — $(grep -E 'error:' "$OUT/flows.log" | grep -v 'healthkit\|WCError' | head -8 | sed 's/.*UITests\///' | cut -c1-400 | tr '\n' ' ')"; STATUS=1
+    export_fail_shots "$OUT/flows.xcresult" flows
   fi
 }
 
@@ -416,6 +435,7 @@ quick_green_for_head() {   # 0 when a quick run passed for HEAD's source tree
 case "$STAGE" in
   unit)  run_unit ;;
   smoke) run_smoke ;;
+  smoke2) run_smoke2 ;;
   journeys) run_journeys ;;
   layout) run_layout ;;
   quick)
@@ -439,7 +459,7 @@ case "$STAGE" in
     note "RESULT archive: skipped (quick check)"; note "RESULT upload: skipped (quick check never uploads)"
     note "Total: $(since $T0)"; exit $STATUS ;;
   all)
-    run_unit; run_smoke; run_journeys; run_layout
+    run_unit; run_smoke; run_smoke2; run_journeys; run_layout
     bash ci/watch-shots.sh "$LAYOUT" || true
     note "  watch screenshots: $(ls "$LAYOUT"/watch-*.png 2>/dev/null | wc -l | tr -d ' ') — $(tr '\n' ' ' < "$LOGS/watch-shots.txt" 2>/dev/null | head -c 400)"
     for f in "$LAYOUT"/watch-*.png; do [ -f "$f" ] && sips -Z 1100 "$f" >/dev/null 2>&1; done ;;

@@ -203,7 +203,15 @@ final class JourneyTests: XCTestCase {
             let order = [2, 3, 4, 5, 6, 7, 1]
             if let i = (todayIndex..<7).first(where: { planWeek[$0] == "strength" }) {
                 let dayCell = app.buttons["planDay-\(order[i])"].firstMatch
-                XCTAssertTrue(tapVisible(app, dayCell))
+                // Checkpoint C2 (run 207): the day button opens the Day page; the session itself is the strength chip on
+                // that row (`planChip-<id>`, label "Strength · …"). Pick the chip whose vertical position is on this row.
+                XCTAssertTrue(dayCell.waitForExistence(timeout: 10), "\(p.tag): day button for the strength day")
+                _ = dayCell.waitUntilSettled(timeout: 5)
+                let rowMidY = dayCell.frame.midY
+                let chips = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'planChip-' AND label BEGINSWITH 'Strength'")).allElementsBoundByIndex
+                let chip = chips.min { abs($0.frame.midY - rowMidY) < abs($1.frame.midY - rowMidY) }
+                XCTAssertNotNil(chip, "\(p.tag): a strength chip on the strength day (chips: \(chips.map(\.label)))")
+                if let chip { XCTAssertTrue(tapVisible(app, chip), "\(p.tag): the strength chip is tappable") }
                 // run 162: a session on a later day shows Move to today / Skip instead of Start — wait for the exercise list itself
                 XCTAssertTrue(app.buttons["adjustSets"].firstMatch.waitForExistence(timeout: 10) || app.buttons["startWorkout"].firstMatch.exists, "\(p.tag): the strength session opens from Plan")
                 let badge = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH 'superset '")).firstMatch

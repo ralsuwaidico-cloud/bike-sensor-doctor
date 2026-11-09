@@ -21,7 +21,7 @@ final class ProgressAnalyticsTests: XCTestCase {
     }
     func testZonesComeFromSamplesAndNeedAnFTP() {
         let s = (0..<600).map { RideRecord.Sample(t: $0, w: $0 < 300 ? 150 : 250, cad: nil, hr: 140, speedCms: nil, lat: nil, lon: nil, alt: nil, gap: nil) }
-        let r = ride(1, min: 10, km: 5, power: 200, samples: s)
+        let r = ride(0, min: 10, km: 5, power: 200, samples: s)   // today: a "this week" test must not depend on the weekday (run 207 ran on a Monday — yesterday was last week)
         let withFTP = ProgressAnalytics.cycling(rides: [r], period: .week, ftpW: 250, hrZones: nil)
         XCTAssertEqual(withFTP.zoneSeconds.count, 7); XCTAssertEqual(withFTP.zoneSeconds.reduce(0, +), 600); XCTAssertEqual(withFTP.zoneSeconds[1], 300, "150 W at FTP 250 = zone 2 for 300 s")
         let noFTP = ProgressAnalytics.cycling(rides: [r], period: .week, ftpW: nil, hrZones: [(0, 120), (121, 140), (141, 160), (161, nil)])

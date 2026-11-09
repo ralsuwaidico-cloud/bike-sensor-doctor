@@ -150,6 +150,7 @@ jobs:
         include:
           - { job: unit,            stage: unit,   devices: "",         minutes: 60 }
           - { job: smoke,           stage: smoke,  devices: "",         minutes: 75 }
+          - { job: flows,           stage: smoke2, devices: "",         minutes: 75 }
           - { job: journeys,        stage: journeys, devices: "",       minutes: 75 }
           - { job: layout-small,    stage: layout, devices: "small",    minutes: 75 }
           - { job: layout-standard, stage: layout, devices: "standard", minutes: 60 }
@@ -300,7 +301,7 @@ jobs:
           set -u
           S="$PWD/summary.txt"; : > "$S"
           echo "BikeComputer iOS CI — run $N — scope $SCOPE — jobs: quick=$R_QUICK test=$R_TEST release=$R_RELEASE testflight=$R_TF" >> "$S"
-          for j in quick unit smoke journeys layout-small layout-standard layout-promax layout-owner watch release; do
+          for j in quick unit smoke flows journeys layout-small layout-standard layout-promax layout-owner watch release; do
             f="logs/logs-$j/logs/summary.txt"; [ -f "$f" ] || f="logs/logs-$j/summary.txt"
             [ -f "$f" ] || continue
             echo "" >> "$S"; echo "## $j" >> "$S"; cat "$f" >> "$S"
