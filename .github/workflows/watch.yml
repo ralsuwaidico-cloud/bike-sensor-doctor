@@ -182,3 +182,18 @@ jobs:
             boot-sim/*.log
             boot-sim/*.json
             boot-sim.log
+  publish-stage1-candidates:
+    # Copies the CI-built Stage 1 images (with their SHA-256 list) to the separate branch firmware/stage1-candidates so they
+    # can be fetched with plain git. Publishing only - nothing is flashed.
+    needs: firmware-compile
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: stage1-firmware-candidates-not-flashed, path: out }
+      - name: Push to firmware/stage1-candidates
+        run: |
+          cd out && sha256sum -c <(grep -v '^commit' SHA256SUMS)
+          git init -q -b firmware/stage1-candidates && git add . && \
+            git -c user.name="cyclift-ci" -c user.email="ci@invalid" commit -q -m "Stage 1 candidates from ${GITHUB_SHA} (run ${GITHUB_RUN_ID}) - not flashed"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" firmware/stage1-candidates
