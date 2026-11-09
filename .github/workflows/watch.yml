@@ -22,6 +22,8 @@ jobs:
         run: |
           pip install -q esptool==4.8.1 "bitstring<4.3"
           python3 watch/tools/stage2a/test_stage2a.py
+      - name: Image-header checker self-test (no hardware)
+        run: python3 watch/firmware/tools/v3/check_image_header.py --self-test
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -57,6 +59,13 @@ jobs:
           echo "## v3 Stage 1 proof of concept (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
           grep -E "RAM:|Flash:" build-*-v3poc.log >> "$GITHUB_STEP_SUMMARY" || true
           python3 tools/v3/elf_sizes.py .pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf | tee -a "$GITHUB_STEP_SUMMARY" || true
+      - name: Image headers match the identified watch (ESP32-PICO-V3-02, 8 MB, DIO 40 MHz) — offline check, nothing flashed
+        working-directory: watch/firmware
+        run: |
+          set -o pipefail
+          python3 tools/v3/check_image_header.py .pio/build/T-Watch-2021-V1_1 .pio/build/T-Watch-2021-V1_1-diag \
+            .pio/build/T-Watch-2021-V1_1-v3poc .pio/build/T-Watch-2021-V1_0-v3poc .pio/build/T-Watch-2021-V2-v3poc | tee image-header-check.log
+          { echo '## Image header check'; echo '```'; cat image-header-check.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -64,3 +73,4 @@ jobs:
           path: |
             watch/firmware/.pio/build/*/firmware.bin
             watch/firmware/build-*.log
+            watch/firmware/image-header-check.log
