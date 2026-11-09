@@ -57,7 +57,7 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         app.buttons["editSave"].firstMatch.tap()
         XCTAssertTrue(preview.waitForExistence(timeout: 15))
         XCTAssertTrue(apply.waitForExistence(timeout: 5)); apply.tap()
-        XCTAssertTrue(preview.waitUntilGone(timeout: 10), "Apply closes the preview")
+        expect(preview.waitUntilDismissed(timeout: 10), "Apply closes the preview", tag: "applyclose")
 
         // the session screen shows the new duration; the Plan's Changes page lists the applied change
         XCTAssertTrue(app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 10) || app.waitForHome(name: "Rashed", timeout: 10))
@@ -66,8 +66,8 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         app.buttons["Plan"].firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any)["planDayStrip"].firstMatch.waitForExistence(timeout: 15), "Plan")
         let changes = app.buttons["planChanges"].firstMatch
-        for _ in 0..<6 where !changes.isHittable { app.swipeUp(velocity: .slow) }
-        XCTAssertTrue(changes.waitForExistence(timeout: 5), "Plan › Changes row"); changes.tap()
+        for _ in 0..<6 where !(changes.exists && changes.isHittable) { app.swipeUp(velocity: .slow); sleep(1) }
+        expect(changes.tapWhenHittable(timeout: 8), "Plan › Changes row", tag: "changesrow")
         XCTAssertTrue(app.descendants(matching: .any)["planVersionRow"].firstMatch.waitForExistence(timeout: 10), "the applied edit is listed in the change history")
         XCTAssertEqual(app.state, .runningForeground)
     }

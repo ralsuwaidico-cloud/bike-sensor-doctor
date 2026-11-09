@@ -25,10 +25,10 @@ final class PlanProgressRecoveryScreensTests: XCTestCase {
         // run 209: an exists-then-label pair raced a re-render of the strip (label threw "no matches") — one predicate query
         _ = app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch.waitForExistence(timeout: 10)
         let withSessions = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'planDay-' AND (label CONTAINS ';' OR (label CONTAINS ',' AND NOT label CONTAINS 'before' AND NOT label CONTAINS 'day'))")).firstMatch
-        let row = withSessions.exists ? withSessions : app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch
+        // run 210: the strip re-renders when Plan reappears; wait for the queried row to exist, then tap it once it is hittable
+        let row = withSessions.waitForExistence(timeout: 10) ? withSessions : app.buttons["planDay-\(Calendar.current.component(.weekday, from: Date()))"].firstMatch
         expect(row.waitForExistence(timeout: 10), "a day row with sessions", tag: "dayrow")
-        _ = row.waitUntilSettled(timeout: 5)
-        row.tap()   // run 206+: the day name column is a real Button (`planDay-<n>`), tapped like any button
+        expect(row.tapWhenHittable(timeout: 8), "day row tappable", tag: "dayrowtap")   // the day name column is a real Button (`planDay-<n>`)
         if !el(app, "homeDayDetail").waitForExistence(timeout: 10) {
             print("RUN206-DIAG day tap did not open the Day page; row: \(row.debugDescription)\nbars: \(app.navigationBars.allElementsBoundByIndex.map(\.identifier)) sheets: \(app.sheets.count)")
         }

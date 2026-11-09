@@ -111,3 +111,27 @@ extension XCTestCase {
         return ok
     }
 }
+
+extension XCUIElement {
+    /// Run 210 (screenshots): after a sheet or the hub was dismissed, its elements stayed in the test driver's tree for
+    /// several seconds although the screen showed them gone. "Dismissed" is judged by what a person sees: the element is
+    /// either no longer in the tree or can no longer be hit.
+    func waitUntilDismissed(timeout: TimeInterval = 8) -> Bool {
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            if !exists || !isHittable { return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        return !exists || !isHittable
+    }
+    /// Wait until the element exists and can be hit (an overlay or a dismissal animation may still cover it), then tap once.
+    @discardableResult
+    func tapWhenHittable(timeout: TimeInterval = 8) -> Bool {
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            if exists && isHittable { tap(); return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        return false
+    }
+}

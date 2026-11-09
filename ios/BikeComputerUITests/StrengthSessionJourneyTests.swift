@@ -67,9 +67,13 @@ final class StrengthSessionJourneyTests: XCTestCase {
 
         // back on Home: the planned session is done and the summary lists today's log with its sets
         expect(app.waitForHome(name: "Rashed", timeout: 20), "back on Home after the session", tag: "home")
-        if app.buttons["hubClose"].firstMatch.exists { app.buttons["hubClose"].firstMatch.tap() }
+        // run 210: the whole flow start → 4 sets → finish → save → check-in → Home passed; the Home card was tapped while
+        // the hub/check-in dismissal still covered it ("not hittable") — close the hub by its visible state, then tap once hittable
+        let hubClose = app.buttons["hubClose"].firstMatch
+        if hubClose.exists && hubClose.isHittable { hubClose.tap(); _ = hubClose.waitUntilDismissed(timeout: 6) }
         let strengthCard = app.buttons["homeStrength"].firstMatch
-        XCTAssertTrue(strengthCard.waitForExistence(timeout: 10), "strength card"); strengthCard.tap()
+        expect(strengthCard.waitForExistence(timeout: 10), "strength card", tag: "card")
+        expect(strengthCard.tapWhenHittable(timeout: 10), "strength card tappable", tag: "cardtap")
         XCTAssertTrue(app.descendants(matching: .any)["homeStrengthSummary"].firstMatch.waitForExistence(timeout: 10), "strength summary")
         let expand = app.buttons["strengthLogExpand-0"].firstMatch
         for _ in 0..<4 where !expand.isHittable { app.swipeUp(velocity: .slow) }

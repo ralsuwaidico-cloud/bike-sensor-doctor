@@ -106,7 +106,7 @@ final class HubTapReliabilityTests: XCTestCase {
                     let sheetClose = app.buttons["homeSheetClose"].firstMatch
                     expect(sheetClose.waitForExistence(timeout: 6), "cycle \(i): Why sheet opened", tag: "why-\(i)")
                     Thread.sleep(forTimeInterval: 0.5); sheetClose.tap()
-                    expect(sheetClose.waitUntilGone(timeout: 6), "cycle \(i): Why sheet closed", tag: "whyclose-\(i)")
+                    expect(sheetClose.waitUntilDismissed(timeout: 6), "cycle \(i): Why sheet closed", tag: "whyclose-\(i)")
                     Thread.sleep(forTimeInterval: 0.5)
                 }
             } else if (9...12).contains(i) {
@@ -118,7 +118,7 @@ final class HubTapReliabilityTests: XCTestCase {
                         let done = app.navigationBars.buttons["Done"].firstMatch
                         expect(done.waitForExistence(timeout: 8), "cycle \(i): details opened", tag: "details-\(i)")
                         Thread.sleep(forTimeInterval: 0.5); done.tap()
-                        expect(done.waitUntilGone(timeout: 6), "cycle \(i): details closed", tag: "detailsclose-\(i)")
+                        expect(done.waitUntilDismissed(timeout: 6), "cycle \(i): details closed", tag: "detailsclose-\(i)")
                         Thread.sleep(forTimeInterval: 0.5)
                     } else { app.swipeDown(velocity: .fast) }   // menu did not offer it: dismiss the menu
                 }
