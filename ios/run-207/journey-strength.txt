@@ -1,0 +1,171 @@
+=== journey-strength: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:208: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: the strength session opens from Plan
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:210: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: the approved session shows a superset group
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:214: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' failed (269.741 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-strength: full filter ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:208: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: the strength session opens from Plan
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:210: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: the approved session shows a superset group
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:214: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' failed (269.741 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-09 04:11:41.804.
+	 Executed 3 tests, with 2 tests skipped and 3 failures (0 unexpected) in 269.992 (269.996) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 04:11:41.805.
+	 Executed 3 tests, with 2 tests skipped and 3 failures (0 unexpected) in 269.992 (269.997) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 04:11:41.805.
+	 Executed 3 tests, with 2 tests skipped and 3 failures (0 unexpected) in 269.992 (269.998) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== journey-strength: last 150 lines ===
+    t =   223.40s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   223.40s         Checking existence of `Any (First Match)`
+    t =   223.76s         Capturing element debug description
+    t =   224.37s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   224.37s         Checking existence of `Any (First Match)`
+    t =   224.71s         Capturing element debug description
+    t =   225.42s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   225.42s         Checking existence of `Any (First Match)`
+    t =   225.76s         Capturing element debug description
+    t =   226.38s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   226.38s         Checking existence of `Any (First Match)`
+    t =   227.10s         Capturing element debug description
+    t =   227.36s     Checking `Expect predicate `existsNoRetry == 1` for object Any (First Match)`
+    t =   227.36s         Checking existence of `Any (First Match)`
+    t =   227.64s         Capturing element debug description
+    t =   227.64s     Checking existence of `Any (First Match)`
+    t =   228.57s Collecting debug information to assist test failure triage
+    t =   228.57s     Requesting snapshot of accessibility hierarchy for app with pid 67170
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:210: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed - strength: the approved session shows a superset group
+    t =   228.97s Checking existence of `"Done" Button`
+    t =   229.37s Swipe down Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   229.37s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   229.37s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   229.50s     Check for interrupting elements affecting "Cyclift" Application
+    t =   229.65s     Synthesize event
+    t =   230.08s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   230.57s Waiting 10.0s for "planDayStrip" Any to exist
+    t =   231.58s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   231.58s         Checking existence of `"planDayStrip" Any`
+    t =   232.41s         Capturing element debug description
+    t =   232.62s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   232.62s         Checking existence of `"planDayStrip" Any`
+    t =   233.52s         Capturing element debug description
+    t =   233.58s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   233.58s         Checking existence of `"planDayStrip" Any`
+    t =   234.45s         Capturing element debug description
+    t =   234.62s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   234.62s         Checking existence of `"planDayStrip" Any`
+    t =   235.47s         Capturing element debug description
+    t =   235.58s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   235.58s         Checking existence of `"planDayStrip" Any`
+    t =   236.29s         Capturing element debug description
+    t =   236.59s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   236.59s         Checking existence of `"planDayStrip" Any`
+    t =   237.36s         Capturing element debug description
+    t =   237.59s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   237.59s         Checking existence of `"planDayStrip" Any`
+    t =   238.31s         Capturing element debug description
+    t =   238.62s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   238.62s         Checking existence of `"planDayStrip" Any`
+    t =   239.44s         Capturing element debug description
+    t =   239.62s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   239.62s         Checking existence of `"planDayStrip" Any`
+    t =   240.43s         Capturing element debug description
+    t =   240.58s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   240.58s         Checking existence of `"planDayStrip" Any`
+    t =   240.89s         Capturing element debug description
+    t =   240.89s     Checking existence of `"planDayStrip" Any`
+    t =   242.26s Collecting debug information to assist test failure triage
+    t =   242.26s     Requesting snapshot of accessibility hierarchy for app with pid 67170
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/JourneyTests.swift:214: error: -[BikeComputerUITests.JourneyTests testStrengthJourney] : XCTAssertTrue failed
+    t =   242.55s Terminate com.ralsuwaidico.bikecomputer:67170
+    t =   243.55s Open com.ralsuwaidico.bikecomputer
+    t =   243.56s     Launch com.ralsuwaidico.bikecomputer
+2026-11-09 04:11:15.706 xcodebuild[66318:175527] [MT] IDELaunchParametersSnapshot: The operation couldn’t be completed. (DebuggerLLDB.DebuggerVersionStore.StoreError error 0.)
+2026-11-09 04:11:15.706 xcodebuild[66318:175527] [MT] IDELaunchParametersSnapshot: no debugger version
+    t =   245.19s         Setting up automation session
+    t =   246.94s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   250.92s Waiting 20.0s for "homeWeek" Any to exist
+    t =   251.97s     Checking `Expect predicate `existsNoRetry == 1` for object "homeWeek" Any`
+    t =   251.97s         Checking existence of `"homeWeek" Any`
+    t =   252.46s Checking existence of `"onboardingContinue" Button`
+    t =   252.72s Find the "homeWeekDay-0" Any
+    t =   253.50s Find the "homeWeekDay-1" Any
+    t =   254.17s Find the "homeWeekDay-2" Any
+    t =   254.80s Find the "homeWeekDay-3" Any
+    t =   255.43s Find the "homeWeekDay-4" Any
+    t =   256.32s Find the "homeWeekDay-5" Any
+    t =   257.19s Find the "homeWeekDay-6" Any
+    t =   258.09s Checking existence of `"Profile" Button`
+    t =   258.33s Find the "Profile" Button
+    t =   258.39s Find the "Profile" Button
+    t =   258.62s Checking existence of `"Profile" Button`
+    t =   258.74s Find the "Profile" Button
+    t =   258.79s Find the "Profile" Button
+    t =   258.83s Find the "Profile" Button
+    t =   258.86s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (350.7, 800.0)
+    t =   258.86s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   258.86s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   258.99s     Check for interrupting elements affecting "Cyclift" Application
+    t =   259.13s     Synthesize event
+    t =   259.13s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   259.24s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   259.37s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   259.77s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   259.78s Waiting 10.0s for "profileHeader" Button to exist
+    t =   260.84s     Checking `Expect predicate `existsNoRetry == 1` for object "profileHeader" Button`
+    t =   260.84s         Checking existence of `"profileHeader" Button`
+    t =   261.12s Find the "profileHeader" Button
+    t =   261.42s Find the "profileWeek" Button
+    t =   261.64s Checking existence of `"Plan" Button`
+    t =   261.78s Find the "Plan" Button
+    t =   261.86s Find the "Plan" Button
+    t =   262.10s Checking existence of `"Plan" Button`
+    t =   262.11s Find the "Plan" Button
+    t =   262.16s Find the "Plan" Button
+    t =   262.18s Find the "Plan" Button
+    t =   262.23s Tap Target Application 'com.ralsuwaidico.bikecomputer'[0.00, 0.00] -> (126.2, 800.0)
+    t =   262.23s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   262.23s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   262.33s     Check for interrupting elements affecting "Cyclift" Application
+    t =   262.43s     Synthesize event
+    t =   262.44s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   262.53s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   262.62s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   263.03s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   263.74s Waiting 10.0s for "planDayStrip" Any to exist
+    t =   264.75s     Checking `Expect predicate `existsNoRetry == 1` for object "planDayStrip" Any`
+    t =   264.75s         Checking existence of `"planDayStrip" Any`
+    t =   265.11s Find the "planDay-2" Button
+    t =   265.47s Find the "planDay-3" Button
+    t =   265.85s Find the "planDay-4" Button
+    t =   266.33s Find the "planDay-5" Button
+    t =   266.71s Find the "planDay-6" Button
+    t =   267.19s Find the "planDay-7" Button
+    t =   267.58s Find the "planDay-1" Button
+    t =   268.17s Terminate com.ralsuwaidico.bikecomputer:81118
+    t =   269.31s Tear Down
+Test Case '-[BikeComputerUITests.JourneyTests testStrengthJourney]' failed (269.741 seconds).
+Test Suite 'JourneyTests' failed at 2026-11-09 04:11:41.804.
+	 Executed 3 tests, with 2 tests skipped and 3 failures (0 unexpected) in 269.992 (269.996) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-09 04:11:41.805.
+	 Executed 3 tests, with 2 tests skipped and 3 failures (0 unexpected) in 269.992 (269.997) seconds
+Test Suite 'Selected tests' failed at 2026-11-09 04:11:41.805.
+	 Executed 3 tests, with 2 tests skipped and 3 failures (0 unexpected) in 269.992 (269.998) seconds
+2026-11-09 04:11:59.638 xcodebuild[66318:175527] [MT] IDETestOperationsObserverDebug: 296.181 elapsed -- Testing started completed.
+2026-11-09 04:11:59.638 xcodebuild[66318:175527] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-09 04:11:59.638 xcodebuild[66318:175527] [MT] IDETestOperationsObserverDebug: 296.181 sec, +296.181 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/Library/Developer/Xcode/DerivedData/BikeComputer-dzciyouvnzxcfcalpkvxnvxhjroh/Logs/Test/Test-BikeComputer-2026.11.09_04-06-59-+0000.xcresult
+
+Failing tests:
+	JourneyTests.testStrengthJourney()
+	JourneyTests.testStrengthJourney()
+	JourneyTests.testStrengthJourney()
+
+** TEST EXECUTE FAILED **
+
+Testing started
