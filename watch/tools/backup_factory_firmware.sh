@@ -10,8 +10,13 @@ mkdir -p "$OUT"
 echo "1/3 chip identification (read only)"
 esptool.py --port "$PORT" chip_id | tee "$OUT/chip_id.txt"
 esptool.py --port "$PORT" flash_id | tee "$OUT/flash_id.txt"
-echo "2/3 full 8 MB flash dump → $OUT/factory-8mb.bin (takes ~3 min at 921600)"
-esptool.py --port "$PORT" --baud 921600 read_flash 0x0 0x800000 "$OUT/factory-8mb.bin"
+# Flash size is NOT assumed: LILYGO's product page says 4 MB, the repo docs say 8 MB. Read what the chip reports.
+SIZE_MB=$(grep -Eo "Detected flash size: [0-9]+MB" "$OUT/flash_id.txt" | grep -Eo "[0-9]+" || true)
+if [ -z "$SIZE_MB" ]; then echo "Could not read the flash size; stopping (nothing was written)."; exit 1; fi
+BYTES=$(printf '0x%X' $((SIZE_MB * 1024 * 1024)))
+echo "2/3 full ${SIZE_MB} MB flash dump → $OUT/factory-${SIZE_MB}mb.bin (read only; a few minutes at 921600)"
+esptool.py --port "$PORT" --baud 921600 read_flash 0x0 "$BYTES" "$OUT/factory-${SIZE_MB}mb.bin"
 echo "3/3 checksum"
-shasum -a 256 "$OUT/factory-8mb.bin" | tee "$OUT/SHA256.txt"
-echo "Backup complete. Restore (ONLY with the owner's explicit approval): esptool.py --port $PORT --baud 921600 write_flash 0x0 $OUT/factory-8mb.bin"
+shasum -a 256 "$OUT/factory-${SIZE_MB}mb.bin" | tee "$OUT/SHA256.txt"
+echo "Backup complete. Keep this folder off the public repository: chip_id.txt contains the watch's hardware address."
+echo "Restore (ONLY with the owner's explicit approval): esptool.py --port $PORT --baud 921600 write_flash 0x0 $OUT/factory-${SIZE_MB}mb.bin"

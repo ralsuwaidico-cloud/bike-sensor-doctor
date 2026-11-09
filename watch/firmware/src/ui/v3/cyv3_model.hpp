@@ -211,8 +211,9 @@ private:
             m.power = sensors.power ? std::max(0, 246 + noise(9) + surge) : -1;
             m.hr = sensors.hr ? 150 + (t_ / 20) % 5 + noise(1) : -1;
             m.cadence = sensors.cadence ? 91 + noise(3) : -1;
-        } else if (wk == WkState::Paused) {
-            m.power = sensors.power ? 0 : -1; m.cadence = sensors.cadence ? 0 : -1;
+        } else if (wk == WkState::Paused) {   // paused: the last ride values stay on screen; heart rate settles slowly
+            if (!sensors.power) m.power = -1;
+            if (!sensors.cadence) m.cadence = -1;
             m.hr = sensors.hr ? std::max(100, (m.hr < 0 ? 150 : m.hr) - 1) : -1;
         }
     }

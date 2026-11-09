@@ -96,7 +96,9 @@ static void simulation() {
     CHECK(m.interval == 3);
     m.sensors.power = false; t += 1000; m.tick(t); CHECK(m.m.power == -1); CHECK(m.m.hr > 0);
     m.sensors = Sensors{false, false, false}; t += 1000; m.tick(t); CHECK(m.m.power == -1 && m.m.hr == -1 && m.m.cadence == -1);
+    m.sensors = Sensors{}; t += 1000; m.tick(t); int lastP = m.m.power;
     int before = m.remainS; m.wk = WkState::Paused; t += 5000; m.tick(t); CHECK(m.remainS == before);   // paused: the clock stops
+    CHECK(m.m.power == lastP); CHECK(m.command().text != "PUSH TO 245 W" || lastP < Model::TARGET_LO);   // and power is not shown as 0 W
 }
 
 static void strings() {
