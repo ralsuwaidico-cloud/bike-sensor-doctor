@@ -67,6 +67,17 @@ class RealTransport:
         time.sleep(seconds)
 
 
+def _tail(out, n=12):
+    """Last meaningful esptool lines (progress percentages dropped) so a failure is diagnosable from the log."""
+    lines = [l.strip() for l in out.replace("\r", "\n").splitlines() if l.strip() and "%)" not in l]
+    return "\n".join("    | " + l[:200] for l in lines[-n:]) or "    | (no output)"
+
+
+def _last(out):
+    lines = [l.strip() for l in out.replace("\r", "\n").splitlines() if l.strip() and "%)" not in l]
+    return lines[-1][:200] if lines else "no output"
+
+
 class DeviceSession:
     def __init__(self, transport, log=print, boot_window=12.0):
         self.t, self.log, self.boot_window = transport, log, boot_window
@@ -78,10 +89,13 @@ class DeviceSession:
         self.state = "unknown"
         try:
             rc, out = self.t.esptool(list(args), timeout=timeout)
-        except CommError:
+        except CommError as e:
             self.state = "unknown"
+            self.log("ESPTOOL %s DID NOT COMPLETE: %s" % (args[0] if args else "?", e))
             raise
         self.state = "download" if rc == 0 else "unknown"
+        if rc != 0:
+            self.log("ESPTOOL %s FAILED (exit %s); last output:\n%s" % (args[0] if args else "?", rc, _tail(out)))
         return rc, out
 
     def write(self, pairs):
@@ -105,7 +119,7 @@ class DeviceSession:
     def read(self, off, size, path):
         rc, out = self.esptool(["read_flash", hex(off), hex(size), path])
         if rc != 0:
-            raise CommError("read_flash 0x%x failed" % off)
+            raise CommError("read_flash 0x%x failed: %s" % (off, _last(out)))
         return open(path, "rb").read()
 
     # ------------------------------------------------------------------ restart into the firmware and confirm it

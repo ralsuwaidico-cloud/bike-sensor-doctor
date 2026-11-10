@@ -100,6 +100,8 @@ class FakeTransport:
                 return 2, "-- verify FAILED (digest mismatch)\n"
             return 0, "-- verify OK (digest matched)\n" * n
         if cmd == "read_flash":
+            if "read_fail" in c.faults:
+                return 2, "Reading 8388608 bytes ...\r1048576 (12 %)\rA fatal error occurred: Packet content transfer stopped (received 8 bytes)"
             open(args[3], "wb").write(b"\xff" * int(args[2], 16))
             return 0, "Read %d bytes" % int(args[2], 16)
         if cmd == "flash_id":
@@ -161,6 +163,19 @@ r = ds.run_phase(s, "p1", lambda: must(s.verify([(0x400000, fw)]), "verify faile
 check(not r.ok and not r.work_ok and r.stop_reason == "verify failed", "verify failure: phase NOT passed, reason kept")
 check(chip.mode == "running" and r.boot.confirmed, "verify failure: cleanup restarted the chip (not left in download mode)")
 check(any("FLASH VERIFY FAILED" in l for l in logs) and any("NOT PASSED" in l for l in logs), "verify failure: log says VERIFY FAILED and NOT PASSED")
+
+# 3b read failure: esptool's own error text is logged and kept in the exception ---------------------------------------
+chip, s, logs = new(faults={"read_fail"})
+def _rr():
+    try:
+        s.read(0, 0x800000, os.path.join(tmp, "r.bin"))
+    except ds.CommError as e:
+        raise Stop("read failed at 0x0 (%s)" % e)
+r = ds.run_phase(s, "read", _rr, stop_exc=(Stop,))
+check("Packet content transfer stopped" in (r.stop_reason or ""), "read failure: esptool error text kept in the stop reason")
+check(not r.ok and chip.mode != "download", "read failure: phase NOT passed, chip not left in download mode")
+check(any("ESPTOOL read_flash FAILED" in l and "Packet content transfer stopped" in l for l in logs), "read failure: esptool error text in the log")
+check(not any("(12 %)" in l for l in logs), "read failure: progress lines not logged")
 
 # 4 interrupted communication ------------------------------------------------------------------------------------------
 chip, s, logs = new(faults={"esptool_dies"})
