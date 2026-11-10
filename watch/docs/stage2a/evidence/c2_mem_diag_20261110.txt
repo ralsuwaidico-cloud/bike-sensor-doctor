@@ -1,0 +1,39 @@
+##### face+menu (restarts 0)
+perf: histogram reset
+perf: frames 2762, avg render 19 us, max 53 us, rebuilds 0 · lv_mem used 5028 / 65536, peak 4622 · heap free 121164, min 94500 · psram 2095104 / 2097152
+perf: frames 94, avg render 18 us, max 71 us, rebuilds 0 · lv_mem used 5028 / 65536, peak 4622 · heap free 121164, min 94500 · psram 2095104 / 2097152
+  key1
+
+##### ride EN (restarts 0)
+  key1
+  ride started (simulated)
+perf: frames 2668, avg render 1465 us, max 362192 us, rebuilds 4 · lv_mem used 5364 / 65536, peak 4622 · heap free 119856, min 94500 · psram 1978364 / 2097152
+
+##### ride EN report (restarts 0)
+perf: frames 2271, avg render 1855 us, max 79535 us, rebuilds 0 · lv_mem used 5364 / 65536, peak 4622 · heap free 119856, min 94500 · psram 1978364 / 2097152
+hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+hist idle     1528 3846 93 2 1 0 0 0 0 0
+hist update   0 0 0 0 0 2 40 1 0 0
+hist rebuild  0 0 0 0 0 0 0 1 3 0
+frames update (last 43): total ms p50 71.0 p95 79.6 p99 112.3 max 112.3 · ui max 19.2 · draw+flush max 93.1 · flush max 11.4 · px max 22056
+frames rebuild (last 4): total ms p50 212.7 p95 362.2 p99 362.2 max 362.2 · ui max 283.6 · draw+flush max 91.4 · flush max 25.7 · px max 57600
+frames idle max 15.2 ms · input max 13.2 ms · model max 0.1 ms
+perf: frames 408, avg render 1738 us, max 79443 us, rebuilds 0 · lv_mem used 5364 / 65536, peak 4622 · heap free 119584, min 94500 · psram 1978364 / 2097152
+
+##### ride AR (restarts 0)
+perf: histogram reset
+perf: frames 2641, avg render 2026 us, max 323737 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 4622 · heap free 119456, min 94500 · psram 1978364 / 2097152
+
+##### ride AR report (restarts 0)
+perf: frames 1681, avg render 1888 us, max 104314 us, rebuilds 0 · lv_mem used 5500 / 65536, peak 4622 · heap free 119456, min 94500 · psram 1978364 / 2097152
+hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+hist idle     33 4052 49 0 0 0 0 0 0 0
+hist update   0 0 0 0 0 2 43 2 0 0
+hist rebuild  0 0 0 0 0 0 0 0 1 0
+frames update (last 47): total ms p50 71.4 p95 87.0 p99 104.7 max 104.7 · ui max 21.8 · draw+flush max 83.2 · flush max 10.8 · px max 21059
+frames rebuild (last 1): total ms p50 323.8 p95 323.8 p99 323.8 max 323.8 · ui max 234.8 · draw+flush max 88.9 · flush max 25.7 · px max 57600
+frames idle max 3.6 ms · input max 13.0 ms · model max 0.1 ms
+
+##### back to EN face (restarts 0)
+perf: frames 944, avg render 2377 us, max 302421 us, rebuilds 2 · lv_mem used 4512 / 65536, peak 4622 · heap free 120108, min 94500 · psram 1978364 / 2097152
+perf: frames 119, avg render 423 us, max 11573 us, rebuilds 0 · lv_mem used 4512 / 65536, peak 4622 · heap free 120108, min 94500 · psram 1978364 / 2097152

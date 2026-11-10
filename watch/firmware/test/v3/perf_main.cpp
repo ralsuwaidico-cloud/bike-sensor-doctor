@@ -116,6 +116,11 @@ int main(int argc, char** argv) {
         s.seconds(30, [&](int sec) { if (sec % 3 == 1) s.m.key1(s.now); });
         s.m.startRide(s.now);
         s.seconds(30, [&](int sec) { if (sec % 6 == 1) s.m.key1(s.now); if (sec % 6 == 4) s.m.key2(s.now); });
+        // 5 touch swipes (owner report 10 Nov): four directions on the face, then menu scroll up ×3 / down / back,
+        //   and a clock that becomes valid while the face is shown (time arriving later must appear)
+        s.reset(std::string("swipe_") + L); lang(s, ar); s.m.clock.valid = false;
+        s.seconds(12, [&](int sec) { if (sec >= 1 && sec <= 4) s.m.swipe(Swipe(sec - 1)); if (sec == 6) { s.m.clock.valid = true; s.m.clock.hh = 13; s.m.clock.mm = 7; } });
+        s.seconds(12, [&](int sec) { if (sec == 1) s.m.key1(s.now); if (sec >= 2 && sec <= 4) s.m.swipe(Swipe::Up); if (sec == 6) s.m.swipe(Swipe::Down); if (sec == 9) s.m.swipe(ar ? Swipe::Left : Swipe::Right); });
         // 4 pause / resume (command sent → confirmed → toast → toast gone: four rebuilds each)
         s.reset(std::string("pause_") + L); lang(s, ar); s.m.startRide(s.now); s.seconds(3);
         s.seconds(20, [&](int sec) { if (sec == 1) s.m.act(Action::Pause, 0, s.now); if (sec == 10) s.m.act(Action::Resume, 0, s.now); });
