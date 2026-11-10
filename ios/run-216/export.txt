@@ -1,0 +1,7 @@
+=== export: errors / failures ===
+=== export: full filter ===
+** EXPORT SUCCEEDED **
+=== export: last 150 lines ===
+2026-11-10 10:24:31.485 xcodebuild[19109:55190] [MT] IDEDistribution: -[IDEDistributionLogging _createLoggingBundleAtPath:]: Created bundle at path "/var/folders/h5/t85nd63d71x27_8gl5gw3l_w0000gn/T/BikeComputer_2026-11-10_10-24-31.443.xcdistributionlogs".
+Exported BikeComputer to: /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/export
+** EXPORT SUCCEEDED **

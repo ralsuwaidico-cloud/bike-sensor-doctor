@@ -1,0 +1,20 @@
+BikeComputer iOS CI — build 216 — 2026-11-10 10:13 UTC
+Stage: release
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Quick check: none for this tree — override accepted [full-override: run 215 full matrix green in unit, smoke, journeys x3, watch and all four layout audits on this app tree; the only red was the flows job's plan-edit UI journey, whose menu did not open on the first tap (the same journey passed slider→preview→Apply in run 214); owner 10 Nov 12:51 prioritises an internal build]
+Accounts: off (no values; ReleaseFlags.accountsEnabled = false in 1.0)
+RESULT archive: ok (adhoc) · 6m20s
+  contains BikeComputer.app 1.0.0 (216) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+  contains BikeComputerWatch.app 1.0.0 (216) — display name 'Cyclift'
+    privacy manifest: present, tracking false
+    HealthKit entitlement embedded in archive: yes
+RESULT sign: ok (BikeComputer.ipa, 12106202 bytes)
+  com.ralsuwaidico.bikecomputer: signature valid, app ID ok, HealthKit ok, Sign in with Apple ok
+  com.ralsuwaidico.bikecomputer.watchkitapp: signature valid, app ID ok, HealthKit ok
+RESULT verify: ok
+RESULT upload: ok — build 216 sent to App Store Connect; TestFlight processing takes about 5-30 minutes (the testflight job reports when it is ready)
+Total: 12m41s
