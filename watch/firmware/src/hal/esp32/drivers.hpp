@@ -12,6 +12,7 @@
 #include <NimBLEDevice.h>
 #include "../hal.hpp"
 #include "../board_pins.hpp"
+#include "../rtc_time.hpp"
 
 namespace cyw::hal::esp32 {
 
@@ -118,6 +119,20 @@ public:
         Wire.beginTransmission(pins::ADDR_RTC); Wire.write(0x02); Wire.write(enc(s)); Wire.write(enc(mi)); Wire.write(enc(h)); Wire.write(enc(d)); Wire.write(0); Wire.write(enc(mo)); Wire.write(enc(y - 2000)); Wire.endTransmission();
     }
     void alarmIn(uint32_t) override {}   // M2: minute alarm via IO32 for the low-power clock
+    /// Stage 1.2 (v3poc): reads the clock with its integrity flag (VL) — false after a power loss, so no stale time is shown.
+    bool read(cyw::rtc::Reading& out) {
+        uint8_t r[7];
+        Wire.beginTransmission(pins::ADDR_RTC); Wire.write(0x02); if (Wire.endTransmission(false) != 0) return false;
+        if (Wire.requestFrom(int(pins::ADDR_RTC), 7) != 7) return false;
+        for (auto& b : r) b = uint8_t(Wire.read());
+        out = cyw::rtc::fromRegs(r); return true;
+    }
+    /// Stage 1.2 (v3poc): writes local time; also clears VL. Returns false if the chip did not acknowledge.
+    bool write(uint32_t t) {
+        uint8_t r[7]; cyw::rtc::toRegs(t, r);
+        Wire.beginTransmission(pins::ADDR_RTC); Wire.write(0x02); for (uint8_t b : r) Wire.write(b);
+        return Wire.endTransmission() == 0;
+    }
     static uint8_t bcd(uint8_t v) { return (v >> 4) * 10 + (v & 0x0F); }
     static uint8_t enc(int v) { return uint8_t(((v / 10) << 4) | (v % 10)); }
     static uint32_t toUnix(int y, int mo, int d, int h, int mi, int s) { int a = (14 - mo) / 12, yy = y + 4800 - a, mm = mo + 12 * a - 3; long jdn = d + (153 * mm + 2) / 5 + 365L * yy + yy / 4 - yy / 100 + yy / 400 - 32045; return uint32_t((jdn - 2440588L) * 86400L + h * 3600 + mi * 60 + s); }

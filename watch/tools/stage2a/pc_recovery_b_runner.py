@@ -13,14 +13,18 @@ AFTER.update({'rb_precheck': (CYCLIFT, None), 'rb_restore': (None, CYCLIFT), 'rb
 # Cyclift program in app1: the approved Stage 1, or — after a Stage 1.1 update — the approved Stage 1.1 (R-B never writes app1).
 FW11 = os.environ.get('CY_FW11') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_1_firmware', 'cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin')
 FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'
+FW12 = os.environ.get('CY_FW12') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_2_firmware', 'cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin')
+FW12_SHA = '__STAGE12_SHA__'
 
 
 def app1_program():
-    """Which approved program app1 holds (read-only verify_flash); None if neither matches."""
+    """Which approved program app1 holds (Stage 1, 1.1 or 1.2; read-only verify_flash); None if none matches."""
     if verify([(0x400000, FW)])[0]:
         return FW
     if os.path.exists(FW11) and sha_file(FW11) == FW11_SHA and verify([(0x400000, FW11)])[0]:
         return FW11
+    if os.path.exists(FW12) and sha_file(FW12) == FW12_SHA and verify([(0x400000, FW12)])[0]:
+        return FW12
     return None
 
 

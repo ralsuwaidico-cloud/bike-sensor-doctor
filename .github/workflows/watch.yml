@@ -22,13 +22,19 @@ jobs:
         run: |
           cd watch/firmware/releases/stage1-approved && sha256sum -c SHA256SUMS
           grep -q '^faa2828f8fd22d59877c4c9535eb09e1a15db3176f2b5cd1c438810aead5cba7  cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
+      - name: Installed Stage 1.1 firmware is unchanged (3274b887…, on the watch since 10 Nov C1; rollback image for Stage 1.2)
+        run: |
+          cd watch/firmware/releases/stage1.1-installed && sha256sum -c SHA256SUMS
+          grep -q '^3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba  cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
       - name: Stage 1.1 rendering checks — visual identity, partial updates, redraw rate, work budgets (computer proxy, not watch timing)
         run: |
           sudo apt-get install -y -qq valgrind >/dev/null
           make -C watch/firmware/test/v3 perf-link
           cd watch/firmware/test/v3 && python3 perf_check.py --callgrind | tee perf-check.log
           mkdir -p out/perf && .build/v3_perf out/perf/frames_wall.csv >/dev/null
-          { echo '## Stage 1.1 rendering checks (computer)'; echo '```'; cat perf-check.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '## Stage 1.1/1.2 rendering checks (computer)'; echo '```'; cat perf-check.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          ./pool_study.sh 32 16 | tee pool-study.log
+          { echo '## LVGL pool-size study (computer)'; echo '```'; cat pool-study.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Stage 2a read-only tool, tested against a simulated watch (no hardware)
         run: |
           pip install -q esptool==4.8.1 "bitstring<4.3"
@@ -77,14 +83,16 @@ jobs:
           echo "## v3 Stage 1 proof of concept (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
           grep -E "RAM:|Flash:" build-*-v3poc.log >> "$GITHUB_STEP_SUMMARY" || true
           python3 tools/v3/elf_sizes.py .pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf | tee -a "$GITHUB_STEP_SUMMARY" || true
-      - name: Memory report — IRAM / DRAM against the linker regions; Stage 1.1 with and without LVGL in IRAM; Bluetooth app build
+      - name: Memory report — IRAM / DRAM against the linker regions; Stage 1.2 with and without LVGL in IRAM; Bluetooth app build
         working-directory: watch/firmware
         run: |
           set -o pipefail
-          pio run -e T-Watch-2021-V1_1-v3poc-nofastmem 2>&1 | tail -n 4
-          python3 tools/v3/mem_report.py "Stage 1.1 candidate (LVGL in IRAM)=.pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf" \
-            "Stage 1.1 without LVGL in IRAM=.pio/build/T-Watch-2021-V1_1-v3poc-nofastmem/firmware.elf" \
-            "existing app with Bluetooth (NimBLE)=.pio/build/T-Watch-2021-V1_1/firmware.elf" | tee mem-report.log
+          pio run -e T-Watch-2021-V1_1-v3poc-fastmem 2>&1 | tail -n 4
+          python3 tools/v3/mem_report.py "Stage 1.2 candidate (IRAM rendering off)=.pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf" \
+            "Stage 1.2 + LVGL in IRAM (comparison, as Stage 1.1)=.pio/build/T-Watch-2021-V1_1-v3poc-fastmem/firmware.elf" \
+            "existing app with Bluetooth (NimBLE)=.pio/build/T-Watch-2021-V1_1/firmware.elf" \
+            "--iram-lvgl=Stage 1.2 + LVGL in IRAM (comparison, as Stage 1.1)" \
+            "--dram-syms=Stage 1.2 candidate (IRAM rendering off):perf::|mem::|g_ring|work_mem_int|lv_mem|draw_buf" | tee mem-report.log
           { echo '## Memory report (static, compile time)'; cat mem-report.log; } >> "$GITHUB_STEP_SUMMARY"
       - name: Toolchain, framework and library versions are exactly the pinned ones
         working-directory: watch/firmware
@@ -104,12 +112,12 @@ jobs:
         working-directory: watch/firmware
         run: |
           mkdir -p ../../stage1-candidates
-          # Stage 1.1 candidates have their own names; the approved Stage 1 file (faa2828f…) lives only in releases/stage1-approved
-          for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1.1-v3poc-T-Watch-2021-$r.bin; done
+          # Stage 1.2 candidates have their own names; approved Stage 1 (faa2828f…) and installed Stage 1.1 (3274b887…) live only in releases/
+          for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1.2-v3poc-T-Watch-2021-$r.bin; done
           cp .pio/build/T-Watch-2021-V1_1-display-diag/firmware.bin ../../stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin
           cd ../../stage1-candidates && sha256sum *.bin | tee SHA256SUMS && echo "commit ${GITHUB_SHA}" >> SHA256SUMS
-          # the owner named this exact file for C1 (9 Nov 23:53): any firmware change must make a NEW, renamed candidate
-          grep -q '^3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba  cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
+          # no candidate may carry the name or fingerprint of an approved/installed file
+          ! grep -E 'faa2828f8fd22d59877c4c9535eb09e1a15db3176f2b5cd1c438810aead5cba7|3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba|stage1-v3poc|stage1.1-v3poc' SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
           name: stage1-firmware-candidates-not-flashed
@@ -200,7 +208,7 @@ jobs:
             --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
             --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
             --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin \
-            --app-stage1 stage1-candidates/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin --app-approved watch/firmware/releases/stage1-approved/cyclift-stage1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
+            --app-stage1 stage1-candidates/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin --app-approved watch/firmware/releases/stage1.1-installed/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
       - name: Summary
         if: always()
         run: |
@@ -235,12 +243,12 @@ jobs:
           set -o pipefail
           for n in 1 2; do rm -rf .pio/build/T-Watch-2021-V1_1-v3poc; pio run -e T-Watch-2021-V1_1-v3poc > build-repro-$n.log 2>&1 || { tail -40 build-repro-$n.log; exit 1; }
             cp .pio/build/T-Watch-2021-V1_1-v3poc/firmware.bin /tmp/clean-$n.bin; done
-          sha256sum /tmp/clean-1.bin /tmp/clean-2.bin ../../published/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin | tee repro.log
+          sha256sum /tmp/clean-1.bin /tmp/clean-2.bin ../../published/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin | tee repro.log
           python3 tools/v3/image_diff.py /tmp/clean-1.bin /tmp/clean-2.bin | tee -a repro.log
-          python3 tools/v3/image_diff.py /tmp/clean-1.bin ../../published/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin | tee -a repro.log
+          python3 tools/v3/image_diff.py /tmp/clean-1.bin ../../published/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin | tee -a repro.log
           { echo '## Reproducible build (Stage 1.1 V1_1)'; echo '```'; cat repro.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           cmp /tmp/clean-1.bin /tmp/clean-2.bin
-          cmp /tmp/clean-1.bin ../../published/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin
+          cmp /tmp/clean-1.bin ../../published/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin
   publish-stage1-candidates:
     # Copies the CI-built Stage 1 images (with their SHA-256 list) to the separate branch firmware/stage1-candidates so they
     # can be fetched with plain git. Publishing only - nothing is flashed.

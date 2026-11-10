@@ -8,7 +8,10 @@
 #define LV_COLOR_DEPTH 16
 #define LV_COLOR_16_SWAP 1
 #define LV_MEM_CUSTOM 0
-#define LV_MEM_SIZE (64U * 1024U)
+#ifndef CYW_LV_MEM_KB              /* computer-only override for the pool-size study (test/v3: make EXTRA=-DCYW_LV_MEM_KB=32U) */
+#define CYW_LV_MEM_KB 64U
+#endif
+#define LV_MEM_SIZE (CYW_LV_MEM_KB * 1024U)
 #define LV_DISP_DEF_REFR_PERIOD 30
 #define LV_INDEV_DEF_READ_PERIOD 30
 #define LV_USE_PERF_MONITOR 0
@@ -18,10 +21,10 @@
 #define LV_TICK_CUSTOM 1
 #define LV_TICK_CUSTOM_INCLUDE "Arduino.h"
 #define LV_TICK_CUSTOM_SYS_TIME_EXPR (millis())
-/* Stage 1.1: LVGL's per-pixel drawing routines (blend, masks) run from internal instruction RAM instead of flash. The watch
-   reads flash in DIO 40 MHz mode (factory bootloader), so code fetched through the flash cache is slow. Device-only; the
-   effect is measured on the watch with the 'h' frame-time report, not on the computer. */
-#ifndef CYW_NO_FAST_MEM          /* comparison build T-Watch-2021-V1_1-v3poc-nofastmem (memory report only) */
+/* LVGL's per-pixel drawing routines (blend, masks) in internal instruction RAM instead of flash (Stage 1.1, 51,404 B of IRAM).
+   Stage 1.2 (owner decision 10 Nov): OFF by default — Bluetooth needs that IRAM (the Bluetooth app alone uses 128,424 of
+   131,072 B). Only the comparison build T-Watch-2021-V1_1-v3poc-fastmem (never published or flashed) sets CYW_FAST_MEM. */
+#ifdef CYW_FAST_MEM
 #include "esp_attr.h"
 #define LV_ATTRIBUTE_FAST_MEM IRAM_ATTR
 #endif

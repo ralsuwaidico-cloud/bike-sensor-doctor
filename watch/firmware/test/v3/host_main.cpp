@@ -7,6 +7,7 @@
 // Writes PNG screenshots and report.json to the output folder. Computer measurements only: NOT watch performance.
 #include "../../src/ui/v3/cyv3_ui.hpp"
 #include "../../src/ui/v3/cyv3_fonts.hpp"
+#include "../../src/hal/rtc_time.hpp"
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -281,6 +282,25 @@ int main(int argc, char** argv) {
     expect(chip, "Key 2 first press shows LAP · PRESS AGAIN");
     c.now += 800; c.m.key2(c.now); c.now += 450; c.m.tick(c.now); c.ui.render(c.m); expect(c.m.laps == 1, "Key 2 second press saves a lap");
     c.m.key1(c.now); c.ui.render(c.m); expect(c.m.screen == Screen::Menu, "Key 1 opens the menu during a ride");
+    // Stage 1.2 temporary time command, end to end: serial "T<seconds>" -> clock-chip registers -> integrity check ->
+    // model clock -> face (same steps as readClock() on the watch; the chip itself is replaced by its 7 registers)
+    { c.m = Model(); fresh(c);
+      uint8_t regs[7] = {0x80, 0, 0, 0x01, 6, 0x01, 0x00};                        // after power loss: VL set, 2000-01-01
+      auto readClock = [&] { cyw::rtc::Reading r = cyw::rtc::fromRegs(regs); c.m.clock.valid = r.integrity; if (!r.integrity) return;
+          int y, mo, d, h, mi, s; cyw::rtc::fromUnix(r.t, y, mo, d, h, mi, s); c.m.clock.hh = h; c.m.clock.mm = mi; c.m.clock.day = d;
+          c.m.clock.month = mo; c.m.clock.weekday = cyw::rtc::weekday(r.t); };
+      auto faceText = [&] { std::string all; std::vector<lv_obj_t*> a; walk(g_screen, a); for (auto* o : a) if (lv_obj_check_type(o, &lv_label_class)) all += std::string(lv_label_get_text(o)) + "|"; return all; };
+      readClock(); c.ui.render(c.m); lv_refr_now(nullptr);
+      expect(faceText().find("--:--") != std::string::npos && faceText().find("NOT SYNCED") != std::string::npos, "unset clock shows --:-- and NOT SYNCED");
+      cyw::rtc::TimeCommand cmd; cyw::rtc::TimeCommand::Result res = cyw::rtc::TimeCommand::Idle;
+      for (char ch : std::string("T1794331800\n")) res = cmd.feed(ch);
+      expect(res == cyw::rtc::TimeCommand::Done, "serial T1794331800 accepted");
+      cyw::rtc::toRegs(uint32_t(cmd.value), regs); readClock(); c.ui.render(c.m); lv_refr_now(nullptr);
+      expect(faceText().find("17:30") != std::string::npos && faceText().find("NOT SYNCED") == std::string::npos, "after T: face shows 17:30, no NOT SYNCED");
+      expect(faceText().find("TUE 10 NOV") != std::string::npos || faceText().find("Tue 10 Nov") != std::string::npos, "after T: date Tue 10 Nov");
+      shoot(c, "face__time-set-from-pc--std-en");
+      regs[0] |= 0x80; readClock(); c.ui.render(c.m); lv_refr_now(nullptr);   // USB unplugged (no battery): VL set again
+      expect(faceText().find("--:--") != std::string::npos, "after power loss: back to --:--"); }
 
     // ---------------------------------------------------------------- 4 partial updates: redrawn area per 1 Hz cockpit update
     for (auto [name, d, t] : {std::tuple<const char*, Density, TextSize>{"std", Density::Standard, TextSize::Default}, {"foc", Density::Focused, TextSize::Default}, {"lt", Density::Standard, TextSize::Large}}) {
