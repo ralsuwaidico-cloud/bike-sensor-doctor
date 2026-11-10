@@ -512,7 +512,7 @@ struct EditWorkoutSheet: View {
             }
             .onAppear { if !loaded { supersets = workout.riderChoice?.prefersSupersets ?? false; loaded = true } }
             // Run 216 defect: the review is PUSHED inside this sheet's own navigation (see SessionChangeSheet.embedded)
-            .navigationDestination(item: $preview) { r in SessionChangeSheet(proposalId: r.id, embedded: true, onApplied: { dismiss() }, onClose: { preview = nil }).id(r.id) }
+            .navigationDestination(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onApplied: { dismiss() }, onClose: { preview = nil }, embedded: true).id(r.id) }
         }
     }
     private func submit() {
