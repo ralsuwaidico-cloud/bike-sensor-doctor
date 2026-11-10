@@ -254,7 +254,7 @@ struct PlanChangeSheet: View {
                 } else {
                     VStack(spacing: DS.m) {
                         Text("This change is no longer available. Nothing was saved.").font(.body).multilineTextAlignment(.center)
-                        Button("Close") { close() }.buttonStyle(.bordered).controlSize(.large)
+                        Button("Close") { dismiss() }.buttonStyle(.bordered).controlSize(.large)
                     }.padding()
                 }
             }
