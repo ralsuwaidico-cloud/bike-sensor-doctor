@@ -6,6 +6,16 @@ with two keys. They share the Cyclift tokens (three families × dark/light) and 
 
 ## Shared design tokens
 
+> **Owner decision, 10 Nov 2026 15:29 — supersedes the family names below.** The shared Cyclift appearance identities for
+> the iPhone **and** the detachable Watch are now **Obsidian · Arctic · Ocean · Forest · Sandstone · High Contrast**
+> (platform‑specific adaptations allowed; stable ids `obsidian`, `arctic`, `ocean`, `forest`, `sandstone`, `highContrast`).
+> They replace the earlier "Cyclift Midnight Blue/Arctic · Sport Graphite/Steel · Bloom Plum/Rose" names. The watch token
+> **values** below are unchanged (firmware is paused; the gallery's 0‑finding contrast evidence depends on them) — mapping
+> the six new identities onto watch tokens is a design‑documentation task for the hardware‑design conversation, not a
+> firmware change. The grading colours remain fixed and identical across all appearances. The iPhone's earlier Checkpoint‑H
+> appearance branch (`impl/checkpoint-h-appearance`) was **lost unpushed** when the iPhone session's workspace was reset
+> on 10 Nov 2026; the iPhone theme layer is rebuilt to the new six under Home v2 (`ios/HOME_V2_IMPLEMENTATION_MAP.md`).
+
 | Family | Dark | Light | Watch token values (`watch/firmware/src/domain/theme_tokens.hpp`) |
 |---|---|---|---|
 | Cyclift | Midnight Blue | Arctic | dark: bg #0A1628 · card #122240 · card2 #1A2F55 · text #EAF2FF · mut #A7BAD6 · line #1E3357 · accent #4FD1FF · accent2 #9CE3FF · onAccent #06111A — light: bg #EEF5FB · card #FFFFFF · card2 #DCE8F3 · text #0B1A33 · mut #3F5574 · line #C9D8E8 · accent #0B6E9E · accent2 #1C8FC4 |

@@ -33,7 +33,7 @@ ride clock when they are the recorder (BikeComputer), and send back events.
   **two user keys + Boot**, charging‑only USB‑C — programming needs the **T‑U2T** dongle. **Board revision
   (V1.0/V1.1/V2) and dongle presence are unconfirmed.**
 - Design v2 **approved 8 Nov 16:44** as the baseline ("one screen, one question"): faces Orbit/Chrono/Pulse, six
-  appearances (Cyclift Midnight Blue/Arctic · Sport Graphite/Steel · Bloom Plum/Rose), fixed grading colours, cycling
+  appearances — **renamed by the owner on 10 Nov 2026 to Obsidian · Arctic · Ocean · Forest · Sandstone · High Contrast, shared with the iPhone** (watch token values unchanged until re‑mapped by design; see 04_) — fixed grading colours, cycling
   Cockpit/Performance/Navigation, strength Exercise/Rep counter/Rest timer, lifecycle screens, two‑press keys.
   "Do not spend another development cycle redesigning the gallery unless real‑device testing reveals a significant problem."
 - Firmware: PlatformIO + Arduino‑ESP32 3.3.12 + LVGL 8.3.11 + NimBLE 1.4.3, branch `watch/w0-foundation` @ ca2cadb6;
