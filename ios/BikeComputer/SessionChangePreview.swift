@@ -28,8 +28,7 @@ struct SessionChangeSheet: View {
     /// appeared (it only changes when the sheet itself rebuilds the proposal), and store work that follows a dismissal
     /// (discard, the caller's own dismiss) runs after the sheet has disappeared.
     @State private var pinned: SessionChangeProposal? = nil
-    private enum AfterDismiss { case none, discard, applied }
-    @State private var afterDismiss: AfterDismiss = .none
+    @State private var closing = false
 
     var body: some View {
         NavigationStack {
@@ -46,12 +45,14 @@ struct SessionChangeSheet: View {
             .navigationTitle("Review the change").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { afterDismiss = .discard; close() }.accessibilityIdentifier("changeCancel")
+                    // Run 214: the discard happens at once (the pinned content keeps the sheet steady while it slides away);
+                    // deferring it to onDisappear let a quickly re-opened review inherit the discard.
+                    Button("Cancel") { closing = true; store.discardProposal(proposalId); close() }.accessibilityIdentifier("changeCancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     let current = pinned ?? store.pendingProposals[proposalId]
                     let blocked = current?.report.outcome == .block
-                    Button("Apply") { apply() }.bold().disabled(blocked || current == nil || afterDismiss != .none).accessibilityIdentifier("changeApply")
+                    Button("Apply") { apply() }.bold().disabled(blocked || current == nil || closing).accessibilityIdentifier("changeApply")
                 }
             }
             .sheet(isPresented: $showEquipment, onDismiss: { rebuild(note: "Rebuilt with your equipment.") { _ in } }) {
@@ -60,19 +61,12 @@ struct SessionChangeSheet: View {
         }
         .interactiveDismissDisabled()        // Cancel or Apply, never a half-decision by swiping
         .onAppear { if pinned == nil { pinned = store.pendingProposals[proposalId] } }
-        .onDisappear {
-            switch afterDismiss {
-            case .discard: store.discardProposal(proposalId)
-            case .applied: onApplied()
-            case .none: break
-            }
-        }
     }
 
     private func apply() {
         let r: CommitResult = coach.map { store.commitCoachChange($0, proposalId: proposalId) } ?? store.commit(proposalId: proposalId, confirmed: true)
         switch r {
-        case .applied: afterDismiss = .applied; close()
+        case .applied: closing = true; close(); onApplied()
         case .stale: rebuild(note: "Something this change depends on changed while you were looking (your plan, equipment or health status). Here is the updated version; nothing was saved.") { _ in }
         case .blocked(let ids): notice = ids.contains("SAFE-001") ? "Training is paused by your health check, so nothing was changed." : "This change can't be applied (\(ids.joined(separator: ", "))). Nothing was saved."
         case .needsConfirmation, .notValidated: notice = "Nothing was saved. Please review the change again."

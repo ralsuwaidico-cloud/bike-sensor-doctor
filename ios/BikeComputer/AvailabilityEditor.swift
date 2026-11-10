@@ -274,7 +274,7 @@ struct FixPlanSheet: View {
             .navigationTitle("Fix plan").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .sheet(isPresented: $showEditor) { AvailabilityEditor() }
-            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onClose: { preview = nil }) }
+            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onClose: { preview = nil }).id(r.id) }
         }
     }
 

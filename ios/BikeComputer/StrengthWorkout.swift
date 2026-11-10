@@ -511,10 +511,11 @@ struct EditWorkoutSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Review") { submit() }.accessibilityIdentifier("editSave") }
             }
             .onAppear { if !loaded { supersets = workout.riderChoice?.prefersSupersets ?? false; loaded = true } }
-            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onApplied: { dismiss() }, onClose: { preview = nil }) }
+            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onApplied: { dismiss() }, onClose: { preview = nil }).id(r.id) }
         }
     }
     private func submit() {
+        guard preview == nil else { return }   // run 214: a review still sliding away must finish before another opens
         notice = nil
         let saved = store.plan.first { $0.id == workout.id }
         let s: Bool? = supersets != (saved?.riderChoice?.prefersSupersets ?? false) ? supersets : nil

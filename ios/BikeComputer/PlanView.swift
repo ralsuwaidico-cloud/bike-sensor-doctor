@@ -55,7 +55,7 @@ struct PlanView: View {
             .sheet(isPresented: $showAvailability) { WeekPage(asSheet: true) }   // V1: the one week editor (onboarding Stage C, Profile › Your week)
             .sheet(item: $addOn) { d in AddWorkoutSheet(date: d) }
             .sheet(item: $dayList) { day in dayListSheet(day) }
-            .sheet(item: $proposalReview) { r in SessionChangeSheet(proposalId: r.id, onClose: { proposalReview = nil }) }
+            .sheet(item: $proposalReview) { r in SessionChangeSheet(proposalId: r.id, onClose: { proposalReview = nil }).id(r.id) }
         }
     }
 
@@ -399,7 +399,7 @@ struct WorkoutDetail: View {
             .alert("Remove this session?", isPresented: $confirmDelete) { Button("Remove", role: .destructive) { store.remove(workout); dismiss() }; Button("Cancel", role: .cancel) {} }
             .sheet(isPresented: $showLog, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { QuickStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus, workoutId: workout.id) }
             .sheet(isPresented: $showDetailed, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { DetailedStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus ?? .custom, workoutId: workout.id) }
-            .sheet(item: $preview, onDismiss: reloadFromStore) { r in SessionChangeSheet(proposalId: r.id, onApplied: { mode = 0 }, onClose: { preview = nil }) }
+            .sheet(item: $preview, onDismiss: reloadFromStore) { r in SessionChangeSheet(proposalId: r.id, onApplied: { mode = 0 }, onClose: { preview = nil }).id(r.id) }
         }
         .undoSnackbar()
     }

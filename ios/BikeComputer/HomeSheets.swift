@@ -73,7 +73,7 @@ struct HomeSwapSheet: View {
                     if let n = notice { Text(n).font(.footnote).foregroundStyle(BC.stale).fixedSize(horizontal: false, vertical: true) }
                 }
             }
-            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onApplied: { dismiss() }, onClose: { preview = nil }) }
+            .sheet(item: $preview) { r in SessionChangeSheet(proposalId: r.id, onApplied: { dismiss() }, onClose: { preview = nil }).id(r.id) }
         }
     }
 }
@@ -280,7 +280,7 @@ struct HomeProposalSheet: View {
             .background(Color(.systemGroupedBackground))
         }
         .presentationDetents([.medium, .large])
-        .sheet(item: $coachPreview) { r in SessionChangeSheet(proposalId: r.id, coach: coachProposal, onApplied: { applied = coachProposal?.text }, onClose: { coachPreview = nil }) }
+        .sheet(item: $coachPreview) { r in SessionChangeSheet(proposalId: r.id, coach: coachProposal, onApplied: { applied = coachProposal?.text }, onClose: { coachPreview = nil }).id(r.id) }
     }
 }
 
