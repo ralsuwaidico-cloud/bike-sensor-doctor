@@ -18,8 +18,11 @@ final class PlanEditPreviewApplyTests: XCTestCase {
 
         // More → Edit type / duration
         let more = app.buttons["moreMenu"].firstMatch
-        XCTAssertTrue(more.waitForExistence(timeout: 5)); more.tap()
+        expect(more.waitForExistence(timeout: 5), "More menu present", tag: "more")
+        _ = more.tapWhenSettled(timeout: 5)
         let edit = app.buttons["moreEditType"].firstMatch
+        // run 215: the menu did not open on the first tap (the sheet was still settling); a person taps More again
+        if !edit.waitForExistence(timeout: 4) { _ = more.tapWhenHittable(timeout: 5) }
         expect(edit.waitForExistence(timeout: 5), "More offers Edit", tag: "more-edit")
         // run 205: "failed to compute hit point" — the menu was still animating; run 206 (SE, AX3): the long menu scrolls and
         // the item never had a settled on-screen frame. Settled tap first; if the item is in the hierarchy but not yet on

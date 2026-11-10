@@ -150,7 +150,11 @@ jobs:
         include:
           - { job: unit,            stage: unit,   devices: "",         minutes: 60 }
           - { job: smoke,           stage: smoke,  devices: "",         minutes: 75 }
-          - { job: flows,           stage: smoke2, devices: "",         minutes: 75 }
+          # Owner 10 Nov 2026 12:51 — internal TestFlight readiness is separate from production readiness: the "flows"
+          # job (hub reliability loops + the long end-to-end UI journeys) still runs on every full run and its result is
+          # published, but a failure there does not withhold an INTERNAL build. Gate for internal builds = unit + smoke +
+          # journeys + all layout audits + watch. A production release still requires every job, flows included.
+          - { job: flows,           stage: smoke2, devices: "",         minutes: 75, gate: internal-advisory }
           - { job: journeys,        stage: journeys, devices: "",       minutes: 75 }
           - { job: layout-small,    stage: layout, devices: "small",    minutes: 75 }
           - { job: layout-standard, stage: layout, devices: "standard", minutes: 60 }
@@ -158,6 +162,7 @@ jobs:
           - { job: layout-owner,    stage: layout, devices: "owner",    minutes: 75 }
           - { job: watch,           stage: watch,  devices: "",         minutes: 45 }
     name: test (${{ matrix.job }})
+    continue-on-error: ${{ matrix.gate == 'internal-advisory' }}
     timeout-minutes: ${{ matrix.minutes }}
     steps:
       - name: Skip what the ui scope does not run
@@ -307,6 +312,10 @@ jobs:
             echo "" >> "$S"; echo "## $j" >> "$S"; cat "$f" >> "$S"
           done
           if [ "$SCOPE" = full ] && [ "$R_TEST" != success ]; then echo "" >> "$S"; echo "RESULT upload: skipped (tests failed — the release job did not run)" >> "$S"; fi
+          if [ "$SCOPE" = full ]; then
+            FL="logs/logs-flows/logs/summary.txt"; [ -f "$FL" ] || FL="logs/logs-flows/summary.txt"
+            if [ -f "$FL" ] && grep -q "RESULT flows: FAILED" "$FL"; then echo "" >> "$S"; echo "GATE flows: FAILED — advisory for INTERNAL builds (owner 10 Nov 2026); a PRODUCTION release requires flows green" >> "$S"; else echo "" >> "$S"; echo "GATE flows: ok" >> "$S"; fi
+          fi
           [ -f logs/logs-testflight/testflight.txt ] && { echo ""; echo "## testflight"; cat logs/logs-testflight/testflight.txt; } >> "$S"
           OK=success
           if [ "$SCOPE" = quick ]; then [ "$R_QUICK" = success ] || OK=failure
