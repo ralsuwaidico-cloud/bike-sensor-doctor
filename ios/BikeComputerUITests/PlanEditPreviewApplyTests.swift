@@ -51,7 +51,10 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         XCTAssertTrue(apply.waitForExistence(timeout: 5), "Apply is offered")
         // Cancel first: the session is unchanged
         let cancel = app.buttons["changeCancel"].firstMatch
-        if cancel.exists { cancel.tap(); expect(preview.waitUntilDismissed(timeout: 8), "cancel closes the preview", tag: "cancelclose") }
+        // run 218: "not hittable" passed while the review was still on screen. The proof that Cancel closed it is positive:
+        // the edit sheet's own Review button is on top again and can be tapped.
+        XCTAssertTrue(cancel.exists, "Cancel is offered"); cancel.tap()
+        expect(app.buttons["editSave"].firstMatch.waitUntilHittable(timeout: 8), "Cancel returns to the edit sheet (its Review button is on top again)", tag: "cancelclose")
         // the edit sheet is still there (or we are back on the session); redo the review and apply this time
         if !app.buttons["editSave"].firstMatch.exists {
             more.tap(); let e2 = app.buttons["moreEditType"].firstMatch; _ = e2.waitForExistence(timeout: 5); if !e2.tapWhenSettled(timeout: 4) { e2.tap() }
@@ -59,8 +62,11 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         }
         app.buttons["editSave"].firstMatch.tap()
         XCTAssertTrue(preview.waitForExistence(timeout: 15))
-        XCTAssertTrue(apply.waitForExistence(timeout: 5)); apply.tap()
-        expect(preview.waitUntilDismissed(timeout: 10), "Apply closes the preview", tag: "applyclose")
+        XCTAssertTrue(apply.waitForExistence(timeout: 5))
+        expect(apply.isEnabled, "Apply is enabled on the re-opened review", tag: "applyenabled")
+        apply.tap()
+        // positive proof again: the session screen's own toolbar is on top (review and edit sheet both gone)
+        expect(more.waitUntilHittable(timeout: 10), "Apply closes the review and the edit sheet (the session screen is on top)", tag: "applyclose")
 
         // the session screen shows the new duration; the Plan's Changes page lists the applied change
         XCTAssertTrue(app.buttons["startWorkout"].firstMatch.waitForExistence(timeout: 10) || app.waitForHome(name: "Rashed", timeout: 10))

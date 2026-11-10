@@ -19,7 +19,10 @@ struct SessionChangeSheet: View {
     /// was bound to a presentation the parent had already rebuilt (applying the change re-renders the session view that
     /// presents this sheet). The presenter passes `onClose` to clear its own `.sheet(item:)` binding, which always closes.
     var onClose: () -> Void = {}
-    private func close() { dismiss(); onClose() }
+    /// Run 218: pushed inside the presenter's navigation (`embedded`), the review is closed by ONE mechanism only — the
+    /// presenter's item binding. `dismiss()` plus the binding plus the presenter's own sheet dismissal in the same turn
+    /// left the pushed review on screen with Apply greyed out.
+    private func close() { if embedded { onClose() } else { dismiss(); onClose() } }
     @State private var notice: String? = nil
     @State private var showEquipment = false
     /// Run 211 (flows screenshot): Cancel/Apply mutated the store and called dismiss() in the same turn; the body flipped to
@@ -78,7 +81,10 @@ struct SessionChangeSheet: View {
     private func apply() {
         let r: CommitResult = coach.map { store.commitCoachChange($0, proposalId: proposalId) } ?? store.commit(proposalId: proposalId, confirmed: true)
         switch r {
-        case .applied: closing = true; close(); onApplied()
+        case .applied:
+            closing = true
+            // embedded: the presenter closes its whole sheet (the pushed review goes with it); no pop in the same turn
+            if embedded { onApplied() } else { close(); onApplied() }
         case .stale: rebuild(note: "Something this change depends on changed while you were looking (your plan, equipment or health status). Here is the updated version; nothing was saved.") { _ in }
         case .blocked(let ids): notice = ids.contains("SAFE-001") ? "Training is paused by your health check, so nothing was changed." : "This change can't be applied (\(ids.joined(separator: ", "))). Nothing was saved."
         case .needsConfirmation, .notValidated: notice = "Nothing was saved. Please review the change again."

@@ -126,6 +126,15 @@ extension XCUIElement {
         }
         return !exists || !isHittable
     }
+    /// Positive evidence that a screen is back on top: the element exists AND can be hit (nothing covers it).
+    func waitUntilHittable(timeout: TimeInterval = 8) -> Bool {
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end {
+            if exists && isHittable { return true }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        return exists && isHittable
+    }
     /// Wait until the element exists and can be hit (an overlay or a dismissal animation may still cover it), then tap once.
     @discardableResult
     func tapWhenHittable(timeout: TimeInterval = 8) -> Bool {
