@@ -1,0 +1,112 @@
+BikeComputer iOS CI — run 215 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 215 — 2026-11-10 07:26 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 3m33s
+RESULT tests: ok (Executed 659 tests, with 0 failures) · 10m21s
+Total: 11m9s
+
+## smoke
+BikeComputer iOS CI — build 215 — 2026-11-10 07:08 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 11m47s
+RESULT launch smoke (Release): ok (Executed 3 tests, with 0 failures) · 61m13s
+Total: 61m25s
+
+## flows
+BikeComputer iOS CI — build 215 — 2026-11-10 07:36 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 11m5s
+RESULT flows: FAILED (exit 65) · 46m35s — PlanEditPreviewApplyTests.swift:29: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - duration slider PlanEditPreviewApplyTests.swift:30: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Slider` -> `Elements matching predicate '"editDuration" IN identifiers'`, given input App element pid: 86162 
+Total: 46m51s
+
+## journeys
+BikeComputer iOS CI — build 215 — 2026-11-10 07:08 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 12m19s
+  journey hybrid: ok · recording 2666 KB · 12m36s
+  journey cycling: ok · recording 2077 KB · 9m7s
+  journey strength: ok · recording 1533 KB · 7m42s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 47m17s
+Total: 47m31s
+
+## layout-small
+BikeComputer iOS CI — build 215 — 2026-11-10 07:27 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 10m4s
+  layout small (L,AX3): ok · 2m55s
+RESULT layout audit: ok (0 screenshots)
+Total: 13m37s
+
+## layout-standard
+BikeComputer iOS CI — build 215 — 2026-11-10 07:08 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m10s
+  layout standard (L,XXXL): ok · 7m10s
+RESULT layout audit: ok (0 screenshots)
+Total: 18m32s
+
+## layout-promax
+BikeComputer iOS CI — build 215 — 2026-11-10 07:08 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m18s
+  layout promax (L): ok · 3m59s
+RESULT layout audit: ok (0 screenshots)
+Total: 15m55s
+
+## layout-owner
+BikeComputer iOS CI — build 215 — 2026-11-10 07:08 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m26s
+  layout owner (L,XXXL): ok · 3m45s
+RESULT layout audit: ok (0 screenshots)
+Total: 17m27s
+
+## watch
+BikeComputer iOS CI — build 215 — 2026-11-10 07:24 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13390   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13572   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 13969   screenshot ax3 ok large · 11m29s
+Total: 11m35s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+commit e03ca51791a4fbd74d6508ac7278f55e3386e713  branch ios/checkpoint-f-ride  job failure

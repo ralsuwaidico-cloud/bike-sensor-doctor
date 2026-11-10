@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 215 — 2026-11-10 07:36 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 11m5s
+RESULT flows: FAILED (exit 65) · 46m35s — PlanEditPreviewApplyTests.swift:29: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - duration slider PlanEditPreviewApplyTests.swift:30: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Slider` -> `Elements matching predicate '"editDuration" IN identifiers'`, given input App element pid: 86162 
+Total: 46m51s
