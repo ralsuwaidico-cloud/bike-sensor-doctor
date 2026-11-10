@@ -30,8 +30,22 @@ struct SessionChangeSheet: View {
     @State private var pinned: SessionChangeProposal? = nil
     @State private var closing = false
 
+    /// Run 216 (screenshots of runs 211–216): presented as a sheet from a view that is itself inside a sheet, the review could
+    /// neither be dismissed by `dismiss()` nor by its presenter's binding once the plan change had re‑rendered the presenter —
+    /// the UIKit presentation was orphaned. Presenters inside a NavigationStack now PUSH the review (`embedded = true`,
+    /// via `navigationDestination(item:)`): popping is driven by the same item binding and cannot be orphaned.
+    var embedded = false
+
     var body: some View {
-        NavigationStack {
+        if embedded {
+            reviewBody.navigationBarBackButtonHidden(true)   // Cancel or Apply, never a half-decision by Back
+        } else {
+            NavigationStack { reviewBody }
+                .interactiveDismissDisabled()        // Cancel or Apply, never a half-decision by swiping
+        }
+    }
+
+    private var reviewBody: some View {
             Group {
                 if let p = pinned ?? store.pendingProposals[proposalId] {
                     SessionChangePreviewContent(p: p, units: store.settings.units, notice: notice) { action in handle(action, p) }
@@ -58,9 +72,7 @@ struct SessionChangeSheet: View {
             .sheet(isPresented: $showEquipment, onDismiss: { rebuild(note: "Rebuilt with your equipment.") { _ in } }) {
                 NavigationStack { EquipmentPage().navigationTitle("Equipment").toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showEquipment = false } } } }
             }
-        }
-        .interactiveDismissDisabled()        // Cancel or Apply, never a half-decision by swiping
-        .onAppear { if pinned == nil { pinned = store.pendingProposals[proposalId] } }
+            .onAppear { if pinned == nil { pinned = store.pendingProposals[proposalId] } }
     }
 
     private func apply() {
@@ -200,7 +212,7 @@ struct SessionChangePreviewContent: View {
 }
 
 /// Identifiable wrapper for `.sheet(item:)`.
-struct PreviewRef: Identifiable, Equatable { let id: UUID }
+struct PreviewRef: Identifiable, Equatable, Hashable { let id: UUID }   // Hashable: navigationDestination(item:)
 
 /// The result of an edit request from a screen.
 enum EditOutcome: Equatable { case saved, preview(UUID), refused(String) }
