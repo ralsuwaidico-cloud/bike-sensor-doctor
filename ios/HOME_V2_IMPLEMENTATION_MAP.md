@@ -58,7 +58,7 @@ HomeDashboardScreen (ScrollView, same ids where they exist)
 | Metric / element | Definition (reusing existing rules) | Source today | New code needed | Test plan |
 |---|---|---|---|---|
 | **Consistency** | completed eligible ÷ eligible planned this week × 100; eligible = training sessions dated ≥ plan start and ≤ today (rest days, beforePlan, future sessions excluded; skipped by the rider excluded from the denominator exactly as `homeWeekOverview` does). Denominator 0 → "No plan yet" / "Starts Mon" | `homeWeekOverview` (done, planned, missed, skipped), `CyDayStatus.beforePlan` | a `ConsistencyMetric` struct in `HomeDashboardModel` (pure) | HomeSummariesTests cases: before plan start, rest day, future session, missed, skipped, multiple sessions per day |
-| **Load Balance** | status from the engine's numbers, documented: `acwr` (acute 7‑day ÷ chronic 4‑week mean) → *Below target* < 0.8 · *Balanced* 0.8–1.3 · *Elevated* > 1.3; **Needs data** when `chronicWeeklyLoad == nil` (< 3 weeks of history) or `usableRecent < 2`. Strength sessions enter the load as the engine already counts them (sessions with rating/HR); no new physiological claim. Thresholds live in one place and are shown on the detail page ("why Balanced") | `TrainingAnalysis.acwr`, `usableRecent` (AdaptationEngine), recovery advice as a second input only for the explanation text | `LoadBalanceMetric` (pure) over `TrainingAnalysis`; detail page reusing `AdjustmentsView` sections + recovery metric rows | AdaptationEngineTests: each band, insufficient data, strength‑only history, endurance‑only history |
+| **Load Balance** | a **status word** derived from the coach engine's existing acute:chronic load numbers — see §8 for how they are computed and their limits. *Below target* < 0.8 · *Balanced* 0.8–1.3 · *Elevated* > 1.3 — **proposed working bands, not a validated safe‑training zone** (the engine itself treats the ratio as information only; Impellizzeri et al. 2020). **Needs data** when the engine has no chronic baseline (requires ≥ 28 days of history with loadable sessions) or fewer than 2 usable sessions in the last 14 days. Shown separately from Recovery and never combined with it | `TrainingAnalysis.acuteLoad / chronicWeeklyLoad / acwr`, `usableRecent` (`AdaptationEngine.swift` lines 262–282) | `LoadBalanceMetric` (pure) over `TrainingAnalysis`; detail page listing inputs, bands and limits | AdaptationEngineTests: each band, no baseline (< 28 days), unrated rides excluded, strength‑only and endurance‑only history, skipped week |
 | **Recovery** | the existing `RecoveryAdvice` word (hold / trainAsPlanned / watch / easier); ring fraction = none (status ring: full for as‑planned, partial for watch/easier, dashed for hold); **No readings** when `RecoveryAnalysis.metrics` has no fresh reading | `RecoveryAnalysis.advice`, `RecoveryFreshness` | presentation only | RecoveryAnalysisTests already cover the words; UI test for "No readings" |
 | **Week strip** | `CyDay` per weekday; sport icons from `CyDaySport` (+ a `sessions: [CyDaySport]` extension for multi‑session days); statuses as today | `HomeDashboard.days` | small model extension | HomeDashboardTests: multi‑session day, rest, missed, today |
 | **Endurance card** | completed endurance minutes this week ÷ planned endurance minutes; distance this week; sparkline = weekly minutes of the last 8 weeks only if ≥ 2 weeks have data | `homeWeekOverview`, ride history (`ProgressAnalytics`) | rename + planned‑minutes field | HomeSummariesTests: no history, 1 week, ≥ 2 weeks |
@@ -126,5 +126,43 @@ Branch: `impl/home-v2` from the build‑216 tree; merged to the release line onl
 | Chart implies continuous values for categorical data | bands/markers only; unit test asserts no numeric mapping of Load/Recovery |
 | Schedule pressure on the release line | Home v2 on its own branch; build 216 line receives only defect fixes |
 
-**Awaiting owner confirmation** of: this scope; the Load Balance thresholds (0.8 / 1.3, engine ACWR); the six new theme
-names replacing the earlier six for the shared identity; default theme Obsidian for existing users.
+## 8. Load Balance — verification of the engine (owner condition 2, 10 Nov 15:29)
+
+Read from `ios/BikeComputer/AdaptationEngine.swift` (`SessionSignal`, `TrainingAnalysis`, lines 151–190 and 262–282):
+
+- **Per‑session load** = *session‑RPE × minutes* (Foster 2001), in arbitrary units, **sport‑neutral**: the same formula for
+  cycling and strength, so the engine already supports **both modalities and their combination**. The effort is the
+  rider's check‑in rating, or the logged session RPE for strength — never estimated for strength. For a ride **without a
+  rating**, the load is estimated from **verified power or average heart rate** and labelled as such; a ride with neither
+  has **no load and is excluded** (`usable == false`).
+- **Acute load** = sum of loads over the **last 7 completed days** (today is excluded because it is still running).
+- **Chronic load** = mean *weekly* load of the up‑to‑4 weeks before the acute week, divided by the weeks actually covered,
+  and **only once ≥ 28 days of history with loadable sessions exist** — so a new rider's repeated week reads ≈ 1.0 instead
+  of a false spike. Below 28 days the engine has **no baseline** (`chronicWeeklyLoad == nil`) → Home shows **Needs data**.
+- **Missing or skipped sessions** contribute nothing (they are absent, not zero‑rated), so a lighter week lowers the acute
+  load and reads *Below target*; an unusually heavy week reads *Elevated*. Sessions that cannot be loaded (unrated rides
+  without HR/verified power) are simply not counted, which **biases the ratio downward** for riders who do not rate rides
+  and ride without sensors — the detail page must say how many sessions were not counted (the engine already tracks
+  `unusableRides` and `unverifiedPowerOnly`).
+- **Thresholds.** The engine flags the ratio only above **1.5**, and by an independent review's finding (F‑15) treats it
+  as **information, never a trigger**, because the acute:chronic model is scientifically contested. The Home bands
+  (0.8 / 1.3) are therefore **presentation bands for a status word**, documented on the detail page with these limits;
+  they are **not** a validated safe‑training zone and are **not** a measure of recovery (Recovery stays its own ring from
+  Health readings).
+- **Minimum history:** the engine's own rule is **28 days**, not three weeks — the map is corrected accordingly.
+
+## 9. Decisions recorded (owner, 10 Nov 2026 15:29)
+
+1. **Scope approved** — Home‑only, separate branch `impl/home-v2`; build 216 is the baseline and its release line receives
+   defect fixes only; Plan, Progress, Profile, Training Hub, live workout screens, firmware and device integrations are
+   not modified. **Stage B does not start until the owner has reviewed build 216 and explicitly authorises implementation.**
+2. **Load Balance conditionally approved** — acute:chronic model as the starting point, status words not a score,
+   "Needs data" without a reliable baseline, thresholds documented with limits (§8), never described as a validated safe
+   zone, never equated with Recovery.
+3. **Themes approved** — Obsidian, Arctic, Ocean, Forest, Sandstone, High Contrast are the shared Cyclift appearance
+   identities for iPhone and the detachable Watch (platform‑specific adaptations allowed); they supersede the earlier
+   Watch colour‑theme names. Shared design documentation updated (hardware handover 04_/10_); no Watch firmware change.
+4. **Lost appearance branch acknowledged** — recorded here; the theme‑token foundation is rebuilt when Home v2
+   implementation begins; obsolete appearance work is not recreated.
+5. **Sequence** — build 216 report and both audits delivered (10 Nov); Home v2 waits for the owner's TestFlight review;
+   no further Home changes until then.
