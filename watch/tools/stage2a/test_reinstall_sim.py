@@ -32,6 +32,7 @@ shutil.copy(os.path.join(HERE, 'pc_recovery_b_runner.py'), os.path.join(T, 'cy_r
 shutil.copy(os.path.join(HERE, 'pc_reinstall_runner.py'), os.path.join(T, 'cy_reinstall.py'))
 shutil.copy(os.path.join(HERE, 'pc_update_s11_runner.py'), os.path.join(T, 'cy_update_s11.py'))
 shutil.copy(os.path.join(HERE, 'pc_update_s12_runner.py'), os.path.join(T, 'cy_update_s12.py'))
+shutil.copy(os.path.join(HERE, 'pc_update_s13_runner.py'), os.path.join(T, 'cy_update_s13.py'))
 
 backup = bytearray(tic.backup_like())
 bl = fp.image_len(backup, 0x1000); hdr = bytearray(backup[0x1000:0x1000 + bl]); hdr[2] = 2; hdr[3] = 0x20
@@ -43,6 +44,8 @@ fw11 = tfp.esp_image(951296, mode=2, size_code=3, seed=11)          # Stage 1.1 
 fw11path = os.path.join(FWD, 'cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin'); open(fw11path, 'wb').write(fw11)
 fw12 = tfp.esp_image(1015808, mode=2, size_code=3, seed=12)         # Stage 1.2 stand-in, LONGER than Stage 1.1 (span grows)
 fw12path = os.path.join(FWD, 'cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin'); open(fw12path, 'wb').write(fw12)
+fw13 = tfp.esp_image(1048576, mode=2, size_code=3, seed=13)         # Stage 1.3 RC1 stand-in, longer again (span 0x100000)
+fw13path = os.path.join(FWD, 'cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin'); open(fw13path, 'wb').write(fw13)
 open(os.path.join(D, 'flash_8MB_read1.bin'), 'wb').write(backup); open(fwpath, 'wb').write(fw)
 planned, _ = fp.apply_plan(backup, b'', True); man = []
 for s in ic.PLANNED:
@@ -88,6 +91,8 @@ def boot_text():
     sel = fp.selected_slot(img, len(apps)) or 0; a = apps[sel]
     nv = [p for p in pts if p['label'] == 'nvs'][0]['offset']
     if a['offset'] == 0x400000:
+        if bytes(FL[0x400000:0x400000 + len(fw13)]) == fw13:
+            return BANNER + 'Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after 430 ms\r\n'
         if bytes(FL[0x400000:0x400000 + len(fw12)]) == fw12:
             return BANNER + 'Cyclift v3 proof of concept · Stage 1.2 (diagnostics; IRAM rendering off) · first frame after 420 ms\r\n'
         if bytes(FL[0x400000:0x400000 + len(fw11)]) == fw11:
@@ -166,7 +171,7 @@ class FlashTransport:
 
 
 def load(name):
-    os.environ.update(CY_PRIVATE_DIR=D, CY_TOOLS_DIR=T, CY_INSTALLER=os.path.join(T, 'cy_install.py'), CY_FW11=fw11path, CY_FW12=fw12path,
+    os.environ.update(CY_PRIVATE_DIR=D, CY_TOOLS_DIR=T, CY_INSTALLER=os.path.join(T, 'cy_install.py'), CY_FW11=fw11path, CY_FW12=fw12path, CY_FW13=fw13path,
                       CY_UPDATE_S11=os.path.join(T, 'cy_update_s11.py'))
     g = {'__file__': os.path.join(T, name), '__name__': name}
     src = open(os.path.join(T, name), encoding='utf-8').read()
@@ -174,6 +179,7 @@ def load(name):
     src = src.replace("BK_SHA = '77ad7105c68fb7de04e5717fca4e90b08bd9c32adeb5c098e3e00446d3767693'", 'BK_SHA = %r' % hashlib.sha256(backup).hexdigest())
     src = src.replace("FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'", 'FW11_SHA = %r' % hashlib.sha256(fw11).hexdigest())
     src = re.sub(r"FW12_SHA = '[0-9a-f_A-Z]+'", 'FW12_SHA = %r' % hashlib.sha256(fw12).hexdigest(), src)
+    src = re.sub(r"FW13_SHA = '[0-9a-f_A-Z]+'", 'FW13_SHA = %r' % hashlib.sha256(fw13).hexdigest(), src)
     exec(compile(src, name, 'exec'), g)
     return g
 
@@ -321,6 +327,50 @@ g2 = load_s12(); g2['FW12_SHA'] = '0' * 64
 check(g2['phase']('s12_pre') is False, 'Stage 1.2 pre-check refuses a file whose fingerprint is not the approved one')
 FL[:] = AFTER_B1
 check(load_s12()['phase']('s12_pre') is False, 'Stage 1.2 pre-check refuses a watch that does not run Stage 1.1')
+
+# 10. PROPOSED Stage 1.3 RC1 app-slot update on the installed Stage 1.1 state, rollbacks, failure paths ----------------------
+def load_s13():
+    g = load('cy_update_s13.py'); patch(g); g['FW11'] = fw11path; g['FW13'] = fw13path; return g
+FL[:] = AFTER_S11
+g = load_s13()
+CMDS.clear()
+res = [g['phase'](p) for p in ('s13_pre', 's13_write', 's13_post')]
+check(res == [True, True, True], 'Stage 1.3 RC1 update: pre-check, app1 write + boot confirmed, post map (%s)' % res)
+SPAN13 = (max(len(fw11), len(fw13), SPAN) + 0xFFF) & ~0xFFF
+wr = [c for c in CMDS if c[0] == 'write_flash']
+check(len(wr) == 1 and [a for a in wr[0] if a.startswith('0x')] == ['0x400000'] and os.path.getsize(wr[0][-1]) == SPAN13,
+      'Stage 1.3 RC1 update issues exactly ONE write: 0x400000, %d B' % SPAN13)
+check(all(c[0] in ('flash_id', 'read_flash', 'write_flash', 'verify_flash') for c in CMDS), 'Stage 1.3 RC1 update: only flash_id, read_flash, write_flash, verify_flash')
+check(bytes(FL[:0x400000]) == AFTER_S11[:0x400000], 'Stage 1.3 RC1 update: first 4 MB (factory app, files, settings, bootloader, table, OTA) untouched')
+check(bytes(FL[0x400000:0x400000 + SPAN13]) == fw13 + b'\xff' * (SPAN13 - len(fw13)) and bytes(FL[0x400000 + SPAN13:0x700000]) == b'\xff' * (0x300000 - SPAN13),
+      'Stage 1.3 RC1 update: app1 = RC1 + erased padding, rest of app1 erased')
+AFTER_S13 = bytes(FL)
+gi = load('cy_install.py'); patch(gi)
+check(gi['recovery']('RA') is True and fp.selected_slot(bytes(FL), 2) == 0, 'R-A after Stage 1.3 RC1: original OTA record written, factory app starts')
+FL[:] = AFTER_S13
+gb = load('cy_recover_b.py'); patch(gb)
+ok = all(gb['phase'](p) for p in ('rb_precheck', 'rb_restore', 'rb_confirm'))
+check(ok and fp.parse_pt(bytes(FL[0x8000:0x8C00])) == fp.parse_pt(backup[0x8000:0x8C00]), 'R-B after Stage 1.3 RC1: accepts RC1 in app1, restores the factory layout, factory starts')
+FL[:] = AFTER_S13
+check(g['phase']('s13_rollback') is True and bytes(FL[0x400000:0x400000 + SPAN13]) == fw11 + b'\xff' * (SPAN13 - len(fw11)),
+      'rollback R-S11 from RC1 to the installed Stage 1.1: written, verified, Stage 1.1 boot confirmed, no RC1 remains')
+check(g['phase']('s13_pre') is True, 'after rollback the watch is again in the Stage 1.1 state (RC1 pre-check passes)')
+FL[:] = AFTER_S13
+check(g['phase']('s11_rollback') is True and bytes(FL[0x400000:0x400000 + len(fw)]) == fw, 'from RC1 the further rollback to Stage 1 (s11_rollback) still works')
+FL[:] = AFTER_S11
+STATE['verify_fault'] = 0x400000
+g['phase']('s13_pre')
+check(g['phase']('s13_write') is False and STATE['mode'] == 'running', 'RC1 update with a verify failure: phase fails, watch restarted')
+STATE['verify_fault'] = None
+FL[:] = AFTER_S11
+g2 = load_s13(); g2['FW13_SHA'] = '0' * 64
+check(g2['phase']('s13_pre') is False, 'RC1 pre-check refuses a file whose fingerprint is not the pinned one')
+FL[:] = AFTER_S11
+os.environ['CY_FW13'] = fw13path
+g3 = load('cy_update_s13.py'); patch(g3); g3['FW11'] = fw11path; g3['FW13'] = fw13path; g3['FW13_SHA'] = 'NOT_PINNED'
+check(g3['phase']('s13_pre') is False, 'RC1 pre-check refuses everything while the tool is not pinned (NOT_PINNED)')
+FL[:] = AFTER_B1
+check(load_s13()['phase']('s13_pre') is False, 'RC1 pre-check refuses a watch that does not run Stage 1.1')
 
 # 8. the real C1 numbers: Stage 1 (983,360 B) and Stage 1.1 (1,009,632 B) -> one write 0x400000-0x4F6FFF
 real = (max(983360, 1009632) + 0xFFF) & ~0xFFF

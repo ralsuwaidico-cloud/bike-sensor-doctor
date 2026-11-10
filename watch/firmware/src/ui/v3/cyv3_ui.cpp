@@ -13,7 +13,9 @@
 extern "C" {
 extern const lv_img_dsc_t cyv3_ic_face_20, cyv3_ic_today_20, cyv3_ic_plan_20, cyv3_ic_heart_20, cyv3_ic_coach_20, cyv3_ic_hist_20,
     cyv3_ic_util_20, cyv3_ic_gear_20, cyv3_ic_bike_20, cyv3_ic_chev_12, cyv3_ic_chevl_12, cyv3_ic_down_11, cyv3_ic_bolt_12,
-    cyv3_ic_check_15, cyv3_ic_warn_15;
+    cyv3_ic_check_15, cyv3_ic_warn_15,
+    cyv3_ic_sun_20, cyv3_ic_palette_20, cyv3_ic_moon_20, cyv3_ic_lock_20, cyv3_ic_info_20, cyv3_ic_heart_22, cyv3_ic_bike_22,
+    cyv3_ic_today_28, cyv3_ic_moon_28, cyv3_ic_heart_28, cyv3_ic_coach_28, cyv3_ic_hist_28, cyv3_ic_util_28, cyv3_ic_gear_28;
 }
 
 namespace cyw::v3 {
@@ -73,7 +75,10 @@ Ui::Key Ui::structureKey(const Model& m) const {
     return Key{int(m.screen), int(m.settings.theme), int(m.settings.density), int(m.settings.text), int(m.settings.lang), int(m.wk), int(m.pending),
         int(m.phoneLinked), int(m.synced && m.clock.valid), int(m.charging), int(m.m.power >= 0), int(m.m.hr >= 0), int(m.m.cadence >= 0),
         int(m.toast.kind), int(m.toast.text), int(m.toast.hasSub), int(m.toast.sub), int(m.key2Armed && m.screen == Screen::Cockpit), m.menuScroll,
-        m.movePct, m.loadPct};
+        m.movePct, m.loadPct,
+        // Stage 1.3
+        int(m.synced), m.settings.brightness, int(m.settings.dnd), int(m.settings.mode), int(m.locked), int(m.notYet), m.qsScroll,
+        int(m.clock.valid), (m.screen == Screen::Today || m.screen == Screen::Week) ? m.clock.weekday * 64 + m.clock.day : 0, 0, 0};
 }
 
 bool Ui::render(const Model& m) {
@@ -151,13 +156,20 @@ bool Ui::setText(lv_obj_t* l, const std::string& s) {
 void Ui::build(const Model& m) {
     lv_obj_clean(root_);
     lines_.clear(); hits_.clear(); groups_.clear(); src_.clear();
-    clock_ = date_ = interval_ = lead_ = hrTile_ = cadTile_ = Run{};
+    clock_ = date_ = interval_ = lead_ = hrTile_ = cadTile_ = bikeInfo_ = Run{};
     cmd_ = marker_ = ivArc_ = ringImg_ = nullptr;
     lv_obj_set_style_bg_color(root_, col(pal_->bg), 0); lv_obj_set_style_bg_opa(root_, LV_OPA_COVER, 0);
     switch (m.screen) {
         case Screen::Face: buildFace(m); break;
         case Screen::Menu: buildMenu(m); break;
         case Screen::Cockpit: buildCockpit(m); break;
+        case Screen::Today: buildToday(m); break;
+        case Screen::Week: buildWeek(m); break;
+        case Screen::Quick: buildQuick(m); break;
+        case Screen::WHealth: buildWHealth(m); break;
+        case Screen::WCoach: buildWCoach(m); break;
+        case Screen::WActivity: buildWActivity(m); break;
+        case Screen::NotYet: buildNotYet(m); break;
     }
     buildOverlays(m);
     noScroll(root_);
@@ -339,7 +351,8 @@ void Ui::updateFace(const Model& m) {
     char clk[8]; if (synced) std::snprintf(clk, sizeof clk, "%02d:%02d", m.clock.hh, m.clock.mm); else std::snprintf(clk, sizeof clk, "--:--");
     if (setText(clock_.pieces[0].obj, clk)) changed = true;
     if (changed) layoutRun(clock_);
-    char dt[64]; std::snprintf(dt, sizeof dt, "%s %d %s", weekday(m.clock.weekday, l), m.clock.day, month(m.clock.month, l));
+    // an invalid clock has no date either (defect D1, 11 Nov): only the battery stays on that line
+    char dt[64]; if (m.clock.valid) std::snprintf(dt, sizeof dt, "%s %d %s", weekday(m.clock.weekday, l), m.clock.day, month(m.clock.month, l)); else dt[0] = 0;
     char bt[8]; std::snprintf(bt, sizeof bt, "%d%%", m.battery);
     uint32_t bc = m.battery <= 10 ? p.status_critical : m.battery <= 20 ? p.status_caution : p.ink_2;
     auto& dp = date_.pieces.front(); auto& bp = date_.pieces.back(); changed = false;
@@ -498,12 +511,19 @@ void Ui::buildCockpit(const Model& m) {
         Piece t; t.text = fmtTime(m.remainS); t.font = lbl; t.color = p.ink; t.gapBefore = 4; interval_.pieces.push_back(t);
         makeRun(interval_);
     }
-    // lead metric + unit (fit 58 → 44 → 32 px)
-    lead_ = Run{}; lead_.top = 58; lead_.lineBox = 58; lead_.mainCss = 58;
-    Piece v; v.text = "0"; v.font = font(Type::Display58, false); v.color = p.ink; lead_.pieces.push_back(v);
-    Piece u; u.text = "W"; u.font = unitFor(58); u.color = p.ink_2; u.gapBefore = 4; lead_.pieces.push_back(u);
+    // lead metric + unit (fit 58 → 44 → 32 px); Bike Mode: 76 → 58 → 44 px, unit moves to the label line (prototype bike)
+    bool bike = m.bike();
+    lead_ = Run{}; lead_.top = bike ? 56 : 58; lead_.lineBox = bike ? 76 : 58; lead_.mainCss = lead_.lineBox;
+    Piece v; v.text = "0"; v.font = font(bike ? Type::Display76 : Type::Display58, false); v.color = p.ink; lead_.pieces.push_back(v);
+    Piece u; u.text = bike ? "" : "W"; u.font = unitFor(58); u.color = p.ink_2; u.gapBefore = bike ? 0 : 4; lead_.pieces.push_back(u);
     makeRun(lead_);
-    if (!focused) {
+    if (bike) {
+        Font lbl = font(Type::Label, large_);
+        bikeInfo_ = Run{}; bikeInfo_.top = 134; bikeInfo_.lineBox = lbl.lineBox; bikeInfo_.mainCss = lbl.css; bikeInfo_.reverse = ar_;
+        Piece a; a.text = "WATTS"; a.font = lbl; a.color = p.ink_2; a.rtlText = ar_; bikeInfo_.pieces.push_back(a);
+        if (!focused) { Piece b; b.text = "0"; b.font = lbl; b.color = p.ink; b.gapBefore = 4; bikeInfo_.pieces.push_back(b); }
+        makeRun(bikeInfo_);
+    } else if (!focused) {
         Font cap = font(Type::Caption, large_);
         auto tile = [&](Run& r, int cx, S name) {
             r = Run{}; r.top = 116; r.lineBox = 28; r.mainCss = 24; r.centerX = cx;
@@ -518,21 +538,23 @@ void Ui::buildCockpit(const Model& m) {
         };
         tile(hrTile_, C - 42, S::HeartRate); tile(cadTile_, C + 42, S::Cadence);
     }
-    cmdTop_ = focused ? 130 : 160;
+    cmdTop_ = bike ? 152 : focused ? 130 : 160;
     Font f13 = font(Type::Small13, false); f13.tracked = true;
     cmd_ = label(root_, "", f13, p.ink_2, ar_);
     if (keyChip && cmdTop_ + 16 > keyChipTop() - 6 && cmdTop_ < keyChipTop() + 22 + 6) lv_obj_add_flag(cmd_, LV_OBJ_FLAG_HIDDEN);   // under the Key 2 chip
     bool paused = m.wk == WkState::Paused;
-    int btop = large_ ? 168 : (paused ? 180 : 182);
-    if (paused) button(btop, tr(m.pending == Cmd::Resume ? S::Resuming : S::Resume, l), m.pending == Cmd::Resume ? 2 : 1, Action::Resume);
-    else button(btop, tr(m.pending == Cmd::Pause ? S::Pausing : S::Pause, l), m.pending == Cmd::Pause ? 2 : 0, Action::Pause);
+    int btop = bike ? 170 : large_ ? 168 : (paused ? 180 : 182);
+    auto btn = [&](const std::string& t, int kind, Action a) { if (bike) bikeButton(btop, t, kind, a); else button(btop, t, kind, a); };
+    if (paused) btn(tr(m.pending == Cmd::Resume ? S::Resuming : S::Resume, l), m.pending == Cmd::Resume ? 2 : 1, Action::Resume);
+    else btn(tr(m.pending == Cmd::Pause ? S::Pausing : S::Pause, l), m.pending == Cmd::Pause ? 2 : 0, Action::Pause);
     updateCockpit(m);
 }
 
 void Ui::setLead(const Model& m) {
     const Palette& p = *pal_;
     int value = m.m.power >= 0 ? m.m.power : m.m.hr;
-    const char* unit = m.m.power >= 0 ? "W" : m.m.hr >= 0 ? "bpm" : "W";
+    bool bike = m.bike();
+    const char* unit = bike ? "" : m.m.power >= 0 ? "W" : m.m.hr >= 0 ? "bpm" : "W";
     uint32_t color = p.ink;
     if (m.m.power >= 0) {
         auto g = Model::gradeOf(m.m.power);
@@ -548,8 +570,9 @@ void Ui::setLead(const Model& m) {
     if (leadPx_ && !unitChanged && before.size() == text.size()) return;
     // fit: the whole line box must sit inside the safe circle (prototype fitText, conservative rule)
     leadPx_ = 0;
-    for (int px : {58, 44, 32}) {
-        Font vf = font(px == 58 ? Type::Display58 : px == 44 ? Type::Display44 : Type::Display32, false), uf = unitFor(px);
+    static const int WRIST[] = {58, 44, 32}, BIKE[] = {76, 58, 44};
+    for (int px : bike ? BIKE : WRIST) {
+        Font vf = font(px == 76 ? Type::Display76 : px == 58 ? Type::Display58 : px == 44 ? Type::Display44 : Type::Display32, false), uf = unitFor(px);
         lv_obj_set_style_text_font(vp.obj, vf.f, 0); lv_obj_set_style_text_font(up.obj, uf.f, 0);
         vp.font = vf; up.font = uf; lead_.lineBox = px; lead_.mainCss = px;
         layoutRun(lead_);
@@ -604,6 +627,12 @@ void Ui::updateCockpit(const Model& m) {
     }
     setLead(m);
     if (!hrTile_.pieces.empty()) { setTile(hrTile_, m.m.hr, "bpm"); setTile(cadTile_, m.m.cadence, "rpm"); }
+    if (!bikeInfo_.pieces.empty()) {          // 'WATTS · 152 bpm' (power lead) or 'BPM · 92 rpm' (heart-rate lead)
+        bool pw = m.m.power >= 0; bool changed = setText(bikeInfo_.pieces[0].obj, pw ? (ar_ ? std::string(tr(S::Watts, m.settings.lang)) + " \xC2\xB7" : "WATTS \xC2\xB7") : "BPM \xC2\xB7");
+        if (bikeInfo_.pieces.size() == 1) changed = setText(bikeInfo_.pieces[0].obj, pw ? tr(S::Watts, m.settings.lang) : "BPM") || changed;
+        else changed = setText(bikeInfo_.pieces[1].obj, pw ? fmtV(m.m.hr) + " bpm" : fmtV(m.m.cadence) + " rpm") || changed;
+        if (changed) layoutRun(bikeInfo_);
+    }
     setCommand(m);
     placeMarker(m);
 }
@@ -628,6 +657,9 @@ void Ui::hideUnder(lv_obj_t* overlay, int margin) {
 
 void Ui::buildOverlays(const Model& m) {
     const Palette& p = *pal_; Lang l = m.settings.lang;
+    // approved text 'Locked · hold Key 1'; prototype y 200 puts the 157 px chip off the round glass, so it sits at y 178 (the
+    // widest point that keeps it whole) and hides the line under it while the screen is locked
+    if (m.locked) { lv_obj_t* k = chip(178, tr(S::LockedHoldKey1, l), p.ink_2, 0, p.surface); lv_obj_set_user_data(k, (void*)"overlay"); hideUnder(k, 4); }
     if (m.key2Armed && m.screen == Screen::Cockpit) { lv_obj_t* k = chip(keyChipTop(), tr(S::KeyLapPressAgain, l), p.status_info, 0, p.surface, 6); lv_obj_set_user_data(k, (void*)"overlay"); hideUnder(k, 6); }
     if (m.toast.kind == Toast::None) return;
     if (m.toast.hasSub) {                                             // banner: result + reason, tap to dismiss
@@ -638,7 +670,7 @@ void Ui::buildOverlays(const Model& m) {
         lv_obj_set_style_bg_color(b, col(p.surface_2), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0); lv_obj_set_style_radius(b, RADIUS_M, 0);
         lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE); lv_obj_set_user_data(b, (void*)"overlay");
         Font t13 = font(Type::Small13, false), c11 = font(Type::Caption, false);
-        lv_obj_t* t = label(b, tr(m.toast.text, l), t13, m.toast.kind == Toast::Crit ? p.status_critical : p.ink, ar_);
+        lv_obj_t* t = label(b, tr(m.toast.text, l), t13, m.toast.kind == Toast::Crit ? p.status_critical : m.toast.kind == Toast::Info ? p.status_info : p.ink, ar_);
         lv_obj_t* s = label(b, tr(m.toast.sub, l), c11, p.ink_2, ar_);
         for (lv_obj_t* o : {t, s}) dotMode(o);
         lv_obj_update_layout(b);
@@ -673,6 +705,326 @@ void Ui::buildOverlays(const Model& m) {
     lv_obj_set_pos(ic, ar_ ? w - 13 - 15 : 13, (h - 15) / 2);
     lv_obj_set_pos(t, ar_ ? 13 : 13 + 15 + 7, labelYFor(baselineOf((h - 16) / 2, 16, 13), f.f));
     hideUnder(box, 2);
+}
+
+
+// ---------------------------------------------------------------------------------------------------------------- Stage 1.3
+// Face neighbourhood of the approved prototype (Deliverable D v3.3, src/screens1.js): Today, Week strip, Quick Settings,
+// the Health / Coach / Activity glance widgets, and an explicit "not in this release" page. Without iPhone data every
+// screen shows its honest empty / not-synced state; demo values appear only when the simulated iPhone is switched on.
+namespace {
+std::string upperAscii(std::string s) { for (char& c : s) if (c >= 'a' && c <= 'z') c = char(c - 32); return s; }
+const lv_img_dsc_t* emptyIcon(MenuId id) {
+    switch (id) {
+        case MenuId::Health: return &cyv3_ic_heart_28;
+        case MenuId::Coach: return &cyv3_ic_coach_28;
+        case MenuId::History: return &cyv3_ic_hist_28;
+        case MenuId::Utilities: return &cyv3_ic_util_28;
+        case MenuId::Settings: return &cyv3_ic_gear_28;
+        default: return &cyv3_ic_today_28;
+    }
+}
+/// "Sun 8 Nov" (caption style) — or nothing when the clock is not valid.
+std::string dateCaption(const Model& m) {
+    if (!m.clock.valid) return "";
+    Lang l = m.settings.lang;
+    std::string wd = weekday(m.clock.weekday, l), mo = month(m.clock.month, l);
+    if (l == Lang::En) { for (size_t i = 1; i < wd.size(); i++) wd[i] = char(wd[i] + 32); for (size_t i = 1; i < mo.size(); i++) mo[i] = char(mo[i] + 32); }
+    char b[64]; std::snprintf(b, sizeof b, "%s %d %s", wd.c_str(), m.clock.day, mo.c_str()); return b;
+}
+}  // namespace
+
+lv_obj_t* Ui::textLine(int top, const std::string& s, const Font& f, uint32_t color, int centerX) {
+    lv_obj_t* l = label(root_, s, f, color, ar_ && hasArabic(s));
+    lv_obj_update_layout(l);
+    lv_obj_set_pos(l, centerX - lv_obj_get_width(l) / 2, labelYFor(baselineOf(top, f.lineBox, f.css), f.f));
+    return l;
+}
+
+lv_obj_t* Ui::paragraph(int top, int left, int width, const std::string& s, const Font& f, int lineH, uint32_t color, bool center) {
+    lv_obj_t* l = label(root_, s, f, color, ar_);
+    lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(l, width);
+    lv_obj_set_style_text_line_space(l, lineH - f.f->line_height, 0);
+    lv_obj_set_style_text_align(l, center ? LV_TEXT_ALIGN_CENTER : (ar_ ? LV_TEXT_ALIGN_RIGHT : LV_TEXT_ALIGN_LEFT), 0);
+    lv_obj_set_pos(l, left, labelYFor(baselineOf(top, lineH, f.css), f.f));
+    return l;
+}
+
+void Ui::icon(int top, const lv_img_dsc_t* ic, uint32_t color, int centerX) {
+    lv_obj_t* i = lv_img_create(root_); lv_img_set_src(i, ic);
+    lv_obj_set_style_img_recolor(i, col(color), 0); lv_obj_set_style_img_recolor_opa(i, LV_OPA_COVER, 0);
+    lv_obj_set_pos(i, centerX - int(ic->header.w) / 2, top); lv_obj_clear_flag(i, LV_OBJ_FLAG_CLICKABLE);
+}
+
+void Ui::header(const std::string& title, const std::string& sub) {
+    Font lbl = font(Type::Label, large_), cap = font(Type::Caption, large_);
+    int t = sub.empty() ? (large_ ? 26 : 24) : (large_ ? (ar_ ? 26 : 27) : ar_ ? 22 : 23);
+    textLine(t, title, lbl, pal_->ink_2);
+    // Arabic month and weekday names carry tall letters (ل ك أ) that reached the title by 1 px in the date sweep: 1 px more air
+    if (!sub.empty()) textLine(large_ ? 44 : ar_ ? 39 : 38, sub, cap, pal_->ink_2);
+}
+
+void Ui::pageDots(int n, int index, int top) {
+    int total = 0; for (int k = 0; k < n; k++) total += (k == index ? 12 : 5) + (k ? 5 : 0);
+    int x = C - total / 2;
+    for (int k = 0; k < n; k++) {
+        int i = ar_ ? n - 1 - k : k;                 // right-to-left: the first page is on the right
+        int w = i == index ? 12 : 5;
+        lv_obj_t* d = lv_obj_create(root_); lv_obj_remove_style_all(d);
+        lv_obj_set_size(d, w, 5); lv_obj_set_pos(d, x, top); lv_obj_set_style_radius(d, i == index ? 3 : LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(d, col(i == index ? pal_->ink : pal_->ink_3), 0); lv_obj_set_style_bg_opa(d, LV_OPA_COVER, 0);
+        lv_obj_clear_flag(d, LV_OBJ_FLAG_CLICKABLE);
+        x += w + 5;
+    }
+}
+
+void Ui::emptyState(const lv_img_dsc_t* ic, const std::string& title, const std::string& sub) {
+    icon(70, ic, pal_->ink_3);
+    textLine(108, title, font(Type::BodyStrong, large_), pal_->ink);
+    Font cap = font(Type::Caption, large_);
+    paragraph(134, 46, 148, sub, cap, cap.lineBox, pal_->ink_2, true);
+}
+
+lv_obj_t* Ui::bikeButton(int top, const std::string& text, int kind, Action a) {
+    Font f = font(Type::BikeButton, false);
+    int h = BUTTON_H_BIKE, minW = 96;
+    uint32_t bg = kind == 1 ? pal_->accent : pal_->surface_2, fg = kind == 1 ? pal_->on_accent : kind == 2 ? pal_->status_info : pal_->ink;
+    lv_obj_t* b = lv_obj_create(root_); lv_obj_remove_style_all(b);
+    lv_obj_set_style_bg_color(b, col(bg), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0); lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
+    lv_obj_clear_flag(b, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_t* t = label(b, text, f, fg, ar_);
+    lv_obj_update_layout(t);
+    int w = std::max(minW, int(lv_obj_get_width(t)) + 2 * SPACE_XL);
+    lv_obj_set_size(b, w, h); lv_obj_set_pos(b, C - w / 2, top);
+    lv_obj_set_pos(t, (w - lv_obj_get_width(t)) / 2, labelYFor(baselineOf((h - f.lineBox) / 2, f.lineBox, f.css), f.f));
+    if (kind != 2) hit(C - w / 2, top, w, h, a, 0, "button");
+    return b;
+}
+
+// ---- Today (prototype def('today')) ----
+void Ui::buildToday(const Model& m) {
+    const Palette& p = *pal_; Lang l = m.settings.lang;
+    header(tr(S::TodayHdr, l), dateCaption(m));
+    if (!m.synced) {                                  // no plan from the iPhone: say so, offer nothing to start
+        emptyState(&cyv3_ic_today_28, tr(S::NoPlanTitle, l), tr(S::NoPlanSub, l));
+    } else {
+        icon(ar_ || large_ ? 61 : 58, &cyv3_ic_bike_22, p.ink_2);   // Arabic / Large Text date caption reaches y 59
+        Font tf = font(Type::Title, large_);
+        lv_obj_t* t = textLine(90, tr(S::PlanName, l), tf, p.ink);
+        for (Type ty : {Type::Title18, Type::Title16}) {   // shrink until the title fits the circle at that height
+            lv_obj_update_layout(t);
+            if (lv_obj_get_width(t) <= int(chordAt(90.f, 90.f + tf.lineBox)) - 12) break;
+            lv_obj_del(t); tf = font(ty, false); t = textLine(90, tr(S::PlanName, l), tf, p.ink);
+        }
+        Font body = font(Type::Body, large_);
+        textLine(118, trds(S::PlanSub, l, 60, "3 \xC3\x97 12"), body, p.ink_2);
+        Font lbl = font(Type::Label, large_);
+        Run r; r.top = 140; r.lineBox = lbl.lineBox; r.mainCss = lbl.css; r.reverse = ar_;
+        Piece a; a.text = tr(S::Target, l); a.font = lbl; a.color = p.ink_2; a.rtlText = ar_; r.pieces.push_back(a);
+        Piece v; v.text = "235\xE2\x80\x93" "255 W"; v.font = lbl; v.color = p.ink; v.gapBefore = 5; r.pieces.push_back(v);
+        makeRun(r);
+        button(large_ ? 156 : 162, tr(S::Start, l), 1, Action::StartPlan);
+    }
+    // "⌄ Week" link at y 207 (44 px touch area); swipe up does the same
+    Font cap = font(Type::Caption, large_);
+    Run w; w.top = 207; w.lineBox = cap.lineBox; w.mainCss = cap.css; w.reverse = ar_;
+    Piece c; c.kind = Piece::Icon; c.icon = &cyv3_ic_down_11; c.iconDrop = 1; c.color = p.ink_2; w.pieces.push_back(c);
+    Piece t2; t2.text = tr(S::WeekLink, l); t2.font = cap; t2.color = p.ink_2; t2.gapBefore = 4; t2.rtlText = ar_; w.pieces.push_back(t2);
+    makeRun(w);
+    // 44 px touch area under the content (as the menu's "more" hint); with a Start button above it there is no room for one
+    // (the button ends at y 206), so the week strip is reached by swiping up — the prototype's gesture for it
+    if (!m.synced) hit(C - 60, 194, 120, 44, Action::Go, int(Screen::Week), "week link");
+}
+
+void Ui::updateToday(const Model&) {}
+
+// ---- Week strip (prototype def('today-week')) ----
+void Ui::buildWeek(const Model& m) {
+    const Palette& p = *pal_; Lang l = m.settings.lang;
+    header(tr(S::WeekHdr, l), "");
+    static const char* EN[] = {"M", "T", "W", "T", "F", "S", "S"};
+    static const char* AR[] = {"ن", "ث", "ر", "خ", "ج", "س", "ح"};
+    static const char ST[] = {'d', 'r', 'm', 'd', 'r', 'd', 'p'};    // demo week: done, rest, missed, plan
+    int today = m.clock.valid ? (m.clock.weekday + 6) % 7 : -1;   // Monday first
+    Font f = font(Type::Chip, false);
+    for (int i = 0; i < 7; i++) {
+        int x = ar_ ? 30 + (6 - i) * 30 : 30 + i * 30;                // right-to-left: Monday on the right
+        lv_obj_t* t = label(root_, (ar_ ? AR : EN)[i], f, i == today ? p.ink : p.ink_2, ar_);
+        lv_obj_set_style_text_letter_space(t, 0, 0);
+        lv_obj_update_layout(t); lv_obj_set_pos(t, x - lv_obj_get_width(t) / 2, labelYFor(92, f.f));
+        char st = m.synced ? ST[i] : 'r';                              // without iPhone data no day has a status
+        if (st == 'd') {
+            lv_obj_t* d = lv_obj_create(root_); lv_obj_remove_style_all(d); lv_obj_set_size(d, 18, 18); lv_obj_set_pos(d, x - 9, 103);
+            lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_color(d, col(p.ink), 0); lv_obj_set_style_bg_opa(d, LV_OPA_COVER, 0);
+        } else if (st == 'p') {
+            lv_obj_t* d = lv_obj_create(root_); lv_obj_remove_style_all(d); lv_obj_set_size(d, 19, 19); lv_obj_set_pos(d, x - 9, 103);   // r 8 + 2.5 stroke
+            lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_border_color(d, col(p.accent), 0); lv_obj_set_style_border_width(d, 3, 0); lv_obj_set_style_border_opa(d, LV_OPA_COVER, 0);
+        } else if (st == 'm') {                                        // dashed ring: six short arcs
+            for (int k = 0; k < 6; k++) {
+                lv_obj_t* a = lv_arc_create(root_); lv_obj_remove_style_all(a); lv_obj_set_size(a, 18, 18); lv_obj_set_pos(a, x - 9, 103);
+                lv_arc_set_angles(a, uint16_t(k * 60), uint16_t(k * 60 + 30));
+                lv_obj_set_style_arc_width(a, 2, LV_PART_INDICATOR); lv_obj_set_style_arc_color(a, col(p.status_caution), LV_PART_INDICATOR);
+                lv_obj_clear_flag(a, LV_OBJ_FLAG_CLICKABLE);
+            }
+        } else line({{lv_coord_t(x - 5), 112}, {lv_coord_t(x + 5), 112}}, 2, p.ink_3);
+        if (i == today) line({{lv_coord_t(x - 8), 128}, {lv_coord_t(x + 8), 128}}, 2, p.ink);
+    }
+    Font body = font(Type::Body, large_), cap = font(Type::Caption, large_);
+    if (!m.synced) { textLine(148, tr(S::PlanOneOnIphone, l), body, p.ink_2); return; }
+    textLine(144, trf(S::SessionsDone, l, 3, 4), body, p.ink);
+    textLine(168, tr(S::MissedWed, l), cap, p.status_caution);
+    textLine(186, tr(S::IphoneAdjusts, l), cap, p.ink_2);
+}
+
+// ---- Quick Settings (prototype def('qs'): rows from y 56, values on the trailing edge) ----
+void Ui::buildQuick(const Model& m) {
+    const Palette& p = *pal_; Lang l = m.settings.lang;
+    char bat[8]; std::snprintf(bat, sizeof bat, "%d%%", m.battery);
+    header(tr(S::QuickSettings, l), bat);
+    static const S THEMES[] = {S::ThObsidian, S::ThArctic, S::ThOcean, S::ThForest, S::ThSandstone, S::ThContrast};
+    static const S MODES[] = {S::Wrist, S::Bike, S::Gym};
+    struct Item { S label; const lv_img_dsc_t* ic; std::string val; };
+    char br[8]; std::snprintf(br, sizeof br, "%d%%", m.settings.brightness);
+    std::vector<Item> items = {
+        {S::Brightness, &cyv3_ic_sun_20, br}, {S::Theme, &cyv3_ic_palette_20, tr(THEMES[int(m.settings.theme)], l)},
+        {S::Dnd, &cyv3_ic_moon_20, tr(m.settings.dnd ? S::On : S::Off, l)}, {S::Mode, &cyv3_ic_bike_20, tr(MODES[int(m.settings.mode)], l)},
+        {S::ScreenLock, &cyv3_ic_lock_20, ""}};
+    const int h = ROW_H + (large_ ? 8 : 0), gap = 6, minW = 132, yMax = 202, off = m.qsScroll;
+    int y0 = 56 + (large_ ? 6 : 0);
+    while (chordAt(float(y0), float(y0 + h)) - 6 < 156 && y0 + h / 2 < 120) y0++;
+    int y = y0 - off * (h + gap), shown = 0, n = int(items.size());
+    for (int idx = 0; idx < n; idx++) {
+        const Item& it = items[idx];
+        int top = y, bottom = y + h; y += h + gap;
+        if (top < y0 - 1 || bottom > yMax) continue;
+        int w = int(std::floor(chordAt(float(top), float(bottom)) - 6));
+        if (w < minW) continue;
+        shown++;
+        int left = int(std::lround(C - w / 2.0));
+        lv_obj_t* row = lv_obj_create(root_); lv_obj_remove_style_all(row);
+        lv_obj_set_pos(row, left, top); lv_obj_set_size(row, w, h);
+        lv_obj_set_style_bg_color(row, col(p.surface), 0); lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0); lv_obj_set_style_radius(row, RADIUS_M, 0);
+        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+        Font f = font(Type::Row, large_);
+        bool hasVal = !it.val.empty(), sub = hasVal && large_;          // Large Text: the value moves under the label
+        lv_obj_t* ic = lv_img_create(row); lv_img_set_src(ic, it.ic);
+        lv_obj_set_style_img_recolor(ic, col(p.ink_2), 0); lv_obj_set_style_img_recolor_opa(ic, LV_OPA_COVER, 0);
+        lv_obj_set_pos(ic, ar_ ? w - 14 - 20 : 14, (h - 20) / 2);
+        int startX = 14 + 30;
+        lv_obj_t* t = label(row, tr(it.label, l), f, p.ink, ar_);
+        lv_obj_update_layout(t);
+        int valW = 0; lv_obj_t* v = nullptr;
+        if (hasVal) {
+            Font vf = sub ? font(Type::Caption, true) : (large_ ? Font{&cyv3_inter600_15, 15, 18, false} : Font{&cyv3_inter600_13, 13, 16, false});
+            v = label(row, it.val, vf, p.ink_2, ar_); lv_obj_update_layout(v); valW = sub ? 0 : lv_obj_get_width(v);
+            if (sub) {
+                int lt = (h - 20 - 15) / 2;
+                lv_obj_set_pos(t, ar_ ? w - startX - lv_obj_get_width(t) : startX, labelYFor(baselineOf(lt, 20, f.css), f.f));
+                lv_obj_set_pos(v, ar_ ? w - startX - lv_obj_get_width(v) : startX, labelYFor(baselineOf(lt + 20, 15, vf.css), vf.f));
+            } else {
+                lv_obj_set_pos(v, ar_ ? 14 : w - 14 - valW, labelYFor(baselineOf((h - vf.lineBox) / 2, vf.lineBox, vf.css), vf.f));
+            }
+        }
+        if (!sub) {
+            int avail = w - startX - 14 - (hasVal ? valW + 10 : 22);
+            if (lv_obj_get_width(t) > avail) { lv_obj_set_width(t, avail); dotMode(t); }
+            int tw = std::min<int>(lv_obj_get_width(t), avail);
+            lv_obj_set_pos(t, ar_ ? w - startX - tw : startX, labelYFor(baselineOf((h - f.lineBox) / 2, f.lineBox, f.css), f.f));
+        }
+        if (!hasVal) {                                   // Screen lock: an action row with a chevron
+            lv_obj_t* cv = lv_img_create(row); lv_img_set_src(cv, ar_ ? &cyv3_ic_chevl_12 : &cyv3_ic_chev_12);
+            lv_obj_set_style_img_recolor(cv, col(p.ink_3), 0); lv_obj_set_style_img_recolor_opa(cv, LV_OPA_COVER, 0);
+            lv_obj_set_pos(cv, ar_ ? 14 : w - 14 - 12, (h - 12) / 2);
+        }
+        hit(left, top, w, h, Action::QsRow, idx, "quick settings row");
+    }
+    int more = n - shown - std::min(off, n);
+    if (more > 0) {
+        Font cap = font(Type::Caption, large_);
+        Run r; r.top = ar_ ? 202 : 205; r.lineBox = cap.lineBox; r.mainCss = cap.css; r.reverse = ar_;
+        Piece t; t.text = trf(S::More, l, more); t.font = cap; t.color = p.ink_2; t.rtlText = ar_; r.pieces.push_back(t);
+        Piece c; c.kind = Piece::Icon; c.icon = &cyv3_ic_down_11; c.gapBefore = 4; c.iconDrop = 1; c.color = p.ink_2; r.pieces.push_back(c);
+        makeRun(r);
+        hit(C - 60, 194, 120, 44, Action::QsMore, 0, "more hint");
+    }
+    if (n > shown) {
+        float a0 = ar_ ? 235.f : 55.f, span = 70.f, f0 = float(std::min(off, n - shown)) / n, f1 = f0 + float(shown) / n;
+        arc(112, 3, a0, a0 + span, p.line);
+        arc(112, 3, a0 + span * f0, a0 + span * std::min(1.f, f1), p.ink_2);
+    }
+}
+
+// ---- glance widgets (prototype w-health, w-coach, w-activity; page dots 4: face = 0) ----
+void Ui::buildWHealth(const Model& m) {
+    const Palette& p = *pal_; Lang l = m.settings.lang;
+    header(tr(S::HealthHdr, l), "");
+    icon(54, &cyv3_ic_heart_22, p.ink_2);
+    // no heart-rate source on this watch yet (Polar link is Stage 2b/4): the value is a dash, the reason is shown
+    lead_ = Run{}; lead_.top = 78; lead_.lineBox = 58; lead_.mainCss = 58;
+    Piece v; v.text = "\xE2\x80\x94"; v.font = font(Type::Display58, false); v.color = p.ink_3; lead_.pieces.push_back(v);
+    Piece u; u.text = "bpm"; u.font = unitFor(58); u.color = p.ink_2; u.gapBefore = 4; lead_.pieces.push_back(u);
+    makeRun(lead_);
+    hit(C - 70, 54, 140, 84, Action::MenuItem, int(MenuId::Health), "health");
+    Font cap = font(Type::Caption, large_);
+    textLine(140, tr(m.synced ? S::WaitingHr : S::NotSynced, l), cap, p.ink_2);
+    if (!large_) {
+        auto tile = [&](int cx, S name, const char* unit) {
+            Run r; r.top = 162; r.lineBox = 28; r.mainCss = 24; r.centerX = cx;
+            Piece n; n.text = "\xE2\x80\x94"; n.font = font(Type::Metric24, false); n.color = p.ink; r.pieces.push_back(n);
+            Piece un; un.text = unit; un.font = font(Type::Unit, false); un.color = p.ink_2; un.gapBefore = 4; r.pieces.push_back(un);
+            makeRun(r);
+            Run c; c.top = 190; c.lineBox = cap.lineBox; c.mainCss = cap.css; c.centerX = cx;
+            Piece t; t.text = tr(name, l); t.font = cap; t.color = p.ink_2; t.rtlText = ar_; c.pieces.push_back(t);
+            makeRun(c);
+        };
+        tile(ar_ ? C + 44 : C - 44, S::RestingHr, "bpm"); tile(ar_ ? C - 44 : C + 44, S::Hrv, "ms");
+    }
+    pageDots(4, 1, 222);
+}
+
+void Ui::buildWCoach(const Model& m) {
+    const Palette& p = *pal_; Lang l = m.settings.lang;
+    header(tr(S::CoachHdr, l), "");
+    Font b = font(Type::BodyMedium, large_);
+    paragraph(58, 31, 178, tr(m.synced ? S::CoachNote : S::NoNote, l), b, large_ ? 22 : 20, p.ink, false);
+    if (m.synced) {                                   // "Why?" needs the coach's reasoning from the iPhone
+        Font f = font(Type::Button, large_);
+        int hgt = large_ ? 48 : BUTTON_H;
+        lv_obj_t* bt = lv_obj_create(root_); lv_obj_remove_style_all(bt);
+        lv_obj_set_style_bg_color(bt, col(p.surface_2), 0); lv_obj_set_style_bg_opa(bt, LV_OPA_COVER, 0); lv_obj_set_style_radius(bt, LV_RADIUS_CIRCLE, 0);
+        lv_obj_clear_flag(bt, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t* t = label(bt, tr(S::Why, l), f, p.ink, ar_); lv_obj_update_layout(t);
+        int w = std::max(large_ ? 84 : 76, int(lv_obj_get_width(t)) + 2 * SPACE_XL);
+        lv_obj_set_size(bt, w, hgt); lv_obj_set_pos(bt, C - w / 2, 160);
+        lv_obj_set_pos(t, (w - lv_obj_get_width(t)) / 2, labelYFor(baselineOf((hgt - f.lineBox) / 2, f.lineBox, f.css), f.f));
+        hit(C - w / 2, 160, w, hgt, Action::MenuItem, int(MenuId::Coach), "why");
+    }
+    pageDots(4, 2, 222);
+}
+
+void Ui::buildWActivity(const Model& m) {
+    const Palette& p = *pal_; Lang l = m.settings.lang;
+    static const int R[] = {110, 98, 86};
+    // steps / minutes / calories need the accelerometer step counter (not built) or iPhone data: tracks only, no progress
+    for (int i = 0; i < 3; i++) arc(R[i], 8, 0, 360, p.line);
+    Font lbl = font(Type::Label, large_), cap = font(Type::Caption, large_);
+    textLine(60, tr(S::StepsLbl, l), lbl, p.ink_2);
+    textLine(86, "\xE2\x80\x94", font(Type::Display44, false), p.ink_3);
+    Run g; g.top = 134; g.lineBox = cap.lineBox; g.mainCss = cap.css; g.reverse = ar_;
+    Piece a; a.text = trs(S::OfGoal, l, "10 000") + " \xC2\xB7"; a.font = cap; a.color = p.ink_2; a.rtlText = ar_; g.pieces.push_back(a);
+    Piece t; t.text = tr(S::Estimated, l); t.font = cap; t.color = p.status_info; t.gapBefore = 4; t.rtlText = ar_; g.pieces.push_back(t);
+    makeRun(g);
+    textLine(152, trss(S::MinKcal, l, "\xE2\x80\x94", "\xE2\x80\x94"), cap, p.ink_2);
+    pageDots(4, 3, 176);
+}
+
+// ---- destinations that are not in this release (prototype emptyState pattern) ----
+void Ui::buildNotYet(const Model& m) {
+    Lang l = m.settings.lang;
+    S name = menuText(m.notYet);
+    header(l == Lang::En ? upperAscii(tr(name, l)) : std::string(tr(name, l)), "");
+    emptyState(emptyIcon(m.notYet), tr(S::NotInRelease, l), tr(S::ArrivesLater, l));
 }
 
 } // namespace cyw::v3

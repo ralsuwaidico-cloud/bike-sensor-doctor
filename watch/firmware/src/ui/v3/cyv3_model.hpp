@@ -13,7 +13,10 @@
 
 namespace cyw::v3 {
 
-enum class Screen : uint8_t { Face, Menu, Cockpit };
+// Stage 1.3 adds the face neighbourhood of the approved prototype (screens1.js): Today, Week strip, Quick Settings, the
+// three glance widgets, and an explicit "not in this release" page for menu destinations that are not built yet.
+enum class Screen : uint8_t { Face, Menu, Cockpit, Today, Week, Quick, WHealth, WCoach, WActivity, NotYet };
+enum class Mode : uint8_t { Wrist, Bike, Gym };
 enum class Density : uint8_t { Standard, Focused };
 enum class TextSize : uint8_t { Default, Large };
 enum class Swipe : uint8_t { Left, Right, Up, Down };
@@ -22,20 +25,25 @@ enum class Cmd : uint8_t { None, Pause, Resume, Lap };
 enum class Reply : uint8_t { Accept, Refuse, NoAnswer };   // what the simulated iPhone does with the next command
 
 /// Actions the UI layer can raise from a touch (each maps to one hit area on screen).
-enum class Action : uint8_t { None, MenuItem, MenuMore, Pause, Resume, DismissToast };
+enum class Action : uint8_t { None, MenuItem, MenuMore, Pause, Resume, DismissToast, QsRow, QsMore, Go, StartPlan };
 
 /// Menu entries in prototype order. Stage 1 implements WatchFace, Activities (starts the simulated ride) and
 /// ReturnToWorkout; the others are drawn as approved but are not wired yet (their screens arrive in Stage 3).
 enum class MenuId : uint8_t { ReturnToWorkout, WatchFace, Today, Activities, Health, Coach, History, Utilities, Settings };
 
-struct Settings { ThemeId theme = ThemeId::Obsidian; Density density = Density::Standard; TextSize text = TextSize::Default; Lang lang = Lang::En; };
+struct Settings {
+    ThemeId theme = ThemeId::Obsidian; Density density = Density::Standard; TextSize text = TextSize::Default; Lang lang = Lang::En;
+    int brightness = 70; bool dnd = false; Mode mode = Mode::Wrist;   // Quick Settings (RAM only; nothing is saved to flash)
+};
+/// Quick Settings rows in prototype order.
+enum class QsRow : uint8_t { Brightness, Theme, Dnd, Mode, Lock };
 
 /// Sensor presence as the iPhone reports it (Stage 1: simulated). A missing value is -1 everywhere.
 struct Sensors { bool power = true, hr = true, cadence = true; };
 struct Metrics { int power = -1, hr = -1, cadence = -1; };
 
 struct Toast {
-    enum Kind : uint8_t { None, Ok, Crit } kind = None;
+    enum Kind : uint8_t { None, Ok, Crit, Info } kind = None;
     S text = S::ToastPaused; bool hasSub = false; S sub = S::NoAnswer; uint32_t untilMs = 0;
 };
 
@@ -58,7 +66,12 @@ public:
     WkState wk = WkState::None;
     int interval = 2, remainS = 492;            // interval 2 of 3, 8:12 left (prototype QA state)
     int laps = 0;
-    int menuScroll = 0;
+    int menuScroll = 0, qsScroll = 0;
+    bool locked = false;                        // Quick Settings → Screen lock; hold Key 1 to unlock
+    MenuId notYet = MenuId::Health;             // which destination the "not in this release" page stands for
+    bool simRideNotice = false;                 // show "Simulated ride" once when a ride starts without an iPhone
+    static constexpr int MAX_STACK = 8;
+    std::vector<Screen> stack;                  // back history (prototype ST.stack), bounded
     Cmd pending = Cmd::None; uint32_t pendingSinceMs = 0;
     Reply nextReply = Reply::Accept;
     bool key2Armed = false; uint32_t key2UntilMs = 0;
@@ -79,7 +92,12 @@ public:
         return v;
     }
     int menuMaxScroll() const { return std::max(0, int(menuItems().size()) - 2); }
-    static bool menuImplemented(MenuId id) { return id == MenuId::ReturnToWorkout || id == MenuId::WatchFace || id == MenuId::Activities; }
+    static bool menuImplemented(MenuId id) { return id == MenuId::ReturnToWorkout || id == MenuId::WatchFace || id == MenuId::Activities || id == MenuId::Today; }
+    static constexpr int QS_ROWS = 5;
+    int qsMaxScroll() const { return QS_ROWS - 2; }
+    bool bike() const { return settings.mode == Mode::Bike; }
+    /// Screens reached sideways from the face (no back history: the prototype resets the stack for these).
+    static bool faceLevel(Screen s) { return s == Screen::Face || s == Screen::WHealth || s == Screen::WCoach || s == Screen::WActivity; }
 
     /// Grade of a power value against the target band (prototype gradeOf): on, adjust or far.
     enum class Grade : uint8_t { None, On, Adjust, Far };
@@ -103,44 +121,80 @@ public:
     }
 
     // ------------------------------------------------------------------ inputs
-    void key1(uint32_t now) {                   // approved: face → menu; menu → face (or back to the workout)
+    void key1(uint32_t now) {                   // approved (app.js key1): menu from anywhere; on the menu → face (or the workout)
         (void)now;
-        if (screen == Screen::Face) go(Screen::Menu);
-        else if (screen == Screen::Menu) go(inWorkout() ? Screen::Cockpit : Screen::Face);
+        if (locked) { note("key1 ignored: locked"); return; }
+        if (screen == Screen::Menu) { if (inWorkout()) toWorkout(); else home(); }
         else go(Screen::Menu);                  // cockpit: the controls page is Stage 3; Stage 1 opens the menu (Return to workout first)
         note("key1");
     }
+    /// Key 1 held (≥ 1 s): unlocks the screen (approved key1Hold). End-workout confirmation is Stage 3.
+    void key1Hold(uint32_t now) { (void)now; if (locked) { locked = false; note("unlocked"); } }
     void key2(uint32_t now) {                   // approved: two presses within 2.5 s = Lap during a ride; otherwise Back
+        if (locked) { note("key2 ignored: locked"); return; }
         if (screen == Screen::Cockpit && inWorkout()) {
             if (key2Armed && now <= key2UntilMs) { key2Armed = false; send(Cmd::Lap, now); note("key2 second press: lap"); return; }
             key2Armed = true; key2UntilMs = now + KEY2_WINDOW_MS; note("key2 first press: lap armed"); return;
         }
         back(); note("key2: back");
     }
+    /// Swipe map of the approved prototype (app.js swipe + each screen's swipe table). Face and widgets keep the same
+    /// physical directions in Arabic (prototype rule); other screens mirror left/right in right-to-left.
     void swipe(Swipe d) {
+        if (locked) { note("swipe ignored: locked"); return; }
         Swipe backward = rtl() ? Swipe::Left : Swipe::Right;
-        if (screen == Screen::Menu) {
+        Screen to = screen; bool has = true;
+        switch (screen) {
+            case Screen::Face: to = d == Swipe::Up ? Screen::Today : d == Swipe::Down ? Screen::Quick : d == Swipe::Left ? Screen::WHealth : Screen::WActivity; break;
+            case Screen::WHealth: if (d == Swipe::Right) to = Screen::Face; else if (d == Swipe::Left) to = Screen::WCoach; else has = false; break;
+            case Screen::WCoach: if (d == Swipe::Right) to = Screen::WHealth; else if (d == Swipe::Left) to = Screen::WActivity; else has = false; break;
+            case Screen::WActivity: if (d == Swipe::Right) to = Screen::WCoach; else if (d == Swipe::Left) to = Screen::Face; else has = false; break;
+            case Screen::Today: if (d == Swipe::Down) to = Screen::Face; else if (d == Swipe::Up) to = Screen::Week; else has = false; break;
+            case Screen::Week: if (d == Swipe::Down) to = Screen::Today; else has = false; break;
+            case Screen::Quick: if (d == Swipe::Up) to = Screen::Face; else has = false; break;
+            default: has = false; break;
+        }
+        if (has) {
+            if (faceLevel(screen) || faceLevel(to)) { stack.clear(); set(to); }   // prototype: face-level targets reset history
+            else go(to);
+        } else if (screen == Screen::Menu || screen == Screen::Quick) {
             if (d == Swipe::Up) scroll(+1); else if (d == Swipe::Down) scroll(-1); else if (d == backward) back();
         } else if (screen == Screen::Cockpit) {
             // ride pages (power, heart rate, cadence, pacing, climb, navigation, coach) and the controls page are Stage 3
-        }
+        } else if (d == backward) back();
         note(std::string("swipe ") + "LRUD"[int(d)]);
     }
     void act(Action a, int arg, uint32_t now) {
+        if (locked) { note("tap ignored: locked"); return; }
         switch (a) {
             case Action::MenuItem: selectMenu(MenuId(arg), now); break;
             case Action::MenuMore: scroll(+1); break;
+            case Action::QsMore: scroll(+1); break;
+            case Action::QsRow: quick(QsRow(arg)); break;
+            case Action::Go: go(Screen(arg)); break;
+            case Action::StartPlan: if (!inWorkout()) startRide(now); else toWorkout(); break;
             case Action::Pause: if (wk == WkState::Active && pending == Cmd::None) send(Cmd::Pause, now); break;
             case Action::Resume: if (wk == WkState::Paused && pending == Cmd::None) send(Cmd::Resume, now); break;
             case Action::DismissToast: toast.kind = Toast::None; break;
             case Action::None: break;
         }
     }
-    void home() { go(Screen::Face); }
-    void back() { if (screen == Screen::Menu) go(inWorkout() ? Screen::Cockpit : Screen::Face); else if (screen == Screen::Cockpit) go(Screen::Menu); }
+    void home() { stack.clear(); set(Screen::Face); }
+    void toWorkout() { stack.clear(); set(Screen::Cockpit); }
+    /// Back (prototype back()): previous screen, else the workout, else the face. The cockpit's back is the menu (Stage 1).
+    void back() {
+        if (screen == Screen::Cockpit) { go(Screen::Menu); return; }
+        if (!stack.empty()) { Screen s = stack.back(); stack.pop_back(); set(s); return; }
+        if (inWorkout()) toWorkout(); else home();
+    }
+    /// Demo data (serial 'E'): the simulated iPhone's synced values; off = honest "not synced" states everywhere.
+    void setDemo(bool on) { synced = on; movePct = on ? 72 : 0; loadPct = on ? 58 : 0; note(on ? "demo data on" : "demo data off"); }
+    /// Hook for the Bluetooth TimeSync payload (Stage 4) and the temporary serial command: the clock's local time.
+    void setClock(const Clock& c) { clock = c; }
 
     void startRide(uint32_t now) {
-        wk = WkState::Active; interval = 2; remainS = 492; laps = 0; lastSecMs_ = now; go(Screen::Cockpit); note("ride started (simulated)");
+        wk = WkState::Active; interval = 2; remainS = 492; laps = 0; lastSecMs_ = now; toWorkout(); note("ride started (simulated)");
+        if (simRideNotice) toast = {Toast::Info, S::SimRide, true, S::SimRideSub, now + BANNER_MS};   // values never mistaken for sensors
     }
 
     /// Advances time: simulated sensors (1 Hz), the interval clock, command replies, toasts, the Key 2 window.
@@ -165,14 +219,41 @@ public:
 private:
     uint32_t lastSecMs_ = 0, rng_ = 0x2026110Bu; int t_ = 0;
     void note(const std::string& s) { log.push_back(s); if (log.size() > 64) log.erase(log.begin()); }
-    void go(Screen s) { if (s == Screen::Menu && screen != Screen::Menu) menuScroll = 0; screen = s; }
-    void scroll(int d) { menuScroll = std::max(0, std::min(menuMaxScroll(), menuScroll + d)); }
+    /// Opens `s`, remembering the current screen for Back. Going to the screen that Back would return to pops instead,
+    /// so repeated gestures (Today ↔ Week, Menu ↔ page) never pile up duplicate history (owner test requirement, 11 Nov).
+    void go(Screen s) {
+        if (s == screen) return;
+        if (!stack.empty() && stack.back() == s) { stack.pop_back(); set(s); return; }
+        stack.push_back(screen); if (int(stack.size()) > MAX_STACK) stack.erase(stack.begin());
+        set(s);
+    }
+    void set(Screen s) {
+        if (s == Screen::Menu && screen != Screen::Menu) menuScroll = 0;
+        if (s == Screen::Quick && screen != Screen::Quick) qsScroll = 0;
+        screen = s;
+    }
+    void scroll(int d) {
+        if (screen == Screen::Quick) qsScroll = std::max(0, std::min(qsMaxScroll(), qsScroll + d));
+        else menuScroll = std::max(0, std::min(menuMaxScroll(), menuScroll + d));
+    }
+    void quick(QsRow r) {
+        switch (r) {
+            case QsRow::Brightness: { static const int L[] = {30, 50, 70, 100}; int i = 0; while (i < 3 && L[i] != settings.brightness) i++;
+                settings.brightness = L[(i + 1) % 4]; break; }
+            case QsRow::Theme: settings.theme = ThemeId((int(settings.theme) + 1) % 6); break;
+            case QsRow::Dnd: settings.dnd = !settings.dnd; break;
+            case QsRow::Mode: settings.mode = Mode((int(settings.mode) + 1) % 3); break;
+            case QsRow::Lock: locked = true; home(); break;
+        }
+        note("quick settings");
+    }
     void selectMenu(MenuId id, uint32_t now) {
         switch (id) {
-            case MenuId::ReturnToWorkout: go(Screen::Cockpit); break;
-            case MenuId::WatchFace: go(Screen::Face); break;
-            case MenuId::Activities: if (!inWorkout()) startRide(now); else go(Screen::Cockpit); break;
-            default: note("menu item not in Stage 1"); break;
+            case MenuId::ReturnToWorkout: toWorkout(); break;
+            case MenuId::WatchFace: home(); break;
+            case MenuId::Activities: if (!inWorkout()) startRide(now); else toWorkout(); break;
+            case MenuId::Today: go(Screen::Today); break;
+            default: notYet = id; go(Screen::NotYet); note("destination not in this release"); break;
         }
     }
     void send(Cmd c, uint32_t now) {

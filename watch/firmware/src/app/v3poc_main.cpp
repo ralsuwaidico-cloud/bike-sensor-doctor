@@ -8,6 +8,9 @@
 //   c phone link     s cycle sensors   x next reply: refuse   n next reply: no answer   u perf report   ? help
 // Stage 1.2 diagnostics: M memory + stack report · R read the clock · T<seconds>⏎ set the clock (temporary PC test command,
 // local time as seconds since 1970; the approved time source remains the iPhone over Bluetooth, Stage 4).
+// Stage 1.3 (RC1): k lock (as Quick Settings) · E demo data on/off. The watch starts with NO invented data: face, Today, Week
+// and widgets show their not-synced states until 'E' turns the labelled demo data on; a ride started without an iPhone shows
+// "Simulated ride". Holding Key 1 for 1 s unlocks. Quick Settings brightness drives the backlight; nothing is saved to flash.
 #if defined(CYW_V3POC) && !defined(CYW_HOST)
 #include <Arduino.h>
 #include <Wire.h>
@@ -31,7 +34,7 @@ static hal::esp32::Power g_power; static hal::esp32::Rtc g_rtc;
 static Model g_model; static Ui g_ui;
 static uint32_t g_lastMemSample = 0;
 static uint32_t g_lastLv = 0, g_lastSlow = 0, g_lastPerf = 0, g_renderUs = 0, g_renderMax = 0, g_frames = 0, g_rebuilds = 0;
-static bool g_k1 = false, g_k2 = false;
+static bool g_k1 = false, g_k2 = false, g_k1Held = false; static uint32_t g_k1Down = 0; static int g_bl = -1;
 static size_t g_logShown = 0;
 
 // ---------------------------------------------------------------- frame-time instrumentation (Stage 1.1, 9 Nov 2026)
@@ -149,7 +152,7 @@ static void printClock(const char* what) {
 }
 
 static void help() {
-    Serial.println("v3poc: m menu/Key1 · b Key2 · f face · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame-time histogram · z reset histogram · M memory+stacks · R clock · T<seconds> set clock (test)");
+    Serial.println("v3poc: m menu/Key1 · b Key2 · f face · k lock · E demo data · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame-time histogram · z reset histogram · M memory+stacks · R clock · T<seconds> set clock (test)");
 }
 
 static void perfReport() {
@@ -192,6 +195,8 @@ static void serialCommand(char c, uint32_t now) {
         case 'h': perf::print(); break;
         case 'z': perf::reset(); Serial.println("perf: histogram reset"); break;
         case 'M': mem::report(); break;
+        case 'E': g_model.setDemo(!g_model.synced); break;
+        case 'k': if (g_model.locked) g_model.key1Hold(now); else g_model.act(Action::QsRow, int(QsRow::Lock), now); break;
         case 'R': printClock("clock"); break;
         case '?': help(); break;
         default: break;
@@ -206,9 +211,11 @@ void setup() {
     uint32_t t0 = millis();
     g_display.begin();
     g_ui.begin(lv_scr_act());
+    g_model.setDemo(false); g_model.simRideNotice = true;   // honest start: nothing synced, simulated rides labelled
+    g_model.log.clear();
     readClock(); g_model.battery = g_power.batteryPct(); g_model.charging = g_power.charging();
     g_ui.render(g_model); lv_refr_now(nullptr);
-    Serial.printf("Cyclift v3 proof of concept · Stage 1.2 (diagnostics; IRAM rendering off) · simulated data · first frame after %u ms · heap %u · psram %u · flash %u MB\n",
+    Serial.printf("Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after %u ms · heap %u · psram %u · flash %u MB\n",
         unsigned(millis() - t0), ESP.getFreeHeap(), ESP.getPsramSize(), unsigned(ESP.getFlashChipSize() / (1024 * 1024)));
     help();
 }
@@ -229,12 +236,14 @@ void loop() {
         }
     }
     bool k1 = g_keys.key1(), k2 = g_keys.key2();      // act on press (falling edge); pins per board revision
-    if (k1 && !g_k1) g_model.key1(now);
+    if (k1 && !g_k1) { g_model.key1(now); g_k1Down = now; g_k1Held = false; }
+    if (k1 && g_k1 && !g_k1Held && now - g_k1Down >= 1000) { g_k1Held = true; g_model.key1Hold(now); }   // hold ≥ 1 s
     if (k2 && !g_k2) g_model.key2(now);
     g_k1 = k1; g_k2 = k2;
     if (now - g_lastSlow >= 10000) { g_lastSlow = now; readClock(); g_model.battery = g_power.batteryPct(); g_model.charging = g_power.charging(); }
     uint32_t f1 = micros();
     g_model.tick(now);
+    if (g_model.settings.brightness != g_bl) { g_bl = g_model.settings.brightness; g_display.setBrightness(uint8_t(g_bl)); }
     uint32_t f2 = micros();
     perf::maxIn = std::max(perf::maxIn, f1 - f0); perf::maxModel = std::max(perf::maxModel, f2 - f1);
     while (g_logShown < g_model.log.size()) Serial.printf("  %s\n", g_model.log[g_logShown++].c_str());

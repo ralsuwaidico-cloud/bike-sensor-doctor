@@ -58,6 +58,7 @@ struct Finding { std::string state, rule, detail; bool known = false; };
 static std::vector<Finding> g_findings;
 static std::vector<std::string> g_infos;
 static int g_checks = 0;
+static double g_minContrast = 99.0;
 /// Findings recorded in the Stage 1 report as remaining defects that need a design decision; listed, never hidden.
 static bool knownDefect(const std::string&, const std::string&) { return false; }   // none since the 9 Nov menu fix
 static void fail(const std::string& st, const std::string& rule, const std::string& d) { g_findings.push_back({st, rule, d, knownDefect(rule, d)}); }
@@ -163,6 +164,21 @@ static void checkState(const std::string& st, Ui& ui, const Model& m) {
         if (std::min(a.x2, b.x2) >= std::max(a.x1, b.x1) && std::min(a.y2, b.y2) >= std::max(a.y1, b.y1))
             fail(st, "touch-overlap", std::string(ui.hits()[i].name) + " overlaps " + ui.hits()[j].name);
     }
+    // 8 text contrast against the screen background: >= 3:1 for every visible label (WCAG large-text level; Stage 1.3)
+    {
+        auto lin = [](uint32_t c8) { double c = c8 / 255.0; return c <= 0.03928 ? c / 12.92 : std::pow((c + 0.055) / 1.055, 2.4); };
+        auto lum = [&](uint32_t rgb) { return 0.2126 * lin((rgb >> 16) & 255) + 0.7152 * lin((rgb >> 8) & 255) + 0.0722 * lin(rgb & 255); };
+        auto bgOf = [&](lv_obj_t* o) { for (lv_obj_t* q = lv_obj_get_parent(o); q; q = lv_obj_get_parent(q))
+            if (lv_obj_get_style_bg_opa(q, 0) >= LV_OPA_50) { lv_color_t c = lv_obj_get_style_bg_color(q, 0); return uint32_t(lv_color_to32(c) & 0xFFFFFF); }
+            return 0u; };
+        for (lv_obj_t* o : all) {
+            if (!lv_obj_check_type(o, &lv_label_class) || lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN) || !*lv_label_get_text(o)) continue;
+            uint32_t fg = lv_color_to32(lv_obj_get_style_text_color(o, 0)) & 0xFFFFFF, bg = bgOf(o);
+            double a = lum(fg), b = lum(bg), ratio = (std::max(a, b) + 0.05) / (std::min(a, b) + 0.05); g_checks++;
+            g_minContrast = std::min(g_minContrast, ratio);
+            if (ratio < 3.0) fail(st, "contrast", std::string("text '") + lv_label_get_text(o) + "' contrast " + std::to_string(ratio).substr(0, 4) + ":1");
+        }
+    }
     (void)m;
 }
 
@@ -175,6 +191,12 @@ static lv_obj_t* g_screen = nullptr;
 
 static void fresh(Ctx& c) { lv_obj_clean(g_screen); c.ui = Ui(); c.ui.begin(g_screen); }
 static double ms(std::chrono::steady_clock::time_point a) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - a).count(); }
+
+/// Render and run every layout check, without saving a picture (for sweeps over many values).
+static void check(Ctx& c, const std::string& name) {
+    c.ui.render(c.m); lv_obj_invalidate(g_screen); lv_refr_now(nullptr);
+    checkState(name, c.ui, c.m);
+}
 
 static void shoot(Ctx& c, const std::string& name) {
     auto t0 = std::chrono::steady_clock::now();
@@ -241,6 +263,47 @@ int main(int argc, char** argv) {
         base(c); ridePreset(c.m, c.now); c.m.key2(c.now); shoot(c, "cockpit__key2-first-press" + sfx);
     }
 
+    // ---------------------------------------------------------------- 1b Stage 1.3 screens: every screen × data state × density ×
+    // text size × language, in all six themes (the first theme also covers the special states)
+    const char* THEME[] = {"obsidian", "arctic", "ocean", "forest", "sandstone", "contrast"};
+    for (int th = 0; th < 6; th++) for (Lang lang : {Lang::En, Lang::Ar}) for (auto& md : modes) {
+        std::string sfx = std::string("--") + md.n + (lang == Lang::Ar ? "-ar" : "-en") + (th ? std::string("-") + THEME[th] : "");
+        auto base = [&](Ctx& x, bool demo) { x.m = Model(); x.m.settings.lang = lang; x.m.settings.density = md.d; x.m.settings.text = md.t;
+            x.m.settings.theme = ThemeId(th); x.m.setDemo(demo); fresh(x); };
+        for (bool demo : {false, true}) {
+            std::string d = demo ? "__demo" : "";
+            base(c, demo); c.m.swipe(Swipe::Up); shoot(c, "today" + d + sfx);
+            base(c, demo); c.m.swipe(Swipe::Up); c.m.swipe(Swipe::Up); shoot(c, "week" + d + sfx);
+            base(c, demo); c.m.swipe(Swipe::Left); shoot(c, "w-health" + d + sfx);
+            base(c, demo); c.m.swipe(Swipe::Left); c.m.swipe(Swipe::Left); shoot(c, "w-coach" + d + sfx);
+            base(c, demo); c.m.swipe(Swipe::Right); shoot(c, "w-activity" + d + sfx);
+            base(c, demo); shoot(c, "face" + std::string(demo ? "__demo" : "__honest") + sfx);
+        }
+        base(c, false); c.m.swipe(Swipe::Down); shoot(c, "quick" + sfx);
+        base(c, false); c.m.swipe(Swipe::Down); c.m.qsScroll = c.m.qsMaxScroll(); shoot(c, "quick__scrolled-end" + sfx);
+        base(c, false); c.m.key1(c.now); c.m.act(Action::MenuItem, int(MenuId::Settings), c.now); shoot(c, "not-yet__settings" + sfx);
+        base(c, false); c.m.settings.mode = Mode::Bike; ridePreset(c.m, c.now); shoot(c, "cockpit__bike" + sfx);
+        base(c, false); c.m.locked = true; shoot(c, "face__locked" + sfx);
+        if (th) continue;
+        // Milestone C: every month and weekday name on the face and the Today caption (both widest day numbers), checked for
+        // glyphs, fit, clipping and overlap without saving images (the PNG set stays one picture per screen)
+        for (int mo = 1; mo <= 12; mo++) for (int wd = 0; wd < 7; wd++) for (bool today : {false, true}) {
+            base(c, true); c.m.clock.month = mo; c.m.clock.weekday = wd; c.m.clock.day = (mo + wd) % 2 ? 28 : 31;
+            if (today) c.m.swipe(Swipe::Up);
+            check(c, std::string(today ? "today" : "face") + "__date-" + std::to_string(mo) + "-" + std::to_string(wd) + sfx);
+        }
+        base(c, false); c.m.clock.valid = false; shoot(c, "face__clock-invalid" + sfx);
+        base(c, false); c.m.clock.valid = false; c.m.swipe(Swipe::Up); shoot(c, "today__clock-invalid" + sfx);
+        base(c, true); c.m.settings.dnd = true; c.m.settings.mode = Mode::Gym; c.m.settings.brightness = 100; c.m.settings.theme = ThemeId::Contrast; c.m.swipe(Swipe::Down); shoot(c, "quick__values" + sfx);
+        for (MenuId id : {MenuId::Health, MenuId::Coach, MenuId::History, MenuId::Utilities}) {
+            static const char* nm[] = {"", "", "", "", "health", "coach", "history", "utilities", ""};
+            base(c, false); c.m.key1(c.now); c.m.act(Action::MenuItem, int(id), c.now); shoot(c, std::string("not-yet__") + nm[int(id)] + sfx); }
+        base(c, false); c.m.settings.mode = Mode::Bike; ridePreset(c.m, c.now); c.m.setMetrics(-1, 152, 92); shoot(c, "cockpit__bike-hr-lead" + sfx);
+        base(c, false); c.m.settings.mode = Mode::Bike; ridePreset(c.m, c.now); c.m.setMetrics(1999, 188, 118); shoot(c, "cockpit__bike-1999" + sfx);
+        base(c, false); c.m.settings.mode = Mode::Bike; ridePreset(c.m, c.now); c.m.act(Action::Pause, 0, c.now); c.m.tick(c.now + 450); c.m.toast.kind = Toast::None; shoot(c, "cockpit__bike-paused" + sfx);
+        base(c, false); c.m.simRideNotice = true; c.m.key1(c.now); c.m.act(Action::MenuItem, int(MenuId::Activities), c.now); c.m.setMetrics(246, 152, 92); shoot(c, "cockpit__simulated-banner" + sfx);
+    }
+
     // ---------------------------------------------------------------- 2 numeric range: the lead number always fits
     for (int v : {0, 7, 42, 99, 246, 999, 1000, 1500, 1999, 2000, 2500}) for (TextSize t : {TextSize::Default, TextSize::Large}) {
         c.m = Model(); c.m.settings.text = t; fresh(c); ridePreset(c.m, c.now); c.m.setMetrics(v, 150, 90);
@@ -282,6 +345,28 @@ int main(int argc, char** argv) {
     expect(chip, "Key 2 first press shows LAP · PRESS AGAIN");
     c.now += 800; c.m.key2(c.now); c.now += 450; c.m.tick(c.now); c.ui.render(c.m); expect(c.m.laps == 1, "Key 2 second press saves a lap");
     c.m.key1(c.now); c.ui.render(c.m); expect(c.m.screen == Screen::Menu, "Key 1 opens the menu during a ride");
+    // Stage 1.3: through the real touch areas of the new screens
+    c.m = Model(); fresh(c); c.m.setDemo(false); c.m.swipe(Swipe::Up); c.ui.render(c.m);
+    expect(tapAt(c, Action::Go, int(Screen::Week)) && c.m.screen == Screen::Week, "Today: tap Week opens the week strip");
+    c.m = Model(); fresh(c); c.m.swipe(Swipe::Up);
+    expect(tapAt(c, Action::StartPlan, 0) && c.m.screen == Screen::Cockpit && c.m.inWorkout(), "Today (demo plan): tap Start begins the ride");
+    c.m = Model(); fresh(c); c.m.setDemo(false); c.m.swipe(Swipe::Up); c.ui.render(c.m);
+    { bool start = false; for (auto& h : c.ui.hits()) start = start || h.action == Action::StartPlan; expect(!start, "Today without a plan offers no Start button"); }
+    c.m = Model(); fresh(c); c.m.swipe(Swipe::Down);
+    expect(tapAt(c, Action::QsRow, int(QsRow::Brightness)) && c.m.settings.brightness == 100, "Quick Settings: tap Brightness 70 -> 100");
+    expect(tapAt(c, Action::QsRow, int(QsRow::Theme)) && c.m.settings.theme == ThemeId::Arctic, "Quick Settings: tap Theme -> Arctic");
+    expect(tapAt(c, Action::QsMore, 0) && c.m.qsScroll == 1, "Quick Settings: tap the more hint scrolls");
+    for (int i = 0; i < 3; i++) tapAt(c, Action::QsMore, 0);
+    expect(tapAt(c, Action::QsRow, int(QsRow::Lock)) && c.m.locked && c.m.screen == Screen::Face, "Quick Settings: Screen lock locks and shows the face");
+    { c.ui.render(c.m); bool chipShown = false; std::vector<lv_obj_t*> a; walk(g_screen, a);
+      for (auto* o : a) if (lv_obj_check_type(o, &lv_label_class) && std::strstr(lv_label_get_text(o), "HOLD KEY 1")) chipShown = true;
+      expect(chipShown, "locked face shows LOCKED · HOLD KEY 1"); }
+    c.m.key1Hold(c.now); c.ui.render(c.m); expect(!c.m.locked, "hold Key 1 unlocks");
+    c.m = Model(); fresh(c); c.m.swipe(Swipe::Left);
+    expect(tapAt(c, Action::MenuItem, int(MenuId::Health)) && c.m.screen == Screen::NotYet && c.m.notYet == MenuId::Health, "Health widget tap opens the Health page (not in this release)");
+    c.m = Model(); fresh(c); c.m.swipe(Swipe::Left); c.m.swipe(Swipe::Left);
+    expect(tapAt(c, Action::MenuItem, int(MenuId::Coach)) && c.m.notYet == MenuId::Coach, "Coach widget: Why? opens the Coach page (not in this release)");
+    c.m.key2(c.now); expect(c.m.screen == Screen::WCoach, "Back from the page returns to the widget");
     // Stage 1.2 temporary time command, end to end: serial "T<seconds>" -> clock-chip registers -> integrity check ->
     // model clock -> face (same steps as readClock() on the watch; the chip itself is replaced by its 7 registers)
     { c.m = Model(); fresh(c);
@@ -324,9 +409,47 @@ int main(int argc, char** argv) {
     { c.m = Model(); fresh(c); double mx = 0; for (int i = 0; i < 20; i++) { auto t0 = std::chrono::steady_clock::now(); c.m.key1(c.now); c.ui.render(c.m); lv_refr_now(nullptr); mx = std::max(mx, ms(t0)); }
       g_metrics["screen_switch_ms_max_host"] = mx; }
 
+    // ---------------------------------------------------------------- soak (Stage 1.3): 30 000 random inputs through the real UI
+    // (swipes, keys, key hold, taps on the drawn touch areas, ticks, ride start), every one rendered. Every 1 000 inputs the
+    // same reference state is rendered through the same Ui: LVGL memory in use must come back within 64 B of the first (no leak),
+    // and the sampled pool peak (total − free after each render; LVGL's own max_used under-reads) must stay under 32 KB.
+    {
+        c.m = Model(); fresh(c); c.m.setDemo(true);
+        Model ref = c.m; uint32_t seed = 12345, refUsed = 0, refMax = 0, peak = 0, steps = 0; int leaks = 0;
+        auto rnd = [&](uint32_t n) { seed = seed * 1103515245u + 12345u; return (seed >> 8) % n; };
+        auto used = [] { lv_mem_monitor_t q; lv_mem_monitor(&q); return uint32_t(q.total_size - q.free_size); };
+        for (int i = 0; i < 30000; i++) {
+            switch (rnd(10)) {
+                case 0: case 1: case 2: c.m.swipe(Swipe(rnd(4))); break;
+                case 3: c.m.key1(c.now); break;
+                case 4: c.m.key2(c.now); break;
+                case 5: c.m.key1Hold(c.now); break;
+                case 6: case 7: { auto& h = c.ui.hits(); if (!h.empty()) { auto& a = h[rnd(uint32_t(h.size()))].area;
+                    c.ui.tap(c.m, (a.x1 + a.x2) / 2, (a.y1 + a.y2) / 2, c.now); } break; }
+                case 8: c.now += 1000; break;
+                case 9: if (!c.m.inWorkout() && rnd(4) == 0) c.m.startRide(c.now); else c.now += 300; break;
+            }
+            c.m.tick(c.now); c.ui.render(c.m); lv_timer_handler(); steps++;
+            peak = std::max(peak, used());
+            if (i % 1000 == 999) {
+                Model keep = c.m; c.m = ref; c.ui.render(c.m); lv_refr_now(nullptr);
+                uint32_t u = used(); if (getenv("SOAK_DEBUG")) std::printf("ref %d: %u\n", i, unsigned(u));
+                // the allocator rounds block splits differently with fragmentation (seen: ±32 B); a leak grows without bound
+                if (!refUsed) refUsed = refMax = u; else { refMax = std::max(refMax, u); if (u > refUsed + 64) leaks++; }
+                c.m = keep; c.ui.render(c.m);
+            }
+        }
+        g_checks += 2;
+        if (leaks) fail("soak", "lv-leak", std::to_string(leaks) + " of 30 reference renders used over 64 B more LVGL memory than the first (" + std::to_string(refUsed) + " B)");
+        if (peak > 32768) fail("soak", "lv-peak", "sampled LVGL pool peak " + std::to_string(peak) + " B over 32 KB");
+        g_metrics["soak_inputs"] = steps; g_metrics["soak_lv_used_reference"] = refUsed; g_metrics["soak_lv_peak_sampled"] = peak; g_metrics["soak_lv_reference_max"] = refMax; g_metrics["soak_lv_reference_growth_failures"] = leaks;
+        std::printf("soak: %u inputs rendered · LVGL in use at the reference state %u–%u B (%d over +64 B) · sampled pool peak %u B\n", unsigned(steps), unsigned(refUsed), unsigned(refMax), leaks, unsigned(peak));
+    }
+
     lv_mem_monitor_t mm; lv_mem_monitor(&mm);
     g_metrics["lv_mem_total"] = mm.total_size; g_metrics["lv_mem_peak"] = mm.max_used; g_metrics["lv_mem_frag_pct"] = mm.frag_pct;
     g_metrics["draw_buffer_bytes"] = sizeof(g_buf);
+    g_metrics["text_contrast_min"] = g_minContrast;
 
     // ---------------------------------------------------------------- report
     FILE* f = std::fopen((g_out + "/report.json").c_str(), "w");

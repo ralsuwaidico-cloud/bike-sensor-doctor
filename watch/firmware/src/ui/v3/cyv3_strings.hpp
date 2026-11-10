@@ -24,6 +24,13 @@ enum class S : uint16_t {
     ToastPaused, ToastResumed, ToastLapSaved, PhoneLostUseIphone,
     UnablePause, UnableResume, UnableLap, NoAnswer, WorkoutChanged,
     KeyLapPressAgain,
+    // Stage 1.3: face neighbourhood (Today, Week, Quick Settings, widgets), not-yet pages, Bike mode, simulated ride
+    QuickSettings, Brightness, Theme, Dnd, Mode, ScreenLock, On, Off, Wrist, Bike, Gym,
+    ThObsidian, ThArctic, ThOcean, ThForest, ThSandstone, ThContrast, LockedHoldKey1,
+    TodayHdr, WeekHdr, WeekLink, Target, Start, PlanName, PlanSub, NoPlanTitle, NoPlanSub, PlanOneOnIphone,
+    SessionsDone, MissedWed, IphoneAdjusts,
+    HealthHdr, CoachHdr, RestingHr, Hrv, NoNote, CoachNote, Why, StepsLbl, OfGoal, Estimated, MinKcal,
+    NotInRelease, ArrivesLater, SimRide, SimRideSub, Watts,
     COUNT
 };
 
@@ -69,6 +76,53 @@ inline const Pair& pair(S id) {
         {"No answer from iPhone", "لا رد من iPhone"},
         {"Workout changed on iPhone", "تغيّر التمرين على iPhone"},
         {"LAP \xC2\xB7 PRESS AGAIN", "لفة \xC2\xB7 اضغط مجددًا"},
+        {"QUICK SETTINGS", "الإعدادات السريعة"},
+        {"Brightness", "السطوع"},
+        {"Theme", "السمة"},
+        {"Do not disturb", "عدم الإزعاج"},
+        {"Mode", "الوضع"},
+        {"Screen lock", "قفل الشاشة"},
+        {"On", "تشغيل"},
+        {"Off", "إيقاف"},
+        {"Wrist", "المعصم"},
+        {"Bike", "الدراجة"},
+        {"Gym", "الصالة"},
+        {"Obsidian", "أوبسيديان"},
+        {"Arctic", "القطب"},
+        {"Ocean", "المحيط"},
+        {"Forest", "الغابة"},
+        {"Sandstone", "الحجر الرملي"},
+        {"High contrast", "تباين عالٍ"},
+        {"LOCKED \xC2\xB7 HOLD KEY 1", "مقفل \xC2\xB7 اضغط المفتاح ١ مطولًا"},
+        {"TODAY", "اليوم"},
+        {"WEEK", "الأسبوع"},
+        {"Week", "الأسبوع"},
+        {"TARGET", "الهدف"},
+        {"Start", "ابدأ"},
+        {"Sweet-spot intervals", "فترات التحمل"},
+        {"%d min \xC2\xB7 %s min", "%d د \xC2\xB7 %s د"},
+        {"No plan on the watch yet", "لا توجد خطة على الساعة بعد"},
+        {"Today\xE2\x80\x99s plan comes from iPhone", "تأتي خطة اليوم من iPhone"},
+        {"Plan one on iPhone", "خطط لتمرين على iPhone"},
+        {"%d of %d sessions done", "%d من %d جلسات منجزة"},
+        {"1 missed \xC2\xB7 Wed", "جلسة فائتة واحدة \xC2\xB7 الأربعاء"},
+        {"iPhone adjusts the plan", "يعدّلها iPhone تلقائيًا"},
+        {"HEALTH", "الصحة"},
+        {"COACH", "المدرب"},
+        {"Resting HR", "نبض الراحة"},
+        {"HRV", "تقلب النبض"},
+        {"No note yet. Plan your week on iPhone.", "لا توجد ملاحظة بعد. خطط لأسبوعك على iPhone."},
+        {"Your legs recovered well from Thursday. Today: sweet-spot, 60 min.", "تعافت ساقاك جيدًا من تمرين الخميس. اليوم: فترات 60 دقيقة."},
+        {"Why?", "لماذا؟"},
+        {"STEPS", "الخطوات"},
+        {"of %s", "من %s"},
+        {"Estimated", "تقديري"},
+        {"%s min \xC2\xB7 %s kcal", "%s د \xC2\xB7 %s سعرة"},
+        {"Not in this release", "غير متاح في هذا الإصدار"},
+        {"Arrives in a later update", "يصل في تحديث لاحق"},
+        {"Simulated ride", "ركوب محاكى"},
+        {"No sensors \xC2\xB7 demo values", "لا مستشعرات \xC2\xB7 قيم تجريبية"},
+        {"WATTS", "واط"},
     };
     static_assert(sizeof(T) / sizeof(T[0]) == static_cast<size_t>(S::COUNT), "one entry per string id");
     return T[static_cast<int>(id)];
@@ -79,6 +133,8 @@ inline const char* tr(S id, Lang l) { return l == Lang::Ar ? pair(id).ar : pair(
 /// printf-style formatting of a translated template (templates carry at most two %d or one %s).
 inline std::string trf(S id, Lang l, int a = 0, int b = 0) { char buf[96]; std::snprintf(buf, sizeof buf, tr(id, l), a, b); return buf; }
 inline std::string trs(S id, Lang l, const char* s) { char buf[96]; std::snprintf(buf, sizeof buf, tr(id, l), s); return buf; }
+inline std::string trds(S id, Lang l, int a, const char* s) { char buf[96]; std::snprintf(buf, sizeof buf, tr(id, l), a, s); return buf; }
+inline std::string trss(S id, Lang l, const char* a, const char* b) { char buf[96]; std::snprintf(buf, sizeof buf, tr(id, l), a, b); return buf; }
 
 inline const char* weekday(int wd, Lang l) {          // 0 = Sunday
     static const char* en[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};

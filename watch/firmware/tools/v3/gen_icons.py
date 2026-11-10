@@ -21,10 +21,18 @@ P = {   # path data copied from the approved prototype (Deliverable D, src/core.
     'bolt':  '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
     'check': '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
     'warn':  '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
+    # Stage 1.3 (Quick Settings, Today, widgets)
+    'sun':   '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+    'moon':  '<path d="M19 14.5A7.5 7.5 0 019.5 5a7.5 7.5 0 109.5 9.5z"/>',
+    'lock':  '<rect x="6" y="11" width="12" height="9" rx="2"/><path d="M8.5 11V8a3.5 3.5 0 017 0v3"/>',
+    'palette': '<path d="M12 4a8 8 0 100 16c1 0 1.5-.8 1.2-1.6-.4-1 .3-2 1.3-2H17a3 3 0 003-3c0-5-3.6-9.4-8-9.4z"/><circle cx="8" cy="11" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="16" cy="11" r="1"/>',
+    'info':  '<circle cx="12" cy="12" r="8"/><path d="M12 11v5M12 8v.5"/>',
 }
 # name, icon, pixel size, stroke width (as used by the prototype at that size)
 OUT = [('row', n, 20, 1.8) for n in ['face', 'today', 'plan', 'heart', 'coach', 'hist', 'util', 'gear', 'bike']] + \
-      [('chev', 'chev', 12, 2.4), ('chevl', 'chevl', 12, 2.4), ('more', 'down', 11, 2.6), ('bolt', 'bolt', 12, 2.0), ('check', 'check', 15, 2.6), ('warn', 'warn', 15, 2.2)]
+      [('chev', 'chev', 12, 2.4), ('chevl', 'chevl', 12, 2.4), ('more', 'down', 11, 2.6), ('bolt', 'bolt', 12, 2.0), ('check', 'check', 15, 2.6), ('warn', 'warn', 15, 2.2)] + \
+      [('row', n, 20, 1.8) for n in ['sun', 'palette', 'moon', 'lock', 'info']] + \
+      [('big', 'heart', 22, 2.0), ('big', 'bike', 22, 1.8)] + [('empty', n, 28, 1.8) for n in ['today', 'moon', 'heart', 'coach', 'hist', 'util', 'gear']]
 
 def main():
     root = pathlib.Path(__file__).resolve().parents[2]

@@ -121,6 +121,23 @@ int main(int argc, char** argv) {
         s.reset(std::string("swipe_") + L); lang(s, ar); s.m.clock.valid = false;
         s.seconds(12, [&](int sec) { if (sec >= 1 && sec <= 4) s.m.swipe(Swipe(sec - 1)); if (sec == 6) { s.m.clock.valid = true; s.m.clock.hh = 13; s.m.clock.mm = 7; } });
         s.seconds(12, [&](int sec) { if (sec == 1) s.m.key1(s.now); if (sec >= 2 && sec <= 4) s.m.swipe(Swipe::Up); if (sec == 6) s.m.swipe(Swipe::Down); if (sec == 9) s.m.swipe(ar ? Swipe::Left : Swipe::Right); });
+        // 6 Stage 1.3 local screens with demo data: Today → Week → back → face → Quick Settings (each row once, then lock and
+        //   unlock) → face → the three widgets and back; one input per second, so every input is one rebuild
+        s.reset(std::string("pages_") + L); lang(s, ar); s.m.setDemo(true);
+        s.seconds(24, [&](int sec) {
+            switch (sec) {
+                case 1: s.m.swipe(Swipe::Up); break;            case 2: s.m.swipe(Swipe::Up); break;
+                case 3: s.m.key2(s.now); break;                 case 4: s.m.swipe(Swipe::Down); break;
+                case 5: s.m.swipe(Swipe::Down); break;          case 6: s.m.act(Action::QsRow, int(QsRow::Brightness), s.now); break;
+                case 7: s.m.act(Action::QsRow, int(QsRow::Theme), s.now); break;         case 8: s.m.act(Action::QsRow, int(QsRow::Dnd), s.now); break;
+                case 9: s.m.act(Action::QsRow, int(QsRow::Mode), s.now); break;          case 10: s.m.act(Action::QsRow, int(QsRow::Lock), s.now); break;
+                case 12: s.m.key1Hold(s.now); break;            case 13: s.m.swipe(ar ? Swipe::Right : Swipe::Left); break;
+                case 14: s.m.swipe(ar ? Swipe::Right : Swipe::Left); break; case 15: s.m.swipe(ar ? Swipe::Right : Swipe::Left); break;
+                case 16: s.m.key2(s.now); break;                case 17: s.m.key2(s.now); break;
+                case 18: s.m.key1(s.now); s.m.act(Action::MenuItem, int(MenuId::Settings), s.now); break;
+                case 20: s.m.key2(s.now); break;                default: break;
+            }
+        });
         // 4 pause / resume (command sent → confirmed → toast → toast gone: four rebuilds each)
         s.reset(std::string("pause_") + L); lang(s, ar); s.m.startRide(s.now); s.seconds(3);
         s.seconds(20, [&](int sec) { if (sec == 1) s.m.act(Action::Pause, 0, s.now); if (sec == 10) s.m.act(Action::Resume, 0, s.now); });

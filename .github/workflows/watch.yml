@@ -26,6 +26,10 @@ jobs:
         run: |
           cd watch/firmware/releases/stage1.1-installed && sha256sum -c SHA256SUMS
           grep -q '^3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba  cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
+      - name: Stage 1.2 offline candidate is preserved unchanged (2760f5a7…, never installed)
+        run: |
+          cd watch/firmware/releases/stage1.2-candidate && sha256sum -c SHA256SUMS
+          grep -q '^2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8e6f8ecc492cfc0e09f66ae75a  cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
       - name: Stage 1.1 rendering checks — visual identity, partial updates, redraw rate, work budgets (computer proxy, not watch timing)
         run: |
           sudo apt-get install -y -qq valgrind >/dev/null
@@ -112,14 +116,17 @@ jobs:
         working-directory: watch/firmware
         run: |
           mkdir -p ../../stage1-candidates
-          # Stage 1.2 candidates have their own names; approved Stage 1 (faa2828f…) and installed Stage 1.1 (3274b887…) live only in releases/
-          for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1.2-v3poc-T-Watch-2021-$r.bin; done
+          # Stage 1.3 RC1 candidates have their own names; Stage 1 (faa2828f…), installed Stage 1.1 (3274b887…) and the Stage 1.2
+          # offline candidate (2760f5a7…) live only in releases/
+          for r in V1_0 V1_1 V2; do cp .pio/build/T-Watch-2021-$r-v3poc/firmware.bin ../../stage1-candidates/cyclift-stage1.3-rc1-v3poc-T-Watch-2021-$r.bin; done
           cp .pio/build/T-Watch-2021-V1_1-display-diag/firmware.bin ../../stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin
           cd ../../stage1-candidates && sha256sum *.bin | tee SHA256SUMS && echo "commit ${GITHUB_SHA}" >> SHA256SUMS
           # no candidate may carry the name or fingerprint of an approved/installed file
-          ! grep -E 'faa2828f8fd22d59877c4c9535eb09e1a15db3176f2b5cd1c438810aead5cba7|3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba|stage1-v3poc|stage1.1-v3poc' SHA256SUMS
-          # Stage 1.2 is presented to the owner as this exact file (10 Nov): any later firmware change needs a NEW, renamed candidate
-          grep -q '^2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8e6f8ecc492cfc0e09f66ae75a  cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin$' SHA256SUMS
+          ! grep -E 'faa2828f8fd22d59877c4c9535eb09e1a15db3176f2b5cd1c438810aead5cba7|3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba|2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8e6f8ecc492cfc0e09f66ae75a|stage1-v3poc|stage1.1-v3poc|stage1.2-v3poc' SHA256SUMS
+          # RC1 fingerprint pin: set after the first CI build of the RC1 commit (see watch/docs/release/RELEASE_READINESS.md);
+          # once pinned, any later firmware change needs a NEW, renamed candidate
+          PIN=$(cat ../watch/firmware/releases/stage1.3-rc1.sha256 2>/dev/null || true)
+          if [ -n "$PIN" ]; then grep -q "^$PIN  cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin\$" SHA256SUMS; else echo "RC1 fingerprint not pinned yet"; fi
       - uses: actions/upload-artifact@v4
         with:
           name: stage1-firmware-candidates-not-flashed
@@ -210,7 +217,7 @@ jobs:
             --app-a watch/firmware/.pio/build/stage2a-bootprobe-factory-standin/firmware.bin \
             --app-b watch/firmware/.pio/build/stage2a-bootprobe-cyclift/firmware.bin \
             --app-crash watch/firmware/.pio/build/stage2a-bootprobe-crash/firmware.bin \
-            --app-stage1 stage1-candidates/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin --app-approved watch/firmware/releases/stage1.1-installed/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
+            --app-stage1 stage1-candidates/cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin --app-approved watch/firmware/releases/stage1.1-installed/cyclift-stage1.1-v3poc-T-Watch-2021-V1_1.bin --app-diag stage1-candidates/cyclift-display-diag-T-Watch-2021-V1_1.bin --out boot-sim | tee boot-sim.log
       - name: Summary
         if: always()
         run: |
@@ -245,12 +252,12 @@ jobs:
           set -o pipefail
           for n in 1 2; do rm -rf .pio/build/T-Watch-2021-V1_1-v3poc; pio run -e T-Watch-2021-V1_1-v3poc > build-repro-$n.log 2>&1 || { tail -40 build-repro-$n.log; exit 1; }
             cp .pio/build/T-Watch-2021-V1_1-v3poc/firmware.bin /tmp/clean-$n.bin; done
-          sha256sum /tmp/clean-1.bin /tmp/clean-2.bin ../../published/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin | tee repro.log
+          sha256sum /tmp/clean-1.bin /tmp/clean-2.bin ../../published/cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin | tee repro.log
           python3 tools/v3/image_diff.py /tmp/clean-1.bin /tmp/clean-2.bin | tee -a repro.log
-          python3 tools/v3/image_diff.py /tmp/clean-1.bin ../../published/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin | tee -a repro.log
-          { echo '## Reproducible build (Stage 1.1 V1_1)'; echo '```'; cat repro.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          python3 tools/v3/image_diff.py /tmp/clean-1.bin ../../published/cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin | tee -a repro.log
+          { echo '## Reproducible build (Stage 1.3 RC1 V1_1)'; echo '```'; cat repro.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           cmp /tmp/clean-1.bin /tmp/clean-2.bin
-          cmp /tmp/clean-1.bin ../../published/cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin
+          cmp /tmp/clean-1.bin ../../published/cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin
   publish-stage1-candidates:
     # Copies the CI-built Stage 1 images (with their SHA-256 list) to the separate branch firmware/stage1-candidates so they
     # can be fetched with plain git. Publishing only - nothing is flashed.

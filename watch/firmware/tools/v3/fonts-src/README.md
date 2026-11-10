@@ -8,3 +8,4 @@
 | NotoAr400.ttf | Noto Sans Arabic Regular | SIL OFL 1.1 (OFL-NotoSansArabic.txt) | Same subset |
 
 `../gen_fonts.sh` converts these into the LVGL fonts in `src/ui/v3/fonts/` (committed; a normal build does not need node).
+| InterR-tnum.ttf | Inter Regular 4.001 | SIL OFL 1.1 (OFL-Inter.txt) | From @fontsource/inter 5.3.0 (`inter-latin-400-normal.woff`), tnum frozen, same Latin subset; body text (Stage 1.3) |

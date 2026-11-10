@@ -17,7 +17,8 @@ static void navigation() {
     m.key1(t); m.swipe(Swipe::Right); CHECK(m.screen == Screen::Face); // swipe back
     m.key1(t);
     auto items = m.menuItems(); CHECK(items.size() == 8); CHECK(items[0] == MenuId::WatchFace);
-    m.act(Action::MenuItem, int(MenuId::Today), t); CHECK(m.screen == Screen::Menu);   // not in Stage 1: stays
+    m.act(Action::MenuItem, int(MenuId::Today), t); CHECK(m.screen == Screen::Today);  // Stage 1.3: Today is wired
+    m.key2(t); CHECK(m.screen == Screen::Menu);                                          // Key 2 = back to the menu
     m.act(Action::MenuItem, int(MenuId::Activities), t); CHECK(m.screen == Screen::Cockpit); CHECK(m.wk == WkState::Active);
     m.key1(t); CHECK(m.screen == Screen::Menu);
     items = m.menuItems(); CHECK(items.size() == 9); CHECK(items[0] == MenuId::ReturnToWorkout);

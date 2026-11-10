@@ -40,7 +40,7 @@ public:
 private:
     lv_obj_t* root_ = nullptr;
     /// Everything that changes the screen's structure (see structureKey); compared every frame, so plain integers.
-    using Key = std::array<int, 21>;
+    using Key = std::array<int, 32>;
     Key key_{}; bool keyValid_ = false;
     std::vector<HitArea> hits_;
     const Palette* pal_ = nullptr;
@@ -70,6 +70,29 @@ private:
     void buildFace(const Model& m);
     void buildMenu(const Model& m);
     void buildCockpit(const Model& m);
+    // Stage 1.3 screens (prototype screens1.js)
+    void buildToday(const Model& m);
+    void buildWeek(const Model& m);
+    void buildQuick(const Model& m);
+    void buildWHealth(const Model& m);
+    void buildWCoach(const Model& m);
+    void buildWActivity(const Model& m);
+    void buildNotYet(const Model& m);
+    void updateToday(const Model& m);
+    // Stage 1.3 primitives
+    /// Section header (prototype hdr): uppercase label at y 24 (26 in Large Text), optional caption under it at y 38 (44).
+    void header(const std::string& title, const std::string& sub);
+    /// One centred line of text whose line box starts at `top`; returns the label.
+    lv_obj_t* textLine(int top, const std::string& s, const Font& f, uint32_t color, int centerX = 120);
+    /// Wrapped paragraph `width` px wide starting at x `left`; `center` centres each line.
+    lv_obj_t* paragraph(int top, int left, int width, const std::string& s, const Font& f, int lineH, uint32_t color, bool center);
+    void icon(int top, const lv_img_dsc_t* ic, uint32_t color, int centerX = 120);
+    /// Page dots (prototype pdots): n dots, the current one a 12 px pill.
+    void pageDots(int n, int index, int top);
+    /// Prototype emptyState(): 28 px icon, title, caption.
+    void emptyState(const lv_img_dsc_t* ic, const std::string& title, const std::string& sub);
+    lv_obj_t* bikeButton(int top, const std::string& text, int kind, Action a);
+    Run bikeInfo_;                               // Bike Mode: 'WATTS · 152 bpm' line under the 76 px number
     /// The cockpit ring parts that never change during a ride (track, target band, zone ticks, interval track).
     void staticRing();
     /// Draws staticRing() once per theme into an opaque image (LVGL snapshot, pixel-identical) and places it as the
