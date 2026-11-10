@@ -40,7 +40,7 @@ static size_t g_logShown = 0;
 // "work" frames are those that rebuilt the screen or sent pixels; their totals go into a ring buffer for percentiles
 // and into a histogram. Read with 'u' (report + reset) and 'h' (histogram + percentiles by frame kind).
 // Stage 1.2: ring 512 → 128 samples (percentiles over the last 128 work frames; the histogram and the per-kind maxima still
-// cover every frame since 'z'). Saves 11,904 B of internal RAM (14,456 → 2,552 B incl. the sort buffer).
+// cover every frame since 'z'). Static RAM 14,456 → 3,716 B incl. the sort buffer: saves 10,740 B (CI symbol sizes).
 namespace perf {
 constexpr int RING = 128;
 constexpr uint32_t EDGES_US[] = {1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 400000};

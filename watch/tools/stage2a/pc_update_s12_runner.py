@@ -11,7 +11,7 @@ _S11 = os.environ.get('CY_UPDATE_S11') or os.path.join(os.path.expanduser('~'), 
 exec(open(_S11, encoding='utf-8').read())          # cy_install + Stage 1.1 constants (FW, FW11, …) and its phases
 
 FW12 = os.environ.get('CY_FW12') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_2_firmware', 'cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin')
-FW12_SHA = '__STAGE12_SHA__'                      # filled from the CI build; the owner's approval must name this value
+FW12_SHA = '2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8e6f8ecc492cfc0e09f66ae75a'   # CI 42826771046 (commit 207b427); install needs the owner's approval naming it
 STAGE12 = 'Stage 1.2'                             # boot banner marker of the new firmware
 
 

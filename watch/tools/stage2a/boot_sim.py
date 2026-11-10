@@ -218,7 +218,7 @@ def main():
 
 
 def s10(a, orig, old, new, results, expect):
-    """S10: Stage 1.1 replaces Stage 1 in app1 and the write is interrupted. The installed layout (8 MB bootloader header,
+    """S10: a new image (--app-stage1) replaces the installed one (--app-approved) in app1 and the write is interrupted. The installed layout (8 MB bootloader header,
     new table, OTA record -> app1) stays as on the watch after B1. Expectation to verify: an incomplete app1 image fails the
     bootloader's image check (checksum + appended SHA-256) and the bootloader starts app0 (the factory stand-in here);
     a complete image starts normally. Interruption points cover esptool's per-sector erase-then-write order: data written up
@@ -242,7 +242,7 @@ def s10(a, orig, old, new, results, expect):
             cases.append(("S10_cut_%04.1fpct_%s" % (frac * 100, rest), state(cut, rest), "factory"))
     cases.append(("S10_last_sector_missing", state(span - 0x1000 + 5, "old"), "factory"))
     full = bytearray(base); full[0x400000:0x400000 + span] = newp
-    cases.append(("S10_complete_stage1_1", bytes(full), "app1"))
+    cases.append(("S10_complete_new_image", bytes(full), "app1"))
     flip = bytearray(full); flip[0x400000 + len(new) // 2] ^= 0x01
     cases.append(("S10_complete_one_bit_flipped", bytes(flip), "factory"))
     hdr = bytearray(base); hdr[0x400000:0x401000] = b"\xff" * 0x1000

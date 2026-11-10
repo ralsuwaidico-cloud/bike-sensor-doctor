@@ -328,5 +328,9 @@ src = open(os.path.join(HERE, 'pc_update_s11_runner.py'), encoding='utf-8').read
 check(real == 0xF7000 and 'WRITE_ADDR, WRITE_LEN = 0x400000, 0xF7000' in src,
       'C1 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1 (0x400000-0x6FFFFF)' % (real, real, 0x400000 + real - 1))
 
+real12 = (max(1009632, 1016192, 0xF7000) + 0xFFF) & ~0xFFF
+src12 = open(os.path.join(HERE, 'pc_update_s12_runner.py'), encoding='utf-8').read()
+check(real12 == 0xF9000 and "FW12_SHA = '2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8e6f8ecc492cfc0e09f66ae75a'" in src12,
+      'Stage 1.2 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1; tool pinned to 2760f5a7…' % (real12, real12, 0x400000 + real12 - 1))
 print('reinstall simulation: %d failures' % len(FAILS))
 sys.exit(1 if FAILS else 0)

@@ -67,4 +67,20 @@ def b2_restart():
     return r.confirmed
 
 
-print('B2 helper loaded (serial only, no esptool). b2_alive(), b2_session(sec, send, gap, label), b2_restart()')
+def local_seconds(now=None):
+    """PC local wall-clock time as seconds since 1970 (the watch clock keeps local time, like the iPhone will set it)."""
+    d = datetime.datetime.fromtimestamp(now if now is not None else time.time()).astimezone()
+    return int(d.timestamp()) + int(d.utcoffset().total_seconds())
+
+
+def c2_set_clock():
+    """Stage 1.2 only (temporary test command): sends T<local seconds> and reads it back with R. Serial only, no reset.
+    Without a battery the watch forgets the time whenever USB is unplugged."""
+    t = local_seconds()
+    txt, st = b2_session(5, send=list(['T%d\n' % t, 'R']), gap=1.0, label='set clock')
+    ok = 'time set from PC' in txt and st == 0
+    log('CLOCK: %s' % ('SET (%s)' % datetime.datetime.utcfromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S local') if ok else 'NOT SET - see the lines above'))
+    return ok
+
+
+print('B2 helper loaded (serial only, no esptool). b2_alive(), b2_session(sec, send, gap, label), b2_restart(), c2_set_clock() [Stage 1.2]')
