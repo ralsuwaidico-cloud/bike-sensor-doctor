@@ -382,5 +382,10 @@ real12 = (max(1009632, 1016192, 0xF7000) + 0xFFF) & ~0xFFF
 src12 = open(os.path.join(HERE, 'pc_update_s12_runner.py'), encoding='utf-8').read()
 check(real12 == 0xF9000 and "FW12_SHA = '2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8e6f8ecc492cfc0e09f66ae75a'" in src12,
       'Stage 1.2 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1; tool pinned to 2760f5a7…' % (real12, real12, 0x400000 + real12 - 1))
+real13 = (max(1009632, 1194112, 0xF7000) + 0xFFF) & ~0xFFF
+src13 = open(os.path.join(HERE, 'pc_update_s13_runner.py'), encoding='utf-8').read()
+pin13 = open(os.path.join(HERE, '..', '..', 'firmware', 'releases', 'stage1.3-rc1.sha256')).read().strip()
+check(real13 == 0x124000 and 0x400000 + real13 - 1 < 0x700000 and "FW13_SHA = '%s'" % pin13 in src13 and pin13 == '4ea0ea90da5061859019c7b6f94c1eaea409c362d94a07e058d7755feda50c19',
+      'RC1 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1; tool pinned to 4ea0ea90… (same as releases/)' % (real13, real13, 0x400000 + real13 - 1))
 print('reinstall simulation: %d failures' % len(FAILS))
 sys.exit(1 if FAILS else 0)

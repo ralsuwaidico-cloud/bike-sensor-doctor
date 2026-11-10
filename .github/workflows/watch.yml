@@ -87,16 +87,16 @@ jobs:
           echo "## v3 Stage 1 proof of concept (compile only, not flashed)" >> "$GITHUB_STEP_SUMMARY"
           grep -E "RAM:|Flash:" build-*-v3poc.log >> "$GITHUB_STEP_SUMMARY" || true
           python3 tools/v3/elf_sizes.py .pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf | tee -a "$GITHUB_STEP_SUMMARY" || true
-      - name: Memory report — IRAM / DRAM against the linker regions; Stage 1.2 with and without LVGL in IRAM; Bluetooth app build
+      - name: Memory report — IRAM / DRAM against the linker regions; Stage 1.3 RC1 with and without LVGL in IRAM; Bluetooth app build
         working-directory: watch/firmware
         run: |
           set -o pipefail
           pio run -e T-Watch-2021-V1_1-v3poc-fastmem 2>&1 | tail -n 4
-          python3 tools/v3/mem_report.py "Stage 1.2 candidate (IRAM rendering off)=.pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf" \
-            "Stage 1.2 + LVGL in IRAM (comparison, as Stage 1.1)=.pio/build/T-Watch-2021-V1_1-v3poc-fastmem/firmware.elf" \
+          python3 tools/v3/mem_report.py "Stage 1.3 RC1 (IRAM rendering off)=.pio/build/T-Watch-2021-V1_1-v3poc/firmware.elf" \
+            "RC1 + LVGL in IRAM (comparison, as Stage 1.1)=.pio/build/T-Watch-2021-V1_1-v3poc-fastmem/firmware.elf" \
             "existing app with Bluetooth (NimBLE)=.pio/build/T-Watch-2021-V1_1/firmware.elf" \
-            "--iram-lvgl=Stage 1.2 + LVGL in IRAM (comparison, as Stage 1.1)" \
-            "--dram-syms=Stage 1.2 candidate (IRAM rendering off):perf::|mem::|g_ring|work_mem_int|lv_mem|draw_buf" | tee mem-report.log
+            "--iram-lvgl=RC1 + LVGL in IRAM (comparison, as Stage 1.1)" \
+            "--dram-syms=Stage 1.3 RC1 (IRAM rendering off):perf::|mem::|g_ring|work_mem_int|lv_mem|draw_buf" | tee mem-report.log
           { echo '## Memory report (static, compile time)'; cat mem-report.log; } >> "$GITHUB_STEP_SUMMARY"
       - name: Toolchain, framework and library versions are exactly the pinned ones
         working-directory: watch/firmware

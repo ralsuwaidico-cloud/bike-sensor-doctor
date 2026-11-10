@@ -16,7 +16,7 @@ FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'
 FW12 = os.environ.get('CY_FW12') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_2_firmware', 'cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin')
 FW12_SHA = '2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8e6f8ecc492cfc0e09f66ae75a'
 FW13 = os.environ.get('CY_FW13') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_3_firmware', 'cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin')
-FW13_SHA = 'NOT_PINNED'   # Stage 1.3 RC1; same pin as cy_update_s13.py
+FW13_SHA = '4ea0ea90da5061859019c7b6f94c1eaea409c362d94a07e058d7755feda50c19'   # Stage 1.3 RC1 (CI 42916312090); same pin as cy_update_s13.py
 
 
 def app1_program():
