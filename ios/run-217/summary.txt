@@ -1,0 +1,107 @@
+BikeComputer iOS CI — run 217 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 217 — 2026-11-10 11:38 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): FAILED (exit 65) · 2m4s — argument 'onApplied' must precede argument 'embedded' 
+RESULT tests: FAILED (build)
+Total: 2m12s
+
+## smoke
+BikeComputer iOS CI — build 217 — 2026-11-10 11:36 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): FAILED (exit 65) · 4m15s — argument 'onApplied' must precede argument 'embedded' 
+RESULT launch smoke (Release): FAILED (build)
+Total: 5m32s
+
+## flows
+BikeComputer iOS CI — build 217 — 2026-11-10 11:37 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): FAILED (exit 65) · 3m13s — argument 'onApplied' must precede argument 'embedded' 
+RESULT flows (Release): FAILED (build)
+Total: 3m43s
+
+## journeys
+BikeComputer iOS CI — build 217 — 2026-11-10 11:32 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): FAILED (exit 65) · 3m7s — argument 'onApplied' must precede argument 'embedded' 
+RESULT journey (recorded): FAILED (build)
+Total: 3m18s
+
+## layout-small
+BikeComputer iOS CI — build 217 — 2026-11-10 11:32 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 4m6s — argument 'onApplied' must precede argument 'embedded' 
+RESULT layout audit: FAILED (build)
+Total: 4m19s
+
+## layout-standard
+BikeComputer iOS CI — build 217 — 2026-11-10 11:32 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 4m50s — argument 'onApplied' must precede argument 'embedded' 
+RESULT layout audit: FAILED (build)
+Total: 5m24s
+
+## layout-promax
+BikeComputer iOS CI — build 217 — 2026-11-10 11:32 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m9s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 3m45s — argument 'onApplied' must precede argument 'embedded' 
+RESULT layout audit: FAILED (build)
+Total: 5m29s
+
+## layout-owner
+BikeComputer iOS CI — build 217 — 2026-11-10 11:32 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): FAILED (exit 65) · 3m51s — argument 'onApplied' must precede argument 'embedded' 
+RESULT layout audit: FAILED (build)
+Total: 4m3s
+
+## watch
+BikeComputer iOS CI — build 217 — 2026-11-10 11:36 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11070   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11386   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11889   screenshot ax3 ok large · 10m14s
+Total: 10m19s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+
+GATE flows: ok
+commit 6bef5c2a5e94f1e946c0c0137abfc621eb8300af  branch ios/checkpoint-f-ride  job failure

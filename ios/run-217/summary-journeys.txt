@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 217 — 2026-11-10 11:32 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): FAILED (exit 65) · 3m7s — argument 'onApplied' must precede argument 'embedded' 
+RESULT journey (recorded): FAILED (build)
+Total: 3m18s
