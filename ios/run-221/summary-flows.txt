@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 221 — 2026-11-11 12:00 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m10s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 12m24s
+RESULT flows: FAILED (exit 65) · 55m40s — PlanEditPreviewApplyTests.swift:78: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled once the review has no blocking conflict PlanEditPreviewApplyTests.swift:81: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top) PlanEditPreviewApplyTests.swift:91: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row PlanEditPreviewApplyTests.swift:92: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history 
+Total: 56m12s
