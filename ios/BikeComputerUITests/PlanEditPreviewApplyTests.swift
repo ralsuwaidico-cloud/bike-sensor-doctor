@@ -63,7 +63,19 @@ final class PlanEditPreviewApplyTests: XCTestCase {
         app.buttons["editSave"].firstMatch.tap()
         XCTAssertTrue(preview.waitForExistence(timeout: 15))
         XCTAssertTrue(apply.waitForExistence(timeout: 5))
-        expect(apply.isEnabled, "Apply is enabled on the re-opened review", tag: "applyenabled")
+        // run 219 (attempt 2 screenshot): today's seeded session used one of the athlete's routines, so the review correctly
+        // said "Can't apply this change" and offered choices; Apply is disabled until one is picked. A person picks one:
+        // rebuild without the routine for this session (or allow the estimated time). Then Apply must be enabled.
+        if !apply.isEnabled {
+            let detach = app.buttons["altDetach"].firstMatch, allow = app.buttons["altAllowTime"].firstMatch
+            if detach.exists { detach.tap() } else if allow.exists { allow.tap() }
+            let end = Date().addingTimeInterval(8)
+            while Date() < end, !apply.isEnabled {
+                if allow.exists && allow.isHittable { allow.tap() }      // a rebuilt session may still be over the time limit
+                Thread.sleep(forTimeInterval: 0.5)
+            }
+        }
+        expect(apply.isEnabled, "Apply is enabled once the review has no blocking conflict", tag: "applyenabled")
         apply.tap()
         // positive proof again: the session screen's own toolbar is on top (review and edit sheet both gone)
         expect(more.waitUntilHittable(timeout: 10), "Apply closes the review and the edit sheet (the session screen is on top)", tag: "applyclose")

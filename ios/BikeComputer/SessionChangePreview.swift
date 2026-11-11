@@ -98,7 +98,7 @@ struct SessionChangeSheet: View {
 
     private func handle(_ a: PreviewAction, _ p: SessionChangeProposal) {
         switch a {
-        case .keepAsPlanned: store.discardProposal(proposalId); dismiss()
+        case .keepAsPlanned: closing = true; store.discardProposal(proposalId); close()   // same single closing path as Cancel
         case .allowMinutes(let m): rebuild(note: "Rebuilt for \(m) min.") { $0.minutes = m }
         case .setEquipment: showEquipment = true
         case .detachRoutine: rebuild(note: "Rebuilt without the routine for this session.") { $0.detachRoutine = true }
@@ -187,7 +187,7 @@ struct SessionChangePreviewContent: View {
         Button("Keep the session as planned") { act(.keepAsPlanned) }.accessibilityIdentifier("altKeep")
         if p.report.has("TIME-001"), let e = p.report.estimatedMinutes { let m = Int(e.rounded(.up)) + 1; Button("Allow \(m) min instead") { act(.allowMinutes(m)) }.accessibilityIdentifier("altAllowTime") }
         if p.report.has("EQUIP-002") || p.report.has("EQUIP-001") { Button("Set my equipment") { act(.setEquipment) }.accessibilityIdentifier("altEquipment") }
-        if p.report.has("ROUTINE-001") && !p.request.detachRoutine { Button("Rebuild without my routine (this session only)") { act(.detachRoutine) } }
+        if p.report.has("ROUTINE-001") && !p.request.detachRoutine { Button("Rebuild without my routine (this session only)") { act(.detachRoutine) }.accessibilityIdentifier("altDetach") }
     }
 
     @ViewBuilder private func entryList(_ es: [ExerciseEntry], logged: Set<String>) -> some View {
