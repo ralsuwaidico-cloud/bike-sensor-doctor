@@ -41,6 +41,22 @@ Home v2 implementation map and the code audit; they were read, not changed.
 | Sport picker "support level" notes | Sports other than cycling / strength do not exist | Adaptive Lifestyle Coach Phase 6 (planned) |
 | Accessibility identifiers | The prototype has none; production UI tests rely on ids such as `homeRingConsistency`, `homeDay-<weekday>` | Add at integration, keep existing ids |
 
+## Home v2.1 additions (12 Nov 2026)
+
+| Prototype component | Reuses existing production data / behaviour | New integration work later |
+|---|---|---|
+| Consistency ring + adherence sheet | `homeWeekOverview` counts (done, planned, missed, skipped) | "Rescheduled" as its own state (production has moved sessions but no such label on Home) |
+| Training Mix double ring + sheet | Per-sport done / planned totals already computed for the week overview | A small `TrainingMix` value (two fractions); rule for single-sport athletes. **The acute:chronic load analysis is untouched and stays a separate analytics capability** |
+| Recovery indicator + sheet | `RecoveryAnalysis` readings, usual range, advice wording | Availability arcs per reading; approved wording for each state; no percentage |
+| Compact schedule | `HomeDashboard.days`, `CyDay` | Per-session state marks (completed / planned / missed / rescheduled); two sessions per day |
+| Compact sport cards | Week totals; distance; lifted volume | Title "Strength" (not "Strength Load") when the card shows sessions |
+| Sleep bar + sheet | Sleep durations already read from Apple Health (`SleepAggregation`) | A user-chosen or documented sleep target and its source field — **no target exists in production and none is to be invented**; seven-day average |
+| Coach banner | `HomeCoachItem`, Why sheet, review flow | "Postponed" state (planned in the Adaptive Lifestyle Coach, Phase 1 — not authorised) |
+| Trends module | Daily ride and strength minutes from history | `HomeTrendDay` builder (minutes per discipline, planned minutes, per-day rows); 4-week aggregation |
+| Key metrics grid | Resting HR / HRV (Health reads), training time, session load, ride power, strength volume | Selection rule per athlete (sports, goals, connected data); comparison wording; metric detail pages |
+| Floating dock | Production already has the original floating dock (`CyLiquidDock`) | None for behaviour — the prototype mirrors it; only theme tokens would be shared |
+| Gradients / quieter cards | — | Token layer (as in section B) |
+
 ## C. Things the prototype deliberately does not do
 
 - It does not compute any metric. Every number and status word is sample text.
