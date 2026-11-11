@@ -2,6 +2,7 @@
 // src/screens2.js, src/core.js): every "top" below is the prototype's line-box top in watch pixels.
 #if defined(CYW_V3POC)
 #include "cyv3_ui.hpp"
+#include <cstring>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -84,7 +85,18 @@ Ui::Key Ui::structureKey(const Model& m) const {
 bool Ui::render(const Model& m) {
     pal_ = &palette(m.settings.theme); large_ = m.large(); ar_ = m.rtl();
     Key k = structureKey(m);
-    if (!keyValid_ || k != key_) { key_ = k; keyValid_ = true; build(m); rebuilds++; return true; }
+    if (!keyValid_ || k != key_) {
+        static const char* const N[32] = {"screen", "theme", "density", "text size", "language", "workout", "pending", "phone link",
+            "synced+clock", "charging", "power present", "hr present", "cadence present", "toast", "toast text", "toast sub", "toast sub text",
+            "key2 armed", "menu scroll", "move", "load", "synced", "brightness", "dnd", "mode", "locked", "not-yet page", "qs scroll",
+            "clock valid", "today date", "-", "-"};
+        cause_[0] = 0;
+        if (keyValid_) for (int i = 0; i < 32; i++) if (k[i] != key_[i]) {
+            size_t n = std::strlen(cause_); if (n + std::strlen(N[i]) + 3 >= sizeof cause_) break;
+            std::snprintf(cause_ + n, sizeof cause_ - n, "%s%s", n ? ", " : "", N[i]);
+        }
+        key_ = k; keyValid_ = true; build(m); rebuilds++; return true;
+    }
     update(m); updates++;
     return false;
 }
@@ -310,7 +322,9 @@ void Ui::buildFace(const Model& m) {
     if (!m.phoneLinked) chip(40, tr(S::PhoneLost, l), p.status_critical, 1, p.surface);
 
     clock_ = Run{}; clock_.top = 64; clock_.lineBox = 58; clock_.mainCss = 54;
-    Piece c; c.text = synced ? "00:00" : "--:--"; c.font = font(Type::Clock54, false); c.color = p.ink; clock_.pieces.push_back(c);
+    // RC2 (owner decision 11 Nov 20:51): the time and date follow the clock chip alone; "synced" governs only the
+    // iPhone data on this face (rings, next ride, Move / Load)
+    Piece c; c.text = m.clock.valid ? "00:00" : "--:--"; c.font = font(Type::Clock54, false); c.color = p.ink; clock_.pieces.push_back(c);
     makeRun(clock_);
 
     Font lbl = font(Type::Label, large_);
@@ -347,8 +361,8 @@ void Ui::buildFace(const Model& m) {
 void Ui::updateFace(const Model& m) {
     if (clock_.pieces.empty()) return;
     const Palette& p = *pal_; Lang l = m.settings.lang;
-    bool synced = m.synced && m.clock.valid, changed = false;
-    char clk[8]; if (synced) std::snprintf(clk, sizeof clk, "%02d:%02d", m.clock.hh, m.clock.mm); else std::snprintf(clk, sizeof clk, "--:--");
+    bool changed = false;
+    char clk[8]; if (m.clock.valid) std::snprintf(clk, sizeof clk, "%02d:%02d", m.clock.hh, m.clock.mm); else std::snprintf(clk, sizeof clk, "--:--");
     if (setText(clock_.pieces[0].obj, clk)) changed = true;
     if (changed) layoutRun(clock_);
     // an invalid clock has no date either (defect D1, 11 Nov): only the battery stays on that line

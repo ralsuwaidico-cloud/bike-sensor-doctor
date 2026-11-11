@@ -115,6 +115,34 @@ int main() {
       CHECK(m.toast.kind == Toast::Info && m.toast.text == S::SimRide, "simulated-ride banner shown");
       CHECK(m.stack.empty(), "starting a workout clears the history"); }
 
+    // RC2 lap regression (owner report 11 Nov: restart after Key 2 during a ride): every language × mode × entry route,
+    // the exact owner sequence (Today → Start, or Menu → Activities; Key 2 twice quickly) and its variants
+    { int laps = 0;
+      for (int ar = 0; ar < 2; ar++) for (int mode = 0; mode < 3; mode++) for (int route = 0; route < 2; route++) {
+          Model m; m.setDemo(route == 0); m.simRideNotice = true; m.settings.lang = ar ? Lang::Ar : Lang::En; m.settings.mode = Mode(mode);
+          uint32_t t = 100000; m.tick(t);
+          if (route == 0) { m.swipe(Swipe::Up); CHECK(m.screen == Screen::Today, "lap: Today opens"); m.act(Action::StartPlan, 0, t); }
+          else { m.key1(t); m.act(Action::MenuItem, int(MenuId::Activities), t); }
+          CHECK(m.screen == Screen::Cockpit && m.inWorkout(), "lap: ride started (route %d)", route);
+          t += 10000; m.tick(t);
+          for (int k = 0; k < 3; k++) {                                   // owner: lower button twice ~0.5 s apart, 3 times
+              int before = m.laps;
+              m.key2(t); CHECK(m.key2Armed && m.screen == Screen::Cockpit, "lap: first press arms, stays on the ride");
+              t += 500; m.key2(t); CHECK(!m.key2Armed && m.pending == Cmd::Lap, "lap: second press sends Lap");
+              t += 500; m.tick(t); CHECK(m.pending == Cmd::None && m.laps == before + 1 && m.screen == Screen::Cockpit, "lap: confirmed, still on the ride");
+              t += 10000; m.tick(t); laps++;
+          }
+          m.key2(t); t += 3000; m.tick(t); CHECK(!m.key2Armed && m.screen == Screen::Cockpit, "lap: single press expires, no Back");
+          m.key2(t); t += 2600; m.key2(t); CHECK(m.key2Armed && m.pending == Cmd::None, "lap: presses 2.6 s apart do not make a lap");
+          t += 3000; m.tick(t);
+          m.key2(t); m.key2(t + 1); m.key2(t + 2); m.key2(t + 3);         // contact bounce / four very fast presses
+          CHECK(m.screen == Screen::Cockpit && m.inWorkout(), "lap: rapid presses never leave the ride");
+          t += 5000; m.tick(t); CHECK(m.pending == Cmd::None, "lap: rapid presses settle");
+          m.act(Action::Pause, 0, t); t += 600; m.tick(t); m.key2(t); m.key2(t + 300);
+          CHECK(m.screen == Screen::Cockpit, "lap: Key 2 twice while paused stays on the ride");
+      }
+      std::printf("lap regression: %d laps in 12 rides\n", laps); }
+
     // random-input soak: 200 000 inputs; invariants hold throughout
     { Model m; uint32_t t = 0, rng = 12345; size_t maxStack = 0; int faceReturns = 0;
       for (int step = 0; step < 200000; step++) {

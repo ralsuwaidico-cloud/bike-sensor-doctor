@@ -24,6 +24,8 @@
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <esp_system.h>
+#include <esp_attr.h>
 extern "C" { extern int _iram_start, _iram_end, _data_start, _bss_end; }   // ESP-IDF linker symbols (sections.ld)
 
 using namespace cyw;
@@ -132,15 +134,27 @@ void report() {
 
 static cyw::rtc::TimeCommand g_timeCmd;
 
+static cyw::rtc::ClockKeeper g_clock;                 // RC2: last confirmed time survives a missed read (rtc_time.hpp)
+static cyw::rtc::Debounced<3> g_charge;               // RC2: charge-status pin must agree 3 reads (30 s) in a row
+static uint32_t g_clockFails = 0;
+
 static void readClock() {
     cyw::rtc::Reading r;
-    // Stage 1.2: valid only if the chip answered, kept time since it was last set (VL clear) and the date is 2024 or later;
-    // otherwise the face shows "--:--" and NOT SYNCED. Without a battery the clock loses its time whenever USB is unplugged.
-    g_model.clock.valid = g_rtc.read(r) && r.integrity;
+    // Stage 1.2: valid only if the chip kept time since it was last set (VL clear) and the date is 2024 or later; otherwise
+    // the face shows "--:--". Without a battery the clock loses its time whenever USB is unplugged.
+    // RC2: a read the chip does not answer keeps the last confirmed time for up to 3 reads (ClockKeeper); every miss is
+    // printed so the hardware log shows whether this happens.
+    bool answered = g_rtc.read(r);
+    bool wasValid = g_clock.valid;
+    g_clock.onRead(answered, r, millis());
+    if (!answered) { g_clockFails++; Serial.printf("  clock: chip did not answer (miss %d in a row, %u total)%s\n", g_clock.misses,
+        unsigned(g_clockFails), g_clock.valid ? " — keeping the last confirmed time" : " — time now unavailable"); }
+    else if (!r.integrity && wasValid) Serial.println("  clock: chip reports lost time (VL) — time now unavailable");
+    g_model.clock.valid = g_clock.valid;
     if (!g_model.clock.valid) return;
-    int y, mo, d, h, mi, s; cyw::rtc::fromUnix(r.t, y, mo, d, h, mi, s);
+    int y, mo, d, h, mi, s; cyw::rtc::fromUnix(g_clock.t, y, mo, d, h, mi, s);
     g_model.clock.hh = h; g_model.clock.mm = mi; g_model.clock.day = d; g_model.clock.month = mo;
-    g_model.clock.weekday = cyw::rtc::weekday(r.t);
+    g_model.clock.weekday = cyw::rtc::weekday(g_clock.t);
 }
 
 static void printClock(const char* what) {
@@ -155,11 +169,24 @@ static void help() {
     Serial.println("v3poc: m menu/Key1 · b Key2 · f face · k lock · E demo data · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame-time histogram · z reset histogram · M memory+stacks · R clock · T<seconds> set clock (test)");
 }
 
+// RC2 boot diagnostics: the chip's own reset reason and a count of starts since power-on (kept in RTC memory, which a
+// software reset, watchdog or panic does not clear; a power-on or brown-out starts it again at 1).
+RTC_NOINIT_ATTR static uint32_t g_bootMagic, g_bootCountRtc;
+static uint32_t g_bootCount = 0;
+static const char* resetName(esp_reset_reason_t r) {
+    switch (r) {
+        case ESP_RST_POWERON: return "power-on"; case ESP_RST_EXT: return "external pin"; case ESP_RST_SW: return "software restart";
+        case ESP_RST_PANIC: return "PANIC (exception)"; case ESP_RST_INT_WDT: return "interrupt WATCHDOG"; case ESP_RST_TASK_WDT: return "task WATCHDOG";
+        case ESP_RST_WDT: return "other WATCHDOG"; case ESP_RST_DEEPSLEEP: return "deep sleep"; case ESP_RST_BROWNOUT: return "BROWN-OUT (supply dip)";
+        case ESP_RST_SDIO: return "SDIO"; default: return "unknown";
+    }
+}
+
 static void perfReport() {
     lv_mem_monitor_t mm; lv_mem_monitor(&mm); mem::sampleLv();
     // "heap free/min" keep the Stage 1/1.1 meaning (getFreeHeap, includes IRAM-only memory) so logs stay comparable; see 'M'.
-    Serial.printf("perf: frames %u, avg render %u us, max %u us, rebuilds %u · lv_mem used %u / %u, peak %u (sampled) · heap free %u, min %u · psram %u / %u\n",
-        g_frames, g_frames ? g_renderUs / g_frames : 0, g_renderMax, g_rebuilds, unsigned(mm.total_size - mm.free_size), unsigned(mm.total_size), unsigned(mem::lvPeak),
+    Serial.printf("perf: up %lu s, boot %u · frames %u, avg render %u us, max %u us, rebuilds %u · lv_mem used %u / %u, peak %u (sampled) · heap free %u, min %u · psram %u / %u\n",
+        (unsigned long)(millis() / 1000), unsigned(g_bootCount), g_frames, g_frames ? g_renderUs / g_frames : 0, g_renderMax, g_rebuilds, unsigned(mm.total_size - mm.free_size), unsigned(mm.total_size), unsigned(mem::lvPeak),
         ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getFreePsram(), ESP.getPsramSize());
     g_frames = g_renderUs = g_renderMax = g_rebuilds = 0;
 }
@@ -205,6 +232,10 @@ static void serialCommand(char c, uint32_t now) {
 
 void setup() {
     Serial.begin(115200); delay(200);
+    esp_reset_reason_t why = esp_reset_reason();
+    if (g_bootMagic != 0xC1C1F7u || why == ESP_RST_POWERON || why == ESP_RST_BROWNOUT) { g_bootMagic = 0xC1C1F7u; g_bootCountRtc = 0; }
+    g_bootCount = ++g_bootCountRtc;
+    Serial.printf("reset reason: %s (code %d) · start %u since power-on\n", resetName(why), int(why), unsigned(g_bootCount));
     pinMode(pins::PWR_ON, OUTPUT); digitalWrite(pins::PWR_ON, HIGH);
     Wire.begin(pins::I2C_SDA, pins::I2C_SCL);
     g_power.begin(); g_keys.begin(); g_touch.begin();
@@ -213,9 +244,9 @@ void setup() {
     g_ui.begin(lv_scr_act());
     g_model.setDemo(false); g_model.simRideNotice = true;   // honest start: nothing synced, simulated rides labelled
     g_model.log.clear();
-    readClock(); g_model.battery = g_power.batteryPct(); g_model.charging = g_power.charging();
+    readClock(); g_model.battery = g_power.batteryPct(); g_model.charging = g_charge.feed(g_power.charging());
     g_ui.render(g_model); lv_refr_now(nullptr);
-    Serial.printf("Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after %u ms · heap %u · psram %u · flash %u MB\n",
+    Serial.printf("Cyclift v3 proof of concept · Stage 1.3 RC2 (local screens; IRAM rendering off) · simulated data · first frame after %u ms · heap %u · psram %u · flash %u MB\n",
         unsigned(millis() - t0), ESP.getFreeHeap(), ESP.getPsramSize(), unsigned(ESP.getFlashChipSize() / (1024 * 1024)));
     help();
 }
@@ -240,7 +271,12 @@ void loop() {
     if (k1 && g_k1 && !g_k1Held && now - g_k1Down >= 1000) { g_k1Held = true; g_model.key1Hold(now); }   // hold ≥ 1 s
     if (k2 && !g_k2) g_model.key2(now);
     g_k1 = k1; g_k2 = k2;
-    if (now - g_lastSlow >= 10000) { g_lastSlow = now; readClock(); g_model.battery = g_power.batteryPct(); g_model.charging = g_power.charging(); }
+    if (now - g_lastSlow >= 10000) {
+        g_lastSlow = now; readClock(); g_model.battery = g_power.batteryPct();
+        bool raw = g_power.charging(); uint32_t f0c = g_charge.flips; g_model.charging = g_charge.feed(raw);
+        if (g_charge.flips != f0c) Serial.printf("  charge pin: %s (raw change %u; shown: %s)\n", raw ? "charging" : "not charging",
+            unsigned(g_charge.flips), g_model.charging ? "charging" : "not charging");
+    }
     uint32_t f1 = micros();
     g_model.tick(now);
     if (g_model.settings.brightness != g_bl) { g_bl = g_model.settings.brightness; g_display.setBrightness(uint8_t(g_bl)); }
@@ -252,7 +288,7 @@ void loop() {
         g_lastLv = now;
         uint32_t r0 = micros(), fl0 = g_display.flushUs, px0 = g_display.flushPx;
         bool rb = g_ui.render(g_model);
-        if (rb) { g_rebuilds++; mem::sampleLv(); }
+        if (rb) { g_rebuilds++; mem::sampleLv(); if (g_ui.lastCause()[0]) Serial.printf("  rebuild: %s\n", g_ui.lastCause()); }
         uint32_t r1 = micros();
         lv_timer_handler();
         uint32_t r2 = micros();

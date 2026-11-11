@@ -33,6 +33,7 @@ shutil.copy(os.path.join(HERE, 'pc_reinstall_runner.py'), os.path.join(T, 'cy_re
 shutil.copy(os.path.join(HERE, 'pc_update_s11_runner.py'), os.path.join(T, 'cy_update_s11.py'))
 shutil.copy(os.path.join(HERE, 'pc_update_s12_runner.py'), os.path.join(T, 'cy_update_s12.py'))
 shutil.copy(os.path.join(HERE, 'pc_update_s13_runner.py'), os.path.join(T, 'cy_update_s13.py'))
+shutil.copy(os.path.join(HERE, 'pc_update_rc2_runner.py'), os.path.join(T, 'cy_update_rc2.py'))
 
 backup = bytearray(tic.backup_like())
 bl = fp.image_len(backup, 0x1000); hdr = bytearray(backup[0x1000:0x1000 + bl]); hdr[2] = 2; hdr[3] = 0x20
@@ -46,6 +47,8 @@ fw12 = tfp.esp_image(1015808, mode=2, size_code=3, seed=12)         # Stage 1.2 
 fw12path = os.path.join(FWD, 'cyclift-stage1.2-v3poc-T-Watch-2021-V1_1.bin'); open(fw12path, 'wb').write(fw12)
 fw13 = tfp.esp_image(1048576, mode=2, size_code=3, seed=13)         # Stage 1.3 RC1 stand-in, longer again (span 0x100000)
 fw13path = os.path.join(FWD, 'cyclift-stage1.3-rc1-v3poc-T-Watch-2021-V1_1.bin'); open(fw13path, 'wb').write(fw13)
+fwr2 = tfp.esp_image(1052672, mode=2, size_code=3, seed=23)        # Stage 1.3 RC2 stand-in, slightly longer (span 0x101000)
+fwr2path = os.path.join(FWD, 'cyclift-stage1.3-rc2-v3poc-T-Watch-2021-V1_1.bin'); open(fwr2path, 'wb').write(fwr2)
 open(os.path.join(D, 'flash_8MB_read1.bin'), 'wb').write(backup); open(fwpath, 'wb').write(fw)
 planned, _ = fp.apply_plan(backup, b'', True); man = []
 for s in ic.PLANNED:
@@ -91,6 +94,8 @@ def boot_text():
     sel = fp.selected_slot(img, len(apps)) or 0; a = apps[sel]
     nv = [p for p in pts if p['label'] == 'nvs'][0]['offset']
     if a['offset'] == 0x400000:
+        if bytes(FL[0x400000:0x400000 + len(fwr2)]) == fwr2:
+            return BANNER + 'reset reason: power-on (code 1) \xb7 start 1 since power-on\r\nCyclift v3 proof of concept \xb7 Stage 1.3 RC2 (local screens; IRAM rendering off) \xb7 simulated data \xb7 first frame after 430 ms\r\n'
         if bytes(FL[0x400000:0x400000 + len(fw13)]) == fw13:
             return BANNER + 'Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after 430 ms\r\n'
         if bytes(FL[0x400000:0x400000 + len(fw12)]) == fw12:
@@ -171,8 +176,8 @@ class FlashTransport:
 
 
 def load(name):
-    os.environ.update(CY_PRIVATE_DIR=D, CY_TOOLS_DIR=T, CY_INSTALLER=os.path.join(T, 'cy_install.py'), CY_FW11=fw11path, CY_FW12=fw12path, CY_FW13=fw13path,
-                      CY_UPDATE_S11=os.path.join(T, 'cy_update_s11.py'))
+    os.environ.update(CY_PRIVATE_DIR=D, CY_TOOLS_DIR=T, CY_INSTALLER=os.path.join(T, 'cy_install.py'), CY_FW11=fw11path, CY_FW12=fw12path, CY_FW13=fw13path, CY_FWR2=fwr2path,
+                      CY_UPDATE_S11=os.path.join(T, 'cy_update_s11.py'), CY_UPDATE_S13=os.path.join(T, 'cy_update_s13.py'))
     g = {'__file__': os.path.join(T, name), '__name__': name}
     src = open(os.path.join(T, name), encoding='utf-8').read()
     src = src.replace("FW_SHA = 'faa2828f8fd22d59877c4c9535eb09e1a15db3176f2b5cd1c438810aead5cba7'", 'FW_SHA = %r' % hashlib.sha256(fw).hexdigest())
@@ -180,6 +185,7 @@ def load(name):
     src = src.replace("FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'", 'FW11_SHA = %r' % hashlib.sha256(fw11).hexdigest())
     src = re.sub(r"FW12_SHA = '[0-9a-f_A-Z]+'", 'FW12_SHA = %r' % hashlib.sha256(fw12).hexdigest(), src)
     src = re.sub(r"FW13_SHA = '[0-9a-f_A-Z]+'", 'FW13_SHA = %r' % hashlib.sha256(fw13).hexdigest(), src)
+    src = re.sub(r"FWR2_SHA = '[0-9a-f_A-Z]+'", 'FWR2_SHA = %r' % hashlib.sha256(fwr2).hexdigest(), src)
     exec(compile(src, name, 'exec'), g)
     return g
 
@@ -199,6 +205,8 @@ for nm in ('cy_install.py', 'cy_update_s11.py'):
     s = s.replace("FW11_SHA = '3274b8877df0a23a5e5cb1364868322d79d643d29411b36782b6bfb34eb937ba'", 'FW11_SHA = %r' % hashlib.sha256(fw11).hexdigest())
     s = s.replace("WRITE_ADDR, WRITE_LEN = 0x400000, 0xF7000", "WRITE_ADDR, WRITE_LEN = 0x400000, %#x" % ((max(len(fw), len(fw11)) + 0xFFF) & ~0xFFF))
     open(p, 'w', encoding='utf-8').write(s)
+p = os.path.join(T, 'cy_update_s13.py'); s = open(p, encoding='utf-8').read()     # exec'd by cy_update_rc2.py
+open(p, 'w', encoding='utf-8').write(re.sub(r"FW13_SHA = '[0-9a-f_A-Z]+'", 'FW13_SHA = %r' % hashlib.sha256(fw13).hexdigest(), s))
 
 # 1. first installation as on 9 Nov 19:35 ---------------------------------------------------------------------------------
 g = load('cy_install.py'); patch(g)
@@ -372,6 +380,40 @@ check(g3['phase']('s13_pre') is False, 'RC1 pre-check refuses everything while t
 FL[:] = AFTER_B1
 check(load_s13()['phase']('s13_pre') is False, 'RC1 pre-check refuses a watch that does not run Stage 1.1')
 
+# 11. PROPOSED RC2 app-slot update on the installed RC1 state, rollbacks, failure paths -----------------------------
+FL[:] = AFTER_S13
+def load_r2():
+    g = load('cy_update_rc2.py'); patch(g); g['FW11'] = fw11path; g['FW13'] = fw13path; g['FWR2'] = fwr2path; return g
+g = load_r2()
+CMDS.clear()
+res = [g['phase'](p) for p in ('r2_pre', 'r2_write', 'r2_post')]
+check(res == [True, True, True], 'RC2 update: pre-check, app1 write + boot confirmed, post map (%s)' % res)
+SPANR2 = (max(len(fw13), len(fwr2), SPAN) + 0xFFF) & ~0xFFF
+wr = [c for c in CMDS if c[0] == 'write_flash']
+check(len(wr) == 1 and [a for a in wr[0] if a.startswith('0x')] == ['0x400000'] and os.path.getsize(wr[0][-1]) == SPANR2,
+      'RC2 update issues exactly ONE write: 0x400000, %d B' % SPANR2)
+check(all(c[0] in ('flash_id', 'read_flash', 'write_flash', 'verify_flash') for c in CMDS), 'RC2 update: only flash_id, read_flash, write_flash, verify_flash')
+check(bytes(FL[:0x400000]) == AFTER_S13[:0x400000], 'RC2 update: first 4 MB untouched')
+check(bytes(FL[0x400000:0x400000 + SPANR2]) == fwr2 + b'\xff' * (SPANR2 - len(fwr2)), 'RC2 update: app1 = RC2 + erased padding')
+AFTER_R2 = bytes(FL)
+check(g['phase']('r2_rollback') is True and bytes(FL[0x400000:0x400000 + SPANR2]) == fw13 + b'\xff' * (SPANR2 - len(fw13)),
+      'rollback from RC2 to the installed RC1: written, verified, RC1 boot confirmed')
+check(g['phase']('r2_pre') is True, 'after rollback the watch is again in the RC1 state (RC2 pre-check passes)')
+FL[:] = AFTER_R2
+gb = load('cy_recover_b.py'); patch(gb)
+ok = all(gb['phase'](p) for p in ('rb_precheck', 'rb_restore', 'rb_confirm'))
+check(ok and fp.parse_pt(bytes(FL[0x8000:0x8C00])) == fp.parse_pt(backup[0x8000:0x8C00]), 'R-B after RC2: accepts RC2 in app1, restores the factory layout')
+FL[:] = AFTER_S13
+STATE['verify_fault'] = 0x400000
+g = load_r2(); g['phase']('r2_pre')
+check(g['phase']('r2_write') is False and STATE['mode'] == 'running', 'RC2 update with a verify failure: phase fails, watch restarted')
+STATE['verify_fault'] = None
+FL[:] = AFTER_S13
+g3 = load_r2(); g3['FWR2_SHA'] = 'NOT_PINNED'
+check(g3['phase']('r2_pre') is False, 'RC2 pre-check refuses everything while the tool is not pinned')
+FL[:] = AFTER_S11
+check(load_r2()['phase']('r2_pre') is False, 'RC2 pre-check refuses a watch that does not run RC1')
+
 # 8. the real C1 numbers: Stage 1 (983,360 B) and Stage 1.1 (1,009,632 B) -> one write 0x400000-0x4F6FFF
 real = (max(983360, 1009632) + 0xFFF) & ~0xFFF
 src = open(os.path.join(HERE, 'pc_update_s11_runner.py'), encoding='utf-8').read()
@@ -384,7 +426,7 @@ check(real12 == 0xF9000 and "FW12_SHA = '2760f5a7f4c4064e3dbbf70e9bd2af9c76be8a8
       'Stage 1.2 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1; tool pinned to 2760f5a7…' % (real12, real12, 0x400000 + real12 - 1))
 real13 = (max(1009632, 1194112, 0xF7000) + 0xFFF) & ~0xFFF
 src13 = open(os.path.join(HERE, 'pc_update_s13_runner.py'), encoding='utf-8').read()
-pin13 = open(os.path.join(HERE, '..', '..', 'firmware', 'releases', 'stage1.3-rc1.sha256')).read().strip()
+pin13 = open(os.path.join(HERE, '..', '..', 'firmware', 'releases', 'stage1.3-rc1-installed', 'PIN.sha256')).read().strip()
 check(real13 == 0x124000 and 0x400000 + real13 - 1 < 0x700000 and "FW13_SHA = '%s'" % pin13 in src13 and pin13 == '4ea0ea90da5061859019c7b6f94c1eaea409c362d94a07e058d7755feda50c19',
       'RC1 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1; tool pinned to 4ea0ea90… (same as releases/)' % (real13, real13, 0x400000 + real13 - 1))
 print('reinstall simulation: %d failures' % len(FAILS))

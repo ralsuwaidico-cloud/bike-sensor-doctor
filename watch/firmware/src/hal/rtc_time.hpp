@@ -73,4 +73,47 @@ private:
     bool active_ = false; int digits_ = 0;
 };
 
+/// Stage 1.3 RC2 (owner requirement 11 Nov 20:51): decides whether the watch may show the time.
+/// - The chip answered and its data is sound (VL clear, year ≥ 2024) → valid; this time becomes the last confirmed time.
+/// - The chip answered but reports lost or implausible time (VL set: its oscillator stopped, e.g. USB power was removed)
+///   → invalid at once: stale time is never shown as valid.
+/// - The chip did not answer (an I²C transfer failed) → the last confirmed time is kept and advanced with the processor's
+///   own millisecond clock, up to MAX_MISSES consecutive misses (30 s at one read per 10 s); after that → invalid until a
+///   read succeeds again. Every read is a fresh retry; nothing is written to the chip.
+struct ClockKeeper {
+    static constexpr int MAX_MISSES = 3;
+    bool valid = false; uint32_t t = 0;        // local seconds since 1970 that the watch should show now
+    int misses = 0; uint32_t misses_total = 0, invalidations = 0;
+    /// One read attempt: `answered` = the I²C transfer succeeded; `r` its decoded data (ignored when it did not answer).
+    void onRead(bool answered, const Reading& r, uint32_t nowMs) {
+        if (answered) {
+            misses = 0;
+            if (r.integrity) { valid = true; base_ = r.t; baseMs_ = nowMs; t = r.t; return; }
+            if (valid) invalidations++;
+            valid = false; return;
+        }
+        misses++; misses_total++;
+        if (valid && misses <= MAX_MISSES) { t = base_ + (nowMs - baseMs_) / 1000u; return; }
+        if (valid) invalidations++;
+        valid = false;
+    }
+private:
+    uint32_t base_ = 0, baseMs_ = 0;
+};
+
+/// A two-state input that must read the same value `N` times in a row before the reported state changes (used for the
+/// charge-status pin, sampled every 10 s: a real plug / unplug shows within 30 s; a pin that flips between samples does
+/// not rebuild the screen each time). `flips` counts raw changes, for the diagnostics report.
+template <int N> struct Debounced {
+    bool state = false; uint32_t flips = 0;
+    bool feed(bool raw) {
+        if (!primed_) { primed_ = true; state = last_ = raw; run_ = N; return state; }
+        if (raw != last_) { flips++; last_ = raw; run_ = 1; } else if (run_ < N) run_++;
+        if (run_ >= N) state = last_;
+        return state;
+    }
+private:
+    bool primed_ = false, last_ = false; int run_ = 0;
+};
+
 }  // namespace cyw::rtc

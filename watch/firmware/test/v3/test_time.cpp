@@ -62,6 +62,32 @@ int main() {
         for (uint32_t t : {toUnix(2024, 2, 28, 23, 59, 59), toUnix(2024, 2, 29, 23, 59, 59), toUnix(2025, 2, 28, 23, 59, 59), toUnix(2026, 12, 31, 23, 59, 59)}) {
             uint8_t r[7]; toRegs(t + 1, r); Reading x = fromRegs(r); CHECK(x.integrity && x.t == t + 1); }
     }
+    // RC2 clock rules (owner requirements 11 Nov 20:51)
+    {
+        uint32_t T0 = toUnix(2026, 11, 11, 20, 0, 0);
+        auto good = [](uint32_t t) { Reading r; r.t = t; r.integrity = true; return r; };
+        Reading lost; lost.t = toUnix(2000, 1, 1, 0, 0, 0); lost.integrity = false;
+        ClockKeeper k; CHECK(!k.valid);                                                    // nothing read yet → --:--
+        k.onRead(true, lost, 0); CHECK(!k.valid);                                          // invalid RTC → --:--
+        k.onRead(true, good(T0), 1000); CHECK(k.valid && k.t == T0);                       // valid RTC → time shown
+        k.onRead(false, Reading{}, 11000); CHECK(k.valid && k.t == T0 + 10 && k.misses == 1);   // one missed read: last time kept, advanced
+        k.onRead(false, Reading{}, 21000); CHECK(k.valid && k.t == T0 + 20);
+        k.onRead(false, Reading{}, 31000); CHECK(k.valid && k.t == T0 + 30 && k.misses == 3);
+        k.onRead(false, Reading{}, 41000); CHECK(!k.valid && k.invalidations == 1);       // 4th miss in a row: no longer confirmed
+        k.onRead(true, good(T0 + 50), 51000); CHECK(k.valid && k.t == T0 + 50 && k.misses == 0);   // chip answers again: recovered
+        k.onRead(false, Reading{}, 61000); k.onRead(true, good(T0 + 70), 71000); CHECK(k.valid && k.misses == 0);   // isolated miss: no blink
+        k.onRead(true, lost, 81000); CHECK(!k.valid && k.invalidations == 2);              // genuine loss (VL): invalid at once, no stale time
+        k.onRead(false, Reading{}, 91000); CHECK(!k.valid);                                 // ...and a miss after it does not bring stale time back
+        k.onRead(true, good(T0 + 100), 101000); CHECK(k.valid && k.t == T0 + 100);
+        { ClockKeeper w; w.onRead(true, good(T0), 0xFFFFF000u); w.onRead(false, Reading{}, 0x00002000u + 0xFFFFF000u); CHECK(w.valid && w.t == T0 + 8); }   // millis() wrap
+        CHECK(k.misses_total == 6);
+        // charge-status pin: 3 equal samples before the shown state changes; raw flips counted
+        Debounced<3> d; CHECK(d.feed(false) == false);
+        CHECK(d.feed(true) == false && d.feed(false) == false && d.feed(true) == false && d.flips == 3);   // a pin that flips: screen unchanged
+        CHECK(d.feed(true) == false && d.feed(true) == true);                              // real plug-in: shown after 3 equal samples (30 s)
+        CHECK(d.feed(false) == true && d.feed(false) == true && d.feed(false) == false);   // real unplug likewise
+        Debounced<3> e; CHECK(e.feed(true) == true);                                       // first sample at start-up is taken as is
+    }
     std::printf("time tests: %d checks, %d failed\n", g_n, g_fail);
     return g_fail ? 1 : 0;
 }

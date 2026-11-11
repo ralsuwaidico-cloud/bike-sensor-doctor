@@ -36,12 +36,16 @@ public:
     uint32_t rebuilds = 0, updates = 0;
     /// Font chosen for the lead number on the last render (58, 44 or 32 px; 0 = did not fit).
     int leadPx() const { return leadPx_; }
+    /// RC2 diagnostics: names of the structure-key fields that changed at the last rebuild ("" for the first build), so the
+    /// hardware log shows WHY the whole screen was rebuilt (e.g. "screen", "charging", "clock valid").
+    const char* lastCause() const { return cause_; }
 
 private:
     lv_obj_t* root_ = nullptr;
     /// Everything that changes the screen's structure (see structureKey); compared every frame, so plain integers.
     using Key = std::array<int, 32>;
     Key key_{}; bool keyValid_ = false;
+    char cause_[96] = "";
     std::vector<HitArea> hits_;
     const Palette* pal_ = nullptr;
     bool large_ = false, ar_ = false;

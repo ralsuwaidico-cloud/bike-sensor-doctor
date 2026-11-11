@@ -192,6 +192,13 @@ static lv_obj_t* g_screen = nullptr;
 static void fresh(Ctx& c) { lv_obj_clean(g_screen); c.ui = Ui(); c.ui.begin(g_screen); }
 static double ms(std::chrono::steady_clock::time_point a) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - a).count(); }
 
+/// True if any label under `o` shows exactly `t` (after LVGL's own copy).
+static bool hasText(lv_obj_t* o, const char* t) {
+    if (lv_obj_check_type(o, &lv_label_class) && std::strcmp(lv_label_get_text(o), t) == 0) return true;
+    for (uint32_t i = 0; i < lv_obj_get_child_cnt(o); i++) if (hasText(lv_obj_get_child(o, int32_t(i)), t)) return true;
+    return false;
+}
+
 /// Render and run every layout check, without saving a picture (for sweeps over many values).
 static void check(Ctx& c, const std::string& name) {
     c.ui.render(c.m); lv_obj_invalidate(g_screen); lv_refr_now(nullptr);
@@ -291,6 +298,15 @@ int main(int argc, char** argv) {
             base(c, true); c.m.clock.month = mo; c.m.clock.weekday = wd; c.m.clock.day = (mo + wd) % 2 ? 28 : 31;
             if (today) c.m.swipe(Swipe::Up);
             check(c, std::string(today ? "today" : "face") + "__date-" + std::to_string(mo) + "-" + std::to_string(wd) + sfx);
+        }
+        // RC2 clock rule: the face shows the chip's time whenever it is valid, whatever the iPhone / demo state; never otherwise
+        for (int demo = 0; demo < 2; demo++) for (int valid = 0; valid < 2; valid++) for (int phone = 0; phone < 2; phone++) {
+            base(c, demo); c.m.clock.valid = valid; c.m.phoneLinked = phone; c.m.clock.hh = 7; c.m.clock.mm = 5;
+            c.ui.render(c.m); lv_refr_now(nullptr);
+            bool time = hasText(lv_scr_act(), "07:05"), dashes = hasText(lv_scr_act(), "--:--");
+            g_checks++;
+            if (!(valid ? (time && !dashes) : (dashes && !time)))
+                fail("face" + sfx, "clock-rule", "demo " + std::to_string(demo) + ", clock valid " + std::to_string(valid) + ", phone " + std::to_string(phone));
         }
         base(c, false); c.m.clock.valid = false; shoot(c, "face__clock-invalid" + sfx);
         base(c, false); c.m.clock.valid = false; c.m.swipe(Swipe::Up); shoot(c, "today__clock-invalid" + sfx);
