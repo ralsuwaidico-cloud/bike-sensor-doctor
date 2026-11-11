@@ -393,7 +393,7 @@ struct CyTabBar: View {
         .padding(.top, CySpace.s)
         .background(theme.surface.ignoresSafeArea(edges: .bottom))
         .overlay(Rectangle().fill(theme.border).frame(height: theme.borderWidth), alignment: .top)
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
     }
     private func tab(_ item: CyTabItem) -> some View {
         Button(action: { selection = item.id }) {

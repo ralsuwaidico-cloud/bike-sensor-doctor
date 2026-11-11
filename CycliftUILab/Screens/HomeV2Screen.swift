@@ -43,8 +43,8 @@ struct HomeV2Screen: View {
                 .padding(.horizontal, CySpace.l)
                 .padding(.top, CySpace.s)
             }
+            .clipped()   // scrolled content must not show under the status bar
             .background(theme.background.ignoresSafeArea())
-            .overlay(alignment: .top) { theme.background.frame(height: 0).ignoresSafeArea(edges: .top) }
             .onAppear {
                 if let scrollTo {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { proxy.scrollTo(scrollTo, anchor: .top) }

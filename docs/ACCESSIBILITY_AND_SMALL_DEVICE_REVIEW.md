@@ -19,12 +19,12 @@ VoiceOver was not listened to. It is a prototype review, not evidence about the 
 
 | # | Finding | Where | Severity | Status |
 |---|---|---|---|---|
-| 1 | Seventh day label on the chart axis was clipped ("…" instead of "Sun") | Trends chart, all themes | Medium | Fixed in the second build (axis padding) — to be confirmed in its screenshots |
-| 2 | Scrolled content showed through under the status bar | Home, gallery | Medium | Fixed in the second build (background behind the status bar) — to be confirmed |
-| 3 | Tab-bar labels grew with accessibility text and wrapped ("Train now" on two lines) | Tab bar at Accessibility Large | Medium | Fixed in the second build: labels stop growing at the largest standard size, as the system tab bar does. A long-press large-content viewer is still to add |
-| 4 | Date line and "SAMPLE DATA" tag wrapped awkwardly at accessibility sizes | Header | Low | Fixed in the second build (tag moves to its own line); the tag is prototype-only anyway |
+| 1 | Seventh day label on the chart axis was clipped ("…" instead of "Sun") | Trends chart, all themes | Medium | Second build still clipped it ("S…"); third build widens the axis — see the final report for the confirmed state |
+| 2 | Scrolled content showed through under the status bar | Home, gallery | Medium | Second build did not fix it; third build clips the scroll area at the status bar — see the final report for the confirmed state |
+| 3 | Tab-bar labels grew with accessibility text and wrapped ("Train now" on two lines) | Tab bar at Accessibility Large | Medium | Second build capped the labels (confirmed on iPhone 17; "Train now" still wrapped on iPhone SE); third build caps one step lower. A long-press large-content viewer is still to add |
+| 4 | Date line and "SAMPLE DATA" tag wrapped awkwardly at accessibility sizes | Header | Low | Fixed and confirmed in the second build's screenshots; the tag is prototype-only anyway |
 | 5 | Review sheet opened at half height and cut off the Approve button | Review sheet | Medium | Fixed in the second build (opens full height) |
-| 6 | Sample chart showed 100 % while the ring showed 80 % | Sample data | Low | Fixed (sample data only) |
+| 6 | Sample chart showed 100 % while the ring showed 80 % | Sample data | Low | Fixed and confirmed in the second build (sample data only) |
 | 7 | At Accessibility Large the header, circles list and strip fill the first screen; the sport cards need a scroll | Home on both devices | Expected | Open for the owner's view: acceptable, or should the greeting be capped at one line at these sizes? |
 | 8 | Chart status cells are 26 pt high — below the 44 pt target, though each is full column width and the same day can be chosen on the chart | Trends chart | Low | Open: raise the cells to 44 pt (taller card) or keep them compact |
 | 9 | Chart axis labels crowd at Accessibility Large ("MonTue WedThu") | Trends chart | Low | Open: switch to single letters at accessibility sizes |

@@ -54,6 +54,7 @@ struct LabScreen: View {
                 }
                 .padding(CySpace.l)
             }
+            .clipped()
             .background(theme.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: String.self) { id in
@@ -143,8 +144,8 @@ struct GalleryPage: View {
             }
             .padding(CySpace.l)
         }
+        .clipped()
         .background(theme.background.ignoresSafeArea())
-        .overlay(alignment: .top) { theme.background.frame(height: 0).ignoresSafeArea(edges: .top) }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showConfirm) {
             CyConfirmSheet(title: "Delete this session?", message: "Sample confirmation. In the app this would remove the session from your plan.",
