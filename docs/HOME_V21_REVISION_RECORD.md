@@ -24,8 +24,8 @@ VoiceOver not listened to. **Nothing is approved; nothing is integrated.**
 | Surfaces | Border on every card | No card outline on dark themes, a hairline on light themes, full borders only in High Contrast; restrained gradients on rings, bars and the coach surface (flat in High Contrast) |
 | Scenarios | Established, new user, loading | Plus cycling only, strength only, no planned sessions, no Apple Health / partial sensors, long name |
 
-Home length at the default text size on iPhone 17: the first screen now reaches the Coach card; v2 ended at the
-sport cards.
+First screen at the default text size on iPhone 17: v2.1 shows the header, indicators, schedule, sport cards, Sleep bar
+and the whole Coach card; v2 showed the header, rings, strip, sport cards and only the top edge of the Coach card.
 
 ## Requirements not implemented faithfully, and why
 
