@@ -94,6 +94,8 @@ struct LabRoot: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             content
+            LinearGradient(colors: [theme.background.opacity(0), theme.background.opacity(0.92), theme.background], startPoint: .top, endPoint: .bottom)
+                .frame(height: dockHeight + 34).ignoresSafeArea(edges: .bottom).allowsHitTesting(false).accessibilityHidden(true)
             VStack(spacing: CySpace.s) {
                 if let toast {
                     Text(toast).font(CyFont.caption).foregroundStyle(theme.textPrimary).multilineTextAlignment(.center)

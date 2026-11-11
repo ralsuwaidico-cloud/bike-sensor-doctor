@@ -44,8 +44,7 @@ struct CyMixRingGlyph: View {
             CyProgressRingGlyph(fraction: model == nil ? 0 : model?.endurance.fraction, color: theme.endurance, diameter: diameter, lineWidth: outer)
             CyProgressRingGlyph(fraction: model == nil ? 0 : model?.strength.fraction, color: theme.strength,
                                 diameter: diameter - 2 * (outer * theme.ringLineWidthScale + gap), lineWidth: outer)
-            if model == nil { ProgressView().controlSize(.small) }
-            else { Text("Mix").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary) }
+            if model != nil && diameter >= 64 { Text("Mix").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary) }
         }
         .frame(width: diameter, height: diameter)
         .accessibilityHidden(true)
@@ -69,8 +68,7 @@ struct CyRecoveryGlyph: View {
                             style: StrokeStyle(lineWidth: has ? lw : max(1.5, lw * 0.4), lineCap: .round, dash: has ? [] : [2, 5]))
                     .rotationEffect(.degrees(-90))
             }
-            if model == nil { ProgressView().controlSize(.small) }
-            else { Image(systemName: icon).font(.title3.weight(.semibold)).foregroundStyle(iconColor) }
+            if model != nil { Image(systemName: icon).font(.system(size: diameter * 0.28, weight: .semibold)).foregroundStyle(iconColor) }
         }
         .padding(lw / 2)
         .frame(width: diameter, height: diameter)
@@ -122,9 +120,10 @@ struct CyIndicatorRow: View {
             tile(title: "Consistency", info: consistencyText, big: big, action: onConsistency) {
                 ZStack {
                     CyProgressRingGlyph(fraction: isLoading ? 0 : consistency?.fraction, color: theme.ringConsistency, diameter: big ? 56 : 76)
-                    if isLoading { ProgressView().controlSize(.small) }
+                    if isLoading { EmptyView() }
                     else if let c = consistency, c.fraction != nil {
-                        Text(c.text).font(big ? CyFont.caption : CyFont.metricSmall).foregroundStyle(theme.textPrimary).minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 12)
+                        // at accessibility sizes the percentage is in the text beside the ring, not squeezed inside it
+                        if !big { Text(c.text).font(CyFont.metricSmall).foregroundStyle(theme.textPrimary).minimumScaleFactor(0.6).lineLimit(1).padding(.horizontal, 12) }
                     } else { Image(systemName: "minus").foregroundStyle(theme.textTertiary) }
                 }
             }
@@ -176,7 +175,7 @@ struct CyIndicatorRow: View {
         guard let c = consistency, c.fraction != nil else {
             return CyIndicatorText(title: "Consistency", line: consistency?.caption ?? "No sessions yet", spoken: consistency?.caption ?? "No sessions yet")
         }
-        return CyIndicatorText(title: "Consistency", line: c.caption, spoken: "\(c.text), \(c.caption)")
+        return CyIndicatorText(title: "Consistency", line: typeSize.isAccessibilitySize ? "\(c.text) · \(c.caption)" : c.caption, spoken: "\(c.text), \(c.caption)")
     }
     private var mixText: CyIndicatorText {
         if isLoading { return CyIndicatorText(title: "Training Mix", line: "Loading", spoken: "Loading") }
@@ -439,18 +438,11 @@ struct CyCoachBanner: View {
                     .frame(width: 26, height: 26).background(Circle().fill(theme.accent))
                     .accessibilityHidden(true)
                 Text("Coach").font(CyFont.label).foregroundStyle(theme.textPrimary)
-                Text("rules-based").font(.caption2).foregroundStyle(theme.textSecondary)
+                Text("rules-based").font(.caption2).foregroundStyle(theme.textSecondary).lineLimit(1).fixedSize()
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .overlay(Capsule().strokeBorder(theme.textTertiary.opacity(0.6), lineWidth: 1))
                 Spacer(minLength: 0)
-                if model != nil && emptyText == nil {
-                    Button(action: onWhy) {
-                        Label("Why?", systemImage: "info.circle").font(CyFont.caption).foregroundStyle(theme.accent)
-                            .frame(minWidth: CyHit.min, minHeight: CyHit.min, alignment: .trailing).contentShape(Rectangle())
-                    }
-                    .buttonStyle(CyRingButtonStyle())
-                    .accessibilityLabel("Why this suggestion")
-                }
+                if model != nil && emptyText == nil && !typeSize.isAccessibilitySize { whyButton }
             }
             .accessibilityElement(children: .contain)
             if let emptyText {
@@ -461,6 +453,7 @@ struct CyCoachBanner: View {
                     Label(note.text, systemImage: note.icon).font(CyFont.caption).foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                if typeSize.isAccessibilitySize { whyButton }
                 if m.hasProposal && (decision == .none || decision == .postponed) {
                     let actions = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: CySpace.s)) : AnyLayout(HStackLayout(spacing: CySpace.m))
                     actions {
@@ -488,6 +481,14 @@ struct CyCoachBanner: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(ZStack { shape.fill(theme.surface); shape.fill(theme.highlightSurface) })
         .overlay(shape.strokeBorder(theme.id == .highContrast ? theme.accent : theme.accent.opacity(0.28), lineWidth: theme.borderWidth))
+    }
+    private var whyButton: some View {
+        Button(action: onWhy) {
+            Label("Why?", systemImage: "info.circle").font(CyFont.caption).foregroundStyle(theme.accent).lineLimit(1).fixedSize()
+                .frame(minWidth: CyHit.min, minHeight: CyHit.min, alignment: .trailing).contentShape(Rectangle())
+        }
+        .buttonStyle(CyRingButtonStyle())
+        .accessibilityLabel("Why this suggestion")
     }
     private var decisionNote: (text: String, icon: String)? {
         switch decision {

@@ -66,11 +66,12 @@ struct CyTrendsModule: View {
     }
 
     private var legend: some View {
-        HStack(spacing: CySpace.l) {
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout(spacing: CySpace.l))
+        return layout {
             key("Endurance", theme.endurance, filled: true)
             key("Strength", theme.strength, filled: true)
             key("Planned", theme.textTertiary, filled: false)
-            Spacer(minLength: 0)
+            if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
             Text(range?.unit ?? "").font(.caption2).foregroundStyle(theme.textTertiary)
         }
         .accessibilityHidden(true)

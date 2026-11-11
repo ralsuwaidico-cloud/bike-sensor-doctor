@@ -68,7 +68,7 @@ if [ -n "$STD" ]; then
     shoot "$U" "home-$T-2-cards" LAB_THEME=$T LAB_SCROLL=cards
     shoot "$U" "home-$T-3-trends" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
     shoot "$U" "home-$T-4-metrics" LAB_THEME=$T LAB_SCROLL=metrics
-    full "$U" "full-$T" LAB_THEME=$T LAB_SELECT=2
+    full "$U" "full-$T" LAB_THEME=$T
     [ "$T" = obsidian ] && shoot "$U" "home-$T-4-metrics-grid" LAB_THEME=$T LAB_SCROLL=metrics LAB_METRICS=grid
   done
   for T in obsidian arctic; do
@@ -94,19 +94,19 @@ if [ -n "$STD" ]; then
     shoot "$U" "a11y-$T-AXL-1-top" LAB_THEME=$T
     shoot "$U" "a11y-$T-AXL-2-cards" LAB_THEME=$T LAB_SCROLL=cards
     shoot "$U" "a11y-$T-AXL-3-trends" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
-    full "$U" "full-$T-AXL" LAB_THEME=$T LAB_SELECT=2
+    full "$U" "full-$T-AXL" LAB_THEME=$T
   done
   xcrun simctl shutdown "$U" >/dev/null 2>&1
 fi
 if [ -n "$SMALL" ]; then
-  U="${SMALL%|*}"; prep "$U"
+  U="${SMALL%|*}"; prep "$U"; SETTLE=4
   SETTLE=6 shoot "$U" warmup-small LAB_THEME=obsidian
   for T in obsidian arctic; do
     shoot "$U" "small-$T-1-top" LAB_THEME=$T
     shoot "$U" "small-$T-2-cards" LAB_THEME=$T LAB_SCROLL=cards
     shoot "$U" "small-$T-3-trends" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
     shoot "$U" "small-$T-4-metrics" LAB_THEME=$T LAB_SCROLL=metrics
-    full "$U" "full-small-$T" LAB_THEME=$T LAB_SELECT=2
+    full "$U" "full-small-$T" LAB_THEME=$T
   done
   shoot "$U" "small-obsidian-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser
   shoot "$U" "small-obsidian-longName" LAB_THEME=obsidian LAB_SCENARIO=longName
@@ -114,7 +114,7 @@ if [ -n "$SMALL" ]; then
   xcrun simctl ui "$U" content_size accessibility-large >/dev/null 2>&1
   shoot "$U" "small-obsidian-AXL-1-top" LAB_THEME=obsidian
   shoot "$U" "small-obsidian-AXL-3-trends" LAB_THEME=obsidian LAB_SCROLL=trends LAB_SELECT=2
-  full "$U" "full-small-obsidian-AXL" LAB_THEME=obsidian LAB_SELECT=2
+  full "$U" "full-small-obsidian-AXL" LAB_THEME=obsidian
   xcrun simctl shutdown "$U" >/dev/null 2>&1
 fi
 rm -f "$OUT/shots/warmup.png" "$OUT/shots/warmup-small.png"
