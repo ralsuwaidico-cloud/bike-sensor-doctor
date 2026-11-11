@@ -1,0 +1,574 @@
+15:57:17 ==================== RC1 automated diagnostics start ====================
+15:57:18   >> sent 'u'
+15:57:22    | perf: frames 610, avg render 795 us, max 228999 us, rebuilds 1 · lv_mem used 4688 / 65536, peak 4688 (sampled) · heap free 183340, min 155208 · psram 2095104 / 2097152
+15:57:22 alive: 4 s, 171 bytes, 0 unexpected restart(s)
+15:57:23   >> sent 'f'
+15:57:24   >> sent 'z'
+15:57:25   >> sent '?'
+15:57:26   >> sent 'M'
+15:57:27   >> sent 'u'
+15:57:28    | perf: histogram reset
+15:57:28    | v3poc: m menu/Key1 · b Key2 · f face · k lock · E demo data · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame
+15:57:28    | mem: internal 8-bit heap free 125728, min 97496, largest block 53236 · DMA largest 53236
+15:57:28    | mem: getFreeHeap-style total 183484 (min 155208) = 8-bit 125728 + IRAM-only 57756
+15:57:28    | mem: psram free 2095104 of 2097152, largest block 2064372, min 0
+15:57:28    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+15:57:28    | mem: lvgl pool used 4504 of 65536, peak 4688 (sampled), largest free 60968 (min 60780), frag 1%
+15:57:28    |   stack loopTask   unused  4924 B (of 8192 B)
+15:57:28    |   stack IDLE0      unused   568 B
+15:57:28    |   stack IDLE1      unused   572 B
+15:57:28    |   stack esp_timer  unused  8168 B
+15:57:28    |   stack ipc0       unused  1504 B
+15:57:28    |   stack ipc1       unused  1500 B
+15:57:28    |   stack Tmr Svc    unused  3604 B
+15:57:28    | perf: frames 771, avg render 659 us, max 222174 us, rebuilds 1 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+15:57:28 A face: help, memory, perf: 6 s, 1160 bytes, 0 unexpected restart(s)
+15:57:29   >> sent 'R'
+15:57:31    | clock: no valid time (not set since power loss) — face shows --:--
+15:57:31 B1 clock before setting: 3 s, 69 bytes, 0 unexpected restart(s)
+15:57:32   >> sent 'T1794412651\n'
+15:57:33   >> sent 'R'
+15:57:36    | time set from PC (temporary test command): 2026-11-11 15:57:31 local
+15:57:36    | clock: 2026-11-11 15:57:32 local
+15:57:36 B2 set clock from the PC: 5 s, 102 bytes, 0 unexpected restart(s)
+15:58:47   >> sent 'R'
+15:58:50    | clock: 2026-11-11 15:58:46 local
+15:58:50 B3 clock after 70 s: 3 s, 33 bytes, 0 unexpected restart(s)
+15:58:50 CLOCK: before=no valid time, set error -4 s, after 70 s error -4 s
+15:58:51   >> sent 'z'
+15:58:53   >> sent 'm'
+15:58:55   >> sent 'b'
+15:58:57   >> sent 'm'
+15:58:59   >> sent 'b'
+15:59:01   >> sent 'm'
+15:59:03   >> sent 'b'
+15:59:05   >> sent 'm'
+15:59:07   >> sent 'b'
+15:59:09   >> sent 'E'
+15:59:11   >> sent 'E'
+15:59:14   >> sent 'd'
+15:59:16   >> sent 'd'
+15:59:18   >> sent 't'
+15:59:20   >> sent 't'
+15:59:22   >> sent 'k'
+15:59:24   >> sent 'k'
+15:59:26   >> sent 'h'
+15:59:28    | perf: histogram reset
+15:59:28    |   key1
+15:59:28    |   key2: back
+15:59:28    |   key1
+15:59:28    |   key2: back
+15:59:28    |   key1
+15:59:28    |   key2: back
+15:59:28    |   key1
+15:59:28    |   key2: back
+15:59:28    |   demo data on
+15:59:28    |   demo data off
+15:59:28    | perf: frames 2646, avg render 1156 us, max 316287 us, rebuilds 10 · lv_mem used 4504 / 65536, peak 4872 (sampled) · heap free 182972, min 155208 · psram 2095104 / 2097152
+15:59:28    |   quick settings
+15:59:28    |   unlocked
+15:59:28    | hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+15:59:28    | hist idle     1536 1457 13 0 0 0 0 0 0 0
+15:59:28    | hist update   0 0 0 0 2 0 0 0 0 0
+15:59:28    | hist rebuild  0 0 0 0 0 0 0 0 16 0
+15:59:28    | frames update (last 2): total ms p50 14.3 p95 18.2 p99 18.2 max 18.2 · ui max 4.1 · draw+flush max 10.7 · flush max 1.0 · px max 1705
+15:59:28    | frames rebuild (last 16): total ms p50 230.2 p95 317.5 p99 317.5 max 317.5 · ui max 145.5 · draw+flush max 174.4 · flush max 25.8 · px max 57600
+15:59:28    | frames since reset: update 2 (max 18.2 ms) · rebuild 16 (max 317.5 ms)
+15:59:28    | frames idle max 2.5 ms · input max 3.3 ms · model max 0.0 ms
+15:59:28 C1 transitions EN: 38 s, 952 bytes, 0 unexpected restart(s)
+15:59:29   >> sent 'l'
+15:59:31   >> sent 'z'
+15:59:33   >> sent 'm'
+15:59:35   >> sent 'b'
+15:59:37   >> sent 'm'
+15:59:39   >> sent 'b'
+15:59:41   >> sent 'm'
+15:59:44   >> sent 'b'
+15:59:46   >> sent 'm'
+15:59:48   >> sent 'b'
+15:59:50   >> sent 'E'
+15:59:52   >> sent 'E'
+15:59:54   >> sent 'd'
+15:59:56   >> sent 'd'
+15:59:58   >> sent 't'
+16:00:00   >> sent 't'
+16:00:02   >> sent 'k'
+16:00:04   >> sent 'k'
+16:00:06   >> sent 'h'
+16:00:08    | perf: histogram reset
+16:00:08    |   key1
+16:00:08    |   key2: back
+16:00:08    |   key1
+16:00:08    |   key2: back
+16:00:08    |   key1
+16:00:08    | perf: frames 2591, avg render 1448 us, max 253078 us, rebuilds 12 · lv_mem used 5020 / 65536, peak 5020 (sampled) · heap free 182400, min 155208 · psram 2095104 / 2097152
+16:00:08    |   key2: back
+16:00:08    |   key1
+16:00:08    |   key2: back
+16:00:08    |   demo data on
+16:00:08    |   demo data off
+16:00:08    |   quick settings
+16:00:08    |   unlocked
+16:00:08    | hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+16:00:08    | hist idle     1559 1396 14 0 0 0 0 0 0 0
+16:00:08    | hist update   0 0 0 0 1 0 0 0 0 0
+16:00:08    | hist rebuild  0 0 0 0 0 0 0 0 16 0
+16:00:08    | frames update (last 1): total ms p50 14.4 p95 14.4 p99 14.4 max 14.4 · ui max 3.6 · draw+flush max 10.7 · flush max 0.9 · px max 1612
+16:00:08    | frames rebuild (last 16): total ms p50 253.6 p95 341.9 p99 341.9 max 341.9 · ui max 172.7 · draw+flush max 182.0 · flush max 25.8 · px max 57600
+16:00:08    | frames since reset: update 1 (max 14.4 ms) · rebuild 16 (max 341.9 ms)
+16:00:08    | frames idle max 3.6 ms · input max 3.0 ms · model max 0.0 ms
+16:00:08 C2 transitions AR: 40 s, 952 bytes, 0 unexpected restart(s)
+16:00:09   >> sent 'E'
+16:00:10   >> sent 'z'
+16:00:11   >> sent 'r'
+16:01:48    |   demo data on
+16:01:48    | perf: histogram reset
+16:01:48    |   ride started (simulated)
+16:01:48    | perf: frames 2509, avg render 1880 us, max 495835 us, rebuilds 13 · lv_mem used 5996 / 65536, peak 8952 (sampled) · heap free 180628, min 155208 · psram 1978364 / 2097152
+16:01:49    | perf: frames 2555, avg render 2480 us, max 402531 us, rebuilds 2 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180916, min 155208 · psram 1978364 / 2097152
+16:01:49    | perf: frames 2632, avg render 2139 us, max 127493 us, rebuilds 0 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180916, min 155208 · psram 1978364 / 2097152
+16:01:49    | perf: frames 2626, avg render 2171 us, max 129300 us, rebuilds 0 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180916, min 155208 · psram 1978364 / 2097152
+16:01:49 D1 ride EN (demo data on, simulated ride): 100 s, 758 bytes, 0 unexpected restart(s)
+16:01:50   >> sent 'p'
+16:01:52   >> sent 'p'
+16:01:54   >> sent 'h'
+16:01:56   >> sent 'u'
+16:02:01    |   command sent (simulated iPhone)
+16:02:01    |   command confirmed
+16:02:01    |   command sent (simulated iPhone)
+16:02:01    |   command confirmed
+16:02:01    | hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+16:02:01    | hist idle     136 8325 245 3 0 0 0 0 0 0
+16:02:01    | hist update   0 0 0 0 1 3 81 14 0 0
+16:02:01    | hist rebuild  0 0 0 0 0 0 0 0 6 2
+16:02:01    | frames update (last 99): total ms p50 91.3 p95 127.1 p99 138.9 max 138.9 · ui max 22.5 · draw+flush max 116.4 · flush max 11.2 · px max 21219
+16:02:01    | frames rebuild (last 8): total ms p50 350.8 p95 496.3 p99 496.3 max 496.3 · ui max 403.1 · draw+flush max 111.1 · flush max 25.8 · px max 57600
+16:02:01    | frames since reset: update 99 (max 138.9 ms) · rebuild 8 (max 496.3 ms)
+16:02:01    | frames idle max 6.5 ms · input max 3.3 ms · model max 0.2 ms
+16:02:01    | perf: frames 1052, avg render 4115 us, max 361265 us, rebuilds 6 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:02:01 D2 pause/resume + ride EN report: 12 s, 906 bytes, 0 unexpected restart(s)
+16:02:02   >> sent 'l'
+16:02:03   >> sent 'z'
+16:03:41    | perf: histogram reset
+16:03:41    | perf: frames 1360, avg render 2448 us, max 330410 us, rebuilds 1 · lv_mem used 5364 / 65536, peak 8952 (sampled) · heap free 180888, min 155208 · psram 1978364 / 2097152
+16:03:41    | perf: frames 2630, avg render 2158 us, max 130618 us, rebuilds 0 · lv_mem used 5364 / 65536, peak 8952 (sampled) · heap free 180888, min 155208 · psram 1978364 / 2097152
+16:03:41    | perf: frames 2581, avg render 2381 us, max 331010 us, rebuilds 2 · lv_mem used 5364 / 65536, peak 8952 (sampled) · heap free 180888, min 155208 · psram 1978364 / 2097152
+16:03:41 D3 ride AR: 100 s, 542 bytes, 0 unexpected restart(s)
+16:03:42   >> sent 'h'
+16:03:44   >> sent 'u'
+16:03:45   >> sent 'M'
+16:03:47   >> sent 'l'
+16:03:49    | perf: frames 2621, avg render 2192 us, max 131689 us, rebuilds 0 · lv_mem used 5364 / 65536, peak 8952 (sampled) · heap free 180888, min 155208 · psram 1978364 / 2097152
+16:03:49    | hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+16:03:49    | hist idle     0 8434 105 0 0 0 0 0 0 0
+16:03:49    | hist update   0 0 0 0 0 4 86 9 0 0
+16:03:49    | hist rebuild  0 0 0 0 0 0 0 0 2 0
+16:03:49    | frames update (last 99): total ms p50 87.9 p95 123.0 p99 131.7 max 131.7 · ui max 18.4 · draw+flush max 113.3 · flush max 11.5 · px max 22454
+16:03:49    | frames rebuild (last 2): total ms p50 331.0 p95 332.3 p99 332.3 max 332.3 · ui max 222.4 · draw+flush max 108.6 · flush max 25.8 · px max 57600
+16:03:49    | frames since reset: update 99 (max 131.7 ms) · rebuild 2 (max 332.3 ms)
+16:03:49    | frames idle max 3.7 ms · input max 2.0 ms · model max 0.1 ms
+16:03:49    | perf: frames 165, avg render 2036 us, max 88427 us, rebuilds 0 · lv_mem used 5364 / 65536, peak 8952 (sampled) · heap free 180888, min 155208 · psram 1978364 / 2097152
+16:03:49    | mem: internal 8-bit heap free 123132, min 97496, largest block 53236 · DMA largest 53236
+16:03:49    | mem: getFreeHeap-style total 180888 (min 155208) = 8-bit 123132 + IRAM-only 57756
+16:03:49    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:03:49    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:03:49    | mem: lvgl pool used 5364 of 65536, peak 8952 (sampled), largest free 60076 (min 56420), frag 1%
+16:03:49    |   stack loopTask   unused  4228 B (of 8192 B)
+16:03:49    |   stack IDLE0      unused   568 B
+16:03:49    |   stack IDLE1      unused   572 B
+16:03:49    |   stack esp_timer  unused  8168 B
+16:03:49    |   stack ipc0       unused  1504 B
+16:03:49    |   stack ipc1       unused  1500 B
+16:03:49    |   stack Tmr Svc    unused  3604 B
+16:03:49 D4 ride AR report + memory: 8 s, 1618 bytes, 0 unexpected restart(s)
+16:03:51   >> sent 'z'
+16:03:53   >> sent 'u'
+16:03:55   >> sent 'M'
+16:08:50    | perf: histogram reset
+16:08:50    | perf: frames 729, avg render 2676 us, max 350742 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:08:50    | mem: internal 8-bit heap free 123036, min 97496, largest block 53236 · DMA largest 53236
+16:08:50    | mem: getFreeHeap-style total 180792 (min 155208) = 8-bit 123036 + IRAM-only 57756
+16:08:50    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:08:50    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:08:50    | mem: lvgl pool used 5488 of 65536, peak 8952 (sampled), largest free 59972 (min 56420), frag 1%
+16:08:50    |   stack loopTask   unused  4228 B (of 8192 B)
+16:08:50    |   stack IDLE0      unused   568 B
+16:08:50    |   stack IDLE1      unused   572 B
+16:08:50    |   stack esp_timer  unused  8168 B
+16:08:50    |   stack ipc0       unused  1504 B
+16:08:50    |   stack ipc1       unused  1500 B
+16:08:50    |   stack Tmr Svc    unused  3604 B
+16:08:50    | perf: frames 1694, avg render 2128 us, max 109131 us, rebuilds 0 · lv_mem used 5500 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2627, avg render 2169 us, max 132277 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2628, avg render 2155 us, max 137595 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2620, avg render 2199 us, max 133185 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2623, avg render 2179 us, max 137438 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2620, avg render 2202 us, max 134826 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2630, avg render 2137 us, max 112552 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2617, avg render 2215 us, max 131674 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2580, avg render 2370 us, max 351539 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50    | perf: frames 2515, avg render 3347 us, max 352507 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:08:50 E soak 0-5 min: 300 s, 2577 bytes, 0 unexpected restart(s)
+16:08:51   >> sent 'u'
+16:08:53   >> sent 'M'
+16:13:50    | perf: frames 775, avg render 2192 us, max 110661 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | mem: internal 8-bit heap free 122988, min 97496, largest block 53236 · DMA largest 53236
+16:13:50    | mem: getFreeHeap-style total 180744 (min 155208) = 8-bit 122988 + IRAM-only 57756
+16:13:50    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:13:50    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:13:50    | mem: lvgl pool used 5500 of 65536, peak 8952 (sampled), largest free 59940 (min 56420), frag 1%
+16:13:50    |   stack loopTask   unused  4228 B (of 8192 B)
+16:13:50    |   stack IDLE0      unused   568 B
+16:13:50    |   stack IDLE1      unused   572 B
+16:13:50    |   stack esp_timer  unused  8168 B
+16:13:50    |   stack ipc0       unused  1504 B
+16:13:50    |   stack ipc1       unused  1500 B
+16:13:50    |   stack Tmr Svc    unused  3604 B
+16:13:50    | perf: frames 1837, avg render 2210 us, max 128368 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2617, avg render 2217 us, max 129126 us, rebuilds 0 · lv_mem used 5500 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2627, avg render 2155 us, max 114303 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2617, avg render 2209 us, max 128554 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2645, avg render 2071 us, max 105555 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2563, avg render 2460 us, max 349709 us, rebuilds 2 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2631, avg render 2140 us, max 114902 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2626, avg render 2167 us, max 133141 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2631, avg render 2144 us, max 128593 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50    | perf: frames 2609, avg render 2252 us, max 138197 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:13:50 E soak 5-10 min: 300 s, 2554 bytes, 0 unexpected restart(s)
+16:13:51   >> sent 'u'
+16:13:53   >> sent 'M'
+16:18:50    | perf: frames 809, avg render 2133 us, max 95015 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | mem: internal 8-bit heap free 122988, min 97496, largest block 53236 · DMA largest 53236
+16:18:50    | mem: getFreeHeap-style total 180744 (min 155208) = 8-bit 122988 + IRAM-only 57756
+16:18:50    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:18:50    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:18:50    | mem: lvgl pool used 5488 of 65536, peak 8952 (sampled), largest free 59972 (min 56420), frag 1%
+16:18:50    |   stack loopTask   unused  4228 B (of 8192 B)
+16:18:50    |   stack IDLE0      unused   568 B
+16:18:50    |   stack IDLE1      unused   572 B
+16:18:50    |   stack esp_timer  unused  8168 B
+16:18:50    |   stack ipc0       unused  1504 B
+16:18:50    |   stack ipc1       unused  1500 B
+16:18:50    |   stack Tmr Svc    unused  3604 B
+16:18:50    | perf: frames 1817, avg render 2138 us, max 102490 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2617, avg render 2215 us, max 127764 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2641, avg render 2100 us, max 111756 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2616, avg render 2215 us, max 132421 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2559, avg render 2468 us, max 350949 us, rebuilds 2 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2618, avg render 2208 us, max 132408 us, rebuilds 0 · lv_mem used 5500 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2629, avg render 2150 us, max 136897 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2598, avg render 2296 us, max 353773 us, rebuilds 1 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2595, avg render 2296 us, max 351277 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:18:50    | perf: frames 2554, avg render 2502 us, max 353651 us, rebuilds 2 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:18:50 E soak 10-15 min: 300 s, 2553 bytes, 0 unexpected restart(s)
+16:18:51   >> sent 'u'
+16:18:54   >> sent 'M'
+16:23:51    | perf: frames 838, avg render 2134 us, max 99855 us, rebuilds 0 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | mem: internal 8-bit heap free 122988, min 97496, largest block 53236 · DMA largest 53236
+16:23:51    | mem: getFreeHeap-style total 180744 (min 155208) = 8-bit 122988 + IRAM-only 57756
+16:23:51    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:23:51    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:23:51    | mem: lvgl pool used 5492 of 65536, peak 8952 (sampled), largest free 59936 (min 56420), frag 1%
+16:23:51    |   stack loopTask   unused  4228 B (of 8192 B)
+16:23:51    |   stack IDLE0      unused   568 B
+16:23:51    |   stack IDLE1      unused   572 B
+16:23:51    |   stack esp_timer  unused  8168 B
+16:23:51    |   stack ipc0       unused  1504 B
+16:23:51    |   stack ipc1       unused  1500 B
+16:23:51    |   stack Tmr Svc    unused  3604 B
+16:23:51    | perf: frames 1756, avg render 2365 us, max 352460 us, rebuilds 1 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2586, avg render 2347 us, max 351803 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2552, avg render 2501 us, max 352973 us, rebuilds 2 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2548, avg render 3179 us, max 128679 us, rebuilds 0 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2634, avg render 2124 us, max 110926 us, rebuilds 0 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2542, avg render 2565 us, max 349622 us, rebuilds 2 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2619, avg render 2188 us, max 114400 us, rebuilds 0 · lv_mem used 5500 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2631, avg render 2151 us, max 143902 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2578, avg render 2383 us, max 349347 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51    | perf: frames 2581, avg render 2374 us, max 349588 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:23:51 E soak 15-20 min: 300 s, 2553 bytes, 0 unexpected restart(s)
+16:23:52   >> sent 'u'
+16:23:54   >> sent 'M'
+16:28:51    | perf: frames 850, avg render 2269 us, max 113233 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | mem: internal 8-bit heap free 122988, min 97496, largest block 53236 · DMA largest 53236
+16:28:51    | mem: getFreeHeap-style total 180744 (min 155208) = 8-bit 122988 + IRAM-only 57756
+16:28:51    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:28:51    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:28:51    | mem: lvgl pool used 5488 of 65536, peak 8952 (sampled), largest free 59972 (min 56420), frag 1%
+16:28:51    |   stack loopTask   unused  4228 B (of 8192 B)
+16:28:51    |   stack IDLE0      unused   568 B
+16:28:51    |   stack IDLE1      unused   572 B
+16:28:51    |   stack esp_timer  unused  8168 B
+16:28:51    |   stack ipc0       unused  1504 B
+16:28:51    |   stack ipc1       unused  1500 B
+16:28:51    |   stack Tmr Svc    unused  3604 B
+16:28:51    | perf: frames 1780, avg render 2059 us, max 110330 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2634, avg render 2143 us, max 143292 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2623, avg render 2169 us, max 102543 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2620, avg render 2198 us, max 132532 us, rebuilds 0 · lv_mem used 5504 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2618, avg render 2201 us, max 129429 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2623, avg render 2176 us, max 118043 us, rebuilds 0 · lv_mem used 5504 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2557, avg render 2482 us, max 351364 us, rebuilds 2 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2623, avg render 2178 us, max 128407 us, rebuilds 0 · lv_mem used 5500 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2618, avg render 2197 us, max 131561 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:28:51    | perf: frames 2590, avg render 2327 us, max 350905 us, rebuilds 1 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:28:51 E soak 20-25 min: 300 s, 2554 bytes, 0 unexpected restart(s)
+16:28:52   >> sent 'u'
+16:28:54   >> sent 'M'
+16:33:51    | perf: frames 850, avg render 2646 us, max 353926 us, rebuilds 1 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:51    | mem: internal 8-bit heap free 122988, min 97496, largest block 53236 · DMA largest 53236
+16:33:51    | mem: getFreeHeap-style total 180744 (min 155208) = 8-bit 122988 + IRAM-only 57756
+16:33:51    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:33:51    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:33:51    | mem: lvgl pool used 5492 of 65536, peak 8952 (sampled), largest free 59936 (min 56420), frag 1%
+16:33:51    |   stack loopTask   unused  4228 B (of 8192 B)
+16:33:51    |   stack IDLE0      unused   568 B
+16:33:51    |   stack IDLE1      unused   572 B
+16:33:51    |   stack esp_timer  unused  8168 B
+16:33:51    |   stack ipc0       unused  1504 B
+16:33:51    |   stack ipc1       unused  1500 B
+16:33:51    |   stack Tmr Svc    unused  3604 B
+16:33:51    | perf: frames 1738, avg render 2157 us, max 110358 us, rebuilds 0 · lv_mem used 5492 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:51    | perf: frames 2552, avg render 2502 us, max 351157 us, rebuilds 2 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:33:51    | perf: frames 2632, avg render 2150 us, max 128918 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:51    | perf: frames 2632, avg render 2131 us, max 113481 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:51    | perf: frames 2613, avg render 2233 us, max 132372 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:51    | perf: frames 2630, avg render 2149 us, max 128096 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:52    | perf: frames 2629, avg render 2156 us, max 128631 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:52    | perf: frames 2545, avg render 3180 us, max 137466 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:52    | perf: frames 2572, avg render 2416 us, max 349171 us, rebuilds 1 · lv_mem used 5500 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:33:52    | perf: frames 2523, avg render 2638 us, max 349485 us, rebuilds 3 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180792, min 155208 · psram 1978364 / 2097152
+16:33:52 E soak 25-30 min: 300 s, 2554 bytes, 0 unexpected restart(s)
+16:33:53   >> sent 'h'
+16:33:55   >> sent 'u'
+16:33:57   >> sent 'M'
+16:34:00    | hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+16:34:00    | hist idle     0 149599 4507 7 4 1 0 0 0 0
+16:34:00    | hist update   0 0 0 0 455 83 1461 253 0 0
+16:34:00    | hist rebuild  0 0 0 0 0 0 0 0 28 0
+16:34:00    | frames update (last 124): total ms p50 84.6 p95 112.3 p99 129.5 max 133.4 · ui max 22.0 · draw+flush max 111.5 · flush max 11.2 · px max 21865
+16:34:00    | frames rebuild (last 4): total ms p50 349.2 p95 349.5 p99 349.5 max 349.5 · ui max 239.8 · draw+flush max 109.7 · flush max 25.8 · px max 57600
+16:34:00    | frames since reset: update 2252 (max 143.9 ms) · rebuild 28 (max 355.8 ms)
+16:34:00    | frames idle max 50.0 ms · input max 48.6 ms · model max 0.1 ms
+16:34:00    | perf: frames 1097, avg render 2274 us, max 129518 us, rebuilds 0 · lv_mem used 5488 / 65536, peak 8952 (sampled) · heap free 180744, min 155208 · psram 1978364 / 2097152
+16:34:00    | mem: internal 8-bit heap free 122988, min 97496, largest block 53236 · DMA largest 53236
+16:34:00    | mem: getFreeHeap-style total 180744 (min 155208) = 8-bit 122988 + IRAM-only 57756
+16:34:00    | mem: psram free 1978364 of 2097152, largest block 1966068, min 0
+16:34:00    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:34:00    | mem: lvgl pool used 5500 of 65536, peak 8952 (sampled), largest free 59940 (min 56420), frag 1%
+16:34:00    |   stack loopTask   unused  4228 B (of 8192 B)
+16:34:00    |   stack IDLE0      unused   568 B
+16:34:00    |   stack IDLE1      unused   572 B
+16:34:00    |   stack esp_timer  unused  8168 B
+16:34:00    |   stack ipc0       unused  1504 B
+16:34:00    |   stack ipc1       unused  1500 B
+16:34:00    |   stack Tmr Svc    unused  3604 B
+16:34:00 E soak end report: 8 s, 1464 bytes, 0 unexpected restart(s)
+16:34:12 BOOT CONFIRMED: flash boot, one start, marker 'Stage 1.3 RC1'
+16:34:12    | Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after 576 ms · heap 183556 · psram 2097152 · flash 8 MB
+16:34:12 RESTART: confirmed (flash boot, one start, marker 'Stage 1.3 RC1')
+16:34:24 BOOT CONFIRMED: flash boot, one start, marker 'Stage 1.3 RC1'
+16:34:24    | Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after 576 ms · heap 183556 · psram 2097152 · flash 8 MB
+16:34:24 RESTART: confirmed (flash boot, one start, marker 'Stage 1.3 RC1')
+16:34:25   >> sent 'M'
+16:34:28   >> sent 'R'
+16:34:33    | mem: internal 8-bit heap free 125584, min 97496, largest block 53236 · DMA largest 53236
+16:34:33    | mem: getFreeHeap-style total 183340 (min 155208) = 8-bit 125584 + IRAM-only 57756
+16:34:33    | mem: psram free 2095104 of 2097152, largest block 2064372, min 0
+16:34:33    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+16:34:33    | mem: lvgl pool used 4688 of 65536, peak 4688 (sampled), largest free 60780 (min 60780), frag 1%
+16:34:33    |   stack loopTask   unused  4924 B (of 8192 B)
+16:34:33    |   stack IDLE0      unused   568 B
+16:34:33    |   stack IDLE1      unused   572 B
+16:34:33    |   stack esp_timer  unused  8168 B
+16:34:33    |   stack ipc0       unused  1504 B
+16:34:33    |   stack ipc1       unused  1500 B
+16:34:33    |   stack Tmr Svc    unused  3604 B
+16:34:33    | clock: 2026-11-11 16:34:26 local
+16:34:33 F after restarts: memory, clock: 8 s, 685 bytes, 0 unexpected restart(s)
+16:34:33 RESULT {'alive': True, 'clock_before': 'no valid time', 'clock_set_error_s': -4, 'clock_run_error_s': -4, 'restarts_confirmed': [True, True], 'unexpected_restarts': 0}
+16:34:33 ==================== RC1 automated diagnostics end ====================
+16:38:48   >> sent 'f'
+16:38:49   >> sent 'z'
+16:58:47    | perf: histogram reset
+16:58:47    | perf: frames 2855, avg render 391 us, max 14384 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2814, avg render 582 us, max 237122 us, rebuilds 2 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14377 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14348 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14373 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14307 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 391 us, max 14391 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 391 us, max 14375 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 391 us, max 14382 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2857, avg render 381 us, max 501 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2835, avg render 499 us, max 237118 us, rebuilds 1 · lv_mem used 4688 / 65536, peak 4688 (sampled) · heap free 183340, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2815, avg render 576 us, max 237116 us, rebuilds 2 · lv_mem used 4688 / 65536, peak 4688 (sampled) · heap free 183340, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2835, avg render 472 us, max 230054 us, rebuilds 1 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 391 us, max 14361 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14359 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2855, avg render 396 us, max 14345 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14390 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 391 us, max 14377 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14335 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2855, avg render 391 us, max 14357 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2855, avg render 391 us, max 14359 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2816, avg render 576 us, max 237127 us, rebuilds 2 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2815, avg render 582 us, max 237100 us, rebuilds 2 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2836, avg render 499 us, max 237082 us, rebuilds 1 · lv_mem used 4688 / 65536, peak 4688 (sampled) · heap free 183340, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2835, avg render 462 us, max 230079 us, rebuilds 1 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 381 us, max 523 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14335 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14420 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14367 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14359 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 391 us, max 14375 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 381 us, max 501 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2855, avg render 391 us, max 14389 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14339 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2855, avg render 396 us, max 14389 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14356 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2815, avg render 582 us, max 237140 us, rebuilds 2 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 381 us, max 519 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2856, avg render 386 us, max 14317 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47    | perf: frames 2855, avg render 396 us, max 14364 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4688 (sampled) · heap free 183484, min 155208 · psram 2095104 / 2097152
+16:58:47 guided part 1 EN: 1200 s, 6864 bytes, 0 unexpected restart(s)
+18:36:34   >> sent 'R'
+18:36:40   >> sent 'R'
+18:36:45   >> sent 'R'
+18:36:50   >> sent 'R'
+18:36:55   >> sent 'R'
+18:37:00   >> sent 'R'
+18:37:05   >> sent 'R'
+18:37:10   >> sent 'R'
+18:37:15   >> sent 'R'
+18:37:21   >> sent 'R'
+18:37:26   >> sent 'R'
+18:37:31   >> sent 'R'
+18:37:36   >> sent 'R'
+18:37:41   >> sent 'R'
+18:37:46   >> sent 'R'
+18:37:51   >> sent 'R'
+18:37:57   >> sent 'R'
+18:38:02   >> sent 'R'
+18:38:07   >> sent 'R'
+18:38:12   >> sent 'R'
+18:38:17   >> sent 'R'
+18:38:22   >> sent 'R'
+18:38:27   >> sent 'R'
+18:38:33   >> sent 'R'
+18:38:38   >> sent 'R'
+18:38:43   >> sent 'R'
+18:38:44    | clock: 2026-11-11 18:36:30 local
+18:38:44    | clock: 2026-11-11 18:36:35 local
+18:38:44    | perf: frames 2775, avg render 358 us, max 240218 us, rebuilds 4 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+18:38:44    | clock: 2026-11-11 18:36:40 local
+18:38:44    | clock: 2026-11-11 18:36:45 local
+18:38:44    | clock: 2026-11-11 18:36:50 local
+18:38:44    | clock: 2026-11-11 18:36:55 local
+18:38:44    | clock: 2026-11-11 18:37:00 local
+18:38:44    | clock: 2026-11-11 18:37:06 local
+18:38:44    | perf: frames 2837, avg render 111 us, max 206049 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+18:38:44    | clock: 2026-11-11 18:37:11 local
+18:38:44    | clock: 2026-11-11 18:37:16 local
+18:38:44    | clock: 2026-11-11 18:37:21 local
+18:38:44    | clock: 2026-11-11 18:37:26 local
+18:38:44    | clock: 2026-11-11 18:37:31 local
+18:38:44    | clock: 2026-11-11 18:37:36 local
+18:38:44    | perf: frames 2856, avg render 38 us, max 94 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+18:38:44    | clock: 2026-11-11 18:37:42 local
+18:38:44    | clock: 2026-11-11 18:37:47 local
+18:38:44    | clock: 2026-11-11 18:37:52 local
+18:38:44    | clock: 2026-11-11 18:37:57 local
+18:38:44    | clock: 2026-11-11 18:38:02 local
+18:38:44    | clock: 2026-11-11 18:38:07 local
+18:38:44    | perf: frames 2857, avg render 38 us, max 95 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+18:38:44    | clock: 2026-11-11 18:38:12 local
+18:38:44    | clock: 2026-11-11 18:38:18 local
+18:38:44    | clock: 2026-11-11 18:38:23 local
+18:38:44    | clock: 2026-11-11 18:38:28 local
+18:38:44    | clock: 2026-11-11 18:38:33 local
+18:38:44    | clock: 2026-11-11 18:38:38 local
+18:38:44 clock probe: 130 s, 1536 bytes, 0 unexpected restart(s)
+18:39:22   >> sent 'E'
+18:39:23   >> sent 'z'
+19:04:21    |   demo data on
+19:04:21    | perf: histogram reset
+19:04:21    | perf: frames 2818, avg render 184 us, max 206020 us, rebuilds 2 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 72 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2819, avg render 184 us, max 206072 us, rebuilds 2 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 74 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2857, avg render 38 us, max 74 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2857, avg render 38 us, max 74 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 74 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2837, avg render 110 us, max 206036 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2819, avg render 184 us, max 206032 us, rebuilds 2 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2838, avg render 110 us, max 206063 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2857, avg render 38 us, max 74 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 72 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2857, avg render 38 us, max 76 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 77 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 72 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2837, avg render 110 us, max 206029 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2838, avg render 110 us, max 206057 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 68 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2857, avg render 38 us, max 76 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 72 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2857, avg render 38 us, max 78 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 72 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 78 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 72 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 78 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2837, avg render 110 us, max 206032 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2837, avg render 110 us, max 206056 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 83 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 72 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2857, avg render 38 us, max 76 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 78 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 78 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 70 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 76 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2837, avg render 110 us, max 206032 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2838, avg render 110 us, max 206051 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2818, avg render 184 us, max 206039 us, rebuilds 2 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 76 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 76 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2838, avg render 110 us, max 206039 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2838, avg render 110 us, max 206060 us, rebuilds 1 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21    | perf: frames 2856, avg render 38 us, max 78 us, rebuilds 0 · lv_mem used 4872 / 65536, peak 5092 (sampled) · heap free 181540, min 155208 · psram 2095104 / 2097152
+19:04:21 guided part 2 ride: 1500 s, 8458 bytes, 0 unexpected restart(s)
+19:46:40   >> sent 'h'
+19:46:44   >> sent 'R'
+19:46:47   >> sent 'M'
+19:46:50   >> sent 'R'
+19:47:19    | hist (frame ms):  <1  1-2  2-5  5-10  10-20  20-50  50-100  100-200  200-400  >=400
+19:47:19    | hist idle     15782 1091 20 0 0 0 0 0 0 0
+19:47:19    | hist update   0 0 0 0 4 0 0 0 0 0
+19:47:20    | hist rebuild  0 0 0 0 0 0 0 3 11 0
+19:47:20    | frames update (last 4): total ms p50 14.4 p95 16.1 p99 16.1 max 16.1 · ui max 3.6 · draw+flush max 10.8 · flush max 1.0 · px max 1705
+19:47:20    | frames rebuild (last 14): total ms p50 223.2 p95 237.1 p99 237.1 max 237.1 · ui max 143.2 · draw+flush max 123.6 · flush max 25.8 · px max 57600
+19:47:20    | frames since reset: update 4 (max 16.1 ms) · rebuild 14 (max 237.1 ms)
+19:47:20    | frames idle max 2.7 ms · input max 2.8 ms · model max 0.1 ms
+19:47:20    | clock: 2026-11-11 19:46:37 local
+19:47:20    | mem: internal 8-bit heap free 124624, min 97496, largest block 53236 · DMA largest 53236
+19:47:20    | mem: getFreeHeap-style total 182380 (min 155208) = 8-bit 124624 + IRAM-only 57756
+19:47:20    | mem: psram free 2095104 of 2097152, largest block 2064372, min 0
+19:47:20    | mem: iram code 72464 of 131072 B (58608 free) · static dram 97192 B
+19:47:20    | mem: lvgl pool used 4504 of 65536, peak 5092 (sampled), largest free 60968 (min 60432), frag 1%
+19:47:20    |   stack loopTask   unused  4796 B (of 8192 B)
+19:47:20    |   stack IDLE0      unused   568 B
+19:47:20    |   stack IDLE1      unused   572 B
+19:47:20    |   stack esp_timer  unused  8168 B
+19:47:20    |   stack ipc0       unused  1504 B
+19:47:20    |   stack ipc1       unused  1500 B
+19:47:20    |   stack Tmr Svc    unused  3604 B
+19:47:20    | clock: 2026-11-11 19:46:43 local
+19:47:20    | perf: frames 2846, avg render 396 us, max 14378 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 5092 (sampled) · heap free 182380, min 155208 · psram 2095104 / 2097152
+19:47:20 status after p2: 40 s, 1506 bytes, 0 unexpected restart(s)
