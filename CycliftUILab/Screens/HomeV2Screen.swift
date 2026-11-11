@@ -44,6 +44,7 @@ struct HomeV2Screen: View {
                 .padding(.top, CySpace.s)
             }
             .background(theme.background.ignoresSafeArea())
+            .overlay(alignment: .top) { theme.background.frame(height: 0).ignoresSafeArea(edges: .top) }
             .onAppear {
                 if let scrollTo {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { proxy.scrollTo(scrollTo, anchor: .top) }
@@ -56,7 +57,8 @@ struct HomeV2Screen: View {
     private var header: some View {
         HStack(alignment: .center, spacing: CySpace.m) {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: CySpace.s) {
+                let lineLayout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(spacing: CySpace.s))
+                lineLayout {
                     Text(data.dateLine.uppercased()).font(CyFont.overline).tracking(0.6).foregroundStyle(theme.textSecondary)
                     if showSampleBadge {
                         Text("SAMPLE DATA").font(.caption2.weight(.bold)).foregroundStyle(theme.warning)

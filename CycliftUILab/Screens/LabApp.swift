@@ -77,7 +77,7 @@ struct LabRoot: View {
         .sheet(item: $sheet) { s in
             sheetView(s)
                 .environment(\.cyTheme, theme)
-                .presentationDetents([.medium, .large])
+                .presentationDetents(s.id == "review" ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .onAppear(perform: applyLaunchSheet)

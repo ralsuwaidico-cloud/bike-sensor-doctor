@@ -130,7 +130,7 @@ struct CyTrendChart: View {
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
             }
         }
-        .chartXScale(domain: -0.3...(Double(max(count - 1, 1)) + 0.3))
+        .chartXScale(domain: -0.5...(Double(max(count - 1, 1)) + 0.5))
         .chartYScale(domain: yDomain ?? autoDomain)
         .chartXAxis {
             AxisMarks(values: (0..<count).map { Double($0) }) { value in

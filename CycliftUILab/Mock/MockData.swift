@@ -81,7 +81,7 @@ enum MockData {
         coachEmpty: nil,
         trendLabels: weekdays,
         trendSeries: [
-            CySeries(id: "consistency", name: "Consistency", unit: "%", points: zip(0..<7, [100.0, 100, 100, nil, nil, nil, nil] as [Double?]).map { CySeriesPoint(id: $0, label: weekdays[$0], value: $1) }, colorKey: .consistency),
+            CySeries(id: "consistency", name: "Consistency", unit: "%", points: zip(0..<7, [100.0, 100, 80, nil, nil, nil, nil] as [Double?]).map { CySeriesPoint(id: $0, label: weekdays[$0], value: $1) }, colorKey: .consistency),
         ],
         trendRows: [
             CyStatusRow(id: "load", name: "Load Balance", cells: [
@@ -145,7 +145,6 @@ enum MockData {
     static let metricEmpty = CyMetricModel(label: "Average heart rate", value: nil, unit: "bpm", delta: nil, deltaLevel: .neutral)
     static let changes = [
         CyChange(id: "load", label: "Bench press load", before: "40 kg", after: "42.5 kg"),
-        CyChange(id: "sets", label: "Sets", before: "3 × 10", after: "3 × 10"),
     ]
     static let sports = [
         CySportOption(id: "cycling", title: "Cycling", icon: "bicycle", note: "Full coaching"),
