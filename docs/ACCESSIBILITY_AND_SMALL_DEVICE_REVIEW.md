@@ -15,19 +15,19 @@ VoiceOver was not listened to. It is a prototype review, not evidence about the 
 | Small device | iPhone SE screenshots, both scroll positions, new-user state | Header, circles, strip and the top of the sport cards fit on the first screen; nothing truncated at the default size |
 | Spoken descriptions | Code review of accessibility labels / values | Rings: label + value (percentage and count, or the status word, or the missing reason). Day cells: weekday, date, "today", day summary. Chart: one spoken summary per series plus a per-day control for each status cell. Cards: combined label. **Not yet heard with VoiceOver.** |
 
-## Findings from the first prototype build
+## Findings (first build) and their state after the third build (run 43055553640, commit f7ec471)
 
 | # | Finding | Where | Severity | Status |
 |---|---|---|---|---|
-| 1 | Seventh day label on the chart axis was clipped ("…" instead of "Sun") | Trends chart, all themes | Medium | Second build still clipped it ("S…"); third build widens the axis — see the final report for the confirmed state |
-| 2 | Scrolled content showed through under the status bar | Home, gallery | Medium | Second build did not fix it; third build clips the scroll area at the status bar — see the final report for the confirmed state |
-| 3 | Tab-bar labels grew with accessibility text and wrapped ("Train now" on two lines) | Tab bar at Accessibility Large | Medium | Second build capped the labels (confirmed on iPhone 17; "Train now" still wrapped on iPhone SE); third build caps one step lower. A long-press large-content viewer is still to add |
+| 1 | Seventh day label on the chart axis was clipped ("…" instead of "Sun") | Trends chart, all themes | Medium | Fixed — confirmed in the third build's screenshots at the default text size (all seven labels shown). Still crowded at Accessibility Large, see 9 |
+| 2 | Scrolled content showed through under the status bar | Home, gallery | Medium | Fixed — confirmed in the third build's screenshots |
+| 3 | Tab-bar labels grew with accessibility text and wrapped ("Train now" on two lines) | Tab bar at Accessibility Large | Medium | Fixed — confirmed in the third build on iPhone 17 and iPhone SE: labels stay on one line. A long-press large-content viewer is still to add |
 | 4 | Date line and "SAMPLE DATA" tag wrapped awkwardly at accessibility sizes | Header | Low | Fixed and confirmed in the second build's screenshots; the tag is prototype-only anyway |
-| 5 | Review sheet opened at half height and cut off the Approve button | Review sheet | Medium | Fixed in the second build (opens full height) |
+| 5 | Review sheet opened at half height and cut off the Approve button | Review sheet | Medium | Fixed — confirmed in the third build: opens full height with Approve, Not now and Decline visible |
 | 6 | Sample chart showed 100 % while the ring showed 80 % | Sample data | Low | Fixed and confirmed in the second build (sample data only) |
 | 7 | At Accessibility Large the header, circles list and strip fill the first screen; the sport cards need a scroll | Home on both devices | Expected | Open for the owner's view: acceptable, or should the greeting be capped at one line at these sizes? |
 | 8 | Chart status cells are 26 pt high — below the 44 pt target, though each is full column width and the same day can be chosen on the chart | Trends chart | Low | Open: raise the cells to 44 pt (taller card) or keep them compact |
-| 9 | Chart axis labels crowd at Accessibility Large ("MonTue WedThu") | Trends chart | Low | Open: switch to single letters at accessibility sizes |
+| 9 | Chart axis labels crowd at Accessibility Large ("MonTue WedThu", last label "S…") | Trends chart | Low | Open: switch to single letters at accessibility sizes |
 | 10 | Sport cards are tall at the default size (sparkline plus caption) | Endurance / Strength Load | Design | Open for the owner's review: keep the sparkline on Home, or move it to the detail sheet for a shorter Home |
 | 11 | High Contrast is one dark variant; there is no light high-contrast variant | Theme | Design | Open: is a light variant wanted? |
 | 12 | Load Balance and Recovery rings look alike when both are "good" (full ring, tick) — told apart by colour, title and word | Circles | Design | Open for the owner's review |
