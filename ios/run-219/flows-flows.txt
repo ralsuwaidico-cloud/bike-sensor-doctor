@@ -1,0 +1,184 @@
+=== flows: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:66: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled on the re-opened review
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:69: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:79: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:80: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (216.259 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: full filter ===
+Test Case '-[BikeComputerUITests.DeleteAllDataJourneyTests testDeleteAllDataReturnsToWelcomeAndStaysEmptyAfterRelaunch]' passed (75.935 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 75.935 (75.938) seconds
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' passed (413.088 seconds).
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' passed (833.852 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1246.940 (1246.947) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:66: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled on the re-opened review
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:69: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:79: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:80: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (216.259 seconds).
+Test Suite 'PlanEditPreviewApplyTests' failed at 2026-11-11 06:25:37.439.
+	 Executed 1 test, with 4 failures (0 unexpected) in 216.259 (216.261) seconds
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' passed (92.747 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' passed (48.827 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testRecoveryPageIsHonestWithoutHealthReads]' passed (47.065 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 188.638 (188.642) seconds
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' passed (132.932 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 132.932 (132.933) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-11 06:30:59.019.
+	 Executed 8 tests, with 4 failures (0 unexpected) in 1860.705 (1860.729) seconds
+Test Suite 'Selected tests' failed at 2026-11-11 06:30:59.020.
+	 Executed 8 tests, with 4 failures (0 unexpected) in 1860.705 (1860.730) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: last 150 lines ===
+    t =    69.09s         Checking existence of `"logSet" Button`
+    t =    70.07s         Capturing element debug description
+    t =    70.32s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    70.91s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    71.62s             Find: Descendants matching type Button
+    t =    71.62s             Find: Elements matching predicate '"logSet" IN identifiers'
+    t =    71.64s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    72.04s             Find: Descendants matching type Button
+    t =    72.05s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    74.07s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    74.07s         Checking existence of `"logSet" Button`
+    t =    75.15s         Capturing element debug description
+    t =    75.15s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    75.93s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    76.33s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    76.34s             Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    76.34s     Checking existence of `"logSet" Button`
+    t =    77.38s Collecting debug information to assist test failure triage
+    t =    77.38s     Requesting snapshot of accessibility hierarchy for app with pid 96172
+    t =    79.08s Waiting 5.0s for "nextSetFinish" Button to exist
+    t =    80.13s     Checking `Expect predicate `existsNoRetry == 1` for object "nextSetFinish" Button`
+    t =    80.13s         Checking existence of `"nextSetFinish" Button`
+    t =    80.65s Checking existence of `StaticText (First Match)`
+    t =    80.84s Waiting 5.0s for "finishWorkout" Button to exist
+    t =    81.86s     Checking `Expect predicate `existsNoRetry == 1` for object "finishWorkout" Button`
+    t =    81.87s         Checking existence of `"finishWorkout" Button`
+    t =    81.98s Tap "finishWorkout" Button
+    t =    81.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    81.98s     Find the "finishWorkout" Button
+    t =    82.13s     Check for interrupting elements affecting "finishWorkout" Button
+    t =    82.80s     Synthesize event
+    t =    83.16s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    84.38s Waiting 10.0s for "saveWorkout" Button to exist
+    t =    85.42s     Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =    85.42s         Checking existence of `"saveWorkout" Button`
+    t =    85.73s Find the "saveWorkout" Button
+    t =    86.03s Tap "saveWorkout" Button
+    t =    86.03s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    86.11s     Find the "saveWorkout" Button
+    t =    86.54s     Check for interrupting elements affecting "saveWorkout" Button
+    t =    87.41s     Synthesize event
+    t =    87.81s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    89.57s Waiting 10.0s for "checkInForm" Any to exist
+    t =    90.60s     Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =    90.60s         Checking existence of `"checkInForm" Any`
+    t =    91.22s Waiting 3.0s for "checkInSubmit" Button to exist
+    t =    92.27s     Checking `Expect predicate `existsNoRetry == 1` for object "checkInSubmit" Button`
+    t =    92.27s         Checking existence of `"checkInSubmit" Button`
+    t =    92.61s Find the "checkInSubmit" Button
+    t =    92.81s Tap "checkInSubmit" Button
+    t =    92.81s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    92.81s     Find the "checkInSubmit" Button
+    t =    93.00s     Check for interrupting elements affecting "checkInSubmit" Button
+    t =    93.42s     Synthesize event
+    t =    93.81s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    95.37s Waiting 8.0s for "Done" Button to exist
+    t =    96.40s     Checking `Expect predicate `existsNoRetry == 1` for object "Done" Button`
+    t =    96.40s         Checking existence of `"Done" Button`
+    t =    96.59s Checking existence of `StaticText (First Match)`
+    t =    97.97s Tap "Done" Button
+    t =    97.97s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    98.06s     Find the "Done" Button
+    t =    98.51s     Check for interrupting elements affecting "adjustmentsDone" Button
+    t =    98.80s     Synthesize event
+    t =    99.16s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    99.98s Checking existence of `"adjustmentsDone" Button`
+    t =   102.28s Waiting 8.0s for "Strength" NavigationBar to exist
+    t =   103.29s     Checking `Expect predicate `existsNoRetry == 1` for object "Strength" NavigationBar`
+    t =   103.29s         Checking existence of `"Strength" NavigationBar`
+    t =   103.39s Checking existence of `StaticText (First Match)`
+    t =   104.08s Checking existence of `"Reopen" Button`
+    t =   107.28s Checking existence of `"Logged" StaticText`
+    t =   109.60s Checking existence of `"Done" Button`
+    t =   109.84s Tap "Done" Button
+    t =   109.84s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   110.03s     Find the "Done" Button
+    t =   110.26s     Check for interrupting elements affecting "Done" Button
+    t =   110.59s     Synthesize event
+    t =   110.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   111.73s Checking existence of `"Done" Button`
+    t =   113.55s Waiting 20.0s for "homeGreeting" Any to exist
+    t =   114.62s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   114.62s         Checking existence of `"homeGreeting" Any`
+    t =   115.32s Find the "homeGreeting" Any
+    t =   116.37s Checking existence of `"hubClose" Button`
+    t =   116.61s Find the "hubClose" Button
+    t =   116.80s Tap "hubClose" Button
+    t =   116.80s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   116.81s     Find the "hubClose" Button
+    t =   117.02s     Check for interrupting elements affecting "hubClose" Button
+    t =   117.40s     Synthesize event
+    t =   117.82s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   118.62s Checking existence of `"hubClose" Button`
+    t =   119.83s Waiting 10.0s for "homeStrength" Button to exist
+    t =   120.87s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrength" Button`
+    t =   120.87s         Checking existence of `"homeStrength" Button`
+    t =   121.40s Checking existence of `"homeStrength" Button`
+    t =   121.83s Find the "homeStrength" Button
+    t =   122.89s Tap "homeStrength" Button
+    t =   122.89s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   122.89s     Find the "homeStrength" Button
+    t =   123.60s     Check for interrupting elements affecting "homeStrength" Button
+    t =   124.30s     Synthesize event
+    t =   124.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   124.80s Waiting 10.0s for "homeStrengthSummary" Any to exist
+    t =   125.83s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   125.83s         Checking existence of `"homeStrengthSummary" Any`
+    t =   126.06s Find the "strengthLogExpand-0" Button
+    t =   126.60s Find the "strengthLogExpand-0" Button
+    t =   126.90s Find the "strengthLogExpand-0" Button
+    t =   127.31s Find the "strengthLogExpand-0" Button
+    t =   127.63s Waiting 5.0s for "strengthLogExpand-0" Button to exist
+    t =   128.67s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExpand-0" Button`
+    t =   128.67s         Checking existence of `"strengthLogExpand-0" Button`
+    t =   128.95s Tap "strengthLogExpand-0" Button
+    t =   128.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   128.95s     Find the "strengthLogExpand-0" Button
+    t =   129.23s     Check for interrupting elements affecting "strengthLogExpand-0" Button
+    t =   129.44s     Synthesize event
+    t =   129.79s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   130.32s Waiting 5.0s for "strengthLogExercises-0" Any to exist
+    t =   131.33s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExercises-0" Any`
+    t =   131.34s         Checking existence of `"strengthLogExercises-0" Any`
+    t =   131.83s Checking existence of `StaticText (First Match)`
+    t =   132.00s Checking existence of `StaticText (First Match)`
+    t =   132.37s Checking existence of `StaticText (First Match)`
+    t =   132.64s Tear Down
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' passed (132.932 seconds).
+Test Suite 'StrengthSessionJourneyTests' passed at 2026-11-11 06:30:59.018.
+	 Executed 1 test, with 0 failures (0 unexpected) in 132.932 (132.933) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-11 06:30:59.019.
+	 Executed 8 tests, with 4 failures (0 unexpected) in 1860.705 (1860.729) seconds
+Test Suite 'Selected tests' failed at 2026-11-11 06:30:59.020.
+	 Executed 8 tests, with 4 failures (0 unexpected) in 1860.705 (1860.730) seconds
+2026-11-11 06:31:26.059 xcodebuild[22280:65696] [MT] IDETestOperationsObserverDebug: 1917.854 elapsed -- Testing started completed.
+2026-11-11 06:31:26.060 xcodebuild[22280:65696] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-11 06:31:26.060 xcodebuild[22280:65696] [MT] IDETestOperationsObserverDebug: 1917.854 sec, +1917.854 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/flows.xcresult
+
+Failing tests:
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+
+** TEST EXECUTE FAILED **
+
+Testing started

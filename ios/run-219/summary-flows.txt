@@ -1,9 +1,9 @@
-BikeComputer iOS CI — build 219 — 2026-11-10 23:27 UTC
+BikeComputer iOS CI — build 219 — 2026-11-11 05:45 UTC
 Stage: smoke2
 macOS 26.7.2, Xcode 26.6 Build version 17F113 
 XcodeGen Version: 2.46.0
-RESULT generate: ok · 0m4s
+RESULT generate: ok · 0m6s
 Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
-RESULT build (Release, for testing): ok · 11m52s
-RESULT flows: FAILED (exit 65) · 60m35s — HubTapReliabilityTests.swift:57: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 1: hub closes again — Close frame (19.999999999999996, 66.0, 67.0, 36.0), hittable true; navigation bars: ["Plan", "Progress", "_TtGC7SwiftUI32NavigationStackHosting"]; sheets: 0; centre hittable true; hub tree: Attributes: Other, 0x11411b200, {{0.0, 0.0 HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 1: Close never had a settled frame (19.999999999999996, 66.0, 67.0, 36.0) HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 2: hub not open after one tap (navigation bars: Plan|Progress, hub exists: false) PlanEditPreviewApplyTests.swift:32: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - duration slider PlanEditPreviewApplyTests.swift:33: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Slider` -> `Elements matching predicate '"editDuration" IN identifiers'`, given input App element pid: 88214 
-Total: 62m24s
+RESULT build (Release, for testing): ok · 8m46s
+RESULT flows: FAILED (exit 65) · 45m38s — PlanEditPreviewApplyTests.swift:66: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled on the re-opened review PlanEditPreviewApplyTests.swift:69: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top) PlanEditPreviewApplyTests.swift:79: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row PlanEditPreviewApplyTests.swift:80: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history 
+Total: 45m56s
