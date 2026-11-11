@@ -429,5 +429,10 @@ src13 = open(os.path.join(HERE, 'pc_update_s13_runner.py'), encoding='utf-8').re
 pin13 = open(os.path.join(HERE, '..', '..', 'firmware', 'releases', 'stage1.3-rc1-installed', 'PIN.sha256')).read().strip()
 check(real13 == 0x124000 and 0x400000 + real13 - 1 < 0x700000 and "FW13_SHA = '%s'" % pin13 in src13 and pin13 == '4ea0ea90da5061859019c7b6f94c1eaea409c362d94a07e058d7755feda50c19',
       'RC1 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1; tool pinned to 4ea0ea90… (same as releases/)' % (real13, real13, 0x400000 + real13 - 1))
+realr2 = (max(1194112, 1197184, 0xF7000) + 0xFFF) & ~0xFFF
+srcr2 = open(os.path.join(HERE, 'pc_update_rc2_runner.py'), encoding='utf-8').read()
+pinr2 = open(os.path.join(HERE, '..', '..', 'firmware', 'releases', 'stage1.3-rc2.sha256')).read().strip()
+check(realr2 == 0x125000 and 0x400000 + realr2 - 1 < 0x700000 and "FWR2_SHA = '%s'" % pinr2 in srcr2 and pinr2 == '82500ce2a2531271573489c9080d7372e0ee97c330e44cbb85f2f3a2040da461',
+      'RC2 write plan with the real files: address 0x400000, %d B (0x%X), last byte 0x%06X — inside app1; tool pinned to 82500ce2… (same as releases/)' % (realr2, realr2, 0x400000 + realr2 - 1))
 print('reinstall simulation: %d failures' % len(FAILS))
 sys.exit(1 if FAILS else 0)

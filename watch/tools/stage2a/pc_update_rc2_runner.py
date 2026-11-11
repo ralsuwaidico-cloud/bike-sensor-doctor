@@ -10,7 +10,7 @@ _S13 = os.environ.get('CY_UPDATE_S13') or os.path.join(os.path.expanduser('~'), 
 exec(open(_S13, encoding='utf-8').read())          # cy_install + Stage 1.1 / RC1 constants and phases
 
 FWR2 = os.environ.get('CY_FWR2') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_3_firmware', 'cyclift-stage1.3-rc2-v3poc-T-Watch-2021-V1_1.bin')
-FWR2_SHA = 'NOT_PINNED'   # set to the CI-built RC2 fingerprint; until then r2_pre refuses every file
+FWR2_SHA = '82500ce2a2531271573489c9080d7372e0ee97c330e44cbb85f2f3a2040da461'   # CI 43064696858 (commit 6c07f69); install needs the owner's approval naming it
 RC1 = 'Stage 1.3 RC1'                             # boot banner marker of the installed firmware
 RC2 = 'Stage 1.3 RC2'                             # boot banner marker of the new firmware
 
