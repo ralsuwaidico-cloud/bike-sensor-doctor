@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Cyclift UI Lab — standalone prototype shell. Mock navigation and local sheets only.
+// Cyclift UI Lab — standalone prototype shell (Home v2.1). Mock navigation and local sheets only.
 // Nothing here talks to the production app, Apple Health, sensors, accounts or any backend.
 
 /// Launch options (environment variables) used by the prototype's own screenshot script.
@@ -8,10 +8,13 @@ enum LabConfig {
     static let env = ProcessInfo.processInfo.environment
     static var theme: CyThemeID? { env["LAB_THEME"].flatMap(CyThemeID.init(rawValue:)) }
     static var scenario: LabScenario? { env["LAB_SCENARIO"].flatMap(LabScenario.init(rawValue:)) }
-    static var screen: String { env["LAB_SCREEN"] ?? "home" }          // home | lab | gallery
+    static var screen: String { env["LAB_SCREEN"] ?? "home" }          // home | lab | gallery | plan
     static var page: String? { env["LAB_PAGE"] }                        // gallery page id
-    static var scroll: String? { env["LAB_SCROLL"] }                    // "trends" | "bottom"
-    static var sheet: String? { env["LAB_SHEET"] }                      // ringLoad | review | day | coachWhy | hub
+    static var scroll: String? { env["LAB_SCROLL"] }                    // cards | coach | trends | metrics | bottom
+    static var sheet: String? { env["LAB_SHEET"] }
+    static var select: Int? { env["LAB_SELECT"].flatMap(Int.init) }     // chart day selected at launch
+    static var render: Bool { env["LAB_RENDER"] == "1" }                // write a full-length Home image to Documents
+    static var decision: String? { env["LAB_DECISION"] }                // accepted | declined | postponed
 }
 
 @main
@@ -22,16 +25,29 @@ struct CycliftUILabApp: App {
 }
 
 enum LabSheet: Identifiable {
-    case ring(CyRingModel), day(CyDayModel), summary(CySummaryCardModel), coachWhy, review, hub, setup(CyChecklistItem)
+    case consistency, mix, recovery, sleep, coachWhy, review, trendsInfo, hub, profile
+    case day(CyScheduleDay), sport(CySportCardModel), trendDay(CyTrendDay), metric(CyMetricTile)
     var id: String {
         switch self {
-        case .ring(let r): return "ring-\(r.id)"
-        case .day(let d): return "day-\(d.id)"
-        case .summary(let s): return "summary-\(s.title)"
+        case .consistency: return "consistency"
+        case .mix: return "mix"
+        case .recovery: return "recovery"
+        case .sleep: return "sleep"
         case .coachWhy: return "coachWhy"
         case .review: return "review"
+        case .trendsInfo: return "trendsInfo"
         case .hub: return "hub"
-        case .setup(let i): return "setup-\(i.id)"
+        case .profile: return "profile"
+        case .day(let d): return "day-\(d.id)"
+        case .sport(let s): return "sport-\(s.title)"
+        case .trendDay(let d): return "trendDay-\(d.full)"
+        case .metric(let m): return "metric-\(m.id)"
+        }
+    }
+    var opensLarge: Bool {
+        switch self {
+        case .review, .sleep, .mix, .consistency: return true
+        default: return false
         }
     }
 }
@@ -39,36 +55,56 @@ enum LabSheet: Identifiable {
 struct LabRoot: View {
     @AppStorage("lab.theme") private var themeRaw: String = CyThemeID.obsidian.rawValue
     @State private var scenario: LabScenario = LabConfig.scenario ?? .established
-    @State private var data: HomeData = MockData.home(LabConfig.scenario ?? .established)
-    @State private var tab: String = LabConfig.screen == "home" ? "home" : "lab"
+    @State private var data: Home21Data = Mock21.make(LabConfig.scenario ?? .established)
+    @State private var tab: Int = LabRoot.initialTab
     @State private var sheet: LabSheet? = nil
     @State private var toast: String? = nil
+    @State private var decision: CyCoachDecision = LabRoot.initialDecision
+
+    private static var initialTab: Int {
+        switch LabConfig.screen {
+        case "home": return 0
+        case "plan": return 1
+        case "progress": return 3
+        default: return 4
+        }
+    }
+    private static var initialDecision: CyCoachDecision {
+        switch LabConfig.decision {
+        case "accepted": return .accepted
+        case "declined": return .declined
+        case "postponed": return .postponed
+        default: return .none
+        }
+    }
 
     private var themeID: CyThemeID { LabConfig.theme ?? CyThemeID(rawValue: themeRaw) ?? .obsidian }
     private var theme: CyTheme { CyTheme.named(themeID) }
+    private let dockHeight: CGFloat = 76
 
-    private let tabs = [
-        CyTabItem(id: "home", title: "Home", icon: "house.fill"),
-        CyTabItem(id: "plan", title: "Plan", icon: "calendar"),
-        CyTabItem(id: "progress", title: "Progress", icon: "chart.line.uptrend.xyaxis"),
-        CyTabItem(id: "lab", title: "Lab", icon: "paintpalette.fill"),
+    private let dockItems = [
+        CyDockItem(id: 0, title: "Home", icon: "house.fill"),
+        CyDockItem(id: 1, title: "Plan", icon: "calendar"),
+        CyDockItem(id: 3, title: "Progress", icon: "chart.xyaxis.line"),
+        CyDockItem(id: 4, title: "Profile", icon: "person.crop.circle"),
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .bottom) {
-                content
+        ZStack(alignment: .bottom) {
+            content
+            VStack(spacing: CySpace.s) {
                 if let toast {
-                    Text(toast).font(CyFont.caption).foregroundStyle(theme.textPrimary)
+                    Text(toast).font(CyFont.caption).foregroundStyle(theme.textPrimary).multilineTextAlignment(.center)
                         .padding(.horizontal, CySpace.l).padding(.vertical, CySpace.m)
                         .background(Capsule().fill(theme.surface2))
                         .overlay(Capsule().strokeBorder(theme.border, lineWidth: theme.borderWidth))
-                        .padding(.bottom, CySpace.m)
+                        .padding(.horizontal, CySpace.l)
                         .transition(.opacity)
                         .accessibilityAddTraits(.isStaticText)
                 }
+                CyFloatingDock(selection: $tab, items: dockItems, centreTitle: "Train now", centreIcon: "figure.mixed.cardio",
+                               centreBadge: scenario == .loading ? nil : data.sessionsToday) { sheet = .hub }
             }
-            CyTabBar(items: tabs, selection: $tab, centreTitle: "Train now", centreBadge: data.sessionsToday) { sheet = .hub }
         }
         .background(theme.background.ignoresSafeArea())
         .environment(\.cyTheme, theme)
@@ -77,38 +113,48 @@ struct LabRoot: View {
         .sheet(item: $sheet) { s in
             sheetView(s)
                 .environment(\.cyTheme, theme)
-                .presentationDetents(s.id == "review" ? [.large] : [.medium, .large])
+                .presentationDetents(s.opensLarge ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .onAppear(perform: applyLaunchSheet)
-        .onChange(of: scenario) { _, new in data = MockData.home(new) }
+        .onAppear {
+            applyLaunchSheet()
+            if LabConfig.render { Task { @MainActor in try? await Task.sleep(nanoseconds: 1_200_000_000); renderFullLength() } }
+        }
+        .onChange(of: scenario) { _, new in data = Mock21.make(new); decision = .none }
     }
 
     @ViewBuilder private var content: some View {
         switch tab {
-        case "home":
-            HomeV2Screen(data: data, isLoading: scenario == .loading, scrollTo: LabConfig.scroll, actions: homeActions)
-        case "lab":
-            LabScreen(themeRaw: $themeRaw, scenario: $scenario, lockedTheme: LabConfig.theme)
+        case 0:
+            Home21Screen(data: data, isLoading: scenario == .loading, coachDecision: decision, scrollTo: LabConfig.scroll,
+                         initialTrendSelection: LabConfig.select, bottomInset: dockHeight, actions: homeActions)
+        case 4:
+            LabScreen(themeRaw: $themeRaw, scenario: $scenario, lockedTheme: LabConfig.theme, bottomInset: dockHeight)
         default:
-            PlaceholderScreen(title: tabs.first { $0.id == tab }?.title ?? "")
+            PlaceholderScreen(title: dockItems.first { $0.id == tab }?.title ?? "", bottomInset: dockHeight)
         }
     }
 
-    private var homeActions: HomeActions {
-        HomeActions(
-            onAvatar: { tab = "lab" },
-            onRing: { sheet = .ring($0) },
-            onSetupItem: { item in
-                // Local mock interaction: marks the step done so the card's move from top to bottom can be reviewed.
-                if let i = data.setup.firstIndex(where: { $0.id == item.id }) { withAnimation { data.setup[i].isDone.toggle() } }
+    private var homeActions: Home21Actions {
+        Home21Actions(
+            onAvatar: { sheet = .profile },
+            onConsistency: { sheet = .consistency },
+            onMix: { sheet = .mix },
+            onRecovery: { sheet = .recovery },
+            onStep: { step in
+                // Local mock: marks the step done, so the move from "below the indicators" to the bottom can be reviewed.
+                if let i = data.steps.firstIndex(where: { $0.id == step.id }) { withAnimation { data.steps[i].isDone.toggle() } }
             },
             onDay: { sheet = .day($0) },
-            onEndurance: { sheet = .summary(data.endurance) },
-            onStrength: { sheet = .summary(data.strength) },
+            onEndurance: { sheet = .sport(data.endurance) },
+            onStrength: { sheet = .sport(data.strength) },
+            onSleep: { sheet = .sleep },
             onCoachWhy: { sheet = .coachWhy },
             onCoachReview: { sheet = .review },
-            onCoachNotNow: { say("Sample only — the suggestion would return at your next weekly review.") })
+            onCoachNotNow: { decision = .postponed; say("Postponed. This is not a decline — it stays open.") },
+            onTrendsInfo: { sheet = .trendsInfo },
+            onTrendDay: { sheet = .trendDay($0) },
+            onMetric: { sheet = .metric($0) })
     }
 
     private func say(_ text: String) {
@@ -118,29 +164,65 @@ struct LabRoot: View {
 
     private func applyLaunchSheet() {
         guard let s = LabConfig.sheet else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             switch s {
-            case "ringConsistency": sheet = .ring(data.rings[0])
-            case "ringLoad": sheet = .ring(data.rings[1])
-            case "ringRecovery": sheet = .ring(data.rings[2])
+            case "consistency": sheet = .consistency
+            case "mix": sheet = .mix
+            case "recovery": sheet = .recovery
+            case "sleep": sheet = .sleep
             case "review": sheet = .review
             case "coachWhy": sheet = .coachWhy
-            case "day": sheet = .day(data.days[2])
+            case "trendsInfo": sheet = .trendsInfo
             case "hub": sheet = .hub
+            case "profile": sheet = .profile
+            case "day": if data.days.count > 2 { sheet = .day(data.days[2]) }
+            case "endurance": sheet = .sport(data.endurance)
+            case "strength": sheet = .sport(data.strength)
+            case "trendDay": if let d = data.trends.first?.days.dropFirst(2).first { sheet = .trendDay(d) }
+            case "metric": if let m = data.metrics.first { sheet = .metric(m) }
             default: break
             }
         }
     }
 
+    /// Review aid only: renders the whole Home column to one tall image in the prototype's own Documents folder.
+    @MainActor func renderFullLength() {
+        let width: CGFloat = UIScreen.main.bounds.width
+        let view = Home21Content(data: data, isLoading: scenario == .loading, coachDecision: decision, initialTrendSelection: LabConfig.select)
+            .padding(.vertical, CySpace.l)
+            .frame(width: width)
+            .background(theme.background)
+            .environment(\.cyTheme, theme)
+            .environment(\.colorScheme, theme.scheme)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 2
+        renderer.proposedSize = ProposedViewSize(width: width, height: nil)
+        guard let image = renderer.uiImage, let png = image.pngData(),
+              let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        try? png.write(to: dir.appendingPathComponent("home-full.png"))
+    }
+
     @ViewBuilder private func sheetView(_ s: LabSheet) -> some View {
+        let close: () -> Void = { sheet = nil }
         switch s {
-        case .ring(let r): RingDetailSheet(model: r) { sheet = nil }
-        case .day(let d): DayDetailSheet(day: d, onClose: { sheet = nil }, onAction: { say("Sample only — a session would start in the real app.") })
-        case .summary(let m): SummaryDetailSheet(model: m) { sheet = nil }
+        case .consistency: ConsistencySheet(model: data.consistency, days: data.days, onClose: close)
+        case .mix: MixSheet(model: data.mix, endurance: data.endurance, strength: data.strength, onClose: close)
+        case .recovery: RecoverySheet(model: data.recovery, onClose: close)
+        case .sleep: SleepSheet(model: data.sleep, onClose: close)
+        case .day(let d): DaySheet(day: d, onClose: close) { say("Sample only — the session would open in the app.") }
+        case .sport(let m): SportSheet(model: m, onClose: close)
+        case .trendDay(let d): TrendDaySheet(day: d, onClose: close)
+        case .metric(let m): MetricSheet(tile: m, onClose: close)
+        case .trendsInfo:
+            CySheet(title: "How Trends works", onClose: close) {
+                InfoBlock(head: "What the chart shows", text: "Recorded training minutes per day: endurance and strength, stacked. Time still planned is drawn as a faint bar. One unit, labelled on the chart.")
+                InfoBlock(head: "What it does not show", text: "No recovery, stress or readiness score. Recovery and sleep for a day appear as words and durations when you touch that day — only when a reading exists.")
+                InfoBlock(head: "Missing days", text: "A day with nothing recorded or planned is left empty and says \"No data\". Nothing is estimated.")
+            }
         case .coachWhy:
-            CySheet(title: "Why this suggestion?", onClose: { sheet = nil }) {
+            CySheet(title: "Why this suggestion?", onClose: close) {
                 Text(data.coach?.why ?? "No suggestion at the moment.").font(CyFont.body).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                Text("The coach is rules-based. Sample text for layout review.").font(.caption2).foregroundStyle(theme.textTertiary)
+                Text("The coach follows written rules. No generative AI model is used. Sample text for layout review.").font(.caption2).foregroundStyle(theme.textTertiary)
             }
         case .review:
             CyReviewSheet(title: "Review the suggestion",
@@ -148,17 +230,28 @@ struct LabRoot: View {
                           benefit: "A small step keeps the work challenging without changing the session.",
                           impact: "The last sets may feel harder for a week or two. You can undo this at any time.",
                           changes: MockData.changes,
-                          onApprove: { sheet = nil; say("Sample only — nothing was changed.") },
-                          onPostpone: { sheet = nil; say("Sample only — postponed, not counted as declined.") },
-                          onDecline: { sheet = nil; say("Sample only — declined.") })
+                          onApprove: { sheet = nil; decision = .accepted; say("Accepted (sample). Nothing real was changed.") },
+                          onPostpone: { sheet = nil; decision = .postponed; say("Postponed. This is not a decline — it stays open.") },
+                          onDecline: { sheet = nil; decision = .declined; say("Declined (sample). It will not be repeated.") })
         case .hub:
-            CySheet(title: "Training Hub", onClose: { sheet = nil }) {
-                Text("Not prototyped yet. The Training Hub is reviewed after Home and Plan are approved.").font(CyFont.callout).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                CyWorkoutCard(model: MockData.workout, onAction: { say("Sample only.") }, onOpen: {})
+            CySheet(title: "Train now", onClose: close) {
+                Text("Mock destination. The Training Hub is prototyped after Home and Plan are approved.").font(CyFont.callout).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                ForEach(data.days.first { $0.isToday }?.sessions ?? []) { s in
+                    CyWorkoutCard(model: CyWorkoutModel(category: s.category, title: s.title, detail: s.detail, status: s.state == .completed ? .done : .today),
+                                  actionTitle: s.state == .completed ? "Results" : "Start", onAction: { say("Sample only.") }, onOpen: {})
+                }
             }
-        case .setup(let item):
-            CySheet(title: item.title, onClose: { sheet = nil }) {
-                Text(item.detail ?? "").font(CyFont.body).foregroundStyle(theme.textSecondary)
+        case .profile:
+            CySheet(title: "Profile", onClose: close) {
+                HStack(spacing: CySpace.m) {
+                    Text(data.initials).font(CyFont.title).foregroundStyle(theme.accent).frame(width: 56, height: 56).background(Circle().fill(theme.accentSubtle))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(data.name).font(CyFont.headline).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                        Text(data.athleteType ?? "Athlete").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                    }
+                }
+                Text("Mock profile. In the prototype the Profile tab holds the UI Lab: themes, scenarios and the component gallery.").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+                CyButton(title: "Open Profile and UI Lab", kind: .secondary) { sheet = nil; tab = 4 }
             }
         }
     }
@@ -166,119 +259,18 @@ struct LabRoot: View {
 
 struct PlaceholderScreen: View {
     let title: String
+    var bottomInset: CGFloat = 0
     @Environment(\.cyTheme) private var theme
     var body: some View {
         VStack(spacing: CySpace.l) {
             Spacer()
             CyEmptyStateCard(icon: "hammer", title: "\(title) is not prototyped yet",
-                             message: "Screens are built one at a time. This one starts after Home has been reviewed and approved.")
+                             message: "Mock destination. Screens are built one at a time; this one starts after Home has been reviewed and approved.")
             Spacer()
         }
         .padding(CySpace.l)
+        .padding(.bottom, bottomInset)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.background.ignoresSafeArea())
-    }
-}
-
-// MARK: Local mock detail sheets
-
-struct RingDetailSheet: View {
-    let model: CyRingModel
-    let onClose: () -> Void
-    @Environment(\.cyTheme) private var theme
-
-    var body: some View {
-        CySheet(title: model.title, onClose: onClose) {
-            HStack(spacing: CySpace.l) {
-                CyRingGlyph(model: model, diameter: 72)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(headline).font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    Text(sub).font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            block("How this is worked out", how)
-            block("What it does not tell you", limits)
-            Text("Sample content for layout review. Wording is reviewed with the real detail pages at integration.").font(.caption2).foregroundStyle(theme.textTertiary)
-        }
-    }
-    private func block(_ head: String, _ body: String) -> some View {
-        CyCard(padding: CySpace.m) {
-            VStack(alignment: .leading, spacing: CySpace.xs) {
-                CyOverline(text: head)
-                Text(body).font(CyFont.callout).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-    private var headline: String {
-        switch model.display {
-        case .fraction(_, let t, _): return t
-        case .status(let w, _, _): return w
-        case .missing(let r): return r
-        case .loading: return "Loading"
-        }
-    }
-    private var sub: String {
-        switch model.display {
-        case .fraction(_, _, let c): return c
-        case .status: return "A status word, not a score"
-        case .missing: return "Shown honestly instead of an estimate"
-        case .loading: return ""
-        }
-    }
-    private var how: String {
-        switch model.kind {
-        case .consistency: return "Planned sessions you completed this week, divided by the planned sessions up to today. Rest days and future sessions are not counted."
-        case .loadBalance: return "Your last 7 days of training load compared with your own average of the previous 4 weeks. It needs at least 4 weeks of sessions with an effort rating or heart rate."
-        case .recovery: return "One word from your own recent sleep and resting heart-rate readings compared with your usual range. Without readings it says so."
-        case .generic: return "A plain proportion of a target."
-        }
-    }
-    private var limits: String {
-        switch model.kind {
-        case .consistency: return "It does not judge how hard or how good the sessions were."
-        case .loadBalance: return "The bands are a guide for wording, not a validated safe-training zone, and this is not a measure of recovery."
-        case .recovery: return "It is general wellness guidance, not medical advice, and it is separate from Load Balance."
-        case .generic: return "Nothing beyond the proportion shown."
-        }
-    }
-}
-
-struct DayDetailSheet: View {
-    let day: CyDayModel
-    let onClose: () -> Void
-    let onAction: () -> Void
-    @Environment(\.cyTheme) private var theme
-    var body: some View {
-        CySheet(title: "\(day.weekday) \(day.dayNumber)", onClose: onClose) {
-            if day.sessions.isEmpty {
-                CyEmptyStateCard(icon: "moon.fill", title: "Rest day", message: day.detail)
-            } else {
-                ForEach(Array(day.sessions.enumerated()), id: \.offset) { i, s in
-                    CyWorkoutCard(model: CyWorkoutModel(category: s, title: s == .endurance ? "Endurance ride" : "Strength session",
-                                                         detail: "Sample session \(i + 1)", status: day.status),
-                                  actionTitle: day.status == .done ? "Results" : "Start",
-                                  isActionEnabled: day.status == .today || day.status == .done,
-                                  onAction: onAction, onOpen: {})
-                }
-            }
-        }
-    }
-}
-
-struct SummaryDetailSheet: View {
-    let model: CySummaryCardModel
-    let onClose: () -> Void
-    @Environment(\.cyTheme) private var theme
-    var body: some View {
-        CySheet(title: model.title, onClose: onClose) {
-            HStack(spacing: CySpace.m) {
-                CyMetricSummaryCard(model: CyMetricModel(label: "This week", value: model.primary, unit: nil, delta: model.secondary, deltaLevel: .neutral))
-                CyMetricSummaryCard(model: CyMetricModel(label: "Also", value: model.supporting, unit: nil, delta: nil, deltaLevel: .neutral))
-            }
-            CyWeeklyBars(title: model.trendCaption ?? "Weekly trend",
-                         points: (model.trend ?? []).enumerated().map { CySeriesPoint(id: $0.offset, label: "W\($0.offset + 1)", value: $0.element) },
-                         unit: "", category: model.category)
-        }
     }
 }

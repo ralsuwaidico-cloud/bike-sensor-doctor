@@ -61,6 +61,25 @@ struct CyTheme {
     var selectedFill: Color { accent.opacity(isDark ? 0.20 : 0.12) }
     var selectedBorder: Color { accent }
     var ringLineWidthScale: CGFloat { id == .highContrast ? 1.25 : 1.0 }
+
+    // v2.1 — gradients and quieter surfaces. Every gradient is derived from an existing, contrast-checked token
+    // (no new colour values), and High Contrast stays flat: legibility before decoration.
+    var usesGradients: Bool { id != .highContrast }
+    /// Card outline: none on dark themes (the surface step is enough), a hairline on light themes, full border in High Contrast.
+    var cardStroke: Color { id == .highContrast ? border : (isDark ? Color.clear : border.opacity(0.55)) }
+    /// Two-stop fill for bars, primary emphasis and selected states.
+    func gradient(_ c: Color) -> LinearGradient {
+        LinearGradient(colors: usesGradients ? [c, c.opacity(0.68)] : [c, c], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+    /// Sweep for a progress ring: lighter at the start of the arc, full colour at its head.
+    func ringGradient(_ c: Color, fraction: Double) -> AngularGradient {
+        AngularGradient(gradient: Gradient(colors: usesGradients ? [c.opacity(0.45), c] : [c, c]), center: .center,
+                        startAngle: .degrees(0), endAngle: .degrees(360 * max(fraction, 0.02)))
+    }
+    /// Soft highlighted surface (coach card, navigation highlight).
+    var highlightSurface: LinearGradient {
+        LinearGradient(colors: usesGradients ? [accent.opacity(isDark ? 0.20 : 0.12), surface] : [surface, surface], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
     var scheme: ColorScheme { isDark ? .dark : .light }
 
     static func named(_ id: CyThemeID) -> CyTheme {
@@ -231,6 +250,9 @@ enum CyRadius {
 }
 enum CyFont {
     static let display = Font.system(.title, design: .rounded).weight(.bold)
+    static let name = Font.system(.title2, design: .rounded).weight(.semibold)          // v2.1 compact header
+    static let value = Font.system(.title3, design: .rounded).weight(.semibold).monospacedDigit()
+    static let label = Font.system(.subheadline).weight(.medium)
     static let title = Font.system(.title3, design: .rounded).weight(.semibold)
     static let headline = Font.system(.headline, design: .rounded)
     static let body = Font.system(.body)

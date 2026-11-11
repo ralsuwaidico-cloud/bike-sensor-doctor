@@ -7,10 +7,12 @@ struct LabScreen: View {
     @Binding var themeRaw: String
     @Binding var scenario: LabScenario
     let lockedTheme: CyThemeID?
+    var bottomInset: CGFloat = 0
     @Environment(\.cyTheme) private var theme
     @State private var path: [String] = LabConfig.screen == "gallery" ? [LabConfig.page ?? "buttons"] : []
 
     static let pages: [(id: String, title: String, icon: String)] = [
+        ("home21", "Home v2.1 components", "sparkles"),
         ("buttons", "Buttons", "hand.tap"),
         ("cards", "Cards", "rectangle.stack"),
         ("rings", "Circular indicators", "circle.dashed"),
@@ -53,12 +55,13 @@ struct LabScreen: View {
                     }
                 }
                 .padding(CySpace.l)
+                .padding(.bottom, bottomInset)
             }
             .clipped()
             .background(theme.background.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: String.self) { id in
-                GalleryPage(id: id)
+                GalleryPage(id: id, bottomInset: bottomInset)
             }
         }
     }
@@ -110,6 +113,7 @@ struct Example<Content: View>: View {
 
 struct GalleryPage: View {
     let id: String
+    var bottomInset: CGFloat = 0
     @Environment(\.cyTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @State private var segment = 0
@@ -134,6 +138,7 @@ struct GalleryPage: View {
                 }
                 if !note.isEmpty { Text(note).font(CyFont.caption).foregroundStyle(theme.accent) }
                 switch id {
+                case "home21": Gallery21()
                 case "buttons": buttons
                 case "cards": cards
                 case "rings": rings
@@ -143,6 +148,7 @@ struct GalleryPage: View {
                 }
             }
             .padding(CySpace.l)
+            .padding(.bottom, bottomInset)
         }
         .clipped()
         .background(theme.background.ignoresSafeArea())
@@ -374,7 +380,7 @@ struct GalleryPage: View {
             }
         }
         Example(label: "NAVIGATION PROTOTYPE") {
-            Text("The tab bar below is the navigation prototype: Home is live, Plan and Progress are placeholders, the centre button opens a sample sheet.")
+            Text("The floating dock below is the navigation prototype (original Cyclift style): Home is live, Plan and Progress are mock destinations, Profile holds this Lab, and the centre button opens a sample sheet.")
                 .font(CyFont.footnote).foregroundStyle(theme.textSecondary)
         }
         Example(label: "LARGE ACCESSIBILITY TEXT") {

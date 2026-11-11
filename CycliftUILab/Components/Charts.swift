@@ -244,6 +244,7 @@ struct CyWeeklyBars: View {
     let points: [CySeriesPoint]
     let unit: String
     let category: CyCategory
+    var emptyText: String = "Weekly trend appears after two weeks of sessions."
     @Environment(\.cyTheme) private var theme
 
     var body: some View {
@@ -251,7 +252,7 @@ struct CyWeeklyBars: View {
             VStack(alignment: .leading, spacing: CySpace.m) {
                 CyOverline(text: title, icon: category.icon, tint: category.color(theme))
                 if points.compactMap(\.value).count < 2 {
-                    Text("Weekly trend appears after two weeks of sessions.").font(CyFont.callout).foregroundStyle(theme.textSecondary)
+                    Text(emptyText).font(CyFont.callout).foregroundStyle(theme.textSecondary)
                         .frame(maxWidth: .infinity, minHeight: 80, alignment: .leading)
                 } else {
                     Chart(points) { p in

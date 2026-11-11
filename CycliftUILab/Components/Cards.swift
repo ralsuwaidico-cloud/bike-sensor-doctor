@@ -14,7 +14,7 @@ struct CyCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(shape.fill(isSelected ? theme.selectedFill : theme.surface))
-            .overlay(shape.strokeBorder(isSelected ? theme.selectedBorder : theme.border, lineWidth: isSelected ? max(theme.borderWidth, 1.5) : theme.borderWidth))
+            .overlay(shape.strokeBorder(isSelected ? theme.selectedBorder : theme.cardStroke, lineWidth: isSelected ? max(theme.borderWidth, 1.5) : theme.borderWidth))
     }
 }
 

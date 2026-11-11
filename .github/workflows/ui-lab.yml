@@ -10,7 +10,7 @@ permissions:
 jobs:
   prototype:
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Build the prototype and capture screenshots
@@ -23,6 +23,7 @@ jobs:
         run: |
           mkdir -p pub && cp -R out/. pub/ && cd pub
           for f in shots/*.png; do [ -f "$f" ] && sips -Z 1400 "$f" >/dev/null 2>&1; done
+          for f in full/*.png; do [ -f "$f" ] && sips --resampleWidth 600 "$f" >/dev/null 2>&1; done
           rm -f build.txt
           git init -q -b proto/ui-lab-out
           git add -A

@@ -5,13 +5,18 @@ import SwiftUI
 // on screen. Status words (Load Balance, Recovery) are examples of wording, not computed or validated scores.
 
 enum LabScenario: String, CaseIterable, Identifiable {
-    case established, newUser, loading
+    case established, newUser, loading, cyclingOnly, strengthOnly, noPlan, partialData, longName
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .established: return "Established athlete"
-        case .newUser: return "New user (setup open, little data)"
+        case .established: return "Established hybrid athlete"
+        case .newUser: return "New athlete (setup open, no history)"
         case .loading: return "Loading"
+        case .cyclingOnly: return "Single sport — cycling only"
+        case .strengthOnly: return "Single sport — strength only"
+        case .noPlan: return "No planned sessions"
+        case .partialData: return "No Apple Health, partial sensor data"
+        case .longName: return "Long name"
         }
     }
 }
@@ -40,10 +45,6 @@ struct HomeData: Equatable {
 
 enum MockData {
     static let weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-    static func home(_ scenario: LabScenario) -> HomeData {
-        scenario == .newUser ? newUser : established
-    }
 
     static let established = HomeData(
         dateLine: "Wednesday, 11 Nov",
