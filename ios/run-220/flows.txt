@@ -1,0 +1,192 @@
+=== flows: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:57: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 4: hub closes again — Close frame (19.999999999999996, 66.0, 67.0, 36.0), hittable true; navigation bars: ["Plan", "Progress", "_TtGC7SwiftUI32NavigationStackHosting"]; sheets: 0; centre hittable true; hub tree: Attributes: Other, 0x113cdaf80, {{0.0, 0.0}, {402.0, 874.0}}, identifier: 'trainingHub' ⏎ Element subtree: ⏎  →Other, 0x113cdaf80, {{0.0, 0.0}, {402.0, 874.0}}, identifier: 'trainingHub' ⏎     Other, 0x113cdb0c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎       NavigationBar, 0x113cdb200, {{0.0, 62.0}, {402.0, 54.0}}, identifier: '_TtGC7SwiftUI32NavigationStackHosting' ⏎         Other, 0x113cdb340, {{20.0, 66.0}, {67.0, 36.0}}, identifier: 'hubClose', label: 'Close' ⏎           Other, 0x113cdb480, {{20.0, 66.0}, {67.0, 36.0}} ⏎             Button, 0x113cdb5c0, {{20.0, 66.0}, {67.0, 36.0}}, identifier: 'hubClose', label: 'Close' ⏎       Other, 0x113cdb700, {{0.0, 0.0}, {402.0, 874.0}} ⏎         Other, 0x113cdb840, {{0.0, 0.0}, {402.0, 874.0}} ⏎           Other, 0x113cdb980, {{0.0, 0.0}, {402.0, 874.0}} ⏎             Other, 0x113cdbac0, {{0.0, 0.0}, {402.0, 874.0}} ⏎               ScrollView, 0x113cdbc00, {{0.0, 0.0}, {402.0, 874.0}} ⏎                 Other, 0x113cdbd40, {{0.0, 0.0}, {402.0, 874.0}} ⏎                   Other, 0x113cdbe80, {{0.0, 0.0}, {402.0, 170.8}} ⏎                 Other, 0x113ce4000, {{0.0, 0.0}, {402.0, 874.0}} ⏎                 Other, 0x113ce4140, {{0.0, 116.0}, {402.0, 81
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 4: Close never had a settled frame (19.999999999999996, 66.0, 67.0, 36.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 5: hub not open after one tap (navigation bars: Plan|Progress, hub exists: false)
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' failed (804.799 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:78: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled once the review has no blocking conflict
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:81: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:91: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:92: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (151.161 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: full filter ===
+Test Case '-[BikeComputerUITests.DeleteAllDataJourneyTests testDeleteAllDataReturnsToWelcomeAndStaysEmptyAfterRelaunch]' passed (66.568 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 66.568 (66.570) seconds
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' passed (434.575 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:57: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 4: hub closes again — Close frame (19.999999999999996, 66.0, 67.0, 36.0), hittable true; navigation bars: ["Plan", "Progress", "_TtGC7SwiftUI32NavigationStackHosting"]; sheets: 0; centre hittable true; hub tree: Attributes: Other, 0x113cdaf80, {{0.0, 0.0}, {402.0, 874.0}}, identifier: 'trainingHub' ⏎ Element subtree: ⏎  →Other, 0x113cdaf80, {{0.0, 0.0}, {402.0, 874.0}}, identifier: 'trainingHub' ⏎     Other, 0x113cdb0c0, {{0.0, 0.0}, {402.0, 874.0}} ⏎       NavigationBar, 0x113cdb200, {{0.0, 62.0}, {402.0, 54.0}}, identifier: '_TtGC7SwiftUI32NavigationStackHosting' ⏎         Other, 0x113cdb340, {{20.0, 66.0}, {67.0, 36.0}}, identifier: 'hubClose', label: 'Close' ⏎           Other, 0x113cdb480, {{20.0, 66.0}, {67.0, 36.0}} ⏎             Button, 0x113cdb5c0, {{20.0, 66.0}, {67.0, 36.0}}, identifier: 'hubClose', label: 'Close' ⏎       Other, 0x113cdb700, {{0.0, 0.0}, {402.0, 874.0}} ⏎         Other, 0x113cdb840, {{0.0, 0.0}, {402.0, 874.0}} ⏎           Other, 0x113cdb980, {{0.0, 0.0}, {402.0, 874.0}} ⏎             Other, 0x113cdbac0, {{0.0, 0.0}, {402.0, 874.0}} ⏎               ScrollView, 0x113cdbc00, {{0.0, 0.0}, {402.0, 874.0}} ⏎                 Other, 0x113cdbd40, {{0.0, 0.0}, {402.0, 874.0}} ⏎                   Other, 0x113cdbe80, {{0.0, 0.0}, {402.0, 170.8}} ⏎                 Other, 0x113ce4000, {{0.0, 0.0}, {402.0, 874.0}} ⏎                 Other, 0x113ce4140, {{0.0, 116.0}, {402.0, 81
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 4: Close never had a settled frame (19.999999999999996, 66.0, 67.0, 36.0)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 5: hub not open after one tap (navigation bars: Plan|Progress, hub exists: false)
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' failed (804.799 seconds).
+Test Suite 'HubTapReliabilityTests' failed at 2026-11-11 07:38:27.669.
+	 Executed 2 tests, with 3 failures (0 unexpected) in 1239.374 (1239.382) seconds
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:78: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled once the review has no blocking conflict
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:81: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:91: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/PlanEditPreviewApplyTests.swift:92: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' failed (151.161 seconds).
+Test Suite 'PlanEditPreviewApplyTests' failed at 2026-11-11 07:40:58.832.
+	 Executed 1 test, with 4 failures (0 unexpected) in 151.161 (151.162) seconds
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' passed (53.832 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' passed (31.678 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testRecoveryPageIsHonestWithoutHealthReads]' passed (28.919 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 114.429 (114.430) seconds
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' passed (107.444 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 107.444 (107.446) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-11 07:44:40.711.
+	 Executed 8 tests, with 7 failures (0 unexpected) in 1678.975 (1678.995) seconds
+Test Suite 'Selected tests' failed at 2026-11-11 07:44:40.711.
+	 Executed 8 tests, with 7 failures (0 unexpected) in 1678.975 (1678.997) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== flows: last 150 lines ===
+    t =    57.48s             Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    58.00s             Find: Descendants matching type Button
+    t =    58.00s             Find: Elements matching predicate '"logSet" IN identifiers'
+    t =    58.02s             Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    58.55s             Find: Descendants matching type Button
+    t =    58.56s             Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    60.09s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    60.09s         Checking existence of `"logSet" Button`
+    t =    61.01s         Capturing element debug description
+    t =    61.01s             Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    61.33s             Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    61.33s             Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    61.33s             Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    61.33s     Checking existence of `"logSet" Button`
+    t =    62.28s Collecting debug information to assist test failure triage
+    t =    62.28s     Requesting snapshot of accessibility hierarchy for app with pid 97966
+    t =    64.72s Waiting 5.0s for "nextSetFinish" Button to exist
+    t =    65.78s     Checking `Expect predicate `existsNoRetry == 1` for object "nextSetFinish" Button`
+    t =    65.78s         Checking existence of `"nextSetFinish" Button`
+    t =    66.01s Checking existence of `StaticText (First Match)`
+    t =    66.17s Waiting 5.0s for "finishWorkout" Button to exist
+    t =    67.20s     Checking `Expect predicate `existsNoRetry == 1` for object "finishWorkout" Button`
+    t =    67.20s         Checking existence of `"finishWorkout" Button`
+    t =    67.37s Tap "finishWorkout" Button
+    t =    67.37s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    67.37s     Find the "finishWorkout" Button
+    t =    67.61s     Check for interrupting elements affecting "finishWorkout" Button
+    t =    67.96s     Synthesize event
+    t =    68.32s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    69.29s Waiting 10.0s for "saveWorkout" Button to exist
+    t =    70.31s     Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =    70.32s         Checking existence of `"saveWorkout" Button`
+    t =    70.84s Find the "saveWorkout" Button
+    t =    71.12s Tap "saveWorkout" Button
+    t =    71.12s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    71.12s     Find the "saveWorkout" Button
+    t =    71.45s     Check for interrupting elements affecting "saveWorkout" Button
+    t =    72.01s     Synthesize event
+    t =    72.38s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    74.20s Waiting 10.0s for "checkInForm" Any to exist
+    t =    75.25s     Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =    75.25s         Checking existence of `"checkInForm" Any`
+    t =    75.99s Waiting 3.0s for "checkInSubmit" Button to exist
+    t =    77.05s     Checking `Expect predicate `existsNoRetry == 1` for object "checkInSubmit" Button`
+    t =    77.05s         Checking existence of `"checkInSubmit" Button`
+    t =    77.25s Find the "checkInSubmit" Button
+    t =    77.47s Tap "checkInSubmit" Button
+    t =    77.47s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    77.62s     Find the "checkInSubmit" Button
+    t =    77.83s     Check for interrupting elements affecting "checkInSubmit" Button
+    t =    78.07s     Synthesize event
+    t =    78.62s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    80.00s Waiting 8.0s for "Done" Button to exist
+    t =    81.05s     Checking `Expect predicate `existsNoRetry == 1` for object "Done" Button`
+    t =    81.05s         Checking existence of `"Done" Button`
+    t =    81.17s Checking existence of `StaticText (First Match)`
+    t =    81.98s Tap "Done" Button
+    t =    81.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    82.21s     Find the "Done" Button
+    t =    82.56s     Check for interrupting elements affecting "adjustmentsDone" Button
+    t =    82.77s     Synthesize event
+    t =    83.13s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    83.85s Checking existence of `"adjustmentsDone" Button`
+    t =    84.76s Waiting 8.0s for "Strength" NavigationBar to exist
+    t =    85.80s     Checking `Expect predicate `existsNoRetry == 1` for object "Strength" NavigationBar`
+    t =    85.80s         Checking existence of `"Strength" NavigationBar`
+    t =    85.90s Checking existence of `StaticText (First Match)`
+    t =    86.30s Checking existence of `"Reopen" Button`
+    t =    87.51s Checking existence of `"Logged" StaticText`
+    t =    88.64s Checking existence of `"Done" Button`
+    t =    89.00s Tap "Done" Button
+    t =    89.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    89.00s     Find the "Done" Button
+    t =    89.13s     Check for interrupting elements affecting "Done" Button
+    t =    89.56s     Synthesize event
+    t =    89.91s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    90.69s Checking existence of `"Done" Button`
+    t =    91.33s Waiting 20.0s for "homeGreeting" Any to exist
+    t =    92.35s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =    92.35s         Checking existence of `"homeGreeting" Any`
+    t =    92.82s Find the "homeGreeting" Any
+    t =    93.33s Checking existence of `"hubClose" Button`
+    t =    93.42s Find the "hubClose" Button
+    t =    93.69s Tap "hubClose" Button
+    t =    93.69s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    93.69s     Find the "hubClose" Button
+    t =    93.78s     Check for interrupting elements affecting "hubClose" Button
+    t =    93.98s     Synthesize event
+    t =    94.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    95.12s Checking existence of `"hubClose" Button`
+    t =    95.90s Waiting 10.0s for "homeStrength" Button to exist
+    t =    96.94s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrength" Button`
+    t =    96.94s         Checking existence of `"homeStrength" Button`
+    t =    97.20s Checking existence of `"homeStrength" Button`
+    t =    97.58s Find the "homeStrength" Button
+    t =    97.82s Tap "homeStrength" Button
+    t =    97.82s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    97.82s     Find the "homeStrength" Button
+    t =    98.03s     Check for interrupting elements affecting "homeStrength" Button
+    t =    98.17s     Synthesize event
+    t =    98.62s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    99.09s Waiting 10.0s for "homeStrengthSummary" Any to exist
+    t =   100.11s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   100.12s         Checking existence of `"homeStrengthSummary" Any`
+    t =   100.31s Find the "strengthLogExpand-0" Button
+    t =   100.75s Find the "strengthLogExpand-0" Button
+    t =   101.06s Find the "strengthLogExpand-0" Button
+    t =   101.41s Find the "strengthLogExpand-0" Button
+    t =   101.71s Waiting 5.0s for "strengthLogExpand-0" Button to exist
+    t =   102.71s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExpand-0" Button`
+    t =   102.72s         Checking existence of `"strengthLogExpand-0" Button`
+    t =   102.98s Tap "strengthLogExpand-0" Button
+    t =   102.98s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   102.98s     Find the "strengthLogExpand-0" Button
+    t =   103.21s     Check for interrupting elements affecting "strengthLogExpand-0" Button
+    t =   103.51s     Synthesize event
+    t =   103.86s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   104.39s Waiting 5.0s for "strengthLogExercises-0" Any to exist
+    t =   105.47s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExercises-0" Any`
+    t =   105.47s         Checking existence of `"strengthLogExercises-0" Any`
+    t =   106.05s Checking existence of `StaticText (First Match)`
+    t =   106.35s Checking existence of `StaticText (First Match)`
+    t =   106.73s Checking existence of `StaticText (First Match)`
+    t =   107.09s Tear Down
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' passed (107.444 seconds).
+Test Suite 'StrengthSessionJourneyTests' passed at 2026-11-11 07:44:40.709.
+	 Executed 1 test, with 0 failures (0 unexpected) in 107.444 (107.446) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-11 07:44:40.711.
+	 Executed 8 tests, with 7 failures (0 unexpected) in 1678.975 (1678.995) seconds
+Test Suite 'Selected tests' failed at 2026-11-11 07:44:40.711.
+	 Executed 8 tests, with 7 failures (0 unexpected) in 1678.975 (1678.997) seconds
+2026-11-11 07:45:10.264 xcodebuild[29010:80657] [MT] IDETestOperationsObserverDebug: 1744.101 elapsed -- Testing started completed.
+2026-11-11 07:45:10.265 xcodebuild[29010:80657] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-11 07:45:10.265 xcodebuild[29010:80657] [MT] IDETestOperationsObserverDebug: 1744.101 sec, +1744.101 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/flows.xcresult
+
+Failing tests:
+	HubTapReliabilityTests.testEveryFirstCentreTapOpensTheHub()
+	HubTapReliabilityTests.testEveryFirstCentreTapOpensTheHub()
+	HubTapReliabilityTests.testEveryFirstCentreTapOpensTheHub()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+	PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply()
+
+** TEST EXECUTE FAILED **
+
+Testing started

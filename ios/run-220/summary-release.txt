@@ -1,0 +1,7 @@
+BikeComputer iOS CI — build 220 — 2026-11-11 07:51 UTC
+Stage: release
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m13s
+RESULT archive: refused — no green quick run for this source tree (push with [ci quick] first, or add [full-override: <reason>] to the commit message)
+Total: 3m13s

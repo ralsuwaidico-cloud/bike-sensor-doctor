@@ -1,0 +1,9 @@
+BikeComputer iOS CI — build 220 — 2026-11-11 07:01 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 9m14s
+RESULT flows: FAILED (exit 65) · 42m36s — HubTapReliabilityTests.swift:57: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 4: hub closes again — Close frame (19.999999999999996, 66.0, 67.0, 36.0), hittable true; navigation bars: ["Plan", "Progress", "_TtGC7SwiftUI32NavigationStackHosting"]; sheets: 0; centre hittable true; hub tree: Attributes: Other, 0x113cdaf80, {{0.0, 0.0 HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 4: Close never had a settled frame (19.999999999999996, 66.0, 67.0, 36.0) HubTapReliabilityTests.swift:79: error: -[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub] : failed - multi@L cycle 5: hub not open after one tap (navigation bars: Plan|Progress, hub exists: false) PlanEditPreviewApplyTests.swift:78: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled once the review has no blocking conflict PlanEditPreviewApplyTests.swift:81: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top) PlanEditPreviewApplyTests.swift:91: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row PlanEditPreviewApplyTests.swift:92: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history 
+Total: 43m49s
