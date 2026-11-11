@@ -1,41 +1,41 @@
-# Home v2 prototype — accessibility and small-device review
+# Home v2.1 prototype — accessibility and small-device review
 
-**Evidence level: simulator screenshots of the standalone UI Lab** (iOS 26.5 simulator; iPhone 17 and iPhone SE
-3rd generation; text sizes Large and Accessibility Large). Nothing here was checked on a physical iPhone, and
-VoiceOver was not listened to. It is a prototype review, not evidence about the production app.
+**Evidence level: simulator screenshots of the standalone UI Lab** — run 43108414885, commit `05e1202`, iOS 26.5
+simulator, iPhone 17 and iPhone SE (3rd generation), text sizes Large and Accessibility Large. Nothing here was
+checked on a physical iPhone, VoiceOver was not listened to, and no interaction was exercised by hand. It is a
+prototype review, not evidence about the production app. (The Home v2 review it replaces is in the branch history.)
 
 ## What was checked and how
 
 | Check | Method | Result |
 |---|---|---|
-| Text contrast, all six themes | `tools/contrast_check.py` on the tokens: text on the three surfaces ≥ 4.5:1; category, status, ring and accent colours ≥ 3:1 as graphics and ≥ 4.5:1 where used as text; button label on accent ≥ 4.5:1 | 294 pairs, 0 failures, lowest text ratio 4.79:1 |
-| Meaning without colour | Review of every status and category | Each status has an icon and a word; each category an icon and a label; missing data is a dashed ring with "?" and a reason |
-| Touch targets | Code review: `CyHit.min` = 44 pt on buttons, chips, checklist rows, tab items, day cells (60 pt high) | Met by construction; chart status cells are 26 pt high (see findings) |
-| Dynamic Type | Screenshots at Accessibility Large on both devices | Rings switch to a list, sport cards stack, text wraps; see findings |
-| Small device | iPhone SE screenshots, both scroll positions, new-user state | Header, circles, strip and the top of the sport cards fit on the first screen; nothing truncated at the default size |
-| Spoken descriptions | Code review of accessibility labels / values | Rings: label + value (percentage and count, or the status word, or the missing reason). Day cells: weekday, date, "today", day summary. Chart: one spoken summary per series plus a per-day control for each status cell. Cards: combined label. **Not yet heard with VoiceOver.** |
+| Text contrast, six themes | `tools/contrast_check.py` on the tokens | 294 pairs, 0 failures, lowest text ratio 4.79:1. v2.1 added no colour values; gradients are derived from checked tokens |
+| Gradients | Review | Used on rings, bars, session marks and the coach surface only. Text never sits on a gradient fill (the Review button is a flat accent). The tail of a gradient bar is lighter than the checked colour by design. High Contrast is flat |
+| Meaning without colour | Review of every state | Session state is a shape (filled disc, thin outline, dashed outline with slash, outline with arrow, moon). Recovery state is an icon and a word. Direction markers are triangles / dot |
+| Touch targets | Code review | Indicators, day cells (50 pt high, full column), cards, Sleep row, coach actions, chart info, tooltip "Open day", metric rows (54 pt), dock items (64 pt): all at least 44 pt. Chart days are chosen by touching anywhere in the day's column |
+| Dynamic Type | Screenshots at Accessibility Large, both devices | Indicators become rows with the value in text; sport cards stack; coach actions stack with Why? on its own row; chart legend stacks; day labels become single letters; metric rows wrap; dock labels stop growing |
+| Small device | iPhone SE, four scroll positions + new athlete + long name | First screen: header, indicators, schedule, sport cards, Sleep bar and the top of the Coach card. Nothing truncated at the default size |
+| Floating dock and content | Screenshots at the end of the scroll and mid-scroll | The last element ("Setup complete") ends above the dock; a soft fade sits behind the dock |
+| Spoken descriptions | Code review of labels and values | Each indicator: title + full value (for Training Mix: both disciplines with done and planned, or "not planned"). Day cells: weekday, date, each session with its state. Chart: one summary plus an adjustable action to step through days. Metric rows: value, unit, comparison, direction in words. **Not yet heard with VoiceOver** |
+| No fabricated scores | Review of every screen and sheet | No recovery percentage, readiness, stress, fitness-age or biological-age figure. Sleep target labelled as a sample. Missing values shown as "—" / "No data" / dashed marks |
 
-## Findings (first build) and their state after the third build (run 43055553640, commit f7ec471)
+## Findings
 
-| # | Finding | Where | Severity | Status |
-|---|---|---|---|---|
-| 1 | Seventh day label on the chart axis was clipped ("…" instead of "Sun") | Trends chart, all themes | Medium | Fixed — confirmed in the third build's screenshots at the default text size (all seven labels shown). Still crowded at Accessibility Large, see 9 |
-| 2 | Scrolled content showed through under the status bar | Home, gallery | Medium | Fixed — confirmed in the third build's screenshots |
-| 3 | Tab-bar labels grew with accessibility text and wrapped ("Train now" on two lines) | Tab bar at Accessibility Large | Medium | Fixed — confirmed in the third build on iPhone 17 and iPhone SE: labels stay on one line. A long-press large-content viewer is still to add |
-| 4 | Date line and "SAMPLE DATA" tag wrapped awkwardly at accessibility sizes | Header | Low | Fixed and confirmed in the second build's screenshots; the tag is prototype-only anyway |
-| 5 | Review sheet opened at half height and cut off the Approve button | Review sheet | Medium | Fixed — confirmed in the third build: opens full height with Approve, Not now and Decline visible |
-| 6 | Sample chart showed 100 % while the ring showed 80 % | Sample data | Low | Fixed and confirmed in the second build (sample data only) |
-| 7 | At Accessibility Large the header, circles list and strip fill the first screen; the sport cards need a scroll | Home on both devices | Expected | Open for the owner's view: acceptable, or should the greeting be capped at one line at these sizes? |
-| 8 | Chart status cells are 26 pt high — below the 44 pt target, though each is full column width and the same day can be chosen on the chart | Trends chart | Low | Open: raise the cells to 44 pt (taller card) or keep them compact |
-| 9 | Chart axis labels crowd at Accessibility Large ("MonTue WedThu", last label "S…") | Trends chart | Low | Open: switch to single letters at accessibility sizes |
-| 10 | Sport cards are tall at the default size (sparkline plus caption) | Endurance / Strength Load | Design | Open for the owner's review: keep the sparkline on Home, or move it to the detail sheet for a shorter Home |
-| 11 | High Contrast is one dark variant; there is no light high-contrast variant | Theme | Design | Open: is a light variant wanted? |
-| 12 | Load Balance and Recovery rings look alike when both are "good" (full ring, tick) — told apart by colour, title and word | Circles | Design | Open for the owner's review |
+| # | Finding | Severity | Status |
+|---|---|---|---|
+| 1 | Large text: percentage and "Mix" were squeezed inside the small rings | Medium | Fixed and confirmed in run 43108414885 (value moved into the text) |
+| 2 | Large text: coach header wrapped ("rules-based", "Why?") | Medium | Fixed and confirmed (tag stays on one line; Why? moves below the sentence) |
+| 3 | Large text: chart legend truncated | Low | Fixed and confirmed (legend stacks) |
+| 4 | Scrolled content showed sharply beneath the floating dock | Medium | Fixed and confirmed (fade) |
+| 5 | Large text: the date / athlete-type line wraps to two lines and the SAMPLE tag sits beside it | Low | Open (the tag is prototype-only) |
+| 6 | Large text: with Why? below the sentence, the coach card is tall and its actions fall below the first screen | Expected | Open for the owner's view |
+| 7 | Two session marks in one day are 19 pt each; clear on iPhone 17, tight on iPhone SE | Low | Open for the owner's view |
+| 8 | Full-length review images draw ring arcs from a different start angle and omit the dock | Review aid only | Documented; on-screen screenshots are correct |
+| 9 | One blank capture on iPhone SE in the earlier run | Capture only | Retaken; not a product issue |
 
 ## Not covered (needs a real device or a later step)
 
-- VoiceOver reading order and wording on a physical iPhone.
-- Reduce Motion, Bold Text, Increase Contrast and Smart Invert system settings.
-- Right-to-left layout and languages other than English.
-- Landscape (the prototype is portrait only) and iPad.
-- One-handed reach and readability while exercising.
+- VoiceOver reading order and wording on a physical iPhone; the chart's adjustable action in practice.
+- Tapping through each interaction by hand; animation feel of the dock highlight and Reduce Motion.
+- Bold Text, Increase Contrast, Smart Invert; right-to-left layout; languages other than English.
+- Landscape and iPad (the prototype is portrait only).
