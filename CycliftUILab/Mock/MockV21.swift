@@ -111,22 +111,23 @@ enum Mock21 {
         freshness: "No source connected")
 
     static func metric(_ id: String, _ icon: String, _ name: String, _ value: String?, _ unit: String, _ trend: String?, _ level: CyStatusLevel,
-                       _ explanation: String, _ source: String, _ history: [Double?], _ historyUnit: String) -> CyMetricTile {
+                       _ explanation: String, _ source: String, _ history: [Double?], _ historyUnit: String,
+                       baseline: String? = nil, direction: CyDirection = .none) -> CyMetricTile {
         CyMetricTile(id: id, icon: icon, name: name, value: value, unit: unit, trend: trend, trendLevel: level, explanation: explanation,
-                     source: source, history: points(weeks8, history), historyUnit: historyUnit)
+                     source: source, history: points(weeks8, history), historyUnit: historyUnit, baseline: baseline, direction: direction)
     }
     static let mRHR = metric("rhr", "heart", "Resting HR", "52", "bpm", "−1 vs 4-week avg", .neutral,
-                             "Your lowest stable heart rate at rest, compared with your own recent average.", "Sample · Apple Health", [54, 53, 54, 53, 53, 52, 53, 52], "bpm")
+                             "Your lowest stable heart rate at rest, compared with your own recent average.", "Sample · Apple Health", [54, 53, 54, 53, 53, 52, 53, 52], "bpm", baseline: "avg 53", direction: .down)
     static let mHRV = metric("hrv", "waveform.path.ecg", "HRV", "64", "ms", "in your usual range", .neutral,
-                             "Heart-rate variability overnight, compared with your own usual range. It varies a lot between people.", "Sample · Apple Health", [61, 66, 58, 63, 65, 62, 60, 64], "ms")
-    static let mTime = metric("time", "clock", "Training time", "1h 57m", "this week", "of 5h 25m planned", .neutral,
-                              "Total recorded training time this week across both disciplines.", "Sample · Cyclift sessions", [255, 270, 230, 285, 260, 290, 275, 117], "min")
+                             "Heart-rate variability overnight, compared with your own usual range. It varies a lot between people.", "Sample · Apple Health", [61, 66, 58, 63, 65, 62, 60, 64], "ms", baseline: "avg 62", direction: .up)
+    static let mTime = metric("time", "clock", "Training time", "1h 57m", "", "of 5h 25m planned", .neutral,
+                              "Total recorded training time this week across both disciplines.", "Sample · Cyclift sessions", [255, 270, 230, 285, 260, 290, 275, 117], "min", baseline: "of 5h 25m planned")
     static let mLoad = metric("load", "chart.bar", "Weekly load", "410", "pts", "session effort × minutes", .neutral,
-                              "Each session's effort rating multiplied by its minutes, added up for the week. It needs an effort rating or heart rate for every session.", "Sample · Cyclift sessions", [720, 760, 640, 800, 730, 820, 770, 410], "pts")
+                              "Each session's effort rating multiplied by its minutes, added up for the week. It needs an effort rating or heart rate for every session.", "Sample · Cyclift sessions", [720, 760, 640, 800, 730, 820, 770, 410], "pts", baseline: "avg 763 / week")
     static let mPower = metric("power", "bolt", "Avg ride power", "168", "W", "last 3 rides", .neutral,
-                               "Average power across your recent rides, from your power meter.", "Sample · power meter", [158, 160, 157, 163, 165, 162, 166, 168], "W")
+                               "Average power across your recent rides, from your power meter.", "Sample · power meter", [158, 160, 157, 163, 165, 162, 166, 168], "W", baseline: "avg 163", direction: .up)
     static let mVolume = metric("volume", "scalemass", "Strength volume", "3,240", "kg", "1 session this week", .neutral,
-                                "Sets × reps × load for logged strength sets this week.", "Sample · logged sets", [9100, 9400, 6200, 9600, 9300, 9800, 6400, 3240], "kg")
+                                "Sets × reps × load for logged strength sets this week.", "Sample · logged sets", [9100, 9400, 6200, 9600, 9300, 9800, 6400, 3240], "kg", baseline: "1 session so far")
 
     // MARK: scenarios
 
@@ -259,7 +260,7 @@ enum Mock21 {
             mTime,
             CyMetricTile(id: "power", icon: "bolt", name: "Avg ride power", value: nil, unit: "W", trend: nil, trendLevel: .neutral, explanation: mPower.explanation, source: "No power meter connected", history: [], historyUnit: "W"),
             mVolume,
-            metric("hr", "heart.circle", "Avg ride HR", "138", "bpm", "last 3 rides", .neutral, "Average heart rate across recent rides, from your strap.", "Sample · heart-rate strap", [136, 139, 137, 140, 138, 139, 137, 138], "bpm"),
+            metric("hr", "heart.circle", "Avg ride HR", "138", "bpm", "last 3 rides", .neutral, "Average heart rate across recent rides, from your strap.", "Sample · heart-rate strap", [136, 139, 137, 140, 138, 139, 137, 138], "bpm", baseline: "avg 138", direction: .flat),
         ]
         d.steps[3].isDone = false
         return d

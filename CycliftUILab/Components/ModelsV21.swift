@@ -122,7 +122,29 @@ struct CyMetricTile: Identifiable, Equatable {
     let source: String
     let history: [CySeriesPoint]
     let historyUnit: String
+    var baseline: String? = nil      // comparison value shown under the main value, e.g. "avg 53"
+    var direction: CyDirection = .none
 }
+/// Direction against the athlete's own baseline. A neutral marker: up or down is not labelled good or bad.
+enum CyDirection: Equatable { case up, down, flat, none
+    var symbol: String? {
+        switch self {
+        case .up: return "arrowtriangle.up.fill"
+        case .down: return "arrowtriangle.down.fill"
+        case .flat: return "circle.fill"
+        case .none: return nil
+        }
+    }
+    var spoken: String {
+        switch self {
+        case .up: return "above your average"
+        case .down: return "below your average"
+        case .flat: return "at your average"
+        case .none: return ""
+        }
+    }
+}
+enum CyMetricStyle: String { case rows, grid }
 
 struct CySetupStep: Identifiable, Equatable {
     let id: String

@@ -77,9 +77,10 @@ struct Gallery21: View {
                     CyTrendsModule(ranges: [], isLoading: true, onInfo: {}, onDay: { _ in })
                 }
             }
-            Example(label: "KEY METRICS · POPULATED / MISSING / LOADING") {
+            Example(label: "KEY METRICS · ROWS / MISSING / LOADING / GRID ALTERNATIVE") {
                 VStack(spacing: CySpace.l) {
                     CyMetricGrid(tiles: hybrid.metrics) { note = "\($0.name) opened" }
+                    CyMetricGrid(tiles: hybrid.metrics, style: .grid) { _ in }
                     CyMetricGrid(tiles: partial.metrics) { _ in }
                     CyMetricGrid(tiles: [], isLoading: true) { _ in }
                 }

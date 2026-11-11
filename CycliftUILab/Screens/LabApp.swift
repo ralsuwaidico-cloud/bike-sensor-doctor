@@ -14,7 +14,8 @@ enum LabConfig {
     static var sheet: String? { env["LAB_SHEET"] }
     static var select: Int? { env["LAB_SELECT"].flatMap(Int.init) }     // chart day selected at launch
     static var render: Bool { env["LAB_RENDER"] == "1" }                // write a full-length Home image to Documents
-    static var decision: String? { env["LAB_DECISION"] }                // accepted | declined | postponed
+    static var decision: String? { env["LAB_DECISION"] }
+    static var metrics: CyMetricStyle? { env["LAB_METRICS"].flatMap(CyMetricStyle.init(rawValue:)) }                // accepted | declined | postponed
 }
 
 @main
@@ -54,6 +55,7 @@ enum LabSheet: Identifiable {
 
 struct LabRoot: View {
     @AppStorage("lab.theme") private var themeRaw: String = CyThemeID.obsidian.rawValue
+    @AppStorage("lab.metrics") private var metricsRaw: String = CyMetricStyle.rows.rawValue
     @State private var scenario: LabScenario = LabConfig.scenario ?? .established
     @State private var data: Home21Data = Mock21.make(LabConfig.scenario ?? .established)
     @State private var tab: Int = LabRoot.initialTab
@@ -127,7 +129,8 @@ struct LabRoot: View {
         switch tab {
         case 0:
             Home21Screen(data: data, isLoading: scenario == .loading, coachDecision: decision, scrollTo: LabConfig.scroll,
-                         initialTrendSelection: LabConfig.select, bottomInset: dockHeight, actions: homeActions)
+                         initialTrendSelection: LabConfig.select, bottomInset: dockHeight,
+                         metricStyle: LabConfig.metrics ?? CyMetricStyle(rawValue: metricsRaw) ?? .rows, actions: homeActions)
         case 4:
             LabScreen(themeRaw: $themeRaw, scenario: $scenario, lockedTheme: LabConfig.theme, bottomInset: dockHeight)
         default:
@@ -188,7 +191,8 @@ struct LabRoot: View {
     /// Review aid only: renders the whole Home column to one tall image in the prototype's own Documents folder.
     @MainActor func renderFullLength() {
         let width: CGFloat = UIScreen.main.bounds.width
-        let view = Home21Content(data: data, isLoading: scenario == .loading, coachDecision: decision, initialTrendSelection: LabConfig.select)
+        let view = Home21Content(data: data, isLoading: scenario == .loading, coachDecision: decision, initialTrendSelection: LabConfig.select,
+                                 metricStyle: LabConfig.metrics ?? CyMetricStyle(rawValue: metricsRaw) ?? .rows)
             .padding(.vertical, CySpace.l)
             .frame(width: width)
             .background(theme.background)

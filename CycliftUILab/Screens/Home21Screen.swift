@@ -30,6 +30,7 @@ struct Home21Content: View {
     var showSampleTag: Bool = true
     var coachDecision: CyCoachDecision = .none
     var initialTrendSelection: Int? = nil
+    var metricStyle: CyMetricStyle = .rows
     var actions = Home21Actions()
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -51,7 +52,7 @@ struct Home21Content: View {
             CyTrendsModule(ranges: data.trends, isLoading: isLoading, emptyText: data.trendsEmpty, initialSelection: initialTrendSelection,
                            onInfo: actions.onTrendsInfo, onDay: actions.onTrendDay)
                 .id("trends")
-            CyMetricGrid(tiles: data.metrics, isLoading: isLoading, onTile: actions.onMetric)
+            CyMetricGrid(tiles: data.metrics, isLoading: isLoading, style: metricStyle, onTile: actions.onMetric)
                 .id("metrics")
             if !data.requiredOpen && !isLoading { CySetupBanner(steps: data.steps, onStep: actions.onStep) }
             Color.clear.frame(height: 1).id("bottom")
@@ -113,13 +114,14 @@ struct Home21Screen: View {
     var scrollTo: String? = nil            // prototype screenshots only
     var initialTrendSelection: Int? = nil
     var bottomInset: CGFloat = 0           // room for the floating dock, so nothing is hidden beneath it
+    var metricStyle: CyMetricStyle = .rows
     var actions = Home21Actions()
     @Environment(\.cyTheme) private var theme
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                Home21Content(data: data, isLoading: isLoading, coachDecision: coachDecision, initialTrendSelection: initialTrendSelection, actions: actions)
+                Home21Content(data: data, isLoading: isLoading, coachDecision: coachDecision, initialTrendSelection: initialTrendSelection, metricStyle: metricStyle, actions: actions)
                     .padding(.bottom, bottomInset + CySpace.l)
             }
             .clipped()

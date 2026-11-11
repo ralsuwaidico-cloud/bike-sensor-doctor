@@ -69,6 +69,7 @@ if [ -n "$STD" ]; then
     shoot "$U" "home-$T-3-trends" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
     shoot "$U" "home-$T-4-metrics" LAB_THEME=$T LAB_SCROLL=metrics
     full "$U" "full-$T" LAB_THEME=$T LAB_SELECT=2
+    [ "$T" = obsidian ] && shoot "$U" "home-$T-4-metrics-grid" LAB_THEME=$T LAB_SCROLL=metrics LAB_METRICS=grid
   done
   for T in obsidian arctic; do
     for S in newUser cyclingOnly strengthOnly noPlan partialData longName loading; do

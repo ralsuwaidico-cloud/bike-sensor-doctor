@@ -212,6 +212,7 @@ struct CyTrendsModule: View {
 struct CyMetricGrid: View {
     let tiles: [CyMetricTile]
     var isLoading: Bool = false
+    var style: CyMetricStyle = .rows
     let onTile: (CyMetricTile) -> Void
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -220,6 +221,7 @@ struct CyMetricGrid: View {
         let cols = typeSize.isAccessibilitySize ? [GridItem(.flexible())] : [GridItem(.flexible(), spacing: CySpace.s), GridItem(.flexible(), spacing: CySpace.s)]
         VStack(alignment: .leading, spacing: CySpace.m) {
             Text("Key metrics").font(CyFont.title).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+            if style == .rows { rows } else {
             LazyVGrid(columns: cols, spacing: CySpace.s) {
                 if isLoading {
                     ForEach(0..<4, id: \.self) { _ in
@@ -231,7 +233,57 @@ struct CyMetricGrid: View {
                     ForEach(tiles) { t in tile(t) }
                 }
             }
+            }
         }
+    }
+
+    /// Dashboard rows: icon and name on the left, value on the right with the athlete's own comparison value beneath
+    /// and a neutral direction marker. One grouped surface with hairlines instead of a border per row.
+    private var rows: some View {
+        VStack(spacing: 0) {
+            if isLoading {
+                ForEach(0..<4, id: \.self) { _ in
+                    HStack { CySkeleton(height: 12, width: 130); Spacer(); CySkeleton(height: 18, width: 50) }.padding(.horizontal, CySpace.m).frame(minHeight: 54)
+                }
+            } else {
+                ForEach(tiles) { t in
+                    Button(action: { onTile(t) }) {
+                        HStack(spacing: CySpace.m) {
+                            Image(systemName: t.icon).font(.footnote.weight(.semibold)).foregroundStyle(theme.textSecondary).frame(width: 22)
+                            Text(t.name.uppercased()).font(.caption.weight(.semibold)).tracking(0.7).foregroundStyle(theme.textPrimary)
+                                .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).minimumScaleFactor(0.8)
+                            Spacer(minLength: CySpace.s)
+                            VStack(alignment: .trailing, spacing: 0) {
+                                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                                    Text(t.value ?? "—").font(CyFont.value).foregroundStyle(t.value == nil ? theme.textTertiary : theme.textPrimary)
+                                    if t.value != nil { Text(t.unit).font(.caption2).foregroundStyle(theme.textSecondary) }
+                                }
+                                Text(t.value == nil ? "No data" : (t.baseline ?? t.trend ?? " ")).font(.caption2).foregroundStyle(theme.textSecondary)
+                            }
+                            .lineLimit(1)
+                            Group {
+                                if let sym = t.direction.symbol, t.value != nil {
+                                    Image(systemName: sym).font(.system(size: t.direction == .flat ? 6 : 8)).foregroundStyle(theme.textSecondary)
+                                } else { Color.clear }
+                            }
+                            .frame(width: 10)
+                        }
+                        .padding(.horizontal, CySpace.m)
+                        .frame(minHeight: 54)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(CyRingButtonStyle())
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(t.name)
+                    .accessibilityValue(t.value.map { "\($0) \(t.unit)\(t.baseline.map { ", \($0)" } ?? "")\(t.direction == .none ? "" : ", \(t.direction.spoken)")" } ?? "No data")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint("Opens details")
+                    if t.id != tiles.last?.id { Rectangle().fill(theme.separator.opacity(0.6)).frame(height: 0.5).padding(.leading, CySpace.m + 22 + CySpace.m) }
+                }
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).fill(theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
     }
 
     private func tile(_ t: CyMetricTile) -> some View {

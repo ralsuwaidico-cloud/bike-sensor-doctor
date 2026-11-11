@@ -9,6 +9,7 @@ struct LabScreen: View {
     let lockedTheme: CyThemeID?
     var bottomInset: CGFloat = 0
     @Environment(\.cyTheme) private var theme
+    @AppStorage("lab.metrics") private var metricsRaw: String = CyMetricStyle.rows.rawValue
     @State private var path: [String] = LabConfig.screen == "gallery" ? [LabConfig.page ?? "buttons"] : []
 
     static let pages: [(id: String, title: String, icon: String)] = [
@@ -37,6 +38,9 @@ struct LabScreen: View {
                     ForEach(LabScenario.allCases) { s in
                         CySelectionCard(title: s.title, isSelected: scenario == s) { scenario = s }
                     }
+
+                    CyOverline(text: "Key metrics layout")
+                    CySegmented(options: ["Rows", "Grid"], selection: Binding(get: { metricsRaw == "grid" ? 1 : 0 }, set: { metricsRaw = $0 == 1 ? "grid" : "rows" }))
 
                     CyOverline(text: "Component gallery")
                     ForEach(LabScreen.pages, id: \.id) { p in
