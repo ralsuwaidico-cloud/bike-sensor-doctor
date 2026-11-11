@@ -21,7 +21,12 @@ extension XCUIElement {
     func waitUntilSettled(timeout: TimeInterval = 5) -> Bool {
         let end = Date().addingTimeInterval(timeout)
         var last: CGRect? = nil
-        while Date() < end {
+        // run 220 (hub, cycle 4): on a slow runner one frame query took seconds, so a 5 s budget allowed a single poll and
+        // a perfectly still Close "never settled" and was never tapped. Two polls are needed to compare; the deadline
+        // cannot end the wait before the element has been read at least three times.
+        var polls = 0
+        while Date() < end || polls < 3 {
+            polls += 1
             if hasUsableFrame {
                 let f = frame
                 // run 212: a frame reported as x = 19.999999999999996 on one poll and 20.0 on the next never "settled" under

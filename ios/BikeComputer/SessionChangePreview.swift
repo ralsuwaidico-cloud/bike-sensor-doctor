@@ -140,8 +140,9 @@ struct SessionChangePreviewContent: View {
                         }
                     }
                     alternatives
-                } header: { Text("Can't apply this change") } footer: { Text("Nothing is changed until you pick an option. The session is never relabelled or turned into a different type to make it fit.") }
-                    .accessibilityIdentifier("changeConflict")
+                // run 220: the identifier used to sit on the Section and replaced the identifiers of every row in it
+                // (altKeep, altAllowTime, altEquipment, altDetach were all exposed as "changeConflict")
+                } header: { Text("Can't apply this change").accessibilityIdentifier("changeConflict") } footer: { Text("Nothing is changed until you pick an option. The session is never relabelled or turned into a different type to make it fit.") }
             }
             if !checks.isEmpty {
                 Section("Please check") {
