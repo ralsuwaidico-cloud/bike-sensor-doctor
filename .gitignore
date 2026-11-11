@@ -1,0 +1,5 @@
+build/
+out/
+*.xcodeproj
+CycliftUILab/Info.plist
+.DS_Store

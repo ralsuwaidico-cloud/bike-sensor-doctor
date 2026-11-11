@@ -1,0 +1,26 @@
+# Cyclift UI Lab — prototype build. Lives only on the orphan branch proto/ui-lab, which contains none of the
+# production workflows, so a push here cannot start the iOS release pipeline. Simulator only: no signing, no secrets,
+# no TestFlight. A green run here says nothing about the production app.
+name: UI Lab prototype
+on:
+  push:
+    branches: ["proto/ui-lab"]
+permissions:
+  contents: read
+jobs:
+  prototype:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the prototype and capture screenshots
+        run: bash tools/build_and_shoot.sh
+      - name: Summary
+        if: always()
+        run: cat out/summary.txt >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-lab-out
+          path: out
+          retention-days: 30

@@ -1,0 +1,26 @@
+# Cyclift UI Lab — standalone prototype project. NOT the production app: different bundle id, no signing,
+# no TestFlight, no shared code with ios/BikeComputer.
+name: CycliftUILab
+options:
+  bundleIdPrefix: lab.cyclift
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  CycliftUILab:
+    type: application
+    platform: iOS
+    sources: [CycliftUILab]
+    info:
+      path: CycliftUILab/Info.plist
+      properties:
+        CFBundleDisplayName: UI Lab
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: lab.cyclift.uilab
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGNING_ALLOWED: "NO"
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
