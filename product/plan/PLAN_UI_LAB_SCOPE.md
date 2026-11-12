@@ -1,6 +1,6 @@
 # Plan v2.0 — focused UI Lab implementation plan (for approval)
 
-Status: **Pending Review** · Version 0.2 · 12 Nov 2026 · Level 3
+Status: **Pending Review** · Version 0.3 · 12 Nov 2026 · Level 3
 Source: `docs/cyclift-governance`, `product/plan/PLAN_UI_LAB_SCOPE.md`
 Specification: `product/plan/PLAN_V2_SPECIFICATION.md` v0.6 · visual direction B — Athletic Dynamic (approved 12 Nov).
 
@@ -89,9 +89,52 @@ and is not claimed. Per your preference, CI is checked once per run and reported
 After step 1 (sheet repair result) · after steps 2–6 (first full Plan run) · after steps 7–9. No promotion toward
 production follows from any prototype review.
 
+## 9. Unsaved-change safeguard for Plan editing sheets (approved to document 12 Nov; **not implemented**)
+
+Separate from the Round 1 shared-presenter repair. Nothing here is built; it applies from the first Plan editing
+sheet (step 7 onward) and needs its own approval before code.
+
+**Finding (12 Nov):** no sheet in the prototype holds unsaved edits today, so nothing is bypassed. But the shared
+presenter closes an open sheet unconditionally when a different sheet is requested; an editing sheet with unsaved
+changes would be closed the same way.
+
+**Rule.** An editing sheet tracks whether it has unsaved changes. While it has:
+
+| Attempt to leave | Behaviour |
+|---|---|
+| Swipe down | Blocked; the confirmation is offered |
+| Tap outside | Blocked; the confirmation is offered |
+| Close button | The confirmation is offered |
+| Request to open another sheet | The request is held, not dropped; the confirmation is offered |
+
+The confirmation offers exactly three choices:
+
+| Choice | Effect |
+|---|---|
+| **Save** | The save runs. Only when it has **completed successfully** does the sheet close and any held request proceed. If the save fails, the sheet stays open with its edits, the failure is stated, and the held request stays held |
+| **Discard** | The changes are explicitly abandoned; the sheet closes; any held request proceeds |
+| **Keep editing** | The confirmation closes; the sheet stays; **any held request is cancelled** |
+
+With no unsaved changes, every way of leaving behaves as it does today.
+All four ways of leaving go through one decision point in the presenter, so they cannot behave differently.
+Repeated requests while the confirmation is showing do not stack: the latest replaces the held one.
+
+**Tests required with the implementation**
+
+1. No changes: swipe, outside tap, Close and another-sheet request all leave at once.
+2. Unsaved changes: each of the four ways shows the confirmation and does not close the sheet.
+3. Save succeeds: sheet closes, edits are stored, held request opens.
+4. Save fails: sheet stays open with the edits intact, the failure is shown, held request not opened.
+5. Discard: edits are gone, sheet closes, held request opens.
+6. Keep editing: sheet and edits remain; held request is cancelled and does not open later.
+7. Repeated navigation requests during the confirmation: one confirmation, the latest request held, none lost silently and none duplicated.
+8. Rapid double tap on Save: one save.
+9. The same on the small simulator and at the largest text size.
+
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 12 Nov 2026 | First scope for approval |
 | 0.2 | 12 Nov 2026 | Rewritten for visual direction B; Home v2.3 result and sheet defect recorded; work order prioritising Weekly Calendar and Recurring Plan |
+| 0.3 | 12 Nov 2026 | §9 added: unsaved-change safeguard for future Plan editing sheets (documented only) |
