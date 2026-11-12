@@ -21,6 +21,7 @@ struct CyTrendsGraph: View {
     let onDay: (CyGraphDate, [CyTrendDetailRow]) -> Void
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.cyStaticRender) private var staticRender
     @State private var rangeIndex = 0
     @State private var modeIndex = 0
     @State private var hidden: Set<String> = []          // multi-selection modes: hidden series ids
@@ -290,14 +291,14 @@ struct CyTrendsGraph: View {
                 ZStack(alignment: .topLeading) {
                     // A tap selects a day and a horizontal drag scrubs. The touch layer only claims drags that start
                     // horizontally, so a vertical swipe that starts on the graph scrolls the page as usual.
-                    GraphTouchLayer { px in
+                    if !staticRender { GraphTouchLayer { px in
                         if let x: Double = proxy.value(atX: px - plot.origin.x) {
                             let i = min(max(Int(x.rounded()), 0), max(count - 1, 0))
                             if selected != i { selected = i }
                         }
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
-                    .accessibilityHidden(true)
+                    .accessibilityHidden(true) }
                     ForEach(dates) { d in
                         if let px = proxy.position(forX: Double(d.id)), let text = (big && count <= 7 ? Optional(d.short) : d.axisLabel) {
                             Text(text)
@@ -417,5 +418,14 @@ private struct GraphTouchLayer: UIViewRepresentable {
             let v = p.velocity(in: p.view)
             return abs(v.x) > abs(v.y)       // vertical movement is left to the page scroll
         }
+    }
+}
+
+/// True only while the Lab renders the full-length review image (the image renderer cannot draw UIKit views).
+private struct CyStaticRenderKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    var cyStaticRender: Bool {
+        get { self[CyStaticRenderKey.self] }
+        set { self[CyStaticRenderKey.self] = newValue }
     }
 }

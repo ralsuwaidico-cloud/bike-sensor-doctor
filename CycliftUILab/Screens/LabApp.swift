@@ -203,6 +203,7 @@ struct LabRoot: View {
             .background(theme.background)
             .environment(\.cyTheme, theme)
             .environment(\.colorScheme, theme.scheme)
+            .environment(\.cyStaticRender, true)
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
         renderer.proposedSize = ProposedViewSize(width: width, height: nil)

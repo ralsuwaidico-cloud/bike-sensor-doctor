@@ -1,67 +1,67 @@
 Page,Section,Card,Control,State,Expected behaviour,Actual prototype behaviour and evidence,Issue,Approval status
 Home v2.2,1 Header,Header,Date · athlete type / name,Normal,"Compact, one line each",Unchanged from v2.1 — Visual only (screenshot),,Awaiting owner review
-Home v2.2,1 Header,Header,Avatar,Tap,Opens Profile,Opens the mock profile sheet — T18 not run,,Awaiting owner review
+Home v2.2,1 Header,Header,Avatar,Tap,Opens Profile,"Opens the mock profile sheet — T18 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
 Home v2.2,2 Indicators,Consistency,Ring,Normal,Unchanged concept and visual,"Unchanged (75 %, 3 of 4 in the sample) — Visual only (screenshot)",,Awaiting owner review
-Home v2.2,2 Indicators,Consistency,Ring,Tap,Adherence detail,Opens the Consistency sheet — T01 not run,,Awaiting owner review
+Home v2.2,2 Indicators,Consistency,Ring,Tap,Adherence detail,Opens the Consistency sheet — T01 FAILED on iPhone SE 3rd generation,,Awaiting owner review
 Home v2.2,2 Indicators,Training Mix,Rings,Normal,"Outer = endurance, inner = strength, each completed ÷ planned",Unchanged double ring — Visual only (screenshot),,Awaiting owner review
-Home v2.2,2 Indicators,Training Mix,Centre,Hybrid,"Ratio of completed training time, e.g. 60:40; the word 'Mix' removed",'66:34' from 77 and 40 sample minutes; caption 'Ride : Lift time' — T02 not run,,Awaiting owner review
-Home v2.2,2 Indicators,Training Mix,Centre,Cycling only,100:0,'100:0' — T03 not run,,Awaiting owner review
-Home v2.2,2 Indicators,Training Mix,Centre,Strength only,0:100,'0:100' — T03 not run,,Awaiting owner review
-Home v2.2,2 Indicators,Training Mix,Centre,No completed training,"Unavailable state, not a made-up ratio",'—' and 'No training time yet' — T03 not run,,Awaiting owner review
-Home v2.2,2 Indicators,Training Mix,Centre,Loading,No value,Empty centre — T22 not run,,Awaiting owner review
-Home v2.2,2 Indicators,Training Mix,Indicator,Tap,Sheet explains ratio vs rings; shows planned distribution,"Completed ratio, planned ratio, completed minutes, two explanations, per-discipline progress — T01 not run; T02 not run",,Awaiting owner review
-Home v2.2,2 Indicators,Training Mix,Formula,—,"Minutes only; never kg, watts, distance or session load mixed",Formula stated in the sheet and in the code; recomputed independently by the test — T02 not run,,Awaiting owner review
-Home v2.2,2 Indicators,Recovery,Glyph,Numerical (sample),Heart and three arcs removed; percentage in the centre; clearly marked sample,Single ring with '68%'; caption 'Sample score'; spoken as sample data — T04 not run,,Awaiting owner review
-Home v2.2,2 Indicators,Recovery,Glyph,Qualitative only,"Status word, no percentage (production fallback)","Plain ring with a text icon, 'In your usual range'; no % anywhere — T05 not run",,Awaiting owner review
-Home v2.2,2 Indicators,Recovery,Glyph,Partial data,"Says partial, no percentage","Dashed ring, 'Partial data' — T06 not run",,Awaiting owner review
-Home v2.2,2 Indicators,Recovery,Glyph,Missing,"Says awaiting, no percentage","Dashed ring with a dash, 'Awaiting data' — T06 not run",,Awaiting owner review
-Home v2.2,2 Indicators,Recovery,Sheet,Numerical (sample),"Readings, freshness, guidance, sample marking, not medical clearance","'68% · Sample score', SAMPLE SCORE tag, three readings, 'About the number', 'Not medical advice' — T04 not run",,Awaiting owner review
-Home v2.2,2 Indicators,Recovery,Sheet,Partial / missing,Missing inputs listed; nothing estimated,'Missing today' lists exactly the readings without a value — T06 not run,,Awaiting owner review
-Home v2.2,2 Indicators,All three,Row,Large text,"Separate, readable, usable",Stack as rows; do not overlap; each opens its sheet — T21 not run,,Awaiting owner review
-Home v2.2,3 Getting Started,Setup card,Position,Required step open,"Below the indicators, above the schedule",Measured position between indicators and schedule — T20 not run,,Awaiting owner review
-Home v2.2,3 Getting Started,Setup card,Next step,Tap (complete),Card leaves the top,Card disappears; 'Setup complete' line appears below the key metrics — T20 not run,,Awaiting owner review
-Home v2.2,3 Getting Started,Setup line,Position,Established athlete,Bottom of Home only,Below the last metric row — T20 not run,,Awaiting owner review
+Home v2.2,2 Indicators,Training Mix,Centre,Hybrid,"Ratio of completed training time, e.g. 60:40; the word 'Mix' removed","'66:34' from 77 and 40 sample minutes; caption 'Ride : Lift time' — T02 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Training Mix,Centre,Cycling only,100:0,"'100:0' — T03 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Training Mix,Centre,Strength only,0:100,"'0:100' — T03 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Training Mix,Centre,No completed training,"Unavailable state, not a made-up ratio","'—' and 'No training time yet' — T03 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Training Mix,Centre,Loading,No value,"Empty centre — T22 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Training Mix,Indicator,Tap,Sheet explains ratio vs rings; shows planned distribution,"Completed ratio, planned ratio, completed minutes, two explanations, per-discipline progress — T01 FAILED on iPhone SE 3rd generation; T02 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Training Mix,Formula,—,"Minutes only; never kg, watts, distance or session load mixed","Formula stated in the sheet and in the code; recomputed independently by the test — T02 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Recovery,Glyph,Numerical (sample),Heart and three arcs removed; percentage in the centre; clearly marked sample,"Single ring with '68%'; caption 'Sample score'; spoken as sample data — T04 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Recovery,Glyph,Qualitative only,"Status word, no percentage (production fallback)","Plain ring with a text icon, 'In your usual range'; no % anywhere — T05 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Recovery,Glyph,Partial data,"Says partial, no percentage","Dashed ring, 'Partial data' — T06 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Recovery,Glyph,Missing,"Says awaiting, no percentage","Dashed ring with a dash, 'Awaiting data' — T06 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Recovery,Sheet,Numerical (sample),"Readings, freshness, guidance, sample marking, not medical clearance","'68% · Sample score', SAMPLE SCORE tag, three readings, 'About the number', 'Not medical advice' — T04 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,Recovery,Sheet,Partial / missing,Missing inputs listed; nothing estimated,"'Missing today' lists exactly the readings without a value — T06 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,2 Indicators,All three,Row,Large text,"Separate, readable, usable","Stack as rows; do not overlap; each opens its sheet — T21 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,3 Getting Started,Setup card,Position,Required step open,"Below the indicators, above the schedule","Measured position between indicators and schedule — T20 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,3 Getting Started,Setup card,Next step,Tap (complete),Card leaves the top,"Card disappears; 'Setup complete' line appears below the key metrics — T20 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,3 Getting Started,Setup line,Position,Established athlete,Bottom of Home only,"Below the last metric row — T20 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
 Home v2.2,4 Schedule,Schedule,Session mark,Completed,Clearly separate icon; no circle; no green tick,Coloured icon with a filled dot under it — Visual only (screenshot),,Awaiting owner review
 Home v2.2,4 Schedule,Schedule,Session mark,Planned,Different without colour alone,Muted icon with a hollow dot — Visual only (screenshot),,Awaiting owner review
 Home v2.2,4 Schedule,Schedule,Session mark,Missed,Different without colour alone,Muted icon with a cross — Visual only (screenshot),,Awaiting owner review
 Home v2.2,4 Schedule,Schedule,Session mark,Rescheduled,Different without colour alone,Muted icon with an arrow — Visual only (screenshot),,Awaiting owner review
-Home v2.2,4 Schedule,Schedule,Day cell,Two sessions,"Two separate icons, no overlap, readable on the smallest iPhone",Two icons side by side with their own marks; both spoken with their state — T07 not run,Owner to judge legibility on iPhone SE from the screenshot,Awaiting owner review
-Home v2.2,4 Schedule,Schedule,Day cell,Rest day,Subtle,Small moon; spoken 'Rest day' — T07 not run,,Awaiting owner review
-Home v2.2,4 Schedule,Schedule,Day cell,Tap (each of 7 days),Opens that day,Each day opens the sheet titled with its own date — T07 not run,,Awaiting owner review
+Home v2.2,4 Schedule,Schedule,Day cell,Two sessions,"Two separate icons, no overlap, readable on the smallest iPhone","Two icons side by side with their own marks; both spoken with their state — T07 passed (iPhone 17, iPhone SE 3rd generation simulator)",Owner to judge legibility on iPhone SE from the screenshot,Awaiting owner review
+Home v2.2,4 Schedule,Schedule,Day cell,Rest day,Subtle,"Small moon; spoken 'Rest day' — T07 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,4 Schedule,Schedule,Day cell,Tap (each of 7 days),Opens that day,"Each day opens the sheet titled with its own date — T07 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
 Home v2.2,5 Sport cards,Endurance / Strength,Card,Normal,"Near approval: no sparklines; duration, bar, one metric",Unchanged from v2.1 — Visual only (screenshot),,Awaiting owner review
 Home v2.2,5 Sport cards,Endurance / Strength,Card,Tap,Detail sheet,Opens the discipline sheet (launch option screenshots) — Visual only (screenshot),,Awaiting owner review
-Home v2.2,6 Sleep,Sleep bar,Row,Normal,"Readable: last night, 7-day average, target; each labelled","'7h 10m last night', bar, '7-day avg 7h 02m', 'Sample target 8h 00m' — T08 not run",,Awaiting owner review
-Home v2.2,6 Sleep,Sleep bar,Row,No sleep source,Truthful empty state,'No sleep recorded'; sheet says 'No record' — T08 not run,,Awaiting owner review
+Home v2.2,6 Sleep,Sleep bar,Row,Normal,"Readable: last night, 7-day average, target; each labelled","'7h 10m last night', bar, '7-day avg 7h 02m', 'Sample target 8h 00m' — T08 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,6 Sleep,Sleep bar,Row,No sleep source,Truthful empty state,"'No sleep recorded'; sheet says 'No record' — T08 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
 Home v2.2,6 Sleep,Sleep sheet,Explanation,—,Distinguish last night / average / target / recommendation; no new algorithm,'Four different things' block; target source stated; no recommendation is shown — Visual only (screenshot),,Awaiting owner review
 Home v2.2,7 Coach,Coach banner,Text,Suggestion,Observation → Recommendation → Action,"Observation line, bold recommendation, then Review / Not now — Visual only (screenshot)",,Awaiting owner review
-Home v2.2,7 Coach,Coach banner,Why?,Tap,Explanation,Opens 'Why this suggestion?' — T09 not run,,Awaiting owner review
-Home v2.2,7 Coach,Coach banner,Review,Tap,Review sheet with three outcomes,Opens the review sheet with Approve / Not now / Decline — T09 not run,,Awaiting owner review
-Home v2.2,7 Coach,Coach banner,Not now,Tap,"Postpone, not decline",'Postponed — still waiting'; Review stays — T09 not run,,Awaiting owner review
-Home v2.2,7 Coach,Review sheet,Approve,Tap,Accepted; sheet closes,'Accepted' note; actions removed; sheet gone — T10 not run,,Awaiting owner review
-Home v2.2,7 Coach,Review sheet,Decline,Tap,Declined,'Declined' note; actions removed — T10 not run,,Awaiting owner review
-Home v2.2,7 Coach,Review sheet,Not now,Tap,Postponed,'Postponed' note; Review stays — T09 not run,,Awaiting owner review
+Home v2.2,7 Coach,Coach banner,Why?,Tap,Explanation,"Opens 'Why this suggestion?' — T09 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,7 Coach,Coach banner,Review,Tap,Review sheet with three outcomes,"Opens the review sheet with Approve / Not now / Decline — T09 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,7 Coach,Coach banner,Not now,Tap,"Postpone, not decline","'Postponed — still waiting'; Review stays — T09 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,7 Coach,Review sheet,Approve,Tap,Accepted; sheet closes,"'Accepted' note; actions removed; sheet gone — T10 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,7 Coach,Review sheet,Decline,Tap,Declined,"'Declined' note; actions removed — T10 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,7 Coach,Review sheet,Not now,Tap,Postponed,"'Postponed' note; Review stays — T09 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
 Home v2.2,7 Coach,Coach banner,Label,Any,Truthfully rule-based,'rules-based' tag — Visual only (screenshot),,Awaiting owner review
 Home v2.2,8 Trends,Graph,Chart type,Normal,Multi-series line graph with point markers (bar chart replaced),Lines with a point per measurement — Visual only (screenshot),,Awaiting owner review
-Home v2.2,8 Trends,Graph,View A,Training & Recovery,Load + recovery % (sample only) on separate labelled scales,"Left scale 'Training load (RPE×min)', right scale 'Recovery (% · sample)' — T11 not run",,Awaiting owner review
-Home v2.2,8 Trends,Graph,View B,Training activity,"Endurance, strength, planned minutes",Three series on one minutes scale; planned dashed — T14 not run,,Awaiting owner review
-Home v2.2,8 Trends,Graph,View C,Recovery trends,"RHR, HRV, sleep with metric selection","One metric at a time, each in its own unit — T14 not run",,Awaiting owner review
-Home v2.2,8 Trends,Graph,Day,Tap,Selects the day; exact date and values,"Vertical guide, enlarged points, panel with date and each value — T11 not run",,Awaiting owner review
-Home v2.2,8 Trends,Graph,Day,Drag (scrub),Selection follows the finger,Selection follows a drag in both directions — T12 not run,,Awaiting owner review
-Home v2.2,8 Trends,Graph,Page scroll,Vertical swipe over the graph,Page still scrolls,Page scrolls — T13 not run,,Awaiting owner review
-Home v2.2,8 Trends,Graph,Missing day,Any view,Gap; no interpolation; says missing,Line breaks; panel says 'No data' — T11 not run; T15 not run,,Awaiting owner review
-Home v2.2,8 Trends,Graph,Series chips,Tap,Show / hide a series; last one stays,Hidden series leaves the graph and the panel; last visible series cannot be hidden — T14 not run,,Awaiting owner review
-Home v2.2,8 Trends,Graph,Range,7 days / 4 weeks,Switches range; selection cleared,"7 days = 7 points, 4 weeks = 28 points; selection cleared on switch — T15 not run",,Awaiting owner review
-Home v2.2,8 Trends,Graph,Open day,Tap,Daily sheet for the selected date,"Sheet titled with the date, listing that day's values — T11 not run",,Awaiting owner review
-Home v2.2,8 Trends,Graph,Info,Tap,Methodology,"'How Trends works' with views, scales, missing days, sample note, sources — T16 not run",,Awaiting owner review
-Home v2.2,8 Trends,Graph,Empty,New athlete / no recovery source,Truthful empty state,Empty text instead of a graph — T16 not run,,Awaiting owner review
+Home v2.2,8 Trends,Graph,View A,Training & Recovery,Load + recovery % (sample only) on separate labelled scales,"Left scale 'Training load (RPE×min)', right scale 'Recovery (% · sample)' — T11 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,View B,Training activity,"Endurance, strength, planned minutes","Three series on one minutes scale; planned dashed — T14 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,View C,Recovery trends,"RHR, HRV, sleep with metric selection","One metric at a time, each in its own unit — T14 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Day,Tap,Selects the day; exact date and values,"Vertical guide, enlarged points, panel with date and each value — T11 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Day,Drag (scrub),Selection follows the finger,"Selection follows a drag in both directions — T12 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Page scroll,Vertical swipe over the graph,Page still scrolls,"Page scrolls — T13 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Missing day,Any view,Gap; no interpolation; says missing,"Line breaks; panel says 'No data' — T11 passed (iPhone 17, iPhone SE 3rd generation simulator); T15 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Series chips,Tap,Show / hide a series; last one stays,"Hidden series leaves the graph and the panel; last visible series cannot be hidden — T14 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Range,7 days / 4 weeks,Switches range; selection cleared,"7 days = 7 points, 4 weeks = 28 points; selection cleared on switch — T15 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Open day,Tap,Daily sheet for the selected date,"Sheet titled with the date, listing that day's values — T11 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Info,Tap,Methodology,"'How Trends works' with views, scales, missing days, sample note, sources — T16 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,8 Trends,Graph,Empty,New athlete / no recovery source,Truthful empty state,"Empty text instead of a graph — T16 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
 Home v2.2,8 Trends,Graph,Stress / strain score,—,None,None present — Visual only (screenshot),,Awaiting owner review
 Home v2.2,9 Key metrics,Metric rows,Layout,Normal,"Rows (approved direction), neutral direction markers","Rows with icon, name, value, unit, baseline, marker, chevron; grid removed — Visual only (screenshot)",,Awaiting owner review
-Home v2.2,9 Key metrics,Metric rows,Weekly load,Normal,"Documented unit, no arbitrary points","'561 RPE×min' with '4-wk avg 1,291' — T17 not run",,Awaiting owner review
-Home v2.2,9 Key metrics,Metric rows,Row,Tap (each of 6),Metric detail,Each row opens the sheet with its own title — T17 not run,,Awaiting owner review
+Home v2.2,9 Key metrics,Metric rows,Weekly load,Normal,"Documented unit, no arbitrary points","'561 RPE×min' with '4-wk avg 1,291' — T17 FAILED on iPhone SE 3rd generation",,Awaiting owner review
+Home v2.2,9 Key metrics,Metric rows,Row,Tap (each of 6),Metric detail,Each row opens the sheet with its own title — T17 FAILED on iPhone SE 3rd generation,,Awaiting owner review
 Home v2.2,9 Key metrics,Metric rows,Row,Missing,"'No data', never zero",Shown in the no-recovery and new-athlete scenarios — Visual only (screenshot),,Awaiting owner review
-Home v2.2,Navigation,Floating dock,Destinations,Tap,Switches destination,"Home, Plan, Progress, Profile switch; Train now opens its sheet — T18 not run",,Awaiting owner review
-Home v2.2,Navigation,Floating dock,Dock,End of page,Never covers the final rows,Last metric row and the final line end above the dock; last row can be tapped — T19 not run,,Awaiting owner review
-Home v2.2,States,Whole screen,Loading,—,No default values,"No ratio, no percentage, no graph, no coach actions — T22 not run",,Awaiting owner review
+Home v2.2,Navigation,Floating dock,Destinations,Tap,Switches destination,"Home, Plan, Progress, Profile switch; Train now opens its sheet — T18 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,Navigation,Floating dock,Dock,End of page,Never covers the final rows,"Last metric row and the final line end above the dock; last row can be tapped — T19 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
+Home v2.2,States,Whole screen,Loading,—,No default values,"No ratio, no percentage, no graph, no coach actions — T22 passed (iPhone 17, iPhone SE 3rd generation simulator)",,Awaiting owner review
 Home v2.2,Themes,Whole screen,Obsidian,Normal,Six themes only; meanings unchanged; selective gradients (flat in High Contrast),Screenshots captured; token contrast check passed — Visual only (screenshot),,Awaiting owner review
 Home v2.2,Themes,Whole screen,Arctic,Normal,Six themes only; meanings unchanged; selective gradients (flat in High Contrast),Screenshots captured; token contrast check passed — Visual only (screenshot),,Awaiting owner review
 Home v2.2,Themes,Whole screen,Ocean,Normal,Six themes only; meanings unchanged; selective gradients (flat in High Contrast),Screenshots captured; token contrast check passed — Visual only (screenshot),,Awaiting owner review

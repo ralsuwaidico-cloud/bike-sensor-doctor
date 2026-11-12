@@ -1,4 +1,4 @@
-# Cyclift UI Lab (prototype)
+# Cyclift UI Lab — isolated prototype (currently Home v2.2)
 
 An isolated SwiftUI prototype of the Cyclift interface library and the Home v2 screen.
 

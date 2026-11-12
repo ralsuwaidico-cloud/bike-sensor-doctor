@@ -34,6 +34,8 @@ note "Runtime: $RT · standard: ${STD#*|} · small: ${SMALL#*|}"
 
 shoot() { # udid name env…
   local U="$1" NAME="$2"; shift 2
+  # "[full-only]" in the commit subject: only the full-length review images are regenerated (no tests, no screen shots)
+  if [ -n "$FULL_ONLY" ] && [ "$NAME" != "zz-render-tmp" ] && [ "${NAME#warmup}" = "$NAME" ]; then return; fi
   local ENVV=(); for kv in "$@"; do ENVV+=("SIMCTL_CHILD_$kv"); done
   xcrun simctl terminate "$U" "$BID" >/dev/null 2>&1
   env "${ENVV[@]}" xcrun simctl launch "$U" "$BID" >/dev/null 2>&1 || { note "launch failed: $NAME"; return; }
@@ -86,8 +88,10 @@ runtests() { # udid label
   # keep the tail of the raw log small enough to publish
   tail -c 400000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 }
-[ -n "$STD" ] && runtests "${STD%|*}" standard "${STD#*|}"
-[ -n "$SMALL" ] && runtests "${SMALL%|*}" small "${SMALL#*|}"
+FULL_ONLY=""; git log -1 --format=%s 2>/dev/null | grep -q "\[full-only\]" && FULL_ONLY=1
+[ -n "$FULL_ONLY" ] && { note "FULL-ONLY run: interaction tests and screen captures were skipped on purpose; see the previous run for them"; echo "Not run in this full-only build." >> "$TESTS"; }
+[ -z "$FULL_ONLY" ] && [ -n "$STD" ] && runtests "${STD%|*}" standard "${STD#*|}"
+[ -z "$FULL_ONLY" ] && [ -n "$SMALL" ] && runtests "${SMALL%|*}" small "${SMALL#*|}"
 
 if [ -n "$STD" ]; then
   U="${STD%|*}"; prep "$U"
