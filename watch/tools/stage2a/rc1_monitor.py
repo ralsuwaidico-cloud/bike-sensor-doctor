@@ -5,7 +5,7 @@
 # 'u' (perf + heap, every 30 s) and 'M' (memory + stacks, every 5 min).
 # Output (Documents\Cyclift_Stage2a\rc1_results): monitor_<time>.txt (every line, timestamped) and monitor_status.txt
 # (heartbeat every 2 s: alive, bytes received, boots seen, last reset reason, last heap). Stops when the file STOP
-# exists in that folder, or after 120 minutes.
+# exists in that folder, or after the time limit (default 240 minutes).
 import os, sys, time, datetime, re, json, subprocess
 OUT = os.path.join(os.path.expanduser('~'), 'Documents', 'Cyclift_Stage2a', 'rc1_results')
 TOOLS = os.path.join(os.path.expanduser('~'), 'Documents', 'Cyclift_Stage2a', 'tools')
@@ -14,14 +14,14 @@ STATUS = os.path.join(OUT, 'monitor_status.txt')
 _PRIVATE = re.compile(r'MAC|mac:|[0-9a-f]{2}(:[0-9a-f]{2}){5}', re.I)
 EVENTS = re.compile(r'rst:0x|Brownout|brownout|Guru Meditation|Backtrace|abort\(\)|panic|watchdog|wdt|Stack canary|'
                     r'LoadProhibited|StoreProhibited|IllegalInstruction|assert|Cyclift v3|key1|key2|lap|ride|swipe|tap', re.I)
-MAX_MIN = 120
+MAX_MIN = 240
 
 
 def now():
     return datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
 
 
-def run():
+def run(minutes=MAX_MIN):
     os.makedirs(OUT, exist_ok=True)
     if os.path.exists(STOP):
         os.remove(STOP)
@@ -30,7 +30,7 @@ def run():
     tr = ds.RealTransport('COM4')
     path = os.path.join(OUT, 'monitor_%s.txt' % datetime.datetime.now().strftime('%Y%m%d_%H%M%S'))
     f = open(path, 'a', encoding='utf-8', errors='replace')
-    st = {'file': os.path.basename(path), 'started': now(), 'alive': True, 'bytes': 0, 'lines': 0, 'boots': 0,
+    st = {'file': os.path.basename(path), 'started': now(), 'limit_min': minutes, 'alive': True, 'bytes': 0, 'lines': 0, 'boots': 0,
           'reset_lines': [], 'events': [], 'last_rx': None, 'last_heap': None, 'port_errors': 0, 'state': 'opening'}
 
     def w(line):
@@ -46,7 +46,7 @@ def run():
 
     w('=== monitor start (read-only; DTR/RTS released; sends only u every 30 s and M every 5 min) ===')
     t0 = time.time(); s = None; buf = b''; next_u = t0 + 3; next_m = t0 + 10; next_st = 0
-    while not os.path.exists(STOP) and time.time() - t0 < MAX_MIN * 60:
+    while not os.path.exists(STOP) and time.time() - t0 < minutes * 60:
         try:
             if s is None:
                 s = tr.open_serial(); s.dtr = False; s.rts = False
@@ -93,11 +93,12 @@ def run():
     st['alive'] = False; st['state'] = 'stopped'; status(); f.close()
 
 
-def start_monitor():
+def start_monitor(minutes=MAX_MIN):
     """From IDLE: starts this file as a separate background process and returns at once."""
+    os.makedirs(OUT, exist_ok=True)
     exe = sys.executable
     flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-    p = subprocess.Popen([exe, os.path.join(TOOLS, 'rc1_monitor.py'), 'run'], creationflags=flags,
+    p = subprocess.Popen([exe, os.path.join(TOOLS, 'rc1_monitor.py'), 'run', str(int(minutes))], creationflags=flags,
                          stdout=subprocess.DEVNULL, stderr=open(os.path.join(OUT, 'monitor_errors.txt'), 'a'))
     print('monitor started, process', p.pid, '- status file:', STATUS)
     return p
@@ -108,4 +109,4 @@ def stop_monitor():
 
 
 if __name__ == '__main__' and len(sys.argv) > 1 and sys.argv[1] == 'run':
-    run()
+    run(int(sys.argv[2]) if len(sys.argv) > 2 else MAX_MIN)
