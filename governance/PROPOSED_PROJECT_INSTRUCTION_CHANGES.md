@@ -1,7 +1,7 @@
 # Proposed changes to the Master Project Instructions (v2.0) — exact before and after
 
-Status: Current Draft · Version 0.2 · 12 Nov 2026
-**Proposals only. The Project Instructions were not changed and will not be changed by me.**
+Status: Current Draft · Version 0.3 · 12 Nov 2026 · **Approved in principle by the owner (12 Nov); Change 4 refined as instructed.**
+**The Project Instructions were not changed and will not be changed by me — the owner applies these edits in Project Settings.**
 "Before" is quoted from the Instructions as they stand. Every existing safeguard is kept; where a sentence carrying a
 safeguard is reworded, the safeguard is repeated in the "after" text and named in the last line of the item.
 
@@ -108,7 +108,9 @@ Safeguard kept: a prototype is not production until separately accepted.
 
 > The repository and approved project documentation are the authoritative records of implementation.
 >
-> Authoritative documentation is version-controlled in GitHub on an isolated documentation branch. Copies in Claude Project Knowledge are reference copies; each identifies its source, version and last synchronization date. Independently edited versions of the same specification must not be maintained.
+> Authoritative documentation is version-controlled in GitHub through an approved isolated documentation workflow, kept separate from release branches. Copies in Claude Project Knowledge are reference copies; each identifies its source, version and last synchronization date. Independently edited versions of the same specification must not be maintained.
+
+Refined in v0.3: the text names "an approved isolated documentation workflow" instead of a particular branch form, so it does not permanently require an orphan branch.
 
 Nothing removed.
 

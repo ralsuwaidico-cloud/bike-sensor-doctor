@@ -1,7 +1,7 @@
 # Cyclift Brand Book
 
-Status: **Current Draft** · Version 0.2 · 12 Nov 2026 · Level 2 (below the Project Instructions, above product specifications)
-**Not Current Approved.** The owner approved parts of v0.1 on 12 Nov (listed below); the book as a whole stays a draft until the owner approves a revised version explicitly.
+Status: **Current Approved — current design baseline** · Version 0.2 · approved by the owner 12 Nov 2026 · Level 2 (below the Project Instructions, above product specifications)
+**Approved as the baseline, with the unresolved items in §15 remaining explicitly provisional.** Approval of this book does **not** approve unresolved theme values, any token change, or any production migration.
 Source: `docs/cyclift-governance` branch, `brand/CYCLIFT_BRAND_BOOK.md`
 
 How to read this book: every rule is marked **[Instructions]** (taken from the Master Project Instructions v2.0),
@@ -22,6 +22,8 @@ this draft, awaiting approval). No token value in this book was invented: each t
 | §5 Grading rule | Approved rule (decision 2); the listed thresholds remain flagged, none approved |
 | §4 theme token tables | Factual extracts; the six themes remain prototype-only |
 | §6 Typography · §7 Spacing, radii | **Provisional** — unification waits for an assessment of the existing component systems |
+| Status vs discipline colour values | **Provisional** — must be made visually distinguishable in a future theme refinement; no token change is authorised now |
+| Watch theme values · production migration to six themes or to the discipline direction | **Not approved** |
 | Logo, wordmark, app icon | **Open design items** — nothing defined |
 | §8 Components · §10 Accessibility · §13–14 | Draft, not yet reviewed individually |
 
@@ -272,7 +274,7 @@ identity and interfaces are not copied. No claim of superiority without evidence
 | # | Item | Owner of the next step |
 |---|---|---|
 | 1 | Watch token values for the six themes (register 13) | Hardware-design workstream |
-| 2 | Recovery vs success share one value in three themes; strength vs warning are close in all six (§4.5) — acceptable, or should status values be separated? | Owner decision; no token is changed here |
+| 2 | Recovery vs success share one value in three themes; strength vs warning are close in all six (§4.5). **Decided 12 Nov: they must be visually distinguishable in a future theme refinement.** Does not block Plan; no token change authorised now | Future theme refinement (not scheduled) |
 | 3 | Which earlier grading thresholds, if any, are approved (§5) | Owner review, rule by rule |
 | 4 | Typography, spacing and radius unification (§6, §7) | After the component-system assessment |
 | 5 | Logo, wordmark and app icon — no source document exists | Open design items |
@@ -284,4 +286,5 @@ identity and interfaces are not copied. No claim of superiority without evidence
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 12 Nov 2026 | First draft |
+| 0.2 (status change) | 12 Nov 2026 | Approved by the owner as the current design baseline; unresolved items stay provisional; status / discipline distinguishability recorded as a future refinement |
 | 0.2 | 12 Nov 2026 | Owner decisions recorded: approved parts table; discipline colour direction (§4.5); typography, spacing and radii marked provisional; logo and icon kept open; unresolved list updated |
