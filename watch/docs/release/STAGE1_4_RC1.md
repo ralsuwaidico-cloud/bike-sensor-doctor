@@ -1,4 +1,4 @@
-# Stage 1.4 RC1 — button system (offline candidate, 12 Nov 2026)
+# Stage 1.4 RC1 — button system (offline candidate, 12 Nov 2026) — design APPROVED 16:37; install NOT approved
 
 Status: **built and tested on the computer only. Not installed. Nothing flashed.** The watch still runs Stage 1.3 RC1
 (4ea0ea90…). Installing needs the owner's separate approval naming the fingerprint below.
@@ -10,7 +10,7 @@ RC2 (clock fix D6, charge-pin debounce, reset reason, rebuild-cause log). RC2 (8
 | | |
 |---|---|
 | Candidate name | `cyclift-stage1.4-rc1-v3poc-T-Watch-2021-V1_1.bin` |
-| Fingerprint | set from the first green CI build of commit 3a8d4e3 (see "Pin" below) |
+| Fingerprint | `f995c5383e60a3331fdc0a0f8aebeefc96f9ec791caceb655b01219dd0d2a076` (1,253,264 B; §8) |
 | Boot banner | `Cyclift v3 proof of concept · Stage 1.4 RC1 (button system; …)` |
 | Install method (when approved) | the reviewed app1-only update (`cy_update_s14.py`, same structure as the RC1 update): one write at 0x400000, no bootloader / partition / OTA-record / factory change; rollback = installed RC1 |
 
@@ -47,7 +47,7 @@ the Pause button (that button cannot be tapped while locked). Full per-screen ta
   redraw. Cause: LVGL draws updates in horizontal strips and skips a label whose line box ends above the strip. The label now
   draws itself in that case. Single-line Arabic labels are covered; multi-line Arabic paragraphs are not (no case found).
 
-## 3. Design choices made during implementation (please review)
+## 3. Design choices made during implementation (approved by the owner 12 Nov 16:37, with the new wording)
 
 | # | Choice | Why |
 |---|---|---|
@@ -70,7 +70,7 @@ New wording (English / Arabic), owner review needed: "Ride ended", "LOCKED · HO
 | Test | Result |
 |---|---|
 | `test_keys` — decoder: debounce, bounce, short/hold/2 s hold, 0.99 s short, combination fire / cancel at 0.3, 2.5 and 9.9 s, late second key, ambiguous overlap, L2 + R2 not a combination, R2 during the combination, determinism | 19 checks, 0 failures |
-| `test_buttons` — raw button levels every 10 ms through the watch path: select / back / next, Controls (EN + AR), Pause / Resume / Lap on every page, End request, Cancel, End with phone lost, touch lock (buttons work, touches ignored), restart outside and during a ride, no leaks after a combination, R2 harmless in a ride, 2 × 60 000 random sequences (incl. bounce), determinism | 114 checks, 0 failures; random runs: 0 rides ended outside the confirmation, 0 restarts outside the 10 s combination / warning |
+| `test_buttons` — raw button levels every 10 ms through the watch path: select / back / next, Controls (EN + AR), Pause / Resume / Lap on every page, End request, Cancel, End with phone lost, touch lock (buttons work, touches ignored), restart outside and during a ride, no leaks after a combination, R2 harmless in a ride, 2 × 60 000 random sequences (incl. bounce), determinism | 154 checks, 0 failures (incl. the owner's 6-point "protect workout controls" checklist: combination cancels an armed lap and navigation; a held button never also gives a short press; chattering presses count once — two give exactly one lap; no single press / hold / pair of any length ends a ride; lock never blocks pause / lap / page / End request; ride restart warns first with Cancel highlighted); random runs: 0 rides ended outside the confirmation, 0 restarts outside the 10 s combination / warning |
 | `test_nav` — every screen × every input × EN / AR × ride / no ride, 200 000 random inputs | 542 checks, 0 failures |
 | `test_model` | 1,840 checks, 0 failures |
 | Rendering — 1,201 screen states (6 themes × EN / AR × 3 densities incl. all new screens), glyphs, fit, clipping, overlap, circle, 44 px touch targets, contrast ≥ 3:1, touch navigation, 30 000-input soak | 0 open findings |
@@ -91,26 +91,60 @@ reproducible-build check run in CI (not available on this computer).
 - D7 (unexplained restarts): the 11:17 recording shows three POWER-ON resets while the watch was handled; this points to the
   reset button / power path, not a firmware crash. The G1 / G11 physical check will confirm or rule this out.
 
-## 6. Consolidated physical acceptance test (proposed; needs approval to install first)
+## 6. Before installation: button identification on the installed RC1 (≈ 3 min, no install)
 
-1. Recorder on (as today). Install Stage 1.4 RC1 with the app1-only update (one write; RC1 kept for rollback).
-2. Identification: press L1, L2, R2 once each → the log shows `key: L1 short`, `key: L2 short`, `key: R2 short`.
-3. Face → R2 ×4 (widgets round), L1 (menu, first row highlighted), R2 (highlight moves), L1 (opens), L2 (back), hold L2 (face).
-4. Hold L1 1 s → Quick Settings; R2 to "Screen lock", L1 → locked: try a tap (ignored) and L1 (menu opens); hold R2 → unlocked.
-5. Start the simulated ride. L1 → Controls with Pause highlighted; L1 → paused. L1, L1 → resumed.
-6. L2, L2 quickly → lap. R2 → Power page, R2 → Heart rate, R2 → Cadence, R2 → cockpit.
-7. Hold L1: ring fills; release at ~1 s → nothing. Hold 2 s → "End workout?" with Cancel highlighted; L2 → back to the ride.
-8. Hold R2 (lock) during the ride: L1 L1 still pauses / resumes; hold R2 again to unlock.
-9. With the ride running, hold L1 + L2: countdown; release at ~5 s → cancelled. Hold 10 s → warning; L1 (Cancel) → ride.
-10. End the ride: hold L1 2 s, R2 to End, L1 → "Ride ended".
-11. No ride: hold L1 + L2 10 s → the watch restarts after release; the log shows `restart cause: user restart (L1 + L2 held 10 s)`.
-12. G11: while holding the watch as on the bike, press L1 firmly 10 times → the log must show no `rst:` line.
-13. Arabic and Large Text: repeat steps 3, 5 and 7 once.
+RC1 prints `key1` / `key2` in the running recording (the read-only monitor holds COM4 until ~19:11). RC1 cannot see R2, so
+R2 is identified by "nothing happens". The reset button is **not** pressed on purpose: it is identified as the one left.
 
-Pass = every step as described, no unexplained restart in the recording.
+| # | Owner does | Expected in the log | Records |
+|---|---|---|---|
+| I1 | Face the screen. Press the **left upper** button once | one `key1`; the menu opens | L1 location |
+| I2 | Press the **left lower** button once | one `key2`; back to the face | L2 location |
+| I3 | Press the **right lower** button once, gently | no key line, **no `rst:` line**, screen unchanged | R2 location (if the watch restarts instead, this is the reset button: stop and report) |
+| I4 | Look only (do not press) at the **right upper** button: sunken, flush or sticking out? | — | reset button location and shape |
+| I5 | Hold the watch as on the wrist / bike and press the left upper button firmly 10 times, at a normal pace | ten `key1`, **no `rst:`** | whether L1 operation presses the reset button |
 
-## 7. Pin
+Pass: I1–I3 as expected, I5 = 10 `key1` and 0 `rst:`. Any `rst:` during I5 = reset contact by L1 operation → reported
+before installation (affects the design, not the firmware). I analyse the recording; the owner only reports what he saw.
 
-The candidate is renamed for this build. After the first green CI run its V1_1 fingerprint goes into
-`releases/stage1.4-rc1.sha256` and into `cy_update_s14.py` / `cy_recover_b.py` (both refuse to run until then). Any later
-firmware change needs a new candidate name.
+## 7. Consolidated hardware acceptance session (after separate install approval; ≈ 35 min)
+
+Install: app1-only update `cy_update_s14.py` (s14_pre → s14_write → s14_post), one write 0x400000–0x531FFF (1,253,376 B),
+verified, boot banner "Stage 1.4 RC1". Rollback = s14_rollback → RC1 (4ea0ea90…). Recording runs throughout; every key is
+logged (`key: L1 short (… ms)`), and the start log shows the reset reason.
+
+| # | Area | Owner does | Pass when |
+|---|---|---|---|
+| A1 | Button identification | L1, L2, R2 once each | log shows `key: L1 short`, `key: L2 short`, `key: R2 short` |
+| A2 | Clock | clock set from the PC (`T`), look at the face | time and date shown; "NOT SYNCED" only for data |
+| A3 | Menu + highlight | Face → L1 (menu, first row highlighted) → R2 ×3 (highlight moves, list scrolls) → L1 (opens) → L2 (back) → hold L2 (face) | highlight always visible and moves one row per press |
+| A4 | Widgets / Today | Face → R2 ×4 (round the widgets); swipe up → Today → R2 (Week) → L2 | as described |
+| A5 | Quick Settings + lock | hold L1 1 s → Quick Settings → R2 to "Screen lock" → L1 → tap the screen (ignored) → L1 (menu opens) → hold R2 (unlocked) | touches ignored, buttons work, chip "LOCKED · HOLD NEXT" |
+| A6 | Ride start | menu → Activities (simulated ride) | cockpit, "Simulated ride" marker |
+| A7 | Pause / Resume | L1 (Controls, Pause highlighted) → L1 (paused) → L1, L1 (resumed) | each confirmed on screen |
+| A8 | Lap | L2, L2 quickly; then L2 once and wait 3 s | one lap; the single press does nothing |
+| A9 | Ride data pages | R2 ×4 | Power → Heart rate → Cadence → cockpit, dots show the page |
+| A10 | End: cancel | hold L1: release at ~1 s (nothing) · hold 2 s → "End workout?" (Cancel highlighted) → L2 | ride continues |
+| A11 | Lock during the ride | hold R2 → L1, L1 (pause) → L1, L1 (resume) → L2, L2 (lap) → hold R2 (unlock) | all work while locked |
+| A12 | Restart shortcut: cancel only | during the ride hold L1 + L2 → countdown → release at ~5 s | "Restart in N" shown, cancelled, ride continues, no lap / menu leaked. **No restart is executed during the ride.** |
+| A13 | End: confirm | hold L1 2 s → R2 (End) → L1 | "Ride ended · iPhone keeps the record", face |
+| A14 | Arabic | language Arabic; repeat A3, A7, A10 briefly | right-to-left, labels complete, highlight correct |
+| A15 | Large Text | Large Text on; open Controls (list form), A10 | list readable, highlight visible |
+| A16 | Restart shortcut, no ride (optional) | with no ride: hold L1 + L2 10 s, release | one restart after release; log `restart cause: user restart (L1 + L2 held 10 s)` |
+| A17 | Monitoring | — (automatic) | no unexplained `rst:` line; heap flat |
+
+Stop rule: any ride ended or restarted without confirmation, a button that acts twice, or an unexplained restart → stop
+and report; no extended diagnostics unless the fault repeats.
+
+## 8. Fingerprint (recorded 12 Nov 2026 16:40 Dubai)
+
+| | |
+|---|---|
+| File | `cyclift-stage1.4-rc1-v3poc-T-Watch-2021-V1_1.bin` |
+| Size | 1,253,264 B |
+| SHA-256 | `f995c5383e60a3331fdc0a0f8aebeefc96f9ec791caceb655b01219dd0d2a076` |
+| Built from | commit 3a8d4e3 (CI 43193189780) and again from 5b4c2a5 (docs only; CI 43193637056) — same file |
+| Reproducible | each run: two clean builds and the published file byte-identical (reproducible-build job) |
+| Integrity | ESP image header DIO / 8 MB / 40 MHz; 6 segments; checksum OK; appended SHA-256 OK; image length = file length; fits the 3 MB slot; banner "Stage 1.4 RC1" |
+| Pinned in | `releases/stage1.4-rc1.sha256`, `cy_update_s14.py`, `cy_recover_b.py` (install simulation checks all three agree) |
+| Install span | 0x400000–0x531FFF (1,253,376 B), app1 only; ends far below the Cyclift settings area 0x700000; first 4 MB untouched |

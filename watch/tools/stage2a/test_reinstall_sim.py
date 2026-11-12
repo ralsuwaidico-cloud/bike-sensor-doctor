@@ -449,13 +449,17 @@ g = load_s14(); g['phase']('s14_pre')
 check(g['phase']('s14_write') is False and STATE['mode'] == 'running', 'Stage 1.4 update with a verify failure: phase fails, watch restarted')
 STATE['verify_fault'] = None
 FL[:] = AFTER_S13
-g3 = load_s14(); g3['FW14_SHA'] = 'PIN-AFTER-CI'
-check(g3['phase']('s14_pre') is False, 'Stage 1.4 pre-check refuses everything while the tool is not pinned (as shipped today)')
+g3 = load_s14(); g3['FW14_SHA'] = '0' * 64
+check(g3['phase']('s14_pre') is False, 'Stage 1.4 pre-check refuses a file whose fingerprint is not the pinned one')
 FL[:] = AFTER_S11
 check(load_s14()['phase']('s14_pre') is False, 'Stage 1.4 pre-check refuses a watch that does not run RC1')
 src14 = open(os.path.join(HERE, 'pc_update_s14_runner.py'), encoding='utf-8').read()
-check("FW14_SHA = 'PIN-AFTER-CI'" in src14 and 'stage1.4-rc1-v3poc-T-Watch-2021-V1_1.bin' in src14,
-      'Stage 1.4 runner ships UNPINNED (refuses to run until the CI fingerprint is written in)')
+PIN14 = open(os.path.join(HERE, '..', '..', 'firmware', 'releases', 'stage1.4-rc1.sha256')).read().strip()
+check("FW14_SHA = '%s'" % PIN14 in src14 and "FW14_SHA = '%s'" % PIN14 in open(os.path.join(HERE, 'pc_recovery_b_runner.py'), encoding='utf-8').read(),
+      'Stage 1.4 runner and Recovery B pinned to releases/stage1.4-rc1.sha256 (%s…)' % PIN14[:8])
+REAL14 = 1253264; SPAN14R = (max(1194112, REAL14) + 0xFFF) & ~0xFFF
+check(SPAN14R == 1253376 and 0x400000 + SPAN14R - 1 == 0x531FFF and 0x400000 + SPAN14R <= 0x700000,
+      'real Stage 1.4 image: one write 0x400000–0x531FFF (1,253,376 B), ends below the Cyclift settings area 0x700000')
 
 # 8. the real C1 numbers: Stage 1 (983,360 B) and Stage 1.1 (1,009,632 B) -> one write 0x400000-0x4F6FFF
 real = (max(983360, 1009632) + 0xFFF) & ~0xFFF

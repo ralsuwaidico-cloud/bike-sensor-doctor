@@ -173,6 +173,48 @@ static void conflictsAndBounce() {
     { Rig r; r.hold(L1 | R2, 150); CHECK(!r.m.restartRequested, "L1 + R2: no restart"); }
 }
 
+/// Owner checklist of 12 Nov 16:37 ("Protect workout controls"), each item as its own test.
+static void ownerProtections() {
+    // 1. a restart combination cancels a pending lap and pending navigation
+    { Rig r; r.startRide(); r.wait(500); int laps = r.m.laps;
+      r.press(L2); CHECK(r.m.key2Armed, "lap armed by one L2 press");
+      r.level(L2, 100); r.level(L1 | L2, 3000); r.level(0, 300);           // 2nd L2 press turns into the combination
+      r.wait(3000); CHECK(r.m.laps == laps && !r.m.key2Armed && r.m.pending == Cmd::None, "combination cancels the armed lap (no lap)");
+      CHECK(Model::workoutPage(r.m.screen), "combination left no navigation behind (%s)", nm(r.m.screen)); }
+    { Rig r; r.level(L1, 400); r.level(L1 | L2, 2500); r.level(0, 300);
+      CHECK(r.m.screen == Screen::Face, "L1 already down 0.4 s, then L2: no Menu, no Back, no Quick Settings"); }
+    // 2. holding a button never also fires a short press (all three buttons, in and out of a ride)
+    for (int b : {int(L1), int(L2), int(R2)}) {
+        Rig x; x.hold(b, 1500); x.wait(500);
+        CHECK(x.in.events == 1 && x.in.last[0].ev != KeyEv::Short, "button %d held 1.5 s: exactly one event (the hold), %u events", b, x.in.events);
+    }
+    { Rig r; r.startRide(); r.wait(500); uint32_t e0 = r.in.events; r.hold(L1, 2300);
+      CHECK(r.m.screen == Screen::EndConfirm && r.in.events - e0 == 2, "ride: L1 held 2.3 s = hold + End request only, no Controls");
+      CHECK(r.m.pending == Cmd::None && r.m.wk == WkState::Active, "…and nothing paused"); }
+    // 3. double presses are debounced: contact chatter on press and release counts as one press
+    { Rig r; r.startRide(); r.wait(500); int laps = r.m.laps;
+      auto chatterPress = [&] { for (int k = 0; k < 3; k++) { r.level(L2, 10); r.level(0, 10); } r.level(L2, 120); for (int k = 0; k < 3; k++) { r.level(0, 10); r.level(L2, 10); } r.level(0, 200); };
+      chatterPress(); CHECK(r.m.laps == laps && r.m.key2Armed, "one chattering L2 press = armed, NOT a lap");
+      r.wait(2700); chatterPress(); r.wait(400); chatterPress(); r.wait(800);
+      CHECK(r.m.laps == laps + 1, "two chattering presses = exactly one lap (%d)", r.m.laps - laps); }
+    // 4. ending a ride always needs the explicit confirmation: no single press or hold of any button ends it
+    for (int b : {int(L1), int(L2), int(R2), L1 | L2, L1 | R2, L2 | R2})
+        for (uint32_t ms : {80u, 1200u, 2200u, 11000u}) {
+            Rig r; r.startRide(); r.wait(500); r.hold(b, ms); r.wait(800);
+            CHECK(r.m.inWorkout() && r.m.pending != Cmd::End, "buttons %d held %u ms: ride still running", b, ms);
+        }
+    // 5. touch lock never blocks pause, lap, page change or the End request
+    { Rig r; r.startRide(); r.wait(500); r.hold(R2, 1200); CHECK(r.m.locked, "locked");
+      r.press(L1); r.press(L1); r.wait(800); bool paused = r.m.wk == WkState::Paused; r.press(L1); r.press(L1); r.wait(800);
+      int laps = r.m.laps; r.press(L2); r.press(L2); r.wait(800); r.wait(2000); r.press(R2); Screen pg = r.m.screen; r.hold(L1, 2100);
+      CHECK(paused && r.m.laps == laps + 1 && pg == Screen::RidePower && r.m.screen == Screen::EndConfirm, "locked: pause, lap, page, End request all work"); }
+    // 6. restart during a ride: warning first, Cancel highlighted, warning text says the watch's ride ends
+    { Rig r; r.startRide(); r.wait(500); r.hold(L1 | L2, 10300);
+      CHECK(r.m.screen == Screen::RestartConfirm && r.m.focus == 0 && !r.m.restartRequested, "ride: warning, Cancel highlighted");
+      CHECK(std::string(tr(S::RestartWarn, Lang::En)) == "The ride on the watch ends", "warning text (EN): %s", tr(S::RestartWarn, Lang::En));
+      r.press(L2); CHECK(Model::workoutPage(r.m.screen) && !r.m.restartRequested && r.m.inWorkout(), "L2 = Cancel, ride continues"); }
+}
+
 static void soak() {
     // random raw levels (incl. bounce) through the real path; invariants:
     //  • the ride ends only from the End confirmation; • a restart happens only after a 10 s combination or the explicit
@@ -209,7 +251,7 @@ static void soak() {
 }
 
 int main() {
-    selectBackNext(); rideControls(false); rideControls(true); endFlow(); touchLock(); restart(); conflictsAndBounce(); soak();
+    selectBackNext(); rideControls(false); rideControls(true); endFlow(); touchLock(); restart(); conflictsAndBounce(); ownerProtections(); soak();
     std::printf("button tests: %d checks, %d failed\n", g_checks, g_fail);
     return g_fail ? 1 : 0;
 }

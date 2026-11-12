@@ -20,7 +20,7 @@ FW13_SHA = '4ea0ea90da5061859019c7b6f94c1eaea409c362d94a07e058d7755feda50c19'   
 FWR2 = os.environ.get('CY_FWR2') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_3_firmware', 'cyclift-stage1.3-rc2-v3poc-T-Watch-2021-V1_1.bin')
 FWR2_SHA = '82500ce2a2531271573489c9080d7372e0ee97c330e44cbb85f2f3a2040da461'   # Stage 1.3 RC2 (CI 43064696858); same pin as cy_update_rc2.py
 FW14 = os.environ.get('CY_FWS14') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_4_firmware', 'cyclift-stage1.4-rc1-v3poc-T-Watch-2021-V1_1.bin')
-FW14_SHA = 'PIN-AFTER-CI'   # Stage 1.4 RC1 (button system); same pin as cy_update_s14.py once CI has built it
+FW14_SHA = 'f995c5383e60a3331fdc0a0f8aebeefc96f9ec791caceb655b01219dd0d2a076'   # Stage 1.4 RC1 (CI 43193189780); same pin as cy_update_s14.py
 
 
 def app1_program():

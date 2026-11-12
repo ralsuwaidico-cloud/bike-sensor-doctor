@@ -65,6 +65,9 @@ Part 3 (Arabic, Large Text on the watch); end-of-session report. Paused by the s
 - **Three chip starts were recorded afterwards, at 11:17:42.146, 11:17:42.661 (0.5 s later) and 11:17:54.694**, each
   `rst:0x1 (POWERON_RESET)` followed by a normal Cyclift start. The last inputs before them: Key 2 at 11:17:33–37 (5 s
   earlier), swipes at 11:17:47–52. No panic, watchdog or brown-out text; no serial port errors.
+- **Two more starts at 16:36:13.6 and 16:36:14.1 (0.5 s apart, again POWERON_RESET)**, with no button or touch event in
+  the minutes before; normal Cyclift start after. Same double pattern as 11:17:42. Not yet explained (owner asked whether
+  he handled the watch or the cable at that moment).
 - On the ESP32 the ROM reports a press of the reset line (R1, the right upper button) and a supply power-up both as
   POWERON_RESET; a firmware crash or watchdog shows a different code and a crash dump. Two starts 0.5 s apart look like a
   bouncing contact (button or connector), not software.

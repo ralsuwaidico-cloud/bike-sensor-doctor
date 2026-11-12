@@ -11,7 +11,7 @@ _S13 = os.environ.get('CY_UPDATE_S13') or os.path.join(os.path.expanduser('~'), 
 exec(open(_S13, encoding='utf-8').read())          # cy_install + Stage 1.1 / RC1 constants and phases
 
 FW14 = os.environ.get('CY_FWS14') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_4_firmware', 'cyclift-stage1.4-rc1-v3poc-T-Watch-2021-V1_1.bin')
-FW14_SHA = 'PIN-AFTER-CI'   # set to the CI-built fingerprint (releases/stage1.4-rc1.sha256); until then every phase refuses
+FW14_SHA = 'f995c5383e60a3331fdc0a0f8aebeefc96f9ec791caceb655b01219dd0d2a076'   # CI 43193189780 (commit 3a8d4e3) = 43193637056; two clean builds identical; install needs the owner's approval naming it
 RC1 = 'Stage 1.3 RC1'                             # boot banner marker of the installed firmware
 S14 = 'Stage 1.4 RC1'                             # boot banner marker of the new firmware
 
