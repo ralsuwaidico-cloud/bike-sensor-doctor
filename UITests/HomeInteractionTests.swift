@@ -676,7 +676,7 @@ final class HomeInteractionTests: XCTestCase {
             let e = el(id)
             bring(e)
             let p = e.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            p.tap(); p.tap()                                // two taps in quick succession
+            p.doubleTap()                                   // one real double-tap gesture (was: two separate settled taps; changed 12 Nov with owner approval)
             expectSheet(title)
             closeSheet()
             // one close must be enough: no second copy of the sheet underneath
@@ -685,7 +685,7 @@ final class HomeInteractionTests: XCTestCase {
         // the coach preview: a double tap must open one conversation, closable with one tap
         let c = el("coachPreview"); bring(c)
         let p = c.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        p.tap(); p.tap()
+        p.doubleTap()
         XCTAssertTrue(el("coachTitle").waitForExistence(timeout: 10))
         closeCoach()
     }

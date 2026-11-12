@@ -217,9 +217,11 @@ struct CoachConversationScreen: View {
     let onClose: () -> Void
     @Environment(\.cyTheme) private var theme
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var open: CyCoachProposal?
-    @State private var sheetBusy = false           // same presentation guard as Home: never request a sheet mid-dismissal
-    @State private var pending: CyCoachProposal?
+    @StateObject private var sheets = SheetPresenter<CyCoachProposal>(name: "coach")
+    // A decision is saved to `conversation` at once. While the proposal sheet is still leaving the screen the
+    // timeline keeps showing this snapshot, and switches to the saved state when the presenter reports the sheet gone.
+    @State private var held: CyCoachConversation?
+    private var shown: CyCoachConversation { held ?? conversation }
     @State private var didInit = false
 
     var body: some View {
@@ -231,10 +233,10 @@ struct CoachConversationScreen: View {
                         Text("Sample history for design review. The coach follows written rules; this is not a live AI chat and nothing here is stored.")
                             .font(.caption2).foregroundStyle(theme.textTertiary).fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("coachSampleNote")
-                        if conversation.entries.isEmpty {
+                        if shown.entries.isEmpty {
                             CyEmptyStateCard(icon: "sparkles", title: "No coach notes yet", message: "Complete a session and the short check-in. The coach starts from what you actually do.")
                         }
-                        ForEach(conversation.days, id: \.day) { group in
+                        ForEach(shown.days, id: \.day) { group in
                             Text(group.day.uppercased()).font(CyFont.overline).tracking(0.8).foregroundStyle(theme.textSecondary)
                                 .frame(maxWidth: .infinity).padding(.top, CySpace.s)
                                 .accessibilityAddTraits(.isHeader)
@@ -248,43 +250,42 @@ struct CoachConversationScreen: View {
                 }
                 .accessibilityIdentifier("coachTimeline")
                 .onAppear { if !startAtTop { DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { proxy.scrollTo("end", anchor: .bottom) } } }
-                .onChange(of: conversation.entries.count) { _, _ in withAnimation { proxy.scrollTo("end", anchor: .bottom) } }
+                .onChange(of: shown.entries.count) { _, _ in withAnimation { proxy.scrollTo("end", anchor: .bottom) } }
             }
         }
         .background(theme.background.ignoresSafeArea())
         .environment(\.cyTheme, theme)
         .preferredColorScheme(theme.scheme)
-        .onChange(of: open?.id) { old, new in SheetLog.note("coach sheet state: \(old ?? "none") -> \(new ?? "none")") }
-        .sheet(item: $open, onDismiss: { SheetLog.note("coach dismissal reported by SwiftUI"); sheetBusy = false; if let p = pending { pending = nil; present(p) } }) { p in
+        .background(sheets.anchorView())
+        .sheet(item: sheets.binding, onDismiss: { sheets.swiftUIDismissed() }) { p in
             CoachProposalSheet(proposal: conversation.proposal(p.id) ?? p, history: conversation.history(of: p.id),
-                               onClose: { SheetLog.note("coach close button: \(p.id)"); open = nil },
+                               onClose: { sheets.dismiss("close button") },
                                onDecide: { status in
-                                   SheetLog.note("coach decision on \(p.id): sheet closed and decision recorded in the same step")
-                                   open = nil
-                                   conversation.decide(p.id, status, day: today, time: now)
+                                   if held == nil { held = conversation }                    // what the timeline shows meanwhile
+                                   conversation.decide(p.id, status, day: today, time: now)    // saved now, not after the animation
+                                   SheetLog.note("coach decision on \(p.id) saved; timeline update waits for the sheet to leave")
+                                   sheets.onNextIdle { held = nil }
+                                   sheets.dismiss("decision")
                                })
-                .onAppear { SheetLog.note("coach sheet content appeared: \(p.id)") }
-                .onDisappear { SheetLog.note("coach sheet content disappeared: \(p.id)") }
+                .background(sheets.probeView(for: p.id))
+                .onAppear { sheets.contentEvent(p.id, appeared: true) }
+                .onDisappear { sheets.contentEvent(p.id, appeared: false) }
                 .environment(\.cyTheme, theme)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+        .onChange(of: sheets.phase) { _, new in if new == .idle && held != nil { held = nil } }
+        .onDisappear { held = nil }
         .onAppear {
             guard !didInit else { return }
             didInit = true
             if let id = initialProposal, let p = conversation.proposal(id) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { present(p) }
+                present(p)        // the presenter waits until this screen has finished appearing
             }
         }
     }
 
-    private func present(_ p: CyCoachProposal) {
-        if open != nil { SheetLog.note("coach request \(p.id): IGNORED, a sheet is already up"); return }
-        if sheetBusy { SheetLog.note("coach request \(p.id): QUEUED"); pending = p; return }
-        SheetLog.note("coach request \(p.id): PRESENT")
-        sheetBusy = true
-        open = p
-    }
+    private func present(_ p: CyCoachProposal) { sheets.request(p) }
 
     private var bar: some View {
         HStack(spacing: CySpace.s) {
@@ -305,7 +306,7 @@ struct CoachConversationScreen: View {
     }
 
     @ViewBuilder private func bubble(_ e: CyCoachEntry) -> some View {
-        let p = e.kind == .proposal ? conversation.proposal(e.proposalId) : nil
+        let p = e.kind == .proposal ? shown.proposal(e.proposalId) : nil
         if p == nil {
             // a plain message is one accessible element; a proposal message keeps its button reachable
             bubbleBody(e, nil)
@@ -424,16 +425,16 @@ struct CoachProposalSheet: View {
             InfoBlock(head: "Possible impact", text: proposal.impact)
             if !history.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    CyOverline(text: "History")
+                    CyOverline(text: "History").accessibilityAddTraits(.isHeader)
                     ForEach(history) { e in
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text("\(e.day.replacingOccurrences(of: "Today · ", with: "")) \(e.time)").font(.caption2).monospacedDigit().foregroundStyle(theme.textTertiary)
                             Text("\(e.author == .athlete ? "You" : "Coach") · \(e.kind.label)").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary)
                         }
                         .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("proposalHistory")     // one element per history record; the heading is not one
                     }
                 }
-                .accessibilityIdentifier("proposalHistory")
             }
             if proposal.status.isOpen {
                 Text("Nothing changes in your plan unless you approve it.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)

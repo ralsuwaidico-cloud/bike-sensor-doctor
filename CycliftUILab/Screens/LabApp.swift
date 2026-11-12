@@ -58,13 +58,8 @@ struct LabRoot: View {
     @State private var scenario: LabScenario = LabConfig.scenario ?? .established
     @State private var data: Home21Data = Mock21.make(LabConfig.scenario ?? .established)
     @State private var tab: Int = LabRoot.initialTab
-    @State private var sheet: LabSheet? = nil
-    // Sheet presentation guard (v2.3). SwiftUI can drop a sheet that is requested while the previous one is still
-    // animating away, leaving the state set with nothing on screen. Requests made in that window are queued and
-    // presented when the dismissal has finished; a request made while a sheet is already up is ignored.
-    @State private var sheetBusy = false
-    @State private var pendingSheet: LabSheet? = nil
-    @State private var visibleSheet: String? = nil
+    // One shared presenter decides when a sheet may open (see SheetPresenter.swift).
+    @StateObject private var sheets = SheetPresenter<LabSheet>(name: "home")
     @State private var stressResult: String? = nil
     @State private var toast: String? = nil
     @State private var conversation: CyCoachConversation = LabRoot.initialConversation
@@ -130,10 +125,12 @@ struct LabRoot: View {
         .environment(\.cyTheme, theme)
         .preferredColorScheme(theme.scheme)
         .tint(theme.accent)
-        .sheet(item: $sheet, onDismiss: sheetDismissed) { s in
+        .background(sheets.anchorView())
+        .sheet(item: sheets.binding, onDismiss: { sheets.swiftUIDismissed() }) { s in
             sheetView(s)
-                .onAppear { visibleSheet = s.id; SheetLog.note("home sheet content appeared: \(s.id)") }
-                .onDisappear { if visibleSheet == s.id { visibleSheet = nil }; SheetLog.note("home sheet content disappeared: \(s.id)") }
+                .background(sheets.probeView(for: s.id))
+                .onAppear { sheets.contentEvent(s.id, appeared: true) }
+                .onDisappear { sheets.contentEvent(s.id, appeared: false) }
                 .environment(\.cyTheme, theme)
                 .presentationDetents(s.opensLarge ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -145,7 +142,6 @@ struct LabRoot: View {
                                     onClose: { showCoach = false })
                 .environment(\.cyTheme, theme)
         }
-        .onChange(of: sheet?.id) { old, new in SheetLog.note("home sheet state: \(old ?? "none") -> \(new ?? "none")") }
         .onChange(of: showCoach) { _, new in SheetLog.note("coach cover state: \(new ? "shown" : "hidden")") }
         .onAppear {
             SheetLog.launch()
@@ -191,53 +187,78 @@ struct LabRoot: View {
     }
 
     /// The only way Home opens a sheet.
-    private func present(_ s: LabSheet) {
-        if sheet != nil { SheetLog.note("home request \(s.id): IGNORED, sheet state already holds \(sheet?.id ?? "")"); return }   // a sheet is already up (e.g. the second tap of a double tap)
-        if sheetBusy && LabConfig.stress != "direct" {   // the previous sheet is still animating away: queue the request
-            SheetLog.note("home request \(s.id): QUEUED, previous dismissal not reported yet")
-            pendingSheet = s
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {   // safety net if the dismissal callback never arrives
-                if let p = pendingSheet, sheet == nil { SheetLog.note("home queued \(p.id): presented by the 1 s safety net"); pendingSheet = nil; sheetBusy = true; sheet = p }
-            }
-            return
-        }
-        SheetLog.note("home request \(s.id): PRESENT (busy flag was \(sheetBusy))")
-        sheetBusy = true
-        sheet = s
-    }
-    private func sheetDismissed() {
-        SheetLog.note("home dismissal reported by SwiftUI (pending: \(pendingSheet?.id ?? "none"))")
-        sheetBusy = false
-        if let p = pendingSheet { pendingSheet = nil; present(p) }
-    }
+    private func present(_ s: LabSheet) { sheets.request(s) }
 
-    /// Prototype self-test (LAB_STRESS = queued | direct): closes a sheet and requests the next one after 0–450 ms,
-    /// i.e. during the closing animation, which a UI test cannot time reliably. "direct" bypasses the queue to show
-    /// what plain SwiftUI does. The outcome is shown as text for the interaction test to read.
+    /// Prototype self-test (LAB_STRESS = queued | direct | presenter).
+    /// queued / direct: closes a sheet and requests the next one 0–450 ms later, i.e. during the closing animation,
+    /// which a UI test cannot time. "direct" bypasses the presenter to observe plain SwiftUI. Each verdict waits for
+    /// the actual outcome; the 15 s bound is only there so that a sheet that never appears is reported as a failure.
+    /// presenter: duplicate request, switch to a different sheet, cancel-then-other, and repeated open/close.
     @MainActor private func runStress() async {
+        _ = await waitUntil(15) { sheets.isHostReady }
+        if LabConfig.stress == "presenter" { await runPresenterSelfTest(); return }
+        let direct = LabConfig.stress == "direct"
         let delays: [UInt64] = [0, 50, 100, 200, 300, 450]
         var shown = 0
         var log: [String] = []
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
         for d in delays {
             SheetLog.note("stress \(d) ms: open mix")
-            present(.mix)
-            try? await Task.sleep(nanoseconds: 1_400_000_000)
-            SheetLog.note("stress \(d) ms: close mix")
-            sheet = nil
+            if direct { sheets.bypass(.mix) } else { sheets.request(.mix) }
+            let first = await waitUntil(15) { sheets.visibleID == "mix" }
+            SheetLog.note("stress \(d) ms: close mix (mix was \(first ? "shown" : "NOT shown"))")
+            if direct { sheets.bypass(nil) } else { sheets.dismiss("self-test") }
             try? await Task.sleep(nanoseconds: d * 1_000_000)
             SheetLog.note("stress \(d) ms: request recovery")
-            present(.recovery)
-            try? await Task.sleep(nanoseconds: 2_200_000_000)
-            let ok = visibleSheet == "recovery"
-            SheetLog.note("stress \(d) ms: result \(ok ? "shown" : "NOT on screen") (state \(sheet?.id ?? "none"))")
+            if direct { sheets.bypass(.recovery) } else { sheets.request(.recovery) }
+            let ok = await waitUntil(15) { sheets.visibleID == "recovery" }
+            SheetLog.note("stress \(d) ms: result \(ok ? "shown" : "NOT on screen") (state \(sheets.item?.id ?? "none"))")
             if ok { shown += 1 }
-            log.append("\(d)ms:\(ok ? "shown" : (sheet == nil ? "not requested" : "state set but nothing on screen"))")
-            sheet = nil; pendingSheet = nil
-            try? await Task.sleep(nanoseconds: 1_400_000_000)
-            sheetBusy = false
+            log.append("\(d)ms:\(ok ? "shown" : (sheets.item == nil ? "not requested" : "state set but nothing on screen"))")
+            if direct { sheets.bypass(nil) } else { sheets.dismiss("self-test end") }
+            _ = await waitUntil(15) { sheets.visibleID == nil && sheets.isSettled }
         }
         stressResult = "\(LabConfig.stress ?? "") \(shown) of \(delays.count) shown · " + log.joined(separator: ", ")
+    }
+
+    @MainActor private func runPresenterSelfTest() async {
+        // 1 · the same sheet requested twice: one sheet, still open
+        sheets.request(.mix); sheets.request(.mix)
+        var a = await waitUntil(15) { sheets.visibleID == "mix" }
+        sheets.request(.mix)
+        a = a && sheets.visibleID == "mix" && sheets.item?.id == "mix"
+        // 2 · a different sheet requested while one is open: the new one replaces it
+        sheets.request(.recovery)
+        let b = await waitUntil(15) { sheets.visibleID == "recovery" && sheets.phase == .presented }
+        // 3 · open, cancel at once, request another: the other one is shown
+        sheets.dismiss("self-test")
+        _ = await waitUntil(15) { sheets.isSettled }
+        sheets.request(.mix); sheets.dismiss("self-test cancel"); sheets.request(.sleep)
+        let c = await waitUntil(15) { sheets.visibleID == "sleep" && sheets.phase == .presented }
+        sheets.dismiss("self-test")
+        _ = await waitUntil(15) { sheets.isSettled }
+        // 4 · repeated open and close
+        var cycles = 0
+        for i in 0..<8 {
+            let s: LabSheet = i % 2 == 0 ? .mix : .recovery
+            sheets.request(s)
+            let up = await waitUntil(15) { sheets.visibleID == s.id && sheets.phase == .presented }
+            sheets.dismiss("self-test cycle")
+            let down = await waitUntil(15) { sheets.isSettled && sheets.visibleID == nil }
+            if up && down { cycles += 1 }
+        }
+        // 5 · nothing left behind
+        let e = sheets.isSettled && sheets.item == nil && sheets.phase == .idle
+        func w(_ ok: Bool) -> String { ok ? "ok" : "FAILED" }
+        stressResult = "presenter duplicate:\(w(a)) switch:\(w(b)) cancel:\(w(c)) cycles:\(cycles)/8 settled:\(w(e))"
+    }
+
+    @MainActor private func waitUntil(_ seconds: Double, _ done: () -> Bool) async -> Bool {
+        let end = Date().addingTimeInterval(seconds)
+        while Date() < end {
+            if done() { return true }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        return done()
     }
 
     private func say(_ text: String) {
@@ -247,20 +268,20 @@ struct LabRoot: View {
 
     private func applyLaunchSheet() {
         guard let s = LabConfig.sheet else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+        do {   // the presenter itself waits until the screen can present
             switch s {
-            case "consistency": sheet = .consistency
-            case "mix": sheet = .mix
-            case "recovery": sheet = .recovery
-            case "sleep": sheet = .sleep
-            case "trendsInfo": sheet = .trendsInfo
-            case "hub": sheet = .hub
-            case "profile": sheet = .profile
-            case "day": if data.days.count > 2 { sheet = .day(data.days[2]) }
-            case "endurance": sheet = .sport(data.endurance)
-            case "strength": sheet = .sport(data.strength)
-            case "trendDay": if let r = data.graph.first, r.dates.count > 2 { sheet = .graphDay(r.dates[2], [CyTrendDetailRow(id: "sample", label: "Opened from launch option", value: "see the graph panel")]) }
-            case "metric": if let m = data.metrics.first { sheet = .metric(m) }
+            case "consistency": present(.consistency)
+            case "mix": present(.mix)
+            case "recovery": present(.recovery)
+            case "sleep": present(.sleep)
+            case "trendsInfo": present(.trendsInfo)
+            case "hub": present(.hub)
+            case "profile": present(.profile)
+            case "day": if data.days.count > 2 { present(.day(data.days[2])) }
+            case "endurance": present(.sport(data.endurance))
+            case "strength": present(.sport(data.strength))
+            case "trendDay": if let r = data.graph.first, r.dates.count > 2 { present(.graphDay(r.dates[2], [CyTrendDetailRow(id: "sample", label: "Opened from launch option", value: "see the graph panel")])) }
+            case "metric": if let m = data.metrics.first { present(.metric(m)) }
             default: break
             }
         }
@@ -287,7 +308,7 @@ struct LabRoot: View {
     }
 
     @ViewBuilder private func sheetView(_ s: LabSheet) -> some View {
-        let close: () -> Void = { SheetLog.note("home close button: \(s.id)"); sheet = nil }
+        let close: () -> Void = { sheets.dismiss("close button") }
         switch s {
         case .consistency: ConsistencySheet(model: data.consistency, days: data.days, onClose: close)
         case .mix: MixSheet(model: data.mix, endurance: data.endurance, strength: data.strength, onClose: close)
@@ -331,7 +352,7 @@ struct LabRoot: View {
                     }
                 }
                 Text("Mock profile. In the prototype the Profile tab holds the UI Lab: themes, scenarios and the component gallery.").font(CyFont.footnote).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)
-                CyButton(title: "Open Profile and UI Lab", kind: .secondary) { sheet = nil; tab = 4 }
+                CyButton(title: "Open Profile and UI Lab", kind: .secondary) { sheets.dismiss("open profile"); tab = 4 }
             }
         }
     }
