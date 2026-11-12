@@ -1,99 +1,93 @@
-# Home v2.1 — review tracker (prototype)
+# Home v2.2 — review tracker (prototype)
 
-Page → Section → Card → Control → State → Expected behaviour → Actual prototype behaviour → Issue → Approval status.
+Page → Section → Card → Control → State → Expected behaviour → Actual prototype behaviour and evidence → Issue → Approval status.
 
-**No row is approved.** Only the owner changes the last column. This tracker replaces the Home v2 tracker
-(v2 was reviewed by the owner on 11–12 Nov and revised; its rows are in the branch history).
-"Actual prototype behaviour" describes the UI Lab build in the simulator; it is not evidence about the
-production app or a physical iPhone.
+**No row is approved.** Only the owner changes the last column.
+"T07 passed" means interaction test 07 passed in the iOS Simulator on the UI Lab prototype with sample data.
+"Visual only" means the state was captured in a screenshot and nothing was tapped. Neither is evidence about
+the production app or a physical iPhone.
 
-| Page | Section | Card | Control | State | Expected behaviour | Actual prototype behaviour | Issue | Approval status |
+| Page | Section | Card | Control | State | Expected behaviour | Actual prototype behaviour and evidence | Issue | Approval status |
 |---|---|---|---|---|---|---|---|---|
-| Home v2.1 | 1 Header | Header | Date · athlete type | Normal | One small line | Sample values shown |  | Awaiting owner review |
-| Home v2.1 | 1 Header | Header | Name | Normal | One line, not a large greeting | Sample name on one line |  | Awaiting owner review |
-| Home v2.1 | 1 Header | Header | Name | Long name | Stays on one line (scales, then truncates); wraps at accessibility sizes | Long-name scenario captured |  | Awaiting owner review |
-| Home v2.1 | 1 Header | Header | Avatar | Tap | Opens Profile | Opens a mock profile sheet |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Consistency | Ring | Normal | Arc = completed ÷ sessions due; percentage inside; 'n of m sessions' | Shown (75 %, 3 of 4 in the sample) |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Consistency | Ring | No sessions due | Dashed ring and a reason; never 0 % | Shown (new athlete, no plan) |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Consistency | Ring | Tap | Weekly adherence detail | Sheet with counts and the week day by day; rest days listed as rest |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Training Mix | Outer ring | Normal | Endurance completed vs planned, endurance colour | Shown |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Training Mix | Inner ring | Normal | Strength completed vs planned, strength colour | Shown |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Training Mix | Either ring | Discipline not planned | Inactive ring, not a failure | Dashed inactive track; caption says 'no … planned' |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Training Mix | Centre | Normal | Simple 'Mix' label, no numbers | Shown |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Training Mix | Indicator | Tap | Endurance / strength breakdown with explanations | Sheet with each discipline, its own bar and percentage, and what it does not show |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Recovery | Glyph | Readings available | No full progress ring, no green tick, no percentage | Three arcs for available readings, heart icon, word |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Recovery | Glyph | Partial data | Says partial | Dashed arcs for missing readings, 'Partial data' |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Recovery | Glyph | Awaiting data | Says awaiting | Dashed arcs, hourglass, 'Awaiting data' |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Recovery | Glyph | Concern | Warning icon and word; no medical-clearance wording | Shown in the gallery (sample wording) |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | Recovery | Indicator | Tap | Recovery details | Sheet with each reading, guidance, source and freshness |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | All three | Row | Loading | Stable layout, no default values | Tracks with spinners, 'Loading' |  | Awaiting owner review |
-| Home v2.1 | 2 Indicators | All three | Row | Large text | Readable list layout | Stacks as rows at accessibility sizes |  | Awaiting owner review |
-| Home v2.1 | 3 Getting Started | Setup card | Position | Required step open | Directly below the indicators, compact | Shown (new athlete) |  | Awaiting owner review |
-| Home v2.1 | 3 Getting Started | Setup card | Next required step | Tap | Opens that step | Marks it done locally (stand-in) |  | Awaiting owner review |
-| Home v2.1 | 3 Getting Started | Setup card | All steps | Tap | Shows every step with Required / Optional tags | Expands in place |  | Awaiting owner review |
-| Home v2.1 | 3 Getting Started | Setup line | Position | Required steps done | Minimal line at the bottom | 'Setup complete · n optional left', expandable |  | Awaiting owner review |
-| Home v2.1 | 3 Getting Started | Setup | Optional steps | Not done | Do not block completion | Completion depends on required steps only |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Completed session | Coloured, filled icon; no tick underneath | Filled disc in the discipline colour |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Planned session | Muted / outlined icon | Thin outline, muted icon |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Missed session | Clearly different, not colour alone | Dashed outline with a slash |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Rescheduled session | Clearly different | Outline with an arrow |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Rest day | Subtle rest symbol | Small moon |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Two sessions | Both icons without crowding | Two marks side by side |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Today | Easy to identify | Tinted cell, bold accent letter |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Day cell | Tap | Opens the day sheet | Day sheet with sessions and states |  | Awaiting owner review |
-| Home v2.1 | 4 Schedule | Schedule | Strip | Nothing planned | Truthful empty state | 'No sessions planned this week' |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Endurance card | Card | Normal | Compact: duration done / planned, thin bar, distance; no sparkline or caption | Shown |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Endurance card | Card | Missing / not planned | Truthful text, same height | 'Not in your plan' / 'No … yet · n planned' |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Endurance card | Card | Loading | Skeleton | Shown |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Endurance card | Card | Tap | Detail sheet (history moved here) | Sheet with totals and 8-week history |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Strength card | Card | Normal | Compact: sessions done / planned, thin bar, weight lifted; titled 'Strength'; no sparkline or caption | Shown |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Strength card | Card | Missing / not planned | Truthful text, same height | 'Not in your plan' / 'No … yet · n planned' |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Strength card | Card | Loading | Skeleton | Shown |  | Awaiting owner review |
-| Home v2.1 | 5 Sport cards | Strength card | Card | Tap | Detail sheet (history moved here) | Sheet with totals and 8-week history |  | Awaiting owner review |
-| Home v2.1 | 6 Sleep | Sleep bar | Row | Normal | Last night, thin bar, 7-day average, target, tap affordance | Shown; bar = last night ÷ target |  | Awaiting owner review |
-| Home v2.1 | 6 Sleep | Sleep bar | Row | No data | Truthful empty state | 'No sleep recorded', empty bar, 'No target set' |  | Awaiting owner review |
-| Home v2.1 | 6 Sleep | Sleep bar | Row | Tap | Sleep detail | Sheet: last night, average, target and its source, recent nights, guidance, data source |  | Awaiting owner review |
-| Home v2.1 | 6 Sleep | Sleep bar | Target | Normal | Not fabricated; source stated | Labelled 'sample target for the prototype' |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Coach banner | Review | Decision pending | Primary action | Filled button; opens the review sheet |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Coach banner | Not now | Decision pending | Postpones; not a rejection | Marks 'Postponed — still waiting'; Review remains |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Coach banner | Why? | Any | Small explanation action | Opens the explanation sheet |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Review sheet | Approve | Tap | Accept | Banner shows 'Accepted'; actions removed |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Review sheet | Decline | Tap | Reject | Banner shows 'Declined'; actions removed |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Review sheet | Not now | Tap | Postpone | Banner shows 'Postponed' |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Coach banner | Label | Any | Truthfully rules-based | 'rules-based' tag; explanation says no generative model |  | Awaiting owner review |
-| Home v2.1 | 7 Coach | Coach banner | Banner | No suggestion / new athlete | Meaningful text | Shown |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Chart | Normal | One coherent chart, 7-day default, one labelled unit | Stacked training minutes; planned as a faint bar; legend with unit |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Status rows | — | Removed | Removed (no Load Balance / Recovery rows) |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Chart | Touch a day | Highlight and daily values | Highlight band, bold label, tooltip with that day's rows |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Tooltip | Open day | Daily metrics | Sheet listing only what the sample holds |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Range control | Tap | 7 days / 4 weeks | Switches the sample dataset |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Info | Tap | Methodology off the chart | 'How Trends works' sheet |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Chart | Missing data | Empty, not zero | Empty column; tooltip 'No data' |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Chart | Large text | Abbreviated day labels, full spoken labels | Single letters; full names in the spoken summary |  | Awaiting owner review |
-| Home v2.1 | 8 Trends | Trends | Chart | VoiceOver | Accessible summary and day stepping | Summary and adjustable action provided; not yet heard on a real iPhone | Real-device VoiceOver check outstanding | Awaiting owner review |
-| Home v2.1 | 9 Key metrics | Metrics grid | Tile | Normal | Icon, name, value, unit, short comparison | Shown, two columns |  | Awaiting owner review |
-| Home v2.1 | 9 Key metrics | Metrics grid | Tile | Missing | Truthful empty state, not zero | '—' and 'No data' |  | Awaiting owner review |
-| Home v2.1 | 9 Key metrics | Metrics grid | Tile | Tap | Metric detail | Sheet with value, history, explanation, source |  | Awaiting owner review |
-| Home v2.1 | 9 Key metrics | Metrics grid | Selection | By athlete | Most useful metrics for sports and data | Sample sets differ by scenario; the selection rule itself is integration work | Rule to be defined at integration | Awaiting owner review |
-| Home v2.1 | 9 Key metrics | Metrics grid | Sleep | — | Not duplicated from the Sleep bar | No sleep tile |  | Awaiting owner review |
-| Home v2.1 | Navigation | Floating dock | Destinations | Tap | Sliding highlight, mock destinations | Works locally |  | Awaiting owner review |
-| Home v2.1 | Navigation | Floating dock | Train now | Tap | Recognisable centre action | Opens a sample sheet with today's sessions |  | Awaiting owner review |
-| Home v2.1 | Navigation | Floating dock | Dock | Scroll to end | Nothing hidden underneath | Content ends above the dock |  | Awaiting owner review |
-| Home v2.1 | Themes | Whole screen | Obsidian | Normal | Tokens applied; meanings unchanged; gradients restrained (flat in High Contrast) | Screenshots captured; token contrast check passed |  | Awaiting owner review |
-| Home v2.1 | Themes | Whole screen | Arctic | Normal | Tokens applied; meanings unchanged; gradients restrained (flat in High Contrast) | Screenshots captured; token contrast check passed |  | Awaiting owner review |
-| Home v2.1 | Themes | Whole screen | Ocean | Normal | Tokens applied; meanings unchanged; gradients restrained (flat in High Contrast) | Screenshots captured; token contrast check passed |  | Awaiting owner review |
-| Home v2.1 | Themes | Whole screen | Forest | Normal | Tokens applied; meanings unchanged; gradients restrained (flat in High Contrast) | Screenshots captured; token contrast check passed |  | Awaiting owner review |
-| Home v2.1 | Themes | Whole screen | Sandstone | Normal | Tokens applied; meanings unchanged; gradients restrained (flat in High Contrast) | Screenshots captured; token contrast check passed |  | Awaiting owner review |
-| Home v2.1 | Themes | Whole screen | High Contrast | Normal | Tokens applied; meanings unchanged; gradients restrained (flat in High Contrast) | Screenshots captured; token contrast check passed |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | Established hybrid | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | New athlete | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | Loading | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | Cycling only | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | Strength only | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | No planned sessions | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | No Apple Health / partial sensors | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | Long name | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | Large text | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
-| Home v2.1 | Scenarios | Whole screen | Small iPhone | — | Truthful, stable layout | Captured in the simulator |  | Awaiting owner review |
+| Home v2.2 | 1 Header | Header | Date · athlete type / name | Normal | Compact, one line each | Unchanged from v2.1 — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 1 Header | Header | Avatar | Tap | Opens Profile | Opens the mock profile sheet — T18 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Consistency | Ring | Normal | Unchanged concept and visual | Unchanged (75 %, 3 of 4 in the sample) — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Consistency | Ring | Tap | Adherence detail | Opens the Consistency sheet — T01 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Rings | Normal | Outer = endurance, inner = strength, each completed ÷ planned | Unchanged double ring — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Centre | Hybrid | Ratio of completed training time, e.g. 60:40; the word 'Mix' removed | '66:34' from 77 and 40 sample minutes; caption 'Ride : Lift time' — T02 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Centre | Cycling only | 100:0 | '100:0' — T03 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Centre | Strength only | 0:100 | '0:100' — T03 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Centre | No completed training | Unavailable state, not a made-up ratio | '—' and 'No training time yet' — T03 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Centre | Loading | No value | Empty centre — T22 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Indicator | Tap | Sheet explains ratio vs rings; shows planned distribution | Completed ratio, planned ratio, completed minutes, two explanations, per-discipline progress — T01 not run; T02 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Training Mix | Formula | — | Minutes only; never kg, watts, distance or session load mixed | Formula stated in the sheet and in the code; recomputed independently by the test — T02 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Recovery | Glyph | Numerical (sample) | Heart and three arcs removed; percentage in the centre; clearly marked sample | Single ring with '68%'; caption 'Sample score'; spoken as sample data — T04 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Recovery | Glyph | Qualitative only | Status word, no percentage (production fallback) | Plain ring with a text icon, 'In your usual range'; no % anywhere — T05 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Recovery | Glyph | Partial data | Says partial, no percentage | Dashed ring, 'Partial data' — T06 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Recovery | Glyph | Missing | Says awaiting, no percentage | Dashed ring with a dash, 'Awaiting data' — T06 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Recovery | Sheet | Numerical (sample) | Readings, freshness, guidance, sample marking, not medical clearance | '68% · Sample score', SAMPLE SCORE tag, three readings, 'About the number', 'Not medical advice' — T04 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | Recovery | Sheet | Partial / missing | Missing inputs listed; nothing estimated | 'Missing today' lists exactly the readings without a value — T06 not run |  | Awaiting owner review |
+| Home v2.2 | 2 Indicators | All three | Row | Large text | Separate, readable, usable | Stack as rows; do not overlap; each opens its sheet — T21 not run |  | Awaiting owner review |
+| Home v2.2 | 3 Getting Started | Setup card | Position | Required step open | Below the indicators, above the schedule | Measured position between indicators and schedule — T20 not run |  | Awaiting owner review |
+| Home v2.2 | 3 Getting Started | Setup card | Next step | Tap (complete) | Card leaves the top | Card disappears; 'Setup complete' line appears below the key metrics — T20 not run |  | Awaiting owner review |
+| Home v2.2 | 3 Getting Started | Setup line | Position | Established athlete | Bottom of Home only | Below the last metric row — T20 not run |  | Awaiting owner review |
+| Home v2.2 | 4 Schedule | Schedule | Session mark | Completed | Clearly separate icon; no circle; no green tick | Coloured icon with a filled dot under it — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 4 Schedule | Schedule | Session mark | Planned | Different without colour alone | Muted icon with a hollow dot — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 4 Schedule | Schedule | Session mark | Missed | Different without colour alone | Muted icon with a cross — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 4 Schedule | Schedule | Session mark | Rescheduled | Different without colour alone | Muted icon with an arrow — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 4 Schedule | Schedule | Day cell | Two sessions | Two separate icons, no overlap, readable on the smallest iPhone | Two icons side by side with their own marks; both spoken with their state — T07 not run | Owner to judge legibility on iPhone SE from the screenshot | Awaiting owner review |
+| Home v2.2 | 4 Schedule | Schedule | Day cell | Rest day | Subtle | Small moon; spoken 'Rest day' — T07 not run |  | Awaiting owner review |
+| Home v2.2 | 4 Schedule | Schedule | Day cell | Tap (each of 7 days) | Opens that day | Each day opens the sheet titled with its own date — T07 not run |  | Awaiting owner review |
+| Home v2.2 | 5 Sport cards | Endurance / Strength | Card | Normal | Near approval: no sparklines; duration, bar, one metric | Unchanged from v2.1 — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 5 Sport cards | Endurance / Strength | Card | Tap | Detail sheet | Opens the discipline sheet (launch option screenshots) — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 6 Sleep | Sleep bar | Row | Normal | Readable: last night, 7-day average, target; each labelled | '7h 10m last night', bar, '7-day avg 7h 02m', 'Sample target 8h 00m' — T08 not run |  | Awaiting owner review |
+| Home v2.2 | 6 Sleep | Sleep bar | Row | No sleep source | Truthful empty state | 'No sleep recorded'; sheet says 'No record' — T08 not run |  | Awaiting owner review |
+| Home v2.2 | 6 Sleep | Sleep sheet | Explanation | — | Distinguish last night / average / target / recommendation; no new algorithm | 'Four different things' block; target source stated; no recommendation is shown — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Coach banner | Text | Suggestion | Observation → Recommendation → Action | Observation line, bold recommendation, then Review / Not now — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Coach banner | Why? | Tap | Explanation | Opens 'Why this suggestion?' — T09 not run |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Coach banner | Review | Tap | Review sheet with three outcomes | Opens the review sheet with Approve / Not now / Decline — T09 not run |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Coach banner | Not now | Tap | Postpone, not decline | 'Postponed — still waiting'; Review stays — T09 not run |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Review sheet | Approve | Tap | Accepted; sheet closes | 'Accepted' note; actions removed; sheet gone — T10 not run |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Review sheet | Decline | Tap | Declined | 'Declined' note; actions removed — T10 not run |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Review sheet | Not now | Tap | Postponed | 'Postponed' note; Review stays — T09 not run |  | Awaiting owner review |
+| Home v2.2 | 7 Coach | Coach banner | Label | Any | Truthfully rule-based | 'rules-based' tag — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Chart type | Normal | Multi-series line graph with point markers (bar chart replaced) | Lines with a point per measurement — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | View A | Training & Recovery | Load + recovery % (sample only) on separate labelled scales | Left scale 'Training load (RPE×min)', right scale 'Recovery (% · sample)' — T11 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | View B | Training activity | Endurance, strength, planned minutes | Three series on one minutes scale; planned dashed — T14 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | View C | Recovery trends | RHR, HRV, sleep with metric selection | One metric at a time, each in its own unit — T14 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Day | Tap | Selects the day; exact date and values | Vertical guide, enlarged points, panel with date and each value — T11 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Day | Drag (scrub) | Selection follows the finger | Selection follows a drag in both directions — T12 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Page scroll | Vertical swipe over the graph | Page still scrolls | Page scrolls — T13 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Missing day | Any view | Gap; no interpolation; says missing | Line breaks; panel says 'No data' — T11 not run; T15 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Series chips | Tap | Show / hide a series; last one stays | Hidden series leaves the graph and the panel; last visible series cannot be hidden — T14 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Range | 7 days / 4 weeks | Switches range; selection cleared | 7 days = 7 points, 4 weeks = 28 points; selection cleared on switch — T15 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Open day | Tap | Daily sheet for the selected date | Sheet titled with the date, listing that day's values — T11 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Info | Tap | Methodology | 'How Trends works' with views, scales, missing days, sample note, sources — T16 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Empty | New athlete / no recovery source | Truthful empty state | Empty text instead of a graph — T16 not run |  | Awaiting owner review |
+| Home v2.2 | 8 Trends | Graph | Stress / strain score | — | None | None present — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 9 Key metrics | Metric rows | Layout | Normal | Rows (approved direction), neutral direction markers | Rows with icon, name, value, unit, baseline, marker, chevron; grid removed — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | 9 Key metrics | Metric rows | Weekly load | Normal | Documented unit, no arbitrary points | '561 RPE×min' with '4-wk avg 1,291' — T17 not run |  | Awaiting owner review |
+| Home v2.2 | 9 Key metrics | Metric rows | Row | Tap (each of 6) | Metric detail | Each row opens the sheet with its own title — T17 not run |  | Awaiting owner review |
+| Home v2.2 | 9 Key metrics | Metric rows | Row | Missing | 'No data', never zero | Shown in the no-recovery and new-athlete scenarios — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Navigation | Floating dock | Destinations | Tap | Switches destination | Home, Plan, Progress, Profile switch; Train now opens its sheet — T18 not run |  | Awaiting owner review |
+| Home v2.2 | Navigation | Floating dock | Dock | End of page | Never covers the final rows | Last metric row and the final line end above the dock; last row can be tapped — T19 not run |  | Awaiting owner review |
+| Home v2.2 | States | Whole screen | Loading | — | No default values | No ratio, no percentage, no graph, no coach actions — T22 not run |  | Awaiting owner review |
+| Home v2.2 | Themes | Whole screen | Obsidian | Normal | Six themes only; meanings unchanged; selective gradients (flat in High Contrast) | Screenshots captured; token contrast check passed — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Themes | Whole screen | Arctic | Normal | Six themes only; meanings unchanged; selective gradients (flat in High Contrast) | Screenshots captured; token contrast check passed — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Themes | Whole screen | Ocean | Normal | Six themes only; meanings unchanged; selective gradients (flat in High Contrast) | Screenshots captured; token contrast check passed — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Themes | Whole screen | Forest | Normal | Six themes only; meanings unchanged; selective gradients (flat in High Contrast) | Screenshots captured; token contrast check passed — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Themes | Whole screen | Sandstone | Normal | Six themes only; meanings unchanged; selective gradients (flat in High Contrast) | Screenshots captured; token contrast check passed — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Themes | Whole screen | High Contrast | Normal | Six themes only; meanings unchanged; selective gradients (flat in High Contrast) | Screenshots captured; token contrast check passed — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | Established hybrid | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | New athlete | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | Cycling only | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | Strength only | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | No planned sessions | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | No recovery data | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | Partial sensor data | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | No sleep source | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | Long name | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | Small iPhone | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
+| Home v2.2 | Scenarios | Whole screen | Large Dynamic Type | — | Truthful, stable layout | Captured in the simulator — Visual only (screenshot) |  | Awaiting owner review |
 
-Rows: 86
+Rows: 80

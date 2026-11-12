@@ -219,10 +219,12 @@ struct CyTrendsGraph: View {
     }
 
     private var axisTitles: some View {
-        HStack(alignment: .firstTextBaseline) {
-            if let l = unitTitle(.leading) { Text(l.text).font(.caption2.weight(.semibold)).foregroundStyle(l.color).lineLimit(1).minimumScaleFactor(0.8) }
-            Spacer(minLength: CySpace.s)
-            if let r = unitTitle(.trailing) { Text(r.text).font(.caption2.weight(.semibold)).foregroundStyle(r.color).lineLimit(1).minimumScaleFactor(0.8) }
+        let big = typeSize.isAccessibilitySize
+        let layout = big ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        return layout {
+            if let l = unitTitle(.leading) { Text(big ? "Left: \(l.text)" : l.text).font(.caption2.weight(.semibold)).foregroundStyle(l.color).lineLimit(big ? 2 : 1).minimumScaleFactor(0.8) }
+            if !big { Spacer(minLength: CySpace.s) }
+            if let r = unitTitle(.trailing) { Text(big ? "Right: \(r.text)" : r.text).font(.caption2.weight(.semibold)).foregroundStyle(r.color).lineLimit(big ? 2 : 1).minimumScaleFactor(0.8) }
         }
         .accessibilityHidden(true)
     }
@@ -257,7 +259,7 @@ struct CyTrendsGraph: View {
                 ForEach(segments(s), id: \.index) { p in
                     LineMark(x: .value("Day", Double(p.index)), y: .value("Value", norm(p.value, s)), series: .value("Series", p.key))
                         .foregroundStyle(color)
-                        .interpolationMethod(.monotone)
+                        .interpolationMethod(count > 10 ? .linear : .monotone)
                         .lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round, dash: s.dashed ? [5, 4] : []))
                     PointMark(x: .value("Day", Double(p.index)), y: .value("Value", norm(p.value, s)))
                         .foregroundStyle(color)
@@ -265,7 +267,7 @@ struct CyTrendsGraph: View {
                 }
             }
         }
-        .chartXScale(domain: -0.5...(Double(max(count - 1, 1)) + 0.5))
+        .chartXScale(domain: 0...Double(max(count - 1, 1)), range: .plotDimension(padding: 18))
         .chartYScale(domain: -0.06...1.08)
         .chartXAxis {
             AxisMarks(values: dates.filter { $0.axisLabel != nil }.map { Double($0.id) }) { value in
@@ -296,19 +298,16 @@ struct CyTrendsGraph: View {
             GeometryReader { geo in
                 let plot = geo[proxy.plotAreaFrame]
                 ZStack(alignment: .topLeading) {
-                    // A tap selects a day; a mostly-horizontal drag scrubs. The drag needs 16 pt of movement so a vertical
-                    // swipe that starts on the graph still scrolls the page (checked by the interaction tests).
-                    let pick: (CGFloat) -> Void = { px in
+                    // A tap selects a day and a horizontal drag scrubs. The touch layer only claims drags that start
+                    // horizontally, so a vertical swipe that starts on the graph scrolls the page as usual.
+                    GraphTouchLayer { px in
                         if let x: Double = proxy.value(atX: px - plot.origin.x) {
                             let i = min(max(Int(x.rounded()), 0), max(count - 1, 0))
                             if selected != i { selected = i }
                         }
                     }
-                    Rectangle().fill(Color.clear).contentShape(Rectangle())
-                        .gesture(SpatialTapGesture().onEnded { g in pick(g.location.x) })
-                        .simultaneousGesture(DragGesture(minimumDistance: 16).onChanged { g in
-                            if abs(g.translation.width) >= abs(g.translation.height) { pick(g.location.x) }
-                        })
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .accessibilityHidden(true)
                     // one accessible element per day, over its column (VoiceOver target and interaction-test target)
                     ForEach(dates) { d in
                         if let px = proxy.position(forX: Double(d.id)) {
@@ -378,6 +377,43 @@ struct CyTrendsGraph: View {
         } else {
             Text("Touch or drag across the graph to inspect a day.").font(.caption2).foregroundStyle(theme.textTertiary)
                 .accessibilityIdentifier("trendsHint")
+        }
+    }
+}
+
+/// Touch handling for the graph. UIKit recognisers are used on purpose: a horizontal-only pan is the standard way to
+/// scrub inside a vertically scrolling page without ever trapping the scroll.
+private struct GraphTouchLayer: UIViewRepresentable {
+    let onPick: (CGFloat) -> Void            // x position inside the layer
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+    func makeUIView(context: Context) -> UIView {
+        let v = UIView()
+        v.backgroundColor = .clear
+        v.isAccessibilityElement = false
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
+        pan.delegate = context.coordinator
+        pan.maximumNumberOfTouches = 1
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
+        v.addGestureRecognizer(pan)
+        v.addGestureRecognizer(tap)
+        return v
+    }
+    func updateUIView(_ uiView: UIView, context: Context) { context.coordinator.onPick = onPick }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onPick: (CGFloat) -> Void
+        init(onPick: @escaping (CGFloat) -> Void) { self.onPick = onPick }
+        @objc func pan(_ g: UIPanGestureRecognizer) {
+            if g.state == .began || g.state == .changed { onPick(g.location(in: g.view).x) }
+        }
+        @objc func tap(_ g: UITapGestureRecognizer) {
+            if g.state == .ended { onPick(g.location(in: g.view).x) }
+        }
+        func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
+            guard let p = g as? UIPanGestureRecognizer else { return true }
+            let v = p.velocity(in: p.view)
+            return abs(v.x) > abs(v.y)       // vertical movement is left to the page scroll
         }
     }
 }

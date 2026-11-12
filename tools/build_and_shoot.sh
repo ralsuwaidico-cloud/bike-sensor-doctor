@@ -88,17 +88,17 @@ if [ -n "$STD" ]; then
   for T in $THEMES; do
     shoot "$U" "home-$T-1-top" LAB_THEME=$T
     shoot "$U" "home-$T-2-cards" LAB_THEME=$T LAB_SCROLL=cards
-    shoot "$U" "home-$T-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
+    shoot "$U" "home-$T-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=6
     shoot "$U" "home-$T-4-metrics" LAB_THEME=$T LAB_SCROLL=metrics
     full "$U" "full-$T" LAB_THEME=$T
   done
   for T in obsidian arctic; do
     shoot "$U" "graph-$T-recovery-7d-noselection" LAB_THEME=$T LAB_SCROLL=trends
     shoot "$U" "graph-$T-recovery-4w" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_RANGE=4w LAB_SELECT=20
-    shoot "$U" "graph-$T-activity-7d" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_SELECT=1
+    shoot "$U" "graph-$T-activity-7d" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_SELECT=2
     shoot "$U" "graph-$T-activity-4w" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_GRAPH_RANGE=4w LAB_SELECT=16
-    shoot "$U" "graph-$T-trends-7d" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_SELECT=1
-    shoot "$U" "graph-$T-trends-4w-gaps" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_GRAPH_RANGE=4w LAB_SELECT=6
+    shoot "$U" "graph-$T-trends-7d" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_SELECT=5
+    shoot "$U" "graph-$T-trends-4w-gaps" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_GRAPH_RANGE=4w LAB_SELECT=23
   done
   shoot "$U" "graph-highContrast-activity-4w" LAB_THEME=highContrast LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_GRAPH_RANGE=4w LAB_SELECT=16
   for S in qualitativeRecovery newUser cyclingOnly strengthOnly noPlan noRecovery partialData noSleep longName loading; do
@@ -108,7 +108,7 @@ if [ -n "$STD" ]; then
   for S in qualitativeRecovery newUser noRecovery; do shoot "$U" "state-arctic-$S-1-top" LAB_THEME=arctic LAB_SCENARIO=$S; done
   shoot "$U" "state-obsidian-newUser-2-graph" LAB_THEME=obsidian LAB_SCENARIO=newUser LAB_SCROLL=trends
   shoot "$U" "state-obsidian-noRecovery-2-graph" LAB_THEME=obsidian LAB_SCENARIO=noRecovery LAB_SCROLL=trends LAB_GRAPH_MODE=trends
-  shoot "$U" "state-obsidian-qualitativeRecovery-2-graph" LAB_THEME=obsidian LAB_SCENARIO=qualitativeRecovery LAB_SCROLL=trends LAB_SELECT=1
+  shoot "$U" "state-obsidian-qualitativeRecovery-2-graph" LAB_THEME=obsidian LAB_SCENARIO=qualitativeRecovery LAB_SCROLL=trends LAB_SELECT=5
   for T in obsidian arctic; do
     for SH in mix recovery sleep consistency review; do shoot "$U" "sheet-$T-$SH" LAB_THEME=$T LAB_SHEET=$SH; done
   done
@@ -127,7 +127,7 @@ if [ -n "$STD" ]; then
   for T in obsidian highContrast; do
     shoot "$U" "a11y-$T-AXL-1-top" LAB_THEME=$T
     shoot "$U" "a11y-$T-AXL-2-cards" LAB_THEME=$T LAB_SCROLL=cards
-    shoot "$U" "a11y-$T-AXL-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
+    shoot "$U" "a11y-$T-AXL-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=6
     full "$U" "full-$T-AXL" LAB_THEME=$T
   done
   xcrun simctl shutdown "$U" >/dev/null 2>&1
@@ -138,12 +138,12 @@ if [ -n "$SMALL" ]; then
   for T in obsidian arctic; do
     shoot "$U" "small-$T-1-top" LAB_THEME=$T
     shoot "$U" "small-$T-2-cards" LAB_THEME=$T LAB_SCROLL=cards
-    shoot "$U" "small-$T-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
+    shoot "$U" "small-$T-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=6
     shoot "$U" "small-$T-4-metrics" LAB_THEME=$T LAB_SCROLL=metrics
     full "$U" "full-small-$T" LAB_THEME=$T
   done
   shoot "$U" "small-obsidian-graph-activity-4w" LAB_THEME=obsidian LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_GRAPH_RANGE=4w LAB_SELECT=16
-  shoot "$U" "small-obsidian-graph-trends" LAB_THEME=obsidian LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_SELECT=1
+  shoot "$U" "small-obsidian-graph-trends" LAB_THEME=obsidian LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_SELECT=5
   shoot "$U" "small-obsidian-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser
   shoot "$U" "small-obsidian-longName" LAB_THEME=obsidian LAB_SCENARIO=longName
   shoot "$U" "small-obsidian-sheet-recovery" LAB_THEME=obsidian LAB_SHEET=recovery
@@ -151,7 +151,7 @@ if [ -n "$SMALL" ]; then
   full "$U" "full-small-obsidian-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser
   xcrun simctl ui "$U" content_size accessibility-large >/dev/null 2>&1
   shoot "$U" "small-obsidian-AXL-1-top" LAB_THEME=obsidian
-  shoot "$U" "small-obsidian-AXL-3-graph" LAB_THEME=obsidian LAB_SCROLL=trends LAB_SELECT=2
+  shoot "$U" "small-obsidian-AXL-3-graph" LAB_THEME=obsidian LAB_SCROLL=trends LAB_SELECT=6
   full "$U" "full-small-obsidian-AXL" LAB_THEME=obsidian
   xcrun simctl shutdown "$U" >/dev/null 2>&1
 fi

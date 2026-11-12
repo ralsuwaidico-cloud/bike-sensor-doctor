@@ -1,4 +1,4 @@
-# Cyclift UI Lab — component inventory (Home v2.1)
+# Cyclift UI Lab — component inventory (Home v2.2)
 
 **Prototype only.** Standalone project on branch `proto/ui-lab`; no production code, data or engine is used.
 Status of every item: **built in the prototype, awaiting the owner's review — nothing is approved.**
@@ -70,6 +70,26 @@ lightness changes with the theme. No component contains a colour value; all read
 | Metrics | `CyMetricGrid` | TrendsAndDock.swift | `[CyMetricTile]`, isLoading | `onTile` | populated, missing ("—" / "No data"), loading, one column at large text |
 | Navigation | `CyFloatingDock` | TrendsAndDock.swift | selection binding, four `CyDockItem`s, centre title / icon / badge | `onCentre` | floating capsule, sliding highlight, raised centre action, six themes |
 
+## Changed or added in Home v2.2 (owner revision, 12 Nov 2026) — all awaiting review
+
+No new prototype project and no parallel library: v2.2 changes existing components in place and adds one (the graph).
+
+| Group | Component | File | What changed in v2.2 | Inputs | Actions | States in the gallery ("Home v2.2 components") |
+|---|---|---|---|---|---|---|
+| Indicators | `CyMixRingGlyph` | HomeV22Components.swift | Centre shows the completed-time ratio; the word "Mix" removed | `CyMixModel?` (legs now carry `minutesDone`, `minutesPlanned`) | — | 66:34, 100:0, 0:100, no completed training ("—"), loading |
+| Indicators | `CyRecoveryGlyph` | HomeV22Components.swift | Heart and three arcs removed; single ring with a percentage (sample) or a status icon | `CyRecoveryIndicatorModel?` with state `numericSample` / `qualitative` / `partial` / `awaiting` | — | all four + loading |
+| Indicators | `CyIndicatorRow` | HomeV22Components.swift | Captions and spoken values for the new centre contents; identifiers for tests | as v2.1 | as v2.1 | hybrid, cycling only, strength only, partial, new athlete, loading, large text |
+| Schedule | `CyCompactSchedule`, `CySessionMark` | HomeV22Components.swift | Circles removed: one icon per session with a state mark beneath (dot, hollow dot, cross, arrow) | `[CyScheduleDay]` | `onDay` | completed, planned, missed, rescheduled, rest, two sessions, empty, loading |
+| Sleep | `CySleepBar` | HomeV22Components.swift | "last night" wording, larger value, labelled target (`targetLabel`) | `CySleepModel?` | `onOpen` | normal, no data, loading |
+| Coach | `CyCoachBanner` | HomeV22Components.swift | Observation line → bold recommendation → actions | `CyCoachBannerModel?` (+ `observation`, `recommendation`) | `onWhy`, `onReview`, `onNotNow` | pending, postponed, accepted, declined, no proposal, empty, loading |
+| Trends | **`CyTrendsGraph`** (new; replaces `CyTrendsModule` on Home) | Graph.swift | Interactive multi-series line graph | `[CyGraphRange]` → `CyGraphMode` → `CyGraphSeries` (id, name, unit, source, provenance, colour, axis, dashed, sample flag, fixed domain, values with `nil` for missing), `CyGraphDate` | `onInfo`, `onDay(date, rows)` | three views, 7 days / 4 weeks, selected day, gaps, empty, loading |
+| Metrics | `CyMetricGrid` (rows) | TrendsAndDock.swift | Rows only on Home; chevron; identifiers. The grid style stays in the file but is no longer offered | `[CyMetricTile]` | `onTile` | populated, missing, loading |
+| Sheets | `MixSheet`, `RecoverySheet`, `SleepSheet`, `GraphDaySheet`, "How Trends works" | Sheets21.swift, LabApp.swift | Ratio explanation; recovery states and missing inputs; four sleep terms; graph day rows; graph methodology and sources | — | close | captured as screenshots |
+| Chrome | `CySheet`, `CyReviewSheet`, `CyFloatingDock`, `CySetupBanner`, `CyCompactSportCard` | Controls.swift, TrendsAndDock.swift, HomeV21Components.swift | Accessibility identifiers only (no visual change) | — | — | — |
+
+Removed from the code in v2.2: the heart / three-arc recovery glyph, the circled schedule marks, the "Mix" centre
+label, the Rows / Grid switch in the Lab. `CyTrendsModule` (v2.1 bar chart) stays in the file, unused on Home.
+
 Superseded on Home (kept in the library and gallery, not deleted): `CyRing` / `CyRingRow`, `CyWeekStrip`,
 `CyTrainingSummaryCard`, `CyCoachInsightCard`, `CyGettingStartedCard`, `CyTrendChart`, `CyTabBar`.
 
@@ -77,7 +97,13 @@ Superseded on Home (kept in the library and gallery, not deleted): `CyRing` / `C
 
 | Screen | File | Status |
 |---|---|---|
-| Home v2.1 | Screens/Home21Screen.swift (+ Sheets21.swift for the local detail sheets) | Prototype built, awaiting review. The v2 screen file was replaced; it remains in the branch history |
+| Home v2.2 | Screens/Home21Screen.swift (+ Sheets21.swift for the local detail sheets) | Prototype built, awaiting review |
 | Lab (theme and scenario switches, gallery index) | Screens/Gallery.swift | Prototype tool, not a product screen |
-| Component gallery (7 pages, incl. "Home v2.1 components") | Screens/Gallery.swift | Prototype tool |
-| Plan, Training Hub, Progress, Profile, Onboarding | — | **Not started** (each waits for the previous approval) |
+| Component gallery (incl. "Home v2.2 components") | Screens/Gallery.swift, Gallery21.swift | Prototype tool |
+| Plan, Training Hub, Progress, Profile, Onboarding | — | **Not started** (owner instruction: stop after Home v2.2) |
+
+## Tests
+
+| Target | File | What it is |
+|---|---|---|
+| `CycliftUILabUITests` | UITests/HomeInteractionTests.swift | 22 interaction tests that drive the prototype in the iOS Simulator. Prototype only: they share nothing with the production test suite |

@@ -30,7 +30,10 @@ final class HomeInteractionTests: XCTestCase {
 
     private var window: CGRect { app.windows.firstMatch.frame }
     /// The part of the screen that is neither under the status bar nor under the floating dock.
-    private var safeTop: CGFloat { 70 }
+    private var safeTop: CGFloat {
+        let scroll = app.scrollViews.firstMatch          // Home's scroll area starts below the status bar
+        return (scroll.exists ? scroll.frame.minY : window.minY + 20) + 4
+    }
     private var safeBottom: CGFloat {
         let dock = el("dockCentre")
         return (dock.exists ? dock.frame.minY : window.maxY - 110) - 8
@@ -63,9 +66,21 @@ final class HomeInteractionTests: XCTestCase {
         XCTAssertEqual(t.label, title, "Wrong sheet opened", file: file, line: line)
     }
 
+    /// Waits until an element has stopped moving (a sheet that is still sliding in must not be tapped mid-flight).
+    private func settle(_ e: XCUIElement) {
+        var last = e.frame
+        for _ in 0..<12 {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = e.frame
+            if now == last && e.isHittable { return }
+            last = now
+        }
+    }
+
     private func closeSheet(file: StaticString = #filePath, line: UInt = #line) {
         let c = el("sheetClose")
         XCTAssertTrue(c.waitForExistence(timeout: 4), "Sheet has no close button", file: file, line: line)
+        settle(c)
         c.tap()
         let gone = NSPredicate(format: "exists == false")
         expectation(for: gone, evaluatedWith: el("sheetTitle"))
@@ -243,21 +258,21 @@ final class HomeInteractionTests: XCTestCase {
         launch()
         bring(el("trendsChart"))
         XCTAssertTrue(el("trendsHint").exists, "Before a selection the hint should be shown")
-        tapOn(el("trendsDay-0"))
+        tapOn(el("trendsDay-4"))
         waitLabel("trendsPanelDate", equals: "Monday 9 Nov")
         waitLabel("trendsValue-load", equals: "240 RPE×min")
         waitLabel("trendsValue-recovery", equals: "72 %")
-        tapOn(el("trendsDay-1"))
+        tapOn(el("trendsDay-5"))
         waitLabel("trendsPanelDate", equals: "Tuesday 10 Nov")
         waitLabel("trendsValue-load", equals: "225 RPE×min")
         waitLabel("trendsValue-recovery", equals: "61 %")
-        // a day without measurements says so — nothing is carried over or interpolated
-        tapOn(el("trendsDay-4"))
-        waitLabel("trendsPanelDate", equals: "Friday 13 Nov")
-        waitLabel("trendsValue-load", equals: "No data")
+        // a day with a missing reading says so — nothing is carried over or interpolated (Sat 7 Nov in the sample)
+        tapOn(el("trendsDay-2"))
+        waitLabel("trendsPanelDate", equals: "Saturday 7 Nov")
+        waitLabel("trendsValue-load", equals: "594 RPE×min")
         waitLabel("trendsValue-recovery", equals: "No data")
         // the daily sheet opens for the selected date
-        tapOn(el("trendsDay-1"))
+        tapOn(el("trendsDay-5"))
         waitLabel("trendsPanelDate", equals: "Tuesday 10 Nov")
         tapOn(el("trendsOpenDay")); expectSheet("Tuesday 10 Nov")
         let rows = labels("graphDayRows").joined(separator: " | ")
@@ -273,14 +288,14 @@ final class HomeInteractionTests: XCTestCase {
         let a = el("trendsDay-0").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         let mid = el("trendsDay-2").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         a.press(forDuration: 0.1, thenDragTo: mid, withVelocity: .slow, thenHoldForDuration: 0.4)
-        waitLabel("trendsPanelDate", equals: "Wednesday 11 Nov")
-        waitLabel("trendsValue-load", equals: "96 RPE×min")
+        waitLabel("trendsPanelDate", equals: "Saturday 7 Nov")
+        waitLabel("trendsValue-load", equals: "594 RPE×min")
         let end = el("trendsDay-5").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         mid.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.4)
-        waitLabel("trendsPanelDate", equals: "Saturday 14 Nov")
+        waitLabel("trendsPanelDate", equals: "Tuesday 10 Nov")
         // and back again, right to left
         end.press(forDuration: 0.1, thenDragTo: a, withVelocity: .slow, thenHoldForDuration: 0.4)
-        waitLabel("trendsPanelDate", equals: "Monday 9 Nov")
+        waitLabel("trendsPanelDate", equals: "Thursday 5 Nov")
     }
 
     /// The graph must not trap the page: a vertical swipe that starts on the graph still scrolls Home.
@@ -294,6 +309,7 @@ final class HomeInteractionTests: XCTestCase {
         start.press(forDuration: 0.05, thenDragTo: stop, withVelocity: .default, thenHoldForDuration: 0.3)
         let after = chart.frame.midY
         XCTAssertLessThan(after, before - 60, "The page did not scroll when swiping up over the graph (before \(before), after \(after))")
+        XCTAssertFalse(el("trendsPanelDate").exists, "A vertical swipe over the graph selected a day")
     }
 
     // MARK: 9 — graph: series switching
@@ -301,7 +317,7 @@ final class HomeInteractionTests: XCTestCase {
     func test14_SeriesSwitchingChangesWhatIsShown() {
         launch()
         bring(el("trendsChart"))
-        tapOn(el("trendsDay-1"))
+        tapOn(el("trendsDay-5"))
         XCTAssertTrue(el("trendsValue-recovery").waitForExistence(timeout: 4))
         XCTAssertEqual(value("trendsSeries-recovery"), "shown")
         tapOn(el("trendsSeries-recovery"))
@@ -318,7 +334,7 @@ final class HomeInteractionTests: XCTestCase {
         tapOn(el("trendsMode-activity"))
         XCTAssertTrue(el("trendsSeries-endurance").waitForExistence(timeout: 4))
         XCTAssertFalse(el("trendsSeries-load").exists, "Switching the view left the previous view's series on screen")
-        tapOn(el("trendsDay-1"))
+        tapOn(el("trendsDay-5"))
         waitLabel("trendsValue-endurance", equals: "45 min")
         waitLabel("trendsValue-strength", equals: "0 min")
         waitLabel("trendsValue-planned", equals: "45 min")
@@ -326,7 +342,7 @@ final class HomeInteractionTests: XCTestCase {
         // Recovery trends: one metric at a time, each in its own unit
         tapOn(el("trendsMode-trends"))
         XCTAssertTrue(el("trendsSeries-rhr").waitForExistence(timeout: 4))
-        tapOn(el("trendsDay-1"))
+        tapOn(el("trendsDay-5"))
         waitLabel("trendsValue-rhr", equals: "54 bpm")
         XCTAssertFalse(el("trendsValue-hrv").exists || el("trendsValue-sleep").exists, "More than one unit is shown at once")
         tapOn(el("trendsSeries-hrv"))
@@ -348,9 +364,11 @@ final class HomeInteractionTests: XCTestCase {
         XCTAssertTrue(el("trendsDay-27").waitForExistence(timeout: 4), "The 4-week view does not have 28 days")
         XCTAssertFalse(el("trendsDay-28").exists)
         XCTAssertFalse(el("trendsPanelDate").exists, "A selection from the other range was kept")
+        // in the 4-week view the load is the 7-day rolling total: 0+240+594+0+240+225+96 for the last day
         tapOn(el("trendsDay-27"))
         waitLabel("trendsPanelDate", equals: "Wednesday 11 Nov")
-        waitLabel("trendsValue-load", equals: "96 RPE×min")
+        waitLabel("trendsValue-load", equals: "\(0 + 240 + 594 + 0 + 240 + 225 + 96) RPE×min")
+        waitLabel("trendsValue-recovery", equals: "68 %")
         tapOn(el("trendsDay-0"))
         waitLabel("trendsPanelDate", equals: "Thursday 15 Oct")
         // a missing recovery reading inside the range is reported as missing (Wed 21 Oct in the sample)

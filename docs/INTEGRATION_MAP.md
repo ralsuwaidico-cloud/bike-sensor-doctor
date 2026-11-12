@@ -57,6 +57,43 @@ Home v2 implementation map and the code audit; they were read, not changed.
 | Floating dock | Production already has the original floating dock (`CyLiquidDock`) | None for behaviour — the prototype mirrors it; only theme tokens would be shared |
 | Gradients / quieter cards | — | Token layer (as in section B) |
 
+## Home v2.2 additions (12 Nov 2026)
+
+Provenance categories requested by the owner: **Existing** = existing engine or stored data · **Mapping** = data
+exists, needs an adapter · **Calculation** = needs a new, documented calculation · **Validation** = must not ship
+without scientific validation and owner approval.
+
+| Prototype element | Category | Production source / what is missing |
+|---|---|---|
+| Training Mix centre ratio (completed minutes, endurance : strength) | Calculation (trivial) over Existing data | Ride and strength durations are already stored. New: a `TrainingMix.completedRatio` value with the documented rounding rule and the "no completed time" state |
+| Training Mix planned ratio (sheet only) | Mapping | Planned minutes per discipline from the approved week plan |
+| Training Mix rings | Existing + Mapping | As in v2.1 |
+| **Acute:chronic load analysis (ACWR) engine** | Existing — **kept, untouched** | Stays a separate analytics capability. It is not the Mix ratio and is not shown on the Mix indicator |
+| Recovery percentage | **Validation** | No approved numerical recovery model exists. Production must show `.qualitative`, `.partial` or `.awaiting` until a documented method is validated and approved. The prototype percentage is sample text, not a formula |
+| Recovery status word, readings, freshness, missing inputs | Existing | `RecoveryAnalysis` advice wording, Health readings, freshness |
+| Schedule session marks | Existing + Mapping | Day sessions and their status; "rescheduled" label needs mapping |
+| Sleep bar: last night, 7-day average | Existing / Calculation (mean of recorded nights) | Sleep durations from Apple Health |
+| Sleep target | Mapping (user setting) | A user-chosen target does not exist yet; none is to be invented. No sleep-need algorithm |
+| Coach observation → recommendation | Mapping | The coach item already has a reason and a proposal; they need to be passed as two fields |
+| Key metric rows | Existing + Mapping | As in v2.1; weekly load stays session effort × minutes |
+
+### Trend graph series
+
+| View | Series | Unit | Scale | Category | Source in production | Missing-data handling |
+|---|---|---|---|---|---|---|
+| Training & Recovery | Training load | RPE×min per day | Left, from zero | Existing | Session load (session effort × minutes) already computed per session; needs a per-day sum (Mapping) | Day without a session after today: gap. Past rest day: 0 |
+| Training & Recovery | Recovery | % | Right, fixed 0–100 | **Validation** | None. Sample only; hidden in the status-word scenarios | Gap |
+| Activity | Endurance | minutes per day | Left, from zero | Existing | Ride durations | Gap for days not yet reached |
+| Activity | Strength | minutes per day | Left, from zero | Existing | Strength session durations | Gap |
+| Activity | Planned | minutes per day | Left, same scale | Mapping | Planned session durations from the week plan | Gap when no plan |
+| Recovery trends | Resting HR | bpm | Own scale | Existing | Apple Health read | Gap; no interpolation |
+| Recovery trends | HRV | ms | Own scale | Existing | Apple Health read | Gap |
+| Recovery trends | Sleep | hours | Own scale | Existing | Apple Health read | Gap |
+
+Graph behaviour that is new production work (Calculation / Mapping, no science needed): per-day series builder for
+7 and 28 days with explicit `nil` for missing days; the selected-day value panel; the daily sheet contents.
+Nothing in the graph is a stress, strain or readiness score.
+
 ## C. Things the prototype deliberately does not do
 
 - It does not compute any metric. Every number and status word is sample text.
