@@ -367,7 +367,10 @@ final class HomeInteractionTests: XCTestCase {
         // in the 4-week view the load is the 7-day rolling total: 0+240+594+0+240+225+96 for the last day
         tapOn(el("trendsDay-27"))
         waitLabel("trendsPanelDate", equals: "Wednesday 11 Nov")
-        waitLabel("trendsValue-load", equals: "\(0 + 240 + 594 + 0 + 240 + 225 + 96) RPE×min")
+        let lastSeven: [Int] = [0, 240, 594, 0, 240, 225, 96]
+        let rollingTotal: Int = lastSeven.reduce(0, +)
+        XCTAssertEqual(rollingTotal, 1395)
+        waitLabel("trendsValue-load", equals: "1395 RPE×min/7d")
         waitLabel("trendsValue-recovery", equals: "68 %")
         tapOn(el("trendsDay-0"))
         waitLabel("trendsPanelDate", equals: "Thursday 15 Oct")

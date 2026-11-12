@@ -69,26 +69,26 @@ enum MockGraph {
 
     static func modes(_ o: GraphOptions, rolling: Bool, e: [Double?], s: [Double?], p: [Double?], load: [Double?], rec: [Double?], rhr: [Double?], hrv: [Double?], slp: [Double?]) -> [CyGraphMode] {
         let n = e.count
-        let sfx = rolling ? " (7-day)" : ""
+        let lu = rolling ? "RPE×min/7d" : "RPE×min", mu = rolling ? "min/7d" : "min"
         let src = rolling ? " · 7-day rolling total" : ""
         var a: [CyGraphSeries] = [
-            CyGraphSeries(id: "load", name: "Training load" + sfx, unit: "RPE×min", source: "Sample · session effort × minutes" + src, provenance: rolling ? .needsCalculation : .existingEngine,
+            CyGraphSeries(id: "load", name: "Training load", unit: lu, source: "Sample · session effort × minutes" + src, provenance: rolling ? .needsCalculation : .existingEngine,
                           color: .load, axis: .leading, values: load)]
         a.append(CyGraphSeries(id: "recovery", name: "Recovery", unit: "%", source: "Sample only · no approved model", provenance: .needsValidation,
                                color: .recovery, axis: .trailing, isSampleScore: true, fixedDomain: 0...100, values: o.recoveryScore ? rec : none(n)))
         var b: [CyGraphSeries] = []
-        if o.endurance { b.append(CyGraphSeries(id: "endurance", name: "Endurance" + sfx, unit: "min", source: "Sample · recorded rides" + src, provenance: rolling ? .needsCalculation : .existingEngine, color: .endurance, axis: .leading, values: e)) }
-        if o.strength { b.append(CyGraphSeries(id: "strength", name: "Strength" + sfx, unit: "min", source: "Sample · logged sessions" + src, provenance: rolling ? .needsCalculation : .existingEngine, color: .strength, axis: .leading, values: s)) }
-        b.append(CyGraphSeries(id: "planned", name: "Planned" + sfx, unit: "min", source: "Sample · plan" + src, provenance: .needsMapping, color: .neutral, axis: .leading, dashed: true, values: p))
+        if o.endurance { b.append(CyGraphSeries(id: "endurance", name: "Endurance", unit: mu, source: "Sample · recorded rides" + src, provenance: rolling ? .needsCalculation : .existingEngine, color: .endurance, axis: .leading, values: e)) }
+        if o.strength { b.append(CyGraphSeries(id: "strength", name: "Strength", unit: mu, source: "Sample · logged sessions" + src, provenance: rolling ? .needsCalculation : .existingEngine, color: .strength, axis: .leading, values: s)) }
+        b.append(CyGraphSeries(id: "planned", name: "Planned", unit: mu, source: "Sample · plan" + src, provenance: .needsMapping, color: .neutral, axis: .leading, dashed: true, values: p))
         let c: [CyGraphSeries] = [
             CyGraphSeries(id: "rhr", name: "Resting HR", unit: "bpm", source: "Sample · Apple Health", provenance: .existingEngine, color: .recovery, axis: .leading, values: o.restingHR ? rhr : none(n)),
             CyGraphSeries(id: "hrv", name: "HRV", unit: "ms", source: "Sample · Apple Health", provenance: .existingEngine, color: .consistency, axis: .leading, values: o.hrv ? hrv : none(n)),
             CyGraphSeries(id: "sleep", name: "Sleep", unit: "h", source: "Sample · Apple Health", provenance: .existingEngine, color: .load, axis: .leading, values: o.sleep ? slp : none(n))]
-        let roll = rolling ? " Load and minutes are 7-day rolling totals in this view." : ""
+        let roll = rolling ? " In this view each load point is the total of the last 7 days (/7d)." : ""
         return [
             CyGraphMode(id: "recovery", title: "Training & Recovery", singleSelection: false, series: a,
                         note: (o.recoveryScore ? "Recovery % is sample data. Cyclift has no validated recovery score; the app would show a status word instead." : "No recovery score: the app shows a status word, not a number.") + roll),
-            CyGraphMode(id: "activity", title: "Activity", singleSelection: false, series: b, note: rolling ? "Each point is the total of the last 7 days." : nil),
+            CyGraphMode(id: "activity", title: "Activity", singleSelection: false, series: b, note: rolling ? "Each point is the total of the last 7 days (/7d)." : nil),
             CyGraphMode(id: "trends", title: "Recovery trends", singleSelection: true, series: c, note: "One metric at a time — the units differ."),
         ]
     }

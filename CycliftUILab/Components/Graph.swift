@@ -269,17 +269,7 @@ struct CyTrendsGraph: View {
         }
         .chartXScale(domain: 0...Double(max(count - 1, 1)), range: .plotDimension(padding: 18))
         .chartYScale(domain: -0.06...1.08)
-        .chartXAxis {
-            AxisMarks(values: dates.filter { $0.axisLabel != nil }.map { Double($0.id) }) { value in
-                AxisValueLabel {
-                    if let v = value.as(Double.self), let d = dates.first(where: { $0.id == Int(v) }) {
-                        Text(big && count <= 7 ? d.short : (d.axisLabel ?? ""))
-                            .font(.caption2.weight(selected == d.id ? .bold : .regular))
-                            .foregroundStyle(selected == d.id ? theme.textPrimary : theme.chartAxis)
-                    }
-                }
-            }
-        }
+        .chartXAxis(.hidden)     // day labels are drawn by the overlay so the first and last label are never clipped
         .chartYAxis {
             AxisMarks(position: .leading, values: [0, 0.5, 1]) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5)).foregroundStyle(theme.chartGrid)
@@ -308,6 +298,17 @@ struct CyTrendsGraph: View {
                     }
                     .frame(width: geo.size.width, height: geo.size.height)
                     .accessibilityHidden(true)
+                    ForEach(dates) { d in
+                        if let px = proxy.position(forX: Double(d.id)), let text = (big && count <= 7 ? Optional(d.short) : d.axisLabel) {
+                            Text(text)
+                                .font(.caption2.weight(selected == d.id ? .bold : .regular))
+                                .foregroundStyle(selected == d.id ? theme.textPrimary : theme.chartAxis)
+                                .lineLimit(1).fixedSize()
+                                .position(x: plot.origin.x + px, y: plot.maxY + (big ? 16 : 11))
+                                .allowsHitTesting(false)
+                                .accessibilityHidden(true)
+                        }
+                    }
                     // one accessible element per day, over its column (VoiceOver target and interaction-test target)
                     ForEach(dates) { d in
                         if let px = proxy.position(forX: Double(d.id)) {
@@ -328,6 +329,7 @@ struct CyTrendsGraph: View {
             }
         }
         .frame(height: 168)
+        .padding(.bottom, big ? 30 : 20)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(mode?.title ?? "Trends"), \(range?.title ?? "")")
         .accessibilityIdentifier("trendsChart")

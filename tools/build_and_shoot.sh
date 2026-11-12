@@ -39,6 +39,10 @@ shoot() { # udid name env…
   env "${ENVV[@]}" xcrun simctl launch "$U" "$BID" >/dev/null 2>&1 || { note "launch failed: $NAME"; return; }
   sleep "${SETTLE:-3}"
   xcrun simctl io "$U" screenshot "$OUT/shots/$NAME.png" >/dev/null 2>&1 || note "screenshot failed: $NAME"
+  # a blank frame (app not drawn yet) compresses to a very small file: retake once after a longer wait
+  if [ -f "$OUT/shots/$NAME.png" ] && [ "$(stat -f%z "$OUT/shots/$NAME.png")" -lt 100000 ] && [ "$NAME" != "zz-render-tmp" ]; then
+    sleep 4; xcrun simctl io "$U" screenshot "$OUT/shots/$NAME.png" >/dev/null 2>&1; note "retaken (blank frame): $NAME"
+  fi
 }
 prep() { # udid
   xcrun simctl boot "$1" >/dev/null 2>&1; xcrun simctl bootstatus "$1" -b >/dev/null 2>&1
