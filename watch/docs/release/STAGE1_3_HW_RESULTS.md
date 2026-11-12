@@ -58,3 +58,18 @@ Part 3 (Arabic, Large Text on the watch); end-of-session report. Paused by the s
    reset reason (brown-out / watchdog / panic / power-on).
 2. Offline RC2 fixes: D6 time display; P1 debounce (clock invalid only after 3 failed reads; charging state ignored when no
    battery voltage); D7 per reproduction result. New file name and fingerprint; separate install approval.
+
+## Restart recording, 12 Nov 11:11–12:59 (read-only monitor; RC1 unchanged)
+- Continuous recording 11:11:20 → 12:59 (`evidence/rc1_restart_recording_20261112.txt`, extract). The owner's restart test
+  (ride, Key 2 laps, Key 1) ran 11:15–11:17 without a restart.
+- **Three chip starts were recorded afterwards, at 11:17:42.146, 11:17:42.661 (0.5 s later) and 11:17:54.694**, each
+  `rst:0x1 (POWERON_RESET)` followed by a normal Cyclift start. The last inputs before them: Key 2 at 11:17:33–37 (5 s
+  earlier), swipes at 11:17:47–52. No panic, watchdog or brown-out text; no serial port errors.
+- On the ESP32 the ROM reports a press of the reset line (R1, the right upper button) and a supply power-up both as
+  POWERON_RESET; a firmware crash or watchdog shows a different code and a crash dump. Two starts 0.5 s apart look like a
+  bouncing contact (button or connector), not software.
+- No further start until 12:59 (the latest copy of the log; the monitor keeps recording until ~19:11). The 2-hour idle recording of 11 Nov (20:56–22:56) also had none.
+- Assessment: D7 is most likely the reset button pressed while handling the watch (pinch with L1 opposite) or a brief
+  power interruption at the connector — **not proven**. The G1 / G11 physical check (owner instructions sent 12 Nov ~13:00)
+  and the Stage 1.4 start log (reset reason, start count, every decoded key) are the next evidence. Per the owner's
+  instruction, no further reproduction cycles without new evidence.

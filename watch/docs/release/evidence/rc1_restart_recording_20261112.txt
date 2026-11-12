@@ -1,0 +1,50 @@
+# RC1 monitor 12 Nov 2026 11:11:20–12:59 (read-only), extract around the three start-ups. Full log on the owner's PC: rc1_results\monitor_20261112_111120.txt (788 lines).
+11:17:13.420 perf: frames 1584, avg render 1869 us, max 319277 us, rebuilds 4 · lv_mem used 5460 / 65536, peak 8752 (sampled) · heap free 179480, min 155208 · psram 1978364 / 2097152
+11:17:25.520 perf: frames 1143, avg render 1088 us, max 19071 us, rebuilds 0 · lv_mem used 5460 / 65536, peak 8752 (sampled) · heap free 179480, min 155208 · psram 1978364 / 2097152
+11:17:29.300   key1
+11:17:33.195   key2 first press: lap armed
+11:17:35.326   command sent (simulated iPhone)
+11:17:35.326   key2 second press: lap
+11:17:35.778   command confirmed
+11:17:37.170   key2 first press: lap armed
+11:17:42.146 ets Jul 29 2019 12:21:46
+11:17:42.146 rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+11:17:42.146 configsip: 271414342, SPIWP:0xee
+11:17:42.146 clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+11:17:42.146 mode:DIO, clock div:2
+11:17:42.146 load:0x3fff0030,len:1184
+11:17:42.146 load:0x40078000,len:12784
+11:17:42.146 load:0x40080400,len:3032
+11:17:42.146 entry 0x400805e4
+11:17:42.661 ets Jul 29 2019 12:21:46
+11:17:42.661 rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+11:17:42.661 configsip: 271414342, SPIWP:0xee
+11:17:42.661 clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+11:17:42.661 mode:DIO, clock div:2
+11:17:42.661 load:0x3fff0030,len:1184
+11:17:42.661 load:0x40078000,len:12784
+11:17:42.661 load:0x40080400,len:3032
+11:17:42.661 entry 0x400805e4
+11:17:43.361 E (729) esp_core_dump_��ash: No core dump partition found!
+11:17:43.361 E (729) esp_core_dump_flash: No core dump partition found!
+11:17:44.264 Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after 576 ms · heap 183556 · psram 2097152 · flash 8 MB
+11:17:44.264 v3poc: m menu/Key1 · b Key2 · f face · k lock · E demo data · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame-time histogram · z reset histogram · M memory+stacks · R clock · T<seconds> set clock (test)
+11:17:47.938   swipe U
+11:17:50.258   swipe D
+11:17:50.956   swipe D
+11:17:52.202   swipe U
+11:17:54.694 ets Jul 29 2019 12:21:46
+11:17:54.694 rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+11:17:54.694 configsip: 271414342, SPIWP:0xee
+11:17:54.694 clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+11:17:54.694 mode:DIO, clock div:2
+11:17:54.694 load:0x3fff0030,len:1184
+11:17:54.694 load:0x40078000,len:12784
+11:17:54.694 load:0x40080400,len:3032
+11:17:54.694 entry 0x400805e4
+11:17:55.395 E (729) esp_core_dump_��ash: No core dump partition found!
+11:17:55.395 E (729) esp_core_dump_flash: No core dump partition found!
+11:17:56.312 Cyclift v3 proof of concept · Stage 1.3 RC1 (local screens; IRAM rendering off) · simulated data · first frame after 576 ms · heap 183556 · psram 2097152 · flash 8 MB
+11:17:56.312 v3poc: m menu/Key1 · b Key2 · f face · k lock · E demo data · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame-time histogram · z reset histogram · M memory+stacks · R clock · T<seconds> set clock (test)
+11:17:56.312 perf: frames 0, avg render 0 us, max 0 us, rebuilds 0 · lv_mem used 4504 / 65536, peak 4504 (sampled) · heap free 183556, min 155208 · psram 2095104 / 2097152
+# rest of the log until 12:59: no further rst: line; perf lines every 30 s
