@@ -82,9 +82,12 @@ final class HomeInteractionTests: XCTestCase {
         XCTAssertTrue(c.waitForExistence(timeout: 4), "Sheet has no close button", file: file, line: line)
         settle(c)
         c.tap()
-        let gone = NSPredicate(format: "exists == false")
-        expectation(for: gone, evaluatedWith: el("sheetTitle"))
-        waitForExpectations(timeout: 6)
+        let title = el("sheetTitle")
+        let deadline = Date().addingTimeInterval(20)
+        while title.exists && Date() < deadline { Thread.sleep(forTimeInterval: 0.2) }
+        if title.exists {
+            XCTFail("Sheet \"\(title.label)\" is still on screen 20 s after Close was tapped (close button exists: \(c.exists), hittable: \(c.exists && c.isHittable))", file: file, line: line)
+        }
     }
 
     private func value(_ id: String) -> String { (el(id).value as? String) ?? "" }
@@ -93,12 +96,17 @@ final class HomeInteractionTests: XCTestCase {
         _ = e.waitForExistence(timeout: timeout)
         return e.exists ? e.label : "<missing \(id)>"
     }
+    /// Polls until the element shows exactly `text`. The time allowed is generous because every accessibility
+    /// query is slow on a shared CI simulator; the expected text itself is never relaxed.
     private func waitLabel(_ id: String, equals text: String, file: StaticString = #filePath, line: UInt = #line) {
         let e = el(id)
-        let p = NSPredicate(format: "exists == true AND label == %@", text)
-        let x = XCTNSPredicateExpectation(predicate: p, object: e)
-        let r = XCTWaiter().wait(for: [x], timeout: 6)
-        XCTAssertEqual(r, .completed, "\(id): expected \"\(text)\", found \"\(e.exists ? e.label : "<missing>")\"", file: file, line: line)
+        let deadline = Date().addingTimeInterval(20)
+        var found = "<missing>"
+        repeat {
+            if e.exists { found = e.label; if found == text { return } } else { found = "<missing>" }
+            Thread.sleep(forTimeInterval: 0.2)
+        } while Date() < deadline
+        XCTFail("\(id): expected \"\(text)\", found \"\(found)\"", file: file, line: line)
     }
     private func labels(_ id: String) -> [String] {
         app.descendants(matching: .any).matching(identifier: id).allElementsBoundByIndex.map(\.label)

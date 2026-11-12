@@ -59,6 +59,9 @@ full() { # udid name env… → full-length Home image rendered by the prototype
   [ -n "$C" ] && rm -f "$C/Documents/home-full.png"
   SETTLE=4.5 shoot "$U" "zz-render-tmp" LAB_RENDER=1 "$@"
   rm -f "$OUT/shots/zz-render-tmp.png"
+  if [ -n "$C" ] && [ ! -f "$C/Documents/home-full.png" ]; then   # slow launch: try once more with a longer wait
+    SETTLE=9 shoot "$U" "zz-render-tmp" LAB_RENDER=1 "$@"; rm -f "$OUT/shots/zz-render-tmp.png"
+  fi
   if [ -n "$C" ] && [ -f "$C/Documents/home-full.png" ]; then cp "$C/Documents/home-full.png" "$OUT/full/$NAME.png"; else note "full-length render missing: $NAME"; fi
 }
 mkdir -p "$OUT/full"
