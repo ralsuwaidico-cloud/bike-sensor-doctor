@@ -1,87 +1,97 @@
-# Plan v2.0 — UI Lab implementation scope (for approval)
+# Plan v2.0 — focused UI Lab implementation plan (for approval)
 
-Status: **Pending Review** · Version 0.1 · 12 Nov 2026 · Level 3
+Status: **Pending Review** · Version 0.2 · 12 Nov 2026 · Level 3
 Source: `docs/cyclift-governance`, `product/plan/PLAN_UI_LAB_SCOPE.md`
-Specification: `product/plan/PLAN_V2_SPECIFICATION.md` v0.3.
+Specification: `product/plan/PLAN_V2_SPECIFICATION.md` v0.6 · visual direction B — Athletic Dynamic (approved 12 Nov).
 
-**Nothing in this document has been started.** The owner's authorisation of 12 Nov is conditional: UI Lab work may
-begin only after Plan v0.3 and its open questions have been reviewed. This is the scope that would then be built.
+**Nothing in this plan has been started. No UI Lab code was written.** It replaces scope v0.1, which predates the
+visual direction.
 
-## 1. What a UI Lab prototype is — and is not
+## 1. What will be built — and what it is
 
-A separate sample-data app on the isolated branch `proto/ui-lab`, the same place and pipeline as the Home
-prototype. It shows how Plan would look and respond. It contains **no planning engine, no real athlete data, no
-metric calculation and no connection to the production app**. Every session, warning and suggestion in it is sample
-data, labelled as such in the documentation.
+A sample-data prototype of Plan inside the existing UI Lab app on the isolated branch `proto/ui-lab`. It shows how
+Plan looks and responds. It contains no planning engine, no real athlete data, no metric calculation, and no
+connection to the production app. Production, firmware, databases, Home and TestFlight are not touched.
 
-## 2. In scope
+## 2. Preconditions
 
-| # | Item | Specification |
+| # | Condition | State on 12 Nov |
 |---|---|---|
-| 1 | Plan landing: header and More menu, one-line goal row, two-section selector | §5 |
-| 2 | Weekly Calendar: week navigation, date jump, Today, seven-date selector with discipline marks, session rows with one status word, Add session | §6.1–6.2 |
-| 3 | Session states: planned, in progress, done, missed, skipped; rest day; empty day; one, two and three sessions; long names | §6.2, §13 |
-| 4 | Session planning detail sheet with the actions valid for each state | §6.3–6.4 |
-| 5 | Add session sheet | §6.5 |
-| 6 | Move to any day: destination choice, soft warnings with "Move anyway", hard blocks with a reason, preview, history entry, Undo | §6.6 |
-| 7 | Missed session: Reschedule, Shorten or replace, Skip, Ask Coach (prepared options), Leave; linked pair shown on both dates; shortened replacement shown as "30 of 45 min prescribed" | §6.7 |
-| 8 | Skip with Restore; Remove with Undo | §6.8 |
-| 9 | Recurring Plan: seven rows, availability row, contextual warning on a row, weekday sheet with two scopes, preview | §7 |
-| 10 | Availability & preferences screen (rows only; each row opens a placeholder titled with the name of the existing editor) | §7.3 |
-| 11 | Routines list and one routine editing screen (static sample) | §9 |
-| 12 | Goal & Program screen with existing-data content only | §8 |
-| 13 | One planning-suggestion row opening the shared proposal detail already built for the Home prototype | §11 |
-| 14 | Plan history list with Undo | §12 |
-| 15 | Six themes; default and largest accessibility text sizes; small and standard simulators | §17–18 |
+| 1 | UI Lab pipeline free | **Free** — no run in progress (last run 43221125374 finished 14:43 UTC) |
+| 2 | Home v2.3 verification result known | **Known: not a clean pass** — 27 of 31 interaction tests passed on each simulator (§3) |
+| 3 | Sheet-presentation defect understood | **Open.** Plan depends on sheets more than Home does; see §3 |
+| 4 | Your explicit "start" | Awaited |
 
-## 3. Out of scope
+## 3. Home v2.3 result and what it means for Plan
 
-- Everything marked Future in the specification: events, named programs and phases, times and windows, date-range
-  exceptions, saved endurance workouts, Weekly Planning Review, external calendars, free-text Coach.
-- Any metric of the metrics proposal (no adherence, fulfillment or volume figure is shown anywhere on Plan).
-- Any change to automatic adaptation.
-- Train: the prototype shows "Start in Train" and "Log this session" as handover points that end on a labelled
-  placeholder.
-- Production code, the release branch, TestFlight, databases, migrations, Apple Watch, BikeComputer, detachable
-  Watch and firmware.
-- Changes to the frozen Home prototype screens.
+Run 43221125374, commit `6454a13`: contrast check passed (six themes, 294 pairs) · build passed · screenshots
+produced (123 screens, 22 full-length) · interaction tests **27 passed, 4 failed on each of the two simulators**.
 
-## 4. Sample-data scenarios
+| Test | Standard | Small | Reading |
+|---|---|---|---|
+| T29 rapid double tap opens one sheet | failed | failed | Reproducible on both: after two fast taps **no** sheet opened. A defect in the presentation guard |
+| T30 sheet requested while another is closing (with guard) | failed, 5 of 6 shown | failed, 4 of 6 shown | Reproducible: a requested sheet sometimes never appears |
+| T23 Coach conversation history | failed | failed | Same on both: the history lists 4 entries where the test expects 3. Either the screen or the test is wrong; not yet examined |
+| T01 each indicator opens its sheet | failed | passed | "No sheet opened" — consistent with the same sheet defect |
+| T09 Coach postpone | passed | failed | "Proposal sheet stayed on screen" — the same family |
 
-Normal week · week with a missed session unresolved · week with a rescheduled pair · week with a completed shortened
-replacement · week with a pending suggestion · empty plan with no goal · next week · recurring plan with one row
-over its available time · recurring plan over the weekly budget · two sessions on one day.
+The tests' own observation: without any guard, plain SwiftUI also lost a sheet requested 0–50 ms into a dismissal
+on one simulator. So this is a real presentation problem, not timing noise, and the guard written for v2.3 does not
+solve it. **Home v2.3 is therefore not ready for owner sign-off.** No test was changed or relaxed.
 
-## 5. Verification that would be reported
+Consequence: step 1 of this plan repairs sheet presentation in the shared layer before any Plan screen is built on
+it. That step changes UI Lab code used by Home; it needs your approval like the rest.
 
-| Check | Method |
-|---|---|
-| Builds; contrast script passes for six themes | Pipeline |
-| Interaction tests on a small and a standard simulator: section switch, date selection, each sheet opens and closes, each action appears only in its valid state, Move with a soft warning and with a hard block, missed-session choices, Skip and Restore, Remove and Undo, scope selection, rapid repeated taps on every sheet trigger | Automated UI tests; failures investigated, not relaxed |
-| Layout: no element under the dock on the small simulator at default and largest text; Recurring Plan clearance measured in the running prototype, not estimated | Automated frame checks and screenshots |
-| The acceptance criteria of the specification §19 that a sample-data prototype can show | Checked one by one; the rest listed as "needs production data" |
+## 4. Work order
 
-Evidence levels will be stated separately: designed · implemented in UI Lab · compiled · simulator-tested. A
-prototype cannot be physical-device-tested by me; that needs your iPhone and is not claimed.
+| Step | Content | Evidence to report |
+|---|---|---|
+| 1 | **Shared sheet presentation** — one presenter for the whole lab app that serialises requests (a request during a dismissal is held until the dismissal completes; a double tap yields exactly one sheet). Examine T23 and correct whichever of screen or test is wrong, stating which | Home tests T01, T09, T23, T27–T31 on both simulators, unmodified in what they expect |
+| 2 | **Plan landing shell** — header and More menu; program header with primary objective, one description line and Add a goal; two-section selector; B backgrounds from theme tokens | Screens in six themes; contrast script |
+| 3 | **Circular date scroller** — week paging with snap, edge days dimmed, ‹ › buttons, tap to select, selection kept across section switch; horizontal-only gesture (the UIKit technique used for the Home graph) so vertical scrolling is never trapped; Reduce Motion cross-fade; VoiceOver labels; text cap | Tests: tap each day · swipe to next and previous week · Today · vertical swipe starting on the scroller scrolls the page · selection survives section switch · labels |
+| 4 | **Session cards** — discipline wash and badge; states planned, done, missed, rescheduled (link line), skipped; structure bar only when the sample prescription has steps or exercises; one, two, three sessions, long names, rest day, empty day | Screens per state; test that a session without structure shows no bar |
+| 5 | **Coach row** — present only with an actionable proposal, specific summary, 44 pt; opens the shared proposal detail already in the lab (reason, alternatives, preview, approve, decline) | Tests: absent with no proposal and no gap left · opens detail · approve and decline update the row |
+| 6 | **Recurring Plan** — seven rows with Mon–Sun pills, availability row, contextual warning naming the exceeded constraint; weekday sheet with two scopes and a preview; Availability & preferences screen as rows | Tests: each weekday opens its sheet · warning text matches the sample constraint · scopes |
+| 7 | **Existing actions as prototype sheets** — session detail, Add session with the circular type carousel, Move with soft warning and hard block, missed-session choices, Skip and Restore, Remove and Undo, Routines list and one routine screen | One test per action; rapid-tap test on every sheet trigger |
+| 8 | **Add a goal** — sheet listing the existing goal types only. Future types on a separate gallery page titled "Demonstration — not a working feature" | Screens |
+| 9 | **Small iPhone and accessibility** — layout checks at default and largest text: nothing under the dock; last card scrolls fully clear; Recurring Plan clearance measured in the running prototype | Frame assertions and screenshots |
+| 10 | Full run, documents (screen map, state matrix, review tracker, open defects, what the prototype does not prove), report, stop | — |
 
-## 6. Deliverables
+Priority, as instructed: steps 2–6 (Weekly Calendar and Recurring Plan). Steps 7–8 follow only after those are
+reviewed, if you prefer two rounds.
 
-Screenshots for every scenario, theme and text size · an interaction-test report · a screen map and state matrix ·
-a review tracker · a list of open defects · a statement of what the prototype does not prove.
+## 5. Explicitly not included
 
-## 7. Conditions before starting
+Goal engines and feasibility calculation · automatic training changes · event programming, phases, milestones ·
+unsupported sports · metrics of the metrics proposal · any change to automatic adaptation · Train (handover points
+end on a labelled placeholder) · production code, release branch, TestFlight, databases, migrations, Apple Watch,
+BikeComputer, detachable Watch, firmware · the frozen Home screens other than the shared sheet presenter of step 1.
 
-1. Plan v0.3 reviewed, with answers (or accepted defaults) for questions Q1–Q9.
-2. Home v2.3 prototype result reported and its branch state stable, since both prototypes share one app and pipeline.
-3. Your explicit "start".
+Existing scheduling, routine editing and training data in the production app are not affected: the prototype is a
+separate app with its own sample data.
+
+## 6. Sample data
+
+One consistent sample athlete (specification §24.3), checked by a unit test in the lab: scheduled days ≤ available
+days, scheduled minutes against the weekly budget, each day against its limit, and every warning shown derived from
+those values rather than typed in. Scenarios: normal week · missed session unresolved · rescheduled pair · completed
+shortened replacement · pending suggestion · no suggestion · no goal · next week · day-limit conflict · budget
+conflict · two sessions on a day.
+
+## 7. Verification and honesty
+
+Evidence levels reported separately: designed · implemented in UI Lab · compiled · simulator-tested. Failures are
+investigated, never relaxed. A simulator result is not a device result; physical-device testing needs your iPhone
+and is not claimed. Per your preference, CI is checked once per run and reported with its workflow ID.
 
 ## 8. Stop points
 
-After the first full run: report and wait. No promotion toward production follows from a prototype review; that is
-a separate authorisation under the Project Instructions §12.
+After step 1 (sheet repair result) · after steps 2–6 (first full Plan run) · after steps 7–9. No promotion toward
+production follows from any prototype review.
 
 ## Change log
 
 | Version | Date | Change |
 |---|---|---|
 | 0.1 | 12 Nov 2026 | First scope for approval |
+| 0.2 | 12 Nov 2026 | Rewritten for visual direction B; Home v2.3 result and sheet defect recorded; work order prioritising Weekly Calendar and Recurring Plan |

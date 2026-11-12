@@ -1,6 +1,6 @@
 # Plan v2.0 — product and UX specification
 
-Status: **Current Draft** · Version 0.5 · 12 Nov 2026 · Level 3 (product specification)
+Status: **Current Draft** · Version 0.6 · 12 Nov 2026 · Level 3 (product specification)
 Source: `docs/cyclift-governance`, `product/plan/PLAN_V2_SPECIFICATION.md`
 Basis: owner brief "Plan Tab Redesign v2.0", the owner's reviews of v0.1 and v0.2 (all 12 Nov), Master Project
 Instructions v2.0, Brand Book v0.2 (current design baseline).
@@ -32,6 +32,22 @@ Companion documents (v0.3): `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md`
 | 9 | Ask Coach uses prepared, context-specific options until two-way messaging exists | §11 |
 | 10 | Automatic increases in load, volume or frequency require approval; existing behaviour audited, correction planned, no code changed | §11, `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` |
 | G | Past-session Quick log moves to Train; no functionality is removed | §9, §14 |
+
+## Decisions recorded from the owner's review of B1 and B2 (12 Nov)
+
+**B — Athletic Dynamic is approved as the Plan visual direction**, with these refinements (applied in §24;
+revised screens in `visual-v06-B/`):
+
+| # | Decision |
+|---|---|
+| W1 | The Coach row is not made smaller to fit more cards. Two full workout rows on a small iPhone are acceptable if scrolling and visibility are correct |
+| W2 | Recurring Plan keeps seven compact rows; weekday labels read Mon, Tue, Wed, Thu, Fri, Sat, Sun; coloured workout-type indicators and separate availability editing stay |
+| W3 | The program header states the **primary training objective**, with one concise line; full goal details, secondary priorities, milestones and phases stay on the program detail screen. No goal dashboard |
+| W4 | In production, Add a goal shows only goal types supported end to end. Future types stay documented and may appear only in clearly labelled UI Lab demonstrations |
+| W5 | Health-related goals: measurable athlete-defined targets only where valid data and an appropriate interpretation exist. No biological-age score, longevity prediction or health grading |
+| W6 | Coach: one compact contextual row, only when an actionable proposal exists; it opens the shared proposal workflow. No permanent Coach panel, no Home duplication |
+| W7 | Sample data must be consistent across training days, weekly budget, scheduled time and day limits; a warning names the constraint actually exceeded; real user data is never invented or silently corrected |
+| W8 | The visual prototype includes no goal engine, automatic training change, event programming or unsupported sport |
 
 ## Decisions recorded from the owner's review of the v0.4 visuals (12 Nov)
 
@@ -951,6 +967,54 @@ small iPhone; the first two sessions and Add session are always visible.
 2. Should choices that do not work yet be hidden from the Add a goal sheet (recommended), or shown as "coming later"?
 3. Which measured values may a "health target as I age" use? None is proposed as approved.
 
+## 24. Refinements to direction B (v0.6)
+
+Screens: `visual-v06-B/B1_weekly_calendar`, `B2_recurring_plan`, `B6_small_iphone`. They replace B1, B2 and B6 of
+v0.5; B3–B5 of v0.5 stand as drawn, as UI Lab demonstrations of proposed and future capabilities.
+
+### 24.1 Program header
+Line 1: the primary objective in the athlete's goal words ("Build strength"). Line 2: one concise description —
+how other disciplines are treated and the position in the cycle ("Cycling maintained · week 2 of 4"). Both lines
+truncate on one line each. The row opens the program detail screen; "+ Add a goal" stays at its right edge.
+With no goal set, line 1 reads "Set your goal".
+
+### 24.2 Recurring Plan
+Weekday labels are three letters in a pill coloured by the day's workout type (neutral for rest), so the indicator
+is never the only cue. Seven rows of 46 pt, then the availability row.
+
+### 24.3 Sample-data consistency — a correction
+The v0.5 sample Recurring Plan was **inconsistent, and that was my error**: it showed "4 days · 3 h 45 m" under a
+week that scheduled five training days and 4 h 45 m, and its Coach suggestion referred to a Thursday ride that the
+week did not contain. The v0.6 sample is checked:
+
+| Check | Sample value |
+|---|---|
+| Available training days | 6 (Mon, Tue, Wed, Thu, Sat, Sun) |
+| Scheduled training days | 6 — equal |
+| Weekly time budget | 6 h |
+| Scheduled duration | 45 + 60 + 60 + 45 + 120 + 30 min = 6 h — equal |
+| Day limits | Saturday allows 1 h; Long Ride is 2 h — **exceeded** |
+| Warning shown | "⚠ 2 h · Sat limit 1 h" — the day limit, the one constraint exceeded |
+| Coach row | "Resolve Saturday's time conflict" — the same conflict |
+| Weekly Calendar | The week's marks match the Recurring Plan, plus one session added for this week only (Thursday) and one rescheduled from a missed Monday (Friday) |
+
+### 24.4 Feasibility wording rule
+A warning names the constraint and both numbers: day limit ("2 h · Sat limit 1 h") · weekly budget ("Cycling 4 h ·
+budget 3 h") · training days ("6 sessions · 5 training days") · two sessions on a day when that is switched off.
+When several are exceeded, the row shows the most specific (day before week) and its sheet lists all. The app
+reports what the athlete's own settings say; it never changes a setting or a session to make a warning disappear.
+
+### 24.5 Add a goal in production
+Shown: only goal types that work from selection through to a previewed, approved plan change. Today that is the
+existing goal types; the sheet itself is Proposed. Marathon, triathlon, other events, additional sports, age-related
+targets and custom goals remain Future, documented in §23.2, and appear only in UI Lab screens labelled
+"Demonstration — not a working feature".
+
+### 24.6 Density (measured in the static mock-ups, not on a device)
+Small iPhone: two full workout cards with the Coach row, three without — accepted (W1). The list scrolls with a
+bottom inset so the last card can always be brought fully above the dock; the prototype must prove this by test.
+Recurring Plan on the small iPhone ends 33 pt above the dock.
+
 ## Change log
 
 | Version | Date | Change |
@@ -960,3 +1024,4 @@ small iPhone; the first two sessions and Add session are always visible.
 | 0.3 | 12 Nov 2026 | Owner decisions R1–R7 applied: three separate measures and no double counting (§6.7); shortened replacements recorded as done (§6.7, §15); soft conflicts warn and can be overridden, hard constraints block (§6.6); move horizon is the active program; Skip and Remove both defined (§6.8); no retroactive reversal (§11, §12); Recurring Plan redesigned for the small iPhone with progressive disclosure and contextual warnings (§7, W4, W9a, W9b); questions regrouped with recommended defaults (§20); three companion documents added |
 | 0.4 | 12 Nov 2026 | Visual direction added as a draft (§22): circular date scroller, picker carousel, structure bar, three static alternatives with a recommendation; functional content unchanged |
 | 0.5 | 12 Nov 2026 | Direction B selected by the owner; Add a goal, Coach suggestion row, goal set-up and program preview, planning-intelligence map with implemented / proposed / future marks, density assessment (§23); static screens B1–B6 |
+| 0.6 | 12 Nov 2026 | Direction B approved with refinements W1–W8: objective-led program header, Mon–Sun labels, production rule for goal types, feasibility wording rule; sample data corrected and checked (§24); screens `visual-v06-B/` |
