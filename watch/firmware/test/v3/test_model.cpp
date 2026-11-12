@@ -20,12 +20,15 @@ static void navigation() {
     m.act(Action::MenuItem, int(MenuId::Today), t); CHECK(m.screen == Screen::Today);  // Stage 1.3: Today is wired
     m.key2(t); CHECK(m.screen == Screen::Menu);                                          // Key 2 = back to the menu
     m.act(Action::MenuItem, int(MenuId::Activities), t); CHECK(m.screen == Screen::Cockpit); CHECK(m.wk == WkState::Active);
-    m.key1(t); CHECK(m.screen == Screen::Menu);
+    m.key1(t); CHECK(m.screen == Screen::Controls); CHECK(m.focus == int(Ctl::PauseResume));   // G7: L1 in a ride = controls
+    for (int i = 0; i < 4; i++) m.pressR2(t);                         // R2 moves the highlight to "Menu"
+    CHECK(m.focus == int(Ctl::Menu)); m.pressL1(t); CHECK(m.screen == Screen::Menu);
     items = m.menuItems(); CHECK(items.size() == 9); CHECK(items[0] == MenuId::ReturnToWorkout);
     m.act(Action::MenuItem, int(MenuId::ReturnToWorkout), t); CHECK(m.screen == Screen::Cockpit);
-    m.key1(t); m.swipe(Swipe::Right); CHECK(m.screen == Screen::Cockpit);   // back from the menu returns to the ride
-    m.key1(t); m.act(Action::MenuItem, int(MenuId::WatchFace), t); CHECK(m.screen == Screen::Face); CHECK(m.inWorkout());
-    m.key1(t); m.key1(t); CHECK(m.screen == Screen::Cockpit);        // Key 1 from the menu goes back to the running ride
+    m.holdL2(t); CHECK(m.screen == Screen::Cockpit);                  // L2 hold in a ride = back to the ride
+    m.key1(t); for (int i = 0; i < 4; i++) m.pressR2(t); m.pressL1(t); CHECK(m.screen == Screen::Menu);
+    m.act(Action::MenuItem, int(MenuId::WatchFace), t); CHECK(m.screen == Screen::Face); CHECK(m.inWorkout());
+    m.key1(t); CHECK(m.screen == Screen::Menu); m.key1(t); CHECK(m.screen == Screen::Cockpit);   // L1 on the highlighted "Return to workout"
 }
 
 static void menuScroll() {

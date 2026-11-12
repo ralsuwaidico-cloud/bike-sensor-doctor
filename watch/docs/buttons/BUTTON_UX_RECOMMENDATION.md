@@ -1,4 +1,23 @@
-# Cyclift Watch — recommended four-button architecture (12 Nov 2026) — PROPOSAL, nothing implemented
+# Cyclift Watch — recommended four-button architecture (12 Nov 2026) — PROPOSAL; see the owner's decisions below
+
+## Owner decisions, 12 Nov 2026 12:59 (these override the proposal where they differ)
+
+| | Decision | Differs from the proposal below? | Stage 1.4 RC1 (offline, not installed) |
+|---|---|---|---|
+| G1 | One short physical button-identification check | — | instructions sent; result pending |
+| G2 | Do / Back / Next model | no | implemented |
+| G3 | R2 for navigation, scrolling and non-critical actions only | no | implemented (R2 never pauses, laps, ends or restarts) |
+| G4 | Screen lock disables the touchscreen only; buttons keep working | no | implemented; chip "LOCKED · HOLD NEXT"; R2 hold toggles |
+| G5 | Restart combination **L1 + L2**, not L2 + R2 | **yes** (§5 proposed L2 + R2) | implemented |
+| G6 | Continuous 10 s hold, countdown, cancel at once on early release | no | implemented (countdown from 2 s) |
+| G7 | L1 opens Controls with Pause / Resume highlighted; a **second deliberate L1** confirms; no invisible double press | **yes** (no 2.5 s window: Controls stay open until L1, L2 or touch) | implemented |
+| G8 | Hold L1 to request End, then explicit confirmation | **partly** (the confirmation is the highlighted End + L1, not a second hold) | implemented; the dialog opens on Cancel |
+| G9 | Visible highlight, approved Hybrid v3 style | no | implemented: 2 px accent border on rows, 2 px accent outline on buttons |
+| G10 | Editors: R2 increase, L2 decrease, L1 confirm | no | key map defined; editors (strength) not built yet |
+| G11 | Check the reset button's position and whether L1 operation can press it | — | physical check pending |
+
+The per-screen result is in BUTTON_SCREEN_MATRIX.md (updated to these decisions). The text below is the original proposal,
+kept for the reasoning.
 
 Inputs:
 - BUTTON_HARDWARE_AUDIT.md;

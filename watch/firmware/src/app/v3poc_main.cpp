@@ -10,7 +10,11 @@
 // local time as seconds since 1970; the approved time source remains the iPhone over Bluetooth, Stage 4).
 // Stage 1.3 (RC1): k lock (as Quick Settings) · E demo data on/off. The watch starts with NO invented data: face, Today, Week
 // and widgets show their not-synced states until 'E' turns the labelled demo data on; a ride started without an iPhone shows
-// "Simulated ride". Holding Key 1 for 1 s unlocks. Quick Settings brightness drives the backlight; nothing is saved to flash.
+// "Simulated ride". Quick Settings brightness drives the backlight; nothing is saved to flash.
+// Stage 1.4 (owner decisions G1–G11, 12 Nov 2026): the buttons go through cyv3_input.hpp (the same code the computer tests
+// run): L1 (GPIO35) Select · L2 (GPIO34) Back · R2 (GPIO0, Boot) Next; holds, the L1 + L2 restart combination (10 s,
+// countdown, warning during a ride) and the touch-only lock. R1 is the chip's reset line: firmware cannot see or remap it.
+// Serial: m = L1 · b = L2 · N = R2 · k = lock toggle (as holding R2).
 #if defined(CYW_V3POC) && !defined(CYW_HOST)
 #include <Arduino.h>
 #include <Wire.h>
@@ -21,6 +25,7 @@
 #include "../hal/esp32/drivers.hpp"
 #include "../hal/rtc_time.hpp"
 #include "../ui/v3/cyv3_ui.hpp"
+#include "../ui/v3/cyv3_input.hpp"
 #include <esp_heap_caps.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -36,7 +41,7 @@ static hal::esp32::Power g_power; static hal::esp32::Rtc g_rtc;
 static Model g_model; static Ui g_ui;
 static uint32_t g_lastMemSample = 0;
 static uint32_t g_lastLv = 0, g_lastSlow = 0, g_lastPerf = 0, g_renderUs = 0, g_renderMax = 0, g_frames = 0, g_rebuilds = 0;
-static bool g_k1 = false, g_k2 = false, g_k1Held = false; static uint32_t g_k1Down = 0; static int g_bl = -1;
+static ButtonInput g_buttons; static int g_bl = -1;
 static size_t g_logShown = 0;
 
 // ---------------------------------------------------------------- frame-time instrumentation (Stage 1.1, 9 Nov 2026)
@@ -166,12 +171,15 @@ static void printClock(const char* what) {
 }
 
 static void help() {
-    Serial.println("v3poc: m menu/Key1 · b Key2 · f face · k lock · E demo data · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame-time histogram · z reset histogram · M memory+stacks · R clock · T<seconds> set clock (test)");
+    Serial.println("v3poc: m L1 · b L2 · N R2 (next) · f face · k touch lock · E demo data · r ride · p Pause/Resume · d density · t text size · l language · c phone · s sensors · x refuse next · n no answer next · u perf · h frame-time histogram · z reset histogram · M memory+stacks · R clock · T<seconds> set clock (test)");
 }
 
 // RC2 boot diagnostics: the chip's own reset reason and a count of starts since power-on (kept in RTC memory, which a
 // software reset, watchdog or panic does not clear; a power-on or brown-out starts it again at 1).
 RTC_NOINIT_ATTR static uint32_t g_bootMagic, g_bootCountRtc;
+// Stage 1.4: why the firmware restarted itself (written just before esp_restart, printed and cleared at the next start)
+RTC_NOINIT_ATTR static uint32_t g_restartWhy;
+static constexpr uint32_t RESTART_BUTTONS = 0xC1A0B0B1u, RESTART_BUTTONS_IN_RIDE = 0xC1A0B0B2u;
 static uint32_t g_bootCount = 0;
 static const char* resetName(esp_reset_reason_t r) {
     switch (r) {
@@ -223,7 +231,8 @@ static void serialCommand(char c, uint32_t now) {
         case 'z': perf::reset(); Serial.println("perf: histogram reset"); break;
         case 'M': mem::report(); break;
         case 'E': g_model.setDemo(!g_model.synced); break;
-        case 'k': if (g_model.locked) g_model.key1Hold(now); else g_model.act(Action::QsRow, int(QsRow::Lock), now); break;
+        case 'k': g_model.holdR2(now); break;
+        case 'N': g_model.pressR2(now); break;
         case 'R': printClock("clock"); break;
         case '?': help(); break;
         default: break;
@@ -236,6 +245,9 @@ void setup() {
     if (g_bootMagic != 0xC1C1F7u || why == ESP_RST_POWERON || why == ESP_RST_BROWNOUT) { g_bootMagic = 0xC1C1F7u; g_bootCountRtc = 0; }
     g_bootCount = ++g_bootCountRtc;
     Serial.printf("reset reason: %s (code %d) · start %u since power-on\n", resetName(why), int(why), unsigned(g_bootCount));
+    if (why == ESP_RST_SW && (g_restartWhy == RESTART_BUTTONS || g_restartWhy == RESTART_BUTTONS_IN_RIDE))
+        Serial.printf("restart cause: user restart (L1 + L2 held 10 s%s)\n", g_restartWhy == RESTART_BUTTONS_IN_RIDE ? ", confirmed on the ride warning" : "");
+    g_restartWhy = 0;
     pinMode(pins::PWR_ON, OUTPUT); digitalWrite(pins::PWR_ON, HIGH);
     Wire.begin(pins::I2C_SDA, pins::I2C_SCL);
     g_power.begin(); g_keys.begin(); g_touch.begin();
@@ -246,7 +258,7 @@ void setup() {
     g_model.log.clear();
     readClock(); g_model.battery = g_power.batteryPct(); g_model.charging = g_charge.feed(g_power.charging());
     g_ui.render(g_model); lv_refr_now(nullptr);
-    Serial.printf("Cyclift v3 proof of concept · Stage 1.3 RC2 (local screens; IRAM rendering off) · simulated data · first frame after %u ms · heap %u · psram %u · flash %u MB\n",
+    Serial.printf("Cyclift v3 proof of concept · Stage 1.4 RC1 (button system; local screens; IRAM rendering off) · simulated data · first frame after %u ms · heap %u · psram %u · flash %u MB\n",
         unsigned(millis() - t0), ESP.getFreeHeap(), ESP.getPsramSize(), unsigned(ESP.getFlashChipSize() / (1024 * 1024)));
     help();
 }
@@ -266,11 +278,23 @@ void loop() {
             default: break;
         }
     }
-    bool k1 = g_keys.key1(), k2 = g_keys.key2();      // act on press (falling edge); pins per board revision
-    if (k1 && !g_k1) { g_model.key1(now); g_k1Down = now; g_k1Held = false; }
-    if (k1 && g_k1 && !g_k1Held && now - g_k1Down >= 1000) { g_k1Held = true; g_model.key1Hold(now); }   // hold ≥ 1 s
-    if (k2 && !g_k2) g_model.key2(now);
-    g_k1 = k1; g_k2 = k2;
+    // Stage 1.4: debounced, decoded buttons (cyv3_keys.hpp) → model (cyv3_input.hpp); touch lock never blocks them (G4)
+    bool wasRide = g_model.inWorkout();
+    g_buttons.sample(g_model, g_keys.key1(), g_keys.key2(), g_keys.boot(), now);
+    for (int i = 0; i < g_buttons.lastN; i++) {                // every decoded event in the log (G1 identification evidence)
+        static const char* const EV[] = {"", "short", "hold", "hold 2 s", "L1+L2 start", "", "L1+L2 cancelled", "L1+L2 10 s"};
+        static const char* const BT[] = {"L1", "L2", "R2"};
+        const KeyEvent& e = g_buttons.last[i];
+        if (e.ev == KeyEv::ChordTick) continue;
+        if (e.ev >= KeyEv::ChordStart) Serial.printf("  key: %s after %u ms\n", EV[int(e.ev)], unsigned(e.heldMs));
+        else Serial.printf("  key: %s %s (%u ms)\n", BT[int(e.btn)], EV[int(e.ev)], unsigned(e.heldMs));
+    }
+    if (g_buttons.restartReady(g_model)) {                       // all buttons up (R2 = GPIO0 must not be held at reset)
+        g_restartWhy = wasRide ? RESTART_BUTTONS_IN_RIDE : RESTART_BUTTONS;
+        Serial.println("restart: requested with L1 + L2 (10 s) · the watch's ride state is not kept");
+        Serial.flush(); delay(50);
+        esp_restart();
+    }
     if (now - g_lastSlow >= 10000) {
         g_lastSlow = now; readClock(); g_model.battery = g_power.batteryPct();
         bool raw = g_power.charging(); uint32_t f0c = g_charge.flips; g_model.charging = g_charge.feed(raw);

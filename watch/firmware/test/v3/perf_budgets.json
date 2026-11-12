@@ -10,7 +10,12 @@
   "pause/rebuild": 5500000,
   "nav/rebuild": 6000000,
   "face/idle": 20000,
-  "pages/rebuild": 7000000
+  "pages/rebuild": 7000000,
+  "chart/update": 1600000,
+  "chart/rebuild": 5100000,
+  "hold/update": 2000000,
+  "hold/rebuild": 8000000
  },
- "note_pages": "Stage 1.3 (11 Nov 2026): pages = Today/Week/Quick Settings/widgets/not-in-release rebuilds; first measurement 6.38 M max per rebuild, budget set 10 % above it (computer proxy)."
+ "note_pages": "Stage 1.3 (11 Nov 2026): pages = Today/Week/Quick Settings/widgets/not-in-release rebuilds; first measurement 6.38 M max per rebuild, budget set 10 % above it (computer proxy).",
+ "note_stage14": "Stage 1.4 (12 Nov 2026): chart = Power/HR/Cadence data pages (1 Hz line + value update; first measurement 1.44 M max update, 4.63 M rebuild); hold = End ring and restart countdown updated in place every 10 ms frame (1.76 M max update; 7.21 M max rebuild when the hold feedback appears or goes on the cockpit). Budgets ~10 % above the first measurement (computer proxy, not ESP32 time)."
 }

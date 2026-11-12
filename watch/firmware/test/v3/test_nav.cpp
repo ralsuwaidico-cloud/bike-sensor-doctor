@@ -13,7 +13,8 @@ static int g_checks = 0, g_fail = 0;
 #define CHECK(c, ...) do { g_checks++; if (!(c)) { g_fail++; std::printf("FAIL %s:%d  ", __FILE__, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); } } while (0)
 
 static const char* name(Screen s) {
-    static const char* n[] = {"Face", "Menu", "Cockpit", "Today", "Week", "Quick", "WHealth", "WCoach", "WActivity", "NotYet"};
+    static const char* n[] = {"Face", "Menu", "Cockpit", "Today", "Week", "Quick", "WHealth", "WCoach", "WActivity", "NotYet",
+                              "Controls", "EndConfirm", "RestartConfirm", "RidePower", "RideHr", "RideCad"};
     return n[int(s)];
 }
 enum In { SL, SR, SU, SD, K1, K2, NIN };
@@ -51,12 +52,14 @@ int main() {
     std::vector<Row> rows = {
         //                                     at   swipeL swipeR swipeU swipeD key1 key2
         {{"face", {}},                          F, {H, A, T, Q, M, F}},
-        {{"widget Health", {SL}},               H, {C, F, H, H, M, F}},
-        {{"widget Coach", {SL, SL}},            C, {A, H, C, C, M, F}},
-        {{"widget Activity", {SR}},             A, {F, C, A, A, M, F}},
-        {{"Today", {SU}},                       T, {T, F, W, F, M, F}},
+        // Stage 1.4 (owner G2 "do / back / next", BUTTON_UX_RECOMMENDATION §3): L1 = the screen's primary action:
+        // widget → its app (not built yet → not-yet page), Today → Start, Quick Settings → the highlighted row.
+        {{"widget Health", {SL}},               H, {C, F, H, H, N, F}},
+        {{"widget Coach", {SL, SL}},            C, {A, H, C, C, N, F}},
+        {{"widget Activity", {SR}},             A, {F, C, A, A, N, F}},
+        {{"Today", {SU}},                       T, {T, F, W, F, K, F}},
         {{"Week", {SU, SU}},                    W, {W, T, W, T, M, T}},
-        {{"Quick Settings", {SD}},              Q, {Q, F, F, Q, M, F}},
+        {{"Quick Settings", {SD}},              Q, {Q, F, F, Q, Q, F}},
         {{"menu", {K1}},                        M, {M, F, M, M, F, F}},
         {{"not-yet page", {}, true},            N, {N, M, N, N, M, M}},
     };
@@ -64,7 +67,7 @@ int main() {
     std::vector<Row> ride = {
         {{"face (ride on)", {}, false, true},              F, {H, A, T, Q, M, K}},
         {{"menu (ride on)", {K1}, false, true},            M, {M, F, M, M, K, F}},
-        {{"Today (ride on)", {SU}, false, true},           T, {T, K, W, F, M, K}},
+        {{"Today (ride on)", {SU}, false, true},           T, {T, K, W, F, K, K}},
     };
     for (bool ar : {false, true}) {
         for (auto* set : {&rows, &ride}) for (const Row& r : *set) {
@@ -85,8 +88,8 @@ int main() {
     { uint32_t t = 0; Model m; m.swipe(Swipe::Up);
       for (int i = 0; i < 50; i++) { m.swipe(Swipe::Up); m.swipe(Swipe::Down); }
       CHECK(m.screen == Screen::Today && m.stack.empty(), "Today<->Week x50: screen %s, history %zu", name(m.screen), m.stack.size());
-      for (int i = 0; i < 50; i++) { m.key1(t); m.key2(t); }
-      CHECK(m.stack.empty(), "Menu<->Today x50 leaves history %zu", m.stack.size());
+      for (int i = 0; i < 50; i++) { m.pressR2(t); m.key2(t); }
+      CHECK(m.screen == Screen::Today && m.stack.empty(), "Today->Week (R2) / Back x50 leaves history %zu", m.stack.size());
       m.swipe(Swipe::Down); CHECK(m.screen == Screen::Face, "Today swipe down = face");
       for (int i = 0; i < 40; i++) m.swipe(Swipe::Left);
       CHECK(m.stack.empty() && Model::faceLevel(m.screen), "widget carousel x40: history %zu", m.stack.size()); }
@@ -105,9 +108,16 @@ int main() {
       Screen before = m.screen;
       for (In i : {SL, SR, SU, SD, K1, K2}) apply(m, i, t);
       m.act(Action::MenuItem, int(MenuId::Today), t);
-      CHECK(m.screen == before && m.locked, "locked: swipes, keys and taps are ignored (screen %s)", name(m.screen));
-      m.key1Hold(t); CHECK(!m.locked, "hold Key 1 unlocks");
-      m.key1(t); CHECK(m.screen == Screen::Menu, "after unlock Key 1 works"); }
+      CHECK(m.locked, "locked stays locked after keys (G4: only the touchscreen is locked)");
+      { Model l; l.act(Action::QsRow, int(QsRow::Lock), t); Screen b = l.screen;
+        for (In i : {SL, SR, SU, SD}) apply(l, i, t);
+        l.act(Action::MenuItem, int(MenuId::Today), t);
+        CHECK(l.screen == b && l.locked, "locked: swipes and taps are ignored (screen %s)", name(l.screen));
+        l.key1(t); CHECK(l.screen == Screen::Menu && l.locked, "locked: L1 still opens the menu (G4)");
+        l.key2(t); CHECK(l.screen == Screen::Face, "locked: L2 still goes back");
+        l.holdR2(t); CHECK(!l.locked, "hold R2 (Next) unlocks the touchscreen");
+        l.holdR2(t); CHECK(l.locked, "hold R2 locks again"); }
+      (void)before; }
 
     // Today Start begins the (simulated) ride; with the honest default the "Simulated ride" banner appears
     { Model m; uint32_t t = 0; m.simRideNotice = true; m.swipe(Swipe::Up); m.act(Action::StartPlan, 0, t);
@@ -160,8 +170,8 @@ int main() {
           if (!m.stack.empty() && m.stack.back() == m.screen) { CHECK(false, "history top equals current screen at step %d", step); }
           if (step % 5000 == 0) {                                     // Back always leads home (or to the workout) in bounded steps
               Model c = m; uint32_t tt = t; int n = 0;
-              while (!(c.screen == Screen::Face || c.screen == Screen::Cockpit) && n < Model::MAX_STACK + 3) { tt += 3000; c.key2(tt); n++; }
-              CHECK(c.screen == Screen::Face || c.screen == Screen::Cockpit, "Back from %s did not reach the face/workout in %d presses", name(m.screen), n);
+              while (!(c.screen == Screen::Face || Model::workoutPage(c.screen)) && n < Model::MAX_STACK + 3) { tt += 3000; c.key2(tt); n++; }
+              CHECK(c.screen == Screen::Face || Model::workoutPage(c.screen), "Back from %s did not reach the face/workout in %d presses", name(m.screen), n);
               faceReturns++;
           }
       }

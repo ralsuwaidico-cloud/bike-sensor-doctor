@@ -26,11 +26,15 @@ enum class S : uint16_t {
     KeyLapPressAgain,
     // Stage 1.3: face neighbourhood (Today, Week, Quick Settings, widgets), not-yet pages, Bike mode, simulated ride
     QuickSettings, Brightness, Theme, Dnd, Mode, ScreenLock, On, Off, Wrist, Bike, Gym,
-    ThObsidian, ThArctic, ThOcean, ThForest, ThSandstone, ThContrast, LockedHoldKey1,
+    ThObsidian, ThArctic, ThOcean, ThForest, ThSandstone, ThContrast, TouchLocked,
     TodayHdr, WeekHdr, WeekLink, Target, Start, PlanName, PlanSub, NoPlanTitle, NoPlanSub, PlanOneOnIphone,
     SessionsDone, MissedWed, IphoneAdjusts,
     HealthHdr, CoachHdr, RestingHr, Hrv, NoNote, CoachNote, Why, StepsLbl, OfGoal, Estimated, MinKcal,
     NotInRelease, ArrivesLater, SimRide, SimRideSub, Watts,
+    // Stage 1.4: button system (owner G1–G11), workout controls, confirmations, chart pages
+    ControlsHdr, Lap, End, Menu, EndWorkoutQ, Cancel, Ending, UnableEnd, ToastEnded, IphoneKeepsRecord,
+    HoldToEnd, RestartIn, ReleaseToCancel, RestartQ, RestartWarn, RestartBtn,
+    PowerHdr, ThreeMin, NoSensor, Avg, Z3Band, TargetCad, Saving,
     COUNT
 };
 
@@ -93,7 +97,7 @@ inline const Pair& pair(S id) {
         {"Forest", "الغابة"},
         {"Sandstone", "الحجر الرملي"},
         {"High contrast", "تباين عالٍ"},
-        {"LOCKED \xC2\xB7 HOLD KEY 1", "مقفل \xC2\xB7 اضغط المفتاح ١ مطولًا"},
+        {"LOCKED \xC2\xB7 HOLD NEXT", "مقفل \xC2\xB7 اضغط مطولًا التالي"},   // Stage 1.4 NEW (G4: was "LOCKED · HOLD KEY 1")
         {"TODAY", "اليوم"},
         {"WEEK", "الأسبوع"},
         {"Week", "الأسبوع"},
@@ -123,6 +127,30 @@ inline const Pair& pair(S id) {
         {"Simulated ride", "ركوب محاكى"},
         {"No sensors \xC2\xB7 demo values", "لا مستشعرات \xC2\xB7 قيم تجريبية"},
         {"WATTS", "واط"},
+        // Stage 1.4 (prototype dictionary unless marked NEW = owner decision G12)
+        {"Controls", "التحكم"},
+        {"Lap", "لفة"},
+        {"End", "إنهاء"},
+        {"Menu", "القائمة"},
+        {"End workout?", "إنهاء التمرين؟"},
+        {"Cancel", "إلغاء"},
+        {"Ending\xE2\x80\xA6", "جارٍ الإنهاء\xE2\x80\xA6"},
+        {"Unable to end", "تعذّر الإنهاء"},
+        {"Ride ended", "انتهى الركوب"},                                   // NEW
+        {"iPhone keeps the record", "يحفظ iPhone السجل"},
+        {"Hold to end", "اضغط مطولًا للإنهاء"},                               // NEW (G8)
+        {"Restart in %d", "إعادة التشغيل خلال %d"},                          // NEW (G6)
+        {"Release to cancel", "اترك الزرين للإلغاء"},                          // NEW (G6)
+        {"Restart the watch?", "إعادة تشغيل الساعة؟"},                        // NEW (G5)
+        {"The ride on the watch ends", "ينتهي الركوب على الساعة"},              // NEW (G5)
+        {"Restart", "إعادة التشغيل"},                                        // NEW (G5)
+        {"Power", "القدرة"},
+        {"3 min", "٣ د"},
+        {"No sensor", "لا يوجد مستشعر"},
+        {"Avg", "متوسط"},
+        {"Z3 140\xE2\x80\x93" "155 bpm", "المنطقة Z3 140\xE2\x80\x93" "155 bpm"},
+        {"Target 85\xE2\x80\x93" "95 rpm", "الهدف 85\xE2\x80\x93" "95 rpm"},
+        {"Saving\xE2\x80\xA6", "جارٍ الحفظ\xE2\x80\xA6"},
     };
     static_assert(sizeof(T) / sizeof(T[0]) == static_cast<size_t>(S::COUNT), "one entry per string id");
     return T[static_cast<int>(id)];

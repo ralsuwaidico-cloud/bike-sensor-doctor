@@ -19,10 +19,12 @@ FW13 = os.environ.get('CY_FW13') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1
 FW13_SHA = '4ea0ea90da5061859019c7b6f94c1eaea409c362d94a07e058d7755feda50c19'   # Stage 1.3 RC1 (CI 42916312090); same pin as cy_update_s13.py
 FWR2 = os.environ.get('CY_FWR2') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_3_firmware', 'cyclift-stage1.3-rc2-v3poc-T-Watch-2021-V1_1.bin')
 FWR2_SHA = '82500ce2a2531271573489c9080d7372e0ee97c330e44cbb85f2f3a2040da461'   # Stage 1.3 RC2 (CI 43064696858); same pin as cy_update_rc2.py
+FW14 = os.environ.get('CY_FWS14') or os.path.join(DOC, 'Cyclift_Stage2a', 'stage1_4_firmware', 'cyclift-stage1.4-rc1-v3poc-T-Watch-2021-V1_1.bin')
+FW14_SHA = 'PIN-AFTER-CI'   # Stage 1.4 RC1 (button system); same pin as cy_update_s14.py once CI has built it
 
 
 def app1_program():
-    """Which approved program app1 holds (Stage 1, 1.1, 1.2, 1.3 RC1 or RC2; read-only verify_flash); None if none matches."""
+    """Which approved program app1 holds (Stage 1, 1.1, 1.2, 1.3 RC1, RC2 or 1.4 RC1; read-only verify_flash); None if none matches."""
     if verify([(0x400000, FW)])[0]:
         return FW
     if os.path.exists(FW11) and sha_file(FW11) == FW11_SHA and verify([(0x400000, FW11)])[0]:
@@ -33,6 +35,8 @@ def app1_program():
         return FW13
     if os.path.exists(FWR2) and sha_file(FWR2) == FWR2_SHA and verify([(0x400000, FWR2)])[0]:
         return FWR2
+    if os.path.exists(FW14) and sha_file(FW14) == FW14_SHA and verify([(0x400000, FW14)])[0]:
+        return FW14
     return None
 
 

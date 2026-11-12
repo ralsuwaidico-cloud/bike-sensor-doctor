@@ -47,7 +47,7 @@ struct Sim {
         lv_refr_now(nullptr);                       // first send any partial update still pending (normal 30 ms refresh)
         static uint16_t inc[240 * 240]; std::memcpy(inc, g_fb, sizeof inc);
         lv_obj_invalidate(lv_scr_act()); lv_refr_now(nullptr);
-        int diff = 0; for (int i = 0; i < 240 * 240; i++) diff += inc[i] != g_fb[i];
+        int diff = 0; for (int i = 0; i < 240 * 240; i++) if (inc[i] != g_fb[i]) { if (getenv("PERF_DIFF") && diff < 12) std::printf("  diff %s f%d at %d,%d partial %04x full %04x\n", scen.c_str(), idx, i % 240, i / 240, inc[i], g_fb[i]); diff++; }
         checked++;
         if (diff) { char b[128]; std::snprintf(b, sizeof b, "%s frame %d: %d pixels differ from a full redraw", scen.c_str(), idx, diff); mismatches.push_back(b); }
     }
@@ -82,7 +82,7 @@ struct Sim {
         double us = std::chrono::duration<double, std::micro>(t2 - t0).count(), uiUs = std::chrono::duration<double, std::micro>(t1 - t0).count();
         bool work = rb || inv || g_px > 0;
         if (work || idx % 500 == 0) g_frames.push_back({scen, idx, rb, g_px, g_flushes, us, uiUs});
-        if (verify && idx % 100 == 99) compareWithFullRedraw();
+        if (verify && (idx % 100 == 99 || (getenv("PERF_EVERY") && scen.find(getenv("PERF_EVERY")) == 0))) compareWithFullRedraw();
         idx++;
     }
     void seconds(int s, const std::function<void(int)>& atSecond = nullptr) {
@@ -131,13 +131,24 @@ int main(int argc, char** argv) {
                 case 5: s.m.swipe(Swipe::Down); break;          case 6: s.m.act(Action::QsRow, int(QsRow::Brightness), s.now); break;
                 case 7: s.m.act(Action::QsRow, int(QsRow::Theme), s.now); break;         case 8: s.m.act(Action::QsRow, int(QsRow::Dnd), s.now); break;
                 case 9: s.m.act(Action::QsRow, int(QsRow::Mode), s.now); break;          case 10: s.m.act(Action::QsRow, int(QsRow::Lock), s.now); break;
-                case 12: s.m.key1Hold(s.now); break;            case 13: s.m.swipe(ar ? Swipe::Right : Swipe::Left); break;
+                case 12: s.m.holdR2(s.now); break;   // Stage 1.4: unlock = hold R2            case 13: s.m.swipe(ar ? Swipe::Right : Swipe::Left); break;
                 case 14: s.m.swipe(ar ? Swipe::Right : Swipe::Left); break; case 15: s.m.swipe(ar ? Swipe::Right : Swipe::Left); break;
                 case 16: s.m.key2(s.now); break;                case 17: s.m.key2(s.now); break;
                 case 18: s.m.key1(s.now); s.m.act(Action::MenuItem, int(MenuId::Settings), s.now); break;
                 case 20: s.m.key2(s.now); break;                default: break;
             }
         });
+        // 7 Stage 1.4 data pages: Power / Heart rate / Cadence charts at 1 Hz (90 s of history), 30 s each, R2 to change page
+        s.reset(std::string("chart_") + L); lang(s, ar); s.m.startRide(s.now);
+        for (int k = 0; k < 95; k++) { s.now += 1000; s.m.tick(s.now); }
+        s.seconds(90, [&](int sec) { if (sec % 30 == 0) s.m.pressR2(s.now); });
+        // 8 Stage 1.4 hold feedback: L1 held toward End (ring every 10 ms frame, 1.9 s, released) and the restart
+        //   countdown (L1 + L2, 2 → 9.9 s, released) — both update in place
+        s.reset(std::string("hold_") + L); lang(s, ar); s.m.startRide(s.now); s.seconds(2);
+        { uint32_t held = 0; for (int i = 0; i < 190; i++) { held += 10; s.frame([&] { s.m.setEndHold(held); }); } s.frame([&] { s.m.setEndHold(0); }); }
+        s.seconds(2);
+        { uint32_t held = 0; for (int i = 0; i < 990; i++) { held += 10; s.frame([&] { s.m.chordTick(held); }); } s.frame([&] { s.m.chordCancel(); }); }
+        s.seconds(2);
         // 4 pause / resume (command sent → confirmed → toast → toast gone: four rebuilds each)
         s.reset(std::string("pause_") + L); lang(s, ar); s.m.startRide(s.now); s.seconds(3);
         s.seconds(20, [&](int sec) { if (sec == 1) s.m.act(Action::Pause, 0, s.now); if (sec == 10) s.m.act(Action::Resume, 0, s.now); });

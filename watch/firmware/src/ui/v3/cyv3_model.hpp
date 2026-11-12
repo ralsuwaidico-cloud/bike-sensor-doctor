@@ -15,17 +15,22 @@ namespace cyw::v3 {
 
 // Stage 1.3 adds the face neighbourhood of the approved prototype (screens1.js): Today, Week strip, Quick Settings, the
 // three glance widgets, and an explicit "not in this release" page for menu destinations that are not built yet.
-enum class Screen : uint8_t { Face, Menu, Cockpit, Today, Week, Quick, WHealth, WCoach, WActivity, NotYet };
+// Stage 1.4 (button system, owner decisions G1–G11, 12 Nov): workout Controls, End and Restart confirmations, and the
+// three approved chart pages of a ride (prototype chartPage: power, heart rate, cadence).
+enum class Screen : uint8_t { Face, Menu, Cockpit, Today, Week, Quick, WHealth, WCoach, WActivity, NotYet,
+                              Controls, EndConfirm, RestartConfirm, RidePower, RideHr, RideCad };
 enum class Mode : uint8_t { Wrist, Bike, Gym };
 enum class Density : uint8_t { Standard, Focused };
 enum class TextSize : uint8_t { Default, Large };
 enum class Swipe : uint8_t { Left, Right, Up, Down };
 enum class WkState : uint8_t { None, Active, Paused };
-enum class Cmd : uint8_t { None, Pause, Resume, Lap };
+enum class Cmd : uint8_t { None, Pause, Resume, Lap, End };
 enum class Reply : uint8_t { Accept, Refuse, NoAnswer };   // what the simulated iPhone does with the next command
 
 /// Actions the UI layer can raise from a touch (each maps to one hit area on screen).
-enum class Action : uint8_t { None, MenuItem, MenuMore, Pause, Resume, DismissToast, QsRow, QsMore, Go, StartPlan };
+enum class Action : uint8_t { None, MenuItem, MenuMore, Pause, Resume, DismissToast, QsRow, QsMore, Go, StartPlan, Choice };
+/// Rows of the workout Controls overlay in button order (G7: Pause / Resume first and highlighted on opening).
+enum class Ctl : uint8_t { PauseResume, Lap, End, Why, Menu };
 
 /// Menu entries in prototype order. Stage 1 implements WatchFace, Activities (starts the simulated ride) and
 /// ReturnToWorkout; the others are drawn as approved but are not wired yet (their screens arrive in Stage 3).
@@ -67,7 +72,22 @@ public:
     int interval = 2, remainS = 492;            // interval 2 of 3, 8:12 left (prototype QA state)
     int laps = 0;
     int menuScroll = 0, qsScroll = 0;
-    bool locked = false;                        // Quick Settings → Screen lock; hold Key 1 to unlock
+    bool locked = false;                        // touch lock (G4): touches and swipes ignored; the buttons keep working
+    int ctlScroll = 0;                          // Controls shown as a list (Large Text / long Arabic labels): first row shown
+    int focus = 0;                              // highlighted row on Menu, Quick Settings, Controls and the confirmations (G9)
+    uint32_t endHoldMs = 0;                     // L1 held on a workout screen: 0–2000 ms ring before the End request (G8)
+    uint32_t restartMs = 0;                     // L1 + L2 held: 0–10 000 ms restart countdown (G5/G6); 0 = not shown
+    bool restartRequested = false;              // the firmware restarts when this becomes true (after the buttons are up)
+    static constexpr int HIST = 90;             // chart pages: the last 90 s (prototype chartPage slice(-90))
+    std::vector<int> histP, histHr, histCad;
+    long powSum = 0; int powN = 0;              // ride average power (seconds with a power value)
+    int elapsedS() const { return t_; }
+    /// Mean of the last n seconds of a history (-1 = no values); n = 0 → the whole ride (power only).
+    int recent(const std::vector<int>& h, int n) const {
+        if (n == 0) return powN ? int((powSum + powN / 2) / powN) : -1;
+        long s = 0; int c = 0; for (int i = int(h.size()) - 1; i >= 0 && i >= int(h.size()) - n; i--) if (h[i] >= 0) { s += h[i]; c++; }
+        return c ? int((s + c / 2) / c) : -1;
+    }
     MenuId notYet = MenuId::Health;             // which destination the "not in this release" page stands for
     bool simRideNotice = false;                 // show "Simulated ride" once when a ride starts without an iPhone
     static constexpr int MAX_STACK = 8;
@@ -85,6 +105,24 @@ public:
     bool large() const { return settings.text == TextSize::Large; }
     bool rtl() const { return settings.lang == Lang::Ar; }
 
+    static bool workoutPage(Screen s) { return s == Screen::Cockpit || s == Screen::RidePower || s == Screen::RideHr || s == Screen::RideCad; }
+    /// Pages R2 steps through during a ride (prototype PAGES.ride; Bike mode keeps cockpit + power). Pacing, climb, navigation
+    /// and coach pages are designed but not built yet.
+    std::vector<Screen> ridePages() const {
+        if (bike()) return {Screen::Cockpit, Screen::RidePower};
+        return {Screen::Cockpit, Screen::RidePower, Screen::RideHr, Screen::RideCad};
+    }
+    int pageIndex() const { auto p = ridePages(); for (int i = 0; i < int(p.size()); i++) if (p[i] == screen) return i; return -1; }
+    /// Rows of the screen that has a highlight (0 = none).
+    int focusCount() const {
+        switch (screen) {
+            case Screen::Menu: return int(menuItems().size());
+            case Screen::Quick: return QS_ROWS;
+            case Screen::Controls: return 5;
+            case Screen::EndConfirm: case Screen::RestartConfirm: return 2;
+            default: return 0;
+        }
+    }
     std::vector<MenuId> menuItems() const {
         std::vector<MenuId> v;
         if (inWorkout()) v.push_back(MenuId::ReturnToWorkout);
@@ -120,24 +158,72 @@ public:
         return {trf(S::Hold, l, mid), Command::On};
     }
 
-    // ------------------------------------------------------------------ inputs
-    void key1(uint32_t now) {                   // approved (app.js key1): menu from anywhere; on the menu → face (or the workout)
-        (void)now;
-        if (locked) { note("key1 ignored: locked"); return; }
-        if (screen == Screen::Menu) { if (inWorkout()) toWorkout(); else home(); }
-        else go(Screen::Menu);                  // cockpit: the controls page is Stage 3; Stage 1 opens the menu (Return to workout first)
-        note("key1");
-    }
-    /// Key 1 held (≥ 1 s): unlocks the screen (approved key1Hold). End-workout confirmation is Stage 3.
-    void key1Hold(uint32_t now) { (void)now; if (locked) { locked = false; note("unlocked"); } }
-    void key2(uint32_t now) {                   // approved: two presses within 2.5 s = Lap during a ride; otherwise Back
-        if (locked) { note("key2 ignored: locked"); return; }
-        if (screen == Screen::Cockpit && inWorkout()) {
-            if (key2Armed && now <= key2UntilMs) { key2Armed = false; send(Cmd::Lap, now); note("key2 second press: lap"); return; }
-            key2Armed = true; key2UntilMs = now + KEY2_WINDOW_MS; note("key2 first press: lap armed"); return;
+    // ------------------------------------------------------------------ inputs: physical buttons (decoded by cyv3_keys.hpp)
+    // Do / Back / Next (owner G2): L1 = the screen's primary action (Menu where there is none), L2 = Back, R2 = Next.
+    // The touch lock (G4) never blocks the buttons.
+    void pressL1(uint32_t now) {
+        endHoldMs = 0;
+        if (focusCount() > 0) { activate(now); note("L1: select"); return; }
+        if (workoutPage(screen) && inWorkout()) { go(Screen::Controls); focus = int(Ctl::PauseResume); note("L1: controls"); return; }   // G7
+        switch (screen) {
+            case Screen::WHealth: notYet = MenuId::Health; go(Screen::NotYet); break;      // widget → its app (not built yet)
+            case Screen::WCoach: notYet = MenuId::Coach; go(Screen::NotYet); break;
+            case Screen::WActivity: notYet = MenuId::History; go(Screen::NotYet); break;
+            case Screen::Today: if (inWorkout()) toWorkout(); else if (synced) startRide(now); else go(Screen::Menu); break;
+            default: go(Screen::Menu); break;
         }
-        back(); note("key2: back");
+        note("L1");
     }
+    void pressL2(uint32_t now) {
+        if (workoutPage(screen) && inWorkout()) {                                      // approved V8: two presses within 2.5 s = Lap
+            if (key2Armed && now <= key2UntilMs) { key2Armed = false; send(Cmd::Lap, now); note("L2 second press: lap"); return; }
+            key2Armed = true; key2UntilMs = now + KEY2_WINDOW_MS; note("L2 first press: lap armed"); return;
+        }
+        back(); note("L2: back");
+    }
+    void pressR2(uint32_t now) {
+        (void)now;
+        int n = focusCount();
+        if (n > 0) { focus = (focus + 1) % n; keepFocusVisible(); note("R2: next row"); return; }
+        if (workoutPage(screen) && inWorkout()) { auto p = ridePages(); int i = pageIndex(); set(p[(i + 1) % int(p.size())]); key2Armed = false; note("R2: next page"); return; }
+        switch (screen) {
+            case Screen::Face: stack.clear(); set(Screen::WHealth); break;
+            case Screen::WHealth: set(Screen::WCoach); break;
+            case Screen::WCoach: set(Screen::WActivity); break;
+            case Screen::WActivity: set(Screen::Face); break;
+            case Screen::Today: go(Screen::Week); break;
+            default: note("R2: nothing next"); return;
+        }
+        note("R2: next");
+    }
+    /// L1 held 1 s: Quick Settings outside a workout; in a workout the hold continues toward End (hold2).
+    void holdL1(uint32_t now) {
+        (void)now;
+        if (inWorkout() && (workoutPage(screen) || screen == Screen::Controls)) return;
+        if (screen == Screen::EndConfirm || screen == Screen::RestartConfirm) return;   // a confirmation is answered, not left
+        if (screen != Screen::Quick) { go(Screen::Quick); note("L1 hold: quick settings"); }
+    }
+    /// L1 held 2 s on a workout screen: the End request → explicit confirmation, Cancel highlighted (G8).
+    void holdL1Long(uint32_t now) {
+        (void)now; endHoldMs = 0;
+        if (inWorkout() && (workoutPage(screen) || screen == Screen::Controls)) { if (screen == Screen::Controls) set(Screen::EndConfirm); else go(Screen::EndConfirm); focus = 0; note("L1 hold 2 s: end request"); }
+    }
+    /// While L1 is down on a workout screen the UI draws a ring (0–2 s); released early = nothing happens.
+    void setEndHold(uint32_t ms) { endHoldMs = (inWorkout() && (workoutPage(screen) || screen == Screen::Controls) && ms >= 300) ? std::min<uint32_t>(ms, 2000) : 0; }
+    void holdL2(uint32_t now) { (void)now; key2Armed = false; if (inWorkout()) toWorkout(); else home(); note("L2 hold: home"); }
+    void holdR2(uint32_t now) { (void)now; locked = !locked; note(locked ? "touch locked" : "touch unlocked"); }
+    /// L1 + L2 chord (G5/G6): countdown shown from 2 s; 10 s → restart (with an explicit warning during a workout).
+    void chordTick(uint32_t ms) { key2Armed = false; endHoldMs = 0; restartMs = ms >= 2000 ? std::min<uint32_t>(ms, 10000) : 0; }
+    void chordCancel() { restartMs = 0; note("restart cancelled"); }
+    void chordFire(uint32_t now) {
+        (void)now; restartMs = 0;
+        if (inWorkout()) { go(Screen::RestartConfirm); focus = 0; note("restart: workout running, asking"); return; }
+        restartRequested = true; note("restart requested (buttons)");
+    }
+    // legacy names used by the serial console and older tests: Key 1 = L1, Key 2 = L2
+    void key1(uint32_t now) { pressL1(now); }
+    void key2(uint32_t now) { pressL2(now); }
+
     /// Swipe map of the approved prototype (app.js swipe + each screen's swipe table). Face and widgets keep the same
     /// physical directions in Arabic (prototype rule); other screens mirror left/right in right-to-left.
     void swipe(Swipe d) {
@@ -159,8 +245,14 @@ public:
             else go(to);
         } else if (screen == Screen::Menu || screen == Screen::Quick) {
             if (d == Swipe::Up) scroll(+1); else if (d == Swipe::Down) scroll(-1); else if (d == backward) back();
-        } else if (screen == Screen::Cockpit) {
-            // ride pages (power, heart rate, cadence, pacing, climb, navigation, coach) and the controls page are Stage 3
+        } else if (workoutPage(screen) && inWorkout()) {                                // prototype: sideways swipes change page
+            auto p = ridePages(); int i = std::max(0, pageIndex()), n = int(p.size());
+            Swipe fwd = rtl() ? Swipe::Right : Swipe::Left;
+            if (d == fwd) set(p[(i + 1) % n]); else if (d == backward) set(p[(i + n - 1) % n]); else if (d == Swipe::Up) { go(Screen::Controls); focus = 0; }
+        } else if (screen == Screen::Controls && (d == Swipe::Up || (d == Swipe::Down && ctlScroll > 0))) {
+            ctlScroll = std::max(0, std::min(CTL_MAX_SCROLL, ctlScroll + (d == Swipe::Up ? 1 : -1)));
+        } else if (screen == Screen::Controls || screen == Screen::EndConfirm || screen == Screen::RestartConfirm) {
+            if (d == backward || d == Swipe::Down) back();
         } else if (d == backward) back();
         note(std::string("swipe ") + "LRUD"[int(d)]);
     }
@@ -176,14 +268,16 @@ public:
             case Action::Pause: if (wk == WkState::Active && pending == Cmd::None) send(Cmd::Pause, now); break;
             case Action::Resume: if (wk == WkState::Paused && pending == Cmd::None) send(Cmd::Resume, now); break;
             case Action::DismissToast: toast.kind = Toast::None; break;
+            case Action::Choice: focus = arg; activate(now); break;
             case Action::None: break;
         }
     }
     void home() { stack.clear(); set(Screen::Face); }
     void toWorkout() { stack.clear(); set(Screen::Cockpit); }
+    bool workoutScreen() const { return workoutPage(screen) || screen == Screen::Controls || screen == Screen::EndConfirm || screen == Screen::RestartConfirm; }
     /// Back (prototype back()): previous screen, else the workout, else the face. The cockpit's back is the menu (Stage 1).
     void back() {
-        if (screen == Screen::Cockpit) { go(Screen::Menu); return; }
+        if (workoutPage(screen)) { go(Screen::Menu); return; }
         if (!stack.empty()) { Screen s = stack.back(); stack.pop_back(); set(s); return; }
         if (inWorkout()) toWorkout(); else home();
     }
@@ -193,7 +287,8 @@ public:
     void setClock(const Clock& c) { clock = c; }
 
     void startRide(uint32_t now) {
-        wk = WkState::Active; interval = 2; remainS = 492; laps = 0; lastSecMs_ = now; toWorkout(); note("ride started (simulated)");
+        wk = WkState::Active; interval = 2; remainS = 492; laps = 0; lastSecMs_ = now; histP.clear(); histHr.clear(); histCad.clear(); powSum = 0; powN = 0; t_ = 0;
+        toWorkout(); note("ride started (simulated)");
         if (simRideNotice) toast = {Toast::Info, S::SimRide, true, S::SimRideSub, now + BANNER_MS};   // values never mistaken for sensors
     }
 
@@ -230,7 +325,35 @@ private:
     void set(Screen s) {
         if (s == Screen::Menu && screen != Screen::Menu) menuScroll = 0;
         if (s == Screen::Quick && screen != Screen::Quick) qsScroll = 0;
+        if (s == Screen::Controls && screen != Screen::Controls) ctlScroll = 0;
+        if (s != screen) focus = 0;
+        if (!workoutPage(s)) key2Armed = false;
         screen = s;
+    }
+    void keepFocusVisible() {
+        if (screen == Screen::Menu) menuScroll = std::max(0, std::min(menuMaxScroll(), focus - 1));
+        if (screen == Screen::Quick) qsScroll = std::max(0, std::min(qsMaxScroll(), focus - 1));
+        if (screen == Screen::Controls) ctlScroll = std::max(0, std::min(CTL_MAX_SCROLL, focus - 1));
+    }
+    static constexpr int CTL_MAX_SCROLL = 3;
+    /// L1 (or a tap) on the highlighted row.
+    void activate(uint32_t now) {
+        switch (screen) {
+            case Screen::Menu: { auto it = menuItems(); if (focus < int(it.size())) selectMenu(it[focus], now); break; }
+            case Screen::Quick: quick(QsRow(focus)); break;
+            case Screen::Controls:
+                switch (Ctl(focus)) {
+                    case Ctl::PauseResume: if (pending == Cmd::None) send(wk == WkState::Paused ? Cmd::Resume : Cmd::Pause, now); back(); break;
+                    case Ctl::Lap: if (pending == Cmd::None) send(Cmd::Lap, now); back(); break;
+                    case Ctl::End: set(Screen::EndConfirm); focus = 0; break;   // replaces Controls: Cancel returns to the ride
+                    case Ctl::Why: notYet = MenuId::Coach; go(Screen::NotYet); break;
+                    case Ctl::Menu: go(Screen::Menu); break;
+                }
+                break;
+            case Screen::EndConfirm: if (focus == 1 && pending == Cmd::None) send(Cmd::End, now); else if (focus == 0) back(); break;
+            case Screen::RestartConfirm: if (focus == 1) { restartRequested = true; note("restart confirmed during a workout"); } else back(); break;
+            default: break;
+        }
     }
     void scroll(int d) {
         if (screen == Screen::Quick) qsScroll = std::max(0, std::min(qsMaxScroll(), qsScroll + d));
@@ -243,7 +366,7 @@ private:
             case QsRow::Theme: settings.theme = ThemeId((int(settings.theme) + 1) % 6); break;
             case QsRow::Dnd: settings.dnd = !settings.dnd; break;
             case QsRow::Mode: settings.mode = Mode((int(settings.mode) + 1) % 3); break;
-            case QsRow::Lock: locked = true; home(); break;
+            case QsRow::Lock: locked = !locked; if (locked) home(); break;
         }
         note("quick settings");
     }
@@ -259,15 +382,16 @@ private:
     void send(Cmd c, uint32_t now) {
         if (!phoneLinked) {                     // approved: workout commands are refused at once while the phone is lost
             // shown as a banner (result + reason): the one-line pill does not fit the round screen at its approved position
-            S fail = c == Cmd::Pause ? S::UnablePause : c == Cmd::Resume ? S::UnableResume : S::UnableLap;
+            S fail = c == Cmd::Pause ? S::UnablePause : c == Cmd::Resume ? S::UnableResume : c == Cmd::End ? S::UnableEnd : S::UnableLap;
             toast = {Toast::Crit, fail, true, S::PhoneLostUseIphone, now + BANNER_MS}; note("command refused: phone lost"); return;
         }
         pending = c; pendingSinceMs = now; toast.kind = Toast::None; note("command sent (simulated iPhone)");
     }
     void resolve(uint32_t now) {
         Cmd c = pending; pending = Cmd::None;
-        S fail = c == Cmd::Pause ? S::UnablePause : c == Cmd::Resume ? S::UnableResume : S::UnableLap;
+        S fail = c == Cmd::Pause ? S::UnablePause : c == Cmd::Resume ? S::UnableResume : c == Cmd::End ? S::UnableEnd : S::UnableLap;
         if (nextReply == Reply::Accept) {
+            if (c == Cmd::End) { wk = WkState::None; key2Armed = false; home(); toast = {Toast::Ok, S::ToastEnded, true, S::IphoneKeepsRecord, now + BANNER_MS}; }
             if (c == Cmd::Pause) { wk = WkState::Paused; toast = {Toast::Ok, S::ToastPaused, false, S::NoAnswer, now + TOAST_MS}; }
             if (c == Cmd::Resume) { wk = WkState::Active; toast = {Toast::Ok, S::ToastResumed, false, S::NoAnswer, now + TOAST_MS}; }
             if (c == Cmd::Lap) { laps++; toast = {Toast::Ok, S::ToastLapSaved, false, S::NoAnswer, now + TOAST_MS}; }
@@ -285,17 +409,21 @@ private:
             t_++;
             if (--remainS <= 0) { interval = interval % INTERVALS + 1; remainS = INTERVAL_S; }
         }
-        if (!simulate) return;
-        if (wk == WkState::Active) {
+        if (simulate && wk == WkState::Active) {
             // a rider holding the 235–255 W band with drift and the odd surge; heart rate and cadence follow slowly
             int surge = (t_ % 47 < 4) ? 60 : (t_ % 61 < 3 ? -45 : 0);
             m.power = sensors.power ? std::max(0, 246 + noise(9) + surge) : -1;
             m.hr = sensors.hr ? 150 + (t_ / 20) % 5 + noise(1) : -1;
             m.cadence = sensors.cadence ? 91 + noise(3) : -1;
-        } else if (wk == WkState::Paused) {   // paused: the last ride values stay on screen; heart rate settles slowly
+        } else if (simulate && wk == WkState::Paused) {   // paused: the last ride values stay on screen; heart rate settles slowly
             if (!sensors.power) m.power = -1;
             if (!sensors.cadence) m.cadence = -1;
             m.hr = sensors.hr ? std::max(100, (m.hr < 0 ? 150 : m.hr) - 1) : -1;
+        }
+        if (wk == WkState::Active) {                        // chart pages: one sample per second while riding (-1 = no sensor)
+            for (auto* h : {&histP, &histHr, &histCad}) if (int(h->size()) >= HIST) h->erase(h->begin());
+            histP.push_back(m.power); histHr.push_back(m.hr); histCad.push_back(m.cadence);
+            if (m.power >= 0) { powSum += m.power; powN++; }
         }
     }
 };

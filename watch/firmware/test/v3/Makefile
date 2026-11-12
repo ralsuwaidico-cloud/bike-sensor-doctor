@@ -21,7 +21,7 @@ all: model render
 $(LVGL)/lvgl.h:
 	git clone --depth 1 --branch v8.3.11 https://github.com/lvgl/lvgl.git $(LVGL)
 
-model: test_model.cpp test_time.cpp test_nav.cpp $(SRC)/*.hpp ../../src/hal/rtc_time.hpp
+model: test_model.cpp test_time.cpp test_nav.cpp test_keys.cpp test_buttons.cpp $(SRC)/*.hpp ../../src/hal/rtc_time.hpp
 	@mkdir -p $(BUILD)
 	$(CXX) -std=gnu++17 -O1 -Wall -Wextra -DCYW_HOST -o $(BUILD)/test_model test_model.cpp
 	$(BUILD)/test_model
@@ -29,6 +29,10 @@ model: test_model.cpp test_time.cpp test_nav.cpp $(SRC)/*.hpp ../../src/hal/rtc_
 	$(BUILD)/test_time
 	$(CXX) -std=gnu++17 -O1 -Wall -Wextra -DCYW_HOST -o $(BUILD)/test_nav test_nav.cpp
 	$(BUILD)/test_nav
+	$(CXX) -std=gnu++17 -O1 -Wall -Wextra -o $(BUILD)/test_keys test_keys.cpp
+	$(BUILD)/test_keys
+	$(CXX) -std=gnu++17 -O1 -Wall -Wextra -DCYW_HOST -o $(BUILD)/test_buttons test_buttons.cpp
+	$(BUILD)/test_buttons
 	python3 ../../tools/v3/gen_tokens.py --check
 
 $(BUILD)/lvgl/%.o: $(LVGL)/%.c $(SRC)/lv_conf_v3.h

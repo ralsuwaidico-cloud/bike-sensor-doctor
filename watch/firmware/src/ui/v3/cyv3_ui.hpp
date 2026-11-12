@@ -108,6 +108,30 @@ private:
     void hideUnder(lv_obj_t* overlay, int margin);
     void updateFace(const Model& m);
     void updateCockpit(const Model& m);
+    // Stage 1.4: button system (owner G2–G10) — workout controls, confirmations, data pages, highlight, hold feedback
+    struct Btn { std::string text; int kind; int arg; bool focus; };   // kind: 0 secondary, 1 primary, 2 loading, 3 destructive
+    /// A centred row of buttons (prototype btnRow, 12 px gap; right-to-left reverses the order). Tap = Action::Choice(arg).
+    void btnRow(int top, std::vector<Btn> items, int pad = SPACE_XL, int gap = 12);
+    int btnRowWidth(const std::vector<Btn>& items, int pad, int gap) const;
+    /// Picks the widest padding / gap (token minimum 12 px padding) that keeps the row on the glass; false = does not fit.
+    bool btnRowFits(int top, const std::vector<Btn>& items, int& pad, int& gap) const;
+    /// The approved highlight (Hybrid v3: 2 px accent, as on the menu's "Return to workout" row). Rows: inside border;
+    /// buttons: an outline 2 px outside the button so it also shows on an accent (primary) button.
+    void focusRow(lv_obj_t* row);
+    void focusButton(lv_obj_t* b);
+    void buildControls(const Model& m);
+    void buildEndConfirm(const Model& m);
+    void buildRestartConfirm(const Model& m);
+    void buildChart(const Model& m);
+    void updateChart(const Model& m);
+    void buildHoldOverlay(const Model& m);
+    void updateHoldOverlay(const Model& m);
+    // chart page and hold overlays: updated in place (no rebuild per second / per 0.1 s)
+    lv_obj_t *chartLine_ = nullptr, *chartDot_ = nullptr, *chartNoData_ = nullptr;
+    std::vector<lv_point_t> chartPts_;
+    Run chartValue_, chartStats_[3];
+    lv_obj_t *holdArc_ = nullptr, *holdText_ = nullptr;
+    int holdKind_ = 0;                            // 1 = End ring (L1 held in a ride), 2 = restart countdown (L1 + L2)
 
     // primitives
     lv_obj_t* label(lv_obj_t* parent, const std::string& s, const Font& f, uint32_t color, bool rtlText);
