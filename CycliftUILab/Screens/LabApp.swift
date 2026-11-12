@@ -132,8 +132,8 @@ struct LabRoot: View {
         .tint(theme.accent)
         .sheet(item: $sheet, onDismiss: sheetDismissed) { s in
             sheetView(s)
-                .onAppear { visibleSheet = s.id }
-                .onDisappear { if visibleSheet == s.id { visibleSheet = nil } }
+                .onAppear { visibleSheet = s.id; SheetLog.note("home sheet content appeared: \(s.id)") }
+                .onDisappear { if visibleSheet == s.id { visibleSheet = nil }; SheetLog.note("home sheet content disappeared: \(s.id)") }
                 .environment(\.cyTheme, theme)
                 .presentationDetents(s.opensLarge ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -145,7 +145,10 @@ struct LabRoot: View {
                                     onClose: { showCoach = false })
                 .environment(\.cyTheme, theme)
         }
+        .onChange(of: sheet?.id) { old, new in SheetLog.note("home sheet state: \(old ?? "none") -> \(new ?? "none")") }
+        .onChange(of: showCoach) { _, new in SheetLog.note("coach cover state: \(new ? "shown" : "hidden")") }
         .onAppear {
+            SheetLog.launch()
             applyLaunchSheet()
             if LabConfig.stress != nil { Task { await runStress() } }
             if LabConfig.render { Task { @MainActor in try? await Task.sleep(nanoseconds: 1_200_000_000); renderFullLength() } }
@@ -189,18 +192,21 @@ struct LabRoot: View {
 
     /// The only way Home opens a sheet.
     private func present(_ s: LabSheet) {
-        if sheet != nil { return }                       // a sheet is already up (e.g. the second tap of a double tap)
+        if sheet != nil { SheetLog.note("home request \(s.id): IGNORED, sheet state already holds \(sheet?.id ?? "")"); return }   // a sheet is already up (e.g. the second tap of a double tap)
         if sheetBusy && LabConfig.stress != "direct" {   // the previous sheet is still animating away: queue the request
+            SheetLog.note("home request \(s.id): QUEUED, previous dismissal not reported yet")
             pendingSheet = s
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {   // safety net if the dismissal callback never arrives
-                if let p = pendingSheet, sheet == nil { pendingSheet = nil; sheetBusy = true; sheet = p }
+                if let p = pendingSheet, sheet == nil { SheetLog.note("home queued \(p.id): presented by the 1 s safety net"); pendingSheet = nil; sheetBusy = true; sheet = p }
             }
             return
         }
+        SheetLog.note("home request \(s.id): PRESENT (busy flag was \(sheetBusy))")
         sheetBusy = true
         sheet = s
     }
     private func sheetDismissed() {
+        SheetLog.note("home dismissal reported by SwiftUI (pending: \(pendingSheet?.id ?? "none"))")
         sheetBusy = false
         if let p = pendingSheet { pendingSheet = nil; present(p) }
     }
@@ -214,13 +220,17 @@ struct LabRoot: View {
         var log: [String] = []
         try? await Task.sleep(nanoseconds: 1_500_000_000)
         for d in delays {
+            SheetLog.note("stress \(d) ms: open mix")
             present(.mix)
             try? await Task.sleep(nanoseconds: 1_400_000_000)
+            SheetLog.note("stress \(d) ms: close mix")
             sheet = nil
             try? await Task.sleep(nanoseconds: d * 1_000_000)
+            SheetLog.note("stress \(d) ms: request recovery")
             present(.recovery)
             try? await Task.sleep(nanoseconds: 2_200_000_000)
             let ok = visibleSheet == "recovery"
+            SheetLog.note("stress \(d) ms: result \(ok ? "shown" : "NOT on screen") (state \(sheet?.id ?? "none"))")
             if ok { shown += 1 }
             log.append("\(d)ms:\(ok ? "shown" : (sheet == nil ? "not requested" : "state set but nothing on screen"))")
             sheet = nil; pendingSheet = nil
@@ -277,7 +287,7 @@ struct LabRoot: View {
     }
 
     @ViewBuilder private func sheetView(_ s: LabSheet) -> some View {
-        let close: () -> Void = { sheet = nil }
+        let close: () -> Void = { SheetLog.note("home close button: \(s.id)"); sheet = nil }
         switch s {
         case .consistency: ConsistencySheet(model: data.consistency, days: data.days, onClose: close)
         case .mix: MixSheet(model: data.mix, endurance: data.endurance, strength: data.strength, onClose: close)

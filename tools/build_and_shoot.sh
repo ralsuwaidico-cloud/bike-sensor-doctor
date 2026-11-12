@@ -92,10 +92,13 @@ runtests() { # udid label
   local P F
   P=$(grep -cE "^Test Case .* passed" "$LOG"); F=$(grep -cE "^Test Case .* failed" "$LOG")
   { echo; echo "== $L (${3}) — passed $P, failed $F, xcodebuild exit $RC ==";
-    grep -E "^Test Case .* (passed|failed)" "$LOG" | sed -E "s/^Test Case '-\[CycliftUILabUITests\.HomeInteractionTests (.*)\]' (passed|failed) \((.*) seconds\)\./  \2  \1  (\3 s)/";
+    grep -E "^Test Case .* (passed|failed)" "$LOG" | sed -E "s/^Test Case '-\[CycliftUILabUITests\.[A-Za-z0-9_]+ (.*)\]' (passed|failed) \((.*) seconds\)\./  \2  \1  (\3 s)/";
     echo "-- observations written by the tests --"; grep -hE "LABNOTE" "$LOG" | sed -E "s/^.*LABNOTE /  /" | sort -u;
     if [ "$F" != "0" ] || [ $RC -ne 0 ]; then echo "-- failure details --"; grep -E "error:|Testing failed|\*\* TEST" "$LOG" | sed "s#$PWD/##" | sort -u | head -60; fi; } >> "$TESTS"
   note "RESULT interaction tests ($L): passed $P, failed $F$([ $RC -ne 0 ] && [ "$F" = "0" ] && echo " — xcodebuild exit $RC (see interaction-tests.txt)")"
+  # the prototype's own sheet-presentation log (diagnostic; see SheetLog.swift)
+  local C; C=$(xcrun simctl get_app_container "$U" "$BID" data 2>/dev/null)
+  if [ -n "$C" ] && [ -f "$C/Documents/sheet-log.txt" ]; then cp "$C/Documents/sheet-log.txt" "$OUT/sheet-log-$L.txt"; else note "sheet log missing ($L)"; fi
   # keep the tail of the raw log small enough to publish
   tail -c 400000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 }
@@ -103,6 +106,9 @@ FULL_ONLY=""; git log -1 --format=%s 2>/dev/null | grep -q "\[full-only\]" && FU
 [ -n "$FULL_ONLY" ] && { note "FULL-ONLY run: interaction tests and screen captures were skipped on purpose; see the previous run for them"; echo "Not run in this full-only build." >> "$TESTS"; }
 [ -z "$FULL_ONLY" ] && [ -n "$STD" ] && runtests "${STD%|*}" standard "${STD#*|}"
 [ -z "$FULL_ONLY" ] && [ -n "$SMALL" ] && runtests "${SMALL%|*}" small "${SMALL#*|}"
+
+# "[tests-only]" in the commit subject: interaction tests on both simulators, no screen captures
+if git log -1 --format=%s 2>/dev/null | grep -q "\[tests-only\]"; then note "TESTS-ONLY run: screen captures were skipped on purpose."; exit 0; fi
 
 if [ -n "$STD" ]; then
   U="${STD%|*}"; prep "$U"

@@ -254,13 +254,17 @@ struct CoachConversationScreen: View {
         .background(theme.background.ignoresSafeArea())
         .environment(\.cyTheme, theme)
         .preferredColorScheme(theme.scheme)
-        .sheet(item: $open, onDismiss: { sheetBusy = false; if let p = pending { pending = nil; present(p) } }) { p in
+        .onChange(of: open?.id) { old, new in SheetLog.note("coach sheet state: \(old ?? "none") -> \(new ?? "none")") }
+        .sheet(item: $open, onDismiss: { SheetLog.note("coach dismissal reported by SwiftUI"); sheetBusy = false; if let p = pending { pending = nil; present(p) } }) { p in
             CoachProposalSheet(proposal: conversation.proposal(p.id) ?? p, history: conversation.history(of: p.id),
-                               onClose: { open = nil },
+                               onClose: { SheetLog.note("coach close button: \(p.id)"); open = nil },
                                onDecide: { status in
+                                   SheetLog.note("coach decision on \(p.id): sheet closed and decision recorded in the same step")
                                    open = nil
                                    conversation.decide(p.id, status, day: today, time: now)
                                })
+                .onAppear { SheetLog.note("coach sheet content appeared: \(p.id)") }
+                .onDisappear { SheetLog.note("coach sheet content disappeared: \(p.id)") }
                 .environment(\.cyTheme, theme)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -275,8 +279,9 @@ struct CoachConversationScreen: View {
     }
 
     private func present(_ p: CyCoachProposal) {
-        if open != nil { return }
-        if sheetBusy { pending = p; return }
+        if open != nil { SheetLog.note("coach request \(p.id): IGNORED, a sheet is already up"); return }
+        if sheetBusy { SheetLog.note("coach request \(p.id): QUEUED"); pending = p; return }
+        SheetLog.note("coach request \(p.id): PRESENT")
         sheetBusy = true
         open = p
     }
