@@ -97,16 +97,26 @@ struct MixSheet: View {
     var body: some View {
         CySheet(title: "Training Mix", onClose: onClose) {
             HStack(spacing: CySpace.l) {
-                CyMixRingGlyph(model: model, diameter: 84)
+                CyMixRingGlyph(model: model, diameter: 92)
                 VStack(alignment: .leading, spacing: 6) {
                     legend("Outer ring · Endurance", theme.endurance)
                     legend("Inner ring · Strength", theme.strength)
+                    Text("Centre · endurance : strength").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
                 }
             }
+            .accessibilityElement(children: .combine)
+            KeyValueList(rows: [
+                CyTrendDetailRow(id: "ratioDone", label: "Completed time, endurance : strength", value: model.ratioText ?? "No completed training yet"),
+                CyTrendDetailRow(id: "ratioPlan", label: "Planned time, endurance : strength", value: model.plannedRatio.map { "\($0.endurance):\($0.strength)" } ?? "Nothing planned"),
+                CyTrendDetailRow(id: "minDone", label: "Completed minutes", value: "\(model.endurance.minutesDone) endurance · \(model.strength.minutesDone) strength"),
+            ])
+            .accessibilityIdentifier("mixRatios")
+            InfoBlock(head: "The centre number", text: "How the training time you have completed this week is split between endurance and strength. It is each discipline's minutes as a share of the total, rounded. Only minutes are used — kilograms, watts, distance and session load are never combined.")
+            InfoBlock(head: "The two rings", text: "A different measurement: how far you are through this week's plan in each discipline (completed ÷ planned). The rings can be far apart while the centre ratio matches your plan, and the other way round.")
             leg(title: "Endurance", icon: CyCategory.endurance.icon, color: theme.endurance, l: model.endurance, extra: endurance.secondary)
             leg(title: "Strength", icon: CyCategory.strength.icon, color: theme.strength, l: model.strength, extra: strength.secondary)
-            InfoBlock(head: "What this shows", text: "How far you are through this week's plan in each discipline. Each ring has its own value.")
-            InfoBlock(head: "What it does not show", text: "The two rings are not added together, and matching rings do not mean an ideal balance. This is separate from the load analysis (recent load against your own longer-term average), which stays its own analytics feature.")
+            InfoBlock(head: "What it does not show", text: "The ratio is not a score and no split is marked as ideal. This is separate from the load analysis (recent load against your own longer-term average), which stays its own analytics feature.")
+            Text("Sample data. Formula: endurance minutes ÷ (endurance + strength minutes), rounded to a whole percent.").font(.caption2).foregroundStyle(theme.textTertiary)
         }
     }
     private func legend(_ text: String, _ color: Color) -> some View {
@@ -148,13 +158,20 @@ struct RecoverySheet: View {
     var body: some View {
         CySheet(title: "Recovery", onClose: onClose) {
             HStack(spacing: CySpace.l) {
-                CyRecoveryGlyph(model: model, diameter: 72)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(word).font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                    Text("\(model.sources.filter { $0.value != nil }.count) of \(model.sources.count) readings available").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                CyRecoveryGlyph(model: model, diameter: 80)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(headline).font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("recoveryHeadline")
+                    Text("\(available) of \(model.sources.count) readings available").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                    if isSample {
+                        Text("SAMPLE SCORE").font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(theme.warning)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .overlay(Capsule().strokeBorder(theme.warning.opacity(0.8), lineWidth: 1))
+                            .accessibilityIdentifier("recoverySampleTag")
+                    }
                 }
             }
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .contain)
             CyCard(padding: CySpace.m) {
                 VStack(spacing: CySpace.s) {
                     ForEach(model.sources) { s in
@@ -170,15 +187,36 @@ struct RecoverySheet: View {
                     }
                 }
             }
-            InfoBlock(head: "Guidance", text: model.guidance)
-            InfoBlock(head: "About this indicator", text: "The three arcs show which readings exist today. There is no recovery percentage, and this is not a medical assessment.")
-            Text(model.freshness).font(.caption2).foregroundStyle(theme.textTertiary)
+            if !missing.isEmpty {
+                InfoBlock(head: "Missing today", text: missing.joined(separator: ", ") + ". Nothing is estimated in their place.")
+                    .accessibilityIdentifier("recoveryMissing")
+            }
+            if !model.guidance.isEmpty { InfoBlock(head: "Guidance", text: model.guidance) }
+            InfoBlock(head: "About the number", text: about)
+            InfoBlock(head: "Not medical advice", text: "This is training context only. It is not a medical assessment and never a clearance to train.")
+            if !model.freshness.isEmpty { Text(model.freshness).font(.caption2).foregroundStyle(theme.textTertiary) }
         }
     }
-    private var word: String {
+    private var available: Int { model.sources.filter { $0.value != nil }.count }
+    private var missing: [String] { model.sources.filter { $0.value == nil }.map(\.name) }
+    private var isSample: Bool { if case .numericSample = model.state { return true }; return false }
+    private var headline: String {
         switch model.state {
-        case .available(let w), .partial(let w), .concern(let w): return w
+        case .numericSample(let p, let w): return "\(p)% · \(w)"
+        case .qualitative(let w), .partial(let w): return w
         case .awaiting: return "Awaiting data"
+        }
+    }
+    private var about: String {
+        switch model.state {
+        case .numericSample:
+            return "The percentage on this screen is sample data for design review. Cyclift has no approved numerical recovery model, so the app will not show a percentage until a documented, validated method exists. Until then it shows a status in words."
+        case .qualitative:
+            return "No percentage is shown because Cyclift has no approved numerical recovery model. The status compares today's readings with your own recent range."
+        case .partial:
+            return "Some readings are missing, so no overall status or percentage is given. The readings that exist are listed above."
+        case .awaiting:
+            return "No readings are available, so nothing is shown. Connect a source or wear your watch overnight."
         }
     }
 }
@@ -192,15 +230,16 @@ struct SleepSheet: View {
             KeyValueList(rows: [
                 CyTrendDetailRow(id: "last", label: "Last night", value: model.lastNight.map(CySleepModel.text) ?? "No record"),
                 CyTrendDetailRow(id: "avg", label: "7-day average", value: model.average7.map(CySleepModel.text) ?? "—"),
-                CyTrendDetailRow(id: "target", label: "Target", value: model.target.map(CySleepModel.text) ?? "Not set"),
+                CyTrendDetailRow(id: "target", label: model.targetLabel, value: model.target.map(CySleepModel.text) ?? "Not set"),
             ])
             if let last = model.lastNight, let t = model.target, t > 0 {
                 VStack(alignment: .leading, spacing: 4) {
                     CyGradientBar(fraction: Double(last) / Double(t), color: theme.ringRecovery, height: 6)
-                    Text("Bar: last night ÷ target").font(.caption2).foregroundStyle(theme.textTertiary)
+                    Text("Bar: last night ÷ \(model.targetLabel.lowercased())").font(.caption2).foregroundStyle(theme.textTertiary)
                 }
             }
             CyWeeklyBars(title: "Recent nights", points: model.nights, unit: "h", category: .recovery, emptyText: "No sleep history yet.")
+            InfoBlock(head: "Four different things", text: "Last night is one recorded night. The 7-day average is the mean of recorded nights. The target is a goal you set. A recommendation would be advice from a documented source — none is shown here.")
             InfoBlock(head: "About the target", text: "Source: \(model.targetSource). Cyclift does not calculate a sleep need. In the app this would be your own chosen target or a documented source.")
             InfoBlock(head: "Guidance", text: model.guidance)
             Text(model.source).font(.caption2).foregroundStyle(theme.textTertiary)
@@ -260,18 +299,19 @@ struct SportSheet: View {
     }
 }
 
-struct TrendDaySheet: View {
-    let day: CyTrendDay
+struct GraphDaySheet: View {
+    let date: CyGraphDate
+    let rows: [CyTrendDetailRow]
     let onClose: () -> Void
     @Environment(\.cyTheme) private var theme
     var body: some View {
-        CySheet(title: day.full, onClose: onClose) {
-            if day.rows.isEmpty {
-                CyEmptyStateCard(icon: "calendar", title: "No data", message: "Nothing was recorded or planned for this day.")
+        CySheet(title: date.full, onClose: onClose) {
+            if rows.isEmpty {
+                CyEmptyStateCard(icon: "calendar", title: "No data", message: "Nothing was recorded for this day in this view.")
             } else {
-                KeyValueList(rows: day.rows)
+                KeyValueList(rows: rows).accessibilityIdentifier("graphDayRows")
             }
-            Text("Only what was recorded is listed. Sample data.").font(.caption2).foregroundStyle(theme.textTertiary)
+            Text("Only what was recorded is listed; a missing reading is shown as missing. Sample data.").font(.caption2).foregroundStyle(theme.textTertiary)
         }
     }
 }

@@ -5,11 +5,14 @@ import SwiftUI
 // on screen. Status words (Load Balance, Recovery) are examples of wording, not computed or validated scores.
 
 enum LabScenario: String, CaseIterable, Identifiable {
-    case established, newUser, loading, cyclingOnly, strengthOnly, noPlan, partialData, longName
+    case established, qualitativeRecovery, newUser, loading, cyclingOnly, strengthOnly, noPlan, noRecovery, partialData, noSleep, longName
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .established: return "Established hybrid athlete"
+        case .established: return "Established hybrid athlete (recovery % = sample)"
+        case .qualitativeRecovery: return "Hybrid — recovery as a status word (production fallback)"
+        case .noRecovery: return "No recovery data"
+        case .noSleep: return "No sleep source"
         case .newUser: return "New athlete (setup open, no history)"
         case .loading: return "Loading"
         case .cyclingOnly: return "Single sport — cycling only"

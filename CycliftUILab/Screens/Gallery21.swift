@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Gallery page for the Home v2.1 components in their states.
+/// Gallery page for the Home v2.2 components in their states.
 struct Gallery21: View {
     @Environment(\.cyTheme) private var theme
     @State private var steps = Mock21.newAthlete().steps
@@ -16,10 +16,21 @@ struct Gallery21: View {
             Example(label: "INDICATORS · STRENGTH ONLY (ENDURANCE RING INACTIVE)") { row(lift) }
             Example(label: "INDICATORS · PARTIAL RECOVERY DATA") { row(partial) }
             Example(label: "INDICATORS · NEW ATHLETE / NOTHING PLANNED") { VStack(spacing: CySpace.l) { row(fresh); row(empty) } }
-            Example(label: "INDICATORS · RECOVERY CONCERN (SAMPLE WORDING)") {
-                CyIndicatorRow(consistency: (0.5, "50%", "2 of 4 sessions"), mix: hybrid.mix,
-                               recovery: CyRecoveryIndicatorModel(state: .concern(word: "Outside your usual range"), sources: Mock21.recoveryFull.sources, guidance: "", freshness: ""),
-                               onConsistency: {}, onMix: {}, onRecovery: { note = "Recovery opened" })
+            Example(label: "RECOVERY · SAMPLE % / STATUS WORD / PARTIAL / AWAITING") {
+                HStack(spacing: CySpace.l) {
+                    CyRecoveryGlyph(model: Mock21.recoveryFull)
+                    CyRecoveryGlyph(model: Mock21.recoveryQualitative)
+                    CyRecoveryGlyph(model: Mock21.recoveryPartial)
+                    CyRecoveryGlyph(model: Mock21.recoveryNone)
+                }
+            }
+            Example(label: "TRAINING MIX · 66:34 / 100:0 / 0:100 / NO COMPLETED TRAINING") {
+                HStack(spacing: CySpace.l) {
+                    CyMixRingGlyph(model: hybrid.mix)
+                    CyMixRingGlyph(model: cyc.mix)
+                    CyMixRingGlyph(model: lift.mix)
+                    CyMixRingGlyph(model: fresh.mix)
+                }
             }
             Example(label: "INDICATORS · LOADING") {
                 CyIndicatorRow(consistency: nil, mix: nil, recovery: nil, isLoading: true, onConsistency: {}, onMix: {}, onRecovery: {})
@@ -70,17 +81,18 @@ struct Gallery21: View {
             }
             }
             Group {
-            Example(label: "TRENDS · 7 DAYS / 4 WEEKS · TOUCH A DAY") { CyTrendsModule(ranges: hybrid.trends, initialSelection: 2, onInfo: { note = "Info opened" }, onDay: { note = "\($0.full) opened" }) }
-            Example(label: "TRENDS · EMPTY / LOADING") {
+            Example(label: "GRAPH · TRAINING & RECOVERY (TWO LABELLED SCALES)") { CyTrendsGraph(ranges: hybrid.graph, initialSelection: 2, onInfo: { note = "Info opened" }, onDay: { d, _ in note = "\(d.full) opened" }) }
+            Example(label: "GRAPH · TRAINING ACTIVITY") { CyTrendsGraph(ranges: hybrid.graph, initialMode: "activity", onInfo: {}, onDay: { _, _ in }) }
+            Example(label: "GRAPH · RECOVERY TRENDS · 4 WEEKS (GAPS = MISSING DAYS)") { CyTrendsGraph(ranges: hybrid.graph, initialMode: "trends", initialRange: "4w", onInfo: {}, onDay: { _, _ in }) }
+            Example(label: "GRAPH · EMPTY / LOADING") {
                 VStack(spacing: CySpace.l) {
-                    CyTrendsModule(ranges: [], emptyText: fresh.trendsEmpty, onInfo: {}, onDay: { _ in })
-                    CyTrendsModule(ranges: [], isLoading: true, onInfo: {}, onDay: { _ in })
+                    CyTrendsGraph(ranges: [], emptyText: fresh.trendsEmpty ?? "Nothing recorded yet.", onInfo: {}, onDay: { _, _ in })
+                    CyTrendsGraph(ranges: [], isLoading: true, onInfo: {}, onDay: { _, _ in })
                 }
             }
-            Example(label: "KEY METRICS · ROWS / MISSING / LOADING / GRID ALTERNATIVE") {
+            Example(label: "KEY METRICS · ROWS / MISSING / LOADING") {
                 VStack(spacing: CySpace.l) {
                     CyMetricGrid(tiles: hybrid.metrics) { note = "\($0.name) opened" }
-                    CyMetricGrid(tiles: hybrid.metrics, style: .grid) { _ in }
                     CyMetricGrid(tiles: partial.metrics) { _ in }
                     CyMetricGrid(tiles: [], isLoading: true) { _ in }
                 }

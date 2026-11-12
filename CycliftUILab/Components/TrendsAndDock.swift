@@ -268,6 +268,7 @@ struct CyMetricGrid: View {
                                 } else { Color.clear }
                             }
                             .frame(width: 10)
+                            Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(theme.textTertiary)
                         }
                         .padding(.horizontal, CySpace.m)
                         .frame(minHeight: 54)
@@ -279,6 +280,7 @@ struct CyMetricGrid: View {
                     .accessibilityValue(t.value.map { "\($0) \(t.unit)\(t.baseline.map { ", \($0)" } ?? "")\(t.direction == .none ? "" : ", \(t.direction.spoken)")" } ?? "No data")
                     .accessibilityAddTraits(.isButton)
                     .accessibilityHint("Opens details")
+                    .accessibilityIdentifier("metricRow-\(t.id)")
                     if t.id != tiles.last?.id { Rectangle().fill(theme.separator.opacity(0.6)).frame(height: 0.5).padding(.leading, CySpace.m + 22 + CySpace.m) }
                 }
             }
@@ -388,6 +390,7 @@ struct CyFloatingDock: View {
         .buttonStyle(.plain)
         .accessibilityLabel(item.title)
         .accessibilityAddTraits(on ? [.isSelected, .isButton] : .isButton)
+        .accessibilityIdentifier("dock-\(item.id)")
     }
 
     private var centre: some View {
@@ -413,5 +416,6 @@ struct CyFloatingDock: View {
         }
         .buttonStyle(CyRingButtonStyle())
         .accessibilityLabel(centreBadge.map { "\(centreTitle), \($0) sessions today" } ?? centreTitle)
+        .accessibilityIdentifier("dockCentre")
     }
 }

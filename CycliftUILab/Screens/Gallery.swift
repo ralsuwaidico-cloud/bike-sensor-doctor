@@ -9,11 +9,10 @@ struct LabScreen: View {
     let lockedTheme: CyThemeID?
     var bottomInset: CGFloat = 0
     @Environment(\.cyTheme) private var theme
-    @AppStorage("lab.metrics") private var metricsRaw: String = CyMetricStyle.rows.rawValue
     @State private var path: [String] = LabConfig.screen == "gallery" ? [LabConfig.page ?? "buttons"] : []
 
     static let pages: [(id: String, title: String, icon: String)] = [
-        ("home21", "Home v2.1 components", "sparkles"),
+        ("home21", "Home v2.2 components", "sparkles"),
         ("buttons", "Buttons", "hand.tap"),
         ("cards", "Cards", "rectangle.stack"),
         ("rings", "Circular indicators", "circle.dashed"),
@@ -26,7 +25,7 @@ struct LabScreen: View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: CySpace.l) {
-                    Text("UI Lab").font(CyFont.display).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader)
+                    Text("UI Lab").font(CyFont.display).foregroundStyle(theme.textPrimary).accessibilityAddTraits(.isHeader).accessibilityIdentifier("labTitle")
                     Text("Prototype only. Sample data. Nothing here is connected to the Cyclift app.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
 
                     CyOverline(text: "Theme")
@@ -36,11 +35,8 @@ struct LabScreen: View {
 
                     CyOverline(text: "Home scenario")
                     ForEach(LabScenario.allCases) { s in
-                        CySelectionCard(title: s.title, isSelected: scenario == s) { scenario = s }
+                        CySelectionCard(title: s.title, isSelected: scenario == s) { scenario = s }.accessibilityIdentifier("scenario-\(s.rawValue)")
                     }
-
-                    CyOverline(text: "Key metrics layout")
-                    CySegmented(options: ["Rows", "Grid"], selection: Binding(get: { metricsRaw == "grid" ? 1 : 0 }, set: { metricsRaw = $0 == 1 ? "grid" : "rows" }))
 
                     CyOverline(text: "Component gallery")
                     ForEach(LabScreen.pages, id: \.id) { p in

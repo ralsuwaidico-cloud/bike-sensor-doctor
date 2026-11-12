@@ -270,8 +270,9 @@ struct CySheet<Content: View>: View {
                 HStack(alignment: .top) {
                     Text(title).font(CyFont.title).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
+                        .accessibilityIdentifier("sheetTitle")
                     Spacer(minLength: CySpace.m)
-                    if let onClose { CyIconButton(systemName: "xmark", label: "Close", action: onClose) }
+                    if let onClose { CyIconButton(systemName: "xmark", label: "Close", action: onClose).accessibilityIdentifier("sheetClose") }
                 }
                 content()
             }
@@ -352,9 +353,9 @@ struct CyReviewSheet: View {
             }
             Text("Nothing changes until you approve.").font(.caption2).foregroundStyle(theme.textTertiary)
             VStack(spacing: CySpace.s) {
-                CyButton(title: "Approve", icon: "checkmark", kind: .primary, action: onApprove).disabled(!canApprove)
-                CyButton(title: "Not now", kind: .secondary, action: onPostpone)
-                CyButton(title: "Decline", kind: .destructive, action: onDecline)
+                CyButton(title: "Approve", icon: "checkmark", kind: .primary, action: onApprove).disabled(!canApprove).accessibilityIdentifier("reviewApprove")
+                CyButton(title: "Not now", kind: .secondary, action: onPostpone).accessibilityIdentifier("reviewPostpone")
+                CyButton(title: "Decline", kind: .destructive, action: onDecline).accessibilityIdentifier("reviewDecline")
             }
         }
     }

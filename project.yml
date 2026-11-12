@@ -10,6 +10,8 @@ targets:
     type: application
     platform: iOS
     sources: [CycliftUILab]
+    scheme:
+      testTargets: [CycliftUILabUITests]
     info:
       path: CycliftUILab/Info.plist
       properties:
@@ -24,3 +26,18 @@ targets:
         CODE_SIGNING_ALLOWED: "NO"
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
+  # Interaction tests for the prototype only (simulator). They never run against the production app.
+  CycliftUILabUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: CycliftUILab
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: lab.cyclift.uilab.uitests
+        GENERATE_INFOPLIST_FILE: "YES"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGNING_ALLOWED: "NO"
+        TEST_TARGET_NAME: CycliftUILab

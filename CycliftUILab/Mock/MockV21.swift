@@ -27,6 +27,7 @@ struct Home21Data: Equatable {
     var coachEmpty: String?
     var trends: [CyTrendRange]
     var trendsEmpty: String?
+    var graph: [CyGraphRange] = MockGraph.ranges()
     var metrics: [CyMetricTile]
     var sessionsToday: Int
     var requiredOpen: Bool { steps.contains { $0.isRequired && !$0.isDone } }
@@ -57,6 +58,9 @@ enum Mock21 {
         for (i, v) in values.enumerated() { out.append(CySeriesPoint(id: i, label: i < labels.count ? labels[i] : "\(i + 1)", value: v)) }
         return out
     }
+    static func missing(_ m: CyMetricTile, _ source: String) -> CyMetricTile {
+        CyMetricTile(id: m.id, icon: m.icon, name: m.name, value: nil, unit: m.unit, trend: nil, trendLevel: .neutral, explanation: m.explanation, source: source, history: [], historyUnit: m.historyUnit)
+    }
     static let weeks8 = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"]
 
     static func make(_ scenario: LabScenario) -> Home21Data {
@@ -67,6 +71,16 @@ enum Mock21 {
         case .strengthOnly: return strengthOnly()
         case .noPlan: return noPlan()
         case .partialData: return partialData()
+        case .qualitativeRecovery:
+            var d = hybrid(); d.recovery = recoveryQualitative; d.graph = MockGraph.ranges(GraphOptions(recoveryScore: false)); return d
+        case .noRecovery:
+            var d = hybrid(); d.recovery = recoveryNone
+            d.graph = MockGraph.ranges(GraphOptions(recoveryScore: false, restingHR: false, hrv: false, sleep: false)); d.sleep = sleepNone
+            d.metrics = d.metrics.map { m in (m.id == "rhr" || m.id == "hrv") ? missing(m, "No recovery source connected") : m }
+            return d
+        case .noSleep:
+            var d = hybrid(); d.sleep = sleepNone; d.recovery = recoveryQualitative
+            d.graph = MockGraph.ranges(GraphOptions(recoveryScore: false, sleep: false)); return d
         case .longName:
             var d = hybrid()
             d.name = "Alexandria-Maximiliana Featherstonehaugh"
@@ -79,22 +93,26 @@ enum Mock21 {
     // MARK: shared pieces
 
     static let sleepFull = CySleepModel(
-        lastNight: 430, average7: 422, target: 480, targetSource: "sample target for the prototype",
+        lastNight: 430, average7: 422, target: 480, targetSource: "sample target for the prototype (in the app: the target you choose)",
         nights: points(shorts, [7.4, 6.8, 7.2, 6.5, 7.6, 6.9, 7.2]),
         guidance: "Sample wording: your last night was close to your seven-day average. General guidance, not medical advice.",
-        source: "Sample data · would read \"Apple Health · updated this morning\"")
+        source: "Sample data · would read \"Apple Health · updated this morning\"", targetLabel: "Sample target")
     static let sleepNone = CySleepModel(
         lastNight: nil, average7: nil, target: nil, targetSource: "no target set", nights: [],
         guidance: "Sleep appears here once a sleep source is connected. Nothing is estimated.",
         source: "No sleep source connected")
 
     static let recoveryFull = CyRecoveryIndicatorModel(
-        state: .available(word: "In your usual range"),
+        state: .numericSample(percent: 68, word: "Sample score"),
         sources: [CyRecoverySource(id: "sleep", name: "Sleep", value: "7h 10m", note: "in your usual range"),
                   CyRecoverySource(id: "rhr", name: "Resting heart rate", value: "52 bpm", note: "in your usual range"),
                   CyRecoverySource(id: "hrv", name: "HRV", value: "64 ms", note: "in your usual range")],
         guidance: "Sample wording: today's readings sit inside your own recent range. This is general wellness information, not medical advice and not a clearance to train.",
         freshness: "Sample data · would read \"Apple Health · updated this morning\"")
+    static let recoveryQualitative = CyRecoveryIndicatorModel(
+        state: .qualitative(word: "In your usual range"), sources: recoveryFull.sources,
+        guidance: "Today's readings sit inside your own recent range. This is a status, not a score, and not a clearance to train. Sample wording.",
+        freshness: recoveryFull.freshness)
     static let recoveryPartial = CyRecoveryIndicatorModel(
         state: .partial(word: "Partial data"),
         sources: [CyRecoverySource(id: "sleep", name: "Sleep", value: nil, note: "no sleep source connected"),
@@ -122,8 +140,8 @@ enum Mock21 {
                              "Heart-rate variability overnight, compared with your own usual range. It varies a lot between people.", "Sample · Apple Health", [61, 66, 58, 63, 65, 62, 60, 64], "ms", baseline: "avg 62", direction: .up)
     static let mTime = metric("time", "clock", "Training time", "1h 57m", "", "of 5h 25m planned", .neutral,
                               "Total recorded training time this week across both disciplines.", "Sample · Cyclift sessions", [255, 270, 230, 285, 260, 290, 275, 117], "min", baseline: "of 5h 25m planned")
-    static let mLoad = metric("load", "chart.bar", "Weekly load", "410", "pts", "session effort × minutes", .neutral,
-                              "Each session's effort rating multiplied by its minutes, added up for the week. It needs an effort rating or heart rate for every session.", "Sample · Cyclift sessions", [720, 760, 640, 800, 730, 820, 770, 410], "pts", baseline: "avg 763 / week")
+    static let mLoad = metric("load", "chart.bar", "Weekly load", "561", "RPE×min", "session effort × minutes", .neutral,
+                              "Each session's effort rating (1–10) multiplied by its minutes, added up for the week — the session-RPE method the Cyclift engine already uses. It needs an effort rating or heart rate for every session; without one the value is shown as unavailable.", "Sample · Cyclift sessions (existing engine calculation)", [1240, 1310, 1105, 1380, 1260, 1415, 1330, 561], "RPE×min", baseline: "4-wk avg 1,291")
     static let mPower = metric("power", "bolt", "Avg ride power", "168", "W", "last 3 rides", .neutral,
                                "Average power across your recent rides, from your power meter.", "Sample · power meter", [158, 160, 157, 163, 165, 162, 166, 168], "W", baseline: "avg 163", direction: .up)
     static let mVolume = metric("volume", "scalemass", "Strength volume", "3,240", "kg", "1 session this week", .neutral,
@@ -160,7 +178,7 @@ enum Mock21 {
             dateLine: "Wed 11 Nov", name: "Alex", athleteType: "Hybrid athlete", initials: "A",
             consistency: CyConsistencyModel(fraction: 0.75, text: "75%", caption: "3 of 4 sessions",
                 counts: [row("Planned to date", "4"), row("Completed", "3"), row("Missed", "1"), row("Rescheduled", "0"), row("Still to come", "3"), row("Rest days", "2 · not counted")]),
-            mix: CyMixModel(endurance: CyMixLeg(done: "1h 17m", planned: "3h 30m", fraction: 0.37), strength: CyMixLeg(done: "1", planned: "3 sessions", fraction: 0.33)),
+            mix: CyMixModel(endurance: CyMixLeg(done: "1h 17m", planned: "3h 30m", fraction: 0.37, minutesDone: 77, minutesPlanned: 210), strength: CyMixLeg(done: "1", planned: "3 sessions", fraction: 0.33, minutesDone: 40, minutesPlanned: 115)),
             recovery: recoveryFull,
             steps: [CySetupStep(id: "plan", title: "Approve your plan", detail: "Review the week Cyclift prepared", isDone: true, isRequired: true),
                     CySetupStep(id: "first", title: "Complete your first session", detail: "Any planned session counts", isDone: true, isRequired: true),
@@ -172,9 +190,11 @@ enum Mock21 {
             strength: CySportCardModel(category: .strength, title: "Strength", done: "1", planned: "3 sessions", fraction: 0.33, secondary: "3,240 kg lifted", emptyText: nil,
                                        history: [3, 3, 2, 3, 3, 3, 2, 1], historyCaption: "Sessions per week, last 8 weeks"),
             sleep: sleepFull,
-            coach: CyCoachBannerModel(sentence: "Two upper-body sessions reached the top of the range. A small load step is ready.",
+            coach: CyCoachBannerModel(sentence: "Your last two strength sessions reached the top of your rep range. Review a small load increase.",
                                       why: "Both sessions reached the top of the rep range at a reported effort of 7 out of 10. The suggested step is the smallest available (2.5 kg). Nothing changes unless you approve it. Sample text.",
-                                      hasProposal: true),
+                                      hasProposal: true,
+                                      observation: "Your last two strength sessions reached the top of your rep range.",
+                                      recommendation: "Review a small load increase."),
             coachEmpty: nil,
             trends: [week, fourWeeks], trendsEmpty: nil,
             metrics: [mRHR, mHRV, mTime, mLoad, mPower, mVolume],
@@ -185,7 +205,7 @@ enum Mock21 {
         var d = hybrid()
         d.name = "Alex"; d.athleteType = nil
         d.consistency = CyConsistencyModel(fraction: nil, text: "", caption: "Starts with your first session", counts: [row("Planned to date", "0"), row("Completed", "0")])
-        d.mix = CyMixModel(endurance: CyMixLeg(done: "0m", planned: "40m", fraction: 0), strength: CyMixLeg(done: "0", planned: "2 sessions", fraction: 0))
+        d.mix = CyMixModel(endurance: CyMixLeg(done: "0m", planned: "40m", fraction: 0, minutesDone: 0, minutesPlanned: 40), strength: CyMixLeg(done: "0", planned: "2 sessions", fraction: 0, minutesDone: 0, minutesPlanned: 60))
         d.recovery = recoveryNone
         d.steps = [CySetupStep(id: "plan", title: "Approve your plan", detail: "Review the week Cyclift prepared", isDone: true, isRequired: true),
                    CySetupStep(id: "first", title: "Complete your first session", detail: "Any planned session counts", isDone: false, isRequired: true),
@@ -198,7 +218,7 @@ enum Mock21 {
         d.sleep = sleepNone
         d.coach = nil
         d.coachEmpty = "Complete a session and the short check-in. The coach starts from what you actually do."
-        d.trends = []; d.trendsEmpty = "Your training appears here after your first session."
+        d.trends = []; d.trendsEmpty = "Your training appears here after your first session."; d.graph = []
         d.metrics = [mRHR, mHRV, mTime, mLoad].map { m in
             CyMetricTile(id: m.id, icon: m.icon, name: m.name, value: nil, unit: m.unit, trend: nil, trendLevel: .neutral, explanation: m.explanation, source: "No data yet", history: [], historyUnit: m.historyUnit)
         }
@@ -209,7 +229,7 @@ enum Mock21 {
     static func cyclingOnly() -> Home21Data {
         var d = hybrid()
         d.athleteType = "Cyclist"
-        d.mix = CyMixModel(endurance: CyMixLeg(done: "2h 02m", planned: "4h 30m", fraction: 0.45), strength: CyMixLeg(done: "0", planned: nil, fraction: nil))
+        d.mix = CyMixModel(endurance: CyMixLeg(done: "2h 02m", planned: "4h 30m", fraction: 0.45, minutesDone: 122, minutesPlanned: 270), strength: CyMixLeg(done: "0", planned: nil, fraction: nil))
         d.consistency = CyConsistencyModel(fraction: 1.0, text: "100%", caption: "3 of 3 sessions", counts: [row("Planned to date", "3"), row("Completed", "3"), row("Missed", "0"), row("Rescheduled", "1 (moved to Friday)")])
         d.days = [day(0, [ride("m1", .completed)]), day(1, [ride("t1", .completed, "Tempo ride", "50 min · moderate")]), day(2, [ride("w1", .completed, "Recovery spin", "27 min · easy")]),
                   day(3, [ride("th1", .rescheduled, "Endurance ride", "moved to Friday")]), day(4, [ride("f1", .planned)]), day(5, [ride("s1", .planned, "Long ride", "2h · steady")]), day(6, [], rest: true)]
@@ -217,6 +237,7 @@ enum Mock21 {
                                        history: [240, 255, 230, 270, 260, 280, 265, 122], historyCaption: "Minutes per week, last 8 weeks")
         d.strength = CySportCardModel(category: .strength, title: "Strength", done: nil, planned: nil, fraction: nil, secondary: nil, emptyText: "Not in your plan", history: [], historyCaption: "")
         d.metrics = [mRHR, mHRV, mTime, mPower]
+        d.graph = MockGraph.ranges(GraphOptions(strength: false))
         d.coach = CyCoachBannerModel(sentence: "Keep this week as planned.", why: "Your last sessions were completed as planned and nothing suggests a change. Sample text.", hasProposal: false)
         d.sessionsToday = 0
         return d
@@ -225,7 +246,7 @@ enum Mock21 {
     static func strengthOnly() -> Home21Data {
         var d = hybrid()
         d.athleteType = "Strength athlete"
-        d.mix = CyMixModel(endurance: CyMixLeg(done: "0m", planned: nil, fraction: nil), strength: CyMixLeg(done: "2", planned: "4 sessions", fraction: 0.5))
+        d.mix = CyMixModel(endurance: CyMixLeg(done: "0m", planned: nil, fraction: nil), strength: CyMixLeg(done: "2", planned: "4 sessions", fraction: 0.5, minutesDone: 95, minutesPlanned: 185))
         d.consistency = CyConsistencyModel(fraction: 0.67, text: "67%", caption: "2 of 3 sessions", counts: [row("Planned to date", "3"), row("Completed", "2"), row("Missed", "1"), row("Rescheduled", "0")])
         d.days = [day(0, [lift("m1", .completed, "Push", "45 min")]), day(1, [lift("t1", .missed, "Pull", "45 min")]), day(2, [lift("w1", .completed, "Legs", "50 min")]),
                   day(3, [], rest: true), day(4, [lift("f1", .planned, "Push", "45 min")]), day(5, [lift("s1", .planned, "Pull", "45 min")]), day(6, [], rest: true)]
@@ -233,6 +254,7 @@ enum Mock21 {
         d.strength = CySportCardModel(category: .strength, title: "Strength", done: "2", planned: "4 sessions", fraction: 0.5, secondary: "9,120 kg lifted", emptyText: nil,
                                       history: [4, 4, 3, 4, 4, 4, 3, 2], historyCaption: "Sessions per week, last 8 weeks")
         d.metrics = [mRHR, mHRV, mTime, mVolume]
+        d.graph = MockGraph.ranges(GraphOptions(endurance: false))
         d.sessionsToday = 0
         return d
     }
@@ -245,7 +267,7 @@ enum Mock21 {
         d.endurance = CySportCardModel(category: .endurance, title: "Endurance", done: nil, planned: nil, fraction: nil, secondary: nil, emptyText: "Nothing planned this week", history: [150, 165, 140, 175, 160, 185, 170, 0], historyCaption: "Minutes per week, last 8 weeks")
         d.strength = CySportCardModel(category: .strength, title: "Strength", done: nil, planned: nil, fraction: nil, secondary: nil, emptyText: "Nothing planned this week", history: [3, 3, 2, 3, 3, 3, 2, 0], historyCaption: "Sessions per week, last 8 weeks")
         d.coach = CyCoachBannerModel(sentence: "No sessions are planned this week. Add a session when you are ready.", why: "Your plan has no sessions for this week. Sample text.", hasProposal: false)
-        d.trends = []; d.trendsEmpty = "Nothing planned or recorded this week."
+        d.trends = []; d.trendsEmpty = "Nothing planned or recorded this week."; d.graph = []
         d.sessionsToday = 0
         return d
     }
@@ -254,6 +276,7 @@ enum Mock21 {
         var d = hybrid()
         d.recovery = recoveryPartial
         d.sleep = sleepNone
+        d.graph = MockGraph.ranges(GraphOptions(recoveryScore: false, hrv: false, sleep: false))
         d.metrics = [
             CyMetricTile(id: "rhr", icon: "heart", name: "Resting HR", value: nil, unit: "bpm", trend: nil, trendLevel: .neutral, explanation: mRHR.explanation, source: "Apple Health not connected", history: [], historyUnit: "bpm"),
             CyMetricTile(id: "hrv", icon: "waveform.path.ecg", name: "HRV", value: nil, unit: "ms", trend: nil, trendLevel: .neutral, explanation: mHRV.explanation, source: "Apple Health not connected", history: [], historyUnit: "ms"),

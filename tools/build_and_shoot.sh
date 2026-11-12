@@ -47,7 +47,6 @@ prep() { # udid
   xcrun simctl ui "$1" content_size large >/dev/null 2>&1
 }
 THEMES="obsidian arctic ocean forest sandstone highContrast"
-PAGES="home21 buttons cards rings charts controls sheets"
 SETTLE=2.5
 
 full() { # udid name env… → full-length Home image rendered by the prototype itself
@@ -60,40 +59,75 @@ full() { # udid name env… → full-length Home image rendered by the prototype
 }
 mkdir -p "$OUT/full"
 
+# ---- Interaction tests (prototype only). Written to out/interaction-tests.txt; a failure is reported, never hidden.
+TESTS="$OUT/interaction-tests.txt"; : > "$TESTS"
+echo "Cyclift UI Lab — Home v2.2 interaction tests (PROTOTYPE, iOS Simulator, sample data)." >> "$TESTS"
+echo "A pass here is not validation of the production app and not a real-device test." >> "$TESTS"
+runtests() { # udid label
+  local U="$1" L="$2" LOG="$OUT/test-$2.txt"
+  xcrun simctl boot "$U" >/dev/null 2>&1; xcrun simctl bootstatus "$U" -b >/dev/null 2>&1
+  xcrun simctl ui "$U" content_size large >/dev/null 2>&1
+  xcodebuild test -project CycliftUILab.xcodeproj -scheme CycliftUILab -destination "id=$U" -derivedDataPath build \
+    -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO > "$LOG" 2>&1
+  local RC=$?
+  local P F
+  P=$(grep -cE "^Test Case .* passed" "$LOG"); F=$(grep -cE "^Test Case .* failed" "$LOG")
+  { echo; echo "== $L (${3}) — passed $P, failed $F, xcodebuild exit $RC ==";
+    grep -E "^Test Case .* (passed|failed)" "$LOG" | sed -E "s/^Test Case '-\[CycliftUILabUITests\.HomeInteractionTests (.*)\]' (passed|failed) \((.*) seconds\)\./  \2  \1  (\3 s)/";
+    if [ "$F" != "0" ] || [ $RC -ne 0 ]; then echo "-- failure details --"; grep -E "error:|Testing failed|\*\* TEST" "$LOG" | sed "s#$PWD/##" | sort -u | head -60; fi; } >> "$TESTS"
+  note "RESULT interaction tests ($L): passed $P, failed $F$([ $RC -ne 0 ] && [ "$F" = "0" ] && echo " — xcodebuild exit $RC (see interaction-tests.txt)")"
+  # keep the tail of the raw log small enough to publish
+  tail -c 400000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+}
+[ -n "$STD" ] && runtests "${STD%|*}" standard "${STD#*|}"
+[ -n "$SMALL" ] && runtests "${SMALL%|*}" small "${SMALL#*|}"
+
 if [ -n "$STD" ]; then
   U="${STD%|*}"; prep "$U"
   SETTLE=6 shoot "$U" warmup LAB_THEME=obsidian
   for T in $THEMES; do
     shoot "$U" "home-$T-1-top" LAB_THEME=$T
     shoot "$U" "home-$T-2-cards" LAB_THEME=$T LAB_SCROLL=cards
-    shoot "$U" "home-$T-3-trends" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
+    shoot "$U" "home-$T-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
     shoot "$U" "home-$T-4-metrics" LAB_THEME=$T LAB_SCROLL=metrics
     full "$U" "full-$T" LAB_THEME=$T
-    [ "$T" = obsidian ] && shoot "$U" "home-$T-4-metrics-grid" LAB_THEME=$T LAB_SCROLL=metrics LAB_METRICS=grid
   done
   for T in obsidian arctic; do
-    for S in newUser cyclingOnly strengthOnly noPlan partialData longName loading; do
-      shoot "$U" "state-$T-$S-1-top" LAB_THEME=$T LAB_SCENARIO=$S
-      full "$U" "full-$T-$S" LAB_THEME=$T LAB_SCENARIO=$S
-    done
-    shoot "$U" "state-$T-newUser-2-trends" LAB_THEME=$T LAB_SCENARIO=newUser LAB_SCROLL=trends
-    for SH in mix sleep consistency recovery review; do shoot "$U" "sheet-$T-$SH" LAB_THEME=$T LAB_SHEET=$SH; done
+    shoot "$U" "graph-$T-recovery-7d-noselection" LAB_THEME=$T LAB_SCROLL=trends
+    shoot "$U" "graph-$T-recovery-4w" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_RANGE=4w LAB_SELECT=20
+    shoot "$U" "graph-$T-activity-7d" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_SELECT=1
+    shoot "$U" "graph-$T-activity-4w" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_GRAPH_RANGE=4w LAB_SELECT=16
+    shoot "$U" "graph-$T-trends-7d" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_SELECT=1
+    shoot "$U" "graph-$T-trends-4w-gaps" LAB_THEME=$T LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_GRAPH_RANGE=4w LAB_SELECT=6
   done
-  for SH in day endurance strength coachWhy trendsInfo trendDay metric profile hub; do shoot "$U" "sheet-obsidian-$SH" LAB_THEME=obsidian LAB_SHEET=$SH; done
+  shoot "$U" "graph-highContrast-activity-4w" LAB_THEME=highContrast LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_GRAPH_RANGE=4w LAB_SELECT=16
+  for S in qualitativeRecovery newUser cyclingOnly strengthOnly noPlan noRecovery partialData noSleep longName loading; do
+    shoot "$U" "state-obsidian-$S-1-top" LAB_THEME=obsidian LAB_SCENARIO=$S
+    full "$U" "full-obsidian-$S" LAB_THEME=obsidian LAB_SCENARIO=$S
+  done
+  for S in qualitativeRecovery newUser noRecovery; do shoot "$U" "state-arctic-$S-1-top" LAB_THEME=arctic LAB_SCENARIO=$S; done
+  shoot "$U" "state-obsidian-newUser-2-graph" LAB_THEME=obsidian LAB_SCENARIO=newUser LAB_SCROLL=trends
+  shoot "$U" "state-obsidian-noRecovery-2-graph" LAB_THEME=obsidian LAB_SCENARIO=noRecovery LAB_SCROLL=trends LAB_GRAPH_MODE=trends
+  shoot "$U" "state-obsidian-qualitativeRecovery-2-graph" LAB_THEME=obsidian LAB_SCENARIO=qualitativeRecovery LAB_SCROLL=trends LAB_SELECT=1
+  for T in obsidian arctic; do
+    for SH in mix recovery sleep consistency review; do shoot "$U" "sheet-$T-$SH" LAB_THEME=$T LAB_SHEET=$SH; done
+  done
+  for SH in day endurance strength coachWhy trendsInfo metric profile hub; do shoot "$U" "sheet-obsidian-$SH" LAB_THEME=obsidian LAB_SHEET=$SH; done
   shoot "$U" "sheet-obsidian-mix-cyclingOnly" LAB_THEME=obsidian LAB_SCENARIO=cyclingOnly LAB_SHEET=mix
-  shoot "$U" "sheet-obsidian-sleep-nodata" LAB_THEME=obsidian LAB_SCENARIO=partialData LAB_SHEET=sleep
+  shoot "$U" "sheet-obsidian-mix-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser LAB_SHEET=mix
+  shoot "$U" "sheet-obsidian-recovery-qualitative" LAB_THEME=obsidian LAB_SCENARIO=qualitativeRecovery LAB_SHEET=recovery
   shoot "$U" "sheet-obsidian-recovery-partial" LAB_THEME=obsidian LAB_SCENARIO=partialData LAB_SHEET=recovery
+  shoot "$U" "sheet-obsidian-recovery-none" LAB_THEME=obsidian LAB_SCENARIO=noRecovery LAB_SHEET=recovery
+  shoot "$U" "sheet-obsidian-sleep-nodata" LAB_THEME=obsidian LAB_SCENARIO=noSleep LAB_SHEET=sleep
   for D in postponed accepted declined; do shoot "$U" "coach-obsidian-$D" LAB_THEME=obsidian LAB_SCROLL=cards LAB_DECISION=$D; done
   shoot "$U" "nav-obsidian-plan" LAB_THEME=obsidian LAB_SCREEN=plan
   shoot "$U" "nav-arctic-profile-lab" LAB_THEME=arctic LAB_SCREEN=lab
-  for T in obsidian arctic highContrast; do
-    for P in $PAGES; do shoot "$U" "gallery-$T-$P" LAB_THEME=$T LAB_SCREEN=gallery LAB_PAGE=$P; done
-  done
+  for T in obsidian arctic highContrast; do shoot "$U" "gallery-$T-home21" LAB_THEME=$T LAB_SCREEN=gallery LAB_PAGE=home21; done
   xcrun simctl ui "$U" content_size accessibility-large >/dev/null 2>&1
   for T in obsidian highContrast; do
     shoot "$U" "a11y-$T-AXL-1-top" LAB_THEME=$T
     shoot "$U" "a11y-$T-AXL-2-cards" LAB_THEME=$T LAB_SCROLL=cards
-    shoot "$U" "a11y-$T-AXL-3-trends" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
+    shoot "$U" "a11y-$T-AXL-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
     full "$U" "full-$T-AXL" LAB_THEME=$T
   done
   xcrun simctl shutdown "$U" >/dev/null 2>&1
@@ -104,16 +138,20 @@ if [ -n "$SMALL" ]; then
   for T in obsidian arctic; do
     shoot "$U" "small-$T-1-top" LAB_THEME=$T
     shoot "$U" "small-$T-2-cards" LAB_THEME=$T LAB_SCROLL=cards
-    shoot "$U" "small-$T-3-trends" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
+    shoot "$U" "small-$T-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=2
     shoot "$U" "small-$T-4-metrics" LAB_THEME=$T LAB_SCROLL=metrics
     full "$U" "full-small-$T" LAB_THEME=$T
   done
+  shoot "$U" "small-obsidian-graph-activity-4w" LAB_THEME=obsidian LAB_SCROLL=trends LAB_GRAPH_MODE=activity LAB_GRAPH_RANGE=4w LAB_SELECT=16
+  shoot "$U" "small-obsidian-graph-trends" LAB_THEME=obsidian LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_SELECT=1
   shoot "$U" "small-obsidian-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser
   shoot "$U" "small-obsidian-longName" LAB_THEME=obsidian LAB_SCENARIO=longName
+  shoot "$U" "small-obsidian-sheet-recovery" LAB_THEME=obsidian LAB_SHEET=recovery
+  shoot "$U" "small-obsidian-sheet-mix" LAB_THEME=obsidian LAB_SHEET=mix
   full "$U" "full-small-obsidian-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser
   xcrun simctl ui "$U" content_size accessibility-large >/dev/null 2>&1
   shoot "$U" "small-obsidian-AXL-1-top" LAB_THEME=obsidian
-  shoot "$U" "small-obsidian-AXL-3-trends" LAB_THEME=obsidian LAB_SCROLL=trends LAB_SELECT=2
+  shoot "$U" "small-obsidian-AXL-3-graph" LAB_THEME=obsidian LAB_SCROLL=trends LAB_SELECT=2
   full "$U" "full-small-obsidian-AXL" LAB_THEME=obsidian
   xcrun simctl shutdown "$U" >/dev/null 2>&1
 fi

@@ -19,7 +19,7 @@ struct Home21Actions {
     var onCoachReview: () -> Void = {}
     var onCoachNotNow: () -> Void = {}
     var onTrendsInfo: () -> Void = {}
-    var onTrendDay: (CyTrendDay) -> Void = { _ in }
+    var onGraphDay: (CyGraphDate, [CyTrendDetailRow]) -> Void = { _, _ in }
     var onMetric: (CyMetricTile) -> Void = { _ in }
 }
 
@@ -30,6 +30,8 @@ struct Home21Content: View {
     var showSampleTag: Bool = true
     var coachDecision: CyCoachDecision = .none
     var initialTrendSelection: Int? = nil
+    var initialGraphMode: String? = nil
+    var initialGraphRange: String? = nil
     var metricStyle: CyMetricStyle = .rows
     var actions = Home21Actions()
     @Environment(\.cyTheme) private var theme
@@ -49,8 +51,9 @@ struct Home21Content: View {
                           emptyText: isLoading ? nil : (data.coach == nil ? data.coachEmpty : nil), decision: coachDecision,
                           onWhy: actions.onCoachWhy, onReview: actions.onCoachReview, onNotNow: actions.onCoachNotNow)
                 .id("coach")
-            CyTrendsModule(ranges: data.trends, isLoading: isLoading, emptyText: data.trendsEmpty, initialSelection: initialTrendSelection,
-                           onInfo: actions.onTrendsInfo, onDay: actions.onTrendDay)
+            CyTrendsGraph(ranges: data.graph, isLoading: isLoading, emptyText: data.graph.isEmpty ? (data.trendsEmpty ?? "Nothing recorded yet.") : nil,
+                          initialMode: initialGraphMode, initialRange: initialGraphRange, initialSelection: initialTrendSelection,
+                          onInfo: actions.onTrendsInfo, onDay: actions.onGraphDay)
                 .id("trends")
             CyMetricGrid(tiles: data.metrics, isLoading: isLoading, style: metricStyle, onTile: actions.onMetric)
                 .id("metrics")
@@ -91,6 +94,7 @@ struct Home21Content: View {
             }
             .buttonStyle(CyRingButtonStyle())
             .accessibilityLabel("Profile")
+            .accessibilityIdentifier("homeAvatar")
         }
     }
     private var overline: String { [data.dateLine, data.athleteType ?? ""].filter { !$0.isEmpty }.joined(separator: " · ") }
@@ -114,6 +118,8 @@ struct Home21Screen: View {
     var scrollTo: String? = nil            // prototype screenshots only
     var initialTrendSelection: Int? = nil
     var bottomInset: CGFloat = 0           // room for the floating dock, so nothing is hidden beneath it
+    var initialGraphMode: String? = nil
+    var initialGraphRange: String? = nil
     var metricStyle: CyMetricStyle = .rows
     var actions = Home21Actions()
     @Environment(\.cyTheme) private var theme
@@ -121,7 +127,8 @@ struct Home21Screen: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                Home21Content(data: data, isLoading: isLoading, coachDecision: coachDecision, initialTrendSelection: initialTrendSelection, metricStyle: metricStyle, actions: actions)
+                Home21Content(data: data, isLoading: isLoading, coachDecision: coachDecision, initialTrendSelection: initialTrendSelection, initialGraphMode: initialGraphMode, initialGraphRange: initialGraphRange,
+                              metricStyle: metricStyle, actions: actions)
                     .padding(.bottom, bottomInset + CySpace.l)
             }
             .clipped()

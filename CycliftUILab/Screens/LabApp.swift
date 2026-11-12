@@ -15,7 +15,8 @@ enum LabConfig {
     static var select: Int? { env["LAB_SELECT"].flatMap(Int.init) }     // chart day selected at launch
     static var render: Bool { env["LAB_RENDER"] == "1" }                // write a full-length Home image to Documents
     static var decision: String? { env["LAB_DECISION"] }
-    static var metrics: CyMetricStyle? { env["LAB_METRICS"].flatMap(CyMetricStyle.init(rawValue:)) }                // accepted | declined | postponed
+    static var graphMode: String? { env["LAB_GRAPH_MODE"] }             // recovery | activity | trends
+    static var graphRange: String? { env["LAB_GRAPH_RANGE"] }           // 7d | 4w                // accepted | declined | postponed
 }
 
 @main
@@ -27,7 +28,7 @@ struct CycliftUILabApp: App {
 
 enum LabSheet: Identifiable {
     case consistency, mix, recovery, sleep, coachWhy, review, trendsInfo, hub, profile
-    case day(CyScheduleDay), sport(CySportCardModel), trendDay(CyTrendDay), metric(CyMetricTile)
+    case day(CyScheduleDay), sport(CySportCardModel), graphDay(CyGraphDate, [CyTrendDetailRow]), metric(CyMetricTile)
     var id: String {
         switch self {
         case .consistency: return "consistency"
@@ -41,7 +42,7 @@ enum LabSheet: Identifiable {
         case .profile: return "profile"
         case .day(let d): return "day-\(d.id)"
         case .sport(let s): return "sport-\(s.title)"
-        case .trendDay(let d): return "trendDay-\(d.full)"
+        case .graphDay(let d, _): return "graphDay-\(d.full)"
         case .metric(let m): return "metric-\(m.id)"
         }
     }
@@ -55,7 +56,6 @@ enum LabSheet: Identifiable {
 
 struct LabRoot: View {
     @AppStorage("lab.theme") private var themeRaw: String = CyThemeID.obsidian.rawValue
-    @AppStorage("lab.metrics") private var metricsRaw: String = CyMetricStyle.rows.rawValue
     @State private var scenario: LabScenario = LabConfig.scenario ?? .established
     @State private var data: Home21Data = Mock21.make(LabConfig.scenario ?? .established)
     @State private var tab: Int = LabRoot.initialTab
@@ -105,6 +105,7 @@ struct LabRoot: View {
                         .padding(.horizontal, CySpace.l)
                         .transition(.opacity)
                         .accessibilityAddTraits(.isStaticText)
+                        .accessibilityIdentifier("toast")
                 }
                 CyFloatingDock(selection: $tab, items: dockItems, centreTitle: "Train now", centreIcon: "figure.mixed.cardio",
                                centreBadge: scenario == .loading ? nil : data.sessionsToday) { sheet = .hub }
@@ -132,7 +133,8 @@ struct LabRoot: View {
         case 0:
             Home21Screen(data: data, isLoading: scenario == .loading, coachDecision: decision, scrollTo: LabConfig.scroll,
                          initialTrendSelection: LabConfig.select, bottomInset: dockHeight,
-                         metricStyle: LabConfig.metrics ?? CyMetricStyle(rawValue: metricsRaw) ?? .rows, actions: homeActions)
+                         initialGraphMode: LabConfig.graphMode, initialGraphRange: LabConfig.graphRange,
+                         metricStyle: .rows, actions: homeActions)
         case 4:
             LabScreen(themeRaw: $themeRaw, scenario: $scenario, lockedTheme: LabConfig.theme, bottomInset: dockHeight)
         default:
@@ -158,7 +160,7 @@ struct LabRoot: View {
             onCoachReview: { sheet = .review },
             onCoachNotNow: { decision = .postponed; say("Postponed. This is not a decline — it stays open.") },
             onTrendsInfo: { sheet = .trendsInfo },
-            onTrendDay: { sheet = .trendDay($0) },
+            onGraphDay: { d, rows in sheet = .graphDay(d, rows) },
             onMetric: { sheet = .metric($0) })
     }
 
@@ -183,7 +185,7 @@ struct LabRoot: View {
             case "day": if data.days.count > 2 { sheet = .day(data.days[2]) }
             case "endurance": sheet = .sport(data.endurance)
             case "strength": sheet = .sport(data.strength)
-            case "trendDay": if let d = data.trends.first?.days.dropFirst(2).first { sheet = .trendDay(d) }
+            case "trendDay": if let r = data.graph.first, r.dates.count > 2 { sheet = .graphDay(r.dates[2], [CyTrendDetailRow(id: "sample", label: "Opened from launch option", value: "see the graph panel")]) }
             case "metric": if let m = data.metrics.first { sheet = .metric(m) }
             default: break
             }
@@ -194,7 +196,8 @@ struct LabRoot: View {
     @MainActor func renderFullLength() {
         let width: CGFloat = UIScreen.main.bounds.width
         let view = Home21Content(data: data, isLoading: scenario == .loading, coachDecision: decision, initialTrendSelection: LabConfig.select,
-                                 metricStyle: LabConfig.metrics ?? CyMetricStyle(rawValue: metricsRaw) ?? .rows)
+                                 initialGraphMode: LabConfig.graphMode, initialGraphRange: LabConfig.graphRange,
+                                 metricStyle: .rows)
             .padding(.vertical, CySpace.l)
             .frame(width: width)
             .background(theme.background)
@@ -217,13 +220,15 @@ struct LabRoot: View {
         case .sleep: SleepSheet(model: data.sleep, onClose: close)
         case .day(let d): DaySheet(day: d, onClose: close) { say("Sample only — the session would open in the app.") }
         case .sport(let m): SportSheet(model: m, onClose: close)
-        case .trendDay(let d): TrendDaySheet(day: d, onClose: close)
+        case .graphDay(let d, let rows): GraphDaySheet(date: d, rows: rows, onClose: close)
         case .metric(let m): MetricSheet(tile: m, onClose: close)
         case .trendsInfo:
             CySheet(title: "How Trends works", onClose: close) {
-                InfoBlock(head: "What the chart shows", text: "Recorded training minutes per day: endurance and strength, stacked. Time still planned is drawn as a faint bar. One unit, labelled on the chart.")
-                InfoBlock(head: "What it does not show", text: "No recovery, stress or readiness score. Recovery and sleep for a day appear as words and durations when you touch that day — only when a reading exists.")
-                InfoBlock(head: "Missing days", text: "A day with nothing recorded or planned is left empty and says \"No data\". Nothing is estimated.")
+                InfoBlock(head: "Three views", text: "Training & Recovery: training load (session effort × minutes) on the left scale and recovery on the right scale. Activity: endurance, strength and planned minutes on one scale. Recovery trends: resting heart rate, HRV or sleep — one at a time, because their units differ.")
+                InfoBlock(head: "Scales", text: "Each scale is labelled with its metric and unit. Two different units are never drawn on one unlabelled axis.")
+                InfoBlock(head: "Missing days", text: "A day without a measurement is a gap: the line stops and no point is drawn. Nothing is interpolated or estimated.")
+                InfoBlock(head: "Recovery percentage", text: "In this prototype the recovery percentage is sample data only. Cyclift has no approved numerical recovery model; until one exists the app would show a status word instead of a number. It is never a medical clearance.")
+                InfoBlock(head: "Sources (sample)", text: (data.graph.first?.modes.flatMap(\.series) ?? []).map { "\($0.name): \($0.source) — \($0.provenance.rawValue.lowercased())" }.joined(separator: "\n"))
             }
         case .coachWhy:
             CySheet(title: "Why this suggestion?", onClose: close) {

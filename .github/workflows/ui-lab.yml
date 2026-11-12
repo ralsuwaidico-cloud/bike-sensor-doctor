@@ -10,10 +10,10 @@ permissions:
 jobs:
   prototype:
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      - name: Build the prototype and capture screenshots
+      - name: Build the prototype, run its interaction tests and capture screenshots
         run: bash tools/build_and_shoot.sh
       - name: Summary
         if: always()
@@ -25,6 +25,7 @@ jobs:
           for f in shots/*.png; do [ -f "$f" ] && sips -Z 1400 "$f" >/dev/null 2>&1; done
           for f in full/*.png; do [ -f "$f" ] && sips --resampleWidth 600 "$f" >/dev/null 2>&1; done
           rm -f build.txt
+          rm -rf *.xcresult
           git init -q -b proto/ui-lab-out
           git add -A
           git -c user.name="ui-lab" -c user.email="noreply@github.com" commit -qm "UI Lab output for ${GITHUB_SHA::7} (run ${GITHUB_RUN_ID})"
