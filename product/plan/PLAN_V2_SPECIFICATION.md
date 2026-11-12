@@ -1,6 +1,6 @@
 # Plan v2.0 — product and UX specification
 
-Status: **Current Draft** · Version 0.3 · 12 Nov 2026 · Level 3 (product specification)
+Status: **Current Draft** · Version 0.4 · 12 Nov 2026 · Level 3 (product specification)
 Source: `docs/cyclift-governance`, `product/plan/PLAN_V2_SPECIFICATION.md`
 Basis: owner brief "Plan Tab Redesign v2.0", the owner's reviews of v0.1 and v0.2 (all 12 Nov), Master Project
 Instructions v2.0, Brand Book v0.2 (current design baseline).
@@ -32,6 +32,13 @@ Companion documents (v0.3): `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md`
 | 9 | Ask Coach uses prepared, context-specific options until two-way messaging exists | §11 |
 | 10 | Automatic increases in load, volume or frequency require approval; existing behaviour audited, correction planned, no code changed | §11, `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` |
 | G | Past-session Quick log moves to Train; no functionality is removed | §9, §14 |
+
+## Visual direction recorded from the owner's review of v0.3 (12 Nov)
+
+The v0.3 wireframes were judged too close to plain settings screens. Plan must look like a premium athletic product:
+deep or layered surfaces, strong typography, restrained accent colour, purposeful gradients, and a **horizontally
+swipeable circular date selector**. The functional decisions of v0.3 are unchanged. The draft visual direction is §22;
+static alternatives are in `visual-v04/`. **Awaiting the owner's visual approval — no UI Lab code was written.**
 
 ## Decisions recorded from the owner's review of v0.2 (12 Nov)
 
@@ -217,6 +224,7 @@ many steps as they need; no artificial tap limit is imposed on them.
 ## 6. Weekly Calendar (W1, W1b, W2, W3)
 
 ### 6.1 Week navigation and date selector
+*(v0.4: the date strip becomes the circular date scroller of §22.2. The rules below still hold.)*
 - Previous / next week; the range label opens a date jump; "Today" appears when another week is shown.
 - Seven dates: weekday letter, day number, and **discipline indicators only** — round mark = endurance, square mark =
   strength (shape as well as colour), dash = scheduled rest, nothing = empty. At most two marks, then "+".
@@ -766,6 +774,82 @@ tried on a physical iPhone or with VoiceOver.
 - The coach's weekly-review structure and the strength session screen were not audited in depth.
 - The planner's spacing rules were seen in its code comments (strength at least 48 h apart; strength kept away from hard rides where a choice exists) but **not extracted in full**; the checks in §6.6 must be built from the real list.
 
+## 22. Visual direction (v0.4 — draft, awaiting visual approval)
+
+Static mock-ups: `visual-v04/V1…V4`. They are drawn pictures with sample data, using only the six-theme UI Lab
+prototype tokens of Brand Book §4.3. Nothing was built or run; sizes are design values, not device measurements.
+
+### 22.1 Principles
+- Depth comes from the theme's own tokens: background, two surface levels, border, accent, and the discipline
+  colours (endurance blue / cyan, strength amber). Gradients and glows are mixes of those tokens; **no new token**.
+- Dark themes: restrained luminosity behind the header and on the selected date. Light themes: layered surfaces and
+  an accent-tinted header area instead of large flat white.
+- High Contrast: no gradients, no shadows; borders and flat fills carry everything (V4).
+- Circles are used for **navigation and selection only** — dates, and workout types inside a picker. There are no
+  progress, recovery or score rings on Plan, and nothing from Home is reused.
+- Status keeps its own treatment and is never colour alone: Planned (plain word) · Done (tick and word, title
+  slightly dimmed) · Missed (dashed outline and word) · Rescheduled (link line "↳ Rescheduled from / to …").
+  No green or red judgement is applied.
+
+### 22.2 Circular date scroller (Weekly Calendar)
+| Aspect | Rule |
+|---|---|
+| Content of a circle | Day number. Above it the weekday letter; below it the discipline marks (round = endurance, square = strength, dash = rest, nothing = empty; at most two, then "+") |
+| What it never shows | Completion, percentages, rings that fill. It is a date control |
+| Size | Circle 44 pt; cell about 52 pt (49.5 pt on the small iPhone); the whole control 82 pt high |
+| Selected · today | Selected: accent ring or fill with a soft glow. Today: accent outline. Both can be true at once |
+| Swiping | Horizontal swipe moves by week and snaps; the neighbouring weeks' edge days are visible, dimmed, as a cue. The ‹ › buttons stay, so swiping is never the only way |
+| Selecting | Tap a circle: the sessions below change in place. The selection is kept when switching section and back |
+| Vertical scrolling | The scroller takes horizontal drags only; a vertical drag that starts on it scrolls the page (the same technique that fixed the Home graph) |
+| VoiceOver | One adjustable element per week plus one button per day: "Wednesday 11 November, today, selected, 2 sessions: ride, strength" |
+| Dynamic Type | Numbers scale to a cap inside the 44 pt circle; the full date is always in the day header below |
+| Reduce Motion | Week changes cross-fade instead of sliding; the glow does not animate |
+| Multiple sessions · empty · rest | Two marks then "+" · no mark · a dash |
+
+### 22.3 Workout picker carousel
+Inside **Add session** and **Replace workout** only — never on the landing screen. One horizontal row of circular
+type selectors: Strength · Cycling · Recovery · Routines · Program. Choosing one filters the list beneath, which
+uses the existing routines and exercise systems. "Program" lists the sessions the current plan prescribes; named
+program workouts are Future. Everything below the carousel stays ordinary rows, because rows are clearer for names
+and durations.
+
+### 22.4 Workout structure bar
+A small segmented bar on a session row, **only when the prescription holds the data**: for a ride, its generated
+steps (segment width = duration, height = intensity zone); for a strength session, one block per exercise (width =
+sets). It describes the plan, not performance, and it is absent when a session has no structure. In the mock-ups the
+bars are sample data.
+
+### 22.5 The three alternatives
+| | A · Premium Minimal | B · Athletic Dynamic | C · Balanced Premium |
+|---|---|---|---|
+| Sessions | One layered surface, hairlines, a thin discipline accent | Separate cards washed with the discipline colour, solid icon badges, structure bar | Separate layered cards, tinted icon badge, thin accent, structure bar |
+| Selected date | Accent fill with a halo | Endurance-to-accent gradient with a strong glow | Accent ring with a soft glow (accent fill on light themes) |
+| Background | Quiet surface gradient | Two discipline-coloured glows | One accent glow at the top |
+| Row height (design value) | about 54 pt | about 74 pt | about 62 pt, about 78 pt with a bar |
+| Strength | Most sessions visible; calmest | Most athletic and distinctive | Rich without crowding; discipline colour stays meaningful |
+| Weakness | Closest to the v0.3 look; least character | Colour is loud; amber wash sits close to the warning colour; fewest rows visible | Fewer rows visible than A |
+
+**Recommendation: C.** It gives the depth and character asked for while keeping colour restrained enough that
+discipline and status remain distinguishable — the open Brand Book item on amber versus warning is aggravated by B.
+
+### 22.6 Cost in space — stated plainly
+The circular scroller is 24 pt taller than the v0.3 date strip. On the small iPhone, with a suggestion row showing,
+design C shows **two full session rows and the start of a third** before scrolling (v0.3: three); without the
+suggestion row, three. A shows four. The first session and Add session stay visible in every case. To be measured
+in a prototype, not assumed.
+
+### 22.7 Not changed by this section
+Sections, actions, states, links, conflicts, scopes, approval, routine and availability editing, counting rules, and
+the Recurring Plan structure of v0.3. The Recurring Plan, sheets and Goal & Program screens have **not** yet been
+redrawn in the new visual language; they follow once a direction is chosen. Horizontal phase navigation belongs to
+the Program screen and stays Future with programs.
+
+### 22.8 Questions for visual approval
+1. Which direction: A, B or C (or C with named elements of another)?
+2. Structure bars on rows: keep, or reserve for the session detail?
+3. Is two-and-a-bit rows on the small iPhone acceptable for the richer look, or should small screens use the compact row of A?
+4. Week-by-week snapping (drawn), or free day-by-day scrolling?
+
 ## Change log
 
 | Version | Date | Change |
@@ -773,3 +857,4 @@ tried on a physical iPhone or with VoiceOver.
 | 0.1 | 12 Nov 2026 | First draft |
 | 0.2 | 12 Nov 2026 | Owner decisions 5–10 applied; goals-to-schedule chain (§4); landing reduced to the approved minimum; explicit scopes; missed-session data semantics and links (§6.7); Move to any day; Coach limited to one row and prepared options; Quick log to Train; Future capabilities removed from the main wireframes and collected in W8; acceptance criteria and unresolved questions rewritten |
 | 0.3 | 12 Nov 2026 | Owner decisions R1–R7 applied: three separate measures and no double counting (§6.7); shortened replacements recorded as done (§6.7, §15); soft conflicts warn and can be overridden, hard constraints block (§6.6); move horizon is the active program; Skip and Remove both defined (§6.8); no retroactive reversal (§11, §12); Recurring Plan redesigned for the small iPhone with progressive disclosure and contextual warnings (§7, W4, W9a, W9b); questions regrouped with recommended defaults (§20); three companion documents added |
+| 0.4 | 12 Nov 2026 | Visual direction added as a draft (§22): circular date scroller, picker carousel, structure bar, three static alternatives with a recommendation; functional content unchanged |
