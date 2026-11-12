@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.3 · 12 Nov 2026
+Status: Current Draft · Version 0.4 · 12 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -34,8 +34,18 @@ firmware or existing document was changed to apply a ruling.
 | 24 | Event programs need disciplines the app does not support | Brief (marathon, triathlon) vs supported sports | **Event programs launch with cycling first; strength may be maintained as a supporting discipline. Running and swimming event programs stay Future until supported** (12 Nov) | Honest scope | Decided · In specification v0.2 |
 | 25 | "Ask Coach" could imply a chatbot | Brief vs rules-based coach | **Prepared, context-specific options until two-way messaging is implemented** (12 Nov) | No implied AI chat | Decided · In specification v0.2 |
 | 26 | Automatic increases | Production: `autoAdapt` on by default applies small progressions automatically; Coach Decision 1 and Instructions require approval | **Automatic increases in load, volume or frequency must require approval. Audit the existing behaviour and plan its safe correction; do not change production code yet** (12 Nov) | Athlete control | Decided · Audit and correction plan: `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` · **Not implemented** |
+| 27 | A rescheduled missed session: adherent, late or missed? | Plan v0.2 question 1 | **Keep the original scheduled date and a linked replacement. Schedule adherence, training fulfillment and actual volume are separate. Never double-count** (12 Nov) | Truthful reporting | Decided · In Plan specification v0.3 and the metrics proposal · Not implemented |
+| 28 | A shortened replacement and the original prescription | Plan v0.2 question 2 | **Record actual completed duration and workload; a 30-minute replacement is not the 45-minute prescription done** (12 Nov) | Truthful reporting | Decided · In specification v0.3 · Not implemented |
+| 29 | Failed scheduling checks: block or warn | Plan v0.2 question 3 | **Warn, explain and allow overrides for soft training conflicts; block only hard technical or data-integrity constraints; no unvalidated physiological rule presented as absolute** (12 Nov) | Athlete control; scientific integrity | Decided · In specification v0.3 |
+| 30 | How far ahead a session can be moved | Plan v0.2 question 4 | **Any future date within the active training program** (12 Nov) | No arbitrary limit | Decided · In specification v0.3 · technical reach of the stored plan not yet investigated |
+| 31 | Skip versus Remove | Plan v0.2 question 5 | **Keep both; Skip is a record, Remove deletes an uncompleted future occurrence with Undo; history and completed records preserved** (12 Nov) | Distinct meanings | Decided · In specification v0.3 |
+| 32 | Increases already applied automatically | Plan v0.2 question 6 | **Not reversed retroactively; future increases need approval; protective reductions audited separately** (12 Nov) | No silent change to existing plans | Decided · In the correction proposal · Not implemented |
+| 33 | Automatic increases reach sessions by a second path that ignores the setting | Source reading 12 Nov: the strength planner writes the next load on each rebuild without consulting `autoAdapt`; the earlier audit described only the adaptation engine | *Awaiting owner* — correction proposal §3–§4 | Found while preparing the proposal | **Open** |
+| 34 | Which protective reductions may change a scheduled workout without approval | Correction proposal §5 (fourteen behaviours, advice or change) | *Awaiting owner* | — | **Open** |
+| 35 | Metric questions A–F (moved-in-advance, removed sessions, late fulfillment, partial threshold) | Metrics proposal §5 | *Awaiting owner* | — | **Open** |
 
 ## Summary of what is still unresolved
 
 13 (Watch theme values — hardware-design workstream) · 15 (refinement decided, not scheduled) · 16 (typography, spacing, radii — waits for the component-system assessment) · 17 (logo, wordmark, icon — open design items) · 20 (Instruction edits waiting for the owner to apply) · grading thresholds awaiting rule-by-rule review (item 2) · the long-term development branch (item 19, after release stabilisation).
-Decided but **not implemented**: 12 (colour direction), 21–26 (Plan and Coach behaviour).
+Decided but **not implemented**: 12 (colour direction), 21–32 (Plan and Coach behaviour).
+Open since 12 Nov: 33, 34, 35 and the Plan specification questions Q1–Q9.

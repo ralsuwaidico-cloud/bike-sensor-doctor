@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 0.3 · 12 Nov 2026
+Status: Current Draft · Version 0.4 · 12 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -27,8 +27,11 @@ project (reference copies and documents not yet in GitHub).
 | **Home** — earlier design rounds | `ui-lab/*` (v2), `ui-lab/home-v2.1/*` | project | Historical (proposed label; not marked Superseded) |
 | **Current approved Home specification** | **None.** No UI Lab Home version has been formally approved | — | — |
 | **Plan** — shipped behaviour | Code on rel; read-only audit `ui-lab/plan/PLAN_CURRENT_UI_AUDIT.md` | project | Current Draft (audit) |
-| **Plan** — design | `product/plan/PLAN_V2_SPECIFICATION.md` v0.2 (+ `product/plan/wireframes/`) | gov | Current Draft |
+| **Plan** — design | `product/plan/PLAN_V2_SPECIFICATION.md` v0.3 (+ `product/plan/wireframes/`) | gov | Current Draft |
 | **Coach** — automatic adjustments audit and correction plan | `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` | gov | Current Draft (plan only) |
+| **Coach** — automatic adaptation correction proposal (two code paths; protective reductions) | `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` v0.1 | gov | Pending Review (proposal only) |
+| **Plan** — UI Lab implementation scope | `product/plan/PLAN_UI_LAB_SCOPE.md` v0.1 | gov | Pending Review (not started) |
+| **Metrics** — schedule adherence, training fulfillment, actual volume | `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` v0.1 | gov | Current Draft (proposal; nothing calculated) |
 | **Plan** — earlier proposal (weekly calendar only) | `ui-lab/plan/PLAN_V1_PROPOSAL.md` | project | Pending Review (not marked Superseded) |
 | **Coach** — implemented behaviour | `ios/ADAPTIVE_COACH.md`, `ios/BEHAVIOUR_CONTRACT.md`, `ios/SAFETY_CHANGES_RC3.md` | rel | Current Approved (describes shipped rules) |
 | **Coach** — audit of what exists | `planning/adaptive-lifestyle-coach/A_CURRENT_AI_COACH_AUDIT.md` | project | Current Approved (audit accepted with Decisions 1–12) |
@@ -65,7 +68,10 @@ project (reference copies and documents not yet in GitHub).
 | `governance/DOCUMENTATION_INDEX.md` | gov `governance/DOCUMENTATION_INDEX.md` | 0.3 | 12 Nov 2026 |
 | `governance/CONFLICT_REGISTER.md` | gov `governance/CONFLICT_REGISTER.md` | 0.3 | 12 Nov 2026 |
 | `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.2 | 12 Nov 2026 |
-| `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.2 | 12 Nov 2026 |
+| `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.3 | 12 Nov 2026 |
+| `product/plan/PLAN_UI_LAB_SCOPE.md` | gov `product/plan/PLAN_UI_LAB_SCOPE.md` | 0.1 | 12 Nov 2026 |
+| `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` | gov `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` | 0.1 | 12 Nov 2026 |
+| `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` | gov `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` | 0.1 | 12 Nov 2026 |
 
 Documents that today exist **only** in the project (UI Lab sets, coach planning A–E, decisions, hardware-design files)
 have no GitHub source yet. Bringing them onto this branch is a **migration step that waits for approval**.

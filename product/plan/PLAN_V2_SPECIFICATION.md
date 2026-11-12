@@ -1,9 +1,11 @@
 # Plan v2.0 — product and UX specification
 
-Status: **Current Draft** · Version 0.2 · 12 Nov 2026 · Level 3 (product specification)
+Status: **Current Draft** · Version 0.3 · 12 Nov 2026 · Level 3 (product specification)
 Source: `docs/cyclift-governance`, `product/plan/PLAN_V2_SPECIFICATION.md`
-Basis: owner brief "Plan Tab Redesign v2.0" and the owner's review of v0.1 (both 12 Nov), Master Project Instructions
-v2.0, Brand Book v0.2 (current design baseline).
+Basis: owner brief "Plan Tab Redesign v2.0", the owner's reviews of v0.1 and v0.2 (all 12 Nov), Master Project
+Instructions v2.0, Brand Book v0.2 (current design baseline).
+The owner approved the overall product direction on 12 Nov, subject to the decisions recorded below. The document
+stays a Current Draft until the open questions of §20 are reviewed.
 
 **Specification only.** No code, UI Lab prototype, production branch, TestFlight build, database, migration or firmware
 was touched. Nothing here is implemented unless a row says "Exists".
@@ -13,7 +15,11 @@ re-tested for this document) · **Partial** = part exists, the rest is named · 
 shown as available · **Design** = new in this specification, buildable on existing data.
 
 Wireframes (grey-scale, layout only): `wireframes/W1…W7` show the design that existing capabilities can support;
-`wireframes/W8_FUTURE_not_built.png` shows Future capabilities for direction only.
+`wireframes/W8_FUTURE_not_built.png` shows Future capabilities for direction only; `W4` (revised), `W9a`, `W9b` and
+`W10` are new in v0.3 (Recurring Plan on the small iPhone; rescheduled, shortened, overridden and removed sessions).
+
+Companion documents (v0.3): `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` · 
+`product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` · `product/plan/PLAN_UI_LAB_SCOPE.md`.
 
 ## Decisions recorded from the owner's review of v0.1 (12 Nov)
 
@@ -26,6 +32,18 @@ Wireframes (grey-scale, layout only): `wireframes/W1…W7` show the design that 
 | 9 | Ask Coach uses prepared, context-specific options until two-way messaging exists | §11 |
 | 10 | Automatic increases in load, volume or frequency require approval; existing behaviour audited, correction planned, no code changed | §11, `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` |
 | G | Past-session Quick log moves to Train; no functionality is removed | §9, §14 |
+
+## Decisions recorded from the owner's review of v0.2 (12 Nov)
+
+| # | Decision | Where applied |
+|---|---|---|
+| R1 | A rescheduled missed workout keeps its original scheduled date and a linked replacement. Schedule adherence, training fulfillment and actual training volume are three different things. A completed rescheduled workout is never counted twice | §6.7, §12, metrics proposal |
+| R2 | A shortened replacement records its actual completed duration and workload. A 30-minute replacement is not the completion of a 45-minute prescription | §6.7, §15, metrics proposal |
+| R3 | Soft training conflicts warn, explain and can be overridden. Only hard technical or data-integrity constraints block. Unvalidated physiological rules are never presented as absolute restrictions | §6.6 |
+| R4 | A session can be rescheduled to any future date within the active training program. No two-week limit | §6.6 |
+| R5 | Skip and Remove both stay. Skip is a record of intentional non-completion. Remove deletes an uncompleted future occurrence, with Undo. Audit history and completed records are always kept | §6.4, §6.8, §12 |
+| R6 | Increases that were already applied are not reversed. Future increases need approval. Automatic protective reductions are audited separately, distinguishing advice from changes to scheduled workouts | §11, auto-adaptation correction proposal |
+| R7 | The UI Lab prototype is conditionally authorised: it may start only after this version and its open questions are reviewed. Nothing was started | §16, UI Lab scope |
 
 ---
 
@@ -76,8 +94,6 @@ Full audit: `ui-lab/plan/PLAN_CURRENT_UI_AUDIT.md` (project). Evidence for "work
 
 ---
 
----
-
 ## 3. Borrowed concepts — mapping and honesty
 
 What the two products do is taken from their own public pages (WHOOP "Weekly Plan"; Garmin Coach), read 12 Nov 2026,
@@ -97,8 +113,6 @@ and from the owner's brief. I have not used either product for this document, an
 | **Cyclift — recurring vs actual week** | Change one week without rebuilding the plan | The two sections | — | Partial: both exist in data, not as two clear places | Design |
 | **Cyclift — approval before change** | Trust | Every consequential change previews first | — | Exists | — |
 | **Cyclift — short-session flexibility** | A short session beats a skipped one | "Shorten or replace" | — | Partial: alternatives list, shortening in Fix plan | Design |
-
----
 
 ---
 
@@ -189,8 +203,10 @@ Design estimates from the wireframe geometry (**not measured on a device**):
 | Standard (393 × 852) | y 385 / 335 | 742 | 5 / 6 |
 | Large (440 × 956) | y 388 / 338 | 846 | 7 / 8 |
 
-Recurring Plan: seven rows + the availability row end at y 530 / 569 / 572; with one warning, y 576 on the small size —
-it fits above the dock line (583) with 7 pt to spare, which is tight and must be checked on a device.
+Recurring Plan (revised in v0.3, W4 and W9a): seven rows and the availability row end at y 530 / 569 / 572 on the
+three sizes. The feasibility warning is no longer a separate block under the list — it is shown on the affected
+weekday row and inside that weekday's sheet (§7.4) — so the content ends **53 pt above the dock line** on the small
+iPhone (530 against 583) in every state. Text sizes and touch areas are unchanged from v0.2.
 
 Common actions are one or two taps from landing (select a date, open a session, add a session, open a weekday).
 Complex workflows — changing a goal, building a routine, a recurring change with preview, an event program — take as
@@ -237,75 +253,126 @@ Exercise editing and the superset option stay exactly as they are today, reached
 | Move session | ✓ | — | — | as Reschedule | after Restore |
 | Replace workout | ✓ | — | — | as Shorten or replace | — |
 | Assign routine | strength | — | — | — | — |
-| Remove from this week | ✓ | — | — | — | — |
-| Skip | ✓ | — | — | ✓ | — |
+| Skip (record that I chose not to do it) | ✓ | — | — | ✓ | — |
+| Remove (delete this occurrence) | today or a future date, not started | — | — | — | — |
 | Restore | — | — | — | — | ✓ |
 | Ask Coach | ✓ | — | — | ✓ | — |
 
 "Start in Train" hands the session to the existing execution flow (ride recorder, strength session, connected
-devices). Plan executes nothing.
+devices). Plan executes nothing. Skip and Remove are defined in §6.8.
 
 ### 6.5 Add session (sheet, W5)
 Discipline · Workout or routine · Date (prefilled) · Duration (prefilled from the routine or the usual length). Body
 region appears only for a strength session without a routine. One button. States "This week only".
 
-### 6.6 Move to any day (sheet, W5) — replaces today's swap-two-days
-1. Choose any destination date in the visible or a later week.
-2. **Feasibility checks**, each one short line: the destination day's available time · sessions already on that day ·
-   the week's time budget per discipline · the spacing rules the planner already applies (strength sessions at least 48 h apart; hard sessions kept apart
-   where a choice exists — the exact list is to be extracted from the planner before this is built) · whether a planned rest day is being used.
+### 6.6 Move to any day (sheet, W5, W10) — replaces today's swap-two-days
+
+1. **Destination:** any future date **within the active training program** (decision R4). There is no fixed
+   two-week limit. Until a program object exists (Future), "the active program" means the period for which the app
+   holds a plan; how far that reaches today, and how a session moved beyond it is kept, is a technical question to be
+   answered before this is built (§20, question T1).
+2. **Checks** run on the destination and are shown as short lines. They come in two kinds:
+
+   | Kind | Examples | Behaviour |
+   |---|---|---|
+   | **Soft training conflict** | The day's available time is exceeded · another session is already on that day · the week's time budget for the discipline is exceeded · a planned rest day is used · strength sessions closer together than the planner normally places them · two demanding sessions on adjacent days | **Warn, explain, allow.** One plain sentence says what the conflict is and what it may mean ("This puts strength on two days in a row. The planner normally leaves a day between them."). The athlete may continue with "Move anyway". The override is written to history |
+   | **Hard constraint** | The destination is in the past · the session is completed or in progress · the destination is outside the active program · the move would create a second copy of the same occurrence or break a link between an original and its replacement · the stored plan cannot represent the result | **Block**, with the reason and the nearest valid alternative |
+
+   Wording rule: a soft conflict is described as the planner's normal practice or the athlete's own setting, never
+   as a medical or physiological law. No rule that has not been validated is shown as "not allowed".
+   The existing health-check behaviour of the production app (sessions paused after a "see a doctor" or illness
+   answer) is **not changed by Plan**: a moved session is treated on its new date exactly like any other session on
+   that date. Whether Plan should add its own block in that case is question Q5 in §20; the drafted default is a
+   clear warning, not a block.
 3. Affected sessions are listed (nothing else moves unless the athlete chooses it).
-4. **Preview → approve.** A check that fails is a warning the athlete may override, except a hold from the health
-   check, which blocks with its reason.
-5. Effect: this occurrence only; the recurring plan is untouched; the session is linked to its original date; a
+4. **Preview → approve.**
+5. Effect: this occurrence only; the recurring plan is untouched; the session keeps a link to its original date; a
    **history entry with Undo** is written. Undo is itself previewed and never overwrites a later change.
 
-Today: only "swap with another day of the same week" exists. Move to any day is **new behaviour (Future)** and needs
-the origin link of §12.
+A move made **before** the session's day is replanning: the session stays one prescribed occurrence with a new date
+and an origin link. A move made **after** the day has passed is a reschedule of a missed session (§6.7).
 
-### 6.7 Missed sessions — truthfulness (W3)
+Today: only "swap with another day of the same week" exists. Move to any day is **new behaviour (Future)**.
+
+### 6.7 Missed sessions — truthfulness (W3, W10)
 
 A missed session **stays on its original date with the status Missed, permanently**. Whatever the athlete does next is
 recorded as a *new, linked* thing — never by rewriting the missed occurrence.
 
 | Choice | What is recorded | What the athlete sees |
 |---|---|---|
-| Reschedule… | The original stays Missed with resolution "rescheduled → date". A new scheduled session is created on the new date, linked to the original | Original: "Missed" + "↳ Rescheduled to Thu 12 Nov". New: "Planned" + "↳ Rescheduled from Mon 9 Nov (missed)" |
-| Shorten or replace… | The original stays Missed with resolution "replaced". A new session (shorter, or a different workout) is created, linked to the original and marked as a **replacement** | New: "↳ Replaces Lower Body A, 45 min (missed Mon 9 Nov)" |
+| Reschedule… | The original stays Missed with resolution "rescheduled → date". A new scheduled session is created on the new date, linked to the original. Both belong to **one prescribed occurrence** | Original: "Missed" + "↳ Rescheduled to Thu 12 Nov". New: "Planned" + "↳ Rescheduled from Mon 9 Nov (missed)" |
+| Shorten or replace… | The original stays Missed with resolution "replaced". A new session (shorter, or a different workout) is created, linked to the original and marked as a **replacement**. The original prescription (45 min) is kept beside the replacement's own plan (30 min) | New: "↳ Replaces Lower Body A, 45 min (missed Mon 9 Nov)" |
 | Skip | The original becomes Skipped (an athlete decision), resolution "skipped" | "Skipped" |
 | Ask Coach | Opens prepared options (§11); whatever is chosen follows the rows above | — |
 | Leave unresolved | Nothing changes; the session stays Missed with no resolution | "Missed" |
 
 Rules:
 1. **A missed session never becomes Done.** Completing the rescheduled or replacement session completes *that*
-   session; the original remains Missed.
+   session; the original remains Missed on its date.
 2. Nothing is rescheduled, shortened or stacked automatically.
-3. **Adherence reporting must not be misled.** How Home's consistency treats these cases is Home's definition and is
-   not changed here; the data must make every reading possible and none silent:
-   - the planned (original) session and its outcome are always kept;
-   - a rescheduled or replacement session is flagged as such and points to its original;
-   - a replacement keeps both durations (planned 45 min → replacement 30 min), so a shortened session is never
-     reported as the full session;
-   - whether "missed, then rescheduled and completed" counts as one adherent session, a late one, or neither, is an
-     **open decision** (§20) — until decided, the default is the most conservative reading: the original counts as
-     missed, the new session counts as a completed session in its own week, and both facts are visible.
-4. History entries are written for reschedule, replace and skip, each with Undo.
+3. **Three separate facts, never merged (decision R1):**
+   - **Schedule adherence** — was it done on the day it was scheduled? A session missed on Monday and done on
+     Thursday was **not** adherent to the schedule.
+   - **Training fulfillment** — was the prescribed training done at all? The same session **is** fulfilled, late.
+   - **Actual training volume** — what was really done, counted once, on the day it was done.
+   The definitions are proposed in `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md`. They are proposals; no
+   calculation was implemented or altered.
+4. **No double counting.** An original and its rescheduled or replacement session are one prescribed occurrence.
+   Completing the linked session adds one completed record — it never also counts as an additional planned session,
+   and its minutes are counted once.
+5. **A shortened replacement is recorded as what it was (decision R2).** Its record holds the actual completed
+   duration and workload. A completed 30-minute replacement of a 45-minute prescription shows
+   "Done · 30 of 45 min prescribed" and counts as **partially fulfilled**, never as the 45-minute session done.
+6. History entries are written for reschedule, replace and skip, each with Undo.
 
-Today: the Missed state exists (derived); rescheduling exists only as a day swap; the link and resolution do not exist
-(Future, §15 items 2–3).
+Today: the Missed state exists (derived); rescheduling exists only as a day swap; the link, the resolution and the
+retained prescription do not exist (Future, §15 items 1–3, 12).
+
+### 6.8 Skip and Remove — both kept (decision R5)
+
+| | Skip | Remove |
+|---|---|---|
+| Meaning | "I chose not to do this session." A record of intentional non-completion | "This session should not be in my schedule." Deletes an uncompleted future occurrence |
+| Applies to | Any planned session, or a missed session | A session of today or a future date that is not started |
+| What stays visible | The row stays on its date with the status Skipped; Restore is offered | The row disappears; a confirmation with **Undo** is shown; the removal is in Plan history |
+| Recurring plan | Unchanged | Unchanged (this occurrence only) |
+| Records | Completed records are never touched | Completed or in-progress sessions cannot be removed |
+| History | Entry with Undo | Entry with Undo; the entry keeps what was removed (workout, date, duration) so it can be restored exactly |
+| In the metrics proposal | Counts as scheduled and not done | Leaves the schedule; counted separately as "removed" so that removing sessions cannot quietly raise a percentage |
+
+Today: skip and remove both exist as actions; a removal is recoverable only through plan versions. The explicit
+removal record is new (§15 item 13).
 
 ---
 
-## 7. Recurring Plan (W4)
+## 7. Recurring Plan (W4, W9a, W9b)
 
 **Purpose:** the normal training structure — a template. Not a calendar, not a performance view: no dates, no status.
+
+### 7.0 Progressive disclosure (v0.3)
+
+The section shows the least that describes a normal week and opens everything else on request.
+
+| Level | What is shown | Opens |
+|---|---|---|
+| 1 — Section | Seven compact weekday rows · one "Availability & preferences" row. Nothing else: no headings, no explanatory text, no cards, no Home metrics | — |
+| 2 — Weekday sheet | That weekday's sessions, duration, routine, and its warning if it has one | Tap a weekday row |
+| 3 — Availability editing (own screen) | Days, time per day, weekly time, equipment, preferences, pause | Tap the availability row, or More › Availability & preferences |
+| 3 — Routine editing (own screen) | Exercises, sets, reps, supersets | Weekday sheet › Routine › Edit, or More › Routines |
+
+Small-iPhone layout (375 × 667, W9a): header 40 · goal row 44 · selector 40 · seven rows of 46 · availability row
+48 — content ends at y 530; the dock line is at y 583. **Clearance 53 pt.** Row text stays 12.5 pt and every row
+keeps a touch area of at least 44 pt; nothing was shrunk to obtain the clearance. The list is a scroll view whose
+bottom inset equals the dock zone plus 16 pt, so at larger text sizes rows grow and scroll, and the last row can
+always be brought fully above the dock (W9b).
 
 ### 7.1 Weekly template
 Seven rows: `Mon  [icon]  Full Body A  ········  30 min  ›`. Rest reads "Rest". Two sessions on a weekday read
 "Full Body A + Zone 2 Ride". Time windows are **Future** and are not shown.
-Below: one "Availability & preferences" row. Below that, **at most one** feasibility warning, only when needed.
+Below: one "Availability & preferences" row.
 
-### 7.2 Editing a weekday — scope is always explicit (W5)
+### 7.2 Editing a weekday — scope is always explicit (W5, W9a)
 
 | Scope | Effect | Today |
 |---|---|---|
@@ -319,15 +386,22 @@ third option.
 Then a preview and approval. **Never rewritten silently:** the recurring pattern (by a single-session edit); future
 sessions the athlete edited by hand or marked fixed (listed in the preview as "kept as you set it"); completed records.
 
-### 7.3 Availability & preferences (screen)
+### 7.3 Availability & preferences (own screen, W9b)
 Regroups what exists — nothing is asked twice and nothing is removed: training days · time per day · two-a-day ·
 weekly time per discipline (the existing budgets) · equipment · strength split · supersets · priorities · training
 pause (unwell, injured, away). Each row opens its existing editor.
 
-### 7.4 Feasibility
-One line, only when something does not fit: a session longer than the day's time · more sessions than days · a weekly
-budget exceeded · a documented spacing rule. "Fix" opens the existing Fix plan (raise the budget · edit the days ·
-shorten or skip a session · keep as it is). Goal / program conflicts join this line when programs exist (Future).
+### 7.4 Feasibility — contextual warnings
+A warning appears **where the problem is**, and only when there is one:
+- on the affected weekday row: a warning mark and the row's right-hand text replaced by the short reason
+  ("2 h · over by 1 h"); spoken as "Saturday, Long Ride, 2 hours, exceeds your available time by 1 hour";
+- inside that weekday's sheet: the same reason in one line with **Fix**, which opens the existing Fix plan (raise the
+  budget · edit the days · shorten or skip a session · keep as it is);
+- a week-level problem that belongs to no single day (the weekly budget of a discipline is exceeded) marks the
+  availability row instead ("Availability & preferences · over budget").
+
+There is no separate warning block under the list. Goal / program conflicts use the same pattern when programs
+exist (Future).
 
 ---
 
@@ -391,9 +465,11 @@ Sequence: **Observe → Explain → Recommend → Preview → Request approval.*
   time · a week over budget · strength sessions too close together · hard sessions on adjacent days · a missed session
   with a feasible later slot · a shorter alternative of the same intent. With recovery data absent, recommendations
   are schedule-based only and no recovery reason is invented.
-- **Increases need approval.** Today the app applies small progressions automatically by default. The audit and the
-  safe-correction plan are in `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md`; nothing was changed. Protective
-  reductions stay automatic (Coach Decision 1).
+- **Increases need approval.** Today the app applies small progressions automatically by default, through two
+  separate code paths. The correction is proposed in `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md`; nothing was
+  changed. Increases that were already applied are **not reversed** (decision R6).
+- **Protective reductions are audited separately** in the same proposal, which lists each one and states whether it
+  is advice or a change to a scheduled workout.
 
 ---
 
@@ -407,18 +483,25 @@ Sequence: **Observe → Explain → Recommend → Preview → Request approval.*
 **Approval**
 4. Every consequential change is previewed; nothing is saved before approval; Cancel leaves stored data equal.
 5. Increases in load, volume or frequency are proposals and are never applied automatically.
-6. Protective reductions and holds may apply automatically and are always listed with their reason.
+6. Protective reductions and holds are listed with their reason. Which of them may change a scheduled workout
+   without approval is set out, one by one, in the auto-adaptation correction proposal and awaits the owner's decision.
+6a. Increases applied before the approval rule arrives are kept as they are; nothing is reversed retroactively.
 
 **Protection**
 7. Completed sessions and their records are never modified by any Plan action.
 8. Sessions edited by hand or marked fixed survive every regeneration and are listed as kept.
 9. A missed occurrence is never rewritten, moved or converted to Done; resolutions are linked records (§6.7).
 10. Nothing is rescheduled or stacked automatically.
+10a. An original and its rescheduled or replacement session are one prescribed occurrence; nothing is counted twice.
+10b. A replacement records its own actual duration and workload; it never stands for the original prescription.
+10c. Soft training conflicts warn and can be overridden; only hard technical or data-integrity constraints block.
 11. Planned rest days are preserved unless the athlete chooses otherwise; using one is called out in the preview.
 
 **History**
 12. Every applied change writes a history entry with Undo; Undo is previewed and never overwrites a later change.
-13. Session states stay distinct in data: planned · scheduled · completed · missed · skipped / removed · rescheduled.
+13. Session states stay distinct in data: planned · scheduled · completed · missed · skipped · removed · rescheduled.
+13a. Skip keeps a visible record; Remove deletes an uncompleted future occurrence and keeps a history entry with Undo.
+13b. Audit history and completed records are never deleted by any Plan action.
 
 **Surface**
 14. Only valid actions are shown for a session's state (§6.4). No disabled placeholders for Future capabilities.
@@ -437,9 +520,10 @@ SCHEDULED ──day passes──► MISSED            (stays MISSED for good)
       MISSED ──reschedule──► MISSED [resolution: rescheduled] + new SCHEDULED (linked: rescheduledFrom)
       MISSED ──replace──► MISSED [resolution: replaced] + new SCHEDULED (linked: replaces; both durations kept)
       MISSED ──skip──► SKIPPED
-SCHEDULED ──move──► SCHEDULED on the new date (linked: movedFrom) + history entry
+      linked session ──finish──► COMPLETED with its own actual duration and workload; the original stays MISSED
+SCHEDULED ──move (before its day)──► SCHEDULED on the new date (linked: movedFrom) + history entry
 SCHEDULED ──skip──► SKIPPED ──restore──► SCHEDULED
-SCHEDULED ──remove from this week──► REMOVED (history entry; Undo)
+SCHEDULED (today or later, not started) ──remove──► REMOVED: no row; history entry keeps the content ──undo──► SCHEDULED
 ```
 
 ---
@@ -453,7 +537,7 @@ Start · actions and transitions · data change · confirmation · error or canc
 | 1 | Create a recurring hybrid week | Recurring Plan (empty) or onboarding | Tap a weekday → sheet → workout, duration; repeat. Or accept the week suggested from availability and goal | Template; coming weeks generated | Preview → "Use this week" | Feasibility warning if days and time do not fit; Cancel saves nothing |
 | 2 | Change one workout only | Weekly Calendar › session ••• › Edit this session | Sheet (duration, exercises, supersets) → before / after review | That session only; history entry | "Apply to this session" | A blocked edit explains why and offers an alternative; Cancel leaves it equal |
 | 3 | Permanently change availability | More › Availability & preferences | Change days / time → preview of future weeks, listing kept sessions | Availability, template, future generated sessions | Approve in preview | Conflicts with fixes; Cancel keeps the old availability |
-| 4 | Miss a workout and reschedule **(F: any-day move, link)** | Weekly Calendar, the missed date | "Missed" row → Reschedule… → choose date → checks → preview | Original stays Missed (resolution: rescheduled); new linked session; history entry | "Reschedule" | No feasible day: says so and offers Shorten, Skip, Leave; Cancel leaves it Missed and unresolved |
+| 4 | Miss a workout and reschedule **(F: any-day move, link)** | Weekly Calendar, the missed date | "Missed" row → Reschedule… → choose date → checks → preview | Original stays Missed (resolution: rescheduled); new linked session; history entry | "Reschedule" (or "Move anyway" after a soft warning) | Soft conflict: warning with explanation, may be overridden. Hard constraint: blocked with the reason. Cancel leaves it Missed and unresolved |
 | 5 | Replace 60 min with a shorter alternative | Session ••• › Replace workout | Shorter alternatives of the same intent → preview | That session's workout and minutes; for a missed one, a linked replacement **(F)** | Apply | No shorter version for that type: says so; Cancel |
 | 6 | Create and assign a strength routine | More › Routines › New | Name, exercises, sets, reps → Save → ••• › Assign to a session / Use on a weekday | Routine; the session's routine or the weekday default | Saved; weekday use asks scope | An empty routine cannot be saved; Cancel discards |
 | 7 | Two workouts on one day | Weekly Calendar › Add session | Sheet → "Add to this week" | Second session on that date | Row appears; a line notes if the day's time is exceeded | If two-a-day is off: offers to allow it for this date; Cancel |
@@ -532,6 +616,9 @@ detachable Watch, and the 25 production UI-test references to Plan identifiers).
 | 9 | History causes: move, reschedule, replace, routine, program, event | Traceability |
 | 10 | Coach event store (observation, proposal, decision, outcome) | Shared proposal detail, review |
 | 11 | Discipline list beyond cycling and strength | Running and swimming events |
+| 12 | Completed record of a linked session: actual duration and workload stored beside the retained original prescription | Shortened replacements reported as what they were (R2) |
+| 13 | Removal record (what was removed, from which date, when) | Remove with exact Undo; "removed" count (R5) |
+| 14 | Override record on a move (which soft conflicts were accepted) | Traceability of overrides (R3) |
 
 Not needed: any change to completed records, to routines, or to existing plan versions.
 
@@ -542,9 +629,9 @@ Not needed: any change to completed records, to routines, or to existing plan ve
 | Phase | Content | Depends on |
 |---|---|---|
 | 0 | Approve this specification | — |
-| 1 | UI Lab prototype of landing, both sections, sheets and missed-session states, with sample data and interaction tests | Phase 0 |
+| 1 | UI Lab prototype — exact scope in `product/plan/PLAN_UI_LAB_SCOPE.md`. Conditionally authorised (R7); not started | Review of v0.3 and of §20 |
 | 2 | Production restructure **with existing data only**: two sections, date selector, session rows, one menu, single routine entry, removal of ring and Next-session card, Quick log to Train, wording | Release stabilised; Defect 6 resolved; integration review |
-| 3 | Approval-only increases (auto-adjustment correction) | Its own plan |
+| 3 | Approval-only increases (auto-adaptation correction) | `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md`, separately authorised |
 | 4 | Move to any day; missed resolution and links | Items 1–3 |
 | 5 | Date-range exceptions; times and windows | Items 4–5 |
 | 6 | Routine additions; saved endurance workouts | Item 8 |
@@ -580,7 +667,8 @@ Production note: the app ships two palettes today; six-theme checks apply to the
 | Truncation | The goal row truncates on the small size (W1) — full name one tap away; long session titles truncate on one line (W2) |
 | Touch | Every control ≥ 44 pt; the ••• target is separate from the row |
 | Missed choices on the small size | Row + five choices end at y 558, above the dock line 583 (W7) — fits, tight |
-| Recurring Plan with a warning on the small size | Ends at y 576 against 583 (W4) — fits by 7 pt; to be checked on a device |
+| Recurring Plan on the small size (revised) | Ends at y 530 against 583 in every state — 53 pt clear; warnings sit on the affected row, not in an extra block (W4, W9a) |
+| Recurring Plan at large accessibility text | Rows take two lines and the list scrolls; the bottom inset keeps the last row clear of the dock (W9b) |
 | Large accessibility text | Selector stacks; goal row takes two lines; session rows three lines; seven date cells stay, with capped text and full spoken labels. Estimate on the small size: two sessions end at y 538, above 583 (W7) |
 | Colour | Shapes for disciplines, words for status |
 | Reading order | Title, More, goal row, selector, week controls, dates, suggestion, day header, Add, sessions |
@@ -622,24 +710,53 @@ tried on a physical iPhone or with VoiceOver.
 25. Quick log is reachable in Train and from a session's More menu; no logging function is lost.
 26. Start in Train reaches the existing execution flow for rides and strength.
 
+**Decisions of 12 Nov (v0.3)**
+30. An original and its linked rescheduled or replacement session never produce two planned sessions or two completions in any count shown.
+31. A completed replacement shows its actual duration beside the original prescription and is never labelled as the original session done.
+32. A soft conflict shows a warning with a plain explanation and a way to continue; a hard constraint blocks with its reason. No soft conflict is worded as a prohibition.
+33. A session can be moved to any future date inside the active program.
+34. Skip leaves a visible Skipped row with Restore; Remove deletes a future uncompleted occurrence, offers Undo, and writes a history entry from which it can be restored exactly.
+35. On the smallest supported iPhone, Recurring Plan content ends at least 16 pt above the dock zone at default text size, with no text or touch area made smaller than in the other sections.
+36. Recurring Plan shows no explanatory paragraph, no Home metric and no warning block; warnings appear only on the affected row and in its sheet.
+
 **Honesty**
 27. No Future capability (events, times, date ranges, endurance library, calendar, advanced adaptation, weekly review) appears as a control before it works.
 28. All six themes pass the contrast script; High Contrast uses borders.
 29. Results are reported by evidence level; simulator results are not called device results.
 
-## 20. Unresolved questions
+## 20. Questions — decided, remaining, and new
 
-1. **Adherence after a reschedule.** When a missed session is rescheduled and then completed, does consistency count it as adherent, late, or missed plus one extra? (Default in this draft: the conservative reading, both facts visible.) This is a Home / metrics definition and needs your decision before phase 4.
-2. **Replacement sessions and adherence.** Does a completed 30-minute replacement of a 45-minute session count as that session done, or as a separate, shorter session? Same default.
-3. **Overriding a failed check** when moving (for example strength on consecutive days): allow with a warning, as drafted, or block?
-4. **How far ahead** can a session be moved — the current and next week only (today's limit on viewing), or further?
-5. **Skipped vs removed:** keep both (skip leaves a visible row; remove deletes it with Undo), or only one?
-6. **Already-applied automatic progressions** when the approval rule arrives: keep them (drafted) or return them to pending?
-7. **Place labels and times** on rows are Future; is duration plus a short description enough for phase 2?
-8. **"Log a past session" in Train:** where exactly it sits is a Train design question — Train has no specification yet.
-9. **Weekly overview and Day pages:** Plan stops opening them. Agree?
-10. **Week start** Monday, as today?
-11. May the **UI Lab prototype (phase 1)** start once this version is approved?
+### Decided on 12 Nov (were questions 1–6 and 11 of v0.2)
+
+| v0.2 question | Decision |
+|---|---|
+| 1 Adherence after a reschedule | R1 — three separate measures; no double counting |
+| 2 Replacement sessions | R2 — recorded as what was actually done |
+| 3 Overriding a failed check | R3 — soft conflicts warn and can be overridden; only hard constraints block |
+| 4 How far ahead | R4 — any future date within the active program |
+| 5 Skipped vs removed | R5 — both kept |
+| 6 Already-applied progressions | R6 — not reversed |
+| 11 UI Lab start | R7 — conditional on the review of this version |
+
+### The four remaining questions, with recommended defaults
+
+| # | Question | Recommended default | Reason |
+|---|---|---|---|
+| Q1 | Place labels and times on session rows are Future. Is duration plus a short description enough for phase 2? | **Yes.** Rows show duration and a short description (exercise count, or ride type and zone). No time, window or place until those fields exist | The fields do not exist in the data today; showing them would mean inventing values |
+| Q2 | Where does "Log a past session" sit in Train? | **Decide it in the Train specification, not here.** Until then nothing moves: the prototype shows only Plan's side (session › More › "Log this session" handing over to the existing logging screen), and production keeps today's entry points | Train has no specification yet; moving the entry without one risks a function being lost between two tabs |
+| Q3 | Plan stops opening the Weekly overview and Day pages (shared with Home). Agree? | **Yes.** Plan's Weekly Calendar replaces them inside Plan; the pages stay in the app and stay reachable from Home | They repeat Home content, which the brief rules out; nothing is deleted |
+| Q4 | Week starts on Monday? | **Yes, Monday**, as the app does today. A setting for another first day is Future | No change to existing week arithmetic or stored weeks |
+
+### New questions raised by the 12 Nov decisions
+
+| # | Question | Recommended default |
+|---|---|---|
+| Q5 | A move onto a date covered by the existing health-check pause (after a "see a doctor" or illness answer): warn, or block inside Plan? | **Warn clearly; do not add a block in Plan.** The existing production pause is left exactly as it is and applies to the moved session like any other |
+| Q6 | A move made **before** the session's day: does schedule adherence follow the new date? | **Yes** — that is replanning, shown separately as "moved in advance". Only sessions missed first count as not adherent (metrics proposal §4) |
+| Q7 | Removed sessions and percentages | **Removed sessions leave schedule adherence but stay in training fulfillment when they came from the program**, and are always shown as a count (metrics proposal §4) |
+| Q8 | When is a completed session "partial"? | **Shown as actual-of-prescribed minutes, with no pass mark invented.** A session-count threshold is proposed for your decision in the metrics proposal §5 |
+| Q9 | Which protective reductions may change a scheduled workout without approval? | Listed one by one in the auto-adaptation correction proposal §5, each with a recommendation |
+| T1 | (Technical, to be answered from the code before building) How far ahead the stored plan reaches, and how a session moved beyond it is kept | Not yet investigated |
 
 ## 21. Limits of this document
 
@@ -655,3 +772,4 @@ tried on a physical iPhone or with VoiceOver.
 |---|---|---|
 | 0.1 | 12 Nov 2026 | First draft |
 | 0.2 | 12 Nov 2026 | Owner decisions 5–10 applied; goals-to-schedule chain (§4); landing reduced to the approved minimum; explicit scopes; missed-session data semantics and links (§6.7); Move to any day; Coach limited to one row and prepared options; Quick log to Train; Future capabilities removed from the main wireframes and collected in W8; acceptance criteria and unresolved questions rewritten |
+| 0.3 | 12 Nov 2026 | Owner decisions R1–R7 applied: three separate measures and no double counting (§6.7); shortened replacements recorded as done (§6.7, §15); soft conflicts warn and can be overridden, hard constraints block (§6.6); move horizon is the active program; Skip and Remove both defined (§6.8); no retroactive reversal (§11, §12); Recurring Plan redesigned for the small iPhone with progressive disclosure and contextual warnings (§7, W4, W9a, W9b); questions regrouped with recommended defaults (§20); three companion documents added |
