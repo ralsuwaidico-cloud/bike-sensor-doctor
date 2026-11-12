@@ -350,9 +350,9 @@ struct CyTrendsGraph: View {
 
     @ViewBuilder private var panel: some View {
         if let sel = selected, let d = dates.first(where: { $0.id == sel }) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(d.full).font(CyFont.label).foregroundStyle(theme.textPrimary)
+                    Text(d.full).font(CyFont.headline).foregroundStyle(theme.accent)
                         .accessibilityIdentifier("trendsPanelDate")
                     Spacer(minLength: 0)
                     Button(action: { onDay(d, rows(sel)) }) {
@@ -368,17 +368,17 @@ struct CyTrendsGraph: View {
                         Circle().fill(s.color.color(theme)).frame(width: 7, height: 7)
                         Text(s.isSampleScore ? "\(s.name) (sample)" : s.name).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
                         Spacer(minLength: CySpace.m)
-                        Text(sel < s.values.count ? s.text(s.values[sel]) : "No data").font(CyFont.footnote.weight(.semibold)).monospacedDigit()
+                        Text(sel < s.values.count ? s.text(s.values[sel]) : "No data").font(CyFont.callout.weight(.semibold)).monospacedDigit()
                             .foregroundStyle(sel < s.values.count && s.values[sel] != nil ? theme.textPrimary : theme.textTertiary)
                             .accessibilityIdentifier("trendsValue-\(s.id)")
                     }
                 }
             }
-            .padding(CySpace.m)
+            .padding(.horizontal, CySpace.m).padding(.top, 2).padding(.bottom, CySpace.s)
             .background(RoundedRectangle(cornerRadius: CyRadius.s, style: .continuous).fill(theme.surface))
-            .overlay(RoundedRectangle(cornerRadius: CyRadius.s, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
+            .overlay(RoundedRectangle(cornerRadius: CyRadius.s, style: .continuous).strokeBorder(theme.id == .highContrast ? theme.border : Color.clear, lineWidth: theme.borderWidth))
         } else {
-            Text("Touch or drag across the graph to inspect a day.").font(.caption2).foregroundStyle(theme.textTertiary)
+            Text("Touch or drag to inspect a day.").font(.caption2).foregroundStyle(theme.textTertiary)
                 .accessibilityIdentifier("trendsHint")
         }
     }

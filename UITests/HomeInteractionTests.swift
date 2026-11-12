@@ -226,38 +226,123 @@ final class HomeInteractionTests: XCTestCase {
                       "With no sleep source the sheet must say there is no record")
     }
 
-    // MARK: 6 — coach
+    // MARK: 6 — coach: compact preview on Home, decisions only inside the conversation
 
-    func test09_CoachWhyReviewNotNow() {
+    private func openCoach(file: StaticString = #filePath, line: UInt = #line) {
+        tapOn(el("coachPreview"), file: file, line: line)
+        XCTAssertTrue(el("coachTitle").waitForExistence(timeout: 10), "The coach conversation did not open", file: file, line: line)
+    }
+    private func closeCoach(file: StaticString = #filePath, line: UInt = #line) {
+        let c = el("coachClose")
+        settle(c); c.tap()
+        let deadline = Date().addingTimeInterval(20)
+        while el("coachTitle").exists && Date() < deadline { Thread.sleep(forTimeInterval: 0.2) }
+        XCTAssertFalse(el("coachTitle").exists, "The coach conversation did not close", file: file, line: line)
+        XCTAssertTrue(el("coachPreview").waitForExistence(timeout: 10), "Home did not come back after the conversation", file: file, line: line)
+    }
+    private func waitValue(_ id: String, equals text: String, file: StaticString = #filePath, line: UInt = #line) {
+        let e = el(id)
+        let deadline = Date().addingTimeInterval(20)
+        var found = "<missing>"
+        repeat {
+            if e.exists { found = (e.value as? String) ?? ""; if found == text { return } } else { found = "<missing>" }
+            Thread.sleep(forTimeInterval: 0.2)
+        } while Date() < deadline
+        XCTFail("\(id): expected value \"\(text)\", found \"\(found)\"", file: file, line: line)
+    }
+
+    func test09_CoachPreviewOpensConversationAndPostpone() {
         launch()
-        tapOn(el("coachWhy")); expectSheet("Why this suggestion?"); closeSheet()
-        tapOn(el("coachReview")); expectSheet("Review the suggestion")
-        XCTAssertTrue(el("reviewApprove").exists && el("reviewPostpone").exists && el("reviewDecline").exists, "Review sheet is missing a decision")
+        // Home: a text-only preview — no decision buttons on Home at all
+        bring(el("coachPreview"))
+        let home = value("coachPreview")
+        XCTAssertTrue(home.hasPrefix("Needs your decision. "), "Home should surface the open proposal: \(home)")
+        XCTAssertTrue(home.contains("Review a small load increase"), home)
+        for id in ["coachReview", "coachNotNow", "coachWhy", "reviewApprove", "reviewPostpone", "reviewDecline"] {
+            XCTAssertFalse(el(id).exists, "Home still shows a coach action button (\(id))")
+        }
+        openCoach()
+        XCTAssertTrue(el("coachSampleNote").exists || el("coachComposerDisabled").exists, "The page does not say it is sample history")
+        waitValue("coachProposal-load", equals: "Needs your decision")
+        tapOn(el("coachProposal-load")); expectSheet("Small load increase — bench press")
+        XCTAssertTrue(el("reviewApprove").exists && el("reviewPostpone").exists && el("reviewDecline").exists, "Proposal detail is missing a decision")
         el("reviewPostpone").tap()
-        waitLabel("coachDecisionNote", equals: "Postponed — still waiting for your decision")
-        XCTAssertTrue(el("coachReview").exists, "A postponed suggestion must stay reviewable")
-        app.terminate()
-
-        launch()
-        tapOn(el("coachNotNow"))
-        waitLabel("coachDecisionNote", equals: "Postponed — still waiting for your decision")
-        XCTAssertTrue(el("coachReview").exists, "\"Not now\" must postpone, not decline")
+        waitValue("coachProposal-load", equals: "Postponed — still open")
+        XCTAssertFalse(el("sheetTitle").exists, "Proposal sheet stayed on screen after the decision")
+        // the decision and the coach's acknowledgement are added to the timeline
+        waitLabel("coachEntry-d11", equals: "You, Your decision, 12:30. Not now.")
+        XCTAssertTrue(label("coachEntry-o11").contains("Nothing changes until you decide"), label("coachEntry-o11"))
+        // a postponed proposal can still be decided, and Home keeps showing it
+        tapOn(el("coachProposal-load")); expectSheet("Small load increase — bench press")
+        XCTAssertTrue(el("reviewApprove").exists && el("reviewDecline").exists)
+        closeSheet()
+        closeCoach()
+        XCTAssertTrue(value("coachPreview").hasPrefix("Needs your decision. "), value("coachPreview"))
     }
 
     func test10_CoachApproveAndDecline() {
         launch()
-        tapOn(el("coachReview")); expectSheet("Review the suggestion")
+        openCoach()
+        tapOn(el("coachProposal-load")); expectSheet("Small load increase — bench press")
         el("reviewApprove").tap()
-        waitLabel("coachDecisionNote", equals: "Accepted — applied to the sample plan")
-        XCTAssertFalse(el("coachReview").exists, "An accepted suggestion must not ask again")
-        XCTAssertFalse(el("sheetTitle").exists, "Review sheet stayed on screen after approval")
+        waitValue("coachProposal-load", equals: "Accepted")
+        waitLabel("coachEntry-d11", equals: "You, Your decision, 12:30. Approved: Small load increase — bench press.")
+        XCTAssertTrue(label("coachEntry-o11").contains("Applied to the sample plan"), label("coachEntry-o11"))
+        // a decided proposal is read-only but can still be revisited with its history
+        tapOn(el("coachProposal-load")); expectSheet("Small load increase — bench press")
+        XCTAssertTrue(el("proposalClosedNote").waitForExistence(timeout: 5))
+        XCTAssertFalse(el("reviewApprove").exists || el("reviewDecline").exists, "A decided proposal can be decided again")
+        XCTAssertGreaterThanOrEqual(labels("proposalHistory").count, 1, "The proposal has no history")
+        closeSheet()
+        closeCoach()
+        // Home moves on to the latest relevant advice — not the decision or its acknowledgement
+        let home = value("coachPreview")
+        XCTAssertFalse(home.contains("Needs your decision"), home)
+        XCTAssertTrue(home.contains("Train as planned"), "Home should show the latest advice: \(home)")
+        XCTAssertFalse(home.contains("Applied to the sample plan") || home.contains("Approved"), "Home shows a decision/outcome message: \(home)")
         app.terminate()
 
         launch()
-        tapOn(el("coachReview")); expectSheet("Review the suggestion")
+        openCoach()
+        tapOn(el("coachProposal-load")); expectSheet("Small load increase — bench press")
         el("reviewDecline").tap()
-        waitLabel("coachDecisionNote", equals: "Declined — this suggestion will not be repeated")
-        XCTAssertFalse(el("coachReview").exists, "A declined suggestion must not ask again")
+        waitValue("coachProposal-load", equals: "Declined")
+        XCTAssertTrue(label("coachEntry-o11").contains("will not be repeated"), label("coachEntry-o11"))
+        closeCoach()
+        XCTAssertFalse(value("coachPreview").contains("Needs your decision"))
+    }
+
+    func test23_CoachConversationScrollsAndKeepsHistory() {
+        launch()
+        openCoach()
+        // opens at the newest messages; the oldest are reached by scrolling back
+        XCTAssertTrue(el("coachProposal-load").waitForExistence(timeout: 10))
+        let first = el("coachEntry-e1")
+        XCTAssertTrue(first.exists, "The oldest sample message is missing")
+        let before = first.frame.minY
+        bring(first)
+        XCTAssertGreaterThan(first.frame.minY, before, "The timeline did not scroll back (before \(before), after \(first.frame.minY))")
+        XCTAssertEqual(first.label, "Coach, Observation, 19:20. Three sessions this week were rated 8 or more out of 10 for effort.")
+        // athlete and coach messages are distinguished
+        XCTAssertTrue(label("coachEntry-e6").hasPrefix("You, Your question, 08:05."), label("coachEntry-e6"))
+        XCTAssertTrue(label("coachEntry-e7").hasPrefix("Coach, Answer, 08:05."), label("coachEntry-e7"))
+        // an earlier, already decided proposal keeps its context
+        waitValue("coachProposal-ride", equals: "Accepted")
+        tapOn(el("coachProposal-ride")); expectSheet("Shorter long ride on Saturday")
+        XCTAssertTrue(el("proposalClosedNote").waitForExistence(timeout: 5))
+        XCTAssertEqual(labels("proposalHistory").count, 3, "History should list proposal, decision and outcome: \(labels("proposalHistory"))")
+        closeSheet()
+        XCTAssertTrue(el("coachComposerDisabled").exists, "The page must say that messaging is not available")
+        closeCoach()
+        app.terminate()
+
+        // a new athlete: one coach note, nothing to decide
+        launch(["LAB_SCENARIO": "newUser"])
+        XCTAssertTrue(value("coachPreview").contains("Complete a session"), value("coachPreview"))
+        openCoach()
+        XCTAssertTrue(el("coachEntry-e0").waitForExistence(timeout: 5))
+        XCTAssertFalse(el("coachProposal-load").exists)
+        closeCoach()
     }
 
     // MARK: 7 — graph: tapping a day
@@ -482,7 +567,11 @@ final class HomeInteractionTests: XCTestCase {
         tapOn(el("indicatorMix")); expectSheet("Training Mix"); closeSheet()
         tapOn(el("indicatorRecovery")); expectSheet("Recovery"); closeSheet()
         tapOn(el("scheduleDay-2")); expectSheet("Wednesday 11 Nov"); closeSheet()
-        tapOn(el("coachReview")); expectSheet("Review the suggestion")
+        openCoach()
+        tapOn(el("coachProposal-load")); expectSheet("Small load increase — bench press")
+        XCTAssertTrue(el("reviewApprove").exists)
+        closeSheet()
+        closeCoach()
     }
 
     func test22_LoadingShowsNoValues() {
@@ -490,6 +579,138 @@ final class HomeInteractionTests: XCTestCase {
         XCTAssertFalse(value("indicatorMix").contains(":"), "A ratio is shown while loading")
         XCTAssertFalse(value("indicatorRecovery").contains("%"), "A percentage is shown while loading")
         XCTAssertFalse(el("trendsChart").exists)
-        XCTAssertFalse(el("coachReview").exists)
+        XCTAssertEqual(value("coachPreview"), "Loading")
+    }
+
+    // MARK: v2.3 — sleep target, sport cards, themes, sheet transitions
+
+    func test24_SleepTargetCanBeSetAndRemoved() {
+        launch(["LAB_SCENARIO": "noSleep"])
+        bring(el("sleepBar"))
+        XCTAssertTrue(value("sleepBar").contains("target not set"), value("sleepBar"))
+        tapOn(el("sleepBar")); expectSheet("Sleep")
+        XCTAssertFalse(el("sleepTargetClear").exists, "Remove is offered although no target is set")
+        el("sleepTarget-480").tap()
+        XCTAssertTrue(el("sleepTargetClear").waitForExistence(timeout: 5), "Choosing a target had no effect")
+        XCTAssertTrue(labels("sleepRows").joined(separator: " | ").contains("Your target, 8h 00m"), labels("sleepRows").joined(separator: " | "))
+        closeSheet()
+        XCTAssertTrue(value("sleepBar").contains("Your target 8h 00m"), value("sleepBar"))
+        app.terminate()
+
+        launch()
+        XCTAssertTrue(value("sleepBar").contains("Your target 8h 00m"), value("sleepBar"))
+        tapOn(el("sleepBar")); expectSheet("Sleep")
+        el("sleepTargetClear").tap()
+        XCTAssertFalse(el("sleepTargetClear").waitForExistence(timeout: 2))
+        closeSheet()
+        XCTAssertTrue(value("sleepBar").contains("target not set"), value("sleepBar"))
+    }
+
+    func test25_SportCardsOpenTheirSheets() {
+        launch()
+        tapOn(el("sportCard-endurance")); expectSheet("Endurance"); closeSheet()
+        tapOn(el("sportCard-strength")); expectSheet("Strength"); closeSheet()
+    }
+
+    func test26_AllSixThemesLaunchAndRespond() {
+        for theme in ["obsidian", "arctic", "ocean", "forest", "sandstone", "highContrast"] {
+            launch(["LAB_THEME": theme])
+            XCTAssertTrue(value("indicatorMix").hasPrefix("66:34."), "\(theme): \(value("indicatorMix"))")
+            tapOn(el("indicatorRecovery")); expectSheet("Recovery"); closeSheet()
+            app.terminate()
+        }
+    }
+
+    /// Opening a sheet right after another one closed, done the way a person does it: tap as soon as the control is usable.
+    func test27_SheetOpensAgainAfterClose_Repeated() {
+        launch()
+        let order = [("indicatorConsistency", "Consistency"), ("indicatorMix", "Training Mix"), ("indicatorRecovery", "Recovery")]
+        for round in 0..<4 {
+            for (id, title) in order {
+                let e = el(id)
+                let deadline = Date().addingTimeInterval(10)
+                while !e.isHittable && Date() < deadline { Thread.sleep(forTimeInterval: 0.05) }
+                XCTAssertTrue(e.isHittable, "Round \(round): \(id) never became usable after the previous sheet closed")
+                e.tap()
+                expectSheet(title)
+                closeSheet()
+            }
+        }
+    }
+
+    /// The same, but WITHOUT waiting: the next control is tapped the instant Close has been tapped, while the previous
+    /// sheet is still animating away. iOS may ignore a tap during that animation; what must never happen is a stuck
+    /// screen. The observed behaviour is written to the log (LABNOTE) and reported, not hidden.
+    func test28_ImmediateTapWhileSheetIsClosing() {
+        launch()
+        var opened = 0, ignored = 0
+        for i in 0..<6 {
+            tapOn(el("indicatorMix")); expectSheet("Training Mix")
+            let target = el("indicatorRecovery").coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let c = el("sheetClose"); settle(c)
+            c.tap()
+            target.tap()                                   // no wait at all
+            // settle: either the Recovery sheet is up, or nothing is
+            let deadline = Date().addingTimeInterval(6)
+            var title = ""
+            while Date() < deadline {
+                let t = el("sheetTitle")
+                title = t.exists ? t.label : ""
+                if title == "Recovery" { break }
+                Thread.sleep(forTimeInterval: 0.25)
+            }
+            if title == "Recovery" { opened += 1; closeSheet() }
+            else {
+                ignored += 1
+                XCTAssertNotEqual(title, "Training Mix", "Attempt \(i): the first sheet never closed")
+                // the screen must be fully usable again
+                tapOn(el("indicatorRecovery")); expectSheet("Recovery"); closeSheet()
+            }
+        }
+        print("LABNOTE immediate tap while a sheet is closing: honoured \(opened) of 6, ignored \(ignored) of 6; the screen was usable afterwards in every case")
+    }
+
+    func test29_RapidDoubleTapOpensOneSheet() {
+        launch()
+        for (id, title) in [("indicatorMix", "Training Mix"), ("scheduleDay-2", "Wednesday 11 Nov"), ("metricRow-load", "Weekly load")] {
+            let e = el(id)
+            bring(e)
+            let p = e.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            p.tap(); p.tap()                                // two taps in quick succession
+            expectSheet(title)
+            closeSheet()
+            // one close must be enough: no second copy of the sheet underneath
+            XCTAssertFalse(el("sheetTitle").waitForExistence(timeout: 1.5), "\(id): a second sheet was stacked by the double tap")
+        }
+        // the coach preview: a double tap must open one conversation, closable with one tap
+        let c = el("coachPreview"); bring(c)
+        let p = c.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        p.tap(); p.tap()
+        XCTAssertTrue(el("coachTitle").waitForExistence(timeout: 10))
+        closeCoach()
+    }
+
+    /// Requests made DURING the closing animation (0–450 ms after Close), driven from inside the prototype because a
+    /// UI test always waits for animations to finish before it taps. With the presentation guard every request must
+    /// end with the sheet on screen.
+    func test30_SheetRequestedDuringDismissal_Queued() {
+        app = XCUIApplication()
+        app.launchEnvironment = ["LAB_THEME": "obsidian", "LAB_SCREEN": "home", "LAB_STRESS": "queued"]
+        app.launch()
+        let r = el("stressResult")
+        XCTAssertTrue(r.waitForExistence(timeout: 120), "The transition self-test did not finish")
+        print("LABNOTE sheet requested during dismissal (with guard): \(r.label)")
+        XCTAssertTrue(r.label.hasPrefix("queued 6 of 6 shown"), "A sheet requested while another was closing did not appear: \(r.label)")
+    }
+
+    /// The same sequence WITHOUT the guard — plain SwiftUI. Not asserted: it documents whether the framework drops
+    /// such requests on this iOS version, which is what the guard exists for.
+    func test31_SheetRequestedDuringDismissal_PlainSwiftUI_Observation() {
+        app = XCUIApplication()
+        app.launchEnvironment = ["LAB_THEME": "obsidian", "LAB_SCREEN": "home", "LAB_STRESS": "direct"]
+        app.launch()
+        let r = el("stressResult")
+        XCTAssertTrue(r.waitForExistence(timeout: 120), "The transition self-test did not finish")
+        print("LABNOTE sheet requested during dismissal (plain SwiftUI, no guard): \(r.label)")
     }
 }

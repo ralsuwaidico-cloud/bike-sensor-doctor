@@ -93,10 +93,10 @@ enum Mock21 {
     // MARK: shared pieces
 
     static let sleepFull = CySleepModel(
-        lastNight: 430, average7: 422, target: 480, targetSource: "sample target for the prototype (in the app: the target you choose)",
+        lastNight: 430, average7: 422, target: 480, targetSource: "chosen by the athlete (sample)",
         nights: points(shorts, [7.4, 6.8, 7.2, 6.5, 7.6, 6.9, 7.2]),
         guidance: "Sample wording: your last night was close to your seven-day average. General guidance, not medical advice.",
-        source: "Sample data · would read \"Apple Health · updated this morning\"", targetLabel: "Sample target")
+        source: "Sample data · would read \"Apple Health · updated this morning\"", targetLabel: "Your target")
     static let sleepNone = CySleepModel(
         lastNight: nil, average7: nil, target: nil, targetSource: "no target set", nights: [],
         guidance: "Sleep appears here once a sleep source is connected. Nothing is estimated.",
@@ -287,5 +287,45 @@ enum Mock21 {
         ]
         d.steps[3].isDone = false
         return d
+    }
+
+    // MARK: coach conversation (sample history — not a live chat)
+
+    static let today = "Today · Wed 11 Nov"
+
+    static func conversation(_ scenario: LabScenario, _ d: Home21Data) -> CyCoachConversation {
+        guard d.coach?.hasProposal == true else {
+            // scenarios without a proposal: one coach note, taken from the scenario's own sample sentence
+            let text = d.coach?.sentence ?? d.coachEmpty ?? "Complete a session and the short check-in. The coach starts from what you actually do."
+            return CyCoachConversation(entries: [CyCoachEntry(id: "e0", day: today, time: "06:50", author: .coach, kind: d.coach == nil ? .observation : .recommendation, text: text)], proposals: [])
+        }
+        let ride = CyCoachProposal(
+            id: "ride", title: "Shorter long ride on Saturday", summary: "Review a shorter long ride for Saturday.",
+            changes: [CyChange(id: "dur", label: "Saturday endurance ride", before: "2h 00m", after: "1h 30m")],
+            reason: "Your reported effort was 8 or more out of 10 in three sessions that week.",
+            benefit: "Keeps the week's endurance work while lowering the total load.",
+            impact: "About 30 minutes less endurance time that week. The following week returns to plan.",
+            status: .accepted)
+        let load = CyCoachProposal(
+            id: "load", title: "Small load increase — bench press", summary: "Your last two strength sessions reached the top of your rep range. Review a small load increase.",
+            changes: MockData.changes,
+            reason: "Two sessions in a row reached the top of the rep range at a reported effort of 7 out of 10.",
+            benefit: "A small step keeps the work challenging without changing the session.",
+            impact: "The last sets may feel harder for a week or two. You can undo this at any time.",
+            status: .pending)
+        let e: [CyCoachEntry] = [
+            CyCoachEntry(id: "e1", day: "Thu 5 Nov", time: "19:20", author: .coach, kind: .observation, text: "Three sessions this week were rated 8 or more out of 10 for effort."),
+            CyCoachEntry(id: "e2", day: "Thu 5 Nov", time: "19:20", author: .coach, kind: .proposal, text: "I suggest shortening Saturday's long ride.", proposalId: "ride"),
+            CyCoachEntry(id: "e3", day: "Thu 5 Nov", time: "19:31", author: .athlete, kind: .decision, text: "Approved: Shorter long ride on Saturday.", proposalId: "ride"),
+            CyCoachEntry(id: "e4", day: "Thu 5 Nov", time: "19:31", author: .coach, kind: .outcome, text: "Saturday's ride is now 1h 30m. Everything else is unchanged.", proposalId: "ride"),
+            CyCoachEntry(id: "e5", day: "Mon 9 Nov", time: "07:42", author: .coach, kind: .observation, text: "Lower-body strength completed as planned. Reported effort 7 out of 10."),
+            CyCoachEntry(id: "e6", day: "Mon 9 Nov", time: "08:05", author: .athlete, kind: .question, text: "I travel on Thursday. Do I need to move anything?"),
+            CyCoachEntry(id: "e7", day: "Mon 9 Nov", time: "08:05", author: .coach, kind: .answer, text: "Thursday is a rest day in your plan, so nothing needs to move. (Scripted sample reply — two-way messaging is not connected.)"),
+            CyCoachEntry(id: "e8", day: "Tue 10 Nov", time: "18:40", author: .coach, kind: .observation, text: "Tempo ride completed: 45 minutes, in line with your recent weeks."),
+            CyCoachEntry(id: "e9", day: today, time: "06:50", author: .coach, kind: .recovery, text: "Sleep was 7h 10m, close to your 7-day average, and your readings are in your usual range. Train as planned."),
+            CyCoachEntry(id: "e10", day: today, time: "12:05", author: .coach, kind: .observation, text: "Recovery spin completed: 32 minutes."),
+            CyCoachEntry(id: "e11", day: today, time: "12:06", author: .coach, kind: .proposal, text: "Your last two strength sessions reached the top of your rep range. I suggest a small load increase.", proposalId: "load"),
+        ]
+        return CyCoachConversation(entries: e, proposals: [ride, load])
     }
 }

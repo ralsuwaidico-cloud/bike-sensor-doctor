@@ -160,7 +160,7 @@ struct CyIndicatorRow: View {
         let line: String
         if ratio == nil { line = m.hasAnyPlan ? "No training time yet" : "Nothing planned" }
         else if typeSize.isAccessibilitySize { line = "\(ratio ?? "") · ride : lift time" }
-        else { line = "Ride : Lift time" }
+        else { line = "Ride : lift · time done" }
         return CyIndicatorText(line: line, spoken: "\(ratio.map { "Completed time ratio \($0), endurance to strength. " } ?? "No completed training time. ")\(spoken)", centre: ratio ?? "No ratio")
     }
     private var recoveryText: CyIndicatorText {
@@ -190,17 +190,17 @@ struct CySessionMark: View {
         VStack(spacing: 3) {
             Image(systemName: session.category.icon)
                 .font(.system(size: size, weight: session.state == .completed ? .semibold : .regular))
-                .foregroundStyle(session.state == .completed ? c : theme.textTertiary)
+                .foregroundStyle(session.state == .completed ? c : theme.textSecondary)
                 .frame(width: size + 4, height: size)
             Group {
                 switch session.state {
-                case .completed: Circle().fill(c).frame(width: 5, height: 5)
-                case .planned: Circle().strokeBorder(theme.textTertiary, lineWidth: 1).frame(width: 5, height: 5)
-                case .missed: Image(systemName: "xmark").font(.system(size: 7, weight: .bold)).foregroundStyle(theme.warning)
-                case .rescheduled: Image(systemName: "arrow.right").font(.system(size: 7, weight: .bold)).foregroundStyle(theme.textSecondary)
+                case .completed: Circle().fill(c).frame(width: 6, height: 6)
+                case .planned: Circle().strokeBorder(theme.textSecondary, lineWidth: 1.2).frame(width: 6, height: 6)
+                case .missed: Image(systemName: "xmark").font(.system(size: 8, weight: .heavy)).foregroundStyle(theme.warning)
+                case .rescheduled: Image(systemName: "arrow.right").font(.system(size: 8, weight: .heavy)).foregroundStyle(theme.textSecondary)
                 }
             }
-            .frame(height: 7)
+            .frame(height: 8)
         }
         .accessibilityHidden(true)
     }
@@ -234,15 +234,15 @@ struct CyCompactSchedule: View {
         return Button(action: { onDay(d) }) {
             VStack(spacing: 5) {
                 Text(d.letter).font(.caption2.weight(d.isToday ? .bold : .medium)).foregroundStyle(d.isToday ? theme.accent : theme.textSecondary)
-                HStack(spacing: two ? 3 : 0) {
+                HStack(spacing: two ? 5 : 0) {
                     if d.sessions.isEmpty {
                         VStack(spacing: 3) {
                             if d.isRest { Image(systemName: "moon").font(.system(size: 12)).foregroundStyle(theme.textTertiary).frame(height: 16) }
                             else { Capsule().fill(theme.textTertiary.opacity(0.5)).frame(width: 8, height: 2).frame(height: 16) }
-                            Color.clear.frame(height: 7)
+                            Color.clear.frame(height: 8)
                         }
                     } else {
-                        ForEach(d.sessions.prefix(2)) { s in CySessionMark(session: s, size: two ? 14 : 16) }
+                        ForEach(d.sessions.prefix(2)) { s in CySessionMark(session: s, size: two ? 13 : 17) }
                     }
                 }
             }
@@ -291,7 +291,8 @@ struct CySleepBar: View {
                     stats {
                         stat("7-day avg", m.average7.map(CySleepModel.text) ?? "—")
                         if !typeSize.isAccessibilitySize { Spacer(minLength: CySpace.s) }
-                        stat(m.target == nil ? "Target" : m.targetLabel, m.target.map(CySleepModel.text) ?? "Not set")
+                        if let t = m.target { stat(m.targetLabel, CySleepModel.text(t)) }
+                        else { Text("Target not set · Set").font(CyFont.footnote.weight(.semibold)).foregroundStyle(theme.accent).lineLimit(1) }
                     }
                 } else {
                     CySkeleton(height: 5); CySkeleton(height: 10, width: 200)
@@ -307,7 +308,7 @@ struct CySleepBar: View {
         .accessibilityLabel("Sleep")
         .accessibilityValue(spoken)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Opens sleep details")
+        .accessibilityHint(model?.target == nil ? "Opens sleep details, where you can set a target" : "Opens sleep details")
         .accessibilityIdentifier("sleepBar")
     }
     private func stat(_ label: String, _ value: String) -> some View {
@@ -321,7 +322,7 @@ struct CySleepBar: View {
         guard let m = model else { return "Loading" }
         let last = m.lastNight.map { "Last night \(CySleepModel.text($0))" } ?? "No sleep recorded"
         let avg = m.average7.map { "seven-day average \(CySleepModel.text($0))" } ?? "no seven-day average yet"
-        let tgt = m.target.map { "\(m.targetLabel) \(CySleepModel.text($0))" } ?? "no target set"
+        let tgt = m.target.map { "\(m.targetLabel) \(CySleepModel.text($0))" } ?? "target not set"
         return "\(last), \(avg), \(tgt)"
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Cyclift UI Lab — standalone prototype shell (Home v2.1). Mock navigation and local sheets only.
+// Cyclift UI Lab — standalone prototype shell (Home v2.3). Mock navigation and local sheets only.
 // Nothing here talks to the production app, Apple Health, sensors, accounts or any backend.
 
 /// Launch options (environment variables) used by the prototype's own screenshot script.
@@ -15,6 +15,7 @@ enum LabConfig {
     static var select: Int? { env["LAB_SELECT"].flatMap(Int.init) }     // chart day selected at launch
     static var render: Bool { env["LAB_RENDER"] == "1" }                // write a full-length Home image to Documents
     static var decision: String? { env["LAB_DECISION"] }
+    static var stress: String? { env["LAB_STRESS"] }                    // queued | direct — sheet transition self-test
     static var graphMode: String? { env["LAB_GRAPH_MODE"] }             // recovery | activity | trends
     static var graphRange: String? { env["LAB_GRAPH_RANGE"] }           // 7d | 4w                // accepted | declined | postponed
 }
@@ -27,7 +28,7 @@ struct CycliftUILabApp: App {
 }
 
 enum LabSheet: Identifiable {
-    case consistency, mix, recovery, sleep, coachWhy, review, trendsInfo, hub, profile
+    case consistency, mix, recovery, sleep, trendsInfo, hub, profile
     case day(CyScheduleDay), sport(CySportCardModel), graphDay(CyGraphDate, [CyTrendDetailRow]), metric(CyMetricTile)
     var id: String {
         switch self {
@@ -35,8 +36,6 @@ enum LabSheet: Identifiable {
         case .mix: return "mix"
         case .recovery: return "recovery"
         case .sleep: return "sleep"
-        case .coachWhy: return "coachWhy"
-        case .review: return "review"
         case .trendsInfo: return "trendsInfo"
         case .hub: return "hub"
         case .profile: return "profile"
@@ -48,7 +47,7 @@ enum LabSheet: Identifiable {
     }
     var opensLarge: Bool {
         switch self {
-        case .review, .sleep, .mix, .consistency: return true
+        case .sleep, .mix, .consistency: return true
         default: return false
         }
     }
@@ -60,24 +59,36 @@ struct LabRoot: View {
     @State private var data: Home21Data = Mock21.make(LabConfig.scenario ?? .established)
     @State private var tab: Int = LabRoot.initialTab
     @State private var sheet: LabSheet? = nil
+    // Sheet presentation guard (v2.3). SwiftUI can drop a sheet that is requested while the previous one is still
+    // animating away, leaving the state set with nothing on screen. Requests made in that window are queued and
+    // presented when the dismissal has finished; a request made while a sheet is already up is ignored.
+    @State private var sheetBusy = false
+    @State private var pendingSheet: LabSheet? = nil
+    @State private var visibleSheet: String? = nil
+    @State private var stressResult: String? = nil
     @State private var toast: String? = nil
-    @State private var decision: CyCoachDecision = LabRoot.initialDecision
+    @State private var conversation: CyCoachConversation = LabRoot.initialConversation
+    @State private var showCoach: Bool = LabConfig.screen == "coach"
 
     private static var initialTab: Int {
         switch LabConfig.screen {
-        case "home": return 0
+        case "home", "coach": return 0
         case "plan": return 1
         case "progress": return 3
         default: return 4
         }
     }
-    private static var initialDecision: CyCoachDecision {
+    /// Sample conversation; LAB_DECISION pre-applies a decision to the open proposal (screenshots only).
+    private static var initialConversation: CyCoachConversation {
+        let sc = LabConfig.scenario ?? .established
+        var c = Mock21.conversation(sc, Mock21.make(sc))
         switch LabConfig.decision {
-        case "accepted": return .accepted
-        case "declined": return .declined
-        case "postponed": return .postponed
-        default: return .none
+        case "accepted": c.decide("load", .accepted, day: Mock21.today, time: "12:30")
+        case "declined": c.decide("load", .declined, day: Mock21.today, time: "12:30")
+        case "postponed": c.decide("load", .postponed, day: Mock21.today, time: "12:30")
+        default: break
         }
+        return c
     }
 
     private var themeID: CyThemeID { LabConfig.theme ?? CyThemeID(rawValue: themeRaw) ?? .obsidian }
@@ -97,6 +108,10 @@ struct LabRoot: View {
             LinearGradient(colors: [theme.background.opacity(0), theme.background.opacity(0.92), theme.background], startPoint: .top, endPoint: .bottom)
                 .frame(height: dockHeight + 34).ignoresSafeArea(edges: .bottom).allowsHitTesting(false).accessibilityHidden(true)
             VStack(spacing: CySpace.s) {
+                if let stressResult {
+                    Text(stressResult).font(.caption2).foregroundStyle(theme.textPrimary).padding(8).background(theme.surface2)
+                        .accessibilityIdentifier("stressResult")
+                }
                 if let toast {
                     Text(toast).font(CyFont.caption).foregroundStyle(theme.textPrimary).multilineTextAlignment(.center)
                         .padding(.horizontal, CySpace.l).padding(.vertical, CySpace.m)
@@ -108,30 +123,40 @@ struct LabRoot: View {
                         .accessibilityIdentifier("toast")
                 }
                 CyFloatingDock(selection: $tab, items: dockItems, centreTitle: "Train now", centreIcon: "figure.mixed.cardio",
-                               centreBadge: scenario == .loading ? nil : data.sessionsToday) { sheet = .hub }
+                               centreBadge: scenario == .loading ? nil : data.sessionsToday) { present(.hub) }
             }
         }
         .background(theme.background.ignoresSafeArea())
         .environment(\.cyTheme, theme)
         .preferredColorScheme(theme.scheme)
         .tint(theme.accent)
-        .sheet(item: $sheet) { s in
+        .sheet(item: $sheet, onDismiss: sheetDismissed) { s in
             sheetView(s)
+                .onAppear { visibleSheet = s.id }
+                .onDisappear { if visibleSheet == s.id { visibleSheet = nil } }
                 .environment(\.cyTheme, theme)
                 .presentationDetents(s.opensLarge ? [.large] : [.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .fullScreenCover(isPresented: $showCoach) {
+            CoachConversationScreen(conversation: $conversation, today: Mock21.today,
+                                    initialProposal: LabConfig.sheet == "proposal" ? "load" : (LabConfig.sheet == "proposalClosed" ? "ride" : nil),
+                                    startAtTop: LabConfig.scroll == "top",
+                                    onClose: { showCoach = false })
+                .environment(\.cyTheme, theme)
+        }
         .onAppear {
             applyLaunchSheet()
+            if LabConfig.stress != nil { Task { await runStress() } }
             if LabConfig.render { Task { @MainActor in try? await Task.sleep(nanoseconds: 1_200_000_000); renderFullLength() } }
         }
-        .onChange(of: scenario) { _, new in data = Mock21.make(new); decision = .none }
+        .onChange(of: scenario) { _, new in data = Mock21.make(new); conversation = Mock21.conversation(new, data) }
     }
 
     @ViewBuilder private var content: some View {
         switch tab {
         case 0:
-            Home21Screen(data: data, isLoading: scenario == .loading, coachDecision: decision, scrollTo: LabConfig.scroll,
+            Home21Screen(data: data, isLoading: scenario == .loading, coachPreview: conversation.preview, scrollTo: LabConfig.scroll,
                          initialTrendSelection: LabConfig.select, bottomInset: dockHeight,
                          initialGraphMode: LabConfig.graphMode, initialGraphRange: LabConfig.graphRange,
                          metricStyle: .rows, actions: homeActions)
@@ -144,24 +169,65 @@ struct LabRoot: View {
 
     private var homeActions: Home21Actions {
         Home21Actions(
-            onAvatar: { sheet = .profile },
-            onConsistency: { sheet = .consistency },
-            onMix: { sheet = .mix },
-            onRecovery: { sheet = .recovery },
+            onAvatar: { present(.profile) },
+            onConsistency: { present(.consistency) },
+            onMix: { present(.mix) },
+            onRecovery: { present(.recovery) },
             onStep: { step in
                 // Local mock: marks the step done, so the move from "below the indicators" to the bottom can be reviewed.
                 if let i = data.steps.firstIndex(where: { $0.id == step.id }) { withAnimation { data.steps[i].isDone.toggle() } }
             },
-            onDay: { sheet = .day($0) },
-            onEndurance: { sheet = .sport(data.endurance) },
-            onStrength: { sheet = .sport(data.strength) },
-            onSleep: { sheet = .sleep },
-            onCoachWhy: { sheet = .coachWhy },
-            onCoachReview: { sheet = .review },
-            onCoachNotNow: { decision = .postponed; say("Postponed. This is not a decline — it stays open.") },
-            onTrendsInfo: { sheet = .trendsInfo },
-            onGraphDay: { d, rows in sheet = .graphDay(d, rows) },
-            onMetric: { sheet = .metric($0) })
+            onDay: { present(.day($0)) },
+            onEndurance: { present(.sport(data.endurance)) },
+            onStrength: { present(.sport(data.strength)) },
+            onSleep: { present(.sleep) },
+            onCoach: { showCoach = true },
+            onTrendsInfo: { present(.trendsInfo) },
+            onGraphDay: { d, rows in present(.graphDay(d, rows)) },
+            onMetric: { present(.metric($0)) })
+    }
+
+    /// The only way Home opens a sheet.
+    private func present(_ s: LabSheet) {
+        if sheet != nil { return }                       // a sheet is already up (e.g. the second tap of a double tap)
+        if sheetBusy && LabConfig.stress != "direct" {   // the previous sheet is still animating away: queue the request
+            pendingSheet = s
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {   // safety net if the dismissal callback never arrives
+                if let p = pendingSheet, sheet == nil { pendingSheet = nil; sheetBusy = true; sheet = p }
+            }
+            return
+        }
+        sheetBusy = true
+        sheet = s
+    }
+    private func sheetDismissed() {
+        sheetBusy = false
+        if let p = pendingSheet { pendingSheet = nil; present(p) }
+    }
+
+    /// Prototype self-test (LAB_STRESS = queued | direct): closes a sheet and requests the next one after 0–450 ms,
+    /// i.e. during the closing animation, which a UI test cannot time reliably. "direct" bypasses the queue to show
+    /// what plain SwiftUI does. The outcome is shown as text for the interaction test to read.
+    @MainActor private func runStress() async {
+        let delays: [UInt64] = [0, 50, 100, 200, 300, 450]
+        var shown = 0
+        var log: [String] = []
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        for d in delays {
+            present(.mix)
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            sheet = nil
+            try? await Task.sleep(nanoseconds: d * 1_000_000)
+            present(.recovery)
+            try? await Task.sleep(nanoseconds: 2_200_000_000)
+            let ok = visibleSheet == "recovery"
+            if ok { shown += 1 }
+            log.append("\(d)ms:\(ok ? "shown" : (sheet == nil ? "not requested" : "state set but nothing on screen"))")
+            sheet = nil; pendingSheet = nil
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            sheetBusy = false
+        }
+        stressResult = "\(LabConfig.stress ?? "") \(shown) of \(delays.count) shown · " + log.joined(separator: ", ")
     }
 
     private func say(_ text: String) {
@@ -177,8 +243,6 @@ struct LabRoot: View {
             case "mix": sheet = .mix
             case "recovery": sheet = .recovery
             case "sleep": sheet = .sleep
-            case "review": sheet = .review
-            case "coachWhy": sheet = .coachWhy
             case "trendsInfo": sheet = .trendsInfo
             case "hub": sheet = .hub
             case "profile": sheet = .profile
@@ -195,7 +259,7 @@ struct LabRoot: View {
     /// Review aid only: renders the whole Home column to one tall image in the prototype's own Documents folder.
     @MainActor func renderFullLength() {
         let width: CGFloat = UIScreen.main.bounds.width
-        let view = Home21Content(data: data, isLoading: scenario == .loading, coachDecision: decision, initialTrendSelection: LabConfig.select,
+        let view = Home21Content(data: data, isLoading: scenario == .loading, coachPreview: conversation.preview, initialTrendSelection: LabConfig.select,
                                  initialGraphMode: LabConfig.graphMode, initialGraphRange: LabConfig.graphRange,
                                  metricStyle: .rows)
             .padding(.vertical, CySpace.l)
@@ -218,7 +282,13 @@ struct LabRoot: View {
         case .consistency: ConsistencySheet(model: data.consistency, days: data.days, onClose: close)
         case .mix: MixSheet(model: data.mix, endurance: data.endurance, strength: data.strength, onClose: close)
         case .recovery: RecoverySheet(model: data.recovery, onClose: close)
-        case .sleep: SleepSheet(model: data.sleep, onClose: close)
+        case .sleep:
+            SleepSheet(model: data.sleep, onClose: close) { minutes in
+                // local mock of the athlete's own setting; nothing is recommended or calculated
+                data.sleep.target = minutes
+                data.sleep.targetLabel = "Your target"
+                data.sleep.targetSource = minutes == nil ? "no target set" : "chosen by the athlete (sample)"
+            }
         case .day(let d): DaySheet(day: d, onClose: close) { say("Sample only — the session would open in the app.") }
         case .sport(let m): SportSheet(model: m, onClose: close)
         case .graphDay(let d, let rows): GraphDaySheet(date: d, rows: rows, onClose: close)
@@ -227,24 +297,12 @@ struct LabRoot: View {
             CySheet(title: "How Trends works", onClose: close) {
                 InfoBlock(head: "Three views", text: "Training & Recovery: training load (session effort × minutes) on the left scale and recovery on the right scale. Activity: endurance, strength and planned minutes on one scale. Recovery trends: resting heart rate, HRV or sleep — one at a time, because their units differ.")
                 InfoBlock(head: "Scales", text: "Each scale is labelled with its metric and unit. Two different units are never drawn on one unlabelled axis.")
+                InfoBlock(head: "Ranges", text: "7 days is the latest seven days including today. In 4 weeks, training load and minutes are 7-day rolling totals (marked /7d) so rest days do not turn the line into a sawtooth; recovery, resting heart rate, HRV and sleep stay daily.")
+                InfoBlock(head: "No cause and effect", text: "Load and recovery are drawn together for comparison only. The graph does not claim that one explains the other.")
                 InfoBlock(head: "Missing days", text: "A day without a measurement is a gap: the line stops and no point is drawn. Nothing is interpolated or estimated.")
                 InfoBlock(head: "Recovery percentage", text: "In this prototype the recovery percentage is sample data only. Cyclift has no approved numerical recovery model; until one exists the app would show a status word instead of a number. It is never a medical clearance.")
                 InfoBlock(head: "Sources (sample)", text: (data.graph.first?.modes.flatMap(\.series) ?? []).map { "\($0.name): \($0.source) — \($0.provenance.rawValue.lowercased())" }.joined(separator: "\n"))
             }
-        case .coachWhy:
-            CySheet(title: "Why this suggestion?", onClose: close) {
-                Text(data.coach?.why ?? "No suggestion at the moment.").font(CyFont.body).foregroundStyle(theme.textPrimary).fixedSize(horizontal: false, vertical: true)
-                Text("The coach follows written rules. No generative AI model is used. Sample text for layout review.").font(.caption2).foregroundStyle(theme.textTertiary)
-            }
-        case .review:
-            CyReviewSheet(title: "Review the suggestion",
-                          reason: "Two sessions in a row reached the top of the rep range at a reported effort of 7 out of 10.",
-                          benefit: "A small step keeps the work challenging without changing the session.",
-                          impact: "The last sets may feel harder for a week or two. You can undo this at any time.",
-                          changes: MockData.changes,
-                          onApprove: { sheet = nil; decision = .accepted; say("Accepted (sample). Nothing real was changed.") },
-                          onPostpone: { sheet = nil; decision = .postponed; say("Postponed. This is not a decline — it stays open.") },
-                          onDecline: { sheet = nil; decision = .declined; say("Declined (sample). It will not be repeated.") })
         case .hub:
             CySheet(title: "Train now", onClose: close) {
                 Text("Mock destination. The Training Hub is prototyped after Home and Plan are approved.").font(CyFont.callout).foregroundStyle(theme.textSecondary).fixedSize(horizontal: false, vertical: true)

@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Home v2.1 — owner revision of 12 Nov 2026 (isolated UI Lab only).
+// Home v2.3 — owner's final refinement (isolated UI Lab only). File name kept from v2.1 on purpose: same screen, revised in place.
 // Order: 1 compact header · 2 Consistency / Training Mix / Recovery · 3 Getting Started while a required step is open ·
 // 4 compact schedule · 5 Endurance and Strength cards · 6 Sleep bar · 7 Coach · 8 Trends · 9 Key metrics ·
 // 10 collapsed setup line. The screen receives data and reports taps; it owns no data, engine or navigation.
@@ -15,9 +15,7 @@ struct Home21Actions {
     var onEndurance: () -> Void = {}
     var onStrength: () -> Void = {}
     var onSleep: () -> Void = {}
-    var onCoachWhy: () -> Void = {}
-    var onCoachReview: () -> Void = {}
-    var onCoachNotNow: () -> Void = {}
+    var onCoach: () -> Void = {}
     var onTrendsInfo: () -> Void = {}
     var onGraphDay: (CyGraphDate, [CyTrendDetailRow]) -> Void = { _, _ in }
     var onMetric: (CyMetricTile) -> Void = { _ in }
@@ -28,7 +26,7 @@ struct Home21Content: View {
     let data: Home21Data
     var isLoading: Bool = false
     var showSampleTag: Bool = true
-    var coachDecision: CyCoachDecision = .none
+    var coachPreview: CyCoachPreviewModel? = nil
     var initialTrendSelection: Int? = nil
     var initialGraphMode: String? = nil
     var initialGraphRange: String? = nil
@@ -38,7 +36,7 @@ struct Home21Content: View {
     @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: CySpace.xl) {
             header.id("top")
             CyIndicatorRow(consistency: (data.consistency.fraction, data.consistency.text, data.consistency.caption),
                            mix: data.mix, recovery: data.recovery, isLoading: isLoading,
@@ -47,9 +45,7 @@ struct Home21Content: View {
             CyCompactSchedule(days: data.days, isLoading: isLoading, onDay: actions.onDay)
             sportCards.id("cards")
             CySleepBar(model: isLoading ? nil : data.sleep, onOpen: actions.onSleep)
-            CyCoachBanner(model: isLoading ? nil : (data.coach ?? CyCoachBannerModel(sentence: "", why: "", hasProposal: false)),
-                          emptyText: isLoading ? nil : (data.coach == nil ? data.coachEmpty : nil), decision: coachDecision,
-                          onWhy: actions.onCoachWhy, onReview: actions.onCoachReview, onNotNow: actions.onCoachNotNow)
+            CyCoachPreview(model: isLoading ? nil : coachPreview, emptyText: data.coachEmpty, isLoading: isLoading, onOpen: actions.onCoach)
                 .id("coach")
             CyTrendsGraph(ranges: data.graph, isLoading: isLoading, emptyText: data.graph.isEmpty ? (data.trendsEmpty ?? "Nothing recorded yet.") : nil,
                           initialMode: initialGraphMode, initialRange: initialGraphRange, initialSelection: initialTrendSelection,
@@ -114,7 +110,7 @@ struct Home21Content: View {
 struct Home21Screen: View {
     let data: Home21Data
     var isLoading: Bool = false
-    var coachDecision: CyCoachDecision = .none
+    var coachPreview: CyCoachPreviewModel? = nil
     var scrollTo: String? = nil            // prototype screenshots only
     var initialTrendSelection: Int? = nil
     var bottomInset: CGFloat = 0           // room for the floating dock, so nothing is hidden beneath it
@@ -127,7 +123,7 @@ struct Home21Screen: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                Home21Content(data: data, isLoading: isLoading, coachDecision: coachDecision, initialTrendSelection: initialTrendSelection, initialGraphMode: initialGraphMode, initialGraphRange: initialGraphRange,
+                Home21Content(data: data, isLoading: isLoading, coachPreview: coachPreview, initialTrendSelection: initialTrendSelection, initialGraphMode: initialGraphMode, initialGraphRange: initialGraphRange,
                               metricStyle: metricStyle, actions: actions)
                     .padding(.bottom, bottomInset + CySpace.l)
             }

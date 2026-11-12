@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Gallery page for the Home v2.2 components in their states.
+/// Gallery page for the Home v2.3 components in their states.
 struct Gallery21: View {
     @Environment(\.cyTheme) private var theme
     @State private var steps = Mock21.newAthlete().steps
@@ -62,15 +62,13 @@ struct Gallery21: View {
             }
             }
             Group {
-            Example(label: "COACH · PENDING / POSTPONED / ACCEPTED / DECLINED / NO PROPOSAL / EMPTY / LOADING") {
+            Example(label: "COACH PREVIEW · NEEDS DECISION / INSIGHT / LONG TEXT / EMPTY / LOADING") {
                 VStack(spacing: CySpace.s) {
-                    CyCoachBanner(model: hybrid.coach, onWhy: { note = "Why opened" }, onReview: { note = "Review opened" }, onNotNow: { note = "Postponed" })
-                    CyCoachBanner(model: hybrid.coach, decision: .postponed, onWhy: {}, onReview: {}, onNotNow: {})
-                    CyCoachBanner(model: hybrid.coach, decision: .accepted, onWhy: {}, onReview: {}, onNotNow: {})
-                    CyCoachBanner(model: hybrid.coach, decision: .declined, onWhy: {}, onReview: {}, onNotNow: {})
-                    CyCoachBanner(model: cyc.coach, onWhy: {}, onReview: {}, onNotNow: {})
-                    CyCoachBanner(model: CyCoachBannerModel(sentence: "", why: "", hasProposal: false), emptyText: fresh.coachEmpty, onWhy: {}, onReview: {}, onNotNow: {})
-                    CyCoachBanner(model: nil, onWhy: {}, onReview: {}, onNotNow: {})
+                    CyCoachPreview(model: Mock21.conversation(.established, hybrid).preview) { note = "Coach opened" }
+                    CyCoachPreview(model: Mock21.conversation(.cyclingOnly, cyc).preview) {}
+                    CyCoachPreview(model: CyCoachPreviewModel(text: "Your last three endurance rides were completed at a lower effort than planned while your strength sessions stayed on target, so the plan stays as it is this week and the long ride remains on Saturday.", needsDecision: false)) {}
+                    CyCoachPreview(model: nil, emptyText: fresh.coachEmpty) {}
+                    CyCoachPreview(model: nil, isLoading: true) {}
                 }
             }
             Example(label: "GETTING STARTED · REQUIRED STEP OPEN (TAP TO COMPLETE) / COMPLETE") {
@@ -102,7 +100,7 @@ struct Gallery21: View {
                     row(hybrid)
                     CyCompactSchedule(days: hybrid.days) { _ in }
                     CySleepBar(model: Mock21.sleepFull) {}
-                    CyCoachBanner(model: hybrid.coach, onWhy: {}, onReview: {}, onNotNow: {})
+                    CyCoachPreview(model: Mock21.conversation(.established, hybrid).preview) {}
                 }
                 .dynamicTypeSize(.accessibility2)
             }

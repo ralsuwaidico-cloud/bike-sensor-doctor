@@ -99,8 +99,8 @@ struct CySportCardModel: Equatable {
 struct CySleepModel: Equatable {
     let lastNight: Int?              // minutes; nil = no record
     let average7: Int?               // minutes
-    let target: Int?                 // minutes
-    let targetSource: String         // where the target comes from — never invented
+    var target: Int?                 // minutes — the athlete's own choice; nil = not set
+    var targetSource: String         // where the target comes from — never invented
     let nights: [CySeriesPoint]      // recent nights, hours
     let guidance: String
     let source: String               // data source and freshness

@@ -84,12 +84,12 @@ enum MockGraph {
             CyGraphSeries(id: "rhr", name: "Resting HR", unit: "bpm", source: "Sample · Apple Health", provenance: .existingEngine, color: .recovery, axis: .leading, values: o.restingHR ? rhr : none(n)),
             CyGraphSeries(id: "hrv", name: "HRV", unit: "ms", source: "Sample · Apple Health", provenance: .existingEngine, color: .consistency, axis: .leading, values: o.hrv ? hrv : none(n)),
             CyGraphSeries(id: "sleep", name: "Sleep", unit: "h", source: "Sample · Apple Health", provenance: .existingEngine, color: .load, axis: .leading, values: o.sleep ? slp : none(n))]
-        let roll = rolling ? " In this view each load point is the total of the last 7 days (/7d)." : ""
+        // Explanations live in the "How Trends works" sheet. Only the rolling-total note stays under the graph.
         return [
             CyGraphMode(id: "recovery", title: "Training & Recovery", singleSelection: false, series: a,
-                        note: (o.recoveryScore ? "Recovery % is sample data. Cyclift has no validated recovery score; the app would show a status word instead." : "No recovery score: the app shows a status word, not a number.") + roll),
-            CyGraphMode(id: "activity", title: "Activity", singleSelection: false, series: b, note: rolling ? "Each point is the total of the last 7 days (/7d)." : nil),
-            CyGraphMode(id: "trends", title: "Recovery trends", singleSelection: true, series: c, note: "One metric at a time — the units differ."),
+                        note: rolling ? "Load points are 7-day totals (/7d)." : nil),
+            CyGraphMode(id: "activity", title: "Activity", singleSelection: false, series: b, note: rolling ? "Each point is a 7-day total (/7d)." : nil),
+            CyGraphMode(id: "trends", title: "Recovery trends", singleSelection: true, series: c, note: nil),
         ]
     }
 

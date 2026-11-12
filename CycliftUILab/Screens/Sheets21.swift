@@ -224,14 +224,17 @@ struct RecoverySheet: View {
 struct SleepSheet: View {
     let model: CySleepModel
     let onClose: () -> Void
+    var onSetTarget: (Int?) -> Void = { _ in }
     @Environment(\.cyTheme) private var theme
+    private let choices = [420, 450, 480, 510, 540]
     var body: some View {
         CySheet(title: "Sleep", onClose: onClose) {
             KeyValueList(rows: [
                 CyTrendDetailRow(id: "last", label: "Last night", value: model.lastNight.map(CySleepModel.text) ?? "No record"),
                 CyTrendDetailRow(id: "avg", label: "7-day average", value: model.average7.map(CySleepModel.text) ?? "—"),
-                CyTrendDetailRow(id: "target", label: model.targetLabel, value: model.target.map(CySleepModel.text) ?? "Not set"),
+                CyTrendDetailRow(id: "target", label: model.target == nil ? "Target" : model.targetLabel, value: model.target.map(CySleepModel.text) ?? "Not set"),
             ])
+            .accessibilityIdentifier("sleepRows")
             if let last = model.lastNight, let t = model.target, t > 0 {
                 VStack(alignment: .leading, spacing: 4) {
                     CyGradientBar(fraction: Double(last) / Double(t), color: theme.ringRecovery, height: 6)
@@ -239,8 +242,37 @@ struct SleepSheet: View {
                 }
             }
             CyWeeklyBars(title: "Recent nights", points: model.nights, unit: "h", category: .recovery, emptyText: "No sleep history yet.")
+            VStack(alignment: .leading, spacing: CySpace.s) {
+                CyOverline(text: model.target == nil ? "Set your sleep target" : "Your sleep target")
+                Text("You choose this number. Cyclift does not calculate or recommend a sleep need.").font(CyFont.footnote).foregroundStyle(theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: CySpace.s) {
+                        ForEach(choices, id: \.self) { m in
+                            let on = model.target == m
+                            Button(action: { onSetTarget(m) }) {
+                                Text(CySleepModel.text(m)).font(CyFont.label).foregroundStyle(on ? theme.textOnAccent : theme.textPrimary)
+                                    .padding(.horizontal, CySpace.m).frame(minHeight: CyHit.min)
+                                    .background(Capsule().fill(on ? theme.accent : theme.surface))
+                                    .overlay(Capsule().strokeBorder(theme.id == .highContrast ? theme.border : Color.clear, lineWidth: theme.borderWidth))
+                            }
+                            .buttonStyle(CyRingButtonStyle())
+                            .accessibilityLabel("Target \(CySleepModel.text(m))")
+                            .accessibilityAddTraits(on ? [.isSelected, .isButton] : .isButton)
+                            .accessibilityIdentifier("sleepTarget-\(m)")
+                        }
+                    }
+                }
+                if model.target != nil {
+                    Button(action: { onSetTarget(nil) }) {
+                        Text("Remove target").font(CyFont.footnote.weight(.semibold)).foregroundStyle(theme.textSecondary)
+                            .frame(minHeight: CyHit.min).contentShape(Rectangle())
+                    }
+                    .buttonStyle(CyRingButtonStyle())
+                    .accessibilityIdentifier("sleepTargetClear")
+                }
+            }
             InfoBlock(head: "Four different things", text: "Last night is one recorded night. The 7-day average is the mean of recorded nights. The target is a goal you set. A recommendation would be advice from a documented source — none is shown here.")
-            InfoBlock(head: "About the target", text: "Source: \(model.targetSource). Cyclift does not calculate a sleep need. In the app this would be your own chosen target or a documented source.")
             InfoBlock(head: "Guidance", text: model.guidance)
             Text(model.source).font(.caption2).foregroundStyle(theme.textTertiary)
         }

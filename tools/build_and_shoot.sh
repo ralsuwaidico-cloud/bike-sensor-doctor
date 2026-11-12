@@ -20,6 +20,16 @@ RC=$?
 grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" "$OUT/build.txt" | sed "s#$PWD/##" | sort -u | head -80 > "$OUT/build-digest.txt"
 if [ $RC -ne 0 ]; then note "RESULT build: FAILED"; cat "$OUT/build-digest.txt" >> "$SUM"; exit 1; fi
 note "RESULT build: ok ($(grep -c 'warning:' "$OUT/build.txt") warnings)"
+# "[compile-only]" in the commit subject: also compile the interaction tests, then stop (fast check; proves nothing at runtime)
+if git log -1 --format=%s 2>/dev/null | grep -q "\[compile-only\]"; then
+  xcodebuild build-for-testing -project CycliftUILab.xcodeproj -scheme CycliftUILab -sdk iphonesimulator \
+    -destination "generic/platform=iOS Simulator" -derivedDataPath build CODE_SIGNING_ALLOWED=NO > "$OUT/build-tests.txt" 2>&1
+  RC=$?
+  grep -E "error:|TEST BUILD (SUCCEEDED|FAILED)" "$OUT/build-tests.txt" | sed "s#$PWD/##" | sort -u | head -60 >> "$OUT/build-digest.txt"
+  note "RESULT test compile: $([ $RC -eq 0 ] && echo ok || echo FAILED)"; [ $RC -ne 0 ] && grep "error:" "$OUT/build-digest.txt" >> "$SUM"
+  note "COMPILE-ONLY run: nothing was launched, tested or captured."
+  exit 0
+fi
 APP="build/Build/Products/Debug-iphonesimulator/CycliftUILab.app"
 BID="lab.cyclift.uilab"
 
@@ -70,7 +80,7 @@ mkdir -p "$OUT/full"
 
 # ---- Interaction tests (prototype only). Written to out/interaction-tests.txt; a failure is reported, never hidden.
 TESTS="$OUT/interaction-tests.txt"; : > "$TESTS"
-echo "Cyclift UI Lab — Home v2.2 interaction tests (PROTOTYPE, iOS Simulator, sample data)." >> "$TESTS"
+echo "Cyclift UI Lab — Home v2.3 interaction tests (PROTOTYPE, iOS Simulator, sample data)." >> "$TESTS"
 echo "A pass here is not validation of the production app and not a real-device test." >> "$TESTS"
 runtests() { # udid label
   local U="$1" L="$2" LOG="$OUT/test-$2.txt"
@@ -83,6 +93,7 @@ runtests() { # udid label
   P=$(grep -cE "^Test Case .* passed" "$LOG"); F=$(grep -cE "^Test Case .* failed" "$LOG")
   { echo; echo "== $L (${3}) — passed $P, failed $F, xcodebuild exit $RC ==";
     grep -E "^Test Case .* (passed|failed)" "$LOG" | sed -E "s/^Test Case '-\[CycliftUILabUITests\.HomeInteractionTests (.*)\]' (passed|failed) \((.*) seconds\)\./  \2  \1  (\3 s)/";
+    echo "-- observations written by the tests --"; grep -hE "LABNOTE" "$LOG" | sed -E "s/^.*LABNOTE /  /" | sort -u;
     if [ "$F" != "0" ] || [ $RC -ne 0 ]; then echo "-- failure details --"; grep -E "error:|Testing failed|\*\* TEST" "$LOG" | sed "s#$PWD/##" | sort -u | head -60; fi; } >> "$TESTS"
   note "RESULT interaction tests ($L): passed $P, failed $F$([ $RC -ne 0 ] && [ "$F" = "0" ] && echo " — xcodebuild exit $RC (see interaction-tests.txt)")"
   # keep the tail of the raw log small enough to publish
@@ -121,16 +132,25 @@ if [ -n "$STD" ]; then
   shoot "$U" "state-obsidian-noRecovery-2-graph" LAB_THEME=obsidian LAB_SCENARIO=noRecovery LAB_SCROLL=trends LAB_GRAPH_MODE=trends
   shoot "$U" "state-obsidian-qualitativeRecovery-2-graph" LAB_THEME=obsidian LAB_SCENARIO=qualitativeRecovery LAB_SCROLL=trends LAB_SELECT=5
   for T in obsidian arctic; do
-    for SH in mix recovery sleep consistency review; do shoot "$U" "sheet-$T-$SH" LAB_THEME=$T LAB_SHEET=$SH; done
+    for SH in mix recovery sleep consistency; do shoot "$U" "sheet-$T-$SH" LAB_THEME=$T LAB_SHEET=$SH; done
   done
-  for SH in day endurance strength coachWhy trendsInfo metric profile hub; do shoot "$U" "sheet-obsidian-$SH" LAB_THEME=obsidian LAB_SHEET=$SH; done
+  for SH in day endurance strength trendsInfo metric profile hub; do shoot "$U" "sheet-obsidian-$SH" LAB_THEME=obsidian LAB_SHEET=$SH; done
   shoot "$U" "sheet-obsidian-mix-cyclingOnly" LAB_THEME=obsidian LAB_SCENARIO=cyclingOnly LAB_SHEET=mix
   shoot "$U" "sheet-obsidian-mix-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser LAB_SHEET=mix
   shoot "$U" "sheet-obsidian-recovery-qualitative" LAB_THEME=obsidian LAB_SCENARIO=qualitativeRecovery LAB_SHEET=recovery
   shoot "$U" "sheet-obsidian-recovery-partial" LAB_THEME=obsidian LAB_SCENARIO=partialData LAB_SHEET=recovery
   shoot "$U" "sheet-obsidian-recovery-none" LAB_THEME=obsidian LAB_SCENARIO=noRecovery LAB_SHEET=recovery
   shoot "$U" "sheet-obsidian-sleep-nodata" LAB_THEME=obsidian LAB_SCENARIO=noSleep LAB_SHEET=sleep
-  for D in postponed accepted declined; do shoot "$U" "coach-obsidian-$D" LAB_THEME=obsidian LAB_SCROLL=cards LAB_DECISION=$D; done
+  # Coach: compact preview on Home, conversation timeline, proposal detail, decision states
+  for T in $THEMES; do shoot "$U" "coach-$T-conversation" LAB_THEME=$T LAB_SCREEN=coach; done
+  shoot "$U" "coach-obsidian-conversation-oldest" LAB_THEME=obsidian LAB_SCREEN=coach LAB_SCROLL=top
+  for T in obsidian arctic; do shoot "$U" "coach-$T-proposal" LAB_THEME=$T LAB_SCREEN=coach LAB_SHEET=proposal; done
+  shoot "$U" "coach-obsidian-proposal-closed" LAB_THEME=obsidian LAB_SCREEN=coach LAB_SHEET=proposalClosed
+  for D in postponed accepted declined; do
+    shoot "$U" "coach-obsidian-$D-conversation" LAB_THEME=obsidian LAB_SCREEN=coach LAB_DECISION=$D
+    shoot "$U" "coach-obsidian-$D-home" LAB_THEME=obsidian LAB_SCROLL=cards LAB_DECISION=$D
+  done
+  shoot "$U" "coach-obsidian-newUser-conversation" LAB_THEME=obsidian LAB_SCREEN=coach LAB_SCENARIO=newUser
   shoot "$U" "nav-obsidian-plan" LAB_THEME=obsidian LAB_SCREEN=plan
   shoot "$U" "nav-arctic-profile-lab" LAB_THEME=arctic LAB_SCREEN=lab
   for T in obsidian arctic highContrast; do shoot "$U" "gallery-$T-home21" LAB_THEME=$T LAB_SCREEN=gallery LAB_PAGE=home21; done
@@ -139,6 +159,7 @@ if [ -n "$STD" ]; then
     shoot "$U" "a11y-$T-AXL-1-top" LAB_THEME=$T
     shoot "$U" "a11y-$T-AXL-2-cards" LAB_THEME=$T LAB_SCROLL=cards
     shoot "$U" "a11y-$T-AXL-3-graph" LAB_THEME=$T LAB_SCROLL=trends LAB_SELECT=6
+    shoot "$U" "a11y-$T-AXL-4-coach" LAB_THEME=$T LAB_SCREEN=coach
     full "$U" "full-$T-AXL" LAB_THEME=$T
   done
   xcrun simctl shutdown "$U" >/dev/null 2>&1
@@ -157,12 +178,15 @@ if [ -n "$SMALL" ]; then
   shoot "$U" "small-obsidian-graph-trends" LAB_THEME=obsidian LAB_SCROLL=trends LAB_GRAPH_MODE=trends LAB_SELECT=5
   shoot "$U" "small-obsidian-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser
   shoot "$U" "small-obsidian-longName" LAB_THEME=obsidian LAB_SCENARIO=longName
+  shoot "$U" "small-obsidian-coach-conversation" LAB_THEME=obsidian LAB_SCREEN=coach
+  shoot "$U" "small-obsidian-coach-proposal" LAB_THEME=obsidian LAB_SCREEN=coach LAB_SHEET=proposal
   shoot "$U" "small-obsidian-sheet-recovery" LAB_THEME=obsidian LAB_SHEET=recovery
   shoot "$U" "small-obsidian-sheet-mix" LAB_THEME=obsidian LAB_SHEET=mix
   full "$U" "full-small-obsidian-newUser" LAB_THEME=obsidian LAB_SCENARIO=newUser
   xcrun simctl ui "$U" content_size accessibility-large >/dev/null 2>&1
   shoot "$U" "small-obsidian-AXL-1-top" LAB_THEME=obsidian
   shoot "$U" "small-obsidian-AXL-3-graph" LAB_THEME=obsidian LAB_SCROLL=trends LAB_SELECT=6
+  shoot "$U" "small-obsidian-AXL-4-coach" LAB_THEME=obsidian LAB_SCREEN=coach
   full "$U" "full-small-obsidian-AXL" LAB_THEME=obsidian
   xcrun simctl shutdown "$U" >/dev/null 2>&1
 fi

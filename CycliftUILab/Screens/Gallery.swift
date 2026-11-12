@@ -12,7 +12,7 @@ struct LabScreen: View {
     @State private var path: [String] = LabConfig.screen == "gallery" ? [LabConfig.page ?? "buttons"] : []
 
     static let pages: [(id: String, title: String, icon: String)] = [
-        ("home21", "Home v2.2 components", "sparkles"),
+        ("home21", "Home v2.3 components", "sparkles"),
         ("buttons", "Buttons", "hand.tap"),
         ("cards", "Cards", "rectangle.stack"),
         ("rings", "Circular indicators", "circle.dashed"),
