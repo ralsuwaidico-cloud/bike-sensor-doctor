@@ -43,6 +43,7 @@ firmware or existing document was changed to apply a ruling.
 | 33 | Automatic increases reach sessions by a second path that ignores the setting | Source reading 12 Nov: the strength planner writes the next load on each rebuild without consulting `autoAdapt`; the earlier audit described only the adaptation engine | *Awaiting owner* — correction proposal §3–§4 | Found while preparing the proposal | **Open** |
 | 34 | Which protective reductions may change a scheduled workout without approval | Correction proposal §5 (fourteen behaviours, advice or change) | *Awaiting owner* | — | **Open** |
 | 35 | Metric questions A–F (moved-in-advance, removed sessions, late fulfillment, partial threshold) | Metrics proposal §5 | *Awaiting owner* | — | **Open** |
+| 36 | Plan visual direction: A, B or C | Plan v0.4 alternatives; my recommendation was C | **B — Athletic Dynamic. Do not switch to C unless specifically approved** (12 Nov) | Owner's preference for stronger discipline colour and athletic character | Decided · In specification v0.5 · static only, not built |
 
 ## Summary of what is still unresolved
 

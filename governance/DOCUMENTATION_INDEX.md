@@ -27,7 +27,7 @@ project (reference copies and documents not yet in GitHub).
 | **Home** — earlier design rounds | `ui-lab/*` (v2), `ui-lab/home-v2.1/*` | project | Historical (proposed label; not marked Superseded) |
 | **Current approved Home specification** | **None.** No UI Lab Home version has been formally approved | — | — |
 | **Plan** — shipped behaviour | Code on rel; read-only audit `ui-lab/plan/PLAN_CURRENT_UI_AUDIT.md` | project | Current Draft (audit) |
-| **Plan** — design | `product/plan/PLAN_V2_SPECIFICATION.md` v0.4 (+ `product/plan/wireframes/`, `product/plan/visual-v04/`) | gov | Current Draft |
+| **Plan** — design | `product/plan/PLAN_V2_SPECIFICATION.md` v0.5 (+ `product/plan/wireframes/`, `product/plan/visual-v04/`, `product/plan/visual-v05-B/`) | gov | Current Draft |
 | **Coach** — automatic adjustments audit and correction plan | `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` | gov | Current Draft (plan only) |
 | **Coach** — automatic adaptation correction proposal (two code paths; protective reductions) | `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` v0.1 | gov | Pending Review (proposal only) |
 | **Plan** — UI Lab implementation scope | `product/plan/PLAN_UI_LAB_SCOPE.md` v0.1 | gov | Pending Review (not started) |
@@ -68,7 +68,7 @@ project (reference copies and documents not yet in GitHub).
 | `governance/DOCUMENTATION_INDEX.md` | gov `governance/DOCUMENTATION_INDEX.md` | 0.3 | 12 Nov 2026 |
 | `governance/CONFLICT_REGISTER.md` | gov `governance/CONFLICT_REGISTER.md` | 0.3 | 12 Nov 2026 |
 | `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.2 | 12 Nov 2026 |
-| `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.4 | 12 Nov 2026 |
+| `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.5 | 12 Nov 2026 |
 | `product/plan/PLAN_UI_LAB_SCOPE.md` | gov `product/plan/PLAN_UI_LAB_SCOPE.md` | 0.1 | 12 Nov 2026 |
 | `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` | gov `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` | 0.1 | 12 Nov 2026 |
 | `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` | gov `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` | 0.1 | 12 Nov 2026 |

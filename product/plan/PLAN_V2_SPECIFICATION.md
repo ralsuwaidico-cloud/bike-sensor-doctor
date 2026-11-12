@@ -1,6 +1,6 @@
 # Plan v2.0 — product and UX specification
 
-Status: **Current Draft** · Version 0.4 · 12 Nov 2026 · Level 3 (product specification)
+Status: **Current Draft** · Version 0.5 · 12 Nov 2026 · Level 3 (product specification)
 Source: `docs/cyclift-governance`, `product/plan/PLAN_V2_SPECIFICATION.md`
 Basis: owner brief "Plan Tab Redesign v2.0", the owner's reviews of v0.1 and v0.2 (all 12 Nov), Master Project
 Instructions v2.0, Brand Book v0.2 (current design baseline).
@@ -32,6 +32,19 @@ Companion documents (v0.3): `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md`
 | 9 | Ask Coach uses prepared, context-specific options until two-way messaging exists | §11 |
 | 10 | Automatic increases in load, volume or frequency require approval; existing behaviour audited, correction planned, no code changed | §11, `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` |
 | G | Past-session Quick log moves to Train; no functionality is removed | §9, §14 |
+
+## Decisions recorded from the owner's review of the v0.4 visuals (12 Nov)
+
+| # | Decision | Where applied |
+|---|---|---|
+| V1 | **B — Athletic Dynamic is the selected visual direction.** C is not to be used unless specifically approved | §22.5, §23 |
+| V2 | Workout structure bars appear only where actual prescription data supports them | §22.4 |
+| V3 | A compact **Add a goal** action sits inside the program area — not a separate card | §23.1 |
+| V4 | Adding a sport is not the same as creating a goal | §23.2 |
+| V5 | Exactly one compact Coach suggestion row, with a specific summary, only when a proposal is actionable; no space reserved otherwise; it opens the shared proposal detail | §23.4 |
+| V6 | Planning intelligence lives behind contextual screens, never as landing-screen widgets, and is marked implemented, proposed or future | §23.5 |
+
+Static screens for review: `visual-v05-B/B1…B6`. **Awaiting visual approval — no UI Lab code was written.**
 
 ## Visual direction recorded from the owner's review of v0.3 (12 Nov)
 
@@ -829,8 +842,9 @@ bars are sample data.
 | Strength | Most sessions visible; calmest | Most athletic and distinctive | Rich without crowding; discipline colour stays meaningful |
 | Weakness | Closest to the v0.3 look; least character | Colour is loud; amber wash sits close to the warning colour; fewest rows visible | Fewer rows visible than A |
 
-**Recommendation: C.** It gives the depth and character asked for while keeping colour restrained enough that
-discipline and status remain distinguishable — the open Brand Book item on amber versus warning is aggravated by B.
+My recommendation was C. **The owner selected B (12 Nov); B is the direction.** One point carried forward from the
+comparison: B's amber strength wash sits close to the warning colour, so warnings in B always carry the ⚠ mark and
+a word, never colour alone (Brand Book §15 open item).
 
 ### 22.6 Cost in space — stated plainly
 The circular scroller is 24 pt taller than the v0.3 date strip. On the small iPhone, with a suggestion row showing,
@@ -850,6 +864,93 @@ the Program screen and stays Future with programs.
 3. Is two-and-a-bit rows on the small iPhone acceptable for the richer look, or should small screens use the compact row of A?
 4. Week-by-week snapping (drawn), or free day-by-day scrolling?
 
+## 23. Plan in direction B — goals, Coach entry, planning intelligence (v0.5 draft)
+
+Screens: `visual-v05-B/B1` Weekly Calendar · `B2` Recurring Plan · `B3` Add a goal sheet · `B4` goal setup and
+program preview · `B5` Coach planning proposal · `B6` small iPhone. Obsidian and Arctic. Sample data throughout.
+
+Status words used below: **Implemented** = in the production app today (read from source, not re-tested here) ·
+**Proposed** = designed here, buildable on existing data, not built · **Future** = needs capabilities that do not exist.
+
+### 23.1 Add a goal — placement
+A pill inside the program row, at its right edge ("+ Add a goal"). The row itself still opens Goal & Program. It adds
+**no height** to the landing screen. The pill is 32 pt tall with a 44 pt touch area.
+
+### 23.2 Add a goal — the sheet (B3)
+| Choice | What it starts | Status |
+|---|---|---|
+| Improve general fitness | Goal set-up with existing goal types | Implemented as a goal type; the sheet is Proposed |
+| Build strength or muscle | The same | Implemented as goal types; sheet Proposed |
+| Improve endurance or cycling performance | The same (endurance, power, sprint, climbing) | Implemented as goal types; sheet Proposed |
+| Prepare for an event | Event set-up (B4) | **Future.** Cycling events first; marathon, running races and triathlon need running and swimming, which the app does not support |
+| Health target as I age | A target on a **measured or entered value the app really has** (for example training sessions per week, weekly training time, strength sessions per week). No biological age, no age score, no prediction | **Future** — the list of supported values must be agreed first |
+| Custom goal | A named goal with the athlete's own words, mapped to priorities by the athlete | **Future** |
+| *Not a goal:* Add a sport or discipline | Adds a kind of session to the plan; it changes what can be scheduled, not what the athlete is aiming for | **Future** (running is next under Coach Decision 11) |
+
+In a build, a choice is shown only when it works; the picture shows the intended complete sheet.
+The sheet's subtitle states the goals the athlete already has.
+
+### 23.3 Goal set-up and program preview (B4)
+1. **Set-up** asks only what is needed: the goal's details · **priority** against existing goals (primary or
+   secondary — one primary at a time) · and shows what the plan will use: time available (from Availability),
+   recent training (from logs), and any entered values. A missing value is shown as "Not entered"; it is never guessed.
+2. **Feasibility** is stated in words, from available time, weeks to the date and logged training — "Fits your time,
+   with two changes", "Fits only if cycling takes priority", or "Does not fit: here is the nearest plan that does".
+   It is a scheduling assessment, **not a performance prediction**, and says so.
+3. **Preview** lists how the recurring plan and future schedule would change, what is kept because the athlete set
+   it, and any choice the athlete must make. Phases appear as a horizontal row on this screen only.
+4. **Nothing is applied without approval.** Approve · Adjust · Not now. Completed sessions never change.
+
+Status: priorities between goals — Implemented (primary goal exists). Feasibility from weekly time — partly
+Implemented (budget and fit report exist for the week; nothing for a dated goal). Event phases, milestones and the
+preview of a program — Future.
+
+### 23.4 Coach suggestion row (B1, B5)
+- At most one row, between the date scroller and the day header, 44 pt high. Absent — with no gap — when there is no
+  actionable proposal (B1, third phone).
+- It carries a **specific** summary under a small "Coach suggests" label: "Move Thursday's ride to Friday" ·
+  "Reduce next week's planned volume" · "Adjust training for your new event" · "Resolve Saturday's time conflict".
+  With several proposals: the most time-critical one, plus "+2".
+- Tapping opens the shared proposal detail (B5): what would change · why, in plain words · a preview on the date
+  scroller · other options · Approve · Not now · Decline. It is the same component as in the Coach conversation.
+  It is not Home's insight card and not a chat.
+
+Status: proposals with approval — Implemented for session-level changes (rules-based). The specific-summary row and
+the shared detail — Proposed. Volume and event proposals — Future.
+
+### 23.5 Planning intelligence — where each capability lives
+| Capability | Where the athlete meets it | Status |
+|---|---|---|
+| Primary and secondary goal priorities | Goal & Program; goal set-up | Implemented (primary goal); explicit secondary ranking Proposed |
+| Goal feasibility from available time | Goal set-up › feasibility; Recurring Plan warnings | Partly Implemented (weekly fit report); dated-goal feasibility Future |
+| Event-based program phases | Goal & Program › phases (horizontal) | Future |
+| Weekly planning review | Offered through the Coach row when the coming week needs attention; a sheet | Future |
+| Shorter workout alternatives | Session › Replace workout; missed-session choices; proposal "other options" | Partly Implemented (alternatives list); linked shortened replacements Future |
+| Program milestones | Goal & Program | Future |
+| Coach-assisted future adjustments | Coach row → proposal detail | Implemented for session-level rules; program-level Future |
+| Protection of priority sessions in a conflict | Inside feasibility and proposals: when two sessions compete for time, the one serving the primary goal is kept and the other is offered shorter, moved or dropped — always as a proposal | Proposed as a rule; today the fit report lists conflicts without ranking by goal (to be confirmed in code before building) |
+
+None of these appears as a permanent widget on the landing screen.
+
+### 23.6 Screen density (measured in the static mock-ups, not on a device)
+Row heights in B: session card about 73 pt with 8 pt gaps; Coach row 44 pt; date scroller 82 pt.
+
+| Device | With Coach row | Without Coach row |
+|---|---|---|
+| Small iPhone (375 × 667) | **2 full workout rows**, and most of a third, above the dock | **3 full rows** |
+| Standard iPhone (393 × 852) | 4 full rows | 5 full rows |
+
+Add a goal costs no height. The Coach row costs 50 pt only while a proposal exists. On the small iPhone the
+Recurring Plan ends 33 pt above the dock (21 pt above the v0.3 "dock line"), with seven 46 pt rows and the
+availability row; text sizes and 44 pt touch targets are unchanged. A day with three or more sessions scrolls on the
+small iPhone; the first two sessions and Add session are always visible.
+
+### 23.7 Questions for visual approval
+1. Is two full rows (with a Coach suggestion) acceptable on the small iPhone, or should the Coach row collapse to a
+   one-line 36 pt strip there?
+2. Should choices that do not work yet be hidden from the Add a goal sheet (recommended), or shown as "coming later"?
+3. Which measured values may a "health target as I age" use? None is proposed as approved.
+
 ## Change log
 
 | Version | Date | Change |
@@ -858,3 +959,4 @@ the Program screen and stays Future with programs.
 | 0.2 | 12 Nov 2026 | Owner decisions 5–10 applied; goals-to-schedule chain (§4); landing reduced to the approved minimum; explicit scopes; missed-session data semantics and links (§6.7); Move to any day; Coach limited to one row and prepared options; Quick log to Train; Future capabilities removed from the main wireframes and collected in W8; acceptance criteria and unresolved questions rewritten |
 | 0.3 | 12 Nov 2026 | Owner decisions R1–R7 applied: three separate measures and no double counting (§6.7); shortened replacements recorded as done (§6.7, §15); soft conflicts warn and can be overridden, hard constraints block (§6.6); move horizon is the active program; Skip and Remove both defined (§6.8); no retroactive reversal (§11, §12); Recurring Plan redesigned for the small iPhone with progressive disclosure and contextual warnings (§7, W4, W9a, W9b); questions regrouped with recommended defaults (§20); three companion documents added |
 | 0.4 | 12 Nov 2026 | Visual direction added as a draft (§22): circular date scroller, picker carousel, structure bar, three static alternatives with a recommendation; functional content unchanged |
+| 0.5 | 12 Nov 2026 | Direction B selected by the owner; Add a goal, Coach suggestion row, goal set-up and program preview, planning-intelligence map with implemented / proposed / future marks, density assessment (§23); static screens B1–B6 |
