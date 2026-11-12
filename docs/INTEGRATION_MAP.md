@@ -94,6 +94,37 @@ Graph behaviour that is new production work (Calculation / Mapping, no science n
 7 and 28 days with explicit `nil` for missing days; the selected-day value panel; the daily sheet contents.
 Nothing in the graph is a stress, strain or readiness score.
 
+## Home v2.3 additions (12 Nov 2026)
+
+### Coach conversation — data model and integration points
+
+The conversation is a **view over coach events**. It does not replace or rewrite the rule-based coach. The prototype
+shows sample history held in memory.
+
+| UI model (prototype) | Meaning | Production source today | What is missing |
+|---|---|---|---|
+| `CyCoachEntry` kind `observation` | Something the coach noticed | Coach findings / session results (rule-based engines) | A stored, dated event per finding (today most are computed for display and not kept) |
+| kind `recommendation` | Advice without a plan change | Coach item reasons | Same: persistence with a date |
+| kind `recovery` | Recovery and fatigue advice | `RecoveryAnalysis` wording (advice only) | Persistence; it must stay advice and never raise training |
+| kind `proposal` + `CyCoachProposal` | A proposed plan change: changes, reason, benefit, impact, status | Pending proposals and the session change review | Mapping of "benefit" and "impact" texts; a stable proposal id that survives the decision |
+| kind `decision` | The athlete's approve / postpone / decline | Proposal apply, dismissed adaptations | A dated record of each decision (declines are remembered today only as exact keys) |
+| kind `outcome` | What happened after the decision | Plan versions ("Plan changes") | Link from a plan version back to the proposal that caused it |
+| kind `question` / `answer` | Two-way messaging | **Nothing** | Future capability: needs a design for scope, safety and, if any cloud model is used, explicit consent (Decision 3). Not part of this prototype |
+| `CyCoachConversation.preview` | Home's "latest relevant insight" | — | The same three-step rule: open proposal → newest recommendation or recovery advice → newest observation |
+
+New production pieces needed (all Calculation / Mapping — no science): a `CoachEvent` store (id, date, kind, text,
+proposal id, author) written by the existing engines when they produce a finding, proposal or acknowledgement; a
+retention rule; migration is additive (no existing data changes). The approval rule is unchanged: **nothing in the
+plan changes without the athlete's approval**, and increases are never applied automatically (Decision 1).
+
+### Other v2.3 items
+
+| Prototype element | Category | Production source / what is missing |
+|---|---|---|
+| Sleep target chosen by the athlete | Mapping (new user setting) | A `sleepTargetMinutes` setting, optional. No sleep-need calculation, no recommendation |
+| Recovery percentage ring | **Future dependency — Validation** | The percentage ring is the intended future design. Required before it can show a number in the app: (1) a documented scoring method, (2) its inputs (sleep, HRV, resting HR and possibly training load) with rules for missing inputs, (3) validation against data, (4) owner approval, (5) integration with the status-word, partial and unavailable fallbacks kept. Until then production shows the fallbacks only. No algorithm was invented in this refinement |
+| Sheet presentation guard | Calculation (UI logic) | A single "present" function with a pending slot and the sheet's dismissal callback; the same pattern should be used in the app's Home when Stage B is authorised. Relevant to production Defect 6 (a nested sheet staying on screen) — to be assessed there, not assumed fixed |
+
 ## C. Things the prototype deliberately does not do
 
 - It does not compute any metric. Every number and status word is sample text.

@@ -1,4 +1,4 @@
-# Cyclift UI Lab — component inventory (Home v2.2)
+# Cyclift UI Lab — component inventory (Home v2.3)
 
 **Prototype only.** Standalone project on branch `proto/ui-lab`; no production code, data or engine is used.
 Status of every item: **built in the prototype, awaiting the owner's review — nothing is approved.**
@@ -70,6 +70,22 @@ lightness changes with the theme. No component contains a colour value; all read
 | Metrics | `CyMetricGrid` | TrendsAndDock.swift | `[CyMetricTile]`, isLoading | `onTile` | populated, missing ("—" / "No data"), loading, one column at large text |
 | Navigation | `CyFloatingDock` | TrendsAndDock.swift | selection binding, four `CyDockItem`s, centre title / icon / badge | `onCentre` | floating capsule, sliding highlight, raised centre action, six themes |
 
+## Changed or added in Home v2.3 (owner's final refinement, 12 Nov 2026) — all awaiting sign-off
+
+| Group | Component | File | What it is | Inputs | Actions | States |
+|---|---|---|---|---|---|---|
+| Coach | **`CyCoachPreview`** (new; replaces `CyCoachBanner` on Home) | CoachConversation.swift | Compact, text-only, tappable preview. No action buttons | `CyCoachPreviewModel?` (text, needsDecision), empty text, loading | `onOpen` | needs decision, insight, long text (truncated), empty, loading |
+| Coach | **`CoachConversationScreen`** (new) | CoachConversation.swift | Timeline of coach events grouped by date; sample history; non-functional message field | `CyCoachConversation` (entries, proposals) | close; open proposal | populated, single note, empty; proposal pending / postponed / accepted / declined |
+| Coach | **`CoachProposalSheet`** (new; same content as `CyReviewSheet` plus status and history) | CoachConversation.swift | What / why / benefit / impact / history / decisions | `CyCoachProposal`, its history | Approve, Not now, Decline, close | open, postponed, closed (read-only) |
+| Coach | Models `CyCoachEntry`, `CyCoachEntryKind` (8 kinds), `CyCoachProposal`, `CyProposalStatus`, `CyCoachConversation` (`preview`, `days`, `history(of:)`, `decide`) | CoachConversation.swift | The UI data model for the timeline | — | — | — |
+| Sleep | `SleepSheet` target section; `CySleepBar` "Target not set · Set" | Sheets21.swift, HomeV22Components.swift | The athlete sets, changes or removes their own target (five choices). Nothing is recommended | `CySleepModel` (target now optional and editable) | `onSetTarget` | set, not set |
+| Schedule | `CySessionMark`, `CyCompactSchedule` | HomeV22Components.swift | Larger, higher-contrast marks; more space between two sessions | unchanged | unchanged | unchanged |
+| Indicators | `CyIndicatorRow` | HomeV22Components.swift | Mix caption "Ride : lift · time done" | unchanged | unchanged | unchanged |
+| Trends | `CyTrendsGraph` | Graph.swift | Selected date in accent colour and larger values; compact panel; explanatory footnotes moved to the info sheet (only the 7-day-total note stays, in the 4-week view) | unchanged | unchanged | unchanged |
+| Shell | Sheet presentation guard (`present`, `sheetDismissed`) | LabApp.swift, CoachConversation.swift | One entry point for sheets; queues a request made during a dismissal; ignores a request while a sheet is up | — | — | — |
+
+No longer used on Home (kept in the file, not deleted): `CyCoachBanner`, `CyReviewSheet` (its content lives on in `CoachProposalSheet`), `CyTrendsModule`.
+
 ## Changed or added in Home v2.2 (owner revision, 12 Nov 2026) — all awaiting review
 
 No new prototype project and no parallel library: v2.2 changes existing components in place and adds one (the graph).
@@ -97,13 +113,15 @@ Superseded on Home (kept in the library and gallery, not deleted): `CyRing` / `C
 
 | Screen | File | Status |
 |---|---|---|
-| Home v2.2 | Screens/Home21Screen.swift (+ Sheets21.swift for the local detail sheets) | Prototype built, awaiting review |
+| Home v2.3 | Screens/Home21Screen.swift (+ Sheets21.swift for the local detail sheets) | **Ready for owner sign-off** (not production approved) |
+| Coach conversation | Components/CoachConversation.swift | Prototype built with sample history, awaiting review |
 | Lab (theme and scenario switches, gallery index) | Screens/Gallery.swift | Prototype tool, not a product screen |
 | Component gallery (incl. "Home v2.2 components") | Screens/Gallery.swift, Gallery21.swift | Prototype tool |
-| Plan, Training Hub, Progress, Profile, Onboarding | — | **Not started** (owner instruction: stop after Home v2.2) |
+| Plan | docs/plan/ (audit + proposal only) | **Audit and proposed structure delivered; no prototype** |
+| Training Hub, Progress, Profile, Onboarding | — | **Not started** |
 
 ## Tests
 
 | Target | File | What it is |
 |---|---|---|
-| `CycliftUILabUITests` | UITests/HomeInteractionTests.swift | 22 interaction tests that drive the prototype in the iOS Simulator. Prototype only: they share nothing with the production test suite |
+| `CycliftUILabUITests` | UITests/HomeInteractionTests.swift | 31 interaction tests that drive the prototype in the iOS Simulator. Prototype only: they share nothing with the production test suite |
