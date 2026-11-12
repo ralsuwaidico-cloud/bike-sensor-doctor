@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.1 · 12 Nov 2026
+Status: Current Draft · Version 0.2 · 12 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -18,6 +18,16 @@ firmware or existing document was changed to apply a ruling.
 | 9 | Load Balance on Home | Decision 10 Nov §2 (status words on Home) vs Home v2.1–v2.3 (Training Mix; load engine kept as analytics) | Home revisions by the owner replaced it on Home | Later owner instruction | Decided in effect; **a dated note on the 10 Nov decision record is proposed, not made** |
 | 10 | Names | Bike Sensor Doctor → Bike Computer → Athletics → Cyclift; repository README and app target still use older names | Public name is Cyclift; internal code names are historical and are not renamed | Renaming code is out of scope | Applied in docs; no change to code |
 | 11 | Typography across devices | iPhone: system font (rounded for numerals). Watch design: Inter, provisional. Waveshare firmware: bitmap fonts | Record each as it is | — | Recorded; Watch font **unverified** |
-| 12 | **Discipline colours differ between three iPhone token sets** | Legacy `BC` (accent teal, strength purple) · production `CyTheme` (cycling indigo-blue, strength rose) · UI Lab six themes (endurance blue, strength amber) | **Open** | — | **Unresolved — needs owner decision before any theme work reaches production** |
+| 12 | Discipline colours differ between three iPhone token sets | Legacy `BC` (accent teal, strength purple) · production `CyTheme` (cycling indigo-blue, strength rose) · UI Lab six themes (endurance blue, strength amber) | **Adopt the UI Lab semantic direction for future six-theme development: endurance blue / cyan, strength amber / warm orange, recovery green; status colours independent of discipline colours. Use the existing documented theme values; do not invent or modify production tokens; prepare a migration impact assessment; do not implement it** (12 Nov) | One semantic language for the six themes | Decided · Applied in Brand Book v0.2 §4.5 · Impact assessed in `brand/DISCIPLINE_COLOUR_MIGRATION_IMPACT.md` · **Migration not authorised, not implemented**. Residual question → item 15 |
 | 13 | Six themes on the Watch have names but no token values | Decision 10 Nov ("watch token values unchanged; mapping is a documentation task") | **Open** | — | **Unresolved — hardware-design workstream** |
 | 14 | Two coach documents describe overlapping behaviour | `ios/ADAPTIVE_COACH.md`, `ios/BEHAVIOUR_CONTRACT.md` vs `planning/adaptive-lifestyle-coach/A–E` | Implemented behaviour: the two repository documents. Future direction: A–E + Decisions 1–12 | Keeps implemented and planned apart | Applied in the index |
+| 15 | "Status independent of discipline": some prototype values coincide | UI Lab tokens: `recovery` = `success` in Arctic, Sandstone, High Contrast; `strength` and `warning` are both amber-family in all six | **Open** | — | **Unresolved — owner decision** (accept, or separate the values in a later theme revision). No token changed |
+| 16 | Typography, spacing and radius scales differ slightly between production and prototype | `CyTheme` (4–24 incl. 20; radii 28 / 22 / 16 / 12), `DS` (corner 14), UI Lab (4–24; radii 22 / 16 / 10) | **Keep provisional until the existing component systems are assessed** (12 Nov) | Avoid unifying blind | Decided to defer · Assessment not started |
+| 17 | Logo, wordmark, app icon have no specification | No source document found | **Keep as open design items** (12 Nov) | Not to be invented | Open by decision |
+| 18 | Brand Book approval | v0.1 reviewed 12 Nov | Parts approved (philosophy, navigation responsibilities, Coach terminology, data-integrity rules, cross-device architecture); **the book is not Current Approved** until the revised version is explicitly approved | — | v0.2 issued as Current Draft |
+| 19 | Documentation branch has no shared history with the application branches | `docs/cyclift-governance` created as an orphan branch | **Open** — explanation and recommendation in `governance/DOCUMENTATION_BRANCH_ARCHITECTURE.md`; no recreate / delete / merge / move without approval | — | **Unresolved — owner decision** |
+
+## Summary of what is still unresolved
+
+13 (Watch theme values) · 15 (coinciding status / discipline values) · 19 (documentation branch form) ·
+the Project Instructions edits for items 1, 3, 4, 5 (proposed, not made) · grading thresholds awaiting rule-by-rule review (item 2).

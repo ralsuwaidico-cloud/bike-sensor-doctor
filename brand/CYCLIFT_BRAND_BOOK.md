@@ -1,12 +1,29 @@
 # Cyclift Brand Book
 
-Status: **Current Draft** · Version 0.1 · 12 Nov 2026 · Level 2 (below the Project Instructions, above product specifications)
+Status: **Current Draft** · Version 0.2 · 12 Nov 2026 · Level 2 (below the Project Instructions, above product specifications)
+**Not Current Approved.** The owner approved parts of v0.1 on 12 Nov (listed below); the book as a whole stays a draft until the owner approves a revised version explicitly.
 Source: `docs/cyclift-governance` branch, `brand/CYCLIFT_BRAND_BOOK.md`
 
 How to read this book: every rule is marked **[Instructions]** (taken from the Master Project Instructions v2.0),
 **[Decision]** (dated owner decision), **[Production]** (extracted from the app's code as it is today),
 **[Prototype]** (exists only in the UI Lab), **[Watch design]** (hardware-design documents) or **[Proposed]** (new in
 this draft, awaiting approval). No token value in this book was invented: each table names the file it was read from.
+
+## Approval state of each part (owner review of v0.1, 12 Nov 2026)
+
+| Part | State |
+|---|---|
+| §1 Identity and mission · §2 Product principles | **Approved content** |
+| §3 Voice and wording, including "Coach" and rules-based | **Approved content** |
+| §9 Navigation responsibilities | **Approved content** |
+| §11 Cross-device architecture (four surfaces, two hardware workstreams) | **Approved content** |
+| §12 Metrics and scientific integrity (data-integrity rules) | **Approved content** |
+| §4.5 Discipline colour direction for future six-theme work | **Approved direction** (new in v0.2) — production tokens unchanged |
+| §5 Grading rule | Approved rule (decision 2); the listed thresholds remain flagged, none approved |
+| §4 theme token tables | Factual extracts; the six themes remain prototype-only |
+| §6 Typography · §7 Spacing, radii | **Provisional** — unification waits for an assessment of the existing component systems |
+| Logo, wordmark, app icon | **Open design items** — nothing defined |
+| §8 Components · §10 Accessibility · §13–14 | Draft, not yet reviewed individually |
 
 ---
 
@@ -105,13 +122,28 @@ strength purple, seven zone colours.
 
 **These are prototype values.** They become brand tokens only when the owner approves the theme set for production.
 
-### 4.4 Open theme conflicts (see the conflict register)
+### 4.4 Open theme item
 
-- **Discipline colours disagree** between the three iPhone sets: strength is purple (`BC`), rose (`CyTheme`) and amber
-  (UI Lab); cycling is teal-accented (`BC`), indigo-blue (`CyTheme`) and blue (UI Lab). Register 12 — unresolved.
-- **The six themes have no Watch token values** yet. Register 13 — unresolved.
+- **The six themes have no Watch token values** yet. Register 13 — unresolved (hardware-design workstream).
 
-### 4.5 Rules that hold in every theme
+### 4.5 Discipline colour direction for six-theme development [Decision 12 Nov, register 12]
+
+| Meaning | Direction | Values to use |
+|---|---|---|
+| Endurance | Blue / cyan | The `endurance` row of table 4.3, per theme |
+| Strength | Amber / warm orange | The `strength` row of table 4.3, per theme |
+| Recovery | Green | The `recovery` row of table 4.3, per theme |
+| Status (success, warning, danger) | **Independent of discipline colours** | The `success`, `warning`, `danger` rows of table 4.3 |
+
+This is the direction for **future** six-theme work. It changes nothing in production: the app keeps its present
+tokens (table 4.2 — cycling indigo-blue, strength rose) until a migration is separately authorised. The impact of
+that migration is assessed in `brand/DISCIPLINE_COLOUR_MIGRATION_IMPACT.md`; it is not implemented.
+
+Two points the decision leaves open, recorded in §15: in table 4.3 the `recovery` and `success` values are identical
+in Arctic, Sandstone and High Contrast, and `strength` (amber) and `warning` (amber-yellow) are close in every theme —
+so "independent" is true of the tokens but not yet of every value.
+
+### 4.6 Rules that hold in every theme
 
 - A colour's **meaning never changes with the theme**; only lightness does. [Prototype; Watch design V5]
 - Accent is restrained and never reduces metric readability or status meaning. [Watch design V4]
@@ -139,7 +171,9 @@ Thresholds found in earlier documents and **flagged for review — not approved 
 | Interval completion: in target light blue · outside yellow · cut short red | Judges a cut-short interval as failure |
 | Records: new record green · within 2 % light blue | The 2 % figure has no documented basis |
 
-## 6. Typography
+## 6. Typography — provisional
+
+Recorded as found. No unification is decided (see §7).
 
 | Surface | Rule | Source |
 |---|---|---|
@@ -160,7 +194,8 @@ Rules: no fixed point sizes for text on iPhone; no meaning carried by size alone
 | Minimum touch target | 44 pt | 44 pt |
 | Dock clearance | 128 pt at the bottom of every scrolling page | Content inset by the dock height |
 
-The two scales are close but not identical; they are to be unified when themes reach production. [Proposed]
+**Provisional.** The two scales are close but not identical. Unification is not decided: it waits for an assessment of
+the existing component systems (`CyTheme` components, the older `BC` / `DS` styles, and the UI Lab library). [Decision 12 Nov]
 
 ## 8. Components and patterns
 
@@ -232,10 +267,21 @@ review, testing and explicit authorisation. Prototype approval does not mean the
 Other products (WHOOP, Garmin, RestorTrain) may be studied for interaction patterns. Their scoring methods, visual
 identity and interfaces are not copied. No claim of superiority without evidence. [Instructions §8]
 
-## 15. What this draft does not settle
+## 15. Remaining unresolved items
 
-1. Discipline colours for production (register 12).
-2. Watch token values for the six themes (register 13).
-3. Which grading rules, if any, are approved (section 5).
-4. One spacing and radius scale for production (section 7).
-5. A logo, wordmark and app-icon specification — **no source document was found**; not invented here.
+| # | Item | Owner of the next step |
+|---|---|---|
+| 1 | Watch token values for the six themes (register 13) | Hardware-design workstream |
+| 2 | Recovery vs success share one value in three themes; strength vs warning are close in all six (§4.5) — acceptable, or should status values be separated? | Owner decision; no token is changed here |
+| 3 | Which earlier grading thresholds, if any, are approved (§5) | Owner review, rule by rule |
+| 4 | Typography, spacing and radius unification (§6, §7) | After the component-system assessment |
+| 5 | Logo, wordmark and app icon — no source document exists | Open design items |
+| 6 | Production migration to the discipline direction and to six themes | Not authorised; impact assessed only |
+| 7 | §8 Components, §10 Accessibility, §13–14 not yet reviewed section by section | Owner review |
+
+## Change log
+
+| Version | Date | Change |
+|---|---|---|
+| 0.1 | 12 Nov 2026 | First draft |
+| 0.2 | 12 Nov 2026 | Owner decisions recorded: approved parts table; discipline colour direction (§4.5); typography, spacing and radii marked provisional; logo and icon kept open; unresolved list updated |

@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 0.1 · 12 Nov 2026
+Status: Current Draft · Version 0.2 · 12 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -15,7 +15,10 @@ project (reference copies and documents not yet in GitHub).
 | Subject | Authoritative file | Location | Status |
 |---|---|---|---|
 | Governance, mission, priorities | Master Project Instructions v2.0 | Project settings | Current Approved |
-| Brand, product principles, design system | `brand/CYCLIFT_BRAND_BOOK.md` | gov | Current Draft |
+| Brand, product principles, design system | `brand/CYCLIFT_BRAND_BOOK.md` (v0.2) | gov | Current Draft — parts approved 12 Nov; not Current Approved |
+| Discipline-colour migration impact | `brand/DISCIPLINE_COLOUR_MIGRATION_IMPACT.md` | gov | Current Draft (assessment only) |
+| Documentation branch form | `governance/DOCUMENTATION_BRANCH_ARCHITECTURE.md` | gov | Current Draft (recommendation) |
+| Proposed Instruction edits | `governance/PROPOSED_PROJECT_INSTRUCTION_CHANGES.md` | gov | Current Draft (proposal) |
 | Contradictions and rulings | `governance/CONFLICT_REGISTER.md` | gov | Current Draft |
 | Owner decisions | `decisions/2026-11-10_home-v2-and-themes.md`, `decisions/2026-11-11_adaptive-lifestyle-coach-decisions-1-12.md` | project | Current Approved |
 | **Home** — shipped behaviour | Production Home in build 216; map `ios/HOME_V2_IMPLEMENTATION_MAP.md` | rel | Current Approved (shipped baseline) |
@@ -24,7 +27,8 @@ project (reference copies and documents not yet in GitHub).
 | **Home** — earlier design rounds | `ui-lab/*` (v2), `ui-lab/home-v2.1/*` | project | Historical (proposed label; not marked Superseded) |
 | **Current approved Home specification** | **None.** No UI Lab Home version has been formally approved | — | — |
 | **Plan** — shipped behaviour | Code on rel; read-only audit `ui-lab/plan/PLAN_CURRENT_UI_AUDIT.md` | project | Current Draft (audit) |
-| **Plan** — design | Plan v2.0 specification (to be drafted from the owner's brief of 12 Nov). `ui-lab/plan/PLAN_V1_PROPOSAL.md` covers the weekly calendar only | project | v1 proposal: Pending Review |
+| **Plan** — design | `product/plan/PLAN_V2_SPECIFICATION.md` (+ `product/plan/wireframes/`) | gov | Current Draft |
+| **Plan** — earlier proposal (weekly calendar only) | `ui-lab/plan/PLAN_V1_PROPOSAL.md` | project | Pending Review (not marked Superseded) |
 | **Coach** — implemented behaviour | `ios/ADAPTIVE_COACH.md`, `ios/BEHAVIOUR_CONTRACT.md`, `ios/SAFETY_CHANGES_RC3.md` | rel | Current Approved (describes shipped rules) |
 | **Coach** — audit of what exists | `planning/adaptive-lifestyle-coach/A_CURRENT_AI_COACH_AUDIT.md` | project | Current Approved (audit accepted with Decisions 1–12) |
 | **Coach** — future direction | `planning/adaptive-lifestyle-coach/B…E` + Decisions 1–12 | project | Current Approved as planning; **not implemented** |
@@ -57,9 +61,10 @@ project (reference copies and documents not yet in GitHub).
 
 | Project path | Source | Version | Last synchronised |
 |---|---|---|---|
-| `governance/DOCUMENTATION_INDEX.md` | gov `governance/DOCUMENTATION_INDEX.md` | 0.1 | 12 Nov 2026 |
-| `governance/CONFLICT_REGISTER.md` | gov `governance/CONFLICT_REGISTER.md` | 0.1 | 12 Nov 2026 |
-| `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.1 | 12 Nov 2026 |
+| `governance/DOCUMENTATION_INDEX.md` | gov `governance/DOCUMENTATION_INDEX.md` | 0.2 | 12 Nov 2026 |
+| `governance/CONFLICT_REGISTER.md` | gov `governance/CONFLICT_REGISTER.md` | 0.2 | 12 Nov 2026 |
+| `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.2 | 12 Nov 2026 |
+| `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.1 | 12 Nov 2026 |
 
 Documents that today exist **only** in the project (UI Lab sets, coach planning A–E, decisions, hardware-design files)
 have no GitHub source yet. Bringing them onto this branch is a **migration step that waits for approval**.
