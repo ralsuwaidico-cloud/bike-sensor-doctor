@@ -1,12 +1,14 @@
+# Cyclift UI Lab — Plan visual round. Separate branch (proto/ui-lab-plan) and separate output branch, so it cannot
+# overwrite or interfere with the sheet-diagnostic runs on proto/ui-lab.
 # Cyclift UI Lab — prototype build. Lives only on the orphan branch proto/ui-lab, which contains none of the
 # production workflows, so a push here cannot start the iOS release pipeline. Simulator only: no signing, no secrets,
 # no TestFlight. A green run here says nothing about the production app.
-name: UI Lab prototype
+name: UI Lab Plan prototype
 on:
   push:
-    branches: ["proto/ui-lab"]
+    branches: ["proto/ui-lab-plan"]
 permissions:
-  contents: write   # only to publish screenshots to the prototype's own output branch (proto/ui-lab-out)
+  contents: write   # only to publish screenshots to the prototype's own output branch (proto/ui-lab-plan-out)
 jobs:
   prototype:
     runs-on: macos-26
@@ -18,7 +20,7 @@ jobs:
       - name: Summary
         if: always()
         run: cat out/summary.txt >> "$GITHUB_STEP_SUMMARY" || true
-      - name: Publish screenshots to proto/ui-lab-out (prototype output branch only)
+      - name: Publish screenshots to proto/ui-lab-plan-out (prototype output branch only)
         if: always()
         run: |
           mkdir -p pub && cp -R out/. pub/ && cd pub
@@ -26,13 +28,13 @@ jobs:
           for f in full/*.png; do [ -f "$f" ] && sips --resampleWidth 600 "$f" >/dev/null 2>&1; done
           rm -f build.txt
           rm -rf *.xcresult
-          git init -q -b proto/ui-lab-out
+          git init -q -b proto/ui-lab-plan-out
           git add -A
           git -c user.name="ui-lab" -c user.email="noreply@github.com" commit -qm "UI Lab output for ${GITHUB_SHA::7} (run ${GITHUB_RUN_ID})"
-          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" proto/ui-lab-out
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" proto/ui-lab-plan-out
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ui-lab-out
+          name: ui-lab-plan-out
           path: out
           retention-days: 30
