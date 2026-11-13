@@ -1,0 +1,88 @@
+Cyclift UI Lab — Home v2.3 interaction tests (PROTOTYPE, iOS Simulator, sample data).
+A pass here is not validation of the production app and not a real-device test.
+
+== standard (iPhone-17) — PRODUCT tests: passed 30, failed 2 · SEPARATE DIAGNOSTIC (plain SwiftUI, presenter bypassed): passed 1, failed 0 · xcodebuild exit 65 ==
+  passed  test01_EachIndicatorOpensItsOwnSheet  (46.306 s)
+  passed  test02_MixRatioMatchesCompletedMinutes  (25.849 s)
+  passed  test03_MixRatioSingleSportAndNoTraining  (23.969 s)
+  passed  test04_RecoveryNumericSampleIsMarkedAsSample  (16.458 s)
+  passed  test05_RecoveryQualitativeShowsNoPercentage  (14.077 s)
+  passed  test06_RecoveryUnavailableAndPartial  (25.980 s)
+  failed  test07_EachScheduleDayOpensThatDay  (116.371 s)
+  passed  test08_SleepOpensSleepSheet  (41.096 s)
+  passed  test09_CoachPreviewOpensConversationAndPostpone  (49.038 s)
+  passed  test10_CoachApproveAndDecline  (71.595 s)
+  passed  test11_GraphDayTapChangesPanelValues  (47.428 s)
+  passed  test12_GraphScrubSelectsTheDayUnderTheFinger  (29.080 s)
+  passed  test13_VerticalSwipeOnGraphStillScrollsThePage  (18.638 s)
+  passed  test14_SeriesSwitchingChangesWhatIsShown  (53.985 s)
+  passed  test15_RangeSwitching  (36.093 s)
+  passed  test16_GraphEmptyAndInfo  (35.248 s)
+  passed  test17_MetricRowsOpenTheirDetails  (81.327 s)
+  passed  test18_DockSwitchesDestinations  (35.409 s)
+  passed  test19_DockNeverCoversTheLastRows  (19.303 s)
+  passed  test20_GettingStartedMovesWhenRequiredStepsAreDone  (20.505 s)
+  passed  test21_LargeTextKeepsIndicatorsSeparateAndUsable  (65.419 s)
+  passed  test22_LoadingShowsNoValues  (6.465 s)
+  passed  test23_CoachConversationScrollsAndKeepsHistory  (57.429 s)
+  passed  test24_SleepTargetCanBeSetAndRemoved  (47.934 s)
+  passed  test25_SportCardsOpenTheirSheets  (26.514 s)
+  passed  test26_AllSixThemesLaunchAndRespond  (119.545 s)
+  passed  test27_SheetOpensAgainAfterClose_Repeated  (123.852 s)
+  passed  test28_ImmediateTapWhileSheetIsClosing  (115.735 s)
+  failed  test29_RapidDoubleTapOpensOneSheet  (67.833 s)
+  passed  test30_SheetRequestedDuringDismissal_Queued  (28.949 s)
+  passed  test31_SheetRequestedDuringDismissal_PlainSwiftUI_Observation  (28.377 s)
+  passed  test01_PresenterSelfTest  (25.733 s)
+  passed  test02_LostPresentationIsRecoveredByARepeatedRequest  (10.868 s)
+-- observations written by the tests --
+  immediate tap while a sheet is closing: honoured 6 of 6, ignored 0 of 6; the screen was usable afterwards in every case
+  lost-presentation self-test: lost early-duplicate-ignored:ok stayed-lost:ok recovery:ok settled:ok
+  presenter self-test: presenter duplicate:ok switch:ok cancel:ok cycles:8/8 settled:ok
+  sheet requested during dismissal (plain SwiftUI, no guard): direct 6 of 6 shown · 0ms:shown, 50ms:shown, 100ms:shown, 200ms:shown, 300ms:shown, 450ms:shown
+  sheet requested during dismissal (with guard): queued 6 of 6 shown · 0ms:shown, 50ms:shown, 100ms:shown, 200ms:shown, 300ms:shown, 450ms:shown
+-- failure details --
+** TEST FAILED **
+UITests/HomeInteractionTests.swift:207: error: -[CycliftUILabUITests.HomeInteractionTests test07_EachScheduleDayOpensThatDay] : failed - Sheet "Tuesday 10 Nov" is still on screen 20 s after Close was tapped (close button exists: true, hittable: true)
+UITests/HomeInteractionTests.swift:689: error: -[CycliftUILabUITests.HomeInteractionTests test29_RapidDoubleTapOpensOneSheet] : XCTAssertTrue failed
+
+== small (iPhone-SE-3rd-generation) — PRODUCT tests: passed 32, failed 0 · SEPARATE DIAGNOSTIC (plain SwiftUI, presenter bypassed): passed 1, failed 0 · xcodebuild exit 0 ==
+  passed  test01_EachIndicatorOpensItsOwnSheet  (72.141 s)
+  passed  test02_MixRatioMatchesCompletedMinutes  (29.380 s)
+  passed  test03_MixRatioSingleSportAndNoTraining  (63.376 s)
+  passed  test04_RecoveryNumericSampleIsMarkedAsSample  (18.198 s)
+  passed  test05_RecoveryQualitativeShowsNoPercentage  (20.358 s)
+  passed  test06_RecoveryUnavailableAndPartial  (38.041 s)
+  passed  test07_EachScheduleDayOpensThatDay  (89.082 s)
+  passed  test08_SleepOpensSleepSheet  (38.649 s)
+  passed  test09_CoachPreviewOpensConversationAndPostpone  (52.808 s)
+  passed  test10_CoachApproveAndDecline  (188.947 s)
+  passed  test11_GraphDayTapChangesPanelValues  (113.213 s)
+  passed  test12_GraphScrubSelectsTheDayUnderTheFinger  (96.096 s)
+  passed  test13_VerticalSwipeOnGraphStillScrollsThePage  (256.029 s)
+  passed  test14_SeriesSwitchingChangesWhatIsShown  (92.029 s)
+  passed  test15_RangeSwitching  (53.011 s)
+  passed  test16_GraphEmptyAndInfo  (46.481 s)
+  passed  test17_MetricRowsOpenTheirDetails  (314.513 s)
+  passed  test18_DockSwitchesDestinations  (65.251 s)
+  passed  test19_DockNeverCoversTheLastRows  (52.080 s)
+  passed  test20_GettingStartedMovesWhenRequiredStepsAreDone  (39.028 s)
+  passed  test21_LargeTextKeepsIndicatorsSeparateAndUsable  (211.699 s)
+  passed  test22_LoadingShowsNoValues  (33.347 s)
+  passed  test23_CoachConversationScrollsAndKeepsHistory  (143.183 s)
+  passed  test24_SleepTargetCanBeSetAndRemoved  (125.238 s)
+  passed  test25_SportCardsOpenTheirSheets  (86.910 s)
+  passed  test26_AllSixThemesLaunchAndRespond  (226.224 s)
+  passed  test27_SheetOpensAgainAfterClose_Repeated  (283.510 s)
+  passed  test28_ImmediateTapWhileSheetIsClosing  (172.324 s)
+  passed  test29_RapidDoubleTapOpensOneSheet  (96.495 s)
+  passed  test30_SheetRequestedDuringDismissal_Queued  (37.909 s)
+  passed  test31_SheetRequestedDuringDismissal_PlainSwiftUI_Observation  (44.438 s)
+  passed  test01_PresenterSelfTest  (43.757 s)
+  passed  test02_LostPresentationIsRecoveredByARepeatedRequest  (16.191 s)
+-- observations written by the tests --
+  immediate tap while a sheet is closing: honoured 6 of 6, ignored 0 of 6; the screen was usable afterwards in every case
+  lost-presentation self-test: lost early-duplicate-ignored:ok stayed-lost:ok recovery:ok settled:ok
+  presenter self-test: presenter duplicate:ok switch:ok cancel:ok cycles:8/8 settled:ok
+  sheet requested during dismissal (plain SwiftUI, no guard): direct 6 of 6 shown · 0ms:shown, 50ms:shown, 100ms:shown, 200ms:shown, 300ms:shown, 450ms:shown
+  sheet requested during dismissal (with guard): queued 6 of 6 shown · 0ms:shown, 50ms:shown, 100ms:shown, 200ms:shown, 300ms:shown, 450ms:shown
