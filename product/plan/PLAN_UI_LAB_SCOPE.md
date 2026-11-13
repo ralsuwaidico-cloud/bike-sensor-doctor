@@ -1,6 +1,6 @@
 # Plan v2.0 — focused UI Lab implementation plan (for approval)
 
-Status: **Pending Review** · Version 0.3 · 12 Nov 2026 · Level 3
+Status: **Pending Review** · Version 0.4 · 13 Nov 2026 · Level 3
 Source: `docs/cyclift-governance`, `product/plan/PLAN_UI_LAB_SCOPE.md`
 Specification: `product/plan/PLAN_V2_SPECIFICATION.md` v0.6 · visual direction B — Athletic Dynamic (approved 12 Nov).
 
@@ -89,7 +89,7 @@ and is not claimed. Per your preference, CI is checked once per run and reported
 After step 1 (sheet repair result) · after steps 2–6 (first full Plan run) · after steps 7–9. No promotion toward
 production follows from any prototype review.
 
-## 9. Unsaved-change safeguard for Plan editing sheets (approved to document 12 Nov; **not implemented**)
+## 9. Unsaved-change safeguard for Plan editing sheets (approved for future implementation 13 Nov; **not implemented**)
 
 Separate from the Round 1 shared-presenter repair. Nothing here is built; it applies from the first Plan editing
 sheet (step 7 onward) and needs its own approval before code.
@@ -98,7 +98,11 @@ sheet (step 7 onward) and needs its own approval before code.
 presenter closes an open sheet unconditionally when a different sheet is requested; an editing sheet with unsaved
 changes would be closed the same way.
 
-**Rule.** An editing sheet tracks whether it has unsaved changes. While it has:
+**How "unsaved" is determined (owner refinement, 13 Nov).** By comparing the sheet's current editing state with
+the original saved state it opened with — not by remembering that something was touched. If the athlete changes a
+value and then changes it back, the two are equal again and the sheet has **no** unsaved changes.
+
+**Rule.** While the editing state differs from the saved state:
 
 | Attempt to leave | Behaviour |
 |---|---|
@@ -117,7 +121,9 @@ The confirmation offers exactly three choices:
 
 With no unsaved changes, every way of leaving behaves as it does today.
 All four ways of leaving go through one decision point in the presenter, so they cannot behave differently.
-Repeated requests while the confirmation is showing do not stack: the latest replaces the held one.
+**First request wins (owner refinement, 13 Nov).** While the confirmation is visible, the first pending navigation
+request is preserved. Further navigation requests are ignored until the confirmation is resolved; a later tap never
+replaces the destination. Each ignored request is written to the presenter log, so nothing is dropped unseen.
 
 **Tests required with the implementation**
 
@@ -127,9 +133,14 @@ Repeated requests while the confirmation is showing do not stack: the latest rep
 4. Save fails: sheet stays open with the edits intact, the failure is shown, held request not opened.
 5. Discard: edits are gone, sheet closes, held request opens.
 6. Keep editing: sheet and edits remain; held request is cancelled and does not open later.
-7. Repeated navigation requests during the confirmation: one confirmation, the latest request held, none lost silently and none duplicated.
+7. Repeated navigation requests during the confirmation: one confirmation; the **first** request stays held; later requests are ignored and logged; after Save or Discard the first destination opens, never a later one.
+7a. After Keep editing, a new navigation request starts a fresh confirmation with that request as the held one.
 8. Rapid double tap on Save: one save.
-9. The same on the small simulator and at the largest text size.
+9. Change a value, then change it back: no confirmation; every way of leaving works at once.
+10. Change two values, revert one: still unsaved; revert the second: no longer unsaved.
+11. After a successful Save the saved state becomes the new original: leaving needs no confirmation.
+12. After a failed Save the comparison still shows unsaved changes.
+13. The same on the small simulator and at the largest text size.
 
 ## Change log
 
@@ -138,3 +149,4 @@ Repeated requests while the confirmation is showing do not stack: the latest rep
 | 0.1 | 12 Nov 2026 | First scope for approval |
 | 0.2 | 12 Nov 2026 | Rewritten for visual direction B; Home v2.3 result and sheet defect recorded; work order prioritising Weekly Calendar and Recurring Plan |
 | 0.3 | 12 Nov 2026 | §9 added: unsaved-change safeguard for future Plan editing sheets (documented only) |
+| 0.4 | 13 Nov 2026 | §9 refined: unsaved state by comparison with the saved state (reverting clears it); first pending request preserved, later ones ignored and logged; tests 7, 7a, 9–13 |
