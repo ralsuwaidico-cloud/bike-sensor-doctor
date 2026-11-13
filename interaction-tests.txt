@@ -1,0 +1,50 @@
+Cyclift UI Lab — Progress proof of concept: hero, scroll transformation, Evolution Track (PROTOTYPE, iOS Simulator, flat placeholder, sample data).
+A pass here is not validation of the production app, not a real-device test, and says nothing about GPU, battery or heat.
+
+== standard (iPhone-17) — passed 5, failed 3, xcodebuild exit 65 ==
+  passed  test01_expandedLayoutAndMeasurements  (42.091 s)
+  passed  test02_scrollTransformIsMonotonicReversibleAndJumpFree  (75.386 s)
+  passed  test03_trackOpensDetailsFromAnyPoint  (43.585 s)
+  failed  test04_trackIsOneAccessibleElement  (16.769 s)
+  passed  test05_trackStates  (60.400 s)
+  passed  test06_dynamicType  (72.596 s)
+  failed  test07_reduceMotionHasTwoStatesOnly  (12.659 s)
+  failed  test08_headerProtectsContentBeneathIt  (30.461 s)
+-- observations written by the tests --
+  [402] collapsed: symbol x 10 y 70 w 40 h 31 · title x 54 y 74 w 88 h 24 · collapse distance ≈ 99 pt of scrolling
+  [402] details opened from the centre, the leading edge and the trailing edge of the track · scroll offset before 20 pt, after returning 20 pt
+  [402] Dynamic Type — default: track 79 pt, hero 339 pt · xxxLarge: track 115 pt, hero 405.3 pt, track top y 399, dock top y 772 · accessibility L: track 232 pt, hero 593.0 pt, track top y 470, dock top y 772 · accessibility XXXL: track 354 pt, hero 919.7 pt, track top y 675, dock top y 772
+  [402] scroll down (progress): 1.00 · 1.00 · 1.00 · 0.83 · 0.48 · 0.13 · 0.00
+  [402] scroll up (offset → progress, singularity diameter): 0→p 0.01 hole 136 · 8→p 0.09 hole 127 · 16→p 0.17 hole 119 · 24→p 0.25 hole 110 · 32→p 0.33 hole 101 · 40→p 0.41 hole 93 · 48→p 0.49 hole 84 · 56→p 0.57 hole 75 · 64→p 0.65 hole 67 · 72→p 0.73 hole 58 · 102→p 1.00 hole 30 · 132→p 1.00 hole 30 · 162→p 1.00 hole 30 · 192→p 1.00 hole 30 · 222→p 1.00 hole 30
+  [402] state sizes — g0: track 79 pt, hero 339.7 pt · g2prov: track 95 pt, hero 355.0 pt · g5: track 79 pt, hero 339.7 pt · first: track 75 pt, hero 269.7 pt · returning: track 79 pt, hero 293.7 pt
+  [402×874] expanded: singularity x 110 y 102 w 181 h 164 · identity x 82 y 260 w 238 h 102 · track x 0 y 370 w 402 h 79 · hero height 339.7 pt · track height 87.7 pt · dock top y 772
+  [402×874] first metric: name x 16 y 577 w 173 h 18 · key value x 16 y 599 w 85 h 50 · key value fully above the dock: yes (122 pt clearance)
+-- failure details --
+** TEST FAILED **
+UITests/ProgressInteractionTests.swift:182: error: -[CycliftUILabUITests.ProgressInteractionTests test04_trackIsOneAccessibleElement] : XCTAssertFalse failed - Track text is exposed as a separate element
+UITests/ProgressInteractionTests.swift:273: error: -[CycliftUILabUITests.ProgressInteractionTests test07_reduceMotionHasTwoStatesOnly] : XCTAssertLessThanOrEqual failed: ("2") is greater than ("1") - Two singularities are exposed at once
+UITests/ProgressInteractionTests.swift:306: error: -[CycliftUILabUITests.ProgressInteractionTests test08_headerProtectsContentBeneathIt] : XCTAssertFalse failed - A tap on the header reached the track hidden beneath it
+
+== small (iPhone-SE-3rd-generation) — passed 6, failed 2, xcodebuild exit 65 ==
+  passed  test01_expandedLayoutAndMeasurements  (32.920 s)
+  passed  test02_scrollTransformIsMonotonicReversibleAndJumpFree  (97.573 s)
+  passed  test03_trackOpensDetailsFromAnyPoint  (174.007 s)
+  failed  test04_trackIsOneAccessibleElement  (24.490 s)
+  passed  test05_trackStates  (71.418 s)
+  passed  test06_dynamicType  (100.986 s)
+  failed  test07_reduceMotionHasTwoStatesOnly  (13.424 s)
+  passed  test08_headerProtectsContentBeneathIt  (35.357 s)
+-- observations written by the tests --
+  [375] collapsed: symbol x 10 y 28 w 40 h 31 · title x 54 y 32 w 88 h 24 · collapse distance ≈ 88 pt of scrolling
+  [375] details opened from the centre, the leading edge and the trailing edge of the track · scroll offset before 20 pt, after returning 20 pt
+  [375] Dynamic Type — default: track 80 pt, hero 318 pt · xxxLarge: track 116 pt, hero 383.5 pt, track top y 335, dock top y 599 · accessibility L: track 233 pt, hero 572.5 pt, track top y 407, dock top y 599 · accessibility XXXL: track 403 pt, hero 999.0 pt, track top y 663, dock top y 599
+  [375] header hit test: track centre at y 56 under the header (20…68); tap did not pass through · safe-area top 20 pt
+  [375] scroll down (progress): 1.00 · 1.00 · 1.00 · 0.94 · 0.55 · 0.15 · 0.00
+  [375] scroll up (offset → progress, singularity diameter): 1→p 0.01 hole 114 · 9→p 0.10 hole 106 · 17→p 0.19 hole 98 · 25→p 0.28 hole 90 · 33→p 0.38 hole 83 · 41→p 0.47 hole 75 · 49→p 0.56 hole 67 · 57→p 0.65 hole 59 · 65→p 0.74 hole 52 · 73→p 0.83 hole 44 · 103→p 1.00 hole 30 · 133→p 1.00 hole 30 · 163→p 1.00 hole 30 · 193→p 1.00 hole 30 · 223→p 1.00 hole 30
+  [375] state sizes — g0: track 80 pt, hero 318.5 pt · g2prov: track 95 pt, hero 334.0 pt · g5: track 80 pt, hero 318.5 pt · first: track 75 pt, hero 248.5 pt · returning: track 93 pt, hero 285.5 pt
+  [375×667] expanded: singularity x 111 y 63 w 152 h 138 · identity x 68 y 196 w 238 h 102 · track x 0 y 306 w 375 h 80 · hero height 318.5 pt · track height 88.0 pt · dock top y 599
+  [375×667] first metric: name x 16 y 514 w 173 h 18 · key value x 16 y 536 w 85 h 50 · key value fully above the dock: yes (12 pt clearance)
+-- failure details --
+** TEST FAILED **
+UITests/ProgressInteractionTests.swift:182: error: -[CycliftUILabUITests.ProgressInteractionTests test04_trackIsOneAccessibleElement] : XCTAssertFalse failed - Track text is exposed as a separate element
+UITests/ProgressInteractionTests.swift:273: error: -[CycliftUILabUITests.ProgressInteractionTests test07_reduceMotionHasTwoStatesOnly] : XCTAssertLessThanOrEqual failed: ("2") is greater than ("1") - Two singularities are exposed at once

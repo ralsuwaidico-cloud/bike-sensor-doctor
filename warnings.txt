@@ -1,0 +1,4 @@
+   2 CycliftUILab/Components/TrendsAndDock.swift:140:48: warning: 'plotAreaFrame' was deprecated in iOS 17.0: renamed to 'plotFrame'
+   2 CycliftUILab/Components/Graph.swift:290:38: warning: 'plotAreaFrame' was deprecated in iOS 17.0: renamed to 'plotFrame'
+   2 CycliftUILab/Components/Charts.swift:156:48: warning: 'plotAreaFrame' was deprecated in iOS 17.0: renamed to 'plotFrame'
+   1 2026-11-13 17:33:29.896 appintentsmetadataprocessor[3419:13588] warning: Metadata extraction skipped. No AppIntents.framework dependency found.

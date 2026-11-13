@@ -1,0 +1,10 @@
+Cyclift UI Lab prototype build — 2026-11-13 17:31 UTC — commit 3aa28d9
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+RESULT contrast: ok — themes: 6 · pairs checked: 294 · failures: 0 · lowest text-level ratio: 4.79
+RESULT generate: ok
+RESULT build: ok (7 warning lines in the log; 0 in ProgressScreen.swift)
+Runtime: com.apple.CoreSimulator.SimRuntime.iOS-26-5 · standard: iPhone-17 · small: iPhone-SE-3rd-generation
+RESULT interaction tests (standard): passed 5, failed 3
+RESULT interaction tests (small): passed 6, failed 2
+PROGRESS run: Progress tests and Progress screens only (Home and Plan were not run on this branch).
+Screens captured: 74
