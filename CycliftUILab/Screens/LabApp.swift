@@ -145,6 +145,7 @@ struct LabRoot: View {
         .onChange(of: showCoach) { _, new in SheetLog.note("coach cover state: \(new ? "shown" : "hidden")") }
         .onAppear {
             SheetLog.launch()
+            DispatchQueue.main.async { SheetLog.installTouchLog() }
             applyLaunchSheet()
             if LabConfig.stress != nil { Task { await runStress() } }
             if LabConfig.render { Task { @MainActor in try? await Task.sleep(nanoseconds: 1_200_000_000); renderFullLength() } }
@@ -180,7 +181,10 @@ struct LabRoot: View {
             onEndurance: { present(.sport(data.endurance)) },
             onStrength: { present(.sport(data.strength)) },
             onSleep: { present(.sleep) },
-            onCoach: { showCoach = true },
+            onCoach: {
+                SheetLog.note("coach preview handler called (cover state before: \(showCoach ? "shown" : "hidden"), home sheet phase \(sheets.phase.rawValue))")
+                showCoach = true
+            },
             onTrendsInfo: { present(.trendsInfo) },
             onGraphDay: { d, rows in present(.graphDay(d, rows)) },
             onMetric: { present(.metric($0)) })
@@ -196,7 +200,9 @@ struct LabRoot: View {
     /// presenter: duplicate request, switch to a different sheet, cancel-then-other, and repeated open/close.
     @MainActor private func runStress() async {
         _ = await waitUntil(15) { sheets.isHostReady }
+        SheetLog.installTouchLog()
         if LabConfig.stress == "presenter" { await runPresenterSelfTest(); return }
+        if LabConfig.stress == "lost" { await runLostPresentationSelfTest(); return }
         let direct = LabConfig.stress == "direct"
         let delays: [UInt64] = [0, 50, 100, 200, 300, 450]
         var shown = 0
@@ -250,6 +256,24 @@ struct LabRoot: View {
         let e = sheets.isSettled && sheets.item == nil && sheets.phase == .idle
         func w(_ ok: Bool) -> String { ok ? "ok" : "FAILED" }
         stressResult = "presenter duplicate:\(w(a)) switch:\(w(b)) cancel:\(w(c)) cycles:\(cycles)/8 settled:\(w(e))"
+    }
+
+    /// Lost presentation: the state says a sheet is being presented, yet nothing reaches the screen.
+    /// Checks that an immediate repeat is treated as a duplicate, and that a repeat after the threshold recovers.
+    @MainActor private func runLostPresentationSelfTest() async {
+        sheets.loseNextPresentation()
+        sheets.request(.mix)
+        sheets.request(.mix)                                              // at once: a duplicate, must not "recover"
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        let early = sheets.visibleID == nil && sheets.phase == .presenting && sheets.item?.id == "mix"
+        try? await Task.sleep(nanoseconds: 1_200_000_000)                  // the threshold (1 s) has now passed
+        let lost = sheets.visibleID == nil && sheets.phase == .presenting   // still nothing on screen: it really was lost
+        sheets.request(.mix)                                              // the athlete taps again
+        let recovered = await waitUntil(15) { sheets.visibleID == "mix" && sheets.phase == .presented }
+        sheets.dismiss("self-test")
+        let settled = await waitUntil(15) { sheets.isSettled && sheets.phase == .idle }
+        func w(_ ok: Bool) -> String { ok ? "ok" : "FAILED" }
+        stressResult = "lost early-duplicate-ignored:\(w(early)) stayed-lost:\(w(lost)) recovery:\(w(recovered)) settled:\(w(settled))"
     }
 
     @MainActor private func waitUntil(_ seconds: Double, _ done: () -> Bool) async -> Bool {

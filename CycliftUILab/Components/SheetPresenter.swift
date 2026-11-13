@@ -33,6 +33,8 @@ final class SheetPresenter<Item: Identifiable>: ObservableObject where Item.ID =
     private var hops = 0
     private var bypassing = false
     private var startedAt = Date.distantPast
+    private var muteNext = false          // self-test only: see loseNextPresentation()
+    private var muted = false
 
     init(name: String) { self.name = name }
 
@@ -40,7 +42,7 @@ final class SheetPresenter<Item: Identifiable>: ObservableObject where Item.ID =
 
     /// For `.sheet(item:)`. SwiftUI writes nil here when the athlete swipes the sheet away or taps outside it.
     var binding: Binding<Item?> {
-        Binding(get: { self.item }, set: { new in
+        Binding(get: { self.muted ? nil : self.item }, set: { new in
             if let new { self.request(new) } else { self.systemDismissed() }
         })
     }
@@ -152,7 +154,13 @@ final class SheetPresenter<Item: Identifiable>: ObservableObject where Item.ID =
         }
     }
 
-    // MARK: Prototype self-test only — plain SwiftUI, no presenter logic ("direct" observation)
+    // MARK: Prototype self-test only
+
+    /// The next presentation is withheld from SwiftUI: the presenter's state says "presenting" while nothing reaches
+    /// the screen — a lost presentation, reproduced on purpose. Used by the "lost" self-test and by nothing else.
+    func loseNextPresentation() { muteNext = true }
+
+    // Plain SwiftUI, no presenter logic ("direct" observation)
 
     func bypass(_ new: Item?) {
         bypassing = true
@@ -199,6 +207,8 @@ final class SheetPresenter<Item: Identifiable>: ObservableObject where Item.ID =
         startedAt = Date()
         hops = 0
         contentAppearedID = nil
+        muted = muteNext
+        muteNext = false
         phase = .presenting
         item = new
         note("PRESENT \(new.id) (#\(generation))")
@@ -208,6 +218,7 @@ final class SheetPresenter<Item: Identifiable>: ObservableObject where Item.ID =
         note("DISMISS \(item?.id ?? "none") (\(why))")
         hops = 0
         phase = .dismissing
+        muted = false
         item = nil
         wake()
     }
