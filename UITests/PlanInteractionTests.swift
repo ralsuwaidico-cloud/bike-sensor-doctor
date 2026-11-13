@@ -49,11 +49,13 @@ final class PlanInteractionTests: XCTestCase {
 
     func test01_LandingShowsHeaderProgramAndTwoSections() {
         launch()
-        for id in ["planTitle", "planMore", "planProgram", "planAddGoal", "planSection-weekly", "planSection-recurring",
+        for id in ["planTitle", "planMore", "planProgram", "planSection-weekly", "planSection-recurring",
                    "planWeekTitle", "planDay-12", "planDayHeader", "planAddSession"] {
             XCTAssertTrue(el(id).exists, "Missing \(id)")
         }
         XCTAssertTrue(el("planProgram").label.contains("Build strength"), "Program row does not state the primary objective: \(el("planProgram").label)")
+        XCTAssertTrue(el("planProgram").label.contains("Hybrid Foundation"), "Program row does not name the program: \(el("planProgram").label)")
+        XCTAssertFalse(el("planAddGoal").exists || el("planSetGoal").exists, "With a primary goal there must be no prominent goal action on the row")
         waitLabel("planWeekTitle", "9 – 15 Nov")
         waitLabel("planDayHeader", "Thu 12 Nov · Today")
     }
@@ -61,8 +63,13 @@ final class PlanInteractionTests: XCTestCase {
     func test02_NoGoalStateAsksForAGoal() {
         launch(["LAB_PLAN": "noGoal"])
         XCTAssertTrue(el("planProgram").label.contains("Set your goal"), "No-goal header reads: \(el("planProgram").label)")
-        XCTAssertTrue(el("planAddGoal").exists)
+        XCTAssertTrue(el("planSetGoal").exists, "The no-goal state must offer one clear action")
+        XCTAssertGreaterThanOrEqual(el("planSetGoal").frame.height, 44)
+        XCTAssertTrue(el("planProgram").label.contains("added by you"), "Hand-scheduled sessions must be stated as such: \(el("planProgram").label)")
+        XCTAssertTrue(el("planSession-g2").waitForExistence(timeout: 5) && el("planSession-g2").label.contains("added by you"))
         XCTAssertFalse(el("planCoachRow").exists, "A Coach row is shown without a proposal")
+        tap("planSection-recurring")
+        XCTAssertTrue(el("planRecurring-Mon").waitForExistence(timeout: 5) && el("planRecurring-Mon").label.contains("Not set"))
     }
 
     // MARK: date selector
@@ -167,7 +174,8 @@ final class PlanInteractionTests: XCTestCase {
     func test09_BudgetConflictIsShownOnTheAvailabilityRow() {
         launch(["LAB_PLAN_SECTION": "recurring", "LAB_PLAN": "budget"])
         XCTAssertTrue(el("planAvailability").waitForExistence(timeout: 5))
-        XCTAssertTrue(el("planAvailability").label.contains("Cycling 4 h · budget 3 h"), el("planAvailability").label)
+        XCTAssertEqual(el("planAvailability").value as? String, "Cycling has 4 h planned and 3 h in your weekly budget")
+        XCTAssertTrue(el("planAvailability").label.contains("5 h a week"), el("planAvailability").label)
         XCTAssertEqual(el("planRecurring-Sat").value as? String, "", "No day limit is exceeded in this sample")
     }
 
@@ -175,7 +183,7 @@ final class PlanInteractionTests: XCTestCase {
 
     func test10_UnbuiltActionsOpenALabelledPlaceholder() {
         launch()
-        for (id, name) in [("planAddGoal", "Add a goal"), ("planProgram", "Goal & Program"), ("planCoachRow", "Coach proposal"),
+        for (id, name) in [("planProgram", "Goal & Program"), ("planCoachRow", "Coach proposal"),
                            ("planAddSession", "Add session"), ("planSession-c4", "Session detail"), ("planSessionMore-c4", "Session actions")] {
             tap(id)
             let p = el("planPlaceholder")
@@ -208,7 +216,9 @@ final class PlanInteractionTests: XCTestCase {
 
     func test13_LargeTextKeepsControlsUsable() {
         launch(args: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"])
-        for id in ["planAddGoal", "planSection-weekly", "planSection-recurring", "planDay-12", "planAddSession"] {
+        let sw = el("planSection-weekly").frame, sr = el("planSection-recurring").frame
+        XCTAssertLessThanOrEqual(sw.maxX, sr.minX + 1, "The two section labels collide (\(sw) and \(sr))")
+        for id in ["planProgram", "planSection-weekly", "planSection-recurring", "planDay-12", "planAddSession"] {
             let e = el(id)
             XCTAssertTrue(e.exists, "Missing \(id) at large text")
             XCTAssertGreaterThanOrEqual(e.frame.height, 44, "\(id) is shorter than 44 pt at large text")
@@ -221,6 +231,65 @@ final class PlanInteractionTests: XCTestCase {
         XCTAssertLessThanOrEqual(a.frame.maxY, dockTop, "At large text the availability row cannot be brought above the dock")
         let sat = el("planRecurring-Sat")
         XCTAssertEqual(sat.value as? String, "2 h · Sat limit 1 h")
+        // the weekday pills must not be squeezed: every row is at least as wide as the screen minus the margins
+        for d in ["Mon", "Wed", "Sat"] { XCTAssertGreaterThanOrEqual(el("planRecurring-\(d)").frame.height, 44) }
+        tap("planSection-weekly")
+        let last = el("planSession-c2"); XCTAssertTrue(last.waitForExistence(timeout: 5))
+        scrollUntilClear(last)
+        XCTAssertLessThanOrEqual(last.frame.maxY, dockTop, "At large text the session card cannot be brought above the dock")
+    }
+
+    /// Regression for the week-arrow failure of run 43409711047 (standard iPhone): the arrows are pressed repeatedly
+    /// and the week must follow every time. On failure the prototype's own record of week changes is printed.
+    func test15_WeekArrowsFollowEveryPress() {
+        launch()
+        func expect(_ title: String, _ step: String) {
+            let e = el("planWeekTitle")
+            let x = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", title), object: e)
+            let r = XCTWaiter().wait(for: [x], timeout: 8)
+            XCTAssertEqual(r, .completed, "After \(step) the week shows \"\(e.label)\", expected \"\(title)\". Prototype record: \(e.value as? String ?? "none")")
+        }
+        tap("planWeekNext"); expect("16 – 22 Nov", "first press of Next, straight after launch")
+        for i in 1...6 {
+            tap("planWeekPrev"); expect("9 – 15 Nov", "Previous, cycle \(i)")
+            tap("planWeekPrev"); expect("2 – 8 Nov", "Previous again, cycle \(i)")
+            tap("planWeekNext"); expect("9 – 15 Nov", "Next, cycle \(i)")
+            tap("planWeekNext"); expect("16 – 22 Nov", "Next again, cycle \(i)")
+        }
+        print("LABNOTE week arrows: 25 presses followed; prototype record (last entries): \(el("planWeekTitle").value as? String ?? "none")")
+    }
+
+    // MARK: session presentation — Variant A (approved cards) and Variant B (hybrid), same four sessions
+
+    private func measure(_ variant: String, _ env: [String: String]) {
+        var e = ["LAB_PLAN": "busy"]; env.forEach { e[$0.key] = $0.value }
+        launch(e)
+        let ids = ["c4", "c5", "b3", "b4"]
+        var heights: [Int] = [], visible = 0
+        for id in ids {
+            let s = el("planSession-\(id)"); XCTAssertTrue(s.waitForExistence(timeout: 5), "Missing session \(id) in \(variant)")
+            let more = el("planSessionMore-\(id)")
+            XCTAssertGreaterThanOrEqual(more.frame.height, 44, "The actions control of \(id) is shorter than 44 pt in \(variant)")
+            XCTAssertGreaterThanOrEqual(more.frame.union(s.frame).height, 44, "Row \(id) is shorter than 44 pt in \(variant)")
+            heights.append(Int(more.frame.union(s.frame).height.rounded()))
+            if max(s.frame.maxY, more.frame.maxY) <= dockTop { visible += 1 }
+        }
+        XCTAssertTrue(el("planSession-b3").label.contains("Rescheduled from Mon 9 Nov (missed)"), "The rescheduling relationship is missing in \(variant)")
+        XCTAssertTrue(el("planSession-b4").label.contains("Done") && el("planSession-c4").label.contains("Planned"), "Status is missing in \(variant)")
+        let first = el("planSession-c4").frame.minY, lastBottom = max(el("planSession-b4").frame.maxY, el("planSessionMore-b4").frame.maxY)
+        print("LABNOTE \(variant): content heights \(heights) pt · list from y \(Int(first)) to y \(Int(lastBottom)) (\(Int(lastBottom - first)) pt for four sessions) · dock top y \(Int(dockTop)) · sessions fully above the dock without scrolling: \(visible) of 4 · window \(Int(window.width)) × \(Int(window.height))")
+        let last = el("planSession-b4"); scrollUntilClear(last)
+        XCTAssertLessThanOrEqual(last.frame.maxY, dockTop, "The last session cannot be brought above the dock in \(variant)")
+    }
+    func test16_VariantA_ApprovedCards_Measured() {
+        measure("Variant A (approved cards)", [:])
+        XCTAssertEqual(el("planSession-c5").value as? String, "planned structure shown")      // unchanged approved behaviour
+    }
+    func test17_VariantB_Hybrid_MeasuredAndStructureOnlyWhenInformative() {
+        measure("Variant B (hybrid)", ["LAB_PLAN_CARDS": "hybrid"])
+        XCTAssertEqual(el("planSession-c4").value as? String, "planned structure shown", "A structured strength session must keep its indicator")
+        XCTAssertEqual(el("planSession-b4").value as? String, "planned structure shown", "An interval workout must keep its indicator")
+        XCTAssertEqual(el("planSession-c5").value as? String, "no structure shown", "A steady Zone 2 session must not show a decorative bar")
     }
 
     func test14_DayCirclesAreLabelledForVoiceOver() {

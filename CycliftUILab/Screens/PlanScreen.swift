@@ -24,6 +24,9 @@ struct PlanSession: Identifiable {
     let status: PlanStatus
     var link: String? = nil
     var structure: [PlanSegment] = []
+    /// A structure indicator is informative only when the prescription has more than one part (intervals, a list of
+    /// exercises). One steady block — an ordinary Zone 2 ride — says nothing a bar could add.
+    var hasInformativeStructure: Bool { structure.count > 1 }
 }
 
 struct PlanDay: Identifiable {
@@ -60,11 +63,12 @@ struct PlanData {
     var weeks: [PlanWeek]
     var suggestion: String?
     var recurring: [PlanRecurringRow]
-    var availability: String
-    var availabilityWarning: String?
+    var availability: String              // plain summary of the time available and planned
+    var availabilityWarning: String?      // plain sentence naming the conflict, when there is one
+    var programName: String? = nil
 }
 
-enum PlanScenario: String { case normal, noSuggestion, noGoal, budget }
+enum PlanScenario: String { case normal, noSuggestion, noGoal, budget, busy }
 
 enum PlanMock {
     private static func seg(_ pairs: [(Double, Double)]) -> [PlanSegment] { pairs.map { PlanSegment(weight: $0.0, level: $0.1) } }
@@ -123,24 +127,55 @@ enum PlanMock {
                              warning: "2 h · Sat limit 1 h", spokenWarning: "2 hours planned, Saturday's limit is 1 hour"),
             PlanRecurringRow(id: "Sun", weekday: "Sunday", discipline: .strength, title: "Full Body B", duration: "30 min"),
         ]
-        var data = PlanData(goalTitle: "Build strength", goalDetail: "Cycling maintained · week 2 of 4",
+        var data = PlanData(goalTitle: "Build strength", goalDetail: "Hybrid Foundation · week 2 of 4",
                             weeks: [previous, current, next], suggestion: "Resolve Saturday’s time conflict",
-                            recurring: recurring, availability: "6 days · 6 h of 6 h", availabilityWarning: nil)
+                            recurring: recurring, availability: "6 days · 6 h a week",
+                            availabilityWarning: "Saturday has 2 h planned and 1 h available", programName: "Hybrid Foundation")
         switch scenario {
         case .normal: break
         case .noSuggestion:
             data.suggestion = nil
         case .noGoal:
+            // No goal and no program. The athlete may still have scheduled sessions by hand: they are shown as such.
             data.goalTitle = nil
-            data.goalDetail = "Choose what you are training for"
+            data.programName = nil
+            data.goalDetail = "No program yet · 3 sessions added by you this week"
             data.suggestion = nil
+            let own = PlanWeek(id: 0, title: "9 – 15 Nov", days: [
+                day(9, "Monday"),
+                day(10, "Tuesday", [s("g1", .endurance, "Zone 2 Ride", "60 min · added by you", .done)]),
+                day(11, "Wednesday"),
+                day(12, "Thursday", today: true, [s("g2", .strength, "Upper Body A", "45 min · 6 exercises · added by you", .planned, lift(6))]),
+                day(13, "Friday"),
+                day(14, "Saturday", [s("g3", .endurance, "Long Ride", "2 h · added by you", .planned)]),
+                day(15, "Sunday"),
+            ])
+            let blank: (Int, Int, String) -> PlanWeek = { id, first, title in
+                PlanWeek(id: id, title: title, days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].enumerated().map { day(first + $0.offset, $0.element) })
+            }
+            data.weeks = [blank(-1, 2, "2 – 8 Nov"), own, blank(1, 16, "16 – 22 Nov")]
+            data.recurring = [("Mon", "Monday"), ("Tue", "Tuesday"), ("Wed", "Wednesday"), ("Thu", "Thursday"), ("Fri", "Friday"), ("Sat", "Saturday"), ("Sun", "Sunday")]
+                .map { PlanRecurringRow(id: $0.0, weekday: $0.1, discipline: nil, title: "Not set", duration: "") }
+            data.availability = "Not set"
+            data.availabilityWarning = nil
         case .budget:
-            // week-level conflict: cycling 4 h scheduled against a 3 h cycling budget; no single day is over its limit
+            // week-level conflict: cycling 4 h planned against a 3 h cycling budget; no single day is over its limit
             recurring[5] = PlanRecurringRow(id: "Sat", weekday: "Saturday", discipline: .endurance, title: "Long Ride", duration: "2 h")
             data.recurring = recurring
-            data.availability = "6 days · 6 h of 5 h"
-            data.availabilityWarning = "Cycling 4 h · budget 3 h"
+            data.availability = "6 days · 5 h a week"
+            data.availabilityWarning = "Cycling has 4 h planned and 3 h in your weekly budget"
             data.suggestion = "Reduce next week’s planned cycling time"
+        case .busy:
+            // one day with four sessions, used to compare the two session presentations with identical content
+            let thursday = day(12, "Thursday", today: true, [
+                s("c4", .strength, "Upper Body A", "45 min · 6 exercises", .planned, lift(6)),
+                s("c5", .endurance, "Recovery Spin", "30 min · Zone 2 · added this week", .planned, steady),
+                s("b3", .strength, "Lower Body A", "45 min · 5 exercises", .planned, link: "Rescheduled from Mon 9 Nov (missed)", lift(5)),
+                s("b4", .endurance, "Threshold Intervals", "60 min · 4 × 8 min", .done, ride)])
+            var days = current.days
+            days[3] = thursday
+            days[4] = day(13, "Friday")
+            data.weeks = [previous, PlanWeek(id: 0, title: current.title, days: days), next]
         }
         return data
     }
@@ -153,6 +188,8 @@ struct PlanScreen: View {
     var bottomInset: CGFloat = 0
     var initialSection: String? = nil            // weekly | recurring
     var initialDay: Int? = nil                   // day of the month to select at launch
+    var sessionStyle: String? = nil              // nil = approved cards (Variant A) · "hybrid" = compact Variant B
+    @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.cyTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var section = 0               // 0 Weekly Calendar · 1 Recurring Plan
@@ -160,6 +197,8 @@ struct PlanScreen: View {
     @State private var selectedDay = 12
     @State private var placeholder: String? = nil
     @State private var didInit = false
+    @State private var weekLog: [String] = []    // diagnostic: every week change and where it came from
+    private var large: Bool { typeSize.isAccessibilitySize }
 
     private var week: PlanWeek { data.weeks[min(max(weekIndex, 0), data.weeks.count - 1)] }
     private var day: PlanDay { week.days.first { $0.id == selectedDay } ?? week.days[0] }
@@ -179,7 +218,7 @@ struct PlanScreen: View {
                         .accessibilityIdentifier("planSampleNote")
                 }
                 .padding(.horizontal, CySpace.l)
-                .padding(.bottom, bottomInset + CySpace.l)
+                .padding(.bottom, bottomInset + 44)      // the dock's centre button rises above the bar
             }
             .accessibilityIdentifier("planScroll")
             if let placeholder { placeholderCard(placeholder).padding(.horizontal, CySpace.l).padding(.bottom, bottomInset + CySpace.m) }
@@ -204,6 +243,7 @@ struct PlanScreen: View {
                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("planTitle")
             Spacer()
             Menu {
+                Button(data.goalTitle == nil ? "Set a goal" : "Add another goal") { placeholder = "Add a goal" }
                 Button("Routines") { placeholder = "Routines" }
                 Button("Availability & preferences") { placeholder = "Availability & preferences" }
                 Button("Plan history") { placeholder = "Plan history" }
@@ -217,40 +257,47 @@ struct PlanScreen: View {
         .frame(minHeight: 44)
     }
 
+    /// With a goal: its name and context; the row opens the details and carries no "add" action (that lives in More).
+    /// Without a goal: a clear "Set your goal" state with one action.
     private var programRow: some View {
-        HStack(spacing: CySpace.s) {
+        let hasGoal = data.goalTitle != nil
+        let layout = large && !hasGoal ? AnyLayout(VStackLayout(alignment: .leading, spacing: CySpace.xs)) : AnyLayout(HStackLayout(spacing: CySpace.s))
+        return layout {
             Button(action: { placeholder = "Goal & Program" }) {
                 HStack(spacing: CySpace.s) {
-                    Image(systemName: data.goalTitle == nil ? "scope" : "flag.fill").font(.footnote.weight(.semibold))
+                    Image(systemName: hasGoal ? "flag.fill" : "scope").font(.footnote.weight(.semibold))
                         .foregroundStyle(theme.accent).frame(width: 28, height: 28).background(Circle().fill(theme.accentSubtle))
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(data.goalTitle ?? "Set your goal").font(.subheadline.weight(.bold)).foregroundStyle(theme.textPrimary).lineLimit(1)
-                        Text(data.goalDetail).font(.caption).foregroundStyle(theme.textSecondary).lineLimit(1)
+                        Text(data.goalTitle ?? "Set your goal").font(.subheadline.weight(.bold)).foregroundStyle(theme.textPrimary)
+                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        Text(data.goalDetail).font(.caption).foregroundStyle(theme.textSecondary)
+                            .lineLimit(large ? 4 : 2).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
+                    if hasGoal {
+                        Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(theme.textTertiary).accessibilityHidden(true)
+                    }
                 }
-                .frame(minHeight: 44).contentShape(Rectangle())
+                .padding(.vertical, 6).frame(minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
             .accessibilityHint("Opens goal and program")
             .accessibilityIdentifier("planProgram")
-            Button(action: { placeholder = "Add a goal" }) {
-                HStack(spacing: 3) {
-                    Image(systemName: "plus").font(.caption.weight(.bold))
-                    Text("Add a goal").font(.caption.weight(.bold)).lineLimit(1)
+            if !hasGoal {
+                Button(action: { placeholder = "Set a goal" }) {
+                    Text("Set goal").font(.caption.weight(.bold)).foregroundStyle(theme.textOnAccent)
+                        .padding(.horizontal, 14).frame(minHeight: 32)
+                        .background(Capsule().fill(theme.accent))
+                        .frame(minHeight: 44).contentShape(Rectangle())
+                        .fixedSize(horizontal: true, vertical: false)
                 }
-                .foregroundStyle(theme.accent)
-                .padding(.horizontal, 10).frame(height: 32)
-                .background(Capsule().fill(theme.isDark ? theme.accentSubtle : theme.surface))
-                .overlay(Capsule().strokeBorder(theme.accent.opacity(theme.id == .highContrast ? 1 : 0.5), lineWidth: 1))
-                .frame(minHeight: 44).contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("planSetGoal")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("planAddGoal")
         }
-        .padding(.leading, CySpace.m).padding(.trailing, CySpace.s).padding(.vertical, 2)
+        .padding(.leading, CySpace.m).padding(.trailing, CySpace.m).padding(.vertical, 2)
         .background(programFill, in: RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous))
         .background(theme.surface.opacity(theme.isDark ? 0.6 : 1), in: RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: CyRadius.m, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
@@ -273,9 +320,11 @@ struct PlanScreen: View {
     private func selectorButton(_ title: String, _ index: Int, _ id: String) -> some View {
         let on = section == index
         return Button(action: { section = index }) {
-            Text(title).font(.footnote.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+            Text(title).font(.footnote.weight(.semibold)).lineLimit(2).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(on ? (theme.id == .highContrast ? theme.background : theme.textPrimary) : theme.textSecondary)
-                .frame(maxWidth: .infinity).frame(minHeight: 38)
+                .padding(.horizontal, 6).padding(.vertical, 4)
+                .frame(maxWidth: .infinity).frame(minHeight: 44)
                 .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? (theme.id == .highContrast ? theme.textPrimary : theme.surface) : Color.clear))
                 .contentShape(Rectangle())
         }
@@ -301,7 +350,8 @@ struct PlanScreen: View {
             .frame(height: 86)
             .dynamicTypeSize(...DynamicTypeSize.xxLarge)
             .padding(.horizontal, -CySpace.xs)
-            .onChange(of: weekIndex) { _, new in
+            .onChange(of: weekIndex) { old, new in
+                note("week index \(old) to \(new)")
                 // keep a day selected inside the visible week: the same weekday, or today when the week holds it
                 let days = data.weeks[new].days
                 if days.contains(where: { $0.id == selectedDay }) { return }
@@ -319,6 +369,7 @@ struct PlanScreen: View {
             navButton("chevron.left", "Previous week", "planWeekPrev", enabled: weekIndex > 0) { move(-1) }
             Spacer(minLength: 0)
             Text(week.title).font(.footnote.weight(.bold)).foregroundStyle(theme.textPrimary)
+                .accessibilityValue(weekLog.suffix(10).joined(separator: " | "))
                 .accessibilityIdentifier("planWeekTitle")
             if week.id != 0 || selectedDay != todayID {
                 Button(action: goToday) {
@@ -343,13 +394,17 @@ struct PlanScreen: View {
     }
     private func move(_ step: Int) {
         let target = min(max(weekIndex + step, 0), data.weeks.count - 1)
+        note("arrow \(step > 0 ? "next" : "previous") pressed at index \(weekIndex), target \(target)")
         if reduceMotion { weekIndex = target } else { withAnimation(.easeInOut(duration: 0.25)) { weekIndex = target } }
     }
     private func goToday() {
         guard let t = todayID, let w = data.weeks.firstIndex(where: { wk in wk.days.contains { $0.id == t } }) else { return }
         selectedDay = t
+        note("today pressed at index \(weekIndex), target \(w)")
         if reduceMotion { weekIndex = w } else { withAnimation(.easeInOut(duration: 0.25)) { weekIndex = w } }
     }
+
+    private func note(_ text: String) { weekLog.append(text) }
 
     private func dayCircle(_ d: PlanDay) -> some View {
         let on = d.id == selectedDay
@@ -423,13 +478,13 @@ struct PlanScreen: View {
                 Image(systemName: "sparkles").font(.footnote).foregroundStyle(theme.accent).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("COACH SUGGESTS").font(.system(size: 9.5, weight: .semibold)).tracking(0.4).foregroundStyle(theme.textSecondary)
-                    Text(text).font(.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).lineLimit(2)
+                    Text(text).font(.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).lineLimit(large ? 4 : 2).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: CySpace.xs)
                 Text("Review").font(.footnote.weight(.bold)).foregroundStyle(theme.accent)
                 Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(theme.accent).accessibilityHidden(true)
             }
-            .padding(.horizontal, CySpace.m).frame(minHeight: 44)
+            .padding(.horizontal, CySpace.m).padding(.vertical, 5).frame(minHeight: 44)
             .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(theme.surface.opacity(theme.id == .highContrast ? 1 : 0.7)))
             .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(theme.border, lineWidth: 1))
             .contentShape(Rectangle())
@@ -441,17 +496,21 @@ struct PlanScreen: View {
     }
 
     private var dayHeader: some View {
-        HStack {
+        let layout = large ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout())
+        return layout {
             Text(day.title + (day.isToday ? " · Today" : "")).font(.subheadline.weight(.bold)).foregroundStyle(theme.textPrimary)
+                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("planDayHeader")
-            Spacer()
+            if !large { Spacer() }
             Button(action: { placeholder = "Add session" }) {
                 Text("+ Add session").font(.caption.weight(.bold)).foregroundStyle(theme.background)
-                    .padding(.horizontal, 13).frame(height: 32).background(Capsule().fill(theme.textPrimary))
+                    .padding(.horizontal, 13).frame(minHeight: 32).background(Capsule().fill(theme.textPrimary))
+                    .fixedSize(horizontal: true, vertical: false)
                     .frame(minHeight: 44).contentShape(Rectangle())
             }
             .buttonStyle(.plain).accessibilityLabel("Add session").accessibilityIdentifier("planAddSession")
         }
+        .padding(.top, large ? CySpace.s : 0)
     }
 
     @ViewBuilder private var dayContent: some View {
@@ -460,8 +519,14 @@ struct PlanScreen: View {
         } else if day.sessions.isEmpty {
             quietRow(icon: "calendar", title: "Nothing scheduled", detail: "Add a session, or leave the day free", id: "planEmpty")
         } else {
-            VStack(spacing: CySpace.s) {
-                ForEach(day.sessions) { s in PlanSessionCard(session: s, onOpen: { placeholder = "Session detail" }, onMore: { placeholder = "Session actions" }) }
+            VStack(spacing: sessionStyle == "hybrid" ? 6 : CySpace.s) {
+                ForEach(day.sessions) { s in
+                    if sessionStyle == "hybrid" {
+                        PlanSessionHybridRow(session: s, onOpen: { placeholder = "Session detail" }, onMore: { placeholder = "Session actions" })
+                    } else {
+                        PlanSessionCard(session: s, onOpen: { placeholder = "Session detail" }, onMore: { placeholder = "Session actions" })
+                    }
+                }
             }
         }
     }
@@ -484,28 +549,38 @@ struct PlanScreen: View {
     // MARK: Recurring Plan
 
     private var recurring: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 2) {
             ForEach(data.recurring) { row in recurringRow(row) }
             Button(action: { placeholder = "Availability & preferences" }) {
                 HStack(spacing: CySpace.s) {
-                    Text("Availability & preferences").font(.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary).lineLimit(1).minimumScaleFactor(0.85)
-                    Spacer(minLength: CySpace.xs)
-                    if let w = data.availabilityWarning {
-                        Label(w, systemImage: "exclamationmark.triangle.fill").font(.caption.weight(.bold)).foregroundStyle(theme.textPrimary).lineLimit(1)
-                    } else {
-                        Text(data.availability).font(.caption).foregroundStyle(theme.textSecondary).lineLimit(1)
+                    VStack(alignment: .leading, spacing: 3) {
+                        let head = large ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(spacing: CySpace.s))
+                        head {
+                            Text("Availability & preferences").font(.footnote.weight(.semibold)).foregroundStyle(theme.textPrimary)
+                                .lineLimit(large ? 3 : 1).fixedSize(horizontal: false, vertical: true)
+                            if !large { Spacer(minLength: CySpace.xs) }
+                            Text(data.availability).font(.caption).foregroundStyle(theme.textSecondary)
+                                .lineLimit(large ? 3 : 1).minimumScaleFactor(large ? 1 : 0.85).fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let w = data.availabilityWarning {
+                            Label(w, systemImage: "exclamationmark.triangle.fill").font(.caption.weight(.bold)).foregroundStyle(theme.textPrimary)
+                                .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("planAvailabilityConflict")
+                        }
                     }
+                    Spacer(minLength: CySpace.xs)
                     Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(theme.textTertiary).accessibilityHidden(true)
                 }
-                .padding(.horizontal, CySpace.m).frame(minHeight: 48)
+                .padding(.horizontal, CySpace.m).padding(.vertical, CySpace.s).frame(minHeight: 48)
                 .background(RoundedRectangle(cornerRadius: 13, style: .continuous).fill(theme.surface))
                 .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(theme.cardStroke, lineWidth: theme.borderWidth))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
+            .accessibilityValue(data.availabilityWarning ?? "")
             .accessibilityIdentifier("planAvailability")
-            .padding(.top, 3)
+            .padding(.top, 2)
         }
         .padding(.top, CySpace.s)
     }
@@ -519,19 +594,25 @@ struct PlanScreen: View {
         let label = spoken
         return Button(action: { placeholder = "Edit \(row.weekday)" }) {
             HStack(spacing: CySpace.m) {
-                Text(row.id).font(.caption.weight(.heavy))
+                Text(row.id).font(.caption.weight(.heavy)).lineLimit(1).fixedSize()
                     .foregroundStyle(isRest ? theme.textSecondary : (theme.isDark ? theme.background : theme.surface))
-                    .frame(width: 40, height: 28).background(Capsule().fill(tint))
-                Text(row.title).font(.footnote.weight(isRest ? .regular : .bold))
-                    .foregroundStyle(isRest ? theme.textSecondary : theme.textPrimary).lineLimit(1)
-                Spacer(minLength: CySpace.xs)
-                if let w = row.warning {
-                    Label(w, systemImage: "exclamationmark.triangle.fill").font(.caption.weight(.bold)).foregroundStyle(theme.textPrimary).lineLimit(1)
+                    .padding(.horizontal, 8).frame(minWidth: 40, minHeight: 28).background(Capsule().fill(tint))
+                let titleText = Text(row.title).font(.footnote.weight(isRest ? .regular : .bold))
+                    .foregroundStyle(isRest ? theme.textSecondary : theme.textPrimary)
+                if large {
+                    VStack(alignment: .leading, spacing: 2) {
+                        titleText.lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        recurringTrailing(row).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: CySpace.xs)
                 } else {
-                    Text(row.duration).font(.caption).foregroundStyle(theme.textSecondary)
+                    titleText.lineLimit(1)
+                    Spacer(minLength: CySpace.xs)
+                    recurringTrailing(row).lineLimit(1)
                 }
                 Image(systemName: "chevron.right").font(.caption2.weight(.bold)).foregroundStyle(theme.textTertiary).accessibilityHidden(true)
             }
+            .padding(.vertical, large ? 6 : 0)
             .padding(.leading, 7).padding(.trailing, CySpace.s).frame(minHeight: 46)
             .background(recurringFill(tint, isRest: isRest))
             .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
@@ -543,6 +624,13 @@ struct PlanScreen: View {
         .accessibilityLabel(label)
         .accessibilityValue(row.warning ?? "")
         .accessibilityIdentifier("planRecurring-\(row.id)")
+    }
+    @ViewBuilder private func recurringTrailing(_ row: PlanRecurringRow) -> some View {
+        if let w = row.warning {
+            Label(w, systemImage: "exclamationmark.triangle.fill").font(.caption.weight(.bold)).foregroundStyle(theme.textPrimary)
+        } else {
+            Text(row.duration).font(.caption).foregroundStyle(theme.textSecondary)
+        }
     }
     @ViewBuilder private func recurringFill(_ tint: Color, isRest: Bool) -> some View {
         let shape = RoundedRectangle(cornerRadius: 13, style: .continuous)
@@ -596,20 +684,21 @@ struct PlanSessionCard: View {
             badge
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: CySpace.s) {
-                    Text(session.title).font(.subheadline.weight(.bold)).foregroundStyle(theme.textPrimary.opacity(session.status == .done ? 0.85 : 1)).lineLimit(1)
+                    Text(session.title).font(.subheadline.weight(.bold)).foregroundStyle(theme.textPrimary.opacity(session.status == .done ? 0.85 : 1)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: CySpace.xs)
                     status
                 }
-                Text(session.detail).font(.caption).foregroundStyle(theme.textSecondary).lineLimit(2)
+                Text(session.detail).font(.caption).foregroundStyle(theme.textSecondary).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 if !session.structure.isEmpty && !missed { PlanStructureBar(segments: session.structure, tint: tint) }
                 if let link = session.link {
-                    Text("↳ " + link).font(.caption.weight(.medium)).foregroundStyle(theme.textPrimary).lineLimit(2)
+                    Text("↳ " + link).font(.caption.weight(.medium)).foregroundStyle(theme.textPrimary).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                 }
             }
             .contentShape(Rectangle())
             .onTapGesture(perform: onOpen)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
+            .accessibilityValue(!session.structure.isEmpty && !missed ? "planned structure shown" : "no structure shown")
             .accessibilityIdentifier("planSession-\(session.id)")
             Button(action: onMore) {
                 Image(systemName: "ellipsis").font(.footnote.weight(.bold)).foregroundStyle(theme.textSecondary)
@@ -671,12 +760,108 @@ struct PlanSessionCard: View {
     }
 }
 
+/// Variant B — hybrid compact presentation (comparison only; not the approved layout).
+/// Keeps discipline colour and icon, name, duration, truthful status and the rescheduling relationship. A compact
+/// planned-structure indicator is shown only when it is informative (intervals, a list of exercises) — never for an
+/// ordinary steady session, and it describes the plan, not completion.
+struct PlanSessionHybridRow: View {
+    let session: PlanSession
+    let onOpen: () -> Void
+    let onMore: () -> Void
+    @Environment(\.cyTheme) private var theme
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var tint: Color { session.discipline == .endurance ? theme.endurance : theme.strength }
+    private var missed: Bool { session.status == .missed }
+    private var showsStructure: Bool { session.hasInformativeStructure && !missed }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            badge
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: CySpace.s) {
+                    Text(session.title).font(.subheadline.weight(.bold)).foregroundStyle(theme.textPrimary.opacity(session.status == .done ? 0.85 : 1))
+                        .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: CySpace.xs)
+                    status
+                }
+                HStack(alignment: .center, spacing: CySpace.s) {
+                    Text(session.detail).font(.caption).foregroundStyle(theme.textSecondary)
+                        .lineLimit(typeSize.isAccessibilitySize ? 3 : 1).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    if showsStructure && !typeSize.isAccessibilitySize { PlanStructureBar(segments: session.structure, tint: tint, width: 84, height: 12) }
+                }
+                if showsStructure && typeSize.isAccessibilitySize { PlanStructureBar(segments: session.structure, tint: tint, width: 120, height: 12) }
+                if let link = session.link {
+                    Text("↳ " + link).font(.caption2.weight(.medium)).foregroundStyle(theme.textPrimary).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onOpen)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityValue(showsStructure ? "planned structure shown" : "no structure shown")
+            .accessibilityIdentifier("planSession-\(session.id)")
+            Button(action: onMore) {
+                Image(systemName: "ellipsis").font(.footnote.weight(.bold)).foregroundStyle(theme.textSecondary)
+                    .frame(width: 36, height: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("More actions for \(session.title)")
+            .accessibilityIdentifier("planSessionMore-\(session.id)")
+        }
+        .padding(.leading, 10).padding(.vertical, 6).padding(.trailing, 2)
+        .frame(minHeight: 56)
+        .background(fill)
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(stroke, style: StrokeStyle(lineWidth: 1, dash: missed ? [5, 4] : [])))
+    }
+
+    @ViewBuilder private var badge: some View {
+        let icon = Image(systemName: session.discipline.icon).font(.footnote.weight(.semibold))
+        let shape = RoundedRectangle(cornerRadius: session.discipline == .endurance ? 17 : 10, style: .continuous)
+        if missed {
+            icon.foregroundStyle(theme.textSecondary).frame(width: 34, height: 34)
+                .overlay(shape.strokeBorder(theme.textSecondary, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))).accessibilityHidden(true)
+        } else {
+            icon.foregroundStyle(theme.isDark ? theme.background : theme.surface).frame(width: 34, height: 34)
+                .background(shape.fill(tint)).accessibilityHidden(true)
+        }
+    }
+    @ViewBuilder private var status: some View {
+        switch session.status {
+        case .planned:
+            Text("Planned").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary)
+        case .done:
+            Label("Done", systemImage: "checkmark").font(.caption2.weight(.semibold)).foregroundStyle(theme.textSecondary)
+        case .missed:
+            Text("Missed").font(.caption2.weight(.semibold)).foregroundStyle(theme.textPrimary)
+                .padding(.horizontal, 6).padding(.vertical, 1)
+                .overlay(Capsule().strokeBorder(theme.textSecondary, style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
+        }
+    }
+    @ViewBuilder private var fill: some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        if missed {
+            shape.fill(Color.clear)
+        } else if theme.usesGradients {
+            shape.fill(theme.surface).overlay(shape.fill(LinearGradient(colors: [tint.opacity(theme.isDark ? 0.20 : 0.12), tint.opacity(0)], startPoint: .leading, endPoint: UnitPoint(x: 0.55, y: 0.5))))
+        } else {
+            shape.fill(theme.surface)
+        }
+    }
+    private var stroke: Color {
+        if missed { return theme.textSecondary }
+        return theme.id == .highContrast ? theme.border : Color.clear
+    }
+}
+
 /// The planned structure of a session, from its prescription: segment width = share of the time, height = intensity
 /// (ride) or one block per exercise (strength). It describes the plan, not performance. Sample data in this prototype.
 struct PlanStructureBar: View {
     let segments: [PlanSegment]
     let tint: Color
-    private let width: CGFloat = 168
+    var width: CGFloat = 168
+    var height: CGFloat = 14
     var body: some View {
         let total = max(segments.reduce(0) { $0 + $1.weight }, 0.001)
         let gaps = CGFloat(max(segments.count - 1, 0)) * 2
@@ -684,10 +869,10 @@ struct PlanStructureBar: View {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
                 RoundedRectangle(cornerRadius: 1.5)
                     .fill(tint)
-                    .frame(width: max((width - gaps) * CGFloat(seg.weight / total), 2), height: 4 + 10 * CGFloat(min(max(seg.level, 0), 1)))
+                    .frame(width: max((width - gaps) * CGFloat(seg.weight / total), 2), height: 4 + (height - 4) * CGFloat(min(max(seg.level, 0), 1)))
             }
         }
-        .frame(height: 14, alignment: .bottom)
+        .frame(height: height, alignment: .bottom)
         .padding(.top, 2)
         .accessibilityHidden(true)
     }

@@ -18,6 +18,7 @@ enum LabConfig {
     static var stress: String? { env["LAB_STRESS"] }                    // queued | direct — sheet transition self-test
     static var graphMode: String? { env["LAB_GRAPH_MODE"] }             // recovery | activity | trends
     static var planScenario: PlanScenario { env["LAB_PLAN"].flatMap(PlanScenario.init(rawValue:)) ?? .normal }   // normal | noSuggestion | noGoal | budget
+    static var planCards: String? { env["LAB_PLAN_CARDS"] }            // hybrid = Variant B (comparison only)
     static var planSection: String? { env["LAB_PLAN_SECTION"] }       // weekly | recurring
     static var planDay: Int? { env["LAB_PLAN_DAY"].flatMap(Int.init) }  // day of the month selected at launch
     static var graphRange: String? { env["LAB_GRAPH_RANGE"] }           // 7d | 4w                // accepted | declined | postponed
@@ -165,7 +166,7 @@ struct LabRoot: View {
                          metricStyle: .rows, actions: homeActions)
         case 1:
             PlanScreen(data: PlanMock.make(LabConfig.planScenario), bottomInset: dockHeight,
-                       initialSection: LabConfig.planSection, initialDay: LabConfig.planDay)
+                       initialSection: LabConfig.planSection, initialDay: LabConfig.planDay, sessionStyle: LabConfig.planCards)
         case 4:
             LabScreen(themeRaw: $themeRaw, scenario: $scenario, lockedTheme: LabConfig.theme, bottomInset: dockHeight)
         default:

@@ -123,11 +123,17 @@ if [ -n "$PLAN_MODE" ]; then
       shoot "$U" "$P-$T-state-rest-day" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN_DAY=20
       shoot "$U" "$P-$T-state-no-goal" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN=noGoal
       shoot "$U" "$P-$T-state-budget-conflict" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN=budget LAB_PLAN_SECTION=recurring
+      shoot "$U" "$P-$T-state-no-goal-recurring" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN=noGoal LAB_PLAN_SECTION=recurring
+      shoot "$U" "$P-$T-variantA-cards-four" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN=busy
+      shoot "$U" "$P-$T-variantB-hybrid-four" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN=busy LAB_PLAN_CARDS=hybrid
+      shoot "$U" "$P-$T-variantB-hybrid-two" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN_CARDS=hybrid
     done
     xcrun simctl ui "$U" content_size accessibility-large >/dev/null 2>&1
     for T in obsidian highContrast; do
       shoot "$U" "$P-$T-AXL-weekly" LAB_SCREEN=plan LAB_THEME=$T
       shoot "$U" "$P-$T-AXL-recurring" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN_SECTION=recurring
+      shoot "$U" "$P-$T-AXL-variantB-hybrid" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN_CARDS=hybrid
+      shoot "$U" "$P-$T-AXL-no-goal" LAB_SCREEN=plan LAB_THEME=$T LAB_PLAN=noGoal
     done
     xcrun simctl ui "$U" content_size large >/dev/null 2>&1
   }
