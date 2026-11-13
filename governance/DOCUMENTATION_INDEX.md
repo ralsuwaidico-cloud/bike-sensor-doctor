@@ -34,6 +34,7 @@ project (reference copies and documents not yet in GitHub).
 | **Progress v2.0** — Phase 0 audit of current Progress | `product/progress/PROGRESS_V2_PHASE0_AUDIT.md` v0.1 | gov | Current Draft (read-only audit) |
 | **Progress v2.0** — competitor research and Athlete Evolution framework | `product/progress/PROGRESS_V2_RESEARCH_AND_FRAMEWORK.md` v0.1 | gov | Current Draft (proposal; no thresholds, nothing calculated) |
 | **Progress v2.0** — concept directions, landing architecture, Singularity feasibility | `product/progress/PROGRESS_V2_CONCEPTS_AND_FEASIBILITY.md` v0.1 (+ `product/progress/concepts/`) | gov | Current Draft (static concepts; nothing built) |
+| **Progress v2.0** — visual design specification: collapsing singularity, full landing page, detail screens, acceptance criteria | `product/progress/PROGRESS_V2_VISUAL_DESIGN_SPECIFICATION.md` v0.2 (+ `product/progress/design-v02/`) | gov | Current Draft — awaiting owner approval (static designs; nothing built) |
 | **Metrics** — schedule adherence, training fulfillment, actual volume | `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` v0.1 | gov | Current Draft (proposal; nothing calculated) |
 | **Plan** — earlier proposal (weekly calendar only) | `ui-lab/plan/PLAN_V1_PROPOSAL.md` | project | Pending Review (not marked Superseded) |
 | **Coach** — implemented behaviour | `ios/ADAPTIVE_COACH.md`, `ios/BEHAVIOUR_CONTRACT.md`, `ios/SAFETY_CHANGES_RC3.md` | rel | Current Approved (describes shipped rules) |
