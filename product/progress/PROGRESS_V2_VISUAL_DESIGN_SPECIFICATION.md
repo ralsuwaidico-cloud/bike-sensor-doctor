@@ -1,6 +1,7 @@
 # Progress v2.0 — visual design specification (collapsing singularity and full landing page)
 
-Status: **Current Draft — awaiting owner approval** · Version 0.2 · 13 Nov 2026 · Level 3
+Status: **Current Draft — awaiting owner visual review** · Version 0.3 · 13 Nov 2026 · Level 3
+**v0.3 adds Part B (Progress v2.2, open-surface design).** Part B replaces the page layouts of sections 2, 5 and 6 and of the v2.1 images. Sections 3 and 4 (scroll interaction, rendering) and 7–9 remain in force.
 **Design only.** Static concepts drawn as images. Nothing was built, run or measured on a device. No production code,
 UI Lab code, renderer, database, firmware or TestFlight change was made. All figures in the images are **invented sample
 data** and are labelled so. No advancement thresholds are defined anywhere in this document.
@@ -169,3 +170,136 @@ D1 and D2 are recorded as dependencies only. Production was not changed.
 
 Drawings, not software. No timing, smoothness, battery, accessibility or small-screen behaviour has been verified.
 The Progress screenshots mentioned in the original brief were not received.
+
+
+---
+
+# Part B — Progress v2.2: open-surface design
+
+Design only; static drawings; illustrative sample data, identical in both variants. Nothing built or run.
+**Not received:** the new WHOOP screenshots did not arrive with the message (text only). Part B follows the qualities
+the brief lists (negative space, large values, full-width visuals, few colours, calm rhythm), not the images.
+
+## B1. Images (`design-v22/`)
+
+| File | Shows |
+|---|---|
+| `PF1_landing_variant_A_and_B.png` | Full-length landing page, Variant A and Variant B, Obsidian and Arctic |
+| `PF2_expanded_collapsed_and_small_iphone.png` | Expanded and collapsed singularity on standard and small iPhone; small-iPhone page at full length (A and B) |
+| `PF3_detail_screens_variant_A.png` | Hybrid, Endurance, Strength development — Variant A, Obsidian and Arctic |
+| `PF4_detail_screens_variant_B.png` | The same three screens — Variant B |
+| `PF5_drilldowns_and_discipline_adaptation.png` | Exercise detail, Athlete Evolution details, endurance-only and strength-only landing pages |
+| `PF6_remaining_four_themes.png` | Ocean, Forest, Sandstone, High Contrast — both variants |
+
+## B2. The two treatments
+
+| | A — Open Editorial | B — Refined Technical |
+|---|---|---|
+| Surface | Page background only; no lines between metrics | Page background; a hairline between metrics; a faint full-width band behind section titles |
+| Key value | 42 pt | 32 pt |
+| Status | Inside the sentence under the value | Right-aligned beside the metric name |
+| Charts | Line and end values only | Light grid, axis values, every point labelled, "no training" period shaded |
+| Extra figures | None | A three-figure line under the endurance chart (baseline · recent repeatable · best verified) |
+
+Neither variant has a card around any metric.
+
+## B3. Landing page
+
+A Singularity (unchanged) → B **Your development** → C Performance trends (one entry) → D Next evolution (name and
+one sentence) → E Evolution timeline (one line with the stage transitions) → F Athlete Evolution details and
+Records & history (two quiet rows).
+
+Your development, for a Hybrid athlete — five sections, each with a different kind of picture because each shows a
+different kind of quantity:
+
+| Section | Headline | Picture | What every mark means |
+|---|---|---|---|
+| Endurance | 221 W, 20-minute power | Trend line on a true time axis with a dashed baseline | Each point is one comparable effort; the dashed line is the baseline value |
+| Strength | 104 kg, squat estimated 1RM | Baseline-to-now comparison of three lifts on one kilogram scale | Hollow dot = baseline, filled dot = now; all in kg |
+| Training consistency | 12 of 14 weeks | Weekly timeline, one mark per session | Filled square = endurance session, outlined square = strength session, dashes = no training recorded |
+| Intensity distribution | 71 % of heart-rate time in zones 1–2 | One horizontal bar divided by zone | Segment length = share of recorded heart-rate time |
+| Hybrid development | "Both progressing" (status, no number) | Two separate small trends on the same dates | Each keeps its own unit; nothing is merged |
+
+Single-discipline athletes get only their own sections (PF5): the endurance-only example shows endurance, consistency,
+intensity and a one-sentence "not enough comparable rides" state; the strength-only example shows strength, bodyweight
+progression, consistency and muscle-group coverage. Insufficient evidence is a sentence, never an empty chart.
+
+Controls: the three discipline names are plain text tabs (shown only when the athlete has more than one view); one
+period control per screen ("Since baseline" on the landing page, "12 weeks ⌄" on detail screens). Each metric section is
+tappable as a whole; there is no button or chevron beside it.
+
+## B4. Detail screens
+
+- **Hybrid development** — Endurance (trend + two lines), Strength (four-lift comparison + pull-up line), training
+  maturity (weekly timeline), changes since the previous evaluation (three lines), then "More".
+- **Endurance development** — Performance (wide 20-minute power trend; longest steady ride as a then/now pair) ·
+  Training distribution (zone bar; riding time per week) · Supporting context (three plain lines) · More.
+- **Strength development** — Progression (squat: estimated 1RM line with recorded top sets as separate marks) ·
+  All lifts (baseline-to-now comparison; bodyweight pull-up in reps) · Coverage (muscle groups; movement patterns as
+  one line) · More.
+
+## B5. Removed, preserved, relocated
+
+**Removed (chrome):** every rounded card and border around metrics; filter pills for range (five per screen) and for
+discipline; status pills; a chevron on every row; repeated tags ("Capability", "Exposure — not capability",
+"Supporting evidence") on each block; per-row miniature charts; most explanatory footnotes.
+
+**Preserved:** the singularity and its collapse; sections A–F; Hybrid / Endurance / Strength adapting to the profile;
+every metric and comparison of v2.1; estimate versus recorded; exposure kept apart from capability (now by section
+title: "Training distribution", "Training maturity", "Supporting context"); "Not enough evidence" states; sample-data
+label; current evaluation versus highest achieved.
+
+**Relocated (nothing deleted):**
+
+| v2.1 location | v2.2 location |
+|---|---|
+| Recorded bests list on Strength | Strength › More › Recorded bests |
+| Sets per week, sessions, quick-log count on Strength | Strength › More › Training volume / Sessions |
+| Session-by-session sets and the Epley explanation | Exercise detail (tap a lift) |
+| Movement-pattern grid | One line under Coverage; grid in its drill-down |
+| List of efforts used / left out; long-term trend; "why it says Improving" | Endurance › More › All efforts and long-term trend (metric detail) |
+| "Best verified vs recent repeatable" bars | One line (A) or three-figure line (B) under the trend |
+| Verified milestones list on Hybrid | Hybrid › More › Verified milestones |
+| Evidence ladder and "what is missing" | Athlete Evolution details |
+| Range choices 4 / 8 / 12 / 16 / All | Inside the single period control |
+| "Next evolution" counts row | One sentence |
+
+## B6. Measured comparison with v2.1 (from the drawing files, standard width)
+
+| | v2.1 landing | v2.2 A landing | v2.2 B landing | v2.1 Strength | v2.2 A Strength |
+|---|---|---|---|---|---|
+| Bordered containers | 5 or more | 0 | 0 | 5 or more | 0 |
+| Pills and chips | 10 | 0 | 0 | 12 | 0 |
+| Smallest text | 10 pt | 11 pt in new content (hero label unchanged at 10 pt) | same | 9.5 pt | 11 pt |
+| Words per 1,000 pt of height | about 136 | about 94 | about 113 | about 184 | about 114 |
+| Page height | about 1,200 pt | about 2,630 pt | about 2,790 pt | about 1,510 pt | about 1,790 pt |
+
+Counts come from an automated pass over the drawings and are approximate. **The landing page is now more than twice as
+long** (about three screens instead of one and a half). That is the cost of five full-width sections; see B8.
+
+Hierarchy: v2.1 gave every row the same weight inside equal cards. v2.2 has three levels only — section title (small
+capitals), key value (largest text on the page after the stage), supporting sentence and picture.
+
+## B7. Accessibility and High Contrast
+
+- No information depends on colour alone: endurance marks are filled, strength marks are outlined; baseline is hollow,
+  now is filled; status is written as a word.
+- High Contrast: line-and-shape singularity; zone segments solid with gaps and written percentages instead of tints;
+  secondary text at full strength; separators drawn at full contrast in Variant B.
+- Text was not reduced to make space; new content is 11 pt or larger and key values are 32–42 pt. At large Dynamic Type
+  sizes the key value and its unit wrap onto their own lines and charts keep their full width; three-figure lines (B)
+  stack vertically.
+- A whole metric section is one touch target and one VoiceOver element ("Endurance, 20-minute power, 221 watts,
+  improving, up from 208 at baseline; opens Endurance development"). Charts need a spoken summary, not point-by-point
+  reading.
+- With chevrons removed from metric sections, tappability relies on the pressed state and the VoiceOver hint; this must
+  be checked with real users in the UI Lab.
+- None of this has been tested; the small-iPhone drawings show fit at default text size only.
+
+## B8. Open points
+
+1. **Length.** If three screens is too long, the cleanest reduction is four sections: fold "Hybrid development" into
+   the sentence under the stage name, or move "Intensity distribution" to Endurance only.
+2. Choice of A or B, or A for the landing page with B for detail screens.
+3. Is a status word acceptable on "Hybrid development" with no number? (No number exists that would be honest.)
+4. Variation bands and minimum evidence behind each status word are still undefined (v2.1 dependency E3).
