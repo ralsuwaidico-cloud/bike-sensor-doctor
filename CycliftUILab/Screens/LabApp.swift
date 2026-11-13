@@ -17,6 +17,10 @@ enum LabConfig {
     static var decision: String? { env["LAB_DECISION"] }
     static var stress: String? { env["LAB_STRESS"] }                    // queued | direct — sheet transition self-test
     static var graphMode: String? { env["LAB_GRAPH_MODE"] }             // recovery | activity | trends
+    static var progressState: ProgressHeroState { env["LAB_PROGRESS"].flatMap(ProgressHeroState.init(rawValue:)) ?? .g2 }   // g0 | g2 | g2prov | g5 | first | returning
+    static var progressScroll: String? { env["LAB_PSCROLL"] }          // expanded | mid | collapsed
+    static var progressReduceMotion: Bool { env["LAB_REDUCE_MOTION"] == "1" }
+    static var progressProbe: Bool { env["LAB_PROBE"] == "1" }
     static var graphRange: String? { env["LAB_GRAPH_RANGE"] }           // 7d | 4w                // accepted | declined | postponed
 }
 
@@ -160,6 +164,10 @@ struct LabRoot: View {
                          initialTrendSelection: LabConfig.select, bottomInset: dockHeight,
                          initialGraphMode: LabConfig.graphMode, initialGraphRange: LabConfig.graphRange,
                          metricStyle: .rows, actions: homeActions)
+        case 3:
+            ProgressScreen(sample: ProgressSample.make(LabConfig.progressState), bottomInset: dockHeight,
+                           launchScroll: LabConfig.progressScroll, forceReduceMotion: LabConfig.progressReduceMotion,
+                           showProbe: LabConfig.progressProbe)
         case 4:
             LabScreen(themeRaw: $themeRaw, scenario: $scenario, lockedTheme: LabConfig.theme, bottomInset: dockHeight)
         default:

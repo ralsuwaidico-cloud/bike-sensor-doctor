@@ -19,7 +19,8 @@ xcodebuild -project CycliftUILab.xcodeproj -scheme CycliftUILab -configuration D
 RC=$?
 grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" "$OUT/build.txt" | sed "s#$PWD/##" | sort -u | head -80 > "$OUT/build-digest.txt"
 if [ $RC -ne 0 ]; then note "RESULT build: FAILED"; cat "$OUT/build-digest.txt" >> "$SUM"; exit 1; fi
-note "RESULT build: ok ($(grep -c 'warning:' "$OUT/build.txt") warnings)"
+note "RESULT build: ok ($(grep -c 'warning:' "$OUT/build.txt") warning lines in the log; $(grep 'warning:' "$OUT/build.txt" | grep -c 'ProgressScreen.swift') in ProgressScreen.swift)"
+grep 'warning:' "$OUT/build.txt" | sed "s#$PWD/##" | sort | uniq -c | sort -rn | head -60 > "$OUT/warnings.txt"
 # "[compile-only]" in the commit subject: also compile the interaction tests, then stop (fast check; proves nothing at runtime)
 if git log -1 --format=%s 2>/dev/null | grep -q "\[compile-only\]"; then
   xcodebuild build-for-testing -project CycliftUILab.xcodeproj -scheme CycliftUILab -sdk iphonesimulator \
@@ -87,18 +88,55 @@ runtests() { # udid label
   xcrun simctl boot "$U" >/dev/null 2>&1; xcrun simctl bootstatus "$U" -b >/dev/null 2>&1
   xcrun simctl ui "$U" content_size large >/dev/null 2>&1
   xcodebuild test -project CycliftUILab.xcodeproj -scheme CycliftUILab -destination "id=$U" -derivedDataPath build \
-    -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO > "$LOG" 2>&1
+    -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO ${ONLY_TESTING:+-only-testing:$ONLY_TESTING} > "$LOG" 2>&1
   local RC=$?
   local P F
   P=$(grep -cE "^Test Case .* passed" "$LOG"); F=$(grep -cE "^Test Case .* failed" "$LOG")
   { echo; echo "== $L (${3}) — passed $P, failed $F, xcodebuild exit $RC ==";
-    grep -E "^Test Case .* (passed|failed)" "$LOG" | sed -E "s/^Test Case '-\[CycliftUILabUITests\.HomeInteractionTests (.*)\]' (passed|failed) \((.*) seconds\)\./  \2  \1  (\3 s)/";
+    grep -E "^Test Case .* (passed|failed)" "$LOG" | sed -E "s/^Test Case '-\[CycliftUILabUITests\.[A-Za-z0-9_]+ (.*)\]' (passed|failed) \((.*) seconds\)\./  \2  \1  (\3 s)/";
     echo "-- observations written by the tests --"; grep -hE "LABNOTE" "$LOG" | sed -E "s/^.*LABNOTE /  /" | sort -u;
     if [ "$F" != "0" ] || [ $RC -ne 0 ]; then echo "-- failure details --"; grep -E "error:|Testing failed|\*\* TEST" "$LOG" | sed "s#$PWD/##" | sort -u | head -60; fi; } >> "$TESTS"
   note "RESULT interaction tests ($L): passed $P, failed $F$([ $RC -ne 0 ] && [ "$F" = "0" ] && echo " — xcodebuild exit $RC (see interaction-tests.txt)")"
   # keep the tail of the raw log small enough to publish
   tail -c 400000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 }
+# ---- Progress proof of concept (branch proto/ui-lab-progress): Progress tests and Progress screens only.
+# Independent of the Home sheet diagnostics (proto/ui-lab) and of the Plan round (proto/ui-lab-plan): own branch,
+# own workflow, own test class, own output branch. Home and Plan are not run here.
+PROGRESS_MODE=1
+FULL_ONLY=""
+if [ -n "$PROGRESS_MODE" ]; then
+  : > "$TESTS"
+  { echo "Cyclift UI Lab — Progress proof of concept: hero, scroll transformation, Evolution Track (PROTOTYPE, iOS Simulator, flat placeholder, sample data)."; echo "A pass here is not validation of the production app, not a real-device test, and says nothing about GPU, battery or heat."; } >> "$TESTS"
+  ONLY_TESTING="CycliftUILabUITests/ProgressInteractionTests"
+  [ -n "$STD" ] && runtests "${STD%|*}" standard "${STD#*|}"
+  [ -n "$SMALL" ] && runtests "${SMALL%|*}" small "${SMALL#*|}"
+  pshots() { # udid prefix
+    local U="$1" P="$2"
+    for T in obsidian arctic; do
+      shoot "$U" "$P-$T-1-expanded" LAB_SCREEN=progress LAB_THEME=$T
+      shoot "$U" "$P-$T-2-intermediate" LAB_SCREEN=progress LAB_THEME=$T LAB_PSCROLL=mid
+      shoot "$U" "$P-$T-3-collapsed" LAB_SCREEN=progress LAB_THEME=$T LAB_PSCROLL=collapsed
+      for S in g0 g2prov g5 first returning; do shoot "$U" "$P-$T-state-$S" LAB_SCREEN=progress LAB_THEME=$T LAB_PROGRESS=$S; done
+    done
+    shoot "$U" "$P-obsidian-reduce-motion-1-expanded" LAB_SCREEN=progress LAB_THEME=obsidian LAB_REDUCE_MOTION=1
+    shoot "$U" "$P-obsidian-reduce-motion-2-part-scrolled" LAB_SCREEN=progress LAB_THEME=obsidian LAB_REDUCE_MOTION=1 LAB_PSCROLL=mid
+    shoot "$U" "$P-obsidian-reduce-motion-3-collapsed" LAB_SCREEN=progress LAB_THEME=obsidian LAB_REDUCE_MOTION=1 LAB_PSCROLL=collapsed
+    for CS in extra-extra-extra-large accessibility-large accessibility-extra-extra-extra-large; do
+      xcrun simctl ui "$U" content_size $CS >/dev/null 2>&1
+      for T in obsidian arctic; do shoot "$U" "$P-$T-text-$CS-1-expanded" LAB_SCREEN=progress LAB_THEME=$T; done
+      shoot "$U" "$P-obsidian-text-$CS-3-collapsed" LAB_SCREEN=progress LAB_THEME=obsidian LAB_PSCROLL=collapsed
+      for S in g2prov g5 returning; do shoot "$U" "$P-obsidian-text-$CS-state-$S" LAB_SCREEN=progress LAB_THEME=obsidian LAB_PROGRESS=$S; done
+    done
+    xcrun simctl ui "$U" content_size large >/dev/null 2>&1
+  }
+  if [ -n "$STD" ]; then U="${STD%|*}"; prep "$U"; SETTLE=6 shoot "$U" warmup LAB_THEME=obsidian LAB_SCREEN=progress; SETTLE=3 pshots "$U" progress-std; xcrun simctl shutdown "$U" >/dev/null 2>&1; fi
+  if [ -n "$SMALL" ]; then U="${SMALL%|*}"; prep "$U"; SETTLE=6 shoot "$U" warmup-small LAB_THEME=obsidian LAB_SCREEN=progress; SETTLE=4 pshots "$U" progress-small; xcrun simctl shutdown "$U" >/dev/null 2>&1; fi
+  rm -f "$OUT/shots/warmup.png" "$OUT/shots/warmup-small.png"
+  note "PROGRESS run: Progress tests and Progress screens only (Home and Plan were not run on this branch)."
+  note "Screens captured: $(ls "$OUT/shots" 2>/dev/null | wc -l | tr -d ' ')"
+  exit 0
+fi
 FULL_ONLY=""; git log -1 --format=%s 2>/dev/null | grep -q "\[full-only\]" && FULL_ONLY=1
 [ -n "$FULL_ONLY" ] && { note "FULL-ONLY run: interaction tests and screen captures were skipped on purpose; see the previous run for them"; echo "Not run in this full-only build." >> "$TESTS"; }
 [ -z "$FULL_ONLY" ] && [ -n "$STD" ] && runtests "${STD%|*}" standard "${STD#*|}"
