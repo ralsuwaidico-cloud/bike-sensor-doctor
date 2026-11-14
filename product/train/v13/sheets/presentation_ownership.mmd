@@ -1,0 +1,22 @@
+flowchart TD
+    C((Session coordinator<br/>the only owner of:<br/>session identity · state ·<br/>which surface is shown)):::c
+    subgraph S[Surfaces - only one of these is on screen at a time]
+      P[Compact panel]
+      H[Training Hub]
+      PR[Preparation]
+      R[Recorder - full screen<br/>strength / endurance / recovery]
+      F[Finish and Save]
+      RV[Review]
+    end
+    E[Train emblem in the dock<br/>shows the coordinator's state]
+    TABS[Home · Plan · Progress · Profile]
+    ENG1[(Strength session store<br/>exists today)]
+    ENG2[(Ride recorder<br/>exists today)]
+    ENG3[(Recovery timer<br/>does not exist)]
+    C --> P & H & PR & R & F & RV
+    C --> E
+    E -- tap --> C
+    R -- minimise --> C
+    C -- shows tabs, keeps session --> TABS
+    C -. reads and commands, never duplicates .-> ENG1 & ENG2 & ENG3
+    classDef c fill:#16181c,color:#fff,stroke:#16181c

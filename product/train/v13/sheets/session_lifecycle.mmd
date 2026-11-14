@@ -1,0 +1,32 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Idle
+    Idle --> Preparing: choose
+    Preparing --> Idle: back
+    Preparing --> Recording: Start (accepted once)
+    Recording --> Paused: Pause
+    Paused --> Recording: Resume
+    Recording --> Finishing: Finish (strength, recovery)
+    Paused --> Finishing: Finish (every activity)
+    Finishing --> Paused: Back to session
+    Finishing --> Saving: Save
+    Finishing --> Discarded: Discard + confirm
+    Saving --> Saved: stored
+    Saving --> SaveFailed: error
+    SaveFailed --> Saving: Try again
+    SaveFailed --> Paused: Back to session
+    Saved --> Review: optional
+    Review --> Closed: Save review / Skip
+    Saved --> Closed
+    Discarded --> Closed
+    Recording --> Interrupted: app ended by the system
+    Paused --> Interrupted: app ended by the system
+    Interrupted --> Paused: reopen, same session, only if it was stored
+    Closed --> [*]
+    note right of Recording
+      Minimised is NOT a state.
+      Recording and Paused can each be
+      shown in the recorder or minimised.
+      Sensor attention is a flag on
+      Recording, not a state.
+    end note

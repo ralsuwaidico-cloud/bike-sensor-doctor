@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.5 · 14 Nov 2026
+Status: Current Draft · Version 0.6 · 14 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -51,10 +51,13 @@ firmware or existing document was changed to apply a ruling.
 | 41 | Pain without a judgment | Brief v1.2 §10 (optional localisation, no forced medical judgment) vs today's three pain levels, which Coach rules act on | Level and area offered as optional, using the existing choices | What is stored when no level is chosen is undecided | **Open** — v1.2 decision 8 |
 | 42 | Statements in Training Hub v1.1 corrected by a closer reading of the source | v1.1 D ("only a superset group letter exists") — the app already alternates A1 → A2. v1.1 C ("background recording not verified") — background modes, a notice and gap handling exist in code. v1.1 C ("ride restoration not verified") — no saving of a phone-recorded ride in progress was found | Corrections recorded here and in the v1.2 documents. **The v1.1 files were not edited** | History is not rewritten | Recorded · still code reading only, nothing tested |
 | 43 | Train symbol candidates | v1.1 register U1 (Pulse, Orbit, Ascent, Vector C) vs owner decision 14 Nov (none approved; redesign) | Owner decision. Three new candidates in v1.2; none approved | Later owner instruction | Decided (withdrawal) · new choice **open** |
+| 44 | Finish while riding | Approved, unit-tested rule RA-20 (End is never reachable while a ride is running; always once paused) vs the Training Hub v1.2 cockpit drawing (Finish beside Pause while riding) | RA-20. v1.3 follows it. **The v1.2 files were not edited**; the error is recorded here and in the v1.3 design document | An approved rule outranks a draft drawing | Corrected in v1.3 · v1.2 decision 4 withdrawn |
+| 45 | Minimising a ride | Owner decision 14 Nov (active-session minimisation approved as a design direction, Option A) vs approved rule RA-01 (the dock is removed while a ride is recorded, so the Ride screen cannot be left) | Direction decided by the owner. **How RA-01 changes is not decided**; v1.3 marks ride minimisation as dependent on that | Later owner decision sets direction; an approved safety rule is not changed by a drawing | **Open** — v1.3 decision 2. Updates item 37 |
+| 46 | Train symbol | v1.2 candidates (Lift Ring, Momentum, Rise) vs brief v1.3 (design a new family) | Three new concepts in v1.3 (Shift, Horizon, Triad); Shift recommended for review; none approved | Later owner instruction | **Open** — v1.3 decision 1. Updates item 43 |
 
 ## Summary of what is still unresolved
 
 13 (Watch theme values — hardware-design workstream) · 15 (refinement decided, not scheduled) · 16 (typography, spacing, radii — waits for the component-system assessment) · 17 (logo, wordmark, icon — open design items) · 20 (Instruction edits waiting for the owner to apply) · grading thresholds awaiting rule-by-rule review (item 2) · the long-term development branch (item 19, after release stabilisation).
 Decided but **not implemented**: 12 (colour direction), 21–32 (Plan and Coach behaviour).
 Open since 12 Nov: 33, 34, 35 and the Plan specification questions Q1–Q9.
-Open since 14 Nov (Training Hub v1.2): 37, 38, 39, 40, 41 and the new emblem choice (43).
+Open since 14 Nov (Training Hub v1.2 and v1.3): 37/45 (minimising a ride and RA-01), 38, 39 and 40 (the owner's v1.3 brief confirms no Effort on Finish and no pre-filled ratings; the Coach fallback remains a separate, unwritten proposal), 41, and the emblem choice (43/46).
