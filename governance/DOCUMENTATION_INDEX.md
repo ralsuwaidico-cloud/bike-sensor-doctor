@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 0.9 · 14 Nov 2026
+Status: Current Draft · Version 1.0 · 14 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -48,6 +48,7 @@ project (reference copies and documents not yet in GitHub).
 | **Training Hub v1.4 — design and UX architecture baseline** (approved by the owner 14 Nov 2026; implementation not authorised). Pending: emblem; cycling safety gate; save-result handling; review values and Coach compatibility; new exercise and recovery data; session and rest rules. Open defects: ride GPS-route test and Plan edit-and-apply test | `product/train/v14/TRAINING_HUB_V14_DESIGN.md` v0.2; supporting: `…_CYCLING_SAFETY_GATE.md`, `…_TECHNICAL_IMPACT.md` v0.2, `…_ACCEPTANCE_CRITERIA.md` (+ `product/train/v14/sheets/`); decision: `decisions/2026-11-14_training-hub-v14-approved-design-baseline.md` | gov | **Current Approved — Design Baseline** · dependencies pending · nothing built |
 | **Profile — Phase 0 audit and proposed information architecture** (read-only; active design workstream from 14 Nov 2026) | `product/profile/PROFILE_PHASE0_AUDIT_AND_IA.md` v0.1 | gov | Current Draft — pending owner review; no screens designed |
 | **Profile and global navigation — design v1.0** (owner decision D: three tabs, Train on the right, Profile from the Home avatar; five Profile sections; seven sheets; route map; dependency assessment; decision register) | `product/profile/PROFILE_AND_NAVIGATION_V1_DESIGN.md` v0.1 (+ `product/profile/sheets/`); decision: `decisions/2026-11-14_navigation-decision-d-three-tabs-train-right-profile-via-avatar.md` | gov | Current Draft — pending owner review; illustrative, not implemented |
+| **Navigation v1.1 — sculpted Train cradle** (correction to P1 of v1.0: one silhouette, three measured depths, medium suggested; four sheets; owner sketch not received) | `product/profile/nav-v11/NAVIGATION_V11_SCULPTED_CRADLE.md` v0.1 (+ `product/profile/nav-v11/sheets/`) | gov | Current Draft — pending owner review; illustrative, not implemented; does not supersede v1.0 |
 | **Metrics** — schedule adherence, training fulfillment, actual volume | `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` v0.1 | gov | Current Draft (proposal; nothing calculated) |
 | **Plan** — earlier proposal (weekly calendar only) | `ui-lab/plan/PLAN_V1_PROPOSAL.md` | project | Pending Review (not marked Superseded) |
 | **Coach** — implemented behaviour | `ios/ADAPTIVE_COACH.md`, `ios/BEHAVIOUR_CONTRACT.md`, `ios/SAFETY_CHANGES_RC3.md` | rel | Current Approved (describes shipped rules) |
@@ -97,6 +98,7 @@ project (reference copies and documents not yet in GitHub).
 | `decisions/2026-11-14_training-hub-v14-approved-design-baseline.md` | gov same path | — | 14 Nov 2026 |
 | `product/profile/PROFILE_PHASE0_AUDIT_AND_IA.md` | gov `product/profile/PROFILE_PHASE0_AUDIT_AND_IA.md` | 0.1 | 14 Nov 2026 |
 | `product/profile/PROFILE_AND_NAVIGATION_V1_DESIGN.md` | gov same path | 0.1 | 14 Nov 2026 |
+| `product/profile/nav-v11/NAVIGATION_V11_SCULPTED_CRADLE.md` | gov same path | 0.1 | 14 Nov 2026 |
 | `decisions/2026-11-14_navigation-decision-d-three-tabs-train-right-profile-via-avatar.md` | gov same path | — | 14 Nov 2026 |
 | `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.2 | 12 Nov 2026 |
 | `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.6 | 12 Nov 2026 |
