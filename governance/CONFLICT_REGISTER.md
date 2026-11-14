@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.7 · 14 Nov 2026
+Status: Current Draft · Version 0.8 · 14 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -57,6 +57,10 @@ firmware or existing document was changed to apply a ruling.
 | 47 | What "tested" means | Training Hub v1.3 sheets (label "Exists · tested", applied after reading test files) vs owner brief v1.4 §14 ("do not use the phrase tested merely because a test file was read") | Brief. v1.4 labels come from an actual run (iOS run 43013897973, commit 4e2e9dc). **v1.3 files were not edited** | Later owner instruction | Corrected in v1.4 |
 | 48 | Release-head test results | v1.3 statements that the route map and ride recording "exist" vs the run result: `RideRegressionTests.testGPSRecordingNeedsNoNetworkAndKeepsRouteSamples` and `PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply` failed on commit 4e2e9dc | The run result. Recorded as a finding; **not investigated, nothing changed** | Evidence outranks reading | **Open** — v1.4 open choice 2 |
 | 49 | Train symbol | v1.3 concepts (Shift, Horizon, Triad — not approved) vs brief v1.4 §4 (three refined candidates; not like the Singularity) | v1.4: Shift (refined), Step, Frame. Horizon withdrawn. None selected | Later owner instruction | **Open** — updates items 43, 46 |
+| 50 | Dock layout and the Profile tab | Master project instructions §5 (Profile as a major navigation destination) and the approved Training Hub v1.4 sheets (five-place dock, Train in the centre) vs owner decision D of 14 Nov (three tabs; Train at the far right; no Profile tab) | Decision D, as a **design direction only**. The v1.4 baseline and its files are unchanged; only the drawn position of the Train control differs | Latest explicit owner decision | Recorded · production navigation unchanged · design pending review |
+| 51 | Home quick menu | Profile quick menu approved in the 6 Nov addendum (avatar opens a menu) vs decision D (avatar opens the complete Profile) | Decision D proposes retiring the quick menu. Home is otherwise frozen, so this needs explicit confirmation | Latest explicit owner decision | **Open** — Profile design decision 9 |
+| 52 | Profile sections | Phase 0 proposal (seven sections) vs owner brief (five sections) | Owner's five. The Phase 0 document is kept unchanged | Later owner instruction | Decided |
+| 53 | Train symbol | v1.4 candidates (Shift, Step, Frame) vs brief of 14 Nov (none approved; explore new symbols) | New candidates Mono, Cleave, Apex. None approved. The emblem stays pending under v1.4 | Later owner instruction | **Open** — updates items 43, 46, 49 |
 
 ## Summary of what is still unresolved
 

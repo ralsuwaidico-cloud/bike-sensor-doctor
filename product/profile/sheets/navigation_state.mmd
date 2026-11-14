@@ -1,0 +1,33 @@
+stateDiagram-v2
+    direction LR
+    state "Tabs (dock visible)" as TABS {
+      Home --> Plan: tab
+      Plan --> Progress: tab
+      Progress --> Home: tab
+      Home --> Profile: avatar
+      Profile --> Section: row
+      Section --> Profile: back
+      Profile --> Home: back
+      Section --> Plan: "Open in Plan" link
+    }
+    TABS --> Panel: Train
+    Panel --> TABS: Train / outside / swipe down
+    Panel --> Hub: swipe up
+    Hub --> TABS: Train
+    Panel --> Preparation: Start
+    Hub --> Preparation: Start
+    Preparation --> Recorder: Start (accepted once)
+    Recorder --> TABS: minimise - returns to the tab and page it left
+    TABS --> Panel: Train while a session exists - Resume only
+    Panel --> Recorder: Resume
+    Recorder --> Finish: Finish
+    Finish --> Recorder: Back
+    Finish --> Saved: Save confirmed
+    Saved --> Review: optional
+    Review --> TABS: Save review / Skip
+    Saved --> TABS: Done
+    note right of Recorder
+      Full screen, dock hidden.
+      Minimising a ride is BLOCKED
+      behind the cycling safety gate.
+    end note
