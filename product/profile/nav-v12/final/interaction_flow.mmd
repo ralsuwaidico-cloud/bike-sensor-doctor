@@ -1,0 +1,24 @@
+flowchart LR
+  T[Home / Plan / Progress]:::today -->|tap Train ball| P[Compact panel]:::design
+  P -->|expand| H[Expanded Training Hub]:::design
+  P -->|Start| PR[Preparation]:::design
+  H -->|Start| PR
+  PR --> R[Recording · full screen]:::today
+  R -->|minimise · strength| M[Minimised · ball shows time]:::design
+  R -.->|minimise · ride| MB[Ride minimised]:::blocked
+  M -->|tap Train| RS[Resume panel → same session]:::design
+  RS --> R
+  R -->|Pause| PA[Paused]:::today
+  PA -->|Resume| R
+  PA -->|Finish · ride only after Pause| F[Finish]:::today
+  R -->|Finish · strength| F
+  F --> S[Save]:::today
+  S -->|saved| RV[Optional review]:::design
+  S -.->|failed or unconfirmed| U[Save uncertain]:::pending
+  RV --> T
+  R -.->|app interrupted| X[Restored · strength only]:::pending
+  X -.-> R
+  classDef today fill:#e6f4ea,stroke:#1e7a3c,color:#111
+  classDef design fill:#e8effb,stroke:#2f5fb3,color:#111
+  classDef blocked fill:#16181c,stroke:#ffd54a,color:#ffd54a
+  classDef pending fill:#ffe1ea,stroke:#a00d45,color:#111

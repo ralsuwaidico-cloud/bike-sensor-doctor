@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.9 · 15 Nov 2026
+Status: Current Draft · Version 1.0 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -61,7 +61,11 @@ firmware or existing document was changed to apply a ruling.
 | 51 | Home quick menu | Profile quick menu approved in the 6 Nov addendum (avatar opens a menu) vs decision D (avatar opens the complete Profile) | Decision D proposes retiring the quick menu. Home is otherwise frozen, so this needs explicit confirmation | Latest explicit owner decision | **Open** — Profile design decision 9 |
 | 52 | Profile sections | Phase 0 proposal (seven sections) vs owner brief (five sections) | Owner's five. The Phase 0 document is kept unchanged | Later owner instruction | Decided |
 | 53 | Train symbol | v1.4 candidates (Shift, Step, Frame) vs brief of 14 Nov (none approved; explore new symbols) | New candidates Mono, Cleave, Apex. None approved. The emblem stays pending under v1.4 | Later owner instruction | **Open** — updates items 43, 46, 49 |
-| 54 | Side of the Train control | Owner decision D of 14 Nov and Navigation v1.1 (Train at the far right) vs owner brief "Navigation v1.2" of 15 Nov (Option A: Train at the far left, design exploration) | Not decided. v1.2 is a draft exploration; Decision D and v1.1 are unchanged. If v1.2 is approved a new decision record is required | Later owner instruction, pending approval | **Open** |
+| 54 | Side of the Train control | Owner decision D of 14 Nov and Navigation v1.1 (Train at the far right) vs owner instruction of 15 Nov (Train at the far left) | Left. Decision of 15 Nov supersedes **only** the placement clause of Decision D; the rest of D, and v1.0 / v1.1 as historical records, stand unedited | Latest explicit owner decision | **Decided** · Selected Visual Direction · refined drawings Pending Final Review · production navigation unchanged |
+| 55 | Arabic layout of the dock | Navigation v1.1 (mirrored, ball at the far left in Arabic) and v1.2 exploration (two alternatives) vs owner instruction of 15 Nov (Train stays on the physical left; not mirrored) | Fixed left. Arabic labels remain illustrative | Latest explicit owner decision | Decided · design only |
+| 56 | Large-text rule | v1.1 (tab words capped at 17 pt) and v1.2 exploration (selected tab widens, icon tabs shift) vs owner instruction of 15 Nov (no cap; touch regions must not shift) | Adaptive text with fixed, equal touch regions. Open point: "Progress" at 26 pt overhangs its region in the drawing | Latest explicit owner decision | Decided; overhang **Open** |
+| 57 | Numbered destinations and the hidden Ride page | Selected three-tab design vs the app as read (five numbered pages, Ride hidden at 2, Profile at 4, tests bound to `tabPage-<i>` and `centreButton`) | Not resolved. Routes are not assumed removable; an implementation audit and engineering approval are required first | Master instructions §3, §10 | **Open** — future engineering |
+| 58 | Silhouette height | Owner target ≈ 91–92 pt vs final refinement drawn at 90.2 pt | Flagged for the owner; depth and ball were not increased to make up the difference | Owner instruction: do not enlarge for drama | **Open** — owner review |
 
 ## Summary of what is still unresolved
 
