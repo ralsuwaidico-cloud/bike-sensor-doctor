@@ -1,9 +1,25 @@
-# Training Hub v1.4 — Controlled design corrections and approval package
+# Training Hub v1.4 — Design and UX architecture baseline
 
-Status: **Current Draft — design only, pending owner review. Nothing here is approved or selected, including every emblem.** · Version 0.1 · 14 Nov 2026 · Level 3
+Status: **Current Approved — Design Baseline** (owner approval, 14 Nov 2026). **Implementation is not authorised.** · Version 0.2 · 14 Nov 2026 · Level 2
+Approved as design: compact panel then expanded Hub · full-screen recording · one session lifecycle with minimise, resume, finish and save ·
+activity-specific endurance screens · strength recording, superset journeys and rest management · recovery concepts ·
+optional review (Intensity, Performance, Effort) · the v1.4 visual direction, six themes and accessibility requirements.
+
+**Explicitly pending — not approved, not resolved:**
+1. Final Train emblem selection.
+2. Cycling minimise / resume safety gate, including GPS recording and storing a ride in progress.
+3. Session save-result handling and recovery.
+4. Unanswered review values, Intensity storage and Coach compatibility.
+5. New exercise and recovery data capabilities.
+6. Unresolved session-behaviour and rest-rule decisions.
+
+**Open defects — unchanged by this approval:** the ride GPS-route test and the Plan edit-and-apply test both failed on the
+release head (run 43013897973). Neither has been investigated or fixed.
+
+No further Training Hub design round is planned. Every screen in this package is a static drawing; nothing was compiled, run or tested.
 No production code, UI Lab code, schema, onboarding, Home, Plan, Progress, Coach, firmware, watch or BikeComputer file was changed.
-Every screen is a static drawing. Nothing was compiled, run or tested. Figures on screens are illustrative samples.
-v1.3 is preserved unchanged as the historical source (`product/train/v13/`).
+v1.3 is preserved unchanged as historical documentation (`product/train/v13/`).
+Decision record: `decisions/2026-11-14_training-hub-v14-approved-design-baseline.md`.
 
 Companions: `TRAINING_HUB_V14_CYCLING_SAFETY_GATE.md` · `TRAINING_HUB_V14_TECHNICAL_IMPACT.md` · `TRAINING_HUB_V14_ACCEPTANCE_CRITERIA.md`.
 
@@ -26,6 +42,7 @@ watch stage passed. I did not investigate either failure; the ride one is listed
 
 | Kind | Item |
 |---|---|
+| **Owner approval, 14 Nov 2026** | Training Hub v1.4 is the approved design and UX architecture baseline. Approval does not authorise implementation. Six matters stay pending (see the status block above) and two test failures stay open defects |
 | **Owner decision** | 1 — All active workouts can be minimised and restored (Option A). For cycling: an architectural goal behind strict safety gates; current behaviour unchanged |
 | **Owner decision** | 2 — Strength shows one primary exercise and the next exercise (Option B) |
 | **Owner decision** | 3 — Review uses three side-by-side draggable sliders: Intensity · Performance · Effort; nothing pre-filled |
@@ -139,7 +156,7 @@ clock-based rest; the dock rule; the ride recorder across tab changes; all acces
 
 **Still needs the owner.** See §9.
 
-## 9. Open choices
+## 9. Open choices (carried forward as pending items after the approval of 14 Nov 2026)
 
 1. Emblem: Shift, Step, Frame, or another round.
 2. Whether the failing ride test and the failing Plan test on the release head should be investigated now, as a separate task.

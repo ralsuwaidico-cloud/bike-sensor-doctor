@@ -1,6 +1,6 @@
 # Training Hub v1.4 — Technical impact
 
-Status: **Current Draft — assessment only. No change made or authorised.** · Version 0.1 · 14 Nov 2026 · Level 3
+Status: **Current Draft — assessment only. No change made or authorised.** · Version 0.2 · 14 Nov 2026 · Level 3
 Source read (read-only): release branch `ios/checkpoint-f-ride`, commit `4e2e9dc`.
 
 ## 1. What works today, and the evidence
@@ -59,7 +59,7 @@ rounds, skipped, new set forms; typing a value; Undo; optional ratings; Intensit
 | "Skipped" set state | Old code reads a set as done or not done; a skipped set must not be counted as done |
 | Rounds | Existing sessions have groups without rounds; they must display unchanged |
 | In-progress ride file | A stale file after a crash must never be saved twice or mistaken for a finished ride |
-| Any of the above | Cloud sync and the "survives relaunch" tests must keep passing |
+| Any of the above | BikeComputer profile sync, data export and the "survives relaunch" tests must keep passing. (Correction 14 Nov: version 0.1 said "cloud sync"; the app has no cloud storage or accounts) |
 
 ## 5. Review compatibility assessment
 
