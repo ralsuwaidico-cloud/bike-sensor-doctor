@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 0.4 · 12 Nov 2026
+Status: Current Draft · Version 0.5 · 14 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -42,7 +42,8 @@ project (reference copies and documents not yet in GitHub).
 | **Decision** — Progress compact hero approved; Progress UI Lab proof of concept authorised | `decisions/2026-11-13_progress-compact-hero-approved-and-poc-authorised.md` | gov | Decision record |
 | **Progress UI Lab proof of concept** — status and evidence | `ui-lab/progress/PROGRESS_POC_STATUS.md` v0.2 | gov | Current Draft — code written on `proto/ui-lab-progress`; first run 43472777501: compiled; 5 of 8 tests passed on standard, 6 of 8 on small; corrections pending owner review |
 | **Training Hub v1.0** — Option D: audit, UX architecture, lifecycle, interaction rules, comparison, acceptance criteria | `product/train/TRAINING_HUB_V1_DESIGN.md` v0.1 (+ `product/train/design-v10/`) | gov | Current Draft — earlier round; layouts superseded by the v1.1 proposal, audit still applies |
-| **Training Hub v1.1** — product specification, activity registry and capability matrix, recording and lifecycle architecture, strength execution, recovery, post-session review, decision register, UI checklist; 15 review sheets | `product/train/v11/` documents A–H (+ `product/train/v11/sheets/`) | gov | Current Draft — design exploration, pending owner review (static designs; nothing built) |
+| **Training Hub v1.1** — product specification, activity registry and capability matrix, recording and lifecycle architecture, strength execution, recovery, post-session review, decision register, UI checklist; 15 review sheets | `product/train/v11/` documents A–H (+ `product/train/v11/sheets/`) | gov | Current Draft — earlier round; revised by the v1.2 draft, not superseded by approval |
+| **Training Hub v1.2** — corrective design (owner decisions of 14 Nov): four journeys, three emblem candidates, interaction and state specification, integration contract, capability matrix; 13 sheets | `product/train/v12/TRAINING_HUB_V12_DESIGN.md`, `…_INTERACTION_AND_STATES.md`, `…_INTEGRATION_CONTRACT.md` v0.1 (+ `product/train/v12/sheets/`) | gov | Current Draft — pending owner review; nothing approved, nothing built |
 | **Metrics** — schedule adherence, training fulfillment, actual volume | `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md` v0.1 | gov | Current Draft (proposal; nothing calculated) |
 | **Plan** — earlier proposal (weekly calendar only) | `ui-lab/plan/PLAN_V1_PROPOSAL.md` | project | Pending Review (not marked Superseded) |
 | **Coach** — implemented behaviour | `ios/ADAPTIVE_COACH.md`, `ios/BEHAVIOUR_CONTRACT.md`, `ios/SAFETY_CHANGES_RC3.md` | rel | Current Approved (describes shipped rules) |
@@ -77,8 +78,11 @@ project (reference copies and documents not yet in GitHub).
 
 | Project path | Source | Version | Last synchronised |
 |---|---|---|---|
-| `governance/DOCUMENTATION_INDEX.md` | gov `governance/DOCUMENTATION_INDEX.md` | 0.3 | 12 Nov 2026 |
-| `governance/CONFLICT_REGISTER.md` | gov `governance/CONFLICT_REGISTER.md` | 0.3 | 12 Nov 2026 |
+| `governance/DOCUMENTATION_INDEX.md` | gov `governance/DOCUMENTATION_INDEX.md` | 0.5 | 14 Nov 2026 |
+| `governance/CONFLICT_REGISTER.md` | gov `governance/CONFLICT_REGISTER.md` | 0.5 | 14 Nov 2026 |
+| `product/train/v12/TRAINING_HUB_V12_DESIGN.md` | gov `product/train/v12/TRAINING_HUB_V12_DESIGN.md` | 0.1 | 14 Nov 2026 |
+| `product/train/v12/TRAINING_HUB_V12_INTERACTION_AND_STATES.md` | gov `product/train/v12/TRAINING_HUB_V12_INTERACTION_AND_STATES.md` | 0.1 | 14 Nov 2026 |
+| `product/train/v12/TRAINING_HUB_V12_INTEGRATION_CONTRACT.md` | gov `product/train/v12/TRAINING_HUB_V12_INTEGRATION_CONTRACT.md` | 0.1 | 14 Nov 2026 |
 | `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.2 | 12 Nov 2026 |
 | `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.6 | 12 Nov 2026 |
 | `product/plan/PLAN_UI_LAB_SCOPE.md` | gov `product/plan/PLAN_UI_LAB_SCOPE.md` | 0.4 | 13 Nov 2026 |

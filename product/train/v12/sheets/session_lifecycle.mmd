@@ -1,0 +1,33 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Idle
+    Idle --> Preparing: choose a session
+    Preparing --> Idle: back / cancel
+    Preparing --> Recording: Start (one tap counts)
+    Recording --> Paused: Pause
+    Paused --> Recording: Resume
+    Recording --> Finishing: Finish
+    Paused --> Finishing: Finish
+    Finishing --> Paused: Back to session
+    Finishing --> Saving: Save
+    Finishing --> Discarded: Discard + confirm
+    Saving --> Saved: stored
+    Saving --> SaveFailed: error
+    SaveFailed --> Saving: Try again
+    SaveFailed --> Paused: Back to session
+    Saved --> Review: offered once
+    Review --> Closed: Save review
+    Review --> Closed: Skip
+    Saved --> Closed: no review (manual log)
+    Discarded --> Closed
+    Closed --> [*]
+    Recording --> Interrupted: app closed by the system
+    Paused --> Interrupted: app closed by the system
+    Interrupted --> Paused: reopen, same session
+    note right of Interrupted
+      Strength: restored today.
+      Ride recorded by this phone:
+      not restored today (unverified
+      by test; no saving of a ride
+      in progress found in the code).
+    end note

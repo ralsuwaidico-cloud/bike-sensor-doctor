@@ -1,0 +1,36 @@
+flowchart TD
+    subgraph NAV[Where the athlete is]
+      T[Any tab: Home / Plan / Progress / Profile]
+      P[Compact panel]
+      H[Training Hub]
+      X[All activities]
+      PR[Preparation]
+      R[Recording - full screen]
+      F[Finish]
+      S[Saved]
+      RV[Review - optional]
+    end
+    T -- tap emblem --> P
+    P -- tap emblem / swipe down / tap outside --> T
+    P -- Training Hub / swipe up --> H
+    H -- tap emblem --> T
+    H -- All activities --> X
+    X -- back --> H
+    P -- Start --> PR
+    H -- Start / activity --> PR
+    X -- recordable activity --> PR
+    PR -- back --> H
+    PR -- Start --> R
+    R -- minimise --> T
+    T -- tap emblem while a session is active --> P
+    P -- Resume --> R
+    R -- Finish --> F
+    F -- Back to session --> R
+    F -- Save --> S
+    S --> RV
+    RV -- Save review / Skip --> T
+    C((Session coordinator<br/>one session identity,<br/>one state)):::c
+    C -. allows or refuses Start .- PR
+    C -. owns state .- R
+    C -. tells the emblem and the panel .- P
+    classDef c fill:#16181c,color:#fff,stroke:#16181c

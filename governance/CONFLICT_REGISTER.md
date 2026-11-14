@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.4 · 12 Nov 2026
+Status: Current Draft · Version 0.5 · 14 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -44,9 +44,17 @@ firmware or existing document was changed to apply a ruling.
 | 34 | Which protective reductions may change a scheduled workout without approval | Correction proposal §5 (fourteen behaviours, advice or change) | *Awaiting owner* | — | **Open** |
 | 35 | Metric questions A–F (moved-in-advance, removed sessions, late fulfillment, partial threshold) | Metrics proposal §5 | *Awaiting owner* | — | **Open** |
 | 36 | Plan visual direction: A, B or C | Plan v0.4 alternatives; my recommendation was C | **B — Athletic Dynamic. Do not switch to C unless specifically approved** (12 Nov) | Owner's preference for stronger discipline colour and athletic character | Decided · In specification v0.5 · static only, not built |
+| 37 | Who owns the screen during a ride | Approved rule RA-01 (the Ride screen owns the bottom of the screen during a ride) vs Training Hub v1.2 brief (recording is a dedicated full-screen interface opened from Train; the emblem shows an active state, which implies it can be minimised) | *Awaiting owner* — v1.2 design, decision 2 | Owner decision of 14 Nov selects full-screen recording; its effect on RA-01 is not yet ruled | **Open** |
+| 38 | Live cycling screen | Today's Ride dashboard (three target gauges) vs the v1.2 cockpit drawing | The v1.2 cockpit is a concept and supersedes nothing | Not decided | **Open** — v1.2 decision 3 |
+| 39 | Effort asked twice | Today: effort on the strength Finish screen (used by Coach when there is no check-in) and again in the check-in. Brief v1.2 §10: remove duplicate Effort inputs | Brief applied in the drawings: no rating on Finish | Consequence: a skipped review leaves no effort and no session load for Coach | **Open** — v1.2 decision 5 |
+| 40 | Unanswered ratings | Today's check-in stores effort and performance as required numbers, pre-filled 7 and 6. Brief v1.2: review is skippable and must not invent values | Drawn as "Not answered" | Needs a storage change; none authorised | **Open** — v1.2 decision 6 |
+| 41 | Pain without a judgment | Brief v1.2 §10 (optional localisation, no forced medical judgment) vs today's three pain levels, which Coach rules act on | Level and area offered as optional, using the existing choices | What is stored when no level is chosen is undecided | **Open** — v1.2 decision 8 |
+| 42 | Statements in Training Hub v1.1 corrected by a closer reading of the source | v1.1 D ("only a superset group letter exists") — the app already alternates A1 → A2. v1.1 C ("background recording not verified") — background modes, a notice and gap handling exist in code. v1.1 C ("ride restoration not verified") — no saving of a phone-recorded ride in progress was found | Corrections recorded here and in the v1.2 documents. **The v1.1 files were not edited** | History is not rewritten | Recorded · still code reading only, nothing tested |
+| 43 | Train symbol candidates | v1.1 register U1 (Pulse, Orbit, Ascent, Vector C) vs owner decision 14 Nov (none approved; redesign) | Owner decision. Three new candidates in v1.2; none approved | Later owner instruction | Decided (withdrawal) · new choice **open** |
 
 ## Summary of what is still unresolved
 
 13 (Watch theme values — hardware-design workstream) · 15 (refinement decided, not scheduled) · 16 (typography, spacing, radii — waits for the component-system assessment) · 17 (logo, wordmark, icon — open design items) · 20 (Instruction edits waiting for the owner to apply) · grading thresholds awaiting rule-by-rule review (item 2) · the long-term development branch (item 19, after release stabilisation).
 Decided but **not implemented**: 12 (colour direction), 21–32 (Plan and Coach behaviour).
 Open since 12 Nov: 33, 34, 35 and the Plan specification questions Q1–Q9.
+Open since 14 Nov (Training Hub v1.2): 37, 38, 39, 40, 41 and the new emblem choice (43).
