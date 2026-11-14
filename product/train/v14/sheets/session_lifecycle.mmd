@@ -1,0 +1,34 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Idle
+    Idle --> Preparing: choose
+    Preparing --> Idle: back
+    Preparing --> Recording: Start (accepted once)
+    Recording --> Paused: Pause
+    Paused --> Recording: Resume
+    Recording --> Finishing: Finish (strength, recovery)
+    Paused --> Finishing: Finish (every activity)
+    Finishing --> Paused: Back to session
+    Finishing --> Saving: Save
+    Finishing --> Discarded: Discard + confirm
+    Saving --> Saved: result confirmed
+    Saving --> SaveFailed: result is failure
+    Saving --> SaveUnknown: no result
+    SaveUnknown --> Saving: Check again (no second record)
+    SaveFailed --> Saving: Try again
+    SaveFailed --> Paused: Back to session
+    SaveUnknown --> Paused: Back to session
+    Saved --> Review: optional
+    Review --> Closed: Save review / Skip
+    Saved --> Closed: Done
+    Discarded --> Closed
+    Recording --> Interrupted: app ended
+    Paused --> Interrupted: app ended
+    Interrupted --> Paused: reopen - only what was stored
+    Closed --> [*]
+    note right of Recording
+      Minimised is not a state: it is
+      which screen is shown. It never
+      pauses, resets, completes or
+      starts anything.
+    end note

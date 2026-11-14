@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.6 · 14 Nov 2026
+Status: Current Draft · Version 0.7 · 14 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -54,6 +54,9 @@ firmware or existing document was changed to apply a ruling.
 | 44 | Finish while riding | Approved, unit-tested rule RA-20 (End is never reachable while a ride is running; always once paused) vs the Training Hub v1.2 cockpit drawing (Finish beside Pause while riding) | RA-20. v1.3 follows it. **The v1.2 files were not edited**; the error is recorded here and in the v1.3 design document | An approved rule outranks a draft drawing | Corrected in v1.3 · v1.2 decision 4 withdrawn |
 | 45 | Minimising a ride | Owner decision 14 Nov (active-session minimisation approved as a design direction, Option A) vs approved rule RA-01 (the dock is removed while a ride is recorded, so the Ride screen cannot be left) | Direction decided by the owner. **How RA-01 changes is not decided**; v1.3 marks ride minimisation as dependent on that | Later owner decision sets direction; an approved safety rule is not changed by a drawing | **Open** — v1.3 decision 2. Updates item 37 |
 | 46 | Train symbol | v1.2 candidates (Lift Ring, Momentum, Rise) vs brief v1.3 (design a new family) | Three new concepts in v1.3 (Shift, Horizon, Triad); Shift recommended for review; none approved | Later owner instruction | **Open** — v1.3 decision 1. Updates item 43 |
+| 47 | What "tested" means | Training Hub v1.3 sheets (label "Exists · tested", applied after reading test files) vs owner brief v1.4 §14 ("do not use the phrase tested merely because a test file was read") | Brief. v1.4 labels come from an actual run (iOS run 43013897973, commit 4e2e9dc). **v1.3 files were not edited** | Later owner instruction | Corrected in v1.4 |
+| 48 | Release-head test results | v1.3 statements that the route map and ride recording "exist" vs the run result: `RideRegressionTests.testGPSRecordingNeedsNoNetworkAndKeepsRouteSamples` and `PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply` failed on commit 4e2e9dc | The run result. Recorded as a finding; **not investigated, nothing changed** | Evidence outranks reading | **Open** — v1.4 open choice 2 |
+| 49 | Train symbol | v1.3 concepts (Shift, Horizon, Triad — not approved) vs brief v1.4 §4 (three refined candidates; not like the Singularity) | v1.4: Shift (refined), Step, Frame. Horizon withdrawn. None selected | Later owner instruction | **Open** — updates items 43, 46 |
 
 ## Summary of what is still unresolved
 

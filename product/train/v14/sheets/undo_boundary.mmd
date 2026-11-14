@@ -1,0 +1,15 @@
+stateDiagram-v2
+    direction LR
+    [*] --> NoUndo
+    NoUndo --> UndoAvailable: Log set
+    UndoAvailable --> NoUndo: Undo used - set removed, values restored
+    UndoAvailable --> Committed: Save confirmed
+    UndoAvailable --> Gone: Discard confirmed
+    Committed --> [*]
+    Gone --> [*]
+    note right of UndoAvailable
+      Stays available through: minimise, resume,
+      pause, tab change, rest ending.
+      Logging the next set moves Undo to that set;
+      the earlier set is then committed.
+    end note
