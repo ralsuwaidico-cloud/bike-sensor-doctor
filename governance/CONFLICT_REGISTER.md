@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 0.8 · 14 Nov 2026
+Status: Current Draft · Version 0.9 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -61,6 +61,7 @@ firmware or existing document was changed to apply a ruling.
 | 51 | Home quick menu | Profile quick menu approved in the 6 Nov addendum (avatar opens a menu) vs decision D (avatar opens the complete Profile) | Decision D proposes retiring the quick menu. Home is otherwise frozen, so this needs explicit confirmation | Latest explicit owner decision | **Open** — Profile design decision 9 |
 | 52 | Profile sections | Phase 0 proposal (seven sections) vs owner brief (five sections) | Owner's five. The Phase 0 document is kept unchanged | Later owner instruction | Decided |
 | 53 | Train symbol | v1.4 candidates (Shift, Step, Frame) vs brief of 14 Nov (none approved; explore new symbols) | New candidates Mono, Cleave, Apex. None approved. The emblem stays pending under v1.4 | Later owner instruction | **Open** — updates items 43, 46, 49 |
+| 54 | Side of the Train control | Owner decision D of 14 Nov and Navigation v1.1 (Train at the far right) vs owner brief "Navigation v1.2" of 15 Nov (Option A: Train at the far left, design exploration) | Not decided. v1.2 is a draft exploration; Decision D and v1.1 are unchanged. If v1.2 is approved a new decision record is required | Later owner instruction, pending approval | **Open** |
 
 ## Summary of what is still unresolved
 

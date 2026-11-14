@@ -1,0 +1,22 @@
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> PanelOpen: tap Train
+    PanelOpen --> Idle: dismiss
+    PanelOpen --> Hub: expand (All training)
+    Hub --> Idle: close
+    PanelOpen --> Recording: Start
+    Hub --> Recording: Start
+    Recording --> Minimised: minimise (strength; ride BLOCKED by safety gate)
+    Minimised --> ResumePanel: tap Train
+    ResumePanel --> Recording: Resume
+    ResumePanel --> Minimised: dismiss
+    Recording --> Paused: Pause
+    Paused --> Recording: Resume
+    Paused --> CompletionPending: Finish (ride: only after Pause)
+    Recording --> CompletionPending: Finish (strength)
+    CompletionPending --> Idle: saved or discarded
+    CompletionPending --> SaveUncertain: save fails or is unconfirmed (PENDING decision)
+    SaveUncertain --> Idle: resolved
+    Recording --> Restored: app interrupted (strength only, as read)
+    Restored --> Recording: Resume
+    note right of Minimised: A second session cannot be started
