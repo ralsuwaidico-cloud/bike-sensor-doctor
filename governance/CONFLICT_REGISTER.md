@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 1.2 · 15 Nov 2026
+Status: Current Draft · Version 1.3 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -71,6 +71,9 @@ firmware or existing document was changed to apply a ruling.
 | 61 | Cyclift Watch (LILYGO) on the Devices screen | Profile v2.0 brief ("future, not a working connection") vs the app as read (a Cyclift Watch card with a "Connect" switch exists; unverified on hardware) and Phase 0 (said no row was found — corrected) | Design shows it as Unavailable / future. Whether to hide or mark the existing switch is open | Master instructions §2 (hardware concept is not verified capability) | **Open** — owner decision |
 | 62 | Who edits goals and the weekly schedule | Profile v2.0 brief (Plan-owned; Profile links) vs the app as read (editors live in Profile and are shared with onboarding; Plan has no own editor) | Not resolved. Existing editors must stay reachable until Plan owns them | Master instructions §5 | **Open** — depends on Plan work and on onboarding authorisation |
 | 63 | Name of the first athlete type | Profile v2.0 brief ("Endurance") vs the app ("Cycling") | Drawn as Endurance; label-only or wider meaning undecided | — | **Open** — owner decision |
+| 64 | Number of onboarding steps | App as read (Welcome + five stages, owner approval 2 Nov) vs owner brief Onboarding v2.0 of 15 Nov (six screens) | Not decided. Six screens are drawn as a proposal; the current onboarding is unchanged | Latest owner brief, pending approval | **Open** |
+| 65 | Sport selection | App (single Cycling / Strength / Hybrid choice; a separate unused `sports` list in Profile) vs Onboarding v2.0 brief (multi-activity selection driving a confirmable classification) | Proposal: one selector on the existing `sports` list; stored type values unchanged | Owner brief; master instructions §10 (no schema change without impact assessment) | **Open** — needs milestone approval |
+| 66 | Health check and onboarding | Profile Phase 0 audit (health check listed as an onboarding-shared editor) vs code as read (not one of the five stages; reached from Home and Profile) | Phase 0 statement corrected in the Onboarding v2.0 audit; Phase 0 document left unedited | Repository is authoritative | Corrected |
 
 ## Summary of what is still unresolved
 
