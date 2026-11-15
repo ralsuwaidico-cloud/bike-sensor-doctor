@@ -1,0 +1,65 @@
+=== layout-standard: errors / failures ===
+=== layout-standard: full filter ===
+2026-11-15 12:24:34.836 xcodebuild[27465:77795]  iOSSimulator: 📱<DVTiPhoneSimulator (0xbd9fc0780), iPhone 17, unknown class, 26.5 (23F77), 23C8F95C-765D-46A9-AE82-0BEE2921C8D7> unable to connect to "com.apple.instruments.deviceservice.lockdown" (Error Domain=DVTiPhoneSimulatorErrorDomain Code=-1 "DTServiceHubClient failed to bless service hub for simulator iPhone 17 (23C8F95C-765D-46A9-AE82-0BEE2921C8D7)" UserInfo={NSLocalizedDescription=DTServiceHubClient failed to bless service hub for simulator iPhone 17 (23C8F95C-765D-46A9-AE82-0BEE2921C8D7), NSUnderlyingError=0xbd6a9c660 {Error Domain=DTServiceHubClient Code=2 "Connection to Simulator service hub (31624) interrupted. Simulator service hub IS still alive." UserInfo={NSLocalizedDescription=Connection to Simulator service hub (31624) interrupted. Simulator service hub IS still alive.}}})
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 2.378 (2.382) seconds
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 2.378 (2.383) seconds
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 2.378 (2.385) seconds
+** TEST EXECUTE SUCCEEDED **
+=== layout-standard: last 150 lines ===
+Command line invocation:
+    /Applications/Xcode_26.6.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/dd-Release/Build/Products/BikeComputer_iphonesimulator26.5-arm64-x86_64.xctestrun -destination id=23C8F95C-765D-46A9-AE82-0BEE2921C8D7 -resultBundlePath /Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult "-only-testing:BikeComputerUITests/LayoutAudit"
+
+2026-11-15 12:20:24.998 xcodebuild[27465:72903] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult
+
+2026-11-15 12:20:25.029 xcodebuild[27465:72903] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:iOS Simulator, arch:arm64, id:23C8F95C-765D-46A9-AE82-0BEE2921C8D7, OS:26.5, name:iPhone 17 }
+{ platform:iOS Simulator, arch:x86_64, id:23C8F95C-765D-46A9-AE82-0BEE2921C8D7, OS:26.5, name:iPhone 17 }
+2026-11-15 12:20:29.399 xcodebuild[27465:72903] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-15 12:20:32.405 xcodebuild[27465:72903] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-15 12:20:34.421 xcodebuild[27465:72903] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-11-15 12:24:34.836 xcodebuild[27465:77795]  iOSSimulator: 📱<DVTiPhoneSimulator (0xbd9fc0780), iPhone 17, unknown class, 26.5 (23F77), 23C8F95C-765D-46A9-AE82-0BEE2921C8D7> unable to connect to "com.apple.instruments.deviceservice.lockdown" (Error Domain=DVTiPhoneSimulatorErrorDomain Code=-1 "DTServiceHubClient failed to bless service hub for simulator iPhone 17 (23C8F95C-765D-46A9-AE82-0BEE2921C8D7)" UserInfo={NSLocalizedDescription=DTServiceHubClient failed to bless service hub for simulator iPhone 17 (23C8F95C-765D-46A9-AE82-0BEE2921C8D7), NSUnderlyingError=0xbd6a9c660 {Error Domain=DTServiceHubClient Code=2 "Connection to Simulator service hub (31624) interrupted. Simulator service hub IS still alive." UserInfo={NSLocalizedDescription=Connection to Simulator service hub (31624) interrupted. Simulator service hub IS still alive.}}})
+2026-11-15 12:25:17.552519+0000 BikeComputerUITests-Runner[31594:85511] [Default] Running tests...
+2026-11-15 12:25:17.769234+0000 BikeComputerUITests-Runner[31594:87545] [General] Failed to send CA Event for app launch measurements for ca_event_type: 0 event_name: com.apple.app_launch_measurement.FirstFramePresentationMetric
+2026-11-15 12:25:17.816841+0000 BikeComputerUITests-Runner[31594:87545] [General] Failed to send CA Event for app launch measurements for ca_event_type: 1 event_name: com.apple.app_launch_measurement.ExtendedLaunchMetrics
+objc[31594]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x106828310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x1063dc398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'Selected tests' started at 2026-11-15 12:25:29.755.
+Test Suite 'BikeComputerUITests.xctest' started at 2026-11-15 12:25:29.756.
+Test Suite 'LayoutAudit' started at 2026-11-15 12:25:29.756.
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' started.
+    t =     0.00s Start Test at 2026-11-15 12:25:29.758
+    t =     1.20s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:512: -[BikeComputerUITests.LayoutAudit testHomeStates] : Test skipped - LAYOUT_DIR not set — the layout audit runs only in the CI layout stage
+    t =     1.24s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' skipped (1.857 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' started.
+    t =     0.00s Start Test at 2026-11-15 12:25:31.616
+    t =     0.04s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:165: -[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes] : Test skipped - LAYOUT_DIR not set — the layout audit runs only in the CI layout stage
+    t =     0.04s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' skipped (0.207 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' started.
+    t =     0.00s Start Test at 2026-11-15 12:25:31.824
+    t =     0.04s Set Up
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:344: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Test skipped - LAYOUT_DIR not set — the layout audit runs only in the CI layout stage
+    t =     0.04s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' skipped (0.314 seconds).
+Test Suite 'LayoutAudit' passed at 2026-11-15 12:25:32.138.
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 2.378 (2.382) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-15 12:25:32.139.
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 2.378 (2.383) seconds
+Test Suite 'Selected tests' passed at 2026-11-15 12:25:32.140.
+	 Executed 3 tests, with 3 tests skipped and 0 failures (0 unexpected) in 2.378 (2.385) seconds
+2026-11-15 12:25:33.403 xcodebuild[27465:72903] [MT] IDETestOperationsObserverDebug: 303.988 elapsed -- Testing started completed.
+2026-11-15 12:25:33.404 xcodebuild[27465:72903] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-15 12:25:33.404 xcodebuild[27465:72903] [MT] IDETestOperationsObserverDebug: 303.988 sec, +303.988 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-standard.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
