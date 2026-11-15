@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 1.7 · 15 Nov 2026
+Status: Current Draft · Version 1.8 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -85,6 +85,7 @@ firmware or existing document was changed to apply a ruling.
 | 75 | Onboarding direction | Genesis v3.1 (two instrument-led concepts, complete visual reset) vs owner direction of 15 Nov (refine the existing onboarding; one visual language; ordinary controls; goals screen and seven-day builder are the starting points) | v3.1 concepts not selected; kept unchanged as a reference; v3.2 is the single proposal | Latest owner decision | Decided · v3.2 Pending Owner Review |
 | 76 | Onboarding v3.2 visual experience | v3.2 proposal vs owner review of 15 Nov (functional foundation retained; **visual experience not approved**) | v3.2 kept unchanged as the functional reference; v3.3 is the recommended visual direction | Latest owner decision | Decided · v3.3 Pending Owner Visual Approval |
 | 77 | Main sport and session modality | v3.2 dropped the primary-activity flag; Training Hub v1.1 §6 reads "which is primary"; v3.3 brief asks for prominent primary sports and different endurance modalities in the week; storage has neither a primary flag nor a per-session modality | v3.3 draws both and lists them as new additive fields; nothing stored or changed | Master instructions §10 (impact assessment before schema change) | **Open** — owner approval of the fields with the design |
+| 78 | Onboarding Page 2 | v3.3 Page 2 (line-up and chips; priority on Page 3) vs owner review of 15 Nov (seven-page structure remains the direction; **Page 2 not visually approved**) | v3.4 redesigns Page 2 only as the Athletic Roster and moves the lead setting to it; Pages 3 and 7 would need the small changes listed in the v3.4 document; nothing else edited | Latest owner decision | Decided · v3.4 Page 2 Pending Owner Visual Approval |
 
 ## Summary of what is still unresolved
 

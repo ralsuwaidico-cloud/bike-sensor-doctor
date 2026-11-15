@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 1.9 · 15 Nov 2026
+Status: Current Draft · Version 2.0 · 15 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -46,7 +46,8 @@ project (reference copies and documents not yet in GitHub).
 | **Training Hub v1.2** — corrective design (owner decisions of 14 Nov): four journeys, three emblem candidates, interaction and state specification, integration contract, capability matrix; 13 sheets | `product/train/v12/TRAINING_HUB_V12_DESIGN.md`, `…_INTERACTION_AND_STATES.md`, `…_INTEGRATION_CONTRACT.md` v0.1 (+ `product/train/v12/sheets/`) | gov | Current Draft — earlier round; revised by the v1.3 draft |
 | **Training Hub v1.3** — corrective design (minimise and resume; three new emblem concepts; refined panel, strength, endurance, recovery, finish and review); session architecture; data and capability contract; 9 sheets | `product/train/v13/TRAINING_HUB_V13_DESIGN.md`, `…_SESSION_ARCHITECTURE.md`, `…_DATA_AND_CAPABILITY_CONTRACT.md` v0.1 (+ `product/train/v13/sheets/`) | gov | Historical — preserved unchanged; superseded as the working design by the approved v1.4 baseline |
 | **Training Hub v1.4 — design and UX architecture baseline** (approved by the owner 14 Nov 2026; implementation not authorised). Pending: emblem; cycling safety gate; save-result handling; review values and Coach compatibility; new exercise and recovery data; session and rest rules. Open defects: ride GPS-route test and Plan edit-and-apply test | `product/train/v14/TRAINING_HUB_V14_DESIGN.md` v0.2; supporting: `…_CYCLING_SAFETY_GATE.md`, `…_TECHNICAL_IMPACT.md` v0.2, `…_ACCEPTANCE_CRITERIA.md` (+ `product/train/v14/sheets/`); decision: `decisions/2026-11-14_training-hub-v14-approved-design-baseline.md` | gov | **Current Approved — Design Baseline** · dependencies pending · nothing built |
-| **Onboarding v3.3** (experience refinement; recommended direction; seven sheets) and its integration contracts | `product/onboarding/v33/ONBOARDING_V33_EXPERIENCE_REFINEMENT.md` v0.1 · `ONBOARDING_V33_INTEGRATION_CONTRACTS.md` v0.1 (+ `sheets/`) | gov | Recommended direction — Pending Owner Visual Approval · implementation not authorized |
+| **Onboarding v3.4 — Page 2 only** (the Athletic Roster; six sheets) | `product/onboarding/v34/ONBOARDING_V34_PAGE2_ATHLETIC_ROSTER.md` v0.1 (+ `sheets/`) | gov | Design proposal — Pending Owner Visual Approval · implementation not authorized |
+| **Onboarding v3.3** (experience refinement; recommended direction; seven sheets) and its integration contracts | `product/onboarding/v33/ONBOARDING_V33_EXPERIENCE_REFINEMENT.md` v0.1 · `ONBOARDING_V33_INTEGRATION_CONTRACTS.md` v0.1 (+ `sheets/`) | gov | Seven-page structure is the current design direction; **Page 2 not visually approved** (owner, 15 Nov); kept unchanged |
 | **Onboarding v3.2** (refinement of the existing onboarding; one proposal; six screens plus review; five sheets) | `product/onboarding/v32/ONBOARDING_V32_REFINED_PROPOSAL.md` v0.1 (+ `sheets/`) | gov | Functional foundation retained; **visual experience not approved** (owner, 15 Nov); kept unchanged |
 | **Cyclift Genesis — Onboarding v3.1** (two visual concepts: A Precision Instrument, B Living Athlete; six screens plus review; six sheets) | `product/onboarding/v31/ONBOARDING_V31_GENESIS_TWO_CONCEPTS.md` v0.1 (+ `sheets/`) | gov | Concepts **not selected** (owner, 15 Nov); kept unchanged as reference |
 | **Onboarding v3.0 — "Your Athletic Blueprint"** (eight adaptive chapters; Endurance / Strength / Rest & Recovery; integration and ownership matrices; activity registry and compatibility plan; eight sheets) | `product/onboarding/v30/ONBOARDING_V30_DESIGN.md` v0.1; `product/onboarding/v30/ONBOARDING_V30_INTEGRATION_AND_OWNERSHIP.md` v0.1; `product/onboarding/v30/ONBOARDING_V30_ACTIVITY_REGISTRY_AND_COMPATIBILITY.md` v0.1 (+ `sheets/`) | gov | Functional research retained as reference; **visual design not approved** (owner, 15 Nov); kept unchanged |
@@ -124,6 +125,7 @@ project (reference copies and documents not yet in GitHub).
 | `product/onboarding/v32/ONBOARDING_V32_REFINED_PROPOSAL.md` | gov same path | 0.1 | 15 Nov 2026 |
 | `product/onboarding/v33/ONBOARDING_V33_EXPERIENCE_REFINEMENT.md` | gov same path | 0.1 | 15 Nov 2026 |
 | `product/onboarding/v33/ONBOARDING_V33_INTEGRATION_CONTRACTS.md` | gov same path | 0.1 | 15 Nov 2026 |
+| `product/onboarding/v34/ONBOARDING_V34_PAGE2_ATHLETIC_ROSTER.md` | gov same path | 0.1 | 15 Nov 2026 |
 | `decisions/2026-11-14_navigation-decision-d-three-tabs-train-right-profile-via-avatar.md` | gov same path | — | 14 Nov 2026 |
 | `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.2 | 12 Nov 2026 |
 | `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.6 | 12 Nov 2026 |
