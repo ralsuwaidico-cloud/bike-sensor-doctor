@@ -12,6 +12,9 @@ final class Fixture216Generator: XCTestCase {
         try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
         let s = Store(directory: d)
         s.profile.name = "Fixture \(name)"
+        // identity, baselines, preferences and device settings with non-default values, so a lost field is visible
+        s.profile.weightKg = 74.5; s.profile.ftpW = 215; s.profile.hoursPerWeek = 6
+        s.settings.keepScreenOn = false; s.settings.units = .imperial; s.settings.phoneOnlyMode = true
         fill(s)
         s.onboarded = true
         // what the new build must find again, written beside the store by the code that created it

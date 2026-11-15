@@ -260,6 +260,49 @@ final class E1DataIntegrityTests: XCTestCase {
         }
     }
 
+    /// Field by field: every value build 216 wrote is still in the file after this build has loaded it and saved again.
+    /// The comparison walks the two JSON documents; a value that is missing or different is listed with its path.
+    private func differences(_ old: Any, _ new: Any, _ path: String, _ out: inout [String]) {
+        if out.count >= 40 { return }
+        switch (old, new) {
+        case let (a as [String: Any], b as [String: Any]):
+            for k in a.keys.sorted() { if let v = b[k] { differences(a[k]!, v, path + "." + k, &out) } else { out.append("\(path).\(k): missing after save (was \(a[k]!))") } }
+        case let (a as [Any], b as [Any]):
+            if a.count != b.count { out.append("\(path): \(a.count) elements became \(b.count)"); return }
+            for i in a.indices { differences(a[i], b[i], "\(path)[\(i)]", &out) }
+        case let (a as NSNumber, b as NSNumber):
+            if abs(a.doubleValue - b.doubleValue) > 1e-9 { out.append("\(path): \(a) became \(b)") }
+        case let (a as String, b as String):
+            if a != b { out.append("\(path): '\(a)' became '\(b)'") }
+        case (is NSNull, is NSNull): break
+        default: out.append("\(path): type changed (\(type(of: old)) → \(type(of: new)))")
+        }
+    }
+    func testEveryFieldBuild216WroteSurvivesLoadAndSave() throws {
+        guard let root = ProcessInfo.processInfo.environment["FIXTURES_216"] else { throw XCTSkip("FIXTURES_216 is not set: this run has no build-216 fixtures") }
+        for name in ["empty", "strength", "cycling", "hybrid", "noequipment", "large"] {
+            let original = try Data(contentsOf: URL(fileURLWithPath: root).appendingPathComponent(name).appendingPathComponent("store.json"))
+            let before = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+            let d = tmp("b216-fields-\(name)"); try original.write(to: d.appendingPathComponent("store.json"))
+            let s = Store(directory: d, generatePlan: false)             // load only: no plan generation, so nothing may differ
+            XCTAssertEqual(s.persistCount, 0, "\(name): loading a build-216 store writes nothing")
+            XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent("store.json")), original, "\(name): the file is untouched by loading")
+            s.ignoredInsights = s.ignoredInsights                        // force one save of exactly what was loaded
+            XCTAssertGreaterThan(s.persistCount, 0, name)
+            let after = try json(d)
+            var diff: [String] = []
+            differences(before, after, name, &diff)
+            let added = Set(after.keys).subtracting(before.keys).sorted()
+            print("E1-MIGRATION \(name): schema \(before["schema"] ?? "?") → \(after["schema"] ?? "?") · top-level fields \(before.count) → \(after.count) · added by this build: \(added) · differences: \(diff.count)")
+            XCTAssertTrue(diff.isEmpty, "\(name): values changed or lost by load + save:\n" + diff.joined(separator: "\n"))
+            // repeating it changes nothing more
+            let again = Store(directory: d, generatePlan: false); again.ignoredInsights = again.ignoredInsights
+            var diff2: [String] = []; differences(after, try json(d), name, &diff2)
+            XCTAssertTrue(diff2.isEmpty, "\(name): a second load + save changed values:\n" + diff2.joined(separator: "\n"))
+            XCTAssertEqual(Store(directory: d, generatePlan: false).strength.count, s.strength.count, "\(name): no session duplicated")
+        }
+    }
+
     // MARK: delete all data
     func testDeleteAllDataRemovesTheSafetyCopiesToo() throws {
         let (_, d) = healthy("delete")
