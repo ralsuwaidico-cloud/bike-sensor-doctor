@@ -36,5 +36,8 @@ grep -E "error:|Build complete" build.log | tail -40
 [ $B -eq 0 ] || exit $B
 mkdir -p .build/debug && cp "$SRC/ios/BikeComputer/Resources/exercises.json" .build/debug/
 if [ -n "$FILTER" ]; then swift test --skip-build --filter "$FILTER" > test.log 2>&1; R=$?; tail -60 test.log
-else swift test --skip-build > test.log 2>&1; R=$?; grep -E "error|failed|Executed|passed at" test.log | tail -60; fi
+else swift test --skip-build > test.log 2>&1; R=$?; grep -E "error|failed|Executed|passed at" test.log | tail -60 || true
+  # E1: a test run that ends without a summary (a crash) used to print nothing at all; show where it stopped
+  grep -q "Executed [0-9]* tests" test.log || { echo "== no test summary (exit $R) — last 40 lines of test.log:"; tail -40 test.log; [ $R -ne 0 ] || R=1; }
+fi
 exit $R

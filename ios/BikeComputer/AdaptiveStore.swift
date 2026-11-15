@@ -60,7 +60,7 @@ extension Store {
     func applyAdaptation(_ r: AdaptationResult, now: Date = Date()) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
-        // E1 interim hold: with automatic changes on, increases in sets, intervals or ride duration still need approval
+        // E1 interim hold: with automatic changes on, every increase (weight, reps, sets, intervals, minutes) still needs approval
         // (an increase that is ALREADY in force from an earlier run is kept, not reversed — owner decision of 12 Nov)
         func isHeld(_ a: PlanAdjustment) -> Bool {
             a.needsApprovalUntilPolicyEngine && !approvedAdaptations.contains(a.key) && !adaptations.contains(where: { $0.key == a.key && $0.change == a.change })

@@ -203,15 +203,18 @@ struct PlanAdjustment: Codable, Equatable, Identifiable {
         }
     }
     enum Category: String, Codable { case progression, reduction, recovery, substitution }
-    /// E1 interim hold (owner directive 15 Nov 2026, E1-E): until the independent Coach policy engine exists, an increase
-    /// in sets, cycling intervals or ride duration is never applied automatically. It is offered for approval instead.
-    /// Load and repetition steps are NOT covered here; reductions and protective changes are never held.
+    /// E1 interim hold (owner decisions of 15 Nov 2026): until the independent Coach policy engine is implemented and
+    /// validated, NO increase is applied automatically — weight, repetitions, sets, cycling intervals or ride duration.
+    /// It is offered for approval instead. Reductions and protective changes are never held. This is a temporary
+    /// safeguard, not the Coach architecture: the policy engine will decide small weight and repetition steps.
     var needsApprovalUntilPolicyEngine: Bool {
         switch change {
+        case .reps(_, let d): return d > 0
+        case .weight(_, let d): return d > 0
         case .sets(_, let d): return d > 0
         case .intervalReps(let d): return d > 0
         case .minutes(let d): return d > 0
-        case .reps, .weight, .kind, .replace: return false
+        case .kind, .replace: return false
         }
     }
 

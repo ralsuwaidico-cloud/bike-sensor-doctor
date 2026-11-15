@@ -254,6 +254,12 @@ struct PlannerContext {
     /// Shared hold (audit G-03): when the adaptive coach says "nothing is increased" (≥ 2 missed sessions in the last
     /// 7 days), the planner holds every load, rep and hold time too. The text completes "Held — …".
     var progressionHold: String? = nil
+    /// E1 interim hold (owner decision 15 Nov 2026): until the independent Coach policy engine is implemented and
+    /// validated, the planner does not raise a weight, a rep count or a hold time by itself. The prescription stays at
+    /// what was last logged and the suggested step is written into the reason. Unlike `progressionHold` this changes
+    /// nothing else: reductions, restarts after a break and pain rules work exactly as before. Default false so the
+    /// planner's own rules stay testable; the Store turns it on.
+    var increasesNeedApproval = false
     var units: AppSettings.Units = .metric
     var now = Date()
     var calendar: Calendar = .current
@@ -721,6 +727,8 @@ enum StrengthPlanner {
     /// range at a known effort ≤ RPE 8 (G-02); an unknown effort is not evidence (G-02 / X04); the step is the smallest
     /// one available, whatever its percentage of a light load (G-01); two failed sessions at RPE ≥ 9 bring the load down
     /// (G-16); a shared hold (missed sessions, pain, deload) stops every kind of progression (G-03).
+    /// E1 interim hold: the sentence that ends every held suggestion.
+    static let approvalNote = "Increases wait for your approval until Cyclift's progression rules are in place, so the prescription stays as it is. You can still raise it yourself."
     static func prescribeLoad(_ e: Exercise, meta m: ExerciseMeta, reps range: ClosedRange<Int>, sets: Int, painBlocked: Bool, ctx: PlannerContext) -> Load {
         let req = ExerciseLibrary.requirement(e)
         let loadOptions = Set(e.equipment.map(EquipmentProfile.normalised)).subtracting(ExerciseLibrary.accessories).subtracting(["bodyweight"])
@@ -734,12 +742,14 @@ enum StrengthPlanner {
         if isHold(e) {
             let h = hist.first.map { $0.entry.doneSets.map { $0.reps }.min() ?? 30 } ?? 30
             let known = hist.first.flatMap { effort($0) }
-            let grow = holdWhy == nil && known.map { $0 <= 8 } == true && h < 60
+            let wouldGrow = holdWhy == nil && known.map { $0 <= 8 } == true && h < 60
+            let grow = wouldGrow && !ctx.increasesNeedApproval
             let next = grow ? min(60, h + 5) : h
             let why: String
             if hist.isEmpty { why = "Start with 30-second holds with good form." }
             else if let hw = holdWhy { why = "Last logged hold: \(h) s. \(hw)" }
             else if known == nil { why = "Last logged hold: \(h) s. No effort was logged, so the hold stays the same — log how hard it felt and it can grow." }
+            else if wouldGrow && !grow { why = "Last logged hold: \(h) s. A hold 5 s longer is suggested. \(StrengthPlanner.approvalNote)" }
             else { why = "Last logged hold: \(h) s. \(grow ? "5 s longer this time." : "Kept the same.")" }
             return Load(weight: nil, reps: max(20, next), bodyweight: true, progressed: grow && !hist.isEmpty, why: why)
         }
@@ -803,6 +813,9 @@ enum StrengthPlanner {
             if rpe == nil { return Load(weight: nil, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: true, progressed: false, why: "\(lastText). \(unknownEffort)") }
             if minReps < range.lowerBound || (rpe ?? 0) >= 9 { return Load(weight: nil, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: true, progressed: false, why: "\(lastText)\(rpeText): it was very hard or short of \(range.lowerBound) reps, so the reps stay the same.") }
             let next = min(range.upperBound, max(range.lowerBound, minReps + 1))
+            if ctx.increasesNeedApproval, next > minReps {
+                return Load(weight: nil, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: true, progressed: false, why: "\(lastText)\(rpeText). One more rep per set (\(next)) is suggested. \(StrengthPlanner.approvalNote)")
+            }
             return Load(weight: nil, reps: next, bodyweight: true, progressed: next > minReps, why: "\(lastText)\(rpeText). \(next > minReps ? "One more rep per set (\(next))" : "Every set is at the top of the range — keep \(next) reps and slow the lowering, or choose a harder variation"); weight progression needs a logged load.")
         }
         let minSets = min(sets, 2)
@@ -825,6 +838,9 @@ enum StrengthPlanner {
         if last2.count == 2, last2.allSatisfy(atTop) {
             let next = ((w + step) * 100).rounded() / 100
             let pct = Int((step / w * 100).rounded())
+            if ctx.increasesNeedApproval {
+                return Load(weight: w, reps: range.upperBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): every set reached the top of the range (\(range.upperBound)) on two sessions in a row at RPE 8 or less. The next step, \(WeightFmt.text(next, ctx.units)), is suggested. \(StrengthPlanner.approvalNote)")
+            }
             let big = step / w > 0.1 ? " That is a big jump for this weight: if the first set is harder than RPE 8, go back to \(WeightFmt.text(w, ctx.units)) and add a rep instead." : ""
             return Load(weight: next, reps: range.lowerBound, bodyweight: false, progressed: true, why: "\(lastText)\(rpeText): every set reached the top of the range (\(range.upperBound)) on two sessions in a row at RPE 8 or less. The smallest step available, \(WeightFmt.text(step, ctx.units))\(dumbbell ? " per hand" : "") (\(pct) %), back to \(range.lowerBound) reps.\(big) If that weight is not available, add a rep instead.")
         }
@@ -842,6 +858,9 @@ enum StrengthPlanner {
             return Load(weight: w, reps: range.lowerBound, bodyweight: false, progressed: false, why: "\(lastText)\(rpeText): \(minReps < range.lowerBound ? "some sets fell short of \(range.lowerBound) reps" : "it was very hard"). Same weight, aim for \(range.lowerBound) reps on every set before adding anything.")
         }
         let next = min(range.upperBound, max(range.lowerBound, minReps + 1))
+        if ctx.increasesNeedApproval, next > minReps {
+            return Load(weight: w, reps: max(range.lowerBound, min(minReps, range.upperBound)), bodyweight: false, progressed: false, why: "\(lastText)\(rpeText). Same weight; one more rep per set (\(next)) is suggested. \(StrengthPlanner.approvalNote)")
+        }
         return Load(weight: w, reps: next, bodyweight: false, progressed: next > minReps, why: "\(lastText)\(rpeText). Same weight, one more rep per set (\(next)) — double progression: reps first, weight once every set reaches \(range.upperBound) on two sessions in a row.")
     }
 
@@ -959,7 +978,7 @@ extension Store {
         }
         return PlannerContext(profile: profile, prefs: strengthPrefs, equipment: equipment, catalogue: allExercises, templates: templates,
                               logs: strength.filter { !$0.awaitingReview && !$0.inProgress }, rides: rides, plan: plan,
-                              painAreas: analysis.painAreas, discomfortAreas: analysis.discomfortAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, units: settings.units, now: now,
+                              painAreas: analysis.painAreas, discomfortAreas: analysis.discomfortAreas, fatigue: analysis.strengthFatigue || analysis.combinedFatigue, progressionHold: hold, increasesNeedApproval: true, units: settings.units, now: now,
                               returning: liftingReturnPhase(now: now))
     }
 
