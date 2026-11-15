@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 2.3 · 15 Nov 2026
+Status: Current Draft · Version 2.4 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -133,3 +133,15 @@ Source: `product/coach/architecture-v1/COACH_ARCHITECTURE_AND_AUDIT.md`. Nothing
 - Nutrition: general fueling guidance only.
 - Document approval never equals implementation authorization.
 - Open: decisions M-01 … M-17 in the design-review package.
+
+## 85 — E0 evidence (15 Nov 2026): corrections and open items
+
+Source: `audit/e0-2026-11-15/E0_EVIDENCE_REPORT.md`. Runs 222 (baseline, commit 4e2e9dc) and 223 (reproductions, commit c2cecde2); nothing uploaded.
+
+- Corrected: an unreadable store is overwritten **during launch**, not at the next save (reproduced).
+- Corrected: build 216's release note claimed four green layout audits; no layout test has run since run 207 (9 Nov) because of a CI script edit. Build 216 has no small-screen or large-text evidence.
+- Corrected: the build-216 upload was permitted by the 10 Nov "flows advisory" decision; the gap is that failing tests need not be acknowledged by name.
+- Reproduced: full-body session edit cannot be applied without recorded equipment (16 of 16 cases).
+- Reproduced: one bad record in plan or rides empties the whole store; in strength or templates it empties that list; a failed write reports success; an older build lowers a newer store's schema number.
+- Unresolved: why the planner skips bodyweight hip exercises; memory-versus-disk difference after a round trip; the Delete-all-data failure of run 216 (insufficient evidence — not classified as fixed).
+- Open for the owner: the five approval requests at the end of the report. E1 is not authorized.

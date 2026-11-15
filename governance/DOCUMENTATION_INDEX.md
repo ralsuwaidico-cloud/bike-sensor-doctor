@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 2.5 · 15 Nov 2026
+Status: Current Draft · Version 2.6 · 15 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -50,6 +50,7 @@ project (reference copies and documents not yet in GitHub).
 | **Training Hub v1.4 — design and UX architecture baseline** (approved by the owner 14 Nov 2026; implementation not authorised). Pending: emblem; cycling safety gate; save-result handling; review values and Coach compatibility; new exercise and recovery data; session and rest rules. Open defects: ride GPS-route test and Plan edit-and-apply test | `product/train/v14/TRAINING_HUB_V14_DESIGN.md` v0.2; supporting: `…_CYCLING_SAFETY_GATE.md`, `…_TECHNICAL_IMPACT.md` v0.2, `…_ACCEPTANCE_CRITERIA.md` (+ `product/train/v14/sheets/`); decision: `decisions/2026-11-14_training-hub-v14-approved-design-baseline.md` | gov | **Current Approved — Design Baseline** · dependencies pending · nothing built |
 | **Consolidation revision 2 — corrected** (one navigation; one athlete journey; 190-function tracker; discrepancy register; reconciled register; E/U release map; open decisions) | `release/consolidation/rev2/` | gov | Corrected consolidation — Pending Owner Final Review · no implementation authorized |
 | **Independent engineering and product audit** (root causes of both failing tests; challenge of ten external findings; independently discovered problems; data and behaviour contract; risk register; revised E0–U4 plan; decision register; verification ledger; 209-function tracker rev 3 — supersedes the rev 2 tracker counts) | `audit/independent-2026-11-15/` | gov | Audit — Pending Owner Review · no test executed by the audit · no implementation |
+| **E0 diagnostic evidence report** (baseline run 222; reproduction run 223 with 12 diagnostic tests; root causes; data-loss timing; layout-audit failure since run 207; navigation map; proposed E1 scope and acceptance tests) | `audit/e0-2026-11-15/` | gov | Evidence record — Pending Owner Review · three items unresolved · E1 not authorized |
 | **Master consolidation, readiness audit and release plan** (documents A–H, feature tracker with traceability, four visual review sheets) | `release/consolidation/` v0.1 | gov | Revision 1 — **not accepted as the development reference** (owner, 15 Nov); kept unchanged |
 | **Decision** — Onboarding v3.4 Athletic Roster selected as Page 2 baseline; Page 3 and Page 7 decisions | `decisions/2026-11-15_onboarding-v34-athletic-roster-selected-page2-baseline.md` | gov | Decision record |
 | **Onboarding v3.4 — Page 2 only** (the Athletic Roster; six sheets) | `product/onboarding/v34/ONBOARDING_V34_PAGE2_ATHLETIC_ROSTER.md` v0.1 (+ `sheets/`) | gov | **Selected Page 2 Design Baseline (15 Nov)** — not implemented, not tested |
