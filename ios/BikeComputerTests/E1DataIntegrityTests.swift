@@ -46,7 +46,7 @@ final class E1DataIntegrityTests: XCTestCase {
         let s2 = Store(directory: d)                                     // second launch: previous copy is taken at its first write
         XCTAssertTrue(s2.addStrength(StrengthSession(date: Date(), minutes: 25, focus: .lower)))
         XCTAssertTrue(files(d).contains(StoreRecovery.previousName), "\(files(d))")
-        try Data("{ not json".utf8).write(to: url)
+        try Data("not a store file".utf8).write(to: url)
         let s3 = Store(directory: d)
         XCTAssertEqual(s3.storage, .unreadable); XCTAssertTrue(s3.canRestorePreviousCopy)
         XCTAssertTrue(s3.restorePreviousCopy())
@@ -66,7 +66,7 @@ final class E1DataIntegrityTests: XCTestCase {
     }
     func testStartFreshKeepsTheUnreadableFile() throws {
         let (_, d) = healthy("fresh"); let url = d.appendingPathComponent("store.json")
-        let bad = Data("{\"schema\":4,\"plan\":".utf8); try bad.write(to: url)
+        let bad = Data("a store cut off in the middle".utf8); try bad.write(to: url)
         let s = Store(directory: d)
         XCTAssertTrue(s.startFreshAfterUnreadableStore())
         XCTAssertEqual(s.storage, .ok); XCTAssertFalse(s.onboarded)
