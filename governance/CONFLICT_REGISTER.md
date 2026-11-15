@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 2.0 · 15 Nov 2026
+Status: Current Draft · Version 2.1 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -96,3 +96,13 @@ firmware or existing document was changed to apply a ruling.
 Decided but **not implemented**: 12 (colour direction), 21–32 (Plan and Coach behaviour).
 Open since 12 Nov: 33, 34, 35 and the Plan specification questions Q1–Q9.
 Open since 14 Nov (Training Hub v1.2 and v1.3): 37/45 (minimising a ride and RA-01), 38, 39 and 40 (the owner's v1.3 brief confirms no Effort on Finish and no pre-filled ratings; the Coach fallback remains a separate, unwritten proposal), 41, and the emblem choice (43/46).
+
+## 82 — Independent audit (15 Nov 2026): corrections to earlier statements
+
+Recorded, not decided. Source: `audit/independent-2026-11-15/INDEPENDENT_AUDIT_REPORT.md`.
+
+- The earlier explanation of the Plan edit-and-apply failure (a stuck "closing" flag) is **withdrawn**. The run-221 failure screenshot shows the change blocked by rule SPLIT-001 for a bodyweight-only full-body rebuild. Why the rebuild omits hip-dominant work is a hypothesis until reproduced.
+- The ride sample-count failure is attributed to wall-clock gap filling in a hand-ticked test (not reproduced); the recorded run shows no lost route point.
+- Tracker rev 3 (209 functions) replaces rev 2 (190): "implemented and verified" falls from 38 to 9; supersets reclassified as existing-partial; Coach timeline (HOM-03.2, COA-07.2) reclassified as proposed.
+- The build-216 release record understated its own run's failures (Plan edit and Delete-all-data flows failed in run 42786480539).
+- Open for the owner: decisions F1–F10 in the audit report. Nothing is implemented.
