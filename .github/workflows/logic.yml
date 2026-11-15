@@ -37,7 +37,8 @@ jobs:
           bash tools/coach-harness/test.sh "$GITHUB_WORKSPACE" > logic.txt 2>&1; X=$?
           set -e
           # E1: name every failing test. The tail alone hid a failure in a suite that sorts early (logic run 81).
-          [ $X -eq 0 ] || { echo "== failing tests and their messages:"; grep -E ": error: |Test Case .* failed|Fatal error" logic.txt | cut -c1-1500 | head -80; }
+          [ $X -eq 0 ] || { echo "== failing tests and their messages:"; grep -E ": error: |Test Case .* failed|Fatal error|became|missing after save|type changed" logic.txt | cut -c1-600 | head -160; }
+          echo "== evidence lines printed by the E1 tests:"; grep -E "^E1-" logic.txt | cut -c1-600 | head -60 || true
           [ $X -eq 0 ] || { echo "== test.sh failed (exit $X); last 60 lines:"; tail -60 logic.txt; echo "== build.log errors:"; grep -E "error:" tools/coach-harness/testws/build.log 2>/dev/null | head -20; }
           dur=$(( $(date +%s) - start ))
           R=ok; [ $X -eq 0 ] || R="FAILED (exit $X)"
