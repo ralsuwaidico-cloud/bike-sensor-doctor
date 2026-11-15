@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 2.2 · 15 Nov 2026
+Status: Current Draft · Version 2.3 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -119,3 +119,17 @@ Source: `product/coach/architecture-v1/COACH_ARCHITECTURE_AND_AUDIT.md`. Nothing
 - Project wording "AI Coach" versus the build: rules only, and the app says so. No AI provider is proposed.
 - Power is never marked verified in this build, so power-based Coach rules cannot run.
 - Open for the owner: the six decisions at the end of the architecture document.
+
+## 84 — Owner directions for the Coach (brief of 15 Nov 2026, section 2) — recorded as decided direction, design only
+
+- Authority: AI analyses and proposes; an independent deterministic policy engine alone authorizes any automatic plan change.
+- Automatic progression: small load and repetition increases only, within approved constraints. Sets, intervals, duration and frequency stay approval-required. **This refines the earlier direction "increases require approval" (items 32, 83).**
+- Protective actions: automatic only for an explicitly approved allowlist — the allowlist itself is still **not approved** (item 34 stays open; proposal in `product/coach/design-review-v2/`, section E2).
+- AI unavailable: validated rules continue; no AI-generated automatic increase.
+- Where AI runs: compare first; no provider selected.
+- Recovery signals: observations only until a rule or the athlete approves a change.
+- Interface: timeline and chat both designed; no claims of capabilities that do not exist. (My earlier recommendation of timeline-only is withdrawn.)
+- Power: verification and testing defined before any power-based coaching.
+- Nutrition: general fueling guidance only.
+- Document approval never equals implementation authorization.
+- Open: decisions M-01 … M-17 in the design-review package.

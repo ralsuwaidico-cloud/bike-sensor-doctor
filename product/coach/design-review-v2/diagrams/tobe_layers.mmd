@@ -1,0 +1,28 @@
+flowchart LR
+  subgraph UNTRUSTED[Untrusted zone · can be wrong, offline or compromised]
+    AI[D · AI reasoning<br/>explains · answers · nominates options<br/>no write access of any kind]
+  end
+  subgraph DET[Deterministic zone · on the iPhone · unit-testable]
+    A[A · Ingestion and provenance<br/>source · time · trust · freshness]
+    B[B · Athlete state<br/>versioned · declared vs measured]
+    C[C · Deterministic analysis<br/>eligibility · fatigue proxies · gaps]
+    E[E · Typed proposal / action]
+    F[F · Independent policy engine<br/>allowlist · hard limits · consent]
+    G[G · Plan validator<br/>whole schedule re-checked]
+    H[H · Transactional persistence<br/>pending → committed / failed / unknown]
+  end
+  I[I · Experience<br/>timeline · ask · approvals · undo · fueling]
+  J[(J · Decision log and versions)]
+  A --> B --> C
+  C -->|candidates with evidence| E
+  C -. read-only snapshot, redacted .-> AI
+  AI -. structured text, parsed and bounded .-> E
+  E --> F
+  F -->|auto-eligible: rule-generated only| G
+  F -->|needs approval| I
+  I -->|approve · reject · undo| F
+  G -->|valid| H
+  G -->|invalid: reasons and ways forward| I
+  H --> J
+  H --> I
+  F --> J

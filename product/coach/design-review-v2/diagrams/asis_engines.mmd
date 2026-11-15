@@ -1,0 +1,35 @@
+flowchart LR
+  subgraph IN[What the app reads today]
+    CI[Check-in after a session<br/>performance · effort · pain + area]
+    LOG[Strength logs<br/>sets · reps · weight · RPE]
+    RID[Rides<br/>time · distance · avg HR · power unverified]
+    PRO[Profile<br/>mode · priority · level · goals<br/>recovery capacity · age · health check]
+    AV[Availability + budgets]
+    EQ[Equipment · exclusions · preferences]
+    AH[Apple Health<br/>sleep · resting HR · HRV]
+  end
+  subgraph ENG[Seven separate rule engines]
+    E1[1 Week builder<br/>PlanEngine]
+    E2[2 Strength planner<br/>StrengthPlanner]
+    E3[3 Adaptive coach<br/>AdaptationEngine]
+    E4[4 Hybrid coach<br/>HybridCoach]
+    E5[5 Session validator<br/>WorkoutValidator]
+    E6[6 Recovery advice<br/>RecoveryAnalysis]
+    E7[7 Live ride cues<br/>CoachCore]
+  end
+  PLAN[(Plan<br/>next 2 weeks)]
+  TXT[Text only<br/>no plan change]
+  PRO --> E1 & E2
+  AV --> E1
+  EQ --> E2
+  LOG --> E2 & E3 & E4
+  CI --> E3
+  CI -. fatigue · pain .-> E2
+  RID --> E3 & E4
+  E1 -->|generates| PLAN
+  E2 -->|fills and rebuilds strength sessions<br/>increases apply with no approval| PLAN
+  E3 -->|automatic changes when auto-adapt is on<br/>proposals for large changes| PLAN
+  E4 -->|proposals, athlete taps Apply| PLAN
+  E5 -->|blocks or allows an edit| PLAN
+  AH --> E6 --> TXT
+  RID --> E7 --> TXT

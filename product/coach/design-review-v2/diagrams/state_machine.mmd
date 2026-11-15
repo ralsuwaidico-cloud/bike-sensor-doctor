@@ -1,0 +1,23 @@
+stateDiagram-v2
+  direction LR
+  [*] --> Drafted: analysis or AI nominates
+  Drafted --> Refused: policy refuses (reason logged)
+  Drafted --> AwaitingApproval: needs the athlete
+  Drafted --> Authorized: auto-eligible and all gates pass
+  AwaitingApproval --> Authorized: athlete approves
+  AwaitingApproval --> Rejected: athlete rejects
+  AwaitingApproval --> Expired: evidence or plan changed
+  Authorized --> Validating: whole plan re-checked
+  Validating --> Refused: validator blocks
+  Validating --> Committing: write starts (action id)
+  Committing --> Committed: durable write confirmed
+  Committing --> Failed: write error shown
+  Committing --> Unknown: app stopped mid-write
+  Unknown --> Committed: found on next launch
+  Unknown --> Failed: not found, retried once by id
+  Failed --> Committing: athlete taps Try again
+  Committed --> Undone: athlete undoes
+  Rejected --> [*]
+  Refused --> [*]
+  Expired --> [*]
+  Undone --> [*]

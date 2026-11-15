@@ -1,0 +1,14 @@
+flowchart LR
+  T[Trigger<br/>session saved · day change · question asked] --> R{AI available<br/>and consented?}
+  R -- no --> RU[Rules path<br/>analysis → candidates → policy]
+  R -- yes --> AIQ[AI asked with redacted snapshot]
+  AIQ --> P{Reply parses to the typed schema,<br/>ids exist, numbers in bounds?}
+  P -- no --> DROP[Reply discarded and logged<br/>rules path continues]
+  P -- yes --> NOM[AI text and nominated options<br/>labelled AI]
+  DROP --> RU
+  NOM --> POL[Policy engine re-derives eligibility<br/>from records, ignores AI claims]
+  RU --> POL
+  POL --> S{Save durable?}
+  S -- confirmed --> OK[Shown as saved · logged]
+  S -- failed --> ER[Shown as not saved · retry by same id]
+  S -- unknown --> UN[Shown as pending · resolved on next launch]
