@@ -1,0 +1,14 @@
+flowchart LR
+  L[App launch] --> R{Read store.json}
+  R -- decodes --> M[Migrate if older format<br/>up to 4 writes]
+  R -- file missing --> N[New empty store]
+  R -- cannot decode<br/>or one bad plan / ride record --> E[Treated exactly like<br/>'no data': empty store]
+  M --> G[Automatic plan generation]
+  N --> G
+  E --> G
+  G -->|any change| W[Write whole store<br/>atomic replace of store.json]
+  W -- ok --> OK[Nothing shown]
+  W -- error --> ER[Error text kept in one variable<br/>visible only on a Profile screen]
+  E -.->|result| LOST[Original file overwritten at launch<br/>no copy exists]
+  C[Any later change<br/>save session · check-in · edit] --> W
+  ER -.-> FS[Screen still says saved]

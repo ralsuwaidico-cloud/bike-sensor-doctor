@@ -1,0 +1,16 @@
+flowchart LR
+  L[App launch] --> R{Read store.json}
+  R -- decodes fully --> V[Loaded]
+  R -- decodes with bad records --> Q[Valid records kept<br/>bad records copied raw to quarantine<br/>athlete told what was set aside]
+  R -- cannot decode at all --> P[Original moved aside byte-for-byte<br/>store.unreadable-date.json<br/>NO write to store.json]
+  R -- newer schema than this build --> RO[Read-only mode<br/>never rewritten by an older build]
+  P --> T{Previous good copy exists?}
+  T -- yes --> RS[Recovery screen:<br/>restore previous · export · start fresh]
+  T -- no --> RS
+  Q --> V
+  V --> B[Before the first write of this launch<br/>and before any migration:<br/>copy store.json → store.previous.json<br/>only if store.json decoded]
+  B --> S[Change requested]
+  S --> W[Write: encode → temp file → verify it decodes → atomic swap]
+  W -- confirmed --> CM[State: committed<br/>'Saved' may be shown · Coach may run]
+  W -- error --> F[State: failed<br/>shown where the athlete is · retry keeps the same id]
+  W -- app stopped --> U[State: unknown<br/>resolved at next launch]
