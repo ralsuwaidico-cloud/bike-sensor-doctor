@@ -74,7 +74,7 @@ digest() {
 SCOPE="${SCOPE:-full}"
 STAGE="${STAGE:-}"
 if [ -z "$STAGE" ]; then if [ "$SCOPE" = ui ]; then STAGE=layout; else STAGE=all; fi; fi
-case "$STAGE" in all|quick|unit|smoke|smoke2|journeys|layout|watch|release) ;; *) echo "unknown STAGE $STAGE"; exit 2;; esac
+case "$STAGE" in all|quick|unit|smoke|smoke2|journeys|layout|watch|release|e0delete) ;; *) echo "unknown STAGE $STAGE"; exit 2;; esac
 LAYOUT_DEVICES="${LAYOUT_DEVICES:-small,standard,promax,owner}"
 T0=$SECONDS; since() { echo "$(( (SECONDS - $1) / 60 ))m$(( (SECONDS - $1) % 60 ))s"; }
 note "BikeComputer iOS CI — build ${BUILD_NUMBER:-?} — $(date -u '+%Y-%m-%d %H:%M UTC')"
@@ -298,6 +298,35 @@ run_smoke2() {   # "flows": hub reliability + the end-to-end UI journeys (streng
   fi
 }
 
+# E0 follow-up diagnostic (15 Nov): the Delete-all-data journey 20 times, each in its own test invocation, with the evidence
+# run 216 never kept: per-run result, duration, new crash reports, and on failure the log digest, simulator log and
+# failure screenshots. Diagnostic only; never part of a release.
+run_e0delete() {
+  TS=$SECONDS
+  release_products || { note "RESULT e0 delete-all-data x20: FAILED (build)"; STATUS=1; return; }
+  warm_release_app
+  local i r T0 crashes why p=0 f=0 DR="$HOME/Library/Logs/DiagnosticReports"
+  : > "$LOGS/e0-delete20.txt"
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    T0=$SECONDS; touch "$OUT/e0-mark-$i"
+    twb "$RELEASE_XR" "$SIM" "$OUT/e0-delete-$i.log" -resultBundlePath "$OUT/e0-delete-$i.xcresult" -only-testing:BikeComputerUITests/DeleteAllDataJourneyTests
+    r=$?
+    crashes=$(find "$DR" -type f -newer "$OUT/e0-mark-$i" \( -name '*BikeComputer*' -o -name '*Cyclift*' \) 2>/dev/null | wc -l | tr -d ' ')
+    why="-"
+    if [ $r -ne 0 ]; then
+      f=$((f+1))
+      why=$(grep -E ' error: ' "$OUT/e0-delete-$i.log" | sed -E 's/.*error: //' | head -2 | tr '\n' ' ' | cut -c1-320)
+      digest "$OUT/e0-delete-$i.log" "e0-delete-$i-FAILED"
+      export_fail_shots "$OUT/e0-delete-$i.xcresult" "e0delete$i"
+      xcrun simctl spawn "$SIM" log show --last 4m --style compact --predicate 'process == "BikeComputer"' 2>/dev/null | tail -300 | scrub > "$LOGS/e0-delete-$i-simlog.txt" || true
+      find "$DR" -type f -newer "$OUT/e0-mark-$i" \( -name '*BikeComputer*' -o -name '*Cyclift*' \) -exec head -150 {} \; 2>/dev/null | scrub > "$LOGS/e0-delete-$i-crash.txt" || true
+    else p=$((p+1)); fi
+    echo "run $i: $([ $r -eq 0 ] && echo passed || echo FAILED) · $((SECONDS-T0))s · new crash reports: $crashes · $why" | tee -a "$LOGS/e0-delete20.txt"
+  done
+  note "RESULT e0 delete-all-data x20: $p passed, $f failed · $(since $TS)"
+  [ $f -eq 0 ] || STATUS=1
+}
+
 # Run 205: the failure screenshots the UI tests attach (XCTAttachment named FAIL-…) stayed inside the xcresult, which the
 # owner's environment cannot download. Export them into $OUT/layout so the publish job copies them to ci-logs/…/layout.
 export_fail_shots() {   # <xcresult> <stage>
@@ -376,16 +405,21 @@ layout_one() {
   local ONLY=(); for a in $TESTS; do ONLY+=("-only-testing:BikeComputerUITests/$a"); done
   local LEXTRAS=0; { [ "$LNAME" = "standard" ] || [ "$LNAME" = "owner" ]; } && LEXTRAS=1
   [ "$STAGE" = quick ] && LEXTRAS=0
+  # E0 follow-up diagnostic (15 Nov): since commit 004936d1 the settings below applied to `rm`, not to the tests. Here the
+  # clean-up is on its own line so the settings reach the test command again — proof of the regression, not a release fix.
+  rm -rf "$OUT/layout-$LNAME.xcresult"
   TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
-    rm -rf "$OUT/layout-$LNAME.xcresult"; twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" -resultBundlePath "$OUT/layout-$LNAME.xcresult" "${ONLY[@]}"
+    twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" -resultBundlePath "$OUT/layout-$LNAME.xcresult" "${ONLY[@]}"
   L=$?
+  note "  layout $LNAME counts (E0): passed $(grep -E "Test Case .* passed" "$OUT/layout-$LNAME.log" | sort -u | wc -l | tr -d ' ') · failed $(grep -E "Test Case .* failed" "$OUT/layout-$LNAME.log" | sort -u | wc -l | tr -d ' ') · skipped $(grep -E "Test Case .* skipped" "$OUT/layout-$LNAME.log" | sort -u | wc -l | tr -d ' ') · screenshots so far $(ls "$LAYOUT"/*.png 2>/dev/null | wc -l | tr -d ' ')"
   # one retry ONLY when the simulator failed to launch the app (infrastructure, run 71) — never for a failed check
   if [ $L -ne 0 ] && grep -q "Timed out while launching application\|Simulator device failed to launch\|Timed out while loading Accessibility\|failed to initialize for UI testing" "$OUT/layout-$LNAME.log"; then
     note "  layout $LNAME: simulator could not launch the app — rebooting it and retrying once"
     mv "$OUT/layout-$LNAME.log" "$OUT/layout-$LNAME-launchfail.log"
     xcrun simctl shutdown "$LID" >/dev/null 2>&1; xcrun simctl boot "$LID" >/dev/null 2>&1; sleep 20
+    rm -rf "$OUT/layout-$LNAME.xcresult"
     TEST_RUNNER_LAYOUT_DIR="$LAYOUT" TEST_RUNNER_LAYOUT_DEVICE="$LNAME" TEST_RUNNER_LAYOUT_SIZES="$LSIZES" TEST_RUNNER_LAYOUT_EXTRAS="$LEXTRAS" \
-      rm -rf "$OUT/layout-$LNAME.xcresult"; twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" -resultBundlePath "$OUT/layout-$LNAME.xcresult" "${ONLY[@]}"
+      twb "$RELEASE_XR" "$LID" "$OUT/layout-$LNAME.log" -resultBundlePath "$OUT/layout-$LNAME.xcresult" "${ONLY[@]}"
     L=$?
   fi
   digest "$OUT/layout-$LNAME.log" "layout-$LNAME"
@@ -441,6 +475,7 @@ case "$STAGE" in
   unit)  run_unit ;;
   smoke) run_smoke ;;
   smoke2) run_smoke2 ;;
+  e0delete) run_e0delete ;;
   journeys) run_journeys ;;
   layout) run_layout ;;
   quick)

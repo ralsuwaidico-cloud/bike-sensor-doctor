@@ -57,6 +57,7 @@ concurrency:
 
 jobs:
   apple:
+    if: ${{ false }}   # E0 diagnostic branch: no App Store Connect call
     runs-on: ubuntu-latest
     outputs:
       app_ready: ${{ steps.asc.outputs.app_ready }}
@@ -141,26 +142,17 @@ jobs:
           if-no-files-found: ignore
 
   test:
-    needs: [apple, mode]
+    needs: [mode]
     if: needs.mode.outputs.scope == 'full' || needs.mode.outputs.scope == 'ui'
     runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { job: unit,            stage: unit,   devices: "",         minutes: 60 }
-          - { job: smoke,           stage: smoke,  devices: "",         minutes: 75 }
-          # Owner 10 Nov 2026 12:51 — internal TestFlight readiness is separate from production readiness: the "flows"
-          # job (hub reliability loops + the long end-to-end UI journeys) still runs on every full run and its result is
-          # published, but a failure there does not withhold an INTERNAL build. Gate for internal builds = unit + smoke +
-          # journeys + all layout audits + watch. A production release still requires every job, flows included.
-          - { job: flows,           stage: smoke2, devices: "",         minutes: 75, gate: internal-advisory }
-          - { job: journeys,        stage: journeys, devices: "",       minutes: 75 }
-          - { job: layout-small,    stage: layout, devices: "small",    minutes: 75 }
-          - { job: layout-standard, stage: layout, devices: "standard", minutes: 60 }
-          - { job: layout-promax,   stage: layout, devices: "promax",   minutes: 60 }
-          - { job: layout-owner,    stage: layout, devices: "owner",    minutes: 75 }
-          - { job: watch,           stage: watch,  devices: "",         minutes: 45 }
+          # E0 follow-up DIAGNOSTIC branch only (15 Nov 2026): three jobs, no archive, no signing, no upload, no App Store Connect call.
+          - { job: unit,            stage: unit,     devices: "",      minutes: 60 }
+          - { job: e0delete,        stage: e0delete, devices: "",      minutes: 75 }
+          - { job: layout-small,    stage: layout,   devices: "small", minutes: 75 }
     name: test (${{ matrix.job }})
     continue-on-error: ${{ matrix.gate == 'internal-advisory' }}
     timeout-minutes: ${{ matrix.minutes }}
@@ -209,7 +201,7 @@ jobs:
 
   release:
     needs: [apple, mode, test]
-    if: needs.mode.outputs.scope == 'full' && needs.test.result == 'success'
+    if: ${{ false }}   # E0 diagnostic branch: never archive, sign or upload
     runs-on: macos-26
     timeout-minutes: 75
     outputs:
@@ -306,7 +298,7 @@ jobs:
           set -u
           S="$PWD/summary.txt"; : > "$S"
           echo "BikeComputer iOS CI — run $N — scope $SCOPE — jobs: quick=$R_QUICK test=$R_TEST release=$R_RELEASE testflight=$R_TF" >> "$S"
-          for j in quick unit smoke flows journeys layout-small layout-standard layout-promax layout-owner watch release; do
+          for j in quick unit e0delete smoke flows journeys layout-small layout-standard layout-promax layout-owner watch release; do
             f="logs/logs-$j/logs/summary.txt"; [ -f "$f" ] || f="logs/logs-$j/summary.txt"
             [ -f "$f" ] || continue
             echo "" >> "$S"; echo "## $j" >> "$S"; cat "$f" >> "$S"
