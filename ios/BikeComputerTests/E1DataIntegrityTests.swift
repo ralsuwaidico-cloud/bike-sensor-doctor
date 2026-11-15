@@ -367,12 +367,21 @@ final class E1DataIntegrityTests: XCTestCase {
 
     /// Field by field: every value build 216 wrote is still in the file after this build has loaded it and saved again.
     /// The comparison walks the two JSON documents; a value that is missing or different is listed with its path.
+    private static let storedAsSet = [".settings.enabledConnections", ".equipment.owned", ".equipment.excluded"]
     private func differences(_ old: Any, _ new: Any, _ path: String, _ out: inout [String]) {
         if out.count >= 40 { return }
         switch (old, new) {
         case let (a as [String: Any], b as [String: Any]):
             for k in a.keys.sorted() { if let v = b[k] { differences(a[k]!, v, path + "." + k, &out) } else { out.append("\(path).\(k): missing after save (was \(a[k]!))") } }
         case let (a as [Any], b as [Any]):
+            // Three stored lists are SETS in the model (Set<String>): the app writes their members in no fixed order, so the
+            // same set can appear as ["board","watch"] in one save and ["watch","board"] in the next. Logic run 84 showed
+            // this was the ONLY difference in all six build-216 fixtures. For exactly these three paths the members are
+            // compared without regard to order; every other list is compared position by position.
+            if Self.storedAsSet.contains(where: { path.hasSuffix($0) }), let x = a as? [String], let y = b as? [String] {
+                if x.sorted() != y.sorted() { out.append("\(path): members \(x.sorted()) became \(y.sorted())") }
+                return
+            }
             if a.count != b.count { out.append("\(path): \(a.count) elements became \(b.count)"); return }
             for i in a.indices { differences(a[i], b[i], "\(path)[\(i)]", &out) }
         case let (a as NSNumber, b as NSNumber):
