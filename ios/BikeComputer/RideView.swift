@@ -248,6 +248,7 @@ struct RideTabView: View {
         case .phone: return device.state == .ready ? "this phone records (BikeComputer values shown)" : "this phone records with the sensors that are live"
         case .blockedByBoardRide: return "the BikeComputer has a ride running — it is the recorder"
         case .blockedNoGPSPermission: return "allow location to record on the phone"
+        case .blockedByHealthHold: return "training is paused by your health check"
         }
     }
 
