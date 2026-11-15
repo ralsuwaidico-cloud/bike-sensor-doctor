@@ -7,26 +7,26 @@ Evidence words used here: **written** = code exists on the branch · **compiled*
 
 ## 1. E1 tasks
 
-Branch `ios/e1-safety`, created from `4e2e9dc1` (the commit audited in E0). First commit `d59193cf`.
+Branch `ios/e1-safety`, created from `4e2e9dc1` (the commit audited in E0). State below is filled from CI only; see section 8 for the run numbers.
 
-| Task | What | Depends on | Tests that must pass | State |
-|---|---|---|---|---|
-| E1-A1 | Unreadable store never overwritten; copy kept; recovery screen | — | E0: UnreadableStoreIsNotOverwrittenAtLaunch, StageAtWhich…; E1DataIntegrity: unreadable ×4 | Written · not yet compiled |
-| E1-A2 | Record-by-record decoding; raw bad records set aside | A1 | E0: MalformedRecordMatrix, OneBadStrengthRecord…; E1: eleven lists | Written · not yet compiled |
-| E1-A3 | Newer store read-only; unknown fields kept; one previous good copy | A1 | E0: NewerStoreKeepsItsUnknownFields…; E1: newer, unknown, previous copy | Written · not yet compiled |
-| E1-A4 | Build-216 fixtures open with zero loss (built by the build-216 serializer in CI) | A2 | New fixture job | **Not started** |
-| E1-B1 | Save result at the store: one write, true only when stored, rollback on failure | A1 | E0: FailedWriteIsReportedAtTheSave; E1: one write, rollback, retry | Written · not yet compiled |
-| E1-B2 | Save screens: "Not saved — Try again" for ride, strength workout, strength log | B1 | Flow tests unchanged; new UI test for the failed state | Written (alerts) · UI test **not started** · the five named states (recording / saving / saved / failed / uncertain) are **not** all modelled yet |
-| E1-C | Full-body edit without equipment: difficulty of bodyweight hip exercises; time-fit keeps required patterns | — | E0 PlanEdit diagnostic; PlanEditPreviewApplyTests flow; matrix level × equipment × minutes | Fix written · matrix test **not started** |
-| E1-D1 | Layout CI: settings reach the tests; zero tests or zero screenshots = failure | — | Deliberate dry run | Written |
-| E1-D2 | Largest-text truncation and stacked weekday letters on production screens; truncation detection | D1 | Layout audit | **Not started** |
-| E1-E | Increases in sets, intervals, ride minutes held for approval; increases already in force kept | — | New tests; existing adaptive tests reviewed one by one | Written · tests **not started** |
-| E1-F1 | Planned-ride completion after midnight / late import | B1 | New tests | **Not started** |
-| E1-F2 | One write per save (was six) | B1 | E1: OneSaveIsOneWrite | Written |
-| E1-F3 | Ride timing test: injectable clock | — | New deterministic test; existing test unchanged | **Not started** |
-| E1-F4 | Delete all data: temporary exports, device diagnostic reports, sensor history; ×20 in CI | — | New test; journey ×20 | Safety copies done · the rest **not started** |
-| E1-F5 | Ride-start gate on all five routes (pause, health stop, location) | — | Per-route tests | **Not started** |
-| E1-G | Release accounting (no upload with an unnamed failing test) | D1 | Dry run, no upload | **Not started** |
+| Task | What | State |
+|---|---|---|
+| E1-A1 | Unreadable store never overwritten; copy kept; recovery screen with retry / restore / send / start again | Written · compiled and unit-tested on Linux (logic run 79) · iOS run pending |
+| E1-A2 | Record-by-record decoding; raw bad records set aside; banner tells the athlete | Written · compiled and unit-tested on Linux (logic run 79) · iOS run pending |
+| E1-A3 | Newer store read-only; unknown fields kept; one previous good copy per launch | Written · compiled and unit-tested on Linux (logic run 79) · iOS run pending |
+| E1-A4 | Stores written by the build-216 code open with zero loss (six synthetic fixtures made in CI from commit `fb52ae27`) | Written · first run pending (logic run 80) |
+| E1-B1 | One write per save; true only when stored; rollback on failure; retry is not a duplicate | Written · compiled and unit-tested on Linux (logic run 79) · iOS run pending · the failed-write test cannot run on Linux (root); needs the iOS run |
+| E1-B2 | "Not saved" on the ride, strength-workout and strength-log screens; failing-write banner on every screen | Written · compiled only when the iOS run finishes · no UI test yet. "Saving" and "uncertain" are not separate states: the write is synchronous, so the result is known when the call returns |
+| E1-C | Full-body edit without equipment: the two bodyweight hip exercises rated basic. My extra time-fit change was **reverted** (it removed a tested fallback) | Fix written · compiled on Linux (run 79) · the plan-edit tests are iOS-only: pending |
+| E1-D1 | Layout CI: settings reach the tests; zero tests or zero screenshots fails | Written · needs a full-scope iOS run |
+| E1-D2 | Largest text: Plan day column scales (was stacked letters). Home ring value, Plan list titles, Profile rows still truncate | Partly written · not verified |
+| E1-E | **Every** automatic increase held (weight, reps, sets, intervals, minutes) in both engines; increases in force kept; planner records the suggestion in the reason | Written · compiled and unit-tested on Linux (logic run 79) · iOS run pending · one existing test updated with its reason |
+| E1-F1 | Ride completes the planned ride of the day it started | Written · first run pending |
+| E1-F2 | One write per save (was six) | Written · compiled and unit-tested on Linux (logic run 79) · iOS run pending · the failed-write test cannot run on Linux (root); needs the iOS run |
+| E1-F3 | Ride timing test with an injectable clock | **Not started** |
+| E1-F4 | Delete all data: safety copies, temporary exports, device reports, diagnostic history | Written · safety copies tested on Linux; the rest has no test yet |
+| E1-F5 | Health-hold gate on every ride-start route | Written · iOS unit test pending. **Location permission is not enforced** (see section 5) |
+| E1-G | Release accounting (no upload with an unnamed failing test) | **Not started** — needed before any upload request, not before |
 
 ## 2. Parallel workstreams that do not touch E1 files
 
@@ -84,3 +84,14 @@ None of these is started. E1 is the only code work under way.
 | Layout defects | Readiness package: triage at a checkpoint; directive E1-D: fix in E1 | Directive followed; added as E1-D2 | No |
 | Diagnostics "pass unmodified" | E0 report; run 225 | One assertion restated with the reason in the file (timestamp rounding, no data lost); all others unchanged | No — disclosed |
 | Themes and Arabic | Readiness package: six themes in UX1; directive §8: additional themes and Arabic as later capability releases | Directive followed; architecture keeps both | No |
+
+## 8. CI evidence so far
+
+| Run | Commit | Result |
+|---|---|---|
+| Fast logic 75–78 | `d59193cf` … `d3a6aca0` | Failed on my test tooling (unparsable fixtures; harness hid failing results), not on product code |
+| Fast logic 79 | `62bb022d` | Compiled. 404 executed, 400 passed, 1 skipped (failed-write test cannot run as root), 1 failed — caused by my time-fit change, since reverted |
+| Fast logic 80 | `ed761478` | Pending at the time of writing |
+| iOS 226 (quick) | `d59193cf` | Running at the time of writing |
+| iOS 227–231 | — | Cancelled by me while queued (superseded commits) or pending |
+
