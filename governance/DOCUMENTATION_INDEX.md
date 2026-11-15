@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 1.3 · 15 Nov 2026
+Status: Current Draft · Version 1.4 · 15 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -46,6 +46,7 @@ project (reference copies and documents not yet in GitHub).
 | **Training Hub v1.2** — corrective design (owner decisions of 14 Nov): four journeys, three emblem candidates, interaction and state specification, integration contract, capability matrix; 13 sheets | `product/train/v12/TRAINING_HUB_V12_DESIGN.md`, `…_INTERACTION_AND_STATES.md`, `…_INTEGRATION_CONTRACT.md` v0.1 (+ `product/train/v12/sheets/`) | gov | Current Draft — earlier round; revised by the v1.3 draft |
 | **Training Hub v1.3** — corrective design (minimise and resume; three new emblem concepts; refined panel, strength, endurance, recovery, finish and review); session architecture; data and capability contract; 9 sheets | `product/train/v13/TRAINING_HUB_V13_DESIGN.md`, `…_SESSION_ARCHITECTURE.md`, `…_DATA_AND_CAPABILITY_CONTRACT.md` v0.1 (+ `product/train/v13/sheets/`) | gov | Historical — preserved unchanged; superseded as the working design by the approved v1.4 baseline |
 | **Training Hub v1.4 — design and UX architecture baseline** (approved by the owner 14 Nov 2026; implementation not authorised). Pending: emblem; cycling safety gate; save-result handling; review values and Coach compatibility; new exercise and recovery data; session and rest rules. Open defects: ride GPS-route test and Plan edit-and-apply test | `product/train/v14/TRAINING_HUB_V14_DESIGN.md` v0.2; supporting: `…_CYCLING_SAFETY_GATE.md`, `…_TECHNICAL_IMPACT.md` v0.2, `…_ACCEPTANCE_CRITERIA.md` (+ `product/train/v14/sheets/`); decision: `decisions/2026-11-14_training-hub-v14-approved-design-baseline.md` | gov | **Current Approved — Design Baseline** · dependencies pending · nothing built |
+| **Profile v2.0 — six-section information architecture and visual design** (eleven sheets; function inventory and old-to-new map; navigation diagram; decision of 15 Nov) | `product/profile/v20/PROFILE_V20_DESIGN.md` v0.1; `product/profile/v20/PROFILE_V20_FUNCTION_INVENTORY_AND_MAP.md` v0.1 (+ `product/profile/v20/sheets/`, `profile_navigation.mmd`); decision: `decisions/2026-11-15_profile-v20-six-section-architecture-approved.md` | gov | Information architecture: **Approved** · visual design: **Pending Review** · implementation not authorised |
 | **Profile — Phase 0 audit and proposed information architecture** (read-only; active design workstream from 14 Nov 2026) | `product/profile/PROFILE_PHASE0_AUDIT_AND_IA.md` v0.1 | gov | Current Draft — pending owner review; no screens designed |
 | **Profile and global navigation — design v1.0** (owner decision D: three tabs, Train on the right, Profile from the Home avatar; five Profile sections; seven sheets; route map; dependency assessment; decision register) | `product/profile/PROFILE_AND_NAVIGATION_V1_DESIGN.md` v0.1 (+ `product/profile/sheets/`); decision: `decisions/2026-11-14_navigation-decision-d-three-tabs-train-right-profile-via-avatar.md` | gov | Current Draft — pending owner review; illustrative, not implemented |
 | **Navigation v1.1 — sculpted Train cradle** (correction to P1 of v1.0: one silhouette, three measured depths, medium suggested; four sheets; owner sketch not received) | `product/profile/nav-v11/NAVIGATION_V11_SCULPTED_CRADLE.md` v0.1 (+ `product/profile/nav-v11/sheets/`) | gov | Historical — design record (right-hand placement replaced by the decision of 15 Nov); kept unchanged |
@@ -105,6 +106,9 @@ project (reference copies and documents not yet in GitHub).
 | `product/profile/nav-v12/final/NAVIGATION_V12_FINAL_VISUAL_SPECIFICATION.md` | gov same path | 1.1 | 15 Nov 2026 |
 | `product/profile/nav-v12/final/NAVIGATION_V12_TECHNICAL_IMPACT_REGISTER.md` | gov same path | 1.0 | 15 Nov 2026 |
 | `decisions/2026-11-15_navigation-v12-train-left-selected-visual-direction.md` | gov same path | — | 15 Nov 2026 |
+| `product/profile/v20/PROFILE_V20_DESIGN.md` | gov same path | 0.1 | 15 Nov 2026 |
+| `product/profile/v20/PROFILE_V20_FUNCTION_INVENTORY_AND_MAP.md` | gov same path | 0.1 | 15 Nov 2026 |
+| `decisions/2026-11-15_profile-v20-six-section-architecture-approved.md` | gov same path | — | 15 Nov 2026 |
 | `decisions/2026-11-14_navigation-decision-d-three-tabs-train-right-profile-via-avatar.md` | gov same path | — | 14 Nov 2026 |
 | `brand/CYCLIFT_BRAND_BOOK.md` | gov `brand/CYCLIFT_BRAND_BOOK.md` | 0.2 | 12 Nov 2026 |
 | `product/plan/PLAN_V2_SPECIFICATION.md` | gov `product/plan/PLAN_V2_SPECIFICATION.md` | 0.6 | 12 Nov 2026 |

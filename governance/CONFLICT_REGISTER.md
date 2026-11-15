@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 1.1 · 15 Nov 2026
+Status: Current Draft · Version 1.2 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -66,6 +66,11 @@ firmware or existing document was changed to apply a ruling.
 | 56 | Large-text rule | v1.1 (tab words capped at 17 pt) and v1.2 exploration (selected tab widens, icon tabs shift) vs owner instruction of 15 Nov (no cap; touch regions must not shift) | Adaptive text with fixed, equal touch regions. Owner ruled (final decision, 15 Nov): the selected word must fit its own region — 20 pt standard / 18 pt small | Latest explicit owner decision | Decided · applied in rev 1.1 |
 | 57 | Numbered destinations and the hidden Ride page | Selected three-tab design vs the app as read (five numbered pages, Ride hidden at 2, Profile at 4, tests bound to `tabPage-<i>` and `centreButton`) | Not resolved. Routes are not assumed removable; an implementation audit and engineering approval are required first | Master instructions §3, §10 | **Open** — future engineering |
 | 58 | Silhouette height | Owner target ≈ 91–92 pt vs final refinement drawn at 90.2 pt | Owner accepted 90.2 pt; geometry is not to be altered to reach 91–92 | Owner instruction: do not enlarge for drama | Decided |
+| 59 | Number of Profile sections | Phase 0 (seven) and Profile & Navigation v1.0 (five) vs owner brief Profile v2.0 of 15 Nov (exactly six) | Six. Earlier documents preserved unedited | Latest explicit owner decision | Decided · visual design Pending Review |
+| 60 | Home quick menu (continues item 51) | Quick menu in the app and the 6 Nov addendum vs Profile v2.0 brief (avatar opens the Profile landing directly) | Retired **in the design**; the app is unchanged | Owner brief, 15 Nov | Decided as design direction · implementation not authorised |
+| 61 | Cyclift Watch (LILYGO) on the Devices screen | Profile v2.0 brief ("future, not a working connection") vs the app as read (a Cyclift Watch card with a "Connect" switch exists; unverified on hardware) and Phase 0 (said no row was found — corrected) | Design shows it as Unavailable / future. Whether to hide or mark the existing switch is open | Master instructions §2 (hardware concept is not verified capability) | **Open** — owner decision |
+| 62 | Who edits goals and the weekly schedule | Profile v2.0 brief (Plan-owned; Profile links) vs the app as read (editors live in Profile and are shared with onboarding; Plan has no own editor) | Not resolved. Existing editors must stay reachable until Plan owns them | Master instructions §5 | **Open** — depends on Plan work and on onboarding authorisation |
+| 63 | Name of the first athlete type | Profile v2.0 brief ("Endurance") vs the app ("Cycling") | Drawn as Endurance; label-only or wider meaning undecided | — | **Open** — owner decision |
 
 ## Summary of what is still unresolved
 

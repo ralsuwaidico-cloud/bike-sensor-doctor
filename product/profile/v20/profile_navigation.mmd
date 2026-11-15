@@ -1,0 +1,44 @@
+flowchart LR
+  H[Home]:::ex -->|avatar| P[Profile landing]
+  P -->|back| H
+  P --> A[Athlete Profile]
+  P --> B[Training Setup]
+  P --> C[Performance Settings]
+  P --> D[Devices & Connections]
+  P --> E[App Preferences]
+  P --> F[Data, Help & About]
+  A --> A1[Personal details · edit, Save]
+  A --> A2[My activities · instant]
+  A --> A3[Type, balance, experience · Save → plan preview]:::plan
+  B --> B1[Equipment & restrictions · plan preview]:::plan
+  B --> B2[Strength preferences · plan preview]:::plan
+  B --> B3[Recovery · pauses · health check]:::plan
+  B -.->|opens Plan| PG[Plan: Goals]:::ext
+  B -.->|opens Plan| PS[Plan: Schedule]:::ext
+  B -.->|opens Plan| PR[Plan: Saved routines]:::ext
+  B -.->|opens library| TX[My exercises]:::ext
+  C --> C1[Heart rate · values, method, zones]
+  C --> C2[Power · FTP, zones, meter state]:::plan
+  C --> C3[Cadence · cycling parameters]
+  C --> C4[Measurement sources]
+  D --> D1[Apple Health]
+  D --> D2[Apple Watch]
+  D --> D3[BikeComputer → sync, settings, Wi-Fi, repair]
+  D --> D4[Cyclift Watch · unavailable]:::na
+  D --> D5[Sensors → add, detail, forget]
+  D --> D6[This iPhone · Bluetooth, location]
+  D --> D7[Connection diagnostics]
+  E --> E1[Appearance · language · units]
+  E --> E2[Notifications · training display · accessibility]
+  E --> E3[Coach settings]
+  E3 -.->|opens Coach| CO[Coach: current adjustments]:::ext
+  F --> F1[Where data lives · export]
+  F --> F2[Permissions → iPhone Settings]
+  F --> F3[Delete all data · confirmation]:::dg
+  F --> F4[How Cyclift works · diagnostics · support]
+  F --> F5[Privacy · terms · version]
+  classDef ex fill:#eef1f5,stroke:#555,color:#111
+  classDef ext fill:#e3ecfb,stroke:#1d3f86,color:#111
+  classDef plan fill:#fff0c9,stroke:#6b4a00,color:#111
+  classDef na fill:#eee,stroke:#999,color:#666,stroke-dasharray:4 3
+  classDef dg fill:#ffe1ea,stroke:#a00d45,color:#111
