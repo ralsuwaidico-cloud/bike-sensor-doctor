@@ -73,6 +73,8 @@ struct BikeComputerApp: App {
         let dc = DiagReportCenter(); dc.attach(device: d, recorder: r)
         dc.onLog = { [weak m] t in m?.log("board", t) }
         m.diagCenter = dc
+        // E1-F4: "Delete all data" reaches the diagnostic history and the stored board reports too
+        s.onDeleteAllData.append { [weak m, weak dc] in m?.clearHistory(); dc?.deleteAllReports() }
         _diag = StateObject(wrappedValue: dc)
         // Cyclift Watch (LILYGO): protocol v1 companion — same one-owner rules; enabled from Connections
         let cw = CyWatchCoordinator(); cw.attach(store: s, hub: h, recorder: r, device: d, location: l)

@@ -26,6 +26,14 @@ jobs:
         run: |
           start=$(date +%s)
           set +e   # run 129: with -e the step died on the failing test.sh before any of the reporting below ran
+          # E1-A4: stores written by the BUILD-216 code itself (commit fb52ae27), then opened by this commit's code.
+          # Synthetic athletes only. If the fixtures cannot be produced the upgrade test FAILS (it never skips quietly).
+          export FIXTURES_216="$GITHUB_WORKSPACE/fixtures216"; mkdir -p "$FIXTURES_216"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE" || true
+          if git fetch -q --depth 1 origin fb52ae27403a8f2703657321ea45406b62832ea6 && git worktree add -q /tmp/b216 FETCH_HEAD; then
+            FIXTURE_OUT="$FIXTURES_216" TESTS=none EXTRA="$GITHUB_WORKSPACE/tools/coach-harness/fixtures216/Fixture216Generator.swift" bash tools/coach-harness/test.sh /tmp/b216 > fixtures216.txt 2>&1 || true
+            echo "== build-216 fixtures: $(ls "$FIXTURES_216" | tr '\n' ' ')"; tail -5 fixtures216.txt
+          else echo "== build-216 fixtures: could not fetch commit fb52ae27"; fi
           bash tools/coach-harness/test.sh "$GITHUB_WORKSPACE" > logic.txt 2>&1; X=$?
           set -e
           [ $X -eq 0 ] || { echo "== test.sh failed (exit $X); last 60 lines:"; tail -60 logic.txt; echo "== build.log errors:"; grep -E "error:" tools/coach-harness/testws/build.log 2>/dev/null | head -20; }

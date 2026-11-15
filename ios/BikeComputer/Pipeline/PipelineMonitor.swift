@@ -64,6 +64,11 @@ final class PipelineMonitor: ObservableObject {
         Ring.append(SensorDiagRecord(d, at: Date()), to: &sensorDiagHistory)
         Self.save(sensorDiagHistory, Self.diagKey)
     }
+    /// E1-F4: "Delete all data" — the history in memory goes too, otherwise the next event would write it back.
+    func clearHistory() {
+        events = []; sensorDiagHistory = []
+        UserDefaults.standard.removeObject(forKey: Self.eventsKey); UserDefaults.standard.removeObject(forKey: Self.diagKey)
+    }
     private static func load<T: Decodable>(_ t: T.Type, _ key: String) -> T? {
         guard let d = UserDefaults.standard.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(T.self, from: d)

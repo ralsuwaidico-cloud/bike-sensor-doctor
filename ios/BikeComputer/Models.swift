@@ -929,6 +929,9 @@ final class Store: ObservableObject {
     @Published var saveFailure: String? = nil
     /// E1: what the launch found, in plain words for Profile and the recovery screen (records set aside, copy kept).
     @Published private(set) var storageNotice: String? = nil
+    /// E1-F4: other holders of personal data on this iPhone (diagnostic history, device reports) register here and are
+    /// cleared by "Delete all data". Not persisted.
+    var onDeleteAllData: [() -> Void] = []
     /// E1: top-level keys of the loaded file that this build does not know; written back unchanged on every save.
     private var unknownKeys: [String: Any] = [:]
     /// E1: store.previous.json is taken once per launch, before the first write, and only from a file that decoded.
@@ -1673,6 +1676,13 @@ final class Store: ObservableObject {
         // unreadable store keeps them, because they are the only copy of what could not be read.
         if !keepRecoveryFiles {
             storageNotice = nil
+            // E1-F4: "Delete all data" also removes what used to be left behind — exported copies of the athlete's data in the
+            // temporary folder, BikeComputer diagnostic reports, and the diagnostic event and sensor history.
+            let tmpDir = FileManager.default.temporaryDirectory
+            for n in ((try? FileManager.default.contentsOfDirectory(atPath: tmpDir.path)) ?? []) where n.hasPrefix("cyclift-export-") { try? FileManager.default.removeItem(at: tmpDir.appendingPathComponent(n)) }
+            if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first { try? FileManager.default.removeItem(at: appSupport.appendingPathComponent("Diagnostics", isDirectory: true)) }
+            for k in ["cyclift.diagnostics.events.v1", "cyclift.diagnostics.sensordiag.v1", "cyclift.diagnostics.uploadConsent", "cyDockAcknowledgedDay"] { UserDefaults.standard.removeObject(forKey: k) }
+            for f in onDeleteAllData { f() }
             for n in ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []) where n == StoreRecovery.previousName || n == StoreRecovery.quarantineName || n.hasPrefix("store.unreadable-") {
                 try? FileManager.default.removeItem(at: dir.appendingPathComponent(n))
             }

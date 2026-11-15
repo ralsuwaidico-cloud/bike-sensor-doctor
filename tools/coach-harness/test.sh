@@ -4,6 +4,7 @@ set -euo pipefail
 SRC="$1"; FILTER="${2:-}"; HERE="$(cd "$(dirname "$0")" && pwd)"; W="$HERE/testws"
 rm -rf "$W/Sources" "$W/Tests"; mkdir -p "$W/Sources/BikeComputer" "$W/Tests/BikeComputerTests"
 for f in Models StoreRecovery Strength WorkoutState Hybrid Planning StrengthPlanner AdaptationEngine AdaptiveModels AdaptiveStore UITestSupport CoachSafety; do
+  [ -f "$SRC/ios/BikeComputer/$f.swift" ] || continue      # E1: an older checkout (the build-216 fixture run) has no StoreRecovery
   sed -e 's/^import Combine$//' -e 's/@retroactive //' "$SRC/ios/BikeComputer/$f.swift" > "$W/Sources/BikeComputer/$f.swift"
 done
 # Home / weekly totals / Progress maths (pure Foundation; present from the RC2 UX work on)

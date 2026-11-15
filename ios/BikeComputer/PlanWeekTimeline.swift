@@ -8,6 +8,9 @@ struct PlanWeekTimeline: View {
     var onDay: (PlanTimelineDay) -> Void
     var onChip: (PlanChip) -> Void
     @Environment(\.dynamicTypeSize) private var dts
+    /// E1-D2 (run 225, small iPhone, largest text): the day column was a fixed 34 pt, so "Mon" was stacked one letter per
+    /// line. The column now grows with the text size and the day name stays on one line.
+    @ScaledMetric(relativeTo: .caption) private var dayColumn: CGFloat = 34
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var maxMinutes: Int { max(30, days.flatMap(\.chips).map(\.minutes).max() ?? 30) }
@@ -43,10 +46,10 @@ struct PlanWeekTimeline: View {
         HStack(alignment: .center, spacing: 10) {
             Button { onDay(d) } label: {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(d.shortName).font(.caption.weight(d.isToday ? .heavy : .semibold)).foregroundStyle(d.isToday ? CyTheme.cycling.tint : .secondary)
-                    Text(d.date, format: .dateTime.day()).font(.caption2).foregroundStyle(.tertiary)
+                    Text(d.shortName).font(.caption.weight(d.isToday ? .heavy : .semibold)).foregroundStyle(d.isToday ? CyTheme.cycling.tint : .secondary).lineLimit(1)
+                    Text(d.date, format: .dateTime.day()).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
                 }
-                .frame(width: 34, alignment: .leading)
+                .frame(width: dayColumn, alignment: .leading)
                 .frame(maxHeight: .infinity)
                 .contentShape(Rectangle())
             }

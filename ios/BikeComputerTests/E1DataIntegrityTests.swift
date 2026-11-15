@@ -226,6 +226,40 @@ final class E1DataIntegrityTests: XCTestCase {
         XCTAssertEqual(s.plan.first { $0.id == id }?.done, false, "the athlete's own decision to skip is kept")
     }
 
+    // MARK: upgrade from build 216 (E1-A4)
+    /// Every store written by the build-216 code (tools/coach-harness/fixtures216, produced in the same CI job from commit
+    /// fb52ae27) must open in this build with nothing lost, nothing set aside and nothing rewritten that changes a record.
+    /// Runs wherever FIXTURES_216 is set (the fast logic tests); elsewhere it is skipped and says so.
+    func testStoresWrittenByBuild216OpenWithoutLoss() throws {
+        guard let root = ProcessInfo.processInfo.environment["FIXTURES_216"] else { throw XCTSkip("FIXTURES_216 is not set: this run has no build-216 fixtures") }
+        let names = ["empty", "strength", "cycling", "hybrid", "noequipment", "large"]
+        for name in names {
+            let src = URL(fileURLWithPath: root).appendingPathComponent(name)
+            let m = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: src.appendingPathComponent("manifest.json"))) as? [String: Any], "fixture '\(name)' was not produced by the build-216 code")
+            let d = tmp("b216-\(name)"); let url = d.appendingPathComponent("store.json")
+            let original = try Data(contentsOf: src.appendingPathComponent("store.json")); try original.write(to: url)
+            let s = Store(directory: d)                                  // launched the way the app launches
+            XCTAssertEqual(s.storage, .ok, name); XCTAssertNil(s.storageNotice, "\(name): nothing to report")
+            XCTAssertFalse(files(d).contains(StoreRecovery.quarantineName), "\(name): no record set aside")
+            XCTAssertEqual(s.profile.name, m["name"] as? String, name); XCTAssertEqual(s.onboarded, m["onboarded"] as? Bool, name)
+            XCTAssertEqual(s.strength.count, m["strength"] as? Int, "\(name): strength sessions")
+            XCTAssertEqual(s.strength.reduce(0) { $0 + $1.minutes }, m["strengthMinutes"] as? Int, "\(name): strength minutes")
+            XCTAssertEqual(s.rides.count, m["rides"] as? Int, "\(name): rides")
+            XCTAssertEqual(s.rides.reduce(0) { $0 + $1.durationS }, m["rideSeconds"] as? Int, "\(name): ride time")
+            XCTAssertEqual(s.templates.count, m["templates"] as? Int, "\(name): routines")
+            XCTAssertEqual(s.strength.map { $0.id.uuidString }.sorted(), m["strengthIds"] as? [String], "\(name): the same strength sessions")
+            XCTAssertEqual(s.rides.map { $0.id.uuidString }.sorted(), m["rideIds"] as? [String], "\(name): the same rides")
+            let planIds = Set(m["planIds"] as? [String] ?? [])
+            XCTAssertTrue(planIds.isSubset(of: Set(s.plan.map { $0.id.uuidString })), "\(name): no planned session disappeared")
+            XCTAssertEqual(s.plan.filter { $0.done && planIds.contains($0.id.uuidString) }.count, m["planDone"] as? Int, "\(name): completed sessions stay completed")
+            // rollback: if this launch wrote, the file build 216 wrote is kept byte for byte as the previous copy
+            if s.persistCount > 0 { XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent(StoreRecovery.previousName)), original, "\(name): the build-216 file is kept for a rollback") }
+            // and a second launch reads the same athlete again
+            let again = Store(directory: d, generatePlan: false)
+            XCTAssertEqual(again.strength.count, s.strength.count, name); XCTAssertEqual(again.rides.count, s.rides.count, name)
+        }
+    }
+
     // MARK: delete all data
     func testDeleteAllDataRemovesTheSafetyCopiesToo() throws {
         let (_, d) = healthy("delete")

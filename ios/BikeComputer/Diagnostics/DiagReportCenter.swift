@@ -98,6 +98,8 @@ final class DiagReportCenter: ObservableObject {
     func text(_ m: DiagReportMeta) -> String? { store.text(m) }
     func fileURL(_ m: DiagReportMeta) -> URL { store.textURL(m) }
     func delete(_ m: DiagReportMeta) { store.delete(m); savedThisSession.removeAll { $0.id == m.id }; reload() }
+    /// E1-F4: "Delete all data" — every stored board report (they name the athlete's device and rides).
+    func deleteAllReports() { for m in store.allReports() { store.delete(m) }; try? FileManager.default.removeItem(at: store.root); savedThisSession.removeAll(); reload() }
     func markSeen(_ m: DiagReportMeta) {
         guard var x = store.meta(m.boardId, m.reportId), !x.seen else { return }
         x.seen = true; store.save(x); reload()
