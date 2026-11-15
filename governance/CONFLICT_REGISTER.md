@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 1.3 · 15 Nov 2026
+Status: Current Draft · Version 1.4 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -71,9 +71,15 @@ firmware or existing document was changed to apply a ruling.
 | 61 | Cyclift Watch (LILYGO) on the Devices screen | Profile v2.0 brief ("future, not a working connection") vs the app as read (a Cyclift Watch card with a "Connect" switch exists; unverified on hardware) and Phase 0 (said no row was found — corrected) | Design shows it as Unavailable / future. Whether to hide or mark the existing switch is open | Master instructions §2 (hardware concept is not verified capability) | **Open** — owner decision |
 | 62 | Who edits goals and the weekly schedule | Profile v2.0 brief (Plan-owned; Profile links) vs the app as read (editors live in Profile and are shared with onboarding; Plan has no own editor) | Not resolved. Existing editors must stay reachable until Plan owns them | Master instructions §5 | **Open** — depends on Plan work and on onboarding authorisation |
 | 63 | Name of the first athlete type | Profile v2.0 brief ("Endurance") vs the app ("Cycling") | Drawn as Endurance; label-only or wider meaning undecided | — | **Open** — owner decision |
-| 64 | Number of onboarding steps | App as read (Welcome + five stages, owner approval 2 Nov) vs owner brief Onboarding v2.0 of 15 Nov (six screens) | Not decided. Six screens are drawn as a proposal; the current onboarding is unchanged | Latest owner brief, pending approval | **Open** |
+| 64 | Number of onboarding steps | App as read (Welcome + five stages, owner approval 2 Nov) vs owner brief Onboarding v2.0 of 15 Nov (six screens) | Not decided. Six screens are drawn as a proposal; the current onboarding is unchanged | Latest owner brief, pending approval | **Open** — now three candidates: five stages (app), six screens (v2.0, reference only), eight chapters (v3.0, pending review) |
 | 65 | Sport selection | App (single Cycling / Strength / Hybrid choice; a separate unused `sports` list in Profile) vs Onboarding v2.0 brief (multi-activity selection driving a confirmable classification) | Proposal: one selector on the existing `sports` list; stored type values unchanged | Owner brief; master instructions §10 (no schema change without impact assessment) | **Open** — needs milestone approval |
 | 66 | Health check and onboarding | Profile Phase 0 audit (health check listed as an onboarding-shared editor) vs code as read (not one of the five stages; reached from Home and Profile) | Phase 0 statement corrected in the Onboarding v2.0 audit; Phase 0 document left unedited | Repository is authoritative | Corrected |
+| 67 | Onboarding direction | Onboarding v2.0 package (six screens) vs owner brief Onboarding v3.0 of 15 Nov (eight chapters; v2.0 is "a technical and data-migration reference, not the approved final experience") | v3.0 is the design direction under review; v2.0 documents kept unchanged as reference | Latest owner brief | Decided as direction · v3.0 drawings Pending Owner Review |
+| 68 | Athlete choosing only unsupported sports | v2.0 proposal (stop at the sports screen) vs v3.0 brief (complete setup; no invented plan) | v3.0: setup completes with a "no plan" blueprint | Latest owner brief | Decided in design · needs a Home "no plan" state |
+| 69 | Coach approval as presented to the athlete | Owner decision of 12 Nov and v3.0 chapter 7 (increases need approval) vs code as read (`autoAdapt` on by default applies some increases; correction proposed, not implemented) | Not resolved. Chapter 7 must not ship before the correction | Master instructions §7, §11 | **Open** — engineering |
+| 70 | Status of unsupported and recovery activities | Training Hub v1.1 registry ("Log only", "Timer" — proposals) vs Onboarding v2.0 ("future only") vs code (nothing exists) | v3.0 registry: "Not supported yet" today; log and timer remain proposals | Repository is authoritative | Recorded |
+| 71 | Walking | Training Hub recovery specification (open: recovery or endurance) vs v3.0 brief (listed as an endurance example) | Drawn under Endurance, unsupported; undecided | — | **Open** — owner decision |
+| 72 | Name "onboarding v3" | Code comment (five-stage flow approved 2 Nov is called "onboarding v3") vs owner brief "Onboarding v3.0" (new eight-chapter direction) | Same label, different things; documents say which is meant | — | Recorded |
 
 ## Summary of what is still unresolved
 
