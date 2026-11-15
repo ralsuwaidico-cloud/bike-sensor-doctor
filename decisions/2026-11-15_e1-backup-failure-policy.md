@@ -1,9 +1,9 @@
 # E1 backup failure policy
 
-Status: **Implemented on a holding branch, awaiting owner confirmation** · 15 Nov 2026
+Status: **Implemented on `ios/e1-safety`, simulator-tested, awaiting owner confirmation** · 15 Nov 2026
 Scope: the iPhone app's one data file (`store.json`) and its safety copies. No storage redesign.
-Code: commit `9f19af51` on `fix/e1-held-validation` (not on `ios/e1-safety`, not in any build).
-Evidence: see the last section. Nothing here has run on iOS or on a physical device yet.
+Code: commit `9f19af51`, now on `ios/e1-safety` (head `a017ed6d`); not in any build.
+Evidence: see the last section. Run on the iOS simulator; nothing here has run on a physical device.
 
 ## The rule
 
@@ -60,4 +60,4 @@ The policy never relies on an older copy. Before a transforming change it makes 
 
 - Fast logic run 87 on `9f19af51` (Linux): 416 tests executed, 0 failed, 2 skipped. The six policy tests ran and passed: no change without a copy (clean-up, migration, unreadable records), ordinary save still works and says so, older-schema file kept and never replaced, new installation needs no copy.
 - The two skipped tests need a folder that is truly read-only and can only run on iOS.
-- iOS: pending (full run on `9f19af51`).
+- iOS run 235 on `a017ed6d` (simulator): all six policy tests and both read-only-folder tests executed and passed, as did restore-previous-copy and damaged-primary-never-replaces-the-copy.
