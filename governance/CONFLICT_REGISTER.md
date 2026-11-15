@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 1.9 · 15 Nov 2026
+Status: Current Draft · Version 2.0 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -88,6 +88,7 @@ firmware or existing document was changed to apply a ruling.
 | 78 | Onboarding Page 2 | v3.3 Page 2 (line-up and chips; priority on Page 3) vs owner review of 15 Nov (seven-page structure remains the direction; **Page 2 not visually approved**) | v3.4 redesigns Page 2 only as the Athletic Roster and moves the lead setting to it; Pages 3 and 7 would need the small changes listed in the v3.4 document; nothing else edited | Latest owner decision | Decided · **v3.4 selected as the Page 2 design baseline (15 Nov)**; Page 3 priority selector removed; Page 7 identity line |
 | 79 | Capability of indoor cycling, mountain bike, bodyweight | v3.4 roster ("recorded with a recorder Cyclift already has") vs code (names only; one ride recorder; bodyweight is a strength mode) | Validated in `release/consolidation/D…` §3: labels, not independent capabilities; planner stays cycling and strength | Owner instruction 15 Nov | **Open** — may such a sport be "main"? |
 | 80 | Missing approvals that gate development | Onboarding pages 1, 3–7; Profile visuals; Plan specification; Home; stage rules; emblem | Listed in `release/consolidation/H_APPROVAL_CHECKLIST.md` | Master instructions §12 | **Open** — owner decisions |
+| 81 | Consolidation revision 1 | Visual walkthrough mixed navigation generations, showed an illustrative G2 stage and unrelated sample data; tracker too coarse | Corrected in `release/consolidation/rev2/` (discrepancy register I, 28 items) | Owner review 15 Nov | Corrected · Pending Owner Final Review |
 
 ## Summary of what is still unresolved
 
