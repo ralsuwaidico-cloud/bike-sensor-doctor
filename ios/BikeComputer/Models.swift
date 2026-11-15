@@ -1421,7 +1421,10 @@ final class Store: ObservableObject {
         rides.insert(r, at: 0)
         // Home B: the ride closes the FIRST open planned ride of its own day (one ride completes one planned ride; before,
         // only `today` — the day's first session, possibly a lift — was looked at)
-        if let t = plan.filter({ $0.kind.isRide && !$0.done && !$0.skipped && Calendar.current.isDate($0.date, inSameDayAs: r.start) && Calendar.current.isDateInToday($0.date) }).min(by: { $0.sequence < $1.sequence }) { var w = t; w.done = true; w.completion = .recorded; w.completedAt = Date(); update(w) }
+        // E1-F1: the ride completes the planned ride of the day it STARTED, whenever it is saved. Before, the planned day also
+        // had to be "today", so a ride saved after midnight (or a device ride that arrived the next morning) left its
+        // session open and later "missed" although it had been ridden. The completion time is the ride's own end.
+        if let t = plan.filter({ $0.kind.isRide && !$0.done && !$0.skipped && Calendar.current.isDate($0.date, inSameDayAs: r.start) }).min(by: { $0.sequence < $1.sequence }) { var w = t; w.done = true; w.completion = .recorded; w.completedAt = r.start.addingTimeInterval(TimeInterval(r.durationS)); update(w) }
         considerFTP(from: r)
         return true
     }

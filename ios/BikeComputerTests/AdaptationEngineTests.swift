@@ -346,6 +346,15 @@ final class AdaptationEngineTests: XCTestCase {
         s.plan = [done, a, b]
         s.strength = [logged(-2, [entry(squat), entry(press)], base: t0), logged(-5, [entry(squat), entry(press)], base: t0)]
         s.runAdaptation(now: t0)
+        // CHANGED in E1 (owner decision 15 Nov 2026). This test used to expect the two weight steps to be applied by the
+        // run itself. That expectation described the behaviour the owner has stopped: until the independent policy engine
+        // is implemented and validated, no increase is applied automatically. The steps are now offered for approval; once
+        // approved, everything this test checks about Undo and Restore is asserted exactly as before.
+        XCTAssertEqual(s.activeAdaptations.count, 0, "E1 hold: nothing is increased without approval")
+        XCTAssertEqual(s.plan.first { $0.id == a.id }!, a, "E1 hold: the session is untouched")
+        let held = s.adaptiveProposals.filter { $0.reason == .heldIncrease }
+        XCTAssertEqual(held.count, 2, "E1 hold: both weight steps wait for approval: \(s.adaptiveProposals.map { $0.text })")
+        for p in held { XCTAssertTrue(s.acceptAdaptiveProposal(p, now: t0)) }
         XCTAssertEqual(s.activeAdaptations.count, 2)
         XCTAssertTrue(s.plan.first { $0.id == a.id }!.coachAdjusted)
         XCTAssertEqual(s.plan.first { $0.id == a.id }!.plannedEntries?.first?.sets.first?.weightKg, 21)

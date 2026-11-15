@@ -197,6 +197,35 @@ final class E1DataIntegrityTests: XCTestCase {
         XCTAssertEqual(Store(directory: d, generatePlan: false).strength.count, count + 1, "saved exactly once")
     }
 
+    // MARK: planned-ride completion (E1-F1)
+    private func rideStore(_ tag: String, plannedDaysAgo: Int) -> (Store, UUID) {
+        let s = Store(directory: tmp(tag), generatePlan: false)
+        let day = Calendar.current.date(byAdding: .day, value: -plannedDaysAgo, to: Calendar.current.startOfDay(for: Date()))!
+        let w = Workout(date: day.addingTimeInterval(7 * 3600), kind: .endurance, minutes: 60)
+        s.plan = [w]
+        return (s, w.id)
+    }
+    func testARideSavedAfterMidnightCompletesTheSessionOfTheDayItStarted() {
+        let (s, id) = rideStore("midnight", plannedDaysAgo: 1)
+        let start = Calendar.current.startOfDay(for: Date()).addingTimeInterval(-40 * 60)        // 23:20 yesterday
+        XCTAssertTrue(s.addRide(RideRecord(start: start, durationS: 3600, distanceM: 30_000, recorder: .phone, sources: ["iPhone"])))
+        let w = s.plan.first { $0.id == id }
+        XCTAssertEqual(w?.done, true, "yesterday's planned ride was ridden; it must not stay open and turn into 'missed'")
+        XCTAssertEqual(w?.completedAt, start.addingTimeInterval(3600), "completed when the ride ended, not when it was saved")
+    }
+    func testARideDoesNotCompleteASessionOfAnotherDay() {
+        let (s, id) = rideStore("otherday", plannedDaysAgo: 2)
+        XCTAssertTrue(s.addRide(RideRecord(start: Date().addingTimeInterval(-3600), durationS: 1800, distanceM: 10_000, recorder: .phone, sources: ["iPhone"])))
+        XCTAssertEqual(s.plan.first { $0.id == id }?.done, false)
+    }
+    func testASkippedSessionIsNotReopenedByALateRide() {
+        let (s, id) = rideStore("skipped", plannedDaysAgo: 1)
+        s.plan[0].skipped = true
+        let start = Calendar.current.startOfDay(for: Date()).addingTimeInterval(-3 * 3600)
+        XCTAssertTrue(s.addRide(RideRecord(start: start, durationS: 1800, distanceM: 10_000, recorder: .phone, sources: ["iPhone"])))
+        XCTAssertEqual(s.plan.first { $0.id == id }?.done, false, "the athlete's own decision to skip is kept")
+    }
+
     // MARK: delete all data
     func testDeleteAllDataRemovesTheSafetyCopiesToo() throws {
         let (_, d) = healthy("delete")

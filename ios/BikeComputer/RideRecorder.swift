@@ -89,8 +89,13 @@ final class RideRecorder: ObservableObject {
     var isActive: Bool { state == .running || state == .paused }
 
     /// What a "Start" would do right now; the Ride tab shows this before the button.
-    enum StartMode { case board, phone, blockedByBoardRide, blockedNoGPSPermission }
+    enum StartMode { case board, phone, blockedByBoardRide, blockedNoGPSPermission, blockedByHealthHold }
+    /// E1-F5: training is paused by the health check (set by the app from the athlete's profile). While it is set no
+    /// route can START a ride — Ride screen, Plan, Apple Watch, Cyclift Watch. A ride already begun on the BikeComputer
+    /// is still adopted and recorded: a recording is never refused or lost.
+    var healthHold = false
     func startMode(locationAuthorized: Bool) -> StartMode {
+        if healthHold { return .blockedByHealthHold }
         let boardReady = device?.state == .ready && (device?.liveIsFresh ?? false)
         if boardReady, let l = device?.live, l.rideState == .running || l.rideState == .paused, owner != .board { return .blockedByBoardRide }
         if boardReady, !phoneOnlyMode { return .board }
@@ -171,6 +176,7 @@ final class RideRecorder: ObservableObject {
     @discardableResult
     func start() -> Bool {
         guard state == .idle || state == .ended, owner != .board else { return false }
+        if healthHold { note = "Training is paused by your health check, so a ride was not started."; return false }
         if let l = device?.live, device?.state == .ready, device?.liveIsFresh ?? false, l.rideState == .running || l.rideState == .paused { return false }
         owner = .phone
         state = .running; elapsedS = 0; distanceM = 0; distCm = 0; samples = []; hrSum = 0; hrN = 0; hrMax = 0; lapStartS = 0; lapCount = 1; gapSeconds = 0

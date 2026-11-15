@@ -432,7 +432,8 @@ struct WorkoutDetail: View {
             }.controlSize(.large)
             Text("Logging exercises lets the coach check coverage and progression.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
-        if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
+        // E1-F5: no Start here while the health check pauses training (the Ride screen and the watches refuse it too)
+        if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, store.profile.readiness.trainingAllowed, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
             Button { if recorder.startMode(locationAuthorized: true) == .board { device.sendRideSteps(store.todayRideSteps()); device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
             Text("The Ride screen coaches against this session's zone; targets reach the BikeComputer when it is connected.").font(.footnote).foregroundStyle(.secondary)
         }
