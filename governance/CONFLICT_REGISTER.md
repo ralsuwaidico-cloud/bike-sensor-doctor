@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 1.5 · 15 Nov 2026
+Status: Current Draft · Version 1.6 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -82,6 +82,7 @@ firmware or existing document was changed to apply a ruling.
 | 72 | Name "onboarding v3" | Code comment (five-stage flow approved 2 Nov is called "onboarding v3") vs owner brief "Onboarding v3.0" (new eight-chapter direction) | Same label, different things; documents say which is meant | — | Recorded |
 | 73 | Onboarding v3.0 visual design | v3.0 package (eight chapters, tiles) vs owner decision of 15 Nov (research retained; visual design and experience **not approved**; maximum six screens plus one review) | v3.0 visuals rejected; v3.0 and v2.0 documents kept unchanged as functional references; v3.1 offers two concepts | Latest owner decision | Decided · v3.1 concepts Pending Owner Selection |
 | 74 | Athlete Evolution criteria | Onboarding v3.1 brief ("existing approved G0–G5 framework"; "what is needed for the next generation, if the approved criteria define it") vs Progress v2.3 documents (criteria, thresholds, confidence rules and transition review not authorised, not defined) | Not resolved. Onboarding shows the track and evidence but states that criteria are not yet defined; no stage is assigned to a new athlete | Master instructions §9 | **Open** — owner decision on Progress criteria |
+| 75 | Onboarding direction | Genesis v3.1 (two instrument-led concepts, complete visual reset) vs owner direction of 15 Nov (refine the existing onboarding; one visual language; ordinary controls; goals screen and seven-day builder are the starting points) | v3.1 concepts not selected; kept unchanged as a reference; v3.2 is the single proposal | Latest owner decision | Decided · v3.2 Pending Owner Review |
 
 ## Summary of what is still unresolved
 
