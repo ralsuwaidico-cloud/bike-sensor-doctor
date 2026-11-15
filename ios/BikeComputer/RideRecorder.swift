@@ -32,6 +32,10 @@ final class RideRecorder: ObservableObject {
     /// Wall-clock time of the last phone-owned second that was recorded; lets a late timer (app suspended) be
     /// recognised as a gap instead of silently losing time.
     private var lastPhoneTick: Date?
+    /// E1-F3: the time source of a phone ride. The app uses the real clock; a test can supply its own, so the number of
+    /// samples no longer depends on how fast the test machine happened to be (run 221: a 5-second stall of the runner
+    /// produced five gap samples and failed an unrelated assertion).
+    var clock: () -> Date = { Date() }
     @Published private(set) var gapSeconds = 0
     private var hrSum = 0, hrN = 0, hrMax = 0
     private var startDate = Date()
@@ -180,7 +184,7 @@ final class RideRecorder: ObservableObject {
         if let l = device?.live, device?.state == .ready, device?.liveIsFresh ?? false, l.rideState == .running || l.rideState == .paused { return false }
         owner = .phone
         state = .running; elapsedS = 0; distanceM = 0; distCm = 0; samples = []; hrSum = 0; hrN = 0; hrMax = 0; lapStartS = 0; lapCount = 1; gapSeconds = 0
-        startDate = Date(); boardLinkLost = false; lastPhoneTick = Date()
+        startDate = clock(); boardLinkLost = false; lastPhoneTick = clock()
         note = device?.state == .ready ? "Phone-only ride: this phone records; the BikeComputer's values are shown but not merged." : "Phone-only ride: GPS speed and distance, heart rate from the watch."
         location?.sharing = true
         askNotifications()
@@ -191,7 +195,7 @@ final class RideRecorder: ObservableObject {
         else if owner == .board, boardLinkLost, state == .running { state = .paused }      /* link lost: the phone's mirror pauses; the board is asked when it returns */
     }
     func resume() {
-        if owner == .phone, state == .paused { state = .running; lastPhoneTick = Date() }
+        if owner == .phone, state == .paused { state = .running; lastPhoneTick = clock() }
         else if owner == .board, boardLinkLost, state == .paused { state = .running }
     }
     /// Owner 7 Nov (RA-20, RA-25): End is always available. For a board-owned ride whose link is lost the phone ends its
@@ -217,7 +221,8 @@ final class RideRecorder: ObservableObject {
     func discard() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; clearBackgroundNotice() }
     func finish() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; clearBackgroundNotice() }
 
-    private func phoneSecond(now: Date = Date()) {
+    private func phoneSecond(now given: Date? = nil) {
+        let now = given ?? clock()
         // Gap handling: if more than one wall-clock second passed since the last recorded second (timer held back while
         // the app was suspended), the missing seconds are stored as empty samples flagged `gap` — time stays right,
         // nothing is interpolated.
@@ -231,7 +236,7 @@ final class RideRecorder: ObservableObject {
         lastPhoneTick = now
         elapsedS += 1
         var s = RideRecord.Sample(t: elapsedS)
-        if let loc = location?.last, Date().timeIntervalSince(loc.timestamp) < 3, loc.horizontalAccuracy >= 0, loc.horizontalAccuracy <= 50 {
+        if let loc = location?.last, now.timeIntervalSince(loc.timestamp) < 3, loc.horizontalAccuracy >= 0, loc.horizontalAccuracy <= 50 {
             s.lat = loc.coordinate.latitude; s.lon = loc.coordinate.longitude; s.alt = loc.verticalAccuracy >= 0 ? loc.altitude : nil
             if loc.speed >= 0.5 { let cms = Int(loc.speed * 100); s.speedCms = cms; distCm += cms; distanceM = distCm / 100 }
             else if loc.speed >= 0 { s.speedCms = 0 }
