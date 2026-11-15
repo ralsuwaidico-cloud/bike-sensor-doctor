@@ -650,6 +650,9 @@ struct StrengthSessionView: View {
                 }
             }
         }.presentationDetents([.medium, .large])
+        // E1: the session is still active and every ticked set is still here when the write fails
+        .onAppear { store.saveFailure = nil }       // a failure reported on another screen is not this workout's
+        .alert("Not saved", isPresented: Binding(get: { store.saveFailure != nil }, set: { if !$0 { store.saveFailure = nil } })) { Button("OK", role: .cancel) {} } message: { Text("Cyclift could not write this workout to storage, so it is not in your history yet. Your sets are still here. Free some space and tap Save again.") }
     }
 }
 

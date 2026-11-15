@@ -60,7 +60,13 @@ extension Store {
     func applyAdaptation(_ r: AdaptationResult, now: Date = Date()) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
-        let wanted = settings.autoAdapt ? r.adjustments : r.adjustments.filter { approvedAdaptations.contains($0.key) }
+        // E1 interim hold: with automatic changes on, increases in sets, intervals or ride duration still need approval
+        // (an increase that is ALREADY in force from an earlier run is kept, not reversed — owner decision of 12 Nov)
+        func isHeld(_ a: PlanAdjustment) -> Bool {
+            a.needsApprovalUntilPolicyEngine && !approvedAdaptations.contains(a.key) && !adaptations.contains(where: { $0.key == a.key && $0.change == a.change })
+        }
+        let held = settings.autoAdapt ? r.adjustments.filter { isHeld($0) } : []
+        let wanted = settings.autoAdapt ? r.adjustments.filter { !isHeld($0) } : r.adjustments.filter { approvedAdaptations.contains($0.key) }
         var byWorkout: [UUID: [PlanAdjustment]] = [:]
         for a in wanted { byWorkout[a.workoutId, default: []].append(a) }
         var p = plan
@@ -89,7 +95,11 @@ extension Store {
         }
         if p != plan { plan = p }
         if adaptations != active { adaptations = active }
-        let props = r.proposals.filter { !dismissedAdaptations.contains($0.id) }
+        var allProposals = r.proposals
+        for h in held where !allProposals.contains(where: { p in p.adjustments.contains { $0.key == h.key } }) {
+            allProposals.append(AdaptiveProposal(id: "hold|\(h.key)", reason: .heldIncrease, text: "\(h.summary)?", why: h.why + " Increases like this one need your OK.", adjustments: [h]))
+        }
+        let props = allProposals.filter { !dismissedAdaptations.contains($0.id) }
         if adaptiveProposals != props { adaptiveProposals = props }
         lastAdaptation = r.summary
     }

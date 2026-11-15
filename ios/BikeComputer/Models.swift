@@ -753,7 +753,7 @@ struct StoreFile: Codable, Equatable {
     var recoveryLog = RecoveryLog()
 
     /// Explicit because both init(from:) and encode(to:) are hand-written (the compiler then synthesises no keys).
-    enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey, CaseIterable {
         case schema, profile, settings, plan, rides, tiles, onboarded, guest, appleUserId, createdAt, ftpSuggestion, boardSync, onboardingStage, availability
         case strength, templates, customExercises, appliedProposals, weekdayRoutines, equipment, activeSession, ignoredInsights
         case adaptations, dismissedAdaptations, approvedAdaptations, adaptiveProposals, lastAdaptation, painClearances
@@ -775,37 +775,55 @@ struct StoreFile: Codable, Equatable {
         schema = try c.decodeIfPresent(Int.self, forKey: .schema) ?? 1
         profile = try c.decodeIfPresent(RiderProfile.self, forKey: .profile) ?? RiderProfile()
         settings = try c.decodeIfPresent(AppSettings.self, forKey: .settings) ?? AppSettings()
-        plan = try c.decodeIfPresent([Workout].self, forKey: .plan) ?? []
-        rides = try c.decodeIfPresent([RideRecord].self, forKey: .rides) ?? []
+        // E1: every stored list is decoded record by record. One undecodable record no longer fails the file (plan,
+        // rides) or empties its list (the others); StoreRecovery finds the skipped records and sets them aside.
+        plan = try StoreFile.lossy(c, .plan, Workout.self, required: true)
+        rides = try StoreFile.lossy(c, .rides, RideRecord.self, required: true)
         tiles = try c.decodeIfPresent([String].self, forKey: .tiles) ?? Store.defaultTiles
         onboarded = try c.decodeIfPresent(Bool.self, forKey: .onboarded) ?? false
         guest = try c.decodeIfPresent(Bool.self, forKey: .guest) ?? true
         appleUserId = try c.decodeIfPresent(String.self, forKey: .appleUserId)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         ftpSuggestion = try c.decodeIfPresent(FTPSuggestion.self, forKey: .ftpSuggestion)
-        boardSync = (try? c.decodeIfPresent([BoardSyncRecord].self, forKey: .boardSync)) ?? []
+        boardSync = (try? StoreFile.lossy(c, .boardSync, BoardSyncRecord.self, required: false)) ?? []
         onboardingStage = try c.decodeIfPresent(Int.self, forKey: .onboardingStage) ?? 0
         availability = try? c.decodeIfPresent(WeeklyAvailability.self, forKey: .availability)
         if let a = availability, a.days.count != 7 { availability = nil }
-        strength = (try? c.decodeIfPresent([StrengthSession].self, forKey: .strength)) ?? []
-        templates = (try? c.decodeIfPresent([WorkoutTemplate].self, forKey: .templates)) ?? []
-        customExercises = (try? c.decodeIfPresent([Exercise].self, forKey: .customExercises)) ?? []
-        appliedProposals = (try? c.decodeIfPresent([AppliedProposal].self, forKey: .appliedProposals)) ?? []
+        strength = (try? StoreFile.lossy(c, .strength, StrengthSession.self, required: false)) ?? []
+        templates = (try? StoreFile.lossy(c, .templates, WorkoutTemplate.self, required: false)) ?? []
+        customExercises = (try? StoreFile.lossy(c, .customExercises, Exercise.self, required: false)) ?? []
+        appliedProposals = (try? StoreFile.lossy(c, .appliedProposals, AppliedProposal.self, required: false)) ?? []
         if let wr = try? c.decodeIfPresent([String: String].self, forKey: .weekdayRoutines) { weekdayRoutines = Dictionary(uniqueKeysWithValues: wr.compactMap { k, v in Int(k).flatMap { i in UUID(uuidString: v).map { (i, $0) } } }) }
         equipment = (try? c.decodeIfPresent(EquipmentProfile.self, forKey: .equipment)) ?? EquipmentProfile()
         activeSession = try? c.decodeIfPresent(StrengthSession.self, forKey: .activeSession)
         ignoredInsights = (try? c.decodeIfPresent([String].self, forKey: .ignoredInsights)) ?? []
-        adaptations = (try? c.decodeIfPresent([PlanAdjustment].self, forKey: .adaptations)) ?? []
+        adaptations = (try? StoreFile.lossy(c, .adaptations, PlanAdjustment.self, required: false)) ?? []
         dismissedAdaptations = (try? c.decodeIfPresent([String].self, forKey: .dismissedAdaptations)) ?? []
         approvedAdaptations = (try? c.decodeIfPresent([String].self, forKey: .approvedAdaptations)) ?? []
-        adaptiveProposals = (try? c.decodeIfPresent([AdaptiveProposal].self, forKey: .adaptiveProposals)) ?? []
+        adaptiveProposals = (try? StoreFile.lossy(c, .adaptiveProposals, AdaptiveProposal.self, required: false)) ?? []
         lastAdaptation = try? c.decodeIfPresent(AdaptationSummary.self, forKey: .lastAdaptation)
-        painClearances = (try? c.decodeIfPresent([PainClearance].self, forKey: .painClearances)) ?? []
+        painClearances = (try? StoreFile.lossy(c, .painClearances, PainClearance.self, required: false)) ?? []
         strengthPrefs = (try? c.decodeIfPresent(StrengthPrefs.self, forKey: .strengthPrefs)) ?? StrengthPrefs()
-        trash = (try? c.decodeIfPresent([TrashItem].self, forKey: .trash)) ?? []
+        trash = (try? StoreFile.lossy(c, .trash, TrashItem.self, required: false)) ?? []
         migrationLog = (try? c.decodeIfPresent([String].self, forKey: .migrationLog)) ?? []
-        planVersions = (try? c.decodeIfPresent([PlanVersion].self, forKey: .planVersions)) ?? []
+        planVersions = (try? StoreFile.lossy(c, .planVersions, PlanVersion.self, required: false)) ?? []
         recoveryLog = (try? c.decodeIfPresent(RecoveryLog.self, forKey: .recoveryLog)) ?? RecoveryLog()
+    }
+    /// E1: decodes a stored list one record at a time and keeps every record that decodes. `required` lists (plan,
+    /// rides) still fail the whole file when the value is present but is not a list at all — that is a damaged file,
+    /// not a damaged record.
+    private struct SkippedRecord: Decodable { init(from decoder: Decoder) throws {} }
+    static func lossy<T: Decodable>(_ c: KeyedDecodingContainer<CodingKeys>, _ key: CodingKeys, _ type: T.Type, required: Bool) throws -> [T] {
+        guard c.contains(key), (try? c.decodeNil(forKey: key)) != true else { return [] }
+        var u: UnkeyedDecodingContainer
+        do { u = try c.nestedUnkeyedContainer(forKey: key) } catch { if required { throw error }; return [] }
+        var out: [T] = []
+        while !u.isAtEnd {
+            if let v = try? u.decode(T.self) { out.append(v); continue }
+            // a failed decode does not advance the container; consume the bad element, or stop if even that fails
+            guard (try? u.decode(SkippedRecord.self)) != nil else { break }
+        }
+        return out
     }
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -904,6 +922,17 @@ final class Store: ObservableObject {
     /// Sessions the planner / adaptive coach rebuilt after the latest check-in, as they were before (one-tap Undo).
     @Published var checkInRebuild: CheckInRebuild? = nil
     @Published private(set) var lastSaveError: String?
+    /// E1: whether this store may write (StoreRecovery). Anything but `.ok` means store.json is left exactly as it is.
+    @Published private(set) var storage: StorageState = .ok
+    /// E1: set when a workout save could not be written to storage (the record was NOT added); cleared by the next
+    /// committed save. The save screens show "Not saved — Try again" from this.
+    @Published var saveFailure: String? = nil
+    /// E1: what the launch found, in plain words for Profile and the recovery screen (records set aside, copy kept).
+    @Published private(set) var storageNotice: String? = nil
+    /// E1: top-level keys of the loaded file that this build does not know; written back unchanged on every save.
+    private var unknownKeys: [String: Any] = [:]
+    /// E1: store.previous.json is taken once per launch, before the first write, and only from a file that decoded.
+    private var previousCopyDue = false
     /// Rebuild fix (review C A7): engine-held proposals; the UI / AI commit by id, a proposal object never crosses a boundary.
     var pendingProposals: [UUID: SessionChangeProposal] = [:]
     /// Rebuild fix: the last proposal `edit` made (for the preview sheet).
@@ -938,9 +967,35 @@ final class Store: ObservableObject {
         UITestSupport.prepareStoreDirectory(dir)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var migrated = false, rc3Migrated = false
-        if let f: StoreFile = Self.read(dir.appendingPathComponent("store.json")) { let m = StoreFile.migrate(f); migrated = f.schema < 2; rc3Migrated = f.schema < 4; apply(m) }
-        else if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
+        let storeURL = dir.appendingPathComponent("store.json")
+        var setAside: [QuarantinedRecord] = []
+        switch StoreRecovery.load(storeURL) {
+        case .ok(let f, let bad, let unknown):
+            let m = StoreFile.migrate(f); migrated = f.schema < 2; rc3Migrated = f.schema < 4; apply(m)
+            unknownKeys = unknown; previousCopyDue = true; setAside = bad
+        case .missing:
+            if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
+        case .newer(let n):
+            // E1: a newer build wrote this file. Lowering its schema number or dropping its fields would be data loss.
+            storage = .newerVersion(n); storageNotice = StorageState.newerVersion(n).explanation
+        case .unreadable:
+            // E1: never treat an unreadable store as a new empty athlete, and never write over it.
+            storage = .unreadable
+            let copy = StoreRecovery.keepUnreadableCopy(of: storeURL, in: dir)
+            storageNotice = StorageState.unreadable.explanation + (copy.map { " A copy was kept as \($0)." } ?? "")
+        }
+        if !setAside.isEmpty {
+            // the raw records are written to store.quarantine.json BEFORE any write of store.json could drop them
+            if StoreRecovery.setAside(setAside, in: dir) {
+                let lists = Array(Set(setAside.map { $0.list })).sorted().joined(separator: ", ")
+                let line = "\(setAside.count) saved record\(setAside.count == 1 ? "" : "s") could not be read (\(lists)) and \(setAside.count == 1 ? "was" : "were") set aside in \(StoreRecovery.quarantineName). Nothing else was changed."
+                migrationLog.append(line); storageNotice = line
+            } else { storage = .cannotSetAside; storageNotice = StorageState.cannotSetAside.explanation }
+        }
         loading = false
+        // E1: in a read-only state nothing below runs — no clean-up, no plan generation, no write of any kind.
+        guard storage.isWritable else { return }
+        if !setAside.isEmpty { persist() }       // records the notice; the previous copy (with the bad records) is taken first
         purgeTrash()
         w12CleanupIfNeeded()        // one-time, logged, recoverable (see above); a no-op once it has run
         if generatePlan { ensurePlan(); refreshRideSafety() }
@@ -1118,9 +1173,14 @@ final class Store: ObservableObject {
         s.rpe = rpe; s.notes = notes
         s.exercises = s.exercises?.map { e in var x = e; x.sets = x.sets.filter { $0.done }; return x }.filter { !$0.sets.isEmpty }
         if (s.exercises ?? []).isEmpty { s.exercises = nil }
-        activeSession = nil
-        _ = addStrength(s)
-        return s
+        // E1: clearing the active session and storing the log are ONE write. If it fails, the session is still active
+        // (nothing is lost, Save can be tapped again) and nil is returned.
+        let finished = s
+        var stored = false
+        let committed = durably { activeSession = nil; stored = addStrengthNow(finished); return true }
+        guard committed else { return nil }
+        _ = stored
+        return finished
     }
     func discardActiveSession() { activeSession = nil }
 
@@ -1353,7 +1413,8 @@ final class Store: ObservableObject {
     /// Adds a finished ride. Demo rides never enter history; a board ride already imported (same board ride id) is
     /// ignored, so a ride can never appear twice or under two recorders.
     @discardableResult
-    func addRide(_ r: RideRecord) -> Bool {
+    func addRide(_ r: RideRecord) -> Bool { durably { addRideNow(r) } }     // E1: true only when the ride reached storage
+    private func addRideNow(_ r: RideRecord) -> Bool {
         guard !r.demo else { return false }
         if let b = r.boardRideId, rides.contains(where: { $0.boardRideId == b && $0.recorder == .board }) { return false }
         if rides.contains(where: { $0.id == r.id }) { return false }
@@ -1375,7 +1436,8 @@ final class Store: ObservableObject {
     /// Adds a strength session unless the same one is already stored (same Health UUID, or start within ±2 min and
     /// a similar duration). Marks today's planned strength session done when the log is for today.
     @discardableResult
-    func addStrength(_ s: StrengthSession) -> Bool {
+    func addStrength(_ s: StrengthSession) -> Bool { durably { addStrengthNow(s) } }   // E1: true only when it reached storage
+    private func addStrengthNow(_ s: StrengthSession) -> Bool {
         if let h = s.healthUUID, strength.contains(where: { $0.healthUUID == h }) { return false }
         if strength.contains(where: { $0.id == s.id }) { return false }
         // A5: one completed log per planned workout. A detailed log replaces a quick log of the same workout; a quick
@@ -1591,8 +1653,9 @@ final class Store: ObservableObject {
     }
 
     /// Guideline 5.1.1(v): everything the app stores about the rider can be removed in-app.
-    func resetAll() {
+    func resetAll(keepRecoveryFiles: Bool = false) {
         loading = true
+        unknownKeys = [:]; previousCopyDue = false; saveFailure = nil
         rides = []; plan = []; profile = RiderProfile(); settings = AppSettings(); onboarded = false; guest = true; appleUserId = nil; ftpSuggestion = nil
         tiles = Store.defaultTiles; createdAt = Date(); boardSync = []; onboardingStage = 0; availability = nil; strength = []
         templates = []; customExercises = []; appliedProposals = []
@@ -1603,6 +1666,14 @@ final class Store: ObservableObject {
         recoveryLog = RecoveryLog()                                     // Checkpoint E: Health reading history is personal data too
         loading = false
         for n in ["store.json", "profile.json", "plan.json", "rides.json", "tiles.json"] { try? FileManager.default.removeItem(at: dir.appendingPathComponent(n)) }
+        // E1: the safety copies hold the athlete's data too. "Delete all data" removes them; "start again" after an
+        // unreadable store keeps them, because they are the only copy of what could not be read.
+        if !keepRecoveryFiles {
+            storageNotice = nil
+            for n in ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []) where n == StoreRecovery.previousName || n == StoreRecovery.quarantineName || n.hasPrefix("store.unreadable-") {
+                try? FileManager.default.removeItem(at: dir.appendingPathComponent(n))
+            }
+        }
         // files other stores keep beside this one: the loaded GPX route and the Cyclift Watch acknowledgement table
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         if let support { try? FileManager.default.removeItem(at: support.appendingPathComponent("Cyclift", isDirectory: true).appendingPathComponent("loaded-route.json")) }
@@ -1613,14 +1684,85 @@ final class Store: ObservableObject {
     // MARK: persistence
     private func persist() {
         guard !loading else { return }
+        // E1: an unreadable, newer or unprotected store is never written. The refusal is reported, not hidden.
+        guard storage.isWritable else { lastSaveError = storage.explanation; return }
         if txDepth > 0 { txDirty = true; return }
         persistCount += 1
         do {
             let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
-            let d = try enc.encode(snapshot)
+            var d = try enc.encode(snapshot)
+            if !unknownKeys.isEmpty { d = StoreRecovery.merging(unknown: unknownKeys, into: d) }
+            // E1: one previous good copy, taken from the file as it was read at launch, before this launch's first write
+            if previousCopyDue { previousCopyDue = false; StoreRecovery.keepPreviousCopy(in: dir) }
             try d.write(to: dir.appendingPathComponent("store.json"), options: .atomic)
             lastSaveError = nil
         } catch { lastSaveError = error.localizedDescription }
+    }
+
+    // MARK: E1 — durable saves and recovery
+    /// Runs a save as ONE write and reports whether it reached storage. `body` returns false when it refuses the record
+    /// (duplicate, demo…): nothing is written and nothing is reported. When `body` accepted the record but the write
+    /// failed, every in-memory change is rolled back — so memory equals disk, a retry is not a duplicate, the planned
+    /// session is not marked done — `saveFailure` is set and the result is false.
+    func durably(_ body: () -> Bool) -> Bool {
+        if txDepth > 0 { return body() }                      // inside a larger transaction: its owner decides
+        saveFailure = nil
+        let before = snapshot, beforeToast = undoToast, writesBefore = persistCount
+        var accepted = false
+        transaction { accepted = body() }
+        guard accepted else { return false }
+        // a write was attempted (or refused because the store is read-only) and did not succeed
+        if persistCount != writesBefore || !storage.isWritable, let e = lastSaveError {
+            loading = true; apply(before); undoToast = beforeToast; loading = false
+            saveFailure = e
+            return false
+        }
+        saveFailure = nil
+        return true
+    }
+    /// Recovery screen › "Try again", and whenever that screen appears. A file that could not be read at launch (for
+    /// example because the iPhone was still locked) is read again; nothing is written unless it now opens cleanly.
+    @discardableResult
+    func retryOpeningStore() -> Bool {
+        guard storage == .unreadable else { return storage.isWritable }
+        guard case .ok(let f, let bad, let unknown) = StoreRecovery.load(dir.appendingPathComponent("store.json")),
+              bad.isEmpty, f.schema == StoreFile.currentSchema else { return false }     // anything else is handled by the next launch
+        loading = true; apply(f); unknownKeys = unknown; previousCopyDue = true; loading = false
+        storage = .ok; storageNotice = nil; lastSaveError = nil
+        ensurePlan(); refreshRideSafety()
+        return true
+    }
+    /// Recovery screen: whether a previous good copy exists and can be read.
+    var canRestorePreviousCopy: Bool {
+        if case .ok = StoreRecovery.load(dir.appendingPathComponent(StoreRecovery.previousName)) { return true }
+        return false
+    }
+    /// Recovery screen › "Restore the previous copy". The unreadable file was already copied aside at launch. Returns
+    /// false (and changes nothing) when the previous copy cannot be read or written.
+    @discardableResult
+    func restorePreviousCopy() -> Bool {
+        guard storage == .unreadable else { return false }
+        let prev = dir.appendingPathComponent(StoreRecovery.previousName), cur = dir.appendingPathComponent("store.json")
+        guard case .ok(let f, _, let unknown) = StoreRecovery.load(prev), let bytes = try? Data(contentsOf: prev) else { return false }
+        guard StoreRecovery.keepUnreadableCopy(of: cur, in: dir) != nil else { return false }   // never replace the only copy
+        do { try bytes.write(to: cur, options: .atomic) } catch { lastSaveError = error.localizedDescription; return false }
+        loading = true; apply(StoreFile.migrate(f)); unknownKeys = unknown; loading = false
+        storage = .ok; lastSaveError = nil
+        storageNotice = "The previous copy of your data was restored. Sessions saved after that copy was made are not in it; the unreadable file was kept."
+        ensurePlan(); refreshRideSafety()
+        return true
+    }
+    /// Recovery screen › "Start again with no data" (confirmed by the athlete). The unreadable file stays on the phone
+    /// under its store.unreadable-… name; only store.json is replaced.
+    @discardableResult
+    func startFreshAfterUnreadableStore() -> Bool {
+        guard storage == .unreadable else { return false }
+        let cur = dir.appendingPathComponent("store.json")
+        guard StoreRecovery.keepUnreadableCopy(of: cur, in: dir) != nil else { return false }
+        storage = .ok; lastSaveError = nil
+        resetAll(keepRecoveryFiles: true)
+        storageNotice = "Started again with no data. The unreadable file was kept on this iPhone."
+        return true
     }
     private static func read<T: Decodable>(_ url: URL) -> T? {
         guard let d = try? Data(contentsOf: url) else { return nil }

@@ -425,6 +425,7 @@ struct RideResultSheet: View {
     @Environment(\.dismiss) private var dismiss
     let ride: RideRecord
     @State private var confirmDiscard = false
+    @State private var saveFailed = false       // E1: the ride could not be written to storage
     /// Adaptive coach: after Save the sheet turns into the post-ride check-in.
     @State private var checkIn = false
     @State private var healthNote: String?
@@ -458,12 +459,14 @@ struct RideResultSheet: View {
             .background(Color(.systemGroupedBackground))
             .interactiveDismissDisabled()
             .alert("Discard this ride?", isPresented: $confirmDiscard) { Button("Discard", role: .destructive) { recorder.discard(); dismiss() }; Button("Keep", role: .cancel) {} }
+            .alert("Not saved", isPresented: $saveFailed) { Button("Try again") { save() }; Button("Cancel", role: .cancel) { store.saveFailure = nil } } message: { Text("Cyclift could not write this ride to storage, so it is not in your history yet. The ride is still here. Free some space and try again.") }
         }
     }
     /// Save in Cyclift first — always, whatever Health says — then decide about the one Health workout.
     private func save() {
         let r = toSave
-        guard store.addRide(r) else { recorder.finish(); dismiss(); return }
+        // E1: a ride that could not be written stays here (nothing is finished or dismissed) and says so
+        guard store.addRide(r) else { if store.saveFailure != nil { saveFailed = true; return }; recorder.finish(); dismiss(); return }
         exportToHealth(r)
         checkIn = true
     }

@@ -3,7 +3,7 @@
 set -euo pipefail
 SRC="$1"; FILTER="${2:-}"; HERE="$(cd "$(dirname "$0")" && pwd)"; W="$HERE/testws"
 rm -rf "$W/Sources" "$W/Tests"; mkdir -p "$W/Sources/BikeComputer" "$W/Tests/BikeComputerTests"
-for f in Models Strength WorkoutState Hybrid Planning StrengthPlanner AdaptationEngine AdaptiveModels AdaptiveStore UITestSupport CoachSafety; do
+for f in Models StoreRecovery Strength WorkoutState Hybrid Planning StrengthPlanner AdaptationEngine AdaptiveModels AdaptiveStore UITestSupport CoachSafety; do
   sed -e 's/^import Combine$//' -e 's/@retroactive //' "$SRC/ios/BikeComputer/$f.swift" > "$W/Sources/BikeComputer/$f.swift"
 done
 # Home / weekly totals / Progress maths (pure Foundation; present from the RC2 UX work on)
@@ -17,7 +17,7 @@ cp "$HERE/Sources/BikeComputer-shims/"*.swift "$W/Sources/BikeComputer/"
 for f in ProgressAnalytics PlanSummaries Ride/RideViewModels Ride/RideStepsSync; do
   [ -f "$SRC/ios/BikeComputer/$f.swift" ] && sed -e 's/^import Combine$//' "$SRC/ios/BikeComputer/$f.swift" > "$W/Sources/BikeComputer/$(basename $f).swift"
 done
-for t in ${TESTS:-TestScreenSupport IndependentReviewPass2ProbeTests IndependentReviewPass2Probe2Tests IndependentReviewPass2Probe3Tests IndependentReviewPass3ProbeTests IndependentReviewPass3Probe2Tests IndependentReviewPass4ProbeTests CoachRemediationPass3Tests IndependentReviewProbeTests IndependentReviewProbe2Tests IndependentReviewProbe3Tests AdaptationEngineTests HybridV2Tests HybridTests RoutinesTests StrengthAuditTests AuditFixTests QualityReleaseTests CoachRemediationTests HomeBTests ProgressMetricsTests Rc3EngineTests S20DataIntegrityTests DesignSystemPureTests EngineSideEffectTests OnboardingDraftTests W12AndDockTests SupersetPipelineTests HomeDashboardTests HomeSummariesTests ProfileMenuTests RecoveryAnalysisTests ProgressAnalyticsTests FTPOwnershipTests DataIntegrityGapTests RideChainTests RideStepsSyncTests RideViewModelTests PlanSummariesTests}; do
+for t in ${TESTS:-E1DataIntegrityTests TestScreenSupport IndependentReviewPass2ProbeTests IndependentReviewPass2Probe2Tests IndependentReviewPass2Probe3Tests IndependentReviewPass3ProbeTests IndependentReviewPass3Probe2Tests IndependentReviewPass4ProbeTests CoachRemediationPass3Tests IndependentReviewProbeTests IndependentReviewProbe2Tests IndependentReviewProbe3Tests AdaptationEngineTests HybridV2Tests HybridTests RoutinesTests StrengthAuditTests AuditFixTests QualityReleaseTests CoachRemediationTests HomeBTests ProgressMetricsTests Rc3EngineTests S20DataIntegrityTests DesignSystemPureTests EngineSideEffectTests OnboardingDraftTests W12AndDockTests SupersetPipelineTests HomeDashboardTests HomeSummariesTests ProfileMenuTests RecoveryAnalysisTests ProgressAnalyticsTests FTPOwnershipTests DataIntegrityGapTests RideChainTests RideStepsSyncTests RideViewModelTests PlanSummariesTests}; do
   [ -f "$SRC/ios/BikeComputerTests/$t.swift" ] && cp "$SRC/ios/BikeComputerTests/$t.swift" "$W/Tests/BikeComputerTests/" && python3 "$HERE/strip_ui_tests.py" "$W/Tests/BikeComputerTests/$t.swift"
 done
 if [ -n "${EXTRA:-}" ]; then cp $EXTRA "$W/Tests/BikeComputerTests/"; fi

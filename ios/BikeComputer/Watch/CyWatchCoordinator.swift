@@ -102,7 +102,7 @@ enum CyWatchEvents {
         case .save:
             if isStrength || store.activeSession != nil {
                 let saved = store.finishActiveSession(rpe: nil, notes: "Logged on Cyclift Watch", now: now)
-                return Outcome(ride: nil, note: saved != nil ? "Strength session saved" : "Nothing to save: no set was logged (session kept open on the phone)")
+                return Outcome(ride: nil, note: saved != nil ? "Strength session saved" : (store.saveFailure != nil ? "Not saved: storage could not be written (session kept open on the phone)" : "Nothing to save: no set was logged (session kept open on the phone)"))
             }
             return Outcome(ride: nil, note: "Save acknowledged")
         case .discard:

@@ -121,7 +121,11 @@ enum ExerciseLibrary {
         var diff: Int
         if has(["clean", "snatch", "pistol", "handstand", "nordic", "overhead squat", "toes to bar", "zercher", "skater", "ab wheel", "copenhagen", "stir the pot", "kroc", "sissy"]) { diff = 3 }
         else if has(["pull-up", "chin-up", "dip", "hanging", "bulgarian", "sumo", "deadlift", "front squat", "back squat", "overhead press", "bench press", "barbell row", "t-bar", "push press", "good morning", "pendlay", "meadows"]) && !has(["bench dip", "assisted", "dumbbell bench"]) { diff = 2 }
-        else if e.equipment.contains("machine") || e.equipment.contains("cable") || !compound || e.equipment == ["bodyweight"] || e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell") || e.equipment.contains("band") { diff = 1 }
+        // E1 (E0 run 225): an exercise that HAS a bodyweight form is not a technical lift unless it is named above. Before,
+        // only exercises listed as exactly ["bodyweight"] counted, so Glute bridge and Hip thrust (barbell OR bodyweight)
+        // were rated 2: a beginner without equipment was left with no hip-dominant compound and every full-body session
+        // the planner built was refused by its own full-body rule (SPLIT-001).
+        else if e.equipment.contains("machine") || e.equipment.contains("cable") || !compound || e.equipment.contains("bodyweight") || e.equipment.contains("dumbbell") || e.equipment.contains("kettlebell") || e.equipment.contains("band") { diff = 1 }
         else { diff = 2 }
         var primary = Array(e.muscles.prefix(2)), secondary = Array(e.muscles.dropFirst(2))
         if primary.isEmpty {
@@ -642,21 +646,40 @@ enum StrengthPlanner {
         }
         // still too long: leave out one main pattern, a different one in each session of the week (pull, hinge, push,
         // squat), so the week as a whole keeps all four
+        // E1: never below what the session's own label requires. The validator refuses a full-body session without squat,
+        // hinge, push and pull work (SPLIT-001 … 004), so the planner must not build one: the only exercise of a required
+        // pattern is kept, and a session that then cannot fit its minutes says so instead of being built to be refused.
+        let requiredPatterns: Set<MovementPattern> = {
+            switch w.strengthFocus ?? .fullBody {
+            case .fullBody: return [.squat, .hinge, .push, .pull]
+            case .lower, .legs: return [.squat, .hinge]
+            case .upper: return [.push, .pull]
+            case .push: return [.push]
+            case .pull: return [.pull]
+            case .custom: return []
+            }
+        }()
+        func lastOfRequired(_ i: Int) -> Bool {
+            guard let f = family(i), requiredPatterns.contains(f) else { return false }
+            return entries.indices.filter { family($0) == f }.count <= 1
+        }
         let dropOrder: [MovementPattern] = [.pull, .hinge, .push, .squat]
         var k = 0
         while estimate() > limit, entries.count > 2, k < 8 {
             let want = dropOrder[(week.sessionIndex + k) % dropOrder.count]
             k += 1
-            guard let j = entries.indices.last(where: { family($0) == want }) else { continue }
+            guard let j = entries.indices.last(where: { family($0) == want }), !lastOfRequired(j) else { continue }
             trimmed.append(entries.remove(at: j).name); rats.remove(at: j)
         }
-        while estimate() > limit, entries.count > 2 { trimmed.append(entries.removeLast().name); rats.removeLast() }
+        while estimate() > limit, entries.count > 2, let j = entries.indices.last(where: { !lastOfRequired($0) }) { trimmed.append(entries.remove(at: j).name); rats.remove(at: j) }
+        let overMinutes = estimate() > limit ? Int(estimate().rounded(.up)) : nil
         for i in entries.indices where entries[i].sets.count < (before[entries[i].id] ?? 0) { rats[i].dose += " Trimmed to \(entries[i].sets.count) sets so the session fits \(Fmt.duration(minutes: w.minutes))." }
         var notes: [String] = [goalReason(goal)]
         if let t = interferenceText { notes.append(t) }
         if week.highCyclingLoad, let r = week.highLoadReason { notes.append("Lower-body volume is reduced by a quarter this week because \(r).") }
         if week.deload, let r = week.deloadReason { notes.append("Deload week: fewer sets and lighter efforts because \(r).") }
         if !trimmed.isEmpty { notes.append("To fit \(Fmt.duration(minutes: w.minutes)), these were left out: \(trimmed.joined(separator: ", ")).") }
+        if let need = overMinutes { notes.append("This session keeps every movement its type needs, which takes about \(Fmt.duration(minutes: need)); it does not fit \(Fmt.duration(minutes: w.minutes)).") }
         if !ctx.equipment.isSet { notes.append("Provisional: your equipment isn't set yet, so this session uses bodyweight exercises only. Set your equipment in Profile › Training.") }
         if let h = ctx.progressionHold { notes.append("Loads and reps are held: \(h).") }
         if let r = ctx.returning, r.active { notes.append("Back after \(r.weeksText) off: one set fewer per exercise, efforts at RPE 7 or less, and loads restart below your last logged ones for your first \(ReturnPhase.phaseSessions) sessions.") }

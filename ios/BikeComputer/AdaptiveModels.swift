@@ -203,6 +203,17 @@ struct PlanAdjustment: Codable, Equatable, Identifiable {
         }
     }
     enum Category: String, Codable { case progression, reduction, recovery, substitution }
+    /// E1 interim hold (owner directive 15 Nov 2026, E1-E): until the independent Coach policy engine exists, an increase
+    /// in sets, cycling intervals or ride duration is never applied automatically. It is offered for approval instead.
+    /// Load and repetition steps are NOT covered here; reductions and protective changes are never held.
+    var needsApprovalUntilPolicyEngine: Bool {
+        switch change {
+        case .sets(_, let d): return d > 0
+        case .intervalReps(let d): return d > 0
+        case .minutes(let d): return d > 0
+        case .reps, .weight, .kind, .replace: return false
+        }
+    }
 
     var workoutId: UUID
     var change: Change
@@ -222,7 +233,9 @@ struct PlanAdjustment: Codable, Equatable, Identifiable {
 struct AdaptiveProposal: Codable, Equatable, Identifiable {
     enum Reason: String, Codable {
         case fixedDay, sessionCount, split, replaceExercise, budget, majorLoad
-        var title: String { switch self { case .fixedDay: return "Fixed day"; case .sessionCount: return "Sessions per week"; case .split: return "Strength split"; case .replaceExercise: return "Saved exercise"; case .budget: return "Time budget"; case .majorLoad: return "Bigger load increase" } }
+        /// E1 interim hold: an increase in sets, intervals or ride duration that waits for the athlete's approval.
+        case heldIncrease
+        var title: String { switch self { case .fixedDay: return "Fixed day"; case .sessionCount: return "Sessions per week"; case .split: return "Strength split"; case .replaceExercise: return "Saved exercise"; case .budget: return "Time budget"; case .majorLoad: return "Bigger load increase"; case .heldIncrease: return "Increase" } }
     }
     var id: String
     var reason: Reason

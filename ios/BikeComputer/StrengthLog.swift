@@ -77,7 +77,7 @@ struct QuickStrengthLogSheet: View {
                 Button("Save as an extra session") { save(asExtra: true) }
                 Button("Cancel", role: .cancel) {}
             } message: { d in Text("This session is already in your history (\(d.title.lowercased()), \(Fmt.duration(minutes: d.minutes)), \(d.date.dayAndDate)). Logging it again would count it twice. Save only if this was another workout.") }
-            .alert("Not saved", isPresented: $rejected) { Button("OK", role: .cancel) {} } message: { Text("A session with the same time and duration is already in your history, so it was not added twice.") }
+            .alert("Not saved", isPresented: $rejected) { Button("OK", role: .cancel) {} } message: { Text(store.saveFailure != nil ? "Cyclift could not write this session to storage, so it is not in your history yet. Nothing was lost on this screen. Free some space and try again." : "A session with the same time and duration is already in your history, so it was not added twice.") }
             .sheet(isPresented: $detailed, onDismiss: { if store.strength.contains(where: { $0.workoutId != nil && $0.workoutId == workoutId }) || detailedSaved { dismiss() } }) {
                 DetailedStrengthLogSheet(date: when, presetFocus: focus, workoutId: workoutId, onSaved: { detailedSaved = true })
             }
@@ -117,6 +117,7 @@ struct DetailedStrengthLogSheet: View {
     @State private var templateName = ""
     @State private var loaded = false
     @State private var expanded: UUID? = nil
+    @State private var writeFailed = false      // E1: the session could not be written to storage
     @State private var checkInFor: UUID? = nil
 
     var body: some View {
@@ -161,6 +162,7 @@ struct DetailedStrengthLogSheet: View {
                 entries.append(e); expanded = e.id
             } }
             .onAppear { load() }
+            .alert("Not saved", isPresented: $writeFailed) { Button("OK", role: .cancel) {} } message: { Text("Cyclift could not write this session to storage, so it is not in your history yet. Nothing was lost on this screen. Free some space and try again.") }
             .alert("Already logged", isPresented: $askExtra) {
                 Button("Save as an extra session") { save(asExtra: true) }
                 Button("Cancel", role: .cancel) {}
@@ -202,7 +204,8 @@ struct DetailedStrengthLogSheet: View {
         }
         if editing != nil { store.updateStrength(s); onSaved?(); dismiss(); return }
         // a new completed session: ask for the check-in before closing (adaptive coach)
-        if store.addStrength(s) { onSaved?(); checkInFor = s.id } else { onSaved?(); dismiss() }
+        // E1: a failed write keeps this sheet open with everything on it and says so; only a real duplicate closes it
+        if store.addStrength(s) { onSaved?(); checkInFor = s.id } else if store.saveFailure != nil { writeFailed = true } else { onSaved?(); dismiss() }
     }
 }
 
