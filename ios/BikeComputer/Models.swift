@@ -1732,6 +1732,8 @@ final class Store: ObservableObject {
         ensurePlan(); refreshRideSafety()
         return true
     }
+    /// The banner's OK: the athlete has read what the launch found.
+    func dismissStorageNotice() { storageNotice = nil }
     /// Recovery screen: whether a previous good copy exists and can be read.
     var canRestorePreviousCopy: Bool {
         if case .ok = StoreRecovery.load(dir.appendingPathComponent(StoreRecovery.previousName)) { return true }

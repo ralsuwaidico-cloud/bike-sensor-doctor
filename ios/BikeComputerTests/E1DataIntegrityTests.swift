@@ -22,6 +22,37 @@ final class E1DataIntegrityTests: XCTestCase {
         return (s, d)
     }
 
+    // MARK: first launch and repeated launches
+    func testAFirstTimeAthleteIsNeverShownTheRecoveryScreen() throws {
+        let d = tmp("first"); let s = Store(directory: d)
+        XCTAssertEqual(s.storage, .ok); XCTAssertNil(s.storageNotice); XCTAssertNil(s.lastSaveError)
+        XCTAssertFalse(s.onboarded, "a new athlete starts in onboarding")
+        XCTAssertTrue(files(d).contains("store.json")); XCTAssertEqual(files(d).filter { $0 != "store.json" }, [], "no recovery file on a clean install")
+        let again = Store(directory: d)
+        XCTAssertEqual(again.storage, .ok); XCTAssertNil(again.storageNotice)
+    }
+    func testThePreviousCopyFollowsEachLaunchAndSurvivesAFailedWrite() throws {
+        let (_, d) = healthy("prevroll"); let prev = d.appendingPathComponent(StoreRecovery.previousName), cur = d.appendingPathComponent("store.json")
+        let launch1 = try Data(contentsOf: cur)
+        let a = Store(directory: d)
+        XCTAssertTrue(a.addStrength(StrengthSession(date: Date().addingTimeInterval(-5 * 86_400), minutes: 20, focus: .push)))
+        XCTAssertEqual(try Data(contentsOf: prev), launch1, "the copy is the file as this launch found it")
+        XCTAssertTrue(a.addStrength(StrengthSession(date: Date().addingTimeInterval(-6 * 86_400), minutes: 20, focus: .pull)))
+        XCTAssertEqual(try Data(contentsOf: prev), launch1, "taken once per launch, not at every write")
+        let launch2 = try Data(contentsOf: cur)
+        let b = Store(directory: d, generatePlan: false)                 // a launch that writes nothing
+        XCTAssertEqual(b.persistCount, 0); XCTAssertEqual(try Data(contentsOf: prev), launch1, "a launch without a write does not move the copy")
+        let c = Store(directory: d, generatePlan: false)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: d.path)
+        let failed = !c.addStrength(StrengthSession(date: Date().addingTimeInterval(-8 * 86_400), minutes: 20, focus: .legs))
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: d.path)
+        if failed {
+            XCTAssertEqual(try Data(contentsOf: prev), launch1, "a failed write changes neither the store nor its previous copy")
+            XCTAssertEqual(try Data(contentsOf: cur), launch2)
+        }
+        guard case .ok = StoreRecovery.load(prev) else { return XCTFail("the previous copy must always be a readable store") }
+    }
+
     // MARK: unreadable store
     func testUnreadableStoreIsLeftUntouchedCopiedAndNeverWritten() throws {
         let (_, d) = healthy("unreadable"); let url = d.appendingPathComponent("store.json")

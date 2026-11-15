@@ -56,3 +56,19 @@ struct StorageRecoveryView: View {
         }
     }
 }
+
+/// E1: one line above every screen while something about storage needs the athlete's attention. A failing write stays
+/// until a write succeeds; a launch notice (records set aside, previous copy restored) stays until OK is tapped.
+struct StorageBanner: View {
+    @EnvironmentObject private var store: Store
+    var body: some View {
+        if store.storage.isWritable, let text = store.lastSaveError.map({ "Your latest changes could not be saved: \($0)" }) ?? store.storageNotice {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).accessibilityHidden(true)
+                Text(text).font(.footnote).frame(maxWidth: .infinity, alignment: .leading)
+                if store.lastSaveError == nil { Button("OK") { store.dismissStorageNotice() }.font(.footnote.bold()).accessibilityIdentifier("storageBannerOK") }
+            }
+            .padding(10).background(Color(.secondarySystemBackground)).accessibilityIdentifier("storageBanner")
+        }
+    }
+}
