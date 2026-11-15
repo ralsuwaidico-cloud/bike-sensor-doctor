@@ -134,6 +134,12 @@ final class E1DataIntegrityTests: XCTestCase {
     }
     func testAHealthyStoreProducesNoQuarantineAndNoLaunchWrite() throws {
         let (_, d) = healthy("clean")
+        // Corrected after logic runs 81/82: my first version expected zero writes on the FIRST relaunch. That premise was
+        // wrong — the baseline app writes one log line the first time an onboarded store is opened (the one-time W12
+        // clean-up marker, Models.w12CleanupIfNeeded). That write is existing, intended behaviour; it is counted here
+        // instead of being hidden, and "no write" is asserted for every launch after it.
+        let first = Store(directory: d, generatePlan: false)
+        XCTAssertLessThanOrEqual(first.persistCount, 1, "at most the one-time clean-up marker"); XCTAssertNil(first.storageNotice)
         let s = Store(directory: d, generatePlan: false)
         XCTAssertEqual(s.persistCount, 0); XCTAssertNil(s.storageNotice)
         XCTAssertFalse(files(d).contains(StoreRecovery.quarantineName), "\(files(d))")
