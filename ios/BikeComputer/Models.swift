@@ -972,10 +972,11 @@ final class Store: ObservableObject {
         var migrated = false, rc3Migrated = false
         let storeURL = dir.appendingPathComponent("store.json")
         var setAside: [QuarantinedRecord] = []
+        var loadedSchema: Int? = nil
         switch StoreRecovery.load(storeURL) {
         case .ok(let f, let bad, let unknown):
             let m = StoreFile.migrate(f); migrated = f.schema < 2; rc3Migrated = f.schema < 4; apply(m)
-            unknownKeys = unknown; previousCopyDue = true; setAside = bad
+            unknownKeys = unknown; previousCopyDue = true; setAside = bad; loadedSchema = f.schema
         case .missing:
             if let legacy = legacyImport() { apply(StoreFile.migrate(legacy)); migrated = true }
         case .newer(let n):
@@ -987,7 +988,19 @@ final class Store: ObservableObject {
             let copy = StoreRecovery.keepUnreadableCopy(of: storeURL, in: dir)
             storageNotice = StorageState.unreadable.explanation + (copy.map { " A copy was kept as \($0)." } ?? "")
         }
-        if !setAside.isEmpty {
+        // E1 backup policy: a launch-time change that TRANSFORMS existing data — a schema migration, dropping unreadable
+        // records, the one-time clean-up — is made only after the file as it is has been copied and read back. If the
+        // copy cannot be secured the change is not made and the store stays read-only for this launch. (An ordinary save
+        // is different: see persist().)
+        if storage.isWritable, previousCopyDue {
+            let cleanUpDue = onboarded && !migrationLog.contains(where: { $0.hasPrefix(Self.w12CleanupTag) })
+            if migrated || rc3Migrated || !setAside.isEmpty || cleanUpDue {
+                var secured = StoreRecovery.keepPreviousCopy(in: dir)
+                if secured, let old = loadedSchema, old < StoreFile.currentSchema { secured = StoreRecovery.keepSchemaCopy(of: old, in: dir) }
+                if secured { previousCopyDue = false } else { storage = .cannotSecureCopy; storageNotice = StorageState.cannotSecureCopy.explanation }
+            }
+        }
+        if storage.isWritable, !setAside.isEmpty {
             // the raw records are written to store.quarantine.json BEFORE any write of store.json could drop them
             if StoreRecovery.setAside(setAside, in: dir) {
                 let lists = Array(Set(setAside.map { $0.list })).sorted().joined(separator: ", ")
@@ -1685,7 +1698,7 @@ final class Store: ObservableObject {
             if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first { try? FileManager.default.removeItem(at: appSupport.appendingPathComponent("Diagnostics", isDirectory: true)) }
             for k in ["cyclift.diagnostics.events.v1", "cyclift.diagnostics.sensordiag.v1", "cyclift.diagnostics.uploadConsent", "cyDockAcknowledgedDay"] { UserDefaults.standard.removeObject(forKey: k) }
             for f in onDeleteAllData { f() }
-            for n in ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []) where n == StoreRecovery.previousName || n == StoreRecovery.quarantineName || n.hasPrefix("store.unreadable-") {
+            for n in ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []) where n == StoreRecovery.previousName || n == StoreRecovery.quarantineName || n.hasPrefix("store.unreadable-") || n.hasPrefix("store.schema-") {
                 try? FileManager.default.removeItem(at: dir.appendingPathComponent(n))
             }
         }
@@ -1708,7 +1721,10 @@ final class Store: ObservableObject {
             var d = try enc.encode(snapshot)
             if !unknownKeys.isEmpty { d = StoreRecovery.merging(unknown: unknownKeys, into: d) }
             // E1: one previous good copy, taken from the file as it was read at launch, before this launch's first write
-            if previousCopyDue { previousCopyDue = false; StoreRecovery.keepPreviousCopy(in: dir) }
+            // An ORDINARY save does not wait for this copy: the write below is atomic (the old file stays whole if it fails)
+            // and adds to the data, and refusing to store a finished workout because a spare copy could not be made
+            // would lose more than it protects. The athlete is told when the copy could not be made.
+            if previousCopyDue { previousCopyDue = false; if !StoreRecovery.keepPreviousCopy(in: dir) { storageNotice = "A safety copy of your data could not be made this time. Your data is saved as usual; free some storage so the copy can be kept." } }
             try d.write(to: dir.appendingPathComponent("store.json"), options: .atomic)
             lastSaveError = nil
         } catch { lastSaveError = error.localizedDescription }
@@ -1739,11 +1755,13 @@ final class Store: ObservableObject {
     /// example because the iPhone was still locked) is read again; nothing is written unless it now opens cleanly.
     @discardableResult
     func retryOpeningStore() -> Bool {
-        guard storage == .unreadable else { return storage.isWritable }
+        guard storage == .unreadable || storage == .cannotSecureCopy else { return storage.isWritable }
         guard case .ok(let f, let bad, let unknown) = StoreRecovery.load(dir.appendingPathComponent("store.json")),
               bad.isEmpty, f.schema == StoreFile.currentSchema else { return false }     // anything else is handled by the next launch
-        loading = true; apply(f); unknownKeys = unknown; previousCopyDue = true; loading = false
+        guard StoreRecovery.keepPreviousCopy(in: dir) else { return false }            // still no safety copy: still nothing changed
+        loading = true; apply(f); unknownKeys = unknown; previousCopyDue = false; loading = false
         storage = .ok; storageNotice = nil; lastSaveError = nil
+        transaction { w12CleanupIfNeeded() }
         ensurePlan(); refreshRideSafety()
         return true
     }

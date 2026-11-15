@@ -24,6 +24,9 @@ enum StorageState: Equatable {
     case newerVersion(Int)
     /// Bad records were found but could not be set aside (quarantine file not writable). Read-only so they are not lost.
     case cannotSetAside
+    /// A launch-time change (migration, one-time clean-up, dropping unreadable records) was due, but the file as it is
+    /// could not be copied first. The change is not made and nothing is written until a copy can be secured.
+    case cannotSecureCopy
 
     var isWritable: Bool { self == .ok }
     /// Plain words for the athlete (shown on the recovery screen and as the save error).
@@ -33,6 +36,7 @@ enum StorageState: Equatable {
         case .unreadable: return "Cyclift could not read your saved data. Nothing has been changed or deleted."
         case .newerVersion: return "Your data was saved by a newer version of Cyclift. This version will not change it."
         case .cannotSetAside: return "Some saved records could not be read and could not be set aside safely. Nothing has been changed."
+        case .cannotSecureCopy: return "Cyclift needs to update your saved data but could not keep a safety copy first, so it has changed nothing. Free some storage and try again."
         }
     }
 }
@@ -153,10 +157,23 @@ enum StoreRecovery {
 
     /// Copies the store.json that was read at launch to store.previous.json, before this launch's first write. Only ever
     /// called for a file that decoded, so a damaged primary can never replace the previous good copy.
-    static func keepPreviousCopy(in dir: URL) {
+    /// Returns true only when the copy is on disk and reads back byte for byte (or there was nothing to copy).
+    @discardableResult
+    static func keepPreviousCopy(in dir: URL) -> Bool {
         let src = dir.appendingPathComponent("store.json"), dst = dir.appendingPathComponent(previousName)
-        guard let data = try? Data(contentsOf: src) else { return }
-        try? data.write(to: dst, options: .atomic)
+        guard FileManager.default.fileExists(atPath: src.path) else { return true }
+        guard let data = try? Data(contentsOf: src) else { return false }
+        do { try data.write(to: dst, options: .atomic) } catch { return false }
+        return (try? Data(contentsOf: dst)) == data
+    }
+    /// Before a schema migration: the file exactly as the older build left it, kept under its own name and never
+    /// replaced (store.schema-3.json). The previous copy moves forward with every launch; this one does not.
+    static func keepSchemaCopy(of schema: Int, in dir: URL) -> Bool {
+        let src = dir.appendingPathComponent("store.json"), dst = dir.appendingPathComponent("store.schema-\(schema).json")
+        if FileManager.default.fileExists(atPath: dst.path) { return true }
+        guard let data = try? Data(contentsOf: src) else { return false }
+        do { try data.write(to: dst, options: .atomic) } catch { return false }
+        return (try? Data(contentsOf: dst)) == data
     }
 
     /// Adds the unknown top-level keys of the loaded file back into the encoded store, so a field written by a newer

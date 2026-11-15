@@ -38,6 +38,8 @@ jobs:
           set -e
           # E1: name every failing test. The tail alone hid a failure in a suite that sorts early (logic run 81).
           [ $X -eq 0 ] || { echo "== failing tests and their messages:"; grep -E ": error: |Test Case .* failed|Fatal error|became|missing after save|type changed" logic.txt | cut -c1-600 | head -160; }
+          # logic run 86: on success the totals were not in the log at all; print them and every skipped test by name
+          echo "== totals:"; grep -E "Executed [0-9]+ tests" logic.txt | tail -1; echo "== skipped tests:"; grep -E "skipped|Skip" logic.txt | cut -c1-300 | head -20 || true
           echo "== evidence lines printed by the E1 tests:"; grep -E "^E1-" logic.txt | cut -c1-600 | head -60 || true
           [ $X -eq 0 ] || { echo "== test.sh failed (exit $X); last 60 lines:"; tail -60 logic.txt; echo "== build.log errors:"; grep -E "error:" tools/coach-harness/testws/build.log 2>/dev/null | head -20; }
           dur=$(( $(date +%s) - start ))
@@ -54,7 +56,7 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           # annotations are readable through the API even where raw logs are not (the owner's tools read them)
-          echo "::notice title=Fast logic tests::$R in ${dur}s — $(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' logic.txt | tail -1)"
+          echo "::notice title=Fast logic tests::$R in ${dur}s — $(grep -Eo 'Executed [0-9]+ tests?, with ([0-9]+ tests? skipped and )?[0-9]+ failures?' logic.txt | tail -1)"
           if [ $X -ne 0 ]; then
             { grep -E "error:|failed \(" logic.txt; grep -E "error:" $W/build.log 2>/dev/null; tail -15 logic.txt; } | head -30 | while IFS= read -r l; do echo "::error title=logic::${l//%/%25}"; done
           fi

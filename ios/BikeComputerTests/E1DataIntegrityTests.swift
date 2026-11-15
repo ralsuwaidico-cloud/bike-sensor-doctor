@@ -238,7 +238,13 @@ final class E1DataIntegrityTests: XCTestCase {
         let blocked = Store(directory: d, generatePlan: false)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: d.path)
         if try Data(contentsOf: url) != before { throw XCTSkip("this environment let the write through despite read-only permissions (for example when running as root)") }
-        XCTAssertNotNil(blocked.lastSaveError, "the failed write is reported")
+        // Expectation changed with the backup policy (owner instruction, 15 Nov), and why: this test used to require
+        // `lastSaveError` — the clean-up was attempted and its write failed. Under the policy the clean-up is no longer
+        // attempted at all when the file cannot first be copied (a read-only folder blocks the copy too), so there is
+        // no failed write to report; the store is read-only with a stated reason instead. What the test protects is
+        // unchanged and still asserted: nothing on disk changes, and the next launch completes the clean-up.
+        XCTAssertEqual(blocked.storage, .cannotSecureCopy, "no safety copy → the clean-up is not attempted"); XCTAssertNotNil(blocked.storageNotice, "and the athlete is told")
+        XCTAssertEqual(blocked.persistCount, 0)
         XCTAssertEqual(try Data(contentsOf: url), before, "nothing on disk changed — not the trash, not the plan, not the log")
         let next = Store(directory: d, generatePlan: false)
         XCTAssertEqual(next.persistCount, 1); XCTAssertEqual(next.plan.map(\.id), [now.id]); XCTAssertEqual(next.w12TrashItems.count, 1)
@@ -432,12 +438,108 @@ final class E1DataIntegrityTests: XCTestCase {
     }
 
     // MARK: delete all data
+    // MARK: backup policy (owner instruction, 15 Nov)
+    // Launch-time changes that transform existing data (schema migration, dropping unreadable records, the one-time
+    // clean-up) need a verified copy of the file first. An ordinary save does not wait for the copy.
+
+    /// Makes store.previous.json impossible to write in a way that also holds when the tests run as root (Linux CI):
+    /// a file cannot be renamed over a non-empty directory of that name. Read-only permissions do not stop root.
+    private func blockPreviousCopy(_ d: URL) throws {
+        let p = d.appendingPathComponent(StoreRecovery.previousName)
+        try? FileManager.default.removeItem(at: p)
+        try FileManager.default.createDirectory(at: p.appendingPathComponent("blocked"), withIntermediateDirectories: true)
+    }
+    private func unblockPreviousCopy(_ d: URL) { try? FileManager.default.removeItem(at: d.appendingPathComponent(StoreRecovery.previousName)) }
+    private func onDiskLog(_ d: URL) throws -> [String] { (try json(d)["migrationLog"] as? [String]) ?? [] }
+
+    func testALaunchTimeChangeIsNotMadeWhenNoSafetyCopyCanBeKept() throws {
+        let (_, d) = healthy("nocopy"); let url = d.appendingPathComponent("store.json"); let before = try Data(contentsOf: url)
+        try blockPreviousCopy(d)
+        let s = Store(directory: d)                                       // the one-time clean-up is due on this launch
+        XCTAssertEqual(s.storage, .cannotSecureCopy); XCTAssertNotNil(s.storageNotice, "the athlete is told why")
+        XCTAssertEqual(s.persistCount, 0); XCTAssertEqual(try Data(contentsOf: url), before, "the store is exactly as it was")
+        XCTAssertEqual(s.strength.count, 2, "the athlete's data is still loaded, only not changed")
+        XCTAssertFalse(s.addStrength(StrengthSession(date: Date(), minutes: 20, focus: .fullBody)), "nothing is saved while no copy exists")
+        XCTAssertNotNil(s.saveFailure, "and the refused save is reported, not shown as stored")
+        XCTAssertFalse(s.retryOpeningStore(), "still blocked: still nothing changed")
+        XCTAssertEqual(try Data(contentsOf: url), before)
+        let relaunch = Store(directory: d)                                // a relaunch while still blocked behaves the same
+        XCTAssertEqual(relaunch.storage, .cannotSecureCopy); XCTAssertEqual(try Data(contentsOf: url), before)
+        unblockPreviousCopy(d)
+        XCTAssertTrue(s.retryOpeningStore(), "once the copy can be kept the launch-time change goes ahead")
+        XCTAssertEqual(s.storage, .ok); XCTAssertNil(s.storageNotice)
+        XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent(StoreRecovery.previousName)), before, "the copy is the file as it was before the change")
+        XCTAssertTrue(try onDiskLog(d).contains { $0.hasPrefix(Store.w12CleanupTag) }, "the clean-up ran and was recorded")
+        XCTAssertEqual(s.strength.count, 2, "the refused session was not stored")
+        XCTAssertTrue(s.addStrength(StrengthSession(date: Date(), minutes: 20, focus: .fullBody)))
+        let next = Store(directory: d, generatePlan: false)
+        XCTAssertEqual(next.storage, .ok); XCTAssertEqual(next.persistCount, 0); XCTAssertEqual(next.strength.count, 3)
+    }
+    func testAnOrdinarySaveStillWorksWhenTheSafetyCopyCannotBeMadeAndSaysSo() throws {
+        let (_, d) = healthy("ordinary"); _ = Store(directory: d)         // first relaunch: the one-time clean-up is now done
+        XCTAssertTrue(try onDiskLog(d).contains { $0.hasPrefix(Store.w12CleanupTag) })
+        try blockPreviousCopy(d)
+        let s = Store(directory: d, generatePlan: false)                  // nothing to transform on this launch
+        XCTAssertEqual(s.storage, .ok, "a missing copy does not lock an athlete out of a healthy store"); XCTAssertEqual(s.persistCount, 0)
+        XCTAssertTrue(s.addStrength(StrengthSession(date: Date(), minutes: 25, focus: .fullBody)), "a finished workout is stored")
+        XCTAssertNil(s.saveFailure); XCTAssertNotNil(s.storageNotice, "the athlete is told that no safety copy could be made")
+        XCTAssertEqual(Store(directory: d, generatePlan: false).strength.count, 3, "and it is really on disk")
+    }
+    func testASchemaMigrationKeepsTheOlderFileUnderItsOwnNameAndNeverReplacesIt() throws {
+        let (_, d) = healthy("schema"); var o = try json(d); o["schema"] = 3
+        let old = try JSONSerialization.data(withJSONObject: o); let url = d.appendingPathComponent("store.json"); try old.write(to: url)
+        let kept = d.appendingPathComponent("store.schema-3.json")
+        let s = Store(directory: d)
+        XCTAssertEqual(s.storage, .ok); XCTAssertEqual(try json(d)["schema"] as? Int, StoreFile.currentSchema, "migrated and saved")
+        XCTAssertEqual(try Data(contentsOf: kept), old, "the file exactly as the older build left it")
+        XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent(StoreRecovery.previousName)), old)
+        XCTAssertTrue(s.addStrength(StrengthSession(date: Date(), minutes: 20, focus: .fullBody)))
+        for k in 0..<2 { let again = Store(directory: d); XCTAssertTrue(again.addStrength(StrengthSession(date: Date().addingTimeInterval(Double(-9 - k) * 86_400), minutes: 20, focus: .legs))) }
+        XCTAssertEqual(try Data(contentsOf: kept), old, "later launches and saves move the previous copy forward but never this one")
+        guard case .ok(let f, let bad, _) = StoreRecovery.load(kept) else { return XCTFail("the kept file must stay a readable store") }
+        XCTAssertEqual(f.schema, 3); XCTAssertTrue(bad.isEmpty); XCTAssertEqual(f.strength.count, 2)
+    }
+    func testASchemaMigrationIsNotMadeWhenNoSafetyCopyCanBeKept() throws {
+        let (_, d) = healthy("schema-blocked"); var o = try json(d); o["schema"] = 3
+        let old = try JSONSerialization.data(withJSONObject: o); let url = d.appendingPathComponent("store.json"); try old.write(to: url)
+        try blockPreviousCopy(d)
+        let s = Store(directory: d)
+        XCTAssertEqual(s.storage, .cannotSecureCopy); XCTAssertEqual(s.persistCount, 0)
+        XCTAssertEqual(try Data(contentsOf: url), old, "the older file is not migrated on disk without a copy")
+        unblockPreviousCopy(d)
+        let next = Store(directory: d)
+        XCTAssertEqual(next.storage, .ok); XCTAssertEqual(try json(d)["schema"] as? Int, StoreFile.currentSchema)
+        XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent("store.schema-3.json")), old)
+    }
+    func testUnreadableRecordsAreNotDroppedWhenNoSafetyCopyCanBeKept() throws {
+        let (_, d) = healthy("bad-blocked"); _ = Store(directory: d)      // clean-up already done, so only the bad record is at stake
+        var o = try json(d); var arr = (o["strength"] as? [Any]) ?? []; arr.append(["id": "bad"] as [String: Any]); o["strength"] = arr
+        let data = try JSONSerialization.data(withJSONObject: o); let url = d.appendingPathComponent("store.json"); try data.write(to: url)
+        try blockPreviousCopy(d)
+        let s = Store(directory: d)
+        XCTAssertEqual(s.storage, .cannotSecureCopy); XCTAssertEqual(try Data(contentsOf: url), data, "the file with the unreadable record is untouched")
+        XCTAssertFalse(files(d).contains(StoreRecovery.quarantineName), "nothing is set aside while the launch is held")
+        unblockPreviousCopy(d)
+        let next = Store(directory: d)
+        XCTAssertEqual(next.storage, .ok); XCTAssertEqual(next.strength.count, 2)
+        XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent(StoreRecovery.previousName)), data, "the copy still holds the unreadable record")
+        XCTAssertTrue(files(d).contains(StoreRecovery.quarantineName))
+    }
+    func testANewInstallationNeedsNoSafetyCopy() throws {
+        let d = tmp("fresh-policy"); try blockPreviousCopy(d)             // even with the copy blocked there is nothing to protect yet
+        let s = Store(directory: d)
+        XCTAssertEqual(s.storage, .ok); XCTAssertNil(s.storageNotice)
+        s.onboarded = true
+        XCTAssertTrue(s.addStrength(StrengthSession(date: Date(), minutes: 20, focus: .fullBody)), "the first saves of a new athlete do not need a copy")
+        XCTAssertNil(s.storageNotice)
+    }
     func testDeleteAllDataRemovesTheSafetyCopiesToo() throws {
         let (_, d) = healthy("delete")
         var o = try json(d); var arr = (o["strength"] as? [Any]) ?? []; arr.append(["id": "bad"] as [String: Any]); o["strength"] = arr
         try JSONSerialization.data(withJSONObject: o).write(to: d.appendingPathComponent("store.json"))
         let s = Store(directory: d); s.settings.keepScreenOn.toggle()
         XCTAssertTrue(files(d).contains(StoreRecovery.quarantineName)); XCTAssertTrue(files(d).contains(StoreRecovery.previousName))
+        try Data("{}".utf8).write(to: d.appendingPathComponent("store.schema-3.json"))   // as left by an earlier migration
         s.resetAll()
         XCTAssertEqual(files(d).filter { $0 != "store.json" }, [], "nothing with the athlete's data is left beside the new empty store: \(files(d))")
         XCTAssertFalse(Store(directory: d, generatePlan: false).onboarded)

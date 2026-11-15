@@ -20,6 +20,10 @@ struct StorageRecoveryView: View {
                 Text(store.storageNotice ?? store.storage.explanation).font(.body)
                 Text(detail).font(.callout).foregroundStyle(.secondary)
                 if let failed { Text(failed).font(.callout).foregroundStyle(.red) }
+                if store.storage == .cannotSecureCopy {
+                    Button { if !store.retryOpeningStore() { failed = "A safety copy still could not be kept. Nothing was changed. Free some storage, then close Cyclift and open it again." } } label: { Text("Try again").frame(maxWidth: .infinity) }
+                        .buttonStyle(.borderedProminent).accessibilityIdentifier("storageRetryCopy")
+                }
                 if store.storage == .unreadable {
                     Button { if !store.retryOpeningStore() { failed = "Still not readable. Nothing was changed." } } label: { Text("Try again").frame(maxWidth: .infinity) }
                         .buttonStyle(.bordered).accessibilityIdentifier("storageRetry")
@@ -51,7 +55,7 @@ struct StorageRecoveryView: View {
     private var detail: String {
         switch store.storage {
         case .newerVersion: return "Install the newer version of Cyclift again. Until then this version shows nothing and saves nothing, so your data stays exactly as it is."
-        case .cannotSetAside: return "Free some storage on this iPhone and open Cyclift again."
+        case .cannotSetAside, .cannotSecureCopy: return "Free some storage on this iPhone and open Cyclift again."
         default: return "This can happen after an interrupted save or when storage is full. Cyclift has not replaced the file."
         }
     }
