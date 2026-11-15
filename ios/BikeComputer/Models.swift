@@ -1000,7 +1000,9 @@ final class Store: ObservableObject {
         guard storage.isWritable else { return }
         if !setAside.isEmpty { persist() }       // records the notice; the previous copy (with the bad records) is taken first
         purgeTrash()
-        w12CleanupIfNeeded()        // one-time, logged, recoverable (see above); a no-op once it has run
+        // E1: the one-time clean-up changes the trash, the plan and the log. Those three changes now reach storage as ONE
+        // atomic write (before: up to three writes, resumable but partial on disk in between). Same result, never partial.
+        transaction { w12CleanupIfNeeded() }        // one-time, logged, recoverable (see above); a no-op once it has run
         if generatePlan { ensurePlan(); refreshRideSafety() }
         // schema-2 upgrade: coach-generated future sessions are rebuilt by the personalised planner (never edited ones)
         if migrated { refreshGeneratedSessions(); persist() }

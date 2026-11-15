@@ -170,6 +170,79 @@ final class E1DataIntegrityTests: XCTestCase {
         let app = Store(directory: d)                                    // launched the way the app launches, same day
         XCTAssertEqual(app.persistCount, 0, "a normal launch with a plan already in place writes nothing either")
     }
+    /// The one-time clean-up when it really has something to do (owner's seven checks, 15 Nov). An athlete whose plan was
+    /// approved on a Wednesday has generated sessions on Monday and Tuesday. Only an untouched generated placeholder may
+    /// be moved to the trash; every session with an athlete action or a record stays. The whole change is one write.
+    func testTheOneTimeCleanUpMovesOnlyUntouchedPlaceholdersInOneWriteAndKeepsEverythingElse() throws {
+        let cal = Calendar.current
+        let d = tmp("w12-real"); let s = Store(directory: d, generatePlan: false)
+        s.profile.name = "E1 W12"
+        let start = cal.startOfDay(for: Date())                                    // the plan was approved today
+        func at(_ back: Int, _ hour: Double) -> Date { start.addingTimeInterval(Double(-back) * 86_400 + hour * 3600) }
+        let placeholderA = Workout(date: at(6, 7), kind: .endurance, minutes: 60)   // untouched, generated → eligible
+        let placeholderB = Workout(date: at(6, 18), kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        var completed = Workout(date: at(5, 7), kind: .endurance, minutes: 45); completed.done = true; completed.completion = .marked
+        var edited = Workout(date: at(4, 7), kind: .tempo, minutes: 50); edited.edited = true
+        var skipped = Workout(date: at(3, 7), kind: .endurance, minutes: 60); skipped.skipped = true
+        let linked = Workout(date: at(2, 18), kind: .strength, minutes: 40, strengthFocus: .upper)   // has a strength log
+        let rideDay = Workout(date: at(1, 7), kind: .endurance, minutes: 60)                           // a ride was recorded that day
+        let future = Workout(date: at(-1, 7), kind: .endurance, minutes: 60)
+        let todayW = Workout(date: at(0, 18), kind: .strength, minutes: 40, strengthFocus: .fullBody)
+        s.plan = [placeholderA, placeholderB, completed, edited, skipped, linked, rideDay, todayW, future]
+        s.strength = [StrengthSession(date: at(2, 18), minutes: 38, focus: .upper, workoutId: linked.id)]
+        XCTAssertTrue(s.importHealthRide(start: at(1, 8), durationS: 3000, distanceM: 21_000, activeKcal: nil, avgHR: nil, healthUUID: "E1-IMPORTED-RIDE"))
+        s.planVersions = [PlanVersion(createdAt: Date(), effectiveDate: start, cause: .profile, before: [], after: [todayW, future], inputsBefore: nil, summary: ["Plan approved in onboarding"], proposalId: nil)]
+        s.onboarded = true
+        let url = d.appendingPathComponent("store.json")
+        let beforeData = try Data(contentsOf: url); let before = try json(d)
+        let eligible: Set<String> = [placeholderA.id.uuidString, placeholderB.id.uuidString]
+        let protected: Set<String> = Set([completed, edited, skipped, linked, rideDay, todayW, future].map { $0.id.uuidString })
+
+        let launched = Store(directory: d, generatePlan: false)                    // the clean-up runs here, once
+        XCTAssertEqual(launched.persistCount, 1, "the whole clean-up is ONE write")
+        let after = try json(d)
+        func ids(_ o: [String: Any], _ key: String) -> [String] { ((o[key] as? [[String: Any]]) ?? []).compactMap { $0["id"] as? String } }
+        func byId(_ o: [String: Any]) -> [String: Any] { Dictionary(uniqueKeysWithValues: ((o["plan"] as? [[String: Any]]) ?? []).compactMap { w in (w["id"] as? String).map { ($0, w as Any) } }) }
+        XCTAssertEqual(Set(ids(before, "plan")).subtracting(ids(after, "plan")), eligible, "exactly the two untouched placeholders left the plan")
+        XCTAssertTrue(protected.isSubset(of: Set(ids(after, "plan"))), "completed, edited, skipped, linked, ride-day, today's and future sessions all stay")
+        var diff: [String] = []
+        for id in protected { differences(byId(before)[id]!, byId(after)[id]!, "plan[\(id.prefix(8))]", &diff) }
+        XCTAssertTrue(diff.isEmpty, "a kept session was altered:\n" + diff.joined(separator: "\n"))
+        let trashed = ((after["trash"] as? [[String: Any]]) ?? []).compactMap { ($0["workout"] as? [String: Any])?["id"] as? String }
+        XCTAssertEqual(Set(trashed), eligible, "the removed sessions are kept in the trash, not deleted")
+        XCTAssertEqual(launched.restoreW12Cleanup(), 2, "and can be put back")
+        XCTAssertEqual(((after["migrationLog"] as? [String]) ?? []).count, ((before["migrationLog"] as? [String]) ?? []).count + 1, "one log line")
+        var rest: [String] = []
+        var b = before, a = after; for k in ["plan", "trash", "migrationLog"] { b[k] = nil; a[k] = nil }
+        differences(b, a, "store", &rest)
+        XCTAssertTrue(rest.isEmpty, "the clean-up changed something outside plan, trash and its log line:\n" + rest.joined(separator: "\n"))
+        XCTAssertEqual(launched.rides.count, 1); XCTAssertEqual(launched.strength.count, 1)
+        XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent(StoreRecovery.previousName)), beforeData, "the complete original is kept before the write")
+        // idempotent across launches
+        let fresh = Store(directory: d, generatePlan: false)                       // (launched.restore above wrote; reload that state)
+        XCTAssertNil(fresh.w12CleanupIfNeeded(), "the clean-up never runs a second time")
+        XCTAssertEqual(Store(directory: d, generatePlan: false).persistCount, 0, "and later launches write nothing")
+    }
+    /// A clean-up whose write fails changes nothing on disk, and the next launch does the whole thing.
+    func testACleanUpThatCannotBeWrittenLeavesTheStoreExactlyAsItWas() throws {
+        let cal = Calendar.current
+        let d = tmp("w12-fail"); let s = Store(directory: d, generatePlan: false)
+        let start = cal.startOfDay(for: Date())
+        let old = Workout(date: start.addingTimeInterval(-3 * 86_400 + 7 * 3600), kind: .endurance, minutes: 60)
+        let now = Workout(date: start.addingTimeInterval(18 * 3600), kind: .endurance, minutes: 60)
+        s.plan = [old, now]
+        s.planVersions = [PlanVersion(createdAt: Date(), effectiveDate: start, cause: .profile, before: [], after: [now], inputsBefore: nil, summary: ["Plan approved in onboarding"], proposalId: nil)]
+        s.onboarded = true
+        let url = d.appendingPathComponent("store.json"); let before = try Data(contentsOf: url)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: d.path)
+        let blocked = Store(directory: d, generatePlan: false)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: d.path)
+        if try Data(contentsOf: url) != before { throw XCTSkip("this environment let the write through despite read-only permissions (for example when running as root)") }
+        XCTAssertNotNil(blocked.lastSaveError, "the failed write is reported")
+        XCTAssertEqual(try Data(contentsOf: url), before, "nothing on disk changed — not the trash, not the plan, not the log")
+        let next = Store(directory: d, generatePlan: false)
+        XCTAssertEqual(next.persistCount, 1); XCTAssertEqual(next.plan.map(\.id), [now.id]); XCTAssertEqual(next.w12TrashItems.count, 1)
+    }
     func testPlanThatIsNotAListIsAnUnreadableStoreNotAnEmptyPlan() throws {
         let (_, d) = healthy("notalist"); var o = try json(d); o["plan"] = "corrupted"
         try JSONSerialization.data(withJSONObject: o).write(to: d.appendingPathComponent("store.json"))
