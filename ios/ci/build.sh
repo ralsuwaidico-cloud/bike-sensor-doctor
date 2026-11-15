@@ -52,6 +52,11 @@ digest() {
     grep -E "error:|ERROR|FAILED|failed|Failing tests|Test Case .* (passed|failed)|Executed [0-9]+ test|\*\* .* (SUCCEEDED|FAILED) \*\*|Provisioning|provisioning|Signing|signing|No profiles|certificate" "$log" | head -400
     echo "=== $name: last 150 lines ==="
     tail -150 "$log"
+    # E0 diagnostic branch only (15 Nov 2026): the complete, uncapped per-test record and the diagnostic tests' own lines.
+    echo "=== $name: every test case, uncapped (E0) ==="
+    grep -E "Test Case .* (passed|failed|skipped)" "$log" | sort -u
+    echo "=== $name: E0-DIAG lines ==="
+    grep -E "E0-DIAG" "$log" | sort -u
   } | scrub > "$LOGS/$name.txt"
 }
 
