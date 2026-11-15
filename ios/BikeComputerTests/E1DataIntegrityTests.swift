@@ -144,6 +144,32 @@ final class E1DataIntegrityTests: XCTestCase {
         XCTAssertEqual(s.persistCount, 0); XCTAssertNil(s.storageNotice)
         XCTAssertFalse(files(d).contains(StoreRecovery.quarantineName), "\(files(d))")
     }
+    /// What exactly does the one-time first-launch write change? (Owner question, 15 Nov.) It is NOT a separate log file:
+    /// the baseline's one-time clean-up (Models.w12CleanupIfNeeded) appends its "done" line to `migrationLog`, which lives
+    /// inside store.json, so the primary store is rewritten once through the normal atomic save. This test proves, value
+    /// by value, that for a store with no verified plan start the ONLY difference is that one added line, that the file
+    /// as it was is kept as the previous copy, and that no later launch writes again.
+    func testTheOneTimeFirstLaunchWriteAddsOneLogLineAndChangesNothingElse() throws {
+        let (_, d) = healthy("w12"); let url = d.appendingPathComponent("store.json")
+        let beforeData = try Data(contentsOf: url); var before = try json(d)
+        let first = Store(directory: d, generatePlan: false)
+        var after = try json(d)
+        let logBefore = (before["migrationLog"] as? [String]) ?? [], logAfter = (after["migrationLog"] as? [String]) ?? []
+        print("E1-W12 first relaunch: file writes=\(first.persistCount) · log lines \(logBefore.count) → \(logAfter.count) · added=\(logAfter.filter { !logBefore.contains($0) })")
+        XCTAssertLessThanOrEqual(first.persistCount, 1)
+        XCTAssertEqual(logAfter.filter { !logBefore.contains($0) }.count, first.persistCount, "one write = one added log line, nothing else")
+        XCTAssertTrue(logAfter.filter { !logBefore.contains($0) }.allSatisfy { $0.hasPrefix(Store.w12CleanupTag) })
+        before["migrationLog"] = nil; after["migrationLog"] = nil
+        var diff: [String] = []; differences(before, after, "store", &diff)
+        XCTAssertTrue(diff.isEmpty, "the one-time write changed something besides its log line:\n" + diff.joined(separator: "\n"))
+        XCTAssertEqual(Set(after.keys), Set(before.keys), "no field added or removed")
+        if first.persistCount > 0 { XCTAssertEqual(try Data(contentsOf: d.appendingPathComponent(StoreRecovery.previousName)), beforeData, "the file as it was is kept before the write") }
+        let stable = try Data(contentsOf: url)
+        for _ in 0..<3 { let again = Store(directory: d, generatePlan: false); XCTAssertEqual(again.persistCount, 0, "no write on any later launch") }
+        XCTAssertEqual(try Data(contentsOf: url), stable, "three more launches left the file byte for byte unchanged")
+        let app = Store(directory: d)                                    // launched the way the app launches, same day
+        XCTAssertEqual(app.persistCount, 0, "a normal launch with a plan already in place writes nothing either")
+    }
     func testPlanThatIsNotAListIsAnUnreadableStoreNotAnEmptyPlan() throws {
         let (_, d) = healthy("notalist"); var o = try json(d); o["plan"] = "corrupted"
         try JSONSerialization.data(withJSONObject: o).write(to: d.appendingPathComponent("store.json"))
