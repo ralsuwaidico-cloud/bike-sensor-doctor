@@ -392,6 +392,20 @@ final class E1DataIntegrityTests: XCTestCase {
         default: out.append("\(path): type changed (\(type(of: old)) → \(type(of: new)))")
         }
     }
+    /// The comparison itself: strict about order everywhere except the three stored sets.
+    func testTheFieldComparisonIsStrictForOrderedListsAndLenientOnlyForTheThreeSets() throws {
+        func doc(plan: String = "[[1,30],[2,45]]", tiles: String = "[\"power\",\"hr\"]", conn: String = "[\"board\",\"watch\"]", owned: String = "[\"dumbbell\",\"bench\"]", sets: String = "[10,8]") throws -> [String: Any] {
+            let text = "{\"plan\":\(plan),\"tiles\":\(tiles),\"settings\":{\"enabledConnections\":\(conn)},\"equipment\":{\"owned\":\(owned),\"excluded\":[\"ex-1\",\"ex-2\"]},\"strength\":[{\"sets\":\(sets)}]}"
+            return try XCTUnwrap(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+        }
+        func diff(_ b: [String: Any]) throws -> [String] { var out: [String] = []; differences(try doc(), b, "s", &out); return out }
+        XCTAssertTrue(try diff(doc(conn: "[\"watch\",\"board\"]", owned: "[\"bench\",\"dumbbell\"]")).isEmpty, "the same sets in another order are equal")
+        XCTAssertFalse(try diff(doc(plan: "[[2,45],[1,30]]")).isEmpty, "reordered planned sessions are a difference")
+        XCTAssertFalse(try diff(doc(tiles: "[\"hr\",\"power\"]")).isEmpty, "reordered ride tiles are a difference")
+        XCTAssertFalse(try diff(doc(sets: "[8,10]")).isEmpty, "reordered logged sets are a difference")
+        XCTAssertFalse(try diff(doc(conn: "[\"board\"]")).isEmpty, "a lost member of a set is a difference")
+        XCTAssertEqual(try diff(doc(plan: "[[1,31],[2,45]]")).count, 1, "one changed value, one line")
+    }
     func testEveryFieldBuild216WroteSurvivesLoadAndSave() throws {
         guard let root = ProcessInfo.processInfo.environment["FIXTURES_216"] else { throw XCTSkip("FIXTURES_216 is not set: this run has no build-216 fixtures") }
         for name in ["empty", "strength", "cycling", "hybrid", "noequipment", "large"] {
