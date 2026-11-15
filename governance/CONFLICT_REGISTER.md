@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 2.1 · 15 Nov 2026
+Status: Current Draft · Version 2.2 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -106,3 +106,16 @@ Recorded, not decided. Source: `audit/independent-2026-11-15/INDEPENDENT_AUDIT_R
 - Tracker rev 3 (209 functions) replaces rev 2 (190): "implemented and verified" falls from 38 to 9; supersets reclassified as existing-partial; Coach timeline (HOM-03.2, COA-07.2) reclassified as proposed.
 - The build-216 release record understated its own run's failures (Plan edit and Delete-all-data flows failed in run 42786480539).
 - Open for the owner: decisions F1–F10 in the audit report. Nothing is implemented.
+
+## 83 — Coach architecture audit (15 Nov 2026): contradictions recorded, none decided
+
+Source: `product/coach/architecture-v1/COACH_ARCHITECTURE_AND_AUDIT.md`. Nothing here is approved.
+
+- Standing direction "increases require approval" versus the build: two paths apply increases without approval (adaptive coach with auto-adapt on by default; strength planner on every rebuild). Turning auto-adapt off also discards protective reductions.
+- "Protective reductions automatic only under the approved rules": no approved rule list exists (item 34 remains open).
+- "No pre-filled ratings" (owner, Training Hub v1.3) versus the check-in form, which opens at performance 7 / effort 6 and feeds progression.
+- Approved Coach timeline direction versus the data model: past Coach decisions are not stored.
+- Approved roster (onboarding v3.4) versus the engines: selected sports are read by no engine; no main sport exists.
+- Project wording "AI Coach" versus the build: rules only, and the app says so. No AI provider is proposed.
+- Power is never marked verified in this build, so power-based Coach rules cannot run.
+- Open for the owner: the six decisions at the end of the architecture document.

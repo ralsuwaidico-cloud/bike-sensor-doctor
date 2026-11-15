@@ -1,0 +1,19 @@
+flowchart LR
+  A[Engine wants to change something] --> B{Training allowed?<br/>health check · pause}
+  B -- no --> X1[Blocked · nothing planned<br/>reason shown]
+  B -- yes --> C{Enough evidence?<br/>rated sessions · known effort}
+  C -- no --> X2[Blocked by insufficient evidence<br/>plan kept · the app asks for a rating]
+  C -- yes --> D{Does it make training<br/>harder, longer or more frequent?}
+  D -- yes --> P[Recommendation<br/>requires approval]
+  D -- no --> E{Is it a bounded protective change<br/>on a session the athlete has not fixed or edited?}
+  E -- yes --> AU[Automatic protective action<br/>applied · explained · listed · Undo]
+  E -- no --> P
+  P --> Q{Athlete}
+  Q -- approve --> AP[Applied · new plan version · Undo]
+  Q -- reject --> RJ[Recorded · not offered again<br/>for that session and reason]
+  Q -- no answer --> KP[Plan stays as it is]
+  AU --> LOG[(Decision log)]
+  AP --> LOG
+  RJ --> LOG
+  X1 --> LOG
+  X2 --> LOG

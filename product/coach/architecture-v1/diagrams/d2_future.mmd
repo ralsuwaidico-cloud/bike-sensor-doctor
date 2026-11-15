@@ -1,0 +1,33 @@
+flowchart LR
+  subgraph SRC[Sources · each value carries its origin and age]
+    S1[Onboarding + Profile<br/>self-reported]
+    S2[Logs and check-ins<br/>entered by the athlete]
+    S3[Recorders and sensors<br/>measured]
+    S4[Apple Health<br/>measured elsewhere]
+  end
+  AM[Athlete model<br/>one owner per field<br/>self-reported · measured · estimated · missing]
+  EV[Evidence ledger<br/>sessions · ratings · pain · readings<br/>append-only]
+  subgraph CORE[Coach core · deterministic]
+    AN[Analysis<br/>load · trends · adherence · pain · breaks]
+    PL[Planner<br/>week · strength session · ride session]
+    DE[Decision engine<br/>classifies every action]
+    VA[Validator<br/>safety · time · equipment · split]
+  end
+  DL[(Decision log<br/>observation · recommendation ·<br/>athlete decision · plan change)]
+  PV[(Plan + plan versions)]
+  EX[Explanation layer<br/>templates today · optional AI wording later<br/>cannot change a decision]
+  UI[Home · Plan · Train · Progress · Profile · Coach page]
+  S1 --> AM
+  S2 & S3 & S4 --> EV
+  AM --> AN & PL
+  EV --> AN
+  AN --> DE
+  PL --> DE
+  DE --> VA
+  VA -->|protective change · applied, listed, undoable| PV
+  VA -->|increase or structural change · waits for approval| DL
+  DE --> DL
+  DL -->|approved| PV
+  DL --> EX --> UI
+  PV --> UI
+  UI -->|approve · reject · undo · edit| DL

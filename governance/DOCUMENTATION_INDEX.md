@@ -1,6 +1,6 @@
 # Documentation index — which file governs each subject
 
-Status: Current Draft · Version 2.3 · 15 Nov 2026
+Status: Current Draft · Version 2.4 · 15 Nov 2026
 
 Statuses: **Current Approved** · **Current Draft** · **Historical** · **Superseded** · **Pending Review**.
 Statuses below are recorded **here only** — no existing file was edited to add them. Only the owner assigns
@@ -30,6 +30,7 @@ project (reference copies and documents not yet in GitHub).
 | **Plan** — design | `product/plan/PLAN_V2_SPECIFICATION.md` v0.6 (+ `product/plan/wireframes/`, `product/plan/visual-v04/`, `product/plan/visual-v05-B/`) | gov | Current Draft |
 | **Coach** — automatic adjustments audit and correction plan | `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` | gov | Current Draft (plan only) |
 | **Coach** — automatic adaptation correction proposal (two code paths; protective reductions) | `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md` v0.1 | gov | Pending Review (proposal only) |
+| **Coach** — complete architecture and independent audit (seven engines as built; rules and thresholds; future architecture; 76-function registry; eight journeys; findings F-01…F-18; roadmap) | `product/coach/architecture-v1/` | gov | Architecture proposal — Pending Owner Review · nothing approved · no implementation |
 | **Plan** — UI Lab implementation scope | `product/plan/PLAN_UI_LAB_SCOPE.md` v0.4 | gov | Pending Review (not started) |
 | **Progress v2.0** — Phase 0 audit of current Progress | `product/progress/PROGRESS_V2_PHASE0_AUDIT.md` v0.1 | gov | Current Draft (read-only audit) |
 | **Progress v2.0** — competitor research and Athlete Evolution framework | `product/progress/PROGRESS_V2_RESEARCH_AND_FRAMEWORK.md` v0.1 | gov | Current Draft (proposal; no thresholds, nothing calculated) |

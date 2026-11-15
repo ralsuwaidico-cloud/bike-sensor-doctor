@@ -1,0 +1,37 @@
+flowchart TB
+  ONB[Onboarding<br/>writes Profile once, owns nothing afterwards]
+  subgraph PROFILE[Profile owns]
+    direction TB
+    P1[Sports · main sport · level]
+    P2[Goals · priority]
+    P3[Availability · session lengths]
+    P4[Equipment · restrictions]
+    P5[FTP and source · zones · health check · pause]
+  end
+  subgraph TRAIN[Train owns]
+    direction TB
+    T1[Recorded sessions]
+    T2[Check-in ratings · pain]
+  end
+  subgraph COACH[Coach owns]
+    direction TB
+    C1[Analysis results]
+    C2[Pending recommendations]
+    C3[Decision log]
+  end
+  subgraph PLANO[Plan owns]
+    direction TB
+    L1[Scheduled sessions]
+    L2[Plan versions]
+  end
+  HOME[Home · shows, owns nothing]
+  PROG[Progress · shows, owns nothing]
+  ONB --> PROFILE
+  PROFILE -->|facts| COACH
+  TRAIN -->|evidence| COACH
+  PROFILE -->|change → preview → approve| PLANO
+  COACH -->|protective change,<br/>or approved recommendation| PLANO
+  PLANO --> HOME
+  PLANO --> PROG
+  COACH --> HOME
+  TRAIN --> PROG
