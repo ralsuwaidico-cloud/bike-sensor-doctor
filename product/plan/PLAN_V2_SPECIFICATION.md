@@ -1,5 +1,7 @@
 # Plan v2.0 — product and UX specification
 
+> **Correction, 15 Nov 2026 — Coach progression wording.** By owner decision (`decisions/2026-11-15_coach-progression-one-rule-and-onboarding-wording.md`) the statement that *all* increases need approval is replaced: small load and repetition increases may be automatic only when the policy engine authorizes them; increases in sets, intervals, ride duration or other load need athlete approval. Passages below that say otherwise are superseded on this point and are marked where they occur. Nothing else in this document is changed.
+
 Status: **Current Draft** · Version 0.6 · 12 Nov 2026 · Level 3 (product specification)
 Source: `docs/cyclift-governance`, `product/plan/PLAN_V2_SPECIFICATION.md`
 Basis: owner brief "Plan Tab Redesign v2.0", the owner's reviews of v0.1 and v0.2 (all 12 Nov), Master Project
@@ -30,7 +32,7 @@ Companion documents (v0.3): `product/metrics/PLAN_ADHERENCE_METRICS_PROPOSAL.md`
 | 7 | "Swap two days" is replaced by Move to any day, with feasibility checks, preview, approval, history and Undo | §6.6 |
 | 8 | Event programs launch with cycling first; strength may be maintained as a supporting discipline; running and swimming events stay Future | §8, §13 |
 | 9 | Ask Coach uses prepared, context-specific options until two-way messaging exists | §11 |
-| 10 | Automatic increases in load, volume or frequency require approval; existing behaviour audited, correction planned, no code changed | §11, `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` |
+| 10 | ~~Automatic increases in load, volume or frequency require approval~~ **Refined 15 Nov: small load and repetition increases may be automatic only when the policy engine authorizes them; volume (sets, intervals, duration) and frequency require approval**; existing behaviour audited, correction planned, no code changed | §11, `product/coach/AUTOADAPT_AUDIT_AND_CORRECTION_PLAN.md` |
 | G | Past-session Quick log moves to Train; no functionality is removed | §9, §14 |
 
 ## Decisions recorded from the owner's review of B1 and B2 (12 Nov)
@@ -78,7 +80,7 @@ static alternatives are in `visual-v04/`. **Awaiting the owner's visual approval
 | R3 | Soft training conflicts warn, explain and can be overridden. Only hard technical or data-integrity constraints block. Unvalidated physiological rules are never presented as absolute restrictions | §6.6 |
 | R4 | A session can be rescheduled to any future date within the active training program. No two-week limit | §6.6 |
 | R5 | Skip and Remove both stay. Skip is a record of intentional non-completion. Remove deletes an uncompleted future occurrence, with Undo. Audit history and completed records are always kept | §6.4, §6.8, §12 |
-| R6 | Increases that were already applied are not reversed. Future increases need approval. Automatic protective reductions are audited separately, distinguishing advice from changes to scheduled workouts | §11, auto-adaptation correction proposal |
+| R6 | Increases that were already applied are not reversed. ~~Future increases need approval.~~ **Refined 15 Nov: future increases need approval, except small load and repetition steps that the policy engine authorizes.** Automatic protective reductions are audited separately, distinguishing advice from changes to scheduled workouts | §11, auto-adaptation correction proposal |
 | R7 | The UI Lab prototype is conditionally authorised: it may start only after this version and its open questions are reviewed. Nothing was started | §16, UI Lab scope |
 
 ---
@@ -502,7 +504,7 @@ Sequence: **Observe → Explain → Recommend → Preview → Request approval.*
   time · a week over budget · strength sessions too close together · hard sessions on adjacent days · a missed session
   with a feasible later slot · a shorter alternative of the same intent. With recovery data absent, recommendations
   are schedule-based only and no recovery reason is invented.
-- **Increases need approval.** Today the app applies small progressions automatically by default, through two
+- **Increases need approval, except small policy-authorized load and repetition steps (refined 15 Nov).** Today the app applies small progressions automatically by default, through two
   separate code paths. The correction is proposed in `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md`; nothing was
   changed. Increases that were already applied are **not reversed** (decision R6).
 - **Protective reductions are audited separately** in the same proposal, which lists each one and states whether it

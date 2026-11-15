@@ -1,5 +1,8 @@
 # Cyclift — E0 Diagnostic Evidence Report
 
+> **Correction, 15 Nov 2026 (after first issue).** This report said that nine diagnostic tests failed in run 223. That was a counting error of mine. **Run 223 contained 12 new diagnostic tests: eight failed and four passed** (12 failed assertions inside those eight tests; 671 tests executed, 663 passed, 0 skipped). Run 224, an accidental duplicate of the same commit, gave the identical result. The two wrong passages are struck through below, not removed. No finding changes.
+
+
 **15 Nov 2026 · E0 only. No product code was changed, no existing test was changed, nothing was uploaded, no athlete data was touched. E1 is not started and not authorized.**
 
 Evidence classes: **[REPRODUCED]** a diagnostic test run in CI today showed it · **[BASELINE]** the unchanged existing tests showed it today · **[RECORDED]** an earlier recorded run shows it · **[SOURCE]** read in source only · **[HYPOTHESIS]** · **[UNRESOLVED]**. Everything ran on CI simulators; **nothing here is physical-device evidence.**
@@ -23,7 +26,7 @@ All runs used the repository's own workflow (`ios.yml`, scope full, upload off) 
 |---|---|---|---|---|
 | iOS 222 | 43712242641 | e0-diagnostic / 4e2e9dc | **Unchanged baseline** | Unit passed; flows failed (1 test); release refused to archive; nothing uploaded |
 | Logic 72 | 43712244487 | same | Linux engine tests | 386 tests, 0 failures |
-| iOS 223 | 43718826051 | e0-repro / c2cecde2 | **Reproductions** + second sample of every existing test | Unit: 671 executed, 9 diagnostic tests failed as designed; flows failed (same 1 test); nothing uploaded |
+| iOS 223 | 43718826051 | e0-repro / c2cecde2 | **Reproductions** + second sample of every existing test | Unit: 671 executed, ~~9 diagnostic tests failed as designed~~ **8 of the 12 new diagnostic tests failed and 4 passed (corrected 15 Nov, see note at top)**; flows failed (same 1 test); nothing uploaded |
 | Logic 73 | 43718826039 | same | Linux engine tests | Started with 223; result not read |
 | iOS 224 | 43718835472 | e0-repro / c2cecde2 | Duplicate I started by mistake | Queued when this was written |
 
@@ -147,7 +150,7 @@ Coach changes (review defaults, approval gating) depend on the decisions in the 
 
 ## 10. Proposed acceptance and regression tests
 
-- The nine diagnostics that failed today become E1's acceptance tests and must pass **unmodified**; the three that passed stay as regressions.
+- The ~~nine~~ **eight** diagnostics that failed today become E1's acceptance tests and must pass **unmodified**; the ~~three~~ **four** that passed stay as regressions.
 - The existing Plan-edit flow test must pass unmodified.
 - New: interrupted-write test; record-by-record decode per list with valid neighbours in all twelve lists; a store written by build 216 itself opens identically (needs the fixture); layout job fails when zero screenshots are produced; delete-all-data repeated 20 times with crash-log capture.
 - Device checklist (not simulator): storage full; phone locked during a save; termination during a strength session and during a ride.

@@ -1,6 +1,6 @@
 # Conflict register
 
-Status: Current Draft · Version 2.4 · 15 Nov 2026
+Status: Current Draft · Version 2.5 · 15 Nov 2026
 Each entry: the original conflict, the decision, the rationale and the resolution status.
 "Decided" means the owner has ruled; "Applied in docs" means the new documents follow the ruling. No application code,
 firmware or existing document was changed to apply a ruling.
@@ -145,3 +145,28 @@ Source: `audit/e0-2026-11-15/E0_EVIDENCE_REPORT.md`. Runs 222 (baseline, commit 
 - Reproduced: one bad record in plan or rides empties the whole store; in strength or templates it empties that list; a failed write reports success; an older build lowers a newer store's schema number.
 - Unresolved: why the planner skips bodyweight hip exercises; memory-versus-disk difference after a round trip; the Delete-all-data failure of run 216 (insufficient evidence — not classified as fixed).
 - Open for the owner: the five approval requests at the end of the report. E1 is not authorized.
+
+## 86 — Coach progression rule and onboarding wording (owner, 15 Nov 2026) — decided
+
+- Conflict: onboarding v3.1–v3.3 page 5 and Plan v2.0 said all increases need approval; the Coach direction (item 84) allows small load and repetition steps; build 216 applies sets, intervals and ride minutes automatically with no policy engine.
+- Decision: one rule everywhere — small load and repetition increases automatic only when the policy engine authorizes them; sets, intervals, ride duration and other load need approval. Record: `decisions/2026-11-15_coach-progression-one-rule-and-onboarding-wording.md`.
+- Applied in docs: correction notes in onboarding v3.3 (two files) and Plan v2.0; tracker acceptance criteria; journey sheet C1. Items 26, 32, 69 and 83 are refined by this item. Not implemented.
+- Planned, not authorized: interim hold in E1 (E1-PR11) so that no increase is applied without approval until the policy engine exists.
+
+## 87 — E0 closeout (run 225) and corrections
+
+- Corrected: the E0 report's "nine diagnostics failed" — run 223 had 12 new diagnostics, eight failed, four passed (visible correction in the report).
+- Resolved by run 225: planner cause (difficulty rating of the two bodyweight hip exercises against the beginner limit; the time-fit hypothesis is refuted); memory-versus-disk difference (sub-second timestamp rounding and note order; no data lost); ride gap samples (stall reproduced); layout tests execute again on the diagnostic branch.
+- Still unresolved: the Delete-all-data failure of run 216 (20 of 20 passed in run 225; cause unknown); upgrade from a store written by build 216; everything on a physical device.
+- New: one save writes the file six times; largest-text truncation on a small iPhone that the automated layout checks do not detect.
+- Disclosure: run 225 changed CI files on its own branch under Claude's reading of the E0 authorization; no further run without instruction.
+
+## 88 — Themes and Arabic (owner, 15 Nov 2026) — requirement preserved
+
+- Six themes and Arabic stay in the target architecture. Source today: one light and one dark palette, about 820 literal strings, no string catalogue, no Arabic.
+- Open for the owner: Train control side in right-to-left layout (D-L2); theme token values (D-L3).
+
+## 89 — Release sequence (owner, 15 Nov 2026) — accepted in principle
+
+- About five integration checkpoints; E1 engineering-integrity build, then UX releases 1–3 as planning groups. Supersedes the "E1/E2, U1–U4" grouping of consolidation rev 2 and the "S1/P1" wording of the first draft of this package. Implementation not authorized.
+

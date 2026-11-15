@@ -1,5 +1,7 @@
 # Cyclift — Onboarding v3.3 — experience refinement
 
+> **Correction, 15 Nov 2026 — Coach progression wording.** By owner decision (`decisions/2026-11-15_coach-progression-one-rule-and-onboarding-wording.md`) the statement that *all* increases need approval is replaced: small load and repetition increases may be automatic only when the policy engine authorizes them; increases in sets, intervals, ride duration or other load need athlete approval. Passages below that say otherwise are superseded on this point and are marked where they occur. Nothing else in this document is changed.
+
 **Version:** 0.1 · 15 Nov 2026 · **Status:** Recommended design direction — **Pending Owner Visual Approval**. **Implementation NOT AUTHORIZED.** Static drawings only: nothing implemented, compiled, run or tested; no prototype. **ILLUSTRATIVE DESIGN — NOT IMPLEMENTED.**
 
 **Owner direction recorded (15 Nov):** v3.2 is a better functional foundation than v3.1; its visual experience is **not approved**. Keep the v3.2 functional improvements; reconsider the visual and interaction design. v3.2 and earlier documents are kept unchanged.
@@ -66,7 +68,7 @@ Empty (pages 1, 2, 3) · selected · changed (main sport, main goal, priority, m
 Unchanged from v3.2: questions asked, validation rules, warnings, the Coach preference, the approval gate.
 
 ## 6. Not verified, not decided
-1. **Coach auto-adjustment (register 26 / 69).** Page 5 says increases always need approval; build 216 applies small progressions automatically by default. The page is untrue until the correction is implemented.
+1. **Coach auto-adjustment (register 26 / 69).** ~~Page 5 says increases always need approval~~ **Corrected 15 Nov: page 5 now says "Your Coach can make small adjustments to reps and load when approved safety rules allow it. Other increases are presented for your approval. You can review why your plan changed."**; build 216 applies small progressions — including sets, intervals and ride minutes — automatically by default, with no policy engine. The page may ship only together with the policy engine.
 2. **Stage rules (register 74)** are not approved. Stage names shown follow Progress framework set 1 (Origin … Mastery); confirm they are the approved names.
 3. **New stored fields (additive, none exist today):** main-sport flag; sport modality per planned session; optional recovery reminder on a rest day; identifiers for activities not yet in the list. The planner today knows only "cycling" and "strength".
 4. **Per-day lengths:** storage holds minutes per day; planner behaviour with unequal lengths has not been run.

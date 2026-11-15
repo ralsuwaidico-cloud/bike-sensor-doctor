@@ -1,5 +1,7 @@
 # Onboarding v3.3 — integration contracts
 
+> **Correction, 15 Nov 2026 — Coach progression wording.** By owner decision (`decisions/2026-11-15_coach-progression-one-rule-and-onboarding-wording.md`) the statement that *all* increases need approval is replaced: small load and repetition increases may be automatic only when the policy engine authorizes them; increases in sets, intervals, ride duration or other load need athlete approval. Passages below that say otherwise are superseded on this point and are marked where they occur. Nothing else in this document is changed.
+
 **Version:** 0.1 · 15 Nov 2026 · **Status:** Current Draft — proposal for review. Nothing implemented; no storage, schema or production behaviour changed; **no migration attempted or tested.** "Today" = as read in build 216 source, not run.
 
 ## 1. Onboarding → Profile
@@ -45,7 +47,7 @@ Only recorded training reaches Progress. Declared level, sports, goals, body mea
 ## 7. Known contradictions and limits
 | Topic | Today | Owner decision / design | Needed before the page is true |
 |---|---|---|---|
-| Coach auto-adjustment | `autoAdapt` on by default applies small progressions (weight step, +1 rep, +1 set, +1 interval, longer ride) without approval | Increases in load, volume or frequency need approval; protective changes may stay automatic (12 Nov) | The correction in `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md`, with its tests |
+| Coach auto-adjustment | `autoAdapt` on by default applies small progressions (weight step, +1 rep, +1 set, +1 interval, longer ride) without approval | ~~Increases in load, volume or frequency need approval~~ **Refined 15 Nov: small load and repetition steps automatic only when the policy engine authorizes them; volume and frequency need approval**; protective changes may stay automatic under the approved allowlist (12 Nov) | The correction in `product/coach/AUTOADAPT_CORRECTION_PROPOSAL.md`, with its tests |
 | Activity capability | Records: cycling (road, indoor, mountain bike, commuting share one recorder), strength. Not supported: running, swimming, walking, all recovery entries | Shown as "interest only" | A recorder, timer or log per activity before any other label |
 | Unknown baselines | Weight, date of birth and FTP may be absent | Shown as unknown; rides use heart rate and effort; no watts guessed | Nothing — existing behaviour |
 | Stage rules | Not approved | No stage shown; names only | Owner decision on Progress criteria |
