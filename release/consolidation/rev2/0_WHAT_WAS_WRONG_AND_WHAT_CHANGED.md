@@ -9,7 +9,7 @@
 | 3 | Progress showed an illustrative **G2 · The Ascendant** | Approved insufficient-evidence hero, worded **"Not yet evaluated"**; "Improving" labels and the "Developing Hybrid" claim removed; values marked illustrative |
 | 4 | Unrelated sample data per screen (Build strength program, Upper Body A, Threshold intervals, 231 W, 9 of 11 sets) | **One athlete, one week:** Sam Rivera, road cycling + gym, balanced; Mon/Wed/Fri gym 35 min, Tue/Sat ride 60 min; week of 9–15 Nov |
 | 5 | Journey stopped at Progress | Continues: review → Coach proposal (waits for approval) → updated Plan with Undo |
-| 6 | Tracker of 74 broad features | **190 functions**, each tied to one of the original 74 IDs (17 new functions had no original row); totals recalculated |
+| 6 | Tracker of 74 broad features | **190 functions**, each tied to one of the original 74 IDs (14 new functions had no original row); totals recalculated |
 | 7 | Home described as "no approved design", earlier Home decisions not shown | Home history set out: shipped state, standing owner decisions, latest draft, exact open decisions (register C rev 2) |
 | 8 | Releases: a TestFlight per milestone; first UX build would have mixed old and new navigation | **Engineering builds (E1, E2)** separated from **integrated UX builds (U1–U3)**; U1 carries the new dock on every tab; release map per tab |
 | 9 | Approval checklist of eleven items, some already decided | Only genuinely open decisions remain (H rev 2) |
