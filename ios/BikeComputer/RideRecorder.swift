@@ -93,18 +93,31 @@ final class RideRecorder: ObservableObject {
     var isActive: Bool { state == .running || state == .paused }
 
     /// What a "Start" would do right now; the Ride tab shows this before the button.
-    enum StartMode { case board, phone, blockedByBoardRide, blockedNoGPSPermission, blockedByHealthHold }
-    /// E1-F5: training is paused by the health check (set by the app from the athlete's profile). While it is set no
-    /// route can START a ride — Ride screen, Plan, Apple Watch, Cyclift Watch. A ride already begun on the BikeComputer
-    /// is still adopted and recorded: a recording is never refused or lost.
-    var healthHold = false
-    func startMode(locationAuthorized: Bool) -> StartMode {
-        if healthHold { return .blockedByHealthHold }
+    enum StartMode { case board, phone, blockedByBoardRide, blockedNoGPSPermission, blockedByHealthHold, blockedStatusUnavailable }
+    /// E1 (owner decision 16 Nov 2026): the ONE start policy. Every route that can start a ride — Ride screen, Plan,
+    /// Apple Watch, Cyclift Watch — asks `startMode()` and, for a phone ride, `start()`; both read the athlete's training
+    /// status here, at the moment of the request (the app wires this to `Store.trainingAuthority`). There is no copied
+    /// flag any more. Until it is wired, or when the athlete record cannot be read, the answer is `.unavailable` and
+    /// nothing starts (fail closed). A ride begun on the BikeComputer's own button cannot be prevented from the phone:
+    /// it is still adopted and recorded, and marked (see `externalDuringHold`).
+    var trainingAuthority: () -> TrainingAuthority = { .unavailable }
+    /// Location permission for a phone-GPS ride. nil = ask the location service; tests supply their own answer.
+    var gpsAuthorized: (() -> Bool)? = nil
+    private var locationOK: Bool { gpsAuthorized?() ?? (location?.authorized ?? false) }
+    static let holdNote = "Training is paused by your health check, so a ride was not started."
+    static let statusNote = "Cyclift could not read your training status, so a ride was not started."
+    static let locationNote = "Location permission is off, so this phone cannot record a GPS ride. Allow location for Cyclift, then start again."
+    static let externalHoldNote = "Training is paused by your health check. This BikeComputer ride is kept as a recording only: it will not complete a planned session or change your training."
+    func startMode() -> StartMode {
+        switch trainingAuthority() { case .onHold: return .blockedByHealthHold; case .unavailable: return .blockedStatusUnavailable; case .allowed: break }
         let boardReady = device?.state == .ready && (device?.liveIsFresh ?? false)
         if boardReady, let l = device?.live, l.rideState == .running || l.rideState == .paused, owner != .board { return .blockedByBoardRide }
         if boardReady, !phoneOnlyMode { return .board }
-        return .phone
+        return locationOK ? .phone : .blockedNoGPSPermission       // a phone ride is a GPS ride: no permission, no start
     }
+    /// True while the ride being mirrored was begun on the BikeComputer during a health hold (decided when the phone
+    /// first sees the ride; the phone cannot know what the status was before it was connected).
+    @Published private(set) var externalDuringHold = false
 
     /// Called once per second by the app.
     func tick() {
@@ -139,7 +152,9 @@ final class RideRecorder: ObservableObject {
     private func adopt(_ l: BCLink.Live) {
         owner = .board; samples = []; hrSum = 0; hrN = 0; hrMax = 0; lapCount = 1; lapStartS = 0
         startDate = Date().addingTimeInterval(-Double(l.elapsedS)); lastBoardRideId = l.rideId
-        note = "The BikeComputer is recording; this phone mirrors it and adds GPS."
+        // while training is paused no phone route can have asked the BikeComputer to start, so this ride began on the device
+        externalDuringHold = trainingAuthority() == .onHold
+        note = externalDuringHold ? Self.externalHoldNote : "The BikeComputer is recording; this phone mirrors it and adds GPS."
         location?.sharing = true
         askNotifications()
     }
@@ -148,7 +163,11 @@ final class RideRecorder: ObservableObject {
         lastBoardLive = l
         elapsedS = l.elapsedS; distanceM = l.distanceM
         let st: State = l.rideState == .running ? .running : l.rideState == .paused ? .paused : l.rideState == .ended ? .ended : .idle
-        if st == .running, lastBoardState != .running, lastBoardState != .paused { startDate = Date().addingTimeInterval(-Double(l.elapsedS)); samples = []; hrSum = 0; hrN = 0; hrMax = 0; lastBoardRideId = l.rideId }
+        if st == .running, lastBoardState != .running, lastBoardState != .paused {
+            // a further ride on the same connection is judged on its own
+            if lastBoardRideId != l.rideId { externalDuringHold = trainingAuthority() == .onHold; if externalDuringHold { note = Self.externalHoldNote } }
+            startDate = Date().addingTimeInterval(-Double(l.elapsedS)); samples = []; hrSum = 0; hrN = 0; hrMax = 0; lastBoardRideId = l.rideId
+        }
         if st == .running {
             var s = RideRecord.Sample(t: l.elapsedS, w: l.powerW, cad: l.cadenceRpm, hr: l.hrBpm, speedCms: nil)
             if let loc = location?.last, Date().timeIntervalSince(loc.timestamp) < 3, loc.horizontalAccuracy >= 0, loc.horizontalAccuracy <= 50 {
@@ -171,6 +190,7 @@ final class RideRecorder: ObservableObject {
                            sources: ["BikeComputer", "Power meter"] + (hrN > 0 ? ["Heart rate"] : []) + (samples.contains { $0.lat != nil } ? ["Phone GPS"] : []), demo: l.demo)
         r.samples = samples
         r.powerVerified = PowerTrust.meterVerified          // explicit: watts from an unverified meter are advisory
+        if externalDuringHold { r.startedExternallyDuringHealthHold = true }     // E1: measurements are untouched; only the marker is added
         if ws.count < l.elapsedS / 2 { r.sources.append("phone mirror incomplete") }   /* the board's own history has the full numbers */
         return r
     }
@@ -180,8 +200,9 @@ final class RideRecorder: ObservableObject {
     @discardableResult
     func start() -> Bool {
         guard state == .idle || state == .ended, owner != .board else { return false }
-        if healthHold { note = "Training is paused by your health check, so a ride was not started."; return false }
+        switch trainingAuthority() { case .onHold: note = Self.holdNote; return false; case .unavailable: note = Self.statusNote; return false; case .allowed: break }
         if let l = device?.live, device?.state == .ready, device?.liveIsFresh ?? false, l.rideState == .running || l.rideState == .paused { return false }
+        guard locationOK else { note = Self.locationNote; return false }
         owner = .phone
         state = .running; elapsedS = 0; distanceM = 0; distCm = 0; samples = []; hrSum = 0; hrN = 0; hrMax = 0; lapStartS = 0; lapCount = 1; gapSeconds = 0
         startDate = clock(); boardLinkLost = false; lastPhoneTick = clock()
@@ -218,8 +239,8 @@ final class RideRecorder: ObservableObject {
         r.samples = samples; r.gapSeconds = gapSeconds
         pendingResult = r
     }
-    func discard() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; clearBackgroundNotice() }
-    func finish() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; clearBackgroundNotice() }
+    func discard() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; externalDuringHold = false; clearBackgroundNotice() }
+    func finish() { pendingResult = nil; state = .idle; owner = .none; note = nil; endedWithoutBoard = false; externalDuringHold = false; clearBackgroundNotice() }
 
     private func phoneSecond(now given: Date? = nil) {
         let now = given ?? clock()

@@ -48,6 +48,7 @@ final class RideViewsSmokeTests: XCTestCase {
             shot("night-\(id.replacingOccurrences(of: "rideView.", with: ""))")
         }
         // the controls never leave the screen (RA-08): Start is hittable on every supported size
+        app.allowLocationForRide()
         let startBtn = app.buttons["START · PHONE"].firstMatch
         XCTAssertTrue(startBtn.waitForExistence(timeout: 5) && startBtn.isHittable, "Start stays visible and tappable under the views")
         // the mini map opens the Map view
@@ -121,6 +122,7 @@ final class RideViewsSmokeTests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["rideHistoryEmpty"].firstMatch.waitForExistence(timeout: 10), "empty history explains itself")
         app.buttons["Done"].firstMatch.tap()
 
+        app.allowLocationForRide()
         let start = app.buttons["START · PHONE"].firstMatch
         XCTAssertTrue(start.waitForExistence(timeout: 10), "phone start (no board in the simulator)")
         XCTAssertTrue(start.isHittable, "Start is on screen and not covered (RA-08)"); start.tap()

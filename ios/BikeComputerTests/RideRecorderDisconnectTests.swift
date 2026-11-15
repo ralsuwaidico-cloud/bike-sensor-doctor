@@ -34,7 +34,7 @@ final class RideRecorderDisconnectTests: XCTestCase {
     }
 
     func testEndWithoutBoardDoesNothingForPhoneRidesOrIdle() {
-        let r = RideRecorder(autoTick: false)
+        let r = RideRecorder.allowedForTests()
         r.endWithoutBoard(); XCTAssertEqual(r.state, .idle)
         XCTAssertTrue(r.start()); r.endWithoutBoard()
         XCTAssertEqual(r.state, .running, "a phone-owned ride is never ended by the board path")

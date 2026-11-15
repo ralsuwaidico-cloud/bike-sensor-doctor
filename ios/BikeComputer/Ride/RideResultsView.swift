@@ -17,6 +17,8 @@ struct RideResultsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // E1: a BikeComputer ride begun during a health hold says so wherever it is reviewed
+            if let n = ride.restrictionNote { Text(n).font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("rideRestriction") }
             routeCard
             headline
             analysisCard

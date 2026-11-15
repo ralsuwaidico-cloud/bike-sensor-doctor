@@ -202,7 +202,7 @@ final class ModelTests: XCTestCase {
     }
 
     func testPhoneRideCannotStartOverBoardRideAndOwnerIsFixed() {
-        let r = RideRecorder(autoTick: false)
+        let r = RideRecorder.allowedForTests()
         XCTAssertEqual(r.owner, .none)
         XCTAssertTrue(r.start())                        // no board → phone owns the ride
         XCTAssertEqual(r.owner, .phone); XCTAssertEqual(r.state, .running)
@@ -216,7 +216,7 @@ final class ModelTests: XCTestCase {
         XCTAssertNil(r.pendingResult?.avgPower, "no power is ever invented on a phone-only ride")
         r.finish()
         XCTAssertEqual(r.owner, .none); XCTAssertEqual(r.state, .idle)
-        XCTAssertEqual(r.startMode(locationAuthorized: true), .phone)
+        XCTAssertEqual(r.startMode(), .phone)
     }
 
     func testDistanceRuleMatchesBoard() {
@@ -316,7 +316,7 @@ final class ModelTests: XCTestCase {
 
     // MARK: phone recording survives a suspension as a marked gap
     func testSuspensionBecomesGapNotInterpolation() {
-        let r = RideRecorder(autoTick: false)
+        let r = RideRecorder.allowedForTests()
         XCTAssertTrue(r.start())
         r.tick(); r.tick()
         XCTAssertEqual(r.elapsedS, 2); XCTAssertEqual(r.gapSeconds, 0)

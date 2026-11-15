@@ -168,6 +168,8 @@ struct SessionSignal: Equatable {
     var hasVerifiedPower = false
     var hasUnverifiedPower = false
     var hasCheckIn = false
+    /// E1: a BikeComputer ride begun during a health hold (RideRecord.startedExternallyDuringHealthHold).
+    var notAuthorized = false
     /// Strength: heavy leg work from evidence (StrengthSession.heavyLegs).
     var legHeavy = false
     var usable: Bool { effort != nil || load != nil }
@@ -241,6 +243,7 @@ enum TrainingAnalyzer {
             s.pain = r.checkIn?.pain ?? .noPain; s.painArea = r.checkIn?.painArea
             s.plannedMinutes = planned?.minutes; s.plannedKind = planned?.kind
             s.hasHR = r.avgHR != nil; s.hasCheckIn = r.checkIn != nil
+            s.notAuthorized = r.startedExternallyDuringHealthHold == true     // E1: still counts for load, fatigue and pain
             s.hasVerifiedPower = r.powerVerified == true && r.avgPower != nil
             s.hasUnverifiedPower = r.powerVerified != true && r.avgPower != nil
             if let e = r.checkIn?.effort { s.load = Double(e * minutes); s.loadSource = "check-in effort × minutes" }
@@ -424,7 +427,8 @@ enum TrainingAnalyzer {
         let cycBase = Array(cyc.filter { $0.hasCheckIn }.dropFirst(2)).filter { $0.date >= daysAgo(AdaptiveRules.baselineDays + 7) }
         let cycPerfBase: Double? = cycBase.count >= 3 ? Double(cycBase.compactMap { $0.performance }.reduce(0, +)) / Double(cycBase.count) : nil
         let cycEffortBase: Double? = cycBase.count >= 3 ? Double(cycBase.compactMap { $0.effort }.reduce(0, +)) / Double(cycBase.count) : nil
-        let ratedRides = cyc.filter { $0.hasCheckIn && $0.date >= daysAgo(14) }
+        // E1: a ride begun on the device during a health hold never counts as evidence that riding is going well
+        let ratedRides = cyc.filter { $0.hasCheckIn && $0.date >= daysAgo(14) && !$0.notAuthorized }
         if ratedRides.count >= 2 {
             let l2 = Array(ratedRides.prefix(2))
             let ok = l2.allSatisfy { x in

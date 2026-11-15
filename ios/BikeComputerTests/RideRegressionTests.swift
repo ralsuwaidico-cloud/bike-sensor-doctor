@@ -15,7 +15,7 @@ final class RideRegressionTests: XCTestCase {
     //    the network; a map that cannot load tiles only changes what is drawn, never what is recorded (RA-17, RA-18).
     func testGPSRecordingNeedsNoNetworkAndKeepsRouteSamples() {
         let loc = LocationService()
-        let r = RideRecorder(autoTick: false); r.location = loc
+        let r = RideRecorder.allowedForTests(); r.location = loc
         XCTAssertTrue(r.start())
         for i in 0..<5 { loc.injectForTests(fix(24.45 + Double(i) * 0.0001, 54.38, speed: 8.33)); r.tick() }
         XCTAssertEqual(r.samples.count, 5)
@@ -31,7 +31,7 @@ final class RideRegressionTests: XCTestCase {
     // 3. A phone ride without any Watch heart rate (strap never paired, or the Watch dropped) still pauses, resumes,
     //    ends and produces a reviewable record with no heart-rate value invented.
     func testPhoneRideSurvivesAMissingWatchAndNeverInventsHeartRate() {
-        let r = RideRecorder(autoTick: false)       // no watch, no board
+        let r = RideRecorder.allowedForTests()       // no watch, no board
         XCTAssertTrue(r.start())
         for _ in 0..<10 { r.tick() }
         r.pause(); XCTAssertEqual(r.state, .paused)

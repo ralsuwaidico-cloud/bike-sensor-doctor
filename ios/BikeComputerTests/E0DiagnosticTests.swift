@@ -111,7 +111,7 @@ final class E0DiagnosticTests: XCTestCase {
     func testE0_Ride_ExtraSamplesAreGapMarkersCausedByElapsedTime() {
         var withGaps = 0, worstStart = 0.0, worstStep = 0.0
         for run in 0..<20 {
-            let loc = LocationService(); let r = RideRecorder(autoTick: false); r.location = loc
+            let loc = LocationService(); let r = RideRecorder.allowedForTests(); r.location = loc
             let t0 = Date(); XCTAssertTrue(r.start()); let startCost = Date().timeIntervalSince(t0)
             var stepMax = 0.0
             for i in 0..<5 { let t = Date(); loc.injectForTests(fix(i)); r.tick(); stepMax = max(stepMax, Date().timeIntervalSince(t)) }
@@ -129,7 +129,7 @@ final class E0DiagnosticTests: XCTestCase {
     /// A deliberate 2.6 s stall between start() and the first tick must produce exactly the gap seconds the wall clock
     /// implies (2 or 3), and nothing else: this is the mechanism behind "expected 5, got 10".
     func testE0_Ride_DeliberateStallProducesExactlyThatManyGapSamples() {
-        let loc = LocationService(); let r = RideRecorder(autoTick: false); r.location = loc
+        let loc = LocationService(); let r = RideRecorder.allowedForTests(); r.location = loc
         XCTAssertTrue(r.start())
         Thread.sleep(forTimeInterval: 2.6)
         for i in 0..<5 { loc.injectForTests(fix(i)); r.tick() }
@@ -189,7 +189,7 @@ final class E0DiagnosticTests: XCTestCase {
     /// Needed behaviour: the file still loads and the valid records in that list survive.
     func testE0_Data_MalformedRecordMatrix() throws {
         let (s0, d0) = seededStore("matrix-base")
-        let loc = LocationService(); let rec = RideRecorder(autoTick: false); rec.location = loc
+        let loc = LocationService(); let rec = RideRecorder.allowedForTests(); rec.location = loc
         XCTAssertTrue(rec.start()); for i in 0..<3 { loc.injectForTests(fix(i)); rec.tick() }; rec.pause(); rec.end()
         if let ride = rec.pendingResult { _ = s0.addRide(ride) }
         _ = s0.addStrength(StrengthSession(date: Date().addingTimeInterval(-86_400), minutes: 30, focus: .fullBody))

@@ -6,6 +6,8 @@ import Combine
 /// The board integrates distance itself; this class never computes or sends a distance total.
 final class LocationService: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var authorized = false
+    /// E1: the athlete (or a restriction) refused location, so asking again shows nothing — the Ride screen then points to Settings.
+    @Published private(set) var denied = false
     @Published private(set) var status = "Not started"
     @Published private(set) var last: CLLocation?
     @Published private(set) var sent = 0
@@ -39,6 +41,7 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
 
     func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
         authorized = m.authorizationStatus == .authorizedWhenInUse || m.authorizationStatus == .authorizedAlways
+        denied = m.authorizationStatus == .denied || m.authorizationStatus == .restricted
         if !authorized, sharing { status = "Location permission denied" }
     }
 

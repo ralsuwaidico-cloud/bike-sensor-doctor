@@ -147,7 +147,7 @@ final class E0FollowUpDiagnosticTests: XCTestCase {
 
     func testE0b_Ride_ControlledStallsExplainTheExtraSamples() {
         for (name, before, mid) in [("none", 0.0, 0.0), ("1.6 s before first tick", 1.6, 0.0), ("5.6 s before first tick", 5.6, 0.0), ("2.6 s mid-ride", 0.0, 2.6)] {
-            let loc = LocationService(); let r = RideRecorder(autoTick: false); r.location = loc
+            let loc = LocationService(); let r = RideRecorder.allowedForTests(); r.location = loc
             XCTAssertTrue(r.start())
             if before > 0 { Thread.sleep(forTimeInterval: before) }
             for i in 0..<5 {
@@ -172,7 +172,7 @@ final class E0FollowUpDiagnosticTests: XCTestCase {
         let n0 = s.strength.count
         let a1 = s.addStrength(x), a2 = s.addStrength(x)
         diag("idem: same strength session saved twice → first=\(a1) second=\(a2) count \(n0) → \(s.strength.count)")
-        let loc = LocationService(); let rec = RideRecorder(autoTick: false); rec.location = loc
+        let loc = LocationService(); let rec = RideRecorder.allowedForTests(); rec.location = loc
         XCTAssertTrue(rec.start()); for i in 0..<3 { loc.injectForTests(fix(i)); rec.tick() }; rec.pause(); rec.end()
         if let ride = rec.pendingResult {
             let r1 = s.addRide(ride), r2 = s.addRide(ride)

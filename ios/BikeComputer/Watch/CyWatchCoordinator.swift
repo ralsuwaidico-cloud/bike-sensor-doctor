@@ -147,8 +147,8 @@ final class CyWatchCoordinator: ObservableObject {
         switch cmd {
         case .start:
             guard !recorder.isActive else { note("Ride already running — start ignored"); return }
-            recorder.healthHold = !store.profile.readiness.trainingAllowed     // E1-F5: the same gate as the phone's own buttons
-            switch recorder.startMode(locationAuthorized: true) { case .board: device.control(.start); case .phone: _ = recorder.start(); case .blockedByHealthHold: note("Training is paused by your health check — ride not started"); default: note("Cannot start a ride now") }
+            // E1: the one start policy (training status, device ride, location)
+            switch recorder.startMode() { case .board: device.control(.start); case .phone: _ = recorder.start(); case .blockedByHealthHold: note("Training is paused by your health check — ride not started"); case .blockedNoGPSPermission: note("Allow location for Cyclift on the phone — ride not started"); default: note("Cannot start a ride now") }
         case .pause: if recorder.owner == .board { device.control(.pause) } else { recorder.pause() }
         case .resume: if recorder.owner == .board { device.control(.resume) } else { recorder.resume() }
         case .lap: recorder.lap()

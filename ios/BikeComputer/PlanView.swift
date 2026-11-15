@@ -433,8 +433,10 @@ struct WorkoutDetail: View {
             Text("Logging exercises lets the coach check coverage and progression.").font(.footnote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         // E1-F5: no Start here while the health check pauses training (the Ride screen and the watches refuse it too)
-        if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, store.profile.readiness.trainingAllowed, recorder.startMode(locationAuthorized: true) != .blockedByBoardRide {
-            Button { if recorder.startMode(locationAuthorized: true) == .board { device.sendRideSteps(store.todayRideSteps()); device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
+        // E1 (16 Nov): the same start policy as every other route; Start is offered only when a ride can actually start
+        // (the Ride screen explains a missing location permission and offers the way to fix it)
+        if workout.kind.isRide, Calendar.current.isDateInToday(workout.date), !recorder.isActive, recorder.startMode() == .board || recorder.startMode() == .phone {
+            Button { if recorder.startMode() == .board { device.sendRideSteps(store.todayRideSteps()); device.control(.start) } else { _ = recorder.start() }; dismiss() } label: { Label("Start this workout", systemImage: "play.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(BC.live).controlSize(.large)
             Text("The Ride screen coaches against this session's zone; targets reach the BikeComputer when it is connected.").font(.footnote).foregroundStyle(.secondary)
         }
     }

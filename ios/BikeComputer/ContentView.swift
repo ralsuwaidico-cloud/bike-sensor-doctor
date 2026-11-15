@@ -37,7 +37,7 @@ struct RootView: View {
         // E1: what the launch found (records set aside, a restored copy) and any write that is failing are said on every
         // screen, not only in Settings. Nothing is shown when storage is healthy.
         .safeAreaInset(edge: .top, spacing: 0) { StorageBanner() }
-        .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: PowerTrust.meterVerified); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.healthHold = !store.profile.readiness.trainingAllowed; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice
+        .onReceive(timer) { _ in hub.refresh(device: device, watch: watch, location: location, powerVerified: PowerTrust.meterVerified); recorder.phoneOnlyMode = store.settings.phoneOnlyMode; recorder.backgroundNoticeEnabled = store.settings.backgroundNotice
             let d = Calendar.current.startOfDay(for: Date()); if d != day { day = d; store.ensurePlan(); store.refreshRideSafety() } }
         // Checkpoint F: the Ride screen follows Ride settings › Display (Daylight / Night / Auto = the app appearance).
         .preferredColorScheme(store.onboarded && tab == 2 ? rideScheme : appScheme)

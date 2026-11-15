@@ -243,19 +243,22 @@ struct RideTabView: View {
         return s
     }
     private var startHint: String {
-        switch recorder.startMode(locationAuthorized: location.authorized) {
+        switch recorder.startMode() {
         case .board: return "BikeComputer records; the phone adds GPS and coaching"
         case .phone: return device.state == .ready ? "this phone records (BikeComputer values shown)" : "this phone records with the sensors that are live"
         case .blockedByBoardRide: return "the BikeComputer has a ride running — it is the recorder"
-        case .blockedNoGPSPermission: return "allow location to record on the phone"
+        case .blockedNoGPSPermission: return location.denied ? "location is off for Cyclift: turn it on in Settings to record on the phone" : "allow location to record on the phone"
         case .blockedByHealthHold: return "training is paused by your health check"
+        case .blockedStatusUnavailable: return "your training status could not be read"
         }
     }
 
     // MARK: controls
     @ViewBuilder private var controls: some View {
-        let mode = recorder.startMode(locationAuthorized: location.authorized)
+        let mode = recorder.startMode()
         VStack(spacing: 6) {
+            // E1: a ride begun on the BikeComputer during a health hold is recorded, and says what it is, as soon as the phone sees it
+            if recorder.isActive, recorder.externalDuringHold { Text(RideRecorder.externalHoldNote).font(.system(size: 11)).foregroundStyle(D7.amber).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("rideHoldRecordingNotice") }
             if recorder.state == .running, coach.phase != .COOLDOWN, store.settings.coachEnabled {
                 Button { coach.requestCooldown(elapsedS: recorder.elapsedS) } label: { Text("Start cool-down (no more 'push' cues)").font(.system(size: 11, design: .monospaced)).foregroundStyle(D7.violet) }
             }
@@ -269,7 +272,16 @@ struct RideTabView: View {
                     case .blockedByBoardRide: Text("BikeComputer ride running — end it there or from Details").font(D7.mono).foregroundStyle(D7.mut).frame(maxWidth: .infinity)
                     case .board: BigButton(text: "START ON BIKECOMPUTER", color: D7.green) { device.sendRideSteps(store.todayRideSteps()); device.control(.start) }
                     case .blockedByHealthHold: HealthHoldNotice(dark: true)
-                    case .blockedNoGPSPermission: BigButton(text: "ALLOW LOCATION", color: D7.amber) { location.requestPermission() }
+                    case .blockedStatusUnavailable: Text("Cyclift could not read your training status, so a ride cannot be started here.").font(D7.mono).foregroundStyle(D7.mut).frame(maxWidth: .infinity)
+                    case .blockedNoGPSPermission:
+                        // E1 (owner decision 16 Nov): a phone ride is a GPS ride — say what is missing and how to fix it
+                        VStack(spacing: 6) {
+                            Text(location.denied ? "Location is turned off for Cyclift, so this phone cannot record a GPS ride. Turn it on in Settings › Cyclift › Location." : "Cyclift needs your location to record a ride on this phone.")
+                                .font(.system(size: 12)).foregroundStyle(D7.mut).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("rideLocationNeeded")
+                            BigButton(text: location.denied ? "OPEN SETTINGS" : "ALLOW LOCATION", color: D7.amber) {
+                                if location.denied { if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) } } else { location.requestPermission() }
+                            }
+                        }
                     case .phone: BigButton(text: "START · PHONE", color: D7.green) { _ = recorder.start() }
                     }
                 } else {

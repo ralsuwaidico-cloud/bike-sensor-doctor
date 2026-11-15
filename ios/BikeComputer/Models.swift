@@ -537,6 +537,11 @@ enum PowerTrust {
     static let meterVerified = false
 }
 
+/// E1: the one answer to "may a new training session be started now?", read from the athlete record at the moment of the
+/// request (never from a copied flag). `unavailable` = the athlete record could not be read; a new phone-controlled
+/// session is then refused (fail closed).
+enum TrainingAuthority: Equatable { case allowed, onHold, unavailable }
+
 struct RideRecord: Codable, Identifiable, Equatable {
     enum Recorder: String, Codable { case board, phone, health }
     var id = UUID()
@@ -573,6 +578,15 @@ struct RideRecord: Codable, Identifiable, Equatable {
     /// Checkpoint F slice 3 (RA-25): UUID of the HealthKit workout THIS PHONE wrote for the ride; nil = never written.
     /// Set once, never rewritten — together with `healthUUID` (imports) it keeps one ride to at most one Health workout.
     var healthExportUUID: String? = nil
+    /// E1 (owner decision 16 Nov 2026): true when this ride was begun on the BikeComputer's own button while training was
+    /// paused by the health check. The recording is kept exactly as received; it does not complete a planned session,
+    /// makes no FTP suggestion and is not counted as "rides going well" by the adaptive coach. nil = UNKNOWN (older
+    /// builds, phone rides, device history imported later) — never proof that the ride was authorized. Optional and
+    /// omitted when nil, so older files and the build-216 fixtures read and write unchanged. Build 216 does not know
+    /// this key and drops it if it saves the file after a rollback; the ride then looks like any other ride.
+    var startedExternallyDuringHealthHold: Bool? = nil
+    /// Plain words for the review and history screens; nil when the ride carries no restriction.
+    var restrictionNote: String? { startedExternallyDuringHealthHold == true ? "Started on the BikeComputer while training was paused by your health check. Kept as a recording only: it did not complete a planned session and is not used to progress your training." : nil }
     struct PlanStep: Codable, Equatable { var name: String; var minutes: Int; var hrZone: Int?; var rpeLo: Int; var rpeHi: Int }
     struct Sample: Codable, Equatable { var t: Int; var w: Int?; var cad: Int?; var hr: Int?; var speedCms: Int?; var lat: Double?; var lon: Double?; var alt: Double?
         /// true = this second was not observed (phone suspended); shown as a gap, never filled in
@@ -1437,6 +1451,9 @@ final class Store: ObservableObject {
         if let b = r.boardRideId, rides.contains(where: { $0.boardRideId == b && $0.recorder == .board }) { return false }
         if rides.contains(where: { $0.id == r.id }) { return false }
         rides.insert(r, at: 0)
+        // E1 (owner decision 16 Nov): a BikeComputer ride begun during a health hold is kept as a recording only — it
+        // completes no planned session and proposes no FTP.
+        if r.startedExternallyDuringHealthHold == true { return true }
         // Home B: the ride closes the FIRST open planned ride of its own day (one ride completes one planned ride; before,
         // only `today` — the day's first session, possibly a lift — was looked at)
         // E1-F1: the ride completes the planned ride of the day it STARTED, whenever it is saved. Before, the planned day also
@@ -1445,6 +1462,12 @@ final class Store: ObservableObject {
         if let t = plan.filter({ $0.kind.isRide && !$0.done && !$0.skipped && Calendar.current.isDate($0.date, inSameDayAs: r.start) }).min(by: { $0.sequence < $1.sequence }) { var w = t; w.done = true; w.completion = .recorded; w.completedAt = r.start.addingTimeInterval(TimeInterval(r.durationS)); update(w) }
         considerFTP(from: r)
         return true
+    }
+    /// E1: the authoritative training status, computed from the athlete record every time it is asked. An unreadable
+    /// store has no athlete record (the app shows the recovery screen), so the answer is `unavailable`, not "allowed".
+    var trainingAuthority: TrainingAuthority {
+        if storage == .unreadable { return .unavailable }
+        return profile.readiness.trainingAllowed ? .allowed : .onHold
     }
     /// RA-25: records the HealthKit workout written for a saved ride (once; a second call is ignored).
     func markHealthExported(rideId: UUID, uuid: String) {
@@ -1622,7 +1645,9 @@ final class Store: ObservableObject {
         r = Self.merge(r, with: b, boardId: boardId, start: start)
         let at = rides.firstIndex { $0.start < r.start } ?? rides.count
         rides.insert(r, at: at)
-        if let b20 = b.best20 { considerFTP(boardBest20: b20, ride: r) }
+        // E1: device history that arrives while training is paused (or the status cannot be read) proposes no FTP. Whether
+        // that ride itself began during a hold is unknown here, so it is not marked.
+        if let b20 = b.best20, trainingAuthority == .allowed { considerFTP(boardBest20: b20, ride: r) }
         return true
     }
     private static func merge(_ r0: RideRecord, with b: BCLink.RideSummary, boardId: String, start: Date) -> RideRecord {

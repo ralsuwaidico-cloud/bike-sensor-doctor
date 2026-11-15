@@ -76,6 +76,16 @@ extension XCUIApplication {
 
     /// Checkpoint C: Home's greeting ("Good morning, Rashed") carries the rider's name; waits for it.
     @discardableResult
+    /// E1 (owner decision 16 Nov 2026): a phone ride needs location permission, so "START · PHONE" is offered only once
+    /// it is granted. CI grants it to the simulator before the tests; if the app still asks, this taps the app's own
+    /// "ALLOW LOCATION" and the system prompt, as an athlete would.
+    func allowLocationForRide() {
+        let ask = buttons["ALLOW LOCATION"].firstMatch
+        guard ask.waitForExistence(timeout: 3) else { return }
+        ask.tap()
+        let sb = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        for label in ["Allow While Using App", "Allow Once"] { let b = sb.buttons[label].firstMatch; if b.waitForExistence(timeout: 5) { b.tap(); break } }
+    }
     func waitForHome(name: String, timeout: TimeInterval = 25) -> Bool {
         let g = descendants(matching: .any)["homeGreeting"].firstMatch
         guard g.waitForExistence(timeout: timeout) else { return false }

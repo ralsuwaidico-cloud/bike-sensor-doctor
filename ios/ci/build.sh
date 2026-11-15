@@ -136,6 +136,8 @@ bft() {
 # $1 = xctestrun, $2 = simulator id, $3 = log file, rest = -only-testing / -skip-testing arguments
 twb() {
   local xr=$1 id=$2 log=$3; shift 3
+  # E1 (16 Nov): a phone ride needs location permission; the ride screen tests run as an athlete who has granted it
+  xcrun simctl privacy "$id" grant location com.ralsuwaidico.bikecomputer > /dev/null 2>&1 || true
   xcodebuild test-without-building -xctestrun "$xr" -destination "id=$id" "$@" > "$log" 2>&1
 }
 
@@ -194,7 +196,7 @@ run_unit() {
   twb "$xr" "$SIM" "$OUT/test.log" -resultBundlePath "$OUT/tests.xcresult" -only-testing:BikeComputerTests
   T=$?
   digest "$OUT/test.log" test
-  if [ $T -eq 0 ]; then note "RESULT tests: ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/test.log" | tail -1)) · $(since $TS)"
+  if [ $T -eq 0 ]; then note "RESULT tests: ok ($(grep -Eo 'Executed [0-9]+ tests?, with ([0-9]+ tests? skipped and )?[0-9]+ failures?' "$OUT/test.log" | tail -1)) · $(since $TS)"
   else note "RESULT tests: FAILED (exit $T) · $(since $TS) — $(grep -A3 'Failing tests:' "$OUT/test.log" | tail -3 | tr '\n' ' ' | cut -c1-300 | scrub)"; STATUS=1; fi
 }
 
@@ -271,7 +273,7 @@ run_smoke() {
   U=$?
   digest "$OUT/uitest.log" launch-smoke
   if [ $U -ne 0 ]; then retry_launch_failures "$RELEASE_XR" "$SIM" launch-smoke "$OUT/uitest.log"; local R=$?; [ $R -eq 0 ] && U=0; fi
-  if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with [0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
+  if [ $U -eq 0 ]; then note "RESULT launch smoke (Release): ok ($(grep -Eo 'Executed [0-9]+ tests?, with ([0-9]+ tests? skipped and )?[0-9]+ failures?' "$OUT/uitest.log" | tail -1)) · $(since $TS)"
   else
     note "RESULT launch smoke (Release): FAILED (exit $U) · $(since $TS)"; STATUS=1
     # crash reports of the app from the simulator run, scrubbed, as text
