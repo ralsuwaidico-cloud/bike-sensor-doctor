@@ -1,0 +1,114 @@
+BikeComputer iOS CI — run 224 — scope full — jobs: quick=skipped test=failure release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 224 — 2026-11-15 14:34 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 4m11s
+RESULT tests: FAILED (exit 65) · 9m45s — 	E0DiagnosticTests.testE0_Data_CurrentStoreRoundTripsWithoutLoss() 	E0DiagnosticTests.testE0_Data_FailedWriteIsReportedAtTheSave() 	E0DiagnosticTests.testE0_Data_MalformedRecordMatrix() 
+Total: 9m57s
+
+## smoke
+BikeComputer iOS CI — build 224 — 2026-11-15 14:34 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 10m18s
+RESULT launch smoke (Release): ok (Executed 3 tests, with 0 failures) · 46m36s
+Total: 46m48s
+
+## flows
+BikeComputer iOS CI — build 224 — 2026-11-15 14:48 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 9m35s
+RESULT flows: FAILED (exit 65) · 54m13s — PlanEditPreviewApplyTests.swift:78: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply is enabled once the review has no blocking conflict PlanEditPreviewApplyTests.swift:81: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Apply closes the review and the edit sheet (the session screen is on top) PlanEditPreviewApplyTests.swift:91: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : failed - Plan › Changes row PlanEditPreviewApplyTests.swift:92: error: -[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply] : XCTAssertTrue failed - the applied edit is listed in the change history 
+Total: 54m37s
+
+## journeys
+BikeComputer iOS CI — build 224 — 2026-11-15 14:34 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 11m36s
+  journey hybrid: ok · recording 2224 KB · 11m10s
+  journey cycling: ok · recording 1781 KB · 7m28s
+  journey strength: ok · recording 1452 KB · 6m55s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 43m18s
+Total: 43m35s
+
+## layout-small
+BikeComputer iOS CI — build 224 — 2026-11-15 14:34 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 9m55s
+  layout small (L,AX3): ok · 3m15s
+RESULT layout audit: ok (0 screenshots)
+Total: 14m2s
+
+## layout-standard
+BikeComputer iOS CI — build 224 — 2026-11-15 14:34 UTC
+Stage: layout (layout devices: standard)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m19s
+  layout standard (L,XXXL): ok · 3m11s
+RESULT layout audit: ok (0 screenshots)
+Total: 14m45s
+
+## layout-promax
+BikeComputer iOS CI — build 224 — 2026-11-15 14:49 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 13m46s
+  layout promax (L): ok · 3m37s
+RESULT layout audit: ok (0 screenshots)
+Total: 17m33s
+
+## layout-owner
+BikeComputer iOS CI — build 224 — 2026-11-15 14:55 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m20s
+  layout owner (L,XXXL): ok · 3m58s
+RESULT layout audit: ok (0 screenshots)
+Total: 15m30s
+
+## watch
+BikeComputer iOS CI — build 224 — 2026-11-15 14:44 UTC
+Stage: watch
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+  watch screenshots: 6 — small: Apple Watch SE 3 (40mm)   content_size large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11277   screenshot l ok   content_size extra-extra-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 11781   screenshot xxxl ok   content_size accessibility-extra-large not supported here com.ralsuwaidico.bikecomputer.watchkitapp: 12294   screenshot ax3 ok large · 10m6s
+Total: 10m13s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+
+GATE flows: FAILED — advisory for INTERNAL builds (owner 10 Nov 2026); a PRODUCTION release requires flows green
+commit c2cecde2f2bf2ce5a1ad477f67e17aec25e22c4a  branch ios/e0-repro  job failure
