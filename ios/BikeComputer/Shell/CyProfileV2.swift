@@ -6,7 +6,7 @@ import SwiftUI
 //
 // One athlete record: every row reads the existing Store and opens the EXISTING editor for that value — nothing is
 // edited in two places and no second model exists. The editors behind the rows still have their older look.
-// Used by Cyclift Lab only (ContentView, `#if CYCLIFT_LAB`). PROVISIONAL where the design is: the visual treatment.
+// Shared code for both apps; switched on by `CyProduct.redesign`. PROVISIONAL where the design is: the visual treatment.
 // Rows whose function the app does not have say "Not available"; in Lab, devices and Apple Health say why they are off.
 
 private enum CyP2 {
