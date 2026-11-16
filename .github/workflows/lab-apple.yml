@@ -1,0 +1,21 @@
+# Cyclift Lab: registers the Lab app identifier with Apple and reports its capabilities. Creates no app, uploads nothing.
+name: Cyclift Lab — Apple identifier
+on:
+  push:
+    branches: ["ios/lab"]
+    paths: [".github/workflows/lab-apple.yml", "tools/lab/register_bundle.py"]
+permissions:
+  contents: read
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet pyjwt cryptography
+      - name: Register com.ralsuwaidico.cycliftlab (no capabilities)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: python3 tools/lab/register_bundle.py 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<e-mail hidden>/g'
