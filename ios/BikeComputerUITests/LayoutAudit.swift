@@ -414,8 +414,14 @@ final class LayoutAudit: XCTestCase {
             if found.count == 7 {
                 let win = app.windows.firstMatch.frame
                 for d in found { XCTAssertTrue(d.frame.minX >= win.minX - 1 && d.frame.maxX <= win.maxX + 1, "\(size): day \(d.identifier) outside the screen \(d.frame)") }
+                // Runs 237 and 239 (both on a Monday, small iPhone, largest text): the demo week had just started, Plan showed
+                // the extra "Lifting is 20 min over" notice above the week card, and the day strip was entirely below the
+                // screen — so the swipe itself could not be performed ("visible frame is empty") and the check never ran.
+                // The strip is now scrolled into view first. The expectation is unchanged: the strip must not move sideways.
+                let strip = app.otherElements["planDayStrip"].firstMatch
+                reveal(app, strip, tries: 6)
                 let before = found.map { $0.frame.minX }
-                app.otherElements["planDayStrip"].firstMatch.swipeLeft(); sleep(1)
+                strip.swipeLeft(); sleep(1)
                 XCTAssertEqual(found.map { $0.frame.minX }, before, "\(size): the day strip moved sideways (horizontal scrolling)")
             }
             // RC3 (owner 1 Nov): the weekly totals live only in Progress; Plan has the week settings row and Plan changes
