@@ -76,7 +76,7 @@ struct CyLiquidDock: View {
                 Image(systemName: t.icon).font(.system(size: 18, weight: .semibold))
                 Text(t.title).font(.caption2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
             }
-            .foregroundStyle(on ? CyTheme.cycling.tint : CyTheme.ink3)
+            .foregroundStyle(on ? CyTheme.cycling.tint : CyTheme.dockIdle)
             .frame(maxWidth: .infinity, minHeight: 64)
             .contentShape(Rectangle())
         }

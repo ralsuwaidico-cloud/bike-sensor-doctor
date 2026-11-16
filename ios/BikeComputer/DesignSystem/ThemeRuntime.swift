@@ -97,6 +97,9 @@ extension CyTheme {
     static let sysFill = Color(.tertiarySystemFill).themed { $0.surfaceRaised }
     static let sysGray5 = Color(.systemGray5).themed { $0.surfaceRaised }
     static let sysGray6 = Color(.systemGray6).themed { $0.surfaceRaised }
+    /// Unselected labels of the navigation dock. Unthemed: `ink3`, as before. Themed: the secondary text colour — the dock
+    /// is translucent, and on it the tertiary colour was too faint in the dark themes (Lab 4 screenshots).
+    static let dockIdle = CyTheme.ink3.themed { $0.textSecondary }
 }
 
 extension UIColor {
