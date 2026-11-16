@@ -116,6 +116,7 @@ struct BikeComputerApp: App {
                 .environmentObject(hub)
                 .environmentObject(monitor)
                 .environmentObject(diag)
+                .cyThemeRoot()      // UX1: no effect unless theming is available (never on a device in the production app)
                 .onOpenURL { url in if ReleaseFlags.accountsEnabled { _ = account.handle(url: url) } }
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {

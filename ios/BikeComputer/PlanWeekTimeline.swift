@@ -34,7 +34,7 @@ struct PlanWeekTimeline: View {
                             .onTapGesture { onDay(d) }
                             .accessibilityHidden(true)   // the day Button carries the accessibility role
                     }
-                    .background(d.isToday ? CyTheme.cycling.bg.opacity(0.45) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .background(d.isToday ? CyTheme.cycling.bg.opacity(0.45) : CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
                 .accessibilityElement(children: .contain)
             }
         }
@@ -93,7 +93,7 @@ struct PlanWeekTimeline: View {
             }
             .foregroundStyle(c.mark == .skipped ? Color.secondary : id.tint)
             .padding(.horizontal, 8).frame(width: width, height: 30, alignment: .leading)
-            .background((c.mark == .skipped ? Color(.systemGray5) : id.bg), in: Capsule())
+            .background((c.mark == .skipped ? CyTheme.sysGray5 : id.bg), in: Capsule())
             .overlay(Capsule().stroke(c.mark == .missed ? BC.warn : Color.clear, lineWidth: 1.5))
         }
         .buttonStyle(.plain)
@@ -112,7 +112,7 @@ struct PlanCompactRing: View {
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
-                Circle().stroke(Color(.systemGray5), lineWidth: 8)
+                Circle().stroke(CyTheme.sysGray5, lineWidth: 8)
                 Circle().trim(from: 0, to: overview.fraction).stroke(CyTheme.cycling.tint, style: StrokeStyle(lineWidth: 8, lineCap: .round)).rotationEffect(.degrees(-90))
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: overview.fraction)
                 Text(CyDesign.percentText(overview.fraction)).font(.caption.weight(.heavy)).monospacedDigit()
@@ -129,7 +129,7 @@ struct PlanCompactRing: View {
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
         }
         .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Week completion: \(overview.planned == 0 ? "no sessions planned" : "\(overview.done) of \(overview.planned) sessions done"). \(minutesLine). Opens the weekly overview")
         .accessibilityIdentifier("planRing")

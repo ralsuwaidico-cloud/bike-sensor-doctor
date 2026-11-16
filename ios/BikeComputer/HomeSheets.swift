@@ -36,7 +36,7 @@ struct HomeWhySheet: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.sysPage)
         }
         .presentationDetents([.medium, .large])
     }
@@ -139,7 +139,7 @@ struct RecoveryGuidanceSheet: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.sysPage)
         }
         .presentationDetents([.medium, .large])
     }
@@ -177,7 +177,7 @@ struct HealthHoldSheet: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.sysPage)
         }
         .presentationDetents([.medium, .large])
     }
@@ -277,7 +277,7 @@ struct HomeProposalSheet: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.sysPage)
         }
         .presentationDetents([.medium, .large])
         .sheet(item: $coachPreview) { r in SessionChangeSheet(proposalId: r.id, coach: coachProposal, onApplied: { applied = coachProposal?.text }, onClose: { coachPreview = nil }).id(r.id) }
@@ -288,7 +288,7 @@ struct HomeProposalSheet: View {
 struct HomeFTPSheet: View {
     var body: some View {
         HomeSheetWrap(title: "Suggested FTP") {
-            ScrollView { FTPSuggestionCard().padding() }.background(Color(.systemGroupedBackground))
+            ScrollView { FTPSuggestionCard().padding() }.background(CyTheme.sysPage)
         }
         .presentationDetents([.medium])
     }

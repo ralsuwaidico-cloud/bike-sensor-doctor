@@ -373,7 +373,7 @@ struct DayIconCell: View {
         }
         .frame(maxWidth: .infinity, minHeight: DS.minTap + 8)
         .foregroundStyle(kind == .rest ? Color.secondary : (highlighted ? Color.white : BC.accent))
-        .background(highlighted ? BC.accent : (kind == .rest ? Color(.tertiarySystemGroupedBackground) : BC.accent.opacity(0.14)), in: RoundedRectangle(cornerRadius: 10))
+        .background(highlighted ? BC.accent : (kind == .rest ? CyTheme.sysCard2 : BC.accent.opacity(0.14)), in: RoundedRectangle(cornerRadius: 10))
         return Group {
             if let tap = onTap {
                 Button(action: tap) { content }.buttonStyle(.plain)

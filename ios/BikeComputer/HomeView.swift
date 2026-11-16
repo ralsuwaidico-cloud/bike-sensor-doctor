@@ -277,7 +277,7 @@ struct HomeCardFrame<Content: View>: View {
         VStack(alignment: .leading, spacing: DS.m) { content }
             .padding(DS.l)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+            .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 20))
     }
 }
 
@@ -379,8 +379,8 @@ struct HomePrimaryButton: View {
                         .fixedSize()
                 }
             }
-            .foregroundStyle(action.prominent ? Color.black : Color.primary)
-            .background(action.prominent ? BC.accent : Color(.tertiarySystemFill), in: Capsule())
+            .foregroundStyle(action.prominent ? BC.onAccent : Color.primary)
+            .background(action.prominent ? BC.accent : CyTheme.sysFill, in: Capsule())
             .frame(minHeight: DS.minTap)
             .contentShape(Rectangle())
         }
@@ -482,7 +482,7 @@ struct HomeMoreMenu: View {
             Group {
                 if iconOnly {
                     Image(systemName: "ellipsis").font(.subheadline.weight(.bold)).foregroundStyle(.primary)
-                        .frame(width: 36, height: 36).background(Color(.tertiarySystemFill), in: Circle())
+                        .frame(width: 36, height: 36).background(CyTheme.sysFill, in: Circle())
                 } else {
                     HStack(spacing: 4) { Text("More"); Image(systemName: "ellipsis") }
                         .font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
@@ -528,7 +528,7 @@ struct HomeMissedRow: View {
             HomePrimaryButton(action: todayFree ? .moveToToday(missed.id) : .reschedule(missed.id), identifier: "homeMissedMove", kind: .compact, perform: perform)
         }
         .padding(.horizontal, DS.l).padding(.vertical, DS.s)
-        .background(Color(.secondarySystemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: 16))
+        .background(CyTheme.sysCard.opacity(0.6), in: RoundedRectangle(cornerRadius: 16))
         .accessibilityElement(children: .contain)
     }
 }
@@ -620,7 +620,7 @@ struct HomeHoldCard: View {
                 }
             }
             Button { perform(.reviewHealth) } label: {
-                Text(hold.button).font(.headline).foregroundStyle(Color.black).frame(maxWidth: .infinity, minHeight: 50)
+                Text(hold.button).font(.headline).foregroundStyle(BC.onAccent).frame(maxWidth: .infinity, minHeight: 50)
                     .background(BC.accent, in: Capsule()).frame(minHeight: DS.minTap).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -746,7 +746,7 @@ struct HomeWeekStrip: View {
             // XL (every cell keeps a full VoiceOver label with the day, sessions and status).
             .dynamicTypeSize(...DynamicTypeSize.xLarge)
             .padding(DS.xs)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+            .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 20))
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("homeWeek")
     }

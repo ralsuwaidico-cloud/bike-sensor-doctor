@@ -99,7 +99,10 @@ jobs:
         run: |
           scope=full
           if [ "$EVENT" = workflow_dispatch ]; then scope="${IN_SCOPE:-full}"
-          elif printf '%s' "$MSG" | grep -qF '[ci quick]'; then scope=quick; fi
+          elif printf '%s' "$MSG" | grep -qF '[ci quick]'; then scope=quick
+          # compile check: the quick job with no screen tests at all (build + unit tests, ~15 min). Never counts as a
+          # quick pass for the release gate. For branches that only need to know the app still compiles.
+          elif printf '%s' "$MSG" | grep -qF '[ci compile]'; then scope=quick; fi
           upload=false
           if [ "$scope" = full ]; then
             if [ "$EVENT" = workflow_dispatch ]; then [ "$IN_UPLOAD" = true ] && upload=true
@@ -302,8 +305,11 @@ jobs:
           R_TEST: ${{ needs.test.result }}
           R_RELEASE: ${{ needs.release.result }}
           R_TF: ${{ needs.testflight.result }}
+          MSG: ${{ github.event.head_commit.message }}
+          IN_QUICK_UI: ${{ inputs.quick_ui }}
         run: |
           set -u
+          COMPILE_ONLY=0; { printf '%s' "$MSG" | grep -qF '[ci compile]' || [ "${IN_QUICK_UI:-}" = none ]; } && COMPILE_ONLY=1
           S="$PWD/summary.txt"; : > "$S"
           echo "BikeComputer iOS CI — run $N — scope $SCOPE — jobs: quick=$R_QUICK test=$R_TEST release=$R_RELEASE testflight=$R_TF" >> "$S"
           for j in quick unit smoke flows journeys layout-small layout-standard layout-promax layout-owner watch release; do
@@ -340,7 +346,7 @@ jobs:
           # quick-before-full markers (ios/CI_PROCESS.md): a green quick run marks this source TREE; a green full run
           # (every test job + release) becomes the base the next quick run diffs against.
           TREE=$(git -C "$GITHUB_WORKSPACE" rev-parse 'HEAD^{tree}' 2>/dev/null || true)
-          if [ "$SCOPE" = quick ] && [ "$OK" = success ] && [ -n "$TREE" ]; then mkdir -p ios/ci/quick-green; echo "$GITHUB_SHA run $N" > "ios/ci/quick-green/$TREE"; fi
+          if [ "$SCOPE" = quick ] && [ "$COMPILE_ONLY" = 0 ] && [ "$OK" = success ] && [ -n "$TREE" ]; then mkdir -p ios/ci/quick-green; echo "$GITHUB_SHA run $N" > "ios/ci/quick-green/$TREE"; fi
           if [ "$SCOPE" = full ] && [ "$OK" = success ]; then mkdir -p ios/ci; echo "$GITHUB_SHA" > ios/ci/last-green.txt; fi
           git add -A && git commit -q -m "iOS CI log run $N"
           for i in 1 2 3; do
