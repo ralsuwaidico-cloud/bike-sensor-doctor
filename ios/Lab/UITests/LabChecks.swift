@@ -69,6 +69,14 @@ final class LabChecks: XCTestCase {
             let centre = app.buttons["centreButton"].firstMatch
             if centre.waitForExistence(timeout: 5) { centre.tap(); app.settleForScreenshot(2); shot("\(tag)-3-train"); XCTAssertTrue(banner(app), "\(t.id): banner on Train") }
             tab(app, "Plan"); shot("\(tag)-4-plan")
+            if i == 0 {
+                // Plan v2.0: the schedule-first screen, fed from the athlete record (Lab: the demo athlete, and it says so)
+                XCTAssertTrue(app.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 8), "Plan v2.0 is shown")
+                let note = app.staticTexts["planSampleNote"].firstMatch
+                XCTAssertTrue(note.exists && note.label.contains("demo athlete"), "Plan says the data is the demo athlete's")
+                XCTAssertTrue(app.staticTexts["planDayHeader"].firstMatch.exists, "today's day is selected")
+                app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-4b-plan-lower")
+            }
             tab(app, "Progress"); shot("\(tag)-5-progress")
             XCTAssertTrue(openProfile(app), "\(t.id): Profile opens from the Home avatar"); shot("\(tag)-6-profile"); XCTAssertTrue(banner(app), "\(t.id): banner on Profile")
             app.terminate()
