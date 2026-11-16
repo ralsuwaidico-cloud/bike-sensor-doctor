@@ -161,16 +161,15 @@ struct HomeView: View {
 
     // MARK: COACH actions (existing destinations only)
     private func coachTapped(_ item: HomeCoachItem) {
-        // Redesign: the card has no actions of its own; it opens the one Coach page, where each note keeps its action.
-        if CyProduct.redesign { showCoach = true; return }
-        switch item.source {
-        case .adaptiveProposal(let id): if store.adaptiveProposals.contains(where: { $0.id == id }) { coachSheet = .adaptive(id) }
-        case .hybridProposal(let id): coachSheet = .hybrid(id)
-        case .adjustment: showAdjustments = true
-        case .ftp: coachSheet = .ftp
-        case .gap, .revise: tab = 1
-        case .insight(let w): perform(.startStrength(w))
-        case .rate(let t): coachSheet = .rate(t)
+        switch HomeCoachItem.route(for: item.source, redesign: CyProduct.redesign) {
+        case .coachPage: showCoach = true
+        case .adaptiveSheet(let id): if store.adaptiveProposals.contains(where: { $0.id == id }) { coachSheet = .adaptive(id) }
+        case .hybridSheet(let id): coachSheet = .hybrid(id)
+        case .adjustments: showAdjustments = true
+        case .ftpSheet: coachSheet = .ftp
+        case .plan: tab = 1
+        case .startStrength(let w): perform(.startStrength(w))
+        case .rateSheet(let t): coachSheet = .rate(t)
         }
     }
     @ViewBuilder private func coachSheetView(_ s: HomeCoachSheet) -> some View {

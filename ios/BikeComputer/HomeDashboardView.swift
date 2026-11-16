@@ -29,7 +29,12 @@ struct HomeDashboardScreen: View {
             if let r = dash.ring { ringCard(r) }
             sportTiles
             weekCard
-            if let c = coach, today.showCoach, !recorder.isActive { coachCard(c) }
+            if let c = coach, today.showCoach, !recorder.isActive {
+                coachCard(c)
+                // Redesign: when the card itself leads somewhere else (a hybrid suggestion, FTP, a rating prompt…), the
+                // Coach page stays one tap away on its own line.
+                if CyProduct.redesign, !c.opensCoachPageInRedesign, let openCoach { coachPageLink(openCoach) }
+            }
             else if CyProduct.redesign, let openCoach, !recorder.isActive { coachQuietCard(openCoach) }
             lowerGrid
             if let r = dash.reminder { reminderCard(r) }
@@ -169,7 +174,7 @@ struct HomeDashboardScreen: View {
                 Text(c.title).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
                 if let e = c.evidence { Text(e).font(CyType.secondary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading) }
                 // Redesign: compact, text-first, no embedded action; the whole card opens the Coach page.
-                if !CyProduct.redesign {
+                if !(CyProduct.redesign && c.opensCoachPageInRedesign) {
                     HStack(spacing: 4) { Text(c.actionLabel ?? "Details"); Image(systemName: "chevron.right").font(.caption2.weight(.bold)) }
                         .font(CyType.secondary.weight(.semibold)).foregroundStyle(CyTheme.insight.tint).frame(minHeight: CyTheme.minTap)
                 }
@@ -181,9 +186,20 @@ struct HomeDashboardScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(CycliftLab.isLab ? "Demo, rule-based, not AI. " : "")Coach: \(c.title). \(c.evidence ?? "") \(CyProduct.redesign ? "" : (c.actionLabel ?? "Details"))")
-        .accessibilityHint(CyProduct.redesign ? "Opens the Coach page" : "")
+        .accessibilityLabel("\(CycliftLab.isLab ? "Demo, rule-based, not AI. " : "")Coach: \(c.title). \(c.evidence ?? "") \(CyProduct.redesign && c.opensCoachPageInRedesign ? "" : (c.actionLabel ?? "Details"))")
+        .accessibilityHint(CyProduct.redesign && c.opensCoachPageInRedesign ? "Opens the Coach page" : "")
         .accessibilityIdentifier("homeCoachAction")
+    }
+
+    private func coachPageLink(_ open: @escaping () -> Void) -> some View {
+        Button(action: open) {
+            HStack(spacing: 4) { Text("Coach page"); Image(systemName: "chevron.right").font(.caption2.weight(.bold)) }
+                .font(CyType.secondary.weight(.semibold)).foregroundStyle(CyTheme.insight.tint)
+                .frame(maxWidth: .infinity, minHeight: CyTheme.minTap, alignment: .trailing).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens the Coach's notes and conversation")
+        .accessibilityIdentifier("homeCoachOpen")
     }
 
     /// Redesign: nothing new from the Coach. One quiet line that still opens the Coach page.

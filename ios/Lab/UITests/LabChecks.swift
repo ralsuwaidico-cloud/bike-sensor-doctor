@@ -66,11 +66,26 @@ final class LabChecks: XCTestCase {
             if i < 2 {
                 // Coach page: the Home card (or its quiet line) opens the one Coach timeline; it says rules-based, not AI
                 let quiet = app.descendants(matching: .any).matching(identifier: "homeCoachQuiet").firstMatch
-                let card = coach.exists ? coach : quiet
-                XCTAssertTrue(card.exists, "\(t.id): Home has a way into the Coach page")
-                if card.exists {
-                    if !card.isHittable { app.swipeUp(); app.settleForScreenshot() }
-                    card.tap()
+                let link = app.buttons["homeCoachOpen"].firstMatch
+                XCTAssertTrue(coach.exists || quiet.exists, "\(t.id): Home has a way into the Coach page")
+                if !(coach.exists || quiet.exists) { app.terminate(); continue }
+                var way = quiet
+                if coach.exists {
+                    if !coach.isHittable { app.swipeUp(); app.settleForScreenshot() }
+                    if link.exists {
+                        // the card leads to its own destination (a hybrid-coach suggestion here): that route must still work…
+                        coach.tap()
+                        XCTAssertTrue(app.buttons["homeSheetClose"].firstMatch.waitForExistence(timeout: 8), "\(t.id): the Coach card opens its own suggestion sheet")
+                        XCTAssertTrue(app.navigationBars["Coach suggestion"].firstMatch.exists || app.navigationBars.firstMatch.exists, "\(t.id): the suggestion sheet is shown")
+                        if i == 0 { app.settleForScreenshot(1); shot("\(tag)-1a-coach-suggestion") }
+                        app.buttons["homeSheetClose"].firstMatch.tap(); app.settleForScreenshot(1)
+                        // …and the Coach page is one tap away on its own line
+                        way = link
+                    } else { way = coach }
+                }
+                do {
+                    if !way.isHittable { app.swipeUp(); app.settleForScreenshot() }
+                    way.tap()
                     XCTAssertTrue(app.staticTexts["coachTitle"].firstMatch.waitForExistence(timeout: 8), "\(t.id): the Coach page opens")
                     XCTAssertTrue(app.staticTexts["coachRulesNote"].firstMatch.exists, "\(t.id): the Coach page says it follows rules and is not an AI chat")
                     if i == 0 {
@@ -93,7 +108,8 @@ final class LabChecks: XCTestCase {
             }
             app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-2-home-lower")
             let centre = app.buttons["centreButton"].firstMatch
-            if centre.waitForExistence(timeout: 5) { centre.tap(); app.settleForScreenshot(2); shot("\(tag)-3-train"); XCTAssertTrue(banner(app), "\(t.id): banner on Train") }
+            XCTAssertTrue(centre.waitForExistence(timeout: 5), "\(t.id): the Train ball")     // required: no silent skip
+            centre.tap(); app.settleForScreenshot(2); shot("\(tag)-3-train"); XCTAssertTrue(banner(app), "\(t.id): banner on Train")
             if i == 0 {
                 // Training Hub v1.4: the Train ball opens the compact panel first; "All training" expands it into the Hub
                 let panel = app.descendants(matching: .any).matching(identifier: "trainPanel").firstMatch
@@ -159,6 +175,7 @@ final class LabChecks: XCTestCase {
     /// minimise and return, rest, every set → Finish → Save → confirmed "Saved" → Done.
     func test2bStrengthSessionIsRecordedAndSaved() {
         let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"      // independent of every other test
         app.launchEnvironment["LAB_THEME"] = "obsidian"
         app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
@@ -220,14 +237,37 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(save.waitForExistence(timeout: 8), "the finish sheet"); XCTAssertTrue(el("finishCount").exists); shot("strength-7-finish"); save.tap()
         XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "the save is confirmed"); XCTAssertTrue(app.buttons["saveReview"].firstMatch.exists, "the review is offered as optional")
         shot("strength-8-saved")
-        app.buttons["saveDone"].firstMatch.tap()
-        XCTAssertFalse(el("strengthRecorderV14").waitForExistence(timeout: 3), "Done leaves the recorder")
-        app.settleForScreenshot(2); shot("strength-9-after")
+        // the optional review: nothing is pre-filled; one answer alone can be saved
+        app.buttons["saveReview"].firstMatch.tap()
+        XCTAssertTrue(el("reviewV14").waitForExistence(timeout: 8), "the review opens")
+        for v in ["reviewIntensityValue", "reviewPerformanceValue", "reviewEffortValue"] { XCTAssertEqual(el(v).label, "–", "\(v) starts unanswered") }
+        XCTAssertFalse(app.buttons["reviewSave"].firstMatch.isEnabled, "nothing answered: nothing to save")
+        app.buttons["reviewEffortPlus"].firstMatch.tap()
+        XCTAssertNotEqual(el("reviewEffortValue").label, "–", "Effort is answered"); XCTAssertEqual(el("reviewPerformanceValue").label, "–", "Performance stays unanswered")
+        shot("strength-8b-review")
+        let saveReview = app.buttons["reviewSave"].firstMatch
+        var sw = 0; while !saveReview.isHittable && sw < 5 { app.swipeUp(); sw += 1 }
+        XCTAssertTrue(saveReview.isEnabled, "one answer is enough to save"); saveReview.tap()
+        XCTAssertTrue(el("reviewSaved").waitForExistence(timeout: 8), "the review is saved")
+        app.buttons["reviewClose"].firstMatch.tap()
+        app.settleForScreenshot(2)
+        XCTAssertFalse(el("strengthRecorderV14").exists, "closing the review leaves the recorder")
+        // updated training state: back on Home, today's strength session is no longer offered to start
+        let close = app.buttons["Done"].firstMatch
+        if close.waitForExistence(timeout: 5) { close.tap() }       // the session page's own Done (optional: it may already be closed)
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 15), "back on Home")
+        app.settleForScreenshot(2); shot("strength-9-home-after")
+        app.buttons["centreButton"].firstMatch.tap()
+        XCTAssertTrue(el("trainPanel").waitForExistence(timeout: 8), "the Train panel")
+        let again = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertFalse(again.exists && again.label.hasPrefix("Start"), "today's strength session is no longer offered to start (\(again.exists ? again.label : "no button"))")
+        shot("strength-10-panel-after")
     }
 
     /// The cycling screen in Lab is a labelled demonstration: the v1.4 layout and lifecycle, simulated figures, nothing saved.
     func test2cCyclingDemonstrationIsLabelledAndSavesNothing() {
         let app = XCUIApplication()
+        app.launchEnvironment["LAB_FRESH_DEMO"] = "1"      // independent of every other test
         app.launchEnvironment["LAB_THEME"] = "obsidian"
         app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))

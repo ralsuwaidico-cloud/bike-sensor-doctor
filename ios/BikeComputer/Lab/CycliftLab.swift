@@ -100,6 +100,9 @@ enum LabDemoData {
         let fm = FileManager.default
         let url = dir.appendingPathComponent("store.json"), seeded = note("seeded", dir), restore = note("restore", dir)
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        // LAB_FRESH_DEMO=1 (screen tests): start this launch from a fresh demo athlete, so each journey is independent of
+        // what an earlier test left behind. Lab only; it touches Lab's own folder and nothing else.
+        if ProcessInfo.processInfo.environment["LAB_FRESH_DEMO"] == "1" { try? Data().write(to: restore) }
         if fm.fileExists(atPath: restore.path) {
             if let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) { for f in files { try? fm.removeItem(at: f) } }
             try? fm.removeItem(at: restore); try? fm.removeItem(at: seeded)

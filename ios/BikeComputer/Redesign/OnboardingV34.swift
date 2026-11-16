@@ -232,7 +232,9 @@ struct OnboardingV34View: View {
         VStack(alignment: .leading, spacing: CySpace.s) {
             Text(coachLine).font(CyFont.footnote).foregroundStyle(theme.textSecondary)
                 .lineLimit(dts.isAccessibilitySize ? 6 : 3, reservesSpace: !dts.isAccessibilitySize)
+                .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .clipped()                              // Lab run 13: a long line was drawn over the page above it
                 .accessibilityIdentifier("onbCoachLine")
             if page == Self.pages {
                 CyPrimaryButton(title: "Approve my plan", systemImage: "checkmark", sport: .recovery) { OnboardingFlow.approve(a, store: store) }

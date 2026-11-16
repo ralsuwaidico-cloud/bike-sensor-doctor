@@ -12,7 +12,9 @@ enum CloudConfig {
     static var googleWebClientId: String? { value("GOOGLE_WEB_CLIENT_ID") }
     /// The URL scheme registered in Info.plist (CFBundleURLTypes); auth e-mails and the Google flow return through it.
     static let redirectURL = URL(string: "com.ralsuwaidico.bikecomputer://auth-callback")!
-    static var isConfigured: Bool { configured(accountsEnabled: ReleaseFlags.accountsEnabled, url: supabaseURL, anonKey: anonKey) }
+    /// Cyclift Lab: accounts and cloud are switched off IN CODE. Lab is never "configured", whatever keys a build might
+    /// carry, so no account client is ever created there (audit follow-up, 16 Nov 2026).
+    static var isConfigured: Bool { configured(accountsEnabled: ReleaseFlags.accountsEnabled && !CycliftLab.isLab, url: supabaseURL, anonKey: anonKey) }
     static var googleEnabled: Bool { isConfigured && googleWebClientId != nil }
 
     /// Pure rule behind `isConfigured` (unit-tested): the release switch wins over any values in the build.

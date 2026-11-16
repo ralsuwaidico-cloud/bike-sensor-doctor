@@ -288,6 +288,25 @@ struct HomeCoachItem: Equatable {
         case rate(CheckInTargetID)
     }
     enum CheckInTargetID: Equatable { case ride(UUID), strength(UUID) }
+    /// Where a tap on the Coach card leads. One rule for both shells, so no card can lose its destination.
+    /// The redesign differs in exactly one way: the Coach's own plan proposals and applied changes open the Coach page,
+    /// where each keeps its action. Everything else — a hybrid-coach proposal, the FTP suggestion, the session-rating
+    /// prompt, a gap or "revise my days" finding, a strength insight — keeps the destination it always had.
+    /// (Audit of 16 Nov 2026: the first redesign sent every card to the Coach page and made these unreachable.)
+    enum Route: Equatable { case coachPage, adaptiveSheet(String), hybridSheet(String), adjustments, ftpSheet, plan, startStrength(UUID), rateSheet(CheckInTargetID) }
+    static func route(for s: Source, redesign: Bool) -> Route {
+        switch s {
+        case .adaptiveProposal(let id): return redesign ? .coachPage : .adaptiveSheet(id)
+        case .adjustment: return redesign ? .coachPage : .adjustments
+        case .hybridProposal(let id): return .hybridSheet(id)
+        case .ftp: return .ftpSheet
+        case .gap, .revise: return .plan
+        case .insight(let w): return .startStrength(w)
+        case .rate(let t): return .rateSheet(t)
+        }
+    }
+    /// Redesign: the card shows its own action only when the tap performs that action (not when it opens the Coach page).
+    var opensCoachPageInRedesign: Bool { HomeCoachItem.route(for: source, redesign: true) == .coachPage }
     var source: Source
     var title: String
     /// The engine's own reason, first sentence only (N2: no invented counts).
