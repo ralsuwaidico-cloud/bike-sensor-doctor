@@ -22,6 +22,7 @@ struct HomeView: View {
     @State private var prescription: Workout? = nil
     @State private var coachSheet: HomeCoachSheet? = nil
     @State private var showAdjustments = false
+    @State private var showCoach = false
     /// Profile Quick Menu (6 Nov addendum): one Bool, so repeated taps can never stack menus.
     @State private var showMenu = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -40,7 +41,7 @@ struct HomeView: View {
                     banner
                     if let c = h.caution { HomeCautionLine(caution: c) { perform(.reviewHealth) } }
                     HomeDashboardScreen(dash: dash, today: h, coach: h.showCoach ? store.homeCoach() : nil,
-                                        openTab: { tab = $0 }, openHub: openHub, open: { path.append($0) }, openPrescription: { prescription = $0 }, coachTapped: coachTapped)
+                                        openTab: { tab = $0 }, openHub: openHub, open: { path.append($0) }, openPrescription: { prescription = $0 }, coachTapped: coachTapped, openCoach: { showCoach = true })
                     // A6 (6 Nov): a dynamic checklist — gone once the required steps are done
                     if h.showWeek, !setup.isEmpty {
                         HomeSetupChecklist(items: setup, openPlan: { tab = 1 }, openConnections: { tab = 4 })
@@ -72,6 +73,7 @@ struct HomeView: View {
             .navigationDestination(isPresented: $showAdjustments) { AdjustmentsView() }
             .sheet(item: $prescription) { w in HomePrescriptionSheet(workout: w) }
             .sheet(item: $coachSheet) { s in coachSheetView(s) }
+            .sheet(isPresented: $showCoach) { CoachTimelineScreen(onClose: { showCoach = false }).cyThemeRoot() }
         }
     }
 
@@ -159,6 +161,8 @@ struct HomeView: View {
 
     // MARK: COACH actions (existing destinations only)
     private func coachTapped(_ item: HomeCoachItem) {
+        // Redesign: the card has no actions of its own; it opens the one Coach page, where each note keeps its action.
+        if CyProduct.redesign { showCoach = true; return }
         switch item.source {
         case .adaptiveProposal(let id): if store.adaptiveProposals.contains(where: { $0.id == id }) { coachSheet = .adaptive(id) }
         case .hybridProposal(let id): coachSheet = .hybrid(id)

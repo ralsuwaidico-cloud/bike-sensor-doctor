@@ -19,6 +19,8 @@ struct HomeDashboardScreen: View {
     var open: (HomeRoute) -> Void
     var openPrescription: (Workout) -> Void
     var coachTapped: (HomeCoachItem) -> Void
+    /// Redesign: the Coach page is always reachable from Home, also when the Coach has nothing new to say.
+    var openCoach: (() -> Void)? = nil
     @Environment(\.dynamicTypeSize) private var dts
 
     var body: some View {
@@ -28,6 +30,7 @@ struct HomeDashboardScreen: View {
             sportTiles
             weekCard
             if let c = coach, today.showCoach, !recorder.isActive { coachCard(c) }
+            else if CyProduct.redesign, let openCoach, !recorder.isActive { coachQuietCard(openCoach) }
             lowerGrid
             if let r = dash.reminder { reminderCard(r) }
         }
@@ -165,8 +168,11 @@ struct HomeDashboardScreen: View {
                 }
                 Text(c.title).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
                 if let e = c.evidence { Text(e).font(CyType.secondary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading) }
-                HStack(spacing: 4) { Text(c.actionLabel ?? "Details"); Image(systemName: "chevron.right").font(.caption2.weight(.bold)) }
-                    .font(CyType.secondary.weight(.semibold)).foregroundStyle(CyTheme.insight.tint).frame(minHeight: CyTheme.minTap)
+                // Redesign: compact, text-first, no embedded action; the whole card opens the Coach page.
+                if !CyProduct.redesign {
+                    HStack(spacing: 4) { Text(c.actionLabel ?? "Details"); Image(systemName: "chevron.right").font(.caption2.weight(.bold)) }
+                        .font(CyType.secondary.weight(.semibold)).foregroundStyle(CyTheme.insight.tint).frame(minHeight: CyTheme.minTap)
+                }
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -175,8 +181,31 @@ struct HomeDashboardScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(CycliftLab.isLab ? "Demo, rule-based, not AI. " : "")Coach: \(c.title). \(c.evidence ?? "") \(c.actionLabel ?? "Details")")
+        .accessibilityLabel("\(CycliftLab.isLab ? "Demo, rule-based, not AI. " : "")Coach: \(c.title). \(c.evidence ?? "") \(CyProduct.redesign ? "" : (c.actionLabel ?? "Details"))")
+        .accessibilityHint(CyProduct.redesign ? "Opens the Coach page" : "")
         .accessibilityIdentifier("homeCoachAction")
+    }
+
+    /// Redesign: nothing new from the Coach. One quiet line that still opens the Coach page.
+    private func coachQuietCard(_ open: @escaping () -> Void) -> some View {
+        Button(action: open) {
+            HStack(spacing: 8) {
+                CyIconBox(systemName: "sparkles", sport: .insight)
+                VStack(alignment: .leading, spacing: 2) {
+                    CyCaption(text: "Coach", color: CyTheme.insight.tint)
+                    Text("Nothing new right now").font(CyType.secondary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: CyTheme.minTap, alignment: .leading)
+            .cyCard()
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Coach: nothing new right now")
+        .accessibilityHint("Opens the Coach page")
+        .accessibilityIdentifier("homeCoachQuiet")
     }
 
     // MARK: recovery + goal

@@ -30,26 +30,36 @@ struct ProgressTabView: View {
         let ledger = store.ledger
         let riding = TrendChartMath.buckets(ledger, riding: true, weeks: historyWeeks, now: Date())
         let lifting = TrendChartMath.buckets(ledger, riding: false, weeks: historyWeeks, now: Date())
-        NavigationStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: DS.m) {
-                        if !metrics.isEmpty { glance(riding: riding, lifting: lifting, proxy: proxy) }
-                        if !metrics.isEmpty {
-                            Card { WeeklyTrendChart(riding: riding, lifting: lifting, metrics: metrics, metric: $metric, range: $range) }
-                                .id("trends")
-                        }
-                        ProgressAnalyticsSection(showRiding: showRiding, showLifting: showLifting)   // Checkpoint D
-                        if showRiding { ftpCard.id("ftp") }
-                        if showLifting { StrengthProgressCard() }
-                        CheckpointsCard(showRiding: showRiding, showLifting: showLifting)
-                        sessions
-                    }.padding()
+        if CyProduct.redesign {
+            // Approved compact hero over the same analysis (one page, one set of figures).
+            ProgressScreen(sample: .notEvaluated) { proxy in analysis(riding: riding, lifting: lifting, proxy: proxy) }
+                .onAppear(perform: position)
+        } else {
+            NavigationStack {
+                ScrollViewReader { proxy in
+                    ScrollView { analysis(riding: riding, lifting: lifting, proxy: proxy).padding() }
                 }
+                .background(CyTheme.sysPage)
+                .navigationTitle("Progress")
+                .onAppear(perform: position)
             }
-            .background(CyTheme.sysPage)
-            .navigationTitle("Progress")
-            .onAppear { if !positioned { positioned = true; if !showRiding && showLifting { metric = .strength } } }
+        }
+    }
+    private func position() { if !positioned { positioned = true; if !showRiding && showLifting { metric = .strength } } }
+
+    /// The analysis itself: the same views and figures in both shells.
+    private func analysis(riding: [WeekBucket], lifting: [WeekBucket], proxy: ScrollViewProxy) -> some View {
+        VStack(spacing: DS.m) {
+            if !metrics.isEmpty { glance(riding: riding, lifting: lifting, proxy: proxy) }
+            if !metrics.isEmpty {
+                Card { WeeklyTrendChart(riding: riding, lifting: lifting, metrics: metrics, metric: $metric, range: $range) }
+                    .id("trends")
+            }
+            ProgressAnalyticsSection(showRiding: showRiding, showLifting: showLifting)   // Checkpoint D
+            if showRiding { ftpCard.id("ftp") }
+            if showLifting { StrengthProgressCard() }
+            CheckpointsCard(showRiding: showRiding, showLifting: showLifting)
+            sessions
         }
     }
 

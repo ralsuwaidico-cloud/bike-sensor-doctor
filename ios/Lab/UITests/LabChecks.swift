@@ -62,6 +62,22 @@ final class LabChecks: XCTestCase {
             app.settleForScreenshot(2); shot("\(tag)-1-home")
             let coach = app.buttons["homeCoachAction"].firstMatch
             if coach.exists { XCTAssertTrue(coach.label.hasPrefix("Demo, rule-based, not AI."), "\(t.id): the Coach card says it is demo and not AI (\(coach.label))") }
+            if i < 2 {
+                // Coach page: the Home card (or its quiet line) opens the one Coach timeline; it says rules-based, not AI
+                let quiet = app.buttons["homeCoachQuiet"].firstMatch
+                let card = coach.exists ? coach : quiet
+                XCTAssertTrue(card.exists, "\(t.id): Home has a way into the Coach page")
+                if card.exists {
+                    if !card.isHittable { app.swipeUp(); app.settleForScreenshot() }
+                    card.tap()
+                    XCTAssertTrue(app.staticTexts["coachTitle"].firstMatch.waitForExistence(timeout: 8), "\(t.id): the Coach page opens")
+                    XCTAssertTrue(app.staticTexts["coachRulesNote"].firstMatch.exists, "\(t.id): the Coach page says it follows rules and is not an AI chat")
+                    XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "coachComposerDisabled").firstMatch.exists, "\(t.id): asking a question is shown as not available")
+                    app.settleForScreenshot(2); shot("\(tag)-1b-coach")
+                    app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(2)
+                    XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): closing the Coach page returns to Home")
+                }
+            }
             app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-2-home-lower")
             let centre = app.buttons["centreButton"].firstMatch
             if centre.waitForExistence(timeout: 5) { centre.tap(); app.settleForScreenshot(2); shot("\(tag)-3-train"); XCTAssertTrue(banner(app), "\(t.id): banner on Train") }
@@ -75,6 +91,14 @@ final class LabChecks: XCTestCase {
                 app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-4b-plan-lower")
             }
             tab(app, "Progress"); shot("\(tag)-5-progress")
+            if i == 0 {
+                // Progress: the approved compact hero, in its honest "no stage yet" state, over the real analysis
+                let track = app.descendants(matching: .any).matching(identifier: "evolutionTrack").firstMatch
+                XCTAssertTrue(track.waitForExistence(timeout: 8), "Progress shows the Evolution Track")
+                XCTAssertFalse(app.staticTexts["heroGeneration"].firstMatch.exists, "no stage may be shown: there is no approved stage evaluation")
+                XCTAssertTrue(track.label.contains("No generation yet"), "the track says no stage is evaluated (\(track.label))")
+                app.swipeUp(); app.settleForScreenshot(); shot("\(tag)-5b-progress-lower")
+            }
             XCTAssertTrue(openProfile(app), "\(t.id): Profile opens from the Home avatar"); shot("\(tag)-6-profile"); XCTAssertTrue(banner(app), "\(t.id): banner on Profile")
             app.terminate()
         }
