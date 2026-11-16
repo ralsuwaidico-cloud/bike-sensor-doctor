@@ -13,6 +13,8 @@ struct AthleteTypeEditor: View {
     enum Part: Hashable { case name, type, experience, personal }
     @Binding var a: OnboardingAnswers
     var parts: Set<Part> = [.name, .type, .experience, .personal]
+    /// Onboarding v3.4 sets the lead on the roster page, so its experience page hides the priority control.
+    var showsPriority = true
     /// Prefill offered from Apple Health (weight) when the athlete has authorized it — shown, never applied silently.
     var healthWeight: (kg: Double, date: Date)? = nil
     var units: AppSettings.Units = .metric
@@ -55,7 +57,7 @@ struct AthleteTypeEditor: View {
                 if m.includesLifting {
                     chips("Strength experience", StrengthPrefs.Experience.allCases, selected: a.strengthLevel, label: strengthTitle, id: "onbStrengthLevel") { a.strengthLevel = $0 }
                 }
-                if m == .hybrid {
+                if m == .hybrid, showsPriority {
                     VStack(alignment: .leading, spacing: 6) {
                         CyCaption(text: "Priority")
                         CySegmentedControl(options: [(TrainingPriority.cycling, "Cycling"), (TrainingPriority.balanced, "Balanced"), (TrainingPriority.strength, "Strength")],

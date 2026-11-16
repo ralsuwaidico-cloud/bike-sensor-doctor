@@ -152,15 +152,7 @@ final class LabChecks: XCTestCase {
         for id in ["profileSectionA", "profileSectionB", "profileSectionC", "profileSectionD", "profileSectionE", "profileSectionF"] {
             XCTAssertTrue(app.descendants(matching: .any).matching(identifier: id).firstMatch.exists, "Profile v2.0 section \(id)")
         }
-        XCTAssertTrue(openSettings(app), "Profile › Data, Help & About › settings")
-        var tries = 0
-        let delete = app.buttons["deleteAllData"].firstMatch
-        while !(delete.exists && delete.isHittable) && tries < 12 { app.swipeUp(); tries += 1 }
-        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Delete all data"); delete.tap()
-        let alert = app.alerts.firstMatch
-        XCTAssertTrue(alert.waitForExistence(timeout: 10), "deletion asks first"); shot("delete-1-question")
-        alert.buttons["Delete"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.waitForExistence(timeout: 15), "after Delete, Lab is at Welcome")
+        deleteAll(app, shotName: "delete-1-question")
         XCTAssertTrue(banner(app), "the demo banner stays on Welcome"); shot("delete-2-welcome")
         app.terminate()
         let again = XCUIApplication()
@@ -172,6 +164,86 @@ final class LabChecks: XCTestCase {
 
     /// After the deletion above Lab is empty. "Restore the demo athlete" is an explicit choice: nothing comes back until
     /// it is chosen AND Lab is reopened; then the demo athlete is there again.
+    /// Profile › Data, Help & About › settings › Delete all data, confirmed. Ends at Welcome.
+    private func deleteAll(_ app: XCUIApplication, shotName: String? = nil) {
+        XCTAssertTrue(openSettings(app), "Profile › Data, Help & About › settings")
+        var tries = 0
+        let delete = app.buttons["deleteAllData"].firstMatch
+        while !(delete.exists && delete.isHittable) && tries < 12 { app.swipeUp(); tries += 1 }
+        XCTAssertTrue(delete.waitForExistence(timeout: 10), "Delete all data"); delete.tap()
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 10), "deletion asks first"); if let n = shotName { shot(n) }
+        alert.buttons["Delete"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.waitForExistence(timeout: 15), "after Delete, Lab is at Welcome")
+    }
+
+    /// The new-athlete journey (runs after the deletion test, so Lab starts empty): the seven onboarding pages, the
+    /// Athletic Roster, approval of the Blueprint, then Home and Plan showing the approved week. Leaves Lab empty again.
+    func test3bNewAthleteOnboardsApprovesAndSeesThePlan() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        let start = app.buttons["onboardingContinue"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 30), "starts at Welcome (after the deletion test)"); shot("journey-0-welcome")
+        start.tap()
+        let next = app.buttons["onboardingNext"].firstMatch
+        func page(_ n: Int) { XCTAssertTrue(app.staticTexts["onboardingProgress"].firstMatch.waitForExistence(timeout: 8) && app.staticTexts["onboardingProgress"].firstMatch.label.hasPrefix("\(n) of 7"), "onboarding page \(n) (\(app.staticTexts["onboardingProgress"].firstMatch.label))") }
+        // 1 About you
+        page(1); XCTAssertFalse(next.isEnabled, "page 1: Continue needs a name")
+        let name = app.textFields["onbName"].firstMatch
+        XCTAssertTrue(name.waitForExistence(timeout: 8)); name.tap(); name.typeText("Sam")
+        let done = app.buttons["keyboardDone"].firstMatch; if done.waitForExistence(timeout: 3) { done.tap() }
+        shot("journey-1-about"); XCTAssertTrue(next.isEnabled); next.tap()
+        // 2 Athletic Roster
+        page(2); XCTAssertFalse(next.isEnabled, "page 2: Continue needs a sport Cyclift can plan")
+        XCTAssertTrue(app.staticTexts["rosterEmptyHeadline"].firstMatch.exists, "empty roster headline")
+        shot("journey-2a-roster-empty")
+        app.buttons["rosterAdd-roadCycling"].firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "rosterMain-roadCycling").firstMatch.waitForExistence(timeout: 5), "the first sport becomes the main sport")
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "rosterLead").firstMatch.exists, "one domain: no lead control")
+        app.buttons["rosterAdd-strength"].firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "rosterMain-strength").firstMatch.waitForExistence(timeout: 5), "strength is the second main sport")
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "rosterLead").firstMatch.waitForExistence(timeout: 5), "two domains: the lead control appears")
+        shot("journey-2b-roster-hybrid")
+        app.buttons["rosterBrowse"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["library-running"].firstMatch.waitForExistence(timeout: 8), "the library opens")
+        let sauna = app.descendants(matching: .any).matching(identifier: "library-sauna").firstMatch
+        var n = 0; while !sauna.exists && n < 4 { app.swipeUp(); n += 1 }
+        XCTAssertTrue(sauna.exists && sauna.label.contains("Coming later"), "an activity that cannot be stored says so and is not a button")
+        shot("journey-2c-library")
+        app.buttons["libraryDone"].firstMatch.tap()
+        XCTAssertTrue(next.waitForExistence(timeout: 8) && next.isEnabled); next.tap()
+        // 3 Goals
+        page(3); XCTAssertFalse(next.isEnabled, "page 3: Continue needs a goal")
+        let goal = app.descendants(matching: .any).matching(identifier: "goal-endurance").firstMatch
+        XCTAssertTrue(goal.waitForExistence(timeout: 8), "goal cards"); goal.tap()
+        shot("journey-3-goals"); XCTAssertTrue(next.isEnabled); next.tap()
+        // 4 Week
+        page(4); XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "onbWeek").firstMatch.waitForExistence(timeout: 8), "the week builder")
+        shot("journey-4-week"); XCTAssertTrue(next.isEnabled, "the proposed week can be accepted as it is"); next.tap()
+        // 5 Connect
+        page(5); XCTAssertTrue(app.staticTexts["onbLabDevices"].firstMatch.exists, "Lab says devices are switched off")
+        shot("journey-5-connect"); next.tap()
+        // 6 Evolution
+        page(6); XCTAssertTrue(app.staticTexts["onbEvolutionStage"].firstMatch.waitForExistence(timeout: 8) && app.staticTexts["onbEvolutionStage"].firstMatch.label.hasPrefix("No stage yet"), "no stage is claimed")
+        shot("journey-6-evolution"); next.tap()
+        // 7 Blueprint
+        page(7)
+        let identity = app.staticTexts["blueprintIdentity"].firstMatch
+        XCTAssertTrue(identity.waitForExistence(timeout: 8) && identity.label == "Road cycling + Gym training · balanced", "the Blueprint names the roster (\(identity.label))")
+        XCTAssertTrue(app.staticTexts["blueprintWeekTotals"].firstMatch.exists, "the proposed week's totals")
+        shot("journey-7-blueprint")
+        app.buttons["onbCreatePlan"].firstMatch.tap()
+        // Home and Plan show the approved athlete and week
+        XCTAssertTrue(app.waitForHome(name: "Sam", timeout: 20), "approval lands on Home for the new athlete"); shot("journey-8-home")
+        tab(app, "Plan")
+        XCTAssertTrue(app.staticTexts["planTitle"].firstMatch.waitForExistence(timeout: 8), "Plan is shown"); shot("journey-9-plan")
+        // leave Lab empty for the restore test
+        tab(app, "Home")
+        XCTAssertTrue(openProfile(app), "Profile from the avatar")
+        deleteAll(app)
+    }
+
     func test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked() {
         let app = XCUIApplication()
         app.launch()

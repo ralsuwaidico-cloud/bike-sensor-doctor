@@ -64,38 +64,14 @@ struct OnboardingView: View {
             default: step = 0
             }
         }
-        let p = store.profile
-        var x = OnboardingAnswers()
-        if !p.name.isEmpty { x.name = p.name }
-        if step >= 1, s != 0 {
-            // the athlete has been past Stage A: what is stored is what they chose
-            x.mode = p.trainingMode
-            x.cyclingLevel = p.level
-            x.strengthLevel = store.strengthPrefs.experience
-            x.priority = p.trainingMode == .hybrid ? p.priority : nil
-        }
-        x.dateOfBirth = p.dateOfBirth
-        x.weightKg = p.provenance(.weight).source == .unknown ? nil : p.weightKg
-        if !p.goals.isEmpty { x.goals = p.goals; x.primaryGoal = p.primaryGoal }
-        let mode = x.mode ?? p.trainingMode
-        if let k = OnboardingWeek.kinds(of: store.availability, mode: mode, twoADay: true), p.weekIsExplicit == true { x.week = k }
-        x.rideMinutes = p.cyclingSessionMinutes
-        x.liftMinutes = p.strengthSessionMinutes
-        if store.equipment.isSet { x.equipment = EquipmentPreset.of(store.equipment) }
-        x.supersets = store.strengthPrefs.prefersSupersets
-        if p.ftpKnown { x.ftpWatts = p.ftpValue; x.ftpSource = p.ftpSource == .tested ? .tested : .entered; ftpKnown = true; ftpText = p.ftpValue.map(String.init) ?? "" }
+        let r = OnboardingFlow.storedAnswers(store, pastFirstStage: step >= 1 && s != 0)
+        let x = r.answers
+        if let w = r.ftpWatts { ftpKnown = true; ftpText = String(w) } else if r.ftpKnown { ftpKnown = true }
         a = x
     }
 
     /// Writes the answers into the one authoritative profile (no second copy). Called on every change.
-    private func commit() {
-        var x = store.planInputs
-        a.apply(to: &x)
-        store.updateProfile { $0 = x.profile }
-        if store.availability != x.availability { store.availability = x.availability }
-        if store.equipment != x.equipment { store.equipment = x.equipment }
-        if store.strengthPrefs != x.strengthPrefs { store.strengthPrefs = x.strengthPrefs }
-    }
+    private func commit() { OnboardingFlow.commit(a, to: store) }
 
     private var mode: TrainingMode { a.mode ?? store.profile.trainingMode }
 
@@ -223,15 +199,7 @@ struct OnboardingView: View {
     /// The planner on the inputs Approve will save, for this Monday — nothing persisted.
     private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int) -> [Workout] { dryRun(kinds, ride, lift, weekOffset: 0) }
     private func dryRun(_ kinds: [DayKind], _ ride: Int, _ lift: Int, weekOffset: Int) -> [Workout] {
-        var x = store.planInputs
-        var draft = a; draft.week = kinds; draft.rideMinutes = ride; draft.liftMinutes = lift
-        draft.apply(to: &x)
-        guard let av = x.availability else { return [] }
-        let cal = Calendar.current
-        let d0 = cal.startOfDay(for: Date())
-        let wd = (cal.component(.weekday, from: d0) + 5) % 7
-        let monday = cal.date(byAdding: .day, value: -wd + 7 * weekOffset, to: d0) ?? d0
-        return PlanEngine.week(starting: monday, profile: x.profile, availability: av)
+        OnboardingFlow.dryRun(a, store: store, kinds: kinds, ride: ride, lift: lift, weekOffset: weekOffset)
     }
 
     // MARK: D — Connect your ecosystem (optional; only actions that work today)
@@ -242,35 +210,7 @@ struct OnboardingView: View {
             if mode.includesCycling { ftpCard }
         }
     }
-    private var ftpCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack { CyCaption(text: "FTP"); Spacer(); CySourceTagBadge(tag: store.profile.ftpKnown ? .logged : .unknown) }
-            CySegmentedControl(options: [(false, "Don't know"), (true, "I know it")], selection: Binding(get: { ftpKnown }, set: { v in
-                ftpKnown = v
-                if !v { a.ftpSource = .unknown; a.ftpWatts = nil; ftpText = "" } else { a.ftpSource = nil }
-            }))
-            .accessibilityIdentifier("onbFTP")
-            if ftpKnown {
-                HStack(spacing: 10) {
-                    TextField("Watts", text: $ftpText).keyboardType(.numberPad).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink)
-                        .padding(.horizontal, 12).frame(minHeight: 48)
-                        .background(CyTheme.card2, in: RoundedRectangle(cornerRadius: CyTheme.rField, style: .continuous))
-                        .onChange(of: ftpText) { _, v in
-                            // GR-22: Entered only with a typed number in 50–600 W; otherwise the FTP stays Unknown
-                            if let n = Int(v), (50...600).contains(n) { a.ftpWatts = n; a.ftpSource = .entered }
-                            else { a.ftpWatts = nil; a.ftpSource = .unknown }
-                        }
-                        .accessibilityLabel("FTP in watts").accessibilityIdentifier("onbFTPWatts")
-                    Text("W").font(CyType.unit).foregroundStyle(CyTheme.ink3)
-                }
-                Text(store.profile.ftpKnown ? "Entered · power targets use it. An FTP test ride later makes it Tested." : "Type your FTP in watts (50–600). Until then it stays Unknown.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
-            } else {
-                Text("Rides use heart rate and effort until you know it. No watts are ever guessed.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
-            }
-        }
-        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-        .cyCard()
-    }
+    private var ftpCard: some View { OnboardingFTPCard(a: $a, ftpKnown: $ftpKnown, ftpText: $ftpText) }
 
     // MARK: E — Your training system (the first real dashboard; Approve → Home shows the same plan)
     private var stageE: some View {
@@ -346,8 +286,66 @@ struct OnboardingView: View {
     }
 
     /// Plan version 1: the same inputs the preview used, generated for this week and next; Home and Plan read `plan`.
-    private func approve() {
-        commit()
+    private func approve() { OnboardingFlow.approve(a, store: store) }
+}
+
+/// The onboarding's logic, shared by every onboarding screen (the five-stage screen above and the seven-page journey in
+/// Redesign/OnboardingV34.swift): one way to read the stored answers, write them, preview the week and approve it.
+/// Moved here unchanged from OnboardingView (16 Nov 2026) so that no second copy of this logic exists.
+enum OnboardingFlow {
+    /// What is already stored, as answers. `pastFirstStage`: the athlete has been past the first stage, so the stored
+    /// training type and levels are what they chose.
+    static func storedAnswers(_ store: Store, pastFirstStage: Bool) -> (answers: OnboardingAnswers, ftpKnown: Bool, ftpWatts: Int?) {
+        let p = store.profile
+        var x = OnboardingAnswers()
+        if !p.name.isEmpty { x.name = p.name }
+        if pastFirstStage {
+            // the athlete has been past Stage A: what is stored is what they chose
+            x.mode = p.trainingMode
+            x.cyclingLevel = p.level
+            x.strengthLevel = store.strengthPrefs.experience
+            x.priority = p.trainingMode == .hybrid ? p.priority : nil
+        }
+        x.dateOfBirth = p.dateOfBirth
+        x.weightKg = p.provenance(.weight).source == .unknown ? nil : p.weightKg
+        if !p.goals.isEmpty { x.goals = p.goals; x.primaryGoal = p.primaryGoal }
+        let mode = x.mode ?? p.trainingMode
+        if let k = OnboardingWeek.kinds(of: store.availability, mode: mode, twoADay: true), p.weekIsExplicit == true { x.week = k }
+        x.rideMinutes = p.cyclingSessionMinutes
+        x.liftMinutes = p.strengthSessionMinutes
+        if store.equipment.isSet { x.equipment = EquipmentPreset.of(store.equipment) }
+        x.supersets = store.strengthPrefs.prefersSupersets
+        var known = false
+        if p.ftpKnown { x.ftpWatts = p.ftpValue; x.ftpSource = p.ftpSource == .tested ? .tested : .entered; known = true }
+        return (x, known, p.ftpKnown ? p.ftpValue : nil)
+    }
+
+    /// Writes the answers into the one authoritative profile (no second copy). Called on every change.
+    static func commit(_ a: OnboardingAnswers, to store: Store) {
+        var x = store.planInputs
+        a.apply(to: &x)
+        store.updateProfile { $0 = x.profile }
+        if store.availability != x.availability { store.availability = x.availability }
+        if store.equipment != x.equipment { store.equipment = x.equipment }
+        if store.strengthPrefs != x.strengthPrefs { store.strengthPrefs = x.strengthPrefs }
+    }
+
+    /// The planner on the inputs Approve will save — nothing persisted.
+    static func dryRun(_ a: OnboardingAnswers, store: Store, kinds: [DayKind], ride: Int, lift: Int, weekOffset: Int) -> [Workout] {
+        var x = store.planInputs
+        var draft = a; draft.week = kinds; draft.rideMinutes = ride; draft.liftMinutes = lift
+        draft.apply(to: &x)
+        guard let av = x.availability else { return [] }
+        let cal = Calendar.current
+        let d0 = cal.startOfDay(for: Date())
+        let wd = (cal.component(.weekday, from: d0) + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -wd + 7 * weekOffset, to: d0) ?? d0
+        return PlanEngine.week(starting: monday, profile: x.profile, availability: av)
+    }
+
+    /// Plan version 1: the same inputs the preview used, generated for this week and next; Home and Plan read `plan`.
+    static func approve(_ a: OnboardingAnswers, store: Store) {
+        commit(a, to: store)
         if store.profile.goals.isEmpty, let g = a.goals { store.updateProfile { $0.goals = g; $0.primaryGoal = a.primaryGoal ?? g.first } }
         store.onboardingStage = 0
         let now = Date()
@@ -358,5 +356,43 @@ struct OnboardingView: View {
         store.planVersions.append(PlanVersion(createdAt: now, effectiveDate: made.first?.date ?? now, cause: .profile, before: [], after: made, inputsBefore: nil,
                                               summary: ["Plan approved in onboarding: \(OnboardingWeek.rides(a.week ?? [])) rides · \(OnboardingWeek.lifts(a.week ?? [])) lifts a week"], proposalId: nil))
         store.onboarded = true
+    }
+}
+
+/// The FTP question (Connect stage): "Don't know" or a typed number in 50–600 W. No watts are ever guessed.
+struct OnboardingFTPCard: View {
+    @EnvironmentObject private var store: Store
+    @Binding var a: OnboardingAnswers
+    @Binding var ftpKnown: Bool
+    @Binding var ftpText: String
+    var body: some View {
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack { CyCaption(text: "FTP"); Spacer(); CySourceTagBadge(tag: store.profile.ftpKnown ? .logged : .unknown) }
+            CySegmentedControl(options: [(false, "Don't know"), (true, "I know it")], selection: Binding(get: { ftpKnown }, set: { v in
+                ftpKnown = v
+                if !v { a.ftpSource = .unknown; a.ftpWatts = nil; ftpText = "" } else { a.ftpSource = nil }
+            }))
+            .accessibilityIdentifier("onbFTP")
+            if ftpKnown {
+                HStack(spacing: 10) {
+                    TextField("Watts", text: $ftpText).keyboardType(.numberPad).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink)
+                        .padding(.horizontal, 12).frame(minHeight: 48)
+                        .background(CyTheme.card2, in: RoundedRectangle(cornerRadius: CyTheme.rField, style: .continuous))
+                        .onChange(of: ftpText) { _, v in
+                            // GR-22: Entered only with a typed number in 50–600 W; otherwise the FTP stays Unknown
+                            if let n = Int(v), (50...600).contains(n) { a.ftpWatts = n; a.ftpSource = .entered }
+                            else { a.ftpWatts = nil; a.ftpSource = .unknown }
+                        }
+                        .accessibilityLabel("FTP in watts").accessibilityIdentifier("onbFTPWatts")
+                    Text("W").font(CyType.unit).foregroundStyle(CyTheme.ink3)
+                }
+                Text(store.profile.ftpKnown ? "Entered · power targets use it. An FTP test ride later makes it Tested." : "Type your FTP in watts (50–600). Until then it stays Unknown.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
+            } else {
+                Text("Rides use heart rate and effort until you know it. No watts are ever guessed.").font(CyType.captionSmall).foregroundStyle(CyTheme.ink3)
+            }
+        }
+        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+        .cyCard()
     }
 }

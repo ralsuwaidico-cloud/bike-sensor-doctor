@@ -34,7 +34,7 @@ struct RootView: View {
     var body: some View {
         Group {
             // E1: an unreadable or newer store is never shown as "no athlete" (which would start onboarding and write)
-            if !store.storage.isWritable { StorageRecoveryView() } else if store.onboarded { tabs } else { OnboardingView() }
+            if !store.storage.isWritable { StorageRecoveryView() } else if store.onboarded { tabs } else if CyProduct.redesign { OnboardingV34View() } else { OnboardingView() }
         }
         // E1: what the launch found (records set aside, a restored copy) and any write that is failing are said on every
         // screen, not only in Settings. Nothing is shown when storage is healthy.
