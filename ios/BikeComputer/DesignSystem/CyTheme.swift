@@ -5,17 +5,20 @@ import SwiftUI
 // Two deliberate palettes. Light: warm grey canvas, white cards, sport pastels. Dark: deep slate canvas, lighter slate
 // cards, desaturated and lifted accents — never inverted, never flat black. Every text/background pair below passes
 // WCAG AA (checked in the v3 prototype with the same hex values).
+//
+// UX1 preview: `.themed { … }` after a colour names the theme token that stands in for it while a preview theme is active
+// (simulator only, DesignSystem/ThemeRuntime.swift). With no preview theme the colour is exactly the one written here.
 
 enum CyTheme {
     // ---- canvas and text
-    static let canvas = Color(cyLight: 0xF4F1EC, dark: 0x151A21)
-    static let card = Color(cyLight: 0xFFFFFF, dark: 0x1E242C)
-    static let card2 = Color(cyLight: 0xF8F6F2, dark: 0x252C35)
-    static let line = Color(cyLight: 0xE7E2DA, dark: 0x2F3741)
-    static let line2 = Color(cyLight: 0xEFEBE5, dark: 0x28303A)
-    static let ink = Color(cyLight: 0x1F2328, dark: 0xEEF1F4)
-    static let ink2 = Color(cyLight: 0x5A6068, dark: 0xAEB6C0)
-    static let ink3 = Color(cyLight: 0x6E747C, dark: 0x8C95A0)
+    static let canvas = Color(cyLight: 0xF4F1EC, dark: 0x151A21).themed { $0.background }
+    static let card = Color(cyLight: 0xFFFFFF, dark: 0x1E242C).themed { $0.surface }
+    static let card2 = Color(cyLight: 0xF8F6F2, dark: 0x252C35).themed { $0.surfaceRaised }
+    static let line = Color(cyLight: 0xE7E2DA, dark: 0x2F3741).themed { $0.border }
+    static let line2 = Color(cyLight: 0xEFEBE5, dark: 0x28303A).themed { $0.hairline }
+    static let ink = Color(cyLight: 0x1F2328, dark: 0xEEF1F4).themed { $0.textPrimary }
+    static let ink2 = Color(cyLight: 0x5A6068, dark: 0xAEB6C0).themed { $0.textSecondary }
+    static let ink3 = Color(cyLight: 0x6E747C, dark: 0x8C95A0).themed { $0.textTertiary }
 
     // ---- sport identities (tint = text/icon on the soft fill, bg = soft fill, mid/soft = chart shades)
     struct Identity {
@@ -28,19 +31,19 @@ enum CyTheme {
     }
     static let cycling = Identity(tint: Color(cyLight: 0x3550B5, dark: 0xA9BAF5), bg: Color(cyLight: 0xE4EAFC, dark: 0x232B42),
                                   mid: Color(cyLight: 0x8FA3EA, dark: 0x7088D8), soft: Color(cyLight: 0xC9D4F7, dark: 0x33406A),
-                                  onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21))
+                                  onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21)).themed { $0.endurance }
     static let strength = Identity(tint: Color(cyLight: 0xA3324F, dark: 0xF2A9BB), bg: Color(cyLight: 0xFCE5EA, dark: 0x3A2430),
                                    mid: Color(cyLight: 0xE58FA5, dark: 0xC9708A), soft: Color(cyLight: 0xF5C6D2, dark: 0x5A3242),
-                                   onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21))
+                                   onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21)).themed { $0.strength }
     static let recovery = Identity(tint: Color(cyLight: 0x1C6B4E, dark: 0x8FD8B5), bg: Color(cyLight: 0xDCF2E7, dark: 0x1C3329),
                                    mid: Color(cyLight: 0x7FCBA6, dark: 0x4FA67F), soft: Color(cyLight: 0xBFE6D1, dark: 0x2A4E3E),
-                                   onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21))
+                                   onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21)).themed { $0.recovery }
     static let goal = Identity(tint: Color(cyLight: 0x855400, dark: 0xF3D088), bg: Color(cyLight: 0xFDF1D3, dark: 0x3A3122),
                                mid: Color(cyLight: 0xF0BE55, dark: 0xC99A3C), soft: Color(cyLight: 0xF8DFA2, dark: 0x594A2C),
-                               onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21))
+                               onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21)).themed { $0.ringLoad }
     static let insight = Identity(tint: Color(cyLight: 0x5A44A8, dark: 0xC7B9F4), bg: Color(cyLight: 0xECE7FB, dark: 0x2C2742),
                                   mid: Color(cyLight: 0xA996E6, dark: 0x8C77D6), soft: Color(cyLight: 0xD9CFF8, dark: 0x3F3860),
-                                  onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21))
+                                  onTint: Color(cyLight: 0xFFFFFF, dark: 0x151A21)).themed { $0.ringRecovery }
     static func identity(_ s: CySport) -> Identity {
         switch s {
         case .cycling: return cycling
@@ -52,18 +55,18 @@ enum CyTheme {
     }
 
     // ---- status
-    static let warn = Color(cyLight: 0x9A4B00, dark: 0xF5B97A)
-    static let warnBg = Color(cyLight: 0xFFE9D6, dark: 0x3A2A1A)
-    static let bad = Color(cyLight: 0xB42318, dark: 0xF59A90)
-    static let badBg = Color(cyLight: 0xFDE4E1, dark: 0x3D2020)
+    static let warn = Color(cyLight: 0x9A4B00, dark: 0xF5B97A).themed { $0.warning }
+    static let warnBg = Color(cyLight: 0xFFE9D6, dark: 0x3A2A1A).themed { $0.shades(of: $0.warning).fill }
+    static let bad = Color(cyLight: 0xB42318, dark: 0xF59A90).themed { $0.danger }
+    static let badBg = Color(cyLight: 0xFDE4E1, dark: 0x3D2020).themed { $0.shades(of: $0.danger).fill }
     static let ok = recovery.tint
 
     // ---- navigation and primary action
-    static let nav = Color(cyLight: 0x1F2328, dark: 0x2A313B)
-    static let navInk = Color(cyLight: 0xB9BEC5, dark: 0x9AA3AE)
+    static let nav = Color(cyLight: 0x1F2328, dark: 0x2A313B).themed { $0.navBar }
+    static let navInk = Color(cyLight: 0xB9BEC5, dark: 0x9AA3AE).themed { $0.navIdle }
     static let navOn = Color.white
-    static let cta = Color(cyLight: 0x1F2328, dark: 0xEEF1F4)
-    static let ctaInk = Color(cyLight: 0xFFFFFF, dark: 0x151A21)
+    static let cta = Color(cyLight: 0x1F2328, dark: 0xEEF1F4).themed { $0.textPrimary }
+    static let ctaInk = Color(cyLight: 0xFFFFFF, dark: 0x151A21).themed { $0.background }
 
     // ---- honesty tags (text, background)
     static func tagColors(_ t: SourceTag) -> (Color, Color) {

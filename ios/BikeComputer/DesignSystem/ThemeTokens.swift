@@ -120,6 +120,52 @@ struct CyThemeTokens: Equatable {
     }
 }
 
+// MARK: - Shades derived from the tokens (UX1 preview bridge)
+//
+// The existing screens ask for more shades than the tokens name (a soft fill behind a discipline label, chart mid-tones,
+// hairlines, the navigation bar). They are derived here by mixing, so six themes stay one set of data. Provisional, like
+// the values they are derived from.
+
+extension CyRGBA {
+    /// This colour moved `amount` (0…1) of the way towards `other`.
+    func mixed(with o: CyRGBA, amount t: Double) -> CyRGBA {
+        let k = min(1, max(0, t))
+        return CyRGBA(r: r + (o.r - r) * k, g: g + (o.g - g) * k, b: b + (o.b - b) * k, a: a + (o.a - a) * k)
+    }
+}
+
+/// One meaning colour with the shades the screens draw it in.
+struct CyThemeShades: Equatable {
+    /// Text and icons.
+    let tint: CyRGBA
+    /// Soft fill behind `tint` text.
+    let fill: CyRGBA
+    /// Chart mid-tone and light tone.
+    let mid: CyRGBA
+    let soft: CyRGBA
+    /// Text on the solid tint (buttons, selected chips).
+    let onTint: CyRGBA
+}
+
+extension CyThemeTokens {
+    /// How much of the meaning colour is in its soft fill. Kept low so the same colour stays readable as small text on it.
+    static let softFillAmount = 0.10
+
+    func shades(of tint: CyRGBA) -> CyThemeShades {
+        CyThemeShades(tint: tint, fill: surface.mixed(with: tint, amount: CyThemeTokens.softFillAmount), mid: surface.mixed(with: tint, amount: 0.6),
+                      soft: surface.mixed(with: tint, amount: 0.3), onTint: id.isDark ? background : CyRGBA(hex: 0xFFFFFF))
+    }
+    /// The meaning colours the existing screens draw with soft fills.
+    var shadedTokens: [(name: String, shades: CyThemeShades)] {
+        [("endurance", shades(of: endurance)), ("strength", shades(of: strength)), ("recovery", shades(of: recovery)), ("ringLoad", shades(of: ringLoad)),
+         ("ringRecovery", shades(of: ringRecovery)), ("warning", shades(of: warning)), ("danger", shades(of: danger))]
+    }
+    var hairline: CyRGBA { border.mixed(with: surface, amount: 0.5) }
+    /// The navigation bar and its idle labels: a raised surface in dark themes, the ink colour in light ones (as today).
+    var navBar: CyRGBA { id.isDark ? surfaceRaised : textPrimary }
+    var navIdle: CyRGBA { id.isDark ? textSecondary : textPrimary.mixed(with: surface, amount: 0.7) }
+}
+
 /// The athlete's choice. Either one theme always, or "follow iOS": one theme of the athlete's choosing while iOS is in
 /// light appearance and another while it is in dark. Nothing is substituted behind the athlete's back: the light slot
 /// only accepts a light theme and the dark slot only a dark one.

@@ -140,4 +140,28 @@ final class ThemeTokensTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: url), before, "choosing a theme does not touch store.json")
         XCTAssertFalse(String(decoding: before, as: UTF8.self).contains("cyclift.theme"), "the athlete record has no theme field")
     }
+
+    // MARK: derived shades (preview bridge)
+
+    func testMixingMovesAColourTowardsAnother() {
+        let a = CyRGBA(hex: 0x000000), b = CyRGBA(hex: 0xFFFFFF)
+        XCTAssertEqual(a.mixed(with: b, amount: 0), a)
+        XCTAssertEqual(a.mixed(with: b, amount: 1), b)
+        XCTAssertEqual(a.mixed(with: b, amount: 0.5).r, 0.5, accuracy: 0.0001)
+        XCTAssertEqual(a.mixed(with: b, amount: 7), b, "amounts outside 0…1 are clamped")
+    }
+
+    func testEveryMeaningColourIsReadableOnItsOwnSoftFillAndUnderItsOwnLabel() {
+        for id in CyThemeID.allCases {
+            let t = CyThemeTokens.tokens(for: id)
+            let bar = id == .highContrast ? 7.0 : 4.5
+            for (name, s) in t.shadedTokens {
+                XCTAssertGreaterThanOrEqual(s.tint.contrast(with: s.fill), bar, "\(id.rawValue) \(name): text on its soft fill")
+                XCTAssertGreaterThanOrEqual(s.onTint.contrast(with: s.tint), 4.5, "\(id.rawValue) \(name): label on the solid colour")
+                XCTAssertGreaterThanOrEqual(t.textPrimary.contrast(with: s.fill), bar, "\(id.rawValue) \(name): primary text on the soft fill")
+            }
+            XCTAssertGreaterThanOrEqual(t.navIdle.contrast(with: t.navBar), 4.5, "\(id.rawValue): idle navigation label")
+            XCTAssertGreaterThanOrEqual(CyRGBA(hex: 0xFFFFFF).contrast(with: t.navBar), 4.5, "\(id.rawValue): selected navigation label")
+        }
+    }
 }
