@@ -1,0 +1,12 @@
+BikeComputer iOS CI — build 246 — 2026-11-16 09:42 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 13m54s
+  layout small counts: passed 0 · failed 1 · skipped 0 · screenshots so far 10
+  layout small (AX3): FAILED (exit 65) · 18m28s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 114.0}, {343.0, 153.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan' -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: a tapped bar shows its week (AVERAGE PER WEEK, 2 h 54 min, 24 Nov 2025 – 22 Nov 2026 · total 47 h 53 min · 42 rides · average of
+RESULT layout audit: FAILED (14 screenshots)
+Total: 32m41s

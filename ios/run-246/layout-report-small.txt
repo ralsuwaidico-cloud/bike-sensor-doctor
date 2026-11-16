@@ -1,0 +1,27 @@
+AX3 progress glance: nothing wider than the screen
+AX3 progress glance: 6 texts, none overlapping
+AX3 riding 4 wk: 4 date labels, smallest gap 25 pt
+AX3 riding 4 wk: nothing wider than the screen
+AX3 riding 4 wk: 7 texts, none overlapping
+AX3 riding 8 wk: 4 date labels, smallest gap 25 pt
+AX3 riding 8 wk: nothing wider than the screen
+AX3 riding 8 wk: 6 texts, none overlapping
+AX3 riding 12 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 12 wk: nothing wider than the screen
+AX3 riding 12 wk: 5 texts, none overlapping
+AX3 riding 16 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 16 wk: nothing wider than the screen
+AX3 riding 16 wk: 2 texts, none overlapping
+AX3 riding 1 yr: 4 date labels, smallest gap 21 pt
+AX3 riding 1 yr: nothing wider than the screen
+AX3 riding 1 yr: 1 texts, none overlapping
+AX3 riding selected: nothing wider than the screen
+AX3 riding selected: 4 texts, none overlapping
+AX3 strength 8 wk: 4 date labels, smallest gap 29 pt
+AX3 strength 8 wk: nothing wider than the screen
+AX3 strength 8 wk: 7 texts, none overlapping
+AX3 strength selected: nothing wider than the screen
+AX3 strength selected: 7 texts, none overlapping
+AX3: FTP badge not found
+AX3 plan: nothing wider than the screen
+AX3 plan: 5 texts, none overlapping

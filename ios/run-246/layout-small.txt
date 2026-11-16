@@ -1,0 +1,176 @@
+=== layout-small: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:393: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: the 16 wk range can be selected
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:397: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: a tapped bar shows its week (AVERAGE PER WEEK, 2 h 54 min, 24 Nov 2025 – 22 Nov 2026 · total 47 h 53 min · 42 rides · average of 16 full weeks)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:398: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: the selection shows done and planned (AVERAGE PER WEEK, 2 h 54 min, 24 Nov 2025 – 22 Nov 2026 · total 47 h 53 min · 42 rides · average of 16 full weeks)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:437: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 114.0}, {343.0, 153.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan'
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (678.523 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: full filter ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:393: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: the 16 wk range can be selected
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:397: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: a tapped bar shows its week (AVERAGE PER WEEK, 2 h 54 min, 24 Nov 2025 – 22 Nov 2026 · total 47 h 53 min · 42 rides · average of 16 full weeks)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:398: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : XCTAssertTrue failed - AX3: the selection shows done and planned (AVERAGE PER WEEK, 2 h 54 min, 24 Nov 2025 – 22 Nov 2026 · total 47 h 53 min · 42 rides · average of 16 full weeks)
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:437: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 114.0}, {343.0, 153.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan'
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (678.523 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-16 10:13:51.379.
+	 Executed 1 test, with 4 failures (0 unexpected) in 678.523 (678.533) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-16 10:13:51.381.
+	 Executed 1 test, with 4 failures (0 unexpected) in 678.523 (678.535) seconds
+Test Suite 'Selected tests' failed at 2026-11-16 10:13:51.382.
+	 Executed 1 test, with 4 failures (0 unexpected) in 678.523 (678.544) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: last 150 lines ===
+    t =   599.26s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   599.71s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   600.09s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   601.57s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   604.20s Checking existence of `"ftpConfidence" Any`
+    t =   609.42s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   609.42s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   609.46s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   610.10s     Check for interrupting elements affecting "Cyclift" Application
+    t =   610.76s     Synthesize event
+    t =   610.76s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   611.05s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   611.67s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   611.91s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   612.16s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   613.16s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   615.80s Checking existence of `"ftpConfidence" Any`
+    t =   622.86s Waiting 5.0s for "Plan" Button to exist
+    t =   623.90s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   623.90s         Checking existence of `"Plan" Button`
+    t =   624.02s Tap "Plan" Button
+    t =   624.02s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   624.05s     Find the "Plan" Button
+    t =   624.15s     Check for interrupting elements affecting "Plan" Button
+    t =   624.75s     Synthesize event
+    t =   625.09s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   625.14s Checking existence of `"Plan" Button`
+    t =   625.53s Find the "Plan" Button
+    t =   625.88s Find the "Plan" Button
+    t =   626.24s Checking existence of `"Plan" Button`
+    t =   626.54s Find the "Plan" Button
+    t =   626.86s Find the "Plan" Button
+    t =   628.10s Find the Window (First Match)
+    t =   628.16s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   629.22s Find the Window (First Match)
+    t =   629.24s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   630.33s Checking existence of `"planDay-1" Button`
+    t =   631.15s Checking existence of `"planDay-2" Button`
+    t =   631.89s Checking existence of `"planDay-3" Button`
+    t =   632.30s Checking existence of `"planDay-4" Button`
+    t =   633.09s Checking existence of `"planDay-5" Button`
+    t =   633.87s Checking existence of `"planDay-6" Button`
+    t =   634.24s Checking existence of `"planDay-7" Button`
+    t =   634.93s Find the Window (First Match)
+    t =   634.95s Find the "planDay-1" Button
+    t =   635.72s Find the "planDay-1" Button
+    t =   636.29s Find the "planDay-2" Button
+    t =   636.98s Find the "planDay-2" Button
+    t =   637.32s Find the "planDay-3" Button
+    t =   637.97s Find the "planDay-3" Button
+    t =   638.60s Find the "planDay-4" Button
+    t =   639.04s Find the "planDay-4" Button
+    t =   639.66s Find the "planDay-5" Button
+    t =   640.13s Find the "planDay-5" Button
+    t =   641.03s Find the "planDay-6" Button
+    t =   641.74s Find the "planDay-6" Button
+    t =   642.11s Find the "planDay-7" Button
+    t =   642.71s Find the "planDay-7" Button
+    t =   643.10s Find the Window (First Match)
+    t =   643.11s Checking existence of `"planDayStrip" Other`
+    t =   643.49s Find the "planDayStrip" Other
+    t =   644.02s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   644.02s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   644.02s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   644.31s     Check for interrupting elements affecting "Cyclift" Application
+    t =   644.81s     Synthesize event
+    t =   644.82s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   645.04s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   645.29s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   645.83s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   646.12s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   647.44s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   650.05s Checking existence of `"planDayStrip" Other`
+    t =   650.78s Find the "planDayStrip" Other
+    t =   651.90s Find the "planDay-1" Button
+    t =   652.40s Find the "planDay-2" Button
+    t =   653.28s Find the "planDay-3" Button
+    t =   654.14s Find the "planDay-4" Button
+    t =   654.93s Find the "planDay-5" Button
+    t =   655.70s Find the "planDay-6" Button
+    t =   656.22s Find the "planDay-7" Button
+    t =   656.87s Swipe left "planDayStrip" Other
+    t =   656.87s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   656.88s     Find the "planDayStrip" Other
+    t =   657.54s     Check for interrupting elements affecting "planDayStrip" Other
+    t =   658.14s     Synthesize event
+    t =   658.63s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   660.94s Find the "planDay-1" Button
+    t =   661.73s Find the "planDay-2" Button
+    t =   662.11s Find the "planDay-3" Button
+    t =   662.89s Find the "planDay-4" Button
+    t =   663.72s Find the "planDay-5" Button
+    t =   664.24s Find the "planDay-6" Button
+    t =   664.89s Find the "planDay-7" Button
+    t =   665.36s Checking existence of `"planDoneRiding" StaticText`
+    t =   666.12s Checking existence of `"planChanges" Button`
+    t =   667.03s Checking existence of `"fixPlan" Button`
+    t =   668.06s Tap "fixPlan" Button
+    t =   668.06s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   668.06s     Find the "fixPlan" Button
+    t =   668.90s     Check for interrupting elements affecting "fixPlan" Button
+    t =   669.71s     Synthesize event
+    t =   669.73s         Scroll element to visible
+    t =   669.74s         Find the "fixPlan" Button
+    t =   670.17s         Computed hit point {-1, -1} after scrolling to visible
+    t =   670.17s         Failed: Not hittable: Button, {{16.0, 114.0}, {343.0, 153.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan'
+    t =   671.18s     Retrying `Tap "fixPlan" Button` (attempt #2)
+    t =   671.18s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   671.18s         Find the "fixPlan" Button
+    t =   671.54s         Check for interrupting elements affecting "fixPlan" Button
+    t =   672.18s         Synthesize event
+    t =   672.29s             Scroll element to visible
+    t =   672.29s             Find the "fixPlan" Button
+    t =   673.10s             Computed hit point {-1, -1} after scrolling to visible
+    t =   673.10s             Failed: Not hittable: Button, {{16.0, 114.0}, {343.0, 153.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan'
+    t =   674.11s     Retrying `Tap "fixPlan" Button` (attempt #3)
+    t =   674.11s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   674.12s         Find the "fixPlan" Button
+    t =   674.72s         Check for interrupting elements affecting "fixPlan" Button
+    t =   675.65s         Synthesize event
+    t =   675.81s             Scroll element to visible
+    t =   675.81s             Find the "fixPlan" Button
+    t =   676.37s             Computed hit point {-1, -1} after scrolling to visible
+    t =   676.37s             Failed: Not hittable: Button, {{16.0, 114.0}, {343.0, 153.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan'
+    t =   676.37s Requesting snapshot of accessibility hierarchy for app with pid 31396
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:437: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{16.0, 114.0}, {343.0, 153.0}}, identifier: 'fixPlan', label: 'Lifting is 20 min over, Fix plan'
+    t =   677.66s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (678.523 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-16 10:13:51.379.
+	 Executed 1 test, with 4 failures (0 unexpected) in 678.523 (678.533) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-16 10:13:51.381.
+	 Executed 1 test, with 4 failures (0 unexpected) in 678.523 (678.535) seconds
+Test Suite 'Selected tests' failed at 2026-11-16 10:13:51.382.
+	 Executed 1 test, with 4 failures (0 unexpected) in 678.523 (678.544) seconds
+2026-11-16 10:14:47.144 xcodebuild[25434:67436] [MT] IDETestOperationsObserverDebug: 1078.461 elapsed -- Testing started completed.
+2026-11-16 10:14:47.146 xcodebuild[25434:67436] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-16 10:14:47.146 xcodebuild[25434:67436] [MT] IDETestOperationsObserverDebug: 1078.461 sec, +1078.461 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-small.xcresult
+
+Failing tests:
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+	LayoutAudit.testRC2OwnerScreens()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+=== layout-small: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (678.523 seconds).
+=== layout-small: E0-DIAG lines ===
