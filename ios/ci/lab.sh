@@ -72,6 +72,25 @@ for t in obsidian arctic; do
   pgrep -f "CycliftLab.app/CycliftLab" >/dev/null && { xcrun simctl io "$SIM" screenshot "$OUT/lab-ax3-$t-home.png" >/dev/null 2>&1; say "  $t at the largest text size: running, screenshot taken"; } || { say "  $t at the largest text size: NOT RUNNING"; FAIL=1; }
 done
 if [ $FAIL -ne 0 ]; then xcrun simctl spawn "$SIM" log show --last 3m --style compact --predicate 'process == "CycliftLab"' 2>/dev/null | tail -150 > "$OUT/simlog.txt"; ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i cycliftlab | head -3 | while read f; do head -c 60000 ~/Library/Logs/DiagnosticReports/"$f" > "$OUT/crash-$f.txt"; done; fi
+# ---- "Follow iOS": one running app, iOS switched from light to dark and back; the picture must change each time
+xcrun simctl terminate "$SIM" $BID >/dev/null 2>&1
+xcrun simctl ui "$SIM" appearance light >/dev/null 2>&1
+SIMCTL_CHILD_LAB_THEME=system xcrun simctl launch "$SIM" $BID >/dev/null 2>&1; sleep 14
+P_A=$(pgrep -f "CycliftLab.app/CycliftLab" | head -1)
+xcrun simctl io "$SIM" screenshot "$OUT/lab-system-1-ios-light.png" >/dev/null 2>&1
+xcrun simctl ui "$SIM" appearance dark >/dev/null 2>&1; sleep 6
+xcrun simctl io "$SIM" screenshot "$OUT/lab-system-2-ios-dark.png" >/dev/null 2>&1
+xcrun simctl ui "$SIM" appearance light >/dev/null 2>&1; sleep 6
+xcrun simctl io "$SIM" screenshot "$OUT/lab-system-3-ios-light-again.png" >/dev/null 2>&1
+P_B=$(pgrep -f "CycliftLab.app/CycliftLab" | head -1)
+# The three pictures are published; whether iOS-light shows the light theme and iOS-dark the dark one is judged by eye.
+# Here only: all three were taken and the dark one is not the same picture as the light ones.
+if [ -s "$OUT/lab-system-1-ios-light.png" ] && [ -s "$OUT/lab-system-2-ios-dark.png" ] && [ -s "$OUT/lab-system-3-ios-light-again.png" ] \
+   && ! cmp -s "$OUT/lab-system-1-ios-light.png" "$OUT/lab-system-2-ios-dark.png" && ! cmp -s "$OUT/lab-system-2-ios-dark.png" "$OUT/lab-system-3-ios-light-again.png"; then
+  say "  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected"
+else say "  FAIL Follow iOS: screenshots missing or identical"; FAIL=1; fi
+[ -n "$P_A" ] && [ "$P_A" = "$P_B" ] && say "  ok   the app was not relaunched during the iOS light/dark changes" || { say "  FAIL the app did not keep running through the iOS light/dark changes ($P_A / $P_B)"; FAIL=1; }
+
 # ---- Lab screen checks (five screens x six themes, switching without relaunch, delete all data) with the PRODUCTION
 # app installed beside Lab: its files must be byte-for-byte the same afterwards.
 PBID=com.ralsuwaidico.bikecomputer

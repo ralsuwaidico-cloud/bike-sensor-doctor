@@ -42,7 +42,7 @@ struct PlanView: View {
                     managePlan                                                         // F · manage plan
                 }.padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.sysPage)
             .navigationTitle("Plan")
             .navigationDestination(for: HomeRoute.self) { r in planDestination(r) }
             .toolbar {
@@ -81,7 +81,7 @@ struct PlanView: View {
                 Text("Review").font(.subheadline.bold()).foregroundStyle(BC.accent)
             }
             .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("planProposalStrip")
@@ -102,7 +102,7 @@ struct PlanView: View {
                 if let why = n.why { Label(why, systemImage: "text.bubble").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("planNextWhy") }
             }
             .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
@@ -122,7 +122,7 @@ struct PlanView: View {
     }
     private func manageRow(_ title: String, _ icon: String) -> some View {
         HStack { Label(title, systemImage: icon).font(.subheadline.weight(.semibold)).foregroundStyle(.primary); Spacer(); Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary) }
-            .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap).background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: header + calendar
@@ -175,7 +175,7 @@ struct PlanView: View {
                     Text("Fix plan").font(.subheadline.bold()).foregroundStyle(BC.accent)
                 }
                 .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("fixPlan")
@@ -189,7 +189,7 @@ struct PlanView: View {
             ForEach(days, id: \.date) { day in
                 if day.items.isEmpty {
                     if !beforePlan(day) {
-                        Button { addOn = day.date } label: { HStack { Text(day.date.dayAndDate).font(.subheadline.weight(.semibold)); Spacer(); Text("free · add").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
+                        Button { addOn = day.date } label: { HStack { Text(day.date.dayAndDate).font(.subheadline.weight(.semibold)); Spacer(); Text("free · add").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
                     }
                 } else if Calendar.current.isDateInToday(day.date) {
                     ForEach(day.items) { w in
@@ -216,7 +216,7 @@ struct PlanView: View {
             Text(w.skipped ? "Skipped" : st.title).font(.caption.weight(.semibold)).foregroundStyle(st.isCompleted ? BC.live : .secondary)
         }
         .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
         .accessibilityElement(children: .combine)
     }
 
@@ -230,7 +230,7 @@ struct PlanView: View {
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
             .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("planChanges")
@@ -246,7 +246,7 @@ struct PlanView: View {
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
             .padding(12).frame(maxWidth: .infinity, minHeight: DS.minTap)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+            .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("planWeekSettings")
@@ -320,7 +320,7 @@ struct WorkoutCard: View {
             }
         }
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-        .background(quiet ? Color(.secondarySystemGroupedBackground).opacity(0.6) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(quiet ? CyTheme.sysCard.opacity(0.6) : CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .combine)
     }
     private var titleBlock: some View { HStack(spacing: 6) { Text(workout.displayTitle(routine: routine)).font(.body.weight(.bold)).fixedSize(horizontal: false, vertical: true); ZonePill(z: workout.kind.zone) } }
@@ -394,7 +394,7 @@ struct WorkoutDetail: View {
                     if mode == 0 { detail } else if mode == 1 { move } else if mode == 2 { edit } else { replace }
                 }.padding()
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.sysPage)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .alert("Remove this session?", isPresented: $confirmDelete) { Button("Remove", role: .destructive) { store.remove(workout); dismiss() }; Button("Cancel", role: .cancel) {} }
             .sheet(isPresented: $showLog, onDismiss: { if let w = store.plan.first(where: { $0.id == workout.id }) { workout = w } }) { QuickStrengthLogSheet(date: workout.date, presetFocus: workout.strengthFocus, workoutId: workout.id) }
@@ -443,7 +443,7 @@ struct WorkoutDetail: View {
     @ViewBuilder private var move: some View {
         Eyebrow(t: "Move to (the two days swap)")
         ForEach(store.workouts(weekOf: workout.date).filter { $0.id != workout.id }) { o in
-            Button { store.swapDays(workout, o); dismiss() } label: { HStack { Text(o.date.dayAndDate).bold(); Spacer(); Text("now \(o.kind.title)").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
+            Button { store.swapDays(workout, o); dismiss() } label: { HStack { Text(o.date.dayAndDate).bold(); Spacer(); Text("now \(o.kind.title)").font(.caption).foregroundStyle(.secondary) }.padding(12).frame(maxWidth: .infinity).background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12)) }.buttonStyle(.plain)
         }
         Button("Cancel") { mode = 0 }
     }
@@ -462,7 +462,7 @@ struct WorkoutDetail: View {
         ForEach(Coach.alternatives(for: workout), id: \.kind) { alt in
             Button { var w = workout; w.kind = alt.kind; w.minutes = alt.minutes; submit(w) } label: {
                 HStack { ZonePill(z: alt.kind.zone); VStack(alignment: .leading) { Text(alt.kind.title).bold().foregroundStyle(.primary); Text(alt.minutes > 0 ? Fmt.duration(minutes: alt.minutes) : "").font(.caption).foregroundStyle(.secondary) }; Spacer() }
-                    .padding(12).frame(maxWidth: .infinity).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .padding(12).frame(maxWidth: .infinity).background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
             }.buttonStyle(.plain)
         }
         Button("Cancel") { mode = 0 }
@@ -536,7 +536,7 @@ struct Spark: View {
             Chart(Array(values.enumerated()), id: \.offset) { i, v in LineMark(x: .value("i", i), y: .value("v", v)).foregroundStyle(color).interpolationMethod(.catmullRom) }
                 .chartXAxis(.hidden).chartYAxis(.hidden).frame(height: 28)
             Text("\(values.last ?? 0) \(unit)").font(.caption.weight(.bold)).monospacedDigit()
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+        }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -568,7 +568,7 @@ struct TimelineRow: View {
             }
         }
         .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: 12))
         .opacity(entry.status == .completed || entry.status == .imported ? 1 : 0.75)
     }
     private func metric(_ v: String, _ u: String) -> some View { HStack(spacing: 2) { Text(v).bold().monospacedDigit(); if !u.isEmpty { Text(u).foregroundStyle(.secondary) } } }

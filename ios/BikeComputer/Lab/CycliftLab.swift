@@ -40,44 +40,54 @@ final class LabNoBluetooth {
 }
 
 enum LabTheme {
-    static let key = "lab.theme"
-    static var chosen: CyThemeID {
-        let raw = ProcessInfo.processInfo.environment["LAB_THEME"] ?? UserDefaults.standard.string(forKey: key) ?? ""      // LAB_THEME: screenshot runs
-        return CyThemeID(rawValue: raw) ?? .newAthleteDefault
+    /// Lab keeps the choice with the real preference store (its own key in Lab's own preferences).
+    static let store = CyThemePreferenceStore()
+    /// LAB_THEME (screenshot runs): a theme name, or "system". Otherwise the stored choice; Obsidian on first launch.
+    static var launchPreference: CyThemePreference {
+        if let raw = ProcessInfo.processInfo.environment["LAB_THEME"], let p = CyThemeState.preference(named: raw) { return p }
+        return store.load(legacyAppearance: nil)
     }
 }
 
 struct LabChrome: ViewModifier {
     @ObservedObject private var theme = CyThemeState.shared
     @State private var restoreAsked = false
+    private func choose(_ p: CyThemePreference?) { if let p { theme.choose(p); LabTheme.store.save(p) } }
+    private var label: String {
+        if restoreAsked { return "Close and reopen Lab to restore" }
+        return theme.preference.mode == .system ? "Theme: follows iOS" : "Theme: \(theme.preference.resolved(systemIsDark: false).title)"
+    }
     func body(content: Content) -> some View {
-        let shown = theme.active ?? .newAthleteDefault
-        return content
-            // a new identity per theme redraws every screen with the new tokens at once (the page returns to Home)
-            .id(shown)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                HStack(spacing: 8) {
-                    Text("CYCLIFT LAB · DEMO DATA").font(.caption2.weight(.heavy)).tracking(0.6)
-                    Spacer(minLength: 4)
-                    Menu {
-                        ForEach(CyThemeID.allCases, id: \.self) { t in
-                            Button { UserDefaults.standard.set(t.rawValue, forKey: LabTheme.key); theme.show(t) } label: {
-                                if t == shown { Label(t.title, systemImage: "checkmark") } else { Text(t.title) }
-                            }
+        // The banner is a strip of its own ABOVE the app (Lab 3: as a safe-area inset it covered the navigation bar's
+        // buttons and titles). Its text does not grow past the largest standard size, so it stays one line.
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Text("CYCLIFT LAB · DEMO DATA").font(.caption2.weight(.heavy)).tracking(0.6).lineLimit(1).minimumScaleFactor(0.7)
+                Spacer(minLength: 4)
+                Menu {
+                    ForEach(CyThemeID.allCases, id: \.self) { t in
+                        Button { choose(CyThemePreference.always(t)) } label: {
+                            if theme.preference == .always(t) { Label(t.title, systemImage: "checkmark") } else { Text(t.title) }
                         }
-                        Divider()
-                        Button("Restore the demo athlete") { LabDemoData.restoreAtNextLaunch(); restoreAsked = true }
-                    } label: {
-                        Text(restoreAsked ? "Close and reopen Lab to restore" : "Theme: \(shown.title)").font(.caption2.weight(.bold)).lineLimit(1).padding(.vertical, 6)
                     }
-                    .accessibilityIdentifier("labThemeMenu")
+                    Button { choose(CyThemePreference.followSystem()) } label: {
+                        if theme.preference.mode == .system { Label("Follow iOS (Arctic / Obsidian)", systemImage: "checkmark") } else { Text("Follow iOS (Arctic / Obsidian)") }
+                    }
+                    Divider()
+                    Button("Restore the demo athlete") { LabDemoData.restoreAtNextLaunch(); restoreAsked = true }
+                } label: {
+                    Text(label).font(.caption2.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7).padding(.vertical, 6).frame(minHeight: 30)
                 }
-                .padding(.horizontal, 12)
-                .foregroundStyle(Color.black)
-                .background(Color(red: 1, green: 0.84, blue: 0.04))
-                .accessibilityIdentifier("labBanner")
+                .accessibilityIdentifier("labThemeMenu")
             }
-            .preferredColorScheme(shown.isDark ? .dark : .light)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            .padding(.horizontal, 12)
+            .foregroundStyle(Color.black)
+            .tint(Color.black)
+            .background(Color(red: 1, green: 0.84, blue: 0.04).ignoresSafeArea(edges: .top))
+            .accessibilityIdentifier("labBanner")
+            content
+        }
     }
 }
 

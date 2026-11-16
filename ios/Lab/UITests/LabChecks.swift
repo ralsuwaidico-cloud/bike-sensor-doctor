@@ -50,13 +50,14 @@ final class LabChecks: XCTestCase {
         var last = XCUIScreen.main.screenshot().pngRepresentation
         for i in Array(1..<themes.count) + [0] {      // every other theme, then back to the first
             let t = themes[i]
-            let menu = app.buttons["labThemeMenu"].firstMatch
+            // Lab 3: the chooser is not exposed as a Button, so it is looked up by its identifier whatever its type
+            let menu = app.descendants(matching: .any).matching(identifier: "labThemeMenu").firstMatch
             XCTAssertTrue(menu.waitForExistence(timeout: 8), "theme chooser"); menu.tap()
             let choice = app.buttons[t.title].firstMatch
             XCTAssertTrue(choice.waitForExistence(timeout: 5), "choice \(t.title)"); choice.tap()
             app.settleForScreenshot(2)
             XCTAssertEqual(app.state, .runningForeground, "\(t.id): still the same running app")
-            XCTAssertTrue(app.buttons["labThemeMenu"].firstMatch.label.contains(t.title), "\(t.id): the chooser names the theme now shown (\(app.buttons["labThemeMenu"].firstMatch.label))")
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "labThemeMenu").firstMatch.label.contains(t.title), "\(t.id): the chooser names the theme now shown (\(app.descendants(matching: .any).matching(identifier: "labThemeMenu").firstMatch.label))")
             XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): Home is shown after the change")
             let now = XCUIScreen.main.screenshot().pngRepresentation
             XCTAssertNotEqual(now, last, "\(t.id): the screen did not change")

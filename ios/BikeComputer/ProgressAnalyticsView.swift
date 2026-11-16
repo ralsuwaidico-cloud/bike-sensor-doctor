@@ -136,7 +136,7 @@ struct ProgressAnalyticsSection: View {
                     if let n = t.2 { Text(n).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(10)
-                .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                .background(CyTheme.sysCard2, in: RoundedRectangle(cornerRadius: 10))
                 .accessibilityElement(children: .combine).accessibilityLabel("\(t.0) \(t.1)" + (t.2.map { ", " + $0 } ?? ""))
             }
         }

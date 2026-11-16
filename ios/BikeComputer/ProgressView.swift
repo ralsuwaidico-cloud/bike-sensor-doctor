@@ -47,7 +47,7 @@ struct ProgressTabView: View {
                     }.padding()
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(CyTheme.sysPage)
             .navigationTitle("Progress")
             .onAppear { if !positioned { positioned = true; if !showRiding && showLifting { metric = .strength } } }
         }
@@ -95,7 +95,7 @@ struct ProgressTabView: View {
         }
         .padding(DS.m)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: DS.corner))
+        .background(CyTheme.sysCard, in: RoundedRectangle(cornerRadius: DS.corner))
         .contentShape(RoundedRectangle(cornerRadius: DS.corner))
         .accessibilityElement(children: .combine)
     }
@@ -270,7 +270,7 @@ struct RideDetailView: View {
                 Button("Delete this ride", role: .destructive) { confirmDelete = true }.frame(maxWidth: .infinity)
             }.padding()
         }
-        .background(Color(.systemGroupedBackground))
+        .background(CyTheme.sysPage)
         .navigationTitle("Ride").navigationBarTitleDisplayMode(.inline)
         .alert("Delete this ride from the phone?", isPresented: $confirmDelete) { Button("Delete", role: .destructive) { store.deleteRide(ride); dismiss() }; Button("Keep", role: .cancel) {} } message: { Text(ride.recorder == .board ? "The copy on the BikeComputer is not affected." : "This cannot be undone.") }
     }

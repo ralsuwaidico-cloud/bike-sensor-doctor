@@ -158,7 +158,8 @@ extension CyThemeTokens {
     /// The meaning colours the existing screens draw with soft fills.
     var shadedTokens: [(name: String, shades: CyThemeShades)] {
         [("endurance", shades(of: endurance)), ("strength", shades(of: strength)), ("recovery", shades(of: recovery)), ("ringLoad", shades(of: ringLoad)),
-         ("ringRecovery", shades(of: ringRecovery)), ("warning", shades(of: warning)), ("danger", shades(of: danger))]
+         ("ringRecovery", shades(of: ringRecovery)), ("warning", shades(of: warning)), ("danger", shades(of: danger)), ("accent", shades(of: accent)),
+         ("success", shades(of: success))]
     }
     var hairline: CyRGBA { border.mixed(with: surface, amount: 0.5) }
     /// The navigation bar and its idle labels: a raised surface in dark themes, the ink colour in light ones (as today).
