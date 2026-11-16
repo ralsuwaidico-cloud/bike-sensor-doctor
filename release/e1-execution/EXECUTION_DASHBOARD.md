@@ -157,3 +157,27 @@ Owner decisions of 15–16 Nov, implemented in `a6ded926` (record: `decisions/20
 | Pure logic (Coach, tokens) | 3-minute Linux checks; one app compile before integration |
 
 A failed full run is followed by a focused repeat of the failing test with a stated hypothesis, not another full run. A full run is started only for a release candidate.
+
+## Update — 16 Nov, 14:50 (Dubai)
+
+**E1 — no verified commit; fallback remains run 235 (`a017ed6d`). Branch head `f59cf47c` (same content as `ed7be39a`).**
+
+| Run | Commit | Result |
+|---|---|---|
+| iOS 243 (focused, small phone, largest text) | `ed7be39a` | Failed at Progress: iOS large-text preview bubble over the range control after the test's own tap; "16 wk" not reachable. Plan step not reached. |
+| iOS 246 (same, with a 3-second wait) | `ad996f97` | Failed, 4 failures: bubble still present after 9 s, so "16 wk" not selected (2 follow-on chart failures); Plan: the day strip was scrolled into view and swiped without a sideways-movement failure, then a Strength sheet for tomorrow was open and "Fix plan" could not be tapped. |
+
+The wait was removed (`f59cf47c`): it did not help and a retry must not hide the bubble.
+
+**Intermittent failures, read together (7 now).** Three are the same kind: a test gesture had an effect other than the intended one — an outside tap left Home (237), a tap on the range control raised a bubble that stayed (243, 246: 2 of 2 focused runs, 0 in full runs 235–239), a scroll or swipe on Plan opened a day's sheet (246). All three are on the newest simulator; two are at the largest text size on the small phone. Not established: whether a person can produce the stuck bubble or the accidental sheet. "Slow machine" as the cause of 243 is withdrawn — no evidence. Day-strip-below-the-screen (237, 239) is explained (Monday demo week). Stall test (236) and owner-phone query timeout (237): unchanged, one occurrence each.
+
+**Open E1 blockers (none resolved by evidence today):** fully passing candidate commit · stuck large-text bubble on Progress ranges (possible accessibility defect) · accidental sheet on Plan · Delete All Data to the 16 Nov definition · "Not saved" screen test · largest-text truncation (e.g. the Plan week ring shows "2…") · ride-start pathway screen tests · release accounting incl. Monday-skipped tests · device check.
+
+**Cyclift Lab (`ios/lab`)**
+
+| Run | Commit | Result |
+|---|---|---|
+| Cyclift Lab 1 | `268779ad` | Passed: build ok (312 s); 15 of 15 isolation checks on the built app; launched and stayed running in all six themes; demo athlete written inside Lab's own container. Screenshots not retrievable from this run. |
+| Logic 100 | `268779ad` | Passed |
+| iOS 245 quick (production app on the Lab branch) | `268779ad` | Running |
+| Cyclift Lab 2, iOS 247 quick, Logic 101 | `e7b0ed88` | Running / waiting. Adds: shared theme state with immediate switching, Lab icon, Coach card labelled "demo · rules, not AI", relaunch and largest-text checks, screenshots published to `ci-logs` `lab/run-2`. |
