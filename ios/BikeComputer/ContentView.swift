@@ -56,7 +56,11 @@ struct RootView: View {
                 PlanView(perform: perform).tabPage(1, tab)
                 RideTabView().tabPage(2, tab)
                 ProgressTabView().tabPage(3, tab)
+                #if CYCLIFT_LAB
+                CyProfileLanding(onBack: { tab = 0 }).tabPage(4, tab)          // Profile v2.0; reached from the Home avatar only
+                #else
                 ProfileTabView().tabPage(4, tab)
+                #endif
                 if showHub {
                     // Run 200 (HubTapReliabilityTests, 4 of 48 cycles): the hub opened every time, but a Close tapped while the
                     // panel was still sliding in landed on the stale frame and missed, so the hub stayed open. The hub now
