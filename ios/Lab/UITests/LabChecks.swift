@@ -41,22 +41,6 @@ final class LabChecks: XCTestCase {
         guard row.waitForExistence(timeout: 8) else { return false }
         row.tap(); return true
     }
-    /// Lab 3 and 4: the chooser was not found by its identifier (an identifier on the banner row replaced it; that one is
-    /// removed). It is now found by identifier or by what it says, whichever iOS exposes.
-    private func chooser(_ app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'labThemeMenu' OR label BEGINSWITH 'Theme' OR label BEGINSWITH 'Close and reopen'")).firstMatch
-    }
-    /// Navigation v1.2: Profile has no tab. Home → avatar → "View profile".
-    private func openProfile(_ app: XCUIApplication) -> Bool {
-        tab(app, "Home")
-        let avatar = app.buttons["homeAvatar"].firstMatch
-        guard avatar.waitForExistence(timeout: 8) else { return false }
-        avatar.tap()
-        let view = app.buttons["menuViewProfile"].firstMatch
-        guard view.waitForExistence(timeout: 5) else { return false }
-        view.tap(); app.settleForScreenshot(2)
-        return app.staticTexts["Profile"].firstMatch.waitForExistence(timeout: 8)
-    }
     private let themes: [(id: String, title: String)] = [("obsidian", "Obsidian"), ("arctic", "Arctic"), ("ocean", "Ocean"), ("forest", "Forest"), ("sandstone", "Sandstone"), ("highContrast", "High Contrast")]
 
     /// The same five screens in each theme, each from a fresh launch in that theme.
@@ -103,8 +87,11 @@ final class LabChecks: XCTestCase {
             // Lab 3: the chooser is not exposed as a Button, so it is looked up by its identifier whatever its type
             let menu = chooser(app)
             XCTAssertTrue(menu.waitForExistence(timeout: 8), "theme chooser"); menu.tap()
+            // Labs 5 and 6: an item tapped while the menu was still opening did not take effect or had no hit point.
+            // The item is tapped once the menu has settled and the item is hittable; the expectation is unchanged.
             let choice = app.buttons[t.title].firstMatch
-            XCTAssertTrue(choice.waitForExistence(timeout: 5), "choice \(t.title)"); choice.tap()
+            XCTAssertTrue(choice.waitForExistence(timeout: 5), "choice \(t.title)")
+            app.settleForScreenshot(1); _ = choice.waitUntilHittable(timeout: 4); choice.tap()
             app.settleForScreenshot(2)
             XCTAssertEqual(app.state, .runningForeground, "\(t.id): still the same running app")
             XCTAssertTrue(chooser(app).label.contains(t.title), "\(t.id): the chooser names the theme now shown (\(chooser(app).label))")
@@ -152,8 +139,10 @@ final class LabChecks: XCTestCase {
         let menu = chooser(app)
         XCTAssertTrue(menu.waitForExistence(timeout: 8), "banner menu"); menu.tap()
         let restore = app.buttons["Restore the demo athlete"].firstMatch
-        XCTAssertTrue(restore.waitForExistence(timeout: 5), "the restore choice"); restore.tap()
+        XCTAssertTrue(restore.waitForExistence(timeout: 5), "the restore choice")
+        app.settleForScreenshot(1); _ = restore.waitUntilHittable(timeout: 4); restore.tap()
         app.settleForScreenshot(1)
+        XCTAssertTrue(chooser(app).label.hasPrefix("Close and reopen"), "the banner confirms that restore was asked for (\(chooser(app).label))")
         XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.exists, "nothing changes until Lab is reopened")
         shot("restore-1-asked")
         app.terminate()
