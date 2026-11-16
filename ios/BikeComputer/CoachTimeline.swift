@@ -6,13 +6,14 @@ import Foundation
 enum CyCoachAuthor: Equatable { case coach, athlete }
 
 enum CyCoachEntryKind: String, Equatable {
-    case observation, recommendation, recovery, question, proposal, decision, outcome
+    case observation, recommendation, recovery, question, answer, proposal, decision, outcome
     var label: String {
         switch self {
         case .observation: return "Observation"
         case .recommendation: return "Recommendation"
         case .recovery: return "Recovery"
         case .question: return "Question"
+        case .answer: return "Answer"
         case .proposal: return "Needs your decision"
         case .decision: return "Your decision"
         case .outcome: return "Plan change"
@@ -24,6 +25,7 @@ enum CyCoachEntryKind: String, Equatable {
         case .recommendation: return "lightbulb"
         case .recovery: return "bed.double"
         case .question: return "questionmark.bubble"
+        case .answer: return "text.bubble"
         case .proposal: return "exclamationmark.bubble"
         case .decision: return "checkmark.circle"
         case .outcome: return "arrow.triangle.2.circlepath"
@@ -40,6 +42,11 @@ struct CyCoachEntry: Identifiable, Equatable {
     let text: String
     var detail: String? = nil
     var opens: Opens? = nil
+    /// What the independent policy check concluded about this proposal (shadow mode: it changes nothing).
+    var check: String? = nil
+    /// Who produced the line: "Rules", "You", "AI not connected".
+    var chip: String? = nil
+    var basedOn: [String] = []
 }
 
 /// Builds the timeline from the app's Coach records. Pure, so it is the same in Lab and production.
@@ -50,6 +57,21 @@ enum CoachTimeline {
         var applied: [PlanAdjustment]
         var accepted: [AppliedProposal]
         var now: Date
+        /// Independent policy check per open proposal (AdaptiveProposal.id → sentence).
+        var checks: [String: String] = [:]
+        /// Proposals the athlete has answered, from the durable decision history.
+        var closed: [Closed] = []
+        /// The conversation, as stored.
+        var chat: [CoachChatMessage] = []
+    }
+    /// One answered proposal: what was proposed, the check, and the athlete's decision with its time.
+    struct Closed: Equatable {
+        var id: String
+        var at: Date
+        var text: String
+        var why: String
+        var approved: Bool
+        var check: String?
     }
 
     static func entries(_ i: Input) -> [CyCoachEntry] {
@@ -71,7 +93,15 @@ enum CoachTimeline {
         let raised = i.summary?.at ?? i.now
         for p in i.proposals {
             out.append(CyCoachEntry(id: "prop-\(p.id)", at: raised, author: .coach, kind: p.adjustments.isEmpty ? .recommendation : .proposal,
-                                    text: p.text, detail: p.why, opens: .proposal(p.id)))
+                                    text: p.text, detail: p.why, opens: .proposal(p.id), check: i.checks[p.id]))
+        }
+        for c in i.closed {
+            out.append(CyCoachEntry(id: "closed-\(c.id)", at: c.at, author: .athlete, kind: .decision, text: "\(c.approved ? "Approved" : "Declined"): \(c.text)",
+                                    detail: c.why, check: c.check, chip: CoachSource.athlete.chip))
+        }
+        for m in i.chat {
+            out.append(CyCoachEntry(id: "chat-\(m.id.uuidString)", at: m.at, author: m.source == .athlete ? .athlete : .coach, kind: m.source == .athlete ? .question : .answer,
+                                    text: m.text, chip: m.source.chip, basedOn: m.basedOn))
         }
         // Oldest first; records of the same moment keep the order above (what was seen, then what is asked).
         return out.enumerated().sorted { ($0.element.at, $0.offset) < ($1.element.at, $1.offset) }.map(\.element)

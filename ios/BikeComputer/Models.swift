@@ -1723,6 +1723,7 @@ final class Store: ObservableObject {
             if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first { try? FileManager.default.removeItem(at: appSupport.appendingPathComponent("Diagnostics", isDirectory: true)) }
             for k in ["cyclift.diagnostics.events.v1", "cyclift.diagnostics.sensordiag.v1", "cyclift.diagnostics.uploadConsent", "cyDockAcknowledgedDay"] { UserDefaults.standard.removeObject(forKey: k) }
             for f in onDeleteAllData { f() }
+            CoachJournal.removeFiles(in: dir)       // the Coach page's conversation and the shadow decision history are the athlete's data too
             for n in ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []) where n == StoreRecovery.previousName || n == StoreRecovery.quarantineName || n.hasPrefix("store.unreadable-") || n.hasPrefix("store.schema-") {
                 try? FileManager.default.removeItem(at: dir.appendingPathComponent(n))
             }

@@ -72,7 +72,19 @@ final class LabChecks: XCTestCase {
                     card.tap()
                     XCTAssertTrue(app.staticTexts["coachTitle"].firstMatch.waitForExistence(timeout: 8), "\(t.id): the Coach page opens")
                     XCTAssertTrue(app.staticTexts["coachRulesNote"].firstMatch.exists, "\(t.id): the Coach page says it follows rules and is not an AI chat")
-                    XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "coachComposerDisabled").firstMatch.exists, "\(t.id): asking a question is shown as not available")
+                    if i == 0 {
+                        // the conversation: a supported question is answered by rules from the demo athlete's records; anything
+                        // else gets the plain statement that AI chat is not connected. Nothing is invented.
+                        func entry(_ part: String) -> XCUIElement { app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coachEntry-chat-' AND label CONTAINS %@", part)).firstMatch }
+                        app.buttons["coachAsk-week"].firstMatch.tap()
+                        XCTAssertTrue(entry("You, Question").waitForExistence(timeout: 8), "the question is kept in the timeline")
+                        XCTAssertTrue(entry("Coach, Answer, Rules").waitForExistence(timeout: 8), "the answer is labelled as rules-based")
+                        let field = app.descendants(matching: .any).matching(identifier: "coachField").firstMatch
+                        XCTAssertTrue(field.waitForExistence(timeout: 5), "the question field"); field.tap(); field.typeText("Should I buy new wheels")
+                        app.buttons["coachSend"].firstMatch.tap()
+                        XCTAssertTrue(entry("AI chat is not connected yet").waitForExistence(timeout: 8), "a question the rules cannot answer says AI chat is not connected")
+                        app.settleForScreenshot(2); shot("\(tag)-1c-coach-chat")
+                    }
                     app.settleForScreenshot(2); shot("\(tag)-1b-coach")
                     app.buttons["coachClose"].firstMatch.tap(); app.settleForScreenshot(2)
                     XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): closing the Coach page returns to Home")
