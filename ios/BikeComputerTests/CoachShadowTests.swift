@@ -13,7 +13,7 @@ final class CoachShadowTests: XCTestCase {
     }
     private let t0 = Date(timeIntervalSince1970: 1_800_000_000)
     private var measured: [ShadowEvidence] { [ShadowEvidence(kind: .measured, source: "Synthetic strength log", label: "Squat, last 3 sessions", value: "3 × 8 at 60 kg, all sets completed")] }
-    private func athlete(_ s: ShadowTrainingStatus = .allowed, pain: Bool? = false) -> ShadowAthleteSnapshot { ShadowAthleteSnapshot(training: s, unclearedPain: pain, at: t0) }
+    private func athlete(_ s: ShadowTrainingStatus = .allowed, pain: ShadowPainStatus = .reportedNoPain) -> ShadowAthleteSnapshot { ShadowAthleteSnapshot(training: s, pain: pain, at: t0) }
     private func proposal(_ a: ShadowAction, origin: ShadowOrigin = .rules, evidence: [ShadowEvidence]? = nil, rationale: String = "All sets completed three sessions in a row.", scope: String = "2026-W47") -> ShadowProposal {
         ShadowProposal(idempotencyKey: ShadowProposal.key(action: a, scope: scope), at: t0, origin: origin, action: a, rationale: rationale, observationIds: [], evidence: evidence ?? measured)
     }
@@ -68,7 +68,22 @@ final class CoachShadowTests: XCTestCase {
             let ev = measured + [ShadowEvidence(kind: k, source: "Synthetic", label: "Estimated 1RM", value: "80 kg")]
             XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad, evidence: ev), athlete: athlete(), config: cfg).reasons, [.evidenceNotMeasuredOrEntered], "\(k)")
         }
-        XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(pain: nil), config: cfg).reasons, [.painStatusUnknown])
+        XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(pain: .unknown), config: cfg).reasons, [.painStatusUnknown])
+        XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(pain: .stale), config: cfg).reasons, [.painInformationStale])
+        XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(pain: .unavailable), config: cfg).reasons, [.painRecordUnavailable])
+    }
+
+    /// Owner decision of 16 Nov: the absence of an entry is not confirmation of safety.
+    func testOnlyAnExplicitCurrentNoPainLetsAnIncreaseThroughThePainCheck() {
+        let cfg = ShadowPolicyConfig(automaticProgressionEnabled: true, automaticLimits: testLimits, protectiveAllowlist: [])
+        for pain in ShadowPainStatus.allCases {
+            let v = ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(pain: pain), config: cfg).verdict
+            switch pain {
+            case .reportedNoPain: XCTAssertEqual(v, .eligibleAutomatic)
+            case .reportedPain: XCTAssertEqual(v, .rejected)
+            case .unknown, .stale, .unavailable: XCTAssertEqual(v, .needsAthleteApproval, pain.rawValue)
+            }
+        }
     }
 
     // MARK: rejections
@@ -77,7 +92,7 @@ final class CoachShadowTests: XCTestCase {
         let cfg = ShadowPolicyConfig(automaticProgressionEnabled: true, automaticLimits: testLimits, protectiveAllowlist: [])
         XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(.onHold), config: cfg), ShadowDecision(verdict: .rejected, reasons: [.healthHold], duplicateOf: nil))
         XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(.unavailable), config: cfg).reasons, [.trainingStatusUnknown])
-        XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(pain: true), config: cfg).reasons, [.unclearedPain])
+        XCTAssertEqual(ShadowPolicy.evaluate(proposal(smallLoad), athlete: athlete(pain: .reportedPain), config: cfg).reasons, [.unclearedPain])
         // a protective proposal is not blocked by a hold: it goes to the athlete
         XCTAssertEqual(ShadowPolicy.evaluate(proposal(.addRestDay(day: "2026-11-18")), athlete: athlete(.onHold), config: cfg).verdict, .needsAthleteApproval)
     }
@@ -178,7 +193,7 @@ final class CoachShadowTests: XCTestCase {
         let before = try Data(contentsOf: storeURL); let planBefore = s.plan; let ridesBefore = s.rides; let strengthBefore = s.strength.count
 
         let snap = ShadowAthleteSnapshot(reading: s, now: t0)
-        XCTAssertEqual(snap.training, .allowed); XCTAssertNil(snap.unclearedPain)
+        XCTAssertEqual(snap.training, .allowed); XCTAssertEqual(snap.pain, .unavailable, "not read is never reported as no pain")
         let l = ShadowLedger(directory: d)
         let move = proposal(.moveSession(sessionId: s.plan[0].id.uuidString, fromDay: "2026-11-16", toDay: "2026-11-17"))
         let all = [proposal(smallLoad), proposal(.shortenSession(sessionId: s.plan[0].id.uuidString, fromMinutes: 60, toMinutes: 45)), move, proposal(.addRestDay(day: "2026-11-18"))]

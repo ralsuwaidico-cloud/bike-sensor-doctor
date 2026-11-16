@@ -106,11 +106,26 @@ struct ShadowProposal: Codable, Equatable, Identifiable {
 
 enum ShadowTrainingStatus: String, Codable { case allowed, onHold, unavailable }
 
+/// What is known about pain (owner decision of 16 Nov 2026). Only an explicit, current "no pain" counts as no pain.
+/// The absence of an entry is `.unknown`, never `.reportedNoPain`.
+enum ShadowPainStatus: String, Codable, CaseIterable {
+    /// The athlete explicitly said there is no pain, and that answer is current.
+    case reportedNoPain
+    /// The athlete reported pain that has not been cleared.
+    case reportedPain
+    /// Nothing was ever recorded either way.
+    case unknown
+    /// There is an answer, but it is too old to rely on. What counts as "too old" is a decision not yet made;
+    /// the caller states it, this file does not invent it.
+    case stale
+    /// The record that would hold the answer could not be read.
+    case unavailable
+}
+
 /// A read-only copy of the few athlete facts the policy needs. Built by the caller; the policy never sees the Store.
 struct ShadowAthleteSnapshot: Codable, Equatable {
     var training: ShadowTrainingStatus
-    /// The athlete reported pain that has not been cleared. nil = not known.
-    var unclearedPain: Bool?
+    var pain: ShadowPainStatus
     var at: Date
 }
 
@@ -136,8 +151,9 @@ struct ShadowPolicyConfig: Codable, Equatable {
 
 enum ShadowReason: String, Codable, CaseIterable {
     // rejections
-    case malformedProposal, missingRationale, noEvidence, evidenceMissing, healthHold, trainingStatusUnknown, unclearedPain, painStatusUnknown
+    case malformedProposal, missingRationale, noEvidence, evidenceMissing, healthHold, trainingStatusUnknown, unclearedPain
     // approval requirements
+    case painStatusUnknown, painInformationStale, painRecordUnavailable
     case automaticProgressionDisabled, automaticLimitsNotApproved, exceedsAutomaticLimits, evidenceNotMeasuredOrEntered
     case modelOriginNeedsApproval, notOnProtectiveAllowlist, scheduleChangeNeedsApproval
     // informational
@@ -152,7 +168,9 @@ enum ShadowReason: String, Codable, CaseIterable {
         case .healthHold: return "Training is paused by the health check, so nothing may be increased."
         case .trainingStatusUnknown: return "The training status could not be read, so nothing may be increased."
         case .unclearedPain: return "Pain was reported and has not been cleared, so nothing may be increased."
-        case .painStatusUnknown: return "It is not known whether pain was reported, so an increase needs the athlete's decision."
+        case .painStatusUnknown: return "Nothing is recorded about pain, so an increase needs the athlete's decision."
+        case .painInformationStale: return "The last answer about pain is old, so an increase needs the athlete's decision."
+        case .painRecordUnavailable: return "The record about pain could not be read, so an increase needs the athlete's decision."
         case .automaticProgressionDisabled: return "Automatic progression is switched off."
         case .automaticLimitsNotApproved: return "No limits for automatic steps have been approved."
         case .exceedsAutomaticLimits: return "The step is larger than the approved automatic limit."
@@ -192,7 +210,7 @@ enum ShadowPolicy {
             case .unavailable: reject.append(.trainingStatusUnknown)
             case .allowed: break
             }
-            if athlete.unclearedPain == true { reject.append(.unclearedPain) }
+            if athlete.pain == .reportedPain { reject.append(.unclearedPain) }
         }
         if !reject.isEmpty { return ShadowDecision(verdict: .rejected, reasons: reject, duplicateOf: nil) }
 
@@ -209,7 +227,12 @@ enum ShadowPolicy {
         case .protective:
             if !config.protectiveAllowlist.contains(p.action.name) { ask.append(.notOnProtectiveAllowlist) }
         case .increase:
-            if athlete.unclearedPain == nil { ask.append(.painStatusUnknown) }
+            switch athlete.pain {
+            case .unknown: ask.append(.painStatusUnknown)
+            case .stale: ask.append(.painInformationStale)
+            case .unavailable: ask.append(.painRecordUnavailable)
+            case .reportedNoPain, .reportedPain: break          // reported pain was rejected above
+            }
             if !config.automaticProgressionEnabled { ask.append(.automaticProgressionDisabled) }
             if let lim = config.automaticLimits {
                 if !within(lim, p.action) { ask.append(.exceedsAutomaticLimits) }
@@ -329,7 +352,8 @@ final class ShadowLedger {
 
 extension ShadowAthleteSnapshot {
     /// Reads the one fact the policy needs today from the athlete record. It reads; it assigns nothing on `store`.
-    /// Pain status is not derived here yet (nil = not known), so in shadow mode every increase still asks the athlete.
+    /// Pain status is not read from the athlete record yet. It is reported as `.unavailable` — "not read" — and never
+    /// as "no pain", so every increase still asks the athlete.
     init(reading store: Store, now: Date) {
         let t: ShadowTrainingStatus
         switch store.trainingAuthority {
@@ -337,6 +361,6 @@ extension ShadowAthleteSnapshot {
         case .onHold: t = .onHold
         case .unavailable: t = .unavailable
         }
-        self.init(training: t, unclearedPain: nil, at: now)
+        self.init(training: t, pain: .unavailable, at: now)
     }
 }
