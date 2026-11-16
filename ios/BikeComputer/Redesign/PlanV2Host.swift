@@ -52,7 +52,8 @@ enum PlanV2Adapter {
     }
 
     private static func session(_ c: PlanChip) -> PlanSession {
-        var detail = c.minutes > 0 ? Fmt.duration(minutes: c.minutes) : ""
+        // a recorded session with no planned session behind it carries no planned length: say what it is instead of nothing
+        var detail = c.minutes > 0 ? Fmt.duration(minutes: c.minutes) : (c.workoutId == nil ? "Recorded · not in the plan" : "")
         let status: PlanStatus
         switch c.mark {
         case .planned: status = .planned
