@@ -36,6 +36,7 @@ unverified parts; both are rebased when E1 has a verified commit.
 | Theme choice | UX1 | Stored under its own preference key `cyclift.theme.preference.v1`, outside `store.json` |
 | Coach history | Coach | Stored in its own file `coach-shadow.json`. The Coach reads the athlete record through `ShadowAthleteSnapshot(reading:)` and has no way to write it |
 | Training status (allowed / on hold / unknown) | E1 (`Store.trainingAuthority`) | Coach reads it; it never computes its own |
+| "Delete all data" (owner decision 16 Nov) | E1 | Returns the app to a fresh install. It must also remove the Coach history file and the theme choice; each workstream registers its own clean-up through the existing delete-all hook at integration. "Delete workout history" is a different action and keeps app preferences. Partial failure must be reported, never shown as success. **Not yet implemented or tested for interruption and failure** |
 | Existing appearance setting (`system` / `light` / `dark`) | E1 | UX1 reads it once to choose a returning athlete's first theme; it is not removed |
 
 ## 4. Integration dependencies and merge order
