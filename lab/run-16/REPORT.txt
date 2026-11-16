@@ -1,0 +1,56 @@
+RESULT Lab build: ok · 264s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint c633559f6ec6ac5d 2 
+	 Executed 7 tests, with 8 failures (0 unexpected) in 1419.394 (1419.413) seconds
+	 Executed 7 tests, with 8 failures (0 unexpected) in 1419.394 (1419.417) seconds
+	 Executed 7 tests, with 8 failures (0 unexpected) in 1419.394 (1419.421) seconds
+Lab/UITests/LabChecks.swift:202: error: -[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved] : XCTAssertTrue failed - the Log set button
+Lab/UITests/LabChecks.swift:204: error: -[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved] : Failed to tap "logSet" Any: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"logSet" IN identifiers'`, given input App element pid: 4602
+Lab/UITests/LabChecks.swift:28: error: -[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty] : Failed to get matching snapshots: Timed out while evaluating UI query.
+Lab/UITests/LabChecks.swift:280: error: -[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing] : Failed to get matching snapshot: No matches found for first query match sequence: `Descendants matching type Any` -> `Elements matching predicate '"cyclingSimulated" IN identifiers'`, given input App element pid: 8386
+Lab/UITests/LabChecks.swift:342: error: -[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan] : XCTAssertTrue failed - starts at Welcome (after the deletion test)
+Lab/UITests/LabChecks.swift:343: error: -[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan] : Failed to tap "onboardingContinue" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"onboardingContinue" IN identifiers'`, given input App element pid: 23802
+Lab/UITests/LabChecks.swift:405: error: -[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked] : XCTAssertTrue failed - starts empty (after the deletion test)
+Lab/UITests/LabChecks.swift:410: error: -[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked] : XCTAssertTrue failed - nothing changes until Lab is reopened
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' passed (571.756 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2bStrengthSessionIsRecordedAndSaved]' failed (113.270 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2cCyclingDemonstrationIsLabelledAndSavesNothing]' failed (52.780 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' passed (318.643 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' failed (173.843 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3zNewAthleteOnboardsApprovesAndSeesThePlan]' failed (108.657 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' failed (80.445 seconds).
+RESULT Lab screen checks: FAILED · 1659s
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (c633559f6ec6ac5d 2 )
+RESULT Lab launch in six themes: FAILED
+commit d7b8788d796188159151f023c101ff293d5f8ade  branch ios/lab
