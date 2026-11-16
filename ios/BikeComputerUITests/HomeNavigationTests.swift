@@ -13,7 +13,7 @@ final class HomeNavigationTests: XCTestCase {
         if !takingFailureShot {
             takingFailureShot = true
             let a = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-            a.name = "FAIL-auto-\(home-nav)-\(Int(Date().timeIntervalSince1970))"; a.lifetime = .keepAlways
+            a.name = "FAIL-auto-home-nav-\(Int(Date().timeIntervalSince1970))"; a.lifetime = .keepAlways
             i.add(a)
             takingFailureShot = false
         }
