@@ -70,6 +70,7 @@ private struct CyThemeRoot: ViewModifier {
             content
                 // `.primary`, `.secondary` and `.tertiary` text everywhere takes the theme's three text colours
                 .foregroundStyle(Color(cyRGBA: t.textPrimary), Color(cyRGBA: t.textSecondary), Color(cyRGBA: t.textTertiary))
+                .environment(\.cyTheme, CxTheme.from(t))           // the redesigned screens read the same tokens
                 .tint(Color(cyRGBA: t.accent))
                 // a new identity per theme redraws every screen with the new tokens at once (the page returns to Home;
                 // keeping the current screen needs navigation state lifted out of the screens — recorded for UX1)
