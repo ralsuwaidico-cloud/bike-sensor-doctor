@@ -133,3 +133,27 @@ Common thread: one measured 25-second stall of a test process shows the runners 
 | Logic 96 (ID 43825208367), Linux only | `9d764de5` on `ios/ux1-foundation` | **Success**: 441 executed, 0 failed, 10 skipped; includes the 13 `ThemeTokensTests`. Theme tokens and preference are written and unit-tested on Linux. **Not compiled in the iOS app; no screen uses them.** Colour values provisional |
 
 Owner decisions of 15–16 Nov, implemented in `a6ded926` (record: `decisions/2026-11-16_e1-ride-authorization-external-rides-location.md`): one ride-start policy read from the athlete record, failing closed; BikeComputer rides begun during a hold kept and marked; phone-GPS rides need location permission; wider failed-save and recovery tests at data level. Still open: largest-text clipping and a truncation check, a screen test for "Not saved", Delete-all coverage for exports and diagnostics, release accounting.
+
+## Update — 16 Nov, 13:30 (Dubai)
+
+**Run 239 (full, `ios/e1-safety` `4970c5c7`): failed on one test.** Unit, flows, journeys, smoke, watch, and layout on the standard, Pro Max and owner phones passed. Layout on the small phone failed: Plan day strip, same line as run 237.
+
+**Cause found from the failure screenshot (evidence, not inference):** on a Monday the demo week has just started and Plan shows an extra "Lifting is 20 min over" notice. On the small phone at the largest text size that pushes the day strip fully below the screen, so the test's swipe could not be performed. Run 235 passed on a Sunday, when the notice was absent and the strip was partly on screen. Classification: test weakness tied to the day of the week; not an app regression. Correction `ed7be39a`: the test scrolls the strip into view first; the expectation (the strip must not move sideways) is unchanged.
+
+| Run | Branch, commit | Scope | Status |
+|---|---|---|---|
+| iOS 243 | `ios/e1-safety` `ed7be39a` | Focused: that one test, small phone, largest text | Running |
+| iOS 242 | `ios/ux1-foundation` `05aa925d` | Six-theme screenshots of five real screens, standard phone | Waiting for 241 |
+| Logic 99 | `ios/ux1-foundation` `05aa925d` | Theme logic incl. derived shades | Running |
+| iOS 240, 241 | `ios/c0-coach` `929bab28`, `ios/ux1-foundation` `ac9d4dcf` | First app compile of Coach and theme files | Running (waited 50 min for a machine behind run 239) |
+| Logic 97 | `ios/c0-coach` `929bab28` | Coach logic incl. five pain states | Passed: 444 executed, 0 failed, 10 skipped |
+
+**Working rules from 16 Nov 13:08 (owner: remove unnecessary overhead, keep safety protected)**
+
+| Kind of change | Check before it is accepted |
+|---|---|
+| Safety-critical (athlete record, recording, ride start, health holds, delete, backup) | Unchanged: full suite on the candidate commit, then device check |
+| Isolated screens and themes on the UX branch | App compile plus screenshots of the affected screens; full suite once, at the integration checkpoint |
+| Pure logic (Coach, tokens) | 3-minute Linux checks; one app compile before integration |
+
+A failed full run is followed by a focused repeat of the failing test with a stated hypothesis, not another full run. A full run is started only for a release candidate.
