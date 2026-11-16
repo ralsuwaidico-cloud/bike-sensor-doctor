@@ -1,0 +1,12 @@
+BikeComputer iOS CI — build 248 — 2026-11-16 10:37 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 13m36s
+  layout owner counts: passed 1 · failed 3 · skipped 0 · screenshots so far 10
+  layout owner (L,AX3): FAILED (exit 65) · 21m57s — -[BikeComputerUITests.PlanLayoutTests testAScrollThatStartsOnASessionDoesNotOpenIt] : XCTAssertGreaterThan failed: ("0.0") is not greater than ("20.0") - L: the page did not scroll when dragged from a session (moved 0.0 pt) — the gesture was swallowed -[BikeComputerUITests.PlanLayoutTests testStripDaysAndChipsFitTheWidthAtEveryTextSize] : XCTAssertGreaterThanOrEqual failed: ("32.0") is less than (
+RESULT layout audit: FAILED (10 screenshots)
+Total: 35m47s
