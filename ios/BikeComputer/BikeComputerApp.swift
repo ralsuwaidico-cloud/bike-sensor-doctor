@@ -116,6 +116,7 @@ struct BikeComputerApp: App {
                 .environmentObject(hub)
                 .environmentObject(monitor)
                 .environmentObject(diag)
+                .cycliftLabChrome()      // production: no effect (Lab/CycliftLab.swift)
                 .onOpenURL { url in if ReleaseFlags.accountsEnabled { _ = account.handle(url: url) } }
                 .sheet(isPresented: $account.recoveryPending) { SetNewPasswordSheet().environmentObject(account) }
                 .onAppear {

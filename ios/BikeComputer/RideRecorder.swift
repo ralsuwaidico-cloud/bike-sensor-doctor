@@ -199,6 +199,9 @@ final class RideRecorder: ObservableObject {
     /// Starts a phone-only ride. Returns false when a board ride is active (one recorder per ride).
     @discardableResult
     func start() -> Bool {
+        #if CYCLIFT_LAB
+        note = "Cyclift Lab shows demo data only. It does not record rides."; return false
+        #else
         guard state == .idle || state == .ended, owner != .board else { return false }
         switch trainingAuthority() { case .onHold: note = Self.holdNote; return false; case .unavailable: note = Self.statusNote; return false; case .allowed: break }
         if let l = device?.live, device?.state == .ready, device?.liveIsFresh ?? false, l.rideState == .running || l.rideState == .paused { return false }
@@ -210,6 +213,7 @@ final class RideRecorder: ObservableObject {
         location?.sharing = true
         askNotifications()
         return true
+        #endif
     }
     func pause() {
         if owner == .phone, state == .running { state = .paused }

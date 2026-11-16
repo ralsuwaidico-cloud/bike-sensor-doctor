@@ -11,7 +11,9 @@ import UIKit
 // colours or the older `BC` colours (they follow light/dark only, and the preview screenshots show which they are).
 enum CyThemeRuntime {
     static let preview: CyThemeTokens? = {
-        #if targetEnvironment(simulator)
+        #if CYCLIFT_LAB
+        return CyThemeTokens.tokens(for: LabTheme.chosen)      // Cyclift Lab always shows one of the six themes
+        #elseif targetEnvironment(simulator)
         guard let raw = ProcessInfo.processInfo.environment["BC_UITEST_THEME"], let id = CyThemeID(rawValue: raw) else { return nil }
         return CyThemeTokens.tokens(for: id)
         #else

@@ -99,7 +99,9 @@ final class BLESensors: NSObject, ObservableObject {
 
     private func ensureCentral() {
         guard central == nil else { return }
+        #if !CYCLIFT_LAB      // Cyclift Lab has no Bluetooth
         central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionRestoreIdentifierKey: BLESensors.restoreId])
+        #endif
     }
 
     // MARK: rider actions

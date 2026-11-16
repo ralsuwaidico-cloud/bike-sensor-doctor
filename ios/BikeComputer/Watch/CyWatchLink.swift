@@ -95,7 +95,11 @@ final class CyWatchLink: NSObject, ObservableObject {
     var planProvider: () -> CyWatchWire.PlanToday? = { nil }
     var cachedProvider: () -> CyWatchWire.Cached? = { nil }
 
+    #if CYCLIFT_LAB
+    private let central = LabNoBluetooth()      // Cyclift Lab has no Bluetooth (Lab/CycliftLab.swift)
+    #else
     private var central: CBCentralManager!
+    #endif
     private var peripheral: CBPeripheral?
     private var rxChar: CBCharacteristic?
     private var timer: Timer?
@@ -107,7 +111,9 @@ final class CyWatchLink: NSObject, ObservableObject {
         let saved = (UserDefaults.standard.dictionary(forKey: "cyw.acked") as? [String: Int]) ?? [:]
         session = CyWatchSession(acked: saved.mapValues { UInt32($0) }, saveAcked: { UserDefaults.standard.set($0.mapValues { Int($0) }, forKey: "cyw.acked") })
         super.init()
+        #if !CYCLIFT_LAB
         central = CBCentralManager(delegate: self, queue: .main)
+        #endif
         session.onStatus = { [weak self] s in self?.status = CyWatchStatus(batteryPct: Int(s.batteryPct), charging: s.charging, freeHeap: Int(s.freeHeap), phase: Int(s.phase), pendingEvents: Int(s.pendingEvents), at: Date()) }
     }
 

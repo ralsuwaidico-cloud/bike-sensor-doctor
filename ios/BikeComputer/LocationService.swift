@@ -27,9 +27,20 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
         mgr.pausesLocationUpdatesAutomatically = false
     }
 
-    func requestPermission() { mgr.requestWhenInUseAuthorization() }
+    func requestPermission() {
+        #if !CYCLIFT_LAB      // Cyclift Lab never asks for location
+        mgr.requestWhenInUseAuthorization()
+        #endif
+    }
 
     private func start() {
+        #if CYCLIFT_LAB
+        status = "Cyclift Lab does not use location"
+        #else
+        startUpdating()
+        #endif
+    }
+    private func startUpdating() {
         if mgr.authorizationStatus == .notDetermined { mgr.requestWhenInUseAuthorization() }
         mgr.allowsBackgroundLocationUpdates = true     /* keeps GPS flowing with the screen locked (UIBackgroundModes: location) */
         mgr.showsBackgroundLocationIndicator = true

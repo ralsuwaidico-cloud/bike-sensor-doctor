@@ -114,7 +114,11 @@ final class DeviceLink: NSObject, ObservableObject {
     /// Seconds a stage may last before it is reported as failed (the brief: never an indefinite "Connecting…").
     static let stageTimeout: TimeInterval = 20
 
+    #if CYCLIFT_LAB
+    private let central = LabNoBluetooth()      // Cyclift Lab has no Bluetooth (Lab/CycliftLab.swift)
+    #else
     private var central: CBCentralManager!
+    #endif
     private var peripheral: CBPeripheral?
     private var inputChr: CBCharacteristic?, controlChr: CBCharacteristic?, liveChr: CBCharacteristic?, syncChr: CBCharacteristic?, eventsChr: CBCharacteristic?
     private var syncInFlight = false
@@ -131,7 +135,9 @@ final class DeviceLink: NSObject, ObservableObject {
     override init() {
         super.init()
         remembered = UserDefaults.standard.string(forKey: rememberedKey) != nil
+        #if !CYCLIFT_LAB
         central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionRestoreIdentifierKey: "bikecomputer.central"])
+        #endif
     }
 
     /// One short, truthful line for the link everywhere it is summarised (Home, Ride, Onboarding). RC2: the coarse `state`

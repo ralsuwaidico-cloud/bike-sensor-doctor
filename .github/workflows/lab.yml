@@ -1,0 +1,32 @@
+# CYCLIFT LAB — the separate prototype app (demo data only). Builds it for the simulator, checks what keeps it apart
+# from the production app, launches it in each of the six themes and keeps the screenshots.
+# Never signs, never archives, never uploads. Nothing here touches the production app or TestFlight.
+name: Cyclift Lab
+on:
+  push:
+    branches: ["ios/lab"]
+    paths: ["ios/**", ".github/workflows/lab.yml"]
+permissions:
+  contents: read
+concurrency:
+  group: lab-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lab:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ios/build/spm
+          key: spm-v1-${{ hashFiles('ios/project.yml') }}
+      - name: Build, isolation check, six-theme screenshots
+        run: bash ios/ci/lab.sh
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-out
+          path: ios/build/lab-out
+          if-no-files-found: ignore
