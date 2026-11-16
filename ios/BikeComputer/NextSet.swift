@@ -21,6 +21,20 @@ enum NextSet {
         guard let s = es[idx].sets.firstIndex(where: { !$0.done }) else { return nil }
         return Pick(entry: idx, set: s, label: label(es, idx))
     }
+    /// Training Hub v1.4 "Next exercise" line: the first DIFFERENT exercise that would come up if the sets were logged
+    /// in order from here (inside a superset that is the partner; otherwise the next exercise in the list). nil = the
+    /// exercise on screen is the last one with open sets.
+    static func following(_ es: [ExerciseEntry]) -> Pick? {
+        guard let now = pick(es) else { return nil }
+        var sim = es
+        var guardCount = 0
+        while let p = pick(sim), guardCount < 500 {
+            if p.entry != now.entry { return p }
+            sim[p.entry].sets[p.set].done = true
+            guardCount += 1
+        }
+        return nil
+    }
     static func label(_ es: [ExerciseEntry], _ idx: Int) -> String? {
         guard let g = es[idx].superset else { return nil }
         let members = es.indices.filter { es[$0].superset == g }

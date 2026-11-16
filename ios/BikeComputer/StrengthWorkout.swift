@@ -530,6 +530,9 @@ struct EditWorkoutSheet: View {
 
 // MARK: - Workout session mode: record each set, see previous performance, pause / resume / finish; resumable
 struct StrengthSessionView: View {
+    /// Redesign: this screen is the Training Hub v1.4 recorder (Redesign/StrengthRecorderV14.swift). `legacy` keeps the
+    /// full list of exercises and sets, which the recorder opens for corrections.
+    var legacy = false
     @EnvironmentObject private var store: Store
     @Environment(\.dismiss) private var dismiss
     @State private var showFinish = false
@@ -546,6 +549,9 @@ struct StrengthSessionView: View {
     @State private var lastRest: Int? = nil
 
     var body: some View {
+        if CyProduct.redesign && !legacy { StrengthRecorderV14().cyThemeRoot() } else { list }
+    }
+    private var list: some View {
         NavigationStack {
             Group {
                 if let s = store.activeSession { content(s) } else { ContentUnavailableView("No workout in progress", systemImage: "dumbbell") }

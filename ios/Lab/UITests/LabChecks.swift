@@ -154,6 +154,74 @@ final class LabChecks: XCTestCase {
         }
     }
 
+    /// The strength journey on the demo athlete: Train ball → compact panel → Start → the v1.4 recorder → log, undo,
+    /// minimise and return, rest, every set → Finish → Save → confirmed "Saved" → Done.
+    func test2bStrengthSessionIsRecordedAndSaved() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        app.buttons["centreButton"].firstMatch.tap()
+        let primary = app.buttons["trainPanelPrimary"].firstMatch
+        XCTAssertTrue(primary.waitForExistence(timeout: 8), "the panel offers today's session"); shot("strength-0-panel"); primary.tap()
+        let start = app.buttons["startWorkout"].firstMatch
+        XCTAssertTrue(start.waitForExistence(timeout: 10), "the session's preparation screen")
+        var n = 0; while !start.isHittable && n < 6 { app.swipeUp(); n += 1 }
+        shot("strength-1-prepare"); start.tap()
+        XCTAssertTrue(el("strengthRecorderV14").waitForExistence(timeout: 10), "the v1.4 recorder opens")
+        XCTAssertTrue(el("recorderExercise").exists && el("recorderSet").exists && el("recorderReps").exists, "exercise, set and reps are shown")
+        XCTAssertTrue(el("recorderNext").exists, "the next exercise is always visible")
+        XCTAssertEqual(el("recorderState").label, "Recording")
+        shot("strength-2-recorder")
+        // change the reps, log one set, see it logged with rest, undo it
+        let reps = el("recorderReps").label
+        app.buttons["recorderRepsPlus"].firstMatch.tap()
+        XCTAssertNotEqual(el("recorderReps").label, reps, "+ changes the reps")
+        app.buttons["recorderRepsMinus"].firstMatch.tap()
+        let firstSet = el("recorderSet").label
+        let log = app.buttons["logSet"].firstMatch
+        log.tap()
+        XCTAssertTrue(el("recorderLogged").waitForExistence(timeout: 5), "the logged set is named, with Undo")
+        XCTAssertTrue(el("restTimer").exists || el("restPlanned").exists, "rest is shown")
+        shot("strength-3-logged")
+        app.buttons["recorderUndo"].firstMatch.tap()
+        XCTAssertFalse(el("recorderLogged").exists, "Undo removes the logged line")
+        XCTAssertEqual(el("recorderSet").label, firstSet, "Undo returns to the same set")
+        // log again, minimise, come back: the session, its logged set and Undo are still there
+        log.tap()
+        XCTAssertTrue(el("recorderLogged").waitForExistence(timeout: 5))
+        app.buttons["recorderMinimise"].firstMatch.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10), "minimising returns to the session's page; the workout keeps running")
+        XCTAssertTrue(start.label.contains("Resume"), "the page offers Resume (\(start.label))")
+        n = 0; while !start.isHittable && n < 6 { app.swipeUp(); n += 1 }
+        start.tap()
+        XCTAssertTrue(el("recorderLogged").waitForExistence(timeout: 10), "after returning, the logged set and Undo are still shown")
+        // pause and resume
+        app.buttons["recorderPause"].firstMatch.tap()
+        XCTAssertTrue(el("recorderState").label.hasPrefix("Paused"), "paused is said in words"); shot("strength-4-paused")
+        app.buttons["recorderPause"].firstMatch.tap()
+        XCTAssertEqual(el("recorderState").label, "Recording")
+        // every remaining set
+        let finish = app.buttons["nextSetFinish"].firstMatch
+        var taps = 0, sawSuperset = false
+        while !finish.exists && taps < 80 {
+            if el("recorderOverline").label.hasPrefix("SUPERSET") { if !sawSuperset { shot("strength-5-superset") }; sawSuperset = true }
+            let skip = app.buttons["restSkip"].firstMatch; if skip.exists { skip.tap() }
+            if log.exists { log.tap() }; taps += 1
+        }
+        XCTAssertTrue(finish.waitForExistence(timeout: 5), "after the last set the recorder offers Finish (\(taps) sets logged)")
+        print("LAB-NOTE strength journey: \(taps) sets logged; superset seen: \(sawSuperset)")
+        shot("strength-6-all-done"); finish.tap()
+        let save = app.buttons["saveWorkout"].firstMatch
+        XCTAssertTrue(save.waitForExistence(timeout: 8), "the finish sheet"); XCTAssertTrue(el("finishCount").exists); shot("strength-7-finish"); save.tap()
+        XCTAssertTrue(el("saveConfirmed").waitForExistence(timeout: 10), "the save is confirmed"); XCTAssertTrue(app.buttons["saveReview"].firstMatch.exists, "the review is offered as optional")
+        shot("strength-8-saved")
+        app.buttons["saveDone"].firstMatch.tap()
+        XCTAssertFalse(el("strengthRecorderV14").waitForExistence(timeout: 3), "Done leaves the recorder")
+        app.settleForScreenshot(2); shot("strength-9-after")
+    }
+
     /// Delete all data inside Lab: back to Welcome at once, still empty after a plain relaunch, banner still there.
     /// (That the production app's files are untouched is checked outside, by ios/ci/lab.sh.) Runs last.
     func test3DeleteAllDataEmptiesLabAndStaysEmpty() {
