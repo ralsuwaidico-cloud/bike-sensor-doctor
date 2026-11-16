@@ -1,41 +1,77 @@
 import SwiftUI
 import UIKit
 
-// UX1 PREVIEW BRIDGE — not the theme feature.
+// UX1 THEME STATE — one shared state and one token engine for every screen.
 //
-// Lets the six themes be SEEN on the real screens before any screen is migrated: when the simulator is launched with
-// BC_UITEST_THEME=<theme>, the existing `CyTheme` colours answer from that theme's tokens instead of the two built-in
-// palettes. On a real device, and in the simulator without that variable, `preview` is nil and every colour is exactly
-// what it was — the athlete's appearance is unchanged until UX1 is actually introduced (owner decision, 16 Nov 2026).
-// Not here yet: the athlete's choice in Profile, following iOS light/dark live, and the screens that still use system
-// colours or the older `BC` colours (they follow light/dark only, and the preview screenshots show which they are).
-enum CyThemeRuntime {
-    static let preview: CyThemeTokens? = {
+// `CyThemeState.shared` holds the theme being shown. The existing `CyTheme` colours ask it for their value each time
+// they are drawn (`.themed { token }` in CyTheme.swift), so a change of theme reaches every screen that uses them without
+// any per-theme code. Where theming is not available the colours are exactly what they were:
+//   • production app on a device: never available (the athlete's appearance is unchanged until UX1 is introduced —
+//     owner decision, 16 Nov 2026);
+//   • simulator: only when launched with BC_UITEST_THEME=<theme> (screenshot tests);
+//   • Cyclift Lab: always (the Lab banner's chooser).
+// Not here yet: the athlete's choice in Profile, following iOS light/dark, and the screens that still use system colours
+// or the older `BC` colours (they follow light/dark only).
+final class CyThemeState: ObservableObject {
+    static let shared = CyThemeState()
+
+    /// Decided once at launch. false = `themed` returns the original colour object untouched.
+    static let available: Bool = {
         #if CYCLIFT_LAB
-        return CyThemeTokens.tokens(for: LabTheme.chosen)      // Cyclift Lab always shows one of the six themes
+        return true
         #elseif targetEnvironment(simulator)
-        guard let raw = ProcessInfo.processInfo.environment["BC_UITEST_THEME"], let id = CyThemeID(rawValue: raw) else { return nil }
-        return CyThemeTokens.tokens(for: id)
+        return ProcessInfo.processInfo.environment["BC_UITEST_THEME"].flatMap(CyThemeID.init(rawValue:)) != nil
         #else
-        return nil
+        return false
         #endif
     }()
+    /// Read by the colours while drawing (any thread); written on the main thread only, together with `active`.
+    private(set) static var tokens: CyThemeTokens? = nil
+
+    @Published private(set) var active: CyThemeID?
+
+    private init() {
+        var first: CyThemeID? = nil
+        #if CYCLIFT_LAB
+        first = LabTheme.chosen
+        #elseif targetEnvironment(simulator)
+        first = ProcessInfo.processInfo.environment["BC_UITEST_THEME"].flatMap(CyThemeID.init(rawValue:))
+        #endif
+        active = first
+        CyThemeState.tokens = first.map(CyThemeTokens.tokens(for:))
+    }
+
+    /// Shows a theme now. Ignored where theming is not available.
+    func show(_ id: CyThemeID) {
+        guard CyThemeState.available, id != active else { return }
+        CyThemeState.tokens = CyThemeTokens.tokens(for: id)
+        active = id
+    }
+}
+
+extension UIColor {
+    convenience init(cyRGBA c: CyRGBA) { self.init(red: CGFloat(c.r), green: CGFloat(c.g), blue: CGFloat(c.b), alpha: CGFloat(c.a)) }
 }
 
 extension Color {
-    init(cyRGBA c: CyRGBA) { self.init(.sRGB, red: c.r, green: c.g, blue: c.b, opacity: c.a) }
-    /// This colour, or the preview theme's answer when one is active.
-    func themed(_ token: (CyThemeTokens) -> CyRGBA) -> Color {
-        guard let t = CyThemeRuntime.preview else { return self }
-        return Color(cyRGBA: token(t))
+    /// This colour; where theming is available, the shown theme's answer, asked again every time it is drawn.
+    func themed(_ token: @escaping (CyThemeTokens) -> CyRGBA) -> Color {
+        guard CyThemeState.available else { return self }
+        _ = CyThemeState.shared                      // makes sure the first theme is set before anything is drawn
+        let original = UIColor(self)
+        return Color(uiColor: UIColor { traits in
+            if let t = CyThemeState.tokens { return UIColor(cyRGBA: token(t)) }
+            return original.resolvedColor(with: traits)
+        })
     }
 }
 
 extension CyTheme.Identity {
-    /// This identity, or the preview theme's shades of the given meaning colour when one is active.
-    func themed(_ token: (CyThemeTokens) -> CyRGBA) -> CyTheme.Identity {
-        guard let t = CyThemeRuntime.preview else { return self }
-        let s = t.shades(of: token(t))
-        return CyTheme.Identity(tint: Color(cyRGBA: s.tint), bg: Color(cyRGBA: s.fill), mid: Color(cyRGBA: s.mid), soft: Color(cyRGBA: s.soft), onTint: Color(cyRGBA: s.onTint))
+    /// This identity; where theming is available, the shown theme's shades of the given meaning colour.
+    func themed(_ token: @escaping (CyThemeTokens) -> CyRGBA) -> CyTheme.Identity {
+        guard CyThemeState.available else { return self }
+        return CyTheme.Identity(tint: tint.themed { $0.shades(of: token($0)).tint }, bg: bg.themed { $0.shades(of: token($0)).fill },
+                                mid: mid.themed { $0.shades(of: token($0)).mid }, soft: soft.themed { $0.shades(of: token($0)).soft },
+                                onTint: onTint.themed { $0.shades(of: token($0)).onTint })
     }
 }

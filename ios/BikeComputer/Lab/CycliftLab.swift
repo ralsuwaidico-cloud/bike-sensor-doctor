@@ -48,28 +48,33 @@ enum LabTheme {
 }
 
 struct LabChrome: ViewModifier {
-    @State private var pending: CyThemeID? = nil
+    @ObservedObject private var theme = CyThemeState.shared
     func body(content: Content) -> some View {
-        content
+        let shown = theme.active ?? .newAthleteDefault
+        return content
+            // a new identity per theme redraws every screen with the new tokens at once (the page returns to Home)
+            .id(shown)
             .safeAreaInset(edge: .top, spacing: 0) {
                 HStack(spacing: 8) {
                     Text("CYCLIFT LAB · DEMO DATA").font(.caption2.weight(.heavy)).tracking(0.6)
                     Spacer(minLength: 4)
                     Menu {
                         ForEach(CyThemeID.allCases, id: \.self) { t in
-                            Button(t.title) { UserDefaults.standard.set(t.rawValue, forKey: LabTheme.key); pending = t == LabTheme.chosen ? nil : t }
+                            Button { UserDefaults.standard.set(t.rawValue, forKey: LabTheme.key); theme.show(t) } label: {
+                                if t == shown { Label(t.title, systemImage: "checkmark") } else { Text(t.title) }
+                            }
                         }
                     } label: {
-                        Text(pending.map { "\($0.title) — reopen to apply" } ?? "Theme: \(LabTheme.chosen.title)").font(.caption2.weight(.bold)).lineLimit(1)
+                        Text("Theme: \(shown.title)").font(.caption2.weight(.bold)).lineLimit(1).padding(.vertical, 6)
                     }
                     .accessibilityIdentifier("labThemeMenu")
                 }
-                .padding(.horizontal, 12).padding(.vertical, 5)
+                .padding(.horizontal, 12)
                 .foregroundStyle(Color.black)
                 .background(Color(red: 1, green: 0.84, blue: 0.04))
                 .accessibilityIdentifier("labBanner")
             }
-            .preferredColorScheme(LabTheme.chosen.isDark ? .dark : .light)
+            .preferredColorScheme(shown.isDark ? .dark : .light)
     }
 }
 
