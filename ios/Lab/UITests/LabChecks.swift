@@ -22,6 +22,17 @@ final class LabChecks: XCTestCase {
     private func chooser(_ app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'labThemeMenu' OR label BEGINSWITH 'Theme' OR label BEGINSWITH 'Close and reopen'")).firstMatch
     }
+    /// Navigation v1.2: Profile has no tab. Home → avatar → "View profile".
+    private func openProfile(_ app: XCUIApplication) -> Bool {
+        tab(app, "Home")
+        let avatar = app.buttons["homeAvatar"].firstMatch
+        guard avatar.waitForExistence(timeout: 8) else { return false }
+        avatar.tap()
+        let view = app.buttons["menuViewProfile"].firstMatch
+        guard view.waitForExistence(timeout: 5) else { return false }
+        view.tap(); app.settleForScreenshot(2)
+        return app.staticTexts["Profile"].firstMatch.waitForExistence(timeout: 8)
+    }
     private let themes: [(id: String, title: String)] = [("obsidian", "Obsidian"), ("arctic", "Arctic"), ("ocean", "Ocean"), ("forest", "Forest"), ("sandstone", "Sandstone"), ("highContrast", "High Contrast")]
 
     /// The same five screens in each theme, each from a fresh launch in that theme.
@@ -33,6 +44,16 @@ final class LabChecks: XCTestCase {
             XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30), "\(t.id): Home with the demo athlete")
             XCTAssertTrue(banner(app), "\(t.id): the demo banner is shown")
             let tag = "\(i + 1)-\(t.id)"
+            // Navigation v1.2 rev 1.1: the dock is the cradle; there are exactly three tabs and no Profile tab
+            if i == 0 {
+                let dock = app.descendants(matching: .any).matching(identifier: "cradleDock").firstMatch
+                XCTAssertTrue(dock.waitForExistence(timeout: 8), "the cradle dock is shown")
+                for name in ["Home", "Plan", "Progress"] { XCTAssertTrue(dock.buttons[name].exists, "tab \(name) in the dock") }
+                XCTAssertFalse(dock.buttons["Profile"].exists, "Profile must not be a tab")
+                let ball = app.buttons["centreButton"].firstMatch, home = dock.buttons["Home"].firstMatch
+                XCTAssertTrue(ball.exists && ball.frame.maxX <= home.frame.minX + 1, "the Train ball is left of Home (\(ball.frame) / \(home.frame))")
+                XCTAssertEqual(ball.frame.width, 72, accuracy: 1, "Train ball is 72 pt"); XCTAssertEqual(ball.frame.height, 72, accuracy: 1)
+            }
             app.settleForScreenshot(2); shot("\(tag)-1-home")
             let coach = app.buttons["homeCoachAction"].firstMatch
             if coach.exists { XCTAssertTrue(coach.label.hasPrefix("Demo, rule-based, not AI."), "\(t.id): the Coach card says it is demo and not AI (\(coach.label))") }
@@ -41,7 +62,7 @@ final class LabChecks: XCTestCase {
             if centre.waitForExistence(timeout: 5) { centre.tap(); app.settleForScreenshot(2); shot("\(tag)-3-train"); XCTAssertTrue(banner(app), "\(t.id): banner on Train") }
             tab(app, "Plan"); shot("\(tag)-4-plan")
             tab(app, "Progress"); shot("\(tag)-5-progress")
-            tab(app, "Profile"); shot("\(tag)-6-profile"); XCTAssertTrue(banner(app), "\(t.id): banner on Profile")
+            XCTAssertTrue(openProfile(app), "\(t.id): Profile opens from the Home avatar"); shot("\(tag)-6-profile"); XCTAssertTrue(banner(app), "\(t.id): banner on Profile")
             app.terminate()
         }
     }
@@ -76,7 +97,7 @@ final class LabChecks: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
-        tab(app, "Profile")
+        XCTAssertTrue(openProfile(app), "Profile opens from the Home avatar")
         let settings = app.buttons["profileSettings"].firstMatch
         var tries = 0
         while !(settings.exists && settings.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }
