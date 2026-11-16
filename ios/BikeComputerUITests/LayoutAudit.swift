@@ -414,9 +414,24 @@ final class LayoutAudit: XCTestCase {
             if found.count == 7 {
                 let win = app.windows.firstMatch.frame
                 for d in found { XCTAssertTrue(d.frame.minX >= win.minX - 1 && d.frame.maxX <= win.maxX + 1, "\(size): day \(d.identifier) outside the screen \(d.frame)") }
-                let before = found.map { $0.frame.minX }
-                app.otherElements["planDayStrip"].firstMatch.swipeLeft(); sleep(1)
-                XCTAssertEqual(found.map { $0.frame.minX }, before, "\(size): the day strip moved sideways (horizontal scrolling)")
+                // The sideways-scroll check used to SWIPE the day strip left and compare the days' positions. That gesture
+                // is replaced by geometry (owner decision, 16 Nov 2026), because it was not a reliable way to test the layout:
+                //   • runs 237 and 239 (Monday, small iPhone, largest text): the strip was below the screen, so the swipe
+                //     could not be performed at all ("visible frame is empty") and nothing was checked;
+                //   • run 246: with the strip scrolled into view the swipe started on tomorrow's session chip — at the
+                //     largest text sizes a chip is as wide as its row — and releasing on it opened that session's sheet,
+                //     which then blocked "Fix plan".
+                // What the swipe was for is asserted directly: the strip and every day (asserted just above) lie inside
+                // the screen's width, so there is nothing to scroll sideways to. The frames come from the accessibility
+                // snapshot and need no touch. Reaching all seven days by scrolling, opening a day or a session, and a
+                // scroll that must not open a session have their own tests in PlanLayoutTests.
+                let strip = app.otherElements["planDayStrip"].firstMatch
+                XCTAssertTrue(strip.exists, "\(size): the day strip")
+                if strip.exists {
+                    let sf = strip.frame
+                    XCTAssertTrue(sf.minX >= win.minX - 1 && sf.maxX <= win.maxX + 1, "\(size): the day strip is wider than the screen \(sf)")
+                    for d in found { XCTAssertTrue(d.frame.minX >= sf.minX - 1 && d.frame.maxX <= sf.maxX + 1, "\(size): day \(d.identifier) outside the strip \(d.frame) / \(sf)") }
+                }
             }
             // RC3 (owner 1 Nov): the weekly totals live only in Progress; Plan has the week settings row and Plan changes
             XCTAssertFalse(app.staticTexts["planDoneRiding"].exists, "\(size): weekly totals are not repeated on Plan")

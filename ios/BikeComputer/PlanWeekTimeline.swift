@@ -62,14 +62,18 @@ struct PlanWeekTimeline: View {
                 let content = Group {
                     if d.beforePlan { quiet("Before this plan started") }
                     else if d.chips.isEmpty { quiet(d.rest ? "Rest day" : "Free · tap to add") }
-                    else if stacked { VStack(alignment: .leading, spacing: 4) { ForEach(d.chips) { c in chip(c, width: g.size.width) } } }
+                    else if stacked { VStack(alignment: .leading, spacing: 0) { ForEach(d.chips) { c in chip(c, width: g.size.width) } } }
                     else { HStack(spacing: 4) { ForEach(d.chips) { c in chip(c, width: chipWidth(c, total: g.size.width, count: d.chips.count)) } ; Spacer(minLength: 0) } }
                 }
-                content.frame(width: g.size.width, alignment: .leading)
+                content.frame(width: g.size.width, height: g.size.height, alignment: .leading)      // centred in the 44-pt band
             }
-            .frame(minHeight: dts.isAccessibilitySize ? CGFloat(max(1, d.chips.count)) * 34 + 4 : 30)
+            // Touch targets (owner decision 16 Nov 2026; run 248 measured the day button 32 pt and the chips 30 pt high):
+            // every chip keeps its 30-pt capsule but is touchable over a 44-pt-high band, and the day button is as high
+            // as the row. The row's own vertical padding moved inside those bands, so a one-session row is 44 pt high
+            // as before. Bands of stacked chips touch but never overlap, and rows stay 6 pt apart.
+            .frame(minHeight: dts.isAccessibilitySize ? CGFloat(max(1, d.chips.count)) * DS.minTap : DS.minTap)
         }
-        .padding(.horizontal, 10).padding(.vertical, 6)
+        .padding(.horizontal, 10)
         .frame(maxWidth: .infinity, minHeight: DS.minTap)
     }
 
@@ -95,6 +99,8 @@ struct PlanWeekTimeline: View {
             .padding(.horizontal, 8).frame(width: width, height: 30, alignment: .leading)
             .background((c.mark == .skipped ? CyTheme.sysGray5 : id.bg), in: Capsule())
             .overlay(Capsule().stroke(c.mark == .missed ? BC.warn : Color.clear, lineWidth: 1.5))
+            .frame(width: width, height: DS.minTap, alignment: .leading)      // the touchable band around the 30-pt capsule
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(c.accessibilityLabel)
