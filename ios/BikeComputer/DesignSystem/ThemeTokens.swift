@@ -6,6 +6,15 @@ import Foundation
 // STATUS OF THE VALUES: PROVISIONAL. They are the UI Lab prototype values (brand book §4.3), carried over unchanged so
 // that real screens can be compared. They are not approved brand tokens; `CyThemeTokens.valuesApproved` says so and a
 // test pins it, so approval has to be a deliberate change.
+//
+// Nine values differ from the prototype (owner instruction of 16 Nov: correct contrast failures of status and discipline
+// indicators used alongside small text). Each was moved the smallest step that reaches 4.5:1 on every ground of its
+// theme (7:1 in High Contrast); hue unchanged:
+//   Arctic     recovery, success 1A7F45 → 197B43 · ring consistency 0B7F74 → 0A786E · ring load A35F00 → 9C5B00
+//   Sandstone  recovery, success 24773F → 23743D · ring consistency 0F7A70 → 0E7269 · ring load 9C5C00 → 945700
+//   High Contrast  danger FF6961 → FF827B
+// Colour is never the only carrier of a safety or training state: that is a rule for the screens (word, icon or shape
+// beside the colour) and cannot be guaranteed by this file.
 
 enum CyThemeID: String, Codable, CaseIterable {
     case obsidian, arctic, ocean, forest, sandstone, highContrast
@@ -93,7 +102,7 @@ struct CyThemeTokens: Equatable {
             return CyThemeTokens(id: .obsidian, background: c(0x0B0D10), surface: c(0x15181D), surfaceRaised: c(0x1F242B), textPrimary: c(0xF2F4F7), textSecondary: c(0xA9B0BB), textTertiary: c(0x8A93A0), border: c(0x2E343D), accent: c(0x9CC2EE), endurance: c(0x58C4F6), strength: c(0xFFB25B), recovery: c(0x7EDC9A), success: c(0x5BD68A), warning: c(0xF5C04A), danger: c(0xFF8077), ringConsistency: c(0x5FD3C4), ringLoad: c(0xF5B85C), ringRecovery: c(0xA99BFF),
                                  borderWidth: 1, usesShadows: true)
         case .arctic:
-            return CyThemeTokens(id: .arctic, background: c(0xF3F6FA), surface: c(0xFFFFFF), surfaceRaised: c(0xE9EEF4), textPrimary: c(0x111820), textSecondary: c(0x465261), textTertiary: c(0x5D6978), border: c(0xD3DBE5), accent: c(0x1B63C2), endurance: c(0x0A6FA8), strength: c(0xA35400), recovery: c(0x1A7F45), success: c(0x1A7F45), warning: c(0x8F5F00), danger: c(0xC2302A), ringConsistency: c(0x0B7F74), ringLoad: c(0xA35F00), ringRecovery: c(0x5F4BD0),
+            return CyThemeTokens(id: .arctic, background: c(0xF3F6FA), surface: c(0xFFFFFF), surfaceRaised: c(0xE9EEF4), textPrimary: c(0x111820), textSecondary: c(0x465261), textTertiary: c(0x5D6978), border: c(0xD3DBE5), accent: c(0x1B63C2), endurance: c(0x0A6FA8), strength: c(0xA35400), recovery: c(0x197B43), success: c(0x197B43), warning: c(0x8F5F00), danger: c(0xC2302A), ringConsistency: c(0x0A786E), ringLoad: c(0x9C5B00), ringRecovery: c(0x5F4BD0),
                                  borderWidth: 1, usesShadows: true)
         case .ocean:
             return CyThemeTokens(id: .ocean, background: c(0x071726), surface: c(0x0E2236), surfaceRaised: c(0x17304A), textPrimary: c(0xEAF3FB), textSecondary: c(0xA3B9CC), textTertiary: c(0x8AA2B8), border: c(0x27496A), accent: c(0x48D6CF), endurance: c(0x6CCBFA), strength: c(0xFFB866), recovery: c(0x86E0A4), success: c(0x66DB95), warning: c(0xF7C75A), danger: c(0xFF8C84), ringConsistency: c(0x5FD9CB), ringLoad: c(0xF7BE68), ringRecovery: c(0xB0A4FF),
@@ -102,10 +111,10 @@ struct CyThemeTokens: Equatable {
             return CyThemeTokens(id: .forest, background: c(0x0C1512), surface: c(0x14201B), surfaceRaised: c(0x1D2D26), textPrimary: c(0xEEF5F0), textSecondary: c(0xA8BBAF), textTertiary: c(0x8CA195), border: c(0x2D4238), accent: c(0x9AD6A8), endurance: c(0x6CC6F2), strength: c(0xF9B466), recovery: c(0x86DDA0), success: c(0x6BD893), warning: c(0xF2C458), danger: c(0xFF8A80), ringConsistency: c(0x62D2C3), ringLoad: c(0xF2B962), ringRecovery: c(0xADA0FF),
                                  borderWidth: 1, usesShadows: true)
         case .sandstone:
-            return CyThemeTokens(id: .sandstone, background: c(0xF5F0E8), surface: c(0xFFFDF9), surfaceRaised: c(0xECE4D8), textPrimary: c(0x221C16), textSecondary: c(0x574C40), textTertiary: c(0x6B5F52), border: c(0xDBCFBF), accent: c(0xA6482A), endurance: c(0x0F6C9C), strength: c(0x9C5300), recovery: c(0x24773F), success: c(0x24773F), warning: c(0x855B00), danger: c(0xB93026), ringConsistency: c(0x0F7A70), ringLoad: c(0x9C5C00), ringRecovery: c(0x5B49C4),
+            return CyThemeTokens(id: .sandstone, background: c(0xF5F0E8), surface: c(0xFFFDF9), surfaceRaised: c(0xECE4D8), textPrimary: c(0x221C16), textSecondary: c(0x574C40), textTertiary: c(0x6B5F52), border: c(0xDBCFBF), accent: c(0xA6482A), endurance: c(0x0F6C9C), strength: c(0x9C5300), recovery: c(0x23743D), success: c(0x23743D), warning: c(0x855B00), danger: c(0xB93026), ringConsistency: c(0x0E7269), ringLoad: c(0x945700), ringRecovery: c(0x5B49C4),
                                  borderWidth: 1, usesShadows: true)
         case .highContrast:
-            return CyThemeTokens(id: .highContrast, background: c(0x000000), surface: c(0x000000), surfaceRaised: c(0x1C1C1E), textPrimary: c(0xFFFFFF), textSecondary: c(0xE5E5EA), textTertiary: c(0xC7C7CC), border: c(0xFFFFFF), accent: c(0xFFD60A), endurance: c(0x64D2FF), strength: c(0xFF9F0A), recovery: c(0x30D158), success: c(0x30D158), warning: c(0xFFD60A), danger: c(0xFF6961), ringConsistency: c(0x66E5D6), ringLoad: c(0xFFB340), ringRecovery: c(0xBFB5FF),
+            return CyThemeTokens(id: .highContrast, background: c(0x000000), surface: c(0x000000), surfaceRaised: c(0x1C1C1E), textPrimary: c(0xFFFFFF), textSecondary: c(0xE5E5EA), textTertiary: c(0xC7C7CC), border: c(0xFFFFFF), accent: c(0xFFD60A), endurance: c(0x64D2FF), strength: c(0xFF9F0A), recovery: c(0x30D158), success: c(0x30D158), warning: c(0xFFD60A), danger: c(0xFF827B), ringConsistency: c(0x66E5D6), ringLoad: c(0xFFB340), ringRecovery: c(0xBFB5FF),
                                  borderWidth: 1.5, usesShadows: false)
         }
     }
@@ -141,8 +150,9 @@ struct CyThemePreference: Equatable, Codable {
     /// A stored preference that breaks the slot rule (hand-edited or damaged data) is not trusted.
     var isValid: Bool { !systemLight.isDark && systemDark.isDark }
 
-    /// PROPOSAL, pending approval: what a returning athlete sees the first time, from the appearance setting they
-    /// already have ("system", "light" or "dark" in today's app). Unknown or absent → the new-athlete default.
+    /// Owner decision of 16 Nov 2026: what a returning athlete sees when UX1 is introduced, from the appearance setting
+    /// they already have. Light → Arctic. Dark → Obsidian. System → Arctic in light, Obsidian in dark.
+    /// Unknown or absent → the new-athlete default (Obsidian). Until UX1 is introduced the existing appearance is unchanged.
     static func forReturningAthlete(legacyAppearance: String?) -> CyThemePreference {
         switch legacyAppearance {
         case "light": return .always(.arctic)

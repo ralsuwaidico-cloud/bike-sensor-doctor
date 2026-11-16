@@ -44,13 +44,14 @@ final class ThemeTokensTests: XCTestCase {
         }
     }
 
-    /// Colours that carry meaning in icons, charts and rings must reach 3:1 on every ground (the threshold for graphics).
-    /// Several are below 4.5:1 in the light themes, so they are not suitable as small text; that is recorded for the
-    /// colour review rather than hidden by a lower bar here.
-    func testEveryMeaningColourIsVisibleOnEveryGround() {
+    /// Colours that carry meaning (discipline, status, rings, accent) sit beside small text, so they must reach the
+    /// small-text threshold themselves: 4.5:1 on every ground of their theme, 7:1 in High Contrast.
+    /// This bar was 3:1 in the first version of this test and was RAISED on the owner's instruction of 16 Nov; nine
+    /// prototype values were corrected to meet it (listed in ThemeTokens.swift).
+    func testEveryMeaningColourIsReadableBesideSmallTextOnEveryGround() {
         for id in CyThemeID.allCases {
-            let t = CyThemeTokens.tokens(for: id)
-            for (name, color) in t.markTokens { XCTAssertGreaterThanOrEqual(t.lowestContrast(of: color), 3.0, "\(id.title) \(name)") }
+            let t = CyThemeTokens.tokens(for: id); let need = id == .highContrast ? 7.0 : 4.5
+            for (name, color) in t.markTokens { XCTAssertGreaterThanOrEqual(t.lowestContrast(of: color), need, "\(id.title) \(name)") }
         }
     }
 
