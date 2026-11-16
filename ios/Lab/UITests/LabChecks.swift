@@ -17,11 +17,8 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(b.waitForExistence(timeout: 8), "tab \(name)")
         if b.exists { b.tap(); app.settleForScreenshot(2) }
     }
-    /// Lab 3 and 4: the chooser was not found by its identifier (an identifier on the banner row replaced it; that one is
-    /// removed). It is now found by identifier or by what it says, whichever iOS exposes.
-    private func chooser(_ app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'labThemeMenu' OR label BEGINSWITH 'Theme' OR label BEGINSWITH 'Close and reopen'")).firstMatch
-    }
+    /// The strip's theme name ("Theme: Ocean").
+    private func themeName(_ app: XCUIApplication) -> String { app.staticTexts["labThemeName"].firstMatch.label }
     /// Navigation v1.2 / Profile v2.0: Profile has no tab; the Home avatar opens the one Profile.
     private func openProfile(_ app: XCUIApplication) -> Bool {
         tab(app, "Home")
@@ -83,26 +80,27 @@ final class LabChecks: XCTestCase {
         }
     }
 
-    /// Choosing a theme in the banner changes the screen at once: no relaunch, and the picture really changes.
+    /// Choosing a theme in Profile › App Preferences › Appearance changes the app at once: no relaunch, the strip names
+    /// the new theme, and the picture really changes. All six, then back to the first.
     func test2ThemesSwitchWithoutRelaunch() {
         let app = XCUIApplication()
         app.launchEnvironment["LAB_THEME"] = "obsidian"
         app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
         var last = XCUIScreen.main.screenshot().pngRepresentation
-        for i in Array(1..<themes.count) + [0] {      // every other theme, then back to the first
+        for i in Array(1..<themes.count) + [0] {
             let t = themes[i]
-            // Lab 3: the chooser is not exposed as a Button, so it is looked up by its identifier whatever its type
-            let menu = chooser(app)
-            XCTAssertTrue(menu.waitForExistence(timeout: 8), "theme chooser"); menu.tap()
-            // Labs 5 and 6: an item tapped while the menu was still opening did not take effect or had no hit point.
-            // The item is tapped once the menu has settled and the item is hittable; the expectation is unchanged.
-            let choice = app.buttons[t.title].firstMatch
-            XCTAssertTrue(choice.waitForExistence(timeout: 5), "choice \(t.title)")
-            app.settleForScreenshot(1); _ = choice.waitUntilHittable(timeout: 4); choice.tap()
+            XCTAssertTrue(openProfile(app), "\(t.id): Profile from the avatar")
+            let prefs = app.descendants(matching: .any).matching(identifier: "profileSectionE").firstMatch
+            XCTAssertTrue(prefs.waitForExistence(timeout: 8), "App Preferences"); prefs.tap()
+            let appearance = app.descendants(matching: .any).matching(identifier: "profileAppearance").firstMatch
+            XCTAssertTrue(appearance.waitForExistence(timeout: 8), "Appearance"); appearance.tap()
+            let row = app.buttons["theme-\(t.id)"].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 8), "theme row \(t.title)")
+            _ = row.waitUntilHittable(timeout: 4); row.tap()
             app.settleForScreenshot(2)
             XCTAssertEqual(app.state, .runningForeground, "\(t.id): still the same running app")
-            XCTAssertTrue(chooser(app).label.contains(t.title), "\(t.id): the chooser names the theme now shown (\(chooser(app).label))")
+            XCTAssertTrue(themeName(app).contains(t.title), "\(t.id): the strip names the theme now shown (\(themeName(app)))")
             XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "\(t.id): Home is shown after the change")
             let now = XCUIScreen.main.screenshot().pngRepresentation
             XCTAssertNotEqual(now, last, "\(t.id): the screen did not change")
@@ -144,13 +142,10 @@ final class LabChecks: XCTestCase {
         let app = XCUIApplication()
         app.launch()
         XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.waitForExistence(timeout: 30), "starts empty (after the deletion test)")
-        let menu = chooser(app)
-        XCTAssertTrue(menu.waitForExistence(timeout: 8), "banner menu"); menu.tap()
-        let restore = app.buttons["Restore the demo athlete"].firstMatch
-        XCTAssertTrue(restore.waitForExistence(timeout: 5), "the restore choice")
-        app.settleForScreenshot(1); _ = restore.waitUntilHittable(timeout: 4); restore.tap()
+        let restore = app.buttons["labRestore"].firstMatch
+        XCTAssertTrue(restore.waitForExistence(timeout: 8), "the restore button in the Lab strip"); restore.tap()
         app.settleForScreenshot(1)
-        XCTAssertTrue(chooser(app).label.hasPrefix("Close and reopen"), "the banner confirms that restore was asked for (\(chooser(app).label))")
+        XCTAssertTrue(app.buttons["labRestore"].firstMatch.label.hasPrefix("Restore asked for"), "the strip confirms that restore was asked for")
         XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.exists, "nothing changes until Lab is reopened")
         shot("restore-1-asked")
         app.terminate()

@@ -52,9 +52,7 @@ enum LabTheme {
 struct LabChrome: ViewModifier {
     @ObservedObject private var theme = CyThemeState.shared
     @State private var restoreAsked = false
-    private func choose(_ p: CyThemePreference?) { if let p { theme.choose(p); LabTheme.store.save(p) } }
     private var label: String {
-        if restoreAsked { return "Close and reopen Lab to restore" }
         return theme.preference.mode == .system ? "Theme: follows iOS" : "Theme: \(theme.preference.resolved(systemIsDark: false).title)"
     }
     func body(content: Content) -> some View {
@@ -64,21 +62,20 @@ struct LabChrome: ViewModifier {
             HStack(spacing: 8) {
                 Text("CYCLIFT LAB · DEMO DATA").font(.caption2.weight(.heavy)).tracking(0.6).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 4)
-                Menu {
-                    ForEach(CyThemeID.allCases, id: \.self) { t in
-                        Button { choose(CyThemePreference.always(t)) } label: {
-                            if theme.preference == .always(t) { Label(t.title, systemImage: "checkmark") } else { Text(t.title) }
-                        }
-                    }
-                    Button { choose(CyThemePreference.followSystem()) } label: {
-                        if theme.preference.mode == .system { Label("Follow iOS (Arctic / Obsidian)", systemImage: "checkmark") } else { Text("Follow iOS (Arctic / Obsidian)") }
-                    }
-                    Divider()
-                    Button("Restore the demo athlete") { LabDemoData.restoreAtNextLaunch(); restoreAsked = true }
-                } label: {
-                    Text(label).font(.caption2.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7).padding(.vertical, 6).frame(minHeight: 30)
+                // Lab 5, 6 and 8: choices in a pull-down menu here did not take effect reliably after the first change. The
+                // six themes are chosen where the design puts them — Profile › App Preferences › Appearance — and this
+                // strip only names the theme shown. Restore is a plain button so it also works from the Welcome screen.
+                Text(label).font(.caption2.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+                    .accessibilityIdentifier("labThemeName")
+                Button { LabDemoData.restoreAtNextLaunch(); restoreAsked = true } label: {
+                    Text(restoreAsked ? "Reopen Lab" : "Restore demo").font(.caption2.weight(.heavy)).lineLimit(1)
+                        .padding(.horizontal, 8).frame(minHeight: 30)
+                        .overlay(Capsule().stroke(Color.black, lineWidth: 1.2))
+                        .frame(minHeight: 44).contentShape(Rectangle())
                 }
-                .accessibilityIdentifier("labThemeMenu")
+                .buttonStyle(.plain)
+                .accessibilityLabel(restoreAsked ? "Restore asked for. Close and reopen Cyclift Lab" : "Restore the demo athlete")
+                .accessibilityIdentifier("labRestore")
             }
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             .padding(.horizontal, 12)
