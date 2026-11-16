@@ -56,11 +56,10 @@ struct RootView: View {
                 PlanView(perform: perform).tabPage(1, tab)
                 RideTabView().tabPage(2, tab)
                 ProgressTabView().tabPage(3, tab)
-                #if CYCLIFT_LAB
-                CyProfileLanding(onBack: { tab = 0 }).tabPage(4, tab)          // Profile v2.0; reached from the Home avatar only
-                #else
-                ProfileTabView().tabPage(4, tab)
-                #endif
+                Group {
+                    if CyProduct.redesign { CyProfileLanding(onBack: { tab = 0 }) }      // Profile v2.0; reached from the Home avatar only
+                    else { ProfileTabView() }
+                }.tabPage(4, tab)
                 if showHub {
                     // Run 200 (HubTapReliabilityTests, 4 of 48 cycles): the hub opened every time, but a Close tapped while the
                     // panel was still sliding in landed on the stale frame and missed, so the hub stayed open. The hub now
@@ -140,21 +139,23 @@ struct RootView: View {
     private var appScheme: ColorScheme? { store.settings.appearance == .light ? .light : store.settings.appearance == .dark ? .dark : nil }
     private var rideScheme: ColorScheme? { store.settings.rideDisplay == .daylight ? .light : store.settings.rideDisplay == .night ? .dark : appScheme }
     private var rideOwnsBottom: Bool { tab == 2 && recorder.isActive }
-    private var dock: some View {
-        let action = store.todayAction(now: max(Date(), day))
-        let copy = RideTabBar.centreCopy(recording: recorder.isActive, action: action)
-        let missed = store.homeToday(recorderActive: recorder.isActive).missed != nil
-        #if CYCLIFT_LAB
-        // Cyclift Lab: Navigation v1.2 rev 1.1 (Shell/CyCradleDock.swift). Destinations and the Train routing are the
-        // existing ones; Profile (page 4) is reached from the Home avatar and has no tab.
-        _ = (copy, missed)
-        let ballState: CyTrainBallState = recorder.isActive ? .recording
-            : (store.activeSession.map { .active(max(0, Int(max(Date(), day).timeIntervalSince($0.startedAt ?? Date())))) } ?? .idle)
-        return CyCradleDock(selection: $tab, hubOpen: showHub, ball: ballState, onTrain: centreTapped)
-        #else
-        return CyLiquidDock(selection: $tab, state: CyCentreState.from(action: action, recording: recorder.isActive), missed: missed,
-                            centreIcon: copy.icon, centreLabel: copy.label, centreHint: copy.hint, onCentre: centreTapped)
-        #endif
+    @ViewBuilder private var dock: some View {
+        if CyProduct.redesign {
+            // Navigation v1.2 rev 1.1 (Shell/CyCradleDock.swift). Destinations and the Train routing are the existing
+            // ones; Profile (page 4) is reached from the Home avatar and has no tab.
+            CyCradleDock(selection: $tab, hubOpen: showHub, ball: ballState, onTrain: centreTapped)
+        } else {
+            let action = store.todayAction(now: max(Date(), day))
+            let copy = RideTabBar.centreCopy(recording: recorder.isActive, action: action)
+            let missed = store.homeToday(recorderActive: recorder.isActive).missed != nil
+            CyLiquidDock(selection: $tab, state: CyCentreState.from(action: action, recording: recorder.isActive), missed: missed,
+                         centreIcon: copy.icon, centreLabel: copy.label, centreHint: copy.hint, onCentre: centreTapped)
+        }
+    }
+    private var ballState: CyTrainBallState {
+        if recorder.isActive { return .recording }
+        if let s = store.activeSession { return .active(max(0, Int(max(Date(), day).timeIntervalSince(s.startedAt ?? Date())))) }
+        return .idle
     }
 
     /// Checkpoint C (owner-approved prototype §2.2): the centre button always opens the Training Hub, whose card carries

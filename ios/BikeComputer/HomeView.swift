@@ -84,11 +84,8 @@ struct HomeView: View {
             HStack {
                 Spacer()
                 Button {
-                    #if CYCLIFT_LAB
-                    tab = 4          // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
-                    #else
-                    setMenu(!showMenu)
-                    #endif
+                    if CyProduct.redesign { tab = 4 }          // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
+                    else { setMenu(!showMenu) }
                 } label: {
                     ZStack {
                         Circle().fill(CyTheme.cta).frame(width: 34, height: 34)

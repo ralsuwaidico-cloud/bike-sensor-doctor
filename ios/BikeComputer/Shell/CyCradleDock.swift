@@ -5,7 +5,8 @@ import UIKit
 // NAVIGATION_V12_FINAL_VISUAL_SPECIFICATION.md). Train ball at the physical far left; Home, Plan, Progress in one
 // sculpted capsule whose left end is a concave cradle around the ball. Profile has no tab.
 //
-// Used by Cyclift Lab only (ContentView, `#if CYCLIFT_LAB`). The production app keeps CyLiquidDock.
+// Shared code for both apps; switched on by `CyProduct.redesign` (on in Cyclift Lab; production keeps CyLiquidDock
+// until the redesign is promoted).
 //
 // Geometry is the specification's (points): ball 72, capsule 56, ring gap 5, ball-to-tabs 15, capsule end inset 6,
 // side margin 14 (applied by the caller), silhouette about 90 high, three equal tab regions 48 high.
