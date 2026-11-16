@@ -1,0 +1,63 @@
+# Cyclift Lab — TestFlight upload. Owner approval of 16 Nov 2026, 17:14 (Dubai): Cyclift Lab 0.1.0 built exclusively
+# from commit 59e2f0338c763b6200c3c13d395e58b09a3d782e, internal testers only. This workflow uploads NOTHING ELSE: the
+# approved commit is fixed below, the app's source folder must be byte-identical to that commit, and the upload is
+# refused unless every check on the signed app passes. It never touches the production Cyclift app or its testers.
+name: Cyclift Lab — TestFlight upload
+on:
+  push:
+    branches: ["ios/lab"]
+    paths: ["tools/lab/UPLOAD_APPROVED"]
+permissions:
+  contents: read
+concurrency:
+  group: lab-upload
+  cancel-in-progress: false
+env:
+  APPROVED: 59e2f0338c763b6200c3c13d395e58b09a3d782e
+jobs:
+  upload:
+    runs-on: macos-26
+    timeout-minutes: 45
+    outputs:
+      build: ${{ steps.n.outputs.build }}
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: n
+        name: Approved commit and unchanged source
+        run: |
+          [ "$(head -1 tools/lab/UPLOAD_APPROVED | tr -dc 'a-f0-9')" = "$APPROVED" ] || { echo "UPLOAD_APPROVED does not name the approved commit"; exit 1; }
+          git diff --quiet "$APPROVED" HEAD -- ios || { echo "REFUSED: the app source (ios/) differs from the approved commit"; git diff --stat "$APPROVED" HEAD -- ios | tail -5; exit 1; }
+          echo "app source identical to $APPROVED (tree $(git rev-parse HEAD:ios))"
+          echo "build=$(( ${{ github.run_number }} + 2 ))" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ios/build/spm
+          key: spm-v1-${{ hashFiles('ios/project.yml') }}
+      - name: Sign, check the signed app, upload only if every check passes
+        env:
+          BUILD_NUMBER: ${{ steps.n.outputs.build }}
+          LAB_SOURCE_COMMIT: ${{ env.APPROVED }}
+          LAB_UPLOAD_APPROVED: ${{ env.APPROVED }}
+        run: bash tools/lab/release.sh
+  testflight:
+    needs: [upload]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet pyjwt cryptography
+      - name: Internal group, tester, processing state
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+          BUILD_NUMBER: ${{ needs.upload.outputs.build }}
+          COMMIT: ${{ env.APPROVED }}
+        run: set -o pipefail; python3 tools/lab/testflight.py 2>&1 | sed -E 's/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/<e-mail hidden>/g'
