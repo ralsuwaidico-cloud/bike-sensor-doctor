@@ -7,27 +7,26 @@ Evidence words used here: **written** = code exists on the branch · **compiled*
 
 ## 1. E1 tasks
 
-Branch `ios/e1-safety` at `9f19af51` (from `4e2e9dc1`, the commit audited in E0). Statuses use the owner's scale. "Linux" = fast logic tests, run 87 on `9f19af51`: 416 executed, 0 failed, 2 skipped (both need a real read-only folder and can only run on iOS). **No iOS result exists yet for `9f19af51`**; iOS run 226 covers only the first batch (`d59193cf`). Section 8 has every run.
+Plan of 16 Nov: `release/execution-plan/2026-11-16_EXECUTION_PLAN.md`. Reference points: build 216 = `fb52ae27` (branch `baseline/build-216`); last E1 commit with every test job green = `a017ed6d` (run 235, branch `baseline/e1-run-235`); E1 candidate = `a6ded926` (run 236: compiled, 2 test failures); E1 head = `b167f514` (diagnostics only; run 237 in progress). Statuses below are for `a6ded926` and come from run 236 unless stated.
 
-| Task | What | Status on `9f19af51` |
+| Task | What | Status on `a6ded926` |
 |---|---|---|
-| E1-A1 | Unreadable store never overwritten; copy kept; recovery screen | Implemented but unverified — Linux passed; iOS pending |
-| E1-A2 | Record-by-record decoding; bad records set aside; banner | Implemented but unverified — Linux passed; iOS pending |
-| E1-A3 | Newer store read-only; unknown fields kept; one previous copy per launch | Implemented but unverified — Linux passed; iOS pending |
-| E1-A4 | Six build-216 fixtures (made in CI by the build-216 code) open, save and relaunch with no difference | Implemented but unverified — Linux: 0 differences in all six; iOS does not run this test (fixtures are generated on Linux) |
-| E1-A5 | Backup policy: launch-time changes need a verified copy; older-schema file kept; ordinary saves do not wait | Implemented but unverified — six new tests passed on Linux; iOS pending · policy awaits owner confirmation |
-| E1-A6 | One-time clean-up: one write, only untouched placeholders moved, nothing on a failed write, no later writes | Implemented but unverified — Linux passed; the failed-write case skips on Linux, needs iOS |
-| E1-B1 | One write per save; true only when stored; rollback; retry not a duplicate | Implemented but unverified — failed-write test passed on iOS for `d59193cf` only (run 226); must run again on `9f19af51` |
-| E1-B2 | "Not saved" on ride, strength workout and strength log; banner on every screen | Partially implemented — no UI test; "saving" and "uncertain" are not separate states (the write is synchronous) |
-| E1-C | Full-body edit without equipment; planner matrix (3 levels × 4 equipment sets × 5 lengths) | Implemented but unverified — matrix test is iOS-only and has never run |
-| E1-D1 | Layout CI: zero tests or zero screenshots fails | Implemented but unverified — needs the full iOS run |
-| E1-D2 | Largest text: Plan day column fixed; Home ring value, Plan list titles, Profile rows still truncate | Partially implemented |
-| E1-E | Every automatic increase held in both engines until the policy engine exists (owner decision 15 Nov) | Implemented but unverified — Linux passed; iOS pending |
-| E1-F1 | Ride completes the planned ride of the day it started | Implemented but unverified — Linux passed; iOS pending |
-| E1-F3 | Ride timing with an injectable clock | Implemented but unverified — iOS-only; never compiled |
-| E1-F4 | Delete all data: safety copies, schema copy, temporary exports, device reports, diagnostic history | Partially implemented — copies tested on Linux; exports and diagnostics have no test |
-| E1-F5 | Health-hold gate on every ride-start route | Implemented but unverified — iOS-only; never compiled. Location permission not enforced (open decision) |
-| E1-G | Release accounting | Blocked on nothing; not started — needed before an upload request |
+| E1-A1–A3 | Unreadable store never overwritten; record-by-record decoding; newer store read-only | Simulator-tested |
+| E1-A4 | Six build-216 fixtures open, save and relaunch with no difference | Unit-tested on Linux only (run 92); does not run on iOS |
+| E1-A5 | Backup policy; stale, unreadable, interrupted and repeated-recovery cases | Simulator-tested · direction confirmed by owner 16 Nov |
+| E1-A6 | One-time clean-up; nothing on a failed write | Simulator-tested |
+| E1-B1 | One write per save; rollback; retry not a duplicate; failed save completes nothing | Simulator-tested (data level) |
+| E1-B2 | "Not saved" shown to the athlete | Implemented; **no screen test** |
+| E1-C | Full-body edit without equipment; planner matrix | Simulator-tested |
+| E1-D1 | Layout CI fails on zero tests or zero screenshots | Simulator-tested |
+| E1-D2 | Largest-text clipping on Home, Profile, Plan; truncation check | **Open** |
+| E1-E | Every automatic increase held in both engines | Simulator-tested |
+| E1-F1, F3 | Ride completes the right planned ride; injectable clock | Simulator-tested · one stall-timing test failed on run 236, cause not established |
+| E1-F4 | Delete all data | Copies tested; **exports and diagnostics untested** |
+| E1-F5 | One start policy on every route, fail closed; external-ride marker; location gate | Simulator-tested at the policy level; **no screen-level route tests** |
+| E1-G | Release accounting | Not started |
+| — | Plan-edit flow test | Failed on run 236 (passed on 235); cause not established |
+| — | Physical-device check | Not possible without an authorized build |
 
 ## 2. Parallel workstreams that do not touch E1 files
 
@@ -39,7 +38,7 @@ Branch `ios/e1-safety` at `9f19af51` (from `4e2e9dc1`, the commit audited in E0)
 | D · Plan, Home, Progress | `ios/ux-plan` | Plan views, Progress hero, approved Home changes | After A |
 | Coach foundation | `ios/c0-coach` | Policy table, decision ledger, typed proposals (new files) | Now, in shadow mode |
 
-None of these is started. E1 is the only code work under way.
+16 Nov: the owner authorized isolated UX1 preparation (theme system, navigation, shared components) on `ios/ux1-foundation`, new files only until Checkpoint 1. Not yet started in code. Coach foundation proposed to start now as new files in shadow mode (plan, section 6).
 
 ## 3. Shared contracts to agree before integration
 
@@ -85,7 +84,7 @@ Resolved 15 Nov: all automatic increases held (owner); synthetic build-216 fixtu
 | Scope of the interim hold | Decision record of 15 Nov; directive E1-E | Owner decided 15 Nov: all automatic increases held in both engines | No — resolved |
 | Layout defects | Readiness package: triage at a checkpoint; directive E1-D: fix in E1 | Directive followed; added as E1-D2 | No |
 | Diagnostics "pass unmodified" | E0 report; run 225 | One assertion restated with the reason in the file (timestamp rounding, no data lost); all others unchanged | No — disclosed |
-| Themes and Arabic | Readiness package: six themes in UX1; directive §8: additional themes and Arabic as later capability releases | Directive followed; architecture keeps both | No |
+| Themes and Arabic | Readiness package: six themes in UX1; directive of 15 Nov §8: later capability releases; **directive of 16 Nov: six themes in UX1 (Week 2), engine ready for Arabic/RTL** | Latest directive followed | No |
 
 ## 8. CI evidence, by commit
 
@@ -110,5 +109,6 @@ A result counts only for the commit in its row.
 | Fast logic 91 | `a6ded926` | **426 executed, 0 failed, 3 skipped** (three read-only-folder tests; iOS only). Nine of the ten new data-contract tests ran and passed. Six build-216 fixtures: 0 differences each, no field added |
 | Fast logic 92 | `a6ded926` | Passed (same commit as run 91, on `ios/e1-safety`) |
 | iOS 236 (full) | `a6ded926` | **Not green: 2 test failures, 0 compile errors.** Debug and Release compiled. Unit: 724 executed, 721 passed, **1 failed**, 2 skipped (build-216 fixture tests, Linux only). Failed: `testE0_Ride_DeliberateStallProducesExactlyThatManyGapSamples` — expected 2–3 gap seconds after a 2.6 s stall, got 25; the test took 27.6 s (2.6 s on run 235). Samples matched elapsed time and no route fix was lost; where the extra 25 s went is not established (suspect: first GPS start in the test process now that CI grants location; not proven). All 6 new ride-gate tests and all 10 data-contract tests passed, including the three read-only-folder tests skipped on Linux. Smoke: 26 executed, 20 passed, 6 skipped by design, 0 failed (3 ride-screen tests passed). Flows: 8 executed, 7 passed, **1 failed** — `PlanEditPreviewApplyTests.testEditDurationGoesThroughPreviewAndApply`, duration slider not found after More → Edit; passed on run 235; cause not established. Journeys 3 passed. Layout: small 3 passed/79 screenshots, owner 2/77, standard 1/33 (one simulator launch retry), promax 1/13. Watch 6 screenshots. Release and archive not run because tests failed |
+| iOS 237 (full), logic 93 | `b167f514` | Started 16 Nov. Diagnostics only in the two failing tests; no expectation changed. Results pending |
 
 Owner decisions of 15–16 Nov, implemented in `a6ded926` (record: `decisions/2026-11-16_e1-ride-authorization-external-rides-location.md`): one ride-start policy read from the athlete record, failing closed; BikeComputer rides begun during a hold kept and marked; phone-GPS rides need location permission; wider failed-save and recovery tests at data level. Still open: largest-text clipping and a truncation check, a screen test for "Not saved", Delete-all coverage for exports and diagnostics, release accounting.
