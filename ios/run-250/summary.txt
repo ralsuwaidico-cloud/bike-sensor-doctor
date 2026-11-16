@@ -1,0 +1,17 @@
+BikeComputer iOS CI — run 250 — scope quick — jobs: quick=failure test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 250 — 2026-11-16 11:15 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): FAILED (exit 65) · 2m49s — no exact matches in call to initializer  
+RESULT tests: FAILED (build)
+COMPILE CHECK — app build and unit tests only; no screen test was run
+RESULT archive: skipped (compile check)
+RESULT upload: skipped (compile check never uploads)
+Total: 3m0s
+commit 9749d71f11e54f4949baaac3cd23041a48ef409e  branch ios/ux1-foundation  job failure
