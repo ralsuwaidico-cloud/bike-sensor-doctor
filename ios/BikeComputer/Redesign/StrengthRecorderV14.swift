@@ -123,7 +123,9 @@ struct StrengthRecorderV14: View {
             .accessibilityLabel("Minimise").accessibilityHint("The workout keeps running. Open it again from the Train button")
             .accessibilityIdentifier("recorderMinimise")
             VStack(alignment: .leading, spacing: 0) {
-                Text(s.customName.isEmpty ? "Strength workout" : s.customName).font(CyFont.caption).foregroundStyle(theme.textSecondary).lineLimit(1)
+                // Cyclift Lab: this screen covers the Lab strip, so it says itself that the athlete is the demo athlete
+                Text((s.customName.isEmpty ? "Strength workout" : s.customName) + (CycliftLab.isLab ? " · DEMO DATA" : "")).font(CyFont.caption).foregroundStyle(theme.textSecondary).lineLimit(1)
+                    .accessibilityIdentifier("recorderName")
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(clock(s.elapsedSeconds(now: now))).font(CyFont.metricSmall).foregroundStyle(paused ? theme.textSecondary : theme.textPrimary)
                         .accessibilityIdentifier("recorderClock")
@@ -327,8 +329,8 @@ struct StrengthRecorderV14: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(id)        // on the button itself (Lab run 12: placed after the padding it was not found as a button)
         .padding(.horizontal, CySpace.l).padding(.vertical, CySpace.s)
-        .accessibilityIdentifier(id)
     }
 
     // MARK: actions — every change goes through the existing Store functions

@@ -181,7 +181,9 @@ final class LabChecks: XCTestCase {
         XCTAssertNotEqual(el("recorderReps").label, reps, "+ changes the reps")
         app.buttons["recorderRepsMinus"].firstMatch.tap()
         let firstSet = el("recorderSet").label
-        let log = app.buttons["logSet"].firstMatch
+        let log = el("logSet")
+        XCTAssertTrue(log.waitForExistence(timeout: 5), "the Log set button")
+        XCTAssertTrue(el("recorderName").label.contains("DEMO DATA"), "the recorder says the athlete is the demo athlete")
         log.tap()
         XCTAssertTrue(el("recorderLogged").waitForExistence(timeout: 5), "the logged set is named, with Undo")
         XCTAssertTrue(el("restTimer").exists || el("restPlanned").exists, "rest is shown")
@@ -204,7 +206,7 @@ final class LabChecks: XCTestCase {
         app.buttons["recorderPause"].firstMatch.tap()
         XCTAssertEqual(el("recorderState").label, "Recording")
         // every remaining set
-        let finish = app.buttons["nextSetFinish"].firstMatch
+        let finish = el("nextSetFinish")
         var taps = 0, sawSuperset = false
         while !finish.exists && taps < 80 {
             if el("recorderOverline").label.hasPrefix("SUPERSET") { if !sawSuperset { shot("strength-5-superset") }; sawSuperset = true }
