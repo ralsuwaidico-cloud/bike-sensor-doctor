@@ -14,15 +14,32 @@ final class RideRegressionTests: XCTestCase {
     // 2. The recorder stores GPS samples and grows the distance from Core Location fixes alone. Nothing here touches
     //    the network; a map that cannot load tiles only changes what is drawn, never what is recorded (RA-17, RA-18).
     func testGPSRecordingNeedsNoNetworkAndKeepsRouteSamples() {
+        // Runs 255 and 256 (16 Nov): this test took 21.5 s and 10.3 s of real time instead of a few milliseconds, and the
+        // recorder — which keeps the ride's clock right by storing every missed second as an empty "gap" sample — held 24
+        // and 10 samples instead of 5. The fixes (5), the distance (41 m) and the saved route (5) were still exact in both
+        // runs: no fix was duplicated or lost. The count "5 samples after 5 steps" is only true when each step is one
+        // second, which the real clock cannot promise on a test machine. The test now supplies the ride's clock (the
+        // recorder's own test seam, E1-F3) and stamps each fix from it. Every expectation below is unchanged.
+        // What stalled for 10–21 s is NOT established; the real time of each part is printed for the next occurrence.
+        let w0 = Date()
         let loc = LocationService()
+        let w1 = Date()
         let r = RideRecorder.allowedForTests(); r.location = loc
+        var t = Date(timeIntervalSince1970: 1_800_000_000); r.clock = { t }
+        func at(_ lat: Double, hacc: Double = 5) -> CLLocation {
+            CLLocation(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: 54.38), altitude: 12, horizontalAccuracy: hacc, verticalAccuracy: 8, course: 0, speed: 8.33, timestamp: t)
+        }
         XCTAssertTrue(r.start())
-        for i in 0..<5 { loc.injectForTests(fix(24.45 + Double(i) * 0.0001, 54.38, speed: 8.33)); r.tick() }
+        let w2 = Date()
+        for i in 0..<5 { t = t.addingTimeInterval(1); loc.injectForTests(at(24.45 + Double(i) * 0.0001)); r.tick() }
+        let w3 = Date()
+        print(String(format: "E1-DIAG gps-route: LocationService()=%.3fs start()=%.3fs fiveSteps=%.3fs samples=%d gapSeconds=%d", w1.timeIntervalSince(w0), w2.timeIntervalSince(w1), w3.timeIntervalSince(w2), r.samples.count, r.gapSeconds))
         XCTAssertEqual(r.samples.count, 5)
         XCTAssertEqual(r.samples.compactMap(\.lat).count, 5, "every second carries the fix")
         XCTAssertEqual(r.distanceM, 41, "5 s at 8.33 m/s (30 km/h) → 41 m from GPS speed")
+        XCTAssertEqual(r.gapSeconds, 0, "five one-second steps leave no gap")
         // a stale or inaccurate fix is not used, but the clock keeps running (distance holds)
-        loc.injectForTests(fix(24.46, 54.38, speed: 8.33, hacc: 80)); r.tick()
+        t = t.addingTimeInterval(1); loc.injectForTests(at(24.46, hacc: 80)); r.tick()
         XCTAssertEqual(r.samples.count, 6); XCTAssertNil(r.samples.last?.lat); XCTAssertEqual(r.distanceM, 41)
         r.pause(); r.end()
         XCTAssertEqual(r.pendingResult?.samples.filter { $0.lat != nil }.count, 5, "the route is in the record")
