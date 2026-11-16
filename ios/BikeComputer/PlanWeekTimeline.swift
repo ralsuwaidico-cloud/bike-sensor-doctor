@@ -65,7 +65,7 @@ struct PlanWeekTimeline: View {
                     else if stacked { VStack(alignment: .leading, spacing: 0) { ForEach(d.chips) { c in chip(c, width: g.size.width) } } }
                     else { HStack(spacing: 4) { ForEach(d.chips) { c in chip(c, width: chipWidth(c, total: g.size.width, count: d.chips.count)) } ; Spacer(minLength: 0) } }
                 }
-                content.frame(width: g.size.width, alignment: .leading)
+                content.frame(width: g.size.width, height: g.size.height, alignment: .leading)      // centred in the 44-pt band
             }
             // Touch targets (owner decision 16 Nov 2026; run 248 measured the day button 32 pt and the chips 30 pt high):
             // every chip keeps its 30-pt capsule but is touchable over a 44-pt-high band, and the day button is as high
