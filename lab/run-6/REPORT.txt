@@ -1,0 +1,49 @@
+RESULT Lab build: ok · 170s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint 2fc9493aee6027a9 2 
+	 Executed 4 tests, with 4 failures (0 unexpected) in 458.290 (458.294) seconds
+	 Executed 4 tests, with 4 failures (0 unexpected) in 458.290 (458.295) seconds
+	 Executed 4 tests, with 4 failures (0 unexpected) in 458.290 (458.296) seconds
+Lab/UITests/LabChecks.swift:138: error: -[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked] : XCTAssertTrue failed - after reopening, the demo athlete is back
+Lab/UITests/LabChecks.swift:83: error: -[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch] : Failed to tap "Forest" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"Forest" IN identifiers'`, given input App element pid: 57896
+Lab/UITests/LabChecks.swift:83: error: -[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch] : XCTAssertTrue failed - choice Forest
+Lab/UITests/LabChecks.swift:86: error: -[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch] : XCTAssertTrue failed - ocean: the chooser names the theme now shown (Theme: Arctic)
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' passed (294.628 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' failed (60.607 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (54.993 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test4RestoreBringsTheDemoAthleteBackOnlyWhenAsked]' failed (48.062 seconds).
+RESULT Lab screen checks: FAILED · 572s
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (2fc9493aee6027a9 2 )
+RESULT Lab launch in six themes: FAILED
+commit 792b12734c5a4e35b4a3201dac5ae3c4038da56e  branch ios/lab
