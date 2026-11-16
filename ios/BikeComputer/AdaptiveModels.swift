@@ -46,6 +46,10 @@ struct CheckIn: Codable, Equatable {
     var painArea: PainArea? = nil
     var note: String = ""
     var at: Date = Date()
+    /// Training Hub v1.4 review: how hard the session was meant to feel against how it felt, 1–10. STORED ONLY — no
+    /// engine reads it. Optional and additive: absent in every record written before it existed and whenever the
+    /// athlete leaves it unanswered; never filled in with a default.
+    var intensity: Int? = nil
 
     init(performance: Int, effort: Int, pain: PainLevel = .noPain, painArea: PainArea? = nil, note: String = "", at: Date = Date()) {
         self.performance = min(10, max(1, performance)); self.effort = min(10, max(1, effort))
@@ -59,6 +63,7 @@ struct CheckIn: Codable, Equatable {
         painArea = try? c.decodeIfPresent(PainArea.self, forKey: .painArea)
         note = (try? c.decodeIfPresent(String.self, forKey: .note)) ?? ""
         at = (try? c.decodeIfPresent(Date.self, forKey: .at)) ?? Date(timeIntervalSince1970: 0)
+        intensity = (try? c.decodeIfPresent(Int.self, forKey: .intensity)).flatMap { $0 }.map { min(10, max(1, $0)) }
     }
 }
 

@@ -9,8 +9,8 @@ import SwiftUI
 // of sets, including superset alternation, is the existing NextSet rule. Nothing is stored in a new place.
 //
 // NOT BUILT, AND NOT PRETENDED (each is a pending item of the v1.4 approval)
-// • Three-slider review (Intensity · Performance · Effort): Intensity has no storage and "unanswered" is undecided.
-//   The optional review after saving is the app's existing check-in.
+// • The optional review after saving is Redesign/ReviewV14.swift (three sliders, nothing pre-filled); its storage
+//   limits are written there.
 // • Rounds and a round rest for supersets, a "skipped" set state, added-weight / assisted / timed sets: new data.
 //   A superset's round is told from its set numbers, and rest is each exercise's own prescribed rest.
 // • "Save unknown" as a state: the app's save reports success or failure only.
@@ -55,7 +55,7 @@ struct StrengthRecorderV14: View {
         .sheet(isPresented: $finishing) { finishSheet.cyThemeRoot() }
         .sheet(isPresented: $allExercises) { StrengthSessionView(legacy: true) }
         .sheet(isPresented: $review, onDismiss: { dismiss() }) {
-            if let s = saved { CheckInFlow(target: .strength(s.id)) { review = false } }
+            if let s = saved { ReviewV14(target: .strength(s.id)) { review = false }.cyThemeRoot() }
         }
         .alert("Discard this workout?", isPresented: $confirmDiscard) {
             Button("Discard", role: .destructive) { store.discardActiveSession(); memory.clear(); dismiss() }

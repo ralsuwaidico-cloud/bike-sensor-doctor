@@ -60,11 +60,12 @@ final class LabChecks: XCTestCase {
                 XCTAssertEqual(ball.frame.width, 72, accuracy: 1, "Train ball is 72 pt"); XCTAssertEqual(ball.frame.height, 72, accuracy: 1)
             }
             app.settleForScreenshot(2); shot("\(tag)-1-home")
-            let coach = app.buttons["homeCoachAction"].firstMatch
+            // Lab run 11: the card is one accessibility element of its own and is not reported as a button
+            let coach = app.descendants(matching: .any).matching(identifier: "homeCoachAction").firstMatch
             if coach.exists { XCTAssertTrue(coach.label.hasPrefix("Demo, rule-based, not AI."), "\(t.id): the Coach card says it is demo and not AI (\(coach.label))") }
             if i < 2 {
                 // Coach page: the Home card (or its quiet line) opens the one Coach timeline; it says rules-based, not AI
-                let quiet = app.buttons["homeCoachQuiet"].firstMatch
+                let quiet = app.descendants(matching: .any).matching(identifier: "homeCoachQuiet").firstMatch
                 let card = coach.exists ? coach : quiet
                 XCTAssertTrue(card.exists, "\(t.id): Home has a way into the Coach page")
                 if card.exists {
@@ -288,9 +289,10 @@ final class LabChecks: XCTestCase {
         XCTAssertTrue(app.buttons["onboardingContinue"].firstMatch.waitForExistence(timeout: 15), "after Delete, Lab is at Welcome")
     }
 
-    /// The new-athlete journey (runs after the deletion test, so Lab starts empty): the seven onboarding pages, the
+    /// The new-athlete journey. Named "3z" so it runs after the deletion test whatever the letter case rule (run 11: as
+    /// "3b" it ran before "3Delete" and met the demo athlete). Lab starts empty here: the seven onboarding pages, the
     /// Athletic Roster, approval of the Blueprint, then Home and Plan showing the approved week. Leaves Lab empty again.
-    func test3bNewAthleteOnboardsApprovesAndSeesThePlan() {
+    func test3zNewAthleteOnboardsApprovesAndSeesThePlan() {
         let app = XCUIApplication()
         app.launchEnvironment["LAB_THEME"] = "obsidian"
         app.launch()
