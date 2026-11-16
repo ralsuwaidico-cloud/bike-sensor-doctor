@@ -1,0 +1,12 @@
+BikeComputer iOS CI — build 243 — 2026-11-16 09:13 UTC
+Stage: layout (layout devices: small)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 12m34s
+  layout small counts: passed 0 · failed 1 · skipped 0 · screenshots so far 4
+  layout small (AX3): FAILED (exit 65) · 9m24s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{219.0, 114.0}, {63.0, 32.0}}, label: '16 wk' 
+RESULT layout audit: FAILED (5 screenshots)
+Total: 22m12s

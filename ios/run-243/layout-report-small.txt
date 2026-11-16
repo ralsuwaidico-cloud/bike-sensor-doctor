@@ -1,0 +1,11 @@
+AX3 progress glance: nothing wider than the screen
+AX3 progress glance: 6 texts, none overlapping
+AX3 riding 4 wk: 4 date labels, smallest gap 25 pt
+AX3 riding 4 wk: nothing wider than the screen
+AX3 riding 4 wk: 3 texts, none overlapping
+AX3 riding 8 wk: 4 date labels, smallest gap 25 pt
+AX3 riding 8 wk: nothing wider than the screen
+AX3 riding 8 wk: 3 texts, none overlapping
+AX3 riding 12 wk: 4 date labels, smallest gap 21 pt
+AX3 riding 12 wk: nothing wider than the screen
+AX3 riding 12 wk: 7 texts, none overlapping

@@ -1,0 +1,170 @@
+=== layout-small: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:326: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{219.0, 114.0}, {63.0, 32.0}}, label: '16 wk'
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (310.060 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: full filter ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:326: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{219.0, 114.0}, {63.0, 32.0}}, label: '16 wk'
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (310.060 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-16 09:34:47.974.
+	 Executed 1 test, with 1 failure (0 unexpected) in 310.060 (310.063) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-16 09:34:47.976.
+	 Executed 1 test, with 1 failure (0 unexpected) in 310.060 (310.065) seconds
+Test Suite 'Selected tests' failed at 2026-11-16 09:34:47.977.
+	 Executed 1 test, with 1 failure (0 unexpected) in 310.060 (310.068) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: last 150 lines ===
+    t =   236.00s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   238.96s Tap "8 wk" Button
+    t =   238.96s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   239.20s     Find the "8 wk" Button
+    t =   239.50s     Check for interrupting elements affecting "8 wk" Button
+    t =   239.91s     Synthesize event
+    t =   240.27s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   242.45s Find the "8 wk" Button
+    t =   243.00s Find the Window (First Match)
+    t =   243.27s Checking existence of `"trendChart" Other`
+    t =   244.98s Find the "trendChart" Other
+    t =   246.61s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   246.61s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   246.91s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   247.13s     Check for interrupting elements affecting "Cyclift" Application
+    t =   247.39s     Synthesize event
+    t =   247.40s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   247.91s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   248.13s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   248.37s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   249.12s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   250.18s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   252.94s Checking existence of `"trendChart" Other`
+    t =   253.50s Find the "trendChart" Other
+    t =   254.52s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   255.43s Find the Window (First Match)
+    t =   255.45s Find the Window (First Match)
+    t =   255.47s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   256.48s Find the Window (First Match)
+    t =   256.49s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   257.34s Waiting 2.0s for "12 wk" Button to exist
+    t =   258.37s     Checking `Expect predicate `existsNoRetry == 1` for object "12 wk" Button`
+    t =   258.38s         Checking existence of `"12 wk" Button`
+    t =   258.97s Find the "12 wk" Button
+    t =   260.03s Find the NavigationBar (First Match)
+    t =   260.33s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   260.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   260.33s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   260.58s     Check for interrupting elements affecting "Cyclift" Application
+    t =   261.11s     Synthesize event
+    t =   261.11s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   261.30s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   261.48s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   261.99s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   262.39s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   263.46s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   266.12s Tap "12 wk" Button
+    t =   266.12s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   266.33s     Find the "12 wk" Button
+    t =   267.13s     Check for interrupting elements affecting "12 wk" Button
+    t =   267.48s     Synthesize event
+    t =   267.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   270.02s Find the "12 wk" Button
+    t =   270.88s Find the Window (First Match)
+    t =   270.90s Checking existence of `"trendChart" Other`
+    t =   271.83s Find the "trendChart" Other
+    t =   272.76s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   272.76s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   272.98s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   273.21s     Check for interrupting elements affecting "Cyclift" Application
+    t =   274.14s     Synthesize event
+    t =   274.14s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   274.93s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   275.24s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   275.51s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   275.96s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   276.96s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   279.98s Checking existence of `"trendChart" Other`
+    t =   280.47s Find the "trendChart" Other
+    t =   281.31s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   282.56s Find the Window (First Match)
+    t =   282.59s Find the Window (First Match)
+    t =   282.61s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   284.03s Find the Window (First Match)
+    t =   284.04s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   284.59s Waiting 2.0s for "16 wk" Button to exist
+    t =   285.63s     Checking `Expect predicate `existsNoRetry == 1` for object "16 wk" Button`
+    t =   285.64s         Checking existence of `"16 wk" Button`
+    t =   286.32s Find the "16 wk" Button
+    t =   286.61s Find the NavigationBar (First Match)
+    t =   286.65s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   286.65s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   286.67s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   287.16s     Check for interrupting elements affecting "Cyclift" Application
+    t =   287.44s     Synthesize event
+    t =   287.44s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   287.87s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   288.06s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   288.26s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   288.47s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   289.71s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   292.33s Tap "16 wk" Button
+    t =   292.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   292.57s     Find the "16 wk" Button
+    t =   293.19s     Check for interrupting elements affecting "16 wk" Button
+    t =   293.48s     Synthesize event
+    t =   293.89s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   296.04s Find the "16 wk" Button
+    t =   297.31s Find the "16 wk" Button
+    t =   297.93s Find the NavigationBar (First Match)
+    t =   298.25s Tap "16 wk" Button
+    t =   298.25s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   298.26s     Find the "16 wk" Button
+    t =   298.95s     Check for interrupting elements affecting "16 wk" Button
+    t =   300.38s     Synthesize event
+    t =   300.47s         Scroll element to visible
+    t =   300.49s         Find the "16 wk" Button
+    t =   302.16s         Computed hit point {-1, -1} after scrolling to visible
+    t =   302.16s         Failed: Not hittable: Button, {{219.0, 114.0}, {63.0, 32.0}}, label: '16 wk'
+    t =   303.17s     Retrying `Tap "16 wk" Button` (attempt #2)
+    t =   303.17s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   303.17s         Find the "16 wk" Button
+    t =   303.58s         Check for interrupting elements affecting "16 wk" Button
+    t =   304.38s         Synthesize event
+    t =   304.40s             Scroll element to visible
+    t =   304.40s             Find the "16 wk" Button
+    t =   305.11s             Computed hit point {-1, -1} after scrolling to visible
+    t =   305.12s             Failed: Not hittable: Button, {{219.0, 114.0}, {63.0, 32.0}}, label: '16 wk'
+    t =   306.13s     Retrying `Tap "16 wk" Button` (attempt #3)
+    t =   306.13s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   306.14s         Find the "16 wk" Button
+    t =   306.44s         Check for interrupting elements affecting "16 wk" Button
+    t =   306.92s         Synthesize event
+    t =   306.94s             Scroll element to visible
+    t =   306.94s             Find the "16 wk" Button
+    t =   307.37s             Computed hit point {-1, -1} after scrolling to visible
+    t =   307.37s             Failed: Not hittable: Button, {{219.0, 114.0}, {63.0, 32.0}}, label: '16 wk'
+    t =   307.38s Requesting snapshot of accessibility hierarchy for app with pid 25329
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:326: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to not hittable: Button, {{219.0, 114.0}, {63.0, 32.0}}, label: '16 wk'
+    t =   309.34s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (310.060 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-16 09:34:47.974.
+	 Executed 1 test, with 1 failure (0 unexpected) in 310.060 (310.063) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-16 09:34:47.976.
+	 Executed 1 test, with 1 failure (0 unexpected) in 310.060 (310.065) seconds
+Test Suite 'Selected tests' failed at 2026-11-16 09:34:47.977.
+	 Executed 1 test, with 1 failure (0 unexpected) in 310.060 (310.068) seconds
+2026-11-16 09:35:33.625 xcodebuild[22693:61757] [MT] IDETestOperationsObserverDebug: 538.071 elapsed -- Testing started completed.
+2026-11-16 09:35:33.626 xcodebuild[22693:61757] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-16 09:35:33.626 xcodebuild[22693:61757] [MT] IDETestOperationsObserverDebug: 538.071 sec, +538.071 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-small.xcresult
+
+Failing tests:
+	LayoutAudit.testRC2OwnerScreens()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+=== layout-small: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (310.060 seconds).
+=== layout-small: E0-DIAG lines ===
