@@ -1,0 +1,174 @@
+=== layout-small: errors / failures ===
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:402: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen.
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (786.145 seconds).
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: full filter ===
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' passed (953.465 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (221.876 seconds).
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:402: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen.
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (786.145 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-16 06:57:26.925.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1961.486 (1961.499) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-16 06:57:26.927.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1961.486 (1961.501) seconds
+Test Suite 'Selected tests' failed at 2026-11-16 06:57:26.928.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1961.486 (1961.503) seconds
+Failing tests:
+** TEST EXECUTE FAILED **
+=== layout-small: last 150 lines ===
+    t =   718.94s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   719.13s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   719.38s     Check for interrupting elements affecting "Cyclift" Application
+    t =   719.66s     Synthesize event
+    t =   719.87s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   720.08s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   720.25s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   720.42s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   720.59s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   721.73s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   724.39s Checking existence of `"ftpConfidence" Any`
+    t =   727.29s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   727.29s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   727.88s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   728.13s     Check for interrupting elements affecting "Cyclift" Application
+    t =   728.42s     Synthesize event
+    t =   728.42s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   728.96s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   729.23s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   729.48s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   730.12s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   731.27s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   733.98s Checking existence of `"ftpConfidence" Any`
+    t =   736.87s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   736.87s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   736.95s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   737.55s     Check for interrupting elements affecting "Cyclift" Application
+    t =   737.87s     Synthesize event
+    t =   738.05s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   738.31s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   738.97s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   739.28s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   740.10s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   741.19s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   743.93s Checking existence of `"ftpConfidence" Any`
+    t =   746.12s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   746.12s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   746.16s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   746.79s     Check for interrupting elements affecting "Cyclift" Application
+    t =   747.01s     Synthesize event
+    t =   747.02s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   747.23s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   747.45s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   747.91s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   748.19s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   749.18s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   751.98s Checking existence of `"ftpConfidence" Any`
+    t =   754.28s Press Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.70] for 0.1 seconds, then drag to Target Application 'com.ralsuwaidico.bikecomputer'[0.50, 0.35] with velocity of 500.00 pixels per second, and then hold for 0.0 seconds 
+    t =   754.28s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   754.34s     Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   755.12s     Check for interrupting elements affecting "Cyclift" Application
+    t =   755.38s     Synthesize event
+    t =   755.39s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   755.84s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   756.06s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   756.29s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   756.91s         Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   757.95s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   761.10s Checking existence of `"ftpConfidence" Any`
+    t =   763.56s Waiting 5.0s for "Plan" Button to exist
+    t =   764.59s     Checking `Expect predicate `existsNoRetry == 1` for object "Plan" Button`
+    t =   764.60s         Checking existence of `"Plan" Button`
+    t =   764.82s Tap "Plan" Button
+    t =   764.82s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   764.83s     Find the "Plan" Button
+    t =   764.85s     Check for interrupting elements affecting "Plan" Button
+    t =   765.07s     Synthesize event
+    t =   765.37s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   765.42s Checking existence of `"Plan" Button`
+    t =   765.47s Find the "Plan" Button
+    t =   765.53s Find the "Plan" Button
+    t =   765.77s Checking existence of `"Plan" Button`
+    t =   765.88s Find the "Plan" Button
+    t =   765.92s Find the "Plan" Button
+    t =   767.02s Find the Window (First Match)
+    t =   767.03s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   767.59s Find the Window (First Match)
+    t =   767.60s Find the Target Application 'com.ralsuwaidico.bikecomputer'
+    t =   768.32s Checking existence of `"planDay-1" Button`
+    t =   768.80s Checking existence of `"planDay-2" Button`
+    t =   769.10s Checking existence of `"planDay-3" Button`
+    t =   769.37s Checking existence of `"planDay-4" Button`
+    t =   769.81s Checking existence of `"planDay-5" Button`
+    t =   770.15s Checking existence of `"planDay-6" Button`
+    t =   770.42s Checking existence of `"planDay-7" Button`
+    t =   770.86s Find the Window (First Match)
+    t =   770.88s Find the "planDay-1" Button
+    t =   771.16s Find the "planDay-1" Button
+    t =   771.50s Find the "planDay-2" Button
+    t =   772.16s Find the "planDay-2" Button
+    t =   772.56s Find the "planDay-3" Button
+    t =   773.17s Find the "planDay-3" Button
+    t =   773.55s Find the "planDay-4" Button
+    t =   773.95s Find the "planDay-4" Button
+    t =   774.19s Find the "planDay-5" Button
+    t =   774.44s Find the "planDay-5" Button
+    t =   774.84s Find the "planDay-6" Button
+    t =   775.12s Find the "planDay-6" Button
+    t =   775.36s Find the "planDay-7" Button
+    t =   775.81s Find the "planDay-7" Button
+    t =   776.05s Find the "planDay-1" Button
+    t =   776.31s Find the "planDay-2" Button
+    t =   776.60s Find the "planDay-3" Button
+    t =   777.08s Find the "planDay-4" Button
+    t =   777.39s Find the "planDay-5" Button
+    t =   778.01s Find the "planDay-6" Button
+    t =   778.42s Find the "planDay-7" Button
+    t =   778.93s Swipe left "planDayStrip" Other
+    t =   778.93s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   778.94s     Find the "planDayStrip" Other
+    t =   779.33s     Check for interrupting elements affecting "planDayStrip" Other
+    t =   779.55s     Synthesize event
+    t =   779.72s         Failed: Unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen.
+    t =   779.72s         Requesting snapshot of accessibility hierarchy for app with pid 97074
+    t =   781.28s     Retrying `Swipe left "planDayStrip" Other` (attempt #2)
+    t =   781.28s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   781.29s         Find the "planDayStrip" Other
+    t =   781.78s         Check for interrupting elements affecting "planDayStrip" Other
+    t =   782.16s         Synthesize event
+    t =   782.24s             Failed: Unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen.
+    t =   782.24s             Requesting snapshot of accessibility hierarchy for app with pid 97074
+    t =   783.67s     Retrying `Swipe left "planDayStrip" Other` (attempt #3)
+    t =   783.67s         Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   783.83s         Find the "planDayStrip" Other
+    t =   784.18s         Check for interrupting elements affecting "planDayStrip" Other
+    t =   784.38s         Synthesize event
+    t =   784.44s             Failed: Unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen.
+    t =   784.44s             Requesting snapshot of accessibility hierarchy for app with pid 97074
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/BikeComputerUITests/LayoutAudit.swift:402: error: -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen.
+    t =   785.44s Tear Down
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (786.145 seconds).
+Test Suite 'LayoutAudit' failed at 2026-11-16 06:57:26.925.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1961.486 (1961.499) seconds
+Test Suite 'BikeComputerUITests.xctest' failed at 2026-11-16 06:57:26.927.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1961.486 (1961.501) seconds
+Test Suite 'Selected tests' failed at 2026-11-16 06:57:26.928.
+	 Executed 3 tests, with 1 failure (0 unexpected) in 1961.486 (1961.503) seconds
+2026-11-16 06:58:05.116 xcodebuild[24263:65674] [MT] IDETestOperationsObserverDebug: 2170.467 elapsed -- Testing started completed.
+2026-11-16 06:58:05.117 xcodebuild[24263:65674] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-16 06:58:05.117 xcodebuild[24263:65674] [MT] IDETestOperationsObserverDebug: 2170.467 sec, +2170.467 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/layout-small.xcresult
+
+Failing tests:
+	LayoutAudit.testRC2OwnerScreens()
+
+** TEST EXECUTE FAILED **
+
+Testing started
+=== layout-small: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.LayoutAudit testHomeStates]' passed (953.465 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testKeyScreensAtTextSizes]' passed (221.876 seconds).
+Test Case '-[BikeComputerUITests.LayoutAudit testRC2OwnerScreens]' failed (786.145 seconds).
+=== layout-small: E0-DIAG lines ===

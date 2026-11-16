@@ -1,0 +1,179 @@
+=== flows: errors / failures ===
+=== flows: full filter ===
+Test Case '-[BikeComputerUITests.DeleteAllDataJourneyTests testDeleteAllDataReturnsToWelcomeAndStaysEmptyAfterRelaunch]' passed (89.069 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 89.069 (89.072) seconds
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' passed (292.172 seconds).
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' passed (752.297 seconds).
+	 Executed 2 tests, with 0 failures (0 unexpected) in 1044.469 (1044.472) seconds
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' passed (151.953 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 151.953 (151.954) seconds
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' passed (74.522 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' passed (38.049 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testRecoveryPageIsHonestWithoutHealthReads]' passed (43.404 seconds).
+	 Executed 3 tests, with 0 failures (0 unexpected) in 155.975 (155.978) seconds
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' passed (120.466 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 120.466 (120.467) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 1561.933 (1561.949) seconds
+	 Executed 8 tests, with 0 failures (0 unexpected) in 1561.933 (1561.950) seconds
+** TEST EXECUTE SUCCEEDED **
+=== flows: last 150 lines ===
+    t =    55.92s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    56.16s Waiting 2.0s for "restTimer" Any to exist
+    t =    57.22s     Checking `Expect predicate `existsNoRetry == 1` for object "restTimer" Any`
+    t =    57.22s         Checking existence of `"restTimer" Any`
+    t =    57.73s Waiting 8.0s for "logSet" Button to exist
+    t =    58.79s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    58.79s         Checking existence of `"logSet" Button`
+    t =    60.11s         Capturing element debug description
+    t =    60.30s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    61.22s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    61.77s             Find: Descendants matching type Button
+    t =    61.77s             Find: Elements matching predicate '"logSet" IN identifiers'
+    t =    61.79s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    62.56s             Find: Descendants matching type Button
+    t =    62.58s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    64.77s     Checking `Expect predicate `existsNoRetry == 1` for object "logSet" Button`
+    t =    64.77s         Checking existence of `"logSet" Button`
+    t =    66.00s         Capturing element debug description
+    t =    66.00s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    66.00s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    66.00s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    66.00s             Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    66.01s     Checking existence of `"logSet" Button`
+    t =    67.56s Collecting debug information to assist test failure triage
+    t =    67.56s     Requesting snapshot of accessibility hierarchy for app with pid 4675
+    t =    70.59s Waiting 5.0s for "nextSetFinish" Button to exist
+    t =    71.61s     Checking `Expect predicate `existsNoRetry == 1` for object "nextSetFinish" Button`
+    t =    71.61s         Checking existence of `"nextSetFinish" Button`
+    t =    71.83s Checking existence of `StaticText (First Match)`
+    t =    72.02s Waiting 5.0s for "finishWorkout" Button to exist
+    t =    73.06s     Checking `Expect predicate `existsNoRetry == 1` for object "finishWorkout" Button`
+    t =    73.06s         Checking existence of `"finishWorkout" Button`
+    t =    73.19s Tap "finishWorkout" Button
+    t =    73.19s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    73.19s     Find the "finishWorkout" Button
+    t =    73.30s     Check for interrupting elements affecting "finishWorkout" Button
+    t =    73.61s     Synthesize event
+    t =    74.21s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    75.37s Waiting 10.0s for "saveWorkout" Button to exist
+    t =    76.41s     Checking `Expect predicate `existsNoRetry == 1` for object "saveWorkout" Button`
+    t =    76.41s         Checking existence of `"saveWorkout" Button`
+    t =    76.74s Find the "saveWorkout" Button
+    t =    77.33s Tap "saveWorkout" Button
+    t =    77.33s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    77.49s     Find the "saveWorkout" Button
+    t =    78.06s     Check for interrupting elements affecting "saveWorkout" Button
+    t =    79.18s     Synthesize event
+    t =    79.63s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    82.01s Waiting 10.0s for "checkInForm" Any to exist
+    t =    83.03s     Checking `Expect predicate `existsNoRetry == 1` for object "checkInForm" Any`
+    t =    83.03s         Checking existence of `"checkInForm" Any`
+    t =    83.55s Waiting 3.0s for "checkInSubmit" Button to exist
+    t =    84.62s     Checking `Expect predicate `existsNoRetry == 1` for object "checkInSubmit" Button`
+    t =    84.62s         Checking existence of `"checkInSubmit" Button`
+    t =    84.91s Find the "checkInSubmit" Button
+    t =    85.17s Tap "checkInSubmit" Button
+    t =    85.17s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    85.38s     Find the "checkInSubmit" Button
+    t =    85.67s     Check for interrupting elements affecting "checkInSubmit" Button
+    t =    86.18s     Synthesize event
+    t =    86.62s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    88.23s Waiting 8.0s for "Done" Button to exist
+    t =    89.29s     Checking `Expect predicate `existsNoRetry == 1` for object "Done" Button`
+    t =    89.30s         Checking existence of `"Done" Button`
+    t =    89.49s Checking existence of `StaticText (First Match)`
+    t =    90.91s Tap "Done" Button
+    t =    90.91s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    91.15s     Find the "Done" Button
+    t =    91.38s     Check for interrupting elements affecting "adjustmentsDone" Button
+    t =    91.68s     Synthesize event
+    t =    92.37s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    93.20s Checking existence of `"adjustmentsDone" Button`
+    t =    94.63s Waiting 8.0s for "Strength" NavigationBar to exist
+    t =    95.66s     Checking `Expect predicate `existsNoRetry == 1` for object "Strength" NavigationBar`
+    t =    95.66s         Checking existence of `"Strength" NavigationBar`
+    t =    95.79s Checking existence of `StaticText (First Match)`
+    t =    96.28s Checking existence of `"Reopen" Button`
+    t =    97.80s Checking existence of `"Logged" StaticText`
+    t =    98.94s Checking existence of `"Done" Button`
+    t =    99.45s Tap "Done" Button
+    t =    99.45s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =    99.46s     Find the "Done" Button
+    t =    99.58s     Check for interrupting elements affecting "Done" Button
+    t =    99.98s     Synthesize event
+    t =   100.38s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   101.27s Checking existence of `"Done" Button`
+    t =   102.14s Waiting 20.0s for "homeGreeting" Any to exist
+    t =   103.21s     Checking `Expect predicate `existsNoRetry == 1` for object "homeGreeting" Any`
+    t =   103.21s         Checking existence of `"homeGreeting" Any`
+    t =   103.73s Find the "homeGreeting" Any
+    t =   104.43s Checking existence of `"hubClose" Button`
+    t =   104.54s Find the "hubClose" Button
+    t =   104.66s Tap "hubClose" Button
+    t =   104.66s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   104.66s     Find the "hubClose" Button
+    t =   104.76s     Check for interrupting elements affecting "hubClose" Button
+    t =   105.03s     Synthesize event
+    t =   105.39s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   106.17s Checking existence of `"hubClose" Button`
+    t =   106.79s Waiting 10.0s for "homeStrength" Button to exist
+    t =   107.86s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrength" Button`
+    t =   107.86s         Checking existence of `"homeStrength" Button`
+    t =   108.18s Checking existence of `"homeStrength" Button`
+    t =   108.43s Find the "homeStrength" Button
+    t =   108.77s Tap "homeStrength" Button
+    t =   108.78s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   108.79s     Find the "homeStrength" Button
+    t =   109.04s     Check for interrupting elements affecting "homeStrength" Button
+    t =   109.18s     Synthesize event
+    t =   109.53s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   110.05s Waiting 10.0s for "homeStrengthSummary" Any to exist
+    t =   111.09s     Checking `Expect predicate `existsNoRetry == 1` for object "homeStrengthSummary" Any`
+    t =   111.09s         Checking existence of `"homeStrengthSummary" Any`
+    t =   111.55s Find the "strengthLogExpand-0" Button
+    t =   112.16s Find the "strengthLogExpand-0" Button
+    t =   112.65s Find the "strengthLogExpand-0" Button
+    t =   113.22s Find the "strengthLogExpand-0" Button
+    t =   113.93s Waiting 5.0s for "strengthLogExpand-0" Button to exist
+    t =   114.97s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExpand-0" Button`
+    t =   114.97s         Checking existence of `"strengthLogExpand-0" Button`
+    t =   115.26s Tap "strengthLogExpand-0" Button
+    t =   115.26s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   115.26s     Find the "strengthLogExpand-0" Button
+    t =   115.56s     Check for interrupting elements affecting "strengthLogExpand-0" Button
+    t =   115.73s     Synthesize event
+    t =   116.28s     Wait for com.ralsuwaidico.bikecomputer to idle
+    t =   117.00s Waiting 5.0s for "strengthLogExercises-0" Any to exist
+    t =   118.09s     Checking `Expect predicate `existsNoRetry == 1` for object "strengthLogExercises-0" Any`
+    t =   118.09s         Checking existence of `"strengthLogExercises-0" Any`
+    t =   118.90s Checking existence of `StaticText (First Match)`
+    t =   119.38s Checking existence of `StaticText (First Match)`
+    t =   119.71s Checking existence of `StaticText (First Match)`
+    t =   120.07s Tear Down
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' passed (120.466 seconds).
+Test Suite 'StrengthSessionJourneyTests' passed at 2026-11-16 07:09:35.859.
+	 Executed 1 test, with 0 failures (0 unexpected) in 120.466 (120.467) seconds
+Test Suite 'BikeComputerUITests.xctest' passed at 2026-11-16 07:09:35.860.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 1561.933 (1561.949) seconds
+Test Suite 'Selected tests' passed at 2026-11-16 07:09:35.860.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 1561.933 (1561.950) seconds
+2026-11-16 07:09:40.115 xcodebuild[36638:96817] [MT] IDETestOperationsObserverDebug: 1589.446 elapsed -- Testing started completed.
+2026-11-16 07:09:40.116 xcodebuild[36638:96817] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-11-16 07:09:40.116 xcodebuild[36638:96817] [MT] IDETestOperationsObserverDebug: 1589.447 sec, +1589.447 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/build/flows.xcresult
+
+** TEST EXECUTE SUCCEEDED **
+
+Testing started
+=== flows: every test case, uncapped (E0) ===
+Test Case '-[BikeComputerUITests.DeleteAllDataJourneyTests testDeleteAllDataReturnsToWelcomeAndStaysEmptyAfterRelaunch]' passed (89.069 seconds).
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testCloseAtHumanPaceAlwaysClosesTheHub]' passed (292.172 seconds).
+Test Case '-[BikeComputerUITests.HubTapReliabilityTests testEveryFirstCentreTapOpensTheHub]' passed (752.297 seconds).
+Test Case '-[BikeComputerUITests.PlanEditPreviewApplyTests testEditDurationGoesThroughPreviewAndApply]' passed (151.953 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testPlanBandsNavigate]' passed (74.522 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testProgressPickersSwitchAndNumbersNameTheirSource]' passed (38.049 seconds).
+Test Case '-[BikeComputerUITests.PlanProgressRecoveryScreensTests testRecoveryPageIsHonestWithoutHealthReads]' passed (43.404 seconds).
+Test Case '-[BikeComputerUITests.StrengthSessionJourneyTests testStartLogFinishSaveCheckInThenHistory]' passed (120.466 seconds).
+=== flows: E0-DIAG lines ===
