@@ -22,6 +22,30 @@ final class LabChecks: XCTestCase {
     private func chooser(_ app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'labThemeMenu' OR label BEGINSWITH 'Theme' OR label BEGINSWITH 'Close and reopen'")).firstMatch
     }
+    /// Navigation v1.2 / Profile v2.0: Profile has no tab; the Home avatar opens the one Profile.
+    private func openProfile(_ app: XCUIApplication) -> Bool {
+        tab(app, "Home")
+        let avatar = app.buttons["homeAvatar"].firstMatch
+        guard avatar.waitForExistence(timeout: 8) else { return false }
+        avatar.tap(); app.settleForScreenshot(2)
+        return app.descendants(matching: .any).matching(identifier: "profileSectionA").firstMatch.waitForExistence(timeout: 8)
+    }
+    /// Profile → Data, Help & About → the existing settings page (export, permissions, delete all data).
+    private func openSettings(_ app: XCUIApplication) -> Bool {
+        let f = app.descendants(matching: .any).matching(identifier: "profileSectionF").firstMatch
+        var tries = 0
+        while !(f.exists && f.isHittable) && tries < 6 { app.swipeUp(); tries += 1 }
+        guard f.exists else { return false }
+        f.tap()
+        let row = app.descendants(matching: .any).matching(identifier: "profileSettings").firstMatch
+        guard row.waitForExistence(timeout: 8) else { return false }
+        row.tap(); return true
+    }
+    /// Lab 3 and 4: the chooser was not found by its identifier (an identifier on the banner row replaced it; that one is
+    /// removed). It is now found by identifier or by what it says, whichever iOS exposes.
+    private func chooser(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "identifier == 'labThemeMenu' OR label BEGINSWITH 'Theme' OR label BEGINSWITH 'Close and reopen'")).firstMatch
+    }
     /// Navigation v1.2: Profile has no tab. Home → avatar → "View profile".
     private func openProfile(_ app: XCUIApplication) -> Bool {
         tab(app, "Home")
@@ -98,12 +122,12 @@ final class LabChecks: XCTestCase {
         app.launch()
         XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
         XCTAssertTrue(openProfile(app), "Profile opens from the Home avatar")
-        let settings = app.buttons["profileSettings"].firstMatch
+        for id in ["profileSectionA", "profileSectionB", "profileSectionC", "profileSectionD", "profileSectionE", "profileSectionF"] {
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: id).firstMatch.exists, "Profile v2.0 section \(id)")
+        }
+        XCTAssertTrue(openSettings(app), "Profile › Data, Help & About › settings")
         var tries = 0
-        while !(settings.exists && settings.isHittable) && tries < 10 { app.swipeUp(); tries += 1 }
-        XCTAssertTrue(settings.waitForExistence(timeout: 10), "Profile › Settings"); settings.tap()
         let delete = app.buttons["deleteAllData"].firstMatch
-        tries = 0
         while !(delete.exists && delete.isHittable) && tries < 12 { app.swipeUp(); tries += 1 }
         XCTAssertTrue(delete.waitForExistence(timeout: 10), "Delete all data"); delete.tap()
         let alert = app.alerts.firstMatch
