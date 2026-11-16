@@ -27,6 +27,8 @@ for k in ["NSBluetoothAlwaysUsageDescription", "NSBluetoothPeripheralUsageDescri
           "UIBackgroundModes", "CFBundleURLTypes", "SUPABASE_URL", "SUPABASE_ANON_KEY", "GOOGLE_WEB_CLIENT_ID", "GOOGLE_IOS_CLIENT_ID", "CYCLIFT_SUPPORT_EMAIL"]:
     check(k not in info, "absent: " + k)
 check(not os.path.exists(os.path.join(app, "Watch")), "no Apple Watch app inside")
+icon = ((info.get("CFBundleIcons") or {}).get("CFBundlePrimaryIcon") or {}).get("CFBundleIconName")
+check(icon == "AppIconLab", "its own icon (AppIconLab): " + str(icon))
 check(not any(f.endswith(".entitlements") or f == "archived-expanded-entitlements.xcent" for f in os.listdir(app)), "no entitlements file in the app")
 print("ISOLATION RESULT: " + ("ok" if bad == 0 else f"FAILED ({bad})"))
 sys.exit(1 if bad else 0)
@@ -56,7 +58,19 @@ for t in obsidian arctic ocean forest sandstone highContrast; do
   else say "  $t: NOT RUNNING 14 s after launch (crash?)"; FAIL=1; fi
 done
 C=$(xcrun simctl get_app_container "$SIM" $BID data 2>/dev/null)
-[ -n "$C" ] && [ -f "$C/Library/Application Support/BikeComputer/store.json" ] && say "  ok   the demo athlete was written inside Lab's own container" || { say "  FAIL no demo athlete record in Lab's container"; FAIL=1; }
+STORE="$C/Library/Application Support/BikeComputer/store.json"
+[ -n "$C" ] && [ -f "$STORE" ] && say "  ok   the demo athlete was written inside Lab's own container" || { say "  FAIL no demo athlete record in Lab's container"; FAIL=1; }
+case "$C" in *"$BID"*|*/Containers/Data/Application/*) say "  ok   container: .../Containers/Data/Application/<Lab only>";; *) say "  FAIL unexpected container path"; FAIL=1;; esac
+# relaunch keeps the same demo record (it is seeded once, never regenerated over an existing one)
+first() { python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["profile"]["name"], d["plan"][0]["id"], len(d.get("strength",[])))' "$STORE" 2>/dev/null; }
+A=$(first); xcrun simctl terminate "$SIM" $BID >/dev/null 2>&1; xcrun simctl launch "$SIM" $BID >/dev/null 2>&1; sleep 10; B=$(first)
+[ -n "$A" ] && [ "$A" = "$B" ] && say "  ok   relaunch kept the same demo record" || { say "  FAIL the demo record changed on relaunch ($A / $B)"; FAIL=1; }
+# largest text size, one dark and one light theme
+for t in obsidian arctic; do
+  xcrun simctl terminate "$SIM" $BID >/dev/null 2>&1
+  SIMCTL_CHILD_LAB_THEME=$t xcrun simctl launch "$SIM" $BID -UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityXL >/dev/null 2>&1; sleep 14
+  pgrep -f "CycliftLab.app/CycliftLab" >/dev/null && { xcrun simctl io "$SIM" screenshot "$OUT/lab-ax3-$t-home.png" >/dev/null 2>&1; say "  $t at the largest text size: running, screenshot taken"; } || { say "  $t at the largest text size: NOT RUNNING"; FAIL=1; }
+done
 if [ $FAIL -ne 0 ]; then xcrun simctl spawn "$SIM" log show --last 3m --style compact --predicate 'process == "CycliftLab"' 2>/dev/null | tail -150 > "$OUT/simlog.txt"; ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i cycliftlab | head -3 | while read f; do head -c 60000 ~/Library/Logs/DiagnosticReports/"$f" > "$OUT/crash-$f.txt"; done; fi
 for f in "$OUT"/*.png; do [ -f "$f" ] && sips -Z 1300 "$f" >/dev/null 2>&1; done
 say "RESULT Lab launch in six themes: $([ $FAIL -eq 0 ] && echo ok || echo FAILED)"

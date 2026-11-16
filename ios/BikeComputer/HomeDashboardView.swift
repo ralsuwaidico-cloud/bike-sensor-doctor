@@ -161,7 +161,7 @@ struct HomeDashboardScreen: View {
                     CyIconBox(systemName: "sparkles", sport: .insight)
                     CyCaption(text: "Coach", color: CyTheme.insight.tint)
                     Spacer()
-                    Text("suggestion").font(CyType.captionSmall).foregroundStyle(CyTheme.insight.tint).padding(.horizontal, 7).padding(.vertical, 4).background(CyTheme.insight.bg, in: Capsule())
+                    Text(CycliftLab.isLab ? "demo · rules, not AI" : "suggestion").font(CyType.captionSmall).foregroundStyle(CyTheme.insight.tint).padding(.horizontal, 7).padding(.vertical, 4).background(CyTheme.insight.bg, in: Capsule())
                 }
                 Text(c.title).font(CyType.bodyStrong).foregroundStyle(CyTheme.ink).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
                 if let e = c.evidence { Text(e).font(CyType.secondary).foregroundStyle(CyTheme.ink2).fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading) }
