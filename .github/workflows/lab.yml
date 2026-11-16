@@ -14,7 +14,7 @@ concurrency:
 jobs:
   lab:
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -43,6 +43,6 @@ jobs:
           if git fetch -q --depth 1 origin ci-logs; then git checkout -q -b ci-logs FETCH_HEAD; else git checkout -q --orphan ci-logs; fi
           D="lab/run-$N"; mkdir -p "$D"
           cp "$GITHUB_WORKSPACE"/ios/build/lab-out/REPORT.txt "$D/" 2>/dev/null || true
-          cp "$GITHUB_WORKSPACE"/ios/build/lab-out/*.png "$D/" 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE"/ios/build/lab-out/*.png "$GITHUB_WORKSPACE"/ios/build/lab-out/uitest-tail.txt "$D/" 2>/dev/null || true
           echo "commit $GITHUB_SHA  branch $GITHUB_REF_NAME" >> "$D/REPORT.txt"
           git add -A && git commit -q -m "Cyclift Lab run $N" && for i in 1 2 3; do git push -q origin ci-logs && break; git pull -q --rebase origin ci-logs; done

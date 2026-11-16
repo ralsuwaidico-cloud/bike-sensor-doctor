@@ -72,6 +72,29 @@ for t in obsidian arctic; do
   pgrep -f "CycliftLab.app/CycliftLab" >/dev/null && { xcrun simctl io "$SIM" screenshot "$OUT/lab-ax3-$t-home.png" >/dev/null 2>&1; say "  $t at the largest text size: running, screenshot taken"; } || { say "  $t at the largest text size: NOT RUNNING"; FAIL=1; }
 done
 if [ $FAIL -ne 0 ]; then xcrun simctl spawn "$SIM" log show --last 3m --style compact --predicate 'process == "CycliftLab"' 2>/dev/null | tail -150 > "$OUT/simlog.txt"; ls ~/Library/Logs/DiagnosticReports/ 2>/dev/null | grep -i cycliftlab | head -3 | while read f; do head -c 60000 ~/Library/Logs/DiagnosticReports/"$f" > "$OUT/crash-$f.txt"; done; fi
+# ---- Lab screen checks (five screens x six themes, switching without relaunch, delete all data) with the PRODUCTION
+# app installed beside Lab: its files must be byte-for-byte the same afterwards.
+PBID=com.ralsuwaidico.bikecomputer
+xcodegen generate --spec project.yml > "$OUT/xcodegen-production.txt" 2>&1
+xcodebuild build -project BikeComputer.xcodeproj -scheme BikeComputer -configuration Debug -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath build/prod-dd -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO > "$OUT/build-production.log" 2>&1
+if [ $? -eq 0 ]; then
+  rm "$OUT/build-production.log"
+  xcrun simctl install "$SIM" build/prod-dd/Build/Products/Debug-iphonesimulator/BikeComputer.app
+  SIMCTL_CHILD_BC_UITEST_RESET=1 xcrun simctl launch "$SIM" $PBID >/dev/null 2>&1; sleep 12; xcrun simctl terminate "$SIM" $PBID >/dev/null 2>&1; sleep 2
+  PC=$(xcrun simctl get_app_container "$SIM" $PBID data 2>/dev/null)
+  phash() { (cd "$PC/Library" 2>/dev/null && find "Application Support" Preferences -type f 2>/dev/null | sort | xargs shasum 2>/dev/null | shasum | cut -c1-16; find "Application Support" Preferences -type f 2>/dev/null | wc -l | tr -d ' '); }
+  P1=$(phash | tr '\n' ' '); say "  production app installed beside Lab: files fingerprint $P1"
+else say "  FAIL the production app did not build for the side-by-side check"; grep -E " error: " "$OUT/build-production.log" | sort -u | head -10 | tee -a "$R"; FAIL=1; P1=""; fi
+xcodegen generate --spec project-lab.yml >> "$OUT/xcodegen.txt" 2>&1
+T=$SECONDS
+TEST_RUNNER_LAYOUT_DIR="$OUT" xcodebuild test -project CycliftLab.xcodeproj -scheme CycliftLab -configuration Debug -destination "id=$SIM" \
+  -derivedDataPath build/lab-dd -clonedSourcePackagesDirPath build/spm CODE_SIGNING_ALLOWED=NO > "$OUT/uitest.log" 2>&1
+UT=$?
+grep -E "Test Case .*(passed|failed)|error: |Executed [0-9]+ tests" "$OUT/uitest.log" | sed -E 's#.*/ios/##' | sort -u | cut -c1-400 | tee -a "$R"
+say "RESULT Lab screen checks: $([ $UT -eq 0 ] && echo ok || echo FAILED) · $((SECONDS-T))s"; [ $UT -eq 0 ] || FAIL=1
+grep -E "^\s+t = |Test Case|error:" "$OUT/uitest.log" | tail -400 > "$OUT/uitest-tail.txt"; rm "$OUT/uitest.log"
+if [ -n "$P1" ]; then P2=$(phash | tr '\n' ' '); [ "$P1" = "$P2" ] && say "  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data ($P2)" || { say "  FAIL the production app's files changed ($P1 -> $P2)"; FAIL=1; }; fi
 for f in "$OUT"/*.png; do [ -f "$f" ] && sips -Z 1300 "$f" >/dev/null 2>&1; done
 say "RESULT Lab launch in six themes: $([ $FAIL -eq 0 ] && echo ok || echo FAILED)"
 exit $FAIL

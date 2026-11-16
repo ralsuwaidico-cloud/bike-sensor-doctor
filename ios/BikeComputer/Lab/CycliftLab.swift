@@ -42,13 +42,14 @@ final class LabNoBluetooth {
 enum LabTheme {
     static let key = "lab.theme"
     static var chosen: CyThemeID {
-        let raw = ProcessInfo.processInfo.environment["LAB_THEME"] ?? UserDefaults.standard.string(forKey: key) ?? ""
+        let raw = ProcessInfo.processInfo.environment["LAB_THEME"] ?? UserDefaults.standard.string(forKey: key) ?? ""      // LAB_THEME: screenshot runs
         return CyThemeID(rawValue: raw) ?? .newAthleteDefault
     }
 }
 
 struct LabChrome: ViewModifier {
     @ObservedObject private var theme = CyThemeState.shared
+    @State private var restoreAsked = false
     func body(content: Content) -> some View {
         let shown = theme.active ?? .newAthleteDefault
         return content
@@ -64,8 +65,10 @@ struct LabChrome: ViewModifier {
                                 if t == shown { Label(t.title, systemImage: "checkmark") } else { Text(t.title) }
                             }
                         }
+                        Divider()
+                        Button("Restore the demo athlete") { LabDemoData.restoreAtNextLaunch(); restoreAsked = true }
                     } label: {
-                        Text("Theme: \(shown.title)").font(.caption2.weight(.bold)).lineLimit(1).padding(.vertical, 6)
+                        Text(restoreAsked ? "Close and reopen Lab to restore" : "Theme: \(shown.title)").font(.caption2.weight(.bold)).lineLimit(1).padding(.vertical, 6)
                     }
                     .accessibilityIdentifier("labThemeMenu")
                 }
@@ -80,13 +83,27 @@ struct LabChrome: ViewModifier {
 
 /// The only athlete Lab ever shows: generated, never read from anywhere. Every figure in Lab is simulated.
 enum LabDemoData {
-    /// Writes the demo athlete when Lab has no record yet. Never touches an existing file.
+    /// Lab's own notes, kept beside (not inside) the record folder so "Delete all data" does not remove them.
+    private static func note(_ name: String, _ dir: URL) -> URL { dir.deletingLastPathComponent().appendingPathComponent("cyclift-lab-\(name)") }
+    private static var recordDir: URL? = nil
+
+    /// Writes the demo athlete once: on Lab's first launch, or when "Restore the demo athlete" was chosen. After
+    /// "Delete all data" Lab stays empty (it starts at Welcome, like a new install) until the demo athlete is restored.
     static func seedIfMissing(_ dir: URL) {
-        let url = dir.appendingPathComponent("store.json")
-        guard !FileManager.default.fileExists(atPath: url.path) else { return }
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        recordDir = dir
+        let fm = FileManager.default
+        let url = dir.appendingPathComponent("store.json"), seeded = note("seeded", dir), restore = note("restore", dir)
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        if fm.fileExists(atPath: restore.path) {
+            if let files = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) { for f in files { try? fm.removeItem(at: f) } }
+            try? fm.removeItem(at: restore); try? fm.removeItem(at: seeded)
+        }
+        guard !fm.fileExists(atPath: seeded.path), !fm.fileExists(atPath: url.path) else { return }
         try? Data(demoStore().utf8).write(to: url)
+        try? Data().write(to: seeded)
     }
+    /// Asks for the demo athlete to be written again at the next launch. Only ever touches Lab's own folder.
+    static func restoreAtNextLaunch() { if let d = recordDir { try? Data().write(to: note("restore", d)) } }
 
     static func demoStore() -> String {       // same demo athlete as the screenshot tests (LayoutAudit.demoStore)
         let iso = ISO8601DateFormatter()

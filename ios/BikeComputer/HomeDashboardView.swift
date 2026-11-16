@@ -175,7 +175,7 @@ struct HomeDashboardScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Coach: \(c.title). \(c.evidence ?? "") \(c.actionLabel ?? "Details")")
+        .accessibilityLabel("\(CycliftLab.isLab ? "Demo, rule-based, not AI. " : "")Coach: \(c.title). \(c.evidence ?? "") \(c.actionLabel ?? "Details")")
         .accessibilityIdentifier("homeCoachAction")
     }
 

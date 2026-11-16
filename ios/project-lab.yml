@@ -69,10 +69,29 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIconLab
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) CYCLIFT_LAB"
 
+  CycliftLabUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Lab/UITests
+      - path: BikeComputerUITests/UITestWaits.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ralsuwaidico.cycliftlab.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: CycliftLab
+    dependencies:
+      - target: CycliftLab
+
 schemes:
   CycliftLab:
     build:
       targets:
         CycliftLab: all
+        CycliftLabUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - CycliftLabUITests
     archive:
       config: Release
