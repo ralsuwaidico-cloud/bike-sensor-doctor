@@ -53,7 +53,10 @@ struct RootView: View {
             // all five stay alive (like TabView) so navigation and scroll positions survive switching
             ZStack {
                 HomeView(tab: $tab, perform: perform, openHub: { openHub() }).tabPage(0, tab)
-                PlanView(perform: perform).tabPage(1, tab)
+                Group {
+                    if CyProduct.redesign { PlanV2Host() }          // Plan v2.0, schedule-first (Redesign/PlanV2Host.swift)
+                    else { PlanView(perform: perform) }
+                }.tabPage(1, tab)
                 RideTabView().tabPage(2, tab)
                 ProgressTabView().tabPage(3, tab)
                 Group {
