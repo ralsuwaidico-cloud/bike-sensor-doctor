@@ -1,0 +1,44 @@
+RESULT Lab build: ok · 275s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  production app installed beside Lab: files fingerprint efac8a75fb88ad3b 2 
+	 Executed 3 tests, with 2 failures (0 unexpected) in 543.544 (543.549) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 543.544 (543.550) seconds
+	 Executed 3 tests, with 2 failures (0 unexpected) in 543.544 (543.552) seconds
+Lab/UITests/LabChecks.swift:54: error: -[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch] : Failed to tap "labThemeMenu" Button: No matches found for first query match sequence: `Descendants matching type Button` -> `Elements matching predicate '"labThemeMenu" IN identifiers'`, given input App element pid: 72500
+Lab/UITests/LabChecks.swift:54: error: -[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch] : XCTAssertTrue failed - theme chooser
+Test Case '-[CycliftLabUITests.LabChecks test1FiveScreensInSixThemes]' passed (387.546 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test2ThemesSwitchWithoutRelaunch]' failed (60.876 seconds).
+Test Case '-[CycliftLabUITests.LabChecks test3DeleteAllDataEmptiesLabAndStaysEmpty]' passed (95.122 seconds).
+RESULT Lab screen checks: FAILED · 732s
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (efac8a75fb88ad3b 2 )
+RESULT Lab launch in six themes: FAILED
+commit b47d4f27dc43da430cc9878be3c11175e13a65d8  branch ios/lab
