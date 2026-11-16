@@ -1,0 +1,2 @@
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Lab/UITests/LabChecks.swift:46:18: error: invalid redeclaration of 'chooser'
+/Users/runner/work/bike-sensor-doctor/bike-sensor-doctor/ios/Lab/UITests/LabChecks.swift:50:18: error: invalid redeclaration of 'openProfile'

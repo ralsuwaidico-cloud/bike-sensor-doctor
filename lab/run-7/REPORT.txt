@@ -1,0 +1,40 @@
+RESULT Lab build: ok · 288s
+ISOLATION (from the built app)
+  ok   app identity is com.ralsuwaidico.cycliftlab: com.ralsuwaidico.cycliftlab
+  ok   name on the phone is Cyclift Lab
+  ok   absent: NSBluetoothAlwaysUsageDescription
+  ok   absent: NSBluetoothPeripheralUsageDescription
+  ok   absent: NSLocationWhenInUseUsageDescription
+  ok   absent: NSLocationAlwaysAndWhenInUseUsageDescription
+  ok   absent: UIBackgroundModes
+  ok   absent: CFBundleURLTypes
+  ok   absent: SUPABASE_URL
+  ok   absent: SUPABASE_ANON_KEY
+  ok   absent: GOOGLE_WEB_CLIENT_ID
+  ok   absent: GOOGLE_IOS_CLIENT_ID
+  ok   absent: CYCLIFT_SUPPORT_EMAIL
+  ok   no Apple Watch app inside
+  ok   its own icon (AppIconLab): AppIconLab
+  ok   no entitlements file in the app
+ISOLATION RESULT: ok
+  ok   the production project file does not enable Lab
+  obsidian: running, screenshot taken
+  arctic: running, screenshot taken
+  ocean: running, screenshot taken
+  forest: running, screenshot taken
+  sandstone: running, screenshot taken
+  highContrast: running, screenshot taken
+  ok   the demo athlete was written inside Lab's own container
+  ok   container: .../Containers/Data/Application/<Lab only>
+  ok   relaunch kept the same demo record
+  obsidian at the largest text size: running, screenshot taken
+  arctic at the largest text size: running, screenshot taken
+  Follow iOS: three screenshots taken (iOS light, dark, light again) — to be inspected
+  ok   the app was not relaunched during the iOS light/dark changes
+  production app installed beside Lab: files fingerprint 911a50f2256552da 2 
+Lab/UITests/LabChecks.swift:46:18: error: invalid redeclaration of 'chooser'
+Lab/UITests/LabChecks.swift:50:18: error: invalid redeclaration of 'openProfile'
+RESULT Lab screen checks: FAILED · 101s
+  ok   the production app's files are unchanged after every Lab check, including Lab's Delete all data (911a50f2256552da 2 )
+RESULT Lab launch in six themes: FAILED
+commit 937cc9b489ea8d277e7ef5b1ee8242ce5596a111  branch ios/lab
