@@ -70,6 +70,7 @@ struct OnboardingV34View: View {
             .onChange(of: page) { _, p in store.onboardingStage = p == 0 ? 0 : Self.stageBase + p }
             .sheet(isPresented: $library) { RosterLibrarySheet(sports: sportsBinding).cyThemeRoot() }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("onboardingV34")
     }
 

@@ -51,6 +51,7 @@ struct CyclingRecorderV14: View {
             controls
         }
         .background(theme.background.ignoresSafeArea())
+        .accessibilityElement(children: .contain)       // see StrengthRecorderV14: keeps every control's own identifier
         .accessibilityIdentifier("cyclingRecorderV14")
     }
 

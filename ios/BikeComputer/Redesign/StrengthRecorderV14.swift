@@ -65,6 +65,9 @@ struct StrengthRecorderV14: View {
             Button("Discard", role: .destructive) { store.discardActiveSession(); memory.clear(); dismiss() }
             Button("Cancel", role: .cancel) {}
         } message: { Text("Nothing is saved. The planned session stays open.") }
+        // Lab runs 12–15: an identifier on a plain container replaced the identifiers of the controls directly inside it
+        // (Log set could not be found). The screen is an accessibility container of its own, so every control keeps its own.
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("strengthRecorderV14")
     }
 

@@ -92,6 +92,7 @@ struct ReviewV14: View {
                 }
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("reviewV14")
     }
 
