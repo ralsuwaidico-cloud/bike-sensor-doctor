@@ -83,7 +83,13 @@ struct HomeView: View {
                 .accessibilityIdentifier("homeDate")
             HStack {
                 Spacer()
-                Button { setMenu(!showMenu) } label: {
+                Button {
+                    #if CYCLIFT_LAB
+                    tab = 4          // Navigation v1.2 / Profile v2.0: the avatar opens the one Profile
+                    #else
+                    setMenu(!showMenu)
+                    #endif
+                } label: {
                     ZStack {
                         Circle().fill(CyTheme.cta).frame(width: 34, height: 34)
                         if initial.isEmpty { Image(systemName: "person.fill").font(.footnote).foregroundStyle(CyTheme.ctaInk) }
