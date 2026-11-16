@@ -104,6 +104,7 @@ extension UIColor {
 }
 
 extension Color {
+    init(cyRGBA c: CyRGBA) { self.init(.sRGB, red: c.r, green: c.g, blue: c.b, opacity: c.a) }
     /// This colour; where theming is available, the shown theme's answer, asked again every time it is drawn.
     func themed(_ token: @escaping (CyThemeTokens) -> CyRGBA) -> Color {
         guard CyThemeState.available else { return self }
