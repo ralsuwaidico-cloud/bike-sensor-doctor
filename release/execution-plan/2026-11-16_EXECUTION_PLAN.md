@@ -86,7 +86,7 @@ Item 8 cannot happen without a build on a phone. The E1 evidence report will req
 
 ## 5. Tests
 
-**Automated:** Linux logic tests on every push (about 10 minutes); quick iOS scope for UX branches; full iOS scope on E1 and at each checkpoint — unit, smoke, flows, journeys, layout on four phone sizes, watch. Added per checkpoint: theme contrast and screenshot matrix (2), Hub and strength journeys (3), policy-engine tables and "no automatic increase without approval" (4), full regression plus build-216 data fixtures (5).
+**Automated:** Linux logic tests on every push (about 3 minutes, measured on run 92); quick iOS scope for UX branches; full iOS scope on E1 and at each checkpoint — unit, smoke, flows, journeys, layout on four phone sizes, watch. Added per checkpoint: theme contrast and screenshot matrix (2), Hub and strength journeys (3), policy-engine tables and "no automatic increase without approval" (4), full regression plus build-216 data fixtures (5).
 
 **Physical device (needs you and an authorized build):** install over build 216 with your real data and confirm nothing is lost; a real outdoor ride with phone GPS; a BikeComputer ride including a disconnect; a ride started from the Apple Watch; a strength session in the gym; denying then granting location; largest text and each theme outdoors; airplane mode; a failed save. I will not label anything device-tested until this has happened.
 
