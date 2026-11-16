@@ -1,0 +1,19 @@
+BikeComputer iOS CI — run 240 — scope quick — jobs: quick=cancelled test=skipped release=skipped testflight=skipped
+
+## quick
+BikeComputer iOS CI — build 240 — 2026-11-16 08:39 UTC
+Stage: quick
+QUICK CHECK — not release evidence (no full layout audit, no archive, never uploads)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 4m10s
+RESULT tests: ok (Executed 742 tests, with 9 tests skipped and 0 failures) · 10m13s
+  targets from the files changed since the last green full run fb52ae2
+Quick UI targets: LayoutAudit/testRC2OwnerScreens JourneyTests/testHybridJourney LaunchSmokeTests LaunchSmokeTests/testUpgradeFromBuild33OpensHybridSheetsAtLargeText RideViewsSmokeTests LaunchSmokeTests/testUpgradeFromBuild36CentreButtonOpensStrengthWorkout AdaptiveSmokeTests/testQuickStrengthLogShowsCheckInThenAdjustments LayoutAudit/testKeyScreensAtTextSizes HomeNavigationTests LayoutAudit PlanEditPreviewApplyTests UITestWaits LayoutAudit/testHomeStates OnboardingScreens/testOnboardingV3FiveStages DesignSystemAudit/testGalleryLightAndDark
+Layout audit simulators: small=iPhone-SE-3rd-generation standard=iPhone 17 max= owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 11m59s
+  layout small counts: passed 29 · failed 2 · skipped 0 · screenshots so far 106
+  layout small (AX3): FAILED (exit 65) · 74m39s — -[BikeComputerUITests.LayoutAudit testRC2OwnerScreens] : Failed to unable to perform Swipe left on "planDayStrip" Other: visible frame is empty, which may happen if the element is offscreen. 
+commit 929bab2861d5c2eb7b3f549f15d516041ac3824e  branch ios/c0-coach  job failure
