@@ -101,9 +101,20 @@ final class PlanLayoutTests: XCTestCase {
                 let f = c.frame
                 XCTAssertTrue(f.minX >= strip.minX - 1 && f.maxX <= strip.maxX + 1, "\(size): session '\(c.label)' is clipped sideways \(f) / \(strip)")
                 XCTAssertGreaterThanOrEqual(f.width, 55.5, "\(size): session '\(c.label)' narrower than its minimum width: \(f.width)")
+                XCTAssertGreaterThanOrEqual(f.height, 43.5, "\(size): session '\(c.label)' has a touch target lower than 44 pt: \(f.height)")
                 lowest = min(lowest, f.height)
             }
-            // recorded, not asserted: the chips are drawn 30 pt high by design; the measurement is kept for the owner
+            // touch targets of different controls must not overlap: no chip on another chip, no chip on a day button
+            let frames = cs.map { $0.frame }
+            for i in frames.indices { for j in frames.indices where j > i {
+                let x = frames[i].intersection(frames[j])
+                XCTAssertTrue(x.isNull || x.width < 1 || x.height < 1, "\(size): two session targets overlap \(frames[i]) / \(frames[j])")
+            } }
+            for d in ds where d.exists { for f in frames {
+                let x = d.frame.intersection(f)
+                XCTAssertTrue(x.isNull || x.width < 1 || x.height < 1, "\(size): a session target overlaps \(d.identifier) \(f) / \(d.frame)")
+            } }
+            // kept for the owner: the measured sizes
             let line = "\(device) \(size): strip \(Int(strip.width)) of \(Int(win.width)) pt wide · \(cs.count) session chips · lowest chip \(Int(lowest)) pt high\n"
             if let dir = outDir { let u = URL(fileURLWithPath: dir).appendingPathComponent("plan-layout-measurements.txt"); let old = (try? String(contentsOf: u, encoding: .utf8)) ?? ""; try? (old + line).write(to: u, atomically: true, encoding: .utf8) }
             shot("\(size.lowercased())-1-top")
