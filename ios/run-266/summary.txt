@@ -1,0 +1,81 @@
+BikeComputer iOS CI — run 266 — scope full — jobs: quick=skipped test=abandoned release=skipped testflight=skipped
+
+## unit
+BikeComputer iOS CI — build 266 — 2026-11-16 20:01 UTC
+Stage: unit
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m7s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Debug, for testing): ok · 5m16s
+RESULT tests: ok (Executed 803 tests, with 9 tests skipped and 0 failures) · 11m43s
+Total: 12m12s
+
+## smoke
+BikeComputer iOS CI — build 266 — 2026-11-16 19:22 UTC
+Stage: smoke
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m4s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 16m33s
+
+## flows
+BikeComputer iOS CI — build 266 — 2026-11-16 19:22 UTC
+Stage: smoke2
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 17m33s
+RESULT flows (hub reliability + UI journeys): ok · 61m1s
+Total: 61m18s
+
+## journeys
+BikeComputer iOS CI — build 266 — 2026-11-16 19:22 UTC
+Stage: journeys
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m5s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+RESULT build (Release, for testing): ok · 15m11s
+  journey hybrid: ok · recording 2685 KB · 12m38s
+  journey cycling: ok · recording 1438 KB · 5m57s
+  journey strength: ok · recording 1368 KB · 5m23s
+RESULT journey (recorded): ok — JourneyTests hybrid, cycling, strength · 43m20s
+Total: 43m31s
+
+## layout-promax
+BikeComputer iOS CI — build 266 — 2026-11-16 19:22 UTC
+Stage: layout (layout devices: promax)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m6s
+Test simulator: FCC5F673-7BEC-4A7D-8F2A-4DC35E2668EC
+Layout audit simulators: small= standard=iPhone 17 max=iPhone 17 Pro Max owner= (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 14m28s
+  layout promax counts: passed 1 · failed 0 · skipped 2 · screenshots so far 13
+  layout promax: WARNING — 2 test(s) skipped: testHomeStates testRC2OwnerScreens 
+  layout promax (L): ok · 9m6s
+RESULT layout audit: ok (13 screenshots)
+Total: 23m50s
+
+## layout-owner
+BikeComputer iOS CI — build 266 — 2026-11-16 20:08 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 16m58s
+  layout owner counts: passed 2 · failed 0 · skipped 1 · screenshots so far 87
+  layout owner: WARNING — 1 test(s) skipped: testKeyScreensAtTextSizes 
+  layout owner (L,XXXL): ok · 54m22s
+RESULT layout audit: ok (87 screenshots)
+Total: 73m9s
+
+RESULT upload: skipped (tests failed — the release job did not run)
+
+GATE flows: ok
+commit d7b8788d796188159151f023c101ff293d5f8ade  branch ios/lab  job failure

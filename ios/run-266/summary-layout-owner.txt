@@ -1,0 +1,13 @@
+BikeComputer iOS CI — build 266 — 2026-11-16 20:08 UTC
+Stage: layout (layout devices: owner)
+macOS 26.7.2, Xcode 26.6 Build version 17F113 
+XcodeGen Version: 2.46.0
+RESULT generate: ok · 0m8s
+Test simulator: CDC7077E-2206-4FEC-B03A-52EB15B2CAD4
+Layout audit simulators: small= standard=iPhone 17 max= owner=iPhone-16 (runtime iOS-26-5)
+RESULT build (Release, for testing): ok · 16m58s
+  layout owner counts: passed 2 · failed 0 · skipped 1 · screenshots so far 87
+  layout owner: WARNING — 1 test(s) skipped: testKeyScreensAtTextSizes 
+  layout owner (L,XXXL): ok · 54m22s
+RESULT layout audit: ok (87 screenshots)
+Total: 73m9s
