@@ -23,6 +23,7 @@ struct RootView: View {
     @State private var showHub = false
     /// Redesign: false = the compact Train panel, true = the full Hub. Reset whenever the Hub opens.
     @State private var hubExpanded = false
+    @State private var cyclingDemo = false
     @State private var lastCentreTap = Date.distantPast
     private let hubLog = Logger(subsystem: "com.ralsuwaidico.bikecomputer", category: "hub")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -83,7 +84,7 @@ struct RootView: View {
                                 .contentShape(Rectangle()).onTapGesture { closeHub() }
                                 .accessibilityHidden(true)
                             CyTrainPanel(perform: { a in closeHub(); perform(a) },
-                                         freeRide: { closeHub(); tab = 2 },
+                                         freeRide: { closeHub(); openRide() },
                                          otherSession: { closeHub(); trainSheet = store.todayAction() },
                                          expand: { var t = Transaction(); t.disablesAnimations = true; withTransaction(t) { hubExpanded = true } },
                                          close: { closeHub() })
@@ -117,15 +118,20 @@ struct RootView: View {
         .sheet(item: $trainSheet) { a in TrainNowSheet(action: a, openRide: { tab = 2 }, openStrength: { strengthWorkout = $0.id }) }
         .sheet(item: $strengthWorkout) { id in StrengthWorkoutScreen(workoutId: id) }
         .fullScreenCover(isPresented: $resumeSession) { StrengthSessionView() }
+        .fullScreenCover(isPresented: $cyclingDemo) { CyclingDemoRide().cyThemeRoot() }
         .sheet(item: $homeSheet) { a in homeSheetView(a) }
         .sheet(isPresented: $holdSheet) { HealthHoldSheet() }
     }
+
+    /// Where a ride opens. Cyclift Lab cannot record (no sensors, no GPS), so with the redesign on it opens the labelled
+    /// demonstration of the v1.4 cycling screen; everywhere else it is the existing Ride screen, unchanged.
+    private func openRide() { if CyProduct.redesign && CycliftLab.isLab { cyclingDemo = true } else { tab = 2 } }
 
     /// Performs a Home action: the card's buttons and the centre button share it, so both reach the same destination.
     private func perform(_ a: HomeAction) {
         switch a {
         case .startStrength(let id): strengthWorkout = id
-        case .openRideScreen, .openLiveRide: tab = 2
+        case .openRideScreen, .openLiveRide: openRide()
         case .resumeStrength(let id):
             if let id { strengthWorkout = id } else { resumeSession = true }
         case .moveToToday(let id): _ = store.reschedule(id, to: Date())

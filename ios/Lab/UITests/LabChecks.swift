@@ -222,6 +222,37 @@ final class LabChecks: XCTestCase {
         app.settleForScreenshot(2); shot("strength-9-after")
     }
 
+    /// The cycling screen in Lab is a labelled demonstration: the v1.4 layout and lifecycle, simulated figures, nothing saved.
+    func test2cCyclingDemonstrationIsLabelledAndSavesNothing() {
+        let app = XCUIApplication()
+        app.launchEnvironment["LAB_THEME"] = "obsidian"
+        app.launch()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 30))
+        func el(_ id: String) -> XCUIElement { app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        app.buttons["centreButton"].firstMatch.tap()
+        let ride = app.buttons["trainPanelRide"].firstMatch
+        XCTAssertTrue(ride.waitForExistence(timeout: 8), "the panel offers a ride"); ride.tap()
+        XCTAssertTrue(el("cyclingRecorderV14").waitForExistence(timeout: 10), "the cycling screen opens")
+        let strip = el("cyclingSimulated")
+        XCTAssertTrue(strip.exists && strip.label.contains("SIMULATED") && strip.label.contains("nothing is recorded or saved"), "the screen says its figures are simulated (\(strip.label))")
+        XCTAssertTrue(app.buttons["cyclingLapButton"].firstMatch.exists && app.buttons["cyclingPause"].firstMatch.exists, "riding: Lap and Pause")
+        XCTAssertFalse(app.buttons["cyclingFinish"].firstMatch.exists, "riding: no Finish")
+        app.settleForScreenshot(3); shot("cycling-1-recording")
+        app.buttons["cyclingLapButton"].firstMatch.tap()
+        XCTAssertTrue(el("cyclingLap").label.contains("lap 2"), "Lap counts a lap (\(el("cyclingLap").label))")
+        app.buttons["cyclingPause"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["cyclingResume"].firstMatch.waitForExistence(timeout: 5) && app.buttons["cyclingFinish"].firstMatch.exists, "paused: Resume and Finish")
+        XCTAssertTrue(el("cyclingState").label.contains("paused"), "paused is said in words")
+        let frozen = el("cyclingElapsed").label; app.settleForScreenshot(3)
+        XCTAssertEqual(el("cyclingElapsed").label, frozen, "the clock does not count while paused"); shot("cycling-2-paused")
+        app.buttons["cyclingResume"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["cyclingPause"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["cyclingPause"].firstMatch.tap(); app.buttons["cyclingFinish"].firstMatch.tap()
+        XCTAssertTrue(el("cyclingDemoEnded").waitForExistence(timeout: 5), "finishing says the demonstration ended"); shot("cycling-3-ended")
+        app.buttons["cyclingDemoClose"].firstMatch.tap()
+        XCTAssertTrue(app.waitForHome(name: "Demo", timeout: 10), "back on Home")
+    }
+
     /// Delete all data inside Lab: back to Welcome at once, still empty after a plain relaunch, banner still there.
     /// (That the production app's files are untouched is checked outside, by ios/ci/lab.sh.) Runs last.
     func test3DeleteAllDataEmptiesLabAndStaysEmpty() {

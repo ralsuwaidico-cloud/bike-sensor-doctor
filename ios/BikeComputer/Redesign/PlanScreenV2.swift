@@ -117,14 +117,15 @@ struct PlanScreen: View {
                 VStack(alignment: .leading, spacing: 0) {
                     header
                     programRow.padding(.top, CySpace.xs)
-                    selector.padding(.top, CySpace.s)
-                    if section == 0 { weekly } else { recurring }
+                    // the note sits above the calendar, where the floating dock can never cover it (Lab run 9)
                     if let note = data.note {
                         Text(note)
                             .font(.caption2).foregroundStyle(theme.textTertiary)
-                            .frame(maxWidth: .infinity).padding(.top, CySpace.l)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .accessibilityIdentifier("planSampleNote")
                     }
+                    selector.padding(.top, CySpace.s)
+                    if section == 0 { weekly } else { recurring }
                 }
                 .padding(.horizontal, CySpace.l)
                 .padding(.bottom, bottomInset + 44)      // the dock's centre button rises above the bar
